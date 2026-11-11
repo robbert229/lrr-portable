@@ -5731,7 +5731,10 @@ static uint32_t stats_rec_word(const EntitySlot* e, int off)
  *
  * Every EntitySlot member placed at its original 32-bit offset is asserted
  * here: the Stats record pointer (finding 520), the +0x33c/+0x340 floats,
- * the +0x36c owner and the +0x3e0..+0x3f0 flag words (finding 522). */
+ * the +0x36c owner and the +0x3e0..+0x3f0 flag words (finding 522), and
+ * the +0x28 path count, the +0x2f0..+0x308 command, pair and link words,
+ * the +0x330 selector, the +0x344 progress float and the +0x3c0 pair link
+ * (finding 526). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 #define ENTITY_SLOT_RETAIL_OFFSET(member, off) \
     static_assert((size_t)&((EntitySlot*)0)->member == (off), \
@@ -5742,15 +5745,27 @@ static uint32_t stats_rec_word(const EntitySlot* e, int off)
                   "EntitySlot." #member " must sit at its retail offset")
 #endif
 #ifdef ENTITY_SLOT_RETAIL_OFFSET
+ENTITY_SLOT_RETAIL_OFFSET(wp_count, 0x28);
+ENTITY_SLOT_RETAIL_OFFSET(cmd_head, 0x2f0);
+ENTITY_SLOT_RETAIL_OFFSET(pos_pair_2f4, 0x2f4);
+ENTITY_SLOT_RETAIL_OFFSET(pos_pair_2f8, 0x2f8);
+ENTITY_SLOT_RETAIL_OFFSET(link_2fc, 0x2fc);
+ENTITY_SLOT_RETAIL_OFFSET(attach_304, 0x304);
+ENTITY_SLOT_RETAIL_OFFSET(carry_link_308, 0x308);
+ENTITY_SLOT_RETAIL_OFFSET(indexed_record_slot_330, 0x330);
 ENTITY_SLOT_RETAIL_OFFSET(stats_record, 0x334);
 ENTITY_SLOT_RETAIL_OFFSET(field_33c, 0x33c);
 ENTITY_SLOT_RETAIL_OFFSET(field_340, 0x340);
+ENTITY_SLOT_RETAIL_OFFSET(progress_344, 0x344);
 ENTITY_SLOT_RETAIL_OFFSET(owner_36c, 0x36c);
+ENTITY_SLOT_RETAIL_OFFSET(pair_link_3c0, 0x3c0);
 ENTITY_SLOT_RETAIL_OFFSET(flags_3e0, 0x3e0);
 ENTITY_SLOT_RETAIL_OFFSET(flags_3e4, 0x3e4);
 ENTITY_SLOT_RETAIL_OFFSET(flags_3e8, 0x3e8);
 ENTITY_SLOT_RETAIL_OFFSET(flags_3ec, 0x3ec);
 ENTITY_SLOT_RETAIL_OFFSET(flags_3f0, 0x3f0);
+static_assert(sizeof(EntitySlot) == 0x678,
+              "EntitySlot keeps its 32-bit size (ADR 0006 decision 5)");
 #undef ENTITY_SLOT_RETAIL_OFFSET
 #endif
 #if defined(_MSC_VER) && defined(_M_IX86)

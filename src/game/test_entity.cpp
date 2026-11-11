@@ -16,6 +16,7 @@
 #include "gods98/block.hpp"
 #include "gods98/resource.hpp"
 #include "game/frontend.hpp"
+#include "game/cmd.hpp"
 #include "game/select.hpp"
 #include "util.hpp"
 
@@ -531,12 +532,13 @@ static void stats_probe(const char* wad_dir)
     resource_unmount_all();
 }
 
-/* Real-data layout check (--real-layout <wad-dir>, finding 522): create
- * entities from the shipped Lego.cfg types and drive the members that the
- * 32-bit layout places at their original offsets (+0x33c, +0x340, +0x36c,
- * +0x3e0..+0x3f0) through the retail readers that read them. A layout move
- * changes no native behaviour, so every reader must keep its answer, and
- * writing the moved members must leave the Stats binding (+0x334) intact. */
+/* Real-data layout check (--real-layout <wad-dir>, findings 522 and 526):
+ * create entities from the shipped Lego.cfg types and drive the members that
+ * the 32-bit layout places at their original offsets (+0x28, +0x2f0..+0x308,
+ * +0x330..+0x344, +0x36c, +0x3c0, +0x3e0..+0x3f0) through the retail readers
+ * that read them. A layout move changes no native behaviour, so every reader
+ * must keep its answer, and writing the moved members must leave the Stats
+ * binding (+0x334) intact. */
 static EntitySlot* layout_probe_create(GameContext* ctx, const char* name)
 {
     int type = 0, row = 0;
@@ -562,6 +564,144 @@ static void layout_probe_defaults(const EntitySlot* e, const char* name)
     if (want == 0u) return;
     snprintf(msg, sizeof msg, "--real-layout: %s +0x3e8 creation word", name);
     CHECK((e->flags_3e8 & want) == want, msg);
+}
+
+/* Finding 526: +0x28 path count, the +0x2f0..+0x308 window, +0x330,
+ * +0x344 and +0x3c0, each driven through a reader that the move aligned. */
+static void layout_probe_window_2f0(GameContext* ctx, EntitySlot* building,
+                                    EntitySlot* monster, EntitySlot* pilot)
+{
+    if (building == NULL || monster == NULL || pilot == NULL) return;
+
+    /* EntityRouteAdjacentStepAppend (0x4468c0) reads and bumps +0x28. */
+    pilot->flags_3e0 |= 1u;
+    pilot->wp_count = 1;
+    pilot->wp_index = 0;
+    ENTITY_WAYPOINTS(pilot)[0].x = 5.0f;
+    ENTITY_WAYPOINTS(pilot)[0].y = 5.0f;
+    CHECK(entity_route_adjacent_step_append(pilot, 6, 5) == 1
+              && pilot->wp_count == 2
+              && ENTITY_WAYPOINTS(pilot)[1].x == 6.0f,
+          "--real-layout: adjacent step appends at +0x28");
+    CHECK(entity_route_adjacent_step_append(pilot, 9, 9) == 0
+              && pilot->wp_count == 2,
+          "--real-layout: non-adjacent step leaves +0x28");
+    pilot->wp_count = 0;
+    pilot->flags_3e0 &= ~1u;
+
+    /* CmdCreateTarget (0x4036c0) installs the +0x2f0 chain head. */
+    CHECK(pilot->cmd_head == NULL && cmd_chain_walk(pilot) == NULL,
+          "--real-layout: new Pilot has no +0x2f0 command chain");
+    cmd_create_target(pilot, monster);
+    CHECK(pilot->cmd_head != NULL && cmd_chain_walk(pilot) != NULL,
+          "--real-layout: target command lands at +0x2f0");
+
+    /* EntityProgressAdvanceBy25 (0x447730): +0x344 against the +0x340
+     * bound, clearing the +0x2fc link. */
+    pilot->progress_344 = 0.0f;
+    pilot->field_340 = 40.0f;
+    pilot->link_2fc = (uintptr_t)monster;
+    CHECK(entity_progress_advance_by_25(pilot) == 0
+              && pilot->progress_344 == 25.0f && pilot->link_2fc == 0u,
+          "--real-layout: +0x344 advances and +0x2fc clears");
+    CHECK(entity_progress_advance_by_25(pilot) == 1
+              && pilot->progress_344 == 40.0f,
+          "--real-layout: +0x344 clamps to +0x340");
+    pilot->progress_344 = 0.0f;
+    pilot->field_340 = 0.0f;
+
+    /* LinkedEntityRouteFlagClear (0x43f100) follows +0x2fc. */
+    pilot->link_2fc = (uintptr_t)monster;
+    pilot->flags_3ec = 0x40u;
+    monster->flags_3ec = 0x42u;
+    entity_linked_route_flag_clear(ctx, pilot);
+    CHECK(pilot->flags_3ec == 0u && monster->flags_3ec == 2u,
+          "--real-layout: +0x2fc link has its route bit cleared");
+    pilot->link_2fc = 0u;
+    monster->flags_3ec = 0u;
+
+    /* SelectionCandidateFilterActive (0x4526e0) tests the +0x304 object in
+     * place of the candidate: an ineligible one rejects the Toolstation. */
+    building->field_340 = 100.0f;
+    CHECK(selection_candidate_eligibility_check(building) == 1,
+          "--real-layout: Toolstation eligible before the +0x304 link");
+    monster->flags_3e8 &= ~0x100u;
+    building->attach_304 = monster;
+    CHECK(selection_candidate_filter_active(building, 1, 0) == 0,
+          "--real-layout: +0x304 object replaces the candidate");
+    building->attach_304 = NULL;
+
+    /* EntityClearNestedState8Fields (0x4487c0): the +0x308 carried type-8
+     * object has its +0x2f4/+0x2f8 pair cleared. */
+    static EntitySlot nested;
+    memset(&nested, 0, sizeof nested);
+    nested.type = 8;
+    nested.pos_pair_2f4 = -1.0f;
+    nested.pos_pair_2f8 = -1.0f;
+    pilot->carry_link_308 = &nested;
+    entity_clear_nested_state_8_fields(pilot);
+    CHECK(nested.pos_pair_2f4 == -1.0f && nested.pos_pair_2f8 == -1.0f,
+          "--real-layout: +0x308 pair untouched without +0x3e0 bit 0x400");
+    pilot->flags_3e0 |= 0x400u;
+    entity_clear_nested_state_8_fields(pilot);
+    CHECK(nested.pos_pair_2f4 == 0.0f && nested.pos_pair_2f8 == 0.0f,
+          "--real-layout: +0x308 carried object's +0x2f4/+0x2f8 cleared");
+    pilot->flags_3e0 &= ~0x400u;
+    pilot->carry_link_308 = NULL;
+
+    /* EntityAnimationStateSet (0x439cd0 -> 0x469c10) writes +0x330 and
+     * selects that Stats row (0x150 bytes per level). */
+    const uint8_t* level0 = (const uint8_t*)building->stats_record;
+    CHECK(building->indexed_record_slot_330 == 0 && level0 != NULL,
+          "--real-layout: Toolstation starts at +0x330 level 0");
+    CHECK(entity_animation_state_set(building, 1u) == 1
+              && building->indexed_record_slot_330 == 1
+              && (const uint8_t*)building->stats_record == level0 + 0x150,
+          "--real-layout: +0x330 level 1 selects the next Stats row");
+    CHECK(entity_animation_state_set(building, 0u) == 1
+              && building->indexed_record_slot_330 == 0
+              && building->stats_record == level0,
+          "--real-layout: +0x330 level 0 restores the Stats row");
+
+    /* EntityDirectionalActivityStart (0x447950) redirects through the
+     * +0x3c0 pair link while +0x3e4 bit 2 is set. */
+    pilot->flags_3e4 |= 2u;
+    pilot->pair_link_3c0 = (uintptr_t)monster;
+    pilot->flags_3e0 &= ~0x1000u;
+    monster->flags_3e0 &= ~0x1000u;
+    monster->field_340 = 100.0f;
+    entity_directional_activity_start(pilot, NULL, 0);
+    CHECK((monster->flags_3e0 & 0x1000u) != 0u
+              && (pilot->flags_3e0 & 0x1000u) == 0u,
+          "--real-layout: +0x3c0 pair link receives the activity");
+    pilot->flags_3e4 &= ~2u;
+    pilot->pair_link_3c0 = 0u;
+
+    /* Every placed member holds distinct storage beside the Stats binding. */
+    const void* record = pilot->stats_record;
+    pilot->wp_count = 0x28;
+    pilot->pos_pair_2f4 = 2.0f;
+    pilot->pos_pair_2f8 = 3.0f;
+    pilot->link_2fc = 0x2fcu;
+    pilot->attach_304 = building;
+    pilot->carry_link_308 = monster;
+    pilot->indexed_record_slot_330 = 0x330;
+    pilot->progress_344 = 4.0f;
+    pilot->pair_link_3c0 = 0x3c0u;
+    CHECK(pilot->stats_record == record && entity_stats_float_at20(pilot) == 1.1f
+              && pilot->cmd_head != NULL && pilot->wp_count == 0x28
+              && pilot->pos_pair_2f4 == 2.0f && pilot->pos_pair_2f8 == 3.0f
+              && pilot->link_2fc == 0x2fcu && pilot->attach_304 == building
+              && pilot->carry_link_308 == monster
+              && pilot->indexed_record_slot_330 == 0x330
+              && pilot->progress_344 == 4.0f && pilot->pair_link_3c0 == 0x3c0u,
+          "--real-layout: finding 526 members hold distinct storage");
+    pilot->wp_count = 0;
+    pilot->attach_304 = NULL;
+    pilot->carry_link_308 = NULL;
+    pilot->link_2fc = 0u;
+    pilot->pair_link_3c0 = 0u;
+    pilot->indexed_record_slot_330 = 0;
 }
 
 static void layout_probe(const char* wad_dir)
@@ -682,7 +822,16 @@ static void layout_probe(const char* wad_dir)
                   && pilot->flags_3e8 == 0x3e8u && pilot->flags_3ec == 0x3ecu
                   && pilot->flags_3f0 == 0x3f0u,
               "--real-layout: moved members hold distinct storage");
+        pilot->field_33c = 0.0f;
+        pilot->field_340 = 0.0f;
+        pilot->owner_36c = NULL;
+        pilot->flags_3e0 = 0u;
+        pilot->flags_3e4 = 0u;
+        pilot->flags_3e8 = 0x004481f5u;
+        pilot->flags_3ec = 0u;
+        pilot->flags_3f0 = 0u;
     }
+    layout_probe_window_2f0(&ctx, building, monster, pilot);
     fprintf(stderr, "entity_test: --real layout probe done\n");
     block_close(cfg);
     resource_unmount_all();
