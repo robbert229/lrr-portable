@@ -1,7 +1,11 @@
 # Rebuild code as original translation units in a C-compatible subset, compiled as C in the matching build
 
 **Status:** accepted (issue #384). **Amends** [ADR 0004](0004-miniwin-native-port.md),
-decision Q-E ("C++17 for the reconstruction").
+decision Q-E ("C++17 for the reconstruction"). **Amended by**
+[ADR 0006](0006-original-link-order.md): units are relocated verbatim before
+conversion, the matching build links them as explicit objects in original
+order (recipe step 2), port-only code in a unit is compiled out of the
+matching build (step 4), and restructuring PRs follow its entropy rules.
 
 ## Decision
 

@@ -115,3 +115,15 @@ _Avoid_: "blast radius", "impact set"
 **entropy drift**:
 Score changes in functions whose source did not change, caused by MSVC 5.0's register allocation depending on how many symbols the translation unit declares before them (finding 506). Any edit to a shared header can cause it.
 _Avoid_: "regression" (when the source is unchanged), "noise" (it is deterministic)
+
+**relocation**:
+Moving one *original translation unit*'s existing functions, and the globals they own, verbatim into that unit's own source file in original order, without changing any contract (ADR 0006). It fixes link order; *conversion* to *original shape* (ADR 0005) is a separate, later step, and a conversion PR also relocates its unit.
+_Avoid_: "refactor", "split" (they suggest code changes)
+
+**link-order list**:
+The single ordered list of original units and their source files from which the *matching build* links its objects explicitly, checked against the unit map (ADR 0006).
+_Avoid_: "object order" when you mean the list rather than a measured layout
+
+**port tail**:
+The port-only objects (hook tables, adapters, platform entry points, drained legacy files) that the *matching build* links after the last gods98 unit and before LIBC. It shrinks to nothing as port-only code is compiled out of the matching build.
+_Avoid_: "extras", "glue" (glue names `platform_glue`)
