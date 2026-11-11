@@ -88,6 +88,93 @@ def rewrites(text, address, c_language=True):
             swapped = names[:]
             swapped[i], swapped[i + 1] = swapped[i + 1], swapped[i]
             edits.append((a, b, ', '.join(swapped), 'declarators'))
+    # Scalar locals only: no pointers, initializers, volatile qualifiers or
+    # user-defined types. Restrict arithmetic to unsigned to avoid overflow
+    # and floating-point reassociation differences.
+    locals_by_type = {}
+    for m in re.finditer(r"(?m)^[ \t]*(unsigned int|int|long|short|char)[ \t]+([A-Za-z_]\w*(?:[ \t]*,[ \t]*[A-Za-z_]\w*)*)[ \t]*;", body):
+        for name in re.split(r"[ \t]*,[ \t]*", m[2]):
+            locals_by_type[name] = m[1]
+    # Without a C parser we cannot resolve shadowing in nested scopes.
+    # Do not infer local types in functions that contain nested blocks, except
+    # when recognizing the dedicated inner-block temporary pattern below.
+    if '{' in body or '}' in body:
+        locals_by_type = {}
+    # Only bare scalar assignments with distinct destinations and RHS reads
+    # from known locals. This excludes calls, memory aliases and volatile data.
+    assignment = r"([ \t]*([A-Za-z_]\w*)[ \t]*=[ \t]*([A-Za-z_]\w*|[0-9]+)[ \t]*;[ \t]*\n)"
+    for m in re.finditer(r"(?m)^" + assignment + r"^" + assignment, body):
+        dst1, rhs1, dst2, rhs2 = m[2], m[3], m[5], m[6]
+        if dst1 not in locals_by_type or dst2 not in locals_by_type or dst1 == dst2:
+            continue
+        if any(not x.isdigit() and x not in locals_by_type for x in (rhs1, rhs2)):
+            continue
+        if dst1 == rhs2 or dst2 == rhs1:
+            continue
+        a, b = start + m.start(), start + m.end()
+        edits.append((a, b, text[start+m.start(4):start+m.end(4)] + text[start+m.start(1):start+m.end(1)], 'statements'))
+    # Introduce a same-type temporary in an inner block around a return.
+    for m in re.finditer(r"\breturn[ \t]+([A-Za-z_]\w*)[ \t]*;", body):
+        name = m[1]
+        if name not in locals_by_type or re.search(r"\b_perm_tmp\b", code):
+            continue
+        a, b = start + m.start(), start + m.end()
+        edits.append((a, b, '{ ' + locals_by_type[name] + ' _perm_tmp = ' + name + '; return _perm_tmp; }', 'temporary-introduce'))
+    # A temporary of the function's scalar return type preserves the return
+    # conversion and evaluates the original expression exactly once. Do not
+    # use floating types: storing them can force x87 rounding.
+    marker = re.search(r'//\s*FUNCTION\s*:\s*LEGORR\s+' + re.escape(hex(address)) + r'\b', text, re.I)
+    if marker is None:
+        marker = next(m for m in re.finditer(r'//\s*FUNCTION\s*:\s*LEGORR\s+(0x[0-9a-fA-F]+)', text) if int(m[1], 16) == address)
+    signature = code[marker.end():start - 1]
+    sig = re.search(r'\b(unsigned int|int|uint32_t|int32_t|unsigned long|long)\s+[A-Za-z_]\w*\s*\([^;{}]*\)\s*$', signature)
+    if sig and '_perm_tmp' not in code:
+        for m in re.finditer(r'\breturn[ \t]+([^;{}\n]+);', body):
+            a, b = start + m.start(), start + m.end()
+            expr_text = text[start+m.start(1):start+m.end(1)]
+            edits.append((a, b, '{ ' + sig[1] + ' _perm_tmp = (' + expr_text + '); return _perm_tmp; }', 'return-temporary'))
+    # Remove a temporary only when source and temporary have the same type.
+    for m in re.finditer(r"\{[ \t]*(unsigned int|int|long|short|char)[ \t]+([A-Za-z_]\w*)[ \t]*=[ \t]*([A-Za-z_]\w*)[ \t]*;[ \t]*return[ \t]+\2[ \t]*;[ \t]*\}", body):
+        before_block = body[:m.start()]
+        outer_decl = re.search(r'(?m)^[ \t]*' + re.escape(m[1]) + r'[ \t]+' + re.escape(m[3]) + r'[ \t]*;', before_block)
+        if not outer_decl or '{' in before_block or '}' in before_block:
+            continue
+        a, b = start + m.start(), start + m.end()
+        edits.append((a, b, 'return ' + m[3] + ';', 'temporary-remove'))
+    # Reassociation/commutation are safe here for unsigned integers, and only
+    # within a complete return expression (not an arbitrary subexpression).
+    expr = r"\breturn[ \t]+\(?([A-Za-z_]\w*)[ \t]*([+*&|^])[ \t]*([A-Za-z_]\w*)\)?[ \t]*;"
+    for m in re.finditer(expr, body):
+        if not all(locals_by_type.get(x) == 'unsigned int' for x in (m[1], m[3])):
+            continue
+        a, b = start + m.start(), start + m.end()
+        edits.append((a, b, 'return ' + m[3] + ' ' + m[2] + ' ' + m[1] + ';', 'commutation'))
+    assoc = r"\breturn[ \t]+\([ \t]*([A-Za-z_]\w*)[ \t]*([+*&|^])[ \t]*([A-Za-z_]\w*)[ \t]*\)[ \t]*\2[ \t]*([A-Za-z_]\w*)[ \t]*;"
+    for m in re.finditer(assoc, body):
+        if not all(locals_by_type.get(x) == 'unsigned int' for x in (m[1], m[3], m[4])):
+            continue
+        a, b = start + m.start(), start + m.end()
+        edits.append((a, b, f'return {m[1]} {m[2]} ({m[3]} {m[2]} {m[4]});', 'association'))
+    # Empty-init/step for and while have identical continue behavior.
+    for m in re.finditer(r"\bfor[ \t]*\([ \t]*;[ \t]*([A-Za-z_]\w*)[ \t]*;[ \t]*\)", body):
+        a, b = start + m.start(), start + m.end()
+        edits.append((a, b, 'while (' + m[1] + ')', 'for-to-while'))
+    # A guarded do/while evaluates the condition at the same points as while.
+    for m in re.finditer(r"\bwhile[ \t]*\([ \t]*([A-Za-z_]\w*)[ \t]*\)[ \t]*\{([^{}#]*)\}", body):
+        a, b = start + m.start(), start + m.end()
+        prefix = code[:a].rstrip()
+        if not prefix.endswith('{') or re.search(r"\b(?:goto|case|default)\b|:", m[2]):
+            continue
+        content = text[start+m.start(2):start+m.end(2)]
+        edits.append((a, b, '{ if (' + m[1] + ') do {' + content + '} while (' + m[1] + '); }', 'while-to-do'))
+    # Restrict do/while conversion to simple braces and no preprocessor or
+    # labels; the flag preserves continue, break and the first iteration.
+    for m in re.finditer(r"\bdo[ \t]*\{([^{}#]*)\}[ \t]*while[ \t]*\([ \t]*([A-Za-z_]\w*)[ \t]*\)[ \t]*;", body):
+        if re.search(r"\b(?:goto|case|default)\b|:", m[1]) or re.search(r"\b_perm_first\b", code):
+            continue
+        a, b = start + m.start(), start + m.end()
+        content = text[start+m.start(1):start+m.end(1)]
+        edits.append((a, b, '{ int _perm_first = 1; for (; _perm_first || ' + m[2] + '; _perm_first = 0) {' + content + '} }', 'do-to-for'))
     for a, b, replacement, kind in edits:
         yield kind, text[:a] + replacement + text[b:]
 
@@ -139,7 +226,11 @@ def main():
         with tempfile.TemporaryDirectory(prefix='permuter-', dir=args.output) as tmp:
             with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
                 while time.monotonic() < deadline and best_score < 1:
-                    variants = [(kind, candidate) for kind, candidate in rewrites(best, args.address, source.suffix == '.c') if candidate not in seen]
+                    try:
+                        variants = [(kind, candidate) for kind, candidate in rewrites(best, args.address, source.suffix == '.c') if candidate not in seen]
+                    except ValueError as ex:
+                        failures.append(str(ex))
+                        break
                     if not variants:
                         break
                     improved = False
