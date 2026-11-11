@@ -26,6 +26,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from binary_progress_hash import input_hash
 
 SCOPES = (
     ("game-only", "game-only.json"),
@@ -206,7 +207,7 @@ def command_update(args) -> int:
         return 2
     baseline_path = Path(args.baseline)
     baseline_path.parent.mkdir(parents=True, exist_ok=True)
-    baseline_path.write_text(render(current), encoding="utf-8", newline="\n")
+    baseline_path.write_text("# input_sha256: %s\n" % input_hash() + render(current), encoding="utf-8", newline="\n")
     print("Wrote %s" % baseline_path)
     print(summarize(current))
     return 0

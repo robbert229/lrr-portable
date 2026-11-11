@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Compare the original PE with the non-incremental matching build."""
+import hashlib
 import argparse
 import json
 import statistics
@@ -124,6 +125,7 @@ def main():
     parser.add_argument('--output', type=Path, default=ROOT / 'docs/coverage/binary-progress.json')
     args = parser.parse_args()
     result = report(args.original, args.rebuilt, args.report_dir)
+    result['baseline_sha256'] = hashlib.sha256((ROOT / 'docs/coverage/match-baseline.txt').read_bytes()).hexdigest()
     output = json.dumps(result, indent=2, sort_keys=True) + '\n'
     args.output.write_text(output, encoding='utf-8')
     print(output, end='')
