@@ -3931,21 +3931,6 @@ void formatted_text_format_draw(const TextureSurface* font,
     if (width_out != NULL) *width_out = width;
 }
 
-/* FormattedTextPrintf (FUN_00401c80): variadic front-end to the format
- * renderer. The original forwards its stack varargs to FormattedTextFormatDraw. */
-// FUNCTION: LEGORR 0x00401C80
-void formatted_text_printf(const TextureSurface* font,
-                           uint32_t* width_out, int* line_count,
-                           void* px, int pitch, int w, int h,
-                           int x, int y, const char* format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    formatted_text_format_draw(font, width_out, line_count, px, pitch, w, h,
-                               x, y, format, args);
-    va_end(args);
-}
-
 /* RewardTextDraw (FUN_0047a180): positioned variadic convenience wrapper for
  * formatted UI text. The legacy routine forwards its format and argument
  * list to FormattedTextFormatDraw; the port supplies its software target. */
@@ -3958,23 +3943,6 @@ void reward_text_draw(const TextureSurface* font, void* px, int pitch,
     formatted_text_format_draw(font, NULL, NULL, px, pitch, w, h,
                                x, y, format, args);
     va_end(args);
-}
-
-/* FormattedTextPrintfWidth (FUN_00401c50): format and measure without drawing.
- * The retail wrapper forwards its variadic arguments through
- * FormattedTextFormatDraw, including the engine's `%b` texture tokens. */
-// FUNCTION: LEGORR 0x00401c50
-uint32_t formatted_text_printf_width(const TextureSurface* font,
-                                     const char* text, ...)
-{
-    if (font == NULL || text == NULL) return 0;
-    uint32_t width = 0u;
-    va_list args;
-    va_start(args, text);
-    formatted_text_format_draw(font, &width, NULL, NULL, 0, 0, 0,
-                               0, 0, text, args);
-    va_end(args);
-    return width;
 }
 
 static void fe_menu_panel_text_draw(void* px, int pitch, int w, int h,

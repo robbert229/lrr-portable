@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_lib = static_library('game',
+  'advisor.cpp',
   building_scene_sources,
   'game.cpp',
   'level.cpp',

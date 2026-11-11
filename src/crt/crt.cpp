@@ -88,6 +88,7 @@ extern char** environ;
 #include "crt.hpp"
 #include "heap.hpp"
 #include "string.hpp"
+#include "crt_shared.hpp"
 
 #if defined(_MSC_VER)
 #define crt_math_error_code_set _set_errno
@@ -1885,9 +1886,6 @@ void global_value_004ffe48_set(uint32_t value)
     s_value_004ffe48 = value;
 }
 
-/* --- the unowned DAT word-store band (see crt.hpp) -------------------------- */
-// GLOBAL: LEGORR 0x004b31bc
-static uint32_t s_advisor_state_word = 0u; /* DAT_004b31bc */
 // GLOBAL: LEGORR 0x00557860
 static uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
 // GLOBAL: LEGORR 0x004b8a54
@@ -1900,12 +1898,6 @@ static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
 static uint32_t s_ui_flag_word = 0u;       /* DAT_004c7ea8 */
 // GLOBAL: LEGORR 0x004a1ee4
 static uint32_t s_config_word = 0u;        /* DAT_004a1ee4 */
-
-// FUNCTION: LEGORR 0x00401c20
-uint32_t global_flag_bit0_is_set(void)
-{
-    return s_advisor_state_word & 1u;
-}
 
 // FUNCTION: LEGORR 0x00407340
 void state_flag_toggle_when_zero(void)
@@ -1971,11 +1963,6 @@ uint32_t global_config_word_peek(void)  { return s_config_word; }
 int s_display_w;           /* DAT_00505924 */
 // GLOBAL: LEGORR 0x00505928
 int s_display_h;           /* DAT_00505928 */
-
-// FUNCTION: LEGORR 0x00401c30
-int display_width_get(void)  { return s_display_w; }
-// FUNCTION: LEGORR 0x00401c40
-int display_height_get(void) { return s_display_h; }
 
 void display_dimensions_set(int w, int h)
 {
@@ -2255,12 +2242,6 @@ void crt_no_op_stub_variant(void)
     /* No standalone equivalent is needed by the portable control path. */
 }
 #endif
-
-// FUNCTION: LEGORR 0x00401b20
-void advisor_clear_active_state(void)
-{
-    s_advisor_state_word &= ~2u;
-}
 
 #if !defined(_MSC_VER)
 // LIBRARY: LEGORR 0x0048e030 SYMBOL
