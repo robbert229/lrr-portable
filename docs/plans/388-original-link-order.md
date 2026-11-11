@@ -214,7 +214,7 @@ misplaced code to the largest units.
 | R1 | GAME-001 Advisor, GAME-004–GAME-009, GAME-011–GAME-016 (except claimed) | Small and medium game units. Many live in `gods98/view.cpp` and `record.cpp`, so moving them also fixes their library | Proves `relocate_unit.py` on 5–30-function units |
 | R2 | gods98 units not converted or claimed: G98-001–003, 005, 008–017, 020, 025, 028, 030, 031 | Moves the gods98 units out of game files (`startup_config.cpp`) and splits `view.cpp`, `surface.cpp`, `resource.cpp` and `record.cpp` | G98-001 and G98-012 are the two C++ objects (finding 505 rule 8). They stay C++, and later conversions keep `/GX` |
 | R3 | GAME-017 FrontEnd, GAME-018 HelpWindow, GAME-019 Info, GAME-020 Interface | Drains `frontend.cpp` (20 units), `message.cpp` and `select.cpp` | Short freeze on `frontend.cpp` while the PR lands |
-| R4 | GAME-021 Lego, GAME-022, GAME-023 LegoObject | The largest units: 216, 27 and 258 functions, from `level.cpp` and `entity.cpp` | Short freeze on `entity.cpp` and `level.cpp`. First decide whether Lego.c is two objects near `0042f350` (finding 505) |
+| R4 | GAME-021 Lego, GAME-022, GAME-023 LegoObject | The largest units: 216, 27 and 258 functions, from `level.cpp` and `entity.cpp` | Short freeze on `entity.cpp` and `level.cpp`. Finding 535 leaves the proposed `0042f350` split undecidable; relocate GAME-021 as one provisional unit pending independent evidence |
 | R5 | GAME-002 AITask, GAME-010, GAME-024–GAME-050 (except GAME-034) | The rest of the game segment, which drains `crt.cpp`'s 159-unit mix | After R5, every game and gods98 function is in its unit file |
 
 **Effect.** The pair inversions fall with each wave and reach about zero
@@ -505,9 +505,9 @@ The coordinator files these. "Parallel" means safe alongside conversions.
    `select.cpp`. Announce a short freeze on `frontend.cpp`. Needs tickets 5
    and 6. Parallel, except for the freeze.
 
-10. **Relocate wave R4: Lego.c, GAME-022 and LegoObject.c** (S3). First
-    decide from the data whether Lego.c is two objects near `0042f350`.
-    Update the spec and finding 505 if it is. Then relocate GAME-021, 022
+10. **Relocate wave R4: Lego.c, GAME-022 and LegoObject.c** (S3). The
+    candidate split at `0042f350` is undecidable (finding 535); retain
+    GAME-021 as one provisional unit. Relocate GAME-021, 022
     and 023 out of `level.cpp` and `entity.cpp` (about 500 functions).
     Announce a short freeze on `level.cpp` and `entity.cpp`. Needs tickets 5
     and 6. Parallel, except for the freeze.

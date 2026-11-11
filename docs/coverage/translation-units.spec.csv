@@ -19,7 +19,7 @@ start,unit_id,name,kind,name_basis,note
 00418190,GAME-018,HelpWindow.c,game,config-key,'HelpWindow' config keys; .bss step to 0x4db8e8
 00419230,GAME-019,Info.c,game,string-prefix,Info_* identifiers (40); .bss 0x4dc658-0x4dcd48
 0041a300,GAME-020,Interface.c,game,string-prefix,Interface_* identifiers (74); .bss from 0x4dcd58
-0041f870,GAME-021,Lego.c,game,string-prefix,Lego_* identifiers and the main config loader; very large: an interior split near 0x42f350 (terrain block helpers) cannot be excluded
+0041f870,GAME-021,Lego.c,game,string-prefix,Lego_* identifiers and the main config loader; candidate interior split at 0x42f350 remains undecidable (finding 535); retain one provisional unit
 00435b20,GAME-022,,game,none,camera control; packed (unaligned) functions with int3 fill: compiled with different options; hard boundaries on both sides
 00436c20,GAME-023,LegoObject.c,game,string-prefix,Activity_* (78) and LegoObject_* (14) identifiers; .bss block from 0x4dec00 referenced across the whole run
 0044c710,GAME-024,LightEffects.c,game,config-key,'LightEffects' config section; .bss step to 0x4eadd8
