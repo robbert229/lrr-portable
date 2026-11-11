@@ -39,6 +39,11 @@ class ListingTest(unittest.TestCase):
         self.assertNotEqual(listings.fingerprint(a), listings.fingerprint([
             'mov eax, ?A0x98765432::value (DATA)', 'push <OFFSET1>']))
 
+    def test_indexed_member_offset(self):
+        a = listings.fingerprint(["test eax, s_help_info_string_storage[2][104]+432 (offset)"])
+        b = listings.fingerprint(["test eax, s_entity_path_motion_runtime[1000].samples+56 (offset)"])
+        self.assertEqual(listings.classify(a, b, False), ("drift", 0))
+
     def test_msvc_mangled_static_offset(self):
         prefix = 'fld dword ptr [eax*8 + ?s_weapon@?%z:/src/weapon.cpp'
         suffix = '@lego@@3PAUWeapon@2@A[0].damage (OFFSET)]'

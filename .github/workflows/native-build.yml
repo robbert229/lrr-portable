@@ -34,6 +34,9 @@ jobs:
         with:
           submodules: false
 
+      - name: Check link order
+        run: python3 tools/link_order.py check
+
       - name: Install build tools
         run: |
           sudo apt-get update

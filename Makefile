@@ -65,6 +65,7 @@ reccmp-report:
 # the same against an existing report without rebuilding. reccmp-baseline-update
 # accepts the current report as the new baseline (run it after a rebuild).
 reccmp-check: reccmp-report reccmp-compare
+	@python3 tools/link_order.py check-map "$(RECCMP_BUILD_DIR)/LegoRR.map" || echo "Warning: link-order map check failed" >&2
 
 reccmp-compare:
 	python3 ./tools/match_baseline.py check \
@@ -101,6 +102,7 @@ convert-unit:
 # Unit tests of the Python tooling (needs reference/LegoRR.exe for the
 # validation tests, which are skipped without it).
 tools-test:
+	python3 tools/link_order.py check
 	python3 -m unittest discover -s tools -p 'test_convert_unit.py'
 	python3 -m unittest discover -s tools/tests -p 'test_msvc_permuter.py'
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_cohort.py'

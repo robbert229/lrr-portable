@@ -9,7 +9,7 @@ from pathlib import Path
 
 SCOPES = (('game-only', 'game-only.json'), ('full', 'results.json'))
 DEFAULT = 'docs/coverage/match-listing-digests.txt'
-FORMAT = '# listing_format: 3'
+FORMAT = '# listing_format: 4'
 REGISTER = re.compile(r'\b(?:e(?:ax|bx|cx|dx|si|di|bp|sp)|(?:ax|bx|cx|dx|si|di|bp|sp)|[abcd][hl]|st(?:\([0-7]\))?)\b', re.I)
 BRANCH = re.compile(r'^(?:j\w+|loop\w*)\s+.*$', re.I)
 STACK = re.compile(r'\b(?:esp|ebp|sp|bp)\s*([+-])\s*(?:0x[0-9a-f]+|\d+)', re.I)
@@ -30,7 +30,7 @@ def normalize(instruction):
     text = re.sub(r"thunk of '[^']*'", '<address>', text)
     text = re.sub(r'[-+]?\d+(?:\.\d+)?\s*\(float\)', '<address>', text)
     text = re.sub(r'<offset\d+>', '<address>', text)
-    text = re.sub(r"(?:[a-z_$?][\w$?:.@]*(?:\[\d+\])*(?:\s*\+\s*(?:0x[0-9a-f]+|\d+))?|\"[^\"]*\")\s*\((?:data|function|import_thunk|offset)\)", '<address>', text)
+    text = re.sub(r"(?:[a-z_$?][\w$?:.@]*(?:\[\d+\]|\.[a-z_$][\w$]*)*(?:\s*\+\s*(?:0x[0-9a-f]+|\d+))?|\"[^\"]*\")\s*\((?:data|function|import_thunk|offset)\)", '<address>', text)
     text = re.sub(r"(?<![\w])(?!(?:e(?:ax|bx|cx|dx|si|di|bp|sp)|(?:ax|bx|cx|dx|si|di|bp|sp))\b)[a-z_$?][\w$?:.@]*(?:\[\d+\])*\s*\+\s*0x[0-9a-f]+", '<address>', text)
     text = re.sub(r'"(?:\\.|[^"\\])*"', '<address>', text)
     text = re.sub(r'(?<![\w])(?:0x[0-9a-f]+|\d+)\s*\(offset\)', '<address>', text)
