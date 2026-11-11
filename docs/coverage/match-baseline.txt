@@ -1,4 +1,4 @@
-# input_sha256: f97e2e9c5e7ae64edceffd2b17c0cc6d477226b69d6491e52e9ff4553baa5bef
+# input_sha256: c61075e87803c2a0da64f4300b772f80b7e04ef27f72d2a123e235516df8897a
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2158 mapped functions
+[game-only] 2159 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -1871,6 +1871,7 @@
 0x0047e2d0 11.11 rgb_channels_unpack
 0x0047e300 10.53 ledger_stub_0047e300_InterfaceMethod18StructApply
 0x0047e3e0 76.47 ledger_stub_0047e3e0_InterfaceMethodResultRecordInitialize
+0x0047e460 50.00 ledger_stub_0047e460_ComObjectDestroyAndOptionallyFree
 0x0047e480 38.10 ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset
 0x0047e4c0 14.81 ledger_stub_0047e4c0_AviPlaybackStateInitialize
 0x0047e510 7.69 AviPlaybackState::display_mode_setup
@@ -2166,7 +2167,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2377 mapped functions
+[full] 2378 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -4031,6 +4032,7 @@
 0x0047e2d0 11.11 rgb_channels_unpack
 0x0047e300 10.53 ledger_stub_0047e300_InterfaceMethod18StructApply
 0x0047e3e0 76.47 ledger_stub_0047e3e0_InterfaceMethodResultRecordInitialize
+0x0047e460 50.00 ledger_stub_0047e460_ComObjectDestroyAndOptionallyFree
 0x0047e480 38.10 ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset
 0x0047e4c0 14.81 ledger_stub_0047e4c0_AviPlaybackStateInitialize
 0x0047e510 7.69 AviPlaybackState::display_mode_setup

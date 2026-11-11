@@ -12,4 +12,10 @@ extern int s_effect_fired;
 extern void (*s_effect_opacity_hook)(uint32_t, int, float, int);
 extern void (*s_effect_release_hook)(uint32_t, int);
 
+/* LightEffects.c's scene-transform word (DAT_004eaec8, GAME-024). It is one
+ * original global: every reader and writer in the original is a LightEffects
+ * function (0044c790..0044da50). game/util.cpp defines it with the rest of
+ * the unit's state; simtick.cpp holds two of the unit's functions. */
+extern uint32_t s_motion_jitter_flags;
+
 #endif /* LRR_GODS98_SIMTICK_SHARED_HPP */

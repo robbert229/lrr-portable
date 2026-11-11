@@ -21,8 +21,6 @@
 #include "view.hpp"
 #include "simtick_shared.hpp"
 
-extern uint32_t s_motion_jitter_flags;
-
 namespace unported_ledger_stubs {
 int ledger_stub_00466490_CellSightRayCheckAndFlag(const EntitySlot* observer);
 }
@@ -452,7 +450,9 @@ void simtick_bobbins(EngineContext* c)
 }
 
 /* ---- grid marker sweep (FUN_0044eff0) ----------------------------------- */
-static int s_marker_fired = 0;int simtick_marker_count(void)
+static int s_marker_fired = 0;
+
+int simtick_marker_count(void)
 {
     return s_marker_fired;
 }

@@ -7,6 +7,9 @@
 #define LRR_CRT_CRT_SHARED_HPP
 
 extern uint32_t s_advisor_state_word;
+/* Pointer.c's current cursor type (DAT_00500a98), defined in
+ * gods98/media.cpp. */
+extern int s_cursor_slot;
 
 extern uint32_t s_mode_zero_flag;
 
