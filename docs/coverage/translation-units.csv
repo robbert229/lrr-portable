@@ -2218,8 +2218,8 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00489bc0,ComChildItemsVisit,74,G98-025,,gods98,low,boundary:G98-025,src/gods98/view.cpp
 00489c30,IndexedBitmapPaletteDataPrepare,75,G98-026,,gods98,low,boundary:G98-026,src/gods98/texture.cpp
 00489d70,ObjectField38Release,75,G98-026,,gods98,low,boundary:G98-026,src/gods98/heap.cpp
-00489d90,DirectXErrorMessageFormat,76,G98-027,,gods98,high,bss;data;string,src/gods98/resource.cpp
-00489dd0,DirectXResultDiagnosticDispatch,76,G98-027,,gods98,high,bss;string,src/gods98/resource.cpp
+00489d90,DirectXErrorMessageFormat,76,G98-027,,gods98,high,bss;data;string,src/gods98/dxerror.c
+00489dd0,DirectXResultDiagnosticDispatch,76,G98-027,,gods98,high,bss;string,src/gods98/dxerror.c
 0048b260,StartupStreamStateReset,77,G98-028,,gods98,low,boundary:G98-028,src/game/startup_config.cpp
 0048b280,WindowModeFlagSet,77,G98-028,,gods98,low,boundary:G98-028,src/gods98/engine.cpp
 0048b290,StartupStreamsClose,77,G98-028,,gods98,low,boundary:G98-028,src/game/startup_config.cpp
