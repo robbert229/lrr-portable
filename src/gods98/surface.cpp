@@ -6208,9 +6208,10 @@ void ledger_stub_0047e3e0_InterfaceMethodResultRecordInitialize(
     result[4] = font_device_color_convert(device, second_color);
 }
 
+void ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset(void* object);
+
 // ComObjectDestroyAndOptionallyFree
 // FUNCTION: LEGORR 0x0047e460
-void ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset(void* object);
 void ledger_stub_0047e460_ComObjectDestroyAndOptionallyFree(void* object,
                                                               unsigned char flags)
 {
