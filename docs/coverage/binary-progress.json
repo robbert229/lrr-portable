@@ -3,7 +3,7 @@
     "full": 55.16,
     "game_only": 51.0
   },
-  "baseline_sha256": "6c938f20960e6c9345d9bcd37021456d8b1f925fc18ac3e3155966141401af04",
+  "baseline_sha256": "f4b3f7cfafd700c0edf0d8e506165b62f90404bf2c4e9ac8ca6d55639123fee2",
   "exact_function_code_bytes": {
     "bytes": 44551,
     "original_text_bytes": 642549,
@@ -23,7 +23,7 @@
       "pairs": 479964
     }
   },
-  "input_sha256": "6c4974e9ad409b111e3c61cb5e8f8fe99dbbc750d72d34167969ebc8e981655f",
+  "input_sha256": "426009e32927494c53b52ebe822dccc1afc4375807132e4c741f17d038767583",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 6,
@@ -3772,7 +3772,7 @@
     ],
     "unmapped_original_functions": 215
   },
-  "listing_digests_sha256": "56d9deb4af5ff07d55ab778fb5f3dc77554d76e656194d4c3138b48e6ca7ce5c",
+  "listing_digests_sha256": "0db0dbe27c9f567ca67b3aca095399a9a348413273a04874a6677e7c47063209",
   "minimum_identical_run_bytes": 16,
   "pe_header_differences": {
     "entry_point_rva": {
@@ -3789,7 +3789,7 @@
     ".data": {
       "chance_percent": 10.47,
       "excess_percent_points": 7.1,
-      "identical_bytes": 12864,
+      "identical_bytes": 12863,
       "identical_percent": 17.57,
       "original_bytes": 73216,
       "rebuilt_bytes": 988160,
@@ -3804,7 +3804,7 @@
       "identical_bytes": 1482,
       "identical_percent": 13.19,
       "original_bytes": 11232,
-      "rebuilt_bytes": 457679,
+      "rebuilt_bytes": 457695,
       "run_chance_percent": 0.0,
       "run_excess_percent_points": 0.56,
       "run_identical_bytes": 63,
@@ -3813,7 +3813,7 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 0.03,
-      "identical_bytes": 18337,
+      "identical_bytes": 18331,
       "identical_percent": 2.85,
       "original_bytes": 642549,
       "rebuilt_bytes": 934676,
@@ -3850,7 +3850,7 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 0.03,
-    "identical_bytes": 18337,
+    "identical_bytes": 18331,
     "identical_percent": 2.85,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
