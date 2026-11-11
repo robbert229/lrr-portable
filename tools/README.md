@@ -365,15 +365,27 @@ Notes:
 
 ## Whole-binary progress
 
-`make match-progress` regenerates the match baseline and whole-binary report
+`make match-progress` regenerates `docs/coverage/match-baseline.txt`,
+`docs/coverage/match-listing-digests.txt`, and `docs/coverage/binary-progress.json`
 from fresh builds. Run `make reccmp-check` first and review any drops under
 ADR 0005 before accepting the baseline. The non-incremental build always runs:
 a matching input hash alone does not prove that the baseline is current.
 The PR freshness check uses `pr_match_progress.py check`, and its `render`
 command compares the committed reports without the toolchain. The baseline
-header records the input fingerprint and the progress file records a baseline
-digest. On conflict, take either side and regenerate both with `make
-match-progress`; never hand-merge them.
+and listing headers record the input fingerprint, and the progress file records
+digests of both. On conflict, take either side and regenerate all three with
+`make match-progress`; never hand-merge them.
+
+For each dropped score, `make reccmp-compare` compares the rebuilt listing
+with the accepted listing fingerprints and checks the annotated source against
+`origin/main`. `--base-ref` selects another Git base when calling
+`tools/match_baseline.py check` directly; `--base-report DIR` compares two
+complete reports. A source change or unknown source needs review. Unchanged
+source is classified as drift, reordered drift, or drift-review when the
+instruction multiset changes. Every nonzero instruction-count delta is flagged
+for the owner. Normalisation masks registers, stack offsets, branch targets and
+absolute addresses; these fingerprints do not prove behavioral equivalence.
+The gate still fails on every score drop.
 
 `make binary-progress` builds a separate non-incremental matching executable
 in `build-binary-progress/`, runs Reccmp, prints the comparison as JSON and

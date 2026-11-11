@@ -190,6 +190,9 @@ tools/binary_progress.py
 tools/binary_progress_hash.py
 tools/binary_progress_inputs.txt
 tools/clean_reccmp_report_names.py
+tools/match_baseline.py
+tools/match_listings.py
 tools/reccmp.sh
+tools/reccmp_full_diff.py
 tools/strip_pe_debug.py
 tools/translation_units.py
