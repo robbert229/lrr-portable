@@ -42,4 +42,6 @@ extern TexturedSceneDrawHooks s_textured_scene_draw_hooks;
 
 extern int s_rot_pairs[ROT_PAIR_SLOTS * 2];
 
+extern RenderResourceBindingHooks s_render_resource_binding_hooks;
+
 #endif /* LRR_GODS98_VIEW_SHARED_HPP */

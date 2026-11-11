@@ -3981,7 +3981,7 @@ void* menu_text_record_make(const char* text, const TextureSurface* font_a,
 #endif
 
 /* The native initializer publishes this list to DAT_0054bf68. */
-static const char* const s_tooltip_names[38] = {
+const char* const s_tooltip_names[38] = {
     "ToolTip_RadarBlock", "ToolTip_UnitSelect", "ToolTip_Construction",
     "ToolTip_InterfaceMenu", "ToolTip_InterfaceMenuBackButton",
     "ToolTip_MapBlock", "ToolTip_Priority", "ToolTip_InfoMenuContinue",
@@ -4001,35 +4001,6 @@ static const char* const s_tooltip_names[38] = {
     "ToolTip_Reward_Save", "ToolTip_Reward_Advance",
     "ToolTip_FrontEnd_Back"
 };
-static const char* s_tooltip_name_table[38];
-
-/* CaseInsensitiveNameTableLookup (FUN_0046b4d0) searches the table published
- * by TooltipOverlayStateInitialize. Results are one-based. The fallback to
- * canonical labels keeps config-only callers usable before GameConfigInit's
- * renderer setup path has initialized the global table in this port. */
-// FUNCTION: LEGORR 0x0046b4d0
-int case_insensitive_name_table_lookup(const char* name, int* out_index)
-{
-    /* Corpus shape: the walk strides the name slots by four with a
-     * one-based counter, feeds each entry to strcasecmp_lite untested,
-     * and answers through the raw out pointer. Deviation: the name NULL
-     * gate stays (the port's menu caller can pass a null optional name;
-     * the corpus strides it blindly). */
-    if (name == NULL) {
-        return 0;
-    }
-    int index = 1;
-    while (index <= 38) {
-        const char* candidate = s_tooltip_name_table[index - 1];
-        if (candidate == NULL) candidate = s_tooltip_names[index - 1];
-        if (strcasecmp_lite(name, candidate) == 0) {
-            *out_index = index;
-            return 1;
-        }
-        ++index;
-    }
-    return 0;
-}
 
 /* UiPanelNameTablesInit publishes these exact pointer-table bands. The
  * button table is twelve 24-pointer rows and ends at DAT_005007d0. */
@@ -5630,7 +5601,6 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value)
  * records: the timestamp, cue, flags, attached object, and image list share
  * the corpus table at DAT_0054c000. */
 #define TIMED_EFFECT_ENTRIES 40
-#define TIMED_EFFECT_RECORD_COUNT 40
 #define LAYOUT_POSITION_ENTRIES 2   /* corpus: two help-window buttons */
 #define LAYOUT_POSITION_STRIDE 7    /* corpus advances 0x1c bytes per entry */
 
@@ -5642,11 +5612,11 @@ static int      s_band_mode;
  * initialization clears 0x1839 dwords: 39 full records plus the first
  * three words of record 39, leaving its update-bound flag intact. */
 // GLOBAL: LEGORR 0x0054c000
-static TimedEffectRecord s_timed_effect_records[TIMED_EFFECT_RECORD_COUNT];
+TimedEffectRecord s_timed_effect_records[TIMED_EFFECT_RECORD_COUNT];
 /* DAT_0054bf3c is the tooltip duration threshold (scale * 25). Timed-effect
  * timestamp reset uses these same float bits as its fallback time value. */
 // GLOBAL: LEGORR 0x0054bf3c
-static float s_timed_effect_tick;
+float s_timed_effect_tick;
 typedef union HelpWindowLayoutWord {
     uint32_t u;
     int32_t i;
@@ -5678,7 +5648,7 @@ static const char* s_help_info_strings[3][15 * 16];
  * own mutable string before replacing underscores. Keep those copies in
  * module-owned storage so this loader does not modify BlockFile-owned text. */
 static char s_help_info_string_storage[3][15 * 16][1024];
-static TooltipOverlayState s_tooltip_overlay_state;
+TooltipOverlayState s_tooltip_overlay_state;
 static AdvisorTutorialIconLoadFn s_tutorial_icon_load;
 static AdvisorTutorialIconInitializeFn s_tutorial_icon_initialize;
 static void (*s_tutorial_icon_release)(void* icon, void* context);
@@ -5716,12 +5686,6 @@ static float s_help_window_feedback_position;
 static float s_help_window_feedback_limit;
 static void (*s_help_window_sound_clear)(int);
 static void (*s_help_render_transition_clear)(int, int);
-
-// FUNCTION: LEGORR 0x0046b770
-void timed_effect_update_request_set_corpus(int index)
-{
-    s_timed_effect_records[index].flags |= 4u;
-}
 
 void timed_effect_update_request_set(int index)
 {
@@ -5763,13 +5727,6 @@ void tooltip_set_content(int index, const char* format, ...)
     *out = '\0';
     memset(record->payload + 0x258, 0, 0x14);
     record->flags = (record->flags & ~8u) | 3u;
-}
-
-// FUNCTION: LEGORR 0x0046b700
-static void timed_effect_cue_request_set_corpus(int index, uint32_t value)
-{
-    s_timed_effect_records[index].cue = value;
-    s_timed_effect_records[index].flags |= 3u;
 }
 
 void timed_effect_cue_request_set(int index, uint32_t value)
@@ -7243,7 +7200,7 @@ const char* tooltip_info_string_peek(int index)
     return (index >= 0 && index < 9) ? s_tooltip_info_strings[index] : NULL;
 }
 
-static void tooltip_overlay_state_fill(
+void tooltip_overlay_state_fill(
     TooltipOverlayState* state, void* font,
     uint32_t value2, uint32_t value3, float scale,
     uint32_t value5, uint32_t value6, uint32_t value7,
@@ -7290,30 +7247,6 @@ void tooltip_overlay_state_initialize_state(
     tooltip_overlay_state_fill(state, font, value2, value3, scale,
                                value5, value6, value7,
                                color_r, color_g, color_b, metric);
-}
-
-/* TooltipOverlayStateInitialize @ 0x46b1d0: the target's ten stack-word entry
- * publishes its fixed labels and geometry/color globals, sets the timed
- * tooltip duration in 25-unit ticks, and clears 0x1839 dwords at the start
- * of the 0x27c-byte overlay-record table. This includes the first 12 bytes
- * of record 39 but leaves its +0x278 traversal-bound flag intact. */
-// FUNCTION: LEGORR 0x0046b1d0
-void tooltip_overlay_state_initialize(
-    void* font, uint32_t value2, uint32_t value3, float scale,
-    uint32_t value5, uint32_t value6, uint32_t value7,
-    float color_r, float color_g, float color_b)
-{
-    float threshold = scale * 25.0f;
-    int i;
-    tooltip_overlay_state_fill(&s_tooltip_overlay_state, font,
-                               value2, value3, scale,
-                               value5, value6, value7,
-                               color_r, color_g, color_b,
-                               object_field_be4_dword_get(font));
-    for (i = 0; i < 38; ++i) s_tooltip_name_table[i] = s_tooltip_names[i];
-    s_timed_effect_tick = threshold;
-    memset(s_timed_effect_records, 0,
-           (size_t)0x1839u * sizeof(uint32_t));
 }
 
 void tooltip_overlay_state_current(TooltipOverlayState* state)
@@ -8777,14 +8710,6 @@ void frontend_action_catalog_images_render(const EngineContext* engine,
                                          fe_action_catalog_image_row, &pass);
 }
 
-/* Keep the address-mapped leaf blind like the corpus; the public wrapper
- * retains the bounds check exercised by the portable API tests. */
-// FUNCTION: LEGORR 0x0046b7a0
-static void timed_effect_timestamp_reset_corpus(int index)
-{
-    s_timed_effect_records[index].timestamp = s_timed_effect_tick;
-}
-
 void timed_effect_timestamp_reset(int index)
 {
     if (index >= 0 && index < TIMED_EFFECT_RECORD_COUNT) {
@@ -9358,13 +9283,6 @@ void ui_overlay_animation_advance(int mode, int steps)
     if (s_overlay_anim_float < 0.0f) {
         s_overlay_anim_float = 0.0f; /* the after-loop negative guard */
     }
-}
-
-// FUNCTION: LEGORR 0x0046b730
-static void timed_effect_persistence_set_corpus(int index, int set)
-{
-    uint32_t* flags = &s_timed_effect_records[index].flags;
-    *flags = (set != 0) ? (*flags | 0x10u) : (*flags & ~0x10u);
 }
 
 void timed_effect_persistence_set(int index, int set)

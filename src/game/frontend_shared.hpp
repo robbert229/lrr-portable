@@ -78,4 +78,15 @@ extern float s_message_text_height;
 void advisor_message_layout_commit(void);
 void advisor_message_layout_reset(void);
 
+#define TIMED_EFFECT_RECORD_COUNT 40
+
+extern const char* const s_tooltip_names[38];
+extern TimedEffectRecord s_timed_effect_records[TIMED_EFFECT_RECORD_COUNT];
+extern float s_timed_effect_tick;
+extern TooltipOverlayState s_tooltip_overlay_state;
+void timed_effect_cue_request_set_corpus(int index, uint32_t value);
+void tooltip_overlay_state_fill( TooltipOverlayState* state, void* font, uint32_t value2, uint32_t value3, float scale, uint32_t value5, uint32_t value6, uint32_t value7, float color_r, float color_g, float color_b, uint32_t font_metric);
+void timed_effect_timestamp_reset_corpus(int index);
+void timed_effect_persistence_set_corpus(int index, int set);
+
 #endif /* LRR_GAME_FRONTEND_SHARED_HPP */

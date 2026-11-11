@@ -6349,65 +6349,6 @@ void simulation_mode_counter_add(int mode, int count)
     }
 }
 
-/* --- command sample stats -----------------------------------------------
- * CommandSampleStatsAccumulate (FUN_0046b660) operates on one 0x27c-byte
- * record per type. The record's twenty sample pointers begin at +0x20c;
- * its count/head/window-total/cumulative-total/high-water words live at
- * +0x25c..+0x26c. These words overlap the timed-effect table owned by the
- * frontend module, so update the shared record returned by its storage API.
- * command_sample_stats_peek() exposes the compact 0..24 inspection view.
- * The reference does not clamp the pointer-log index at twenty. The port
- * keeps the log within its known twenty-word allocation because the
- * reference's later writes can corrupt other timed-effect records and the
- * decompile provides no bound for writes beyond the 40-record table. */
-#define CMD_STATS_KINDS 40u
-#define CMD_STATS_LOG_DWORD 131u /* +0x20c */
-#define CMD_STATS_LOG_DWORDS 20u
-#define CMD_STATS_COUNT_DWORD 151u /* +0x25c */
-#define CMD_STATS_HEAD_DWORD 152u /* +0x260 */
-#define CMD_STATS_WINDOW_DWORD 153u /* +0x264 */
-#define CMD_STATS_TOTAL_DWORD 154u /* +0x268 */
-#define CMD_STATS_HIGH_DWORD 155u /* +0x26c */
-
-// FUNCTION: LEGORR 0x0046b660
-void command_sample_stats_accumulate(int kind, const void* sample)
-{
-    if (kind < 0 || (unsigned)kind >= CMD_STATS_KINDS) {
-        return;
-    }
-    TimedEffectRecord* record = timed_effect_record_get((unsigned int)kind);
-    uint32_t* slot;
-    if (record == NULL) return;
-    slot = (uint32_t*)record;
-    if (sample == NULL) {
-        slot[CMD_STATS_HEAD_DWORD] = 0u;
-        slot[CMD_STATS_TOTAL_DWORD] = 0u;
-    } else {
-        uint32_t v4 = 0u, v8 = 0u;           /* sample+4, sample+8 */
-        __builtin_memcpy(&v4, (const char*)sample + 4, sizeof v4);
-        __builtin_memcpy(&v8, (const char*)sample + 8, sizeof v8);
-        if ((int)slot[CMD_STATS_HEAD_DWORD] < (int)v8) {
-            slot[CMD_STATS_WINDOW_DWORD] = (uint32_t)(
-                (int)slot[CMD_STATS_WINDOW_DWORD] -
-                (int)slot[CMD_STATS_HEAD_DWORD]);
-            slot[CMD_STATS_HEAD_DWORD] = v8;
-            slot[CMD_STATS_WINDOW_DWORD] = (uint32_t)(
-                (int)slot[CMD_STATS_WINDOW_DWORD] + (int)v8);
-        }
-        slot[CMD_STATS_TOTAL_DWORD] = (uint32_t)(
-            (int)slot[CMD_STATS_TOTAL_DWORD] + (int)v4);
-        if ((int)slot[CMD_STATS_HIGH_DWORD] <
-            (int)slot[CMD_STATS_TOTAL_DWORD]) {
-            slot[CMD_STATS_HIGH_DWORD] = slot[CMD_STATS_TOTAL_DWORD];
-        }
-    }
-    const uint32_t idx = slot[CMD_STATS_COUNT_DWORD];
-    if (idx < CMD_STATS_LOG_DWORDS) {
-        slot[CMD_STATS_LOG_DWORD + idx] = (uint32_t)(uintptr_t)sample;
-    }
-    slot[CMD_STATS_COUNT_DWORD] = idx + 1u;
-}
-
 uint32_t command_sample_stats_peek(int kind, int field)
 {
     if (kind < 0 || (unsigned)kind >= CMD_STATS_KINDS ||

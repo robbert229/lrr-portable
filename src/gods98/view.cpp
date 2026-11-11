@@ -3083,7 +3083,7 @@ void scene_rotation_flags_apply(void* object, const float first[3],
     scene_rotation_flags_apply(object, 0.0f, first, second, third, scale,
                                uniform_scale, child_value, flags);
 }
-static RenderResourceBindingHooks s_render_resource_binding_hooks;
+RenderResourceBindingHooks s_render_resource_binding_hooks;
 
 // ModelTransformCopyToSceneNode (FUN_00435e35) copies a scene node's pose
 // onto the model scene object when the model record kind is 3.
@@ -3444,75 +3444,6 @@ void render_resource_binding_hooks_set(
     else {
         s_render_resource_binding_hooks = *hooks;
     }
-}
-
-// FUNCTION: LEGORR 0x0046c030
-void render_resource_binding_initialize(RenderResourceBinding* binding,
-                                        void* key, void* config_a,
-                                        void* config_b)
-{
-    unsigned int selector;
-    if (binding == NULL) return;
-    binding->key = NULL;
-    binding->resource = NULL;
-    binding->state = 0;
-    binding->flags = 0;
-    if (s_render_resource_binding_hooks.resource_find != NULL) {
-        for (selector = 0; selector < 3; ++selector) {
-            binding->resource =
-                s_render_resource_binding_hooks.resource_find(
-                    s_render_resource_binding_hooks.context,
-                    config_a, config_b, selector);
-            if (binding->resource != NULL) break;
-        }
-    }
-    binding->key = key;
-}
-
-// FUNCTION: LEGORR 0x0046c0b0
-void render_resource_binding_copy_and_convert(
-    const RenderResourceBinding* source,
-    RenderResourceBinding* destination)
-{
-    if (source == NULL || destination == NULL) return;
-    *destination = *source;
-    if (s_render_resource_binding_hooks.resource_load != NULL) {
-        destination->resource =
-            s_render_resource_binding_hooks.resource_load(
-                s_render_resource_binding_hooks.context, source->resource);
-    }
-}
-
-// FUNCTION: LEGORR 0x0046c0f0
-void render_resource_binding_release(RenderResourceBinding* binding)
-{
-    if (binding == NULL) return;
-    if (s_render_resource_binding_hooks.resource_release != NULL) {
-        s_render_resource_binding_hooks.resource_release(
-            s_render_resource_binding_hooks.context, binding->resource);
-    }
-}
-
-// FUNCTION: LEGORR 0x0046c110
-float animation_resource_advance_time(RenderResourceBinding* binding,
-                                     void* argument)
-{
-    if (binding != NULL &&
-        s_render_resource_binding_hooks.animation_time_get != NULL) {
-        (void)s_render_resource_binding_hooks.animation_time_get(
-            s_render_resource_binding_hooks.context, binding->resource,
-            argument);
-    }
-    return 0.0f;
-}
-
-// FUNCTION: LEGORR 0x0046c130
-void scene_object_set_animation_with_fallback(
-    RenderResourceBinding* binding, void* name)
-{
-    if (scene_action_name_set(binding->resource, (const char*)name) == 0u)
-        (void)scene_action_name_set(binding->resource,
-                                    ai_activity_name(AI_ACT_STAND));
 }
 
 void scene_object_chain_hooks_set(const SceneObjectChainHooks* hooks)

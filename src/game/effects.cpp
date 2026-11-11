@@ -62,13 +62,8 @@ void* s_transient_effect_head;
 void* s_transient_effect_tail;
 TransientEffectInstanceLinks* s_transient_effect_links;
 int s_transient_effect_enabled = 1;
-static TimedEffectRuntimeHooks s_timed_effect_runtime_hooks;
-static TimedEffectSlotRenderHooks s_timed_effect_slot_render_hooks;
-/* The legacy UI owns these globals and renders synchronously. Reuse one
- * snapshot to keep the mapped slot renderer's frame-local record small. */
-static TooltipOverlayState s_timed_effect_overlay_state;
-// GLOBAL: LEGORR 0x004aa64c
-static uint32_t s_timed_effect_cue_gate = 1u;
+TimedEffectRuntimeHooks s_timed_effect_runtime_hooks;
+TimedEffectSlotRenderHooks s_timed_effect_slot_render_hooks;
 SceneTransformState s_scene_transform_state;
 LightEffectParameterState s_light_effect_parameters;
 static EntityNodeScaleApplyHook s_entity_node_scale_apply_hook;
@@ -226,42 +221,6 @@ void timed_effect_cue_update(TimedEffectCueState* state, float x, float y,
             slot->timer += delta;
         }
         slot->flags &= ~4u;
-    }
-}
-
-// FUNCTION: LEGORR 0x0046b8b0
-void rectangular_grid_overlay_geometry_draw(
-    const RectangularGridOverlayState* state,
-    const RectangularGridOverlayHooks* hooks)
-{
-    float points[10];
-    unsigned int band, bands;
-    if (state == NULL || hooks == NULL) return;
-    if (hooks->region_fill != NULL)
-        hooks->region_fill(hooks->context, state,
-                           state->overlay_mode != 0 ? 2 : 0);
-    if (hooks->polyline_draw == NULL) return;
-    bands = state->bands > 5u ? 5u : state->bands;
-    for (band = 0; band < bands; ++band) {
-        float inset = (float)band;
-        float left = state->x + inset;
-        float top = state->y + inset;
-        float right = state->x + state->width - 1.0f - inset;
-        float bottom = state->y + state->height - 1.0f - inset;
-        points[0] = left; points[1] = top;
-        points[2] = right; points[3] = top;
-        points[4] = right; points[5] = bottom;
-        points[6] = left; points[7] = bottom;
-        points[8] = left; points[9] = top;
-        hooks->polyline_draw(hooks->context, points, 5,
-                             state->first_line_color, 0);
-        points[0] = left + 1.0f; points[1] = top + 1.0f;
-        points[2] = right - 1.0f; points[3] = top + 1.0f;
-        points[4] = right - 1.0f; points[5] = bottom - 1.0f;
-        points[6] = left + 1.0f; points[7] = bottom - 1.0f;
-        points[8] = left + 1.0f; points[9] = top + 1.0f;
-        hooks->polyline_draw(hooks->context, points, 5,
-                             state->second_line_color, 0);
     }
 }
 
@@ -1444,142 +1403,6 @@ void timed_effect_timestamp_reset(unsigned int slot)
     }
 }
 
-// FUNCTION: LEGORR 0x0046bc30
-void timed_effect_slot_render_record(const TimedEffectRecord* record,
-                                     uint32_t render_x, uint32_t render_y)
-{
-    TooltipOverlayState* config = &s_timed_effect_overlay_state;
-    RectangularGridOverlayState overlay;
-    uint32_t colors[4][3];
-    const uint32_t* words;
-    uint32_t flags, padding, bands, count, i;
-    float inset, top, left, width, height, y, row_x, row_y, row_height;
-    void* resource = NULL;
-    if (record == NULL) return;
-    words = (const uint32_t*)record;
-    flags = words[0x278 / 4];
-    tooltip_overlay_state_current(config);
-    bands = config->values[0];
-    padding = config->values[1];
-    inset = (float)((padding + bands) * 2u);
-    if ((flags & 8u) != 0u) {
-        uint32_t handle = words[0x270 / 4];
-        if (s_timed_effect_runtime_hooks.resource_handle_resolve != NULL)
-            resource = s_timed_effect_runtime_hooks.resource_handle_resolve(
-                s_timed_effect_runtime_hooks.context, handle);
-        else if (sizeof(void*) == 4)
-            resource = (void*)(uintptr_t)handle;
-        top = 0.0f;
-        left = 0.0f;
-        if (resource != NULL &&
-            s_timed_effect_runtime_hooks.resource_extent_get != NULL)
-            s_timed_effect_runtime_hooks.resource_extent_get(
-                s_timed_effect_runtime_hooks.context, resource, &top, &left);
-        else if (resource != NULL && sizeof(void*) == 4) {
-            top = (float)*(uint32_t*)((unsigned char*)resource + 4);
-            left = (float)*(uint32_t*)((unsigned char*)resource + 8);
-        }
-    }
-    else {
-        uint32_t first = words[0x204 / 4];
-        uint32_t second = words[0x26c / 4];
-        top = (float)(first > second ? first : second);
-        left = (float)(words[0x208 / 4] * config->font_metric +
-                       words[0x264 / 4]);
-    }
-    top += inset;
-    left += inset;
-    if ((flags & 0x10u) == 0u) {
-        if ((int)config->values[2] < (int)top + (int)render_x)
-            width = (float)((int)config->values[2] - (int)top);
-        else
-            width = (float)render_x;
-    }
-    else if ((float)render_x + 32.0f <= (float)config->values[2])
-        width = (float)render_x + 32.0f - (float)(uint32_t)top;
-    else
-        width = (float)((int)config->values[2] - (int)top);
-    y = (float)(config->values[4] + render_y);
-    height = left;
-    if ((float)config->values[3] < y + height)
-        y = (float)(render_y - (uint32_t)height) - 1.0f;
-    memset(&overlay, 0, sizeof(overlay));
-    overlay.x = width;
-    overlay.y = y;
-    overlay.width = top;
-    overlay.height = height;
-    overlay.bands = bands;
-    for (i = 0; i < 3u; ++i) {
-        colors[0][i] = (uint32_t)(config->color_base[i] * 255.0f);
-        colors[1][i] = (uint32_t)(config->color_high[i] * 255.0f);
-        colors[2][i] = (uint32_t)(config->color_low[i] * 255.0f);
-        colors[3][i] = 0u;
-    }
-    memcpy(overlay.fill_color, colors[0], sizeof(overlay.fill_color));
-    memcpy(overlay.first_line_color, colors[1],
-           sizeof(overlay.first_line_color));
-    memcpy(overlay.second_line_color, colors[2],
-           sizeof(overlay.second_line_color));
-    overlay.overlay_mode = (flags & 8u) != 0u;
-    rectangular_grid_overlay_geometry_draw(&overlay,
-        &s_timed_effect_slot_render_hooks.overlay_hooks);
-    if (s_timed_effect_slot_render_hooks.overlay_background != NULL)
-        s_timed_effect_slot_render_hooks.overlay_background(
-            s_timed_effect_slot_render_hooks.context, width, y, top, height,
-            colors, overlay.overlay_mode ? 2 : 0);
-    if ((flags & 8u) != 0u) {
-        if (resource != NULL &&
-            s_timed_effect_slot_render_hooks.render_item != NULL)
-            s_timed_effect_slot_render_hooks.render_item(
-                s_timed_effect_slot_render_hooks.context, resource,
-                width + (float)(padding + bands),
-                y + (float)(padding + bands), top - inset, left - inset);
-        return;
-    }
-    if (s_timed_effect_slot_render_hooks.render_text != NULL)
-        s_timed_effect_slot_render_hooks.render_text(
-            s_timed_effect_slot_render_hooks.context, config->font,
-            (const char*)record + 4, width + (float)(padding + bands),
-            y + (float)(padding + bands));
-    count = words[0x25c / 4];
-    if (count > 20u) count = 20u;
-    row_x = width + (float)(padding + bands);
-    row_y = y + (float)(padding + bands) +
-        (float)words[0x208 / 4] * (float)config->font_metric;
-    row_height = 0.0f;
-    for (i = 0; i < count; ++i) {
-        uint32_t handle = words[0x20c / 4 + i];
-        float item_width = 0.0f;
-        float item_height = 0.0f;
-        resource = NULL;
-        if (s_timed_effect_runtime_hooks.resource_handle_resolve != NULL)
-            resource = s_timed_effect_runtime_hooks.resource_handle_resolve(
-                s_timed_effect_runtime_hooks.context, handle);
-        else if (sizeof(void*) == 4)
-            resource = (void*)(uintptr_t)handle;
-        if (resource == NULL) {
-            row_y += row_height;
-            row_height = 0.0f;
-            row_x = width + (float)(padding + bands);
-            continue;
-        }
-        if (s_timed_effect_runtime_hooks.resource_extent_get != NULL)
-            s_timed_effect_runtime_hooks.resource_extent_get(
-                s_timed_effect_runtime_hooks.context, resource,
-                &item_width, &item_height);
-        else if (sizeof(void*) == 4) {
-            item_width = (float)*(uint32_t*)((unsigned char*)resource + 4);
-            item_height = (float)*(uint32_t*)((unsigned char*)resource + 8);
-        }
-        if (s_timed_effect_slot_render_hooks.render_item != NULL)
-            s_timed_effect_slot_render_hooks.render_item(
-                s_timed_effect_slot_render_hooks.context, resource, row_x,
-                row_y, item_width, item_height);
-        row_x += item_width;
-        if (row_height < item_height) row_height = item_height;
-    }
-}
-
 void timed_effect_hover_reset(void)
 {
     unsigned int slot;
@@ -1589,74 +1412,6 @@ void timed_effect_hover_reset(void)
             record->timestamp = 0.0f;
             record->flags &= ~4u;
         }
-    }
-}
-
-// FUNCTION: LEGORR 0x0046b7c0
-void timed_effect_runtime_update(uint32_t render_x, uint32_t render_y,
-                                 float delta)
-{
-    float now;
-    uint32_t tick_bits;
-    uint32_t cue_gate;
-    uint32_t global_flags;
-    int rendered = 0;
-    int advanced = 0;
-    unsigned int slot;
-    tick_bits = timed_effect_tick_word_peek();
-    memcpy(&now, &tick_bits, sizeof(now));
-    if (s_timed_effect_runtime_hooks.time_get != NULL)
-        now = s_timed_effect_runtime_hooks.time_get(
-            s_timed_effect_runtime_hooks.context);
-    cue_gate = s_timed_effect_runtime_hooks.cue_gate_get != NULL
-        ? s_timed_effect_runtime_hooks.cue_gate_get(
-              s_timed_effect_runtime_hooks.context)
-        : s_timed_effect_cue_gate;
-    global_flags = s_timed_effect_runtime_hooks.global_flags_get != NULL
-        ? s_timed_effect_runtime_hooks.global_flags_get(
-              s_timed_effect_runtime_hooks.context)
-        /* The reference tests DAT_00556ed0, the debug/cheat word. */
-        : engine_debug_word_peek();
-    for (slot = 1u; slot < 39u; ++slot) {
-        TimedEffectRecord* record = timed_effect_record_get(slot);
-        if (record == NULL) continue;
-        if ((record->flags & 3u) == 0u) continue;
-        if ((record->flags & 4u) == 0u || advanced != 0) {
-            record->timestamp = 0.0f;
-        }
-        else if (record->timestamp < now || rendered != 0) {
-            cue_gate = 1u;
-            s_timed_effect_cue_gate = cue_gate;
-            if (s_timed_effect_runtime_hooks.cue_gate_set != NULL)
-                s_timed_effect_runtime_hooks.cue_gate_set(
-                    s_timed_effect_runtime_hooks.context, cue_gate);
-            advanced = 1;
-            record->timestamp += delta;
-        }
-        else {
-            if (record->cue != 0u && cue_gate != 0u &&
-                (global_flags & 0x100000u) == 0u &&
-                s_timed_effect_runtime_hooks.attached_effect_update != NULL) {
-                cue_gate = s_timed_effect_runtime_hooks.attached_effect_update(
-                    s_timed_effect_runtime_hooks.context, record->cue, 0) == 0
-                    ? 1u : 0u;
-                s_timed_effect_cue_gate = cue_gate;
-                if (s_timed_effect_runtime_hooks.cue_gate_set != NULL)
-                    s_timed_effect_runtime_hooks.cue_gate_set(
-                        s_timed_effect_runtime_hooks.context, cue_gate);
-            }
-            else if (record->cue != 0u && cue_gate != 0u &&
-                     (global_flags & 0x100000u) == 0u) {
-                cue_gate = sound_submit_with_global_cooldown(
-                    (int)record->cue, NULL) == 0 ? 1u : 0u;
-                s_timed_effect_cue_gate = cue_gate;
-            }
-            timed_effect_slot_render_record(record, render_x, render_y);
-            rendered = 1;
-            advanced = 1;
-            record->timestamp += delta;
-        }
-        record->flags &= ~4u;
     }
 }
 

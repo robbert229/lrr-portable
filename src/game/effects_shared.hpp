@@ -43,4 +43,7 @@ TransientEffectInstanceLinks* transient_effect_links_find( const void* instance)
 TransientEffectInstanceLinks* transient_effect_links_add(void* instance);
 void transient_effect_link_pointer_set(void* instance, size_t offset, void* value);
 
+extern TimedEffectRuntimeHooks s_timed_effect_runtime_hooks;
+extern TimedEffectSlotRenderHooks s_timed_effect_slot_render_hooks;
+
 #endif /* LRR_GAME_EFFECTS_SHARED_HPP */

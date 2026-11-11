@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'tooltip.cpp',
   'text.cpp',
   'record_chains.cpp',
   'grid_cell_records.cpp',
