@@ -1,4 +1,4 @@
-# Finding 514 — gods98 handle table (G98-024) in original shape
+# Finding 515 — gods98 handle table (G98-024) in original shape
 
 Issue #413. The ADR 0005 conversion starts with `tools/convert_unit.py G98-024`.
 The unit is `004893f0`–`004894c0`; its four functions now live in

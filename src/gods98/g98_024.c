@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* Original translation unit G98-024: 2000-slot handle table (finding 514). */
+/* Original translation unit G98-024: 2000-slot handle table (finding 515). */
 #include <stdlib.h>
 #include "g98_024.h"
 #include "crt/vc5names.h"

@@ -22,7 +22,7 @@
       "pairs": 852005
     }
   },
-  "input_sha256": "89eb73bee50f7b99f1c96914c0584cb295aff538ee1ce6cc60754f2f1a9d1363",
+  "input_sha256": "d4881771529486f8a0b387479b69e5223f4d2bee6272fbde543ad8a4019bad9f",
   "minimum_identical_run_bytes": 16,
   "pe_header_differences": {
     "entry_point_rva": {
@@ -86,9 +86,9 @@
     },
     "resources": {
       "chance_percent": 16.31,
-      "excess_percent_points": 0.14,
-      "identical_bytes": 483,
-      "identical_percent": 16.45,
+      "excess_percent_points": 0.0,
+      "identical_bytes": 479,
+      "identical_percent": 16.31,
       "original_bytes": 2936,
       "rebuilt_bytes": 1348,
       "run_chance_percent": 0.0,
