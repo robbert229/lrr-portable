@@ -2008,7 +2008,6 @@ __declspec(naked) int request_record_ready_flag4_target(int index)
     }
 }
 #else
-// FUNCTION: LEGORR 0x0045ab30
 int request_record_ready_flag4_target(int index)
 {
     const RequestRecord* record = (const RequestRecord*)((const uint8_t*)
@@ -2054,7 +2053,6 @@ __declspec(naked) int request_record_ready_flag2_target(int index)
     }
 }
 #else
-// FUNCTION: LEGORR 0x0045ab60
 int request_record_ready_flag2_target(int index)
 {
     RequestRecord* record = (RequestRecord*)((uint8_t*)s_request_records +
@@ -2094,7 +2092,6 @@ __declspec(naked) int request_record_flag8_is_set_target(int index)
     }
 }
 #else
-// FUNCTION: LEGORR 0x0045ab90
 int request_record_flag8_is_set_target(int index)
 {
     RequestRecord* record = (RequestRecord*)((uint8_t*)s_request_records +

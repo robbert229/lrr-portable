@@ -358,7 +358,9 @@ void legacy_result_check_hook_set(LegacyResultCheckHook hook, void* context)
 { s_result_check_hook = hook; s_result_check_context = context; }
 // FUNCTION: LEGORR 0x00480780
 int zero_result_is_success(void* value)
-{ return s_result_check_hook != 0 && s_result_check_hook(s_result_check_context, value) == 0; }
+{
+    return s_result_check_hook != 0 && s_result_check_hook(s_result_check_context, value) == 0;
+}
 
 void global_scatter_spawn_find_hook_set(GlobalScatterSpawnFindHook hook,
                                         void* context)

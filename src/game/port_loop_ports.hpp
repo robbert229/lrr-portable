@@ -79,7 +79,7 @@ int attached_model_orientation_update(AttachedModelOrientationState* state,
 
 typedef float (*PortLoopRandomRangeHook)(void* context, float minimum,
                                          float maximum);
-typedef struct MotionWaypointTimerState {
+struct MotionWaypointTimerState {
     uint32_t flags;
     float delay;
     float delay_min;

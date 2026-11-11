@@ -21,7 +21,7 @@
 static char s_application_prefix[1024];
 static DWORD s_startup_no_sound;
 static DWORD s_startup_insist_on_cd;
-// GLOBAL: LEGORR 0x00505f88
+/* Port-side duplicate of the application mode, not the annotated global. */
 static DWORD s_programmer_mode;
 // GLOBAL: LEGORR 0x00505f8c
 static char s_start_level_name[256];

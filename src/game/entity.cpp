@@ -13737,7 +13737,6 @@ uint32_t ledger_stub_00449ff0_EntityTypeOperationRelease(EntitySlot* entity)
  * work-object record before asking the scene layer for its position. The
  * sidecar record pointers correspond to the retail entity fields +0x0c,
  * +0x10, and +0x14 used by types 1, 2, and 3. */
-// FUNCTION: LEGORR 0x0044a2a0
 } // namespace unported_ledger_stubs
 
 /* EntityDirectionalActivityStart (FUN_00447950) chooses an activity from the
@@ -13899,6 +13898,7 @@ void entity_follow_target_pose_get(EntitySlot* entity, int index,
     }
 }
 
+// FUNCTION: LEGORR 0x0044a2a0
 int entity_work_object_position_get(const EntitySlot* entity,
                                     float out_xy[2])
 {

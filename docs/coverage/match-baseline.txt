@@ -1,4 +1,4 @@
-# input_sha256: b17b0966c72809c4c09ff53c1bcf57ebdc008db13787fd944230ff2b98a54b1d
+# input_sha256: f97e2e9c5e7ae64edceffd2b17c0cc6d477226b69d6491e52e9ff4553baa5bef
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2155 mapped functions
+[game-only] 2158 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -971,7 +971,7 @@
 0x00443710 23.53 ledger_stub_00443710_AdjacentPositionCandidateFind
 0x004437f0 87.50 entity_dispatch_event31_for_pending_flag
 0x00443840 20.31 entity_route_cell_candidate_accept
-0x004438b0 26.49 entity_path_step_advance_and_arrival_check
+0x004438b0 26.66 entity_path_step_advance_and_arrival_check
 0x004440a0 31.82 linked_entity_flag_and_command_update
 0x004440f0 11.31 ledger_stub_004440f0_ActivityTimeoutAccumulateAndRaise
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
@@ -1030,6 +1030,7 @@
 0x00449ff0 29.01 entity_type_operation_release
 0x0044a070 22.49 entity_follow_target_pose_get
 0x0044a200 91.49 entity_type_component_get
+0x0044a2a0 34.41 entity_work_object_position_get
 0x0044a310 0.00 ledger_stub_0044a310_ObjectMovementInputAccumulate
 0x0044a390 53.85 type11_cell_coordinate_append
 0x0044a3d0 44.97 type11_cell_coordinate_nearest_resolve
@@ -1204,7 +1205,8 @@
 0x00458670 27.40 objective_announce_current
 0x004588e0 31.43 input_device_release
 0x004589a0 17.39 global_option_low_bits_enabled
-0x00458be0 14.38 objective_tick_target
+0x00458be0 15.03 objective_tick_target
+0x00459050 36.13 objective_check
 0x00459190 35.05 osf_add
 0x00459240 21.05 entity_state_override_pop
 0x004592a0 100.00 osf_read_state_reset
@@ -1934,6 +1936,7 @@
 0x00480390 40.76 resource_directory_tree_scan_target
 0x00480570 36.36 resource_directory_token_list_contains
 0x004805b0 29.89 lego::shared_texture_root_register
+0x00480780 11.43 lego::zero_result_is_success
 0x004807a0 38.10 render_resource_instance_record_acquire
 0x004807d0 100.00 render_resource_instance_record_release
 0x004807f0 30.00 render_resource_instance_pool_grow
@@ -2163,7 +2166,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2374 mapped functions
+[full] 2377 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -3128,7 +3131,7 @@
 0x00443710 23.53 ledger_stub_00443710_AdjacentPositionCandidateFind
 0x004437f0 87.50 entity_dispatch_event31_for_pending_flag
 0x00443840 20.31 entity_route_cell_candidate_accept
-0x004438b0 26.49 entity_path_step_advance_and_arrival_check
+0x004438b0 26.66 entity_path_step_advance_and_arrival_check
 0x004440a0 31.82 linked_entity_flag_and_command_update
 0x004440f0 11.31 ledger_stub_004440f0_ActivityTimeoutAccumulateAndRaise
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
@@ -3187,6 +3190,7 @@
 0x00449ff0 29.01 entity_type_operation_release
 0x0044a070 22.49 entity_follow_target_pose_get
 0x0044a200 91.49 entity_type_component_get
+0x0044a2a0 34.41 entity_work_object_position_get
 0x0044a310 0.00 ledger_stub_0044a310_ObjectMovementInputAccumulate
 0x0044a390 53.85 type11_cell_coordinate_append
 0x0044a3d0 44.97 type11_cell_coordinate_nearest_resolve
@@ -3361,7 +3365,8 @@
 0x00458670 27.40 objective_announce_current
 0x004588e0 31.43 input_device_release
 0x004589a0 17.39 global_option_low_bits_enabled
-0x00458be0 14.38 objective_tick_target
+0x00458be0 15.03 objective_tick_target
+0x00459050 36.13 objective_check
 0x00459190 35.05 osf_add
 0x00459240 21.05 entity_state_override_pop
 0x004592a0 100.00 osf_read_state_reset
@@ -4091,6 +4096,7 @@
 0x00480390 40.76 resource_directory_tree_scan_target
 0x00480570 36.36 resource_directory_token_list_contains
 0x004805b0 29.89 lego::shared_texture_root_register
+0x00480780 11.43 lego::zero_result_is_success
 0x004807a0 38.10 render_resource_instance_record_acquire
 0x004807d0 100.00 render_resource_instance_record_release
 0x004807f0 30.00 render_resource_instance_pool_grow
