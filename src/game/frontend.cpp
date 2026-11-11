@@ -232,8 +232,6 @@ static int s_main_menu_text_item_pending;
  * ABI while the portable frame loop can still use its instance-taking
  * adapter below. */
 static FrontEnd* s_reward_save_frontend;
-// GLOBAL: LEGORR 0x004dcd40
-static TextureSurface* s_interface_message_tab_info_text;
 // GLOBAL: LEGORR 0x004dcec4
 static int s_back_button_width;
 static void fe_picker_order(FrontEnd* fe, int tree_index);
@@ -5323,15 +5321,6 @@ void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
 
 }
 
-/* InterfaceMessageTabInfoTextLoad (FUN_00419430): load the scrolling
- * message-tab panel surface and apply the shared resource-record setup. */
-// FUNCTION: LEGORR 0x00419430
-void interface_message_tab_info_text_load(const char* path)
-{
-    s_interface_message_tab_info_text = image_surface_load(path, 0u, 0u);
-    resource_record_add_ref(s_interface_message_tab_info_text);
-}
-
 TextureSurface* interface_message_tab_info_text(void)
 {
     return s_interface_message_tab_info_text;
@@ -9469,18 +9458,6 @@ uint32_t timed_effect_time_peek(int index)
     return bits;
 }
 
-/* ScreenRightEdgeCacheRefresh (FUN_0041a290) — see frontend.hpp. */
-// GLOBAL: LEGORR 0x004dcd44
-static uint32_t s_screen_right_edge;
-
-// FUNCTION: LEGORR 0x41a290
-void screen_right_edge_cache_refresh(void)
-{
-    uint32_t x = 0, y = 0;
-    indexed_text_metrics_pair_get(0, &x, &y);
-    s_screen_right_edge = x - y;
-}
-
 uint32_t screen_right_edge_cache_peek(void) { return s_screen_right_edge; }
 
 /* BitmapFontGlyphMeasureWidth (FUN_0047a520) — see frontend.hpp. */
@@ -9522,7 +9499,7 @@ static float    s_panel_height;
 // GLOBAL: LEGORR 0x0050081c
 static uint32_t s_panel_extra;
 // GLOBAL: LEGORR 0x005007d8
-static void*    s_panel_ui_record;   /* DAT_005007d8 role */
+void*    s_panel_ui_record;   /* DAT_005007d8 role */
 static void*    s_panel_text_slot;   /* DAT_005007dc role: holder-slot address */
 
 // GLOBAL: LEGORR 0x004ffec4
@@ -9628,23 +9605,6 @@ void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
     s_panel_width = (float)w;
     s_panel_extra = extra;
     s_panel_height = (float)h;
-}
-
-// FUNCTION: LEGORR 0x0041a250
-void scroll_offset_from_cursor_update(void)
-{
-    uint32_t lo = 0, hi = 0;
-    /* the corpus pushes the DAT_005007d8 record value itself, whose +0
-     * field the forward reads; the unowned-global deviation keeps the
-     * slot NULL-defaulted and the callee's guards answer zeros */
-    ui_record_callback_forward((const void* const*)s_panel_ui_record,
-                               &lo, &hi);
-    int diff = (int)(lo - hi);
-    if (diff < 0) {
-        diff = 0;
-    }
-    indexed_text_metrics_pair_set(0, (uint32_t)diff, 0u);
-    screen_right_edge_cache_refresh();
 }
 
 void     panel_enable_word_set(uint32_t word) { s_panel_enable_word = word; }
@@ -10769,54 +10729,12 @@ int ledger_stub_0041ee80_CellGridPointHitTest(
 
 namespace unported_ledger_stubs {
 
-static UiEntryHitTestState* s_ui_entry_hit_test_state;
+UiEntryHitTestState* s_ui_entry_hit_test_state;
 
 void ui_entry_hit_test_state_bind(
     unported_ledger_stubs::UiEntryHitTestState* state)
 {
     s_ui_entry_hit_test_state = state;
-}
-
-// FUNCTION: LEGORR 0x0041a1a0
-int ui_entry_hit_test_and_dispatch(
-    int x, int y, int click)
-{
-    UiEntryHitTestState* state = s_ui_entry_hit_test_state;
-    uint32_t index, entry_count;
-    if (state == NULL || state->entries == NULL || state->count == 0u ||
-        state->object_bounds_get == NULL) return 0;
-    entry_count = state->count;
-    if (entry_count > UI_HIT_ENTRY_CAPACITY)
-        entry_count = UI_HIT_ENTRY_CAPACITY;
-
-    for (index = 0u; index < entry_count; ++index) {
-        UiEntryHitRecord* entry = &state->entries[index];
-        int width = 0;
-        int height = 0;
-        int top = crt_float_to_long(entry->vertical_offset);
-        if (!state->object_bounds_get(state->context, entry->fields[2],
-                                      &width, &height)) continue;
-        if (x < 0 || x > width || y < top || y > top + height) continue;
-        if (click != 0) {
-            if ((state->flags & 1u) != 0u && index == 0u) {
-                panel_state_flags_toggle(7);
-                state->flags &= ~1u;
-                return 1;
-            }
-            if (index != 0u) {
-                UiEntryHitRecord selected = *entry;
-                uint32_t move;
-                for (move = index; move != 0u; --move)
-                    state->entries[move] = state->entries[move - 1u];
-                state->entries[0] = selected;
-            }
-            /* RecordListEntryMoveToFront sets both state bits even when the
-             * clicked row is already at index zero. */
-            state->flags |= 3u;
-        }
-        return 1;
-    }
-    return 0;
 }
 
 } // namespace unported_ledger_stubs

@@ -22,4 +22,11 @@ extern void* s_ency_files[4];
 extern void* s_ency_crystal;
 extern void* s_ency_ore;
 
+extern TextureSurface* s_interface_message_tab_info_text;
+extern uint32_t s_screen_right_edge;
+extern void* s_panel_ui_record;
+namespace unported_ledger_stubs {
+extern UiEntryHitTestState* s_ui_entry_hit_test_state;
+} // namespace unported_ledger_stubs
+
 #endif /* LRR_GAME_FRONTEND_SHARED_HPP */
