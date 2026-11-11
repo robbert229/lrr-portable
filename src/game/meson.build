@@ -12,37 +12,51 @@ if get_option('platform') == 'winapi'
   building_scene_sources += ['building_scene.cpp']
 endif
 
-game_lib = static_library('game',
+game_sources = [
   'advisor.cpp',
-  building_scene_sources,
-  'game.cpp',
-  'level.cpp',
-  'objective.cpp',
-  'savegame.cpp',
-  'mission.cpp',
-  'entity.cpp',
   'cmd.cpp',
-  'select.cpp',
-  'ai.cpp',
-  'screen_pick.cpp',
-  'render.cpp',
-  'scene_render.cpp',
-  'frontend.cpp',
-  'options.cpp',
-  'util.cpp',
-  'effects.cpp',
-  'terrain_grid.cpp',
   'dependency_grid.cpp',
-  'weapon.cpp',
+  'options.cpp',
+  'savegame.cpp',
+  'util.cpp',
   'upgrades.cpp',
-  'video_graph.cpp',
+  'frontend.cpp',
+  'select.cpp',
+  'entity_config.cpp',
+  'level.cpp',
+  'scene_render.cpp',
+  'ai.cpp',
+  'terrain_grid.cpp',
+  'entity.cpp',
   'spawn.cpp',
-  'opgroup.cpp',
-  'ui_list.cpp',
+  'screen_pick.cpp',
+  'objective.cpp',
   'tutorial_hud.cpp',
+  'ui_list.cpp',
+  'mission.cpp',
+  'effects.cpp',
+  'weapon.cpp',
+  'video_graph.cpp',
+  'startup_config.cpp',
+  'entity_motion_owner.cpp',
+  'game.cpp',
+  'opgroup.cpp',
+  'render.cpp',
   'tutorial_world_arrows.cpp',
   'seh_runtime.cpp',
-  'startup_config.cpp',
+]
+game_c_sources = [
+  'bezier.c',
+  'priorities.c',
+]
+# Native/reference builds compile original-shape C units as C++ (ADR 0005).
+game_c_as_cpp = []
+foreach source : game_c_sources
+  game_c_as_cpp += configure_file(input : source, output : '@PLAINNAME@.cpp', copy : true)
+endforeach
+
+game_lib = static_library('game',
+  game_sources, game_c_as_cpp, building_scene_sources,
   include_directories : gods98_incs + [miniwin_inc],
   dependencies : [platsub_deps],
   install : false)
@@ -68,7 +82,8 @@ if get_option('platform') == 'native'
                  ['render', 'test_render.cpp'],
 ['bind', 'test_bind.cpp'],
                  ['frontend', 'test_frontend.cpp'],
-                 ['options', 'test_options.cpp']]
+                 ['options', 'test_options.cpp'],
+                 ['bezier', 'test_bezier.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs + [miniwin_inc],
@@ -77,7 +92,7 @@ if get_option('platform') == 'native'
       install : false)
     test_wads = get_option('test_wads_dir')
     test(test_name, t,
-      args : test_wads == '' ? [] : ['--real', test_wads],
+      args : test_wads != '' and test_name == 'level' ? ['--real', test_wads] : [],
       suite : test_name,
       workdir : meson.current_build_dir())
   endforeach

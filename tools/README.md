@@ -101,6 +101,9 @@ refuses:
 - backend-only sources;
 - stems that clash with an existing file (pass `--stem`).
 
+The relocator adds each new C++ source to the literal `game_sources` or
+`gods98_sources` Meson array, which the native parity check reads.
+
 `--survey` tries every unrelocated unit and tabulates the blocking constructs
 (finding 523).
 
@@ -628,3 +631,13 @@ it with `git apply`, then run `make reccmp-check`. A local improvement can
 cause other functions to drop through translation-unit symbol numbering
 (finding 506); review every drop under ADR 0005. For a source change that is
 accepted, run `make match-progress` and include both refreshed coverage files.
+
+## Native CMake/Meson source parity
+
+`python3 tools/meson_source_parity.py` checks the native game, gods98,
+platform glue, executable, miniwin, and loop-created test source lists without configuring either
+build or requiring a compiler. CMake groups the platform-filtered entries in
+`src/link_order.cmake` by target; the check compares those entries and the
+executable's explicitly compiled hook sources with Meson. It also compares the
+miniwin lists. Keep Meson's literal source arrays and their target wiring in
+sync with this check. `make tools-test` runs the check and its fixtures.
