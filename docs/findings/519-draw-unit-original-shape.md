@@ -65,7 +65,10 @@ One function ends between 75% and 99%:
   original has `add esi, 8; add edi, 8` (from-list, then to-list), and the
   rebuild has them the other way round. Reccmp calls it an effective match.
   Pointer-walking loops scored 61–63%, and swapping the local declarations
-  changed nothing.
+  changed nothing. *Update (#382):* now at 100%. The loop takes per-iteration
+  element pointers, `from = &fromList[loop]; to = &toList[loop];`. The
+  attempts are in
+  [`msvc-permuter-demonstration.md`](../coverage/msvc-permuter-demonstration.md#polyline-acceptance-target).
 
 One function is below that band:
 

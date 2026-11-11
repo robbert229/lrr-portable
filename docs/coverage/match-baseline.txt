@@ -1,4 +1,4 @@
-# input_sha256: 988a254df043c4b9124bf70ded179bba44c182eea01836df720da5f3a5613b16
+# input_sha256: 76897bec6e053ff695a331d1b67c2612728740efaea77366c59330cb509ddcb3
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2025,7 +2025,7 @@
 0x00485e80 100.00 surface_render_setup
 0x00485ea0 100.00 viewport_subrectangle_set
 0x00485fb0 100.00 viewport_rectangle_get
-0x00485ff0 98.36 surface_draw_polyline
+0x00485ff0 100.00 surface_draw_polyline
 0x00486090 100.00 surface_fill_pixel_spans
 0x00486210 100.00 surface_fill_pixel_span_records
 0x00486390 100.00 surface_draw_circle_pixels
@@ -4182,7 +4182,7 @@
 0x00485e80 100.00 surface_render_setup
 0x00485ea0 100.00 viewport_subrectangle_set
 0x00485fb0 100.00 viewport_rectangle_get
-0x00485ff0 98.36 surface_draw_polyline
+0x00485ff0 100.00 surface_draw_polyline
 0x00486090 100.00 surface_fill_pixel_spans
 0x00486210 100.00 surface_fill_pixel_span_records
 0x00486390 100.00 surface_draw_circle_pixels
