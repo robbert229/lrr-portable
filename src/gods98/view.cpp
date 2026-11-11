@@ -22,6 +22,7 @@
 #include "../game/entity.hpp"
 #include "../game/level.hpp"
 #include "view_shared.hpp"
+#include "view_for_tile_variants.hpp"
 
 #if defined(_MSC_VER)
 #define VIEW_COM_CALL __stdcall
@@ -149,8 +150,8 @@ static SharedObjectCloneOps s_shared_object_clone_ops;
 QuadMeshRenderHooks s_quad_mesh_render_hooks;
 static SinePhaseBlendState s_sine_phase_blend_state;
 static SinePhaseBlendHooks s_sine_phase_blend_hooks;
-static SceneFrameApplyHooks s_scene_frame_apply_hooks;
-static SceneRotationApplyHooks s_scene_rotation_apply_hooks;
+SceneFrameApplyHooks s_scene_frame_apply_hooks;
+SceneRotationApplyHooks s_scene_rotation_apply_hooks;
 SceneObjectRecordRetainHook s_scene_object_record_retain_hook;
 void* s_scene_object_record_retain_context;
 static RenderQualityApplyHook s_render_quality_apply_hook;
@@ -2874,117 +2875,6 @@ void scene_frame_apply_hooks_set(const SceneFrameApplyHooks* hooks)
     else s_scene_frame_apply_hooks = *hooks;
 }
 
-static float scene_frame_vector_length(const float vector[3])
-{
-    return (float)sqrt((double)(vector[0] * vector[0] +
-                                 vector[1] * vector[1] +
-                                 vector[2] * vector[2]));
-}
-
-// FUNCTION: LEGORR 0x0040bb90
-void scene_frame_from_triplet_apply(void* object, float projection_scale,
-                                   const float first[3],
-                                   const float second[3],
-                                   const float third[3])
-{
-    float forward[3];
-    float normal[3];
-    float transformed_second[3];
-    float transformed_third[3];
-    float projection[16];
-    float forward_length, normal_length;
-    float projection_height;
-    int i;
-    if (object == NULL || first == NULL || second == NULL || third == NULL)
-        return;
-    for (i = 0; i < 3; ++i) forward[i] = second[i] - first[i];
-    normal[0] = (third[2] - second[2]) * forward[1] -
-                (third[1] - second[1]) * forward[2];
-    normal[1] = (third[0] - second[0]) * forward[2] -
-                (third[2] - second[2]) * forward[0];
-    normal[2] = (third[1] - second[1]) * forward[0] -
-                (third[0] - second[0]) * forward[1];
-    forward_length = scene_frame_vector_length(forward);
-    normal_length = scene_frame_vector_length(normal);
-    projection_height = forward[1];
-    for (i = 0; i < 3; ++i) {
-        forward[i] /= forward_length;
-        normal[i] = -normal[i] / normal_length;
-    }
-    if (s_scene_frame_apply_hooks.orientation_set != NULL)
-        s_scene_frame_apply_hooks.orientation_set(
-            s_scene_frame_apply_hooks.context, object, 0, normal, forward);
-    if (s_scene_frame_apply_hooks.position_set != NULL)
-        s_scene_frame_apply_hooks.position_set(
-            s_scene_frame_apply_hooks.context, object, 0, first);
-    memcpy(transformed_second, second, sizeof(transformed_second));
-    memcpy(transformed_third, third, sizeof(transformed_third));
-    if (s_scene_frame_apply_hooks.point_transform != NULL) {
-        s_scene_frame_apply_hooks.point_transform(
-            s_scene_frame_apply_hooks.context, object, transformed_second,
-            second);
-        s_scene_frame_apply_hooks.point_transform(
-            s_scene_frame_apply_hooks.context, object, transformed_third,
-            third);
-    }
-    perspective_projection_matrix_set(
-        projection, projection_scale, projection_scale, projection_height,
-        transformed_third[0], transformed_third[2]);
-    if (s_scene_frame_apply_hooks.projection_set != NULL)
-        s_scene_frame_apply_hooks.projection_set(
-            s_scene_frame_apply_hooks.context, object, 1, projection);
-}
-
-/* CellVisualChannelRelay (FUN_0040b880): resolve the two root resources into
- * the current channel slot, then apply the selected and opposite corner
- * frames. The record follows the recovered dword layout on x86 while its
- * pointer-bearing banks widen naturally in the portable build. */
-// FUNCTION: LEGORR 0x0040b880
-void scene_cell_visual_channels_apply(SceneCellVisualRelayRecord* record,
-                                      const float corner_points[12],
-                                      uint32_t lookup_selector,
-                                      uint32_t corner_index, float scale,
-                                      float uniform_scale)
-{
-    static const uint8_t corner_triplets[4][3] = {
-        { 3, 0, 2 }, { 0, 1, 3 }, { 1, 2, 0 }, { 2, 3, 1 }
-    };
-    void* scene_objects[2];
-    float child_value = 0.0f;
-    uint32_t child_value_bits;
-    uint32_t index;
-    uint32_t first_corner;
-    uint32_t opposite_corner;
-    if (record == NULL || corner_points == NULL) return;
-    index = record->channel_cursor;
-    if (index >= 100u) return;
-    scene_objects[0] = entity_visual_resource_load(record->resource_roots[0]);
-    scene_objects[1] = entity_visual_resource_load(record->resource_roots[1]);
-    record->channel_resources[0][index] = scene_objects[0];
-    record->channel_resources[1][index] = scene_objects[1];
-    if (record->lookup_table != NULL &&
-        record->lookup_table->entries != NULL) {
-        uint32_t lookup_index =
-            (lookup_selector & 0x0fu) * record->lookup_table->stride +
-            ((lookup_selector & 0xffu) >> 4);
-        child_value_bits = record->lookup_table->entries[lookup_index];
-        memcpy(&child_value, &child_value_bits, sizeof(child_value));
-    }
-    first_corner = corner_index & 3u;
-    opposite_corner = (first_corner + 2u) & 3u;
-    scene_rotation_flags_apply(scene_objects[0], record->projection_scale,
-        corner_points + corner_triplets[first_corner][0] * 3u,
-        corner_points + corner_triplets[first_corner][1] * 3u,
-        corner_points + corner_triplets[first_corner][2] * 3u,
-        scale, uniform_scale, child_value, 0u);
-    scene_rotation_flags_apply(scene_objects[1], record->projection_scale,
-        corner_points + corner_triplets[opposite_corner][0] * 3u,
-        corner_points + corner_triplets[opposite_corner][1] * 3u,
-        corner_points + corner_triplets[opposite_corner][2] * 3u,
-        scale, uniform_scale, child_value, 0u);
-    record->channel_cursor = index + 1u;
-}
-
 int viewport_target_position_clamp(ViewportTargetClampState* state,
                                    const int position[2])
 {
@@ -3013,64 +2903,6 @@ void scene_rotation_apply_hooks_set(const SceneRotationApplyHooks* hooks)
     if (hooks == NULL) memset(&s_scene_rotation_apply_hooks, 0,
                               sizeof(s_scene_rotation_apply_hooks));
     else s_scene_rotation_apply_hooks = *hooks;
-}
-
-/* SceneRotationFlagsApply (FUN_0040ba00): argument 2 is passed through to
- * SceneFrameFromTripletApply as its projection scale; the remaining scalar
- * and bit arguments retain their original stack order. */
-// FUNCTION: LEGORR 0x0040BA00
-void scene_rotation_flags_apply(void* object, float projection_scale,
-                                const float first[3],
-                                const float second[3], const float third[3],
-                                float scale, float uniform_scale,
-                                float child_value, uint8_t flags)
-{
-    unsigned int i;
-    SceneRotationApplyHooks* hooks = &s_scene_rotation_apply_hooks;
-    if (object == NULL || first == NULL || second == NULL || third == NULL)
-        return;
-    if (hooks->frame_transform_apply != NULL) {
-        hooks->frame_transform_apply(hooks->context, object, projection_scale,
-                                     first, second, third);
-    } else {
-        /* The renderer's projection-matrix operation is not exposed by the
-         * portable scene interface; preserve the available frame update. */
-        scene_frame_from_triplet_apply(object, projection_scale,
-                                       first, second, third);
-    }
-    if (hooks->apply != NULL)
-        hooks->apply(hooks->context, object, 0x473b40u, 0, 0, 0, 0, 0);
-    i = 0u;
-    while (hooks->child_count != NULL &&
-           i < hooks->child_count(hooks->context, object)) {
-        if (hooks->apply != NULL)
-            hooks->apply(hooks->context, object, 0x474da0u, i,
-                         child_value, 0, 0, 0);
-        ++i;
-    }
-    if (hooks->apply == NULL) return;
-    hooks->apply(hooks->context, object, 0x4755e0u, 1,
-                 -0.02f, -0.02f, 0, 0);
-    hooks->apply(hooks->context, object, 0x4755b0u, 1,
-                 1.015f, 1.015f, scale, 0);
-    hooks->apply(hooks->context, object, 0x4750b0u, 0,
-                 uniform_scale, uniform_scale, uniform_scale, 1.0f);
-    if (flags & 1u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                 1, 0, 0, 1.57079637f);
-    if (flags & 2u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                 1, 0, 0, -1.57079637f);
-    if (flags & 4u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                 0, 1, 0, 1.57079637f);
-    if (flags & 8u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                 0, 1, 0, -1.57079637f);
-    if (flags & 0x10u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                   0, 0, 1, 1.57079637f);
-    if (flags & 0x20u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                   0, 0, 1, -1.57079637f);
-    if (flags & 0x80u) hooks->apply(hooks->context, object, 0x4755e0u, 2,
-                                   0, -10, 0, 0);
-    if (flags & 0x40u) hooks->apply(hooks->context, object, 0x4755e0u, 2,
-                                   0, 10, 0, 0);
 }
 
 void scene_rotation_flags_apply(void* object, const float first[3],
@@ -3648,41 +3480,6 @@ void camera_project_point_to_screen(const ViewProjectionAdapter* adapter,
     output_xy[1] = projected[1] / projected[3];
 }
 
-// FUNCTION: LEGORR 0x0040b470
-float projected_quad_screen_area_calculate(
-    const ViewProjectionAdapter* adapter, const float* quad_xyz,
-    const float bounds_xy[2], int disable_visibility_clip)
-{
-    float clip[4][4];
-    float screen[4][3];
-    float first_area;
-    float second_area;
-    float visibility = 1.0f;
-    int i;
-    if (adapter == NULL || adapter->transform_point == NULL ||
-        quad_xyz == NULL || bounds_xy == NULL) return 0.0f;
-    for (i = 0; i < 4; ++i) {
-        adapter->transform_point(adapter->context, clip[i], quad_xyz + i * 3);
-        screen[i][0] = clip[i][0] / clip[i][3];
-        screen[i][1] = clip[i][1] / clip[i][3];
-        /* The target writes only projected x/y into these 3-word points;
-         * SurfaceTriangleAreaCalculate consumes them as z=0 screen points. */
-        screen[i][2] = 0.0f;
-        if (!disable_visibility_clip &&
-            (screen[i][0] < 0.0f || screen[i][1] < 0.0f ||
-             screen[i][0] > bounds_xy[0] || screen[i][1] > bounds_xy[1] ||
-             clip[i][2] < 0.0f || clip[i][2] > clip[i][3])) {
-            visibility -= 0.25f;
-        }
-    }
-    if (visibility <= 0.0f) return 0.0f;
-    first_area = surface_triangle_area_calculate(
-        screen[2], screen[1], screen[0], 0);
-    second_area = surface_triangle_area_calculate(
-        screen[0], screen[3], screen[2], 0);
-    return (second_area + first_area) * visibility;
-}
-
 #if !defined(LEGORRR_BACKEND_WINAPI)
 /* D3DRM.DLL's D3DRMVectorRandom and D3DRMVectorRotate for the native port,
  * which has no D3DRM import. Maths.c's wrappers (FUN_00479500,
@@ -3926,31 +3723,6 @@ int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
         return 0;
     }
     return rect_contains_converted(*bounds_at_14, off_x, off_y, x, y);
-}
-
-/* BuildPerspectiveProjectionMatrix (FUN_0040bd60): zero the matrix, raise
- * m[10]/m[15], then the three quotients — the corpus's m[1] multiplies
- * p5/p4 by p4/p1, not p5/p1. */
-// FUNCTION: LEGORR 0x0040bd60
-void perspective_projection_matrix_set(float* out, float p1, float p2,
-                                       float p3, float p4, float p5)
-{
-    out[3] = 0.0f;
-    out[2] = 0.0f;
-    out[7] = 0.0f;
-    out[6] = 0.0f;
-    out[4] = 0.0f;
-    out[11] = 0.0f;
-    out[9] = 0.0f;
-    out[8] = 0.0f;
-    out[14] = 0.0f;
-    out[13] = 0.0f;
-    out[12] = 0.0f;
-    out[15] = 1.0f;
-    out[10] = 1.0f;
-    out[0] = p4 / p1;
-    out[5] = p3 / p2;
-    out[1] = (p5 / p4) * (p4 / p1);
 }
 
 /* ---- camera-handle primitives (record-backed) --------------------------- */

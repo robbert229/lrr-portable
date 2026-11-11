@@ -139,17 +139,6 @@ void* rec_ptr(const void* base, size_t off)
 /* Defined with the mesh-window band below; used by the visibility setter. */
 void rec_dword_put(void* base, size_t off, uint32_t v);
 
-/* Contents of a native cell array: memcpy read (the corpus's cell
- * dwords can sit unaligned after a stride change). */
-static uint32_t cells_dword(const void* cells, size_t off)
-{
-    uint32_t v = 0;
-    if (cells != NULL) {
-        __builtin_memcpy(&v, (const char*)cells + off, sizeof(v));
-    }
-    return v;
-}
-
 /* Render-resource instance records have their free-list link at +0x30.
  * Include the native pointer width in the stride so x86 keeps the corpus's
  * 0x34-byte records. */
@@ -458,22 +447,6 @@ float camera_rotation_get(const void* camera)
     return *(const float*)((const char*)camera + 0x84);
 }
 #endif
-
-/* PackedGridCellValueGet (FUN_0040b850, findings 373/451): low nibble
- * * width + high nibble indexes the cell dwords; the corpus's own NULL
- * grid guard answers 0, reproduced. */
-// FUNCTION: LEGORR 0x0040b850
-uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell)
-{
-    void* cells = rec_ptr(grid, 0x08);
-    if (cells == NULL) {
-        return 0u;
-    }
-    const int32_t width = (int32_t)rec_dword(grid, 0x00);
-    const int32_t index = (int32_t)(packed_cell & 0xfu) * width
-        + (int32_t)((packed_cell & 0xffu) >> 4);
-    return cells_dword(cells, (size_t)index * 4u);
-}
 
 /* ModelChildRenderEligibilityCheck (FUN_00483a70): the two-bit render
  * gate (finding 431). NULL answers "not eligible" — the corpus would
