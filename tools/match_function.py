@@ -159,11 +159,6 @@ class CompileCommand:
     source: Path
     output: str
 
-    @property
-    def target(self) -> str:
-        m = re.match(r"CMakeFiles/([^/]+)\.dir/", self.output)
-        return m.group(1) if m else ""
-
 
 def cmake_args(env: Environment, cmake_dir: Path) -> list[str]:
     """The configure line of tools/reccmp.sh, plus compile_commands.json.
@@ -307,7 +302,6 @@ class ProjectContext:
     orig_bin: Any
     code_files: list
     markers: dict[int, Marker]
-    program_sources: set[Path]
     libc_symbols: set[str]
     # Line-referenced FUNCTION/STUB annotations by unqualified name.
     libc_data: bytes | None = None
@@ -320,12 +314,12 @@ class ProjectContext:
     orig_imports: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def build(cls, orig_bin, code_files, markers, program_sources, libc_symbols):
+    def build(cls, orig_bin, code_files, markers, libc_symbols):
         from reccmp.compare import ingest
         from reccmp.parser import DecompCodebase
         from reccmp.parser.node import ParserFunction
 
-        ctx = cls(orig_bin, code_files, markers, program_sources, libc_symbols)
+        ctx = cls(orig_bin, code_files, markers, libc_symbols)
         codebase = DecompCodebase(code_files, TARGET_ID)
 
         # load_markers() parses the whole tree again for every object; hand it
@@ -477,8 +471,6 @@ def analyse(img: SyntheticImage, ctx: ProjectContext) -> Analysis:
         an.create_imports(db, img_id, binfile)
         if img_id == ImageId.ORIG:
             an.create_import_thunks(db, img_id, binfile)
-        else:
-            _create_recomp_import_thunks(db, img)
         an.create_seh_entities(db, img_id, binfile)
         an.create_thunks(db, img_id, binfile)
         if img_id == ImageId.ORIG:
@@ -535,16 +527,6 @@ def _check_vtables(db) -> None:
     except ImportError:
         return
     check_vtables(db)
-
-
-def _create_recomp_import_thunks(db, img: SyntheticImage) -> None:
-    from reccmp.analysis import find_import_thunks
-    from reccmp.types import EntityType, ImageId
-
-    with db.batch() as batch:
-        for thunk in find_import_thunks(img):
-            batch.set(ImageId.RECOMP, thunk.addr, type=EntityType.IMPORT_THUNK, skip=True, size=thunk.size)
-            batch.set_ref(ImageId.RECOMP, thunk.addr, ref=thunk.import_addr)
 
 
 # ---------------------------------------------------------------------------
@@ -644,17 +626,13 @@ def compare_function(analysis: Analysis, ctx: ProjectContext, address: int) -> F
         res.error = "the recomp function has no size"
         return res
 
-    # Reccmp applies assert fix-ups to images with a debug directory: the
-    # matching build links with /DEBUG; the shipped executable has none.
-    original_has_asserts = rf.has_asserts
-    rf.has_asserts = lambda image: image is analysis.image or original_has_asserts(image)
-    try:
-        comparator = rf.FunctionComparator(
-            db, analysis.lines_db, ctx.orig_bin, analysis.image, _null_report, CvdumpTypesParser()
-        )
-        result = comparator.compare_function(match)
-    finally:
-        rf.has_asserts = original_has_asserts
+    # Reccmp applies assert fix-ups only to images with a debug directory.
+    # tools/reccmp.sh strips the matching build's, as the shipped executable
+    # has none, so neither side gets them (the synthetic image is no PEImage).
+    comparator = rf.FunctionComparator(
+        db, analysis.lines_db, ctx.orig_bin, analysis.image, _null_report, CvdumpTypesParser()
+    )
+    result = comparator.compare_function(match)
 
     res.matching = result.match_ratio
     res.effective = bool(result.is_effective_match)
@@ -929,7 +907,6 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], list[FunctionResult]]
     code_files = list(TextFile.from_files(code_paths, allow_error=True, encoding="utf-8"))
     markers = scan_markers(code_files)
     by_source = {c.source: c for c in commands}
-    program_sources = {c.source for c in commands if c.target == "program"}
 
     # Work out which source file(s) to compile.
     plan: dict[Path, list[int]] = {}
@@ -958,7 +935,7 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], list[FunctionResult]]
 
     libc_symbols, libc_data, libc_index = load_libc_index(env)
     t = time.monotonic()
-    ctx = ProjectContext.build(orig_bin, code_files, markers, program_sources, libc_symbols)
+    ctx = ProjectContext.build(orig_bin, code_files, markers, libc_symbols)
     ctx.libc_data, ctx.libc_index = libc_data, libc_index
     ctx.link_end = link_end(orig_bin, env.root)
     timings["annotations"] = time.monotonic() - t
@@ -1001,7 +978,7 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], list[FunctionResult]]
                 # Reccmp associates COFF line records with the original path.
                 # Candidates preserve line numbers and are compiled elsewhere.
                 obj.source_name = str(source)
-            img = SyntheticImage(obj, ctx, source, source in program_sources)
+            img = SyntheticImage(obj, ctx, source)
             analysis = analyse(img, ctx)
             timings["analyse"] = timings.get("analyse", 0.0) + time.monotonic() - t
 
@@ -1064,7 +1041,7 @@ def compare_libc(addr: int, ctx: ProjectContext, marker: Marker, libc_data: byte
         return None
     member = _pick_libc_member(libc_data, libc_index, symbol)
     obj = msvc_coff.parse_coff(member.data, f"LIBC.LIB({msvc_coff.member_basename(member)})")
-    img = SyntheticImage(obj, ctx, marker.path, False)
+    img = SyntheticImage(obj, ctx, marker.path)
     analysis = analyse(img, ctx)
     res = compare_function(analysis, ctx, addr)
     res.origin = f"LIBC.LIB({msvc_coff.member_basename(member)})"
