@@ -49,6 +49,7 @@ src/game/bubbles.cpp
 src/game/building_model.cpp
 src/game/building_scene.cpp
 src/game/building_scene.hpp
+src/game/camera_control.cpp
 src/game/camera_drag.hpp
 src/game/cell_flood_passes.cpp
 src/game/cmd.cpp
@@ -103,6 +104,7 @@ src/game/frontend.h
 src/game/frontend.hpp
 src/game/frontend_for_bitmap_font.hpp
 src/game/frontend_for_encyclopedia.hpp
+src/game/frontend_for_helpwindow.hpp
 src/game/frontend_for_info.hpp
 src/game/frontend_for_info_track_overlay.hpp
 src/game/frontend_for_map_view.hpp
@@ -113,10 +115,12 @@ src/game/frontend_for_screen_effect_quads.hpp
 src/game/frontend_for_text.hpp
 src/game/frontend_for_tooltip.hpp
 src/game/frontend_for_tutorial_script.hpp
+src/game/frontend_from_helpwindow.hpp
 src/game/frontend_shared.hpp
 src/game/game.cpp
 src/game/game.hpp
 src/game/grid_cell_records.cpp
+src/game/helpwindow.cpp
 src/game/info.cpp
 src/game/info_track_overlay.cpp
 src/game/lava_erosion.cpp
@@ -206,6 +210,7 @@ src/game/terrain_grid_shared.hpp
 src/game/terrain_map.cpp
 src/game/terrain_overlay_quads.cpp
 src/game/text.cpp
+src/game/tile_variants.cpp
 src/game/tooltip.cpp
 src/game/tutorial_hud.cpp
 src/game/tutorial_hud_for_object_overlays.hpp
@@ -226,6 +231,7 @@ src/game/ui_list_shared.hpp
 src/game/upgrade_levels.cpp
 src/game/upgrades.cpp
 src/game/upgrades.hpp
+src/game/upgrades_for_helpwindow.hpp
 src/game/util.cpp
 src/game/util.hpp
 src/game/util_for_bubbles.hpp
@@ -233,6 +239,7 @@ src/game/util_for_info.hpp
 src/game/util_for_level_id_remap.hpp
 src/game/util_for_lighteffects.hpp
 src/game/util_for_placement.hpp
+src/game/util_for_tile_variants.hpp
 src/game/util_shared.hpp
 src/game/vehicle_model.cpp
 src/game/video_graph.cpp
@@ -390,6 +397,7 @@ src/gods98/view.cpp
 src/gods98/view.hpp
 src/gods98/view_for_animation_object.hpp
 src/gods98/view_for_building_model.hpp
+src/gods98/view_for_camera_control.hpp
 src/gods98/view_for_cell_flood_passes.hpp
 src/gods98/view_for_info_track_overlay.hpp
 src/gods98/view_for_lighteffects.hpp
@@ -399,6 +407,7 @@ src/gods98/view_for_placement_footprint.hpp
 src/gods98/view_for_record_chains.hpp
 src/gods98/view_for_screen_effect_quads.hpp
 src/gods98/view_for_terrain_map.hpp
+src/gods98/view_for_tile_variants.hpp
 src/gods98/view_for_tooltip.hpp
 src/gods98/view_shared.hpp
 src/gods98/winmm.h
