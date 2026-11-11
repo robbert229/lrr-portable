@@ -1404,41 +1404,6 @@ void indexed_record_field64_set(void* record, int index, uint32_t value)
     indexed_record_field64_set_target(record, index, value);
 }
 
-// FUNCTION: LEGORR 0x004851b0
-void float_pair_at_offset4_set_from_ints(void* record, int x, int y)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    const float fx = (float)x; /* the corpus's int->float casts */
-    const float fy = (float)y;
-    __builtin_memcpy((char*)record + 0x04, &fx, sizeof(fx));
-    __builtin_memcpy((char*)record + 0x08, &fy, sizeof(fy));
-}
-
-// FUNCTION: LEGORR 0x004851d0
-void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
-                                          uint32_t y)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    const float fx = (float)x; /* the corpus's uint->float casts */
-    const float fy = (float)y;
-    __builtin_memcpy((char*)record + 0x0c, &fx, sizeof(fx));
-    __builtin_memcpy((char*)record + 0x10, &fy, sizeof(fy));
-}
-
-/* The mapped body follows the corpus's blind record and output-pointer
- * accesses. */
-// FUNCTION: LEGORR 0x00485a00
-void object_state_pair_get_target(const void* record, uint32_t* out_a,
-                                  uint32_t* out_b)
-{
-    *out_a = *(const uint32_t*)((const char*)record + 0x820);
-    *out_b = *(const uint32_t*)((const char*)record + 0x824);
-}
-
 /* Preserve the test-pinned null-record behavior of the portable API. */
 void object_state_pair_get(const void* record, uint32_t* out_a,
                            uint32_t* out_b)
