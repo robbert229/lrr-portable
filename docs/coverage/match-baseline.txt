@@ -1,4 +1,4 @@
-# input_sha256: 399f454b7d6ed1d5081591e503544c1c0afbc561074bedef648ba6f78557bcbc
+# input_sha256: e2669fbe3ea5a0ff2161748428ef9008215a52b8a60129e07373a32af1fe2bb8
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2150 mapped functions
+[game-only] 2161 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -325,25 +325,36 @@
 0x0040f330 21.13 lava_erosion_neighbor_mutate
 0x0040f5e0 100.00 global_config_value_set
 0x0040f5f0 21.36 lava_erosion_eight_neighbor_propagate
-0x0040f6c0 7.27 scene_node_record_create
+0x0040f6c0 82.93 scene_node_record_create
 0x0040f7b0 100.00 optional_resource_destroy
-0x0040f7d0 36.78 callback_state_record_create
-0x0040f850 46.38 callback_state_list_dispose
+0x0040f7d0 100.00 callback_state_record_create
+0x0040f850 100.00 callback_state_list_dispose
+0x0040f890 100.00 direction_driven_heading_angle_step
+0x0040f920 81.48 kind_two_steering_torque_apply
 0x0040fb00 100.00 matrix_rotation_compose_xyz
-0x0040fcc0 91.30 vector_scale_components_in_place
-0x0040fdb0 53.85 three_value_record_copy_and_mark_ready
-0x0040fde0 75.00 set_vector_and_notify_listeners
-0x0040fe00 32.14 scene_object_list_update_transforms
-0x0040fe40 6.45 ptrstack_push
-0x0040fe60 28.00 ptrstack_pop
-0x0040fe90 54.55 ptrstack_for_each
-0x0040fec0 90.91 set_global_scalar_to_one
-0x0040ff50 87.50 scene_object_list_apply_float_callback
-0x0040ff70 83.33 object_vector3_set
-0x00410020 17.14 scene_node_position_set
-0x00410070 75.00 scene_object_list_apply_position_callback
-0x004100b0 75.00 scene_object_list_apply_second_position_callback
-0x00410280 20.00 callback_operation_run_and_return_status
+0x0040fb90 98.97 steering_physics_step
+0x0040fcc0 100.00 vector_scale_components_in_place
+0x0040fd00 89.66 steering_item_wander
+0x0040fdb0 100.00 three_value_record_copy_and_mark_ready
+0x0040fde0 100.00 set_vector_and_notify_listeners
+0x0040fe00 100.00 scene_object_list_update_transforms
+0x0040fe40 100.00 ptrstack_push
+0x0040fe60 100.00 ptrstack_pop
+0x0040fe90 100.00 ptrstack_for_each
+0x0040fec0 100.00 random_unit_float
+0x0040fed0 36.62 steering_item_spread_tuning
+0x0040ff50 100.00 scene_object_list_apply_float_callback
+0x0040ff70 100.00 object_vector3_set
+0x0040ff90 100.00 steering_item_set_tuning
+0x0040ffe0 100.00 global_vector_set_and_notify
+0x00410020 100.00 scene_node_position_set
+0x00410050 100.00 steering_item_set_position
+0x00410070 100.00 scene_object_list_apply_position_callback
+0x00410090 100.00 steering_item_set_target
+0x004100b0 100.00 scene_object_list_apply_second_position_callback
+0x004100d0 53.99 steering_item_follow_target
+0x00410230 100.00 steering_item_arrived
+0x00410280 100.00 callback_operation_run_and_return_status
 0x004102b0 100.00 ui_text_underscores_to_spaces_target
 0x00410320 29.03 string_queue_record_or_flush
 0x004103d0 88.89 main_menu_text_item
@@ -2158,7 +2169,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2386 mapped functions
+[full] 2397 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -2477,25 +2488,36 @@
 0x0040f330 21.13 lava_erosion_neighbor_mutate
 0x0040f5e0 100.00 global_config_value_set
 0x0040f5f0 21.36 lava_erosion_eight_neighbor_propagate
-0x0040f6c0 7.27 scene_node_record_create
+0x0040f6c0 82.93 scene_node_record_create
 0x0040f7b0 100.00 optional_resource_destroy
-0x0040f7d0 36.78 callback_state_record_create
-0x0040f850 46.38 callback_state_list_dispose
+0x0040f7d0 100.00 callback_state_record_create
+0x0040f850 100.00 callback_state_list_dispose
+0x0040f890 100.00 direction_driven_heading_angle_step
+0x0040f920 81.48 kind_two_steering_torque_apply
 0x0040fb00 100.00 matrix_rotation_compose_xyz
-0x0040fcc0 91.30 vector_scale_components_in_place
-0x0040fdb0 53.85 three_value_record_copy_and_mark_ready
-0x0040fde0 75.00 set_vector_and_notify_listeners
-0x0040fe00 32.14 scene_object_list_update_transforms
-0x0040fe40 6.45 ptrstack_push
-0x0040fe60 28.00 ptrstack_pop
-0x0040fe90 54.55 ptrstack_for_each
-0x0040fec0 90.91 set_global_scalar_to_one
-0x0040ff50 87.50 scene_object_list_apply_float_callback
-0x0040ff70 83.33 object_vector3_set
-0x00410020 17.14 scene_node_position_set
-0x00410070 75.00 scene_object_list_apply_position_callback
-0x004100b0 75.00 scene_object_list_apply_second_position_callback
-0x00410280 20.00 callback_operation_run_and_return_status
+0x0040fb90 98.97 steering_physics_step
+0x0040fcc0 100.00 vector_scale_components_in_place
+0x0040fd00 89.66 steering_item_wander
+0x0040fdb0 100.00 three_value_record_copy_and_mark_ready
+0x0040fde0 100.00 set_vector_and_notify_listeners
+0x0040fe00 100.00 scene_object_list_update_transforms
+0x0040fe40 100.00 ptrstack_push
+0x0040fe60 100.00 ptrstack_pop
+0x0040fe90 100.00 ptrstack_for_each
+0x0040fec0 100.00 random_unit_float
+0x0040fed0 36.62 steering_item_spread_tuning
+0x0040ff50 100.00 scene_object_list_apply_float_callback
+0x0040ff70 100.00 object_vector3_set
+0x0040ff90 100.00 steering_item_set_tuning
+0x0040ffe0 100.00 global_vector_set_and_notify
+0x00410020 100.00 scene_node_position_set
+0x00410050 100.00 steering_item_set_position
+0x00410070 100.00 scene_object_list_apply_position_callback
+0x00410090 100.00 steering_item_set_target
+0x004100b0 100.00 scene_object_list_apply_second_position_callback
+0x004100d0 53.99 steering_item_follow_target
+0x00410230 100.00 steering_item_arrived
+0x00410280 100.00 callback_operation_run_and_return_status
 0x004102b0 100.00 ui_text_underscores_to_spaces_target
 0x00410320 29.03 string_queue_record_or_flush
 0x004103d0 88.89 main_menu_text_item

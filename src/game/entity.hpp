@@ -343,6 +343,8 @@ typedef struct EntityPairPoseHooks {
 } EntityPairPoseHooks;
 void entity_pair_pose_hooks_set(const EntityPairPoseHooks* hooks);
 int entity_record_pair_pose_copy_and_activity_raise(EntitySlot* entity);
+/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+ * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void set_vector_and_notify_listeners(float* state,
                                      const float* delta); /* FUN_0040fde0 */
 int entity_face_target_action_start(EntitySlot* entity, EntitySlot* target,
@@ -692,6 +694,8 @@ void entity_linked_event_submit_hook_set(EntityLinkedEventSubmitFn hook,
                                          void* user);
 void entity_linked_activity_event_dispatch(EntitySlot* entity,
                                            uint32_t events); /* 0x0043f5b0 */
+/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+ * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void direction_driven_heading_angle_step(void* state, const float* direction);
 void kind_two_steering_torque_apply(void* state, float direction[3]);
 void steering_physics_step(void* unused, float* state, const float* delta);

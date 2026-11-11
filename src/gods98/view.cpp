@@ -146,8 +146,6 @@ static SharedObjectSoundSubmitFn s_shared_object_sound_submit;
 static void* s_scene_material_manager;
 static SceneEntryExpandOps s_scene_entry_expand_ops;
 static SharedObjectCloneOps s_shared_object_clone_ops;
-SceneObjectListApplyHook s_scene_object_list_apply_hook;
-void* s_scene_object_list_apply_context;
 QuadMeshRenderHooks s_quad_mesh_render_hooks;
 static SinePhaseBlendState s_sine_phase_blend_state;
 static SinePhaseBlendHooks s_sine_phase_blend_hooks;
@@ -3378,13 +3376,6 @@ void renderer_record_clone_hooks_set(const RendererRecordCloneHooks* hooks)
     }
 }
 
-void scene_object_list_apply_hook_set(SceneObjectListApplyHook hook,
-                                      void* context)
-{
-    s_scene_object_list_apply_hook = hook;
-    s_scene_object_list_apply_context = context;
-}
-
 void quad_mesh_render_hooks_set(const QuadMeshRenderHooks* hooks)
 {
     if (hooks == NULL) {
@@ -6555,34 +6546,6 @@ int scene_activity_change(void* activity, void* state, void* value)
     int result = s_scene_activity_change != NULL
         ? s_scene_activity_change(activity, state, value) : 0;
     return result;
-}
-
-static uint32_t s_global_vector_values[4];
-static GlobalVectorNotifyFn s_global_vector_notify;
-
-void global_vector_notify_callback_set(GlobalVectorNotifyFn callback)
-{
-    s_global_vector_notify = callback;
-}
-
-void global_vector_get(uint32_t values[4])
-{
-    if (values != NULL) {
-        __builtin_memcpy(values, s_global_vector_values,
-                         sizeof(s_global_vector_values));
-    }
-}
-
-/* FUNCTION: LEGORR 0x0040ffe0. The corpus stores four global dwords and
- * broadcasts the new tuple to a callback walk rooted at context. */
-void global_vector_set_and_notify(void* context, const uint32_t values[4])
-{
-    if (values == NULL) return;
-    __builtin_memcpy(s_global_vector_values, values,
-                     sizeof(s_global_vector_values));
-    if (s_global_vector_notify != NULL) {
-        s_global_vector_notify(context, s_global_vector_values);
-    }
 }
 
 static UIRenderTreeHook s_ui_render_tree_hook;

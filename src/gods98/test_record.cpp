@@ -1195,18 +1195,6 @@ int main(void)
         indexed_record_field64_set(NULL, 0, 1u); /* guarded */
         indexed_record_field64_set(rec, 0, 1u);  /* base stays: fine */
 
-        /* ObjectVector3Set: slot 0 of the block is the base pointer. */
-        char block[8];
-        memset(block, 0, sizeof(block));
-        __builtin_memcpy(block, &bp, sizeof(bp));
-        object_vector3_set(block, 1.5f, 2.5f, 3.5f);
-        float x = 0, y = 0, z = 0;
-        __builtin_memcpy(&x, base + 0x3c, 4);
-        __builtin_memcpy(&y, base + 0x40, 4);
-        __builtin_memcpy(&z, base + 0x44, 4);
-        CHECK(x == 1.5f && y == 2.5f && z == 3.5f, "the vector lands at +3c");
-        object_vector3_set(NULL, 0.0f, 0.0f, 0.0f); /* guarded */
-
         char r2[0x20];
         memset(r2, 0, sizeof(r2));
         float_pair_at_offset4_set_from_ints(r2, -2, 7);

@@ -389,6 +389,8 @@ void scene_object_record_retain_hook_set(SceneObjectRecordRetainHook hook,
                                          void* context);
 void scene_object_record_clone_retain_handles(
     const SceneObjectRecord* source, SceneObjectRecord* destination);
+/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+ * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 typedef void (*SceneObjectListApplyHook)(void* context, void* list,
                                          void* object, uint32_t operation,
                                          void* payload);
@@ -543,6 +545,8 @@ float point_to_polyline_minimum_segment_distance(const float* point,
                                                  const float* first_point,
                                                  const float* last_point,
                                                  unsigned int segment_count);
+/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+ * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void matrix_rotation_compose_xyz(float* record); /* FUN_0040fb00 */
 /* D3DRMVectorRandom takes one D3DVECTOR* (three adjacent floats). */
 extern "C" float* d3drm_vector_random(float* r); /* FUN_00479500 */
@@ -551,6 +555,8 @@ extern "C" float* d3drm_vector_random(float* r); /* FUN_00479500 */
  * out may alias either vector input or axis. */
 extern "C" float* d3drm_vector_rotate(float* r, float* v, float* axis,
                                       float theta);
+/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+ * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void vector_scale_components_in_place(float* vector, float sx, float sy,
                                       float sz); /* FUN_0040fcc0 */
 int   vec_exact_equal(const float* a, const float* b);
@@ -1474,6 +1480,8 @@ void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
  * NULL contexts skip (deviation). */
 void grid_operation_argument_adapter(float x, float y, EngineContext* ctx);
 
+/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+ * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 /* SetGlobalScalarToOne (FUN_0040fec0): the corpus draws the 0…1 ramp and
  * drops it; the port models that ramp as 1.0, so the call's observable
  * effect is nothing — faithful. */
@@ -1580,6 +1588,8 @@ void render_interface_transform_point(void* object, void* output,
 uint32_t scene_property_primary_value_get(void* property); /* FUN_00476120 */
 uint32_t scene_property_secondary_value_get(void* property); /* FUN_00476140 */
 
+/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+ * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 /* SceneNodePositionSet (FUN_00410020): the scene node's position store —
  * the node's position-valid flag at +0xc goes to 1, and the three floats
  * land on the inner object's +0xc/+0x10/+0x14. Deviation: the corpus
@@ -1695,6 +1705,8 @@ typedef int (*SceneActivityChangeFn)(void* activity, void* state,
                                      void* value);
 void scene_activity_change_callback_set(SceneActivityChangeFn callback);
 int scene_activity_change(void* activity, void* state, void* value);
+/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+ * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 typedef void (*GlobalVectorNotifyFn)(void* context, const uint32_t values[4]);
 void global_vector_notify_callback_set(GlobalVectorNotifyFn callback);
 void global_vector_set_and_notify(void* context, const uint32_t values[4]);
