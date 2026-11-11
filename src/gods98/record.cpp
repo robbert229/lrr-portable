@@ -992,17 +992,6 @@ void scene_render_lock_toggle(void* scene_object, int enabled)
 }
 #endif
 
-/* SceneCurrentObjectSet (FUN_00477240) — see record.hpp. The store lands
- * on the record's +0x14 slot; Deviation: the corpus strides a dword, the
- * port writes the module's widened pointer slot. */
-// FUNCTION: LEGORR 0x00477240
-void scene_current_object_set(void* record, void* object)
-{
-    if (record != NULL) {
-        __builtin_memcpy((char*)record + 0x14, &object, sizeof object);
-    }
-}
-
 /* UIRecordCallbackForward (FUN_0045a630) — see record.hpp. */
 // FUNCTION: LEGORR 0x0045a630
 void ui_record_callback_forward(const void* const* ui_record,

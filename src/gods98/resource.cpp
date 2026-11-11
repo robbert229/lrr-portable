@@ -76,75 +76,6 @@ public:
     virtual void* property_get(void) = 0;
 };
 
-class ResourceSlot40Interface
-{
-public:
-    virtual void slot_00(void) = 0;
-    virtual void slot_04(void) = 0;
-    virtual void slot_08(void) = 0;
-    virtual void slot_0c(void) = 0;
-    virtual void slot_10(void) = 0;
-    virtual void slot_14(void) = 0;
-    virtual void slot_18(void) = 0;
-    virtual void slot_1c(void) = 0;
-    virtual void slot_20(void) = 0;
-    virtual void slot_24(void) = 0;
-    virtual void slot_28(void) = 0;
-    virtual void slot_2c(void) = 0;
-    virtual void slot_30(void) = 0;
-    virtual void slot_34(void) = 0;
-    virtual void slot_38(void) = 0;
-    virtual void slot_3c(void) = 0;
-    virtual void slot_40(uint32_t value) = 0;
-};
-
-class ResourceSlot88Interface
-{
-public:
-    virtual void slot_00(void) = 0;
-    virtual void slot_04(void) = 0;
-    virtual void slot_08(void) = 0;
-    virtual void slot_0c(void) = 0;
-    virtual void slot_10(void) = 0;
-    virtual void slot_14(void) = 0;
-    virtual void slot_18(void) = 0;
-    virtual void slot_1c(void) = 0;
-    virtual void slot_20(void) = 0;
-    virtual void slot_24(void) = 0;
-    virtual void slot_28(void) = 0;
-    virtual void slot_2c(void) = 0;
-    virtual void slot_30(void) = 0;
-    virtual void slot_34(void) = 0;
-    virtual void slot_38(void) = 0;
-    virtual void slot_3c(void) = 0;
-    virtual void slot_40(void) = 0;
-    virtual void slot_44(void) = 0;
-    virtual void slot_48(void) = 0;
-    virtual void slot_4c(void) = 0;
-    virtual void slot_50(void) = 0;
-    virtual void slot_54(void) = 0;
-    virtual void slot_58(void) = 0;
-    virtual void slot_5c(void) = 0;
-    virtual void slot_60(void) = 0;
-    virtual void slot_64(void) = 0;
-    virtual void slot_68(void) = 0;
-    virtual void slot_6c(void) = 0;
-    virtual void slot_70(void) = 0;
-    virtual void slot_74(void) = 0;
-    virtual void slot_78(void) = 0;
-    virtual void slot_7c(void) = 0;
-    virtual void slot_80(void) = 0;
-    virtual void slot_84(void) = 0;
-    virtual void slot_88(void) = 0;
-};
-
-class ResourceRetainInterface
-{
-public:
-    virtual void slot_00(void) = 0;
-    virtual void retain(void) = 0;
-};
-
 char s_rock_fall_style_names[ROCK_FALL_STYLE_NAME_CAPACITY]
                                     [ROCK_FALL_STYLE_NAME_LENGTH];
 uint32_t s_rock_fall_style_name_count;
@@ -1216,43 +1147,6 @@ int scene_resource_availability_sweep(float delta, uint32_t** groups_out,
     return count;
 }
 
-// FUNCTION: LEGORR 0x00477220
-void render_resource_track_and_retain(void* resource)
-{
-    void** next;
-    ResourceRetainInterface* interface_object;
-    if (resource == NULL) {
-        return;
-    }
-    next = (void**)((unsigned char*)resource + 0x1c);
-    *next = s_render_surface_pool_free_head;
-    s_render_surface_pool_free_head = resource;
-    interface_object = *(ResourceRetainInterface**)((unsigned char*)resource + 0x10);
-    interface_object->retain();
-}
-
-// FUNCTION: LEGORR 0x00477270
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void resource_interface_call_slot88(void* wrapper)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 10h]
-        push eax
-        mov ecx, dword ptr [eax]
-        call dword ptr [ecx + 88h]
-        ret
-    }
-}
-#else
-void resource_interface_call_slot88(void* wrapper)
-{
-    ResourceSlot88Interface* interface_object =
-        *(ResourceSlot88Interface**)((unsigned char*)wrapper + 0x10);
-    interface_object->slot_88();
-}
-#endif
-
 // FUNCTION: LEGORR 0x00476d10
 void render_resource_pair_release_and_clear(void** pair)
 {
@@ -1291,19 +1185,6 @@ void scene_property_owned_buffer_release(void* property)
     owned_buffer = record != NULL ? *(void**)((char*)record + 0x08) : NULL;
     engine_heap_free(owned_buffer);
 #endif
-}
-
-// FUNCTION: LEGORR 0x00477250
-void resource_interface_call_slot40_and_clear_field14(
-    ResourceInterfaceWrapper* wrapper, uint32_t value)
-{
-    if (wrapper == NULL) {
-        return;
-    }
-    if (wrapper->interface_object != NULL) {
-        ((ResourceSlot40Interface*)wrapper->interface_object)->slot_40(value);
-    }
-    wrapper->field14 = 0;
 }
 
 #define RESOURCE_MAX_WADS 10
