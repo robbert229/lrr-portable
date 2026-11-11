@@ -326,24 +326,26 @@ static void probe_real(const char* wad_dir)
               && flic_frames(holo) == 82,
           "HOLO.FLH 158x226 (nFrames 81 -> 82 chunks)");
     if (holo != NULL) {
-        /* Animated: the last decoded frame must differ from frame 0. */
+        /* The shipped HOLO loop returns to frame 0 at frame 81. Applying its
+         * opcode-27 records with the original delta decoder's row skips and
+         * pixel writes (FUN_00484e50) changes 3672 pixels at frame 1, then
+         * restores all of them by the final frame. */
         const uint16_t* f0 = flic_frame555(holo);
         uint16_t* f0copy = (uint16_t*)malloc(158 * 226 * 2);
+        CHECK(f0copy != NULL, "allocate HOLO frame copy");
         if (f0copy != NULL) {
             memcpy(f0copy, f0, 158 * 226 * 2);
-        }
-        step_to_eof(holo);
-        const uint16_t* fN = flic_frame555(holo);
-        int diff = 0;
-        if (f0copy != NULL) {
+            flic_tick_loop(holo, 0);
+            const uint16_t* f1 = flic_frame555(holo);
+            int diff = 0;
             for (int i = 0; i < 158 * 226; ++i) {
-                if (f0copy[i] != fN[i]) {
-                    diff = 1;
-                    break;
-                }
+                if (f0copy[i] != f1[i]) ++diff;
             }
+            CHECK(diff == 3672, "HOLO frame 1 changes 3672 pixels");
+            step_to_eof(holo);
+            CHECK(memcmp(f0copy, flic_frame555(holo), 158 * 226 * 2) == 0,
+                  "HOLO last frame returns to frame 0");
         }
-        CHECK(diff == 1, "HOLO animates (last frame differs)");
         free(f0copy);
         flic_close(holo);
     }
