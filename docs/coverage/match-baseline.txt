@@ -1,4 +1,4 @@
-# input_sha256: 74339ef2241c91ce6291a903055ff9098485bb8a1a4ccc7b281130184ec929b0
+# input_sha256: 6f52a3429237564c2c3af4c0bd35c5c046fdb3577cbcfc6ccb117376fc7b57fe
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1915,7 +1915,7 @@
 0x0047eb20 22.22 AviPlaybackState::frame_update_and_blit
 0x0047ebe0 70.00 AviPlaybackState::stream_frame_count_get
 0x0047ebf0 40.62 AviPlaybackState::frame_seek_and_clock_rebase
-0x0047ec60 11.11 AviPlaybackState::playback_frame_index_get
+0x0047ec60 23.53 AviPlaybackState::playback_frame_index_get
 0x0047ec80 36.36 avi_file_initialize
 0x0047ec90 8.51 avi_player_create
 0x0047ecf0 50.00 ledger_stub_0047ecf0_AviFrameUpdate
@@ -4096,7 +4096,7 @@
 0x0047eb20 22.22 AviPlaybackState::frame_update_and_blit
 0x0047ebe0 70.00 AviPlaybackState::stream_frame_count_get
 0x0047ebf0 40.62 AviPlaybackState::frame_seek_and_clock_rebase
-0x0047ec60 11.11 AviPlaybackState::playback_frame_index_get
+0x0047ec60 23.53 AviPlaybackState::playback_frame_index_get
 0x0047ec80 36.36 avi_file_initialize
 0x0047ec90 8.51 avi_player_create
 0x0047ecf0 50.00 ledger_stub_0047ecf0_AviFrameUpdate

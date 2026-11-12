@@ -19,6 +19,7 @@
 #include "surface_for_viewports.hpp"
 #include "surface_for_images_unit.hpp"
 #include "surface_from_images_unit.hpp"
+#include "surface_for_directdraw.hpp"
 
 static void* mesh_record_default_allocate(void*, size_t bytes)
 {
@@ -1260,11 +1261,11 @@ static uint8_t s_d3d_material_state_dirty[200];
 static RendererWindowModeOps s_renderer_window_mode_ops;
 static int s_renderer_window_width;
 static int s_renderer_window_height;
-static uint32_t s_renderer_window_mode_flags;
+uint32_t s_renderer_window_mode_flags;
 // GLOBAL: LEGORR 0x0076ac80
 void* s_renderer_window_handle;
-static DirectDrawEnumerationHook s_directdraw_enumeration_hook;
-static void* s_directdraw_enumeration_context;
+DirectDrawEnumerationHook s_directdraw_enumeration_hook;
+void* s_directdraw_enumeration_context;
 static Direct3DRenderPreferenceApplyHook s_render_preference_apply_hook;
 static void* s_render_preference_apply_context;
 static Direct3DMatrixOps s_direct3d_matrix_ops;
@@ -1281,9 +1282,9 @@ typedef struct PortableModelRenderEntry {
 static PortableModelRenderEntry* s_portable_model_render_head;
 static PortableModelRenderEntry* s_portable_model_render_tail;
 static PortableModelRenderEntry* s_portable_model_render_active;
-static ProjectionOverlayBlitHook s_projection_overlay_blit_hook;
-static void* s_projection_overlay_blit_context;
-static DirectDrawClipperRegionOps s_directdraw_clipper_region_ops;
+ProjectionOverlayBlitHook s_projection_overlay_blit_hook;
+void* s_projection_overlay_blit_context;
+DirectDrawClipperRegionOps s_directdraw_clipper_region_ops;
 static Direct3DRenderStateSnapshotOps s_d3d_render_state_snapshot_ops;
 static uint32_t s_d3d_snapshot_light;
 static uint32_t s_d3d_snapshot_render;
@@ -1298,22 +1299,16 @@ static ModelMaterialUpdateHook s_model_material_update_hook;
 static void* s_model_material_update_context;
 static ModelChildMaterialOps s_model_child_material_ops;
 static Direct3DInterfaceOps s_direct3d_interface_ops;
-static DirectDrawDeviceCreateOps s_directdraw_device_create_ops;
-static DirectDrawRendererInitOps s_directdraw_renderer_init_ops;
-#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-static int directdraw_renderer_init_winapi(
-    const DirectDrawRendererInitParams* params, const void* guid,
-    int width, int height, int bits_per_pixel);
-static int winapi_renderer_active(void);
-#endif
+DirectDrawDeviceCreateOps s_directdraw_device_create_ops;
+DirectDrawRendererInitOps s_directdraw_renderer_init_ops;
 #if !defined(_WIN32)
-static void* s_surface_description_interface;
+void* s_surface_description_interface;
 #endif
-static Direct3DTextureMemoryCapsQueryFn s_texture_memory_caps_query;
-static void* s_texture_memory_caps_context;
-static uint32_t s_texture_memory_last_value;
+Direct3DTextureMemoryCapsQueryFn s_texture_memory_caps_query;
+void* s_texture_memory_caps_context;
+uint32_t s_texture_memory_last_value;
 static Direct3DRMDeviceInitOps s_direct3drm_device_init_ops;
-static int s_direct3drm_device_mode = 1;
+int s_direct3drm_device_mode = 1;
 static DirectDrawDeviceInitializeOps s_directdraw_device_initialize_ops;
 static int s_directdraw_device_selection_cancelled;
 static DirectDrawDeviceSelection s_directdraw_device_selection = {
@@ -1485,20 +1480,6 @@ void directdraw_enumeration_hook_set(DirectDrawEnumerationHook hook,
 {
     s_directdraw_enumeration_hook = hook;
     s_directdraw_enumeration_context = context;
-}
-
-/* DirectDrawEnumerateAndStoreCallbackResult (FUN_0047c1c0): enumerate using
- * the requested adapter identifier and return the callback's stored result. */
-// FUNCTION: LEGORR 0x0047c1c0
-int directdraw_enumerate_and_store_result(const void* guid, void** result_out)
-{
-    void* result = NULL;
-    if (s_directdraw_enumeration_hook != NULL) {
-        s_directdraw_enumeration_hook(s_directdraw_enumeration_context,
-                                      guid, &result);
-    }
-    if (result_out != NULL) *result_out = result;
-    return 1;
 }
 
 void direct3d_render_preference_hook_set(
@@ -2243,65 +2224,6 @@ void directdraw_device_create_ops_set(const DirectDrawDeviceCreateOps* ops)
                 sizeof(s_directdraw_device_create_ops));
 }
 
-static int directdraw_device_create_internal(
-    const void* guid, const void* adapter, int windowed, void** result_out)
-{
-    void* device = NULL;
-    void* interface_pointer = NULL;
-    void* result = NULL;
-    int success = 0;
-    if (s_directdraw_device_create_ops.device_create == NULL ||
-        s_directdraw_device_create_ops.device_interface_query == NULL ||
-        s_directdraw_device_create_ops.device_enumerate == NULL) return 0;
-    if (s_directdraw_device_create_ops.device_create(
-            s_directdraw_device_create_ops.context, guid, &device) == 0 &&
-        device != NULL &&
-        s_directdraw_device_create_ops.device_interface_query(
-            s_directdraw_device_create_ops.context, device,
-            &interface_pointer) == 0 && interface_pointer != NULL &&
-        s_directdraw_device_create_ops.device_enumerate(
-            s_directdraw_device_create_ops.context, device, interface_pointer,
-            adapter, windowed, &result) == 0) {
-        success = 1;
-    }
-    if (result_out != NULL) *result_out = result;
-    if (interface_pointer != NULL &&
-        s_directdraw_device_create_ops.release != NULL) {
-        s_directdraw_device_create_ops.release(
-            s_directdraw_device_create_ops.context, interface_pointer);
-    }
-    if (device != NULL && s_directdraw_device_create_ops.release != NULL) {
-        s_directdraw_device_create_ops.release(
-            s_directdraw_device_create_ops.context, device);
-    }
-    return success;
-}
-
-/* DirectDrawDeviceCreate (FUN_0047c2e0): create a device from its optional
- * GUID, query the required interface and run the display-mode enumeration. */
-// FUNCTION: LEGORR 0x0047c2e0
-int directdraw_device_create(const void* guid, void** result_out)
-{
-    if (result_out != NULL) *result_out = NULL;
-    return directdraw_device_create_internal(guid, NULL, 0, result_out);
-}
-
-/* DirectDrawEnumeratedDeviceCreate (FUN_0047c4b0): require the adapter's
- * enumerated flag, choose its GUID only when flag 0x10 is set, and dispatch
- * mode enumeration with the requested windowed/fullscreen policy. */
-// FUNCTION: LEGORR 0x0047c4b0
-int directdraw_enumerated_device_create(const void* adapter,
-                                        uint32_t adapter_flags,
-                                        int windowed, void** result_out)
-{
-    const void* guid;
-    if (result_out != NULL) *result_out = NULL;
-    if (adapter == NULL || (adapter_flags & 1u) == 0u) return 0;
-    guid = ((adapter_flags & 0x10u) != 0u) ? adapter : NULL;
-    return directdraw_device_create_internal(guid, adapter, windowed,
-                                             result_out);
-}
-
 void directdraw_renderer_init_ops_set(const DirectDrawRendererInitOps* ops)
 {
     if (ops != NULL) s_directdraw_renderer_init_ops = *ops;
@@ -2309,124 +2231,11 @@ void directdraw_renderer_init_ops_set(const DirectDrawRendererInitOps* ops)
                 sizeof(s_directdraw_renderer_init_ops));
 }
 
-/* DirectDrawRendererInit (FUN_0047c610): normalize the adapter and mode
- * selection, configure the window/device, create primary and back surfaces,
- * attach the clipper, initialize Direct3D, and commit the resulting state. */
-// FUNCTION: LEGORR 0x0047c610
-int directdraw_renderer_init(const DirectDrawRendererInitParams* params)
-{
-    const void* guid = NULL;
-    int width;
-    int height;
-    int bits_per_pixel;
-    void* device = NULL;
-    void* primary = NULL;
-    void* back_surface = NULL;
-    int success = 0;
-    if (params == NULL) return 0;
-    width = params->width;
-    height = params->height;
-    bits_per_pixel = params->mode_bits_per_pixel > 0
-        ? params->mode_bits_per_pixel : 16;
-    if ((params->adapter_flags & 1u) != 0u) {
-        guid = params->adapter_guid;
-    }
-    if (params->mode_width > 0) width = params->mode_width;
-    if (params->mode_height > 0) height = params->mode_height;
-    if (width <= 0 || height <= 0) return 0;
-
-    if (s_directdraw_renderer_init_ops.device_create == NULL ||
-        s_directdraw_renderer_init_ops.cooperative_level_set == NULL ||
-        s_directdraw_renderer_init_ops.surfaces_create == NULL ||
-        s_directdraw_renderer_init_ops.clipper_setup == NULL ||
-        s_directdraw_renderer_init_ops.direct3d_initialize == NULL) {
-#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-        /* Do not disturb an already committed display while attempting a
-         * replacement: DirectDraw changes the display mode process-wide. */
-        if (winapi_renderer_active()) return 0;
-        if (!directdraw_renderer_init_winapi(params, guid, width, height,
-                                            bits_per_pixel)) return 0;
-        renderer_window_mode_apply(params->fullscreen, params->window_x,
-                                   params->window_y, width, height);
-        return 1;
-#else
-        return 0;
-#endif
-    }
-    s_renderer_window_handle = params->window;
-    renderer_window_mode_apply(params->fullscreen, params->window_x,
-                               params->window_y, width, height);
-    if (!s_directdraw_renderer_init_ops.device_create(
-            s_directdraw_renderer_init_ops.context, guid, &device) ||
-        device == NULL) goto cleanup;
-    if (!s_directdraw_renderer_init_ops.cooperative_level_set(
-            s_directdraw_renderer_init_ops.context, device,
-            params->fullscreen,
-            params->fullscreen != 0 ? 0x11u : 8u)) goto cleanup;
-    if (params->fullscreen != 0) {
-        if (s_directdraw_renderer_init_ops.display_mode_set == NULL ||
-            !s_directdraw_renderer_init_ops.display_mode_set(
-                s_directdraw_renderer_init_ops.context, device, width,
-                height, bits_per_pixel)) goto cleanup;
-    }
-    if (!s_directdraw_renderer_init_ops.surfaces_create(
-            s_directdraw_renderer_init_ops.context, device,
-            params->fullscreen, width, height, bits_per_pixel,
-            &primary, &back_surface) || primary == NULL ||
-        back_surface == NULL) goto cleanup;
-    if (!s_directdraw_renderer_init_ops.clipper_setup(
-            s_directdraw_renderer_init_ops.context, width, height)) {
-        goto cleanup;
-    }
-    if (!s_directdraw_renderer_init_ops.direct3d_initialize(
-            s_directdraw_renderer_init_ops.context, device, primary,
-            back_surface, params->fullscreen)) goto cleanup;
-    if (s_directdraw_renderer_init_ops.renderer_state_commit != NULL) {
-        s_directdraw_renderer_init_ops.renderer_state_commit(
-            s_directdraw_renderer_init_ops.context, device, primary,
-            back_surface, params->fullscreen);
-    }
-    success = 1;
-
-cleanup:
-    if (!success && s_directdraw_renderer_init_ops.release != NULL) {
-        if (back_surface != NULL) {
-            s_directdraw_renderer_init_ops.release(
-                s_directdraw_renderer_init_ops.context, back_surface);
-        }
-        if (primary != NULL) {
-            s_directdraw_renderer_init_ops.release(
-                s_directdraw_renderer_init_ops.context, primary);
-        }
-    }
-    if (device != NULL && s_directdraw_renderer_init_ops.release != NULL) {
-        s_directdraw_renderer_init_ops.release(
-            s_directdraw_renderer_init_ops.context, device);
-    }
-    return success;
-}
-
 void direct3d_texture_memory_query_hook_set(
     Direct3DTextureMemoryCapsQueryFn hook, void* context)
 {
     s_texture_memory_caps_query = hook;
     s_texture_memory_caps_context = context;
-}
-
-/* QueryTextureMem (FUN_0047cd50): try the preferred texture-memory caps
- * query, then the fallback capability path, and retain the reported amount. */
-// FUNCTION: LEGORR 0x0047cd50
-void query_texture_memory(void)
-{
-    uint32_t memory = 0u;
-    if (s_texture_memory_caps_query == NULL) return;
-    if (s_texture_memory_caps_query(s_texture_memory_caps_context,
-                                    0x800u, &memory) != 0) {
-        memory = 0u;
-        if (s_texture_memory_caps_query(s_texture_memory_caps_context,
-                                        0x400u, &memory) != 0) return;
-    }
-    s_texture_memory_last_value = memory;
 }
 
 uint32_t query_texture_memory_last_value(void)
@@ -2852,21 +2661,6 @@ void renderer_begin_frame_once_retail(void)
     s_engine_feature_word |= 1u;
 }
 
-/* DirectDrawSurfaceDescriptorInitialize (FUN_0047e710): clear the
- * descriptor storage at +0x1c and restore DDSURFACEDESC.dwSize. */
-// FUNCTION: LEGORR 0x0047e710
-void surface_descriptor_initialize(void* record)
-{
-    unsigned char* bytes = (unsigned char*)record;
-    if (bytes == NULL) return;
-    memset(bytes + 0x1c, 0, 0x7c);
-    *(uint32_t*)(bytes + 0x1c) = 0x7cu;
-    *(uint32_t*)(bytes + 0x18) = 0u;
-    *(uint32_t*)(bytes + 0x10) = 0u;
-    bytes[0x08] = 0u;
-    bytes[0x14] = 0u;
-}
-
 /* RenderObjectStateApplyToEntries (FUN_00473ec0): state kind 4 snapshots
  * the child set and applies each child callback; kind 1 applies the surface
  * property to each layer in order. */
@@ -3165,37 +2959,6 @@ uint32_t terrain_detail_entry_get_at_index_dispatch(
         == 0u ? 1u : 0u;
 }
 
-/* DirectDrawObjectsRelease (FUN_0047ccf0): release the primary surface and
- * clipper interfaces, restore display mode when the device was exclusive,
- * then release the DirectDraw device itself. */
-// FUNCTION: LEGORR 0x0047ccf0
-void directdraw_objects_release(DirectDrawObjectSet* objects,
-                                const DirectDrawObjectReleaseOps* ops)
-{
-    if (objects == NULL) return;
-    if (ops != NULL && ops->release != NULL) {
-        if (objects->primary_surface != NULL)
-            ops->release(ops->context, objects->primary_surface);
-        if (objects->primary_clipper != NULL)
-            ops->release(ops->context, objects->primary_clipper);
-        if (objects->windowed_clipper != NULL)
-            ops->release(ops->context, objects->windowed_clipper);
-    }
-    objects->primary_surface = NULL;
-    objects->primary_clipper = NULL;
-    objects->windowed_clipper = NULL;
-    if (objects->device != NULL) {
-        if (objects->restore_display_mode != 0 && ops != NULL &&
-            ops->restore_display_mode != NULL) {
-            ops->restore_display_mode(ops->context, objects->device);
-        }
-        if (ops != NULL && ops->release != NULL)
-            ops->release(ops->context, objects->device);
-    }
-    objects->device = NULL;
-    objects->restore_display_mode = 0;
-}
-
 void surface_writer_unlock_hook_set(SurfaceWriterUnlockHook hook)
 {
     s_surface_writer_unlock_hook = hook;
@@ -3311,46 +3074,6 @@ int parse_indexed_surface_name(const char* path, uint32_t* index_out)
     return 1;
 }
 
-/* SurfacePixelValueEncode (FUN_0047d2d0): resolve an RGB color through an
- * indexed palette at 8 bpp; otherwise scale each byte into its channel mask. */
-// FUNCTION: LEGORR 0x0047d2d0
-uint32_t surface_pixel_value_encode(const SurfacePixelFormat* format,
-                                    uint32_t color_rgb)
-{
-    uint32_t red = (color_rgb >> 16) & 0xffu;
-    uint32_t green = (color_rgb >> 8) & 0xffu;
-    uint32_t blue = color_rgb & 0xffu;
-    if (format == NULL) return 0u;
-    if (format->bits_per_pixel == 8u) {
-        unsigned int i;
-        if (format->palette_rgb == NULL) return 0u;
-        for (i = 0; i < 256u; ++i) {
-            uint32_t entry = format->palette_rgb[i];
-            if (((entry >> 16) & 0xffu) == red &&
-                ((entry >> 8) & 0xffu) == green &&
-                (entry & 0xffu) == blue) {
-                return i;
-            }
-        }
-        return 0u;
-    }
-    else {
-        const uint32_t red_bits = (uint32_t)pop_count32(format->red_mask);
-        const uint32_t green_bits = (uint32_t)pop_count32(format->green_mask);
-        const uint32_t blue_bits = (uint32_t)pop_count32(format->blue_mask);
-        /* The retail encoder packs channels by their mask bit counts (red
-         * above green above blue); it does not shift according to each
-         * mask's first set bit. Standard DirectDraw RGB layouts produce the
-         * same result either way, while this preserves the reference result
-         * for unusual/non-contiguous masks too. */
-        return ((red >> ((8u - red_bits) & 31u))
-                << ((green_bits + blue_bits) & 31u)) |
-               ((green >> ((8u - green_bits) & 31u))
-                << (blue_bits & 31u)) |
-               (blue >> ((8u - blue_bits) & 31u));
-    }
-}
-
 void projection_overlay_blit_hook_set(ProjectionOverlayBlitHook hook,
                                       void* context)
 {
@@ -3358,72 +3081,11 @@ void projection_overlay_blit_hook_set(ProjectionOverlayBlitHook hook,
     s_projection_overlay_blit_context = context;
 }
 
-/* ProjectionOverlayDrawSubmit (FUN_0047ce20): encode the requested fill
- * color for the target surface and submit a color-fill blit, optionally
- * constrained to the supplied rectangle. */
-// FUNCTION: LEGORR 0x0047ce20
-int projection_overlay_draw_submit(int has_rectangle,
-                                   const int rectangle[4],
-                                   const SurfacePixelFormat* format,
-                                   uint32_t color_rgb)
-{
-    uint32_t fill_color;
-    if (s_projection_overlay_blit_hook == NULL ||
-        (has_rectangle != 0 && rectangle == NULL)) return 0;
-    fill_color = surface_pixel_value_encode(format, color_rgb);
-    return s_projection_overlay_blit_hook(
-        s_projection_overlay_blit_context,
-        has_rectangle != 0 ? rectangle : NULL,
-        fill_color, 0x01000400u);
-}
-
 void directdraw_clipper_region_ops_set(const DirectDrawClipperRegionOps* ops)
 {
     if (ops != NULL) s_directdraw_clipper_region_ops = *ops;
     else memset(&s_directdraw_clipper_region_ops, 0,
                 sizeof(s_directdraw_clipper_region_ops));
-}
-
-/* DirectDrawClipperSetRegion (FUN_0047cee0): obtain a clipper, serialize a
- * client rectangle into region data, install it, attach it to the surface,
- * and release the temporary references. Callbacks use HRESULT convention. */
-// FUNCTION: LEGORR 0x0047cee0
-int directdraw_clipper_set_region(int width, int height)
-{
-    void* clipper = NULL;
-    void* region_data = NULL;
-    uint32_t region_size = 0u;
-    int success = 0;
-    if (s_directdraw_clipper_region_ops.clipper_get == NULL ||
-        s_directdraw_clipper_region_ops.region_data_create == NULL ||
-        s_directdraw_clipper_region_ops.clipper_region_set == NULL ||
-        s_directdraw_clipper_region_ops.surface_clipper_set == NULL) {
-        return 0;
-    }
-    if (s_directdraw_clipper_region_ops.clipper_get(
-            s_directdraw_clipper_region_ops.context, &clipper) == 0 &&
-        clipper != NULL &&
-        s_directdraw_clipper_region_ops.region_data_create(
-            s_directdraw_clipper_region_ops.context, width, height,
-            &region_data, &region_size) == 0 && region_data != NULL &&
-        s_directdraw_clipper_region_ops.clipper_region_set(
-            s_directdraw_clipper_region_ops.context, clipper, region_data,
-            region_size) == 0 &&
-        s_directdraw_clipper_region_ops.surface_clipper_set(
-            s_directdraw_clipper_region_ops.context, clipper) == 0) {
-        success = 1;
-    }
-    if (region_data != NULL &&
-        s_directdraw_clipper_region_ops.region_data_release != NULL) {
-        s_directdraw_clipper_region_ops.region_data_release(
-            s_directdraw_clipper_region_ops.context, region_data);
-    }
-    if (clipper != NULL &&
-        s_directdraw_clipper_region_ops.clipper_release != NULL) {
-        s_directdraw_clipper_region_ops.clipper_release(
-            s_directdraw_clipper_region_ops.context, clipper);
-    }
-    return success;
 }
 
 struct SurfacePixelInfo {
@@ -3795,115 +3457,34 @@ static int surface_directdraw_description_query(DisplaySurface* s,
     out->bits_per_pixel = d.ddpfPixelFormat.dwRGBBitCount;
     return 1;
 }
+#endif
 
-#elif defined(LEGORRR_BACKEND_WINAPI)
 
-/* The WinAPI build intentionally avoids miniwin's shortened COM interfaces.
- * The reference requests IDirectDraw4/IDirectDrawSurface4 and passes the
- * 124-byte DDSURFACEDESC2 layout. Declare only the ABI pieces used here. */
-#if defined(_WIN32) && !defined(_WIN64)
-typedef struct SurfaceDdrawColorKey {
-    DWORD low;
-    DWORD high;
-} SurfaceDdrawColorKey;
-
-typedef struct SurfaceDdrawPixelFormat {
-    DWORD size;
-    DWORD flags;
-    DWORD fourcc;
-    DWORD rgb_bits;
-    DWORD red_mask;
-    DWORD green_mask;
-    DWORD blue_mask;
-    DWORD alpha_mask;
-} SurfaceDdrawPixelFormat;
-
-typedef struct SurfaceDdrawPaletteEntry {
-    BYTE red;
-    BYTE green;
-    BYTE blue;
-    BYTE flags;
-} SurfaceDdrawPaletteEntry;
-typedef char SurfaceDdrawPaletteEntryMustBe4Bytes[
-    sizeof(SurfaceDdrawPaletteEntry) == 4u ? 1 : -1];
-
-typedef struct SurfaceDdrawCaps2 {
-    DWORD caps;
-    DWORD caps2;
-    DWORD caps3;
-    DWORD caps4;
-} SurfaceDdrawCaps2;
-
-typedef struct SurfaceDdrawDesc2 {
-    DWORD size;
-    DWORD flags;
-    DWORD height;
-    DWORD width;
-    union { LONG pitch; DWORD linear_size; };
-    DWORD backbuffer_count;
-    union { DWORD mipmap_count; DWORD zbuffer_depth; DWORD refresh_rate; };
-    DWORD alpha_depth;
-    DWORD reserved;
-    void* surface;
-    SurfaceDdrawColorKey keys[4];
-    SurfaceDdrawPixelFormat pixel_format;
-    SurfaceDdrawCaps2 caps;
-    DWORD texture_stage;
-} SurfaceDdrawDesc2;
-
-typedef char SurfaceDdrawDesc2MustBe124Bytes[
-    sizeof(SurfaceDdrawDesc2) == 0x7cu ? 1 : -1];
-typedef char SurfaceDdrawPixelFormatMustBe32Bytes[
-    sizeof(SurfaceDdrawPixelFormat) == 0x20u ? 1 : -1];
-
-static const GUID s_iid_direct_draw4 = {
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+const GUID s_iid_direct_draw4 = {
     0x9c59509a, 0x39bd, 0x11d1,
     { 0x8c, 0x4a, 0x00, 0xc0, 0x4f, 0xd9, 0x30, 0xc5 }
 };
+#endif
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static HMODULE s_surface_ddraw_module;
 static FARPROC s_surface_ddraw_create;
+#endif
 
-typedef HRESULT (WINAPI *SurfaceDdrawCreateFn)(GUID*, void**, void*);
-typedef HRESULT (WINAPI *SurfaceQueryInterfaceFn)(void*, REFIID, void**);
-typedef ULONG (WINAPI *SurfaceReleaseFn)(void*);
-typedef HRESULT (WINAPI *SurfaceSetCooperativeLevelFn)(void*, HWND, DWORD);
-typedef HRESULT (WINAPI *SurfaceSetDisplayModeFn)(void*, DWORD, DWORD,
-                                                   DWORD, DWORD, DWORD);
-typedef HRESULT (WINAPI *SurfaceCreateSurfaceFn)(void*, SurfaceDdrawDesc2*,
-                                                 void**, void*);
-typedef HRESULT (WINAPI *SurfaceCreateClipperFn)(void*, DWORD, void**, void*);
-typedef HRESULT (WINAPI *SurfaceCreatePaletteFn)(void*, DWORD,
-    SurfaceDdrawPaletteEntry*, void**, void*);
-typedef HRESULT (WINAPI *SurfaceGetAttachedSurfaceFn)(void*,
-    SurfaceDdrawCaps2*, void**);
-typedef HRESULT (WINAPI *SurfaceSetClipperFn)(void*, void*);
-typedef HRESULT (WINAPI *ClipperSetClipListFn)(void*, const RGNDATA*, DWORD);
-typedef HRESULT (WINAPI *SurfaceLockFn)(void*, RECT*, SurfaceDdrawDesc2*,
-                                        DWORD, HANDLE);
-typedef HRESULT (WINAPI *SurfaceUnlockFn)(void*, RECT*);
-typedef HRESULT (WINAPI *SurfaceSetPaletteFn)(void*, void*);
-typedef HRESULT (WINAPI *SurfacePaletteSetEntriesFn)(void*, DWORD, DWORD,
-    DWORD, SurfaceDdrawPaletteEntry*);
-typedef HRESULT (WINAPI *SurfaceBltFn)(void*, RECT*, void*, RECT*, DWORD,
-                                       void*);
-typedef HRESULT (WINAPI *SurfaceGetDescriptionFn)(void*,
-                                                   SurfaceDdrawDesc2*);
-typedef HRESULT (WINAPI *SurfaceGetPixelFormatFn)(void*,
-                                                  SurfaceDdrawPixelFormat*);
-
-static void** surface_com_vtable(void* object)
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+void** surface_com_vtable(void* object)
 {
     return object != NULL ? *(void***)object : NULL;
 }
 
-static ULONG surface_com_release(void* object)
+ULONG surface_com_release(void* object)
 {
     void** vtable = surface_com_vtable(object);
     if (vtable == NULL || vtable[2] == NULL) return 0;
     return ((SurfaceReleaseFn)vtable[2])(object);
 }
 
-static int surface_ddraw_api_get(SurfaceDdrawCreateFn* create)
+int surface_ddraw_api_get(SurfaceDdrawCreateFn* create)
 {
     if (create == NULL) return 0;
     if (s_surface_ddraw_create == NULL) {
@@ -3916,44 +3497,38 @@ static int surface_ddraw_api_get(SurfaceDdrawCreateFn* create)
     *create = (SurfaceDdrawCreateFn)s_surface_ddraw_create;
     return 1;
 }
+#endif
 
-typedef struct WinapiRendererState {
-    void* device;
-    void* primary;
-    void* back_surface;
-    void* clipper;
-    void* rm;
-    void* rm_device;
-    void* immediate_device;
-    void* staging_surface;
-    HMODULE rm_module;
-    HWND window;
-    int fullscreen;
-    int width;
-    int height;
-} WinapiRendererState;
-
-static WinapiRendererState s_winapi_renderer_state;
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+WinapiRendererState s_winapi_renderer_state;
+#endif
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 void* surface_winapi_immediate_device_peek(void)
 {
     return s_winapi_renderer_state.immediate_device;
 }
+#endif
 
-static int winapi_renderer_active(void)
-{
-    return s_winapi_renderer_state.device != NULL;
-}
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 // GLOBAL: LEGORR 0x0076acbc
-static uint32_t s_renderer_fullscreen;
+uint32_t s_renderer_fullscreen;
+#endif
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 // GLOBAL: LEGORR 0x0076acc0
-static uint32_t s_renderer_surface_width;
+uint32_t s_renderer_surface_width;
+#endif
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 // GLOBAL: LEGORR 0x0076acc4
-static uint32_t s_renderer_surface_height;
+uint32_t s_renderer_surface_height;
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static void windowed_surface_blit_impl(DisplaySurface* primary,
                                        DisplaySurface* back_surface);
+#endif
 
-static void winapi_renderer_state_release(WinapiRendererState* state)
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+void winapi_renderer_state_release(WinapiRendererState* state)
 {
     void* immediate;
     if (state == NULL) return;
@@ -3984,308 +3559,9 @@ static void winapi_renderer_state_release(WinapiRendererState* state)
     s_renderer_surface_width = 0u;
     s_renderer_surface_height = 0u;
 }
+#endif
 
-/* WindowedRenderSurfaceBlit (FUN_0047cc50): derive the screen-space target
- * rectangle, then blit the global back surface into the primary surface. */
-// FUNCTION: LEGORR 0x0047cc50
-static void windowed_render_surface_blit_retail(void)
-{
-    struct WindowedRenderSurfaceLocal {
-        POINT origin;
-        RECT destination;
-        RECT source;
-    } local;
-    void** vtable;
-    SurfaceBltFn blt;
-    local.destination.right = (LONG)s_renderer_surface_width;
-    local.origin.y = 0;
-    local.origin.x = 0;
-    local.destination.left = 0;
-    local.destination.top = 0;
-    local.destination.bottom = (LONG)s_renderer_surface_height;
-    ClientToScreen(s_renderer_window_handle, &local.origin);
-    OffsetRect(&local.destination, local.origin.x, local.origin.y);
-    local.source.bottom = (LONG)s_renderer_surface_height;
-    local.source.top = 0;
-    local.source.left = 0;
-    local.source.right = (LONG)s_renderer_surface_width;
-    vtable = *(void***)s_renderer_primary_surface;
-    blt = (SurfaceBltFn)vtable[5];
-    (void)blt(s_renderer_primary_surface, &local.destination,
-              (void*)s_render_surface_secondary, &local.source,
-              0x01000000u, NULL);
-}
-
-/* RenderSurfacePresent (FUN_0047c8d0) chooses fullscreen flip or windowed
- * global-surface blit from the renderer mode word. */
-// FUNCTION: LEGORR 0x0047c8d0
-void render_surface_present(void)
-{
-    if (s_renderer_fullscreen != 0u) {
-        typedef HRESULT (SURFACE_COM_CALL *SurfaceFlipFn)(void*, void*, DWORD);
-        void** vtable = *(void***)s_renderer_primary_surface;
-        SurfaceFlipFn flip = (SurfaceFlipFn)vtable[11];
-        (void)flip(s_renderer_primary_surface, NULL, 1u);
-        return;
-    }
-    windowed_render_surface_blit_retail();
-}
-
-static int winapi_renderer_clipper_attach(void* device, void* surface,
-    HWND window, void** clipper_out)
-{
-    SurfaceCreateClipperFn create_clipper;
-    typedef HRESULT (WINAPI *ClipperSetHwndFn)(void*, DWORD, HWND);
-    ClipperSetHwndFn set_hwnd;
-    SurfaceSetClipperFn set_clipper;
-    void** vtable;
-    void* clipper = NULL;
-    int success = 0;
-
-    if (clipper_out != NULL) *clipper_out = NULL;
-    if (device == NULL || surface == NULL || clipper_out == NULL ||
-        window == NULL) return 0;
-    vtable = surface_com_vtable(device);
-    create_clipper = vtable != NULL && vtable[4] != NULL
-        ? (SurfaceCreateClipperFn)vtable[4] : NULL;
-    if (create_clipper == NULL ||
-        create_clipper(device, 0u, &clipper, NULL) != 0 || clipper == NULL)
-        goto cleanup;
-
-    vtable = surface_com_vtable(clipper);
-    set_hwnd = vtable != NULL && vtable[8] != NULL
-        ? (ClipperSetHwndFn)vtable[8] : NULL;
-    if (set_hwnd == NULL || set_hwnd(clipper, 0u, window) != 0) goto cleanup;
-    vtable = surface_com_vtable(surface);
-    set_clipper = vtable != NULL && vtable[28] != NULL
-        ? (SurfaceSetClipperFn)vtable[28] : NULL;
-    if (set_clipper == NULL || set_clipper(surface, clipper) != 0)
-        goto cleanup;
-    *clipper_out = clipper;
-    clipper = NULL;
-    success = 1;
-
-cleanup:
-    if (clipper != NULL) surface_com_release(clipper);
-    return success;
-}
-
-static int winapi_rm_device_create(void* rm1, void* device, void* back_surface,
-    const GUID* device_guid, void** rm_out, void** device_out)
-{
-    typedef HRESULT (WINAPI *CreateDeviceFn)(void*, const GUID*, void*,
-                                              void*, DWORD, void**);
-    static const GUID iid_rm3 = { 0x4516ec83, 0x8f20, 0x11d0,
-        { 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3 } };
-    static const GUID iid_dd1 = { 0x6c14db80, 0xa733, 0x11ce,
-        { 0xa5, 0x21, 0x00, 0x20, 0xaf, 0x0b, 0xe5, 0x60 } };
-    static const GUID iid_surface1 = { 0x6c14db81, 0xa733, 0x11ce,
-        { 0xa5, 0x21, 0x00, 0x20, 0xaf, 0x0b, 0xe5, 0x60 } };
-    void* dd1 = NULL;
-    void* surface1 = NULL;
-    int ok = 0;
-    *rm_out = NULL;
-    *device_out = NULL;
-    if (device_guid != NULL &&
-        ((SurfaceQueryInterfaceFn)surface_com_vtable(rm1)[0])(
-            rm1, iid_rm3, rm_out) == 0 && *rm_out != NULL &&
-        ((SurfaceQueryInterfaceFn)surface_com_vtable(device)[0])(
-            device, iid_dd1, &dd1) == 0 && dd1 != NULL &&
-        ((SurfaceQueryInterfaceFn)surface_com_vtable(back_surface)[0])(
-            back_surface, iid_surface1, &surface1) == 0 && surface1 != NULL &&
-        ((CreateDeviceFn)surface_com_vtable(*rm_out)[15])(
-            *rm_out, device_guid, dd1, surface1, 0u, device_out) == 0 &&
-        *device_out != NULL) ok = 1;
-    if (surface1 != NULL) surface_com_release(surface1);
-    if (dd1 != NULL) surface_com_release(dd1);
-    return ok;
-}
-
-static int directdraw_renderer_init_winapi(
-    const DirectDrawRendererInitParams* params, const void* guid,
-    int width, int height, int bits_per_pixel)
-{
-    SurfaceDdrawCreateFn create;
-    SurfaceQueryInterfaceFn query;
-    SurfaceSetCooperativeLevelFn set_cooperative_level;
-    SurfaceSetDisplayModeFn set_display_mode;
-    SurfaceCreateSurfaceFn create_surface;
-    SurfaceGetAttachedSurfaceFn get_attached_surface;
-    void* direct_draw = NULL;
-    void* device = NULL;
-    void* primary = NULL;
-    void* back_surface = NULL;
-    void* clipper = NULL;
-    void* rm = NULL;
-    void* rm_device = NULL;
-    void* immediate_device = NULL;
-    HMODULE rm_module = NULL;
-    int mode_set = 0;
-    void** vtable;
-    SurfaceDdrawDesc2 desc;
-    SurfaceDdrawCaps2 back_caps;
-    HWND window;
-    int success = 0;
-
-    if (params == NULL || width <= 0 || height <= 0 ||
-        !surface_ddraw_api_get(&create)) return 0;
-    window = params->window != NULL ? (HWND)params->window : GetActiveWindow();
-    if (window == NULL) return 0;
-    if (create((GUID*)guid, &direct_draw, NULL) != 0 || direct_draw == NULL)
-        goto cleanup;
-    vtable = surface_com_vtable(direct_draw);
-    query = vtable != NULL && vtable[0] != NULL
-        ? (SurfaceQueryInterfaceFn)vtable[0] : NULL;
-    if (query == NULL || query(direct_draw, s_iid_direct_draw4, &device) != 0 ||
-        device == NULL) goto cleanup;
-    surface_com_release(direct_draw);
-    direct_draw = NULL;
-
-    vtable = surface_com_vtable(device);
-    set_cooperative_level = vtable != NULL && vtable[20] != NULL
-        ? (SurfaceSetCooperativeLevelFn)vtable[20] : NULL;
-    if (set_cooperative_level == NULL ||
-        set_cooperative_level(device, window,
-            params->fullscreen != 0 ? 0x11u : 8u) != 0) goto cleanup;
-    if (params->fullscreen != 0) {
-        set_display_mode = vtable != NULL && vtable[21] != NULL
-            ? (SurfaceSetDisplayModeFn)vtable[21] : NULL;
-        if (set_display_mode == NULL || set_display_mode(device,
-                (DWORD)width, (DWORD)height, (DWORD)bits_per_pixel,
-                0u, 0u) != 0) goto cleanup;
-        mode_set = 1;
-    }
-
-    memset(&desc, 0, sizeof(desc));
-    desc.size = sizeof(desc);
-    if (params->fullscreen != 0) {
-        desc.flags = 0x21u;
-        desc.backbuffer_count = 1u;
-        desc.caps.caps = 0x2218u;
-    }
-    else {
-        desc.flags = 1u;
-        desc.caps.caps = 0x2200u;
-    }
-    create_surface = vtable != NULL && vtable[6] != NULL
-        ? (SurfaceCreateSurfaceFn)vtable[6] : NULL;
-    if (create_surface == NULL ||
-        create_surface(device, &desc, &primary, NULL) != 0 ||
-        primary == NULL) goto cleanup;
-
-    if (params->fullscreen != 0) {
-        memset(&back_caps, 0, sizeof(back_caps));
-        back_caps.caps = 4u;
-        vtable = surface_com_vtable(primary);
-        get_attached_surface = vtable != NULL && vtable[12] != NULL
-            ? (SurfaceGetAttachedSurfaceFn)vtable[12] : NULL;
-        if (get_attached_surface == NULL ||
-            get_attached_surface(primary, &back_caps, &back_surface) != 0 ||
-            back_surface == NULL) goto cleanup;
-    }
-    else {
-        memset(&desc, 0, sizeof(desc));
-        desc.size = sizeof(desc);
-        desc.flags = 7u;
-        desc.height = (DWORD)height;
-        desc.width = (DWORD)width;
-        desc.caps.caps = 0x2040u;
-        vtable = surface_com_vtable(device);
-        create_surface = vtable != NULL && vtable[6] != NULL
-            ? (SurfaceCreateSurfaceFn)vtable[6] : NULL;
-        if (create_surface == NULL ||
-            create_surface(device, &desc, &back_surface, NULL) != 0 ||
-            back_surface == NULL) goto cleanup;
-    }
-
-    if (params->fullscreen == 0 &&
-        !winapi_renderer_clipper_attach(device, primary, window,
-                                        &clipper)) goto cleanup;
-
-    /* RM3 consumes the selected Direct3D device GUID, independently of the
-     * DirectDraw adapter GUID used to create the owning display. */
-    {
-        typedef HRESULT (WINAPI *CreateRMFn)(void**);
-        char path[MAX_PATH];
-        DWORD length = GetFullPathNameA("D3DRM.DLL", sizeof(path), path, NULL);
-        void* rm1 = NULL;
-        CreateRMFn create_rm;
-        int ok = 0;
-        if (params->device_guid != NULL && length != 0 && length < sizeof(path)) {
-            rm_module = LoadLibraryA(path);
-            create_rm = rm_module != NULL ? (CreateRMFn)GetProcAddress(
-                rm_module, "Direct3DRMCreate") : NULL;
-            if (create_rm != NULL && create_rm(&rm1) == 0 && rm1 != NULL &&
-                winapi_rm_device_create(rm1, device, back_surface,
-                    (const GUID*)params->device_guid, &rm, &rm_device)) ok = 1;
-        }
-        if (rm1 != NULL) surface_com_release(rm1);
-        if (!ok) goto cleanup;
-    }
-
-    /* The UserVisual manager needs the real immediate device belonging to
-     * this selected retained-mode device, as4781d0 does. Never substitute
-     * the DirectDraw device or the RM factory for that interface. */
-    if (!scene_winapi_device3_acquire(rm_device, &immediate_device))
-        goto cleanup;
-
-    if (s_directdraw_renderer_init_ops.renderer_state_commit != NULL) {
-        s_directdraw_renderer_init_ops.renderer_state_commit(
-            s_directdraw_renderer_init_ops.context, device, primary,
-            back_surface, params->fullscreen);
-    }
-    winapi_renderer_state_release(&s_winapi_renderer_state);
-    s_winapi_renderer_state.device = device;
-    s_winapi_renderer_state.primary = primary;
-    s_winapi_renderer_state.back_surface = back_surface;
-    s_winapi_renderer_state.clipper = clipper;
-    s_winapi_renderer_state.rm = rm;
-    s_winapi_renderer_state.rm_device = rm_device;
-    s_winapi_renderer_state.immediate_device = immediate_device;
-    s_winapi_renderer_state.rm_module = rm_module;
-    s_winapi_renderer_state.window = window;
-    s_winapi_renderer_state.fullscreen = params->fullscreen != 0;
-    s_winapi_renderer_state.width = width;
-    s_winapi_renderer_state.height = height;
-    s_renderer_window_handle = window;
-    s_renderer_primary_surface = primary;
-    render_surface_secondary_set((uint32_t)back_surface);
-    s_renderer_fullscreen = params->fullscreen != 0 ? 1u : 0u;
-    s_renderer_surface_width = (uint32_t)width;
-    s_renderer_surface_height = (uint32_t)height;
-    screen_bounded_surface_device_set(rm, rm_device);
-    if ((params->device_flags & 0x4000u) != 0u)
-        s_renderer_window_mode_flags |= 4u;
-    s_direct3drm_device_mode =
-        (s_renderer_window_mode_flags & 0x80000u) == 0u &&
-        (params->device_flags & 0x2000u) != 0u ? 2 : 1;
-    device = NULL;
-    primary = NULL;
-    back_surface = NULL;
-    clipper = NULL;
-    rm = NULL; rm_device = NULL; immediate_device = NULL;
-    rm_module = NULL; mode_set = 0;
-    if (params->fullscreen != 0) (void)ShowCursor(FALSE);
-    success = 1;
-
-cleanup:
-    if (immediate_device != NULL) surface_com_release(immediate_device);
-    if (rm_device != NULL) surface_com_release(rm_device);
-    if (rm != NULL) surface_com_release(rm);
-    if (rm_module != NULL) FreeLibrary(rm_module);
-    if (clipper != NULL) surface_com_release(clipper);
-    if (back_surface != NULL) surface_com_release(back_surface);
-    if (primary != NULL) surface_com_release(primary);
-    if (device != NULL && mode_set) {
-        typedef HRESULT (WINAPI *RestoreFn)(void*);
-        void** vt = surface_com_vtable(device);
-        if (vt != NULL && vt[19] != NULL) ((RestoreFn)vt[19])(device);
-    }
-    if (device != NULL) surface_com_release(device);
-    if (direct_draw != NULL) surface_com_release(direct_draw);
-    return success;
-}
-
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 int surface_winapi_present_rgba(const void* pixels, int pitch, int width, int height)
 {
     WinapiRendererState* state = &s_winapi_renderer_state;
@@ -4899,6 +4175,7 @@ static int surface_winapi_startup_renderer_initialize(void* context,
 }
 #endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI)
 void surface_winapi_startup_ops_install(void* owner_window)
 {
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
@@ -5157,7 +4434,7 @@ static int surface_directdraw_description_query(DisplaySurface* s,
     return 0;
 }
 
-#else  /* Other non-miniwin platform: DirectDraw is unavailable. */
+#elif !defined(LEGORRR_BACKEND_MINIWIN) /* Other non-miniwin platform: DirectDraw is unavailable. */
 
 int surface_create(DisplaySurface* out, void* hwnd, int w, int h)
 {
@@ -5317,35 +4594,6 @@ void surface_description_interface_set(void* interface_pointer)
 #else
     s_surface_description_interface = interface_pointer;
 #endif
-}
-
-/* SurfaceDescriptionGet (FUN_0047cdd0): pass a 0x1000 description request
- * through slot 0x5c of the renderer's DirectDraw wrapper. */
-// FUNCTION: LEGORR 0x0047cdd0
-int surface_description_get(int* width_out, int* height_out)
-{
-    typedef long (SURFACE_COM_CALL *SurfaceDescriptionProc)(
-        void*, uint32_t*, int*, int*);
-    uint32_t description[4];
-    void* interface_pointer;
-    void** vtable;
-    SurfaceDescriptionProc get_description;
-    description[0] = 0x1000u;
-    description[1] = 0u;
-    description[2] = 0u;
-    description[3] = 0u;
-    *width_out = 0;
-    *height_out = 0;
-#if defined(_WIN32)
-    interface_pointer = (void*)s_renderer_global_dword;
-#else
-    interface_pointer = s_surface_description_interface;
-    if (interface_pointer == NULL) return 0;
-#endif
-    vtable = *(void***)interface_pointer;
-    get_description = (SurfaceDescriptionProc)vtable[0x5c / 4];
-    return get_description(interface_pointer, description,
-                           width_out, height_out) == 0;
 }
 
 void surface_fill(void* px, int pitch, int w, int h, int r, int g, int b)
@@ -5526,51 +4774,6 @@ int ledger_stub_004748f0_MeshRecordAllocateOrAppend(
 {
     return mesh_record_allocate_or_append(object, vertex_count, index_rows,
                                           index_columns, source_indices);
-}
-
-
-void ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset(void* object);
-
-// ComObjectDestroyAndOptionallyFree
-// FUNCTION: LEGORR 0x0047e460
-void ledger_stub_0047e460_ComObjectDestroyAndOptionallyFree(void* object,
-                                                              unsigned char flags)
-{
-    if (object == 0) return;
-    ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset(object);
-    if ((flags & 1u) != 0) ui_render_record_free(object);
-}
-
-// TwoInterfaceFieldsReleaseAndReset
-// FUNCTION: LEGORR 0x0047e480
-void ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset(void* object)
-{
-    typedef unsigned long (SURFACE_COM_CALL *ReleaseMethod)(void*);
-    unsigned char* bytes = (unsigned char*)object;
-    unsigned int* slots;
-    void* interface_object;
-    void** vtable;
-    if (bytes == 0) return;
-    slots = (unsigned int*)bytes;
-    slots[0] = 0;
-    interface_object = *(void**)(bytes + 24);
-    if (interface_object != 0) {
-        vtable = *(void***)interface_object;
-        if (vtable != 0 && vtable[2] != 0) {
-            ReleaseMethod release = (ReleaseMethod)vtable[2];
-            release(interface_object);
-        }
-        *(void**)(bytes + 24) = 0;
-    }
-    interface_object = *(void**)(bytes + 16);
-    if (interface_object != 0) {
-        vtable = *(void***)interface_object;
-        if (vtable != 0 && vtable[2] != 0) {
-            ReleaseMethod release = (ReleaseMethod)vtable[2];
-            release(interface_object);
-        }
-        *(void**)(bytes + 16) = 0;
-    }
 }
 
 

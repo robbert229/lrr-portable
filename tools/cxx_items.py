@@ -148,9 +148,9 @@ class Item:
     cgroup: bool = False      # a merged top-level #if group of one cluster (#501)
     parts: list["Item"] = field(default_factory=list)   # a cgroup's members, in order
     branch: int = 0           # a cgroup member's branch (0: the #if branch)
-    condition: str = ""       # a cgroup's #if/#ifdef/#ifndef directive, verbatim
-    endif: str = ""           # a cgroup's #endif line, verbatim
-    branches: int = 0         # a cgroup's number of branches
+    condition: str = ""       # a cgroup's (or merged group's) #if/#ifdef/#ifndef directive, verbatim
+    endif: str = ""           # a cgroup's (or merged group's) #endif line, verbatim
+    branches: int = 0         # a cgroup's (or merged group's) number of branches
     in_group: int = 0         # line of the unmerged top-level #if group holding the item
     group_why: str = ""       # why that group was not merged
 
@@ -813,7 +813,9 @@ def _merge_groups(items: list[Item], groups: list[Group], text: str) -> list[Ite
         first = parts[0]
         item = Item(kind="function", start=g.start, end=g.end, category="function",
                     names=list(names), cond=first.cond - 1, container=first.container,
-                    group=True, body=first.body, decl_start=first.start)
+                    group=True, body=first.body, decl_start=first.start,
+                    condition=text[g.start:g.if_end], endif=text[g.endif_start:g.end],
+                    branches=len(g.branches))
         for p in parts:
             item.uses |= p.uses
             item.static = item.static or p.static

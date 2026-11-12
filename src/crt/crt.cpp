@@ -8,6 +8,7 @@
 #include <string.h>
 #include "gods98/texture.hpp"
 #include "crt_for_lego.hpp"
+#include "crt_for_avi_player.hpp"
 #if defined(_MSC_VER)
 #pragma function(fabs)
 #include <io.h>
@@ -832,39 +833,6 @@ int crt_runtime_error_message_box_display(const char* message,
 }
 #endif
 
-/* FUN_0047d3f0: popcount via the clear-lowest-set-bit loop. */
-// FUNCTION: LEGORR 0x0047d3f0
-int bit_count32(uint32_t value)
-{
-    int n = 0;
-    while (value != 0u) {
-        value &= value - 1u;
-        ++n;
-    }
-    return n;
-}
-
-/* FUN_0047e7e0: the corpus's second identical position-loop body. */
-#if defined(_MSC_VER)
-#define LEGORRR_CRT_STDCALL __stdcall
-#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
-#define LEGORRR_CRT_STDCALL __attribute__((stdcall))
-#else
-#define LEGORRR_CRT_STDCALL
-#endif
-// FUNCTION: LEGORR 0x0047e7e0
-int LEGORRR_CRT_STDCALL bit_count32_by_position(uint32_t value)
-{
-    int count = 0;
-    uint32_t position = 0u;
-    do {
-        if ((value & (1u << position)) != 0u) {
-            ++count;
-        }
-        ++position;
-    } while (position < 0x20u);
-    return count;
-}
 #undef LEGORRR_CRT_STDCALL
 
 /* VC5 LIBC.LIB intrncvt.obj supplies this three-dword zero test. */

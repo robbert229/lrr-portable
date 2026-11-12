@@ -1498,23 +1498,6 @@ const WindowRuntimeState* window_runtime_state_get(void)
     return &s_window_runtime_state;
 }
 
-// FUNCTION: LEGORR 0x0047c170
-void window_state_initialize_retail(void* window)
-{
-    s_renderer_window_state_b0 = 0u;
-    s_renderer_window_state_9c = 0u;
-    s_renderer_window_state_b4 = 0u;
-    s_renderer_window_state_a4 = 0u;
-    s_renderer_window_state_b8 = 0u;
-    s_renderer_window_state_ac = 0u;
-    s_renderer_window_handle = window;
-    s_renderer_global_dword = 0u;
-    s_renderer_window_state_90 = 0u;
-    s_render_surface_secondary = 0u;
-    s_renderer_primary_surface = NULL;
-    s_renderer_window_state_94 = 0u;
-}
-
 void window_runtime_state_initialize(void* window)
 {
     memset(&s_window_runtime_state, 0, sizeof(s_window_runtime_state));
