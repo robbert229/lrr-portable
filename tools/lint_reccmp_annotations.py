@@ -254,6 +254,89 @@ def annotated_group_lines(source: str, masked: str) -> set[int]:
     return covered
 
 
+NATIVE_ONLY_MACRO = "LEGORRR_BACKEND_MINIWIN"
+IFDEF_NATIVE = re.compile(r"\s*#\s*ifdef\s+" + NATIVE_ONLY_MACRO + r"\s*$")
+IF_OR_ELIF = re.compile(r"\s*#\s*(if|elif)\b(.*)$")
+NATIVE_CONJUNCT = re.compile(r"defined\s*(?:\(\s*" + NATIVE_ONLY_MACRO +
+                             r"\s*\)|\s" + NATIVE_ONLY_MACRO + r")")
+
+
+def condition_requires_native(expression: str) -> bool:
+    """True when an #if/#elif expression has `defined(LEGORRR_BACKEND_MINIWIN)`
+    as a top-level conjunct and no top-level `||`."""
+    expression = expression.strip()
+    while expression.startswith("(") and expression.endswith(")"):
+        depth = 0
+        for index, char in enumerate(expression):
+            depth += char == "("
+            depth -= char == ")"
+            if depth == 0 and index != len(expression) - 1:
+                break
+        else:
+            expression = expression[1:-1].strip()
+            continue
+        break
+    conjuncts: list[str] = []
+    depth = 0
+    start = 0
+    index = 0
+    while index < len(expression):
+        char = expression[index]
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        elif depth == 0 and expression.startswith("||", index):
+            return False
+        elif depth == 0 and expression.startswith("&&", index):
+            conjuncts.append(expression[start:index])
+            start = index + 2
+            index += 1
+        index += 1
+    conjuncts.append(expression[start:])
+    return any(NATIVE_CONJUNCT.fullmatch(conjunct.strip()) for conjunct in conjuncts)
+
+
+def native_only_lines(masked: str) -> set[int]:
+    """Lines inside an #if/#ifdef/#elif branch whose condition requires
+    LEGORRR_BACKEND_MINIWIN.
+
+    The matching build (PLATFORM=winapi) never defines that macro, so such a
+    definition is never an input of the matching build and cannot carry a
+    Reccmp address. Native-only port files wrap their body in such a group."""
+    lines = masked.splitlines()
+    covered: set[int] = set()
+    stack: list[bool] = []
+    index = 0
+    while index < len(lines):
+        text = lines[index]
+        # Join backslash continuations of a directive.
+        directive = text
+        last = index
+        while directive.lstrip().startswith("#") and directive.rstrip().endswith("\\") \
+                and last + 1 < len(lines):
+            last += 1
+            directive = directive.rstrip()[:-1] + " " + lines[last]
+        if CONDITIONAL_ANY.match(directive):
+            if IFDEF_NATIVE.match(directive):
+                stack.append(True)
+            elif CONDITIONAL_OPEN.match(directive):
+                match = IF_OR_ELIF.match(directive)
+                stack.append(bool(match and match.group(1) == "if"
+                                  and condition_requires_native(match.group(2))))
+            elif CONDITIONAL_CLOSE.match(directive):
+                if stack:
+                    stack.pop()
+            elif stack:
+                match = IF_OR_ELIF.match(directive)
+                stack[-1] = bool(match and match.group(1) == "elif"
+                                 and condition_requires_native(match.group(2)))
+        elif any(stack):
+            covered.update(range(index, last + 1))
+        index = last + 1
+    return covered
+
+
 def source_files(root: Path) -> list[Path]:
     return sorted(
         path
@@ -335,10 +418,13 @@ def collect(root: Path, ledger_path: Path | None) -> dict[str, list[str]]:
         masked = mask_comments_and_literals(source)
         scopes = scopes_at_braces(masked)
         grouped = annotated_group_lines(source, masked)
+        native_only = native_only_lines(masked)
         for offset, name, brace, definition in function_definitions(source):
             if has_nearby_annotation(source, definition):
                 continue
             if source.count("\n", 0, definition) in grouped:
+                continue
+            if source.count("\n", 0, definition) in native_only:
                 continue
             # Ignore whitespace and directives, not parameter names or types.
             signature = re.sub(r"(?m)^\s*\#.*$", "", masked[offset:brace])
