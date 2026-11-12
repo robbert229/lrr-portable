@@ -48,7 +48,9 @@ src/game/advisor_maths.h
 src/game/ai.cpp
 src/game/ai.hpp
 src/game/ai_for_bubbles.hpp
+src/game/ai_for_legoobject.hpp
 src/game/ai_from_lego.hpp
+src/game/ai_from_legoobject.hpp
 src/game/ai_shared.hpp
 src/game/animation_object.c
 src/game/animation_object.h
@@ -68,6 +70,7 @@ src/game/cmd_for_bubbles.hpp
 src/game/cmd_for_interface.hpp
 src/game/cmd_for_lava_erosion.hpp
 src/game/cmd_for_lego.hpp
+src/game/cmd_for_legoobject.hpp
 src/game/cmd_for_placement.hpp
 src/game/cmd_for_tooltip.hpp
 src/game/cmd_for_weapons.hpp
@@ -82,6 +85,7 @@ src/game/effects.cpp
 src/game/effects.hpp
 src/game/effects_for_bubbles.hpp
 src/game/effects_for_interface.hpp
+src/game/effects_for_legoobject.hpp
 src/game/effects_for_lighteffects.hpp
 src/game/effects_for_sfx.hpp
 src/game/effects_for_tooltip.hpp
@@ -107,6 +111,7 @@ src/game/entity_for_entity_stats.hpp
 src/game/entity_for_grid_cell_records.hpp
 src/game/entity_for_interface.hpp
 src/game/entity_for_lego.hpp
+src/game/entity_for_legoobject.hpp
 src/game/entity_for_loading_progress.hpp
 src/game/entity_for_map_view.hpp
 src/game/entity_for_object_state_file.hpp
@@ -118,6 +123,7 @@ src/game/entity_for_terrain_cell_objects.hpp
 src/game/entity_for_weapons.hpp
 src/game/entity_from_entity_stats.hpp
 src/game/entity_from_lego.hpp
+src/game/entity_from_legoobject.hpp
 src/game/entity_motion_owner.cpp
 src/game/entity_motion_ports.hpp
 src/game/entity_motion_probe.hpp
@@ -136,6 +142,7 @@ src/game/frontend_for_info.hpp
 src/game/frontend_for_info_track_overlay.hpp
 src/game/frontend_for_interface.hpp
 src/game/frontend_for_lego.hpp
+src/game/frontend_for_legoobject.hpp
 src/game/frontend_for_map_view.hpp
 src/game/frontend_for_object_overlays.hpp
 src/game/frontend_for_objective_unit.hpp
@@ -163,6 +170,7 @@ src/game/info_track_overlay.cpp
 src/game/interface.cpp
 src/game/lava_erosion.cpp
 src/game/lego.cpp
+src/game/legoobject.cpp
 src/game/level.cpp
 src/game/level.hpp
 src/game/level_for_dependencies.hpp
@@ -172,6 +180,7 @@ src/game/level_for_files.hpp
 src/game/level_for_grid_cell_records.hpp
 src/game/level_for_lava_erosion.hpp
 src/game/level_for_lego.hpp
+src/game/level_for_legoobject.hpp
 src/game/level_for_objective_unit.hpp
 src/game/level_for_placement.hpp
 src/game/level_for_screen_effect_quads.hpp
@@ -180,6 +189,7 @@ src/game/level_for_terrain_map.hpp
 src/game/level_for_terrain_overlay_quads.hpp
 src/game/level_for_tutorial_script.hpp
 src/game/level_from_lego.hpp
+src/game/level_from_legoobject.hpp
 src/game/level_id_remap.cpp
 src/game/level_shared.hpp
 src/game/lighteffects.cpp
@@ -242,11 +252,13 @@ src/game/seh_runtime.cpp
 src/game/seh_runtime.hpp
 src/game/select.cpp
 src/game/select.hpp
+src/game/select_from_legoobject.hpp
 src/game/sfx.cpp
 src/game/simulation_ui_ports.hpp
 src/game/spawn.cpp
 src/game/spawn.hpp
 src/game/spawn_for_lego.hpp
+src/game/spawn_for_legoobject.hpp
 src/game/startup_config.cpp
 src/game/startup_config_for_file_list_streams.hpp
 src/game/startup_config_for_wad.hpp
@@ -260,9 +272,11 @@ src/game/terrain_grid.cpp
 src/game/terrain_grid.hpp
 src/game/terrain_grid_for_cell_flood_passes.hpp
 src/game/terrain_grid_for_lego.hpp
+src/game/terrain_grid_for_legoobject.hpp
 src/game/terrain_grid_for_map_view.hpp
 src/game/terrain_grid_for_terrain_cell_objects.hpp
 src/game/terrain_grid_for_terrain_map.hpp
+src/game/terrain_grid_from_legoobject.hpp
 src/game/terrain_grid_shared.hpp
 src/game/terrain_map.cpp
 src/game/terrain_overlay_quads.cpp
@@ -323,6 +337,7 @@ src/gods98/block.hpp
 src/gods98/camera.cpp
 src/gods98/camera.hpp
 src/gods98/camera_for_lego.hpp
+src/gods98/camera_for_legoobject.hpp
 src/gods98/camera_for_record_chains.hpp
 src/gods98/camera_shared.hpp
 src/gods98/com_object_tree.cpp
@@ -470,6 +485,7 @@ src/gods98/simtick_for_cell_flood_passes.hpp
 src/gods98/simtick_for_grid_cell_records.hpp
 src/gods98/simtick_for_interface.hpp
 src/gods98/simtick_for_lego.hpp
+src/gods98/simtick_for_legoobject.hpp
 src/gods98/simtick_for_lighteffects.hpp
 src/gods98/simtick_for_panel_unit.hpp
 src/gods98/simtick_for_placement.hpp
@@ -520,6 +536,7 @@ src/gods98/view_for_com_object_tree.hpp
 src/gods98/view_for_images_unit.hpp
 src/gods98/view_for_info_track_overlay.hpp
 src/gods98/view_for_lego.hpp
+src/gods98/view_for_legoobject.hpp
 src/gods98/view_for_lighteffects.hpp
 src/gods98/view_for_lws.hpp
 src/gods98/view_for_map_view.hpp
