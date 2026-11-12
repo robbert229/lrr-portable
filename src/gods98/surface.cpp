@@ -3780,13 +3780,13 @@ static int surface_directdraw_description_query(DisplaySurface* s,
     out->bits_per_pixel = d.ddpfPixelFormat.dwRGBBitCount;
     return 1;
 }
+#endif
 
-#elif defined(LEGORRR_BACKEND_WINAPI)
 
 /* The WinAPI build intentionally avoids miniwin's shortened COM interfaces.
  * The reference requests IDirectDraw4/IDirectDrawSurface4 and passes the
  * 124-byte DDSURFACEDESC2 layout. Declare only the ABI pieces used here. */
-#if defined(_WIN32) && !defined(_WIN64)
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 typedef struct SurfaceDdrawColorKey {
     DWORD low;
     DWORD high;
@@ -3840,14 +3840,20 @@ typedef char SurfaceDdrawDesc2MustBe124Bytes[
     sizeof(SurfaceDdrawDesc2) == 0x7cu ? 1 : -1];
 typedef char SurfaceDdrawPixelFormatMustBe32Bytes[
     sizeof(SurfaceDdrawPixelFormat) == 0x20u ? 1 : -1];
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static const GUID s_iid_direct_draw4 = {
     0x9c59509a, 0x39bd, 0x11d1,
     { 0x8c, 0x4a, 0x00, 0xc0, 0x4f, 0xd9, 0x30, 0xc5 }
 };
+#endif
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static HMODULE s_surface_ddraw_module;
 static FARPROC s_surface_ddraw_create;
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 typedef HRESULT (WINAPI *SurfaceDdrawCreateFn)(GUID*, void**, void*);
 typedef HRESULT (WINAPI *SurfaceQueryInterfaceFn)(void*, REFIID, void**);
 typedef ULONG (WINAPI *SurfaceReleaseFn)(void*);
@@ -3875,7 +3881,9 @@ typedef HRESULT (WINAPI *SurfaceGetDescriptionFn)(void*,
                                                    SurfaceDdrawDesc2*);
 typedef HRESULT (WINAPI *SurfaceGetPixelFormatFn)(void*,
                                                   SurfaceDdrawPixelFormat*);
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static void** surface_com_vtable(void* object)
 {
     return object != NULL ? *(void***)object : NULL;
@@ -3901,7 +3909,9 @@ static int surface_ddraw_api_get(SurfaceDdrawCreateFn* create)
     *create = (SurfaceDdrawCreateFn)s_surface_ddraw_create;
     return 1;
 }
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 typedef struct WinapiRendererState {
     void* device;
     void* primary;
@@ -3917,27 +3927,43 @@ typedef struct WinapiRendererState {
     int width;
     int height;
 } WinapiRendererState;
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static WinapiRendererState s_winapi_renderer_state;
+#endif
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 void* surface_winapi_immediate_device_peek(void)
 {
     return s_winapi_renderer_state.immediate_device;
 }
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static int winapi_renderer_active(void)
 {
     return s_winapi_renderer_state.device != NULL;
 }
+#endif
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 // GLOBAL: LEGORR 0x0076acbc
 static uint32_t s_renderer_fullscreen;
+#endif
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 // GLOBAL: LEGORR 0x0076acc0
 static uint32_t s_renderer_surface_width;
+#endif
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 // GLOBAL: LEGORR 0x0076acc4
 static uint32_t s_renderer_surface_height;
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static void windowed_surface_blit_impl(DisplaySurface* primary,
                                        DisplaySurface* back_surface);
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static void winapi_renderer_state_release(WinapiRendererState* state)
 {
     void* immediate;
@@ -3969,7 +3995,9 @@ static void winapi_renderer_state_release(WinapiRendererState* state)
     s_renderer_surface_width = 0u;
     s_renderer_surface_height = 0u;
 }
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 /* WindowedRenderSurfaceBlit (FUN_0047cc50): derive the screen-space target
  * rectangle, then blit the global back surface into the primary surface. */
 // FUNCTION: LEGORR 0x0047cc50
@@ -4000,7 +4028,9 @@ static void windowed_render_surface_blit_retail(void)
               (void*)s_render_surface_secondary, &local.source,
               0x01000000u, NULL);
 }
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 /* RenderSurfacePresent (FUN_0047c8d0) chooses fullscreen flip or windowed
  * global-surface blit from the renderer mode word. */
 // FUNCTION: LEGORR 0x0047c8d0
@@ -4015,7 +4045,9 @@ void render_surface_present(void)
     }
     windowed_render_surface_blit_retail();
 }
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static int winapi_renderer_clipper_attach(void* device, void* surface,
     HWND window, void** clipper_out)
 {
@@ -4270,7 +4302,9 @@ cleanup:
     if (direct_draw != NULL) surface_com_release(direct_draw);
     return success;
 }
+#endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 int surface_winapi_present_rgba(const void* pixels, int pitch, int width, int height)
 {
     WinapiRendererState* state = &s_winapi_renderer_state;
@@ -4884,6 +4918,7 @@ static int surface_winapi_startup_renderer_initialize(void* context,
 }
 #endif
 
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI)
 void surface_winapi_startup_ops_install(void* owner_window)
 {
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
@@ -5142,7 +5177,7 @@ static int surface_directdraw_description_query(DisplaySurface* s,
     return 0;
 }
 
-#else  /* Other non-miniwin platform: DirectDraw is unavailable. */
+#elif !defined(LEGORRR_BACKEND_MINIWIN) /* Other non-miniwin platform: DirectDraw is unavailable. */
 
 int surface_create(DisplaySurface* out, void* hwnd, int w, int h)
 {
