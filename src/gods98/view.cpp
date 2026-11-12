@@ -4687,13 +4687,11 @@ uint32_t ledger_stub_004753f0_DDiSceneObjectFramePositionGet(
 
 
 
-namespace unported_ledger_stubs {
 // FUNCTION: LEGORR 0x004756d0
 extern "C" float ledger_stub_004756d0_VideoObjectAspectRatioGet(void* video_object)
 {
     return video_object_aspect_ratio_get(video_object);
 }
-} // namespace unported_ledger_stubs
 
 // DDiSceneResourceNameResolve
 int ledger_stub_00476770_DDiSceneResourceNameResolve(const char* name)
