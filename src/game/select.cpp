@@ -18,12 +18,9 @@
 #include "gods98/sound.hpp"
 #include "gods98/view.hpp"
 #include "select_from_legoobject.hpp"
+#include "select_from_message_unit.hpp"
 
 static GameContext* s_selection_active_context;
-// GLOBAL: LEGORR 0x004ff298
-static uint32_t s_selection_active_count;
-// GLOBAL: LEGORR 0x004fef2c
-static EntitySlot* s_selection_active_records[SELECTION_MAX];
 
 void selection_active_context_sync(GameContext* ctx)
 {
@@ -80,121 +77,6 @@ void selection_remove(GameContext* ctx, const EntitySlot* e)
     selection_active_context_sync(ctx);
 }
 
-#if !defined(_MSC_VER) || !defined(_M_IX86)
-/* EntityTypeComponentGet (FUN_0044a200) indexes the retail entity record as
- * 32-bit words. EntitySlot is a port sidecar whose attached-record fields are
- * native-width on this build, so read them through their named members (the
- * same +0x0c/+0x10/+0x14/+0x18/+0x1c/+0x20 slots) instead of by word index. */
-static void* selection_entity_type_component(const EntitySlot* e)
-{
-    const void* record = NULL;
-    switch (e->type) {
-    case 1:
-        record = e->attached_direction_record_type1;
-        return record != NULL
-            ? (void*)(uintptr_t)scene_object_resource_get(record) : NULL;
-    case 2:
-        record = e->attached_direction_record_type2;
-        break;
-    case 3:
-        record = e->attached_direction_record_type3;
-        break;
-    case 4:
-        record = e->attached_direction_record_type4;
-        break;
-    case 10:
-        record = e->attached_direction_record_type10;
-        break;
-    default:
-        if ((e->flags_3e8 & 0x00020000u) != 0u)
-            return (void*)e->type_operation_fallback_1c;
-        return (void*)e;
-    }
-    return record != NULL
-        ? (void*)(uintptr_t)animation_object_handle_get(record) : NULL;
-}
-#endif
-
-// FUNCTION: LEGORR 0x004526e0
-int selection_candidate_filter_active(void* entity, int mode, int param_3)
-{
-    EntitySlot* e = (EntitySlot*)entity;
-    if (e->attach_304 != NULL) {
-        e = (EntitySlot*)e->attach_304;
-    }
-    if (selection_candidate_eligibility_check(e) == 0) {
-        return 0;
-    }
-    if (mode == 0
-        && selection_active_candidate_already_selected_or_marked(e) != 0) {
-        selection_clear_marker_and_reset_hud(e);
-        return 0;
-    }
-    if (selection_contains_entity_active_target(e, NULL) != 0u
-        || s_selection_active_count >= SELECTION_MAX) {
-        return 0;
-    }
-
-    (void)entity_pool_find_by_callback_filtered_current(
-        selection_candidate_filter_pool_refresh_callback, NULL);
-    s_selection_active_records[s_selection_active_count] = e;
-    ++s_selection_active_count;
-    e->flags_3e8 |= ENTITY_SELECTED;
-    if (e->type != 4
-        && (e->flags_3e0 & 0x24002000u) == 0u
-        && (e->flags_3e4 & 0x100u) == 0u) {
-        entity_action_sequence_reset(e, 0);
-        entity_activity_records_refresh(e);
-        if (e->type == 2 && param_3 != 0) {
-            ViewContext* view = engine_current_primary_view_get();
-            if (view != NULL) {
-                float facing[3];
-                float target[2];
-                cam_get_facing(&view->cam_follow, facing);
-                target[0] = -facing[0];
-                target[1] = -facing[1];
-                entity_state_reset(e, 0, 0);
-                unported_ledger_stubs::
-                    ledger_stub_00444fb0_EntityTurnToVectorActivityIssue(
-                        e, target);
-            }
-        }
-    }
-    if ((e->flags_3e8 & 0x80u) != 0u
-        && ((entity_stats_word_get(e) & 0x20000u) == 0u
-            || e->owner_36c != NULL)) {
-#if defined(_MSC_VER) && defined(_M_IX86)
-        sound_submission_route_wrapper(entity_type_component_get(e),
-                                       0x11, 0, 1, NULL);
-#else
-        sound_submission_route_wrapper(selection_entity_type_component(e),
-                                       0x11, 0, 1, NULL);
-#endif
-        return 1;
-    }
-    return 0;
-}
-
-// FUNCTION: LEGORR 0x00452be0
-void selection_clear_active(void)
-{
-    uint32_t index = 0;
-    if (s_selection_active_count != 0u) {
-        EntitySlot** record = s_selection_active_records;
-        do {
-            EntitySlot* entity = *record;
-            if ((entity->flags_3e8 & ENTITY_SELECTED) != 0u) {
-                entity->flags_3ec |= 2u;
-            }
-            entity->flags_3e8 &= ~ENTITY_SELECTED;
-            entity->flags_3ec &= ~1u;
-            ++index;
-            ++record;
-        } while (index < s_selection_active_count);
-    }
-    s_selection_active_count = 0u;
-}
-
 void selection_clear(GameContext* ctx)
 {
     int i;
@@ -208,25 +90,6 @@ void selection_clear(GameContext* ctx)
     }
     selection_clear_active();
     ctx->selection_count = 0;
-}
-
-// FUNCTION: LEGORR 0x00452c50
-int selection_entity_remove_active(EntitySlot* entity)
-{
-    uint32_t index;
-    if (s_selection_active_count != 0u) {
-        if (selection_contains_entity_active_target(entity, &index) != 0u) {
-            if (index == 0u) {
-                command_context_post_to_hud(0, NULL);
-            }
-            --s_selection_active_count;
-            s_selection_active_records[index] =
-                s_selection_active_records[s_selection_active_count];
-            entity->flags_3e8 &= ~ENTITY_SELECTED;
-            return 1;
-        }
-    }
-    return 0;
 }
 
 int selection_count(const GameContext* ctx)
@@ -256,188 +119,12 @@ void selection_count_reset(GameContext* ctx)
     }
 }
 
-/* The reference reads its active selection globals. The portable runtime
- * keeps those globals inside the currently bound GameContext. */
-// FUNCTION: LEGORR 0x004525c0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked)
-EntitySlot* selection_active_entity_get(void)
-{
-    __asm {
-        mov eax, dword ptr [s_selection_active_count]
-        mov ecx, dword ptr [s_selection_active_records]
-        neg eax
-        sbb eax, eax
-        and eax, ecx
-        ret
-    }
-}
-#else
-EntitySlot* selection_active_entity_get(void)
-{
-    return s_selection_active_count != 0u
-        ? s_selection_active_records[0] : NULL;
-}
-#endif
-
-// FUNCTION: LEGORR 0x00452580
-EntitySlot* const* selection_active_context_record_get(int* count_out)
-{
-    if (s_selection_active_count != 0u) {
-        if (count_out != NULL)
-            *count_out = (int)s_selection_active_count;
-        return s_selection_active_records;
-    }
-    if (count_out != NULL)
-        *count_out = 0;
-    return NULL;
-}
-
-// FUNCTION: LEGORR 0x004525e0
-EntitySlot* const* selection_active_records_get(void)
-{
-    return s_selection_active_records;
-}
-
-// FUNCTION: LEGORR 0x004525f0
-uint32_t selection_active_count_get(void)
-{
-    return s_selection_active_count;
-}
-
-// FUNCTION: LEGORR 0x004525b0
-int selection_active_has_any_get(void)
-{
-    return s_selection_active_count != 0u;
-}
-
-// FUNCTION: LEGORR 0x00452600
-void selection_active_count_reset(void)
-{
-#if defined(_MSC_VER) && defined(_M_IX86)
-    __asm {
-        mov dword ptr [s_selection_active_count], 0
-    }
-#else
-    s_selection_active_count = 0u;
-#endif
-}
-
 EntitySlot* selection_first(const GameContext* ctx)
 {
     if (ctx == NULL || ctx->selection_count == 0) {
         return NULL;
     }
     return ctx->selection[0];
-}
-
-/* SelectionStateTick (FUN_004528c0) — see select.hpp. */
-// FUNCTION: LEGORR 0x004528c0
-void selection_state_tick_active(void)
-{
-    EntitySlot** sel = s_selection_active_records;
-
-    /* Pass 1: classify the whole selection into the highest class any
-     * entry justifies. Deviations: the widened owner mirror stands in
-     * for the corpus's +0x36c pointer word (pointer-word convention),
-     * and the corpus's byte read at +0x3ec lands on the flag word's low
-     * byte in little-endian. */
-    int cls_none = 0; /* the class-none shape: every entry is stale */
-    int cls_two = 0, cls_bad = 0, cls_clean = 0, cls_flag = 0;
-    int cls_four = 0, cls_eleven = 0;
-    int i;
-    for (i = 0; i < (int)s_selection_active_count; ++i) {
-        EntitySlot* e = sel[i];
-        const int type = e->type;
-        const uint32_t stats = entity_stats_word_get(e);
-        if (type == 2 && e->owner_36c == NULL) {
-            cls_two = 1; /* kind 2 unowned: the class wins, scan done */
-            break;
-        }
-        if ((stats & 0x20000u) == 0u) {
-            if (type == 1) {
-                if ((stats & 0x2000000u) == 0u
-                    && (e->flags_3ec & 0x40u) == 0u) {
-                    cls_clean = 1;
-                } else {
-                    cls_bad = 1;
-                }
-            } else if (type == 4) {
-                cls_four = 1;
-            } else if (type == 0xb && (e->flags_3e4 & 0x2000000u) != 0u) {
-                cls_eleven = 1;
-            }
-        } else if (e->owner_36c == NULL) {
-            cls_flag = 1;
-        } else if ((stats & 0x2000000u) == 0u
-                   && (e->flags_3ec & 0x40u) == 0u) {
-            cls_clean = 1;
-        } else {
-            cls_bad = 1;
-        }
-    }
-
-    /* The class ladder posts one HUD context and silences the lower
-     * classes (the corpus's own chain, contexts 9..0xe). */
-    if (cls_two) {
-        command_context_post_to_hud(9, NULL);
-        cls_bad = cls_clean = cls_flag = cls_four = cls_eleven = 0;
-    } else if (cls_bad) {
-        command_context_post_to_hud(10, NULL);
-        cls_clean = cls_flag = cls_four = cls_eleven = 0;
-    } else if (cls_clean) {
-        command_context_post_to_hud(0xb, NULL);
-        cls_flag = cls_four = cls_eleven = 0;
-    } else if (cls_flag) {
-        command_context_post_to_hud(0xc, NULL);
-        cls_four = cls_eleven = 0;
-    } else if (cls_four) {
-        command_context_post_to_hud(0xd, NULL);
-        cls_eleven = 0;
-    } else if (cls_eleven) {
-        command_context_post_to_hud(0xe, NULL);
-    } else {
-        command_context_post_to_hud(0, NULL);
-        cls_none = 1;
-    }
-
-    /* Pass 2: entries outside the chosen class drop out — swap-with-last
-     * compaction that revisits the swapped-in slot (the corpus's index
-     * quirk) — and every dropped entity loses the selected bit. The
-     * class-none shape drops everything (quirk pinned). */
-    for (i = 0; i < (int)s_selection_active_count; ) {
-        EntitySlot* e = sel[i];
-        const int type = e->type;
-        const uint32_t stats = entity_stats_word_get(e);
-        const int bit17 = (stats & 0x20000u) != 0u;
-        const int bit25 = (stats & 0x2000000u) != 0u;
-        const int bit6 = (e->flags_3ec & 0x40u) != 0u;
-        const int owned = e->owner_36c != NULL;
-        int drop;
-        if (cls_two) {
-            drop = (type != 2 || owned);
-        } else if (cls_bad) {
-            drop = bit17 ? ((!bit25 && !bit6) || !owned) : (type != 1);
-        } else if (cls_clean) {
-            drop = bit17 ? ((bit25 || bit6) || !owned) : (type != 1);
-        } else if (cls_flag) {
-            drop = !bit17 || owned;
-        } else if (cls_four) {
-            drop = (type != 4);
-        } else if (cls_eleven) {
-            drop = type != 0xb || (e->flags_3e4 & 0x2000000u) == 0u;
-        } else {
-            drop = 1; /* the class-none shape removes every entry */
-        }
-        if (drop) {
-            --s_selection_active_count;
-            sel[i] = sel[s_selection_active_count];
-            e->flags_3e8 &= ~ENTITY_SELECTED;
-            /* No index advance: the swapped-in entry gets revisited. */
-        } else {
-            ++i;
-        }
-    }
 }
 
 void selection_state_tick(GameContext* ctx)
@@ -534,32 +221,6 @@ int selection_contains_entity_target(const GameContext* ctx,
     return 0;
 }
 
-/* The retail entry point takes only the entity and optional index output;
- * its array and count are the active selection globals mirrored above. */
-// FUNCTION: LEGORR 0x00452610
-uint32_t selection_contains_entity_active_target(
-    EntitySlot* entity, uint32_t* index_out)
-{
-    if (index_out != NULL) {
-#if defined(_MSC_VER) && defined(_M_IX86)
-        return (uint32_t)cmd_array_find_value_index(
-            (const int*)s_selection_active_records,
-            (unsigned)s_selection_active_count, (int)entity,
-            (unsigned*)index_out);
-#else
-        uint32_t i;
-        for (i = 0; i < s_selection_active_count; ++i) {
-            if (s_selection_active_records[i] == entity) {
-                *index_out = i;
-                return 1u;
-            }
-        }
-        return 0u;
-#endif
-    }
-    return entity->flags_3e8 & 0x200000u;
-}
-
 int selection_contains_entity(const GameContext* ctx, const EntitySlot* e)
 {
     uint32_t index;
@@ -576,16 +237,6 @@ int selection_candidate_already_selected_or_marked(const GameContext* ctx,
         return 1;
     }
     return (e->flags_3ec & 2u) != 0u ? 1 : 0;
-}
-
-// FUNCTION: LEGORR 0x00452690
-int selection_active_candidate_already_selected_or_marked(EntitySlot* entity)
-{
-    if (selection_contains_entity_active_target(entity, NULL) == 0
-        && (entity->flags_3ec & 2u) == 0u) {
-        return 0;
-    }
-    return 1;
 }
 
 /* Compatibility entry retained for callers and tests that own an explicit

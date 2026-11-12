@@ -3671,32 +3671,6 @@ uint32_t context_selected_pointer_pair_peek(int second)
     return (second != 0) ? s_ctx_sel_ptr_second : s_ctx_sel_ptr_first;
 }
 
-/* SelectionCandidateEligibilityCheck (FUN_00452870, findings 77/85/468):
- * corpus order kept — state gate, shared predicate, then the clear-bit
- * band; the byte-read of +0x3e4's low byte (& 10 decimal) maps to the
- * flag-word mask 0xA. */
-// FUNCTION: LEGORR 0x00452870
-int selection_candidate_eligibility_check(const EntitySlot* e)
-{
-#if !defined(_MSC_VER) || !defined(_M_IX86)
-    if (e == NULL) {
-        return 0; /* deviation: the corpus dereferences blindly */
-    }
-#endif
-    if ((e->flags_3e8 & 0x100u) == 0u) {
-        return 0;
-    }
-    const int shared_eligible = entity_shared_eligibility_check(e, 1);
-    if ((shared_eligible != 0)
-        && ((uint8_t)e->flags_3e4 & 0x0Au) == 0u /* corpus: low byte & 10 */
-        && (e->flags_3e0 & 0x24000000u) == 0u
-        && ((e->type != 1)
-            || (e->flags_3e0 & 0x00040000u) == 0u)) {
-        return 1; /* type 1 has the additional 0x40000 rejection (finding 468). */
-    }
-    return 0;
-}
-
 uint32_t entity_global_animation_state_peek(void)
 {
     return s_global_animation_state;

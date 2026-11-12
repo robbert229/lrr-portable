@@ -28,8 +28,6 @@ namespace unported_ledger_stubs {
 int ledger_stub_00443710_AdjacentPositionCandidateFind(
     EntitySlot* entity, const int candidate[2], int output[2]);
 int entity_capacity_or_state_predicate(const EntitySlot* entity);
-int ledger_stub_00447210_EntityAdjacentPlacementCellSearch(
-    EntitySlot* entity, EntitySlot* target);
 int entity_cell_step_command_issue_with_jitter(
     EntitySlot* entity, const int target_xy[2], const float input_xy[2],
     int action_mode, int mark_pending);
@@ -79,6 +77,8 @@ extern "C" float random_float_range(float minimum, float maximum);
 #include "cmd_from_weapons.hpp"
 #include "cmd_for_interface.hpp"
 #include "cmd_for_legoobject.hpp"
+#include "cmd_for_message_unit.hpp"
+#include "cmd_from_message_unit.hpp"
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
@@ -894,7 +894,7 @@ static unsigned s_pending_timer_count;
  * entity walk. Direct callers of the scans still get a live-pool fallback. */
 static int s_pending_candidates_from_entity_walk;
 
-static GameContext* pending_scan_context_get(void)
+GameContext* pending_scan_context_get(void)
 {
     return s_ctx != NULL ? s_ctx : entity_pool_callback_context_get();
 }
@@ -2886,7 +2886,7 @@ void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag)
 /* Queue operation 8 addresses the active selection, not its object word.
  * The coordinate pair remains two raw integer cell words. */
 // FUNCTION: LEGORR 0x00403270
-static void selection_drag_area_command_create(EntitySlot* const* entities,
+void selection_drag_area_command_create(EntitySlot* const* entities,
     unsigned int count, const int cell_xy[2], int replace)
 {
     unsigned int i;
@@ -3890,22 +3890,6 @@ void idle_queue_clear(EntitySlot* e)
  *  Queue executor (FUN_004520d0): 5-dword records, ping-pong buffered.
  * ------------------------------------------------------------------ */
 
-#define CMD_QUEUE_CAP 0x800
-
-typedef struct QueueRec {
-    int        opcode;
-    const void* a1;    /* arg1: entity ptr for entity ops */
-    int        a2;
-    int        a3;
-    int        a4;
-} QueueRec;
-
-// GLOBAL: LEGORR 0x004eaf20
-static QueueRec s_queue[2][CMD_QUEUE_CAP];
-// GLOBAL: LEGORR 0x004fef20
-static int      s_queued_count[2];
-// GLOBAL: LEGORR 0x004fef28
-static int      s_ping; /* active producer block (DAT_004fef28) */
 void cmd_context_set(GameContext* ctx)
 {
     s_ctx = ctx;
@@ -3919,25 +3903,6 @@ void cmd_context_set(GameContext* ctx)
     }
 }
 
-// FUNCTION: LEGORR 0x00452060
-void cmd_produce(int op, const void* a1, int a2, const int* pair)
-{
-    int block = s_ping;
-    if ((unsigned)s_queued_count[block] >= CMD_QUEUE_CAP) {
-        return; /* queue full: silent drop (FUN_00452060) */
-    }
-    QueueRec* q = &s_queue[block][s_queued_count[block]++];
-    /* b63 note: an explicit zero-fill phase + single pair null-test was
-     * tried (corpus 0x452092..0x4520ba shape) and measured LOWER — the
-     * toolchain's store/register scheduling diverges; the fused writes
-     * below are the measured-best shape. */
-    q->opcode = op;
-    q->a1 = a1;
-    q->a2 = a2;
-    q->a3 = (pair != NULL) ? pair[0] : 0;
-    q->a4 = (pair != NULL) ? pair[1] : 0;
-}
-
 void cmd_enqueue(int opcode, const EntitySlot* e, int param, int p1, int p2)
 {
     int pair[2];
@@ -3946,28 +3911,8 @@ void cmd_enqueue(int opcode, const EntitySlot* e, int param, int p1, int p2)
     cmd_produce(opcode, e, param, pair);
 }
 
-/* Cheat/debug keybinds (FUN_00452010). */
-/* The byte key table at 0x004ff0bc has twelve slots before the five-dword
- * records beginning at 0x004ff0c8.  Keep the portable table within that
- * retail storage window. */
-#define KEYBIND_MAX 12
-typedef struct KeyBind {
-    int key;
-    int op, a1, a2, a3, a4;
-} KeyBind;
-static KeyBind s_keybinds[KEYBIND_MAX];
-static int     s_keybind_count = 0;
-
-// FUNCTION: LEGORR 0x00452010
-void cmd_bind_key(int key, int op, int a1, int a2, int a3, int a4)
-{
-    if (s_keybind_count >= KEYBIND_MAX) {
-        return;
-    }
-    KeyBind* b = &s_keybinds[s_keybind_count++];
-    b->key = key & 0xff;
-    b->op = op; b->a1 = a1; b->a2 = a2; b->a3 = a3; b->a4 = a4;
-}
+KeyBind s_keybinds[KEYBIND_MAX];
+int     s_keybind_count = 0;
 
 void cmd_keybind_tick(int (*keyheld)(int key))
 {
@@ -3983,180 +3928,6 @@ void cmd_keybind_tick(int (*keyheld)(int key))
     }
 }
 
-// FUNCTION: LEGORR 0x004520d0
-void cmd_queue_tick(void)
-{
-    int i;
-    /* 1. Producer block: the held-key pre-pass (SelectionRoot step 1 —
-     *    cheat-keybinds; the demo binds keys via cmd_bind_key). */
-    uint32_t* engine_state = engine_current_state_word();
-    if ((engine_state == NULL ||
-         (*engine_state & ENGINE_STATE_TIME_FROZEN) == 0u) &&
-        s_ctx != NULL && s_ctx->input_keyheld != NULL) {
-        cmd_keybind_tick(s_ctx->input_keyheld);
-    }
-
-    /* 2. Remap the first dword of every queued record while the old bank
-     *    is still active. This is FUN_0045d870 over each 0x14-byte record. */
-    int block = s_ping;
-    int count = s_queued_count[block];
-    for (i = 0; i < count; ++i) {
-        QueueRec* q = &s_queue[block][i];
-        command_entity_reference_remap((uint32_t*)q);
-
-    }
-
-    /* 3. Retire the old producer bank, flip the ping-pong selector, and
-     *    clear the newly active bank before dispatching the saved count. */
-    s_queued_count[block] = 0;
-    s_ping = !s_ping;
-    s_queued_count[s_ping] = 0;
-
-    /* 4. The opcode switch (finding 06/10 §"The queue executor"). */
-    for (i = 0; i < count; ++i) {
-        QueueRec* q = &s_queue[block][i];
-        EntitySlot* ent = (EntitySlot*)q->a1;
-        switch (q->opcode) {
-        case 5:
-        case 6:
-            cmd_create_move(ent, (const float*)&q->a3, q->a2);
-            break;
-        case 8:
-            selection_drag_area_command_create(selection_active_records_get(),
-                selection_active_count_get(), &q->a3, q->a2);
-            break;
-        case 0x17:
-        case 0x1d:
-            cmd_create_task(ent);
-            break;
-        case 0x19:
-            cmd_create_gated(ent, (void*)(uintptr_t)q->a2);
-            break;
-        case 0x2b:
-            cmd_create_target(ent, (void*)(uintptr_t)q->a2);
-            break;
-        case 1:
-            selection_candidate_filter_default(ent, q->a2);
-            break;
-        case 3:
-            selection_clear(s_ctx);
-            break;
-        case 4:
-            selection_entity_remove(ent);
-            break;
-        case 9:
-            selection_command_dispatch(q->a2);
-            break;
-        case 0xb:
-            media_min_distance_update_mode(1, NULL, 0);
-            break;
-        case 0xc:
-            sound_alias_play(q->a2, 0);
-            break;
-        case 10:
-            /* GlobalRenderRecordSetFromInput also needs its active view and
-             * renderer hooks; the queue entry supplies neither. */
-            break;
-        case 0x13:
-            /* CmdQueueFlush calls TerrainStampImpactHandler(a3, a4,
-             * low16(a2), high16(a2)); the helper now reads the active level
-             * and terrain owners directly. */
-            (void)terrain_stamp_impact_handle_current(
-                (uint32_t)q->a3, (uint32_t)q->a4,
-                (int)((uint32_t)q->a2 & 0xffffu),
-                (int)((uint32_t)q->a2 >> 16));
-            break;
-        case 0x15:
-        case 0x1b:
-        {
-            int cell_xy[2];
-            cell_xy[0] = q->a3;
-            cell_xy[1] = q->a4;
-            (void)entity_build_placement_command_setup(
-                cell_xy, 0, NULL, 1, q->opcode == 0x1b);
-            break;
-        }
-        case 0x1f:
-        {
-            GameContext* context = pending_scan_context_get();
-            LevelState* level = context != NULL ? context->level : NULL;
-            int owner_index;
-            /* The reference ignores the queue payload here: it takes the
-             * type-3 entity index from level +0xb0, uses that same index as
-             * the spawned entity's owner, and samples the active terrain's
-             * width and height. */
-            if (level != NULL) {
-                owner_index = (int)active_engine_field_b0_get(level);
-                if (owner_index >= 0 &&
-                    entity_at(context, 3, owner_index) != NULL) {
-                    (void)unported_ledger_stubs::
-                        emergence_random_spawn_attempt(owner_index,
-                            owner_index, level_width(level),
-                            level_height(level));
-                }
-            }
-            break;
-        }
-        case 0x21:
-            (void)lego::entity_conditional_type_five_spawn(ent);
-            break;
-        case 0x23:
-            entity_random_valid_cell_command_create(ent);
-            break;
-        case 0x25:
-            (void)unported_ledger_stubs::
-                ledger_stub_00447210_EntityAdjacentPlacementCellSearch(
-                    ent, (EntitySlot*)(uintptr_t)q->a2);
-            break;
-        case 0x2d: selection_state_tick(s_ctx); break;
-        case 0x34:
-        {
-            int cell_xy[2];
-            cell_xy[0] = q->a3;
-            cell_xy[1] = q->a4;
-            entity_build_placement_command_pair_create(cell_xy, 0);
-            break;
-        }
-        case 0x36:
-        {
-            int cell_xy[2];
-            cell_xy[0] = q->a3;
-            cell_xy[1] = q->a4;
-            entity_build_placement_command_batch_expand(cell_xy);
-            break;
-        }
-        case 0x40:
-            (void)selected_entity_state_monitor();
-            break;
-        default:
-            /* SelectionRoot has no default dispatch branch. */
-            break;
-        }
-    }
-}
-
-/* --- queue-adjacent leaves (see cmd.hpp) -----------------------------------
- * CommandQueueCancelOpcode: corpus shape — the active bank only,
- * swap-with-last removals, forward index never rechecking the slot a
- * swap landed on (so a swapped-in match stays if it lands behind the
- * cursor; the loop bound is the running count).
- * The comparison uses the same low 32-bit word as the 32-bit corpus even on
- * the native host, where entity pointers can be wider. */
-// FUNCTION: LEGORR 0x00451f60
-void cmd_queue_cancel_match(int value)
-{
-    const int block = s_ping;
-    int count = s_queued_count[block];
-    unsigned i = 0;
-    while ((int)i < count) {
-        if ((uint32_t)(uintptr_t)s_queue[block][i].a1 == (uint32_t)value) {
-            count = count - 1;
-            s_queue[block][i] = s_queue[block][count];
-            s_queued_count[block] = count;
-        }
-        i = i + 1;
-    }
-}
 const void* active_context_record_get(int* count_out)
 {
     const int count = selection_count(s_ctx);
@@ -4170,135 +3941,11 @@ const void* active_context_record_get(int* count_out)
     return (const void*)selection_record_array(s_ctx);
 }
 
-// FUNCTION: LEGORR 0x00452650
-int cmd_array_find_value_index(const int* array, unsigned count, int value,
-                               unsigned* index_out)
-{
-    if (count != 0) { /* deviation: the corpus tests the count first */
-        if (array != NULL) { /* pinned anti-crash guard — the corpus
-                              * dereferences blindly */
-            for (unsigned i = 0; i != count; ++i) {
-                if (array[i] == value) {
-                    if (index_out != NULL) {
-                        *index_out = i;
-                    }
-                    return 1;
-                }
-            }
-        }
-    }
-    return 0;
-}
-
 int cmd_queue_active_count_peek(void)
 {
     return s_queued_count[s_ping];
 }
 
-/* --- selection snapshot / dispatch (see cmd.hpp) -----------------------------
- * The owner read takes the EntitySlot's +0x36c mirror (pointer-sized; the
- * corpus reads the flat 32-bit word), and the flag reads take the
- * flags_3e8 mirror's low byte as the corpus's byte read. */
-static const void* cmd_entity_owner_at(const EntitySlot* e)
-{
-    return e->owner_36c;
-}
-// FUNCTION: LEGORR 0x00452520
-int selection_snapshot_create(void** array_out, unsigned* count_out)
-{
-    const int count = selection_count(s_ctx);
-    if (count == 0) {
-        return 0;
-    }
-    if (count_out != NULL) {
-        *count_out = (unsigned)count;
-    }
-    void* copy = engine_heap_alloc((long)count * (long)sizeof(void*));
-    if (array_out != NULL) {
-        *array_out = copy;
-    }
-    if (copy != NULL) {
-        EntitySlot* const* src = selection_record_array(s_ctx);
-        const unsigned n = (unsigned)count & 0x3fffffffu;
-        for (unsigned i = 0; i < n; ++i) {
-            ((void**)copy)[i] = src[i];
-        }
-    }
-    return 1;
-}
-// FUNCTION: LEGORR 0x00452d60
-int selection_command_dispatch(int param)
-{
-    const void* sel = media_min_distance_context();
-    if (sel != NULL) {
-        const EntitySlot* s = (const EntitySlot*)sel;
-        if ((s->flags_3e8 & 0x10u) != 0u
-            && (s->type == 2 || cmd_entity_owner_at(s) != NULL)) {
-            media_min_distance_update_mode(0, (void*)s, param);
-            return 1;
-        }
-    }
-    const int count = selection_count(s_ctx);
-    for (int i = 0; i < count; ++i) {
-        const EntitySlot* e = selection_record_array(s_ctx)[i];
-        if (e == NULL) {
-            continue; /* deviation: the corpus dereferences blindly */
-        }
-        if (e->type == 2 && cmd_entity_owner_at(e) != NULL) {
-            e = (const EntitySlot*)cmd_entity_owner_at(e);
-        } /* (the corpus checks the swapped-in entity's own owner word) */
-        if ((e->flags_3e8 & 0x10u) != 0u
-            && (e->type == 2 || cmd_entity_owner_at(e) != NULL)) {
-            media_min_distance_update_mode(0, (void*)e, param);
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/* --- random-cell producer / entity remove (see cmd.hpp) ----------------------
- * VC5 rand.obj supplies the shared stream in the classic x86 build; other
- * builds keep this subsystem's local LCG model. */
-#if !defined(_MSC_VER) || (_MSC_VER >= 1200) || !defined(_M_IX86)
-static uint32_t s_cmd_rand_state = 1;
-#endif
-
-static int cmd_rand15(void)
-{
-#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
-    return rand();
-#else
-    s_cmd_rand_state = s_cmd_rand_state * 214013u + 2531011u;
-    return (int)((s_cmd_rand_state >> 16) & 0x7fffu);
-#endif
-}
-// FUNCTION: LEGORR 0x00452430
-void entity_random_valid_cell_command_create(void* entity)
-{
-    const LevelState* lvl = (s_ctx != NULL) ? s_ctx->level : NULL;
-    const int w = (lvl != NULL) ? level_width(lvl) : 0;
-    const int h = (lvl != NULL) ? level_height(lvl) : 0;
-    if (w <= 0 || h <= 0) {
-        return; /* deviation: the corpus modulos zero on an absent level */
-    }
-    int x = 0, y = 0;
-    int found = 0;
-    for (unsigned tries = 0; tries < 1000u; ++tries) {
-        x = cmd_rand15() % w;
-        y = cmd_rand15() % h;
-        if (level_cell_flag_8_bounded(lvl, x, y) != 0u) {
-            found = 1;
-            break;
-        }
-    }
-    if (found != 0) {
-        /* FUN_00452060 copies the two optional words from a stack pair. */
-        int pair[2];
-        pair[0] = x;
-        pair[1] = y;
-        cmd_produce(0x24, entity, 0, pair);
-    }
-}
 int selection_entity_remove(void* entity)
 {
     int result;
@@ -4316,22 +3963,6 @@ int selection_entity_remove(void* entity)
         ((EntitySlot*)entity)->flags &= ~ENTITY_SELECTED;
     }
     return result;
-}
-
-/* SelectionObjectDetach (FUN_004524b0): cancel queued commands for the
- * object, remove it from the selected set, and clear the current selection
- * context when it refers to that object. */
-// FUNCTION: LEGORR 0x004524b0
-void selection_object_detach(void* entity)
-{
-    if (entity == NULL) {
-        return;
-    }
-    cmd_queue_cancel_match((int)(uintptr_t)entity);
-    (void)selection_entity_remove(entity);
-    if (media_min_distance_context() == entity) {
-        media_min_distance_update_mode(1, NULL, 0);
-    }
 }
 
 int selection_candidate_filter(void* entity, int mode, int param_3)
@@ -4356,49 +3987,6 @@ int selection_candidate_filter(void* entity, int mode, int param_3)
         }
         return result;
     }
-}
-
-/* SelectionCandidateFilterDefault (FUN_004526c0) is the exact mode-1
- * forwarding wrapper around SelectionCandidateFilter. */
-// FUNCTION: LEGORR 0x004526c0
-void selection_candidate_filter_default(void* entity, int mode)
-{
-    (void)selection_candidate_filter(entity, mode, 1);
-}
-
-// FUNCTION: LEGORR 0x00452cc0
-int selected_entity_state_monitor(void)
-{
-    const int count = (s_ctx != NULL) ? s_ctx->selection_count : 0;
-    /* Faithful corpus shape: the counter is not used inside the loop —
-     * every pass inspects the first selection entry. */
-    for (int i = 0; i < count; ++i) {
-        EntitySlot* head = (count > 0)
-            ? (EntitySlot*)selection_record_array(s_ctx)[0]
-            : NULL;
-        if (head == NULL) {
-            continue;
-        }
-        if ((entity_stats_word_get(head) & 0x20000u) != 0u) {
-            EntitySlot* owner = (EntitySlot*)head->owner_36c;
-            if (owner != NULL) {
-                owner->flags_3e4 &= 0xfffffff7u;
-                owner->owner_36c = NULL;
-            }
-        }
-        if (head->type == 4) {
-            /* FUN_00409ff0 replaces tracked object pointers before teardown. */
-            entity_destroy_tracked_pointer_cleanup(head);
-        }
-        else {
-            if (head->type == 0xb) {
-                /* FUN_0040d0a0 removes type-11 objects from the cell chain. */
-                terrain_entity_cell_record_remove(head);
-            }
-            (void)entity_teardown(head);
-        }
-    }
-    return count;
 }
 
 /* --- entity record schedulers (see cmd.hpp) ---------------------------------- */
