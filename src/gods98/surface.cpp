@@ -2852,21 +2852,6 @@ void renderer_begin_frame_once_retail(void)
     s_engine_feature_word |= 1u;
 }
 
-/* DirectDrawSurfaceDescriptorInitialize (FUN_0047e710): clear the
- * descriptor storage at +0x1c and restore DDSURFACEDESC.dwSize. */
-// FUNCTION: LEGORR 0x0047e710
-void surface_descriptor_initialize(void* record)
-{
-    unsigned char* bytes = (unsigned char*)record;
-    if (bytes == NULL) return;
-    memset(bytes + 0x1c, 0, 0x7c);
-    *(uint32_t*)(bytes + 0x1c) = 0x7cu;
-    *(uint32_t*)(bytes + 0x18) = 0u;
-    *(uint32_t*)(bytes + 0x10) = 0u;
-    bytes[0x08] = 0u;
-    bytes[0x14] = 0u;
-}
-
 /* RenderObjectStateApplyToEntries (FUN_00473ec0): state kind 4 snapshots
  * the child set and applies each child callback; kind 1 applies the surface
  * property to each layer in order. */
@@ -5526,51 +5511,6 @@ int ledger_stub_004748f0_MeshRecordAllocateOrAppend(
 {
     return mesh_record_allocate_or_append(object, vertex_count, index_rows,
                                           index_columns, source_indices);
-}
-
-
-void ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset(void* object);
-
-// ComObjectDestroyAndOptionallyFree
-// FUNCTION: LEGORR 0x0047e460
-void ledger_stub_0047e460_ComObjectDestroyAndOptionallyFree(void* object,
-                                                              unsigned char flags)
-{
-    if (object == 0) return;
-    ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset(object);
-    if ((flags & 1u) != 0) ui_render_record_free(object);
-}
-
-// TwoInterfaceFieldsReleaseAndReset
-// FUNCTION: LEGORR 0x0047e480
-void ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset(void* object)
-{
-    typedef unsigned long (SURFACE_COM_CALL *ReleaseMethod)(void*);
-    unsigned char* bytes = (unsigned char*)object;
-    unsigned int* slots;
-    void* interface_object;
-    void** vtable;
-    if (bytes == 0) return;
-    slots = (unsigned int*)bytes;
-    slots[0] = 0;
-    interface_object = *(void**)(bytes + 24);
-    if (interface_object != 0) {
-        vtable = *(void***)interface_object;
-        if (vtable != 0 && vtable[2] != 0) {
-            ReleaseMethod release = (ReleaseMethod)vtable[2];
-            release(interface_object);
-        }
-        *(void**)(bytes + 24) = 0;
-    }
-    interface_object = *(void**)(bytes + 16);
-    if (interface_object != 0) {
-        vtable = *(void***)interface_object;
-        if (vtable != 0 && vtable[2] != 0) {
-            ReleaseMethod release = (ReleaseMethod)vtable[2];
-            release(interface_object);
-        }
-        *(void**)(bytes + 16) = 0;
-    }
 }
 
 

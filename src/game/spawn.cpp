@@ -76,20 +76,6 @@ void pairing_activity_prepare(EntitySlot* target)
 }
 int scatter_spawn_gate_get()
 { return (entity_state_flags_peek() & 0x20u) != 0u; }
-// FUNCTION: LEGORR 0x0047ed70
-void interface_invoke_one_if_nonnull(void* object)
-{
-    if (object != 0) {
-        void** vtable = *static_cast<void***>(object);
-        LegacyInterfaceInvoke invoke =
-            reinterpret_cast<LegacyInterfaceInvoke>(vtable[0]);
-#if defined(_MSC_VER)
-        invoke(object, 0, 1);
-#else
-        invoke(object, 1);
-#endif
-    }
-}
 void legacy_result_check_hook_set(LegacyResultCheckHook hook, void* context)
 { s_result_check_hook = hook; s_result_check_context = context; }
 // FUNCTION: LEGORR 0x00480780

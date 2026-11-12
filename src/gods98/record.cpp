@@ -469,31 +469,6 @@ void* indexed_record_data_address_get(const void* record, int index)
     return indexed_record_data_address_get_target(record, index);
 }
 
-/* AviPlayerReadyGet (FUN_0047ed80, findings 185/414): the readiness
- * byte at +0x99 (byte-safe — the corpus reads it as a raw byte). */
-// FUNCTION: LEGORR 0x0047ed80
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t avi_player_ready_get(const void* movie)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        xor eax, eax
-        mov al, byte ptr [ecx + 99h]
-        ret
-    }
-}
-#else
-uint32_t avi_player_ready_get(const void* movie)
-{
-    if (movie != NULL) {
-        uint8_t v = 0;
-        __builtin_memcpy(&v, (const char*)movie + 0x99, sizeof(v));
-        return v;
-    }
-    return 0u;
-}
-#endif
-
 /* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): the
  * inline-block copy into the indexed record's data slot. Deviation: the
  * corpus strides both links and the copy blindly; the three null answers
