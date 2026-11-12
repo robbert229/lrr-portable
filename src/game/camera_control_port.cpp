@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-022 GAME-022: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-022.csv. */
+/* The port's camera (port tail, ADR 0006 decision 4; finding 587).
+ *
+ * GAME-022, the original's camera unit, is rebuilt in original shape in
+ * camera_control.c. These are the port's models of its functions, under the
+ * port's names, on the port's ViewContext, the engine's camera controller
+ * buffer and their hooks: native callers and tests use them. Their
+ * annotations moved to camera_control.c; each keeps a "Port model of"
+ * comment with the original's address. Relocated by tools/relocate_unit.py
+ * (body hashes: docs/coverage/relocations/GAME-022.csv). */
 #include <math.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -36,7 +42,7 @@ static int target_blend(EngineCameraTargetRecord* record, int target_id, float* 
 static void view_tail(ViewContext* v, float scale);
 
 // SceneObjectChainRecordCreate (FUN_00435b20).
-// FUNCTION: LEGORR 0x00435b20
+/* Port model of 0x00435b20 (camera_control.c). */
 SceneObjectChainRecord* scene_object_chain_record_create(void* parent,
                                                          int type)
 {
@@ -89,7 +95,7 @@ fail:
     return NULL;
 }
 
-// FUNCTION: LEGORR 0x00435d91
+/* Port model of 0x00435d91 (camera_control.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void entity_b8_bit3_set_or_clear(void* record, int set)
 {
@@ -132,7 +138,7 @@ void entity_b8_bit3_set_or_clear(void* record, int set)
 
 // CameraViewContextClose (FUN_00435dc8) releases the world camera first,
 // conditionally releases follow and third handles, then frees the context.
-// FUNCTION: LEGORR 0x00435dc8
+/* Port model of 0x00435dc8 (camera_control.c). */
 void camera_view_context_close(void* view)
 {
     int mode;
@@ -152,7 +158,7 @@ void camera_view_context_close(void* view)
     }
 }
 
-// FUNCTION: LEGORR 0x00435e0e
+/* Port model of 0x00435e0e (camera_control.c). */
 void camera_view_context_set(float cap, float follow_scale,
                              float pan_scale, int edge)
 {
@@ -163,7 +169,7 @@ void camera_view_context_set(float cap, float follow_scale,
 }
 // ModelTransformCopyToSceneNode (FUN_00435e35) copies a scene node's pose
 // onto the model scene object when the model record kind is 3.
-// FUNCTION: LEGORR 0x00435e35
+/* Port model of 0x00435e35 (camera_control.c). */
 void model_transform_copy_to_scene_node(void* model_record,
                                         void* source_scene_node)
 {
@@ -195,7 +201,7 @@ void model_transform_copy_to_scene_node(void* model_record,
 
 /* ScreenEffectRecordSet (FUN_00435ebb): copy the four effect parameters
  * around the camera tilt operation in the original record. */
-// FUNCTION: LEGORR 0x00435ebb
+/* Port model of 0x00435ebb (camera_control.c). */
 void screen_effect_record_set(void* camera_record,
                               uint32_t field4, uint32_t field8,
                               uint32_t fieldc, float tilt,
@@ -210,7 +216,7 @@ void screen_effect_record_set(void* camera_record,
 }
 
 /* --- entity record-field leaves (see record.hpp) --------------------------- */
-// FUNCTION: LEGORR 0x00435ef4
+/* Port model of 0x00435ef4 (camera_control.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void record_fields_4_and_14_set(
     void* record, uint32_t value_a, uint32_t value_b)
@@ -240,7 +246,7 @@ void record_fields_4_and_14_set(void* record, uint32_t value_a,
 }
 #endif
 /* RecordField14Get (FUN_00435f0b). */
-// FUNCTION: LEGORR 0x00435f0b
+/* Port model of 0x00435f0b (camera_control.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t record_field14_get(const void* record)
 {
@@ -261,7 +267,7 @@ uint32_t record_field14_get(const void* record)
 #endif
 
 /* CursorScreenRayContextReset (FUN_00435f16) — see view.hpp. */
-// FUNCTION: LEGORR 0x00435f16
+/* Port model of 0x00435f16 (camera_control.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void cursor_screen_ray_context_reset(ViewContext* v)
 {
@@ -284,7 +290,7 @@ void cursor_screen_ray_context_reset(ViewContext* v)
 }
 #endif
 /* TerrainGridBorderInsetGet (FUN_00435f28): DAT_005560ac's getter. */
-// FUNCTION: LEGORR 0x00435f28
+/* Port model of 0x00435f28 (camera_control.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) int view_grid_edge_get(void)
 {
@@ -303,7 +309,7 @@ int view_grid_edge_get(void)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00435f32
+/* Port model of 0x00435f32 (camera_control.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void entity_fields_a0_a4_store_a8_clear(
     void* record, uint32_t value_a, uint32_t value_b)
@@ -337,7 +343,7 @@ void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
 }
 #endif
 
-// FUNCTION: LEGORR 0x00435f5c
+/* Port model of 0x00435f5c (camera_control.c). */
 void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
 {
     if (v == NULL || dt <= 0.0f) {
@@ -473,7 +479,7 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
     view_tail(v, scale);
 }
 
-// FUNCTION: LEGORR 0x00436831
+/* Port model of 0x00436831 (camera_control.c). */
 void camera_tilt_bounds_set(void* camera, float lo, float hi)
 {
     if (camera == NULL) {
@@ -490,7 +496,7 @@ void camera_tilt_bounds_set(void* camera, float lo, float hi)
  * negative X-axis rotation. The DDiSceneObjectPoseMethodDispatch leaf is an
  * injectable renderer seam because its owning scene interface varies by
  * backend. */
-// FUNCTION: LEGORR 0x00436860
+/* Port model of 0x00436860 (camera_control.c). */
 void camera_tilt_set(void* camera, float value)
 {
     uint8_t flags;
@@ -525,14 +531,14 @@ void camera_tilt_set(void* camera, float value)
 /* CameraPanAxisUpdate (FUN_00436900): add the delta to the controller's
  * current +0x78 angle and route through CameraSetTilt for the same bounds and
  * scene-transform update. */
-// FUNCTION: LEGORR 0x00436900
+/* Port model of 0x00436900 (camera_control.c). */
 void camera_pan_axis_update(void* camera, float delta)
 {
     camera_tilt_set(camera,
                     delta + *(float*)((char*)camera + 0x78));
 }
 
-// FUNCTION: LEGORR 0x00436921
+/* Port model of 0x00436921 (camera_control.c). */
 void camera_scalar_bounds_set(void* camera, float lo, float hi)
 {
     if (camera == NULL) {
@@ -547,7 +553,7 @@ void camera_scalar_bounds_set(void* camera, float lo, float hi)
 /* CameraSetBoundedRotationValue (FUN_00436953): same optional-range and
  * override gates as the tilt setter, with a reset pose followed by a
  * negative Z-axis rotation. */
-// FUNCTION: LEGORR 0x00436953
+/* Port model of 0x00436953 (camera_control.c). */
 void camera_rotation_set(void* camera, float value)
 {
     uint8_t flags;
@@ -581,13 +587,13 @@ void camera_rotation_set(void* camera, float value)
  * +0x84 angle and route it through camera_rotation_set (0x00436953), as
  * camera_pan_axis_update does for +0x78. Panel.c (GAME-032, finding 554) is
  * its caller. */
-// FUNCTION: LEGORR 0x004369f4
+/* Port model of 0x004369f4 (camera_control.c). */
 extern "C" void camera_tilt_axis_update(void* camera, float delta)
 {
     camera_rotation_set(camera, delta + *(float*)((char*)camera + 0x84));
 }
 
-// FUNCTION: LEGORR 0x00436a18
+/* Port model of 0x00436a18 (camera_control.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void camera_distance_bounds_set(void* camera,
                                                  float lo, float hi)
@@ -623,7 +629,7 @@ void camera_distance_bounds_set(void* camera, float lo, float hi)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00436a4a
+/* Port model of 0x00436a4a (camera_control.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void camera_distance_set(void* camera, float value)
 {
@@ -679,7 +685,7 @@ void camera_distance_set(void* camera, float value)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00436aa5
+/* Port model of 0x00436aa5 (camera_control.c). */
 void camera_zoom_update(void* camera, float delta)
 {
     if (camera == NULL) {
@@ -691,7 +697,7 @@ void camera_zoom_update(void* camera, float delta)
 }
 
 /* RendererNodeRelativePositionSet (FUN_00436ac9) — see view.hpp. */
-// FUNCTION: LEGORR 0x00436ac9
+/* Port model of 0x00436ac9 (camera_control.c). */
 void renderer_node_relative_position_set(const void* node, float x, float y)
 {
 #if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
@@ -707,7 +713,7 @@ void renderer_node_relative_position_set(const void* node, float x, float y)
     cam_offset((CameraHandle*)handle, x, y, 0.0f);
 }
 /* SelectionRecordPointGet (FUN_00436ae9) — see view.hpp. */
-// FUNCTION: LEGORR 0x00436ae9
+/* Port model of 0x00436ae9 (camera_control.c). */
 void selection_record_point_get(ViewContext* v, float out[3])
 {
     if (v != NULL && out != NULL && v->mode == 1) {
@@ -715,7 +721,7 @@ void selection_record_point_get(ViewContext* v, float out[3])
         cam_get_pos(&v->cam_follow, out);
     }
 }
-// FUNCTION: LEGORR 0x00436b0b
+/* Port model of 0x00436b0b (camera_control.c). */
 void selection_record_point_set(ViewContext* v, float x, float y)
 {
     if (v != NULL && v->mode == 1) {
@@ -724,7 +730,7 @@ void selection_record_point_set(ViewContext* v, float x, float y)
     }
 }
 
-// FUNCTION: LEGORR 0x00436b33
+/* Port model of 0x00436b33 (camera_control.c). */
 int camera_get_position_with_terrain_height(ViewContext* v,
                                             EngineContext* ctx,
                                             float out[3])
@@ -740,7 +746,7 @@ int camera_get_position_with_terrain_height(ViewContext* v,
 
 /* CameraRotationGet (FUN_00436b79): the float at +0x84 (opaque-record
  * reader; see header). */
-// FUNCTION: LEGORR 0x00436b79
+/* Port model of 0x00436b79 (camera_control.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) float camera_rotation_get(const void* camera)
 {
@@ -760,7 +766,7 @@ float camera_rotation_get(const void* camera)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00436b87
+/* Port model of 0x00436b87 (camera_control.c). */
 void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount)
 {
     if (v == NULL || vec == NULL) {

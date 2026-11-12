@@ -15,6 +15,37 @@
 
 #include <stdint.h>
 
+/* GAME-022 Camera (camera_control.c, finding 587). The declarations below
+ * keep the port's names, which the port tail (camera_control_port.cpp)
+ * defines for native callers. In the matching build they name the unit's
+ * original functions instead; a #define adds no declaration, so
+ * lego_unit.c's symbol numbering does not move (finding 538). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define scene_object_chain_record_create camera_create
+#define entity_b8_bit3_set_or_clear camera_enable_free_movement
+#define camera_view_context_close camera_free
+#define camera_view_context_set camera_init_camera_movements
+#define screen_effect_record_set_original camera_track_object
+#define record_fields_4_and_14_set camera_set_fp_object
+#define record_field14_get camera_get_fp_camera_frame
+#define cursor_screen_ray_context_reset camera_stop_movement
+#define view_grid_edge_get camera_get_mouse_scroll_indent
+#define entity_fields_a0_a4_store_a8_clear_original camera_shake
+#define view_tick_original camera_update
+#define camera_tilt_bounds_set camera_set_tilt_range
+#define camera_tilt_set camera_set_tilt
+#define camera_pan_axis_update camera_add_tilt
+#define camera_rotation_set camera_set_rotation
+#define camera_tilt_axis_update camera_add_rotation
+#define camera_distance_bounds_set camera_set_zoom_range
+#define camera_distance_set camera_set_zoom
+#define camera_zoom_update camera_add_zoom
+#define selection_record_point_get camera_get_topdown_position
+#define selection_record_point_set camera_set_topdown_position
+#define camera_topdown_position_get_adapter camera_get_topdown_world_pos
+#define camera_pointer_pan_update camera_move
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
