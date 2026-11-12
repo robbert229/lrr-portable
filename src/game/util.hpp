@@ -156,9 +156,9 @@ void pending_record_table_install(const uint32_t* rows, unsigned int count);
 void pending_record_release_hook_set(void (*hook)(uint32_t* row));
 unsigned int pending_record_count_get(void);
 extern "C" void pending_record_list_entry_move_to_front(unsigned int index); /* FUN_00419de0 */
-void pending_record_list_entry_remove_and_release(unsigned int index); /* FUN_00419e80 */
+extern "C" void pending_record_list_entry_remove_and_release(unsigned int index); /* FUN_00419e80 */
 extern "C" void pending_record_release_if_present(void); /* FUN_00419e60 */
-void pending_record_release_all(void); /* FUN_00419f10 */
+extern "C" void pending_record_release_all(void); /* FUN_00419f10 */
 
 void level_identifier_remap_table_install(const uint32_t* pairs,
                                           unsigned int count);
