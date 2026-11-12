@@ -12,6 +12,8 @@
  * The port's stats loader (entity_config.cpp, entity.cpp) fills the same
  * statsGlobs through entity_stats_port_globs(); the port's own getters are
  * in the port tail entity_stats_port.cpp, for native builds only. */
+/* Matching build: LegoObject.c callers call legoobject_unit.c (#588). */
+#include "legoobject_port_aliases.h"
 #include "entity_stats_link_names.h"
 #include <stdlib.h>
 #include <string.h>

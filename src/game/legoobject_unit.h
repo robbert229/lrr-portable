@@ -44,12 +44,14 @@ typedef struct Lego_Object {
     void* routeBlocks;                /* +0x024 route buffer */
     unsigned int routeBlocksTotal;    /* +0x028 */
     unsigned int routeBlocksCurrent;  /* +0x02c */
-    unsigned char pad_030[0x28c - 0x030];
+    unsigned int routeCurveCount;     /* +0x030 BezierCurve routeCurve: count */
+    float routeCurvePoints[50][2];    /* +0x034 routeCurve.points */
+    float routeCurveDistances[50];    /* +0x1c4 routeCurve.distances */
     float field_28c;                  /* +0x28c */
     float field_290;                  /* +0x290 */
     float field_294;                  /* +0x294 */
-    int field_298;                    /* +0x298 */
-    int field_29c;                    /* +0x29c */
+    float field_298;                  /* +0x298 last route direction x */
+    float field_29c;                  /* +0x29c last route direction y */
     float field_2a0;                  /* +0x2a0 */
     float field_2a4;                  /* +0x2a4 */
     float field_2a8;                  /* +0x2a8 */
@@ -63,7 +65,7 @@ typedef struct Lego_Object {
     unsigned int field_2d0;           /* +0x2d0 */
     float animTime;                   /* +0x2d4 */
     unsigned int animRepeat;          /* +0x2d8 */
-    void* field_2dc;                  /* +0x2dc */
+    void* field_2dc;                  /* +0x2dc sink effect container */
     int field_2e0;                    /* +0x2e0 */
     void* activityCont;               /* +0x2e4 container the activity runs */
     const char* activityName1;        /* +0x2e8 activityName entries */
@@ -95,7 +97,9 @@ typedef struct Lego_Object {
     struct Lego_Object* driveObject;  /* +0x36c */
     int carriedTools[5];              /* +0x370 */
     unsigned int numCarriedTools;     /* +0x384 */
-    unsigned char pad_388[0x3b4 - 0x388];
+    unsigned char pad_388[0x39c - 0x388];
+    float weaponDirection[3];         /* +0x39c fire direction */
+    float weaponTarget[3];            /* +0x3a8 fire target position */
     float field_3b4;                  /* +0x3b4 */
     float field_3b8;                  /* +0x3b8 */
     float field_3bc;                  /* +0x3bc */
@@ -312,8 +316,343 @@ void legoobject_simulation_mode_counter_add(int unused, unsigned int count); /* 
 void legoobject_tracked_pointer_remove(void* pointer);          /* 0043a930 */
 void legoobject_lava_crust_activity_register(Lego_Object* obj); /* 0043a960 */
 
-/* ---- pulled forward from part 2 ---- */
+/* ---- group H: 0043a9e0-0043bbc0 (part 2, issue #588) ---- */
+/* The record LegoObject_RunThroughLists hands 0043b3b0: the screen point
+ * to pick at and where the hit goes. */
+typedef struct LegoObjH_PickSearch {
+    Lego_Object** result;             /* +0x00 */
+    float x;                          /* +0x04 screen position */
+    float y;                          /* +0x08 */
+} LegoObjH_PickSearch;
+/* The record of 0043b770: the viewport and the screen rectangle. */
+typedef struct LegoObjH_RectSearch {
+    void* viewport;                   /* +0x00 */
+    float left;                       /* +0x04 */
+    float top;                        /* +0x08 */
+    float right;                      /* +0x0c */
+    float bottom;                     /* +0x10 */
+} LegoObjH_RectSearch;
+/* The record of 0043b8d0: the listener, its position and the two ranges
+ * that switch the objects' meshes. */
+typedef struct LegoObjH_LodSearch {
+    Lego_Object* obj;                 /* +0x00 the listener (skipped) */
+    int usePosition;                  /* +0x04 */
+    float mediumDist;                 /* +0x08 */
+    float highDist;                   /* +0x0c */
+    float position[3];                /* +0x10 */
+} LegoObjH_LodSearch;
+/* Map3D's block grid size (its first two words). */
+typedef struct LegoObjH_Map {
+    int blockWidth;                   /* +0x00 */
+    int blockHeight;                  /* +0x04 */
+} LegoObjH_Map;
+/* legoGlobs.rockMonsterData: the creature models (0x74 bytes each). */
+typedef struct LegoObjH_CreatureModel {
+    unsigned char bytes[0x74];
+} LegoObjH_CreatureModel;
+/* legoGlobs.buildingData: the building models (0x14c bytes each). */
+typedef struct LegoObjH_BuildingModel {
+    unsigned char bytes[0x14c];
+} LegoObjH_BuildingModel;
+void legoobject_queue_for_rockfall_processing_if_eligible(Lego_Object* obj); /* 0043a9e0 */
+void legoobject_pair_interaction_gate(Lego_Object* obj, Lego_Object* other); /* 0043a9f0 */
+void legoobject_proximity_activity_raise(Lego_Object* obj); /* 0043aab0 */
+void legoobject_terrain_cell_variant_update_queue(Lego_Object* obj); /* 0043abf0 */
+int legoobject_terrain_cell_variant_visit_callback(Lego_Object* obj, void* data); /* 0043ac90 merged callback */
+Lego_Object* legoobject_predug_spawn_coordinate_select_and_create(Lego_Object* originObj, int id); /* 0043ad50 */
+Lego_Object* legoobject_emergence_random_spawn_attempt(void); /* 0043aea0 */
+Lego_Object* legoobject_creature_spawn_from_emergence(void* model, int type, int id, int bx, int by); /* 0043af30 */
+void legoobject_update_all(float elapsed); /* 0043b270 */
+void legoobject_remove_all(void); /* 0043b320 */
+int legoobject_remove_all_callback(Lego_Object* obj, void* data); /* 0043b350 merged callback */
+int legoobject_pick_at_screen_position(unsigned int x, unsigned int y, Lego_Object** outObj); /* 0043b360 */
+int legoobject_pick_at_screen_position_callback(Lego_Object* obj, void* data); /* 0043b3b0 merged callback */
+void legoobject_select_in_screen_rect(void* viewport, float* corner1, float* corner2); /* 0043b6c0 */
+int legoobject_select_in_screen_rect_callback(Lego_Object* obj, void* data); /* 0043b770 merged callback */
+void legoobject_first_person_meshes_swap(Lego_Object* obj, unsigned int camera, int swap); /* 0043b820 */
+void legoobject_lod_meshes_update(Lego_Object* obj, void* cont, float mediumDist, float highDist, int usePosition); /* 0043b850 */
+int legoobject_lod_meshes_update_callback(Lego_Object* obj, void* data); /* 0043b8d0 merged callback */
+int legoobject_flags_mask107c33de_or_1c00203_any_test(Lego_Object* obj); /* 0043baf0 */
+void legoobject_building_deposit_state_monitor(Lego_Object* obj); /* 0043bb20 */
+void legoobject_detach_carried_object_and_reset_state(Lego_Object* obj); /* 0043bbc0 */
+
+/* ---- group I1: 0043bc40-0043c6b0 (part 2, issue #588) ---- */
+/* AITask, the fields group I reads. */
+typedef struct LegoObjI_AITask {
+    int taskType;                     /* +0x00 AITask_Type */
+    unsigned char pad_04[0x10 - 0x04];
+    Lego_Object* targetObject;        /* +0x10 */
+} LegoObjI_AITask;
+void legoobject_objective_sidecar_append_gate(Lego_Object* obj); /* 0043bc40 */
+int legoobject_state_pair_predicate(int type, int id, int type2, int id2); /* 0043c200 */
+int legoobject_nested_float_add_unless_blocked(Lego_Object* obj, void* data); /* 0043c280 */
+void legoobject_periodic_timer25_advance(float elapsed, int renderTrack); /* 0043c2b0 */
+int legoobject_periodic_timer25_callback(Lego_Object* obj, void* data); /* 0043c2f0 merged callback; verify */
+int legoobject_type26_command_completion_gate(Lego_Object* obj); /* 0043c3e0 */
+int legoobject_can_do_activity_classify(Lego_Object* obj); /* 0043c440 */
 int legoobject_task_type_and_condition_check(void* unused, Lego_Object* target, int condition); /* 0043c490 */
+void legoobject_finish_state_1a(Lego_Object* obj); /* 0043c4c0 */
+void legoobject_mark_and_finish_state_1a(Lego_Object* obj); /* 0043c530 */
+void legoobject_kind_four_post_create_resolve(Lego_Object* obj); /* 0043c570 */
+int legoobject_capacity_or_state_predicate(Lego_Object* obj); /* 0043c650 */
+void legoobject_activity_counters_advance(Lego_Object* obj, float elapsed); /* 0043c6b0 */
+
+/* ---- group J: 0043c810-0043c810 (part 2, issue #588) ---- */
+/* Lego_Block (0x48) and the Lego_Level fields group J reads. */
+typedef struct LegoObjJ_Block {
+    unsigned char pad_00[2];
+    unsigned char terrain;            /* +0x02 */
+    unsigned char pad_03[0x0c - 0x03];
+    unsigned int flags1;              /* +0x0c */
+    unsigned char pad_10[0x48 - 0x10];
+} LegoObjJ_Block;
+typedef struct LegoObjJ_Level {
+    unsigned char pad_00[0x14];
+    unsigned int width;               /* +0x14 */
+    unsigned char pad_18[0xb8 - 0x18];
+    LegoObjJ_Block* blocks;           /* +0xb8 */
+} LegoObjJ_Level;
+/* Vector3F. */
+typedef struct LegoObjJ_Vector3F {
+    float x;
+    float y;
+    float z;
+} LegoObjJ_Vector3F;
+/* Point2I. */
+typedef struct LegoObjJ_Point2I {
+    int x;
+    int y;
+} LegoObjJ_Point2I;
+/* AITask (0x68), the fields 0043c810 reads. */
+typedef struct LegoObjJ_AITask {
+    unsigned char pad_00[0x10];
+    Lego_Object* object;              /* +0x10 */
+    unsigned char pad_14[0x38 - 0x14];
+    int activity;                     /* +0x38 */
+} LegoObjJ_AITask;
+/* LegoObject_Callback_Update: the per-object update LegoObject_UpdateAll
+ * (0043b270) runs through LegoObject_RunThroughLists; data points at the
+ * elapsed time. */
+int legoobject_update_callback(Lego_Object* obj, void* data); /* 0043c810 */
+
+/* ---- group I2: 0043eea0-0043f7d0 (part 2, issue #588) ---- */
+/* legoGlobs.objTeleportQueue: the queued object requests (types, ids). */
+typedef struct LegoObjI_Requests {
+    int type[20];                     /* +0x00 */
+    int id[20];                       /* +0x50 */
+} LegoObjI_Requests;
+void legoobject_simulation_queue_flush(Lego_Object* obj); /* 0043eea0 */
+void legoobject_linked_route_flag_clear(Lego_Object* obj, Lego_Object* target); /* 0043f100 */
+void legoobject_trigger_frame_callback(void* cont, void* data); /* 0043f130 merged callback */
+int legoobject_spawn_request_queue_add(Lego_Object* obj, int type, int id); /* 0043f150 */
+void legoobject_spawn_request_queue_process(Lego_Object* obj); /* 0043f190 */
+void legoobject_pool_find_with_local_predicate(Lego_Object* obj); /* 0043f560 */
+int legoobject_pool_find_local_predicate_callback(Lego_Object* obj, void* data); /* 0043f580 merged callback */
+void legoobject_linked_activity_event_dispatch(Lego_Object* obj, unsigned int events); /* 0043f5b0 */
+void legoobject_damage_apply(Lego_Object* obj, float damage, int reactToHit, float elapsed); /* 0043f6a0 */
+void legoobject_energy_low_target_route_command_tick(Lego_Object* obj, float elapsed); /* 0043f7d0 */
+
+/* ---- group K: 0043fb40-00440c70 (part 2, issue #588) ---- */
+/* The search record of the two radius queries (004407b0, 004408c0) and
+ * their LegoObject_RunThroughLists callbacks (00440800, 00440920). */
+typedef struct LegoObjK_SearchData {
+    Lego_Object* obj;                 /* +0x00 the object at the centre, skipped */
+    float x;                          /* +0x04 centre */
+    float y;                          /* +0x08 */
+    float radius;                     /* +0x0c */
+    float damage;                     /* +0x10 00440800: damage at the centre */
+    float eventRadius;                /* +0x14 00440800: rock monster event radius */
+} LegoObjK_SearchData;
+/* Maths_Vector3DSubtract, Maths.h's inline function on Vector3F (x, y,
+ * z); the matching build compiles with /Ob1, so it is expanded in place, as
+ * the original's was. Maths_Vector3DModulus is legoobject_unit_imports.h's
+ * legoobject_vector3d_modulus (it needs <math.h>). */
+static __inline float* legoobject_vector3d_subtract(float* r, float* a, float* b)
+{
+    r[0] = a[0] - b[0];
+    r[1] = a[1] - b[1];
+    r[2] = a[2] - b[2];
+    return r;
+}
+int legoobject_damage_hurt_sound_submit(Lego_Object* obj, float elapsed, float damage); /* 0043fb40 */
+int legoobject_record_pair_pose_copy_and_activity_raise(Lego_Object* obj); /* 0043fc20 */
+int legoobject_action_target_cell_is_valid(Lego_Object* obj); /* 0043fdc0 */
+int legoobject_route_to_explicit_target(Lego_Object* obj, Lego_Object* target); /* 0043fe70 */
+int legoobject_route_marker_setup(Lego_Object* obj); /* 0043fff0 */
+void legoobject_update_and_unregister_at_tile(Lego_Object* routeTo, int* blockPos); /* 00440130 */
+int legoobject_terrain_cell_to_world_position(Lego_Object* obj, int noUnloadCell); /* 004401b0 */
+int legoobject_level_debug_cell_retarget_dispatch(Lego_Object* obj, Lego_Object* target); /* 004403d0 */
+void legoobject_spatial_callback_query(Lego_Object* obj, float radius, float damage, float eventRadius); /* 004407b0 */
+int legoobject_spatial_callback_query_visit(Lego_Object* obj, void* data); /* 00440800 */
+void legoobject_spatial_callback_query_at_optional_coordinate(Lego_Object* obj, float* position, float radius); /* 004408c0 */
+int legoobject_spatial_callback_query_at_optional_coordinate_visit(Lego_Object* obj, void* data); /* 00440920 */
+void legoobject_set_activity(Lego_Object* obj, int activity, int restart); /* 004409e0 */
+void legoobject_attached_direction_vector_update(Lego_Object* obj); /* 00440a10 */
+void legoobject_object_list_field_assign_all(Lego_Object* obj, int value); /* 00440bf0 */
+int legoobject_grid_route_search_adapter(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount); /* 00440c30 */
+int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount, int (*callback)(Lego_Object* obj, int* blockPos, void* data), void* data); /* 00440c70 */
+
+/* ---- group L: 004410f0-00442560 (part 2, issue #588) ---- */
+struct TerrainMap;
+/* Vector3F, for the original's whole-vector copies and Maths.h's inline
+ * vector functions. */
+typedef struct LegoObjL_Vector3F {
+    float x;
+    float y;
+    float z;
+} LegoObjL_Vector3F;
+/* Maths_Vector3DScale, one of Maths.h's inline functions (the matching
+ * build compiles with /Ob1, so it is expanded in place, as the original's
+ * was). */
+static __inline LegoObjL_Vector3F* legoobject_vector3d_scale(LegoObjL_Vector3F* r,
+    LegoObjL_Vector3F* a, float f)
+{
+    r->x = a->x * f;
+    r->y = a->y * f;
+    r->z = a->z * f;
+    return r;
+}
+/* The stop callback of legoobject_terrain_neighbor_path_check: called with
+ * each newly reached block; nonzero ends the search there. */
+typedef int (*LegoObjL_RouteCallback)(Lego_Object* obj, int* blockPos, void* data);
+int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount, LegoObjL_RouteCallback callback, void* data); /* 004410f0 */
+int legoobject_route_setup_and_marker_associate(Lego_Object* obj, unsigned int count, unsigned int* bxList, unsigned int* byList, float* wPos); /* 00441700 */
+void legoobject_action_sequence_reset(Lego_Object* obj, int completed); /* 00441940 */
+void legoobject_state_reset(Lego_Object* obj, int restart, int detach); /* 00441b30 */
+void legoobject_type5_finalize_if_allowed(Lego_Object* obj); /* 00441ea0 */
+int legoobject_face_target_action_start(Lego_Object* obj, Lego_Object* target, int kind); /* 00441ed0 */
+void legoobject_kind_effect_slot_init_dispatch(Lego_Object* obj, int kind); /* 004420d0 */
+void legoobject_action_route_state_initialize(Lego_Object* obj); /* 00442210 */
+void legoobject_transform_position_get(Lego_Object* obj, float* outX, float* outY); /* 00442260 */
+void legoobject_surface_vector_normalize(Lego_Object* obj, float* outDir); /* 004422a0 */
+void legoobject_velocity_vector_dispatch(Lego_Object* obj, float heading, float* dir); /* 00442300 */
+float legoobject_vector_direction_angle_radians_get(Lego_Object* obj); /* 00442480 */
+void legoobject_position_to_terrain_cell(Lego_Object* obj, int* outX, int* outY); /* 004424f0 */
+float legoobject_world_z_callback(float x, float y, struct TerrainMap* map); /* 00442540 */
+float legoobject_world_z_callback_lake(float x, float y, struct TerrainMap* map); /* 00442560 */
+
+/* ---- group M: 004425f0-00443840 (part 2, issue #588) ---- */
+/* Maths.h's inline vector functions the group's functions expand (the
+ * matching build compiles with /Ob1, as the original was); sqrt for them.
+ * legoobject_unit.c includes <math.h> first, so this include adds nothing
+ * to the unit. */
+#include <math.h>
+/* Maths_Vector3DAdd. */
+static __inline LegoObjL_Vector3F* legoobject_vector3d_add(LegoObjL_Vector3F* r,
+    LegoObjL_Vector3F* a, LegoObjL_Vector3F* b)
+{
+    r->x = a->x + b->x;
+    r->y = a->y + b->y;
+    r->z = a->z + b->z;
+    return r;
+}
+/* Point2F and Maths_Vector2DSubtract, _Modulus, _Scale, _Normalise and
+ * _DotProduct. */
+typedef struct LegoObjM_Point2F {
+    float x;
+    float y;
+} LegoObjM_Point2F;
+static __inline LegoObjM_Point2F* legoobject_vector2d_subtract(LegoObjM_Point2F* r,
+    LegoObjM_Point2F* a, LegoObjM_Point2F* b)
+{
+    r->x = a->x - b->x;
+    r->y = a->y - b->y;
+    return r;
+}
+static __inline float legoobject_vector2d_modulus(LegoObjM_Point2F* v)
+{
+    return (float)sqrt(v->x * v->x + v->y * v->y);
+}
+static __inline LegoObjM_Point2F* legoobject_vector2d_scale(LegoObjM_Point2F* r,
+    LegoObjM_Point2F* a, float f)
+{
+    r->x = a->x * f;
+    r->y = a->y * f;
+    return r;
+}
+static __inline LegoObjM_Point2F* legoobject_vector2d_normalise(LegoObjM_Point2F* r, LegoObjM_Point2F* a)
+{
+    float inv;
+    inv = 1.0f / legoobject_vector2d_modulus(a);
+    return legoobject_vector2d_scale(r, a, inv);
+}
+static __inline float legoobject_vector2d_dot(LegoObjM_Point2F* a, LegoObjM_Point2F* b)
+{
+    return a->x * b->x + a->y * b->y;
+}
+/* Maths_Vector3DSubtract and Maths_Vector3DModulus (Maths.h inlines). */
+static __inline LegoObjL_Vector3F* legoobject_m_vector3d_subtract(LegoObjL_Vector3F* r,
+    LegoObjL_Vector3F* a, LegoObjL_Vector3F* b)
+{
+    r->x = a->x - b->x;
+    r->y = a->y - b->y;
+    r->z = a->z - b->z;
+    return r;
+}
+static __inline float legoobject_m_vector3d_modulus(LegoObjL_Vector3F* v)
+{
+    float m;
+    m = (float)sqrt(v->x * v->x + v->y * v->y + v->z * v->z);
+    return m;
+}
+void legoobject_subobject_pose_delta_normalize_and_dispatch(Lego_Object* obj, float param2, float param3); /* 004425f0 */
+void legoobject_world_position_set(Lego_Object* obj, float x, float y, float theta, int assignHeading); /* 004428a0 */
+int legoobject_movement_accumulator_apply(Lego_Object* obj, float elapsed, float* outTransSpeed); /* 00442b10 */
+void legoobject_pose_orientation_dispatch(Lego_Object* obj, float elapsed); /* 00442f80 */
+void legoobject_scene_object_pose_position_sync(Lego_Object* obj); /* 00443510 */
+int legoobject_random_activity_attempt(Lego_Object* obj); /* 00443670 */
+int legoobject_type3_flag04000000_test(Lego_Object* obj); /* 004436f0 */
+int legoobject_adjacent_position_candidate_find(Lego_Object* obj, int* blockPos, int* outPos); /* 00443710 */
+void legoobject_dispatch_event31_for_pending_flag(Lego_Object* obj); /* 004437f0 */
+int legoobject_route_cell_candidate_accept(Lego_Object* obj, int* blockPos, void* data); /* 00443840 */
+
+/* ---- group N: 004438b0-00444620 (part 2, issue #588) ---- */
+/* Maths_Vector2DSubtract and Maths_Vector2DModulus, Maths.h's inline
+ * functions on Point2F (x, y); the matching build compiles with /Ob1, so
+ * they are expanded in place, as the original's were. The modulus needs
+ * <math.h>, which the unit includes. */
+static __inline float* legoobject_n_vector2d_subtract(float* r, float* a, float* b)
+{
+    r[0] = a[0] - b[0];
+    r[1] = a[1] - b[1];
+    return r;
+}
+#define legoobject_n_vector2d_modulus(v) \
+    ((float)sqrt((v)[0] * (v)[0] + (v)[1] * (v)[1]))
+/* r = origin + ray * dist on Point2F, an inline vector function of the
+ * same kind (00444460 expands it in place). */
+static __inline float* legoobject_vector2d_ray_end_point(float* r, float* origin,
+                                                         float* ray, float dist)
+{
+    r[0] = origin[0] + ray[0] * dist;
+    r[1] = origin[1] + ray[1] * dist;
+    return r;
+}
+void legoobject_path_step_advance_and_arrival_check(Lego_Object* obj, float elapsed); /* 004438b0 */
+void legoobject_linked_flag_and_command_update(Lego_Object* obj); /* 004440a0 */
+void legoobject_activity_timeout_accumulate_and_raise(Lego_Object* obj, float elapsed); /* 004440f0 */
+int legoobject_random_cell_step_route_issue(Lego_Object* obj); /* 00444260 */
+void legoobject_flagged_vector_step_command_issue(Lego_Object* obj, float* dir); /* 00444460 */
+void legoobject_enter_event21_state_once(Lego_Object* obj); /* 00444620 */
+
+/* ---- group O: 00444680-00445830 (part 2, issue #588) ---- */
+/* The record field_32c points at for a rock monster with stats flag
+ * 0x200000 (a bat's home position and its attack flag). */
+typedef struct LegoObjO_Home {
+    unsigned char pad_00[0x18];
+    float x;                          /* +0x18 */
+    float pad_1c;                     /* +0x1c */
+    float y;                          /* +0x20 */
+    unsigned int flags;               /* +0x24 */
+} LegoObjO_Home;
+int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int turn, int reverse); /* 00444680 */
+void legoobject_turn_to_vector_activity_issue(Lego_Object* obj, float* dir); /* 00444fb0 */
+void legoobject_path_step_vector_normalize(Lego_Object* obj); /* 004451e0 */
+int legoobject_path_step_vector_callback(Lego_Object* obj, void* data); /* 00445340 merged callback */
+int legoobject_move_vector_surface_probe(Lego_Object* obj); /* 004455a0 */
+void legoobject_behavior_callback_tick(Lego_Object* obj, float elapsed); /* 004456e0 */
+int legoobject_behavior_callback_a(Lego_Object* obj, void* data); /* 00445770 merged callback */
+int legoobject_behavior_callback_b(Lego_Object* obj, void* data); /* 00445830 merged callback */
 
 #ifdef __cplusplus
 }

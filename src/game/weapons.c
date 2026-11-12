@@ -421,18 +421,18 @@ void weapons_generic_damage_object(Weapons_Object* obj, int weaponType,
     if ((obj->flags3 & 0x40000) && legoobject_shared_eligibility_check(WEAPONS_LOBJ(obj), 1)) {
         if (weaponGlobs.weaponStatsList[weaponType].slowDeath) {
             if (knownWeapon) {
-                entity_damage_apply_original(WEAPONS_ENT(obj), weaponGlobs.weaponStatsList[weaponType].slowDeathDamage * damage, 1, elapsed);
+                legoobject_damage_apply(WEAPONS_LOBJ(obj), weaponGlobs.weaponStatsList[weaponType].slowDeathDamage * damage, 1, elapsed);
                 obj->slowDeathTimer = weaponGlobs.weaponStatsList[weaponType].slowDeathDuration;
                 obj->slowDeathWeapon = weaponType;
                 entity_directional_activity_start(WEAPONS_ENT(obj), dir, 1);
             }
             else {
-                entity_damage_apply_original(WEAPONS_ENT(obj), damage * elapsed, 1, elapsed);
+                legoobject_damage_apply(WEAPONS_LOBJ(obj), damage * elapsed, 1, elapsed);
             }
         }
         else {
             if (obj->type == 3) global_counter_at_0055532c_increment();
-            entity_damage_apply_original(WEAPONS_ENT(obj), damage, 1, elapsed);
+            legoobject_damage_apply(WEAPONS_LOBJ(obj), damage, 1, elapsed);
             if (knownWeapon) entity_directional_activity_start(WEAPONS_ENT(obj), dir, 1);
         }
     }
@@ -441,7 +441,7 @@ void weapons_generic_damage_object(Weapons_Object* obj, int weaponType,
 // FUNCTION: LEGORR 0x0046f380
 void weapons_gun_hit_object(Weapons_Object* obj, float damage, int mode)
 {
-    entity_damage_apply_original(WEAPONS_ENT(obj), damage, 1, 1.0f);
+    legoobject_damage_apply(WEAPONS_LOBJ(obj), damage, 1, 1.0f);
     entity_directional_activity_start(WEAPONS_ENT(obj), NULL, mode);
 }
 
@@ -554,7 +554,7 @@ void weapons_projectile_hit_object(Weapons_Object* obj, const float* dir,
 
     dir2D[0] = dir[0];
     dir2D[1] = dir[1];
-    if (entity_type3_flag04000000_test(WEAPONS_ENT(obj))) scene_light_create_at_position((const float*)hitPos);
+    if (legoobject_type3_flag04000000_test(WEAPONS_LOBJ(obj))) scene_light_create_at_position((const float*)hitPos);
     switch (knownWeapon) {
     case 1:
         if (entity_state_flags_get(WEAPONS_ENT(obj)) & 0x2000000) {
@@ -914,7 +914,7 @@ int weapons_object_center_proximity_check(Weapons_Object* obj, float* fromPos,
     if (!checkSide || !weapons_object_line_side_check(obj, from, to)) {
         end[0] = to[0] + from[0];
         end[1] = to[1] + from[1];
-        entity_transform_position_get_outputs(WEAPONS_ENT(obj), &objPos[0], &objPos[1]);
+        legoobject_transform_position_get(WEAPONS_LOBJ(obj), &objPos[0], &objPos[1]);
         point_project_onto_line2d(from, end, objPos, proj);
         if ((float)sqrt((proj[0] - objPos[0]) * (proj[0] - objPos[0]) +
                         (proj[1] - objPos[1]) * (proj[1] - objPos[1])) <
@@ -927,7 +927,7 @@ int weapons_object_center_proximity_check(Weapons_Object* obj, float* fromPos,
 int weapons_object_line_side_check(Weapons_Object* obj, float* fromPos, float* dir)
 {
     float objPos[2];
-    entity_transform_position_get_outputs(WEAPONS_ENT(obj), &objPos[0], &objPos[1]);
+    legoobject_transform_position_get(WEAPONS_LOBJ(obj), &objPos[0], &objPos[1]);
     if ((objPos[0] - fromPos[0]) * dir[0] + (objPos[1] - fromPos[1]) * dir[1] < 0.0f) return 1;
     return 0;
 }
@@ -1095,7 +1095,7 @@ static int weapons_callback_ray_candidate(Weapons_Object* obj,
     dir[1] = search->direction->y;
     dirLen = (float)sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
     if (obj != search->ignoreObject && (dirLen <= -0.00001f || dirLen >= 0.00001f)) {
-        entity_transform_position_get_outputs(WEAPONS_ENT(obj), &objPos[0], &objPos[1]);
+        legoobject_transform_position_get(WEAPONS_LOBJ(obj), &objPos[0], &objPos[1]);
         ground = terrain_map_world_z_get(WEAPONS_LEGO_GET_MAP(), objPos[0], objPos[1]);
         point2d_project_onto_direction(origin, dir, objPos, proj);
         if ((float)sqrt((proj[0] - objPos[0]) * (proj[0] - objPos[0]) +
@@ -1363,8 +1363,8 @@ int weapons_model_fire_update(Weapons_Object* obj, float elapsed, unsigned int s
     weapons_model_aim(weapons_get_weapons_model(obj), &target, elapsed, 1, slot);
     if (renderer_word_c_get() && (s_panel_highlight_flags & 0x400) &&
         weapons_model_timer_get(obj, slot) <= 0.0f) {
-        if (entity_task_at_grid_coordinate_find(renderer_word_a_get(), renderer_word_b_get(),
-                                                (struct EntitySlot**)&taskObj) &&
+        if (legoobject_pick_at_screen_position(renderer_word_a_get(), renderer_word_b_get(),
+                                              (Lego_Object**)&taskObj) &&
             taskObj == obj) {
             return 1;
         }
@@ -1446,7 +1446,7 @@ int weapons_object_in_range(Weapons_Object* obj, Weapons_Object* target)
     Weapons_Vector3F objPos;
     Weapons_Vector3F targetPos;
 
-    weaponType = ai_activity_probe(WEAPONS_ENT(obj));
+    weaponType = legoobject_can_do_activity_classify(WEAPONS_LOBJ(obj));
     if (obj != NULL && target != NULL && weaponType != 0) {
         range = weapon_type_range_get_target(weaponType);
         weapons_object_center_get(obj, &objPos);
@@ -1464,7 +1464,7 @@ int weapons_object_in_touch_range(Weapons_Object* obj, Weapons_Object* target)
     Weapons_Vector3F objPos;
     Weapons_Vector3F targetPos;
 
-    weaponType = ai_activity_probe(WEAPONS_ENT(obj));
+    weaponType = legoobject_can_do_activity_classify(WEAPONS_LOBJ(obj));
     if (obj != NULL && target != NULL && weaponType != 0) {
         range = entity_collision_radius_get(WEAPONS_ENT(obj));
         weapons_object_center_get(obj, &objPos);
