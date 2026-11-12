@@ -20,21 +20,21 @@ because Ghidra merged six functions into their neighbours:
 
 All six are written and annotated.
 
-"Before" is the *match baseline* on `main` at `b141a808` (#566). "After" is
-this change. Scores come from the full matching build (`make reccmp-check`).
+"Before" is the *match baseline* of #572 (GAME-019, `32293a40`), on which
+this change is stacked. "After" is this change. Scores come from the full matching build (`make reccmp-check`).
 
 ## Result
 
 | | before | after |
 | --- | ---: | ---: |
-| Range similarity (byte-weighted, 78 functions, 47,745 bytes without `0x90` fill) | 8.98% | **89.27%** |
-| Exact functions in the range | 22 | **45 of 78** |
+| Range similarity (byte-weighted, 78 functions, 47,745 bytes without `0x90` fill) | 8.98% | **89.29%** |
+| Exact functions in the range | 22 | **46 of 78** |
 | Mapped functions in the range | 63 | 78 |
-| Exact functions, whole binary | 951 | 975 |
-| Accuracy, full / game-only (`binary-progress.json`) | 63.83% / 60.05% | **65.13% / 61.51%** |
-| Exact-function code bytes | 80,442 | 82,289 |
-| Unit-relative identity | 68,699 bytes (12.40%) | 76,185 bytes (13.75%) |
-| Unmapped original functions | 181 | 171 |
+| Exact functions, whole binary | 978 | 1,003 |
+| Accuracy, full / game-only (`binary-progress.json`) | 64.56% / 60.86% | **65.85% / 62.32%** |
+| Exact-function code bytes | 82,815 | 84,712 |
+| Unit-relative identity | 71,449 bytes (12.90%) | 78,985 bytes (14.26%) |
+| Unmapped original functions | 180 | 170 |
 
 Byte weights are the original's code bytes without the `0x90` fill. An
 unmapped function counts as 0%.
@@ -57,13 +57,13 @@ unmapped function counts as 0%.
 | `0041fa20` | `lego_game_config_callback_registry_init` | 38.60 | **100.00** |
 | `0041fa80` | `lego_start_level_pilots` | 54.41 | 86.27 |
 | `0041fb40` | `EngineTimeScale(1)` | **100.00** | **100.00** |
-| `0041fb50` | `lego_game_config_init` | — | 93.80 |
+| `0041fb50` | `lego_game_config_init` | — | 93.74 |
 | `00422850` | `lego_misc_object_resources_load` | 11.29 | 89.52 |
 | `00423080` | `lego_mode_dependent_field24_get` | 13.33 | **100.00** |
 | `004230b0` | `global_float_field_00556f00_get` | **100.00** | **100.00** |
 | `004230c0` | `lego_debug_panel_text_draw_update` | 16.59 | 93.68 |
 | `004231f0` | `lego_engine_pre_tick` | 17.14 | **100.00** |
-| `004232e0` | `lego_engine_tick` | 10.16 | 92.01 |
+| `004232e0` | `lego_engine_tick` | 10.16 | 91.52 |
 | `00424560` | `lego_air_supply_amount_update` | 30.40 | 97.62 |
 | `00424600` | `lego_terrain_cell_flag_cleanup` | — | 98.90 |
 | `00424730` | `lego_sine_phase_midpoint_blend_dispatch` | 33.33 | 90.91 |
@@ -99,9 +99,9 @@ unmapped function counts as 0%.
 | `00428330` | `lego_terrain_command_feedback_dispatch` | 9.60 | 71.24 |
 | `00428780` | `lego_terrain_cell_command_predicate` | 29.27 | 90.24 |
 | `00428800` | `media_action_feedback_sound_dispatch` | **100.00** | **100.00** |
-| `004288e0` | `lego_level_debug_input_cell_mutator_dispatch` | — | 96.90 |
+| `004288e0` | `lego_level_debug_input_cell_mutator_dispatch` | — | 96.75 |
 | `00429110` | `lego_block_visible_callback` | — | 49.06 |
-| `00429160` | `lego_terrain_cell_palette_resource_at_grid_position` | **100.00** | 82.35 |
+| `00429160` | `lego_terrain_cell_palette_resource_at_grid_position` | **100.00** | **100.00** |
 | `004291a0` | `lego_scene_marker_update_and_draw` | 8.82 | 96.20 |
 | `004293b0` | `lego_selection_rectangle_render` | — | **100.00** |
 | `00429470` | `lego_camera_pointer_ray_route` | — | 98.80 |
@@ -114,7 +114,7 @@ unmapped function counts as 0%.
 | `00429850` | `active_engine_field_b0_get_current` | **100.00** | **100.00** |
 | `00429860` | `engine_float_field210_get_by_index_current` | **100.00** | **100.00** |
 | `00429880` | `engine_float_field260_get_current_target` | **100.00** | **100.00** |
-| `00429890` | `lego_level_load` | 7.92 | 90.45 |
+| `00429890` | `lego_level_load` | 7.92 | 90.40 |
 | `0042b2f0` | `lego_entity_effect_counters_apply_from_record` | 30.30 | 91.30 |
 | `0042b330` | `lego_load_tile_meshes` | 18.07 | 98.17 |
 | `0042b480` | `lego_rectangular_resource_table_destroy` | 17.20 | 97.73 |
@@ -245,7 +245,16 @@ Not shared:
   port's NULL guard.
 - `scroll_scale_set_and_clamp` (`00425ce0`): the original also stores the
   options slider.
-- `0x00429160`: it dereferences level pointers.
+- `0x00429160`: it dereferences level pointers. The unit's version keeps
+  the port's `__declspec(naked)` body under MSVC x86, as `vec_cross` does
+  (#519, finding 550), with the C version for other compilers. No C form
+  reproduces the original's index multiply: the `imul` takes the width and
+  `xy[1]` in the other order, and the global and parameter loads are
+  scheduled the other way (82.35%). Tried without effect: every operand
+  order of `width * y + x`, signedness casts, a local level, a `Point2I`
+  parameter declared before and after `Lego_Level`, the permuter (no
+  candidates) and a counter sweep over a full 512 period (one code at every
+  N, so not rule B).
 
 ### Callers that keep the port's functions (follow-up)
 
@@ -400,19 +409,18 @@ and `"Pilot"`.
 | `00426520` | 69.79 | stack-slot reuse of the dead parameter slots, register choice, three store orders |
 | `00428330` | 71.24 | MSVC puts the early-return block last; the frame is one dword smaller |
 | `00429110` | 49.06 | register choice (edx/esi/edi) |
-| `00429160` | 82.35 | see below |
 | `004297b0`–`0042b480`, `004232e0`, `0041fb50` and the rest at 86–99% | | adapter call operands, pooled literals, the 0.0f that `lego.cpp` annotates as `s_panel_highlight_zero` (`0049e2b8`), rule-B register choices |
 
 ## Entropy and drops
 
-`make reccmp-check` against `b141a808`: 46 improved, 15 newly mapped, 14 below
-baseline. No instruction count changed anywhere.
+`make reccmp-check` against #572's baseline: 46 improved, 15 newly mapped, 13
+below baseline. **No exact match is lost**, and no instruction count changed
+anywhere.
 
 | Address | Function | File | Score | Label | Instructions |
 | --- | --- | --- | --- | --- | --- |
 | `0x00404280` | `cmd_entity_command_chain_tick` | `game/aitask.cpp` | 10.71 → 10.46 | drift | +0 |
 | `0x00415220` | `frontend_start_level` | `game/frontend_unit.cpp` | 16.67 → 13.33 | drift | +0 |
-| `0x00429160` | `lego_terrain_cell_palette_resource_at_grid_position` | `game/lego_unit.c` | 100.00 → 82.35 | source-changed | +0 |
 | `0x0043a650` | `entity_action_kind_entity_create_and_command_issue` | `game/legoobject.cpp` | 26.62 → 25.90 | drift | +0 |
 | `0x0043a850` | `entity_action_record_consume_and_cleanup` | `game/legoobject.cpp` | 30.37 → 26.18 | drift | +0 |
 | `0x0043a910` | `simulation_mode_counter_add` | `game/legoobject.cpp` | 43.75 → 37.50 | drift | +0 |
@@ -425,24 +433,22 @@ baseline. No instruction count changed anywhere.
 | `0x004538a0` | `camera_focus_scroll_scale_commit` | `game/tutorial_script.cpp` | 42.25 → 39.44 | drift | +0 |
 | `0x00458670` | `objective_announce_current` | `game/objective_unit.cpp` | 27.95 → 27.40 | drift | +0 |
 
-- **One exact match is lost: `0x00429160`, for the owner.** Its 100%
-  baseline came from a `__declspec(naked)` asm block in the port. The C
-  version is 82.35%: one `imul` takes its operands in the other order, and
-  the global and parameter loads are scheduled the other way. Tried:
-  - index operand orders;
-  - signedness casts;
-  - a local level;
-  - a `Point2I` parameter declared before and after `Lego_Level`;
-  - the permuter (no candidates);
-  - a counter sweep over a full 512 period (one code at every N).
-
-  None moved it, so it is not rule B.
-- **The other 13 are drift: same instruction count, listing differs only in
+- **All 13 are drift: same instruction count, listing differs only in
   registers or operand naming.** Most are callers whose callee's original
   address now names a unit function or stand-in while they still call the
   port model. For example, `0x004524b0` calls `media_min_distance_update_mode`,
   and the original side now reads `lego_sound_minimum_distance_update_mode`.
   This is the port-tail effect seen in finding 556.
+- **`0x00419b80` `info_send` (GAME-019, #572) is not among them.** It calls
+  Lego_SetGameSpeed (`00425ce0`) with the original's contract, so it now
+  calls `lego_game_speed_set`. `info_api.h`'s declaration of the port's
+  `scroll_scale_set_and_clamp` was swapped one for one, keeping the
+  declaration count. Before the switch it fell from 96.77% to 96.06% on the
+  call operand.
+- **`0x0041a1a0`.** #572 converted it into `info_unit.c` with three
+  parameters. Its port entry, which the GAME-021 adapter
+  `info_check_click_adapter` called, is gone, so the adapter now forwards to
+  `info_unit.c`.
 - **`0x0040e9c0` stays exact.** It was lost and recovered (see State above).
   An `extern "C"` block appended to `cmd.hpp` was replaced the same way, by
   pre-declarations in `cmd.cpp` and `lego.cpp`.
@@ -453,16 +459,22 @@ baseline. No instruction count changed anywhere.
 
 ## Reccmp lint ratchet
 
-The lint baseline grows from 1,527 to 1,573 entries (46 keys), all in
-`lego.cpp`:
+The ledger does not grow. It goes from 1,521 to 1,503 entries, updated without
+`--allow-growth`:
 
-- the 45 port models left there unannotated, under their port names;
-- one `definition defined` key, the lint's misparse of a nested
-  `#if defined(...)` inside the port model of `0x00429160`.
-
-The adapters carry `// PORT-ONLY:` and add no keys (#558). `--allow-growth`
-was used. These keys go when part 3 retires `lego.cpp` to a `tail` entry,
-which #558 exempts.
+- **The 45 port models left unannotated in `lego.cpp`** carry
+  `// PORT-ONLY: port model of 0x…, retires to the tail in GAME-021 part 3`.
+  There are 43 markers; two of them sit above `#if` groups holding two
+  definitions each. Part 3 replaces them by retiring `lego.cpp` to a `tail`
+  entry, which #558 exempts.
+- **The lint parser no longer reads `defined` as a definition.** A brace block
+  opened right after `#if defined(X)` inside a body used to be taken for a
+  definition named `defined`: the block's "header" was the directive line.
+  `function_definitions` now blanks preprocessor directives, with their
+  continuations, before reading a declarator. A fixture test covers it.
+  This removes the 18 `definition defined` keys already in the ledger, and
+  the one the `0x00429160` port model would have added.
+- **The adapters** carry `// PORT-ONLY:` and add no keys (#558).
 
 ## Follow-ups
 
@@ -477,7 +489,8 @@ which #558 exempts.
   parameters. `0x00426520` pushes six (the frame time) and scores against
   the original with six. One of the two units has the wrong arity; the call
   still goes through `interface_handle_mouse_adapter`.
-- **`0x00429160`** (above).
+- **`0x0041a1a0`.** `0x00426520` pushes four arguments (both release flags);
+  `info_unit.c` defines three. Settle which arity is the original's.
 - **`textGlobs_f_503618`** (`00503618`) is Text.c's word, defined here for
   lack of a port owner. **`s_lego_f_4e8448`** (`004e8448`, the first
   mini-figure) is outside both legoGlobs and Lego.c's `.bss`.
@@ -485,8 +498,8 @@ which #558 exempts.
 
 ## Validation
 
-- `make reccmp-check` (MSVC 5.0, developer distrobox): the 14 drops above, 46
-  improved, 15 newly mapped. The link-order map check passes.
+- `make reccmp-check` (MSVC 5.0, developer distrobox), against #572: the 13
+  drops above, 46 improved, 15 newly mapped. The link-order map check passes.
 - `make match-progress` regenerated:
   - the baseline;
   - the listing digests;
@@ -494,14 +507,14 @@ which #558 exempts.
     `pefile`).
 
   `tools/binary_progress_inputs.txt` was rewritten for the new files, and
-  `tools/pr_match_progress.py check` passes against `main`.
+  `tools/pr_match_progress.py check` passes against #572.
 - `make unit-data-offsets`, GAME-021 row:
   - `.data`: partial (244, 12 unknown);
   - `.rdata`: n/a;
   - `.bss`: partial (5, 3 unknown), gap from `004de430`;
   - commons: the stand-ins.
 - `python3 tools/translation_units.py build`: 0 conflicts.
-- `make tools-test` passes (lint with the growth above).
+- `make tools-test` passes, including the lint, with no ledger growth.
 - `lego_unit.c` passes both syntax checks:
   - `gcc -std=gnu89 -Werror=declaration-after-statement -fsyntax-only`;
   - `g++ -std=c++17 -fsyntax-only`.
