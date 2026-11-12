@@ -43,48 +43,6 @@ void object_field_38_release(void* record)
     if (record != NULL) object_field_38_release_target(record);
 }
 
-/* ThreeWordRecordAllocateAndInitialize (FUN_00410b60) — see heap.hpp. */
-// FUNCTION: LEGORR 0x00410b60
-void* three_word_record_allocate_and_initialize(uint32_t a, uint32_t b,
-                                                uint32_t c)
-{
-    uint32_t* rec = (uint32_t*)engine_heap_alloc(12);
-    if (rec == NULL) {
-        return NULL; /* deviation: the corpus strides the record blindly */
-    }
-    rec[0] = a;
-    rec[1] = b;
-    rec[2] = c;
-    return rec;
-}
-
-/* DwordListAllocateAndZero (FUN_00414070) — see heap.hpp. */
-// FUNCTION: LEGORR 0x00414070
-void** dword_list_allocate_and_zero(uint32_t count)
-{
-    void** hdr = (void**)engine_heap_alloc(2 * sizeof(void*));
-    if (hdr == NULL) {
-        return NULL; /* deviation: the corpus strides both halves blindly */
-    }
-    hdr[0] = NULL;
-    hdr[1] = NULL;
-    void* data = engine_heap_alloc((long)(count * sizeof(void*)));
-    hdr[0] = data;
-    /* Corpus shape: the zero-pass sweeps `count & 0x3fffffff` slots and the
-     * second pass is dead code (loop seed 0) — kept faithfully. */
-    void** p = (void**)data;
-    const uint32_t n = count & 0x3fffffffu;
-    for (uint32_t i = 0; i != n; ++i) {
-        p[i] = NULL;
-    }
-    if (data == NULL && count != 0) {
-        engine_heap_free(hdr); /* deviation: the corpus leaves both behind */
-        return NULL;
-    }
-    hdr[1] = (void*)(size_t)count;
-    return hdr;
-}
-
 /* Keep the portable API null-safe; the mapped entry above follows the
  * retail function's unchecked pointer contract. */
 void text_buffer_reset(void* record)

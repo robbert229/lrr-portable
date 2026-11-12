@@ -17,6 +17,7 @@
 #include "upgrades_for_helpwindow.hpp"
 #include "upgrades_for_lego.hpp"
 #include "upgrades_for_interface.hpp"
+#include "upgrades_for_frontend_unit.hpp"
 
 namespace lego {
 
@@ -25,10 +26,8 @@ namespace {
 LevelCounterState s_default_counter_state;
 } // namespace
 LevelCounterState* s_counter_state = &s_default_counter_state;
-namespace {
 UpgradeAverageCountHook s_average_count_hook = 0;
 UpgradeAverageValueHook s_average_value_hook = 0;
-} // namespace
 UpgradeConfigEntryHook s_upgrade_entry_hook = 0;
 uint32_t (*s_upgrade_entry_count_hook)(void*) = 0;
 uint32_t s_level_upgrade_names[UPGRADE_NAME_SLOT_COUNT];
@@ -47,24 +46,6 @@ void upgrade_average_hooks_set(UpgradeAverageCountHook count_hook,
 {
     s_average_count_hook = count_hook;
     s_average_value_hook = value_hook;
-}
-
-// FUNCTION: LEGORR 0x00418120
-int upgrade_average_is_above_99(void)
-{
-    uint32_t count;
-    uint32_t i;
-    uint32_t total = 0;
-    float value;
-    if (s_average_count_hook == 0 || s_average_value_hook == 0) return 0;
-    count = (uint32_t)s_average_count_hook();
-    if (count <= 8) return 0;
-    for (i = 8; i < count; ++i) {
-        if (!s_average_value_hook(i, &value)) return 0;
-        if (value > 0.0f) total += (uint32_t)value;
-        else if (value < 0.0f) total -= (uint32_t)(-value);
-    }
-    return total / (count - 8) > 99;
 }
 
 void level_counter_state_set(LevelCounterState* state,

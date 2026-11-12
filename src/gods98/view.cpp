@@ -2931,63 +2931,6 @@ void view_views_tick(EngineContext* ctx, float dt, float scale)
         }
     }
 }
-/* MenuPointerRectangleHitTest (FUN_004112e0): the corpus's widget test,
- * reproduced clause-for-clause — inclusive lower corners, inclusive
- * upper corners via origin+size (finding 23: the widget rectangle is
- * the 100x20 row band this routine hit-tests). */
-// FUNCTION: LEGORR 0x004112e0
-#if defined(LEGORRR_BACKEND_WINAPI)
-__declspec(naked) int menu_pointer_rectangle_hit_test(
-    int x, int y, int rect_x, int rect_y, int rect_w, int rect_h)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 0x0c]
-        cmp eax, ecx
-        jl menu_pointer_rectangle_hit_test_miss
-        mov edx, dword ptr [esp + 0x14]
-        add edx, ecx
-        cmp eax, edx
-        jg menu_pointer_rectangle_hit_test_miss
-        mov eax, dword ptr [esp + 8]
-        mov ecx, dword ptr [esp + 0x10]
-        cmp eax, ecx
-        jl menu_pointer_rectangle_hit_test_miss
-        mov edx, dword ptr [esp + 0x18]
-        add edx, ecx
-        cmp eax, edx
-        jg menu_pointer_rectangle_hit_test_miss
-        mov eax, 1
-        ret
-    menu_pointer_rectangle_hit_test_miss:
-        xor eax, eax
-        ret
-    }
-}
-#else
-int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
-                                    int rect_w, int rect_h)
-{
-    if (x < rect_x || x > rect_w + rect_x) return 0;
-    if (y < rect_y || y > rect_h + rect_y) return 0;
-    return 1;
-}
-#endif
-
-/* MenuOverlayListCount (FUN_00412170): head slot + record+0x40, next
- * slot + node+0x18, both native-size (pointer-slot deviation; see the
- * header). */
-// FUNCTION: LEGORR 0x00412170
-int menu_overlay_list_count(const void* menu)
-{
-    int count = 0;
-    void* head = *(void* const*)((const char*)menu + 0x40);
-    while (head != NULL) {
-        ++count;
-        head = *(void**)((char*)head + 0x18);
-    }
-    return count;
-}
 
 /* Startup CameraViewContextSet binds CameraSpeed, CameraDropOff,
  * CameraAcceleration and MouseScrollIndent in the reference caller order. */

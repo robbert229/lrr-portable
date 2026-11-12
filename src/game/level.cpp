@@ -316,11 +316,6 @@ int level_random_draw15(void)
  *  `.map` file container (finding 07): raw image, direct-mapped.
  * ------------------------------------------------------------------ */
 
-/* MapOpen2 (FUN_00480170): preserve the retail open, seek/tell, progress,
- * allocate, rewind/read, and close order against the level-owned map slots. */
-// GLOBAL: LEGORR 0x004a2770
-const char s_map_open_binary_mode[] = "rb";
-
 MapFile* level_map_open(const char* name)
 {
     int slot;

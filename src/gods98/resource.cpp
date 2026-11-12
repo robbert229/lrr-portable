@@ -2813,46 +2813,6 @@ uint32_t resource_handle_set_band_word_peek(int unit)
     return (unit >= 0 && unit < 24) ? s_handle_set_band[unit].word2 : 0u;
 }
 
-/* ResourceHandleListDispose (FUN_00410ae0): free the list's non-zero
- * handles (the count lives behind), then the array, then the record — the
- * record is freed even when its array word is zero. Deviations: the record
- * fields widen LP64-safe and the NULL record is guarded (the corpus strides
- * blindly). */
-// FUNCTION: LEGORR 0x00410ae0
-void resource_handle_list_dispose(ResourceHandleList* list)
-{
-    if (list == NULL) {
-        return; /* deviation: the corpus derefs blindly */
-    }
-    if (list->handles != NULL) {
-        for (int32_t i = 0; i < list->count; ++i) {
-            if (list->handles[i] != NULL) {
-                engine_heap_free(list->handles[i]); /* FUN_0048db80 */
-            }
-        }
-        engine_heap_free(list->handles);
-    }
-    engine_heap_free(list);
-}
-
-/* ResourceHandleListAppend (FUN_00410aa0): append a heap-owned string only
- * while the preallocated handle array has capacity. */
-// FUNCTION: LEGORR 0x00410aa0
-void resource_handle_list_append(ResourceHandleList* list, const char* value)
-{
-    if (list == NULL || list->handles == NULL
-        || list->count >= (int32_t)(uint32_t)list->word1 || value == NULL) {
-        return;
-    }
-    const size_t length = strlen(value);
-    if (length >= 0x7fffffffU) return;
-    char* copy = (char*)engine_heap_alloc((long)length + 1);
-    if (copy == NULL) return;
-    strncpy(copy, value, length + 1);
-    list->handles[list->count] = copy;
-    ++list->count;
-}
-
 namespace unported_ledger_stubs {
 
 MiscObjectResourceHooks s_misc_resource_hooks;

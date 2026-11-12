@@ -19,6 +19,7 @@
 #include "util_shared.hpp"
 #include "util_for_tile_variants.hpp"
 #include "util_for_lego.hpp"
+#include "util_for_frontend_unit.hpp"
 
 static ParsedEntityHealthValue s_parsed_entity_health_value;
 
@@ -519,17 +520,8 @@ void (*s_entity_link_list_release_hook)(EntityLinkList*);
 void (*s_resource_entry_release_hook)(void*);
 void (*s_resource_array_release_hook)(void*);
 
-#define STRING_QUEUE_CAPACITY 15
-#define STRING_QUEUE_TEXT_CAPACITY 1024
-struct StringQueueEntry {
-    uint32_t first;
-    uint32_t second;
-    uint32_t third;
-    char text[STRING_QUEUE_TEXT_CAPACITY];
-};
-static StringQueueEntry s_string_queue[STRING_QUEUE_CAPACITY];
-static unsigned int s_string_queue_count;
-static StringQueueFlushHook s_string_queue_flush_hook;
+unsigned int s_string_queue_count;
+StringQueueFlushHook s_string_queue_flush_hook;
 
 void string_table_install(const char* const* entries, unsigned int count)
 {
@@ -650,34 +642,6 @@ void string_queue_flush_hook_set(StringQueueFlushHook hook)
 unsigned int string_queue_count_get(void)
 {
     return s_string_queue_count;
-}
-
-// FUNCTION: LEGORR 0x00410320
-void string_queue_record_or_flush(uint32_t first, uint32_t second,
-                                  uint32_t third, const char* text,
-                                  int record)
-{
-    unsigned int i;
-    if (!record) {
-        if (s_string_queue_flush_hook != NULL) {
-            for (i = 0; i < s_string_queue_count; ++i) {
-                s_string_queue_flush_hook(s_string_queue[i].first,
-                                          s_string_queue[i].second,
-                                          s_string_queue[i].third,
-                                          s_string_queue[i].text);
-            }
-        }
-        s_string_queue_count = 0;
-        return;
-    }
-    if (s_string_queue_count >= STRING_QUEUE_CAPACITY || text == NULL) return;
-    s_string_queue[s_string_queue_count].first = first;
-    s_string_queue[s_string_queue_count].second = second;
-    s_string_queue[s_string_queue_count].third = third;
-    strncpy(s_string_queue[s_string_queue_count].text, text,
-            STRING_QUEUE_TEXT_CAPACITY - 1);
-    s_string_queue[s_string_queue_count].text[STRING_QUEUE_TEXT_CAPACITY - 1] = '\0';
-    ++s_string_queue_count;
 }
 
 const char* util_root_name(BlockFile* bf)

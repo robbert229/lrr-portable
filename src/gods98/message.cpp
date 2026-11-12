@@ -347,23 +347,6 @@ uint32_t deferred_callback_peek(void)
     return s_deferred_callback_presence;
 }
 
-/* HasActiveResource (FUN_004119d0) — see message.hpp. */
-// FUNCTION: LEGORR 0x004119d0
-int has_active_resource(const void* record)
-{
-    uint32_t handle = 0u;
-    if (record != NULL) {
-        __builtin_memcpy(&handle, (const char*)record + 0x38, sizeof handle);
-    }
-    if (record == NULL || handle == 0u) {
-        return 0;
-    }
-    if (system_state_flags_get() == 0u) {
-        return 0;
-    }
-    return 1;
-}
-
 /* --- the indexed-list window (see message.hpp) ---------------------------- */
 
 void indexed_list_install(int list, void* head, int count)
