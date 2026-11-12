@@ -603,6 +603,7 @@ void* checkpoint_blob_get(const GameContext* ctx)
     return ctx != NULL ? ctx->checkpoint_blob : NULL;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* SelectedLevelStartObjectUpdate (FUN_00460200) — see savegame.hpp. */
 void selected_level_start_object_update(GameContext* ctx)
 {
@@ -611,6 +612,7 @@ void selected_level_start_object_update(GameContext* ctx)
     }
     (void)checkpoint_blob_get(ctx); /* the corpus keeps no result */
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 namespace unported_ledger_stubs {
 void ledger_stub_00460290_EntityType4IndexListBuild(
@@ -1597,6 +1599,7 @@ void pointer_override_expiry_tick(float delta)
     main_loop_frame_pump(1);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int mission_reward_click(GameContext* ctx, int hit_save)
 {
     if (ctx == NULL || ctx->level == NULL || ctx->checkpoint_blob == NULL)
@@ -1620,6 +1623,7 @@ int mission_reward_click(GameContext* ctx, int hit_save)
     }
     return 0;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void* callback_record_allocate_initialize(void** out_record, uint32_t param_2,
                                           uint32_t param_3, uint32_t param_4,
@@ -1655,6 +1659,7 @@ void* callback_record_allocate_initialize(void** out_record, uint32_t param_2,
     return record;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* TaskTableContentsRelease (FUN_00462960) — see cmd.hpp. */
 int task_table_contents_release(void* record)
 {
@@ -1699,6 +1704,7 @@ int task_table_contents_release(void* record)
     engine_heap_free(rec);
     return 1;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* --- the record-field write band (see record.hpp) --------------------------- */
 #if defined(_MSC_VER) && defined(_M_IX86)

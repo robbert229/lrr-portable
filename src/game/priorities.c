@@ -376,6 +376,7 @@ void priorities_draw(void)
     }
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void priorities_selection_set(unsigned int index, unsigned int flags)
 {
     priorities.selected = index;
@@ -392,3 +393,4 @@ void priorities_hover_area_get(Area2F* area)
 {
     *area = priorities.hover_area;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */

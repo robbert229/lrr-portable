@@ -621,6 +621,7 @@ void engine_debug_word_bit_set(uint32_t mask, int enabled)
     else s_panel_highlight_flags &= ~mask;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void objective_score_text_origin_peek(float out[2])
 {
     if (out != NULL) {
@@ -672,6 +673,7 @@ void engine_app_mode_global_set(int32_t mode)
 {
     s_application_mode = mode;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* --- the grid-cell record buffer (see engine.hpp) ---------------------------- */
 // GLOBAL: LEGORR 0x005520e8
@@ -706,8 +708,11 @@ void*  s_position_seam_last_handle;
 int    s_position_seam_last_x;
 int    s_position_seam_last_y;
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void global_position_handle_set(void* handle) { s_position_handle = handle; }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 void* global_position_handle_peek(void) { return s_position_handle; }
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void global_position_seam_reset(void)
 {
     s_position_seam_calls = 0;
@@ -728,6 +733,7 @@ void global_position_seam_last(void** out_handle, int* out_x, int* out_y)
         *out_y = s_position_seam_last_y;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* ScrollScaleSetAndClamp (FUN_00425ce0) — see engine.hpp. The corpus reads
  * its speed word through the overlapping _DAT_0055615c alias; the port keeps
@@ -736,6 +742,7 @@ void global_position_seam_last(void** out_handle, int* out_x, int* out_y)
 float s_scroll_scale = 1.0f; /* DAT_0055615c; port default (ref is zero-filled) */
 
 float scroll_scale_peek(void) { return s_scroll_scale; }
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void  scroll_scale_set(float value) { s_scroll_scale = value; }
 
 int scroll_speed_index_get(void)
@@ -748,6 +755,7 @@ int scroll_speed_index_get(void)
     if (v < 2.0f)       { return 4; }
     return 5;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* PanelSelectionHighlightToggle (FUN_00435aa0) — see engine.hpp. The corpus
  * rides two DAT globals, not the context: bit 0 of the shared debug/cheat

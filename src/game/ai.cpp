@@ -132,7 +132,9 @@ void bubble_texture_handle_set(int index, uint32_t handle)
     }
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int ai_idle_count(void) { return s_idle100_n; }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 const LevelState* grid_of(const GameContext* ctx);
 
@@ -265,12 +267,14 @@ int ai_object_registry_window_count(int window)
     return count;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void ai_object_registries_reset(void)
 {
     memset(s_reg_flagged, 0, sizeof s_reg_flagged);
     memset(s_reg_type4, 0, sizeof s_reg_type4);
     memset(s_reg_type2, 0, sizeof s_reg_type2);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* Finish the chain-head command on `e`: unlink from both structures, free,
  * advance the chain. */
@@ -375,7 +379,9 @@ static const int s_seed_off[4][2] = { { -1, -1 }, { 0, -1 }, { 0, 0 }, { -1, 0 }
 
 static int s_wave_marks; /* wave-flag count from the last path build */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int ai_wave_flood_count(void) { return s_wave_marks; }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static void wave_mark(WaveFlood* wf, int cell)
 {
@@ -537,6 +543,7 @@ static int wave_traceback(WaveFlood* wf, int start)
     return 0;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* Build a command's path into the entity buffer through the wave-flood
  * core. Corpus shape: the command dispatch installs the list per command
  * (0x4418d0: buffer set, count/index and +0x28c/+0x290 reset, mover flag
@@ -624,6 +631,7 @@ int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty)
     free(wf.scan);
     return rc;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* The bound level's voxel grid, or NULL for an absent/sub-margin map.
  * Ordinary kind-0 admission waits while its terrain is unavailable. */
@@ -1231,6 +1239,7 @@ int ai_tick(GameContext* ctx, float dt)
     return done;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int ai_commands_active(const GameContext* ctx)
 {
     int n = 0;
@@ -1247,6 +1256,7 @@ int ai_commands_active(const GameContext* ctx)
     }
     return n;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void entity_activity_scene_state_update(GameContext* ctx)
 {
@@ -1279,6 +1289,7 @@ void ai_idle_table_reset(void)
     s_idle100_n = 0;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void active_entity_list_install(const EntitySlot* const* entries, int count)
 {
     if (entries == NULL || count < 0) {
@@ -1296,6 +1307,7 @@ void active_entity_list_install(const EntitySlot* const* entries, int count)
     }
     s_active_list_used = count;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int active_entity_list_count(void)
 {

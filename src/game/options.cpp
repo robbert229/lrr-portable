@@ -252,6 +252,7 @@ static uint32_t s_get_u32(const uint8_t* p)
 #define OPT_HDR_VERSION 1u
 #define OPT_HDR_BYTES (12 + 4 * GAME_OPT_COUNT)
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void options_save_header(const GameOptions* o, uint8_t* blk)
 {
     if (o == NULL || blk == NULL) {
@@ -265,6 +266,7 @@ void options_save_header(const GameOptions* o, uint8_t* blk)
         s_put_u32(blk + 12 + 4 * i, (uint32_t)options_get(o, i));
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int options_load_header(GameOptions* o, const uint8_t* blk)
 {

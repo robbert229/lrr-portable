@@ -297,12 +297,14 @@ int save_write_slot(GameContext* ctx, int slot)
     return ok;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void save_set_current_record(GameContext* ctx, int index)
 {
     if (ctx != NULL) {
         ctx->current_record = index;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 uint32_t* save_record_flags(GameContext* ctx, int index)
 {
@@ -496,6 +498,7 @@ int osf_read_path(GameContext* ctx, int slot)
 
 /* --- the save-slot band (2026-10-24; findings 21/408) ---------------------- */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void save_slot_selection_clear(GameContext* ctx)
 {
     if (ctx != NULL) {
@@ -513,6 +516,7 @@ void* sav_slot_ctx(GameContext* ctx, int slot)
     save_context_bind(ctx);
     return sav_slot_ctx_target(slot);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* SaveStateEventContextSet (FUN_00418110) — zero-init module static per
  * the unowned-global convention (the corpus's word is DAT_0055781c). */
@@ -562,22 +566,26 @@ int list_find_name(const SavListWindow* win, const char* name)
 static void**  s_sav_menu_windows[2]; /* the chain + 0x10 word's slot role */
 static void*   s_sav_slot_stride_window; /* the context + 0x34 word's role */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void sav_menu_window_install(int which, void** slot)
 {
     if (which == 0 || which == 1) {
         s_sav_menu_windows[which] = slot;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void** sav_menu_window_peek(int which)
 {
     return (which == 0 || which == 1) ? s_sav_menu_windows[which] : NULL;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void sav_slot_stride_window_install(void* base)
 {
     s_sav_slot_stride_window = base;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void* sav_slot_stride_window_peek(void)
 {
@@ -665,6 +673,7 @@ static void sav_visited_band_release(int which)
     sav_visited_band_alias_sync(which);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void sav_tree_root_install(int which, void* node)
 {
     void** items = NULL;
@@ -696,6 +705,7 @@ void sav_tree_root_install(int which, void* node)
     }
     free(items);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static int sav_visited_band_reserve(int which, uint32_t count)
 {
@@ -799,6 +809,7 @@ void sav_tree_roots_clear(void)
     sav_tree_owned_nodes_release(1);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void save_menu_refresh(GameContext* ctx, int slot)
 {
     if (ctx == NULL) return;
@@ -806,6 +817,7 @@ void save_menu_refresh(GameContext* ctx, int slot)
     save_menu_refresh_target(0u, slot);
     ctx->save_slot = slot;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* ShowLevelOverlayForCurrentSelection (FUN_00418000): commit the currently
  * selected save slot, then rebuild the campaign/tutorial save-tree views.

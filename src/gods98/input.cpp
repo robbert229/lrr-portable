@@ -338,6 +338,7 @@ int input_key_edge(const InputState* s, int key)
     return s->cur[key] != 0 && s->prev[key] == 0;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int input_key_released(const InputState* s, int key)
 {
     if (key < 0 || key >= INPUT_KEY_COUNT) {
@@ -345,12 +346,14 @@ int input_key_released(const InputState* s, int key)
     }
     return s->prev[key] != 0 && s->cur[key] == 0;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int input_mouse_pressed(const InputState* s)
 {
     return s != NULL ? s->mouse_press : 0;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* Port-local key-to-ASCII helper. The reference entry at 0x48e380 is CRT
  * `_toupper`, used by text/string paths; it is not this InputState API.
  */
@@ -369,6 +372,7 @@ uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode)
     }
     return scancode;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 uint32_t input_key_context(const InputState* s, uint32_t key)
 {
@@ -378,6 +382,7 @@ uint32_t input_key_context(const InputState* s, uint32_t key)
     return s->context_filter[key];
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void input_text_pump(InputState* s, char* buf, int cap, int* len_out, int clear)
 {
     if (s == NULL) {
@@ -439,6 +444,7 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
     }
     return 0;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static uint32_t s_player_kind1_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind4_flags[INPUT_FLAG_TABLE_SLOTS];
@@ -571,6 +577,7 @@ int input_binding_pressed_get(const EngineContext* ctx, int kind, int entry,
     return (int)(word & 1u);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void input_indexed_window_set(int which, int index, uint32_t value)
 {
     uint32_t* window;
@@ -601,6 +608,7 @@ uint32_t input_indexed_window_peek(int which, int index)
     }
     return 0u;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 namespace unported_ledger_stubs {
 

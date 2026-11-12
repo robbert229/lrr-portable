@@ -275,6 +275,7 @@ void flic_packed_triplet_table_to_word_build(void* record)
 flic_window_slot g_flic_windows[16];
 static unsigned g_flic_window_next = 0u;
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void flic_frame_window_layout_install(void* rec, int row_len, int row_count,
                                       int pitch, void* stream,
                                       void* pixel_buffer, int flag)
@@ -310,6 +311,7 @@ void flic_frame_window_layout_install(void* rec, int row_len, int row_count,
     g_flic_windows[slot].stream = stream;
     g_flic_windows[slot].pixels = pixel_buffer;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 namespace unported_ledger_stubs {
 

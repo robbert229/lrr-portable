@@ -46,6 +46,7 @@ ViewObjectLookupHook s_view_object_lookup_hook = NULL;
 ViewTargetBlendHook s_view_target_blend_hook = NULL;
 void* s_view_follow_target_context = NULL;
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void view_follow_target_hooks_set(ViewObjectLookupHook lookup,
     ViewTargetBlendHook blend, void* context)
 {
@@ -53,6 +54,7 @@ void view_follow_target_hooks_set(ViewObjectLookupHook lookup,
     s_view_target_blend_hook = blend;
     s_view_follow_target_context = context;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* CameraZoomStepAdjust reads the primary view/camera context directly from
  * the corpus's active-view global. Its owner is the unported config setup. */
@@ -638,10 +640,12 @@ int shared_object_directory_root_set(const char* directory)
     return directory == NULL || path != NULL;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 const char* shared_object_directory_root_get(void)
 {
     return s_shared_object_directory_root;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void shared_object_sound_callbacks_get(
     SharedObjectSoundEnabledFn* enabled_out,
@@ -1391,6 +1395,7 @@ static int rect_contains_converted(const float rect[4], float off_x,
                ? 1 : 0;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* Port-local adapter. Retail 0x45b590 has four stack arguments
  * (unused, bounds, x, y) and consumes its offsets from x87 state. */
 int rect_contains_offset_point(const float rect_bounds[4],
@@ -1441,6 +1446,7 @@ int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
     }
     return rect_contains_converted(*bounds_at_14, off_x, off_y, x, y);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* ---- camera-handle primitives (record-backed) --------------------------- */
 
@@ -2109,7 +2115,9 @@ void scene_object_registry_pool_block_register(void* block)
 }
 
 void scene_root_install(void* root) { s_scene_root = root; }
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void* scene_root_peek(void) { return s_scene_root; }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static void* scene_root_interface(void)
 {
@@ -2457,12 +2465,14 @@ void grid_surface_hooks_set(GridSurfaceLookupFn lookup,
 static WorldSpatialRecordModel* s_world_spatial_records;
 static uint32_t s_world_spatial_record_count;
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void world_spatial_records_install(WorldSpatialRecordModel* records,
                                    uint32_t count)
 {
     s_world_spatial_records = records;
     s_world_spatial_record_count = count > 65536u ? 65536u : count;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* FUNCTION: LEGORR 0x0046e8a0 */
 WorldSpatialRecordModel* world_spatial_record_find_at_grid_coordinate(
