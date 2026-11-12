@@ -4243,13 +4243,49 @@ static void lego_block_visible_callback(int bx, int by)
 
 /* TerrainCellPaletteResourceAtGridPosition [group M] */
 // FUNCTION: LEGORR 0x00429160
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* The C body below compiles to the same operations except one: the index
+ * multiply loads xy[1] into eax and multiplies by the level's width, where
+ * the original loads the width and multiplies by xy[1], with the global and
+ * parameter loads scheduled the other way round (82.35%). No source form
+ * moved it: every operand order of width * y + x, signedness casts, a local
+ * level pointer, a Point2I parameter declared before and after Lego_Level,
+ * the permuter (no candidates) and a counter sweep over a full 512 period
+ * (one code at every N, so not rule B; finding 538). As for vec_cross
+ * (finding 550), the matching build keeps the port's instruction-for-
+ * instruction body. */
+__declspec(naked) void* lego_terrain_cell_palette_resource_at_grid_position(
+    const int* xy)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov edx, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [ecx + 7ch]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        mov al, byte ptr [edx + eax*8 + 1]
+        push eax
+        push ecx
+        call packed_grid_cell_value_get
+        add esp, 8
+        pop esi
+        ret
+    }
+}
+#else
 void* lego_terrain_cell_palette_resource_at_grid_position(const int* xy)
 {
     int idx = xy[0] + xy[1] * legoGlobs_currLevel->width;
-    return (void*)packed_grid_cell_value_get(
+    return (void*)(uintptr_t)packed_grid_cell_value_get(
         LEGO_LEVEL_PTR(void, legoGlobs_currLevel->textureSet),
         LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[idx].texture);
 }
+#endif
 
 
 /* SceneMarkerUpdateAndDraw [group G] */
