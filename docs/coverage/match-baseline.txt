@@ -1,4 +1,4 @@
-# input_sha256: ec4e0acd3ed5bad66bbfabbba8452d28a3a348933c61dfb5f76cf893faa13424
+# input_sha256: 1a7636ba49114d33334a7f65a29f95168b0b085a83f8cc7810fe77fb3437db43
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1967,7 +1967,7 @@
 0x00480570 36.36 resource_directory_token_list_contains
 0x004805b0 29.89 lego::shared_texture_root_register
 0x00480780 11.43 lego::zero_result_is_success
-0x004807a0 38.10 render_resource_instance_record_acquire
+0x004807a0 57.89 render_resource_instance_record_acquire
 0x004807d0 100.00 render_resource_instance_record_release
 0x004807f0 30.00 render_resource_instance_pool_grow
 0x00480870 31.65 engine_task_callback_record_allocate_and_initialize
@@ -1984,7 +1984,7 @@
 0x004823e0 13.56 terrain_cell_quad_vertices_write
 0x00482470 11.86 indexed_geometry_data_copy_to_output
 0x00482500 9.22 instance_quad_vertex_data_fill
-0x00482620 26.09 mesh_segment_vertex_fill
+0x00482620 31.30 mesh_segment_vertex_fill
 0x004826c0 9.64 mesh_vertex_record_fill
 0x00482780 100.00 indexed_record_flag6c_bit0_get
 0x004827a0 100.00 indexed_record_flag6c_bit0_set
@@ -4148,7 +4148,7 @@
 0x00480570 36.36 resource_directory_token_list_contains
 0x004805b0 29.89 lego::shared_texture_root_register
 0x00480780 11.43 lego::zero_result_is_success
-0x004807a0 38.10 render_resource_instance_record_acquire
+0x004807a0 57.89 render_resource_instance_record_acquire
 0x004807d0 100.00 render_resource_instance_record_release
 0x004807f0 30.00 render_resource_instance_pool_grow
 0x00480870 31.65 engine_task_callback_record_allocate_and_initialize
@@ -4165,7 +4165,7 @@
 0x004823e0 13.56 terrain_cell_quad_vertices_write
 0x00482470 11.86 indexed_geometry_data_copy_to_output
 0x00482500 9.22 instance_quad_vertex_data_fill
-0x00482620 26.09 mesh_segment_vertex_fill
+0x00482620 31.30 mesh_segment_vertex_fill
 0x004826c0 9.64 mesh_vertex_record_fill
 0x00482780 100.00 indexed_record_flag6c_bit0_get
 0x004827a0 100.00 indexed_record_flag6c_bit0_set

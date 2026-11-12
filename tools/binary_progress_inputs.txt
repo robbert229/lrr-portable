@@ -15,6 +15,7 @@ src/crt/crt.hpp
 src/crt/crt_for_avi_player.hpp
 src/crt/crt_for_bubbles.hpp
 src/crt/crt_for_building_model.hpp
+src/crt/crt_for_container_unit.hpp
 src/crt/crt_for_dependencies.hpp
 src/crt/crt_for_encyclopedia.hpp
 src/crt/crt_for_entity_cell_effects.hpp
@@ -33,6 +34,7 @@ src/crt/crt_for_sfx.hpp
 src/crt/crt_for_terrain_cell_objects.hpp
 src/crt/crt_for_tutorial_script.hpp
 src/crt/crt_from_frontend_unit.hpp
+src/crt/crt_from_mesh_unit.hpp
 src/crt/crt_from_panel_unit.hpp
 src/crt/crt_heap.cpp
 src/crt/crt_runtime_aliases.cpp
@@ -280,6 +282,7 @@ src/game/spawn.cpp
 src/game/spawn.hpp
 src/game/spawn_for_lego.hpp
 src/game/spawn_for_legoobject.hpp
+src/game/spawn_for_mesh_unit.hpp
 src/game/startup_config.cpp
 src/game/startup_config_for_file_list_streams.hpp
 src/game/startup_config_for_wad.hpp
@@ -376,6 +379,7 @@ src/gods98/container_native.cpp
 src/gods98/container_native.hpp
 src/gods98/container_route.cpp
 src/gods98/container_route.h
+src/gods98/container_unit.cpp
 src/gods98/directdraw.cpp
 src/gods98/draw.c
 src/gods98/draw.h
@@ -456,6 +460,7 @@ src/gods98/media_for_lego.hpp
 src/gods98/media_for_pointer.hpp
 src/gods98/media_shared.hpp
 src/gods98/mesh.h
+src/gods98/mesh_unit.cpp
 src/gods98/message.cpp
 src/gods98/message.h
 src/gods98/message.hpp
@@ -484,6 +489,7 @@ src/gods98/record_for_bitmap_font.hpp
 src/gods98/record_for_building_model.hpp
 src/gods98/record_for_flic_unit.hpp
 src/gods98/record_for_level_id_remap.hpp
+src/gods98/record_for_mesh_unit.hpp
 src/gods98/record_for_placement.hpp
 src/gods98/record_for_placement_footprint.hpp
 src/gods98/record_for_terrain_map.hpp
@@ -492,6 +498,8 @@ src/gods98/record_for_text_window.hpp
 src/gods98/record_for_tutorial_script.hpp
 src/gods98/record_for_upgrade_levels.hpp
 src/gods98/record_for_vehicle_model.hpp
+src/gods98/record_from_container_unit.hpp
+src/gods98/record_from_mesh_unit.hpp
 src/gods98/record_shared.hpp
 src/gods98/registry_api.h
 src/gods98/registry_port.cpp
@@ -514,10 +522,13 @@ src/gods98/resource_from_wad.hpp
 src/gods98/resource_shared.hpp
 src/gods98/scene_pool.cpp
 src/gods98/scene_pool.hpp
+src/gods98/scene_pool_for_container_unit.hpp
 src/gods98/scene_resources.cpp
 src/gods98/scene_resources.h
 src/gods98/scene_resources.hpp
+src/gods98/scene_resources_for_container_unit.hpp
 src/gods98/scene_resources_for_lws.hpp
+src/gods98/scene_resources_for_mesh_unit.hpp
 src/gods98/scene_resources_for_viewports.hpp
 src/gods98/simtick.cpp
 src/gods98/simtick.h
@@ -556,10 +567,13 @@ src/gods98/string.hpp
 src/gods98/surface.cpp
 src/gods98/surface.hpp
 src/gods98/surface_for_bitmap_font.hpp
+src/gods98/surface_for_container_unit.hpp
 src/gods98/surface_for_directdraw.hpp
 src/gods98/surface_for_images_unit.hpp
+src/gods98/surface_for_mesh_unit.hpp
 src/gods98/surface_for_viewports.hpp
 src/gods98/surface_from_images_unit.hpp
+src/gods98/surface_from_mesh_unit.hpp
 src/gods98/surface_shared.hpp
 src/gods98/text_window.cpp
 src/gods98/texture.cpp
@@ -578,6 +592,7 @@ src/gods98/view_for_building_model.hpp
 src/gods98/view_for_camera_control.hpp
 src/gods98/view_for_cell_flood_passes.hpp
 src/gods98/view_for_com_object_tree.hpp
+src/gods98/view_for_container_unit.hpp
 src/gods98/view_for_images_unit.hpp
 src/gods98/view_for_info_track_overlay.hpp
 src/gods98/view_for_lego.hpp
@@ -585,6 +600,7 @@ src/gods98/view_for_legoobject.hpp
 src/gods98/view_for_lighteffects.hpp
 src/gods98/view_for_lws.hpp
 src/gods98/view_for_map_view.hpp
+src/gods98/view_for_mesh_unit.hpp
 src/gods98/view_for_panel_unit.hpp
 src/gods98/view_for_placement.hpp
 src/gods98/view_for_placement_footprint.hpp
