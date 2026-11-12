@@ -789,19 +789,3 @@ void* crt_calloc_aligned(int count, int size)
 #endif
 }
 #endif
-
-#if !defined(_MSC_VER)
-namespace unported_ledger_stubs {
-void* ledger_stub_0048dc80_GrowHeapArray(void* allocation,
-                                         uint32_t requested_size);
-} // namespace unported_ledger_stubs
-
-/* _realloc for the original-shape C units on other compilers
- * (crt/vc5names.h maps it here): the port's model of LIBC.LIB's realloc
- * (FUN_0048dc80) in crt.cpp, over the same heap as engine_heap_alloc. */
-extern "C" void* engine_heap_realloc(void* ptr, long size)
-{
-    return unported_ledger_stubs::ledger_stub_0048dc80_GrowHeapArray(
-        ptr, (uint32_t)size);
-}
-#endif
