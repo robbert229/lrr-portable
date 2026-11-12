@@ -1200,7 +1200,11 @@ void mission_crystal_quota_setup(BlockFile* config, const char* gameName,
 {
     const char* str;
 
-    if (block_get_strptr(config, string_path_join(gameName, levelName, "Reward", "Quota", "Crystals", NULL)) != NULL) {
+    if (block_get_strptr(config, string_path_join(gameName, levelName,
+            // STRING: LEGORR 0x004a89f8
+            "Reward",
+            // STRING: LEGORR 0x004a8a00
+            "Quota", "Crystals", NULL)) != NULL) {
         str = block_get_strptr(config, string_path_join(gameName, levelName, "Reward", "Quota", "Crystals", NULL));
     } else {
         str = "";

@@ -498,9 +498,12 @@ def render_source(u, fp, stem, ranges, struct_fields, bss_refs, g_start, g_end,
         w("")
     if literals or shared:
         w("/* String literals. Annotate each where the code uses it, as")
-        w(" * `// STRING: LEGORR 0x...` on the line before the literal (utils.c). The")
-        w(" * ones pooled with another object cannot be bound by position: use an")
-        w(" * annotated static (config.c) or the same STRING marker. */")
+        w(" * `// STRING: LEGORR 0x...` on the line before the literal (utils.c),")
+        w(" * one literal per marked line. The matching build pools literals the way")
+        w(" * the original did (finding 563), so mark each address once in the whole")
+        w(" * tree: Reccmp drops a second marker for it. Mark this unit's own")
+        w(" * literals here, even when other units reuse them. Leave the ones pooled")
+        w(" * with another unit unmarked; that unit's conversion marks them. */")
         for addr, text in literals[:STRING_LIST_LIMIT]:
             w("/*   STRING: LEGORR 0x%08x  %s */" % (addr, comment_safe(json.dumps(text))))
         if len(literals) > STRING_LIST_LIMIT:
