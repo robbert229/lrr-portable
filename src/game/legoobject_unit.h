@@ -145,13 +145,26 @@ void legoobject_callback_dispatch_unless_type_five(Lego_Object* obj); /* 004374f
 int legoobject_linked_route_clear_callback(Lego_Object* obj, void* data); /* 00437510 */
 
 /* ---- group B: 00437540-00437cc0 ---- */
+/* objectGlobs.recordObjs (004e8544): one deferred object of the level's
+ * object list, 0x2c bytes, created when its block is uncovered. */
+typedef struct LegoObjGB_DeferredRecord {
+    int blockPos[2];                  /* +0x00 */
+    float worldPos[2];                /* +0x08 */
+    float heading;                    /* +0x10 */
+    void* model;                      /* +0x14 */
+    int type;                         /* +0x18 */
+    int id;                           /* +0x1c */
+    float health;                     /* +0x20 */
+    char* name;                       /* +0x24 */
+    char* linkName;                   /* +0x28 driving/route target's name */
+} LegoObjGB_DeferredRecord;
 int legoobject_remove(Lego_Object* obj);                        /* 00437540 */
 int legoobject_run_through_lists_skip_upgrade_parts(Lego_ObjectCallback callback, void* data); /* 004377b0 */
 int legoobject_run_through_lists(Lego_ObjectCallback callback, void* data, int skipUpgradeParts); /* 004377d0 */
 void legoobject_rename(Lego_Object* obj, const char* name);     /* 00437880 */
 void legoobject_grid_object_records_release(void);              /* 004378e0 */
-void legoobject_deferred_olist_create_and_link(int* record);    /* 00437940 */
-void legoobject_deferred_olist_queue_add(int a, int b, int c, void* d, int e, int f, int g, int h); /* 00437c20 */
+void legoobject_deferred_olist_create_and_link(int* blockPos);  /* 00437940 */
+void legoobject_deferred_olist_queue_add(void* model, int type, int id, float* worldPos, float heading, float health, const char* name, const char* linkName); /* 00437c20 */
 int legoobject_flag40000_threshold_compare(Lego_Object* obj);   /* 00437cc0 */
 
 /* ---- group C: 00437d00-00438580 ---- */

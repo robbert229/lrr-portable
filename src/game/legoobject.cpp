@@ -1081,7 +1081,8 @@ static int entity_linked_route_clear_callback(EntitySlot* candidate,
 /* EntityTeardown (FUN_00437540). The legacy routine's engine calls are
  * represented by typed stage callbacks; record flags, command-chain cleanup,
  * special back-reference clearing, and free-list ownership stay local. */
-// FUNCTION: LEGORR 0x00437540
+/* Port model of 0x00437540 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437540, retires to the tail in GAME-023 part 3
 int entity_teardown(EntitySlot* entity)
 {
     uint32_t flags;
@@ -1225,7 +1226,8 @@ int entity_teardown(EntitySlot* entity)
     return 0;
 }
 /* EntityPoolFindByCallbackFiltered (FUN_004377b0) fixes the filter on. */
-// FUNCTION: LEGORR 0x004377B0
+/* Port model of 0x004377b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004377b0, retires to the tail in GAME-023 part 3
 int entity_pool_find_by_callback_filtered_current(
     int (*callback)(EntitySlot*, void*), void* payload)
 {
@@ -1233,7 +1235,8 @@ int entity_pool_find_by_callback_filtered_current(
 }
 /* The retail pool walkers use the active context instead of receiving it as
  * an argument. Keep context-taking forms above as portable caller adapters. */
-// FUNCTION: LEGORR 0x004377D0
+/* Port model of 0x004377d0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004377d0, retires to the tail in GAME-023 part 3
 int entity_pool_find_by_callback_current(
     int (*callback)(EntitySlot*, void*), void* payload, int filter_flagged)
 {
@@ -1271,7 +1274,8 @@ int entity_pool_find_by_callback_current(
 /* GridObjectRecordsRelease (FUN_004378e0): release both owned handles for
  * each active record, clear the fixed 200-word table, then release its side
  * structure through the installed owner callback. */
-// FUNCTION: LEGORR 0x004378e0
+/* Port model of 0x004378e0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004378e0, retires to the tail in GAME-023 part 3
 void grid_object_records_release(void)
 {
     unsigned int i;
@@ -1294,7 +1298,8 @@ void grid_object_records_release(void)
 /* DeferredOListEntityCreateAndLink (FUN_00437940): realize all queued object
  * records at a cell, initialize each created entity, resolve named links
  * after creation, then release the consumed queue records. */
-// FUNCTION: LEGORR 0x00437940
+/* Port model of 0x00437940 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437940, retires to the tail in GAME-023 part 3
 void deferred_olist_entity_create_and_link(const int cell_xy[2])
 {
     EntitySlot* created[200];
@@ -1388,7 +1393,8 @@ void deferred_olist_entity_create_and_link(const int cell_xy[2])
     }
 }
 
-// FUNCTION: LEGORR 0x00437c20
+/* Port model of 0x00437c20 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437c20, retires to the tail in GAME-023 part 3
 void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
                                      int p1, int p2, int p3, int p5, int p6,
                                      const char* name1, const char* name2)
@@ -1422,7 +1428,8 @@ void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
 }
 
 /* EntityFlag40000ThresholdCompare (see entity.hpp). */
-// FUNCTION: LEGORR 0x00437cc0
+/* Port model of 0x00437cc0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437cc0, retires to the tail in GAME-023 part 3
 int entity_flag40000_threshold_compare(const EntitySlot* e)
 {
     if ((entity_state_flags_get(e) & 0x40000u) != 0u) {
@@ -11223,4 +11230,66 @@ static int render_entity_callback(EntitySlot* entity, void* payload)
     if (s_render_entity_hook != NULL)
         s_render_entity_hook(entity, s_render_entity_user);
     return 0;
+}
+
+/* ---- group B adapters ---- */
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-023 part 1 group B in
+ * legoobject_unit.c. Where the port's entry takes a GameContext or a hook
+ * table, or has no entry at all, these give the original's contract.
+ * Natively nothing calls them: the unit's functions run only in the
+ * matching build. */
+
+/* 00472060 (Weapons.c): the RunThroughLists callback LegoObject_Remove
+ * passes, which clears another object's +0x3c4 reference to the removed
+ * one. No port entry: does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (callback 0x00472060, no port entry)
+extern "C" int legoobject_gb_weapon_target_clear_callback(void* obj, void* data)
+{
+    (void)obj;
+    (void)data;
+    return 0;
+}
+
+/* 0043f560 takes the object; the port's entry takes its context too. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (entity_pool_find_with_local_predicate, 0x0043f560)
+extern "C" int legoobject_gb_pool_find_with_local_predicate_adapter(void* obj)
+{
+    return entity_pool_find_with_local_predicate(
+        entity_pool_callback_context_get(), (EntitySlot*)obj);
+}
+
+/* 0044be30 takes the object; the port's entry takes a hook table. No hooks
+ * are installed for the original's contract: does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (entity_auxiliary_payload_release, 0x0044be30)
+extern "C" void legoobject_gb_auxiliary_payload_release_adapter(void* obj)
+{
+    (void)obj;
+}
+
+/* 00409a90 takes (id, position, direction, points, count, notify) and
+ * returns the object; the port's entry takes a hook table and returns
+ * nothing. Does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (world_object_create_with_transform, 0x00409a90)
+extern "C" void* legoobject_gb_world_object_create_adapter(int id, void* position,
+                                                           unsigned int direction,
+                                                           void* points,
+                                                           uint32_t count,
+                                                           int notify)
+{
+    (void)id;
+    (void)position;
+    (void)direction;
+    (void)points;
+    (void)count;
+    (void)notify;
+    return NULL;
+}
+
+/* 00454880 is called with the object's type, which it does not read; the
+ * port's entry takes no argument. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (global_counter_004ff990_increment, 0x00454880)
+extern "C" void legoobject_gb_tutorial_counter_increment_adapter(int type)
+{
+    (void)type;
+    global_counter_004ff990_increment();
 }

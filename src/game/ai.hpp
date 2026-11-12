@@ -349,7 +349,7 @@ void linked_entity_flag_and_command_update(EntitySlot* e);
 
 /* EntityPointerRegistriesRemove (FUN_004073a0): drop the record pointer from
  * every window whose slot matches (the timer words ride on). */
-void entity_pointer_registries_remove(EntitySlot* record); /* FUN_004073a0 */
+extern "C" void entity_pointer_registries_remove(EntitySlot* record); /* FUN_004073a0 */
 
 /* Type4ObjectRegistryInsert (FUN_00407410): a type-4 record goes into the
  * type-4 window when absent — first empty slot, timer word untouched. */
