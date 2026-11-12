@@ -974,15 +974,15 @@ int reward_loop(void)
     struct DirectShowGraphState* movie;
 
     count = 0;
-    last = (float)timeGetTime();
+    last = (float)main_time_get();
     time = rewardGlobs.timer;
     if ((level = (RewardLegoLevel*)level_current_owner_get()) == NULL) return 0;
     if ((current = reward_level_get(level->rewardKey)) == NULL) return 0;
     if (!reward_check_skip()) return 0;
 
     while (state < 4 || g_renderer_word_c || s_window_mouse_word_4c) {
-        elapsed = ((float)timeGetTime() - last) * 0.001f;
-        last = (float)timeGetTime();
+        elapsed = ((float)main_time_get() - last) * 0.001f;
+        last = (float)main_time_get();
         time += elapsed;
         reward_update_state(&count, &state, &time);
         if (((!s_global_current_keys[0x39] && s_global_previous_keys[0x39]) ||

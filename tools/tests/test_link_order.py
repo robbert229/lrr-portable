@@ -83,9 +83,11 @@ class CommittedListTest(unittest.TestCase):
         units = [e.key for e in self.entries if e.kind == "unit"]
         self.assertEqual(units, sorted(units, key=starts.__getitem__))
 
-    def test_matching_libraries_start_with_libc(self):
+    def test_matching_libraries_put_libc_after_kernel32(self):
+        # Finding 574: kernel32's descriptor comes first, and LIBC follows it
+        # so that RtlUnwind's thunk is pulled after the DirectX thunks.
         libs = lo.libraries((lo.ROOT / lo.LIST).read_text(encoding="utf-8"))
-        self.assertEqual(libs[:2], ["libc.lib", "oldnames.lib"])
+        self.assertEqual(libs[:3], ["kernel32.lib", "libc.lib", "oldnames.lib"])
 
 
 class CheckTest(unittest.TestCase):

@@ -1,4 +1,4 @@
-# input_sha256: c9af858ce909c094a329276617f066aa02e77c64a017f87de949a053e6243063
+# input_sha256: 8873fdd97f5125ee51f96476069b033c6f7a628fe662ce9cac285a7f731a8099
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2234 mapped functions
+[game-only] 2235 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -1407,7 +1407,7 @@
 0x00460950 90.86 reward_calculate_score
 0x00460f00 99.09 reward_create_scroll
 0x00461070 99.28 reward_format_values
-0x00461410 97.25 reward_loop
+0x00461410 98.28 reward_loop
 0x00461790 92.46 reward_draw_item
 0x00461c90 90.91 reward_draw_score
 0x00461dd0 96.12 reward_do_buttons
@@ -1815,6 +1815,7 @@
 0x00477f80 85.71 window_runtime_display_caps_query
 0x00477fa0 90.00 renderer_begin_frame_once_retail
 0x00477fd0 71.43 window_runtime_callback_triplet_set
+0x00478000 100.00 main_time_get
 0x00478010 92.86 window_runtime_message_dispatch_filter
 0x00478040 62.96 window_message_dispatch_pump
 0x004780b0 25.00 renderer_window_mode_apply
@@ -2242,7 +2243,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2470 mapped functions
+[full] 2471 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -3643,7 +3644,7 @@
 0x00460950 90.86 reward_calculate_score
 0x00460f00 99.09 reward_create_scroll
 0x00461070 99.28 reward_format_values
-0x00461410 97.25 reward_loop
+0x00461410 98.28 reward_loop
 0x00461790 92.46 reward_draw_item
 0x00461c90 90.91 reward_draw_score
 0x00461dd0 96.12 reward_do_buttons
@@ -4051,6 +4052,7 @@
 0x00477f80 85.71 window_runtime_display_caps_query
 0x00477fa0 90.00 renderer_begin_frame_once_retail
 0x00477fd0 71.43 window_runtime_callback_triplet_set
+0x00478000 100.00 main_time_get
 0x00478010 92.86 window_runtime_message_dispatch_filter
 0x00478040 62.96 window_message_dispatch_pump
 0x004780b0 25.00 renderer_window_mode_apply
