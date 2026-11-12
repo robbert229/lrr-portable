@@ -19,22 +19,24 @@ the LightWave scene loader.
 - **Lws_SetTime** interpolates the keys and dissolve levels, sets the mesh
   texture time and fires the triggers.
 
-"Before" is the *match baseline* on `main` at `c0d131de` (#539). "After" is
-this change.
+This change is stacked on #547 (`dfb4db6f`: GAME-037, finding 560), which
+contains #549 (G98-002 and G98-015 relocated out of `view.cpp`, finding 562)
+and #548. "Before" is the *match baseline* at `dfb4db6f`; "after" is this
+change.
 
 ## Result
 
 | | before | after |
 | --- | ---: | ---: |
-| Unit similarity (byte-weighted, all 25 functions, 8,300 bytes) | 16.09% | **87.78%** |
-| Exact functions in the unit | 1 | **15 of 25** |
+| Unit similarity (byte-weighted, all 25 functions, 8,300 bytes) | 16.09% | **87.75%** |
+| Exact functions in the unit | 1 | **14 of 25** |
 | Mapped functions in the unit | 21 | 25 |
-| Exact functions, full scope | 893 | 907 |
-| Accuracy, full (`binary-progress.json`) | 60.47% | 61.10% |
-| Accuracy, game-only | 56.27% | 56.97% |
-| Exact-function code bytes | 76,390 | 78,560 |
-| Unmapped original functions | 192 | 188 |
-| Order inversions, full (pairs) | 32,339 | 32,392 |
+| Exact functions, full scope | 906 | 919 |
+| Accuracy, full (`binary-progress.json`) | 61.58% | 62.20% |
+| Accuracy, game-only | 57.50% | 58.20% |
+| Exact-function code bytes | 77,536 | 79,550 |
+| Unmapped original functions | 189 | 185 |
+| Order inversions, full (pairs) | 16,588 | 16,597 |
 
 Byte weights are the original's code bytes without the `0x90` fill. An
 unmapped function counts as 0%. Pair inversions rise because four more
@@ -56,7 +58,7 @@ functions are mapped; all 25 link in original order.
 | `00487ed0` | Lws_KeyPassed | `shared_object_sample_time_matches` | 229 | 40.58 | **100.00** |
 | `00487fc0` | Lws_FindPrevDissolve | `keyframe_time_segment_fraction` | 165 | 42.34 | **100.00** |
 | `00488070` | Lws_InterpolateDissolve | `lws_dissolve_interpolate` | 70 | 10.00 | 75.00 |
-| `004880d0` | Lws_SetDissolveLevel | `lws_dissolve_level_set` | 156 | unmapped | **100.00** |
+| `004880d0` | Lws_SetDissolveLevel | `lws_dissolve_level_set` | 156 | unmapped | 98.51 |
 | `00488170` | Lws_Interpolate | `lws_interpolate` | 368 | 19.35 | 34.17 |
 | `004882e0` | Lws_SetAbsoluteKey | `lws_absolute_key_set` | 708 | 14.00 | 23.88 |
 | `004885c0` | Lws_LoadMesh | `lws_mesh_load` | 368 | 41.33 | 97.12 |
@@ -68,7 +70,7 @@ functions are mapped; all 25 link in original order.
 | `004889d0` | Lws_Free | `lws_free` | 149 | 17.24 | **100.00** |
 | `00488a70` | Lws_FreeNode | `lws_node_free` | 211 | 8.57 | 98.78 |
 
-14 functions are newly exact; 4 are newly mapped (the port had no models of
+13 functions are newly exact; 4 are newly mapped (the port had no models of
 them). The gods98 names are descriptive; the binary does not attest them.
 `make match-function` scores `0x004876c0` as an effective match (100%\*) and
 `0x004887c0` at 98.08%; the full build gives the table's figures. The
@@ -104,7 +106,7 @@ numbering, which the full report maps.
 | --- | --- | --- | --- | --- |
 | G98-020 | partial (18, 1 unknown) gap 9 first 004ab670: 78/80 | partial (2, 0 unknown) gap 1 first 0049ea4c: 4/-4 | n/a (1, 0 unknown) fewer than two attributable items | - |
 
-Unit summary: full 0, gaps-only 2, partial 28, n/a 195.
+Unit summary: full 0, gaps-only 2, partial 30, n/a 193.
 
 ### COM and Mesh.c
 
@@ -113,22 +115,27 @@ The unit declares the method-table slots it calls: IDirect3DRMFrame3
 `GetVisuals`), IUnknown, IDirect3DRMUserVisual (`GetAppData`) and
 IDirect3DRM3 (`CreateFrame`). A mesh is the user visual's app data.
 
-Mesh.c (G98-015) is still spread over port files. New C boundary header
+Mesh.c (G98-015) is relocated to `gods98/mesh_unit.cpp` (#549, finding
+562); Mesh_Load is still `model.cpp`'s. New C boundary header
 [`gods98/mesh_unit.h`](../../src/gods98/mesh_unit.h) (`gods98/mesh.h` is
 Container.c's, from #537):
 
 - `lwo_model_entry_load` (Mesh_Load, `004809e0`), `pointer_value_get`
   (Mesh_GetGroupCount, `00482210`): `extern "C"` in place.
-- `screen_effect_item_opacity_set_target` (Mesh_SetGroupMaterialValues,
-  `00483420`): was `static` in `record.cpp`; now `extern "C"` at its
-  definition, no other change.
-- Three unannotated adapters in `lws_port.cpp` (ADR 0005 step 6):
+- Four unannotated adapters in `lws_port.cpp` (ADR 0005 step 6):
+  `mesh_group_material_values_set` (Mesh_SetGroupMaterialValues,
+  `00483420`: the port's `screen_effect_item_opacity_set_target` in
+  `mesh_unit.cpp` has C++ linkage, and its only declaration is in the frozen
+  `record_from_mesh_unit.hpp`, so it cannot gain `extern "C"`),
   `mesh_clone` (Mesh_Clone, `00480900`: the port's entry takes the mesh only,
   and its type is in namespace `lego`), `mesh_texture_time_set`
-  (Mesh_SetTextureTime2, `00482040`: the port's entry, a view.cpp ledger stub
-  with C++ linkage, takes an integer frame offset) and `mesh_remove`
-  (Mesh_Remove, `004820d0`, not modelled). Each costs the call operand
-  (`0x00487a00`, `0x004885c0`, `0x00487d50`, `0x00488a70`).
+  (Mesh_SetTextureTime2, `00482040`: the port's entry, a ledger stub
+  in `mesh_unit.cpp` with C++ linkage, takes an integer frame offset) and
+  `mesh_remove` (Mesh_Remove, `004820d0`, not modelled). Each costs the call
+  operand (`0x00487a00`, `0x004885c0`, `0x00487d50`, `0x004880d0`,
+  `0x00488a70`). Before the rebase onto #549, `lws.c` called
+  `0x00483420` directly (the function was `static` in `record.cpp`, given
+  `extern "C"`), and `0x004880d0` was exact.
 
 Other callees: [`gods98/files_open.h`](../../src/gods98/files_open.h)
 (File_Open, File_Close, File_GetLine, `extern "C"` in `resource.hpp`);
@@ -217,7 +224,7 @@ touch.
 | Address | Score | What is left |
 | --- | ---: | --- |
 | `0x004869f0` | 94.25 | the pooled `"%s.%s"`/`"r"` operands; register choice around the node-list `realloc` and the dissolve clamps |
-| `0x004877e0`, `0x00487d50`, `0x00487a00`, `0x004885c0`, `0x00488a70` | 97–99 | a pooled `","`, the adapter call targets above, and Reccmp's per-side operand numbering after them |
+| `0x004877e0`, `0x00487d50`, `0x00487a00`, `0x004880d0`, `0x004885c0`, `0x00488a70` | 97–99 | a pooled `","`, the adapter call targets above, and Reccmp's per-side operand numbering after them |
 | `0x00488070` | 75.00 | the original loads the current level onto the x87 stack before the branch and keeps it for both calls; 13 shapes (locals, `double`, one call with a `level` local: 75%) either store it or reload it |
 | `0x00488170` | 34.17 | the expression trees match the original (checked with a symbolic x87 trace of both listings); the original addresses the scale and rotation keys through the rotation-key pointers (`add eax, 0xc`) and keeps `&hpb` in `edi`. Inline Maths.h helpers give four pointer registers (24%). A rule B sweep shows two codes, period 256 |
 | `0x004882e0` | 23.88 | the trees almost match: same six `fsin`/`fcos`, the same products. The original keeps negations as `fchs` + `fadd` (MSVC folds `-a*b + c` into `fsub`), has three more stack temporaries, loads the pivot into locals, and in the face-camera arm stores each scaled diagonal element before loading the next scale component. 16 variants, `msvc_permuter.py` (no candidates) |
@@ -236,7 +243,7 @@ kept for their count are pads (ADR 0005 entropy rule 3).
 
 ## Entropy
 
-`make reccmp-check` against `c0d131de`: **OK**, no function below the
+`make reccmp-check` against `dfb4db6f`: **OK**, no function below the
 baseline; link-order map OK. 21 improved and 4 newly mapped in the unit.
 
 Outside the unit, one score moved and no listing digest changed:
@@ -249,17 +256,19 @@ No instruction-count change outside the unit. All header edits are
 `extern "C"` in place (`crt.hpp`, `model.hpp`, `record.hpp`,
 `resource.hpp` ×3, `scene_resources.hpp` ×2, `view.hpp`) or confined to
 `vc5names.h`'s non-MSVC branch; none adds or removes a declaration in a
-matching-build header. `record.cpp` loses one `static`.
+matching-build header.
 
 ## Reccmp lint ratchet
 
-4,117 → 4,128 entries (+12, −1). **For the owner:**
+4,167 → 4,179 entries (+13, −1). Issue #550 will exempt port-tail code;
+until then the growth stays, justified below. **For the owner:**
 
 - Removed (1): `animation_track_find_keyframe_and_fraction`, now annotated
   in `lws.c`.
-- Added (12):
-  - the three Mesh.c adapters (`mesh_clone`, `mesh_texture_time_set`,
-    `mesh_remove`), which ADR 0005 step 6 requires unannotated;
+- Added (13):
+  - the four Mesh.c adapters (`mesh_clone`, `mesh_group_material_values_set`,
+    `mesh_texture_time_set`, `mesh_remove`), which ADR 0005 step 6 requires
+    unannotated;
   - the port tail's nine models (listed above), previously annotated at the
     addresses `lws.c` now holds. Four of them are reachable only from
     `view.cpp`'s uncalled wrappers.
