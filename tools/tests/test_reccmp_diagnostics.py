@@ -24,6 +24,11 @@ class DiagnosticsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn('Dropped duplicate', result.stderr)
 
+    def test_coloured_reccmp_levels_are_diagnostics(self):
+        line = '[\x1b[31mERROR\x1b[0m] Dropped duplicate address 0x4a89f8 on STRING annotation\n'
+        self.assertEqual(unexpected([line, '[\x1b[33mWARNING\x1b[0m] x\n', '\x1b[32m100.00%\x1b[0m similar\n']),
+                         ['[ERROR] Dropped duplicate address 0x4a89f8 on STRING annotation', '[WARNING] x'])
+
     def test_allowlist_is_specific(self):
         self.assertEqual(len(unexpected(['other.cpp(1) : warning C4172: returning address of local variable or temporary'])), 1)
         self.assertEqual(len(unexpected(['z:/src/gods98/view.cpp(1373) : warning C4172: returning address of local variable or temporary'])), 1)
