@@ -910,6 +910,14 @@ non-debug symbol table. The tool reports each check and its first difference;
 `--json` emits the same results as JSON. Differences and tool failures exit
 nonzero; an emulated pass counts as a pass.
 
+`--rename OLD=NEW` (repeatable) compares modulo a rename of a static or
+other identifier (#533): the base's preprocessed tokens, relocation targets
+and symbol names are spelled with `NEW` before comparing. A symbol name
+matches whole, so a mangled `?OLD@@3HA` is renamed but `OLD_more` is not. A
+rename is not a reshape under the ADR 0006 addendum (it changes tokens), so
+a pass shows only that nothing but the name changed; symbol order still
+counts, which catches a rename that reorders MSVC 5.0's `.bss` (finding 548).
+
 Run in the developer distrobox or let the tool enter it when Wine is absent.
 The matching toolchain and native build's configure dependencies must be
 installed. It configures `build/` and `build-match/` if needed, and uses

@@ -60,8 +60,21 @@ def preprocess_reference(candidate):
     return run([compiler, '-E', '-x', 'c++', *REFERENCE_FLAGS, str(candidate)], ROOT)
 
 
-def compare_objects(left: bytes, right: bytes) -> list[str]:
+def rename_identifier(text: str, renames: dict[str, str]) -> str:
+    """Spell each renamed identifier in a COFF symbol name as its new name.
+
+    The identifier matches whole within MSVC's decorations: plain ``old``,
+    C ``_old`` and a file static's ``_old$S12``, and C++ ``?old@@3HA`` or a
+    scope ``?f@old@@``. ``old_more`` and ``_old_more$S1`` are not renamed."""
+    for old, new in renames.items():
+        text = re.sub(r'(?:(?<=^)|(?<=^_)|(?<=^\?)|(?<=@))' + re.escape(old) + r'(?=$|\$|@)', new, text)
+    return text
+
+
+def compare_objects(left: bytes, right: bytes, renames: dict[str, str] | None = None) -> list[str]:
+    """Compare non-debug contents; ``renames`` maps names in ``left`` first."""
     a, b = (msvc_coff.parse_coff(x) for x in (left, right))
+    renames = renames or {}
     errors = []
     def sections(obj):
         return [s for s in obj.sections if not s.name.startswith('.debug$')]
@@ -75,7 +88,8 @@ def compare_objects(left: bytes, right: bytes) -> list[str]:
             errors.append(f'section {x.name} bytes/size/flags differ')
         def relocs(obj, section):
             return [(r.offset, r.type, obj.symbols[r.symbol].name) for r in section.relocations]
-        if relocs(a, x) != relocs(b, y):
+        renamed = [(o, t, rename_identifier(n, renames)) for o, t, n in relocs(a, x)]
+        if renamed != relocs(b, y):
             errors.append(f'section {x.name} relocations differ')
     def symbols(obj):
         result = []
@@ -87,7 +101,7 @@ def compare_objects(left: bytes, right: bytes) -> list[str]:
             section = obj.section(s.section).name if s.section > 0 else s.section
             result.append((s.name, section, s.value, s.storage_class))
         return result
-    if symbols(a) != symbols(b):
+    if [(rename_identifier(n, renames), *rest) for n, *rest in symbols(a)] != symbols(b):
         errors.append('symbol table differs')
     return errors
 
@@ -172,7 +186,15 @@ def main():
     parser.add_argument('--base', default='HEAD~1')
     parser.add_argument('--head', default='worktree')
     parser.add_argument('--json', action='store_true')
+    parser.add_argument('--rename', action='append', default=[], metavar='OLD=NEW',
+                        help='compare modulo renaming identifier OLD (in --base) to NEW; repeatable')
     args = parser.parse_args()
+    renames = {}
+    for item in args.rename:
+        old, sep, new = item.partition('=')
+        if not sep or not re.fullmatch(r'[A-Za-z_$][\w$]*', old) or not re.fullmatch(r'[A-Za-z_$][\w$]*', new):
+            parser.error(f'--rename expects OLD=NEW identifiers, got {item!r}')
+        renames[old] = new
     # Use the developer environment for all compilers, including CMake's
     # native compiler, when Wine is not available on the host.
     if not shutil.which('wine') and shutil.which('distrobox') and not os.environ.get('RESHAPE_IN_BOX'):
@@ -213,6 +235,7 @@ def main():
                     objects.append(obj.read_bytes())
                 checks = {'includes': 'identical' if stripped[0][1] == stripped[1][1] else 'different include directives'}
                 for key in streams:
+                    streams[key][0] = [renames.get(t, t) for t in streams[key][0]]
                     if streams[key][0] == streams[key][1]:
                         checks[key] = 'identical'
                         if key == 'mingw':
@@ -223,9 +246,12 @@ def main():
                         checks[key] = f'different at token {index}: {l[index:index+1]} -> {r[index:index+1]}'
                         if key == 'mingw':
                             checks[key] += ' (cross-compiler)' if mingw is not None else ' (emulated: host gcc + reference defines)'
-                diffs = compare_objects(*objects)
+                diffs = compare_objects(*objects, renames=renames)
                 checks['object'] = '; '.join(diffs) if diffs else 'identical (including .drectve when present)'
-                results.append({'file': name, 'checks': checks})
+                result = {'file': name, 'checks': checks}
+                if renames:
+                    result['renames'] = renames
+                results.append(result)
     except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError, mf.MatchError, msvc_coff.CoffError, struct.error, IndexError, KeyError) as exc:
         if args.json:
             print(json.dumps({'results': results, 'error': str(exc)}))
@@ -237,6 +263,8 @@ def main():
     else:
         for result in results:
             print(result['file'] + ':')
+            for old, new in result.get('renames', {}).items():
+                print(f'  rename: {old} -> {new} (base spelled as head)')
             for key, value in result['checks'].items():
                 print(f'  {key}: {value}')
     return int(any(not v.startswith('identical') for r in results for v in r['checks'].values()))
