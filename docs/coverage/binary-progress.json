@@ -1,13 +1,13 @@
 {
   "accuracy_percent": {
-    "full": 66.58,
-    "game_only": 63.13
+    "full": 66.6,
+    "game_only": 63.15
   },
-  "baseline_sha256": "4d514557befe8fbb2656abd242288b983c0db03a1c31cd950cd936fc26cf6c41",
+  "baseline_sha256": "f18fd15ddc62226c21993f546c0db7e561665cc42bfdfd0d57e0d60b1a07a34f",
   "exact_function_code_bytes": {
-    "bytes": 87662,
+    "bytes": 88637,
     "original_text_bytes": 642549,
-    "percent": 13.64
+    "percent": 13.79
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 384,
@@ -23,7 +23,7 @@
       "pairs": 1584
     }
   },
-  "input_sha256": "24787fa4c47e98d780e243e3287713347eb1cd9c7f3c0639cfaace7dac637108",
+  "input_sha256": "98c9584b3ef3d495f08afe3577a57f8f442cf8dcf438443370384ab6581f4892",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 8,
@@ -1324,7 +1324,7 @@
       {
         "contiguous": true,
         "data_offset_agreement": false,
-        "data_offset_comparisons": 36,
+        "data_offset_comparisons": 38,
         "functions": 32,
         "identical_function_bytes": 2348,
         "identity_percent": 78.48,
@@ -1696,7 +1696,7 @@
       {
         "contiguous": true,
         "data_offset_agreement": false,
-        "data_offset_comparisons": 61,
+        "data_offset_comparisons": 63,
         "functions": 52,
         "identical_function_bytes": 5632,
         "identity_percent": 58.24,
@@ -4024,7 +4024,7 @@
     ],
     "unmapped_original_functions": 169
   },
-  "listing_digests_sha256": "b51da91b88c7dbb6a2a43f34b9156d4da968dc76f808c8a62ddc60767a70fc19",
+  "listing_digests_sha256": "c6167622151548b72acf410ba73eee1ac695421ba45a634deb3106669f6f9e94",
   "minimum_identical_run_bytes": 16,
   "pe_header_differences": {
     "entry_point_rva": {
