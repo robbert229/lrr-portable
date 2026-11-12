@@ -43,7 +43,7 @@ static uint32_t s_panel_highlight_flags; /* DAT_00556ed0 bit 0 */
 static float s_panel_highlight_timer;    /* DAT_00556efc 250-ms cooldown */
 static EngineContext* s_engine_pre_tick_context;
 // GLOBAL: LEGORR 0x00556ec8
-static int32_t s_context_mode;
+extern "C" { int32_t s_context_mode; } /* gods98/engine.h: Advisor.c reads it */
 
 /* PanelSelectionHighlightToggle compares against this file-backed .rdata
  * dword (the PE bytes at 0x0049e2b8 are 00 00 00 00, +0.0f). Volatile

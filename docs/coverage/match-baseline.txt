@@ -1,4 +1,4 @@
-# input_sha256: c8e28d79c2e7c55a61eb8379df4ab5e02f3b0e1fa8bce486b7b7804ab19c31f6
+# input_sha256: c2672cdbedb3e0bd54b98f79d4056b6381cd0ea0f06fcc50c9f60f1e0a017ce9
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -7,36 +7,36 @@
 # section is unmapped.
 
 [game-only] 2161 mapped functions
-0x00401000 75.97 advisor_scene_controller_initialize
-0x004011c0 90.00 advisor_animation_end_cleanup
-0x00401210 76.19 advisor_scene_visual_state_initialize
+0x00401000 98.48 advisor_scene_controller_initialize
+0x004011c0 100.00 advisor_animation_end_cleanup
+0x00401210 78.26 advisor_scene_visual_state_initialize
 0x00401240 100.00 vec2_dist
-0x00401270 11.16 advisor_config_slots_load_target
+0x00401270 95.96 advisor_config_slots_load_target
 0x004013a0 100.00 vec_len
-0x004013e0 89.66 advisor_position_name_to_index
+0x004013e0 100.00 advisor_position_name_to_index
 0x00401420 100.00 vec_dist
 0x00401470 100.00 vec_cross
-0x004014c0 89.66 advisor_animation_name_to_index
+0x004014c0 100.00 advisor_animation_name_to_index
 0x00401500 100.00 vec_add
-0x00401530 29.33 advisor_position_config_load
+0x00401530 97.69 advisor_position_config_load
 0x004016c0 100.00 vec_sub
 0x004016f0 100.00 vec_dot
 0x00401720 100.00 vec_scale
-0x00401750 95.52 vec_normalize
-0x004017b0 17.39 advisor_position_record_initialize
-0x00401840 26.32 advisor_action_position_and_mode_set
-0x00401890 32.56 advisor_action_position_get
-0x004018c0 13.79 advisor_request_admit
-0x00401930 81.58 advisor_request_reset_and_submit_sound
-0x00401990 37.18 advisor_transition_worker
-0x00401a70 28.82 advisor_scene_advance_completion_check
+0x00401750 100.00 vec_normalize
+0x004017b0 100.00 advisor_position_record_initialize
+0x00401840 100.00 advisor_action_position_and_mode_set
+0x00401890 100.00 advisor_action_position_get
+0x004018c0 100.00 advisor_request_admit
+0x00401930 100.00 advisor_request_reset_and_submit_sound
+0x00401990 86.36 advisor_transition_worker
+0x00401a70 100.00 advisor_scene_advance_completion_check
 0x00401b20 100.00 advisor_clear_active_state
-0x00401b30 16.67 advisor_apply_slot_transform
+0x00401b30 100.00 advisor_apply_slot_transform
 0x00401bf0 100.00 engine_app_mode_get
 0x00401c20 100.00 global_flag_bit0_is_set
 0x00401c30 100.00 display_width_get
 0x00401c40 100.00 display_height_get
-0x00401c50 23.08 formatted_text_printf_width
+0x00401c50 29.17 formatted_text_printf_width
 0x00401c80 26.92 formatted_text_printf
 0x00401cb0 93.10 cmd_kind_by_name
 0x00401cf0 36.96 cmd_registry_init_target
@@ -265,7 +265,7 @@
 0x0040bf70 46.51 rock_fall_style_name_lookup
 0x0040bfc0 100.00 rockfall_style_table_base_set
 0x0040bfd0 19.92 rock_fall_styles_config_load
-0x0040c0d0 17.59 scene_act_slot_load_and_register
+0x0040c0d0 18.52 scene_act_slot_load_and_register
 0x0040c1b0 17.78 indexed_resource_handle_set_create
 0x0040c230 22.06 scene_slot_pose_scale_register
 0x0040c2f0 34.74 transient_effect_render_slot_configure
@@ -556,7 +556,7 @@
 0x0041baa0 15.26 simulation_pointer_action_dispatch_impl
 0x0041c1c0 11.49 advisor_overlay_hit_resolve
 0x0041c440 31.11 advisor_callback_schedule_gate
-0x0041c4f0 13.10 advisor_animation_position_and_request_update_internal
+0x0041c4f0 13.23 advisor_animation_position_and_request_update_internal
 0x0041c6e0 84.77 pointer_action_state_dispatch
 0x0041c7b0 19.75 input_action_state_update
 0x0041c800 22.08 catalog_slot_flag_update
@@ -1721,8 +1721,8 @@
 0x00476f50 27.03 lego::resource_interface_call_slot48
 0x00476f70 20.78 scene_object_query_value_if_ready
 0x00476fb0 28.57 renderer_object_set_clip_distance
-0x00476fd0 100.00 lego::resource_interface_call_slot8c
-0x00476ff0 100.00 lego::resource_interface_call_slot90
+0x00476fd0 100.00 resource_interface_call_slot8c
+0x00476ff0 100.00 resource_interface_call_slot90
 0x00477010 15.38 ledger_stub_00477010_DDiSceneDrawBegin
 0x00477150 30.00 ddiscene_draw_end
 0x00477220 58.33 render_resource_track_and_retain
@@ -2170,36 +2170,36 @@
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
 [full] 2397 mapped functions
-0x00401000 75.97 advisor_scene_controller_initialize
-0x004011c0 90.00 advisor_animation_end_cleanup
-0x00401210 76.19 advisor_scene_visual_state_initialize
+0x00401000 98.48 advisor_scene_controller_initialize
+0x004011c0 100.00 advisor_animation_end_cleanup
+0x00401210 78.26 advisor_scene_visual_state_initialize
 0x00401240 100.00 vec2_dist
-0x00401270 11.16 advisor_config_slots_load_target
+0x00401270 95.96 advisor_config_slots_load_target
 0x004013a0 100.00 vec_len
-0x004013e0 89.66 advisor_position_name_to_index
+0x004013e0 100.00 advisor_position_name_to_index
 0x00401420 100.00 vec_dist
 0x00401470 100.00 vec_cross
-0x004014c0 89.66 advisor_animation_name_to_index
+0x004014c0 100.00 advisor_animation_name_to_index
 0x00401500 100.00 vec_add
-0x00401530 29.33 advisor_position_config_load
+0x00401530 97.69 advisor_position_config_load
 0x004016c0 100.00 vec_sub
 0x004016f0 100.00 vec_dot
 0x00401720 100.00 vec_scale
-0x00401750 95.52 vec_normalize
-0x004017b0 17.39 advisor_position_record_initialize
-0x00401840 26.32 advisor_action_position_and_mode_set
-0x00401890 32.56 advisor_action_position_get
-0x004018c0 13.79 advisor_request_admit
-0x00401930 81.58 advisor_request_reset_and_submit_sound
-0x00401990 37.18 advisor_transition_worker
-0x00401a70 28.82 advisor_scene_advance_completion_check
+0x00401750 100.00 vec_normalize
+0x004017b0 100.00 advisor_position_record_initialize
+0x00401840 100.00 advisor_action_position_and_mode_set
+0x00401890 100.00 advisor_action_position_get
+0x004018c0 100.00 advisor_request_admit
+0x00401930 100.00 advisor_request_reset_and_submit_sound
+0x00401990 86.36 advisor_transition_worker
+0x00401a70 100.00 advisor_scene_advance_completion_check
 0x00401b20 100.00 advisor_clear_active_state
-0x00401b30 16.67 advisor_apply_slot_transform
+0x00401b30 100.00 advisor_apply_slot_transform
 0x00401bf0 100.00 engine_app_mode_get
 0x00401c20 100.00 global_flag_bit0_is_set
 0x00401c30 100.00 display_width_get
 0x00401c40 100.00 display_height_get
-0x00401c50 23.08 formatted_text_printf_width
+0x00401c50 29.17 formatted_text_printf_width
 0x00401c80 26.92 formatted_text_printf
 0x00401cb0 93.10 cmd_kind_by_name
 0x00401cf0 36.96 cmd_registry_init_target
@@ -2428,7 +2428,7 @@
 0x0040bf70 46.51 rock_fall_style_name_lookup
 0x0040bfc0 100.00 rockfall_style_table_base_set
 0x0040bfd0 19.92 rock_fall_styles_config_load
-0x0040c0d0 17.59 scene_act_slot_load_and_register
+0x0040c0d0 18.52 scene_act_slot_load_and_register
 0x0040c1b0 17.78 indexed_resource_handle_set_create
 0x0040c230 22.06 scene_slot_pose_scale_register
 0x0040c2f0 34.74 transient_effect_render_slot_configure
@@ -2719,7 +2719,7 @@
 0x0041baa0 15.26 simulation_pointer_action_dispatch_impl
 0x0041c1c0 11.49 advisor_overlay_hit_resolve
 0x0041c440 31.11 advisor_callback_schedule_gate
-0x0041c4f0 13.10 advisor_animation_position_and_request_update_internal
+0x0041c4f0 13.23 advisor_animation_position_and_request_update_internal
 0x0041c6e0 84.77 pointer_action_state_dispatch
 0x0041c7b0 19.75 input_action_state_update
 0x0041c800 22.08 catalog_slot_flag_update
@@ -3884,8 +3884,8 @@
 0x00476f50 27.03 lego::resource_interface_call_slot48
 0x00476f70 20.78 scene_object_query_value_if_ready
 0x00476fb0 28.57 renderer_object_set_clip_distance
-0x00476fd0 100.00 lego::resource_interface_call_slot8c
-0x00476ff0 100.00 lego::resource_interface_call_slot90
+0x00476fd0 100.00 resource_interface_call_slot8c
+0x00476ff0 100.00 resource_interface_call_slot90
 0x00477010 15.38 ledger_stub_00477010_DDiSceneDrawBegin
 0x00477150 30.00 ddiscene_draw_end
 0x00477220 58.33 render_resource_track_and_retain

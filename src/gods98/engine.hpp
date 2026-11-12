@@ -403,7 +403,7 @@ void   global_triple_copy_out(uint32_t* out);
 /* GlobalField505f88Get (FUN_00401bf0, finding 02): application-mode global
  * at DAT_00505f88. The startup parser's writer is not ported yet, so native
  * setup code installs the value through this seam. */
-int engine_app_mode_get(void);
+extern "C" int engine_app_mode_get(void);
 void engine_app_mode_global_set(int32_t mode);
 
 /* --- the grid-cell record buffer (2026-10-24; finding 463) ------------------

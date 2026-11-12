@@ -182,22 +182,25 @@ int main(void)
     /* Advisor action window band (2026-10-25): the row table's mode/pair
      * stores, the 0xc mode flag raise/clear pair, and the token table. */
     {
-        uint32_t x = 0u, y = 0u;
+        float x = 1.0f, y = 1.0f;
         advisor_action_position_get(3, &x, &y);
-        CHECK(x == 0u && y == 0u, "the quiet advisor row reads zero");
-        advisor_action_position_and_mode_set(3, 0xc, 7u, 9u);
+        CHECK(x == 0.0f && y == 0.0f, "the quiet advisor row reads zero");
+        advisor_action_position_and_mode_set(3, 0xc, 7.0f, 9.0f);
         CHECK(advisor_action_flags_peek(3) == 0x10000u,
               "mode 0xc raises the flag bit");
-        advisor_action_position_and_mode_set(3, 5, 1u, 2u);
+        advisor_action_position_and_mode_set(3, 5, 1.0f, 2.0f);
         CHECK(advisor_action_flags_peek(3) == 0u,
               "any other mode clears the flag bit");
-        advisor_action_position_and_mode_set(3, 0xc, 7u, 9u);
-        /* Faithful quirk: the set's pair lands at words 5/6 while the get
-         * reads words 6/7, so the get sees the second stored dword (9) and
-         * the untouched neighbour (0). */
+        advisor_action_position_and_mode_set(3, 0xc, 7.0f, 9.0f);
+        /* Advisor_SetParameters moves the current position; GetOrigPos
+         * reads the configured one, which only InitPosition writes. */
         advisor_action_position_get(3, &x, &y);
-        CHECK(x == 9u && y == 0u, "the read-out window rides the set");
-        advisor_action_position_get(99999, &x, &y); /* bounds guarded */
+        CHECK(x == 0.0f && y == 0.0f, "the original position is unchanged");
+        advisor_position_record_initialize(3, 1, 0x1a, 2, 0xc, 4.0f, 5.0f);
+        advisor_action_position_get(3, &x, &y);
+        CHECK(x == 4.0f && y == 5.0f, "InitPosition sets the original position");
+        CHECK(advisor_action_flags_peek(3) == 0x30000u,
+              "used, and no panel offset for panel type 0xc");
         /* The token table: empty model answers 0; installed, the read
          * shape is the corpus's bounds-guarded table walk. */
         CHECK(objective_advisor_token_lookup(1) == 0,

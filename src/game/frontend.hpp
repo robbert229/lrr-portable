@@ -378,7 +378,7 @@ void main_menu_text_item(void); /* FUN_004103d0; requests scrolling credits */
 
 /* FormattedTextPrintfWidth / MenuTextRecordMake: menu text measurement and
  * the 15-word text-record constructor used by legacy menu builders. */
-uint32_t formatted_text_printf_width(const TextureSurface* font,
+extern "C" uint32_t formatted_text_printf_width(const TextureSurface* font,
                                      const char* text, ...); /* FUN_00401c50 */
 void formatted_text_draw(const TextureSurface* font, void* px, int pitch,
                          int w, int h, int x, int y, const char* text);
@@ -386,12 +386,12 @@ uint32_t formatted_text_draw_and_measure(const TextureSurface* font,
                                          void* px, int pitch, int w, int h,
                                          int x, int y, const char* text,
                                          int* line_count);
-void formatted_text_format_draw(const TextureSurface* font,
+extern "C" void formatted_text_format_draw(const TextureSurface* font,
                                 uint32_t* width_out, int* line_count,
                                 void* px, int pitch, int w, int h,
                                 int x, int y, const char* format,
                                 va_list args);
-void formatted_text_printf(const TextureSurface* font,
+extern "C" void formatted_text_printf(const TextureSurface* font,
                            uint32_t* width_out, int* line_count,
                            void* px, int pitch, int w, int h,
                            int x, int y, const char* format, ...);
@@ -412,7 +412,7 @@ void ui_panel_name_tables_install(const char* const names[12],
                                   const char* const indexed_names[][24],
                                   unsigned int indexed_count);
 void ui_panel_name_tables_init(void);
-int ui_panel_name_table_lookup(const char* name, int* out_index);
+extern "C" int ui_panel_name_table_lookup(const char* name, int* out_index);
 int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
                                  unsigned int* out_index);
 typedef struct ToolTipIconConfigHooks {

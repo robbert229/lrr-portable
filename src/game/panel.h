@@ -30,6 +30,9 @@ void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y);
 /* Panel button area (FUN_0045bf70): x, y, width, height. */
 void ui_entry_bounds_get(int panel, int item, float* out_bounds);
 
+/* Panel_GetPanelType (FUN_0045a370). */
+int ui_panel_name_table_lookup(const char* name, int* out_index);
+
 #ifdef __cplusplus
 }
 #endif

@@ -48,6 +48,17 @@
 #include "crt/crt.h"
 #include "gods98/record.h"
 #include "game/steering.h"
+#include "game/objective.hpp"
+#include "gods98/engine.hpp"
+#include "game/advisor.h"
+#include "gods98/view.h"
+#include "gods98/scene_resources.hpp"
+#include "gods98/scene_resources.h"
+#include "gods98/message.hpp"
+#include "gods98/message.h"
+#include "gods98/entity.h"
+#include "gods98/engine.h"
+#include "gods98/font.h"
 
 int main(void)
 {

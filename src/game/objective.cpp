@@ -324,136 +324,15 @@ int objective_tick(LevelState* s, float dt)
 
 /* --- the advisor action window band (see objective.hpp) ------------------- */
 
-/* Controller representation of DAT_004b31bc. The CRT adapter also keeps
- * a copy; objective presentation release synchronizes their active bit. */
-uint32_t s_adv_scene_state_word;
-/* Both represented words model DAT_004b31bc. A presentation release must
- * clear bit 1 in the live animation controller as well as the CRT leaf;
- * bit 0 remains owned by the normal animation-end cleanup. */
+/* Both former copies of DAT_004b31bc now live in Advisor.c's globals. */
 void objective_advisor_clear_active_state(void)
 {
     advisor_clear_active_state();
-    s_adv_scene_state_word &= ~2u;
-}
-
-AdvisorSceneActionHook s_adv_scene_action_hook;
-void* s_adv_scene_action_user;
-static AdvisorCompanionSceneCreateHook s_adv_companion_scene_create_hook;
-static void* s_adv_companion_scene_create_user;
-AdvisorAnimationHooks s_adv_animation_hooks;
-AdvisorAnimationTargetConfigLookupHook s_advisor_config_target_lookup;
-void* s_advisor_config_target_lookup_user;
-AdvisorTransformApplyHook s_adv_transform_apply_hook;
-void* s_adv_transform_apply_user;
-
-void advisor_animation_hooks_set(const AdvisorAnimationHooks* hooks)
-{
-    if (hooks == NULL) {
-        memset(&s_adv_animation_hooks, 0, sizeof(s_adv_animation_hooks));
-    } else {
-        s_adv_animation_hooks = *hooks;
-    }
-}
-
-void advisor_animation_target_config_lookup_set(
-    AdvisorAnimationTargetConfigLookupHook lookup, void* user)
-{
-    s_advisor_config_target_lookup = lookup;
-    s_advisor_config_target_lookup_user = user;
-}
-
-void advisor_animation_slot_install(int slot, uint32_t handle,
-                                    float start_time, float end_time)
-{
-    if (slot < 0 || slot >= 11) return;
-    s_adv_animation_slots[slot].handle = handle;
-    s_adv_animation_slots[slot].start_time = start_time;
-    s_adv_animation_slots[slot].end_time = end_time;
 }
 
 void advisor_scene_ready_set(int ready)
 {
     engine_context_mode_global_set(ready);
-}
-
-void advisor_scene_action_hook_set(AdvisorSceneActionHook hook, void* user)
-{
-    s_adv_scene_action_hook = hook;
-    s_adv_scene_action_user = user;
-}
-
-void advisor_companion_scene_create_hook_set(
-    AdvisorCompanionSceneCreateHook hook, void* user)
-{
-    s_adv_companion_scene_create_hook = hook;
-    s_adv_companion_scene_create_user = user;
-}
-
-float advisor_scene_scale_get(void)
-{
-    return s_adv_scene_scale;
-}
-
-void advisor_transform_apply_hook_set(AdvisorTransformApplyHook hook,
-                                      void* user)
-{
-    s_adv_transform_apply_hook = hook;
-    s_adv_transform_apply_user = user;
-}
-
-/* Compatibility entry point for callers that already decoded the records. */
-int advisor_position_config_entries_load(
-    const AdvisorPositionConfigEntry* entries, uint32_t count)
-{
-    uint32_t i;
-    int loaded = 0;
-    if (entries == NULL) return 0;
-    for (i = 0; i < count; ++i) {
-        int position_index;
-        int animation_index;
-        uint32_t x_bits;
-        uint32_t y_bits;
-        if (entries[i].position_name == NULL ||
-            entries[i].animation_name == NULL ||
-            !advisor_position_name_to_index(entries[i].position_name,
-                                            &position_index) ||
-            !advisor_animation_name_to_index(entries[i].animation_name,
-                                             &animation_index)) {
-            continue;
-        }
-        memcpy(&x_bits, &entries[i].x, sizeof(x_bits));
-        memcpy(&y_bits, &entries[i].y, sizeof(y_bits));
-        advisor_position_record_initialize(position_index,
-            (uint32_t)animation_index, entries[i].position_type,
-            entries[i].position_mode, entries[i].action_mode, x_bits, y_bits);
-        ++loaded;
-    }
-    return loaded;
-}
-
-/* Adapter used by portable callers with an already-resolved resource loader.
- * It intentionally has no target annotation: the retail entry takes the
- * scene and config contexts, not a function pointer and user-data pair. */
-int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
-                              void* user)
-{
-    int i;
-    int loaded = 0;
-    if (lookup == NULL) return 0;
-    for (i = 0; i < 11; ++i) {
-        uint32_t handle = 0u;
-        float start_time = 0.0f;
-        float end_time = 0.0f;
-        if (lookup(s_advisor_animation_names[i], &handle, &start_time,
-                   &end_time, user)) {
-            int start_frame = (int)(start_time * 25.0f);
-            int end_frame = (int)(end_time * 25.0f);
-            advisor_animation_slot_install(i, handle, (float)start_frame,
-                                           (float)end_frame);
-            ++loaded;
-        }
-    }
-    return loaded;
 }
 
 void advisor_animation_position_update_state_set(
@@ -515,9 +394,7 @@ static void advisor_animation_position_and_request_update_internal(
     float offset_x, offset_y;
     int width = 0, height = 0;
     float new_x, new_y;
-    uint32_t old_x_bits, old_y_bits;
     float old_x, old_y;
-    uint32_t new_x_bits, new_y_bits;
 
     frontend_event_timer_state_get(&frontend_state);
     if ((frontend_state.flags & 0x20u) == 0u ||
@@ -593,15 +470,11 @@ static void advisor_animation_position_and_request_update_internal(
     }
 
     if (state->action_row < 0 || state->action_row >= ADV_ACTION_ROWS) return;
-    advisor_action_position_get(state->action_row, &old_x_bits, &old_y_bits);
-    memcpy(&old_x, &old_x_bits, sizeof(old_x));
-    memcpy(&old_y, &old_y_bits, sizeof(old_y));
+    advisor_action_position_get(state->action_row, &old_x, &old_y);
     old_x += new_x;
     old_y += new_y;
-    memcpy(&new_x_bits, &old_x, sizeof(new_x_bits));
-    memcpy(&new_y_bits, &old_y, sizeof(new_y_bits));
     advisor_action_position_and_mode_set(state->action_row, 0x0c,
-                                          new_x_bits, new_y_bits);
+                                          old_x, old_y);
     (void)advisor_request_admit(state->action_row,
                                 (frontend_state.flags & 0x40u) != 0u);
     frontend_state.flags &= ~0x20u;
@@ -623,10 +496,6 @@ void advisor_animation_position_and_request_update(
         position_mode, input_a, input_b, position, NULL, 0);
 }
 
-uint32_t advisor_action_flags_peek(int row)
-{
-    return (row >= 0 && row < ADV_ACTION_ROWS) ? s_adv_actions[row][8] : 0u;
-}
 
 typedef struct ObjectiveAdvisorResourceToken {
     const char* name;
