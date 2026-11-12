@@ -27,19 +27,6 @@ longer tracked; exact-function code bytes replaced it, and accuracy is the same
 Reccmp measure as before (then 48.27%).
 [Report details and reproduction](docs/coverage/reccmp.md).
 
-**How it's measured.** Conversions now rebuild the original translation units
-in their original shape ([ADR 0005](docs/adr/0005-original-shape-c-units.md))
-and link order ([ADR 0006](docs/adr/0006-original-link-order.md)). The matching build
-compiles them with MSVC 5.0 and scores each function with Reccmp. The
-whole-binary gap is still large: `.text` is 1,105,428 bytes against the
-original's 642,549, `.rdata` 24,376 against 11,232 and `.data` 1,004,544
-against 73,216. A second link in the original's mode (no `/DEBUG`, so
-`/OPT:REF`) drops 414,654 bytes of unreferenced code and brings `.text` to
-690,682. These figures are in
-[`binary-progress.json`](docs/coverage/binary-progress.json); see findings
-[563](docs/findings/563-whole-binary-audit.md) and
-[576](docs/findings/576-link-mode-and-unreferenced-code.md).
-
 The [source ledger](docs/coverage/README.md) records **2,282 / 2,564 functions
 (89.0%) with source citations**, plus 280 runtime/import functions and 2 named
 functions not yet cited. Source coverage and binary similarity measure
