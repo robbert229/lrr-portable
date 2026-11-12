@@ -10,8 +10,11 @@ with the boundary header [`entity_stats.h`](../../src/game/entity_stats.h).
 The port's implementation moves, unannotated, to the port tail
 [`entity_stats_port.cpp`](../../src/game/entity_stats_port.cpp).
 
-"Before" is `main` at `3791f0dd` (#590). "After" is this change. Scores come
-from the full matching build (`make reccmp-check`).
+"Before" is `main` at `3791f0dd` (#590), where this change was made and
+measured. "After" is this change. Scores come from the full matching build
+(`make reccmp-check`). The change was then rebased onto stack #600, on
+#598's head (`6654a85a`); [Rebased onto stack #600](#rebased-onto-stack-600)
+gives the figures there.
 
 ## Result
 
@@ -339,6 +342,53 @@ reach the unit through the link names alone.
 | `src/game/test_c_boundaries.cpp` | includes `entity_stats.h` |
 | `src/link_order.cmake`, `src/game/meson.build` | `unit GAME-043 game/entity_stats.c`; `tail game/entity_stats_port.cpp` |
 
+## Rebased onto stack #600
+
+Rebased onto #598 (`6654a85a`: #597 GAME-021 part 3, #595 `.data`
+padding, #598 Files.c). "Before" is #598's head:
+
+| | #598 head `6654a85a` | this change, rebased |
+| --- | ---: | ---: |
+| Exact-function code bytes | 113,287 | **113,553** |
+| Exact functions, full / game-only | 1,220 / 1,020 | 1,223 / 1,023 |
+| Accuracy, full / game-only | 73.11% / 70.39% | 73.17% / 70.46% |
+| `opt_ref` full: removed / exact removed | 755 / 335 | **754 / 335** |
+| `opt_ref` game-only | 736 / 322 | 735 / 322 |
+| Stats.c functions removed under `/OPT:REF` | 21 (of 62) | 18 (of 63) |
+| Stats.c exact | 59 | 62 of 63 |
+
+`make reccmp-check` against #598's baseline: 6 improved
+(`0041fb50` 93.61% → 93.64%, `00429890`, `00469a90`, `00469c10`,
+`0046a120`, `0046a4c0`), `004667e0` newly mapped, none below baseline, no
+exact match lost.
+
+- **`004667e0` is 99.92% here, with code identical to the original.** After
+  #595 removed the `.data` padding, the rebuild's `.bss` reaches past
+  `0x00800000`. Reccmp now renders the immediate flag `0x800000` in
+  `or dword ptr [esp+0x1c], 0x800000` (Flocks_Smooth and
+  DamageCausesCallToArms) as `s_entity_path_motion_runtime[802]...` on the
+  rebuilt side, and the `<OFFSETn>` numbering after it shifts by one. These
+  are the only three differences. It is the same scoring artifact finding
+  572 recorded for `0x800000` in LegoObject.c, and it is not fixable in the
+  unit. Its 12,961 bytes are therefore not in the exact-bytes figure above.
+- **The `lego_unit.c` caller switch.** #597 made Lego.c's config init
+  (`0041fb50` `lego_game_config_init`) a converted root, live under
+  `/OPT:REF`. It called the empty `PORT-ONLY` `stats_initialise_adapter`
+  (`lego_port.cpp`) where the original calls `Stats_Initialise`, so
+  `004667e0` stayed removed. The contract matches: the same `config` and
+  `gameName` arguments, with the result ignored. Natively nothing calls
+  `lego_game_config_init`. So `lego_unit.c` now calls `stats_initialise`,
+  and the declaration in `lego_unit_imports.h` is renamed in place, so the
+  symbol counter does not move. `004667e0` is live, and `0041fb50` rose.
+  The adapter in `lego_port.cpp` (#597's file) is now unused and is left in
+  place for its owner to delete.
+- **Port-tail hardening for the switch.** In the matching build the
+  original loader now runs beside the port's. `Stats_Initialise` allocates
+  `objectStats[type]` with the type's ID count, while the port's loader
+  writes all 15 rows. `entity_stats_port_row_table()` therefore moves an
+  array it did not allocate into its fixed 15-row storage, copying the
+  loaded rows, before the port writes to it. Natively this path never runs.
+
 ## Follow-ups
 
 - #599 (`port`): natively, `building_upgrade_admission_check` returns the
@@ -346,8 +396,8 @@ reach the unit through the link names alone.
   an upgrade. The matching build now has the original's integer.
 - When the port reads the original object layout natively, the port tail's
   getters can go and the link-name header can apply to every build.
-- `Stats_Initialise` goes live when #587 gives Lego.c's config init a live
-  caller and points it at `stats_initialise` instead of the port loader.
+- Delete `lego_port.cpp`'s unused `stats_initialise_adapter` (#597's
+  file).
 
 ## Validation
 

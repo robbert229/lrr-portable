@@ -315,8 +315,8 @@ void* select_place_create_adapter(void* root, float size);
  * table (helpwindow.cpp). */
 void help_window_initialise_adapter(struct BlockRec* config,
                                     const char* gameName);
-/* Stats_Initialise (004667e0): no port entry (lego.cpp). */
-void stats_initialise_adapter(struct BlockRec* config, const char* gameName);
+/* Stats_Initialise (004667e0): entity_stats.c (GAME-043, finding 581). */
+int stats_initialise(struct BlockRec* config, const char* gameName);
 /* Dependencies_Initialise (0040ab70): the port's entry takes a level block
  * and the config (dependencies.cpp). */
 void dependencies_initialise_adapter(struct BlockRec* config,

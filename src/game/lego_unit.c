@@ -1304,7 +1304,7 @@ int lego_game_config_init(void)
                     }
                     frontend_render_three_pass_update(cfgStr, s_engine_config_root);
                     light_effect_configuration_load(cfgStr, s_engine_config_root);
-                    stats_initialise_adapter(cfgStr, s_engine_config_root);
+                    stats_initialise(cfgStr, s_engine_config_root);
                     dependencies_initialise_adapter(cfgStr, s_engine_config_root);
                     bubble_config_texture_load(cfgStr);
                     encyclopedia_config_files_open(cfgStr, s_engine_config_root);

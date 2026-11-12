@@ -71,10 +71,26 @@ static StatsData* s_stats_cell_ptr[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS
  * original's objectLevels word is statsGlobs.objectLevels. */
 float s_stats_cell_level_limit[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS];
 
+/* Lego.c (GAME-021): the number of IDs of an object type, the length of the
+ * row array Stats_Initialise allocates. */
+extern "C" unsigned int lego_stats_level_record_count_for_stat_type(int objType);
+
 StatsData** entity_stats_port_row_table(int type)
 {
     Stats_Globs* globs = entity_stats_port_globs();
-    if (globs->objectStats[type] == NULL) {
+    StatsData** rows = globs->objectStats[type];
+    if (rows != s_stats_cell_ptr[type]) {
+        /* In the matching build Lego.c's config init runs the original
+         * Stats_Initialise, which allocates a row array of the type's ID
+         * count; the port's loader writes all STATS_TYPE_TABLE_ROWS rows,
+         * so the loaded rows move to this file's fixed storage. Natively
+         * nothing calls Stats_Initialise and rows is NULL or ours. */
+        if (rows != NULL) {
+            unsigned int count = lego_stats_level_record_count_for_stat_type(type);
+            unsigned int i;
+            if (count > STATS_TYPE_TABLE_ROWS) count = STATS_TYPE_TABLE_ROWS;
+            for (i = 0; i < count; ++i) s_stats_cell_ptr[type][i] = rows[i];
+        }
         globs->objectStats[type] = s_stats_cell_ptr[type];
     }
     return globs->objectStats[type];
