@@ -37,22 +37,6 @@ const unsigned char s_resource_tree_child_iid[16] = {
     0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66
 };
 
-/* Explicit vtable layouts used by the three small resource wrappers below.
- * The corpus uses 32-bit COM-style interfaces; these declarations preserve
- * their method slots without importing a platform SDK. */
-class ResourcePropertyInterface
-{
-public:
-    virtual void slot_00(void) = 0;
-    virtual void slot_04(void) = 0;
-    virtual void slot_08(void) = 0;
-    virtual void slot_0c(void) = 0;
-    virtual void slot_10(void) = 0;
-    virtual void slot_14(void) = 0;
-    virtual void slot_18(void) = 0;
-    virtual void* property_get(void) = 0;
-};
-
 char s_rock_fall_style_names[ROCK_FALL_STYLE_NAME_CAPACITY]
                                     [ROCK_FALL_STYLE_NAME_LENGTH];
 uint32_t s_rock_fall_style_name_count;
@@ -1125,46 +1109,6 @@ int scene_resource_availability_sweep(float delta, uint32_t** groups_out,
         *slots_out = s_scene_availability_slots;
     }
     return count;
-}
-
-// FUNCTION: LEGORR 0x00476d10
-void render_resource_pair_release_and_clear(void** pair)
-{
-    void* property;
-    if (pair == NULL) {
-        return;
-    }
-    property = pair[1] != NULL
-        ? ((ResourcePropertyInterface*)pair[1])->property_get() : NULL;
-    engine_heap_free(property);
-    engine_heap_free(pair[0]);
-    pair[0] = NULL;
-    pair[1] = NULL;
-}
-
-// FUNCTION: LEGORR 0x004762f0
-void scene_property_owned_buffer_release(void* property)
-{
-#if defined(_MSC_VER) && defined(_M_IX86)
-    void* owned_buffer = (void*)scene_property_value_at08_get(property);
-    if (owned_buffer != NULL) {
-        engine_heap_free(owned_buffer);
-    }
-#elif defined(__i386__)
-    void* owned_buffer = (void*)scene_property_value_at08_get(property);
-    if (owned_buffer != NULL) {
-        engine_heap_free(owned_buffer);
-    }
-#else
-    void* record;
-    void* owned_buffer;
-    if (property == NULL) {
-        return;
-    }
-    record = ((ResourcePropertyInterface*)property)->property_get();
-    owned_buffer = record != NULL ? *(void**)((char*)record + 0x08) : NULL;
-    engine_heap_free(owned_buffer);
-#endif
 }
 
 #define WAD_MAGIC         "WWAD"
@@ -2860,82 +2804,6 @@ int resource_tree_callback_walk(ResourceTreeNode* root, int depth,
 
 } // namespace unported_ledger_stubs
 
-/* Retail ResourceTreeCallbackWalk (FUN_00476330) operates on Direct3DRM
- * interfaces, not ResourceTreeNode. Keep this target entry separate from the
- * portable test/runtime tree API above. Its traversal mirrors the COM slots
- * and reference ownership visible in the retail body. */
-// FUNCTION: LEGORR 0x00476330
-int resource_tree_callback_walk_target(void* object, int depth,
-                                       ResourceTreeCallback callback,
-                                       void* context)
-{
-    void** object_vtable;
-    ResourceTreeGetChildrenFn get_children;
-    void* child_array;
-    void** array_vtable;
-    ResourceTreeArraySizeFn get_size;
-    uint32_t child_count;
-    uint32_t index;
-    int found = 0;
-    if (callback(object, context) != 0) return 1;
-
-    object_vtable = *(void***)object;
-    get_children = (ResourceTreeGetChildrenFn)object_vtable[0x4c / 4];
-    child_array = NULL;
-    if (get_children(object, &child_array) != 0) return 0;
-
-    array_vtable = *(void***)child_array;
-    get_size = (ResourceTreeArraySizeFn)array_vtable[0x0c / 4];
-    child_count = get_size(child_array);
-    for (index = 0u; index < child_count; ++index) {
-        void* child;
-        void* child_interface;
-        void** child_vtable;
-        void** current_array_vtable;
-        ResourceTreeArrayElementFn get_element;
-        ResourceTreeQueryInterfaceFn query_interface;
-        ResourceTreeReferenceFn release_child;
-        ResourceTreeReferenceFn release_interface;
-
-        child = NULL;
-        child_interface = NULL;
-        current_array_vtable = *(void***)child_array;
-        get_element = (ResourceTreeArrayElementFn)
-            current_array_vtable[0x10 / 4];
-        (void)get_element(child_array, index, &child);
-
-        child_vtable = *(void***)child;
-        query_interface = (ResourceTreeQueryInterfaceFn)child_vtable[0];
-        (void)query_interface(child, s_resource_tree_child_iid,
-                              &child_interface);
-        release_child = (ResourceTreeReferenceFn)child_vtable[2];
-        (void)release_child(child);
-
-        if (resource_tree_callback_walk_target(child_interface, depth + 1,
-                                               callback, context) != 0) {
-            void** child_interface_vtable = *(void***)child_interface;
-            release_interface = (ResourceTreeReferenceFn)
-                child_interface_vtable[2];
-            (void)release_interface(child_interface);
-            found = 1;
-            break;
-        }
-        {
-            void** child_interface_vtable = *(void***)child_interface;
-            release_interface = (ResourceTreeReferenceFn)
-                child_interface_vtable[2];
-            (void)release_interface(child_interface);
-        }
-    }
-    {
-        void** current_array_vtable = *(void***)child_array;
-        ResourceTreeReferenceFn release_array =
-            (ResourceTreeReferenceFn)current_array_vtable[2];
-        (void)release_array(child_array);
-    }
-    return found;
-}
-
 static int resource_name_match_callback(ResourceTreeNode* node,
                                         void* context)
 {
@@ -2977,124 +2845,6 @@ static int resource_name_match_callback(ResourceTreeNode* node,
     else if (query->search_mode != 0) return 0;
     query->resource = node->resource;
     return 1;
-}
-
-typedef uint32_t (RESOURCE_TREE_STDCALL *ResourceTreeGetNameFn)(
-    void*, uint32_t*, char*);
-
-static int resource_name_compare_bytes(const char* left, const char* right,
-                                       int case_sensitive)
-{
-    while (*left != '\0' && *right != '\0') {
-        unsigned char a = (unsigned char)*left;
-        unsigned char b = (unsigned char)*right;
-        if (case_sensitive == 0) {
-            if (a >= 'A' && a <= 'Z') a = (unsigned char)(a + ('a' - 'A'));
-            if (b >= 'A' && b <= 'Z') b = (unsigned char)(b + ('a' - 'A'));
-        }
-        if (a != b) return 0;
-        ++left;
-        ++right;
-    }
-    return *left == *right;
-}
-
-/* ResourceNameMatchCallback @ 0x00476410. The retail callback receives a
- * Direct3DRM object and the seven-word query record built by
- * ResourceNameRegisterOrQuery. Name retrieval uses the object's +0x24 slot;
- * the portable ResourceTreeNode predicate above remains for portable callers. */
-// FUNCTION: LEGORR 0x00476410
-int resource_name_match_callback_target(void* object, void* context)
-{
-    ResourceNameMatchCallbackContext* query =
-        (ResourceNameMatchCallbackContext*)context;
-    void** object_vtable;
-    ResourceTreeGetNameFn get_name;
-    uint32_t object_name_bytes = 0u;
-    char* object_name;
-    uint32_t mode;
-    int equal;
-
-    object_vtable = *(void***)object;
-    get_name = (ResourceTreeGetNameFn)object_vtable[0x24 / 4];
-    if (get_name(object, &object_name_bytes, NULL) != 0u ||
-        object_name_bytes == 0u ||
-        object_name_bytes - 1u != query->name_length) {
-        return 0;
-    }
-    object_name = (char*)engine_heap_alloc((long)object_name_bytes);
-    if (object_name == NULL) return 0;
-    object_name[0] = '\0';
-    if (get_name(object, &object_name_bytes, object_name) != 0u) {
-        engine_heap_free(object_name);
-        return 0;
-    }
-
-    mode = (uint32_t)query->mode;
-    if (mode == 0u || mode == 2u) query->matched_object = NULL;
-    equal = resource_name_compare_bytes(object_name, query->name,
-                                        query->case_sensitive != 0u);
-    if (equal != 0) {
-        if (mode == 0u) {
-            query->matched_object = object;
-        } else if (mode == 1u) {
-            ++query->match_count;
-        } else if (mode == 2u) {
-            ++query->match_count;
-            if (query->match_count == query->selected_index + 1u) {
-                query->matched_object = object;
-            }
-        }
-    }
-    engine_heap_free(object_name);
-    return query->matched_object != NULL;
-}
-
-/* ResourceNameRegisterOrQuery (FUN_00473bc0) builds the seven-word callback
- * record, walks the interface root, and resolves the selected object through
- * SceneObjectOwnerLinkEnsure. The portable ResourceTreeNode helper below is
- * kept for host-side callers; this is the retail pointer-to-root ABI. */
-// FUNCTION: LEGORR 0x00473bc0
-void* resource_name_register_or_query_target(
-    void** root, const char* name, int mode,
-    uint32_t* match_count_or_index)
-{
-    const char* cursor = name;
-    uint32_t remaining = 0xffffffffu;
-    ResourceNameMatchCallbackContext query;
-
-    do {
-        char value;
-        if (remaining == 0u) break;
-        --remaining;
-        value = *cursor;
-        ++cursor;
-        if (value == '\0') break;
-    } while (1);
-
-    query.name = name;
-    query.name_length = ~remaining - 1u;
-    query.case_sensitive = 0u;
-    query.matched_object = NULL;
-    query.match_count = 0u;
-    query.mode = mode;
-    query.selected_index = match_count_or_index != NULL
-        ? *match_count_or_index : 0u;
-
-    if (root != NULL && *root != NULL) {
-        (void)resource_tree_callback_walk_target(*root, 0,
-            resource_name_match_callback_target, &query);
-    }
-
-    if (mode == 0 || mode == 2) {
-        return query.matched_object != NULL
-            ? scene_object_owner_link_ensure(query.matched_object) : NULL;
-    }
-    if (mode == 1) {
-        if (match_count_or_index != NULL)
-            *match_count_or_index = query.match_count;
-    }
-    return NULL;
 }
 
 namespace unported_ledger_stubs {

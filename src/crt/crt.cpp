@@ -96,6 +96,7 @@ extern char** environ;
 #include "crt_from_panel_unit.hpp"
 #include "crt_for_frontend_unit.hpp"
 #include "crt_from_frontend_unit.hpp"
+#include "crt_for_container_unit.hpp"
 
 #if defined(_MSC_VER)
 #define crt_math_error_code_set _set_errno
@@ -2182,13 +2183,7 @@ void crt_owned_stream_buffer_release(char* record)
 
 /* --- the shared texture directory word (see crt.hpp) ------------------------ */
 // GLOBAL: LEGORR 0x0076cd88
-static char* s_shared_texture_dir; /* DAT_0076cd88 role: unowned */
-
-// FUNCTION: LEGORR 0x004728c0
-void shared_texture_directory_set(const char* path)
-{
-    s_shared_texture_dir = string_duplicate(path);
-}
+char* s_shared_texture_dir; /* DAT_0076cd88 role: unowned */
 
 char* shared_texture_directory_peek(void) { return s_shared_texture_dir; }
 void shared_texture_directory_clear(void)
@@ -2199,42 +2194,20 @@ void shared_texture_directory_clear(void)
 
 /* --- the renderer flag word + scene hook pair band (see crt.hpp) ----------- */
 // GLOBAL: LEGORR 0x0076cd94
-static uint32_t s_renderer_flag_word; /* DAT_0076cd94 role: unowned */
+uint32_t s_renderer_flag_word; /* DAT_0076cd94 role: unowned */
 // GLOBAL: LEGORR 0x0076cd80
-static void*    s_scene_end_hook;     /* DAT_0076cd80 role: unowned */
+void*    s_scene_end_hook;     /* DAT_0076cd80 role: unowned */
 // GLOBAL: LEGORR 0x0076cd84
-static void*    s_scene_end_value;    /* DAT_0076cd84 role: unowned */
+void*    s_scene_end_value;    /* DAT_0076cd84 role: unowned */
 // GLOBAL: LEGORR 0x0076cd78
-static void*    s_scene_sample_hook;  /* DAT_0076cd78 role: unowned */
+void*    s_scene_sample_hook;  /* DAT_0076cd78 role: unowned */
 // GLOBAL: LEGORR 0x0076cd7c
-static void*    s_scene_sample_value; /* DAT_0076cd7c role: unowned */
-
-// FUNCTION: LEGORR 0x004728e0
-void renderer_flag_bit6_set(int value)
-{
-    s_renderer_flag_word = (value != 0) ? (s_renderer_flag_word | 0x40u)
-                                        : (s_renderer_flag_word & ~0x40u);
-}
+void*    s_scene_sample_value; /* DAT_0076cd7c role: unowned */
 
 uint32_t renderer_flag_word_peek(void) { return s_renderer_flag_word; }
 
-// FUNCTION: LEGORR 0x00472900
-void scene_end_hook_register(void* hook, void* value)
-{
-    s_scene_end_hook = hook;
-    s_scene_end_value = value;
-}
-
 void* scene_end_hook_peek(void) { return s_scene_end_hook; }
 void* scene_end_hook_value_peek(void) { return s_scene_end_value; }
-
-// FUNCTION: LEGORR 0x00472920
-void scene_sample_hook_register(void* hook, void* value)
-{
-    s_scene_sample_hook = hook;
-    s_scene_sample_value = value;
-    s_renderer_flag_word |= 0x40u;
-}
 
 void* scene_sample_hook_peek(void) { return s_scene_sample_hook; }
 void* scene_sample_hook_value_peek(void) { return s_scene_sample_value; }

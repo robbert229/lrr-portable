@@ -20,6 +20,7 @@
 #include "surface_for_images_unit.hpp"
 #include "surface_from_images_unit.hpp"
 #include "surface_for_directdraw.hpp"
+#include "surface_for_container_unit.hpp"
 
 static void* mesh_record_default_allocate(void*, size_t bytes)
 {
@@ -31,11 +32,11 @@ static void mesh_record_default_release(void*, void* memory)
     engine_heap_free(memory);
 }
 
-static MeshRecordAppendOps s_mesh_record_append_ops;
+MeshRecordAppendOps s_mesh_record_append_ops;
 static ModelTextureBindOps s_model_texture_bind_ops;
 static MaterialPassOps s_material_pass_ops;
-static TextureSurfaceCreateHook s_texture_surface_create_hook;
-static void* s_texture_surface_create_context;
+TextureSurfaceCreateHook s_texture_surface_create_hook;
+void* s_texture_surface_create_context;
 static DisplaySurface* s_active_render_target;
 static void* s_screen_bounded_surface_renderer;
 void* s_screen_bounded_surface_device;
@@ -254,32 +255,6 @@ int mesh_record_allocate_and_fill(MeshRecordPool* pool,
     if (pool->record_registered != NULL)
         pool->record_registered(pool->context, index);
     return (int)index;
-}
-
-/* MeshRecordAllocateOrAppend (FUN_004748f0): use the in-memory mesh pool
- * when present; otherwise route through the legacy Direct3DRM record path. */
-// FUNCTION: LEGORR 0x004748f0
-int mesh_record_allocate_or_append(void* object, uint32_t vertex_count,
-                                   uint32_t index_rows,
-                                   uint32_t index_columns,
-                                   const uint16_t* source_indices)
-{
-    MeshRecordPool* pool = NULL;
-    if (object == NULL) return -1;
-    if (s_mesh_record_append_ops.pool_get != NULL) {
-        pool = s_mesh_record_append_ops.pool_get(
-            s_mesh_record_append_ops.context, object);
-    }
-    if (pool != NULL) {
-        return mesh_record_allocate_and_fill(pool, vertex_count, index_rows,
-                                             index_columns, source_indices);
-    }
-    if (s_mesh_record_append_ops.legacy_append != NULL) {
-        return s_mesh_record_append_ops.legacy_append(
-            s_mesh_record_append_ops.context, object, vertex_count,
-            index_rows, index_columns, source_indices);
-    }
-    return -1;
 }
 
 void model_texture_bind_ops_set(const ModelTextureBindOps* ops)
@@ -2661,144 +2636,6 @@ void renderer_begin_frame_once_retail(void)
     s_engine_feature_word |= 1u;
 }
 
-/* RenderObjectStateApplyToEntries (FUN_00473ec0): state kind 4 snapshots
- * the child set and applies each child callback; kind 1 applies the surface
- * property to each layer in order. */
-// FUNCTION: LEGORR 0x00473ec0
-void render_object_state_apply_to_entries(void* object, uint32_t value,
-                                          const RenderObjectStateOps* ops)
-{
-    unsigned int i;
-    int kind;
-    if (object == NULL || ops == NULL || ops->object_kind == NULL) return;
-    kind = ops->object_kind(ops->context, object);
-    if (kind == 4 && ops->children_snapshot != NULL &&
-        ops->child_state_apply != NULL) {
-        void** children = NULL;
-        unsigned int count = 0;
-        if (ops->children_snapshot(ops->context, object, &children,
-                                   &count) == 0 || children == NULL) {
-            return;
-        }
-        for (i = 0; i < count; ++i) {
-            if (children[i] != NULL)
-                ops->child_state_apply(ops->context, children[i], value);
-        }
-        if (ops->children_snapshot_release != NULL)
-            ops->children_snapshot_release(ops->context, children);
-    }
-    else if (kind == 1 && ops->layer_count != NULL &&
-             ops->layer_property_set != NULL) {
-        unsigned int count = ops->layer_count(ops->context, object);
-        for (i = 0; i < count; ++i) {
-            ops->layer_property_set(ops->context, object, i, value);
-        }
-    }
-}
-
-/* TerrainSurfacePropertySet (FUN_00474e30): mesh-backed objects already
- * receive material state through their mesh; regular layers get property
- * bit 4 set or cleared on the resolved animated layer frame. */
-// FUNCTION: LEGORR 0x00474e30
-void terrain_surface_property_set(void* object, unsigned int layer_index,
-                                  int enabled,
-                                  const TerrainSurfacePropertyOps* ops)
-{
-    unsigned int frame = 0u;
-    void* layer;
-    if (object == NULL || ops == NULL || ops->layer_resolve == NULL ||
-        ops->property_set == NULL) return;
-    if (ops->has_mesh != NULL && ops->has_mesh(ops->context, object) != 0) {
-        return;
-    }
-    layer = ops->layer_resolve(ops->context, object, layer_index, &frame);
-    if (layer != NULL) {
-        ops->property_set(ops->context, layer, frame,
-                          enabled != 0 ? 4u : 0u);
-    }
-}
-
-/* LwoLayerEnabledSet (FUN_00474b30): route mesh-backed entries to their
- * mesh setter; otherwise attach/detach the selected layer and maintain its
- * disabled high bit. Index zero uses the collection's base enabled field. */
-// FUNCTION: LEGORR 0x00474b30
-void lwo_layer_enabled_set(void* object, unsigned int index, int enabled,
-                           const LwoLayerEnabledOps* ops)
-{
-    void* mesh;
-    void* layer;
-    int current_enabled;
-    uint32_t flags;
-    if (object == NULL || ops == NULL) return;
-    mesh = ops->mesh_get != NULL
-        ? ops->mesh_get(ops->context, object) : NULL;
-    if (mesh != NULL) {
-        if (ops->mesh_set != NULL)
-            ops->mesh_set(ops->context, mesh, index, enabled);
-        return;
-    }
-    if (ops->layer_get == NULL) return;
-    layer = ops->layer_get(ops->context, object, index);
-    if (layer == NULL) return;
-    if (index == 0u) {
-        current_enabled = ops->base_enabled_get != NULL
-            ? ops->base_enabled_get(ops->context, layer) : 0;
-        if (enabled != 0 && current_enabled == 0 &&
-            ops->layer_attach != NULL) {
-            ops->layer_attach(ops->context, object, layer);
-        }
-        else if (enabled == 0 && current_enabled != 0 &&
-                 ops->layer_detach != NULL) {
-            ops->layer_detach(ops->context, object, layer);
-        }
-        if (ops->base_enabled_set != NULL)
-            ops->base_enabled_set(ops->context, layer, enabled);
-        return;
-    }
-    if (ops->layer_flags_get == NULL || ops->layer_flags_set == NULL) return;
-    flags = ops->layer_flags_get(ops->context, layer);
-    current_enabled = (flags & 0x80000000u) == 0u;
-    if (enabled != 0 && current_enabled == 0 && ops->layer_attach != NULL) {
-        ops->layer_attach(ops->context, object, layer);
-    }
-    else if (enabled == 0 && current_enabled != 0 &&
-             ops->layer_detach != NULL) {
-        ops->layer_detach(ops->context, object, layer);
-    }
-    flags = (flags & 0x7fffffffu) |
-            (enabled != 0 ? 0u : 0x80000000u);
-    ops->layer_flags_set(ops->context, layer, flags);
-}
-
-// FUNCTION: LEGORR 0x00474c40
-uint32_t lwo_layer_polygon_vertex_count(
-    void* object, int block, uint32_t* field_out, uint32_t reserved,
-    uint32_t* kind_out, uint32_t* count_out, uint32_t* indices_out)
-{
-    void* owner = *(void**)((char*)object + 0x0c);
-    void* mesh = *(void**)((char*)owner + 0x0c);
-    if (mesh != NULL) {
-        indexed_record_entry_read(mesh, block, field_out, reserved, kind_out,
-                                  count_out, indices_out);
-        return 0u;
-    }
-    else {
-        void* interface_object = *(void**)((char*)owner + 8);
-        int resolved_block = block;
-        void** vtable;
-        typedef int32_t (SURFACE_COM_CALL *PolygonVertexCountFn)(
-            void*, int, uint32_t*, uint32_t, uint32_t*, uint32_t*,
-            uint32_t*);
-        (void)lego::animated_texture_frame_resolve(&interface_object,
-                                                  &resolved_block);
-        vtable = *(void***)interface_object;
-        return (uint32_t)(((PolygonVertexCountFn)
-            vtable[0x5c / sizeof(void*)])(
-                interface_object, resolved_block, field_out, reserved,
-                kind_out, count_out, indices_out) == 0);
-    }
-}
-
 uint32_t lwo_layer_polygon_vertex_count_dispatch(
     void* object, unsigned int layer_index, const void* request,
     const LwoLayerDispatchOps* ops)
@@ -2818,35 +2655,6 @@ uint32_t lwo_layer_polygon_vertex_count_dispatch(
     if (layer == NULL) return 0u;
     return ops->layer_polygon_vertex_count(ops->context, layer, frame,
                                            request) == 0 ? 1u : 0u;
-}
-
-// FUNCTION: LEGORR 0x00474cc0
-uint32_t lwo_layer_polygon_vertex_data_read(
-    void* object, int block, int first_vertex, int count, void* output)
-{
-    void* owner = *(void**)((char*)object + 0x0c);
-    void* mesh = *(void**)((char*)owner + 0x0c);
-    if (mesh != NULL) {
-        indexed_geometry_data_copy_to_output(mesh, block, first_vertex,
-                                             count, output);
-        return 0u;
-    }
-    else {
-        void* interface_object = *(void**)((char*)owner + 8);
-        int resolved_block = block;
-        void** vtable;
-        typedef int32_t (SURFACE_COM_CALL *PolygonVertexDataReadFn)(
-            void*, int, int, int, void*);
-        (void)lego::animated_texture_frame_resolve(&interface_object,
-                                                  &resolved_block);
-        vtable = *(void***)interface_object;
-        if (((PolygonVertexDataReadFn)vtable[0x60 / sizeof(void*)])(
-                interface_object, resolved_block, first_vertex, count,
-                output) != 0) {
-            return 0xffffffffu;
-        }
-        return 0u;
-    }
 }
 
 uint32_t lwo_layer_polygon_vertex_data_read_dispatch(
@@ -2869,64 +2677,6 @@ uint32_t lwo_layer_polygon_vertex_data_read_dispatch(
     if (layer == NULL) return 0u;
     return ops->layer_polygon_vertex_data_read(ops->context, layer, frame,
             request) == 0 ? 0u : 0xffffffffu;
-}
-
-// FUNCTION: LEGORR 0x00474d30
-uint32_t terrain_cell_quad_vertex_emit(
-    void* object, unsigned int layer_index, const void* request,
-    const LwoLayerDispatchOps* ops)
-{
-    void* mesh;
-    void* layer;
-    unsigned int frame = 0u;
-    if (object == NULL || ops == NULL || ops->mesh_get == NULL) return 0u;
-    mesh = ops->mesh_get(ops->context, object);
-    if (mesh != NULL) {
-        return ops->mesh_terrain_quad_emit != NULL
-            ? ops->mesh_terrain_quad_emit(ops->context, mesh, request) : 0u;
-    }
-    if (ops->layer_resolve == NULL ||
-        ops->layer_terrain_quad_emit == NULL) return 0u;
-    layer = ops->layer_resolve(ops->context, object, layer_index, &frame);
-    if (layer == NULL) return 0u;
-    return ops->layer_terrain_quad_emit(ops->context, layer, frame, request)
-        == 0 ? 0xffffffffu : 0u;
-}
-
-/* TerrainDetailEntryGetAtIndex (FUN_00474ae0): mesh paths delegate directly;
- * layer paths query child flags, with index zero reading the collection's
- * base enabled value. If no child array is available, the original returns
- * the requested index. */
-// FUNCTION: LEGORR 0x00474ae0
-uint32_t terrain_detail_entry_get_at_index(void* object,
-                                           unsigned int index)
-{
-    void* owner = *(void**)((char*)object + 0x0c);
-    void* mesh = *(void**)((char*)owner + 0x0c);
-    if (mesh != NULL) {
-        return indexed_record_flag6c_bit0_get(mesh, (int)index);
-    }
-    else {
-        void* layer = *(void**)((char*)owner + 8);
-        void** layer_vtable = *(void***)layer;
-        typedef void* (SURFACE_COM_CALL *LayerCollectionGetFn)(void*);
-        void* children = ((LayerCollectionGetFn)
-            layer_vtable[0x1c / sizeof(void*)])(layer);
-        if (children != NULL) {
-            if (index != 0u) {
-                void* data = *(void**)children;
-                void* child = *(void**)((char*)data - sizeof(uint32_t) +
-                    (size_t)index * sizeof(void*));
-                void** child_vtable = *(void***)child;
-                typedef uint32_t (SURFACE_COM_CALL *LayerFlagsGetFn)(void*);
-                uint32_t flags = ((LayerFlagsGetFn)
-                    child_vtable[0x1c / sizeof(void*)])(child);
-                return ~flags >> 31;
-            }
-            return *(uint32_t*)((char*)children + 0x0c);
-        }
-        return index;
-    }
 }
 
 uint32_t terrain_detail_entry_get_at_index_dispatch(
@@ -3049,31 +2799,6 @@ void font_pixel_format_hooks_set(FontPixelFormatQueryFn query,
     s_font_pixel_format_release = release;
 }
 
-// FUNCTION: LEGORR 0x00474410
-int parse_indexed_surface_name(const char* path, uint32_t* index_out)
-{
-    const char* component;
-    const char* digits;
-    uint32_t value;
-    unsigned int i;
-    if (path == NULL || index_out == NULL) return 0;
-    component = path;
-    while (*path != '\0') {
-        if (*path == '\\' || *path == '/') component = path + 1;
-        ++path;
-    }
-    if (component[0] != 'a' && component[0] != 'A') return 0;
-    digits = component + 1;
-    value = 0;
-    for (i = 0; i < 3; ++i) {
-        if (digits[i] < '0' || digits[i] > '9') return 0;
-        value = value * 10u + (uint32_t)(digits[i] - '0');
-    }
-    if (digits[3] != '_') return 0;
-    *index_out = value;
-    return 1;
-}
-
 void projection_overlay_blit_hook_set(ProjectionOverlayBlitHook hook,
                                       void* context)
 {
@@ -3086,60 +2811,6 @@ void directdraw_clipper_region_ops_set(const DirectDrawClipperRegionOps* ops)
     if (ops != NULL) s_directdraw_clipper_region_ops = *ops;
     else memset(&s_directdraw_clipper_region_ops, 0,
                 sizeof(s_directdraw_clipper_region_ops));
-}
-
-struct SurfacePixelInfo {
-    int width;
-    int height;
-    int reserved2;
-    int reserved3;
-    int bits_per_pixel;
-    int reserved5;
-    int row_stride;
-    void* pixels;
-};
-
-class SurfacePixelInfoOwner {
-public:
-    virtual void slot00() = 0; virtual void slot04() = 0;
-    virtual void slot08() = 0; virtual void slot0c() = 0;
-    virtual void slot10() = 0; virtual void slot14() = 0;
-    virtual void slot18() = 0; virtual void slot1c() = 0;
-    virtual void slot20() = 0; virtual void slot24() = 0;
-    virtual void slot28() = 0; virtual void slot2c() = 0;
-    virtual void slot30() = 0; virtual void slot34() = 0;
-    virtual void slot38() = 0; virtual void slot3c() = 0;
-    virtual void slot40() = 0; virtual void slot44() = 0;
-    virtual void slot48() = 0; virtual void slot4c() = 0;
-    virtual void slot50() = 0; virtual void slot54() = 0;
-    virtual void slot58() = 0; virtual void slot5c() = 0;
-    virtual SurfacePixelInfo* get_pixel_info() = 0;
-};
-
-// FUNCTION: LEGORR 0x00476bf0
-void surface_pixel_rows_flip_in_place(void* surface)
-{
-    SurfacePixelInfo* info =
-        ((SurfacePixelInfoOwner*)surface)->get_pixel_info();
-    if (info != NULL) {
-        const int row_bits = info->bits_per_pixel * info->width;
-        const uint32_t row_bytes = (uint32_t)(
-            (row_bits + ((row_bits >> 31) & 7)) >> 3);
-        unsigned char* scratch = (unsigned char*)engine_heap_alloc(row_bytes);
-        if (scratch != NULL) {
-            unsigned char* top = (unsigned char*)info->pixels;
-            unsigned char* bottom = top
-                + (ptrdiff_t)(info->height - 1) * info->row_stride;
-            for (int row = 0; row < info->height / 2; ++row) {
-                memcpy(scratch, bottom, row_bytes);
-                memcpy(bottom, top, row_bytes);
-                memcpy(top, scratch, row_bytes);
-                top += info->row_stride;
-                bottom -= info->row_stride;
-            }
-            engine_heap_free(scratch);
-        }
-    }
 }
 
 /* Convert the frontend's RGBA bytes using the destination surface's masks. */
@@ -4805,25 +4476,6 @@ void texture_surface_create_hook_set(TextureSurfaceCreateHook hook,
 {
     s_texture_surface_create_hook = hook;
     s_texture_surface_create_context = context;
-}
-
-/* TextureSurfaceCreate (FUN_004744f0): mode zero resolves the configured
- * renderer surface database; nonzero mode uses the named bitmap path. The
- * configured database and its COM object tree are renderer-owned, so the
- * hook handles that route. Mode one can use the portable BMP decoder and its
- * release-tracked host record. */
-// FUNCTION: LEGORR 0x004744f0
-void* texture_surface_create(const char* name, uint32_t mode,
-                             uint32_t* value_out, uint32_t mode_data)
-{
-    if (name == NULL) return NULL;
-    if (s_texture_surface_create_hook != NULL) {
-        return s_texture_surface_create_hook(s_texture_surface_create_context,
-                                             name, mode, value_out,
-                                             mode_data);
-    }
-    if (mode != 1u) return NULL;
-    return texture_surface_create_host_record(name, mode);
 }
 
 #undef SURFACE_COM_CALL

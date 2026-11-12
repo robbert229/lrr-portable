@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "record_shared.hpp"
+#include "record_from_container_unit.hpp"
 
 #if defined(_MSC_VER)
 #define RECORD_COM_CALL __stdcall
@@ -214,19 +215,6 @@ void render_resource_instance_pool_reset(void)
     s_render_resource_instance_pool_count = 0;
 }
 
-/* EntityFlag80Set (FUN_00473b20) — see record.hpp. */
-// FUNCTION: LEGORR 0x00473b20
-void entity_flag_80_set_corpus(void* record, int set)
-{
-    uint32_t* word = (uint32_t*)((char*)record + 0x14);
-    if (set != 0) {
-        *word |= 0x80u;
-    }
-    else {
-        *word &= ~0x80u;
-    }
-}
-
 void entity_flag_80_set(void* record, int set)
 {
     if (record == NULL) {
@@ -277,47 +265,6 @@ uint32_t pointer_value_get(const void* pointed)
         return 0u; /* pinned deviation: the corpus loads blindly */
     }
     return *(const uint32_t*)pointed;
-}
-#endif
-
-// FUNCTION: LEGORR 0x00473db0
-uint32_t scene_object_owner_get(const void* scene_object)
-{
-    uint32_t owner;
-    __builtin_memcpy(&owner, (const char*)scene_object + 0x20,
-                     sizeof(owner));
-    return owner;
-}
-
-// FUNCTION: LEGORR 0x00473680
-uint32_t scene_object_wrapped_pointer_get(const void* wrapped)
-{
-    uint32_t value;
-    __builtin_memcpy(&value, wrapped, sizeof(value));
-    return value;
-}
-
-/* The mapped SceneObjectFlagBit3Get body follows the corpus's unchecked
- * +0x14 load; animation_object_visibility_get retains its null-safe path. */
-// FUNCTION: LEGORR 0x00473ba0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t scene_object_flag_bit3_get_target(
-    const void* scene_object)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 14h]
-        and eax, 0ffh
-        shr eax, 3
-        and eax, 1
-        ret
-    }
-}
-#else
-uint32_t scene_object_flag_bit3_get_target(const void* scene_object)
-{
-    return (*(const uint32_t*)((const char*)scene_object + 0x14) & 0xffu)
-           >> 3 & 1u;
 }
 #endif
 
@@ -488,28 +435,6 @@ uint32_t indexed_record_transform_copy_in(void* record, int index,
 
 /* --- indexed flag slot and resource-handle writers (see record.hpp) ------ */
 
-// FUNCTION: LEGORR 0x00473da0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void scene_object_owner_set(void* scene_object,
-                                              uint32_t owner)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        mov eax, dword ptr [esp + 8]
-        mov dword ptr [ecx + 20h], eax
-        ret
-    }
-}
-#else
-void scene_object_owner_set(void* scene_object, uint32_t owner)
-{
-    if (scene_object == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    __builtin_memcpy((char*)scene_object + 0x20, &owner, sizeof(owner));
-}
-#endif
-
 /* --- the record primitive band (see record.hpp) ----------------------------- */
 // FUNCTION: LEGORR 0x00482350
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -650,78 +575,6 @@ int surface_visibility_adapter_remove(SurfaceVisibilityAdapter adapter,
     s_surface_visibility_context = NULL;
     return 1;
 }
-
-/* SceneRenderLockToggle (FUN_00473b40): update the paired render interfaces
- * on the transition into or out of lock mode, then toggle flag bit 3. The
- * channel slots use the corpus offsets; rec_ptr preserves this port's
- * native-width pointer-slot convention. */
-// FUNCTION: LEGORR 0x00473B40
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void scene_render_lock_toggle(void* scene_object,
-                                                int enabled)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 8]
-        push esi
-        mov esi, dword ptr [esp + 8]
-        mov eax, dword ptr [esi + 14h]
-        and eax, 8
-        test ecx, ecx
-        je scene_render_lock_toggle_disable_check
-        test eax, eax
-        jne scene_render_lock_toggle_disable_gate
-        mov eax, dword ptr [esi + 4]
-        mov ecx, dword ptr [esi + 8]
-        push eax
-        push ecx
-        call render_interface_pair_update
-        mov eax, dword ptr [esi + 14h]
-        add esp, 8
-        or al, 8
-        mov dword ptr [esi + 14h], eax
-        pop esi
-        ret
-    scene_render_lock_toggle_disable_gate:
-        test ecx, ecx
-        jne scene_render_lock_toggle_done
-    scene_render_lock_toggle_disable_check:
-        test eax, eax
-        je scene_render_lock_toggle_done
-        mov edx, dword ptr [esi + 4]
-        mov eax, dword ptr [esi]
-        push edx
-        push eax
-        call render_interface_pair_update
-        mov eax, dword ptr [esi + 14h]
-        add esp, 8
-        and al, 0f7h
-        mov dword ptr [esi + 14h], eax
-    scene_render_lock_toggle_done:
-        pop esi
-        ret
-    }
-}
-#else
-void scene_render_lock_toggle(void* scene_object, int enabled)
-{
-    uint32_t flags;
-    if (scene_object == NULL) return;
-    flags = rec_dword(scene_object, 0x14);
-    if (enabled != 0) {
-        if ((flags & 8u) == 0u) {
-            render_interface_pair_update(rec_ptr(scene_object, 0x08u),
-                                         rec_ptr(scene_object, 0x04u));
-            rec_dword_put(scene_object, 0x14, flags | 8u);
-        }
-        return;
-    }
-    if ((flags & 8u) != 0u) {
-        render_interface_pair_update(rec_ptr(scene_object, 0x00u),
-                                     rec_ptr(scene_object, 0x04u));
-        rec_dword_put(scene_object, 0x14, flags & ~8u);
-    }
-}
-#endif
 
 /* --- the UI record factories (see record.hpp) ------------------------------
  * Corpus record windows stride as dwords; the port lays both shapes out as
