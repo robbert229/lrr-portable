@@ -29,6 +29,7 @@
 #include "view_for_lws.hpp"
 #include "view_for_panel_unit.hpp"
 #include "view_for_lego.hpp"
+#include "view_for_images_unit.hpp"
 
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
@@ -3442,28 +3443,9 @@ void ddiscene_render_surface_pool_release_all(void)
     s_render_surface_pool_free_head = NULL;
 }
 
-static void* s_scene_registry_blocks[32];
-static unsigned int s_scene_registry_block_count;
-static SceneRegistrySurfaceReleaseFn s_scene_registry_surface_release;
-
-typedef uint32_t (VIEW_COM_CALL *SceneRegistryInterfaceReleaseFn)(void*);
-
-static size_t scene_registry_record_stride(void)
-{
-    return (size_t)0x1cu + sizeof(void*);
-}
-
-static void* scene_registry_record_next_get(void* record)
-{
-    void* next;
-    memcpy(&next, (unsigned char*)record + 0x1c, sizeof(next));
-    return next;
-}
-
-static void scene_registry_record_next_set(void* record, void* next)
-{
-    memcpy((unsigned char*)record + 0x1c, &next, sizeof(next));
-}
+void* s_scene_registry_blocks[32];
+unsigned int s_scene_registry_block_count;
+SceneRegistrySurfaceReleaseFn s_scene_registry_surface_release;
 
 void scene_object_registry_surface_release_set(
     SceneRegistrySurfaceReleaseFn release)
@@ -3471,65 +3453,11 @@ void scene_object_registry_surface_release_set(
     s_scene_registry_surface_release = release;
 }
 
-// FUNCTION: LEGORR 0x0047d470
-void image_surface_release(void* record)
-{
-    uint32_t interface_token = 0u;
-    if (record == NULL) return;
-    memcpy(&interface_token, record, sizeof(interface_token));
-    /* ImageSurfaceRelease calls vtable slot +8 (IUnknown::Release) on the
-     * record's first dword. The record ABI stores that interface as a 32-bit
-     * value, so this direct call is valid only in the 32-bit reference ABI. */
-    if (s_scene_registry_surface_release != NULL) {
-        s_scene_registry_surface_release(interface_token);
-    }
-    else if (sizeof(void*) == sizeof(uint32_t) && interface_token != 0u) {
-        void* interface_object = (void*)(uintptr_t)interface_token;
-        void** vtable = *(void***)interface_object;
-        if (vtable != NULL && vtable[2] != NULL) {
-            ((SceneRegistryInterfaceReleaseFn)vtable[2])(interface_object);
-        }
-    }
-    scene_registry_record_next_set(record, s_small_record_free);
-    s_small_record_free = record;
-}
-
 void scene_object_registry_pool_block_register(void* block)
 {
     if (block != NULL && s_scene_registry_block_count < 32u) {
         s_scene_registry_blocks[s_scene_registry_block_count++] = block;
     }
-}
-
-// FUNCTION: LEGORR 0x0047e130
-void scene_object_registry_release_all(void)
-{
-    unsigned int level;
-    size_t stride = scene_registry_record_stride();
-    for (level = 0u; level < s_scene_registry_block_count; ++level) {
-        unsigned int count = 1u << level;
-        unsigned int i;
-        unsigned char* block =
-            (unsigned char*)s_scene_registry_blocks[level];
-        for (i = 0u; i < count; ++i) {
-            void* record = block + (size_t)i * stride;
-            if (scene_registry_record_next_get(record) == record) {
-                image_surface_release(record);
-            }
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x0047d430
-void scene_object_registry_teardown(void)
-{
-    unsigned int i;
-    scene_object_registry_release_all();
-    fixed_size_small_record_pool_teardown();
-    for (i = 0u; i < s_scene_registry_block_count; ++i) {
-        s_scene_registry_blocks[i] = NULL;
-    }
-    s_scene_registry_block_count = 0u;
 }
 
 void scene_root_install(void* root) { s_scene_root = root; }

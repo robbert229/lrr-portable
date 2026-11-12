@@ -872,37 +872,6 @@ int bit_count32(uint32_t value)
     return n;
 }
 
-/* FUN_0047d700: popcount via the per-position test loop. */
-// FUNCTION: LEGORR 0x0047d700
-int pop_count32(uint32_t value)
-{
-    int count = 0;
-    uint32_t position = 0u;
-    do {
-        if ((value & (1u << position)) != 0u) {
-            ++count;
-        }
-        ++position;
-    } while (position < 0x20u);
-    return count;
-}
-
-/* FUN_0047d720: index of the lowest set bit, 0xffffffff for zero. The
- * corpus's 0x47d72e `shl esi,cl` repeatedly shifts its live mask; without
- * resetting that mask, it answers 2 for 0x8 rather than the tested 3.
- * Keep the one-hot-per-position semantics; the i&31 is redundant under
- * the i < 32 bound. */
-// FUNCTION: LEGORR 0x0047d720
-uint32_t find_first_set_bit32(uint32_t value)
-{
-    for (uint32_t i = 0; i < 32u; ++i) {
-        if ((value & (1u << i)) != 0u) {
-            return i;
-        }
-    }
-    return 0xffffffffu;
-}
-
 /* FUN_0047e7e0: the corpus's second identical position-loop body. */
 #if defined(_MSC_VER)
 #define LEGORRR_CRT_STDCALL __stdcall

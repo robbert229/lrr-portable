@@ -8,6 +8,7 @@ if get_option('platform') == 'winapi'
 endif
 
 gods98_sources = [
+  'images_unit.cpp',
   'files.cpp',
   'sound3d.cpp',
   'lwo.cpp',

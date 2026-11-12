@@ -27,8 +27,6 @@
 static void* s_large_record_free;
 static void* s_large_record_blocks[32];
 static unsigned int s_large_record_block_count;
-// GLOBAL: LEGORR 0x00533988
-void* s_small_record_free;
 static void* s_small_record_blocks[32];
 static unsigned int s_small_record_block_count;
 
@@ -1150,19 +1148,6 @@ void menu_record_resources_release(void* record)
     engine_heap_free(record);
 }
 #endif
-
-/* ResourceRecordAddRef (FUN_0047dbc0): the wrapped DirectDraw object's
- * SetColorKey(DDCKEY_SRCBLT, range) equivalent, then mark flag bit 1. */
-// FUNCTION: LEGORR 0x0047dbc0
-void resource_record_add_ref(void* record)
-{
-    if (record == NULL) return;
-    TextureSurface* surface = (TextureSurface*)record;
-    const uint32_t low = surface->key_count > 0 ? surface->keys[0] : 0;
-    const uint32_t high = surface->key_count > 1 ? surface->keys[1] : low;
-    texture_source_color_key_set(surface, low, high);
-    surface->resource_flags |= 2u;
-}
 
 /* LoadItemStrings (FUN_00414010): the corpus uses eight dword resource
  * pointers at byte offset 0x20. This port reads the equivalent eight
