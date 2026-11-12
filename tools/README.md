@@ -780,6 +780,31 @@ bytes up to the next symbol, so a large static without a map symbol is counted
 to the symbol before it. Read sizes from the COFF objects when that matters.
 The tool does not change `binary-progress.json`.
 
+## Native code in winapi links (`winapi_link_audit.py`)
+
+The matching build and the MinGW reference build must link no native-backend
+code (finding 575). `python3 tools/winapi_link_audit.py check-list` checks the
+link-order list without a toolchain: no source under `platform/native/` or
+`miniwin/`, no `*_miniwin.*`, `*_native.*` or SDL-named source, and none of
+the known native-only sources (`main.cpp`, `gods98/gods98.cpp`, the native
+backend files) without a `native` tag; and no SDL or miniwin library in
+`LRR_LINK_LIBRARIES`. It runs in `make tools-test`.
+
+`make winapi-link-check` (`check-link`) reads an existing matching build's
+`objects1.rsp`, `link.txt` and `LegoRR.map`. It fails on an object from a
+native-only source, an SDL or miniwin library, object or symbol, a native
+entry-chain symbol (`LegorrrMain`, `LegorrrRun`, `gods98_engine_name`,
+`game_layer_name`), or a map object that is not a winapi entry of the list.
+It then prints `.text` by category: annotated original code (from
+`reccmp-report/results.json`), port code by link-order kind, LIBC and import
+thunks; `--json` writes both. `make reccmp-check` and `make match-progress`
+run it. How much port code `/OPT:REF` would drop is #562's measure, not this
+tool's.
+
+Port-only code inside a shared file that only the native backend or the
+native tests use goes in `#if !defined(LEGORRR_BACKEND_WINAPI)`, after the
+file's last annotated function (rule B, finding 538).
+
 ## Whole-binary progress
 
 `make match-progress` regenerates `docs/coverage/match-baseline.txt`,
