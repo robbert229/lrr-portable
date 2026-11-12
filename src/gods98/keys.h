@@ -16,8 +16,7 @@ extern "C" {
 /* One name per DirectInput scan code (DIK_*). */
 #define KEY_NAMES_COUNT 256
 
-/* KEY_NAMES_COUNT + 1: keys.c explains the spare slot. */
-extern const char* key_names[KEY_NAMES_COUNT + 1];
+extern const char* key_names[KEY_NAMES_COUNT];
 
 /* FUN_00485a20 (Keys_Initialise). */
 void keyboard_key_names_init(void);

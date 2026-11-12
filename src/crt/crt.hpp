@@ -192,7 +192,7 @@ int double_is_finite(double value);
 extern "C" void integer_pair_divide_to_float_pair(int x, int y, int divisor,
                                        float* out_x, float* out_y);
 
-/* Superseded by game/panel_unit.h (GAME-032, finding 554): FUN_0045b930
+/* Deviation (scoring only): superseded by game/panel_unit.h (GAME-032, finding 554): FUN_0045b930
  * clamps a point to the rotation control's circle and takes five
  * arguments. Kept uncalled so the symbol count of every includer is
  * unchanged (ADR 0005 entropy rule 1). */

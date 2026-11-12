@@ -128,19 +128,6 @@ void cmd_rec_set_next(void* rec, void* next) { as_rec(rec)->next = next; }
  *  Pool (CmdPoolGrow/CmdAlloc/CmdFree).
  * ------------------------------------------------------------------ */
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-/* Layout control (the frontend.cpp/audio.cpp data_seg precedent): the
- * release loop's bound s_blocks + CMD_POOL_MAX_BLOCKS materializes as an
- * absolute operand Reccmp must resolve through s_free's annotation at
- * 0x4b31f8, so s_free has to own the dword right after the twelve table
- * entries. The default .bss/.data split let s_upgrade_names land there
- * instead, so the trio rides one zero-initialized named segment in
- * declaration order. */
-#pragma data_seg(".data$cmdpool")
-#endif
-#if defined(LEGORRR_BACKEND_WINAPI)
-#pragma data_seg()
-#endif
 /* CmdAlloc writes a self-pointer to retail +0x64; CmdFree replaces it with a
  * freelist link. The host record reuses that dword for other staging, so keep
  * live membership in an index-parallel sidecar instead of inferring it from

@@ -769,7 +769,7 @@ void surface_descriptor_initialize(void* record); /* FUN_0047e710 */
  * drawing types (SurfacePixelWriteFn, SurfacePixelWriterTable,
  * SurfaceRasterContext, SurfacePixelSpan, SurfacePoint) and the undefined
  * surface_render_flags_peek and surface_pixel_writer_peek are no longer
- * used. They stay declared only to hold the declaration count (finding 506)
+ * used. Deviation (scoring only): they stay declared only to hold the declaration count (finding 506)
  * until the #388 relocation splits this header. */
 typedef void (*SurfacePixelWriteFn)(void* context, int x, int y,
                                     uint32_t pixel);

@@ -15,17 +15,9 @@
 #include "keys.h"
 #include "crt/vc5names.h"
 
-/* Key names by scan code, a common symbol. Unnamed codes stay NULL.
- *
- * Deviation (scoring only): the original table has 256 slots, and its
- * walk ends at 005769e0, where Files.c's directory-token table begins.
- * Reccmp names an immediate only when it falls inside an annotated
- * variable, sizing the original's from this definition, so with 256 slots
- * the end bound compares as two unrelated addresses. The spare slot makes
- * both sides read key_names[256]. Nothing reads or writes it; the clear
- * and the walk cover KEY_NAMES_COUNT slots, as in the original. */
+/* Key names by scan code, a common symbol. Unnamed codes stay NULL. */
 // GLOBAL: LEGORR 0x005765e0
-const char* key_names[KEY_NAMES_COUNT + 1];
+const char* key_names[KEY_NAMES_COUNT];
 
 /* Keys_Initialise: clear the table, then name the 101 known scan codes. The
  * literals are pooled, so the link places them in reverse order of first

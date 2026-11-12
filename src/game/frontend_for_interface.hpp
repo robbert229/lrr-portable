@@ -5,12 +5,6 @@
 #ifndef LRR_GAME_FRONTEND_FOR_INTERFACE_HPP
 #define LRR_GAME_FRONTEND_FOR_INTERFACE_HPP
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-#define MENU_ACTION_TABLE_ALLOC __declspec(allocate(".data$zzzzzz"))
-#else
-#define MENU_ACTION_TABLE_ALLOC
-#endif
-
 /* --- the cell-action permission window (see frontend.hpp) ------------------- */
 #define CELL_PERMISSION_ENTRIES 300 /* corpus's 300-dword clear loop */
 

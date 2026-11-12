@@ -28,7 +28,7 @@ static char s_start_level_name[256];
 // GLOBAL: LEGORR 0x0050593c
 static float s_frame_interval_override;
 
-/* Retained to preserve declaration count for matching (finding 506). */
+/* Deviation (scoring only): retained to preserve declaration count for matching (finding 506). */
 static void* winmain_registry_create_key(void* parent, const char* component,
                                          void*)
 {

@@ -3,11 +3,11 @@
     "full": 72.36,
     "game_only": 69.56
   },
-  "baseline_sha256": "ccf4147d1cd4f362862549ef250121ecf8a6ef5b391aea1334220882ede99cc2",
+  "baseline_sha256": "9068092024074fa27eaedd0e8434b40e559567bb89111319e9980d66487af619",
   "exact_function_code_bytes": {
-    "bytes": 108678,
+    "bytes": 108385,
     "original_text_bytes": 642549,
-    "percent": 16.91
+    "percent": 16.87
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 384,
@@ -23,7 +23,7 @@
       "pairs": 1596
     }
   },
-  "input_sha256": "322b357dbd729881d726f93eed03d32a1ee7e33a6fd8a35be39e1b4f082b4790",
+  "input_sha256": "d58b6cc1039cc1f45f51442ab6b734e4350e7b468e952be0efab0e4073f3e00c",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 8,
@@ -4028,18 +4028,18 @@
     ],
     "unmapped_original_functions": 154
   },
-  "listing_digests_sha256": "e31a62d1dccf841e2721b32bc19714ed7ff911a93990006b0502e1d1f9def274",
+  "listing_digests_sha256": "a8a8aac13fb68e1d4158c6ac14e36e3fe24d7eaf3609030848027b96007f8b14",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 1196,
+        "exact": 1194,
         "mapped": 2501,
         "removed": 773,
         "removed_exact": 339
       },
       "game_only": {
-        "exact": 996,
+        "exact": 994,
         "mapped": 2265,
         "removed": 738,
         "removed_exact": 312
@@ -4105,10 +4105,10 @@
     },
     "gate_text_symbols": 7054,
     "image": {
-      "bss_bytes": 3810816,
+      "bss_bytes": 3810768,
       "characteristics": 271,
       "common_dll_order_equal": true,
-      "data_initialised_bytes": 1002797,
+      "data_initialised_bytes": 90124,
       "debug_directory": [
         0,
         0
@@ -4128,10 +4128,10 @@
       "imported_names": 141,
       "section_bytes": {
         ".data": {
-          "differing": 991549,
-          "equal": 11459,
+          "differing": 79169,
+          "equal": 11455,
           "original": 73216,
-          "rebuilt": 1003008
+          "rebuilt": 90624
         },
         ".idata": {
           "differing": 3591,
@@ -4140,22 +4140,22 @@
           "rebuilt": 3854
         },
         ".rdata": {
-          "differing": 22856,
+          "differing": 23160,
           "equal": 1264,
           "original": 11232,
-          "rebuilt": 24120
+          "rebuilt": 24424
         },
         ".text": {
-          "differing": 818112,
-          "equal": 20490,
+          "differing": 818101,
+          "equal": 20501,
           "original": 642549,
           "rebuilt": 838602
         }
       },
       "sections": {
         ".data": {
-          "raw_size": 1003008,
-          "virtual_size": 4813680
+          "raw_size": 90624,
+          "virtual_size": 3900944
         },
         ".idata": {
           "raw_size": 4096,
@@ -4163,7 +4163,7 @@
         },
         ".rdata": {
           "raw_size": 24576,
-          "virtual_size": 24120
+          "virtual_size": 24424
         },
         ".rsrc": {
           "raw_size": 1536,
@@ -4194,7 +4194,7 @@
     },
     "image_size": {
       "original": 3608576,
-      "rebuilt": 5976064
+      "rebuilt": 5066752
     }
   },
   "schema_version": 4,
@@ -4202,10 +4202,10 @@
     ".data": {
       "chance_percent": 10.47,
       "excess_percent_points": 3.42,
-      "identical_bytes": 10173,
-      "identical_percent": 13.89,
+      "identical_bytes": 10174,
+      "identical_percent": 13.9,
       "original_bytes": 73216,
-      "rebuilt_bytes": 1005056,
+      "rebuilt_bytes": 92160,
       "run_chance_percent": 1.76,
       "run_excess_percent_points": 3.17,
       "run_identical_bytes": 3608,
@@ -4213,11 +4213,11 @@
     },
     ".rdata": {
       "chance_percent": 4.12,
-      "excess_percent_points": 7.37,
-      "identical_bytes": 1291,
-      "identical_percent": 11.49,
+      "excess_percent_points": 7.38,
+      "identical_bytes": 1292,
+      "identical_percent": 11.5,
       "original_bytes": 11232,
-      "rebuilt_bytes": 24328,
+      "rebuilt_bytes": 24616,
       "run_chance_percent": 0.0,
       "run_excess_percent_points": 0.36,
       "run_identical_bytes": 40,
@@ -4226,8 +4226,8 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 1.02,
-      "identical_bytes": 24695,
-      "identical_percent": 3.84,
+      "identical_bytes": 24712,
+      "identical_percent": 3.85,
       "original_bytes": 642549,
       "rebuilt_bytes": 1114708,
       "run_chance_percent": 0.0,
@@ -4263,8 +4263,8 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 1.02,
-    "identical_bytes": 24695,
-    "identical_percent": 3.84,
+    "identical_bytes": 24712,
+    "identical_percent": 3.85,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,

@@ -444,7 +444,7 @@ void owned_object_release_hooks_set(OwnedObjectReleaseFn object_release,
     s_owned_release_user = user;
 }
 
-/* Superseded by GAME-026 (terrain_map.c) and uncalled; kept, renamed
+/* Deviation (scoring only): superseded by GAME-026 (terrain_map.c) and uncalled; kept, renamed
  * (finding 556). The port's model of 0x00451c50. The reference chain is represented with
  * host-sized links; ownership bits keep the original two release gates. */
 void owned_object_reference_chain_release_superseded(void* head)

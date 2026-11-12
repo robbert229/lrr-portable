@@ -4,6 +4,11 @@
 This is intentionally a small source-level lint rather than a C++ parser. It
 recognizes function bodies in production C/C++ translation units under ``src``
 and checks for a Reccmp annotation near each definition.
+
+It also rejects named-section storage (``#pragma data_seg``/``bss_seg``/
+``const_seg`` and ``__declspec(allocate(...))``) in every source file, port
+tail included: ADR 0006 decision 5 forbids storage made up for scoring, and
+#448 retired the last of it (finding 580). It is not baselined.
 """
 
 from __future__ import annotations
@@ -28,6 +33,11 @@ LEGORR_ADDRESS_ANNOTATION = re.compile(
     r"0x([0-9a-fA-F]+)(?:\s+SYMBOL)?\s*$"
 )
 PORT_ONLY = re.compile(r"^\s*//\s*PORT-ONLY:(.*)$")
+# Named-section storage: ADR 0006 decision 5, finding 580.
+NAMED_SECTION = re.compile(
+    r"^\s*#\s*pragma\s+(?:data_seg|bss_seg|const_seg)\b|__declspec\s*\(\s*allocate\s*\(",
+    re.MULTILINE,
+)
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z_0-9]*\s*$")
 CONTROL_NAMES = {
     "if",
@@ -41,6 +51,7 @@ CONTROL_NAMES = {
     "static_assert",
 }
 SOURCE_SUFFIXES = {".c", ".cc", ".cpp", ".cxx"}
+NAMED_SECTION_SUFFIXES = SOURCE_SUFFIXES | {".h", ".hh", ".hpp", ".hxx", ".inc"}
 DECLARATOR_SUFFIX = re.compile(
     r"\s*(?:(?:const|volatile|override|final|noexcept|&|&&)\s*)*"
     r"(?:->\s*[A-Za-z_][A-Za-z_0-9:\s*&<>]*)?\s*$"
@@ -453,6 +464,21 @@ def scopes_at_braces(masked: str) -> dict[int, str]:
 LINKAGE_TOKENS = frozenset({"static", "inline", "__inline", "__forceinline"})
 
 
+def named_section_storage(root: Path) -> list[str]:
+    """Locations of named-section storage devices in production sources."""
+    found = []
+    paths = sorted(path for path in (root / "src").rglob("*")
+                   if path.is_file() and path.suffix.lower() in NAMED_SECTION_SUFFIXES)
+    for path in paths:
+        source = path.read_text(encoding="utf-8", errors="replace")
+        masked = mask_comments_and_literals(source)
+        # Directives survive masking except for their string arguments.
+        for match in NAMED_SECTION.finditer(masked):
+            line = masked.count("\n", 0, match.start()) + 1
+            found.append(f"{path.relative_to(root)}:{line}")
+    return found
+
+
 def collect(root: Path, ledger_path: Path | None) -> dict[str, list[str]]:
     violations: dict[str, list[str]] = defaultdict(list)
     tail_paths = {entry.path for entry in link_order.load(root) if entry.kind == "tail"}
@@ -505,6 +531,14 @@ def main() -> int:
     baseline = args.baseline if args.baseline.is_absolute() else root / args.baseline
     ledger = args.ledger if not args.ledger or args.ledger.is_absolute() else root / args.ledger
     try:
+        named = named_section_storage(root)
+        if named:
+            for location in named:
+                print(f"named-section storage: {location}")
+            print("Reccmp annotation lint failed: named-section storage is storage made up "
+                  "for scoring (ADR 0006 decision 5, finding 580); let the data fall where "
+                  "the link puts it", file=sys.stderr)
+            return 1
         violations = collect(root, ledger)
         current = Counter({key: len(locations) for key, locations in violations.items()})
         if baseline.exists():

@@ -156,8 +156,7 @@ typedef struct MenuResourceEntry {
 #endif
 
 /* The corpus menu-volume gain is a standalone .rdata dword (verified
- * 0x49e1e0 = 0.11111111f); the compat band's volume_scale member is now
- * dead space whose bytes the band still carries. */
+ * 0x49e1e0 = 0.11111111f). */
 // GLOBAL: LEGORR 0x0049e1e0
 static const float s_menu_volume_scale = 0.11111111f; /* DAT_0049e1e0 */
 
@@ -425,7 +424,7 @@ __declspec(naked) void menu_wipe_end(void)
 {
     /* Symbolic operands (like menu_wipe_start): __emit-encoded operand
      * dwords carry no relocation, so reccmp resolved them as an OFFSET
-     * into s_reference_menu_data_pad0 and scored the two movs as
+     * into the old .data$zzzzzz pad and scored the two movs as
      * mismatches (measured 50.0%); the symbolic form resolves through
      * the 0x005574f0 annotation as DATA. */
     __asm {

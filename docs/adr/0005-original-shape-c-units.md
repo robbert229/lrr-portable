@@ -72,6 +72,16 @@ and down. The restructuring cannot avoid this. While it lasts:
 3. The symbol-count pads that the pilot left in `crt.hpp` and `frontend.hpp`
    are a pilot-only device. The first PR that refreshes under rule 2 removes
    them. Do not add new ones.
+4. Every change made only to help the score carries the comment phrase
+   `Deviation (scoring only)`, so that `git grep "Deviation (scoring only)"`
+   lists them all. This covers declaration-only deviations (kept superseded
+   declarations, like those in `view.hpp` and `record.hpp`) and anything
+   else that is not the original's. A scoring-only deviation must not change
+   storage: no variable's size, alignment, order or section may differ from
+   the original's (ADR 0006 decision 5). Named-section storage (`#pragma
+   data_seg`, `__declspec(allocate(...))`) is rejected by `make
+   reccmp-lint` (finding 580). Where storage would help a score, use an
+   annotation instead, or accept the lower score.
 
 As units become C with original-shaped headers, the symbol numbering
 converges on the original's, and the drift becomes convergence.
@@ -142,6 +152,8 @@ For each original translation unit, in link order where possible:
    - Run `make reccmp-check` and compare the unit's functions before and
      after.
    - Classify any drop outside the unit under the entropy policy.
+   - Mark every scoring-only deviation `Deviation (scoring only)` (entropy
+     rule 4), and check that none of them changes storage.
    - Run `make match-progress` and commit the refreshed match baseline,
      listing digests and whole-binary progress. It reads the same
      non-incremental build as `make reccmp-check` (ADR 0006 decision 2), so

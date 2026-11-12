@@ -61,20 +61,12 @@
 #include "gods98/string.hpp"
 #include "frontend_for_interface.hpp"
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-#pragma data_seg(".data$zzzzzz")
-/* The first table and the menu globals follow the reference data layout. */
-__declspec(allocate(".data$zzzzzz")) static unsigned char
-    s_menu_action_table_gap[0x3aad0] = { 0 };
-#pragma data_seg()
-#endif
-
 static void advisor_text_display_production_install(void);
 void frontend_status_flash_tick(float delta);
 // The corpus keeps this 74-pointer label table in the runtime-filled band at
 // 0x4dced0 (zero-init at image load), so it takes no // GLOBAL annotation:
 // static initializers against a zero-filled corpus tail break reccmp-datacmp.
-MENU_ACTION_TABLE_ALLOC const char* const s_interface_menu_action_labels[] = {
+const char* const s_interface_menu_action_labels[] = {
     "Interface_MenuItem_BackToDefault",
     "Interface_MenuItem_TeleportMan",
     "Interface_MenuItem_BuildBuilding",
@@ -150,32 +142,18 @@ MENU_ACTION_TABLE_ALLOC const char* const s_interface_menu_action_labels[] = {
     "Interface_MenuItem_ClearSelection",
     "Interface_MenuItem_Build",
 };
-#undef MENU_ACTION_TABLE_ALLOC
-#if defined(LEGORRR_BACKEND_WINAPI)
-#pragma data_seg(".data$zzzzzz")
-__declspec(allocate(".data$zzzzzz")) static unsigned char
-    s_reference_menu_data_pad0[0x79144] = { 0 };
-__declspec(allocate(".data$zzzzzz")) static unsigned char
-    s_menu_global_bytes[0x13c0] = { 0 };
-#pragma data_seg()
-#define s_menu_global_words ((uint32_t*)s_menu_global_bytes)
-#endif
 /* main_menu_text_item (FUN_004103d0) reads these three dwords individually;
- * dedicated annotated statics carry them (whole-object resolution — the
- * s_menu_global_bytes band cannot hold the annotation, same precedent as the
- * s_fe_flow_* carve-outs). Own storage, zero-init like the corpus's tail. */
+ * dedicated annotated statics carry them (whole-object resolution, the same
+ * precedent as the s_fe_flow_* carve-outs). Own storage, zero-init like the
+ * corpus's tail. */
 // GLOBAL: LEGORR 0x0055613c
 extern "C" { void* DAT_0055613c; }
 // GLOBAL: LEGORR 0x00556f50
 extern "C" { void* DAT_00556f50; }
 // GLOBAL: LEGORR 0x00556f54
 extern "C" { void* DAT_00556f54; }
-#if defined(LEGORRR_BACKEND_WINAPI)
-#define s_fe_flow (s_menu_global_words + 0x3b7)
-#endif
 /* The five flow words land as own storage: the corpus addresses them as
- * individual dwords, and Reccmp only resolves whole-object operands (the
- * s_menu_global_bytes band cannot carry the annotation). */
+ * individual dwords, and Reccmp only resolves whole-object operands. */
 #if defined(LEGORRR_BACKEND_WINAPI)
 // GLOBAL: LEGORR 0x0055701c
 int s_fe_flow_quit;
@@ -201,8 +179,7 @@ int s_fe_flow[5];
 #endif
 /* The wipe quad lands as own storage: the corpus addresses each word as
  * an individual dword (objdump-verified 0x5574ec/f0/f4/f8) and Reccmp
- * only resolves whole-object operands (the s_menu_global_bytes band
- * cannot carry the annotation, and its winapi indices were word-shifted). */
+ * only resolves whole-object operands. */
 // GLOBAL: LEGORR 0x005574ec
 uint32_t s_menu_wipe_arm;
 // GLOBAL: LEGORR 0x005574f0
