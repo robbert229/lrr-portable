@@ -475,6 +475,9 @@ void graphics_overlay_word_set(uint32_t handle);    /* port hook */
 uint32_t graphics_overlay_word_peek(void);          /* port hook */
 void indexed_surface_grid_install(uint32_t width, const void* const* entries,
                                   uint32_t entry_count);
+#ifdef __cplusplus
+extern "C"
+#endif
 void indexed_surface_entry_hide_and_record(int x, int y); /* FUN_004634f0 */
 #ifdef __cplusplus
 extern "C"

@@ -698,6 +698,21 @@ int s_object_f_4eabc8;
 /* ---- part 2 state, group 2G: end ---- */
 
 
+/* ---- GAME-021 part 3 (issue #587) state ---- */
+
+/* ---- part 3 state, group 3A (004324d0-00433330): begin ---- */
+
+/* ---- part 3 state, group 3A: end ---- */
+
+/* ---- part 3 state, group 3B (00433380-00434530): begin ---- */
+
+/* ---- part 3 state, group 3B: end ---- */
+
+/* ---- part 3 state, group 3C (00434570-00435aa0): begin ---- */
+
+/* ---- part 3 state, group 3C: end ---- */
+
+
 /* ------------------------------------------------------------------ */
 /* Functions, in original address order.                              */
 /* ------------------------------------------------------------------ */
@@ -1278,8 +1293,8 @@ int lego_game_config_init(void)
                         // STRING: LEGORR 0x004a3914
                         "MouseScrollBorder", 0))) == 0) legoGlobs_MouseScrollBorder = 5;
 
-                    entity_object_names_load(cfgStr);
-                    entity_object_the_names_load(cfgStr);
+                    lego_object_names_load(cfgStr);
+                    lego_object_the_names_load(cfgStr);
 
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3904
@@ -3995,16 +4010,16 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
     show = 0;
     if (flags & 8) {
         if (flags & 0x80000000) {
-            text = terrain_surface_type_name_get(0);
-            sfx = surface_type_configured_value_at_index(0);
+            text = lego_terrain_surface_type_name_get(0);
+            sfx = lego_surface_type_configured_value_at_index(0);
             show = 1;
         } else if (!(flags & 0x200000)) {
-            text = terrain_surface_type_name_get(0xc);
-            sfx = surface_type_configured_value_at_index(0xc);
+            text = lego_terrain_surface_type_name_get(0xc);
+            sfx = lego_surface_type_configured_value_at_index(0xc);
             show = 1;
         } else if (block->flags2 & 0x20) {
-            text = terrain_surface_type_name_get(0xf);
-            sfx = surface_type_configured_value_at_index(0xf);
+            text = lego_terrain_surface_type_name_get(0xf);
+            sfx = lego_surface_type_configured_value_at_index(0xf);
             show = 1;
         } else {
             if (bx >= 0 && by >= 0 && bx < (int)legoGlobs_currLevel->width && by < (int)legoGlobs_currLevel->height)
@@ -4012,41 +4027,41 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
             else
                 valid = 0;
             if (valid || (flags & 0x8000)) {
-                text = terrain_surface_type_name_get(0xe);
-                sfx = surface_type_configured_value_at_index(0xe);
+                text = lego_terrain_surface_type_name_get(0xe);
+                sfx = lego_surface_type_configured_value_at_index(0xe);
                 show = 1;
             } else if (!(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 0x400) &&
                        !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags2 & 4) &&
                        !(flags & 0x100000)) {
                 if (showCavern) {
-                    text = terrain_surface_type_name_get(0x11);
-                    sfx = surface_type_configured_value_at_index(0x11);
+                    text = lego_terrain_surface_type_name_get(0x11);
+                    sfx = lego_surface_type_configured_value_at_index(0x11);
                 } else {
-                    text = terrain_surface_type_name_get(0);
-                    sfx = surface_type_configured_value_at_index(0);
+                    text = lego_terrain_surface_type_name_get(0);
+                    sfx = lego_surface_type_configured_value_at_index(0);
                 }
                 show = 1;
             }
         }
         if (block->f_02 == 9) {
-            text = terrain_surface_type_name_get(block->f_02);
-            sfx = surface_type_configured_value_at_index(block->f_02);
+            text = lego_terrain_surface_type_name_get(block->f_02);
+            sfx = lego_surface_type_configured_value_at_index(block->f_02);
             show = 1;
         } else if (block->f_02 == 6) {
-            text = terrain_surface_type_name_get(block->f_02);
-            sfx = surface_type_configured_value_at_index(block->f_02);
+            text = lego_terrain_surface_type_name_get(block->f_02);
+            sfx = lego_surface_type_configured_value_at_index(block->f_02);
             show = 1;
         }
     } else {
         if (!(flags & 0x10) && (flags & 0x20000)) {
-            text = terrain_surface_type_name_get(0x10);
-            sfx = surface_type_configured_value_at_index(0x10);
+            text = lego_terrain_surface_type_name_get(0x10);
+            sfx = lego_surface_type_configured_value_at_index(0x10);
         } else if (flags & 0x20) {
-            text = terrain_surface_type_name_get(0xd);
-            sfx = surface_type_configured_value_at_index(0xd);
+            text = lego_terrain_surface_type_name_get(0xd);
+            sfx = lego_surface_type_configured_value_at_index(0xd);
         } else {
-            text = terrain_surface_type_name_get(block->f_02);
-            sfx = surface_type_configured_value_at_index(block->f_02);
+            text = lego_terrain_surface_type_name_get(block->f_02);
+            sfx = lego_surface_type_configured_value_at_index(block->f_02);
         }
         show = 1;
     }
@@ -7720,7 +7735,7 @@ int lego_any_object_can_occupy_terrain_cell(int bx, int by)
     units = selection_active_context_record_get((int*)&count);
     if (units != NULL) {
         for (i = 0; i < count; i++) {
-            if (terrain_cell_allows_placement_adapter(units[i], bx, by))
+            if (lego_terrain_cell_allows_placement(units[i], bx, by))
                 return 1;
         }
     }
@@ -8074,3 +8089,2275 @@ void lego_terrain_cell_flags_set_mask20108000(int bx, int by)
 }
 
 /* ---- part 2 functions, group 2G: end ---- */
+
+/* ---- part 3 functions, group 3A (004324d0-00433330): begin ---- */
+
+/* Natively this file builds as C++. Part 3 declares its imports here, not
+ * in the extern "C" headers (finding 538), so it opens its own block. */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Group 3A's imports and declarations sit here, after parts 1 and 2,
+ * not in the shared headers: MSVC's symbol counter (finding 538, rule B)
+ * then stays the same for every function before this point. */
+/* Callees of the block accessors. */
+struct InfoPoint2I;
+void info_remove_block_references(struct InfoPoint2I* blockPos); /* info_unit.c, 004198f0 */
+void selection_mode5_cancel_at_point(const uint32_t coordinate[2]); /* interface_unit.c, 0041cfe0 */
+void aitask_coordinate_callback_dispatch_by_mode(const int* blockPos, int mode); /* aitask.c, 00402b60 */
+float* d3drm_vector_random(float* r);                       /* maths.c, 00479500 */
+int lava_effect_select_and_place(int slot, const float* position,
+                                 const float* rotation);     /* resource.hpp, 0040cce0 */
+int level_coord_pair_within_bounds_target(const unsigned int* dimensions,
+                                          unsigned int cx, unsigned int cy); /* terrain_map.c, 004502c0 */
+float entity_stats_float_at24_indexed(const struct EntitySlot* e, int index); /* entity.hpp, 00469cc0 */
+uint32_t object_type_name_index_find(const char* name);    /* weapon.hpp, 0046f0d0 */
+float entity_indexed_float_lookup_with_minus_one_fallback(int weapon_type,
+                                                          const void* entity_record); /* weapon.hpp, 0046f1d0 */
+
+/* Lego.c's block accessors (004324d0-00433330). Most share the port's name:
+ * the port's declaration already has the original's contract, so the
+ * converted callers (aitask.c, interface_unit.c, legoobject_unit.c,
+ * terrain_cell_objects.c) reach them unchanged. They are compiled for MSVC
+ * x86 only: the level's pointer words are not pointers on 64-bit, so other
+ * targets keep the port models in lego.cpp. 00432950 and 00432a20 get a
+ * lego_ name: the port's functions also take the level. 00432770 and
+ * 00433180 take a LegoObject; the port's callers pass its EntitySlot (0x674
+ * bytes, not the original's 0x40c), which only the matching build reads at
+ * the original's offsets, as the port's own MSVC bodies already did. */
+#define LEGO_3A_BLOCKS (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks))
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+
+// FUNCTION: LEGORR 0x004324d0
+void terrain_cell_secondary_flag_8_set_current(int bx, int by, int on)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    if (on) {
+        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags2 |= 8;
+        return;
+    }
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags2 &= ~8;
+}
+
+// FUNCTION: LEGORR 0x00432520
+uint32_t terrain_cell_secondary_flag_8_current(int bx, int by)
+{
+    return LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags2 & 8;
+}
+
+// FUNCTION: LEGORR 0x00432550
+int always_accept_place_command_cell(void)
+{
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00432560
+void terrain_cell_flag40000000_clear_or_set_current(const int blockPos[2], int on)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    if (on)
+        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x40000000;
+    else
+        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x40000000;
+    lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
+}
+
+/* As the accessors below: MSVC 5 swaps ecx/edx here in every C form tried
+ * (global or local level, both imul operand orders, a block pointer).
+ * The closest C form was:
+ *
+ *   void terrain_cell_secondary_bit0_set_current(const int blockPos[2])
+ *   {
+ *       LEGO_3A_BLOCKS[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags2 |= 1;
+ *   }
+ */
+// FUNCTION: LEGORR 0x004325d0
+__declspec(naked) void terrain_cell_secondary_bit0_set_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 0ch]
+        or dword ptr [eax], 1
+        ret
+    }
+}
+
+// FUNCTION: LEGORR 0x00432600
+int terrain_cell_variant_flag_propagate_current(const int blockPos[2])
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]];
+    uint32_t flags = block->flags1;
+
+    if ((flags & 0x200000) && block->f_02 != 6) {
+        int offsets[5][2];
+        unsigned int i;
+
+        offsets[0][0] = 0;
+        offsets[0][1] = 0;
+        offsets[1][0] = 0;
+        offsets[1][1] = -1;
+        offsets[2][0] = 1;
+        offsets[2][1] = 0;
+        offsets[3][0] = 0;
+        offsets[3][1] = 1;
+        offsets[4][0] = -1;
+        offsets[4][1] = 0;
+        if (flags & 0x80000000) {
+            lava_erosion_pending_cell_add(blockPos, 0);
+            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].f_07 = 0;
+        } else {
+            block->flags1 = flags | 0x20000000;
+        }
+        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x40000000;
+        for (i = 0; i < 5; i++)
+            lego_cell_init_pass(level, blockPos[0] + offsets[i][0], offsets[i][1] + blockPos[1], 0);
+        entity_activity_scene_state_update_retail();
+        return 1;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00432710
+void terrain_cell_flag_80000_clear_or_set_current(const int blockPos[2], int on)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    if (on) {
+        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x80000;
+        return;
+    }
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x80000;
+}
+
+/* Shared in the matching build only: the port's callers in ai.cpp and
+ * legoobject.cpp pass the port's EntitySlot, which this build reads at the
+ * original's offsets (the port's own MSVC body already did). */
+// FUNCTION: LEGORR 0x00432770
+int terrain_cell_walkability_query_current(const struct EntitySlot* liveObj,
+                                           uint32_t bx, uint32_t by,
+                                           int digging, int ignoreFlag400)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+
+    if (!(entity_stats_word_get(liveObj) & 0x20000) || LEGO_FIELD(liveObj, void*, 0x36c) != NULL) {
+        if (digging && !(entity_stats_word_get(liveObj) & 1))
+            return 0;
+        if ((!ignoreFlag400 || !(LEGO_FIELD(liveObj, uint32_t, 0x3e0) & 0x400)) &&
+            (LEGO_FIELD(liveObj, unsigned char, 0x3e8) & 2) &&
+            entity_stats_float_at24_indexed(liveObj, block->f_02) != 0.0f &&
+            bx < level->width - 2 && by < level->height - 2) {
+            if (digging) {
+                if (block->f_00 == 0) {
+                    int offsets[8][2];
+                    unsigned int i;
+
+                    offsets[4][0] = -1;
+                    offsets[4][1] = -1;
+                    offsets[5][0] = 0;
+                    offsets[5][1] = -1;
+                    offsets[6][0] = 0;
+                    offsets[6][1] = 0;
+                    offsets[7][0] = -1;
+                    offsets[7][1] = 0;
+                    offsets[0][0] = 0;
+                    offsets[0][1] = -1;
+                    offsets[1][0] = 1;
+                    offsets[1][1] = 0;
+                    offsets[2][0] = 0;
+                    offsets[2][1] = 1;
+                    offsets[3][0] = -1;
+                    offsets[3][1] = 0;
+                    for (i = 0; i < 4; i++) {
+                        if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+                                [(offsets[i][1] + by) * level->width + bx + offsets[i][0]].f_00 != 0)
+                            break;
+                    }
+                    if (i < 4) {
+                        for (i = 0; i < 4; i++) {
+                            unsigned char type = LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+                                [(offsets[i + 4][1] + by) * level->width + bx + offsets[i + 4][0]].f_02;
+                            if (type != 1 && type != 7)
+                                break;
+                        }
+                        if (i < 4)
+                            return 1;
+                    }
+                }
+            } else {
+                if ((block->flags1 & 0x10) && !(block->flags1 & 0x40) &&
+                    block->f_02 != 1 && block->f_02 != 7 && block->f_02 != 11)
+                    return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+#endif /* _MSC_VER && _M_IX86 */
+
+/* The port's functions take the level as well (and an EntitySlot); its
+ * callers keep them. */
+// FUNCTION: LEGORR 0x00432950
+int lego_entity_move_destination_cell_usable(struct EntitySlot* liveObj, unsigned int bx, unsigned int by)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    if ((LEGO_FIELD(liveObj, uint32_t, 0x3e8) & 0x8000) && bx > 0 && by > 0 &&
+        bx < level->width - 2 && by < level->height - 2) {
+        Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+        uint32_t flags = block->flags1;
+        unsigned char type;
+        if ((flags & 0x10) && !(flags & 0x40) && (type = block->f_02) != 1 && type != 11 && type != 7)
+            return 1;
+    }
+    return 0;
+}
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+
+// FUNCTION: LEGORR 0x004329d0
+int level_cell_flag8_check_target(const void* unused, int bx, int by)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    if (level_coord_pair_within_bounds_target(LEGO_LEVEL_PTR(const unsigned int, level->map), bx, by) &&
+        (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 & 8))
+        return 1;
+    return 0;
+}
+
+#endif /* _MSC_VER && _M_IX86 */
+
+// FUNCTION: LEGORR 0x00432a20
+int lego_terrain_cell_allows_placement(struct EntitySlot* liveObj, unsigned int bx, unsigned int by)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    if ((liveObj == NULL || (LEGO_FIELD(liveObj, unsigned char, 0x3e8) & 4)) && bx > 0 && by > 0 &&
+        bx < level->width - 2 && by < level->height - 2) {
+        Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+        uint32_t flags = block->flags1;
+        unsigned char type;
+        if ((flags & 0x10) && !(flags & 0x20) && (type = block->f_02) != 11 && type != 8 && type != 10)
+            return 1;
+    }
+    return 0;
+}
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+
+// FUNCTION: LEGORR 0x00432aa0
+uint32_t terrain_cell_occupied_or_flag_current(int bx, int by, int checkFlags2)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    if (checkFlags2) {
+        Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx];
+        if (!(block->flags1 & 0x400) && !(block->flags2 & 4))
+            return 0;
+        return 1;
+    }
+    return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 & 0x400;
+}
+
+// FUNCTION: LEGORR 0x00432b00
+uint32_t terrain_cell_flag_800_bounded_current(uint32_t bx, uint32_t by)
+{
+    if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
+        return LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 & 0x800;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00432b50
+uint32_t terrain_cell_flag_8_bounded_current(uint32_t bx, uint32_t by)
+{
+    if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
+        return LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 & 8;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00432b90
+int terrain_cell_type_is_8_or_10_or_11_current(int bx, int by)
+{
+    unsigned char type = LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].f_02;
+    if (type == 8 || type == 10 || type == 11)
+        return 1;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00432bd0
+int terrain_cell_walkable_flag_current(uint32_t bx, uint32_t by)
+{
+    if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1) {
+        uint32_t flags = LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1;
+        if ((flags & 0x10) && !(flags & 8))
+            return 1;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00432c20
+uint32_t terrain_cell_flag_wave_current(int bx, int by)
+{
+    return LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags1 & 0x40000;
+}
+
+// FUNCTION: LEGORR 0x00432c50
+int terrain_cell_speed_class_current(const int blockPos[2])
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    uint32_t flags = LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1;
+    if (flags & 0x200000)
+        return 0;
+    return (flags & 3) + 1;
+}
+
+// FUNCTION: LEGORR 0x00432c90
+int terrain_cell_state_update_current(const int blockPos[2])
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    int result = 1;
+    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]];
+    uint32_t flags = block->flags1;
+    uint32_t stage = flags & 3;
+
+    if (!(flags & 0x200000)) {
+        if (stage == 0) {
+            float wPos[3];
+            float dir[3];
+            block->flags1 = flags | 0x200000;
+            info_remove_block_references((struct InfoPoint2I*)blockPos);
+            selection_mode5_cancel_at_point((const uint32_t*)blockPos);
+            aitask_coordinate_callback_dispatch_by_mode(blockPos, 0);
+            terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
+                                       blockPos[0], blockPos[1], &wPos[0], &wPos[1]);
+            wPos[2] = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wPos[0], wPos[1]);
+            d3drm_vector_random(dir);
+            dir[2] = 0.0f;
+            lava_effect_select_and_place(3, wPos, dir);
+        } else {
+            /* The original stores the stage as a 2-bit field: */
+            block->flags1 = (((stage - 1) ^ flags) & 3) ^ flags;
+            result = 0;
+        }
+        lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
+    }
+    return result;
+}
+
+// FUNCTION: LEGORR 0x00432d90
+uint32_t terrain_cell_flag_20_bounded_current(uint32_t bx, uint32_t by)
+{
+    if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
+        return LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 & 0x20;
+    return 0;
+}
+
+/* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
+ * C form tried: the level read directly or through a local, both imul
+ * operand orders, a block-pointer or block-array local (finding 538,
+ * rule B; the port's lego.cpp had the same body). The original's code is
+ * kept; the closest C form was:
+ *
+ *   uint32_t terrain_cell_flag_reserved_current(const int blockPos[2])
+ *   {
+ *       return LEGO_3A_BLOCKS[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 & 0x8000000;
+ *   }
+ */
+// FUNCTION: LEGORR 0x00432dd0
+__declspec(naked) uint32_t terrain_cell_flag_reserved_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        and eax, 8000000h
+        ret
+    }
+}
+
+// FUNCTION: LEGORR 0x00432e00
+void level_tile_mark_current_target(const int blockPos[2], int on)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    if (on) {
+        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x8000000;
+        return;
+    }
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x8000000;
+}
+
+// FUNCTION: LEGORR 0x00432e60
+uint32_t terrain_cell_mask_c0_current(int bx, int by)
+{
+    if ((LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags1 & 0x40) || (LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags1 & 0x80))
+        return 1;
+    return 0;
+}
+
+/* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
+ * C form tried: the level read directly or through a local, both imul
+ * operand orders, a block-pointer or block-array local (finding 538,
+ * rule B; the port's lego.cpp had the same body). The original's code is
+ * kept; the closest C form was:
+ *
+ *   uint32_t terrain_cell_edge_wall_current(const int blockPos[2])
+ *   {
+ *       Lego_Level* level = legoGlobs_currLevel;
+ *       return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 & 0x4000000;
+ *   }
+ */
+// FUNCTION: LEGORR 0x00432e90
+__declspec(naked) uint32_t terrain_cell_edge_wall_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        and eax, 4000000h
+        ret
+    }
+}
+
+/* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
+ * C form tried: the level read directly or through a local, both imul
+ * operand orders, a block-pointer or block-array local (finding 538,
+ * rule B; the port's lego.cpp had the same body). The original's code is
+ * kept; the closest C form was:
+ *
+ *   int terrain_cell_state_equals_one_current(const int blockPos[2])
+ *   {
+ *       Lego_Level* level = legoGlobs_currLevel;
+ *       return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].f_02 == 1;
+ *   }
+ */
+// FUNCTION: LEGORR 0x00432ec0
+__declspec(naked) int terrain_cell_state_equals_one_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push ebx
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        xor edx, edx
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov bl, byte ptr [ecx + eax*8 + 2]
+        cmp bl, 1
+        pop ebx
+        sete dl
+        mov eax, edx
+        ret
+    }
+}
+
+// FUNCTION: LEGORR 0x00432f00
+int terrain_cell_state_equals_six_current(const int blockPos[2])
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[blockPos[1] * level->width + blockPos[0]].f_02 == 6;
+}
+
+// FUNCTION: LEGORR 0x00432f40
+int terrain_cell_mask18_clear_current(uint32_t bx, uint32_t by)
+{
+    if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
+        return !(LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 & 0x18);
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00432f90
+uint32_t level_cell_flag_4_current(uint32_t bx, uint32_t by)
+{
+    if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
+        return LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 & 4;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00432fd0
+uint32_t terrain_cell_flag_2000_current(int bx, int by)
+{
+    return LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags1 & 0x2000;
+}
+
+// FUNCTION: LEGORR 0x00433000
+uint32_t terrain_cell_flag_80_current(int bx, int by)
+{
+    return LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].flags1 & 0x80;
+}
+
+// FUNCTION: LEGORR 0x00433030
+uint32_t terrain_cell_flag_8000_current(const int blockPos[2])
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 & 0x8000;
+}
+
+/* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
+ * C form tried: the level read directly or through a local, both imul
+ * operand orders, a block-pointer or block-array local (finding 538,
+ * rule B; the port's lego.cpp had the same body). The original's code is
+ * kept; the closest C form was:
+ *
+ *   uint32_t terrain_cell_secondary_bit0_current(const int blockPos[2])
+ *   {
+ *       Lego_Level* level = legoGlobs_currLevel;
+ *       return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags2 & 1;
+ *   }
+ */
+// FUNCTION: LEGORR 0x00433060
+__declspec(naked) uint32_t terrain_cell_secondary_bit0_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 0ch]
+        and eax, 1
+        ret
+    }
+}
+
+/* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
+ * C form tried: the level read directly or through a local, both imul
+ * operand orders, a block-pointer or block-array local (finding 538,
+ * rule B; the port's lego.cpp had the same body). The original's code is
+ * kept; the closest C form was:
+ *
+ *   uint32_t level_cell_occupied_at_current(const int blockPos[2])
+ *   {
+ *       Lego_Level* level = legoGlobs_currLevel;
+ *       int bx = blockPos[0];
+ *       int by;
+ *       if (bx >= 0 && (by = blockPos[1]) >= 0 &&
+ *           bx < (int)level->width && by < (int)level->height)
+ *           return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 & 0x20000000;
+ *       return 0;
+ *   }
+ */
+// FUNCTION: LEGORR 0x00433090
+__declspec(naked) uint32_t level_cell_occupied_at_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov edx, dword ptr [g_active_level_retail]
+        push esi
+        mov ecx, dword ptr [eax]
+        test ecx, ecx
+        jl level_cell_occupied_at_failed
+        mov esi, dword ptr [eax + 4]
+        test esi, esi
+        jl level_cell_occupied_at_failed
+        mov eax, dword ptr [edx + 14h]
+        cmp ecx, eax
+        jge level_cell_occupied_at_failed
+        cmp esi, dword ptr [edx + 18h]
+        jge level_cell_occupied_at_failed
+        imul eax, esi
+        add eax, ecx
+        mov ecx, dword ptr [edx + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        and eax, 20000000h
+        pop esi
+        ret
+    level_cell_occupied_at_failed:
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+
+/* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
+ * C form tried: the level read directly or through a local, both imul
+ * operand orders, a block-pointer or block-array local (finding 538,
+ * rule B; the port's lego.cpp had the same body). The original's code is
+ * kept; the closest C form was:
+ *
+ *   int terrain_cell_mask_180000_current(const int blockPos[2])
+ *   {
+ *       Lego_Level* level = legoGlobs_currLevel;
+ *       if (!(LEGO_LEVEL_PTR(Lego_Block, level->blocks)[blockPos[1] * level->width + blockPos[0]].flags1 & 0x180000))
+ *           return 0;
+ *       (no value when set, as in the original)
+ *   }
+ */
+// FUNCTION: LEGORR 0x004330e0
+__declspec(naked) int terrain_cell_mask_180000_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        test dword ptr [ecx + eax*8 + 8], 180000h
+        jne terrain_cell_mask_180000_true
+        xor eax, eax
+    terrain_cell_mask_180000_true:
+        pop esi
+        ret
+    }
+}
+
+/* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
+ * C form tried: the level read directly or through a local, both imul
+ * operand orders, a block-pointer or block-array local (finding 538,
+ * rule B; the port's lego.cpp had the same body). The original's code is
+ * kept; the closest C form was:
+ *
+ *   void terrain_cell_flag_10000000_set_current(const int blockPos[2], int on)
+ *   {
+ *       Lego_Level* level = legoGlobs_currLevel;
+ *       if (on) {
+ *           LEGO_LEVEL_PTR(Lego_Block, level->blocks)[blockPos[1] * level->width + blockPos[0]].flags1 |= 0x10000000;
+ *           return;
+ *       }
+ *       LEGO_LEVEL_PTR(Lego_Block, level->blocks)[blockPos[1] * level->width + blockPos[0]].flags1 &= ~0x10000000;
+ *   }
+ */
+// FUNCTION: LEGORR 0x00433120
+__declspec(naked) void terrain_cell_flag_10000000_set_current(
+    const int cell_xy[2], int set)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        test eax, eax
+        mov eax, dword ptr [edx + 4]
+        je terrain_cell_flag_10000000_clear
+        imul eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 8]
+        or dword ptr [eax], 10000000h
+        pop esi
+        ret
+    terrain_cell_flag_10000000_clear:
+        imul eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        add eax, esi
+        pop esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 0efffffffh
+        mov dword ptr [eax], ecx
+        ret
+        nop
+        nop
+        nop
+        nop
+    }
+}
+
+/* Shared in the matching build only, as 00432770. */
+// FUNCTION: LEGORR 0x00433180
+int entity_cell_type_speed_multiplier_resolve_current(const struct EntitySlot* liveObj, int bx, int by,
+                                                      float speed, float* outSpeed)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    int type = LEGO_FIELD(liveObj, int, 0);
+
+    if (type != 6 && type != 7 && type != 5 && type != 8 && type != 11 && type != 13 &&
+        type != 14 && type != 15 && type != 16 && type != 17 && type != 18 && type != 19) {
+        Lego_Block* block;
+        if (LEGO_FIELD(liveObj, void*, 0x36c) != NULL && !(entity_stats_word_get(liveObj) & 0x20000))
+            return 0;
+        block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+        if (block->f_02 == 6 && !(block->flags1 & 0x200) && !(entity_state_flags_get(liveObj) & 0x200000)) {
+            if (outSpeed != NULL)
+                *outSpeed = speed;
+            return 1;
+        }
+        if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].flags1 & 0x1000) {
+            if (outSpeed != NULL)
+                *outSpeed = entity_indexed_float_lookup_with_minus_one_fallback(
+                                (int)object_type_name_index_find(
+                                    // STRING: LEGORR 0x004a471c
+                                    "RockFallIn"),
+                                liveObj) * speed;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004332c0
+uint32_t terrain_cell_record_byte3_current(int bx, int by)
+{
+    return LEGO_3A_BLOCKS[legoGlobs_currLevel->width * by + bx].f_03;
+}
+
+// FUNCTION: LEGORR 0x004332f0
+void terrain_cell_work_flag_set_current(uint32_t bx, uint32_t by)
+{
+    if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
+        LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].flags1 |= 4;
+}
+
+// FUNCTION: LEGORR 0x00433330
+int terrain_cell_type_get_at_current(uint32_t bx, uint32_t by, uint32_t* outType)
+{
+    if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1) {
+        *outType = LEGO_3A_BLOCKS[by * legoGlobs_currLevel->width + bx].f_02;
+        return 1;
+    }
+    return 0;
+}
+
+#endif /* _MSC_VER && _M_IX86 */
+
+
+/* ---- part 3 functions, group 3A: end ---- */
+
+/* ---- part 3 functions, group 3B (00433380-00434530): begin ---- */
+
+/* Group 3B's state, declarations and imports sit here, before its
+ * functions and after every earlier one, so MSVC's symbol counter
+ * (finding 538, rule B) does not move for parts 1, 2 and earlier groups. */
+/* legoGlobs.quality: the render quality Lego_LoadGraphicsSettings reads
+ * (0 wireframe, 2 flat, 3 gouraud). */
+// GLOBAL: LEGORR 0x005560d0
+int legoGlobs_quality;
+
+/* legoGlobs.quality (005560d0), stand-in (lego_unit.c). */
+extern int legoGlobs_quality;                   /* 005560d0 */
+
+/* Lego_LoadGraphicsSettings's projected-cell list (00433e80): the block
+ * and its distance and projected area, sorted by area (00434450). */
+typedef struct LegoProjectedCell3B {
+    float x, y;
+    float dist;
+    float area;
+} LegoProjectedCell3B;
+typedef struct LegoPoint2U3B {
+    unsigned int x, y;
+} LegoPoint2U3B;
+
+/* Shared (the port's entries keep the name; see lego.cpp):
+ * terrain_cell_mutation_progress (00433380, MSVC x86 only),
+ * level_map_dimensions_get (004334c0) and
+ * terrain_grid_entry_resources_release_all_current (00434530, MSVC x86
+ * only) are declared in lego_unit_imports.h. */
+int lego_render_quality_config_apply(void);                          /* 004334f0 */
+int lego_scene_lights_build_from_config(void);                       /* 00433770 */
+void lego_current_level_terrain_grid_pick(float x, float y, int* bx,
+                                          int* by);                  /* 00433be0 */
+int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
+                                                 float elapsed,
+                                                 int force);         /* 00433c10 */
+int lego_grid_cell_entity_eligibility_check(int bx, int by);         /* 00433e30 */
+void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
+                                               float maxDist,
+                                               unsigned int maxCount); /* 00433e80 */
+int lego_projected_cell_area_compare(const void* a, const void* b);  /* 00434450 */
+int lego_terrain_cell_surface_update_dispatch_level(Lego_Level* level,
+                                                    int bx, int by,
+                                                    float scale,
+                                                    float uniformScale); /* 00434480 */
+
+struct TerrainMap;
+struct TerrainMapVector3;
+struct EntitySlot;
+struct SceneCellVisualRelayRecord;
+/* GAME-026 Map3D.c (terrain_map.h). */
+int terrain_map_block_vertices_get(struct TerrainMap* map, unsigned int bx,
+                                   unsigned int by,
+                                   struct TerrainMapVector3* positions); /* 004500d0 */
+int terrain_map_block_hidden_get(struct TerrainMap* map, int bx, int by); /* 0044e860 */
+void terrain_map_visible_add(struct TerrainMap* map, int bx, int by);     /* 00450730 */
+/* G98 Container.c (view.hpp, container_unit.cpp): the light's colour and
+ * the spot/range values are float bit patterns in the port's contract. */
+void* ddiscene_light_create(void* owner, uint32_t value_a, uint32_t value_b,
+                            uint32_t value_c, uint32_t value_d);  /* 004734f0 */
+int light_interface_call_slot_38(void* record, uint32_t value);   /* 004734a0 */
+int light_interface_call_slot_3c(void* record, uint32_t value);   /* 00473480 */
+int light_interface_call_slot_40(void* record, uint32_t value);   /* 00473460 */
+void* scene_root_object_get(void);                                /* 00472940 */
+/* LightEffects.c (effects.hpp). */
+void scene_transform_state_initialize(void* target, void* owner,
+                                      float x, float y, float z); /* 0044c710 */
+/* LegoObject.c (entity.hpp; aitask_port.cpp's adapter for 00449700). */
+int entity_flags_mask107c33de_or_1c00203_any_test(const struct EntitySlot* e); /* 0043baf0 */
+int aitask_route_step_adapter(struct EntitySlot* object);         /* 00449700 */
+/* Roof.c (record.hpp): 004634f0. */
+void indexed_surface_entry_hide_and_record(int x, int y);         /* 004634f0 */
+/* Detail.c (tile_variants.cpp, view.hpp). */
+void scene_cell_visual_channels_apply(struct SceneCellVisualRelayRecord* record,
+                                      const float corner_points[12],
+                                      uint32_t lookup_selector,
+                                      uint32_t corner_index, float scale,
+                                      float uniform_scale);       /* 0040b880 */
+/* No port entry with the original's contract: adapters at the end of
+ * lego.cpp (group 3B). */
+void lego_roof_block_vertices_set_adapter(unsigned int bx, unsigned int by,
+                                          struct TerrainMapVector3* v0,
+                                          struct TerrainMapVector3* v1,
+                                          struct TerrainMapVector3* v2,
+                                          struct TerrainMapVector3* v3); /* 00462f20 */
+void lego_main_setup3d_adapter(int quality, int dither, int filter,
+                               int mipmap, int linearMipMap, int blend,
+                               int sort);                         /* 00478330 */
+void* lego_container_create_adapter(void* parent);                /* 00472950 */
+float lego_viewport_field_get_adapter(void* view);                /* 00477270 */
+void lego_viewport_size_get_adapter(void* view, unsigned int* width,
+                                    unsigned int* height);        /* 00476f10 */
+float lego_projected_quad_area_adapter(struct TerrainMapVector3* vertices,
+                                       void* view,
+                                       const float screen[2],
+                                       int noClip);               /* 0040b470 */
+int lego_entity_random_cell_step_route_adapter(struct EntitySlot* object); /* 00444260 */
+/* 0040b810's port entry takes the ledger namespace's channel table. */
+void lego_detail_mesh_resources_clear_adapter(void* mesh);        /* 0040b810 */
+
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+
+/* Lego_UpdateBlockRoof [group 3B]: lowers the roof quad over a wall block
+ * (all four corners), or over a reinforced/pre-dug edge block (the corners
+ * whose block is pre-dug), by the dig depth plus the roof height, and hands
+ * the quad to the roof. Shared under MSVC x86: the port's model in lego.cpp
+ * keeps the native path. */
+// FUNCTION: LEGORR 0x00433380
+void terrain_cell_mutation_progress(struct LevelState* levelState,
+                                    uint32_t bx, uint32_t by)
+{
+    Lego_Level* level = (Lego_Level*)levelState;
+    struct TerrainMap* map = LEGO_LEVEL_PTR(struct TerrainMap, level->map);
+    LegoVector3FC vertPos[4];
+
+    if (bx < level->width - 1 && by < level->height - 1) {
+        Lego_Block* block;
+
+        terrain_map_block_vertices_get(map, bx, by, (struct TerrainMapVector3*)vertPos);
+        block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+        if (block->flags1 & 0x8) {
+            float drop = level->digDepth + level->roofHeight;
+            vertPos[0].z -= drop;
+            vertPos[1].z -= drop;
+            vertPos[2].z -= drop;
+            vertPos[3].z -= drop;
+        } else if (block->flags1 & 0x10) {
+            if (block->f_00 == 1)
+                vertPos[0].z -= level->digDepth + level->roofHeight;
+            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx + 1].f_00 == 1)
+                vertPos[1].z -= level->digDepth + level->roofHeight;
+            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by + 1) * level->width + bx + 1].f_00 == 1)
+                vertPos[2].z -= level->digDepth + level->roofHeight;
+            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by + 1) * level->width + bx].f_00 == 1)
+                vertPos[3].z -= level->digDepth + level->roofHeight;
+        } else {
+            return;
+        }
+        lego_roof_block_vertices_set_adapter(bx, by,
+                                             (struct TerrainMapVector3*)&vertPos[0],
+                                             (struct TerrainMapVector3*)&vertPos[1],
+                                             (struct TerrainMapVector3*)&vertPos[2],
+                                             (struct TerrainMapVector3*)&vertPos[3]);
+    }
+}
+
+#endif /* _MSC_VER && _M_IX86 */
+
+/* Lego_GetMapFileDimensions [group 3B]: the map file's header dimensions.
+ * Shared: the port's definition in lego.cpp is gone. */
+// FUNCTION: LEGORR 0x004334c0
+void level_map_dimensions_get(uint32_t slot, uint32_t* width,
+                              uint32_t* height)
+{
+    uint8_t* image = level_map_slot_get(slot);
+    image += 0x08;
+    *width = *(uint32_t*)image;
+    *height = *(uint32_t*)(image + 4);
+}
+
+/* Lego_LoadGraphicsSettings [group 3B]. */
+// FUNCTION: LEGORR 0x004334f0
+int lego_render_quality_config_apply(void)
+{
+    const char* str;
+    int quality;
+    int dither, filter, blend, sort, mipmap, linearMipMap;
+
+    if (0.0f != (legoGlobs_FPClipBlocks = (float)atof(LEGO_A_CFG_STR(legoGlobs_config,
+            string_path_join(s_engine_config_root, "Main",
+                // STRING: LEGORR 0x004a4784
+                "fpclipblocks", 0))))) {
+        str = block_get_strptr(legoGlobs_config,
+            string_path_join(s_engine_config_root, "Main",
+                // STRING: LEGORR 0x004a477c
+                "quality", 0));
+        if (str != NULL) {
+            // STRING: LEGORR 0x004a4774
+            if (_strcmpi("gouraud", str) == 0) quality = 3;
+            // STRING: LEGORR 0x004a476c
+            else if (_strcmpi("flat", str) == 0) quality = 2;
+            // STRING: LEGORR 0x004a4760
+            else if (_strcmpi("wireframe", str) == 0) quality = 0;
+            else return 0;
+            legoGlobs_quality = quality;
+
+            dither = block_get_bool_path(legoGlobs_config,
+                string_path_join(s_engine_config_root, "Main",
+                    // STRING: LEGORR 0x004a4758
+                    "dither", 0));
+            filter = block_get_bool_path(legoGlobs_config,
+                string_path_join(s_engine_config_root, "Main",
+                    // STRING: LEGORR 0x004a4750
+                    "filter", 0));
+            blend = block_get_bool_path(legoGlobs_config,
+                string_path_join(s_engine_config_root, "Main",
+                    // STRING: LEGORR 0x004a4748
+                    "blend", 0));
+            sort = block_get_bool_path(legoGlobs_config,
+                string_path_join(s_engine_config_root, "Main",
+                    // STRING: LEGORR 0x004a4740
+                    "sort", 0));
+            mipmap = block_get_bool_path(legoGlobs_config,
+                string_path_join(s_engine_config_root, "Main",
+                    // STRING: LEGORR 0x004a4738
+                    "mipmap", 0));
+            linearMipMap = block_get_bool_path(legoGlobs_config,
+                string_path_join(s_engine_config_root, "Main",
+                    // STRING: LEGORR 0x004a4728
+                    "linearmipmap", 0));
+            lego_main_setup3d_adapter(quality, dither == 1, filter == 1,
+                                      mipmap == 1, linearMipMap == 1,
+                                      blend == 1, sort == 1);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Lego_LoadLighting [group 3B]. The port's Container entries take the
+ * light colour and the spot values as float bit patterns. */
+// FUNCTION: LEGORR 0x00433770
+int lego_scene_lights_build_from_config(void)
+{
+    float r, g, b;
+
+    if (!config_rgb_vector_read(legoGlobs_config,
+            string_path_join(s_engine_config_root, "Main",
+                // STRING: LEGORR 0x004a47cc
+                "topspotrgb", 0),
+            &r, &g, &b)) return 0;
+    if ((legoGlobs_spotlightTop = ddiscene_light_create(
+             LEGO_FIELD(s_zoom_step_context, void*, 0x2c), 2,
+             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == NULL) return 0;
+    light_interface_call_slot_40(legoGlobs_spotlightTop, 0x3f59999a); /* 0.85f */
+    light_interface_call_slot_3c(legoGlobs_spotlightTop, 0x3ecccccd); /* 0.4f */
+    ddiscene_object_position_set(legoGlobs_spotlightTop,
+                                 LEGO_FIELD(s_zoom_step_context, void*, 0x2c),
+                                 200.0f, 140.0f, -130.0f);
+    ddiscene_object_pose_method_dispatch(legoGlobs_spotlightTop,
+                                         LEGO_FIELD(s_zoom_step_context, void*, 0x2c),
+                                         -1.0f, -0.8f, 0.75f, 0.0f, 1.0f, 0.0f);
+
+    if (!config_rgb_vector_read(legoGlobs_config,
+            string_path_join(s_engine_config_root, "Main",
+                // STRING: LEGORR 0x004a47bc
+                "trackspotrgb", 0),
+            &r, &g, &b)) return 0;
+    if ((legoGlobs_spotlightTrack = ddiscene_light_create(
+             LEGO_FIELD(legoGlobs_cameraTrack, void*, 0x28), 2,
+             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == NULL) return 0;
+    ddiscene_object_position_set(legoGlobs_spotlightTrack, NULL,
+                                 0.0f, 0.0f, -150.0f);
+    ddiscene_object_pose_method_dispatch(legoGlobs_spotlightTrack, NULL,
+                                         0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f);
+
+    if (!config_rgb_vector_read(legoGlobs_config,
+            string_path_join(s_engine_config_root, "Main",
+                // STRING: LEGORR 0x004a47b0
+                "ambientrgb", 0),
+            &r, &g, &b)) return 0;
+    if ((legoGlobs_ambientLight = ddiscene_light_create(legoGlobs_rootCont, 0,
+             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == NULL) return 0;
+
+    if (!config_rgb_vector_read(legoGlobs_config,
+            string_path_join(s_engine_config_root, "Main",
+                // STRING: LEGORR 0x004a47a4
+                "fplightrgb", 0),
+            &r, &g, &b)) return 0;
+    if ((legoGlobs_f_5560f8 = (uint32_t)(uintptr_t)ddiscene_light_create(
+             LEGO_FIELD(legoGlobs_cameraFP, void*, 0x24), 1,
+             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == 0) return 0;
+
+    if (config_rgb_vector_read(legoGlobs_config,
+            string_path_join(s_engine_config_root, "Main",
+                // STRING: LEGORR 0x004a4794
+                "fprotlightrgb", 0),
+            &r, &g, &b)) {
+        legoGlobs_dirLightFP = ddiscene_light_create(
+            LEGO_FIELD(legoGlobs_cameraFP, void*, 0x24), 3,
+            *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b);
+    } else {
+        legoGlobs_dirLightFP = NULL;
+    }
+
+    if ((legoGlobs_dirLightCallToArms = ddiscene_light_create(
+             LEGO_FIELD(legoGlobs_cameraFP, void*, 0x24), 3,
+             0x3f800000, 0, 0)) == NULL) return 0; /* 1, 0, 0 */
+
+    legoGlobs_f_556108 = lego_container_create_adapter(scene_root_object_get());
+    if ((legoGlobs_f_556104 = (uint32_t)(uintptr_t)ddiscene_light_create(
+             legoGlobs_f_556108, 2,
+             0x3f800000, 0x3f800000, 0x3f800000)) == 0) return 0; /* 1, 1, 1 */
+    scene_transform_state_initialize((void*)(uintptr_t)legoGlobs_f_556104,
+                                     legoGlobs_f_556108, 0.8f, 0.8f, 0.8f);
+    ddiscene_object_pose_method_dispatch((void*)(uintptr_t)legoGlobs_f_556104, NULL,
+                                         0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f);
+    light_interface_call_slot_40((void*)(uintptr_t)legoGlobs_f_556104, 0x3f59999a); /* 0.85f */
+    light_interface_call_slot_3c((void*)(uintptr_t)legoGlobs_f_556104, 0);
+
+    scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_5560f8, 1);
+    if (legoGlobs_dirLightFP != NULL) scene_render_lock_toggle(legoGlobs_dirLightFP, 1);
+    scene_render_lock_toggle(legoGlobs_spotlightTop, 1);
+    scene_render_lock_toggle(legoGlobs_spotlightTrack, 1);
+    scene_render_lock_toggle(legoGlobs_ambientLight, 1);
+    scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_556104, 1);
+    scene_render_lock_toggle(legoGlobs_dirLightCallToArms, 1);
+
+    light_interface_call_slot_38(legoGlobs_spotlightTop, 0x44fa0000); /* 2000.0f */
+    light_interface_call_slot_38(legoGlobs_spotlightTrack, 0x44fa0000);
+    light_interface_call_slot_38((void*)(uintptr_t)legoGlobs_f_556104, 0x44fa0000);
+    return 1;
+}
+
+/* Lego_GetBlockXYFromWorldPos? [group 3B]: the current level's
+ * Map3D_WorldToBlockPos. */
+// FUNCTION: LEGORR 0x00433be0
+void lego_current_level_terrain_grid_pick(float x, float y, int* bx, int* by)
+{
+    terrain_map_world_to_block(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+                               x, y, bx, by);
+}
+
+/* 00432bd0's test, which the original inlines here. A macro, not a static
+ * helper: the lint takes every unannotated definition for port code. */
+#define LEGO_3B_BLOCK_OPEN(x, y) \
+    ((unsigned int)(x) < legoGlobs_currLevel->width - 1 && \
+     (unsigned int)(y) < legoGlobs_currLevel->height - 1 && \
+     (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[(unsigned int)(y) * legoGlobs_currLevel->width + (unsigned int)(x)].flags1 & 0x10) && \
+     !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[(unsigned int)(y) * legoGlobs_currLevel->width + (unsigned int)(x)].flags1 & 0x8))
+
+/* [group 3B] Slug/object scare step: at a random interval (the elapsed
+ * time against 300, or against the object's stats value +0x140), an
+ * object next to a fresh rubble-free reinforced/cleared block takes a route
+ * step, or a random neighbouring step. */
+// FUNCTION: LEGORR 0x00433c10
+int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
+                                                 float elapsed, int force)
+{
+    int by;
+    int bx;
+    int offsets[4][2];
+    unsigned int i;
+    float rate;
+    float maxRate;
+
+    offsets[0][0] = -1; offsets[0][1] = 0;
+    offsets[1][0] = 1;  offsets[1][1] = 0;
+    offsets[2][0] = 0;  offsets[2][1] = -1;
+    offsets[3][0] = 0;  offsets[3][1] = 1;
+
+    if ((entity_stats_word_get(object) & 0x1000) &&
+        !(LEGO_FIELD(object, uint32_t, 0x3e0) & 1) &&
+        !entity_flags_mask107c33de_or_1c00203_any_test(object) &&
+        elapsed != 0.0f) {
+        rate = elapsed;
+        if (elapsed > 300.0f) rate = 300.0f;
+        if ((unsigned int)(int)rng_thunk_draw15() % (unsigned int)(300.0f / rate) == 0) {
+            entity_block_pos_get_adapter(object, &bx, &by);
+            for (i = 0; i < 4; i++) {
+                unsigned int x = bx + offsets[i][0];
+                unsigned int y = by + offsets[i][1];
+                if (LEGO_3B_BLOCK_OPEN(x, y)) {
+                    LEGO_FIELD(object, float, 0x340) = -1.0f;
+                    aitask_route_step_adapter(object);
+                    return 1;
+                }
+            }
+        }
+    }
+
+    if ((force || (entity_stats_word_get(object) & 0x400)) &&
+        !(LEGO_FIELD(object, uint32_t, 0x3e0) & 1) &&
+        !entity_flags_mask107c33de_or_1c00203_any_test(object) &&
+        elapsed != 0.0f) {
+        maxRate = LEGO_FIELD(LEGO_FIELD(object, void*, 0x334), float, 0x140);
+        rate = elapsed;
+        if (elapsed > maxRate) rate = maxRate;
+        if (force || (unsigned int)(int)rng_thunk_draw15() % (unsigned int)(maxRate / rate) == 0) {
+            lego_entity_random_cell_step_route_adapter(object);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* [group 3B] A block an object may be placed on: not flagged 0x100 and
+ * visible on the map. */
+// FUNCTION: LEGORR 0x00433e30
+int lego_grid_cell_entity_eligibility_check(int bx, int by)
+{
+    if (!(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+              [legoGlobs_currLevel->width * by + bx].flags1 & 0x100) &&
+        terrain_map_block_hidden_get((struct TerrainMap*)level_current_terrain_get_original(),
+                                     bx, by)) {
+        return 1;
+    }
+    return 0;
+}
+
+/* [group 3B] The first-person high-poly blocks: every surface block within
+ * maxDist of the camera and inside its view cone is projected to the
+ * screen. Blocks with no area are hidden; the rest, largest first, get
+ * high-poly detail (up to maxCount within two thirds of maxDist) or go
+ * back to the map's low-poly mesh. */
+// FUNCTION: LEGORR 0x00433e80
+void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
+                                               float maxDist,
+                                               unsigned int maxCount)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    struct TerrainMap* map = LEGO_LEVEL_PTR(struct TerrainMap, level->map);
+    unsigned int visibleCount = 0;
+    float blockSize = terrain_context_scale_get(map);
+    int radius = (int)(maxDist / blockSize);
+    unsigned int hiddenCount = 0;
+    LegoVector3FC camPos;
+    LegoVector3FC camDir;
+    LegoVector3FC wPos;
+    LegoVector3FC diff;
+    LegoVector3FC vertPos[4];
+    int camX, camY;
+    int startX, startY, endX, endY;
+    unsigned int x, y;
+    float screen[2];
+    float cosFov;
+    float dist;
+    unsigned int i;
+    unsigned int highCount;
+    LegoPoint2U3B hidden[300];
+    LegoProjectedCell3B visible[300];
+
+    ddiscene_object_position_get(cont, NULL, &camPos.x);
+    terrain_map_world_to_block(map, camPos.x, camPos.y, &camX, &camY);
+    ddiscene_object_facing_pair_get(cont, NULL, &camDir.x, NULL);
+    cosFov = (float)cos(lego_viewport_field_get_adapter(legoGlobs_viewMain) * 1.4f);
+    lego_viewport_size_get_adapter(legoGlobs_viewMain, &x, &y);
+    screen[0] = (float)x;
+    screen[1] = (float)y;
+
+    startX = camX - radius;
+    startY = camY - radius;
+    endX = camX + radius;
+    endY = camY + radius;
+    if (startX < 0) startX = 0;
+    if (startY < 0) startY = 0;
+    if (endX < 0) endX = 0;
+    if (endY < 0) endY = 0;
+    if (endX >= (int)level->width) endX = level->width - 1;
+    if (endY >= (int)level->height) endY = level->height - 1;
+
+    for (y = startY; y < (unsigned int)endY; y++) {
+        for (x = startX; x < (unsigned int)endX; x++) {
+            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x18) {
+                terrain_map_block_to_world(map, x, y, &wPos.x, &wPos.y);
+                wPos.z = terrain_map_world_z_get(map, wPos.x, wPos.y);
+                diff.x = wPos.x - camPos.x;
+                diff.y = wPos.y - camPos.y;
+                diff.z = wPos.z - camPos.z;
+                dist = (float)sqrt(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
+                if (dist < maxDist) {
+                    float inv = 1.0f / dist;
+                    float dot = inv * diff.x * camDir.x + inv * diff.y * camDir.y +
+                                inv * diff.z * camDir.z;
+                    int noClip;
+                    if (dist < (dot + 2.0f) * blockSize) {
+                        dot = cosFov + 1.0f;
+                        noClip = 1;
+                    } else {
+                        noClip = 0;
+                    }
+                    if (dot > cosFov) {
+                        terrain_map_block_vertices_get(map, x, y,
+                                                       (struct TerrainMapVector3*)vertPos);
+                        visible[visibleCount].x = (float)x;
+                        visible[visibleCount].y = (float)y;
+                        visible[visibleCount].dist = dist;
+                        if ((visible[visibleCount].area = lego_projected_quad_area_adapter(
+                                 (struct TerrainMapVector3*)vertPos, view, screen,
+                                 noClip)) > 0.0f) {
+                            visibleCount++;
+                        } else {
+                            hidden[hiddenCount].x = x;
+                            hidden[hiddenCount].y = y;
+                            hiddenCount++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    qsort(visible, visibleCount, sizeof(LegoProjectedCell3B),
+          lego_projected_cell_area_compare);
+
+    maxDist *= 0.6666667f;
+    highCount = 0;
+    for (i = 0; i < visibleCount; i++) {
+        x = (int)visible[i].x;
+        y = (int)visible[i].y;
+        if (highCount < maxCount && visible[i].dist < maxDist) {
+            float scale = 1.0f - visible[i].dist / maxDist;
+            float uniform = scale * 0.7f + 0.3f;
+            if ((legoGlobs_flags1 & 0x20) &&
+                lego_terrain_cell_surface_update_dispatch_level(level, x, y, scale, uniform)) {
+                LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 |= 0x100;
+                indexed_surface_entry_hide_and_record(x, y);
+                highCount++;
+            } else {
+                terrain_map_visible_add(map, x, y);
+                indexed_surface_entry_hide_and_record(x, y);
+                if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x4000) {
+                    transient_effect_enable_set((void*)(uintptr_t)
+                        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10[3], 0);
+                }
+                LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 &= ~0x100;
+            }
+        } else {
+            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 &= ~0x100;
+            terrain_map_visible_add(map, x, y);
+            indexed_surface_entry_hide_and_record(x, y);
+            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x4000) {
+                transient_effect_enable_set((void*)(uintptr_t)
+                    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10[3], 0);
+            }
+        }
+    }
+
+    for (i = 0; i < hiddenCount; i++) {
+        indexed_surface_entry_hide_and_record(hidden[i].x, hidden[i].y);
+    }
+}
+
+/* [group 3B] qsort callback of 00433e80: larger projected area first. */
+// FUNCTION: LEGORR 0x00434450
+int lego_projected_cell_area_compare(const void* a, const void* b)
+{
+    if (((const LegoProjectedCell3B*)a)->area < ((const LegoProjectedCell3B*)b)->area) return 1;
+    if (((const LegoProjectedCell3B*)a)->area > ((const LegoProjectedCell3B*)b)->area) return -1;
+    return 0;
+}
+
+/* [group 3B] A surface block's high-poly detail mesh: the level's tile
+ * mesh for the block's texture, placed on the block's four corners. */
+// FUNCTION: LEGORR 0x00434480
+int lego_terrain_cell_surface_update_dispatch_level(Lego_Level* level,
+                                                    int bx, int by,
+                                                    float scale,
+                                                    float uniformScale)
+{
+    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+    void* mesh;
+    LegoVector3FC vertPos[4];
+
+    if ((block->flags1 & 0x18) &&
+        (mesh = LEGO_LEVEL_PTR(void*, level->f_080)[level->f_074 * (block->texture & 0xf) +
+                                                    (block->texture >> 4)]) != NULL) {
+        terrain_map_block_vertices_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
+                                       bx, by, (struct TerrainMapVector3*)vertPos);
+        scene_cell_visual_channels_apply((struct SceneCellVisualRelayRecord*)mesh,
+            &vertPos[0].x,
+            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].texture,
+            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_03,
+            scale, uniformScale);
+        return 1;
+    }
+    return 0;
+}
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+
+/* [group 3B] Releases the resources of every tile mesh of the current
+ * level. Shared under MSVC x86: the port's model in lego.cpp keeps the
+ * native path. */
+// FUNCTION: LEGORR 0x00434530
+void terrain_grid_entry_resources_release_all_current(void)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    unsigned int i;
+
+    for (i = 0; i < level->f_078 * level->f_074; i++) {
+        if (LEGO_LEVEL_PTR(void*, level->f_080)[i] != NULL) {
+            lego_detail_mesh_resources_clear_adapter(LEGO_LEVEL_PTR(void*, level->f_080)[i]);
+        }
+    }
+}
+
+#endif /* _MSC_VER && _M_IX86 */
+
+/* ---- part 3 functions, group 3B: end ---- */
+
+/* ---- part 3 functions, group 3C (00434570-00435aa0): begin ---- */
+
+/* Group 3C's state, declarations and imports sit here, before its
+ * functions and after every earlier one, so MSVC's symbol counter
+ * (finding 538, rule B) does not move for parts 1, 2 and earlier groups. */
+/* legoGlobs.placeDirection? The building placement direction (00556448),
+ * from the camera's facing. */
+// GLOBAL: LEGORR 0x00556448
+int legoGlobs_f_556448;
+
+/* legoGlobs.TutorialIcon (0055645c). The port keeps its own copy
+ * (s_tutorial_icon, lego.cpp). */
+// GLOBAL: LEGORR 0x0055645c
+struct Image* legoGlobs_TutorialIcon;
+
+/* Input's left mouse button (0076ab3c) at the last release check. */
+// GLOBAL: LEGORR 0x004de424
+uint32_t s_lego_mslbLast;
+
+/* The tutorial icon's bob phase. */
+// GLOBAL: LEGORR 0x004de58c
+float s_lego_tutorialIconPhase;
+
+/* Maths.h's Vector3F. */
+typedef struct LegoVector3F3C { float x, y, z; } LegoVector3F3C;
+
+/* Lego_Block +0x14: the drill damage (0 to 1). */
+#define LEGO_BLOCK_DAMAGE(block) (*(float*)&(block)->f_10[1])
+
+/* legoGlobs fields and Lego.c .bss the port does not model (stand-ins in
+ * lego_unit.c). */
+extern int legoGlobs_f_556448;                  /* 00556448 placement direction */
+extern struct Image* legoGlobs_TutorialIcon;    /* 0055645c */
+extern uint32_t s_lego_mslbLast;                /* 004de424 */
+extern float s_lego_tutorialIconPhase;          /* 004de58c */
+
+/* Shared under MSVC x86 (the port keeps its models in lego.cpp elsewhere). */
+int terrain_cell_drill_work_add_current(int bx, int by, float destroyTime,
+                                        float elapsed);
+void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
+                                               int radius);
+/* Shared. */
+int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void);
+
+/* The unit's own entries (the port keeps its models in lego.cpp). */
+void lego_panels_config_entry_apply(struct BlockRec* config,
+                                    unsigned int screenWidth,
+                                    unsigned int screenHeight);
+void lego_panel_button_layout_config_load(struct BlockRec* config,
+                                          unsigned int screenWidth,
+                                          unsigned int screenHeight);
+void lego_advisor_tutorial_icon_image_load(struct BlockRec* config);
+void lego_sound_samples_config_load(struct BlockRec* config,
+                                    int noReduceSamples);
+void lego_text_messages_config_load(struct BlockRec* config);
+void lego_message_load_infomessages(struct BlockRec* config);
+void lego_advisor_tooltip_and_sound_config_load(struct BlockRec* config);
+int lego_interface_spawn_request_enqueue(int objType, int objIndex);
+void lego_surface_type_descriptions_config_load(struct BlockRec* config,
+                                                const char* gameName);
+const char* lego_terrain_surface_type_name_get(int surfaceType);
+uint32_t lego_surface_type_configured_value_at_index(int surfaceType);
+void lego_random_variant_cell_scatter(const int* blockPos, int radius,
+                                      int stopAtFirst);
+void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
+                                      float elapsedWorld, float elapsed);
+int lego_global_handle_position_apply_if_present(void);
+int lego_menu_option_panel_texture_update(const char* title, const char* msg,
+                                          const char* ok, const char* cancel);
+int lego_keep_running(void);
+void lego_camera_registry_probe(void);
+void lego_panel_selection_highlight_toggle(int on);
+
+/* gods98 Image.c (images_unit.cpp): Image_SetPenZeroTrans (0047dbc0). */
+void resource_record_add_ref(void* record);
+/* GAME-030 Panel.c (panel_unit.h). */
+int ui_panel_name_table_lookup(const char* name, int* panel);   /* 0045a370 */
+void legacy_overlay_image_record_load(const char* fileName, int panel,
+                                      unsigned int flags);      /* 0045a2e0 */
+int ui_panel_indexed_name_lookup(int panel, const char* name,
+                                 unsigned int* button);         /* 0045a410 */
+void panel_category_bounds_set(int panel, int xOut, int yOut, int xIn,
+                               int yIn);                        /* 0045a650 */
+void panel_item_flag8_set_if_enabled(int panel, int button, int on); /* 0045abf0 */
+void panel_texture_slots_allocate(int panel, unsigned int count,
+                                  const unsigned int* buttonTypes,
+                                  const float* areas,
+                                  char** normalNames,
+                                  char** highlightNames,
+                                  char** pressedNames,
+                                  const int* toolTips);         /* 0045ac30 */
+/* ToolTip.c (frontend.hpp, tooltip.cpp): ToolTip_GetType (0046b4d0). */
+int case_insensitive_name_table_lookup(const char* name, int* out_index);
+/* SFX.c (sound.hpp, sfx.cpp): 00464c50, 00464d00. */
+void sound_alias_registration_set(int enable);
+int sound_sample_marker_parse(const char* spec, int alias_index);
+/* Text.c (message.hpp, text.cpp): 0046aad0, 0046ab10, 0046abb0. */
+int ui_message_label_index_find(const char* label, int* out_index);
+void ui_message_text_slot_assign(int index, const char* text);
+void ui_message_text_slot_assign_with_image(int index, const char* text,
+                                            const char* image_path,
+                                            const char* display_path);
+/* GAME-019 Info.c (info_unit.h). */
+int info_get_type(const char* name, int* type);                 /* 004193e0 */
+void info_set_type_auto_game_speed(int type, int on);           /* 00419470 */
+void info_set_text(int type, char* text);                       /* 004194b0 */
+void info_set_type_play_always(int type, int on);               /* 004194f0 */
+void info_set_image_file(int type, const char* filename);       /* 00419650 */
+void info_set_sfx(int type, int sfxType);                       /* 00419680 */
+/* Stats.c (entity.hpp): 00469ee0. */
+uint32_t stats_table_word_at_148(int type, int row);
+/* LegoObject.c (entity.hpp, legoobject.cpp): 0043f150. The original's first
+ * argument is the teleporter; the port's entry does not read it. */
+struct GameContext;
+int entity_spawn_request_queue_add(struct GameContext* ctx, int type,
+                                   int request_kind);
+/* lego.cpp (level.hpp): 004332f0, 00433e30. */
+void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy);
+int grid_cell_entity_eligibility_check(int x, int y);
+/* level.cpp (level_for_lego.hpp): legoGlobs.langSurface_desc (005562d8)
+ * and langSurface_sound (00556320). */
+extern const char* s_surface_type_names[18];
+extern uint32_t s_surface_type_values[18];
+/* GAME-026 Map3D.c (terrain_map.h): 0044f4e0, 0044f540. */
+int terrain_map_block_highlight_set(struct TerrainMap* map, int bx, int by,
+                                    int highlight);
+int terrain_map_block_highlight_get(struct TerrainMap* map, int bx, int by);
+/* GAME-023 LegoObject.c (legoobject_unit.c): the third teleporter. */
+extern struct Lego_Object* legoGlobs_f_556454;                  /* 00556454 */
+/* GAME-020 Interface.c (interface_unit.h), read by offset. */
+extern struct InterfaceGlobs interfaceGlobs;                    /* 004dcd58 */
+/* gods98 TextWindow.c (heap.hpp): TextWindow_Update (00485390). */
+int text_buffer_draw_wrapped(void* record, uint32_t start_line,
+                             float line_scale, int* height_out);
+/* GAME-015 FrontEnd.c (frontend_api.h): 00416d50, 00416d60. */
+int save_slot_open(void);
+int is_in_game(void);
+/* GAME-031 Reward.c (reward.h). */
+int reward_prepare_level(void);                                 /* 0045fda0 */
+void reward_free_level(void);                                   /* 004601e0 */
+int reward_prepare_results(void);                               /* 00460360 */
+int reward_loop(void);                                          /* 00461410 */
+/* Stats.c / record_chains.cpp (entity.hpp): 0046a4c0. */
+int entity_flag_mask_callbacks_all_pass(uint32_t mask);
+
+
+/* TerrainCellProgressUpdate [group 3C]: Level_Block_Damage. Adds
+ * elapsed / destroyTime to the block's damage and reports whether it is
+ * past 1. Shared under MSVC x86 (the level's pointer words). */
+#if defined(_MSC_VER) && defined(_M_IX86)
+// FUNCTION: LEGORR 0x00434570
+int terrain_cell_drill_work_add_current(int bx, int by, float destroyTime,
+                                        float elapsed)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+
+    if (0.0f != destroyTime) {
+        LEGO_BLOCK_DAMAGE(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx]) += elapsed / destroyTime;
+        if (LEGO_BLOCK_DAMAGE(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx]) > 1.0f) return 1;
+    }
+    return 0;
+}
+#endif
+
+/* PanelsConfigEntryApply [group 3C]: Lego_LoadPanels. */
+// FUNCTION: LEGORR 0x004345f0
+void lego_panels_config_entry_apply(struct BlockRec* config,
+                                    unsigned int screenWidth,
+                                    unsigned int screenHeight)
+{
+    char buff[256];
+    struct BlockRec* arrayItem;
+    int panelType;
+    char* argv[10];
+
+    // STRING: LEGORR 0x004a47d8
+    sprintf(buff, "Panels%ix%i", screenWidth, screenHeight);
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (ui_panel_name_table_lookup(arrayItem->key, &panelType)) {
+            strcpy(buff, arrayItem->value);
+            sound_variant_split(buff, argv, ",");
+            legacy_overlay_image_record_load(argv[0], panelType, 4);
+            panel_category_bounds_set(panelType, atoi(argv[1]), atoi(argv[2]),
+                                      atoi(argv[3]), atoi(argv[4]));
+        }
+    }
+}
+
+/* PanelButtonLayoutConfigLoad [group 3C]: Lego_LoadPanelButtons. */
+// FUNCTION: LEGORR 0x00434710
+void lego_panel_button_layout_config_load(struct BlockRec* config,
+                                          unsigned int screenWidth,
+                                          unsigned int screenHeight)
+{
+    char buff[256];
+    char* argv[9];
+    unsigned int buttonCount[12];
+    unsigned int buttonTypes[12][24];
+    char* normalNames[12][24];
+    char* highlightNames[12][24];
+    char* pressedNames[12][24];
+    float areas[12][24][4];
+    int toolTips[12][24];
+    char* copies[100];
+    unsigned int copyCount;
+    struct BlockRec* arrayItem;
+    int panelType;
+    unsigned int buttonType;
+    unsigned int i;
+
+    copyCount = 0;
+    memset(buttonCount, 0, sizeof(buttonCount));
+    // STRING: LEGORR 0x004a47e4
+    sprintf(buff, "Buttons%ix%i", screenWidth, screenHeight);
+    if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0))) != NULL) {
+        do {
+            if (ui_panel_name_table_lookup(arrayItem->key, &panelType)) {
+                copies[copyCount] = string_duplicate(arrayItem->value);
+                sound_variant_split(copies[copyCount], argv, ",");
+                if (ui_panel_indexed_name_lookup(panelType, argv[0], &buttonType)) {
+                    buttonTypes[panelType][buttonCount[panelType]] = buttonType;
+                    for (i = 0; i < 3; i++) {
+                        char** names = (i == 0) ? normalNames[panelType] : (i == 1) ? highlightNames[panelType] : pressedNames[panelType];
+                        if (_strcmpi("NULL", argv[1 + i]) == 0) names[buttonCount[panelType]] = NULL;
+                        else names[buttonCount[panelType]] = argv[1 + i];
+                    }
+                    areas[panelType][buttonCount[panelType]][0] = (float)atoi(argv[4]);
+                    areas[panelType][buttonCount[panelType]][1] = (float)atoi(argv[5]);
+                    areas[panelType][buttonCount[panelType]][2] = (float)atoi(argv[6]);
+                    areas[panelType][buttonCount[panelType]][3] = (float)atoi(argv[7]);
+                    if (case_insensitive_name_table_lookup(argv[8], &toolTips[panelType][buttonCount[panelType]]) == 0)
+                        toolTips[panelType][buttonCount[panelType]] = 0;
+                    buttonCount[panelType]++;
+                    copyCount++;
+                }
+            }
+        } while ((arrayItem = block_next_equal_key(arrayItem)) != NULL);
+
+        for (i = 0; i < 12; i++) {
+            panel_texture_slots_allocate(i, buttonCount[i], buttonTypes[i], &areas[i][0][0],
+                                         normalNames[i], highlightNames[i], pressedNames[i],
+                                         toolTips[i]);
+        }
+        for (; copyCount != 0; copyCount--) free(copies[copyCount - 1]);
+    }
+}
+
+/* AdvisorTutorialIconImageLoad [group 3C]: Lego_LoadTutorialIcon. */
+// FUNCTION: LEGORR 0x00434a00
+void lego_advisor_tutorial_icon_image_load(struct BlockRec* config)
+{
+    char* fileName;
+
+    if ((fileName = block_get_str_copy(config, string_path_join(s_engine_config_root, "Main",
+        // STRING: LEGORR 0x004a47f4
+        "TutorialIcon", 0))) != NULL) {
+        if ((legoGlobs_TutorialIcon = image_load_bmp_scaled(fileName, 0, 0)) != NULL) {
+            resource_record_add_ref(legoGlobs_TutorialIcon);
+        }
+    }
+}
+
+/* SoundSamplesConfigLoad [group 3C]: Lego_LoadSamples. A leading '!' marks
+ * a sample skipped when reduceSamples is set. */
+// FUNCTION: LEGORR 0x00434a50
+void lego_sound_samples_config_load(struct BlockRec* config, int noReduceSamples)
+{
+    struct BlockRec* arrayItem;
+    const char* name;
+    int sfxType;
+    int skip;
+
+    // STRING: LEGORR 0x004a4804
+    if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "Samples", 0))) != NULL) {
+        sound_alias_registration_set(1);
+        do {
+            name = arrayItem->key;
+            skip = 0;
+            if (*name == '!') {
+                name++;
+                if (!noReduceSamples) skip = 1;
+            }
+            if (!skip) {
+                if (sound_alias_lookup(name, &sfxType)) {
+                    sound_sample_marker_parse(arrayItem->value, sfxType);
+                }
+            }
+        } while ((arrayItem = block_next_equal_key(arrayItem)) != NULL);
+        sound_alias_registration_set(0);
+    }
+}
+
+/* TextMessagesConfigLoad [group 3C]: Lego_LoadTextMessages. */
+// FUNCTION: LEGORR 0x00434af0
+void lego_text_messages_config_load(struct BlockRec* config)
+{
+    char buff[512];
+    struct BlockRec* arrayItem;
+    int textType;
+    char* argv[10];
+
+    // STRING: LEGORR 0x004a4824
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "TextMessages", 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (ui_message_label_index_find(arrayItem->key, &textType)) {
+            ui_message_text_slot_assign(textType, arrayItem->value);
+        }
+    }
+    // STRING: LEGORR 0x004a480c
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "TextMessagesWithImages", 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (ui_message_label_index_find(arrayItem->key, &textType)) {
+            strcpy(buff, arrayItem->value);
+            sound_variant_split(buff, argv, ":");
+            ui_message_text_slot_assign_with_image(textType, argv[0], argv[1], argv[2]);
+        }
+    }
+}
+
+/* IncidentMessageConfigLoad [group 3C]: Lego_LoadInfoMessages. */
+// FUNCTION: LEGORR 0x00434c10
+void lego_message_load_infomessages(struct BlockRec* config)
+{
+    char buff[1024];
+    struct BlockRec* arrayItem;
+    int infoType;
+    int sfxType;
+    char* argv[10];
+    unsigned int argc;
+
+    // STRING: LEGORR 0x004a484c
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "InfoMessages", 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (info_get_type(arrayItem->key, &infoType)) {
+            strcpy(buff, arrayItem->value);
+            argc = sound_variant_split(buff, argv, ":");
+            info_set_text(infoType, argv[0]);
+            info_set_image_file(infoType, argv[1]);
+            if (sound_alias_lookup(argv[2], &sfxType)) info_set_sfx(infoType, sfxType);
+            if (argc > 3) {
+                // STRING: LEGORR 0x004a4844
+                if (!_strcmpi(argv[3], "SLOW")) info_set_type_auto_game_speed(infoType, 1);
+                else info_set_type_auto_game_speed(infoType, 0);
+                // STRING: LEGORR 0x004a4834
+                if (!_strcmpi(argv[3], "ALWAYSPLAYSFX")) info_set_type_play_always(infoType, 1);
+                else if (argc > 4 && !_strcmpi(argv[4], "ALWAYSPLAYSFX")) info_set_type_play_always(infoType, 1);
+                else info_set_type_play_always(infoType, 0);
+            } else {
+                info_set_type_auto_game_speed(infoType, 1);
+                info_set_type_play_always(infoType, 0);
+            }
+        }
+    }
+}
+
+/* AdvisorTooltipAndTooltipSoundConfigLoad [group 3C]: Lego_LoadToolTips. */
+// FUNCTION: LEGORR 0x00434da0
+void lego_advisor_tooltip_and_sound_config_load(struct BlockRec* config)
+{
+    struct BlockRec* arrayItem;
+    int toolTipType;
+    int sfxType;
+
+    // STRING: LEGORR 0x004a486c
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "ToolTips", 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (case_insensitive_name_table_lookup(arrayItem->key, &toolTipType)) {
+            tooltip_set_content(toolTipType, arrayItem->value);
+        }
+    }
+    // STRING: LEGORR 0x004a485c
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "ToolTipsSFXs", 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (case_insensitive_name_table_lookup(arrayItem->key, &toolTipType) &&
+            sound_alias_lookup(arrayItem->value, &sfxType)) {
+            timed_effect_cue_request_set_corpus(toolTipType, sfxType);
+        }
+    }
+}
+
+/* InterfaceSpawnRequestEnqueue [group 3C]: starts placing a building (the
+ * two directional types) or teleports the object in from the first
+ * teleporter that takes its kind. */
+// FUNCTION: LEGORR 0x00434e80
+int lego_interface_spawn_request_enqueue(int objType, int objIndex)
+{
+    LegoVector3F3C dir;
+    int direction;
+
+    s_global_low_word &= ~0x80;
+    mode_flag_pair_apply_if_bit2(1);
+    if (objType == 4 || objType == 11) {
+        s_global_low_word |= 0x80;
+        legoGlobs_f_556440 = objType;
+        legoGlobs_f_556444 = objIndex;
+        ddiscene_object_facing_pair_get(LEGO_FIELD(s_zoom_step_context, void*, 0x24), NULL,
+                                        (float*)&dir, NULL);
+        if (fabs(dir.x) > fabs(dir.y)) {
+            if (dir.x > 0.0f) direction = 3;
+            else direction = 1;
+        } else {
+            if (dir.y > 0.0f) direction = 2;
+            else direction = 0;
+        }
+        legoGlobs_f_556448 = direction;
+        return 1;
+    }
+    if (stats_table_word_at_148(objType, objIndex) & 0x1000)
+        return entity_spawn_request_queue_add((struct GameContext*)legoGlobs_f_55644c, objType, objIndex);
+    if (stats_table_word_at_148(objType, objIndex) & 0x800)
+        return entity_spawn_request_queue_add((struct GameContext*)legoGlobs_f_556450, objType, objIndex);
+    if (stats_table_word_at_148(objType, objIndex) & 0x2000)
+        return entity_spawn_request_queue_add((struct GameContext*)legoGlobs_f_556454, objType, objIndex);
+    if (stats_table_word_at_148(objType, objIndex) & 0x400000)
+        return entity_spawn_request_queue_add(NULL, objType, objIndex);
+    return 0;
+}
+
+/* TerrainCellWorkFlagCircleSet [group 3C]: Level_Block_SetBusyArea?
+ * Raises the work flag on the blocks within the radius. Shared under
+ * MSVC x86 (the level's pointer words). */
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* The original keeps the level in a stack slot across the call and reloads
+ * the radius after it; MSVC 5 keeps the level in a register in both C
+ * forms tried (the bounds tests inline: 46.73%; with radius * radius and
+ * the block coordinates in locals: 28.04%). The port's body, the
+ * original's code, is kept; the C form was:
+ *
+ *   void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
+ *                                                  int radius)
+ *   {
+ *       Lego_Level* level = legoGlobs_currLevel;
+ *       int radiusSq = radius * radius;
+ *       int x, y;
+ *
+ *       for (y = -radius; y <= radius; y++) {
+ *           for (x = -radius; x <= radius; x++) {
+ *               if (x * x + y * y <= radiusSq) {
+ *                   int bx = center_xy[0] + x;
+ *                   if (bx >= 0 && bx < (int)level->width) {
+ *                       int by = center_xy[1] + y;
+ *                       if (by >= 0 && by < (int)level->height)
+ *                           terrain_cell_work_flag_set_current(bx, by);
+ *                   }
+ *               }
+ *           }
+ *       }
+ *   }
+ */
+// FUNCTION: LEGORR 0x00435010
+__declspec(naked) void terrain_cell_work_flag_circle_set_current(
+    const int center_xy[2], int radius)
+{
+    __asm {
+        sub esp, 0ch
+        mov eax, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 14h]
+        mov dword ptr [esp], eax
+        mov eax, edx
+        imul eax, edx
+        push esi
+        mov esi, edx
+        neg esi
+        push edi
+        mov edi, esi
+        cmp edi, edx
+        mov dword ptr [esp + 0ch], eax
+        mov dword ptr [esp + 10h], esi
+        jg terrain_cell_work_flag_circle_set_early_done
+        push ebp
+        mov ebp, dword ptr [esp + 1ch]
+        push ebx
+    terrain_cell_work_flag_circle_set_outer_loop:
+        mov ebx, edi
+        imul ebx, edi
+        cmp esi, edx
+        jg terrain_cell_work_flag_circle_set_outer_next
+    terrain_cell_work_flag_circle_set_inner_loop:
+        mov ecx, esi
+        mov eax, dword ptr [esp + 14h]
+        imul ecx, esi
+        add ecx, ebx
+        cmp ecx, eax
+        jg terrain_cell_work_flag_circle_set_next_column
+        mov eax, dword ptr [ebp]
+        lea ecx, dword ptr [esi + eax]
+        test ecx, ecx
+        jl terrain_cell_work_flag_circle_set_next_column
+        mov eax, dword ptr [esp + 10h]
+        cmp ecx, dword ptr [eax + 14h]
+        jge terrain_cell_work_flag_circle_set_next_column
+        mov eax, dword ptr [ebp + 4]
+        add eax, edi
+        test eax, eax
+        jl terrain_cell_work_flag_circle_set_next_column
+        mov edx, dword ptr [esp + 10h]
+        cmp eax, dword ptr [edx + 18h]
+        jge terrain_cell_work_flag_circle_set_after_mark
+        push eax
+        push ecx
+        call terrain_cell_work_flag_set_current
+        add esp, 8
+    terrain_cell_work_flag_circle_set_after_mark:
+        mov edx, dword ptr [esp + 24h]
+    terrain_cell_work_flag_circle_set_next_column:
+        inc esi
+        cmp esi, edx
+        jle terrain_cell_work_flag_circle_set_inner_loop
+        mov esi, dword ptr [esp + 18h]
+    terrain_cell_work_flag_circle_set_outer_next:
+        inc edi
+        cmp edi, edx
+        jle terrain_cell_work_flag_circle_set_outer_loop
+        pop ebx
+        pop ebp
+    terrain_cell_work_flag_circle_set_early_done:
+        pop edi
+        pop esi
+        add esp, 0ch
+        ret
+    }
+}
+#endif
+
+/* legoGlobs.langSurface_name, langSurface_desc and langSurface_sound: three
+ * adjacent arrays (00556290, 005562d8, 00556320). */
+typedef struct LegoSurfaceDescs3C {
+    const char* name[18];
+    const char* desc[18];
+    uint32_t sfx[18];
+} LegoSurfaceDescs3C;
+#define LEGO_SURFACE_DESCS_3C ((LegoSurfaceDescs3C*)legoGlobs_langSurface_name)
+
+/* SurfaceTypeDescriptionsConfigLoad [group 3C]:
+ * Lego_LoadSurfaceTypeDescriptions_sound. */
+// FUNCTION: LEGORR 0x004350a0
+void lego_surface_type_descriptions_config_load(struct BlockRec* config,
+                                                const char* gameName)
+{
+    char buff[1024];
+    char* argv[10];
+    const char* str;
+    int sfxType;
+    uint32_t* sfx;
+
+    for (sfx = s_surface_type_values; sfx < &s_surface_type_values[18]; sfx++) {
+        // STRING: LEGORR 0x004a4878
+        if ((str = block_get_strptr(config, string_path_join(gameName, "SurfaceTypeDescriptions",
+                                                             ((const char**)sfx)[-36], 0))) != NULL) {
+            strcpy(buff, str);
+            sound_variant_split((char*)str, argv, ",");
+            ((const char**)sfx)[-18] = formatted_text_escape_decode_and_emit(argv[0]);
+            *sfx = sound_alias_lookup(argv[1], &sfxType) ? sfxType : 0;
+        }
+    }
+}
+
+/* TerrainSurfaceTypeNameGet [group 3C]: Lego_GetSurfaceTypeDescription. */
+// FUNCTION: LEGORR 0x00435170
+const char* lego_terrain_surface_type_name_get(int surfaceType)
+{
+    const char* name = s_surface_type_names[surfaceType];
+    // STRING: LEGORR 0x004a4890
+    if (name == NULL) name = "Need config for surface type.";
+    return name;
+}
+
+/* SurfaceTypeConfiguredValueAtIndex [group 3C]:
+ * Lego_GetSurfaceTypeSFX. */
+// FUNCTION: LEGORR 0x00435190
+uint32_t lego_surface_type_configured_value_at_index(int surfaceType)
+{
+    return s_surface_type_values[surfaceType];
+}
+
+/* ActionCodeToSoundAlias [group 3C]: the pointer for a block's surface
+ * action. Shared (the port's callers use the original's contract). */
+// FUNCTION: LEGORR 0x004351a0
+void media_action_code_to_sound_alias(int code)
+{
+    if (code == 1) {
+        media_pointer_cursor_select(0x2b);
+        return;
+    }
+    if (code == 2) {
+        media_pointer_cursor_select(0x2c);
+        return;
+    }
+    if (code == 3) {
+        media_pointer_cursor_select(0x2d);
+        return;
+    }
+    if (code == 4) {
+        media_pointer_cursor_select(0x2e);
+        return;
+    }
+    if (code == 5) {
+        media_pointer_cursor_select(0x2f);
+        return;
+    }
+    if (code == 8) {
+        media_pointer_cursor_select(0x32);
+        return;
+    }
+    if (code == 10) {
+        media_pointer_cursor_select(0x34);
+        return;
+    }
+    if (code == 11) {
+        media_pointer_cursor_select(0x35);
+        return;
+    }
+}
+
+/* RandomVariantCellScatter [group 3C]: random lava erosion around a block
+ * (Level_GenerateLavaErosion-like). Stops at the first erosion when
+ * stopAtFirst is set; otherwise tries a quarter of the box. */
+// FUNCTION: LEGORR 0x00435230
+void lego_random_variant_cell_scatter(const int* blockPos, int radius, int stopAtFirst)
+{
+    int done[100];
+    unsigned int count;
+    unsigned int size;
+    unsigned int dx, dy;
+    int pos[2];
+
+    memset(done, 0, sizeof(done));
+    size = radius * 2;
+    for (count = 0; count < (stopAtFirst ? size * size : (size * size) / 4); count++) {
+        dx = rng_thunk_draw15() % size;
+        dy = rng_thunk_draw15() % size;
+        pos[0] = (dx + blockPos[0]) - radius;
+        pos[1] = (blockPos[1] + dy) - radius;
+        if (!done[dx * 10 + dy]) {
+            if (lava_erosion_cell_eligible_and_mutate(pos, 1) && stopAtFirst) return;
+            done[dx * 10 + dy] = 1;
+        }
+    }
+}
+
+/* FUN_00435300 [group 3C]: draws the tutorial icon over the blocks the
+ * tutorial flags and highlights them. */
+// FUNCTION: LEGORR 0x00435300
+void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
+                                      float elapsedWorld, float elapsed)
+{
+    float bob = (float)sin(s_lego_tutorialIconPhase);
+    unsigned int bx, by;
+    Lego_Block* block;
+    float wPos[3];
+    float sPos[2];
+
+    s_lego_tutorialIconPhase -= elapsed * 25.0f * -0.013333334f;
+    if (system_state_flags_get_original(NULL)) {
+        for (by = 0; by < ((unsigned int*)LEGO_LEVEL_PTR(void, level->map))[1]; by++) {
+            for (bx = 0; bx < ((unsigned int*)LEGO_LEVEL_PTR(void, level->map))[0]; bx++) {
+                if (!grid_cell_entity_eligibility_check(bx, by)) {
+                    block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+                    if (block->f_04) {
+                        terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by,
+                                                   &wPos[0], &wPos[1]);
+                        wPos[2] = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
+                                                          wPos[0], wPos[1]);
+                        camera_project_point_to_screen((const struct ViewProjectionAdapter*)view, sPos, wPos);
+                        sPos[0] -= (float)(legoGlobs_TutorialIcon->width / 2);
+                        sPos[1] -= bob * 20.0f + (float)(legoGlobs_TutorialIcon->height * 2);
+                        image_display_scaled(legoGlobs_TutorialIcon, NULL, (const struct Point2F*)sPos, NULL);
+                        if (LEGO_FIELD(&interfaceGlobs, int, 0xfc4)) {
+                            terrain_map_block_highlight_set(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by, 5);
+                        } else {
+                            terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by);
+                        }
+                        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_10[13] = 1;
+                    } else if (block->f_10[13] == 1) {
+                        block->f_10[13] = 0;
+                        if (!(system_state_flags_get_original(NULL) & 2) &&
+                            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_10[6] &&
+                            !LEGO_FIELD(&interfaceGlobs, int, 0xf74)) {
+                            terrain_map_block_highlight_set(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by, 4);
+                        } else {
+                            terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by);
+                        }
+                    } else if (block->f_10[13] == 0 &&
+                               terrain_map_block_highlight_get(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by) == 5) {
+                        terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* GlobalStateZeroTransitionDetect [group 3C]: Lego_IsLeftButtonReleased-
+ * like. Shared (reward.c and the port call it with the original's
+ * contract). */
+// FUNCTION: LEGORR 0x00435550
+int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void)
+{
+    uint32_t current = legoInput_mslb;
+    int released = current == 0 && s_lego_mslbLast != 0;
+    s_lego_mslbLast = current;
+    return released;
+}
+
+/* GlobalHandlePositionApplyIfPresent [group 3C]: draws the dialog's
+ * contrast overlay at the origin. */
+// FUNCTION: LEGORR 0x00435580
+int lego_global_handle_position_apply_if_present(void)
+{
+    float pos[2];
+
+    pos[0] = 0.0f;
+    pos[1] = 0.0f;
+    if (s_position_handle) {
+        image_display_scaled((struct Image*)s_position_handle, NULL, (const struct Point2F*)pos, NULL);
+        return 1;
+    }
+    return 0;
+}
+
+/* MenuOptionPanelTextureUpdate [group 3C]: draws the in-game dialog and
+ * returns 1 for OK, 0 for Cancel and -1 for neither. */
+// FUNCTION: LEGORR 0x004355c0
+int lego_menu_option_panel_texture_update(const char* title, const char* msg,
+                                          const char* ok, const char* cancel)
+{
+    float pos[2];
+    float wndRect[4];
+    float textX;
+    unsigned int textWidth;
+    unsigned int textHeight;
+    int result = -1;
+
+    if (legoGlobs_DialogImage && legoGlobs_DialogTextWndTitle && legoGlobs_DialogTextWndMessage) {
+        lego_global_handle_position_apply_if_present();
+        pos[0] = (float)(s_display_w / 2) - (float)(legoGlobs_DialogImage->width >> 1);
+        pos[1] = (float)(s_display_h / 2) - (float)(legoGlobs_DialogImage->height >> 1);
+        image_display_scaled(legoGlobs_DialogImage, NULL, (const struct Point2F*)pos, NULL);
+        text_buffer_reset_target(legoGlobs_DialogTextWndTitle);
+        text_buffer_reset_target(legoGlobs_DialogTextWndMessage);
+        text_buffer_reset_target(legoGlobs_DialogTextWndOK);
+        text_buffer_reset_target(legoGlobs_DialogTextWndCancel);
+        if (ok) {
+            wndRect[0] = 0.0f;
+            wndRect[1] = 0.0f;
+            wndRect[2] = 0.0f;
+            textWidth = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingHi, ok);
+            textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
+            textX = ((float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 4) -
+                     (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 12) * -0.5f) - (float)(textWidth >> 1);
+            wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 8);
+            wndRect[2] = (float)textHeight;
+            if (legoInput_mouseX < textX || legoInput_mouseX >= textX + textWidth ||
+                legoInput_mouseY < wndRect[0] || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
+                LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingHi;
+                text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
+            } else {
+                LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingLo;
+                text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
+                if (ledger_stub_00435550_GlobalStateZeroTransitionDetect()) result = 1;
+            }
+        }
+        if (cancel) {
+            wndRect[0] = 0.0f;
+            wndRect[1] = 0.0f;
+            wndRect[2] = 0.0f;
+            textWidth = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingHi, cancel);
+            textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
+            textX = ((float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 4) -
+                     (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 12) * -0.5f) - (float)(textWidth >> 1);
+            wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 8);
+            wndRect[2] = (float)textHeight;
+            if (legoInput_mouseX < textX || legoInput_mouseX >= textX + textWidth ||
+                legoInput_mouseY < wndRect[0] || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
+                LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingHi;
+                text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
+            } else {
+                LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingLo;
+                text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
+                if (ledger_stub_00435550_GlobalStateZeroTransitionDetect()) result = 0;
+            }
+        }
+        text_buffer_append_format(legoGlobs_DialogTextWndTitle, title);
+        text_buffer_append_format(legoGlobs_DialogTextWndMessage, msg);
+        text_buffer_draw_wrapped(legoGlobs_DialogTextWndTitle, 0, 1.0f, NULL);
+        text_buffer_draw_wrapped(legoGlobs_DialogTextWndMessage, 0, 1.0f, NULL);
+        text_buffer_draw_wrapped(legoGlobs_DialogTextWndOK, 0, 1.0f, NULL);
+        text_buffer_draw_wrapped(legoGlobs_DialogTextWndCancel, 0, 1.0f, NULL);
+        return result;
+    }
+    return -1;
+}
+
+/* KeepRunning [group 3C]: Lego_EndLevel. Frees the level, runs the
+ * rewards and the front end, and loads the next level. */
+// FUNCTION: LEGORR 0x00435940
+int lego_keep_running(void)
+{
+    int saveOpen, inGame;
+    const char* levelName;
+
+    level_current_owner_get();
+    saveOpen = save_slot_open();
+    inGame = is_in_game();
+    sound_subsystem_stop_all();
+    if (frontend_enabled_original()) {
+        reward_prepare_level();
+        reward_prepare_results();
+        reward_loop();
+        reward_free_level();
+    }
+    lego_sound_minimum_distance_update_mode(1, NULL, 0);
+    text_buffer_reset_target(legoGlobs_textOnlyWindow);
+    levelName = lego_level_free();
+    if (frontend_enabled_original()) {
+        if (saveOpen) {
+            front_run_screen_menu_type_adapter(1);
+            if (quit_menu_probe()) return 0;
+            levelName = front_get_selected_level_adapter();
+        } else if (inGame) {
+            front_run_screen_menu_type_adapter(2);
+            if (quit_menu_probe()) return 0;
+            levelName = front_get_selected_level_adapter();
+        }
+    }
+    options_load_or_default_target(1, 0);
+    if (levelName && lego_level_load(levelName)) {
+        free((void*)levelName);
+        return 1;
+    }
+    return 0;
+}
+
+/* GlobalStateLowByteClearAndRefresh [group 3C]: clears the low byte of
+ * flags3 and hides the placement marker. Shared. */
+// FUNCTION: LEGORR 0x00435a20
+void global_state_low_byte_clear_and_refresh(void)
+{
+    /* The original clears eight one-bit fields of legoGlobs.flags3, one
+     * `and` each; MSVC folds the same masks written as integers. */
+    struct LegoFlags3Bits3C {
+        unsigned int b0 : 1, b1 : 1, b2 : 1, b3 : 1, b4 : 1, b5 : 1, b6 : 1, b7 : 1;
+    } *bits = (struct LegoFlags3Bits3C*)&s_global_low_word;
+    bits->b1 = 0;
+    bits->b2 = 0;
+    bits->b3 = 0;
+    bits->b4 = 0;
+    bits->b5 = 0;
+    bits->b6 = 0;
+    bits->b7 = 0;
+    bits->b0 = 0;
+    surface_visibility_set(s_refresh_record, 1);
+}
+
+/* MainSimFeatureFlagLatch [group 3C]. */
+// FUNCTION: LEGORR 0x00435a50
+void lego_camera_registry_probe(void)
+{
+    if (legoGlobs_flags1 & 0x8000000) {
+        if (entity_flag_mask_callbacks_all_pass(0x40b)) s_panel_highlight_flags |= 0x2;
+    }
+}
+
+/* PanelSelectionHighlightToggle [group 3C]: Lego_SetCallToArmsOn. */
+// FUNCTION: LEGORR 0x00435aa0
+void lego_panel_selection_highlight_toggle(int on)
+{
+    if (on) {
+        s_panel_highlight_flags |= 0x1;
+        if (s_panel_highlight_timer <= 0.0f) {
+            sound_alias_play(0x19, 0);
+            s_panel_highlight_timer = 250.0f;
+        }
+        panel_item_flag8_set_if_enabled(6, 2, 1);
+    } else {
+        s_panel_highlight_flags &= ~0x1;
+        s_panel_highlight_timer = 0.0f;
+        panel_item_flag8_set_if_enabled(6, 2, 0);
+    }
+}
+
+/* ---- part 3 functions, group 3C: end ---- */
+
+/* Lego.c data the port defined in lego.cpp until GAME-021 part 3 (#587)
+ * retired it to the port tail (lego_port.cpp). Defined last, so no
+ * function's symbol counter changes (finding 538). */
+
+/* Lego.c .bss: the scroll guard and the neighbour-pick rotation. */
+// GLOBAL: LEGORR 0x004de548
+int s_scroll_guard;
+// GLOBAL: LEGORR 0x004de588
+uint32_t s_neighbor_pick_rotation;
+
+/* legoGlobs fields (stand-ins, as in part 1): the text-window font, the
+ * crystal-count font and the radar zoom. */
+// GLOBAL: LEGORR 0x00556124
+struct TextureSurface* s_lego_text_window_font;
+// GLOBAL: LEGORR 0x00556128
+struct TextureSurface* s_lego_crystal_count_font;
+// GLOBAL: LEGORR 0x005563f4
+float s_lego_radar_zoom;
+
+#ifdef __cplusplus
+}
+#endif

@@ -42,9 +42,10 @@ void media_action_feedback_sound_dispatch(int event);
 /* FUN_00431560: the current level. The original reads its objective result
  * at +0x27c. */
 struct LevelState* level_current_owner_get(void);
-/* FUN_00435aa0: the call-to-arms highlight. The port's entry takes the
- * engine context first; the original takes only the flag. */
-void panel_selection_highlight_toggle(struct EngineContext* ctx, int on);
+/* FUN_00435aa0: the call-to-arms highlight, lego_unit.c's original-shape
+ * function (the port's entry, which also takes the engine context, stays in
+ * lego_port.cpp for native callers). */
+void lego_panel_selection_highlight_toggle(int on); /* 00435aa0, lego_unit.c */
 
 #ifdef __cplusplus
 }

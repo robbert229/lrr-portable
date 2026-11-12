@@ -280,6 +280,9 @@ void engine_game_config_callback_registry_hooks_set(
     EngineConfigRegistryResetHook reset_hook,
     EngineGameConfigInitHook init_hook,
     void* user);
+#ifdef __cplusplus
+extern "C"
+#endif
 void engine_game_config_callback_registry_init(const char* root);
 /* Dispatch the registered application callbacks using their retail-shaped
  * signatures. The window/message loop owns when these are called. */

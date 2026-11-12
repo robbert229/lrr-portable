@@ -537,6 +537,9 @@ int level_tile_occupied(const LevelState* s, int cx, int cy);
 /* Cell (x,y) tile type byte (record+2), or -1 when there is no map. */
 int level_tile_type(const LevelState* s, int cx, int cy);
 /* Retail current-level accessor at FUN_004319b0: cell byte at record +2. */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint8_t terrain_cell_material_get_current(int x, int y);
 
 /* --- terrain-cell flag primitives (finding 07: record+8 flag word,
@@ -559,7 +562,7 @@ extern "C" int terrain_cell_walkable_flag_current(uint32_t cx, uint32_t cy);
 
 /* FUN_00432c20: the wave-spawn flag bit. Returns the masked word. */
 uint32_t level_cell_flag_wave(const LevelState* s, int cx, int cy);
-uint32_t terrain_cell_flag_wave_current(int cx, int cy);
+extern "C" uint32_t terrain_cell_flag_wave_current(int cx, int cy);
 
 /* FUN_00432c50: terrain speed class — 0 when flag bit 0x200000 is set,
  * otherwise the low two terrain-type bits + 1. */
@@ -574,7 +577,7 @@ extern "C" uint32_t terrain_cell_mask_c0_current(int cx, int cy);
 /* FUN_00432e90: the predug edge-wall bit (flag 0x4000000, finding 07).
  * Returns the masked word. */
 uint32_t level_cell_flag_edge_wall(const LevelState* s, int cx, int cy);
-uint32_t terrain_cell_edge_wall_current(const int cell_xy[2]);
+extern "C" uint32_t terrain_cell_edge_wall_current(const int cell_xy[2]);
 
 /* FUN_00432ec0 / FUN_00432f00: the cell state byte (record+2) equals 1
  * or 6. No cell, no match. */
@@ -597,15 +600,15 @@ extern "C" uint32_t level_cell_flag_4_current(uint32_t cx, uint32_t cy);
 /* Explicit-level adapters and target-shaped current-level scalar readers. */
 uint32_t level_cell_flag_2000(const LevelState* s, int cx, int cy);
 uint32_t level_cell_flag_80(const LevelState* s, int cx, int cy);
-uint32_t terrain_cell_flag_2000_current(int cx, int cy);
-uint32_t terrain_cell_flag_80_current(int cx, int cy);
+extern "C" uint32_t terrain_cell_flag_2000_current(int cx, int cy);
+extern "C" uint32_t terrain_cell_flag_80_current(int cx, int cy);
 /* FUN_00433030: current-level unchecked pair-pointer read. */
 extern "C" uint32_t terrain_cell_flag_8000_current(const int cell_xy[2]);
 /* Explicit-level adapter retained for callers with a LevelState. */
 uint32_t level_cell_flag_8000(const LevelState* s, int cx, int cy);
 
 /* FUN_00433060: current-level unchecked pair-pointer read. */
-uint32_t terrain_cell_secondary_bit0_current(const int cell_xy[2]);
+extern "C" uint32_t terrain_cell_secondary_bit0_current(const int cell_xy[2]);
 /* Explicit-level adapter. */
 uint32_t level_cell_secondary_bit0(const LevelState* s, int cx, int cy);
 
@@ -619,7 +622,7 @@ uint32_t terrain_cell_secondary_flag_100_current(const int cell_xy[2]);
 uint32_t terrain_cell_visited_flag_current(const int cell_xy[2]);
 
 /* FUN_004330e0: current-level unchecked pair-pointer mask test. */
-int terrain_cell_mask_180000_current(const int cell_xy[2]);
+extern "C" int terrain_cell_mask_180000_current(const int cell_xy[2]);
 /* Explicit-level adapter. */
 int level_cell_mask_180000(const LevelState* s, int cx, int cy);
 
@@ -651,7 +654,7 @@ void level_cell_secondary_bit0_clear(LevelState* s, int cx, int cy);
 void terrain_cell_secondary_bit0_clear_current(const int cell_xy[2]);
 /* Explicit-level set helper. */
 void level_cell_secondary_bit0_set(LevelState* s, int cx, int cy);
-void terrain_cell_secondary_bit0_set_current(const int cell_xy[2]);
+extern "C" void terrain_cell_secondary_bit0_set_current(const int cell_xy[2]);
 
 /* FUN_004324d0 / FUN_00432520: secondary bit 3 (the flag-8 pair). */
 void level_cell_secondary_bit8_set(LevelState* s, int cx, int cy, int set);
@@ -678,13 +681,13 @@ uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy);
 uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy);
 uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy);
 /* Retail target forms read the active level and apply unsigned dim-1 gates. */
-uint32_t terrain_cell_flag_800_bounded_current(uint32_t cx, uint32_t cy);
+extern "C" uint32_t terrain_cell_flag_800_bounded_current(uint32_t cx, uint32_t cy);
 extern "C" uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);
 extern "C" uint32_t terrain_cell_flag_20_bounded_current(uint32_t cx, uint32_t cy);
 
 /* Explicit-level version of the unchecked state-byte classifier. */
 int level_cell_type_is_8_or_10_or_11(const LevelState* s, int cx, int cy);
-int terrain_cell_type_is_8_or_10_or_11_current(int cx, int cy);
+extern "C" int terrain_cell_type_is_8_or_10_or_11_current(int cx, int cy);
 
 /* Explicit-level entity-reservation bit reader. */
 uint32_t level_cell_flag_reserved(const LevelState* s, int cx, int cy);
@@ -700,14 +703,14 @@ extern "C" void terrain_cell_flag_80000_clear_or_set_current(const int cell_xy[2
                                                    int set);
 
 /* FUN_004332c0: current-level unchecked pair-pointer byte return. */
-uint8_t terrain_cell_record_byte3_current(int x, int y);
+extern "C" uint32_t terrain_cell_record_byte3_current(int x, int y);
 /* Explicit-level adapter. */
 int level_cell_record_byte3(const LevelState* s, int cx, int cy);
 
 /* Explicit-LevelState work-bit helper used by map/load callers. */
 void level_cell_work_flag_set(LevelState* s, int cx, int cy);
 /* TerrainCellWorkFlagSet @ 0x004332f0: current-level target ABI. */
-void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy);
+extern "C" void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy);
 
 /* Explicit-LevelState worker used by erosion and the current-level mapped
  * target below. It applies the descriptor veto, cell flag changes, available
@@ -731,7 +734,7 @@ int level_cell_flag8_check(const LevelState* s, int cx, int cy);
 
 /* FUN_00433330: current-level target entry; reads the unsigned state byte
  * through an out param only inside the dim-1 gate. */
-int terrain_cell_type_get_at_current(uint32_t cx, uint32_t cy,
+extern "C" int terrain_cell_type_get_at_current(uint32_t cx, uint32_t cy,
                                      uint32_t* out_type);
 /* Explicit-level adapter. */
 int level_cell_type_get_at(const LevelState* s, uint32_t cx, uint32_t cy,
@@ -797,7 +800,7 @@ uint32_t upgrade_resource_check_current(int selector);
  * cell-eligibility callback command kind 0x16 installs — answers accept
  * unconditionally; any restriction lives in the callers' command tests.
  * Corpus arguments are ignored; definition stays void. */
-int always_accept_place_command_cell(void);
+extern "C" int always_accept_place_command_cell(void);
 
 /* --- tracked/refreshing cell-flag set family ----------------------------
  * The target entry points read the current level from GameContext and keep
@@ -855,7 +858,7 @@ void terrain_cell_flags_set_mask20108000_current(int x, int y);
  * x/y pair and selector; the explicit-LevelState form is a caller adapter. */
 void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
                                             int set);
-void terrain_cell_flag40000000_clear_or_set_current(const int cell_xy[2],
+extern "C" void terrain_cell_flag40000000_clear_or_set_current(const int cell_xy[2],
                                                      int set);
 
 /* Evidence-backed stateful branches of LevelDebugInputCellMutatorDispatch
@@ -918,7 +921,7 @@ void terrain_cell_variant_complete_hook_install(
     TerrainCellVariantCompleteHook hook, void* context);
 int terrain_cell_variant_flag_propagate(LevelState* s,
                                         const int cell_xy[2]);
-int terrain_cell_variant_flag_propagate_current(const int cell_xy[2]);
+extern "C" int terrain_cell_variant_flag_propagate_current(const int cell_xy[2]);
 void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
                                                const int cell_xy[2]);
 extern "C" void map_cell_tracking_flags_clear_and_refresh_current(
@@ -1008,6 +1011,9 @@ typedef struct TerrainStampImpactHooks {
     void (*cell_flags_or)(void* context, uint32_t x, uint32_t y,
                           uint32_t flags);
 } TerrainStampImpactHooks;
+#ifdef __cplusplus
+extern "C"
+#endif
 int terrain_stamp_impact_handle_current(uint32_t x, uint32_t y,
                                         int direction, int mode); /* 0x00431780 */
 int terrain_stamp_impact_handle(uint32_t x, uint32_t y, int direction,
@@ -1088,6 +1094,9 @@ void terrain_cell_flag20_clear_and_refresh(LevelState* s, int cx, int cy);
 /* TerrainCellEdgeFlagSetAndUpdate (FUN_0042f2e0): raise or clear the
  * primary 0x200 edge flag on the corpus's set selector (the manager
  * travels as the corpus's first argument), then the refresh seam. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
                                            int set);
 void* terrain_activity_build_record_get(LevelState* level, int x, int y);

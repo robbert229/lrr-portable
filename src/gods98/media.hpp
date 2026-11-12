@@ -64,6 +64,9 @@ float media_timer_remaining(void);
 void     media_cd_config_set(int start_track_base, int track_count);
 
 /* Enable selects and starts a track; disable clears the bit and closes. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void     media_cd_watchdog_update(int enable);
 uint32_t media_cd_flags_get(void);   /* state word with the 0x8/0x10 bits */
 int      media_cd_slot(void);        /* last selected track */
@@ -74,6 +77,9 @@ int      media_cd_slot(void);        /* last selected track */
 /* Set (enable != 0) raises the sound-on bit and re-enables the sound
  * subsystem; clearing it mutes through the same gate. Repeats are
  * idempotent, like the corpus's flag write. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void media_audio_playback_toggle(int enable);
 
 /* ------------------------------------------------------------------ *
@@ -121,6 +127,9 @@ void media_action_code_to_sound_alias(int code);
 /* Run the state machine: `mode` 0/1 (other values only update the mode),
  * `context` the entity/context pointer stored in mode 0. Mode 0 picks
  * the listener scale from `scalar_selector` (0 -> 0.9, nonzero -> 0.6). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void  media_min_distance_update_mode(int mode, void* context,
                                      int scalar_selector);
 

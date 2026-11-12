@@ -61,8 +61,8 @@ void* ui_message_text_output_get(int alternate); /* DAT_0050361c/620 */
 extern "C" void ui_message_overlay_state_initialize(void); /* FUN_0046aa90 */
 const char* ui_message_label_get(unsigned int index);
 extern "C" int ui_message_label_index_find(const char* label, int* out_index); /* FUN_0046aad0 */
-void ui_message_text_slot_assign(int index, const char* text); /* FUN_0046ab10 */
-void ui_message_text_slot_assign_with_image(int index, const char* text,
+extern "C" void ui_message_text_slot_assign(int index, const char* text); /* FUN_0046ab10 */
+extern "C" void ui_message_text_slot_assign_with_image(int index, const char* text,
                                             const char* image_path,
                                             const char* display_path); /* FUN_0046abb0 */
 const char* ui_message_text_slot_get(unsigned int index);

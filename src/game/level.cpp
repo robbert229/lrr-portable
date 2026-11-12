@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
+/* Matching build: Lego.c callers call lego_unit.c (#587). */
+#include "lego_port_aliases.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -53,12 +55,17 @@ extern "C" int32_t s_cell_previous_track[][2];
 extern "C" int s_cell_previous_track_count;
 extern "C" int32_t s_cell_visited_track[][2];
 extern "C" int s_cell_visited_track_count;
+/* GAME-021's lego_unit.c reads the surface type descriptions (issue #587):
+ * C linkage, which the frozen header below and the definitions inherit. */
+extern "C" const char* s_surface_type_names[];
+extern "C" uint32_t s_surface_type_values[];
 #include "level_for_lego.hpp"
 /* Defined in GAME-021's lego_unit.c (issue #544): C linkage, which the
  * frozen header below inherits. */
 extern "C" float engine_float_field260_get_current_target(void);
 extern "C" uint32_t global_state_field84_get_current_target(void);
 extern "C" uint32_t s_neighbor_pick_rotation;
+extern "C" int level_cell_flag8_check_target(const LevelState* unused, int cx, int cy);
 #include "level_from_lego.hpp"
 #include "level_for_files.hpp"
 #include "level_for_legoobject.hpp"

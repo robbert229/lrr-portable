@@ -244,6 +244,9 @@ void sound_alias_registry_init(void);
 /* SoundDynamicAliasRegistrationSet @ 0x00464c50: enable (nonzero) or
  * disable (zero) appending unknown names during lookup (DAT_00502a2c
  * bit 2). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void sound_alias_registration_set(int enable);
 
 /* SoundAliasLookup @ 0x00464c70: resolve `name` (case-insensitive) to an
@@ -476,6 +479,9 @@ int sound_deferred_handle(void);
 /* SoundSampleMarkerParse @ 0x464d00: parse one Samples value into the
  * alias's variant chain. 1 if every path loaded, 0 if any failed (the
  * chain still keeps the successes, like the corpus). */
+#ifdef __cplusplus
+extern "C"
+#endif
 int sound_sample_marker_parse(const char* spec, int alias_index);
 /* Load the Samples section after the audio bank has been enabled.
  * allow_marked controls the reference's leading-`!` reduce-samples gate. */

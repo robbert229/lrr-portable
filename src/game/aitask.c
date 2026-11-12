@@ -4493,7 +4493,7 @@ int aitask_cmd_entity_command_chain_tick(struct EntitySlot* object, void* data)
                             if (route) {
                                 AITaskPoint2I goal;
                                 if (task->type == 9) {
-                                    if (!first_free_neighbor_cell_pick_current(object, &task->blockX,
+                                    if (!lego_first_free_neighbor_cell_pick(object, &task->blockX,
                                                                                &goal.x, 1))
                                         failed = 1;
                                 } else {
@@ -5844,7 +5844,7 @@ void aitask_pending_command_entity_assignment_tick(void)
                                 (oBPos[1] != bPos[1] || abs(oBPos[0] - bPos[0]) != 1)) {
                                 nearBPos[0] = bPos[0];
                                 nearBPos[1] = bPos[1];
-                                if (!first_free_neighbor_cell_pick_current(best, nearBPos, bPos, 1))
+                                if (!lego_first_free_neighbor_cell_pick(best, nearBPos, bPos, 1))
                                     route = 0;
                             }
                             if (route) {
@@ -5946,7 +5946,7 @@ void aitask_pending_command_entity_assignment_tick(void)
                             message = 0x32;
                             break;
                         }
-                        if (first_free_neighbor_cell_pick_current(best, bPos, nearBPos, 1)) {
+                        if (lego_first_free_neighbor_cell_pick(best, bPos, nearBPos, 1)) {
                             cmd_produce(message, best, (int)(size_t)task, nearBPos);
                             if (!(task->flags & 0x100))
                                 task->entityRef = best;
