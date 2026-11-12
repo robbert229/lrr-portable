@@ -757,6 +757,25 @@ object-layout model, not proof of final linker placement or content identity.
 An anchor mismatch can coexist with equal gaps; it signals missing or extra
 prefix storage. The tool does not change `binary-progress.json`.
 
+## Whole-binary audit (`pe_audit.py`)
+
+`make pe-audit` compares the matching build's `LegoRR.exe` with the original
+beyond function code (finding 563). It reports:
+- the PE and COFF header fields that differ, and the section table;
+- each section's bytes that differ at the same offset;
+- the import directory: DLL order, imported names and the IAT;
+- the resource leaves, and repeated string literals;
+- the original's `.text` by unit kind and its inter-function fill;
+- the rebuilt map's section groups, attributed to link-order categories
+  (unit, legacy, tail, LIBC, import, common), and the import thunks in `.text`.
+
+It reads an existing build in `$(RECCMP_BUILD_DIR)` and does not rebuild.
+`PE_AUDIT_JSON=out.json` writes every measurement. `--no-functions` skips the
+per-function fill, which needs capstone. Map attribution gives each symbol the
+bytes up to the next symbol, so a large static without a map symbol is counted
+to the symbol before it. Read sizes from the COFF objects when that matters.
+The tool does not change `binary-progress.json`.
+
 ## Whole-binary progress
 
 `make match-progress` regenerates `docs/coverage/match-baseline.txt`,

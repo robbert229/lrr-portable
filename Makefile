@@ -19,7 +19,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: unit-data-offsets match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
+.PHONY: unit-data-offsets pe-audit match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -111,6 +111,12 @@ relocate-unit:
 unit-data-offsets:
 	python3 tools/unit_data_offsets.py --build "$(RECCMP_BUILD_DIR)"
 
+# Whole-binary audit beyond function code (finding 563): headers, sections,
+# imports, resources and map attribution of the existing matching build.
+pe-audit:
+	python3 tools/pe_audit.py --rebuilt "$(RECCMP_BUILD_DIR)/LegoRR.exe" \
+	  --map "$(RECCMP_BUILD_DIR)/LegoRR.map" $(if $(PE_AUDIT_JSON),--json "$(PE_AUDIT_JSON)")
+
 # Unit tests of the Python tooling (needs reference/LegoRR.exe for the
 # validation tests, which are skipped without it).
 tools-test: reccmp-lint
@@ -124,6 +130,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_cohort.py'
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_unit_data_offsets.py'
+	python3 -m unittest discover -s tools/tests -p 'test_pe_audit.py'
 	python3 -m unittest discover -s tools/tests -p 'test_pr_match_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_match_listings.py'
 	python3 -m unittest discover -s tools/tests -p 'test_link_order.py'
