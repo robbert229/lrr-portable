@@ -306,7 +306,7 @@ void motion_jitter_state_step(MotionJitterState* state, float delta,
 namespace unported_ledger_stubs {
 uint32_t ledger_stub_0040e1e0_CellCornerOccupancyScan(
     struct LevelState* level, int cell_x, int cell_y);
-void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
+extern "C" void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
     const struct EntitySlot* entity, const int cell_xy[2],
     uint32_t filter_a, uint32_t filter_b);
 extern "C" void ledger_stub_0044b140_SmallSpiderCellSwarmSpawn(

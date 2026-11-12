@@ -525,7 +525,7 @@ const void* terrain_cell_variant_window_get(const void* terrain);
  * clears. Bounds-guarded (the corpus writes OOB for bad coords). */
 void level_tile_mark(LevelState* s, int cx, int cy, int set);
 void level_tile_mark_current(const int cell_xy[2], int set);
-void level_tile_mark_current_target(const int cell_xy[2], int set);
+extern "C" void level_tile_mark_current_target(const int cell_xy[2], int set);
 
 /* FUN_00432e00 read side: does the cell currently carry the OCCUPIED
  * reservation flag? The wave-flood pathfinder consults it for its blocked
@@ -564,7 +564,7 @@ uint32_t terrain_cell_flag_wave_current(int cx, int cy);
 /* FUN_00432c50: terrain speed class — 0 when flag bit 0x200000 is set,
  * otherwise the low two terrain-type bits + 1. */
 int level_cell_speed_class(const LevelState* s, int cx, int cy);
-int terrain_cell_speed_class_current(const int cell_xy[2]);
+extern "C" int terrain_cell_speed_class_current(const int cell_xy[2]);
 
 /* Explicit-level flag-byte view; returns the masked 0xc0 bits. The target
  * returns a normalized boolean through the active-level pair below. */
@@ -580,19 +580,19 @@ uint32_t terrain_cell_edge_wall_current(const int cell_xy[2]);
  * or 6. No cell, no match. */
 int level_cell_state_is_1(const LevelState* s, int cx, int cy);
 int level_cell_state_is_6(const LevelState* s, int cx, int cy);
-int terrain_cell_state_equals_one_current(const int cell_xy[2]);
+extern "C" int terrain_cell_state_equals_one_current(const int cell_xy[2]);
 extern "C" int terrain_cell_state_equals_six_current(const int cell_xy[2]);
 
 /* FUN_00432f40: the two low terrain bits (0x18) clear — cells OUTSIDE
  * the grid-minus-one gate count as clear (as in the corpus). */
 int level_cell_mask18_clear(const LevelState* s, int cx, int cy);
-int terrain_cell_mask18_clear_current(uint32_t cx, uint32_t cy);
+extern "C" int terrain_cell_mask18_clear_current(uint32_t cx, uint32_t cy);
 
 /* FUN_00432f90: flag bit 4 inside the grid-minus-one gate (0 outside).
  * The mapped entry uses the live level; the explicit-level form is an
  * adapter for callers which already own a LevelState. */
 uint32_t level_cell_flag_4(const LevelState* s, int cx, int cy);
-uint32_t level_cell_flag_4_current(uint32_t cx, uint32_t cy);
+extern "C" uint32_t level_cell_flag_4_current(uint32_t cx, uint32_t cy);
 
 /* Explicit-level adapters and target-shaped current-level scalar readers. */
 uint32_t level_cell_flag_2000(const LevelState* s, int cx, int cy);
@@ -626,7 +626,7 @@ int level_cell_mask_180000(const LevelState* s, int cx, int cy);
 /* FUN_00433120: raise (set nonzero) or clear flag bit 0x10000000.
  * Bounds-guarded (the corpus writes OOB for bad coords). */
 void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set);
-void terrain_cell_flag_10000000_set_current(const int cell_xy[2], int set);
+extern "C" void terrain_cell_flag_10000000_set_current(const int cell_xy[2], int set);
 
 /* Raise (set nonzero) or clear flag bit 0x800000 — the cell-command
  * issuer's terrain half marks the cell through this leaf (finding 451);
@@ -656,7 +656,7 @@ void terrain_cell_secondary_bit0_set_current(const int cell_xy[2]);
 /* FUN_004324d0 / FUN_00432520: secondary bit 3 (the flag-8 pair). */
 void level_cell_secondary_bit8_set(LevelState* s, int cx, int cy, int set);
 uint32_t level_cell_secondary_flag_8(const LevelState* s, int cx, int cy);
-void terrain_cell_secondary_flag_8_set_current(int cx, int cy, int set);
+extern "C" void terrain_cell_secondary_flag_8_set_current(int cx, int cy, int set);
 extern "C" uint32_t terrain_cell_secondary_flag_8_current(int cx, int cy);
 
 /* FUN_00432aa0: mode 0 reads the flag word's 0x400 mask; mode nonzero
@@ -696,7 +696,7 @@ extern "C" uint32_t terrain_cell_flag_reserved_current(const int cell_xy[2]);
  * queues; this one is an unchecked pure leaf. */
 void level_cell_flag_80000_set(LevelState* s, int cx, int cy, int set);
 /* Retail target form takes a coordinate pair and an unchecked set selector. */
-void terrain_cell_flag_80000_clear_or_set_current(const int cell_xy[2],
+extern "C" void terrain_cell_flag_80000_clear_or_set_current(const int cell_xy[2],
                                                    int set);
 
 /* FUN_004332c0: current-level unchecked pair-pointer byte return. */
@@ -933,7 +933,7 @@ void terrain_cell_linked_entry_remove_hook_install(
 void terrain_cell_state_projection_hook_install(
     TerrainCellStateProjectionHook hook, void* context);
 int terrain_cell_state_update(LevelState* s, const int cell_xy[2]);
-int terrain_cell_state_update_current(const int cell_xy[2]);
+extern "C" int terrain_cell_state_update_current(const int cell_xy[2]);
 typedef int (*DockDefinitionCellGetHook)(int cell_xy[2], void* context);
 void dock_definition_cell_get_hook_install(DockDefinitionCellGetHook hook,
                                           void* context);
@@ -1427,7 +1427,7 @@ extern "C" void render_config_six_field_copy_in_or_clear(const uint32_t in[6]);
 /* GridRecordCountDifferenceSum (FUN_00437100): sum all 16 slots for rows
  * 0..14 of `type`, optionally skipping rows whose stats record has bit 8
  * set at offset +0x144. The stats table is the guarded entity model. */
-int grid_record_count_difference_sum(int type, int skip_flagged_rows);
+extern "C" int grid_record_count_difference_sum(int type, int skip_flagged_rows);
 extern "C" uint32_t grid_record_count_get(int row, int column, int slot);
 extern "C" uint32_t entity_type_grid_record_count_get(const char* type_name, int slot);
 /* Diagnostics table index: 0 is first, 1 is second. */
@@ -1680,7 +1680,7 @@ uint32_t path_record_count_peek(void);
 void* path_record_last_peek(void);
 uint32_t path_record_count_matching_coordinates(const void* record,
                                                 int type, int row);
-int terrain_descriptor_coordinate_count_limit_check(
+extern "C" int terrain_descriptor_coordinate_count_limit_check(
     uint32_t descriptor_key, int type, int row); /* 0x00408d70 */
 uint32_t terrain_kind_nine_neighbor_emit_for_footprint_cells(
     const int cell_xy[2], const int* footprint_xy, uint32_t footprint_count); /* 0x00408ec0 */
@@ -1715,10 +1715,9 @@ extern "C" int terrain_cell_route_and_occupancy_check_current(
 int first_free_neighbor_cell_pick(const struct EntitySlot* entity,
                                   const LevelState* s, const int* cell_in,
                                   int* cell_out, int mode);
-int first_free_neighbor_cell_pick_current(const struct EntitySlot* entity,
-                                          const int* cell_in, int* cell_out,
-                                          int mode);
-                                                /* FUN_00431c70 */
+extern "C" int first_free_neighbor_cell_pick_current(
+    const struct EntitySlot* entity, const int* cell_in, int* cell_out,
+    int mode);                                  /* FUN_00431c70; aitask.c */
 uint32_t neighbor_pick_rotation_peek(void);     /* port hook */
 int nearby_placement_entity_search_current(const int cell_xy[2],
                                            int resource_amount);

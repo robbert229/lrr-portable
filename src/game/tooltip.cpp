@@ -53,6 +53,11 @@ extern "C" void timed_effect_cue_request_set_corpus(int index, uint32_t value);
 #include "ai.hpp"
 #include "spawn.hpp"
 #include "terrain_grid.hpp"
+/* C linkage for AITask.c (aitask.c, ADR 0005 step 6, finding 570): the
+ * frozen header below redeclares idle_register and
+ * cmd_operation_group_append_object and inherits it. */
+extern "C" void idle_register(EntitySlot* e);
+extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
 #include "cmd_for_tooltip.hpp"
 #include "combat_ray_ports.hpp"
 #include "gods98/scene_pool.hpp"

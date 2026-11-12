@@ -34,7 +34,7 @@
 
 # Ordered game and gods98 segments, port tail, then CRT-range legacy files.
 lrr_link(unit   GAME-001 game          game/advisor.c)
-lrr_link(unit   GAME-002 game          game/aitask.cpp)
+lrr_link(unit   GAME-002 game          game/aitask.c)
 lrr_link(unit   GAME-003 game          game/bezier.c)
 lrr_link(unit   GAME-004 game          game/animation_object.c)
 lrr_link(unit   GAME-005 game          game/bubbles.cpp)
@@ -171,6 +171,7 @@ lrr_link(tail   -        game          game/terrain_map_port.cpp)
 lrr_link(tail   -        game          game/reward_port.cpp)
 lrr_link(tail   -        game          game/interface_port.cpp)
 lrr_link(tail   -        game          game/info_port.cpp)
+lrr_link(tail   -        game          game/aitask_port.cpp)
 lrr_link(tail   -        game          game/terrain_cell_objects_port.cpp)
 lrr_link(tail   -        gods98        gods98/message.cpp)
 lrr_link(tail   -        gods98        gods98/sound.cpp)

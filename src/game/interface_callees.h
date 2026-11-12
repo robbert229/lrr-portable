@@ -164,15 +164,15 @@ extern unsigned char input_prev_key_map[256];
 
 /* ---- port entries with the original contract ---------------------------- */
 
-/* AITask.c (GAME-002): game/cmd.hpp */
-void cmd_mark_matching(int type, int payload, const int coords[2]);
-void task_type23_create_for_category_mask(struct EntitySlot* e, int selector,
-                                          int issue_records);
-void entity_kind_command_issue(struct EntitySlot* e);
-void entity_conditional_task_schedule(struct EntitySlot* e);
-void object_command_task_create(struct EntitySlot* entity, int parameter);
-void entity_threshold_progress_event_queue(void* payload, int flag);
-int object_event_type2_queue(void* payload);
+/* AITask.c (GAME-002): its original-shape unit, game/aitask.h (finding 570) */
+void aitask_cmd_mark_matching(int type, struct EntitySlot* object, const int* blockPos);
+void aitask_task_type23_create_for_category_mask(struct EntitySlot* object, int mask, int detach);
+void aitask_entity_kind_command_issue(struct EntitySlot* object);
+void aitask_entity_conditional_task_schedule(struct EntitySlot* object);
+void aitask_object_command_task_create(struct EntitySlot* object, int param);
+void aitask_entity_threshold_progress_event_queue(struct EntitySlot* object,
+                                                  int urgent);
+int aitask_object_event_type2_queue(void* payload);
 /* ToolTip.c (GAME-046): game/cmd.hpp */
 void command_sample_stats_accumulate(int kind, const void* sample);
 /* Lego.c (GAME-021): game/cmd.hpp, game/level.hpp, game/frontend.hpp,
@@ -198,9 +198,9 @@ uint32_t terrain_cell_flag_8000_current(const int cell_xy[2]);
 uint32_t level_cell_occupied_at_current(const int cell_xy[2]);
 int interface_spawn_request_enqueue(int type, uint32_t parameter);
 void global_state_low_byte_clear_and_refresh(void);
-/* AITask.c (GAME-002), Construction (GAME-007), Dependencies.c (GAME-010):
+/* AITask.c (GAME-002, aitask.h), Construction (GAME-007), Dependencies.c (GAME-010):
  * game/level.hpp, gods98/simtick.hpp */
-void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode);
+void aitask_terrain_cell_refresh_dispatch_current(const int* blockPos, int mode);
 int terrain_cell_predicate_check_current(const uint32_t pair_key[2]);
 void simtick_selection_group_clear(const uint32_t key_pair[2]);
 int ensure_cell_entries_loaded(uint32_t kind, int row, int slot);

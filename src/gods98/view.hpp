@@ -1352,6 +1352,9 @@ void* scene_object_indexed_handle_get_or_create(void* record, int index);
 extern "C"
 #endif
 void* scene_object_primary_handle_get_or_create(void* record);
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_object_secondary_handle_get_or_create(void* record);
 #ifdef __cplusplus
 extern "C"

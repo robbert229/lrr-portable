@@ -991,7 +991,7 @@ extern uint32_t s_window_mouse_word_58; /* DAT_0076ab58 */
 void     renderer_words_set(uint32_t a, uint32_t b, uint32_t c); /* install */
 
 /* GlobalDwordGet (FUN_004065d0): the DAT_0076ac84 global dword. */
-extern uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
+extern "C" uint32_t s_renderer_global_dword; /* DAT_0076ac84, aitask.c reads it */
 extern void* s_renderer_primary_surface; /* DAT_0076ac88 */
 extern uint32_t s_renderer_window_state_90; /* DAT_0076ac90 */
 extern uint32_t s_renderer_window_state_94; /* DAT_0076ac94 */
@@ -1001,12 +1001,12 @@ extern uint32_t s_renderer_window_state_ac; /* DAT_0076acac */
 extern uint32_t s_renderer_window_state_b0; /* DAT_0076acb0 */
 extern uint32_t s_renderer_window_state_b4; /* DAT_0076acb4 */
 extern uint32_t s_renderer_window_state_b8; /* DAT_0076acb8 */
-uint32_t renderer_global_dword_get(void);
+extern "C" uint32_t renderer_global_dword_get(void); /* aitask.c */
 void     renderer_global_dword_set(uint32_t value); /* install */
 
 /* RenderSurfaceSecondaryGet (FUN_004065e0): the DAT_0076ac8c surface word. */
 extern "C" uint32_t s_render_surface_secondary; /* DAT_0076ac8c, crt.h */
-uint32_t render_surface_secondary_get(void);
+extern "C" uint32_t render_surface_secondary_get(void); /* aitask.c */
 void     render_surface_secondary_set(uint32_t value); /* install */
 
 /* RenderFeatureFlagsGet (FUN_00477f70): the DAT_0050608c feature word. */

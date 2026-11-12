@@ -2239,11 +2239,11 @@ int interface_do_action(int type)
         selection_clear_request_and_hud_reset();
         return 1;
     case 9:
-        cmd_mark_matching(12, 0, &interfaceGlobs.selBlockPos.x);
+        aitask_cmd_mark_matching(12, 0, &interfaceGlobs.selBlockPos.x);
         selection_clear_request_and_hud_reset();
         return 1;
     case 15:
-        terrain_cell_refresh_dispatch_current(&interfaceGlobs.selBlockPos.x, 0);
+        aitask_terrain_cell_refresh_dispatch_current(&interfaceGlobs.selBlockPos.x, 0);
         interfaceGlobs.blockHighlight = 0;
         terrain_map_block_highlight_set(lego_get_map(), interfaceGlobs.selBlockPos.x, interfaceGlobs.selBlockPos.y, 4);
         selection_clear_request_and_hud_reset();
@@ -2258,7 +2258,7 @@ int interface_do_action(int type)
         return 1;
     case 24:
         selection_clear_active();
-        entity_kind_command_issue(LEGOOBJ(obj));
+        aitask_entity_kind_command_issue(LEGOOBJ(obj));
         selection_clear_request_and_hud_reset();
         return 1;
     case 12:
@@ -2337,7 +2337,7 @@ int interface_do_action(int type)
         selection_clear_request_and_hud_reset();
         return 1;
     case 64:
-        object_command_task_create(LEGOOBJ(obj), 0);
+        aitask_object_command_task_create(LEGOOBJ(obj), 0);
         selection_clear_request_and_hud_reset();
         return 1;
     case 65:
@@ -2416,7 +2416,7 @@ int interface_do_action(int type)
         if (found == NULL) {
             return 0;
         }
-        task_type23_create_for_category_mask(LEGOOBJ(found), mask, 1);
+        aitask_task_type23_create_for_category_mask(LEGOOBJ(found), mask, 1);
         selection_clear_request_and_hud_reset();
         return 1;
     case 2:
@@ -2479,7 +2479,7 @@ int interface_do_action(int type)
         return 1;
     case 20:
         if (entity_capability_flags_get(LEGOOBJ(obj)) & 1) {
-            entity_conditional_task_schedule(LEGOOBJ(obj));
+            aitask_entity_conditional_task_schedule(LEGOOBJ(obj));
             return 1;
         }
         mask = 0x10;
@@ -2539,22 +2539,22 @@ int interface_do_action(int type)
         command_context_post_to_hud(18, NULL);
         return 1;
     case 67:
-        object_command_task_create(LEGOOBJ(obj), 1);
+        aitask_object_command_task_create(LEGOOBJ(obj), 1);
         obj->field_3d8 = 0;
         selection_clear_request_and_hud_reset();
         return 1;
     case 68:
-        object_command_task_create(LEGOOBJ(obj), 0);
+        aitask_object_command_task_create(LEGOOBJ(obj), 0);
         obj->field_3d8 = 0;
         selection_clear_request_and_hud_reset();
         return 1;
     case 69:
-        object_command_task_create(LEGOOBJ(obj), 2);
+        aitask_object_command_task_create(LEGOOBJ(obj), 2);
         obj->field_3d8 = 0;
         selection_clear_request_and_hud_reset();
         return 1;
     case 70:
-        object_command_task_create(LEGOOBJ(obj), 3);
+        aitask_object_command_task_create(LEGOOBJ(obj), 3);
         obj->field_3d8 = 0;
         selection_clear_request_and_hud_reset();
         return 1;
@@ -3170,7 +3170,7 @@ int interface_callback_go_feed(struct LegoObject* obj, void* data)
 int interface_callback_repair(struct LegoObject* obj, void* data)
 {
     if (obj->health < 100.0f) {
-        entity_threshold_progress_event_queue(obj, 0);
+        aitask_entity_threshold_progress_event_queue(LEGOOBJ(obj), 0);
     }
     return 0;
 }
@@ -3185,7 +3185,7 @@ int interface_callback_lacks_tool(struct LegoObject* obj, void* data)
 int interface_callback_get_tool(struct LegoObject* obj, void* data)
 {
     if (!ai_activity_scan(LEGOOBJ(obj), (int)(size_t)data)) {
-        object_event_type2_queue((void*)data);
+        aitask_object_event_type2_queue((void*)data);
     }
     return 0;
 }

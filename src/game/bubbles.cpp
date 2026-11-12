@@ -34,6 +34,11 @@
 #include "gods98/engine.hpp"
 #include "gods98/media.hpp"
 #include "port_loop_ports.hpp"
+/* C linkage for AITask.c (aitask.c, ADR 0005 step 6, finding 570): the
+ * frozen header below redeclares idle_register and
+ * cmd_operation_group_append_object and inherits it. */
+extern "C" void idle_register(EntitySlot* e);
+extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
 #include "cmd_for_bubbles.hpp"
 #include "combat_ray_ports.hpp"
 #include "simtick.hpp"

@@ -50,6 +50,11 @@
 #include "crt/crt_for_lava_erosion.hpp"
 #include "level_for_lava_erosion.hpp"
 #include "crt/crt_for_lava_erosion.hpp"
+/* C linkage for AITask.c (aitask.c, ADR 0005 step 6, finding 570): the
+ * frozen header below redeclares idle_register and
+ * cmd_operation_group_append_object and inherits it. */
+extern "C" void idle_register(EntitySlot* e);
+extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
 #include "cmd_for_lava_erosion.hpp"
 
 // GLOBAL: LEGORR 0x0049e124
