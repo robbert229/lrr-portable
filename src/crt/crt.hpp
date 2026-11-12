@@ -595,7 +595,7 @@ void request_record_panel_bounds_peek(int index, float* out_x1,
  * guarded to a documented 16-entry window (deviation). */
 extern "C" void global_value_0050080c_set(int value);
 uint32_t global_value_0050080c_peek(void);            /* port hook */
-uint32_t indexed_global_value_at_get(int index);      /* FUN_0045cc10 */
+extern "C" uint32_t indexed_global_value_at_get(int index);      /* FUN_0045cc10 */
 uint32_t global_cursor_word_get(void);                /* FUN_0045cc60 */
 void     font_cursor_word_set(int index, uint32_t v); /* port hook */
 
@@ -631,9 +631,9 @@ extern "C" void indexed_pair_get(int index, float* out_x, float* out_y);
 extern "C" void indexed_float_pair_set(int index, uint32_t x, uint32_t y);
                                         /* FUN_00463730 */
 void indexed_float_pair_peek(int index, float* out_x, float* out_y); /* port hook */
-void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y);
+extern "C" void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y);
                                         /* FUN_00463ed0 */
-void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
+extern "C" void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
                                    uint32_t* out_y); /* FUN_00463ea0 */
 void indexed_record_pointer_set(int index, void* record); /* port hook */
 void* indexed_record_pointer_peek(int index);

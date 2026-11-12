@@ -129,6 +129,8 @@
 #include "game/select.hpp"
 #include "game/interface_unit.h"
 #include "game/interface_callees.h"
+#include "game/info_unit.h"
+#include "game/info_api.h"
 
 int main(void)
 {

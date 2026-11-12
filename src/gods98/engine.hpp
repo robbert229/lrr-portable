@@ -256,7 +256,7 @@ void engine_keep_running_hook_set(EngineKeepRunningHook hook, void* user);
 int EngineKeepRunning(EngineContext* ctx);
 
 /* Retail TimeScaleGet @ 0x0041fb40 reads the shared DAT_0055615c global. */
-float EngineTimeScale(void);
+extern "C" float EngineTimeScale(void);
 /* Portable context adapter used by EngineTick and local callers. */
 float EngineTimeScale(EngineContext* ctx);
 
@@ -372,7 +372,7 @@ void objective_task_text_origin_peek(float out[2]); /* port hook */
  * (the 0x414f90 slider store) refreshes the speed index first; the port
  * mirrors that band with the peek hook below.
  * Deviation: the corpus reads the overlap-flagged float word blindly. */
-void  scroll_scale_set_and_clamp(float scale);  /* FUN_00425ce0 */
+extern "C" void  scroll_scale_set_and_clamp(float scale);  /* FUN_00425ce0 */
 float scroll_scale_peek(void);                  /* port hook */
 void  scroll_scale_set(float value);            /* port hook */
 int   scroll_speed_index_get(void);             /* port hook (band model) */

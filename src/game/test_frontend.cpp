@@ -25,6 +25,7 @@
 #include "game/effects.hpp"
 #include "game/priorities.h"
 #include "game/panel_unit.h"
+#include "game/info_unit.h"
 #include "game/savegame.hpp"
 #include "game/util.hpp"
 #include "game/game.hpp"
@@ -1786,10 +1787,10 @@ int main(int argc, char** argv)
         indexed_record_pointer_set(0, metric);
         indexed_text_metrics_pair_set(0, 0u, 0u);
         screen_right_edge_cache_refresh();
-        CHECK(screen_right_edge_cache_peek() == 0u, "a clear pair caches clear");
+        CHECK(info_scroll_offset_get() == 0, "a clear pair caches clear");
         indexed_text_metrics_pair_set(0, 11u, 4u);
         screen_right_edge_cache_refresh();
-        CHECK(screen_right_edge_cache_peek() == 7u, "the fold caches x - y");
+        CHECK(info_scroll_offset_get() == 7, "the fold caches x - y");
         indexed_text_metrics_pair_set(0, 0u, 0u);
         indexed_record_pointer_set(0, NULL);
     }
@@ -1847,7 +1848,7 @@ int main(int argc, char** argv)
         uint32_t mx = 0u, my = 0u;
         indexed_text_metrics_pair_get(0, &mx, &my);
         CHECK(mx == 7u && my == 0u, "the clamped pair difference lands");
-        CHECK(screen_right_edge_cache_peek() == 7u, "the cache follows");
+        CHECK(info_scroll_offset_get() == 7, "the cache follows");
         const uint32_t low2 = 2u, high2 = 9u;
         __builtin_memcpy(ui_rec + 0x820, &low2, sizeof low2);
         __builtin_memcpy(ui_rec + 0x824, &high2, sizeof high2);

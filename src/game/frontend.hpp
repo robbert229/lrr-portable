@@ -463,7 +463,7 @@ int  frontend_build(FrontEnd* fe, BlockFile* cfg);
  * records of Lego.cfg's Pointers group. */
 void pointer_cursor_config_load_target(BlockRec* first_entry);
 void frontend_pointer_config_load(BlockFile* cfg);
-int pointer_cursor_config_parse_target(const char* name, int* index_out);
+extern "C" int pointer_cursor_config_parse_target(const char* name, int* index_out);
 extern "C" void pointer_cursor_draw_target(uint32_t x, uint32_t y);
 /* Draw into a caller-locked software frame, using the same resource owner. */
 void pointer_cursor_draw_pixels(uint32_t x, uint32_t y, void* pixels,
@@ -1513,7 +1513,7 @@ void indexed_panel_resource_position_apply(const float* record_position,
 extern "C" void panel_resource_handle_and_dimensions_store(const char* resource, unsigned int w,
                                                 unsigned int h, unsigned int extra);
                                                 /* FUN_0045c520 */
-void scroll_offset_from_cursor_update(void);    /* FUN_0041a250 */
+extern "C" void scroll_offset_from_cursor_update(void);    /* FUN_0041a250 */
 void     panel_enable_word_set(uint32_t word);  /* port hook */
 uint32_t panel_enable_word_peek(void);          /* port hook */
 extern uint32_t s_panel_enable_word; /* DAT_004ffe68 */

@@ -531,7 +531,7 @@ char* campaign_level_fallback_label(const char* label); /* FUN_004105a0 */
 void* menu_item_choice_strings_allocate(uint32_t count, uint32_t f3,
                                         uint32_t f4, uint32_t f5,
                                         uint32_t f6); /* FUN_00410a10 */
-void resource_record_add_ref(void* record); /* FUN_0047dbc0 */
+extern "C" void resource_record_add_ref(void* record); /* FUN_0047dbc0 */
 /* LoadItemStrings (FUN_00414010): for record type 0x10 resolve and retain
  * the eight string-cache resources stored from pointer slot 4 onward;
  * other types produce eight null outputs. Pointer slots are native-width

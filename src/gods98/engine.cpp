@@ -796,3 +796,17 @@ void lego_reset_level_and_exit(void)
 {
     engine_reset_level_and_exit();
 }
+
+/* Lego_GotoInfo (0042de40) in the original ABI, for Info.c (GAME-019,
+ * finding 567): move the view to a message's object or block. A thin
+ * unannotated adapter (ADR 0005 step 6). The port's model at that address
+ * (ledger_stub_0042de40_ViewportTargetPositionClamp) takes a clamp state,
+ * not an object, and the port has no camera goto, so this does nothing. */
+#include "game/info_api.h"
+
+void lego_goto_info(void* object, const int* blockPos, int force)
+{
+    (void)object;
+    (void)blockPos;
+    (void)force;
+}

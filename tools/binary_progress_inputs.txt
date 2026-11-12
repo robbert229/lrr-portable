@@ -183,9 +183,12 @@ src/game/game.cpp
 src/game/game.hpp
 src/game/grid_cell_records.cpp
 src/game/helpwindow.cpp
-src/game/info.cpp
 src/game/info.h
+src/game/info_api.h
+src/game/info_port.cpp
 src/game/info_track_overlay.cpp
+src/game/info_unit.c
+src/game/info_unit.h
 src/game/interface.h
 src/game/interface_callees.h
 src/game/interface_port.cpp
