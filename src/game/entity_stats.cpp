@@ -749,3 +749,16 @@ static uint32_t stats_instance_read(const void* config_block, int off)
     __builtin_memcpy(&index, (const uint8_t*)config_block + 0x330, sizeof(index));
     return stats_table_read(type, row, off, index);
 }
+
+/* ---- GAME-023 group D adapters ---- */
+/* entity_building_index_set is declared only in the frozen
+ * entity_from_entity_stats.hpp. An extern "C" pre-declaration before that
+ * include in legoobject.cpp and entity.cpp shifts both units' symbol
+ * counters (finding 538, rule B), so legoobject_unit.c calls this C entry
+ * instead. */
+// PORT-ONLY: C-linkage entry to 0x00469c10 for legoobject_unit.c (GAME-023)
+extern "C" int legoobject_gd_building_index_set_adapter(EntitySlot* entity,
+                                                        uint32_t state)
+{
+    return entity_building_index_set(entity, state);
+}

@@ -606,7 +606,7 @@ uint32_t entity_indexed_record_word_at_b8_get(int group, int index,
                                               int slot); /* FUN_00469b20 */
 uint32_t entity_indexed_record_word_at_f0_get(int group, int index,
                                               int slot); /* FUN_00469be0 */
-uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
+extern "C" uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
                                                      int slot); /* FUN_0046a0c0 */
 typedef int (*PeriodicEntityCallback)(EntitySlot* entity, void* payload,
                                       void* context);
@@ -1091,7 +1091,7 @@ int entity_centers_within_configured_radius(const EntitySlot* first,
                                             const EntitySlot* second); /* FUN_00472080 */
 int entity_centers_within_object_radius(const EntitySlot* first,
                                         const EntitySlot* second); /* FUN_00472130 */
-void entity_world_position_set(EntitySlot* entity, float x, float y,
+extern "C" void entity_world_position_set(EntitySlot* entity, float x, float y,
                                float heading, int update_heading); /* FUN_004428a0 */
 typedef void (*EntityFinalizeHook)(EntitySlot* entity);
 void entity_type5_finalize_environment_set(uint32_t mode_flags,

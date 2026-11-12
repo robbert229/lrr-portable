@@ -165,15 +165,37 @@ void legoobject_kind_record_update_dispatch(Lego_Object* obj);  /* 00438460 */
 void legoobject_flag80000000_set_or_clear(Lego_Object* obj, int on); /* 00438580 */
 
 /* ---- group D: 004385b0-00438ed0 ---- */
+/* The search record the LegoObject_RunThroughLists callback 00438fb0
+ * scans with (nine dwords): the nearest match within bestDistance whose
+ * kind is selected by mask, and the mask's extra arguments. */
+typedef struct LegoObjGD_SearchData {
+    Lego_Object* result;              /* +0x00 */
+    float x;                          /* +0x04 search centre */
+    float y;                          /* +0x08 */
+    float bestDistance;               /* +0x0c starts at 10000.0f */
+    unsigned int mask;                /* +0x10 */
+    int arg14;                        /* +0x14 */
+    int arg18;                        /* +0x18 */
+    int arg1c;                        /* +0x1c */
+    int arg20;                        /* +0x20 */
+} LegoObjGD_SearchData;
+
+/* The record of the block-position callback 004386b0. */
+typedef struct LegoObjGD_BlockSearch {
+    Lego_Object* result;              /* +0x00 */
+    int bx;                           /* +0x04 */
+    int by;                           /* +0x08 */
+} LegoObjGD_BlockSearch;
+
 int legoobject_shared_eligibility_check(Lego_Object* obj, int relaxed); /* 004385b0 */
 Lego_Object* legoobject_create_in_world(void* model, int type, int id, int last, float x, float y, float heading); /* 00438610 */
 Lego_Object* legoobject_at_grid_position_find(int* cell);       /* 00438670 */
 int legoobject_grid_position_match_callback(Lego_Object* obj, void* data); /* 004386b0 */
-int legoobject_available_resource_spend(int resource, int amount); /* 00438720 */
+int legoobject_available_resource_spend(Lego_Object* obj, int amount); /* 00438720 */
 int legoobject_building_upgrade_resource_admission_check(Lego_Object* building, unsigned int* outCost); /* 00438770 */
 void legoobject_building_upgrade_commit(Lego_Object* building); /* 004387f0 */
 int legoobject_action_kind_prerequisite_check(Lego_Object* obj, int action); /* 004388b0 */
-int legoobject_unknown_00438960(int a, int b);                  /* 00438960 */
+Lego_Object* legoobject_unknown_00438960(Lego_Object* obj, int alt); /* 00438960 */
 Lego_Object* legoobject_route_marker_candidate_find(Lego_Object* source, int secondary); /* 004389e0 */
 Lego_Object* legoobject_query_center_mask01(int* cell, int a, int b, int c); /* 00438a60 */
 Lego_Object* legoobject_query_center_mask02(Lego_Object* obj, int* cell, int a, int b); /* 00438ae0 */

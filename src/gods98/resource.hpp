@@ -770,6 +770,9 @@ typedef int (*SceneEffectPoseHook)(void* handle, float px, float py, float pz,
                                    float rx, float ry, float rz,
                                    void* context);
 void scene_effect_pose_hook_install(SceneEffectPoseHook hook, void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 int lava_effect_select_and_place(int slot, const float* position,
                                  const float* rotation); /* FUN_0040cce0 */
 typedef int (*SceneObjectPositionHook)(void* object, float position[3],
