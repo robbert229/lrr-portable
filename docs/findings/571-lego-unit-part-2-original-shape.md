@@ -13,19 +13,20 @@ functions in the binary, and six functions had no definition in the port
 (`0042b850`, `0042de40`, `0042f0c0`, `004311d0`, `004314c0`, `00431530`).
 All 72 are written and annotated.
 
-"Before" is the *match baseline* at `9b30b563` (main, #567). "After" is this
-change. Scores come from the full matching build (`make reccmp-check`).
+This change is stacked on #581 (GAME-023 part 1, `4e536b53`, which includes
+main at `1d31a556`). "Before" is that head's *match baseline*. "After" is
+this change. Scores come from the full matching build (`make reccmp-check`).
 
 ## Result
 
 | | before | after |
 | --- | ---: | ---: |
-| Range similarity (byte-weighted, 72 functions, 28,041 bytes) | 21.47% | **88.66%** |
+| Range similarity (byte-weighted, 72 functions, 28,041 bytes) | 21.49% | **88.78%** |
 | Exact functions in the range | 17 | **34 of 72** |
 | Mapped functions in the range | 66 | 72 |
-| Exact functions, whole binary | 1,026 | 1,043 |
-| Accuracy, full / game-only (`binary-progress.json`) | 66.60% / 63.15% | **67.94% / 64.64%** |
-| Exact-function code bytes | 88,637 | 93,067 |
+| Exact functions, whole binary | 1,078 | 1,095 |
+| Accuracy, full / game-only (`binary-progress.json`) | 68.50% / 65.26% | **69.83% / 66.74%** |
+| Exact-function code bytes (share of `.text`) | 93,923 (14.62%) | **98,353 (15.31%)** |
 
 Byte weights are the original's code bytes. An unmapped function counts as
 0%. Single-function scores (`make match-function`) are higher for about 15
@@ -69,11 +70,11 @@ differently (offset reads, adapters, unannotated port models).
 | `0042f0c0` | `lego_level_free` | — | 82.52 |
 | `0042f2e0` | `lego_terrain_cell_edge_flag_set_and_update` | 45.61 | **100.00** |
 | `0042f350` | `lego_terrain_neighbor_coordinate_check` | 16.30 | 96.26 |
-| `0042f6f0` | `lego_cell_init_pass` | 9.05 | 76.86 |
+| `0042f6f0` | `lego_cell_init_pass` | 9.05 | 77.84 |
 | `004302b0` | `map_cell_tracking_flags_clear_and_refresh_current` | **100.00** | **100.00** |
 | `00430320` | `terrain_cell_work_flag_clear_current` | **100.00** | **100.00** |
 | `00430470` | `lego_terrain_neighbor_flag_set` | 17.54 | 96.88 |
-| `00430530` | `lego_terrain_cell_mutate` | 12.20 | 95.03 |
+| `00430530` | `lego_terrain_cell_mutate` | 12.41 | 95.31 |
 | `00430df0` | `lego_terrain_neighbor_refresh` | 18.48 | 90.17 |
 | `00430ee0` | `lego_terrain_cell_initialize` | 11.27 | 52.37 |
 | `004310f0` | `lego_terrain_cell_flag20_clear_and_refresh` | 32.84 | **100.00** |
@@ -338,6 +339,8 @@ Both keep a C body under `#else`.
   - the two part-3 naked bodies in `lego.cpp` (`00432560`, `00432600`)
     call `lego_cell_init_pass`, whose four integer arguments they already
     push.
+  - `legoobject_unit_imports.h` (GAME-023, #581) names the unit's
+    `0042e8b0`, `0042c5b0` and `00431da0` the same way.
 
 ### Not switched
 
@@ -385,7 +388,7 @@ matching build:
 
 ## Entropy and drops
 
-Against the baseline at `9b30b563`, `make reccmp-check` reports 55
+Against #581's baseline (`4e536b53`), `make reccmp-check` reports 56
 improved and 6 newly mapped. **No exact match is lost** and no instruction
 count changed anywhere. The drops are below; all are labelled.
 
@@ -393,16 +396,21 @@ count changed anywhere. The drops are below; all are labelled.
 | --- | --- | --- | --- | --- | --- |
 | `0x0040eab0` | `lava_erosion_pending_cell_tick` | `game/lava_erosion.cpp` | 40.59 → 40.17 | drift: calls the unannotated port model `cell_init_pass` | +0 |
 | `0x0040f330` | `lava_erosion_neighbor_mutate` | `game/lava_erosion.cpp` | 20.66 → 20.19 | drift: same | +0 |
-| `0x0041fb50` | `lego_game_config_init` | `game/lego_unit.c` | 93.74 → 93.71 | source changed (calls the unit's type loaders); flagged for review | +0 |
-| `0x0043b270` | `simtick_scene_pass` | `game/legoobject.cpp` | 19.72 → 16.90 | drift: calls the unannotated port models of `00432200`, `004321a0`; `legoobject.cpp` belongs to #575 | +0 |
+| `0x0041fb50` | `lego_game_config_init` | `game/lego_unit.c` | 93.77 → 93.74 | source changed (calls the unit's type loaders); flagged for review | +0 |
+| `0x00437540` | `legoobject_remove` | `game/legoobject_unit.c` (#581) | 80.11 → 79.58 | drift: register order only; its translation unit compiles the same with and without this change's header edit, so the move comes from the link | +0 |
+| `0x0043b270` | `simtick_scene_pass` | `game/legoobject.cpp` | 18.31 → 15.49 | drift: calls the unannotated port models of `00432200` and `004321a0` | +0 |
 
-Four exact callers fell in the first full run and were restored before the
+Seven exact callers fell during the work and were restored before the
 baseline was refreshed, all by call operand only:
 
 - `0x00409450` (`placement.cpp`): `00432300` is shared under MSVC x86;
-- `0x00432560` and `0x00432600` (`lego.cpp`, part 3): they now call
+- `0x00432560` and `0x00432600` (`lego.cpp`, part 3): they call
   `lego_cell_init_pass`;
-- `0x00460910` (`reward.c`): its boundary header names the unit function.
+- `0x00460910` (`reward.c`): its boundary header names the unit function;
+- `0x00438f60` and `0x00439280` (`legoobject_unit.c`, #581):
+  `legoobject_unit_imports.h` names the unit's `0042e8b0`, `0042c5b0` and
+  `00431da0` in the matching build, one declaration either way. This also
+  restores `0x00439d50` (98.72).
 
 `0x00460360` (`reward.c`) recovered the same way.
 
@@ -410,7 +418,8 @@ Improved outside the range:
 
 - part 1: `0x004232e0` 91.52 → 95.88, `0x00424d00` 89.71 → 90.07,
   `0x004295f0` 96.75 → 97.56, `0x00422850` 89.52 → 90.00, `0x00429890`
-  90.40 → 90.64;
+  90.50 → 90.73;
+- `0x00437d00` (`legoobject_unit.c`) 98.80 → 99.04;
 - `0x004520d0` 21.67 → 21.98.
 
 Part 3 in `lego.cpp` (`004324d0` and later) is unchanged except the two
@@ -418,8 +427,8 @@ call fixes above.
 
 ## Reccmp lint ratchet
 
-The ledger goes from 1,490 to 1,488 entries, updated without
-`--allow-growth`:
+The ledger goes from 1,475 to 1,473 entries (against #581), updated
+without `--allow-growth`:
 
 - `definition level_current_owner_get`: now shared under MSVC x86;
 - `definition cell_init_pass`: its `PORT-ONLY` marker was moved directly
@@ -462,7 +471,8 @@ deferred, #552):
 ## Validation
 
 - `make reccmp-check` (MSVC 5.0, developer distrobox): passes after the
-  refresh; the drops above are the full list against `9b30b563`.
+  refresh; the drops above are the full list against #581's `4e536b53`.
+- `make winapi-link-check`: OK.
 - `make match-progress` regenerated the baseline, the listing digests and
   `binary-progress.json`.
 - `make unit-data-offsets`, GAME-021 row:
