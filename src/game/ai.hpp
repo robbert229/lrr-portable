@@ -277,7 +277,7 @@ int  entity_set_activity_place(EntitySlot* e);           /* FUN_00448c50 */
  * bits and the scatter-spawn gate. The corpus's global level pointer is
  * threaded as a GameContext argument (the module's ctx convention). */
 void entity_activity_scene_state_update(GameContext* ctx); /* FUN_00439990 */
-void entity_activity_scene_state_update_retail(void); /* FUN_00439990 */
+extern "C" void entity_activity_scene_state_update_retail(void); /* FUN_00439990 */
 uint32_t entity_state_flags_peek(void);                    /* port hook */
 void     entity_state_flags_set(uint32_t value);           /* port hook */
 extern "C" uint32_t s_entity_state_flags; /* DAT_004dee14 shared state word */

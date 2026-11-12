@@ -2726,7 +2726,8 @@ void camera_grid_timers(EngineContext* ctx, float dt)
 
 /* LoadErodeCryoreLayers @ 0x42c480 — reads the TerrainMap (Surf materials),
  * writes the erosion/cryo byte at voxel +0x02. */
-// FUNCTION: LEGORR 0x0042c480
+/* Port model of 0x0042c480 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042c480, retires to the tail in GAME-021 part 3
 static int load_erode_cryore(LevelState* s, const char* name, int bias)
 {
     uint32_t width;
@@ -2776,7 +2777,8 @@ static int load_erode_cryore(LevelState* s, const char* name, int bias)
  * obtained through DAT_005560d4. Existing game code uses the explicit-level
  * helper above so noncurrent loads can classify cells without changing the
  * target entry's ownership contract. */
-// FUNCTION: LEGORR 0x0042c5b0
+/* Port model of 0x0042c5b0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042c5b0, retires to the tail in GAME-021 part 3
 int terrain_cell_byte_state_classify_current(const int xy[2],
     uint32_t* out_a, uint32_t* out_b, uint32_t* out_c, uint32_t* out_d)
 {
@@ -2815,7 +2817,8 @@ int terrain_cell_byte_state_classify_current(const int xy[2],
 }
 /* LoadPathAiLayers @ 0x42c6a0 — reads the CryOreMap, writes path/AI byte
  * (value − bias) at voxel +0x05. */
-// FUNCTION: LEGORR 0x0042c6a0
+/* Port model of 0x0042c6a0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042c6a0, retires to the tail in GAME-021 part 3
 static int load_path_ai(LevelState* s, const char* name, int bias)
 {
     uint32_t width;
@@ -2850,7 +2853,8 @@ static int load_path_ai(LevelState* s, const char* name, int bias)
 
 /* LoadFallinLayer @ 0x42c760 — reads the PathMap, ORs fallin flag bits into
  * voxel +0x08 over an existing cave flag (the corpus's `(flags & 8)` gate). */
-// FUNCTION: LEGORR 0x0042c760
+/* Port model of 0x0042c760 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042c760, retires to the tail in GAME-021 part 3
 static int load_fallin(LevelState* s, const char* name, int bias)
 {
     MapFile* m = level_map_open(name);
@@ -2890,7 +2894,8 @@ static int load_fallin(LevelState* s, const char* name, int bias)
 /* LoadBlockPointers @ 0x42c9d0 — reads the FallinMap, writes the block
  * pointer count/flag at voxel +0x38/+0x3C and the hash mod at +0x40.
  * (Key→loader roles are the code's mapping, see level.hpp.) */
-// FUNCTION: LEGORR 0x0042c9d0
+/* Port model of 0x0042c9d0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042c9d0, retires to the tail in GAME-021 part 3
 static int load_block_pointers(LevelState* s, const char* name)
 {
     /* DAT_00556f18 is also the camera's block-pointer-grid enable word. */
@@ -2946,7 +2951,8 @@ static int load_block_pointers(LevelState* s, const char* name)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0042cb70
+/* Port model of 0x0042cb70 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042cb70, retires to the tail in GAME-021 part 3
 void camera_grid_expiry(EngineContext* ctx, float dt)
 {
     EngineState* st = ctx != NULL ? ctx->state_block : NULL;
@@ -2994,7 +3000,8 @@ void camera_grid_expiry(EngineContext* ctx, float dt)
 
 /* LoadTerrainMap @ 0x42cc90 — reads the BlockPointersMap, writes surface
  * type byte (value − bias) at voxel +0x04 (mapping note: level.hpp). */
-// FUNCTION: LEGORR 0x0042cc90
+/* Port model of 0x0042cc90 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042cc90, retires to the tail in GAME-021 part 3
 static int load_terrain_map(LevelState* s, const char* name, int bias)
 {
     uint32_t width;
@@ -3027,7 +3034,8 @@ static int load_terrain_map(LevelState* s, const char* name, int bias)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0042cd50
+/* Port model of 0x0042cd50 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042cd50, retires to the tail in GAME-021 part 3
 const void* upgrade_name_entry_find(const char* name)
 {
     /* Install clamps negatives to zero. Corpus 0x42cd5b/0x42cd7f uses
@@ -3049,7 +3057,8 @@ const void* upgrade_name_entry_find(const char* name)
 
 extern "C" int entity_vehicle_type_table_load(void);
 /* VehicleTypesLoad (FUN_0042cda0) likewise loads 0x74-byte visual rows. */
-// FUNCTION: LEGORR 0x0042CDA0
+/* Port model of 0x0042cda0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042cda0, retires to the tail in GAME-021 part 3
 int entity_vehicle_type_table_load(void)
 {
     ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_vehicle_type_config,
@@ -3058,7 +3067,8 @@ int entity_vehicle_type_table_load(void)
 extern "C" int entity_minifigure_type_table_load(void);
 /* MiniFigureTypeTableLoad (FUN_0042cf50) reads the active engine config,
  * builds 0x74-byte rows, finalizes each parsed row, and stores copied names. */
-// FUNCTION: LEGORR 0x0042CF50
+/* Port model of 0x0042cf50 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042cf50, retires to the tail in GAME-021 part 3
 int entity_minifigure_type_table_load(void)
 {
     ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_minifigure_type_config,
@@ -3068,7 +3078,8 @@ int entity_minifigure_type_table_load(void)
 extern "C" int entity_rockmonster_type_table_load(void);
 /* RockMonsterTypesLoad (FUN_0042d100) uses the same 0x74-byte visual row
  * reader as the vehicle and minifigure tables (FUN_00406990). */
-// FUNCTION: LEGORR 0x0042D100
+/* Port model of 0x0042d100 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042d100, retires to the tail in GAME-021 part 3
 int entity_rockmonster_type_table_load(void)
 {
     ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_rockmonster_type_config,
@@ -3078,7 +3089,8 @@ int entity_rockmonster_type_table_load(void)
 extern "C" int entity_building_types_load(void);
 /* BuildingTypesLoad (FUN_0042d2b0) uses the same config walk with 0x14c-byte
  * rows and the building-specific `.ae` parser/finalizer. */
-// FUNCTION: LEGORR 0x0042D2B0
+/* Port model of 0x0042d2b0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042d2b0, retires to the tail in GAME-021 part 3
 int entity_building_types_load(void)
 {
     ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_building_type_config,
@@ -3086,7 +3098,8 @@ int entity_building_types_load(void)
 }
 
 namespace lego {
-// FUNCTION: LEGORR 0x0042D460
+/* Port model of 0x0042d460 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042d460, retires to the tail in GAME-021 part 3
 int upgrade_types_load(void* config)
 {
     BlockRec* group;
@@ -10746,6 +10759,49 @@ extern "C" const char* main_get_start_level_adapter(void)
 /* ---- part 2 adapters, group 2A: end ---- */
 
 /* ---- part 2 adapters, group 2B (0042c480-0042d460): begin ---- */
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (MapShared_GetBlock 004319e0 in group 2G; the original returns the cell widened to 32 bits)
+extern "C" uint32_t lego_map_get_block_adapter(uint32_t handle, int x, int y)
+{
+    return level_map_cell_get(handle, x, y);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (004311d0 in group 2F; the port's model takes the level state and the block as two ints)
+extern "C" void lego_terrain_activity_build_record_update_adapter(
+    struct Lego_Level* level, const int* blockPos, int on)
+{
+    terrain_activity_build_record_update((LevelState*)level, blockPos[0],
+                                         blockPos[1], on);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (an empty function the linker folded to 00484c90, called with the block position)
+extern "C" void lego_noop_block_adapter(const int* blockPos)
+{
+    (void)blockPos;
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Vehicle_Load 0046c6f0; no port entry has its contract, natively nothing calls this)
+extern "C" int lego_vehicle_load_adapter(void* vehicle, unsigned int objID,
+                                         void* root, const char* filename,
+                                         const char* gameName)
+{
+    (void)vehicle;
+    (void)objID;
+    (void)root;
+    (void)filename;
+    (void)gameName;
+    return 0;
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Creature_Load 00406990; animation_object.c's entry adds a row kind, which it ignores)
+extern "C" int lego_creature_load_adapter(void* creature, unsigned int objID,
+                                          void* root, const char* filename,
+                                          const char* gameName)
+{
+    return entity_type_config_resource_row_load(creature, objID, root,
+                                                 filename, (void*)gameName,
+                                                 0u);
+}
 
 /* ---- part 2 adapters, group 2B: end ---- */
 

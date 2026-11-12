@@ -524,6 +524,29 @@ void lego_periodic_callback_dispatch(int on);   /* E, 00425b40 */
 
 /* ---- part 2 declarations, group 2B (0042c480-0042d460): begin ---- */
 
+extern int legoGlobs_f_556f18;                  /* 00556f18 fall-ins loaded */
+
+int lego_load_erode_cryore(Lego_Level* level, const char* filename,
+                           int modifier);                       /* 0042c480 */
+int lego_terrain_cell_byte_state_classify_current(const int* blockPos,
+    unsigned int* crystalsLv0, unsigned int* crystalsLv1,
+    unsigned int* oreLv0, unsigned int* oreLv1);                /* 0042c5b0 */
+int lego_load_path_ai(Lego_Level* level, const char* filename,
+                      char modifier);                           /* 0042c6a0 */
+int lego_load_fallin(Lego_Level* level, const char* filename,
+                     int modifier);                             /* 0042c760 */
+int lego_load_block_pointers(Lego_Level* level,
+                             const char* filename);             /* 0042c9d0 */
+void lego_camera_grid_expiry(float elapsed);                    /* 0042cb70 */
+int lego_load_terrain_map(Lego_Level* level, const char* filename,
+                          int modifier);                       /* 0042cc90 */
+void* lego_upgrade_name_entry_find(const char* name);           /* 0042cd50 */
+int lego_entity_vehicle_type_table_load(void);                  /* 0042cda0 */
+int lego_entity_minifigure_type_table_load(void);               /* 0042cf50 */
+int lego_entity_rockmonster_type_table_load(void);              /* 0042d100 */
+int lego_entity_building_types_load(void);                      /* 0042d2b0 */
+int lego_upgrade_types_load(void);                              /* 0042d460 */
+
 /* ---- part 2 declarations, group 2B: end ---- */
 
 /* ---- part 2 declarations, group 2C (0042d600-0042dff0): begin ---- */

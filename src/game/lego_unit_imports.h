@@ -1289,6 +1289,56 @@ void terrain_map_wobble_emissive_set(struct TerrainMap* map, int on); /* 00450a8
 
 /* ---- part 2 imports, group 2B (0042c480-0042d460): begin ---- */
 
+struct BlockRec;
+struct RenderResourceBinding;
+struct Lego_Level;
+
+/* GAME-021 part 3 still in lego.cpp, and gods98 Files.c (level.hpp,
+ * extern "C" in place). */
+int map_open2(const char* path, int32_t* size_out);             /* 00480170 */
+void level_map_dimensions_get(uint32_t slot, uint32_t* width,
+                              uint32_t* height);                /* 004334c0 */
+void level_map_slot_release(uint32_t slot);                     /* 00489460 */
+/* LegoObject.c (spawn.hpp, ai.hpp; extern "C" in place). */
+void type11_cell_coordinate_append(const int* coordinate);      /* 0044a390 */
+void entity_activity_scene_state_update_retail(void);           /* 00439990 */
+/* AITask.c (cmd.hpp, extern "C" in place). */
+void coordinate_pair_callback_dispatch(const void* coord_pair); /* 00402a40 */
+void coordinate_pair_event_queue(const int pair[2], void* payload); /* 004030b0 */
+/* GAME-012 (level.hpp, extern "C" in place; placement.cpp). */
+int terrain_cell_predicate_check_current(const uint32_t pair_key[2]); /* 004090a0 */
+int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint); /* 0040f190 */
+/* GAME-019 Info.c (info_unit.c, a C unit). */
+struct InfoPoint2I;
+void info_send(int type, char* text, void* object,
+               struct InfoPoint2I* blockPos);                   /* 00419b80 */
+/* Vehicle.c, Creature.c, Building.c and Upgrade.c (record.hpp, view.hpp,
+ * type_config_ports.hpp; extern "C" in place). */
+void scene_resource_visibility_set(void* record, uint32_t flag);   /* 0046d2c0 */
+void animation_object_visibility_set(const void* anim, uint32_t flag); /* 00406c90 */
+int entity_building_type_config_record_parse(void* destination,
+                                             uint32_t row_index,
+                                             void* scene_context,
+                                             const char* asset_path,
+                                             void* engine_config); /* 00407d60 */
+void scene_object_pair_apply_mode(const void* record, uint32_t flag); /* 00408670 */
+void render_resource_binding_initialize(struct RenderResourceBinding* binding,
+                                        void* key, void* config_a,
+                                        void* config_b);        /* 0046c030 */
+/* Original-ABI adapters at the end of lego.cpp (group 2B). 004319e0
+ * (group 2G) returns the 16-bit cell widened to 32 bits; the port's
+ * level_map_cell_get returns uint16_t. 004311d0 is group 2F's. */
+uint32_t lego_map_get_block_adapter(uint32_t handle, int x, int y); /* 004319e0 */
+void lego_terrain_activity_build_record_update_adapter(struct Lego_Level* level,
+    const int* blockPos, int on);                               /* 004311d0 */
+void lego_noop_block_adapter(const int* blockPos);              /* 00484c90 */
+int lego_vehicle_load_adapter(void* vehicle, unsigned int objID, void* root,
+                              const char* filename,
+                              const char* gameName);            /* 0046c6f0 */
+int lego_creature_load_adapter(void* creature, unsigned int objID, void* root,
+                               const char* filename,
+                               const char* gameName);           /* 00406990 */
+
 /* ---- part 2 imports, group 2B: end ---- */
 
 /* ---- part 2 imports, group 2C (0042d600-0042dff0): begin ---- */

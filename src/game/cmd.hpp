@@ -494,7 +494,7 @@ typedef int (*TaskCallbackEntityFn)(EntitySlot* entity, void* payload,
 void cmd_callback_dispatch_hooks_install(
     CoordinatePairEntityCallback coordinate_callback,
     ArgumentEntityCallback argument_callback, void* context);
-void coordinate_pair_callback_dispatch(const void* coord_pair);
+extern "C" void coordinate_pair_callback_dispatch(const void* coord_pair);
 void argument_callback_dispatch(void* arg);
 void task_callback_dispatch_hook_install(TaskCallbackEntityFn callback,
                                          void* context);
@@ -611,7 +611,7 @@ int task_kind_filtered_search(int selector);
  *      command 10, bit 4 cleared and bits 6/7/10 raised; returns the record.
  *  TaskRecordKind11TimedQueue (FUN_004039d0): kind 0x11, payload, the
  *      timestamp word zeroed, command 0, bit 4 cleared and bits 6/7 raised. */
-void coordinate_pair_event_queue(const int pair[2], void* payload);
+extern "C" void coordinate_pair_event_queue(const int pair[2], void* payload);
 extern "C" int  object_event_type2_queue(void* payload);
 void coordinate_pair_task_record_queue(const int pair[2]);
 void scalar_task_record_queue(void* scalar);

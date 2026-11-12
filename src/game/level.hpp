@@ -345,7 +345,7 @@ uint8_t* level_voxel(const LevelState* s, int x, int y);
 #define LEVEL_MAP_SLOT_COUNT 2000 /* the corpus table length */
 
 /* FUN_00480170: load a file through the level map-slot table. */
-int map_open2(const char* path, int32_t* size_out);
+extern "C" int map_open2(const char* path, int32_t* size_out);
 
 /* FUN_004893f0: zero every slot pair. */
 extern "C" void level_map_slots_reset(void);
@@ -371,12 +371,12 @@ uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y);
 
 /* FUN_004334c0: header dims via the slot. An unresolved slot yields
  * 0/0 (the corpus reads address 0x8/0xC — documented deviation). */
-void level_map_dimensions_get(uint32_t slot, uint32_t* width,
+extern "C" void level_map_dimensions_get(uint32_t slot, uint32_t* width,
                               uint32_t* height);
 
 /* FUN_004319e0: cell via the slot (row y, column x; the width comes
  * from the image header). Unresolved slot reads 0. */
-uint16_t level_map_cell_get(uint32_t slot, int x, int y);
+extern "C" uint16_t level_map_cell_get(uint32_t slot, int x, int y);
 
 /* --- tile semantics (entity-callback queries, finding 10) -------------- *
  * The voxel record fields these read are the ones the layer loaders write
@@ -1229,7 +1229,7 @@ extern "C" void lava_erosion_neighbor_mutate(const int xy[2], unsigned int direc
                                             int propagate);
 void lava_erosion_eight_neighbor_propagate(const int xy[2],
                                            unsigned int direction);
-int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint);
+extern "C" int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint);
 
 /* CellDirtyQueuePushAndClear (FUN_00450960): the terrain-owned dirty
  * cell queue over the physical block table. push != 0: when the cell's

@@ -474,6 +474,9 @@ typedef struct RenderResourceBindingHooks {
 } RenderResourceBindingHooks;
 void render_resource_binding_hooks_set(
     const RenderResourceBindingHooks* hooks);
+#ifdef __cplusplus
+extern "C"
+#endif
 void render_resource_binding_initialize(RenderResourceBinding* binding,
                                         void* key, void* config_a,
                                         void* config_b);
