@@ -5093,11 +5093,6 @@ extern __inline void map_cell_tracking_flags_clear_and_refresh_current(const int
     ((void (*)(const int*))flic_opcode27_fallback_noop)(cell_xy);
 }
 
-static __inline int lego_2f_block_is_busy(const int* blockPos)
-{
-    return LEGO_2F_BLOCK(legoGlobs_currLevel, blockPos[0], blockPos[1]).flags1 & 0x8000;
-}
-
 /* Clears a block's pending work once nothing occupies or reserves it, and
  * queues four of the given event for it. The original computes the block
  * address once for its first two tests (flags1 & 0x400, flags2 & 4) and
@@ -5107,7 +5102,7 @@ static __inline int lego_2f_block_is_busy(const int* blockPos)
  * the block coordinates or the pair, operand orders, value copies and a
  * second index form), giving 70.66-74.42%. As for 00429160, the matching
  * build keeps the port's instruction-for-instruction body. 00430530 inlines
- * the same code (lego_2f_work_flag_clear, below). */
+ * the same code. */
 // FUNCTION: LEGORR 0x00430320
 __declspec(naked) void terrain_cell_work_flag_clear_current(
     const int coord[2], uint32_t selector)
@@ -5214,23 +5209,6 @@ __declspec(naked) void terrain_cell_work_flag_clear_current(
 
 #endif /* _MSC_VER && _M_IX86 */
 
-/* TerrainCellWorkFlagClear (00430320) in C, for 00430530, which inlines it. */
-static __inline void lego_2f_work_flag_clear(const int* blockPos, uint32_t selector)
-{
-    int i;
-
-    if (!(LEGO_2F_BLOCK(legoGlobs_currLevel, blockPos[0], blockPos[1]).flags1 & 0x400) &&
-        !(LEGO_2F_BLOCK(legoGlobs_currLevel, blockPos[0], blockPos[1]).flags2 & 0x4) &&
-        !(LEGO_2F_BLOCK(legoGlobs_currLevel, blockPos[0], blockPos[1]).flags1 & 0x8000) &&
-        !terrain_cell_predicate_check_current((const uint32_t*)blockPos)) {
-        LEGO_2F_BLOCK(legoGlobs_currLevel, blockPos[0], blockPos[1]).flags1 &= ~0x200000;
-        map_cell_tracking_flags_clear_and_refresh_current(blockPos);
-        for (i = 0; i < 4; i++)
-            coordinate_pair_event_queue(blockPos, (void*)(uintptr_t)selector);
-        LEGO_2F_BLOCK(legoGlobs_currLevel, blockPos[0], blockPos[1]).flags1 |= 0x3;
-    }
-}
-
 // FUNCTION: LEGORR 0x00430470
 void lego_terrain_neighbor_flag_set(Lego_Level* level, int unused,
                                     unsigned int bx, unsigned int by)
@@ -5295,9 +5273,9 @@ int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                 }
             }
 
+            LEGO_2F_BLOCK(level, bx, by).flags1 |= 0x8;
             pos[0] = bx;
             pos[1] = by;
-            LEGO_2F_BLOCK(level, bx, by).flags1 |= 0x8;
             lego_terrain_neighbor_flag_refresh(level, pos, 1);
             LEGO_2F_BLOCK(level, bx, by).flags1 &= ~0x20;
             LEGO_2F_BLOCK(level, bx, by).flags1 |= 0x400000;
@@ -5331,7 +5309,17 @@ int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                 terrain_cell_surface_quad_height_fill_current((struct LevelState*)level, bx, by);
                 pos2[0] = bx;
                 pos2[1] = by;
-                lego_2f_work_flag_clear(pos2, 0x28);
+                /* TerrainCellWorkFlagClear (00430320), inline. */
+                if (!(LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 & 0x400) &&
+                    !(LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags2 & 0x4) &&
+                    !(LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 & 0x8000) &&
+                    !terrain_cell_predicate_check_current((const uint32_t*)pos2)) {
+                    LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 &= ~0x200000;
+                    map_cell_tracking_flags_clear_and_refresh_current(pos2);
+                    for (i = 0; i < 4; i++)
+                        coordinate_pair_event_queue(pos2, (void*)0x28);
+                    LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 |= 0x3;
+                }
                 selection_mode7_cancel_at_point((const uint32_t*)pos2);
             }
 
@@ -5367,6 +5355,7 @@ int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                 info_send(0x1b, NULL, NULL, (struct InfoPoint2I*)pos2);
                 return 1;
             }
+            return 1;
         } else {
             pos[0] = bx;
             pos[1] = by;
@@ -5398,13 +5387,11 @@ int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                 for (i = 0; i < 4; i++)
                     LEGO_2F_BLOCK(level, bx + quad[i][0], by + quad[i][1]).f_00 = 1;
                 lego_terrain_cell_mutate(level, bx, by, isHiddenCavern);
-            } else {
-                terrain_cell_mutation_progress((struct LevelState*)legoGlobs_currLevel, bx, by);
-                terrain_cell_refresh_eight_neighbors_current(pos);
-                return 0;
+                return 1;
             }
+            terrain_cell_mutation_progress((struct LevelState*)legoGlobs_currLevel, bx, by);
+            terrain_cell_refresh_eight_neighbors_current(pos);
         }
-        return 1;
     }
     return 0;
 }
@@ -5442,9 +5429,6 @@ int lego_terrain_cell_initialize(Lego_Level* level, unsigned int bx, unsigned in
 
     if (bx > 0 && by > 0 && bx < level->width - 2 && by < level->height - 2) {
         if (LEGO_2F_BLOCK(level, bx, by).f_00 == 0) {
-            int pos[2];
-            unsigned int count, last, dir;
-
             terrain_map_vertex_move(map, bx, by, level->digDepth);
             LEGO_2F_BLOCK(level, bx, by).f_00 = 1;
             for (i = 0; i < 4; i++)
@@ -5458,27 +5442,32 @@ int lego_terrain_cell_initialize(Lego_Level* level, unsigned int bx, unsigned in
                     terrain_map_block_vertex_modified(map, x, y);
             }
 
-            dirs[0].x = 0;
-            dirs[0].y = -1;
-            dirs[1].x = 1;
-            dirs[1].y = 0;
-            dirs[2].x = 0;
-            dirs[2].y = 1;
-            dirs[3].x = -1;
-            dirs[3].y = 0;
-            pos[0] = bx;
-            pos[1] = by;
-            count = 0;
-            for (i = 0; i < 4; i++) {
-                if (LEGO_2F_BLOCK(level, bx + dirs[i].x, by + dirs[i].y).f_00 == 1) {
-                    count++;
-                    last = i;
+            {
+                int pos[2];
+                unsigned int count, last, dir;
+
+                dirs[0].x = 0;
+                dirs[0].y = -1;
+                dirs[1].x = 1;
+                dirs[1].y = 0;
+                dirs[2].x = 0;
+                dirs[2].y = 1;
+                dirs[3].x = -1;
+                dirs[3].y = 0;
+                pos[0] = bx;
+                pos[1] = by;
+                count = 0;
+                for (i = 0; i < 4; i++) {
+                    if (LEGO_2F_BLOCK(level, bx + dirs[i].x, by + dirs[i].y).f_00 == 1) {
+                        count++;
+                        last = i;
+                    }
                 }
+                dir = (last - 2) & 3;
+                if (count == 1)
+                    cmd_produce(0xe, NULL, dir | 0x10000, pos);
+                terrain_cell_refresh_dispatch_current(pos, 1);
             }
-            dir = (last - 2) & 3;
-            if (count == 1)
-                cmd_produce(0xe, NULL, dir | 0x10000, pos);
-            terrain_cell_refresh_dispatch_current(pos, 1);
         }
         return 1;
     }
