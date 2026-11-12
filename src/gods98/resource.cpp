@@ -28,6 +28,8 @@
 #include "resource_from_sound3d.hpp"
 #include "resource_for_files.hpp"
 #include "resource_from_files.hpp"
+#include "resource_for_interface.hpp"
+#include "resource_from_interface.hpp"
 
 // GLOBAL: LEGORR 0x0049f988
 const unsigned char s_resource_tree_child_iid[16] = {
@@ -2774,20 +2776,7 @@ GameFileHandle* game_file_open_loose_path(const char* path,
     return handle;
 }
 
-/* --- resource-handle release band (2026-10-25; corpus .data band) ---------
- * ResourceHandleSetRelease (FUN_0041a850) frees the corpus's global handle
- * set: the DAT_004ddc04 stride-8 record band (the first DWORD of each pair,
- * while the walker stays below DAT_004ddcc4) followed by twelve named
- * globals, freed in corpus order. Deviations: the band lands as
- * own storage (install/peek hooks for the named globals), the
- * corpus frees without clearing, and the port nulls each freed slot. */
-struct ResourceHandleSetBandSlot {
-    void* handle;      /* corpus band dword (stride 8; the word behind rides) */
-    uint32_t word2;
-};
-// GLOBAL: LEGORR 0x004ddc04
-static struct ResourceHandleSetBandSlot s_handle_set_band[24]; /* DAT_004ddc04..DAT_004ddcc4, stride 8 */
-static void* s_handle_set_named[12]; /* DAT_004dd734..9a8/DAT_004ddad4/d8 */
+void* s_handle_set_named[12]; /* DAT_004dd734..9a8/DAT_004ddad4/d8 */
 
 /* Port hook: slots 0..23 are the band (stride-8 units), 24..35 the named
  * globals in address order: 734, 738, 73c, 740, 744, 748, 99c, 9a0, 9a4,
@@ -2810,92 +2799,6 @@ void* resource_handle_set_slot_peek(int slot)
         return s_handle_set_named[slot - 24];
     }
     return NULL;
-}
-
-// FUNCTION: LEGORR 0x0041a850
-void resource_handle_set_release(void)
-{
-    for (int i = 0; i != 24; ++i) {
-        /* corpus: stride the band, free the non-zero dwords under cc4 */
-        if (s_handle_set_band[i].handle != NULL) {
-            engine_heap_free(s_handle_set_band[i].handle); /* FUN_0048db80 */
-            s_handle_set_band[i].handle = NULL; /* deviation: the corpus dangles */
-        }
-    }
-    /* corpus free order: 734 73c 744 ad4 99c 9a4 738 740 748 ad8 9a0 9a8 */
-    static const size_t order[12] = { 0, 2, 4, 10, 6, 8, 1, 3, 5, 11, 7, 9 };
-    for (size_t k = 0; k != 12; ++k) {
-        void** p = &s_handle_set_named[order[k]];
-        if (*p != NULL) {
-            engine_heap_free(*p);
-            *p = NULL;
-        }
-    }
-}
-
-/* --- the key-group action-code band (see resource.hpp) ---------------------
- * InputKeyGroupRegister (FUN_0041a7d0) stages one interaction-action group:
- * the count word rides in at the pair's +4 slot FIRST (corpus order), then
- * a count*4 heap array takes the code dwords. The codes ride the stack as
- * the corpus's own cdecl varargs and are read out with va_arg in index
- * order. Deviations: the staging copy of the variadic window into locals
- * (and the always-zero byte tail) fold into a direct dword copy, and the
- * group guard answers where the corpus strides the band blindly.
- * Registering the same group twice re-stages in place; the corpus leaks the
- * superseded array, and so does the port. */
-// FUNCTION: LEGORR 0x0041a7d0
-void resource_input_key_group_register(int group, int count, ...)
-{
-    va_list ap;
-
-    if (group < 0 || group >= 24) {
-        return; /* deviation: the corpus strides the band blindly */
-    }
-    s_handle_set_band[group].word2 = (uint32_t)count;
-    void* array = engine_heap_alloc((long)count * 4); /* FUN_0048dbd0 */
-    s_handle_set_band[group].handle = array;
-    va_start(ap, count);
-    if (array != NULL) {
-        uint32_t* dst = (uint32_t*)array;
-        const uint32_t n = (uint32_t)count & 0x3fffffffu;
-        for (uint32_t i = 0; i != n; ++i) {
-            dst[i] = (uint32_t)va_arg(ap, int);
-        }
-    }
-    va_end(ap);
-}
-
-/* InteractionActionCodeMapInitialize (FUN_0041a660): registers the fixed
- * eighteen interaction-action groups in the corpus's call order — groups
- * 0..5, 7, 8, then 0xa, 0xb, 0xc, with group 9 landing between 0xc and
- * 0xd, and group 6 left unregistered (the corpus skips it). The action
- * codes ride as the corpus's own pushed constants, one push per code. */
-// FUNCTION: LEGORR 0x0041a660
-void interaction_action_code_map_initialize(void)
-{
-    resource_input_key_group_register(0, 4, 1, 2, 3, 4);
-    resource_input_key_group_register(1, 3, 5, 6, 0xe);
-    resource_input_key_group_register(2, 1, 7);
-    resource_input_key_group_register(3, 1, 0xe);
-    resource_input_key_group_register(4, 1, 0x10);
-    resource_input_key_group_register(5, 2, 9, 0xe);
-    resource_input_key_group_register(7, 4, 0xb, 0xc, 0xd, 0xf);
-    resource_input_key_group_register(8, 2, 0x2b, 0x2f);
-    resource_input_key_group_register(0xa, 7, 0x16, 0x14, 0x42, 0x19,
-                                      0x2d, 0x2e, 0x29);
-    resource_input_key_group_register(0xb, 6, 0x16, 0x14, 0x19, 0x2d, 0x2e,
-                                      0x1a);
-    resource_input_key_group_register(0xc, 2, 0x18, 0x29);
-    resource_input_key_group_register(9, 10, 0x1f, 0x17, 0x15, 0x30, 0x21,
-                                      0x40, 0x39, 0x2d, 0x2e, 0x20);
-    resource_input_key_group_register(0xd, 4, 0x24, 0x22, 0x41, 0x28);
-    resource_input_key_group_register(0xe, 1, 0x2a);
-    resource_input_key_group_register(0xf, 3, 0x2c, 0x2e, 0x2d);
-    resource_input_key_group_register(0x10, 8, 0x31, 0x32, 0x33, 0x34, 0x35,
-                                      0x36, 0x37, 0x38);
-    resource_input_key_group_register(0x11, 6, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e,
-                                      0x3f);
-    resource_input_key_group_register(0x12, 4, 0x43, 0x44, 0x45, 0x46);
 }
 
 void resource_handle_set_band_word_install(int unit, uint32_t value)

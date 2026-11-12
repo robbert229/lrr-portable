@@ -1662,31 +1662,6 @@ uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
     return 1;
 }
 
-/* CellFourNeighborWalkCheck (FUN_0041f740): the tutorial path gate uses
- * this asymmetric cardinal-neighbor rule before submitting a cell action.
- * Neighbor order follows the corpus's local table: east, south, west,
- * north. */
-// FUNCTION: LEGORR 0x0041f740
-int cell_four_neighbor_walk_check(const LevelState* s, int cx, int cy)
-{
-    static const int8_t offsets[4][2] = {
-        { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 },
-    };
-    const int marked = level_cell_mask_c0(s, cx, cy) != 0;
-    int occupied_neighbors = 0;
-    for (int i = 0; i < 4; ++i) {
-        const int neighbor = level_cell_occupied_or_flag(
-            s, cx + offsets[i][0], cy + offsets[i][1], 1) != 0;
-        if (neighbor != 0) {
-            if (marked == 0) {
-                return 0;
-            }
-            ++occupied_neighbors;
-        }
-    }
-    return marked == 0 || occupied_neighbors <= 1;
-}
-
 uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);

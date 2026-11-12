@@ -29,6 +29,7 @@
 #include <string.h>
 #include "effects_shared.hpp"
 #include "effects_for_weapons.hpp"
+#include "effects_for_interface.hpp"
 
 uint32_t s_active_effect_occupied[10];
 uint32_t s_active_segment_visual_occupied[10];
@@ -69,8 +70,8 @@ SceneTransformState s_scene_transform_state;
 LightEffectParameterState s_light_effect_parameters;
 static EntityNodeScaleApplyHook s_entity_node_scale_apply_hook;
 static void* s_entity_node_scale_apply_context;
-static EventTimerActionHook s_event_timer_action_hook;
-static void* s_event_timer_action_context;
+EventTimerActionHook s_event_timer_action_hook;
+void* s_event_timer_action_context;
 static EventTimerInteractionFlagsHook s_event_timer_interaction_flags_hook;
 static void* s_event_timer_interaction_flags_context;
 
@@ -130,62 +131,6 @@ uint32_t event_timer_interaction_flags_get(void)
     return s_event_timer_interaction_flags_hook != NULL
         ? s_event_timer_interaction_flags_hook(
               s_event_timer_interaction_flags_context) : 0u;
-}
-
-// FUNCTION: LEGORR 0x0041EAC0
-void event_timer_countdown_advance(float delta)
-{
-    EventTimerState state;
-    frontend_event_timer_state_get(&state);
-    if ((state.flags & 0x80u) != 0u) return;
-    if ((state.flags & 0x100u) == 0u) {
-        if ((state.flags & 4u) != 0u) {
-            state.timer -= delta * state.rate;
-            if (state.timer <= state.lower) {
-                state.flags |= 0x80u;
-                state.timer = state.lower;
-            }
-        }
-        frontend_event_timer_state_set(&state);
-        return;
-    }
-    state.timer += delta * state.rate;
-    if (state.current_event == 0x16 &&
-        (state.external_flags & 2u) != 0u) {
-        if (s_event_timer_action_hook != NULL) {
-            s_event_timer_action_hook(s_event_timer_action_context, 8, 0);
-            s_event_timer_action_hook(s_event_timer_action_context, 6, 1);
-        }
-        state.timer = state.upper;
-    }
-    if (state.timer < state.upper) {
-        frontend_event_timer_state_set(&state);
-        return;
-    }
-    state.flags &= ~0x100u;
-    state.timer = state.upper;
-    sound_alias_play(0x15, 0);
-    if (state.next_event == 0x16) {
-        state.flags = (state.flags & ~4u) | 0x80u;
-        if (s_event_timer_action_hook != NULL)
-            s_event_timer_action_hook(s_event_timer_action_context, 8, 0);
-        simtick_global_ui_flags_clear_bits12();
-        simtick_global_ui_flags_set_bit2();
-    }
-    else if (state.next_event == 0x17) {
-        state.flags = (state.flags & ~4u) | 0x80u;
-        if (s_event_timer_action_hook != NULL)
-            s_event_timer_action_hook(s_event_timer_action_context, 0x0b, 0);
-        global_state_low_word_set(global_state_low_word_get() | 1u);
-        global_flag_bit0_clear();
-    }
-    else {
-        state.flags |= 4u;
-    }
-    state.current_event = state.next_event;
-    state.current_x = state.next_x;
-    state.current_y = state.next_y;
-    frontend_event_timer_state_set(&state);
 }
 
 void timed_effect_cue_update(TimedEffectCueState* state, float x, float y,

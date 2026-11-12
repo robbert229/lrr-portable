@@ -8,10 +8,6 @@
 #include "frameloop.hpp"
 #include "input_shared.hpp"
 
-/* The action catalog gate is DAT_004de1f8, owned by the frontend. It is
- * distinct from the engine placement-mode word at DAT_00556ed4. */
-extern uint32_t interaction_flags_peek(void);
-
 DirectInputHooks s_direct_input_hooks;
 InputState s_direct_input_state;
 InputState* s_active_input_state;
@@ -36,6 +32,8 @@ void input_direct_state_bind(InputState* state)
     s_active_input_state = state;
 }
 #include <ctype.h>
+#include "input_for_interface.hpp"
+#include "input_from_interface.hpp"
 
 uint8_t s_global_current_keys[INPUT_KEY_COUNT];
 // GLOBAL: LEGORR 0x0076AB34
@@ -479,22 +477,14 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
     }
     return 0;
 }
-/* --- input-entry / player-input flag-8 leaves (see input.hpp) --------------
- * Zero-initialized module statics with the documented window; the corpus
- * indexes through (possibly heap) pointers blindly. */
-#define INPUT_FLAG_TABLE_SLOTS 74
 
-// GLOBAL: LEGORR 0x004dd60c
-static uint32_t s_input_entry_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind1_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind4_flags[INPUT_FLAG_TABLE_SLOTS];
-// GLOBAL: LEGORR 0x004dd9ac
-static uint32_t s_input_action_click_counts[INPUT_FLAG_TABLE_SLOTS];
-static uint32_t s_player_kind1_click_counts[INPUT_FLAG_TABLE_SLOTS];
-static uint32_t s_player_kind4_click_counts[INPUT_FLAG_TABLE_SLOTS];
-static uint32_t* player_flags_table(int kind);
-static InputActionStateQueryFn s_input_action_state_query;
-static void* s_input_action_state_query_context;
+uint32_t s_player_kind1_click_counts[INPUT_FLAG_TABLE_SLOTS];
+uint32_t s_player_kind4_click_counts[INPUT_FLAG_TABLE_SLOTS];
+uint32_t* player_flags_table(int kind);
+InputActionStateQueryFn s_input_action_state_query;
+void* s_input_action_state_query_context;
 
 uint32_t input_action_state_word_get(int action)
 {
@@ -522,50 +512,6 @@ void input_binding_state_word_set(int kind, int entry, uint32_t flags)
     if (table == NULL || entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS)
         return;
     table[entry] = flags;
-}
-
-// FUNCTION: LEGORR 0x0041e810
-uint32_t input_action_click_count_get(int action)
-{
-    if (action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) return 0u;
-    return s_input_action_click_counts[action];
-}
-
-// FUNCTION: LEGORR 0x0041e7f0
-uint32_t input_action_click_count_swap(int action, uint32_t value)
-{
-    uint32_t old = input_action_click_count_get(action);
-    if (action >= 0 && action < INPUT_FLAG_TABLE_SLOTS)
-        s_input_action_click_counts[action] = value;
-    return old;
-}
-
-static uint32_t* player_click_count_table(int kind)
-{
-    if (kind == 1) return s_player_kind1_click_counts;
-    if (kind == 4) return s_player_kind4_click_counts;
-    return NULL;
-}
-
-// FUNCTION: LEGORR 0x0041e860
-uint32_t input_binding_click_count_get(int kind, int entry)
-{
-    const uint32_t* table = player_click_count_table(kind);
-    if (table == NULL || entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS)
-        return 0u;
-    return table[entry];
-}
-
-// FUNCTION: LEGORR 0x0041e820
-uint32_t input_binding_click_count_swap(int kind, int entry, uint32_t value)
-{
-    uint32_t* table = player_click_count_table(kind);
-    uint32_t old;
-    if (table == NULL || entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS)
-        return 0u;
-    old = table[entry];
-    table[entry] = value;
-    return old;
 }
 
 /* Called only after the real pointer latch admits a counted completion,
@@ -603,46 +549,7 @@ void input_action_state_query_set(InputActionStateQueryFn query,
     s_input_action_state_query_context = context;
 }
 
-// FUNCTION: LEGORR 0x0041c7b0
-/* InputActionStateUpdate: while mode bit 7 is set and the action entry lacks
- * bit 1, ask the action helper. The helper may mutate the same word, so the
- * word is deliberately re-read before clearing bit 0. */
-void input_action_state_update(int action)
-{
-    uint32_t flags = input_action_state_word_get(action);
-    if ((flags & 2u) == 0u &&
-        (interaction_flags_peek() & 0x80u) != 0u) {
-        int handled = 0;
-        if (s_input_action_state_query != NULL) {
-            handled = s_input_action_state_query(
-                s_input_action_state_query_context, action);
-        }
-        flags = input_action_state_word_get(action);
-        if (handled != 0) {
-            input_action_state_word_set(action, flags & ~1u);
-            return;
-        }
-    }
-    input_action_state_word_set(action, flags | 1u);
-}
-
-// FUNCTION: LEGORR 0x0041c9f0
-void input_entry_flag8_set_clear(int entry, int set)
-{
-    if (set != 0) {
-        s_input_entry_flags[entry] = s_input_entry_flags[entry] | 8u;
-    } else {
-        s_input_entry_flags[entry] = s_input_entry_flags[entry] & ~8u;
-    }
-}
-
-// FUNCTION: LEGORR 0x0041ca60
-uint32_t input_entry_flag8_get(int entry)
-{
-    return s_input_entry_flags[entry] & 8u;
-}
-
-static uint32_t* player_flags_table(int kind)
+uint32_t* player_flags_table(int kind)
 {
     if (kind == 1) {
         return s_player_kind1_flags;   /* DAT pointer global: table A */
@@ -651,33 +558,6 @@ static uint32_t* player_flags_table(int kind)
         return s_player_kind4_flags;   /* DAT pointer global: table B */
     }
     return NULL;
-}
-
-// FUNCTION: LEGORR 0x0041ca20
-void player_input_flag8_set_clear(int kind, int action, int set)
-{
-    /* MEASURED: the inlined kind 1/kind 4 ladder scored 24.0% vs the
-     * player_flags_table helper CALL at 45.0% — MSVC5 re-canonicalizes
-     * the inline form (b27 helper-route class). Keep the helper. */
-    uint32_t* table = player_flags_table(kind);
-    if (table == NULL || action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) {
-        return; /* deviation: the corpus reads any kind through the table */
-    }
-    if (set != 0) {
-        table[action] = table[action] | 8u;
-    } else {
-        table[action] = table[action] & ~8u;
-    }
-}
-
-// FUNCTION: LEGORR 0x0041ca70
-uint32_t player_input_flag8_get(int kind, int action)
-{
-    const uint32_t* table = player_flags_table(kind);
-    if (table == NULL || action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) {
-        return 0u;
-    }
-    return table[action] & 8u;
 }
 
 /* InputActionPressedGet (FUN_0041c8f0) — see input.hpp. Action 0x49 ('I')
@@ -727,43 +607,6 @@ int input_binding_pressed_get(const EngineContext* ctx, int kind, int entry,
         return (int)((~word >> 2) & 1u);
     }
     return (int)(word & 1u);
-}
-
-/* IndexedEntityValueGet (FUN_0041cab0) — see input.hpp. The three binding
- * windows stride in the corpus's data section as adjacent 74-dword blocks
- * (DAT_004dcff8 / DAT_004dd120 / DAT_004dd248); their only writer, the
- * interface-images config load, is a recorded file-seam boundary, so the
- * port models the windows as own storage installed through the hook below.
- * Deviations: the corpus indexes blindly (the port answers zero outside
- * its 74-slot window), and the NULL-context gate deviation inherited
- * from InputActionPressedGet (FUN_0041c8f0) applies. */
-#define INPUT_INDEXED_WINDOW_SLOTS 74
-
-/* The corpus keeps the three 74-slot windows as individually-addressed
- * tables (DAT_004dcff8 / DAT_004dd120 / DAT_004dd248, contiguous zero-tail
- * band 0x4dcff8..0x4dd370); Reccmp only resolves whole-object operands, so
- * each window gets its own annotated array (the s_fe_flow_* carve-out
- * precedent). Own storage, zero-init like the corpus's tail. */
-// GLOBAL: LEGORR 0x004dcff8
-static uint32_t s_indexed_window_c[INPUT_INDEXED_WINDOW_SLOTS]; /* default window */
-// GLOBAL: LEGORR 0x004dd120
-static uint32_t s_indexed_window_a[INPUT_INDEXED_WINDOW_SLOTS]; /* pressed window */
-// GLOBAL: LEGORR 0x004dd248
-static uint32_t s_indexed_window_b[INPUT_INDEXED_WINDOW_SLOTS]; /* flag8 window */
-
-// FUNCTION: LEGORR 0x0041cab0
-uint32_t indexed_entity_value_get(const EngineContext* ctx, int index)
-{
-    if (index < 0 || index >= INPUT_INDEXED_WINDOW_SLOTS) {
-        return 0u; /* deviation: the corpus strides its window blindly */
-    }
-    if (input_action_pressed_get(ctx, index, 0) != 0) {
-        return s_indexed_window_a[index]; /* DAT_004dd120 window */
-    }
-    if (input_entry_flag8_get(index) != 0u) {
-        return s_indexed_window_b[index]; /* DAT_004dd248 window */
-    }
-    return s_indexed_window_c[index];     /* DAT_004dcff8 window */
 }
 
 void input_indexed_window_set(int which, int index, uint32_t value)

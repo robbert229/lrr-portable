@@ -237,16 +237,6 @@ void entity_flag_80_set(void* record, int set)
     entity_flag_80_set_corpus(record, set);
 }
 
-/* CategoryValueIsNeitherZeroNorFifteen (FUN_0041b470). */
-// FUNCTION: LEGORR 0x0041b470
-int category_value_is_neither_zero_nor_fifteen(int value)
-{
-    if (value != 0 && value != 0xf) {
-        return 1;
-    }
-    return 0;
-}
-
 /* ModelChildRenderEligibilityCheck (FUN_00483a70): the two-bit render
  * gate (finding 431). NULL answers "not eligible" — the corpus would
  * crash on it (documented deviation). */

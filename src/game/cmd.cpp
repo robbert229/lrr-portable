@@ -28,8 +28,6 @@ namespace unported_ledger_stubs {
 int ledger_stub_00443710_AdjacentPositionCandidateFind(
     EntitySlot* entity, const int candidate[2], int output[2]);
 int entity_capacity_or_state_predicate(const EntitySlot* entity);
-int ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
-    EntitySlot* entity);
 int ledger_stub_00447210_EntityAdjacentPlacementCellSearch(
     EntitySlot* entity, EntitySlot* target);
 int entity_cell_step_command_issue_with_jitter(
@@ -79,6 +77,7 @@ extern "C" float random_float_range(float minimum, float maximum);
 #include "cmd_for_lego.hpp"
 #include "cmd_for_weapons.hpp"
 #include "cmd_from_weapons.hpp"
+#include "cmd_for_interface.hpp"
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
@@ -4334,30 +4333,6 @@ void selection_object_detach(void* entity)
     }
 }
 
-/* SelectedEntityDetachCallback (FUN_0041f6c0): capability bit 0 chooses
- * between the attachment detach path and RecordPairPoseCopyAndActivityRaise
- * for the carried object. */
-// FUNCTION: LEGORR 0x0041f6c0
-int selected_entity_detach_callback(EntitySlot* entity)
-{
-    EntitySlot* attached;
-    uint32_t capabilities;
-    capabilities = entity_capability_flags_get(entity);
-    attached = (EntitySlot*)entity->carry_link_308;
-    if ((capabilities & 1u) != 0u) {
-        if ((entity->flags_3e0 & 0x400u) != 0u && attached != NULL) {
-            unported_ledger_stubs::
-                ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
-                    attached);
-        }
-    }
-    else if ((entity->flags_3e0 & 0x400u) == 0u || attached == NULL
-             || attached->type != 9) {
-        unported_ledger_stubs::entity_attached_object_list_detach(entity, 0);
-    }
-    return 0;
-}
-
 int selection_candidate_filter(void* entity, int mode, int param_3)
 {
     if (s_ctx == NULL || entity == NULL) {
@@ -6017,58 +5992,7 @@ unsigned int deferred_olist_entity_queue_take_cell(const int cell_xy[2],
  * Deviations: the no-level and NULL-coordinate paths stay inert (the
  * corpus dereferences the current level and coordinate blindly), and the
  * NULL terrain handle reads the zero state through the guarded leaves. */
-static uint32_t s_menu_surface_track; /* DAT_004de1f0 */
-
-static int menu_kind_gated(int kind)
-{
-    return kind == 1 || kind == 2 || kind == 3 || kind == 4
-        || kind == 5 || kind == 7;
-}
-
-// FUNCTION: LEGORR 0x0041b300
-void menu_selection_resource_update(int kind, const uint32_t coord[2])
-{
-    /* FUN_0041b300 */
-    if (s_ctx == NULL || s_ctx->level == NULL) {
-        return; /* deviation: no current level, no corpus chain */
-    }
-    void* terrain = s_ctx->level->ptr_terrain;
-    if (menu_kind_gated((int)map_store_kind_peek())) {
-        const int x = (int)map_store_last_word(0);
-        const int y = (int)map_store_last_word(1);
-        if (terrain_cell_surface_type_get(terrain, x, y) == 0) {
-            s_menu_surface_track = 0u;
-        } else {
-            terrain_cell_surface_type_set(terrain, x, y,
-                                          (int)s_menu_surface_track);
-        }
-    }
-    if (menu_kind_gated(kind) && coord != NULL) {
-        const uint32_t prior = (uint32_t)terrain_cell_surface_type_set(
-            terrain, (int)coord[0], (int)coord[1], 4);
-        if (prior != 4u) {
-            s_menu_surface_track = prior;
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x0041b2d0
-void command_context_post_to_hud(int kind, const uint32_t coord[2])
-{
-    /* FUN_0041b2d0 */
-    global_state_low_byte_clear_and_refresh(); /* FUN_00435a20 */
-    menu_selection_resource_update(kind, coord);
-    store_selected_map_coordinate(kind, coord); /* FUN_0041ea50 */
-}
-
-// FUNCTION: LEGORR 0x0041e750
-void selection_clear_request_and_hud_reset(void)
-{
-    /* FUN_0041e750 enqueues command 3 with a null entity and pair, then posts
-     * the HUD context with kind 0 / no coordinate. */
-    cmd_produce(3, NULL, 0, NULL); /* FUN_00452060 */
-    command_context_post_to_hud(0, NULL);
-}
+uint32_t s_menu_surface_track; /* DAT_004de1f0 */
 
 uint32_t menu_surface_track_peek(void)
 {

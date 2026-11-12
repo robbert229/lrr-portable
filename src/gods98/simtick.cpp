@@ -25,19 +25,10 @@
 #include "simtick_for_lego.hpp"
 #include "simtick_for_weapons.hpp"
 #include "simtick_for_sound3d.hpp"
+#include "simtick_for_interface.hpp"
+#include "simtick_from_interface.hpp"
 
-#define SIMTICK_MUTE_RESET 25.0f
-
-/* ---- mute timer (FUN_0041ba10) ------------------------------------------ */
-// GLOBAL: LEGORR 0x004de1f4
-static uint32_t s_mute_word    = 0;       /* DAT_004de1f4 */
-// GLOBAL: LEGORR 0x004de1fc
-static uint32_t s_mute_last    = 0;       /* DAT_004de1fc */
-// GLOBAL: LEGORR 0x004a2b58
-static float    s_mute_timer   = SIMTICK_MUTE_RESET; /* _DAT_004a2b58, boot fresh */
-// GLOBAL: LEGORR 0x004de200
-static int      s_mute_engaged = 0;       /* DAT_004de200 */
-static int      (*s_mute_hook)(uint32_t id, int vol) = NULL; /* FUN_00464ef0 */
+int      (*s_mute_hook)(uint32_t id, int vol) = NULL; /* FUN_00464ef0 */
 
 uint32_t simtick_mute_word(void)      { return s_mute_word; }
 int      simtick_mute_engaged(void)   { return s_mute_engaged; }
@@ -50,28 +41,6 @@ void simtick_set_mute_word(uint32_t v)
 void simtick_set_mute_hook(int (*hook)(uint32_t, int))
 {
     s_mute_hook = hook;
-}
-
-// FUNCTION: LEGORR 0x0041ba10
-void simtick_mute_timer(EngineContext* c, float dt)
-{
-    (void)c;
-    if (s_mute_word != s_mute_last) {
-        s_mute_last = s_mute_word;
-        s_mute_timer = SIMTICK_MUTE_RESET;
-        s_mute_engaged = 0;
-        s_mute_word = 0;
-        return;
-    }
-    s_mute_timer -= dt;
-    if ((s_mute_timer <= 0.0f) && (s_mute_engaged == 0)) {
-        if (s_mute_hook != NULL) {
-            s_mute_engaged = s_mute_hook(s_mute_word, 0);
-        } else {
-            s_mute_engaged = 1;
-        }
-    }
-    s_mute_word = 0;
 }
 
 /* ---- table dispatch (FUN_0040aa10) -------------------------------------- */
@@ -855,15 +824,6 @@ void simtick_fx_bank_entries_install(SimtickFxEntry* entries, uint32_t count,
     s_fx_count = count > 256u ? 256u : count;
     s_fx_update = update;
     s_fx_user = user;
-}
-
-/* SimulationGlobalWordSet (FUN_0041ba90): the faithful blind store — the
- * same word the mute timer reads (simtick_set_mute_word is the port-side
- * hook with the same effect; this is the corpus's own entry point). */
-// FUNCTION: LEGORR 0x0041ba90
-void simulation_global_word_set(uint32_t value)
-{
-    s_mute_word = value;
 }
 
 uint32_t simtick_route_position_state_peek(void)

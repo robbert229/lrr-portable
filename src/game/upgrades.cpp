@@ -16,13 +16,16 @@
 #include <string.h>
 #include "upgrades_for_helpwindow.hpp"
 #include "upgrades_for_lego.hpp"
+#include "upgrades_for_interface.hpp"
 
 namespace lego {
 
 namespace {
 
 LevelCounterState s_default_counter_state;
+} // namespace
 LevelCounterState* s_counter_state = &s_default_counter_state;
+namespace {
 UpgradeAverageCountHook s_average_count_hook = 0;
 UpgradeAverageValueHook s_average_value_hook = 0;
 } // namespace
@@ -77,34 +80,6 @@ void level_counter_state_set(LevelCounterState* state,
     s_counter_state = state;
     s_counter_state->dynamic_a_count = dynamic_a_count > 256 ? 256 : dynamic_a_count;
     s_counter_state->dynamic_b_count = dynamic_b_count > 256 ? 256 : dynamic_b_count;
-}
-
-// FUNCTION: LEGORR 0x0041A920
-void level_state_counters_clear(void)
-{
-    EventTimerState frontend_state;
-    uint32_t i;
-    LevelCounterState* state = s_counter_state;
-    frontend_event_timer_state_get(&frontend_state);
-    frontend_state.flags = 0u;
-    frontend_event_timer_state_set(&frontend_state);
-    input_action_level_state_clear();
-    for (i = 0u; i < 300u; ++i)
-        cell_action_permission_table_set((int)i, 0u);
-    if (state == 0) return;
-    memset(state->fixed_a, 0, sizeof(state->fixed_a));
-    memset(state->fixed_b, 0, sizeof(state->fixed_b));
-    memset(state->table_a, 0, sizeof(state->table_a));
-    memset(state->table_b, 0, sizeof(state->table_b));
-    state->state_counter = 0;
-    if (state->dynamic_a_count > 256) state->dynamic_a_count = 256;
-    if (state->dynamic_b_count > 256) state->dynamic_b_count = 256;
-    memset(state->dynamic_a, 0, state->dynamic_a_count * sizeof(uint32_t));
-    memset(state->dynamic_b, 0, state->dynamic_a_count * sizeof(uint32_t));
-    memset(state->dynamic_c, 0, state->dynamic_b_count * sizeof(uint32_t));
-    memset(state->dynamic_d, 0, state->dynamic_b_count * sizeof(uint32_t));
-    memset(state->trailing, 0, sizeof(state->trailing));
-    objective_selection_state_reset();
 }
 
 void level_upgrade_config_hooks_set(UpgradeConfigEntryHook entry_hook,
