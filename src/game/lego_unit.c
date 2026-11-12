@@ -2490,9 +2490,7 @@ void lego_engine_shutdown(void)
     if (s_application_mode == 10) {
         loader_profile_entries_release_adapter(
             media_cd_audio_playback_available()
-            // STRING: LEGORR 0x004a3acc
             ? "LoaderProfile.txt"
-            // STRING: LEGORR 0x004a3ab0
             : "LoaderProfileNoSound.txt");
     } else {
         loader_profile_entries_release_adapter(NULL);
@@ -3914,14 +3912,12 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
             if (usesStuds) {
                 if (studsCost) {
                     sprintf(buff2,
-                            // STRING: LEGORR 0x004a41dc
                             "\n%s: %i/%i",
                             legoGlobs_studsText, studs, studsCost);
                     strcat(buffer, buff2);
                 }
             } else if (oreCost) {
                 sprintf(buff2,
-                        // STRING: LEGORR 0x004a41dc
                         "\n%s: %i/%i",
                         legoGlobs_oreText, ore, oreCost);
                 strcat(buffer, buff2);

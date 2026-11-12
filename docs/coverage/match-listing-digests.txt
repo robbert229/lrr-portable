@@ -1,4 +1,4 @@
-# input_sha256: 24787fa4c47e98d780e243e3287713347eb1cd9c7f3c0639cfaace7dac637108
+# input_sha256: 98c9584b3ef3d495f08afe3577a57f8f442cf8dcf438443370384ab6581f4892
 # listing_format: 4
 # Normalised rebuilt listings: address count sequence_sha256 multiset_sha256
 [game-only]

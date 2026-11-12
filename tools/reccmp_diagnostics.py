@@ -17,9 +17,14 @@ ALLOW = [re.compile(r'[/\\]src[/\\]gods98[/\\]viewports\.cpp\(\d+\) : warning C4
          re.compile(r'^WARNING:  missing cvtres\.err; displaying error numbers without messages\.$')]
 DIAGNOSTIC = re.compile(r'\[(?:ERROR|WARNING|CRITICAL)\]|\bwarning\s+(?:[A-Z]+\d+\s*:|:)|^\s*(?:warning|error|fatal error)\s*:', re.I)
 
+# Reccmp colours its log level ("[\x1b[31mERROR\x1b[0m]"), which hid its
+# diagnostics from DIAGNOSTIC until the colour codes were removed (finding 569).
+ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
+
 def unexpected(lines):
-    return [line.rstrip('\r\n') for line in lines
-            if DIAGNOSTIC.search(line) and not any(p.search(line.rstrip('\r\n')) for p in ALLOW)]
+    plain = (ANSI.sub('', line).rstrip('\r\n') for line in lines)
+    return [line for line in plain
+            if DIAGNOSTIC.search(line) and not any(p.search(line) for p in ALLOW)]
 
 def main():
     with open(sys.argv[1], encoding='utf-8', errors='replace') as f:

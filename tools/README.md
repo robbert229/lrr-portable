@@ -736,7 +736,11 @@ results. The standalone stdlib tool reads the link-order list, range CSV, map,
 source annotations, the Reccmp entity report, the current CMake link response and matching COFF objects.
 The response file excludes stale object directories left by a rebase. It parses section alignment,
 section pieces and symbols, and compares each attributable annotation's gap
-from the first annotation in its original section. Finding 524's supported
+from the first annotation in its original section. A COMDAT section whose
+symbol the map places in another object takes no space: the link kept that
+object's copy. MSVC 5.0's `/O2` emits every string literal as such a COMDAT,
+so a literal pooled with an earlier object does not shift the later ones
+(finding 569). Finding 524's supported
 anchors additionally check absolute offsets. `full` requires matching gaps and
 anchor; `gaps-only` has no anchor; `partial` reports the first discrepancy;
 `n/a` means too few items or incomplete attribution. Unresolved addresses and
