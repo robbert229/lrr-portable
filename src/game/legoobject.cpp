@@ -10327,6 +10327,7 @@ static int entity_grid_position_match(EntitySlot* entity, void* payload)
     return 0;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static EntitySlot* entity_at_grid_position_find_in_context(
     GameContext* context, LevelState* level, const int cell_xy[2])
 {
@@ -10341,12 +10342,14 @@ static EntitySlot* entity_at_grid_position_find_in_context(
     return query.found;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int entity_pool_teardown_callback(EntitySlot* entity, void* unused)
 {
     (void)unused;
     return entity_teardown(entity);
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int entity_spawn_request_nested_sum_add(EntitySlot* candidate,
                                                 void* payload)
 {
@@ -10362,6 +10365,7 @@ static int entity_spawn_request_nested_sum_add(EntitySlot* candidate,
 /* EntityStatePairPredicate (FUN_0043c200): the selected type/row is
  * compatible when its +0xdc value, the Barracks +0xdc value, and the
  * eligible type-4 instance sum have a positive total. */
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int entity_spawn_request_state_pair_predicate(int type, int row,
                                                      int other_type,
                                                      int other_row,
@@ -10380,6 +10384,7 @@ static int entity_spawn_request_state_pair_predicate(int type, int row,
     return candidate_value + other_value + sum.value > 0.0f;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int entity_spawn_request_pair_matches(const EntitySpawnRequest* request,
                                               const EntitySlot* requester,
                                               GameContext* context)
@@ -10471,6 +10476,7 @@ static int deferred_olist_string_equal(const char* first, const char* second)
     return *first == '\0' && *second == '\0';
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int entity_type_two_positioned_candidate(EntitySlot* candidate,
                                                 void* payload)
 {
@@ -10531,6 +10537,7 @@ static int entity_type_two_positioned_candidate(EntitySlot* candidate,
     return 0;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int entity_task_at_grid_coordinate_candidate(
     EntitySlot* entity, void* payload)
 {
@@ -10566,6 +10573,7 @@ static int entity_deposit_position_get(EntitySlot* entity, float position[3])
         fabs(position[0]) <= FLT_MAX && fabs(position[1]) <= FLT_MAX;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int entity_kind_four_candidate_search(GameContext* context,
                                             LevelState* level, int x, int y,
                                             int amount)
@@ -10598,6 +10606,7 @@ static int entity_kind_four_candidate_search(GameContext* context,
     return 0;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int entity_kind_four_candidate_find(GameContext* context,
                                             LevelState* level,
                                             const int start_xy[2],
@@ -10611,6 +10620,7 @@ static int entity_kind_four_candidate_find(GameContext* context,
     return found;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static void entity_kind_four_adjacent_expand(LevelState* level, int x, int y)
 {
     static const int offsets[4][2] = {
@@ -10676,6 +10686,7 @@ static int entity_type_four_linked_type_five_reset(EntitySlot* candidate,
     return 0;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int entity_linked_reference_matches(EntitySlot* candidate,
                                            void* target)
 {
@@ -10759,6 +10770,7 @@ static void spatial_query_center_from_cell(
     request->center_is_cell = 0;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int adjacent_route_candidate_stop(void*, const uint32_t cell[2],
                                          void* context)
 {
@@ -10769,6 +10781,7 @@ static int adjacent_route_candidate_stop(void*, const uint32_t cell[2],
         (int)cell[0], (int)cell[1], accept->route_cookie);
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static EntityPathMotionRuntime* entity_path_motion_runtime_get(
     EntitySlot* entity, int create)
 {
@@ -10788,6 +10801,7 @@ static EntityPathMotionRuntime* entity_path_motion_runtime_get(
 }
 
 /* Return the real current terrain pick result; absent terrain is failure. */
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int entity_work_entry_grid_pick(float x, float y, int* cx, int* cy)
 {
     LevelState* level = level_current_owner_get();
@@ -11051,6 +11065,7 @@ static int activity_skips_idle_chain(int activity)
 /* ObjectiveSidecarAppendGate (FUN_0043bc40). The entity's stats accessors,
  * activity, owner, carried-object, selection, task, and OSF state are live in
  * the portable model. Scene-object creation/labels remain renderer-owned. */
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static void objective_sidecar_activity_set(EntitySlot* entity, int activity)
 {
     ai_set_activity(entity, activity, 0);
@@ -11059,6 +11074,7 @@ static void objective_sidecar_activity_set(EntitySlot* entity, int activity)
     entity->activity_timer = 0.0f;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static void objective_sidecar_owner_detach(GameContext* ctx,
                                            EntitySlot* entity)
 {
@@ -11088,6 +11104,7 @@ static int global_scatter_find(int mode)
 } // namespace lego
 
 namespace unported_ledger_stubs {
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static GameContext* emergence_game_context_get(const void* base_entity)
 {
     const EntitySlot* base = (const EntitySlot*)base_entity;
@@ -11095,6 +11112,7 @@ static GameContext* emergence_game_context_get(const void* base_entity)
     return entity_pool_callback_context_get();
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static LevelState* emergence_level_get(const void* base_entity)
 {
     GameContext* context;
@@ -11104,6 +11122,7 @@ static LevelState* emergence_level_get(const void* base_entity)
     return context != NULL ? context->level : NULL;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int emergence_cell_world_position_get(int cell_x, int cell_y,
                                              float out_xy[2])
 {
@@ -11117,6 +11136,7 @@ static int emergence_cell_world_position_get(int cell_x, int cell_y,
     return 1;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static EntitySlot* emergence_entity_create(void* base_entity,
                                            int owner_index, float x,
                                            float y, float heading)
@@ -11158,6 +11178,7 @@ static EntitySlot* emergence_entity_create(void* base_entity,
 }
 } // namespace unported_ledger_stubs
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int terrain_variant_entity_visit_adapter(EntitySlot* candidate,
                                                  void* context)
 {
@@ -11172,6 +11193,7 @@ static int terrain_variant_entity_visit_adapter(EntitySlot* candidate,
  * active level. Older portable callers also pass LevelState or TerrainState
  * here, so recognize those owners without interpreting their leading words
  * as an EntitySlot. */
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static LevelState* terrain_path_level_resolve(void* argument,
                                               EntitySlot** actor_out)
 {
@@ -11207,6 +11229,7 @@ static LevelState* terrain_path_level_resolve(void* argument,
     return NULL;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int terrain_path_grid_size_get(void* entity, uint32_t* width,
                                       uint32_t* height)
 {
@@ -11222,6 +11245,7 @@ static int terrain_path_grid_size_get(void* entity, uint32_t* width,
     return *width != 0u && *height != 0u;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int terrain_path_route_accept(void* entity, uint32_t x, uint32_t y,
                                      int direction)
 {
@@ -11240,6 +11264,7 @@ static int terrain_path_route_accept(void* entity, uint32_t x, uint32_t y,
         (int)x + dx[direction], (int)y + dy[direction], 0) != 0;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int terrain_path_cell_accept(void* entity, uint32_t x, uint32_t y)
 {
     LevelState* level;
@@ -11258,6 +11283,7 @@ static int terrain_path_cell_accept(void* entity, uint32_t x, uint32_t y)
         : 0;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int terrain_path_half_cost_accept(void* entity, uint32_t x,
                                          uint32_t y, int direction)
 {
@@ -11277,6 +11303,7 @@ static int terrain_path_half_cost_accept(void* entity, uint32_t x,
     return level_cell_occupied_at(level, probe_x, probe_y) != 0;
 }
 
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static int scene_entity_callback(EntitySlot* entity, void* payload)
 {
     float dt = *(float*)payload;
@@ -11293,6 +11320,7 @@ static int scene_entity_callback(EntitySlot* entity, void* payload)
  * mirrors each coordinate into its previous-state slots, and clears cell
  * flag 0x100. The host grid is the same +0xb8 / 0x48-byte cell array used by
  * EngineState. */
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static void scene_cell_previous_state_track(EngineState* st)
 {
     uint32_t i;
@@ -11317,6 +11345,7 @@ static void scene_cell_previous_state_track(EngineState* st)
 
 /* FUN_004321a0 drains the snapshot after the entity callback walk. A cell
  * whose +0x0d byte bit 0 is clear is sent to CellInitPass (FUN_0042f6f0). */
+// PORT-ONLY: helper of GAME-023 part-2 port models, retires to the tail in GAME-023 part 3
 static void scene_cell_update_queue_flush(EngineState* st)
 {
     uint32_t i;
@@ -11357,14 +11386,6 @@ extern "C" int legoobject_gb_weapon_target_clear_callback(void* obj, void* data)
     (void)obj;
     (void)data;
     return 0;
-}
-
-/* 0043f560 takes the object; the port's entry takes its context too. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (entity_pool_find_with_local_predicate, 0x0043f560)
-extern "C" int legoobject_gb_pool_find_with_local_predicate_adapter(void* obj)
-{
-    return entity_pool_find_with_local_predicate(
-        entity_pool_callback_context_get(), (EntitySlot*)obj);
 }
 
 /* 0044be30 takes the object; the port's entry takes a hook table. No hooks

@@ -3365,27 +3365,6 @@ void legoobject_activity_counters_advance(Lego_Object* obj, float elapsed)
 
 /* ---- functions, group J (0043c810; part 2, issue #588) ---- */
 
-/* Maths_Vector3DScale and Maths_Vector3DAdd, the inline helpers of
- * Gods98's Maths.h: inlined, they leave no code of their own. */
-static __inline LegoObjJ_Vector3F* legoobject_vector3_scale(LegoObjJ_Vector3F* r,
-                                                           LegoObjJ_Vector3F* a, float f)
-{
-    r->x = a->x * f;
-    r->y = a->y * f;
-    r->z = a->z * f;
-    return r;
-}
-
-static __inline LegoObjJ_Vector3F* legoobject_vector3_add(LegoObjJ_Vector3F* r,
-                                                         LegoObjJ_Vector3F* a,
-                                                         LegoObjJ_Vector3F* b)
-{
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
-    return r;
-}
-
 /* LegoObject_Callback_Update: one object's frame. Ghidra merged it into
  * 0043c6b0's span; LegoObject_UpdateAll (0043b270) pushes it. The flag
  * words are flags1-flags4 (+0x3e0-+0x3ec): one handler runs per frame, the
@@ -6746,87 +6725,6 @@ void legoobject_enter_event21_state_once(Lego_Object* obj)
 
 
 /* ---- functions, group O (00444680-00445830; part 2, issue #588) ---- */
-
-/* Maths.h's inline Vector3D and Vector2D helpers, as group O's functions
- * expand them (static __inline; /Ob1 expands them in place). */
-static __inline float legoobject_o_vector3_dot(LegoObjJ_Vector3F* a, LegoObjJ_Vector3F* b)
-{
-    return a->x * b->x + a->y * b->y + a->z * b->z;
-}
-
-static __inline float legoobject_o_vector3_modulus(LegoObjJ_Vector3F* v)
-{
-    return (float)sqrt(legoobject_o_vector3_dot(v, v));
-}
-
-static __inline LegoObjJ_Vector3F* legoobject_o_vector3_scale(LegoObjJ_Vector3F* r,
-                                                             LegoObjJ_Vector3F* a, float f)
-{
-    r->x = a->x * f;
-    r->y = a->y * f;
-    r->z = a->z * f;
-    return r;
-}
-
-static __inline LegoObjJ_Vector3F* legoobject_o_vector3_normalise(LegoObjJ_Vector3F* r)
-{
-    return legoobject_o_vector3_scale(r, r, 1.0f / legoobject_o_vector3_modulus(r));
-}
-
-static __inline LegoObjJ_Vector3F* legoobject_o_vector3_cross(LegoObjJ_Vector3F* r,
-                                                             LegoObjJ_Vector3F* a,
-                                                             LegoObjJ_Vector3F* b)
-{
-    float x;
-    float y;
-    float z;
-
-    x = a->y * b->z - a->z * b->y;
-    y = a->z * b->x - a->x * b->z;
-    z = a->x * b->y - a->y * b->x;
-    r->x = x;
-    r->y = y;
-    r->z = z;
-    return r;
-}
-
-static __inline float legoobject_o_vector2_modulus(Point2F* v)
-{
-    return (float)sqrt(v->x * v->x + v->y * v->y);
-}
-
-static __inline Point2F* legoobject_o_vector2_scale(Point2F* r, Point2F* a, float f)
-{
-    r->x = a->x * f;
-    r->y = a->y * f;
-    return r;
-}
-
-static __inline Point2F* legoobject_o_vector2_add(Point2F* r, Point2F* a, Point2F* b)
-{
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    return r;
-}
-
-static __inline Point2F* legoobject_o_vector2_subtract(Point2F* r, Point2F* a, Point2F* b)
-{
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    return r;
-}
-
-static __inline Point2F* legoobject_o_vector2_copy(Point2F* r, Point2F* a)
-{
-    r->x = a->x;
-    r->y = a->y;
-    return r;
-}
-
-static __inline Point2F* legoobject_o_vector2_normalise(Point2F* r)
-{
-    return legoobject_o_vector2_scale(r, r, 1.0f / legoobject_o_vector2_modulus(r));
-}
 
 /* LegoObject_Route_ResolveStep?: set up the Bezier curve from the
  * object's position to the next route block (nextBlock advances the route

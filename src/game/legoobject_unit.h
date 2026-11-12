@@ -435,6 +435,27 @@ typedef struct LegoObjJ_AITask {
  * elapsed time. */
 int legoobject_update_callback(Lego_Object* obj, void* data); /* 0043c810 */
 
+/* Maths_Vector3DScale and Maths_Vector3DAdd, the inline helpers of
+ * Gods98's Maths.h: inlined, they leave no code of their own. */
+static __inline LegoObjJ_Vector3F* legoobject_vector3_scale(LegoObjJ_Vector3F* r,
+                                                           LegoObjJ_Vector3F* a, float f)
+{
+    r->x = a->x * f;
+    r->y = a->y * f;
+    r->z = a->z * f;
+    return r;
+}
+
+static __inline LegoObjJ_Vector3F* legoobject_vector3_add(LegoObjJ_Vector3F* r,
+                                                         LegoObjJ_Vector3F* a,
+                                                         LegoObjJ_Vector3F* b)
+{
+    r->x = a->x + b->x;
+    r->y = a->y + b->y;
+    r->z = a->z + b->z;
+    return r;
+}
+
 /* ---- group I2: 0043eea0-0043f7d0 (part 2, issue #588) ---- */
 /* legoGlobs.objTeleportQueue: the queued object requests (types, ids). */
 typedef struct LegoObjI_Requests {

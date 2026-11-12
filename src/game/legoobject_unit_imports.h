@@ -1024,6 +1024,87 @@ int _finite(double x);
 void legoobject_go_pairing_activity_adapter(struct EntitySlot* first,
                                             struct EntitySlot* second); /* 0044b250 */
 
+/* Maths.h's inline Vector3D and Vector2D helpers, as group O's functions
+ * expand them (static __inline; /Ob1 expands them in place). */
+static __inline float legoobject_o_vector3_dot(LegoObjJ_Vector3F* a, LegoObjJ_Vector3F* b)
+{
+    return a->x * b->x + a->y * b->y + a->z * b->z;
+}
+
+static __inline float legoobject_o_vector3_modulus(LegoObjJ_Vector3F* v)
+{
+    return (float)sqrt(legoobject_o_vector3_dot(v, v));
+}
+
+static __inline LegoObjJ_Vector3F* legoobject_o_vector3_scale(LegoObjJ_Vector3F* r,
+                                                             LegoObjJ_Vector3F* a, float f)
+{
+    r->x = a->x * f;
+    r->y = a->y * f;
+    r->z = a->z * f;
+    return r;
+}
+
+static __inline LegoObjJ_Vector3F* legoobject_o_vector3_normalise(LegoObjJ_Vector3F* r)
+{
+    return legoobject_o_vector3_scale(r, r, 1.0f / legoobject_o_vector3_modulus(r));
+}
+
+static __inline LegoObjJ_Vector3F* legoobject_o_vector3_cross(LegoObjJ_Vector3F* r,
+                                                             LegoObjJ_Vector3F* a,
+                                                             LegoObjJ_Vector3F* b)
+{
+    float x;
+    float y;
+    float z;
+
+    x = a->y * b->z - a->z * b->y;
+    y = a->z * b->x - a->x * b->z;
+    z = a->x * b->y - a->y * b->x;
+    r->x = x;
+    r->y = y;
+    r->z = z;
+    return r;
+}
+
+static __inline float legoobject_o_vector2_modulus(Point2F* v)
+{
+    return (float)sqrt(v->x * v->x + v->y * v->y);
+}
+
+static __inline Point2F* legoobject_o_vector2_scale(Point2F* r, Point2F* a, float f)
+{
+    r->x = a->x * f;
+    r->y = a->y * f;
+    return r;
+}
+
+static __inline Point2F* legoobject_o_vector2_add(Point2F* r, Point2F* a, Point2F* b)
+{
+    r->x = a->x + b->x;
+    r->y = a->y + b->y;
+    return r;
+}
+
+static __inline Point2F* legoobject_o_vector2_subtract(Point2F* r, Point2F* a, Point2F* b)
+{
+    r->x = a->x - b->x;
+    r->y = a->y - b->y;
+    return r;
+}
+
+static __inline Point2F* legoobject_o_vector2_copy(Point2F* r, Point2F* a)
+{
+    r->x = a->x;
+    r->y = a->y;
+    return r;
+}
+
+static __inline Point2F* legoobject_o_vector2_normalise(Point2F* r)
+{
+    return legoobject_o_vector2_scale(r, r, 1.0f / legoobject_o_vector2_modulus(r));
+}
+
 #ifdef __cplusplus
 }
 #endif
