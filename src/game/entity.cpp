@@ -50,6 +50,20 @@
 extern "C" int entity_building_index_set(EntitySlot* entity, uint32_t state);
 #include "entity_from_entity_stats.hpp"
 #include "entity_from_lego.hpp"
+/* C linkage for legoGlobs' object-name tables, which legoobject_unit.c
+ * reads (declared again, with the same types, by the frozen header below). */
+extern "C" const char* s_object_name_special[9];
+extern "C" const char* s_object_the_name_special[9];
+extern "C" const char** s_object_name_kind1;
+extern "C" const char** s_object_name_kind2;
+extern "C" const char** s_object_name_kind3;
+extern "C" const char** s_object_name_kind4;
+extern "C" const char** s_object_name_kind10;
+extern "C" const char** s_object_the_name_kind1;
+extern "C" const char** s_object_the_name_kind2;
+extern "C" const char** s_object_the_name_kind3;
+extern "C" const char** s_object_the_name_kind4;
+extern "C" const char** s_object_the_name_kind10;
 #include "entity_for_legoobject.hpp"
 
 static uint32_t s_next_ddiscene_owner_token = 1u;

@@ -87,6 +87,20 @@ extern "C" int entity_building_index_set(EntitySlot* entity, uint32_t state);
 #include "camera_for_lego.hpp"
 #include "simtick_shared.hpp"
 #include "view_shared.hpp"
+/* C linkage for legoGlobs' object-name tables, which legoobject_unit.c
+ * reads (declared again, with the same types, by the frozen header below). */
+extern "C" const char* s_object_name_special[9];
+extern "C" const char* s_object_the_name_special[9];
+extern "C" const char** s_object_name_kind1;
+extern "C" const char** s_object_name_kind2;
+extern "C" const char** s_object_name_kind3;
+extern "C" const char** s_object_name_kind4;
+extern "C" const char** s_object_name_kind10;
+extern "C" const char** s_object_the_name_kind1;
+extern "C" const char** s_object_the_name_kind2;
+extern "C" const char** s_object_the_name_kind3;
+extern "C" const char** s_object_the_name_kind4;
+extern "C" const char** s_object_the_name_kind10;
 #include "entity_for_legoobject.hpp"
 /* C linkage for legoobject_unit.c (the frozen header below redeclares it). */
 extern "C" const char* s_tool_type_names[AI_TOOL_TYPE_COUNT];
@@ -2060,7 +2074,8 @@ int entity_flags_contain_requested_single_bit(const EntitySlot* e,
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00438f60
+/* Port model of 0x00438f60 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438f60, retires to the tail in GAME-023 part 3
 int dock_definition_matches_cell(const int cell_xy[2])
 {
     int dock_xy[2];
@@ -2072,7 +2087,8 @@ int dock_definition_matches_cell(const int cell_xy[2])
     return dock_xy[0] == cell_xy[0] && dock_xy[1] == cell_xy[1];
 }
 
-// FUNCTION: LEGORR 0x00438fb0
+/* Port model of 0x00438fb0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438fb0, retires to the tail in GAME-023 part 3
 int entity_route_marker_candidate_visit(EntitySlot* candidate,
                                                 void* payload)
 {
@@ -2099,7 +2115,8 @@ int entity_route_marker_candidate_visit(EntitySlot* candidate,
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00439200
+/* Port model of 0x00439200 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439200, retires to the tail in GAME-023 part 3
 int task_kind_filtered_search(int selector)
 {
     if (selector == 1 || selector == 2 || selector == 4) {
@@ -2121,7 +2138,8 @@ int task_kind_filtered_search(int selector)
     }
     return 0;
 }
-// FUNCTION: LEGORR 0x00439240
+/* Port model of 0x00439240 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439240, retires to the tail in GAME-023 part 3
 int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind)
 {
     /* Corpus: test al,0x8 — the byte test of the stats word return. */
@@ -2138,7 +2156,8 @@ int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind)
  * values are the outputs of the level's byte-state classifier at 0x42c5b0,
  * so this path uses the live level record instead of requiring a separately
  * installed count callback. */
-// FUNCTION: LEGORR 0x00439280
+/* Port model of 0x00439280 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439280, retires to the tail in GAME-023 part 3
 void entity_build_placement_command_batch_expand(const int cell_xy[2])
 {
     uint32_t counts[4];
@@ -2162,7 +2181,8 @@ void entity_build_placement_command_batch_expand(const int cell_xy[2])
         (void)entity_build_placement_command_setup(cell_xy, 1, NULL, 1, 1);
     }
 }
-// FUNCTION: LEGORR 0x00439340
+/* Port model of 0x00439340 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439340, retires to the tail in GAME-023 part 3
 void entity_build_placement_command_pair_create(const int cell_xy[2],
                                                 int entity_id)
 {
@@ -2174,7 +2194,8 @@ void entity_build_placement_command_pair_create(const int cell_xy[2],
 
 namespace unported_ledger_stubs {
 // EntityBuildPlacementCommandSetup
-// FUNCTION: LEGORR 0x00439370
+/* Port model of 0x00439370 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439370, retires to the tail in GAME-023 part 3
 void ledger_stub_00439370_EntityBuildPlacementCommandSetup(
     const int cell_xy[2], int entity_id, const float world_xy[2],
     int update_state)
@@ -2254,7 +2275,8 @@ void ledger_stub_00439370_EntityBuildPlacementCommandSetup(
 }
 
 // EntityBuildPlacementAlternateCommandSetup
-// FUNCTION: LEGORR 0x004394b0
+/* Port model of 0x004394b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004394b0, retires to the tail in GAME-023 part 3
 void ledger_stub_004394b0_EntityBuildPlacementAlternateCommandSetup(
     const int cell_xy[2], int entity_id, const float world_xy[2],
     int update_state)
@@ -2336,7 +2358,8 @@ void ledger_stub_004394b0_EntityBuildPlacementAlternateCommandSetup(
  * category-specific index is represented by the config type name in the
  * portable entity record; kind 7's second-word selector is retained as
  * etype, matching the original +4 read. */
-// FUNCTION: LEGORR 0x004395E0
+/* Port model of 0x004395e0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004395e0, retires to the tail in GAME-023 part 3
 const char* entity_display_name_lookup(const EntitySlot* entity)
 {
     int index;
@@ -2368,7 +2391,8 @@ const char* entity_display_name_lookup(const EntitySlot* entity)
 }
 /* ItemNameByKindLookup (FUN_004396c0): fixed item labels plus the four
  * runtime-configured vehicle/minifigure/creature/building name tables. */
-// FUNCTION: LEGORR 0x004396C0
+/* Port model of 0x004396c0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004396c0, retires to the tail in GAME-023 part 3
 const char* item_name_by_kind_lookup(uint32_t kind, int index)
 {
     static const char* const special_names[] = {
@@ -2397,7 +2421,8 @@ const char* item_name_by_kind_lookup(uint32_t kind, int index)
     return NULL;
 }
 
-// FUNCTION: LEGORR 0x00439790
+/* Port model of 0x00439790 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439790, retires to the tail in GAME-023 part 3
 const char* localized_object_the_name_get(uint32_t kind, int index)
 {
     switch (kind) {
@@ -2417,7 +2442,8 @@ const char* localized_object_the_name_get(uint32_t kind, int index)
     default: return NULL;
     }
 }
-// FUNCTION: LEGORR 0x00439860
+/* Port model of 0x00439860 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439860, retires to the tail in GAME-023 part 3
 const char* localized_object_name_get(uint32_t kind, int index)
 {
     switch (kind) {
@@ -2439,7 +2465,8 @@ const char* localized_object_name_get(uint32_t kind, int index)
 }
 
 /* CopyTwoDwordPairToOutputs (FUN_00439930) — see record.hpp. */
-// FUNCTION: LEGORR 0x00439930
+/* Port model of 0x00439930 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439930, retires to the tail in GAME-023 part 3
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void copy_two_dword_pair_to_outputs(
     const void* record, uint32_t* out_a, uint32_t* out_b)
