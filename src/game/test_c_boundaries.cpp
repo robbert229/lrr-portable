@@ -161,6 +161,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/building_model.h"
 #include "game/lego_blocks.h"
 #include "game/legoobject.h"
+#include "game/legoobject_unit.h"
+#include "game/legoobject_unit_imports.h"
 #include "game/placement_footprint.h"
 #include "game/rock_fall_styles.h"
 #include "game/stats.h"

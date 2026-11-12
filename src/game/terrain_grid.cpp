@@ -28,6 +28,9 @@
 #include "terrain_grid_shared.hpp"
 #include "terrain_grid_for_lego.hpp"
 #include "terrain_grid_for_legoobject.hpp"
+/* GAME-023 legoobject_unit.c reads objectGlobs 004dee00 from C; declared
+ * so before the frozen header gives it C linkage. */
+extern "C" float* s_terrain_neighbor_path_cost;
 #include "terrain_grid_from_legoobject.hpp"
 
 static BlockFile* s_texture_set_config_context;

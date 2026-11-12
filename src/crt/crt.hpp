@@ -727,6 +727,9 @@ float    crt_float_bits(uint32_t bits);
 void uint96_zero(uint32_t limbs[3]);   /* FUN_00497aa0 */
 void uint96_shift_right(uint32_t limbs[3], int count); /* FUN_00497ad0 */
 #endif
+#ifdef __cplusplus
+extern "C"
+#endif
 void global_value_clear_if_equal(int value); /* FUN_0040e910 */
 void global_value_word_set(int value);       /* port hook */
 int  global_value_word_peek(void);
@@ -806,7 +809,7 @@ void  shared_texture_directory_clear(void);          /* port hook: free */
 
 /* RendererFlagBit6Set (FUN_004728e0): sets or clears bit 0x40 in the
  * renderer flag word. */
-void renderer_flag_bit6_set(int value);             /* FUN_004728e0 */
+extern "C" void renderer_flag_bit6_set(int value);             /* FUN_004728e0 */
 uint32_t renderer_flag_word_peek(void);             /* port hook */
 
 /* DDiSceneEndHookRegister (FUN_00472900): stores the scene-end callback

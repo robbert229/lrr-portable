@@ -4,6 +4,8 @@
  * 505): the electric fences (the original's ElectricFence.c), rebuilt in
  * original shape (ADR 0005, finding 566). terrain_cell_objects.h describes
  * the model. */
+/* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
+#include "legoobject_port_aliases.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>

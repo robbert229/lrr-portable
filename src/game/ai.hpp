@@ -277,7 +277,7 @@ int  entity_set_activity_place(EntitySlot* e);           /* FUN_00448c50 */
  * bits and the scatter-spawn gate. The corpus's global level pointer is
  * threaded as a GameContext argument (the module's ctx convention). */
 void entity_activity_scene_state_update(GameContext* ctx); /* FUN_00439990 */
-void entity_activity_scene_state_update_retail(void); /* FUN_00439990 */
+extern "C" void entity_activity_scene_state_update_retail(void); /* FUN_00439990 */
 uint32_t entity_state_flags_peek(void);                    /* port hook */
 void     entity_state_flags_set(uint32_t value);           /* port hook */
 extern "C" uint32_t s_entity_state_flags; /* DAT_004dee14 shared state word */
@@ -331,7 +331,7 @@ int entity_random_activity_attempt(EntitySlot* e); /* FUN_00443670 */
  * Deviation: the corpus dereferences entities blindly; the guards and the
  * threaded GameContext stand in (the scene-state update's global level
  *   word is the module's ctx convention). */
-void simulation_update_counter_add(GameContext* ctx, int count);
+extern "C" void simulation_update_counter_add(GameContext* ctx, int count);
                                                 /* FUN_0043a8f0 */
 void entity_flag80000000_set_or_clear(GameContext* ctx, EntitySlot* e,
                                       int param); /* FUN_00438580 */
@@ -349,7 +349,7 @@ void linked_entity_flag_and_command_update(EntitySlot* e);
 
 /* EntityPointerRegistriesRemove (FUN_004073a0): drop the record pointer from
  * every window whose slot matches (the timer words ride on). */
-void entity_pointer_registries_remove(EntitySlot* record); /* FUN_004073a0 */
+extern "C" void entity_pointer_registries_remove(EntitySlot* record); /* FUN_004073a0 */
 
 /* Type4ObjectRegistryInsert (FUN_00407410): a type-4 record goes into the
  * type-4 window when absent — first empty slot, timer word untouched. */

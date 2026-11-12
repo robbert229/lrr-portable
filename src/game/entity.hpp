@@ -242,7 +242,7 @@ typedef int (*EntityRouteSegmentAcceptHook)(EntitySlot* entity,
                                             float x0, float y0,
                                             float x1, float y1);
 void entity_route_segment_accept_hook_set(EntityRouteSegmentAcceptHook hook);
-int entity_route_setup_and_marker_associate(EntitySlot* entity,
+extern "C" int entity_route_setup_and_marker_associate(EntitySlot* entity,
                                             unsigned int count,
                                             const float* x_values,
                                             const float* y_values,
@@ -606,7 +606,7 @@ uint32_t entity_indexed_record_word_at_b8_get(int group, int index,
                                               int slot); /* FUN_00469b20 */
 uint32_t entity_indexed_record_word_at_f0_get(int group, int index,
                                               int slot); /* FUN_00469be0 */
-uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
+extern "C" uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
                                                      int slot); /* FUN_0046a0c0 */
 typedef int (*PeriodicEntityCallback)(EntitySlot* entity, void* payload,
                                       void* context);
@@ -617,7 +617,7 @@ int entity_default_transform_apply_if_flagged(EntitySlot* entity,
                                               void* argument);
 void entity_default_transform_apply_all(void* argument);
 EntitySlot* entity_at_grid_position_find(const int cell_xy[2]); /* 0x00438670 */
-void entity_activity_record_remove_by_type(void* entity, int type,
+extern "C" void entity_activity_record_remove_by_type(void* entity, int type,
                                            void* action_context);
 void entity_activity_records_refresh(void* entity);
 typedef void (*ActivityRecordClearFn)(void* head, void* user);
@@ -707,7 +707,7 @@ typedef int (*EntityFlagMaskPredicate)(EntitySlot*, uint32_t, void*);
 int entity_flag_mask_callbacks_predicate_all_pass(
     GameContext* ctx, uint32_t mask, EntityFlagMaskPredicate predicate,
     void* user);
-void entity_iteration_callback_guard(void); /* FUN_0043b320 */
+extern "C" void entity_iteration_callback_guard(void); /* FUN_0043b320 */
 uint32_t entity_iteration_guard_flags_peek(void); /* port hook */
 void entity_iteration_guard_flags_set(uint32_t flags); /* FUN_00436c20 / 437050 */
 typedef int (*SceneObjectStateCallback)(EntitySlot*, uint32_t, uint32_t,
@@ -887,7 +887,7 @@ float entity_stats_float_at10c(const EntitySlot* e);  /* FUN_0046a310 */
 
 /* FUN_0043baf0 — true when either flag word intersects its literal mask:
  * +0x3e0 & 0x107c33de or +0x3e4 & 0x01c00203. */
-int entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e);
+extern "C" int entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e);
 
 /* FUN_004385b0 — the shared eligibility gate the command and activity
  * layers consult: no +0x3e0 bits 0x700100 or bit 0x20000, no +0x3e4 bit
@@ -1091,13 +1091,13 @@ int entity_centers_within_configured_radius(const EntitySlot* first,
                                             const EntitySlot* second); /* FUN_00472080 */
 int entity_centers_within_object_radius(const EntitySlot* first,
                                         const EntitySlot* second); /* FUN_00472130 */
-void entity_world_position_set(EntitySlot* entity, float x, float y,
+extern "C" void entity_world_position_set(EntitySlot* entity, float x, float y,
                                float heading, int update_heading); /* FUN_004428a0 */
 typedef void (*EntityFinalizeHook)(EntitySlot* entity);
 void entity_type5_finalize_environment_set(uint32_t mode_flags,
                                           EntityFinalizeHook timeout_hook,
                                           EntityFinalizeHook finalize_hook);
-void entity_type5_finalize_if_allowed(EntitySlot* entity); /* FUN_00441ea0 */
+extern "C" void entity_type5_finalize_if_allowed(EntitySlot* entity); /* FUN_00441ea0 */
 typedef int (*EntityRouteStateHook)(EntitySlot* entity);
 void entity_route_state_hook_set(EntityRouteStateHook hook);
 void entity_action_route_state_initialize(EntitySlot* entity); /* FUN_00442210 */
@@ -1482,7 +1482,7 @@ extern "C" uint32_t building_upgrade_admission_check(int type, int row);
 extern "C" uint32_t stats_table_word_at_b8(int type, int row, int stride_index = 0); /* FUN_00469b20 */
 uint32_t stats_table_word_at_b0(int type, int row, int stride_index);
 float stats_table_float_at_dc(int type, int row);    /* FUN_00469e00 */
-uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
+extern "C" uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
 extern "C" uint32_t stats_table_word_at_148(int type, int row); /* FUN_00469ee0 */
 extern "C" uint32_t stats_table_word_at_14c(int type, int row); /* FUN_00469f00 */
 

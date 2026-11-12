@@ -405,6 +405,9 @@ typedef struct SceneObjectRecord {
 typedef void* (*SceneObjectRecordRetainHook)(void* context, void* resource);
 void scene_object_record_retain_hook_set(SceneObjectRecordRetainHook hook,
                                          void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_record_clone_retain_handles(
     const SceneObjectRecord* source, SceneObjectRecord* destination);
 /* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
@@ -477,6 +480,9 @@ void render_resource_binding_hooks_set(
 void render_resource_binding_initialize(RenderResourceBinding* binding,
                                         void* key, void* config_a,
                                         void* config_b);
+#ifdef __cplusplus
+extern "C"
+#endif
 void render_resource_binding_copy_and_convert(
     const RenderResourceBinding* source,
     RenderResourceBinding* destination);
@@ -1339,8 +1345,14 @@ void renderer_handle_scalar_hook_install(RendererHandleScalarGetHook hook,
  * entropy rule 1). */
 int renderer_cached_handle_4c_is_not_one(void* record); /* FUN_00407040 */
 void* scene_object_indexed_handle_get_or_create(void* record, int index);
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_object_primary_handle_get_or_create(void* record);
 void* scene_object_secondary_handle_get_or_create(void* record);
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_object_indexed_secondary_handle_get_or_create(void* record,
                                                            int index);
 float animation_loop_time_adjust(void* record, float argument,

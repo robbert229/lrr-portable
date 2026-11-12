@@ -2,6 +2,8 @@
 /* GAME-050 GAME-050: the unit's functions in original address order and the
  * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
  * Body hashes: docs/coverage/relocations/GAME-050.csv. */
+/* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
+#include "legoobject_port_aliases.h"
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
@@ -161,7 +163,7 @@ extern "C" float weapon_type_recharge_time_get_target(int type)
 }
 
 // FUNCTION: LEGORR 0x0046F140
-float weapon_type_discharge_rate_get_target(int type)
+extern "C" float weapon_type_discharge_rate_get_target(int type)
 {
     return s_weapon_indexed_records[type].discharge_rate;
 }

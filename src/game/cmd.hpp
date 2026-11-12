@@ -136,7 +136,7 @@ int cmd_chain_drop(EntitySlot* e, int type);
 /* Full EntityCommandUnlinkByKind entry (FUN_00403d10). `extra` is the
  * type-specific payload (an EntitySlot for types 3 and 7).
  * `unlink` controls detachment from the entity chain and pool release. */
-void entity_command_unlink_by_kind(EntitySlot* e, int type,
+extern "C" void entity_command_unlink_by_kind(EntitySlot* e, int type,
                                    const void* extra, int unlink);
 
 /* ObjectAttachedRecordAllocate (FUN_004033c0, findings 251/270): allocates a
@@ -733,7 +733,7 @@ void entity_task_batch_append(EntitySlot* const* entities, int count,
  * words: 0/1 the terrain-derived cell pair (FUN_0044f6d0), 2/3 the world
  * pair, then params 5/1/2/3/6 and
  * two duplicated names (FUN_00477550). The hooks peek the band. */
-void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
+extern "C" void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
                                      int p1, int p2, int p3, int p5, int p6,
                                      const char* name1, const char* name2);
 uint32_t deferred_olist_entry_word(int slot, int word);
@@ -777,7 +777,7 @@ uint32_t menu_surface_track_peek(void);           /* port hook: DAT_004de1f0 */
  * ride — the corpus runs the advance outside the level gate). */
 void level_resource_balance_add_and_sound(int selector);
                                                 /* FUN_0041f9a0 */
-void simulation_mode_counter_add(int mode, int count);
+extern "C" void simulation_mode_counter_add(int mode, int count);
                                                 /* FUN_0043a910 */
 
 /* UpgradeResourceDebit (FUN_0041f9e0): subtract `amount` from the current

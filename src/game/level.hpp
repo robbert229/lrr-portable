@@ -317,10 +317,10 @@ void        level_destroy(LevelState* s);
 
 /* Grid size left in the block after a successful load. */
 extern "C" LevelState* level_current_owner_get(void);
-void* level_current_terrain_get(int cell_x, int cell_y); /* FUN_00431570 */
+extern "C" void* level_current_terrain_get(int cell_x, int cell_y); /* FUN_00431570 */
 /* Shared predug pool used by nearest-coordinate and spawn paths. */
-extern int s_predug_coordinates[20][2];
-extern unsigned int s_predug_coordinate_count;
+extern "C" int s_predug_coordinates[20][2];
+extern "C" unsigned int s_predug_coordinate_count;
 int level_width(const LevelState* s);
 int level_height(const LevelState* s);
 
@@ -581,7 +581,7 @@ uint32_t terrain_cell_edge_wall_current(const int cell_xy[2]);
 int level_cell_state_is_1(const LevelState* s, int cx, int cy);
 int level_cell_state_is_6(const LevelState* s, int cx, int cy);
 int terrain_cell_state_equals_one_current(const int cell_xy[2]);
-int terrain_cell_state_equals_six_current(const int cell_xy[2]);
+extern "C" int terrain_cell_state_equals_six_current(const int cell_xy[2]);
 
 /* FUN_00432f40: the two low terrain bits (0x18) clear — cells OUTSIDE
  * the grid-minus-one gate count as clear (as in the corpus). */
@@ -679,7 +679,7 @@ uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy);
 uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy);
 /* Retail target forms read the active level and apply unsigned dim-1 gates. */
 uint32_t terrain_cell_flag_800_bounded_current(uint32_t cx, uint32_t cy);
-uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);
+extern "C" uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);
 extern "C" uint32_t terrain_cell_flag_20_bounded_current(uint32_t cx, uint32_t cy);
 
 /* Explicit-level version of the unchecked state-byte classifier. */
@@ -964,8 +964,8 @@ void terrain_cell_record_count_increment_hook_install(
 void terrain_cell_record_count_increment(int a, int b, int c);
 void terrain_cell_record_count_update(const int cell_xy[2], int a, int b,
                                      int c); /* 0x00403810 */
-void terrain_cell_record_counts_prune(void* entity); /* 0x00403910 */
-void task_record_create_and_scan_grid(void* entity); /* 0x004039a0 */
+extern "C" void terrain_cell_record_counts_prune(void* entity); /* 0x00403910 */
+extern "C" void task_record_create_and_scan_grid(void* entity); /* 0x004039a0 */
 typedef struct TerrainCellSurfaceUpdateHooks {
     void* context;
     void* (*resource_get)(void* context, unsigned int channel,
@@ -1556,7 +1556,7 @@ unsigned int level_predug_coordinate_count_get(void);
 int level_predug_coordinate_get(unsigned int index, int cell_xy_out[2]);
 void level_predug_coordinate_pool_clear(void);
 void predug_coordinate_pool_append(const int cell_xy[2]);
-void spawn_coordinate_pool_clear(void); /* FUN_004372a0 */
+extern "C" void spawn_coordinate_pool_clear(void); /* FUN_004372a0 */
                                  /* FUN_0044ad80 */
 void terrain_sfx_grid_cell_set(int cell, int handle);  /* port hook */
 int  terrain_sfx_grid_cell_peek(int cell);             /* port hook */

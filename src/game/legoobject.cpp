@@ -43,7 +43,13 @@
 #include "crt/crt.hpp"
 #include "frontend.hpp"
 #include "entity_shared.hpp"
+/* C linkage for 00469c10, which legoobject_unit.c calls: the frozen header
+ * is wrapped rather than pre-declared, so no declaration is added (a
+ * pre-declaration shifts the symbol counter for parts 2 and 3). This file
+ * uses none of the header's other declarations. */
+extern "C" {
 #include "entity_from_entity_stats.hpp"
+}
 #include "entity_from_lego.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
@@ -85,7 +91,23 @@
 #include "camera_for_lego.hpp"
 #include "simtick_shared.hpp"
 #include "view_shared.hpp"
+/* C linkage for legoGlobs' object-name tables, which legoobject_unit.c
+ * reads (declared again, with the same types, by the frozen header below). */
+extern "C" const char* s_object_name_special[9];
+extern "C" const char* s_object_the_name_special[9];
+extern "C" const char** s_object_name_kind1;
+extern "C" const char** s_object_name_kind2;
+extern "C" const char** s_object_name_kind3;
+extern "C" const char** s_object_name_kind4;
+extern "C" const char** s_object_name_kind10;
+extern "C" const char** s_object_the_name_kind1;
+extern "C" const char** s_object_the_name_kind2;
+extern "C" const char** s_object_the_name_kind3;
+extern "C" const char** s_object_the_name_kind4;
+extern "C" const char** s_object_the_name_kind10;
 #include "entity_for_legoobject.hpp"
+/* C linkage for legoobject_unit.c (the frozen header below redeclares it). */
+extern "C" const char* s_tool_type_names[AI_TOOL_TYPE_COUNT];
 #include "ai_for_legoobject.hpp"
 #include "cmd_for_legoobject.hpp"
 #include "effects_for_legoobject.hpp"
@@ -96,6 +118,13 @@
 #include "gods98/camera_for_legoobject.hpp"
 #include "gods98/simtick_for_legoobject.hpp"
 #include "gods98/view_for_legoobject.hpp"
+/* C linkage for the state legoobject_unit.c reads (declared again, with
+ * the same types, by the frozen header below). */
+extern "C" const char* s_activity[AI_ACTIVITY_COUNT];
+extern "C" const char* s_ability_type_names[AI_ABILITY_TYPE_COUNT];
+extern "C" uint32_t s_activity_resource_slots[AI_ACTIVITY_RESOURCE_SLOT_COUNT];
+extern "C" EntitySlot* s_idle100[AI_IDLE_TABLE_MAX];
+extern "C" int s_idle100_n;
 #include "ai_from_legoobject.hpp"
 #if defined(LEGORRR_BACKEND_MINIWIN)
 #include "creature_scene.hpp"
@@ -168,194 +197,106 @@ typedef struct TerrainVariantVisitContext {
 
 /* The corpus's eligibility gate compares the +0x340 bound against this
  * .rdata zero dword (objdump-verified fcomp operand of
- * EntitySharedEligibilityCheck); a named const static keeps the fcomp
- * operand resolvable by Reccmp. */
-// GLOBAL: LEGORR 0x0049e3a4
+ * EntitySharedEligibilityCheck). Its annotation moved to legoobject_unit.c
+ * (legoobject_zero, GAME-023). */
 static const float s_eligibility_floor = 0.0f;   /* DAT_0049e3a4, verified */
 
-// GLOBAL: LEGORR 0x004a48d4
 const char s_tool_name_birdscarer[] = "LegoObject_ToolType_BirdScarer";
-// GLOBAL: LEGORR 0x004a48f4
 const char s_tool_name_pushergun[] = "LegoObject_ToolType_PusherGun";
-// GLOBAL: LEGORR 0x004a4914
 const char s_tool_name_laser[] = "LegoObject_ToolType_Laser";
-// GLOBAL: LEGORR 0x004a4930
 const char s_tool_name_spanner[] = "LegoObject_ToolType_Spanner";
-// GLOBAL: LEGORR 0x004a494c
 const char s_tool_name_hammer[] = "LegoObject_ToolType_Hammer";
-// GLOBAL: LEGORR 0x004a4968
 const char s_tool_name_spade[] = "LegoObject_ToolType_Spade";
-// GLOBAL: LEGORR 0x004a4984
 const char s_tool_name_drill[] = "LegoObject_ToolType_Drill";
-// GLOBAL: LEGORR 0x004a49a0
 static const char s_ability_name_scanner[] = "LegoObject_AbilityType_Scanner";
-// GLOBAL: LEGORR 0x004a49c0
 static const char s_ability_name_repair[] = "LegoObject_AbilityType_Repair";
-// GLOBAL: LEGORR 0x004a49e0
 static const char s_ability_name_dynamite[] = "LegoObject_AbilityType_Dynamite";
-// GLOBAL: LEGORR 0x004a4a00
 static const char s_ability_name_driver[] = "LegoObject_AbilityType_Driver";
-// GLOBAL: LEGORR 0x004a4a20
 static const char s_ability_name_sailor[] = "LegoObject_AbilityType_Sailor";
-// GLOBAL: LEGORR 0x004a4a40
 static const char s_ability_name_pilot[] = "LegoObject_AbilityType_Pilot";
-// GLOBAL: LEGORR 0x004a4a60
 static const char s_activity_name_activity_teleportin[] = "Activity_TeleportIn";
-// GLOBAL: LEGORR 0x004a4a74
 static const char s_activity_name_activity_crumble[] = "Activity_Crumble";
-// GLOBAL: LEGORR 0x004a4a88
 static const char s_activity_name_activity_waiting21[] = "Activity_Waiting21";
-// GLOBAL: LEGORR 0x004a4a9c
 static const char s_activity_name_activity_waiting20[] = "Activity_Waiting20";
-// GLOBAL: LEGORR 0x004a4ab0
 static const char s_activity_name_activity_waiting19[] = "Activity_Waiting19";
-// GLOBAL: LEGORR 0x004a4ac4
 static const char s_activity_name_activity_waiting18[] = "Activity_Waiting18";
-// GLOBAL: LEGORR 0x004a4ad8
 static const char s_activity_name_activity_waiting17[] = "Activity_Waiting17";
-// GLOBAL: LEGORR 0x004a4aec
 static const char s_activity_name_activity_waiting16[] = "Activity_Waiting16";
-// GLOBAL: LEGORR 0x004a4b00
 static const char s_activity_name_activity_waiting15[] = "Activity_Waiting15";
-// GLOBAL: LEGORR 0x004a4b14
 static const char s_activity_name_activity_waiting14[] = "Activity_Waiting14";
-// GLOBAL: LEGORR 0x004a4b28
 static const char s_activity_name_activity_waiting13[] = "Activity_Waiting13";
-// GLOBAL: LEGORR 0x004a4b3c
 static const char s_activity_name_activity_waiting12[] = "Activity_Waiting12";
-// GLOBAL: LEGORR 0x004a4b50
 static const char s_activity_name_activity_waiting11[] = "Activity_Waiting11";
-// GLOBAL: LEGORR 0x004a4b64
 static const char s_activity_name_activity_waiting10[] = "Activity_Waiting10";
-// GLOBAL: LEGORR 0x004a4b78
 static const char s_activity_name_activity_waiting9[] = "Activity_Waiting9";
-// GLOBAL: LEGORR 0x004a4b8c
 static const char s_activity_name_activity_waiting8[] = "Activity_Waiting8";
-// GLOBAL: LEGORR 0x004a4ba0
 static const char s_activity_name_activity_waiting7[] = "Activity_Waiting7";
-// GLOBAL: LEGORR 0x004a4bb4
 static const char s_activity_name_activity_waiting6[] = "Activity_Waiting6";
-// GLOBAL: LEGORR 0x004a4bc8
 static const char s_activity_name_activity_waiting5[] = "Activity_Waiting5";
-// GLOBAL: LEGORR 0x004a4bdc
 static const char s_activity_name_activity_waiting4[] = "Activity_Waiting4";
-// GLOBAL: LEGORR 0x004a4bf0
 static const char s_activity_name_activity_waiting3[] = "Activity_Waiting3";
-// GLOBAL: LEGORR 0x004a4c04
 static const char s_activity_name_activity_waiting2[] = "Activity_Waiting2";
-// GLOBAL: LEGORR 0x004a4c18
 static const char s_activity_name_activity_waiting1[] = "Activity_Waiting1";
-// GLOBAL: LEGORR 0x004a4c2c
 static const char s_activity_name_activity_open[] = "Activity_Open";
-// GLOBAL: LEGORR 0x004a4c3c
 static const char s_activity_name_activity_closing[] = "Activity_Closing";
-// GLOBAL: LEGORR 0x004a4c50
 static const char s_activity_name_activity_opening[] = "Activity_Opening";
-// GLOBAL: LEGORR 0x004a4c64
 static const char s_activity_name_activity_floatoff[] = "Activity_FloatOff";
-// GLOBAL: LEGORR 0x004a4c78
 static const char s_activity_name_activity_floaton[] = "Activity_FloatOn";
-// GLOBAL: LEGORR 0x004a4c8c
 static const char s_activity_name_activity_train[] = "Activity_Train";
-// GLOBAL: LEGORR 0x004a4c9c
 static const char s_activity_name_activity_wakeup[] = "Activity_WakeUp";
-// GLOBAL: LEGORR 0x004a4cac
 static const char s_activity_name_activity_recharge[] = "Activity_Recharge";
-// GLOBAL: LEGORR 0x004a4cc0
 static const char s_activity_name_activity_freezemelt[] = "Activity_FreezeMelt";
-// GLOBAL: LEGORR 0x004a4cd4
 static const char s_activity_name_activity_freezestart[] = "Activity_FreezeStart";
-// GLOBAL: LEGORR 0x004a4cec
 static const char s_activity_name_activity_freezed[] = "Activity_Freezed";
-// GLOBAL: LEGORR 0x004a4d00
 static const char s_activity_name_activity_firelaser[] = "Activity_FireLaser";
-// GLOBAL: LEGORR 0x004a4d14
 static const char s_activity_name_activity_unpowered[] = "Activity_Unpowered";
-// GLOBAL: LEGORR 0x004a4d28
 static const char s_activity_name_activity_explode[] = "Activity_Explode";
-// GLOBAL: LEGORR 0x004a4d3c
 static const char s_activity_name_activity_upgrade[] = "Activity_Upgrade";
-// GLOBAL: LEGORR 0x004a4d50
 static const char s_activity_name_activity_buildpath[] = "Activity_BuildPath";
-// GLOBAL: LEGORR 0x004a4d64
 static const char s_activity_name_activity_getup[] = "Activity_GetUp";
-// GLOBAL: LEGORR 0x004a4d74
 static const char s_activity_name_activity_thrownbyrockmonster[] = "Activity_ThrownByRockMonster";
-// GLOBAL: LEGORR 0x004a4d94
 static const char s_activity_name_activity_throwman[] = "Activity_ThrowMan";
-// GLOBAL: LEGORR 0x004a4da8
 static const char s_activity_name_activity_stamp[] = "Activity_Stamp";
-// GLOBAL: LEGORR 0x004a4db8
 static const char s_activity_name_activity_eat[] = "Activity_Eat";
-// GLOBAL: LEGORR 0x004a4dc8
 static const char s_activity_name_activity_rest[] = "Activity_Rest";
-// GLOBAL: LEGORR 0x004a4dd8
 static const char s_activity_name_activity_slip[] = "Activity_Slip";
-// GLOBAL: LEGORR 0x004a4de8
 static const char s_activity_name_activity_repair[] = "Activity_Repair";
-// GLOBAL: LEGORR 0x004a4df8
 static const char s_activity_name_activity_place[] = "Activity_Place";
-// GLOBAL: LEGORR 0x004a4e08
 static const char s_activity_name_activity_clear[] = "Activity_Clear";
-// GLOBAL: LEGORR 0x004a4e18
 static const char s_activity_name_activity_deposit[] = "Activity_Deposit";
-// GLOBAL: LEGORR 0x004a4e2c
 static const char s_activity_name_activity_dynamite[] = "Activity_Dynamite";
-// GLOBAL: LEGORR 0x004a4e40
 static const char s_activity_name_activity_hithard[] = "Activity_HitHard";
-// GLOBAL: LEGORR 0x004a4e54
 static const char s_activity_name_activity_hitback[] = "Activity_HitBack";
-// GLOBAL: LEGORR 0x004a4e68
 static const char s_activity_name_activity_hitfront[] = "Activity_HitFront";
-// GLOBAL: LEGORR 0x004a4e7c
 static const char s_activity_name_activity_hitright[] = "Activity_HitRight";
-// GLOBAL: LEGORR 0x004a4e90
 static const char s_activity_name_activity_hitleft[] = "Activity_HitLeft";
-// GLOBAL: LEGORR 0x004a4ea4
 static const char s_activity_name_activity_carrystand[] = "Activity_CarryStand";
-// GLOBAL: LEGORR 0x004a4eb8
 static const char s_activity_name_activity_carryturnright[] = "Activity_CarryTurnRight";
-// GLOBAL: LEGORR 0x004a4ed0
 static const char s_activity_name_activity_carryturnleft[] = "Activity_CarryTurnLeft";
-// GLOBAL: LEGORR 0x004a4ee8
 static const char s_activity_name_activity_throw[] = "Activity_Throw";
-// GLOBAL: LEGORR 0x004a4ef8
 static const char s_activity_name_activity_carryrubble[] = "Activity_CarryRubble";
-// GLOBAL: LEGORR 0x004a4f10
 static const char s_activity_name_activity_carry[] = "Activity_Carry";
-// GLOBAL: LEGORR 0x004a4f20
 static const char s_activity_name_activity_gather[] = "Activity_Gather";
-// GLOBAL: LEGORR 0x004a4f30
 static const char s_activity_name_activity_collect[] = "Activity_Collect";
-// GLOBAL: LEGORR 0x004a4f44
 static const char s_activity_name_activity_enterrein[] = "Activity_EnterRein";
-// GLOBAL: LEGORR 0x004a4f58
 static const char s_activity_name_activity_enter[] = "Activity_Enter";
-// GLOBAL: LEGORR 0x004a4f68
 static const char s_activity_name_activity_emerge[] = "Activity_Emerge";
-// GLOBAL: LEGORR 0x004a4f78
 static const char s_activity_name_activity_cantdo[] = "Activity_CantDo";
-// GLOBAL: LEGORR 0x004a4f88
 static const char s_activity_name_activity_turnright[] = "Activity_TurnRight";
-// GLOBAL: LEGORR 0x004a4f9c
 static const char s_activity_name_activity_turnleft[] = "Activity_TurnLeft";
-// GLOBAL: LEGORR 0x004a4fb0
 static const char s_activity_name_activity_reverse[] = "Activity_Reverse";
-// GLOBAL: LEGORR 0x004a4fc4
 static const char s_activity_name_activity_reinforce[] = "Activity_Reinforce";
-// GLOBAL: LEGORR 0x004a4fd8
 static const char s_activity_name_activity_walk[] = "Activity_Walk";
-// GLOBAL: LEGORR 0x004a4fe8
 static const char s_activity_name_activity_teleport[] = "Activity_Teleport";
-// GLOBAL: LEGORR 0x004a4ffc
 static const char s_activity_name_activity_drill[] = "Activity_Drill";
-// GLOBAL: LEGORR 0x004a500c
 static const char s_activity_name_activity_runpanic[] = "Activity_RunPanic";
-// GLOBAL: LEGORR 0x004a5020
 static const char s_activity_name_activity_routerubble[] = "Activity_RouteRubble";
-// GLOBAL: LEGORR 0x004a5038
 static const char s_activity_name_activity_route[] = "Activity_Route";
 
+/* The unit (legoobject_unit.c) reads this state with C linkage; the
+ * frozen *_from_legoobject.hpp headers are pre-declared to match where
+ * they are included. */
+extern "C" {
 // GLOBAL: LEGORR 0x004de790
 void* s_pool_chunks[POOL_CHUNK_COUNT_SLOTS];
 // GLOBAL: LEGORR 0x004de810
@@ -394,8 +335,12 @@ const char* s_activity[AI_ACTIVITY_COUNT] = {
     s_activity_name_activity_crumble, s_activity_name_activity_teleportin
 };
 
+} /* extern "C" */
+
+extern "C" {
 // GLOBAL: LEGORR 0x004dee00
 float* s_terrain_neighbor_path_cost;
+}
 /* DAT_004dee04 / DAT_004dee08: the retail path-search functions share and
  * reuse one zeroed dword per map cell. */
 // GLOBAL: LEGORR 0x004dee04
@@ -403,6 +348,7 @@ static uint32_t* s_terrain_path_depth;
 // GLOBAL: LEGORR 0x004dee08
 static uint32_t s_terrain_path_depth_count;
 
+extern "C" {
 // GLOBAL: LEGORR 0x004dee10
 uint32_t s_pool_chunk_count;
 
@@ -420,37 +366,33 @@ uint32_t s_activity_resource_slots[AI_ACTIVITY_RESOURCE_SLOT_COUNT] = {
 uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
 
 // GLOBAL: LEGORR 0x004e2684
-static uint32_t s_task_counter_nonzero;
+uint32_t s_task_counter_nonzero;
 
 // GLOBAL: LEGORR 0x004e3944
 uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
 
 // GLOBAL: LEGORR 0x004e7184
-static uint32_t s_task_counter_zero;
+uint32_t s_task_counter_zero;
 
 /* The corpus keeps a bounded twenty-entry pool of the predug coordinates
  * encountered while loading the layer. */
 // GLOBAL: LEGORR 0x004e844c
 int s_predug_coordinates[20][2];
 
-namespace unported_ledger_stubs {
 // GLOBAL: LEGORR 0x004e84ec
-static int s_type11_cell_coordinates[10][2];
-} // namespace unported_ledger_stubs
+int s_type11_cell_coordinates[10][2];
 
 // GLOBAL: LEGORR 0x004e853c
 unsigned int s_predug_coordinate_count;
 
-namespace unported_ledger_stubs {
 // GLOBAL: LEGORR 0x004e8540
-static unsigned int s_type11_cell_coordinate_count;
-} // namespace unported_ledger_stubs
+unsigned int s_type11_cell_coordinate_count;
 
 /* The six-dword render snapshot is a separate zero-filled global block in
  * the corpus (DAT_004ea7ac). Its individual values are unresolved; keep the
  * storage opaque and expose only the exact copy/clear operations. */
 // GLOBAL: LEGORR 0x004ea7ac
-static uint32_t s_render_config_snapshot[6];
+uint32_t s_render_config_snapshot[6];
 
 // GLOBAL: LEGORR 0x004eabcc
 EntitySlot* s_idle100[AI_IDLE_TABLE_MAX];
@@ -468,6 +410,7 @@ const char* s_ability_type_names[AI_ABILITY_TYPE_COUNT] = {
 uint32_t s_global_animation_state; /* DAT_004eadc4 */
 // GLOBAL: LEGORR 0x004eadd0
 EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records;
+} /* extern "C" */
 static EntitySlot* s_entity_teardown_free_head;
 
 static uint32_t s_grid_object_record_words[200];
@@ -629,7 +572,8 @@ namespace lego { namespace { static int global_scatter_find(int mode); } }
 
 /* ActivityNameTableInit (FUN_00436c20) resets state represented by the
  * cleared global range, then installs activity, ability, and tool names. */
-// FUNCTION: LEGORR 0x00436C20
+/* Port model of 0x00436c20 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00436c20, retires to the tail in GAME-023 part 3
 void ai_activity_name_table_initialize(void)
 {
     /* The retail initializer writes these same table values on every call.
@@ -778,7 +722,8 @@ void ai_activity_name_table_initialize(void)
  * the pool/lifecycle state. DAT_004dee00 is the terrain-grid cost map; retail
  * frees it without nulling the global pointer, while the portable owner
  * clears it to make repeated teardown safe. */
-// FUNCTION: LEGORR 0x00437050
+/* Port model of 0x00437050 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437050, retires to the tail in GAME-023 part 3
 void pooled_record_pool_resources_release(void)
 {
     uint32_t i;
@@ -798,7 +743,8 @@ void pooled_record_pool_resources_release(void)
     s_entity_iteration_guard_flags &= ~1u;
 }
 
-// FUNCTION: LEGORR 0x004370b0
+/* Port model of 0x004370b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004370b0, retires to the tail in GAME-023 part 3
 void render_config_six_field_copy_out(uint32_t out[6])
 {
     if (out == NULL) {
@@ -812,7 +758,8 @@ void render_config_six_field_copy_out(uint32_t out[6])
     } while (remaining != 0);
 }
 
-// FUNCTION: LEGORR 0x004370d0
+/* Port model of 0x004370d0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004370d0, retires to the tail in GAME-023 part 3
 void render_config_six_field_copy_in_or_clear(const uint32_t in[6])
 {
     if (in != NULL) {
@@ -832,7 +779,8 @@ void render_config_six_field_copy_in_or_clear(const uint32_t in[6])
     } while (remaining != 0);
 }
 
-// FUNCTION: LEGORR 0x00437100
+/* Port model of 0x00437100 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437100, retires to the tail in GAME-023 part 3
 int grid_record_count_difference_sum(int type, int skip_flagged_rows)
 {
     int total = 0;
@@ -858,7 +806,8 @@ int grid_record_count_difference_sum(int type, int skip_flagged_rows)
 /* ToolTipIconsConfigLoad (FUN_00437150): load matching images from the
  * ToolTipIcons config section into the two named icon banks and special
  * Blank/Cursor slots. */
-// FUNCTION: LEGORR 0x00437150
+/* Port model of 0x00437150 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437150, retires to the tail in GAME-023 part 3
 void tooltip_icons_config_load(void* config)
 {
     BlockRec* section = block_subgroup((BlockFile*)config,
@@ -906,7 +855,8 @@ void tooltip_icons_config_load(void* config)
     }
 }
 
-// FUNCTION: LEGORR 0x004372a0
+/* Port model of 0x004372a0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004372a0, retires to the tail in GAME-023 part 3
 void spawn_coordinate_pool_clear(void)
 {
     unsigned int i;
@@ -917,10 +867,10 @@ void spawn_coordinate_pool_clear(void)
     camera_predug_spawn_state_clear();
     camera_spawn_coordinate_hook_set(NULL, NULL);
     for (i = 0; i < 10u; ++i) {
-        unported_ledger_stubs::s_type11_cell_coordinates[i][0] = 0;
-        unported_ledger_stubs::s_type11_cell_coordinates[i][1] = 0;
+        s_type11_cell_coordinates[i][0] = 0;
+        s_type11_cell_coordinates[i][1] = 0;
     }
-    unported_ledger_stubs::s_type11_cell_coordinate_count = 0u;
+    s_type11_cell_coordinate_count = 0u;
     queued_grid_animation_accumulator_clear();
     ai_idle_table_reset();
     entity_global_animation_state_set(0u);
@@ -928,7 +878,8 @@ void spawn_coordinate_pool_clear(void)
 
 /* ProcessQueuedGridAnimations (FUN_00437300): accumulate scaled fractional
  * work, then consume one queued type-six animation for each whole unit. */
-// FUNCTION: LEGORR 0x00437300
+/* Port model of 0x00437300 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437300, retires to the tail in GAME-023 part 3
 void process_queued_grid_animations(void* anchor, int mode, float delta)
 {
     QueuedGridAnimationHooks* const hooks = &s_queued_grid_animation_hooks;
@@ -976,7 +927,8 @@ void process_queued_grid_animations(void* anchor, int mode, float delta)
  * shared tail at 0x437431) — on the FUN_00447c40 bookkeeping call, so the
  * port calls the file-local carrier there for code shape; the flag folds
  * stay the dword spelling of the corpus's byte ops on the +0x3ec word. */
-// FUNCTION: LEGORR 0x004373d0
+/* Port model of 0x004373d0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004373d0, retires to the tail in GAME-023 part 3
 void entity_activity_toggle(EntitySlot* e, int on)
 {
     if (e == NULL) {
@@ -995,7 +947,8 @@ void entity_activity_toggle(EntitySlot* e, int on)
     activity_register_bookkeeping(e); /* FUN_00447c40, corpus tail call */
 }
 
-// FUNCTION: LEGORR 0x00437440
+/* Port model of 0x00437440 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437440, retires to the tail in GAME-023 part 3
 void grid_record_count_tables_clear(void)
 {
     for (size_t k = 0; k < GRID_COUNT_TABLE_DWORDS; ++k) {
@@ -1007,7 +960,8 @@ void grid_record_count_tables_clear(void)
     }
 }
 
-// FUNCTION: LEGORR 0x00437460
+/* Port model of 0x00437460 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437460, retires to the tail in GAME-023 part 3
 int grid_record_count_difference_get(int row, int column, int slot,
                                      int subtract_first_table)
 {
@@ -1021,7 +975,8 @@ int grid_record_count_difference_get(int row, int column, int slot,
         : v;
 }
 
-// FUNCTION: LEGORR 0x004374a0
+/* Port model of 0x004374a0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004374a0, retires to the tail in GAME-023 part 3
 uint32_t grid_record_count_get(int row, int column, int slot)
 {
     const int64_t idx = grid_count_index(row, column, slot);
@@ -1029,7 +984,8 @@ uint32_t grid_record_count_get(int row, int column, int slot)
 }
 
 /* TaskCounterIncrementByBranch (FUN_004374d0). */
-// FUNCTION: LEGORR 0x004374d0
+/* Port model of 0x004374d0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004374d0, retires to the tail in GAME-023 part 3
 void entity_task_counter_increment_by_branch(int nonzero)
 {
     if (nonzero != 0) {
@@ -1042,7 +998,8 @@ void entity_task_counter_increment_by_branch(int nonzero)
 /* EntityCallbackDispatchUnlessTypeFive (FUN_004374f0): type five is a
  * non-dispatchable source; otherwise clear every live candidate route that
  * points back to it, then notify the optional host observer. */
-// FUNCTION: LEGORR 0x004374F0
+/* Port model of 0x004374f0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004374f0, retires to the tail in GAME-023 part 3
 void entity_callback_dispatch_unless_type_five(EntitySlot* entity)
 {
     if (entity == NULL || entity->type == 5) return;
@@ -1053,7 +1010,8 @@ void entity_callback_dispatch_unless_type_five(EntitySlot* entity)
                                         s_entity_callback_dispatch_context);
     }
 }
-// FUNCTION: LEGORR 0x00437510
+/* Port model of 0x00437510 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437510, retires to the tail in GAME-023 part 3
 static int entity_linked_route_clear_callback(EntitySlot* candidate,
                                               void* payload)
 {
@@ -1070,7 +1028,8 @@ static int entity_linked_route_clear_callback(EntitySlot* candidate,
 /* EntityTeardown (FUN_00437540). The legacy routine's engine calls are
  * represented by typed stage callbacks; record flags, command-chain cleanup,
  * special back-reference clearing, and free-list ownership stay local. */
-// FUNCTION: LEGORR 0x00437540
+/* Port model of 0x00437540 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437540, retires to the tail in GAME-023 part 3
 int entity_teardown(EntitySlot* entity)
 {
     uint32_t flags;
@@ -1214,7 +1173,8 @@ int entity_teardown(EntitySlot* entity)
     return 0;
 }
 /* EntityPoolFindByCallbackFiltered (FUN_004377b0) fixes the filter on. */
-// FUNCTION: LEGORR 0x004377B0
+/* Port model of 0x004377b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004377b0, retires to the tail in GAME-023 part 3
 int entity_pool_find_by_callback_filtered_current(
     int (*callback)(EntitySlot*, void*), void* payload)
 {
@@ -1222,7 +1182,8 @@ int entity_pool_find_by_callback_filtered_current(
 }
 /* The retail pool walkers use the active context instead of receiving it as
  * an argument. Keep context-taking forms above as portable caller adapters. */
-// FUNCTION: LEGORR 0x004377D0
+/* Port model of 0x004377d0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004377d0, retires to the tail in GAME-023 part 3
 int entity_pool_find_by_callback_current(
     int (*callback)(EntitySlot*, void*), void* payload, int filter_flagged)
 {
@@ -1260,7 +1221,8 @@ int entity_pool_find_by_callback_current(
 /* GridObjectRecordsRelease (FUN_004378e0): release both owned handles for
  * each active record, clear the fixed 200-word table, then release its side
  * structure through the installed owner callback. */
-// FUNCTION: LEGORR 0x004378e0
+/* Port model of 0x004378e0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004378e0, retires to the tail in GAME-023 part 3
 void grid_object_records_release(void)
 {
     unsigned int i;
@@ -1283,7 +1245,8 @@ void grid_object_records_release(void)
 /* DeferredOListEntityCreateAndLink (FUN_00437940): realize all queued object
  * records at a cell, initialize each created entity, resolve named links
  * after creation, then release the consumed queue records. */
-// FUNCTION: LEGORR 0x00437940
+/* Port model of 0x00437940 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437940, retires to the tail in GAME-023 part 3
 void deferred_olist_entity_create_and_link(const int cell_xy[2])
 {
     EntitySlot* created[200];
@@ -1377,7 +1340,8 @@ void deferred_olist_entity_create_and_link(const int cell_xy[2])
     }
 }
 
-// FUNCTION: LEGORR 0x00437c20
+/* Port model of 0x00437c20 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437c20, retires to the tail in GAME-023 part 3
 void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
                                      int p1, int p2, int p3, int p5, int p6,
                                      const char* name1, const char* name2)
@@ -1411,7 +1375,8 @@ void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
 }
 
 /* EntityFlag40000ThresholdCompare (see entity.hpp). */
-// FUNCTION: LEGORR 0x00437cc0
+/* Port model of 0x00437cc0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437cc0, retires to the tail in GAME-023 part 3
 int entity_flag40000_threshold_compare(const EntitySlot* e)
 {
     if ((entity_state_flags_get(e) & 0x40000u) != 0u) {
@@ -1428,7 +1393,8 @@ int entity_flag40000_threshold_compare(const EntitySlot* e)
  * (the corpus's -1.5 pair). Deviations: the port's link slot is
  * native-size (the pool-stride convention), and the grow half answers
  * NULL when the allocator is empty where the corpus strides the word. */
-// FUNCTION: LEGORR 0x004382c0
+/* Port model of 0x004382c0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004382c0, retires to the tail in GAME-023 part 3
 void* pooled_record_allocate_and_reset(void)
 {
     if (s_pool_record_head == NULL) {
@@ -1449,7 +1415,8 @@ void* pooled_record_allocate_and_reset(void)
     __builtin_memcpy(record + 0x2f8, &seeded, 4);
     return record;
 }
-// FUNCTION: LEGORR 0x00438310
+/* Port model of 0x00438310 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438310, retires to the tail in GAME-023 part 3
 void pooled_record_chunk_allocate_and_link(void)
 {
     const uint32_t n =
@@ -1472,14 +1439,16 @@ void pooled_record_chunk_allocate_and_link(void)
                      sizeof(s_pool_record_head));
     s_pool_record_head = base;
 }
-// FUNCTION: LEGORR 0x004383a0
+/* Port model of 0x004383a0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004383a0, retires to the tail in GAME-023 part 3
 void entity_global_animation_state_set(uint32_t value)
 {
     s_global_animation_state = value;
 }
 /* RoverWorkQueueUpdate (FUN_004383b0): apply the selected global work
  * position to every animation component in the rover's scene model. */
-// FUNCTION: LEGORR 0x004383B0
+/* Port model of 0x004383b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004383b0, retires to the tail in GAME-023 part 3
 void rover_work_queue_update(EntitySlot* entity, int mode)
 {
     RoverWorkQueueHooks* const hooks = &s_rover_work_queue_hooks;
@@ -1505,7 +1474,8 @@ void rover_work_queue_update(EntitySlot* entity, int mode)
 /* EntityKindRecordUpdateDispatch (FUN_00438460): preserve type-specific
  * update order, action transitions, event flags, and the two shared flag
  * updates while leaving engine-owned side effects behind typed callbacks. */
-// FUNCTION: LEGORR 0x00438460
+/* Port model of 0x00438460 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438460, retires to the tail in GAME-023 part 3
 void entity_kind_record_update_dispatch(EntitySlot* entity)
 {
     EntityKindRecordUpdateHooks* const hooks =
@@ -1561,7 +1531,8 @@ void entity_kind_record_update_dispatch(EntitySlot* entity)
     if ((type == 1 || type == 4)) entity->flags_3ec |= 0x40000u;
 }
 
-// FUNCTION: LEGORR 0x00438580
+/* Port model of 0x00438580 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438580, retires to the tail in GAME-023 part 3
 void entity_flag80000000_set_or_clear(GameContext* ctx, EntitySlot* e,
                                       int param)
 {
@@ -1576,7 +1547,8 @@ void entity_flag80000000_set_or_clear(GameContext* ctx, EntitySlot* e,
     entity_activity_scene_state_update(ctx);
 }
 
-// FUNCTION: LEGORR 0x004385b0
+/* Port model of 0x004385b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004385b0, retires to the tail in GAME-023 part 3
 int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
 {
     if ((e->flags_3e0 & 0x00700100u) != 0u) {
@@ -1603,7 +1575,8 @@ int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
 /* EntityCreateWithPosition (FUN_00438610): create through the pooled entity
  * allocator, apply the reference position update, then initialize the mode
  * word for pooled kinds six and seven. */
-// FUNCTION: LEGORR 0x00438610
+/* Port model of 0x00438610 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438610, retires to the tail in GAME-023 part 3
 EntitySlot* entity_create_with_position(GameContext* context, int type,
                                         const char* name, int value,
                                         float x, float y, float heading)
@@ -1614,7 +1587,8 @@ EntitySlot* entity_create_with_position(GameContext* context, int type,
 /* EntityAtGridPositionLookup (FUN_00438670): the callback pool walk returns
  * the first eligible entity whose world position rounds to the requested
  * grid cell. The portable entity tables replace the corpus's raw chunk scan. */
-// FUNCTION: LEGORR 0x00438670
+/* Port model of 0x00438670 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438670, retires to the tail in GAME-023 part 3
 EntitySlot* entity_at_grid_position_find(const int cell_xy[2])
 {
     EntityGridFindQuery query;
@@ -1634,7 +1608,8 @@ EntitySlot* entity_at_grid_position_find(const int cell_xy[2])
 /* EntityAvailableResourceSpend (FUN_00438720) — see level.hpp.
  * The corpus's comparison value is the unconsumed EAX of the void no-op
  * callback; pinning it to 0 matches the corpus call's observable shape. */
-// FUNCTION: LEGORR 0x00438720
+/* Port model of 0x00438720 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438720, retires to the tail in GAME-023 part 3
 int entity_available_resource_spend(LevelState* level, int amount,
                                     const void* resource_hint)
 {
@@ -1653,7 +1628,8 @@ int entity_available_resource_spend(LevelState* level, int amount,
 /* BuildingUpgradeResourceAdmissionCheck (FUN_00438770): reject the terminal
  * upgrade level, then apply the two-resource threshold and return the
  * secondary debit amount when that path is selected. */
-// FUNCTION: LEGORR 0x00438770
+/* Port model of 0x00438770 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438770, retires to the tail in GAME-023 part 3
 int building_upgrade_resource_admission_check(EntitySlot* building,
                                                uint32_t* out_secondary_cost)
 {
@@ -1695,7 +1671,8 @@ int building_upgrade_resource_admission_check(EntitySlot* building,
 /* BuildingUpgradeCommit (FUN_004387f0): spend the selected resource, clear
  * the pending request, advance the level in payload/stats, and dispatch the
  * upgrade's world effect. */
-// FUNCTION: LEGORR 0x004387f0
+/* Port model of 0x004387f0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004387f0, retires to the tail in GAME-023 part 3
 void building_upgrade_commit(EntitySlot* building)
 {
     BuildingUpgradeCommitHooks* const hooks =
@@ -1762,7 +1739,8 @@ void building_upgrade_commit(EntitySlot* building)
 /* EntityActionKindPrerequisiteCheck (FUN_004388b0): require a type-one
  * entity and a valid action, then gate the two resource balances against
  * the corpus's packed primary/secondary action costs. */
-// FUNCTION: LEGORR 0x004388B0
+/* Port model of 0x004388b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004388b0, retires to the tail in GAME-023 part 3
 int entity_action_kind_prerequisite_check(EntitySlot* entity, int action)
 {
     uint32_t values[3] = { 0u, 0u, 0u };
@@ -1813,7 +1791,8 @@ int entity_action_kind_prerequisite_check(EntitySlot* entity, int action)
 /* EntityRouteMarkerCandidateFind (FUN_004389e0): retain the nearest pooled
  * entity within the corpus's 10,000-unit radius that passes LAB_00438fb0's
  * mask-selected predicates. */
-// FUNCTION: LEGORR 0x004389E0
+/* Port model of 0x004389e0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004389e0, retires to the tail in GAME-023 part 3
 EntitySlot* entity_route_marker_candidate_find(EntitySlot* source,
                                                int include_secondary)
 {
@@ -1839,7 +1818,8 @@ EntitySlot* entity_route_marker_candidate_find(EntitySlot* source,
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00438a60
+/* Port model of 0x00438a60 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438a60, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
     const int cell_xy[2], uint32_t filter_a, uint32_t filter_b,
     uint32_t filter_c)
@@ -1854,7 +1834,8 @@ void* ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
     return entity_spatial_query_execute_current(&request);
 }
 
-// FUNCTION: LEGORR 0x00438ae0
+/* Port model of 0x00438ae0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438ae0, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
     const EntitySlot* entity, const int cell_xy[2], uint32_t filter_a,
     uint32_t filter_b)
@@ -1870,7 +1851,8 @@ void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
     return entity_spatial_query_execute_current(&request);
 }
 
-// FUNCTION: LEGORR 0x00438b80
+/* Port model of 0x00438b80 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438b80, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438b80_SpatialObjectQueryCenterMaskFromArgument(
     const EntitySlot* entity, uint32_t mask)
 {
@@ -1880,7 +1862,8 @@ void* ledger_stub_00438b80_SpatialObjectQueryCenterMaskFromArgument(
     return entity_spatial_query_execute_current(&request);
 }
 
-// FUNCTION: LEGORR 0x00438bf0
+/* Port model of 0x00438bf0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438bf0, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(
     const EntitySlot* entity)
 {
@@ -1890,7 +1873,8 @@ void* ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(
     return entity_spatial_query_execute_current(&request);
 }
 
-// FUNCTION: LEGORR 0x00438c60
+/* Port model of 0x00438c60 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438c60, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438c60_EntityCandidateSearch(const EntitySlot* entity)
 {
     SpatialObjectQueryRequest request;
@@ -1899,7 +1883,8 @@ void* ledger_stub_00438c60_EntityCandidateSearch(const EntitySlot* entity)
     return entity_spatial_query_execute_current(&request);
 }
 
-// FUNCTION: LEGORR 0x00438cd0
+/* Port model of 0x00438cd0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438cd0, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438cd0_SpatialObjectQueryCenterMask20(
     const float center[2])
 {
@@ -1920,7 +1905,8 @@ void* ledger_stub_00438cd0_SpatialObjectQueryCenterMask20(
     return request.match;
 }
 
-// FUNCTION: LEGORR 0x00438d30
+/* Port model of 0x00438d30 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438d30, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438d30_SpatialObjectQueryCenterMask10(
     const float center[2])
 {
@@ -1941,7 +1927,8 @@ void* ledger_stub_00438d30_SpatialObjectQueryCenterMask10(
     return request.match;
 }
 
-// FUNCTION: LEGORR 0x00438d90
+/* Port model of 0x00438d90 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438d90, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438d90_SpatialObjectQueryCenterMask200(
     const float center[2])
 {
@@ -1963,7 +1950,8 @@ void* ledger_stub_00438d90_SpatialObjectQueryCenterMask200(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00438df0
+/* Port model of 0x00438df0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438df0, retires to the tail in GAME-023 part 3
 EntitySlot* entity_lookup_at_world_position(const float world_position[2])
 {
     struct EntityLookupRequestRecord {
@@ -2002,7 +1990,8 @@ EntitySlot* entity_lookup_at_world_position(const float world_position[2])
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00438e50
+/* Port model of 0x00438e50 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438e50, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438e50_SpatialObjectQueryCenterMask100(
     const EntitySlot* entity, const float center[2], uint32_t extra)
 {
@@ -2023,7 +2012,8 @@ void* ledger_stub_00438e50_SpatialObjectQueryCenterMask100(
  * The corpus re-reads the word at each chain rung; the selector arms and
  * the flag bits pair one-to-one, so one read through the switch is the
  * identical answer. */
-// FUNCTION: LEGORR 0x00438ed0
+/* Port model of 0x00438ed0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438ed0, retires to the tail in GAME-023 part 3
 int entity_flags_contain_requested_single_bit(const EntitySlot* e,
                                               int selector)
 {
@@ -2045,7 +2035,8 @@ int entity_flags_contain_requested_single_bit(const EntitySlot* e,
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00438f60
+/* Port model of 0x00438f60 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438f60, retires to the tail in GAME-023 part 3
 int dock_definition_matches_cell(const int cell_xy[2])
 {
     int dock_xy[2];
@@ -2057,7 +2048,8 @@ int dock_definition_matches_cell(const int cell_xy[2])
     return dock_xy[0] == cell_xy[0] && dock_xy[1] == cell_xy[1];
 }
 
-// FUNCTION: LEGORR 0x00438fb0
+/* Port model of 0x00438fb0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438fb0, retires to the tail in GAME-023 part 3
 int entity_route_marker_candidate_visit(EntitySlot* candidate,
                                                 void* payload)
 {
@@ -2084,7 +2076,8 @@ int entity_route_marker_candidate_visit(EntitySlot* candidate,
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00439200
+/* Port model of 0x00439200 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439200, retires to the tail in GAME-023 part 3
 int task_kind_filtered_search(int selector)
 {
     if (selector == 1 || selector == 2 || selector == 4) {
@@ -2106,7 +2099,8 @@ int task_kind_filtered_search(int selector)
     }
     return 0;
 }
-// FUNCTION: LEGORR 0x00439240
+/* Port model of 0x00439240 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439240, retires to the tail in GAME-023 part 3
 int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind)
 {
     /* Corpus: test al,0x8 — the byte test of the stats word return. */
@@ -2123,7 +2117,8 @@ int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind)
  * values are the outputs of the level's byte-state classifier at 0x42c5b0,
  * so this path uses the live level record instead of requiring a separately
  * installed count callback. */
-// FUNCTION: LEGORR 0x00439280
+/* Port model of 0x00439280 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439280, retires to the tail in GAME-023 part 3
 void entity_build_placement_command_batch_expand(const int cell_xy[2])
 {
     uint32_t counts[4];
@@ -2147,7 +2142,8 @@ void entity_build_placement_command_batch_expand(const int cell_xy[2])
         (void)entity_build_placement_command_setup(cell_xy, 1, NULL, 1, 1);
     }
 }
-// FUNCTION: LEGORR 0x00439340
+/* Port model of 0x00439340 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439340, retires to the tail in GAME-023 part 3
 void entity_build_placement_command_pair_create(const int cell_xy[2],
                                                 int entity_id)
 {
@@ -2159,7 +2155,8 @@ void entity_build_placement_command_pair_create(const int cell_xy[2],
 
 namespace unported_ledger_stubs {
 // EntityBuildPlacementCommandSetup
-// FUNCTION: LEGORR 0x00439370
+/* Port model of 0x00439370 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439370, retires to the tail in GAME-023 part 3
 void ledger_stub_00439370_EntityBuildPlacementCommandSetup(
     const int cell_xy[2], int entity_id, const float world_xy[2],
     int update_state)
@@ -2239,7 +2236,8 @@ void ledger_stub_00439370_EntityBuildPlacementCommandSetup(
 }
 
 // EntityBuildPlacementAlternateCommandSetup
-// FUNCTION: LEGORR 0x004394b0
+/* Port model of 0x004394b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004394b0, retires to the tail in GAME-023 part 3
 void ledger_stub_004394b0_EntityBuildPlacementAlternateCommandSetup(
     const int cell_xy[2], int entity_id, const float world_xy[2],
     int update_state)
@@ -2321,7 +2319,8 @@ void ledger_stub_004394b0_EntityBuildPlacementAlternateCommandSetup(
  * category-specific index is represented by the config type name in the
  * portable entity record; kind 7's second-word selector is retained as
  * etype, matching the original +4 read. */
-// FUNCTION: LEGORR 0x004395E0
+/* Port model of 0x004395e0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004395e0, retires to the tail in GAME-023 part 3
 const char* entity_display_name_lookup(const EntitySlot* entity)
 {
     int index;
@@ -2353,7 +2352,8 @@ const char* entity_display_name_lookup(const EntitySlot* entity)
 }
 /* ItemNameByKindLookup (FUN_004396c0): fixed item labels plus the four
  * runtime-configured vehicle/minifigure/creature/building name tables. */
-// FUNCTION: LEGORR 0x004396C0
+/* Port model of 0x004396c0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004396c0, retires to the tail in GAME-023 part 3
 const char* item_name_by_kind_lookup(uint32_t kind, int index)
 {
     static const char* const special_names[] = {
@@ -2382,7 +2382,8 @@ const char* item_name_by_kind_lookup(uint32_t kind, int index)
     return NULL;
 }
 
-// FUNCTION: LEGORR 0x00439790
+/* Port model of 0x00439790 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439790, retires to the tail in GAME-023 part 3
 const char* localized_object_the_name_get(uint32_t kind, int index)
 {
     switch (kind) {
@@ -2402,7 +2403,8 @@ const char* localized_object_the_name_get(uint32_t kind, int index)
     default: return NULL;
     }
 }
-// FUNCTION: LEGORR 0x00439860
+/* Port model of 0x00439860 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439860, retires to the tail in GAME-023 part 3
 const char* localized_object_name_get(uint32_t kind, int index)
 {
     switch (kind) {
@@ -2424,7 +2426,8 @@ const char* localized_object_name_get(uint32_t kind, int index)
 }
 
 /* CopyTwoDwordPairToOutputs (FUN_00439930) — see record.hpp. */
-// FUNCTION: LEGORR 0x00439930
+/* Port model of 0x00439930 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439930, retires to the tail in GAME-023 part 3
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void copy_two_dword_pair_to_outputs(
     const void* record, uint32_t* out_a, uint32_t* out_b)
@@ -2454,7 +2457,8 @@ void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
 
 /* ToolNameStringResourcesLoad (FUN_00439950): load the eleven configured
  * entries from the ToolNames category into the global indexed handle table. */
-// FUNCTION: LEGORR 0x00439950
+/* Port model of 0x00439950 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439950, retires to the tail in GAME-023 part 3
 void entity_tool_name_strings_load(void* string_loader, void* config)
 {
     BlockFile* cfg = (BlockFile*)string_loader;
@@ -2481,7 +2485,8 @@ void entity_tool_name_strings_load(void* string_loader, void* config)
     }
 }
 
-// FUNCTION: LEGORR 0x00439990
+/* Port model of 0x00439990 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439990, retires to the tail in GAME-023 part 3
 void entity_activity_scene_state_update_retail(void)
 {
     if ((s_entity_state_flags & 0x10u) != 0u) {
@@ -2494,7 +2499,8 @@ void entity_activity_scene_state_update_retail(void)
 
 /* EntityFlag400AndHealthThresholdCheck (FUN_004399c0): require flag 0x400;
  * type-1 entities also pass the corpus's indexed-count and 75-percent gate. */
-// FUNCTION: LEGORR 0x004399C0
+/* Port model of 0x004399c0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004399c0, retires to the tail in GAME-023 part 3
 int entity_flag400_and_health_threshold_check(const EntitySlot* entity)
 {
     EntityHealthThresholdState state;
@@ -2535,7 +2541,8 @@ int entity_flag400_and_health_threshold_check(const EntitySlot* entity)
 /* GatedStepCommandIssueWithTargetRecord (FUN_00439a20): resolve both cells,
  * install a one-point route for same-cell targets or the computed path for a
  * different cell, mark the last route step as kind 3, and retain the target. */
-// FUNCTION: LEGORR 0x00439A20
+/* Port model of 0x00439a20 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439a20, retires to the tail in GAME-023 part 3
 int entity_gated_step_command_issue(EntitySlot* entity, EntitySlot* target)
 {
     GameContext* context;
@@ -2622,7 +2629,8 @@ int entity_gated_step_command_issue(EntitySlot* entity, EntitySlot* target)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00439b80
+/* Port model of 0x00439b80 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439b80, retires to the tail in GAME-023 part 3
 int entity_task_target_cell_eligibility_check(
     const EntitySlot* entity, const EntitySlot* target)
 {
@@ -2650,7 +2658,8 @@ int entity_task_target_cell_eligibility_check(
     return candidate != NULL;
 }
 /* EntityAcceptsTargetForTaskCheck (FUN_00439bd0, finding 471). */
-// FUNCTION: LEGORR 0x00439bd0
+/* Port model of 0x00439bd0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439bd0, retires to the tail in GAME-023 part 3
 int entity_accepts_target_for_task_check(const EntitySlot* entity,
                                          const EntitySlot* target,
                                          int apply_extra_gate)
@@ -2678,7 +2687,8 @@ int entity_accepts_target_for_task_check(const EntitySlot* entity,
 
 /* EntityIndexedFlagSetAndRefresh (FUN_00439c80): type-1 records publish
  * their indexed bit, refresh the owning entity's flags, and raise event 0x19. */
-// FUNCTION: LEGORR 0x00439C80
+/* Port model of 0x00439c80 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439c80, retires to the tail in GAME-023 part 3
 void entity_indexed_flag_set_and_refresh(EntitySlot* entity)
 {
     uint32_t bit;
@@ -2693,30 +2703,35 @@ void entity_indexed_flag_set_and_refresh(EntitySlot* entity)
                                            s_entity_indexed_flag_context);
     }
 }
-// FUNCTION: LEGORR 0x00439CD0
+/* Port model of 0x00439cd0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439cd0, retires to the tail in GAME-023 part 3
 int entity_animation_state_set(EntitySlot* entity, uint32_t state)
 {
     return entity_building_index_set(entity, state);
 }
 
-// FUNCTION: LEGORR 0x00439cf0
+/* Port model of 0x00439cf0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439cf0, retires to the tail in GAME-023 part 3
 uint32_t entity_stats_flag10_test(const EntitySlot* e)
 {
     return entity_stats_word_get(e) & 0x10u;
 }
 
-// FUNCTION: LEGORR 0x00439d10
+/* Port model of 0x00439d10 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439d10, retires to the tail in GAME-023 part 3
 uint32_t entity_stats_flag20_test(const EntitySlot* e)
 {
     return entity_stats_word_get(e) & 0x20u;
 }
 
-// FUNCTION: LEGORR 0x00439d30
+/* Port model of 0x00439d30 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439d30, retires to the tail in GAME-023 part 3
 uint32_t entity_stats_flag40_test(const EntitySlot* e)
 {
     return entity_stats_word_get(e) & 0x40u;
 }
-// FUNCTION: LEGORR 0x00439d50
+/* Port model of 0x00439d50 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439d50, retires to the tail in GAME-023 part 3
 int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
                                              int out_xy[2])
 {
@@ -2728,7 +2743,8 @@ int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
         entity, context != NULL ? context->level : NULL, out_xy);
 }
 
-// FUNCTION: LEGORR 0x00439e10
+/* Port model of 0x00439e10 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439e10, retires to the tail in GAME-023 part 3
 int entity_vehicle_unload_cell_find_if_eligible(const EntitySlot* entity,
                                                 int out_xy[2])
 {
@@ -2739,7 +2755,8 @@ int entity_vehicle_unload_cell_find_if_eligible(const EntitySlot* entity,
     return entity_vehicle_unload_adjacent_cell_find(entity, out_xy);
 }
 
-// FUNCTION: LEGORR 0x00439e40
+/* Port model of 0x00439e40 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439e40, retires to the tail in GAME-023 part 3
 int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2])
 {
     if (entity == NULL
@@ -2752,7 +2769,8 @@ int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2])
 namespace unported_ledger_stubs {
 /* EntityAttachedObjectListDetach (FUN_00439e70): detach every represented
  * carried slot, retaining the legacy slot-zero mirror. */
-// FUNCTION: LEGORR 0x00439e70
+/* Port model of 0x00439e70 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439e70, retires to the tail in GAME-023 part 3
 void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
 {
     EntitySlot* carried;
@@ -2832,7 +2850,8 @@ void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
     entity->carry_state_324 = 0;
     entity->flags_3e0 &= ~0x400u;
 }
-// FUNCTION: LEGORR 0x0043a120
+/* Port model of 0x0043a120 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a120, retires to the tail in GAME-023 part 3
 int entity_cell_step_command_issue_with_jitter(EntitySlot* entity,
     const int target_xy[2], const float input_xy[2], int action_mode,
     int mark_pending)
@@ -2972,7 +2991,8 @@ int entity_cell_step_command_issue_with_jitter(EntitySlot* entity,
 /* EntityDepositActivityGate (FUN_0043a300): accepted targets use the real
  * locator, terrain search and route installer. An unavailable scene owner
  * is distinct from an authored missing locator, which uses target origin. */
-// FUNCTION: LEGORR 0x0043A300
+/* Port model of 0x0043a300 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a300, retires to the tail in GAME-023 part 3
 int entity_deposit_activity_gate(EntitySlot* entity, EntitySlot* target)
 {
     uint32_t flags;
@@ -3089,7 +3109,8 @@ int entity_deposit_activity_gate(EntitySlot* entity, EntitySlot* target)
 }
 /* EntityVisualResourceGetOrCreate (FUN_0043a5f0): choose one of the four
  * type-specific cached visual handles and create the model when absent. */
-// FUNCTION: LEGORR 0x0043a5f0
+/* Port model of 0x0043a5f0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a5f0, retires to the tail in GAME-023 part 3
 void entity_visual_resource_get_or_create(EntitySlot* entity)
 {
     int slot;
@@ -3118,7 +3139,8 @@ void entity_visual_resource_get_or_create(EntitySlot* entity)
 /* ActionKindEntityCreateAndCommandIssue (FUN_0043a650). The installed
  * constructor owns resource/template selection; this routine keeps the
  * verified action gate, event order, queue opcode, and kind labels. */
-// FUNCTION: LEGORR 0x0043A650
+/* Port model of 0x0043a650 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a650, retires to the tail in GAME-023 part 3
 EntitySlot* entity_action_kind_entity_create_and_command_issue(
     EntitySlot* source, int kind, int selector, int argument)
 {
@@ -3174,7 +3196,8 @@ EntitySlot* entity_action_kind_entity_create_and_command_issue(
 /* --- the task-kind filtered search (see cmd.hpp) -----------------------------
  * The corpus's pool walk hands the callback the slot pointer and the
  * argument block; the port models that argument block as the selector word. */
-// FUNCTION: LEGORR 0x0043a7c0
+/* Port model of 0x0043a7c0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a7c0, retires to the tail in GAME-023 part 3
 int entity_action_kind_supported(EntitySlot* e, int kind, int arg)
 {
     if (e == NULL) {
@@ -3205,7 +3228,8 @@ int entity_action_kind_supported(EntitySlot* e, int kind, int arg)
 /* EntityActionRecordConsumeAndCleanup (FUN_0043a850): the second argument is
  * a full entity record. Its +0x330 selector drives the type-6 owner counter;
  * +0x304 is cleared before the record is returned through EntityTeardown. */
-// FUNCTION: LEGORR 0x0043A850
+/* Port model of 0x0043a850 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a850, retires to the tail in GAME-023 part 3
 void entity_action_record_consume_and_cleanup(
     EntitySlot* entity, EntitySlot* record)
 {
@@ -3266,7 +3290,8 @@ void entity_action_record_consume_and_cleanup(
     }
 }
 
-// FUNCTION: LEGORR 0x0043a8f0
+/* Port model of 0x0043a8f0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a8f0, retires to the tail in GAME-023 part 3
 void simulation_update_counter_add(GameContext* ctx, int count)
 {
     if (ctx == NULL) {
@@ -3278,7 +3303,8 @@ void simulation_update_counter_add(GameContext* ctx, int count)
     entity_activity_scene_state_update(ctx);
 }
 
-// FUNCTION: LEGORR 0x0043a910
+/* Port model of 0x0043a910 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a910, retires to the tail in GAME-023 part 3
 void simulation_mode_counter_add(int mode, int count)
 {
     (void)mode; /* register residue: the corpus ignores it, count only */
@@ -3293,7 +3319,8 @@ void simulation_mode_counter_add(int mode, int count)
  * strides the DAT_004eabcc window up to its count word blindly; the port
  * rides the s_idle100 model's used window (the corpus keeps walking past
  * a hit, pinned). */
-// FUNCTION: LEGORR 0x0043a930
+/* Port model of 0x0043a930 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a930, retires to the tail in GAME-023 part 3
 void ai_idle_table_pointer_remove(void* pointer)
 {
     for (int i = 0; i < s_idle100_n; ++i) {
@@ -3307,7 +3334,8 @@ void ai_idle_table_pointer_remove(void* pointer)
  * tile before appending it to the 100-slot high-water table. A NULL entity
  * or missing current level returns safely because the portable runtime has
  * no record or map pointer to inspect in those cases. */
-// FUNCTION: LEGORR 0x0043a960
+/* Port model of 0x0043a960 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a960, retires to the tail in GAME-023 part 3
 void ai_lava_crust_activity_register(GameContext* ctx, EntitySlot* e)
 {
     const LevelState* grid;
@@ -4167,7 +4195,8 @@ int ai_activity_probe(const EntitySlot* e)
 }
 
 /* TaskTypeAndConditionCheck (FUN_0043c490) — see entity.hpp. */
-// FUNCTION: LEGORR 0x0043c490
+/* Port model of 0x0043c490 (GAME-023, part 2); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043c490, retires to the tail in GAME-023 part 3
 int task_type_and_condition_check(const void* unused,
                                   const EntitySlot* target, int condition)
 {
@@ -10033,6 +10062,7 @@ static void entity_carried_slot_set(EntitySlot* entity, int index,
     else entity->carry_extra_links[index - 1] = carried;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static void entity_carried_links_clear(EntitySlot* entity)
 {
     int index;
@@ -10047,6 +10077,7 @@ static void entity_carried_links_clear(EntitySlot* entity)
     entity->carry_state_324 = 0;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static void entity_action_consume_counter_sidecar_release(EntitySlot* owner)
 {
     EntityActionConsumeCounterSidecar** link =
@@ -10068,6 +10099,7 @@ static void entity_action_consume_counter_sidecar_release(EntitySlot* owner)
     }
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int entity_display_name_config_index(const EntitySlot* entity)
 {
     uint32_t i;
@@ -10083,12 +10115,14 @@ static int entity_display_name_config_index(const EntitySlot* entity)
     return -1;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static void* entity_spatial_query_execute_current(
     const SpatialObjectQueryRequest* request)
 {
     return entity_spatial_object_query_hook(
         entity_pool_callback_context_get(), request);
 }
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int entity_route_marker_query_match(
     EntitySlot* candidate, const EntityRouteMarkerSearchRequest* request)
 {
@@ -10151,6 +10185,7 @@ static int entity_route_marker_query_match(
     return matched;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int queued_grid_animation_anchor_cell_get(void* anchor,
                                                   float position[2])
 {
@@ -10167,6 +10202,7 @@ static int queued_grid_animation_anchor_cell_get(void* anchor,
     return 1;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static EntitySlot* queued_grid_animation_spatial_find(
     const float position[2], int type, int filter_a, int filter_b)
 {
@@ -10192,6 +10228,7 @@ static EntitySlot* queued_grid_animation_spatial_find(
     return (EntitySlot*)spatial_object_query_execute(&request);
 }
 
+// PORT-ONLY: port model of 0x004386b0, retires to the tail in GAME-023 part 3
 static int entity_grid_position_match(EntitySlot* entity, void* payload)
 {
     EntityGridFindQuery* const query = (EntityGridFindQuery*)payload;
@@ -10296,6 +10333,7 @@ static int entity_spawn_request_pair_matches(const EntitySpawnRequest* request,
         request->type, request->kind, barracks_type, barracks_row, context);
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static GameContext* building_upgrade_context_get(EntitySlot* building)
 {
     if (building != NULL && building->owner_ctx != NULL)
@@ -10303,6 +10341,7 @@ static GameContext* building_upgrade_context_get(EntitySlot* building)
     return entity_pool_callback_context_get();
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static uint32_t building_upgrade_config_cost_get(GameContext* context,
                                                   int selector)
 {
@@ -10313,6 +10352,7 @@ static uint32_t building_upgrade_config_cost_get(GameContext* context,
     return (uint32_t)block_get_int(context->cfg, key, default_cost);
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int building_upgrade_live_payment_select(EntitySlot* building,
                                                 uint32_t* resource_out,
                                                 uint32_t* amount_out)
@@ -10335,6 +10375,7 @@ static int building_upgrade_live_payment_select(EntitySlot* building,
     return 1;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int deferred_olist_string_equal(const char* first, const char* second)
 {
     if (first == NULL || second == NULL) return 0;
@@ -10426,6 +10467,7 @@ static int entity_task_at_grid_coordinate_candidate(
     return 1;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int entity_deposit_position_get(EntitySlot* entity, float position[3])
 {
     if (entity->attached_scene_object != NULL) {
@@ -10503,6 +10545,7 @@ static void entity_kind_four_adjacent_expand(LevelState* level, int x, int y)
     }
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int entity_unload_adjacent_cell_find_on_level(
     const EntitySlot* entity, const LevelState* level, int out_xy[2])
 {
@@ -10893,6 +10936,7 @@ static int nearest_open_cell_candidate_compare(const void* first,
 }
 } // namespace unported_ledger_stubs
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static void idle100_register(EntitySlot* e)
 {
     if (s_idle100_n < AI_IDLE_TABLE_MAX) {
@@ -11211,5 +11255,98 @@ static int render_entity_callback(EntitySlot* entity, void* payload)
     (void)payload;
     if (s_render_entity_hook != NULL)
         s_render_entity_hook(entity, s_render_entity_user);
+    return 0;
+}
+
+/* ---- group B adapters ---- */
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-023 part 1 group B in
+ * legoobject_unit.c. Where the port's entry takes a GameContext or a hook
+ * table, or has no entry at all, these give the original's contract.
+ * Natively nothing calls them: the unit's functions run only in the
+ * matching build. */
+
+/* 00472060 (Weapons.c): the RunThroughLists callback LegoObject_Remove
+ * passes, which clears another object's +0x3c4 reference to the removed
+ * one. No port entry: does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (callback 0x00472060, no port entry)
+extern "C" int legoobject_gb_weapon_target_clear_callback(void* obj, void* data)
+{
+    (void)obj;
+    (void)data;
+    return 0;
+}
+
+/* 0043f560 takes the object; the port's entry takes its context too. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (entity_pool_find_with_local_predicate, 0x0043f560)
+extern "C" int legoobject_gb_pool_find_with_local_predicate_adapter(void* obj)
+{
+    return entity_pool_find_with_local_predicate(
+        entity_pool_callback_context_get(), (EntitySlot*)obj);
+}
+
+/* 0044be30 takes the object; the port's entry takes a hook table. No hooks
+ * are installed for the original's contract: does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (entity_auxiliary_payload_release, 0x0044be30)
+extern "C" void legoobject_gb_auxiliary_payload_release_adapter(void* obj)
+{
+    (void)obj;
+}
+
+/* 00409a90 takes (id, position, direction, points, count, notify) and
+ * returns the object; the port's entry takes a hook table and returns
+ * nothing. Does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (world_object_create_with_transform, 0x00409a90)
+extern "C" void* legoobject_gb_world_object_create_adapter(int id, void* position,
+                                                           unsigned int direction,
+                                                           void* points,
+                                                           uint32_t count,
+                                                           int notify)
+{
+    (void)id;
+    (void)position;
+    (void)direction;
+    (void)points;
+    (void)count;
+    (void)notify;
+    return NULL;
+}
+
+/* 00454880 is called with the object's type, which it does not read; the
+ * port's entry takes no argument. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (global_counter_004ff990_increment, 0x00454880)
+extern "C" void legoobject_gb_tutorial_counter_increment_adapter(int type)
+{
+    (void)type;
+    global_counter_004ff990_increment();
+}
+
+/* ---- group G adapters (GAME-023 part 1, legoobject_unit.c) ---- */
+
+/* 00447b30 (EntityActivityTick) with C linkage for legoobject_unit.c. */
+// PORT-ONLY: original-ABI adapter for 0x00447b30, called by legoobject_unit.c
+extern "C" float legoobject_activity_tick_adapter(EntitySlot* entity, float delta)
+{
+    return unported_ledger_stubs::ledger_stub_00447b30_EntityActivityTick(entity, delta);
+}
+
+/* ---- group C adapters ---- */
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-023 legoobject_unit.c,
+ * group C (LegoObject_Create 0x00437d00 and 0x00438460). The port's
+ * 0043f560 and 0044b370 take the GameContext too, and its 0044b680 is a
+ * ledger stub with another contract. Nothing calls these natively. */
+
+/* 0044b370 takes the object and the activity value. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0044b370 takes no GameContext)
+extern "C" void legoobject_gc_activity_grant_adapter(EntitySlot* e, int value)
+{
+    ai_activity_grant(e != NULL ? e->owner_ctx : NULL, e, value);
+}
+
+/* 0044b680 attaches the object's scene tree; the port's ledger stub takes
+ * the scene objects and a hook instead. No port equivalent: nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (no port equivalent of 0x0044b680)
+extern "C" int legoobject_gc_scene_object_tree_attach_adapter(EntitySlot* e)
+{
+    (void)e;
     return 0;
 }

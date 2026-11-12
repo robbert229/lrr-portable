@@ -21,6 +21,8 @@
  * globals annotated in other files, which this unit reads directly. The
  * fields the port does not model are defined here, one annotated global
  * each, as stand-ins until the port's owners are converted. */
+/* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
+#include "legoobject_port_aliases.h"
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>

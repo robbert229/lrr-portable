@@ -284,6 +284,9 @@ const char* sound_alias_name(int index);
  * also zeroes the cooldown word _DAT_00502b2c (the last
  * alias submitted under the global cooldown — written by the submission
  * queue port #296). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void sound_subsystem_enable_set(int enable, int stop_active);
 
 /* SoundSubsystemEnableSetAndStop @ 0x4652a0: enable_set with the stop

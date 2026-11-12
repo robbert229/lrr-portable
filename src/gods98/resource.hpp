@@ -651,6 +651,9 @@ int scene_activity_change_dispatch(SceneResourceAnimationRecord* record,
                                    int index); /* FUN_0046da50 */
 void* scene_resource_cached_slot_b4_get(
     SceneResourceAnimationRecord* record); /* FUN_0046da90 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_resource_cached_slot_b8_get(
     SceneResourceAnimationRecord* record); /* FUN_0046dac0 */
 void* scene_resource_cached_slot_c0_get(
@@ -693,6 +696,9 @@ void paired_resource_state_set(ScenePairedAnimationState* state,
                                int enabled); /* FUN_0046ced0 */
 void scene_entity_animation_tracks_set_enabled(
     ScenePairedAnimationState* state, int enabled); /* FUN_0046cf20 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_assign_owner_from_model(ScenePairedAnimationState* state,
                                    void* owner); /* FUN_0046d140 */
 void scene_object_attached_resource_release(void* record); /* FUN_0046d1a0 */
@@ -704,6 +710,9 @@ extern "C"
 #endif
 void entity_payload_type1_release(ScenePairedAnimationState* state);
                                                 /* FUN_0046ce10 */
+#ifdef __cplusplus
+extern "C"
+#endif
 int scene_record_template_instantiate(
     const ScenePairedAnimationState* source,
     ScenePairedAnimationState* destination); /* FUN_0046cff0 */
@@ -770,6 +779,9 @@ typedef int (*SceneEffectPoseHook)(void* handle, float px, float py, float pz,
                                    float rx, float ry, float rz,
                                    void* context);
 void scene_effect_pose_hook_install(SceneEffectPoseHook hook, void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 int lava_effect_select_and_place(int slot, const float* position,
                                  const float* rotation); /* FUN_0040cce0 */
 typedef int (*SceneObjectPositionHook)(void* object, float position[3],

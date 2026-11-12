@@ -9,6 +9,8 @@
  * header's declaration, gives that one the same linkage (finding 566). */
 namespace lego {
 extern "C" float weapon_type_recharge_time_get_target(int type);
+/* GAME-023 legoobject_unit.c calls 0x0046f140 from C. */
+extern "C" float weapon_type_discharge_rate_get_target(int type);
 }
 #include "weapon_from_weapons.hpp"
 

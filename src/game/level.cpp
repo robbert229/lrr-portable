@@ -53,6 +53,11 @@ extern "C" uint32_t global_state_field84_get_current_target(void);
 #include "level_from_lego.hpp"
 #include "level_for_files.hpp"
 #include "level_for_legoobject.hpp"
+/* C linkage for LegoObject.c state that legoobject_unit.c also reads
+ * (defined in legoobject.cpp; the frozen header below redeclares it). */
+extern "C" uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
+extern "C" uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
+extern "C" int s_terrain_sfx_grid[TERRAIN_SFX_GRID_CELLS];
 #include "level_from_legoobject.hpp"
 #include "level_for_aitask.hpp"
 
