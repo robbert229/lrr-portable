@@ -93,6 +93,10 @@ extern "C" int level_coord_pair_within_bounds_target(
 #include "movie.hpp"
 #include "simtick_shared.hpp"
 #include "view_shared.hpp"
+/* GAME-021 lego_unit.c reads these two (Level_Free); the first declaration
+ * gives them C linkage, the frozen header below redeclares them. */
+extern "C" int s_cell_refresh_track_count;
+extern "C" int s_cell_previous_track_count;
 #include "level_for_lego.hpp"
 /* C linkage for a legoGlobs field that GAME-021's lego_unit.c reads (issue
  * #544). The frozen header below redeclares it and inherits it. */
@@ -3650,7 +3654,8 @@ int stats_level_record_count_for_stat_type(int stat_type)
     }
 }
 
-// FUNCTION: LEGORR 0x0042efc0
+/* Port model of 0x0042efc0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042efc0, retires to the tail in GAME-021 part 3
 int movie_video_playback_loop(const MoviePump* pump)
 {
     if (pump == NULL || pump->next == NULL || pump->present == NULL
@@ -3683,7 +3688,8 @@ int movie_video_playback_loop(const MoviePump* pump)
     return frames;
 }
 
-// FUNCTION: LEGORR 0x0042f2e0
+/* Port model of 0x0042f2e0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042f2e0, retires to the tail in GAME-021 part 3
 void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
                                            int set)
 {
@@ -3701,7 +3707,8 @@ void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
 /* The retail entry uses the active level and returns the classification via
  * a four-argument ABI. Keep the explicit-level table helper above for tools
  * and callers operating on an inactive level. */
-// FUNCTION: LEGORR 0x0042f350
+/* Port model of 0x0042f350 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042f350, retires to the tail in GAME-021 part 3
 uint8_t terrain_neighbor_coordinate_check_current_target(
     int x, int y, uint8_t* kind, int mode)
 {
@@ -3797,7 +3804,8 @@ uint8_t terrain_neighbor_coordinate_check_current_target(
  * callbacks, and diagonal updates to the installed per-level surface grid
  * and CPU terrain cache. Cell-kind records are level-owned; only their DDi
  * object factory and scene attachment remain behind renderer hooks. */
-// FUNCTION: LEGORR 0x0042f6f0
+/* Port model of 0x0042f6f0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042f6f0, retires to the tail in GAME-021 part 3
 /* Callers in the reference often push a fourth zero that FUN_0042f6f0 does
  * not inspect. Keep the worker variadic so those target-shaped call sites can
  * preserve that stack shape while older portable callers omit it. */
@@ -10317,16 +10325,6 @@ extern "C" int entity_type_pair_for_name_original(const char* name,
     return entity_type_pair_for_name(name, type_out, index_out, zero_out);
 }
 
-/* Lego_PlayMovie (FUN_0042efc0) plays a file at a screen position; the
- * port's entry runs a prepared MoviePump. No port equivalent: nothing. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (no port equivalent of 0x0042efc0)
-extern "C" void lego_play_movie_adapter(const char* fileName,
-                                        const float* screenPt)
-{
-    (void)fileName;
-    (void)screenPt;
-}
-
 /* EntityCreateByType (FUN_00437d00): no port entry with the original's
  * contract (the port spawns through its GameContext); returns NULL. */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (no port equivalent of 0x00437d00)
@@ -10531,12 +10529,6 @@ extern "C" void lego_object_movement_input_adapter(struct EntitySlot* liveObj,
                                                    float rotate)
 {
     entity_motion_input_accumulate(liveObj, forward, strafe, rotate);
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (0x0042f0c0, no port entry)
-extern "C" void lego_level_names_free_adapter(void)
-{
-    /* No port entry: does nothing. */
 }
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (KeepRunning 0x00435940, no port entry)
@@ -10758,6 +10750,65 @@ extern "C" const char* main_get_start_level_adapter(void)
 /* ---- part 2 adapters, group 2D: end ---- */
 
 /* ---- part 2 adapters, group 2E (0042efc0-0042f6f0): begin ---- */
+
+#include "video_graph.hpp"
+
+/* Movie_GetSize (00472670): the port's entry fills a surface description. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Movie_GetSize 00472670; the port's entry fills a surface description)
+extern "C" void lego_movie_get_size_adapter(struct DirectShowGraphState* mov,
+                                            unsigned int* width,
+                                            unsigned int* height)
+{
+    lego::DirectShowSurfaceDescription desc;
+    lego::directdraw_surface_description_get(
+        (lego::DirectShowGraphState*)mov, &desc);
+    *width = desc.width;
+    *height = desc.height;
+}
+
+/* Movie_Update (004726d0): the port's entry blits between surfaces it is
+ * given; no port entry draws to a screen rectangle. Ends the movie. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Movie_Update 004726d0; the port's entry takes surfaces)
+extern "C" int lego_movie_update_adapter(struct DirectShowGraphState* mov,
+                                         float speed,
+                                         const LegoRect2E* destRect)
+{
+    (void)mov;
+    (void)speed;
+    (void)destRect;
+    return 0;
+}
+
+/* 0047cc20 takes no argument; the port's render_surface_restore_from_primary
+ * takes the surfaces, which the port's renderer owns. Does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (0047cc20; the port's entry takes the surfaces)
+extern "C" void lego_render_surface_restore_adapter(void)
+{
+}
+
+/* 00435aa0 (Lego.c part 3) takes the flag alone; the port's entry also
+ * takes the EngineContext, which it does not read. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00435aa0; the port's entry takes the EngineContext)
+extern "C" void lego_panel_selection_highlight_toggle_adapter(int on)
+{
+    panel_selection_highlight_toggle(NULL, on);
+}
+
+/* 00456c60 takes no argument (it frees the global pool lists); the port's
+ * object_pool_lists_free_all takes the pool table, which the port's level
+ * owner keeps. No port entry frees the original's: does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00456c60; the port's entry takes the pool table)
+extern "C" void lego_object_pool_lists_free_all_adapter(void)
+{
+}
+
+/* 00484c90 is an empty function; the original also calls it with a block
+ * position. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00484c90 called with an argument)
+extern "C" void lego_noop_point_adapter(const int* blockPos)
+{
+    (void)blockPos;
+}
 
 /* ---- part 2 adapters, group 2E: end ---- */
 

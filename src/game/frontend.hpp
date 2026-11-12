@@ -720,7 +720,7 @@ extern "C" void current_selection_context_set(void* context);
  * documented 16-entry window (deviation). The set/peek functions are the
  * tests/diagnostics view (the message_active_count precedent); tests also
  * inject through them. */
-void selection_state_flag_clear_bit0(void);
+extern "C" void selection_state_flag_clear_bit0(void);
 uint32_t selection_state_handle_get(int index);
 
 uint32_t selection_state_flags_peek(void);
@@ -1642,7 +1642,7 @@ int menu_list_find_name(const void* list_header,
  *   with mode 1. The table has no ported owner; it lands here as zero-init
  *   statics and the seam rides a recorded hook (the bobbin-drop precedent).
  * Deviation: the corpus blind-calls the seam even for cleared handle slots. */
-void screen_effect_flags_clear_and_release(void);  /* FUN_0040a3d0 */
+extern "C" void screen_effect_flags_clear_and_release(void);  /* FUN_0040a3d0 */
 void  screen_effect_entry_set(int index, void* handle, uint32_t flags);
                                                 /* port hook */
 void* screen_effect_handle_peek(int index);       /* port hook */

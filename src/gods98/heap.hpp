@@ -90,6 +90,9 @@ void engine_heap_free_wrapper(void* ptr);
 
 /* UiRenderRecordFree (FUN_0045daf0): the corpus's UI-side record free is
  * a bare tail call into the engine heap free — faithful wrapper. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void ui_render_record_free(void* record);
 
 /* EngineHeapAllocate (FUN_0047ff30): the corpus's plain alloc wrapper is

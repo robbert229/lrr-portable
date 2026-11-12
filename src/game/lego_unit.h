@@ -536,6 +536,29 @@ void lego_periodic_callback_dispatch(int on);   /* E, 00425b40 */
 
 /* ---- part 2 declarations, group 2E (0042efc0-0042f6f0): begin ---- */
 
+/* Win32 RECT, as Lego_PlayMovie's destination area. */
+typedef struct LegoRect2E {
+    long left, top, right, bottom;
+} LegoRect2E;
+
+/* Stand-ins (lego_unit.c). */
+extern unsigned int legoGlobs_f_556514;         /* 00556514 */
+extern int s_object_f_4eabc4;                   /* 004eabc4 */
+extern int s_object_f_4eabc8;                   /* 004eabc8 */
+
+void lego_play_movie(const char* fName, const float* screenPt);
+const char* lego_level_free(void);
+void lego_terrain_cell_edge_flag_set_and_update(Lego_Level* level, int bx, int by, int on);
+unsigned char lego_terrain_neighbor_coordinate_check(int bx, int by, unsigned char* direction,
+                                                     int powered);
+/* Level_BlockUpdateSurface: the fourth argument is unused. */
+void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, int reserved);
+
+/* Assumed from other groups (original signatures). */
+void lego_terrain_neighbor_flag_refresh(Lego_Level* level, const int* blockPos,
+                                        int mode);               /* 2F 00431450 */
+void lego_terrain_activity_build_records_release_all(Lego_Level* level); /* 2F 00431530 */
+
 /* ---- part 2 declarations, group 2E: end ---- */
 
 /* ---- part 2 declarations, group 2F (004302b0-00431570): begin ---- */

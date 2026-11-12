@@ -792,7 +792,6 @@ int map_pipeline_original(struct Lego_Level* level, char* surfaceMap,
                           char* aiMap, char* fallinMap); /* lego.cpp, 0042b510 */
 int object_list_load_file_original(struct Lego_Level* level,
                                    const char* fileName); /* lego.cpp, 0042e020 */
-void lego_play_movie_adapter(const char* fileName, const float* screenPt); /* lego.cpp, 0042efc0 */
 void* lego_object_create_adapter(void* objectData, int type, void* extra); /* lego.cpp, 00437d00 */
 void simulation_update_counter_add_original(struct EntitySlot* object,
                                             int count); /* lego.cpp, 0043a8f0 */
@@ -894,7 +893,6 @@ void lego_object_movement_input_adapter(struct EntitySlot* liveObj,
 float terrain_map_world_z_get(struct TerrainMap* map, float x, float y); /* 0044f940 */
 /* Lego.c parts 2-3 and others with no port equivalent of the original's
  * contract: adapters at the end of lego.cpp. */
-void lego_level_names_free_adapter(void);                       /* 0042f0c0 */
 int lego_keep_running_adapter(void);                            /* 00435940 */
 int lego_quit_poll_adapter(int a, int b, int* quit);            /* 004589c0 */
 int lego_level_low_bits_enabled_adapter(void);                  /* 004589a0 */
@@ -1300,6 +1298,102 @@ void terrain_map_wobble_emissive_set(struct TerrainMap* map, int on); /* 00450a8
 /* ---- part 2 imports, group 2D: end ---- */
 
 /* ---- part 2 imports, group 2E (0042efc0-0042f6f0): begin ---- */
+
+/* G98 Movie.c (video_graph.hpp, video_graph.h). Movie_GetSize (00472670)
+ * and Movie_Update (004726d0) have other contracts in the port (a surface
+ * description, a source surface); adapters at the end of lego.cpp. */
+struct DirectShowGraphState;
+struct DirectShowGraphState* directshow_render_surface_create(const char* path); /* 00472560 */
+void directshow_wrapper_destroy(struct DirectShowGraphState* state);  /* 004726f0 */
+void lego_movie_get_size_adapter(struct DirectShowGraphState* mov,
+                                 unsigned int* width,
+                                 unsigned int* height);         /* 00472670 */
+int lego_movie_update_adapter(struct DirectShowGraphState* mov, float speed,
+                              const LegoRect2E* destRect);      /* 004726d0 */
+/* G98 Main.c (frameloop.hpp). */
+void main_loop_frame_pump(int draw_projection_overlay);         /* 00477f30 */
+/* G98 DirectDraw.c: 0047cc20 takes no argument; the port's
+ * render_surface_restore_from_primary takes the surfaces. Adapter at the
+ * end of lego.cpp. */
+void lego_render_surface_restore_adapter(void);                 /* 0047cc20 */
+
+/* Level_Free's callees. */
+extern uint32_t s_entity_state_flags;          /* legoobject.cpp, 004dee14 */
+extern int s_cell_refresh_track_count;         /* level.cpp, 00556e8c */
+extern int s_cell_previous_track_count;        /* level.cpp, 00556e90 */
+/* 00435aa0 (Lego.c part 3): the port's entry also takes the
+ * EngineContext, which it does not read. Adapter at the end of lego.cpp. */
+void lego_panel_selection_highlight_toggle_adapter(int on);     /* 00435aa0 */
+void camera_distance_set(void* camera, float value);            /* view.hpp, 00436a4a */
+void transient_effect_registry_release_all(void);               /* effects.hpp, 00465970 */
+void global_state_low_byte_clear_and_refresh(void);             /* lego.cpp, 00435a20 */
+void ui_message_overlay_state_initialize(void);                 /* message.hpp, 0046aa90 */
+void selection_state_flag_clear_bit0(void);                     /* frontend.hpp, 004181a0 */
+void grid_record_flag_mask_clear(void);                         /* level.hpp, 0040ab30 */
+/* 00456c60 takes no argument; the port's entry takes the pool table.
+ * Adapter at the end of lego.cpp. */
+void lego_object_pool_lists_free_all_adapter(void);             /* 00456c60 */
+void cmd_flush_all(int disable_mode);                           /* cmd.hpp, 00402100 */
+void spawn_coordinate_pool_clear(void);                         /* level.hpp, 004372a0 */
+void path_record_release_all(void);                             /* level.hpp, 004099d0 */
+void ledger_stub_0040bdc0_SetTimeoutTo10000(void);              /* rock_fall_styles.cpp, 0040bdc0 */
+void graphics_overlay_resources_release(void);                  /* resource.hpp, 00462ed0 */
+void selection_active_count_reset(void);                        /* select.hpp, 00452600 */
+int tutorial_display_resources_release(void);                   /* tutorial_hud_ports.hpp, 00453220 */
+void ui_render_record_free(void* record);                       /* heap.hpp, 0045daf0 */
+struct TerrainMap;
+void terrain_map_remove(struct TerrainMap* map);                /* terrain_map.h, 0044e670 */
+struct TerrainCellResourceGrid;
+void terrain_cell_resource_grid_dispose(struct TerrainCellResourceGrid* grid); /* terrain_grid.hpp, 0040b410 */
+void scene_resource_singleton_pool_release(void);               /* resource.hpp, 0040c690 */
+void pending_record_release_all(void);                          /* info_unit.h, 00419f10 */
+void interface_reset(void);                                     /* interface_unit.h, 0041a920 */
+void legacy_panel_category_interaction_state_reset(void);       /* panel_unit.h, 0045a270 */
+void advisor_animation_end_cleanup(void);                       /* advisor.h, 004011c0 */
+void info_enable(int on);                                       /* info_unit.h, 00419ae0 */
+void screen_effect_flags_clear_and_release(void);               /* frontend.hpp, 0040a3d0 */
+
+/* Level_BlockUpdateSurface's callees. */
+void entity_task_counter_increment_by_branch(int nonzero);      /* entity.hpp, 004374d0 */
+void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode); /* level.hpp, 00402ae0 */
+int terrain_cell_predicate_check_current(const uint32_t pair_key[2]); /* level.hpp, 004090a0 */
+void entity_activity_scene_state_update_retail(void);           /* ai.hpp, 00439990 */
+void coordinate_pair_callback_dispatch(const void* coord_pair); /* cmd.hpp, 00402a40 */
+/* The empty function at 00484c90, called with the block position. */
+void lego_noop_point_adapter(const int* blockPos);              /* 00484c90 */
+void coordinate_pair_event_queue(const int pair[2], void* payload); /* cmd.hpp, 004030b0 */
+void selection_mode7_cancel_at_point(const uint32_t coordinate[2]); /* interface_unit.h, 0041cf80 */
+int electric_fence_stud_fits(struct ElectricFenceLevel* level, int bx, int by); /* terrain_cell_objects.h, 0040e1e0 */
+void electric_fence_stud_set(struct ElectricFenceLevel* level, int bx, int by,
+                             int on);                           /* terrain_cell_objects.h, 0040e350 */
+void lava_erosion_pending_cell_add(const int xy[2], int add);   /* level.hpp, 0040ee50 */
+void terrain_map_block_uv_wobble_set(struct TerrainMap* map, unsigned int bx,
+                                     unsigned int by, int on);  /* terrain_map.h, 00450960 */
+/* sfx.cpp's entry types the ninth argument (a float) as a word. */
+void* transient_effect_emitter_create(void* scene_context, uint32_t position_x,
+                                      uint32_t position_y, int* direction,
+                                      float red, float green, float blue,
+                                      float rate, int parameter_9, int mode,
+                                      uint32_t seed, int auxiliary); /* effects.hpp, 00465430 */
+void terrain_map_vertex_position_get(struct TerrainMap* map, unsigned int vx,
+                                     unsigned int vy, float* x, float* y,
+                                     float* z);                 /* terrain_map.h, 004507d0 */
+void terrain_map_block_rotated_set(struct TerrainMap* map, unsigned int bx,
+                                   unsigned int by, int on);    /* terrain_map.h, 0044edf0 */
+void coordinate_callback_dispatch_current(const void* coord_pair); /* level.hpp, 00402b30 */
+void terrain_map_block_highlight_clear(struct TerrainMap* map, int bx, int by); /* terrain_map.h, 0044f570 */
+uint32_t render_feature_flags_get(void);                        /* crt.hpp, 00477f70 */
+void terrain_map_block_texture_fade_set(struct TerrainMap* map, unsigned int bx,
+                                        unsigned int by, unsigned char texture,
+                                        unsigned char direction); /* terrain_map.h, 0044e6d0 */
+void terrain_map_block_texture_set(struct TerrainMap* map, unsigned int bx,
+                                   unsigned int by, unsigned char texture,
+                                   unsigned char direction);    /* terrain_map.h, 0044f230 */
+/* 00433380 (Lego.c part 3, lego.cpp); the port's LevelState is the
+ * original's level record in the matching build. */
+struct LevelState;
+void terrain_cell_mutation_progress(struct LevelState* level, uint32_t x,
+                                    uint32_t y);                /* level.hpp, 00433380 */
 
 /* ---- part 2 imports, group 2E: end ---- */
 

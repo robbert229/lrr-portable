@@ -567,6 +567,9 @@ void indexed_surface_resource_hooks_set(IndexedSurfaceCreateFn create,
                                         void* user);
 int indexed_surface_resource_allocate(void* owner, int width, int height);
 int animated_texture_replace(const char* name); /* 0x00462e60 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void graphics_overlay_resources_release(void); /* 0x00462ed0 */
 /* Native frame owner is distinct from the software quad indices. */
 void* indexed_surface_scene_owner_get(void);
@@ -581,6 +584,9 @@ void* visual_model_record_create(void* parent, const char* name,
 void scene_timeout_entry_sweep(SceneTimeoutEntrySet* set, float delta);
 void scene_light_pool_primary_expire(float delta); /* FUN_0040c4d0 */
 void scene_light_pool_secondary_expire(float delta); /* FUN_0040c520 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_resource_singleton_pool_release(void); /* FUN_0040c690 */
 void terrain_marker_sets_clear(float delta); /* FUN_0040cc40 */
 typedef struct SceneResourceSlotModel {

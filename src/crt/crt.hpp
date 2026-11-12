@@ -1007,7 +1007,7 @@ uint32_t render_surface_secondary_get(void);
 void     render_surface_secondary_set(uint32_t value); /* install */
 
 /* RenderFeatureFlagsGet (FUN_00477f70): the DAT_0050608c feature word. */
-uint32_t render_feature_flags_get(void);
+extern "C" uint32_t render_feature_flags_get(void);
 void     render_feature_flags_set(uint32_t value); /* install */
 extern uint32_t s_render_feature_flags; /* DAT_0050608c */
 

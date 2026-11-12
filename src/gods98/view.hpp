@@ -1671,6 +1671,9 @@ extern "C"
 #endif
 void camera_distance_bounds_set(void* camera, float lo, float hi);
                                         /* FUN_00436a18 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void camera_distance_set(void* camera, float value); /* FUN_00436a4a */
 #ifdef __cplusplus
 extern "C"
