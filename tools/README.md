@@ -104,7 +104,9 @@ legacy `frontend.cpp`), the tool uses `<stem>_unit` and says so;
 2. Types and macros.
 3. The owned globals in address order, then the closure variables. A
    variable moves up to just before its first user.
-4. The forward declarations the new order needs.
+4. The forward declarations the new order needs. They come before the
+   first variable, prototype or group that names one of the functions,
+   such as a closure variable initialised with a static helper (#543).
 5. The unit's functions in address order.
 6. Static helpers last, because they are port-only code (ADR 0006 decision
    4).
