@@ -220,15 +220,35 @@ int legoobject_vehicle_unload_cell_find_if_eligible(Lego_Object* obj, int* outCe
 int legoobject_record_flag20_query(Lego_Object* obj, int* outCell); /* 00439e40 */
 
 /* ---- group G: 00439e70-0043a960 ---- */
+/* Lego_Block (0x48) and the Lego_Level fields group G reads. */
+typedef struct LegoObjG_Block {
+    unsigned char pad_00[2];
+    unsigned char terrain;            /* +0x02 */
+    unsigned char pad_03[0x48 - 0x03];
+} LegoObjG_Block;
+/* RoutingBlock (0x14 bytes): one entry of Lego_Object.routeBlocks. */
+typedef struct LegoObjG_RouteBlock {
+    int blockPos[2];                  /* +0x00 */
+    float blockOffset[2];             /* +0x08 */
+    unsigned char flags;              /* +0x10 */
+    unsigned char actionFlags;        /* +0x11 */
+    unsigned char pad_12[0x14 - 0x12];
+} LegoObjG_RouteBlock;
+typedef struct LegoObjG_Level {
+    unsigned char pad_00[0x14];
+    unsigned int width;               /* +0x14 */
+    unsigned char pad_18[0xb8 - 0x18];
+    LegoObjG_Block* blocks;           /* +0xb8 */
+} LegoObjG_Level;
 void legoobject_attached_object_list_detach(Lego_Object* obj, int resetMode); /* 00439e70 */
 int legoobject_cell_step_command_issue_with_jitter(Lego_Object* obj, int* target, float* input, int mode, int markPending); /* 0043a120 */
 int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target); /* 0043a300 */
 void legoobject_visual_resource_get_or_create(Lego_Object* obj); /* 0043a5f0 */
-Lego_Object* legoobject_action_kind_create_and_command_issue(Lego_Object* source, int kind, int selector, int argument); /* 0043a650 */
-int legoobject_action_kind_supported(Lego_Object* obj, int kind, int argument); /* 0043a7c0 */
+Lego_Object* legoobject_action_kind_create_and_command_issue(Lego_Object* source, int kind, int argument, int last); /* 0043a650 */
+int legoobject_action_kind_supported(Lego_Object* obj, int kind, int argument, int last); /* 0043a7c0 */
 void legoobject_action_record_consume_and_cleanup(Lego_Object* obj, Lego_Object* record); /* 0043a850 */
-void legoobject_simulation_update_counter_add(int unused, int count); /* 0043a8f0 */
-void legoobject_simulation_mode_counter_add(int mode, int count); /* 0043a910 */
+void legoobject_simulation_update_counter_add(int unused, unsigned int count); /* 0043a8f0 */
+void legoobject_simulation_mode_counter_add(int unused, unsigned int count); /* 0043a910 */
 void legoobject_tracked_pointer_remove(void* pointer);          /* 0043a930 */
 void legoobject_lava_crust_activity_register(Lego_Object* obj); /* 0043a960 */
 

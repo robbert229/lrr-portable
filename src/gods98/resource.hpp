@@ -651,6 +651,9 @@ int scene_activity_change_dispatch(SceneResourceAnimationRecord* record,
                                    int index); /* FUN_0046da50 */
 void* scene_resource_cached_slot_b4_get(
     SceneResourceAnimationRecord* record); /* FUN_0046da90 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_resource_cached_slot_b8_get(
     SceneResourceAnimationRecord* record); /* FUN_0046dac0 */
 void* scene_resource_cached_slot_c0_get(

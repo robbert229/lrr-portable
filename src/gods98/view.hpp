@@ -1339,8 +1339,14 @@ void renderer_handle_scalar_hook_install(RendererHandleScalarGetHook hook,
  * entropy rule 1). */
 int renderer_cached_handle_4c_is_not_one(void* record); /* FUN_00407040 */
 void* scene_object_indexed_handle_get_or_create(void* record, int index);
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_object_primary_handle_get_or_create(void* record);
 void* scene_object_secondary_handle_get_or_create(void* record);
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_object_indexed_secondary_handle_get_or_create(void* record,
                                                            int index);
 float animation_loop_time_adjust(void* record, float argument,

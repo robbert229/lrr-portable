@@ -136,7 +136,7 @@ int cmd_chain_drop(EntitySlot* e, int type);
 /* Full EntityCommandUnlinkByKind entry (FUN_00403d10). `extra` is the
  * type-specific payload (an EntitySlot for types 3 and 7).
  * `unlink` controls detachment from the entity chain and pool release. */
-void entity_command_unlink_by_kind(EntitySlot* e, int type,
+extern "C" void entity_command_unlink_by_kind(EntitySlot* e, int type,
                                    const void* extra, int unlink);
 
 /* ObjectAttachedRecordAllocate (FUN_004033c0, findings 251/270): allocates a

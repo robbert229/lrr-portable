@@ -125,6 +125,72 @@ void legoobject_block_position_get(struct EntitySlot* entity, int* bx, int* by);
 
 /* ---- group G ---- */
 
+struct AnimationObject;
+struct SceneResourceAnimationRecord;
+struct LevelState;
+
+/* legoGlobs.currLevel (005560d4): terrain_grid.cpp's g_active_level_retail. */
+extern struct LevelState* g_active_level_retail;
+#define LegoObjG_currLevel ((LegoObjG_Level*)g_active_level_retail)
+/* objectGlobs.liveObjs (004eabcc) and liveCount (004ead5c). */
+#define LegoObjG_liveObjs ((Lego_Object**)s_idle100)
+#define LegoObjG_liveCount (*(unsigned int*)&s_idle100_n)
+
+/* GAME-006/GAME-004/GAME-047 model handles. */
+void* scene_object_primary_handle_get_or_create(void* record);              /* 004087b0 */
+void* renderer_cached_handle_50_get_or_create(struct AnimationObject* object); /* 00407010 */
+void* scene_resource_cached_slot_b8_get(struct SceneResourceAnimationRecord* record); /* 0046dac0 */
+void* entity_type_component_get(const void* entity_record);                 /* 0044a200 */
+/* GAME-021 Lego.c (lego_unit.c). 0041f8e0 is Lego_GetCrystalCount(flag) in
+ * the original; lego_unit.c defines it as noop_callback(void), so the unit
+ * calls it with the original's argument and result through a cast. */
+void noop_callback(void);                                                    /* 0041f8e0 */
+#define Lego_GetCrystalCount(onlyUsable) (((int (*)(int))noop_callback)(onlyUsable))
+int lego_upgrade_resource_check(int ore);                                   /* 0041f900 */
+void global_object_field8c_increment(void);                                 /* 0041f870 */
+void lego_level_resource_balance_add_and_sound(int ore);                    /* 0041f9a0 */
+/* legoGlobs.cont* (00556374-0055638c): lego_unit.c stand-ins. */
+extern void* legoGlobs_contCrystal;            /* 00556374 */
+extern void* legoGlobs_contDynamite;           /* 00556378 */
+extern void* legoGlobs_contOresTable;          /* 0055637c, indexed by ore type */
+extern void* legoGlobs_contOohScary;           /* 00556384 */
+extern void* legoGlobs_contBarrier;            /* 00556388 */
+extern void* legoGlobs_contElectricFence;      /* 0055638c */
+void global_object_field8c_subtract(int amount);                            /* 0041f880 */
+void lego_upgrade_resource_debit(int ore, int amount);                      /* 0041f9e0 */
+/* G98 Container.c (view.hpp, container.h). */
+void* scene_object_indexed_secondary_handle_get_or_create(void* record, int index); /* 00408810 */
+int ddiscene_object_position_get(void* object, void* alternate_frame,
+                                 float position[3]);                         /* 004754c0 */
+uint32_t scene_action_name_set(void* scene_object, const char* action_name); /* 00473370 */
+/* GAME-027 Message.c (cmd.hpp). */
+void cmd_produce(int op, const void* a1, int a2, const int* pair);          /* 00452060 */
+int ddiscene_object_position_set(void* object, void* alternate_frame,
+                                 float x, float y, float z);                 /* 00475430 */
+/* GAME-002 AITask.c (cmd.hpp, entity.hpp; defined in aitask.cpp). */
+void entity_command_unlink_by_kind(struct EntitySlot* e, int type,
+                                   const void* extra, int unlink);           /* 00403d10 */
+void entity_activity_record_remove_by_type(void* entity, int type,
+                                           void* action_context);           /* 00403c00 */
+/* GAME-021 Lego.c (level.hpp; port models in lego.cpp). */
+int terrain_cell_state_equals_six_current(const int cell_xy[2]);            /* 00432f00 */
+uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy, int mode);   /* 00432aa0 */
+/* LegoObject.c part 2 (entity.hpp). */
+void entity_type5_finalize_if_allowed(struct EntitySlot* entity);           /* 00441ea0 */
+int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+                                    float first[3], float second[3]);        /* 00475500 */
+/* LegoObject.c part 2 (ai.hpp), port models in legoobject.cpp. */
+void ai_set_activity(struct EntitySlot* e, int id, int param);              /* 004409e0 */
+int activity_register_bookkeeping(struct EntitySlot* e);                    /* 00447c40 */
+/* 00447b30: the port's entry is in a namespace of a frozen header; thin
+ * adapter at the end of legoobject.cpp. */
+float legoobject_activity_tick_adapter(struct EntitySlot* entity, float delta);
+/* G98 Maths.c (maths.h). */
+short rng_thunk_draw15(void);                                               /* 004798a0 */
+float random_float_range(float low, float high);                            /* 004798b0 */
+/* GAME-002 (level.hpp; defined in aitask.cpp). */
+void terrain_cell_record_counts_prune(void* entity);                        /* 00403910 */
+
 #ifdef __cplusplus
 }
 #endif

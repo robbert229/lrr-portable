@@ -581,7 +581,7 @@ uint32_t terrain_cell_edge_wall_current(const int cell_xy[2]);
 int level_cell_state_is_1(const LevelState* s, int cx, int cy);
 int level_cell_state_is_6(const LevelState* s, int cx, int cy);
 int terrain_cell_state_equals_one_current(const int cell_xy[2]);
-int terrain_cell_state_equals_six_current(const int cell_xy[2]);
+extern "C" int terrain_cell_state_equals_six_current(const int cell_xy[2]);
 
 /* FUN_00432f40: the two low terrain bits (0x18) clear — cells OUTSIDE
  * the grid-minus-one gate count as clear (as in the corpus). */
@@ -964,7 +964,7 @@ void terrain_cell_record_count_increment_hook_install(
 void terrain_cell_record_count_increment(int a, int b, int c);
 void terrain_cell_record_count_update(const int cell_xy[2], int a, int b,
                                      int c); /* 0x00403810 */
-void terrain_cell_record_counts_prune(void* entity); /* 0x00403910 */
+extern "C" void terrain_cell_record_counts_prune(void* entity); /* 0x00403910 */
 void task_record_create_and_scan_grid(void* entity); /* 0x004039a0 */
 typedef struct TerrainCellSurfaceUpdateHooks {
     void* context;

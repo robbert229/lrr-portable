@@ -286,3 +286,399 @@ int legoobject_record_flag20_query(Lego_Object* obj, int* outCell)
 
 /* ---- functions, group G (00439e70-0043a960) ---- */
 
+// FUNCTION: LEGORR 0x00439e70
+void legoobject_attached_object_list_detach(Lego_Object* obj, int resetMode)
+{
+    unsigned int flags;
+    unsigned int noRemoveTasks;
+    Lego_Object* routeTo;
+    unsigned int routeToStats;
+    unsigned int i;
+    Lego_Object* carried;
+    LegoObjF_Point2I blockPos;
+    float pos[3];
+    float contPos[3];
+    void* cont;
+    unsigned char* routeFlag;
+
+    flags = obj->flags1;
+    noRemoveTasks = flags & 0x200;
+    if ((flags & 0x400) && (!(flags & 0x2000) || resetMode)) {
+        routeTo = obj->routeToObject;
+        routeToStats = 0;
+        if (routeTo != NULL)
+            routeToStats = entity_stats_word_get(LEGOOBJ_SLOT(routeTo)) & 0x8;
+        if (routeToStats == 0 && resetMode) {
+            entity_command_unlink_by_kind(LEGOOBJ_SLOT(obj), 6, NULL, 1);
+            entity_command_unlink_by_kind(LEGOOBJ_SLOT(obj), 9, NULL, 1);
+            entity_command_unlink_by_kind(LEGOOBJ_SLOT(obj), 15, NULL, 1);
+            entity_command_unlink_by_kind(LEGOOBJ_SLOT(obj), 20, NULL, 1);
+        }
+        for (i = 0; i < obj->numCarriedObjects; i++) {
+            carried = obj->carriedObjects[i];
+            obj->carriedObjects[i] = NULL;
+            carried->carryingThisObject = NULL;
+            carried->interactObject = NULL;
+            if (routeToStats && resetMode) {
+                entity_command_unlink_by_kind(LEGOOBJ_SLOT(obj), 5, carried, 1);
+                legoobject_action_record_consume_and_cleanup(routeTo, carried);
+                legoobject_activity_scene_state_update();
+            } else {
+                legoobject_block_position_get(LEGOOBJ_SLOT(carried), &blockPos.x, &blockPos.y);
+                if (!terrain_cell_flag_8_bounded_current(blockPos.x, blockPos.y) ||
+                    terrain_cell_state_equals_six_current(&blockPos.x) ||
+                    terrain_cell_occupied_or_flag_current(blockPos.x, blockPos.y, 0))
+                {
+                    cont = entity_type_component_get(carried);
+                    entity_transform_position_get_outputs(LEGOOBJ_SLOT(obj), &pos[0], &pos[1]);
+                    ddiscene_object_position_get(cont, NULL, contPos);
+                    ddiscene_object_position_set(cont, NULL, pos[0], pos[1], contPos[2]);
+                }
+                if (resetMode) {
+                    entity_command_unlink_by_kind(LEGOOBJ_SLOT(obj), 7, carried,
+                                                  i == obj->numCarriedObjects - 1);
+                    if (carried->type != 7 && carried->type != 6)
+                        carried->flags1 |= 0x80000;
+                } else if (noRemoveTasks) {
+                    entity_activity_record_remove_by_type(obj, 3, carried);
+                } else {
+                    entity_activity_record_remove_by_type(obj, 5, carried);
+                    entity_activity_record_remove_by_type(obj, 6, carried);
+                    entity_activity_record_remove_by_type(obj, 9, carried);
+                    entity_activity_record_remove_by_type(obj, 15, carried);
+                    entity_activity_record_remove_by_type(obj, 7, carried);
+                    entity_activity_record_remove_by_type(obj, 4, NULL);
+                    entity_activity_record_remove_by_type(obj, 20, carried);
+                }
+                if (carried->type == 5)
+                    entity_type5_finalize_if_allowed(LEGOOBJ_SLOT(carried));
+            }
+        }
+        obj->numCarriedObjects = 0;
+        obj->flags1 &= ~0x400;
+        for (i = 0; i < obj->routeBlocksTotal; i++) {
+            routeFlag = &((LegoObjG_RouteBlock*)obj->routeBlocks)[i].actionFlags;
+            if (*routeFlag == 7 || *routeFlag == 5)
+                *routeFlag = 0;
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x0043a300
+int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
+{
+    int fromY;
+    int* routeX;
+    int* routeY;
+    int fromX;
+    unsigned int count;
+    int result;
+    int toX;
+    int toY;
+    int dir;
+    void* cont;
+    float targetPos[2];
+    float pos[2];
+    float facing[3];
+    float contPos[3];
+
+    if (obj->flags1 & 0x400) {
+        if ((entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x4) ||
+            (entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x2))
+        {
+            obj->flags1 |= 0x2000;
+            ai_set_activity(LEGOOBJ_SLOT(obj), 0x1d, 1);
+            activity_register_bookkeeping(LEGOOBJ_SLOT(obj));
+            legoobject_activity_tick_adapter(LEGOOBJ_SLOT(obj), 1.0f);
+            return 1;
+        } else if (legoobject_accepts_target_for_task_check(target, obj->carriedObjects[0], 0) ||
+            (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x8))
+        {
+            cont = NULL;
+            if (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x8)
+                cont = scene_object_indexed_secondary_handle_get_or_create(target->building, s_activity_resource_slots[10]);
+            else if (target->type == 4)
+                cont = scene_object_primary_handle_get_or_create(target->building);
+
+            if (cont != NULL) {
+                ddiscene_object_position_get(cont, NULL, contPos);
+                ddiscene_object_facing_pair_get(cont, NULL, facing, NULL);
+                targetPos[0] = contPos[0];
+                targetPos[1] = contPos[1];
+                if (fabs(facing[0]) > fabs(facing[1]))
+                    dir = (facing[0] > 0.0f) ? 3 : 1;
+                else
+                    dir = (facing[1] > 0.0f) ? 2 : 0;
+            } else {
+                entity_transform_position_get_outputs(LEGOOBJ_SLOT(target), &targetPos[0], &targetPos[1]);
+            }
+
+            terrain_map_world_to_block(Lego_GetMap(), targetPos[0], targetPos[1], &toX, &toY);
+            entity_transform_position_get_outputs(LEGOOBJ_SLOT(obj), &pos[0], &pos[1]);
+            terrain_map_world_to_block(Lego_GetMap(), pos[0], pos[1], &fromX, &fromY);
+
+            if (fromX == toX && fromY == toY) {
+                result = entity_route_setup_and_marker_associate(LEGOOBJ_SLOT(obj), 1,
+                    (const float*)&toX, (const float*)&toY, targetPos);
+            } else {
+                if (!terrain_neighbor_path_check_current(obj, fromX, fromY, toX, toY,
+                        &routeX, &routeY, (float*)&count, NULL, NULL))
+                    return 0;
+                result = entity_route_setup_and_marker_associate(LEGOOBJ_SLOT(obj), count,
+                    (const float*)routeX, (const float*)routeY, targetPos);
+                free(routeX);
+                free(routeY);
+            }
+
+            if (result) {
+                obj->routeToObject = target;
+                if (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x8) {
+                    ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 9;
+                    obj->routeToObject = target;
+                    return 1;
+                }
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 7;
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].flags |= 4;
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].flags |= dir & 3;
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x0043a5f0
+void legoobject_visual_resource_get_or_create(Lego_Object* obj)
+{
+    void* handle;
+
+    handle = NULL;
+    if (obj->type == 4)
+        handle = scene_object_primary_handle_get_or_create(obj->building);
+    else if (obj->type == 3)
+        handle = renderer_cached_handle_50_get_or_create((struct AnimationObject*)obj->rockMonster);
+    else if (obj->type == 2)
+        handle = renderer_cached_handle_50_get_or_create((struct AnimationObject*)obj->miniFigure);
+    else if (obj->type == 1)
+        handle = scene_resource_cached_slot_b8_get((struct SceneResourceAnimationRecord*)obj->vehicle);
+    if (handle == NULL)
+        entity_type_component_get(obj);
+}
+
+// FUNCTION: LEGORR 0x0043a120
+int legoobject_cell_step_command_issue_with_jitter(Lego_Object* obj, int* target, float* input, int mode, int markPending)
+{
+    int result;
+    int* routeX;
+    int* routeY;
+    int blockX;
+    int blockY;
+    unsigned int count;
+    float offset[2];
+    float jitter;
+    int side;
+
+    result = 0;
+    if (obj->flags1 & 0x400) {
+        legoobject_block_position_get(LEGOOBJ_SLOT(obj), &blockX, &blockY);
+        if (blockX == target[0] && blockY == target[1]) {
+            result = entity_route_setup_and_marker_associate(LEGOOBJ_SLOT(obj), 1,
+                (const float*)&target[0], (const float*)&target[1], NULL);
+        } else if (terrain_neighbor_path_check_current(obj, blockX, blockY,
+                       target[0], target[1], &routeX, &routeY, (float*)&count, NULL, NULL)) {
+            result = entity_route_setup_and_marker_associate(LEGOOBJ_SLOT(obj), count,
+                (const float*)routeX, (const float*)routeY, NULL);
+            free(routeX);
+            free(routeY);
+        }
+
+        if (result) {
+            if (obj->type == 1) {
+                jitter = random_float_range(0.55f, 0.75f);
+                side = rng_thunk_draw15() % 4;
+                markPending = 1;
+                switch (side) {
+                case 0:
+                    offset[0] = 0.5f;
+                    offset[1] = jitter;
+                    break;
+                case 1:
+                    offset[1] = 0.5f;
+                    offset[0] = jitter;
+                    break;
+                case 2:
+                    offset[0] = 0.5f;
+                    offset[1] = 1.0f - jitter;
+                    break;
+                case 3:
+                    offset[1] = 0.5f;
+                    offset[0] = 1.0f - jitter;
+                    break;
+                }
+            } else {
+                offset[0] = input[0];
+                offset[1] = input[1];
+            }
+
+            if (mode)
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 9;
+            else
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 8;
+            if (input != NULL) {
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].blockOffset[0] = offset[0];
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].blockOffset[1] = offset[1];
+            }
+            if (markPending)
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].flags |= 8;
+        }
+    }
+    return result;
+}
+
+// FUNCTION: LEGORR 0x0043a650
+Lego_Object* legoobject_action_kind_create_and_command_issue(Lego_Object* source, int kind, int argument, int last)
+{
+    int slot;
+    void* handle;
+    void* model;
+    float pos[3];
+    Lego_Object* obj;
+
+    if (!legoobject_action_kind_supported(source, kind, argument, last))
+        return NULL;
+
+    switch (kind) {
+    case 9:
+        slot = 8;
+        break;
+    case 6:
+    case 7:
+        slot = 10;
+        break;
+    case 8:
+        slot = 9;
+        break;
+    default:
+        slot = 0;
+        break;
+    }
+    handle = scene_object_indexed_secondary_handle_get_or_create(source->building, s_activity_resource_slots[slot]);
+    ddiscene_object_position_get(handle, NULL, pos);
+
+    if (kind == 6) {
+        model = legoGlobs_contCrystal;
+        legoobject_activity_scene_state_update();
+        global_object_field8c_subtract(1);
+    } else if (kind == 7) {
+        model = (&legoGlobs_contOresTable)[argument];
+        lego_upgrade_resource_debit(argument, 1);
+    } else if (kind == 9) {
+        model = legoGlobs_contBarrier;
+    } else if (kind == 8) {
+        model = legoGlobs_contDynamite;
+    } else if (kind == 11) {
+        model = legoGlobs_contElectricFence;
+    } else if (kind == 13) {
+        model = legoGlobs_contOohScary;
+    } else {
+        return NULL;
+    }
+
+    obj = legoobject_create_in_world(model, kind, argument, last, pos[0], pos[1], 0.0f);
+    if (kind == 7)
+        cmd_produce(0x1c, obj, 0, NULL);
+    else
+        cmd_produce(0x16, obj, 0, NULL);
+    if (kind == 9) {
+        // STRING: LEGORR 0x004a507c
+        scene_action_name_set(obj->other, "Short");
+        return obj;
+    }
+    if (kind == 8)
+        // STRING: LEGORR 0x004a5074
+        scene_action_name_set(obj->other, "Normal");
+    return obj;
+}
+
+// FUNCTION: LEGORR 0x0043a7c0
+int legoobject_action_kind_supported(Lego_Object* obj, int kind, int argument, int last)
+{
+    if (entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x8) {
+        if (kind == 6 && Lego_GetCrystalCount(1))
+            return 1;
+        if (kind == 7 && lego_upgrade_resource_check(argument))
+            return 1;
+        if (kind == 9)
+            return 1;
+        if (kind == 8)
+            return 1;
+        if (kind == 11)
+            return 1;
+        if (kind == 13)
+            return 1;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x0043a850
+void legoobject_action_record_consume_and_cleanup(Lego_Object* obj, Lego_Object* record)
+{
+    if (obj->type == 3 && obj->field_348 == NULL) {
+        obj->field_348 = malloc(6 * sizeof(int));
+        memset(obj->field_348, 0, 6 * sizeof(int));
+    }
+    if (record->type == 6) {
+        if (obj->type == 3)
+            ((int*)obj->field_348)[record->objLevel]++;
+        else
+            global_object_field8c_increment();
+    } else if (record->type == 7 && obj->type != 3) {
+        lego_level_resource_balance_add_and_sound(record->id);
+    }
+    record->carryingThisObject = NULL;
+    legoobject_remove(record);
+    if (obj->type != 3)
+        terrain_cell_record_counts_prune(obj);
+}
+
+// FUNCTION: LEGORR 0x0043a8f0
+void legoobject_simulation_update_counter_add(int unused, unsigned int count)
+{
+    while (count-- > 0)
+        global_object_field8c_increment();
+    legoobject_activity_scene_state_update();
+}
+
+// FUNCTION: LEGORR 0x0043a910
+void legoobject_simulation_mode_counter_add(int unused, unsigned int count)
+{
+    while (count-- > 0)
+        lego_level_resource_balance_add_and_sound(0);
+}
+
+// FUNCTION: LEGORR 0x0043a930
+void legoobject_tracked_pointer_remove(void* pointer)
+{
+    unsigned int i;
+
+    for (i = 0; i < LegoObjG_liveCount; i++) {
+        if (pointer == LegoObjG_liveObjs[i])
+            LegoObjG_liveObjs[i] = NULL;
+    }
+}
+
+// FUNCTION: LEGORR 0x0043a960
+void legoobject_lava_crust_activity_register(Lego_Object* obj)
+{
+    LegoObjF_Point2I blockPos;
+
+    if (obj->type == 1 && !(entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x2000000)) {
+        legoobject_block_position_get(LEGOOBJ_SLOT(obj), &blockPos.x, &blockPos.y);
+        if (LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos.y + blockPos.x].terrain == 9 &&
+            LegoObjG_liveCount < 100)
+        {
+            LegoObjG_liveObjs[LegoObjG_liveCount] = obj;
+            LegoObjG_liveCount++;
+        }
+    }
+}

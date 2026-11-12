@@ -2781,7 +2781,8 @@ int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2])
 namespace unported_ledger_stubs {
 /* EntityAttachedObjectListDetach (FUN_00439e70): detach every represented
  * carried slot, retaining the legacy slot-zero mirror. */
-// FUNCTION: LEGORR 0x00439e70
+/* Port model of 0x00439e70 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439e70, retires to the tail in GAME-023 part 3
 void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
 {
     EntitySlot* carried;
@@ -2861,7 +2862,8 @@ void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
     entity->carry_state_324 = 0;
     entity->flags_3e0 &= ~0x400u;
 }
-// FUNCTION: LEGORR 0x0043a120
+/* Port model of 0x0043a120 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a120, retires to the tail in GAME-023 part 3
 int entity_cell_step_command_issue_with_jitter(EntitySlot* entity,
     const int target_xy[2], const float input_xy[2], int action_mode,
     int mark_pending)
@@ -3001,7 +3003,8 @@ int entity_cell_step_command_issue_with_jitter(EntitySlot* entity,
 /* EntityDepositActivityGate (FUN_0043a300): accepted targets use the real
  * locator, terrain search and route installer. An unavailable scene owner
  * is distinct from an authored missing locator, which uses target origin. */
-// FUNCTION: LEGORR 0x0043A300
+/* Port model of 0x0043a300 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a300, retires to the tail in GAME-023 part 3
 int entity_deposit_activity_gate(EntitySlot* entity, EntitySlot* target)
 {
     uint32_t flags;
@@ -3118,7 +3121,8 @@ int entity_deposit_activity_gate(EntitySlot* entity, EntitySlot* target)
 }
 /* EntityVisualResourceGetOrCreate (FUN_0043a5f0): choose one of the four
  * type-specific cached visual handles and create the model when absent. */
-// FUNCTION: LEGORR 0x0043a5f0
+/* Port model of 0x0043a5f0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a5f0, retires to the tail in GAME-023 part 3
 void entity_visual_resource_get_or_create(EntitySlot* entity)
 {
     int slot;
@@ -3147,7 +3151,8 @@ void entity_visual_resource_get_or_create(EntitySlot* entity)
 /* ActionKindEntityCreateAndCommandIssue (FUN_0043a650). The installed
  * constructor owns resource/template selection; this routine keeps the
  * verified action gate, event order, queue opcode, and kind labels. */
-// FUNCTION: LEGORR 0x0043A650
+/* Port model of 0x0043a650 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a650, retires to the tail in GAME-023 part 3
 EntitySlot* entity_action_kind_entity_create_and_command_issue(
     EntitySlot* source, int kind, int selector, int argument)
 {
@@ -3203,7 +3208,8 @@ EntitySlot* entity_action_kind_entity_create_and_command_issue(
 /* --- the task-kind filtered search (see cmd.hpp) -----------------------------
  * The corpus's pool walk hands the callback the slot pointer and the
  * argument block; the port models that argument block as the selector word. */
-// FUNCTION: LEGORR 0x0043a7c0
+/* Port model of 0x0043a7c0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a7c0, retires to the tail in GAME-023 part 3
 int entity_action_kind_supported(EntitySlot* e, int kind, int arg)
 {
     if (e == NULL) {
@@ -3234,7 +3240,8 @@ int entity_action_kind_supported(EntitySlot* e, int kind, int arg)
 /* EntityActionRecordConsumeAndCleanup (FUN_0043a850): the second argument is
  * a full entity record. Its +0x330 selector drives the type-6 owner counter;
  * +0x304 is cleared before the record is returned through EntityTeardown. */
-// FUNCTION: LEGORR 0x0043A850
+/* Port model of 0x0043a850 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a850, retires to the tail in GAME-023 part 3
 void entity_action_record_consume_and_cleanup(
     EntitySlot* entity, EntitySlot* record)
 {
@@ -3295,7 +3302,8 @@ void entity_action_record_consume_and_cleanup(
     }
 }
 
-// FUNCTION: LEGORR 0x0043a8f0
+/* Port model of 0x0043a8f0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a8f0, retires to the tail in GAME-023 part 3
 void simulation_update_counter_add(GameContext* ctx, int count)
 {
     if (ctx == NULL) {
@@ -3307,7 +3315,8 @@ void simulation_update_counter_add(GameContext* ctx, int count)
     entity_activity_scene_state_update(ctx);
 }
 
-// FUNCTION: LEGORR 0x0043a910
+/* Port model of 0x0043a910 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a910, retires to the tail in GAME-023 part 3
 void simulation_mode_counter_add(int mode, int count)
 {
     (void)mode; /* register residue: the corpus ignores it, count only */
@@ -3322,7 +3331,8 @@ void simulation_mode_counter_add(int mode, int count)
  * strides the DAT_004eabcc window up to its count word blindly; the port
  * rides the s_idle100 model's used window (the corpus keeps walking past
  * a hit, pinned). */
-// FUNCTION: LEGORR 0x0043a930
+/* Port model of 0x0043a930 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a930, retires to the tail in GAME-023 part 3
 void ai_idle_table_pointer_remove(void* pointer)
 {
     for (int i = 0; i < s_idle100_n; ++i) {
@@ -3336,7 +3346,8 @@ void ai_idle_table_pointer_remove(void* pointer)
  * tile before appending it to the 100-slot high-water table. A NULL entity
  * or missing current level returns safely because the portable runtime has
  * no record or map pointer to inspect in those cases. */
-// FUNCTION: LEGORR 0x0043a960
+/* Port model of 0x0043a960 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043a960, retires to the tail in GAME-023 part 3
 void ai_lava_crust_activity_register(GameContext* ctx, EntitySlot* e)
 {
     const LevelState* grid;
@@ -11241,4 +11252,13 @@ static int render_entity_callback(EntitySlot* entity, void* payload)
     if (s_render_entity_hook != NULL)
         s_render_entity_hook(entity, s_render_entity_user);
     return 0;
+}
+
+/* ---- group G adapters (GAME-023 part 1, legoobject_unit.c) ---- */
+
+/* 00447b30 (EntityActivityTick) with C linkage for legoobject_unit.c. */
+// PORT-ONLY: original-ABI adapter for 0x00447b30, called by legoobject_unit.c
+extern "C" float legoobject_activity_tick_adapter(EntitySlot* entity, float delta)
+{
+    return unported_ledger_stubs::ledger_stub_00447b30_EntityActivityTick(entity, delta);
 }
