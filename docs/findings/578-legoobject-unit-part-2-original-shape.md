@@ -6,7 +6,7 @@ in layout and method. This change rebuilds `0043a9e0`–`00445830` (functions
 87–172 of the unit map) in [`src/game/legoobject_unit.c`](../../src/game/legoobject_unit.c),
 and moves part 1's pulled-forward `0043c490` back into address order.
 
-"Before" is `main` at `05cd8938` (the *match baseline* and `binary-progress.json`
+"Before" is `main` at `31da2ab6` (the *match baseline* and `binary-progress.json`
 there). "After" is this change. Scores come from the full matching build
 (`make reccmp-check`).
 
@@ -14,13 +14,13 @@ there). "After" is this change. Scores come from the full matching build
 
 | | before | after |
 | --- | ---: | ---: |
-| Range similarity (byte-weighted, 101 functions, 45,218 bytes without `0x90` fill) | 15.25% | **88.22%** |
-| Exact functions in the range | 4 | **57 of 101** |
+| Range similarity (byte-weighted, 101 functions, 45,218 bytes without `0x90` fill) | 15.25% | **88.39%** |
+| Exact functions in the range | 4 | **60 of 101** |
 | Mapped functions in the range | 82 | 101 |
 | Exact functions in part 1 (`00436c20`–`0043a960`) | 64 of 90 | 69 of 90 |
-| Exact functions, full / game-only | 1,238 / 1,038 | **1,296 / 1,096** |
-| Accuracy, full / game-only (`binary-progress.json`) | 73.97% / 71.34% | **76.06% / 73.67%** |
-| Exact-function code bytes | 115,442 (17.97%) | **124,886 (19.44%)** |
+| Exact functions, full / game-only | 1,240 / 1,040 | **1,301 / 1,101** |
+| Accuracy, full / game-only (`binary-progress.json`) | 73.97% / 71.35% | **76.07% / 73.68%** |
+| Exact-function code bytes | 128,629 (20.02%) | **139,499 (21.71%)** |
 | `opt_ref` annotated removed, full (exact) | 762 (346) | **604 (279)** |
 | `opt_ref` annotated removed, game-only (exact) | 743 (333) | 586 (267) |
 | `legoobject_unit.c`: annotated / removed by `/OPT:REF` (exact) | 91 / 24 (18) | 191 / 27 (23) |
@@ -69,8 +69,8 @@ unmapped function counts as 0%.
 | `0043b8d0` | `legoobject_lod_meshes_update_callback` | 529 | — | 96.55 |
 | `0043baf0` | `legoobject_flags_mask107c33de_or_1c00203_any_test` | 40 | **100.00** | **100.00** |
 | `0043bb20` | `legoobject_building_deposit_state_monitor` | 152 | 28.15 | 96.08 |
-| `0043bbc0` | `legoobject_detach_carried_object_and_reset_state` | 120 | 63.89 | 96.67 |
-| `0043bc40` | `legoobject_objective_sidecar_append_gate` | 1472 | 39.16 | 97.99 |
+| `0043bbc0` | `legoobject_detach_carried_object_and_reset_state` | 120 | 63.89 | **100.00** |
+| `0043bc40` | `legoobject_objective_sidecar_append_gate` | 1472 | 39.16 | 98.88 |
 | `0043c200` | `legoobject_state_pair_predicate` | 125 | 26.36 | 88.37 |
 | `0043c280` | `legoobject_nested_float_add_unless_blocked` | 46 | 85.71 | **100.00** |
 | `0043c2b0` | `legoobject_periodic_timer25_advance` | 58 | 14.41 | **100.00** |
@@ -83,7 +83,7 @@ unmapped function counts as 0%.
 | `0043c570` | `legoobject_kind_four_post_create_resolve` | 222 | 30.27 | 97.26 |
 | `0043c650` | `legoobject_capacity_or_state_predicate` | 86 | 37.33 | **100.00** |
 | `0043c6b0` | `legoobject_activity_counters_advance` | 339 | 43.88 | **100.00** |
-| `0043c810` | `legoobject_update_callback` | 9864 | — | 88.24 |
+| `0043c810` | `legoobject_update_callback` | 9864 | — | 88.60 |
 | `0043eea0` | `legoobject_simulation_queue_flush` | 598 | — | 89.26 |
 | `0043f100` | `legoobject_linked_route_flag_clear` | 40 | 69.23 | **100.00** |
 | `0043f130` | `legoobject_trigger_frame_callback` | 28 | — | **100.00** |
@@ -92,8 +92,8 @@ unmapped function counts as 0%.
 | `0043f560` | `legoobject_pool_find_with_local_predicate` | 19 | 14.81 | **100.00** |
 | `0043f580` | `legoobject_pool_find_local_predicate_callback` | 37 | — | **100.00** |
 | `0043f5b0` | `legoobject_linked_activity_event_dispatch` | 232 | — | **100.00** |
-| `0043f6a0` | `legoobject_damage_apply` | 304 | 65.22 | 92.22 |
-| `0043f7d0` | `legoobject_energy_low_target_route_command_tick` | 872 | 28.47 | 98.83 |
+| `0043f6a0` | `legoobject_damage_apply` | 304 | 65.22 | 93.33 |
+| `0043f7d0` | `legoobject_energy_low_target_route_command_tick` | 872 | 28.47 | **100.00** |
 | `0043fb40` | `legoobject_damage_hurt_sound_submit` | 223 | — | **100.00** |
 | `0043fc20` | `legoobject_record_pair_pose_copy_and_activity_raise` | 402 | 22.53 | **100.00** |
 | `0043fdc0` | `legoobject_action_target_cell_is_valid` | 168 | — | **100.00** |
@@ -116,7 +116,7 @@ unmapped function counts as 0%.
 | `00441940` | `legoobject_action_sequence_reset` | 491 | 44.52 | **100.00** |
 | `00441b30` | `legoobject_state_reset` | 870 | 41.26 | **100.00** |
 | `00441ea0` | `legoobject_type5_finalize_if_allowed` | 39 | 37.04 | **100.00** |
-| `00441ed0` | `legoobject_face_target_action_start` | 502 | 18.72 | 98.12 |
+| `00441ed0` | `legoobject_face_target_action_start` | 502 | 18.72 | 98.75 |
 | `004420d0` | `legoobject_kind_effect_slot_init_dispatch` | 308 | 7.36 | 96.08 |
 | `00442210` | `legoobject_action_route_state_initialize` | 66 | 41.67 | **100.00** |
 | `00442260` | `legoobject_transform_position_get` | 56 | 23.19 | **100.00** |
@@ -140,7 +140,7 @@ unmapped function counts as 0%.
 | `004440a0` | `legoobject_linked_flag_and_command_update` | 70 | 31.82 | **100.00** |
 | `004440f0` | `legoobject_activity_timeout_accumulate_and_raise` | 358 | 11.31 | **100.00** |
 | `00444260` | `legoobject_random_cell_step_route_issue` | 509 | 34.37 | **100.00** |
-| `00444460` | `legoobject_flagged_vector_step_command_issue` | 434 | 19.15 | 98.61 |
+| `00444460` | `legoobject_flagged_vector_step_command_issue` | 434 | 19.15 | **100.00** |
 | `00444620` | `legoobject_enter_event21_state_once` | 91 | 87.10 | **100.00** |
 | `00444680` | `legoobject_step_movement_vector_resolve` | 2344 | 4.88 | 64.85 |
 | `00444fb0` | `legoobject_turn_to_vector_activity_issue` | 556 | 26.04 | 70.66 |
@@ -149,7 +149,7 @@ unmapped function counts as 0%.
 | `004455a0` | `legoobject_move_vector_surface_probe` | 308 | 16.54 | 75.83 |
 | `004456e0` | `legoobject_behavior_callback_tick` | 133 | 17.65 | **100.00** |
 | `00445770` | `legoobject_behavior_callback_a` | 177 | — | 92.68 |
-| `00445830` | `legoobject_behavior_callback_b` | 1342 | — | 75.28 |
+| `00445830` | `legoobject_behavior_callback_b` | 1342 | — | 75.52 |
 
 
 ### What is left
@@ -165,10 +165,10 @@ unmapped function counts as 0%.
 | `00445830`, `00445340`, `004455a0` | 73–76 | frame slots (the original reuses the dead `obj` parameter slot for `dist`), x87 scheduling, the loop base `&points[i].y` |
 | `0043b6c0` | 77.69 | the y bounds are compared on the x87 stack (`fld; fld; fcompp`); every form tried moves them as integers |
 | `0043fe70`, `0043fff0`, `004403d0` | 82–86 | stack-slot layout only (the original keeps the route lists in the dead parameter slots); 400 declaration orders moved nothing |
-| `0043c810` | 88.46 | the frame size (0x3c) and control flow match; locals land in other slots (the original's scoping is not recovered), and 14 bytes of x87/test-byte forms: `fld/fstp` against `mov` for `+0x2c8`, `fld; fcomp st(1)`, and `and edx,3; test dl,dl`, which MSVC folds into `test byte ptr` in about fifteen forms |
+| `0043c810` | 88.60 | the frame size (0x3c) and control flow match; locals land in other slots (the original's scoping is not recovered), and 14 bytes of x87/test-byte forms: `fld/fstp` against `mov` for `+0x2c8`, `fld; fcomp st(1)`, and `and edx,3; test dl,dl`, which MSVC folds into `test byte ptr` in about fifteen forms |
 | `0043b3b0`, `0043eea0` | 86–89 | block order of a skip loop; `sete; cmp ecx,1`, which MSVC folds |
 | `0043c200`, `0043f6a0`, `0043af30` | 88–97 | symbol-counter ties (rule B): `0043c200` scored 100% in two of the group trees and flips with the declaration count before it |
-| the rest at 91–99.6% | | adapter operands (`0046d380` Vehicle_SetPosition, `00446610`, `004477d0`, `00435aa0`, placement), the `0x800000` immediate Reccmp reads as an address, one `fxch` (`00445770`) |
+| the rest at 91–99.6% | | adapter operands (`0046d380` Vehicle_SetPosition, `00446610`, `004477d0`, `00435aa0`, placement), one `fxch` (`00445770`) |
 
 ## How the conversion is laid out
 
@@ -310,25 +310,21 @@ Gaps (`make opt-ref-callers`), left as they are because the contracts differ:
 
 ## Entropy and drops
 
-`make reccmp-check` against `main` (`05cd8938`): 99 improved, 19 newly mapped,
-**33 below baseline, all `drift; instructions +0`**. For each, the rebuilt
-listing's normalised digest (`match-listing-digests.txt`, registers, names and
-addresses masked) equals `main`'s: our code is unchanged.
-
-- **21 call-operand drops**: 19 part-3 functions in `legoobject.cpp`, plus
-  `00409f20` (`entity_cell_effects.cpp`) and `004526e0` (`message_unit.cpp`),
-  still call port models at addresses that now name the unit's functions
-  (as in finding 572).
-- **12 data-operand drops**, among them two exact matches that become
-  byte-identical non-matches, **`00402510`** (100 → 98.78) and **`004667e0`**
-  (100 → 99.92): finding 580's Cause A. The original's `or …, 0x800000`
-  immediate now falls inside the port's `.bss` array
-  `s_entity_path_motion_runtime`, and Reccmp names it there. #604 fixes this
-  separately. The others are `00407a10`, `00409600`, `0041fb50`, `0042b330`,
-  `0042f6f0`, `00430530`, `00447ea0`, `0044bfd0`, `00477bf0` and `00482b50`.
-
-None is owner-reviewed. Under ADR 0005's entropy rule 2 the baseline is
+`make reccmp-check` against `main` (`31da2ab6`): 99 improved, 19 newly mapped,
+**21 below baseline, all `drift; instructions +0`**, and no exact match lost.
+For each, the rebuilt listing's normalised digest (`match-listing-digests.txt`,
+registers, names and addresses masked) equals `main`'s: our code is unchanged.
+They are 19 part-3 functions in `legoobject.cpp`, plus `00409f20`
+(`entity_cell_effects.cpp`) and `004526e0` (`message_unit.cpp`), that still call
+port models at addresses that now name the unit's functions (as in finding
+572). None is owner-reviewed. Under ADR 0005's entropy rule 2 the baseline is
 refreshed.
+
+On `05cd8938`, before #604, twelve more functions dropped on data operands,
+among them two byte-identical exact ones (`00402510`, `004667e0`): finding
+580's Cause A, where the original's `0x800000` immediate fell inside the port's
+`.bss` array `s_entity_path_motion_runtime`. #604 (finding 584) removed them;
+on `31da2ab6` none remains.
 
 ## How the work was split
 
@@ -373,9 +369,9 @@ merged tree loses to rule B.
 
 ## Validation
 
-On `05cd8938`:
+On `31da2ab6`:
 
-- `make reccmp-check`: the 33 drops above (accepted, not owner-reviewed); link
+- `make reccmp-check`: the 21 drops above (accepted, not owner-reviewed); link
   order map check OK; `make winapi-link-check` OK.
 - `make match-progress` regenerated the baseline, the listing digests and
   `binary-progress.json`; `tools/binary_progress_inputs.txt` rewritten with
