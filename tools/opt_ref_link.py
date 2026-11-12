@@ -24,6 +24,19 @@ that mode and measures what it removes.
         removes and how many of them are exact, and the relinked image's
         sections, thunks, entry point and import order.
 
+    python3 tools/opt_ref_link.py callers [--build build-reccmp]
+        [--out build-reccmp/opt-ref] [--object NAME ...] [--min N] [--json out.json]
+        For each object with at least N removed annotated functions
+        (default 15), list them with their callers in the original (from
+        its direct calls, so not through tables) and the state of each
+        caller in the rebuild: ``live`` (kept by the relink), ``removed``
+        or ``unmapped``. For a live caller it names what the rebuilt caller
+        calls at the original's call site instead, which is the port
+        substitute to switch (#589, finding 579). ``roots`` names the
+        objects of the topmost removed callers: the removed functions a
+        live caller has to reach first. It needs ``capstone`` and
+        ``reference/LegoRR.exe``.
+
 ``binary_progress.py`` records ``measure``'s result as ``opt_ref`` in
 ``binary-progress.json`` when the relink exists; ``make match-progress``
 runs ``relink`` first.
@@ -32,7 +45,9 @@ runs ``relink`` first.
 from __future__ import annotations
 
 import argparse
+import bisect
 import collections
+import difflib
 import json
 import shlex
 import subprocess
@@ -251,10 +266,180 @@ def format_summary(result: dict) -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# Callers of the removed functions (#589, finding 579)
+
+
+def call_site_substitutes(original_calls: list[int], rebuilt_calls: list[int],
+                          to_rebuilt: dict[int, int], target: int) -> list:
+    """What a rebuilt caller calls where the original calls ``target``.
+
+    ``original_calls`` and ``rebuilt_calls`` are the direct call targets of
+    one function in the original and in the rebuild, in address order.
+    ``to_rebuilt`` maps original addresses to rebuilt ones. The two
+    sequences are aligned on the calls that agree; inside a differing run of
+    equal length each original call pairs with the rebuilt call at the same
+    position, otherwise with the whole run (a list). ``None`` means the
+    rebuild has no call there.
+    """
+    mapped = [to_rebuilt.get(t, ("original", t)) for t in original_calls]
+    out = []
+    matcher = difflib.SequenceMatcher(None, mapped, rebuilt_calls, autojunk=False)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        for k in range(i1, i2):
+            if original_calls[k] != target or tag == "equal":
+                continue
+            if tag == "delete":
+                out.append(None)
+            elif i2 - i1 == j2 - j1:
+                out.append(rebuilt_calls[j1 + k - i1])
+            else:
+                out.append(list(rebuilt_calls[j1:j2]))
+    return out
+
+
+def dead_roots(removed: set[int], callers: dict[int, set[int]]) -> dict[int, set[int]]:
+    """The topmost removed callers of each removed function.
+
+    A root is a removed function that no removed function calls; reviving
+    it (a live caller) revives everything below it. A removed function
+    without removed callers is its own root.
+    """
+    memo: dict[int, set[int]] = {}
+
+    def walk(addr, stack):
+        if addr in memo:
+            return memo[addr]
+        up = [c for c in callers.get(addr, ()) if c in removed and c not in stack]
+        if not up:
+            result = {addr}
+        else:
+            result = set()
+            for c in up:
+                result |= walk(c, stack | {addr})
+        memo[addr] = result
+        return result
+    return {a: walk(a, frozenset()) for a in removed}
+
+
+def _direct_calls(md, image: bytes, base: int, start: int, end: int) -> list[int]:
+    return [int(i.op_str, 16) for i in md.disasm(image[start - base:end - base], start)
+            if i.mnemonic == "call" and i.op_str.startswith("0x")]
+
+
+def caller_report(build: Path, out: Path, original: Path, objects=None,
+                  min_removed: int = 15) -> dict:
+    """Removed annotated functions per object, with their original callers."""
+    import capstone
+    import pefile
+    rows = load_rows(build / "reccmp-report/results.json") or []
+    gate_map = (build / "LegoRR.map").read_text(encoding="latin-1")
+    _, ref_symbols = pe_audit.parse_map((out / "LegoRR.map").read_text(encoding="latin-1"))
+    kept = {s["name"] for s in ref_symbols if s["section"] == 1}
+    annotated = {int(r["recomp"], 16): r for r in rows if r.get("recomp")}
+    gate = winapi_link_audit.text_symbols(gate_map, link_order.load(), set(annotated))
+    by_object = collections.defaultdict(list)
+    removed = {}
+    for s in gate:
+        row = annotated.get(s["address"])
+        if row is not None and s["name"] not in kept:
+            orig = int(row["address"], 16)
+            removed[orig] = s["object"]
+            by_object[s["object"]].append((orig, row, s["name"]))
+    to_rebuilt = {int(r["address"], 16): int(r["recomp"], 16) for r in rows if r.get("recomp")}
+    by_original = {int(r["address"], 16): r for r in rows}
+    md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
+    o_pe, r_pe = pefile.PE(str(original)), pefile.PE(str(build / "LegoRR.exe"))
+    o_img, r_img = o_pe.get_memory_mapped_image(), r_pe.get_memory_mapped_image()
+    base = o_pe.OPTIONAL_HEADER.ImageBase
+    o_text = next(s for s in o_pe.sections if pe_audit.section_name(s) == ".text")
+    t0 = base + o_text.VirtualAddress
+    t1 = t0 + o_text.Misc_VirtualSize
+    # Function starts: the annotated ones and every direct call target.
+    starts = set(by_original) | {t for t in _direct_calls(md, o_img, base, t0, t1) if t0 <= t < t1}
+    starts = sorted(starts)
+
+    def o_end(a):
+        i = bisect.bisect_right(starts, a)
+        return starts[i] if i < len(starts) else min(a + 0x1000, t1)
+    callers = collections.defaultdict(set)
+    o_calls = {}
+    for a in by_original:
+        if not t0 <= a < t1:
+            continue
+        o_calls[a] = _direct_calls(md, o_img, base, a, o_end(a))
+        for t in o_calls[a]:
+            if t in by_original and t != a:
+                callers[t].add(a)
+    r_text = sorted((s["address"], s["name"], s["object"]) for s in gate)
+    r_addr = [t[0] for t in r_text]
+
+    def r_name(a):
+        i = bisect.bisect_right(r_addr, a) - 1
+        return f"{r_text[i][1]} ({r_text[i][2]})" if i >= 0 and r_addr[i] == a else hex(a)
+
+    def r_end(a):
+        i = bisect.bisect_right(r_addr, a)
+        return r_addr[i] if i < len(r_addr) else a + 0x1000
+    roots = dead_roots(set(removed), callers)
+    report = {}
+    for obj, entries in sorted(by_object.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        if objects and obj not in objects:
+            continue
+        if not objects and len(entries) < min_removed:
+            continue
+        functions = []
+        for orig, row, symbol in sorted(entries, key=lambda e: e[0]):
+            calls = []
+            for c in sorted(callers.get(orig, ())):
+                crow = by_original[c]
+                entry = {"address": f"{c:#x}", "name": crow.get("name")}
+                if not crow.get("recomp"):
+                    entry["state"] = "unmapped"
+                elif c in removed:
+                    entry["state"] = "removed"
+                else:
+                    entry["state"] = "live"
+                    r = int(crow["recomp"], 16)
+                    subs = call_site_substitutes(
+                        o_calls.get(c, []), _direct_calls(md, r_img, base, r, r_end(r)),
+                        to_rebuilt, orig)
+                    entry["rebuilt_calls"] = [
+                        None if x is None else [r_name(y) for y in x] if isinstance(x, list)
+                        else r_name(x) for x in subs]
+                calls.append(entry)
+            functions.append({"address": f"{orig:#x}", "name": row.get("name"),
+                              "symbol": symbol, "exact": row.get("matching") == 1.0,
+                              "callers": calls,
+                              "roots": sorted({removed[r] for r in roots[orig]})})
+        report[obj] = {"removed": len(functions),
+                       "exact_removed": sum(f["exact"] for f in functions),
+                       "functions": functions}
+    return report
+
+
+def format_callers(report: dict) -> str:
+    lines = []
+    for obj, data in report.items():
+        lines.append(f"{obj}: {data['removed']} removed, {data['exact_removed']} exact")
+        for f in data["functions"]:
+            roots = ", ".join(r for r in f["roots"] if r != obj) or "this object"
+            lines.append(f"  {f['address']} {'E' if f['exact'] else ' '} {f['name']}"
+                         f"  [roots: {roots}]")
+            for c in f["callers"]:
+                text = f"      <- {c['address']} {c['name']} ({c['state']})"
+                if c.get("rebuilt_calls"):
+                    text += " calls instead: " + "; ".join(
+                        "no call" if x is None else " | ".join(x) if isinstance(x, list) else x
+                        for x in c["rebuilt_calls"])
+                lines.append(text)
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("relink", "measure"):
+    for name in ("relink", "measure", "callers"):
         p = sub.add_parser(name)
         p.add_argument("--build", type=Path, default=DEFAULT_BUILD)
         p.add_argument("--out", type=Path)
@@ -266,6 +451,11 @@ def main(argv: list[str] | None = None) -> int:
         else:
             p.add_argument("--original", type=Path, default=ROOT / "reference/LegoRR.exe")
             p.add_argument("--json", type=Path)
+        if name == "callers":
+            p.add_argument("--object", action="append", default=[],
+                           help="only this object (map name, e.g. reward.c.obj)")
+            p.add_argument("--min", type=int, default=15,
+                           help="objects with at least this many removed functions")
     args = parser.parse_args(argv)
     out = args.out or args.build / OUT_NAME
     if args.command == "relink":
@@ -274,6 +464,12 @@ def main(argv: list[str] | None = None) -> int:
         if not path.is_file():
             print(f"missing {path}; run make opt-ref-link first", file=sys.stderr)
             return 2
+    if args.command == "callers":
+        report = caller_report(args.build, out, args.original, set(args.object), args.min)
+        if args.json:
+            args.json.write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
+        print(format_callers(report))
+        return 0
     result = measure(args.build, out, args.original)
     if args.json:
         args.json.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n",

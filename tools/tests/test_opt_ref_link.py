@@ -142,5 +142,50 @@ class RemovedCodeTests(unittest.TestCase):
         self.assertIn("annotated (full): 2 of 5 removed, 1 of 3 exact", text)
 
 
+class CallerTests(unittest.TestCase):
+    # Original 0x500 calls a, F, b; its rebuild calls a', P, b'.
+    TO_REBUILT = {0x100: 0x1100, 0x200: 0x1200, 0x300: 0x1300}
+
+    def test_substitute_at_the_call_site(self):
+        subs = opt.call_site_substitutes([0x100, 0x400, 0x300], [0x1100, 0x9000, 0x1300],
+                                         self.TO_REBUILT, 0x400)
+        self.assertEqual(subs, [0x9000])
+
+    def test_no_call_and_uneven_runs(self):
+        self.assertEqual(opt.call_site_substitutes([0x100, 0x400, 0x300], [0x1100, 0x1300],
+                                                   self.TO_REBUILT, 0x400), [None])
+        self.assertEqual(opt.call_site_substitutes([0x100, 0x400, 0x300],
+                                                   [0x1100, 0x9000, 0x9100, 0x1300],
+                                                   self.TO_REBUILT, 0x400),
+                         [[0x9000, 0x9100]])
+
+    def test_agreeing_call_is_not_a_substitute(self):
+        # The rebuild already calls the function (it is not removed then).
+        self.assertEqual(opt.call_site_substitutes([0x100], [0x1100], self.TO_REBUILT, 0x100), [])
+
+    def test_dead_roots(self):
+        # 1 -> 2 -> 3, 4 -> 3; 5 alone; 6 <-> 7 (a removed cycle).
+        callers = {2: {1}, 3: {2, 4}, 7: {6}, 6: {7}}
+        roots = opt.dead_roots({1, 2, 3, 4, 5, 6, 7}, callers)
+        self.assertEqual(roots[3], {1, 4})
+        self.assertEqual(roots[2], {1})
+        self.assertEqual(roots[5], {5})
+        self.assertTrue(roots[6] and roots[7])
+
+    def test_live_caller_is_not_a_root(self):
+        # 9 is live (not removed): 3's root is 3 itself.
+        self.assertEqual(opt.dead_roots({3}, {3: {9}})[3], {3})
+
+    def test_format(self):
+        report = {"x.c.obj": {"removed": 1, "exact_removed": 1, "functions": [
+            {"address": "0x400", "name": "f", "exact": True, "roots": ["y.c.obj"],
+             "callers": [{"address": "0x500", "name": "g", "state": "live",
+                          "rebuilt_calls": ["port_f (z.cpp.obj)", None]}]}]}}
+        text = opt.format_callers(report)
+        self.assertIn("x.c.obj: 1 removed, 1 exact", text)
+        self.assertIn("0x400 E f  [roots: y.c.obj]", text)
+        self.assertIn("<- 0x500 g (live) calls instead: port_f (z.cpp.obj); no call", text)
+
+
 if __name__ == "__main__":
     unittest.main()

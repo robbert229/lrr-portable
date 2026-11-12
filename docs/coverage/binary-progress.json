@@ -1,9 +1,9 @@
 {
   "accuracy_percent": {
-    "full": 71.58,
-    "game_only": 68.69
+    "full": 71.59,
+    "game_only": 68.7
   },
-  "baseline_sha256": "4a8becb030c1e9393ee426982123a454aee50c638259803be53f54936667360c",
+  "baseline_sha256": "3c6ed0f12851d486aff3ab3a4ffd78bfc8e043e7fa60f54f4484698ae926285b",
   "exact_function_code_bytes": {
     "bytes": 105485,
     "original_text_bytes": 642549,
@@ -23,7 +23,7 @@
       "pairs": 1596
     }
   },
-  "input_sha256": "738fb897432e7e69e0ec76bc48defb546f28ca9dd920d5aacb5e4322c12482b0",
+  "input_sha256": "011ecc41e71bd5ae5ec32438dd5a4b94c09e2201d6343b9929c74cae915696f1",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 8,
@@ -4028,29 +4028,29 @@
     ],
     "unmapped_original_functions": 158
   },
-  "listing_digests_sha256": "20700c2d39f13a8799d01364b06bca7e6297d6bfe635fee32fc921b7d2a2eda3",
+  "listing_digests_sha256": "c95502422a2c853f427c88bb1381133312efb1654ed48c46cf4fc7343853c5b2",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
         "exact": 1174,
         "mapped": 2496,
-        "removed": 1304,
-        "removed_exact": 586
+        "removed": 1303,
+        "removed_exact": 585
       },
       "game_only": {
         "exact": 974,
         "mapped": 2260,
-        "removed": 1267,
-        "removed_exact": 557
+        "removed": 1266,
+        "removed_exact": 556
       }
     },
     "annotated_by_kind": {
       "legacy": {
         "bytes": 70336,
         "functions": 283,
-        "removed_bytes": 23584,
-        "removed_functions": 119
+        "removed_bytes": 23568,
+        "removed_functions": 118
       },
       "unit": {
         "bytes": 396048,
@@ -4063,8 +4063,8 @@
       "import_thunks": {
         "bytes": 1036,
         "functions": 152,
-        "removed_bytes": 1000,
-        "removed_functions": 146
+        "removed_bytes": 1006,
+        "removed_functions": 147
       },
       "libc": {
         "bytes": 69344,
@@ -4075,8 +4075,8 @@
       "original_annotated": {
         "bytes": 466384,
         "functions": 2259,
-        "removed_bytes": 275824,
-        "removed_functions": 1267
+        "removed_bytes": 275808,
+        "removed_functions": 1266
       },
       "other": {
         "bytes": 4152,
@@ -4124,7 +4124,7 @@
         "gdi32.dll",
         "advapi32.dll"
       ],
-      "import_thunks": 6,
+      "import_thunks": 5,
       "imported_names": 141,
       "section_bytes": {
         ".data": {
@@ -4146,10 +4146,10 @@
           "rebuilt": 24184
         },
         ".text": {
-          "differing": 672496,
-          "equal": 18202,
+          "differing": 672564,
+          "equal": 18118,
           "original": 642549,
-          "rebuilt": 690698
+          "rebuilt": 690682
         }
       },
       "sections": {
@@ -4170,14 +4170,13 @@
           "virtual_size": 1348
         },
         ".text": {
-          "raw_size": 691200,
-          "virtual_size": 690698
+          "raw_size": 690688,
+          "virtual_size": 690682
         }
       },
       "thunk_order": [
         "d3drm.dll:_D3DRMVectorRandom@4",
         "d3drm.dll:_D3DRMVectorRotate@16",
-        "winmm.dll:_timeGetTime@0",
         "dinput-data:_c_dfDIMouse",
         "dinput-data:_c_dfDIKeyboard",
         "dinput.dll:_DirectInputCreateA@16",
@@ -4185,7 +4184,7 @@
         "kernel32.dll:_RtlUnwind@16"
       ]
     },
-    "removed_bytes": 414664,
+    "removed_bytes": 414654,
     "removed_functions": 3238
   },
   "pe_header_differences": {

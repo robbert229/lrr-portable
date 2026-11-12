@@ -803,7 +803,18 @@ aliases at one address are not miscounted. On `1d31a556` this agrees function
 for function with a Reccmp run on a `/DEBUG /OPT:REF` relink.
 
 `python3 tools/opt_ref_link.py relink --out DIR [--keep-debug] [--flag /X]`
-makes scratch variants, and `measure --out DIR` reads them. Tests:
+makes scratch variants, and `measure --out DIR` reads them.
+
+`make opt-ref-callers` (`opt_ref_link.py callers [--object NAME] [--min N]
+[--json FILE]`, finding 579) lists, for each object with at least 15 removed
+annotated functions, those functions with their callers in the original and
+each caller's state in the rebuild: `live`, `removed` or `unmapped`. For a
+live caller it names what the rebuilt caller calls at the original's call
+site, which is the port substitute to switch. `roots` names the objects of
+the topmost removed callers, the functions a live caller has to reach first.
+It reads the original's direct calls with `capstone`, so calls through
+tables are not seen. Use it before rewiring callers so that `/OPT:REF` keeps
+a converted unit's functions. Tests:
 `tools/tests/test_opt_ref_link.py`, in `make tools-test`.
 
 ## Native code in winapi links (`winapi_link_audit.py`)
