@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "camera_shared.hpp"
+#include "camera_for_lego.hpp"
 
 extern "C" short rng_thunk_draw15(void);
 extern "C" float random_float_range(float minimum, float maximum);
@@ -17,9 +18,9 @@ int   g_camera_grid_enabled = 1;    /* DAT_00556f18 */
 // GLOBAL: LEGORR 0x00556ed8
 float g_camera_countdown  = 0.0f;    /* DAT_00556ed8 */
 static int s_predug_spawn_cells[256][2];
-static uint32_t s_predug_spawn_count;
-static int s_predug_spawn_enabled;
-static const uint8_t* s_spawn_level_block;
+uint32_t s_predug_spawn_count;
+int s_predug_spawn_enabled;
+const uint8_t* s_spawn_level_block;
 static CameraSpawnRandomIndexHook s_spawn_random_index_hook;
 static CameraSpawnRandomAngleHook s_spawn_random_angle_hook;
 static CameraSpawnObjectCellHook s_spawn_object_cell_hook;
@@ -28,29 +29,16 @@ static CameraSpawnCreateHook s_spawn_create_hook;
 static CameraSpawnInitializeHook s_spawn_initialize_hook;
 static void* s_spawn_hook_context;
 static void* s_spawn_coordinate_context;
-static CameraGridSpawnHook s_grid_spawn_hook;
-static void* s_grid_spawn_context;
-static CameraSpawnRegistryProbeHook s_spawn_registry_probe_hook;
-static void* s_spawn_registry_probe_context;
+CameraGridSpawnHook s_grid_spawn_hook;
+void* s_grid_spawn_context;
+CameraSpawnRegistryProbeHook s_spawn_registry_probe_hook;
+void* s_spawn_registry_probe_context;
 CameraMovePostCallback s_move_post_callback;
 void* s_move_post_user;
-static CameraControlRegistryPredicate s_control_registry_predicate;
-static void* s_control_registry_user;
+CameraControlRegistryPredicate s_control_registry_predicate;
+void* s_control_registry_user;
 
 /* --- helper stubs (fill from the corpus one at a time) ------------------- */
-
-/* FUN_0046a4c0's bit ordering and all-pass aggregation are implemented by
- * the game entity layer. Only LAB_0046a490's entity predicate is unknown. */
-static int control_registry_predicate_dispatch(EntitySlot* entity,
-                                               uint32_t bit, void* user)
-{
-    (void)user;
-    if (s_control_registry_predicate == NULL) {
-        return 0;
-    }
-    return s_control_registry_predicate(entity, bit,
-                                        s_control_registry_user);
-}
 
 void camera_entity_callback_hooks_set(CameraMovePostCallback move_callback,
                                       void* move_user,
@@ -64,29 +52,10 @@ void camera_entity_callback_hooks_set(CameraMovePostCallback move_callback,
     s_control_registry_user = control_user;
 }
 
-/* Spawn one pending grid cell through the installed game entity factory. */
-static int grid_spawn(uint32_t* coords, uint32_t hint)
-{
-    if (coords == NULL || s_grid_spawn_hook == NULL) return 0;
-    return s_grid_spawn_hook(coords, hint, s_grid_spawn_context);
-}
-
 void camera_grid_spawn_hook_set(CameraGridSpawnHook hook, void* context)
 {
     s_grid_spawn_hook = hook;
     s_grid_spawn_context = context;
-}
-
-/* Query the game-owned registry before issuing a delayed spawn. */
-static int spawn_probe(int first, int second)
-{
-    if (s_spawn_registry_probe_hook != NULL) {
-        return s_spawn_registry_probe_hook(first, second,
-                                           s_spawn_registry_probe_context);
-    }
-    /* The level-backed pool is the supported eligibility signal until the
-     * entity registry callback is connected by the game layer. */
-    return s_predug_spawn_enabled != 0 && s_predug_spawn_count != 0u;
 }
 
 void camera_spawn_registry_probe_hook_set(CameraSpawnRegistryProbeHook hook,
@@ -94,20 +63,6 @@ void camera_spawn_registry_probe_hook_set(CameraSpawnRegistryProbeHook hook,
 {
     s_spawn_registry_probe_hook = hook;
     s_spawn_registry_probe_context = context;
-}
-static void spawn_issue(int source_object, uint32_t type)
-{
-    predug_spawn_coordinate_select_and_create(source_object, (int)type);
-}
-
-static int control_probe(uint32_t mask)
-{
-    GameContext* game = entity_pool_callback_context_get();
-    if (s_control_registry_predicate == NULL) {
-        return 0;
-    }
-    return entity_flag_mask_callbacks_predicate_all_pass(
-        game, mask, control_registry_predicate_dispatch, NULL);
 }
 
 void camera_predug_spawn_state_install(const int* cell_xy, uint32_t count,
@@ -228,111 +183,10 @@ void* predug_spawn_coordinate_select_and_create(int source_object, int type)
 
 /* --- the six corpus functions -------------------------------------------- */
 
-/* MainSimFeatureFlagLatch (FUN_00435a50): probe control 0x40b when state
- * bit 0x08000000 is set, then latch debug bit 0x2. Context-owned state is
- * the port adaptation of the original globals. */
-// FUNCTION: LEGORR 0x00435a50
-void camera_registry_probe(EngineContext* ctx)
-{
-    if (ctx == NULL) {
-        return;
-    }
-    if ((ctx->state & 0x8000000u) != 0) {
-        if (control_probe(0x40bu)) {
-            ctx->debug |= 2u;
-        }
-    }
-}
-
 /* Camera-context state root used by the reconstructed camera helpers. */
 EngineState* camera_state_root(EngineContext* ctx)
 {
     return ctx != NULL ? ctx->state_block : NULL;
-}
-
-// FUNCTION: LEGORR 0x0042c440
-void camera_grid_timers(EngineContext* ctx, float dt)
-{
-    EngineState* st = ctx != NULL ? ctx->state_block : NULL;
-    if (st == NULL || st->move_list == NULL || st->move_list_count == 0) {
-        return;
-    }
-    uint8_t* base = (uint8_t*)st->move_list;
-    for (uint32_t i = 0; i < st->move_list_count; ++i) {
-        float* f = (float*)(base + 0xc + i * 0x4c);
-        if (*f > 0.0f) {
-            *f -= dt;
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x0042cb70
-void camera_grid_expiry(EngineContext* ctx, float dt)
-{
-    EngineState* st = ctx != NULL ? ctx->state_block : NULL;
-    /* Prefer the bound level's voxel grid (width/height +0x14/0x18, voxels
-     * via the resolved pointer — the raw +0xb8 word truncates on 64-bit). */
-    const uint8_t* cells = NULL;
-    uint32_t gw = 0, gh = 0;
-    if (ctx != NULL && ctx->level_block != NULL) {
-        gw = (uint32_t)engine_level_width(ctx);
-        gh = (uint32_t)engine_level_height(ctx);
-        cells = ctx->level_voxels;
-        if (cells == NULL) {
-            cells = (const uint8_t*)engine_level_ptr(ctx, 0xb8);
-        }
-    } else if (st != NULL) {
-        gw = st->grid_w;
-        gh = st->grid_h;
-        cells = (const uint8_t*)st->grid_cells;
-    }
-    if (!g_camera_grid_enabled || gw == 0 || gh == 0 || cells == NULL) {
-        return;
-    }
-    for (uint32_t y = 0; y < gh; ++y) {
-        for (uint32_t x = 0; x < gw; ++x) {
-            uint32_t idx = y * gw + x;
-            uint8_t* cell = (uint8_t*)cells + idx * 0x48;
-            uint32_t busy = *(uint32_t*)(cell + 0x3c);
-            if (busy == 0) {
-                continue;
-            }
-            float* timer = (float*)(cell + 0x40);
-            *timer += dt;
-            uint32_t spent = busy * (uint32_t)g_camera_scale_14 * 0x19;
-            if ((float)spent < *timer) {
-                *timer = 0.0f;
-                uint32_t coords[2] = { x, y };
-                uint32_t hint = *(uint32_t*)(cell + 0x38);
-                if (grid_spawn(coords, hint)) {
-                    message_dispatch(6, 0, 0, coords); /* corpus FUN_00419b80 */
-                }
-            }
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x004261c0
-void camera_spawn_countdown(float dt)
-{
-    const uint8_t* level = s_spawn_level_block;
-    float spawn_interval;
-    uint32_t spawn_type;
-    if (level == NULL) return;
-    /* The reference reads the re-arm interval and type from the current
-     * level block at +0x268/+0x26c. */
-    memcpy(&spawn_interval, level + 0x268, sizeof(spawn_interval));
-    memcpy(&spawn_type, level + 0x26c, sizeof(spawn_type));
-    if (spawn_type == 0x14) {
-        return;
-    }
-    g_camera_countdown -= dt;
-    if (g_camera_countdown < 0.0f) {
-        if (spawn_probe(0, 0)) {
-            spawn_issue(0, (uint32_t)spawn_type);
-        }
-        g_camera_countdown = spawn_interval;
-    }
 }
 
 void camera_cluster(EngineContext* ctx, float dt, float scale)

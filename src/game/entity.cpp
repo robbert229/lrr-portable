@@ -44,6 +44,7 @@
 #include "frontend.hpp"
 #include "entity_shared.hpp"
 #include "entity_from_entity_stats.hpp"
+#include "entity_from_lego.hpp"
 extern "C" float random_float_range(float minimum, float maximum);
 
 static uint32_t s_next_ddiscene_owner_token = 1u;
@@ -153,9 +154,9 @@ static EntityVisualResourcePresentHook s_entity_visual_resource_present_hook;
 static EntityVisualResourceCreateHook s_entity_visual_resource_create_hook;
 static EntityTeardownHooks s_entity_teardown_hooks;
 static EntitySlot* s_entity_teardown_free_head;
-static EntityCommandStatusFeedbackHooks s_entity_command_feedback_hooks;
-static EntitySlot* s_entity_command_feedback_last_entity;
-static char s_entity_command_feedback_last_text[256];
+EntityCommandStatusFeedbackHooks s_entity_command_feedback_hooks;
+EntitySlot* s_entity_command_feedback_last_entity;
+char s_entity_command_feedback_last_text[256];
 static void* s_entity_visual_resource_context;
 EntitySceneSlotRuntimeOps s_entity_scene_slot_runtime_ops;
 static EntitySurfaceScaleReadHook s_entity_surface_scale_read_hook;
@@ -393,21 +394,6 @@ void entity_kind_name_tables_install(int kind, const char* const* names,
     }
     s_entity_kind_name_counts[kind] = count;
 }
-
-// GLOBAL: LEGORR 0x004a3f40
-static const char s_item_name_spider_web[] = "SpiderWeb";
-// GLOBAL: LEGORR 0x004a3f90
-static const char s_item_name_electric_fence[] = "ElectricFence";
-// GLOBAL: LEGORR 0x004a3fa0
-static const char s_item_name_processed_ore[] = "ProcessedOre";
-// GLOBAL: LEGORR 0x004a3fb0
-static const char s_item_name_barrier[] = "Barrier";
-// GLOBAL: LEGORR 0x004a3fb8
-static const char s_item_name_ooh_scary[] = "OohScary";
-// GLOBAL: LEGORR 0x004a3fc4
-static const char s_item_name_dynamite[] = "Dynamite";
-// GLOBAL: LEGORR 0x004a46dc
-static const char s_item_name_tv_camera[] = "tvcamera";
 
 /* ItemNameByKindLookup (FUN_004396c0): fixed item labels plus the four
  * runtime-configured vehicle/minifigure/creature/building name tables. */
@@ -843,6 +829,7 @@ extern "C" float random_float_range(float minimum, float maximum);
 #include "crt/crt.hpp"
 #include "entity_for_reward.hpp"
 #include "entity_for_entity_stats.hpp"
+#include "entity_for_lego.hpp"
 
 static uint32_t s_entity_finalize_mode_flags;
 static EntityFinalizeHook s_entity_type5_timeout_hook;
@@ -2013,7 +2000,7 @@ int entity_stride(int type)
 
 /* Table index for a corpus type code (FUN_0042e8b0):
  * 1..4 map to the four typed tables, 5..19 map to the special table. */
-static int entity_tab(int type)
+int entity_tab(int type)
 {
     return (type >= 1 && type <= ENTITY_TYPES - 1) ? type - 1
                                                    : ENTITY_TYPES - 1;
@@ -2027,35 +2014,18 @@ int entity_count(GameContext* ctx, int type)
     return ctx->entity_count[entity_tab(type)];
 }
 
-/* EntityPointer's types 1..4 table lookup (FUN_0042ed70). The port adds
- * bounds/null guards and groups the original special singleton types into
- * one table, so only the regular typed-array branch is represented here. */
-// FUNCTION: LEGORR 0x0042ed70
-const EntitySlot* entity_at(GameContext* ctx, int type, int index)
-{
-    if (ctx == NULL || type < 1 || type > 19) {
-        return NULL;
-    }
-    int tab = entity_tab(type);
-    if (index < 0 || index >= ctx->entity_count[tab]) {
-        return NULL;
-    }
-    return &ctx->entity[tab][index];
-}
-
 /* EntityPoolFindByCallback (FUN_004377d0): the corpus walks each allocated
  * entity chunk, accepts only records whose +0x408 word points to themselves,
  * optionally filters the +0x3e8 0x80000 bit, and returns on the first
  * callback match. pool_link_408 is the native-width mirror of that dword. */
 static GameContext* s_entity_pool_callback_context;
-#define OBJECT_POINTER_REGISTRY_CAPACITY 10u
 // GLOBAL: LEGORR 0x005563b8
-static uint32_t s_object_pointer_registry_words[
+uint32_t s_object_pointer_registry_words[
     OBJECT_POINTER_REGISTRY_CAPACITY];
 // GLOBAL: LEGORR 0x005563e0
-static uint32_t s_object_pointer_registry_count;
+uint32_t s_object_pointer_registry_count;
 /* Native pointer sidecar follows the retail-shaped slots and count. */
-static EntitySlot* s_object_pointer_registry_entities[
+EntitySlot* s_object_pointer_registry_entities[
     OBJECT_POINTER_REGISTRY_CAPACITY];
 
 void object_pointer_registry_reset(void)
@@ -2213,8 +2183,8 @@ static DeferredOListEntityRecord s_deferred_olist_records[200];
 static unsigned int s_deferred_olist_record_count;
 static DeferredOListEntityHooks s_deferred_olist_hooks;
 static LevelState* s_deferred_olist_level;
-static PeriodicEntityCallback s_periodic_entity_callback;
-static void* s_periodic_entity_callback_context;
+PeriodicEntityCallback s_periodic_entity_callback;
+void* s_periodic_entity_callback_context;
 
 #define ENTITY_INDEXED_RECORD_TABLES 320
 struct EntityIndexedRecordTable {
@@ -2483,52 +2453,6 @@ void entity_command_status_feedback_hooks_set(
         s_entity_command_feedback_last_text[0] = '\0';
     }
     else s_entity_command_feedback_hooks = *hooks;
-}
-
-/* EntityCommandStatusFeedbackDispatch (FUN_00428020): suppresses the first
- * observed entity after a selection switch, clears stale empty command text,
- * and routes changed command/status text through the UI adapter. */
-// FUNCTION: LEGORR 0x00428020
-void entity_command_status_feedback_dispatch(EntitySlot* entity)
-{
-    const char* command;
-    const char* status_text;
-    char text[256];
-    unsigned int i;
-    int status;
-    EntityCommandStatusFeedbackHooks* hooks =
-        &s_entity_command_feedback_hooks;
-    if (entity == NULL || hooks->command_text_get == NULL) return;
-    command = hooks->command_text_get(entity, hooks->context);
-    if (command == NULL) return;
-    if (s_entity_command_feedback_last_entity != entity) {
-        s_entity_command_feedback_last_entity = entity;
-        return;
-    }
-    if (command[0] == '\0' && hooks->empty_command_clear != NULL) {
-        hooks->empty_command_clear(entity, hooks->context);
-        s_entity_command_feedback_last_text[0] = '\0';
-        return;
-    }
-    if (command[0] == '\0') return;
-    for (i = 0; i + 1 < sizeof(text) && command[i] != '\0'; ++i)
-        text[i] = command[i];
-    text[i] = '\0';
-    status = hooks->status_get != NULL ?
-        hooks->status_get(entity, hooks->context) : 0;
-    status_text = hooks->status_text_get != NULL ?
-        hooks->status_text_get(entity, status, hooks->context) : NULL;
-    if (status_text != NULL && status_text[0] != '\0') {
-        size_t j = strlen(text);
-        if (j < sizeof(text) - 1) text[j++] = ' ';
-        for (i = 0; j + 1 < sizeof(text) && status_text[i] != '\0'; ++i)
-            text[j++] = status_text[i];
-        text[j] = '\0';
-    }
-    if (strcmp(text, s_entity_command_feedback_last_text) == 0) return;
-    strcpy(s_entity_command_feedback_last_text, text);
-    if (hooks->feedback_dispatch != NULL)
-        hooks->feedback_dispatch(entity, text, hooks->context);
 }
 
 void entity_action_prerequisite_hooks_set(
@@ -3123,93 +3047,6 @@ void periodic_entity_callback_install(PeriodicEntityCallback callback,
     s_periodic_entity_callback = callback;
     s_periodic_entity_callback_context = context;
 }
-
-static int periodic_entity_callback_adapter(EntitySlot* entity,
-                                            void* payload)
-{
-    if (s_periodic_entity_callback == NULL) {
-        return 0;
-    }
-    return s_periodic_entity_callback(entity, payload,
-                                      s_periodic_entity_callback_context);
-}
-
-/* PeriodicCallbackDispatch (FUN_00425b40): run the installed periodic
- * callback over live entity records, skipping the corpus's +0x3e8 bit
- * 0x80000 flagged entries and stopping when a callback reports a match. */
-// FUNCTION: LEGORR 0x00425B40
-void periodic_entity_callback_dispatch(void* payload)
-{
-    entity_pool_find_by_callback_filtered_current(
-        periodic_entity_callback_adapter, payload);
-}
-
-// FUNCTION: LEGORR 0x004247d0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int entity_default_transform_apply_if_flagged(
-    EntitySlot* entity, void* argument)
-{
-    __asm {
-        push ebp
-        mov ebp, esp
-        push ecx
-        mov eax, dword ptr [ebp + 0ch]
-        mov dword ptr [ebp - 4], eax
-        mov ecx, dword ptr [ebp + 8]
-        mov edx, dword ptr [ecx + 3ech]
-        and edx, 1
-        test edx, edx
-        je default_transform_done
-        push 0
-        push 0
-        push 3f800000h
-        mov eax, dword ptr [ebp - 4]
-        push eax
-        mov ecx, dword ptr [ebp + 8]
-        push ecx
-        call selected_entity_ground_marker_render
-        add esp, 14h
-    default_transform_done:
-        xor eax, eax
-        mov esp, ebp
-        pop ebp
-        ret
-    }
-}
-#else
-int entity_default_transform_apply_if_flagged(EntitySlot* entity,
-                                              void* argument)
-{
-    if (entity != NULL && (entity->flags_3ec & 1u) != 0u)
-        selected_entity_ground_marker_render(entity, argument, 1.0f, 0.0f,
-                                             0.0f);
-    return 0;
-}
-#endif
-
-// FUNCTION: LEGORR 0x00424810
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void entity_default_transform_apply_all(void* argument)
-{
-    __asm {
-        push ebp
-        mov ebp, esp
-        mov eax, dword ptr [ebp + 8]
-        push eax
-        push offset entity_default_transform_apply_if_flagged
-        call entity_pool_find_by_callback_filtered_current
-        add esp, 8
-        pop ebp
-        ret
-    }
-}
-#else
-void entity_default_transform_apply_all(void* argument)
-{
-    entity_pool_find_by_callback_filtered_current(
-        entity_default_transform_apply_if_flagged, argument);
-}
-#endif
 
 struct EntityGridFindQuery {
     int x;
@@ -4954,7 +4791,7 @@ static void olist_building_pair_refresh(void*, int32_t x, int32_t y)
     terrain_cell_and_neighbors_update(x, y);
 }
 
-static EntitySlot* deferred_olist_live_building_create(
+EntitySlot* deferred_olist_live_building_create(
     const DeferredOListEntityRecord* record, unsigned int, void* context)
 {
     const TypeConfigTable* table = entity_type_config_table_for_entity_type(4);
@@ -5053,15 +4890,6 @@ void deferred_olist_entity_level_begin(GameContext* context)
     hooks.link_finalize = deferred_olist_live_link_finalize;
     hooks.record_release = deferred_olist_live_record_release;
     deferred_olist_entity_hooks_set(&hooks);
-}
-
-/* Parse an optional child value under "<root>::<obj>::<key>". */
-static const char* obj_val(BlockFile* bf, const char* root, const char* obj,
-                           const char* key)
-{
-    char path[512];
-    snprintf(path, sizeof(path), "%s::%s::%s", root, obj, key);
-    return block_get_strptr(bf, path);
 }
 
 /* The entity renderer consumes the portable parsed-model representation.
@@ -5231,215 +5059,6 @@ int entity_state_override_stack_push(const EntityStateOverrideEntry* entry)
 #undef ENTITY_STATS_FLOAT_READ
 #undef ENTITY_STATS_WORD_READ
 
-/* `.ol` `type` name -> entity table code — DECOMPILE-VERIFIED (finding 07/10).
- *
- * The corpus resolver `FUN_0042e8b0` (ObjectTypeByName) matches the name
- * case-insensitively (__strcmpi) against the four runtime name registries —
- * populated from the shipped `Lego.cfg` `VehicleTypes` (FUN_0042cda0),
- * `RockMonsterTypes` (FUN_0042d100, the type-3 general/creature table),
- * `MiniFigureTypes` and `BuildingTypes` (parallel inits) — and then against
- * a hardcoded special-object table:
- *
- *   1 = VehicleTypes      (Hoverboard, SmallDigger, … 12)
- *   2 = MiniFigureTypes   (Pilot)
- *   3 = RockMonsterTypes  (RockMonster, TinyRM, TinyIM, SmallSpider, Bat,
- *                          Slug, LavaMonster, IceMonster)
- *   4 = BuildingTypes     (Toolstation, TeleportPad, … Geo-dome, … 10)
- *   5..19 = special objects (hardcoded in FUN_0042e8b0):
- *          Boulder=5, PowerCrystal=6, Ore=7(idx 0), ProcessedOre=7(idx 1),
- *          Dynamite=8, Barrier=9, ElectricFence=11, SpiderWeb=12, OohScary=13,
- *          Path=15, Pusher=16, Freezer=17, LaserShot=19
- *   -1 = TVCamera (the .ol loader's camera branch, no entity)
- *   0  = not registered (the corpus aborts the load; the port skips, see
- *        object_list_load_file)
- *
- * The special-entity codes are stored in the port's shared table index 4
- * (ENTITY_TYPE_SPECIAL); the corpus keeps one singleton slot each
- * (DAT_00556368..b0). */
-typedef struct NameCode { const char* name; int code; } NameCode;
-
-static const NameCode s_vehicle_names[] = {
-    { "hoverboard", 1 }, { "smalldigger", 1 }, { "smalltruck", 1 },
-    { "smallcat", 1 },   { "smallmlp", 1 },    { "smallheli", 1 },
-    { "bulldozer", 1 },  { "walkerdigger", 1 }, { "largemlp", 1 },
-    { "largedigger", 1 }, { "largecat", 1 },   { "largeheli", 1 },
-};
-static const NameCode s_minifig_names[] = {
-    { "pilot", 2 },
-};
-static const NameCode s_creature_names[] = {
-    { "rockmonster", 3 }, { "tinyrm", 3 }, { "tinyim", 3 },
-    { "smallspider", 3 }, { "bat", 3 },    { "slug", 3 },
-    { "lavamonster", 3 }, { "icemonster", 3 },
-};
-static const NameCode s_building_names[] = {
-    { "toolstation", 4 }, { "teleportpad", 4 }, { "docks", 4 },
-    { "powerstation", 4 }, { "barracks", 4 },   { "upgrade", 4 },
-    { "geo-dome", 4 },    { "orerefinery", 4 }, { "gunstation", 4 },
-    { "teleportbig", 4 },
-};
-static const NameCode s_special_names[] = {
-    { "boulder", 5 },      { "powercrystal", 6 },  { "ore", 7 },
-    { "processedore", 7 }, { "dynamite", 8 },      { "barrier", 9 },
-    { "electricfence", 11 }, { "spiderweb", 12 },  { "oohscary", 13 },
-    { "path", 15 },        { "pusher", 16 },       { "freezer", 17 },
-    { "lasershot", 19 },
-};
-
-/* ObjectListEntityTypeResolve scans the loaded RockMonster, Vehicle,
- * MiniFigure, and Building name tables in that order. Keep the fixed names
- * below as a pre-config fallback for callers that run before GameConfigInit;
- * once a table is installed, its rows and names are authoritative. */
-static int entity_type_config_name_find(uint32_t table_kind,
-                                       const char* name, int type,
-                                       int* row_out)
-{
-    const TypeConfigTable* table = entity_type_config_table_get(table_kind);
-    uint32_t row;
-    if (table == NULL || table->names == NULL) return 0;
-    for (row = 0u; row < table->count; ++row) {
-        if (table->names[row] != NULL &&
-            strcasecmp_lite(table->names[row], name) == 0) {
-            if (row_out != NULL) *row_out = (int)row;
-            return type;
-        }
-    }
-    return -1;
-}
-
-/* Resolver pair (FUN_0042e8b0 shape): answers known-1 with the corpus's
- * (type, registry-row) outputs. The corpus zeroes the row slot at entry
- * (`mov ebx,[esp+0x10]` / `mov [ebx],0` at 0x42e8b8, before the name load
- * and on every path, even the failed ones); registry matches then write
- * both, the special names write the dedicated ore-pair rows (0/1) only,
- * so everything else answers a zero row (the dispatch aliases that slot
- * onto its first argument's word — a corpus quirk, pinned in the tests). */
-// FUNCTION: LEGORR 0x0042e8b0
-int entity_type_pair_for_name(const char* name, int* type_out,
-                                     int* row_out, int* zero_out)
-{
-    /* The corpus's entry zeroing, blind (mov ebx,[esp+0x10] / mov [ebx],0
-     * at 0x42e8b8): every in-tree caller threads a live row slot
-     * (entity_type_for_name carries a sink; the wrapper's two callers pass
-     * &barracks_row / &obj_y; the dispatch aliases its name slot). */
-    *row_out = 0;
-    if (name == NULL || name[0] == '\0') {
-        return 0; /* unregistered; ObjectListLoadFile aborts on this result. */
-    }
-    if (strcasecmp_lite(name, "tvcamera") == 0) {
-        if (type_out != NULL) {
-            *type_out = -1; /* follow-camera branch in FUN_0042e020 */
-        }
-        /* corpus: the special-name answer also zeroes the fourth word
-         * (test a3 / store) — every port caller threads NULL. */
-        if (zero_out != NULL) {
-            *zero_out = 0;
-        }
-        return 1;
-    }
-    int code;
-    int row = 0;
-    size_t i;
-    code = entity_type_config_name_find(3u, name, 3, &row);
-    if (code != 0) {
-        if (code < 0) code = 0;
-        else {
-            if (type_out != NULL) *type_out = code;
-            if (row_out != NULL) *row_out = row;
-            return 1;
-        }
-    }
-    code = 0;
-    for (i = 0; i < 13; ++i) {
-        if (strcasecmp_lite(s_special_names[i].name, name) == 0) {
-            code = s_special_names[i].code;
-            row = (int)i;
-            break;
-        }
-    }
-    if (code != 0) {
-        if (type_out != NULL) {
-            *type_out = code;
-        }
-        if (row_out != NULL) {
-            if (code == 7) {
-                *row_out = row - 2; /* Ore and ProcessedOre occupy rows 2 and 3. */
-            }
-        }
-        return 1;
-    }
-    code = entity_type_config_name_find(4u, name, 1, &row);
-    if (code < 0) code = 0;
-    if (code == 0 && (entity_type_config_table_get(4u) == NULL ||
-        entity_type_config_table_get(4u)->names == NULL))
-    for (i = 0; i < 12; ++i) {
-        if (strcasecmp_lite(s_vehicle_names[i].name, name) == 0) {
-            code = s_vehicle_names[i].code; row = (int)i; break;
-        }
-    }
-    if (code != 0) {
-        if (type_out != NULL) {
-            *type_out = code;
-        }
-        if (row_out != NULL) {
-            *row_out = row;
-        }
-        return 1;
-    }
-    code = entity_type_config_name_find(1u, name, 2, &row);
-    if (code < 0) code = 0;
-    if (code == 0 && (entity_type_config_table_get(1u) == NULL ||
-        entity_type_config_table_get(1u)->names == NULL))
-    for (i = 0; i < 1; ++i) {
-        if (strcasecmp_lite(s_minifig_names[i].name, name) == 0) {
-            code = s_minifig_names[i].code; row = (int)i; break;
-        }
-    }
-    if (code != 0) {
-        if (type_out != NULL) {
-            *type_out = code;
-        }
-        if (row_out != NULL) {
-            *row_out = row;
-        }
-        return 1;
-    }
-    if (entity_type_config_table_get(3u) == NULL ||
-        entity_type_config_table_get(3u)->names == NULL) for (i = 0; i < 8; ++i) {
-        if (strcasecmp_lite(s_creature_names[i].name, name) == 0) {
-            code = s_creature_names[i].code; row = (int)i; break;
-        }
-    }
-    if (code != 0) {
-        if (type_out != NULL) {
-            *type_out = code;
-        }
-        if (row_out != NULL) {
-            *row_out = row;
-        }
-        return 1;
-    }
-    code = entity_type_config_name_find(2u, name, 4, &row);
-    if (code < 0) code = 0;
-    if (code == 0 && (entity_type_config_table_get(2u) == NULL ||
-        entity_type_config_table_get(2u)->names == NULL))
-    for (i = 0; i < 10; ++i) {
-        if (strcasecmp_lite(s_building_names[i].name, name) == 0) {
-            code = s_building_names[i].code; row = (int)i; break;
-        }
-    }
-    if (code != 0) {
-        if (type_out != NULL) {
-            *type_out = code;
-        }
-        if (row_out != NULL) {
-            *row_out = row;
-        }
-        return 1;
-    }
-    return 0;
-}
-
 static int entity_type_for_name(const char* name)
 {
     int type = 0;
@@ -5460,20 +5079,6 @@ int entity_type_row_for_name(const char* name, int* type_out, int* row_out)
     return entity_type_pair_for_name(name, type_out, row_out, NULL);
 }
 
-static void ol_strncpy(char* dst, size_t n, const char* src)
-{
-    if (n == 0) {
-        dst[0] = '\0';
-        return;
-    }
-    if (src == NULL) {
-        dst[0] = '\0';
-        return;
-    }
-    strncpy(dst, src, n - 1);
-    dst[n - 1] = '\0';
-}
-
 int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
 {
     if (ctx == NULL || cfg == NULL || level_name == NULL) {
@@ -5491,255 +5096,6 @@ int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name)
     }
     snprintf(olist, sizeof(olist), "%s", v);
     return object_list_load_file(ctx, olist);
-}
-
-// FUNCTION: LEGORR 0x0042e020
-int object_list_load_file(GameContext* ctx, const char* olist)
-{
-    if (ctx == NULL || olist == NULL || olist[0] == '\0') {
-        return 0;
-    }
-
-    BlockFile* ol = block_open(olist);
-    if (ol == NULL) {
-        return 0;
-    }
-
-    /* OListEntityRecordParse clears DAT_005563b8 only after the resource
-     * opened successfully, then appends created entities in file order. */
-    object_pointer_registry_reset();
-    deferred_olist_entity_level_begin(ctx);
-
-    int placed = 0;
-    int parse_ok = 1;
-    size_t placed_slot_count = 0u;
-    size_t placed_slot_capacity = block_record_count(ol);
-    EntitySlot** placed_slots = (EntitySlot**)calloc(
-        placed_slot_capacity, sizeof(EntitySlot*));
-    if (placed_slot_capacity != 0u && placed_slots == NULL) {
-        block_close(ol);
-        return 0;
-    }
-    /* Root = the file's first record; objects are its children (document
-     * order, like the entity list the corpus walks). */
-    BlockRec* rootrec = block_record_at(ol, 0);
-    const char* rname = rootrec ? block_name(rootrec) : NULL;
-    if (rname == NULL) {
-        free(placed_slots);
-        block_close(ol);
-        return 0;
-    }
-    for (BlockRec* rec = block_first_child(rootrec); rec != NULL;
-         rec = block_next_sibling(rec)) {
-        const char* name = block_name(rec);
-        if (name == NULL) {
-            continue;
-        }
-        ObjectPlacement op;
-        __builtin_memset(&op, 0, sizeof(op));
-        snprintf(op.name, sizeof(op.name), "%s", name);
-
-        /* Shipped grammar (decompile-verified, FUN_0042e020): `type <name>`,
-         * `xpos` / `ypos`, `heading`, optional `health` (default 100) and
-         * `driving <ref>`. `Model` is the port's extension key (absent from
-         * all 44 shipped lists). */
-        const char* t = obj_val(ol, rname, name, "type");
-        const char* x_value = obj_val(ol, rname, name, "xPos");
-        const char* y_value = obj_val(ol, rname, name, "yPos");
-        const char* heading_value = obj_val(ol, rname, name, "heading");
-        const char* health_value = obj_val(ol, rname, name, "health");
-        int type_row = 0;
-        float grid_x;
-        float grid_y;
-        float center[2];
-        int cell_x;
-        int cell_y;
-        float blocksize;
-        if (t == NULL || x_value == NULL || y_value == NULL ||
-            heading_value == NULL) {
-            parse_ok = 0;
-            break;
-        }
-        ol_strncpy(op.type_name, sizeof(op.type_name), t);
-        if (!entity_type_row_for_name(op.type_name, &op.type, &type_row)) {
-            parse_ok = 0;
-            break;
-        }
-        grid_x = (float)atof(x_value) - 1.0f;
-        grid_y = (float)atof(y_value) - 1.0f;
-        cell_x = crt_float_to_long(grid_x);
-        cell_y = crt_float_to_long(grid_y);
-        if (ctx->level == NULL || ctx->level->ptr_terrain == NULL ||
-            !terrain_cell_world_center_xy_transform(
-                ctx->level->ptr_terrain,
-                cell_x, cell_y, center)) {
-            parse_ok = 0;
-            break;
-        }
-        blocksize = terrain_blocksize_get(ctx->level->ptr_terrain);
-        op.x = center[0] + (grid_x - ((float)cell_x + 0.5f)) * blocksize;
-        op.y = center[1] - (grid_y - ((float)cell_y + 0.5f)) * blocksize;
-        op.heading = (float)atof(heading_value) *
-            0.0055555557f * 3.1415927f;
-        op.z = 0.0f;
-        op.rot = op.heading;
-        {
-            const ParsedEntityHealthValue* parsed_health =
-                parse_entity_health_value(
-                    health_value != NULL ? health_value : "", 0, 0, 0);
-            op.health = parsed_health != NULL
-                ? (float)parsed_health->value : 0.0f;
-        }
-        ol_strncpy(op.driving, sizeof(op.driving),
-                   obj_val(ol, rname, name, "driving"));
-        ol_strncpy(op.model, sizeof(op.model), obj_val(ol, rname, name, "Model"));
-
-        if (op.type == -1) {
-            /* TVCamera — FUN_0042e020's type -1 branch drives the follow
-             * camera instead of creating an entity (last one wins). */
-            ctx->ol_camera_set = 1;
-            ctx->ol_camera_x = op.x;
-            ctx->ol_camera_y = op.y;
-            ctx->ol_camera_heading = op.heading;
-            ++placed;
-            continue;
-        }
-        {
-            const uint8_t* voxel = level_voxel(ctx->level, cell_x, cell_y);
-            uint32_t flags = 0u;
-            if (voxel != NULL) memcpy(&flags, voxel + 8, 4);
-            if ((flags & 8u) == 0u) {
-                uint32_t world[2];
-                int heading_bits, health_bits;
-                memcpy(world, &op.x, 4);
-                memcpy(world + 1, &op.y, 4);
-                memcpy(&heading_bits, &op.heading, 4);
-                memcpy(&health_bits, &op.health, 4);
-                /* Resolve the configured archetype by kind/row when the
-                 * reveal consumer runs; keep instance/link names owned. */
-                deferred_olist_entity_queue_add(ctx, world, 0, op.type,
-                    type_row, heading_bits, health_bits, op.name,
-                    op.driving[0] != '\0' ? op.driving : NULL);
-                continue;
-            }
-        }
-        {
-            /* The creator resolves its name argument as a configured type
-             * and binds Stats before kind-four post-create callbacks. The
-             * OList instance label is separate from that type identity. */
-            EntitySlot* slot;
-            if (op.type == 4) {
-                DeferredOListEntityRecord record;
-                memset(&record, 0, sizeof(record));
-                record.cell_x = cell_x;
-                record.cell_y = cell_y;
-                record.entity_type = op.type;
-                record.variant = type_row;
-                record.heading = op.heading;
-                record.name = op.name;
-                slot = deferred_olist_live_building_create(&record,
-                                                            0u, ctx);
-            }
-            else slot = entity_create_with_position(ctx, op.type,
-                op.type_name, type_row, op.x, op.y, op.heading);
-            if (slot != NULL) {
-                ol_strncpy(slot->name, sizeof(slot->name), op.name);
-                ol_strncpy(slot->type_name, sizeof(slot->type_name),
-                           op.type_name);
-                slot->etype = type_row;
-                (void)entity_stats_record_bind(slot);
-                (void)entity_activity_runner_type_config_bind(slot);
-                (void)entity_type_config_scene_slot_nodes_load(slot);
-                ol_strncpy(slot->driving, sizeof(slot->driving), op.driving);
-                slot->rot = op.heading;
-                slot->field_340 = op.health != 0.0f
-                    ? op.health : 100.0f;
-                entity_set_model(slot,
-                    op.model[0] != '\0' ? op.model : NULL);
-                entity_scene_slot_table_rebuild(slot, 0);
-                if (op.type == 6 || op.type == 7 || op.type == 8 ||
-                    op.type == 9) {
-                    cmd_create_task(slot);
-                }
-                object_pointer_registry_append(slot);
-                slot->flags_3ec |= 0x200u;
-                lego::building_upgrade_state_changed_dispatch(
-                    op.type, type_row, 0, 1);
-                entity_queue_for_rockfall_processing_if_eligible(slot);
-                if (op.type == 12) {
-                    slot->flags_3e8 |= 0x10000u;
-                    /* Retail also sets scene action "FlapInWind" and frame 0.
-                     * The portable scene owner has no action/frame setter,
-                     * and its expansion-cell table has no represented owner. */
-                }
-                if (slot->type == 11) {
-                    /* The .ol loader's type-0xb branch installs its instance
-                     * in the current level's per-cell object registry. */
-                    register_object_at_grid_position(slot);
-                }
-                if (placed_slots != NULL &&
-                    placed_slot_count < placed_slot_capacity) {
-                    placed_slots[placed_slot_count++] = slot;
-                }
-                ++placed;
-            }
-        }
-    }
-
-    if (!parse_ok) {
-        free(placed_slots);
-        block_close(ol);
-        ctx->entity_placed = placed;
-        return 0;
-    }
-
-    /* The corpus resolves `driving` references after every object has been
-     * created, so forward references work. It links the source entity to the
-     * named object, raises +0x3e4 bit 2, dispatches the capability-derived
-     * activity event, then clears route bit 0x40 on both linked entities. */
-    if (placed_slots != NULL) {
-        size_t source_index;
-        for (source_index = 0u; source_index < placed_slot_count;
-             ++source_index) {
-            EntitySlot* source = placed_slots[source_index];
-            size_t target_index;
-            if (source == NULL || source->driving[0] == '\0') {
-                continue;
-            }
-            for (target_index = 0u; target_index < placed_slot_count;
-                 ++target_index) {
-                EntitySlot* target = placed_slots[target_index];
-                uint32_t events;
-                uint32_t capabilities;
-                if (target == NULL ||
-                    strcasecmp_lite(source->driving, target->name) != 0) {
-                    continue;
-                }
-                source->link_2fc = (uintptr_t)target;
-                source->flags_3e4 |= 4u;
-                capabilities = entity_capability_flags_get(target);
-                if ((capabilities & 0x100u) != 0u) {
-                    events = 1u;
-                }
-                else if ((target->flags_3e8 & 0x01000000u) == 0u) {
-                    events = 4u;
-                }
-                else if ((target->flags_3e8 & 0x02000000u) == 0u) {
-                    events = 2u;
-                }
-                else {
-                    events = 1u;
-                }
-                entity_linked_activity_event_dispatch(source, events);
-                entity_linked_route_flag_clear(ctx, source);
-                break;
-            }
-        }
-    }
-    free(placed_slots);
-    block_close(ol);
-    ctx->entity_placed = placed;
-    return 1;
 }
 
 /* EntityFlagsMask107C33DEOr1C00203AnyTest (FUN_0043baf0, finding 319):
@@ -7244,182 +6600,6 @@ int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2])
     return entity_vehicle_unload_adjacent_cell_find(entity, out_xy);
 }
 
-static uint32_t entity_cell_speed_rock_fall_name_find(const char* name)
-{
-    return lego::object_type_name_index_find(name);
-}
-
-static float entity_cell_speed_indexed_scale_get(int type,
-                                                  const void* entity_record)
-{
-    return lego::entity_indexed_float_lookup_with_minus_one_fallback(
-        type, entity_record);
-}
-
-#if defined(_MSC_VER) && defined(_M_IX86)
-static const char s_entity_rock_fall_in_name[] = "RockFallIn";
-#endif
-
-// FUNCTION: LEGORR 0x00433180
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int entity_cell_type_speed_multiplier_resolve_current(
-    const EntitySlot* entity, int x, int y, float scale, float* out_scale)
-{
-    __asm {
-        push ebx
-        push ebp
-        mov ebp, dword ptr [esp + 0ch]
-        push esi
-        push edi
-        mov edi, dword ptr [g_active_level_retail]
-        mov eax, dword ptr [ebp]
-        cmp eax, 6
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 7
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 5
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 8
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 0bh
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 0dh
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 0eh
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 0fh
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 10h
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 11h
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 12h
-        je entity_cell_type_speed_multiplier_failed
-        cmp eax, 13h
-        je entity_cell_type_speed_multiplier_failed
-        mov eax, dword ptr [ebp + 36ch]
-        test eax, eax
-        je entity_cell_type_speed_multiplier_cell_test
-        push ebp
-        call entity_stats_word_get
-        add esp, 4
-        test eax, 20000h
-        je entity_cell_type_speed_multiplier_failed
-    entity_cell_type_speed_multiplier_cell_test:
-        mov esi, dword ptr [esp + 1ch]
-        mov ebx, dword ptr [esp + 18h]
-        mov eax, esi
-        mov ecx, dword ptr [edi + 0b8h]
-        imul eax, dword ptr [edi + 14h]
-        add eax, ebx
-        lea eax, dword ptr [eax + eax*8]
-        lea eax, dword ptr [ecx + eax*8]
-        cmp byte ptr [eax + 2], 6
-        jne entity_cell_type_speed_multiplier_fallback
-        mov ecx, dword ptr [eax + 8]
-        test ch, 2
-        jne entity_cell_type_speed_multiplier_fallback
-        push ebp
-        call entity_state_flags_get
-        add esp, 4
-        test eax, 200000h
-        jne entity_cell_type_speed_multiplier_fallback
-        mov eax, dword ptr [esp + 24h]
-        test eax, eax
-        je entity_cell_type_speed_multiplier_success
-        mov edx, dword ptr [esp + 20h]
-        mov dword ptr [eax], edx
-        mov eax, 1
-        pop edi
-        pop esi
-        pop ebp
-        pop ebx
-        ret
-    entity_cell_type_speed_multiplier_fallback:
-        imul esi, dword ptr [edi + 14h]
-        mov ecx, dword ptr [edi + 0b8h]
-        add esi, ebx
-        lea eax, dword ptr [esi + esi*8]
-        mov edx, dword ptr [ecx + eax*8 + 8]
-        test dh, 10h
-        je entity_cell_type_speed_multiplier_failed
-        mov esi, dword ptr [esp + 24h]
-        test esi, esi
-        je entity_cell_type_speed_multiplier_success
-        push ebp
-        push offset s_entity_rock_fall_in_name
-        call entity_cell_speed_rock_fall_name_find
-        add esp, 4
-        push eax
-        call entity_cell_speed_indexed_scale_get
-        fmul dword ptr [esp + 28h]
-        add esp, 8
-        fstp dword ptr [esi]
-    entity_cell_type_speed_multiplier_success:
-        mov eax, 1
-        pop edi
-        pop esi
-        pop ebp
-        pop ebx
-        ret
-    entity_cell_type_speed_multiplier_failed:
-        pop edi
-        pop esi
-        pop ebp
-        xor eax, eax
-        pop ebx
-        ret
-    }
-}
-#else
-int entity_cell_type_speed_multiplier_resolve_current(
-    const EntitySlot* entity, int x, int y, float scale, float* out_scale)
-{
-    LevelState* level = g_active_level_retail;
-    if (entity->type == 6 || entity->type == 7 || entity->type == 5 ||
-        entity->type == 8 || entity->type == 11 || entity->type == 13 ||
-        entity->type == 14 || entity->type == 15 || entity->type == 16 ||
-        entity->type == 17 || entity->type == 18 || entity->type == 19) {
-        return 0;
-    }
-    if (entity->owner_36c != NULL &&
-        (entity_stats_word_get(entity) & 0x20000u) == 0u) return 0;
-
-    {
-        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
-#if defined(_WIN32) && defined(_M_IX86)
-        uint8_t* voxels = (uint8_t*)(uintptr_t)
-            level->word[LEVEL_OFF_VOXELS / 4];
-#else
-        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
-#endif
-        int index = width * y + x;
-        uint8_t* cell = voxels + index * 0x48;
-        if (cell[2] == 6) {
-            uint32_t cell_flags = *(uint32_t*)(cell + 8);
-            if ((cell_flags & 0x200u) == 0u &&
-                (entity_state_flags_get(entity) & 0x200000u) == 0u) {
-                if (out_scale == NULL) return 1;
-                *out_scale = scale;
-                return 1;
-            }
-        }
-        if ((*(uint32_t*)(cell + 8) & 0x1000u) != 0u) {
-            if (out_scale != NULL) {
-                uint32_t rock_fall_type =
-                    lego::object_type_name_index_find("RockFallIn");
-                float motion_scale =
-                    lego::entity_indexed_float_lookup_with_minus_one_fallback(
-                        (int)rock_fall_type, entity);
-                *out_scale = motion_scale * scale;
-            }
-            return 1;
-        }
-    }
-    return 0;
-}
-#endif
-
 int entity_cell_type_speed_multiplier_resolve(const EntitySlot* entity,
                                               const LevelState* level,
                                               int x, int y, float scale,
@@ -7762,41 +6942,6 @@ void entity_type_four_callback_dispatch(EntitySlot* source)
     if (source == NULL || source->type != 4) return;
     (void)entity_pool_find_by_callback_filtered_current(
         entity_type_four_linked_type_five_reset, source);
-}
-
-/* EntityEffectCountersApplyFromRecord (FUN_0042b2f0): when state bit 8 is
- * active, route the record words at +4/+8 to the global update and resource
- * counter helpers, in decompiled order. */
-// FUNCTION: LEGORR 0x0042b2f0
-void entity_effect_counters_apply_from_record(EntitySlot* e,
-                                              const void* record)
-{
-    if (e == NULL || record == NULL
-        || (entity_state_flags_get(e) & 8u) == 0u) {
-        return;
-    }
-    uint32_t count_a_bits = 0u;
-    uint32_t count_b_bits = 0u;
-    int count_b;
-    GameContext* context = e->owner_ctx;
-    __builtin_memcpy(&count_a_bits, (const char*)record + 4,
-                     sizeof(count_a_bits));
-    __builtin_memcpy(&count_b_bits, (const char*)record + 8,
-                     sizeof(count_b_bits));
-    if (context == NULL) context = entity_pool_callback_context_get();
-
-    /* FUN_0042b2f0 forwards +4 to SimulationUpdateCounterAdd, whose tail
-     * also performs EntityActivitySceneStateUpdate. */
-    simulation_update_counter_add(context, (int)count_a_bits);
-
-    /* FUN_0043a910 calls LevelResourceBalanceAddAndSound(0) once per +8
-     * count. Keep that operation on the command module's active context so
-     * its global resource counter and overlay notification stay paired. */
-    count_b = (int)count_b_bits;
-    while (count_b != 0) {
-        level_resource_balance_add_and_sound(0);
-        --count_b;
-    }
 }
 
 /* EntityDamageApply (FUN_0043f6a0): the corpus subtracts from the float at
@@ -8354,33 +7499,6 @@ unsigned int entity_stats_config_load(
     return committed;
 }
 
-/* Retail-shaped accessors share the OList-fed registry and its host-pointer
- * sidecar above; do not keep a second table at DAT_005563b8. */
-// FUNCTION: LEGORR 0x0042dfc0
-void object_pointer_registry_clear_match(int32_t pointer)
-{
-    for (uint32_t i = 0; i < s_object_pointer_registry_count &&
-         i < OBJECT_POINTER_REGISTRY_CAPACITY; ++i) {
-        if ((int32_t)s_object_pointer_registry_words[i] == pointer) {
-            s_object_pointer_registry_words[i] = 0u;
-            s_object_pointer_registry_entities[i] = NULL;
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x0042dff0
-int object_pointer_registry_get_slot(uint32_t index, int32_t* out)
-{
-    if (index >= s_object_pointer_registry_count) {
-        return 0; /* deviation: the corpus reads blindly past the count */
-    }
-    const int32_t v = (int32_t)s_object_pointer_registry_words[index];
-    if (out != NULL) {
-        *out = v;
-    }
-    return v != 0 ? 1 : 0;
-}
-
 uint32_t object_pointer_registry_count_peek(void)
 {
     return s_object_pointer_registry_count;
@@ -8392,8 +7510,8 @@ uint32_t object_pointer_registry_count_peek(void)
  * layer (the port's own models, fed by SoundMinimumDistanceUpdateMode).
  * The DAT_005560f8 / DAT_00556104 pair has no ported feeder — two
  * zero-initialized statics (documented deviation). */
-static uint32_t s_ctx_sel_ptr_first  = 0u; /* DAT_005560f8 */
-static uint32_t s_ctx_sel_ptr_second = 0u; /* DAT_00556104 */
+uint32_t s_ctx_sel_ptr_first  = 0u; /* DAT_005560f8 */
+uint32_t s_ctx_sel_ptr_second = 0u; /* DAT_00556104 */
 
 void context_selected_pointer_pair_set(uint32_t first, uint32_t second)
 {
@@ -8404,30 +7522,6 @@ void context_selected_pointer_pair_set(uint32_t first, uint32_t second)
 uint32_t context_selected_pointer_pair_peek(int second)
 {
     return (second != 0) ? s_ctx_sel_ptr_second : s_ctx_sel_ptr_first;
-}
-
-// FUNCTION: LEGORR 0x004295a0
-uint32_t context_selected_global_pointer_get(void)
-{
-    return (media_min_distance_mode() != 0) ? s_ctx_sel_ptr_second
-                                           : s_ctx_sel_ptr_first;
-}
-
-// FUNCTION: LEGORR 0x004295c0
-int entity_matches_current_selection_or_owner(const void* entity)
-{
-    if (entity == NULL) {
-        return 0;
-    }
-    const void* selected = media_min_distance_context();
-    const int mode = media_min_distance_mode();
-    void* owner = NULL;
-    __builtin_memcpy(&owner, (const char*)entity + 0x36c, sizeof(owner));
-    /* corpus shape: match (mode-clear && entity == selection) or
-     * (owner != NULL && owner == selection); reject otherwise. */
-    const int direct_ok = (mode == 0) && (entity == selected);
-    const int owner_ok = (owner != NULL) && (owner == selected);
-    return (direct_ok || owner_ok) ? 1 : 0;
 }
 
 /* SelectionCandidateEligibilityCheck (FUN_00452870, findings 77/85/468):
@@ -8891,44 +7985,9 @@ uint32_t stats_table_word_at_b0(int type, int row, int stride_index)
  * encyclopedia loader indexes. Counts and names are installed from the
  * current config load; the five slots map DAT_0055627c/80/84/88/8c. */
 // GLOBAL: LEGORR 0x0055627c
-static uint32_t s_catalog_counts[5]; /* DAT_0055627c/80/84/88/8c roles */
+uint32_t s_catalog_counts[5]; /* DAT_0055627c/80/84/88/8c roles */
 static const void* s_catalog_name_tables[4]; /* DAT_005561e8/ec/f0/f4 roles */
 #define CATALOG_ID_PAIRS 24u
-
-// FUNCTION: LEGORR 0x0042ef40
-int stats_level_record_count_for_stat_type(int stat_type)
-{
-    switch (stat_type) {
-    case 1:
-        return (int)s_catalog_counts[0];
-    case 2:
-        return (int)s_catalog_counts[1];
-    case 3:
-        return (int)s_catalog_counts[2];
-    case 4:
-        return (int)s_catalog_counts[3];
-    case 5:
-    case 6:
-    case 8:
-    case 9:
-    case 11:
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-    case 16:
-    case 17:
-    case 18:
-    case 19:
-        return 1;
-    case 7:
-        return 2;
-    case 10:
-        return (int)s_catalog_counts[4];
-    default:
-        return stat_type - 1;
-    }
-}
 
 // FUNCTION: LEGORR 0x0041b3c0
 int entity_query_flag_count(int query)

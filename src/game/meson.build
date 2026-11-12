@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'lego.cpp',
   'panel_unit.cpp',
   'entity_stats.cpp',
   'reward.cpp',

@@ -27,6 +27,7 @@
 #include "resource_for_com_object_tree.hpp"
 #include "resource_for_wad.hpp"
 #include "resource_from_wad.hpp"
+#include "resource_for_lego.hpp"
 
 // GLOBAL: LEGORR 0x0049f988
 const unsigned char s_resource_tree_child_iid[16] = {
@@ -3930,8 +3931,8 @@ void resource_handle_list_append(ResourceHandleList* list, const char* value)
 
 namespace unported_ledger_stubs {
 
-static MiscObjectResourceHooks s_misc_resource_hooks;
-static void* s_misc_resource_handles[22];
+MiscObjectResourceHooks s_misc_resource_hooks;
+void* s_misc_resource_handles[22];
 
 void misc_object_resource_hooks_set(const MiscObjectResourceHooks* hooks)
 {
@@ -3943,62 +3944,6 @@ void misc_object_resource_hooks_set(const MiscObjectResourceHooks* hooks)
 void* misc_object_resource_peek(unsigned int slot)
 {
     return slot < 22u ? s_misc_resource_handles[slot] : NULL;
-}
-
-typedef struct MiscResourceSpec {
-    const char* name;
-    int kind;
-    int fallback_kind;
-    int load_flag;
-} MiscResourceSpec;
-
-// FUNCTION: LEGORR 0x00422850
-void misc_object_resources_load(void* config)
-{
-    static const MiscResourceSpec specs[22] = {
-        { "Boulder", 1, 2, 1 },
-        { "BoulderExplodeIce", 3, -1, 1 },
-        { "BoulderExplode", 3, -1, 1 },
-        { "SmashPath", 3, -1, 1 },
-        { "Explosion", 5, -1, 1 },
-        { "Crystal", 1, 2, 1 },
-        { "Dynamite", 4, -1, 1 },
-        { "OohScary", 4, -1, 1 },
-        { "Barrier", 4, -1, 1 },
-        { "Ore", 1, 2, 1 },
-        { "ProcessedOre", 1, 2, 1 },
-        { "ElectricFence", 1, -1, 1 },
-        { "ElectricFenceStud", 3, -1, 1 },
-        { "ShortElectricFenceBeam", 6, -1, 0 },
-        { "LongElectricFenceBeam", 7, -1, 1 },
-        { "SpiderWeb", 4, -1, 1 },
-        { "RechargeSparkle", 3, -1, 1 },
-        { "MiniTeleportUp", 3, -1, 0 },
-        { "IceCube", 4, -1, 1 },
-        { "Pusher", 3, -1, 1 },
-        { "Freezer", 3, -1, 1 },
-        { "LaserShot", 3, -1, 1 }
-    };
-    unsigned int i;
-    memset(s_misc_resource_handles, 0, sizeof(s_misc_resource_handles));
-    if (s_misc_resource_hooks.load != NULL) {
-        for (i = 0u; i < 22u; ++i) {
-            void* handle = s_misc_resource_hooks.load(config, "MiscObjects",
-                specs[i].name, specs[i].kind, specs[i].load_flag,
-                s_misc_resource_hooks.user);
-            if (handle == NULL && specs[i].fallback_kind >= 0) {
-                handle = s_misc_resource_hooks.load(config, "MiscObjects",
-                    specs[i].name, specs[i].fallback_kind,
-                    specs[i].load_flag, s_misc_resource_hooks.user);
-            }
-            s_misc_resource_handles[i] = handle;
-            if (handle != NULL && s_misc_resource_hooks.enable != NULL)
-                s_misc_resource_hooks.enable(handle,
-                                             s_misc_resource_hooks.user);
-        }
-    }
-    if (s_misc_resource_hooks.post_load != NULL)
-        s_misc_resource_hooks.post_load(config, s_misc_resource_hooks.user);
 }
 
 typedef struct PortableResourceNameQuery {

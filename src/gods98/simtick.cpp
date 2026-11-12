@@ -22,6 +22,7 @@
 #include "simtick_shared.hpp"
 #include "simtick_for_panel_unit.hpp"
 #include "simtick_from_panel_unit.hpp"
+#include "simtick_for_lego.hpp"
 
 #define SIMTICK_MUTE_RESET 25.0f
 
@@ -457,12 +458,12 @@ void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user)
  * Cells are 7 uintptr_t: [0] handle, [3] flags byte, [5] next, [6] state.
  * (The corpus's u32 slots are a 32-bit artifact; uintptr_t keeps the next
  * pointer whole on 64-bit hosts.) */
-static void* s_minion_list = NULL;
-static int (*s_minion_dist)(int, float) = NULL;
-static void (*s_minion_act)(int) = NULL;
-static void (*s_minion_fail)(void*) = NULL;
-static int s_minion_actions = 0;
-static int s_minion_fails = 0;
+void* s_minion_list = NULL;
+int (*s_minion_dist)(int, float) = NULL;
+void (*s_minion_act)(int) = NULL;
+void (*s_minion_fail)(void*) = NULL;
+int s_minion_actions = 0;
+int s_minion_fails = 0;
 
 void simtick_set_minion_list(void* list)
 {
@@ -477,45 +478,6 @@ void simtick_set_minion_hooks(int (*d)(int, float), void (*a)(int),
 }
 int simtick_minion_actions(void)   { return s_minion_actions; }
 int simtick_minion_failures(void)  { return s_minion_fails; }
-
-// FUNCTION: LEGORR 0x004313b0
-void simtick_minion_states(EngineContext* c, float dt, float scale)
-{
-    (void)dt;
-    EngineState* st = c != NULL ? c->state_block : NULL;
-    uintptr_t* node = (uintptr_t*)(st != NULL && st->minion_list != NULL
-                                       ? st->minion_list : s_minion_list);
-    s_minion_actions = s_minion_fails = 0;
-    while (node != NULL) {
-        uintptr_t* next = (uintptr_t*)node[5];
-        float dist = 0.0f;
-        if (s_minion_dist != NULL) {
-            dist = (float)s_minion_dist((int)(uint32_t)node[0], scale);
-        }
-        if (node[6] == 0) {
-            uint8_t* b = (uint8_t*)&node[3];
-            if (((*b & 1u) == 0) && (dist != 0.0f)) {
-                *b = (uint8_t)(*b | 1u);
-                if (s_minion_act != NULL) {
-                    s_minion_act((int)(uint32_t)node[0]);
-                }
-                ++s_minion_actions;
-            } else if ((*b & 2u) == 0) {
-                if (((*b & 4u) != 0) && (dist != 0.0f)) {
-                    *b = (uint8_t)(*b | 2u);
-                    ++s_minion_actions;
-                }
-            } else if (s_minion_fail != NULL) {
-                s_minion_fail(node);
-                ++s_minion_fails;
-            }
-        } else if (s_minion_fail != NULL) {
-            s_minion_fail(node);
-            ++s_minion_fails;
-        }
-        node = next;
-    }
-}
 
 /* Deterministic seeded-cell adapter retained for existing local callers. */
 static int s_cells_n = 0;
@@ -859,43 +821,17 @@ void simtick_sfx_bank(EngineContext* c, float dt)
 
 /* ---- tranche 10: the remaining table tickers ---------------------------- */
 
-/* shared tranche-10 module state */
-static int   s_mouse_anchor_x = 0, s_mouse_anchor_y = 0;
-static SimtickRenderPassHook s_render_pass_hook = NULL;
-static void* s_render_pass_user = NULL;
+SimtickRenderPassHook s_render_pass_hook = NULL;
+void* s_render_pass_user = NULL;
 static SimtickRenderEntityHook s_render_entity_hook = NULL;
 static void* s_render_entity_user = NULL;
 
 /* FUN_00425d90: world picker via mouse motion. */
-static int (*s_pick)(int, int) = NULL;
-static int s_picks = 0;
+int (*s_pick)(int, int) = NULL;
+int s_picks = 0;
 
 void simtick_set_pick_hook(int (*h)(int, int)) { s_pick = h; }
 int  simtick_mouse_picks(void) { return s_picks; }
-
-// FUNCTION: LEGORR 0x00425d90
-void simtick_mouse_world(EngineContext* c, float dt)
-{
-    (void)dt;
-    /* gate: state & 2 (in-game render pass), &0x1000 required, &0x100 blocks. */
-    if (c == NULL) return;
-    if ((c->state & 2u) == 0) return;
-    if ((c->state & 0x1000u) == 0) return;
-    if ((c->state & 0x100u) != 0) return;
-    if (c->input == NULL) return;
-    /* mouse delta vs stored anchor; accumulate the distance. */
-    static float acc = 0.0f;
-    float dx = (float)c->input->mouse_x - (float)s_mouse_anchor_x;
-    float dy = (float)c->input->mouse_y - (float)s_mouse_anchor_y;
-    acc += sqrtf(dx * dx + dy * dy);
-    if (acc >= 4.0f) {
-        acc = 0.0f;
-        if (s_pick != NULL) {
-            s_pick(c->input->mouse_x, c->input->mouse_y);
-        }
-        ++s_picks;
-    }
-}
 
 /* Legacy frame-counter helper retained for callers/tests; 0x402220 is the
  * command subsystem's CmdTickGlobal entry (see game/cmd.cpp). */
@@ -963,50 +899,10 @@ void simtick_sound_bank_tick(EngineContext* c, float dt)
 }
 
 /* FUN_004291a0: render-pass entry (in-game camera probe / world collect). */
-static int s_camera_detail_collection_ready = 1;
+int s_camera_detail_collection_ready = 1;
 int simtick_camera_detail_collection_ready(void)
 {
     return s_camera_detail_collection_ready;
-}
-// FUNCTION: LEGORR 0x004291a0
-void simtick_render_pass(EngineContext* c, float dt, float scale, uint32_t o1)
-{
-    (void)o1;
-    if (c == NULL) return;
-    if (scale == 0.0f) s_camera_detail_collection_ready = 1;
-#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-    if (c->level_block != NULL &&
-        ((scale == 0.0f && c->context_mode == 1) ||
-         (scale != 0.0f && (c->state & 2u) != 0u &&
-          (c->state & 0x2000u) != 0u))) {
-        const int primary = scale == 0.0f;
-        float position[3], forward[3];
-        if (!scene_runtime_collection_pose_get(c->views[primary ? 0 : 1],
-                primary, position, forward)) {
-            fprintf(stderr, "camera-diag: pose failed primary=%d view=%p level=%p\n",
-                primary, c->views[primary ? 0 : 1], c->level_block);
-            fflush(stderr);
-            s_camera_detail_collection_ready = 0;
-        } else if (!terrain_camera_detail_collect((LevelState*)c->level_block,
-                position, primary ? forward : NULL, primary)) {
-            fprintf(stderr, "camera-diag: collection failed primary=%d level=%p pos=%g,%g,%g\n",
-                primary, c->level_block, position[0], position[1], position[2]);
-            fflush(stderr);
-            s_camera_detail_collection_ready = 0;
-        }
-    }
-#endif
-    if (scale == 0.0f) {
-        if (c->context_mode == 1 || c->context_mode == 0) {
-            if (s_render_pass_hook != NULL)
-                s_render_pass_hook(c, dt, scale, s_render_pass_user);
-            ++s_post_n;
-        }
-    } else if ((c->state & 2u) != 0 && (c->state & 0x2000u) != 0) {
-        if (s_render_pass_hook != NULL)
-            s_render_pass_hook(c, dt, scale, s_render_pass_user);
-        ++s_post_n;
-    }
 }
 
 int simtick_render_steps(void) { return s_post_n; }
@@ -1038,72 +934,6 @@ void simtick_render_step(EngineContext* c)
     (void)c;
     entity_pool_find_by_callback_current(render_entity_callback, NULL, 0);
     ++s_post_n;
-}
-
-/* MainSimInteractionAndCellUpdate: retain this subsystem and its real
- * admission gates. Ordinary pointer actions share the frame UI arbiter's
- * ordered samples and central world owner; raw aggregate presses cannot
- * bypass UI or emit a second command after the operation queue has drained. */
-// FUNCTION: LEGORR 0x00426520
-void simtick_vu_meter(EngineContext* c, float dt)
-{
-#if defined(LEGORRR_BACKEND_WINAPI)
-    GameContext* game;
-    LevelState* level;
-    int width, height, i;
-    (void)dt;
-    if (c == NULL) return;
-    c->debug &= ~0x400u;
-    if ((c->state & 2u) == 0u || (c->state & 0x100u) != 0u ||
-        c->context_mode != 1 || c->input == NULL) return;
-    game = entity_pool_callback_context_get();
-    level = (LevelState*)c->level_block;
-    if (game == NULL || level == NULL || game->level != level) return;
-    width = display_width_get();
-    height = display_height_get();
-    for (i = 0; i < c->input->pointer_count; ++i)
-        (void)selection_pointer_world_dispatch(game, c,
-            &c->input->pointer_samples[i], width, height);
-#else
-    GameContext* game;
-    LevelState* level;
-    float cell_x, cell_y;
-    EntitySlot* picked;
-    int width, height;
-    (void)dt;
-    if (c == NULL) return;
-    c->debug &= ~0x400u; /* corpus's first statement after loading state */
-
-    if ((c->state & 2u) == 0u || (c->state & 0x100u) != 0u ||
-        c->context_mode != 1 || c->input == NULL ||
-        c->input->mouse_press == 0) return;
-
-    game = entity_pool_callback_context_get();
-    level = (LevelState*)c->level_block;
-    if (game == NULL || level == NULL || game->level != level) return;
-    width = display_width_get();
-    height = display_height_get();
-    if (width <= 0 || height <= 0 ||
-        !level_scene_mouse_cell(game, level, width, height,
-                               c->input->mouse_x, c->input->mouse_y,
-                               &cell_x, &cell_y)) return;
-
-    picked = level_scene_pick_entity(game, level, width, height,
-                                     c->input->mouse_x, c->input->mouse_y,
-                                     18.0f);
-    if (picked == NULL) {
-        /* The renderer's precise screen picker currently covers minifigures.
-         * Keep other selectable entity kinds reachable through the shared
-         * cell-space selection owner. */
-        picked = selection_pick(game, cell_x, cell_y, 0.75f);
-    }
-    if (picked != NULL) {
-        (void)selection_add(game, picked);
-    }
-    else if (selection_count(game) != 0) {
-        (void)selection_cmd_move(game, cell_x, cell_y);
-    }
-#endif
 }
 
 /* FUN_0046e390: fx-bank ticker — per-entry sub-fx scan with fade/clamp. */

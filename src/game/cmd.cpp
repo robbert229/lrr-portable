@@ -76,6 +76,7 @@ static CommandKindRecordHooks s_command_kind_record_hooks;
 extern "C" float random_float_range(float minimum, float maximum);
 #include "gods98/string.hpp"
 #include "cmd_shared.hpp"
+#include "cmd_for_lego.hpp"
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
@@ -5911,54 +5912,6 @@ void* cmd_pending_record_copy(const void* rec)
     return dst;
 }
 
-/* SelectedEntitiesAnyPredicateMatch (FUN_00431a30) / AnyObjectCanOccupy-
- * TerrainCell (FUN_00431ab0) — see cmd.hpp. The selection array entries
- * ride as native record pointers. The walkability sweep uses each record's
- * state and stats against the current level; the placement gate reads the
- * record's own flags. */
-// FUNCTION: LEGORR 0x00431a30
-int selected_entities_any_predicate_match(int cx, int cy, int require_stat_bit)
-{
-    int count = 0;
-    const void* recs = selection_active_context_record_get(&count);
-    const unsigned remaining_count = (unsigned)count;
-    /* Corpus 0x431a54 tests the count as unsigned; zero is the empty case. */
-    if (recs == NULL || remaining_count == 0u) {
-        return 0;
-    }
-    const EntitySlot* const* arr = (const EntitySlot* const*)recs;
-    for (unsigned i = 0; i < remaining_count; ++i) {
-        if (terrain_cell_walkability_query_current(arr[i], (uint32_t)cx,
-                (uint32_t)cy, require_stat_bit, 1) != 0) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-// FUNCTION: LEGORR 0x00431ab0
-int any_object_can_occupy_terrain_cell(int cx, int cy)
-{
-    int count = 0;
-    const void* recs = active_context_record_get(&count);
-    if (recs == NULL || count <= 0) {
-        return 0;
-    }
-    const LevelState* lvl = (s_ctx != NULL)
-        ? (const LevelState*)s_ctx->level : NULL;
-    const EntitySlot* const* arr = (const EntitySlot* const*)recs;
-    /* Corpus 0x431aef..0x431af5 advances the array pointer and uses an
-     * unsigned loop bound. Keep the signed nonpositive guard above so a
-     * negative port count still answers zero before the unsigned walk. */
-    const EntitySlot* const* current = arr;
-    for (unsigned i = 0; i < (unsigned)count; ++i, ++current) {
-        if (terrain_cell_allows_placement(*current, lvl, cx, cy) != 0) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 /* --- the cell-command type-3 issue + task batch append band (2026-10-25) -- */
 
 /* CellCommandType3Issue (FUN_00403030) — see cmd.hpp. */
@@ -6196,63 +6149,10 @@ uint32_t menu_surface_track_peek(void)
     return s_menu_surface_track;
 }
 
-/* --- resource/ore counter pair (2026-10-25) --------------------------------
- * The counter half runs under the corpus's current-level gate; the
- * overlay advance half runs outside it (corpus order), so the guarded
- * no-level path keeps stepping the float. */
-// FUNCTION: LEGORR 0x0041f9a0
-void level_resource_balance_add_and_sound(int selector)
-{
-    if (s_ctx != NULL && s_ctx->level != NULL) {
-        LevelState* lvl = (LevelState*)s_ctx->level;
-        if (selector == 0) {
-            level_set_int(lvl, LEVEL_OFF_RES_A,
-                          level_int(lvl, LEVEL_OFF_RES_A) + 1);
-        } else {
-            level_set_int(lvl, LEVEL_OFF_RES_B,
-                          level_int(lvl, LEVEL_OFF_RES_B) + 1);
-        }
-    }
-    ui_overlay_animation_advance(1, selector != 0 ? 5 : 1);
-}
-
-/* UpgradeResourceDebit (FUN_0041f9e0) — the debit half of the counter pair.
- * Corpus order: the counter store runs under the level gate, then the
- * overlay advance runs outside it. Pin: the debit half steps the advance
- * with mode 0 (the add half is mode 1), and a nonzero selector steps the
- * constant 5 regardless of the amount — selector 0 steps the amount.
- * Deviation: the corpus's DAT-null gate is the port's ctx/level guard. */
-// FUNCTION: LEGORR 0x0041f9e0
-void upgrade_resource_debit(int selector, int amount)
-{
-    if (s_ctx != NULL && s_ctx->level != NULL) {
-        LevelState* lvl = (LevelState*)s_ctx->level;
-        if (selector == 0) {
-            level_set_int(lvl, LEVEL_OFF_RES_A,
-                          level_int(lvl, LEVEL_OFF_RES_A) - amount);
-        } else {
-            level_set_int(lvl, LEVEL_OFF_RES_B,
-                          level_int(lvl, LEVEL_OFF_RES_B) - amount);
-        }
-    }
-    ui_overlay_animation_advance(0, selector != 0 ? 5 : amount);
-}
-
-/* --- the upgrade-name table band (2026-10-25) ------------------------------
- * UpgradeNameEntryFind (FUN_0042cd50): a case-insensitive scan over the
- * loader-owned name table, answering the indexed record's address. The
- * loader (the config seam) has no ported owner, so the three globals — the
- * name-pointer array DAT_005561f8, the record block DAT_005561e4, and the
- * entry count DAT_0055628c — ride zero-init own storage behind an install
- * hook. Deviations: the region span (0x1f8..0x28c, 37 dwords) sizes the
- * window to 36 installable entries (the corpus strides its count bound
- * blindly); NULL names (the searched name or a table entry) skip the
- * compare. A cold table answers NULL like the corpus's zero-count return. */
-#define UPGRADE_NAME_TABLE_MAX 36 /* span-derived window guard */
-static const char* s_upgrade_names[UPGRADE_NAME_TABLE_MAX];
+const char* s_upgrade_names[UPGRADE_NAME_TABLE_MAX];
 // GLOBAL: LEGORR 0x005561e4
-static void* s_upgrade_records;
-static unsigned s_upgrade_count;
+void* s_upgrade_records;
+unsigned s_upgrade_count;
 
 void upgrade_name_table_install(void* records, const char* const* names,
                                 int count)
@@ -6272,26 +6172,6 @@ void upgrade_name_table_install(void* records, const char* const* names,
     }
     s_upgrade_records = records;
     s_upgrade_count = (unsigned)count;
-}
-
-// FUNCTION: LEGORR 0x0042cd50
-const void* upgrade_name_entry_find(const char* name)
-{
-    /* Install clamps negatives to zero. Corpus 0x42cd5b/0x42cd7f uses
-     * unsigned count gates and an unsigned index bound. */
-    if (name == NULL || s_upgrade_count == 0u || s_upgrade_records == NULL) {
-        /* deviation: the corpus strides a dangling record base blindly */
-        return NULL;
-    }
-    for (unsigned i = 0; i < s_upgrade_count; ++i) {
-        const char* entry = s_upgrade_names[i];
-        /* Corpus 0x42cd6b calls the annotated strcasecmp_lite twin at
-         * 0x48ff10; this caller observes equality only. */
-        if (entry != NULL && strcasecmp_lite(name, entry) == 0) {
-            return (const char*)s_upgrade_records + (size_t)i * 16;
-        }
-    }
-    return NULL;
 }
 
 void kind_six_sweep_timer_install(float value) { s_sweep_timer = value; }

@@ -25,6 +25,7 @@
 #include "gods98/message.hpp"
 #include "util.hpp"
 #include "ai_shared.hpp"
+#include "ai_from_lego.hpp"
 
 /* The command record's mutable `now` doubles as the task countdown for
  * task commands (the link primitives seed it with the 1500.0 "now"
@@ -46,9 +47,6 @@
                                                  * (callback 0x43da62) */
 
 static const void* rec_payload(const void* rec) { return cmd_rec_payload(rec); }
-
-// GLOBAL: LEGORR 0x004a46f8
-static const char s_activity_name_activity_stand[] = "Activity_Stand";
 
 // GLOBAL: LEGORR 0x004a5038
 static const char s_activity_name_activity_route[] = "Activity_Route";

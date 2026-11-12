@@ -1615,30 +1615,6 @@ void sound_tracked_buffers_set_max_distance(uint32_t value)
     }
 }
 
-// FUNCTION: LEGORR 0x00434a50
-void sound_samples_config_load(BlockFile* config, int allow_marked)
-{
-    BlockRec* group;
-    BlockRec* entry;
-    if (config == NULL) return;
-    group = block_subgroup(config,
-        string_path_join(util_root_name(config), "Samples", (const char*)NULL));
-    if (group == NULL) return;
-    sound_alias_registration_set(1);
-    for (entry = group; entry != NULL;
-         entry = block_next_sibling(entry)) {
-        const char* value = block_value(entry);
-        const char* alias_name = value;
-        int alias;
-        if (alias_name == NULL) continue;
-        if (alias_name[0] == '!' && allow_marked) ++alias_name;
-        else if (alias_name[0] == '!' && !allow_marked) continue;
-        if (sound_alias_lookup(alias_name, &alias))
-            (void)sound_sample_marker_parse(block_name(entry), alias);
-    }
-    sound_alias_registration_set(0);
-}
-
 namespace unported_ledger_stubs {
 
 void ledger_stub_00434a50_SoundSamplesConfigLoad(BlockFile* config,

@@ -14,6 +14,7 @@
 #include "record.hpp"
 #include "crt/crt.hpp"
 #include "message_shared.hpp"
+#include "message_for_lego.hpp"
 
 /* UI-owned operations used by IncidentMessageTextConsumer. The text output
  * record layout and implementations live in game/frontend.cpp; forward
@@ -54,7 +55,7 @@ const char* ui_message_label_get(unsigned int index)
     return index < 26u ? s_ui_message_labels[index] : NULL;
 }
 
-static char* s_info_message_sound_names[MESSAGE_MAX_ID];
+char* s_info_message_sound_names[MESSAGE_MAX_ID];
 float         s_now = 0.0f;          /* _DAT_0049e264 analog */
 MessageCallback  s_callback = NULL;
 MessageSoundHook s_sound = NULL;
@@ -347,100 +348,6 @@ const char* message_sound(int id)
         return NULL;
     }
     return s_cfg[id].sound;
-}
-
-// FUNCTION: LEGORR 0x00434c10
-void message_load_infomessages(BlockFile* cfg)
-{
-    static const char separators[] = ":";
-    static const char slow_mode[] = "SLOW";
-    static const char always_play[] = "ALWAYSPLAYSFX";
-    if (cfg == NULL) {
-        return;
-    }
-    /* Find any `InfoMessages` record (nested under Lego*; the parser keeps
-     * document order) and configure each child by its Info name. */
-    size_t n = block_record_count(cfg);
-    for (size_t i = 0; i < n; ++i) {
-        BlockRec* rec = block_record_at(cfg, i);
-        if (rec == NULL || block_name(rec) == NULL
-            || strcasecmp_lite(block_name(rec), "InfoMessages") != 0) {
-            continue;
-        }
-        for (BlockRec* kid = block_first_child(rec); kid != NULL;
-             kid = block_next_sibling(kid)) {
-            const char* nm = block_name(kid);
-            const char* val = block_value(kid);
-            if (nm == NULL) {
-                continue;
-            }
-            /* Entries may carry the Info_ prefix (finding 22's stored
-             * strings are `Info_*`); the catalog is bare. */
-            if (strncmp(nm, "Info_", 5) == 0) {
-                nm += 5;
-            }
-            int id = -1;
-            for (int k = 0; k < MESSAGE_MAX_ID; ++k) {
-                if (strcasecmp_lite(nm, s_catalog[k]) == 0) {
-                    id = k;
-                    break;
-                }
-            }
-            if (id < 0) {
-                continue;
-            }
-            char value[1024];
-            char* fields[1024];
-            int field_count;
-            size_t value_length;
-            int sound_alias;
-            char* sound_name = NULL;
-            if (val == NULL) continue;
-            value_length = strlen(val);
-            if (value_length >= sizeof(value))
-                value_length = sizeof(value) - 1u;
-            memcpy(value, val, value_length);
-            value[value_length] = '\0';
-            field_count = sound_variant_split(value, fields, separators);
-            if (field_count < 2) continue;
-
-            if (field_count > 2 && fields[2][0] != '\0') {
-                size_t sound_length = strlen(fields[2]);
-                sound_name = (char*)engine_heap_alloc(
-                    (long)(sound_length + 1u));
-                if (sound_name != NULL) {
-                    memcpy(sound_name, fields[2], sound_length + 1u);
-                }
-            }
-            if (s_info_message_sound_names[id] != NULL)
-                engine_heap_free(s_info_message_sound_names[id]);
-            s_info_message_sound_names[id] = sound_name;
-
-            /* InfoMessages stores display text, image resource, optional
-             * sound alias, and two independent mode markers as colon fields. */
-            message_config_set(id, sound_name, 0.0f, 0u);
-            incident_message_template_replace(id, fields[0]);
-            info_message_surface_load(id, fields[1]);
-
-            if (field_count > 2 &&
-                sound_alias_lookup(fields[2], &sound_alias) != 0) {
-                info_message_secondary_sound_set(id,
-                                                   (uint32_t)sound_alias);
-            }
-            if (field_count < 4) {
-                info_message_always_play_flag_set(id, 1);
-                indexed_selection_flag_20000_set_clear(id, 0);
-            }
-            else {
-                info_message_always_play_flag_set(
-                    id, strcasecmp_lite(fields[3], slow_mode) == 0);
-                indexed_selection_flag_20000_set_clear(id,
-                    strcasecmp_lite(fields[3], always_play) == 0 ||
-                    (field_count >= 5 &&
-                     strcasecmp_lite(fields[4], always_play) == 0));
-            }
-        }
-    }
 }
 
 void message_update(float dt)
