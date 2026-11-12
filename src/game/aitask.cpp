@@ -4579,9 +4579,9 @@ static int cmd_place_target_nested_scene_pose_get(const EntitySlot* entity,
     const EntitySlot* nested;
     void* scene_object;
     if (entity == NULL || position == NULL ||
-        (entity->flags_3ec & 0x40u) == 0u || entity->link_2fc == 0u)
+        (entity->flags_3ec & 0x40u) == 0u || entity->link_2fc == NULL)
         return 0;
-    nested = (const EntitySlot*)entity->link_2fc;
+    nested = entity->link_2fc;
     if (nested->type != 4 ||
         nested->attached_direction_record_type4 == NULL) return 0;
     /* FUN_00404fc0 resolves nested type-4 field +0x18 through
@@ -4878,7 +4878,7 @@ static int cmd_gettool_route_adopt(EntitySlot* entity, CmdRec* head)
         !entity_route_waypoint_world_get(entity,
             (unsigned int)(entity->wp_count - 1), route->endpoint)) return 0;
     route->actor = entity;
-    route->store = (EntitySlot*)entity->link_2fc;
+    route->store = entity->link_2fc;
     route->waypoints = ENTITY_WAYPOINTS(entity);
     route->count = entity->wp_count;
     route->phase = 1;

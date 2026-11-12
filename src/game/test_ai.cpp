@@ -1516,7 +1516,7 @@ int main(int argc, char** argv)
         memset(&parent, 0, sizeof parent);
         memset(&child, 0, sizeof child);
         child.type = 4;
-        parent.link_2fc = (uintptr_t)&child;
+        parent.link_2fc = &child;
         linked_entity_flag_and_command_update(&parent);
         CHECK(parent.flags_3ec == 0x40u && child.flags_3ec == 0x40u
                   && parent.cmd_head == NULL,
@@ -1525,7 +1525,7 @@ int main(int argc, char** argv)
         parent.flags_3ec = 0u;
         linked_entity_flag_and_command_update(&parent);
         CHECK(parent.flags_3ec == 0u, "the non-type-4 link stays silent");
-        parent.link_2fc = 0u;
+        parent.link_2fc = NULL;
         linked_entity_flag_and_command_update(&parent); /* clear link */
         linked_entity_flag_and_command_update(NULL); /* guarded */
     }
@@ -1683,11 +1683,11 @@ int main(int argc, char** argv)
         entity_queue_for_rockfall_processing_if_eligible(&idle);
         CHECK(ai_idle_count() == 1, "the probe lands one entry");
         entity_update_and_unregister_at_tile(3, 5, &four);
-        CHECK(idle.link_2fc == (uintptr_t)&four, "the link word stores");
+        CHECK(idle.link_2fc == &four, "the link word stores");
         CHECK((idle.flags_3ec & 0x40u) != 0u && (four.flags_3ec & 0x40u) != 0u,
               "the type-4 link raises both +0x3ec bits");
         entity_update_and_unregister_at_tile(3, 5, NULL);
-        CHECK(idle.link_2fc == (uintptr_t)&four,
+        CHECK(idle.link_2fc == &four,
               "the blanked slot no longer hits (unregister)");
         entity_update_and_unregister_at_tile(9, 9, NULL); /* coord miss */
         CHECK((four.flags_3ec & 0x40u) != 0u, "the coordinate miss is inert");

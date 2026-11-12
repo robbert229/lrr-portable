@@ -1059,9 +1059,9 @@ static int entity_linked_route_clear_callback(EntitySlot* candidate,
 {
     EntitySlot* source = (EntitySlot*)payload;
     if (candidate != NULL && source != NULL &&
-        (EntitySlot*)candidate->link_2fc == source) {
+        candidate->link_2fc == source) {
         entity_action_sequence_reset(candidate, 0);
-        candidate->link_2fc = 0;
+        candidate->link_2fc = NULL;
     }
     /* LAB_00437510 always continues so every matching link is cleared. */
     return 0;
@@ -1124,17 +1124,17 @@ int entity_teardown(EntitySlot* entity)
     if ((flags & 0x40U) != 0) {
         entity->flags_3ec = (int32_t)(flags & ~0x40U);
         flags &= ~0x40U;
-        if (entity->link_2fc != 0) {
-            EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+        if (entity->link_2fc != NULL) {
+            EntitySlot* linked = entity->link_2fc;
             linked->flags_3ec &= ~0x40u;
         }
     }
     if ((flags & 0x80U) != 0) {
-        if (entity->link_2fc != 0) {
-            EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+        if (entity->link_2fc != NULL) {
+            EntitySlot* linked = entity->link_2fc;
             linked->flags_3ec &= ~0x80u;
         }
-        entity->link_2fc = 0;
+        entity->link_2fc = NULL;
         entity->flags_3ec = (int32_t)(flags & ~0x80U);
         flags &= ~0x80U;
     }
@@ -1358,7 +1358,7 @@ void deferred_olist_entity_create_and_link(const int cell_xy[2])
             if (i == j || !deferred_olist_string_equal(
                     target_name, active[j].name)) continue;
             target = created[j];
-            created[i]->route_partner_300 = target;
+            created[i]->link_2fc = target;
             created[i]->flags_3e4 |= 4u;
             if ((target->flags_3e0 & 0x100u) != 0u) mode = 1u;
             else if ((target->flags_3e0 & 0x1000000u) == 0u) mode = 4u;
@@ -2618,7 +2618,7 @@ int entity_gated_step_command_issue(EntitySlot* entity, EntitySlot* target)
     free(path_y);
     if (!route_result || entity->wp_count <= 0) return 0;
     ENTITY_WAYPOINTS(entity)[entity->wp_count - 1].step_kind = 3u;
-    entity->link_2fc = (uintptr_t)target;
+    entity->link_2fc = target;
     return 1;
 }
 
@@ -2763,7 +2763,7 @@ void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
     state_flags = entity->flags_3e0;
     if ((state_flags & 0x400u) == 0u ||
         ((state_flags & 0x2000u) != 0u && reset_mode == 0)) return;
-    linked_entity = (EntitySlot*)(uintptr_t)entity->link_2fc;
+    linked_entity = entity->link_2fc;
     /* The retail consume-and-release branch walks the attached-record array
      * when the +0x2fc entity has stats bit 8 and reset mode is active. Those
      * records are full entity slots; clear their two owner links, unlink kind
@@ -2780,7 +2780,7 @@ void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
             entity->attached_children[i] = NULL;
             if (record == NULL) continue;
             record->attach_304 = NULL;
-            record->field_300 = 0u;
+            record->link_300 = NULL;
             entity_command_unlink_by_kind(entity, 5, record, 1);
             entity_action_record_consume_and_cleanup(linked_entity, record);
             entity_activity_scene_state_update(context);
@@ -2810,7 +2810,7 @@ void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
             carried->attached_scene_slot_index = 0;
         }
         carried->owner_36c = NULL;
-        carried->link_2fc = 0u;
+        carried->link_2fc = NULL;
         if (reset_mode == 0) {
             if ((state_flags & 0x200u) == 0u) {
                 (void)cmd_chain_drop(entity, 5);
@@ -3078,7 +3078,7 @@ int entity_deposit_activity_gate(EntitySlot* entity, EntitySlot* target)
      * the preceding route. Path-search failure returns zero. */
     if (installed && entity->wp_count > 0) {
         AiWaypoint* last = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
-        entity->link_2fc = (uintptr_t)target;
+        entity->link_2fc = target;
         if ((flags & 8u) != 0u) last->step_kind = 9u;
         else {
             last->step_kind = 7u;
@@ -4185,8 +4185,8 @@ void entity_finish_state_1a(EntitySlot* entity)
 {
     EntitySlot* target;
     if (entity == NULL) return;
-    if (entity->link_2fc != 0u) {
-        target = (EntitySlot*)entity->link_2fc;
+    if (entity->link_2fc != NULL) {
+        target = entity->link_2fc;
         if (target->type == ENTITY_TYPE_OBJ && entity->wake_timer <= 0.0f)
             (void)entity_face_target_action_start(entity, target, 1);
     }
@@ -4331,8 +4331,8 @@ void entity_linked_route_flag_clear(GameContext* ctx, EntitySlot* e)
         return;
     }
     e->flags_3ec &= ~0x40u;
-    if (e->link_2fc != 0u) {
-        EntitySlot* linked = (EntitySlot*)e->link_2fc;
+    if (e->link_2fc != NULL) {
+        EntitySlot* linked = e->link_2fc;
         linked->flags_3ec &= ~0x40u;
     }
 }
@@ -4411,7 +4411,7 @@ void entity_spawn_request_queue_process(EntitySlot* requester)
         else if ((entity_stats_word_get(spawned) & 0x20000u) != 0u) {
             requester->flags_3ec |= 0x80u;
             spawned->flags_3ec |= 0x80u;
-            spawned->link_2fc = (uintptr_t)requester;
+            spawned->link_2fc = requester;
         }
         position[0] = requester->x;
         position[1] = requester->y;
@@ -4627,7 +4627,7 @@ int ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
     ai_set_activity(entity, 0x34, 0);
     (void)activity_register_bookkeeping(entity);
     ai_idle_chain_record_attach(entity);
-    entity->link_2fc = (uintptr_t)attached;
+    entity->link_2fc = attached;
     entity->flags_3ec |= 0x8000u;
     if (s_entity_pair_pose_hooks.activity_raise != NULL)
         s_entity_pair_pose_hooks.activity_raise(
@@ -4651,7 +4651,7 @@ void entity_update_and_unregister_at_tile(int x, int y, void* link)
             continue;
         }
         if (level_cell_of(e->x) == x && level_cell_of(e->y) == y) {
-            e->link_2fc = (uintptr_t)link;          /* entity +0x2fc */
+            e->link_2fc = (EntitySlot*)link;        /* entity +0x2fc */
             linked_entity_flag_and_command_update(e); /* FUN_004440a0 */
             s_idle100[i] = NULL;                    /* unregister */
         }
@@ -4720,7 +4720,7 @@ int ledger_stub_004401b0_TerrainCellToWorldPosition(EntitySlot* entity,
         }
     }
     else if (!should_transfer && (entity->flags_3ec & 0x40u) != 0u) {
-        linked = (EntitySlot*)entity->link_2fc;
+        linked = entity->link_2fc;
         if (linked != NULL && linked->type == 4) {
             if (s_entity_pair_pose_hooks.scene_present != NULL &&
                 !s_entity_pair_pose_hooks.scene_present(
@@ -4846,7 +4846,7 @@ int ledger_stub_004403d0_LevelDebugCellRetargetDispatch(
             }
             step->pending = (uint8_t)(step->pending | 8u);
             step->step_kind = 12u;
-            entity->link_2fc = (uintptr_t)target;
+            entity->link_2fc = target;
             return 1;
         }
     }
@@ -5499,7 +5499,7 @@ int entity_route_setup_and_marker_associate(EntitySlot* entity,
     if (entity_flags_mask107c33de_or_1c00203_any_test(entity)) return 0;
 
     if ((entity->flags_3ec & 0x40u) != 0u) {
-        entity->link_2fc = 0;
+        entity->link_2fc = NULL;
         entity->flags_3ec &= ~0x40u;
     }
     if (count == 0u) {
@@ -5611,27 +5611,27 @@ void entity_action_sequence_reset(EntitySlot* entity, int preserve_mode)
         AiWaypoint* waypoints = ENTITY_WAYPOINTS(entity);
         while (index < count) {
             if (waypoints[index].step_kind == 3u) {
-                EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+                EntitySlot* linked = entity->link_2fc;
                 if (linked != NULL) {
                     if (linked->type == 5) {
                         entity_type5_finalize_if_allowed(linked);
                     }
                     else {
-                        linked->route_partner_300 = NULL;
+                        linked->link_300 = NULL;
                     }
-                    entity->link_2fc = 0;
+                    entity->link_2fc = NULL;
                 }
                 break;
             }
             if (waypoints[index].step_kind == 7u) {
-                if (entity->link_2fc != 0) entity->link_2fc = 0;
+                if (entity->link_2fc != NULL) entity->link_2fc = NULL;
                 break;
             }
             ++index;
         }
 
         if (entity->type == 3) {
-            EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+            EntitySlot* linked = entity->link_2fc;
             if ((entity->flags_3e8 & 0x400u) != 0u && linked != NULL &&
                 linked->type == 5) {
                 unported_ledger_stubs::entity_attached_object_list_detach(
@@ -5662,8 +5662,8 @@ void entity_action_sequence_reset(EntitySlot* entity, int preserve_mode)
     entity_path_motion_runtime_clear(entity);
     entity->flags_3e0 &= 0xff7ffffeu;
     entity->flags_3e8 &= 0xffffbbffu;
-    if (entity->link_2fc != 0) {
-        EntitySlot* partner = (EntitySlot*)entity->link_2fc;
+    if (entity->link_2fc != NULL) {
+        EntitySlot* partner = entity->link_2fc;
         partner->flags_3ec &= ~0x10u;
     }
     if ((entity->flags_3e0 & 2u) != 0) {
@@ -5717,8 +5717,8 @@ void entity_state_reset(EntitySlot* entity, int clear_mode, int reset_mode)
         entity->flags_3e0 = old_flags_3e0 & 0x6fffd7ffu;
         cmd_chain_drop(entity, 5);
         entity_simulation_queue_flush(entity);
-        if (entity->link_2fc != 0) {
-            EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+        if (entity->link_2fc != NULL) {
+            EntitySlot* linked = entity->link_2fc;
             linked->flags_3ec &= 0xfeffffffu;
         }
     }
@@ -5742,7 +5742,7 @@ void entity_state_reset(EntitySlot* entity, int clear_mode, int reset_mode)
         entity->flags_3e4 &= ~0x400u;
 
     if ((entity->flags_3e4 & 0x8000u) != 0u) {
-        EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+        EntitySlot* linked = entity->link_2fc;
         preserve_link_flags = 0;
         if (linked != NULL && (entity_stats_word_get(linked) & 2u) != 0u) {
             if ((linked->flags_3e4 & 0x8000u) != 0u) {
@@ -5750,8 +5750,8 @@ void entity_state_reset(EntitySlot* entity, int clear_mode, int reset_mode)
             }
             else {
                 cmd_chain_drop(entity, 0x15);
-                linked->route_partner_300 = NULL;
-                entity->link_2fc = 0;
+                linked->link_300 = NULL;
+                entity->link_2fc = NULL;
             }
         }
         if (!preserve_link_flags)
@@ -5776,7 +5776,7 @@ void entity_state_reset(EntitySlot* entity, int clear_mode, int reset_mode)
     old_flags_3e0 = entity->flags_3e0;
     entity->flags_3e0 = old_flags_3e0 & 0xfbffffffu;
     if ((entity->flags_3e4 & 4u) != 0u) {
-        entity->link_2fc = 0;
+        entity->link_2fc = NULL;
         entity->flags_3e4 &= ~4u;
     }
     entity->flags_3e0 = old_flags_3e0 & 0x7bfa7fffu;
@@ -6345,10 +6345,10 @@ float entity_path_step_advance_and_arrival_check(EntitySlot* entity,
     entity_transform_position_get(entity, position);
     if ((entity->flags_3e0 & 8u) == 0u &&
         ENTITY_WAYPOINTS(entity)[entity->wp_index].step_kind == 3u &&
-        entity->link_2fc != 0) {
+        entity->link_2fc != NULL) {
         float work_position[2];
         float dx, dy, distance;
-        if (entity_work_object_position_get((EntitySlot*)entity->link_2fc,
+        if (entity_work_object_position_get(entity->link_2fc,
                                             work_position)) {
             dx = work_position[0] - position[0];
             dy = work_position[1] - position[1];
@@ -6361,8 +6361,8 @@ float entity_path_step_advance_and_arrival_check(EntitySlot* entity,
         }
     }
     if (ENTITY_WAYPOINTS(entity)[entity->wp_index].step_kind == 12u &&
-        entity->link_2fc != 0) {
-        EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+        entity->link_2fc != NULL) {
+        EntitySlot* linked = entity->link_2fc;
         float work_position[2];
         float dx, dy;
         if (entity_work_object_position_get(linked, work_position)) {
@@ -6433,7 +6433,7 @@ float entity_path_step_advance_and_arrival_check(EntitySlot* entity,
         case 17u: entity->flags_3e4 |= 0x4000000u; break;
         case 18u: entity->flags_3e4 |= 0x10000000u; break;
         case 19u: {
-            EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+            EntitySlot* linked = entity->link_2fc;
             if (linked != NULL && linked->type == 4) {
                 entity->flags_3ec |= 0x40u;
                 linked->flags_3ec |= 0x40u;
@@ -6460,7 +6460,7 @@ void linked_entity_flag_and_command_update(EntitySlot* e)
     if (e == NULL) {
         return; /* deviation: the corpus strides blindly */
     }
-    EntitySlot* child = (EntitySlot*)(uintptr_t)e->link_2fc;
+    EntitySlot* child = e->link_2fc;
     if (child == NULL || child->type != 4) {
         return;
     }
@@ -7220,8 +7220,8 @@ int entity_try_create_linked_at_position(EntitySlot* entity, float cell_x,
                 (unsigned int)(int)cell_y, 4.0f)) return 0;
     if (entity->wp_count <= 0) return 0;
     ENTITY_WAYPOINTS(entity)[entity->wp_count - 1].step_kind = 3u;
-    entity->link_2fc = (uintptr_t)linked;
-    linked->attach_304 = entity;
+    entity->link_2fc = linked;
+    linked->link_300 = entity;
     return 1;
 }
 
@@ -7302,7 +7302,7 @@ int ledger_stub_004473b0_RouteToCellCommandIssue(
     if (target_cell[0] == target_x && target_cell[1] == target_y) return 0;
     if (!entity_route_to_cell_commit(entity, target_x, target_y, 5u)) return 0;
     if (entity->carry_link_308 != NULL)
-        ((EntitySlot*)entity->carry_link_308)->link_2fc = (uintptr_t)target;
+        ((EntitySlot*)entity->carry_link_308)->link_2fc = target;
     return 1;
 }
 
@@ -7314,8 +7314,8 @@ void ledger_stub_004474f0_LinkedEntityProximityResponse(EntitySlot* entity)
     float linked_position[3];
     float dx, dy, distance_squared, radius;
     if (entity == NULL) return;
-    linked = (EntitySlot*)entity->link_2fc;
-    entity->link_2fc = 0;
+    linked = entity->link_2fc;
+    entity->link_2fc = NULL;
     if (linked == NULL ||
         !entity_world_center_position_read(entity, entity_position) ||
         !entity_world_center_position_read(linked, linked_position)) return;
@@ -7341,7 +7341,7 @@ int ledger_stub_004475c0_EntityProgressAndNegativeDeltaHandler(
     float delta;
     int complete = 0;
     if (entity == NULL) return 1;
-    target = (EntitySlot*)entity->link_2fc;
+    target = entity->link_2fc;
     if (target == NULL) return 1;
     if ((target->flags_3e4 & 0x00100000u) != 0u) return 0;
 
@@ -7387,7 +7387,7 @@ int ledger_stub_004475c0_EntityProgressAndNegativeDeltaHandler(
         }
     }
     if (target->field_340 <= 0.0f) complete = 1;
-    if (complete) entity->link_2fc = 0;
+    if (complete) entity->link_2fc = NULL;
     return complete;
 }
 } // namespace unported_ledger_stubs
@@ -7401,7 +7401,7 @@ int ledger_stub_004475c0_EntityProgressAndNegativeDeltaHandler(
 int entity_progress_advance_by_25(EntitySlot* e)
 {
     const float advanced = e->progress_344 + 25.0f;
-    e->link_2fc = 0u;
+    e->link_2fc = NULL;
     e->progress_344 = advanced;
     if (e->field_340 < advanced) {
         e->progress_344 = e->field_340;
@@ -7471,7 +7471,7 @@ void ledger_stub_004477d0_PathStepLookaheadEntryWrite(EntitySlot* entity)
     if (linked == NULL) {
         return;
     }
-    target = (EntitySlot*)linked->link_2fc;
+    target = linked->link_2fc;
     if (target == NULL) {
         return;
     }
@@ -7498,7 +7498,7 @@ void ledger_stub_004477d0_PathStepLookaheadEntryWrite(EntitySlot* entity)
     waypoint->pending = (uint8_t)(waypoint->pending | 8u);
     linked->pos_pair_2f4 = target_world[0];
     linked->pos_pair_2f8 = target_world[1];
-    linked->link_2fc = 0;
+    linked->link_2fc = NULL;
 }
 } // namespace unported_ledger_stubs
 
@@ -8195,8 +8195,8 @@ int ledger_stub_00448c90_CardinalStepCommandIssueAndLink(
                                                  target_cell[0], target_cell[1]);
     step->step_kind = 15u;
     step->pending = (uint8_t)(step->pending | 4u | direction);
-    entity->link_2fc = (uintptr_t)target;
-    target->route_partner_300 = entity;
+    entity->link_2fc = target;
+    target->link_300 = entity;
     entity->command_mode_404 = link_mode;
     return 1;
 }
@@ -8243,7 +8243,7 @@ int ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(
     }
     step->step_kind = marker ? 15u : 14u;
     step->pending = (uint8_t)(step->pending | 4u | direction);
-    entity->link_2fc = (uintptr_t)target;
+    entity->link_2fc = target;
     return 1;
 }
 
@@ -8322,7 +8322,7 @@ int ledger_stub_004490a0_ProximityStepCommandIssueWithLink(
     step->step_kind = 6u;
     step->pending = (uint8_t)(step->pending | 4u | direction |
                               (mode != 0 ? 0x20u : 0u));
-    entity->link_2fc = (uintptr_t)target;
+    entity->link_2fc = target;
     if (set_global_gate) entity->flags_3ec |= 0x00400000u;
     return 1;
 }
@@ -8421,7 +8421,7 @@ int ledger_stub_00449430_EntityTargetCellRouteAndAssociate(
             ? entity->wp_count > AI_WAYPOINTS_MAX
             : (unsigned int)entity->wp_count > entity->wp_capacity)) return 0;
     ENTITY_WAYPOINTS(entity)[entity->wp_count - 1].step_kind = 0x11u;
-    entity->link_2fc = (uintptr_t)target;
+    entity->link_2fc = target;
     return 1;
 }
 
@@ -8636,7 +8636,7 @@ int ledger_stub_00449ac0_ProximityStepCommandIssueClearingGate(
     }
     step->step_kind = 0x0bu;
     step->pending = (uint8_t)(step->pending | 4u | (direction & 3u));
-    entity->link_2fc = (uintptr_t)target;
+    entity->link_2fc = target;
     return 1;
 }
 } // namespace unported_ledger_stubs
@@ -9318,8 +9318,8 @@ void entity_kind_one_random_spawn_trigger(void* entity)
     }
     spawn_owner = source;
     if ((source->flags_3ec & 0x00000040u) != 0u &&
-        source->link_2fc != 0u) {
-        spawn_owner = (EntitySlot*)source->link_2fc;
+        source->link_2fc != NULL) {
+        spawn_owner = source->link_2fc;
     }
     count = stats_table_word_at_b4(1, source->etype, 0);
     random_kind_six_scatter_spawn(spawn_owner, (int)count, 0);
@@ -9619,7 +9619,7 @@ int ledger_stub_0044b500_ObjectPositionStepCommandIssueAndLink(
         (entity->wp_dynamic == NULL
             ? entity->wp_count > AI_WAYPOINTS_MAX
             : (unsigned int)entity->wp_count > entity->wp_capacity)) return 0;
-    entity->link_2fc = (uintptr_t)spatial_candidate;
+    entity->link_2fc = spatial_candidate;
     step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     step->step_kind = 0x0du;
     return 1;
@@ -10130,7 +10130,7 @@ static int entity_route_marker_query_match(
         if ((mask & 0x0040u) != 0u && (stats & 8u) == 0u &&
             candidate->type == 4) matched = 1;
         if ((mask & 0x0080u) != 0u && (state & 2u) != 0u &&
-            candidate->field_300 == 0u) matched = 1;
+            candidate->link_300 == NULL) matched = 1;
         if ((mask & 0x0800u) != 0u &&
             (stats & 0x80000000u) != 0u) matched = 1;
         if ((mask & 0x0010u) != 0u && (stats & 0x10u) != 0u)
@@ -10542,7 +10542,7 @@ static int entity_type_four_linked_type_five_reset(EntitySlot* candidate,
 {
     EntitySlot* source = (EntitySlot*)payload;
     if (candidate != NULL && candidate->type == 5 &&
-        candidate->link_2fc == (uintptr_t)source &&
+        candidate->link_2fc == source &&
         candidate->attach_304 != NULL) {
         entity_action_sequence_reset(candidate, 0);
     }
@@ -10557,8 +10557,8 @@ static int entity_linked_reference_matches(EntitySlot* candidate,
     if (candidate == NULL || target == NULL) {
         return 0;
     }
-    if (candidate->link_2fc == (uintptr_t)target) {
-        candidate->link_2fc = 0u;
+    if (candidate->link_2fc == target) {
+        candidate->link_2fc = NULL;
         candidate->flags_3ec &= ~0x40u;
         matched = 1;
     }

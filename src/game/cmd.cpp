@@ -682,7 +682,7 @@ static void cmd_gettool_owner_forget(CmdRec* record)
     record->state &= ~CMD_STATE_ISSUED;
     if (actor->cmd_head == record) {
         actor->flags_3e4 &= ~0x40u;
-        if (actor->link_2fc == (uintptr_t)store) actor->link_2fc = 0u;
+        if (actor->link_2fc == store) actor->link_2fc = NULL;
     }
 }
 
@@ -762,7 +762,7 @@ int cmd_gettool_route_moving(EntitySlot* entity)
     if (head->gettool.actor == entity &&
         (head->state & (CMD_STATE_ISSUED | CMD_STATE_DONE)) ==
             CMD_STATE_ISSUED && cmd_gettool_store_live(&head->gettool) &&
-        entity->link_2fc == (uintptr_t)head->gettool.store &&
+        entity->link_2fc == head->gettool.store &&
         (entity->flags_3e0 & 1u) != 0u &&
         entity->wp_count == head->gettool.count &&
         ENTITY_WAYPOINTS(entity) == head->gettool.waypoints &&

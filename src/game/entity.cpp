@@ -1781,7 +1781,7 @@ int entity_route_marker_setup(EntitySlot* actor)
                                                     target_position)) {
         return 0;
     }
-    actor->link_2fc = (uintptr_t)target;
+    actor->link_2fc = target;
     ENTITY_WAYPOINTS(actor)[count - 1u].pending = 0x13u;
     return 1;
 }
@@ -2466,7 +2466,7 @@ uint32_t stats_rec_word(const EntitySlot* e, int off)
  * the +0x36c owner and the +0x3e0..+0x3f0 flag words (finding 522), and
  * the +0x28 path count, the +0x2f0..+0x308 command, pair and link words,
  * the +0x330 selector, the +0x344 progress float and the +0x3c0 pair link
- * (finding 526). */
+ * (finding 526), and the +0x300 reciprocal link (finding 565). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 #define ENTITY_SLOT_RETAIL_OFFSET(member, off) \
     static_assert((size_t)&((EntitySlot*)0)->member == (off), \
@@ -2482,6 +2482,7 @@ ENTITY_SLOT_RETAIL_OFFSET(cmd_head, 0x2f0);
 ENTITY_SLOT_RETAIL_OFFSET(pos_pair_2f4, 0x2f4);
 ENTITY_SLOT_RETAIL_OFFSET(pos_pair_2f8, 0x2f8);
 ENTITY_SLOT_RETAIL_OFFSET(link_2fc, 0x2fc);
+ENTITY_SLOT_RETAIL_OFFSET(link_300, 0x300);
 ENTITY_SLOT_RETAIL_OFFSET(attach_304, 0x304);
 ENTITY_SLOT_RETAIL_OFFSET(carry_link_308, 0x308);
 ENTITY_SLOT_RETAIL_OFFSET(indexed_record_slot_330, 0x330);
@@ -2496,8 +2497,8 @@ ENTITY_SLOT_RETAIL_OFFSET(flags_3e4, 0x3e4);
 ENTITY_SLOT_RETAIL_OFFSET(flags_3e8, 0x3e8);
 ENTITY_SLOT_RETAIL_OFFSET(flags_3ec, 0x3ec);
 ENTITY_SLOT_RETAIL_OFFSET(flags_3f0, 0x3f0);
-static_assert(sizeof(EntitySlot) == 0x678,
-              "EntitySlot keeps its 32-bit size (ADR 0006 decision 5)");
+static_assert(sizeof(EntitySlot) == 0x674,
+              "EntitySlot 32-bit size (0x678 until finding 565 merged +0x300)");
 #undef ENTITY_SLOT_RETAIL_OFFSET
 #endif
 
