@@ -976,9 +976,9 @@ uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit);
 
 /* GlobalPointerGet variants: the three global words (see crt.cpp) —
  * FUN_00410b30, FUN_00410b40, FUN_00410b50. */
-uint32_t renderer_word_a_get(void);
-uint32_t renderer_word_b_get(void);
-uint32_t renderer_word_c_get(void);
+extern "C" uint32_t renderer_word_a_get(void);
+extern "C" uint32_t renderer_word_b_get(void);
+extern "C" uint32_t renderer_word_c_get(void);
 void     renderer_word_c_set(uint32_t value);
 extern "C" uint32_t s_renderer_word_a; /* DAT_0076ab24 */
 extern "C" uint32_t s_renderer_word_b; /* DAT_0076ab28 */

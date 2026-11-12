@@ -408,8 +408,12 @@ src/game/weapon.cpp
 src/game/weapon.hpp
 src/game/weapon_for_weapons.hpp
 src/game/weapon_from_weapons.hpp
-src/game/weapons.cpp
+src/game/weapons.c
 src/game/weapons.h
+src/game/weapons_imports.h
+src/game/weapons_maths.h
+src/game/weapons_port.cpp
+src/game/weapons_port_aliases.h
 src/gods98/audio.cpp
 src/gods98/audio.h
 src/gods98/audio.hpp

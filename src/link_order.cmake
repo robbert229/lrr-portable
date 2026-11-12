@@ -83,7 +83,7 @@ lrr_link(unit   GAME-046 game          game/tooltip.cpp)
 lrr_link(unit   GAME-047 game          game/upgrade_levels.cpp)
 lrr_link(unit   GAME-048 game          game/vehicle_model.cpp)
 lrr_link(unit   GAME-049 game          game/cell_flood_passes.cpp)
-lrr_link(unit   GAME-050 game          game/weapons.cpp)
+lrr_link(unit   GAME-050 game          game/weapons.c)
 
 # gods98 segment. G98-001 is still in src/game and the game library;
 # it moves with its relocation.
@@ -172,6 +172,7 @@ lrr_link(tail   -        game          game/reward_port.cpp)
 lrr_link(tail   -        game          game/interface_port.cpp)
 lrr_link(tail   -        game          game/info_port.cpp)
 lrr_link(tail   -        game          game/aitask_port.cpp)
+lrr_link(tail   -        game          game/weapons_port.cpp)
 lrr_link(tail   -        game          game/terrain_cell_objects_port.cpp)
 lrr_link(tail   -        game          game/entity_stats_port.cpp)
 lrr_link(tail   -        gods98        gods98/message.cpp)

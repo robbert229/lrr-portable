@@ -612,6 +612,9 @@ float sound_streamed_wave_buffer_step_rate(int slot);
 /* SoundObjectDurationGet @ 0x465160: duration of whatever `alias`'s
  * chain selects — consumes one variant draw per call. Alias 0
  * (nothing selects) reads 0. */
+#ifdef __cplusplus
+extern "C"
+#endif
 double sound_object_duration_get(int alias);
 
 /* SoundSubmitWithGlobalCooldown @ 0x464ef0: with the cooldown timer

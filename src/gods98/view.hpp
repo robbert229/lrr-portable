@@ -357,6 +357,9 @@ typedef struct EngineTaskCallbackHooks {
 } EngineTaskCallbackHooks;
 void engine_task_callback_hooks_set(const EngineTaskCallbackHooks* hooks);
 /* Five retail stack arguments, in callsite order. */
+#ifdef __cplusplus
+extern "C"
+#endif
 EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
     void* owner, void* callback, uint32_t mode, void* context,
     uint32_t flag_value); /* 0x00480870 */
@@ -708,8 +711,14 @@ float projected_quad_screen_area_calculate(
     const float bounds_xy[2], int disable_visibility_clip); /* FUN_0040b470 */
 
 /* 2D orthogonal projections; zero-length directions remain unguarded. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void point_project_onto_line2d(const float* line_start, const float* line_end,
                                const float* point, float* out);
+#ifdef __cplusplus
+extern "C"
+#endif
 void point2d_project_onto_direction(const float* origin, const float* direction,
                                     const float* point, float* out);
 
@@ -1370,6 +1379,9 @@ void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
                            float z); /* 0x004755b0 */
 void scene_object_coordinate_transform_to_output(void* object,
                                                   void* input, void* output);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_coordinate_transform_in_place(void* object,
                                                 void* coordinates,
                                                 void* transform);

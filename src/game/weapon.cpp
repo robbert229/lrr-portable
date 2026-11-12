@@ -4,15 +4,23 @@
 
 #include <string.h>
 #include "weapon_for_weapons.hpp"
-/* GAME-013's terrain_cell_objects.c calls 0x0046f110 from C, so weapons.cpp
- * defines it with C linkage. Declaring it so here, before the frozen
- * header's declaration, gives that one the same linkage (finding 566). */
+/* Weapons.c (GAME-050, weapons.c) defines the four stats getters with C
+ * linkage (finding 582; terrain_cell_objects.c and legoobject_unit.c call
+ * two of them from C). Declaring them so here, before the frozen header's
+ * declarations, gives those the same linkage (finding 566). */
 namespace lego {
 extern "C" float weapon_type_recharge_time_get_target(int type);
-/* GAME-023 legoobject_unit.c calls 0x0046f140 from C. */
 extern "C" float weapon_type_discharge_rate_get_target(int type);
+extern "C" float weapon_type_range_get_target(int type);
+extern "C" float weapon_type_wall_destroy_time_get_target(int type,
+                                                         int wall_type);
 }
 #include "weapon_from_weapons.hpp"
+/* The table is Weapons.c's weaponStatsList (0x00503878); the frozen
+ * header's s_weapon_indexed_records is now never defined (finding 582). */
+extern "C" void** weapons_port_stats_slot(void);
+#define s_weapon_indexed_records \
+    (*(WeaponIndexedTypeRecord**)weapons_port_stats_slot())
 
 namespace lego {
 

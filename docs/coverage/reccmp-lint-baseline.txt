@@ -2,9 +2,6 @@
 # Run make reccmp-lint-update to remove fixed entries; use
 # make reccmp-lint-update RECCMP_LINT_UPDATE_ARGS=--allow-growth to add debt.
 definition LegorrrRun f5909051e01d1b40
-definition active_effect_curve_samples_build 05806dd1875e0bf3
-definition active_effect_direction_normalize 3a25493ee5070259
-definition active_effect_type_resolve 72d6b4cfad4fe956
 definition active_engine_field_b0_get 6e3c6c40b93f4dde
 definition activity_skips_idle_chain 5f1b385c07873380
 definition advisor_action_flags_peek ea8fe0fbc236572d
@@ -339,7 +336,6 @@ definition engine_heap_free 4d9b4fc02c8a2c60
 definition entity_at_grid_position_find_in_context 38e7e305b4510cf7
 definition entity_carried_slot_get 12345419a1ef8dd4
 definition entity_carried_slot_set 7cf4c930b277e4ce
-definition entity_centers_within_radius 108721351e1d1cfb
 definition entity_flag_mask_match_callback 6fd04edaf479bbfa
 definition entity_kind_four_adjacent_expand 4a258ff89e1864f4
 definition entity_kind_four_candidate_find 1726e035d36a7738
@@ -583,8 +579,6 @@ definition legacy_config_rgb_from_root 35cf31a909c132bf
 definition legacy_hud_config_path c788bfaad47b0723
 definition legacy_hud_resource_name 3a9a02604ba012e3
 definition legacy_rgb_pack 91794e4c89e73446
-definition lego::ascii_case_equal 7d3d6ee8ba879622
-definition lego::ascii_lower 6177d2d61ad89646
 definition lego::copy_string 667dc15702ec1f98
 definition lego::directshow_graph_hooks_set c2b3761767b2783b
 definition lego::directshow_partial_release 2032eba740f85169
@@ -595,7 +589,6 @@ definition lego::interface_array_forward_sync_slot80 14047f5420ea54d6
 definition lego::interface_forward_sync_items_reserve c6405e56076278bd
 definition lego::resource_interface_call_noargs 0416ab88b7735148
 definition lego::scene_object_allocation_failed 11cb33c3e9943043
-definition lego::weapon_definition_reset b41a1cecd5f88f66
 definition level_cell_byte_state_classify b799b7aa208b73dd
 definition level_cell_flag8_check db0660db8b83c376
 definition level_cell_flag_10000000_set 4054637cffa036cc
@@ -1041,7 +1034,6 @@ definition selection_marker_descriptor_peek 17e4b338302919ce
 definition selection_marker_descriptor_set dc005d8ae6d1eea2
 definition selection_marker_slot_peek b7fb3bdcf9a242e8
 definition selection_marker_slot_set 29c37876511cde6f
-definition sfx_entity_scan_callback 570c1228e42d817b
 definition shared_texture_directory_clear 82a117533ec9a5c3
 definition shared_texture_directory_peek d19a7b5e789610c1
 definition sound_alias_builtin_hashes_init 1a9c45e46c6900d0
@@ -1280,9 +1272,6 @@ definition uint96_is_zero 6977430b626bdf4f
 definition uint96_shift_right 4201924142b3f638
 definition uint96_zero d4cc244058f587a4
 definition unported_ledger_stubs::adjacent_route_candidate_stop c329d144914896fb
-definition unported_ledger_stubs::combat_ray_configured_range_get 451568fb2421a026
-definition unported_ledger_stubs::combat_ray_entity_release bfe314193d5a9716
-definition unported_ledger_stubs::combat_ray_scene_trace 25a76540637d66ba
 definition unported_ledger_stubs::emergence_cell_world_position_get 53bb19ad8990daaf
 definition unported_ledger_stubs::emergence_entity_create 784e7491e67ad8f6
 definition unported_ledger_stubs::emergence_game_context_get 30b3d23315ed25db

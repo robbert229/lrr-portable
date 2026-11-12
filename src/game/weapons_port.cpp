@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-050 GAME-050: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-050.csv. */
+/* GAME-050 Weapons.c port tail (finding 582): the port's models of the
+ * unit, unannotated. The original-shape unit is weapons.c; these models keep
+ * the port's contracts (hook tables, the port's EntitySlot, NULL guards) for
+ * the native callers and tests. Five entries moved to weapons.c, which serves
+ * native callers too: object_type_name_index_find and the four stats getters
+ * (0x0046f0d0-0x0046f1a0). The port's loader publishes its table into the
+ * unit's state for them. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
 #include <stdio.h>
@@ -64,14 +68,23 @@
 #include "weapon_for_weapons.hpp"
 #include "gods98/simtick_for_weapons.hpp"
 
-namespace lego {
-// GLOBAL: LEGORR 0x00503878
-WeaponIndexedTypeRecord* s_weapon_indexed_records;
-} // namespace lego
+/* weapons.c's port-only accessors (finding 582). */
+extern "C" void weapons_port_type_table_set(unsigned int count, char** names,
+                                            void* stats);
+extern "C" void** weapons_port_stats_slot(void);
+
+/* Weapons.c's weaponStatsList (0x00503878) is the port's indexed table:
+ * the unit owns it, and the port reads and writes it through the unit. The
+ * frozen weapon_from_weapons.hpp's declaration is now never defined. */
+#define s_weapon_indexed_records \
+    (*(WeaponIndexedTypeRecord**)weapons_port_stats_slot())
 
 namespace lego {
 namespace {
 void* s_weapon_config = 0;
+/* The names object_type_name_index_find (weapons.c) compares, as the
+ * original's weaponNameList. */
+char* s_weapon_name_table[WEAPON_TYPE_CAPACITY];
 } // namespace
 } // namespace lego
 
@@ -83,7 +96,6 @@ int ledger_stub_004702b0_EntitySurfaceQuadSegmentIntersect(
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 namespace lego { namespace { void weapon_definition_reset(WeaponDefinition* definition); } }
-namespace lego { namespace { int ascii_case_equal(const char* a, const char* b); } }
 namespace unported_ledger_stubs { static float combat_ray_configured_range_get(void*, int kind); }
 namespace unported_ledger_stubs { static void combat_ray_entity_release(void*, void* entity); }
 namespace unported_ledger_stubs { static int combat_ray_scene_trace(void*, const float origin[3], const float direction[3], float* hit_fraction, float hit_point[3], void** hit_object_out); }
@@ -97,7 +109,7 @@ namespace lego {
 /* The original walks the block-text `WeaponTypes` section and fills a much
  * larger type/level grid. This portable owner preserves the directly used
  * footer fields and lets the existing config layer provide parsed entries. */
-// FUNCTION: LEGORR 0x0046EB80
+/* Port model of 0x0046eb80 */
 int weapon_type_config_load(void* config, void* context)
 {
     uint32_t i;
@@ -105,6 +117,8 @@ int weapon_type_config_load(void* config, void* context)
     WeaponIndexedTypeRecord* records;
     s_weapon_config = config;
     s_weapon_type_count = 0;
+    weapons_port_type_table_set(0, s_weapon_name_table,
+                                s_weapon_indexed_records);
     for (i = 0; i < WEAPON_TYPE_CAPACITY; ++i)
         weapon_definition_reset(&s_weapon_definitions[i]);
     if (s_weapon_parse_hook == 0) return 0;
@@ -139,48 +153,15 @@ int weapon_type_config_load(void* config, void* context)
     if (s_weapon_owned_records != 0)
         engine_heap_free(s_weapon_owned_records);
     s_weapon_owned_records = records;
-    s_weapon_indexed_records = records;
     s_weapon_indexed_record_count = count;
     s_weapon_type_count = count;
+    for (i = 0; i < count; ++i)
+        s_weapon_name_table[i] = s_weapon_definitions[i].name;
+    weapons_port_type_table_set(count, s_weapon_name_table, records);
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0046F0D0
-uint32_t object_type_name_index_find(const char* name)
-{
-    uint32_t i;
-    if (s_weapon_type_count == 0) return 1;
-    for (i = 0; i < s_weapon_type_count; ++i) {
-        if (ascii_case_equal(s_weapon_definitions[i].name, name)) return i;
-    }
-    return s_weapon_type_count + 1;
-}
-
-// FUNCTION: LEGORR 0x0046F110
-extern "C" float weapon_type_recharge_time_get_target(int type)
-{
-    return s_weapon_indexed_records[type].recharge_time;
-}
-
-// FUNCTION: LEGORR 0x0046F140
-extern "C" float weapon_type_discharge_rate_get_target(int type)
-{
-    return s_weapon_indexed_records[type].discharge_rate;
-}
-
-// FUNCTION: LEGORR 0x0046F170
-float weapon_type_range_get_target(int type)
-{
-    return s_weapon_indexed_records[type].range;
-}
-
-// FUNCTION: LEGORR 0x0046F1A0
-float weapon_type_wall_destroy_time_get_target(int type, int wall_type)
-{
-    return s_weapon_indexed_records[type].wall_destroy_time[wall_type];
-}
-
-// FUNCTION: LEGORR 0x0046f1d0
+/* Port model of 0x0046f1d0 */
 float entity_indexed_float_lookup_with_minus_one_fallback(
     int weapon_type, const void* entity_record)
 {
@@ -215,7 +196,7 @@ float entity_indexed_float_lookup_with_minus_one_fallback(
 
 namespace unported_ledger_stubs {
 // TypeMotionScaleApplyDispatch
-// FUNCTION: LEGORR 0x0046f270
+/* Port model of 0x0046f270 */
 extern "C" void ledger_stub_0046f270_TypeMotionScaleApplyDispatch(
     EntitySlot* entity, int weapon_type, int apply_index, float scale,
     void* finish_argument)
@@ -287,7 +268,7 @@ extern "C" void ledger_stub_0046f270_TypeMotionScaleApplyDispatch(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x0046f380
+/* Port model of 0x0046f380 */
 void entity_apply_impulse_and_direction(void* entity, float magnitude,
                                         uint32_t direction)
 {
@@ -308,7 +289,7 @@ void entity_apply_impulse_and_direction(void* entity, float magnitude,
 
 namespace unported_ledger_stubs {
 // RayHitScanAndEffectApply
-// FUNCTION: LEGORR 0x0046f3b0
+/* Port model of 0x0046f3b0 */
 void ledger_stub_0046f3b0_RayHitScanAndEffectApply(
     CombatRayState* state, const CombatRayHooks* hooks)
 {
@@ -329,7 +310,7 @@ void ledger_stub_0046f3b0_RayHitScanAndEffectApply(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x0046f550
+/* Port model of 0x0046f550 */
 void simtick_sfx_bank(EngineContext* c, float dt)
 {
     int i;
@@ -406,7 +387,7 @@ void simtick_sfx_bank(EngineContext* c, float dt)
     }
 }
 
-// FUNCTION: LEGORR 0x0046f770
+/* Port model of 0x0046f770 */
 void effect_apply_by_kind_branch(void* entity, const float direction_xy[2],
                                  const float effect_position[3],
                                  uint32_t type, int mode)
@@ -463,7 +444,7 @@ void effect_apply_by_kind_branch(void* entity, const float direction_xy[2],
                                                  entity, type, direction);
     }
 }
-// FUNCTION: LEGORR 0x0046faf0
+/* Port model of 0x0046faf0 */
 int entity_spawn_record_slot_init(void* owner, const float position[3],
                                   const float direction[3],
                                   uint32_t auxiliary, uint32_t mode)
@@ -516,7 +497,7 @@ int entity_spawn_record_slot_init(void* owner, const float position[3],
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0046fc70
+/* Port model of 0x0046fc70 */
 int object_flight_curve_record_init(void* owner, const float start[3],
                                     const float end[3], uint32_t auxiliary,
                                     uint32_t mode)
@@ -573,7 +554,7 @@ int object_flight_curve_record_init(void* owner, const float start[3],
             s_active_effect_build_hooks.context, record, slot);
     return 1;
 }
-// FUNCTION: LEGORR 0x0046fef0
+/* Port model of 0x0046fef0 */
 void effect_mode_surface_query_type_resolve(uint32_t mode,
                                             uint32_t* surface_type,
                                             uint32_t* flags)
@@ -587,7 +568,7 @@ void effect_mode_surface_query_type_resolve(uint32_t mode,
     }
 }
 
-// FUNCTION: LEGORR 0x0046ff70
+/* Port model of 0x0046ff70 */
 int active_effect_record_slot_find(void)
 {
     int i;
@@ -598,7 +579,7 @@ int active_effect_record_slot_find(void)
     return -1;
 }
 
-// FUNCTION: LEGORR 0x0046ff90
+/* Port model of 0x0046ff90 */
 int active_segment_visual_record_slot_find(void)
 {
     int i;
@@ -611,7 +592,7 @@ int active_segment_visual_record_slot_find(void)
 
 namespace unported_ledger_stubs {
 // LaserSpatialSoundAndImpact
-// FUNCTION: LEGORR 0x0046ffb0
+/* Port model of 0x0046ffb0 */
 void* ledger_stub_0046ffb0_LaserSpatialSoundAndImpact(
     void* request, int kind, float scale, const float origin[3],
     const float direction[3], const LaserImpactHooks* hooks)
@@ -621,7 +602,7 @@ void* ledger_stub_0046ffb0_LaserSpatialSoundAndImpact(
 }
 
 // EntitySurfaceSegmentCollisionCheck
-// FUNCTION: LEGORR 0x00470260
+/* Port model of 0x00470260 */
 void ledger_stub_00470260_EntitySurfaceSegmentCollisionCheck(
     EntitySlot* entity, const float start_xy[2], const float end_xy[2],
     int check_side)
@@ -636,7 +617,7 @@ void ledger_stub_00470260_EntitySurfaceSegmentCollisionCheck(
 }
 
 // EntitySurfaceQuadSegmentIntersect
-// FUNCTION: LEGORR 0x004702b0
+/* Port model of 0x004702b0 */
 int ledger_stub_004702b0_EntitySurfaceQuadSegmentIntersect(
     EntitySlot* entity, const float start_xy[2], const float end_xy[2],
     float out_xy[2], int check_side)
@@ -646,7 +627,7 @@ int ledger_stub_004702b0_EntitySurfaceQuadSegmentIntersect(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00470540
+/* Port model of 0x00470540 */
 int entity_segment_center_proximity_check(const EntitySlot* entity,
                                           const float start_xy[2],
                                           const float end_xy[2],
@@ -683,7 +664,7 @@ int entity_segment_center_proximity_check(const EntitySlot* entity,
     if (radius <= (float)sqrt(dx * dx + dy * dy)) return 0;
     return 1;
 }
-// FUNCTION: LEGORR 0x00470630
+/* Port model of 0x00470630 */
 int entity_directed_line_side_check(const EntitySlot* entity,
                                     const float point_xy[2],
                                     const float direction_xy[2])
@@ -695,7 +676,7 @@ int entity_directed_line_side_check(const EntitySlot* entity,
             (entity_position[1] - point_xy[1]) * direction_xy[1]) < 0.0f;
 }
 
-// FUNCTION: LEGORR 0x00470690
+/* Port model of 0x00470690 */
 void timed_entity_segment_visual_create(void* entity, const float start[3],
                                        const float end[3])
 {
@@ -725,7 +706,7 @@ void timed_entity_segment_visual_create(void* entity, const float start[3],
     active_segment_visual_record_slot_set(slot, 1);
 }
 
-// FUNCTION: LEGORR 0x00470760
+/* Port model of 0x00470760 */
 void mesh_build_eight_sided_segment(void* mesh, float radius,
                                     const float start[3], const float end[3],
                                     float red, float green, float blue,
@@ -849,7 +830,7 @@ void mesh_build_eight_sided_segment(void* mesh, float radius,
 /* EntityVelocityStateRecordGet (FUN_004712c0): the x86 body mirrors the
  * unchecked type decrement/subtract and embedded-base returns. The portable
  * path retains the NULL record/link guards pinned by test_record. */
-// FUNCTION: LEGORR 0x004712c0
+/* Port model of 0x004712c0 */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
 void* entity_velocity_state_record_get(const void* record)
@@ -899,7 +880,7 @@ void* entity_velocity_state_record_get(const void* record)
 /* EntityVelocitySlotValueGet (FUN_004712f0): the x86 body reads the float
  * at +0x98 + slot*4 without a null or slot guard. The portable path keeps
  * its guarded fallback. */
-// FUNCTION: LEGORR 0x004712f0
+/* Port model of 0x004712f0 */
 float entity_velocity_slot_value_get(const void* record, int slot)
 {
     void* base = entity_velocity_state_record_get(record);
@@ -915,7 +896,7 @@ float entity_velocity_slot_value_get(const void* record, int slot)
 
 /* EntityVelocitySlotValueSet (FUN_00471310): the x86 body stores the raw
  * value word at +0x98 + slot*4 without guards. */
-// FUNCTION: LEGORR 0x00471310
+/* Port model of 0x00471310 */
 void entity_velocity_slot_value_set(void* record, float value, int slot)
 {
     void* base = entity_velocity_state_record_get(record);
@@ -934,7 +915,7 @@ void entity_velocity_slot_value_set(void* record, float value, int slot)
  * directly in b, a order, then interpolates before `v <= target` and
  * `target - t <= v`. Keep rec_float's NULL-to-zero behavior without helper
  * calls so the native-width loads follow that operand schedule. */
-// FUNCTION: LEGORR 0x00471330
+/* Port model of 0x00471330 */
 int interpolated_z_within_bounds(const void* record_a, const void* record_b,
                                  float t, float target, float scale)
 {
@@ -952,7 +933,7 @@ int interpolated_z_within_bounds(const void* record_a, const void* record_b,
  * always returns zero so the pool walker examines every candidate. The ray
  * uses the game's logical [X,Y,height] basis; terrain geometry stores the
  * same horizontal axes at vertex components 0/2 and height at component 1. */
-// FUNCTION: LEGORR 0x00471370
+/* Port model of 0x00471370 */
 int cmd_place_ray_candidate_check(EntitySlot* entity, void* payload)
 {
     CmdRayCandidateWalk* walk = (CmdRayCandidateWalk*)payload;
@@ -1018,7 +999,7 @@ int cmd_place_ray_candidate_check(EntitySlot* entity, void* payload)
 
 /* RayHitCellDistanceMinimizeSweep (FUN_00471630): enumerate the grid cells
  * touched by the start/end segment and retain the nearest reported hit. */
-// FUNCTION: LEGORR 0x00471630
+/* Port model of 0x00471630 */
 void ray_hit_cell_distance_minimize_sweep(EntityRayHitSweepState* state)
 {
     uint32_t width = 0u;
@@ -1096,7 +1077,7 @@ void ray_hit_cell_distance_minimize_sweep(EntityRayHitSweepState* state)
 /* SceneSegmentTraceNearestHit (FUN_00471860): initialize the trace record,
  * let the scene walk populate its candidate context, then minimize against
  * grid-cell ray hits and publish the nearest result. */
-// FUNCTION: LEGORR 0x00471860
+/* Port model of 0x00471860 */
 int scene_segment_trace_nearest_hit(const float start[3],
                                    const float direction[3],
                                    void** hit_object_out,
@@ -1124,7 +1105,7 @@ int scene_segment_trace_nearest_hit(const float start[3],
 
 /* ObjectPairRayHitCheck (FUN_004718d0): trace the normalized segment from
  * the first object to the second and ignore a hit reported on the target. */
-// FUNCTION: LEGORR 0x004718d0
+/* Port model of 0x004718d0 */
 int object_pair_ray_hit_check(void* first, void* second)
 {
     float start[3];
@@ -1150,7 +1131,7 @@ int object_pair_ray_hit_check(void* first, void* second)
 
 /* SeeThroughWallsRayCheck (FUN_00471960): short-circuit when the setting is
  * enabled; otherwise sweep the object-to-object segment through grid cells. */
-// FUNCTION: LEGORR 0x00471960
+/* Port model of 0x00471960 */
 int see_through_walls_ray_check(void* first, void* second)
 {
     float start[3];
@@ -1182,7 +1163,7 @@ int see_through_walls_ray_check(void* first, void* second)
 
 /* ReadIndexedPairSlotDword (FUN_00471a20): base + i*8 + j*4, exactly as
  * the corpus computes it. */
-// FUNCTION: LEGORR 0x00471a20
+/* Port model of 0x00471a20 */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t read_indexed_pair_slot_dword(
     const void* base, uint32_t i, uint32_t j)
@@ -1209,7 +1190,7 @@ uint32_t read_indexed_pair_slot_dword(const void* base, uint32_t i,
 
 /* VelocitySlotPrimaryObjectGet / SecondaryObjectGet (FUN_00471a40 /
  * FUN_00471a50): indexed slot at +0x18 / +0x24. */
-// FUNCTION: LEGORR 0x00471a40
+/* Port model of 0x00471a40 */
 uint32_t velocity_slot_primary_object_get(const void* record,
                                           uint32_t index)
 {
@@ -1219,7 +1200,7 @@ uint32_t velocity_slot_primary_object_get(const void* record,
     return value;
 }
 
-// FUNCTION: LEGORR 0x00471a50
+/* Port model of 0x00471a50 */
 uint32_t velocity_slot_secondary_object_get(const void* record,
                                             uint32_t index)
 {
@@ -1232,7 +1213,7 @@ uint32_t velocity_slot_secondary_object_get(const void* record,
 /* EntityVelocitySteerBlendUpdate (FUN_00471a60): move the target when asked,
  * blend the existing velocity toward it at the time-scaled rate, normalize,
  * cap upward speed, then apply to the secondary and primary objects. */
-// FUNCTION: LEGORR 0x00471a60
+/* Port model of 0x00471a60 */
 void entity_velocity_steer_blend_update(EntityVelocitySteerState* state,
                                         const float target[3], float elapsed,
                                         int update_target)
@@ -1291,7 +1272,7 @@ void entity_velocity_steer_blend_update(EntityVelocitySteerState* state,
 
 /* VelocitySlotVectorRead (FUN_00471c70): copy the three slot dwords
  * directly, preserving their bit patterns. */
-// FUNCTION: LEGORR 0x00471c70
+/* Port model of 0x00471c70 */
 void velocity_slot_vector_read(const void* record, float out[3],
                                uint32_t index)
 {
@@ -1299,7 +1280,7 @@ void velocity_slot_vector_read(const void* record, float out[3],
     __builtin_memcpy(out, (const char*)record + off, 3u * sizeof(uint32_t));
 }
 
-// FUNCTION: LEGORR 0x00471CA0
+/* Port model of 0x00471ca0 */
 int entity_world_center_position_read(const EntitySlot* entity,
                                       float out_xyz[3])
 {
@@ -1322,7 +1303,7 @@ int entity_world_center_position_read(const EntitySlot* entity,
 }
 
 /* EntityFlag100AndSharedEligibilityCheck (FUN_00471ce0) — see entity.hpp. */
-// FUNCTION: LEGORR 0x00471ce0
+/* Port model of 0x00471ce0 */
 int entity_flag100_and_shared_eligibility_check(const EntitySlot* e)
 {
     /* Corpus shape: both gates jump to the shared zero tail, only the
@@ -1337,7 +1318,7 @@ int entity_flag100_and_shared_eligibility_check(const EntitySlot* e)
 
 namespace unported_ledger_stubs {
 // VelocitySlotSteerDispatchAndSound
-// FUNCTION: LEGORR 0x00471d20
+/* Port model of 0x00471d20 */
 int ledger_stub_00471d20_VelocitySlotSteerDispatchAndSound(
     void* entity, void* argument, float delta)
 {
@@ -1348,7 +1329,7 @@ int ledger_stub_00471d20_VelocitySlotSteerDispatchAndSound(
 /* PoseOffsetVelocitySlotBlend (FUN_00471f00): convert the pose's local
  * offset to world scale, add the pose position, and feed that target through
  * the shared velocity steering blend. */
-// FUNCTION: LEGORR 0x00471f00
+/* Port model of 0x00471f00 */
 int pose_offset_velocity_slot_blend_update(
     EntityVelocitySteerState* state, const float offset[3],
     const float translation[3], float elapsed)
@@ -1365,7 +1346,7 @@ int pose_offset_velocity_slot_blend_update(
 
 /* EntityVelocitySlotDispatch (FUN_00471fc0): walk every velocity slot and
  * choose the pose-offset path or the steer/sound path from entity bit 0. */
-// FUNCTION: LEGORR 0x00471fc0
+/* Port model of 0x00471fc0 */
 int entity_velocity_slot_dispatch(void* entity, void* argument)
 {
     uint32_t flags = 0u;
@@ -1400,7 +1381,7 @@ int entity_velocity_slot_dispatch(void* entity, void* argument)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00472080
+/* Port model of 0x00472080 */
 int entity_centers_within_configured_radius(const EntitySlot* first,
                                             const EntitySlot* second)
 {
@@ -1412,7 +1393,7 @@ int entity_centers_within_configured_radius(const EntitySlot* first,
         lego::weapon_type_range_get(activity_class));
 }
 
-// FUNCTION: LEGORR 0x00472130
+/* Port model of 0x00472130 */
 int entity_centers_within_object_radius(const EntitySlot* first,
                                         const EntitySlot* second)
 {
@@ -1539,23 +1520,6 @@ void weapon_definition_reset(WeaponDefinition* definition)
         definition->wall_destroy_time[i] = 5.0f;
 }
 
-int ascii_lower(int ch)
-{
-    if (ch >= 'A' && ch <= 'Z') return ch + ('a' - 'A');
-    return ch;
-}
-
-int ascii_case_equal(const char* a, const char* b)
-{
-    if (a == 0 || b == 0) return 0;
-    while (*a != '\0' && *b != '\0') {
-        if (ascii_lower((unsigned char)*a) != ascii_lower((unsigned char)*b))
-            return 0;
-        ++a;
-        ++b;
-    }
-    return *a == *b;
-}
 } // namespace
 } // namespace lego
 

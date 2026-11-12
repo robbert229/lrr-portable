@@ -1581,9 +1581,9 @@ typedef struct EntityOneShotAttachedEffectHooks {
 } EntityOneShotAttachedEffectHooks;
 void entity_one_shot_attached_effect_hooks_set(
     const EntityOneShotAttachedEffectHooks* hooks);
-int entity_one_shot_attached_effect_start(EntitySlot* entity,
+extern "C" int entity_one_shot_attached_effect_start(EntitySlot* entity,
                                           float duration); /* 0x0044c030 */
-int entity_pair_scalar_fields_set(EntitySlot* entity, const int32_t pair[2],
+extern "C" int entity_pair_scalar_fields_set(EntitySlot* entity, const int32_t pair[2],
                                   int32_t scalar); /* 0x0044c150 */
 
 namespace unported_ledger_stubs {
