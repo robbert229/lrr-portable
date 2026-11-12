@@ -27,6 +27,13 @@
 #include "ai_shared.hpp"
 #include "ai_from_lego.hpp"
 #include "ai_for_legoobject.hpp"
+/* C linkage for LegoObject.c state that legoobject_unit.c also reads
+ * (defined in legoobject.cpp; the frozen header below redeclares it). */
+extern "C" const char* s_activity[AI_ACTIVITY_COUNT];
+extern "C" const char* s_ability_type_names[AI_ABILITY_TYPE_COUNT];
+extern "C" uint32_t s_activity_resource_slots[AI_ACTIVITY_RESOURCE_SLOT_COUNT];
+extern "C" EntitySlot* s_idle100[AI_IDLE_TABLE_MAX];
+extern "C" int s_idle100_n;
 #include "ai_from_legoobject.hpp"
 #include "ai_for_aitask.hpp"
 #include "ai_from_aitask.hpp"

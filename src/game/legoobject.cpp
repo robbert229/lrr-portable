@@ -96,6 +96,13 @@
 #include "gods98/camera_for_legoobject.hpp"
 #include "gods98/simtick_for_legoobject.hpp"
 #include "gods98/view_for_legoobject.hpp"
+/* C linkage for the state legoobject_unit.c reads (declared again, with
+ * the same types, by the frozen header below). */
+extern "C" const char* s_activity[AI_ACTIVITY_COUNT];
+extern "C" const char* s_ability_type_names[AI_ABILITY_TYPE_COUNT];
+extern "C" uint32_t s_activity_resource_slots[AI_ACTIVITY_RESOURCE_SLOT_COUNT];
+extern "C" EntitySlot* s_idle100[AI_IDLE_TABLE_MAX];
+extern "C" int s_idle100_n;
 #include "ai_from_legoobject.hpp"
 #if defined(LEGORRR_BACKEND_MINIWIN)
 #include "creature_scene.hpp"
@@ -356,6 +363,10 @@ static const char s_activity_name_activity_routerubble[] = "Activity_RouteRubble
 // GLOBAL: LEGORR 0x004a5038
 static const char s_activity_name_activity_route[] = "Activity_Route";
 
+/* The unit (legoobject_unit.c) reads this state with C linkage; the
+ * frozen *_from_legoobject.hpp headers are pre-declared to match where
+ * they are included. */
+extern "C" {
 // GLOBAL: LEGORR 0x004de790
 void* s_pool_chunks[POOL_CHUNK_COUNT_SLOTS];
 // GLOBAL: LEGORR 0x004de810
@@ -394,6 +405,8 @@ const char* s_activity[AI_ACTIVITY_COUNT] = {
     s_activity_name_activity_crumble, s_activity_name_activity_teleportin
 };
 
+} /* extern "C" */
+
 // GLOBAL: LEGORR 0x004dee00
 float* s_terrain_neighbor_path_cost;
 /* DAT_004dee04 / DAT_004dee08: the retail path-search functions share and
@@ -403,6 +416,7 @@ static uint32_t* s_terrain_path_depth;
 // GLOBAL: LEGORR 0x004dee08
 static uint32_t s_terrain_path_depth_count;
 
+extern "C" {
 // GLOBAL: LEGORR 0x004dee10
 uint32_t s_pool_chunk_count;
 
@@ -420,37 +434,33 @@ uint32_t s_activity_resource_slots[AI_ACTIVITY_RESOURCE_SLOT_COUNT] = {
 uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
 
 // GLOBAL: LEGORR 0x004e2684
-static uint32_t s_task_counter_nonzero;
+uint32_t s_task_counter_nonzero;
 
 // GLOBAL: LEGORR 0x004e3944
 uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
 
 // GLOBAL: LEGORR 0x004e7184
-static uint32_t s_task_counter_zero;
+uint32_t s_task_counter_zero;
 
 /* The corpus keeps a bounded twenty-entry pool of the predug coordinates
  * encountered while loading the layer. */
 // GLOBAL: LEGORR 0x004e844c
 int s_predug_coordinates[20][2];
 
-namespace unported_ledger_stubs {
 // GLOBAL: LEGORR 0x004e84ec
-static int s_type11_cell_coordinates[10][2];
-} // namespace unported_ledger_stubs
+int s_type11_cell_coordinates[10][2];
 
 // GLOBAL: LEGORR 0x004e853c
 unsigned int s_predug_coordinate_count;
 
-namespace unported_ledger_stubs {
 // GLOBAL: LEGORR 0x004e8540
-static unsigned int s_type11_cell_coordinate_count;
-} // namespace unported_ledger_stubs
+unsigned int s_type11_cell_coordinate_count;
 
 /* The six-dword render snapshot is a separate zero-filled global block in
  * the corpus (DAT_004ea7ac). Its individual values are unresolved; keep the
  * storage opaque and expose only the exact copy/clear operations. */
 // GLOBAL: LEGORR 0x004ea7ac
-static uint32_t s_render_config_snapshot[6];
+uint32_t s_render_config_snapshot[6];
 
 // GLOBAL: LEGORR 0x004eabcc
 EntitySlot* s_idle100[AI_IDLE_TABLE_MAX];
@@ -468,6 +478,7 @@ const char* s_ability_type_names[AI_ABILITY_TYPE_COUNT] = {
 uint32_t s_global_animation_state; /* DAT_004eadc4 */
 // GLOBAL: LEGORR 0x004eadd0
 EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records;
+} /* extern "C" */
 static EntitySlot* s_entity_teardown_free_head;
 
 static uint32_t s_grid_object_record_words[200];
@@ -917,10 +928,10 @@ void spawn_coordinate_pool_clear(void)
     camera_predug_spawn_state_clear();
     camera_spawn_coordinate_hook_set(NULL, NULL);
     for (i = 0; i < 10u; ++i) {
-        unported_ledger_stubs::s_type11_cell_coordinates[i][0] = 0;
-        unported_ledger_stubs::s_type11_cell_coordinates[i][1] = 0;
+        s_type11_cell_coordinates[i][0] = 0;
+        s_type11_cell_coordinates[i][1] = 0;
     }
-    unported_ledger_stubs::s_type11_cell_coordinate_count = 0u;
+    s_type11_cell_coordinate_count = 0u;
     queued_grid_animation_accumulator_clear();
     ai_idle_table_reset();
     entity_global_animation_state_set(0u);

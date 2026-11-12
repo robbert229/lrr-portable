@@ -96,6 +96,7 @@ game_c_sources = [
   'info_unit.c',
   'interface_unit.c',
   'lego_unit.c',
+  'legoobject_unit.c',
   'panel_unit.c',
   'priorities.c',
   'reward.c',
