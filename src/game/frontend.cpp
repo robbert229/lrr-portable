@@ -1392,7 +1392,7 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
 
 const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
 {
-    static const FeMenu s_empty = { 0 };
+    static FeMenu s_empty = { 0 };
     if (fe == NULL || menu < 0 || menu >= FE_MENU_COUNT) {
         return &s_empty;
     }
@@ -1401,7 +1401,7 @@ const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
 
 const FeSubmenu* frontend_active_submenu(const FrontEnd* fe)
 {
-    static const FeSubmenu s_empty = { 0 };
+    static FeSubmenu s_empty = { 0 };
     if (fe == NULL || !fe->open || fe->menu < 0 || fe->menu >= FE_MENU_COUNT) {
         return &s_empty;
     }
