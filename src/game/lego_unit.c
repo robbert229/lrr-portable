@@ -698,6 +698,21 @@ int s_object_f_4eabc8;
 /* ---- part 2 state, group 2G: end ---- */
 
 
+/* ---- GAME-021 part 3 (issue #587) state ---- */
+
+/* ---- part 3 state, group 3A (004324d0-00433330): begin ---- */
+
+/* ---- part 3 state, group 3A: end ---- */
+
+/* ---- part 3 state, group 3B (00433380-00434530): begin ---- */
+
+/* ---- part 3 state, group 3B: end ---- */
+
+/* ---- part 3 state, group 3C (00434570-00435aa0): begin ---- */
+
+/* ---- part 3 state, group 3C: end ---- */
+
+
 /* ------------------------------------------------------------------ */
 /* Functions, in original address order.                              */
 /* ------------------------------------------------------------------ */
@@ -8074,3 +8089,15 @@ void lego_terrain_cell_flags_set_mask20108000(int bx, int by)
 }
 
 /* ---- part 2 functions, group 2G: end ---- */
+
+/* ---- part 3 functions, group 3A (004324d0-00433330): begin ---- */
+
+/* ---- part 3 functions, group 3A: end ---- */
+
+/* ---- part 3 functions, group 3B (00433380-00434530): begin ---- */
+
+/* ---- part 3 functions, group 3B: end ---- */
+
+/* ---- part 3 functions, group 3C (00434570-00435aa0): begin ---- */
+
+/* ---- part 3 functions, group 3C: end ---- */

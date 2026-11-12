@@ -1579,6 +1579,18 @@ int scene_slot_pose_scale_register(int group, uint32_t first, uint32_t second,
 
 /* ---- part 2 imports, group 2G: end ---- */
 
+/* ---- part 3 imports, group 3A (004324d0-00433330): begin ---- */
+
+/* ---- part 3 imports, group 3A: end ---- */
+
+/* ---- part 3 imports, group 3B (00433380-00434530): begin ---- */
+
+/* ---- part 3 imports, group 3B: end ---- */
+
+/* ---- part 3 imports, group 3C (00434570-00435aa0): begin ---- */
+
+/* ---- part 3 imports, group 3C: end ---- */
+
 #ifdef __cplusplus
 }
 #endif
