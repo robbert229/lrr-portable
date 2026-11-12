@@ -154,6 +154,10 @@
 #define linked_entity_flag_and_command_update legoobject_linked_flag_and_command_update /* 004440a0 */
 #define entity_enter_event21_state_once legoobject_enter_event21_state_once /* 00444620 */
 #define entity_step_movement_vector_resolve legoobject_step_movement_vector_resolve /* 00444680 */
+/* Port entries in entity.cpp (no FUNCTION annotation there). */
+#define entity_action_target_cell_is_valid legoobject_action_target_cell_is_valid /* 0043fdc0 */
+#define entity_route_to_explicit_target legoobject_route_to_explicit_target /* 0043fe70 */
+#define entity_route_marker_setup legoobject_route_marker_setup /* 0043fff0 */
 /* Original-ABI adapters other port tails give converted C units. A file
  * that defines them sets LEGORRR_LEGOOBJECT_ALIASES_NO_ADAPTERS first. */
 #if !defined(LEGORRR_LEGOOBJECT_ALIASES_NO_ADAPTERS)
@@ -163,6 +167,17 @@
 #define entity_custom_name_set_adapter legoobject_rename /* 00437880 */
 #define lego_object_create_adapter legoobject_create /* 00437d00 */
 #define entity_pool_find_by_callback_filtered_current_original legoobject_run_through_lists_skip_upgrade_parts /* 004377b0 */
+/* Part 2 (#588): lego_port.cpp's, aitask_port.cpp's and interface_port.cpp's
+ * original-ABI adapters, whose contract is the original's. */
+#define simtick_scene_pass_original legoobject_update_all /* 0043b270 */
+#define lego_object_pair_requirement_met legoobject_state_pair_predicate /* 0043c200 */
+#define periodic_timer25_advance_original legoobject_periodic_timer25_advance /* 0043c2b0 */
+#define lego_object_drop_carried legoobject_record_pair_pose_copy_and_activity_raise /* 0043fc20 */
+#define lego_object_go_to_block legoobject_terrain_cell_to_world_position /* 004401b0 */
+#define level_debug_cell_retarget_adapter legoobject_level_debug_cell_retarget_dispatch /* 004403d0 */
+#define aitask_grid_route_search_adapter legoobject_grid_route_search_adapter /* 00440c30 */
+#define entity_position_to_terrain_cell_adapter legoobject_position_to_terrain_cell /* 004424f0 */
+#define aitask_cell_step_command_issue_adapter legoobject_cell_step_command_issue_with_jitter /* 0043a120 */
 #endif
 #endif
 
