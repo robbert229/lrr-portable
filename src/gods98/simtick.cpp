@@ -318,7 +318,8 @@ void simtick_manager_set_timer_word(uint32_t w)
 }
 
 /* ---- tranche 8: sound keep-alive (FUN_0047aba0) ------------------------- */
-static int s_sound_on = 0, s_sound_active = 0;
+static int s_sound_on = 0;
+static int s_sound_active = 0;
 // GLOBAL: LEGORR 0x00506688
 static int s_listener_view = 0;
 static int (*s_keepalive)(int, int, int) = NULL;
