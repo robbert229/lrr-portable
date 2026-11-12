@@ -214,7 +214,6 @@ typedef struct LwsGlobs {
     LwsPlaySample3DFunc PlaySample3DFunc;                /* 00544860 */
 } LwsGlobs;
 
-#include "lws_maths.h"
 
 /* The functions lws.h declares with the port's contracts, with the
  * original's argument types. */
