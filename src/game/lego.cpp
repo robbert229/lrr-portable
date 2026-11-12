@@ -10738,3 +10738,33 @@ extern "C" const char* main_get_start_level_adapter(void)
 {
     return NULL;
 }
+
+/* ==== GAME-021 part 2 (issue #574) adapters ==== */
+
+/* ---- part 2 adapters, group 2A (0042b510-0042c440): begin ---- */
+
+/* ---- part 2 adapters, group 2A: end ---- */
+
+/* ---- part 2 adapters, group 2B (0042c480-0042d460): begin ---- */
+
+/* ---- part 2 adapters, group 2B: end ---- */
+
+/* ---- part 2 adapters, group 2C (0042d600-0042dff0): begin ---- */
+
+/* ---- part 2 adapters, group 2C: end ---- */
+
+/* ---- part 2 adapters, group 2D (0042e020-0042ef40): begin ---- */
+
+/* ---- part 2 adapters, group 2D: end ---- */
+
+/* ---- part 2 adapters, group 2E (0042efc0-0042f6f0): begin ---- */
+
+/* ---- part 2 adapters, group 2E: end ---- */
+
+/* ---- part 2 adapters, group 2F (004302b0-00431570): begin ---- */
+
+/* ---- part 2 adapters, group 2F: end ---- */
+
+/* ---- part 2 adapters, group 2G (00431580-00432490): begin ---- */
+
+/* ---- part 2 adapters, group 2G: end ---- */

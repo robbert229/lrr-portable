@@ -635,6 +635,37 @@ char* legoGlobs_upgradeNames[16];
 uint32_t textGlobs_f_503618;
 
 
+/* ---- GAME-021 part 2 (issue #574) state ---- */
+
+/* ---- part 2 state, group 2A (0042b510-0042c440): begin ---- */
+
+/* ---- part 2 state, group 2A: end ---- */
+
+/* ---- part 2 state, group 2B (0042c480-0042d460): begin ---- */
+
+/* ---- part 2 state, group 2B: end ---- */
+
+/* ---- part 2 state, group 2C (0042d600-0042dff0): begin ---- */
+
+/* ---- part 2 state, group 2C: end ---- */
+
+/* ---- part 2 state, group 2D (0042e020-0042ef40): begin ---- */
+
+/* ---- part 2 state, group 2D: end ---- */
+
+/* ---- part 2 state, group 2E (0042efc0-0042f6f0): begin ---- */
+
+/* ---- part 2 state, group 2E: end ---- */
+
+/* ---- part 2 state, group 2F (004302b0-00431570): begin ---- */
+
+/* ---- part 2 state, group 2F: end ---- */
+
+/* ---- part 2 state, group 2G (00431580-00432490): begin ---- */
+
+/* ---- part 2 state, group 2G: end ---- */
+
+
 /* ------------------------------------------------------------------ */
 /* Functions, in original address order.                              */
 /* ------------------------------------------------------------------ */
@@ -5006,3 +5037,35 @@ uint32_t global_state_field84_get_current_target(void)
 {
     return legoGlobs_currLevel->f_084;
 }
+
+/* ------------------------------------------------------------------ */
+/* Part 2 (issue #574): 0042b510-00432490.                             */
+/* ------------------------------------------------------------------ */
+
+/* ---- part 2 functions, group 2A (0042b510-0042c440): begin ---- */
+
+/* ---- part 2 functions, group 2A: end ---- */
+
+/* ---- part 2 functions, group 2B (0042c480-0042d460): begin ---- */
+
+/* ---- part 2 functions, group 2B: end ---- */
+
+/* ---- part 2 functions, group 2C (0042d600-0042dff0): begin ---- */
+
+/* ---- part 2 functions, group 2C: end ---- */
+
+/* ---- part 2 functions, group 2D (0042e020-0042ef40): begin ---- */
+
+/* ---- part 2 functions, group 2D: end ---- */
+
+/* ---- part 2 functions, group 2E (0042efc0-0042f6f0): begin ---- */
+
+/* ---- part 2 functions, group 2E: end ---- */
+
+/* ---- part 2 functions, group 2F (004302b0-00431570): begin ---- */
+
+/* ---- part 2 functions, group 2F: end ---- */
+
+/* ---- part 2 functions, group 2G (00431580-00432490): begin ---- */
+
+/* ---- part 2 functions, group 2G: end ---- */

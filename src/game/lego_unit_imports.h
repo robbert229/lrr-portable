@@ -1281,6 +1281,36 @@ void terrain_map_visible_radius_add(struct TerrainMap* map, int bx, int by,
 float terrain_context_scale_get(const void* context);           /* 00450890 */
 void terrain_map_wobble_emissive_set(struct TerrainMap* map, int on); /* 00450a80 */
 
+/* ---- GAME-021 part 2 (issue #574) ---- */
+
+/* ---- part 2 imports, group 2A (0042b510-0042c440): begin ---- */
+
+/* ---- part 2 imports, group 2A: end ---- */
+
+/* ---- part 2 imports, group 2B (0042c480-0042d460): begin ---- */
+
+/* ---- part 2 imports, group 2B: end ---- */
+
+/* ---- part 2 imports, group 2C (0042d600-0042dff0): begin ---- */
+
+/* ---- part 2 imports, group 2C: end ---- */
+
+/* ---- part 2 imports, group 2D (0042e020-0042ef40): begin ---- */
+
+/* ---- part 2 imports, group 2D: end ---- */
+
+/* ---- part 2 imports, group 2E (0042efc0-0042f6f0): begin ---- */
+
+/* ---- part 2 imports, group 2E: end ---- */
+
+/* ---- part 2 imports, group 2F (004302b0-00431570): begin ---- */
+
+/* ---- part 2 imports, group 2F: end ---- */
+
+/* ---- part 2 imports, group 2G (00431580-00432490): begin ---- */
+
+/* ---- part 2 imports, group 2G: end ---- */
+
 #ifdef __cplusplus
 }
 #endif
