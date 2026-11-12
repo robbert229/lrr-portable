@@ -734,6 +734,42 @@ void lego_terrain_cell_flags_set_mask20108000(int bx, int by);       /* 00432490
 
 /* ---- part 3 declarations, group 3B (00433380-00434530): begin ---- */
 
+/* legoGlobs.quality (005560d0), stand-in (lego_unit.c). */
+extern int legoGlobs_quality;                   /* 005560d0 */
+
+/* Lego_LoadGraphicsSettings's projected-cell list (00433e80): the block
+ * and its distance and projected area, sorted by area (00434450). */
+typedef struct LegoProjectedCell3B {
+    float x, y;
+    float dist;
+    float area;
+} LegoProjectedCell3B;
+typedef struct LegoPoint2U3B {
+    unsigned int x, y;
+} LegoPoint2U3B;
+
+/* Shared (the port's entries keep the name; see lego.cpp):
+ * terrain_cell_mutation_progress (00433380, MSVC x86 only),
+ * level_map_dimensions_get (004334c0) and
+ * terrain_grid_entry_resources_release_all_current (00434530, MSVC x86
+ * only) are declared in lego_unit_imports.h. */
+int lego_render_quality_config_apply(void);                          /* 004334f0 */
+int lego_scene_lights_build_from_config(void);                       /* 00433770 */
+void lego_current_level_terrain_grid_pick(float x, float y, int* bx,
+                                          int* by);                  /* 00433be0 */
+int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
+                                                 float elapsed,
+                                                 int force);         /* 00433c10 */
+int lego_grid_cell_entity_eligibility_check(int bx, int by);         /* 00433e30 */
+void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
+                                               float maxDist,
+                                               unsigned int maxCount); /* 00433e80 */
+int lego_projected_cell_area_compare(const void* a, const void* b);  /* 00434450 */
+int lego_terrain_cell_surface_update_dispatch_level(Lego_Level* level,
+                                                    int bx, int by,
+                                                    float scale,
+                                                    float uniformScale); /* 00434480 */
+
 /* ---- part 3 declarations, group 3B: end ---- */
 
 /* ---- part 3 declarations, group 3C (00434570-00435aa0): begin ---- */

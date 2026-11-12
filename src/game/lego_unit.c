@@ -706,6 +706,11 @@ int s_object_f_4eabc8;
 
 /* ---- part 3 state, group 3B (00433380-00434530): begin ---- */
 
+/* legoGlobs.quality: the render quality Lego_LoadGraphicsSettings reads
+ * (0 wireframe, 2 flat, 3 gouraud). */
+// GLOBAL: LEGORR 0x005560d0
+int legoGlobs_quality;
+
 /* ---- part 3 state, group 3B: end ---- */
 
 /* ---- part 3 state, group 3C (00434570-00435aa0): begin ---- */
@@ -8095,6 +8100,479 @@ void lego_terrain_cell_flags_set_mask20108000(int bx, int by)
 /* ---- part 3 functions, group 3A: end ---- */
 
 /* ---- part 3 functions, group 3B (00433380-00434530): begin ---- */
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+
+/* Lego_UpdateBlockRoof [group 3B]: lowers the roof quad over a wall block
+ * (all four corners), or over a reinforced/pre-dug edge block (the corners
+ * whose block is pre-dug), by the dig depth plus the roof height, and hands
+ * the quad to the roof. Shared under MSVC x86: the port's model in lego.cpp
+ * keeps the native path. */
+// FUNCTION: LEGORR 0x00433380
+void terrain_cell_mutation_progress(struct LevelState* levelState,
+                                    uint32_t bx, uint32_t by)
+{
+    Lego_Level* level = (Lego_Level*)levelState;
+    struct TerrainMap* map = LEGO_LEVEL_PTR(struct TerrainMap, level->map);
+    LegoVector3FC vertPos[4];
+
+    if (bx < level->width - 1 && by < level->height - 1) {
+        Lego_Block* block;
+
+        terrain_map_block_vertices_get(map, bx, by, (struct TerrainMapVector3*)vertPos);
+        block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+        if (block->flags1 & 0x8) {
+            float drop = level->digDepth + level->roofHeight;
+            vertPos[0].z -= drop;
+            vertPos[1].z -= drop;
+            vertPos[2].z -= drop;
+            vertPos[3].z -= drop;
+        } else if (block->flags1 & 0x10) {
+            if (block->f_00 == 1)
+                vertPos[0].z -= level->digDepth + level->roofHeight;
+            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx + 1].f_00 == 1)
+                vertPos[1].z -= level->digDepth + level->roofHeight;
+            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by + 1) * level->width + bx + 1].f_00 == 1)
+                vertPos[2].z -= level->digDepth + level->roofHeight;
+            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by + 1) * level->width + bx].f_00 == 1)
+                vertPos[3].z -= level->digDepth + level->roofHeight;
+        } else {
+            return;
+        }
+        lego_roof_block_vertices_set_adapter(bx, by,
+                                             (struct TerrainMapVector3*)&vertPos[0],
+                                             (struct TerrainMapVector3*)&vertPos[1],
+                                             (struct TerrainMapVector3*)&vertPos[2],
+                                             (struct TerrainMapVector3*)&vertPos[3]);
+    }
+}
+
+#endif /* _MSC_VER && _M_IX86 */
+
+/* Lego_GetMapFileDimensions [group 3B]: the map file's header dimensions.
+ * Shared: the port's definition in lego.cpp is gone. */
+// FUNCTION: LEGORR 0x004334c0
+void level_map_dimensions_get(uint32_t slot, uint32_t* width,
+                              uint32_t* height)
+{
+    uint8_t* image = level_map_slot_get(slot);
+    image += 0x08;
+    *width = *(uint32_t*)image;
+    *height = *(uint32_t*)(image + 4);
+}
+
+/* Lego_LoadGraphicsSettings [group 3B]. */
+// FUNCTION: LEGORR 0x004334f0
+int lego_render_quality_config_apply(void)
+{
+    const char* str;
+    int quality;
+    int dither, filter, blend, sort, mipmap, linearMipMap;
+
+    if (0.0f != (legoGlobs_FPClipBlocks = (float)atof(LEGO_A_CFG_STR(legoGlobs_config,
+            // STRING: LEGORR 0x004a4784
+            string_path_join(s_engine_config_root, "Main", "fpclipblocks", 0))))) {
+        str = block_get_strptr(legoGlobs_config,
+            // STRING: LEGORR 0x004a477c
+            string_path_join(s_engine_config_root, "Main", "quality", 0));
+        if (str != NULL) {
+            // STRING: LEGORR 0x004a4774
+            if (_strcmpi("gouraud", str) == 0) quality = 3;
+            // STRING: LEGORR 0x004a476c
+            else if (_strcmpi("flat", str) == 0) quality = 2;
+            // STRING: LEGORR 0x004a4760
+            else if (_strcmpi("wireframe", str) == 0) quality = 0;
+            else return 0;
+            legoGlobs_quality = quality;
+
+            dither = block_get_bool_path(legoGlobs_config,
+                // STRING: LEGORR 0x004a4758
+                string_path_join(s_engine_config_root, "Main", "dither", 0));
+            filter = block_get_bool_path(legoGlobs_config,
+                // STRING: LEGORR 0x004a4750
+                string_path_join(s_engine_config_root, "Main", "filter", 0));
+            blend = block_get_bool_path(legoGlobs_config,
+                // STRING: LEGORR 0x004a4748
+                string_path_join(s_engine_config_root, "Main", "blend", 0));
+            sort = block_get_bool_path(legoGlobs_config,
+                // STRING: LEGORR 0x004a4740
+                string_path_join(s_engine_config_root, "Main", "sort", 0));
+            mipmap = block_get_bool_path(legoGlobs_config,
+                // STRING: LEGORR 0x004a4738
+                string_path_join(s_engine_config_root, "Main", "mipmap", 0));
+            linearMipMap = block_get_bool_path(legoGlobs_config,
+                // STRING: LEGORR 0x004a4728
+                string_path_join(s_engine_config_root, "Main", "linearmipmap", 0));
+            lego_main_setup3d_adapter(quality, dither == 1, filter == 1,
+                                      mipmap == 1, linearMipMap == 1,
+                                      blend == 1, sort == 1);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Lego_LoadLighting [group 3B]. The port's Container entries take the
+ * light colour and the spot values as float bit patterns. */
+// FUNCTION: LEGORR 0x00433770
+int lego_scene_lights_build_from_config(void)
+{
+    float r, g, b;
+
+    if (!config_rgb_vector_read(legoGlobs_config,
+            // STRING: LEGORR 0x004a47cc
+            string_path_join(s_engine_config_root, "Main", "topspotrgb", 0),
+            &r, &g, &b)) return 0;
+    if ((legoGlobs_spotlightTop = ddiscene_light_create(
+             LEGO_FIELD(s_zoom_step_context, void*, 0x2c), 2,
+             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == NULL) return 0;
+    light_interface_call_slot_40(legoGlobs_spotlightTop, 0x3f59999a); /* 0.85f */
+    light_interface_call_slot_3c(legoGlobs_spotlightTop, 0x3ecccccd); /* 0.4f */
+    ddiscene_object_position_set(legoGlobs_spotlightTop,
+                                 LEGO_FIELD(s_zoom_step_context, void*, 0x2c),
+                                 200.0f, 140.0f, -130.0f);
+    ddiscene_object_pose_method_dispatch(legoGlobs_spotlightTop,
+                                         LEGO_FIELD(s_zoom_step_context, void*, 0x2c),
+                                         -1.0f, -0.8f, 0.75f, 0.0f, 1.0f, 0.0f);
+
+    if (!config_rgb_vector_read(legoGlobs_config,
+            // STRING: LEGORR 0x004a47bc
+            string_path_join(s_engine_config_root, "Main", "trackspotrgb", 0),
+            &r, &g, &b)) return 0;
+    if ((legoGlobs_spotlightTrack = ddiscene_light_create(
+             LEGO_FIELD(legoGlobs_cameraTrack, void*, 0x28), 2,
+             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == NULL) return 0;
+    ddiscene_object_position_set(legoGlobs_spotlightTrack, NULL,
+                                 0.0f, 0.0f, -150.0f);
+    ddiscene_object_pose_method_dispatch(legoGlobs_spotlightTrack, NULL,
+                                         0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f);
+
+    if (!config_rgb_vector_read(legoGlobs_config,
+            // STRING: LEGORR 0x004a47b0
+            string_path_join(s_engine_config_root, "Main", "ambientrgb", 0),
+            &r, &g, &b)) return 0;
+    if ((legoGlobs_ambientLight = ddiscene_light_create(legoGlobs_rootCont, 0,
+             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == NULL) return 0;
+
+    if (!config_rgb_vector_read(legoGlobs_config,
+            // STRING: LEGORR 0x004a47a4
+            string_path_join(s_engine_config_root, "Main", "fplightrgb", 0),
+            &r, &g, &b)) return 0;
+    if ((legoGlobs_f_5560f8 = (uint32_t)(uintptr_t)ddiscene_light_create(
+             LEGO_FIELD(legoGlobs_cameraFP, void*, 0x24), 1,
+             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == 0) return 0;
+
+    if (config_rgb_vector_read(legoGlobs_config,
+            // STRING: LEGORR 0x004a4794
+            string_path_join(s_engine_config_root, "Main", "fprotlightrgb", 0),
+            &r, &g, &b)) {
+        legoGlobs_dirLightFP = ddiscene_light_create(
+            LEGO_FIELD(legoGlobs_cameraFP, void*, 0x24), 3,
+            *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b);
+    } else {
+        legoGlobs_dirLightFP = NULL;
+    }
+
+    if ((legoGlobs_dirLightCallToArms = ddiscene_light_create(
+             LEGO_FIELD(legoGlobs_cameraFP, void*, 0x24), 3,
+             0x3f800000, 0, 0)) == NULL) return 0; /* 1, 0, 0 */
+
+    legoGlobs_f_556108 = lego_container_create_adapter(scene_root_object_get());
+    if ((legoGlobs_f_556104 = (uint32_t)(uintptr_t)ddiscene_light_create(
+             legoGlobs_f_556108, 2,
+             0x3f800000, 0x3f800000, 0x3f800000)) == 0) return 0; /* 1, 1, 1 */
+    scene_transform_state_initialize((void*)(uintptr_t)legoGlobs_f_556104,
+                                     legoGlobs_f_556108, 0.8f, 0.8f, 0.8f);
+    ddiscene_object_pose_method_dispatch((void*)(uintptr_t)legoGlobs_f_556104, NULL,
+                                         0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f);
+    light_interface_call_slot_40((void*)(uintptr_t)legoGlobs_f_556104, 0x3f59999a); /* 0.85f */
+    light_interface_call_slot_3c((void*)(uintptr_t)legoGlobs_f_556104, 0);
+
+    scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_5560f8, 1);
+    if (legoGlobs_dirLightFP != NULL) scene_render_lock_toggle(legoGlobs_dirLightFP, 1);
+    scene_render_lock_toggle(legoGlobs_spotlightTop, 1);
+    scene_render_lock_toggle(legoGlobs_spotlightTrack, 1);
+    scene_render_lock_toggle(legoGlobs_ambientLight, 1);
+    scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_556104, 1);
+    scene_render_lock_toggle(legoGlobs_dirLightCallToArms, 1);
+
+    light_interface_call_slot_38(legoGlobs_spotlightTop, 0x44fa0000); /* 2000.0f */
+    light_interface_call_slot_38(legoGlobs_spotlightTrack, 0x44fa0000);
+    light_interface_call_slot_38((void*)(uintptr_t)legoGlobs_f_556104, 0x44fa0000);
+    return 1;
+}
+
+/* Lego_GetBlockXYFromWorldPos? [group 3B]: the current level's
+ * Map3D_WorldToBlockPos. */
+// FUNCTION: LEGORR 0x00433be0
+void lego_current_level_terrain_grid_pick(float x, float y, int* bx, int* by)
+{
+    terrain_map_world_to_block(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+                               x, y, bx, by);
+}
+
+static __inline int lego_block_is_open_edge_3B(unsigned int x, unsigned int y)
+{
+    return (x < legoGlobs_currLevel->width - 1 && y < legoGlobs_currLevel->height - 1 &&
+            (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[y * legoGlobs_currLevel->width + x].flags1 & 0x10) &&
+            !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[y * legoGlobs_currLevel->width + x].flags1 & 0x8));
+}
+
+/* [group 3B] Slug/object scare step: at a random interval (the elapsed
+ * time against 300, or against the object's stats value +0x140), an
+ * object next to a fresh rubble-free reinforced/cleared block takes a route
+ * step, or a random neighbouring step. */
+// FUNCTION: LEGORR 0x00433c10
+int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
+                                                 float elapsed, int force)
+{
+    int by;
+    int bx;
+    int offsets[4][2];
+    unsigned int i;
+    float rate;
+    float maxRate;
+
+    offsets[0][0] = -1; offsets[0][1] = 0;
+    offsets[1][0] = 1;  offsets[1][1] = 0;
+    offsets[2][0] = 0;  offsets[2][1] = -1;
+    offsets[3][0] = 0;  offsets[3][1] = 1;
+
+    if ((entity_stats_word_get(object) & 0x1000) &&
+        !(LEGO_FIELD(object, uint32_t, 0x3e0) & 1) &&
+        !entity_flags_mask107c33de_or_1c00203_any_test(object) &&
+        elapsed != 0.0f) {
+        rate = elapsed;
+        if (elapsed > 300.0f) rate = 300.0f;
+        if ((unsigned int)(int)rng_thunk_draw15() % (unsigned int)(300.0f / rate) == 0) {
+            entity_block_pos_get_adapter(object, &bx, &by);
+            for (i = 0; i < 4; i++) {
+                if (lego_block_is_open_edge_3B(bx + offsets[i][0], by + offsets[i][1])) {
+                    LEGO_FIELD(object, float, 0x340) = -1.0f;
+                    aitask_route_step_adapter(object);
+                    return 1;
+                }
+            }
+        }
+    }
+
+    if ((force || (entity_stats_word_get(object) & 0x400)) &&
+        !(LEGO_FIELD(object, uint32_t, 0x3e0) & 1) &&
+        !entity_flags_mask107c33de_or_1c00203_any_test(object) &&
+        elapsed != 0.0f) {
+        maxRate = LEGO_FIELD(LEGO_FIELD(object, void*, 0x334), float, 0x140);
+        rate = elapsed;
+        if (elapsed > maxRate) rate = maxRate;
+        if (force || (unsigned int)(int)rng_thunk_draw15() % (unsigned int)(maxRate / rate) == 0) {
+            lego_entity_random_cell_step_route_adapter(object);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* [group 3B] A block an object may be placed on: not flagged 0x100 and
+ * visible on the map. */
+// FUNCTION: LEGORR 0x00433e30
+int lego_grid_cell_entity_eligibility_check(int bx, int by)
+{
+    if (!(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+              [legoGlobs_currLevel->width * by + bx].flags1 & 0x100) &&
+        terrain_map_block_hidden_get((struct TerrainMap*)level_current_terrain_get_original(),
+                                     bx, by)) {
+        return 1;
+    }
+    return 0;
+}
+
+/* [group 3B] The first-person high-poly blocks: every surface block within
+ * maxDist of the camera and inside its view cone is projected to the
+ * screen. Blocks with no area are hidden; the rest, largest first, get
+ * high-poly detail (up to maxCount within two thirds of maxDist) or go
+ * back to the map's low-poly mesh. */
+// FUNCTION: LEGORR 0x00433e80
+void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
+                                               float maxDist,
+                                               unsigned int maxCount)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    struct TerrainMap* map = LEGO_LEVEL_PTR(struct TerrainMap, level->map);
+    unsigned int visibleCount = 0;
+    float blockSize = terrain_context_scale_get(map);
+    int radius = (int)(maxDist / blockSize);
+    unsigned int hiddenCount = 0;
+    LegoVector3FC camPos;
+    LegoVector3FC camDir;
+    LegoVector3FC wPos;
+    LegoVector3FC diff;
+    LegoVector3FC vertPos[4];
+    int camX, camY;
+    int startX, startY, endX, endY;
+    unsigned int x, y;
+    float screen[2];
+    float cosFov;
+    float dist;
+    unsigned int i;
+    unsigned int highCount;
+    LegoPoint2U3B hidden[300];
+    LegoProjectedCell3B visible[300];
+
+    ddiscene_object_position_get(cont, NULL, &camPos.x);
+    terrain_map_world_to_block(map, camPos.x, camPos.y, &camX, &camY);
+    ddiscene_object_facing_pair_get(cont, NULL, &camDir.x, NULL);
+    cosFov = (float)cos(lego_viewport_field_get_adapter(legoGlobs_viewMain) * 1.4f);
+    lego_viewport_size_get_adapter(legoGlobs_viewMain, &x, &y);
+    screen[0] = (float)x;
+    screen[1] = (float)y;
+
+    startX = camX - radius;
+    startY = camY - radius;
+    endX = camX + radius;
+    endY = camY + radius;
+    if (startX < 0) startX = 0;
+    if (startY < 0) startY = 0;
+    if (endX < 0) endX = 0;
+    if (endY < 0) endY = 0;
+    if (endX >= (int)level->width) endX = level->width - 1;
+    if (endY >= (int)level->height) endY = level->height - 1;
+
+    for (y = startY; y < (unsigned int)endY; y++) {
+        for (x = startX; x < (unsigned int)endX; x++) {
+            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x18) {
+                terrain_map_block_to_world(map, x, y, &wPos.x, &wPos.y);
+                wPos.z = terrain_map_world_z_get(map, wPos.x, wPos.y);
+                diff.x = wPos.x - camPos.x;
+                diff.y = wPos.y - camPos.y;
+                diff.z = wPos.z - camPos.z;
+                dist = (float)sqrt(diff.x * diff.x + diff.y * diff.y + diff.z * diff.z);
+                if (dist < maxDist) {
+                    float inv = 1.0f / dist;
+                    float dot = inv * diff.x * camDir.x + inv * diff.y * camDir.y +
+                                inv * diff.z * camDir.z;
+                    int noClip;
+                    if (dist < (dot + 2.0f) * blockSize) {
+                        dot = cosFov + 1.0f;
+                        noClip = 1;
+                    } else {
+                        noClip = 0;
+                    }
+                    if (dot > cosFov) {
+                        terrain_map_block_vertices_get(map, x, y,
+                                                       (struct TerrainMapVector3*)vertPos);
+                        visible[visibleCount].x = (float)x;
+                        visible[visibleCount].y = (float)y;
+                        visible[visibleCount].dist = dist;
+                        if ((visible[visibleCount].area = lego_projected_quad_area_adapter(
+                                 (struct TerrainMapVector3*)vertPos, view, screen,
+                                 noClip)) > 0.0f) {
+                            visibleCount++;
+                        } else {
+                            hidden[hiddenCount].x = x;
+                            hidden[hiddenCount].y = y;
+                            hiddenCount++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    qsort(visible, visibleCount, sizeof(LegoProjectedCell3B),
+          lego_projected_cell_area_compare);
+
+    maxDist *= 0.6666667f;
+    highCount = 0;
+    for (i = 0; i < visibleCount; i++) {
+        x = (int)visible[i].x;
+        y = (int)visible[i].y;
+        if (highCount < maxCount && visible[i].dist < maxDist) {
+            float scale = 1.0f - visible[i].dist / maxDist;
+            float uniform = scale * 0.7f + 0.3f;
+            if ((legoGlobs_flags1 & 0x20) &&
+                lego_terrain_cell_surface_update_dispatch_level(level, x, y, scale, uniform)) {
+                LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 |= 0x100;
+                indexed_surface_entry_hide_and_record(x, y);
+                highCount++;
+            } else {
+                terrain_map_visible_add(map, x, y);
+                indexed_surface_entry_hide_and_record(x, y);
+                if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x4000) {
+                    transient_effect_enable_set((void*)(uintptr_t)
+                        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10[3], 0);
+                }
+                LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 &= ~0x100;
+            }
+        } else {
+            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 &= ~0x100;
+            terrain_map_visible_add(map, x, y);
+            indexed_surface_entry_hide_and_record(x, y);
+            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x4000) {
+                transient_effect_enable_set((void*)(uintptr_t)
+                    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10[3], 0);
+            }
+        }
+    }
+
+    for (i = 0; i < hiddenCount; i++) {
+        indexed_surface_entry_hide_and_record(hidden[i].x, hidden[i].y);
+    }
+}
+
+/* [group 3B] qsort callback of 00433e80: larger projected area first. */
+// FUNCTION: LEGORR 0x00434450
+int lego_projected_cell_area_compare(const void* a, const void* b)
+{
+    if (((const LegoProjectedCell3B*)a)->area < ((const LegoProjectedCell3B*)b)->area) return 1;
+    if (((const LegoProjectedCell3B*)a)->area > ((const LegoProjectedCell3B*)b)->area) return -1;
+    return 0;
+}
+
+/* [group 3B] A surface block's high-poly detail mesh: the level's tile
+ * mesh for the block's texture, placed on the block's four corners. */
+// FUNCTION: LEGORR 0x00434480
+int lego_terrain_cell_surface_update_dispatch_level(Lego_Level* level,
+                                                    int bx, int by,
+                                                    float scale,
+                                                    float uniformScale)
+{
+    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+    void* mesh;
+    LegoVector3FC vertPos[4];
+
+    if ((block->flags1 & 0x18) &&
+        (mesh = LEGO_LEVEL_PTR(void*, level->f_080)[level->f_074 * (block->texture & 0xf) +
+                                                    (block->texture >> 4)]) != NULL) {
+        terrain_map_block_vertices_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
+                                       bx, by, (struct TerrainMapVector3*)vertPos);
+        scene_cell_visual_channels_apply((struct SceneCellVisualRelayRecord*)mesh,
+            &vertPos[0].x,
+            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].texture,
+            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_03,
+            scale, uniformScale);
+        return 1;
+    }
+    return 0;
+}
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+
+/* [group 3B] Releases the resources of every tile mesh of the current
+ * level. Shared under MSVC x86: the port's model in lego.cpp keeps the
+ * native path. */
+// FUNCTION: LEGORR 0x00434530
+void terrain_grid_entry_resources_release_all_current(void)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    unsigned int i;
+
+    for (i = 0; i < level->f_078 * level->f_074; i++) {
+        if (LEGO_LEVEL_PTR(void*, level->f_080)[i] != NULL) {
+            lego_detail_mesh_resources_clear_adapter(LEGO_LEVEL_PTR(void*, level->f_080)[i]);
+        }
+    }
+}
+
+#endif /* _MSC_VER && _M_IX86 */
 
 /* ---- part 3 functions, group 3B: end ---- */
 

@@ -1585,6 +1585,60 @@ int scene_slot_pose_scale_register(int group, uint32_t first, uint32_t second,
 
 /* ---- part 3 imports, group 3B (00433380-00434530): begin ---- */
 
+struct TerrainMap;
+struct TerrainMapVector3;
+struct EntitySlot;
+struct SceneCellVisualRelayRecord;
+/* GAME-026 Map3D.c (terrain_map.h). */
+int terrain_map_block_vertices_get(struct TerrainMap* map, unsigned int bx,
+                                   unsigned int by,
+                                   struct TerrainMapVector3* positions); /* 004500d0 */
+int terrain_map_block_hidden_get(struct TerrainMap* map, int bx, int by); /* 0044e860 */
+void terrain_map_visible_add(struct TerrainMap* map, int bx, int by);     /* 00450730 */
+/* G98 Container.c (view.hpp, container_unit.cpp): the light's colour and
+ * the spot/range values are float bit patterns in the port's contract. */
+void* ddiscene_light_create(void* owner, uint32_t value_a, uint32_t value_b,
+                            uint32_t value_c, uint32_t value_d);  /* 004734f0 */
+int light_interface_call_slot_38(void* record, uint32_t value);   /* 004734a0 */
+int light_interface_call_slot_3c(void* record, uint32_t value);   /* 00473480 */
+int light_interface_call_slot_40(void* record, uint32_t value);   /* 00473460 */
+void* scene_root_object_get(void);                                /* 00472940 */
+/* LightEffects.c (effects.hpp). */
+void scene_transform_state_initialize(void* target, void* owner,
+                                      float x, float y, float z); /* 0044c710 */
+/* LegoObject.c (entity.hpp; aitask_port.cpp's adapter for 00449700). */
+int entity_flags_mask107c33de_or_1c00203_any_test(const struct EntitySlot* e); /* 0043baf0 */
+int aitask_route_step_adapter(struct EntitySlot* object);         /* 00449700 */
+/* Roof.c (record.hpp): 004634f0. */
+void indexed_surface_entry_hide_and_record(int x, int y);         /* 004634f0 */
+/* Detail.c (tile_variants.cpp, view.hpp). */
+void scene_cell_visual_channels_apply(struct SceneCellVisualRelayRecord* record,
+                                      const float corner_points[12],
+                                      uint32_t lookup_selector,
+                                      uint32_t corner_index, float scale,
+                                      float uniform_scale);       /* 0040b880 */
+/* No port entry with the original's contract: adapters at the end of
+ * lego.cpp (group 3B). */
+void lego_roof_block_vertices_set_adapter(unsigned int bx, unsigned int by,
+                                          struct TerrainMapVector3* v0,
+                                          struct TerrainMapVector3* v1,
+                                          struct TerrainMapVector3* v2,
+                                          struct TerrainMapVector3* v3); /* 00462f20 */
+void lego_main_setup3d_adapter(int quality, int dither, int filter,
+                               int mipmap, int linearMipMap, int blend,
+                               int sort);                         /* 00478330 */
+void* lego_container_create_adapter(void* parent);                /* 00472950 */
+float lego_viewport_field_get_adapter(void* view);                /* 00477270 */
+void lego_viewport_size_get_adapter(void* view, unsigned int* width,
+                                    unsigned int* height);        /* 00476f10 */
+float lego_projected_quad_area_adapter(struct TerrainMapVector3* vertices,
+                                       void* view,
+                                       const float screen[2],
+                                       int noClip);               /* 0040b470 */
+int lego_entity_random_cell_step_route_adapter(struct EntitySlot* object); /* 00444260 */
+/* 0040b810's port entry takes the ledger namespace's channel table. */
+void lego_detail_mesh_resources_clear_adapter(void* mesh);        /* 0040b810 */
+
 /* ---- part 3 imports, group 3B: end ---- */
 
 /* ---- part 3 imports, group 3C (00434570-00435aa0): begin ---- */

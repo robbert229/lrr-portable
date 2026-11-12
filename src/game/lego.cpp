@@ -7906,7 +7906,10 @@ int terrain_cell_type_get_at_current(uint32_t cx, uint32_t cy,
 
 /* TerrainCellMutationProgress has the retail level/x/y ABI. It samples and
  * derives its separate SceneRender quad without writing back into the base. */
-// FUNCTION: LEGORR 0x00433380
+/* Port model of 0x00433380 (GAME-021) for the targets other than MSVC x86; on MSVC
+ * x86 the shared original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00433380 off MSVC x86, retires to the tail in GAME-021 part 3
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 void terrain_cell_mutation_progress(LevelState* level, uint32_t x,
                                     uint32_t y)
 {
@@ -7915,18 +7918,11 @@ void terrain_cell_mutation_progress(LevelState* level, uint32_t x,
     (void)terrain_cell_mutation_progress_level(level, surface,
                                                (int)x, (int)y);
 }
-/* FUN_004334c0: resolve the resource slot, then read its two header dwords. */
-// FUNCTION: LEGORR 0x004334c0
-void level_map_dimensions_get(uint32_t slot, uint32_t* width,
-                              uint32_t* height)
-{
-    uint8_t* image = level_map_slot_get(slot);
-    image += 0x08;
-    *width = *(uint32_t*)image;
-    *height = *(uint32_t*)(image + 4);
-}
+#endif
+/* FUN_004334c0 (level_map_dimensions_get) is shared: lego_unit.c defines it. */
 
-// FUNCTION: LEGORR 0x00433770
+/* Port model of 0x00433770 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00433770, retires to the tail in GAME-021 part 3
 int scene_lights_build_from_config(const SceneLightBuildOps* ops)
 {
     SceneLightDefinition definition;
@@ -8057,7 +8053,8 @@ int scene_lights_build_from_config(const SceneLightBuildOps* ops)
 }
 
 /* CurrentLevelTerrainGridPick (FUN_00433be0) — see view.hpp. */
-// FUNCTION: LEGORR 0x00433be0
+/* Port model of 0x00433be0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00433be0, retires to the tail in GAME-021 part 3
 void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
                                      int* gx, int* gy)
 {
@@ -8072,7 +8069,8 @@ void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
  * entity, a float cadence divisor, and a mode word. The first branch tests
  * the four adjacent voxel flag words and raises the route-step response on
  * the first cell with bit 0x10 set and bit 8 clear. */
-// FUNCTION: LEGORR 0x00433c10
+/* Port model of 0x00433c10 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00433c10, retires to the tail in GAME-021 part 3
 int entity_neighbor_blocked_cell_step_probe(EntitySlot* entity,
                                              float cadence, int mode)
 {
@@ -8141,7 +8139,8 @@ int entity_neighbor_blocked_cell_step_probe(EntitySlot* entity,
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00433e30
+/* Port model of 0x00433e30 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00433e30, retires to the tail in GAME-021 part 3
 int grid_cell_entity_eligibility_check(int x, int y)
 {
     GridCellEligibilityHooks* hooks = &s_grid_cell_eligibility_hooks;
@@ -8170,7 +8169,8 @@ int grid_cell_entity_eligibility_check(int x, int y)
 /* CellSurfaceUpdateDispatch (FUN_00434480): resolve the packed surface's
  * per-level tile-model record, sample the live four-corner geometry, then
  * run the two persistent visual channels through the scene resource API. */
-// FUNCTION: LEGORR 0x00434480
+/* Port model of 0x00434480 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00434480, retires to the tail in GAME-021 part 3
 int terrain_cell_surface_update_dispatch_level(LevelState* level,
                                                 int x, int y,
                                                 float scale,
@@ -8212,7 +8212,10 @@ int terrain_cell_surface_update_dispatch_level(LevelState* level,
 /* TerrainGridEntryResourcesReleaseAll (FUN_00434530): the retail level's
  * +0x80 pointer array contains visual-channel records. Clear their two
  * 100-entry resource channels and reset +0x32c; retain the records and roots. */
-// FUNCTION: LEGORR 0x00434530
+/* Port model of 0x00434530 (GAME-021) for the targets other than MSVC x86; on MSVC
+ * x86 the shared original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00434530 off MSVC x86, retires to the tail in GAME-021 part 3
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 void terrain_grid_entry_resources_release_all_current(void)
 {
     GameContext* game = entity_pool_callback_context_get();
@@ -8243,6 +8246,7 @@ void terrain_grid_entry_resources_release_all_current(void)
         }
     }
 }
+#endif
 
 // FUNCTION: LEGORR 0x00434570
 int terrain_cell_drill_work_add_current(int x, int y, float divisor,
@@ -10741,6 +10745,99 @@ extern "C" int entity_block_pos_get_adapter(const struct EntitySlot* entity,
 /* ---- part 3 adapters, group 3A: end ---- */
 
 /* ---- part 3 adapters, group 3B (00433380-00434530): begin ---- */
+
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-021's lego_unit.c,
+ * functions 00433380-00434530. Natively nothing calls them: the unit
+ * functions that do run only in the matching build. */
+
+void render_surface_get_value_pair_80_and_84(void* surface,
+                                             uint32_t* out_80,
+                                             uint32_t* out_84); /* viewports.cpp, 00476f10 */
+namespace lego {
+struct DDiSceneObjectDescriptor;
+void* ddiscene_object_allocate(const DDiSceneObjectDescriptor* descriptor); /* container_unit.cpp, 00472950 */
+}
+namespace unported_ledger_stubs {
+int ledger_stub_00444260_EntityRandomCellStepRouteIssue(EntitySlot* entity); /* legoobject.cpp */
+}
+
+/* FUN_00462f20 (Roof_SetBlockRoofVertices) takes the block and its four
+ * corners; the port's TerrainCellQuadGeometryEmit takes a grid and a packed
+ * array, with no grid for the current level. This does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00462f20; no port entry with the original's contract)
+extern "C" void lego_roof_block_vertices_set_adapter(unsigned int bx,
+                                                     unsigned int by,
+                                                     struct TerrainMapVector3* v0,
+                                                     struct TerrainMapVector3* v1,
+                                                     struct TerrainMapVector3* v2,
+                                                     struct TerrainMapVector3* v3)
+{
+    (void)bx; (void)by; (void)v0; (void)v1; (void)v2; (void)v3;
+}
+
+/* FUN_00478330 (Main_Setup3D) takes the render quality and six switches;
+ * the port's direct3d_render_preferences_apply takes another set of five.
+ * This does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00478330; the port's entry takes other parameters)
+extern "C" void lego_main_setup3d_adapter(int quality, int dither, int filter,
+                                          int mipmap, int linearMipMap,
+                                          int blend, int sort)
+{
+    (void)quality; (void)dither; (void)filter; (void)mipmap;
+    (void)linearMipMap; (void)blend; (void)sort;
+}
+
+/* FUN_00472950 (Container_Create): the parent container is the port's
+ * scene-object descriptor (its +0/+8 frames). */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00472950; C++ linkage in namespace lego)
+extern "C" void* lego_container_create_adapter(void* parent)
+{
+    return lego::ddiscene_object_allocate(
+        (const lego::DDiSceneObjectDescriptor*)parent);
+}
+
+/* FUN_00477270 (Viewport_GetField) returns the field of view; the port's
+ * naked entry is declared void. This returns 0. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00477270; the port's entry returns nothing)
+extern "C" float lego_viewport_field_get_adapter(void* view)
+{
+    (void)view;
+    return 0.0f;
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00476f10; C++ linkage in viewports.cpp)
+extern "C" void lego_viewport_size_get_adapter(void* view, unsigned int* width,
+                                               unsigned int* height)
+{
+    render_surface_get_value_pair_80_and_84(view, width, height);
+}
+
+/* FUN_0040b470 (Detail's projected block area) takes the corners, the
+ * viewport, the screen size and the no-clip switch; the port's entry takes a
+ * projection adapter first. This returns 0 (no area). */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (0040b470; the port's entry takes a projection adapter)
+extern "C" float lego_projected_quad_area_adapter(struct TerrainMapVector3* vertices,
+                                                  void* view,
+                                                  const float screen[2],
+                                                  int noClip)
+{
+    (void)vertices; (void)view; (void)screen; (void)noClip;
+    return 0.0f;
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00444260; C++ linkage in legoobject.cpp's ledger namespace)
+extern "C" int lego_entity_random_cell_step_route_adapter(struct EntitySlot* object)
+{
+    return unported_ledger_stubs::ledger_stub_00444260_EntityRandomCellStepRouteIssue(
+        object);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (0040b810; the port's entry takes the ledger namespace's channel table)
+extern "C" void lego_detail_mesh_resources_clear_adapter(void* mesh)
+{
+    unported_ledger_stubs::cell_visual_channel_table_resources_clear(
+        (unported_ledger_stubs::CellVisualChannelTable*)mesh);
+}
 
 /* ---- part 3 adapters, group 3B: end ---- */
 

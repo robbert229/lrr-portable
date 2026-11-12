@@ -192,6 +192,9 @@ typedef struct SceneCellVisualRelayRecord {
     uint32_t reserved[3];
     SceneCellVisualLookupTable* lookup_table;
 } SceneCellVisualRelayRecord;
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_cell_visual_channels_apply(SceneCellVisualRelayRecord* record,
                                       const float corner_points[12],
                                       uint32_t lookup_selector,
@@ -1401,8 +1404,17 @@ int ddiscene_object_pose_method_dispatch(void* object,
                                          float parameter_6,
                                          float parameter_7,
                                          float parameter_8);
+#ifdef __cplusplus
+extern "C"
+#endif
 int light_interface_call_slot_38(void* record, uint32_t value);
+#ifdef __cplusplus
+extern "C"
+#endif
 int light_interface_call_slot_3c(void* record, uint32_t value);
+#ifdef __cplusplus
+extern "C"
+#endif
 int light_interface_call_slot_40(void* record, uint32_t value);
 
 /* DDiSceneRenderSurfacePoolGrow (FUN_00477370): grow the surface-record
@@ -1829,6 +1841,9 @@ void scene_root_install(void* root);            /* port hook */
 void* scene_root_peek(void);                    /* port hook */
 
 /* SceneRootObjectGet (FUN_00472940): the corpus's root-object read. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_root_object_get(void);              /* FUN_00472940 */
 /* Direct scene-interface wrappers: the interface pointer is at object + 0x10;
  * clip distance uses vtable byte slot 0x3c and point transform uses 0x50. */
