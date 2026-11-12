@@ -3,11 +3,11 @@
     "full": 60.48,
     "game_only": 56.28
   },
-  "baseline_sha256": "94330ca4b62b553237cc73f1a1560c8962ad443cf230b7346f76459f463c16d8",
+  "baseline_sha256": "54a16fca9083288cee1407baad01290f7029700c68e70099154749c1d577597d",
   "exact_function_code_bytes": {
-    "bytes": 76390,
+    "bytes": 76650,
     "original_text_bytes": 642549,
-    "percent": 11.89
+    "percent": 11.93
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 384,
@@ -23,13 +23,13 @@
       "pairs": 1571
     }
   },
-  "input_sha256": "1a7636ba49114d33334a7f65a29f95168b0b085a83f8cc7810fe77fb3437db43",
+  "input_sha256": "87ceb9bb61b62e60f325979f754f9b1b28823c7daed39d952c1ab1e41a5627ee",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 8,
       "eligible_units": 48,
       "method": "anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted",
-      "unattributed_or_unmapped_annotations": 177
+      "unattributed_or_unmapped_annotations": 175
     },
     "link_order_list": {
       "adjacent": 0,
@@ -1672,7 +1672,7 @@
       {
         "contiguous": true,
         "data_offset_agreement": false,
-        "data_offset_comparisons": 59,
+        "data_offset_comparisons": 61,
         "functions": 52,
         "identical_function_bytes": 5632,
         "identity_percent": 58.24,
@@ -4000,7 +4000,7 @@
     ],
     "unmapped_original_functions": 192
   },
-  "listing_digests_sha256": "bae0d37a28f00bea7c62da6a0aa9b1f05d0696361508a35141ca627697b47bc9",
+  "listing_digests_sha256": "dd3acdcca8d7eedde153670a4dd136eca9ff7c286c29cf1d80601eda0d0bb6fd",
   "minimum_identical_run_bytes": 16,
   "pe_header_differences": {
     "entry_point_rva": {
@@ -4017,8 +4017,8 @@
     ".data": {
       "chance_percent": 10.47,
       "excess_percent_points": 7.61,
-      "identical_bytes": 13242,
-      "identical_percent": 18.09,
+      "identical_bytes": 13241,
+      "identical_percent": 18.08,
       "original_bytes": 73216,
       "rebuilt_bytes": 996864,
       "run_chance_percent": 1.76,

@@ -1,4 +1,4 @@
-# input_sha256: 1a7636ba49114d33334a7f65a29f95168b0b085a83f8cc7810fe77fb3437db43
+# input_sha256: 87ceb9bb61b62e60f325979f754f9b1b28823c7daed39d952c1ab1e41a5627ee
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -104,7 +104,7 @@
 0x00403af0 77.78 entity_task_state_update_after_cleanup
 0x00403b40 24.24 entity_pending_task_flag_clear
 0x00403b60 80.99 entity_activity_records_refresh
-0x00403c00 99.05 entity_activity_record_remove_by_type
+0x00403c00 100.00 entity_activity_record_remove_by_type
 0x00403d10 21.72 entity_command_unlink_by_kind
 0x00403ef0 10.87 pending_record_callback_dispatch
 0x00403f30 33.33 ai_idle_chain_record_attach
@@ -1276,7 +1276,7 @@
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
 0x0045b620 100.00 ui_list_priority_button_action_dispatch
-0x0045b740 92.19 ui_scroll_info_panel_initialize
+0x0045b740 95.31 ui_scroll_info_panel_initialize
 0x0045b850 93.75 ui_overlay_create_configured_element
 0x0045b8a0 100.00 point_distance_within_radius
 0x0045b900 100.00 integer_pair_divide_to_float_pair
@@ -2285,7 +2285,7 @@
 0x00403af0 77.78 entity_task_state_update_after_cleanup
 0x00403b40 24.24 entity_pending_task_flag_clear
 0x00403b60 80.99 entity_activity_records_refresh
-0x00403c00 99.05 entity_activity_record_remove_by_type
+0x00403c00 100.00 entity_activity_record_remove_by_type
 0x00403d10 21.72 entity_command_unlink_by_kind
 0x00403ef0 10.87 pending_record_callback_dispatch
 0x00403f30 33.33 ai_idle_chain_record_attach
@@ -3457,7 +3457,7 @@
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
 0x0045b620 100.00 ui_list_priority_button_action_dispatch
-0x0045b740 92.19 ui_scroll_info_panel_initialize
+0x0045b740 95.31 ui_scroll_info_panel_initialize
 0x0045b850 93.75 ui_overlay_create_configured_element
 0x0045b8a0 100.00 point_distance_within_radius
 0x0045b900 100.00 integer_pair_divide_to_float_pair

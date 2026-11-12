@@ -72,6 +72,9 @@
 #include "level_for_aitask.hpp"
 #include "gods98/simtick_for_aitask.hpp"
 
+struct TerrainMap;
+extern "C" void terrain_map_block_highlight_clear(TerrainMap* map, int bx, int by);
+
 #define CMD_STRIDE sizeof(CmdRec)
 
 /* The callback writes independent 50-entry arrays at +0x335c and +0x3428.
@@ -2044,7 +2047,7 @@ __declspec(naked) void entity_activity_record_remove_by_type(
         push edx
         call level_current_terrain_get
         push eax
-        call terrain_cell_surface_type_reset
+        call terrain_map_block_highlight_clear
         add esp, 0ch
     create_task:
         mov edi, dword ptr [esp + 1ch]
