@@ -78,6 +78,8 @@ winapi-link-check:
 reccmp-compare:
 	python3 ./tools/match_baseline.py check \
 	  --report-dir "$(RECCMP_BUILD_DIR)/reccmp-report" --baseline "$(RECCMP_BASELINE)"
+	python3 ./tools/reccmp_plain_immediates.py check \
+	  --report-dir "$(RECCMP_BUILD_DIR)/reccmp-report"
 
 reccmp-baseline-update:
 	python3 ./tools/match_baseline.py update \
@@ -135,7 +137,9 @@ unit-data-offsets:
 	python3 tools/unit_data_offsets.py --build "$(RECCMP_BUILD_DIR)"
 
 # Whole-binary audit beyond function code (finding 563): headers, sections,
-# imports, resources and map attribution of the existing matching build.
+# imports, resources and map attribution of the existing matching build. It
+# warns when the rebuilt image covers the original's flag constant 0x800000
+# (finding 584).
 pe-audit:
 	python3 tools/pe_audit.py --rebuilt "$(RECCMP_BUILD_DIR)/LegoRR.exe" \
 	  --map "$(RECCMP_BUILD_DIR)/LegoRR.map" $(if $(PE_AUDIT_JSON),--json "$(PE_AUDIT_JSON)")
@@ -155,6 +159,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_unit_data_offsets.py'
 	python3 -m unittest discover -s tools/tests -p 'test_pe_audit.py'
+	python3 -m unittest discover -s tools/tests -p 'test_reccmp_plain_immediates.py'
 	python3 -m unittest discover -s tools/tests -p 'test_pr_match_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_match_listings.py'
 	python3 -m unittest discover -s tools/tests -p 'test_link_order.py'

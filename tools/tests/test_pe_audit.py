@@ -140,6 +140,32 @@ class MapTests(unittest.TestCase):
         self.assertEqual(pe_audit.import_thunks(symbols), {"d3drm.dll": 1, "kernel32.dll": 1})
 
 
+class ImageEndTests(unittest.TestCase):
+    def test_constant_covered_once_rebuilt_image_passes_it(self):
+        # finding 584: original ends at 0x771000, the rebuild past 0x800000.
+        end = pe_audit.image_end_report(0x400000, 0x371000, 0x400000, 0x6d0000)
+        self.assertEqual(end["original"], 0x771000)
+        self.assertEqual(end["rebuilt"], 0xad0000)
+        self.assertEqual(end["covered_constants"], [0x800000])
+        self.assertEqual(end["margin_below_first_constant"], 0x800000 - 0xad0000)
+        summary = pe_audit.summary({"file_size": {"original": 1, "rebuilt": 1},
+                                    "header_differences": {}, "image_end": end,
+                                    "section_bytes": {}, "section_virtual_sizes": {},
+                                    "imports": {"original_dll_order": [], "rebuilt_dll_order": [],
+                                                "original_names": 0, "rebuilt_names": 0,
+                                                "missing_dlls": [], "extra_dlls": [],
+                                                "dll_order_equal": True,
+                                                "common_dll_order_equal": True},
+                                    "resources": {"identical": 0, "count": 0, "leaves": []}})
+        self.assertIn("WARNING", summary)
+        self.assertIn("0x800000", summary)
+
+    def test_no_constant_covered_below_it(self):
+        end = pe_audit.image_end_report(0x400000, 0x371000, 0x400000, 0x3f0000)
+        self.assertEqual(end["covered_constants"], [])
+        self.assertEqual(end["margin_below_first_constant"], 0x800000 - 0x7f0000)
+
+
 class AuditTests(unittest.TestCase):
     def test_identical_images(self):
         with tempfile.TemporaryDirectory() as tmp:
