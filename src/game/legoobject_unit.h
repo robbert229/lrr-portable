@@ -188,14 +188,44 @@ Lego_Object* legoobject_query_center_mask100(Lego_Object* obj, float* center, in
 int legoobject_flags_contain_requested_single_bit(Lego_Object* obj, int selector); /* 00438ed0 */
 
 /* ---- group E: 00438f60-00439930 ---- */
-int legoobject_dock_definition_matches_cell(int* cell);         /* 00438f60 */
+/* The search record the spatial queries (004389e0-00438e50) pass to
+ * legoobject_route_marker_candidate_visit. */
+typedef struct LegoObjGE_RouteMarkerSearch {
+    Lego_Object* result;     /* +0x00 nearest match */
+    float x;                 /* +0x04 query position */
+    float y;                 /* +0x08 */
+    float bestDistance;      /* +0x0c */
+    unsigned int flags;      /* +0x10 search mask */
+    int actionKind;          /* +0x14 legoobject_action_kind_supported */
+    int actionArgument;      /* +0x18 */
+    int actionExtra;         /* +0x1c */
+    int selector;            /* +0x20 legoobject_flags_contain_requested_single_bit */
+} LegoObjGE_RouteMarkerSearch;
+/* Lego_Level and Lego_Block (0x48), the fields group E reads. */
+typedef struct LegoObjGE_Block {
+    unsigned char pad_00[0x2c];
+    int field_2c;            /* +0x2c build-placement counter */
+    int field_30;            /* +0x30 alternate build-placement counter */
+    unsigned char pad_34[0x48 - 0x34];
+} LegoObjGE_Block;
+/* The callers of legoobject_action_kind_supported (0043a7c0) push four
+ * arguments; it reads three. Group E calls it through this type until the
+ * prototype gains the unused fourth parameter. */
+typedef int (*LegoObjGE_ActionKindSupported)(Lego_Object* obj, int kind,
+                                             int argument, int unused);
+/* Point2F. */
+typedef struct LegoObjGE_Point2F {
+    float x;
+    float y;
+} LegoObjGE_Point2F;
+int legoobject_dock_definition_matches_cell(Lego_Object* obj);  /* 00438f60 */
 int legoobject_route_marker_candidate_visit(Lego_Object* obj, void* data); /* 00438fb0 */
 int legoobject_task_kind_filtered_search(int selector);         /* 00439200 */
 int legoobject_task_flags_and_cell_task_match(Lego_Object* obj, void* task); /* 00439240 */
 void legoobject_build_placement_command_batch_expand(int* cell); /* 00439280 */
 void legoobject_build_placement_command_pair_create(int* cell, int id); /* 00439340 */
-void legoobject_build_placement_command_setup(int* cell, int id, float* world, int update); /* 00439370 */
-void legoobject_build_placement_alternate_command_setup(int* cell, int id, float* world, int update); /* 004394b0 */
+void legoobject_build_placement_command_setup(int* cell, int id, LegoObjGE_Point2F* world, int update); /* 00439370 */
+void legoobject_build_placement_alternate_command_setup(int* cell, int id, LegoObjGE_Point2F* world, int update); /* 004394b0 */
 const char* legoobject_display_name_lookup(Lego_Object* obj);  /* 004395e0 */
 const char* legoobject_item_name_by_kind(unsigned int kind, int index); /* 004396c0 */
 const char* legoobject_the_name_get(unsigned int kind, int index); /* 00439790 */

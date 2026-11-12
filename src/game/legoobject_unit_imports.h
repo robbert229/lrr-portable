@@ -59,6 +59,61 @@ extern struct EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records; 
 /* ---- group D ---- */
 
 /* ---- group E ---- */
+struct LevelState;
+struct TerrainMap;
+struct TerrainMapVector3;
+struct InfoPoint2I;
+/* legoGlobs stand-ins defined in lego_unit.c (GAME-021). */
+extern void* legoGlobs_contCrystal;                 /* 00556374 */
+extern void* legoGlobs_contOresTable;               /* 0055637c */
+extern char** legoGlobs_vehicleName;                /* 005561e8 */
+extern char** legoGlobs_miniFigureName;             /* 005561ec */
+extern char** legoGlobs_rockMonsterName;            /* 005561f0 */
+extern char** legoGlobs_buildingName;               /* 005561f4 */
+/* legoGlobs' object-name tables, defined in entity.cpp (C linkage from the
+ * pre-declarations before entity_for_legoobject.hpp). */
+extern const char* s_object_name_special[9];        /* 0055618c */
+extern const char* s_object_the_name_special[9];    /* 005561b0 */
+extern const char** s_object_name_kind1;            /* 00556254 */
+extern const char** s_object_name_kind2;            /* 00556258 */
+extern const char** s_object_name_kind3;            /* 0055625c */
+extern const char** s_object_name_kind4;            /* 00556260 */
+extern const char** s_object_name_kind10;           /* 00556264 */
+extern const char** s_object_the_name_kind1;        /* 00556268 */
+extern const char** s_object_the_name_kind2;        /* 0055626c */
+extern const char** s_object_the_name_kind3;        /* 00556270 */
+extern const char** s_object_the_name_kind4;        /* 00556274 */
+extern const char** s_object_the_name_kind10;       /* 00556278 */
+/* GAME-021 Lego.c (lego.cpp, level.hpp, entity_api.h). */
+int entity_type_pair_lookup(const char* name, int* type_out, int* row_out,
+                            int* zero_out);                     /* 0042e8b0 */
+int terrain_cell_byte_state_classify_current(const int xy[2],
+    uint32_t* out_a, uint32_t* out_b, uint32_t* out_c,
+    uint32_t* out_d);                                           /* 0042c5b0 */
+struct LevelState* level_current_owner_get(void);               /* 00431560 */
+/* 00431570 takes no argument; adapter at the end of lego.cpp. */
+void* level_current_terrain_get_original(void);                 /* 00431570 */
+/* GAME-019 Info.c (info_unit.h). */
+void info_send(int type, char* text, void* object,
+               struct InfoPoint2I* blockPos);                   /* 00419b80 */
+/* GAME-023 parts 2-3 (legoobject.cpp, entity.hpp). */
+void entity_transform_position_get_outputs(const struct EntitySlot* entity,
+                                           float* out_x,
+                                           float* out_y);       /* 00442260 */
+/* Map3D (terrain_map.h). */
+float terrain_context_scale_get(const void* context);           /* 00450890 */
+int terrain_map_block_vertices_get(struct TerrainMap* map, unsigned int bx,
+                                   unsigned int by,
+                                   struct TerrainMapVector3* positions); /* 004500d0 */
+/* Message.c (message.h). */
+void cmd_produce(int op, const void* a1, int a2, const int* pair); /* 00452060 */
+/* Stats.c (entity.hpp). */
+uint32_t entity_stats_word_get(const struct EntitySlot* e);    /* 00469e60 */
+uint32_t entity_state_flags_get(const struct EntitySlot* e);   /* 00469e80 */
+/* Text.c (frontend.hpp). */
+void advisor_text_animation_update(int slot, int force, int selected); /* 0046ac60 */
+/* Maths.c (maths.h). */
+float random_float_range(float low, float high);                /* 004798b0 */
 
 /* ---- group F ---- */
 
