@@ -66,6 +66,7 @@ src/game/bezier.c
 src/game/bezier.h
 src/game/bubbles.cpp
 src/game/building_model.cpp
+src/game/building_model.h
 src/game/building_scene.cpp
 src/game/building_scene.hpp
 src/game/camera_control.cpp
@@ -198,11 +199,13 @@ src/game/lava_erosion.cpp
 src/game/lego.cpp
 src/game/lego.h
 src/game/lego_api.h
+src/game/lego_blocks.h
 src/game/lego_maths.h
 src/game/lego_unit.c
 src/game/lego_unit.h
 src/game/lego_unit_imports.h
 src/game/legoobject.cpp
+src/game/legoobject.h
 src/game/level.cpp
 src/game/level.h
 src/game/level.hpp
@@ -262,6 +265,7 @@ src/game/panel_unit.c
 src/game/panel_unit.h
 src/game/placement.cpp
 src/game/placement_footprint.cpp
+src/game/placement_footprint.h
 src/game/pointer.cpp
 src/game/pointer_cursor.hpp
 src/game/port_loop_ports.hpp
@@ -276,6 +280,7 @@ src/game/reward.h
 src/game/reward_maths.h
 src/game/reward_port.cpp
 src/game/rock_fall_styles.cpp
+src/game/rock_fall_styles.h
 src/game/savegame.cpp
 src/game/savegame.h
 src/game/savegame.hpp
@@ -309,10 +314,13 @@ src/game/startup_config.cpp
 src/game/startup_config_for_file_list_streams.hpp
 src/game/startup_config_for_wad.hpp
 src/game/startup_config_shared.hpp
+src/game/stats.h
 src/game/steering.c
 src/game/steering.h
 src/game/steering_maths.h
-src/game/terrain_cell_objects.cpp
+src/game/terrain_cell_objects.c
+src/game/terrain_cell_objects.h
+src/game/terrain_cell_objects_port.cpp
 src/game/terrain_feedback.hpp
 src/game/terrain_grid.cpp
 src/game/terrain_grid.h
@@ -380,6 +388,7 @@ src/game/weapon.hpp
 src/game/weapon_for_weapons.hpp
 src/game/weapon_from_weapons.hpp
 src/game/weapons.cpp
+src/game/weapons.h
 src/gods98/audio.cpp
 src/gods98/audio.h
 src/gods98/audio.hpp

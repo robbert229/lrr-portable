@@ -1894,7 +1894,7 @@ void scene_mesh_color_set(void* object, int block, float red, float green,
  * negative folds default), adds the offset pair, and answers the
  * scratch pointer. Deviations: bounded scratch (the corpus writes its
  * DAT region blindly) and count guarded. */
-void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
+extern "C" void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
                                  int count, int rotation);          /* FUN_00464110 */
 
 /* Observer hook answering the scratch base (test pin). */

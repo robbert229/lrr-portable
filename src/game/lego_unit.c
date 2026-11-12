@@ -4198,11 +4198,11 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct EntityS
     }
     if (LEGO_KEY_PRESSED(0x23) && selection_active_has_any_get()) {
         unit = selection_active_entity_get();
-        if (LEGO_FIELD(unit, int, 0x0) == 4) terrain_cell_activation_try(unit, 0, 0);
+        if (LEGO_FIELD(unit, int, 0x0) == 4) electric_fence_spark_from((struct ElectricFenceObject*)unit, 0, 0);
     }
     if (LEGO_KEY_PRESSED(0x24)) {
-        if (grid_cell_record_present_check(bx, by)) delete_cell_object(bx, by);
-        else create_cell_object_if_available(bx, by);
+        if (electric_fence_block_is_fence(bx, by)) electric_fence_debug_remove(bx, by);
+        else electric_fence_debug_place(bx, by);
     }
     if (LEGO_KEY_PRESSED(0x15)) {
         int param[2];
@@ -4881,7 +4881,7 @@ int lego_level_load(const char* levelName)
                 free(fallinMap);
                 if (pathMap) free(pathMap);
 
-                map_cell_state_buffer_rebuild(level);
+                electric_fence_restart((struct ElectricFenceLevel*)level);
                 grid_cell_record_buffer_replace((struct EngineState*)level);
                 objective_announce_current(0);
                 objective_tick_target(legoGlobs_textOnlyWindow, (struct LevelState*)legoGlobs_currLevel, 1.0f, 1.0f);

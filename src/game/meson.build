@@ -49,7 +49,7 @@ game_sources = [
   'lighteffects.cpp',
   'bubbles.cpp',
   'info_port.cpp',
-  'terrain_cell_objects.cpp',
+  'terrain_cell_objects_port.cpp',
   'rock_fall_styles.cpp',
   'dependencies.cpp',
   'entity_cell_effects.cpp',
@@ -100,6 +100,7 @@ game_c_sources = [
   'priorities.c',
   'reward.c',
   'steering.c',
+  'terrain_cell_objects.c',
   'terrain_map.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).

@@ -106,7 +106,7 @@ uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress);
  * dword at +0x84 and, when given an output pointer, copy the dword at
  * +0x88 there. Field meanings stay with the task layer. NULL task
  * answers 0 and writes nothing (documented deviation). */
-uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88);
+extern "C" uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88);
 
 /* PackedGridCellValueGet (FUN_0040b850, findings 373/451): decode a
  * packed cell byte — the low nibble steps by the descriptor's width

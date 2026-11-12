@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-013 GAME-013: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-013.csv. */
+/* Port tail (ADR 0006 decision 4): the port's own electric-fence model.
+ *
+ * GAME-013 (the original's ElectricFence.c) is rebuilt in original shape in
+ * terrain_cell_objects.c (issue #556). The port's model is a different
+ * contract: a calloc'd LevelCellKindGrid per level, explicit level
+ * arguments and the scene-object hooks the native tests pin. These are the
+ * port's implementations of the unit's functions under the port's names,
+ * unannotated, so the native callers and tests keep their behaviour
+ * (finding 566). Callers move to terrain_cell_objects.c as their own units
+ * are converted. */
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
@@ -71,18 +78,22 @@
 #define s_grid_cell_object_free (s_active_cell_kind_grid->free_nodes)
 #define s_grid_cell_object_chunk_count (s_active_cell_kind_grid->chunk_count)
 
-// GLOBAL: LEGORR 0x004c7df8
+/* Port state at 0x004c7df8 (GAME-013): electricFenceGlobs in
+ * terrain_cell_objects.c holds the annotation. */
 void*    s_marker_descriptor;
 
-// GLOBAL: LEGORR 0x004c7dfc
+/* Port state at 0x004c7dfc (GAME-013): electricFenceGlobs in
+ * terrain_cell_objects.c holds the annotation. */
 static const uint32_t* s_grid_record_manager;
 
 /* --- the selection marker table (see crt.hpp) ------------------------------
  * DAT_004c7e00..e7c is 32 pointer slots plus the count word at e80; the
  * descriptor sits at DAT_004c7df8. All unowned: zero-init statics here. */
-// GLOBAL: LEGORR 0x004c7e00
+/* Port state at 0x004c7e00 (GAME-013): electricFenceGlobs in
+ * terrain_cell_objects.c holds the annotation. */
 void*    s_marker_table[32];
-// GLOBAL: LEGORR 0x004c7e80
+/* Port state at 0x004c7e80 (GAME-013): electricFenceGlobs in
+ * terrain_cell_objects.c holds the annotation. */
 uint32_t s_marker_count;
 
 /* The active table and its dimension owner are mirrored from the cell-kind
@@ -111,7 +122,8 @@ static int terrain_flood_special_state(int x, int y, int mode);
 
 /* MapCellRecordGridInitialize (FUN_0040cdc0): allocate the target's
  * width*height*0x14-byte table and widened per-level pointer views. */
-// FUNCTION: LEGORR 0x0040CDC0
+/* Port model of 0x0040cdc0 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void map_cell_record_grid_initialize(void* level)
 {
     LevelCellKindGrid* grid;
@@ -154,7 +166,8 @@ void map_cell_record_grid_initialize(void* level)
     s_active_cell_kind_grid = grid;
 }
 
-// FUNCTION: LEGORR 0x0040ce30
+/* Port model of 0x0040ce30 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void selection_marker_resources_release(void)
 {
     /* Corpus walk: an unsigned add-4 pointer stride bounded by the table
@@ -186,7 +199,8 @@ void selection_marker_resources_release(void)
 
 /* MapCellStateBufferRebuild (FUN_0040ce80): release prior marker resources,
  * then rebuild the level's per-cell state records. */
-// FUNCTION: LEGORR 0x0040CE80
+/* Port model of 0x0040ce80 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void map_cell_state_buffer_rebuild(void* level)
 {
     /* FUN_0040ce80 always releases the active marker registry before
@@ -199,7 +213,8 @@ void map_cell_state_buffer_rebuild(void* level)
 
 /* TerrainCellAndNeighborsUpdate (FUN_0040cea0): update a cell, then each
  * cardinal neighbor that passes the installed terrain bounds predicate. */
-// FUNCTION: LEGORR 0x0040CEA0
+/* Port model of 0x0040cea0 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void terrain_cell_and_neighbors_update(int x, int y)
 {
     static const int offsets[4][2] = { { 0, 1 }, { 1, 0 }, { 0, -1 },
@@ -244,7 +259,8 @@ void terrain_cell_and_neighbors_update(int x, int y)
 
 /* RegisterObjectAtGridPosition (FUN_0040cf50): query an object's grid cell,
  * then insert it in that cell's linked record chain. */
-// FUNCTION: LEGORR 0x0040CF50
+/* Port model of 0x0040cf50 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void register_object_at_grid_position(void* object)
 {
     int x;
@@ -256,7 +272,8 @@ void register_object_at_grid_position(void* object)
 }
 /* GridCellObjectLinkInsert (FUN_0040cf80): acquire a five-word node, mark
  * its link as the retail self-linked sentinel, and install it in the cell. */
-// FUNCTION: LEGORR 0x0040CF80
+/* Port model of 0x0040cf80 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void* grid_cell_object_link_insert(void* object, int x, int y)
 {
     uint32_t width;
@@ -298,7 +315,8 @@ void* grid_cell_object_link_insert(void* object, int x, int y)
     terrain_cell_and_neighbors_update(x, y);
     return node;
 }
-// FUNCTION: LEGORR 0x0040D030
+/* Port model of 0x0040d030 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void terrain_record_pool_chunk_allocate(void)
 {
     GridCellObjectChunk* chunk;
@@ -339,7 +357,8 @@ void terrain_record_pool_chunk_allocate(void)
 
 /* TerrainEntityCellRecordRemove (FUN_0040d0a0): locate the object's cell and
  * clear its cell record chain when the object is registered there. */
-// FUNCTION: LEGORR 0x0040D0A0
+/* Port model of 0x0040d0a0 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void terrain_entity_cell_record_remove(void* object)
 {
     int x;
@@ -370,7 +389,8 @@ void terrain_entity_cell_record_remove(void* object)
 }
 /* TerrainCellEntityRecordUnlink (FUN_0040d100): return the cell's linked
  * records to the pool, clear its head, and refresh the changed cell ring. */
-// FUNCTION: LEGORR 0x0040D100
+/* Port model of 0x0040d100 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void terrain_cell_entity_record_unlink(void* record, int x, int y)
 {
     uint32_t width;
@@ -403,7 +423,8 @@ void terrain_cell_entity_record_unlink(void* record, int x, int y)
 /* CreateCellObjectIfAvailable (FUN_0040d170): apply the decompiled cell
  * predicate, place a type-0xb entity at the cell center, and register it.
  * Explicit callbacks remain overrides for renderer-owned hosts. */
-// FUNCTION: LEGORR 0x0040D170
+/* Port model of 0x0040d170 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 int create_cell_object_if_available(int x, int y)
 {
     GameContext* game = entity_pool_callback_context_get();
@@ -442,7 +463,8 @@ int create_cell_object_if_available(int x, int y)
 
 /* DeleteCellObject (FUN_0040d1f0): remove and destroy the cell's head object
  * when present. */
-// FUNCTION: LEGORR 0x0040D1F0
+/* Port model of 0x0040d1f0 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 int delete_cell_object(int x, int y)
 {
     uint32_t width;
@@ -482,7 +504,8 @@ int delete_cell_object(int x, int y)
 /* TerrainCellHasOccupiedOrFlaggedNeighbor (FUN_0040d240): preserve the
  * corpus's center rejection and adjacent/distance-two checks per axis. The
  * per-cell DAT_004c7df8 side table is threaded as a query callback. */
-// FUNCTION: LEGORR 0x0040D240
+/* Port model of 0x0040d240 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 int terrain_cell_has_occupied_or_flagged_neighbor(
     const LevelState* s, int cx, int cy,
     TerrainCellSidecarPresenceQuery sidecar_present)
@@ -520,7 +543,8 @@ int terrain_cell_has_occupied_or_flagged_neighbor(
     }
     return 0;
 }
-// FUNCTION: LEGORR 0x0040d3f0
+/* Port model of 0x0040d3f0 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 int terrain_cell_special_state_predicate(const LevelState* s, int cx,
                                          int cy, int secondary_gate)
 {
@@ -533,7 +557,8 @@ int terrain_cell_special_state_predicate(const LevelState* s, int cx,
     return level_cell_secondary_flag_100(s, cx, cy) != 0u ? 1 : 0;
 }
 
-// FUNCTION: LEGORR 0x0040d450
+/* Port model of 0x0040d450 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void simtick_post_cluster(EngineContext* c)
 {
     (void)c;
@@ -545,7 +570,8 @@ void simtick_post_cluster(EngineContext* c)
     s_post_steps += 3;
 }
 
-// FUNCTION: LEGORR 0x0040D4F0
+/* Port model of 0x0040d4f0 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 int terrain_cell_activation_try(void* object, int x, int y)
 {
     LevelState* level = terrain_flood_current_level_get();
@@ -602,7 +628,8 @@ int terrain_cell_activation_try(void* object, int x, int y)
  * the corpus's cardinal/extended candidate offsets, draw the exact shared
  * random gate, emit edge effects, and recurse into eligible cells. The edge
  * effect itself remains renderer-owned. */
-// FUNCTION: LEGORR 0x0040D850
+/* Port model of 0x0040d850 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void terrain_cell_neighbor_flood_walk(int x, int y, int force, float strength)
 {
     static const int adjacent[4][2] = {
@@ -696,7 +723,8 @@ void terrain_cell_neighbor_flood_walk(int x, int y, int force, float strength)
 /* CellPairEdgeEffectApply (FUN_0040dc20): accept the four corpus-adjacent
  * offset pairs, compute their world direction, and configure the matching
  * transient effect group. */
-// FUNCTION: LEGORR 0x0040DC20
+/* Port model of 0x0040dc20 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 int cell_pair_edge_effect_apply(int x1, int y1, int x2, int y2)
 {
     static const int offsets[8][2] = {
@@ -734,7 +762,8 @@ int cell_pair_edge_effect_apply(int x1, int y1, int x2, int y2)
 }
 /* ComputeWorldPositionDelta (FUN_0040dd90): query the two cell centers and
  * subtract the first world position from the second. */
-// FUNCTION: LEGORR 0x0040DD90
+/* Port model of 0x0040dd90 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void compute_world_position_delta(int x1, int y1, int x2, int y2,
                                   float delta[3])
 {
@@ -759,7 +788,8 @@ void compute_world_position_delta(int x1, int y1, int x2, int y2,
 /* EntityFenceSparkTerrainInteraction (FUN_0040de40): check the source cell,
  * choose the closest adjacent cell whose spark timer has expired, register
  * the launch/activation, and refresh that cell's timer. */
-// FUNCTION: LEGORR 0x0040DE40
+/* Port model of 0x0040de40 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 int entity_fence_spark_terrain_interaction(void* entity)
 {
     static const int offsets[4][2] = {
@@ -876,7 +906,8 @@ int entity_fence_spark_terrain_interaction(void* entity)
 /* FenceSparkLaunchRegister (FUN_0040e0c0): place the transient spark at the
  * target cell center, derive its vertical separation from the source height
  * and entity radius, then attach/register the spark through the caller hook. */
-// FUNCTION: LEGORR 0x0040E0C0
+/* Port model of 0x0040e0c0 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void fence_spark_launch_register(void* entity, const float position_xy[2],
                                  int cell_x, int cell_y)
 {
@@ -928,7 +959,8 @@ void fence_spark_launch_register(void* entity, const float position_xy[2],
 namespace unported_ledger_stubs {
 // CellCornerOccupancyScan examines the center and ordered cardinal neighbors
 // in the map-record sidecar and the level's special-state predicate.
-// FUNCTION: LEGORR 0x0040e1e0
+/* Port model of 0x0040e1e0 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 uint32_t ledger_stub_0040e1e0_CellCornerOccupancyScan(
     LevelState* level, int cell_x, int cell_y)
 {
@@ -963,7 +995,8 @@ uint32_t ledger_stub_0040e1e0_CellCornerOccupancyScan(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x0040e350
+/* Port model of 0x0040e350 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 void cell_entity_kind_create_or_remove(CellEntityKindRegistry* registry,
                                        uint32_t x, uint32_t y,
                                        int create)
@@ -991,7 +1024,8 @@ void cell_entity_kind_create_or_remove(CellEntityKindRegistry* registry,
     }
 }
 
-// FUNCTION: LEGORR 0x0040e460
+/* Port model of 0x0040e460 (GAME-013); the original-shape
+ * function is in terrain_cell_objects.c. */
 int grid_cell_record_present_check(int x, int y)
 {
     size_t index;
@@ -1202,4 +1236,22 @@ static int post_cluster_entity_second(EntitySlot* entity, void* payload)
     if (s_post_entity_second_hook != NULL)
         s_post_entity_second_hook(entity, 1, s_post_cluster_user);
     return 0;
+}
+
+/* Adapters with the original signatures for terrain_cell_objects.c's
+ * callees whose port entries take a different contract (ADR 0005 step 6).
+ * Their owners (lego.cpp, legoobject.cpp) are converted separately. */
+// PORT-ONLY: Level_BlockUpdateSurface; the port's entry takes a float column.
+extern "C" void level_block_surface_update(LevelState* level, int bx, int by,
+                                           int reserved)
+{
+    (void)reserved;
+    cell_init_pass(level, (float)bx, (uint32_t)by);
+}
+
+// PORT-ONLY: LegoObject_GetBlockPos; the port's entry also takes the level.
+extern "C" void legoobject_block_position_get(EntitySlot* entity, int* bx,
+                                              int* by)
+{
+    entity_position_to_terrain_cell(entity, g_active_level_retail, bx, by);
 }

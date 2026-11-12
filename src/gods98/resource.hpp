@@ -870,7 +870,7 @@ typedef int (*TransientEffectConfigureHook)(void* handle, int group,
                                             void* context);
 void transient_effect_configure_hook_install(
     TransientEffectConfigureHook hook, void* context);
-int transient_effect_render_slot_configure(int group, float x, float y,
+extern "C" int transient_effect_render_slot_configure(int group, float x, float y,
                                            float size, float heading,
                                            float dx, float dy); /* FUN_0040c2f0 */
 #ifdef __cplusplus

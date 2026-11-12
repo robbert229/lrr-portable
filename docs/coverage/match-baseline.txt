@@ -1,4 +1,4 @@
-# input_sha256: abf904c7cd3324bc57ed83db20953f2c17f84b051759d30c815af5b51efc4898
+# input_sha256: 24787fa4c47e98d780e243e3287713347eb1cd9c7f3c0639cfaace7dac637108
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2230 mapped functions
+[game-only] 2234 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -287,29 +287,33 @@
 0x0040cb70 21.82 scene_timeout_entry_sweep
 0x0040cc40 32.00 terrain_marker_sets_clear
 0x0040cce0 23.53 lava_effect_select_and_place
-0x0040cdc0 7.89 map_cell_record_grid_initialize
-0x0040ce30 73.47 selection_marker_resources_release
-0x0040ce80 33.33 map_cell_state_buffer_rebuild
-0x0040cea0 22.68 terrain_cell_and_neighbors_update
-0x0040cf50 79.07 register_object_at_grid_position
-0x0040cf80 19.58 grid_cell_object_link_insert
-0x0040d030 12.96 terrain_record_pool_chunk_allocate
-0x0040d0a0 30.77 terrain_entity_cell_record_remove
-0x0040d100 11.11 terrain_cell_entity_record_unlink
-0x0040d170 26.97 create_cell_object_if_available
-0x0040d1f0 31.11 delete_cell_object
-0x0040d240 16.39 terrain_cell_has_occupied_or_flagged_neighbor
-0x0040d3f0 19.05 terrain_cell_special_state_predicate
-0x0040d450 30.77 simtick_post_cluster
-0x0040d4f0 17.48 terrain_cell_activation_try
-0x0040d850 9.58 terrain_cell_neighbor_flood_walk
-0x0040dc20 14.57 cell_pair_edge_effect_apply
-0x0040dd90 12.66 compute_world_position_delta
-0x0040de40 24.03 entity_fence_spark_terrain_interaction
-0x0040e0c0 16.07 fence_spark_launch_register
-0x0040e1e0 16.41 ledger_stub_0040e1e0_CellCornerOccupancyScan
-0x0040e350 12.86 cell_entity_kind_create_or_remove
-0x0040e460 12.00 grid_cell_record_present_check
+0x0040cdc0 100.00 electric_fence_initialise
+0x0040ce30 100.00 electric_fence_shutdown
+0x0040ce80 100.00 electric_fence_restart
+0x0040cea0 96.67 electric_fence_block_surfaces_update
+0x0040cf50 95.00 electric_fence_add
+0x0040cf80 70.48 electric_fence_create
+0x0040d030 100.00 electric_fence_add_list
+0x0040d0a0 96.77 electric_fence_remove
+0x0040d100 100.00 electric_fence_remove_node
+0x0040d170 100.00 electric_fence_debug_place
+0x0040d1f0 100.00 electric_fence_debug_remove
+0x0040d240 100.00 electric_fence_can_place_at_block
+0x0040d3f0 100.00 electric_fence_block_is_building
+0x0040d450 100.00 electric_fence_update
+0x0040d490 100.00 electric_fence_run_through_lists
+0x0040d4f0 100.00 electric_fence_spark_from
+0x0040d5e0 92.24 electric_fence_building_spark_callback
+0x0040d720 95.45 electric_fence_building_clear_callback
+0x0040d770 100.00 electric_fence_node_update_callback
+0x0040d850 59.62 electric_fence_spark
+0x0040dc20 100.00 electric_fence_beam_create
+0x0040dd90 100.00 electric_fence_block_vector_get
+0x0040de40 99.51 electric_fence_object_strike
+0x0040e0c0 100.00 electric_fence_object_beam
+0x0040e1e0 100.00 electric_fence_stud_fits
+0x0040e350 100.00 electric_fence_stud_set
+0x0040e460 100.00 electric_fence_block_is_fence
 0x0040e490 9.93 encyclopedia_config_files_open
 0x0040e700 22.40 terrain_choice_resource_select
 0x0040e7e0 100.00 global_flag_bit0_clear
@@ -715,7 +719,7 @@
 0x0042b330 98.17 lego_load_tile_meshes
 0x0042b480 97.73 lego_rectangular_resource_table_destroy
 0x0042b500 100.00 global_state_field84_get_current_target
-0x0042b510 27.74 map_pipeline
+0x0042b510 27.40 map_pipeline
 0x0042bb60 6.67 terrain_texture_set_config_load_level
 0x0042bd20 9.74 load_predug
 0x0042bf40 33.66 load_emerge
@@ -740,14 +744,14 @@
 0x0042da20 5.97 entity_object_the_names_load
 0x0042dfc0 22.22 object_pointer_registry_clear_match
 0x0042dff0 30.30 object_pointer_registry_get_slot
-0x0042e020 14.13 object_list_load_file
+0x0042e020 13.96 object_list_load_file
 0x0042e8b0 25.43 entity_type_pair_lookup
 0x0042ed70 10.71 entity_at
 0x0042ef40 86.79 stats_level_record_count_for_stat_type
 0x0042efc0 6.80 movie_video_playback_loop
 0x0042f2e0 45.61 terrain_cell_edge_flag_set_and_update
 0x0042f350 16.30 terrain_neighbor_coordinate_check_current_target
-0x0042f6f0 9.28 cell_init_pass
+0x0042f6f0 9.05 cell_init_pass
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 17.54 terrain_neighbor_flag_set
@@ -766,7 +770,7 @@
 0x004319e0 93.88 level_map_cell_get
 0x00431a30 63.72 selected_entities_any_predicate_match
 0x00431ab0 50.77 any_object_can_occupy_terrain_cell
-0x00431b20 12.12 terrain_placement_blocked_adjacent_cell_scan
+0x00431b20 11.11 terrain_placement_blocked_adjacent_cell_scan
 0x00431c70 18.29 first_free_neighbor_cell_pick_current
 0x00431da0 44.19 terrain_cell_route_and_occupancy_check_current
 0x00432100 100.00 terrain_cell_flag100_set_and_track_current
@@ -895,7 +899,7 @@
 0x004377b0 100.00 entity_pool_find_by_callback_filtered_current
 0x004377d0 35.22 entity_pool_find_by_callback_current
 0x004378e0 47.50 grid_object_records_release
-0x00437940 17.87 deferred_olist_entity_create_and_link
+0x00437940 17.49 deferred_olist_entity_create_and_link
 0x00437c20 35.37 deferred_olist_entity_queue_add
 0x00437cc0 100.00 entity_flag40000_threshold_compare
 0x004382c0 62.75 pooled_record_allocate_and_reset
@@ -977,7 +981,7 @@
 0x0043baf0 100.00 entity_flags_mask107c33de_or_1c00203_any_test
 0x0043bb20 32.59 entity_building_deposit_state_monitor
 0x0043bbc0 61.11 entity_detach_carried_object_and_reset_state
-0x0043bc40 39.43 objective_sidecar_append_gate
+0x0043bc40 39.16 objective_sidecar_append_gate
 0x0043c200 26.36 entity_state_pair_predicate
 0x0043c280 90.48 entity_nested_float_add_unless_blocked
 0x0043c2b0 14.41 periodic_timer25_advance
@@ -994,7 +998,7 @@
 0x0043f190 16.24 entity_spawn_request_queue_process
 0x0043f560 14.81 entity_pool_find_with_local_predicate
 0x0043f6a0 68.12 entity_damage_apply
-0x0043f7d0 28.83 ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick
+0x0043f7d0 28.47 ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick
 0x0043fc20 23.21 ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise
 0x00440130 61.90 entity_update_and_unregister_at_tile
 0x004401b0 17.59 ledger_stub_004401b0_TerrainCellToWorldPosition
@@ -1231,7 +1235,7 @@
 0x004528c0 32.77 selection_state_tick_active
 0x00452be0 40.62 selection_clear_active
 0x00452c50 97.06 selection_entity_remove_active
-0x00452cc0 29.06 selected_entity_state_monitor
+0x00452cc0 27.35 selected_entity_state_monitor
 0x00452d60 27.74 selection_command_dispatch
 0x00452df0 34.62 tutorial_script_file_load_target
 0x00452e70 12.66 objective_advisor_token_file_load
@@ -1617,8 +1621,8 @@
 0x0046ead0 16.22 map_row_span_append
 0x0046eb30 26.42 map_row_span_record_start
 0x0046eb80 15.83 weapon_type_config_load
-0x0046f0d0 50.67 lego::object_type_name_index_find
-0x0046f110 100.00 lego::weapon_type_recharge_time_get_target
+0x0046f0d0 50.67 object_type_name_index_find
+0x0046f110 100.00 weapon_type_recharge_time_get_target
 0x0046f140 100.00 lego::weapon_type_discharge_rate_get_target
 0x0046f170 100.00 lego::weapon_type_range_get_target
 0x0046f1a0 100.00 lego::weapon_type_wall_destroy_time_get_target
@@ -2238,7 +2242,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2466 mapped functions
+[full] 2470 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2519,29 +2523,33 @@
 0x0040cb70 21.82 scene_timeout_entry_sweep
 0x0040cc40 32.00 terrain_marker_sets_clear
 0x0040cce0 23.53 lava_effect_select_and_place
-0x0040cdc0 7.89 map_cell_record_grid_initialize
-0x0040ce30 73.47 selection_marker_resources_release
-0x0040ce80 33.33 map_cell_state_buffer_rebuild
-0x0040cea0 22.68 terrain_cell_and_neighbors_update
-0x0040cf50 79.07 register_object_at_grid_position
-0x0040cf80 19.58 grid_cell_object_link_insert
-0x0040d030 12.96 terrain_record_pool_chunk_allocate
-0x0040d0a0 30.77 terrain_entity_cell_record_remove
-0x0040d100 11.11 terrain_cell_entity_record_unlink
-0x0040d170 26.97 create_cell_object_if_available
-0x0040d1f0 31.11 delete_cell_object
-0x0040d240 16.39 terrain_cell_has_occupied_or_flagged_neighbor
-0x0040d3f0 19.05 terrain_cell_special_state_predicate
-0x0040d450 30.77 simtick_post_cluster
-0x0040d4f0 17.48 terrain_cell_activation_try
-0x0040d850 9.58 terrain_cell_neighbor_flood_walk
-0x0040dc20 14.57 cell_pair_edge_effect_apply
-0x0040dd90 12.66 compute_world_position_delta
-0x0040de40 24.03 entity_fence_spark_terrain_interaction
-0x0040e0c0 16.07 fence_spark_launch_register
-0x0040e1e0 16.41 ledger_stub_0040e1e0_CellCornerOccupancyScan
-0x0040e350 12.86 cell_entity_kind_create_or_remove
-0x0040e460 12.00 grid_cell_record_present_check
+0x0040cdc0 100.00 electric_fence_initialise
+0x0040ce30 100.00 electric_fence_shutdown
+0x0040ce80 100.00 electric_fence_restart
+0x0040cea0 96.67 electric_fence_block_surfaces_update
+0x0040cf50 95.00 electric_fence_add
+0x0040cf80 70.48 electric_fence_create
+0x0040d030 100.00 electric_fence_add_list
+0x0040d0a0 96.77 electric_fence_remove
+0x0040d100 100.00 electric_fence_remove_node
+0x0040d170 100.00 electric_fence_debug_place
+0x0040d1f0 100.00 electric_fence_debug_remove
+0x0040d240 100.00 electric_fence_can_place_at_block
+0x0040d3f0 100.00 electric_fence_block_is_building
+0x0040d450 100.00 electric_fence_update
+0x0040d490 100.00 electric_fence_run_through_lists
+0x0040d4f0 100.00 electric_fence_spark_from
+0x0040d5e0 92.24 electric_fence_building_spark_callback
+0x0040d720 95.45 electric_fence_building_clear_callback
+0x0040d770 100.00 electric_fence_node_update_callback
+0x0040d850 59.62 electric_fence_spark
+0x0040dc20 100.00 electric_fence_beam_create
+0x0040dd90 100.00 electric_fence_block_vector_get
+0x0040de40 99.51 electric_fence_object_strike
+0x0040e0c0 100.00 electric_fence_object_beam
+0x0040e1e0 100.00 electric_fence_stud_fits
+0x0040e350 100.00 electric_fence_stud_set
+0x0040e460 100.00 electric_fence_block_is_fence
 0x0040e490 9.93 encyclopedia_config_files_open
 0x0040e700 22.40 terrain_choice_resource_select
 0x0040e7e0 100.00 global_flag_bit0_clear
@@ -2947,7 +2955,7 @@
 0x0042b330 98.17 lego_load_tile_meshes
 0x0042b480 97.73 lego_rectangular_resource_table_destroy
 0x0042b500 100.00 global_state_field84_get_current_target
-0x0042b510 27.74 map_pipeline
+0x0042b510 27.40 map_pipeline
 0x0042bb60 6.67 terrain_texture_set_config_load_level
 0x0042bd20 9.74 load_predug
 0x0042bf40 33.66 load_emerge
@@ -2972,14 +2980,14 @@
 0x0042da20 5.97 entity_object_the_names_load
 0x0042dfc0 22.22 object_pointer_registry_clear_match
 0x0042dff0 30.30 object_pointer_registry_get_slot
-0x0042e020 14.13 object_list_load_file
+0x0042e020 13.96 object_list_load_file
 0x0042e8b0 25.43 entity_type_pair_lookup
 0x0042ed70 10.71 entity_at
 0x0042ef40 86.79 stats_level_record_count_for_stat_type
 0x0042efc0 6.80 movie_video_playback_loop
 0x0042f2e0 45.61 terrain_cell_edge_flag_set_and_update
 0x0042f350 16.30 terrain_neighbor_coordinate_check_current_target
-0x0042f6f0 9.28 cell_init_pass
+0x0042f6f0 9.05 cell_init_pass
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 17.54 terrain_neighbor_flag_set
@@ -2998,7 +3006,7 @@
 0x004319e0 93.88 level_map_cell_get
 0x00431a30 63.72 selected_entities_any_predicate_match
 0x00431ab0 50.77 any_object_can_occupy_terrain_cell
-0x00431b20 12.12 terrain_placement_blocked_adjacent_cell_scan
+0x00431b20 11.11 terrain_placement_blocked_adjacent_cell_scan
 0x00431c70 18.29 first_free_neighbor_cell_pick_current
 0x00431da0 44.19 terrain_cell_route_and_occupancy_check_current
 0x00432100 100.00 terrain_cell_flag100_set_and_track_current
@@ -3127,7 +3135,7 @@
 0x004377b0 100.00 entity_pool_find_by_callback_filtered_current
 0x004377d0 35.22 entity_pool_find_by_callback_current
 0x004378e0 47.50 grid_object_records_release
-0x00437940 17.87 deferred_olist_entity_create_and_link
+0x00437940 17.49 deferred_olist_entity_create_and_link
 0x00437c20 35.37 deferred_olist_entity_queue_add
 0x00437cc0 100.00 entity_flag40000_threshold_compare
 0x004382c0 62.75 pooled_record_allocate_and_reset
@@ -3209,7 +3217,7 @@
 0x0043baf0 100.00 entity_flags_mask107c33de_or_1c00203_any_test
 0x0043bb20 32.59 entity_building_deposit_state_monitor
 0x0043bbc0 61.11 entity_detach_carried_object_and_reset_state
-0x0043bc40 39.43 objective_sidecar_append_gate
+0x0043bc40 39.16 objective_sidecar_append_gate
 0x0043c200 26.36 entity_state_pair_predicate
 0x0043c280 90.48 entity_nested_float_add_unless_blocked
 0x0043c2b0 14.41 periodic_timer25_advance
@@ -3226,7 +3234,7 @@
 0x0043f190 16.24 entity_spawn_request_queue_process
 0x0043f560 14.81 entity_pool_find_with_local_predicate
 0x0043f6a0 68.12 entity_damage_apply
-0x0043f7d0 28.83 ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick
+0x0043f7d0 28.47 ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick
 0x0043fc20 23.21 ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise
 0x00440130 61.90 entity_update_and_unregister_at_tile
 0x004401b0 17.59 ledger_stub_004401b0_TerrainCellToWorldPosition
@@ -3463,7 +3471,7 @@
 0x004528c0 32.77 selection_state_tick_active
 0x00452be0 40.62 selection_clear_active
 0x00452c50 97.06 selection_entity_remove_active
-0x00452cc0 29.06 selected_entity_state_monitor
+0x00452cc0 27.35 selected_entity_state_monitor
 0x00452d60 27.74 selection_command_dispatch
 0x00452df0 34.62 tutorial_script_file_load_target
 0x00452e70 12.66 objective_advisor_token_file_load
@@ -3849,8 +3857,8 @@
 0x0046ead0 16.22 map_row_span_append
 0x0046eb30 26.42 map_row_span_record_start
 0x0046eb80 15.83 weapon_type_config_load
-0x0046f0d0 50.67 lego::object_type_name_index_find
-0x0046f110 100.00 lego::weapon_type_recharge_time_get_target
+0x0046f0d0 50.67 object_type_name_index_find
+0x0046f110 100.00 weapon_type_recharge_time_get_target
 0x0046f140 100.00 lego::weapon_type_discharge_rate_get_target
 0x0046f170 100.00 lego::weapon_type_range_get_target
 0x0046f1a0 100.00 lego::weapon_type_wall_destroy_time_get_target
