@@ -745,7 +745,8 @@ void level_no_gather_object_setup(int mode);           /* cmd.hpp, aitask.cpp 00
 void level_state_stored_value_set(uint32_t v);         /* crt.hpp, 00409d40 */
 int rock_fall_style_name_lookup(const char* name, uint32_t* index); /* resource.hpp, 0040bf70 */
 void rockfall_style_table_base_set(uint32_t v);        /* crt.hpp, 0040bfc0 */
-void map_cell_state_buffer_rebuild(void* level);       /* terrain_grid.hpp, 0040ce80 */
+struct ElectricFenceLevel;
+void electric_fence_restart(struct ElectricFenceLevel* level); /* terrain_cell_objects.h, 0040ce80 */
 void erosion_timing_state_init(float value_a, float value_b,
                                float value_c);         /* level.hpp, 0040e930 */
 void global_config_value_set(uint32_t v);              /* crt.hpp, 0040f5e0 */
@@ -1151,12 +1152,12 @@ void scene_record_indexed_entries_rebuild_original(void* vehicleModel,
  * position by pointer: adapter at the end of aitask.cpp. */
 void entity_command14_batch_issue(int count);             /* 00402800 */
 void cell_command_type13_issue_original(const int* blockPos); /* 00402e40 */
-/* Fallin.c / Spider webs (terrain_cell_objects.cpp; level.hpp,
- * terrain_grid.hpp). */
-int terrain_cell_activation_try(void* object, int x, int y); /* 0040d4f0 */
-int create_cell_object_if_available(int x, int y);        /* 0040d170 */
-int delete_cell_object(int x, int y);                     /* 0040d1f0 */
-int grid_cell_record_present_check(int x, int y);         /* 0040e460 */
+/* ElectricFence.c (GAME-013, terrain_cell_objects.h; finding 566). */
+struct ElectricFenceObject;
+int electric_fence_spark_from(struct ElectricFenceObject* object, int bx, int by); /* 0040d4f0 */
+int electric_fence_debug_place(int bx, int by);           /* 0040d170 */
+int electric_fence_debug_remove(int bx, int by);          /* 0040d1f0 */
+int electric_fence_block_is_fence(int bx, int by);        /* 0040e460 */
 /* GAME-040 (grid_cell_records.cpp): a namespaced ledger stub; adapter at
  * the end of grid_cell_records.cpp. */
 int expand_cell_entity_spawn_adapter(int x, int y);       /* 00466250 */

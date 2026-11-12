@@ -4,6 +4,12 @@
 
 #include <string.h>
 #include "weapon_for_weapons.hpp"
+/* GAME-013's terrain_cell_objects.c calls 0x0046f110 from C, so weapons.cpp
+ * defines it with C linkage. Declaring it so here, before the frozen
+ * header's declaration, gives that one the same linkage (finding 566). */
+namespace lego {
+extern "C" float weapon_type_recharge_time_get_target(int type);
+}
 #include "weapon_from_weapons.hpp"
 
 namespace lego {

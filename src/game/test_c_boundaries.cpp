@@ -156,6 +156,15 @@ extern "C" int s_cursor_delta_y;
 #include "gods98/draw.h"
 #include "game/lego_unit.h"
 #include "game/lego_unit_imports.h"
+#include "game/weapon.hpp"
+#include "game/terrain_cell_objects.h"
+#include "game/building_model.h"
+#include "game/lego_blocks.h"
+#include "game/legoobject.h"
+#include "game/placement_footprint.h"
+#include "game/rock_fall_styles.h"
+#include "game/stats.h"
+#include "game/weapons.h"
 
 int main(void)
 {

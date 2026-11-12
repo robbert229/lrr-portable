@@ -155,7 +155,7 @@ uint32_t object_type_name_index_find(const char* name)
 }
 
 // FUNCTION: LEGORR 0x0046F110
-float weapon_type_recharge_time_get_target(int type)
+extern "C" float weapon_type_recharge_time_get_target(int type)
 {
     return s_weapon_indexed_records[type].recharge_time;
 }
@@ -214,7 +214,7 @@ float entity_indexed_float_lookup_with_minus_one_fallback(
 namespace unported_ledger_stubs {
 // TypeMotionScaleApplyDispatch
 // FUNCTION: LEGORR 0x0046f270
-void ledger_stub_0046f270_TypeMotionScaleApplyDispatch(
+extern "C" void ledger_stub_0046f270_TypeMotionScaleApplyDispatch(
     EntitySlot* entity, int weapon_type, int apply_index, float scale,
     void* finish_argument)
 {
