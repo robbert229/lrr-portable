@@ -193,9 +193,8 @@ typedef struct TerrainVariantVisitContext {
 
 /* The corpus's eligibility gate compares the +0x340 bound against this
  * .rdata zero dword (objdump-verified fcomp operand of
- * EntitySharedEligibilityCheck); a named const static keeps the fcomp
- * operand resolvable by Reccmp. */
-// GLOBAL: LEGORR 0x0049e3a4
+ * EntitySharedEligibilityCheck). Its annotation moved to legoobject_unit.c
+ * (legoobject_zero, GAME-023). */
 static const float s_eligibility_floor = 0.0f;   /* DAT_0049e3a4, verified */
 
 const char s_tool_name_birdscarer[] = "LegoObject_ToolType_BirdScarer";
@@ -1544,7 +1543,8 @@ void entity_flag80000000_set_or_clear(GameContext* ctx, EntitySlot* e,
     entity_activity_scene_state_update(ctx);
 }
 
-// FUNCTION: LEGORR 0x004385b0
+/* Port model of 0x004385b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004385b0, retires to the tail in GAME-023 part 3
 int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
 {
     if ((e->flags_3e0 & 0x00700100u) != 0u) {
@@ -1571,7 +1571,8 @@ int entity_shared_eligibility_check(const EntitySlot* e, int relaxed)
 /* EntityCreateWithPosition (FUN_00438610): create through the pooled entity
  * allocator, apply the reference position update, then initialize the mode
  * word for pooled kinds six and seven. */
-// FUNCTION: LEGORR 0x00438610
+/* Port model of 0x00438610 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438610, retires to the tail in GAME-023 part 3
 EntitySlot* entity_create_with_position(GameContext* context, int type,
                                         const char* name, int value,
                                         float x, float y, float heading)
@@ -1582,7 +1583,8 @@ EntitySlot* entity_create_with_position(GameContext* context, int type,
 /* EntityAtGridPositionLookup (FUN_00438670): the callback pool walk returns
  * the first eligible entity whose world position rounds to the requested
  * grid cell. The portable entity tables replace the corpus's raw chunk scan. */
-// FUNCTION: LEGORR 0x00438670
+/* Port model of 0x00438670 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438670, retires to the tail in GAME-023 part 3
 EntitySlot* entity_at_grid_position_find(const int cell_xy[2])
 {
     EntityGridFindQuery query;
@@ -1602,7 +1604,8 @@ EntitySlot* entity_at_grid_position_find(const int cell_xy[2])
 /* EntityAvailableResourceSpend (FUN_00438720) — see level.hpp.
  * The corpus's comparison value is the unconsumed EAX of the void no-op
  * callback; pinning it to 0 matches the corpus call's observable shape. */
-// FUNCTION: LEGORR 0x00438720
+/* Port model of 0x00438720 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438720, retires to the tail in GAME-023 part 3
 int entity_available_resource_spend(LevelState* level, int amount,
                                     const void* resource_hint)
 {
@@ -1621,7 +1624,8 @@ int entity_available_resource_spend(LevelState* level, int amount,
 /* BuildingUpgradeResourceAdmissionCheck (FUN_00438770): reject the terminal
  * upgrade level, then apply the two-resource threshold and return the
  * secondary debit amount when that path is selected. */
-// FUNCTION: LEGORR 0x00438770
+/* Port model of 0x00438770 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438770, retires to the tail in GAME-023 part 3
 int building_upgrade_resource_admission_check(EntitySlot* building,
                                                uint32_t* out_secondary_cost)
 {
@@ -1663,7 +1667,8 @@ int building_upgrade_resource_admission_check(EntitySlot* building,
 /* BuildingUpgradeCommit (FUN_004387f0): spend the selected resource, clear
  * the pending request, advance the level in payload/stats, and dispatch the
  * upgrade's world effect. */
-// FUNCTION: LEGORR 0x004387f0
+/* Port model of 0x004387f0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004387f0, retires to the tail in GAME-023 part 3
 void building_upgrade_commit(EntitySlot* building)
 {
     BuildingUpgradeCommitHooks* const hooks =
@@ -1730,7 +1735,8 @@ void building_upgrade_commit(EntitySlot* building)
 /* EntityActionKindPrerequisiteCheck (FUN_004388b0): require a type-one
  * entity and a valid action, then gate the two resource balances against
  * the corpus's packed primary/secondary action costs. */
-// FUNCTION: LEGORR 0x004388B0
+/* Port model of 0x004388b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004388b0, retires to the tail in GAME-023 part 3
 int entity_action_kind_prerequisite_check(EntitySlot* entity, int action)
 {
     uint32_t values[3] = { 0u, 0u, 0u };
@@ -1781,7 +1787,8 @@ int entity_action_kind_prerequisite_check(EntitySlot* entity, int action)
 /* EntityRouteMarkerCandidateFind (FUN_004389e0): retain the nearest pooled
  * entity within the corpus's 10,000-unit radius that passes LAB_00438fb0's
  * mask-selected predicates. */
-// FUNCTION: LEGORR 0x004389E0
+/* Port model of 0x004389e0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004389e0, retires to the tail in GAME-023 part 3
 EntitySlot* entity_route_marker_candidate_find(EntitySlot* source,
                                                int include_secondary)
 {
@@ -1807,7 +1814,8 @@ EntitySlot* entity_route_marker_candidate_find(EntitySlot* source,
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00438a60
+/* Port model of 0x00438a60 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438a60, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
     const int cell_xy[2], uint32_t filter_a, uint32_t filter_b,
     uint32_t filter_c)
@@ -1822,7 +1830,8 @@ void* ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
     return entity_spatial_query_execute_current(&request);
 }
 
-// FUNCTION: LEGORR 0x00438ae0
+/* Port model of 0x00438ae0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438ae0, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
     const EntitySlot* entity, const int cell_xy[2], uint32_t filter_a,
     uint32_t filter_b)
@@ -1838,7 +1847,8 @@ void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
     return entity_spatial_query_execute_current(&request);
 }
 
-// FUNCTION: LEGORR 0x00438b80
+/* Port model of 0x00438b80 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438b80, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438b80_SpatialObjectQueryCenterMaskFromArgument(
     const EntitySlot* entity, uint32_t mask)
 {
@@ -1848,7 +1858,8 @@ void* ledger_stub_00438b80_SpatialObjectQueryCenterMaskFromArgument(
     return entity_spatial_query_execute_current(&request);
 }
 
-// FUNCTION: LEGORR 0x00438bf0
+/* Port model of 0x00438bf0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438bf0, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(
     const EntitySlot* entity)
 {
@@ -1858,7 +1869,8 @@ void* ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(
     return entity_spatial_query_execute_current(&request);
 }
 
-// FUNCTION: LEGORR 0x00438c60
+/* Port model of 0x00438c60 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438c60, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438c60_EntityCandidateSearch(const EntitySlot* entity)
 {
     SpatialObjectQueryRequest request;
@@ -1867,7 +1879,8 @@ void* ledger_stub_00438c60_EntityCandidateSearch(const EntitySlot* entity)
     return entity_spatial_query_execute_current(&request);
 }
 
-// FUNCTION: LEGORR 0x00438cd0
+/* Port model of 0x00438cd0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438cd0, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438cd0_SpatialObjectQueryCenterMask20(
     const float center[2])
 {
@@ -1888,7 +1901,8 @@ void* ledger_stub_00438cd0_SpatialObjectQueryCenterMask20(
     return request.match;
 }
 
-// FUNCTION: LEGORR 0x00438d30
+/* Port model of 0x00438d30 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438d30, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438d30_SpatialObjectQueryCenterMask10(
     const float center[2])
 {
@@ -1909,7 +1923,8 @@ void* ledger_stub_00438d30_SpatialObjectQueryCenterMask10(
     return request.match;
 }
 
-// FUNCTION: LEGORR 0x00438d90
+/* Port model of 0x00438d90 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438d90, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438d90_SpatialObjectQueryCenterMask200(
     const float center[2])
 {
@@ -1931,7 +1946,8 @@ void* ledger_stub_00438d90_SpatialObjectQueryCenterMask200(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00438df0
+/* Port model of 0x00438df0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438df0, retires to the tail in GAME-023 part 3
 EntitySlot* entity_lookup_at_world_position(const float world_position[2])
 {
     struct EntityLookupRequestRecord {
@@ -1970,7 +1986,8 @@ EntitySlot* entity_lookup_at_world_position(const float world_position[2])
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00438e50
+/* Port model of 0x00438e50 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438e50, retires to the tail in GAME-023 part 3
 void* ledger_stub_00438e50_SpatialObjectQueryCenterMask100(
     const EntitySlot* entity, const float center[2], uint32_t extra)
 {
@@ -1991,7 +2008,8 @@ void* ledger_stub_00438e50_SpatialObjectQueryCenterMask100(
  * The corpus re-reads the word at each chain rung; the selector arms and
  * the flag bits pair one-to-one, so one read through the switch is the
  * identical answer. */
-// FUNCTION: LEGORR 0x00438ed0
+/* Port model of 0x00438ed0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438ed0, retires to the tail in GAME-023 part 3
 int entity_flags_contain_requested_single_bit(const EntitySlot* e,
                                               int selector)
 {

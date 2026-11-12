@@ -247,6 +247,66 @@ void legoobject_gc_activity_grant_adapter(struct EntitySlot* e, int value); /* 0
 int legoobject_gc_scene_object_tree_attach_adapter(struct EntitySlot* e); /* 0044b680 */
 
 /* ---- group D ---- */
+struct LevelState;
+struct InfoPoint2I;
+struct TerrainMap;
+/* legoGlobs (Lego.c): currLevel is terrain_grid.cpp's port global; the
+ * upgrade costs are stand-ins in lego_unit.c. */
+extern struct LevelState* g_active_level_retail;    /* 005560d4 currLevel */
+extern int legoGlobs_BuildingUpgradeCostOre;        /* 00556f98 */
+extern int legoGlobs_BuildingUpgradeCostStuds;      /* 00556f9c */
+/* Lego.c (lego_unit.c). 0041f8e0 is an empty function in this build; the
+ * original's caller compares its (undefined) return value. */
+void noop_callback(void);                           /* 0041f8e0 */
+void global_object_field98_add(int amount);         /* 0041f8a0 */
+int lego_upgrade_resource_check(int ore);           /* 0041f900 */
+void lego_upgrade_resource_debit(int ore, int amount); /* 0041f9e0 */
+/* 00431570 takes no argument; the port's entry takes two ignored cells
+ * (adapter at the end of lego.cpp). */
+void* level_current_terrain_get_original(void);     /* 00431570 */
+/* Info.c (info_unit.c). */
+void info_send(int type, char* text, void* object,
+               struct InfoPoint2I* blockPos);       /* 00419b80 */
+/* Map3D.c (terrain_map.c). */
+int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,
+                               unsigned int by, float* xOut,
+                               float* yOut);        /* 0044f640 */
+/* Building.c (building_model.cpp): Building_SetUpgradeLevel; the port's
+ * entry takes the object for the building model. */
+void entity_payload_state_set(struct EntitySlot* e, int state); /* 004089a0 */
+/* Stats.c (entity_stats.cpp). */
+uint32_t entity_state_flags_get(const struct EntitySlot* e); /* 00469e80 */
+/* 00469c10: the port's entry is declared only in a frozen header with C++
+ * linkage; C entry at the end of entity_stats.cpp. */
+int legoobject_gd_building_index_set_adapter(struct EntitySlot* entity,
+                                             uint32_t state); /* 00469c10 */
+uint32_t building_upgrade_admission_check(int type, int row); /* 00469f40 */
+uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
+                                                     int slot); /* 0046a0c0 */
+/* Vehicle.c (vehicle_model.cpp). */
+uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
+                              int reject_masked);   /* 0046cf40 */
+/* Container.c (container_unit.cpp). */
+int ddiscene_object_position_get(void* object, void* alternate_frame,
+                                 float position[3]); /* 004754c0 */
+/* Effects (rock_fall_styles.cpp). */
+int lava_effect_select_and_place(int slot, const float* position,
+                                 const float* rotation); /* 0040cce0 */
+/* HelpWindow.c (helpwindow.cpp, namespace lego). */
+void building_upgrade_state_changed_dispatch(int type, int row, int column,
+                                             int state); /* 00418830 */
+/* LegoObject.c parts 2-3 (legoobject.cpp, legoobject.h). */
+void entity_transform_position_get_outputs(const struct EntitySlot* entity,
+                                           float* out_x,
+                                           float* out_y); /* 00442260 */
+void entity_world_position_set(struct EntitySlot* entity, float x, float y,
+                               float heading, int update_heading); /* 004428a0 */
+/* 004424f0 LegoObject_GetBlockPos: adapter in the GAME-013 port tail
+ * (legoobject.h). */
+void legoobject_block_position_get(struct EntitySlot* entity, int* bx,
+                                   int* by);
+void* entity_type_component_get(const void* entity_record); /* 0044a200 */
+
 
 /* ---- group E ---- */
 struct LevelState;
