@@ -3487,8 +3487,10 @@ void activity_runner_hooks_set(ActivityRecordClearFn clear_records,
     s_activity_runner_user = user;
 }
 
-/* FUNCTION: LEGORR 0x00406e40 */
-int activity_runner_update(void* runner, void* state, void* value)
+/* Port model of FUN_00406e40, superseded by game/animation_object.c
+ * (GAME-004, finding 549). Kept verbatim, renamed and uncalled: deleting it
+ * re-rolls later functions in this file (ADR 0005 entropy rule 1). */
+int activity_runner_update_superseded(void* runner, void* state, void* value)
 {
     unsigned int i;
     if (runner == NULL) return 0;
@@ -14146,4 +14148,21 @@ void entity_actor_activity_advance_hook_set(EntityActorActivityAdvanceHook hook,
 {
     s_actor_activity_advance_hook = hook;
     s_actor_activity_advance_context = context;
+}
+
+/* MeshLOD_Load (FUN_0044a7d0) with the original's arguments, for
+ * game/animation_object.c (game/entity.h). The port's 0x0044a7d0 is a
+ * ledger stub with another contract and there is no mesh-list loader yet:
+ * the adapter loads nothing (finding 549). */
+extern "C" ModelEntryRecord* mesh_lod_load(BlockFile* config,
+                                           const char* gameName,
+                                           const char* filename, int lod,
+                                           unsigned int count)
+{
+    (void)config;
+    (void)gameName;
+    (void)filename;
+    (void)lod;
+    (void)count;
+    return NULL;
 }

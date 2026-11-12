@@ -125,7 +125,7 @@ void texture_cache_clear(void);
 /* XfTextureNameFormat (FUN_00473c60): the retail helper writes and returns a
  * shared registration-name buffer. `texture_record` carries the kind and
  * renderer-facing frame handles; `frame_index` is optional. */
-const char* xf_texture_name_format(void* texture_record,
+extern "C" const char* xf_texture_name_format(void* texture_record,
                                   const char* name_base,
                                   const int* frame_index);
 

@@ -51,7 +51,6 @@ game_sources = [
   'lava_erosion.cpp',
   'screen_effect_quads.cpp',
   'building_model.cpp',
-  'animation_object.cpp',
   'cmd.cpp',
   'dependency_grid.cpp',
   'options.cpp',
@@ -85,6 +84,7 @@ game_sources = [
 ]
 game_c_sources = [
   'advisor.c',
+  'animation_object.c',
   'bezier.c',
   'priorities.c',
   'steering.c',
@@ -124,7 +124,8 @@ if get_option('platform') == 'native'
                  ['frontend', 'test_frontend.cpp'],
                  ['options', 'test_options.cpp'],
                  ['bezier', 'test_bezier.cpp'],
-                 ['steering', 'test_steering.cpp']]
+                 ['steering', 'test_steering.cpp'],
+                 ['animation_object', 'test_animation_object.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs + [miniwin_inc],

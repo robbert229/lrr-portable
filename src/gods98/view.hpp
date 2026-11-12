@@ -129,6 +129,9 @@ typedef void (*RenderNodePositionApplyHook)(void* context,
 void animation_transform_hooks_set(AnimationObjectTransformApplyHook orient,
                                    RenderNodePositionApplyHook position,
                                    void* context);
+/* Superseded by game/animation_object.c (GAME-004, finding 549); kept
+ * uncalled so that the symbol count of every includer is unchanged (ADR 0005
+ * entropy rule 1). */
 void animation_object_transform_set(void* record, float first, float second);
 void render_node_position_from_callback(void* record, float x, float y,
                                         RenderNodePositionValueFn value_fn,
@@ -379,6 +382,9 @@ typedef struct RendererRecordCloneHooks {
     void* (*visual_resource_load)(void* context, void* source);
 } RendererRecordCloneHooks;
 void renderer_record_clone_hooks_set(const RendererRecordCloneHooks* hooks);
+/* Superseded by game/animation_object.c (GAME-004, finding 549); kept
+ * uncalled so that the symbol count of every includer is unchanged (ADR 0005
+ * entropy rule 1). */
 void renderer_record_clone(const RendererRecord* source,
                            RendererRecord* destination); /* FUN_00406cb0 */
 typedef struct SceneObjectRecord {
@@ -716,7 +722,7 @@ uint32_t ddiscene_action_record_field_0c_get(void* scene_interface);
 const char* scene_property_secondary_name_get(void* property);
 uint32_t scene_property_value_at08_get(void* scene_interface);
 float scene_property_float_at14_get(void* property); /* 0x004761c0 */
-float typed_child_resource_scalar_get(void* scene_object); /* 0x004757f0 */
+extern "C" float typed_child_resource_scalar_get(void* scene_object); /* 0x004757f0 */
 void attached_object_data_release_and_clear(void* property); /* 0x004760e0 */
 void callback_record_set_flag10_and_refresh(void* property); /* 0x00475e10 */
 typedef struct SceneChildSearchHooks {
@@ -803,7 +809,7 @@ typedef int (*SceneActionNameLookupHook)(void* scene_object, void* action_name,
 void scene_action_name_lookup_hook_set(SceneActionNameLookupHook hook,
                                        void* context);
 uint32_t scene_action_name_present(void* scene_object, void* action_name);
-uint32_t scene_action_name_set(void* scene_object, const char* action_name);
+extern "C" uint32_t scene_action_name_set(void* scene_object, const char* action_name);
 typedef struct SceneActFrameScanHooks {
     void* context;
     void* (*animation_interface_get)(void* scene_object, unsigned int slot,
@@ -879,7 +885,7 @@ typedef struct EntityVisualResourceLoadHooks {
 } EntityVisualResourceLoadHooks;
 void entity_visual_resource_load_hooks_set(
     const EntityVisualResourceLoadHooks* hooks);
-void* entity_visual_resource_load(void* scene_object); /* 0x473690 */
+extern "C" void* entity_visual_resource_load(void* scene_object); /* 0x473690 */
 typedef void* (*SceneActionInterfaceGetHook)(void* scene_object,
                                              void* action_name,
                                              uint32_t selector,
@@ -1100,7 +1106,7 @@ void ddiscene_object_destroy_hook_set(DDiSceneObjectDestroyHook hook,
 void ddiscene_object_destroy(void* scene_object); /* 0x472a40 */
 void ddiscene_object_destroy_with_mode(void* scene_object, int mode); /* 0x472a50 */
 extern "C" float ddiscene_object_length_get(void* scene_object); /* 0x00475390 */
-uint32_t ddiscene_object_frame_position_get(
+extern "C" uint32_t ddiscene_object_frame_position_get(
     void* scene_object); /* 0x004753f0 */
 void ddiscene_animation_callbacks_set(void* scene_object,
                                       void* callback_a, void* callback_b,
@@ -1167,8 +1173,8 @@ typedef int (*SceneTimingCountGetHook)(void* frame, void* context);
 void scene_timing_value_hooks_install(SceneTimingValueGetHook value_get,
                                       SceneTimingCountGetHook count_get,
                                       void* context);
-float renderer_object_timing_value_adjust_by_count(void* record,
-                                                   void* argument,
+extern "C" float renderer_object_timing_value_adjust_by_count(void* record,
+                                                   float time,
                                                    uint32_t count); /* FUN_00406d30 */
 typedef void (*AnimationObjectTimeUpdateHook)(void* frame, float time,
                                               void* context);
@@ -1177,6 +1183,9 @@ void animation_object_hooks_install(AnimationObjectTimeUpdateHook update,
                                     AnimationObjectActionHook time_get,
                                     AnimationObjectActionHook value_get,
                                     void* context);
+/* Superseded by game/animation_object.c (GAME-004, finding 549); kept
+ * uncalled so that the symbol count of every includer is unchanged (ADR 0005
+ * entropy rule 1). */
 void animation_object_time_update(void* record, float time); /* FUN_00406d10 */
 void animation_object_time_get(void* record); /* FUN_00406da0 */
 void animation_object_value_get(void* record); /* FUN_00407090 */
@@ -1188,24 +1197,33 @@ typedef void (*RendererSubobjectApplyHook)(void* frame, void* subobject,
 void renderer_subobject_hooks_install(RendererSubobjectFindHook find,
                                       RendererSubobjectApplyHook apply,
                                       void* context);
+/* Superseded by game/animation_object.c (GAME-004, finding 549); kept
+ * uncalled so that the symbol count of every includer is unchanged (ADR 0005
+ * entropy rule 1). */
 void* renderer_object_subobject_find_apply(void* record, void* key);
-/* Port-only adapter. Retail FUN_00406f50 performs resource-tree lookup and
- * registration; this requires a renderer/resource owner to install hooks. */
+/* Superseded, like the line above; FUN_00406f50 is now
+ * animation_object_null_find in game/animation_object.c. */
 void renderer_object_subobject_dispatch(void* record, void* key);
-void* renderer_cached_handle_48_get_or_create(void* record);
+extern "C" void* renderer_cached_handle_48_get_or_create(void* record);
                                                 /* FUN_00406fe0 */
+/* Superseded by game/animation_object.c (GAME-004, finding 549); kept
+ * uncalled so that the symbol count of every includer is unchanged (ADR 0005
+ * entropy rule 1). */
 void* renderer_cached_handle_50_get_or_create(void* record);
                                                 /* FUN_00407010 */
 typedef float (*RendererHandleScalarGetHook)(void* handle, void* context);
 void renderer_handle_scalar_hook_install(RendererHandleScalarGetHook hook,
                                          void* context);
+/* Superseded by game/animation_object.c (GAME-004, finding 549); kept
+ * uncalled so that the symbol count of every includer is unchanged (ADR 0005
+ * entropy rule 1). */
 int renderer_cached_handle_4c_is_not_one(void* record); /* FUN_00407040 */
 void* scene_object_indexed_handle_get_or_create(void* record, int index);
 void* scene_object_primary_handle_get_or_create(void* record);
 void* scene_object_secondary_handle_get_or_create(void* record);
 void* scene_object_indexed_secondary_handle_get_or_create(void* record,
                                                            int index);
-float animation_loop_time_adjust(void* record, void* argument,
+float animation_loop_time_adjust(void* record, float argument,
                                  uint32_t count); /* FUN_00408860 */
 void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
                            float z); /* 0x004755b0 */
@@ -1698,9 +1716,12 @@ int float_round_to_nearest_int(float value); /* FUN_00463e40 */
 typedef void* (*RendererSubobjectResolveFn)(void* owner, void* source,
                                             int index);
 void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver);
+/* Superseded by game/animation_object.c (GAME-004, finding 549); kept
+ * uncalled so that the symbol count of every includer is unchanged (ADR 0005
+ * entropy rule 1). */
 void* activity_runner_state_read(void* runner, int index);
 void* scene_activity_change_secondary(void* activity, int index);
-void* renderer_cached_handle_40_get_or_create(void* renderer);
+extern "C" void* renderer_cached_handle_40_get_or_create(void* renderer);
 typedef int (*SceneActivityChangeFn)(void* activity, void* state,
                                      void* value);
 void scene_activity_change_callback_set(SceneActivityChangeFn callback);

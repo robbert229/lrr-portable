@@ -120,7 +120,7 @@ typedef struct ModelEntryRecord {
 
 ModelEntryRecord* model_primitive_record_create(ModelEntryRecord* previous,
                                                 const char* name, int kind);
-ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head);
+extern "C" ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head);
 
 /* Open through the resource layer (finding 01 resolution) and parse. `path`
  * may be a base name or an explicit `.lwo` path; the loader opens `<base>.lwo`

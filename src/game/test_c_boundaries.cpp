@@ -59,6 +59,13 @@
 #include "gods98/entity.h"
 #include "gods98/engine.h"
 #include "gods98/font.h"
+#include "game/type_config_ports.hpp"
+#include "gods98/model.hpp"
+#include "gods98/model.h"
+#include "gods98/texture.h"
+#include "gods98/container.h"
+#include "game/entity.h"
+#include "game/animation_object.h"
 
 int main(void)
 {
