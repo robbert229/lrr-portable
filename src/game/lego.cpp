@@ -4230,47 +4230,10 @@ void cell_init_pass(LevelState* s, float cell_x, uint32_t cell_y, ...)
 
 /* MapCellTrackingFlagsClearAndRefresh (FUN_004302b0) reads the active level
  * global and receives only the coordinate pair in the retail ABI. */
-// FUNCTION: LEGORR 0x004302B0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void map_cell_tracking_flags_clear_and_refresh_current(
-    const int cell_xy[2])
-{
-    __asm {
-        mov ecx, dword ptr [g_active_level_retail]
-        push esi
-        mov esi, dword ptr [esp + 8]
-        mov eax, dword ptr [ecx + 14h]
-        mov ecx, dword ptr [ecx + 0b8h]
-        imul eax, dword ptr [esi + 4]
-        add eax, dword ptr [esi]
-        lea eax, dword ptr [eax + eax*8]
-        lea eax, dword ptr [ecx + eax*8 + 8]
-        mov ecx, dword ptr [eax]
-        and ecx, 0dfffffffh
-        mov dword ptr [eax], ecx
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, edx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and ecx, 0bfffffffh
-        mov dword ptr [eax], ecx
-        call entity_activity_scene_state_update_retail
-        push esi
-        call coordinate_pair_callback_dispatch
-        add esp, 4
-        push esi
-        call flic_opcode27_fallback_noop
-        add esp, 4
-        pop esi
-        ret
-    }
-}
-#else
+/* Port model of 0x004302b0 (GAME-021) for the targets other than MSVC x86; on MSVC
+ * x86 the shared original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004302b0 off MSVC x86, retires to the tail in GAME-021 part 3
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 void map_cell_tracking_flags_clear_and_refresh_current(
     const int cell_xy[2])
 {
@@ -4303,111 +4266,10 @@ void map_cell_tracking_flags_clear_and_refresh_current(
 #endif
 /* TerrainCellWorkFlagClear @ 0x00430320 takes only the coordinate pair and
  * event selector; DAT_005560d4 supplies its level. */
-// FUNCTION: LEGORR 0x00430320
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void terrain_cell_work_flag_clear_current(
-    const int coord[2], uint32_t selector)
-{
-    __asm {
-        mov ecx, dword ptr [g_active_level_retail]
-        push ebx
-        push esi
-        mov esi, dword ptr [esp + 0ch]
-        mov eax, dword ptr [ecx + 14h]
-        mov ebx, dword ptr [ecx + 0b8h]
-        mov edx, dword ptr [esi + 4]
-        push edi
-        imul eax, edx
-        mov edi, dword ptr [esi]
-        add eax, edi
-        lea eax, dword ptr [eax + eax*8]
-        lea eax, dword ptr [ebx + eax*8]
-        mov ebx, dword ptr [eax + 8]
-        test bh, 4
-        jne terrain_cell_work_flag_clear_done
-        test byte ptr [eax + 0ch], 4
-        jne terrain_cell_work_flag_clear_done
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, edx
-        add eax, edi
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        test ch, 80h
-        jne terrain_cell_work_flag_clear_done
-        push esi
-        call terrain_cell_predicate_check_current
-        add esp, 4
-        test eax, eax
-        jne terrain_cell_work_flag_clear_done
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, edx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and ecx, 0ffdfffffh
-        mov dword ptr [eax], ecx
-        mov ecx, dword ptr [g_active_level_retail]
-        mov ebx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, ebx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov edi, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and edi, 0dfffffffh
-        mov dword ptr [eax], edi
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, edx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ebx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and ebx, 0bfffffffh
-        mov dword ptr [eax], ebx
-        call entity_activity_scene_state_update_retail
-        push esi
-        call coordinate_pair_callback_dispatch
-        add esp, 4
-        push esi
-        call flic_opcode27_fallback_noop
-        mov ebx, dword ptr [esp + 18h]
-        add esp, 4
-        mov edi, 4
-    terrain_cell_work_flag_clear_queue_loop:
-        push ebx
-        push esi
-        call coordinate_pair_event_queue
-        add esp, 8
-        dec edi
-        jne terrain_cell_work_flag_clear_queue_loop
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, edx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        or ecx, 3
-        mov dword ptr [eax], ecx
-    terrain_cell_work_flag_clear_done:
-        pop edi
-        pop esi
-        pop ebx
-        ret
-    }
-}
-#else
+/* Port model of 0x00430320 (GAME-021) for the targets other than MSVC x86; on MSVC
+ * x86 the shared original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00430320 off MSVC x86, retires to the tail in GAME-021 part 3
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 void terrain_cell_work_flag_clear_current(const int coord[2],
                                           uint32_t selector)
 {
@@ -4446,7 +4308,8 @@ void terrain_cell_work_flag_clear_current(const int coord[2],
 /* TerrainNeighborFlagSet (FUN_00430470): for an interior, flagged cell,
  * require a staged spatial record at that coordinate, move the primary flag
  * from bit 3 to bit 4, run CellInitPass, and clear its staged render slot. */
-// FUNCTION: LEGORR 0x00430470
+/* Port model of 0x00430470 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00430470, retires to the tail in GAME-021 part 3
 void terrain_neighbor_flag_set(LevelState* s, int manager,
                                uint32_t x, uint32_t y)
 {
@@ -4520,7 +4383,8 @@ void terrain_neighbor_flag_set(LevelState* s, int manager,
 /* TerrainCellMutation's mode-1 path is used by the tutorial ground visitor as
  * well as the predug-cell sweep. CPU-visible state from both modes is owned
  * here; the indexed DDi height-overlay slot remains a renderer operation. */
-// FUNCTION: LEGORR 0x00430530
+/* Port model of 0x00430530 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00430530, retires to the tail in GAME-021 part 3
 int terrain_cell_mutate(LevelState* level, uint32_t x, uint32_t y, int mode)
 {
     static const int corner_offset[4][2] = {
@@ -4722,7 +4586,8 @@ int terrain_cell_mutate(LevelState* level, uint32_t x, uint32_t y, int mode)
 /* TerrainNeighborRefresh (FUN_00430df0): inspect the first eligible
  * bit-3 neighbor in north/east/south/west order. Current state 8 requests
  * the build action; state 10 requests the clear action. */
-// FUNCTION: LEGORR 0x00430DF0
+/* Port model of 0x00430df0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00430df0, retires to the tail in GAME-021 part 3
 void terrain_neighbor_refresh(LevelState* s, const int cell_xy[2])
 {
     static const int offsets[4][2] = {
@@ -4777,7 +4642,8 @@ void terrain_neighbor_refresh(LevelState* s, const int cell_xy[2])
     }
 }
 /* 0x430ee0: initialize one actual level cell, including terrain refresh. */
-// FUNCTION: LEGORR 0x00430ee0
+/* Port model of 0x00430ee0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00430ee0, retires to the tail in GAME-021 part 3
 int terrain_cell_initialize(LevelState* level, uint32_t x, uint32_t y)
 {
     static const int cardinal[4][2] = {{0,-1},{1,0},{0,1},{-1,0}};
@@ -4824,7 +4690,8 @@ int terrain_cell_initialize(LevelState* level, uint32_t x, uint32_t y)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x004310f0
+/* Port model of 0x004310f0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004310f0, retires to the tail in GAME-021 part 3
 void terrain_cell_flag20_clear_and_refresh(LevelState* s, int cx, int cy)
 {
     terrain_neighbor_flag_refresh_xy(s, cx, cy, 0);
@@ -4839,7 +4706,8 @@ void terrain_cell_flag20_clear_and_refresh(LevelState* s, int cx, int cy)
     cell_init_pass(s, (float)cx, (uint32_t)cy);
 }
 
-// FUNCTION: LEGORR 0x00431140
+/* Port model of 0x00431140 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00431140, retires to the tail in GAME-021 part 3
 void terrain_cell_queued_work_transition_current(int x, int y)
 {
     LevelState* lvl = level_current_owner_get();
@@ -4862,7 +4730,8 @@ void terrain_cell_queued_work_transition_current(int x, int y)
     message_dispatch(0x1c, 0, 0, pair);
 }
 
-// FUNCTION: LEGORR 0x004313b0
+/* Port model of 0x004313b0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004313b0, retires to the tail in GAME-021 part 3
 void simtick_minion_states(EngineContext* c, float dt, float scale)
 {
     (void)dt;
@@ -4901,7 +4770,8 @@ void simtick_minion_states(EngineContext* c, float dt, float scale)
     }
 }
 
-// FUNCTION: LEGORR 0x00431450
+/* Port model of 0x00431450 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00431450, retires to the tail in GAME-021 part 3
 void terrain_neighbor_flag_refresh(LevelState* s, const int cell_xy[2],
                                    int mode)
 {
@@ -4928,16 +4798,10 @@ void terrain_neighbor_flag_refresh(LevelState* s, const int cell_xy[2],
     }
     build->scene_flags_0c |= 2u;
 }
-#if defined(_MSC_VER) && defined(_M_IX86)
-// FUNCTION: LEGORR 0x00431560
-__declspec(naked) LevelState* level_current_owner_get(void)
-{
-    __asm {
-        mov eax, dword ptr [g_active_level_retail]
-        ret
-    }
-}
-#else
+/* Port model of 0x00431560 (GAME-021) for the targets other than MSVC x86; on MSVC
+ * x86 the shared original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00431560 off MSVC x86, retires to the tail in GAME-021 part 3
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 LevelState* level_current_owner_get(void)
 {
     GameContext* game = entity_pool_callback_context_get();
@@ -4948,18 +4812,18 @@ LevelState* level_current_owner_get(void)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00431570
+/* Port model of 0x00431570 (GAME-021) for the targets other than MSVC x86; on MSVC
+ * x86 the shared original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00431570 off MSVC x86, retires to the tail in GAME-021 part 3
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 void* level_current_terrain_get(int cell_x, int cell_y)
 {
+    LevelState* level = level_current_owner_get();
     (void)cell_x;
     (void)cell_y;
-#if !defined(_MSC_VER) || !defined(_M_IX86)
-    LevelState* level = level_current_owner_get();
     return level != NULL ? level->ptr_terrain : NULL;
-#else
-    return *(void**)((char*)level_current_owner_get() + 4);
-#endif
 }
+#endif
 
 /* Retail ABI is two unsigned coordinates. The level is the live global, not
  * an explicit first parameter; keep the three-argument form above as the
@@ -10762,6 +10626,35 @@ extern "C" const char* main_get_start_level_adapter(void)
 /* ---- part 2 adapters, group 2E: end ---- */
 
 /* ---- part 2 adapters, group 2F (004302b0-00431570): begin ---- */
+
+/* 00439370 and 004394b0 are declared only in legoobject.cpp's ledger
+ * namespace, with C++ linkage; these forward the original's arguments. */
+namespace unported_ledger_stubs {
+void ledger_stub_00439370_EntityBuildPlacementCommandSetup(
+    const int cell_xy[2], int entity_id, const float world_xy[2],
+    int update_state);
+void ledger_stub_004394b0_EntityBuildPlacementAlternateCommandSetup(
+    const int cell_xy[2], int entity_id, const float world_xy[2],
+    int update_state);
+} // namespace unported_ledger_stubs
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (EntityBuildPlacementCommandSetup 00439370; C++ linkage in legoobject.cpp's ledger namespace)
+extern "C" void entity_build_placement_setup_original(
+    const int cell_xy[2], int entity_id, const float world_xy[2],
+    int update_state)
+{
+    unported_ledger_stubs::ledger_stub_00439370_EntityBuildPlacementCommandSetup(
+        cell_xy, entity_id, world_xy, update_state);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (EntityBuildPlacementAlternateCommandSetup 004394b0; C++ linkage in legoobject.cpp's ledger namespace)
+extern "C" void entity_build_placement_alt_setup_original(
+    const int cell_xy[2], int entity_id, const float world_xy[2],
+    int update_state)
+{
+    unported_ledger_stubs::ledger_stub_004394b0_EntityBuildPlacementAlternateCommandSetup(
+        cell_xy, entity_id, world_xy, update_state);
+}
 
 /* ---- part 2 adapters, group 2F: end ---- */
 

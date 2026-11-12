@@ -578,7 +578,7 @@ typedef struct DeferredOListEntityHooks {
 void deferred_olist_entity_hooks_set(const DeferredOListEntityHooks* hooks);
 void deferred_olist_entity_queue_install(
     const DeferredOListEntityRecord* records, unsigned int count);
-void deferred_olist_entity_create_and_link(const int cell_xy[2]); /* 0x437940 */
+extern "C" void deferred_olist_entity_create_and_link(const int cell_xy[2]); /* 0x437940 */
 void deferred_olist_entity_level_begin(GameContext* context);
 void deferred_olist_entity_level_end(struct LevelState* level);
 typedef int (*EntitySpatialQueryHook)(void* context, EntitySlot* subject,

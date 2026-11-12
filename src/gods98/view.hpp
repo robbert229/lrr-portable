@@ -1982,6 +1982,9 @@ typedef struct WorldSpatialRecordModel {
 } WorldSpatialRecordModel;
 void world_spatial_records_install(WorldSpatialRecordModel* records,
                                    uint32_t count);
+#ifdef __cplusplus
+extern "C"
+#endif
 WorldSpatialRecordModel* world_spatial_record_find_at_grid_coordinate(
     int x, int y, uint32_t* point_index); /* 0x0046e8a0 */
 typedef void* (*UIRenderTreeHook)(int operation, void* tree, void* entry,

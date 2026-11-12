@@ -1305,6 +1305,64 @@ void terrain_map_wobble_emissive_set(struct TerrainMap* map, int on); /* 00450a8
 
 /* ---- part 2 imports, group 2F (004302b0-00431570): begin ---- */
 
+struct TerrainMap;
+struct LevelState;
+struct WorldSpatialRecordModel;
+/* AITask.c (cmd.hpp, level.hpp). */
+void coordinate_pair_callback_dispatch(const void* coord_pair);       /* 00402a40 */
+void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode); /* 00402ae0 */
+void coordinate_callback_dispatch_current(const void* coord_pair);    /* 00402b30 */
+void coordinate_pair_event_queue(const int pair[2], void* payload);   /* 004030b0 */
+/* placement.cpp (level.hpp, port_loop_ports.hpp). */
+int terrain_cell_predicate_check_current(const uint32_t pair_key[2]); /* 004090a0 */
+void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2]); /* 00409940 */
+/* GAME-021 part 3 (lego.cpp, level.hpp): the same contract as the
+ * original's, with the port's level view. */
+void terrain_cell_mutation_progress(struct LevelState* level, uint32_t x,
+                                    uint32_t y);                /* 00433380 */
+/* LegoObject.c (legoobject.cpp: ai.hpp, entity.hpp, level.hpp,
+ * port_loop_ports.hpp). */
+void deferred_olist_entity_create_and_link(const int cell_xy[2]);     /* 00437940 */
+void entity_activity_scene_state_update_retail(void);                 /* 00439990 */
+void predug_coordinate_pool_append(const int cell_xy[2]);             /* 0044a4b0 */
+void ledger_stub_0044b140_SmallSpiderCellSwarmSpawn(int cell_x, int cell_y,
+                                                    uint32_t variation); /* 0044b140 */
+/* 00439370 and 004394b0 are declared only in legoobject.cpp's ledger
+ * namespace. Adapters at the end of lego.cpp. */
+void entity_build_placement_setup_original(const int cell_xy[2], int entity_id,
+                                           const float world_xy[2],
+                                           int update_state);   /* 00439370 */
+void entity_build_placement_alt_setup_original(const int cell_xy[2], int entity_id,
+                                               const float world_xy[2],
+                                               int update_state); /* 004394b0 */
+/* GAME-026 Map3D.c (terrain_map.h). */
+void terrain_map_block_vertex_modified(struct TerrainMap* map, unsigned int vx,
+                                       unsigned int vy);        /* 0044efb0 */
+void terrain_map_vertex_move(struct TerrainMap* map, unsigned int vx,
+                             unsigned int vy, float zDist);     /* 0044f380 */
+int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,
+                               unsigned int by, float* xOut, float* yOut); /* 0044f640 */
+/* reward.c (reward.h). */
+void global_float_at_00554adc_add_one(void);                          /* 00462830 */
+void global_float_at_00554efc_add_one(void);                          /* 00462850 */
+/* G98 (terrain_grid.hpp, view.hpp). */
+void terrain_cell_surface_quad_height_fill_current(struct LevelState* level,
+                                                   int x, int y); /* 0046e220 */
+void terrain_cell_surface_quad_reset_current(int x, int y);           /* 0046e330 */
+struct WorldSpatialRecordModel* world_spatial_record_find_at_grid_coordinate(
+    int x, int y, uint32_t* point_index);                       /* 0046e8a0 */
+/* G98 Container.c (view.hpp). */
+uint32_t scene_action_name_set(void* scene_object, const char* action_name); /* 00473370 */
+void* entity_visual_resource_load(void* scene_object);                /* 00473690 */
+float ddiscene_advance_by_time_target(void* scene_object, float delta); /* 00475120 */
+float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 00475140 */
+/* GAME-019 Info.c (info_unit.h). */
+struct InfoPoint2I;
+void info_send(int type, char* text, void* object,
+               struct InfoPoint2I* blockPos);                   /* 00419b80 */
+/* GAME-020 Interface.c (interface_unit.h). */
+void selection_mode7_cancel_at_point(const uint32_t coordinate[2]);   /* 0041cf80 */
+
 /* ---- part 2 imports, group 2F: end ---- */
 
 /* ---- part 2 imports, group 2G (00431580-00432490): begin ---- */

@@ -309,14 +309,14 @@ uint32_t ledger_stub_0040e1e0_CellCornerOccupancyScan(
 void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
     const struct EntitySlot* entity, const int cell_xy[2],
     uint32_t filter_a, uint32_t filter_b);
-void ledger_stub_0044b140_SmallSpiderCellSwarmSpawn(
+extern "C" void ledger_stub_0044b140_SmallSpiderCellSwarmSpawn(
     int cell_x, int cell_y, uint32_t variation);
 int ledger_stub_004403d0_LevelDebugCellRetargetDispatch(
     struct EntitySlot* entity, struct EntitySlot* target,
     const struct EntityDebugCellRetargetHooks* hooks);
 int ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(
     struct EntitySlot* entity, struct EntitySlot* target, int marker);
-void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2]);
+extern "C" void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2]);
 void entity_cell_path_effects_apply_current(struct EntitySlot* entity);
 /* StartupStreamsClose/StartupStreamStateReset (FUN_0048b290/260): the
  * four file handles and window-mode word that the startup stream routines

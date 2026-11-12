@@ -540,6 +540,62 @@ void lego_periodic_callback_dispatch(int on);   /* E, 00425b40 */
 
 /* ---- part 2 declarations, group 2F (004302b0-00431570): begin ---- */
 
+/* Maths.h's Point2I. */
+typedef struct LegoPoint2I2F {
+    int x, y;
+} LegoPoint2I2F;
+
+/* A block's activity (0x1c bytes): the animated container (the recharge
+ * sparkle's clone) a block plays while a path or wall is built on it or
+ * destroyed. Lego_Level +0x88 heads the list; Lego_Block +0x18 points to
+ * the block's own. */
+typedef struct LegoBlockActivity2F {
+    void* cont;                             /* +0x00 Container */
+    int bx;                                 /* +0x04 */
+    int by;                                 /* +0x08 */
+    unsigned char flags;                    /* +0x0c 1 standing, 2 done, 4 destroying */
+    unsigned char f_0d[3];
+    struct LegoBlockActivity2F* prev;       /* +0x10 */
+    struct LegoBlockActivity2F* next;       /* +0x14 */
+    int build;                              /* +0x18 */
+} LegoBlockActivity2F;
+
+/* Shared (their callers already use these contracts). Defined in
+ * lego_unit.c on MSVC x86 only; lego.cpp keeps the port's models for the
+ * other targets. level_current_owner_get is in lego_unit_imports.h. */
+void map_cell_tracking_flags_clear_and_refresh_current(const int cell_xy[2]);
+void terrain_cell_work_flag_clear_current(const int coord[2], uint32_t selector);
+void* level_current_terrain_get(int cell_x, int cell_y);
+
+void lego_terrain_neighbor_flag_set(Lego_Level* level, int unused,
+                                    unsigned int bx, unsigned int by);
+int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
+                             unsigned int by, int isHiddenCavern);
+void lego_terrain_neighbor_refresh(const int* blockPos);
+int lego_terrain_cell_initialize(Lego_Level* level, unsigned int bx,
+                                 unsigned int by);
+void lego_terrain_cell_flag20_clear_and_refresh(const int* blockPos);
+void lego_terrain_cell_queued_work_transition(unsigned int bx, unsigned int by);
+void lego_block_activity_create(Lego_Level* level, const int* blockPos, int build);
+void lego_block_activity_update_all(Lego_Level* level, float elapsedWorld);
+void lego_terrain_neighbor_flag_refresh(Lego_Level* level, const int* blockPos,
+                                        int build);
+void lego_block_activity_remove(LegoBlockActivity2F* activity);
+void lego_block_activity_remove_all(Lego_Level* level);
+
+/* Assumed from other groups:
+ * 2E 0042f6f0 Level_BlockUpdateSurface (the port's cell_init_pass takes x
+ *    as a float, so the unit's is assumed to be lego_cell_init_pass):
+ *    void lego_cell_init_pass(Lego_Level* level, unsigned int bx,
+ *                             unsigned int by, int reserved);
+ * 2G 00431580 (the port's entry already has the original's contract):
+ *    void terrain_neighbor_work_flag_scan_current(unsigned int bx,
+ *                                                 unsigned int by); */
+void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by,
+                         int reserved);                         /* 2E 0042f6f0 */
+void terrain_neighbor_work_flag_scan_current(unsigned int seed_x,
+                                             unsigned int seed_y); /* 2G 00431580 */
+
 /* ---- part 2 declarations, group 2F: end ---- */
 
 /* ---- part 2 declarations, group 2G (00431580-00432490): begin ---- */

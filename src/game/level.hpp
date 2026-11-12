@@ -317,7 +317,7 @@ void        level_destroy(LevelState* s);
 
 /* Grid size left in the block after a successful load. */
 extern "C" LevelState* level_current_owner_get(void);
-void* level_current_terrain_get(int cell_x, int cell_y); /* FUN_00431570 */
+extern "C" void* level_current_terrain_get(int cell_x, int cell_y); /* FUN_00431570 */
 /* Shared predug pool used by nearest-coordinate and spawn paths. */
 extern int s_predug_coordinates[20][2];
 extern unsigned int s_predug_coordinate_count;
@@ -921,7 +921,7 @@ int terrain_cell_variant_flag_propagate(LevelState* s,
 int terrain_cell_variant_flag_propagate_current(const int cell_xy[2]);
 void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
                                                const int cell_xy[2]);
-void map_cell_tracking_flags_clear_and_refresh_current(
+extern "C" void map_cell_tracking_flags_clear_and_refresh_current(
     const int cell_xy[2]); /* FUN_004302b0 */
 typedef void (*TerrainCellStateProjectionHook)(const int cell_xy[2],
                                                const float position[3],
@@ -988,7 +988,7 @@ int terrain_cell_drill_work_add(LevelState* level, int x, int y,
                                 float divisor, float elapsed);
 int terrain_cell_drill_work_add_current(int x, int y, float divisor,
                                         float elapsed);
-void terrain_cell_mutation_progress(LevelState* level, uint32_t x,
+extern "C" void terrain_cell_mutation_progress(LevelState* level, uint32_t x,
                                     uint32_t y); /* 0x00433380 */
 void terrain_cell_mutation_progress_current(int x, int y);
 extern "C" int terrain_cell_mutate(LevelState* level, uint32_t x, uint32_t y,
@@ -1118,7 +1118,7 @@ void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
  * (width + height)-based capacity assumption. */
 void terrain_neighbor_work_flag_scan(LevelState* s, unsigned int seed_x,
                                      unsigned int seed_y);
-void terrain_neighbor_work_flag_scan_current(unsigned int seed_x,
+extern "C" void terrain_neighbor_work_flag_scan_current(unsigned int seed_x,
                                              unsigned int seed_y);
 
 /* TerrainCellQueuedWorkTransition (FUN_00431140): mapped current-level
@@ -1503,12 +1503,12 @@ void terrain_cell_refresh_entity_callback_install(
 void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
                                    int y);
 extern "C" void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode);
-void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2]);
+extern "C" void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2]);
 /* CellInitPass (FUN_0042f6f0), exposed for path-record mutations that must
  * rebuild the cell variant after changing its path flags. */
 void level_cell_init_pass(LevelState* level, int x, int y);
 void coordinate_callback_dispatch(const void* coord_pair, int value);
-void coordinate_callback_dispatch_current(const void* coord_pair);
+extern "C" void coordinate_callback_dispatch_current(const void* coord_pair);
 typedef int (*CoordinateEntityDispatchHook)(struct EntitySlot* entity,
                                             const void* coordinate_pair,
                                             int extra, void* context);
@@ -1555,7 +1555,7 @@ extern "C" int terrain_object_type_sfx_at_cell_get(const void* position_record);
 unsigned int level_predug_coordinate_count_get(void);
 int level_predug_coordinate_get(unsigned int index, int cell_xy_out[2]);
 void level_predug_coordinate_pool_clear(void);
-void predug_coordinate_pool_append(const int cell_xy[2]);
+extern "C" void predug_coordinate_pool_append(const int cell_xy[2]);
 void spawn_coordinate_pool_clear(void); /* FUN_004372a0 */
                                  /* FUN_0044ad80 */
 void terrain_sfx_grid_cell_set(int cell, int handle);  /* port hook */
