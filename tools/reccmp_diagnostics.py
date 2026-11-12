@@ -13,6 +13,10 @@ ALLOW = [re.compile(r'[/\\]src[/\\]gods98[/\\]viewports\.cpp\(\d+\) : warning C4
          # it never sets to the crystal panel when there is no level: the
          # original reads the same uninitialised stack slots (issue #544).
          re.compile(r'[/\\]src[/\\]game[/\\]lego_unit\.c\(\d+\) : warning C4700: local variable \'(used|crystals)\' used without having been initialized$', re.I),
+         # The units the original compiled without optimisation take /Od
+         # after the configuration's /O2 (LRR_UNOPTIMISED_UNITS in
+         # CMakeLists.txt; the camera unit, finding 587).
+         re.compile(r"^Command line warning D4025 : overriding '/O2' with '/Od'$"),
          # This toolchain omits the optional resource-compiler message catalog.
          re.compile(r'^WARNING:  missing cvtres\.err; displaying error numbers without messages\.$')]
 DIAGNOSTIC = re.compile(r'\[(?:ERROR|WARNING|CRITICAL)\]|\bwarning\s+(?:[A-Z]+\d+\s*:|:)|^\s*(?:warning|error|fatal error)\s*:', re.I)

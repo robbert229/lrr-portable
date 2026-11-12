@@ -27,7 +27,7 @@ void ddiscene_object_pool_hooks_set(
 void ddiscene_object_pool_auxiliary_set(void** allocations, uint32_t count,
                                         void* shared_directory);
 void ddiscene_object_array_grow(void);
-void* ddiscene_object_allocate(const DDiSceneObjectDescriptor* descriptor);
+extern "C" void* ddiscene_object_allocate(const DDiSceneObjectDescriptor* descriptor); /* FUN_00472950; C linkage for camera_control.c */
 /* Return a live record after its kind-specific payload has been released. */
 void ddiscene_object_record_release(void* record);
 int ddiscene_object_pool_owns(const void* record);

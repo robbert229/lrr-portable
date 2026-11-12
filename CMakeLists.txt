@@ -158,6 +158,11 @@ if(LRR_CLASSIC_MSVC5)
   set(LRR_LINK_INCLUDES_program ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
   set(LRR_LINK_INCLUDES_gods98 ${SRC_ROOT} ${ENGINE_DIR} ${GAME_DIR})
   set(LRR_LINK_INCLUDES_platform_glue ${SRC_ROOT})
+  # Units the original compiled without optimisation: their code keeps the
+  # frame pointer and reloads every operand, and the functions are packed
+  # with int3 fill (finding 505 rule 5; finding 587). They take /Od after the
+  # configuration's /O2.
+  set(LRR_UNOPTIMISED_UNITS "${SRC_ROOT}/game/camera_control.c")
   set(LRR_LINK_OBJECTS "")
   set(_lrr_index 0)
   foreach(_src _lib IN ZIP_LISTS LRR_LINK_SOURCES LRR_LINK_TARGETS)
@@ -169,6 +174,9 @@ if(LRR_CLASSIC_MSVC5)
     set(_target "link_${_pos}_${_stem}")
     add_library(${_target} OBJECT ${_src})
     target_include_directories(${_target} PRIVATE ${LRR_LINK_INCLUDES_${_lib}})
+    if(_src IN_LIST LRR_UNOPTIMISED_UNITS)
+      target_compile_options(${_target} PRIVATE /Od)
+    endif()
     list(APPEND LRR_LINK_OBJECTS "$<TARGET_OBJECTS:${_target}>")
   endforeach()
 else()

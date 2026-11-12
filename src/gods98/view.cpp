@@ -38,9 +38,8 @@
 #endif
 
 /* Reconstruction-owned globals for corpus constants. */
-float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
-// GLOBAL: LEGORR 0x005560ac
-int   g_view_grid_edge   = 0;       /* DAT_005560ac (tile-count edge clamp) */
+float g_view_follow_scale = 1.0f;   /* port copy of cameraGlobs.cameraDropOff (005560a4, camera_control.c) */
+int   g_view_grid_edge   = 0;       /* port copy of cameraGlobs.mouseScrollIndent (005560ac) */
 int   g_view_test_blend  = 0;       /* test hook for the mode-3 EMA target */
 ViewObjectLookupHook s_view_object_lookup_hook = NULL;
 ViewTargetBlendHook s_view_target_blend_hook = NULL;
@@ -1664,10 +1663,8 @@ void view_views_tick(EngineContext* ctx, float dt, float scale)
 
 /* Startup CameraViewContextSet binds CameraSpeed, CameraDropOff,
  * CameraAcceleration and MouseScrollIndent in the reference caller order. */
-// GLOBAL: LEGORR 0x005560a0
-float g_view_pan_cap   = 0.0f;  /* DAT_005560a0 (CameraSpeed) */
-// GLOBAL: LEGORR 0x005560a8
-float g_view_pan_scale = 0.0f;  /* DAT_005560a8 (CameraAcceleration) */
+float g_view_pan_cap   = 0.0f;  /* port copy of cameraGlobs.cameraSpeed (005560a0, camera_control.c) */
+float g_view_pan_scale = 0.0f;  /* port copy of cameraGlobs.cameraAcceleration (005560a8) */
 
 CameraPoseDispatchHook s_camera_pose_dispatch_hook;
 void* s_camera_pose_dispatch_context;

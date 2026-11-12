@@ -81,8 +81,10 @@ src/game/building_model.cpp
 src/game/building_model.h
 src/game/building_scene.cpp
 src/game/building_scene.hpp
-src/game/camera_control.cpp
+src/game/camera_control.c
 src/game/camera_control.h
+src/game/camera_control_imports.h
+src/game/camera_control_port.cpp
 src/game/camera_drag.hpp
 src/game/cell_flood_passes.cpp
 src/game/cmd.cpp

@@ -150,17 +150,30 @@ class CoffObject:
     def function_lines(self) -> dict[int, list[tuple[int, int]]]:
         """Absolute (line, offset) pairs per code section, resolved from
         the COFF line-number table and the .bf base line of each function."""
-        base_lines: dict[int, int] = {}
-        for sym in self.symbols.values():
+        # Each function's line numbers are relative to its own .bf record,
+        # the first .bf after the function's symbol. With /Gy every function
+        # has a section of its own; without it (an /Od object, finding 587)
+        # one .text section holds them all.
+        base_lines: dict[int, list[tuple[int, int]]] = {}
+        for index, sym in self.symbols.items():
             if sym.name == ".bf" and sym.aux and sym.section > 0:
                 (line,) = struct.unpack_from("<H", sym.aux[0], 4)
-                base_lines.setdefault(sym.section, line)
+                base_lines.setdefault(sym.section, []).append((index, line))
+        for records in base_lines.values():
+            records.sort()
+
+        def function_base(section: int, func_index: int) -> int | None:
+            records = base_lines.get(section, [])
+            for index, line in records:
+                if index > func_index:
+                    return line
+            return records[0][1] if records else None
 
         result: dict[int, list[tuple[int, int]]] = {}
         for sect in self.sections:
             if not sect.linenumbers:
                 continue
-            base = base_lines.get(sect.index)
+            base = function_base(sect.index, -1)
             if base is None:
                 continue
             pairs: list[tuple[int, int]] = []
@@ -169,6 +182,9 @@ class CoffObject:
                 if line == 0:
                     sym = self.symbols.get(addr)
                     func_offset = sym.value if sym is not None else 0
+                    base = function_base(sect.index, addr)
+                    if base is None:
+                        base = 0
                     pairs.append((base, func_offset))
                 else:
                     pairs.append((base + line, addr))

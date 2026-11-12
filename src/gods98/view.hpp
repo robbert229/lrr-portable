@@ -853,7 +853,7 @@ typedef struct RenderInterfacePairHooks {
 } RenderInterfacePairHooks;
 void render_interface_pair_hooks_set(const RenderInterfacePairHooks* hooks);
 void render_interface_pair_update(void* destination, void* source);
-void ddiscene_scene_object_attach_or_unlink(void* pair_record,
+extern "C" void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* source_pair_record);
 void scene_object_transform_matrix_set(void* object, uint32_t mode,
                                        const float* matrix);
