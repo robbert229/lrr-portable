@@ -128,23 +128,23 @@ int sound_bank_free_slot_find(int* out_slot);
  * raise busy+loaded. Returns the slot index, or -1 when sound is off,
  * no slot is free, or the file fails to load (the claimed slot's flags
  * stay zeroed, exactly as shipped). No dedupe — the corpus has none. */
-int sound_bank_entry_load(const char* name, int streamed, int looping,
+extern "C" int sound_bank_entry_load(const char* name, int streamed, int looping,
                           int volume);
 
 /* SoundBankEntryRelease @ 0x47ab00: clear the busy bit and free the
  * record's sample memory and its portable PCM duplicate buffers. Returns 1
  * when the sound system is enabled and the slot is valid, otherwise 0. */
-int sound_bank_entry_release(int slot);
+extern "C" int sound_bank_entry_release(int slot);
 
 /* SoundVolumeValueValid @ 0x47a850: the millibel sanity gate — valid
  * while (-10001 < v < 1). */
-int sound_volume_value_valid(int millibels);
+extern "C" int sound_volume_value_valid(int millibels);
 
 /* Record inspection: flag word / stored volume for a slot, or
  * 0/0-invalid when the index is out of range. The volume read is the
  * corpus's IndexedRecordStride134WordGet. */
 uint32_t sound_bank_entry_flags(int slot);
-int sound_bank_entry_volume(int slot);
+extern "C" int sound_bank_entry_volume(int slot);
 Sound* sound_bank_entry_sample_get(int slot);
 /* Create up to three portable duplicate-buffer records for the loaded slot. */
 int sound_record_create_buffers(int slot);
@@ -156,7 +156,7 @@ int sound_bank_entry_play_mode(int slot, int loop, int mode);
  * when invalid) into the record's volume word and apply the equivalent
  * gain to buffer 0 or all three duplicate buffers when the loop bit is set.
  * The port guards the corpus's unbounded slot write. */
-void sound_bank_entry_volume_set(int slot, int millibels);
+extern "C" void sound_bank_entry_volume_set(int slot, int millibels);
 
 /* ------------------------------------------------------------------ *
  *  Configured variant properties (issues #319 / #320).
@@ -262,7 +262,7 @@ void sound_subsystem_enable_set_and_stop(int enable);
 
 /* SoundBufferStopHandle @ 0x47b130: stop the selected duplicate buffer's
  * active voice when the backend supports per-submission cancellation. */
-void sound_buffer_stop_handle(int buffer_handle);
+extern "C" void sound_buffer_stop_handle(int buffer_handle);
 void sound_handle_stop_forward(int buffer_handle); /* 0x465190 */
 struct AudioBuffer;
 struct AudioBuffer* sound_handle_buffer_get(int buffer_handle); /* 0x47b0f0 */
@@ -276,8 +276,8 @@ int sound_stream_drain_check(int stream_index);
 void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
                                       void* context);
 void sound_buffer_association_stop_all(void);
-int sound_stream_stop_and_release(int stream_index);
-void sound_subsystem_stop_all(void);
+extern "C" int sound_stream_stop_and_release(int stream_index);
+extern "C" void sound_subsystem_stop_all(void);
 typedef void (*SoundPositionApplyHook)(void* context, void* buffer_object,
                                        const float position[3],
                                        uint32_t flags);
@@ -303,7 +303,7 @@ void sound_spatial_refresh_hooks_set(SoundSpatialRefreshHook refresh,
                                      void* context);
 /* SoundSourceSpatialRefresh @ 0x47b410; called by the production sound tick. */
 void sound_source_spatial_refresh(void* sound_object);
-void sound_source_spatial_refresh_all(void);
+extern "C" void sound_source_spatial_refresh_all(void);
 void sound_stream_ring_buffer_tick(int stream_index);
 
 /* SoundSubsystemEnabledGet @ 0x465370: bit 0. */
@@ -517,7 +517,7 @@ int sound_active_request_get(int index, int* alias, int* loop);
  * Deviation: the corpus keeps stream records in a side table with a
  * cached-vs-dereferenced rate word selected by the stream flag; the
  * port reads its bank record (the same value for both branches). */
-double sound_streamed_wave_buffer_step_rate(int slot);
+extern "C" float sound_streamed_wave_buffer_step_rate(int slot);
 
 /* SoundObjectDurationGet @ 0x465160: duration of whatever `alias`'s
  * chain selects — consumes one variant draw per call. Alias 0
@@ -554,6 +554,6 @@ void* sound_buffer_association_head_peek(void);      /* port hook */
 
 /* SoundMinimumDistanceUpdateMode (FUN_004295f0) applies this raw float
  * bit pattern to every tracked buffer through its min-distance method. */
-void sound_tracked_buffers_set_min_distance(uint32_t value);
+extern "C" void sound_tracked_buffers_set_min_distance(float value);
 
 #endif /* LEGORRR_SOUND_HPP */

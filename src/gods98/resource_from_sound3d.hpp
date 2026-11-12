@@ -6,7 +6,7 @@
 #define LRR_GODS98_RESOURCE_FROM_SOUND3D_HPP
 
 namespace unported_ledger_stubs {
-int nested_record_list_remove_matching_key_impl( void* owner, void* key, void* opaque_record);
+extern "C" int nested_record_list_remove_matching_key_impl( void* owner, void* key, void* opaque_record);
 } // namespace unported_ledger_stubs
 
 #endif /* LRR_GODS98_RESOURCE_FROM_SOUND3D_HPP */

@@ -565,7 +565,7 @@ extern "C" float* d3drm_vector_rotate(float* r, float* v, float* axis,
  * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void vector_scale_components_in_place(float* vector, float sx, float sy,
                                       float sz); /* FUN_0040fcc0 */
-int   vec_exact_equal(const float* a, const float* b);
+extern "C" int vec_exact_equal(const float* a, const float* b);
 
 typedef void (*ViewPointProjectCallback)(void* context, float* output,
                                          const float* input);
@@ -931,7 +931,7 @@ typedef struct DDiSceneAnimationHookRecordHooks {
 } DDiSceneAnimationHookRecordHooks;
 void ddiscene_animation_hook_record_hooks_set(
     const DDiSceneAnimationHookRecordHooks* hooks);
-void ddiscene_animation_hook_create(void* scene_object, int callback,
+extern "C" void ddiscene_animation_hook_create(void* scene_object, int callback,
                                     const char* name,
                                     const uint32_t* value_0c, int value_08,
                                     const uint32_t* value_10,

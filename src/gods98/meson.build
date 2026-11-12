@@ -10,7 +10,6 @@ endif
 gods98_sources = [
   'images_unit.cpp',
   'files.cpp',
-  'sound3d.cpp',
   'lwo.cpp',
   'wad.cpp',
   'lws.cpp',
@@ -65,6 +64,7 @@ gods98_c_sources = [
   'keys.c',
   'draw.c',
   'soundsys.c',
+  'sound3d.c',
   'g98_024.c',
   'g98_026.c',
   'dxerror.c',

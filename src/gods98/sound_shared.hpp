@@ -42,6 +42,6 @@ extern int s_batch_count;
 extern int s_active_alias[SOUND_REQUEST_QUEUE_CAPACITY];
 extern int s_active_loop[SOUND_REQUEST_QUEUE_CAPACITY];
 extern int s_active_count;
-int s_play_seam(int mode, int position, int slot, int loop, const float* xyz);
+extern "C" int s_play_seam(int mode, int position, int slot, int loop, const float* xyz);
 
 #endif /* LRR_GODS98_SOUND_SHARED_HPP */
