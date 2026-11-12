@@ -16,6 +16,12 @@
 #endif
 
 #include "resource.hpp"
+#if !defined(_WIN32)
+#include <sys/stat.h>
+#endif
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "container_native.hpp"
+#endif
 #include "heap.hpp"
 #include "record.hpp"
 #include "sound.hpp"
@@ -3653,6 +3659,14 @@ void* game_file_handle_allocate(int kind)
  * loose-file storage, then return the corresponding GameFileHandle. The WAD
  * stream owns a fixed resource slot plus a cursor record; loose streams keep
  * their CRT FILE handle directly. */
+#if !defined(_WIN32)
+static int game_file_stream_is_regular(void* stream)
+{
+    struct stat info;
+    return fstat(fileno((FILE*)stream), &info) == 0 && S_ISREG(info.st_mode);
+}
+#endif
+
 // FUNCTION: LEGORR 0x0047f6e0
 GameFileHandle* game_file_open_dispatch(const char* path, const char* mode)
 {
@@ -3704,6 +3718,14 @@ GameFileHandle* game_file_open_dispatch(const char* path, const char* mode)
         if (ares_cd_fallback_path(path, fallback, sizeof(fallback)))
             handle->stream = fopen(fallback, mode);
     }
+#if !defined(_WIN32)
+    /* Windows refuses to open a directory; glibc opens one for reading. An
+     * empty level map name resolves to the data directory itself. */
+    if (handle->stream != NULL && !game_file_stream_is_regular(handle->stream)) {
+        fclose((FILE*)handle->stream);
+        handle->stream = NULL;
+    }
+#endif
     if (handle->stream == NULL) {
         game_file_close(handle);
         return NULL;
@@ -4173,6 +4195,10 @@ void* resource_name_register_or_query_target(
     void** root, const char* name, int mode,
     uint32_t* match_count_or_index)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (mode == 0 && container_native_owns(root))
+        return container_native_part_find(root, name);
+#endif
     const char* cursor = name;
     uint32_t remaining = 0xffffffffu;
     ResourceNameMatchCallbackContext query;

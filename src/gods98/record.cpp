@@ -2,6 +2,9 @@
 /* gods98 engine — corpus record access primitives (see record.hpp). */
 
 #include "record.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "container_native.hpp"
+#endif
 #include "heap.hpp"
 #include "sound.hpp"
 #include "string.hpp"
@@ -792,6 +795,12 @@ __declspec(naked) void scene_render_lock_toggle(void* scene_object,
 #else
 void scene_render_lock_toggle(void* scene_object, int enabled)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (container_native_owns(scene_object)) {
+        container_native_hidden_set(scene_object, enabled);
+        return;
+    }
+#endif
     uint32_t flags;
     if (scene_object == NULL) return;
     flags = rec_dword(scene_object, 0x14);

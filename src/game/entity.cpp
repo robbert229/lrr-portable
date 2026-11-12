@@ -28,6 +28,11 @@
 #include "cmd.hpp"
 
 #include "select.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "animation_object.h"
+#include "creature_scene.hpp"
+static void entity_creature_pose_apply(EntitySlot* entity);
+#endif
 #include "gods98/model.hpp"
 #include "gods98/view.hpp"
 #include "gods98/engine.hpp"
@@ -1987,6 +1992,9 @@ int entity_teardown(EntitySlot* entity)
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (entity->type == 4) building_scene_entity_release(entity);
     if (entity->type == 2 || entity->type == 3) actor_scene_entity_release(entity);
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+    /* EntityTeardown (0x437540): Creature_Remove, then free the record. */
+    creature_scene_entity_release(entity);
 #endif
     type = entity->type;
     flags = (uint32_t)entity->flags_3ec;
@@ -4055,6 +4063,11 @@ EntitySlot* entity_create_with_position_subtype(GameContext* context, int type,
         (void)entity_teardown(created);
         return NULL;
     }
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+    /* EntityCreateByType (0x437d00) clones the type row's AnimationObject. A
+     * type without a loadable scene keeps the port's drawn stand-in. */
+    if ((type == 2 || type == 3) && creature_scene_entity_create(created))
+        entity_creature_pose_apply(created);
 #endif
     entity_scene_slot_table_rebuild(created, 0);
     if (type == 6 || type == 7) {
@@ -6381,6 +6394,28 @@ int entity_position_grid_coordinates_get(const EntitySlot* entity,
     return 1;
 }
 
+#if defined(LEGORRR_BACKEND_MINIWIN)
+static float entity_creature_world_z(float x, float y, void* terrain)
+{
+    return terrain_surface_height_interpolate(terrain, x, y);
+}
+
+/* EntityWorldPositionSet's creature branch: Creature_SetPosition with the
+ * terrain height, then Creature_SetOrientation along the heading. */
+static void entity_creature_pose_apply(EntitySlot* entity)
+{
+    AnimationObject* model = creature_scene_model(entity);
+    if (model == NULL || entity->owner_ctx == NULL ||
+        entity->owner_ctx->level == NULL ||
+        entity->owner_ctx->level->ptr_terrain == NULL) return;
+    render_node_position_from_callback(model, entity->x, entity->y,
+                                       entity_creature_world_z,
+                                       entity->owner_ctx->level->ptr_terrain);
+    animation_object_transform_set(model, entity->attached_direction[0],
+                                   entity->attached_direction[1]);
+}
+#endif
+
 // FUNCTION: LEGORR 0x004428a0
 void entity_world_position_set(EntitySlot* entity, float x, float y,
                                float heading, int update_heading)
@@ -6417,6 +6452,8 @@ void entity_world_position_set(EntitySlot* entity, float x, float y,
     if (entity->type == 4) (void)building_scene_pose_set(entity);
     if (entity->type == 2 || entity->type == 3)
         (void)actor_scene_pose_set(entity);
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+    entity_creature_pose_apply(entity);
 #endif
     /* Corpus writes 0.01 to the +0xae tick scale after every update. */
     entity->movement_tick_scale = 0.01f;
@@ -10014,6 +10051,14 @@ float ledger_stub_00447b30_EntityActivityTick(
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
             else advanced = actor_scene_advance(entity, scaled_delta,
                 (uint32_t)entity->activity_param, &overflow);
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+            /* EntityActivityTick (0x447b30): Creature_UpdateAnimation. */
+            else if (creature_scene_model(entity) != NULL) {
+                overflow = renderer_object_timing_value_adjust_by_count(
+                    creature_scene_model(entity), scaled_delta,
+                    (uint32_t)entity->activity_param);
+                advanced = 1;
+            }
 #endif
             if (advanced && generation == entity->activity_generation &&
                 activity == entity->activity && overflow == overflow &&

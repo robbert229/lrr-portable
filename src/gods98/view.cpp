@@ -7,6 +7,9 @@
 #include <stdio.h>
 
 #include "view.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "container_native.hpp"
+#endif
 #include "record.hpp"
 #include "scene_resources.hpp"
 #include "scene_pool.hpp"
@@ -446,6 +449,10 @@ static void ddiscene_action_channel_apply(void* channel, void* action_record)
 uint32_t scene_action_name_set(void* scene_object,
                                const char* action_name)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (container_native_owns(scene_object))
+        return container_native_activity_set(scene_object, action_name);
+#endif
     char* previous_name = NULL;
     void* requested_record;
     uint32_t result = 0u;
@@ -659,6 +666,10 @@ void entity_visual_resource_load_hooks_set(
  * common preparation and the kind-four act-frame build before attachment. */
 void* entity_visual_resource_load(void* scene_object)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (container_native_owns(scene_object))
+        return container_native_clone(scene_object);
+#endif
     EntityVisualResourceLoadHooks* hooks =
         &s_entity_visual_resource_load_hooks;
     int kind;
@@ -698,6 +709,10 @@ void video_aspect_ratio_query_hook_set(VideoAspectRatioQueryHook hook,
 
 float video_object_aspect_ratio_get(void* video_object)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    /* Null frames carry no transparency coefficient. */
+    if (container_native_object_known(video_object)) return 0.0f;
+#endif
     if (video_object == NULL || s_video_aspect_ratio_query_hook == NULL) {
         return 0.0f;
     }
@@ -1342,6 +1357,12 @@ static void ddiscene_destroy_kind1_child_interfaces(void* scene_object)
 // FUNCTION: LEGORR 0x00472a50
 void ddiscene_object_destroy_with_mode(void* scene_object, int mode)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (container_native_owns(scene_object)) {
+        container_native_remove(scene_object);
+        return;
+    }
+#endif
     uint32_t kind;
     if (scene_object == NULL) return;
     if (s_ddiscene_object_destroy_hook != NULL) {
@@ -1443,6 +1464,10 @@ static void* ddiscene_object_frame_record_get(void* scene_object)
 // FUNCTION: LEGORR 0x00475390
 float ddiscene_object_length_get(void* scene_object)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (container_native_owns(scene_object))
+        return container_native_animation_time(scene_object);
+#endif
     const uint32_t kind = *(uint32_t*)((char*)scene_object + 0x10);
     if (kind == 4u) {
         void* action_slot = *(void**)((char*)scene_object + 0x0c);
@@ -1463,6 +1488,10 @@ float ddiscene_object_length_get(void* scene_object)
 // FUNCTION: LEGORR 0x004753f0
 uint32_t ddiscene_object_frame_position_get(void* scene_object)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (container_native_owns(scene_object))
+        return container_native_animation_frames(scene_object);
+#endif
     void* interface_object = NULL;
     const uint32_t kind = *(uint32_t*)((char*)scene_object + 0x10);
     if (kind == 4u) {
@@ -1631,6 +1660,10 @@ int ddiscene_sample_hook_add(DDiSceneSampleHook sample_hook,
  * timed dispatch, and signal the registered end callback on frame overflow. */
 float ddiscene_frame_update_and_callbacks(void* scene_object, float time)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (container_native_owns(scene_object))
+        return container_native_animation_time_set(scene_object, time);
+#endif
     void* frame_interface = NULL;
     void* action_slot;
     const char* action_name;
@@ -1715,6 +1748,10 @@ float ddiscene_frame_update_and_callbacks(void* scene_object, float time)
 // FUNCTION: LEGORR 0x00475120
 float ddiscene_advance_by_time_target(void* scene_object, float delta)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (container_native_owns(scene_object))
+        return container_native_animation_forward(scene_object, delta);
+#endif
     const float current = ddiscene_object_length_get(scene_object);
     const float next = current + delta;
     return ddiscene_frame_update_and_callbacks(scene_object, next);
@@ -1731,6 +1768,10 @@ float ddiscene_advance_by_time(void* scene_object, float delta)
 // FUNCTION: LEGORR 0x004757f0
 float typed_child_resource_scalar_get(void* scene_object)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (container_native_owns(scene_object))
+        return container_native_trans_coef(scene_object);
+#endif
     if (*(uint32_t*)((char*)scene_object + 0x10) == 4u) {
         void* action_slot = *(void**)((char*)scene_object + 0x0c);
         if (action_slot != NULL) {
@@ -3921,6 +3962,10 @@ static DDiSceneObjectPoseInterface* ddiscene_pose_interface_resolve(
 int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3])
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (alternate_frame == NULL && container_native_object_known(object))
+        return container_native_position_get(object, position);
+#endif
 #if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
     void* normalized_object = NULL;
     const void* normalized_frame = NULL;
@@ -3974,6 +4019,10 @@ int ddiscene_object_facing_get(void* object, void* alternate_frame,
 int ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (alternate_frame == NULL && container_native_owns(object))
+        return container_native_position_set(object, x, y, z);
+#endif
 #if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
     void* normalized_object = NULL;
     const void* normalized_frame = NULL;
@@ -4007,6 +4056,11 @@ int ddiscene_object_pose_method_dispatch(void* object,
                                          float parameter_7,
                                          float parameter_8)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (alternate_frame == NULL && container_native_owns(object))
+        return container_native_orientation_set(object, parameter_3,
+            parameter_4, parameter_5, parameter_6, parameter_7, parameter_8);
+#endif
 #if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
     void* normalized_object = NULL;
     const void* normalized_frame = NULL;

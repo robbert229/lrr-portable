@@ -7,6 +7,9 @@
 #include "scene_resources.hpp"
 #include "string.hpp"
 #include "texture.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "container_native.hpp"
+#endif
 #include "images.h"
 #include "view.hpp"
 #include "heap.hpp"
@@ -677,6 +680,11 @@ const char* xf_texture_name_format(void* texture_record,
                                    const char* name_base,
                                    const int* frame_index)
 {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (container_native_owns(texture_record))
+        return container_native_part_name_format(texture_record, name_base,
+                                                 frame_index);
+#endif
     static char output[1024];
     char path[1024];
     const char* frame_name = NULL;

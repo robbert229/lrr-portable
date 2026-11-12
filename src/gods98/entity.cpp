@@ -13,6 +13,10 @@
 #include "entity.hpp"
 #include "resource.hpp"
 #include "string.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "container_native.hpp"
+#include "crt/crt.hpp"
+#endif
 
 /* --- kind dispatch (FUN_00475930) ---------------------------------------------- */
 
@@ -187,14 +191,21 @@ void entity_assembly_free(EntityAssembly* ea)
 
 /* Container_Load's signature (ADR 0005 step 6) for units rebuilt as C,
  * declared in gods98/entity.h. The port's 0x00472cd0 is the .ae assembly
- * parser above, with a different contract, and the port has no container
- * loader yet: this adapter loads nothing. */
+ * parser above, with a different contract. Native builds load activity
+ * ("ACT") objects as native Containers (container_native.hpp); otherwise
+ * the port has no container loader yet and this adapter loads nothing. */
 extern "C" void* container_load(void* parent, const char* filename,
                                 const char* typeString, int looseLoad)
 {
     (void)parent;
+    (void)looseLoad;
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (typeString != NULL && strcasecmp_lite(typeString, "ACT") == 0)
+        return container_native_load_act(filename,
+                                         engine_feature_word_peek(), NULL, 0u);
+#else
     (void)filename;
     (void)typeString;
-    (void)looseLoad;
+#endif
     return NULL;
 }

@@ -13,6 +13,9 @@
 #include "entity.hpp"
 #include "building_scene.hpp"
 #include "actor_scene.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "animation_object.h"
+#endif
 #include "level.hpp"
 #include "terrain_grid.hpp"
 #include "mission.hpp"
@@ -2021,10 +2024,22 @@ int activity_register_bookkeeping(EntitySlot* e)
                                            e->activity_timer);
 #else
         uint32_t initial_time;
-        memcpy(&initial_time, &e->activity_timer, sizeof(initial_time));
-        result = entity_activity_runner_activity_update(
-            e, e->type, (void*)ai_activity_name(e->activity),
-            (void*)(uintptr_t)initial_time);
+#if defined(LEGORRR_BACKEND_MINIWIN)
+        AnimationObject* model = (AnimationObject*)(e->type == 2
+            ? e->attached_direction_record_type2
+            : e->attached_direction_record_type3);
+        /* Creature_SetActivity (0x406e40) with the carried time. */
+        if (model != NULL)
+            result = (int)activity_runner_update(
+                model, ai_activity_name(e->activity), e->activity_timer);
+        else
+#endif
+        {
+            memcpy(&initial_time, &e->activity_timer, sizeof(initial_time));
+            result = entity_activity_runner_activity_update(
+                e, e->type, (void*)ai_activity_name(e->activity),
+                (void*)(uintptr_t)initial_time);
+        }
 #endif
     }
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
