@@ -50,6 +50,12 @@
 #define entity_command_unlink_by_kind aitask_entity_command_unlink_by_kind /* 00403d10 */
 #define ai_idle_chain_record_attach aitask_ai_idle_chain_record_attach /* 00403f30 */
 #define task_record_kind14_remove_if_head aitask_task_record_kind14_remove_if_head /* 00403f60 */
+/* GAME-050 Weapons.c (finding 582), for lego_unit.c (config init and
+ * 00433180): here rather than through weapons_port_aliases.h because a new
+ * #include moves lego_unit.c's symbol counter (finding 538) and costs exact
+ * matches (00431450); a #define in a header it already includes does not. */
+#define weapon_type_config_load weapons_initialise /* 0046eb80 */
+#define entity_indexed_float_lookup_with_minus_one_fallback weapons_get_damage_for_object /* 0046f1d0 */
 #endif
 
 #endif /* LEGORRR_GAME_AITASK_PORT_ALIASES_H */

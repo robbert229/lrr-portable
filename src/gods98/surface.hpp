@@ -108,7 +108,7 @@ typedef struct MeshRecordPool {
     void (*release)(void* context, void* memory);
     void (*record_registered)(void* context, uint32_t index);
 } MeshRecordPool;
-int mesh_record_allocate_and_fill(MeshRecordPool* pool,
+extern "C" int mesh_record_allocate_and_fill(MeshRecordPool* pool,
                                   uint32_t vertex_count,
                                   uint32_t index_rows,
                                   uint32_t index_columns,

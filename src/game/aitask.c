@@ -14,6 +14,7 @@
  * names and serve both (the priority accessors, the engine memory wrappers
  * and the two renderer getters). */
 #include "legoobject_port_aliases.h"
+#include "weapons_port_aliases.h"
 #include <math.h>
 #include <stddef.h>
 #include <stdlib.h>

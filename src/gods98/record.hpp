@@ -733,6 +733,9 @@ void instance_quad_vertex_data_fill(void* record, int block,
  * pairs advance round by round while the triple stays exactly where it
  * was, so every vertex receives the SAME triple (the pinned quirk this
  * family is known for). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
                               int count, const float* positions,
                               const uint32_t triple[3],
@@ -780,6 +783,9 @@ uint32_t screen_effect_item_opacity_set(void* record, int block,
  * the white-opacity flag: bit 0x100000 raises when every channel reads
  * exactly 1.0). Deviations: NULL table windows store nothing yet still
  * answer 1; the corpus's clamps run before every branch, NaN included. */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t render_object_color_vector_set(void* record, int block, float red,
                                         float green, float blue, int slot);
                                                 /* FUN_00483270 */

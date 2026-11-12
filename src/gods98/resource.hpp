@@ -865,6 +865,9 @@ void terrain_point_template_install(void* handle);
 void terrain_height_hook_install(TerrainHeightAtPointHook hook,
                                 void* context);
 void terrain_point_object_create(void* object, const float* xy); /* FUN_0040c750 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_light_create_at_position(const float position[3]);
 void scene_marker_create_at_position_or_object(void* object,
                                                const float position[3]);

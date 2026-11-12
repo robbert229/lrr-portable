@@ -18,7 +18,7 @@ game_sources = [
   'legoobject.cpp',
   'frontend_unit.cpp',
   'interface_port.cpp',
-  'weapons.cpp',
+  'weapons_port.cpp',
   'lego_port.cpp',
   'entity_stats_port.cpp',
   'creature_scene.cpp',
@@ -105,6 +105,7 @@ game_c_sources = [
   'steering.c',
   'terrain_cell_objects.c',
   'terrain_map.c',
+  'weapons.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []
