@@ -1321,7 +1321,16 @@ def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int, why: s
     it = (defs or protos or [None])[0]
     if it is None:
         return []
-    return _declaration(s, it, it.qnames[0], it.scope, why, reasons, direction)
+    out = _declaration(s, it, it.qnames[0], it.scope, why, reasons, direction)
+    if it.group and it.branches == 1:
+        # One function in a single-branch group (#525: G98-010's
+        # winapi_renderer_state_release): its declaration takes the group's
+        # condition, verbatim, as a cgroup's does. Whole alternatives with an
+        # #else are defined in every configuration and stay unguarded.
+        guard, endif = it.condition.rstrip("\n"), it.endif.rstrip("\n")
+        out = [Decl(d.name, d.text, d.why, d.ns, d.direction, d.const_object, guard, endif,
+                    f"{s.rel}:{it.line}") for d in out]
+    return out
 
 
 def _group_declarations(s: Source, group: cx.Item, why: str, reasons: list[str],

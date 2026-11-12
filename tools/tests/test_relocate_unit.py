@@ -1451,6 +1451,36 @@ class ConditionalGroupTest(unittest.TestCase):
         self.assertIn("#if defined(FEATURE) /* port only */", guarded[0]["edit"])
         self.assertTrue(any(r["role"] == "stays-var" and "static removed" in r["edit"] for r in rows), rows)
 
+    def shared_function(self, group: str) -> str:
+        return MIXED.replace("static int s_shared_counter;", group + "static int s_shared_counter;") \
+            .replace("    s_shared_counter += p.a;\n",
+                     "    s_shared_counter += p.a;\n#if defined(FEATURE)\n    s_shared_counter += cond_get();\n#endif\n") \
+            .replace("    return s_beta_state;",
+                     "#if defined(FEATURE)\n    s_beta_state += cond_get();\n#endif\n    return s_beta_state;")
+
+    def test_shared_static_function_in_a_single_branch_group_gets_a_guarded_declaration(self):
+        # G98-010's winapi_renderer_state_release (#525): one function in a
+        # single-branch group merges as a function item; its declaration
+        # takes the group's condition, as a cgroup's does.
+        group = "#if defined(FEATURE) && !defined(OTHER)\nstatic int cond_get(void)\n{\n    return 1;\n}\n#endif\n"
+        fx, plan = self.plan(self.shared_function(group))
+        self.assertIn("#if defined(FEATURE) && !defined(OTHER)\nint cond_get(void);\n#endif\n",
+                      plan.files["src/game/mixed_for_alpha.hpp"])
+        self.assertIn("#if defined(FEATURE) && !defined(OTHER)\nint cond_get(void)\n{",
+                      plan.files["src/game/mixed.cpp"])
+        rows = list(csv.DictReader(io.StringIO(plan.files["docs/coverage/relocations/GAME-001.csv"])))
+        self.assertEqual([r["name"] for r in rows if r["role"] == "guarded-declaration"], ["cond_get"])
+
+    def test_whole_alternatives_with_an_else_get_an_unguarded_declaration(self):
+        # G98-012's movie_avi_file_initialize (#525): defined in every
+        # configuration, so the declaration needs no condition.
+        group = ("#if defined(FEATURE)\nstatic int cond_get(void)\n{\n    return 1;\n}\n"
+                 "#else\nstatic int cond_get(void)\n{\n    return 0;\n}\n#endif\n")
+        fx, plan = self.plan(self.shared_function(group).replace("#if defined(FEATURE)\n    s_", "#if 1\n    s_"))
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
+        self.assertIn("\nint cond_get(void);\n", header)
+        self.assertNotIn("#if defined(FEATURE)", header)
+
     def test_first_branch_static_gets_a_guarded_declaration(self):
         group = "#if defined(FEATURE)\nstatic int s_cond;\n#else\n#define S_COND_ABSENT 1\n#endif\n"
         group = group.replace("#define S_COND_ABSENT 1", "#define s_cond_absent s_cond")
