@@ -21,6 +21,7 @@ src/crt/crt_for_entity_cell_effects.hpp
 src/crt/crt_for_info_track_overlay.hpp
 src/crt/crt_for_lava_erosion.hpp
 src/crt/crt_for_objective_unit.hpp
+src/crt/crt_for_panel_unit.hpp
 src/crt/crt_for_pointer.hpp
 src/crt/crt_for_record_chains.hpp
 src/crt/crt_for_reward.hpp
@@ -29,6 +30,7 @@ src/crt/crt_for_screen_effect_quads.hpp
 src/crt/crt_for_sfx.hpp
 src/crt/crt_for_terrain_cell_objects.hpp
 src/crt/crt_for_tutorial_script.hpp
+src/crt/crt_from_panel_unit.hpp
 src/crt/crt_heap.cpp
 src/crt/crt_runtime_aliases.cpp
 src/crt/crt_runtime_calls.cpp
@@ -115,6 +117,7 @@ src/game/frontend_for_info_track_overlay.hpp
 src/game/frontend_for_map_view.hpp
 src/game/frontend_for_object_overlays.hpp
 src/game/frontend_for_objective_unit.hpp
+src/game/frontend_for_panel_unit.hpp
 src/game/frontend_for_pointer.hpp
 src/game/frontend_for_reward.hpp
 src/game/frontend_for_screen_effect_quads.hpp
@@ -122,6 +125,7 @@ src/game/frontend_for_text.hpp
 src/game/frontend_for_tooltip.hpp
 src/game/frontend_for_tutorial_script.hpp
 src/game/frontend_from_helpwindow.hpp
+src/game/frontend_from_panel_unit.hpp
 src/game/frontend_from_reward.hpp
 src/game/frontend_shared.hpp
 src/game/game.cpp
@@ -154,6 +158,7 @@ src/game/mission.cpp
 src/game/mission.hpp
 src/game/mission_for_reward.hpp
 src/game/mission_for_screen_effect_quads.hpp
+src/game/mission_from_panel_unit.hpp
 src/game/mission_from_reward.hpp
 src/game/mission_shared.hpp
 src/game/object_overlays.cpp
@@ -171,6 +176,7 @@ src/game/opgroup.hpp
 src/game/options.cpp
 src/game/options.hpp
 src/game/panel.h
+src/game/panel_unit.cpp
 src/game/placement.cpp
 src/game/placement_footprint.cpp
 src/game/pointer.cpp
@@ -228,6 +234,7 @@ src/game/tile_variants.cpp
 src/game/tooltip.cpp
 src/game/tutorial_hud.cpp
 src/game/tutorial_hud_for_object_overlays.hpp
+src/game/tutorial_hud_for_panel_unit.hpp
 src/game/tutorial_hud_for_tutorial_script.hpp
 src/game/tutorial_hud_ports.hpp
 src/game/tutorial_hud_shared.hpp
@@ -391,10 +398,12 @@ src/gods98/simtick.hpp
 src/gods98/simtick_for_cell_flood_passes.hpp
 src/gods98/simtick_for_grid_cell_records.hpp
 src/gods98/simtick_for_lighteffects.hpp
+src/gods98/simtick_for_panel_unit.hpp
 src/gods98/simtick_for_placement.hpp
 src/gods98/simtick_for_screen_effect_quads.hpp
 src/gods98/simtick_for_terrain_cell_objects.hpp
 src/gods98/simtick_for_terrain_map.hpp
+src/gods98/simtick_from_panel_unit.hpp
 src/gods98/simtick_shared.hpp
 src/gods98/sound.cpp
 src/gods98/sound.h
@@ -429,6 +438,7 @@ src/gods98/view_for_info_track_overlay.hpp
 src/gods98/view_for_lighteffects.hpp
 src/gods98/view_for_lws.hpp
 src/gods98/view_for_map_view.hpp
+src/gods98/view_for_panel_unit.hpp
 src/gods98/view_for_placement.hpp
 src/gods98/view_for_placement_footprint.hpp
 src/gods98/view_for_record_chains.hpp
