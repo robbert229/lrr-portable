@@ -7,8 +7,11 @@ their own definitions. This sweep looked for every function whose remaining
 mismatch contains an x87 operand swap, and asked of each one whether
 declaration order explains it.
 
-**Result:** on `main` at `0a90abfa`, the survey finds 8 functions with an
-arithmetic operand swap and 10 more with a comparison swap. Only one swap is
+**Result:** this survey was first run on `main` at `0a90abfa`. It was rerun
+on `c86c2c72` (#540, the base of this change), which adds #541's GAME-027 and
+GAME-002 relocations, #540's G98-012 and G98-010 relocations, and main's
+GAME-026 conversion (#537). On that base it finds 9 functions with an
+arithmetic operand swap and 12 more with only comparison swaps. Only one swap is
 a rule A case: `0x004075a0`. Fixing it flips the operands but does not change
 Reccmp's score, so it is not applied. One other swap, `0x0045c3f0`, is
 expression shape, not rule A. Its fix is one line and is applied: 93.02% to
@@ -53,8 +56,9 @@ Each candidate was then tested:
 
 ## Survey
 
-Scores are `make match-function` on `0a90abfa`, equal to the baseline.
-"Gain" is the tool's estimate.
+Scores are the match baseline at `c86c2c72`. None of the rows from the
+`0a90abfa` run changed score with the relocations. "Gain" is the tool's
+estimate.
 
 | Function | Unit | Score | Gain | Swap (original / recomp) | Cause | Fix | After |
 | --- | --- | ---: | ---: | --- | --- | --- | ---: |
@@ -64,15 +68,17 @@ Scores are `make match-function` on `0a90abfa`, equal to the baseline.
 | `0x0046b7c0` timed_effect_runtime_update | GAME-046 `tooltip.cpp` | 21.05 | 2.72 | `fld [delta]; fadd [rec->t]` / reversed, loose | not rule A: one operand is a field through a pointer. Minimal compiles put the lvalue first in every declaration arrangement, and the source order makes no difference. The recomp is 0x1c3 bytes against 0xf0 | none | = |
 | `0x004882e0` scene_node_transform_matrix_apply | G98-020 `lws.cpp` | 14.00 | 1.37 | `fld [m+4]; fmul [s]` / reversed (×2), loose | **not investigated: G98-020 is in flight** (follow-up) | — | — |
 | `0x004075a0` screen_effects_tick | GAME-005 `bubbles.cpp` | 9.32 | 1.16 | `fld [pulse_timer]; fadd [delta]` / reversed | **rule A**: the original's timer was first declared after the parameter `delta`, as a function-scope `static` would be. Moving `static float s_screen_effect_pulse_timer;` into the function gives the original's order | not applied: Reccmp's score is unchanged (0.093168 before and after), and the move would rename a data symbol | = |
+| `0x00450f30` terrain_map_block_vertex_normals_update | GAME-026 `terrain_map.c` (new on `c86c2c72`) | 98.86 | 1.14 | `fld [offs+i].y; fadd [(float)vy]` / reversed | not rule A: one operand is an indexed array element and the other the converted parameter, held in a stack temporary. `+= (float)vy`, `y + (float)vy` and the committed `(float)vy + y` give the same code. `match-function` already calls it an effective match (100%\*) | none | = |
 | `0x0043f7d0` ledger_stub_…EnergyLowTargetRouteCommandTick | GAME-023 `legoobject.cpp` | 28.83 | 0.71 | `fmul [0.04]; fmul [delta]` / reversed, loose | expression shape, as in `0x0045c3f0` | `delta * (rate * 0.04f)` gives the original's order, but the score is unchanged because the function's other code differs. Not applied | = |
 | `0x00444460` ledger_stub_…FlaggedVectorStepCommandIssue | GAME-023 `legoobject.cpp` | 22.72 | 0.69 | `fld st(0); fmul [v]` / `fld [v]; fmul st(1)` | not rule A: in the original, the two products `v[0] * scale` and `v[1] * scale` load their operands in opposite orders. No declaration order gives both. This is the "x87 swap" drop that finding 548 recorded (23.61 → 22.72): a re-roll under rule B, not a declaration change. `scale * v[0]` changes nothing | none | = |
 
-The `compare` hits (10 functions with only comparison swaps, plus `0x0043f7d0`) are all `fld A; fcomp B` against `fld B; fcomp A`:
+The `compare` hits (12 functions with only comparison swaps, plus `0x0043f7d0`) are all `fld A; fcomp B` against `fld B; fcomp A`:
 
 - `0x0040de40` GAME-013;
 - `0x00419030` GAME-018;
 - `0x00425ce0` and `0x00435aa0` GAME-021;
 - `0x0043f7d0` GAME-023;
+- `0x0044e8c0` and `0x0044ead0` GAME-026 (new on `c86c2c72`; finding 556 gives their other causes);
 - `0x00465430` GAME-041;
 - `0x0046a7f0` GAME-045;
 - `0x0046d1c0` GAME-048;
@@ -121,7 +127,7 @@ These functions' current listings were checked against the original.
 - **G98-020 (`lws.cpp`, in flight):** `0x004882e0`, two `fld`/`fmul`
   swaps of a matrix element against a stack scale, found in loose mode;
   `0x00487ed0`, two `compare` swaps. Rerun the tool after the conversion.
-- **No candidates** in GAME-002, GAME-027, GAME-037, GAME-026, G98-010,
+- **No candidates** in GAME-002, GAME-027, GAME-037, G98-010,
   G98-012 or the creature-scene files (`creature_scene`,
   `container_native`, `lwsc_miniwin`).
 - **`0x004075a0`:** if GAME-005 is converted, a function-scope
@@ -135,14 +141,20 @@ These functions' current listings were checked against the original.
 
 ## Gate
 
-- `make reccmp-check`: OK. The two full reports differ in exactly one
-  function, `0x0045c3f0` (93.02 → 97.67). Nothing fell, and no other
-  listing digest changed. The rest of the difference is the call to
-  `image_display_scaled`, which Reccmp labels differently on the original
-  side.
+Measured on top of #540 (`c86c2c72`); every figure is this change's delta
+over that base.
+
+- `make reccmp-check`: OK. Exactly one function differs from #540's
+  baseline: `0x0045c3f0`, 93.02 → 97.67. Nothing fell, so no exact match is
+  lost and there are no drops to label. The rest of that function's
+  difference is the call to `image_display_scaled`, which Reccmp labels
+  differently on the original side.
 - The unit's other 51 functions keep their scores under single-unit
   compiles. The edit adds no declaration, so rule B's counter is unchanged.
-- Means: game-only 54.75%, full 59.11%, both unchanged at two decimals.
-  Unit-relative byte identity rose from 49,997 to 50,169 bytes.
-- `make match-progress` regenerated the three files.
+- Means: game-only 56.27%, full 60.47%, both unchanged at two decimals.
+  Exact-function code bytes are unchanged (76,390). Unit-relative byte
+  identity rose from 55,718 to 55,890 bytes (10.06% to 10.09%).
+- `make match-progress` regenerated the three files. Its last step
+  (`binary-progress-compare`) ran on the host, because the distrobox lacks
+  `pefile`.
 - `make tools-test` and native ctest pass.

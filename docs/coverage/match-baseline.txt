@@ -1,4 +1,4 @@
-# input_sha256: 6f52a3429237564c2c3af4c0bd35c5c046fdb3577cbcfc6ccb117376fc7b57fe
+# input_sha256: ec4e0acd3ed5bad66bbfabbba8452d28a3a348933c61dfb5f76cf893faa13424
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1289,7 +1289,7 @@
 0x0045c040 85.42 mission_crystal_quota_setup
 0x0045c0d0 90.03 panel_crystals_draw
 0x0045c340 94.34 panel_resource_layout_store
-0x0045c3f0 93.02 advisor_progress_bar_fill_draw
+0x0045c3f0 97.67 advisor_progress_bar_fill_draw
 0x0045c4a0 100.00 global_value_0050080c_set
 0x0045c4b0 96.67 panel_resource_position_update
 0x0045c520 95.45 panel_resource_handle_and_dimensions_store
@@ -3470,7 +3470,7 @@
 0x0045c040 85.42 mission_crystal_quota_setup
 0x0045c0d0 90.03 panel_crystals_draw
 0x0045c340 94.34 panel_resource_layout_store
-0x0045c3f0 93.02 advisor_progress_bar_fill_draw
+0x0045c3f0 97.67 advisor_progress_bar_fill_draw
 0x0045c4a0 100.00 global_value_0050080c_set
 0x0045c4b0 96.67 panel_resource_position_update
 0x0045c520 95.45 panel_resource_handle_and_dimensions_store
