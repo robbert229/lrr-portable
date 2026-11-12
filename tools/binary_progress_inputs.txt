@@ -186,8 +186,11 @@ src/game/helpwindow.cpp
 src/game/info.cpp
 src/game/info.h
 src/game/info_track_overlay.cpp
-src/game/interface.cpp
 src/game/interface.h
+src/game/interface_callees.h
+src/game/interface_port.cpp
+src/game/interface_unit.c
+src/game/interface_unit.h
 src/game/lava_erosion.cpp
 src/game/lego.cpp
 src/game/lego.h

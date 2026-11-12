@@ -370,7 +370,7 @@ TextureSurface* interface_action_image_value_get(
     const struct EngineContext* engine, int action);
 TextureSurface* interface_build_image_binding_value_get(
     const struct EngineContext* engine, int kind, int index);
-void* input_binding_default_value_get(int kind, int index, int mode);
+extern "C" void* input_binding_default_value_get(int kind, int index, int mode);
 void keyboard_key_names_init(void); /* FUN_00485a20 */
 int named_option_index_find_case_insensitive(const char* name,
                                              uint8_t* out_index); /* FUN_00485e30 */
@@ -1050,7 +1050,7 @@ typedef struct InterfaceSpawnRequestOps {
                             int type, uint32_t parameter);
 } InterfaceSpawnRequestOps;
 void interface_spawn_request_ops_set(const InterfaceSpawnRequestOps* ops);
-int interface_spawn_request_enqueue(int type, uint32_t parameter); /* FUN_00434e80 */
+extern "C" int interface_spawn_request_enqueue(int type, uint32_t parameter); /* FUN_00434e80 */
 void interface_spawn_request_state_get(InterfaceSpawnRequestState* state_out);
 typedef struct AdvisorOverlayRect {
     float x;
@@ -1308,7 +1308,7 @@ typedef int (*FeAdvisorCatalogCallback)(int action, int lane, int row,
                                         void* payload);
 void advisor_callback_schedule_callback_set(
     FeAdvisorCatalogCallback callback); /* port binding */
-void advisor_callback_schedule_gate(void); /* FUN_0041c440 */
+extern "C" void advisor_callback_schedule_gate(void); /* FUN_0041c440 */
 extern "C" int advisor_animation_slot_id_resolve(int animation_kind,
                                       int position_index,
                                       int* slot_id); /* FUN_0045c6b0 */
@@ -1329,7 +1329,7 @@ uint32_t cursor_tile_pair_peek(int which);      /* port hook: 0/1 */
  * (dword row + column*15, zeroed at level start by the unported
  * counters-clear path). The table lands as zero-init storage with
  * port-side accessors standing in for the unported cell writer. */
-int cell_action_permission_get(int column, int row);
+extern "C" int cell_action_permission_get(int column, int row);
 void cell_action_permission_table_set(int index, uint32_t value);
                                        /* port hook */
 uint32_t cell_action_permission_table_peek(int index);

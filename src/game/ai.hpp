@@ -197,7 +197,7 @@ float ai_stats_speed(const GameContext* ctx, int tile_type);
 
 /* FUN_0044b480: 1 when `activity` is on the entity's list (+0x370 scanned
  * through count +0x384), else 0; a zero count always answers 0. */
-int ai_activity_scan(const EntitySlot* e, int activity);
+extern "C" int ai_activity_scan(const EntitySlot* e, int activity);
 
 /* FUN_0043c440: which can-do activity the list carries — 1 = drill (4),
  * 2 = teleport (5), 3 = reinforce (7), 0 = none. */
@@ -299,7 +299,7 @@ int scene_object_has_task_type_4_5_7(const EntitySlot* e); /* FUN_004493e0 */
  * Deviation: the corpus dereferences the entity blindly. */
 void entity_dispatch_event31_for_pending_flag(EntitySlot* e);
                                                 /* FUN_004437f0 */
-void entity_activity23_state_transition(EntitySlot* e); /* FUN_00449a70 */
+extern "C" void entity_activity23_state_transition(EntitySlot* e); /* FUN_00449a70 */
 
 /* TryRandomEntityActionFromCodeRange (FUN_00443670): while the +0x3e0 bit
  *   0x400 is clear and the mask-word test (FUN_0043baf0) answers 0, draw

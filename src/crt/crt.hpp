@@ -550,7 +550,7 @@ void     level_state_stored_value_set(uint32_t v); /* FUN_00409d40 */
 void     global_mode_zero_input_set(int value);    /* FUN_0040ab10 */
 uint32_t global_mode_zero_input_peek(void);         /* port hook */
 void     rockfall_style_table_base_set(uint32_t v);/* FUN_0040bfc0 */
-void     global_flag_bit0_clear(void);             /* FUN_0040e7e0 */
+extern "C" void     global_flag_bit0_clear(void);             /* FUN_0040e7e0 */
 void     global_config_value_set(uint32_t v);      /* FUN_0040f5e0 */
 extern "C" uint32_t advisor_state_word_peek(void); /* port hook */
 extern "C" void advisor_state_word_set(uint32_t v); /* port hook */

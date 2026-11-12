@@ -99,7 +99,7 @@ void cmd_create_gated(EntitySlot* e, void* target);
  * bits) for action-record removals; the port wires that through its +0x2f0
  * command-chain representation. */
 void cmd_create_task(EntitySlot* e, int32_t parameter = 0); /* +0x18 argument */
-void object_command_task_create(EntitySlot* entity, int parameter);
+extern "C" void object_command_task_create(EntitySlot* entity, int parameter);
 int object_path_submit_to_grid_target(EntitySlot* entity,
                                       struct LevelState* level,
                                       const int target_xy[2],
@@ -377,7 +377,7 @@ void entity_deferred_work_schedule(EntitySlot* e);
  * finding 466): the 27-entry per-priority state table (DAT_004b7ff4, zeroed
  * by the registry initializer — a zero-init static here, the initializer
  * seam); guarded access (deviation). */
-void cmd_mark_matching(int type, int payload, const int coords[2]);
+extern "C" void cmd_mark_matching(int type, int payload, const int coords[2]);
 void cmd_set_kind(void* rec, int kind);
 void priority_entry_order_value_set(int kind, int value);
 void priority_entry_state_set(int kind, int value);
@@ -452,8 +452,8 @@ int task_table_contents_release(void* record);      /* FUN_00462960 */
  * chain through the CmdChainWalk tail (or the +0x2f0 head) — no link-head,
  * no timestamp write (the corpus writes only the chain pointer). */
 void cmd_cancel_ref(void* rec);
-void entity_conditional_task_schedule(EntitySlot* e);
-void entity_threshold_progress_event_queue(void* payload, int flag);
+extern "C" void entity_conditional_task_schedule(EntitySlot* e);
+extern "C" void entity_threshold_progress_event_queue(void* payload, int flag);
 void entity_target_command_queue(EntitySlot* e, void* target);
 
 /* Diagnostics: overwrite a record's +0x58 reference slot and its +0x00 type
@@ -483,7 +483,7 @@ void cmd_rec_type_set(void* rec, int type);
  * wrapper and the direct-argument dispatch. Their whole observable body is
  * the unported pool-callback machinery, so the port records the seams. */
 void entity_record_array_apply_zero_state(void* rec, int mode);
-void entity_kind_command_issue(EntitySlot* e);
+extern "C" void entity_kind_command_issue(EntitySlot* e);
 typedef int (*CoordinatePairEntityCallback)(EntitySlot* entity,
                                             const void* coordinate_pair,
                                             int extra, void* context);
@@ -563,7 +563,7 @@ int cmd_rec_target_get(const void* rec);
  * argument, and the task links with the category kind the selector maps
  * to — 1/2/4 to 0xc, 8 to 3, 0x10 to 7, 0x20 to 4, every other value to
  * 0xd — clearing bit 6 afterwards. NULL entity guarded (deviation). */
-void task_type23_create_for_category_mask(EntitySlot* e, int selector,
+extern "C" void task_type23_create_for_category_mask(EntitySlot* e, int selector,
                                           int issue_records);
 
 /* --- the task-kind filtered search (2026-10-24; findings 378/381/449) --------
@@ -612,7 +612,7 @@ int task_kind_filtered_search(int selector);
  *  TaskRecordKind11TimedQueue (FUN_004039d0): kind 0x11, payload, the
  *      timestamp word zeroed, command 0, bit 4 cleared and bits 6/7 raised. */
 void coordinate_pair_event_queue(const int pair[2], void* payload);
-int  object_event_type2_queue(void* payload);
+extern "C" int  object_event_type2_queue(void* payload);
 void coordinate_pair_task_record_queue(const int pair[2]);
 void scalar_task_record_queue(void* scalar);
 void task_pair_record_enqueue(const int pair[2]);
@@ -707,9 +707,9 @@ void idle_queue_register(EntitySlot* e);
  * The walkability sweep retains the per-entity gates and forwards the
  * optional stats-bit requirement. The port guards the state block and
  * empty array, which the corpus strides blindly. */
-int selected_entities_any_predicate_match(int cx, int cy, int require_stat_bit = 0);
+extern "C" int selected_entities_any_predicate_match(int cx, int cy, int require_stat_bit = 0);
                                                 /* FUN_00431a30 */
-int any_object_can_occupy_terrain_cell(int cx, int cy);
+extern "C" int any_object_can_occupy_terrain_cell(int cx, int cy);
                                                 /* FUN_00431ab0 */
 
 /* CellCommandType3Issue (FUN_00403030): the kind-0xb cell-command issuer —
@@ -819,7 +819,7 @@ float kind_six_sweep_timer_peek(void);          /* port hook */
  * the pointer rides the kind's log and the index increments. Deviations
  * (kind guard, log-edge stop) in the module notes. Fields 20..24 are
  * index/head/total/sum/high. */
-void command_sample_stats_accumulate(int kind, const void* sample);
+extern "C" void command_sample_stats_accumulate(int kind, const void* sample);
                                                 /* FUN_0046b660 */
 uint32_t command_sample_stats_peek(int kind, int field); /* port hook */
 

@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-020 Interface.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-020.csv. */
+/* Port tail (ADR 0006 decision 4): the port's own interface model.
+ *
+ * GAME-020 (the original's Interface.c) is rebuilt in original shape in
+ * interface_unit.c (issue #545). The port's interface is a different
+ * contract: hook tables, its own state words (shared with frontend.cpp,
+ * input.cpp, resource.cpp and simtick.cpp through the frozen per-unit
+ * headers) and the native HUD. These are the port's implementations of the
+ * unit's functions under the port's names, unannotated, so the native
+ * callers and tests keep their behaviour (finding 564). The adapters and
+ * stand-ins that interface_unit.c calls through game/interface_callees.h are
+ * at the end. */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -86,6 +94,9 @@
 #include <unistd.h>
 #endif
 #include "frontend_for_interface.hpp"
+#include "interface_unit.h"
+#include "interface_callees.h"
+#include "gods98/image_adapters.h"
 #include "cmd_for_interface.hpp"
 #include "effects_for_interface.hpp"
 #include "entity_for_interface.hpp"
@@ -118,23 +129,16 @@ typedef struct QueueCellRequest {
  * qword, an unsigned conversion) and the slots rotate: arg0 -> +08,
  * arg1 -> +0c, arg2 -> +00, arg3 -> +04; the float multiplies the .rdata
  * 0.04 constant in single precision into the +10 slot. */
-// GLOBAL: LEGORR 0x0049e298
 static const float s_region_scale_004 = 0.04f; /* DAT_0049e298, verified */
 
-// GLOBAL: LEGORR 0x004a2b58
 static float    s_mute_timer   = SIMTICK_MUTE_RESET; /* _DAT_004a2b58, boot fresh */
 
-// GLOBAL: LEGORR 0x004dcd58
 uint32_t s_incident_state;
 
-// GLOBAL: LEGORR 0x004dce64
 TextureSurface* s_back_button_highlight;
-// GLOBAL: LEGORR 0x004dce68
 TextureSurface* s_back_button_pressed;
-// GLOBAL: LEGORR 0x004dcec4
 int s_back_button_width;
 
-// GLOBAL: LEGORR 0x004dcec8
 int s_back_button_height;
 
 /* The corpus keeps the three 74-slot windows as individually-addressed
@@ -142,19 +146,13 @@ int s_back_button_height;
  * band 0x4dcff8..0x4dd370); Reccmp only resolves whole-object operands, so
  * each window gets its own annotated array (the s_fe_flow_* carve-out
  * precedent). Own storage, zero-init like the corpus's tail. */
-// GLOBAL: LEGORR 0x004dcff8
 uint32_t s_indexed_window_c[INPUT_INDEXED_WINDOW_SLOTS]; /* default window */
-// GLOBAL: LEGORR 0x004dd120
 uint32_t s_indexed_window_a[INPUT_INDEXED_WINDOW_SLOTS]; /* pressed window */
-// GLOBAL: LEGORR 0x004dd248
 uint32_t s_indexed_window_b[INPUT_INDEXED_WINDOW_SLOTS]; /* flag8 window */
-// GLOBAL: LEGORR 0x004dd60c
 uint32_t s_input_entry_flags[INPUT_FLAG_TABLE_SLOTS];
 
-// GLOBAL: LEGORR 0x004dd9ac
 uint32_t s_input_action_click_counts[INPUT_FLAG_TABLE_SLOTS];
 
-// GLOBAL: LEGORR 0x004ddc04
 struct ResourceHandleSetBandSlot s_handle_set_band[24]; /* DAT_004ddc04..DAT_004ddcc4, stride 8 */
 
 /* --- the selection-coordinate store (2026-10-24) ---------------------------
@@ -163,87 +161,57 @@ struct ResourceHandleSetBandSlot s_handle_set_band[24]; /* DAT_004ddc04..DAT_004
  * unowned-global deviation). Each word carries its own GLOBAL annotation:
  * Reccmp only resolves whole-object operands, so accesses at an offset
  * inside a shared array never match. */
-// GLOBAL: LEGORR 0x004ddcc4
 uint32_t s_map_store_pair_x;   /* DAT_004ddcc4 */
-// GLOBAL: LEGORR 0x004ddcc8
 uint32_t s_map_store_pair_y;   /* DAT_004ddcc8 */
-// GLOBAL: LEGORR 0x004ddccc
 uint32_t s_obj_sel_word;          /* DAT_004ddccc */
-// GLOBAL: LEGORR 0x004ddcd0
 float s_obj_track_word;     /* _DAT_004ddcd0 */
 
 /* CursorTileSelectionUpdateByType (FUN_0041cc80) — see frontend.hpp. */
 /* The corpus addresses the pair as two individual dwords; carve annotated
  * statics (whole-object resolution, the s_fe_flow_* precedent). Own
  * storage, zero-init like the corpus's tail. */
-// GLOBAL: LEGORR 0x004ddcd8
 uint32_t s_cursor_tile_first;  /* DAT_004ddcd8 role */
-// GLOBAL: LEGORR 0x004ddcdc
 uint32_t s_cursor_tile_second; /* DAT_004ddcdc role */
 /* The corpus's parameter register quintet, DAT_004ddce0..f0 at stride 4.
  * Each float carries its own GLOBAL annotation: Reccmp only resolves
  * whole-object operands, so a shared-array base never matches the corpus's
  * absolute accesses in the FUN_0041a990 and FUN_0041e9d0 readers. */
-// GLOBAL: LEGORR 0x004ddce0
 float s_reg_e0;            /* DAT_004ddce0 */
-// GLOBAL: LEGORR 0x004ddce4
 float s_reg_e4;            /* DAT_004ddce4 */
-// GLOBAL: LEGORR 0x004ddce8
 float s_reg_e8;            /* DAT_004ddce8 */
-// GLOBAL: LEGORR 0x004ddcec
 float s_reg_ec;            /* DAT_004ddcec */
-// GLOBAL: LEGORR 0x004ddcf0
 float s_reg_f0;            /* DAT_004ddcf0 */
 
-// GLOBAL: LEGORR 0x004ddcf4
 uint32_t s_map_store_last_x;   /* DAT_004ddcf4 */
-// GLOBAL: LEGORR 0x004ddcf8
 uint32_t s_map_store_last_y;   /* DAT_004ddcf8 */
-// GLOBAL: LEGORR 0x004ddcfc
 uint32_t s_map_store_kind;     /* DAT_004ddcfc */
-// GLOBAL: LEGORR 0x004ddd00
 uint32_t s_pointer_action_type; /* DAT_004ddd00 */
-// GLOBAL: LEGORR 0x004ddd04
 uint32_t s_pointer_action_kind; /* DAT_004ddd04 */
-// GLOBAL: LEGORR 0x004ddd08
 uint32_t s_pointer_action_entry;/* DAT_004ddd08 */
 /* --- the selection-region band (see frontend.hpp) ---------------------------
  * Zero-initialized statics per the unowned-global convention: the corpus's
  * words have no ported owner (its UI/hit-test writers are unported), so
  * the zero load image is the faithful state (deviation). */
-// GLOBAL: LEGORR 0x004ddd0c
 uint32_t s_sel_c0c;
-// GLOBAL: LEGORR 0x004ddd10
 uint32_t s_sel_c10;
-// GLOBAL: LEGORR 0x004ddd14
 float    s_sel_c14;
-// GLOBAL: LEGORR 0x004ddd18
 float    s_sel_c18;
 
-// GLOBAL: LEGORR 0x004ddd1c
 uint32_t s_status_banner_word;
-// GLOBAL: LEGORR 0x004ddd20
 float s_status_blink_timer;
 
-// GLOBAL: LEGORR 0x004ddd34
 uint32_t s_cell_perm[CELL_PERMISSION_ENTRIES];
 
-// GLOBAL: LEGORR 0x004de1e4
 uint32_t s_interface_button_surfaces[2];
-// GLOBAL: LEGORR 0x004de1ec
 float    s_inter_timer = 0.0f; /* DAT_004de1ec */
 
 /* ---- mute timer (FUN_0041ba10) ------------------------------------------ */
-// GLOBAL: LEGORR 0x004de1f4
 uint32_t s_mute_word    = 0;       /* DAT_004de1f4 */
 
-// GLOBAL: LEGORR 0x004de1f8
 uint32_t s_inter_flags;    /* DAT_004de1f8 */
 
-// GLOBAL: LEGORR 0x004de1fc
 static uint32_t s_mute_last    = 0;       /* DAT_004de1fc */
 
-// GLOBAL: LEGORR 0x004de200
 int      s_mute_engaged = 0;       /* DAT_004de200 */
 
 static TextureSurface* s_interface_button_surface_native[2];
@@ -288,7 +256,6 @@ static int queue_placement_cell_matches(EntitySlot* entity, void* payload);
 /* InterfaceMenuActionLabelsInit (FUN_0041a300): load the action key table,
  * enable timed-effect entry 4, and install the cursor/selection region. The
  * name table itself uses immutable executable strings in the port. */
-// FUNCTION: LEGORR 0x0041a300
 void interface_menu_action_labels_init(uint32_t x, uint32_t y,
                                        const void* context)
 {
@@ -308,7 +275,6 @@ void interface_menu_action_labels_init(uint32_t x, uint32_t y,
  * 0..5, 7, 8, then 0xa, 0xb, 0xc, with group 9 landing between 0xc and
  * 0xd, and group 6 left unregistered (the corpus skips it). The action
  * codes ride as the corpus's own pushed constants, one push per code. */
-// FUNCTION: LEGORR 0x0041a660
 void interaction_action_code_map_initialize(void)
 {
     resource_input_key_group_register(0, 4, 1, 2, 3, 4);
@@ -345,7 +311,6 @@ void interaction_action_code_map_initialize(void)
  * group guard answers where the corpus strides the band blindly.
  * Registering the same group twice re-stages in place; the corpus leaks the
  * superseded array, and so does the port. */
-// FUNCTION: LEGORR 0x0041a7d0
 void resource_input_key_group_register(int group, int count, ...)
 {
     va_list ap;
@@ -366,7 +331,6 @@ void resource_input_key_group_register(int group, int count, ...)
     }
     va_end(ap);
 }
-// FUNCTION: LEGORR 0x0041a850
 void resource_handle_set_release(void)
 {
     for (int i = 0; i != 24; ++i) {
@@ -388,7 +352,6 @@ void resource_handle_set_release(void)
 }
 
 namespace lego {
-// FUNCTION: LEGORR 0x0041A920
 void level_state_counters_clear(void)
 {
     EventTimerState frontend_state;
@@ -417,7 +380,6 @@ void level_state_counters_clear(void)
 }
 } // namespace lego
 
-// FUNCTION: LEGORR 0x0041a990
 void objective_selection_state_reset(void)
 {
     s_obj_sel_word = 0u;
@@ -427,7 +389,6 @@ void objective_selection_state_reset(void)
 /* CaseInsensitiveStringTableIndexFind (FUN_0041a9c0): the index is the
  * position in the 74-key table above, matching the corpus's zero-based
  * pointer walk. */
-// FUNCTION: LEGORR 0x0041a9c0
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) int interface_menu_action_label_find(const char* name,
                                                        int* out_index)
@@ -486,7 +447,6 @@ int interface_menu_action_label_find(const char* name, int* out_index)
  * and sizes its six zeroed maps from the loaded vehicle/building counts.
  * Native pointers remain in this owner; the table payloads are retail-width
  * dword/byte arrays and are never used to carry host pointers. */
-// FUNCTION: LEGORR 0x0041AA00
 void entity_table_maps_allocate(void)
 {
     entity_table_maps_current_release();
@@ -503,7 +463,6 @@ void entity_table_maps_allocate(void)
 
 /* InterfaceBuildImagesConfigLoad (FUN_0041ab00): the two groups are keyed
  * by the VehicleTypes and BuildingTypes catalog names, in that order. */
-// FUNCTION: LEGORR 0x0041ab00
 int interface_build_images_config_load(BlockFile* cfg)
 {
     if (cfg == NULL) {
@@ -627,7 +586,6 @@ int interface_build_images_config_load(BlockFile* cfg)
 }
 /* InterfaceImagesConfigLoad (FUN_0041ada0): load three bitmap states and
  * tooltip/sound/shortcut metadata for each of the 74 named action slots. */
-// FUNCTION: LEGORR 0x0041ada0
 int interface_images_config_load(BlockFile* cfg)
 {
     BlockRec* section;
@@ -761,7 +719,6 @@ int interface_images_config_load(BlockFile* cfg)
 /* InterfaceSurroundImagesConfigLoad (FUN_0041afd0): load the eleven
  * numbered surround records. Each record is
  * `image:x:y:w:h:image-without-back:x:y`; either image may be `NULL`. */
-// FUNCTION: LEGORR 0x0041afd0
 int interface_surround_images_config_load(BlockFile* cfg)
 {
     if (cfg == NULL) {
@@ -866,7 +823,6 @@ int interface_surround_images_config_load(BlockFile* cfg)
  * `width:height:highlight-image:pressed-image:action`. The corpus also
  * initializes its legacy UI text entry 5; the port's menu model has no such
  * text-entry record, so retain the action token for the future UI consumer. */
-// FUNCTION: LEGORR 0x0041b1b0
 int interface_back_button_config_load(BlockFile* cfg)
 {
     if (cfg == NULL) {
@@ -939,7 +895,6 @@ int interface_back_button_config_load(BlockFile* cfg)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0041b270
 void interface_button_images_load(const char* left_path,
                                   const char* right_path)
 {
@@ -956,15 +911,13 @@ void interface_button_images_load(const char* left_path,
     }
 }
 
-// FUNCTION: LEGORR 0x0041b2d0
-void command_context_post_to_hud(int kind, const uint32_t coord[2])
+void command_context_post_to_hud_port(int kind, const uint32_t coord[2])
 {
     /* FUN_0041b2d0 */
     global_state_low_byte_clear_and_refresh(); /* FUN_00435a20 */
     menu_selection_resource_update(kind, coord);
     store_selected_map_coordinate(kind, coord); /* FUN_0041ea50 */
 }
-// FUNCTION: LEGORR 0x0041b300
 void menu_selection_resource_update(int kind, const uint32_t coord[2])
 {
     /* FUN_0041b300 */
@@ -991,7 +944,6 @@ void menu_selection_resource_update(int kind, const uint32_t coord[2])
     }
 }
 
-// FUNCTION: LEGORR 0x0041b3c0
 int entity_query_flag_count(int query)
 {
     if (query == 0x13) {
@@ -1023,7 +975,6 @@ int entity_query_flag_count(int query)
 }
 
 /* CategoryValueIsNeitherZeroNorFifteen (FUN_0041b470). */
-// FUNCTION: LEGORR 0x0041b470
 int category_value_is_neither_zero_nor_fifteen(int value)
 {
     if (value != 0 && value != 0xf) {
@@ -1045,7 +996,6 @@ int category_value_is_neither_zero_nor_fifteen(int value)
  * context block (the resolve's state window is not a corpus argument),
  * NULL callback/pair arrays answer zero where the corpus strides
  * blindly, and the guarded reads fold the corpus's blind strides. */
-// FUNCTION: LEGORR 0x0041b680
 int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
                                     int (*callback)(int, int, int, void*),
                                     void* payload)
@@ -1109,7 +1059,6 @@ int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
     }
 }
 
-// FUNCTION: LEGORR 0x0041B930
 void timed_status_and_event_tick(float delta)
 {
     frontend_status_flash_tick(delta);
@@ -1121,8 +1070,7 @@ void timed_status_and_event_tick(float delta)
     s_inter_flags |= 0x800u;
 }
 
-// FUNCTION: LEGORR 0x0041b9b0
-uint32_t sim_status_banner_word_get(void)
+uint32_t sim_status_banner_word_get_port(void)
 {
     return s_status_banner_word;
 }
@@ -1130,7 +1078,6 @@ uint32_t sim_status_banner_word_get(void)
 /* SelectionEntityCodeResolve (FUN_0041b9c0) — see frontend.hpp. The corpus
  * reads the first selection first and branches afterwards; the port's
  * order is equivalent since the read is side-effect-free. */
-// FUNCTION: LEGORR 0x41b9c0
 int selection_entity_code_resolve(const GameContext* ctx, int* code_out)
 {
     const EntitySlot* first = selection_first(ctx);
@@ -1146,7 +1093,6 @@ int selection_entity_code_resolve(const GameContext* ctx, int* code_out)
     return code;
 }
 
-// FUNCTION: LEGORR 0x0041ba10
 void simtick_mute_timer(EngineContext* c, float dt)
 {
     (void)c;
@@ -1171,8 +1117,7 @@ void simtick_mute_timer(EngineContext* c, float dt)
 /* SimulationGlobalWordSet (FUN_0041ba90): the faithful blind store — the
  * same word the mute timer reads (simtick_set_mute_word is the port-side
  * hook with the same effect; this is the corpus's own entry point). */
-// FUNCTION: LEGORR 0x0041ba90
-void simulation_global_word_set(uint32_t value)
+void simulation_global_word_set_port(uint32_t value)
 {
     s_mute_word = value;
 }
@@ -1184,7 +1129,6 @@ namespace unported_ledger_stubs {
  * renderer feedback, and the later action-specific statistics are supplied
  * by the frontend owner because their tables are not yet owned in this
  * module. A terrain ray test covers the available 3D miss path. */
-// FUNCTION: LEGORR 0x0041baa0
 int simulation_pointer_action_dispatch_impl(int x, int y, int active,
                                             int suppress_initial,
                                             int count_action)
@@ -1297,7 +1241,6 @@ int simulation_pointer_action_dispatch_impl(int x, int y, int active,
 
 /* AdvisorOverlayHitResolve (FUN_0041c1c0): first hit-test the active overlay
  * rectangle; if it misses, defer to the configurable control-tree search. */
-// FUNCTION: LEGORR 0x0041c1c0
 int advisor_overlay_hit_resolve(
     float x, float y, const AdvisorOverlayRect* focused_rect,
     float offset_x, float offset_y, AdvisorOverlayFallbackHitFn fallback,
@@ -1329,8 +1272,7 @@ int advisor_overlay_hit_resolve(
 /* AdvisorCallbackScheduleGate @ 0x0041c440 is a no-argument global-state
  * entry. The catalog walk is available; LAB_0041c470 remains an explicit
  * callback binding because its body is unresolved. */
-// FUNCTION: LEGORR 0x0041C440
-void advisor_callback_schedule_gate(void)
+void advisor_callback_schedule_gate_port(void)
 {
     if ((s_inter_flags & 0x04u) == 0u || (s_inter_flags & 0x80u) == 0u ||
         !input_keyboard_key_held(0x3c) ||
@@ -1345,7 +1287,6 @@ void advisor_callback_schedule_gate(void)
  * interaction word, scroll/lower offsets, and back-button extents come from
  * their existing owners. The point table and row/trigger tuple are the four
  * unowned DAT inputs represented by the explicit bounded state above. */
-// FUNCTION: LEGORR 0x0041c4f0
 void advisor_animation_position_and_request_update_internal(
     int position_mode, int input_a, int input_b, const float* position,
     const TextureSurface* image, int typed)
@@ -1449,7 +1390,6 @@ void advisor_animation_position_and_request_update_internal(
 /* PointerActionStateDispatch (FUN_0041c6e0): update the current pointer
  * action latch and its input flags. The interaction lock at +0x1f8 bit
  * 0x1000 suppresses state changes while preserving the prior-state result. */
-// FUNCTION: LEGORR 0x0041C6E0
 int pointer_action_state_dispatch(int action, int kind, int entry,
                                   int active, int suppress_initial)
 {
@@ -1503,7 +1443,6 @@ finish:
     return 0;
 }
 
-// FUNCTION: LEGORR 0x0041c7b0
 /* InputActionStateUpdate: while mode bit 7 is set and the action entry lacks
  * bit 1, ask the action helper. The helper may mutate the same word, so the
  * word is deliberately re-read before clearing bit 0. */
@@ -1526,7 +1465,6 @@ void input_action_state_update(int action)
     input_action_state_word_set(action, flags | 1u);
 }
 
-// FUNCTION: LEGORR 0x0041c800
 void catalog_slot_flag_update(int category, int slot)
 {
     uint32_t flags;
@@ -1566,7 +1504,6 @@ void catalog_slot_flag_update(int category, int slot)
     input_binding_state_word_set(category, slot, flags);
 }
 
-// FUNCTION: LEGORR 0x0041c9f0
 void input_entry_flag8_set_clear(int entry, int set)
 {
     if (set != 0) {
@@ -1576,7 +1513,6 @@ void input_entry_flag8_set_clear(int entry, int set)
     }
 }
 
-// FUNCTION: LEGORR 0x0041ca20
 void player_input_flag8_set_clear(int kind, int action, int set)
 {
     /* MEASURED: the inlined kind 1/kind 4 ladder scored 24.0% vs the
@@ -1592,13 +1528,11 @@ void player_input_flag8_set_clear(int kind, int action, int set)
         table[action] = table[action] & ~8u;
     }
 }
-// FUNCTION: LEGORR 0x0041ca60
 uint32_t input_entry_flag8_get(int entry)
 {
     return s_input_entry_flags[entry] & 8u;
 }
 
-// FUNCTION: LEGORR 0x0041ca70
 uint32_t player_input_flag8_get(int kind, int action)
 {
     const uint32_t* table = player_flags_table(kind);
@@ -1608,7 +1542,6 @@ uint32_t player_input_flag8_get(int kind, int action)
     return table[action] & 8u;
 }
 
-// FUNCTION: LEGORR 0x0041cab0
 uint32_t indexed_entity_value_get(const EngineContext* ctx, int index)
 {
     if (index < 0 || index >= INPUT_INDEXED_WINDOW_SLOTS) {
@@ -1626,7 +1559,6 @@ uint32_t indexed_entity_value_get(const EngineContext* ctx, int index)
 /* InputBindingValueGet (FUN_0041caf0): resolve a catalog image from the
  * input binding's pressed state, then its flag-8 state, else the normal
  * image. Corpus kind values 1 and 4 select the two image catalogs. */
-// FUNCTION: LEGORR 0x0041CAF0
 TextureSurface* interface_build_image_binding_value_get(
     const EngineContext* engine, int kind, int index)
 {
@@ -1648,8 +1580,7 @@ TextureSurface* interface_build_image_binding_value_get(
 /* InputBindingDefaultValueGet (FUN_0041cb90): return the catalog's default
  * image field for kinds 1 and 4. Kinds 2, 11, and 15 read zero-initialized
  * scalar globals in the corpus image; no writer is present in the ledger. */
-// FUNCTION: LEGORR 0x0041CB90
-void* input_binding_default_value_get(int kind, int index, int mode)
+void* input_binding_default_value_get_port(int kind, int index, int mode)
 {
     const int group = (kind == 1) ? 0 : (kind == 4) ? 1 : -1;
     if (group >= 0) {
@@ -1668,7 +1599,6 @@ void* input_binding_default_value_get(int kind, int index, int mode)
     return 0u;
 }
 
-// FUNCTION: LEGORR 0x0041cc80
 void cursor_tile_selection_update_by_type(int kind, uint32_t first,
                                           uint32_t second)
 {
@@ -1688,7 +1618,6 @@ void cursor_tile_selection_update_by_type(int kind, uint32_t first,
     }
     /* the corpus's else branch rides */
 }
-// FUNCTION: LEGORR 0x0041cce0
 void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y)
 {
     if (pair == NULL) {
@@ -1703,8 +1632,7 @@ void selection_coordinates_set(const uint32_t* pair, uint32_t x, uint32_t y)
  * in green unless the interface's transition flag is active. Each closed
  * four-point contour is one Draw_LineListEx call (draw.c) whose to-list is
  * the from-list shifted by one point. */
-// FUNCTION: LEGORR 0x0041cd30
-void position_tracker_box_draw(const float bounds[4])
+void position_tracker_box_draw_port(const float bounds[4])
 {
     PositionTrackerBoxDrawOps* ops = &s_position_tracker_box_draw_ops;
     uint32_t flags;
@@ -1739,7 +1667,6 @@ void position_tracker_box_draw(const float bounds[4])
  * argument in the current selection. A singleton selection updates the HUD
  * action to 10 or 11 from the entity's action flags; a multi-selection
  * clears the pending command context. */
-// FUNCTION: LEGORR 0x0041CEA0
 void selection_object_command_update(GameContext* ctx, EntitySlot* entity)
 {
     if (objective_selection_word_peek() != 12u || ctx == NULL
@@ -1773,7 +1700,6 @@ void selection_object_command_update(GameContext* ctx, EntitySlot* entity)
  * entry. A matching singleton posts HUD action 12; a matching
  * multi-selection clears it. Deviation: a NULL entity faults at the
  * corpus's blind [entity+0x36c] read. */
-// FUNCTION: LEGORR 0x0041CF20
 void selection_target_command_update(GameContext* ctx, EntitySlot* entity)
 {
     const uint32_t mode = s_obj_sel_word;
@@ -1801,8 +1727,7 @@ void selection_target_command_update(GameContext* ctx, EntitySlot* entity)
 }
 /* SelectionMode7CancelAtPoint (FUN_0041cf80): cancel on a matching map
  * coordinate while objective selection mode 7 is active. */
-// FUNCTION: LEGORR 0x0041CF80
-void selection_mode7_cancel_at_point(const uint32_t coordinate[2])
+void selection_mode7_cancel_at_point_port(const uint32_t coordinate[2])
 {
     cancel_action_if_map_coordinate_matches(
         objective_selection_word_peek(), 7u, coordinate);
@@ -1810,8 +1735,7 @@ void selection_mode7_cancel_at_point(const uint32_t coordinate[2])
 
 /* CancelActionForMatchingCoordinates (FUN_0041cfb0): modes 1 and 4 cancel
  * when the clicked coordinate matches the stored map target. */
-// FUNCTION: LEGORR 0x0041CFB0
-void cancel_action_for_matching_coordinates(const uint32_t coordinate[2])
+void cancel_action_for_matching_coordinates_port(const uint32_t coordinate[2])
 {
     const uint32_t mode = objective_selection_word_peek();
     if ((mode == 1u || mode == 4u)
@@ -1822,8 +1746,7 @@ void cancel_action_for_matching_coordinates(const uint32_t coordinate[2])
 
 /* SelectionMode5CancelAtPoint (FUN_0041cfe0): the same coordinate match
  * cancels only while objective selection mode 5 is active. */
-// FUNCTION: LEGORR 0x0041CFE0
-void selection_mode5_cancel_at_point(const uint32_t coordinate[2])
+void selection_mode5_cancel_at_point_port(const uint32_t coordinate[2])
 {
     if (objective_selection_word_peek() == 5u
         && selected_map_coordinate_matches(coordinate)) {
@@ -1834,7 +1757,6 @@ void selection_mode5_cancel_at_point(const uint32_t coordinate[2])
 /* SelectionCancelIfCursorHitsObject (FUN_0041d010): only active in game
  * context, and only when the entity is selected or has the cursor-hit flag.
  * The corpus then queues command 3 and clears the HUD action context. */
-// FUNCTION: LEGORR 0x0041D010
 void selection_cancel_if_cursor_hits_object(EngineContext* engine,
                                              GameContext* ctx,
                                              EntitySlot* entity)
@@ -1846,7 +1768,6 @@ void selection_cancel_if_cursor_hits_object(EngineContext* engine,
         selection_clear_request_and_hud_reset();
     }
 }
-// FUNCTION: LEGORR 0x0041D040
 int tutorial_path_menu_action(
     GameContext* ctx, const EngineContext* engine,
     TerrainDescriptorNode* descriptors,
@@ -1884,7 +1805,6 @@ int tutorial_path_menu_action(
     return action_result;
 }
 
-// FUNCTION: LEGORR 0x0041dca0
 int ui_action_dispatch(int action)
 {
     UiActionDispatchState* state = s_ui_action_dispatch_state;
@@ -2313,8 +2233,7 @@ action_flag_toggle:
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0041e750
-void selection_clear_request_and_hud_reset(void)
+void selection_clear_request_and_hud_reset_port(void)
 {
     /* FUN_0041e750 enqueues command 3 with a null entity and pair, then posts
      * the HUD context with kind 0 / no coordinate. */
@@ -2322,7 +2241,6 @@ void selection_clear_request_and_hud_reset(void)
     command_context_post_to_hud(0, NULL);
 }
 
-// FUNCTION: LEGORR 0x0041e7f0
 uint32_t input_action_click_count_swap(int action, uint32_t value)
 {
     uint32_t old = input_action_click_count_get(action);
@@ -2330,14 +2248,12 @@ uint32_t input_action_click_count_swap(int action, uint32_t value)
         s_input_action_click_counts[action] = value;
     return old;
 }
-// FUNCTION: LEGORR 0x0041e810
 uint32_t input_action_click_count_get(int action)
 {
     if (action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) return 0u;
     return s_input_action_click_counts[action];
 }
 
-// FUNCTION: LEGORR 0x0041e820
 uint32_t input_binding_click_count_swap(int kind, int entry, uint32_t value)
 {
     uint32_t* table = player_click_count_table(kind);
@@ -2348,7 +2264,6 @@ uint32_t input_binding_click_count_swap(int kind, int entry, uint32_t value)
     table[entry] = value;
     return old;
 }
-// FUNCTION: LEGORR 0x0041e860
 uint32_t input_binding_click_count_get(int kind, int entry)
 {
     const uint32_t* table = player_click_count_table(kind);
@@ -2357,8 +2272,7 @@ uint32_t input_binding_click_count_get(int kind, int entry)
     return table[entry];
 }
 
-// FUNCTION: LEGORR 0x0041e990
-int cell_action_permission_get(int column, int row)
+int cell_action_permission_get_port(int column, int row)
 {
     if ((system_state_flags_get() & 4u) == 0u) {
         return 1;
@@ -2371,7 +2285,6 @@ int cell_action_permission_get(int column, int row)
      * boolean. Keep callers that use its value semantics intact. */
     return (int)s_cell_perm[index];
 }
-// FUNCTION: LEGORR 0x0041e9d0
 void selection_region_parameters_set(uint32_t a, uint32_t b, uint32_t c,
                                      uint32_t d, float e)
 {
@@ -2382,7 +2295,6 @@ void selection_region_parameters_set(uint32_t a, uint32_t b, uint32_t c,
     s_reg_f0 = e * s_region_scale_004;
 }
 
-// FUNCTION: LEGORR 0x0041ea50
 void store_selected_map_coordinate(int kind, const uint32_t coord[2])
 {
     if ((s_inter_flags & 0x80u) == 0u
@@ -2405,7 +2317,6 @@ void store_selected_map_coordinate(int kind, const uint32_t coord[2])
     s_map_store_kind = (uint32_t)kind;
 }
 
-// FUNCTION: LEGORR 0x0041EAC0
 void event_timer_countdown_advance(float delta)
 {
     EventTimerState state;
@@ -2463,7 +2374,6 @@ void event_timer_countdown_advance(float delta)
 
 /* AdvisorDialogStackLayout (FUN_0041eca0): refresh geometry when dimensions
  * change, then lay out icons and queued entries upward from the top point. */
-// FUNCTION: LEGORR 0x0041eca0
 void advisor_dialog_stack_layout(float y, uint32_t parameter,
                                  uint32_t width, uint32_t height)
 {
@@ -2541,7 +2451,6 @@ void advisor_dialog_stack_layout(float y, uint32_t parameter,
     }
 }
 
-// FUNCTION: LEGORR 0x0041ee60
 void interaction_timer_reset_and_flag_clear(void)
 {
     s_inter_timer = 25.0f; /* corpus 0x41c80000 */
@@ -2549,7 +2458,6 @@ void interaction_timer_reset_and_flag_clear(void)
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x0041ee80
 int ledger_stub_0041ee80_CellGridPointHitTest(
     uint32_t x, uint32_t y, float region_x, float region_y,
     uint32_t* action_out, uint32_t* cell_x_out, uint32_t* cell_y_out)
@@ -2641,7 +2549,6 @@ int ledger_stub_0041ee80_CellGridPointHitTest(
 /* ObjectInteractionFlagsAllow (FUN_0041f100): flags are checked in the
  * corpus's priority order. Only the first present capability bit selects
  * a state mask; no capability bits means the action is allowed directly. */
-// FUNCTION: LEGORR 0x0041f100
 int object_interaction_flags_allow(GameContext* ctx, int type, int row)
 {
     const uint32_t capabilities = stats_table_word_at_148(type, row);
@@ -2666,7 +2573,6 @@ int object_interaction_flags_allow(GameContext* ctx, int type, int row)
 }
 /* QueueActionRequestType2 (FUN_0041f230): the callback tests state +0x148
  * bit 2 across all live entities, after the pool's +0x3e8 filter. */
-// FUNCTION: LEGORR 0x0041F230
 int queue_action_request_type2(GameContext* ctx)
 {
     const EntityActionRequest request = { 0, 0, 0, 2u, 0, 0 };
@@ -2675,7 +2581,6 @@ int queue_action_request_type2(GameContext* ctx)
 
 /* QueueActionRequestValue (FUN_0041f270): search state +0x148 for the
  * supplied mask. */
-// FUNCTION: LEGORR 0x0041F270
 int queue_action_request_value(GameContext* ctx, uint32_t state_mask)
 {
     const EntityActionRequest request = { 0, 0, 0, state_mask, 0, 0 };
@@ -2684,7 +2589,6 @@ int queue_action_request_value(GameContext* ctx, uint32_t state_mask)
 
 /* QueueActionRequestFlag100000 (FUN_0041f2b0): search stats word +0x144
  * for bit 0x100000. */
-// FUNCTION: LEGORR 0x0041F2B0
 int queue_action_request_flag100000(GameContext* ctx)
 {
     const EntityActionRequest request = { 0, 0, 0x100000u, 0, 0, 0 };
@@ -2694,7 +2598,6 @@ int queue_action_request_flag100000(GameContext* ctx)
 /* QueueActionRequestPair (FUN_0041f2f0): mode 1 compares both leading
  * entity words with the two request values. The corpus at 0x41f2f0 clears
  * the inactive masks, ORs mode 1 into a zero word, then supplies the pair. */
-// FUNCTION: LEGORR 0x0041F2F0
 int queue_action_request_pair(GameContext* ctx, int entity_type,
                               uint32_t entity_subtype)
 {
@@ -2715,7 +2618,6 @@ int queue_action_request_pair(GameContext* ctx, int entity_type,
 /* QueueActionRequestIndex (FUN_0041f340): mode 2 asks whether any entity
  * has the requested bit in its +0x3f0 flags word. Keep the 0x41f340
  * zero-mask / zero-word-then-OR setup shared with QueueActionRequestPair. */
-// FUNCTION: LEGORR 0x0041F340
 int queue_action_request_index(GameContext* ctx, uint32_t flags_mask)
 {
     EntityActionRequest request;
@@ -2735,7 +2637,6 @@ int queue_action_request_index(GameContext* ctx, uint32_t flags_mask)
  * TerrainCellWalkabilityQuery(entity, x, y, 0, 0). This preserves that
  * call's entity flag/owner and per-terrain speed gates before the simple
  * cell walkability predicate. */
-// FUNCTION: LEGORR 0x0041F3C0
 int queue_callback_request_390(GameContext* ctx, int x, int y)
 {
     if (ctx == NULL || ctx->level == NULL) {
@@ -2747,7 +2648,6 @@ int queue_callback_request_390(GameContext* ctx, int x, int y)
 }
 /* QueueCallbackRequest3E0 (FUN_0041f400): its callback forwards each live
  * entity and the requested cell to TerrainCellAllowsPlacement (FUN_00432a20). */
-// FUNCTION: LEGORR 0x0041F400
 int queue_callback_request_3e0(GameContext* ctx, int x, int y)
 {
     if (ctx == NULL || ctx->level == NULL) {
@@ -2762,7 +2662,6 @@ int queue_callback_request_3e0(GameContext* ctx, int x, int y)
  * The port routes through selection_count/selection_record_array, whose own
  * NULL guards cover ctx, and hands each entry to the predicate blind — the
  * predicates NULL-check it themselves. */
-// FUNCTION: LEGORR 0x0041f420
 int selected_entities_any_match(const GameContext* ctx,
                                 int (*predicate)(EntitySlot*, uint32_t),
                                 uint32_t argument)
@@ -2784,7 +2683,6 @@ int selected_entities_any_match(const GameContext* ctx,
 /* SelectedEntityDetachCallback (FUN_0041f6c0): capability bit 0 chooses
  * between the attachment detach path and RecordPairPoseCopyAndActivityRaise
  * for the carried object. */
-// FUNCTION: LEGORR 0x0041f6c0
 int selected_entity_detach_callback(EntitySlot* entity)
 {
     EntitySlot* attached;
@@ -2806,7 +2704,6 @@ int selected_entity_detach_callback(EntitySlot* entity)
 }
 
 /* CurrentLevelStateFlagsContainMask (FUN_0041f720) — see select.hpp. */
-// FUNCTION: LEGORR 0x0041f720
 int current_level_state_flags_contain_mask(const GameContext* ctx,
                                            uint32_t mask)
 {
@@ -2821,7 +2718,6 @@ int current_level_state_flags_contain_mask(const GameContext* ctx,
  * this asymmetric cardinal-neighbor rule before submitting a cell action.
  * Neighbor order follows the corpus's local table: east, south, west,
  * north. */
-// FUNCTION: LEGORR 0x0041f740
 int cell_four_neighbor_walk_check(const LevelState* s, int cx, int cy)
 {
     static const int8_t offsets[4][2] = {
@@ -2845,7 +2741,6 @@ int cell_four_neighbor_walk_check(const LevelState* s, int cx, int cy)
 /* RemoveObjectIfClass6 (FUN_0041f840) performs the activity-6 scan and
  * raises the tick-down marker when available; the corpus returns zero
  * regardless of whether the marker was created. */
-// FUNCTION: LEGORR 0x0041f840
 int entity_remove_object_if_class6(GameContext* ctx, EntitySlot* e)
 {
     if (e != NULL && ai_activity_scan(e, 6) != 0) {
@@ -3646,3 +3541,232 @@ static uint32_t* player_click_count_table(int kind)
     if (kind == 4) return s_player_kind4_click_counts;
     return NULL;
 }
+
+/* ---- Interface.c (interface_unit.c): adapters and stand-ins --------------
+ * The thin unannotated adapters, with the original signatures, that
+ * game/interface_callees.h declares (ADR 0005 step 6), and the stand-ins for
+ * the legoGlobs fields and Input.c key maps that have no C-visible owner.
+ * The native port does not reach interface_unit.c's functions (its callers
+ * use the implementations above), so these only have to link and to forward
+ * where a port entry exists. */
+
+/* Declared only in frozen per-unit headers. */
+int entity_type_pair_for_name(const char* name, int* type_out, int* row_out,
+                              int* zero_out);
+float engine_float_field260_get_current_target(void);
+void timed_effect_persistence_set_corpus(int index, int set);
+void timed_effect_timestamp_reset_corpus(int index);
+namespace unported_ledger_stubs {
+int ledger_stub_004401b0_TerrainCellToWorldPosition(EntitySlot* entity,
+                                                    int force);
+} // namespace unported_ledger_stubs
+
+extern "C" {
+
+LegoCamera* lego_camera_fp;
+LegoObject* lego_object_fp;
+char** lego_vehicle_names;
+char** lego_building_names;
+unsigned int lego_vehicle_type_count;
+unsigned int lego_building_type_count;
+LegoObject* lego_teleport_primary_small;
+LegoObject* lego_teleport_primary_big;
+LegoObject* lego_teleport_primary_laser;
+LegoObjectRequests lego_object_requests;
+unsigned int lego_object_request_count;
+const char* lego_upgrade_cost_text;
+unsigned int lego_upgrade_cost_ore;
+unsigned int lego_upgrade_cost_studs;
+const char* lego_custom_name_separator;
+unsigned int lego_flags1;
+unsigned int s_global_low_word_c;
+char* lego_upgrade_level_names[16];
+int object_tooltip_sfx[20 * 15];
+void* lego_tooltip_ore_icon;
+unsigned char input_key_map[256];
+unsigned char input_prev_key_map[256];
+
+void lego_ai_create_dig(const Point2I* blockPos, int arg2, int arg3)
+{
+    terrain_cell_command_create(blockPos->x, blockPos->y, arg2, arg3);
+}
+
+void lego_ai_create_dynamite(const Point2I* blockPos, int arg2)
+{
+    kind_nine_cell_command_issue(blockPos->x, blockPos->y, arg2);
+}
+
+void lego_ai_create_reinforce(const Point2I* blockPos)
+{
+    cell_command_type3_issue(blockPos->x, blockPos->y);
+}
+
+void lego_ai_create_dam(const Point2I* blockPos)
+{
+    cell_command_type11_issue(blockPos->x, blockPos->y);
+}
+
+int aitask_list_contains(int code)
+{
+    return active_entity_list_contains_code(entity_pool_callback_context_get(),
+                                            code);
+}
+
+void lego_path_remove(const Point2I* blockPos)
+{
+    unported_ledger_stubs::ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
+        &blockPos->x);
+}
+
+void dependencies_get_requirements(int objType, int objIndex, int level,
+                                   InterfaceDependency** list,
+                                   unsigned int* count)
+{
+    /* The port's Dependencies_GetRequirements returns the list through a
+     * 32-bit word; the native port has no original-layout list. */
+    (void)objType;
+    (void)objIndex;
+    (void)level;
+    *list = NULL;
+    *count = 0;
+}
+
+int lego_block_has_lava_neighbour(int x, int y)
+{
+    return terrain_cell_has_occupied_or_flagged_neighbor(
+        level_current_owner_get(), x, y, NULL);
+}
+
+int lego_get_resource_count(int type)
+{
+    /* FUN_0041f8e0's port entry is a no-op ledger callback. */
+    (void)type;
+    return 0;
+}
+
+unsigned int lego_get_resource(int type)
+{
+    return upgrade_resource_check_current(type);
+}
+
+void lego_set_tracked_object(LegoObject* obj)
+{
+    (void)obj;
+}
+
+float lego_get_min_health(void)
+{
+    return engine_float_field260_get_current_target();
+}
+
+int lego_object_type_for_name(const char* name, int* objType, int* objIndex,
+                              int* level)
+{
+    return entity_type_pair_for_name(name, objType, objIndex, level);
+}
+
+void lego_level_block_update(LegoLevel* level, int x, int y, int arg)
+{
+    /* FUN_0042f6f0's port entry has another parameter list. */
+    (void)level;
+    (void)x;
+    (void)y;
+    (void)arg;
+}
+
+struct TerrainMap* lego_get_map(void)
+{
+    /* The port's terrain is not the original map (finding 556). */
+    return NULL;
+}
+
+int lego_object_can_enter_block(LegoObject* obj, int x, int y)
+{
+    return terrain_cell_allows_placement((const EntitySlot*)obj,
+                                         level_current_owner_get(), x, y);
+}
+
+void lego_object_set_primary_teleporter(LegoObject* obj, int on)
+{
+    entity_flag80000000_set_or_clear(entity_pool_callback_context_get(),
+                                     (EntitySlot*)obj, on);
+}
+
+int lego_object_can_eject(LegoObject* obj, int kind, int arg3, int arg4)
+{
+    (void)arg4;
+    return entity_action_kind_supported((EntitySlot*)obj, kind, arg3);
+}
+
+int lego_object_pair_requirement_met(int objType, int objIndex,
+                                     int otherType, int otherIndex)
+{
+    return entity_state_pair_predicate(entity_pool_callback_context_get(),
+                                       objType, objIndex, otherType,
+                                       otherIndex);
+}
+
+void* lego_object_get_container(LegoObject* obj)
+{
+    (void)obj;
+    return NULL;
+}
+
+void lego_object_drop_carried(LegoObject* obj)
+{
+    unported_ledger_stubs::ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
+        (EntitySlot*)obj);
+}
+
+void lego_object_go_to_block(LegoObject* obj, int dig)
+{
+    unported_ledger_stubs::ledger_stub_004401b0_TerrainCellToWorldPosition(
+        (EntitySlot*)obj, dig);
+}
+
+void lego_object_get_block(LegoObject* obj, int* x, int* y)
+{
+    entity_position_to_terrain_cell((const EntitySlot*)obj,
+                                    level_current_owner_get(), x, y);
+}
+
+LegoObject* lego_object_find_trainer(LegoObject* obj, const Point2F* center,
+                                     unsigned int mask)
+{
+    return (LegoObject*)unported_ledger_stubs::
+        ledger_stub_00438e50_SpatialObjectQueryCenterMask100(
+            (const EntitySlot*)obj, (const float*)center, mask);
+}
+
+void lego_object_detach_all(LegoObject* obj, int resetMode)
+{
+    unported_ledger_stubs::entity_attached_object_list_detach(
+        (EntitySlot*)obj, resetMode);
+}
+
+void entity_kind6_tick_down_marker_spawn_obj(LegoObject* obj)
+{
+    entity_kind6_tick_down_marker_spawn(entity_pool_callback_context_get(),
+                                        (EntitySlot*)obj);
+}
+
+void container_get_position(void* container, void* reference,
+                            Point2F* position)
+{
+    (void)container;
+    (void)reference;
+    position->x = 0.0f;
+    position->y = 0.0f;
+}
+
+void tooltip_set_persistent(int index, int set)
+{
+    timed_effect_persistence_set_corpus(index, set);
+}
+
+void tooltip_reset_timer(int index)
+{
+    timed_effect_timestamp_reset_corpus(index);
+}
+
+} /* extern "C" */

@@ -439,7 +439,7 @@ typedef struct EntityActionPrerequisiteHooks {
 } EntityActionPrerequisiteHooks;
 void entity_action_prerequisite_hooks_set(
     const EntityActionPrerequisiteHooks* hooks);
-int entity_action_kind_prerequisite_check(EntitySlot* entity,
+extern "C" int entity_action_kind_prerequisite_check(EntitySlot* entity,
                                           int action); /* 0x4388b0 */
 typedef int (*EntityRouteMarkerCandidateHook)(EntitySlot* candidate,
                                                const float position[2],
@@ -447,7 +447,7 @@ typedef int (*EntityRouteMarkerCandidateHook)(EntitySlot* candidate,
                                                void* context);
 void entity_route_marker_candidate_hook_set(
     EntityRouteMarkerCandidateHook hook, void* context);
-EntitySlot* entity_route_marker_candidate_find(EntitySlot* source,
+extern "C" EntitySlot* entity_route_marker_candidate_find(EntitySlot* source,
                                                int include_secondary); /* 0x4389e0 */
 typedef struct EntityKindRecordUpdateHooks {
     void* context;
@@ -530,7 +530,7 @@ typedef struct BuildingUpgradeAdmissionHooks {
 } BuildingUpgradeAdmissionHooks;
 void building_upgrade_admission_hooks_set(
     const BuildingUpgradeAdmissionHooks* hooks);
-int building_upgrade_resource_admission_check(EntitySlot* building,
+extern "C" int building_upgrade_resource_admission_check(EntitySlot* building,
                                                uint32_t* out_secondary_cost); /* 0x438770 */
 typedef struct BuildingUpgradeCommitHooks {
     void* context;
@@ -546,7 +546,7 @@ typedef struct BuildingUpgradeCommitHooks {
 } BuildingUpgradeCommitHooks;
 void building_upgrade_commit_hooks_set(
     const BuildingUpgradeCommitHooks* hooks);
-void building_upgrade_commit(EntitySlot* building); /* 0x4387f0 */
+extern "C" void building_upgrade_commit(EntitySlot* building); /* 0x4387f0 */
 typedef struct DeferredOListEntityRecord {
     int cell_x;
     int cell_y;
@@ -600,7 +600,7 @@ void entity_indexed_record_table_set(int group, const void* const* records,
                                      uint32_t count);
 uint32_t entity_indexed_record_word_at_b0_get(int group, int index,
                                               int slot); /* FUN_00469ac0 */
-uint32_t entity_indexed_record_word_at_b4_get(int group, int index,
+extern "C" uint32_t entity_indexed_record_word_at_b4_get(int group, int index,
                                               int slot); /* FUN_00469af0 */
 uint32_t entity_indexed_record_word_at_b8_get(int group, int index,
                                               int slot); /* FUN_00469b20 */
@@ -674,7 +674,7 @@ typedef int (*EntityActionTargetCellValidateFn)(EntitySlot* entity,
                                                 void* user);
 void entity_action_target_cell_validator_set(
     EntityActionTargetCellValidateFn validator, void* user);
-int entity_action_target_cell_is_valid(EntitySlot* entity); /* 0x0043fdc0 */
+extern "C" int entity_action_target_cell_is_valid(EntitySlot* entity); /* 0x0043fdc0 */
 typedef int (*EntityExplicitRouteFn)(EntitySlot* actor, EntitySlot* target,
                                      float* x_values, float* y_values,
                                      unsigned int* count, void* user);
@@ -820,8 +820,8 @@ float entity_stats_float_at80(const EntitySlot* e);   /* FUN_00469dc0 */
 float entity_energy_decay_rate_get(const EntitySlot* e); /* FUN_00469de0 (+84) */
 float entity_stats_float_atdc(const EntitySlot* e);   /* FUN_00469e20 */
 uint32_t entity_stats_word_atac(const EntitySlot* e); /* FUN_00469e40 */
-uint32_t entity_stats_word_get(const EntitySlot* e);  /* FUN_00469e60 (+144) */
-uint32_t entity_state_flags_get(const EntitySlot* e); /* FUN_00469e80 (+148) */
+extern "C" uint32_t entity_stats_word_get(const EntitySlot* e);  /* FUN_00469e60 (+144) */
+extern "C" uint32_t entity_state_flags_get(const EntitySlot* e); /* FUN_00469e80 (+148) */
 typedef struct EntityStateOverrideEntry {
     uint32_t flags_3f0;
     uint32_t value_330;
@@ -841,7 +841,7 @@ int entity_state_override_stack_set(const EntityStateOverrideEntry* entries,
 int entity_state_override_stack_push(const EntityStateOverrideEntry* entry);
 int entity_state_override_pop(EntitySlot* entity); /* FUN_00459240 */
 void entity_record_flag400_toggle_and_refresh(EntitySlot* e); /* FUN_0046a330 */
-uint32_t entity_capability_flags_get(const EntitySlot* e); /* FUN_00469ea0 (+14c) */
+extern "C" uint32_t entity_capability_flags_get(const EntitySlot* e); /* FUN_00469ea0 (+14c) */
 float entity_stats_float_at88(const EntitySlot* e);   /* FUN_00469f20
                                          * (the "screen shake" reader) */
 uint32_t entity_stats_word_at_c0_or_c4(const EntitySlot* e, int selector);
@@ -894,7 +894,7 @@ int entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e);
  * 0x100000, the +0x340 float not negative, and — when the caller passes a
  * zero second argument — +0x3e8 bit 0x20000000 set with bit 0x80000000
  * clear. */
-int entity_shared_eligibility_check(const EntitySlot* e, int relaxed);
+extern "C" int entity_shared_eligibility_check(const EntitySlot* e, int relaxed);
 
 /* FUN_004436f0 — kind-3 predicate: type == 3 and +0x3e8 bit 0x04000000. */
 int entity_type3_flag04000000_test(const EntitySlot* e);
@@ -903,9 +903,9 @@ int entity_type3_flag04000000_test(const EntitySlot* e);
  * 0x439e10, 0x439e40): direct level-backed neighbor selection. */
 int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
                                              int out_xy[2]);
-int entity_vehicle_unload_cell_find_if_eligible(const EntitySlot* entity,
+extern "C" int entity_vehicle_unload_cell_find_if_eligible(const EntitySlot* entity,
                                                 int out_xy[2]);
-int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2]);
+extern "C" int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2]);
 int entity_accepts_target_for_task_check(const EntitySlot* entity,
                                          const EntitySlot* target,
                                          int apply_extra_gate); /* 0x00439bd0 */
@@ -1029,7 +1029,7 @@ typedef struct EntityActionIssueHooks {
     void (*label_set)(void* context, EntitySlot* created, const char* label);
 } EntityActionIssueHooks;
 void entity_action_issue_hooks_set(const EntityActionIssueHooks* hooks);
-EntitySlot* entity_action_kind_entity_create_and_command_issue(
+extern "C" EntitySlot* entity_action_kind_entity_create_and_command_issue(
     EntitySlot* source, int kind, int selector, int argument); /* 0x0043a650 */
 typedef struct EntityActionConsumeHooks {
     void* context;
@@ -1357,9 +1357,9 @@ void entity_task_counter_increment_by_branch(int nonzero);
 /* EntityStatsWordFlag10Test/20Test/40Test (FUN_00439cf0/00439d10/00439d30):
  * the stats-word bit tests — the corpus masks the stats reader's word and
  * hands back the masked result (a bare bit, not a bool). */
-uint32_t entity_stats_flag10_test(const EntitySlot* e); /* FUN_00439cf0 */
-uint32_t entity_stats_flag20_test(const EntitySlot* e); /* FUN_00439d10 */
-uint32_t entity_stats_flag40_test(const EntitySlot* e); /* FUN_00439d30 */
+extern "C" uint32_t entity_stats_flag10_test(const EntitySlot* e); /* FUN_00439cf0 */
+extern "C" uint32_t entity_stats_flag20_test(const EntitySlot* e); /* FUN_00439d10 */
+extern "C" uint32_t entity_stats_flag40_test(const EntitySlot* e); /* FUN_00439d30 */
 
 /* GlobalAnimationStateSet (FUN_004383a0): stores the global animation-state
  * counter word (DAT_004eadc4 — the unowned global lands zero-init, finding
@@ -1477,14 +1477,14 @@ const void* stats_type_table_cell(int type, int row);
 uint32_t stats_table_word_at_cc(int type, int row, int stride_index);
 int entity_task_state_capacity_bind(EntitySlot* entity);
 /* FUN_00469f40: raw float word for the stats loader's parsed level count. */
-uint32_t building_upgrade_admission_check(int type, int row);
+extern "C" uint32_t building_upgrade_admission_check(int type, int row);
 
 uint32_t stats_table_word_at_b8(int type, int row, int stride_index = 0); /* FUN_00469b20 */
 uint32_t stats_table_word_at_b0(int type, int row, int stride_index);
 float stats_table_float_at_dc(int type, int row);    /* FUN_00469e00 */
 uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
-uint32_t stats_table_word_at_148(int type, int row); /* FUN_00469ee0 */
-uint32_t stats_table_word_at_14c(int type, int row); /* FUN_00469f00 */
+extern "C" uint32_t stats_table_word_at_148(int type, int row); /* FUN_00469ee0 */
+extern "C" uint32_t stats_table_word_at_14c(int type, int row); /* FUN_00469f00 */
 
 /* Strided triplets: the corpus takes the instance index as its third
  * argument (offset + index * 0x150 into the template). */
@@ -1499,7 +1499,7 @@ uint32_t stats_table_word_at_100(int type, int row, int stride_index);
  * instance index dword at +0x330. */
 uint32_t stats_instance_word_at_bc(const void* config_block); /* FUN_00469b50 */
 uint32_t stats_instance_word_at_e0(const void* config_block); /* FUN_00469b80 */
-uint32_t stats_instance_word_at_ec(const void* config_block); /* FUN_00469bb0 */
+extern "C" uint32_t stats_instance_word_at_ec(const void* config_block); /* FUN_00469bb0 */
 uint32_t stats_instance_word_at_f0(const void* config_block); /* FUN_00469be0 */
 
 /* CreateRepeatedResourceInstances (FUN_00408e50): increments the matching
@@ -1515,7 +1515,7 @@ void entity_localized_name_tables_install(int kind,
                                           const char* const* the_names,
                                           uint32_t count);
 const char* entity_display_name_lookup(const EntitySlot* entity); /* FUN_004395e0 */
-const char* localized_object_name_get(uint32_t kind, int index); /* FUN_00439860 */
+extern "C" const char* localized_object_name_get(uint32_t kind, int index); /* FUN_00439860 */
 const char* localized_object_the_name_get(uint32_t kind,
                                           int index); /* FUN_00439790 */
 /* Optional override for EntityFlag400AndHealthThresholdCheck's four source

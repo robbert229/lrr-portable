@@ -1048,10 +1048,15 @@ void message_cooldown_tick(float dt)
     }
 }
 
+/* Interface.c's font (interfaceGlobs, GAME-020). The include sits here, after
+ * every other annotated function of this file, so that their symbol numbering
+ * does not change (finding 538). */
+#include "interface_unit.h"
+
 // FUNCTION: LEGORR 0x0041a2f0
 uint32_t incident_message_state_get(void)
 {
-    return s_incident_state;
+    return (uint32_t)(size_t)interfaceGlobs.font;
 }
 static void message_node_track(void* node)
 {
