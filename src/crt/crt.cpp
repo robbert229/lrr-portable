@@ -1290,20 +1290,13 @@ uint32_t global_value_004ff9bc_store_and_return(const void* value)
         ? global_value_004ff9bc_store_and_return_target(value) : 0u;
 }
 
-// GLOBAL: LEGORR 0x00554adc
 float    s_float_00554adc   = 0.0f;
-// GLOBAL: LEGORR 0x00554efc
 float    s_float_00554efc   = 0.0f;
 
-// GLOBAL: LEGORR 0x00555324
 uint32_t s_counter_00555324 = 0u;
-// GLOBAL: LEGORR 0x00555328
 uint32_t s_counter_00555328 = 0u;
-// GLOBAL: LEGORR 0x0055532c
 uint32_t s_counter_0055532c = 0u;
-// GLOBAL: LEGORR 0x00555330
 float    s_float_00555330   = 0.0f;
-// GLOBAL: LEGORR 0x00555120
 float    s_float_00555120   = 0.0f;
 
 uint32_t crt_counter_004ff990_peek(void) { return s_counter_004ff990; }
@@ -1831,9 +1824,7 @@ void* panel_draw_records_peek(int index)
     return panelGlobs.panelTable[index].buttonList;
 }
 
-// GLOBAL: LEGORR 0x00555738
 float    s_reward_score;  /* DAT_00555738 */
-// GLOBAL: LEGORR 0x0055573c
 float    s_reward_count;  /* DAT_0055573c */
 
 float reward_score_total_peek(void) { return s_reward_score; }

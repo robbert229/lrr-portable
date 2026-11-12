@@ -374,7 +374,7 @@ void* input_binding_default_value_get(int kind, int index, int mode);
 void keyboard_key_names_init(void); /* FUN_00485a20 */
 int named_option_index_find_case_insensitive(const char* name,
                                              uint8_t* out_index); /* FUN_00485e30 */
-void main_menu_text_item(void); /* FUN_004103d0; requests scrolling credits */
+extern "C" void main_menu_text_item(void); /* FUN_004103d0; requests scrolling credits */
 
 /* FormattedTextPrintfWidth / MenuTextRecordMake: menu text measurement and
  * the 15-word text-record constructor used by legacy menu builders. */
@@ -464,7 +464,7 @@ int  frontend_build(FrontEnd* fe, BlockFile* cfg);
 void pointer_cursor_config_load_target(BlockRec* first_entry);
 void frontend_pointer_config_load(BlockFile* cfg);
 int pointer_cursor_config_parse_target(const char* name, int* index_out);
-void pointer_cursor_draw_target(uint32_t x, uint32_t y);
+extern "C" void pointer_cursor_draw_target(uint32_t x, uint32_t y);
 /* Draw into a caller-locked software frame, using the same resource owner. */
 void pointer_cursor_draw_pixels(uint32_t x, uint32_t y, void* pixels,
                                  int pitch, int width, int height);
@@ -478,7 +478,7 @@ void frontend_options_sync(FrontEnd* fe);
 /* The FrontEndActive gate: `Lego* Main FrontEnd` cfg flag (finding 23).
  * (The corpus ANDs the loader-mode check DAT_00505f88 < 3; the port only
  * tracks the flag — the loader-mode notion is Win32-side.) */
-int  frontend_enabled(BlockFile* cfg);
+extern "C" int  frontend_enabled(BlockFile* cfg);
 /* RenderThreePassUpdate (FUN_00459530): initialize health-bar geometry and
  * colors, hunger images and position, then the bubble position from the
  * value/key config pair. Called during game config setup before rendering. */
@@ -515,7 +515,7 @@ int  frontend_open(FrontEnd* fe, int menu);
 int  frontend_open_submenu(FrontEnd* fe, int menu, int submenu);
 /* Prepare one native front-end flow (save-tree/global setup is port state). */
 int  frontend_state_change(FrontEnd* fe, int state); /* FUN_004169c0 */
-int  menu_enter(FrontEnd* fe, int mode); /* FUN_00416c80 */
+extern "C" int  menu_enter(FrontEnd* fe, int mode); /* FUN_00416c80 */
 int  save_menu_open_from_reward(FrontEnd* fe); /* FUN_00462030 */
 int  save_menu_open_from_reward_bound(void);
 void frontend_close(FrontEnd* fe);
@@ -701,8 +701,8 @@ void frontend_help_overlay(void* px, int pitch, int w, int h,
  * state-change leaf — unported — and the menu-build leaf, modeled without
  * storing) leave it unset, so the context answers NULL in port cases
  * (documented deviation). */
-void* current_selection_context_get(void);
-void current_selection_context_set(void* context);
+extern "C" void* current_selection_context_get(void);
+extern "C" void current_selection_context_set(void* context);
 
 #ifdef __cplusplus
 }
@@ -1192,8 +1192,8 @@ int      layout_position_get(int entry, int* x, int* y);
  * the corpus does before the save/tutorial selections initialize (the
  * assigned IsInGame label is a selection sentinel per finding 438).
  * The port-side setter stands in for the unported callback bindings. */
-int save_slot_open(void);       /* FUN_00416d50: DAT_00557020 != -1 */
-int is_in_game(void);           /* FUN_00416d60: DAT_00557024 != -1 */
+extern "C" int save_slot_open(void);       /* FUN_00416d50: DAT_00557020 != -1 */
+extern "C" int is_in_game(void);           /* FUN_00416d60: DAT_00557024 != -1 */
 int quit_menu_probe(void);      /* FUN_00416dd0: DAT_0055701c verbatim */
 int level_start_flag(void);     /* FUN_00416de0: DAT_00557048 != 0 */
 int menu_options_flag(void);    /* FUN_00416df0: DAT_0055704c != 0 */
@@ -1610,7 +1610,7 @@ void     panel_seam_last(void** out_res, float* out_x, float* out_y);
  * selector — in-game answers the DAT_00556fd0 word, otherwise the
  * DAT_00556fe4 word. Counts are refreshed when their SaveTree root and
  * dynamic visited band are installed. */
-int* active_object_list_word(void); /* FUN_00416e00 */
+extern "C" int* active_object_list_word(void); /* FUN_00416e00 */
 void active_object_list_count_set(int which, int count);
 
 /* --- the sav visited-table band --------------------------------------------

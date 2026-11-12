@@ -34,7 +34,7 @@ typedef int (*UpgradeAverageCountHook)(void);
 typedef int (*UpgradeAverageValueHook)(uint32_t index, float* value_out);
 void upgrade_average_hooks_set(UpgradeAverageCountHook count_hook,
                                UpgradeAverageValueHook value_hook);
-int upgrade_average_is_above_99(void); /* FUN_00418120 */
+extern "C" int upgrade_average_is_above_99(void); /* FUN_00418120 */
 
 void level_counter_state_set(LevelCounterState* state,
                              uint32_t dynamic_a_count,

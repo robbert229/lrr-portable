@@ -1277,7 +1277,7 @@ void ddiscene_render_surface_pool_release_all(void);
  * an optional callback resolves/releases that token on hosts where the
  * reference's 32-bit interface pointer cannot be called directly. */
 typedef void (*SceneRegistrySurfaceReleaseFn)(uint32_t interface_token);
-void image_surface_release(void* record); /* 0x0047d470 */
+extern "C" void image_surface_release(void* record); /* 0x0047d470 */
 void scene_object_registry_surface_release_set(
     SceneRegistrySurfaceReleaseFn release);
 void scene_object_registry_pool_block_register(void* block);

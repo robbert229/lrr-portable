@@ -79,6 +79,7 @@
 #include "camera.hpp"
 #include "ptrstack.hpp"
 #include <limits.h>
+#include "mission.h"
 #include "mission_for_reward.hpp"
 #include "crt/crt_for_reward.hpp"
 #include "entity_for_reward.hpp"
@@ -107,24 +108,15 @@
  * verified 00 00 80 bf (-1.0f). A const static keeps the operand a
  * memory reference Reccmp resolves through the annotation (the
  * audio.cpp s_menu_volume_scale pattern). */
-// GLOBAL: LEGORR 0x0049e6bc
 static const float s_minus_one_0049e6bc = -1.0f;
 
-// GLOBAL: LEGORR 0x004a931c
 static const char s_task_name_score[] = "Score";
-// GLOBAL: LEGORR 0x004a9324
 static const char s_task_name_timer[] = "Timer";
-// GLOBAL: LEGORR 0x004a932c
 static const char s_task_name_oxygen[] = "Oxygen";
-// GLOBAL: LEGORR 0x004a9334
 static const char s_task_name_rock_monsters[] = "RockMonsters";
-// GLOBAL: LEGORR 0x004a9344
 static const char s_task_name_figures[] = "Figures";
-// GLOBAL: LEGORR 0x004a934c
 static const char s_task_name_caverns[] = "Caverns";
-// GLOBAL: LEGORR 0x004a9354
 static const char s_task_name_constructions[] = "Constructions";
-// GLOBAL: LEGORR 0x004a9364
 static const char s_task_name_diggable[] = "Diggable";
 static const char s_task_name_ore[] = "Ore";
 
@@ -134,7 +126,7 @@ namespace unported_ledger_stubs {
 void ledger_stub_00460290_EntityType4IndexListBuild(
     EntityType4IndexNameList* output);
 
-int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void);
+extern "C" int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void);
 } // namespace unported_ledger_stubs
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
@@ -171,7 +163,6 @@ static int zone_hit(float x, float y, float w, float h, int mx, int my);
 static void reward_screen_task_timer_tick(RewardScreenState* state);
 static uint32_t mission_blob_word_get(const uint8_t* blob, size_t offset);
 
-// FUNCTION: LEGORR 0x0045f030
 int mission_task_init_target(void)
 {
     GameContext* ctx = s_task_init_binding.game;
@@ -229,7 +220,6 @@ int mission_task_init_target(void)
     return 1;
 }
 /* FUN_0045f1f0 — `Reward Sounds.<name>` at +0x208. */
-// FUNCTION: LEGORR 0x0045f1f0
 static void task_loader_sound(BlockFile* cfg, const char* root,
                               const char* level, GameTask* t)
 {
@@ -240,7 +230,6 @@ static void task_loader_sound(BlockFile* cfg, const char* root,
  * created atlas handle (the default Reward.Font atlas when no task override
  * is configured), while the widened host pointer is retained in the task
  * resource sidecar for safe release. */
-// FUNCTION: LEGORR 0x0045f230
 static void task_loader_font(BlockFile* cfg, const char* root,
                              const char* level, GameTask* t)
 {
@@ -262,7 +251,6 @@ static void task_loader_font(BlockFile* cfg, const char* root,
 }
 
 /* FUN_0045f290 — `Reward BoxImages.<name>`: coords +0x59/0x5a, |0x40. */
-// FUNCTION: LEGORR 0x0045f290
 static void task_loader_boximages(BlockFile* cfg, const char* root,
                                   const char* level, GameTask* t)
 {
@@ -299,7 +287,6 @@ static void task_loader_boximages(BlockFile* cfg, const char* root,
 }
 /* TaskLoaderImages @ 0x0045f3e0 takes only the task record; the config,
  * root, and level belong to the active TaskBlockInit binding. */
-// FUNCTION: LEGORR 0x0045f3e0
 static void task_loader_images(GameTask* t)
 {
     BlockFile* cfg = s_task_init_binding.config;
@@ -355,7 +342,6 @@ static void task_loader_images(GameTask* t)
  * DAT_004a26b0 = "Text"): field 0 -> display text at +0x54 with '_'
  * mapped to ' ' over the first 0x20 bytes (corpus FUN_00413f00),
  * fields 1/2 -> text-draw x/y at +0x154/+0x158, flag |= 0x31. */
-// FUNCTION: LEGORR 0x0045f530
 static void task_loader_text(BlockFile* cfg, const char* root,
                              const char* level, GameTask* t)
 {
@@ -375,7 +361,6 @@ static void task_loader_text(BlockFile* cfg, const char* root,
 }
 
 /* FUN_0045f5f0 — `Reward Flics.<name>`: path +0x5b, rect +0x7b..0x7e, |4. */
-// FUNCTION: LEGORR 0x0045f5f0
 static void task_loader_flics(BlockFile* cfg, const char* root,
                               const char* level, GameTask* t)
 {
@@ -408,7 +393,6 @@ static void task_loader_flics(BlockFile* cfg, const char* root,
 
 /* TaskBlockFinish @ 0x0045f750: the ten 0x210-byte task records select
  * image release with flag bit 1 and font release with bit 0. */
-// FUNCTION: LEGORR 0x0045F750
 void reward_task_block_finish(void)
 {
     unsigned int i;
@@ -425,7 +409,6 @@ void reward_task_block_finish(void)
     }
 }
 /* TaskFlushImages @ 0x0045f7b0: release the task's owned image surface. */
-// FUNCTION: LEGORR 0x0045F7B0
 void reward_task_flush_images(RewardTaskResourceRecord* task)
 {
     if (task != NULL) {
@@ -434,7 +417,6 @@ void reward_task_flush_images(RewardTaskResourceRecord* task)
 }
 
 /* TaskFlushFont @ 0x0045f7d0: release the task's font-atlas record. */
-// FUNCTION: LEGORR 0x0045F7D0
 void reward_task_flush_font(RewardTaskResourceRecord* task)
 {
     if (task != NULL) {
@@ -442,7 +424,6 @@ void reward_task_flush_font(RewardTaskResourceRecord* task)
     }
 }
 
-// FUNCTION: LEGORR 0x0045f7f0
 int mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
 {
     if (ctx == NULL) {
@@ -525,7 +506,6 @@ int mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_name
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0045fda0
 void checkpoint_blob_build(GameContext* ctx)
 {
     if (ctx == NULL) {
@@ -579,7 +559,6 @@ void checkpoint_blob_build(GameContext* ctx)
 
 /* TaskImportanceRefresh @ 0x4600a0 takes the task record; its config
  * context is the currently bound mission owner. */
-// FUNCTION: LEGORR 0x004600a0
 void mission_task_importance_refresh(GameTask* t)
 {
     MissionTaskInitBinding* binding = &s_task_init_binding;
@@ -595,7 +574,6 @@ void mission_task_importance_refresh(GameTask* t)
 
 /* TaskQuotaRefresh @ 0x460140: load one task's Reward Quota value into
  * record +0x28 from the currently bound mission config. */
-// FUNCTION: LEGORR 0x00460140
 void mission_task_quota_refresh(GameTask* t)
 {
     MissionTaskInitBinding* binding = &s_task_init_binding;
@@ -612,7 +590,6 @@ void mission_task_quota_refresh(GameTask* t)
 /* CheckpointBlobFree (FUN_004601e0, finding 08): frees the blob. The
  * corpus frees its global and LEAVES the dangling pointer; the port
  * nulls it (documented deviation — port-owned storage). */
-// FUNCTION: LEGORR 0x004601e0
 void checkpoint_blob_free(GameContext* ctx)
 {
     if (ctx != NULL) {
@@ -621,14 +598,12 @@ void checkpoint_blob_free(GameContext* ctx)
     }
 }
 
-// FUNCTION: LEGORR 0x004601f0
 void* checkpoint_blob_get(const GameContext* ctx)
 {
     return ctx != NULL ? ctx->checkpoint_blob : NULL;
 }
 
 /* SelectedLevelStartObjectUpdate (FUN_00460200) — see savegame.hpp. */
-// FUNCTION: LEGORR 0x00460200
 void selected_level_start_object_update(GameContext* ctx)
 {
     if (ctx == NULL || ctx->level == NULL) {
@@ -638,7 +613,6 @@ void selected_level_start_object_update(GameContext* ctx)
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00460290
 void ledger_stub_00460290_EntityType4IndexListBuild(
     EntityType4IndexNameList* output)
 {
@@ -658,7 +632,6 @@ void ledger_stub_00460290_EntityType4IndexListBuild(
         memcpy(output, &local, sizeof(local));
     }
 }
-// FUNCTION: LEGORR 0x00460310
 int ledger_stub_00460310_EntityType4IndexListAppend(
     EntitySlot* entity, void* payload)
 {
@@ -681,7 +654,6 @@ int ledger_stub_00460310_EntityType4IndexListAppend(
  * fold and CRT-backed score/stat reads use their existing helpers. The
  * retail DAT_005529c4 type-four list is represented by the selected-level
  * snapshot produced after object-list population. */
-// FUNCTION: LEGORR 0x00460360
 int mission_checkpoint_task_progress_refresh_bound(void)
 {
     GameContext* ctx = mission_reward_game_get();
@@ -915,7 +887,6 @@ int mission_checkpoint_task_progress_refresh_bound(void)
 }
 
 /* ResolvedEntityOperationDispatch (FUN_00460910) — see entity.hpp. */
-// FUNCTION: LEGORR 0x00460910
 int resolved_entity_operation_dispatch(const char* name, int slot,
                                        int subtract)
 {
@@ -935,7 +906,6 @@ int resolved_entity_operation_dispatch(const char* name, int slot,
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00460950
 int checkpoint_blob_task_progress_recalculate_target(void)
 {
     GameContext* ctx = s_save_current_context;
@@ -997,7 +967,6 @@ int checkpoint_blob_task_progress_recalculate_target(void)
 
 /* RewardStatsPanelDraw (FUN_00460f00) formats stats and selects the result
  * label from the active level before issuing renderer-owned draw operations. */
-// FUNCTION: LEGORR 0x00460f00
 int reward_stats_panel_draw_bound(void)
 {
     GameContext* game = mission_reward_game_get();
@@ -1077,7 +1046,6 @@ int reward_stats_panel_draw_bound(void)
  * emits two percent characters; construction and cavern counts use `%d`.
  * Elapsed time is assembled from the literals at 0x4a949c..0x4a94c8 and
  * stored as HH:MM.SS. */
-// FUNCTION: LEGORR 0x00461070
 int reward_stats_text_format_bound(void)
 {
     static const int float_value_offsets[] = {
@@ -1178,7 +1146,6 @@ int reward_stats_text_format_bound(void)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00461410
 int reward_screen_tick(void)
 {
     RewardScreenState* state = s_reward_screen_state;
@@ -1283,7 +1250,6 @@ int reward_screen_tick(void)
 }
 /* RewardDisplayTick (FUN_00461790) takes the task pointer, draw mask, and
  * displayed-task count. The elapsed value is read from the bound loop state. */
-// FUNCTION: LEGORR 0x00461790
 void reward_display_task_abi(GameTask* task, uint32_t draw_mask,
                              uint32_t displayed_count)
 {
@@ -1372,7 +1338,6 @@ void reward_display_task_abi(GameTask* task, uint32_t draw_mask,
  * current displayed-task count and elapsed time; the score record is the
  * final task slot in the active reward context. Its ordinary task text is
  * submitted through RewardDisplayTick before the separate score string. */
-// FUNCTION: LEGORR 0x00461c90
 int reward_score_task_text_draw(int displayed_task_count, float elapsed)
 {
     RewardScreenState* state = s_reward_screen_state;
@@ -1392,7 +1357,6 @@ int reward_score_task_text_draw(int displayed_task_count, float elapsed)
     }
     return drawn;
 }
-// FUNCTION: LEGORR 0x00461dd0
 int mission_reward_zone(GameContext* ctx, int mx, int my,
                         int* hit_save, int* hit_advance)
 {
@@ -1423,7 +1387,6 @@ int mission_reward_zone(GameContext* ctx, int mx, int my,
 }
 
 namespace reference_target {
-// FUNCTION: LEGORR 0x00462030
 void save_menu_open_from_reward(void)
 {
     FrontEnd* fe = s_reward_save_frontend;
@@ -1443,7 +1406,6 @@ void save_menu_open_from_reward(void)
 }
 } // namespace reference_target
 
-// FUNCTION: LEGORR 0x00462270
 void checkpoint_step_target(void)
 {
     GameContext* ctx = s_save_current_context;
@@ -1501,7 +1463,6 @@ void checkpoint_step_target(void)
     }
 }
 
-// FUNCTION: LEGORR 0x00462390
 void reward_screen_transition_tick_abi(int* displayed_task_count,
                                        int* transition_stage,
                                        int* score_text_gate, float* elapsed)
@@ -1523,7 +1484,6 @@ void reward_screen_transition_tick_abi(int* displayed_task_count,
 /* RewardFlhContextReload @ 0x00462460 closes and reopens one task's FLIC
  * context only when its record has the FLIC flag. Resolve that record to the
  * active task index so the host-width Flic pointer stays in the sidecar. */
-// FUNCTION: LEGORR 0x00462460
 void reward_flic_context_reload_abi(void* task_context)
 {
 #if defined(_WIN64) || defined(__LP64__)
@@ -1557,7 +1517,6 @@ void reward_flic_context_reload_abi(void* task_context)
 
 /* RewardFlhContextTick (FUN_004624a0) updates the timer/index tuple supplied
  * by the reward loop, and performs task audio and transition cleanup. */
-// FUNCTION: LEGORR 0x004624a0
 void reward_flic_context_tick_abi(int* displayed_task_count,
                                   int* transition_stage, float* elapsed)
 {
@@ -1577,7 +1536,6 @@ void reward_flic_context_tick_abi(int* displayed_task_count,
  * score-FLIC gate, draws text for the revealed task rows, then submits the
  * level/result labels through the renderer-owned reward text context. The
  * retail caller already owns the displayed count and elapsed value. */
-// FUNCTION: LEGORR 0x00462600
 void reward_task_text_draw_and_score_gate_abi(int* displayed_task_count,
                                              int* score_text_gate,
                                              float elapsed)
@@ -1625,7 +1583,6 @@ void reward_task_text_draw_and_score_gate_abi(int* displayed_task_count,
 
 /* PointerOverrideExpiryTick (FUN_00462700): expire overrides, draw the
  * current cursor, advance the sound/effect work, then pump one frame. */
-// FUNCTION: LEGORR 0x00462700
 void pointer_override_expiry_tick(float delta)
 {
     media_pointer_cursor_override_tick(1.0f);
@@ -1640,7 +1597,6 @@ void pointer_override_expiry_tick(float delta)
     main_loop_frame_pump(1);
 }
 
-// FUNCTION: LEGORR 0x00462780
 int mission_reward_click(GameContext* ctx, int hit_save)
 {
     if (ctx == NULL || ctx->level == NULL || ctx->checkpoint_blob == NULL)
@@ -1665,55 +1621,6 @@ int mission_reward_click(GameContext* ctx, int hit_save)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00462800
-void reward_score_add(float value)
-{
-    s_reward_count = s_reward_count - -1.0f; /* corpus shape */
-    s_reward_score = s_reward_score + value;
-}
-// FUNCTION: LEGORR 0x00462830
-void global_float_at_00554adc_add_one(void)
-{
-    s_float_00554adc = s_float_00554adc - s_minus_one_0049e6bc; /* corpus: x - -1.0 */
-}
-
-// FUNCTION: LEGORR 0x00462850
-void global_float_at_00554efc_add_one(void)
-{
-    s_float_00554efc = s_float_00554efc - s_minus_one_0049e6bc; /* corpus: x - -1.0 */
-}
-
-// FUNCTION: LEGORR 0x00462870
-void global_counter_at_00555324_increment(void)
-{
-    s_counter_00555324 = s_counter_00555324 + 1u;
-}
-
-// FUNCTION: LEGORR 0x00462880
-void global_counter_at_00555328_increment(void)
-{
-    s_counter_00555328 = s_counter_00555328 + 1u;
-}
-
-// FUNCTION: LEGORR 0x00462890
-void global_counter_at_0055532c_increment(void)
-{
-    s_counter_0055532c = s_counter_0055532c + 1u;
-}
-
-// FUNCTION: LEGORR 0x004628a0
-void global_float_accumulator_00555330_add(float value)
-{
-    s_float_00555330 = s_float_00555330 + value;
-}
-
-// FUNCTION: LEGORR 0x004628c0
-void global_float_accumulate_00555120(float value)
-{
-    s_float_00555120 = s_float_00555120 + value;
-}
-
-// FUNCTION: LEGORR 0x004628e0
 void* callback_record_allocate_initialize(void** out_record, uint32_t param_2,
                                           uint32_t param_3, uint32_t param_4,
                                           uint32_t param_5, uint32_t param_6)
@@ -1749,7 +1656,6 @@ void* callback_record_allocate_initialize(void** out_record, uint32_t param_2,
 }
 
 /* TaskTableContentsRelease (FUN_00462960) — see cmd.hpp. */
-// FUNCTION: LEGORR 0x00462960
 int task_table_contents_release(void* record)
 {
     if (record == NULL) {
@@ -1795,7 +1701,6 @@ int task_table_contents_release(void* record)
 }
 
 /* --- the record-field write band (see record.hpp) --------------------------- */
-// FUNCTION: LEGORR 0x00462ab0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void record_field18_set(void* record, uint32_t value)
 {
@@ -1816,7 +1721,6 @@ void record_field18_set(void* record, uint32_t value)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00462ac0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void record_flags_24_or(void* record, uint32_t flags)
 {
@@ -1837,7 +1741,6 @@ void record_flags_24_or(void* record, uint32_t flags)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00462ad0
 extern "C" int reward_scroll_ticker_advance_and_draw(
     RewardScrollTickerState* state)
 {

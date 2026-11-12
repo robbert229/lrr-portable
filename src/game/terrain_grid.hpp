@@ -406,7 +406,7 @@ void map_cell_record_grid_release_current(void);
 void* map_cell_record_grid_get(void);
 void* map_cell_record_grid_level_get(void);
 /* Retail current-level global DAT_005560d4, mirrored by level activation. */
-extern struct LevelState* g_active_level_retail;
+extern "C" struct LevelState* g_active_level_retail;
 int terrain_cell_object_record_present(int x, int y);
 int terrain_cell_object_record_present_for_level(const struct LevelState* level,
                                                  int x, int y);

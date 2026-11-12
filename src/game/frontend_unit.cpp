@@ -2303,7 +2303,7 @@ static int fe_item_kind(const char* tok)
 /* StrReplace (FUN_00413f00): replace one byte throughout a NUL-terminated
  * string and return the original pointer. */
 // FUNCTION: LEGORR 0x00413f00
-char* mission_replace_char(char* text, char from, char to)
+extern "C" char* mission_replace_char(char* text, char from, char to)
 {
     char* const original = text;
     while (*text != '\0') {
@@ -3159,7 +3159,7 @@ int* active_object_list_word(void)
 #if defined(_MSC_VER) && defined(_M_IX86)
 /* The mapped ListFindName body follows the unchecked retail list walk. */
 // FUNCTION: LEGORR 0x00416e20
-__declspec(naked) int list_find_name_target(
+extern "C" __declspec(naked) int front_level_set_index_of(
     const SavListWindow* win, const char* name)
 {
     __asm {
@@ -3217,7 +3217,7 @@ __declspec(naked) int list_find_name_target(
     }
 }
 #else
-int list_find_name_target(const SavListWindow* win, const char* name)
+extern "C" int front_level_set_index_of(const SavListWindow* win, const char* name)
 {
     int i;
     if (win->count <= 0) return -1;
@@ -3479,7 +3479,7 @@ SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
     }
     memset(node, 0, sizeof(*node));
     {
-        const int index = list_find_name_target(win, level_name);
+        const int index = front_level_set_index_of(win, level_name);
         if (index < 0) {
             engine_heap_free(node);
             return NULL;
@@ -4965,4 +4965,43 @@ static void menu_resource_entry_release(MenuResourceEntry* entry)
             menu_texture_surface_release(entry->textures[i]);
         }
     }
+}
+
+/* --- FrontEnd.c entries in the original ABI, for Reward.c (GAME-037,
+ * finding 560) ---------------------------------------------------------
+ * Thin unannotated adapters (ADR 0005 step 6). savegame.cpp reaches
+ * list_find_name_target and the campaign snapshot through its frozen
+ * private header, so their linkage stays; the snapshot also needs the
+ * active GameContext, which the original ABI does not pass. Port globals
+ * stand in for FrontEnd.c state the port does not model; nothing sets
+ * them yet. */
+#include "frontend_api.h"
+#include "video_graph.h"
+
+char* g_front_end_avi1;
+char* g_front_end_avi2;
+void* g_front_main_menu_set;
+void* g_front_save_tree;
+uint8_t g_front_save_slot_buffer[0xec];
+int g_front_save_menu_result;
+int g_front_save_menu_open;
+
+/* Front_LevelSet_IndexOf (00416e20) has C linkage under the name
+ * front_level_set_index_of; savegame.cpp reaches it through its frozen
+ * private header under the port's name, which this forwarder keeps. */
+int list_find_name_target(const SavListWindow* win, const char* name)
+{
+    return front_level_set_index_of(win, name);
+}
+
+int front_campaign_snapshot_create(void* snapshot)
+{
+    return unported_ledger_stubs::ledger_stub_00418040_CampaignChainSnapshotCreate(
+        save_current_context_get(), snapshot, 0xb8u);
+}
+
+void movie_play_wait(struct DirectShowGraphState* movie, int skippable)
+{
+    (void)movie;
+    (void)skippable;
 }

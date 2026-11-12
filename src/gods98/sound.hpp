@@ -76,7 +76,7 @@ void sound_free(Sound* s);
 
 /* Load by resource name (disk or WAD) through the resource layer. */
 Sound* sound_load(const char* name);
-int sound_sample_file_open_by_name(const char* name); /* 0x0047fb60 */
+extern "C" int sound_sample_file_open_by_name(const char* name); /* 0x0047fb60 */
 int sound_sample_load_into(Sound* output, const char* name, int mode_flags);
 void sound_sample_clear(Sound* sound);
 
@@ -263,7 +263,7 @@ void sound_subsystem_enable_set_and_stop(int enable);
 /* SoundBufferStopHandle @ 0x47b130: stop the selected duplicate buffer's
  * active voice when the backend supports per-submission cancellation. */
 extern "C" void sound_buffer_stop_handle(int buffer_handle);
-void sound_handle_stop_forward(int buffer_handle); /* 0x465190 */
+extern "C" void sound_handle_stop_forward(int buffer_handle); /* 0x465190 */
 struct AudioBuffer;
 struct AudioBuffer* sound_handle_buffer_get(int buffer_handle); /* 0x47b0f0 */
 typedef void (*SoundBufferObjectStopHook)(void* context, void* buffer_object);
@@ -497,7 +497,7 @@ int sound_batch_queue_get(int index, int* alias, int* position,
                           uint32_t* mode, float* xyz);
 
 /* SoundSubsystemFrameTick @ 0x4651a0. */
-void sound_subsystem_frame_tick(float dt);
+extern "C" void sound_subsystem_frame_tick(float dt);
 
 /* The rotated queue the frame tick replays each frame (the corpus's
  * active copies DAT_00502b80/DAT_00502ba8/DAT_00502bd4). */

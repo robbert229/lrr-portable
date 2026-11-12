@@ -375,7 +375,7 @@ int entity_pool_find_by_callback_filtered(GameContext* ctx,
 /* Retail ABI wrappers read the active pool context (FUN_004377d0/b0). */
 int entity_pool_find_by_callback_current(
     int (*callback)(EntitySlot*, void*), void* payload, int filter_flagged);
-int entity_pool_find_by_callback_filtered_current(
+extern "C" int entity_pool_find_by_callback_filtered_current(
     int (*callback)(EntitySlot*, void*), void* payload);
 void entity_pool_callback_context_set(GameContext* ctx);
 GameContext* entity_pool_callback_context_get(void);
@@ -1509,7 +1509,7 @@ void entity_repeated_resource_instances_create(
     int count); /* FUN_00408e50 */
 void entity_kind_name_tables_install(int kind, const char* const* names,
                                      uint32_t count);
-const char* item_name_by_kind_lookup(uint32_t kind, int index); /* FUN_004396c0 */
+extern "C" const char* item_name_by_kind_lookup(uint32_t kind, int index); /* FUN_004396c0 */
 void entity_localized_name_tables_install(int kind,
                                           const char* const* names,
                                           const char* const* the_names,

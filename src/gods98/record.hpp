@@ -155,7 +155,7 @@ uint32_t entity_type_flag_bit1_get_target(const void* record);
 uint32_t object_record_field11c_get(const void* record);
 
 /* ObjectFieldBE4DwordGet (FUN_0047a540, findings 361/411): +0xbe4. */
-uint32_t object_field_be4_dword_get(const void* record);
+extern "C" uint32_t object_field_be4_dword_get(const void* record);
 
 /* EntityTypeMaskGet (FUN_0046cf80, findings 357/432): dword at +0x12c
  * (Ghidra prints this offset as decimal 300). */
@@ -358,7 +358,7 @@ extern "C" void linked_record_field4_clear(void* record);
 /* CopyTwoDwordPairToOutputs (FUN_00439930): split a two-dword record
  * field across two output words — the corpus's blind dereferences get
  * entry NULL guards (documented). */
-void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
+extern "C" void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
                                     uint32_t* out_b);
 
 /* SceneObjectOwnerSet (FUN_00473da0): dword store at +0x20; the MSVC x86

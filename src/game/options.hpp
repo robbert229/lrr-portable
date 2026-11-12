@@ -141,7 +141,7 @@ int  options_load_header(GameOptions* o, const uint8_t* blk);
 
 /* Typed owner adapter plus the corpus's no-argument target entry. */
 void options_write_to_slot(struct GameContext* ctx);
-void options_write_to_slot_target(void); /* FUN_00416910 */
+extern "C" void options_write_to_slot_target(void); /* FUN_00416910 */
 /* Apply the selected slot's sound, brightness and music on level load. */
 void options_apply_from_slot(struct GameContext* ctx); /* FUN_00415150 */
 
@@ -150,7 +150,7 @@ void options_apply_from_slot(struct GameContext* ctx); /* FUN_00415150 */
  * adapter binds a GameContext before calling that exact-ABI entry. */
 void options_context_six_field_set(struct GameContext* ctx,
                                    const uint32_t* src);
-void options_context_six_field_set_target(const uint32_t* src);
+extern "C" void options_context_six_field_set_target(const uint32_t* src);
 
 /* OptionsContextCopyAndReplaceResource (FUN_004180c0): with a save slot
  * open, frees the slot context's owned resource word (the corpus's
@@ -161,7 +161,7 @@ void options_context_six_field_set_target(const uint32_t* src);
  * so the window and widened resource ride module-owned sidecar storage. */
 void options_context_copy_and_replace_resource(struct GameContext* ctx,
                                                const uint32_t* source);
-void options_context_copy_and_replace_resource_target(const uint32_t* source);
+extern "C" void options_context_copy_and_replace_resource_target(const uint32_t* source);
 void     options_slot_window_install(const uint32_t* block, void* resource);
 uint32_t options_slot_window_dword_peek(int index);
 void*    options_slot_resource_peek(void); /* FUN_00417f20 */

@@ -436,3 +436,16 @@ void font_v_print_f(const TextureSurface* font, int x, int y,
     formatted_text_format_draw(font, NULL, NULL, NULL, 0, 0, 0, x, y, msg,
                                args);
 }
+
+/* Font_PrintF (0047a180) in the original ABI, for Reward.c (GAME-037,
+ * finding 560). A thin unannotated adapter (ADR 0005 step 6) over
+ * font_v_print_f: the port's entry at that address takes a render target. */
+#include "font_api.h"
+
+void font_print_f(const TextureSurface* font, int x, int y, const char* msg, ...)
+{
+    va_list args;
+    va_start(args, msg);
+    font_v_print_f(font, x, y, msg, args);
+    va_end(args);
+}

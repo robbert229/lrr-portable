@@ -37,6 +37,7 @@ src/crt/crt_from_frontend_unit.hpp
 src/crt/crt_from_mesh_unit.hpp
 src/crt/crt_from_panel_unit.hpp
 src/crt/crt_heap.cpp
+src/crt/crt_mouse.h
 src/crt/crt_runtime_aliases.cpp
 src/crt/crt_runtime_calls.cpp
 src/crt/crt_shared.hpp
@@ -96,6 +97,7 @@ src/game/dependency_grid.cpp
 src/game/dependency_grid_for_dependencies.hpp
 src/game/dependency_grid_shared.hpp
 src/game/effects.cpp
+src/game/effects.h
 src/game/effects.hpp
 src/game/effects_for_bubbles.hpp
 src/game/effects_for_interface.hpp
@@ -109,6 +111,7 @@ src/game/encyclopedia.cpp
 src/game/entity.cpp
 src/game/entity.h
 src/game/entity.hpp
+src/game/entity_api.h
 src/game/entity_cell_effects.cpp
 src/game/entity_config.cpp
 src/game/entity_config_for_animation_object.hpp
@@ -148,6 +151,7 @@ src/game/entity_stats.cpp
 src/game/frontend.cpp
 src/game/frontend.h
 src/game/frontend.hpp
+src/game/frontend_api.h
 src/game/frontend_for_bitmap_font.hpp
 src/game/frontend_for_encyclopedia.hpp
 src/game/frontend_for_frontend_unit.hpp
@@ -187,8 +191,10 @@ src/game/interface.h
 src/game/lava_erosion.cpp
 src/game/lego.cpp
 src/game/lego.h
+src/game/lego_api.h
 src/game/legoobject.cpp
 src/game/level.cpp
+src/game/level.h
 src/game/level.hpp
 src/game/level_for_aitask.hpp
 src/game/level_for_dependencies.hpp
@@ -216,6 +222,7 @@ src/game/map_view.cpp
 src/game/message.h
 src/game/message_unit.cpp
 src/game/mission.cpp
+src/game/mission.h
 src/game/mission.hpp
 src/game/mission_for_reward.hpp
 src/game/mission_for_screen_effect_quads.hpp
@@ -236,6 +243,7 @@ src/game/objective_unit.cpp
 src/game/opgroup.cpp
 src/game/opgroup.hpp
 src/game/options.cpp
+src/game/options.h
 src/game/options.hpp
 src/game/options_for_frontend_unit.hpp
 src/game/panel.h
@@ -253,9 +261,13 @@ src/game/priority_config_ports.hpp
 src/game/record_chains.cpp
 src/game/render.cpp
 src/game/render.hpp
-src/game/reward.cpp
+src/game/reward.c
+src/game/reward.h
+src/game/reward_maths.h
+src/game/reward_port.cpp
 src/game/rock_fall_styles.cpp
 src/game/savegame.cpp
+src/game/savegame.h
 src/game/savegame.hpp
 src/game/savegame_for_frontend_unit.hpp
 src/game/savegame_for_object_state_file.hpp
@@ -293,6 +305,7 @@ src/game/steering_maths.h
 src/game/terrain_cell_objects.cpp
 src/game/terrain_feedback.hpp
 src/game/terrain_grid.cpp
+src/game/terrain_grid.h
 src/game/terrain_grid.hpp
 src/game/terrain_grid_for_cell_flood_passes.hpp
 src/game/terrain_grid_for_lego.hpp
@@ -331,6 +344,7 @@ src/game/ui_list_for_pointer.hpp
 src/game/ui_list_shared.hpp
 src/game/upgrade_levels.cpp
 src/game/upgrades.cpp
+src/game/upgrades.h
 src/game/upgrades.hpp
 src/game/upgrades_for_frontend_unit.hpp
 src/game/upgrades_for_helpwindow.hpp
@@ -349,6 +363,7 @@ src/game/util_for_tile_variants.hpp
 src/game/util_shared.hpp
 src/game/vehicle_model.cpp
 src/game/video_graph.cpp
+src/game/video_graph.h
 src/game/video_graph.hpp
 src/game/weapon.cpp
 src/game/weapon.hpp
@@ -405,11 +420,14 @@ src/gods98/files.h
 src/gods98/flic.cpp
 src/gods98/flic.h
 src/gods98/flic.hpp
+src/gods98/flic_api.h
 src/gods98/flic_for_flic_unit.hpp
 src/gods98/flic_shared.hpp
 src/gods98/flic_unit.cpp
 src/gods98/font.h
+src/gods98/font_api.h
 src/gods98/frameloop.cpp
+src/gods98/frameloop.h
 src/gods98/frameloop.hpp
 src/gods98/frameloop_for_frontend_unit.hpp
 src/gods98/frameloop_for_screen_effect_quads.hpp
@@ -438,6 +456,7 @@ src/gods98/input_for_input_unit.hpp
 src/gods98/input_for_interface.hpp
 src/gods98/input_for_terrain_map.hpp
 src/gods98/input_from_interface.hpp
+src/gods98/input_keys.h
 src/gods98/input_shared.hpp
 src/gods98/input_unit.cpp
 src/gods98/keys.c
@@ -455,6 +474,7 @@ src/gods98/mainsim.hpp
 src/gods98/maths.c
 src/gods98/maths.h
 src/gods98/media.cpp
+src/gods98/media.h
 src/gods98/media.hpp
 src/gods98/media_for_lego.hpp
 src/gods98/media_for_pointer.hpp
@@ -484,6 +504,7 @@ src/gods98/ptrstack.hpp
 src/gods98/record.cpp
 src/gods98/record.h
 src/gods98/record.hpp
+src/gods98/record_api.h
 src/gods98/record_for_animation_object.hpp
 src/gods98/record_for_bitmap_font.hpp
 src/gods98/record_for_building_model.hpp
@@ -555,6 +576,7 @@ src/gods98/sound.h
 src/gods98/sound.hpp
 src/gods98/sound3d.c
 src/gods98/sound3d.h
+src/gods98/sound_api.h
 src/gods98/sound_for_sfx.hpp
 src/gods98/sound_for_sound3d.hpp
 src/gods98/sound_from_sound3d.hpp
@@ -587,6 +609,7 @@ src/gods98/utils.h
 src/gods98/view.cpp
 src/gods98/view.h
 src/gods98/view.hpp
+src/gods98/view_api.h
 src/gods98/view_for_animation_object.hpp
 src/gods98/view_for_building_model.hpp
 src/gods98/view_for_camera_control.hpp

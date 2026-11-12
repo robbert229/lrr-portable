@@ -52,13 +52,13 @@ void directshow_interface_release(DirectShowGraphState* state);
 int configured_video_sample_update(DirectShowGraphState* state,
                                    void* source, void* destination);
 void video_duration_frame_bound_update(DirectShowGraphState* state);
-DirectShowGraphState* directshow_render_surface_create(const char* path);
+extern "C" DirectShowGraphState* directshow_render_surface_create(const char* path);
 void directdraw_surface_description_get(DirectShowGraphState* state,
                                         DirectShowSurfaceDescription* desc);
 void video_frame_bound_refresh(DirectShowGraphState* state);
 int directshow_sample_update_and_blit(DirectShowGraphState* state,
                                       void* source, void* destination);
-void directshow_wrapper_destroy(DirectShowGraphState* state);
+extern "C" void directshow_wrapper_destroy(DirectShowGraphState* state);
 
 } // namespace lego
 

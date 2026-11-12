@@ -750,7 +750,7 @@ int level_cell_byte_state_classify(const LevelState* s, int cx, int cy,
                                    uint32_t* out_a, uint32_t* out_b,
                                    uint32_t* out_c, uint32_t* out_d);
 /* Retail coordinate-pair ABI; reads the current level global. */
-int terrain_cell_byte_state_classify_current(const int xy[2],
+extern "C" int terrain_cell_byte_state_classify_current(const int xy[2],
     uint32_t* out_a, uint32_t* out_b, uint32_t* out_c, uint32_t* out_d);
 
 /* --- active-engine state accessors on the level block (findings
@@ -1418,18 +1418,18 @@ uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
  * tests/diagnostics view over
  * the statics (the message_active_count precedent), returning -1 outside. */
 void grid_record_count_tables_clear(void);
-int grid_record_count_difference_get(int row, int column, int slot,
+extern "C" int grid_record_count_difference_get(int row, int column, int slot,
                                      int subtract_first_table);
 /* RenderConfigSixFieldCopyOut / CopyInOrClear (FUN_004370b0 / 004370d0):
  * copy the opaque six-dword render snapshot, or clear it when input is NULL. */
-void render_config_six_field_copy_out(uint32_t out[6]);
+extern "C" void render_config_six_field_copy_out(uint32_t out[6]);
 void render_config_six_field_copy_in_or_clear(const uint32_t in[6]);
 /* GridRecordCountDifferenceSum (FUN_00437100): sum all 16 slots for rows
  * 0..14 of `type`, optionally skipping rows whose stats record has bit 8
  * set at offset +0x144. The stats table is the guarded entity model. */
 int grid_record_count_difference_sum(int type, int skip_flagged_rows);
-uint32_t grid_record_count_get(int row, int column, int slot);
-uint32_t entity_type_grid_record_count_get(const char* type_name, int slot);
+extern "C" uint32_t grid_record_count_get(int row, int column, int slot);
+extern "C" uint32_t entity_type_grid_record_count_get(const char* type_name, int slot);
 /* Diagnostics table index: 0 is first, 1 is second. */
 int32_t grid_count_table_slot_peek(int row, int column, int slot, int table);
 
@@ -1528,7 +1528,7 @@ int global_option_low_bits_enabled(const LevelState* s);
 /* GlobalFlagGet_004ffe30 (FUN_00458650, findings 21/22): the objective-
  * result word the corpus reads blindly - LevelState's own field through
  * the port's guarded read (NULL answers 0). */
-int level_objective_result_get(const struct LevelState* s);
+extern "C" int level_objective_result_get(const struct LevelState* s);
 
 /* The original shared random stream is VC5 LIBC.LIB rand.obj's _rand/_srand
  * pair. The VC5 x86 build calls that runtime directly; other builds keep the

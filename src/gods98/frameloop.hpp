@@ -34,7 +34,7 @@ typedef struct MainLoopFramePumpHooks {
     void (*projection_overlay)(void* context, int first, int second);
 } MainLoopFramePumpHooks;
 void main_loop_frame_pump_hooks_set(const MainLoopFramePumpHooks* hooks);
-void main_loop_frame_pump(int draw_projection_overlay); /* FUN_00477f30 */
+extern "C" void main_loop_frame_pump(int draw_projection_overlay); /* FUN_00477f30 */
 void pointer_override_expiry_tick(float delta); /* FUN_00462700 */
 
 typedef struct WindowPortRect {

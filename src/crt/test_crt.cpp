@@ -8,6 +8,7 @@
 #include "crt/crt.hpp"
 #include "gods98/heap.hpp"
 #include "game/panel_unit.h"
+#include "game/reward.h"
 
 static int s_failures = 0;
 
@@ -292,34 +293,34 @@ static void test_static_globals(void)
     }
 
     {
-        const float base_a = crt_float_00554adc_peek();
-        const float base_e = crt_float_00554efc_peek();
+        const float base_a = rewardGlobs.level.itemsArray[REWARD_ITEM_DIGGABLE].actual;
+        const float base_e = rewardGlobs.level.itemsArray[REWARD_ITEM_CAVERNS].actual;
         global_float_at_00554adc_add_one();
         global_float_at_00554adc_add_one();
         global_float_at_00554efc_add_one();
-        CHECK(crt_float_00554adc_peek() == base_a + 2.0f
-                  && crt_float_00554efc_peek() == base_e + 1.0f,
+        CHECK(rewardGlobs.level.itemsArray[REWARD_ITEM_DIGGABLE].actual == base_a + 2.0f
+                  && rewardGlobs.level.itemsArray[REWARD_ITEM_CAVERNS].actual == base_e + 1.0f,
               "the add-one leaves raise each float once per call");
     }
 
     {
-        const unsigned b4 = crt_counter_00555324_peek();
-        const unsigned b8 = crt_counter_00555328_peek();
-        const unsigned bc = crt_counter_0055532c_peek();
+        const unsigned b4 = rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].count;
+        const unsigned b8 = rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].startCount;
+        const unsigned bc = rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].lostCount;
         global_counter_at_00555328_increment();
-        CHECK(crt_counter_00555324_peek() == b4
-                  && crt_counter_00555328_peek() == b8 + 1u
-                  && crt_counter_0055532c_peek() == bc,
+        CHECK(rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].count == b4
+                  && rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].startCount == b8 + 1u
+                  && rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].lostCount == bc,
               "each counter bumps independently");
     }
 
     {
-        const float base_3 = crt_float_00555330_peek();
-        const float base_1 = crt_float_00555120_peek();
+        const float base_3 = rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].damage;
+        const float base_1 = rewardGlobs.level.itemsArray[REWARD_ITEM_FIGURES].damage;
         global_float_accumulator_00555330_add(1.5f);
         global_float_accumulate_00555120(-0.5f);
-        CHECK(crt_float_00555330_peek() == base_3 + 1.5f
-                  && crt_float_00555120_peek() == base_1 - 0.5f,
+        CHECK(rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].damage == base_3 + 1.5f
+                  && rewardGlobs.level.itemsArray[REWARD_ITEM_FIGURES].damage == base_1 - 0.5f,
               "the accumulators add the argument once per call");
     }
 }
@@ -535,13 +536,14 @@ int main(void)
         request_record_flags_set(5, 0u);
     }
 
-    /* RewardScoreAdd (2026-10-24). */
+    /* RewardScoreAdd (2026-10-24): the counts are rewardGlobs fields
+     * (Reward.c, finding 560). */
     {
-        const float base = reward_score_total_peek();
-        const uint32_t n = reward_score_count_peek();
+        const float base = rewardGlobs.level.itemsArray[REWARD_ITEM_TIMER].total;
+        const float n = rewardGlobs.level.itemsArray[REWARD_ITEM_TIMER].actual;
         reward_score_add(3.5f);
-        CHECK(reward_score_total_peek() == base + 3.5f, "the score accumulates");
-        CHECK(reward_score_count_peek() == n + 1u, "the count rises once");
+        CHECK(rewardGlobs.level.itemsArray[REWARD_ITEM_TIMER].total == base + 3.5f, "the score accumulates");
+        CHECK(rewardGlobs.level.itemsArray[REWARD_ITEM_TIMER].actual == n + 1.0f, "the count rises once");
     }
 
     /* The small global primitives band (2026-10-24). */

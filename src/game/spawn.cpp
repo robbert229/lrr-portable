@@ -119,7 +119,6 @@ void emergence_spawn_hooks_set(const EmergenceSpawnHooks* hooks)
 
 namespace unported_ledger_stubs {
 
-// GLOBAL: LEGORR 0x00555118
 uint32_t s_start_level_pilot_grid_count;
 
 } // namespace unported_ledger_stubs
