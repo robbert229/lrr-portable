@@ -5643,3 +5643,42 @@ int surface_reward_success_capture(uint32_t width, uint32_t height,
     return s_reward_success_capture(s_reward_success_capture_context,
                                     width, height, words_out);
 }
+
+/* Original-signature adapters for units rebuilt as C (ADR 0005 step 6),
+ * declared in gods98/mesh.h. Unannotated: the port's entries at these
+ * addresses have other contracts. The port keeps no Container mesh for the
+ * original terrain map (game/terrain_map.c, finding 556), so the three
+ * mesh adapters pass no host operation table and change nothing. */
+
+/* Container_MakeMesh2 (FUN_00473560). */
+extern "C" void* container_make_mesh2(void* parent, int type)
+{
+    return ddiscene_object_kind_mode_setup(parent, type);
+}
+
+/* Container_Mesh_HideGroup (FUN_00474b30). */
+extern "C" void container_mesh_hide_group(void* mesh, unsigned int group,
+                                          int hide)
+{
+    lwo_layer_enabled_set(mesh, group, !hide, NULL);
+}
+
+/* Container_Mesh_SetVertices (FUN_00474d30). */
+extern "C" void container_mesh_set_vertices(void* mesh, unsigned int group,
+                                            unsigned int index,
+                                            unsigned int count,
+                                            const void* vertices)
+{
+    (void)index;
+    (void)count;
+    (void)vertices;
+    (void)terrain_cell_quad_vertex_emit(mesh, group, NULL, NULL);
+}
+
+/* Container_Mesh_SetPerspectiveCorrection (FUN_00474e30). */
+extern "C" void container_mesh_perspective_correction_set(void* mesh,
+                                                          unsigned int group,
+                                                          int on)
+{
+    terrain_surface_property_set(mesh, group, on, NULL);
+}

@@ -109,7 +109,7 @@ uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88);
  * corpus's own guard. Deviation: the corpus's 32-bit cell-array slot is
  * read as a native pointer (the port's model of a corpus pointer
  * field). */
-uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell);
+extern "C" uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell);
 
 /* ObjectPoolListHeadGet (FUN_00456c30, finding 374): the list-head slot
  * table — index -1..0x37 (exclusive) over +0x114, with the corpus's

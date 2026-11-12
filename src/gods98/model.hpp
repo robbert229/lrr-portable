@@ -109,6 +109,7 @@ struct Model {
 
 /* Legacy model/resource list node (the six-word record used by the
  * 0x451ab0 constructor and 0x451b30 flatten operation). */
+#define LRR_MODEL_ENTRY_RECORD_DEFINED 1
 typedef struct ModelEntryRecord {
     void* object;
     void* instance;
@@ -118,7 +119,7 @@ typedef struct ModelEntryRecord {
     struct ModelEntryRecord* next;
 } ModelEntryRecord;
 
-ModelEntryRecord* model_primitive_record_create(ModelEntryRecord* previous,
+extern "C" ModelEntryRecord* model_primitive_record_create(ModelEntryRecord* previous,
                                                 const char* name, int kind);
 extern "C" ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head);
 

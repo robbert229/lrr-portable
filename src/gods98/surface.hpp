@@ -169,7 +169,7 @@ typedef struct MeshRecordAppendOps {
                          const uint16_t* source_indices);
 } MeshRecordAppendOps;
 int mesh_record_allocate_or_append_ops_set(const MeshRecordAppendOps* ops);
-int mesh_record_allocate_or_append(void* object, uint32_t vertex_count,
+extern "C" int mesh_record_allocate_or_append(void* object, uint32_t vertex_count,
                                    uint32_t index_rows,
                                    uint32_t index_columns,
                                    const uint16_t* source_indices);
@@ -397,7 +397,7 @@ uint32_t lwo_layer_polygon_vertex_count(
 uint32_t lwo_layer_polygon_vertex_count_dispatch(
     void* object, unsigned int layer_index, const void* request,
     const LwoLayerDispatchOps* ops);
-uint32_t lwo_layer_polygon_vertex_data_read(
+extern "C" uint32_t lwo_layer_polygon_vertex_data_read(
     void* object, int block, int first_vertex, int count,
     void* output); /* FUN_00474cc0 */
 /* Portable host adapter for terrain and model owners that store the layer
@@ -420,7 +420,7 @@ typedef struct TerrainDetailLookupOps {
     uint32_t (*base_enabled_get)(void* context, void* children);
     uint32_t (*child_flags_get)(void* context, void* child);
 } TerrainDetailLookupOps;
-uint32_t terrain_detail_entry_get_at_index(void* object,
+extern "C" uint32_t terrain_detail_entry_get_at_index(void* object,
                                            unsigned int index);
 uint32_t terrain_detail_entry_get_at_index_dispatch(
     void* object, unsigned int index, const TerrainDetailLookupOps* ops);

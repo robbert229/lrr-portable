@@ -17,11 +17,11 @@ void scene_resource_string_tables_free(); /* 0x00487760 */
 int shared_object_sample_time_matches(const void* record, uint32_t time); /* 0x00487ed0 */
 float keyframe_time_segment_fraction(const void* track, float time, uint16_t* segment_out); /* 0x00487fc0 */
 int animated_texture_frame_count(const void* texture); /* 0x00474a20 */
-void animated_texture_frame_bind(void* texture, uint32_t frame_index,
+extern "C" void animated_texture_frame_bind(void* texture, uint32_t frame_index,
                                  int mode); /* 0x00474a60 */
 int animated_texture_frame_resolve(void** interface_io,
                                    int* frame_index_io); /* 0x00474c00 */
-void animated_texture_frame_set(void* texture, uint32_t frame_index,
+extern "C" void animated_texture_frame_set(void* texture, uint32_t frame_index,
                                 const void* frame_state); /* 0x00474da0 */
 typedef void (*AnimatedTextureFrameApplyHook)(void* interface_object,
                                                void* surface_record,
@@ -50,7 +50,7 @@ typedef struct InterfaceArrayForwardSyncHooks {
 } InterfaceArrayForwardSyncHooks;
 void interface_array_forward_sync_hooks_set(
     const InterfaceArrayForwardSyncHooks* hooks);
-void interface_array_forward_sync(void* owner_link, void* source_record,
+extern "C" void interface_array_forward_sync(void* owner_link, void* source_record,
                                   void* state_value); /* 0x00474760 */
 typedef int (*SharedTextureRootInitializeHook)(void* context);
 void shared_texture_root_initialize_hook_set(

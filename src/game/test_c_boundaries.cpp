@@ -85,6 +85,10 @@
 #include "game/tutorial_script.h"
 #include "game/spawn.hpp"
 #include "game/port_loop_ports.hpp"
+#include "game/terrain_grid.hpp"
+#include "gods98/mesh.h"
+#include "game/tile_variants.h"
+#include "game/terrain_map.h"
 
 int main(void)
 {

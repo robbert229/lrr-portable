@@ -1039,7 +1039,7 @@ void shared_object_sound_callbacks_get(
     SharedObjectSoundSubmitFn* submit_out);
 void shared_object_timed_sound_event_update(void* owner, void* track); /* 0x487de0 */
 void scene_material_manager_set(void* manager);
-void* scene_material_create(float color0, float color1, float color2,
+extern "C" void* scene_material_create(float color0, float color1, float color2,
                             float color3, float color4, float color5,
                             float power); /* 0x4894c0 */
 
@@ -1599,7 +1599,7 @@ void* scene_root_object_get(void);              /* FUN_00472940 */
 /* Direct scene-interface wrappers: the interface pointer is at object + 0x10;
  * clip distance uses vtable byte slot 0x3c and point transform uses 0x50. */
 void renderer_object_set_clip_distance(void* object, float distance);
-void render_interface_transform_point(void* object, void* output,
+extern "C" void render_interface_transform_point(void* object, void* output,
                                       const void* input);
 /* SceneProperty callback returns a two-dword value record; null inputs or
  * missing callback/record return zero (the native port's guard policy). */
@@ -1652,13 +1652,13 @@ extern "C" float surface_triangle_area_calculate(const float* p1, const float* p
  * slot-0 color set and the alpha through the mode-4 opacity composition.
  * Deviations: the corpus strides both link slots blindly — the port
  * guards them, and a missing record leaves both windows untouched. */
-void scene_mesh_color_and_alpha_set(void* object, int block, float red,
+extern "C" void scene_mesh_color_and_alpha_set(void* object, int block, float red,
                                     float green, float blue, float alpha);
 
 /* SceneMeshColorSet (FUN_00474ff0): the color triple without the alpha,
  * mode three of the ported color-vector setter (the block's +0x34 slot).
  * Deviation: the corpus strides both record links blindly. */
-void scene_mesh_color_set(void* object, int block, float red, float green,
+extern "C" void scene_mesh_color_set(void* object, int block, float red, float green,
                           float blue);
                                                 /* FUN_00475020 */
 
