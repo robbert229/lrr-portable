@@ -12,14 +12,14 @@ in a playable state before the end of November 2026.
      with `python3 tools/readme_status.py` (no build needed); recount the
      source ledger with `python3 tools/coverage_ledger.py`. -->
 
-Verified **2026-11-12** on `main` at `3791f0dd`, with MSVC 5.0 and Reccmp:
+Verified **2026-11-12** on `main` at `18fd3881`, with MSVC 5.0 and Reccmp:
 
 | Measure | Value |
 | --- | ---: |
-| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **105,485 / 642,549 bytes (16.42%)** |
-| Accuracy: mean Reccmp score of mapped functions, game-only / full | 68.70% / 71.59% |
-| Mapped functions, game-only / full | 2,260 / 2,496 |
-| Exact (100%) functions, game-only / full | 974 / 1,174 |
+| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **148,281 / 642,549 bytes (23.08%)** |
+| Accuracy: mean Reccmp score of mapped functions, game-only / full | 75.46% / 77.67% |
+| Mapped functions, game-only / full | 2,294 / 2,530 |
+| Exact (100%) functions, game-only / full | 1,156 / 1,356 |
 | Functions byte-identical at their original address | 8 (384 bytes) |
 
 The old headline, Reccmp's game-only "progress" (47.77% on 2026-11-04), is no
@@ -27,8 +27,8 @@ longer tracked; exact-function code bytes replaced it, and accuracy is the same
 Reccmp measure as before (then 48.27%).
 [Report details and reproduction](docs/coverage/reccmp.md).
 
-The [source ledger](docs/coverage/README.md) records **2,282 / 2,564 functions
-(89.0%) with source citations**, plus 280 runtime/import functions and 2 named
+The [source ledger](docs/coverage/README.md) records **2,283 / 2,564 functions
+(89.0%) with source citations**, plus 279 runtime/import functions and 2 named
 functions not yet cited. Source coverage and binary similarity measure
 different things; neither guarantees correct gameplay.
 
