@@ -6803,7 +6803,7 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
                     offsets[2].y = 0.0f;
                     offsets[3].x = 0.1f;
                     offsets[3].y = 0.0f;
-                    offset = &offsets[terrain_cell_record_byte3_current(cbx, cby)];
+                    offset = &offsets[legoobject_o_block_byte3(cbx, cby)];
                 } else {
                     offsets[0].x = 0.0f;
                     offsets[0].y = -0.1f;
@@ -6813,7 +6813,7 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
                     offsets[2].y = 0.1f;
                     offsets[3].x = 0.0f;
                     offsets[3].y = 0.1f;
-                    offset = &offsets[terrain_cell_record_byte3_current(cbx, cby)];
+                    offset = &offsets[legoobject_o_block_byte3(cbx, cby)];
                 }
                 legoobject_o_vector2_add(&to, offset, &to);
             }

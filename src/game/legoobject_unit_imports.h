@@ -554,8 +554,16 @@ int sphere_ray_intersection_discriminant_positive(const float* center,
 struct EntitySlot;
 /* GAME-002 AITask.c (aitask.c). */
 void aitask_entity_deferred_work_schedule(struct EntitySlot* object);      /* 004026c0 */
+/* In the matching build part 1's entity_command_unlink_by_kind (above)
+ * names this function (aitask_port_aliases.h) with a const void* target;
+ * aitask.h declares a struct EntitySlot*. Each build sees one type. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LEGOOBJ_I_UNLINK_TARGET const void*
+#else
+#define LEGOOBJ_I_UNLINK_TARGET struct EntitySlot*
+#endif
 void aitask_entity_command_unlink_by_kind(struct EntitySlot* object, int type,
-                                          const void* target,
+                                          LEGOOBJ_I_UNLINK_TARGET target,
                                           int unlink);                      /* 00403d10 */
 /* Bubble.c (ai.hpp, bubbles.cpp). */
 void type4_object_registry_insert(struct EntitySlot* record);              /* 00407410 */
@@ -1002,7 +1010,12 @@ void aitask_entity_task_batch_append(struct EntitySlot** objects,
 uint32_t terrain_cell_flag_2000_current(int cx, int cy);           /* 00432fd0 */
 int terrain_cell_type_is_8_or_10_or_11_current(int cx, int cy);    /* 00432b90 */
 uint32_t terrain_cell_flag_80_current(int cx, int cy);             /* 00433000 */
-uint8_t terrain_cell_record_byte3_current(int x, int y);           /* 004332c0 */
+/* 004332c0 returns the block's byte 3; the port declares a uint32_t
+ * (level.hpp). The unit reads the byte through a cast, as the original
+ * uses only al. */
+uint32_t terrain_cell_record_byte3_current(int x, int y);          /* 004332c0 */
+#define legoobject_o_block_byte3(x, y) \
+    (((uint8_t (*)(int, int))terrain_cell_record_byte3_current)(x, y))
 /* Map3D.c (terrain_map.h). */
 int terrain_map_world_edge_point_get(struct TerrainMap* map, float x, float y,
                                      int diagonal, float distance,
