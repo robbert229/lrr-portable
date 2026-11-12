@@ -52,13 +52,23 @@ static const float s_config_angle_turn_radians = 6.2831855f;
 static const float s_config_rgb_scale = 1.0f / 255.0f;
 
 /* Literals the unit shares with earlier objects. The original's "" for a
- * missing angle resolves to a zero byte in another object's .bss. */
+ * missing angle resolves to a zero byte in another object's .bss.
+ * The original pools ":" and "" for every unit, so the two have external C
+ * linkage: entity_stats.c (GAME-043) reads them where the original's
+ * literals resolve to these addresses (finding 581). A macro, not a
+ * declaration, gives the C++ build its extern "C", so the symbol numbering
+ * (finding 538) does not change. */
+#ifdef __cplusplus
+#define CONFIG_POOLED_LITERAL extern "C"
+#else
+#define CONFIG_POOLED_LITERAL
+#endif
 // GLOBAL: LEGORR 0x004a1cd4
-static const char s_config_rgb_separator[] = ":";
+CONFIG_POOLED_LITERAL const char s_config_rgb_separator[] = ":";
 // GLOBAL: LEGORR 0x004aab18
 static const char s_config_separator[] = "::";
 // GLOBAL: LEGORR 0x004b8a14
-static const char s_config_angle_empty[4] = { 0, 0, 0, 0 };
+CONFIG_POOLED_LITERAL const char s_config_angle_empty[4] = { 0, 0, 0, 0 };
 
 // FUNCTION: LEGORR 0x00478df0
 void block_text_token_pool_init(void)

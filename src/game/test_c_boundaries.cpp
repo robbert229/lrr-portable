@@ -171,6 +171,7 @@ extern "C" int s_cursor_delta_y;
 #include "game/weapons.h"
 #include "game/aitask.h"
 #include "game/aitask_imports.h"
+#include "game/entity_stats.h"
 
 int main(void)
 {

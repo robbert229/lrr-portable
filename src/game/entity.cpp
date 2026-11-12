@@ -50,6 +50,7 @@
 #include "entity_shared.hpp"
 /* C linkage for legoobject_unit.c (the frozen header below redeclares it). */
 extern "C" int entity_building_index_set(EntitySlot* entity, uint32_t state);
+extern "C" void* entity_stats_field_at_a0_corpus(const EntitySlot* e);
 #include "entity_from_entity_stats.hpp"
 #include "entity_from_lego.hpp"
 /* C linkage for legoGlobs' object-name tables, which legoobject_unit.c
@@ -563,6 +564,7 @@ extern "C" uint32_t s_pool_chunk_count;
 extern "C" void* s_pool_chunks[POOL_CHUNK_COUNT_SLOTS];
 extern "C" void* s_pool_record_head;
 #include "entity_from_legoobject.hpp"
+#include "entity_stats_port.hpp"
 
 uint32_t s_entity_finalize_mode_flags;
 EntityFinalizeHook s_entity_type5_timeout_hook;
@@ -1220,8 +1222,8 @@ void rover_work_queue_hooks_set(const RoverWorkQueueHooks* hooks)
 
 void entity_indexed_value_table_clear(void)
 {
-    memset(s_entity_indexed_value_groups, 0,
-           sizeof(s_entity_indexed_value_groups));
+    memset(entity_stats_port_globs()->toolTaskTypes, 0,
+           sizeof(entity_stats_port_globs()->toolTaskTypes));
 }
 
 void entity_indexed_record_table_set(int group, const void* const* records,
@@ -1258,7 +1260,7 @@ uint32_t entity_indexed_record_word_get(int group, int index,
     if (record == NULL && group < STATS_TYPE_TABLE_TYPES &&
         index < STATS_TYPE_TABLE_ROWS &&
         slot < s_stats_cell_span[group][index]) {
-        record = (const uint8_t*)s_stats_type_table[group][index];
+        record = (const uint8_t*)entity_stats_port_row_table(group)[index];
     }
     if (record == NULL) {
         return 0u;
@@ -3563,9 +3565,13 @@ void stats_type_table_install(int type, int row, const void* record,
     if (stride_count < 0) {
         stride_count = 0;
     }
-    s_stats_type_table[type][row] = stride_count > 0 ? record : NULL;
+    entity_stats_port_row_table(type)[row] =
+        stride_count > 0 ? (StatsData*)record : NULL;
     s_stats_cell_span[type][row] = stride_count;
     s_stats_cell_level_limit[type][row] = (float)stride_count;
+    /* The original's level count, which the unit's getters read. */
+    entity_stats_port_globs()->objectLevels[type][row] =
+        (unsigned int)stride_count;
 }
 
 void stats_type_table_level_limit_install(int type, int row, float level_limit)
@@ -3581,7 +3587,7 @@ const void* stats_type_table_cell(int type, int row)
         || row < 0 || row >= STATS_TYPE_TABLE_ROWS) {
         return NULL; /* deviation: the corpus strides blindly */
     }
-    return s_stats_type_table[type][row];
+    return entity_stats_port_row_table(type)[row];
 }
 
 uint32_t stats_table_read(int type, int row, int off, int stride_index)
@@ -3590,7 +3596,7 @@ uint32_t stats_table_read(int type, int row, int off, int stride_index)
         || row < 0 || row >= STATS_TYPE_TABLE_ROWS || stride_index < 0) {
         return 0u; /* deviation: the corpus strides the index blindly */
     }
-    const void* base = s_stats_type_table[type][row];
+    const void* base = entity_stats_port_row_table(type)[row];
     if (base == NULL) {
         return 0u; /* empty cell = the zero template */
     }
