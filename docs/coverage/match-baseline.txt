@@ -1,4 +1,4 @@
-# input_sha256: 1c8ceb97e1759399aec12525e385fc2028fd2656030c6d67aea7bba4482f33c5
+# input_sha256: 74339ef2241c91ce6291a903055ff9098485bb8a1a4ccc7b281130184ec929b0
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -130,7 +130,7 @@
 0x00406400 24.00 cmd_pending_record_copy
 0x00406440 49.06 cmd_alloc
 0x00406480 75.00 cmd_free
-0x004064c0 25.21 cmd_pool_grow
+0x004064c0 23.53 cmd_pool_grow
 0x004065d0 100.00 renderer_global_dword_get
 0x004065e0 100.00 render_surface_secondary_get
 0x004065f0 56.88 cubic_bezier_point_evaluate
@@ -1167,8 +1167,8 @@
 0x00451c50 73.68 owned_object_reference_chain_release
 0x00451f60 18.18 cmd_queue_cancel_match
 0x00452010 28.57 cmd_bind_key
-0x00452060 58.06 cmd_produce
-0x004520d0 21.81 cmd_queue_tick
+0x00452060 35.48 cmd_produce
+0x004520d0 21.98 cmd_queue_tick
 0x00452430 28.12 entity_random_valid_cell_command_create
 0x004524b0 72.22 selection_object_detach
 0x00452520 15.73 selection_snapshot_create
@@ -2311,7 +2311,7 @@
 0x00406400 24.00 cmd_pending_record_copy
 0x00406440 49.06 cmd_alloc
 0x00406480 75.00 cmd_free
-0x004064c0 25.21 cmd_pool_grow
+0x004064c0 23.53 cmd_pool_grow
 0x004065d0 100.00 renderer_global_dword_get
 0x004065e0 100.00 render_surface_secondary_get
 0x004065f0 56.88 cubic_bezier_point_evaluate
@@ -3348,8 +3348,8 @@
 0x00451c50 73.68 owned_object_reference_chain_release
 0x00451f60 18.18 cmd_queue_cancel_match
 0x00452010 28.57 cmd_bind_key
-0x00452060 58.06 cmd_produce
-0x004520d0 21.81 cmd_queue_tick
+0x00452060 35.48 cmd_produce
+0x004520d0 21.98 cmd_queue_tick
 0x00452430 28.12 entity_random_valid_cell_command_create
 0x004524b0 72.22 selection_object_detach
 0x00452520 15.73 selection_snapshot_create
