@@ -123,6 +123,12 @@
 #include "gods98/mesh_unit.h"
 #include "gods98/files_open.h"
 #include "gods98/main.h"
+/* GAME-020 (finding 564). game/entity.hpp, which declares the LegoObject.c
+ * and Stats.c entries interface_callees.h repeats, cannot share this
+ * translation unit with game/steering.h (finding 549). */
+#include "game/select.hpp"
+#include "game/interface_unit.h"
+#include "game/interface_callees.h"
 
 int main(void)
 {

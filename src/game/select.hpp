@@ -54,21 +54,21 @@ void selection_count_reset(GameContext* ctx);
  * entry point. */
 void selection_active_context_bind(GameContext* ctx);
 void selection_active_context_sync(GameContext* ctx);
-void selection_clear_active(void);
+extern "C" void selection_clear_active(void);
 int selection_entity_remove_active(EntitySlot* entity);
 int selection_candidate_filter_active(void* entity, int mode, int param_3);
 
 /* Retail active-selection global accessors. */
 EntitySlot* const* selection_active_context_record_get(int* count_out);
-EntitySlot* const* selection_active_records_get(void);
-uint32_t selection_active_count_get(void);
-int selection_active_has_any_get(void);
+extern "C" EntitySlot* const* selection_active_records_get(void);
+extern "C" uint32_t selection_active_count_get(void);
+extern "C" int selection_active_has_any_get(void);
 void selection_active_count_reset(void);
 
 /* SelectedEntity (0x4525c0): zero-argument retail getter over the active
  * selection globals. */
-EntitySlot* selection_active_entity_get(void);
-uint32_t selection_contains_entity_active_target(
+extern "C" EntitySlot* selection_active_entity_get(void);
+extern "C" uint32_t selection_contains_entity_active_target(
     EntitySlot* entity, uint32_t* index_out);
 
 /* Context-explicit helper for portable callers. */
@@ -180,9 +180,9 @@ int selection_contains_entity_target(const GameContext* ctx,
 
 /* Coordinate-matched UI action cancellation helpers (FUN_0041cf80,
  * FUN_0041cfb0 and FUN_0041cfe0). `coordinate` points to two map words. */
-void selection_mode7_cancel_at_point(const uint32_t coordinate[2]);
-void cancel_action_for_matching_coordinates(const uint32_t coordinate[2]);
-void selection_mode5_cancel_at_point(const uint32_t coordinate[2]);
+extern "C" void selection_mode7_cancel_at_point(const uint32_t coordinate[2]);
+extern "C" void cancel_action_for_matching_coordinates(const uint32_t coordinate[2]);
+extern "C" void selection_mode5_cancel_at_point(const uint32_t coordinate[2]);
 
 /* Selection-mode HUD command updates (FUN_0041cea0/0041cf20). */
 void selection_object_command_update(GameContext* ctx, EntitySlot* entity);

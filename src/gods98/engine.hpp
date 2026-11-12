@@ -469,7 +469,7 @@ int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out);
  * Neither corpus word has a ported owner; both land here as zero-init
  * statics with hooks. Deviation: the port's surface set reads the record's
  * +0 handle through the widened pointer slot (record.cpp convention). */
-void global_state_low_byte_clear_and_refresh(void); /* FUN_00435a20 */
+extern "C" void global_state_low_byte_clear_and_refresh(void); /* FUN_00435a20 */
 uint32_t global_state_low_word_get(void);           /* port hook */
 void     global_state_low_word_set(uint32_t value); /* port hook */
 void  global_refresh_record_set(void* record);      /* port hook */

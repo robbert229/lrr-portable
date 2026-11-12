@@ -531,7 +531,7 @@ double sound_object_duration_get(int alias);
  * given) on submission, 0 when the timer is still running or nothing
  * routed. Deviation: the corpus handle is an instance-layer handle;
  * the port records the routed bank slot (see the .cpp note). */
-int sound_submit_with_global_cooldown(int alias, int* out_handle);
+extern "C" int sound_submit_with_global_cooldown(int alias, int* out_handle);
 
 /* StreamPlayLevel @ 0x416150 / StreamPlayTutorial @ 0x4161a0: format
  * the `Stream_LevelName_Level%d` / `Stream_LevelName_TLevel%d`

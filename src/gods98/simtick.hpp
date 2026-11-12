@@ -262,7 +262,7 @@ void simtick_bobbin_action_hooks_set(SimtickBobbinSpawnHook spawn,
     void* context);
 int  simtick_bobbin_advanced(void); /* helper-invocation counter */
 void simtick_selection_group_release(const uint32_t key_pair[2]); /* FUN_00409110 */
-void simtick_selection_group_clear(const uint32_t key_pair[2]);   /* FUN_00409150 */
+extern "C" void simtick_selection_group_clear(const uint32_t key_pair[2]);   /* FUN_00409150 */
 
 /* SimulationGlobalWordSet (FUN_0041ba90, finding 474): the corpus assigns
  * its argument to the global DAT_004de1f4 — the mute word the simtick
