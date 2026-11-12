@@ -3450,8 +3450,9 @@ int terrain_sfx_grid_cell_peek(int cell)
  * into skipped (`continue`) iterations; a resolved name therefore always
  * sees a fresh row (the port's resolver carries the entry zeroing); the corpus
  * strides a missing value string into the alias table (the port's lookup
- * guards NULL) and stores blind past the 300-entry window (the port
- * stores blind as well). The entry chain is the subgroup record followed
+ * guards NULL) and stores blind past the 300-entry window (the matching
+ * build stores blind as well; the native build bounds-checks the store,
+ * see the comment at the store below). The entry chain is the subgroup record followed
  * by its equal-key siblings, entry name = the object name (the corpus
  * reads the name blind at its record +4, the BlockRec key), entry value =
  * the sound alias reference. */
@@ -3486,6 +3487,54 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
             continue;
         }
         const int cell = obj_y + obj_x * 15;
+        /* The out-of-window store (#521, finding 548).
+         *
+         * What the original does: LegoRR.exe stores `sfx` at
+         * `s_terrain_sfx_grid[cell]` with no bounds check. Nothing keeps
+         * `cell` inside the 300-entry window: an object row whose type or
+         * row index falls outside the 20 x 15 grid writes before or after
+         * it. That missing check is the original game's own behaviour, kept
+         * on purpose for faithfulness. It is not a bug introduced by the
+         * port.
+         *
+         * Why the matching build keeps it: the MSVC 5.0 matching build must
+         * compile this function (0x0044acc0) to the same bytes as the
+         * original. A compare-and-branch here would add instructions and
+         * break that match. So when the matching compiler sees this code,
+         * the guard below is preprocessed out and the store stays as blind
+         * as the original's. The token stream and object code of the
+         * matching build are unchanged by this guard.
+         *
+         * What the stray store hits: the native `level` test's data
+         * (test_level.cpp) reaches `cell == -15`, a write 60 bytes before
+         * `s_terrain_sfx_grid`.
+         * - On the data layout before GAME-023's relocation, that address
+         *   held nothing that mattered, and the write was harmless.
+         * - With GAME-023 (entity.cpp's original unit) relocated, the native
+         *   layout changes and the write lands on `s_pool_chunks[28]`.
+         *   `pooled_record_storage_clear` later passes that value to
+         *   free(), and the `level` test crashes. A hardware watchpoint on
+         *   the slot found the store.
+         * Which object sits next to the grid depends on the compiler,
+         * linker and source order, so on the native build the stray write
+         * corrupts whatever is there.
+         *
+         * Why the guard is native-only: the native port (and the MinGW
+         * reference build, which shares this branch) has no byte-for-byte
+         * contract, and its data layout is not the original's. There the
+         * blind store is memory corruption with no faithful result to
+         * preserve, so an out-of-window cell is dropped instead of written.
+         * Cells inside the window are stored exactly as before, so
+         * well-formed data behaves the same in every build. The owner chose
+         * this over changing `test_level`'s data or padding the layout
+         * (#521, option 1). The condition is the one the codebase already
+         * uses to choose the matching (MSVC x86) path, for example in
+         * terrain_object_type_sfx_at_cell_get (0x0044ad80). */
+#if !(defined(_MSC_VER) && defined(_M_IX86))
+        if (cell < 0 || cell >= TERRAIN_SFX_GRID_CELLS) {
+            continue; /* native only: drop the original's out-of-window store */
+        }
+#endif
         s_terrain_sfx_grid[cell] = sfx; /* the corpus's blind scale store */
     }
 }
