@@ -1,6 +1,6 @@
 # 576. Link mode: unreferenced code under `/OPT:REF`, and how Reccmp keeps its PDB
 
-Issue #562, a follow-up of finding 563. Measured on `main` at `1d31a556`. ADR 0006 decision 2 asked for `/OPT:REF` to be measured and adopted only if it changes no score. Finding 563 showed that the original was linked without `/DEBUG`, so LINK 5.0 applied `/OPT:REF` by default. The gate links with `/DEBUG` (so `/OPT:NOREF`), because Reccmp needs the linker's PDB.
+Issue #562, a follow-up of finding 563. The analysis below was measured on `main` at `1d31a556`. [The stacked figures](#refreshed-on-the-stack-581--583) were measured again on #583's head `25529648` (GAME-023 part 1, then GAME-021 part 2). The method and the decision did not change. ADR 0006 decision 2 asked for `/OPT:REF` to be measured and adopted only if it changes no score. Finding 563 showed that the original was linked without `/DEBUG`, so LINK 5.0 applied `/OPT:REF` by default. The gate links with `/DEBUG` (so `/OPT:NOREF`), because Reccmp needs the linker's PDB.
 
 ## Summary
 
@@ -44,7 +44,38 @@ Issue #562, a follow-up of finding 563. Measured on `main` at `1d31a556`. ADR 00
 
 The gate's Reccmp numbers do not change: `make reccmp-check` passes, and the baseline differs only in its input hash.
 
-## What `/OPT:REF` removes
+## Refreshed on the stack (#581 → #583)
+
+Measured on `convert/574-game-021-part-2` at `25529648`, with this change rebased onto it. The gate's scores equal #583's baseline.
+
+| | `main` `1d31a556` | Stack `25529648` |
+| --- | ---: | ---: |
+| Gate: Reccmp mapped / exact (full) | 2,471 / 1,027 | 2,482 / 1,095 |
+| Gate: `.text` | 1,041,892 | 1,085,780 |
+| Gate: `.data` initialised / `.bss` | 999,725 / 3,782,112 | 1,002,717 / 3,790,928 |
+| Gate: entry-point RVA | 0xed350 | 0xf7ec0 |
+| `/OPT:REF` removes: `.text` bytes (symbols) | 375,438 (3,097 of 6,720) | **401,854 (3,163 of 6,892)** |
+| ⤷ annotated, full report: removed / exact removed | 1,262 / 528 | **1,272 / 546** |
+| ⤷ annotated, game-only: removed / exact removed | 1,225 / 499 | 1,235 / 517 |
+| ⤷ annotated in `unit` objects, bytes (functions) | 238,224 (1,144) | 241,632 (1,113) |
+| ⤷ annotated in `legacy` objects, bytes (functions) | 9,024 (81) | 23,984 (122) |
+| ⤷ port code: unit / legacy / tail, bytes | 8,000 / 31,776 / 70,608 | 6,640 / 40,832 / 70,960 |
+| ⤷ LIBC / import thunks, bytes | 16,800 / 1,006 | 16,800 / 1,006 |
+| Exact functions that survive `/OPT:REF` | 499 | **549** |
+| Original mode: `.text` / `.rdata` | 666,410 / 24,792 | 683,882 / 24,840 |
+| Original mode: `.data` initialised / `.bss` | 977,933 / 3,781,088 | 979,309 / 3,789,984 |
+| Original mode: `.data` proper removed by `/OPT:REF` | 21,792 | 23,408 |
+| Original mode: entry-point RVA | 0x95d20 | 0x9a160 |
+| Original mode: thunks / imported names / descriptor order | 5 / 141 / equal | 5 / 141 / equal |
+
+**The removed-annotated counts rose, not fell.** The two conversions added 11 mapped functions and 68 exact ones, and much of the new original-shape code is still reached only from port code that calls the port's own implementation.
+- `lego_unit.c`'s removed functions went from 69 to 127 (61 exact).
+- The new `legoobject_unit.c` adds 63 (47 exact).
+- Callers rewired by the conversions took others back into the live graph: `legoobject.cpp` went from 82 to 64, `lego.cpp` from 60 to 37 and `terrain_map.c` from 55 to 42.
+
+The share of annotated functions removed is unchanged at 51%. The exact functions that survive `/OPT:REF`, the ones the original mode keeps, rose by 50. Converting a unit only lowers the count once the unit's callers are converted too. The gate's switch condition therefore still waits.
+
+## What `/OPT:REF` removes (`1d31a556`)
 
 These are `.text` symbols in the gate's map with no symbol of the same name from the same object in the relink's map. Each symbol owns the bytes up to the next one. The categories are `winapi_link_audit.py`'s (finding 575).
 

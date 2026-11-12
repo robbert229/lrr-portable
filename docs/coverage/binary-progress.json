@@ -3,7 +3,7 @@
     "full": 69.83,
     "game_only": 66.74
   },
-  "baseline_sha256": "37c0c7a13d902b076e2160d94974df25d2bedd28ed3b17ac58a63e8dad0a1d20",
+  "baseline_sha256": "689da7736dfdfd21f8bc9eba2b9f94bd3038c3b750ecc86f05ed7e01a20f9046",
   "exact_function_code_bytes": {
     "bytes": 98353,
     "original_text_bytes": 642549,
@@ -23,7 +23,7 @@
       "pairs": 1612
     }
   },
-  "input_sha256": "2bae57c06080cbd985360eec130715a4cd936b2ed0f20102c37722462eacf395",
+  "input_sha256": "fff054b94abbabdcbc3b29a3936ea6a2dc7ca2c95ac9911732367c61895b64c8",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 8,
@@ -4024,8 +4024,165 @@
     ],
     "unmapped_original_functions": 159
   },
-  "listing_digests_sha256": "c6ca3b065e475e70d7415f6ff684a8110b980d4ca0bff0bf7a199ac96cf5a6c4",
+  "listing_digests_sha256": "a99cf69ada16f4fff1ad7a1e90a4b4770000fc5406389d1288b94ddf62f1f90f",
   "minimum_identical_run_bytes": 16,
+  "opt_ref": {
+    "annotated": {
+      "full": {
+        "exact": 1095,
+        "mapped": 2482,
+        "removed": 1272,
+        "removed_exact": 546
+      },
+      "game_only": {
+        "exact": 895,
+        "mapped": 2246,
+        "removed": 1235,
+        "removed_exact": 517
+      }
+    },
+    "annotated_by_kind": {
+      "legacy": {
+        "bytes": 70336,
+        "functions": 283,
+        "removed_bytes": 23984,
+        "removed_functions": 122
+      },
+      "unit": {
+        "bytes": 402928,
+        "functions": 1962,
+        "removed_bytes": 241632,
+        "removed_functions": 1113
+      }
+    },
+    "by_category": {
+      "import_thunks": {
+        "bytes": 1036,
+        "functions": 152,
+        "removed_bytes": 1006,
+        "removed_functions": 147
+      },
+      "libc": {
+        "bytes": 69344,
+        "functions": 441,
+        "removed_bytes": 16800,
+        "removed_functions": 129
+      },
+      "original_annotated": {
+        "bytes": 473264,
+        "functions": 2245,
+        "removed_bytes": 265616,
+        "removed_functions": 1235
+      },
+      "other": {
+        "bytes": 4152,
+        "functions": 2,
+        "removed_bytes": 0,
+        "removed_functions": 0
+      },
+      "port_legacy": {
+        "bytes": 173456,
+        "functions": 1233,
+        "removed_bytes": 40832,
+        "removed_functions": 527
+      },
+      "port_tail": {
+        "bytes": 326224,
+        "functions": 2522,
+        "removed_bytes": 70960,
+        "removed_functions": 1028
+      },
+      "port_unit": {
+        "bytes": 38304,
+        "functions": 297,
+        "removed_bytes": 6640,
+        "removed_functions": 97
+      }
+    },
+    "gate_text_symbols": 6892,
+    "image": {
+      "bss_bytes": 3789984,
+      "characteristics": 271,
+      "common_dll_order_equal": true,
+      "data_initialised_bytes": 979309,
+      "debug_directory": [
+        0,
+        0
+      ],
+      "entry_point_rva": 631136,
+      "import_dlls": [
+        "kernel32.dll",
+        "d3drm.dll",
+        "winmm.dll",
+        "dinput.dll",
+        "dsound.dll",
+        "user32.dll",
+        "gdi32.dll",
+        "advapi32.dll"
+      ],
+      "import_thunks": 5,
+      "imported_names": 141,
+      "section_bytes": {
+        ".data": {
+          "differing": 965328,
+          "equal": 14128,
+          "original": 73216,
+          "rebuilt": 979456
+        },
+        ".idata": {
+          "differing": 3591,
+          "equal": 521,
+          "original": 4112,
+          "rebuilt": 3854
+        },
+        ".rdata": {
+          "differing": 23661,
+          "equal": 1179,
+          "original": 11232,
+          "rebuilt": 24840
+        },
+        ".text": {
+          "differing": 665575,
+          "equal": 18307,
+          "original": 642549,
+          "rebuilt": 683882
+        }
+      },
+      "sections": {
+        ".data": {
+          "raw_size": 979456,
+          "virtual_size": 4769360
+        },
+        ".idata": {
+          "raw_size": 4096,
+          "virtual_size": 3854
+        },
+        ".rdata": {
+          "raw_size": 25088,
+          "virtual_size": 24840
+        },
+        ".rsrc": {
+          "raw_size": 1536,
+          "virtual_size": 1348
+        },
+        ".text": {
+          "raw_size": 684032,
+          "virtual_size": 683882
+        }
+      },
+      "thunk_order": [
+        "d3drm.dll:_D3DRMVectorRandom@4",
+        "d3drm.dll:_D3DRMVectorRotate@16",
+        "dinput-data:_c_dfDIMouse",
+        "dinput-data:_c_dfDIKeyboard",
+        "dinput.dll:_DirectInputCreateA@16",
+        "dsound.dll:_DirectSoundCreate@12",
+        "kernel32.dll:_RtlUnwind@16"
+      ]
+    },
+    "removed_bytes": 401854,
+    "removed_functions": 3163
+  },
   "pe_header_differences": {
     "entry_point_rva": {
       "original": 585728,
@@ -4036,7 +4193,7 @@
       "rebuilt": 5931008
     }
   },
-  "schema_version": 3,
+  "schema_version": 4,
   "sections": {
     ".data": {
       "chance_percent": 10.47,
