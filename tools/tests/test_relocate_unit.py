@@ -214,6 +214,28 @@ class ScannerTest(unittest.TestCase):
         self.assertNotIn("Pair", query.uses)
         self.assertIn("Desc", query.uses)
 
+    def test_single_branch_group_around_one_annotated_datum_moves_whole(self):
+        # frontend.cpp's flow words (#525): the annotation sits on the
+        # declaration, inside the #if, because Reccmp reads the next line.
+        text = textwrap.dedent("""\
+            #if defined(WINAPI)
+            // GLOBAL: LEGORR 0x0055701c
+            static int s_flow_quit;
+            #endif
+            #if defined(WINAPI)
+            // GLOBAL: LEGORR 0x00557020
+            static int s_a;
+            #define A_REF s_a
+            #endif
+            """)
+        items = cx.scan(text).items
+        one = next(i for i in items if "s_flow_quit" in i.names)
+        self.assertTrue(one.cgroup)
+        self.assertEqual(one.problems, [])
+        self.assertEqual(one.annotations, [("GLOBAL", 0x0055701c)])
+        two = next(i for i in items if "s_a" in i.names)
+        self.assertTrue(any("only unannotated groups move whole" in p for p in two.problems), two.problems)
+
     def test_if_group_of_alternatives_merges(self):
         text = textwrap.dedent("""\
             // FUNCTION: LEGORR 0x00401000

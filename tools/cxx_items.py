@@ -465,10 +465,27 @@ def scan(text: str) -> Scan:
         item.line = _line_of(text, item.start)
         for m in ANNOTATION.finditer(text, item.lead, item.end if item.group or item.cgroup else item.start):
             item.annotations.append((m.group(1), int(m.group(2), 16)))
-        if item.cgroup and ANNOTATION.search(text, item.start, item.end):
+        if item.cgroup and ANNOTATION.search(text, item.start, item.end) and not _one_annotated_datum(item, text):
             item.problems.append(f"the #if group at line {item.line} holds an annotated item; "
                                  "only unannotated groups move whole")
     return Scan(text, masked, items, groups, problems)
+
+
+def _one_annotated_datum(item: Item, text: str) -> bool:
+    """A single-branch group around one ``GLOBAL``-annotated variable (#525).
+
+    ``#if C`` / ``// GLOBAL: …`` / ``static int v;`` / ``#endif``: the
+    annotation must sit on the declaration, because Reccmp reads the line
+    after it as the declaration (above the ``#if`` it names ``defined``). Such
+    a group is the variable, guarded, so it moves whole like an unannotated
+    one, and its address comes from the annotation."""
+    if item.branches != 1 or len(item.parts) != 1:
+        return False
+    part = item.parts[0]
+    if part.category != "var" or len(part.names) != 1 or part.multi:
+        return False
+    found = list(ANNOTATION.finditer(text, item.start, item.end))
+    return len(found) == 1 and found[0].group(1) == "GLOBAL" and not text[found[0].end():part.start].strip()
 
 
 def _lead(item: Item, text: str, masked: str) -> int:

@@ -229,6 +229,12 @@ A second run finds the unit relocated and does nothing. A half-done state
   `for` header when both files use it and it holds only macros, types,
   prototypes and `#include`s. The hash check covers the group's whole
   text.
+  - **An annotated datum in a group (#525).** A group may hold an
+    annotated item only when it is a single-branch group around one
+    `GLOBAL`-annotated variable, with the annotation directly on the
+    declaration, inside the `#if`. Reccmp reads the line after a `GLOBAL`
+    annotation as its declaration, so above the `#if` it would name the
+    variable `defined`. Such a group moves as that owned global.
   - **Macros in such a group** are alternatives, not redefinitions: one
     definition per branch is accepted. An `#undef` after the macro's last
     use stays where it is and is reported in the plan's notes. An `#undef`
