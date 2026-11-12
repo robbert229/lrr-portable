@@ -641,6 +641,25 @@ class R1DefectTest(unittest.TestCase):
         finally:
             fx.close()
 
+    def test_include_only_if_group_is_copied_in_place(self):
+        # G98-014's resource.cpp (#525): a platform include group the moved
+        # code needs is copied verbatim, in order; a mixed group is not.
+        grouped = MIXED.replace('#include <string.h>\n',
+                                '#include <string.h>\n#if defined(_WIN32)\n#include <windows.h>\n'
+                                '#else\n#include <dirent.h>\n#endif\n'
+                                '#if defined(PORT_EXTRA)\n#include <stddef.h>\n#define PORT_EXTRA_ON 1\n#endif\n')
+        fx = Fixture(grouped)
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            unit = plan.files["src/game/alpha.cpp"]
+            block = "#if defined(_WIN32)\n#include <windows.h>\n#else\n#include <dirent.h>\n#endif\n"
+            self.assertEqual(unit.count(block), 1)
+            self.assertLess(unit.index("#include <string.h>"), unit.index(block))
+            self.assertLess(unit.index(block), unit.index('#include "mixed.hpp"'))
+            self.assertNotIn("<stddef.h>", unit)
+        finally:
+            fx.close()
+
     def test_late_private_include_is_caught(self):
         fx = Fixture(MIXED)
         original = ru._insert_include

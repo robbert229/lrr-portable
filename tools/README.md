@@ -88,7 +88,10 @@ legacy `frontend.cpp`), the tool uses `<stem>_unit` and says so;
 1. The includes of the source with the most moved functions, in order; then
    the other sources' unconditional includes that are not already there.
    Spellings are re-spelled only when they would resolve to a different
-   file.
+   file. A top-level `#if` group that holds only `#include` lines (a
+   platform-header group) is copied verbatim, in its place, when each of
+   its includes resolves the same from the unit file (#525). Other
+   conditional includes are listed in the plan's notes and not copied.
 2. Types and macros.
 3. The owned globals in address order, then the closure variables. A
    variable moves up to just before its first user.

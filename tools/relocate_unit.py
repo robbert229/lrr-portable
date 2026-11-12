@@ -1454,6 +1454,17 @@ def _blocks(chunks: list[tuple[str | None, str]], sep: str = "\n") -> list[str]:
     return out
 
 
+def _include_only_group(scan, it) -> "cx.Group | None":
+    """The top-level, non-nested #if group around include ``it`` when the
+    group holds only ``#include`` lines (#525), else None."""
+    if it.cond != 1 or it.container or not it.in_group or it.group_why != "it holds only #include lines":
+        return None
+    for g in scan.groups:
+        if g.end >= 0 and not g.in_item and not g.nested and g.start <= it.start < g.end:
+            return g
+    return None
+
+
 def _spell(spelled: str, including: str, target: str, library: str, headers: Headers) -> str:
     """The include spelling that resolves from ``target`` to the same file."""
     if spelled.startswith("<"):
@@ -1511,13 +1522,25 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
     # A legacy file's private headers come along only when the unit uses a
     # name they declare: they are frozen, so including them is safe, but a
     # unit that does not need them should not count their declarations.
-    includes, seen, skipped = [], set(), []
+    # A top-level #if group that holds only #include lines (#525) is copied
+    # verbatim, in its place, once: the unit needs the platform headers it
+    # selects. Other conditional includes are not copied.
+    includes, seen, skipped, copied_groups = [], set(), [], set()
     for s in ordered_sources:
         for it in s.scan.items:
             if it.category != "include" or not it.include:
                 continue
             if it.cond or it.container:
-                skipped.append(f"{s.rel}:{it.line} {it.include}")
+                g = _include_only_group(s.scan, it)
+                members = [x for x in s.scan.items if g is not None and g.start <= x.start < g.end]
+                if g is None or any(_spell(x.include, s.rel, plan.target, s.entry.library, headers)
+                                    != x.include for x in members):
+                    skipped.append(f"{s.rel}:{it.line} {it.include}")
+                    continue
+                block = s.scan.text[g.start:g.end].rstrip("\n")
+                if block not in copied_groups:
+                    copied_groups.add(block)
+                    includes.append(block)
                 continue
             resolved = headers.resolve(it.include, s.rel, s.entry.library) or it.include
             if resolved in seen:
@@ -1525,7 +1548,7 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
             if is_private_header(root, resolved) and not (_names_in_file(root / resolved) & needed):
                 continue
             seen.add(resolved)
-            includes.append(_spell(it.include, s.rel, plan.target, s.entry.library, headers))
+            includes.append("#include " + _spell(it.include, s.rel, plan.target, s.entry.library, headers))
     if skipped:
         plan.notes.append("Conditional includes not copied (the build checks the result): " + ", ".join(skipped))
     private = [s.for_header for s in ordered_sources if s.shares_for]
@@ -1604,7 +1627,7 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
            f"/* {u.unit_id} {title}: the unit's functions in original address order and the",
            " * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).",
            f" * Body hashes: {RECORDS}/{u.unit_id}.csv. */"]
-    out += [f"#include {i}" for i in includes]
+    out += includes
     out += [_private_include(h, plan.target) for h in private]
     body = ["\n".join(out) + "\n"]
     if usings:
