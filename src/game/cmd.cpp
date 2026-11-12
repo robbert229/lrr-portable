@@ -71,13 +71,17 @@ const CmdRec* cas_rec(const void* p) { return (const CmdRec*)p; }
 int cmd_rec_type(const void* rec) { return cas_rec(rec)->type; }
 const void* cmd_rec_payload(const void* rec) { return cas_rec(rec)->payload; }
 int cmd_rec_kind(const void* rec) { return cas_rec(rec)->kind; }
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int cmd_rec_behaviour(const void* rec) { return cas_rec(rec)->behaviour; }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 int cmd_rec_activity(const void* rec) { return cas_rec(rec)->grant_act; }
 uint32_t cmd_rec_value_38(const void* rec)
 {
     return (uint32_t)(uintptr_t)cas_rec(rec)->arg38;
 }
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void cmd_rec_set_activity(void* rec, int act) { as_rec(rec)->grant_act = act; }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 uint32_t cmd_rec_state(const void* rec) { return cas_rec(rec)->state; }
 void* cmd_rec_next(const void* rec) { return cas_rec(rec)->next; }
 
@@ -863,6 +867,7 @@ int cmd_kind_behaviour(int kind)
     return s_behaviour[kind];
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 const char* cmd_task_name(int slot)
 {
     return (slot >= 0 && slot < 31) ? s_task_names[slot] : NULL;
@@ -871,6 +876,7 @@ const char* cmd_priority_name(int slot)
 {
     return (slot >= 0 && slot < 27) ? s_priority_names[slot] : NULL;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* ------------------------------------------------------------------ *
  *  Link / chain primitives.
@@ -906,6 +912,7 @@ void* cmd_global_head(void)
     return s_global_head;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void* cmd_global_pending_head(void)
 {
     return s_global_tail;
@@ -915,6 +922,7 @@ void* cmd_global_next(const void* rec)
 {
     return rec != NULL ? cas_rec(rec)->global_next : NULL;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void cmd_global_unlink(const void* rec)
 {
@@ -941,6 +949,7 @@ void cmd_global_unlink(const void* rec)
     }
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void* cmd_rec_entity_ref(const void* rec)
 {
     return rec != NULL ? cas_rec(rec)->entity_ref : NULL;
@@ -967,6 +976,7 @@ void cmd_create_move(EntitySlot* e, float x, float y, int flag)
     memcpy(position_xy, cell_xy, sizeof(cell_xy));
     cmd_create_move(e, position_xy, flag);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* Task kind derived from the entity type (FUN_00402720's bVar3 switch). */
 
@@ -1099,6 +1109,7 @@ int cmd_purge_compare_default(const void* left, const void* right)
            (a_behaviour > b_behaviour ? 1 : 0);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* Portable helper for callers that own an EntitySlot command chain. Retail
  * CmdChainPurge takes a command-list head pointer; its mapped implementation
  * is cmd_global_list_purge below. */
@@ -1233,6 +1244,7 @@ void cmd_tick_global(void)
 {
     cmd_tick_global_delta(0.0f);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* ------------------------------------------------------------------ *
  *  Idle queue table (IdleQueueRegister): type-2 entries.
@@ -1361,6 +1373,7 @@ int selection_candidate_filter(void* entity, int mode, int param_3)
 
 /* --- entity record schedulers (see cmd.hpp) ---------------------------------- */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void cmd_rec_state_set(void* rec, uint32_t state)
 {
     if (rec != NULL) {
@@ -1393,6 +1406,7 @@ void cmd_rec_type_set(void* rec, int type)
         as_rec(rec)->type = type;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 CoordinatePairEntityCallback s_coordinate_pair_entity_callback;
 ArgumentEntityCallback s_argument_entity_callback;
@@ -1484,6 +1498,7 @@ void cmd_pool_cell_refresh_dispatch(const int cell_xy[2], int mode)
     }
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 unsigned cmd_rec_count_get(const void* rec)
 {
     return rec != NULL ? cas_rec(rec)->count : 0u;
@@ -1496,6 +1511,7 @@ int cmd_rec_extra_get(const void* rec)
     }
     return (int)cas_rec(rec)->extra;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int cmd_rec_cell_xy_get(const void* rec, int* x, int* y)
 {
@@ -1512,6 +1528,7 @@ int cmd_rec_cell_xy_get(const void* rec, int* x, int* y)
     return 1;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int cmd_rec_action_get(const void* rec)
 {
     return rec != NULL ? (int)cas_rec(rec)->cell_act : -1;
@@ -1521,6 +1538,7 @@ int cmd_rec_target_get(const void* rec)
 {
     return rec != NULL ? (int)cas_rec(rec)->cell_target : -2;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void cmd_tutorial_congregation_set(int x, int y, int enable)
 {
@@ -1529,6 +1547,7 @@ void cmd_tutorial_congregation_set(int x, int y, int enable)
     else task_registry_remove_type0_entry_by_pair(pair);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void* cmd_rec_event_payload_get(const void* rec)
 {
     return rec != NULL ? cas_rec(rec)->event_payload : NULL;
@@ -1551,12 +1570,14 @@ void cmd_rec_zone_set(void* rec, int zone)
         as_rec(rec)->zone = zone;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void cmd_link_global_head(void* rec, int kind)
 {
     cmd_link_head(as_rec(rec), kind);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void cmd_rec_action_set(void* rec, int action)
 {
     if (rec != NULL) {
@@ -1570,12 +1591,14 @@ void cmd_rec_target_set(void* rec, int target)
         as_rec(rec)->cell_target = target;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* --- the cell-command type-3 issue + task batch append band (2026-10-25) -- */
 
 DeferredOListEntry s_deferred_olist[DEFERRED_OLIST_SLOTS];
 uint32_t           s_deferred_olist_next; /* DAT_004ea7a4 */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t deferred_olist_entry_word(int slot, int word)
 {
     if (slot < 0 || slot >= DEFERRED_OLIST_SLOTS || word < 0 || word > 8) {
@@ -1596,6 +1619,7 @@ uint32_t deferred_olist_counter_peek(void)
 {
     return s_deferred_olist_next;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void deferred_olist_reset(void)
 {
@@ -1650,10 +1674,12 @@ unsigned int deferred_olist_entity_queue_take_cell(const int cell_xy[2],
  * NULL terrain handle reads the zero state through the guarded leaves. */
 uint32_t s_menu_surface_track; /* DAT_004de1f0 */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t menu_surface_track_peek(void)
 {
     return s_menu_surface_track;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 const char* s_upgrade_names[UPGRADE_NAME_TABLE_MAX];
 // GLOBAL: LEGORR 0x005561e4
@@ -1680,6 +1706,7 @@ void upgrade_name_table_install(void* records, const char* const* names,
     s_upgrade_count = (unsigned)count;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void kind_six_sweep_timer_install(float value) { s_sweep_timer = value; }
 float kind_six_sweep_timer_peek(void) { return s_sweep_timer; }
 
@@ -1715,6 +1742,7 @@ uint32_t command_sample_stats_peek(int kind, int field)
     default: return 0u;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 namespace unported_ledger_stubs {
 

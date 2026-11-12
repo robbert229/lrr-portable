@@ -258,6 +258,7 @@ Sound* sound_bank_find(const char* fullname)
     return NULL;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int sound_bank_count(void)
 {
     int count = 0;
@@ -302,12 +303,14 @@ void sound_bank_sound_on_set(int on)
 {
     s_bank_sound_on = (on != 0);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int sound_bank_sound_on(void)
 {
     return s_bank_sound_on;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t sound_bank_entry_flags(int slot)
 {
     if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
@@ -335,6 +338,7 @@ uint32_t sound_pcm_hash(Sound* s)
     }
     return h;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* ------------------------------------------------------------------ *
  *  Sound alias registry (finding 137; issues #313 / #321 / #314).
@@ -504,6 +508,7 @@ void sound_spatial_refresh_hooks_set(SoundSpatialRefreshHook refresh,
     s_spatial_refresh_context = context;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int sound_alias_count(void)
 {
     return SOUND_ALIAS_BUILTINS + s_alias_dynamic_count;
@@ -580,6 +585,7 @@ int sound_deferred_handle(void)
 {
     return s_cooldown_handle;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* ------------------------------------------------------------------ *
  *  Configured sound-variant chains (issues #318 / #324). See sound.hpp.
@@ -590,6 +596,7 @@ int s_variant_next[SOUND_ALIAS_MAX]; /* DAT_0050146c head next words */
 
 VariantNode s_variant_pool[SOUND_VARIANT_POOL_NODES];
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int sound_variant_chain(int alias_index, int* out_slots, int max)
 {
     if (alias_index < 0 || alias_index >= SOUND_ALIAS_MAX || max <= 0) {
@@ -665,6 +672,7 @@ int sound_active_request_get(int index, int* alias, int* loop)
     }
     return 1;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* ------------------------------------------------------------------ *
  *  Streamed-voice duration + configured stream triggers (issues

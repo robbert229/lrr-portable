@@ -139,12 +139,14 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
     s_task_init_binding = previous;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void mission_task_refresh(GameContext* ctx)
 {
     if (ctx == NULL) return;
     mission_task_config_values_refresh(ctx, ctx->cfg,
         ctx->level != NULL ? (const char*)ctx->level->ptr_name : NULL);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static void mission_task_config_values_refresh(GameContext* ctx,
                                                BlockFile* cfg,

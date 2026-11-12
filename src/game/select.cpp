@@ -107,6 +107,7 @@ EntitySlot* const* selection_record_array(const GameContext* ctx)
     return ctx != NULL ? ctx->selection : NULL;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void selection_count_reset(GameContext* ctx)
 {
     /* Corpus SelectionRecordCountReset @ 0x452600 — DAT_004ff298 = 0,
@@ -118,6 +119,7 @@ void selection_count_reset(GameContext* ctx)
         }
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 EntitySlot* selection_first(const GameContext* ctx)
 {
@@ -194,12 +196,14 @@ int selection_cmd_move(GameContext* ctx, float tx, float ty)
     return n;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void selection_cmd_add(GameContext* ctx, EntitySlot* e)
 {
     if (ctx != NULL && e != NULL) {
         cmd_produce(1, e, 1, NULL);
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int selection_contains_entity_target(const GameContext* ctx,
                                      const EntitySlot* e,
@@ -221,6 +225,7 @@ int selection_contains_entity_target(const GameContext* ctx,
     return 0;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int selection_contains_entity(const GameContext* ctx, const EntitySlot* e)
 {
     uint32_t index;
@@ -259,6 +264,7 @@ void selection_clear_marker_and_reset_hud(struct EngineContext* engine,
     }
     selection_clear_request_and_hud_reset();
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* The ordinary floor alternatives at 0x4272b6..0x42744f. A recognized
  * floor owns a failed route/permission result too: it must not become an

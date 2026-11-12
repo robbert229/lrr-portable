@@ -867,10 +867,12 @@ void message_cooldown_tick(float dt)
  * does not change (finding 538). */
 #include "interface_unit.h"
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t incident_message_state_get(void)
 {
     return (uint32_t)(size_t)interfaceGlobs.font;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 static void message_node_track(void* node)
 {
     if (node != NULL && s_message_node_count < MESSAGE_NODE_LIMIT) {

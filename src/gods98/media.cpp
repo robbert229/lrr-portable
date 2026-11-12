@@ -30,6 +30,7 @@ typedef struct MediaTimer {
 
 static MediaTimer s_timer;
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int media_timer_schedule(float delay, MediaTimerCallback cb, void* user)
 {
     s_timer.active = 1;
@@ -74,6 +75,7 @@ int media_timer_pending(void)
 {
     return s_timer.active;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 float media_timer_remaining(void)
 {
@@ -145,6 +147,7 @@ float  s_mind_clip_base  = 0.0f;   /* DAT_00556114 analog */
 float  s_mind_ref_base   = 150.0f; /* DAT_00556ec4 analog (150.0) */
 float  s_mind_dist_base  = 0.0f;   /* DAT_005560d4 + 0x1c analog */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void media_min_distance_config_set(float cell_scale, float clip_base,
                                    float ref_base, float min_dist_base)
 {
@@ -153,6 +156,7 @@ void media_min_distance_config_set(float cell_scale, float clip_base,
     s_mind_ref_base = ref_base;
     s_mind_dist_base = min_dist_base;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int media_min_distance_mode(void)
 {
@@ -164,6 +168,7 @@ void* media_min_distance_context(void)
     return s_mind_context;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 float media_min_distance_listener_scale(void)
 {
     return s_mind_listener;
@@ -181,3 +186,4 @@ float media_min_distance_ref_distance(void)
 
 void* loader_progress_callback_peek(void) { return s_loader_progress_callback; }
 void* loader_progress_context_peek(void) { return s_loader_progress_context; }
+#endif /* !LEGORRR_BACKEND_WINAPI */

@@ -594,8 +594,10 @@ const LwscNode* lwsc_scene_node(const LwscSceneTemplate* scene, unsigned int ind
 { return scene != NULL && index < scene->count ? &scene->nodes[index] : NULL; }
 unsigned int lwsc_scene_first_frame(const LwscSceneTemplate* scene)
 { return scene != NULL ? scene->first_frame : 0u; }
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 unsigned int lwsc_scene_last_frame(const LwscSceneTemplate* scene)
 { return scene != NULL ? scene->last_frame : 0u; }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 float lwsc_scene_fps(const LwscSceneTemplate* scene)
 { return scene != NULL ? scene->fps : 0.0f; }
 const char* lwsc_scene_path(const LwscSceneTemplate* scene)
@@ -795,12 +797,14 @@ const char* lwsc_assembly_configured_name(const LwscAssemblyTemplate* assembly,
     return NULL;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 const LwscSceneTemplate* lwsc_assembly_scene(const LwscAssemblyTemplate* assembly,
                                             unsigned int activity)
 {
     return assembly != NULL && activity < assembly->metadata->count
         ? assembly->scenes[activity] : NULL;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static void lwsc_identity(float matrix[16])
 {
@@ -1036,12 +1040,14 @@ failed:
     return NULL;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 LwscAssemblyInstance* lwsc_instance_create(LwscAssemblyTemplate* assembly,
     const LwscBackendOps* ops, const LwscFrameRef* parent,
     const float root_matrix[16], LwscError* error)
 {
     return lwsc_instance_create_internal(assembly, ops, parent, root_matrix, 1, error);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 LwscAssemblyInstance* lwsc_instance_create_for_pose(LwscAssemblyTemplate* assembly,
     const LwscBackendOps* ops, const LwscFrameRef* parent,
@@ -1050,6 +1056,7 @@ LwscAssemblyInstance* lwsc_instance_create_for_pose(LwscAssemblyTemplate* assemb
     return lwsc_instance_create_internal(assembly, ops, parent, root_matrix, 0, error);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 LwscAssemblyInstance* lwsc_instance_clone(const LwscAssemblyInstance* source,
     const LwscFrameRef* parent, const float root_matrix[16], LwscError* error)
 {
@@ -1066,6 +1073,7 @@ LwscAssemblyInstance* lwsc_instance_clone(const LwscAssemblyInstance* source,
     }
     return clone;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void lwsc_instance_destroy(LwscAssemblyInstance* instance)
 {

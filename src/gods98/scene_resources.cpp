@@ -135,6 +135,7 @@ void scene_node_matrix_apply_hook_set(SceneNodeMatrixApplyHook hook,
     s_node_matrix_apply_hook = hook;
     s_node_matrix_apply_context = context;
 }
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void scene_node_transform_matrix_apply(void* owner, const void* track,
     const float position[3], const float rotation[3], const float scale[3])
 {
@@ -197,6 +198,7 @@ void scene_node_transform_matrix_apply(void* owner, const void* track,
     s_node_matrix_apply_hook(owner, track, matrix,
                              s_node_matrix_apply_context);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 void scene_resource_string_tables_set(void** first, unsigned int first_count,
                                       void** second, unsigned int second_count)
 { s_string_table_a = first; s_string_count_a = first_count; s_string_table_b = second; s_string_count_b = second_count; }

@@ -13,10 +13,12 @@
 #include "sound.hpp"
 #include "util.hpp"
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 const char* game_layer_name(void)
 {
     return "game layer (level/mission/save)";
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* Root identity string used in the reconstruction log. */
 const char* game_identity(void)

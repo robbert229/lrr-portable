@@ -166,6 +166,7 @@ void map_cell_record_grid_initialize(void* level)
     s_active_cell_kind_grid = grid;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* Port model of 0x0040ce30 (GAME-013); the original-shape
  * function is in terrain_cell_objects.c. */
 void selection_marker_resources_release(void)
@@ -196,6 +197,7 @@ void selection_marker_resources_release(void)
         s_marker_descriptor = NULL;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* MapCellStateBufferRebuild (FUN_0040ce80): release prior marker resources,
  * then rebuild the level's per-cell state records. */
