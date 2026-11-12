@@ -28,25 +28,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include "effects_shared.hpp"
+#include "effects_for_weapons.hpp"
 
-static uint32_t s_active_effect_occupied[10];
-static uint32_t s_active_segment_visual_occupied[10];
-static ActiveEffectRecord s_active_effect_records[10];
+uint32_t s_active_effect_occupied[10];
+uint32_t s_active_segment_visual_occupied[10];
+ActiveEffectRecord s_active_effect_records[10];
 /* Each record's flight path. The original embeds the BezierCurve at +4 of
  * its 0x2b0-byte record (00503920); the port's record keeps its own layout,
  * so the paths sit beside it, one per slot. */
 static BezierCurve s_active_effect_paths[10];
-static ActiveEffectBuildHooks s_active_effect_build_hooks;
-static EntityImpulseApplyHook s_entity_impulse_hook;
-static EntityDirectionApplyHook s_entity_direction_hook;
-static TimedSegmentVisualHooks s_timed_segment_visual_hooks;
-static void* s_timed_segment_visuals[10][2];
-static void* s_timed_segment_visual_owners[10];
-static SimtickSfxTimedVisualRecord s_timed_segment_tick_records[10];
+ActiveEffectBuildHooks s_active_effect_build_hooks;
+EntityImpulseApplyHook s_entity_impulse_hook;
+EntityDirectionApplyHook s_entity_direction_hook;
+TimedSegmentVisualHooks s_timed_segment_visual_hooks;
+void* s_timed_segment_visuals[10][2];
+void* s_timed_segment_visual_owners[10];
+SimtickSfxTimedVisualRecord s_timed_segment_tick_records[10];
 static SimtickSfxProjectileRecord s_active_effect_tick_records[10];
 static int s_sfx_tick_hooks_installed;
 static KindEffectDispatchHooks s_kind_effect_dispatch_hooks;
-static EffectApplyHooks s_effect_apply_hooks;
+EffectApplyHooks s_effect_apply_hooks;
 static ScreenSpaceEffectDispatchHook s_screen_space_effect_dispatch_hook;
 struct ScreenEffectTickRecord s_screen_effect_tick_records[3][50];
 ScreenEffectTickHooks s_screen_effect_tick_hooks;
@@ -497,42 +498,6 @@ const SceneTransformState* scene_transform_state_peek(void)
     return &s_scene_transform_state;
 }
 
-// FUNCTION: LEGORR 0x0046fef0
-void effect_mode_surface_query_type_resolve(uint32_t mode,
-                                            uint32_t* surface_type,
-                                            uint32_t* flags)
-{
-    switch (mode) {
-    case 1: *surface_type = 0x13; *flags = 0; break;
-    case 2: *surface_type = 0x10; *flags = 0; break;
-    case 3: *surface_type = 0x11; *flags = 0; break;
-    case 4: *surface_type = 5;    *flags = 0; break;
-    default: break;
-    }
-}
-
-// FUNCTION: LEGORR 0x0046ff70
-int active_effect_record_slot_find(void)
-{
-    int i;
-    for (i = 0; i < 10; ++i) {
-        if (s_active_effect_occupied[i] == 0 ||
-            s_active_effect_records[i].spawned_entity == NULL) return i;
-    }
-    return -1;
-}
-
-// FUNCTION: LEGORR 0x0046ff90
-int active_segment_visual_record_slot_find(void)
-{
-    int i;
-    for (i = 0; i < 10; ++i) {
-        if (s_active_segment_visual_occupied[i] == 0 ||
-            s_timed_segment_visuals[i][0] == NULL) return i;
-    }
-    return -1;
-}
-
 void active_effect_record_slot_set(int slot, int occupied)
 {
     if (slot >= 0 && slot < 10)
@@ -576,25 +541,6 @@ void entity_effect_motion_hooks_set(EntityImpulseApplyHook impulse_hook,
     s_entity_direction_hook = direction_hook;
 }
 
-// FUNCTION: LEGORR 0x0046f380
-void entity_apply_impulse_and_direction(void* entity, float magnitude,
-                                        uint32_t direction)
-{
-    if (s_entity_impulse_hook != NULL) {
-        s_entity_impulse_hook(entity, magnitude, 1, 1.0f);
-    }
-    else {
-        entity_damage_apply((EntitySlot*)entity, magnitude, 1);
-    }
-    if (s_entity_direction_hook != NULL) {
-        s_entity_direction_hook(entity, 0, direction);
-    }
-    else {
-        entity_directional_activity_start((EntitySlot*)entity, NULL,
-                                          (int)direction);
-    }
-}
-
 void timed_segment_visual_hooks_set(const TimedSegmentVisualHooks* hooks)
 {
     if (hooks == NULL) {
@@ -606,157 +552,6 @@ void timed_segment_visual_hooks_set(const TimedSegmentVisualHooks* hooks)
         return;
     }
     s_timed_segment_visual_hooks = *hooks;
-}
-
-// FUNCTION: LEGORR 0x00470690
-void timed_entity_segment_visual_create(void* entity, const float start[3],
-                                       const float end[3])
-{
-    int slot = active_segment_visual_record_slot_find();
-    void* scene;
-    if (slot < 0 || s_timed_segment_visual_hooks.scene_get == NULL ||
-        s_timed_segment_visual_hooks.visual_create == NULL ||
-        s_timed_segment_visual_hooks.segment_build == NULL) return;
-    scene = s_timed_segment_visual_hooks.scene_get(entity);
-    s_timed_segment_visuals[slot][0] =
-        s_timed_segment_visual_hooks.visual_create(scene, 0x4400u);
-    s_timed_segment_visuals[slot][1] =
-        s_timed_segment_visual_hooks.visual_create(scene, 0x4400u);
-    s_timed_segment_visual_hooks.segment_build(s_timed_segment_visuals[slot][0],
-                                               0.2f, start, end,
-                                               0.6f, 0.6f, 0.6f, 1.0f);
-    s_timed_segment_visual_hooks.segment_build(s_timed_segment_visuals[slot][1],
-                                               1.0f, start, end,
-                                               0.1f, 0.2f, 0.5f, 1.0f);
-    s_timed_segment_visual_owners[slot] = entity;
-    s_timed_segment_tick_records[slot].first_handle =
-        s_timed_segment_visuals[slot][0];
-    s_timed_segment_tick_records[slot].second_handle =
-        s_timed_segment_visuals[slot][1];
-    s_timed_segment_tick_records[slot].resource_owner = scene;
-    s_timed_segment_tick_records[slot].remaining = 5.0f;
-    active_segment_visual_record_slot_set(slot, 1);
-}
-
-// FUNCTION: LEGORR 0x00470760
-void mesh_build_eight_sided_segment(void* mesh, float radius,
-                                    const float start[3], const float end[3],
-                                    float red, float green, float blue,
-                                    float alpha)
-{
-    static const uint16_t triangle_indices[48] = {
-        0, 1, 9, 9, 8, 0, 1, 2, 10, 10, 9, 1,
-        2, 3, 11, 11, 10, 2, 3, 4, 12, 12, 11, 3,
-        4, 5, 13, 13, 12, 4, 5, 6, 14, 14, 13, 5,
-        6, 7, 15, 15, 14, 6, 7, 0, 8, 8, 15, 7
-    };
-    static const uint32_t texture_pairs[32] = {
-        0u, 0x3f800000u, 0u, 0u, 0x3f800000u, 0u, 0x3f800000u, 0x3f800000u,
-        0u, 0x3f800000u, 0u, 0u, 0x3f800000u, 0u, 0x3f800000u, 0x3f800000u,
-        0u, 0x3f800000u, 0u, 0u, 0x3f800000u, 0u, 0x3f800000u, 0x3f800000u,
-        0u, 0x3f800000u, 0u, 0u, 0x3f800000u, 0u, 0x3f800000u, 0x3f800000u
-    };
-    uint16_t source_indices[96];
-    float positions[48];
-    float normals[24];
-    float dx;
-    float dy;
-    float dz;
-    float inverse_length;
-    float axis_y;
-    float axis_z;
-    float frame_x;
-    float frame_y;
-    float off_x[8];
-    float off_y[8];
-    float off_z[8];
-    float f6;
-    float f9;
-    float f5;
-    float f8;
-    float fparam;
-    float diagonal_x;
-    float diagonal_y;
-    float diagonal_z;
-    float diagonal_r;
-    float diagonal_f9;
-    float normal_length;
-    int record_index;
-    int i;
-    if (mesh == NULL || start == NULL || end == NULL) return;
-
-    dx = end[0] - start[0];
-    dy = end[1] - start[1];
-    dz = end[2] - start[2];
-    /* Keep the decompile's component evaluation order (z, y, x). */
-    inverse_length = 1.0f / (float)sqrt(dz * dz + dy * dy + dx * dx);
-    axis_y = inverse_length * dy;
-    axis_z = inverse_length * dz;
-    if (axis_y == 0.0f && axis_z == 0.0f) {
-        frame_x = 1.0f;
-        frame_y = 0.0f;
-    }
-    else if (axis_y == 0.0f) {
-        frame_y = 1.0f;
-        frame_x = 0.0f;
-    }
-    else {
-        frame_x = (float)sqrt(1.0f / ((axis_z * axis_z) /
-                                      (axis_y * axis_y) + 1.0f));
-        frame_y = -(axis_z / axis_y) * frame_x;
-    }
-
-    f6 = frame_y * radius;
-    f9 = frame_x * radius;
-    f5 = (frame_x * axis_y - frame_y * axis_z) * radius;
-    f8 = -(frame_x * inverse_length * dx) * radius;
-    fparam = frame_y * inverse_length * dx * radius;
-    diagonal_x = f6 * 0.41421354f;
-    diagonal_y = f5 * 0.41421354f;
-    diagonal_z = f8 * 0.41421354f;
-    diagonal_r = fparam * 0.41421354f;
-    diagonal_f9 = f9 * 0.41421354f;
-
-    off_x[0] = diagonal_y; off_y[0] = f6 + diagonal_z; off_z[0] = f9 + diagonal_r;
-    off_x[1] = f5; off_y[1] = f8 + diagonal_x; off_z[1] = fparam + diagonal_f9;
-    off_x[2] = f5; off_y[2] = f8 - diagonal_x; off_z[2] = fparam - diagonal_f9;
-    off_x[3] = diagonal_y; off_y[3] = diagonal_z - f6; off_z[3] = diagonal_r - f9;
-    off_x[4] = -diagonal_y; off_y[4] = -f6 - diagonal_z; off_z[4] = -f9 - diagonal_r;
-    off_x[5] = -f5; off_y[5] = -diagonal_x - f8; off_z[5] = -diagonal_f9 - fparam;
-    off_x[6] = -f5; off_y[6] = diagonal_x - f8; off_z[6] = diagonal_f9 - fparam;
-    off_x[7] = -diagonal_y; off_y[7] = f6 - diagonal_z; off_z[7] = f9 - diagonal_r;
-
-    for (i = 0; i < 8; ++i) {
-        float nx;
-        float ny;
-        float nz;
-        int vertex = i * 3;
-        positions[vertex] = start[0] + off_x[i];
-        positions[vertex + 1] = start[1] + off_y[i];
-        positions[vertex + 2] = start[2] + off_z[i];
-        positions[24 + vertex] = end[0] + off_x[i];
-        positions[24 + vertex + 1] = end[1] + off_y[i];
-        positions[24 + vertex + 2] = end[2] + off_z[i];
-        nx = off_x[i];
-        ny = off_y[i];
-        nz = off_z[i];
-        normal_length = (float)sqrt(nx * nx + nz * nz + ny * ny);
-        normals[vertex] = nx / normal_length;
-        normals[vertex + 1] = ny / normal_length;
-        normals[vertex + 2] = nz / normal_length;
-    }
-    for (i = 0; i < 48; ++i) {
-        source_indices[i * 2] = triangle_indices[i];
-        source_indices[i * 2 + 1] = 0;
-    }
-
-    record_index = mesh_record_allocate_or_append(mesh, 16u, 16u, 3u,
-                                                   source_indices);
-    if (record_index < 0) return;
-    (void)render_object_color_vector_set(mesh, record_index, red, green, blue, 3);
-    (void)screen_effect_item_opacity_set(mesh, record_index, alpha, 4);
-    mesh_segment_vertex_fill(mesh, record_index, 0, 16, positions,
-                             (const uint32_t*)normals, texture_pairs);
 }
 
 void kind_effect_dispatch_hooks_set(const KindEffectDispatchHooks* hooks)
@@ -885,7 +680,7 @@ static void* active_effect_component_get(ActiveEffectRecord* record)
     return entity->type_component_handle;
 }
 
-static BezierCurve* active_effect_path(const ActiveEffectRecord* record)
+BezierCurve* active_effect_path(const ActiveEffectRecord* record)
 {
     return &s_active_effect_paths[record - s_active_effect_records];
 }
@@ -1042,230 +837,10 @@ void effects_simtick_sfx_hooks_install(void)
     s_sfx_tick_hooks_installed = 1;
 }
 
-static int active_effect_type_resolve(uint32_t mode, uint32_t* type,
-                                      uint32_t* flags)
-{
-    *type = 0;
-    *flags = 0;
-    switch (mode) {
-    case 1: *type = 0x13; break;
-    case 2: *type = 0x10; break;
-    case 3: *type = 0x11; break;
-    case 4: *type = 5; break;
-    default: return 0;
-    }
-    return 1;
-}
-
-static void active_effect_direction_normalize(float direction[3])
-{
-    float length = (float)sqrt(direction[0] * direction[0] +
-                               direction[1] * direction[1] +
-                               direction[2] * direction[2]);
-    float inverse = 1.0f / length;
-    direction[0] *= inverse;
-    direction[1] *= inverse;
-    direction[2] *= inverse;
-}
-
-/* FUN_0046fc70's path: a cubic in the vertical plane from the start to the
- * end, (horizontal distance, height). It leaves at (1, -1.3) scaled to a
- * fifth of the distance and arrives along (0.3, 1) scaled to a third. The
- * total length becomes the flight duration. record->duration holds the
- * straight-line distance on entry. */
-static void active_effect_curve_samples_build(ActiveEffectRecord* record,
-                                              const float endpoint[3])
-{
-    BezierCurve* path = active_effect_path(record);
-    float distance = record->duration;
-    Point2F p0, p1, p2, p3;
-    p0.x = 0.0f;
-    p0.y = 0.0f;
-    p1.x = 1.0f;
-    p1.y = -1.3f;
-    p2.x = distance;
-    p2.y = endpoint[2] - record->curve_origin[2];
-    p3.x = 0.3f;
-    p3.y = 1.0f;
-    vector2_set_length(&p1, distance * 0.2f);
-    vector2_set_length(&p3, distance * 0.33333334f);
-    bezier_curve_samples_build(path, &p0, &p1, &p2, &p3, BEZIER_MAXPOINTS);
-    record->curve_total_length = polyline_segment_lengths_total(path);
-}
-
-// FUNCTION: LEGORR 0x0046faf0
-int entity_spawn_record_slot_init(void* owner, const float position[3],
-                                  const float direction[3],
-                                  uint32_t auxiliary, uint32_t mode)
-{
-    uint32_t type, flags;
-    int slot;
-    unsigned int i;
-    ActiveEffectRecord* record;
-    /* Retail performs this owner/mode preparation before resolving the
-     * surface pair or testing its table pointer. Use the injected callback
-     * when present; otherwise run the live queued-grid animation path that
-     * implements FUN_00437300(owner, auxiliary, 1.0). */
-    if (mode == 1) {
-        if (s_active_effect_build_hooks.pre_spawn_prepare != NULL) {
-            s_active_effect_build_hooks.pre_spawn_prepare(
-                s_active_effect_build_hooks.context, owner, auxiliary);
-        }
-        else {
-            process_queued_grid_animations(owner, (int)auxiliary, 1.0f);
-        }
-    }
-    if (position == NULL || direction == NULL ||
-        !active_effect_type_resolve(mode, &type, &flags)) return 0;
-    if (s_active_effect_build_hooks.surface_type_exists != NULL &&
-        !s_active_effect_build_hooks.surface_type_exists(
-            s_active_effect_build_hooks.context, type, flags)) return 0;
-    slot = active_effect_record_slot_find();
-    if (slot < 0) return 0;
-    record = &s_active_effect_records[slot];
-    memset(record, 0, sizeof(*record));
-    record->auxiliary = auxiliary;
-    record->mode = mode;
-    record->owner = owner;
-    record->speed = 5.0f;
-    for (i = 0; i < 3; ++i) {
-        record->position[i] = position[i];
-        record->previous_position[i] = position[i];
-        record->direction[i] = direction[i];
-    }
-    active_effect_direction_normalize(record->direction);
-    if (s_active_effect_build_hooks.entity_spawn != NULL)
-        record->spawned_entity = s_active_effect_build_hooks.entity_spawn(
-            s_active_effect_build_hooks.context, type, flags, position);
-    record->initialized = 0;
-    active_effect_record_slot_set(slot,
-                                  record->spawned_entity != NULL);
-    if (s_active_effect_build_hooks.record_activate != NULL)
-        s_active_effect_build_hooks.record_activate(
-            s_active_effect_build_hooks.context, record, slot);
-    return 1;
-}
-
-// FUNCTION: LEGORR 0x0046fc70
-int object_flight_curve_record_init(void* owner, const float start[3],
-                                    const float end[3], uint32_t auxiliary,
-                                    uint32_t mode)
-{
-    uint32_t type, flags;
-    int slot;
-    unsigned int i;
-    float distance;
-    ActiveEffectRecord* record;
-    if (start == NULL || end == NULL ||
-        !active_effect_type_resolve(mode, &type, &flags)) return 0;
-    if (s_active_effect_build_hooks.surface_type_exists != NULL &&
-        !s_active_effect_build_hooks.surface_type_exists(
-            s_active_effect_build_hooks.context, type, flags)) return 0;
-    slot = active_effect_record_slot_find();
-    if (slot < 0) return 0;
-    record = &s_active_effect_records[slot];
-    memset(record, 0, sizeof(*record));
-    record->mode = mode;
-    record->auxiliary = auxiliary;
-    record->owner = owner;
-    record->initialized = 1;
-    record->speed = 4.0f;
-    record->curve[0] = 0.3f;
-    record->curve[1] = 1.0f;
-    record->curve[2] = 1.0f;
-    record->curve[3] = -1.3f;
-    for (i = 0; i < 3; ++i) {
-        record->position[i] = start[i];
-        record->previous_position[i] = start[i];
-        record->curve_origin[i] = start[i];
-        record->direction[i] = end[i] - start[i];
-    }
-    active_effect_direction_normalize(record->direction);
-    distance = (float)sqrt((end[0] - start[0]) * (end[0] - start[0]) +
-                           (end[1] - start[1]) * (end[1] - start[1]) +
-                           (end[2] - start[2]) * (end[2] - start[2]));
-    record->duration = distance;
-    active_effect_curve_samples_build(record, end);
-    if (s_active_effect_build_hooks.flight_curve_build != NULL) {
-        record->duration = s_active_effect_build_hooks.flight_curve_build(
-            s_active_effect_build_hooks.context, record, end);
-    }
-    else {
-        record->duration = record->curve_total_length;
-    }
-    if (s_active_effect_build_hooks.entity_spawn != NULL)
-        record->spawned_entity = s_active_effect_build_hooks.entity_spawn(
-            s_active_effect_build_hooks.context, type, flags, start);
-    active_effect_record_slot_set(slot,
-                                  record->spawned_entity != NULL);
-    if (s_active_effect_build_hooks.record_activate != NULL)
-        s_active_effect_build_hooks.record_activate(
-            s_active_effect_build_hooks.context, record, slot);
-    return 1;
-}
-
 void effect_apply_hooks_set(const EffectApplyHooks* hooks)
 {
     if (hooks == NULL) memset(&s_effect_apply_hooks, 0, sizeof(s_effect_apply_hooks));
     else s_effect_apply_hooks = *hooks;
-}
-
-// FUNCTION: LEGORR 0x0046f770
-void effect_apply_by_kind_branch(void* entity, const float direction_xy[2],
-                                 const float effect_position[3],
-                                 uint32_t type, int mode)
-{
-    EntitySlot* target = (EntitySlot*)entity;
-    uint32_t flags;
-    float direction[2];
-    if (entity == NULL || direction_xy == NULL) return;
-    direction[0] = direction_xy[0];
-    direction[1] = direction_xy[1];
-    if (entity_type3_flag04000000_test(target) != 0 &&
-        effect_position != NULL) {
-        scene_light_create_at_position(effect_position);
-    }
-    flags = entity_state_flags_get(target);
-    if (mode == 1) {
-        if ((flags & 0x02000000u) != 0) {
-            entity_apply_impulse_and_direction(
-                entity, entity_stats_float_at11c(target), 1u);
-        }
-        if (effect_position != NULL)
-            (void)lava_effect_select_and_place(0, effect_position, NULL);
-    }
-    else if (mode == 2) {
-        if ((flags & 0x04000000u) != 0) {
-            float amount = entity_stats_float_at118(target);
-            float scalar = entity_stats_float_at114(target);
-            int32_t pair_words[2];
-            int32_t scalar_word;
-            direction[0] *= 1.5f;
-            direction[1] *= 1.5f;
-            entity_apply_impulse_and_direction(entity, amount, 1u);
-            memcpy(pair_words, direction, sizeof(pair_words));
-            memcpy(&scalar_word, &scalar, sizeof(scalar_word));
-            (void)entity_pair_scalar_fields_set(target, pair_words,
-                                                scalar_word);
-        }
-        if (effect_position != NULL)
-            (void)lava_effect_select_and_place(1, effect_position, NULL);
-    }
-    else if (mode == 3) {
-        if ((flags & 0x01000000u) != 0) {
-            float duration = entity_stats_float_at10c(target);
-            float amount = entity_stats_float_at110(target);
-            if (duration <= 0.0f) duration = 10.0f;
-            entity_apply_impulse_and_direction(entity, amount, 0u);
-            (void)entity_one_shot_attached_effect_start(target, duration);
-        }
-        if (effect_position != NULL)
-            (void)lava_effect_select_and_place(2, effect_position, NULL);
-    }
-    else if (s_effect_apply_hooks.generic_motion_apply != NULL) {
-        s_effect_apply_hooks.generic_motion_apply(s_effect_apply_hooks.context,
-                                                 entity, type, direction);
-    }
 }
 
 void screen_space_effect_dispatch_hook_set(ScreenSpaceEffectDispatchHook hook,
@@ -1522,77 +1097,3 @@ void ledger_stub_0046b7a0_TimedEffectTimestampReset(unsigned int slot)
 
 } // namespace unported_ledger_stubs
 
-namespace unported_ledger_stubs {
-
-static float combat_ray_configured_range_get(void*, int kind)
-{
-    return lego::weapon_type_range_get(kind);
-}
-
-static int combat_ray_scene_trace(void*, const float origin[3],
-                                  const float direction[3],
-                                  float* hit_fraction, float hit_point[3],
-                                  void** hit_object_out)
-{
-    float distance;
-    float nearest_distance;
-    void* hit_object = NULL;
-    int hit;
-    if (hit_fraction == NULL || hit_point == NULL || origin == NULL ||
-        direction == NULL) return 0;
-    distance = (float)sqrt((double)(direction[0] * direction[0] +
-                                    direction[1] * direction[1] +
-                                    direction[2] * direction[2]));
-    if (distance <= 0.0f) return 0;
-    /* SceneSegmentTraceNearestHit bounds and returns distance in units of
-     * the supplied direction vector (0 at origin, 1 at its endpoint). */
-    nearest_distance = 1.0f;
-    hit = scene_segment_trace_nearest_hit(origin, direction, &hit_object,
-                                          &nearest_distance, NULL);
-    if (hit == 0) return 0;
-    *hit_fraction = nearest_distance;
-    hit_point[0] = origin[0] + direction[0] * *hit_fraction;
-    hit_point[1] = origin[1] + direction[1] * *hit_fraction;
-    hit_point[2] = origin[2] + direction[2] * *hit_fraction;
-    if (hit_object_out != NULL) *hit_object_out = hit_object;
-    return 1;
-}
-
-static void combat_ray_entity_release(void*, void* entity)
-{
-    (void)entity_teardown((EntitySlot*)entity);
-}
-
-// RayHitScanAndEffectApply
-// FUNCTION: LEGORR 0x0046f3b0
-void ledger_stub_0046f3b0_RayHitScanAndEffectApply(
-    CombatRayState* state, const CombatRayHooks* hooks)
-{
-    CombatRayHooks live_hooks;
-    if (hooks != NULL || state == NULL) {
-        combat_ray_hit_scan_and_effect_apply(state, hooks);
-        return;
-    }
-    live_hooks.configured_range_get = combat_ray_configured_range_get;
-    live_hooks.raycast = combat_ray_scene_trace;
-    live_hooks.entity_release = combat_ray_entity_release;
-    /* The retail call passes the effect direction stored at record +0x290.
-     * CombatRayState has no corresponding field, so leave this callback
-     * unset instead of substituting the ray's origin-to-target delta. */
-    live_hooks.impact_apply = NULL;
-    live_hooks.context = state;
-    combat_ray_hit_scan_and_effect_apply(state, &live_hooks);
-}
-
-// LaserSpatialSoundAndImpact
-// FUNCTION: LEGORR 0x0046ffb0
-void* ledger_stub_0046ffb0_LaserSpatialSoundAndImpact(
-    void* request, int kind, float scale, const float origin[3],
-    const float direction[3], const LaserImpactHooks* hooks)
-{
-    return laser_spatial_sound_and_impact(request, kind, scale, origin,
-                                           direction, hooks);
-}
-
-
-} // namespace unported_ledger_stubs

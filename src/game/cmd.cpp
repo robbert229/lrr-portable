@@ -77,6 +77,8 @@ extern "C" float random_float_range(float minimum, float maximum);
 #include "gods98/string.hpp"
 #include "cmd_shared.hpp"
 #include "cmd_for_lego.hpp"
+#include "cmd_for_weapons.hpp"
+#include "cmd_from_weapons.hpp"
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
@@ -436,11 +438,6 @@ static int pending_command_cell_walkable(GameContext* context,
                                          const EntitySlot* entity,
                                          int x, int y, int mode);
 
-typedef struct CmdRayCandidateWalk {
-    GameContext* game;
-    EntityRayHitSweepState* state;
-} CmdRayCandidateWalk;
-
 static int cmd_place_ray_object_position_get(void*, void* object,
                                             float position[3])
 {
@@ -491,77 +488,6 @@ static int cmd_place_ray_cell_intersection(void*, uint32_t x, uint32_t y,
         ? terrain_cell_ray_hit_test(grid, (int)x, (int)y, start, direction,
                                     hit)
         : 0;
-}
-
-/* LAB_00471370: the scene callback receives each live entity and the ray
- * record. It skips the ray source, projects the entity center onto the
- * horizontal ray, tests the Stats radius at +0x6c, then checks the ray's Z
- * against the terrain-to-Stats-height interval (Stats +0x74). The callback
- * always returns zero so the pool walker examines every candidate. The ray
- * uses the game's logical [X,Y,height] basis; terrain geometry stores the
- * same horizontal axes at vertex components 0/2 and height at component 1. */
-// FUNCTION: LEGORR 0x00471370
-static int cmd_place_ray_candidate_check(EntitySlot* entity, void* payload)
-{
-    CmdRayCandidateWalk* walk = (CmdRayCandidateWalk*)payload;
-    EntityRayHitSweepState* state;
-    float candidate_xy[2];
-    float dx, dy, dz;
-    float horizontal_length;
-    float along;
-    float projected_x, projected_y;
-    float perp_x, perp_y;
-    float radius;
-    float height;
-    float ground;
-    float entry_distance;
-    float entry_fraction;
-    if (walk == NULL || (state = walk->state) == NULL || entity == NULL ||
-        entity == state->ignored_object || walk->game == NULL ||
-        walk->game->level == NULL ||
-        walk->game->level->ptr_terrain == NULL || state->start == NULL ||
-        state->direction == NULL) return 0;
-
-    dx = state->direction[0];
-    dy = state->direction[1];
-    dz = state->direction[2];
-    horizontal_length = (float)sqrt(dx * dx + dy * dy);
-    if (horizontal_length <= 0.00001f) return 0;
-
-    entity_transform_position_get(entity, candidate_xy);
-    along = (candidate_xy[0] - state->start[0]) * dx / horizontal_length +
-            (candidate_xy[1] - state->start[1]) * dy / horizontal_length;
-    projected_x = state->start[0] + along * dx / horizontal_length;
-    projected_y = state->start[1] + along * dy / horizontal_length;
-    perp_x = candidate_xy[0] - projected_x;
-    perp_y = candidate_xy[1] - projected_y;
-    radius = entity_stats_float_at6c(entity);
-    if (radius <= 0.0f || perp_x * perp_x + perp_y * perp_y >=
-        radius * radius) return 0;
-
-    entry_distance = along - (float)sqrt(
-        radius * radius - perp_x * perp_x - perp_y * perp_y);
-    /* A segment that starts inside the candidate's radius reports an
-     * immediate hit, after the same vertical interval check at t = 0. */
-    entry_fraction = entry_distance > 0.0f
-        ? entry_distance / horizontal_length : 0.0f;
-    if (entry_fraction >= state->max_distance)
-        return 0;
-
-    height = entity_stats_float_at74(entity);
-    ground = terrain_surface_height_interpolate(
-        walk->game->level->ptr_terrain, candidate_xy[0], candidate_xy[1]);
-    /* 0x44f940 returns the terrain quad's vertical component directly.
-     * Scene rays store that same vertical value in component +2; components
-     * 0/1 are the horizontal pair corresponding to terrain X/Z. */
-    if (height <= 0.0f ||
-        state->start[2] + dz * entry_fraction > ground + height ||
-        state->start[2] + dz * entry_fraction < ground) return 0;
-
-    state->hit_object = entity;
-    state->max_distance = entry_fraction;
-    state->hit = 1;
-    return 0;
 }
 
 static void cmd_place_ray_scene_trace_prepare(

@@ -830,6 +830,7 @@ extern "C" float random_float_range(float minimum, float maximum);
 #include "entity_for_reward.hpp"
 #include "entity_for_entity_stats.hpp"
 #include "entity_for_lego.hpp"
+#include "entity_for_weapons.hpp"
 
 static uint32_t s_entity_finalize_mode_flags;
 static EntityFinalizeHook s_entity_type5_timeout_hook;
@@ -837,12 +838,12 @@ static EntityFinalizeHook s_entity_type5_finalize_hook;
 static EntitySurfaceVectorGetHook s_entity_surface_vector_get_hook;
 static EntityFlagDispatchHook s_entity_flag_dispatch_first;
 static EntityFlagDispatchHook s_entity_flag_dispatch_second;
-static EntitySegmentRadiusGetHook s_entity_segment_radius_hook;
+EntitySegmentRadiusGetHook s_entity_segment_radius_hook;
 static EntityVelocityApplyHook s_entity_velocity_hooks[5];
-static EntityRayHitSweepOps s_entity_ray_hit_sweep_ops;
-static EntitySteerVelocityApplyFn s_entity_steer_velocity_apply;
-static void* s_entity_steer_velocity_context;
-static EntityVelocitySlotDispatchOps s_entity_velocity_slot_dispatch_ops;
+EntityRayHitSweepOps s_entity_ray_hit_sweep_ops;
+EntitySteerVelocityApplyFn s_entity_steer_velocity_apply;
+void* s_entity_steer_velocity_context;
+EntityVelocitySlotDispatchOps s_entity_velocity_slot_dispatch_ops;
 static EntityVelocitySteerDispatchOps s_entity_velocity_steer_dispatch_ops;
 static EntityRouteSegmentAcceptHook s_entity_route_segment_accept_hook;
 static EntityScenePoseHooks s_entity_scene_pose_hooks;
@@ -919,59 +920,9 @@ int entity_flag_gated_callback_dispatch(EntitySlot* entity,
     return result;
 }
 
-// FUNCTION: LEGORR 0x00470630
-int entity_directed_line_side_check(const EntitySlot* entity,
-                                    const float point_xy[2],
-                                    const float direction_xy[2])
-{
-    float entity_position[2];
-    if (entity == NULL || point_xy == NULL || direction_xy == NULL) return 0;
-    entity_transform_position_get(entity, entity_position);
-    return ((entity_position[0] - point_xy[0]) * direction_xy[0] +
-            (entity_position[1] - point_xy[1]) * direction_xy[1]) < 0.0f;
-}
-
 void entity_segment_radius_hook_set(EntitySegmentRadiusGetHook hook)
 {
     s_entity_segment_radius_hook = hook;
-}
-
-// FUNCTION: LEGORR 0x00470540
-int entity_segment_center_proximity_check(const EntitySlot* entity,
-                                          const float start_xy[2],
-                                          const float end_xy[2],
-                                          int check_side)
-{
-    float line_x;
-    float line_y;
-    float inv_length;
-    float projection;
-    float projected_x;
-    float projected_y;
-    float entity_position[2];
-    float dx;
-    float dy;
-    float radius;
-    if (entity == NULL || start_xy == NULL || end_xy == NULL) return 0;
-    if (check_side && entity_directed_line_side_check(entity, start_xy, end_xy))
-        return 0;
-    entity_transform_position_get(entity, entity_position);
-    line_x = (end_xy[0] + start_xy[0]) - start_xy[0];
-    line_y = (end_xy[1] + start_xy[1]) - start_xy[1];
-    inv_length = 1.0f / (float)sqrt(line_x * line_x + line_y * line_y);
-    line_x *= inv_length;
-    line_y *= inv_length;
-    projection = (entity_position[0] - start_xy[0]) * line_x +
-                 (entity_position[1] - start_xy[1]) * line_y;
-    projected_x = start_xy[0] + projection * line_x;
-    projected_y = start_xy[1] + projection * line_y;
-    dx = projected_x - entity_position[0];
-    dy = projected_y - entity_position[1];
-    radius = s_entity_segment_radius_hook != NULL
-        ? s_entity_segment_radius_hook(entity)
-        : entity_stats_float_at6c(entity);
-    if (radius <= (float)sqrt(dx * dx + dy * dy)) return 0;
-    return 1;
 }
 
 void ray_hit_cell_sweep_ops_set(const EntityRayHitSweepOps* ops)
@@ -981,253 +932,11 @@ void ray_hit_cell_sweep_ops_set(const EntityRayHitSweepOps* ops)
                 sizeof(s_entity_ray_hit_sweep_ops));
 }
 
-/* RayHitCellDistanceMinimizeSweep (FUN_00471630): enumerate the grid cells
- * touched by the start/end segment and retain the nearest reported hit. */
-// FUNCTION: LEGORR 0x00471630
-void ray_hit_cell_distance_minimize_sweep(EntityRayHitSweepState* state)
-{
-    uint32_t width = 0u;
-    uint32_t height = 0u;
-    uint32_t start_x = 0u;
-    uint32_t start_y = 0u;
-    uint32_t end_x = 0u;
-    uint32_t end_y = 0u;
-    uint32_t min_x;
-    uint32_t min_y;
-    uint32_t max_x;
-    uint32_t max_y;
-    uint32_t x;
-    uint32_t y;
-    float endpoint[3];
-    float direction_length;
-    if (state == NULL || state->start == NULL || state->direction == NULL ||
-        s_entity_ray_hit_sweep_ops.grid_dimensions_get == NULL ||
-        s_entity_ray_hit_sweep_ops.world_to_cell == NULL ||
-        s_entity_ray_hit_sweep_ops.cell_intersection == NULL ||
-        s_entity_ray_hit_sweep_ops.grid_dimensions_get(
-            s_entity_ray_hit_sweep_ops.context, &width, &height) == 0 ||
-        width == 0u || height == 0u) return;
-    for (x = 0u; x < 3u; ++x) {
-        endpoint[x] = state->start[x] + state->direction[x];
-    }
-    if (!s_entity_ray_hit_sweep_ops.world_to_cell(
-            s_entity_ray_hit_sweep_ops.context, state->start,
-            &start_x, &start_y)) {
-        if (start_x >= width) start_x = width - 1u;
-        if (start_y >= height) start_y = height - 1u;
-    }
-    if (!s_entity_ray_hit_sweep_ops.world_to_cell(
-            s_entity_ray_hit_sweep_ops.context, endpoint, &end_x, &end_y)) {
-        if (end_x >= width) end_x = width - 1u;
-        if (end_y >= height) end_y = height - 1u;
-    }
-    if (start_x >= width) start_x = width - 1u;
-    if (start_y >= height) start_y = height - 1u;
-    if (end_x >= width) end_x = width - 1u;
-    if (end_y >= height) end_y = height - 1u;
-    min_x = (start_x < end_x) ? start_x : end_x;
-    max_x = (start_x < end_x) ? end_x : start_x;
-    min_y = (start_y < end_y) ? start_y : end_y;
-    max_y = (start_y < end_y) ? end_y : start_y;
-    direction_length = (float)sqrt(
-        state->direction[0] * state->direction[0] +
-        state->direction[1] * state->direction[1] +
-        state->direction[2] * state->direction[2]);
-    if (direction_length <= 0.0f) return;
-    for (x = min_x; x <= max_x; ++x) {
-        for (y = min_y; y <= max_y; ++y) {
-            float hit_point[3];
-            float dx;
-            float dy;
-            float dz;
-            float distance;
-            if (!s_entity_ray_hit_sweep_ops.cell_intersection(
-                    s_entity_ray_hit_sweep_ops.context, x, y,
-                    state->start, state->direction, hit_point)) continue;
-            dx = hit_point[0] - state->start[0];
-            dy = hit_point[1] - state->start[1];
-            dz = hit_point[2] - state->start[2];
-            distance = (float)sqrt(dx * dx + dy * dy + dz * dz) /
-                       direction_length;
-            if (distance < state->max_distance) {
-                state->max_distance = distance;
-                state->hit = 1;
-                state->hit_object = NULL;
-            }
-        }
-    }
-}
-
-/* SceneSegmentTraceNearestHit (FUN_00471860): initialize the trace record,
- * let the scene walk populate its candidate context, then minimize against
- * grid-cell ray hits and publish the nearest result. */
-// FUNCTION: LEGORR 0x00471860
-int scene_segment_trace_nearest_hit(const float start[3],
-                                   const float direction[3],
-                                   void** hit_object_out,
-                                   float* max_distance_io,
-                                   void* ignored_object)
-{
-    EntityRayHitSweepState state;
-    if (hit_object_out != NULL) *hit_object_out = NULL;
-    if (start == NULL || direction == NULL || max_distance_io == NULL) return 0;
-    state.hit_object = NULL;
-    state.max_distance = *max_distance_io;
-    state.start = start;
-    state.direction = direction;
-    state.hit = 0;
-    state.ignored_object = ignored_object;
-    if (s_entity_ray_hit_sweep_ops.scene_trace_prepare != NULL) {
-        s_entity_ray_hit_sweep_ops.scene_trace_prepare(
-            s_entity_ray_hit_sweep_ops.context, &state);
-    }
-    ray_hit_cell_distance_minimize_sweep(&state);
-    *max_distance_io = state.max_distance;
-    if (hit_object_out != NULL) *hit_object_out = state.hit_object;
-    return state.hit;
-}
-
-/* ObjectPairRayHitCheck (FUN_004718d0): trace the normalized segment from
- * the first object to the second and ignore a hit reported on the target. */
-// FUNCTION: LEGORR 0x004718d0
-int object_pair_ray_hit_check(void* first, void* second)
-{
-    float start[3];
-    float target[3];
-    float direction[3];
-    float max_distance = 1.0f;
-    void* hit_object = NULL;
-    int index;
-    int hit;
-    if (first == NULL || second == NULL ||
-        s_entity_ray_hit_sweep_ops.object_position_get == NULL ||
-        !s_entity_ray_hit_sweep_ops.object_position_get(
-            s_entity_ray_hit_sweep_ops.context, first, start) ||
-        !s_entity_ray_hit_sweep_ops.object_position_get(
-            s_entity_ray_hit_sweep_ops.context, second, target)) return 0;
-    for (index = 0; index < 3; ++index) {
-        direction[index] = target[index] - start[index];
-    }
-    hit = scene_segment_trace_nearest_hit(
-        start, direction, &hit_object, &max_distance, first);
-    return (hit != 0 && hit_object != second) ? 1 : 0;
-}
-
-/* SeeThroughWallsRayCheck (FUN_00471960): short-circuit when the setting is
- * enabled; otherwise sweep the object-to-object segment through grid cells. */
-// FUNCTION: LEGORR 0x00471960
-int see_through_walls_ray_check(void* first, void* second)
-{
-    float start[3];
-    float target[3];
-    float direction[3];
-    EntityRayHitSweepState state;
-    int index;
-    if (s_entity_ray_hit_sweep_ops.see_through_walls_enabled != NULL &&
-        s_entity_ray_hit_sweep_ops.see_through_walls_enabled(
-            s_entity_ray_hit_sweep_ops.context) != 0) return 0;
-    if (first == NULL || second == NULL ||
-        s_entity_ray_hit_sweep_ops.object_position_get == NULL ||
-        !s_entity_ray_hit_sweep_ops.object_position_get(
-            s_entity_ray_hit_sweep_ops.context, first, start) ||
-        !s_entity_ray_hit_sweep_ops.object_position_get(
-            s_entity_ray_hit_sweep_ops.context, second, target)) return 0;
-    for (index = 0; index < 3; ++index) {
-        direction[index] = target[index] - start[index];
-    }
-    state.hit_object = NULL;
-    state.max_distance = 1.0f;
-    state.start = start;
-    state.direction = direction;
-    state.hit = 0;
-    state.ignored_object = NULL;
-    ray_hit_cell_distance_minimize_sweep(&state);
-    return state.hit;
-}
-
 void entity_steer_velocity_apply_hook_set(EntitySteerVelocityApplyFn hook,
                                           void* context)
 {
     s_entity_steer_velocity_apply = hook;
     s_entity_steer_velocity_context = context;
-}
-
-/* EntityVelocitySteerBlendUpdate (FUN_00471a60): move the target when asked,
- * blend the existing velocity toward it at the time-scaled rate, normalize,
- * cap upward speed, then apply to the secondary and primary objects. */
-// FUNCTION: LEGORR 0x00471a60
-void entity_velocity_steer_blend_update(EntityVelocitySteerState* state,
-                                        const float target[3], float elapsed,
-                                        int update_target)
-{
-    float position[3];
-    float desired[3];
-    float length;
-    float blend;
-    int axis;
-    if (state == NULL) return;
-    if (update_target != 0 && target != NULL) {
-        for (axis = 0; axis < 3; ++axis) state->target[axis] = target[axis];
-    }
-    if (state->primary == NULL || elapsed <= 0.00001f ||
-        s_entity_ray_hit_sweep_ops.object_position_get == NULL ||
-        !s_entity_ray_hit_sweep_ops.object_position_get(
-            s_entity_ray_hit_sweep_ops.context, state->primary, position)) {
-        return;
-    }
-    for (axis = 0; axis < 3; ++axis) {
-        desired[axis] = state->target[axis] - position[axis];
-    }
-    length = (float)sqrt(desired[0] * desired[0] +
-                         desired[1] * desired[1] +
-                         desired[2] * desired[2]);
-    if (length <= 0.0f) return;
-    blend = 5.0f / elapsed;
-    for (axis = 0; axis < 3; ++axis) {
-        state->velocity[axis] = state->velocity[axis] * blend +
-                                desired[axis] / length;
-    }
-    length = (float)sqrt(state->velocity[0] * state->velocity[0] +
-                         state->velocity[1] * state->velocity[1] +
-                         state->velocity[2] * state->velocity[2]);
-    if (length > 0.0f) {
-        for (axis = 0; axis < 3; ++axis) state->velocity[axis] /= length;
-    }
-    if (state->max_vertical_velocity < state->velocity[2]) {
-        state->velocity[2] = state->max_vertical_velocity;
-    }
-    if (s_entity_steer_velocity_apply != NULL) {
-        if (state->secondary != NULL) {
-            float secondary_velocity[3];
-            secondary_velocity[0] = state->velocity[0];
-            secondary_velocity[1] = state->velocity[1];
-            secondary_velocity[2] = 0.0f;
-            s_entity_steer_velocity_apply(
-                s_entity_steer_velocity_context, state->secondary,
-                secondary_velocity, state->heading, 1);
-        }
-        s_entity_steer_velocity_apply(
-            s_entity_steer_velocity_context, state->primary,
-            state->velocity, state->heading, 0);
-    }
-}
-
-/* PoseOffsetVelocitySlotBlend (FUN_00471f00): convert the pose's local
- * offset to world scale, add the pose position, and feed that target through
- * the shared velocity steering blend. */
-// FUNCTION: LEGORR 0x00471f00
-int pose_offset_velocity_slot_blend_update(
-    EntityVelocitySteerState* state, const float offset[3],
-    const float translation[3], float elapsed)
-{
-    float target[3];
-    int axis;
-    if (state == NULL || offset == NULL || translation == NULL) return 1;
-    for (axis = 0; axis < 3; ++axis) {
-        target[axis] = offset[axis] * 10000.0f + translation[axis];
-    }
-    entity_velocity_steer_blend_update(state, target, elapsed, 1);
-    return 1;
 }
 
 void entity_velocity_slot_dispatch_ops_set(
@@ -1236,43 +945,6 @@ void entity_velocity_slot_dispatch_ops_set(
     if (ops != NULL) s_entity_velocity_slot_dispatch_ops = *ops;
     else memset(&s_entity_velocity_slot_dispatch_ops, 0,
                 sizeof(s_entity_velocity_slot_dispatch_ops));
-}
-
-/* EntityVelocitySlotDispatch (FUN_00471fc0): walk every velocity slot and
- * choose the pose-offset path or the steer/sound path from entity bit 0. */
-// FUNCTION: LEGORR 0x00471fc0
-int entity_velocity_slot_dispatch(void* entity, void* argument)
-{
-    uint32_t flags = 0u;
-    uint32_t count = 0u;
-    uint32_t slot;
-    if (entity == NULL || s_entity_velocity_slot_dispatch_ops.state_get == NULL ||
-        !s_entity_velocity_slot_dispatch_ops.state_get(
-            s_entity_velocity_slot_dispatch_ops.context, entity,
-            &flags, &count)) return 1;
-    for (slot = 0u; slot < count; ++slot) {
-        if ((flags & 1u) != 0u) {
-            if (s_entity_velocity_slot_dispatch_ops.steer_sound_dispatch != NULL) {
-                s_entity_velocity_slot_dispatch_ops.steer_sound_dispatch(
-                    s_entity_velocity_slot_dispatch_ops.context, entity,
-                    argument, slot);
-            }
-        }
-        else if (s_entity_velocity_slot_dispatch_ops.pose_slot_get != NULL) {
-            EntityVelocitySteerState* state = NULL;
-            float offset[3] = { 0.0f, 0.0f, 0.0f };
-            float translation[3] = { 0.0f, 0.0f, 0.0f };
-            float elapsed = 0.0f;
-            if (s_entity_velocity_slot_dispatch_ops.pose_slot_get(
-                    s_entity_velocity_slot_dispatch_ops.context, entity,
-                    argument, slot, &state, offset, translation,
-                    &elapsed)) {
-                pose_offset_velocity_slot_blend_update(
-                    state, offset, translation, elapsed);
-            }
-        }
-    }
-    return 1;
 }
 
 void entity_velocity_steer_dispatch_ops_set(
@@ -6709,65 +6381,6 @@ int entity_position_grid_coordinates_get(const EntitySlot* entity,
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00471CA0
-int entity_world_center_position_read(const EntitySlot* entity,
-                                      float out_xyz[3])
-{
-    float position[3];
-    if (entity == NULL || out_xyz == NULL) return 0;
-    if (entity->attached_scene_object != NULL &&
-        ddiscene_object_position_get(entity->attached_scene_object, NULL,
-                                     position)) {
-        out_xyz[0] = position[0];
-        out_xyz[1] = position[1];
-        out_xyz[2] = position[2];
-    }
-    else {
-        out_xyz[0] = entity->x;
-        out_xyz[1] = entity->y;
-        out_xyz[2] = entity->z;
-    }
-    out_xyz[2] -= entity_stats_float_at74(entity) * 0.5f;
-    return 1;
-}
-
-static int entity_centers_within_radius(const EntitySlot* first,
-                                       const EntitySlot* second,
-                                       float radius)
-{
-    float a[3];
-    float b[3];
-    float dx, dy, dz;
-    if (first == NULL || second == NULL || radius <= 0.0f
-        || !entity_world_center_position_read(first, a)
-        || !entity_world_center_position_read(second, b)) return 0;
-    dx = a[0] - b[0];
-    dy = a[1] - b[1];
-    dz = a[2] - b[2];
-    return sqrtf(dx * dx + dy * dy + dz * dz) < radius;
-}
-
-// FUNCTION: LEGORR 0x00472080
-int entity_centers_within_configured_radius(const EntitySlot* first,
-                                            const EntitySlot* second)
-{
-    int activity_class;
-    if (first == NULL || second == NULL) return 0;
-    activity_class = ai_activity_probe(first);
-    if (activity_class == 0) return 0;
-    return entity_centers_within_radius(first, second,
-        lego::weapon_type_range_get(activity_class));
-}
-
-// FUNCTION: LEGORR 0x00472130
-int entity_centers_within_object_radius(const EntitySlot* first,
-                                        const EntitySlot* second)
-{
-    if (first == NULL || second == NULL) return 0;
-    return entity_centers_within_radius(first, second,
-                                        entity_collision_radius_get(first));
-}
-
 // FUNCTION: LEGORR 0x004428a0
 void entity_world_position_set(EntitySlot* entity, float x, float y,
                                float heading, int update_heading)
@@ -7619,20 +7232,6 @@ void entity_global_animation_state_set(uint32_t value)
 uint32_t entity_global_animation_state_peek(void)
 {
     return s_global_animation_state;
-}
-
-/* EntityFlag100AndSharedEligibilityCheck (FUN_00471ce0) — see entity.hpp. */
-// FUNCTION: LEGORR 0x00471ce0
-int entity_flag100_and_shared_eligibility_check(const EntitySlot* e)
-{
-    /* Corpus shape: both gates jump to the shared zero tail, only the
-     * double pass answers 1. */
-    if ((entity_state_flags_get(e) & 0x100u) != 0u) {
-        if (entity_shared_eligibility_check(e, e->type != 4) != 0) {
-            return 1;
-        }
-    }
-    return 0;
 }
 
 /* TaskTypeAndConditionCheck (FUN_0043c490) — see entity.hpp. */
@@ -12333,118 +11932,9 @@ float ledger_stub_0046f1d0_EntityIndexedFloatLookupWithMinusOneFallback(
         weapon_type, entity_record);
 }
 
-// TypeMotionScaleApplyDispatch
-// FUNCTION: LEGORR 0x0046f270
-void ledger_stub_0046f270_TypeMotionScaleApplyDispatch(
-    EntitySlot* entity, int weapon_type, int apply_index, float scale,
-    void* finish_argument)
-{
-    const TypeMotionScaleHooks* hooks = NULL;
-    float base_value;
-    float entry_scale = 0.0f;
-    int entry_value = 0;
-    int entry_present = 0;
-    if (entity == NULL) return;
-    base_value = lego::entity_indexed_float_lookup_with_minus_one_fallback(
-        weapon_type, entity);
-    if ((entity_state_flags_get(entity) & 0x00040000u) == 0u ||
-        !entity_shared_eligibility_check(entity, 1)) return;
-    if (hooks != NULL && hooks->indexed_entry_get != NULL) {
-        entry_present = hooks->indexed_entry_get(hooks->context, weapon_type,
-                                                 &entry_scale, &entry_value);
-    }
-    if (entry_present) {
-        if (apply_index) {
-            if (hooks != NULL && hooks->motion_apply != NULL) {
-                hooks->motion_apply(hooks->context, entity,
-                                    entry_scale * base_value, 1, scale);
-            }
-            else {
-                entity_damage_apply(entity, entry_scale * base_value, 1);
-            }
-            if (hooks != NULL && hooks->entry_state_store != NULL)
-                hooks->entry_state_store(hooks->context, entity, weapon_type,
-                                         entry_value);
-            if (hooks != NULL && hooks->finish_apply != NULL)
-                hooks->finish_apply(hooks->context, entity, finish_argument, 1);
-            else
-                entity_directional_activity_start(entity,
-                    (const float*)finish_argument, 1);
-        }
-        else {
-            if (hooks != NULL && hooks->motion_apply != NULL) {
-                hooks->motion_apply(hooks->context, entity,
-                                    base_value * scale, 1, scale);
-            }
-            else {
-                entity_damage_apply(entity, base_value * scale, 1);
-            }
-        }
-        return;
-    }
-    if (entity->type == ENTITY_TYPE_OBJ) {
-        if (hooks != NULL && hooks->type3_entry_miss != NULL) {
-            hooks->type3_entry_miss(hooks->context, entity);
-        }
-        else {
-            /* FUN_0046f270 calls FUN_00462890 on a type-3 table miss. */
-            global_counter_at_0055532c_increment();
-        }
-    }
-    if (hooks != NULL && hooks->motion_apply != NULL)
-        hooks->motion_apply(hooks->context, entity, base_value, 1, scale);
-    else
-        entity_damage_apply(entity, base_value, 1);
-    if (apply_index) {
-        if (hooks != NULL && hooks->finish_apply != NULL)
-            hooks->finish_apply(hooks->context, entity, finish_argument, 1);
-        else
-            entity_directional_activity_start(entity,
-                (const float*)finish_argument, 1);
-    }
-    return;
-}
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
-
-int ledger_stub_004702b0_EntitySurfaceQuadSegmentIntersect(
-    EntitySlot* entity, const float start_xy[2], const float end_xy[2],
-    float out_xy[2], int check_side);
-
-// EntitySurfaceSegmentCollisionCheck
-// FUNCTION: LEGORR 0x00470260
-void ledger_stub_00470260_EntitySurfaceSegmentCollisionCheck(
-    EntitySlot* entity, const float start_xy[2], const float end_xy[2],
-    int check_side)
-{
-    if ((entity_state_flags_get(entity) & 0x100u) != 0u) {
-        (void)ledger_stub_004702b0_EntitySurfaceQuadSegmentIntersect(
-            entity, start_xy, end_xy, NULL, 0);
-        return;
-    }
-    (void)entity_segment_center_proximity_check(entity, start_xy, end_xy,
-                                               check_side);
-}
-
-// EntitySurfaceQuadSegmentIntersect
-// FUNCTION: LEGORR 0x004702b0
-int ledger_stub_004702b0_EntitySurfaceQuadSegmentIntersect(
-    EntitySlot* entity, const float start_xy[2], const float end_xy[2],
-    float out_xy[2], int check_side)
-{
-    return entity_surface_quad_segment_intersect(entity, start_xy, end_xy,
-        out_xy, check_side, &s_entity_quad_collision_hooks);
-}
-
-// VelocitySlotSteerDispatchAndSound
-// FUNCTION: LEGORR 0x00471d20
-int ledger_stub_00471d20_VelocitySlotSteerDispatchAndSound(
-    void* entity, void* argument, float delta)
-{
-    return entity_velocity_steer_dispatch_and_sound(entity, argument, delta);
-}
 
 // BuildingUpgradeResourceAdmissionCheck
 int ledger_stub_00438770_BuildingUpgradeResourceAdmissionCheck(

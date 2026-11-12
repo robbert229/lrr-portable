@@ -23,6 +23,7 @@
 #include "simtick_for_panel_unit.hpp"
 #include "simtick_from_panel_unit.hpp"
 #include "simtick_for_lego.hpp"
+#include "simtick_for_weapons.hpp"
 
 #define SIMTICK_MUTE_RESET 25.0f
 
@@ -711,19 +712,10 @@ void simtick_scene_pass(EngineContext* c, float dt)
  * another pass over all ten records, then ten 0x10 timed-visual records.
  * The owners provide typed sidecar views because their portable records are
  * not binary-compatible with the retail global arrays. */
-static const void** s_sfx_entries = NULL;
-static int s_sfx_n = 0;
-static int s_sfx_rels = 0;
-static SimtickSfxBankHooks s_sfx_bank_hooks;
-
-static int sfx_entity_scan_callback(EntitySlot* entity, void* payload)
-{
-    const float dt = *(const float*)payload;
-    if (s_sfx_bank_hooks.entity_segment_scan != NULL)
-        s_sfx_bank_hooks.entity_segment_scan(
-            entity, dt, s_sfx_bank_hooks.context);
-    return 0;
-}
+const void** s_sfx_entries = NULL;
+int s_sfx_n = 0;
+int s_sfx_rels = 0;
+SimtickSfxBankHooks s_sfx_bank_hooks;
 
 void simtick_sfx_bank_hooks_set(const SimtickSfxBankHooks* hooks)
 {
@@ -741,83 +733,6 @@ void simtick_sfx_seed(int n, const void** entries)
 }
 
 int simtick_sfx_releases(void) { return s_sfx_rels; }
-
-// FUNCTION: LEGORR 0x0046f550
-void simtick_sfx_bank(EngineContext* c, float dt)
-{
-    int i;
-    s_sfx_rels = 0;
-
-    /* Ten projectile records: update only records with a spawned entity at
-     * +0x2a4. The update owner performs the scene-resource movement from
-     * FUN_0046f920 using its retained full record. */
-    if (s_sfx_bank_hooks.projectile_record_get != NULL) {
-        for (i = 0; i < SIMTICK_SFX_BANK_SLOTS; ++i) {
-            SimtickSfxProjectileRecord* record =
-                s_sfx_bank_hooks.projectile_record_get(
-                    i, s_sfx_bank_hooks.context);
-            if (record != NULL && record->tracked_entity != NULL &&
-                s_sfx_bank_hooks.projectile_update != NULL) {
-                s_sfx_bank_hooks.projectile_update(record->owner_record, dt,
-                                                   s_sfx_bank_hooks.context);
-            }
-        }
-    }
-
-    /* LAB_0046f610 is called through the unfiltered entity-pool walk between
-     * projectile movement and per-record hit scans. The checked-in full
-     * decompile contains no body for that label, so its narrow callback stays
-     * optional while the live pool walk and surrounding order are retained. */
-    (void)c;
-    entity_pool_find_by_callback_current(sfx_entity_scan_callback, &dt, 0);
-
-    /* The hit scanner runs for all ten records, including empty records; the
-     * retail helper itself gates on the record's +0x2a4 entity pointer. */
-    if (s_sfx_bank_hooks.projectile_record_get != NULL) {
-        for (i = 0; i < SIMTICK_SFX_BANK_SLOTS; ++i) {
-            SimtickSfxProjectileRecord* record =
-                s_sfx_bank_hooks.projectile_record_get(
-                    i, s_sfx_bank_hooks.context);
-            if (record != NULL && s_sfx_bank_hooks.ray_hit_scan != NULL)
-                s_sfx_bank_hooks.ray_hit_scan(record->owner_record,
-                                              s_sfx_bank_hooks.context);
-        }
-    }
-
-    /* Ten 0x10 timed-visual records: negative timers release both handles,
-     * clear the first handle as the occupancy sentinel, then every active
-     * timer is decremented (including one just released). */
-    if (s_sfx_bank_hooks.timed_visual_record_get != NULL) {
-        for (i = 0; i < SIMTICK_SFX_BANK_SLOTS; ++i) {
-            SimtickSfxTimedVisualRecord* record =
-                s_sfx_bank_hooks.timed_visual_record_get(
-                    i, s_sfx_bank_hooks.context);
-            if (record == NULL || record->first_handle == NULL) continue;
-            if (record->remaining < 0.0f) {
-                if (s_sfx_bank_hooks.resource_release != NULL) {
-                    s_sfx_bank_hooks.resource_release(record->first_handle,
-                        record->resource_owner, s_sfx_bank_hooks.context);
-                    s_sfx_bank_hooks.resource_release(record->second_handle,
-                        record->resource_owner, s_sfx_bank_hooks.context);
-                }
-                record->first_handle = NULL;
-                ++s_sfx_rels;
-            }
-            record->remaining -= dt;
-        }
-    } else {
-        /* Keep the small raw timer fixture available to existing simtick
-         * tests; production records use the typed bank hooks above. */
-        for (i = 0; i < s_sfx_n; ++i) {
-            float* remaining = (float*)((uint8_t*)s_sfx_entries[i] + 12);
-            if (*remaining < 0.0f) {
-                ++s_sfx_rels;
-                *(uint32_t*)((uint8_t*)s_sfx_entries[i]) = 0;
-            }
-            *remaining -= dt;
-        }
-    }
-}
 
 /* ---- tranche 10: the remaining table tickers ---------------------------- */
 
