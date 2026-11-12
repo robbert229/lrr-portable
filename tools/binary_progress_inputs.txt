@@ -356,6 +356,8 @@ src/gods98/container.h
 src/gods98/container_frame.h
 src/gods98/container_native.cpp
 src/gods98/container_native.hpp
+src/gods98/container_route.cpp
+src/gods98/container_route.h
 src/gods98/draw.c
 src/gods98/draw.h
 src/gods98/draw_port.cpp

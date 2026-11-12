@@ -31,6 +31,9 @@
 #include "view_for_lego.hpp"
 #include "view_for_images_unit.hpp"
 #include "view_for_legoobject.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "container_native.hpp"
+#endif
 
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
@@ -3717,6 +3720,7 @@ static DDiSceneObjectPoseInterface* ddiscene_pose_interface_resolve(
 }
 
 // FUNCTION: LEGORR 0x004754c0
+#if !defined(LEGORRR_BACKEND_MINIWIN)
 int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3])
 {
@@ -3742,6 +3746,41 @@ int ddiscene_object_position_get(void* object, void* alternate_frame,
     return 1;
 #endif
 }
+#else
+int ddiscene_object_position_get(void* object, void* alternate_frame,
+                                 float position[3])
+{
+    /* Native Containers and the null frames their part search returns
+     * (container_native.hpp). The Creature unit reaches its other
+     * Container calls through container_route.h; this one is also called
+     * from C++ (the work-object position), so it is a whole alternative
+     * definition. It follows the matching build's branch, which Reccmp
+     * maps by the line below the annotation (finding 555). */
+    if (alternate_frame == NULL && container_native_object_known(object))
+        return container_native_position_get(object, position);
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    void* normalized_object = NULL;
+    const void* normalized_frame = NULL;
+    void** vtable;
+    typedef long (VIEW_COM_CALL *PositionGetFn)(void*, void*, float*);
+    scene_object_arguments_normalize((const void**)object,
+        (const void**)alternate_frame,
+        &normalized_object, &normalized_frame);
+    vtable = *(void***)normalized_object;
+    return ((PositionGetFn)vtable[0x60 / 4])(normalized_object,
+        (void*)normalized_frame, position) == 0;
+#else
+    void* normalized_frame = NULL;
+    DDiSceneObjectPoseInterface* scene;
+    if (position == NULL) return 0;
+    scene = ddiscene_pose_interface_resolve(object, alternate_frame,
+                                            &normalized_frame);
+    if (scene == NULL) return 0;
+    scene->position_get(normalized_frame, position);
+    return 1;
+#endif
+}
+#endif
 
 // FUNCTION: LEGORR 0x00475500
 int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,

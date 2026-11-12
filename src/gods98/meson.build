@@ -50,6 +50,7 @@ gods98_sources = [
   'lwsc_scene.cpp',
   'lwsc_miniwin.cpp',
   'container_native.cpp',
+  'container_route.cpp',
   'registry_port.cpp',
   'sound_wave.cpp',
   'tickers.cpp',

@@ -38,4 +38,29 @@ float ledger_stub_004756d0_VideoObjectAspectRatioGet(void* video_object);
 }
 #endif
 
+/* Native builds route the Creature unit's Container calls through
+ * forwarders that answer for native Containers (container_route.h,
+ * finding 555), so the annotated gods98 functions stay free of backend
+ * code. Every declaration after this point, in gods98/entity.h, record.h,
+ * texture.h and view.h, names the forwarder, with the same signature. */
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "container_route.h"
+#define container_load container_route_load
+#define scene_render_lock_toggle container_route_hide
+#define entity_visual_resource_load container_route_clone
+#define ddiscene_frame_update_and_callbacks container_route_animation_time_set
+#define ddiscene_advance_by_time_target container_route_animation_forward
+#define ddiscene_object_frame_position_get container_route_animation_frames
+#define ddiscene_object_length_get container_route_animation_time
+#define ddiscene_object_pose_method_dispatch container_route_orientation_set
+#define ddiscene_object_position_set container_route_position_set
+#define scene_action_name_set container_route_activity_set
+#define ledger_stub_00472a40_DDiSceneObjectDestroy container_route_remove
+#define xf_texture_name_format container_route_part_name_format
+#define resource_name_register_or_query_target container_route_search_tree
+#define typed_child_resource_scalar_get container_route_trans_coef
+#define ledger_stub_004756d0_VideoObjectAspectRatioGet \
+    container_route_frame_scale
+#endif
+
 #endif /* LEGORRR_GODS98_CONTAINER_H */
