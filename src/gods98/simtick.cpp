@@ -24,6 +24,7 @@
 #include "simtick_from_panel_unit.hpp"
 #include "simtick_for_lego.hpp"
 #include "simtick_for_weapons.hpp"
+#include "simtick_for_sound3d.hpp"
 
 #define SIMTICK_MUTE_RESET 25.0f
 
@@ -318,11 +319,9 @@ void simtick_manager_set_timer_word(uint32_t w)
 }
 
 /* ---- tranche 8: sound keep-alive (FUN_0047aba0) ------------------------- */
-static int s_sound_on = 0;
-static int s_sound_active = 0;
-// GLOBAL: LEGORR 0x00506688
-static int s_listener_view = 0;
-static int (*s_keepalive)(int, int, int) = NULL;
+int s_sound_on = 0;
+int s_sound_active = 0;
+int (*s_keepalive)(int, int, int) = NULL;
 
 void simtick_set_sound_guards(int sound_on, int active)
 {
@@ -333,16 +332,6 @@ void simtick_set_sound_guards(int sound_on, int active)
 void simtick_set_keepalive_hook(int (*h)(int, int, int))
 {
     s_keepalive = h;
-}
-
-// FUNCTION: LEGORR 0x0047aba0
-void simtick_sound_keepalive(EngineContext* c)
-{
-    (void)c;
-    /* corpus: if (sound system on && an ambient entry exists) -> poke it. */
-    if (s_sound_on != 0 && s_sound_active != 0 && s_keepalive != NULL) {
-        s_keepalive(0, 0, 0);
-    }
 }
 
 /* ---- tranche 8: editor steps (FUN_0044cfa0) ------------------------------ */
@@ -875,15 +864,6 @@ void simtick_fx_bank_entries_install(SimtickFxEntry* entries, uint32_t count,
 void simulation_global_word_set(uint32_t value)
 {
     s_mute_word = value;
-}
-
-/* DirectSoundListenerViewSet (FUN_0047ab80) — see simtick.hpp. */
-// FUNCTION: LEGORR 0x0047ab80
-void simtick_directsound_listener_view_set(int view)
-{
-    if (s_bank_sound_on != 0) {
-        s_listener_view = view;
-    }
 }
 
 uint32_t simtick_route_position_state_peek(void)

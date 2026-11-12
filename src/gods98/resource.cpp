@@ -28,6 +28,7 @@
 #include "resource_for_wad.hpp"
 #include "resource_from_wad.hpp"
 #include "resource_for_lego.hpp"
+#include "resource_from_sound3d.hpp"
 
 // GLOBAL: LEGORR 0x0049f988
 const unsigned char s_resource_tree_child_iid[16] = {
@@ -4257,32 +4258,6 @@ int ledger_stub_00476330_ResourceTreeCallbackWalk(
     return unported_ledger_stubs::resource_tree_callback_walk(
         root, depth, callback, context);
 }
-
-// NestedRecordListRemoveMatchingKey
-typedef struct NestedResourceRecord {
-    void* key;
-    void* reserved[3];
-    struct NestedResourceRecord* child_or_next;
-} NestedResourceRecord;
-// FUNCTION: LEGORR 0x0047b330
-static int nested_record_list_remove_matching_key_impl(
-    void* owner, void* key, void* opaque_record)
-{
-    NestedResourceRecord* record = (NestedResourceRecord*)opaque_record;
-    NestedResourceRecord* child;
-    if (record == NULL) return 0;
-    child = record->child_or_next;
-    if (nested_record_list_remove_matching_key_impl(owner, key, child)) {
-        /* The retail call removes the matching key from DAT_00506684;
-         * its owner argument is forwarded but ignored by that helper. */
-        (void)owner;
-        sound_buffer_association_remove_instance(key);
-        record->child_or_next = child->child_or_next;
-        engine_heap_free(child);
-    }
-    return record->key == key ? 1 : 0;
-}
-
 
 } // namespace unported_ledger_stubs
 

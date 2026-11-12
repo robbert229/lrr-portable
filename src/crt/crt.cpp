@@ -1326,12 +1326,6 @@ double double_build_with_exponent(uint32_t significand_low,
 /* ------------------------------------------------------------------ *
  *  Constant and DAT-global band (see crt.hpp). */
 
-// FUNCTION: LEGORR 0x0047c160
-int32_t constant_negative_10000_get(void)
-{
-    return -10000;
-}
-
 /* LIBC.LIB testfdiv.obj's __ms_p5_test_fdiv (finding 540). */
 #if !defined(_MSC_VER)
 // LIBRARY: LEGORR 0x00490230 SYMBOL

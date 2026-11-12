@@ -4,16 +4,15 @@
 #include <string.h>
 
 #include "audio.hpp"
+#include "audio_for_sound3d.hpp"
+#include "audio_from_sound3d.hpp"
 
-static AudioPlayer* s_active_audio_player;
+AudioPlayer* s_active_audio_player;
 static AudioListenerRolloffHook s_listener_rolloff_hook;
 static void* s_listener_rolloff_context;
-static float s_listener_rolloff;
-static AudioSystemInitHook s_audio_system_init_hook;
-static void* s_audio_system_init_context;
-static float s_audio_system_initial_volume = 1.0f;
-// GLOBAL: LEGORR 0x00506694
-static int s_audio_buffer_volume;
+float s_listener_rolloff;
+AudioSystemInitHook s_audio_system_init_hook;
+void* s_audio_system_init_context;
 
 struct AudioBuffer {
     const Sound* sample;
@@ -120,19 +119,6 @@ AudioPlayer* audio_system_player_get(void)
     return s_active_audio_player;
 }
 
-// FUNCTION: LEGORR 0x0047a800
-void audio_active_shutdown(void)
-{
-    if (!sound_bank_sound_on()) return;
-    if (s_active_audio_player != NULL) {
-        audio_stop(s_active_audio_player);
-        audio_set_volume(s_active_audio_player,
-                         s_audio_system_initial_volume);
-        audio_close(s_active_audio_player);
-    }
-    sound_bank_sound_on_set(0);
-}
-
 void audio_system_shutdown(void)
 {
     sound_subsystem_stop_all();
@@ -143,30 +129,6 @@ void audio_system_init_hook_set(AudioSystemInitHook hook, void* context)
 {
     s_audio_system_init_hook = hook;
     s_audio_system_init_context = context;
-}
-
-// FUNCTION: LEGORR 0x0047a640
-int audio_system_init(void* window)
-{
-    int initialized = 0;
-    sound_bank_sound_on_set(0);
-    if (s_audio_system_init_hook != NULL)
-        initialized = s_audio_system_init_hook(s_audio_system_init_context,
-                                               window);
-    else if (s_active_audio_player != NULL)
-        initialized = audio_open(s_active_audio_player) == 0;
-    if (initialized != 0) {
-        sound_bank_sound_on_set(1);
-        s_listener_rolloff = 1.0f;
-        if (s_active_audio_player != NULL) {
-            s_audio_system_initial_volume = s_active_audio_player->volume;
-            audio_set_volume(s_active_audio_player, 1.0f);
-        }
-    }
-    /* The reference's completion result is one after either a successful
-     * device setup or its fallback/skip path; only its retry-dialog code
-     * loops. */
-    return 1;
 }
 
 void audio_set_volume(AudioPlayer* p, float volume)
@@ -191,12 +153,6 @@ void audio_set_volume(AudioPlayer* p, float volume)
     }
 }
 
-// GLOBAL: LEGORR 0x004aae30
-static const int s_sfx_attenuation[11] = {
-    -10000, -5000, -3500, -2000, -1500, -1000,
-      -700,  -400,  -200,   -80,     0
-};
-
 float audio_sfx_volume_gain(int index)
 {
     if (index < 0 || index >= 11) {
@@ -210,43 +166,9 @@ float audio_sfx_volume_gain(int index)
     return powf(10.0f, (float)s_sfx_attenuation[index] / 2000.0f);
 }
 
-/* SoundBufferVolumeSet (FUN_0047b500): DirectSound's attenuation maps to
- * the port's single master stream gain. Invalid corpus attenuation values
- * are ignored by the same range predicate used by sound-bank records. */
-// FUNCTION: LEGORR 0x0047b500
-void audio_sound_volume_set(int millibels)
-{
-    if (s_bank_sound_on != 0) {
-        if (sound_volume_value_valid(millibels) != 0) {
-            s_audio_buffer_volume = millibels;
-            if (s_active_audio_player == NULL) return;
-            const float gain = millibels <= -10000
-                ? 0.0f : powf(10.0f, (float)millibels / 2000.0f);
-            audio_set_volume(s_active_audio_player, gain);
-        }
-    }
-}
-
 void audio_active_sound_volume_set(int millibels)
 {
     audio_sound_volume_set(millibels);
-}
-
-// FUNCTION: LEGORR 0x0047b550
-void audio_sound_volume_minus_300(void)
-{
-    if (s_bank_sound_on != 0)
-        audio_sound_volume_set(-300);
-}
-
-/* SoundVolumeIndexSet (FUN_0047b530): the table lookup is bounded to the
- * eleven menu slider entries, then the selected attenuation is applied. */
-// FUNCTION: LEGORR 0x0047b530
-void audio_sound_volume_index_set(int index)
-{
-    if (index >= 0 && index < 11) {
-        audio_sound_volume_set(s_sfx_attenuation[index]);
-    }
 }
 
 /* GameSpeedSelect (FUN_00414de0): the ledger name is misleading; this is
@@ -776,7 +698,7 @@ int audio_stream_setup(AudioPlayer* p, int stream_index,
 
 /* Feed one aligned slice from a loaded WAVE sample to this stream's owned
  * output queue. */
-static int audio_stream_submit_chunk(AudioPlayer* p, int stream_index)
+int audio_stream_submit_chunk(AudioPlayer* p, int stream_index)
 {
     const Sound* sample;
     Sound slice;
@@ -865,73 +787,6 @@ void audio_stream_stop(AudioPlayer* p, int stream_index)
     p->stream_buffer_bytes[stream_index] = 0;
     p->stream_cursor_bytes[stream_index] = 0;
     memset(&p->stream_format[stream_index], 0, sizeof(WavSample));
-}
-
-// FUNCTION: LEGORR 0x0047ba20
-int sound_stream_stop_and_release(int stream_index)
-{
-    AudioPlayer* p = s_active_audio_player;
-    int slot = stream_index == 0 ? 0 : 1;
-    if (p != NULL) {
-        platform_audio_close(p->stream_dev[slot]);
-        p->stream_dev[slot] = NULL;
-        p->stream_active[slot] = 0;
-        p->stream_sample[slot] = NULL;
-        p->stream_buffer_bytes[slot] = 0;
-        p->stream_cursor_bytes[slot] = 0;
-        memset(&p->stream_format[slot], 0, sizeof(WavSample));
-    }
-    return 1;
-}
-
-// FUNCTION: LEGORR 0x0047bc30
-int sound_stream_drain_check(int stream_index)
-{
-    AudioPlayer* p = s_active_audio_player;
-    int slot = stream_index == 0 ? 0 : 1;
-    const Sound* sample;
-    uint32_t before;
-    uint32_t frame_bytes;
-    int queued_ms;
-    int buffer_ms;
-    int submitted;
-    if (p == NULL || !p->stream_active[slot]
-        || p->stream_dev[slot] == NULL) return 0;
-    sample = p->stream_sample[slot];
-    if (sample == NULL) return 0;
-    queued_ms = platform_audio_queued_milliseconds(
-        p->stream_dev[slot]);
-    if (p->stream_cursor_bytes[slot] >= sample->data_len) {
-        if (queued_ms == 0) (void)sound_stream_stop_and_release(slot);
-        return 0;
-    }
-    frame_bytes = p->stream_format[slot].block_align;
-    if (frame_bytes == 0u || p->stream_format[slot].byte_rate == 0u)
-        return 0;
-    buffer_ms = (int)(((double)p->stream_buffer_bytes[slot] * 1000.0)
-                      / p->stream_format[slot].byte_rate);
-    if (buffer_ms < 2) buffer_ms = 2;
-    if (queued_ms >= buffer_ms / 2) return 0;
-    before = p->stream_cursor_bytes[slot];
-    submitted = audio_stream_submit_chunk(p, slot);
-    if (submitted <= 0) return 0;
-    return (int)(p->stream_cursor_bytes[slot] - before);
-}
-
-// FUNCTION: LEGORR 0x0047bdb0
-void sound_stream_ring_buffer_tick(int stream_index)
-{
-    AudioPlayer* p = s_active_audio_player;
-    int slot = stream_index == 0 ? 0 : 1;
-    if (p == NULL || !p->stream_active[slot]
-        || p->stream_sample[slot] == NULL
-        || p->stream_dev[slot] == NULL) return;
-    if (p->stream_cursor_bytes[slot] >= p->stream_sample[slot]->data_len
-        && platform_audio_queued_milliseconds(p->stream_dev[slot]) == 0) {
-        (void)sound_stream_stop_and_release(slot);
-        return;
-    }
-    (void)sound_stream_drain_check(slot);
 }
 
 namespace unported_ledger_stubs {

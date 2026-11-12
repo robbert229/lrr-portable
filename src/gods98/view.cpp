@@ -2525,12 +2525,6 @@ void scene_object_owner_link_release_hooks_set(
  *   FUN_00401240 vec2_dist,
  *   FUN_0047c0c0 vec_exact_equal. */
 
-// FUNCTION: LEGORR 0x0047c0c0
-int vec_exact_equal(const float* a, const float* b) /* FUN_0047c0c0 */
-{
-    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
-}
-
 #if !defined(LEGORRR_BACKEND_WINAPI)
 /* D3DRM.DLL's D3DRMVectorRandom and D3DRMVectorRotate for the native port,
  * which has no D3DRM import. Maths.c's wrappers (FUN_00479500,
