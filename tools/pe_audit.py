@@ -92,6 +92,10 @@ def compare_imports(original: list[tuple[str, list[str]]],
                         "same_order": a == b}
     return {"original_dll_order": [d for d, _ in o], "rebuilt_dll_order": [d for d, _ in r],
             "dll_order_equal": [d for d, _ in o] == [d for d, _ in r],
+            # The order of the DLLs both import (finding 574): it follows the
+            # library order even while some DLLs are still missing.
+            "common_dll_order_equal": ([d for d, _ in o if d in rd] ==
+                                       [d for d, _ in r if d in od]),
             "missing_dlls": [d for d, _ in o if d not in rd],
             "extra_dlls": [d for d, _ in r if d not in od],
             "original_names": sum(len(n) for _, n in o),
@@ -374,7 +378,8 @@ def summary(result: dict) -> str:
     lines.append(f"imports: dlls {len(imp['original_dll_order'])} -> {len(imp['rebuilt_dll_order'])}, "
                  f"names {imp['original_names']} -> {imp['rebuilt_names']}, "
                  f"missing dlls {imp['missing_dlls']}, extra {imp['extra_dlls']}, "
-                 f"order equal {imp['dll_order_equal']}")
+                 f"order equal {imp['dll_order_equal']}, "
+                 f"common order equal {imp['common_dll_order_equal']}")
     res = result["resources"]
     lines.append(f"resources: {res['identical']}/{res['count']} leaves identical: " +
                  ", ".join(f"{x['type']}/{x['name']} {x['state']}" for x in res["leaves"]))

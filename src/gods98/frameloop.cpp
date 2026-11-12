@@ -28,6 +28,7 @@
 #include "game/upgrades.hpp"
 #include "game/util.hpp"
 #include "platform/platform.h"
+#include "winmm.h"
 #include "audio.hpp"
 #include "engine.hpp"
 #include "frameloop.hpp"
@@ -1542,6 +1543,14 @@ int window_runtime_callback_triplet_get(size_t triplet[3])
     triplet[1] = s_window_runtime_state.callback_triplet[1];
     triplet[2] = s_window_runtime_state.callback_triplet[2];
     return 1;
+}
+
+/* Main.c's millisecond clock. The original compiles it to a bare
+ * `jmp [__imp__timeGetTime]`, and Reward.c calls it directly (finding 574). */
+// FUNCTION: LEGORR 0x00478000
+extern "C" unsigned long main_time_get(void)
+{
+    return timeGetTime();
 }
 
 // FUNCTION: LEGORR 0x00478010

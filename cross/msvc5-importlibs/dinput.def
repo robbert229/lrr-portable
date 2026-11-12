@@ -1,0 +1,8 @@
+; SPDX-License-Identifier: LGPL-3.0-or-later
+;
+; DINPUT.DLL import library of the matching build (finding 574). The original
+; imports one DINPUT name, by name. LIB resolves the undecorated export to
+; _DirectInputCreateA@16 through sdk_exports.c's prototype object.
+LIBRARY DINPUT.dll
+EXPORTS
+    DirectInputCreateA

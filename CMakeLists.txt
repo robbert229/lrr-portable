@@ -259,6 +259,13 @@ if(LRR_RECCMP)
   target_link_options(program PRIVATE "/MAP:${CMAKE_BINARY_DIR}/LegoRR.map")
 endif()
 if(LRR_CLASSIC_MSVC5)
+  # The DirectX libraries the toolchain lacks, rebuilt from source and
+  # searched before its lib directory (finding 574).
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cross/msvc5-importlibs/importlibs.cmake)
+  add_dependencies(program lrr_msvc5_importlibs)
+  set_property(TARGET program APPEND PROPERTY LINK_DEPENDS ${LRR_IMPORTLIB_FILES})
+  target_link_options(program PRIVATE "/LIBPATH:${LRR_IMPORTLIB_DIR}"
+    ${LRR_LINK_SYMBOLS})
   target_link_libraries(program PRIVATE ${LRR_LINK_LIBRARIES})
   # Name the entry point up front. LIBC is searched before the linker would
   # infer it, and LIBC.LIB's symbol index resolves the startup data shared by

@@ -11,6 +11,8 @@ import link_order
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = 'tools/binary_progress_inputs.txt'
+# The import libraries the matching build rebuilds from source (finding 574).
+IMPORTLIB_DIR = 'cross/msvc5-importlibs/'
 FIXED = ('CMakeLists.txt', 'cross/msvc5-toolchain.cmake', 'tools/reccmp.sh',
          'tools/clean_reccmp_report_names.py', 'tools/reccmp_full_diff.py', 'tools/reccmp_diagnostics.py', 'tools/match_listings.py',
          'tools/match_baseline.py', 'tools/binary_progress.py', 'tools/layout_progress.py',
@@ -39,7 +41,7 @@ def selected_paths(root, tracked):
     if (root / link_order.LIST).is_file():
         sources.update(link_order.sources(link_order.load(root), platform=None))
     def selected(name):
-        if name in FIXED:
+        if name in FIXED or name.startswith(IMPORTLIB_DIR):
             return True
         if not name.startswith('src/') or name.startswith('src/platform/native/'):
             return False

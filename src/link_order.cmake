@@ -92,7 +92,7 @@ lrr_link(unit   G98-002  gods98        gods98/container_unit.cpp)
 lrr_link(unit   G98-003  gods98        gods98/viewports.cpp)
 lrr_link(unit   G98-004  gods98        gods98/utils.c)
 lrr_link(legacy 004777a0 program       platform/winapi/entry.cpp winapi)
-lrr_link(legacy 00478040 gods98        gods98/frameloop.cpp)
+lrr_link(legacy 00478010 gods98        gods98/frameloop.cpp)
 lrr_link(legacy 00478330 gods98        gods98/surface.cpp)
 lrr_link(legacy 004783f0 platform_glue platform/winapi/frameloop.cpp winapi)
 lrr_link(legacy 004789a0 gods98        gods98/audio.cpp)
@@ -203,11 +203,18 @@ lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp)
 lrr_link(legacy 00494c30 gods98        crt/crt.cpp)
 lrr_link(legacy 0049cd30 gods98        gods98/resource.cpp)
 
-# Libraries of the matching build, after the objects: LIBC (the /ML runtime),
-# oldnames.lib, then the import libraries in the original's import-thunk
-# order (finding 505 rule 7), then the others in the order of the original's
-# import directory. The toolchain has no dinput.lib; vfw32.lib holds the
-# avifil32 imports.
-set(LRR_LINK_LIBRARIES libc.lib oldnames.lib
-  d3drm.lib ddraw.lib vfw32.lib dsound.lib kernel32.lib
-  ole32.lib winmm.lib user32.lib gdi32.lib advapi32.lib)
+# Libraries of the matching build, after the objects, in the order of the
+# original's import directory, with LIBC placed so that its code precedes the
+# import thunks and RtlUnwind's thunk comes last (finding 574; ADR 0006
+# decision 1 as amended). dinput.lib, dsound.lib and dxguid.lib are rebuilt
+# from cross/msvc5-importlibs; vfw32.lib holds the avifil32 imports.
+set(LRR_LINK_LIBRARIES kernel32.lib libc.lib oldnames.lib
+  ole32.lib d3drm.lib ddraw.lib winmm.lib vfw32.lib dinput.lib dsound.lib
+  user32.lib gdi32.lib advapi32.lib dxguid.lib)
+
+# Symbols the matching link pulls in by name, in this order. Input.c's
+# references to dinput.lib's data members and DirectInputCreateA are still in
+# port code that does not reference them, so they are named here until it is
+# converted; the order reproduces the original's member order in .text.
+set(LRR_LINK_SYMBOLS /INCLUDE:_c_dfDIMouse /INCLUDE:_c_dfDIKeyboard
+  /INCLUDE:_DirectInputCreateA@16)

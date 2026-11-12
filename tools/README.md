@@ -868,7 +868,8 @@ using only the standard library. It selects Git-tracked matching-build sources
 from CMake's source declarations and the link-order list
 (`src/link_order.cmake`, read by `link_order.py`), excludes native-only and
 test-only sources, and conservatively includes non-native project headers. It also hashes the
-build configuration, metric code and its coverage inputs. Untracked and ignored
+build configuration (including the import-library sources in
+`cross/msvc5-importlibs/`), metric code and its coverage inputs. Untracked and ignored
 files are excluded. When Git is unavailable, the explicit
 `tools/binary_progress_inputs.txt` list is used; update it when the selected
 tracked inputs change (the tooling test checks it). The report's schema version
