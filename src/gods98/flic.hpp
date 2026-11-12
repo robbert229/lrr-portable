@@ -74,7 +74,7 @@ int flic_stream_frame_advance(Flic* flic);
  * failure. The keyframe is decoded at open, so flic_tick starts at frame 1. */
 Flic* flic_open(const char* name);
 
-int flic_close(Flic* f);
+extern "C" int flic_close(Flic* f);
 
 /* --- geometry / inventory ------------------------------------------------- */
 

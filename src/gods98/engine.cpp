@@ -787,3 +787,12 @@ EngineTaskCallbackRecord* ledger_stub_00480870_TaskCallbackRecordAllocateAndInit
 
 
 } // namespace unported_ledger_stubs
+
+/* ResetLevelAndExit (004250a0) in the original ABI, for Reward.c (GAME-037,
+ * finding 560); a thin unannotated adapter (ADR 0005 step 6). */
+#include "game/lego_api.h"
+
+void lego_reset_level_and_exit(void)
+{
+    engine_reset_level_and_exit();
+}

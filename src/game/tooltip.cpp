@@ -494,3 +494,26 @@ void scene_object_set_animation_with_fallback(
         (void)scene_action_name_set(binding->resource,
                                     ai_activity_name(AI_ACT_STAND));
 }
+
+/* ToolTip_DrawBox (0046b8b0) in the original ABI, for Reward.c (GAME-037,
+ * finding 560). A thin unannotated adapter (ADR 0005 step 6): the original
+ * takes the box and its three colours by value; the port's entry takes its
+ * state record and the renderer's hooks, which the original ABI does not
+ * carry, so the box is described but not drawn. */
+#include "effects.h"
+
+void tooltip_draw_box(Area2F rect, ColourRGBF fill, ColourRGBF highlight,
+                      ColourRGBF shadow, int dark)
+{
+    RectangularGridOverlayState state;
+    memset(&state, 0, sizeof(state));
+    state.x = rect.x;
+    state.y = rect.y;
+    state.width = rect.width;
+    state.height = rect.height;
+    memcpy(state.fill_color, &fill, sizeof(state.fill_color));
+    memcpy(state.first_line_color, &highlight, sizeof(state.first_line_color));
+    memcpy(state.second_line_color, &shadow, sizeof(state.second_line_color));
+    state.overlay_mode = dark;
+    rectangular_grid_overlay_geometry_draw(&state, NULL);
+}

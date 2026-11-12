@@ -272,7 +272,7 @@ void timed_effect_cue_request_set(unsigned int slot, uint32_t cue);
 void timed_effect_persistence_set(unsigned int slot, int enabled);
 void timed_effect_update_request_set(unsigned int slot);
 void timed_effect_timestamp_reset(unsigned int slot);
-void timed_effect_runtime_update(uint32_t render_x, uint32_t render_y,
+extern "C" void timed_effect_runtime_update(uint32_t render_x, uint32_t render_y,
                                  float delta);
 void timed_effect_hover_reset(void);
 void timed_effect_slot_render_record(const TimedEffectRecord* record,

@@ -22,7 +22,7 @@ game_sources = [
   'lego.cpp',
   'entity_stats.cpp',
   'creature_scene.cpp',
-  'reward.cpp',
+  'reward_port.cpp',
   'camera_control.cpp',
   'helpwindow.cpp',
   'tile_variants.cpp',
@@ -95,6 +95,7 @@ game_c_sources = [
   'bezier.c',
   'panel_unit.c',
   'priorities.c',
+  'reward.c',
   'steering.c',
   'terrain_map.c',
 ]

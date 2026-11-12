@@ -11,7 +11,7 @@ extern InputState s_direct_input_state;
 extern InputState* s_active_input_state;
 extern int s_direct_input_initialized;
 extern int s_direct_input_keyboard_acquired;
-extern uint8_t s_global_current_keys[INPUT_KEY_COUNT];
+extern "C" uint8_t s_global_current_keys[INPUT_KEY_COUNT];
 extern int s_cursor_delta_x;
 extern int s_cursor_delta_y;
 extern InputClientToScreenHook s_input_client_to_screen_hook;

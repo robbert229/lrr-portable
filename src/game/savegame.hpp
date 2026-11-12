@@ -57,8 +57,8 @@ GameContext* save_current_context_get(void);
 
 int  save_slot_get(const GameContext* ctx);  /* typed SavGetSlot adapter */
 void save_slot_set(GameContext* ctx, int slot);  /* typed SavSetSlot adapter */
-int  save_slot_get_target(void);              /* SavGetSlot @ 0x417e90 */
-void save_slot_set_target(int slot);          /* SavSetSlot @ 0x417ea0 */
+extern "C" int  save_slot_get_target(void);              /* SavGetSlot @ 0x417e90 */
+extern "C" void save_slot_set_target(int slot);          /* SavSetSlot @ 0x417ea0 */
 
 /* SaveSlotSelectionClear (FUN_00415cf0, finding 408): drops the active
  * slot selection back to the corpus's closed sentinel (-1). The corpus
@@ -68,7 +68,7 @@ void save_slot_selection_clear_target(void);  /* @ 0x415cf0 */
 
 /* Typed SavSlotCtx adapter and its one-argument target ABI entry. */
 void* sav_slot_ctx(GameContext* ctx, int slot);
-void* sav_slot_ctx_target(int slot);          /* SavSlotCtx @ 0x417e50 */
+extern "C" void* sav_slot_ctx_target(int slot);          /* SavSlotCtx @ 0x417e50 */
 
 /* Open `Saves\<slot>.sav` into the active-slot context. `create_if_missing`
  * mirrors SavReadSlot's `param_3`: 0 writes a fresh empty slot when the file
@@ -77,7 +77,7 @@ int save_read_slot(GameContext* ctx, int slot, int create_if_missing);
 /* SavReadSlot's retail argument order: (slot, slot-context, mode). A supplied
  * per-slot context receives the retail header while record allocations live
  * in a host-width sidecar; NULL retains the typed active-GameContext path. */
-int save_read_slot_target(uint32_t slot, void* slot_context, int mode);
+extern "C" int save_read_slot_target(uint32_t slot, void* slot_context, int mode);
 
 /* Write the active-slot context to `Saves\<slot>.sav` (+ `.osf`). */
 int save_write_slot(GameContext* ctx, int slot);
@@ -91,7 +91,7 @@ void sav_refresh_slots(GameContext* ctx); /* FUN_00417df0 */
 void sav_refresh_slots_target(void);
 
 /* SavCommit: write the current active slot to disk. */
-void save_commit(GameContext* ctx);
+extern "C" void save_commit(GameContext* ctx);
 void save_return_diagnostic_log_set(void* log);
 
 /* Write the `.dat` slot thumbnail: the framebuffer as an uncompressed
@@ -103,7 +103,7 @@ int save_write_thumbnail(GameContext* ctx, int slot, const void* fb,
                          int pitch, int w, int h);
 
 /* Dirty-mark record `index` (|1, plus |2 for an empty-name record). */
-void save_mark_record(GameContext* ctx, int index);
+extern "C" void save_mark_record(GameContext* ctx, int index);
 
 /* Typed owner adapter: grow the port's record table as needed, bind this
  * GameContext as the current save owner, then enter the retail ABI body. */
@@ -111,7 +111,7 @@ int  save_write_record(GameContext* ctx, int index, const uint8_t* blob);
 /* SavWriteRecord (FUN_00417f40): the retail two-argument entry reads the
  * active save context, gates on the record count, and copies 0x318c bytes at
  * record base + index * 0x3190 + 4. */
-int  save_write_record_target(int index, const uint8_t* blob);
+extern "C" int  save_write_record_target(int index, const uint8_t* blob);
 
 /* Return record `index`'s flags word pointer (SavRecordPtr + flags). */
 uint32_t* save_record_flags(GameContext* ctx, int index);
@@ -207,18 +207,18 @@ void* checkpoint_blob_get(const GameContext* ctx);
  * the word FrontEndStateChange follows; its corpus feeder is the unported
  * front-end state-change path, so it lands as zero-init storage with a
  * port-side peek. */
-void     save_state_event_context_set(uint32_t value);
+extern "C" void     save_state_event_context_set(uint32_t value);
 uint32_t save_state_event_context_peek(void);
 
 /* Typed SavBuildCtx adapter and the no-argument target ABI entry. */
 void* sav_build_ctx(GameContext* ctx);
-void* sav_build_ctx_target(void);             /* SavBuildCtx @ 0x417e70 */
+extern "C" void* sav_build_ctx_target(void);             /* SavBuildCtx @ 0x417e70 */
 
 /* SavRecordPtr (FUN_00417f90): the record address for `index` —
  * base + index * 0x3190 + 4 once the slot context is open and the index
  * is under the count. NULL when the corpus's guard answers 0. */
 void* sav_record_ptr(GameContext* ctx, int index);
-void* sav_record_ptr_target(int index);       /* SavRecordPtr @ 0x417f90 */
+extern "C" void* sav_record_ptr_target(int index);       /* SavRecordPtr @ 0x417f90 */
 
 /* SelectedLevelStartObjectUpdate (FUN_00460200): when the level block is
  * bound, reads the checkpoint blob through the ported getter (the corpus
@@ -345,7 +345,7 @@ void sav_tree_walk2(void* node, SavTree2State* state, int carry,
  * the corpus builds them (window base, stored word, block slot, zero
  * cursor, flag), walk with carry 1, then SavClearVisited (FUN_00416e70)
  * over the installed visited bands. */
-void sav_tree_load(void* node, void* window_base, void** blocks,
+extern "C" void sav_tree_load(void* node, void* window_base, void** blocks,
                    uint32_t window, uint32_t flag,
                    const EngineContext* eng);  /* FUN_004173e0 */
 
@@ -384,7 +384,7 @@ uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index);
 void save_menu_refresh(GameContext* ctx, int slot);  /* FUN_004150b0 */
 void save_menu_refresh_target(uint32_t unused, int slot);
 void show_level_overlay_for_current_selection(GameContext* ctx); /* FUN_00418000 */
-void show_level_overlay_target(void);
+extern "C" void show_level_overlay_target(void);
 
 /* Install/peek hooks for the corpus reference state the refresh walks.
  * slot is the corpus's port-owned block-slot address (the chain word's

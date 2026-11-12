@@ -35,7 +35,13 @@ void input_direct_state_bind(InputState* state)
 #include "input_for_interface.hpp"
 #include "input_from_interface.hpp"
 
+// GLOBAL: LEGORR 0x0076ab80
 uint8_t s_global_current_keys[INPUT_KEY_COUNT];
+/* The previous frame's key map (Input.c's prevKey_Map), for the converted
+ * C units that read it (gods98/input_keys.h). */
+// GLOBAL: LEGORR 0x0076aa00
+extern "C" uint8_t s_global_previous_keys[INPUT_KEY_COUNT];
+uint8_t s_global_previous_keys[INPUT_KEY_COUNT];
 // GLOBAL: LEGORR 0x0076AB34
 int s_cursor_delta_x;
 // GLOBAL: LEGORR 0x0076AB38
@@ -51,6 +57,7 @@ void input_global_current_keys_copy(const InputState* state)
      * make a still-held key appear released. */
     if (state != NULL) {
         memcpy(s_global_current_keys, state->cur, sizeof(s_global_current_keys));
+        memcpy(s_global_previous_keys, state->prev, sizeof(s_global_previous_keys));
     }
 }
 

@@ -954,7 +954,7 @@ void font_pixel_format_hooks_set(FontPixelFormatQueryFn query,
 uint32_t font_device_color_convert(void* device, uint32_t color);
 /* FontResourceLoad (FUN_00479ee0): create the 10-by-19 glyph atlas record
  * from a decoded font bitmap. The record owns one surface reference. */
-void* font_atlas_record_create(const char* name);
+extern "C" void* font_atlas_record_create(const char* name);
 TextureSurface* font_atlas_record_surface_get(const void* record);
 int font_atlas_record_line_height_get(const void* record);
 int font_atlas_record_glyph_get(const void* record, unsigned char glyph,
@@ -963,7 +963,7 @@ int font_atlas_record_glyph_get(const void* record, unsigned char glyph,
 int parse_indexed_surface_name(const char* path, uint32_t* index_out);
 /* FontRecordAndSurfaceRelease (FUN_0047a550): release the atlas surface in
  * field zero and return the large atlas record to its dedicated free list. */
-void font_atlas_record_release(void* record);
+extern "C" void font_atlas_record_release(void* record);
 
 /* SurfacePixelRowsFlipInPlace (FUN_00476bf0): vertically flip a locked
  * renderer surface using its descriptor and engine heap scratch storage. */

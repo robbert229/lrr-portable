@@ -428,21 +428,21 @@ void global_counter_004ff990_reset(void);
  * (FUN_00462830 / FUN_00462850, finding 357): add 1.0 to the named global
  * float. Both land as zero-initialized module statics — no ported code
  * owns or feeds them (findings leave their unit unresolved). */
-void global_float_at_00554adc_add_one(void);
-void global_float_at_00554efc_add_one(void);
+extern "C" void global_float_at_00554adc_add_one(void);
+extern "C" void global_float_at_00554efc_add_one(void);
 
 /* GlobalCounterAt00555324 / 00555328 / 0055532cIncrement (FUN_00462870 /
  * FUN_00462880 / FUN_00462890, finding 357): bump the three named global
  * counters; zero-initialized module statics (unowned precedents). */
-void global_counter_at_00555324_increment(void);
-void global_counter_at_00555328_increment(void);
-void global_counter_at_0055532c_increment(void);
+extern "C" void global_counter_at_00555324_increment(void);
+extern "C" void global_counter_at_00555328_increment(void);
+extern "C" void global_counter_at_0055532c_increment(void);
 
 /* GlobalFloatAccumulator_00555330Add / GlobalFloatAccumulate_00555120
  * (FUN_004628a0 / FUN_004628c0, findings 383/386): add the argument to
  * the named global float accumulator; zero-initialized module statics. */
-void global_float_accumulator_00555330_add(float value);
-void global_float_accumulate_00555120(float value);
+extern "C" void global_float_accumulator_00555330_add(float value);
+extern "C" void global_float_accumulate_00555120(float value);
 
 /* Tests/diagnostics census of the DAT statics above (the
  * message_active_count precedent): read-only views over the module's
@@ -644,7 +644,7 @@ extern "C" void panel_item_flag16_set(int panel, int item, int value);
 extern "C" void panel_item_flag32_set(int panel, int item, int value);
                                         /* FUN_0045abb0 */
 extern "C" void panel_state_flags_toggle(int index); /* FUN_0045ab00 */
-void reward_score_add(float value);      /* FUN_00462800 */
+extern "C" void reward_score_add(float value);      /* FUN_00462800 */
 float reward_score_total_peek(void);
 uint32_t reward_score_count_peek(void);
 
@@ -977,11 +977,11 @@ uint32_t renderer_word_a_get(void);
 uint32_t renderer_word_b_get(void);
 uint32_t renderer_word_c_get(void);
 void     renderer_word_c_set(uint32_t value);
-extern uint32_t s_renderer_word_a; /* DAT_0076ab24 */
-extern uint32_t s_renderer_word_b; /* DAT_0076ab28 */
-extern uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
+extern "C" uint32_t s_renderer_word_a; /* DAT_0076ab24 */
+extern "C" uint32_t s_renderer_word_b; /* DAT_0076ab28 */
+extern "C" uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
 extern uint32_t s_window_mouse_word_40; /* DAT_0076ab40 */
-extern uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c */
+extern "C" uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c */
 extern uint32_t s_window_mouse_word_50; /* DAT_0076ab50 */
 extern uint32_t s_window_mouse_word_54; /* DAT_0076ab54 */
 extern uint32_t s_window_mouse_word_58; /* DAT_0076ab58 */

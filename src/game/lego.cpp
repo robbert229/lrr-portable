@@ -3605,7 +3605,7 @@ int object_list_load_file(GameContext* ctx, const char* olist)
  * so everything else answers a zero row (the dispatch aliases that slot
  * onto its first argument's word — a corpus quirk, pinned in the tests). */
 // FUNCTION: LEGORR 0x0042e8b0
-int entity_type_pair_for_name(const char* name, int* type_out,
+extern "C" int entity_type_pair_lookup(const char* name, int* type_out,
                                      int* row_out, int* zero_out)
 {
     /* The corpus's entry zeroing, blind (mov ebx,[esp+0x10] / mov [ebx],0
@@ -9151,7 +9151,7 @@ void random_variant_cell_scatter(int center_x, int center_y, int radius,
 
 namespace unported_ledger_stubs {
 // FUNCTION: LEGORR 0x00435550
-int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void)
+extern "C" int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void)
 {
     uint32_t current = g_renderer_word_c;
     int transitioned_to_zero = current == 0u &&
@@ -10091,3 +10091,13 @@ static uint32_t media_float_bits(float value)
 struct TextureSurface* s_lego_text_window_font;
 struct TextureSurface* s_lego_crystal_count_font;
 float s_lego_radar_zoom;
+
+/* Lego_GetObjectByName (0042e8b0) has C linkage under the name
+ * entity_type_pair_lookup, for Reward.c (GAME-037, finding 560). entity.cpp
+ * reaches it through its frozen private header under the port's name, so
+ * this unannotated forwarder keeps that name. */
+int entity_type_pair_for_name(const char* name, int* type_out, int* row_out,
+                              int* zero_out)
+{
+    return entity_type_pair_lookup(name, type_out, row_out, zero_out);
+}
