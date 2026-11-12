@@ -971,6 +971,20 @@ class SplitTest(unittest.TestCase):
         self.assertIn("struct Counter {", header)                  # the type, shared
         self.assertIn("extern struct Counter s_counter_record;", header)
 
+    def test_type_and_variable_split_moves_the_annotation_onto_the_variable(self):
+        # GAME-020's s_handle_set_band (#525): the GLOBAL names the variable.
+        mixed = MIXED.replace("static int s_shared_counter;",
+                              "/* The band. */\n// GLOBAL: LEGORR 0x004b0008\nstatic struct Counter {\n"
+                              "    struct { int x; } inner;\n    int value;\n} s_counter_record; /* tail */\n"
+                              "static int s_shared_counter;") \
+            .replace("    s_shared_counter++;\n", "    s_shared_counter++;\n    s_counter_record.value++;\n") \
+            .replace("    s_shared_counter += p.a;\n", "    s_shared_counter += p.a + s_counter_record.value;\n")
+        fx = self.split_fixture(mixed)
+        plan = ru.plan_relocation("GAME-001", fx.root, split=True)
+        self.assertIn("/* The band. */\nstruct Counter {\n    struct { int x; } inner;\n    int value;\n};\n"
+                      "// GLOBAL: LEGORR 0x004b0008\nstatic struct Counter s_counter_record; /* tail */\n",
+                      plan.files["src/game/mixed.cpp"])
+
     def test_untagged_type_cannot_be_split(self):
         mixed = MIXED.replace("static int s_shared_counter;",
                               "static struct {\n    int value;\n} s_counter_record;\nstatic int s_shared_counter;") \

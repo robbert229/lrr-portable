@@ -279,6 +279,7 @@ class Split:
     item: cx.Item
     text: str                 # the replacement, one declaration per line
     kind: str                 # declarators or type-and-variables
+    start: int = -1           # where the replacement starts, when before the item (#525)
 
 
 @dataclass
@@ -959,7 +960,34 @@ def _need_split(plan: Plan, s: Source, it: cx.Item, reasons: list[str], why: str
     except ValueError as e:
         reasons.append(f"{where}: {why}, and it cannot be split: {e}")
         return
-    plan.splits.append(Split(s.rel, it, text, kind))
+    start = -1
+    if kind == "type-and-variables":
+        text, start = _annotations_onto_variable(s.text, it, text)
+    plan.splits.append(Split(s.rel, it, text, kind, start))
+
+
+def _annotations_onto_variable(text: str, it: cx.Item, split: str) -> tuple[str, int]:
+    """Move a type-and-variables split's annotations onto its first variable.
+
+    The annotations in the leading comments named the variable, not the
+    type (#525: ``resource.cpp``'s ``s_handle_set_band``). They leave the
+    leading comments and go directly above the first variable declaration,
+    so the replacement then starts at the leading comments."""
+    if it.lead < 0 or it.lead >= it.start:
+        return split, -1
+    lead = text[it.lead:it.start]
+    lines = lead.splitlines(keepends=True)
+    notes = [ln for ln in lines if cx.ANNOTATION.match(ln)]
+    if not notes:
+        return split, -1
+    kept = "".join(ln for ln in lines if not cx.ANNOTATION.match(ln))
+    masked, depth, type_end = cx.mask(split), 0, -1
+    for k in range(masked.index("{"), len(masked)):
+        depth += {"{": 1, "}": -1}.get(masked[k], 0)
+        if depth == 0:
+            type_end = masked.index("\n", k) + 1     # past "};" and its line end
+            break
+    return kept + split[:type_end] + "".join(notes) + split[type_end:], it.lead
 
 
 def _split_declaration(text: str, it: cx.Item) -> tuple[str, str]:
@@ -1065,7 +1093,7 @@ def _render_splits(plan: Plan, reasons: list[str]) -> None:
             continue
         out, last = [], 0
         for x in mine:
-            out.append(s.text[last:x.item.start])
+            out.append(s.text[last:x.start if x.start >= 0 else x.item.start])
             out.append(x.text)
             last = x.item.end
         out.append(s.text[last:])

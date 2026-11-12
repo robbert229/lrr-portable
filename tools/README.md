@@ -187,7 +187,9 @@ A second run finds the unit relocated and does nothing. A half-done state
   The split step only rewrites the declarations the relocation needs split:
   - `static int a = 0, b = 0;` becomes one declaration per name;
   - `static struct T {…} v[3];` becomes `struct T {…};` and
-    `static struct T v[3];`; an untagged type is refused.
+    `static struct T v[3];`; an untagged type is refused. Annotations in
+    the leading comments move below the type, onto the first variable,
+    because they name the variable (#525).
 
   Each split is recorded in `docs/coverage/relocations/<unit>-splits.csv`,
   with hashes before and after, and the result is re-scanned for one name
