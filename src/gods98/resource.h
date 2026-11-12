@@ -11,6 +11,16 @@
 #ifndef LEGORRR_GODS98_RESOURCE_H
 #define LEGORRR_GODS98_RESOURCE_H
 
+/* read_whole_file is File_LoadBinary. The port's version is in
+ * resource.cpp, so files.c cannot take its name (files.h); in the matching
+ * build the C units that include this header call files.c's function
+ * instead, whose contract theirs is (finding 583). A macro renames the
+ * declaration and the calls one for one: the symbol numbering does not
+ * change. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define read_whole_file file_load_binary
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

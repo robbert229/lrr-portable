@@ -94,7 +94,7 @@
 
 #define GRID_REC_FIELD_WORDS   16    /* cleared by the mask sweep */
 
-// GLOBAL: LEGORR 0x004a1d60
+/* 004a1d60 is the pooled "%s" literal, marked in gods98/files.c (finding 583). */
 const char s_task_copy_format[] = "%s";
 
 // GLOBAL: LEGORR 0x004b8bc8

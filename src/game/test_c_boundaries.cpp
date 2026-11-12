@@ -34,6 +34,8 @@
 #include "gods98/audio.h"
 #include "gods98/sound3d.h"
 #include "gods98/files.h"
+#include "gods98/files_paths.h"
+#include "gods98/wad.h"
 #include "gods98/container_frame.h"
 #include "platform/platform.h"
 #include "platform/window.h"

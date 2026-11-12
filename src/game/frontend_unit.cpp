@@ -245,7 +245,8 @@ static const char s_menu_null_label[5] = "Null";
 
 /* MapOpen2 (FUN_00480170): preserve the retail open, seek/tell, progress,
  * allocate, rewind/read, and close order against the level-owned map slots. */
-// GLOBAL: LEGORR 0x004a2770
+/* 004a2770 is the pooled "rb" literal, marked in gods98/files.c (finding
+ * 583); this copy serves the port's map_open2 (files_port.cpp). */
 const char s_map_open_binary_mode[] = "rb";
 
 // GLOBAL: LEGORR 0x004db748

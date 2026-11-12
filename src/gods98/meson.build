@@ -13,7 +13,7 @@ gods98_sources = [
   'directdraw.cpp',
   'avi_player.cpp',
   'images_unit.cpp',
-  'files.cpp',
+  'files_port.cpp',
   'lwo.cpp',
   'wad.cpp',
   'lws_port.cpp',
@@ -77,6 +77,7 @@ gods98_c_sources = [
   'dxerror.c',
   'g98_029.c',
   'lws.c',
+  'files.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 gods98_c_as_cpp = []

@@ -55,6 +55,9 @@ typedef int (*ResourcePathExistsFn)(const char* path, void* context);
 void resource_cd_probe_hooks_set(ResourceDriveTypeQueryFn drive_type,
                                  ResourcePathExistsFn path_exists,
                                  void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 int resource_find_cd_key_drive(void); /* FUN_0047f4f0 */
 #ifdef __cplusplus
 extern "C"
@@ -109,6 +112,9 @@ int resource_mount(const char* dir, const char* prefix);
 /* WadMountStartup's retail ABI: exe-derived prefix, insist-on-CD flag, and
  * registry key used by the localized CDMissing/DataMissing strings. The
  * explicit-root `resource_mount` remains the modern test/host entry. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void resource_mount_startup_target(const char* prefix, int require_cd,
                                    const char* registry_key);
 /* Calls the retail-shaped entry and returns RESOURCE_STARTUP_*. */
@@ -134,6 +140,9 @@ int resource_wad_lookup(int wad_idx, const char* name);
 
 /* Search the mounted archives from newest to oldest, or one selected archive
  * when `wad_idx` is nonnegative. */
+#ifdef __cplusplus
+extern "C"
+#endif
 int wad_entry_find_across_mounted_archives(const char* name, int wad_idx);
 
 /* TOC introspection used by tests/validators. */
@@ -164,6 +173,9 @@ typedef struct ResourceFileTokenList {
  * root explicitly when they don't mount numbered archives. */
 void resource_directory_scan_root_set(const char* root);
 const char* resource_directory_scan_root_get(void);
+#ifdef __cplusplus
+extern "C"
+#endif
 void resource_file_token_list_load_and_tree_scan_target(
     const char* token_file); /* FUN_004802d0, one-argument retail shape */
 
@@ -253,6 +265,9 @@ typedef struct ResourceDirectoryScanOps {
 void resource_directory_tree_scan(const char* root,
                                   const ResourceFileTokenList* tokens,
                                   const ResourceDirectoryScanOps* ops);
+#ifdef __cplusplus
+extern "C"
+#endif
 void resource_directory_tree_scan_target(
     const char* root); /* FUN_00480390, one-argument retail shape */
 
@@ -287,6 +302,9 @@ void* read_whole_file(const char* path, int32_t* size_out); /* FUN_004800a0 */
  * Deviation: the table has no ported owner (its only corpus writer is the
  *   unported stream opener), so it lands as sixteen zero-init slots with
  *   install hooks; the corpus strides the index blindly. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void fixed_record_slot_resource_release(int slot); /* FUN_0048bfc0 */
 void* fixed_record_slot_resource_get(int slot);    /* FUN_0048bff0 */
 void fixed_record_slot_install(int slot, void* resource); /* port hook */
@@ -355,12 +373,30 @@ typedef struct GameFileHandle {
     int32_t flag;   /* corpus record dword at +0 */
     void*   stream; /* corpus record dword at +4 (widened, LP64 deviation) */
 } GameFileHandle;
+#ifdef __cplusplus
+extern "C"
+#endif
 void* game_file_handle_allocate(int kind);                       /* FUN_0047fed0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 int game_file_read_byte(GameFileHandle* handle);                  /* FUN_0047fc20 */
+#ifdef __cplusplus
+extern "C"
+#endif
 int wad_file_read(void* destination, int element_size, int element_count,
                   GameFileHandle* handle);                         /* FUN_0047f980 */
+#ifdef __cplusplus
+extern "C"
+#endif
 int wad_file_seek(GameFileHandle* handle, int offset, int origin); /* FUN_0047f850 */
+#ifdef __cplusplus
+extern "C"
+#endif
 int wad_file_cursor_get(GameFileHandle* handle);                   /* FUN_0047fb10 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void game_file_handle_release(GameFileHandle* handle);            /* FUN_0047ff50 */
 #ifdef __cplusplus
 extern "C"
@@ -376,16 +412,37 @@ GameFileHandle* game_file_open_dispatch(const char* path,
  * WAD-only read routes are not representable by this FILE-backed adapter. */
 GameFileHandle* game_file_open_loose_path(const char* path,
                                           const char* mode);
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t game_file_write(const void* data, uint32_t size,
                          uint32_t count, GameFileHandle* handle); /* FUN_0047fa50 */
+#ifdef __cplusplus
+extern "C"
+#endif
 int game_file_print_format(GameFileHandle* handle, const char* format, ...);
                                                                  /* FUN_0047fdb0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void resource_debug_output_format(const char* format, ...);        /* FUN_0047f600 */
+#ifdef __cplusplus
+extern "C"
+#endif
 int game_file_open_route_select(const char* path,
                                 const char* mode);                 /* FUN_0047fe30 */
+#ifdef __cplusplus
+extern "C"
+#endif
 char* game_file_mounted_path_prefix_rewrite(const char* path);     /* FUN_0047ffc0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 char* game_file_read_line(char* buffer, int capacity,
                           GameFileHandle* handle);                /* FUN_0047fce0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 char* game_file_read_line_dispatch(char* buffer, int capacity,
                                    GameFileHandle* handle);       /* FUN_0047fd40 */
 #ifdef __cplusplus

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* C boundary header (ADR 0005) for the gods98 file stream entries (Files.c,
- * G98-014; the port's gods98/files.cpp) that gods98/lws.c calls:
- * File_Open, File_Close and File_GetLine. They are not added to
- * gods98/files.h or gods98/resource.h because other C units include them,
- * and every declaration shifts their symbol numbering (finding 538). Shared
- * C++ headers do not include this file; src/game/test_c_boundaries.cpp
- * checks it against resource.hpp. */
+ * G98-014) that gods98/lws.c calls, under the port's names: File_Open,
+ * File_Close and File_GetLine. They are not added to gods98/resource.h
+ * because other C units include it, and every declaration shifts their
+ * symbol numbering (finding 538). In the matching build gods98/files.c
+ * defines these names (gods98/files.h, finding 583); natively they are the
+ * port tail's (gods98/files_port.cpp). Shared C++ headers do not include
+ * this file; src/game/test_c_boundaries.cpp checks it against
+ * resource.hpp. */
 #ifndef LEGORRR_GODS98_FILES_OPEN_H
 #define LEGORRR_GODS98_FILES_OPEN_H
 

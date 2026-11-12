@@ -82,6 +82,9 @@ void* three_word_record_allocate_and_initialize(uint32_t a, uint32_t b,
 
 
 /* FUN_0047ff40: the resource-layer free wrapper (identical call). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void engine_heap_free_wrapper(void* ptr);
 
 #ifdef __cplusplus

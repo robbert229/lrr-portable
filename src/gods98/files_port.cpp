@@ -1,7 +1,25 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-014 Files.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-014.csv. */
+/* Port tail (ADR 0006) for G98-014 Files.c (finding 583). The original-shape
+ * unit is gods98/files.c; this file keeps the port's file layer, which the
+ * native port runs. None of it is annotated: the addresses belong to
+ * files.c.
+ *
+ * - The port's models of Files.c's functions, under the port's names. They
+ *   read the WADs through gods98/resource.cpp's Resource records, resolve
+ *   host paths (POSIX separators, mounted roots, no _fullpath) and take
+ *   their startup prompts from host hooks. Native callers keep calling them.
+ * - In the matching build (MSVC 5.0) files.c defines 26 of those names
+ *   itself, for the callers whose contracts are the original's (files.h).
+ *   Their port definitions here are left out of it
+ *   (FILES_PORT_DEFINES_UNIT_NAMES); the rest, whose port contracts differ
+ *   (save_directory_ensure_exists, save_stream_length,
+ *   wad_mount_path_cache_store, ares_cd_fallback_path, mount_wad_from_path,
+ *   engine_heap_allocate, wad_entry_read_into_stream_slot,
+ *   game_file_system_type_get, resource_directory_token_list_contains),
+ *   stay in every build.
+ * - At the end: the four Wad.c adapters gods98/wad.h describes, the no-op
+ *   files.c calls natively for its debug messages, and the native stand-ins
+ *   files_native.h declares. */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,6 +81,17 @@
 #include "resource_for_files.hpp"
 #include "game/level_for_files.hpp"
 
+#include "wad.h"
+
+/* The matching build, where files.h gives files.c the port's names. This
+ * file cannot include files.h: its File declarations would then clash with
+ * resource.hpp's under those names. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define FILES_PORT_DEFINES_UNIT_NAMES 0
+#else
+#define FILES_PORT_DEFINES_UNIT_NAMES 1
+#endif
+
 #if defined(_WIN32) && !defined(INVALID_FILE_ATTRIBUTES)
 #define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
 #endif
@@ -80,47 +109,33 @@ typedef struct WadFileStreamState {
 #  define LRR_MKDIR(p) mkdir(p, 0755)
 #endif
 
-// GLOBAL: LEGORR 0x004aafd4
 static const char s_game_file_source_path[] =
     "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Files.c";
 
-// GLOBAL: LEGORR 0x004ab010
 static const char s_game_file_seek_mode_format[] = "Uknown seek mode (%i)";
 /* Shared file-layer diagnostics used by the reference dispatchers. */
-// GLOBAL: LEGORR 0x004ab028
 static const char s_game_file_unknown_type_format[] =
     "%s(%i) : Unknown file system in call to %s";
 
-// GLOBAL: LEGORR 0x004ab054
 static const char s_game_file_seek_name[] = "File_Seek";
 
-// GLOBAL: LEGORR 0x004ab0a0
 static const char s_game_file_tell_name[] = "File_Tell";
 
-// GLOBAL: LEGORR 0x004ab0ac
 static const char s_game_file_getc_name[] = "File_GetC";
-// GLOBAL: LEGORR 0x004ab0b8
 static const char s_game_file_gets_name[] = "File_GetS";
 
-// GLOBAL: LEGORR 0x004ab0c4
 static const char s_game_file_printf_wad_error[] =
     "\"fprintf\" is unsupprted for wad files";
-// GLOBAL: LEGORR 0x004ab0ec
 static const char s_game_file_printf_name[] = "File_PrintF";
 
-// GLOBAL: LEGORR 0x005339a0
 static char      s_wad_mount_path_cache[0x400];
 
-// GLOBAL: LEGORR 0x00533da0
 static char      s_wad_mount_path_rewrite[0x400];
 
 /* LoaderProgressCallbackSet (FUN_004802b0) — see media.hpp. */
-// GLOBAL: LEGORR 0x005343ac
 void* s_loader_progress_callback; /* DAT_005343ac role: unowned */
-// GLOBAL: LEGORR 0x005343b0
 void* s_loader_progress_context;  /* DAT_005343b0 role: unowned */
 
-// GLOBAL: LEGORR 0x005343b8
 static int       s_wad_mount_path_cache_valid;
 static const char s_game_file_open_name[] = "File_Open";
 static const char s_game_file_close_name[] = "File_Close";
@@ -147,7 +162,7 @@ static void fixed_record_slot_release(int slot);
  * mounting, Data-root derivation, CD-marker probing, and mount-path caching.
  * Localized prompts and modal UI are host operations; process exit remains
  * optional so portable callers can inspect the startup result. */
-// FUNCTION: LEGORR 0x0047f130
+#if FILES_PORT_DEFINES_UNIT_NAMES
 void resource_mount_startup_target(const char* prefix, int require_cd,
                                    const char* registry_key)
 {
@@ -223,10 +238,11 @@ void resource_mount_startup_target(const char* prefix, int require_cd,
         resource_startup_delme_marker_remove(marker_path);
     }
 }
+#endif
 /* FindCdKeyDrive (FUN_0047f4f0): scan optical drive letters C through Z,
  * retaining the first drive with a readable cd.key marker. Platform hooks
  * supply drive type and file probes; a mounted root uses its file probe. */
-// FUNCTION: LEGORR 0x0047f4f0
+#if FILES_PORT_DEFINES_UNIT_NAMES
 int resource_find_cd_key_drive(void)
 {
     char path[RESOURCE_PATH_MAX];
@@ -266,10 +282,10 @@ int resource_find_cd_key_drive(void)
     }
     return 0;
 }
+#endif
 
 /* WadMountPathCacheStore (FUN_0047f590): keep a nonempty path shorter than
  * 0x401 bytes; invalid input clears the cache and its validity flag. */
-// FUNCTION: LEGORR 0x0047f590
 void wad_mount_path_cache_store(const char* path)
 {
     size_t length;
@@ -288,7 +304,7 @@ void wad_mount_path_cache_store(const char* path)
 /* DebugOutputFormat (FUN_0047f600) formats one variadic message into the
  * same 1024-byte scratch size as the reference and emits it to the process
  * debug stream. The portable backend uses stderr for that stream. */
-// FUNCTION: LEGORR 0x0047f600
+#if FILES_PORT_DEFINES_UNIT_NAMES
 void resource_debug_output_format(const char* format, ...)
 {
     char buffer[1024];
@@ -301,9 +317,9 @@ void resource_debug_output_format(const char* format, ...)
     va_end(args);
     fputs(buffer, stderr);
 }
+#endif
 /* MountWadFromPath (FUN_0047f640): reset mounted archive state and load the
  * requested archive path. */
-// FUNCTION: LEGORR 0x0047f640
 void mount_wad_from_path(const char* path)
 {
     resource_unmount_all();
@@ -333,7 +349,6 @@ void mount_wad_from_path(const char* path)
 /* SoundPathFallbackFormat (FUN_0047f660): only format the fallback when a
  * drive is configured. The port permits a mounted-root override and applies
  * host separators/bounds checks inside ares_cd_path. */
-// FUNCTION: LEGORR 0x0047f660
 int ares_cd_fallback_path(const char* name, char* out, size_t out_sz)
 {
     if (s_cd_drive == 0) {
@@ -346,7 +361,6 @@ int ares_cd_fallback_path(const char* name, char* out, size_t out_sz)
 /* SaveDirectoryEnsureExists (FUN_0047f6a0): the engine's directory-create
  * wrapper. The port receives the resolved save path directly rather than
  * prefixing the corpus's shared `Data` directory. */
-// FUNCTION: LEGORR 0x0047f6a0
 void save_directory_ensure_exists(const char* path)
 {
     if (path != NULL && path[0] != '\0') {
@@ -358,7 +372,7 @@ void save_directory_ensure_exists(const char* path)
  * loose-file storage, then return the corresponding GameFileHandle. The WAD
  * stream owns a fixed resource slot plus a cursor record; loose streams keep
  * their CRT FILE handle directly. */
-// FUNCTION: LEGORR 0x0047f6e0
+#if FILES_PORT_DEFINES_UNIT_NAMES
 GameFileHandle* game_file_open_dispatch(const char* path, const char* mode)
 {
     const char* resolved;
@@ -427,9 +441,10 @@ GameFileHandle* game_file_open_dispatch(const char* path, const char* mode)
     }
     return handle;
 }
+#endif
 /* WadFileSeek (FUN_0047f850): update the WAD stream cursor for SET/CUR/END.
  * The END case preserves the corpus's length-plus-offset behavior. */
-// FUNCTION: LEGORR 0x0047f850
+#if FILES_PORT_DEFINES_UNIT_NAMES
 int wad_file_seek(GameFileHandle* handle, int offset, int origin)
 {
     WadFileStreamState* state;
@@ -468,10 +483,11 @@ int wad_file_seek(GameFileHandle* handle, int offset, int origin)
     }
     return 0;
 }
+#endif
 
 /* WadFileRead (FUN_0047f980): read complete elements from the slot resource,
  * clipping the byte count at its end and advancing the cursor. */
-// FUNCTION: LEGORR 0x0047f980
+#if FILES_PORT_DEFINES_UNIT_NAMES
 int wad_file_read(void* destination, int element_size, int element_count,
                   GameFileHandle* handle)
 {
@@ -510,10 +526,11 @@ int wad_file_read(void* destination, int element_size, int element_count,
     state->cursor += (int32_t)bytes;
     return (int)(bytes / (unsigned int)element_size);
 }
+#endif
 
 /* GameFileWrite (FUN_0047fa50): writes are supported by loose-file streams;
  * WAD entries are immutable and report a zero item count. */
-// FUNCTION: LEGORR 0x0047fa50
+#if FILES_PORT_DEFINES_UNIT_NAMES
 uint32_t game_file_write(const void* data, uint32_t size,
                          uint32_t count, GameFileHandle* handle)
 {
@@ -536,7 +553,8 @@ uint32_t game_file_write(const void* data, uint32_t size,
     return (uint32_t)fwrite(data, (size_t)size, (size_t)count,
                             (FILE*)handle->stream);
 }
-// FUNCTION: LEGORR 0x0047fac0
+#endif
+#if FILES_PORT_DEFINES_UNIT_NAMES
 int game_file_close(GameFileHandle* handle)
 {
     if (handle == NULL) return 0;
@@ -548,8 +566,9 @@ int game_file_close(GameFileHandle* handle)
         s_game_file_source_path, 0x1af, s_game_file_close_name);
     return 0;
 }
+#endif
 /* WadFileCursorGet (FUN_0047fb10): return the current WAD stream cursor. */
-// FUNCTION: LEGORR 0x0047fb10
+#if FILES_PORT_DEFINES_UNIT_NAMES
 int wad_file_cursor_get(GameFileHandle* handle)
 {
     WadFileStreamState* state;
@@ -569,12 +588,13 @@ int wad_file_cursor_get(GameFileHandle* handle)
         s_game_file_source_path, 0x1d5, s_game_file_tell_name);
     return 0;
 }
+#endif
 
 /* SoundSampleFileOpenByName (FUN_0047fb60) is a presence query: the retail
  * code opens and closes loose files, but returns the matching WAD entry
  * index for an archive-backed sample. Keep the decoded Sound loader below
  * this probe so the portable audio API can still consume sample data. */
-// FUNCTION: LEGORR 0x0047fb60
+#if FILES_PORT_DEFINES_UNIT_NAMES
 int sound_sample_file_open_by_name(const char* name)
 {
     const char* resolved;
@@ -596,11 +616,12 @@ int sound_sample_file_open_by_name(const char* name)
     }
     return 0;
 }
+#endif
 
 /* GameFileReadByte (FUN_0047fc20) and its line readers (FUN_0047fce0,
  * FUN_0047fd40): type 0 dispatches to the WAD cursor buffer and type 1 to
  * the FILE-backed CRT stream. */
-// FUNCTION: LEGORR 0x0047fc20
+#if FILES_PORT_DEFINES_UNIT_NAMES
 int game_file_read_byte(GameFileHandle* handle)
 {
     WadFileStreamState* state;
@@ -627,11 +648,11 @@ int game_file_read_byte(GameFileHandle* handle)
     value = resource->data[state->cursor++];
     return value;
 }
+#endif
 
 /* GameFileLengthGet (FUN_0047fca0): query the stream length and restore its
  * original position, matching the original's save/seek-end/read-position /
  * seek-back sequence. */
-// FUNCTION: LEGORR 0x0047fca0
 long save_stream_length(FILE* fp)
 {
     long position = ftell(fp);
@@ -641,7 +662,7 @@ long save_stream_length(FILE* fp)
     return length;
 }
 
-// FUNCTION: LEGORR 0x0047fce0
+#if FILES_PORT_DEFINES_UNIT_NAMES
 char* game_file_read_line(char* buffer, int capacity,
                           GameFileHandle* handle)
 {
@@ -658,8 +679,9 @@ char* game_file_read_line(char* buffer, int capacity,
     buffer[count] = '\0';
     return buffer;
 }
+#endif
 
-// FUNCTION: LEGORR 0x0047fd40
+#if FILES_PORT_DEFINES_UNIT_NAMES
 char* game_file_read_line_dispatch(char* buffer, int capacity,
                                    GameFileHandle* handle)
 {
@@ -679,10 +701,11 @@ char* game_file_read_line_dispatch(char* buffer, int capacity,
         s_game_file_source_path, 0x24b, s_game_file_gets_name);
     return NULL;
 }
+#endif
 
 /* GameFilePrintFormat (FUN_0047fdb0): forward formatted text to a loose
  * stream, returning the corpus's fixed zero status. */
-// FUNCTION: LEGORR 0x0047fdb0
+#if FILES_PORT_DEFINES_UNIT_NAMES
 int game_file_print_format(GameFileHandle* handle, const char* format, ...)
 {
     uint32_t type;
@@ -704,20 +727,10 @@ int game_file_print_format(GameFileHandle* handle, const char* format, ...)
     va_end(args);
     return 0;
 }
+#endif
 
 /* GameFileSystemTypeGet (FUN_0047fe20, findings 234/404): the handle's
  * leading type dword. */
-// FUNCTION: LEGORR 0x0047fe20
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t game_file_system_type_get(const void* handle)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax]
-        ret
-    }
-}
-#else
 uint32_t game_file_system_type_get(const void* handle)
 {
     if (handle == NULL) {
@@ -725,12 +738,11 @@ uint32_t game_file_system_type_get(const void* handle)
     }
     return *(const uint32_t*)handle;
 }
-#endif
 
 /* FileOpenRouteSelect (FUN_0047fe30): choose loose-file handling for
  * non-write modes only when the rewritten path is not present in a mounted
  * archive. */
-// FUNCTION: LEGORR 0x0047fe30
+#if FILES_PORT_DEFINES_UNIT_NAMES
 int game_file_open_route_select(const char* path, const char* mode)
 {
     char* rewritten;
@@ -740,6 +752,7 @@ int game_file_open_route_select(const char* path, const char* mode)
     rewritten = game_file_mounted_path_prefix_rewrite(path);
     return wad_entry_find_across_mounted_archives(rewritten, -1) == -1;
 }
+#endif
 
 /* WadEntryReadIntoStreamSlot (FUN_0047fea0): zero the slot pair behind the
  * handle, resolve the entry through the corpus's wad path opener with the
@@ -748,7 +761,6 @@ int game_file_open_route_select(const char* path, const char* mode)
  * fixed_record_slot_resource_get) rides as the opened resource pointer and
  * the corpus's -1 sentinel becomes NULL; the search-all index arrives as
  * the wad-only open mode with the corpus's global at -1 inlined. */
-// FUNCTION: LEGORR 0x0047fea0
 int wad_entry_read_into_stream_slot(WadStreamSlots* slots, const char* name)
 {
     if (slots == NULL) {
@@ -768,7 +780,7 @@ int wad_entry_read_into_stream_slot(WadStreamSlots* slots, const char* name)
  * dwords, 8 bytes, alias this record's front half) and the corpus's
  * blind-first store for kind 1 is guarded. The corpus's wrapper chain
  * 0x47ff30 is a bare call into the heap's alloc entry. */
-// FUNCTION: LEGORR 0x0047fed0
+#if FILES_PORT_DEFINES_UNIT_NAMES
 void* game_file_handle_allocate(int kind)
 {
     GameFileHandle* h;
@@ -798,19 +810,20 @@ void* game_file_handle_allocate(int kind)
     engine_heap_free_wrapper(h);
     return NULL;
 }
+#endif
 
-// FUNCTION: LEGORR 0x0047ff30
 void engine_heap_allocate(long size)
 {
     (void)engine_heap_alloc(size);
 }
-// FUNCTION: LEGORR 0x0047ff40
+#if FILES_PORT_DEFINES_UNIT_NAMES
 void engine_heap_free_wrapper(void* ptr)
 {
     engine_heap_free(ptr);
 }
+#endif
 
-// FUNCTION: LEGORR 0x0047ff50
+#if FILES_PORT_DEFINES_UNIT_NAMES
 void game_file_handle_release(GameFileHandle* handle)
 {
     if (handle == NULL) return;
@@ -831,7 +844,8 @@ void game_file_handle_release(GameFileHandle* handle)
     }
     engine_heap_free_wrapper(handle);
 }
-// FUNCTION: LEGORR 0x0047ffc0
+#endif
+#if FILES_PORT_DEFINES_UNIT_NAMES
 char* game_file_mounted_path_prefix_rewrite(const char* path)
 {
     size_t path_length;
@@ -859,8 +873,9 @@ char* game_file_mounted_path_prefix_rewrite(const char* path)
              "%s", relative_path);
     return s_wad_mount_path_rewrite;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00480050
+#if FILES_PORT_DEFINES_UNIT_NAMES
 char* game_file_read_crlf_line(char* buffer, int capacity,
                                GameFileHandle* handle)
 {
@@ -876,8 +891,9 @@ char* game_file_read_crlf_line(char* buffer, int capacity,
     }
     return result;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00480170
+#if FILES_PORT_DEFINES_UNIT_NAMES
 int map_open2(const char* path, int32_t* size_out)
 {
     GameFileHandle* handle = game_file_open_dispatch(
@@ -906,10 +922,11 @@ int map_open2(const char* path, int32_t* size_out)
     }
     return -1;
 }
+#endif
 
 /* PathResolveAgainstBase (FUN_00480220): form a path under the configured
  * data root and reject parent-directory components that escape that root. */
-// FUNCTION: LEGORR 0x00480220
+#if FILES_PORT_DEFINES_UNIT_NAMES
 const char* resource_path_resolve_against_base(const char* path)
 {
     static char resolved[RESOURCE_PATH_MAX];
@@ -937,17 +954,19 @@ const char* resource_path_resolve_against_base(const char* path)
     snprintf(resolved, sizeof(resolved), "%s%s", base, path);
     return resolved;
 }
+#endif
 
-// FUNCTION: LEGORR 0x004802b0
+#if FILES_PORT_DEFINES_UNIT_NAMES
 void loader_progress_callback_set(void* callback, void* context)
 {
     s_loader_progress_callback = callback;
     s_loader_progress_context = context;
 }
+#endif
 
 /* FileTokenListLoadAndTreeScan (FUN_004802d0): retail ABI takes only the
  * token filename; root and token table are module-owned loader state. */
-// FUNCTION: LEGORR 0x004802d0
+#if FILES_PORT_DEFINES_UNIT_NAMES
 void resource_file_token_list_load_and_tree_scan_target(
     const char* token_file)
 {
@@ -959,10 +978,11 @@ void resource_file_token_list_load_and_tree_scan_target(
     if (s_resource_directory_root[0] != '\0')
         resource_directory_tree_scan_target(s_resource_directory_root);
 }
+#endif
 
 /* DirectoryTreeScan (FUN_00480390): retail ABI takes one root and reads the
  * process-wide token state populated by FileTokenListLoadAndTreeScan. */
-// FUNCTION: LEGORR 0x00480390
+#if FILES_PORT_DEFINES_UNIT_NAMES
 void resource_directory_tree_scan_target(const char* root)
 {
     ResourceDirectoryScanHandle* scan = NULL;
@@ -1025,10 +1045,10 @@ void resource_directory_tree_scan_target(const char* root)
     }
     resource_directory_scan_default_close(NULL, scan);
 }
+#endif
 /* DirectoryTokenListCompare (FUN_00480570): find a token with the same
  * ASCII case-folded spelling. The original discards the comparison result;
  * this API exposes it to the reconstructed directory walker. */
-// FUNCTION: LEGORR 0x00480570
 int resource_directory_token_list_contains(
     const ResourceFileTokenList* list, const char* token)
 {
@@ -1190,9 +1210,222 @@ static void fixed_record_slot_release(int slot)
 }
 
 /* File_GetCDFilePath (FUN_0047f660) with the original's (out, name)
- * argument order, for gods98/sound3d.c (ADR 0005 step 6). The out buffer
- * is MAX_PATH bytes there. */
+ * argument order, for gods98/sound3d.c natively (ADR 0005 step 6); files.c
+ * defines it in the matching build. The out buffer is MAX_PATH bytes
+ * there. */
+#if FILES_PORT_DEFINES_UNIT_NAMES
 extern "C" int resource_cd_file_path_get(char* out, const char* name)
 {
     return ares_cd_fallback_path(name, out, 260);
 }
+#endif
+
+/* --- Wad.c adapters (gods98/wad.h) -----------------------------------------
+ * The original-contract Wad.c entries files.c calls where the port's
+ * function at that address has another contract. Wad.c's conversion
+ * replaces them. A stream handle is a slot of the port's fixed-record table
+ * (resource.cpp) holding the entry's data, allocated with the C library
+ * heap, so that fixed_record_slot_resource_release (Wad_FileClose, 0048bfc0)
+ * frees it as the original does. */
+static int s_files_wad_file_lengths[FIXED_RECORD_SLOTS];
+
+/* Wad_Load (0048b4e0): the port's wwad_archive_index_load has the contract,
+ * but its only declaration (resource_from_wad.hpp, frozen) has C++
+ * linkage. */
+extern "C" int wad_load(const char* fName)
+{
+    return wwad_archive_index_load(fName);
+}
+
+/* Wad_FileOpen (0048bf70): the port's ares_open_wad_path returns a Resource
+ * record. Archive selection follows wad_entry_find_across_mounted_archives;
+ * files.c always passes -1 (every archive, newest first). */
+extern "C" int wad_file_open(const char* fName, int wadNo)
+{
+    Resource* resource;
+    int32_t length;
+    void* data;
+    int slot;
+    (void)wadNo;
+    resource = ares_open_wad_path(fName, RESOURCE_WAD_ONLY);
+    if (resource == NULL) return -1;
+    length = resource_read(resource);
+    slot = wad_entry_slot_allocate();
+    if (length < 0 || slot < 0) {
+        resource_free(resource);
+        return -1;
+    }
+    data = engine_heap_alloc(length > 0 ? (long)length : 1L);
+    if (data == NULL) {
+        resource_free(resource);
+        return -1;
+    }
+    if (length > 0) memcpy(data, resource->data, (size_t)length);
+    resource_free(resource);
+    fixed_record_slot_install(slot, data);
+    s_files_wad_file_lengths[slot] = (int)length;
+    return slot;
+}
+
+/* Wad_FileLength (0048c010): the port's wad_stream_length_get returns
+ * nothing. */
+extern "C" int wad_file_length(int handle)
+{
+    if ((unsigned int)handle >= FIXED_RECORD_SLOTS) return 0;
+    return s_files_wad_file_lengths[handle];
+}
+
+/* Wad_FileData (0048c030): the port's wad_memory_stream_buffer_get returns
+ * nothing. */
+extern "C" void* wad_file_data(int handle)
+{
+    return fixed_record_slot_resource_get(handle);
+}
+
+/* The original's debug-message calls go to an empty variadic function
+ * (00484c90). files.c calls this one when it is compiled as C++. */
+extern "C" void files_debug_noop(const char* msg, ...)
+{
+    (void)msg;
+}
+
+#if !defined(_WIN32)
+/* --- Native stand-ins (gods98/files_native.h) ------------------------------
+ * The VC5 LIBC directory routines and the Win32 calls files.c makes, over
+ * POSIX. Backslashes in the paths files.c builds are host separators here. */
+#include "files_native.h"
+
+static void files_native_host_path(const char* path, char* out, size_t size)
+{
+    size_t i;
+    for (i = 0; path[i] != '\0' && i + 1 < size; ++i)
+        out[i] = path[i] == '\\' ? '/' : path[i];
+    out[i] = '\0';
+}
+
+typedef struct FilesNativeFind {
+    DIR* directory;
+    char root[1024];
+} FilesNativeFind;
+static FilesNativeFind s_files_native_finds[16];
+
+static int files_native_find_fill(FilesNativeFind* find,
+                                  struct files_native_finddata* info)
+{
+    struct dirent* entry;
+    struct stat status;
+    char path[2048];
+    if ((entry = readdir(find->directory)) == NULL) return -1;
+    memset(info, 0, sizeof(*info));
+    snprintf(info->name, sizeof(info->name), "%s", entry->d_name);
+    snprintf(path, sizeof(path), "%s/%s", find->root, entry->d_name);
+    if (stat(path, &status) == 0) {
+        if (S_ISDIR(status.st_mode)) info->attrib |= _A_SUBDIR;
+        info->size = (unsigned long)status.st_size;
+        info->time_write = (long)status.st_mtime;
+    }
+    return 0;
+}
+
+extern "C" long files_native_findfirst(const char* filespec,
+                                       struct files_native_finddata* fileinfo)
+{
+    char path[1024];
+    char* slash;
+    long handle;
+    files_native_host_path(filespec, path, sizeof(path));
+    /* The pattern is always "*.*": every entry. */
+    slash = strrchr(path, '/');
+    if (slash != NULL) *slash = '\0';
+    else snprintf(path, sizeof(path), ".");
+    for (handle = 0; handle < 16; ++handle) {
+        FilesNativeFind* find = &s_files_native_finds[handle];
+        if (find->directory != NULL) continue;
+        if ((find->directory = opendir(path)) == NULL) return -1;
+        snprintf(find->root, sizeof(find->root), "%s", path);
+        if (files_native_find_fill(find, fileinfo) != 0) {
+            closedir(find->directory);
+            find->directory = NULL;
+            return -1;
+        }
+        return handle;
+    }
+    return -1;
+}
+
+extern "C" int files_native_findnext(long handle,
+                                     struct files_native_finddata* fileinfo)
+{
+    if (handle < 0 || handle >= 16 ||
+        s_files_native_finds[handle].directory == NULL)
+        return -1;
+    return files_native_find_fill(&s_files_native_finds[handle], fileinfo);
+}
+
+extern "C" int files_native_findclose(long handle)
+{
+    if (handle < 0 || handle >= 16 ||
+        s_files_native_finds[handle].directory == NULL)
+        return -1;
+    closedir(s_files_native_finds[handle].directory);
+    s_files_native_finds[handle].directory = NULL;
+    return 0;
+}
+
+extern "C" int files_native_chmod(const char* path, int mode)
+{
+    char host[1024];
+    struct stat status;
+    files_native_host_path(path, host, sizeof(host));
+    if (stat(host, &status) != 0) return -1;
+    return chmod(host, (mode & 0x80) != 0 ? (status.st_mode | S_IWUSR)
+                                          : (status.st_mode & ~S_IWUSR));
+}
+
+extern "C" char* files_native_getcwd(char* buffer, int maxlen)
+{
+    return getcwd(buffer, (size_t)maxlen);
+}
+
+extern "C" int files_native_mkdir(const char* path)
+{
+    char host[1024];
+    files_native_host_path(path, host, sizeof(host));
+    return mkdir(host, 0755);
+}
+
+extern "C" char* files_native_fullpath(char* absPath, const char* relPath,
+                                       unsigned int maxLength)
+{
+    char cwd[1024];
+    int written;
+    if (relPath[0] == '/' || relPath[0] == '\\') {
+        written = snprintf(absPath, maxLength, "%s", relPath);
+    } else {
+        if (getcwd(cwd, sizeof(cwd)) == NULL) return NULL;
+        written = snprintf(absPath, maxLength, "%s/%s", cwd, relPath);
+    }
+    if (written < 0 || (unsigned int)written >= maxLength) return NULL;
+    return absPath;
+}
+
+extern "C" unsigned int files_native_get_drive_type(const char* rootPathName)
+{
+    (void)rootPathName;
+    return 1; /* DRIVE_NO_ROOT_DIR: no drive letters */
+}
+
+extern "C" int files_native_message_box(void* window, const char* text,
+                                        const char* caption, unsigned int type)
+{
+    (void)window;
+    (void)type;
+    fprintf(stderr, "%s: %s\n", caption, text);
+    return 1; /* IDOK */
+}
+
+extern "C" void files_native_output_debug_string(const char* text)
+{
+    fputs(text, stderr);
+}
+#endif
