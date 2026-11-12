@@ -1339,12 +1339,32 @@ def _declaration(s: Source, it: cx.Item, name: str, scope: str, why: str, reason
             reasons.append(f"{where}: {it.names[0]} has default arguments; a declaration cannot repeat them")
             return []
         return [Decl(name, f"{prefix}{head};", why, scope, direction)]
-    decl = cx._split_top(head, "=")[0].strip()
+    parts = cx._split_top(head, "=")
+    decl = parts[0].strip()
+    if len(parts) > 1 and re.search(r"\[\s*\]$", decl):
+        decl = _bounded(decl, "=".join(parts[1:]))
     if not decl.startswith("extern"):
         decl = "extern " + decl
     if prefix:
         decl = prefix + decl[len("extern "):]
     return [Decl(name, decl + ";", why, scope, direction, _const_object(head, it.names[0]))]
+
+
+def _bounded(decl: str, init: str) -> str:
+    """``T a[]`` with the bound its brace initializer implies (#525).
+
+    ``extern T a[];`` is an incomplete type, so a user's ``sizeof a`` would
+    stop compiling in the file that gets only the declaration. A
+    one-dimensional brace list gives the count; anything else is left as
+    written."""
+    body = init.strip()
+    if not (body.startswith("{") and body.endswith("}")):
+        return decl
+    masked = cx.mask(body[1:-1])
+    if not masked.strip():
+        return decl
+    elements = [e for e in cx._split_top(masked) if e.strip()]
+    return re.sub(r"\[\s*\]$", f"[{len(elements)}]", decl)
 
 
 def _check_clashes(plan: Plan, root: Path, reasons: list[str]) -> None:

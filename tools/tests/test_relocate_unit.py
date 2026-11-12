@@ -660,6 +660,21 @@ class R1DefectTest(unittest.TestCase):
         finally:
             fx.close()
 
+    def test_shared_unbounded_array_is_declared_with_its_bound(self):
+        # GAME-020's s_interface_menu_action_labels (#525): a moved user takes
+        # sizeof, so ``extern T a[];`` would be an incomplete type there.
+        labels = MIXED.replace("static int s_shared_counter;",
+                               'static int s_shared_counter;\nstatic const char* const s_labels[] = {\n'
+                               '    "a,b", /* one, */\n    "c",\n};') \
+            .replace("    s_shared_counter++;\n", "    s_shared_counter += (int)sizeof(s_labels[0][0]);\n") \
+            .replace("    s_shared_counter += p.a;\n", "    s_shared_counter += p.a + (int)sizeof(s_labels);\n")
+        fx = Fixture(labels)
+        try:
+            header = ru.plan_relocation("GAME-001", fx.root).files["src/game/mixed_for_alpha.hpp"]
+            self.assertIn("extern const char* const s_labels[2];", header)
+        finally:
+            fx.close()
+
     def test_late_private_include_is_caught(self):
         fx = Fixture(MIXED)
         original = ru._insert_include

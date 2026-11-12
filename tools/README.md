@@ -103,7 +103,9 @@ legacy `frontend.cpp`), the tool uses `<stem>_unit` and says so;
 **Sharing without editing shared headers: per-relocation private headers
 (#496).** Sometimes moved code and the code left behind both need something.
 - A static gets external linkage: `static` is removed and the static is
-  declared in a private header.
+  declared in a private header. An array defined as `T a[] = { … }` is
+  declared with the bound its one-dimensional brace list implies, so a
+  `sizeof a` in the other file still compiles (#525).
 - A file-local type or macro moves into a private header.
 
 Each relocation of unit U from legacy file L writes its own pair, next to L:
