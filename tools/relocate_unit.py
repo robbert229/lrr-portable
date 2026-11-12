@@ -39,8 +39,9 @@ condition. A static that a private-header item needs is exported (T2).
 Constructs it refuses rather than guesses at: definitions inside ``#if`` blocks
 (except a group of alternative definitions of one function, or a whole
 group as above), directives that
-split a declaration, functions defined in headers, qualified or macro-built
-definitions, named namespaces, shared ``inline`` functions, shared statics that
+split a declaration, functions defined in headers, multi-level qualified or
+macro-built definitions, linkage blocks inside namespaces, shared annotated
+``inline`` functions, shared statics that
 need a declaration it cannot write, and name clashes between moved files.
 """
 
@@ -52,7 +53,9 @@ import hashlib
 import io
 import json
 import re
+import shutil
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -157,14 +160,33 @@ def _qualify(scope: str, name: str) -> str:
 
 
 def _container_namespace(container: str | None) -> str | None:
-    """X for a member of ``namespace X {}`` or of an anonymous namespace
-    inside it (``namespace X { namespace { } }``), else None."""
+    """X for a member of ``namespace X {}``, ``A::B`` for nested named
+    namespaces (#514), each optionally with an anonymous namespace innermost
+    (``namespace X { namespace { } }``); else None."""
     if container and container.startswith("ns:"):
-        if "/" not in container:
-            return container[3:]
-        if re.fullmatch(r"ns:[A-Za-z_]\w*/anon", container):
-            return container[3:].split("/")[0]
+        parts = container.split("/")
+        if parts[-1] == "anon":
+            parts = parts[:-1]
+        if parts and all(re.fullmatch(r"ns:[A-Za-z_]\w*", p) for p in parts):
+            return "::".join(p[3:] for p in parts)
     return None
+
+
+def _ns_names(wrap: str) -> list[str]:
+    """The named namespaces of a wrap, outermost first: ``ns:A/ns:B`` (a
+    container) or ``ns:A::B`` (a declaration's scope)."""
+    ns = _container_namespace(wrap) if "/" in wrap else wrap[3:]
+    return ns.split("::") if ns else []
+
+
+def _ns_block(names: list[str], body: str, anon: bool = False, inline: bool = False) -> str:
+    """``body`` inside nested ``namespace A { namespace B { } }`` blocks (MSVC
+    5.0 has no ``namespace A::B``), with an anonymous namespace innermost."""
+    opens = [f"namespace {n} {{" for n in names] + (["namespace {"] if anon else [])
+    closes = (["} // namespace"] if anon else []) + [f"}} // namespace {n}" for n in reversed(names)]
+    if inline:
+        return " ".join(opens) + " " + body + " " + " ".join("}" for _ in closes)
+    return "\n".join(opens) + "\n" + body + "\n" + "\n".join(closes) + "\n"
 
 
 def _outer_wrap(container: str | None) -> str | None:
@@ -540,8 +562,13 @@ class _Clusters:
             if it.category in self.SKIP:
                 it.qnames = []
                 continue
-            it.qnames = [_qualify(it.scope, n) for n in it.names]
-            if it.category in ("function", "proto") and it.qnames and definitions.get(it.qnames[0], 0) > 1:
+            if it.qualifier and not it.scope:
+                # An out-of-line class member (#514): X::f, never the free f.
+                it.qnames = [f"{it.qualifier}::{n}" for n in it.names]
+            else:
+                it.qnames = [_qualify(it.scope, n) for n in it.names]
+            if it.category in ("function", "proto") and not it.cgroup and it.qnames \
+                    and definitions.get(it.qnames[0], 0) > 1:
                 key = f"{it.qnames[0]}({_param_key(it.head(_text_of(it)))})"
                 self.overloads.setdefault(it.qnames[0], set()).add(key)
                 it.qnames = [key]
@@ -581,8 +608,11 @@ class _Clusters:
     def resolve(self, use: str, scope: str) -> str:
         if "::" in use:
             return use
-        if scope and f"{scope}::{use}" in self.known:
-            return f"{scope}::{use}"
+        enclosing = scope.split("::") if scope else []
+        while enclosing:       # A::B, then A (C++ lookup through enclosing namespaces)
+            if f"{'::'.join(enclosing)}::{use}" in self.known:
+                return f"{'::'.join(enclosing)}::{use}"
+            enclosing.pop()
         if use in self.known:
             return use
         for kind, target in self.usings:
@@ -650,6 +680,12 @@ def _kind(items: list[cx.Item], members: list[int]) -> str:
     its = [items[k] for k in members]
     cats = {i.category for i in its}
     if cats <= {"type", "macro"}:
+        return "local"
+    funcs = [i for i in its if i.category == "function" and not i.cgroup]
+    if funcs and all(f.inline for f in funcs) and cats <= {"function", "proto"} \
+            and not any(i.annotations for i in its):
+        # An unannotated inline function (#514) is header-safe: shared, it
+        # goes verbatim to the private header, as a type or macro does.
         return "local"
     if any(i.static or _anonymous(i.container) for i in its):
         return "internal"
@@ -769,6 +805,12 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
     for c in sorted(core, key=first):
         if not (cl.users[c] - moving):
             continue
+        if any(items[k].inline for k in cl.members[c]) and kinds[c] != "internal":
+            # An annotated inline function must be defined in every file
+            # that uses it: a declaration is not enough (#514).
+            reasons.append(f"{s.rel}:{items[cl.members[c][0]].line}: inline {', '.join(sorted(cl.names[c]))} "
+                           "is used by moved and remaining code")
+            continue
         if kinds[c] == "internal":
             exported.add(c)
         elif kinds[c] == "external" and not (_bases(cl.names[c]) & visible_here):
@@ -861,8 +903,6 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
                                    f"cannot move whole ({it.group_why})")
                 else:
                     reasons.append(f"{where_}: inside an #if block")
-            if it.qualifier and not it.scope:
-                reasons.append(f"{where_}: out-of-line member of {it.qualifier} (a class, not a namespace)")
             for p in it.problems:
                 reasons.append(f"{where_}: {p}")
             if c in to_header and any(kind == "GLOBAL" or kind in FUNCTION_KINDS for kind, _ in it.annotations):
@@ -1256,6 +1296,8 @@ def _declaration(s: Source, it: cx.Item, name: str, scope: str, why: str, reason
                  direction: str) -> list[Decl]:
     """The external declaration of one definition or prototype."""
     where = f"{s.rel}:{it.line}"
+    if it.qualifier and not it.scope:
+        return []          # an out-of-line class member: its class declares it
     if it.multi or it.defines_type:
         what = ("a type and a variable defined in one declaration" if it.defines_type
                 else "several variables in one declaration")
@@ -1306,7 +1348,29 @@ def _check_clashes(plan: Plan, root: Path, reasons: list[str]) -> None:
             if it.category in ("function", "var") and not it.static and not _anonymous(it.container):
                 scope = _scope(it, plan.namespaces)
                 for n in {_qualify(scope, x) for x in it.names} & set(exported):
-                    reasons.append(f"{n} would get external linkage but {rel}:{it.line} defines it too")
+                    reasons.append(f"{n} would get external linkage but {rel}:{it.line} defines it too"
+                                   + _clash_advice(plan, exported[n], n, rel, it))
+
+
+def _clash_advice(plan: Plan, source: str, name: str, rel: str, other: cx.Item) -> str:
+    """What the original's addresses say about two definitions of one name
+    (#514, as in #482): one original global (unify them) or two (rename)."""
+    s = next(x for x in plan.sources if x.rel == source)
+    mine = next((it for it in s.scan.items if it.static and name.rsplit("::", 1)[-1] in it.names), None)
+    here = {a for k, a in (mine.annotations if mine else []) if k == "GLOBAL" or k in FUNCTION_KINDS}
+    there = {a for k, a in other.annotations if k == "GLOBAL" or k in FUNCTION_KINDS}
+    where = f"{source}:{mine.line}" if mine else source
+    if here and there and here & there:
+        return (f": one original global (0x{min(here & there):08x}) defined twice; unify them first "
+                "(a source fix, not a relocation)")
+    if here and there:
+        return (f": two original globals (0x{min(here):08x} at {where}, 0x{min(there):08x} at {rel}:{other.line}); "
+                f"rename the static at {where} first (a source fix, not a relocation)")
+    if here:
+        return f": the definition at {rel}:{other.line} is port-only (no annotation); rename it first"
+    if there:
+        return f": the static at {where} is port-only (no annotation); rename it first"
+    return ": neither is annotated; rename one first"
 
 
 # --------------------------------------------------------------------------
@@ -1356,12 +1420,10 @@ def _wrap(text: str, wrap: str | None) -> str:
         return 'extern "C" {\n' + body + '\n}\n'
     if wrap == "anon":
         return "namespace {\n" + body + "\n} // namespace\n"
-    if wrap and wrap.endswith("/anon"):
-        ns = wrap[3:].split("/")[0]
-        return f"namespace {ns} {{\nnamespace {{\n" + body + f"\n}} // namespace\n}} // namespace {ns}\n"
-    ns = _container_namespace(wrap)
-    if ns:
-        return f"namespace {ns} {{\n" + body + f"\n}} // namespace {ns}\n"
+    if wrap and wrap.startswith("ns:"):
+        names = _ns_names(wrap)
+        if names:
+            return _ns_block(names, body, anon=wrap.endswith("/anon"))
     return text
 
 
@@ -1477,14 +1539,19 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
     def section(pred):
         return [m for s in ordered_sources for m in s.moves if pred(m)]
     types = section(lambda m: m.item.category in ("type", "macro"))
+    # A whole #if group with helper functions (#514) goes before the unit's
+    # functions, as it was before its users in the source: no forward
+    # declarations for a group's alternatives.
+    groups = section(lambda m: m.item.cgroup and m.item.category == "function")
     globals_ = sorted(section(lambda m: m.role == "global"), key=lambda m: m.address)
     variables = section(lambda m: m.role.startswith("closure") and m.item.category == "var")
     protos = section(lambda m: m.item.category == "proto")
     functions = sorted(section(lambda m: m.role == "function"), key=lambda m: m.address)
-    helpers = section(lambda m: m.role.startswith("closure") and m.item.category == "function")
+    helpers = section(lambda m: m.role.startswith("closure") and m.item.category == "function"
+                      and not m.item.cgroup)
     data = _data_order(globals_ + variables)
     globals_, variables = data, []
-    plan.order = types + globals_ + variables + protos + functions + helpers
+    plan.order = types + globals_ + variables + protos + groups + functions + helpers
     if len(plan.order) != len(plan.moves):
         reasons.append("internal error: moved items not all placed")
         return
@@ -1513,9 +1580,9 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
             if target_move.item.category != "function":
                 reasons.append(f"{n} ({target_move.item.category}) is used before its definition in {plan.target}")
                 continue
-            if _anonymous(target_move.wrap):
-                reasons.append(f"{n} is in an anonymous namespace and used before its definition in {plan.target}")
-                continue
+            # An anonymous-namespace function is forward-declared in an
+            # anonymous namespace too: the same one, per translation unit (#514).
+            anon = _anonymous(target_move.wrap)
             s = src_of[id(target_move)]
             head = _head_decl(s, target_move.item)
             if target_move.static_removed:
@@ -1523,9 +1590,10 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
             decl = head + ";"
             if target_move.wrap == "extern-c":
                 decl = 'extern "C" ' + decl
-            forward.append((target_move.item.scope, decl))
+            forward.append((target_move.item.scope, decl, anon))
             declared.add(n)
-    plan.forward = [f"namespace {ns} {{ {d} }}" if ns else d for ns, d in forward]
+    plan.forward = [_ns_block(ns.split("::") if ns else [], d, anon=anon, inline=True) if ns or anon else d
+                    for ns, d, anon in forward]
 
     # using directives and declarations the moved global-scope code needs.
     usings = _needed_usings(plan, ordered_sources, visible, reasons)
@@ -1555,7 +1623,7 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
         else:
             chunks.append((m.wrap, text))
         prev = m
-    for m in types + globals_ + variables + protos:
+    for m in types + globals_ + variables + protos + groups:
         add(m)
     body.extend(_blocks(chunks))
     chunks = []
@@ -1814,13 +1882,16 @@ def _render_private(root: Path, s: Source, kind: str, reasons: list[str]) -> str
     rel = s.for_header if kind == "for" else s.from_header
     guard = "LRR_" + re.sub(r"\W", "_", Path(rel).relative_to("src").as_posix()).upper()
     chunks: list[tuple[str | None, str]] = []
+    functions: list[tuple[str | None, str]] = []
     if kind == "for":
         for it in s.header_items:
             text = it.text(s.text).rstrip("\n") + "\n"
             # A type or macro that leaves an anonymous namespace lands in
             # its outer namespace (recorded as such in the relocation CSV).
             wrap = _outer_wrap(it.container) if _anonymous(it.container) else it.container
-            chunks.append((wrap if _container_namespace(wrap) else None, text))
+            # Inline functions (#514) come after the declarations they may use.
+            (functions if it.category in ("function", "proto") else chunks).append(
+                (wrap if _container_namespace(wrap) else None, text))
     parts = _blocks(chunks)
     decls = [(f"ns:{d.ns}" if d.ns else None, d.rendered())
              for d in (s.for_decls if kind == "for" else s.from_decls)]
@@ -1828,6 +1899,8 @@ def _render_private(root: Path, s: Source, kind: str, reasons: list[str]) -> str
     body = "\n".join(p.rstrip("\n") + "\n" for p in parts)
     if decl_text:
         body += ("\n" if body else "") + decl_text
+    if functions:
+        body += ("\n" if body else "") + "\n".join(p.rstrip("\n") + "\n" for p in _blocks(functions))
     uses = _tail_uses(body)
     deps = [h for h in legacy_private_headers(root, s.rel)
             if h != rel and _names_in_file(Path(root) / h) & uses]
@@ -2341,16 +2414,42 @@ def survey(root: Path) -> list[dict]:
                             "reasons": []})
         except Refused as e:
             status = "refused"
+            reasons = e.reasons
             if all(classify_reason(r).startswith("needs --split") for r in e.reasons):
-                # Would it relocate once its declarations are split?
+                # Would it relocate once its declarations are split? Plan the
+                # relocation itself on the split text, in a scratch copy: a
+                # blocker behind the split must show (#514: G98-009, GAME-021).
                 try:
-                    if plan_relocation(u.unit_id, root, stem=stem, headers=headers, split=True).splits:
-                        status = "ok after --split-declarations"
+                    split = plan_relocation(u.unit_id, root, stem=stem, headers=headers, split=True)
+                    if split.splits:
+                        behind = _plan_after_split(root, u.unit_id, stem, split.files)
+                        if behind:
+                            status = "refused after --split-declarations"
+                            reasons = e.reasons + behind
+                        else:
+                            status = "ok after --split-declarations"
                 except Refused:
                     pass
             results.append({"unit": u.unit_id, "name": u.unit_name, "status": status,
-                            "functions": 0, "sources": [], "shared": 0, "reasons": e.reasons})
+                            "functions": 0, "sources": [], "shared": 0, "reasons": reasons})
     return results
+
+
+def _plan_after_split(root: Path, unit: str, stem: str, files: dict[str, str]) -> list[str]:
+    """The refusals of ``unit``'s relocation once ``files`` (its declaration
+    splits) are applied, planned in a scratch copy of src/ and docs/coverage/."""
+    with tempfile.TemporaryDirectory(prefix="relocate-survey-") as tmp:
+        scratch = Path(tmp)
+        for d in ("src", "docs/coverage"):
+            shutil.copytree(Path(root) / d, scratch / d, symlinks=True)
+        for rel, text in files.items():
+            (scratch / rel).parent.mkdir(parents=True, exist_ok=True)
+            (scratch / rel).write_text(text, encoding="utf-8")
+        try:
+            plan_relocation(unit, scratch, stem=stem)
+        except Refused as e:
+            return [r.replace(tmp + "/", "") for r in e.reasons]
+    return []
 
 
 def classify_reason(reason: str) -> str:
@@ -2364,6 +2463,10 @@ def classify_reason(reason: str) -> str:
         ("directive splits", "directive inside a declaration"),
         ("interrupts the declaration", "directive inside a declaration"),
         ("annotated definitions in a header", "function defined in a header"),
+        ("nested in itself", "namespace nested in itself (source fix)"),
+        ("two original globals", "name clash: two original globals (rename, source fix)"),
+        ("one original global", "name clash: one global defined twice (unify, source fix)"),
+        ("port-only", "name clash with a port-only definition (rename, source fix)"),
         ("qualified", "qualified (namespace/member) definition"),
         ("inside namespace", "named namespace"),
         ("nested namespace", "nested namespace or linkage block"),
