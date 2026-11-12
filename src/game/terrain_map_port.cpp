@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-026 GAME-026: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-026.csv. */
+/* Port tail (ADR 0006 decision 4): the port's own terrain model.
+ *
+ * GAME-026 (the original's Map3D.c) is rebuilt in original shape in
+ * terrain_map.c (issue #522). The port's terrain is a different contract:
+ * TerrainState with native render sidecars, TerrainSurfaceGrid and the
+ * scene-render hooks. These are the port's implementations of the unit's
+ * functions under the port's names, unannotated, so the native callers and
+ * tests keep their behaviour (finding 556). Callers move to terrain_map.c
+ * as their own units are converted. */
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
@@ -108,7 +114,8 @@ static void marker_cell(EngineState* st, uint32_t x, uint32_t y);
 static int terrain_surface_triangle_height(const float a[3], const float b[3], const float c[3], float x, float z, float* height_out);
 static int terrain_ray_triangle_hit(const float origin[3], const float direction[3], const float a[3], const float b[3], const float c[3], float hit[3]);
 
-// FUNCTION: LEGORR 0x0044e0c0
+/* Port model of 0x0044e0c0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void* terrain_create_retail(void* engine_context, const char* surface_map,
                             float blocksize, float terrain_value)
 {
@@ -272,7 +279,8 @@ void* terrain_create_retail(void* engine_context, const char* surface_map,
     return t;
 }
 
-// FUNCTION: LEGORR 0x0044e4d0
+/* Port model of 0x0044e4d0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_grid_vertex_build(TerrainVertexBuildGrid* grid)
 {
     static const float corners[4][2] = {
@@ -310,7 +318,8 @@ void terrain_grid_vertex_build(TerrainVertexBuildGrid* grid)
         }
     }
 }
-// FUNCTION: LEGORR 0x0044e670
+/* Port model of 0x0044e670 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void nested_pointer_record_destroy(NestedPointerRecord* record)
 {
     if (record == NULL) return;
@@ -324,7 +333,8 @@ void nested_pointer_record_destroy(NestedPointerRecord* record)
     }
 }
 
-// FUNCTION: LEGORR 0x0044e6b0
+/* Port model of 0x0044e6b0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void indexed_flag_value_set_one(void* record, uint32_t index)
 {
     if (record == NULL) {
@@ -335,7 +345,8 @@ void indexed_flag_value_set_one(void* record, uint32_t index)
     __builtin_memcpy((char*)record + off, &one, sizeof(one));
 }
 
-// FUNCTION: LEGORR 0x0044e6d0
+/* Port model of 0x0044e6d0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_material_transition_begin(TerrainSurfaceGrid* grid,
                                             uint32_t x, uint32_t y,
                                             int material,
@@ -423,7 +434,8 @@ void terrain_cell_material_transition_begin(TerrainSurfaceGrid* grid,
  * +0x24 for the detail entry at width * y + x, then discards the result.
  * Keep this target wrapper separate from the host eligibility predicate
  * below, which reads the same mirrored enable bit. */
-// FUNCTION: LEGORR 0x0044e860
+/* Port model of 0x0044e860 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void grid_cell_set_payload_index(void* terrain_handle, int x, int y)
 {
     TerrainState* terrain = (TerrainState*)terrain_handle;
@@ -436,7 +448,8 @@ void grid_cell_set_payload_index(void* terrain_handle, int x, int y)
     (void)terrain_detail_entry_get_at_index(&object, entry_index);
 }
 
-// FUNCTION: LEGORR 0x0044e880
+/* Port model of 0x0044e880 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_grid_cells_initialize(TerrainSurfaceGrid* grid)
 {
     uint32_t x;
@@ -456,7 +469,8 @@ void terrain_grid_cells_initialize(TerrainSurfaceGrid* grid)
  * sampled terrain span. Adjacent corner heights must stay within the edge
  * limit; cells carrying the terrain height-check bit must also stay within
  * the requested total height range. */
-// FUNCTION: LEGORR 0x0044E8C0
+/* Port model of 0x0044e8c0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int terrain_surface_vertex_span_validate(TerrainSurfaceGrid* grid,
                                          const int* cell_xy,
                                          uint32_t cell_count,
@@ -534,7 +548,8 @@ int terrain_surface_vertex_span_validate(TerrainSurfaceGrid* grid,
 /* TerrainCellListSurfaceHeightClampMutate (FUN_0044ead0): use unprocessed
  * cell corners to compute one target height, bounded by already-processed
  * cells, then clamp each new corner to the tolerance band around that target. */
-// FUNCTION: LEGORR 0x0044ead0
+/* Port model of 0x0044ead0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_surface_height_clamp(TerrainSurfaceGrid* grid,
                                        const int* cell_xy,
                                        uint32_t cell_count,
@@ -652,7 +667,8 @@ void terrain_cell_surface_height_clamp(TerrainSurfaceGrid* grid,
  * diagonal by cyclically rotating its four stored vertex records. Retail
  * writes the corresponding bit at cell +0x19, rebuilds the two triangle
  * normals, and marks the cell and four shared-corner records dirty. */
-// FUNCTION: LEGORR 0x0044edf0
+/* Port model of 0x0044edf0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_surface_orientation_set(TerrainSurfaceGrid* grid,
                                          uint32_t x, uint32_t y,
                                          int flipped)
@@ -735,7 +751,8 @@ void terrain_cell_surface_orientation_set(TerrainSurfaceGrid* grid,
     }
 }
 
-// FUNCTION: LEGORR 0x0044eff0
+/* Port model of 0x0044eff0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void simtick_marker_sweep(EngineContext* c, float dt, float scale)
 {
     (void)scale;
@@ -768,7 +785,8 @@ void simtick_marker_sweep(EngineContext* c, float dt, float scale)
      * cell-list and renderer-owned vertex records. */
 }
 
-// FUNCTION: LEGORR 0x0044f090
+/* Port model of 0x0044f090 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_material_transition_tick(TerrainSurfaceGrid* grid, float delta)
 {
     LevelState* level = terrain_material_transition_owner_get(grid);
@@ -812,7 +830,8 @@ void terrain_material_transition_tick(TerrainSurfaceGrid* grid, float delta)
     }
 }
 
-// FUNCTION: LEGORR 0x0044f1a0
+/* Port model of 0x0044f1a0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void input_key_mapping_add_bidirectional(InputKeyMappingTable* table,
                                          uint8_t key_a, uint8_t key_b)
 {
@@ -829,7 +848,8 @@ void input_key_mapping_add_bidirectional(InputKeyMappingTable* table,
     ++table->count[key_b];
 }
 
-// FUNCTION: LEGORR 0x0044f220
+/* Port model of 0x0044f220 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void scene_object_resource_handle_set(void* object,
                                                         uint32_t handle)
@@ -851,7 +871,8 @@ void scene_object_resource_handle_set(void* object, uint32_t handle)
 }
 #endif
 
-// FUNCTION: LEGORR 0x0044f230
+/* Port model of 0x0044f230 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_material_set(TerrainSurfaceGrid* grid, uint32_t x,
                                uint32_t y, uint8_t material,
                                uint8_t rotation)
@@ -886,7 +907,8 @@ void terrain_cell_material_set(TerrainSurfaceGrid* grid, uint32_t x,
 /* TerrainVoxelNeighborsMutate (FUN_0044f380): move the selected world-space
  * vertex in each adjacent cell's corner table, then rebuild both triangles
  * for the four cells sharing that vertex. */
-// FUNCTION: LEGORR 0x0044f380
+/* Port model of 0x0044f380 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_surface_voxel_neighbors_mutate(TerrainSurfaceGrid* grid,
                                                 uint32_t x, uint32_t y,
                                                 float height_delta)
@@ -913,7 +935,8 @@ void terrain_cell_surface_voxel_neighbors_mutate(TerrainSurfaceGrid* grid,
         }
     }
 }
-// FUNCTION: LEGORR 0x0044f490
+/* Port model of 0x0044f490 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_grid_operation_apply_all(TerrainSurfaceGrid* grid,
                                      uint32_t operation, void* context,
                                      TerrainGridOperationHook hook)
@@ -928,7 +951,8 @@ void terrain_grid_operation_apply_all(TerrainSurfaceGrid* grid,
     }
 }
 
-// FUNCTION: LEGORR 0x0044f4e0
+/* Port model of 0x0044f4e0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 uint8_t terrain_cell_surface_type_set(void* terrain, int x, int y, int type)
 {
     TerrainState* t = (TerrainState*)terrain;
@@ -955,7 +979,8 @@ uint8_t terrain_cell_surface_type_set(void* terrain, int x, int y, int type)
  * handle is the TerrainState model, so the corpus's record fields
  * +0x8/+0x28 (stride, table) map to the modeled width/table pair. Bounds
  * guard added — the corpus indexes blind (documented deviation). */
-// FUNCTION: LEGORR 0x0044f540
+/* Port model of 0x0044f540 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int terrain_cell_surface_type_get(const void* terrain, int x, int y)
 {
     const TerrainState* t = (const TerrainState*)terrain;
@@ -968,7 +993,8 @@ int terrain_cell_surface_type_get(const void* terrain, int x, int y)
     return t->blocks[0x24 + ((size_t)y * (size_t)t->width + (size_t)x) * TERRAIN_BLOCK_STRIDE];
 }
 
-// FUNCTION: LEGORR 0x0044f570
+/* Port model of 0x0044f570 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_surface_type_reset(void* terrain, int x, int y)
 {
     /* corpus: the white appearance (1,1,1) through the leaf in mode 0,
@@ -976,7 +1002,8 @@ void terrain_cell_surface_type_reset(void* terrain, int x, int y)
     terrain_cell_surface_appearance_apply(terrain, x, y, 0, 1.0f, 1.0f,
                                           1.0f);
 }
-// FUNCTION: LEGORR 0x0044f5c0
+/* Port model of 0x0044f5c0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_surface_appearance_apply(void* terrain, int x, int y,
                                            int mode, float r, float g,
                                            float b)
@@ -1014,7 +1041,8 @@ void terrain_cell_surface_appearance_apply(void* terrain, int x, int y,
 /* MapCellToWorldCenter (FUN_0044f640, finding 225): the descriptor's
  * int fields convert to float at the use site — reproduced exactly,
  * including the unsigned bounds compare. */
-// FUNCTION: LEGORR 0x0044f640
+/* Port model of 0x0044f640 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int map_cell_to_world_center(const void* map, uint32_t cell_x,
                              uint32_t cell_y, float* world_x, float* world_y)
 {
@@ -1052,14 +1080,16 @@ int map_cell_to_world_center(const void* map, uint32_t cell_x,
 
 /* TerrainGridPick (FUN_0044f6d0): forward the same cell outputs and retain
  * the bounds result; the corpus's temporary subcell write is discarded. */
-// FUNCTION: LEGORR 0x0044f6d0
+/* Port model of 0x0044f6d0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int terrain_grid_pick(const void* map, float world_x, float world_y,
                       int* cell_x, int* cell_y)
 {
     return world_to_terrain_cell_bounds_check(
         map, world_x, world_y, cell_x, cell_y, (float*)&cell_y);
 }
-// FUNCTION: LEGORR 0x0044f700
+/* Port model of 0x0044f700 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int world_to_terrain_cell_bounds_check(const void* map, float world_x,
                                        float world_y, int* cell_x,
                                        int* cell_y, float* subcell)
@@ -1119,7 +1149,8 @@ int world_to_terrain_cell_bounds_check(const void* map, float world_x,
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0044f810
+/* Port model of 0x0044f810 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void grid_coordinate_clamp_and_store(const void* map, float world_x,
                                      float world_y, int* cell_x, int* cell_y)
 {
@@ -1147,7 +1178,8 @@ void grid_coordinate_clamp_and_store(const void* map, float world_x,
     }
 }
 
-// FUNCTION: LEGORR 0x0044f870
+/* Port model of 0x0044f870 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 uint32_t terrain_world_point_to_cell(const void* map, const float* point,
                                      float* cell_out, float* offset_out)
 {
@@ -1210,7 +1242,8 @@ uint32_t terrain_world_point_to_cell(const void* map, const float* point,
  * the four vertices before interpolation. Heights are already in world units
  * after TerrainGridVertexBuild, so the target returns the interpolated value
  * without another scale. */
-// FUNCTION: LEGORR 0x0044f940
+/* Port model of 0x0044f940 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 float terrain_surface_height_interpolate(const void* handle, float world_x,
                                          float world_z)
 {
@@ -1254,7 +1287,8 @@ float terrain_surface_height_interpolate(const void* handle, float world_x,
 /* TerrainCellSurfaceTriangleVerticesSelect (FUN_0044fab0). The renderer
  * grid's point coordinates are world-space; use its owning terrain transform
  * to select the cell and its configured block size for the edge test. */
-// FUNCTION: LEGORR 0x0044FAB0
+/* Port model of 0x0044fab0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_surface_triangle_vertices_select(
     TerrainSurfaceGrid* grid, float x, float z, uint32_t out_vertices[3])
 {
@@ -1332,7 +1366,8 @@ void terrain_cell_surface_triangle_vertices_select(
  * The reference receives its TerrainState and four-corner data from the
  * active renderer; this path uses TerrainState's retained CPU quad and the
  * two triangle normals stored in its 0x28-byte cell record. */
-// FUNCTION: LEGORR 0x0044fb90
+/* Port model of 0x0044fb90 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int terrain_state_surface_point_project_offset(
     void* terrain_handle, float world_x, float world_z, int orientation,
     float offset, float* out_x, float* out_z)
@@ -1440,7 +1475,8 @@ int terrain_state_surface_point_project_offset(
 /* 0x44fe70 samples the authored SurfaceMap plane, independently of the
  * live/mutated quad used by 0x44f940. Byte decoding and RoughLevel scaling
  * stay inside the terrain owner; the camera receives a world-space height. */
-// FUNCTION: LEGORR 0x0044fe70
+/* Port model of 0x0044fe70 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 float terrain_authored_surface_height_interpolate(const void* handle,
                                                   float world_x,
                                                   float world_y)
@@ -1473,7 +1509,8 @@ float terrain_authored_surface_height_interpolate(const void* handle,
         (height[2] - height[1]) * fy;
 }
 
-// FUNCTION: LEGORR 0x00450060
+/* Port model of 0x00450060 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int grid_cell_read_surface_vector(TerrainSurfaceGrid* grid, uint32_t x,
                                   uint32_t y, float out[3])
 {
@@ -1499,7 +1536,8 @@ int grid_cell_read_surface_vector(TerrainSurfaceGrid* grid, uint32_t x,
            sizeof(float) * 3);
     return 1;
 }
-// FUNCTION: LEGORR 0x004500d0
+/* Port model of 0x004500d0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int terrain_cell_surface_vertices_get(TerrainSurfaceGrid* grid, uint32_t x,
                                       uint32_t y, float out[12])
 {
@@ -1536,7 +1574,8 @@ int terrain_cell_surface_vertices_get(TerrainSurfaceGrid* grid, uint32_t x,
     return flip;
 }
 
-// FUNCTION: LEGORR 0x00450220
+/* Port model of 0x00450220 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void grid_cell_read_surface_values(void* terrain, int x, int y,
                                    float out_values[12])
 {
@@ -1564,44 +1603,12 @@ void grid_cell_read_surface_values(void* terrain, int x, int y,
                 indexed_output[corner][component];
 }
 
-/* FUN_004502c0: unsigned pair membership (negative coords wrap). */
-// FUNCTION: LEGORR 0x004502c0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int level_coord_pair_within_bounds_target(
-    const uint32_t* dimensions, uint32_t cx, uint32_t cy)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        cmp ecx, dword ptr [eax]
-        jb coordinate_x_in_bounds
-        xor eax, eax
-        ret
-    coordinate_x_in_bounds:
-        mov edx, dword ptr [esp + 0ch]
-        mov ecx, dword ptr [eax + 4]
-        cmp edx, ecx
-        sbb eax, eax
-        neg eax
-        ret
-    }
-}
-#else
-int level_coord_pair_within_bounds_target(const uint32_t* dimensions,
-                                                uint32_t cx, uint32_t cy)
-{
-    if (cx < dimensions[0]) {
-        return cy < dimensions[1];
-    }
-    return 0;
-}
-#endif
-
 /* The seven argument slots match FUN_004502e0. The grid and ray-hook pointees
  * are portable owners rather than the retail terrain/view records, so this is
  * an ABI-shaped implementation over semantic adapters, not a raw-record
  * replacement. */
-// FUNCTION: LEGORR 0x004502e0
+/* Port model of 0x004502e0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int screen_ray_terrain_cell_pick_target(
     TerrainSurfaceGrid* grid, const CameraPointerRayHooks* ray_hooks,
     float screen_x, float screen_y, int* out_cell_x, int* out_cell_y,
@@ -1706,7 +1713,8 @@ int screen_ray_terrain_cell_pick_target(
  * z quirk is faithful: FUN_004798e0 answers into `out` while the height
  * store lands on the plane quad's z-slot, so the corpus effectively
  * intersects against successively lower planes. */
-// FUNCTION: LEGORR 0x00450560
+/* Port model of 0x00450560 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
                                         const float* dir, float* out,
                                         int* gx, int* gy, int rounds)
@@ -1723,7 +1731,8 @@ void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
 /* FUN_00450600: clear and queue every in-bounds cell in the inclusive circle.
  * The callback runs after the surface value is cleared but before the
  * coordinate is appended, matching the reference's observable order. */
-// FUNCTION: LEGORR 0x00450600
+/* Port model of 0x00450600 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_surface_clear_circle(TerrainSurfaceGrid* grid, int center_x,
                                   int center_y, int radius,
                                   TerrainGridCircleCellCallback callback)
@@ -1759,7 +1768,8 @@ void terrain_surface_clear_circle(TerrainSurfaceGrid* grid, int center_x,
         }
     }
 }
-// FUNCTION: LEGORR 0x00450700
+/* Port model of 0x00450700 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void grid_surface_write_at_xy(TerrainSurfaceGrid* grid, int x, int y,
                               uint8_t value)
 {
@@ -1777,7 +1787,8 @@ void grid_surface_write_at_xy(TerrainSurfaceGrid* grid, int x, int y,
                                   value != 0u);
 }
 
-// FUNCTION: LEGORR 0x00450730
+/* Port model of 0x00450730 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_change_queue_append(TerrainSurfaceGrid* grid, int x, int y)
 {
     if (grid == NULL) return;
@@ -1789,7 +1800,8 @@ void terrain_cell_change_queue_append(TerrainSurfaceGrid* grid, int x, int y)
     ++grid->changed_count;
 }
 
-// FUNCTION: LEGORR 0x00450780
+/* Port model of 0x00450780 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_change_queue_flush(TerrainSurfaceGrid* grid)
 {
     uint32_t i;
@@ -1800,7 +1812,8 @@ void terrain_cell_change_queue_flush(TerrainSurfaceGrid* grid)
     }
     grid->changed_count = 0;
 }
-// FUNCTION: LEGORR 0x004507d0
+/* Port model of 0x004507d0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int terrain_cell_edge_vector_query(TerrainSurfaceGrid* grid, uint32_t x,
                                    uint32_t y, float out[3])
 {
@@ -1830,62 +1843,11 @@ int terrain_cell_edge_vector_query(TerrainSurfaceGrid* grid, uint32_t x,
     return 1;
 }
 
-/* The terrain context's block-size float is the dword at +0x10. */
-// FUNCTION: LEGORR 0x00450890
-float terrain_context_scale_get(const void* context)
-{
-    return *(const float*)((const uint8_t*)context + 0x10);
-}
-
-/* CellNeighborDirectionCode (FUN_004508a0): eight neighbors, -1 else. */
-// FUNCTION: LEGORR 0x004508a0
-int cell_neighbor_direction_code(int x1, int y1, int x2, int y2)
-{
-    int result = -1;
-    if (x1 == x2) {
-        if (y2 == y1 - 1) {
-            return 0;
-        }
-        if (y2 == y1 + 1) {
-            return 2;
-        }
-    }
-    else {
-        const int x1_next = x1 + 1;
-        if (y1 == y2) {
-            if (x1_next == x2) {
-                return 1;
-            }
-            if (x1 - 1 == x2) {
-                return 3;
-            }
-        }
-        else {
-            if (x1_next == x2) {
-                if (y1 - 1 == y2) {
-                    return 4;
-                }
-                if (x1_next == x2 && y1 + 1 == y2) {
-                    return 5;
-                }
-            }
-            if (x1 - 1 == x2) {
-                if (y1 + 1 == y2) {
-                    return 6;
-                }
-                if (x1 - 1 == x2 && y1 - 1 == y2) {
-                    result = 7;
-                }
-            }
-        }
-    }
-    return result;
-}
-
 /* --- terrain dirty queue (see level.hpp) ---------------------------------
  * The corpus's queue lives inside its terrain context (u16 pair entries,
  * stride 4, capacity (0x7198-0x4a88)/4 = 2500, count at +0x7198). */
-// FUNCTION: LEGORR 0x00450960
+/* Port model of 0x00450960 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_dirty_queue_push_and_clear(void* terrain, int x, int y,
                                              int push)
 {
@@ -1936,7 +1898,8 @@ void terrain_cell_dirty_queue_push_and_clear(void* terrain, int x, int y,
     *flag |= 0x10;
 }
 
-// FUNCTION: LEGORR 0x00450a80
+/* Port model of 0x00450a80 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
 {
     GameContext* game = entity_pool_callback_context_get();
@@ -1975,7 +1938,8 @@ void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
 /* CellVariantEntryMatchCheck (FUN_00451180) — see level.hpp. The
  * coordinate pair names two cells through the same window: the block
  * table stride is the window's own dword at + 0x08. */
-// FUNCTION: LEGORR 0x00451180
+/* Port model of 0x00451180 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int cell_variant_entry_match_check(const void* grid, uint32_t x1, uint32_t y1,
                                    uint32_t x2, uint32_t y2)
 {
@@ -2013,7 +1977,8 @@ int cell_variant_entry_match_check(const void* grid, uint32_t x1, uint32_t y1,
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00451230
+/* Port model of 0x00451230 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_surface_vector_write(TerrainSurfaceGrid* grid,
                                        uint32_t x, uint32_t y,
                                        uint32_t corner,
@@ -2030,7 +1995,8 @@ void terrain_cell_surface_vector_write(TerrainSurfaceGrid* grid,
 }
 
 /* --- corner normal sampling (see level.hpp) ------------------------------- */
-// FUNCTION: LEGORR 0x004512d0
+/* Port model of 0x004512d0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 #if defined(_MSC_VER) && defined(_M_IX86)
 int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
                                uint32_t corner, float out[3])
@@ -2126,7 +2092,8 @@ int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
 }
 #endif
 
-// FUNCTION: LEGORR 0x00451450
+/* Port model of 0x00451450 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_surface_vector_offset_add(TerrainSurfaceGrid* grid,
                                             uint32_t x, uint32_t y,
                                             uint32_t corner,
@@ -2146,7 +2113,8 @@ void terrain_cell_surface_vector_offset_add(TerrainSurfaceGrid* grid,
 }
 /* FUN_004514f0: refresh both stored triangle normals from the cell's four
  * surface vectors. */
-// FUNCTION: LEGORR 0x004514f0
+/* Port model of 0x004514f0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void terrain_cell_surface_vectors_rebuild(TerrainSurfaceGrid* grid,
                                           uint32_t x, uint32_t y)
 {
@@ -2171,7 +2139,8 @@ void terrain_cell_surface_vectors_rebuild(TerrainSurfaceGrid* grid,
 }
 
 /* FUN_004515a0: header dims at +0x08/+0x0C (port guards a NULL image). */
-// FUNCTION: LEGORR 0x004515a0
+/* Port model of 0x004515a0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 void level_map_image_header(const uint8_t* image, uint32_t* width,
                             uint32_t* height)
 {
@@ -2189,7 +2158,8 @@ void level_map_image_header(const uint8_t* image, uint32_t* width,
 }
 
 /* FUN_004515c0: zero-extended u16 cell at +0x10 + (y*width+x)*2. */
-// FUNCTION: LEGORR 0x004515c0
+/* Port model of 0x004515c0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y)
 {
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -2209,7 +2179,8 @@ uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y)
 #endif
 }
 
-// FUNCTION: LEGORR 0x004515E0
+/* Port model of 0x004515e0 (GAME-026); the original-shape
+ * function is in terrain_map.c. */
 int terrain_cell_ray_hit_test(TerrainSurfaceGrid* grid, int x,
                               int y, const float origin[3],
                               const float direction[3], float hit[3])
@@ -2253,88 +2224,6 @@ int terrain_cell_ray_hit_test(TerrainSurfaceGrid* grid, int x,
     }
     for (i = 0; i < 3; ++i) hit[i] = first ? first_hit[i] : second_hit[i];
     return 1;
-}
-
-/* PrimitiveModelRecordCreate (FUN_00451ab0): six-word record with a
- * heap-owned name; its object slot is empty, the caller kind is copied,
- * flags start at 2, and the list link starts clear. */
-// FUNCTION: LEGORR 0x00451ab0
-ModelEntryRecord* model_primitive_record_create(ModelEntryRecord* previous,
-                                                const char* name, int kind)
-{
-    ModelEntryRecord* record = (ModelEntryRecord*)engine_heap_alloc(
-        (long)sizeof(ModelEntryRecord));
-    if (record == NULL || name == NULL) {
-        engine_heap_free(record);
-        return NULL;
-    }
-    record->object = NULL;
-    record->instance = NULL;
-    const size_t length = strlen(name) + 1;
-    record->name = (char*)engine_heap_alloc((long)length);
-    if (record->name == NULL) {
-        engine_heap_free(record);
-        return NULL;
-    }
-    memcpy(record->name, name, length);
-    record->kind = kind;
-    record->flags = 2;
-    record->next = NULL;
-    if (previous != NULL) {
-        previous->next = record;
-    }
-    return record;
-}
-
-/* LinkedRecordListFlatten (FUN_00451b30): copy six fields from each
- * linked record into a contiguous engine-heap array, reset instance, mark
- * every entry active, mark the first entry as the list head, and terminate
- * the final next link. */
-// FUNCTION: LEGORR 0x00451b30
-ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head)
-{
-    size_t count = 0;
-    const ModelEntryRecord* node;
-    for (node = head; node != NULL; node = node->next) {
-        ++count;
-    }
-    if (count == 0) {
-        return NULL;
-    }
-    if (count > (size_t)LONG_MAX / sizeof(ModelEntryRecord)) {
-        return NULL;
-    }
-    ModelEntryRecord* flat = (ModelEntryRecord*)engine_heap_alloc(
-        (long)(count * sizeof(ModelEntryRecord)));
-    if (flat == NULL) {
-        return NULL;
-    }
-    node = head;
-    for (size_t i = 0; i < count; ++i) {
-        flat[i] = *node;
-        flat[i].instance = NULL;
-        flat[i].flags = (flat[i].flags & ~2u) | 1u;
-        flat[i].next = (i + 1 < count) ? &flat[i + 1] : NULL;
-        node = node->next;
-    }
-    flat[0].flags |= 2u;
-    return flat;
-}
-
-// FUNCTION: LEGORR 0x00451c30
-void linked_record_field4_clear(void* record)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    char* node = (char*)record;
-    while (node != NULL) {
-        const uint32_t zero = 0u;
-        __builtin_memcpy(node + 4, &zero, sizeof(zero));
-        void* next = NULL;
-        __builtin_memcpy(&next, node + 0x14, sizeof(next));
-        node = (char*)next;
-    }
 }
 
 static int terrain_grid_cell_valid(const TerrainSurfaceGrid* grid,

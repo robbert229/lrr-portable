@@ -40,6 +40,11 @@
 #include "select.hpp"
 #include "scene_render.hpp"
 #include "tutorial_hud_ports.hpp"
+/* GAME-026's Map3D_IsInsideDimensions (FUN_004502c0) is defined in the C
+ * unit terrain_map.c. This first declaration gives it C linkage; the frozen
+ * level headers below redeclare it and inherit that linkage (finding 556). */
+extern "C" int level_coord_pair_within_bounds_target(
+    const uint32_t* dimensions, uint32_t cx, uint32_t cy);
 #include "level_shared.hpp"
 #include <float.h>
 #include <ctype.h>

@@ -42,7 +42,7 @@ game_sources = [
   'object_state_file.cpp',
   'objective_unit.cpp',
   'tutorial_script.cpp',
-  'terrain_map.cpp',
+  'terrain_map_port.cpp',
   'loading_progress.cpp',
   'lighteffects.cpp',
   'bubbles.cpp',
@@ -94,6 +94,7 @@ game_c_sources = [
   'panel_unit.c',
   'priorities.c',
   'steering.c',
+  'terrain_map.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

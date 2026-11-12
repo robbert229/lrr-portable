@@ -288,10 +288,14 @@ src/game/terrain_grid_for_terrain_cell_objects.hpp
 src/game/terrain_grid_for_terrain_map.hpp
 src/game/terrain_grid_from_legoobject.hpp
 src/game/terrain_grid_shared.hpp
-src/game/terrain_map.cpp
+src/game/terrain_map.c
+src/game/terrain_map.h
+src/game/terrain_map_maths.h
+src/game/terrain_map_port.cpp
 src/game/terrain_overlay_quads.cpp
 src/game/text.cpp
 src/game/tile_variants.cpp
+src/game/tile_variants.h
 src/game/tooltip.cpp
 src/game/tutorial_hud.cpp
 src/game/tutorial_hud_for_object_overlays.hpp
@@ -438,6 +442,7 @@ src/gods98/media.hpp
 src/gods98/media_for_lego.hpp
 src/gods98/media_for_pointer.hpp
 src/gods98/media_shared.hpp
+src/gods98/mesh.h
 src/gods98/message.cpp
 src/gods98/message.h
 src/gods98/message.hpp
