@@ -12,6 +12,7 @@
 #include "scene_resources_for_viewports.hpp"
 #include "scene_resources_for_lws.hpp"
 #include "scene_resources_for_container_unit.hpp"
+#include "scene_resources_for_mesh_unit.hpp"
 namespace lego {
 // GLOBAL: LEGORR 0x0076ad68
 int s_slots_live = 0;
@@ -28,13 +29,17 @@ SceneAnimationTrackApplyHook s_animation_track_apply_hook = 0;
 void* s_animation_track_apply_context = 0;
 SceneNodeMatrixApplyHook s_node_matrix_apply_hook = 0;
 void* s_node_matrix_apply_context = 0;
+} // namespace
 AnimatedTextureFrameApplyHook s_texture_frame_apply_hook = 0;
 void* s_texture_frame_apply_context = 0;
 char s_shared_texture_root[1024];
+namespace {
 SharedTextureRootInitializeHook s_shared_texture_initialize_hook = 0;
 void* s_shared_texture_initialize_context = 0;
+} // namespace
 CachedRenderResourceRendererHook s_cached_resource_renderer_hook = 0;
 void* s_cached_resource_renderer_context = 0;
+namespace {
 CachedRenderResourceRendererReleaseHook s_cached_resource_renderer_release_hook = 0;
 void* s_cached_resource_renderer_release_context = 0;
 }
@@ -59,75 +64,11 @@ void animated_texture_frame_apply_hook_set(AnimatedTextureFrameApplyHook hook,
     s_texture_frame_apply_hook = hook;
     s_texture_frame_apply_context = context;
 }
-/* AnimatedTextureFrameSurfaceSet (FUN_004830c0): the frame state's slot-zero
- * method is called with the record's shared-surface selector word and the
- * indexed frame record (records + 0x60 + frame * 0x70); the portable port
- * routes that call through the installed apply hook.  The state's third
- * dword then raises or clears the 0x00400000 shared-surface bit in the
- * frame record's flag word at +0x0c. */
-// FUNCTION: LEGORR 0x004830c0
-void animated_texture_frame_surface_set(void* texture, int frame_index,
-                                        const void* frame_state)
-{
-    unsigned char* record = static_cast<unsigned char*>(texture);
-    const unsigned char* state =
-        static_cast<const unsigned char*>(frame_state);
-    unsigned char* records;
-    void* interface_object = 0;
-    unsigned int flags;
-    unsigned char* frame_record;
-    if (record == 0 || state == 0 || frame_index < 0) return;
-    memcpy(&records, record + 8, sizeof(records));
-    if (records == 0) return;
-    frame_record = records + 0x60 + (size_t)frame_index * 0x70;
-    memcpy(&interface_object, state, sizeof(interface_object));
-    if (interface_object != 0 && s_texture_frame_apply_hook != 0)
-        s_texture_frame_apply_hook(interface_object, frame_record,
-                                   s_texture_frame_apply_context);
-    memcpy(&flags, frame_record + 0x0c, sizeof(flags));
-    if (((const uint32_t*)state)[2] != 0u) flags |= 0x00400000u;
-    else flags &= ~0x00400000u;
-    memcpy(frame_record + 0x0c, &flags, sizeof(flags));
-}
 void shared_texture_root_initialize_hook_set(
     SharedTextureRootInitializeHook hook, void* context)
 {
     s_shared_texture_initialize_hook = hook;
     s_shared_texture_initialize_context = context;
-}
-// FUNCTION: LEGORR 0x004805b0
-int shared_texture_root_register(const char* root)
-{
-    /* SharedTextureRootRegister drops the shared-pool link and releases the
-     * model-render list (DAT_005343c4 + FUN_00482d30) before re-seeding;
-     * crt.cpp owns that list head, so the walk-and-free runs there. */
-    model_render_list_clear();
-    if (root != 0) {
-        size_t length = strlen(root);
-        size_t written;
-        if (length >= sizeof(s_shared_texture_root))
-            length = sizeof(s_shared_texture_root) - 1u; /* port bound */
-        written = length;
-        /* The reference checks the final input character: if the root
-         * lacks a trailing backslash, it appends one.  The reference also
-         * repoints the model-render list
-         * head (DAT_00534558) at this freshly allocated string; this port
-         * keeps the root in the module static instead. */
-        if (length == 0u || root[length - 1u] != '\\') {
-            if (length >= sizeof(s_shared_texture_root) - 1u)
-                length = sizeof(s_shared_texture_root) - 2u;
-            written = length + 1u;
-        }
-        if (length != 0u) memcpy(s_shared_texture_root, root, length);
-        s_shared_texture_root[written - 1u] = '\\';
-        s_shared_texture_root[written] = '\0';
-    }
-    /* DAT_00540584/D4/D8 are the render-resource instance pool owned by
-     * record.cpp. TextureGetOrCreate keys cached shared resources by their
-     * complete path, so changing this root does not require cache eviction. */
-    render_resource_instance_pool_reset();
-    (void)shared_texture_root_initialize();
-    return 1;
 }
 /* SharedTextureRootInitialize uses the Direct3D interface globals and COM
  * methods documented in LEGORR.full.c:86278. There is no portable texture
@@ -272,93 +213,6 @@ void cached_render_resource_renderer_release_hook_set(
 {
     s_cached_resource_renderer_release_hook = hook;
     s_cached_resource_renderer_release_context = context;
-}
-
-// FUNCTION: LEGORR 0x00480900
-CachedRenderResourceInstanceRecord* cached_render_resource_instance_create(
-    CachedRenderResourceTemplateRecord* source)
-{
-    CachedRenderResourceTemplateRecord* template_record;
-    CachedRenderResourceInstanceRecord* instance;
-    uint32_t count;
-    uint32_t index;
-    size_t bytes;
-    void* pool_record;
-    if (source == NULL) return NULL;
-
-    template_record = source->shared_template != NULL
-        ? source->shared_template : source;
-    count = template_record->words[0];
-    if (count > 0x7fffffffu / 0x70u) return NULL;
-    bytes = (size_t)count * 0x70u;
-
-    pool_record = render_resource_instance_record_acquire();
-    if (pool_record == NULL) return NULL;
-    instance = (CachedRenderResourceInstanceRecord*)engine_heap_alloc(
-        (long)sizeof(*instance));
-    if (instance == NULL) {
-        render_resource_instance_record_release(pool_record);
-        return NULL;
-    }
-    memset(instance, 0, sizeof(*instance));
-    memcpy(instance->words, template_record->words,
-           sizeof(instance->words));
-    instance->pool_record = pool_record;
-    instance->words[1] = count;
-    instance->words[2] = 0u;
-    instance->words[3] = 0u;
-    instance->words[8] = 0u;
-    instance->words[9] = 0u;
-    instance->words[10] = 0u;
-    memcpy(pool_record, instance->words, sizeof(instance->words));
-    instance->source_template = template_record;
-
-    if (bytes != 0u) {
-        if (template_record->entry_block == NULL) {
-            render_resource_instance_record_release(pool_record);
-            engine_heap_free(instance);
-            return NULL;
-        }
-        instance->entry_block = (unsigned char*)engine_heap_alloc(
-            (long)bytes);
-        if (instance->entry_block == NULL) {
-            render_resource_instance_record_release(pool_record);
-            engine_heap_free(instance);
-            return NULL;
-        }
-        /* The source pointer includes a 0x10-byte header. Retail copies
-         * count * 0x70 bytes from it, then initializes and copies each
-         * per-entry 0x50-byte transform window at +0x10. */
-        memcpy(instance->entry_block, template_record->entry_block, bytes);
-        for (index = 0u; index < count; ++index) {
-            unsigned char* destination = instance->entry_block + 0x10u
-                + (size_t)index * 0x70u;
-            const unsigned char* entry_source =
-                template_record->entry_block + 0x10u
-                + (size_t)index * 0x70u;
-            uint32_t transform[20];
-            unsigned int word;
-            transform[0] = 0x50u;
-            transform[1] = 0x3f800000u;
-            transform[2] = 0x3f800000u;
-            transform[3] = 0x3f800000u;
-            transform[4] = 0x3f800000u;
-            for (word = 5u; word < 20u; ++word) transform[word] = 0u;
-            memcpy(destination, transform, sizeof(transform));
-            memcpy(destination, entry_source, sizeof(transform));
-        }
-    }
-
-    /* These renderer calls create and attach the wrapped interface. Their
-     * COM vtables belong to the platform renderer; the hook updates the
-     * host-side handles without guessing those ABI signatures here. */
-    if (s_cached_resource_renderer_hook != NULL)
-        s_cached_resource_renderer_hook(instance,
-                                        s_cached_resource_renderer_context);
-
-    ++template_record->words[8];
-    template_record->words[11] |= 0x00200000u;
-    return instance;
 }
 
 void cached_render_resource_instance_dispose(

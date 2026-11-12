@@ -19,6 +19,7 @@
 #include <string.h>
 #include "spawn_for_lego.hpp"
 #include "spawn_for_legoobject.hpp"
+#include "spawn_for_mesh_unit.hpp"
 
 /* These two target entries already have live port implementations in the
  * ledger unit. Keep the calls target-shaped at ConfiguredMonsterSpawnTick. */
@@ -33,9 +34,9 @@ void* s_scene_position_context;
 namespace {
 PairingActivityPrepareHook s_pairing_activity_prepare_hook;
 void* s_pairing_activity_prepare_context;
+} // namespace
 LegacyResultCheckHook s_result_check_hook = 0;
 void* s_result_check_context = 0;
-} // namespace
 GlobalScatterSpawnFindHook s_global_scatter_find_hook = 0;
 void* s_global_scatter_find_context = 0;
 int s_global_scatter_flag_a = 0;
@@ -78,11 +79,6 @@ int scatter_spawn_gate_get()
 { return (entity_state_flags_peek() & 0x20u) != 0u; }
 void legacy_result_check_hook_set(LegacyResultCheckHook hook, void* context)
 { s_result_check_hook = hook; s_result_check_context = context; }
-// FUNCTION: LEGORR 0x00480780
-int zero_result_is_success(void* value)
-{
-    return s_result_check_hook != 0 && s_result_check_hook(s_result_check_context, value) == 0;
-}
 
 void global_scatter_spawn_find_hook_set(GlobalScatterSpawnFindHook hook,
                                         void* context)

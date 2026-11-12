@@ -32,6 +32,7 @@
 #include "view_for_images_unit.hpp"
 #include "view_for_legoobject.hpp"
 #include "view_for_container_unit.hpp"
+#include "view_for_mesh_unit.hpp"
 #if defined(LEGORRR_BACKEND_MINIWIN)
 #include "container_native.hpp"
 #endif
@@ -1051,7 +1052,7 @@ finish:
     return succeeded;
 }
 
-static EngineTaskCallbackHooks s_engine_task_callback_hooks;
+EngineTaskCallbackHooks s_engine_task_callback_hooks;
 
 void engine_task_callback_hooks_set(const EngineTaskCallbackHooks* hooks)
 {
@@ -1060,43 +1061,6 @@ void engine_task_callback_hooks_set(const EngineTaskCallbackHooks* hooks)
                sizeof(s_engine_task_callback_hooks));
     else
         s_engine_task_callback_hooks = *hooks;
-}
-
-// FUNCTION: LEGORR 0x00480870
-EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
-    void* owner, void* callback, uint32_t mode, void* context,
-    uint32_t flag_value)
-{
-    EngineTaskCallbackRecord* record;
-    void* resource_interface = NULL;
-    const EngineTaskCallbackHooks* hooks = &s_engine_task_callback_hooks;
-    record = (EngineTaskCallbackRecord*)
-        render_resource_instance_record_acquire();
-    if (record == NULL) return NULL;
-    /* The fixed-size pool has already cleared +0..+0x2f and installed its
-     * self-link at +0x30; do not erase that link. */
-    /* FUN_00472940 is an observed root-global read whose return is discarded. */
-    (void)scene_root_object_get();
-    if (hooks->user_visual_create != NULL)
-        hooks->user_visual_create(hooks->context,
-                                  (uint32_t)(uintptr_t)callback,
-                                  record, &resource_interface);
-    if (hooks->owner_bind != NULL)
-        hooks->owner_bind(hooks->context, owner, resource_interface);
-    if (hooks->callback_attach != NULL)
-        hooks->callback_attach(hooks->context, resource_interface, record);
-    /* 0x4808aa..0x4808c6 copies stack arguments 2/4/3 into +10/+14/+18.
-     * LAB_004827f0 is the UserVisual manager entry passed to the factory;
-     * its address and the record's self-link are not these metadata words. */
-    record->words[3] = (uint32_t)(uintptr_t)resource_interface;
-    record->words[4] = (uint32_t)(uintptr_t)callback;
-    record->words[5] = (uint32_t)(uintptr_t)context;
-    record->words[6] = mode;
-    record->words[8] = 1u;
-    record->words[10] = (uint32_t)(uintptr_t)owner;
-    if (flag_value == 1u) record->words[11] |= 2u;
-    else if (flag_value == 2u) record->words[11] |= 4u;
-    return record;
 }
 
 void engine_task_callback_record_release(
@@ -1818,19 +1782,6 @@ void* s_scene_root;
 #endif
 
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-// FUNCTION: LEGORR 0x004827f0
-int __cdecl scene_runtime_user_visual_manager(
-    IDirect3DRMUserVisual* visual, void* cookie, SceneUserVisualReason reason,
-    IDirect3DRMDevice* device, IDirect3DRMViewport* viewport)
-{
-    (void)visual;
-    (void)device;
-    return scene_user_visual_manager_dispatch(
-        (EngineTaskCallbackRecord*)cookie, (uint32_t)reason, viewport);
-}
-#endif
-
-#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static struct SceneCameraBinding {
     CameraHandle* camera;
     void* scene;
@@ -2240,34 +2191,6 @@ void scene_object_value_query_hooks_set(
     s_scene_ready_query = ready_query;
     s_scene_current_value_query = value_query;
     s_scene_value_release = release;
-}
-
-/* Matrix4IdentityInitialize (FUN_00483540): spell the float bit patterns as
- * dword stores so MSVC 5 /Od uses the corpus's shared zero/one registers.
- * Preserve its non-monotonic order: the twelve off-diagonal words are zeroed
- * high-to-low, then the diagonal words receive 1.0f's IEEE-754 pattern. */
-// FUNCTION: LEGORR 0x00483540
-void matrix4_identity_initialize(float* out)
-{
-    uint32_t* words = (uint32_t*)out;
-    const uint32_t zero = 0u;
-    words[7] = zero;
-    words[6] = zero;
-    words[4] = zero;
-    words[3] = zero;
-    words[2] = zero;
-    words[1] = zero;
-    words[14] = zero;
-    words[13] = zero;
-    words[12] = zero;
-    words[11] = zero;
-    words[9] = zero;
-    words[8] = zero;
-    const uint32_t one = 0x3f800000u;
-    words[15] = one;
-    words[10] = one;
-    words[5] = one;
-    words[0] = one;
 }
 
 /* --- the rotated-pairs scratch (see view.hpp) ----------------------------- */
@@ -2747,53 +2670,6 @@ void ledger_stub_00476220_RenderInterfacePairUpdate(
     render_interface_pair_update(first, second);
 }
 
-// SceneObjectSetFormattedString
-// AnimationTrackApplyWrappedFrameOffset
-void ledger_stub_004830c0_AnimatedTextureFrameSurfaceSet(
-    void* texture, int frame_index, const void* frame_state);
-// FUNCTION: LEGORR 0x00482040
-int ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
-    void* animation_owner, int frame_offset)
-{
-    unsigned char* owner = (unsigned char*)animation_owner;
-    unsigned char* records;
-    uint32_t count;
-    uint32_t flags;
-    uint32_t slot;
-    if (owner == NULL) return 0;
-    memcpy(&count, owner, sizeof(count));
-    memcpy(&flags, owner + 0x2c, sizeof(flags));
-    if ((flags & 4u) == 0u) return 0;
-    memcpy(&records, owner + 8, sizeof(records));
-    if (records == NULL) return 1;
-    for (slot = 0; slot < count; ++slot) {
-        unsigned char* record = records + (size_t)slot * 0x70u;
-        unsigned char* track;
-        uint32_t track_flags;
-        int frame_count;
-        int frame_base;
-        int frame_index;
-        void* frames;
-        void* frame;
-        memcpy(&track, record + 0x68, sizeof(track));
-        if (track == NULL) continue;
-        memcpy(&track_flags, track + 0x34, sizeof(track_flags));
-        if ((track_flags & 0x80u) == 0u) continue;
-        memcpy(&frame_count, track + 8, sizeof(frame_count));
-        memcpy(&frame_base, track + 0x38, sizeof(frame_base));
-        memcpy(&frames, track, sizeof(frames));
-        if (frame_count <= 0 || frames == NULL) continue;
-        frame_index = (frame_base + frame_offset) % frame_count;
-        /* The reference clamps a negative remainder to frame zero. */
-        if (frame_index < 0) frame_index = 0;
-        memcpy(&frame, (unsigned char*)frames +
-               (size_t)frame_index * sizeof(frame), sizeof(frame));
-        ledger_stub_004830c0_AnimatedTextureFrameSurfaceSet(
-            animation_owner, (int)slot, frame);
-    }
-    return 1;
-}
-
 void ledger_stub_004876c0_SharedObjectDirectoryScan(
     const char* directory, SharedObjectEntryResolveFn resolve,
     SharedObjectSoundEnabledFn sound_enabled,
@@ -2822,8 +2698,6 @@ float ledger_stub_00487cb0_AnimationTrackFindKeyframeAndFraction(
                                                          segment_out);
 }
 
-int ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
-    void* animation_owner, int frame_offset);
 #undef LEDGER_SCENE_COM_STDCALL
 
 // SharedObjectTimedSoundEventUpdate

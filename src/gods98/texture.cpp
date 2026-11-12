@@ -585,40 +585,6 @@ uint32_t texture_pixel_hash(TextureSurface* t)
     return h;
 }
 
-/* --- the cache-window name pair (see texture.hpp) ------------------------- */
-/* Both corpus halves work over a caller-supplied entry window; entries
- * ride as widened slots {word, name, word}. */
-// FUNCTION: LEGORR 0x00483030
-void* texture_cache_name_slot_find(const void* table, uint32_t count,
-                                   const char* name)
-{
-    /* Corpus 0x483030 gates the unsigned count once, then walks name fields
-     * at 0x0c-byte strides; its bottom comparison is unsigned (jb). */
-    const long field = (long)sizeof(void*);
-    for (uint32_t i = 0u; i < count; ++i) {
-        const char* entry_name = *(const char* const*)
-            ((const char*)table + (long)i * 3 * field + field);
-        if (strcasecmp_lite(name, entry_name) == 0) {
-            return (void*)((const char*)table + (long)i * 3 * field);
-        }
-    }
-    return NULL;
-}
-
-// FUNCTION: LEGORR 0x00483080
-void texture_cache_name_slot_append(void* table, int* count,
-                                    const char* name, void* slot_a,
-                                    void* slot_b)
-{
-    const long field = (long)sizeof(void*);
-    char* copy = string_duplicate(name); /* FUN_00477550 */
-    char* entry = (char*)table + (long)*count * 3 * field;
-    __builtin_memcpy(entry, &slot_a, sizeof slot_a);
-    __builtin_memcpy(entry + field, &copy, sizeof copy);
-    __builtin_memcpy(entry + 2 * field, &slot_b, sizeof slot_b);
-    *count += 1;
-}
-
 namespace unported_ledger_stubs {
 const char* ledger_stub_00473c60_XfTextureNameFormat(
     void* texture_record, const char* name_base, const int* frame_index)
