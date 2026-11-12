@@ -585,6 +585,57 @@ def _function_name(head: str) -> tuple[str | None, list[str], str | None]:
     return m.group(1), problems, qualifier
 
 
+def _typedef_names(stripped: str) -> list[str]:
+    """The names a ``typedef`` declaration (without ``;``) introduces."""
+    rest, bodies = _strip_braced(stripped[len("typedef"):])
+    names = []
+    tm = re.match(r"\s*(?:struct|union|enum|class)\s+([A-Za-z_]\w*)", rest)
+    if tm:
+        names.append(tm.group(1))
+    for part in _split_top(rest):
+        # (*Name), (__stdcall *Name) or (CONV_MACRO *Name) (#501)
+        fp = re.search(r"\(\s*(?:[A-Za-z_]\w*\s+)*\*\s*([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*\)",
+                       DECL_STRIP.sub(" ", part))
+        if fp:
+            names.append(fp.group(1))
+            continue
+        part = re.sub(r"\[[^\]]*\]", " ", part)
+        m = re.search(r"([A-Za-z_]\w*)\s*$", part)
+        if m:
+            names.append(m.group(1))
+    if re.match(r"\s*enum\b", rest):
+        for body in bodies:
+            names.extend(_enumerators(body))
+    return list(dict.fromkeys(names))
+
+
+def _local_typedefs(body: str) -> set[str]:
+    """Names of block-scope ``typedef``s in a masked function body (#525).
+
+    They shadow any file-scope name of the same spelling, as
+    ``font_device_pixel_format_query``'s ``SurfaceLockFn`` does in
+    ``surface.cpp``, so they are not uses of it. The scanner does not track
+    scopes: a later use of the file-scope name in the same function, outside
+    the block, is missed, and the relocated file's compile catches that."""
+    out: set[str] = set()
+    for m in re.finditer(r"\btypedef\b", body):
+        depth, end = 0, -1
+        for k in range(m.start(), len(body)):
+            ch = body[k]
+            if ch in "([{":
+                depth += 1
+            elif ch in ")]}":
+                depth -= 1
+                if depth < 0:
+                    break
+            elif ch == ";" and depth == 0:
+                end = k
+                break
+        if end > 0:
+            out.update(_typedef_names(body[m.start():end].strip()))
+    return out
+
+
 def _describe(item: Item, text: str, masked: str) -> None:
     if item.kind in ("macro", "include", "directive"):
         return
@@ -605,6 +656,8 @@ def _describe(item: Item, text: str, masked: str) -> None:
         item.names = [name] if name else []
         item.problems.extend(probs)
         item.uses -= set(item.names)
+        if item.body >= 0:
+            item.uses -= _local_typedefs(masked[item.body:item.end])
         if item.qualifier:
             item.uses.discard(f"{item.qualifier}::{name}")
             item.uses.add(item.qualifier)
@@ -614,26 +667,7 @@ def _describe(item: Item, text: str, masked: str) -> None:
     words = stripped.split()
     if words and words[0] == "typedef":
         item.category = "type"
-        rest, bodies = _strip_braced(stripped[len("typedef"):])
-        names = []
-        tm = re.match(r"\s*(?:struct|union|enum|class)\s+([A-Za-z_]\w*)", rest)
-        if tm:
-            names.append(tm.group(1))
-        for part in _split_top(rest):
-            # (*Name), (__stdcall *Name) or (CONV_MACRO *Name) (#501)
-            fp = re.search(r"\(\s*(?:[A-Za-z_]\w*\s+)*\*\s*([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*\)",
-                           DECL_STRIP.sub(" ", part))
-            if fp:
-                names.append(fp.group(1))
-                continue
-            part = re.sub(r"\[[^\]]*\]", " ", part)
-            m = re.search(r"([A-Za-z_]\w*)\s*$", part)
-            if m:
-                names.append(m.group(1))
-        if re.match(r"\s*enum\b", rest):
-            for body in bodies:
-                names.extend(_enumerators(body))
-        item.names = list(dict.fromkeys(names))
+        item.names = _typedef_names(stripped)
         if not item.names:
             item.problems.append("a typedef whose name the scanner cannot find")
     elif words and words[0] in TYPE_KEYWORDS and "{" in stripped:

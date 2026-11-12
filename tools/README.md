@@ -61,6 +61,10 @@ make relocate-unit UNIT=GAME-001 RELOCATE_ARGS=--dry-run
 - Unmarked code with external linkage stays where it is. So does an item
   annotated for another unit, even if only moved code uses it.
 - Each item keeps its leading comments.
+- A `typedef` inside a function body is local: it shadows a file-scope name
+  of the same spelling, so it is not a use of that name (#525). The scanner
+  does not track block scopes, so a use of the file-scope name elsewhere in
+  the same function is missed; the relocated file's compile catches it.
 
 **Named namespaces** (#471). A member of `namespace X { }` moves verbatim
 into a reopened `namespace X { }` in the unit file. Consecutive members share

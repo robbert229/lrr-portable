@@ -192,6 +192,28 @@ class ScannerTest(unittest.TestCase):
         self.assertEqual(by[("member",)].qualifier, "obj")
         self.assertEqual(by[("member",)].problems, [])
 
+    def test_block_scope_typedef_is_not_a_use_of_the_file_scope_name(self):
+        # surface.cpp's font_device_pixel_format_query (#525) declares its own
+        # SurfaceLockFn; the winapi region's file-scope one is not used.
+        text = textwrap.dedent("""\
+            typedef int (*LockFn)(void*);
+            typedef struct Desc { int size; } Desc;
+            static int query(void* device)
+            {
+                {
+                    typedef int (__stdcall *LockFn)(void*, void*);
+                    typedef struct { int a; int b; } Pair;
+                    LockFn lock = (LockFn)device;
+                    Pair p;
+                    return lock(device, &p) + (int)sizeof(Desc);
+                }
+            }
+            """)
+        query = next(i for i in cx.scan(text).items if i.names == ["query"])
+        self.assertNotIn("LockFn", query.uses)
+        self.assertNotIn("Pair", query.uses)
+        self.assertIn("Desc", query.uses)
+
     def test_if_group_of_alternatives_merges(self):
         text = textwrap.dedent("""\
             // FUNCTION: LEGORR 0x00401000
