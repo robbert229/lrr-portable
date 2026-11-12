@@ -409,6 +409,18 @@ GameFileHandle* game_file_open_dispatch(const char* path, const char* mode)
         if (ares_cd_fallback_path(path, fallback, sizeof(fallback)))
             handle->stream = fopen(fallback, mode);
     }
+#if !defined(_WIN32)
+    /* Windows refuses to open a directory; glibc opens one for reading. An
+     * empty level map name resolves to the data directory itself. */
+    if (handle->stream != NULL) {
+        struct stat info;
+        if (fstat(fileno((FILE*)handle->stream), &info) != 0 ||
+            !S_ISREG(info.st_mode)) {
+            fclose((FILE*)handle->stream);
+            handle->stream = NULL;
+        }
+    }
+#endif
     if (handle->stream == NULL) {
         game_file_close(handle);
         return NULL;

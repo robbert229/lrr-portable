@@ -2925,6 +2925,15 @@ static int frameloop_game_init_callback(const char* root, void* user)
             "frameloop: scene root/cameras/lights initialized root=%p\n",
             scene_root_object_get());
     fflush(s_frameloop_application.log);
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+    /* The native creature scenes resolve meshes against Main::SharedObjects
+     * after their own directory, as engine_scene_initialize sets it up. */
+    if (cfg != NULL) {
+        char key[256];
+        snprintf(key, sizeof(key), "%s::Main::SharedObjects",
+                 util_root_name(cfg));
+        (void)shared_object_directory_root_set(block_get_strptr(cfg, key));
+    }
 #endif
     if (cfg != NULL) {
         EngineContext* engine = &s_frameloop_application.engine_context;
