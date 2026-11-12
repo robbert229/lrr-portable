@@ -3099,7 +3099,8 @@ int menu_enter(FrontEnd* fe, int mode)
 }
 // FUNCTION: LEGORR 0x00416d00
 int frontend_enabled(BlockFile* cfg)
-{    if (cfg == NULL) {
+{
+    if (cfg == NULL) {
         return 0;
     }
     /* FrontEndActive @ 0x416d00: the cfg flag (loader-mode <3 is Win32). */
