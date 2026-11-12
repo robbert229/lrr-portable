@@ -136,7 +136,7 @@ extern "C" void object_field_38_release_target(void* record); /* unchecked targe
  * keeping the record usable (the corpus-visible padding bytes stay
  * zeroed for any pointer below 4 GiB). */
 void text_buffer_reset(void* record);           /* FUN_004859b0 */
-void text_buffer_reset_target(void* record);    /* unchecked retail body */
+extern "C" void text_buffer_reset_target(void* record);    /* unchecked retail body */
 
 /* TextBufferCreate (FUN_004850f0): allocates the 0x830-byte text-output
  * record, zero-clears it, installs the caller's font-resource handle and four header
@@ -145,9 +145,9 @@ void text_buffer_reset_target(void* record);    /* unchecked retail body */
  * as a dword at +0x418, and raises the +0x82c bit 2. Deviations: the
  * buffer-slot widening, and the record half answering NULL where the
  * corpus strides the allocation blindly. */
-void* text_buffer_create(uintptr_t font_handle, const uint32_t* header,
+extern "C" void* text_buffer_create(uintptr_t font_handle, const uint32_t* header,
                          long size);
-void text_buffer_append_vformat(void* record, int skip_bells,
+extern "C" void text_buffer_append_vformat(void* record, int skip_bells,
                                 const char* format, va_list args);
 void text_buffer_append_format(void* record, const char* format, ...);
 void formatted_text_append_to_ring_buffer(void* record, int skip_bells,
@@ -170,7 +170,7 @@ void text_buffer_draw_ops_get(TextBufferDrawOps* ops);
 void text_buffer_draw_framebuffer_install(void* pixels, int pitch, int width, int height);
 /* Install the software bitmap-atlas renderer used by portable gameplay. */
 void text_buffer_draw_software_install(void);
-int text_buffer_draw_wrapped(void* record, uint32_t start_line,
+extern "C" int text_buffer_draw_wrapped(void* record, uint32_t start_line,
                              float line_scale, int* height_out);
 int text_wrap_measure_and_draw_lines(void* record, float elapsed,
                                      int* height_out);
@@ -179,7 +179,7 @@ int text_wrap_measure_and_draw_lines(void* record, float elapsed,
  * record held in the caller's pointer slot with blind accesses. The public
  * adapter guards both the holder and its record pointer. */
 void ui_text_output_object_release(void* const* holder);
-void ui_text_output_object_release_target(void* const* holder);
+extern "C" void ui_text_output_object_release_target(void* const* holder);
                                                 /* FUN_0045a620 */
 
 /* --- dword-list allocator (2026-10-25) -----------------------------------

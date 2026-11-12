@@ -730,3 +730,9 @@ int ledger_stub_00462ad0_RewardScrollTickerAdvanceAndDraw(
 
 
 } // namespace unported_ledger_stubs
+
+/* Reward.c's crystal task name. The relocated Panel.c held it (finding 546,
+ * fix-up 2); the converted unit uses the pooled literal, so the named object
+ * stays with its other user, as before #516 (finding 554). */
+// GLOBAL: LEGORR 0x004a8a08
+const char s_task_name_crystals[] = "Crystals";

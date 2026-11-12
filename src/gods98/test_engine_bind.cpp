@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "engine.hpp"
+#include "game/panel_unit.h"
 #include "view.hpp"
 #include "record.hpp"
 #include "crt/crt.hpp"
@@ -406,9 +407,9 @@ int main(void)
         EngineContext ec = {};
         ec.debug = 0u;
         ec.exit_timer = 0.0f;
-        static char block[0x8c];
+        static PanelButton block[3];
         memset(block, 0, sizeof block);
-        uint32_t* w = (uint32_t*)(block + 2 * 0x2c + 0x28);
+        unsigned int* w = &block[2].flags;
         *w = 0x20u; /* the enable gate for panel 6, item 2 */
         panel_draw_records_set(6, block);
 

@@ -146,7 +146,7 @@ uint32_t* engine_current_feature_word(void);
  * active frame. NULL outside an active engine context. */
 uint32_t* engine_current_state_word(void);
 /* Shared DAT_00556ecc owner, including the pre-bind bootstrap lifetime. */
-uint32_t* engine_shared_state_word(void);
+extern "C" uint32_t* engine_shared_state_word(void);
 void engine_current_context_bind(EngineContext* ctx);
 /* Current primary follow view (DAT_005560e4), while an EngineContext owns
  * the active frame. NULL outside an active engine context or without a view. */
@@ -396,7 +396,7 @@ int camera_focus_scroll_scale_commit(const EngineContext* ctx,
  * Deviations: the corpus writes its DAT globals blindly; the port threads
  * them through the context (NULL skips the words, both branches still fire
  * the panel write). */
-void panel_selection_highlight_toggle(EngineContext* ctx, int on);
+extern "C" void panel_selection_highlight_toggle(EngineContext* ctx, int on);
                                                 /* FUN_00435aa0 */
 void   global_triple_copy_out(uint32_t* out);
 

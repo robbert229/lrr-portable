@@ -18,6 +18,7 @@
 #include <time.h>
 #include "frontend.hpp"
 #include "frontend.h"
+#include "panel_unit.h"
 #include "objective.hpp"
 #include "level.hpp"
 #include "entity.hpp"
@@ -146,13 +147,11 @@ void view_blit_rect_positions_apply(int view)
         return;
     }
     const int k = s_view_region[view];
-    if (k < 0 || k >= DAT_WINDOW_COUNT) {
+    if (k < 0 || k >= PANEL_TYPE_COUNT) {
         return; /* deviation: the corpus strides its own block blindly */
     }
-    const float ox = s_fpair_a[view] +
-                     (float)(int)s_request_records[k].pair_x;
-    const float oy = s_fpair_b[view] +
-                     (float)(int)s_request_records[k].pair_y;
+    const float ox = s_fpair_a[view] + panelGlobs.panelTable[k].xCurr;
+    const float oy = s_fpair_b[view] + panelGlobs.panelTable[k].yCurr;
     crt_surface_blit_record(s_view_handle[view], ox, oy);
 
     for (int which = 0; which <= 1; ++which) {
@@ -346,4 +345,32 @@ static void scene_quad_grid_vertices_build(uint32_t quad,
         vertices[vertex][7] = position_components[vertex][1];
         memcpy(&vertices[vertex][8], &color_word, sizeof(color_word));
     }
+}
+
+/* --- InfoPanel entry points Panel.c calls (game/info.h) --------------------
+ * FUN_004636b0 creates the information panel's scroll widget and
+ * FUN_004638a0 tests the mouse against it. The port has no entries at
+ * these addresses; these unannotated adapters (ADR 0005 step 6) serve
+ * Panel.c (GAME-032, finding 554) until this unit is converted: the widget
+ * is not built, and the mouse is never over it. */
+#include "info.h"
+
+void info_panel_initialise(const char* name, int a, int b, int panel, int c)
+{
+    (void)name;
+    (void)a;
+    (void)b;
+    (void)panel;
+    (void)c;
+}
+
+int info_panel_check_collision(int* released, int mouseX, int mouseY,
+                               int leftButton, int leftButtonLast)
+{
+    (void)mouseX;
+    (void)mouseY;
+    (void)leftButton;
+    (void)leftButtonLast;
+    *released = 0;
+    return 0;
 }

@@ -189,14 +189,14 @@ int double_is_finite(double value);
 
 /* FUN_0045b900: divide an integer pair by `divisor`, both operands cast to
  * float before the divide; results land in the float pair. */
-void integer_pair_divide_to_float_pair(int x, int y, int divisor,
+extern "C" void integer_pair_divide_to_float_pair(int x, int y, int divisor,
                                        float* out_x, float* out_y);
 
-/* FUN_0045b930: __ftol applied twice — the float pair truncated toward
- * zero into the integer pair. The mapped retail ABI receives the destination
- * pointers while its two source values are already on the x87 stack. The
- * four-argument overload is the portable typed adapter. */
-void float_pair_to_integer_pair_x87(int* out_x, int* out_y); /* FUN_0045b930 */
+/* Superseded by game/panel_unit.h (GAME-032, finding 554): FUN_0045b930
+ * clamps a point to the rotation control's circle and takes five
+ * arguments. Kept uncalled so the symbol count of every includer is
+ * unchanged (ADR 0005 entropy rule 1). */
+void float_pair_to_integer_pair_x87_superseded(int* out_x, int* out_y);
 void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y);
 
 /* VC5 LIBC.LIB supplies this add-with-carry primitive on MSVC. */
@@ -577,7 +577,7 @@ extern "C" int s_display_h; /* DAT_00505928 */
 int  request_record_ready_flag4(int index);   /* FUN_0045ab30 */
 extern "C" int  request_record_ready_flag4_target(int index); /* unchecked target body */
 int  request_record_ready_flag2(int index);   /* FUN_0045ab60 */
-int  request_record_ready_flag2_target(int index); /* retail body */
+extern "C" int  request_record_ready_flag2_target(int index); /* FUN_0045ab60 */
 int  request_record_flag8_is_set(int index);  /* FUN_0045ab90 */
 extern "C" int  request_record_flag8_is_set_target(int index); /* unchecked target body */
 void request_record_flags_set(int index, uint32_t flags); /* port hook */
@@ -593,7 +593,7 @@ void request_record_panel_bounds_peek(int index, float* out_x1,
  * table reads whose feeder (the font slot loader) is unported, so both
  * land as zero-init storage with the corpus's stride-1 index math
  * guarded to a documented 16-entry window (deviation). */
-void     global_value_0050080c_set(uint32_t value);
+extern "C" void global_value_0050080c_set(int value);
 uint32_t global_value_0050080c_peek(void);            /* port hook */
 uint32_t indexed_global_value_at_get(int index);      /* FUN_0045cc10 */
 uint32_t global_cursor_word_get(void);                /* FUN_0045cc60 */
@@ -624,11 +624,11 @@ void byte_range_swap(void* a, void* b, size_t n);
  * — the tables land as zero-initialized module statics with guarded
  * entry windows and port-side hooks standing in for the unported panel/
  * view writers (unowned-global convention; deviations documented). */
-void indexed_pair_set(int index, uint32_t x, uint32_t y);
+extern "C" void indexed_pair_set(int index, float x, float y);
                                         /* FUN_0045a6e0 */
-extern "C" void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y);
+extern "C" void indexed_pair_get(int index, float* out_x, float* out_y);
                                         /* FUN_0045a700 */
-void indexed_float_pair_set(int index, uint32_t x, uint32_t y);
+extern "C" void indexed_float_pair_set(int index, uint32_t x, uint32_t y);
                                         /* FUN_00463730 */
 void indexed_float_pair_peek(int index, float* out_x, float* out_y); /* port hook */
 void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y);
@@ -639,11 +639,11 @@ void indexed_record_pointer_set(int index, void* record); /* port hook */
 void* indexed_record_pointer_peek(int index);
 void panel_draw_records_set(int index, void* records); /* port hook */
 void* panel_draw_records_peek(int index);
-void panel_item_flag16_set(int panel, int item, int value);
+extern "C" void panel_item_flag16_set(int panel, int item, int value);
                                         /* FUN_0045aac0 */
-void panel_item_flag32_set(int panel, int item, int value);
+extern "C" void panel_item_flag32_set(int panel, int item, int value);
                                         /* FUN_0045abb0 */
-void panel_state_flags_toggle(int index); /* FUN_0045ab00 */
+extern "C" void panel_state_flags_toggle(int index); /* FUN_0045ab00 */
 void reward_score_add(float value);      /* FUN_00462800 */
 float reward_score_total_peek(void);
 uint32_t reward_score_count_peek(void);
@@ -666,12 +666,14 @@ uint32_t reward_score_count_peek(void);
  * modeled seam. The corpus overwrites the panel's previous block without
  * freeing it (faithful). */
 void view_blit_rect_positions_apply(int view); /* FUN_00463d20 */
-void panel_item_flag8_set_if_enabled(int panel, int item, int value);
+extern "C" void panel_item_flag8_set_if_enabled(int panel, int item, int value);
                                         /* FUN_0045abf0 */
-void panel_texture_slots_allocate(int panel, int count, const int* slot_index,
-                                  const float* stream, const int* tex1,
-                                  const int* tex2, const int* tex3,
-                                  const int* ids); /* FUN_0045ac30 */
+extern "C" void panel_texture_slots_allocate(int panel, unsigned int count,
+                                  const unsigned int* button_types,
+                                  const float* areas,
+                                  char** normal_names, char** highlight_names,
+                                  char** pressed_names,
+                                  const int* tool_tips); /* FUN_0045ac30 */
 /* Config adapter: retain the resource names from Buttons%ix%i and load them
  * through the shared bitmap-surface cache before filling the same records. */
 void panel_texture_slots_allocate_named(

@@ -18,7 +18,6 @@ game_sources = [
   'interface.cpp',
   'weapons.cpp',
   'lego.cpp',
-  'panel_unit.cpp',
   'entity_stats.cpp',
   'reward.cpp',
   'camera_control.cpp',
@@ -91,6 +90,7 @@ game_c_sources = [
   'advisor.c',
   'animation_object.c',
   'bezier.c',
+  'panel_unit.c',
   'priorities.c',
   'steering.c',
 ]

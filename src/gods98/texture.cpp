@@ -784,3 +784,39 @@ const char* ledger_stub_00473c60_XfTextureNameFormat(
 
 
 } // namespace unported_ledger_stubs
+
+/* --- Images.c entry points in the original ABI (gods98/image_adapters.h) --
+ * Thin unannotated adapters (ADR 0005 step 6) for Panel.c (GAME-032,
+ * finding 554). The retail entries take the Image record; the port's own
+ * entries at these addresses take the TextureSurface it wraps. */
+#include "image_adapters.h"
+#include "surface.hpp"
+
+void image_setup_trans(Image* image, float lowRed, float lowGreen,
+                       float lowBlue, float highRed, float highGreen,
+                       float highBlue)
+{
+    if (image == NULL) return;
+    image_surface_blit_transformed((TextureSurface*)image->surface, lowRed,
+                                   lowGreen, lowBlue, highRed, highGreen,
+                                   highBlue);
+}
+
+int image_get_pixel(Image* image, int x, int y, unsigned int* pixel)
+{
+    const TextureSurface* surface;
+    if (image == NULL || image->surface == NULL) return 0;
+    surface = (const TextureSurface*)image->surface;
+    if (x < 0 || y < 0 || x >= surface->width || y >= surface->height ||
+        surface->pixels == NULL)
+        return 0;
+    *pixel = surface->pixels[(size_t)y * (size_t)surface->width +
+                             (size_t)x] & 0x00ffffffu;
+    return 1;
+}
+
+void image_set_pen_zero_trans(Image* image)
+{
+    if (image == NULL) return;
+    texture_source_color_key_set((TextureSurface*)image->surface, 0u, 0u);
+}

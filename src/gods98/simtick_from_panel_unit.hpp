@@ -5,6 +5,9 @@
 #ifndef LRR_GODS98_SIMTICK_FROM_PANEL_UNIT_HPP
 #define LRR_GODS98_SIMTICK_FROM_PANEL_UNIT_HPP
 
-extern "C" uint32_t simtick_timer_word;
+/* DAT_00500860 is Panel.c's flag word since GAME-032 was converted
+ * (finding 554). */
+#include "game/panel_unit.h"
+#define simtick_timer_word (panelGlobs.flags)
 
 #endif /* LRR_GODS98_SIMTICK_FROM_PANEL_UNIT_HPP */

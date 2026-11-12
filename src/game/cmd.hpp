@@ -249,7 +249,7 @@ void cmd_context_set(GameContext* ctx);
 /* Producer (FUN_00452060): append a 5-dword command record to the active
  * buffer; the optional pair supplies record words 3 and 4, otherwise both
  * are zero. The corpus silently drops when the buffer is full. */
-void cmd_produce(int op, const void* a1, int a2, const int* pair);
+extern "C" void cmd_produce(int op, const void* a1, int a2, const int* pair);
 
 /* Queue a command for an entity (opcode, entity, param, extra…) — the
  * entity-aware convenience over cmd_produce. */
@@ -759,9 +759,9 @@ unsigned int deferred_olist_entity_queue_take_cell(const int cell_xy[2],
  * (deviations: the corpus dereferences the current level blindly). */
 void menu_selection_resource_update(int kind, const uint32_t coord[2]);
                                                   /* FUN_0041b300 */
-void command_context_post_to_hud(int kind, const uint32_t coord[2]);
+extern "C" void command_context_post_to_hud(int kind, const uint32_t coord[2]);
                                                   /* FUN_0041b2d0 */
-void selection_clear_request_and_hud_reset(void); /* FUN_0041e750 */
+extern "C" void selection_clear_request_and_hud_reset(void); /* FUN_0041e750 */
 uint32_t menu_surface_track_peek(void);           /* port hook: DAT_004de1f0 */
 
 /* --- resource/ore counter pair (2026-10-25) --------------------------------

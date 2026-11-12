@@ -204,7 +204,7 @@ uint32_t message_config_flags(int id);
  * read directly and installed through a pointed-to value. The setter
  * returns the installed value; NULL answers 0 and stores nothing
  * (documented deviation; corpus callers pass live pointers). */
-uint32_t system_state_flags_get(void);
+extern "C" uint32_t system_state_flags_get(void);
 uint32_t system_state_flags_set(const uint32_t* value);
 uint32_t system_state_flags_set_target(const uint32_t* value);
 uint32_t objective_switch_state_set(uint32_t value);
@@ -268,7 +268,7 @@ typedef void (*MessagePanelRefreshHook)(void* auxiliary, void* queue,
 void incident_message_panel_refresh_hook_install(
     MessagePanelRefreshHook hook, void* context);
 void incident_message_panel_aux_install(void* auxiliary); /* port hook */
-void incident_message_panel_refresh_if_active(void); /* FUN_00419da0 */
+extern "C" void incident_message_panel_refresh_if_active(void); /* FUN_00419da0 */
 void* incident_message_queue_remove_at(int list, int index); /* FUN_004197b0 */
 
 #endif /* LEGORRR_MESSAGE_HPP */

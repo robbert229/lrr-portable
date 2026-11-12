@@ -219,62 +219,9 @@ int s_attach_n = 0;
 
 const uint32_t s_timer_bits[4] = { 0x10u, 0x20u, 0x40u, 0x80u };
 
-void simtick_manager_clear(void)
-{
-    s_mgr = NULL;
-    s_mgr_count = 0;
-    s_repos = NULL;
-    s_attach = NULL;
-    s_metrics[0] = s_metrics[1] = 0;
-    s_repos_n = s_attach_n = 0;
-    simtick_timer_word = 0;
-}
-
-void simtick_manager_set_slots(SimtickManagerSlot* slots, int count)
-{
-    simtick_manager_clear();
-    if (slots == NULL) {
-        return;
-    }
-    if (count > SIMTICK_MANAGER_SLOTS) {
-        count = SIMTICK_MANAGER_SLOTS;
-    }
-    s_mgr = slots; /* keep the caller's table (the corpus mutates it in place) */
-    s_mgr_count = count;
-}
-
-void simtick_manager_set_reposition_hook(int (*h)(int, int, int))
-{
-    s_repos = h;
-}
-
-void simtick_manager_set_attach_hook(int (*h)(int, int, int, int))
-{
-    s_attach = h;
-}
-
-void simtick_manager_set_metrics(int mx, int my)
-{
-    s_metrics[0] = mx;
-    s_metrics[1] = my;
-}
-
-int simtick_manager_repositions(void) { return s_repos_n; }
-int simtick_manager_attaches(void)     { return s_attach_n; }
-
-/* Index-9 timer word bits 0x10..0x80 (DAT_00500860) — still armed state. */
-int simtick_manager_timer_bit(int which)
-{
-    if (which < 0 || which > 3) {
-        return 0;
-    }
-    return (simtick_timer_word & s_timer_bits[which]) != 0;
-}
-
-void simtick_manager_set_timer_word(uint32_t w)
-{
-    simtick_timer_word = w;
-}
+/* The port's slot-table model of ManagerTick (0x0045a730) and its test
+ * hooks are superseded by Panel_Update (game/panel_unit.c, finding 554);
+ * their declarations stay in simtick.hpp (ADR 0005 entropy rule 1). */
 
 /* ---- tranche 8: sound keep-alive (FUN_0047aba0) ------------------------- */
 int s_sound_on = 0;

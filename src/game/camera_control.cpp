@@ -577,6 +577,16 @@ void camera_rotation_set(void* camera, float value)
     render_object_rotate_axis(scene_object, 1u, 0.0f, 0.0f, 1.0f, -value);
 }
 
+/* CameraTiltAxisUpdate (FUN_004369f4): add the delta to the controller's
+ * +0x84 angle and route it through camera_rotation_set (0x00436953), as
+ * camera_pan_axis_update does for +0x78. Panel.c (GAME-032, finding 554) is
+ * its caller. */
+// FUNCTION: LEGORR 0x004369f4
+extern "C" void camera_tilt_axis_update(void* camera, float delta)
+{
+    camera_rotation_set(camera, delta + *(float*)((char*)camera + 0x84));
+}
+
 // FUNCTION: LEGORR 0x00436a18
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void camera_distance_bounds_set(void* camera,
@@ -827,3 +837,4 @@ static void view_tail(ViewContext* v, float scale)
                    -v->velocity[2]);
     }
 }
+

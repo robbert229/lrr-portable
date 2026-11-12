@@ -5,7 +5,9 @@
 #ifndef LRR_GAME_MISSION_FROM_PANEL_UNIT_HPP
 #define LRR_GAME_MISSION_FROM_PANEL_UNIT_HPP
 
-extern int s_crystal_quota;
-void mission_crystal_quota_setup(BlockFile* cfg, const char* root, const char* level);
+/* GAME-032 is converted (finding 554): the quota is Panel.c's
+ * panelGlobs.crystalQuota, and the setup is declared in game/panel_unit.h. */
+#include "panel_unit.h"
+#define s_crystal_quota ((int)panelGlobs.crystalQuota)
 
 #endif /* LRR_GAME_MISSION_FROM_PANEL_UNIT_HPP */

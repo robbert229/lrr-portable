@@ -5,6 +5,6 @@
 #ifndef LRR_GODS98_VIEW_FOR_PANEL_UNIT_HPP
 #define LRR_GODS98_VIEW_FOR_PANEL_UNIT_HPP
 
-extern void* s_zoom_step_context;
+extern "C" void* s_zoom_step_context;
 
 #endif /* LRR_GODS98_VIEW_FOR_PANEL_UNIT_HPP */

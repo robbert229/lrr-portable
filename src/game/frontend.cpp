@@ -3091,7 +3091,7 @@ static void advisor_message_interface_finish(void* context,
     position[0] = 42.0f;
     position[1] = s_message_panel_y;
     memcpy(position_bits, position, sizeof(position_bits));
-    indexed_pair_set(3, position_bits[0], position_bits[1]);
+    indexed_pair_set(3, position[0], position[1]);
     if (target == NULL || target->w <= 0 || target->h <= 0 ||
         surface_lock(target, &pixels, &pitch) != 0) return;
     surface_blit_texture(pixels, pitch, target->w, target->h,
@@ -3736,14 +3736,44 @@ void menu_clock_millis_set(uint32_t millis)
 
 void panel_texture_slots_blit(int panel)
 {
-    panel_texture_slots_blit_to(panel, NULL, 0, 0, 0);
+    panel_texture_slots_render(panel, NULL, 0, 0, 0);
 }
 
+/* The native HUD's software draw of one panel's buttons, with the state
+ * choice of Panel_Button_DisplayAll (panel_texture_slots_blit_to,
+ * FUN_0045a9c0, game/panel_unit.c). The original draws to the back buffer
+ * through Image_DisplayScaled, which the port's renderer does not own. */
 void panel_texture_slots_render(int panel, void* pixels, int pitch,
                                 int width, int height)
 {
-    if (pixels == NULL || pitch <= 0 || width <= 0 || height <= 0) return;
-    panel_texture_slots_blit_to(panel, pixels, pitch, width, height);
+    const PanelData* data;
+    unsigned int i;
+    if (panel < 0 || panel >= PANEL_TYPE_COUNT || pixels == NULL ||
+        pitch <= 0 || width <= 0 || height <= 0) return;
+    data = &panelGlobs.panelTable[panel];
+    for (i = 0; i < data->buttonCount && data->buttonList != NULL; ++i) {
+        const PanelButton* button = &data->buttonList[i];
+        const unsigned int flags = button->flags;
+        const int flash = (flags & PANEL_BUTTON_FLAG_BANNER) != 0u &&
+                          sim_status_banner_word_get() != 0u;
+        const Image* image;
+        if ((flags & PANEL_BUTTON_FLAG_HIDDEN) != 0u) continue;
+        if ((flags & PANEL_BUTTON_FLAG_TOGGLED) == 0u &&
+            (flags & PANEL_BUTTON_FLAG_HIGHLIGHT) != 0u) {
+            if ((flags & PANEL_BUTTON_FLAG_BANNER) != 0u && !flash) continue;
+            image = button->highlightImage;
+        } else if ((flags & (PANEL_BUTTON_FLAG_PRESSED |
+                             PANEL_BUTTON_FLAG_TOGGLED)) == 0u) {
+            image = flash ? button->highlightImage : button->normalImage;
+        } else {
+            image = flash ? button->highlightImage : button->pressedImage;
+        }
+        if (image != NULL && image->surface != NULL)
+            surface_blit_texture(pixels, pitch, width, height,
+                (const TextureSurface*)image->surface,
+                (int)floor((double)(button->x1 + data->xCurr)),
+                (int)floor((double)(button->y1 + data->yCurr)));
+    }
 }
 
 /* The physical gesture caller supplies mapped button levels; the scan owns
@@ -3760,29 +3790,29 @@ int frontend_panels_pointer_update(FrontendPanelPointerCapture* capture,
     hit->category = 12; hit->item = 24; hit->released = 0;
     frontend_panel_rotation_control_state_get(&rotation);
     for (panel = 0; panel < 12; ++panel) {
-        uint32_t ox_bits = 0u, oy_bits = 0u;
+        float ox_bits = 0.0f, oy_bits = 0.0f;
         int i, px, py, count;
-        char* block;
+        PanelButton* block;
         if ((request_record_flags_peek(panel) & 1u) == 0u) continue;
         count = panel_draw_count_peek(panel);
-        block = (char*)panel_draw_records_peek(panel);
+        block = (PanelButton*)panel_draw_records_peek(panel);
         if (block == NULL) continue;
         indexed_pair_get(panel, &ox_bits, &oy_bits);
-        px = x - (int)crt_float_bits(ox_bits);
-        py = y - (int)crt_float_bits(oy_bits);
+        px = x - (int)ox_bits;
+        py = y - (int)oy_bits;
         for (i = 0; i < count; ++i) {
-            float* rec = (float*)(block + (size_t)i * 0x2c);
+            PanelButton* rec = &block[i];
             uint32_t flags;
             int inside = 0;
-            memcpy(&flags, rec + 10, sizeof(flags));
+            flags = rec->flags;
             if (!found) {
                 if (panel == 9 && i == 3) {
                     const double dx = (double)rotation.center_x - x;
                     const double dy = (double)rotation.center_y - y;
                     inside = sqrt(dx * dx + dy * dy) < rotation.radius;
                 } else {
-                    inside = rec[0] <= (float)px && (float)px < rec[2] &&
-                             rec[1] <= (float)py && (float)py < rec[3];
+                    inside = rec->x1 <= (float)px && (float)px < rec->x2 &&
+                             rec->y1 <= (float)py && (float)py < rec->y2;
                 }
             }
             if (inside) {
@@ -3812,7 +3842,7 @@ int frontend_panels_pointer_update(FrontendPanelPointerCapture* capture,
             } else {
                 flags = (flags & ~6u) | ((flags & 8u) ? 4u : 0u);
             }
-            memcpy(rec + 10, &flags, sizeof(flags));
+            rec->flags = flags;
         }
     }
     if (!current) {
@@ -3832,12 +3862,12 @@ void frontend_panels_pointer_capture_cancel(FrontendPanelPointerCapture* capture
         capture->records != NULL &&
         capture->records == panel_draw_records_peek(capture->category) &&
         capture->item >= 0 && capture->item < panel_draw_count_peek(capture->category)) {
-        char* block = (char*)panel_draw_records_peek(capture->category);
-        char* word = block + (size_t)capture->item * 0x2c + 0x28;
+        PanelButton* block = (PanelButton*)panel_draw_records_peek(capture->category);
+        unsigned int* word = &block[capture->item].flags;
         uint32_t flags;
-        memcpy(&flags, word, sizeof(flags));
+        flags = *word;
         flags = (flags & ~6u) | ((flags & 8u) ? 4u : 0u);
-        memcpy(word, &flags, sizeof(flags));
+        *word = flags;
     }
     capture->active = 0; capture->records = NULL;
     capture->category = 12; capture->item = 24;
@@ -3855,16 +3885,16 @@ int frontend_panels_pointer_hover(int x, int y)
  * performed action are separate results; unported action owners return zero. */
 int frontend_panels_pointer_activate(int category, int item)
 {
-    char* block;
+    PanelButton* block;
     uint32_t count, flags, blocked = 0u;
     LevelState* level;
     if (category < 0 || category >= 12 || item < 0 ||
         item >= panel_draw_count_peek(category)) return 0;
-    block = (char*)panel_draw_records_peek(category);
+    block = (PanelButton*)panel_draw_records_peek(category);
     if (block == NULL) return 0;
-    memcpy(&count, block + (size_t)item * 0x2c + 0x24, sizeof(count));
+    count = (uint32_t)block[item].clickCount;
     ++count;
-    memcpy(block + (size_t)item * 0x2c + 0x24, &count, sizeof(count));
+    block[item].clickCount = (int)count;
     flags = system_state_flags_get();
     if (category == 0) blocked = flags & 0x10u;
     else if (category == 6 && item < 3) blocked = flags & (0x20u << item);
@@ -3901,13 +3931,13 @@ int frontend_panels_pointer_activate(int category, int item)
 static void frontend_panel_render(int panel, void* pixels, int pitch,
                                    int width, int height)
 {
-    uint32_t x = 0u, y = 0u;
+    float x = 0.0f, y = 0.0f;
     TextureSurface* image = legacy_panel_texture_get(panel);
     indexed_pair_get(panel, &x, &y);
     if (image != NULL)
         surface_blit_texture(pixels, pitch, width, height, image,
-            (int)floor((double)crt_float_bits(x)),
-            (int)floor((double)crt_float_bits(y)));
+            (int)floor((double)x),
+            (int)floor((double)y));
     panel_texture_slots_render(panel, pixels, pitch, width, height);
 }
 
@@ -3933,6 +3963,13 @@ void frontend_panels_release(void)
     for (panel = 0; panel < 12; ++panel) {
         panel_draw_records_set(panel, NULL);
         panel_draw_count_set(panel, 0);
+        if (!panelGlobs.panelTable[panel].isFlic &&
+            panelGlobs.panelTable[panel].image != NULL) {
+            Image* image = (Image*)panelGlobs.panelTable[panel].image;
+            texture_free((TextureSurface*)image->surface);
+            free(image);
+        }
+        panelGlobs.panelTable[panel].image = NULL;
         legacy_overlay_image_record_load(NULL, panel, 0u);
     }
 }
@@ -4191,7 +4228,7 @@ float panel_layout_size_peek(int which)
     if (which < 0 || which > 1) {
         return 0.0f; /* deviation: the corpus strides the pair blindly */
     }
-    return s_panel_layout_size[which];
+    return (&panelGlobs.airMeterJuiceOffset.x)[which];
 }
 void panel_layout_glyph_install(void* surface)
 {
@@ -4245,7 +4282,8 @@ uint32_t interface_button_surface_peek(int which)
 
 uint32_t advisor_bar_surface_peek(int which)
 {
-    return (which >= 0 && which < 3) ? s_advisor_bar_surfaces[which] : 0u;
+    return (which >= 0 && which < 3)
+        ? (uint32_t)(uintptr_t)(&panelGlobs.crystalSmallImage)[which] : 0u;
 }
 
 void menu_blit_record_write(int index, uint32_t value)
@@ -4927,7 +4965,7 @@ int ui_text_output_panel_coordinates_set(int panel, float y_offset,
     if (panel < 0 || panel >= 18) return 0;
     memcpy(&y_bits, &y_offset, sizeof(y_bits));
     memcpy(&x_bits, &x_offset, sizeof(x_bits));
-    indexed_pair_set(panel, x_bits, y_bits);
+    indexed_pair_set(panel, x_offset, y_offset);
     s_ui_text_output_panel_offsets[panel][6] = y_offset;
     s_ui_text_output_panel_offsets[panel][7] = x_offset;
     return 1;
@@ -4968,14 +5006,10 @@ void ui_text_output_record_destroy(void* opaque)
             break;
         }
     }
-#if defined(_M_IX86) || defined(__i386__)
     if (text_buffer == NULL) {
-        const UiTextOutputRecord32* record =
-            (const UiTextOutputRecord32*)opaque;
-        text_buffer = (void*)(uintptr_t)record->text_buffer_pointer;
+        text_buffer = ((const PanelTextWindow*)opaque)->textWindow;
         owns_text_buffer = 1;
     }
-#endif
     if (owns_text_buffer && text_buffer != NULL)
         text_buffer_destroy(text_buffer);
     engine_heap_free(opaque);
@@ -5369,3 +5403,4 @@ void ledger_stub_004588e0_InputDeviceRelease()
 }
 
 } // namespace unported_ledger_stubs
+

@@ -471,7 +471,7 @@ void* panel_event_entry_append(void* panel, const char* name, uint32_t payload,
                                uint32_t flags); /* FUN_004629d0 */
 typedef void* (*PanelResourceLoadFn)(const char* name, void* user);
 void panel_resource_loader_set(PanelResourceLoadFn callback, void* user);
-void scroll_rect_payload_record_create(int slot, const float rect[4],
+extern "C" void scroll_rect_payload_record_create(int slot, const float rect[4],
                                        int count, uint32_t value,
                                        const char* resource_name);
 void* scroll_rect_payload_record_get(int slot);

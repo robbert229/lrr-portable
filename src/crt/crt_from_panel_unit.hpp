@@ -5,6 +5,10 @@
 #ifndef LRR_CRT_CRT_FROM_PANEL_UNIT_HPP
 #define LRR_CRT_CRT_FROM_PANEL_UNIT_HPP
 
-extern uint32_t s_value_0050080c;
+/* GAME-032 is converted (finding 554): Panel.c's state is panelGlobs in
+ * game/panel_unit.h. */
+#include "game/panel_unit.h"
+#include "gods98/image_adapters.h"
+#define s_value_0050080c ((uint32_t)panelGlobs.airMeterOxygenLow)
 
 #endif /* LRR_CRT_CRT_FROM_PANEL_UNIT_HPP */

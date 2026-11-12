@@ -1648,16 +1648,16 @@ void request_record_panel_bounds_peek(int panel, float* out_x1,
                                       float* out_y1, float* out_x2,
                                       float* out_y2)
 {
-    RequestRecord* record = s_request_records + panel;
-    if (out_x1 != NULL) *out_x1 = record->bounds_x1;
-    if (out_y1 != NULL) *out_y1 = record->bounds_y1;
-    if (out_x2 != NULL) *out_x2 = record->bounds_x2;
-    if (out_y2 != NULL) *out_y2 = record->bounds_y2;
+    PanelData* record = &panelGlobs.panelTable[panel];
+    if (out_x1 != NULL) *out_x1 = record->xOut;
+    if (out_y1 != NULL) *out_y1 = record->yOut;
+    if (out_x2 != NULL) *out_x2 = record->xIn;
+    if (out_y2 != NULL) *out_y2 = record->yIn;
 }
 
 int request_record_ready_flag4(int index)
 {
-    if ((unsigned)index >= REQUEST_RECORD_COUNT) return 0;
+    if ((unsigned)index >= PANEL_TYPE_COUNT) return 0;
     return request_record_ready_flag4_target(index);
 }
 
@@ -1668,7 +1668,7 @@ int request_record_ready_flag2(int index)
 
 int request_record_flag8_is_set(int index)
 {
-    if ((unsigned)index >= REQUEST_RECORD_COUNT) {
+    if ((unsigned)index >= PANEL_TYPE_COUNT) {
         return 0; /* deviation: the corpus strides blindly */
     }
     return request_record_flag8_is_set_target(index);
@@ -1676,17 +1676,17 @@ int request_record_flag8_is_set(int index)
 
 void request_record_flags_set(int index, uint32_t flags)
 {
-    if ((unsigned)index < REQUEST_RECORD_COUNT) {
-        s_request_records[index].flags = flags;
+    if ((unsigned)index < PANEL_TYPE_COUNT) {
+        panelGlobs.panelTable[index].flags = flags;
     }
 }
 
 uint32_t request_record_flags_peek(int index)
 {
-    if ((unsigned)index >= REQUEST_RECORD_COUNT) {
+    if ((unsigned)index >= PANEL_TYPE_COUNT) {
         return 0u;
     }
-    return s_request_records[index].flags;
+    return panelGlobs.panelTable[index].flags;
 }
 
 uint32_t global_value_0050080c_peek(void)
@@ -1802,13 +1802,26 @@ typedef struct PanelNamedResources {
 } PanelNamedResources;
 static PanelNamedResources s_panel_named[DAT_WINDOW_COUNT];
 
+/* Port ownership: free the button list (and its images) that
+ * panel_texture_slots_allocate_named had Panel.c's loader build; the
+ * original never frees one. Lists installed some other way are not ours. */
 static void panel_named_release(int panel)
 {
     PanelNamedResources* owner = &s_panel_named[panel];
+    PanelButton* list = (PanelButton*)owner->block;
     int i;
-    for (i = 0; i < owner->count * 3; ++i)
-        texture_release(owner->slots[i]);
-    free(owner->slots);
+    for (i = 0; i < owner->count && list != NULL; ++i) {
+        Image* images[3];
+        int k;
+        images[0] = list[i].normalImage;
+        images[1] = list[i].highlightImage;
+        images[2] = list[i].pressedImage;
+        for (k = 0; k < 3; ++k) {
+            if (images[k] == NULL) continue;
+            texture_free((TextureSurface*)images[k]->surface);
+            free(images[k]);
+        }
+    }
     engine_heap_free(owner->block);
     owner->slots = NULL;
     owner->count = 0;
@@ -1832,18 +1845,20 @@ TextureSurface* panel_named_resource_get(int panel, const void* block,
 
 void panel_draw_records_set(int index, void* records)
 {
-    if (index >= 0 && index < DAT_WINDOW_COUNT) {
-        if (s_panel_records[index] != records) panel_named_release(index);
-        s_panel_records[index] = records;
+    if (index >= 0 && index < PANEL_TYPE_COUNT) {
+        if (panelGlobs.panelTable[index].buttonList != records &&
+            panelGlobs.panelTable[index].buttonList == s_panel_named[index].block)
+            panel_named_release(index);
+        panelGlobs.panelTable[index].buttonList = (PanelButton*)records;
     }
 }
 
 void* panel_draw_records_peek(int index)
 {
-    if (index < 0 || index >= DAT_WINDOW_COUNT) {
+    if (index < 0 || index >= PANEL_TYPE_COUNT) {
         return NULL;
     }
-    return s_panel_records[index];
+    return panelGlobs.panelTable[index].buttonList;
 }
 
 // GLOBAL: LEGORR 0x00555738
@@ -2003,17 +2018,17 @@ void view_blit_window_peek(int view, uint32_t* handle, void** rect_a,
 
 void panel_draw_count_set(int panel, int count)
 {
-    if (panel >= 0 && panel < DAT_WINDOW_COUNT) {
-        s_panel_count[panel] = count;
+    if (panel >= 0 && panel < PANEL_TYPE_COUNT) {
+        panelGlobs.panelTable[panel].buttonCount = (unsigned int)count;
     }
 }
 
 int panel_draw_count_peek(int panel)
 {
-    if (panel < 0 || panel >= DAT_WINDOW_COUNT) {
+    if (panel < 0 || panel >= PANEL_TYPE_COUNT) {
         return 0;
     }
-    return s_panel_count[panel];
+    return (int)panelGlobs.panelTable[panel].buttonCount;
 }
 
 void panel_texture_slots_allocate_named(
@@ -2021,64 +2036,28 @@ void panel_texture_slots_allocate_named(
     const char* const* tex1, const char* const* tex2,
     const char* const* tex3, const int* ids)
 {
-    if (panel < 0 || panel >= DAT_WINDOW_COUNT || count <= 0 ||
-        slot_index == NULL || stream == NULL) {
+    int i;
+    if (panel < 0 || panel >= PANEL_TYPE_COUNT || count <= 0 ||
+        slot_index == NULL || stream == NULL || ids == NULL) {
         return;
     }
-    /* Preserve the old records if either allocation fails. */
-    if ((size_t)count > ((size_t)-1) / (3u * sizeof(TextureSurface*)) ||
-        count > 0x7fffffffL / 0x2cL) return;
-    TextureSurface** slots = (TextureSurface**)calloc(
-        (size_t)count * 3u, sizeof(TextureSurface*));
-    if (slots == NULL) return;
-    float* block = (float*)engine_heap_alloc((long)count * 0x2c);
-    if (block == NULL) {
-        free(slots);
-        return;
+    /* Panel.c's loader writes button slot_index[i]; the port refuses a
+     * table that would write outside the list or leave a button unset. */
+    for (i = 0; i < count; ++i) {
+        int j;
+        if (slot_index[i] < 0 || slot_index[i] >= count) return;
+        for (j = 0; j < i; ++j)
+            if (slot_index[j] == slot_index[i]) return;
     }
-    memset(block, 0, (size_t)count * 0x2c);
-    panel_draw_records_set(panel, block);
-    panel_draw_count_set(panel, count);
-    s_panel_named[panel].slots = slots;
-    s_panel_named[panel].block = block;
+    if (panelGlobs.panelTable[panel].buttonList == s_panel_named[panel].block)
+        panel_named_release(panel);
+    panel_texture_slots_allocate(panel, (unsigned int)count,
+                                 (const unsigned int*)slot_index,
+                                 stream,
+                                 (char**)tex1, (char**)tex2, (char**)tex3,
+                                 ids);
+    s_panel_named[panel].block = panelGlobs.panelTable[panel].buttonList;
     s_panel_named[panel].count = count;
-
-    for (int i = 0; i < count; ++i) {
-        const int slot = slot_index[i];
-        if (slot < 0 || slot >= count) continue;
-        float* rec = block + (size_t)slot * 11;
-        const float* s = stream + (size_t)i * 4;
-        for (int clear = 0; clear < 3; ++clear) {
-            texture_release(slots[slot * 3 + clear]);
-            slots[slot * 3 + clear] = NULL;
-        }
-        rec[0] = s[0];
-        rec[1] = s[1];
-        rec[2] = s[2] + s[0];
-        rec[3] = s[3] + s[1];
-        rec[4] = 0.0f;
-        rec[5] = 0.0f;
-        rec[6] = 0.0f;
-        rec[10] = 0.0f;
-        if (ids != NULL) rec[8] = crt_float_bits((uint32_t)ids[i]);
-
-        const char* const* names[3] = { tex1, tex2, tex3 };
-        const int fields[3] = { 6, 4, 5 };
-        for (int t = 0; t < 3; ++t) {
-            const char* name = names[t] != NULL ? names[t][i] : NULL;
-            TextureSurface* surface;
-            uint32_t handle;
-            if (name == NULL || name[0] == '\0') continue;
-            surface = image_surface_load(name, 0u, 0u);
-            if (surface == NULL) continue;
-            texture_source_color_key_set(surface, 0u, 0u);
-            surface->resource_flags |= 2u;
-            slots[slot * 3 + fields[t] - 4] = surface;
-            handle = (uint32_t)(uintptr_t)surface;
-            rec[fields[t]] = crt_float_bits(handle);
-            crt_surface_blit_record(handle, 0.0f, 0.0f);
-        }
-    }
 }
 
 /* VC5 LIBC.LIB intrncvt.obj supplies this zeroing helper. */

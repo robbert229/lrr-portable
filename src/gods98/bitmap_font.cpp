@@ -415,3 +415,24 @@ static void fe_blit_glyph(void* px, int pitch, int w, int h,
         }
     }
 }
+
+/* --- Font.c entry points in the original ABI (gods98/image_adapters.h) ----
+ * Thin unannotated adapters (ADR 0005 step 6) for Panel.c (GAME-032,
+ * finding 554). The original draws to the back buffer, which the port's
+ * renderer owns, so the print measures only. */
+#include "image_adapters.h"
+
+void font_v_get_string_info(const TextureSurface* font, uint32_t* width,
+                            uint32_t* lineCount, const char* msg,
+                            va_list args)
+{
+    formatted_text_format_draw(font, width, (int*)lineCount, NULL, 0, 0, 0,
+                               0, 0, msg, args);
+}
+
+void font_v_print_f(const TextureSurface* font, int x, int y,
+                    const char* msg, va_list args)
+{
+    formatted_text_format_draw(font, NULL, NULL, NULL, 0, 0, 0, x, y, msg,
+                               args);
+}

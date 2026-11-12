@@ -1406,3 +1406,10 @@ int active_entity_list_contains_code(GameContext* ctx, int code)
     }
     return 0;
 }
+
+/* DAT_004eabc8, LegoObject.c's tool-tip gate that Panel.c reads (game/ai.h).
+ * The port has no owner of it yet; this port global stands in for it
+ * (finding 554). */
+#include "ai.h"
+
+int s_lego_object_tool_tip_gate;

@@ -7,6 +7,7 @@
 
 #include "crt/crt.hpp"
 #include "gods98/heap.hpp"
+#include "game/panel_unit.h"
 
 static int s_failures = 0;
 
@@ -491,14 +492,11 @@ int main(void)
 
     /* The DAT window band (2026-10-24). */
     {
-        indexed_pair_set(2, 11u, 22u);
-        indexed_pair_set(100, 1u, 1u); /* guarded */
+        indexed_pair_set(2, 11.0f, 22.0f);
+        float pairx = 0.0f, pairy = 0.0f;
+        indexed_pair_get(2, &pairx, &pairy);
+        CHECK(pairx == 11.0f && pairy == 22.0f, "the pair window round-trips");
         uint32_t x = 0u, y = 0u;
-        indexed_pair_get(2, &x, &y);
-        CHECK(x == 11u && y == 22u, "the pair window round-trips");
-        indexed_pair_get(-1, &x, &y);
-        indexed_pair_get(2, NULL, &y); /* guarded */
-        CHECK(x == 11u && y == 22u, "the guards skip");
 
         indexed_float_pair_set(1, 3u, 8u);
         float fx = 0, fy = 0;
@@ -515,22 +513,17 @@ int main(void)
         indexed_text_metrics_pair_set(4, 1u, 1u); /* empty slot: inert */
         indexed_text_metrics_pair_get(9, &x, &y); /* guarded */
 
-        char block[0x2c * 3];
+        static PanelButton block[3];
         memset(block, 0, sizeof(block));
         panel_draw_records_set(0, block);
         CHECK(panel_draw_records_peek(0) == (void*)block, "the hook lands");
         panel_item_flag16_set(0, 1, 1);
-        uint32_t w = 0u;
-        __builtin_memcpy(&w, block + 0x28 + 0x2c, 4);
-        CHECK(w == 0x10u, "the item word raises bit 16");
+        CHECK(block[1].flags == 0x10u, "the button raises bit 16");
         panel_item_flag32_set(0, 1, 1);
-        __builtin_memcpy(&w, block + 0x28 + 0x2c, 4);
-        CHECK(w == 0x30u, "bit 32 stacks");
+        CHECK(block[1].flags == 0x30u, "bit 32 stacks");
         panel_item_flag16_set(0, 1, 0);
-        __builtin_memcpy(&w, block + 0x28 + 0x2c, 4);
-        CHECK(w == 0x20u, "bit 16 drops alone");
-        panel_item_flag16_set(7, 0, 1); /* empty panel: guarded */
-        panel_item_flag32_set(0, -1, 1); /* guarded */
+        CHECK(block[1].flags == 0x20u, "bit 16 drops alone");
+        panel_draw_records_set(0, NULL);
 
         request_record_flags_set(5, 2u);
         panel_state_flags_toggle(5);
@@ -539,7 +532,6 @@ int main(void)
         panel_state_flags_toggle(5);
         CHECK(request_record_flags_peek(5) == (8u & ~4u) | 0xau,
               "the branch-one fold");
-        panel_state_flags_toggle(100); /* guarded */
         request_record_flags_set(5, 0u);
     }
 
@@ -601,9 +593,9 @@ int main(void)
     /* The panel/view blit band (2026-10-24). */
     {
         /* The flag-8 enable gate. */
-        static char fblock[0x2c * 2];
+        static PanelButton fblock[2];
         memset(fblock, 0, sizeof(fblock));
-        uint32_t* w = (uint32_t*)(fblock + 0x28);
+        unsigned int* w = &fblock[0].flags;
         panel_draw_records_set(7, fblock);
         panel_item_flag8_set_if_enabled(7, 0, 1);
         CHECK(*w == 0u, "the disabled gate keeps bit 8 clear");
@@ -612,56 +604,38 @@ int main(void)
         CHECK(*w == 0x28u, "the enabled gate takes bit 8");
         panel_item_flag8_set_if_enabled(7, 0, 0);
         CHECK(*w == 0x20u, "clearing drops bit 8");
+        *w = 0x2cu;
+        panel_item_flag8_set_if_enabled(7, 0, 0);
+        CHECK(*w == 0x20u, "clearing also drops the pressed bit");
         *w = 0x10u;
         panel_item_flag8_set_if_enabled(7, 0, 1);
         CHECK(*w == 0x10u, "bit 16 alone is not the enable gate");
         panel_draw_records_set(7, NULL);
 
-        /* Allocate: the stream, the size sums, the gather, the ids, the
-         * three texture streams through the modeled seam. */
-        crt_surface_calls_clear();
-        const float stream[2][4] = { { 1.0f, 2.0f, 3.0f, 4.0f },
-                                     { 5.0f, 6.0f, 7.0f, 8.0f } };
-        const int slot[2] = { 1, 0 };
+        /* Panel_LoadButtons (FUN_0045ac30): the areas as corners, the
+         * gather through the button types, the tool tips; missing bitmaps
+         * load as NULL. */
+        const Area2F areas[2] = { { 1.0f, 2.0f, 3.0f, 4.0f },
+                                  { 5.0f, 6.0f, 7.0f, 8.0f } };
+        const unsigned int slot[2] = { 1u, 0u };
         const int ids[2] = { 0x111, 0x222 };
-        const int t1[2] = { 7, 0 };
-        const int t2[2] = { 0, 8 };
-        const int t3[2] = { 9, 10 };
-        panel_texture_slots_allocate(3, 2, slot, &stream[0][0], t1, t2, t3,
+        panel_texture_slots_allocate(3, 2u, slot, &areas[0].x, NULL, NULL, NULL,
                                      ids);
         CHECK(panel_draw_count_peek(3) == 2, "the count lands");
-        const char* blk = (const char*)panel_draw_records_peek(3);
-        CHECK(blk != NULL, "the block lands");
-        const float* r1 = (const float*)(blk + 0x2c);
-        CHECK(r1[0] == 1.0f && r1[1] == 2.0f && r1[2] == 4.0f
-                  && r1[3] == 6.0f,
-              "the stream lands with the size sums");
-        uint32_t bits = 0u;
-        __builtin_memcpy(&bits, r1 + 8, 4);
-        CHECK(bits == 0x111u, "the id carries bit for bit");
-        __builtin_memcpy(&bits, r1 + 6, 4);
-        CHECK(bits != 0u, "the first texture stream lands at +18");
-        __builtin_memcpy(&bits, r1 + 4, 4);
-        CHECK(bits == 0u, "the second stream leaves +16 clear");
-        const float* r0 = (const float*)blk;
-        __builtin_memcpy(&bits, r0 + 6, 4);
-        CHECK(bits == 0u, "the absent second item first stream stays clear");
-        __builtin_memcpy(&bits, r0 + 5, 4);
-        CHECK(bits != 0u, "the third stream lands at +14");
-        CHECK(crt_surface_calls_count() == 4, "the seam records the loads");
-        int transforms = 0;
-        for (int ci = 0; ci < crt_surface_calls_count(); ++ci) {
-            uint32_t h; float cx, cy;
-            crt_surface_call_get(ci, &h, &cx, &cy);
-            (void)h;
-            if (cx == 0.0f && cy == 0.0f) {
-                ++transforms;
-            }
-        }
-        CHECK(transforms == 4, "the loads land as transforms");
+        PanelButton* blk = (PanelButton*)panel_draw_records_peek(3);
+        CHECK(blk != NULL, "the list lands");
+        CHECK(blk[1].x1 == 1.0f && blk[1].y1 == 2.0f && blk[1].x2 == 4.0f
+                  && blk[1].y2 == 6.0f,
+              "the first row lands at its button type with the corners");
+        CHECK(blk[1].toolTip == 0x111 && blk[0].toolTip == 0x222,
+              "the tool tips follow their rows");
+        CHECK(blk[0].normalImage == NULL && blk[0].highlightImage == NULL
+                  && blk[0].pressedImage == NULL && blk[0].flags == 0u,
+              "no names load no images, and the flags start clear");
         panel_draw_records_set(3, NULL);
         panel_draw_count_set(3, 0);
-        panel_texture_slots_allocate(3, 0, NULL, NULL, NULL, NULL, NULL,
+        engine_heap_free(blk);
+        panel_texture_slots_allocate(3, 0u, NULL, NULL, NULL, NULL, NULL,
                                      NULL); /* count zero: inert */
         CHECK(panel_draw_count_peek(3) == 0, "the zero count stays inert");
 
@@ -672,7 +646,7 @@ int main(void)
         const uint32_t fl_a = 2u, fl_b = 4u;
         __builtin_memcpy(rect_a + 6, &fl_a, 4); /* bit 2, rec+16 set */
         __builtin_memcpy(rect_b + 6, &fl_b, 4); /* size-b pair path */
-        indexed_pair_set(4, 100u, 50u);        /* the region offsets */
+        indexed_pair_set(4, 100.0f, 50.0f);    /* the region offsets */
         indexed_float_pair_set(2, 10u, 20u);   /* the view's own pair */
         view_blit_window_set(2, 777u, rect_a, rect_b, 4);
         indexed_record_pointer_set(2, metrics);
