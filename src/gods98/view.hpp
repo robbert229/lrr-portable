@@ -1515,7 +1515,7 @@ void scene_object_value_query_hooks_set(void* context,
                                         SceneObjectReadyQueryFn ready_query,
                                         SceneObjectCurrentValueFn value_query,
                                         SceneObjectValueReleaseFn release);
-uint32_t scene_object_query_value_if_ready(void* object);
+extern "C" uint32_t scene_object_query_value_if_ready(void* object);
 
 /* --- 4x4 matrix primitives + polygon parity test (corpus FUN_00479ea0 /
  * FUN_00479ce0 / FUN_00479b80; findings 309/388) ---------------------------

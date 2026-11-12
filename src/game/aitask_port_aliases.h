@@ -56,6 +56,10 @@
  * matches (00431450); a #define in a header it already includes does not. */
 #define weapon_type_config_load weapons_initialise /* 0046eb80 */
 #define entity_indexed_float_lookup_with_minus_one_fallback weapons_get_damage_for_object /* 0046f1d0 */
+/* GAME-041 SFX.c (finding 585), for lego_unit.c's engine tick (004232e0):
+ * sfx.c defines 00465030, which returns the volume, under the port's name
+ * (sfx_link_names.h); the port's adapter is native-only. */
+#define sound_variant_property_read_original sound_variant_property_read /* 00465030 */
 #endif
 
 #endif /* LEGORRR_GAME_AITASK_PORT_ALIASES_H */
