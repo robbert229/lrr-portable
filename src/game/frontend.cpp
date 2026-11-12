@@ -66,6 +66,8 @@
 __declspec(allocate(".data$zzzzzz")) static unsigned char
     s_menu_action_table_gap[0x3aad0] = { 0 };
 #pragma data_seg()
+#endif
+#if defined(LEGORRR_BACKEND_WINAPI)
 #define MENU_ACTION_TABLE_ALLOC __declspec(allocate(".data$zzzzzz"))
 #else
 #define MENU_ACTION_TABLE_ALLOC
