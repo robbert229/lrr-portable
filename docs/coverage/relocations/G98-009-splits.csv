@@ -1,0 +1,2 @@
+role,address,name,from,to,before_sha256,after_sha256,edit
+split-declarators,,"s_sound_on,s_sound_active",src/gods98/simtick.cpp:321,src/gods98/simtick.cpp:321,a2168c531868a2d67aab6401319ea6fb46bd3935b453aee6b42c4a4a47b2a16b,059e04ca00b5469fae5cf67428cc7a2e65d647fff6a257f5207ce52d0487e975,split into 2 declarations

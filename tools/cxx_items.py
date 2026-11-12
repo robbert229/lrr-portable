@@ -54,6 +54,7 @@ DIRECTIVE = re.compile(r"[ \t]*#[ \t]*(\w*)")
 CONTROL = {"if", "for", "while", "switch", "catch", "sizeof", "return", "do", "else"}
 DECL_STRIP = re.compile(r"__declspec\s*\((?:[^()]|\([^()]*\))*\)|__attribute__\s*\(\((?:[^()]|\([^()]*\))*\)\)")
 TYPE_KEYWORDS = ("struct", "union", "enum", "class")
+NESTED_NAMESPACES = re.compile(r"(?:ns:[A-Za-z_]\w*/)+(?:ns:[A-Za-z_]\w*|anon)")
 
 
 # --------------------------------------------------------------------------
@@ -443,10 +444,21 @@ def scan(text: str) -> Scan:
         problems.append("unbalanced braces at end of file")
     for item in items:
         _describe(item, text, masked)
-        if item.container and "/" in item.container and not re.fullmatch(r"ns:[A-Za-z_]\w*/anon", item.container):
-            # namespace X { namespace { } } is supported (scope X, internal
-            # linkage); other nesting is not.
+        if item.container and "/" in item.container and not NESTED_NAMESPACES.fullmatch(item.container):
+            # Named namespaces nest (scope A::B, #514), optionally with an
+            # anonymous namespace innermost (internal linkage); a linkage
+            # block or an anonymous namespace inside another block does not.
             item.problems.append(f"nested namespace or linkage block ({item.container})")
+        elif item.container and "/" in item.container:
+            names = [p[3:] for p in item.container.split("/") if p.startswith("ns:")]
+            if len(set(names)) < len(names):
+                # namespace X { namespace X { } }: inside the outer X, a
+                # qualified X:: names the inner one once it is declared, so
+                # lookups depend on position and a relocation, which
+                # reorders items, can change them (#514).
+                item.problems.append(f"nested namespace or linkage block ({item.container}): namespace "
+                                     f"{names[-1]} is nested in itself, so qualified {names[-1]}:: lookups "
+                                     "depend on position; close the outer namespace first (a source fix)")
     items = _merge_groups(items, groups, text)
     for item in items:
         item.lead = _lead(item, text, masked)
@@ -595,6 +607,7 @@ def _describe(item: Item, text: str, masked: str) -> None:
         item.uses -= set(item.names)
         if item.qualifier:
             item.uses.discard(f"{item.qualifier}::{name}")
+            item.uses.add(item.qualifier)
         return
     decl = code.rstrip().rstrip(";")
     stripped = decl.strip()
@@ -769,7 +782,7 @@ def _merge_groups(items: list[Item], groups: list[Group], text: str) -> list[Ite
 
 
 
-CLUSTER_CATEGORIES = ("macro", "include", "type", "proto", "var")
+CLUSTER_CATEGORIES = ("macro", "include", "type", "proto", "var", "function")
 
 
 def _cluster_group(g: Group, items: list[Item], text: str) -> tuple[tuple[int, Item] | None, str]:
@@ -789,11 +802,13 @@ def _cluster_group(g: Group, items: list[Item], text: str) -> tuple[tuple[int, I
     if not keys:
         return None, "it holds no items"
     members = [items[k] for k in keys]
+    masked = mask(text)
     if any(it.cond != 1 for it in members):
         return None, "it is nested in another #if group"
     for it in members:
-        if it.category == "function":
-            return None, f"it holds the function definition {', '.join(it.names) or '?'} besides other items"
+        if it.category == "function" and ANNOTATION.search(
+                text, _lead(Item(kind="", start=it.start, end=it.start), text, masked), it.start):
+            return None, f"it holds the annotated function definition {', '.join(it.names) or '?'} besides other items"
         if it.category not in CLUSTER_CATEGORIES:
             word = DIRECTIVE.match(text, it.start)
             return None, f"it holds a #{word.group(1) if word else it.category} directive"
@@ -807,7 +822,8 @@ def _cluster_group(g: Group, items: list[Item], text: str) -> tuple[tuple[int, I
     # One cluster: union by shared names and by uses of each other's names.
     # Header-safe members (macros, types, prototypes) always belong together:
     # they can all go to the private header (the plan's P2 allows two macros
-    # per branch). Data must connect by names.
+    # per branch). So do unannotated helper functions (#514: G98-009's COM
+    # helpers and the GNU branch's typedefs). Data must connect by names.
     named = [k for k, it in enumerate(members) if it.category != "include"]
     parent = {k: k for k in named}
 
@@ -816,7 +832,7 @@ def _cluster_group(g: Group, items: list[Item], text: str) -> tuple[tuple[int, I
             parent[x] = parent[parent[x]]
             x = parent[x]
         return x
-    safe = [k for k in named if members[k].category in ("macro", "type", "proto")]
+    safe = [k for k in named if members[k].category in ("macro", "type", "proto", "function")]
     for k in safe[1:]:
         parent[find(k)] = find(safe[0])
     owner: dict[str, int] = {}
@@ -841,10 +857,9 @@ def _cluster_group(g: Group, items: list[Item], text: str) -> tuple[tuple[int, I
         it.branch = branch_of[k]
         parts.append(it)
     cats = {it.category for it in parts}
-    category = next(c for c in ("var", "proto", "type", "macro") if c in cats)
+    category = next(c for c in ("function", "var", "proto", "type", "macro") if c in cats)
     names = list(dict.fromkeys(n for it in parts for n in it.names))
     cond_uses = set()
-    masked = mask(text)
     for m in DIRECTIVE_LINE.finditer(masked, g.start, g.end):
         if m.group(1) in ("if", "ifdef", "ifndef", "elif"):
             cond_uses |= set(IDENT.findall(m.group(2)))

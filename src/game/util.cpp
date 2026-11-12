@@ -18,6 +18,7 @@
 #include "util.hpp"
 #include "util_shared.hpp"
 #include "util_for_tile_variants.hpp"
+#include "util_for_lego.hpp"
 
 static ParsedEntityHealthValue s_parsed_entity_health_value;
 
@@ -515,8 +516,8 @@ unsigned int s_level_remap_count;
 EntityLinkList** s_entity_link_lists;
 void (*s_entity_link_node_release_hook)(EntityLinkNode*);
 void (*s_entity_link_list_release_hook)(EntityLinkList*);
-static void (*s_resource_entry_release_hook)(void*);
-static void (*s_resource_array_release_hook)(void*);
+void (*s_resource_entry_release_hook)(void*);
+void (*s_resource_array_release_hook)(void*);
 
 #define STRING_QUEUE_CAPACITY 15
 #define STRING_QUEUE_TEXT_CAPACITY 1024
@@ -639,28 +640,6 @@ void rectangular_resource_table_release_hooks_set(void (*resource_hook)(void*),
 {
     s_resource_entry_release_hook = resource_hook;
     s_resource_array_release_hook = array_hook;
-}
-
-// FUNCTION: LEGORR 0x0042b480
-void rectangular_resource_table_destroy(RectangularResourceTable* table)
-{
-    unsigned long i;
-    unsigned long total;
-    if (table == NULL || table->resources == NULL) return;
-    total = (unsigned long)table->width * (unsigned long)table->height;
-    for (i = 0; i < total; ++i) {
-        if (s_resource_entry_release_hook != NULL)
-            s_resource_entry_release_hook(table->resources[i]);
-        else
-            unported_ledger_stubs::cell_visual_channel_table_dispose(
-                (unported_ledger_stubs::CellVisualChannelTable*)
-                    table->resources[i]);
-    }
-    if (s_resource_array_release_hook != NULL)
-        s_resource_array_release_hook(table->resources);
-    else
-        engine_heap_free(table->resources);
-    table->resources = NULL;
 }
 
 void string_queue_flush_hook_set(StringQueueFlushHook hook)

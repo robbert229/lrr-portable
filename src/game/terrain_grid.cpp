@@ -26,6 +26,7 @@
 
 #include <stdlib.h>
 #include "terrain_grid_shared.hpp"
+#include "terrain_grid_for_lego.hpp"
 
 static BlockFile* s_texture_set_config_context;
 TerrainCellInBoundsHook s_terrain_cell_in_bounds_hook;
@@ -897,71 +898,6 @@ int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid,
     return 1;
 }
 
-/* LoadTileMeshes (FUN_0042b330): the level owns a row-major pointer table of
- * TileModelEntityRegister records. The editor path leaves it zeroed; normal
- * play registers one paired visual record for every surface-text cell. */
-// FUNCTION: LEGORR 0x0042b330
-int terrain_tile_mesh_grid_load_level(LevelState* level,
-                                      const char* bitmap_prefix)
-{
-    TerrainTileMeshGrid* grid;
-    size_t count;
-    uint32_t y;
-    if (level == NULL) return 0;
-    grid = level->ptr_tile_mesh_grid;
-    if (grid == NULL) return 0;
-    grid->owner_level = level;
-    if (grid->width == 0u || grid->height == 0u ||
-        grid->width > 65535u || grid->height > 65535u ||
-        (size_t)grid->width > ((size_t)-1) / (size_t)grid->height ||
-        (size_t)grid->width * (size_t)grid->height >
-            ((size_t)-1) / sizeof(void*)) return 0;
-    grid->bitmap_prefix = bitmap_prefix;
-    terrain_tile_mesh_grid_release(grid);
-    count = (size_t)grid->width * (size_t)grid->height;
-    grid->meshes = (SceneCellVisualRelayRecord**)calloc(
-        count, sizeof(SceneCellVisualRelayRecord*));
-    if (grid->meshes == NULL) return 0;
-    if (grid->editor_mode) return 1;
-    if (grid->bitmap_prefix == NULL) {
-        terrain_tile_mesh_grid_release(grid);
-        return 0;
-    }
-    /* The retail loop indexes the pointer table by y * width + x. Its
-     * registration failure is nonfatal: a failed scene resource leaves a
-     * null slot while the rest of the cell grid is still initialized. */
-    if (grid->register_mesh == NULL) return 1;
-    for (y = 0u; y < grid->height; ++y) {
-        uint32_t x;
-        for (x = 0u; x < grid->width; ++x) {
-            char bitmap_a[256];
-            char bitmap_b[256];
-            size_t prefix_len = strlen(grid->bitmap_prefix);
-            size_t index = (size_t)y * (size_t)grid->width + x;
-            if (prefix_len + 16u >= sizeof(bitmap_a)) {
-                terrain_tile_mesh_grid_release(grid);
-                return 0;
-            }
-            strcpy(bitmap_a, grid->bitmap_prefix);
-            strcpy(bitmap_b, grid->bitmap_prefix);
-            sprintf(bitmap_a + prefix_len, "%x%xa", (unsigned int)x,
-                    (unsigned int)y);
-            sprintf(bitmap_b + prefix_len, "%x%xb", (unsigned int)x,
-                    (unsigned int)y);
-            grid->meshes[index] = grid->register_mesh(
-                grid->scene, bitmap_a, bitmap_b, grid->material,
-                grid->options, grid->context);
-            if (grid->meshes[index] != NULL) {
-                SceneCellVisualRelayRecord* visual = grid->meshes[index];
-                visual->lookup_table =
-                    (SceneCellVisualLookupTable*)grid->visual_lookup_table;
-                visual->projection_scale = grid->cell_projection_scale;
-            }
-        }
-    }
-    return 1;
-}
-
 struct SceneCellVisualRelayRecord* terrain_tile_mesh_visual_channels_get(
     TerrainTileMeshGrid* grid, uint8_t packed_surface)
 {
@@ -1036,7 +972,7 @@ int terrain_texture_set_config_load_current(TerrainTileMeshGrid* grid,
     return terrain_texture_set_config_load(grid, group_name);
 }
 
-static int terrain_texture_set_config_load_grid(TerrainTileMeshGrid* grid,
+int terrain_texture_set_config_load_grid(TerrainTileMeshGrid* grid,
                                                 const char* group_name)
 {
     BlockFile* config = s_texture_set_config_context;
@@ -1180,18 +1116,6 @@ int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
     return terrain_texture_set_config_load_grid(grid, group_name);
 }
 
-/* Retail TextureSetConfigLoad receives the level record and resolves its
- * +0x74/+0x78 grid and +0x04 terrain owner before loading resources. */
-// FUNCTION: LEGORR 0x0042BB60
-int terrain_texture_set_config_load_level(LevelState* level,
-                                          const char* group_name)
-{
-    if (level == NULL || level->ptr_tile_mesh_grid == NULL) return 0;
-    level->ptr_tile_mesh_grid->owner_level = level;
-    return terrain_texture_set_config_load_grid(
-        level->ptr_tile_mesh_grid, group_name);
-}
-
 void terrain_texture_set_release(TerrainTileMeshGrid* grid)
 {
     const void* borrowed_window;
@@ -1239,41 +1163,6 @@ void terrain_grid_entry_resources_release_all(TerrainCellResourceGrid* grid)
         if (grid->handles[i] != NULL) {
             texture_release_record((TextureReleaseRecord*)grid->handles[i]);
             grid->handles[i] = NULL;
-        }
-    }
-}
-
-/* TerrainGridEntryResourcesReleaseAll (FUN_00434530): the retail level's
- * +0x80 pointer array contains visual-channel records. Clear their two
- * 100-entry resource channels and reset +0x32c; retain the records and roots. */
-// FUNCTION: LEGORR 0x00434530
-void terrain_grid_entry_resources_release_all_current(void)
-{
-    GameContext* game = entity_pool_callback_context_get();
-    LevelState* level = game != NULL ? game->level : NULL;
-    TerrainTileMeshGrid* grid;
-    size_t count;
-    size_t i;
-    if (level == NULL)
-        level = (LevelState*)map_cell_record_grid_level_get();
-    if (level == NULL) return;
-    grid = level->ptr_tile_mesh_grid;
-    if (grid == NULL || grid->meshes == NULL) return;
-    if (grid->height != 0u && (size_t)grid->width >
-        ((size_t)-1) / (size_t)grid->height) return;
-    count = (size_t)grid->width * (size_t)grid->height;
-    for (i = 0u; i < count; ++i) {
-        SceneCellVisualRelayRecord* visual = grid->meshes[i];
-        uint32_t channel;
-        uint32_t item;
-        if (visual == NULL) continue;
-        visual->channel_cursor = 0u;
-        for (channel = 0u; channel < 2u; ++channel) {
-            for (item = 0u; item < 100u; ++item) {
-                void* resource = visual->channel_resources[channel][item];
-                if (resource != NULL) ddiscene_object_destroy(resource);
-                visual->channel_resources[channel][item] = NULL;
-            }
         }
     }
 }
@@ -1593,90 +1482,6 @@ void terrain_cell_palette_resource_at_grid_position(
     packed |= grid->cell_records[cell_index * 0x48u + 1u];
     grid->palette_resource_select(grid->context, packed);
 }
-
-/* TerrainCellPaletteResourceAtGridPosition returns the cell's palette
- * texture handle from the current level's +0x7c resource grid. */
-// FUNCTION: LEGORR 0x00429160
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void* terrain_cell_palette_resource_at_grid_position_current(
-    const int cell_xy[2])
-{
-    __asm {
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esp + 4]
-        push esi
-        mov eax, dword ptr [ecx + 14h]
-        mov esi, dword ptr [edx]
-        imul eax, dword ptr [edx + 4]
-        mov edx, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [ecx + 7ch]
-        add eax, esi
-        lea eax, dword ptr [eax + eax*8]
-        mov al, byte ptr [edx + eax*8 + 1]
-        push eax
-        push ecx
-        call packed_grid_cell_value_get
-        add esp, 8
-        pop esi
-        ret
-    }
-}
-#else
-void* terrain_cell_palette_resource_at_grid_position_current(
-    const int cell_xy[2])
-{
-    LevelState* level = level_current_owner_get();
-    if (level == NULL || cell_xy == NULL) return NULL;
-#if defined(_WIN32) && !defined(_WIN64)
-    /* The retail target reads the active level's +0x14 width, +0xb8 cell
-     * table, and +0x7c LoadTileVariants descriptor directly. Its callers
-     * supply in-bounds coordinates; preserve the same row-major selector and
-     * let PackedGridCellValueGet decode the table coordinates. */
-    {
-        uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
-        uint32_t index = width * (uint32_t)cell_xy[1] +
-                         (uint32_t)cell_xy[0];
-        uint32_t packed = index * 9u;
-        const uint8_t* voxels = (const uint8_t*)
-            level->word[LEVEL_OFF_VOXELS / 4];
-        const void* resources = (const void*)
-            level->word[LEVEL_OFF_CELL_RESOURCES / 4];
-        packed = (packed & 0xffffff00u) |
-            voxels[index * LEVEL_VOXEL_STRIDE + 1u];
-        return (void*)packed_grid_cell_value_get(resources, packed);
-    }
-#else
-    {
-        TerrainCellResourceGrid* resources;
-        const uint8_t* cell;
-        uint32_t x, y, width, height, index, packed, row, column;
-        uint32_t resource_index;
-        width = (uint32_t)level_width(level);
-        height = (uint32_t)level_height(level);
-        if (cell_xy[0] < 0 || cell_xy[1] < 0 ||
-            (uint32_t)cell_xy[0] >= width ||
-            (uint32_t)cell_xy[1] >= height) return NULL;
-        x = (uint32_t)cell_xy[0];
-        y = (uint32_t)cell_xy[1];
-        cell = level_voxel(level, (int)x, (int)y);
-        resources = level->ptr_cell_resources;
-        if (cell == NULL || resources == NULL || resources->handles == NULL)
-            return NULL;
-        index = y * width + x;
-        packed = (index * 9u & 0xffffff00u) | cell[1];
-        /* FUN_0040b850 indexes low-nibble * width + high-nibble. */
-        row = packed & 0x0fu;
-        column = (packed & 0xffu) >> 4;
-        if (row >= resources->height || column >= resources->width)
-            return NULL;
-        resource_index = row * resources->width + column;
-        if (resource_index >= resources->width * resources->height)
-            return NULL;
-        return resources->handles[resource_index];
-    }
-#endif
-}
-#endif
 
 /* TerrainViewTileGeometryBuild (FUN_0045dbc0) remains an explicit-grid
  * adapter for the retail global render-view/mesh owner.  When no renderer
@@ -2500,7 +2305,6 @@ int ledger_stub_0042bb60_TextureSetConfigLoad(LevelState* level,
     return terrain_texture_set_config_load_level(level, group_name);
 }
 
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
@@ -2512,7 +2316,6 @@ int ledger_stub_0044fb90_TerrainSurfacePointProjectOffset(
     return terrain_surface_point_project_offset(grid, x, z, orientation,
                                                 offset, out_x, out_z);
 }
-
 
 } // namespace unported_ledger_stubs
 
@@ -2559,7 +2362,6 @@ int ledger_stub_00463590_TerrainCellSurfaceNormalGet(uint32_t x, uint32_t y,
     return terrain_cell_surface_normal_get(x, y, normal);
 }
 
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
@@ -2577,7 +2379,6 @@ const int* ledger_stub_004641c0_BuildingPlacementFootprintRenderAndValidate(
         surface, offset, source_xy, count, rotation, maximum_height_span,
         maximum_edge_delta, minimum_routes, hooks);
 }
-
 
 } // namespace unported_ledger_stubs
 
@@ -2624,52 +2425,6 @@ void* ledger_stub_0046e9d0_StagedCellCandidateCollect(
     return staged_cell_candidate_collect(row, first_cell, end_cell);
 }
 
-
-// FUNCTION: LEGORR 0x00431b20
-uint32_t terrain_placement_blocked_adjacent_cell_scan(
-    int x, int y, int mode, int duplicate_pair)
-{
-    static const int offset[4][2] = {
-        { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 }
-    };
-    GameContext* game = entity_pool_callback_context_get();
-    LevelState* level = game != NULL ? game->level : NULL;
-    uint8_t* cell;
-    uint32_t flags;
-    uint8_t type;
-    void* descriptor;
-    uint32_t index;
-    if (level == NULL)
-        level = (LevelState*)map_cell_record_grid_level_get();
-    if (level == NULL) return 0u;
-    cell = level_voxel(level, x, y);
-    if (cell == NULL || (cell[0x0c] & 0x20u) != 0u) return 0u;
-    flags = *(uint32_t*)(cell + 0x08);
-    type = cell[0x02];
-
-    descriptor = path_record_last_peek();
-    while (descriptor != NULL) {
-        const uint32_t* words = (const uint32_t*)descriptor;
-        if (words[3] == (uint32_t)x && words[4] == (uint32_t)y)
-            return 0u;
-        descriptor = *(void**)((uint8_t*)descriptor + 0x24);
-    }
-    if ((flags & 0x20000000u) != 0u) return 0u;
-    if (mode != 0 && duplicate_pair != 0 && type != 9u) return 0u;
-    if (mode != 0 && (flags & 0x8000u) != 0u) return 0u;
-    if ((duplicate_pair == 0 && type == 9u) || type == 6u) return 0u;
-    if ((flags & 8u) == 0u || (flags & 0x200000u) == 0u ||
-        (flags & 0x108400u) != 0u) return 0u;
-    if (grid_cell_record_present_check(x, y) != 0) return 0u;
-
-    for (index = 0u; index < 4u; ++index) {
-        uint8_t* neighbor = level_voxel(
-            level, x + offset[index][0], y + offset[index][1]);
-        if (neighbor == NULL || neighbor[0x02] == 11u) return 0u;
-    }
-    return 1u;
-}
-
 /* Adapter only: RenderQualityConfigApply (FUN_004334f0) has no explicit
  * arguments; it reads the global config and render device state. This port
  * seam accepts parsed settings and does not provide those global owners. */
@@ -2680,83 +2435,6 @@ int ledger_stub_004334f0_RenderQualityConfigApply(
 }
 
 } // namespace unported_ledger_stubs
-
-namespace unported_ledger_stubs {
-int ledger_stub_00449700_RouteStepCommandIssue(EntitySlot* entity);
-}
-
-/* EntityNeighborBlockedCellStepProbe (FUN_00433c10): the retail ABI is an
- * entity, a float cadence divisor, and a mode word. The first branch tests
- * the four adjacent voxel flag words and raises the route-step response on
- * the first cell with bit 0x10 set and bit 8 clear. */
-// FUNCTION: LEGORR 0x00433c10
-int entity_neighbor_blocked_cell_step_probe(EntitySlot* entity,
-                                             float cadence, int mode)
-{
-    static const int offset[4][2] = {
-        { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 }
-    };
-    GameContext* game;
-    LevelState* level;
-    int cell_x = -1;
-    int cell_y = -1;
-    uint32_t state_flags;
-    int i;
-    if (entity == NULL) return 0;
-    state_flags = entity_state_flags_get(entity);
-    game = entity_pool_callback_context_get();
-    level = game != NULL ? game->level : NULL;
-    if (level == NULL)
-        level = (LevelState*)map_cell_record_grid_level_get();
-    if (level == NULL) return 0;
-
-    if ((state_flags & 0x1000u) != 0u &&
-        (entity->flags_3e0 & 1u) == 0u &&
-        !entity_flags_mask107c33de_or_1c00203_any_test(entity) &&
-        cadence != 0.0f) {
-        uint32_t divisor = (uint32_t)(int)cadence;
-        if (divisor != 0u &&
-            (uint32_t)level_random_draw15() % divisor == 0u) {
-            entity_position_to_terrain_cell(entity, level, &cell_x, &cell_y);
-            if (!level_coord_pair_within_bounds(level, cell_x, cell_y))
-                return 0;
-            for (i = 0; i < 4; ++i) {
-                int x = cell_x + offset[i][0];
-                int y = cell_y + offset[i][1];
-                uint8_t* cell;
-                uint32_t flags;
-                if (x < 0 || y < 0 ||
-                    (uint32_t)x >= level->word[5] - 1u ||
-                    (uint32_t)y >= level->word[6] - 1u) continue;
-                cell = level_voxel(level, x, y);
-                if (cell == NULL) continue;
-                memcpy(&flags, cell + 8, sizeof(flags));
-                if ((flags & 0x10u) != 0u && (flags & 8u) == 0u) {
-                    entity->field_340 = -1.0f;
-                    unported_ledger_stubs::
-                        ledger_stub_00449700_RouteStepCommandIssue(entity);
-                    return 1;
-                }
-            }
-        }
-    }
-
-    /* The other retail branch calls EntityRandomCellStepRouteIssue after its
-     * own cadence gate. Its route search needs the renderer-owned surface
-     * sampler and path-marker allocator, neither of which has a live adapter
-     * in this module; leave that action inert until those owners are bound. */
-    if ((mode != 0 || (state_flags & 0x400u) != 0u) &&
-        (entity->flags_3e0 & 1u) == 0u &&
-        !entity_flags_mask107c33de_or_1c00203_any_test(entity) &&
-        cadence != 0.0f) {
-        uint32_t divisor = (uint32_t)(int)cadence;
-        if (mode != 0 || (divisor != 0u &&
-                          (uint32_t)level_random_draw15() % divisor == 0u)) {
-            /* See the dependency note above. */
-        }
-    }
-    return 0;
-}
 
 namespace unported_ledger_stubs {
 
@@ -2809,7 +2487,6 @@ int ledger_stub_0042de40_ViewportTargetPositionClamp(
     return viewport_target_position_clamp(state, position);
 }
 
-
 /* Port adapter for TerrainStampImpactHandler (FUN_00431780). Its hook-bundle
  * argument is a reconstruction seam, not part of the corpus ABI; production
  * terrain/effect bindings are not installed yet. */
@@ -2820,14 +2497,12 @@ int ledger_stub_00431780_TerrainStampImpactHandler(
     return terrain_stamp_impact_handle(x, y, direction, mode, hooks);
 }
 
-
 // ProcessQueuedGridAnimations
 void ledger_stub_00437300_ProcessQueuedGridAnimations(
     void* anchor, int mode, float delta)
 {
     process_queued_grid_animations(anchor, mode, delta);
 }
-
 
 /* Retain the earlier port-facing mesh-grid adapter for internal callers. */
 int ledger_stub_0040b310_LoadTileMeshes(TerrainTileMeshGrid* grid,
@@ -2852,6 +2527,5 @@ TileModelEntityRegistration* ledger_stub_0040b5f0_TileModelEntityRegister(
     return tile_model_entity_register(manager, first_entry, second_entry,
                                       scale_percent, parameter, hooks);
 }
-
 
 } // namespace unported_ledger_stubs

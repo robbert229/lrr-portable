@@ -385,17 +385,12 @@ class RefusalTest(unittest.TestCase):
                                   "// FUNCTION: LEGORR 0x00401000\nDECLARE_IT(x) int alpha_first(int x)"),
                     "macro or complex declarator")
 
-    def test_nested_namespace(self):
+    def test_linkage_block_inside_a_namespace(self):
         nested = MIXED.replace("// FUNCTION: LEGORR 0x00401000\nint alpha_first(int x)\n{\n"
                                "    s_alpha_state = x;\n    return alpha_second();\n}\n",
-                               "namespace outer {\nnamespace inner {\n// FUNCTION: LEGORR 0x00401000\n"
+                               "namespace outer {\nextern \"C\" {\n// FUNCTION: LEGORR 0x00401000\n"
                                "int alpha_first(int x)\n{\n    return x;\n}\n}\n}\n")
         self.refuse(nested, "nested namespace")
-
-    def test_out_of_line_class_member(self):
-        member = MIXED.replace("// FUNCTION: LEGORR 0x00401000\nint alpha_first(int x)",
-                               "// FUNCTION: LEGORR 0x00401000\nint Obj::alpha_first(int x)")
-        self.refuse(member, "out-of-line member of Obj")
 
     def test_function_defined_in_a_header(self):
         self.refuse(MIXED, "edit a shared header",
@@ -405,11 +400,13 @@ class RefusalTest(unittest.TestCase):
         self.refuse(MIXED.replace("// FUNCTION: LEGORR 0x00401040\n", "// FUNCTION: LEGORR 0x00401040\n\n"),
                     "not attached")
 
-    def test_shared_inline(self):
-        mixed = MIXED.replace("static int alpha_helper(int v)\n{", "static inline int alpha_helper(int v)\n{") \
-            .replace("static int alpha_helper(int v);", "static inline int alpha_helper(int v);") \
-            .replace("    return s_beta_state;", "    return s_beta_state + alpha_helper(1);")
-        self.refuse(mixed, "inline alpha_helper")
+    def test_shared_annotated_inline(self):
+        # An annotated inline function shared by both files cannot go to a
+        # header (#514 moves only unannotated ones).
+        mixed = MIXED.replace("// FUNCTION: LEGORR 0x00401040\nint alpha_second(void)",
+                              "// FUNCTION: LEGORR 0x00401040\ninline int alpha_second(void)") \
+            .replace("    return s_beta_state;", "    return s_beta_state + alpha_second();")
+        self.refuse(mixed, "inline alpha_second")
 
     def test_several_declarators_shared(self):
         mixed = MIXED.replace("static int s_shared_counter;", "static int s_shared_counter, s_other;")
@@ -1073,7 +1070,7 @@ class AnonymousNamespaceTest(unittest.TestCase):
         finally:
             fx.close()
 
-    def test_shared_inline_in_anonymous_namespace_is_refused(self):
+    def test_shared_inline_in_anonymous_namespace_goes_to_the_header(self):
         mixed = MIXED.replace("static int alpha_helper(int v);\n", "").replace(
             "static int alpha_helper(int v)\n{\n    return v + 1;\n}\n", "") \
             .replace("static int s_shared_counter;",
@@ -1081,9 +1078,14 @@ class AnonymousNamespaceTest(unittest.TestCase):
             .replace("    return s_beta_state;", "    return s_beta_state + alpha_helper(1);")
         fx = Fixture(mixed)
         try:
-            with self.assertRaises(ru.Refused) as cm:
-                ru.plan_relocation("GAME-001", fx.root)
-            self.assertTrue(any("inline" in r for r in cm.exception.reasons), cm.exception.reasons)
+            # #514: an unannotated inline function both files use goes to the
+            # for header, verbatim; it leaves its anonymous namespace (an inline
+            # function may be defined in every translation unit).
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            header = plan.files["src/game/mixed_for_alpha.hpp"]
+            self.assertIn("inline int alpha_helper(int v) { return v + 1; }", header)
+            self.assertNotIn("alpha_helper(int v) {", plan.files["src/game/mixed.cpp"])
+            self.assertNotIn("alpha_helper(int v) {", plan.files["src/game/alpha.cpp"])
         finally:
             fx.close()
 
@@ -1150,6 +1152,25 @@ class OrderAndSurveyTest(unittest.TestCase):
         finally:
             fx.close()
 
+
+    def test_survey_plans_the_relocation_behind_a_split(self):
+        # #514 (GAME-021, G98-009): a unit that needs --split-declarations is
+        # "ok after" only if the relocation itself plans on the split text.
+        mixed = MIXED.replace("static int s_shared_counter;", "static int s_shared_counter, s_other;")
+        for frozen, expected in ((None, "ok after --split-declarations"),
+                                 ("// someone else's\n", "refused after --split-declarations")):
+            extra = {"src/game/mixed_for_alpha.hpp": frozen} if frozen else None
+            fx = Fixture(mixed, extra)
+            try:
+                result = next(r for r in ru.survey(fx.root) if r["unit"] == "GAME-001")
+                self.assertEqual(result["status"], expected)
+                if frozen:
+                    self.assertTrue(any("frozen" in r for r in result["reasons"]), result["reasons"])
+                    self.assertFalse(any(fx.dir.name in r for r in result["reasons"]))
+                # The survey never writes the real tree.
+                self.assertEqual(fx.read("src/game/mixed.cpp"), mixed)
+            finally:
+                fx.close()
 
 class LinkOrderPlaceTest(unittest.TestCase):
     STARTS = {"GAME-001": 0x401000, "GAME-002": 0x401100, "GAME-003": 0x402000}
@@ -1227,10 +1248,10 @@ class ConditionalGroupTest(unittest.TestCase):
 
     def test_groups_that_do_not_merge_say_why(self):
         unrelated = "#if A\nint a;\nint b;\n#endif\n"
-        with_function = "#if A\nint a;\nint f(void) { return a; }\n#endif\n"
+        with_function = "#if A\nint a;\n// FUNCTION: LEGORR 0x00401000\nint f(void) { return a; }\n#endif\n"
         guard = "#ifndef H\n#define H\nint a;\n#endif\n"
         nested = "#if A\n#if B\nint a;\n#endif\n#endif\n"
-        for text, why in ((unrelated, "2 unrelated clusters"), (with_function, "function definition f"),
+        for text, why in ((unrelated, "2 unrelated clusters"), (with_function, "annotated function definition f"),
                           (guard, "include guard"), (nested, "nested #if")):
             items = cx.scan(text).items
             self.assertFalse(any(i.cgroup for i in items), text)
@@ -1336,11 +1357,11 @@ class ConditionalGroupTest(unittest.TestCase):
     # -- (4) anything else refuses, naming the group
 
     def test_unmergeable_group_is_named(self):
-        group = ("#if defined(FEATURE)\nstatic int s_cond;\nstatic int cond_helper(void) { return s_cond; }\n"
+        group = ("#if defined(FEATURE)\nstatic int s_cond;\n#if defined(MORE)\nstatic int s_more;\n#endif\n"
                  "#endif\n")
         reasons = self.refused(self.guarded(group))
         line = self.guarded(group).splitlines().index("#if defined(FEATURE)") + 1
-        self.assertTrue(any(f"the group at line {line} cannot move whole" in r and "cond_helper" in r
+        self.assertTrue(any(f"the group at line {line} cannot move whole" in r and "nested #if" in r
                             for r in reasons), reasons)
 
     # -- T2: a static that a private-header item needs is exported
@@ -1356,9 +1377,19 @@ class ConditionalGroupTest(unittest.TestCase):
         rows = list(csv.DictReader(io.StringIO(plan.files["docs/coverage/relocations/GAME-001.csv"])))
         self.assertTrue(any(r["name"] == "s_scale_base" and "static removed" in r["edit"] for r in rows), rows)
 
-    def test_inline_static_a_header_needs_still_refuses(self):
+    def test_inline_a_header_macro_needs_goes_to_the_header(self):
+        # #514: an inline function is header-safe; it follows its macro.
         mixed = MIXED.replace("#define ALPHA_SCALE 3\n",
                               "static inline int scale_base(void) { return 3; }\n#define ALPHA_SCALE (scale_base() + 1)\n") \
+            .replace("    return s_beta_state;", "    return s_beta_state * ALPHA_SCALE;")
+        fx, plan = self.plan(mixed)
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
+        self.assertIn("static inline int scale_base(void) { return 3; }", header)
+        self.assertIn("#define ALPHA_SCALE (scale_base() + 1)", header)
+
+    def test_anonymous_static_a_header_needs_still_refuses(self):
+        mixed = MIXED.replace("#define ALPHA_SCALE 3\n",
+                              "namespace {\nint s_scale_base = 3;\n}\n#define ALPHA_SCALE (s_scale_base + 1)\n") \
             .replace("    return s_beta_state;", "    return s_beta_state * ALPHA_SCALE;")
         reasons = self.refused(mixed)
         self.assertTrue(any("a static that is not shared" in r for r in reasons), reasons)
@@ -1381,3 +1412,150 @@ class ConditionalGroupTest(unittest.TestCase):
         # Using only the datum is fine.
         fx, plan = self.plan(self.guarded(group))
         self.assertIn("extern int s_cond;", plan.files["src/game/mixed_for_alpha.hpp"])
+
+
+class RemainingRefusalsTest(unittest.TestCase):
+    """#514: nested namespaces, out-of-line class members, anonymous-namespace
+    forward declarations, helper functions in whole groups, name clashes."""
+
+    def plan(self, mixed: str, unit: str = "GAME-001", extra: dict | None = None):
+        fx = Fixture(mixed, extra)
+        self.addCleanup(fx.close)
+        return ru.plan_relocation(unit, fx.root)
+
+    def refused(self, mixed: str, extra: dict | None = None) -> list[str]:
+        fx = Fixture(mixed, extra)
+        self.addCleanup(fx.close)
+        with self.assertRaises(ru.Refused) as cm:
+            ru.plan_relocation("GAME-001", fx.root)
+        return cm.exception.reasons
+
+    def test_nested_named_namespaces_move_verbatim(self):
+        nested = MIXED.replace("// FUNCTION: LEGORR 0x00401000\nint alpha_first(int x)\n{\n"
+                               "    s_alpha_state = x;\n    return alpha_second();\n}\n",
+                               "namespace outer {\nnamespace inner {\n// FUNCTION: LEGORR 0x00401000\n"
+                               "int alpha_first(int x)\n{\n    return x;\n}\n}\n}\n")
+        plan = self.plan(nested)
+        unit = plan.files["src/game/alpha.cpp"]
+        self.assertIn("namespace outer {\nnamespace inner {\n// FUNCTION: LEGORR 0x00401000\nint alpha_first", unit)
+        self.assertIn("} // namespace inner\n} // namespace outer", unit)
+        self.assertNotIn("namespace outer::inner", unit)     # MSVC 5.0 has no nested namespace definitions
+        self.assertEqual(cx.scan(unit).problems, [])
+
+    def test_nested_namespace_declarations_nest(self):
+        # A staying member of outer::inner that moved code uses gets its
+        # declaration in nested blocks, never `namespace outer::inner`.
+        nested = MIXED.replace("static int alpha_helper(int v)\n{\n    return v + 1;\n}\n",
+                               "namespace outer {\nnamespace inner {\nint deep(int v)\n{\n    return v + 1;\n}\n}\n}\n") \
+            .replace("    return s_beta_state;", "    return s_beta_state + outer::inner::deep(1);") \
+            .replace("    return alpha_helper(s_alpha_state) * ALPHA_SCALE;",
+                     "    return outer::inner::deep(s_alpha_state) * ALPHA_SCALE;") \
+            .replace("static int alpha_helper(int v);\n", "")
+        plan = self.plan(nested)
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
+        self.assertIn("namespace outer {\nnamespace inner {\nint deep(int v);\n} // namespace inner\n"
+                      "} // namespace outer", header)
+
+    def test_out_of_line_class_member_moves_with_its_class(self):
+        member = MIXED.replace("static int s_shared_counter;",
+                               "class Obj {\npublic:\n    int alpha_first(int x);\n};\nstatic int s_shared_counter;") \
+            .replace("// FUNCTION: LEGORR 0x00401000\nint alpha_first(int x)",
+                     "// FUNCTION: LEGORR 0x00401000\nint Obj::alpha_first(int x)")
+        plan = self.plan(member)
+        unit = plan.files["src/game/alpha.cpp"]
+        self.assertIn("int Obj::alpha_first(int x)", unit)
+        self.assertIn("class Obj {", unit)                       # only moved code uses it
+        for path, text in plan.files.items():
+            if path.endswith(".hpp"):
+                self.assertNotRegex(text, r"\bint alpha_first\(int x\);", path)  # the class declares it
+
+    def test_shared_class_goes_to_the_header(self):
+        member = MIXED.replace("static int s_shared_counter;",
+                               "class Obj {\npublic:\n    int alpha_first(int x);\n};\nstatic int s_shared_counter;") \
+            .replace("// FUNCTION: LEGORR 0x00401000\nint alpha_first(int x)",
+                     "// FUNCTION: LEGORR 0x00401000\nint Obj::alpha_first(int x)") \
+            .replace("    return s_beta_state;", "    Obj o;\n    return s_beta_state + o.alpha_first(1);")
+        plan = self.plan(member)
+        self.assertIn("class Obj {", plan.files["src/game/mixed_for_alpha.hpp"])
+        self.assertNotIn("class Obj {", plan.files["src/game/mixed.cpp"])
+
+    def test_anonymous_namespace_function_used_before_its_definition(self):
+        anon = MIXED.replace("static int alpha_helper(int v);\n", "") \
+            .replace("static int alpha_helper(int v)\n{\n    return v + 1;\n}\n",
+                     "namespace {\nint alpha_helper(int v)\n{\n    return v + 1;\n}\n}\n")
+        plan = self.plan(anon)
+        self.assertIn("namespace { int alpha_helper(int v); }", plan.forward)
+        unit = plan.files["src/game/alpha.cpp"]
+        self.assertLess(unit.index("namespace { int alpha_helper(int v); }"), unit.index("int alpha_second(void)"))
+
+    def test_helper_functions_in_a_whole_group(self):
+        # G98-009's shape: alternative static helpers, with typedefs in the
+        # second branch, used only by moved code. The group moves whole and
+        # lands before the unit's functions (no forward declarations).
+        group = ("#if defined(_MSC_VER)\nstatic int alpha_helper(int v)\n{\n    return v + 1;\n}\n"
+                 "#elif defined(__GNUC__)\ntypedef int HelperInt;\nstatic int alpha_helper(int v)\n{\n"
+                 "    return (HelperInt)v + 1;\n}\n#endif\n")
+        mixed = MIXED.replace("static int alpha_helper(int v);\n", "") \
+            .replace("static int alpha_helper(int v)\n{\n    return v + 1;\n}\n", "") \
+            .replace("static int s_shared_counter;", group + "static int s_shared_counter;")
+        plan = self.plan(mixed)
+        unit = plan.files["src/game/alpha.cpp"]
+        self.assertIn(group, unit)
+        self.assertLess(unit.index(group), unit.index("int alpha_second(void)"))
+        self.assertEqual(plan.forward, [])
+        self.assertNotIn("alpha_helper", plan.files["src/game/mixed.cpp"])
+
+    def test_shared_helper_group_with_alternatives_refuses(self):
+        # G98-009's shape (typedefs in the second branch, so not plain
+        # alternatives of one function): shared, it would need a guarded
+        # declaration for both branches.
+        group = ("#if defined(_MSC_VER)\nstatic int alpha_helper(int v)\n{\n    return v + 1;\n}\n"
+                 "#elif defined(__GNUC__)\ntypedef int HelperInt;\nstatic int alpha_helper(int v)\n{\n"
+                 "    return (HelperInt)v + 2;\n}\n#endif\n")
+        mixed = MIXED.replace("static int alpha_helper(int v);\n", "") \
+            .replace("static int alpha_helper(int v)\n{\n    return v + 1;\n}\n", "") \
+            .replace("static int s_shared_counter;", group + "static int s_shared_counter;") \
+            .replace("    return s_beta_state;", "    return s_beta_state + alpha_helper(1);")
+        reasons = self.refused(mixed)
+        self.assertTrue(any("branch 2 of the #if group" in r for r in reasons), reasons)
+
+    def test_name_clash_between_two_original_globals_says_rename(self):
+        mixed = MIXED.replace("static int s_shared_counter;", "// GLOBAL: LEGORR 0x004c0004\nstatic int s_shared_counter;")
+        other = OTHER + "// GLOBAL: LEGORR 0x004c0000\nint s_shared_counter;\n"
+        reasons = self.refused(mixed, {"src/game/other.cpp": other})
+        self.assertTrue(any("would get external linkage" in r and "two original globals" in r
+                            and "rename" in r for r in reasons), reasons)
+
+    def test_name_clash_with_one_original_global_says_unify(self):
+        mixed = MIXED.replace("static int s_shared_counter;", "// GLOBAL: LEGORR 0x004c0000\nstatic int s_shared_counter;")
+        other = OTHER + "// GLOBAL: LEGORR 0x004c0000\nint s_shared_counter;\n"
+        reasons = self.refused(mixed, {"src/game/other.cpp": other})
+        self.assertTrue(any("one original global" in r and "unify" in r for r in reasons), reasons)
+
+    def test_name_clash_with_a_port_only_definition_says_rename_it(self):
+        mixed = MIXED.replace("static int s_shared_counter;", "// GLOBAL: LEGORR 0x004c0000\nstatic int s_shared_counter;")
+        other = OTHER + "int s_shared_counter;\n"
+        reasons = self.refused(mixed, {"src/game/other.cpp": other})
+        self.assertTrue(any("port-only" in r and "src/game/other.cpp" in r for r in reasons), reasons)
+
+    def test_namespace_nested_in_itself_refuses(self):
+        nested = MIXED.replace("// FUNCTION: LEGORR 0x00401000\nint alpha_first(int x)\n{\n"
+                               "    s_alpha_state = x;\n    return alpha_second();\n}\n",
+                               "namespace port {\nnamespace port {\n// FUNCTION: LEGORR 0x00401000\n"
+                               "int alpha_first(int x)\n{\n    return x;\n}\n}\n}\n")
+        reasons = self.refused(nested)
+        self.assertTrue(any("nested in itself" in r for r in reasons), reasons)
+
+    def test_anonymous_namespace_inside_a_named_namespace(self):
+        # GAME-021's shape (#515): lego::{anonymous}::prefix_equal, a closure
+        # helper used before its definition in the unit file.
+        anon = MIXED.replace("static int alpha_helper(int v);\n", "") \
+            .replace("static int alpha_helper(int v)\n{\n    return v + 1;\n}\n",
+                     "namespace lego {\nnamespace {\nint alpha_helper(int v)\n{\n    return v + 1;\n}\n}\n}\n") \
+            .replace("    return alpha_helper(s_alpha_state) * ALPHA_SCALE;",
+                     "    return lego::alpha_helper(s_alpha_state) * ALPHA_SCALE;")
+        plan = self.plan(anon)
+        self.assertIn("namespace lego { namespace { int alpha_helper(int v); } }", plan.forward)
+        unit = plan.files["src/game/alpha.cpp"]
+        self.assertIn("namespace lego {\nnamespace {\nint alpha_helper(int v)", unit)
+        self.assertEqual(cx.scan(unit).problems, [])

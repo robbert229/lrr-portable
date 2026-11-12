@@ -17,6 +17,7 @@
 #include "../gods98/camera.hpp"
 #include <math.h>
 #include <string.h>
+#include "spawn_for_lego.hpp"
 
 /* These two target entries already have live port implementations in the
  * ledger unit. Keep the calls target-shaped at ConfiguredMonsterSpawnTick. */
@@ -430,7 +431,7 @@ static LevelState* emergence_level_get(const void* base_entity)
     return context != NULL ? context->level : NULL;
 }
 
-static const char* emergence_type_name_get(int owner_index)
+const char* emergence_type_name_get(int owner_index)
 {
     const TypeConfigTable* table = entity_type_config_table_for_entity_type(3);
     if (owner_index < 0 || table == NULL ||
@@ -756,113 +757,7 @@ void spawn_coordinate_pool_clear(void)
 
 namespace unported_ledger_stubs {
 
-// FUNCTION: LEGORR 0x0042c330
-int ledger_stub_0042c330_EmergeMapTriggerSpawn(
-    LevelState* level, const int cell_xy[2], int output_xy[2])
-{
-    unsigned char* records;
-    uint32_t record_count;
-    uint32_t owner_index;
-    GameContext* context;
-    const EntitySlot* base_entity;
-    uint32_t record_index;
-    if (level == NULL || cell_xy == NULL || level->ptr_layerl == NULL)
-        return 0;
-    records = (unsigned char*)level->ptr_layerl;
-    record_count = level->word[LEVEL_OFF_LAYERL_COUNT / 4];
-    owner_index = level->word[0xb0 / 4];
-    context = entity_pool_callback_context_get();
-    if (context == NULL || context->level != level) return 0;
-    base_entity = entity_at(context, 3, (int)owner_index);
-    if (emergence_type_name_get((int)owner_index) == NULL &&
-        base_entity == NULL) return 0;
-    for (record_index = 0u; record_index < record_count; ++record_index) {
-        unsigned char* record = records + record_index * 0x4cu;
-        uint32_t slot_index;
-        int record_x, record_y;
-        float timer;
-        memcpy(&record_x, record + 4, sizeof(record_x));
-        memcpy(&record_y, record + 8, sizeof(record_y));
-        memcpy(&timer, record + 0x0c, sizeof(timer));
-        /* The retail branch is timer <= 0.0. Express the negation directly
-         * so unordered NaN values remain ineligible, as they are there. */
-        if (record_x != cell_xy[0] || record_y != cell_xy[1] ||
-            !(timer <= 0.0f)) continue;
-        for (slot_index = 0u; slot_index < 5u; ++slot_index) {
-            unsigned char* entry = record + 0x18u + slot_index * 0x0cu;
-            int spawn_x, spawn_y;
-            uint32_t populated;
-            EntitySlot* spawned;
-            memcpy(&populated, entry, sizeof(populated));
-            if (populated == 0u) continue;
-            memcpy(&spawn_x, entry - 8, sizeof(spawn_x));
-            memcpy(&spawn_y, entry - 4, sizeof(spawn_y));
-            spawned = creature_spawn_from_emergence(
-                (void*)base_entity, 3, (int)owner_index, spawn_x, spawn_y);
-            if (spawned == NULL) continue;
-            memcpy(record + 0x0c, &level->word[0x264 / 4], sizeof(float));
-            if (output_xy != NULL) {
-                output_xy[0] = spawn_x;
-                output_xy[1] = spawn_y;
-            }
-            return 1;
-        }
-    }
-    return 0;
-}
-
-
 // GLOBAL: LEGORR 0x00555118
-static uint32_t s_start_level_pilot_grid_count;
-
-// FUNCTION: LEGORR 0x0041fa80
-void ledger_stub_0041fa80_StartLevelPilots(void)
-{
-    GameContext* ctx = entity_pool_callback_context_get();
-    uint32_t* engine_state = engine_current_state_word();
-    uint32_t selector[4];
-    uint32_t panel_flags;
-
-    /* DAT_00556ecc is an engine-owned global in the reference. If the port
-     * has no active engine context, there is no corresponding state word to
-     * test or update, so this initialization cannot run faithfully. */
-    if (engine_state == NULL) return;
-
-    /* FUN_00431560's current-level getter is unconditional and its returned
-     * pointer is discarded.  The port has no side effect to reproduce. */
-    if ((*engine_state & 0x08000000u) != 0u) return;
-
-    /* FUN_00455300("Pilot", 0) resolves the catalog row and reads its
-     * slot-zero grid count.  GridRecordCountGet is the same state table in
-     * the port; the type/row resolver is intentionally not exposed here. */
-    s_start_level_pilot_grid_count =
-        entity_type_grid_record_count_get("Pilot", 0);
-    *engine_state |= 0x08000000u;
-    level_state_stored_value_set(1u);
-    lego::scatter_spawn_gate_set(1);
-
-    /* The decompile passes selector, mode=1, flags=1 for each of these.
-     * Its per-entity callback body remains unresolved in the checked-in
-     * corpus; the dispatch helper's known state path is still invoked. */
-    selector[0] = 1u;
-    selector[1] = 2u;
-    selector[2] = 8u;
-    selector[3] = 0x400u;
-    scene_object_state_dispatch(ctx, selector[0], 1u, 1u, NULL, NULL);
-    scene_object_state_dispatch(ctx, selector[1], 1u, 1u, NULL, NULL);
-    scene_object_state_dispatch(ctx, selector[2], 1u, 1u, NULL, NULL);
-    scene_object_state_dispatch(ctx, selector[3], 1u, 1u, NULL, NULL);
-    ledger_stub_00425c30_TransitionControl(0, 0u);
-    selection_clear_request_and_hud_reset();
-
-    /* DAT_0050013c is the first request/panel record in the portable CRT
-     * window.  Only its observed bit-1 gate controls the two toggles. */
-    panel_flags = request_record_flags_peek(0);
-    if ((panel_flags & 2u) != 0u) {
-        panel_state_flags_toggle(0);
-        panel_state_flags_toggle(1);
-    }
-}
-
+uint32_t s_start_level_pilot_grid_count;
 
 } // namespace unported_ledger_stubs

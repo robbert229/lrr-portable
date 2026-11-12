@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "gods98/texture.hpp"
+#include "crt_for_lego.hpp"
 #if defined(_MSC_VER)
 #pragma function(fabs)
 #include <io.h>
@@ -626,12 +627,6 @@ int float_to_long_x87(unsigned int index, const void* record)
 int float_to_long(float value)
 {
     return (int)value;
-}
-
-/* FUN_0041f8e0: empty body; the corpus's callable no-op (finding 381). */
-// FUNCTION: LEGORR 0x0041f8e0
-void noop_callback(void)
-{
 }
 
 /* The executable owns these two runtime-error controls. The callback and
@@ -1331,12 +1326,6 @@ double double_build_with_exponent(uint32_t significand_low,
 /* ------------------------------------------------------------------ *
  *  Constant and DAT-global band (see crt.hpp). */
 
-// FUNCTION: LEGORR 0x0047c160
-int32_t constant_negative_10000_get(void)
-{
-    return -10000;
-}
-
 /* LIBC.LIB testfdiv.obj's __ms_p5_test_fdiv (finding 540). */
 #if !defined(_MSC_VER)
 // LIBRARY: LEGORR 0x00490230 SYMBOL
@@ -1381,13 +1370,7 @@ uint32_t crt_floating_point_feature_probe(void)
  * still unported) land — message.cpp's s_system_state precedent. The
  * float width is the corpus's own: 0x4230b0 flds a DWORD. */
 // GLOBAL: LEGORR 0x00556f00
-static float    s_global_float_00556f00;
-
-// FUNCTION: LEGORR 0x004230b0
-float global_float_field_00556f00_get(void)
-{
-    return s_global_float_00556f00;
-}
+float    s_global_float_00556f00;
 
 /* Keep the portable API's null behavior pinned by test_static_globals. */
 uint32_t global_value_004ff9bc_store_and_return(const void* value)
@@ -8915,21 +8898,6 @@ int crt_double_to_integer_round(uint32_t status, double* value,
 #endif
 
 namespace unported_ledger_stubs {
-
-// PanelsConfigEntryApply
-// GLOBAL: LEGORR 0x004de424
-static uint32_t s_global_zero_transition_previous_primary;
-
-// FUNCTION: LEGORR 0x00435550
-int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void)
-{
-    uint32_t current = g_renderer_word_c;
-    int transitioned_to_zero = current == 0u &&
-        s_global_zero_transition_previous_primary != 0u;
-    s_global_zero_transition_previous_primary = current;
-    return transitioned_to_zero;
-}
-
 
 // VC5 LIBC.LIB realloc.obj supplies the heap reallocation entry.
 // LIBRARY: LEGORR 0x0048dc80 SYMBOL

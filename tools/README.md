@@ -235,23 +235,45 @@ A second run finds the unit relocated and does nothing. A half-done state
   static is exported by the static rule instead of refused. `inline` and
   anonymous-namespace items still refuse.
 
+- **#514 additions.**
+  - *Nested named namespaces* (`namespace A { namespace B { } }`) are
+    scope `A::B`. The unit file and the private headers write them as
+    nested blocks, because MSVC 5.0 has no `namespace A::B {`.
+  - *Shared unannotated `inline` functions* go verbatim to the `for`
+    header, after its declarations, as a type or macro does. An annotated
+    inline function that both files use still refuses.
+  - *Out-of-line class members* (`T C::f() {}`) belong to `C::f`. The class
+    definition follows them like any type: into the unit file, or into the
+    `for` header when both files use it. They get no extra declarations,
+    since the class declares them.
+  - *Anonymous-namespace functions used before their definition* get a
+    forward declaration in an anonymous namespace, which is the same one in
+    any one translation unit.
+  - *Unannotated helper functions* may sit in a whole `#if` group, for
+    example G98-009's COM-call helpers. Such a group lands in the unit file
+    before the unit's functions.
+  - *A name clash* refusal reads both definitions' annotations. It says
+    whether they are one original global (unify them), two (rename the
+    static), or a port-only definition (rename it). Either way it is a
+    source fix, not a relocation.
+
 **Refusals.** The tool refuses, with the file and line, rather than guess. It
 refuses:
 - definitions inside `#if` blocks, except a group whose branches each hold
   one whole definition of the same function (the naked-`__asm`/C pairs)
   and the whole groups above. The refusal names the group and why it
-  cannot move whole: it holds a function definition among other items,
-  a nested group, an `#undef` or other directive, or unrelated items;
+  cannot move whole: it holds an annotated function definition among other
+  items, a nested group, an `#undef` or other directive, or unrelated items;
 - a guarded declaration for a definition outside a group's first branch
   (its condition would have to be synthesised);
 - directives that split a declaration;
 - functions defined in headers;
-- out-of-line class members (`T C::f() {}` where `C` is not a namespace),
-  qualifications with several levels, and macro-built definitions;
-- nested named namespaces or a namespace inside an `extern "C"` block;
+- qualifications with several levels, and macro-built definitions;
+- a linkage block inside a namespace, or a namespace inside an
+  `extern "C"` block;
 - an untagged type defined together with a variable, when it has to be
   split;
-- shared `inline` functions;
+- shared annotated `inline` functions;
 - a declaration that needs splitting, unless you run `--split-declarations`
   first (below);
 - macros that are redefined, or `#undef`'d before a later use;
@@ -264,8 +286,12 @@ refuses:
 The relocator adds each new C++ source to the literal `game_sources` or
 `gods98_sources` Meson array, which the native parity check reads.
 
-`--survey` tries every unrelocated unit and tabulates the blocking constructs
-(findings 523, 530, 537 and 541).
+`--survey` tries every unrelocated unit and tabulates the blocking constructs.
+A unit that needs `--split-declarations` is reported "ok after" only when its
+relocation also plans on the split text. The survey applies the split in a
+scratch copy of `src/` and `docs/coverage/`; otherwise it reports "refused
+after `--split-declarations`" with the reasons (#514). See findings 523,
+530, 537, 541, 545 and 548.
 
 The scanner is `cxx_items.py`: a comment- and literal-aware top-level item
 splitter (stdlib only), not a C++ parser. Tests: `tools/tests/test_relocate_unit.py`

@@ -32,25 +32,19 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "engine_shared.hpp"
+#include "engine_for_lego.hpp"
+#include "engine_from_lego.hpp"
 
 /* PanelSelectionHighlightToggle/EngineTick DAT globals (see the function
  * comments at their use sites): bit-0 flag word and the 250-ms cooldown in
  * the zero-filled .data virtual tail. Declared here because EngineTick owns
  * the corpus's scaled countdown of DAT_00556efc. */
 // GLOBAL: LEGORR 0x00556ed0
-static uint32_t s_panel_highlight_flags; /* DAT_00556ed0 bit 0 */
+uint32_t s_panel_highlight_flags; /* DAT_00556ed0 bit 0 */
 // GLOBAL: LEGORR 0x00556efc
-static float s_panel_highlight_timer;    /* DAT_00556efc 250-ms cooldown */
-static EngineContext* s_engine_pre_tick_context;
+float s_panel_highlight_timer;    /* DAT_00556efc 250-ms cooldown */
 // GLOBAL: LEGORR 0x00556ec8
 extern "C" { int32_t s_context_mode; } /* gods98/engine.h: Advisor.c reads it */
-
-/* PanelSelectionHighlightToggle compares against this file-backed .rdata
- * dword (the PE bytes at 0x0049e2b8 are 00 00 00 00, +0.0f). Volatile
- * preserves the corpus's explicit memory comparison instead of folding it
- * to an immediate floating-point constant. */
-// GLOBAL: LEGORR 0x0049e2b8
-static const volatile float s_panel_highlight_zero = 0.0f;
 
 /* GlobalField505f88Get and CommandLineOptionParse share this app-mode word. */
 // GLOBAL: LEGORR 0x00505f88
@@ -276,16 +270,16 @@ int engine_scene_initialize(EngineContext* context, BlockFile* config)
 #endif
 static EngineKeepRunningHook s_keep_running_hook;
 static void* s_keep_running_user;
-static EngineWorldArrowCaptureHook s_world_arrow_capture_hook;
-static void* s_world_arrow_capture_context;
+EngineWorldArrowCaptureHook s_world_arrow_capture_hook;
+void* s_world_arrow_capture_context;
 void engine_world_arrow_capture_hook_set(EngineWorldArrowCaptureHook hook,
                                          void* context)
 {
     s_world_arrow_capture_hook = hook;
     s_world_arrow_capture_context = context;
 }
-static EngineTutorialDispatchHook s_tutorial_dispatch_hook;
-static void* s_tutorial_dispatch_context;
+EngineTutorialDispatchHook s_tutorial_dispatch_hook;
+void* s_tutorial_dispatch_context;
 
 void engine_tutorial_dispatch_hook_set(EngineTutorialDispatchHook hook,
                                        void* context)
@@ -293,29 +287,13 @@ void engine_tutorial_dispatch_hook_set(EngineTutorialDispatchHook hook,
     s_tutorial_dispatch_hook = hook;
     s_tutorial_dispatch_context = context;
 }
-static unported_ledger_stubs::GlobalSubsystemResetState*
+unported_ledger_stubs::GlobalSubsystemResetState*
     s_global_subsystem_reset_state;
 
 void unported_ledger_stubs::global_subsystem_reset_state_bind(
     unported_ledger_stubs::GlobalSubsystemResetState* state)
 {
     s_global_subsystem_reset_state = state;
-}
-
-// FUNCTION: LEGORR 0x004263c0
-void unported_ledger_stubs::ledger_stub_004263c0_GlobalSubsystemStateReset(
-    void)
-{
-    static const int mode = 1;
-    unported_ledger_stubs::GlobalSubsystemResetState* state =
-        s_global_subsystem_reset_state;
-    (void)engine_mode_set_target(&mode);
-    if (state != NULL) {
-        if (state->word_00503618 != NULL) *state->word_00503618 = 0u;
-        text_buffer_reset(state->text_buffer);
-    }
-    engine_global_state_flags_bits6_and_9_set_target(0, 0);
-    engine_global_state_flags_bit7_set_target(0);
 }
 
 uint32_t* engine_current_feature_word(void)
@@ -357,11 +335,11 @@ ViewContext* engine_current_primary_view_get(void)
  * a byte-identical 0x3be-dword global block, so reset of their owned state is
  * supplied by an explicit hook instead of clearing unrelated module globals. */
 // GLOBAL: LEGORR 0x005560c4
-static const char* s_engine_config_root;
-static EngineContext* s_callback_registry_context;
-static EngineConfigRegistryResetHook s_callback_registry_reset_hook;
-static EngineGameConfigInitHook s_game_config_init_hook;
-static void* s_callback_registry_user;
+const char* s_engine_config_root;
+EngineContext* s_callback_registry_context;
+EngineConfigRegistryResetHook s_callback_registry_reset_hook;
+EngineGameConfigInitHook s_game_config_init_hook;
+void* s_callback_registry_user;
 
 void engine_game_config_callback_registry_hooks_set(
     EngineContext* context,
@@ -373,59 +351,6 @@ void engine_game_config_callback_registry_hooks_set(
     s_callback_registry_reset_hook = reset_hook;
     s_game_config_init_hook = init_hook;
     s_callback_registry_user = user;
-}
-
-static int engine_game_config_init_callback(void)
-{
-    if (s_game_config_init_hook == NULL) return 0;
-    return s_game_config_init_hook(s_engine_config_root,
-                                   s_callback_registry_user);
-}
-
-static int engine_registered_tick_callback(float dt)
-{
-    if (s_callback_registry_context == NULL) return 0;
-    return EngineTick(s_callback_registry_context, dt);
-}
-
-static void engine_registered_shutdown_normal_callback(void)
-{
-    if (s_callback_registry_context != NULL)
-        EngineShutdown(s_callback_registry_context);
-}
-
-static void engine_registered_shutdown_loader_callback(void)
-{
-    if (s_callback_registry_context != NULL)
-        EngineShutdown(s_callback_registry_context);
-}
-
-/* GameConfigCallbackRegistryInit (FUN_0041fa20) clears the reference's
- * 0x3be-dword state block, stores the root name, sets the window title, and
- * installs init/tick/shutdown callbacks. The reset and game-config callbacks
- * are explicit seams because their state and implementation are not owned by
- * this engine module. The adapters below match the callback signatures used
- * by the frame loop; the context-taking EngineTick/EngineShutdown functions
- * themselves are never published as incompatible raw callbacks. */
-// FUNCTION: LEGORR 0x0041fa20
-void engine_game_config_callback_registry_init(const char* root)
-{
-    size_t callbacks[3];
-    const int loader_mode = s_application_mode == ENGINE_APP_LOADER;
-
-    if (s_callback_registry_reset_hook != NULL)
-        s_callback_registry_reset_hook(s_callback_registry_user);
-    s_engine_config_root = root;
-    window_title_set(root);
-
-    callbacks[0] = reinterpret_cast<size_t>(
-        &engine_game_config_init_callback);
-    callbacks[1] = reinterpret_cast<size_t>(
-        &engine_registered_tick_callback);
-    callbacks[2] = reinterpret_cast<size_t>(loader_mode ?
-        &engine_registered_shutdown_loader_callback :
-        &engine_registered_shutdown_normal_callback);
-    (void)window_runtime_callback_triplet_set(callbacks);
 }
 
 int engine_callback_triplet_init_dispatch(void)
@@ -458,115 +383,6 @@ void engine_callback_triplet_shutdown_dispatch(void)
 // WindowModeFlagSet records the mode selected by renderer startup.
 // GLOBAL: LEGORR 0x005764f4
 uint32_t s_window_mode_flag;
-
-/* Frame tick — corpus EngineTick @ 0x4232e0. The numbered structure below
- * mirrors finding 03 §"Tick structure" and the first 130 lines of the corpus.
- * Every subsystem ticker is a registered stub in tickers.cpp whose function
- * body is filled in from the corpus one at a time; the *order* here is the
- * observed call order and must stay stable.
- */
-// FUNCTION: LEGORR 0x004232e0
-int EngineTick(EngineContext* ctx, float dt)
-{
-    engine_current_context_bind(ctx);
-    /* 1. Gate — loader/benchmark mode idles out of the frame. */
-    if (ctx->app_mode == ENGINE_APP_LOADER && EngineKeepRunning(ctx) == 0) {
-        return 0;
-    }
-    /* Frozen time zeroes dt (corpus: DAT_00556ecc & 0x100000). */
-    if ((ctx->state & ENGINE_STATE_TIME_FROZEN) != 0) {
-        dt = 0.0f;
-    }
-
-    /* 2. Per-frame housekeeping (EnginePreTick @ 0x4231f0). When text entry is
-     *    active it consumes this frame's key table; the frame-loop drives the
-     *    normal capture/input_begin_frame lifecycle — see frameloop.cpp. */
-    EngineContext* previous_pre_tick_context = s_engine_pre_tick_context;
-    s_engine_pre_tick_context = ctx;
-    EnginePreTick();
-    s_engine_pre_tick_context = previous_pre_tick_context;
-
-    /* 3. Scaled delta: subsystem tickers run scaled time, raw dt drives
-     *    timers. Editor/preview (context_mode==0) runs raw dt. */
-    float scale;
-    if (ctx->context_mode == 0 && ctx->app_mode < 2) {
-        scale = dt;
-    } else {
-        scale = EngineTimeScale(ctx) * dt;
-    }
-    /* One-shot "force scale 1.0 this frame" (corpus: DAT_00556ecc & 4). */
-    const int camera_force_scale_one =
-        (ctx->state & ENGINE_STATE_FORCE_SCALE_1) != 0;
-    if (camera_force_scale_one) {
-        ctx->state &= ~ENGINE_STATE_FORCE_SCALE_1;
-        scale = 1.0f;
-    }
-
-    /* 4. Movement/grid cluster; the primary camera's world-target consumer
-     * follows below, independently of these entity/grid operations. */
-    camera_cluster(ctx, dt, scale);
-
-    /* EngineTick's primary world-target consumer uses reference frame
-     * units. AI and the remaining simulation continue to receive seconds. */
-    float camera_delta = view_camera_delta_from_seconds(dt);
-    view_primary_target_tick(ctx, camera_delta);
-
-    /* 5. Main simulation step — 0 => quit frame (MainSimStep @ 0x4250c0,
-     *    ported in mainsim.*). */
-    uint32_t sim_out1 = 0, sim_out2 = 0, sim_out3 = 0;
-    if (main_sim_step(ctx, scale, &sim_out1, &sim_out2, &sim_out3) == 0) {
-        return 0;
-    }
-
-    /* 6. The ordered subsystem-ticker sequence (finding 03; corpus lines
-     *    93-119). Only the first entry is gated on !TIME_FROZEN at the call
-     *    site; that gate lives in the table (see TICKERS[0].skip_when). */
-    if (!EngineSubsystemTickersWithViews(ctx, dt, scale, camera_delta,
-            dt > 0.0f ? (camera_force_scale_one ? 1.0f :
-                (scale / dt) * camera_delta) : 0.0f)) {
-        fprintf(stderr, "engine: camera terrain collection owner unavailable\n");
-        terrain_camera_detail_restore((LevelState*)ctx->level_block);
-        return 0;
-    }
-
-    /* 7. Indexed manager dispatch (corpus ManagerTick FUN_0045a730) — enabled
-     *    under ENGINE_STATE_INDEXED_SUBSYS; index list observed: 1,2,4,9,6,8,
-     *    0xb,5,7,10 interleaved with the named manager tickers. Stub table. */
-    if ((ctx->state & ENGINE_STATE_INDEXED_SUBSYS) != 0) {
-        /* Indexed UI timers use the reference 25-Hz frame unit. */
-        EngineManagerDispatch(ctx, dt * 25.0f);
-    }
-
-    /* 8. Render begin/end pairs, world-draw vs editor pass, and the
-     *    &2/&0x2000-gated in-game render pass (corpus lines 130-215). Stub. */
-    EngineRenderFrame(ctx, dt, scale, &sim_out1);
-    if (!simtick_camera_detail_collection_ready()) {
-        fprintf(stderr, "engine: secondary terrain collection owner unavailable\n");
-        terrain_camera_detail_restore((LevelState*)ctx->level_block);
-        return 0;
-    }
-    if (s_world_arrow_capture_hook != NULL)
-        s_world_arrow_capture_hook(ctx, dt, s_world_arrow_capture_context);
-
-    /* 9. Air-supply beat mechanic (corpus tail): fires the air-low/empty
-     *    notifications and loops SND_AirBeat; writes air_prev back. */
-    EngineAirBeat(ctx, scale);
-
-    media_cd_audio_watchdog_tick((int)(ctx->state & MEDIA_CD_WATCHDOG_BIT));
-
-    /* TutorialScriptCommandDispatch follows the manager/render tick cluster
-     * in the corpus and is disabled by DAT_00556ecc bit 0x01000000. Keep its
-     * game-owned interpreter behind a narrow callback so EngineTick does not
-     * depend on the game layer. */
-    if ((ctx->state & 0x01000000u) == 0u &&
-        s_tutorial_dispatch_hook != NULL)
-        s_tutorial_dispatch_hook(dt, s_tutorial_dispatch_context);
-
-    /* Exit timer counts down in scaled time (corpus: DAT_00556efc -= scale). */
-    s_panel_highlight_timer = s_panel_highlight_timer - scale;
-
-    return 1;
-}
 
 static void engine_pre_tick_context_run(EngineContext* ctx)
 {
@@ -626,62 +442,6 @@ static void engine_pre_tick_context_run(EngineContext* ctx)
 void engine_pre_tick_adapter(EngineContext* ctx)
 {
     engine_pre_tick_context_run(ctx);
-}
-
-/* Retail-shaped EnginePreTick @ 0x4231f0 uses global input/text state. */
-// FUNCTION: LEGORR 0x004231f0
-void EnginePreTick(void)
-{
-    EngineContext* ctx = s_engine_pre_tick_context;
-    InputState* input;
-    char* target;
-    int length = 0;
-    int scan_limit;
-    int key;
-    int cancel;
-
-    if (ctx == NULL || ctx->input == NULL) return;
-    input = ctx->input;
-    target = input->text_target;
-    if (target == NULL) return;
-
-    scan_limit = input->text_cap > 0 ? input->text_cap : 12;
-    if (scan_limit > 12) scan_limit = 12;
-    while (length < scan_limit && target[length] != '\0') ++length;
-
-    if (input->cur[0x8e] == 0u ||
-        input->mirror[0x8e] == input->cur[0x8e]) {
-        cancel = (input->cur[0x9c] == 0u &&
-                  input->mirror[0x9c] != 0u) ||
-                 (input->cur[0x01] == 0u &&
-                  input->mirror[0x01] != 0u);
-        if (cancel) {
-            input->text_target = NULL;
-        }
-        else {
-            int text_limit = input->text_cap > 0
-                ? input->text_cap - 1 : 11;
-            if (text_limit > 11) text_limit = 11;
-            for (key = 0; key < INPUT_KEY_COUNT && length < text_limit;
-                 ++key) {
-                uint32_t mapped;
-                if (input->cur[key] == 0u ||
-                    input->mirror[key] == input->cur[key]) continue;
-                mapped = input_key_context(input, (uint32_t)key);
-                if (mapped == 0u) continue;
-                target[length++] = (char)toupper((unsigned char)mapped);
-                target[length] = '\0';
-            }
-        }
-    }
-    else if (length != 0) {
-        target[length - 1] = '\0';
-        --length;
-    }
-    input->text_len = length;
-    /* TransitionControl(0,0), called by the original cancel branch, is an
-     * intentional no-op in the checked-in decompile. */
-    input_mirror_and_clear(input);
 }
 
 /* KeepRunning's global app-state and resource predicates are owned by the
@@ -781,86 +541,22 @@ void EngineShutdown(EngineContext* ctx)
     lego::scene_resource_slots_release_all();
     lego::scene_resource_string_tables_free();
 }
-/* RuntimeFlag40000000Get (FUN_0041f970): the faithful masked read of the
- * port's engine-state word. */
-// FUNCTION: LEGORR 0x0041f970
-uint32_t runtime_flag40000000_get(const EngineContext* ctx)
-{
-    return ctx != NULL ? (ctx->state & 0x40000000u) : 0u;
-}
 
-/* ModeDependentField24Get (FUN_00423080): mode-selected follow-span read.
- * The corpus indexes views[ctx->context_mode == 1 ? 0 : 2]; other modes
- * return the mode word verbatim, and the port reads the ViewContext's
- * follow_span slot (the corpus's word 0x24) through the threaded view
- * table (deviation: NULL slots answer zero, corpus dereferences blindly).
- */
-// FUNCTION: LEGORR 0x00423080
-int mode_dependent_field24_get(const EngineContext* ctx)
-{
-    if (ctx == NULL) {
-        return 0; /* deviation: the corpus dereferences its global blindly */
-    }
-    int which;
-    if (ctx->context_mode == 1) {
-        which = 0;
-    } else if (ctx->context_mode == 0) {
-        which = 2;
-    } else {
-        return ctx->context_mode;
-    }
-    const ViewContext* v = ctx->views[which];
-    return v != NULL ? (int)v->follow_span : 0;
-}
-
-/* --- the 0x425-0x426 engine-state band (see engine.hpp) ---------------------
- * The two threaded one-liners are the corpus's own reads of the context-mode
- * and cheat-word globals; the two DAT-global shapes land as zero-initialized
- * module storage per the unowned-global convention (the triple's only corpus
- * writer is the unported renderer-side sim-interaction update). The triple is
- * three individually-addressed dwords in the corpus, so it carves into one
- * annotated static per dword — reccmp resolves whole objects only and an
- * array's tail elements would render as (OFFSET) fragments. */
-// GLOBAL: LEGORR 0x004de548
-static int s_scroll_guard;        /* DAT_004de548 */
 // GLOBAL: LEGORR 0x0055651c
-static uint32_t s_triple_first;  /* DAT_0055651c role: unowned */
+uint32_t s_triple_first;  /* DAT_0055651c role: unowned */
 // GLOBAL: LEGORR 0x00556520
-static uint32_t s_triple_second; /* DAT_00556520 role: unowned */
+uint32_t s_triple_second; /* DAT_00556520 role: unowned */
 // GLOBAL: LEGORR 0x00556524
-static uint32_t s_triple_third;  /* DAT_00556524 role: unowned */
+uint32_t s_triple_third;  /* DAT_00556524 role: unowned */
 // GLOBAL: LEGORR 0x00556f24
-static float s_task_text_origin_x;
+float s_task_text_origin_x;
 // GLOBAL: LEGORR 0x00556f28
-static float s_task_text_origin_y;
-
-// FUNCTION: LEGORR 0x00425d80
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) bool current_engine_mode_is_zero(void)
-{
-    __asm {
-        mov ecx, dword ptr [s_context_mode]
-        xor eax, eax
-        test ecx, ecx
-        sete al
-        ret
-    }
-}
-#else
-bool current_engine_mode_is_zero(void)
-{
-    return s_context_mode == 0;
-}
-#endif
+float s_task_text_origin_y;
 
 void engine_context_mode_global_set(int32_t mode)
 {
     s_context_mode = mode;
 }
-
-void engine_global_state_flags_bit7_set_target(int value);
-void engine_global_state_flags_bits6_and_9_set_target(
-    int value, int set_bit9);
 
 int engine_mode_set(EngineContext* ctx, const int* mode)
 {
@@ -891,25 +587,9 @@ void engine_overlay_words_set(uint32_t flags, uint32_t request)
  * rides unowned-global module storage (the corpus's writer side is this
  * setter; the reader is the unported score-text draw band — deviation). */
 // GLOBAL: LEGORR 0x00556f1c
-static float s_score_text_origin_x;
+float s_score_text_origin_x;
 // GLOBAL: LEGORR 0x00556f20
-static float s_score_text_origin_y;
-
-// FUNCTION: LEGORR 0x004262e0
-void objective_score_text_origin_set(const float* pair)
-{
-    if (pair != NULL) {
-        s_score_text_origin_x = pair[0];
-        s_score_text_origin_y = pair[1];
-        /* Corpus 0x4262f3..0x426301: mov eax,ds:0x556ed0 / or ah,0x40 /
-         * mov ds:0x556ed0,eax — the shared debug/cheat word (the panel
-         * highlight flag word), not the caller's context. */
-        s_panel_highlight_flags = s_panel_highlight_flags | 0x4000u;
-        return;
-    }
-    /* Corpus 0x426307..0x42630f: mov / and ah,0xbf / mov. */
-    s_panel_highlight_flags = s_panel_highlight_flags & ~0x4000u;
-}
+float s_score_text_origin_y;
 
 uint32_t engine_debug_word_peek(void)
 {
@@ -930,16 +610,6 @@ void objective_score_text_origin_peek(float out[2])
     }
 }
 
-// FUNCTION: LEGORR 0x004263a0
-void engine_global_state_flags_bit7_set_target(int value)
-{
-    if (value != 0) {
-        s_panel_highlight_flags |= 0x80u;
-        return;
-    }
-    s_panel_highlight_flags &= ~0x80u;
-}
-
 void global_state_flags_bit7_set(EngineContext* ctx, int value)
 {
     if (ctx == NULL) {
@@ -950,21 +620,6 @@ void global_state_flags_bit7_set(EngineContext* ctx, int value)
         return;
     }
     ctx->debug &= ~0x80u;
-}
-
-// FUNCTION: LEGORR 0x00426360
-void engine_global_state_flags_bits6_and_9_set_target(
-    int value, int set_bit9)
-{
-    /* FUN_00426360 commits the bit-6 update before testing its second
-     * argument, then performs the bit-9 update against that stored word. */
-    if (value != 0) s_panel_highlight_flags |= 0x40u;
-    else s_panel_highlight_flags &= ~0x40u;
-    if (set_bit9 != 0) {
-        s_panel_highlight_flags |= 0x200u;
-        return;
-    }
-    s_panel_highlight_flags &= ~0x200u;
 }
 
 void global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
@@ -981,35 +636,9 @@ void global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
     ctx->debug = (set_bit9 != 0) ? (v | 0x200u) : (v & ~0x200u);
 }
 
-// FUNCTION: LEGORR 0x00425cd0
-void global_scroll_guard_set(int value)
-{
-    s_scroll_guard = value;
-}
-
 int global_scroll_guard_peek(void)
 {
     return s_scroll_guard;
-}
-
-/* ObjectiveTaskTextOriginSet (FUN_00426320) — see engine.hpp. The corpus's
- * pair has no ported reader outside the corpus's own draw band (the only
- * writers are this setter), so it rides module storage per the unowned-
- * global convention; the enable bit rides the bound debug word. */
-// FUNCTION: LEGORR 0x00426320
-void objective_task_text_origin_set(EngineContext* ctx, const float* pair)
-{
-    if (pair != NULL) {
-        s_task_text_origin_x = pair[0];
-        s_task_text_origin_y = pair[1];
-        if (ctx != NULL) {
-            ctx->debug |= 0x8000u;
-        }
-        return; /* deviation: the corpus writes the word blindly */
-    }
-    if (ctx != NULL) {
-        ctx->debug &= ~0x8000u;
-    }
 }
 
 void objective_task_text_origin_peek(float out[2])
@@ -1018,17 +647,6 @@ void objective_task_text_origin_peek(float out[2])
         out[0] = s_task_text_origin_x;
         out[1] = s_task_text_origin_y;
     }
-}
-
-// FUNCTION: LEGORR 0x00426230
-void global_triple_copy_out(uint32_t* out)
-{
-    if (out == NULL) {
-        return; /* deviation: the corpus writes through blindly */
-    }
-    out[0] = s_triple_first;
-    out[1] = s_triple_second;
-    out[2] = s_triple_third;
 }
 
 void engine_app_mode_global_set(int32_t mode)
@@ -1050,16 +668,9 @@ EngineState* entity_field_grid_descriptor_peek(void) { return s_field_grid_desc;
  * FUN_00435a20's two corpus words (state word, refresh record pointer) have
  * no ported owner; they land here as zero-init statics with hooks. */
 // GLOBAL: LEGORR 0x00556ed4
-static uint32_t s_global_low_word; /* DAT_00556ed4 role */
+uint32_t s_global_low_word; /* DAT_00556ed4 role */
 // GLOBAL: LEGORR 0x005563b4
-static void* s_refresh_record;     /* DAT_005563b4 role */
-
-// FUNCTION: LEGORR 0x00435a20
-void global_state_low_byte_clear_and_refresh(void)
-{
-    s_global_low_word &= 0xffffff00u;
-    surface_visibility_set(s_refresh_record, 1u);
-}
+void* s_refresh_record;     /* DAT_005563b4 role */
 
 uint32_t global_state_low_word_get(void) { return s_global_low_word; }
 void global_state_low_word_set(uint32_t value) { s_global_low_word = value; }
@@ -1070,24 +681,11 @@ void* global_refresh_record_peek(void) { return s_refresh_record; }
  * DAT_00556f3c has no ported owner; the reposition seam (FUN_0047dcb0) is
  * a hook boundary, so the call rides a recorded seam here. */
 // GLOBAL: LEGORR 0x00556f3c
-static void* s_position_handle;   /* DAT_00556f3c role */
-static int    s_position_seam_calls;
-static void*  s_position_seam_last_handle;
-static int    s_position_seam_last_x;
-static int    s_position_seam_last_y;
-
-// FUNCTION: LEGORR 0x00435580
-int global_handle_position_apply_if_present(void)
-{
-    if (s_position_handle == NULL) {
-        return 0;
-    }
-    ++s_position_seam_calls;
-    s_position_seam_last_handle = s_position_handle;
-    s_position_seam_last_x = 0;
-    s_position_seam_last_y = 0;
-    return 1;
-}
+void* s_position_handle;   /* DAT_00556f3c role */
+int    s_position_seam_calls;
+void*  s_position_seam_last_handle;
+int    s_position_seam_last_x;
+int    s_position_seam_last_y;
 
 void global_position_handle_set(void* handle) { s_position_handle = handle; }
 void* global_position_handle_peek(void) { return s_position_handle; }
@@ -1116,14 +714,7 @@ void global_position_seam_last(void** out_handle, int* out_x, int* out_y)
  * its speed word through the overlapping _DAT_0055615c alias; the port keeps
  * one float in this module's storage. */
 // GLOBAL: LEGORR 0x0055615c
-static float s_scroll_scale = 1.0f; /* DAT_0055615c; port default (ref is zero-filled) */
-
-/* TimeScaleGet @ 0x0041fb40 returns the shared scroll/time scale global. */
-// FUNCTION: LEGORR 0x0041fb40
-float EngineTimeScale(void)
-{
-    return s_scroll_scale;
-}
+float s_scroll_scale = 1.0f; /* DAT_0055615c; port default (ref is zero-filled) */
 
 float scroll_scale_peek(void) { return s_scroll_scale; }
 void  scroll_scale_set(float value) { s_scroll_scale = value; }
@@ -1139,20 +730,6 @@ int scroll_speed_index_get(void)
     return 5;
 }
 
-// FUNCTION: LEGORR 0x00425ce0
-void scroll_scale_set_and_clamp(float scale)
-{
-    if (s_scroll_scale <= scale || s_scroll_guard == 0) {
-        s_scroll_scale = scale;
-        if (s_scroll_scale < 0.0f) {
-            s_scroll_scale = 0.0f;
-        }
-        if (s_scroll_scale > 3.0f) {
-            s_scroll_scale = 3.0f;
-        }
-    }
-}
-
 /* PanelSelectionHighlightToggle (FUN_00435aa0) — see engine.hpp. The corpus
  * rides two DAT globals, not the context: bit 0 of the shared debug/cheat
  * flag word DAT_00556ed0 (25 further corpus claimants — docs/dat/globals.csv)
@@ -1166,48 +743,6 @@ void scroll_scale_set_and_clamp(float scale)
  * corpus has one cdecl argument, whereas this declaration's select is its
  * second argument. */
 /* (The DAT objects live above EngineTick — single definition, two sites.) */
-
-// FUNCTION: LEGORR 0x00435aa0
-void panel_selection_highlight_toggle(EngineContext* ctx, int on)
-{
-    (void)ctx; /* the corpus dereferences nothing; it only tests the arg */
-    if (on != 0) {
-        s_panel_highlight_flags = s_panel_highlight_flags | 1u;
-        if (s_panel_highlight_timer <= s_panel_highlight_zero) {
-            sound_alias_play(0x19, 0);
-            s_panel_highlight_timer = 250.0f;
-        }
-        panel_item_flag8_set_if_enabled(6, 2, 1);
-    } else {
-        s_panel_highlight_flags = s_panel_highlight_flags & ~1u;
-        s_panel_highlight_timer = 0.0f;
-        panel_item_flag8_set_if_enabled(6, 2, 0);
-    }
-}
-
-/* TerrainCellCommandPredicate (FUN_00428780) — see engine.hpp. The corpus
- * re-reads its system-state word through FUN_00456240 before each gate and
- * strides the voxel cell blindly; the port answers through the
- * bounds-checking voxel accessor for that latter path. CurrentLevelGet's
- * block is the bound level_block here. */
-// FUNCTION: LEGORR 0x00428780
-int terrain_cell_command_predicate(const EngineContext* ctx, int x, int y)
-{
-    if (system_state_flags_get() != 0u) {
-        if ((system_state_flags_get() & 8u) == 0u) {
-            if ((system_state_flags_get() & 4u) == 0u) {
-                return 1;
-            }
-        }
-    }
-    if ((system_state_flags_get() & 2u) != 0u) {
-        const uint8_t* cell = engine_level_voxel(ctx, x, y);
-        if (cell != NULL && cell[0x4] == 0u) {
-            return 1; /* deviation: an absent/occupied cell blocks */
-        }
-    }
-    return 0;
-}
 
 /* --- the field-grid cell window band (see engine.hpp) --------------------- */
 

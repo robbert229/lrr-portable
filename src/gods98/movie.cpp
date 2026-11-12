@@ -2270,39 +2270,6 @@ int avi_frame_decode_and_copy(Movie* movie, uint8_t* destination,
  *  note (finding 206: the corpus's own Blit ignores the rect).
  * ------------------------------------------------------------------ */
 
-// FUNCTION: LEGORR 0x0042efc0
-int movie_video_playback_loop(const MoviePump* pump)
-{
-    if (pump == NULL || pump->next == NULL || pump->present == NULL
-        || pump->info == NULL) {
-        return 0;
-    }
-    /* Corpus: the rect branch restores the render surface from the
-     * primary once, before the pump starts (the corpus's
-     * RenderSurfaceRestoreFromPrimary role); the null branch starts
-     * immediately. */
-    if (pump->rect != NULL && pump->restore != NULL) {
-        pump->restore(pump->restore_user);
-    }
-    int frames = 0;
-    for (;;) {
-        MovieOut out;
-        memset(&out, 0, sizeof(out));
-        if (pump->next(&out, pump->next_user) != 0) {
-            break;                    /* EOF or error ends the branch */
-        }
-        if (pump->present(&out, pump->info, pump->rect,
-                          pump->present_user) != 0) {
-            break;
-        }
-        ++frames;
-        if (pump->quit != NULL && pump->quit(pump->quit_user) != 0) {
-            break;                    /* message-pump quit between frames */
-        }
-    }
-    return frames;
-}
-
 void movie_scale_rgba_rect(const uint8_t* src, int sw, int sh, int spitch,
                            uint8_t* dst, int dw, int dh, int dpitch,
                            const MovieRect* rect)

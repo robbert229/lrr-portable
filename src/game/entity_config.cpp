@@ -15,17 +15,19 @@
 #include "gods98/sound.hpp"
 #include "gods98/string.hpp"
 #include "util.hpp"
+#include "entity_config_for_lego.hpp"
+#include "entity_config_from_lego.hpp"
 
 TypeConfigTable s_minifigure_type_config;
 TypeConfigTable s_building_type_config;
 TypeConfigTable s_vehicle_type_config;
 TypeConfigTable s_rockmonster_type_config;
-static BlockFile* s_entity_type_config_file;
+BlockFile* s_entity_type_config_file;
 
 /* These loaders receive the complete game config. Retail builds each key
  * beneath its actual root; BlockFile retains that root in its hierarchy.
  * Returns the section's container record (NULL when missing or empty). */
-static BlockRec* entity_config_section_find(BlockFile* config,
+BlockRec* entity_config_section_find(BlockFile* config,
                                              const char* section_name)
 {
     char path[512];
@@ -64,7 +66,7 @@ const TypeConfigTable* entity_type_config_table_for_entity_type(int type)
     return NULL;
 }
 
-static uint32_t entity_type_config_entry_count(void* context, void* section)
+uint32_t entity_type_config_entry_count(void* context, void* section)
 {
     BlockRec* child;
     uint32_t count = 0u;
@@ -679,7 +681,7 @@ void entity_type_config_row_finalize(void* context, void* row,
     }
 }
 
-static void entity_type_config_family_release(TypeConfigTable* table, uint32_t kind)
+void entity_type_config_family_release(TypeConfigTable* table, uint32_t kind)
 {
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (kind == 2u && !building_scene_types_clear())
@@ -691,95 +693,6 @@ static void entity_type_config_family_release(TypeConfigTable* table, uint32_t k
     (void)kind;
 #endif
     type_config_table_release(table);
-}
-
-#define ENTITY_TYPE_CONFIG_TABLE_LOAD(table_, section_name_, kind_, stride_) \
-    TypeConfigTable* table = (table_); \
-    BlockRec* section; \
-    BlockRec* child; \
-    uint32_t count; \
-    uint32_t i; \
-    char* rows; \
-    char** names; \
-    void** row_owned; \
-    if (table == NULL || s_entity_type_config_file == NULL) return 0; \
-    section = entity_config_section_find(s_entity_type_config_file, (section_name_)); \
-    entity_type_config_family_release(table, (kind_)); \
-    count = entity_type_config_entry_count(NULL, section); \
-    table->row_stride = (stride_); \
-    if (count == 0u || count > 0xffffffffu / (stride_) || \
-        count > 0xffffffffu / (uint32_t)sizeof(char*)) return 0; \
-    rows = (char*)engine_heap_alloc((long)((size_t)count * (stride_))); \
-    if (rows == NULL) return 0; \
-    names = (char**)engine_heap_alloc((long)((size_t)count * sizeof(char*))); \
-    if (names == NULL) { engine_heap_free(rows); return 0; } \
-    memset(names, 0, (size_t)count * sizeof(char*)); \
-    row_owned = (void**)calloc((size_t)count, sizeof(void*)); \
-    if (row_owned == NULL) { \
-        engine_heap_free(names); engine_heap_free(rows); return 0; \
-    } \
-    table->rows = rows; table->names = names; \
-    table->row_owned = row_owned; table->capacity = count; \
-    child = block_first_child(section); \
-    for (i = 0u; i < count; ++i) { \
-        const char* source_name; \
-        size_t name_length; \
-        char* row = rows + (size_t)i * (stride_); \
-        memset(row, 0, (stride_)); \
-        table->count = i + 1u; \
-        if (child == NULL || \
-            !entity_type_config_row_parse(table, child, row, (kind_))) { \
-            entity_type_config_family_release(table, (kind_)); return 0; \
-        } \
-        memcpy(row, &i, sizeof(i)); \
-        entity_type_config_row_finalize(table, row, (kind_)); \
-        source_name = block_name(child); \
-        if (source_name == NULL) { \
-            entity_type_config_family_release(table, (kind_)); return 0; \
-        } \
-        name_length = strlen(source_name); \
-        names[i] = (char*)engine_heap_alloc((long)(name_length + 1u)); \
-        if (names[i] == NULL) { \
-            entity_type_config_family_release(table, (kind_)); return 0; \
-        } \
-        memcpy(names[i], source_name, name_length + 1u); \
-        child = block_next_equal_key(child); \
-    } \
-    return 1
-
-/* MiniFigureTypeTableLoad (FUN_0042cf50) reads the active engine config,
- * builds 0x74-byte rows, finalizes each parsed row, and stores copied names. */
-// FUNCTION: LEGORR 0x0042CF50
-int entity_minifigure_type_table_load(void)
-{
-    ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_minifigure_type_config,
-                                  "MiniFigureTypes", 1u, 0x74u);
-}
-
-/* RockMonsterTypesLoad (FUN_0042d100) uses the same 0x74-byte visual row
- * reader as the vehicle and minifigure tables (FUN_00406990). */
-// FUNCTION: LEGORR 0x0042D100
-static int entity_rockmonster_type_table_load(void)
-{
-    ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_rockmonster_type_config,
-                                  "RockMonsterTypes", 3u, 0x74u);
-}
-
-/* VehicleTypesLoad (FUN_0042cda0) likewise loads 0x74-byte visual rows. */
-// FUNCTION: LEGORR 0x0042CDA0
-static int entity_vehicle_type_table_load(void)
-{
-    ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_vehicle_type_config,
-                                  "VehicleTypes", 4u, 0x74u);
-}
-
-/* BuildingTypesLoad (FUN_0042d2b0) uses the same config walk with 0x14c-byte
- * rows and the building-specific `.ae` parser/finalizer. */
-// FUNCTION: LEGORR 0x0042D2B0
-int entity_building_types_load(void)
-{
-    ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_building_type_config,
-                                  "BuildingTypes", 2u, 0x14cu);
 }
 
 #undef ENTITY_TYPE_CONFIG_TABLE_LOAD
@@ -915,91 +828,7 @@ static void entity_config_values_release(void** values, uint32_t count)
     free(values);
 }
 
-typedef struct EntityObjectNameLoadState {
-    ObjectNameTableSet* tables;
-    ObjectNameLoadHooks* hooks;
-} EntityObjectNameLoadState;
-
-static EntityObjectNameLoadState* s_entity_object_name_load_state;
-
-#define ENTITY_OBJECT_NAMES_LOAD_BODY(section_name_) \
-    static const char* const named_keys[9] = { \
-        "Ore", "PowerCrystal", "ProcessedOre", "Dynamite", "Barrier", \
-        "ElectricFence", "SpiderWeb", "OohScary", "Path" \
-    }; \
-    BlockRec* section; \
-    EntityObjectNameLoadState* state = s_entity_object_name_load_state; \
-    ObjectNameTableSet* tables; \
-    ObjectNameLoadHooks* hooks; \
-    uint32_t i; \
-    if (state == NULL || state->tables == NULL || state->hooks == NULL || \
-        config == NULL) return; \
-    section = entity_config_section_find(config, (section_name_)); \
-    tables = state->tables; \
-    hooks = state->hooks; \
-    for (i = 0u; i < 5u; ++i) { \
-        uint32_t count = tables->counts[i]; \
-        void** values; \
-        uint32_t j; \
-        if (tables->output_values[i] == NULL) continue; \
-        if ((size_t)count > ((size_t)-1) / sizeof(void*)) { \
-            *tables->output_values[i] = NULL; \
-            continue; \
-        } \
-        values = (void**)malloc((size_t)count * sizeof(void*)); \
-        *tables->output_values[i] = values; \
-        if (count != 0u && values == NULL) continue; \
-        for (j = 0u; j < count; ++j) { \
-            const char* key = tables->type_names[i] != NULL \
-                ? tables->type_names[i][j] : NULL; \
-            const char* value = hooks->value_find != NULL && key != NULL \
-                ? hooks->value_find(hooks->context, section, key) : NULL; \
-            void* resolved = NULL; \
-            if (i != 4u || value != NULL) { \
-                resolved = hooks->value_resolve != NULL \
-                    ? hooks->value_resolve(hooks->context, value) : NULL; \
-            } \
-            /* ObjectNamesLoad/ObjectTheNamesLoad resolve each upgrade's
-             * configured label, then immediately clear the just-written
-             * slot in the retail loop. Keep the observed table contents
-             * (all upgrade labels NULL) without retaining the discarded
-             * temporary string. */ \
-            if (i == 4u) { \
-                engine_heap_free(resolved); \
-                resolved = NULL; \
-            } \
-            values[j] = resolved; \
-        } \
-    } \
-    for (i = 0u; i < 9u; ++i) { \
-        const char* value = hooks->value_find != NULL \
-            ? hooks->value_find(hooks->context, section, named_keys[i]) : NULL; \
-        if (value != NULL) { \
-            void* resolved = hooks->value_resolve != NULL \
-                ? hooks->value_resolve(hooks->context, value) : NULL; \
-            if (tables->named_output_values[i] != NULL) \
-                *tables->named_output_values[i] = resolved; \
-            if (hooks->named_value_set != NULL) \
-                hooks->named_value_set(hooks->context, named_keys[i], resolved); \
-        } \
-    }
-
-/* ObjectNamesLoad (FUN_0042d600) receives the parent config handle. The
- * decompile builds ObjectNames-qualified keys and queries them against that
- * root; entity_config_section_find provides the equivalent scope. */
-// FUNCTION: LEGORR 0x0042D600
-void entity_object_names_load(BlockFile* config)
-{
-    ENTITY_OBJECT_NAMES_LOAD_BODY("ObjectNames");
-}
-
-/* ObjectTheNamesLoad (FUN_0042da20) has the same parent-config ABI and uses
- * the separate ObjectTheNames-qualified lookup namespace. */
-// FUNCTION: LEGORR 0x0042DA20
-void entity_object_the_names_load(BlockFile* config)
-{
-    ENTITY_OBJECT_NAMES_LOAD_BODY("ObjectTheNames");
-}
+EntityObjectNameLoadState* s_entity_object_name_load_state;
 
 #undef ENTITY_OBJECT_NAMES_LOAD_BODY
 

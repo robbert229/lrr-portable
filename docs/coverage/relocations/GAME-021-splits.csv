@@ -1,0 +1,2 @@
+role,address,name,from,to,before_sha256,after_sha256,edit
+split-declarators,,"s_minion_actions,s_minion_fails",src/gods98/simtick.cpp:464,src/gods98/simtick.cpp:464,a21ac395cb2445bc0b748c46d78ededa284f1bdcf41e016c85fe46fe810f75da,072ae73e98e1f795b1dd8a72fd17616997c51931137a6d53c00aada9eeb6f3aa,split into 2 declarations

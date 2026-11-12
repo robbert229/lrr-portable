@@ -28,6 +28,7 @@
 #include "view_for_viewports.hpp"
 #include "view_for_lws.hpp"
 #include "view_for_panel_unit.hpp"
+#include "view_for_lego.hpp"
 
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
@@ -144,8 +145,8 @@ void* s_scene_material_manager;
 SceneEntryExpandOps s_scene_entry_expand_ops;
 SharedObjectCloneOps s_shared_object_clone_ops;
 QuadMeshRenderHooks s_quad_mesh_render_hooks;
-static SinePhaseBlendState s_sine_phase_blend_state;
-static SinePhaseBlendHooks s_sine_phase_blend_hooks;
+SinePhaseBlendState s_sine_phase_blend_state;
+SinePhaseBlendHooks s_sine_phase_blend_hooks;
 SceneFrameApplyHooks s_scene_frame_apply_hooks;
 SceneRotationApplyHooks s_scene_rotation_apply_hooks;
 SceneObjectRecordRetainHook s_scene_object_record_retain_hook;
@@ -2428,31 +2429,6 @@ void sine_phase_blend_hooks_set(const SinePhaseBlendHooks* hooks)
     else s_sine_phase_blend_hooks = *hooks;
 }
 
-// FUNCTION: LEGORR 0x00424730
-void sine_phase_midpoint_blend_dispatch(void* object, float delta)
-{
-    SinePhaseBlendState* state = &s_sine_phase_blend_state;
-    SinePhaseBlendHooks* hooks = &s_sine_phase_blend_hooks;
-    float color[3];
-    float half_difference;
-    float oscillation;
-    unsigned int i;
-    if ((state->flags & 0x8000u) == 0u) return;
-    if (hooks->object_prepare != NULL) {
-        hooks->object_prepare(hooks->context, object);
-    }
-    if (object == NULL || (state->flags & 0x10000u) == 0u ||
-        hooks->color_apply == NULL || state->period == 0.0f) return;
-    state->phase += (6.2831855f / state->period) * delta;
-    oscillation = (float)sin((double)state->phase);
-    for (i = 0; i < 3; ++i) {
-        half_difference = (state->to[i] - state->from[i]) * 0.5f;
-        color[i] = state->from[i] + half_difference +
-                   half_difference * oscillation;
-    }
-    hooks->color_apply(hooks->context, color[0], color[1], color[2]);
-}
-
 void render_resource_binding_hooks_set(
     const RenderResourceBindingHooks* hooks)
 {
@@ -2548,12 +2524,6 @@ void scene_object_owner_link_release_hooks_set(
  *   FUN_00401420 vec_dist,  FUN_004016f0 vec_dot,  FUN_004013a0 vec_len,
  *   FUN_00401240 vec2_dist,
  *   FUN_0047c0c0 vec_exact_equal. */
-
-// FUNCTION: LEGORR 0x0047c0c0
-int vec_exact_equal(const float* a, const float* b) /* FUN_0047c0c0 */
-{
-    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
-}
 
 #if !defined(LEGORRR_BACKEND_WINAPI)
 /* D3DRM.DLL's D3DRMVectorRandom and D3DRMVectorRotate for the native port,
@@ -3100,18 +3070,6 @@ static void cam_or_flags(void* rec, uint8_t mask)
     uint8_t f = *(uint8_t*)((char*)rec + CAM_FLAGS_OFF);
     f |= mask;
     *(uint8_t*)((char*)rec + CAM_FLAGS_OFF) = f;
-}
-
-/* CurrentLevelTerrainGridPick (FUN_00433be0) — see view.hpp. */
-// FUNCTION: LEGORR 0x00433be0
-void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
-                                     int* gx, int* gy)
-{
-    const float pos[2] = { x, y };
-    int tx = 0, ty = 0;
-    int* px = gx != NULL ? gx : &tx;
-    int* py = gy != NULL ? gy : &ty;
-    (void)engine_context_grid_pick(ctx, pos, px, py);
 }
 
 void terrain_point_pick_cell_check_hook_set(
