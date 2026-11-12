@@ -31,7 +31,7 @@ void* ddiscene_object_allocate(const DDiSceneObjectDescriptor* descriptor);
 /* Return a live record after its kind-specific payload has been released. */
 void ddiscene_object_record_release(void* record);
 int ddiscene_object_pool_owns(const void* record);
-void ddiscene_object_pool_shutdown(void); /* FUN_00472800 */
+extern "C" void ddiscene_object_pool_shutdown(void); /* FUN_00472800 */
 
 } // namespace lego
 

@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 float EngineTimeScale(void);                                    /* 0041fb40 */
-void scroll_scale_set_and_clamp(float scale);                   /* 00425ce0 */
+void lego_game_speed_set(float speed);                          /* 00425ce0 lego_unit.c */
 /* Lego_GotoInfo (0042de40) in the original ABI; unannotated adapter
  * (engine.cpp). */
 void lego_goto_info(void* object, const int* blockPos, int force);

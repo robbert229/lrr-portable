@@ -131,7 +131,7 @@ int float_to_long_x87(unsigned int index, const void* record);
 int float_to_long(float value);
 
 /* FUN_0041f8e0: the callable no-op installed by several engine paths. */
-void noop_callback(void);
+extern "C" void noop_callback(void);
 
 /* CRT runtime-error reporting (FUN_004968b0 / FUN_004968f0 / FUN_00499730).
  * The callback is invoked between the 0xfc and 0xff marker messages when
@@ -408,7 +408,7 @@ uint32_t flh_magic_uu_noop(void);
 /* GlobalFloatField00556F00Get (FUN_004230b0, findings 295/392): reads
  * the global float at DAT_00556f00 as the corpus does (fld DWORD).
  * Its meaning is unresolved — storage stays static-backed. */
-float global_float_field_00556f00_get(void);
+extern "C" float global_float_field_00556f00_get(void);
 
 /* GlobalValue_004ff9bcStoreAndReturn (FUN_004567c0, findings 386/440):
  * stores the pointed-to dword into DAT_004ff9bc-backed storage and
@@ -532,7 +532,7 @@ int  display_mode_matches_filter_tuple(int mode_index);
  * gates a caller on; zero-init static, no ported feeder.
  * GlobalValueSet_004ffe48 (FUN_00458660): the unresolved store's word. */
 uint32_t global_flag_004ff978_get(void);
-void     global_value_004ffe48_set(uint32_t value);
+extern "C" void global_value_004ffe48_set(uint32_t value);
 
 /* --- the unowned DAT word-store band (2026-10-24; findings 37/256/392/419) -
  * Corpus leaves storing or toggling globals with no ported owner/feeder;
@@ -544,14 +544,14 @@ void     global_value_004ffe48_set(uint32_t value);
  * reads (finding 392); the rest are the unresolved or config-domain
  * stores below. */
 extern "C" uint32_t global_flag_bit0_is_set(void); /* FUN_00401c20 */
-void     state_flag_toggle_when_zero(void);        /* FUN_00407340 */
+extern "C" void     state_flag_toggle_when_zero(void);        /* FUN_00407340 */
 uint32_t global_task_refresh_flag_get(void);       /* FUN_00407360 */
-void     level_state_stored_value_set(uint32_t v); /* FUN_00409d40 */
-void     global_mode_zero_input_set(int value);    /* FUN_0040ab10 */
+extern "C" void level_state_stored_value_set(uint32_t v); /* FUN_00409d40 */
+extern "C" void     global_mode_zero_input_set(int value);    /* FUN_0040ab10 */
 uint32_t global_mode_zero_input_peek(void);         /* port hook */
-void     rockfall_style_table_base_set(uint32_t v);/* FUN_0040bfc0 */
+extern "C" void rockfall_style_table_base_set(uint32_t v);/* FUN_0040bfc0 */
 extern "C" void     global_flag_bit0_clear(void);             /* FUN_0040e7e0 */
-void     global_config_value_set(uint32_t v);      /* FUN_0040f5e0 */
+extern "C" void global_config_value_set(uint32_t v);      /* FUN_0040f5e0 */
 extern "C" uint32_t advisor_state_word_peek(void); /* port hook */
 extern "C" void advisor_state_word_set(uint32_t v); /* port hook */
 uint32_t level_stored_word_peek(void);             /* port hook */
@@ -596,7 +596,7 @@ void request_record_panel_bounds_peek(int index, float* out_x1,
 extern "C" void global_value_0050080c_set(int value);
 uint32_t global_value_0050080c_peek(void);            /* port hook */
 extern "C" uint32_t indexed_global_value_at_get(int index);      /* FUN_0045cc10 */
-uint32_t global_cursor_word_get(void);                /* FUN_0045cc60 */
+extern "C" uint32_t global_cursor_word_get(void);                /* FUN_0045cc60 */
 void     font_cursor_word_set(int index, uint32_t v); /* port hook */
 
 /* --- CRT x87 helper fallback + advisor word clear ---------------------------
@@ -665,7 +665,7 @@ uint32_t reward_score_count_peek(void);
  * slot-index array, with the three texture streams loaded through the
  * modeled seam. The corpus overwrites the panel's previous block without
  * freeing it (faithful). */
-void view_blit_rect_positions_apply(int view); /* FUN_00463d20 */
+extern "C" void view_blit_rect_positions_apply(int view); /* FUN_00463d20 */
 extern "C" void panel_item_flag8_set_if_enabled(int panel, int item, int value);
                                         /* FUN_0045abf0 */
 extern "C" void panel_texture_slots_allocate(int panel, unsigned int count,
@@ -735,7 +735,7 @@ void* linked_list_global_head_peek(void);           /* port hook */
 void  linked_list_global_head_set(void* record);      /* port hook */
 void linked_list_conditional_float_advance(float delta); /* FUN_0046a700 */
 uint32_t first_set_flag_ordinal(uint32_t mask); /* FUN_0046a760 */
-int  scene_effect_registry_reset(void);             /* FUN_00465380 */
+extern "C" int  scene_effect_registry_reset(void);             /* FUN_00465380 */
 void scene_effect_registry_words_peek(uint32_t out_words[3]);
 void crt_fatal_message_exit(void);                  /* FUN_00498340 */
 void crt_fatal_exit_observer_set(void (*observer)(void));
@@ -753,7 +753,7 @@ void crt_no_op_stub_variant2(void); /* FUN_00493c40 */
  * auxiliary global word (DAT_004aa450, unowned, zero-init hook), frees the
  * chain at the global head, and clears the head. */
 void linked_record_chain_free(void* record);  /* FUN_0046a370 */
-void global_linked_record_chain_clear(void);  /* FUN_0046a390 */
+extern "C" void global_linked_record_chain_clear(void);  /* FUN_0046a390 */
 void* linked_list_global_aux_peek(void);      /* port hook */
 void  linked_list_global_aux_set(void* word); /* port hook */
 
@@ -791,7 +791,7 @@ void crt_owned_stream_buffer_release(char* record); /* FUN_00494df0 */
  * with hooks). Deviation: the corpus overwrites without freeing the prior
  * copy (leak), reproduced faithfully; tests free the last copy through the
  * peek hook. */
-void shared_texture_directory_set(const char* path); /* FUN_004728c0 */
+extern "C" void shared_texture_directory_set(const char* path); /* FUN_004728c0 */
 char* shared_texture_directory_peek(void);           /* port hook */
 void  shared_texture_directory_clear(void);          /* port hook: free */
 
@@ -812,7 +812,7 @@ uint32_t renderer_flag_word_peek(void);             /* port hook */
 /* DDiSceneEndHookRegister (FUN_00472900): stores the scene-end callback
  * pair — the corpus strides its code-pointer globals blindly; the port
  * stores host pointers. */
-void scene_end_hook_register(void* hook, void* value); /* FUN_00472900 */
+extern "C" void scene_end_hook_register(void* hook, void* value); /* FUN_00472900 */
 void* scene_end_hook_peek(void);                       /* port hook */
 void* scene_end_hook_value_peek(void);                 /* port hook */
 
@@ -980,7 +980,7 @@ void     renderer_word_c_set(uint32_t value);
 extern "C" uint32_t s_renderer_word_a; /* DAT_0076ab24 */
 extern "C" uint32_t s_renderer_word_b; /* DAT_0076ab28 */
 extern "C" uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
-extern uint32_t s_window_mouse_word_40; /* DAT_0076ab40 */
+extern "C" uint32_t s_window_mouse_word_40; /* DAT_0076ab40 */
 extern "C" uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c */
 extern uint32_t s_window_mouse_word_50; /* DAT_0076ab50 */
 extern uint32_t s_window_mouse_word_54; /* DAT_0076ab54 */
@@ -1018,7 +1018,7 @@ extern uint32_t s_render_feature_flags; /* DAT_0050608c */
 uint32_t engine_feature_word_peek(void);
 void     engine_feature_word_install(uint32_t value); /* port hook */
 extern "C" uint32_t s_engine_feature_word; /* DAT_00505f84 */
-void     low_texture_flag_set(void);                  /* FUN_00477bd0 */
+extern "C" void     low_texture_flag_set(void);                  /* FUN_00477bd0 */
 
 /* --- integer/string helper band (2026-10-25) -------------------------------
  * UInt96Copy (FUN_00497a80): copies the three dwords src→dst in ascending

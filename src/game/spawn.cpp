@@ -17,6 +17,10 @@
 #include "../gods98/camera.hpp"
 #include <math.h>
 #include <string.h>
+/* GAME-021 lego_unit.c writes this word (C linkage, ADR 0005 step 6). */
+namespace unported_ledger_stubs {
+extern "C" uint32_t s_start_level_pilot_grid_count;
+}
 #include "spawn_for_lego.hpp"
 #include "spawn_for_legoobject.hpp"
 #include "spawn_for_mesh_unit.hpp"

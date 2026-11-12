@@ -843,3 +843,10 @@ static int cmd_rand15(void)
     return (int)((s_cmd_rand_state >> 16) & 0x7fffu);
 #endif
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the debug-key binder (00452010) takes five words; the port's entry takes six. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (cmd_bind_key)
+extern "C" void lego_key_callback_set_adapter(int key, int op, int a1, int a2, int a3)
+{
+    cmd_bind_key(key, op, a1, a2, a3, 0);
+}

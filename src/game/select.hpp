@@ -59,7 +59,7 @@ int selection_entity_remove_active(EntitySlot* entity);
 int selection_candidate_filter_active(void* entity, int mode, int param_3);
 
 /* Retail active-selection global accessors. */
-EntitySlot* const* selection_active_context_record_get(int* count_out);
+extern "C" EntitySlot* const* selection_active_context_record_get(int* count_out);
 extern "C" EntitySlot* const* selection_active_records_get(void);
 extern "C" uint32_t selection_active_count_get(void);
 extern "C" int selection_active_has_any_get(void);

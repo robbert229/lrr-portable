@@ -87,7 +87,7 @@ ScreenBoundedSurfaceRecord* screen_bounded_surface_allocate(
     uint32_t width, uint32_t height, void* camera, int x, int y);
 /* RenderTargetViewportScaleSet (FUN_00476dc0): turn normalized viewport
  * origin and size values into device pixels, then allocate its viewport. */
-ScreenBoundedSurfaceRecord* render_target_viewport_scale_set(
+extern "C" ScreenBoundedSurfaceRecord* render_target_viewport_scale_set(
     float x, float y, float width_scale, float height_scale, void* camera);
 
 /* FUN_00482220: one 0x70-byte mesh render record. The corpus stores the
@@ -308,7 +308,7 @@ int surface_palette_entries_set(DisplaySurface* surface, unsigned int start,
                                 unsigned int count,
                                 const SurfacePaletteEntry* entries);
 void surface_description_interface_set(void* interface_pointer);
-int surface_description_get(int* width_out, int* height_out); /* FUN_0047cdd0 */
+extern "C" int surface_description_get(int* width_out, int* height_out); /* FUN_0047cdd0 */
 
 /* Lock returns the framebuffer pointer + row pitch (RGBA32 R,G,B,A on LE). */
 int  surface_lock(DisplaySurface* s, void** pixels, int* pitch);
@@ -752,13 +752,13 @@ int direct3drm_device_initialize(void* adapter, uint32_t adapter_flags,
                                  void* surface, int force_single_mode); /* FUN_004781d0 */
 int direct3drm_device_mode_get(void);
 uint32_t surface_render_flags_peek(void);
-void renderer_record_table_initialize(void); /* FUN_0047d410 */
+extern "C" void renderer_record_table_initialize(void); /* FUN_0047d410 */
 uint32_t renderer_record_table_word_peek(int index);
 void renderer_record_table_word_set(int index, uint32_t value);
 typedef void (*RendererBeginFrameHook)(void* device);
 void renderer_begin_frame_hook_set(RendererBeginFrameHook hook, void* device);
 int renderer_begin_frame_once(void);
-void renderer_begin_frame_once_retail(void); /* FUN_00477fa0 */
+extern "C" void renderer_begin_frame_once_retail(void); /* FUN_00477fa0 */
 void renderer_begin_frame_once_reset(void);
 #if defined(LEGORRR_BACKEND_WINAPI)
 void render_surface_present(void); /* FUN_0047c8d0 */

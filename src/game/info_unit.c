@@ -509,7 +509,7 @@ void info_send(int type, char* text, void* object, InfoPoint2I* blockPos)
 
                         if ((unsigned int)engine_app_mode_get() <= 4 && (infoGlobs.flags & INFO_FLAG_AUTOGAMESPEED) &&
                             (infoGlobs.infoDataTable[type].flags & INFO_DATA_FLAG_AUTOGAMESPEED)) {
-                            if (EngineTimeScale() > 1.0f) scroll_scale_set_and_clamp(1.0f);
+                            if (EngineTimeScale() > 1.0f) lego_game_speed_set(1.0f);
                         }
                     }
                 }

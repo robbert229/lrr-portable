@@ -7,13 +7,13 @@ enum { SCENE_RESOURCE_SLOT_COUNT = 32 };
 typedef void (*SceneResourceReleaseHook)(void* resource, void* context);
 void scene_resource_release_hook_set(SceneResourceReleaseHook hook,
                                      void* context);
-void scene_resource_slots_initialize(); /* 0x00476d50 */
-void scene_resource_slots_release_all(); /* 0x00476d80 */
+extern "C" void scene_resource_slots_initialize(); /* 0x00476d50 */
+extern "C" void scene_resource_slots_release_all(); /* 0x00476d80 */
 void* scene_resource_slot_get(unsigned int index);
 int scene_resource_slot_set(unsigned int index, void* resource);
 void scene_resource_string_tables_set(void** first, unsigned int first_count,
                                       void** second, unsigned int second_count);
-void scene_resource_string_tables_free(); /* 0x00487760 */
+extern "C" void scene_resource_string_tables_free(); /* 0x00487760 */
 extern "C" int shared_object_sample_time_matches(const void* record, uint32_t time); /* 0x00487ed0 */
 extern "C" float keyframe_time_segment_fraction(const void* track, float time, uint16_t* segment_out); /* 0x00487fc0 */
 int animated_texture_frame_count(const void* texture); /* 0x00474a20 */
@@ -55,7 +55,7 @@ extern "C" void interface_array_forward_sync(void* owner_link, void* source_reco
 typedef int (*SharedTextureRootInitializeHook)(void* context);
 void shared_texture_root_initialize_hook_set(
     SharedTextureRootInitializeHook hook, void* context);
-int shared_texture_root_register(const char* root); /* 0x004805b0 */
+extern "C" int shared_texture_root_register(const char* root); /* 0x004805b0 */
 int shared_texture_root_initialize(); /* 0x00480650 */
 const char* shared_texture_root_get();
 /* Host records for CachedRenderResourceInstanceCreate @ 0x00480900. `words`
@@ -111,7 +111,7 @@ void scene_node_matrix_apply_hook_set(SceneNodeMatrixApplyHook hook,
                                       void* context);
 void scene_node_transform_matrix_apply(void* owner, const void* track,
     const float position[3], const float rotation[3], const float scale[3]);
-void resource_interface_call_slot48(void* wrapper, void* value); /* 0x00476f50 */
+extern "C" void resource_interface_call_slot48(void* wrapper, void* value); /* 0x00476f50 */
 extern "C" float resource_interface_call_slot8c(void* wrapper); /* 0x00476fd0 */
 extern "C" float resource_interface_call_slot90(void* wrapper); /* 0x00476ff0 */
 }

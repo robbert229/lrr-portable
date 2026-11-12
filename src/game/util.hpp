@@ -144,7 +144,7 @@ const char* util_level_cfg_path(BlockFile* cfg, const char* level,
  * table. A miss returns the configured count. */
 void string_table_install(const char* const* entries, unsigned int count);
 unsigned int string_table_index_lookup(const char* value);
-void bubble_action_strings_initialize(void); /* FUN_004070b0 */
+extern "C" void bubble_action_strings_initialize(void); /* FUN_004070b0 */
 const char* bubble_action_string_get(unsigned int index);
 int case_insensitive_name_table_lookup_at_offset8(const void* const* entries,
                                                    unsigned int count,

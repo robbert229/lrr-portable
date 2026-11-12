@@ -54,7 +54,7 @@ typedef int  (*MessageCallback)(int id); /* port notification after append */
 typedef void (*MessageSoundHook)(int id, float vol); /* FUN_00464ef0 role */
 
 void message_init_defaults(void);   /* seed the 40-id catalog (finding 22) */
-void ui_message_strings_initialize(void* primary_font, void* secondary_font,
+extern "C" void ui_message_strings_initialize(void* primary_font, void* secondary_font,
                                    void* message_resource, void* subtitle_font,
                                    float line_delay); /* FUN_0046a7f0 */
 void* ui_message_text_output_get(int alternate); /* DAT_0050361c/620 */
@@ -76,7 +76,7 @@ void message_clear(void);           /* reset queue + config for tests */
  * The catalog names are statically seeded; the initializer retains its
  * opaque caller word and raises the corpus's 0x18 flags. Template compile
  * emits the format string and trailing substitution metadata. */
-void incident_message_catalog_init(uint32_t owner);
+extern "C" void incident_message_catalog_init(uint32_t owner);
 uint32_t incident_message_catalog_owner_get(void); /* port state peek */
 struct TextureSurface;
 void info_message_surface_load(int id, const char* path); /* FUN_00419650 */
@@ -106,12 +106,12 @@ const char* message_sound(int id);
 /* Load `InfoMessages` (FUN_00434c10): each named row's colon-separated value
  * contains display text, image resource, optional sound alias, and the SLOW /
  * ALWAYSPLAYSFX mode fields. */
-void message_load_infomessages(BlockFile* cfg);
+extern "C" void message_load_infomessages(BlockFile* cfg);
 
 /* fire a message (corpus MessageDispatch). p2 is an optional text override,
  * p3 is the node payload dword, and p4 points to the optional two-dword
  * event data copied into the incident node. */
-void message_dispatch(int id, const char* p2, uint32_t p3, const void* p4);
+extern "C" void message_dispatch(int id, const char* p2, uint32_t p3, const void* p4);
 
 /* Index of the queued message id, or -1 (corpus InfoMessageQueueFindId). */
 int message_queue_find_id(int id);                /* FUN_00419b20 */
@@ -127,7 +127,7 @@ int incident_message_config_lookup(const char* name, int* out_id);
 void message_update(float dt);
 
 /* corpus FUN_0041a2c0: decrement every configured cooldown toward 0. */
-void message_cooldown_tick(float dt);
+extern "C" void message_cooldown_tick(float dt);
 
 /* InfoMessageQueueTick (FUN_00419f30): advance each active message's
  * display-offset and remaining-time words. The original then updates a
@@ -150,7 +150,7 @@ typedef struct InfoMessageQueueTickOps {
     InfoMessageQueueResourceLimitHook resource_limit_get;
 } InfoMessageQueueTickOps;
 void info_message_queue_tick_ops_set(const InfoMessageQueueTickOps* ops);
-void info_message_queue_tick(float dt); /* FUN_00419f30 */
+extern "C" void info_message_queue_tick(float dt); /* FUN_00419f30 */
 
 /* IncidentMessageTextConsumer (FUN_0041a080): the queue/catalog and update
  * bit are message-owned. The scrolling panel record, UI state word, transition
@@ -170,7 +170,7 @@ typedef struct IncidentMessageTextConsumerOps {
 } IncidentMessageTextConsumerOps;
 void incident_message_text_consumer_ops_set(
     const IncidentMessageTextConsumerOps* ops);
-void incident_message_text_consumer(float frame_delta);
+extern "C" void incident_message_text_consumer(float frame_delta);
 
 /* CatalogSlotFlagUpdate (FUN_0041c800): category 1 and 4 rows each retain a
  * low-bit state word. The catalog owner supplies the two eligibility checks
@@ -206,7 +206,7 @@ uint32_t message_config_flags(int id);
  * (documented deviation; corpus callers pass live pointers). */
 extern "C" uint32_t system_state_flags_get(void);
 uint32_t system_state_flags_set(const uint32_t* value);
-uint32_t system_state_flags_set_target(const uint32_t* value);
+extern "C" uint32_t system_state_flags_set_target(const uint32_t* value);
 uint32_t objective_switch_state_set(uint32_t value);
 uint32_t objective_switch_state_get(void);
 
@@ -240,12 +240,12 @@ uint32_t incident_message_state_get(void);
  * whether the corresponding message resource was found; the corpus reader
  * (DeferredCallbackInvokeIfSet) is unported, so the word lands as
  * zero-init storage with a peek. */
-void     deferred_callback_set(uint32_t value);
+extern "C" void     deferred_callback_set(uint32_t value);
 uint32_t deferred_callback_peek(void);
 
 /* IncidentMessageFlagSet (FUN_00419ae0, findings 06/440): raises or drops
  * bit 4 of the message flag word through the module's own s_flags. */
-void incident_message_flag_set(int value);
+extern "C" void incident_message_flag_set(int value);
 
 /* HasActiveResource (FUN_004119d0, finding 440): a record with a nonzero
  * +0x38 word answers through the system-state bitmask. NULL record guarded

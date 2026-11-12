@@ -794,3 +794,28 @@ static Resource* resource_load_complete(const char* path)
     }
     return resource;
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_0040c720 takes the root container and the path; the port's
+ * entry above takes the path only. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (global_resource_handle_load_and_enable 0040c720)
+extern "C" int global_resource_handle_load_and_enable_original(void* root,
+                                                               const char* path)
+{
+    (void)root;
+    return global_resource_handle_load_and_enable(path);
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_0040c990 reads the MiscObjects entries from the config
+ * itself; the port's entry above takes them parsed (lego.cpp's loader
+ * does the parsing). Nothing calls this natively, so it does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (misc_objects_effect_slots_bind 0040c990)
+extern "C" void misc_objects_effect_slots_bind_original(BlockFile* config,
+                                                        const char* gameName,
+                                                        void* root)
+{
+    (void)config;
+    (void)gameName;
+    (void)root;
+}

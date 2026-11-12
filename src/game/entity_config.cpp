@@ -19,6 +19,12 @@
 #include "gods98/string.hpp"
 #include "util.hpp"
 #include "entity_config_for_lego.hpp"
+extern "C" int entity_vehicle_type_table_load(void);
+extern "C" int entity_minifigure_type_table_load(void);
+extern "C" int entity_rockmonster_type_table_load(void);
+extern "C" int entity_building_types_load(void);
+extern "C" void entity_object_names_load(BlockFile* config);
+extern "C" void entity_object_the_names_load(BlockFile* config);
 #include "entity_config_from_lego.hpp"
 
 TypeConfigTable s_minifigure_type_config;

@@ -1,0 +1,1287 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+/* GAME-021 Lego.c part 1 (issue #544): the C declarations of the functions
+ * and globals of other modules that lego_unit.c calls or reads.
+ *
+ * Every entry has C linkage. Where the owning module has a C++ header, its
+ * declaration there carries extern "C" (in place) and
+ * src/game/test_c_boundaries.cpp includes both, so a mismatch fails to
+ * compile. They are kept here, not in the owners' C boundary headers, so
+ * the other C units' symbol numbering does not change (finding 538); they
+ * move to the owners' headers when the owners are converted. Where a
+ * callee's contract differs from the original's, the port's contract is
+ * used and noted. */
+#ifndef LEGORRR_GAME_LEGO_UNIT_IMPORTS_H
+#define LEGORRR_GAME_LEGO_UNIT_IMPORTS_H
+
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ---- group M ---- */
+
+
+/* legoGlobs fields the port models as globals of its own (each annotated
+ * at the field's address in its file). */
+extern struct LevelState* g_active_level_retail; /* terrain_grid.cpp, 005560d4 currLevel */
+extern const char* s_engine_config_root;      /* engine.cpp, 005560c4 gameName */
+extern void* s_zoom_step_context;             /* view.cpp, 005560e4 cameraMain */
+extern float s_scroll_scale;                  /* engine.cpp, 0055615c gameSpeed */
+extern uint32_t s_triple_first;               /* engine.cpp, 0055651c */
+extern uint32_t s_triple_second;              /* engine.cpp, 00556520 */
+extern uint32_t s_triple_third;               /* engine.cpp, 00556524 */
+extern int32_t s_context_mode;                /* engine.cpp, 00556ec8 viewMode */
+extern uint32_t s_panel_highlight_flags;      /* engine.cpp, 00556ed0 flags2 */
+extern uint32_t s_global_low_word;            /* engine.cpp, 00556ed4 */
+extern float s_global_float_00556f00;         /* crt.cpp, 00556f00 */
+extern float s_score_text_origin_x;           /* engine.cpp, 00556f1c */
+extern float s_score_text_origin_y;           /* engine.cpp, 00556f20 */
+extern float s_task_text_origin_x;            /* engine.cpp, 00556f24 */
+extern float s_task_text_origin_y;            /* engine.cpp, 00556f28 */
+extern void* s_refresh_record;                /* engine.cpp, 005563b4 */
+extern void* s_position_handle;               /* engine.cpp, 00556f3c */
+/* Lego.c's own .bss that the port's lego.cpp still defines. */
+extern int s_scroll_guard;                    /* lego.cpp, 004de548 */
+
+/* GAME-032 Panel.c (panel_unit.h). */
+void ui_overlay_animation_advance(int up, unsigned int count); /* 0045c580 */
+/* GAME-011 (tile_variants.h): Detail_GetTexture, which takes the texture
+ * as a byte. */
+unsigned int packed_grid_cell_value_get(const void* grid,
+                                        unsigned char packed_cell); /* 0040b850 */
+/* G98 sound (sound.hpp, sound.h). */
+int sound_batch_mode_get(void);                            /* 004652b0 */
+void sound_batch_queue_drain(int batch_set, int replay);   /* 004652d0 */
+int sound_alias_play(int alias, int loop);                 /* 00464fa0 */
+/* GAME-033 pointer (media.hpp). */
+void media_pointer_cursor_override_set(int slot, float value); /* 0045cc40 */
+/* GAME-017 FrontEnd.c: FUN_00414f90 takes no argument; the port's entry
+ * takes the game context. Thin adapter at the end of frontend_unit.cpp. */
+void options_scroll_index_store_current(float speed);      /* 00414f90 */
+
+
+
+/* ---- group A ---- */
+
+/* The C boundary headers of the converted gods98 units whose records
+ * Lego_Initialise uses: Config.c (BlockFile, BlockRec) and Images.c
+ * (Image, Area2F, Point2F, and the original-ABI image adapters). */
+#include "gods98/config.h"
+#include "gods98/images.h"
+#include "gods98/image_adapters.h"
+
+struct TextureSurface;
+struct SceneObjectChainRecord;
+struct ScreenBoundedSurfaceRecord;
+
+/* legoGlobs fields the port keeps as port globals. */
+extern uint32_t s_engine_feature_word;        /* crt.cpp, 00505f84 mainGlobs.flags */
+extern void* DAT_0055613c;                    /* frontend.cpp, 0055613c the RSFont */
+extern void* DAT_00556f50;                    /* frontend.cpp, 00556f50 CreditsTextFile */
+extern void* DAT_00556f54;                    /* frontend.cpp, 00556f54 CreditsBackAVI */
+/* lego.cpp's stand-ins for the two Panel.c fonts and the radar zoom
+ * (game/lego.h, finding 554), unannotated there. */
+extern struct TextureSurface* s_lego_text_window_font;   /* 00556124 fontStandard */
+extern struct TextureSurface* s_lego_crystal_count_font; /* 00556128 fontToolTip */
+extern float s_lego_radar_zoom;                          /* 005563f4 */
+
+/* G98 Keys.c (keys.h). */
+void keyboard_key_names_init(void);                        /* 00485a20 */
+/* G98 Viewports.c (scene_resources.hpp). */
+void scene_resource_slots_initialize(void);                /* 00476d50 */
+struct ScreenBoundedSurfaceRecord* render_target_viewport_scale_set(
+    float x, float y, float width_scale, float height_scale,
+    void* camera);                                         /* 00476dc0 */
+void renderer_object_set_clip_distance(void* object, float distance); /* 00476fb0 */
+/* GAME-022 LegoObject.c (ai.hpp, frontend.hpp, entity.hpp, level.hpp). */
+void ai_activity_name_table_initialize(void);              /* 00436c20 */
+void tooltip_icons_config_load(void* config);              /* 00437150 */
+void entity_tool_name_strings_load(void* string_loader,
+                                   void* config);          /* 00439950 */
+void terrain_object_sfx_grid_config_load(struct BlockRec* config,
+                                         const char* root_path); /* 0044acc0 */
+/* G98 Images.c (surface.hpp). */
+void renderer_record_table_initialize(void);               /* 0047d410 */
+/* G98 Flic.c (flic.hpp): an empty function; the original's other empty
+ * callee at this address (it takes two arguments) is an adapter below. */
+void flic_opcode27_fallback_noop(void);                    /* 00484c90 */
+/* GAME-03x map view (frontend.hpp). */
+void screen_coord_normalize_init(void);                    /* 0045d8b0 */
+/* GAME-032 Panel.c (panel_unit.h). */
+void ui_panel_name_tables_init(void);                      /* 0045a030 */
+void frontend_panel_rotation_control_config_load(struct BlockRec* config,
+                                                 const char* gameName); /* 0045b9d0 */
+void three_surface_resources_load(const char* smallCrystal,
+                                  const char* usedCrystal,
+                                  const char* noSmallCrystal); /* 0045bfb0 */
+void panel_resource_layout_store(const char* juiceName, unsigned int juiceX,
+                                 unsigned int juiceY,
+                                 unsigned int juiceLength,
+                                 const char* noAirName, unsigned int noAirX,
+                                 unsigned int noAirY);     /* 0045c340 */
+void panel_resource_handle_and_dimensions_store(const char* name,
+                                                unsigned int x,
+                                                unsigned int y,
+                                                unsigned int length); /* 0045c520 */
+void legacy_scroll_panel_controls_initialize(void);        /* 0045a240 */
+void panel_item_flag16_set(int panelType, int button, int on); /* 0045aac0 */
+/* GAME-002 AITask.c (cmd_from_aitask.hpp, cmd.hpp). */
+void cmd_registry_init_target(void);                       /* 00401cf0 */
+void engine_memory_free(void* ptr);                        /* 00402210 Mem_Free */
+/* G98 resource (resource.hpp). */
+void message_string_table_initialize(void);                /* 00451cd0 */
+void string_table_entry_set_current(const char* name);     /* 0044dde0 */
+void preload_numbered_bitmaps(const char* directory, const char* prefix); /* 0040a400 */
+/* GAME sfx.cpp (crt.hpp, sound.hpp, sound.h). */
+int scene_effect_registry_reset(void);                     /* 00465380 */
+void sound_alias_registry_init(void);                      /* 00464740 */
+int sound_alias_lookup(const char* name, int* out_index);  /* 00464c70 */
+int sound_positional_sound_submit(int position, int alias, int loop,
+                                  int positional, const float* xyz); /* 00465090 */
+int sound_subsystem_enabled(void);                         /* 00465370 */
+void sound_samples_config_load(struct BlockRec* config, int allow_marked); /* 00434a50 */
+/* GAME pointer.cpp (ui_list.hpp, frontend.hpp, media.hpp). */
+void ui_pointer_cursor_name_registry_init(void);           /* 0045c830 */
+void pointer_cursor_config_load_target(struct BlockRec* first_entry); /* 0045ca70 */
+void media_pointer_cursor_select(int slot);                /* 0045cc20 */
+/* GAME-004 Bubbles.c (util.hpp, ai.hpp). */
+void bubble_action_strings_initialize(void);               /* 004070b0 */
+void bubble_config_texture_load(struct BlockRec* cfg);     /* 00407240 */
+/* G98 Font.c (surface.hpp): Font_Load. */
+void* font_atlas_record_create(const char* name);          /* 00479ee0 */
+/* GAME Info.c (message.hpp, frontend.hpp). The original passes the font. */
+void incident_message_catalog_init(uint32_t owner);        /* 00419230 */
+void interface_message_tab_info_text_load(const char* path); /* 00419430 */
+/* GAME Interface.c (frontend.hpp, entity.hpp). */
+/* G98 Container.c (crt.hpp, scene_pool.hpp). */
+void scene_end_hook_register(void* hook, void* value);     /* 00472900 */
+void shared_texture_directory_set(const char* path);       /* 004728c0 */
+void ddiscene_object_pool_shutdown(void);                  /* 00472800 */
+/* G98 Advisor.c (advisor.h). */
+int display_width_get(void);                               /* 00401c30 */
+int display_height_get(void);                              /* 00401c40 */
+int engine_app_mode_get(void);                             /* 00401bf0 */
+void advisor_scene_controller_initialize(const char* gameName,
+                                         void* camera, void* viewMain); /* 00401000 */
+void advisor_scene_visual_state_initialize(float distance); /* 00401210 */
+void advisor_config_slots_load_target(struct BlockRec* config,
+                                      const char* gameName); /* 00401270 */
+void advisor_position_config_load(struct BlockRec* config,
+                                  const char* gameName, int screenWidth,
+                                  int screenHeight);       /* 00401530 */
+/* GAME ToolTip.c (frontend.hpp). */
+void tooltip_overlay_state_initialize(
+    void* font, uint32_t geometry_a, uint32_t geometry_b,
+    float duration_scale, uint32_t display_width, uint32_t display_height,
+    uint32_t inset_word, float color_r, float color_g,
+    float color_b);                                        /* 0046b1d0 */
+/* G98 DirectDraw.c (directdraw.hpp). */
+int surface_description_get(int* width_out, int* height_out); /* 0047cdd0 */
+void low_texture_flag_set(void);                           /* 00477bd0 */
+/* G98 TextWindow.c (heap.hpp, textwindow.h). */
+void* text_buffer_create(uintptr_t font_handle, const uint32_t* header,
+                         long size);                       /* 004850f0 */
+void text_buffer_append_format(void* record, const char* format, ...); /* 00485230 */
+/* GAME Text.c (message.hpp). The original passes two screen positions as
+ * the middle words. */
+void ui_message_strings_initialize(void* primary_font, void* secondary_font,
+                                   void* message_resource,
+                                   void* subtitle_font,
+                                   float line_delay);      /* 0046a7f0 */
+/* GAME-017 FrontEnd.c (mission_for_reward.hpp, savegame.hpp, frontend.hpp,
+ * options.hpp). */
+char* mission_replace_char(char* text, char from, char to); /* 00413f00 */
+void save_slot_selection_clear_target(void);               /* 00415cf0 */
+int quit_menu_probe(void);                                 /* 00416dd0 */
+void options_load_or_default_target(int load_options,
+                                    int reset_frontend);   /* 00416940 */
+/* G98 Utils.c (utils.h) and Sound.c (soundsys.h, sound.h). */
+int sound_variant_split(char* text, char** out, const char* separators); /* 00477440 */
+int media_cd_audio_playback_available(void);               /* 00488b90 */
+int sound_alias_play(int alias, int loop);                 /* 00464fa0 */
+/* G98 Camera / view (camera_control.cpp; view.hpp). */
+struct SceneObjectChainRecord* scene_object_chain_record_create(void* parent,
+                                                                int type); /* 00435b20 */
+void camera_view_context_set(float cap, float follow_scale,
+                             float pan_scale, int edge); /* 00435e0e */
+void camera_distance_bounds_set(void* camera, float lo, float hi); /* 00436a18 */
+void camera_tilt_bounds_set(void* camera, float lo, float hi); /* 00436831 */
+/* GAME level.hpp. */
+void surface_type_descriptions_config_load(struct BlockRec* config,
+                                           const char* config_root); /* 004350a0 */
+/* GAME Priorities.c (priorities.h). */
+void priorities_load_positions(struct BlockRec* config, const char* game_name); /* 0045d060 */
+void priorities_load_images(struct BlockRec* config, const char* game_name);    /* 0045cdc0 */
+/* G98 Images.c / scene resources (scene_resources.hpp). */
+int shared_texture_root_register(const char* root);        /* 004805b0 */
+/* GAME message.hpp. */
+void deferred_callback_set(uint32_t value);                /* 00453900 */
+void message_load_infomessages(struct BlockRec* cfg);      /* 00434c10 */
+/* GAME-021 parts 2-3, still in lego.cpp (entity_config_from_lego.hpp,
+ * frontend.hpp). */
+int entity_vehicle_type_table_load(void);                  /* 0042cda0 */
+int entity_minifigure_type_table_load(void);               /* 0042cf50 */
+int entity_rockmonster_type_table_load(void);              /* 0042d100 */
+int entity_building_types_load(void);                      /* 0042d2b0 */
+void entity_object_names_load(struct BlockRec* config);    /* 0042d600 */
+void entity_object_the_names_load(struct BlockRec* config); /* 0042da20 */
+void advisor_tooltip_and_sound_config_load(struct BlockRec* config); /* 00434da0 */
+void advisor_tutorial_icon_image_load(struct BlockRec* cfg); /* 00434a00 */
+/* G98 Sound3D.c (sound3d.c, simtick.hpp, sound3d.h). The native port's
+ * entries take a frame handle and the distance as an integer word. */
+#if defined(LEGORRR_BACKEND_MINIWIN)
+typedef int LegoA_Sound3DFrameArg;
+void sound_tracked_buffers_set_max_distance(uint32_t value); /* 0047b4d0 */
+#else
+typedef struct Sound3DFrame* LegoA_Sound3DFrameArg;
+void sound_tracked_buffers_set_max_distance(float dist);   /* 0047b4d0 */
+#endif
+void sound_tracked_buffers_set_min_distance(float value);  /* 0047b4a0 */
+void simtick_directsound_listener_view_set(LegoA_Sound3DFrameArg frame); /* 0047ab80 */
+float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff); /* 0047c100 */
+/* GAME placement_footprint.cpp (record.hpp). */
+void surface_visibility_set(const void* record, uint32_t flag); /* 00464720 */
+/* GAME HelpWindow.c (frontend.hpp). The original passes the font. */
+void selection_mode_state_set(uint32_t value);             /* 00418190 */
+/* GAME ObjInfo.c (frontend.hpp), LightEffects.c (effects.hpp). */
+void frontend_render_three_pass_update(struct BlockRec* values,
+                                       const char* config_root); /* 00459530 */
+void light_effect_configuration_load(void* config,
+                                     const char* config_root); /* 0044c7c0 */
+void transient_effect_textures_preload(const char* filename_prefix,
+                                       const char* filename_format,
+                                       uint32_t texture_count); /* 004653a0 */
+/* GAME Encyclopedia.c (frontend.hpp), Weapons.c (weapon.hpp). */
+void encyclopedia_config_files_open(struct BlockRec* cfg,
+                                    const char* root_path); /* 0040e490 */
+int weapon_type_config_load(void* config, void* context);  /* 0046eb80 */
+/* GAME mission.hpp. */
+int reward_initialise(void);                               /* reward.c, 0045f030 */
+
+/* Original-ABI adapters (ADR 0005 step 6), unannotated, where the port's
+ * entry has another contract or there is none. */
+/* Container_Initialise (00472710): no port entry (lego.cpp). */
+void* container_initialise_original(const char* gameName);
+/* LegoObject_TriggerFrameCallback (0043f130): no port entry (lego.cpp). */
+void lego_object_trigger_frame_callback_adapter(void* cont, void* data);
+/* DirectDraw_AdjustTextureUsage (0047cd50): the port's entry takes no
+ * argument (directdraw.cpp). */
+void query_texture_memory_original(unsigned int* textureUsage);
+/* TextWindow-backed message panel set-up (0046a950): no port entry
+ * (lego.cpp). */
+void text_message_panel_initialise_adapter(const char* imageFile,
+                                           unsigned int x, unsigned int y,
+                                           unsigned int openY,
+                                           Area2F* messageWindow,
+                                           Area2F* imageWindow,
+                                           float timer);
+/* Front_IsFrontEndEnabled (00416d00), Front_IsIntrosEnabled (00414ce0):
+ * the port's entries read the config (frontend_unit.cpp). */
+int frontend_enabled_original(void);
+int movie_avis_enabled_original(void);
+/* Front_PlayIntroMovie (00415910), Front_PlayIntroSplash (004157c0): no
+ * port entries with this contract (lego.cpp). */
+void front_play_intro_movie_adapter(const char* movieKey, int skippable);
+void front_play_intro_splash_adapter(const char* imageKey, int skippable,
+                                     const char* timeKey);
+/* Loader_Initialise (0044db50): the port's entry is a key/value loader
+ * (lego.cpp). */
+void loader_initialise_adapter(const char* loadScreenName,
+                               const char* shutdownScreenName,
+                               struct TextureSurface* font,
+                               const char* profileName, int progressDirection,
+                               const char* progressBarName,
+                               Area2F* progressWindow,
+                               const char* loadingText);
+/* Viewport_Create (00476e50): the port's entry is a ledger stub in a
+ * namespace taking the size first (viewports.cpp). */
+void* render_target_viewport_create_original(int x, int y, int width,
+                                             int height, void* camera);
+/* SFX/Lws_SetupSoundTriggers (004876c0): the port's entry takes its
+ * callbacks in another order (lws.cpp). */
+#ifdef __cplusplus
+}
+#endif
+#include "gods98/lws.h" /* lws_initialise (004876c0), G98-020 */
+#ifdef __cplusplus
+extern "C" {
+#endif
+/* Lego_LoadLighting (00433770), Lego_LoadGraphicsSettings (004334f0),
+ * Lego_LoadUpgradeTypes (0042d460): the port's entries take hook tables
+ * or the config, or sit in a namespace (lego.cpp). */
+int scene_lights_build_from_config_original(void);
+int render_quality_config_apply_original(void);
+int upgrade_types_load_original(void);
+/* SelectPlace_Create (00463f00): the port's entry takes a hook table
+ * (info_track_overlay.cpp). */
+void* select_place_create_adapter(void* root, float size);
+/* HelpWindow_Initialise (004181b0): the port's entry takes a resource-op
+ * table (helpwindow.cpp). */
+void help_window_initialise_adapter(struct BlockRec* config,
+                                    const char* gameName);
+/* Stats_Initialise (004667e0): no port entry (lego.cpp). */
+void stats_initialise_adapter(struct BlockRec* config, const char* gameName);
+/* Dependencies_Initialise (0040ab70): the port's entry takes a level block
+ * and the config (dependencies.cpp). */
+void dependencies_initialise_adapter(struct BlockRec* config,
+                                     const char* gameName);
+/* The debug-key binder (00452010): the port's entry takes six words
+ * (message_unit.cpp). */
+void lego_key_callback_set_adapter(int key, int op, int a1, int a2, int a3);
+/* An empty function the linker folded to 00484c90, called with the root
+ * container and "animtex_dirt" (lego.cpp). */
+void lego_noop_load_adapter(void* root, const char* name);
+/* RockFall_Initialise (0040bfd0): the port's entry takes a style table
+ * (rock_fall_styles.cpp). */
+void rock_fall_initialise_adapter(struct BlockRec* config,
+                                  const char* gameName, void* root);
+/* Lego_LoadPanels (004345f0), Lego_LoadPanelButtons (00434710),
+ * Lego_LoadTextMessages (00434af0): the port's entries are in a namespace
+ * (lego.cpp). */
+void panels_config_entry_apply_original(struct BlockRec* config, int width,
+                                        int height);
+void panel_button_layout_config_load_original(struct BlockRec* config,
+                                              int width, int height);
+void text_messages_config_load_original(struct BlockRec* config);
+/* Interface_LoadImages (0041ada0), Interface_LoadSurroundImages
+ * (0041afd0): the port's entries take the config only (interface.cpp). */
+/* Reward_Initialise (0045f7f0): the port's entry takes the game context
+ * (reward.cpp). */
+int reward_load_graphics(struct BlockRec* config, const char* gameName); /* reward.c, 0045f7f0 */
+/* Front_LoadMenus (004161f0): no port entry (lego.cpp). */
+void front_load_menus_adapter(struct BlockRec* config);
+/* Front_RunScreenMenuType (00416c80), Front_GetSelectedLevel (00416d70):
+ * the port's entries take the front end (frontend_unit.cpp). */
+void front_run_screen_menu_type_adapter(int menuType);
+const char* front_get_selected_level_adapter(void);
+/* Main_GetStartLevel (00401c00): Main.c's buffer is the Win32 entry
+ * point's (lego.cpp). */
+const char* main_get_start_level_adapter(void);
+
+
+
+/* GAME-020 Interface.c, converted (interface_unit.h, finding 564). */
+void interface_initialise(unsigned int x, unsigned int y,
+                          struct TextureSurface* font);           /* 0041a300 */
+void interface_shutdown(void);                                    /* 0041a850 */
+void interface_init_object_items(void);                           /* 0041aa00 */
+void interface_load_menu_items(BlockFile* config, const char* gameName); /* 0041ada0 */
+void interface_load_item_panels(BlockFile* config, const char* gameName); /* 0041afd0 */
+void interface_load_dependency_images(const char* plusName,
+                                      const char* equalsName);    /* 0041b270 */
+void interface_draw(void);                                        /* 0041b490 */
+void interface_update(float elapsed);                             /* 0041b930 */
+void interface_update_hover_sfx(float elapsed);                   /* 0041ba10 */
+
+/* ---- group B ---- */
+
+struct TextureSurface;
+struct EntitySlot;
+struct ViewContext;
+struct TerrainMap;
+struct TerrainMapVector3;
+struct Image;
+struct Area2F;
+struct Point2F;
+struct PanelGlobs;
+
+/* Port globals at legoGlobs fields and gods98 globals (annotated in their
+ * files). */
+extern int32_t s_application_mode;            /* engine.cpp, 00505f88 mainGlobs.programmerLevel */
+extern int s_display_w;                       /* crt.cpp, 00505924 appWidth */
+extern uint32_t s_renderer_word_a;            /* crt.cpp, 0076ab24 mouse x */
+extern uint32_t s_renderer_word_b;            /* crt.cpp, 0076ab28 mouse y */
+extern float s_panel_highlight_timer;         /* engine.cpp, 00556efc */
+extern struct PanelGlobs panelGlobs;          /* panel_unit.c, 005000e0 */
+/* The two interface fonts, legoGlobs 00556124 and 00556128 (lego.cpp,
+ * lego.h). */
+
+/* gods98 Font.c, Input.c and the bitmap font (record.hpp, frontend.hpp,
+ * input.hpp). */
+uint32_t object_field_be4_dword_get(const void* record);   /* 0047a540 Font_GetHeight */
+int bitmap_font_glyph_measure_width(void* font, unsigned char glyph); /* 0047a520 */
+uint32_t input_key_context_check(int key);                 /* 00411f00 */
+/* GAME-001 Advisor.c (advisor.h): the Font.h inline and Advisor_Update. */
+uint32_t formatted_text_printf_width(const struct TextureSurface* font,
+                                     const char* text, ...); /* 00401c50 */
+void advisor_transition_worker(float elapsed);             /* 00401990 */
+/* Font_PrintF (0047a180): the port's entry draws to a software target.
+ * Thin adapter at the end of bitmap_font.cpp. */
+void font_print_f(const struct TextureSurface* font, int x, int y,
+                  const char* msg, ...);
+/* Message.c (select.hpp, message_unit.cpp). */
+struct EntitySlot* selection_active_entity_get(void);      /* 004525c0 */
+struct EntitySlot* const* selection_active_context_record_get(int* count_out); /* 00452580 */
+void cmd_queue_tick(void);                                 /* 004520d0 */
+/* LegoObject.c (entity.hpp, legoobject.cpp). */
+const char* entity_display_name_lookup(const struct EntitySlot* entity); /* 004395e0 */
+int grid_record_count_difference_get(int row, int column, int slot,
+                                     int subtract_first_table); /* 00437460 */
+void entity_type_two_event_dispatch(const struct EntitySlot* entity,
+                                    uint32_t argument_a,
+                                    uint32_t argument_b); /* 0043b820 */
+void entity_type_two_positioned_callback_dispatch(
+    const struct EntitySlot* entity, void* scene_object, float inner_range,
+    float outer_range, int mode);                          /* 0043b850 */
+/* Lego.c parts 2-3, still in lego.cpp (lego.h). */
+struct LevelState* level_current_owner_get(void);          /* 00431560 */
+void terrain_grid_entry_resources_release_all_current(void); /* 00434530 */
+/* Single-unit ticks whose port entries keep the original ABI. */
+void cmd_tick_global_delta(float delta);                   /* 00402220 aitask.cpp */
+void screen_effects_tick(float delta);                     /* 004075a0 bubbles.cpp */
+void lava_erosion_pending_cell_tick(float scale);          /* 0040eab0 */
+uint32_t kind_six_random_sweep_dispatch(float delta);      /* 0040f0e0 */
+int level_start_flag(void);                                /* 00416de0 frontend_unit.cpp */
+int menu_options_flag(void);                               /* 00416df0 */
+int overlay_text_buffer_refresh(void);                     /* 00418a00 helpwindow.cpp */
+void message_dispatch(int id, const char* p2, uint32_t p3,
+                      const void* p4);                     /* 00419b80 info.cpp */
+void info_message_queue_tick(float dt);                    /* 00419f30 */
+void incident_message_text_consumer(float frame_delta);    /* 0041a080 */
+void message_cooldown_tick(float dt);                      /* 0041a2c0 */
+uint32_t sim_status_banner_word_get(void);                 /* 0041b9b0 */
+uint32_t record_field14_get(const void* record);           /* 00435f0b camera_control.cpp */
+void selection_record_point_set(struct ViewContext* v, float x,
+                                float y);                  /* 00436b0b */
+void motion_gameplay_tick(float delta);                    /* 0044cfa0 util.cpp */
+void tutorial_script_command_dispatch(float delta);        /* 00453320 */
+void tutorial_frame_timer_array_advance(float delta);      /* 00453bb0 */
+void objective_announce_current(int who);                  /* 00458670 objective_unit.cpp */
+void objective_tick_target(void* engine, struct LevelState* s,
+                           float checker_dt, float frame_dt); /* 00458be0 */
+void media_pointer_cursor_select(int slot);                /* 0045cc20 pointer.cpp */
+void pointer_cursor_draw_target(uint32_t x, uint32_t y);   /* 0045cc70 */
+void media_pointer_cursor_override_tick(float delta);      /* 0045cd90 */
+void graphics_overlay_visibility_set(uint32_t flag);       /* 004634b0 */
+void indexed_surface_entries_restore(void);                /* 00463540 */
+void view_blit_rect_positions_apply(int view);             /* 00463d20 */
+int sound_alias_lookup(const char* name, int* out_index);  /* 00464c70 */
+int sound_variant_select(int alias_index);                 /* 00464e20 */
+void sound_variant_property_set(int alias_index, int millibels); /* 00465010 */
+void sound_handle_stop_forward(int buffer_handle);         /* 00465190 */
+void sound_subsystem_frame_tick(float dt);                 /* 004651a0 */
+void transient_effect_registry_enable_set(int enabled);    /* 00465a90 */
+void transient_effect_instances_tick(float delta);         /* 00465b00 */
+uint32_t building_upgrade_admission_check(int type, int row); /* 00469f40 */
+void advisor_text_animation_update(int slot, int force, int selected); /* 0046ac60 */
+void advisor_text_display_worker(float delta);             /* 0046ad00 */
+void timed_effect_runtime_update(uint32_t render_x, uint32_t render_y,
+                                 float delta);             /* 0046b7c0 */
+/* GAME-026 terrain map (terrain_map.h). */
+void terrain_map_update(struct TerrainMap* map, float elapsed); /* 0044eff0 */
+void terrain_map_block_first_vertex_get(struct TerrainMap* map, int bx,
+                                        int by,
+                                        struct TerrainMapVector3* position); /* 00450060 */
+void terrain_map_visible_clear(struct TerrainMap* map);    /* 00450780 */
+/* GAME-032 Panel.c (panel_unit.h). */
+void panel_print_f(int panel, const struct TextureSurface* font, int x,
+                   int y, int center, const char* msg, ...); /* 0045a460 */
+void simtick_manager_tick(int panel, float elapsed);       /* 0045a730 */
+int request_record_ready_flag2_target(int panel);          /* 0045ab60 */
+void global_value_0050080c_set(int on);                    /* 0045c4a0 */
+void panel_side_bar_draw(void);                            /* 0045c5f0 */
+/* GAME-034 Priorities.c (priorities.h). */
+void priorities_draw(void);                                /* 0045d6d0 */
+/* gods98 (record.hpp, view.hpp, viewports, surface, maths.h, sound3d.h,
+ * text_window, soundsys.h, images.h). */
+void scene_render_lock_toggle(void* scene_object, int enabled); /* 00473b40 */
+int ddiscene_object_position_get(void* object, void* alternate_frame,
+                                 float position[3]);        /* 004754c0 */
+void render_object_rotate_axis(void* object, uint32_t mode, float x,
+                               float y, float z, float angle); /* 00475580 */
+void ledger_stub_00477010_DDiSceneDrawBegin(void* render_object,
+                                            int begin);     /* 00477010 */
+void ddiscene_draw_end(void* render_object, const void* commit_source,
+                       float frame_delta);                  /* 00477150 */
+void render_interface_transform_point(void* object, void* output,
+                                      const void* input);   /* 004772b0 */
+void renderer_begin_frame_once_retail(void);               /* 00477fa0 */
+float random_float_range(float low, float high);           /* 004798b0 */
+float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff); /* 0047c100 */
+int32_t constant_negative_10000_get(void);                 /* 0047c160 */
+void image_display_scaled(struct Image* image, const struct Area2F* src,
+                          const struct Point2F* dest_pos,
+                          const struct Point2F* dest_size); /* 0047dcb0 */
+void text_buffer_append_format(void* record, const char* format, ...); /* 00485230 */
+void media_cd_audio_watchdog_tick(int cdtrack);            /* 00488c00 */
+
+/* Original-ABI adapters (ADR 0005 step 6). The port's entries take its
+ * engine or game context, other arguments, or do not exist; the adapters
+ * are at the end of lego.cpp unless noted. */
+int keep_running_original(void);                           /* 00435940 */
+void camera_move_pipeline_original(float elapsedWorld);    /* 0046a730 */
+void camera_registry_probe_original(void);                 /* 00435a50 */
+void camera_grid_timers_original(struct LevelState* level, float elapsed); /* 0042c440 */
+void camera_grid_expiry_original(float elapsedWorld);      /* 0042cb70 */
+void simtick_table_dispatch_original(float elapsed);       /* 0040aa10 */
+void simtick_scene_pass_original(float elapsedWorld);      /* 0043b270 */
+void simtick_sfx_bank_original(float elapsedWorld);        /* 0046f550 */
+void simtick_minion_states_original(struct Lego_Level* level, float elapsedWorld); /* 004313b0 */
+void view_tick_original(void* camera, Lego_Level* level, float elapsed,
+                        float elapsedWorld);                /* 00435f5c */
+void simtick_bobbins_original(float elapsedWorld);         /* 004091e0 */
+void simtick_render_step_original(void);                   /* 00449c00 */
+void simtick_post_cluster_original(float elapsedWorld);    /* 0040d450 */
+void simtick_fx_bank_tick_original(Lego_Level* level, float elapsedWorld); /* 0046e390 */
+void simtick_sound_keepalive_original(void);               /* 0047aba0 */
+void simtick_post_step_original(float elapsedWorld);       /* 004665c0 */
+void terrain_dirty_quad_normal_emit_pass_original(void);   /* 00463230 */
+void screen_space_effect_dispatch_original(void* view);    /* 0040e8d0 */
+void world_render_pass_a_original(Lego_Level* level, void* view,
+                                  float elapsedWorld, float elapsed); /* 00435300 */
+void world_render_pass_b_original(Lego_Level* level, void* view,
+                                  float elapsedWorld, float elapsed); /* 00454600 */
+void periodic_timer25_advance_original(float elapsedWorld, int renderTrack); /* 0043c2b0 */
+void effects_update_original(float elapsed);               /* 0040e7f0 */
+void panel_crystals_draw_original(unsigned int crystals,
+                                  unsigned int usedCrystals,
+                                  float elapsedWorld);      /* 0045c0d0 */
+int objective_is_ended_original(void);                     /* 004589a0 */
+int frontend_enabled_original(void);                       /* 00416d00 */
+int overlay_menu_gate_original(float elapsed, int mode);   /* 00415370 */
+int reward_level_start(void);                              /* reward.c, 00460220 */
+void frontend_start_level_original(void);                  /* 00415220 */
+/* At the end of sfx.cpp: the port's entry discards the volume. */
+int sound_variant_property_read_original(int alias_index); /* 00465030 */
+
+
+
+/* ---- group C ---- */
+
+/* gods98 Input's mouse state (crt.cpp, input.cpp). The port types the
+ * position and button words unsigned; the original reads them as
+ * signed ints. */
+extern uint32_t g_renderer_word_c;            /* crt.cpp, 0076ab3c mslb */
+extern uint32_t s_window_mouse_word_40;       /* crt.cpp, 0076ab40 msrb */
+extern int s_cursor_delta_x;                  /* input.cpp, 0076ab34 diffX */
+extern int s_cursor_delta_y;                  /* input.cpp, 0076ab38 diffY */
+#define legoInput_mouseX ((int)s_renderer_word_a)
+#define legoInput_mouseY ((int)s_renderer_word_b)
+#define legoInput_mslb g_renderer_word_c
+#define legoInput_msrb s_window_mouse_word_40
+extern int s_display_h;                       /* crt.cpp, 00505928 appHeight */
+/* lego.cpp's stand-in for legoGlobs.radarZoom (005563f4, game/lego.h). */
+
+struct EntitySlot;
+struct TerrainMap;
+struct TerrainMapVector3;
+struct ViewContext;
+struct ViewProjectionAdapter;
+
+/* GAME-030 (entity_stats.cpp, entity.hpp). */
+float entity_stats_float_at7c(const struct EntitySlot* e);       /* 00469db0 */
+uint32_t entity_stats_word_get(const struct EntitySlot* e);      /* 00469e60 */
+uint32_t entity_capability_flags_get(const struct EntitySlot* e); /* 00469ea0 */
+/* Camera_TrackObject (00435ebb). The port's screen_effect_record_set takes
+ * the float arguments as words; adapter at the end of camera_control.cpp. */
+/* camera_control.cpp: Camera_StopMovement (00435f16),
+ * Camera_GetTopdownPosition (00436b33; the port's entry takes the engine
+ * context instead of the map: adapter at the end of camera_control.cpp)
+ * and Camera_Move (00436b87). */
+void cursor_screen_ray_context_reset(struct ViewContext* v);  /* 00435f16 */
+int camera_topdown_position_get_adapter(void* camera, void* map,
+                                        float out[3]);        /* 00436b33 */
+void camera_pointer_pan_update(struct ViewContext* v, float vec[3],
+                               float amount);                 /* 00436b87 */
+/* legoobject.cpp (entity.hpp): LegoObject_GetPosition (00442260). */
+void entity_transform_position_get_outputs(const struct EntitySlot* entity,
+                                           float* out_x, float* out_y);
+/* RadarMap_SetZoom (0045d8a0; the port's entry takes the float as a word)
+ * and RadarMap_SetTVPosition (0045dbc0; no port function): adapters at the
+ * end of lego.cpp. */
+void radar_map_zoom_set_adapter(void* radarMap, float zoom);
+void radar_map_tv_position_set_adapter(void* radarMap, const float* pos);
+/* NERPs' tutorial flags (00456240): the original passes the NERPs stack
+ * argument; the port's system_state_flags_get takes none. Adapter at the
+ * end of tutorial_script.cpp. */
+/* record.hpp: SelectPlace_Hide (00464720). */
+void surface_visibility_set(const void* record, uint32_t flag);
+/* frontend.hpp: HelpWindow_HandleInput-style hit test (00418da0). */
+int help_window_button_hit_test(uint32_t x, uint32_t y, int mode,
+                                int transition_flags, int active,
+                                float feedback_amount);
+/* media.hpp: Pointer_SetCurrent_IfTimerFinished (0045cc20). */
+void media_pointer_cursor_select(int slot);
+/* crt.hpp: Pointer_GetCurrentType (0045cc60). */
+uint32_t global_cursor_word_get(void);
+/* GAME-026 Map3D.c (terrain_map.h). */
+int terrain_map_screen_pick(struct TerrainMap* map, void* viewport,
+                            unsigned int mx, unsigned int my,
+                            unsigned int* bx, unsigned int* by,
+                            struct TerrainMapVector3* intersection); /* 004502e0 */
+/* view.hpp: Container_SetPosition (00475430). */
+int ddiscene_object_position_set(void* object, void* alternate_frame,
+                                 float x, float y, float z);
+/* simtick.hpp (0044da20). */
+void simtick_route_position_blocked_state_set(int blocked);
+/* select.hpp / message_unit.cpp: Message_AnyUnitSelected (004525b0),
+ * Message_GetPrimarySelectedUnit (004525c0), Message_IsUnitSelected
+ * (00452610). */
+int selection_active_has_any_get(void);
+struct EntitySlot* selection_active_entity_get(void);
+uint32_t selection_contains_entity_active_target(struct EntitySlot* entity,
+                                                 uint32_t* index_out);
+/* GAME-032 Panel.c (panel_unit.h): Panel_CheckCollision (0045adb0). */
+int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
+                                    int leftButton, int leftButtonLast,
+                                    int* overPanel);
+/* Priorities.c (priorities.h): Priorities_HandleInput (0045d110). */
+int priorities_handle_cursor(unsigned int x, unsigned int y, int pressed,
+                             int released, int apply);
+/* Interface_HandleInput (0041baa0): the port's entry has another arity, in
+ * a namespace; adapter at the end of interface.cpp. */
+int interface_handle_mouse_adapter(int x, int y, int leftButton,
+                                   int leftButtonLast, int leftReleased,
+                                   float elapsed);
+/* Info_CheckCollision-style click (0041a1a0): the port's entry has another
+ * arity, in a namespace; adapter at the end of info.cpp. */
+int info_check_click_adapter(int x, int y, int leftReleased,
+                             int rightReleased);
+/* map_view.cpp: RadarMap_InsideRadar (0045e660). */
+int rect_contains_point_half_open(const float* rect_record, int x, int y);
+/* frontend.h: tooltip activation (0046b770) and the advisor animation
+ * (0046ac60). */
+void timed_effect_update_request_set_corpus(int index);
+void advisor_text_animation_update(int slot, int force, int selected);
+/* objective.hpp (00453910) and tutorial_hud_ports.hpp (00453920). */
+void objective_deferred_callback_invoke_if_set(void);
+void tutorial_advisor_scroll_step_advance(void);
+/* BuildingPlacement update (0044a910): the port's entry takes a hook
+ * table; adapter at the end of lego.cpp. */
+int building_placement_update_adapter(int type, int index, int leftReleased,
+                                      int rightReleased,
+                                      const float* pos,
+                                      unsigned int bx, unsigned int by,
+                                      int show, void* selectPlace);
+/* entity.hpp: LegoObject at a screen point (0043b360), the selection
+ * rectangle (0043b6c0), the selectable predicate (004385b0). */
+int entity_task_at_grid_coordinate_find(uint32_t x, uint32_t y,
+                                        struct EntitySlot** out_entity);
+void entity_clipped_rectangle_callback_dispatch(void* payload,
+                                                const float rect_a[2],
+                                                const float rect_b[2]);
+int entity_shared_eligibility_check(const struct EntitySlot* e,
+                                    int relaxed);
+/* media.hpp (004351a0). */
+void media_action_code_to_sound_alias(int code);
+/* GAME-021 part 2 (lego.cpp, cmd.hpp): 00431a30. */
+int selected_entities_any_predicate_match(int cx, int cy,
+                                          int require_stat_bit);
+/* GAME-021 part 2 (lego.cpp, level.hpp): 00431da0. */
+int terrain_cell_route_and_occupancy_check_current(
+    const struct EntitySlot* entity, int from_x, int from_y, int to_x,
+    int to_y, int strict);
+/* LegoObject_GetBlockPos (004424f0): the port's entry takes the level as
+ * well; adapter at the end of lego.cpp. */
+void entity_position_to_terrain_cell_adapter(const struct EntitySlot* entity,
+                                             int* cell_x, int* cell_y);
+/* AITask.c (cmd.hpp): AITask_DoClearTypeAction-style block command
+ * (00402510; the port's entry takes x and y: adapter at the end of
+ * aitask.cpp), AITask_Game_SetNoGather-style marker (00402000; the port's
+ * payload is an int: adapter at the end of aitask.cpp), 004026c0 and
+ * 00402960. */
+void terrain_cell_command_create_adapter(const int* blockPos, int flag,
+                                         int raise20);
+void cmd_mark_matching_adapter(int type, struct EntitySlot* object,
+                               const int* coords);
+void entity_deferred_work_schedule(struct EntitySlot* e);
+void entity_kind_command_issue(struct EntitySlot* e);
+/* Message.c (message.h, cmd.hpp): Message_PostEvent (00452060). */
+void cmd_produce(int op, const void* a1, int a2, const int* pair);
+/* Interface.c (interface.h): 0041b2d0 and 0041e750. */
+void command_context_post_to_hud(int kind, const uint32_t coord[2]);
+void selection_clear_request_and_hud_reset(void);
+/* frontend.hpp: 0041e990. */
+int cell_action_permission_get(int column, int row);
+/* level.hpp (encyclopedia.cpp): 0040e700. */
+void terrain_choice_resource_select(const void* record);
+/* view.hpp (viewports.cpp): Viewport_WorldToScreen (004772d0). */
+void camera_project_point_to_screen(
+    const struct ViewProjectionAdapter* adapter, float* output_xy,
+    const float* input_xyz);
+
+
+
+/* ---- group D ---- */
+
+/* _strcmpi, malloc and free natively; vc5names.h has its own linkage. */
+#ifdef __cplusplus
+}
+#endif
+#include "crt/vc5names.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct BlockRec;
+struct EngineState;
+struct EntitySlot;
+struct Lego_Level;
+
+/* Globals the port annotates at the original's address. */
+extern float g_camera_countdown;              /* camera.cpp, 00556ed8 */
+
+/* G98-006 Config.c (gods98/config.h; BlockFile is struct BlockRec). */
+const char* string_path_join(const char* root, ...);                    /* 00478f50 */
+char* block_get_str_copy(struct BlockRec* root, const char* path);      /* 00479050 */
+const char* block_get_strptr(struct BlockRec* root, const char* path);  /* 004790b0 */
+int block_get_bool_path(struct BlockRec* root, const char* path);       /* 004790d0 */
+int config_rgb_vector_read(struct BlockRec* root, const char* path,
+                           float* r, float* g, float* b);              /* 00479170 */
+/* G98 Utils.c (gods98/utils.h): Util_Tokenise. */
+int sound_variant_split(char* text, char** out, const char* separators); /* 00477440 */
+/* GAME-032 Panel.c (panel_unit.h) and GAME-034 Priorities.c (priorities.h). */
+void mission_crystal_quota_setup(struct BlockRec* config, const char* gameName,
+                                 const char* levelName);               /* 0045c040 */
+int priorities_load(struct BlockRec* config, const char* game_name,
+                    const char* level_name);                           /* 0045cf50 */
+/* Message.c (message.h) and Interface.c (interface.h). */
+void cmd_produce(int op, const void* a1, int a2, const int* pair);    /* 00452060 */
+void command_context_post_to_hud(int kind, const uint32_t coord[2]);  /* 0041b2d0 */
+
+/* Port entries with the original's contract (extern "C" in place). */
+void level_no_gather_object_setup(int mode);           /* cmd.hpp, aitask.cpp 00402170 */
+void level_state_stored_value_set(uint32_t v);         /* crt.hpp, 00409d40 */
+int rock_fall_style_name_lookup(const char* name, uint32_t* index); /* resource.hpp, 0040bf70 */
+void rockfall_style_table_base_set(uint32_t v);        /* crt.hpp, 0040bfc0 */
+void map_cell_state_buffer_rebuild(void* level);       /* terrain_grid.hpp, 0040ce80 */
+void erosion_timing_state_init(float value_a, float value_b,
+                               float value_c);         /* level.hpp, 0040e930 */
+void global_config_value_set(uint32_t v);              /* crt.hpp, 0040f5e0 */
+void* sav_build_ctx_target(void);                      /* savegame.hpp, 00417e70 */
+int save_slot_get_target(void);                        /* savegame.hpp, 00417e90 */
+void mode_flag_pair_apply_if_bit2(int value);          /* frontend.hpp, 00418800 */
+void incident_message_flag_set(int value);             /* message.hpp, 00419ae0 */
+void render_config_six_field_copy_in_or_clear(const uint32_t in[6]); /* level.hpp, 004370d0 */
+int entity_teardown(struct EntitySlot* entity);        /* entity.hpp, 00437540 */
+void scatter_spawn_gate_set(int enabled);              /* spawn.hpp, 0044adc0 */
+void string_table_entry_set_current(const char* name); /* resource.hpp, 0044dde0 */
+int tutorial_script_file_load_target(const char* path); /* tutorial_hud_*.hpp (frozen; pre-declared), 00452df0 */
+int objective_advisor_token_file_load(const char* path); /* objective.hpp, 00452e70 */
+void tutorial_path_coordinate_index(struct LevelState* s); /* level.hpp, 00456b80 */
+void global_value_004ffe48_set(uint32_t value);        /* crt.hpp, 00458660 */
+void objective_announce_current(int who);              /* objective.hpp, 00458670 */
+void objective_tick_target(void* engine, struct LevelState* s,
+                           float checker_dt, float frame_dt); /* objective.hpp, 00458be0 */
+void grid_cell_record_buffer_replace(struct EngineState* block); /* engine.hpp, 00466230 */
+void global_linked_record_chain_clear(void);           /* crt.hpp, 0046a390 */
+uint32_t entity_stats_word_get(const struct EntitySlot* e); /* entity.hpp, 00469e60 */
+
+/* Original-ABI adapters (unannotated, ADR 0005 step 6) where the port's
+ * contract differs, or where frozen headers declare the port's entry with
+ * C++ linkage; each names the file that defines it. */
+int entity_pool_find_by_callback_filtered_current_original(
+    int (*callback)(struct EntitySlot*, void*), void* payload); /* lego.cpp, 004377b0 */
+void* tile_model_entity_register_original(void* manager, const char* nameA,
+                                          const char* nameB, float blockSize,
+                                          void* textureSet); /* tile_variants.cpp, 0040b5f0 */
+void cell_visual_channel_table_dispose_original(void* table); /* tile_variants.cpp, 0040b7d0 */
+void options_apply_from_slot_original(void);           /* options.cpp, 00415150 */
+void movie_play_level_video_adapter(const char* levelName, int flag); /* frontend_unit.cpp, 00415990 */
+int entity_type_pair_for_name_original(const char* name, int* type_out,
+                                       int* index_out, int* zero_out); /* lego.cpp, 0042e8b0 */
+int map_pipeline_original(struct Lego_Level* level, char* surfaceMap,
+                          char* predugMap, int predugParam,
+                          char* terrainMap, int terrainParam,
+                          char* blockPointersMap, int blockPointersParam,
+                          char* cryOreMap, int cryOreParam, char* erodeMap,
+                          char* pathMap, int pathParam,
+                          const char* textureSet, char* emergeMap,
+                          char* aiMap, char* fallinMap); /* lego.cpp, 0042b510 */
+int object_list_load_file_original(struct Lego_Level* level,
+                                   const char* fileName); /* lego.cpp, 0042e020 */
+void lego_play_movie_adapter(const char* fileName, const float* screenPt); /* lego.cpp, 0042efc0 */
+void* lego_object_create_adapter(void* objectData, int type, void* extra); /* lego.cpp, 00437d00 */
+void simulation_update_counter_add_original(struct EntitySlot* object,
+                                            int count); /* lego.cpp, 0043a8f0 */
+void simulation_mode_counter_add_original(struct EntitySlot* object,
+                                          int count); /* lego.cpp, 0043a910 */
+void objective_load_original(struct BlockRec* config, const char* gameName,
+                             const char* levelName, struct Lego_Level* level,
+                             int screenWidth, int screenHeight); /* objective_unit.cpp, 00457d40 */
+int osf_read_dirty_flag_get_original(void);            /* object_state_file.cpp, 004593d0 */
+int osf_read_original(const char* path);               /* object_state_file.cpp, 00459470 */
+int level_identifier_remap_table_load_original(const char* fileName,
+                                               const char* gameName); /* level_id_remap.cpp, 0045d7e0 */
+void renderer_fog_color_set_original(float r, float g, float b); /* lego.cpp, 00473e10 */
+void renderer_fog_mode_set_original(unsigned int mode);          /* lego.cpp, 00473e70 */
+void renderer_fog_parameters_set_original(float start, float end,
+                                          float density);        /* lego.cpp, 00473ea0 */
+
+
+/* ---- group E ---- */
+
+struct EntitySlot;
+struct LevelState;
+struct BlockRec;
+struct Point2F;
+struct ViewProjectionAdapter;
+struct TerrainMap;
+struct ScenePairedAnimationState;
+struct RenderResourceBinding;
+
+/* legoGlobs fields and other modules' globals the port models. */
+extern void* s_upgrade_records;               /* cmd.cpp, 005561e4 upgradeData */
+extern uint32_t s_window_application_active;  /* frameloop.cpp, 00505808 */
+/* legoGlobs' object-name tables and catalogue counts. The port's copies
+ * are entity.cpp globals with C++ linkage (00556254-00556264, 0055618c,
+ * 0055627c), and entity.cpp is outside this change. Declaring them
+ * extern "C" in entity.hpp shifts the symbol counter of every unit that
+ * includes it (finding 538, rule B; it cost 0x0040e9c0 its match), and
+ * LINK 5.0 has no /alternatename. So the unit reads them at their offsets
+ * in legoGlobs, from the base stand-in legoGlobs_config (005560c0): the
+ * same instructions, with only the operand names differing. */
+#define legoGlobs_objectNamesSpecial ((const char**)((char*)&legoGlobs_config + 0xcc))
+#define legoGlobs_objectNamesKind1 LEGO_FIELD(&legoGlobs_config, const char**, 0x194)
+#define legoGlobs_objectNamesKind2 LEGO_FIELD(&legoGlobs_config, const char**, 0x198)
+#define legoGlobs_objectNamesKind3 LEGO_FIELD(&legoGlobs_config, const char**, 0x19c)
+#define legoGlobs_objectNamesKind4 LEGO_FIELD(&legoGlobs_config, const char**, 0x1a0)
+#define legoGlobs_objectNamesKind10 LEGO_FIELD(&legoGlobs_config, const char**, 0x1a4)
+#define legoGlobs_catalogCounts ((uint32_t*)((char*)&legoGlobs_config + 0x1bc))
+
+/* GAME-030 Objective.c / stats (entity.hpp, objective.hpp). */
+float entity_stats_float_atdc(const struct EntitySlot* e);      /* 00469e20 */
+float entity_stats_float_at74(const struct EntitySlot* e);      /* 00469d50 */
+float entity_stats_float_at78(const struct EntitySlot* e);      /* 00469d60 */
+uint32_t entity_stats_word_at_c0_or_c4(const struct EntitySlot* e,
+                                       int selector);           /* 00469f90 */
+uint32_t entity_stats_word_atc8(const struct EntitySlot* e);    /* 00469fc0 */
+void objective_announce_current(int who);                       /* 00458670 */
+int objective_voice_alias_raise_commit(struct LevelState* s);   /* 00454b70 */
+int objective_voice_alias_raise_gate_bit27(struct LevelState* s); /* 00454b80 */
+void reward_shutdown(void);                                     /* reward.c, 0045f750 */
+/* Fallin / scene resources (resource.hpp). */
+int scene_resource_availability_sweep(float delta, uint32_t** groups_out,
+                                      uint32_t** slots_out);    /* 0040c3a0 */
+void scene_cell_table_pair_read(int group, int slot, uint32_t* first,
+                                uint32_t* second);              /* 0040c570 */
+void rock_fall_style_scene_resources_release(void);             /* 0040c6c0 */
+void global_resource_handle_release(void);                      /* 0044e0a0 */
+void render_resource_track_and_retain(void* resource);          /* 00477220 */
+void entity_payload_type1_release(
+    struct ScenePairedAnimationState* state);                   /* 0046ce10 */
+/* GAME-024 Message.c (message.h, select.hpp). */
+void cmd_produce(int op, const void* a1, int a2, const int* pair); /* 00452060 */
+struct EntitySlot* selection_active_entity_get(void);           /* 004525c0 */
+struct EntitySlot* const* selection_active_records_get(void);   /* 004525e0 */
+uint32_t selection_active_count_get(void);                      /* 004525f0 */
+/* GAME-022 LegoObject.c (entity.hpp, ai.hpp). */
+int entity_pool_find_by_callback_filtered_current(
+    int (*callback)(struct EntitySlot*, void*), void* payload); /* 004377b0 */
+uint32_t entity_type_operation_release(const struct EntitySlot* entity); /* 00449ff0 */
+void entity_transform_position_get_outputs(const struct EntitySlot* entity,
+                                           float* out_x,
+                                           float* out_y);       /* 00442260 */
+void* entity_type_component_get(const void* entity_record);     /* 0044a200 */
+void ai_set_activity(struct EntitySlot* e, int id, int param);  /* 004409e0 */
+int activity_register_bookkeeping(struct EntitySlot* e);        /* 00447c40 */
+void ai_idle_chain_record_attach(struct EntitySlot* entity);    /* 00403f30 */
+void pooled_record_pool_resources_release(void);                /* 00437050 */
+void entity_payload_release_subslots(struct EntitySlot* e);     /* 00406ec0 */
+void entity_payload_teardown(struct EntitySlot* e);             /* 00408940 */
+void handle_array_release_and_reset(void);                      /* 004020c0 */
+/* LegoObject_SetCustomName (00437880) and
+ * LegoObject_MoveAnimation-style input (0044a310): adapters at the end of
+ * lego.cpp (no port entry with C linkage). */
+void lego_object_custom_name_set_adapter(struct EntitySlot* liveObj,
+                                         const char* name);     /* 00437880 */
+void lego_object_movement_input_adapter(struct EntitySlot* liveObj,
+                                        int forward, int strafe,
+                                        float rotate);          /* 0044a310 */
+/* GAME-033 Map3D (terrain_map.h). */
+float terrain_map_world_z_get(struct TerrainMap* map, float x, float y); /* 0044f940 */
+/* Lego.c parts 2-3 and others with no port equivalent of the original's
+ * contract: adapters at the end of lego.cpp. */
+void lego_level_names_free_adapter(void);                       /* 0042f0c0 */
+int lego_keep_running_adapter(void);                            /* 00435940 */
+int lego_quit_poll_adapter(int a, int b, int* quit);            /* 004589c0 */
+int lego_level_low_bits_enabled_adapter(void);                  /* 004589a0 */
+void lego_fog_enable_adapter(int on);                           /* 00473dc0 */
+void lego_fog_colour_set_adapter(float r, float g, float b);    /* 00473e10 */
+void lego_light_penumbra_set_adapter(void* light, float value); /* 00473460 */
+void lego_light_umbra_set_adapter(void* light, float value);    /* 00473480 */
+/* GAME-002 / helpwindow (frontend.hpp). */
+int main_sim_state_admission_predicate(void);                   /* 004191a0 */
+void advisor_callback_schedule_gate(void);                      /* 0041c440 */
+void state_flag_toggle_when_zero(void);                         /* 00407340 */
+/* Camera (camera_control.h, view.hpp). */
+void camera_pan_axis_update(void* camera, float delta);         /* 00436900 */
+void camera_tilt_axis_update(void* camera, float delta);        /* 004369f4 */
+void camera_zoom_update(void* camera, float delta);             /* 00436aa5 */
+void camera_view_context_close(void* view);                     /* 00435dc8 */
+void entity_b8_bit3_set_or_clear(void* record, int set);        /* 00435d91 */
+/* Camera_Shake (00435f32): the port's entry takes the two floats as
+ * words. Thin adapter at the end of camera_control.cpp. */
+void entity_fields_a0_a4_store_a8_clear_original(void* camera, float a,
+                                                 float b);      /* 00435f32 */
+/* gods98 Viewports / Container / Draw / Font / TextWindow / Config. */
+void camera_screen_coordinate_project(
+    const struct ViewProjectionAdapter* adapter, float* output,
+    const float* input);                                         /* 00477290 */
+void camera_project_point_to_screen(
+    const struct ViewProjectionAdapter* adapter, float* output_xy,
+    const float* input_xyz);                                     /* 004772d0 */
+int ddiscene_object_position_get(void* object, void* alternate_frame,
+                                 float position[3]);             /* 004754c0 */
+void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object); /* 00472a40 */
+void ddiscene_object_pool_shutdown(void);                        /* 00472800 */
+void scene_resource_slots_release_all(void);                     /* 00476d80 */
+void scene_object_registry_teardown(void);                       /* 0047d430 */
+void surface_visibility_set(const void* record, uint32_t flag);  /* 00464720 */
+void surface_draw_polyline(struct Point2F* fromList,
+                           struct Point2F* toList, uint32_t count,
+                           float r, float g, float b, int effect); /* 00485ff0 */
+uint32_t object_field_be4_dword_get(const void* record);         /* 0047a540 */
+void font_atlas_record_release(void* record);                    /* 0047a550 */
+void text_buffer_destroy_target(void* record);                   /* 00485190 */
+void text_buffer_append_format(void* record, const char* format, ...); /* 00485230 */
+/* DirectDraw (directdraw.cpp): the original takes two words; the port's
+ * entry takes four. Thin adapter at the end of directdraw.cpp. */
+int projection_overlay_draw_submit_adapter(int a, int b);        /* 0047ce20 */
+const char* string_path_join(const char* root, ...);             /* 00478f50 */
+int block_get_bool_path(struct BlockRec* root, const char* path); /* 004790d0 */
+void block_close(struct BlockRec* root);                         /* 00479240 */
+void render_resource_binding_release(
+    struct RenderResourceBinding* binding);                      /* 0046c0f0 */
+void flic_opcode27_fallback_noop(void);                          /* 00484c90 */
+/* Maths (advisor.h, view.hpp). */
+float vec2_dist(const float* a, const float* b);                 /* 00401240 */
+float* vec_cross(float* dst, const float* b, const float* c);    /* 00401470 */
+float* vec_add(float* dst, const float* a, const float* b);      /* 00401500 */
+float* vec_sub(float* dst, const float* a, const float* b);      /* 004016c0 */
+float* vec_scale(float* dst, const float* src, float s);         /* 00401720 */
+void vec_normalize(float* v);                                    /* 00401750 */
+int display_width_get(void);                                     /* 00401c30 */
+int display_height_get(void);                                    /* 00401c40 */
+/* Sound (sound.hpp, sound3d.h, soundsys.h). */
+void sound_handle_stop_forward(int buffer_handle);               /* 00465190 */
+int sound_submission_route_wrapper(const void* wrapped_position, int alias,
+                                   int loop, int positional,
+                                   const float* xyz);            /* 00465050 */
+void audio_active_shutdown(void);                                /* 0047a800 */
+int media_cd_audio_playback_available(void);                     /* 00488b90 */
+/* Panel (panel_unit.h). */
+void panel_item_flag16_set(int panel, int button, int on);       /* 0045aac0 */
+/* LoaderProfile release (loading_progress.cpp): the original takes the
+ * profile file name; the port's entry takes the parsed entries. Thin
+ * adapter at the end of loading_progress.cpp. */
+void loader_profile_entries_release_adapter(const char* profile); /* 0044dd40 */
+
+
+
+/* ---- group F ---- */
+
+/* legoGlobs fields the port models as globals of its own. */
+/* GAME-028 NERPs (tutorial_script.cpp): NERPFunc__GetTutorialFlags. The
+ * original takes the NERPs parameter stack; the port's entry takes none.
+ * Thin adapter at the end of tutorial_script.cpp. */
+uint32_t system_state_flags_get_original(const int* parameters); /* 00456240 */
+/* GAME-021 part 3 (lego.cpp): Lego_GetLevel. */
+struct LevelState* level_current_owner_get(void);         /* 00431560 */
+/* LegoObject.c (legoobject.cpp, declared in camera.hpp). */
+void* predug_spawn_coordinate_select_and_create(int source_object,
+                                                int type); /* 0043ad50 */
+/* LegoObject.c FUN_00438960: no port entry; the port's spawn probe hook.
+ * Adapter at the end of lego.cpp. */
+int spawn_registry_probe_adapter(int first, int second);  /* 00438960 */
+/* G98 config.c (gods98/config.h). */
+const char* string_path_join(const char* root, ...);       /* 00478f50 */
+const char* block_get_strptr(struct BlockRec* root, const char* path); /* 004790b0 */
+/* G98 Container_Load (gods98/entity.h): unannotated adapter in entity.cpp. */
+void* container_load(void* parent, const char* filename,
+                     const char* typeString, int looseLoad); /* 00472cd0 */
+/* G98 Container_Hide (gods98/record.h, record.hpp). */
+void scene_render_lock_toggle(void* scene_object, int enabled); /* 00473b40 */
+/* GAME-008 (rock_fall_styles.cpp, resource.hpp): Effect_Load_Electric
+ * FenceBeam. */
+int indexed_resource_handle_set_create(void* scene, const char* path,
+                                       int group);         /* 0040c1b0 */
+/* GAME-008: the original takes the root container and the path; the
+ * port's entry takes the path only. Adapter at the end of
+ * rock_fall_styles.cpp. */
+int global_resource_handle_load_and_enable_original(void* root,
+                                                    const char* path); /* 0040c720 */
+/* GAME-008: the original reads the MiscObjects block itself; the port's
+ * entry takes parsed entries. Adapter at the end of rock_fall_styles.cpp. */
+void misc_objects_effect_slots_bind_original(struct BlockRec* config,
+                                             const char* gameName,
+                                             void* root);   /* 0040c990 */
+/* LegoObject.c (legoobject.cpp, entity.hpp): LegoObject_GetLangName and
+ * Object_GetLangName. */
+const char* entity_display_name_lookup(const struct EntitySlot* entity); /* 004395e0 */
+const char* localized_object_name_get(uint32_t kind, int index); /* 00439860 */
+/* LegoObject_SetCustomName: no port entry; adapter at the end of lego.cpp. */
+void entity_custom_name_set_adapter(struct EntitySlot* object,
+                                    const char* name);     /* 00437880 */
+/* GAME-006 (screen_effect_quads.cpp, entity.hpp). */
+int entity_quad_mesh_render_record_allowed(const struct EntitySlot* e); /* 0040aae0 */
+/* LegoObject.c (legoobject.cpp, level.hpp): the object's tool tip SFX. */
+int terrain_object_type_sfx_at_cell_get(const void* position_record); /* 0044ad80 */
+/* Stats.c (entity_stats.cpp, ai.hpp): StatsObject_GetCapacity. */
+int ai_activity_cap(const struct EntitySlot* e);          /* 0046a060 */
+/* ToolTip.c (tooltip.cpp; frontend.h, cmd.hpp, the frozen frontend
+ * headers): SetContent (unannotated adapter in frontend.cpp), AddIcon,
+ * SetSFX, Activate. */
+void tooltip_set_content(int index, const char* format, ...); /* 0046b520 */
+void command_sample_stats_accumulate(int kind, const void* sample); /* 0046b660 */
+void timed_effect_cue_request_set_corpus(int index, uint32_t value); /* 0046b700 */
+void timed_effect_update_request_set_corpus(int index);   /* 0046b770 */
+/* GAME-007 (placement.cpp, record.hpp): the resources delivered to a
+ * building site. */
+int count_matching_coordinates_in_list(const void* manager,
+                                       int32_t coord_x, int32_t coord_y); /* 00408e10 */
+/* Stats.c (entity_stats.cpp, entity.hpp): the building costs in crystals,
+ * ore and studs. */
+uint32_t entity_indexed_record_word_at_b0_get(int group, int index,
+                                              int slot);   /* 00469ac0 */
+uint32_t entity_indexed_record_word_at_b4_get(int group, int index,
+                                              int slot);   /* 00469af0 */
+uint32_t stats_table_word_at_b8(int type, int row, int stride_index); /* 00469b20 */
+/* GAME-021 part 3 (lego.cpp, level.hpp): Lego_GetSurfaceTypeDescription
+ * and Lego_GetSurfaceTypeSFX. */
+const char* terrain_surface_type_name_get(int index);     /* 00435170 */
+uint32_t surface_type_configured_value_at_index(int index); /* 00435190 */
+/* G98 Input (crt.cpp, crt.hpp): the mouse position and left button. */
+/* GAME-033 Pointer.c (pointer.cpp, media.hpp): Pointer_SetCurrent_IfTimerFinished. */
+void media_pointer_cursor_select(int slot);               /* 0045cc20 */
+/* GAME-034 RadarMap.c (map_view.cpp, view.hpp). ScreenToBlockPos returns
+ * the block through two pointers; the port's entry takes two words, so an
+ * adapter at the end of map_view.cpp stands in. GetObjectAtScreen returns
+ * the object as a word. */
+struct TerrainPointPickRegion;
+int rect_contains_point_half_open(const float* rect_record, int x, int y); /* 0045e660 */
+int terrain_point_pick_resolve_original(const struct TerrainPointPickRegion* region,
+                                        uint32_t screen_x, uint32_t screen_y,
+                                        float out_world_xy[2],
+                                        uint32_t* out_block_x,
+                                        uint32_t* out_block_y); /* 0045e6d0 */
+int viewport_point_callback_dispatch(const struct TerrainPointPickRegion* region,
+                                     uint32_t screen_x, uint32_t screen_y,
+                                     uint32_t* object_handle,
+                                     float out_position_xy[2]); /* 0045e820 */
+/* GAME-022 camera (camera_control.cpp, view.hpp). Camera_TrackObject takes
+ * floats where the port's entry takes words: adapter at the end of
+ * camera_control.cpp. */
+struct ViewContext;
+int view_grid_edge_get(void);                             /* 00435f28 */
+void selection_record_point_get(struct ViewContext* v, float out[3]); /* 00436ae9 */
+void selection_record_point_set(struct ViewContext* v, float x, float y); /* 00436b0b */
+void screen_effect_record_set_original(void* camera, struct EntitySlot* object,
+                                       float speed, float distance,
+                                       float tilt, float rotation); /* 00435ebb */
+/* Stats.c (entity_stats.cpp, entity.hpp). */
+float entity_stats_float_at7c(const struct EntitySlot* e); /* 00469db0 */
+
+/* The debug keys' callees (004288e0). */
+struct LevelState;
+/* GAME-005 (lava_erosion.cpp, level.hpp). */
+void lava_erosion_neighbor_mutate(const int xy[2], unsigned int direction,
+                                  int propagate);           /* 0040f330 */
+/* LegoObject.c (legoobject.cpp, entity.hpp, spawn.hpp). */
+void entity_enter_event21_state_once(struct EntitySlot* entity); /* 00444620 */
+struct EntitySlot* creature_spawn_from_emergence(void* base_entity, int mode_token,
+                                                 int owner_index, int cell_x,
+                                                 int cell_y); /* 0043af30 */
+void entity_clear_nested_state_8_fields(struct EntitySlot* e); /* 004487c0 */
+void entity_action_sequence_reset(struct EntitySlot* entity,
+                                  int preserve_mode);       /* 00441940 */
+void object_list_field_assign_all(struct EntitySlot* entity,
+                                  void* texture_resource);  /* 00440bf0 */
+/* LegoObject.c entries the port keeps as namespaced ledger stubs, takes
+ * with other contracts, or lacks: adapters at the end of lego.cpp. */
+int nearest_open_cell_search_adapter(struct EntitySlot* entity, int* x, int* y,
+                                     int requireDistance, int allowMaskC0,
+                                     int allowFlag20);      /* 0044a5d0 */
+struct EntitySlot* object_create_from_container_adapter(void* container,
+                                                        int type, int id); /* 00437d00 */
+void entity_type_operation_dispatch_adapter(struct EntitySlot* entity,
+                                            int operation); /* 00449f50 */
+int entity_try_create_linked_at_position_original(struct EntitySlot* entity,
+                                                  int x, int y,
+                                                  struct EntitySlot* linked); /* 004471b0 */
+int entity_pair_scalar_fields_set_original(struct EntitySlot* entity,
+                                           const float* pair,
+                                           float scalar);   /* 0044c150 */
+void entity_damage_apply_original(struct EntitySlot* entity, float damage,
+                                  int emitEffects, float elapsed); /* 0043f6a0 */
+int level_debug_cell_retarget_adapter(struct EntitySlot* entity,
+                                      struct EntitySlot* target); /* 004403d0 */
+/* GAME-030 Message.c (message_unit.cpp, select.hpp). */
+struct EntitySlot* const* selection_active_context_record_get(int* count_out); /* 00452580 */
+int selection_active_has_any_get(void);                   /* 004525b0 */
+struct EntitySlot* selection_active_entity_get(void);     /* 004525c0 */
+struct EntitySlot* const* selection_active_records_get(void); /* 004525e0 */
+uint32_t selection_active_count_get(void);                /* 004525f0 */
+/* Stats.c (entity_stats.cpp, entity.hpp). */
+void entity_record_flag400_toggle_and_refresh(struct EntitySlot* e); /* 0046a330 */
+/* GAME-021 part 3 (lego.cpp, level.hpp). */
+void terrain_neighbor_flag_set(struct LevelState* s, int manager,
+                               uint32_t x, uint32_t y);    /* 00430470 */
+int terrain_cell_mutate(struct LevelState* level, uint32_t x, uint32_t y,
+                        int mode);                          /* 00430530 */
+int terrain_cell_initialize(struct LevelState* level, uint32_t x,
+                            uint32_t y);                    /* 00430ee0 */
+/* GAME-028 NERPs (tutorial_script.cpp, message.hpp): SetTutorialFlags. */
+uint32_t system_state_flags_set_target(const uint32_t* value); /* 00456550 */
+/* GAME-006 (screen_effect_quads.cpp, crt.hpp). */
+void global_mode_zero_input_set(int value);               /* 0040ab10 */
+/* G98 Container_SetPosition and Container_SetOrientation (view.hpp). */
+int ddiscene_object_position_set(void* object, void* alternate_frame,
+                                 float x, float y, float z); /* 00475430 */
+int ddiscene_object_pose_method_dispatch(void* object, void* alternate_frame,
+                                         float parameter_3, float parameter_4,
+                                         float parameter_5, float parameter_6,
+                                         float parameter_7,
+                                         float parameter_8); /* 00475470 */
+/* LightEffects.c (lighteffects.cpp; simtick.hpp, effects.hpp). */
+void simtick_scene_position_reset_and_effect_motion_cancel(void); /* 0044cf70 */
+void scene_transform_enable_set(int enabled);             /* 0044c790 */
+/* Building.c and Vehicle.c upgrades (building_model.cpp, vehicle_model.cpp,
+ * record.hpp, entity.hpp). Vehicle_SetUpgradeLevel's port entry takes the
+ * record list and the channel state: adapter at the end of
+ * vehicle_model.cpp. */
+uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress); /* 00408970 */
+void entity_payload_state_set(struct EntitySlot* e, int state); /* 004089a0 */
+uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
+                              int reject_masked);           /* 0046cf40 */
+void scene_record_indexed_entries_rebuild_original(void* vehicleModel,
+                                                   int upgradeLevel); /* 0046cf90 */
+/* AITask.c (aitask.cpp, cmd.hpp). The original 00402e40 takes the block
+ * position by pointer: adapter at the end of aitask.cpp. */
+void entity_command14_batch_issue(int count);             /* 00402800 */
+void cell_command_type13_issue_original(const int* blockPos); /* 00402e40 */
+/* Fallin.c / Spider webs (terrain_cell_objects.cpp; level.hpp,
+ * terrain_grid.hpp). */
+int terrain_cell_activation_try(void* object, int x, int y); /* 0040d4f0 */
+int create_cell_object_if_available(int x, int y);        /* 0040d170 */
+int delete_cell_object(int x, int y);                     /* 0040d1f0 */
+int grid_cell_record_present_check(int x, int y);         /* 0040e460 */
+/* GAME-040 (grid_cell_records.cpp): a namespaced ledger stub; adapter at
+ * the end of grid_cell_records.cpp. */
+int expand_cell_entity_spawn_adapter(int x, int y);       /* 00466250 */
+/* Info.c (info.cpp, message.hpp). */
+void message_dispatch(int id, const char* p2, uint32_t p3, const void* p4); /* 00419b80 */
+/* Advisor.c and Panel.c (C units). */
+void advisor_clear_active_state(void);                    /* 00401b20 */
+int panel_advisor_animation_play(int panel, int button, int force); /* 0045c670 */
+
+
+
+/* ---- group G ---- */
+
+struct BlockRec;
+struct EntitySlot;
+struct PanelGlobs;
+struct Point2F;
+struct ResourceInterfaceWrapper;
+struct TerrainMap;
+struct ViewProjectionAdapter;
+
+/* Globals the port models in other files. */
+extern uint32_t s_overlay_word_03610;         /* text.cpp, 00503610 */
+/* spawn.cpp, 00555118 (namespace unported_ledger_stubs, C linkage). */
+extern uint32_t s_start_level_pilot_grid_count;
+/* GAME-032 Panel.c (panel_unit.h), 005000e0; panelTable[0].flags is at
+ * +0x5c. */
+
+/* G98 Main.c (frameloop.hpp). The triplet is Main_State's three callbacks. */
+void window_title_set(const char* title);                       /* 004783d0 */
+int window_runtime_callback_triplet_set(const size_t* triplet); /* 00477fd0 */
+/* GAME-021 parts 2-3 and others still in lego.cpp / level.cpp. */
+struct LevelState* level_current_owner_get(void);               /* 00431560 */
+uint32_t entity_type_grid_record_count_get(const char* type_name,
+                                           int slot);           /* 00455300 */
+/* 00431570 takes no argument; the port's entry takes two ignored cells.
+ * Adapter at the end of lego.cpp. */
+void* level_current_terrain_get_original(void);                 /* 00431570 */
+/* 00433e80 and 0042de40 (Lego.c parts 2-3) have no port entry with the
+ * original's contract. Adapters at the end of lego.cpp. */
+void terrain_projected_cell_state_refresh_original(void* container,
+    void* view, float distance, unsigned int count);            /* 00433e80 */
+void viewport_target_position_clamp_original(void* object, int x,
+                                             int y);            /* 0042de40 */
+/* GAME AITask.c (crt.hpp). */
+void level_state_stored_value_set(uint32_t v);                  /* 00409d40 */
+/* GAME LegoObject.c (spawn.hpp, namespace lego, C linkage). */
+void scatter_spawn_gate_set(int enabled);                       /* 0044adc0 */
+/* (entity.hpp, namespace unported_ledger_stubs, C linkage). */
+void entity_attached_object_list_detach(struct EntitySlot* entity,
+                                        int reset_mode);        /* 00439e70 */
+/* 0046a510 takes (selector, mode, flags); the port's entry adds the game
+ * context and a callback. Adapter at the end of record_chains.cpp. */
+void scene_object_state_dispatch_original(uint32_t selector, uint32_t mode,
+                                          uint32_t flags);      /* 0046a510 */
+/* GAME Interface.c (cmd.hpp, interface.h). */
+void selection_clear_request_and_hud_reset(void);               /* 0041e750 */
+/* GAME-032 Panel.c (panel_unit.h). */
+void panel_state_flags_toggle(int panelType);                   /* 0045ab00 */
+/* G98 Sound3D.c (sound.hpp, sound3d.h). */
+void sound_subsystem_stop_all(void);                            /* 0047b160 */
+void sound_tracked_buffers_set_min_distance(float value);       /* 0047b4a0 */
+/* GAME SFX.c (sound.hpp). */
+void sound_subsystem_enable_set_and_stop(int enable);           /* 004652a0 */
+void transient_effect_enable_set(void* instance, int enabled);  /* 00465ac0 */
+/* Advisor/Text (engine.hpp, heap.hpp, textwindow.h). */
+int engine_mode_set_target(const int* mode);                    /* 004565f0 */
+void text_buffer_reset_target(void* record);                    /* 004859b0 */
+/* G98 Config.c and Utils.c (config.h, utils.h). */
+const char* string_path_join(const char* root, ...);            /* 00478f50 */
+struct BlockRec* block_subgroup(struct BlockRec* root,
+                                const char* path);              /* 00478ff0 */
+struct BlockRec* block_next_equal_key(const struct BlockRec* start); /* 00479020 */
+char* block_get_str_copy(struct BlockRec* root, const char* path); /* 00479050 */
+char* string_duplicate(const char* text);                       /* 00477550 */
+/* G98 Container.c (view.hpp). */
+int ddiscene_object_position_get(void* object, void* alternate_frame,
+                                 float position[3]);            /* 004754c0 */
+int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+                                    float first[3],
+                                    float second[3]);           /* 00475500 */
+void global_entity_render_parameter_mode_set(int mode);         /* 0046e1c0 */
+/* G98 Viewports.c (view.hpp, scene_resources.hpp, resource.hpp). */
+void resource_interface_call_slot48(void* wrapper, void* value); /* 00476f50 */
+void renderer_object_set_clip_distance(void* object, float distance); /* 00476fb0 */
+/* 00477240 takes the field of view as a float; the port's entry stores a
+ * pointer. Adapter at the end of viewports.cpp. */
+void scene_current_object_set_original(void* view, float field); /* 00477240 */
+void resource_interface_call_slot40_and_clear_field14(
+    struct ResourceInterfaceWrapper* wrapper, uint32_t value);  /* 00477250 */
+void camera_screen_coordinate_project(
+    const struct ViewProjectionAdapter* adapter, float* output,
+    const float* input);                                        /* 00477290 */
+void camera_project_point_to_screen(
+    const struct ViewProjectionAdapter* adapter, float* output_xy,
+    const float* input_xyz);                                    /* 004772d0 */
+/* G98 Maths.c (maths.h). */
+short rng_thunk_draw15(void);                                   /* 004798a0 */
+int view_ray_intersection_test(float* endPoint, const float* rayOrigin,
+                               const float* ray, const float* planePoint,
+                               const float* planeNormal);       /* 004798e0 */
+/* G98 Draw.c (draw.h). */
+void surface_draw_polyline(struct Point2F* fromList, struct Point2F* toList,
+                           uint32_t count, float r, float g, float b,
+                           int effect);                         /* 00485ff0 */
+/* G98 Sound.c CD audio (soundsys.h). */
+void media_cd_audio_track_start(int track, int mode,
+                                void (*callback)(void));        /* 00488bb0 */
+void media_cd_audio_stop_and_close_if_active(void);             /* 00488bf0 */
+void media_cd_audio_watchdog_tick(int cdtrack);                 /* 00488c00 */
+/* GAME-024 camera (record.hpp). The original takes the tracked object as
+ * a pointer; the port's entry types it as a word. */
+void record_fields_4_and_14_set(void* record, uint32_t value_a,
+                                uint32_t value_b);              /* 00435ef4 */
+/* GAME Map3D.c (terrain_map.h). */
+int terrain_map_world_to_block(struct TerrainMap* map, float x, float y,
+                               int* bx, int* by);               /* 0044f6d0 */
+void terrain_map_visible_radius_add(struct TerrainMap* map, int bx, int by,
+                                    int radius,
+                                    void (*callback)(int x, int y)); /* 00450600 */
+float terrain_context_scale_get(const void* context);           /* 00450890 */
+void terrain_map_wobble_emissive_set(struct TerrainMap* map, int on); /* 00450a80 */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* LEGORRR_GAME_LEGO_UNIT_IMPORTS_H */

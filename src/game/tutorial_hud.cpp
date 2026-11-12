@@ -28,6 +28,7 @@
 #include "terrain_grid.hpp"
 #include "../gods98/message.hpp"
 #include "../gods98/media.hpp"
+extern "C" int tutorial_script_file_load_target(const char* path);
 #include "tutorial_hud_shared.hpp"
 #include "tutorial_hud_for_panel_unit.hpp"
 

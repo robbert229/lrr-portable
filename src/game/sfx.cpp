@@ -1319,3 +1319,12 @@ static void* transient_effect_previous_get(void* instance)
         return *(void**)((unsigned char*)instance + 0x29c);
     return NULL;
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original ConfiguredVariantPropertyRead (FUN_00465030) returns the
+ * variant's volume; the port's entry above discards it. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (sound_variant_select, sound_bank_entry_volume)
+extern "C" int sound_variant_property_read_original(int alias_index)
+{
+    return sound_bank_entry_volume(sound_variant_select(alias_index));
+}

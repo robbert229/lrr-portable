@@ -674,3 +674,29 @@ static int objective_entity_pair_match(EntitySlot* entity, void* payload)
     }
     return 0;
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_00457d40 takes the config, game and level names, the level
+ * and the screen size; the port's objective_load above takes the config,
+ * the level name and the level. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (objective_load, 0x00457d40)
+extern "C" void objective_load_original(BlockFile* config,
+                                        const char* gameName,
+                                        const char* levelName,
+                                        struct Lego_Level* level,
+                                        int screenWidth, int screenHeight)
+{
+    (void)gameName;
+    (void)screenWidth;
+    (void)screenHeight;
+    objective_load(config, levelName, (LevelState*)level);
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_004589a0 takes no argument and reads the current level; the
+ * port's entry takes the level. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (global_option_low_bits_enabled, 0x004589a0)
+extern "C" int lego_level_low_bits_enabled_adapter(void)
+{
+    return global_option_low_bits_enabled(g_active_level_retail);
+}

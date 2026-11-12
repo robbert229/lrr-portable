@@ -189,7 +189,10 @@ void input_cursor_position_hooks_install(InputClientToScreenHook convert,
                                         void* context);
 void input_cursor_position_update(void); /* FUN_0047f010 */
 void input_cursor_position_sync(InputState* state);
-extern "C" void input_cursor_client_position_set(int x, int y); /* FUN_0047f0d0 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void input_cursor_client_position_set(int x, int y); /* FUN_0047f0d0 */
 void input_cursor_client_position_get(int* x, int* y);
 void input_cursor_delta_get(int* x, int* y);
 int  input_key_edge(const InputState* s, int key);
@@ -207,6 +210,9 @@ uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode);
 /* Port-local text filter stored per InputState. The retail KeyContextCheck
  * table is a separate process-global scan-code-to-character map. */
 uint32_t input_key_context(const InputState* s, uint32_t key);
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t input_key_context_check(int key); /* FUN_00411f00 */
 
 /* EnginePreTick text pump: for each key edge allowed by the context filter,

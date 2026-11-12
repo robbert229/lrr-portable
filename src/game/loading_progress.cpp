@@ -117,3 +117,13 @@ uint32_t ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease(
         config, entries, count, hooks);
 }
 } // namespace unported_ledger_stubs
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original EngineLoaderProfileEntriesRelease (FUN_0044dd40) takes the
+ * profile file name; the port's entry takes the parsed entries. No port
+ * path with the original's contract: does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease, 0x0044dd40)
+extern "C" void loader_profile_entries_release_adapter(const char* profile)
+{
+    (void)profile;
+}

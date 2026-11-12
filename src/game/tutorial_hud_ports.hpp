@@ -63,9 +63,9 @@ int tutorial_objective_token_file_load(const char* path,
 const char* tutorial_objective_token_lookup(uint32_t index);
 int tutorial_display_resources_release(void);
 void tutorial_indirect_handle_resolve(uint32_t* value);
-void tutorial_frame_timer_array_advance(float delta);
-void tutorial_script_command_dispatch(float delta);
-void tutorial_advisor_scroll_step_advance(void);
+extern "C" void tutorial_frame_timer_array_advance(float delta);
+extern "C" void tutorial_script_command_dispatch(float delta);
+extern "C" void tutorial_advisor_scroll_step_advance(void);
 /* Single production message owner; history index zero deliberately reads
  * the frontend inline sound slot. Delta remains the reference float ABI. */
 void tutorial_message_generation_sync(void);

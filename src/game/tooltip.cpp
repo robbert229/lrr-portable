@@ -46,6 +46,9 @@
 #include "gods98/view.hpp"
 #include "gods98/string.hpp"
 #include "gods98/resource.hpp"
+/* C linkage for ToolTip_SetSFX, which GAME-021's lego_unit.c calls (issue
+ * #544). The frozen header below redeclares it and inherits it. */
+extern "C" void timed_effect_cue_request_set_corpus(int index, uint32_t value);
 #include "frontend_for_tooltip.hpp"
 #include "ai.hpp"
 #include "spawn.hpp"

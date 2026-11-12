@@ -823,3 +823,20 @@ static int directdraw_device_create_internal(
     }
     return success;
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_0047ce20 call in the shutdown passes two zero words; the
+ * port's entry takes four arguments. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (projection_overlay_draw_submit, 0x0047ce20)
+extern "C" int projection_overlay_draw_submit_adapter(int a, int b)
+{
+    return projection_overlay_draw_submit(a, NULL, NULL, (uint32_t)b);
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: DirectDraw_AdjustTextureUsage (0047cd50) takes the usage to adjust; the port's entry takes nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (query_texture_memory)
+extern "C" void query_texture_memory_original(unsigned int* textureUsage)
+{
+    (void)textureUsage;
+    query_texture_memory();
+}

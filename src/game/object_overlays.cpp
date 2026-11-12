@@ -51,6 +51,7 @@
 #include "game.hpp"
 #include "spawn.hpp"
 #include "terrain_grid.hpp"
+extern "C" int tutorial_script_file_load_target(const char* path);
 #include "tutorial_hud_for_object_overlays.hpp"
 
 /* --- the panel resource + scroll leaf band (see frontend.hpp) --------------

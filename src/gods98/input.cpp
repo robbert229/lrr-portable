@@ -6,6 +6,9 @@
 #include "message.hpp"
 #include "crt/crt.hpp"
 #include "frameloop.hpp"
+/* GAME-021's lego_unit.c (C) reads the pointer deltas. */
+extern "C" int s_cursor_delta_x;
+extern "C" int s_cursor_delta_y;
 #include "input_shared.hpp"
 
 DirectInputHooks s_direct_input_hooks;

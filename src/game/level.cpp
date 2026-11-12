@@ -46,6 +46,10 @@ extern "C" int level_coord_pair_within_bounds_target(
     const uint32_t* dimensions, uint32_t cx, uint32_t cy);
 #include "level_shared.hpp"
 #include "level_for_lego.hpp"
+/* Defined in GAME-021's lego_unit.c (issue #544): C linkage, which the
+ * frozen header below inherits. */
+extern "C" float engine_float_field260_get_current_target(void);
+extern "C" uint32_t global_state_field84_get_current_target(void);
 #include "level_from_lego.hpp"
 #include "level_for_files.hpp"
 #include "level_for_legoobject.hpp"

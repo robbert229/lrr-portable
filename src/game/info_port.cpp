@@ -955,3 +955,17 @@ static int incident_message_text_append_default(
     return 0; /* the host-width output record resolves its buffer by sidecar */
 #endif
 }
+
+/* Adapter for GAME-021's lego_unit.c: Lego_HandleWorld (0x00426520) pushes
+ * the pointer position and both release flags to FUN_0041a1a0, which
+ * info_unit.c (GAME-019) defines with three parameters. Which arity is the
+ * original's is open (finding 568); this forwards to info_unit.c. */
+extern "C" int ui_entry_hit_test_and_dispatch(int mouseX, int mouseY,
+                                              int leftButton); /* info_unit.c */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (0041a1a0 -> info_unit.c)
+extern "C" int info_check_click_adapter(int x, int y, int leftReleased,
+                                        int rightReleased)
+{
+    (void)rightReleased;
+    return ui_entry_hit_test_and_dispatch(x, y, leftReleased);
+}

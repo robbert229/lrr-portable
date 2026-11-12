@@ -369,6 +369,12 @@ float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff);
 
 #else /* native port */
 
+#ifdef __cplusplus
+/* C linkage for GAME-021 lego_unit.c, which calls these two. */
+extern "C" void sound_tracked_buffers_set_max_distance(uint32_t value);
+extern "C" float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff);
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2282,6 +2288,9 @@ float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff)
     return rolloff;
 }
 #else
+#ifdef __cplusplus
+extern "C" /* GAME-021's lego_unit.c calls it (issue #544) */
+#endif
 float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff)
 {
     if (s_bank_sound_on == 0) return rolloff;
@@ -2419,3 +2428,4 @@ static int keyed_sweep(int key, void* node)
     return node_key == (uint32_t)key;
 }
 #endif /* !SOUND3D_DIRECTSOUND */
+

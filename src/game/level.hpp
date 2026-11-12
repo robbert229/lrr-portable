@@ -299,7 +299,7 @@ static inline void* level_load_ptr(const LevelState* s, int off)
  * where the corpus strides, and a zeroing re-run leaks the superseded
  * chains (as does the corpus). Node storage uses the target's 12-byte
  * layout on 32-bit builds and widens only the next pointer on 64-bit hosts. */
-void tutorial_path_coordinate_index(LevelState* s);       /* FUN_00456b80 */
+extern "C" void tutorial_path_coordinate_index(LevelState* s);       /* FUN_00456b80 */
 
 /* --- level loading ------------------------------------------------------ */
 /* `pending` is first consulted (PendingLevelName @ 0x42f0c0): when non-null
@@ -760,11 +760,11 @@ extern "C" int terrain_cell_byte_state_classify_current(const int xy[2],
 
 /* FUN_00429850: the dword at +0xb0. */
 uint32_t active_engine_field_b0_get(const LevelState* s);
-uint32_t active_engine_field_b0_get_current(void); /* FUN_00429850 */
+extern "C" uint32_t active_engine_field_b0_get_current(void); /* FUN_00429850 */
 
 /* FUN_00429860: the float at +0x210 + 4*index. */
 float engine_float_field210_get_by_index(const LevelState* s, int index);
-float engine_float_field210_get_by_index_current(int index); /* FUN_00429860 */
+extern "C" float engine_float_field210_get_by_index_current(int index); /* FUN_00429860 */
 
 /* FUN_00429880: the float at +0x260. */
 float engine_float_field260_get(const LevelState* s);
@@ -905,8 +905,8 @@ typedef void (*TerrainNeighborRenderUpdateHook)(uint32_t x, uint32_t y,
 void terrain_neighbor_flag_hooks_install(
     TerrainNeighborPresenceHook presence,
     TerrainNeighborRenderUpdateHook render_update, void* context);
-void terrain_neighbor_flag_set(LevelState* s, int manager,
-                               uint32_t x, uint32_t y); /* FUN_00430470 */
+extern "C" void terrain_neighbor_flag_set(LevelState* s, int manager,
+                                          uint32_t x, uint32_t y); /* FUN_00430470 */
 typedef void (*TerrainNeighborActionHook)(const int cell_xy[2],
                                           void* context);
 void terrain_neighbor_refresh_hooks_install(
@@ -982,7 +982,7 @@ int terrain_cell_surface_update_dispatch_level(LevelState* level,
                                                 int x, int y,
                                                 float scale,
                                                 float uniform_scale);
-int terrain_cell_initialize(LevelState* level, uint32_t x, uint32_t y); /* 0x430ee0 */
+extern "C" int terrain_cell_initialize(LevelState* level, uint32_t x, uint32_t y); /* 0x430ee0 */
 /* 0x434570: accumulate work in the level cell; no terrain mutation. */
 int terrain_cell_drill_work_add(LevelState* level, int x, int y,
                                 float divisor, float elapsed);
@@ -991,8 +991,8 @@ int terrain_cell_drill_work_add_current(int x, int y, float divisor,
 void terrain_cell_mutation_progress(LevelState* level, uint32_t x,
                                     uint32_t y); /* 0x00433380 */
 void terrain_cell_mutation_progress_current(int x, int y);
-int terrain_cell_mutate(LevelState* level, uint32_t x, uint32_t y,
-                        int mode); /* 0x00430530 */
+extern "C" int terrain_cell_mutate(LevelState* level, uint32_t x, uint32_t y,
+                                   int mode); /* 0x00430530 */
 typedef struct TerrainStampImpactHooks {
     void* context;
     uint32_t (*cell_flags_get)(void* context, int x, int y);
@@ -1026,7 +1026,7 @@ typedef struct SurfaceTypeDescriptionHooks {
 } SurfaceTypeDescriptionHooks;
 void surface_type_descriptions_load(SurfaceTypeDescriptionEntry entries[18],
                                     const SurfaceTypeDescriptionHooks* hooks); /* 0x004350a0 */
-void surface_type_descriptions_config_load(BlockFile* config,
+extern "C" void surface_type_descriptions_config_load(BlockFile* config,
                                            const char* config_root); /* 0x004350a0 */
 typedef struct TileModelEntityRegistration {
     void* models[2];
@@ -1164,7 +1164,7 @@ uint32_t cell_coordinate_timestamp_exists(const int xy[2]);
 /* ErosionTimingStateInit (FUN_0040e930): scale the configured trigger,
  * erosion, and lock durations, then clear the ordered pending list, 2,000
  * stage slots, and 1,000 timed coordinate records. */
-void erosion_timing_state_init(float value_a, float value_b, float value_c);
+extern "C" void erosion_timing_state_init(float value_a, float value_b, float value_c);
 float erosion_decay_scale_peek(void);          /* port hook */
 float erosion_delay_scale_peek(void);          /* port hook */
 int   erosion_timestamp_tick_peek(void);       /* port hook */
@@ -1225,8 +1225,8 @@ void lava_erosion_hooks_set(LavaErosionEdgeApplyHook edge_apply,
                             LavaErosionEventHook event,
                             void* context);
 void lava_erosion_mutation_threshold_set(unsigned int threshold);
-void lava_erosion_neighbor_mutate(const int xy[2], unsigned int direction,
-                                 int propagate);
+extern "C" void lava_erosion_neighbor_mutate(const int xy[2], unsigned int direction,
+                                            int propagate);
 void lava_erosion_eight_neighbor_propagate(const int xy[2],
                                            unsigned int direction);
 int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint);
@@ -1301,7 +1301,7 @@ uint32_t cell_flag100_is_set(int x, int y, int field);
  * The table's owner (the grid-initialize leaf) is unported, so it stays
  * NULL in port cases and the check answers 0 (documented deviation;
  * the corpus dereferences its pointer blindly). */
-int grid_cell_record_present_check(int x, int y);
+extern "C" int grid_cell_record_present_check(int x, int y);
 
 /* --- corner normal sampling + surface-type config leaves (2026-10-24) -----
  * TerrainCellNormalSample (FUN_004512d0): read the cell's corner float
@@ -1385,12 +1385,12 @@ int terrain_cell_roof_vertices_get(const LevelState* level, uint32_t x,
  * surface type, falling back to the missing-config literal when the entry
  * is null. The current config adapter can retain parsed numeric values but
  * does not yet intern and install the display-name token. */
-const char* terrain_surface_type_name_get(int index);
+extern "C" const char* terrain_surface_type_name_get(int index);
 
 /* SurfaceTypeConfiguredValueAtIndex (FUN_00435190): the indexed value of
  * the same config loader's table, with the corpus's blind indexing guarded
  * (deviation). */
-uint32_t surface_type_configured_value_at_index(int index);
+extern "C" uint32_t surface_type_configured_value_at_index(int index);
 
 /* TerrainNeighborCoordinateCheck (FUN_0042f350): classify a cell's
  * cardinal-neighbor state. The corpus probes north, east, south, west in
@@ -1423,7 +1423,7 @@ extern "C" int grid_record_count_difference_get(int row, int column, int slot,
 /* RenderConfigSixFieldCopyOut / CopyInOrClear (FUN_004370b0 / 004370d0):
  * copy the opaque six-dword render snapshot, or clear it when input is NULL. */
 extern "C" void render_config_six_field_copy_out(uint32_t out[6]);
-void render_config_six_field_copy_in_or_clear(const uint32_t in[6]);
+extern "C" void render_config_six_field_copy_in_or_clear(const uint32_t in[6]);
 /* GridRecordCountDifferenceSum (FUN_00437100): sum all 16 slots for rows
  * 0..14 of `type`, optionally skipping rows whose stats record has bit 8
  * set at offset +0x144. The stats table is the guarded entity model. */
@@ -1449,14 +1449,14 @@ void grid_count_table_slot_poke(int row, int column, int slot, int table,
  * LevelStateField9CAdd @ FUN_0041f920
  * GlobalObjectField94Increment @ FUN_0041f980
  * GlobalObjectFieldA8Increment @ FUN_0041f990 */
-void global_object_field8c_increment(void);
+extern "C" void global_object_field8c_increment(void);
 void global_object_field8c_increment_for_level(LevelState* s);
-void global_object_field8c_subtract(int amount);
+extern "C" void global_object_field8c_subtract(int amount);
 void global_object_field8c_subtract_for_level(LevelState* s, int amount);
-void global_object_field98_add(int amount);
+extern "C" void global_object_field98_add(int amount);
 void global_object_field98_add_for_level(LevelState* s, int amount);
 void global_object_field98_clear(LevelState* s);
-void global_object_field98_clear_current(void); /* FUN_0041f8c0 */
+extern "C" void global_object_field98_clear_current(void); /* FUN_0041f8c0 */
 
 /* EntityAvailableResourceSpend (FUN_00438720, findings 251/372): the +0x1f8
  * gate zeroes the amount when raised; then, when the no-op callback probe
@@ -1468,11 +1468,11 @@ int entity_available_resource_spend(LevelState* level, int amount,
                                     const void* resource_hint);
                                                 /* FUN_00438720 */
 
-void level_state_field9c_add(int amount);
+extern "C" void level_state_field9c_add(int amount);
 void level_state_field9c_add_for_level(LevelState* s, int amount);
-void global_object_field94_increment(void);
+extern "C" void global_object_field94_increment(void);
 void global_object_field94_increment_for_level(LevelState* s);
-void global_object_fielda8_increment(void);
+extern "C" void global_object_fielda8_increment(void);
 void global_object_fielda8_increment_for_level(LevelState* s);
 uint32_t level_field8c_get(const LevelState* s);
 uint32_t level_field98_get(const LevelState* s);
@@ -1551,7 +1551,7 @@ extern "C" short rng_thunk_draw15(void); /* FUN_004798a0: Maths_Rand */
  * by the unported config-parsing loader, so it lands as zero-init module
  * storage with set/peek hooks; out-of-range cells answer 0 (guarded
  * deviation: the corpus strides blindly). */
-int terrain_object_type_sfx_at_cell_get(const void* position_record);
+extern "C" int terrain_object_type_sfx_at_cell_get(const void* position_record);
 unsigned int level_predug_coordinate_count_get(void);
 int level_predug_coordinate_get(unsigned int index, int cell_xy_out[2]);
 void level_predug_coordinate_pool_clear(void);
@@ -1566,7 +1566,7 @@ int  terrain_sfx_grid_cell_peek(int cell);             /* port hook */
  * resolved sound alias at cell (row + type*15), the (type, row) pair coming
  * from the entity name resolver and carried across entries (the corpus's
  * quirk). Deviations in the module notes. */
-void terrain_object_sfx_grid_config_load(BlockFile* config,
+extern "C" void terrain_object_sfx_grid_config_load(BlockFile* config,
                                          const char* root_path);
                                                 /* FUN_0044acc0 */
 
@@ -1577,7 +1577,7 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
  * answers a null handle. Kinds 6/7 select the two scalar handles; other
  * kinds clear selection flag bit 0. A success raises flag bits 0+1, keeps
  * the record pointer, and releases the panel text-output slot. */
-void terrain_choice_resource_select(const void* record);
+extern "C" void terrain_choice_resource_select(const void* record);
                                                 /* FUN_0040e700 */
 void      terrain_choice_window_array_install(int kind, int index,
                                               uint32_t value);

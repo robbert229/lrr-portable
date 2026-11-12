@@ -475,3 +475,16 @@ void scene_object_resource_release(void* record)
 {
     (void)typed_child_resource_scalar_get(*(void**)((char*)record + 8));
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_0046cf90 (Vehicle_SetUpgradeLevel) takes the vehicle model
+ * and the level; the port's entry above takes the record list and the
+ * channel state separately, which the vehicle model does not carry in the
+ * port. Nothing calls this natively, so it does nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (scene_record_indexed_entries_rebuild_and_refresh 0046cf90)
+extern "C" void scene_record_indexed_entries_rebuild_original(
+    void* vehicleModel, int upgradeLevel)
+{
+    (void)vehicleModel;
+    (void)upgradeLevel;
+}

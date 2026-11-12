@@ -11,7 +11,7 @@ extern "C" {
 /* Priority-panel button action (FUN_0045b620): buttons 0-8 toggle a
  * priority row, buttons 9-16 move rows 1-8 up one. */
 void ui_list_priority_button_action_dispatch(int action);
-void ui_pointer_cursor_name_registry_init(void); /* FUN_0045c830 */
+extern "C" void ui_pointer_cursor_name_registry_init(void); /* FUN_0045c830 */
 const char* ui_pointer_cursor_name_get(uint32_t index);
 void ui_pointer_cursor_override_set(float duration);
 float ui_pointer_cursor_override_remaining(void);

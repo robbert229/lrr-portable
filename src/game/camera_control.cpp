@@ -838,3 +838,50 @@ static void view_tail(ViewContext* v, float scale)
     }
 }
 
+
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-021's lego_unit.c. */
+
+/* Camera_GetTopdownPosition (FUN_00436b33): the original takes the map;
+ * the port's camera_get_position_with_terrain_height takes the engine
+ * context for the terrain height. Without one it leaves the output as the
+ * original does for another camera mode. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Camera_GetTopdownPosition 00436b33 -> camera_get_position_with_terrain_height)
+extern "C" int camera_topdown_position_get_adapter(void* camera, void* map, float out[3])
+{
+    (void)map;
+    return camera_get_position_with_terrain_height((ViewContext*)camera, NULL, out);
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_00435ebb (Camera_TrackObject) takes the object pointer and
+ * its float parameters as floats; the port's entry above takes them as
+ * 32-bit words. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (screen_effect_record_set 00435ebb)
+extern "C" void screen_effect_record_set_original(void* camera,
+                                                  EntitySlot* object,
+                                                  float speed, float distance,
+                                                  float tilt, float rotation)
+{
+    uint32_t speed_word;
+    uint32_t distance_word;
+    uint32_t rotation_word;
+    memcpy(&speed_word, &speed, sizeof(speed_word));
+    memcpy(&distance_word, &distance, sizeof(distance_word));
+    memcpy(&rotation_word, &rotation, sizeof(rotation_word));
+    screen_effect_record_set(camera, (uint32_t)(uintptr_t)object, speed_word,
+                             distance_word, tilt, rotation_word);
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original Camera_Shake takes two floats; the port's entry takes their
+ * bits as words. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (entity_fields_a0_a4_store_a8_clear, 0x00435f32)
+extern "C" void entity_fields_a0_a4_store_a8_clear_original(void* camera,
+                                                            float a, float b)
+{
+    uint32_t bits_a;
+    uint32_t bits_b;
+    memcpy(&bits_a, &a, sizeof(bits_a));
+    memcpy(&bits_b, &b, sizeof(bits_b));
+    entity_fields_a0_a4_store_a8_clear(camera, bits_a, bits_b);
+}

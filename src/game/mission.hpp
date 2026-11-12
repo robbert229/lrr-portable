@@ -74,7 +74,7 @@ extern "C" {
 
 /* Target-shaped, no-argument TaskBlockInit entry. The current runtime owner
  * is supplied by the explicit adapter below. */
-int mission_task_init_target(void);
+extern "C" int mission_task_init_target(void);
 /* Seed ten named task slots and run the six corpus-order field-loader passes
  * for the supplied live GameContext. */
 void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name);
