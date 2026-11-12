@@ -2781,11 +2781,12 @@ GameFileHandle* game_file_open_loose_path(const char* path,
  * globals, freed in corpus order. Deviations: the band lands as
  * own storage (install/peek hooks for the named globals), the
  * corpus frees without clearing, and the port nulls each freed slot. */
-// GLOBAL: LEGORR 0x004ddc04
-static struct ResourceHandleSetBandSlot {
+struct ResourceHandleSetBandSlot {
     void* handle;      /* corpus band dword (stride 8; the word behind rides) */
     uint32_t word2;
-} s_handle_set_band[24]; /* DAT_004ddc04..DAT_004ddcc4, stride 8 */
+};
+// GLOBAL: LEGORR 0x004ddc04
+static struct ResourceHandleSetBandSlot s_handle_set_band[24]; /* DAT_004ddc04..DAT_004ddcc4, stride 8 */
 static void* s_handle_set_named[12]; /* DAT_004dd734..9a8/DAT_004ddad4/d8 */
 
 /* Port hook: slots 0..23 are the band (stride-8 units), 24..35 the named
