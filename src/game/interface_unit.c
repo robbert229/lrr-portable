@@ -1755,12 +1755,12 @@ int interface_is_item_available(int type)
 
         lego_object_get_block(obj, &blockPos.x, &blockPos.y);
         if (obj->driveObject != NULL &&
-            !terrain_cell_route_and_occupancy_check_current(LEGOOBJ(obj->driveObject), blockPos.x, blockPos.y, blockPos.x, blockPos.y, 1)) {
+            !lego_terrain_cell_route_and_occupancy_check(LEGOOBJ(obj->driveObject), blockPos.x, blockPos.y, blockPos.x, blockPos.y, 1)) {
             return 0;
         }
         if ((entity_capability_flags_get(LEGOOBJ(obj)) & 1) &&
             (obj->flags1 & 0x400) && obj->interactObject != NULL &&
-            !terrain_cell_route_and_occupancy_check_current(LEGOOBJ(obj->interactObject), blockPos.x, blockPos.y, blockPos.x, blockPos.y, 1)) {
+            !lego_terrain_cell_route_and_occupancy_check(LEGOOBJ(obj->interactObject), blockPos.x, blockPos.y, blockPos.x, blockPos.y, 1)) {
             return 0;
         }
         if (!(entity_stats_word_get(LEGOOBJ(obj)) & 0x2000000) &&
@@ -1850,7 +1850,7 @@ int interface_is_item_available(int type)
         }
         if (selection_active_has_any_get()) {
             if ((!aitask_list_contains(2) && !interface_any_object_with_flags2_100000()) ||
-                !any_object_can_occupy_terrain_cell(interfaceGlobs.selBlockPos.x, interfaceGlobs.selBlockPos.y)) {
+                !lego_any_object_can_occupy_terrain_cell(interfaceGlobs.selBlockPos.x, interfaceGlobs.selBlockPos.y)) {
                 return 0;
             }
         } else if (!interface_any_object_can_reach_alt(&interfaceGlobs.selBlockPos)) {
@@ -3129,7 +3129,7 @@ int interface_callback_can_pick_up(struct LegoObject* obj, void* data)
             (container = lego_object_get_container(obj)) != NULL) {
             container_get_position(container, NULL, &wPos);
             if (terrain_map_world_to_block(lego_get_map(), wPos.x, wPos.y, &bx, &by) &&
-                terrain_cell_route_and_occupancy_check_current(NULL, bx, by, bx, by, 1)) {
+                lego_terrain_cell_route_and_occupancy_check(NULL, bx, by, bx, by, 1)) {
                 return 1;
             }
         }

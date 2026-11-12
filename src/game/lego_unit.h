@@ -544,6 +544,50 @@ void lego_periodic_callback_dispatch(int on);   /* E, 00425b40 */
 
 /* ---- part 2 declarations, group 2G (00431580-00432490): begin ---- */
 
+/* Maths.h's Point2F and Vector3F. */
+typedef struct LegoPoint2F2G { float x, y; } LegoPoint2F2G;
+typedef struct LegoPoint2I2G { int x, y; } LegoPoint2I2G;
+typedef struct LegoVector3F2G { float x, y, z; } LegoVector3F2G;
+
+void lego_terrain_neighbor_work_flag_scan(unsigned int bx, unsigned int by); /* 00431580 */
+void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
+                                      int direction, int vertexMode); /* 00431780 */
+int lego_terrain_cell_material_get(int bx, int by);                 /* 004319b0 */
+/* Shared: level_map_cell_get (004319e0), selected_entities_any_predicate_match
+ * (00431a30). */
+uint32_t level_map_cell_get(uint32_t slot, int x, int y);
+int selected_entities_any_predicate_match(int cx, int cy, int require_stat_bit);
+int lego_any_object_can_occupy_terrain_cell(int bx, int by);        /* 00431ab0 */
+int lego_terrain_placement_blocked_adjacent_cell_scan(int bx, int by,
+                                                      int mode, int water); /* 00431b20 */
+int lego_first_free_neighbor_cell_pick(struct EntitySlot* liveObj,
+                                       const int blockPos[2], int outPos[2],
+                                       int skipWalls);              /* 00431c70 */
+int lego_terrain_cell_route_and_occupancy_check(struct EntitySlot* liveObj,
+                                                int bx, int by, int toX,
+                                                int toY, int ignoreOwnBlock); /* 00431da0 */
+void lego_terrain_cell_flag100_set_and_track(const int blockPos[2]);  /* 00432100 */
+uint32_t lego_terrain_cell_secondary_flag_100(const int blockPos[2]); /* 00432170 */
+void lego_terrain_cell_update_queue_flush(void);                     /* 004321a0 */
+void lego_terrain_cell_previous_state_track(void);                   /* 00432200 */
+void lego_terrain_cell_visited_flag_set_and_track(const int blockPos[2]); /* 00432270 */
+uint32_t lego_terrain_cell_visited_flag(const int blockPos[2]);      /* 004322d0 */
+void lego_terrain_cell_visited_flags_clear_all(void);                /* 00432300 */
+void lego_terrain_cell_primary_flags_mask_clear_and_refresh(const int blockPos[2]); /* 00432360 */
+void lego_terrain_cell_secondary_bit0_clear(const int blockPos[2]);  /* 004323c0 */
+void lego_terrain_cell_flags_set_and_refresh(const int blockPos[2]); /* 004323f0 */
+void lego_terrain_cell_flags_set_mask100400(int bx, int by);         /* 00432450 */
+void lego_terrain_cell_flags_set_mask20108000(int bx, int by);       /* 00432490 */
+
+/* -- assumed from other groups (part 2) --
+ * 0042f6f0 Level_BlockUpdateSurface (group 2E): the callers push a fourth
+ * argument (0 here).
+ * 00430530 the block mutation (group 2F). */
+void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by,
+                         int reserved);                             /* 0042f6f0 */
+int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
+                             unsigned int by, int mode);            /* 00430530 */
+
 /* ---- part 2 declarations, group 2G: end ---- */
 
 #ifdef __cplusplus

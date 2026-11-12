@@ -1309,6 +1309,48 @@ void terrain_map_wobble_emissive_set(struct TerrainMap* map, int on); /* 00450a8
 
 /* ---- part 2 imports, group 2G (00431580-00432490): begin ---- */
 
+/* legoGlobs block-update lists the port models (level.cpp): 0055684c,
+ * 00556e8c, 00556b6c, 00556e90, 00556528, 00556848. 100 pairs each. */
+extern int32_t s_cell_refresh_track[100][2];
+extern int s_cell_refresh_track_count;
+extern int32_t s_cell_previous_track[100][2];
+extern int s_cell_previous_track_count;
+extern int32_t s_cell_visited_track[100][2];
+extern int s_cell_visited_track_count;
+/* Lego.c .bss (lego.cpp): the neighbour-pick rotation, 004de588. */
+extern uint32_t s_neighbor_pick_rotation;
+/* G98 Map file images (g98_024.h): 004894a0; lego.cpp (level.hpp): 004334c0. */
+unsigned char* level_map_slot_get(unsigned int slot);
+void level_map_dimensions_get(uint32_t slot, uint32_t* width,
+                              uint32_t* height);
+/* GAME-021 part 3 (lego.cpp, level.hpp): 00432770. 00432a20 takes the
+ * level as well; adapter at the end of lego.cpp. */
+int terrain_cell_walkability_query_current(const struct EntitySlot* entity,
+                                           uint32_t x, uint32_t y,
+                                           int require_stat_bit,
+                                           int gated_mode);
+int terrain_cell_allows_placement_adapter(const struct EntitySlot* e,
+                                          int bx, int by);
+/* placement.cpp (level.hpp): the block's path descriptor (004090a0). */
+int terrain_cell_predicate_check_current(const uint32_t pair_key[2]);
+/* Stats.c (entity.hpp): 00469e80. */
+uint32_t entity_state_flags_get(const struct EntitySlot* e);
+/* LegoObject_GetBlockPos (004424f0) returns whether the position is on the
+ * map; the port's entry returns nothing. Adapter at the end of lego.cpp. */
+int entity_block_pos_get_adapter(const struct EntitySlot* entity,
+                                 int* bx, int* by);
+/* GAME-026 Map3D.c (terrain_map.h): 0044f640, 004507d0. */
+int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,
+                               unsigned int by, float* xOut, float* yOut);
+void terrain_map_vertex_position_get(struct TerrainMap* map, unsigned int vx,
+                                     unsigned int vy, float* x, float* y,
+                                     float* z);
+/* GAME-008 Effects (rock_fall_styles.cpp, resource.hpp): the rock fall,
+ * 0040c230. */
+int scene_slot_pose_scale_register(int group, uint32_t first, uint32_t second,
+                                   float x, float y, float z,
+                                   float heading, float pitch);
+
 /* ---- part 2 imports, group 2G: end ---- */
 
 #ifdef __cplusplus

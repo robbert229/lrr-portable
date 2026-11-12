@@ -242,7 +242,7 @@ int electric_fence_block_is_building(ElectricFenceLevel* level, int bx,
     if (terrain_cell_occupied_or_flag_current(bx, by, 1)) {
         if (!powered)
             return 1;
-        if (terrain_cell_secondary_flag_100_current(&pos.x))
+        if (lego_terrain_cell_secondary_flag_100(&pos.x))
             return 1;
     }
     return 0;

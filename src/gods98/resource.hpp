@@ -855,6 +855,9 @@ typedef int (*SceneSlotPoseHook)(void* handle, int group, int slot,
                                  float x, float y, float z,
                                  float heading, float pitch, void* context);
 void scene_slot_pose_hook_install(SceneSlotPoseHook hook, void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 int scene_slot_pose_scale_register(int group, uint32_t first, uint32_t second,
                                    float x, float y, float z,
                                    float heading, float pitch); /* FUN_0040c230 */

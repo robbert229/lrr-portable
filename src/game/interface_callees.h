@@ -178,12 +178,12 @@ void command_sample_stats_accumulate(int kind, const void* sample);
 /* Lego.c (GAME-021): game/cmd.hpp, game/level.hpp, game/frontend.hpp,
  * gods98/engine.hpp */
 int selected_entities_any_predicate_match(int cx, int cy, int require_stat_bit);
-int any_object_can_occupy_terrain_cell(int cx, int cy);
+int lego_any_object_can_occupy_terrain_cell(int bx, int by);
 void terrain_cell_work_flag_clear_current(const int coord[2],
                                           uint32_t selector);
-int terrain_cell_route_and_occupancy_check_current(
-    const struct EntitySlot* entity, int from_x, int from_y, int to_x,
-    int to_y, int strict);
+int lego_terrain_cell_route_and_occupancy_check(struct EntitySlot* liveObj,
+                                                int bx, int by, int toX,
+                                                int toY, int ignoreOwnBlock);
 int terrain_cell_walkability_query_current(const struct EntitySlot* entity,
                                            uint32_t x, uint32_t y,
                                            int require_stat_bit,

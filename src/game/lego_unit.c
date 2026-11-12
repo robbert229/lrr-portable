@@ -3364,7 +3364,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                             if (unit != NULL) {
                                                 entity_position_to_terrain_cell_adapter(
                                                     liveObj, &objPos[0], &objPos[1]);
-                                                if (terrain_cell_route_and_occupancy_check_current(
+                                                if (lego_terrain_cell_route_and_occupancy_check(
                                                         unit, objPos[0], objPos[1],
                                                         objPos[0], objPos[1], 0)) {
                                                     cmd_produce(8, NULL, 0, objPos);
@@ -3385,7 +3385,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                          LEGO_FIELD(liveObj, int, 0) == 7)) {
                                         entity_position_to_terrain_cell_adapter(
                                             liveObj, &objPos[0], &objPos[1]);
-                                        if (terrain_cell_route_and_occupancy_check_current(
+                                        if (lego_terrain_cell_route_and_occupancy_check(
                                                 unit, objPos[0], objPos[1], objPos[0],
                                                 objPos[1], 0)) {
                                             if (LEGO_FIELD(liveObj, int, 0) == 7)
@@ -3408,7 +3408,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                  !(LEGO_FIELD(liveObj, uint32_t, 0x3e4) & 0x2000000)) ||
                                 (type == 8 &&
                                  !(LEGO_FIELD(liveObj, uint32_t, 0x3e8) & 0x10000))) {
-                                if (terrain_cell_route_and_occupancy_check_current(
+                                if (lego_terrain_cell_route_and_occupancy_check(
                                         selection_active_entity_get(), bx, by, bx, by, 0)) {
                                     if (LEGO_FIELD(liveObj, int, 0) == 7)
                                         media_pointer_cursor_select(0x1c);
@@ -3478,7 +3478,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                         if (s_global_low_word & 2) media_pointer_cursor_select(0x25);
                         else media_pointer_cursor_select(0x26);
                         if ((block->flags1 & 8) && selection_active_has_any_get() &&
-                            terrain_cell_route_and_occupancy_check_current(
+                            lego_terrain_cell_route_and_occupancy_check(
                                 selection_active_entity_get(), bx, by, bx, by, 0)) {
                             if (s_global_low_word & 2) media_pointer_cursor_select(0x27);
                             else media_pointer_cursor_select(0x28);
@@ -3552,7 +3552,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                         !(block->flags2 & 0x20)) {
                                         if (!(block->flags1 & 0x200000) &&
                                             (entity_stats_word_get(selection_active_entity_get()) & 0x10000) &&
-                                            terrain_cell_route_and_occupancy_check_current(
+                                            lego_terrain_cell_route_and_occupancy_check(
                                                 selection_active_entity_get(), bx, by, bx, by, 0)) {
                                             handled = 1;
                                             if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x29);
@@ -3566,7 +3566,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                             }
                                         }
                                         if (handled) goto tracking;
-                                        if (terrain_cell_route_and_occupancy_check_current(
+                                        if (lego_terrain_cell_route_and_occupancy_check(
                                                 selection_active_entity_get(), bx, by, bx, by, 0)) {
                                             handled = 1;
                                             if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x27);
@@ -5067,5 +5067,509 @@ uint32_t global_state_field84_get_current_target(void)
 /* ---- part 2 functions, group 2F: end ---- */
 
 /* ---- part 2 functions, group 2G (00431580-00432490): begin ---- */
+
+/* TerrainNeighborWorkFlagScan [group 2G]: a breadth-first sweep from one
+ * block. Every block in the 3x3 neighbourhood of a listed position whose
+ * flags1 carries 0x20000 is updated (Level_Block mutation, mode 1), loses
+ * the flag and is listed for the next pass. Two position lists alternate. */
+// FUNCTION: LEGORR 0x00431580
+void lego_terrain_neighbor_work_flag_scan(unsigned int bx, unsigned int by)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    unsigned int listSize = (level->width + level->height) * 2;
+    unsigned int counts[2];
+    LegoPoint2F2G* lists[2];
+    unsigned int curr;
+    unsigned int i;
+    LegoPoint2F2G pos;
+    int x, y;
+
+    counts[0] = 0;
+    counts[1] = 0;
+    curr = 0;
+    lists[0] = (LegoPoint2F2G*)malloc(sizeof(LegoPoint2F2G) * listSize * 2);
+    if (lists[0] != NULL) {
+        lists[1] = &lists[0][listSize];
+        lists[0][0].x = (float)bx;
+        lists[0][0].y = (float)by;
+        counts[0] = 1;
+        do {
+            for (i = 0; i < counts[curr]; i++) {
+                pos = lists[curr][i];
+                for (y = (int)pos.y - 1; y <= (int)pos.y + 1; y++) {
+                    for (x = (int)pos.x - 1; x <= (int)pos.x + 1; x++) {
+                        if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x20000) {
+                            lego_terrain_cell_mutate(level, x, y, 1);
+                            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 &= ~0x20000;
+                            if (pos.x != (float)x || pos.y != (float)y) {
+                                lists[!curr][counts[!curr]].x = (float)x;
+                                lists[!curr][counts[!curr]].y = (float)y;
+                                counts[!curr]++;
+                            }
+                        }
+                    }
+                }
+            }
+            counts[curr] = 0;
+            curr = !curr;
+        } while (counts[curr]);
+        free(lists[0]);
+    }
+}
+
+/* TerrainStampImpactHandler [group 2G]: a rock fall at a block. Counts the
+ * solid neighbours (flags1 & 8), plays the fall sound at the block (or the
+ * vertex) and spawns the rock-fall effect facing direction; on success the
+ * block is marked 0x800. */
+// FUNCTION: LEGORR 0x00431780
+void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
+                                      int direction, int vertexMode)
+{
+    unsigned int count = 0;
+    unsigned int i;
+    float x;
+    float y;
+    float z;
+    LegoVector3F2G sPos;
+    int big;
+
+    {
+        LegoPoint2F2G offsets[4] = { { 1.0f, 0.0f }, { 0.0f, 1.0f },
+                                     { -1.0f, 0.0f }, { 0.0f, -1.0f } };
+        for (i = 0; i < 4; i++) {
+            offsets[i].x += (float)bx;
+            offsets[i].y += (float)by;
+            if (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+                    [legoGlobs_currLevel->width * (int)offsets[i].y + (int)offsets[i].x].flags1 & 8)
+                count++;
+        }
+    }
+    if (vertexMode) {
+        terrain_map_vertex_position_get((struct TerrainMap*)LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
+                                        bx, by, &x, &y, &z);
+    } else {
+        terrain_map_block_to_world((struct TerrainMap*)LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
+                                   bx, by, &x, &y);
+    }
+    sPos.x = x;
+    sPos.y = y;
+    sPos.z = terrain_map_world_z_get((struct TerrainMap*)LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
+                                     x, y);
+    sound_submission_route_wrapper(NULL, 4, 0, 0, &sPos.x);
+    big = (count > 1);
+    {
+        LegoPoint2F2G dirs[4] = { { 0.0f, 1.0f }, { 1.0f, 0.0f },
+                                  { 0.0f, -1.0f }, { -1.0f, 0.0f } };
+        if (scene_slot_pose_scale_register((unsigned short)big, bx, by, x, y,
+                terrain_map_world_z_get((struct TerrainMap*)LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
+                                        x, y),
+                dirs[direction].x, dirs[direction].y)) {
+            LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+                [legoGlobs_currLevel->width * by + bx].flags1 |= 0x800;
+        }
+    }
+}
+
+/* TerrainCellMaterialGet [group 2G]: the block's terrain type. */
+// FUNCTION: LEGORR 0x004319b0
+int lego_terrain_cell_material_get(int bx, int by)
+{
+    return LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+        [legoGlobs_currLevel->width * by + bx].f_02;
+}
+
+/* MapFileCellGet [group 2G]: a cell of a level map file (a Map_* image),
+ * row by, column bx; the width comes from the image header. Shared: the
+ * port's callers use this contract. */
+// FUNCTION: LEGORR 0x004319e0
+uint32_t level_map_cell_get(uint32_t slot, int x, int y)
+{
+    uint16_t* data = (uint16_t*)(level_map_slot_get(slot) + 0x10);
+    uint32_t width, height;
+    level_map_dimensions_get(slot, &width, &height);
+    return data[y * width + x];
+}
+
+/* SelectedEntitiesAnyPredicateMatch [group 2G]: does any selected unit pass
+ * the walkability query for the block? Shared. */
+// FUNCTION: LEGORR 0x00431a30
+int selected_entities_any_predicate_match(int cx, int cy, int require_stat_bit)
+{
+    struct EntitySlot* const* units;
+    unsigned int count;
+    unsigned int i;
+
+    units = selection_active_context_record_get((int*)&count);
+    if (units != NULL) {
+        for (i = 0; i < count; i++) {
+            if (terrain_cell_walkability_query_current(units[i], cx, cy, require_stat_bit, 1))
+                return 1;
+        }
+    }
+    return 0;
+}
+
+/* AnyObjectCanOccupyTerrainCell [group 2G]: can any selected unit be placed
+ * on the block? */
+// FUNCTION: LEGORR 0x00431ab0
+int lego_any_object_can_occupy_terrain_cell(int bx, int by)
+{
+    struct EntitySlot* const* units;
+    unsigned int count;
+    unsigned int i;
+
+    units = selection_active_context_record_get((int*)&count);
+    if (units != NULL) {
+        for (i = 0; i < count; i++) {
+            if (terrain_cell_allows_placement_adapter(units[i], bx, by))
+                return 1;
+        }
+    }
+    return 0;
+}
+
+/* PlacementBlockedAdjacentCellScan [group 2G]: can a building's block go
+ * here? The block must be a known, solid-path ground block without a fence,
+ * none of whose four neighbours is terrain type 11. */
+// FUNCTION: LEGORR 0x00431b20
+int lego_terrain_placement_blocked_adjacent_cell_scan(int bx, int by,
+                                                      int mode, int water)
+{
+    int blockPos[2];
+    Lego_Block* block;
+    unsigned int i;
+
+    blockPos[0] = bx;
+    blockPos[1] = by;
+    block = &LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+        [legoGlobs_currLevel->width * by + bx];
+    if (!(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+              [legoGlobs_currLevel->width * by + bx].flags2 & 0x20) &&
+        !terrain_cell_predicate_check_current((const uint32_t*)blockPos) &&
+        !(block->flags1 & 0x20000000)) {
+        if ((!mode || !water || block->f_02 == 9) &&
+            (!mode || !(block->flags1 & 0x8000)) &&
+            (water || block->f_02 != 9) && block->f_02 != 6 &&
+            (block->flags1 & 8) && (block->flags1 & 0x200000) &&
+            !(block->flags1 & 0x108400)) {
+            if (!electric_fence_block_is_fence(bx, by)) {
+                int DIRECTIONS[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+                for (i = 0; i < 4; i++) {
+                    if (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+                            [(DIRECTIONS[i][1] + by) * legoGlobs_currLevel->width + bx + DIRECTIONS[i][0]].f_02 == 11)
+                        return 0;
+                }
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/* Is the block inside the map's border, flags1 0x10 set and 8 clear? The
+ * original inlines this test (it materialises the 0/1 result). */
+static __inline int lego_block_flag10_without_8(unsigned int bx, unsigned int by)
+{
+    int result = 0;
+    if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1 &&
+        (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+             [by * legoGlobs_currLevel->width + bx].flags1 & 0x10) &&
+        !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+              [by * legoGlobs_currLevel->width + bx].flags1 & 8))
+        result = 1;
+    return result;
+}
+
+/* FirstFreeNeighborCellPick [group 2G]: the first of the four neighbours,
+ * starting from a rotating direction, that the unit can route to. */
+// FUNCTION: LEGORR 0x00431c70
+int lego_first_free_neighbor_cell_pick(struct EntitySlot* liveObj,
+                                       const int blockPos[2], int outPos[2],
+                                       int skipWalls)
+{
+    int DIRECTIONS[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+    unsigned int i;
+    unsigned int dir;
+
+    s_neighbor_pick_rotation++;
+    for (i = 0; i < 4; i++) {
+        dir = (s_neighbor_pick_rotation + i) & 3;
+        if (!skipWalls ||
+            !lego_block_flag10_without_8(DIRECTIONS[dir][0] + blockPos[0],
+                                         DIRECTIONS[dir][1] + blockPos[1])) {
+            if (lego_terrain_cell_route_and_occupancy_check(liveObj,
+                    DIRECTIONS[dir][0] + blockPos[0], DIRECTIONS[dir][1] + blockPos[1],
+                    DIRECTIONS[dir][0] + blockPos[0], DIRECTIONS[dir][1] + blockPos[1], 0)) {
+                outPos[0] = DIRECTIONS[dir][0] + blockPos[0];
+                outPos[1] = DIRECTIONS[dir][1] + blockPos[1];
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/* TerrainCellRouteAndOccupancyCheck [group 2G]: can the unit (or any unit,
+ * for NULL) move from block (bx, by) to (toX, toY)? Returns 0 (no), 1, 2
+ * (diagonal or slow) or 3 (water). */
+// FUNCTION: LEGORR 0x00431da0
+int lego_terrain_cell_route_and_occupancy_check(struct EntitySlot* liveObj,
+                                                int bx, int by, int toX,
+                                                int toY, int ignoreOwnBlock)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    uint32_t crossLand = 0;
+    uint32_t crossOther = 1;
+    uint32_t enterLava = 0;
+    uint32_t crossRubble = 0;
+    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+    Lego_Block* toBlock = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[toY * level->width + toX];
+    int result = 1;
+    int DIRECTIONS[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
+    unsigned int dir;
+    uint32_t flags;
+    uint32_t water;
+    int objX, objY;
+
+    if (liveObj != NULL && (entity_stats_word_get(liveObj) & 0x20000) &&
+        LEGO_FIELD(liveObj, void*, 0x36c) == NULL)
+        return 0;
+
+    for (dir = 0; dir < 4; dir++) {
+        if (DIRECTIONS[dir][0] + toX == bx && toY + DIRECTIONS[dir][1] == by)
+            break;
+    }
+
+    if (liveObj != NULL) {
+        if (LEGO_FIELD(liveObj, int, 0) == 11)
+            return 0;
+        crossRubble = entity_capability_flags_get(liveObj) & 0x200;
+        water = entity_stats_word_get(liveObj) & 1;
+        crossLand = entity_stats_word_get(liveObj) & 0x1000000;
+        crossOther = entity_stats_word_get(liveObj) & 0x2000000;
+        enterLava = entity_state_flags_get(liveObj) & 0x200000;
+        if (!ignoreOwnBlock && entity_block_pos_get_adapter(liveObj, &objX, &objY) &&
+            bx == objX && by == objY)
+            return 1;
+    } else {
+        water = 0;
+    }
+
+    if (block->f_02 == 9 && !crossLand)
+        return 0;
+    if (block->f_02 != 9 && !crossOther)
+        return 0;
+    if (block->f_02 == 6 && !enterLava && !(block->flags1 & 0x200))
+        return 0;
+    flags = block->flags1;
+    if (flags & 0x400)
+        return 0;
+    if (ignoreOwnBlock && (flags & 0x40))
+        return 0;
+    if (!crossRubble && (block->flags2 & 4))
+        return 0;
+    if (water) {
+        if (flags & 0x10)
+            result = 3;
+        if (block->f_00 == 0)
+            return 0;
+        if ((LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].flags1 & 0x10) &&
+            (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx - 1].f_02 == 6 ||
+             LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by - 1) * level->width + bx].f_02 == 6))
+            return 0;
+        if ((LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].flags1 & 0x10) &&
+            (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx - 1].f_02 == 7 ||
+             LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by - 1) * level->width + bx].f_02 == 7))
+            return 0;
+        if (dir == 0) {
+            if (flags & 0x2000)
+                result = 2;
+            if (toBlock->flags1 & 0x2000)
+                result = 2;
+        }
+    } else if (!(flags & 8)) {
+        return 0;
+    }
+    if (toX != bx && toY != by) {
+        if ((LEGO_LEVEL_PTR(Lego_Block, level->blocks)[toY * level->width + bx].flags1 & 8) &&
+            (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + toX].flags1 & 8))
+            return 2;
+    }
+    return result;
+}
+
+/* The block-update lists [group 2G]: blocks marked flags2 0x100 this frame
+ * (s_cell_refresh_track, 0055684c), last frame's copy (s_cell_previous_track,
+ * 00556b6c) and the visited blocks (s_cell_visited_track, 00556528). */
+// FUNCTION: LEGORR 0x00432100
+void lego_terrain_cell_flag100_set_and_track(const int blockPos[2])
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    int32_t (*list)[2] = s_cell_refresh_track;
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags2 |= 0x100;
+    list[s_cell_refresh_track_count][0] = blockPos[0];
+    list[s_cell_refresh_track_count][1] = blockPos[1];
+    s_cell_refresh_track_count++;
+    lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
+}
+
+// FUNCTION: LEGORR 0x00432170
+uint32_t lego_terrain_cell_secondary_flag_100(const int blockPos[2])
+{
+    return LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+        [blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags2 & 0x100;
+}
+
+// FUNCTION: LEGORR 0x004321a0
+void lego_terrain_cell_update_queue_flush(void)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    unsigned int i;
+
+    for (i = 0; i < (unsigned int)s_cell_previous_track_count; i++) {
+        if (!(LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+                  [level->width * s_cell_previous_track[i][1] + s_cell_previous_track[i][0]].flags2 & 0x100))
+            lego_cell_init_pass(level, s_cell_previous_track[i][0], s_cell_previous_track[i][1], 0);
+    }
+    s_cell_previous_track_count = 0;
+}
+
+/* The original's lists are adjacent legoGlobs fields, so it walks one
+ * pointer over the current list and writes the previous one at +0x320. The
+ * port keeps them as separate globals (level.cpp), from which no C form
+ * reproduces that addressing (the separate-array form scores 23.88%; a
+ * one-struct model of the lists gives the original's loop). So the
+ * matching build keeps the original's code, as the port did; the C form is
+ * for other compilers. */
+// FUNCTION: LEGORR 0x00432200
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void lego_terrain_cell_previous_state_track(void)
+{
+    __asm {
+        mov eax, dword ptr [s_cell_refresh_track_count]
+        xor edx, edx
+        push esi
+        mov esi, dword ptr [g_active_level_retail]
+        test eax, eax
+        jbe lego_previous_state_track_done
+        push edi
+        mov ecx, offset s_cell_refresh_track
+    lego_previous_state_track_loop:
+        mov eax, dword ptr [ecx]
+        mov dword ptr [ecx + 320h], eax
+        mov eax, dword ptr [ecx + 4]
+        mov dword ptr [ecx + 324h], eax
+        mov eax, dword ptr [ecx + 4]
+        imul eax, dword ptr [esi + 14h]
+        mov edi, dword ptr [ecx]
+        add ecx, 8
+        add eax, edi
+        mov edi, dword ptr [esi + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [edi + eax*8 + 0ch]
+        mov edi, dword ptr [eax]
+        and edi, 0fffffeffh
+        inc edx
+        mov dword ptr [eax], edi
+        mov eax, dword ptr [s_cell_refresh_track_count]
+        cmp edx, eax
+        jb lego_previous_state_track_loop
+        pop edi
+    lego_previous_state_track_done:
+        mov dword ptr [s_cell_previous_track_count], eax
+        mov dword ptr [s_cell_refresh_track_count], 0
+        pop esi
+        ret
+    }
+}
+#else
+void lego_terrain_cell_previous_state_track(void)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    unsigned int i;
+
+    for (i = 0; i < (unsigned int)s_cell_refresh_track_count; i++) {
+        s_cell_previous_track[i][0] = s_cell_refresh_track[i][0];
+        s_cell_previous_track[i][1] = s_cell_refresh_track[i][1];
+        LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+            [s_cell_refresh_track[i][1] * level->width + s_cell_refresh_track[i][0]].flags2 &= ~0x100;
+    }
+    s_cell_previous_track_count = s_cell_refresh_track_count;
+    s_cell_refresh_track_count = 0;
+}
+#endif
+
+// FUNCTION: LEGORR 0x00432270
+void lego_terrain_cell_visited_flag_set_and_track(const int blockPos[2])
+{
+    int32_t (*list)[2] = s_cell_visited_track;
+    LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+        [legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].flags2 |= 2;
+    list[s_cell_visited_track_count][0] = blockPos[0];
+    list[s_cell_visited_track_count][1] = blockPos[1];
+    s_cell_visited_track_count++;
+}
+
+// FUNCTION: LEGORR 0x004322d0
+uint32_t lego_terrain_cell_visited_flag(const int blockPos[2])
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    return LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+        [blockPos[1] * level->width + blockPos[0]].flags2 & 2;
+}
+
+// FUNCTION: LEGORR 0x00432300
+void lego_terrain_cell_visited_flags_clear_all(void)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    unsigned int i;
+
+    for (i = 0; i < (unsigned int)s_cell_visited_track_count; i++) {
+        LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+            [s_cell_visited_track[i][1] * level->width + s_cell_visited_track[i][0]].flags2 &= ~2;
+    }
+    s_cell_visited_track_count = 0;
+}
+
+// FUNCTION: LEGORR 0x00432360
+void lego_terrain_cell_primary_flags_mask_clear_and_refresh(const int blockPos[2])
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 &= 0xdfef7bff;
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags2 &= ~4;
+    lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
+}
+
+// FUNCTION: LEGORR 0x004323c0
+void lego_terrain_cell_secondary_bit0_clear(const int blockPos[2])
+{
+    LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+        [blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags2 &= ~1;
+}
+
+// FUNCTION: LEGORR 0x004323f0
+void lego_terrain_cell_flags_set_and_refresh(const int blockPos[2])
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x108000;
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags2 |= 4;
+    lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
+}
+
+// FUNCTION: LEGORR 0x00432450
+void lego_terrain_cell_flags_set_mask100400(int bx, int by)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 |= 0x100400;
+    lego_cell_init_pass(level, bx, by, 0);
+}
+
+// FUNCTION: LEGORR 0x00432490
+void lego_terrain_cell_flags_set_mask20108000(int bx, int by)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 |= 0x20108000;
+    lego_cell_init_pass(level, bx, by, 0);
+}
 
 /* ---- part 2 functions, group 2G: end ---- */

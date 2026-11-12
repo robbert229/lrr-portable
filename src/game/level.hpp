@@ -371,12 +371,12 @@ uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y);
 
 /* FUN_004334c0: header dims via the slot. An unresolved slot yields
  * 0/0 (the corpus reads address 0x8/0xC — documented deviation). */
-void level_map_dimensions_get(uint32_t slot, uint32_t* width,
-                              uint32_t* height);
+extern "C" void level_map_dimensions_get(uint32_t slot, uint32_t* width,
+                                         uint32_t* height);
 
 /* FUN_004319e0: cell via the slot (row y, column x; the width comes
  * from the image header). Unresolved slot reads 0. */
-uint16_t level_map_cell_get(uint32_t slot, int x, int y);
+extern "C" uint32_t level_map_cell_get(uint32_t slot, int x, int y);
 
 /* --- tile semantics (entity-callback queries, finding 10) -------------- *
  * The voxel record fields these read are the ones the layer loaders write
