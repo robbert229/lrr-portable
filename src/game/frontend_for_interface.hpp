@@ -15,7 +15,7 @@
 #define CELL_PERMISSION_ENTRIES 300 /* corpus's 300-dword clear loop */
 
 void frontend_status_flash_tick(float delta);
-extern MENU_ACTION_TABLE_ALLOC const char* const s_interface_menu_action_labels[74];
+extern const char* const s_interface_menu_action_labels[74];
 extern char s_back_button_action[FE_NAME_MAX];
 extern FeSurroundImage s_interface_surround_images[FE_SURROUND_IMAGES_MAX];
 extern FeInterfaceImage s_interface_images[FE_INTERFACE_ACTION_COUNT];
