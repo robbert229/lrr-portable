@@ -461,7 +461,8 @@ static void* s_minion_list = NULL;
 static int (*s_minion_dist)(int, float) = NULL;
 static void (*s_minion_act)(int) = NULL;
 static void (*s_minion_fail)(void*) = NULL;
-static int s_minion_actions = 0, s_minion_fails = 0;
+static int s_minion_actions = 0;
+static int s_minion_fails = 0;
 
 void simtick_set_minion_list(void* list)
 {
