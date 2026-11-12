@@ -317,7 +317,7 @@ void        level_destroy(LevelState* s);
 
 /* Grid size left in the block after a successful load. */
 extern "C" LevelState* level_current_owner_get(void);
-void* level_current_terrain_get(int cell_x, int cell_y); /* FUN_00431570 */
+extern "C" void* level_current_terrain_get(int cell_x, int cell_y); /* FUN_00431570 */
 /* Shared predug pool used by nearest-coordinate and spawn paths. */
 extern "C" int s_predug_coordinates[20][2];
 extern "C" unsigned int s_predug_coordinate_count;
@@ -679,7 +679,7 @@ uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy);
 uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy);
 /* Retail target forms read the active level and apply unsigned dim-1 gates. */
 uint32_t terrain_cell_flag_800_bounded_current(uint32_t cx, uint32_t cy);
-uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);
+extern "C" uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);
 extern "C" uint32_t terrain_cell_flag_20_bounded_current(uint32_t cx, uint32_t cy);
 
 /* Explicit-level version of the unchecked state-byte classifier. */

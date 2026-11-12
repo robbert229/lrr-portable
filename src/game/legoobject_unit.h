@@ -203,7 +203,8 @@ const char* legoobject_name_get(unsigned int kind, int index);  /* 00439860 */
 void legoobject_copy_two_dword_pair(void* record, unsigned int* outA, unsigned int* outB); /* 00439930 */
 
 /* ---- group F: 00439950-00439e40 ---- */
-void legoobject_tool_name_strings_load(void* loader, void* config); /* 00439950 */
+typedef struct LegoObjF_Point2I { int x; int y; } LegoObjF_Point2I;
+void legoobject_tool_name_strings_load(void* config, const char* gameName); /* 00439950 */
 void legoobject_activity_scene_state_update(void);              /* 00439990 */
 int legoobject_flag400_and_health_threshold_check(Lego_Object* obj); /* 004399c0 */
 int legoobject_gated_step_command_issue(Lego_Object* obj, Lego_Object* target); /* 00439a20 */

@@ -557,7 +557,7 @@ int terrain_neighbor_path_check(void* actor, uint32_t start_x,
                                 uint32_t goal_y, int** out_x, int** out_y,
                                 uint32_t* out_count, TerrainPathStopHook stop,
                                 void* user);
-int terrain_neighbor_path_check_current(void* actor, uint32_t start_x,
+extern "C" int terrain_neighbor_path_check_current(void* actor, uint32_t start_x,
     uint32_t start_y, uint32_t goal_x, uint32_t goal_y, int** out_x,
     int** out_y, float* out_count, TerrainPathStopHook stop, void* user);
                                                         /* 0x004410f0 */

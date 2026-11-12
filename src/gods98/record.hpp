@@ -171,6 +171,9 @@ uint32_t object_field_be4_dword_get(const void* record);
 
 /* EntityTypeMaskGet (FUN_0046cf80, findings 357/432): dword at +0x12c
  * (Ghidra prints this offset as decimal 300). */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t entity_type_mask_get(const void* record);
 
 /* PointerValueGet (FUN_00482210, findings 381/411): the dword it points

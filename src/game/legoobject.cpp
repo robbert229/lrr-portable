@@ -43,6 +43,8 @@
 #include "crt/crt.hpp"
 #include "frontend.hpp"
 #include "entity_shared.hpp"
+/* C linkage for legoobject_unit.c (the frozen header below redeclares it). */
+extern "C" int entity_building_index_set(EntitySlot* entity, uint32_t state);
 #include "entity_from_entity_stats.hpp"
 #include "entity_from_lego.hpp"
 #include "util.hpp"
@@ -86,6 +88,8 @@
 #include "simtick_shared.hpp"
 #include "view_shared.hpp"
 #include "entity_for_legoobject.hpp"
+/* C linkage for legoobject_unit.c (the frozen header below redeclares it). */
+extern "C" const char* s_tool_type_names[AI_TOOL_TYPE_COUNT];
 #include "ai_for_legoobject.hpp"
 #include "cmd_for_legoobject.hpp"
 #include "effects_for_legoobject.hpp"
@@ -2465,7 +2469,8 @@ void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
 
 /* ToolNameStringResourcesLoad (FUN_00439950): load the eleven configured
  * entries from the ToolNames category into the global indexed handle table. */
-// FUNCTION: LEGORR 0x00439950
+/* Port model of 0x00439950 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439950, retires to the tail in GAME-023 part 3
 void entity_tool_name_strings_load(void* string_loader, void* config)
 {
     BlockFile* cfg = (BlockFile*)string_loader;
@@ -2492,7 +2497,8 @@ void entity_tool_name_strings_load(void* string_loader, void* config)
     }
 }
 
-// FUNCTION: LEGORR 0x00439990
+/* Port model of 0x00439990 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439990, retires to the tail in GAME-023 part 3
 void entity_activity_scene_state_update_retail(void)
 {
     if ((s_entity_state_flags & 0x10u) != 0u) {
@@ -2505,7 +2511,8 @@ void entity_activity_scene_state_update_retail(void)
 
 /* EntityFlag400AndHealthThresholdCheck (FUN_004399c0): require flag 0x400;
  * type-1 entities also pass the corpus's indexed-count and 75-percent gate. */
-// FUNCTION: LEGORR 0x004399C0
+/* Port model of 0x004399c0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004399c0, retires to the tail in GAME-023 part 3
 int entity_flag400_and_health_threshold_check(const EntitySlot* entity)
 {
     EntityHealthThresholdState state;
@@ -2546,7 +2553,8 @@ int entity_flag400_and_health_threshold_check(const EntitySlot* entity)
 /* GatedStepCommandIssueWithTargetRecord (FUN_00439a20): resolve both cells,
  * install a one-point route for same-cell targets or the computed path for a
  * different cell, mark the last route step as kind 3, and retain the target. */
-// FUNCTION: LEGORR 0x00439A20
+/* Port model of 0x00439a20 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439a20, retires to the tail in GAME-023 part 3
 int entity_gated_step_command_issue(EntitySlot* entity, EntitySlot* target)
 {
     GameContext* context;
@@ -2633,7 +2641,8 @@ int entity_gated_step_command_issue(EntitySlot* entity, EntitySlot* target)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00439b80
+/* Port model of 0x00439b80 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439b80, retires to the tail in GAME-023 part 3
 int entity_task_target_cell_eligibility_check(
     const EntitySlot* entity, const EntitySlot* target)
 {
@@ -2661,7 +2670,8 @@ int entity_task_target_cell_eligibility_check(
     return candidate != NULL;
 }
 /* EntityAcceptsTargetForTaskCheck (FUN_00439bd0, finding 471). */
-// FUNCTION: LEGORR 0x00439bd0
+/* Port model of 0x00439bd0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439bd0, retires to the tail in GAME-023 part 3
 int entity_accepts_target_for_task_check(const EntitySlot* entity,
                                          const EntitySlot* target,
                                          int apply_extra_gate)
@@ -2689,7 +2699,8 @@ int entity_accepts_target_for_task_check(const EntitySlot* entity,
 
 /* EntityIndexedFlagSetAndRefresh (FUN_00439c80): type-1 records publish
  * their indexed bit, refresh the owning entity's flags, and raise event 0x19. */
-// FUNCTION: LEGORR 0x00439C80
+/* Port model of 0x00439c80 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439c80, retires to the tail in GAME-023 part 3
 void entity_indexed_flag_set_and_refresh(EntitySlot* entity)
 {
     uint32_t bit;
@@ -2704,30 +2715,35 @@ void entity_indexed_flag_set_and_refresh(EntitySlot* entity)
                                            s_entity_indexed_flag_context);
     }
 }
-// FUNCTION: LEGORR 0x00439CD0
+/* Port model of 0x00439cd0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439cd0, retires to the tail in GAME-023 part 3
 int entity_animation_state_set(EntitySlot* entity, uint32_t state)
 {
     return entity_building_index_set(entity, state);
 }
 
-// FUNCTION: LEGORR 0x00439cf0
+/* Port model of 0x00439cf0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439cf0, retires to the tail in GAME-023 part 3
 uint32_t entity_stats_flag10_test(const EntitySlot* e)
 {
     return entity_stats_word_get(e) & 0x10u;
 }
 
-// FUNCTION: LEGORR 0x00439d10
+/* Port model of 0x00439d10 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439d10, retires to the tail in GAME-023 part 3
 uint32_t entity_stats_flag20_test(const EntitySlot* e)
 {
     return entity_stats_word_get(e) & 0x20u;
 }
 
-// FUNCTION: LEGORR 0x00439d30
+/* Port model of 0x00439d30 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439d30, retires to the tail in GAME-023 part 3
 uint32_t entity_stats_flag40_test(const EntitySlot* e)
 {
     return entity_stats_word_get(e) & 0x40u;
 }
-// FUNCTION: LEGORR 0x00439d50
+/* Port model of 0x00439d50 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439d50, retires to the tail in GAME-023 part 3
 int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
                                              int out_xy[2])
 {
@@ -2739,7 +2755,8 @@ int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
         entity, context != NULL ? context->level : NULL, out_xy);
 }
 
-// FUNCTION: LEGORR 0x00439e10
+/* Port model of 0x00439e10 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439e10, retires to the tail in GAME-023 part 3
 int entity_vehicle_unload_cell_find_if_eligible(const EntitySlot* entity,
                                                 int out_xy[2])
 {
@@ -2750,7 +2767,8 @@ int entity_vehicle_unload_cell_find_if_eligible(const EntitySlot* entity,
     return entity_vehicle_unload_adjacent_cell_find(entity, out_xy);
 }
 
-// FUNCTION: LEGORR 0x00439e40
+/* Port model of 0x00439e40 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00439e40, retires to the tail in GAME-023 part 3
 int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2])
 {
     if (entity == NULL

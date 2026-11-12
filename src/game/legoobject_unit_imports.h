@@ -62,6 +62,67 @@ extern struct EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records; 
 
 /* ---- group F ---- */
 
+struct BlockRec;
+struct TerrainMap;
+
+/* Lego_Object passed to a port entry that takes EntitySlot. */
+#define LEGOOBJ_SLOT(o) ((struct EntitySlot*)(o))
+
+/* legoGlobs.toolName (005561fc, ai.cpp's s_tool_type_names) and, right
+ * after it in the original's Lego_Globs, langToolName (00556228). */
+#define LEGO_TOOL_TYPE_COUNT 11
+extern const char* s_tool_type_names[8];                     /* ai.cpp, 005561fc */
+#define legoGlobs_toolName (s_tool_type_names)
+#define legoGlobs_langToolName ((char**)(s_tool_type_names + LEGO_TOOL_TYPE_COUNT))
+
+/* G98 Config.c (config.h). */
+const char* string_path_join(const char* root, ...);                         /* 00478f50 */
+char* block_get_str_copy(struct BlockRec* root, const char* path);           /* 00479050 */
+/* GAME-021 (lego_unit.c). */
+void global_object_field98_clear_current(void);                              /* 0041f8c0 */
+/* Lego_GetMap (00431570) takes no argument; the port's entry (level.hpp)
+ * takes two it ignores. A cdecl call without them is the original's. */
+void* level_current_terrain_get(int cell_x, int cell_y);                     /* 00431570 */
+#define Lego_GetMap() ((struct TerrainMap*)((void* (*)(void))level_current_terrain_get)())
+uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);      /* 00432b50 */
+int terrain_cell_route_and_occupancy_check_current(
+    const struct EntitySlot* entity, int from_x, int from_y,
+    int to_x, int to_y, int strict);                                         /* 00431da0 */
+/* GAME-026 Map3D (terrain_map.h). */
+int terrain_map_world_to_block(struct TerrainMap* map, float x, float y,
+                               int* bx, int* by);                            /* 0044f6d0 */
+/* GAME-043 Stats.c (entity.hpp, entity_from_entity_stats.hpp). */
+uint32_t stats_instance_word_at_ec(const void* config_block);                /* 00469bb0 */
+uint32_t entity_stats_word_get(const struct EntitySlot* e);                  /* 00469e60 */
+uint32_t entity_capability_flags_get(const struct EntitySlot* e);            /* 00469ea0 */
+int entity_building_index_set(struct EntitySlot* entity, uint32_t state);    /* 00469c10 */
+/* GAME-047 Vehicle.c (record.hpp): Vehicle_GetUpgradeLevel. */
+uint32_t entity_type_mask_get(const void* record);                           /* 0046cf80 */
+/* Vehicle_SetUpgradeLevel (0046cf90). The port's entry takes a record list
+ * and a channel state instead; GAME-021's thin adapter in vehicle_model.cpp. */
+void scene_record_indexed_entries_rebuild_original(void* vehicleModel, int upgradeLevel);
+/* GAME-045 Text.c (frontend.hpp). */
+void advisor_text_animation_update(int slot, int force, int selected);      /* 0046ac60 */
+/* LegoObject.c parts 2/3, still port models in legoobject.cpp. Where the
+ * port's parameter types differ (float arrays for the route's block
+ * coordinates, a float count), the unit passes the original's values
+ * through casts. */
+void entity_transform_position_get_outputs(const struct EntitySlot* entity,
+                                           float* out_x, float* out_y);      /* 00442260 */
+int entity_route_setup_and_marker_associate(struct EntitySlot* entity,
+                                            unsigned int count,
+                                            const float* x_values,
+                                            const float* y_values,
+                                            const float* final_marker_position); /* 00441700 */
+typedef int (*TerrainPathStopHook)(void* level, const uint32_t xy[2],
+                                   void* user);
+int terrain_neighbor_path_check_current(void* actor, uint32_t start_x,
+    uint32_t start_y, uint32_t goal_x, uint32_t goal_y, int** out_x,
+    int** out_y, float* out_count, TerrainPathStopHook stop, void* user);     /* 004410f0 */
+int entity_flags_mask107c33de_or_1c00203_any_test(const struct EntitySlot* e); /* 0043baf0 */
+/* 004424f0 LegoObject_GetBlockPos: the GAME-013 port-tail adapter. */
+void legoobject_block_position_get(struct EntitySlot* entity, int* bx, int* by);
+
 /* ---- group G ---- */
 
 #ifdef __cplusplus

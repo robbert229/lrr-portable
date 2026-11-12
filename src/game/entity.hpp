@@ -242,7 +242,7 @@ typedef int (*EntityRouteSegmentAcceptHook)(EntitySlot* entity,
                                             float x0, float y0,
                                             float x1, float y1);
 void entity_route_segment_accept_hook_set(EntityRouteSegmentAcceptHook hook);
-int entity_route_setup_and_marker_associate(EntitySlot* entity,
+extern "C" int entity_route_setup_and_marker_associate(EntitySlot* entity,
                                             unsigned int count,
                                             const float* x_values,
                                             const float* y_values,
@@ -887,7 +887,7 @@ float entity_stats_float_at10c(const EntitySlot* e);  /* FUN_0046a310 */
 
 /* FUN_0043baf0 — true when either flag word intersects its literal mask:
  * +0x3e0 & 0x107c33de or +0x3e4 & 0x01c00203. */
-int entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e);
+extern "C" int entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e);
 
 /* FUN_004385b0 — the shared eligibility gate the command and activity
  * layers consult: no +0x3e0 bits 0x700100 or bit 0x20000, no +0x3e4 bit

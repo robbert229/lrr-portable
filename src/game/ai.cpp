@@ -26,6 +26,8 @@
 #include "util.hpp"
 #include "ai_shared.hpp"
 #include "ai_from_lego.hpp"
+/* C linkage for legoobject_unit.c (the frozen header below redeclares it). */
+extern "C" const char* s_tool_type_names[AI_TOOL_TYPE_COUNT];
 #include "ai_for_legoobject.hpp"
 /* C linkage for LegoObject.c state that legoobject_unit.c also reads
  * (defined in legoobject.cpp; the frozen header below redeclares it). */
