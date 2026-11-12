@@ -316,7 +316,7 @@ void level_no_gather_config_setup(BlockFile* cfg, const char* level_name);
 void        level_destroy(LevelState* s);
 
 /* Grid size left in the block after a successful load. */
-LevelState* level_current_owner_get(void);
+extern "C" LevelState* level_current_owner_get(void);
 void* level_current_terrain_get(int cell_x, int cell_y); /* FUN_00431570 */
 /* Shared predug pool used by nearest-coordinate and spawn paths. */
 extern int s_predug_coordinates[20][2];

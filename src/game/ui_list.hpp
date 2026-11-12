@@ -10,7 +10,7 @@ extern "C" {
 
 /* Priority-panel button action (FUN_0045b620): buttons 0-8 toggle a
  * priority row, buttons 9-16 move rows 1-8 up one. */
-void ui_list_priority_button_action_dispatch(uint32_t action);
+void ui_list_priority_button_action_dispatch(int action);
 void ui_pointer_cursor_name_registry_init(void); /* FUN_0045c830 */
 const char* ui_pointer_cursor_name_get(uint32_t index);
 void ui_pointer_cursor_override_set(float duration);
@@ -28,8 +28,12 @@ struct UiOverlayInitSink {
                             int flags);
     void (*handle_store)(void* context, int which, void* handle);
 };
-void ui_scroll_info_panel_initialize(const UiOverlayInitSink* sink); /* FUN_0045b740 */
-void ui_overlay_create_configured_element(const UiOverlayInitSink* sink); /* FUN_0045b850 */
+/* Superseded by game/panel_unit.h (GAME-032, finding 554), where
+ * FUN_0045b740 and FUN_0045b850 take no arguments. Kept uncalled, renamed,
+ * so the symbol count of every includer is unchanged (ADR 0005 entropy
+ * rule 1). */
+void ui_scroll_info_panel_initialize_superseded(const UiOverlayInitSink* sink);
+void ui_overlay_create_configured_element_superseded(const UiOverlayInitSink* sink);
 typedef struct UiInfoPanelStringInit {
     int text_id;
     uint32_t slot;

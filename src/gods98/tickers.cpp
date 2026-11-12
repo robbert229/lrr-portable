@@ -16,6 +16,7 @@
 #include "media.hpp"
 #include "view.hpp"
 #include "game/level.hpp"
+#include "game/panel_unit.h"
 
 /* ------------------------------------------------------------------ *
  * Per-ticker stubs. Each `ticker_<hex>` corresponds to the corpus's
@@ -262,13 +263,10 @@ int EngineSubsystemTickersWithViews(EngineContext* ctx, float dt, float scale,
 
 static void ManagerTick(EngineContext* ctx, int idx, float dt)
 {
-    /* ported in simtick.* (FUN_0045a730): positional trackers with the
-     * exponential smoothing; ingame = ~state bit 0x40000 (corpus). */
-    int ingame = ((ctx->state & 0x40000u) == 0) ? 1 : 0;
-    simtick_manager_tick(idx, dt, ingame);
-    /* ManagerTick's final operation draws this indexed panel's texture
-     * slots after advancing its position and animation state. */
-    panel_texture_slots_blit(idx);
+    /* Panel_Update (FUN_0045a730, game/panel_unit.c) moves the panel and
+     * draws it and its buttons. */
+    (void)ctx;
+    simtick_manager_tick(idx, dt);
 }
 
 void EngineManagerDispatch(EngineContext* ctx, float dt)

@@ -360,7 +360,7 @@ typedef struct FrontendPanelRotationControlState {
     TextureSurface* images[4];
     float image_sizes[4][2];
 } FrontendPanelRotationControlState;
-void frontend_panel_rotation_control_config_load(BlockFile* values,
+extern "C" void frontend_panel_rotation_control_config_load(BlockFile* values,
                                                    const char* config_root);
 void frontend_panel_rotation_control_state_get(
     FrontendPanelRotationControlState* state);
@@ -411,9 +411,9 @@ int case_insensitive_name_table_lookup(const char* name,
 void ui_panel_name_tables_install(const char* const names[12],
                                   const char* const indexed_names[][24],
                                   unsigned int indexed_count);
-void ui_panel_name_tables_init(void);
+extern "C" void ui_panel_name_tables_init(void);
 extern "C" int ui_panel_name_table_lookup(const char* name, int* out_index);
-int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
+extern "C" int ui_panel_indexed_name_lookup(int table_index, const char* name,
                                  unsigned int* out_index);
 typedef struct ToolTipIconConfigHooks {
     void* context;
@@ -1265,7 +1265,7 @@ typedef char UiTextOutputRecord32SizeCheck[
 /* PanelImageSlotEntryAllocate (FUN_0045a500) builds the 16-byte text-output
  * wrapper around TextBufferCreate. rect is the x/y/w/h float tuple; the
  * font handle and buffer size are passed to TextBufferCreate. */
-void* ui_text_output_record_allocate(int panel, uintptr_t font_handle,
+extern "C" void* ui_text_output_record_allocate(int panel, uintptr_t font_handle,
                                      const float rect[4],
                                      uint32_t buffer_size);
 typedef struct UiTextOutputElementCreateContext {
@@ -1288,7 +1288,7 @@ void ui_text_output_record_slot_destroy(void** holder);
 int ui_text_output_pointer_binding_set(void* record, void* text_buffer,
                                        const float* offsets);
 void ui_text_output_pointer_binding_clear(void* record);
-void ui_text_output_position_and_draw(void* record, uint32_t start_line,
+extern "C" void ui_text_output_position_and_draw(void* record, uint32_t start_line,
                                       float line_scale);
 void ui_text_output_record_slot_draw(void* const* holder,
                                      uint32_t start_line, float line_scale);
@@ -1309,9 +1309,9 @@ typedef int (*FeAdvisorCatalogCallback)(int action, int lane, int row,
 void advisor_callback_schedule_callback_set(
     FeAdvisorCatalogCallback callback); /* port binding */
 void advisor_callback_schedule_gate(void); /* FUN_0041c440 */
-int advisor_animation_slot_id_resolve(uint32_t animation_kind,
-                                      uint32_t position_index,
-                                      uint32_t* slot_id); /* FUN_0045c6b0 */
+extern "C" int advisor_animation_slot_id_resolve(int animation_kind,
+                                      int position_index,
+                                      int* slot_id); /* FUN_0045c6b0 */
 
 /* CursorTileSelectionUpdateByType (FUN_0041cc80): the tile-selection pair
  * ride (DAT_004ddcd8/cdc role) keyed by the selection kind: 0x49 installs
@@ -1343,7 +1343,7 @@ uint32_t cell_action_permission_table_peek(int index);
  * feeder is unported, so the word lands zero-initialized with port-side
  * accessors standing in. */
 bool menu_audio_tick_interval_reached(void); /* FUN_00412190 */
-uint32_t sim_status_banner_word_get(void);  /* FUN_0041b9b0 */
+extern "C" uint32_t sim_status_banner_word_get(void);  /* FUN_0041b9b0 */
 
 /* PanelResourceLayoutStore (FUN_0045c340): the layout band store — both
  * surface loads ride the load seam (NULL answers), the glyph load's
@@ -1354,11 +1354,11 @@ uint32_t sim_status_banner_word_get(void);  /* FUN_0041b9b0 */
  * the blit seam, gated by the 0x50080c word and the status-banner word.
  * Deviation: the corpus loads are hook boundaries answering NULL and the
  * DAT words have no ported owner. */
-void panel_resource_layout_store(void* face_resource, uint32_t width,
-                                 uint32_t height, uint32_t extra,
-                                 void* glyph_resource, uint32_t position_x,
-                                 uint32_t position_y);
-void panel_resource_position_update(int index);
+extern "C" void panel_resource_layout_store(const char* face_resource, unsigned int width,
+                                 unsigned int height, unsigned int extra,
+                                 const char* glyph_resource, unsigned int position_x,
+                                 unsigned int position_y);
+extern "C" void panel_resource_position_update(int index);
 void* panel_layout_surface_peek(void);    /* port hook */
 void* panel_layout_glyph_peek(void);      /* port hook */
 void  panel_layout_glyph_install(void* surface); /* test hook: the seam
@@ -1378,7 +1378,7 @@ void     sim_status_banner_word_set(uint32_t value); /* port hook */
  * including its rectangle, pair, category word, and flags.
  * UiEntryBoundsGet (FUN_0045bf70): position plus derived size from the
  * panel's installed draw-record block (stride 0x2c, far minus near). */
-void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2);
+extern "C" void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2);
                                         /* FUN_0045a650 */
 void panel_category_bounds_peek(int panel, float* out_x1, float* out_y1,
                                 float* out_x2, float* out_y2); /* port hook */
@@ -1472,7 +1472,7 @@ void* timed_effect_record_storage_get(unsigned int index); /* 0x27c stride */
  * metrics pair through the ported getter and caches x - y into the right-edge
  * word. The corpus's reader is the unported layout band, so the cache lands
  * as a module static with a peek hook. */
-void     screen_right_edge_cache_refresh(void); /* FUN_0041a290 */
+extern "C" void screen_right_edge_cache_refresh(void); /* FUN_0041a290 */
 uint32_t screen_right_edge_cache_peek(void);    /* port hook */
 /* BitmapFontGlyphMeasureWidth (FUN_0047a520): measures one glyph without
  * drawing. The decompiler labels the wrapper void, but its callers consume
@@ -1510,8 +1510,8 @@ void panel_resource_position_apply_if_enabled(void* resource, int x, int y);
  * (deviation). */
 void indexed_panel_resource_position_apply(const float* record_position,
                                            int x, int y);
-void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
-                                                uint32_t h, uint32_t extra);
+extern "C" void panel_resource_handle_and_dimensions_store(const char* resource, unsigned int w,
+                                                unsigned int h, unsigned int extra);
                                                 /* FUN_0045c520 */
 void scroll_offset_from_cursor_update(void);    /* FUN_0041a250 */
 void     panel_enable_word_set(uint32_t word);  /* port hook */
@@ -1555,7 +1555,7 @@ void* encyclopedia_ore_file_peek(void);              /* port hook */
 /* ThreeSurfaceResourcesLoadAndInitialize (FUN_0045bfb0): the same fold
  * for three paths, with the corpus's slot quirk: param_2 lands at peek
  * index 2 and param_3 at index 1. */
-void     three_surface_resources_load(const char* first, const char* second,
+extern "C" void three_surface_resources_load(const char* first, const char* second,
                                       const char* third);
 uint32_t advisor_bar_surface_peek(int which);        /* port hook */
 
@@ -1564,7 +1564,7 @@ uint32_t advisor_bar_surface_peek(int which);        /* port hook */
  * (float bits) offset by the layout size pair and a {fill, face+8} size
  * witness; fill = extra * 0.01 * percent. Deviation: the face+8 read
  * needs panel_layout_surface_install (the load seam answers NULL). */
-void     advisor_progress_bar_fill_draw(int row, float percent);
+extern "C" void advisor_progress_bar_fill_draw(int row, float percent);
 
 /* MenuSurfaceBlitScaled (FUN_00412af0): side-selectable face blit — flag
  * set takes the plain destination lane, unset the scaled lane through the
@@ -1693,7 +1693,7 @@ int selection_entity_code_resolve(const struct GameContext* ctx,
  * stride maps to the port's view slots). Deviations: the window guards
  * and the surface-load seam answering NULL (the panel-load precedent),
  * so the dim halves stay zero. */
-void scroll_rect_resource_record_create(int view, int mode,
+extern "C" void scroll_rect_resource_record_create(int view, int mode,
                                         const float* quad, int tex_a,
                                         int tex_b);
 
@@ -1706,7 +1706,7 @@ void scroll_rect_resource_record_create(int view, int mode,
  * reference state; the port models the animated float as guarded own
  * storage with install/peek hooks (the unowned-global deviation), and
  * the corpus's x87 float10 storage lands as plain float (deviation). */
-void ui_overlay_animation_advance(int mode, int steps); /* FUN_0045c580 */
+extern "C" void ui_overlay_animation_advance(int mode, unsigned int steps); /* FUN_0045c580 */
 float overlay_anim_float_peek(void);           /* port hook */
 void  overlay_anim_float_install(float value); /* port hook */
 

@@ -1745,9 +1745,9 @@ int tutorial_builtin_command(uint32_t command, const uint32_t* args,
                 if (action == -1) {
                     /* FlashCallToArms is a direct advisor request, not an
                      * action-table flash. Its wrapper always returns zero. */
-                    uint32_t slot;
+                    int slot;
                     if (args[0] != 0u) {
-                        if (advisor_animation_slot_id_resolve(6u, 2u, &slot))
+                        if (advisor_animation_slot_id_resolve(6, 2, &slot))
                             (void)advisor_request_admit((int)slot, 1);
                     }
                     else advisor_clear_active_state();
@@ -2101,15 +2101,16 @@ void legacy_panel_category_record_install(int panel, const float rect[4],
 
 TextureSurface* legacy_panel_texture_get(int panel)
 {
-    if (panel < 0 || panel >= 18) return NULL;
-    const LegacyPanelPortRecord* record = &s_legacy_panels[panel];
-    if (!record->image_texture_owned || record->image_mode != 0) return NULL;
-    return (TextureSurface*)record->image;
+    if (panel < 0 || panel >= PANEL_TYPE_COUNT) return NULL;
+    const PanelData* record = &panelGlobs.panelTable[panel];
+    if (record->isFlic || record->image == NULL) return NULL;
+    return (TextureSurface*)((const Image*)record->image)->surface;
 }
 
 void* legacy_panel_image_get(int panel)
 {
-    return panel >= 0 && panel < 18 ? s_legacy_panels[panel].image : NULL;
+    return panel >= 0 && panel < PANEL_TYPE_COUNT
+        ? panelGlobs.panelTable[panel].image : NULL;
 }
 
 void legacy_panel_image_slot_entry_release(void* opaque)

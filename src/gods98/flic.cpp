@@ -327,3 +327,28 @@ int ledger_stub_00483f60_FlicFileHeaderValidate(const char* path,
 }
 
 } // namespace unported_ledger_stubs
+
+/* --- Flic.c entry points in the original ABI (gods98/flic.h) --------------
+ * Thin unannotated adapters (ADR 0005 step 6) for Panel.c (GAME-032,
+ * finding 554) over the port's player. Drawing to the back buffer is the
+ * renderer's, so Flic_Animate only advances the frame. */
+#include "flic.h"
+
+int flic_setup(const char* name, void** out, int flags)
+{
+    Flic* flic;
+    (void)flags;
+    flic = flic_open(name);
+    *out = flic;
+    return flic != NULL;
+}
+
+int flic_animate(void* flic, const struct Area2F* area, int advance,
+                 int trans)
+{
+    (void)area;
+    (void)trans;
+    if (flic == NULL) return 0;
+    if (advance) flic_tick_loop((Flic*)flic, 1);
+    return 1;
+}

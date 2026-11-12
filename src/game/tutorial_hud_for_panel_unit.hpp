@@ -22,4 +22,8 @@ typedef struct LegacyPanelPortRecord {
 
 extern LegacyPanelPortRecord s_legacy_panels[18];
 
+/* GAME-032 is converted (finding 554): the panel images are Panel.c's, in
+ * panelGlobs (game/panel_unit.h). */
+#include "panel_unit.h"
+
 #endif /* LRR_GAME_TUTORIAL_HUD_FOR_PANEL_UNIT_HPP */

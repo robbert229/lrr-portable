@@ -380,12 +380,12 @@ void indexed_record_field64_set(void* record, int index, uint32_t value);
 /* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
  * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void object_vector3_set(void* object_block, float x, float y, float z);
-void float_pair_at_offset4_set_from_ints(void* record, int x, int y);
+extern "C" void float_pair_at_offset4_set_from_ints(void* record, int x, int y);
 void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
                                           uint32_t y);
 void object_state_pair_get(const void* record, uint32_t* out_a,
                            uint32_t* out_b);
-void object_state_pair_get_target(const void* record, uint32_t* out_a,
+extern "C" void object_state_pair_get_target(const void* record, uint32_t* out_a,
                                   uint32_t* out_b);
 
 /* --- scene-visibility wrapper band (2026-10-24; findings 446/370/435/356/
@@ -481,7 +481,7 @@ void six_resource_slots_set_state(const void* record, uint32_t flag);
 /* UIRecordCallbackForward (FUN_0045a630, findings 386/439): dereferences the
  * UI record's +0 handle and forwards the two outputs through the ported
  * state-pair read. Widened handle slot like the other handle rows. */
-void ui_record_callback_forward(const void* const* ui_record,
+extern "C" void ui_record_callback_forward(const void* const* ui_record,
                                 uint32_t* out_a, uint32_t* out_b);
                                                 /* FUN_0045a630 */
 

@@ -79,9 +79,11 @@ typedef struct SimtickManagerSlot {
 void simtick_manager_clear(void);
 void simtick_manager_set_slots(SimtickManagerSlot* slots, int count);
 
-/* One tracked slot: target select -> EMA smoothing -> mode routing.
- * `ingame` is the engine-state derived flag (corpus ~DAT_00556ecc >> 0x14). */
-void simtick_manager_tick(int index, float dt, int ingame);
+/* Superseded by Panel_Update (FUN_0045a730, game/panel_unit.h; GAME-032,
+ * finding 554), which takes the panel and the elapsed time. Kept uncalled,
+ * renamed, so the symbol count of every includer is unchanged (ADR 0005
+ * entropy rule 1). */
+void simtick_manager_tick_superseded(int index, float dt, int ingame);
 
 /* smoothing model-parameters (corpus _DAT_0049e5e8/e5ec/e5e0/e5d8). */
 extern float g_manager_smooth_a;
@@ -283,7 +285,7 @@ void simtick_directsound_listener_view_set(int view); /* FUN_0047ab80 */
  * readers of both words. */
 void simtick_route_position_blocked_state_set(int blocked);
                                         /* FUN_0044da20 */
-void simtick_global_ui_flags_clear_bits12(void); /* FUN_0045b610 */
+extern "C" void simtick_global_ui_flags_clear_bits12(void); /* FUN_0045b610 */
 void simtick_global_ui_flags_set_bit2(void);
 uint32_t simtick_route_position_state_peek(void);
 uint32_t simtick_global_ui_flags_word(void);

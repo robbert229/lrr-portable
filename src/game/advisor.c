@@ -551,7 +551,7 @@ void advisor_apply_slot_transform(int advisorType)
         panelX = 0.0f;
         panelY = 0.0f;
     } else {
-        indexed_pair_get(advisorGlobs.positions[advisorType].panelType, (uint32_t*)&panelX, (uint32_t*)&panelY);
+        indexed_pair_get(advisorGlobs.positions[advisorType].panelType, &panelX, &panelY);
     }
     screenPt[0] = advisorGlobs.positions[advisorType].x + panelX;
     screenPt[1] = advisorGlobs.positions[advisorType].y + panelY;

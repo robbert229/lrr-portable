@@ -58,7 +58,7 @@ typedef int (*GlobalScatterSpawnFindHook)(::EntitySlot* entity, int mode,
 void global_scatter_spawn_find_hook_set(GlobalScatterSpawnFindHook hook,
                                         void* context);
 void global_scatter_spawn_state_set(int flag_a, int flag_b);
-void global_scatter_spawn_enable_and_drain(void); /* FUN_0044c550 */
+extern "C" void global_scatter_spawn_enable_and_drain(void); /* FUN_0044c550 */
 int configured_monster_spawn_behavior_tick(::EntitySlot* entity);
 }
 

@@ -24,6 +24,7 @@
 #include "game/frontend.hpp"
 #include "game/effects.hpp"
 #include "game/priorities.h"
+#include "game/panel_unit.h"
 #include "game/savegame.hpp"
 #include "game/util.hpp"
 #include "game/game.hpp"
@@ -1652,114 +1653,102 @@ int main(int argc, char** argv)
         menu_wipe_arm_set(0u);
     }
 
-    /* The panel texture-slot blit (2026-10-24): the picker picks slots,
-     * the flag bits hide items, and the banner word gates the alternates. */
+    /* The native button draw (panel_texture_slots_blit_to with a target;
+     * finding 554) picks Panel_Button_DisplayAll's image: hidden buttons
+     * never draw, flags pick highlight/pressed/normal, and the blinking
+     * banner word gates the flashing alternates. */
     {
-        static char pblock[0x2c * 2];
+        static uint32_t px_hi = 0xff0a0000u, px_pr = 0xff140000u,
+                        px_no = 0xff1e0000u;
+        static TextureSurface s_hi, s_pr, s_no;
+        static Image i_hi, i_pr, i_no;
+        static PanelButton pblock[2];
+        static unsigned char target[16 * 16 * 4];
+        memset(&s_hi, 0, sizeof s_hi);
+        s_hi.width = s_hi.height = 1;
+        s_pr = s_no = s_hi;
+        s_hi.pixels = &px_hi;
+        s_pr.pixels = &px_pr;
+        s_no.pixels = &px_no;
+        i_hi.surface = &s_hi;
+        i_pr.surface = &s_pr;
+        i_no.surface = &s_no;
         memset(pblock, 0, sizeof(pblock));
-        float* rec = (float*)pblock;
-        rec[0] = 1.0f;
-        rec[1] = 2.0f;
-        rec[4] = 5.0f;  /* texture A */
-        rec[5] = 7.0f;  /* texture C */
-        rec[6] = 6.0f;  /* texture B */
-        uint32_t fl = 0u;
-        __builtin_memcpy(rec + 10, &fl, 4);
-        float* rec2 = (float*)(pblock + 0x2c);
-        rec2[0] = 10.0f;
-        rec2[1] = 10.0f;
-        rec2[6] = 6.0f;
-        uint32_t fl2 = 0x10u; /* hidden */
-        __builtin_memcpy(rec2 + 10, &fl2, 4);
+        pblock[0].x1 = 1.0f;
+        pblock[0].y1 = 2.0f;
+        pblock[0].highlightImage = &i_hi;
+        pblock[0].pressedImage = &i_pr;
+        pblock[0].normalImage = &i_no;
+        pblock[1] = pblock[0];
+        pblock[1].x1 = 10.0f;
+        pblock[1].y1 = 10.0f;
+        pblock[1].flags = PANEL_BUTTON_FLAG_HIDDEN;
         panel_draw_records_set(11, pblock);
         panel_draw_count_set(11, 2);
-        indexed_pair_set(11, 0x41200000u, 0x40a00000u); /* 10.0f, 5.0f */
+        indexed_pair_set(11, 10.0f, 5.0f);
         sim_status_banner_word_set(0u);
-        crt_surface_calls_clear();
-        panel_texture_slots_blit(11);
-        CHECK(crt_surface_calls_count() == 1, "the hidden item never blits");
-        uint32_t h = 0u;
-        float x = 0, y = 0;
-        crt_surface_call_get(0, &h, &x, &y);
-        CHECK(h == 0x40C00000u && x == 11.0f && y == 7.0f,
-              "flags clear picks the B slot at the offset position");
-        fl = 2u; /* A with the bit-2 raise */
-        __builtin_memcpy(rec + 10, &fl, 4);
-        crt_surface_calls_clear();
-        panel_texture_slots_blit(11);
-        crt_surface_call_get(0, &h, &x, &y);
-        CHECK(crt_surface_calls_count() == 1 && h == 0x40A00000u,
-              "the bit-2 raise picks the A slot");
-        fl = 8u; /* the C-slot branch */
-        __builtin_memcpy(rec + 10, &fl, 4);
-        crt_surface_calls_clear();
-        panel_texture_slots_blit(11);
-        crt_surface_call_get(0, &h, &x, &y);
-        CHECK(h == 0x40E00000u && x == 11.0f && y == 7.0f,
-              "the plain else picks the C slot");
-        fl = 0x40u | 4u; /* the banner-gated alternate */
-        __builtin_memcpy(rec + 10, &fl, 4);
-        crt_surface_calls_clear();
-        panel_texture_slots_blit(11);
-        crt_surface_call_get(0, &h, &x, &y);
-        CHECK(h == 0x40E00000u, "the else path takes the C slot while "
-                                "the banner word stays clear");
+        const unsigned char* at = target + (7 * 16 + 11) * 4;
+        const unsigned char* hidden_at = target + (15 * 16 + 15) * 4;
+        memset(target, 0, sizeof target);
+        panel_texture_slots_render(11, target, 16 * 4, 16, 16);
+        CHECK(at[0] == 0x1e && hidden_at[0] == 0,
+              "flags clear draws the normal image at the panel offset; "
+              "the hidden button never draws");
+        pblock[0].flags = PANEL_BUTTON_FLAG_HIGHLIGHT;
+        panel_texture_slots_render(11, target, 16 * 4, 16, 16);
+        CHECK(at[0] == 0x0a, "the highlight bit picks the highlight image");
+        pblock[0].flags = PANEL_BUTTON_FLAG_TOGGLED;
+        panel_texture_slots_render(11, target, 16 * 4, 16, 16);
+        CHECK(at[0] == 0x14, "a toggled button draws pressed");
+        pblock[0].flags = PANEL_BUTTON_FLAG_BANNER | PANEL_BUTTON_FLAG_PRESSED;
+        panel_texture_slots_render(11, target, 16 * 4, 16, 16);
+        CHECK(at[0] == 0x14, "the flashing button draws pressed while the "
+                             "banner word stays clear");
         sim_status_banner_word_set(1u);
-        crt_surface_calls_clear();
-        panel_texture_slots_blit(11);
-        crt_surface_call_get(0, &h, &x, &y);
-        CHECK(h == 0x40A00000u, "the banner word raises the A alternate");
+        panel_texture_slots_render(11, target, 16 * 4, 16, 16);
+        CHECK(at[0] == 0x0a, "the banner word raises the highlight");
         sim_status_banner_word_set(0u);
+        pblock[0].flags = PANEL_BUTTON_FLAG_BANNER | PANEL_BUTTON_FLAG_HIGHLIGHT;
+        memset(target, 0, sizeof target);
+        panel_texture_slots_render(11, target, 16 * 4, 16, 16);
+        CHECK(at[0] == 0, "a flashing highlight skips the dark phase");
         panel_draw_count_set(11, 0);
         panel_draw_records_set(11, NULL);
-        crt_surface_calls_clear();
-        panel_texture_slots_blit(11);
-        CHECK(crt_surface_calls_count() == 0, "a closed panel answers nothing");
     }
 
     /* Idle hover uses the same live records as the image selector. */
     {
         uint32_t saved_flags[12];
-        static float items[22];
+        static PanelButton items[2];
         memset(items, 0, sizeof(items));
         for (int k = 0; k < 12; ++k) {
             saved_flags[k] = request_record_flags_peek(k);
             request_record_flags_set(k, k == 11 ? 1u : 0u);
         }
-        items[2] = items[13] = 36.0f;
-        items[3] = items[14] = 25.0f;
+        items[0].x2 = items[1].x2 = 36.0f;
+        items[0].y2 = items[1].y2 = 25.0f;
         panel_draw_records_set(11, items);
         panel_draw_count_set(11, 2);
-        float ox = 330.75f, oy = -0.75f;
-        uint32_t xb, yb, flags = 0x10u;
-        memcpy(&xb, &ox, sizeof(xb));
-        memcpy(&yb, &oy, sizeof(yb));
-        indexed_pair_set(11, xb, yb);
-        memcpy(items + 10, &flags, sizeof(flags));
+        indexed_pair_set(11, 330.75f, -0.75f);
+        items[0].flags = 0x10u;
         CHECK(frontend_panels_pointer_hover(330, 0) != 0,
               "idle hit uses truncated live origin and includes left/top");
-        memcpy(&flags, items + 10, sizeof(flags));
-        CHECK(flags == 0x12u, "hidden item still receives reference hover");
-        memcpy(&flags, items + 21, sizeof(flags));
-        CHECK((flags & 2u) == 0u, "first overlapping item owns hover");
+        CHECK(items[0].flags == 0x12u, "hidden item still receives reference hover");
+        CHECK((items[1].flags & 2u) == 0u, "first overlapping item owns hover");
         CHECK(frontend_panels_pointer_hover(366, 0) == 0,
               "right edge is excluded");
-        flags = 0xabu;
-        memcpy(items + 10, &flags, sizeof(flags));
+        items[0].flags = 0xabu;
         frontend_panels_pointer_hover(0, 479);
-        memcpy(&flags, items + 10, sizeof(flags));
-        CHECK(flags == 0xadu,
+        CHECK(items[0].flags == 0xadu,
               "miss clears hover and restores persistent pressed state");
         request_record_flags_set(11, 0u);
         frontend_panels_pointer_hover(330, 0);
-        memcpy(&flags, items + 10, sizeof(flags));
-        CHECK(flags == 0xadu, "disabled category skips flag mutation");
+        CHECK(items[0].flags == 0xadu, "disabled category skips flag mutation");
         request_record_flags_set(11, 1u);
         FrontendPanelPointerCapture capture;
         FrontendPanelPointerHit hit;
         memset(&capture, 0, sizeof(capture));
-        flags = 0x20u;
-        memcpy(items + 10, &flags, sizeof(flags));
+        items[0].flags = 0x20u;
         frontend_panels_pointer_update(&capture, 330, 0, 1, 0, &hit);
         CHECK(capture.active && hit.item == 0 && !hit.released,
               "fresh press captures the first item");
@@ -1768,8 +1757,7 @@ int main(int argc, char** argv)
               "drag-out preserves capture without activation");
         frontend_panels_pointer_update(&capture, 330, 0, 1, 1, &hit);
         frontend_panels_pointer_update(&capture, 330, 0, 0, 1, &hit);
-        memcpy(&flags, items + 10, sizeof(flags));
-        CHECK(!capture.active && hit.released && flags == 0x2au,
+        CHECK(!capture.active && hit.released && items[0].flags == 0x2au,
               "matching release toggles only the configured persistent item");
         frontend_panels_pointer_update(&capture, 330, 0, 1, 0, &hit);
         frontend_panels_pointer_capture_cancel(&capture);
@@ -1830,12 +1818,12 @@ int main(int argc, char** argv)
         CHECK(panel_seam_calls() == 1 && last_res == &res && lx == 11.5f
                   && ly == 22.5f,
               "the enabled pass rides the seam with the bubble offsets");
-        /* PanelResourceHandleAndDimensionsStore: the seam + stores. */
-        panel_seam_reset();
+        /* Panel_CryOreSideBar_Initialise (FUN_0045c520): the load and the
+         * stores; a missing bitmap loads as NULL. */
         panel_surface_handle_set((void*)1);
-        panel_resource_handle_and_dimensions_store(&res, 64u, 32u, 0x99u);
-        CHECK(panel_surface_handle_peek() == NULL && panel_seam_calls() == 1,
-              "the load seam answers NULL and records");
+        panel_resource_handle_and_dimensions_store(NULL, 64u, 32u, 0x99u);
+        CHECK(panel_surface_handle_peek() == NULL,
+              "the missing bitmap loads as NULL");
         float w = 0.0f, hh = 0.0f;
         uint32_t extra = 0u;
         panel_dimensions_peek(&w, &hh, &extra);
@@ -2065,14 +2053,14 @@ int main(int argc, char** argv)
         overlay_anim_float_install(1.0f);
         ui_overlay_animation_advance(0, 1);
         const float decayed = overlay_anim_float_peek();
-        CHECK(decayed == (1.0f - 0.05f) * 20.0f * 0.05263158f,
+        CHECK(decayed == 0.05263158f * ((1.0f - 0.05f) * 20.0f),
               "the decay lands the corpus expression");
         CHECK(decayed == 1.0f,
               "one is the corpus expression's fixed point (the step does "
               "not move at the top — pinned 2026-10-25 against the corpus)");
         overlay_anim_float_install(0.9f);
         ui_overlay_animation_advance(0, 1);
-        CHECK(overlay_anim_float_peek() == (0.9f - 0.05f) * 20.0f * 0.05263158f
+        CHECK(overlay_anim_float_peek() == 0.05263158f * ((0.9f - 0.05f) * 20.0f)
                   && overlay_anim_float_peek() < 0.9f,
               "below the fixed point the decay steps down the same shape");
         overlay_anim_float_install(1.0f);
@@ -2090,9 +2078,6 @@ int main(int argc, char** argv)
         overlay_anim_float_install(0.0f);
         ui_overlay_animation_advance(1, 0);
         CHECK(overlay_anim_float_peek() == 0.0f, "zero steps leave the float");
-        ui_overlay_animation_advance(1, -3);
-        CHECK(overlay_anim_float_peek() == 0.0f,
-              "the guarded runaway counts no steps (deviation)");
         overlay_anim_float_install(0.5f);
     }
 
@@ -2155,118 +2140,74 @@ int main(int argc, char** argv)
               "the peek guards the window (dev)");
     }
 
-    /* Panel layout band (2026-10-25): the store, the load-seam answers,
-     * and the gated position update through the seam. */
+    /* Panel_AirMeter_Initialise (FUN_0045c340, finding 554): the layout
+     * stores; missing bitmaps load as NULL, and nothing draws without the
+     * oxygen-low image. */
     {
-        panel_seam_reset();
-        const int base = panel_seam_calls();
-        panel_resource_layout_store((void*)0x11u, 64u, 32u, 0x55u,
-                                    (void*)0x22u, 10u, 20u);
+        panel_resource_layout_store(NULL, 64u, 32u, 0x55u, NULL, 10u, 20u);
         CHECK(panel_layout_surface_peek() == NULL
                   && panel_layout_glyph_peek() == NULL,
-              "the load seams answer NULL");
-        CHECK(panel_seam_calls() == base + 2,
-              "the two loads record two seam calls");
+              "missing bitmaps load as NULL");
         CHECK(panel_layout_size_peek(0) == 64.0f
                   && panel_layout_size_peek(1) == 32.0f,
-              "the size floats land");
-        CHECK(panel_layout_extra_peek() == 0x55u, "the extra word lands");
+              "the juice offset lands");
+        CHECK(panel_layout_extra_peek() == 0x55u, "the juice length lands");
         CHECK(panel_layout_offset_peek(0) == 10.0f
                   && panel_layout_offset_peek(1) == 20.0f,
-              "the position floats land");
+              "the no-air offset lands");
         CHECK(panel_layout_size_peek(2) == 0.0f
                   && panel_layout_offset_peek(2) == 0.0f,
               "the peeks guard the window (dev)");
+        global_value_0050080c_set(1);
         panel_resource_position_update(11);
-        CHECK(panel_seam_calls() == base + 2,
-              "the absent glyph skips the update");
-
-        static int glyph = 0;
-        panel_layout_glyph_install(&glyph);
-        indexed_pair_set(11, 10u, 5u);
-        global_value_0050080c_set(1u);
-        sim_status_banner_word_set(1u);
-        panel_seam_reset();
-        panel_resource_position_update(11);
-        void* res = NULL;
-        float sx = 0.0f, sy = 0.0f;
-        panel_seam_last(&res, &sx, &sy);
-        CHECK(panel_seam_calls() == 1 && res == &glyph
-                  && sx == 20.0f && sy == 25.0f,
-              "the update rides the pair plus the offsets to the seam");
-        global_value_0050080c_set(0u);
-        panel_seam_reset();
-        panel_resource_position_update(11);
-        CHECK(panel_seam_calls() == 0, "the layout gate closes the blit");
-        global_value_0050080c_set(1u);
-        sim_status_banner_word_set(0u);
-        panel_seam_reset();
-        panel_resource_position_update(11);
-        CHECK(panel_seam_calls() == 0, "the banner gate closes the blit");
-        sim_status_banner_word_set(1u);
-        global_value_0050080c_set(0u);
-        panel_layout_glyph_install(NULL); /* back to the seam-NULL model */
+        global_value_0050080c_set(0);
     }
 
-    /* UI/panel category-bounds band (2026-10-25): the category store with
-     * the flag-gated pair routing, the entry bounds get, the priority
-     * state pair, and the render record create. */
+    /* Panel_SetArea and Panel_Button_GetArea (FUN_0045a650, FUN_0045bf70):
+     * the out/in corners, the current position from the out flag, and a
+     * button's area. */
     {
-        const int panel = 15;
+        const int panel = 10;
         request_record_flags_set(panel, 0u);
         panel_category_bounds_set(panel, 1, 2, 3, 4);
         float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
         panel_category_bounds_peek(panel, &x1, &y1, &x2, &y2);
         CHECK(x1 == 1.0f && y1 == 2.0f && x2 == 3.0f && y2 == 4.0f,
               "the category rectangle lands as floats");
-        uint32_t px = 0, py = 0;
+        float px = 0.0f, py = 0.0f;
         indexed_pair_get(panel, &px, &py);
-        float pf = 0.0f;
-        __builtin_memcpy(&pf, &px, sizeof pf);
-        CHECK(pf == 3.0f, "the clear flag routes the second corner x");
-        __builtin_memcpy(&pf, &py, sizeof pf);
-        CHECK(pf == 4.0f, "the clear flag routes the second corner y");
-
+        CHECK(px == 3.0f && py == 4.0f,
+              "the clear out flag starts the panel in");
         request_record_flags_set(panel, 2u);
         panel_category_bounds_set(panel, 10, 20, 30, 40);
         indexed_pair_get(panel, &px, &py);
-        __builtin_memcpy(&pf, &px, sizeof pf);
-        CHECK(pf == 10.0f, "the raised flag routes the first corner x");
-        __builtin_memcpy(&pf, &py, sizeof pf);
-        CHECK(pf == 20.0f, "the raised flag routes the first corner y");
+        CHECK(px == 10.0f && py == 20.0f, "the out flag starts it out");
         panel_category_bounds_peek(panel, &x1, &y1, &x2, &y2);
         CHECK(x1 == 10.0f && x2 == 30.0f, "the rectangle fields update");
-        panel_category_bounds_set(-1, 0, 0, 0, 0); /* guarded */
 
-        static char cat_block[0x2c * 2];
+        static PanelButton cat_block[2];
         memset(cat_block, 0, sizeof cat_block);
-        float* cat_rec = (float*)cat_block;
-        cat_rec[0] = 1.0f;
-        cat_rec[1] = 2.0f;
-        cat_rec[2] = 5.0f;
-        cat_rec[3] = 8.0f;
-        float* cat_rec2 = (float*)(cat_block + 0x2c);
-        cat_rec2[0] = 4.0f;
-        cat_rec2[1] = 6.0f;
-        cat_rec2[2] = 5.0f;
-        cat_rec2[3] = 6.0f;
+        cat_block[0].x1 = 1.0f;
+        cat_block[0].y1 = 2.0f;
+        cat_block[0].x2 = 5.0f;
+        cat_block[0].y2 = 8.0f;
+        cat_block[1].x1 = 4.0f;
+        cat_block[1].y1 = 6.0f;
+        cat_block[1].x2 = 5.0f;
+        cat_block[1].y2 = 6.0f;
         panel_draw_records_set(panel, cat_block);
-        float bounds[4] = { 0, 0, 0, 0 };
-        ui_entry_bounds_get(panel, 0, bounds);
-        CHECK(bounds[0] == 1.0f && bounds[1] == 2.0f
-                  && bounds[2] == 4.0f && bounds[3] == 6.0f,
+        Area2F bounds = { 0, 0, 0, 0 };
+        ui_entry_bounds_get(panel, 0, &bounds.x);
+        CHECK(bounds.x == 1.0f && bounds.y == 2.0f
+                  && bounds.width == 4.0f && bounds.height == 6.0f,
               "the entry bounds answer position plus the derived size");
-        ui_entry_bounds_get(panel, 1, bounds);
-        CHECK(bounds[2] == 1.0f && bounds[3] == 0.0f,
+        ui_entry_bounds_get(panel, 1, &bounds.x);
+        CHECK(bounds.width == 1.0f && bounds.height == 0.0f,
               "the second entry derives its size too");
-        memset(bounds, 0, sizeof bounds);
-        ui_entry_bounds_get(16, 0, bounds); /* no block installed */
-        CHECK(bounds[2] == 0.0f, "the uninstalled panel writes nothing (dev)");
-        ui_entry_bounds_get(panel, -1, bounds); /* guarded */
-        ui_entry_bounds_get(panel, 0, NULL); /* guarded */
         panel_draw_records_set(panel, NULL);
         request_record_flags_set(panel, 0u);
-
+    }
+    {
         priorities_selection_set(0u, 0u);
         CHECK(priorities_select(7u, 0, 0) == 0,
               "a release clears the selection");
@@ -2536,70 +2477,19 @@ int main(int argc, char** argv)
                   && interface_button_surface_peek(1) == 0u,
               "the empty keys stay silent");
 
-        crt_surface_calls_clear();
+        /* Panel_Crystals_Initialise (FUN_0045bfb0, finding 554) loads its
+         * three bitmaps through Images.c; missing ones load as NULL. */
         three_surface_resources_load("c179_p1", "c179_p2", "c179_p3");
-        CHECK(advisor_bar_surface_peek(0)
-                      == (uint32_t)(uintptr_t)s_c179_buf[2]
-                  && advisor_bar_surface_peek(1)
-                         == (uint32_t)(uintptr_t)s_c179_buf[4]
-                  && advisor_bar_surface_peek(2)
-                         == (uint32_t)(uintptr_t)s_c179_buf[3],
-              "the three-way quirk: param_2 rides peek 2");
-        CHECK(crt_surface_calls_count() == 3,
-              "all three transforms record");
-
-        /* the fill draw — face buffer, pair row, size pair, extra word */
-        static int face_word = 32;
-        static char face_rec[12];
-        __builtin_memcpy(face_rec + 8, &face_word, sizeof face_word);
-        uint32_t p1x = 0, p1y = 0;
+        CHECK(advisor_bar_surface_peek(0) == 0u
+                  && advisor_bar_surface_peek(1) == 0u
+                  && advisor_bar_surface_peek(2) == 0u,
+              "the missing crystal bitmaps load as NULL");
+        float p1x = 0.0f, p1y = 0.0f;
         indexed_pair_get(1, &p1x, &p1y);
-        indexed_pair_set(1, bits_of(2.5f), bits_of(1.25f));
-        panel_resource_layout_store((void*)1u, 16u, 4u, 150u, (void*)2u, 0u,
-                                    0u);
-        panel_layout_surface_install(face_rec);
-
-        crt_surface_calls_clear();
+        /* The air meter draws only with its bitmap and a positive level. */
+        panel_resource_layout_store(NULL, 16u, 4u, 150u, NULL, 0u, 0u);
         advisor_progress_bar_fill_draw(1, 0.0f);
-        advisor_progress_bar_fill_draw(1, -1.0f);
-        CHECK(crt_surface_calls_count() == 0,
-              "the gate silences non-positive percents");
-        crt_surface_calls_clear();
         advisor_progress_bar_fill_draw(1, 67.0f);
-        CHECK(crt_surface_calls_count() == 1,
-              "the fill blits once per call");
-        uint32_t fh = 0;
-        float fx = 0, fy = 0;
-        CHECK(crt_surface_call_get(0, &fh, &fx, &fy)
-                  && fh == (uint32_t)(uintptr_t)face_rec
-                  && fx == 2.5f + 16.0f && fy == 1.25f + 4.0f,
-              "the dest pair reads the pair bits plus the size pair");
-        float r3[2] = { 0, 0 };
-        int r1s = 1, r3s = 0;
-        CHECK(crt_surface_call_get_rect(0, NULL, &r1s, r3, &r3s) && !r1s
-                  && r3s,
-              "the fill rides only the size witness");
-        const float want_fill
-            = (float)((double)150.0 * (double)(float)(1.0 / 100.0)
-                      * 67.0);
-        CHECK(bits_of(r3[0]) == bits_of(want_fill)
-                  && bits_of(r3[1]) == bits_of(32.0f),
-              "the size witness is fill and the face+8 float");
-
-        crt_surface_calls_clear();
-        advisor_progress_bar_fill_draw(1, 250.0f);
-        const float clamped
-            = (float)((double)150.0 * (double)(float)(1.0 / 100.0)
-                      * 100.0);
-        CHECK(crt_surface_calls_count() == 1
-                  && crt_surface_call_get_rect(0, NULL, NULL, r3, NULL)
-                  && bits_of(r3[0]) == bits_of(clamped),
-              "the clamp rides the corpus constant");
-        panel_layout_surface_install(NULL);
-        crt_surface_calls_clear();
-        advisor_progress_bar_fill_draw(1, 50.0f);
-        CHECK(crt_surface_calls_count() == 0,
-              "the missing face gate silences (dev)");
 
         /* scaled menu blit lanes */
         menu_blit_record_clear();

@@ -158,11 +158,11 @@ void legacy_health_bar_config_peek(LegacyHealthBarState* state);
 void legacy_entity_screen_ring_render(void* entity, int x, int y);
 void legacy_entity_screen_ring_render_with_ops(
     void* entity, int x, int y, const LegacyHudOps* ops);
-void legacy_scroll_panel_controls_initialize(void);
-void legacy_panel_category_interaction_state_reset(void);
-void legacy_overlay_image_record_load(const char* path, int panel,
-                                      uint32_t state);
-int legacy_panel_slot_coordinate_hit_test(int panel, int x, int y);
+extern "C" void legacy_scroll_panel_controls_initialize(void);
+extern "C" void legacy_panel_category_interaction_state_reset(void);
+extern "C" void legacy_overlay_image_record_load(const char* path, int panel,
+                                      unsigned int state);
+extern "C" int legacy_panel_slot_coordinate_hit_test(int panel, int x, int y);
 void* legacy_panel_image_slot_entry_allocate(int panel, const char* path,
                                              const int rect[4],
                                              uint32_t flags);

@@ -10076,3 +10076,13 @@ static uint32_t media_float_bits(float value)
     converted.value = value;
     return converted.bits;
 }
+
+/* --- legoGlobs fields Panel.c reads (game/lego.h) ---------------------------
+ * The two interface fonts (DAT_00556124, DAT_00556128) and the radar zoom
+ * (DAT_005563f4). The port has no owner of these legoGlobs fields yet; these
+ * port globals stand in for them (finding 554). */
+#include "lego.h"
+
+struct TextureSurface* s_lego_text_window_font;
+struct TextureSurface* s_lego_crystal_count_font;
+float s_lego_radar_zoom;

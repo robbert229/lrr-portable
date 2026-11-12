@@ -46,6 +46,7 @@ src/game/advisor.c
 src/game/advisor.h
 src/game/advisor_maths.h
 src/game/ai.cpp
+src/game/ai.h
 src/game/ai.hpp
 src/game/ai_for_bubbles.hpp
 src/game/ai_for_legoobject.hpp
@@ -61,6 +62,7 @@ src/game/building_model.cpp
 src/game/building_scene.cpp
 src/game/building_scene.hpp
 src/game/camera_control.cpp
+src/game/camera_control.h
 src/game/camera_drag.hpp
 src/game/cell_flood_passes.cpp
 src/game/cmd.cpp
@@ -166,10 +168,13 @@ src/game/game.hpp
 src/game/grid_cell_records.cpp
 src/game/helpwindow.cpp
 src/game/info.cpp
+src/game/info.h
 src/game/info_track_overlay.cpp
 src/game/interface.cpp
+src/game/interface.h
 src/game/lava_erosion.cpp
 src/game/lego.cpp
+src/game/lego.h
 src/game/legoobject.cpp
 src/game/level.cpp
 src/game/level.hpp
@@ -195,6 +200,7 @@ src/game/level_shared.hpp
 src/game/lighteffects.cpp
 src/game/loading_progress.cpp
 src/game/map_view.cpp
+src/game/message.h
 src/game/mission.cpp
 src/game/mission.hpp
 src/game/mission_for_reward.hpp
@@ -219,7 +225,9 @@ src/game/options.cpp
 src/game/options.hpp
 src/game/options_for_frontend_unit.hpp
 src/game/panel.h
-src/game/panel_unit.cpp
+src/game/panel_maths.h
+src/game/panel_unit.c
+src/game/panel_unit.h
 src/game/placement.cpp
 src/game/placement_footprint.cpp
 src/game/pointer.cpp
@@ -290,6 +298,7 @@ src/game/tutorial_hud_for_tutorial_script.hpp
 src/game/tutorial_hud_ports.hpp
 src/game/tutorial_hud_shared.hpp
 src/game/tutorial_script.cpp
+src/game/tutorial_script.h
 src/game/tutorial_world_arrows.cpp
 src/game/tutorial_world_arrows.hpp
 src/game/type_config_ports.hpp
@@ -367,6 +376,7 @@ src/gods98/file_list_streams.cpp
 src/gods98/files.cpp
 src/gods98/files.h
 src/gods98/flic.cpp
+src/gods98/flic.h
 src/gods98/flic.hpp
 src/gods98/flic_for_flic_unit.hpp
 src/gods98/flic_shared.hpp
@@ -391,6 +401,7 @@ src/gods98/heap.hpp
 src/gods98/heap_for_map_view.hpp
 src/gods98/heap_for_text_window.hpp
 src/gods98/heap_shared.hpp
+src/gods98/image_adapters.h
 src/gods98/images.h
 src/gods98/images_unit.cpp
 src/gods98/input.cpp
@@ -524,6 +535,7 @@ src/gods98/text_window.cpp
 src/gods98/texture.cpp
 src/gods98/texture.h
 src/gods98/texture.hpp
+src/gods98/textwindow.h
 src/gods98/tickers.cpp
 src/gods98/tickers.hpp
 src/gods98/utils.c

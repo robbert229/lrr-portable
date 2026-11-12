@@ -23,9 +23,8 @@ extern "C" {
 int request_record_ready_flag4_target(int index);
 int request_record_flag8_is_set_target(int index);
 
-/* Panel position (FUN_0045a700). The original stores floats; this
- * reconstruction stores the pair as integers (finding 506). */
-void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y);
+/* Panel_GetPosition (FUN_0045a700). */
+void indexed_pair_get(int index, float* out_x, float* out_y);
 
 /* Panel button area (FUN_0045bf70): x, y, width, height. */
 void ui_entry_bounds_get(int panel, int item, float* out_bounds);

@@ -280,7 +280,7 @@ void entity_activity_scene_state_update(GameContext* ctx); /* FUN_00439990 */
 void entity_activity_scene_state_update_retail(void); /* FUN_00439990 */
 uint32_t entity_state_flags_peek(void);                    /* port hook */
 void     entity_state_flags_set(uint32_t value);           /* port hook */
-extern uint32_t s_entity_state_flags; /* DAT_004dee14 shared state word */
+extern "C" uint32_t s_entity_state_flags; /* DAT_004dee14 shared state word */
 
 /* SceneObjectHasTaskType4_5_7 (FUN_004493e0, finding 469): a type-2 entity
  * answers 1 when its activity list carries drill (4), teleport (5), or

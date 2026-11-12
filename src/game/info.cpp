@@ -54,6 +54,7 @@
 #include "gods98/message_for_info.hpp"
 #include "frontend_for_info.hpp"
 #include "util_for_info.hpp"
+#include "panel_unit.h"
 
 #define MESSAGE_CD_RESET 25.0f /* 0x41c80000 */
 
@@ -941,8 +942,8 @@ void incident_message_text_consumer(float frame_delta)
             else {
                 scroll_offset = screen_right_edge_cache_peek();
             }
-            unported_ledger_stubs::ui_text_output_position_and_draw(
-                output, scroll_offset, frame_delta);
+            ui_text_output_position_and_draw(output, scroll_offset,
+                                             frame_delta);
             if (appended) {
                 scroll_offset_from_cursor_update();
                 s_flags &= ~2u;
@@ -957,8 +958,7 @@ void incident_message_text_consumer(float frame_delta)
     else {
         scroll_offset = screen_right_edge_cache_peek();
     }
-    unported_ledger_stubs::ui_text_output_position_and_draw(
-        output, scroll_offset, frame_delta);
+    ui_text_output_position_and_draw(output, scroll_offset, frame_delta);
 }
 
 namespace unported_ledger_stubs {
@@ -1012,7 +1012,7 @@ void scroll_offset_from_cursor_update(void)
     /* the corpus pushes the DAT_005007d8 record value itself, whose +0
      * field the forward reads; the unowned-global deviation keeps the
      * slot NULL-defaulted and the callee's guards answer zeros */
-    ui_record_callback_forward((const void* const*)s_panel_ui_record,
+    ui_record_callback_forward((const void* const*)panelGlobs.scrollTextWindow,
                                &lo, &hi);
     int diff = (int)(lo - hi);
     if (diff < 0) {

@@ -566,7 +566,7 @@ uint32_t input_device_release_flags_get(void);
 uint32_t input_device_release_system_flags_get(void);
 int input_device_release_active_track_get(void);
 
-void ledger_stub_00425c30_TransitionControl(int enabled,
+extern "C" void ledger_stub_00425c30_TransitionControl(int enabled,
                                             uint32_t parameter);
 
 /* CellGridPointHitTest reads a global row of 16-byte action records and two

@@ -641,7 +641,7 @@ void point2d_project_onto_direction(const float* origin, const float* direction,
 /* --- geometry helpers (corpus FUN_0045b8a0 / FUN_0045e660 / FUN_00479a30 /
  * FUN_00479af0 / FUN_00479c10; findings 363/323) --------------------------- */
 /* True when distance (x1,y1)-(x2,y2) < radius (FUN_0045b8a0). */
-int point_distance_within_radius(int x1, int y1, int x2, int y2,
+extern "C" int point_distance_within_radius(int x1, int y1, int x2, int y2,
                                  int radius);
 /* Half-open rect test on the record's float quad at offsets +4 through +0x10. */
 int rect_contains_point_half_open(const float* rect_record, int x, int y);
@@ -1466,7 +1466,7 @@ void camera_pose_dispatch_hook_install(CameraPoseDispatchHook hook,
 void camera_tilt_set(void* camera, float value); /* FUN_00436860 */
 /* Signature also fits CameraDragHooks' camera_vertical_apply callback when
  * its context is the controller record. */
-void camera_pan_axis_update(void* camera, float delta); /* FUN_00436900 */
+extern "C" void camera_pan_axis_update(void* camera, float delta); /* FUN_00436900 */
 void screen_effect_record_set(void* camera_record,
                               uint32_t field4, uint32_t field8,
                               uint32_t fieldc, float tilt,
@@ -1477,7 +1477,7 @@ void camera_rotation_set(void* camera, float value); /* FUN_00436953 */
 void camera_distance_bounds_set(void* camera, float lo, float hi);
                                         /* FUN_00436a18 */
 void camera_distance_set(void* camera, float value); /* FUN_00436a4a */
-void camera_zoom_update(void* camera, float delta);  /* FUN_00436aa5 */
+extern "C" void camera_zoom_update(void* camera, float delta);  /* FUN_00436aa5 */
 
 /* CursorScreenRayContextReset (FUN_00435f16): clear the modeled ViewContext
  * pan accumulator at +0x9c. The target x86 body is the corpus's blind store;
@@ -1515,7 +1515,7 @@ void float_negate_absolute_value(float* value);
 /* Unused: kept for the declaration count (see vec2_dist_alt above). */
 void vector2_set_length(float v[2], float length);
 void camera_zoom_step_context_set(void* context);
-void camera_zoom_step_adjust(int direction, float step);
+extern "C" void camera_zoom_step_adjust(int direction, float step);
 
 /* SelectionRecordPointGet (FUN_00436ae9): the follow-mode readback — the
  * selection record's camera position through the corpus's move-or-pose read

@@ -6,7 +6,7 @@
 #define LRR_GODS98_ENGINE_FOR_LEGO_HPP
 
 extern "C" int32_t s_context_mode;
-extern uint32_t s_panel_highlight_flags;
+extern "C" uint32_t s_panel_highlight_flags;
 extern float s_panel_highlight_timer;
 extern EngineWorldArrowCaptureHook s_world_arrow_capture_hook;
 extern void* s_world_arrow_capture_context;
