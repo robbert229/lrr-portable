@@ -3476,12 +3476,14 @@ int surface_reward_success_capture(uint32_t width, uint32_t height,
  * mesh adapters pass no host operation table and change nothing. */
 
 /* Container_MakeMesh2 (FUN_00473560). */
+// PORT-ONLY: adapter or forwarder for the port contract
 extern "C" void* container_make_mesh2(void* parent, int type)
 {
     return ddiscene_object_kind_mode_setup(parent, type);
 }
 
 /* Container_Mesh_HideGroup (FUN_00474b30). */
+// PORT-ONLY: adapter or forwarder for the port contract
 extern "C" void container_mesh_hide_group(void* mesh, unsigned int group,
                                           int hide)
 {
@@ -3489,6 +3491,7 @@ extern "C" void container_mesh_hide_group(void* mesh, unsigned int group,
 }
 
 /* Container_Mesh_SetVertices (FUN_00474d30). */
+// PORT-ONLY: adapter or forwarder for the port contract
 extern "C" void container_mesh_set_vertices(void* mesh, unsigned int group,
                                             unsigned int index,
                                             unsigned int count,
@@ -3501,6 +3504,7 @@ extern "C" void container_mesh_set_vertices(void* mesh, unsigned int group,
 }
 
 /* Container_Mesh_SetPerspectiveCorrection (FUN_00474e30). */
+// PORT-ONLY: adapter or forwarder for the port contract
 extern "C" void container_mesh_perspective_correction_set(void* mesh,
                                                           unsigned int group,
                                                           int on)

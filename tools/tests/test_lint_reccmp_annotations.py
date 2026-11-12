@@ -14,6 +14,7 @@ class RatchetTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         (self.root / "src").mkdir()
+        (self.root / "src/link_order.cmake").write_text("lrr_link(unit GAME-001 game one.cpp)\nlrr_link(tail - game tail.cpp)\n")
         self.source = self.root / "src" / "one.cpp"
 
     def run_lint(self, *args):
@@ -43,6 +44,45 @@ class RatchetTest(unittest.TestCase):
         self.assertIn("can be removed:", result.stdout)
         self.assertEqual(self.run_lint("--update").returncode, 0)
         self.assertNotIn("can be removed:", self.run_lint().stdout)
+
+    def test_port_only_exemptions_and_empty_reason(self):
+        self.source.write_text("")
+        self.baseline()
+        (self.root / "src/tail.cpp").write_text("void tail() {}\n")
+        self.source.write_text(
+            "// PORT-ONLY: adapter\nvoid adapter() {}\n"
+            "// PORT-ONLY: alternatives\n#if A\nvoid alternate() {}\n"
+            "#else\nvoid alternate() {}\n#endif\n"
+            "void ordinary() {}\n")
+        result = self.run_lint()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("ordinary", result.stdout)
+        for name in ("tail", "adapter", "alternate"):
+            self.assertNotIn(name, result.stdout)
+        self.source.write_text("// PORT-ONLY:   \nvoid bad() {}\n")
+        result = self.run_lint("--update", "--allow-growth")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("requires a reason", result.stderr)
+
+    def test_port_only_requires_direct_adjacency(self):
+        self.source.write_text("")
+        self.baseline()
+        self.source.write_text(
+            "// PORT-ONLY: adapter\n\nvoid separated() {}\n"
+            "// PORT-ONLY: group\n\n#if X\nvoid grouped() {}\n#endif\n"
+            "void after() {}\n")
+        result = self.run_lint()
+        self.assertEqual(result.returncode, 1)
+        for name in ("separated", "grouped", "after"):
+            self.assertIn(name, result.stdout)
+
+    def test_allow_growth_lists_new_keys(self):
+        self.source.write_text("")
+        self.baseline()
+        self.source.write_text("void added() {}\n")
+        result = self.run_lint("--update", "--allow-growth")
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("New ledger debt (justify each in the PR):\ndefinition added ", result.stdout)
 
     def test_verbatim_move_and_scopes(self):
         first = "namespace A {\nstatic void helper(int x) {}\n}\n"

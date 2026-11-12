@@ -422,6 +422,7 @@ static void fe_blit_glyph(void* px, int pitch, int w, int h,
  * renderer owns, so the print measures only. */
 #include "image_adapters.h"
 
+// PORT-ONLY: adapter or forwarder for the port contract
 void font_v_get_string_info(const TextureSurface* font, uint32_t* width,
                             uint32_t* lineCount, const char* msg,
                             va_list args)
@@ -430,6 +431,7 @@ void font_v_get_string_info(const TextureSurface* font, uint32_t* width,
                                0, 0, msg, args);
 }
 
+// PORT-ONLY: adapter or forwarder for the port contract
 void font_v_print_f(const TextureSurface* font, int x, int y,
                     const char* msg, va_list args)
 {
@@ -442,6 +444,7 @@ void font_v_print_f(const TextureSurface* font, int x, int y,
  * font_v_print_f: the port's entry at that address takes a render target. */
 #include "font_api.h"
 
+// PORT-ONLY: adapter or forwarder for the port contract
 void font_print_f(const TextureSurface* font, int x, int y, const char* msg, ...)
 {
     va_list args;

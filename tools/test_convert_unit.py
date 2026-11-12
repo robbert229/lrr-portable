@@ -78,6 +78,12 @@ def make_repo(root: Path) -> None:
     write(root, "src/link_order.cmake", "")
 
 
+class PortOnlyChecklistTest(unittest.TestCase):
+    def test_conversion_checklist_marks_adapters_and_forwarders(self):
+        self.assertTrue(any("adapter and forwarder" in item and "// PORT-ONLY: <reason>" in item
+                            for item in cu.CHECKLIST))
+
+
 class HeaderScanTest(unittest.TestCase):
     def test_linkage_and_bodies(self):
         scan = cf.HeaderScan(
