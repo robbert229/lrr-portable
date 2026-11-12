@@ -17,6 +17,8 @@ extern "C" {
 #endif
 
 int sound_alias_lookup(const char* name, int* out_index); /* FUN_00464c70 */
+void sound_request_queue_submit(int alias, int loop);    /* FUN_00464f60 */
+int sound_alias_play(int alias, int loop);               /* FUN_00464fa0 */
 
 #ifdef __cplusplus
 }

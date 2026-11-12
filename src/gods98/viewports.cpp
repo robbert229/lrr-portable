@@ -268,7 +268,7 @@ void renderer_object_set_clip_distance(void* object, float distance)
 namespace lego {
 // FUNCTION: LEGORR 0x00476fd0
 #if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void resource_interface_call_slot8c(void* wrapper)
+__declspec(naked) float resource_interface_call_slot8c(void* wrapper)
 {
     __asm {
         mov eax, dword ptr [esp + 4]
@@ -280,14 +280,16 @@ __declspec(naked) void resource_interface_call_slot8c(void* wrapper)
     }
 }
 #else
-void resource_interface_call_slot8c(void* wrapper)
+float resource_interface_call_slot8c(void* wrapper)
 {
+    /* The viewport clip getter's value is not modelled natively. */
     resource_interface_call_noargs(wrapper, 0x8c);
+    return 0.0f;
 }
 #endif
 // FUNCTION: LEGORR 0x00476ff0
 #if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void resource_interface_call_slot90(void* wrapper)
+__declspec(naked) float resource_interface_call_slot90(void* wrapper)
 {
     __asm {
         mov eax, dword ptr [esp + 4]
@@ -299,9 +301,11 @@ __declspec(naked) void resource_interface_call_slot90(void* wrapper)
     }
 }
 #else
-void resource_interface_call_slot90(void* wrapper)
+float resource_interface_call_slot90(void* wrapper)
 {
+    /* The viewport clip getter's value is not modelled natively. */
     resource_interface_call_noargs(wrapper, 0x90);
+    return 0.0f;
 }
 #endif
 } // namespace lego

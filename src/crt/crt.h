@@ -21,6 +21,13 @@ extern "C" {
  * stores the surface pointer there. */
 extern uint32_t s_render_surface_secondary;
 
+/* DAT_00505924 and DAT_00505928: Main.c's window width and height. */
+extern int s_display_w;
+extern int s_display_h;
+
+/* DAT_00505f84: Main.c's flags. */
+extern uint32_t s_engine_feature_word;
+
 #ifdef __cplusplus
 }
 #endif

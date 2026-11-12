@@ -3631,7 +3631,8 @@ int frameloop_application_init(void)
         snprintf(advisor_config_path, sizeof(advisor_config_path),
                  "%s::DisplayAdvisor", util_root_name(game.cfg));
         if (block_get_bool_path(game.cfg, advisor_config_path) == 1) {
-            advisor_position_config_load(game.cfg, WINDOW_W, WINDOW_H);
+            advisor_position_config_load(game.cfg, util_root_name(game.cfg),
+                                         WINDOW_W, WINDOW_H);
         }
         /* SaveMenuBuild builds and retains the campaign/tutorial trees before
          * refreshing all six slots; SavReadSlot uses the campaign tree count. */

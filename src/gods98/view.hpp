@@ -525,15 +525,15 @@ void view_follow_target_hooks_set(ViewObjectLookupHook lookup,
  * FUN_004016c0 / FUN_00401470 / FUN_00401750 / FUN_00401420 / FUN_004016f0 /
  * FUN_004013a0 / FUN_00401240 / FUN_00406730 / FUN_0047c0c0; finding 280) --
  * 3D unless noted; x87 float10 corpus math is byte-equivalent float here. */
-void vec_scale(float* dst, const float* src, float s);
-void vec_add(float* dst, const float* a, const float* b);
-void vec_sub(float* dst, const float* a, const float* b);
-void vec_cross(float* dst, const float* b, const float* c);
-void vec_normalize(float* v); /* zero length unguarded, as corpus */
-float vec_dist(const float* a, const float* b);
-float vec_dot(const float* a, const float* b);
-float vec_len(const float* a);
-float vec2_dist(const float* a, const float* b);   /* 2D */
+extern "C" float* vec_scale(float* dst, const float* src, float s);
+extern "C" float* vec_add(float* dst, const float* a, const float* b);
+extern "C" float* vec_sub(float* dst, const float* a, const float* b);
+extern "C" float* vec_cross(float* dst, const float* b, const float* c);
+extern "C" void vec_normalize(float* v); /* zero length unguarded, as corpus */
+extern "C" float vec_dist(const float* a, const float* b);
+extern "C" float vec_dot(const float* a, const float* b);
+extern "C" float vec_len(const float* a);
+extern "C" float vec2_dist(const float* a, const float* b);   /* 2D */
 /* Unused: kept only to preserve the declaration count of every unit that
  * includes this header (finding 506) until the #388 relocation. The
  * function is game/bezier.c's (GAME-003, finding 514). */
@@ -618,7 +618,7 @@ void textured_scene_draw_hooks_set(const TexturedSceneDrawHooks* hooks);
 void textured_scene_object_draw_at_position(const void* view,
                                             const float position_xy[2],
                                             float z, float size); /* FUN_0045db00 */
-void camera_screen_coordinate_project(const ViewProjectionAdapter* adapter,
+extern "C" void camera_screen_coordinate_project(const ViewProjectionAdapter* adapter,
                                       float* output, const float* input);
 void camera_project_point_to_screen(const ViewProjectionAdapter* adapter,
                                    float* output_xy, const float* input_xyz);
@@ -964,7 +964,7 @@ typedef struct DDiSceneLightCreateHooks {
                                void* context);
 } DDiSceneLightCreateHooks;
 void ddiscene_light_create_hooks_set(const DDiSceneLightCreateHooks* hooks);
-void* ddiscene_light_create(void* owner, uint32_t value_a,
+extern "C" void* ddiscene_light_create(void* owner, uint32_t value_a,
                             uint32_t value_b, uint32_t value_c,
                             uint32_t value_d); /* 0x4734f0 */
 typedef struct DDiSceneKindModeSetupHooks {
@@ -1099,7 +1099,7 @@ void ddiscene_object_destroy_hook_set(DDiSceneObjectDestroyHook hook,
                                       void* context);
 void ddiscene_object_destroy(void* scene_object); /* 0x472a40 */
 void ddiscene_object_destroy_with_mode(void* scene_object, int mode); /* 0x472a50 */
-float ddiscene_object_length_get(void* scene_object); /* 0x00475390 */
+extern "C" float ddiscene_object_length_get(void* scene_object); /* 0x00475390 */
 uint32_t ddiscene_object_frame_position_get(
     void* scene_object); /* 0x004753f0 */
 void ddiscene_animation_callbacks_set(void* scene_object,
@@ -1158,9 +1158,9 @@ int ddiscene_sample_hook_add(DDiSceneSampleHook sample_hook,
  * pretending that their native records have the original ACT layout. */
 void ddiscene_activity_sample_dispatch(const char* sample, void* scene_object);
 void ddiscene_activity_trigger_dispatch(void* scene_object);
-float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 0x475140 */
+extern "C" float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 0x475140 */
 float ddiscene_advance_by_time(void* scene_object, float delta); /* 0x00475120 */
-float ddiscene_advance_by_time_target(void* scene_object, float delta);
+extern "C" float ddiscene_advance_by_time_target(void* scene_object, float delta);
 typedef float (*SceneTimingValueGetHook)(void* frame, void* argument,
                                          void* context);
 typedef int (*SceneTimingCountGetHook)(void* frame, void* context);
@@ -1223,9 +1223,9 @@ int ddiscene_object_facing_get(void* object, void* alternate_frame,
                                float facing[3]); /* FUN_00475500 */
 int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3]);
-int ddiscene_object_position_set(void* object, void* alternate_frame,
+extern "C" int ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z);
-int ddiscene_object_pose_method_dispatch(void* object,
+extern "C" int ddiscene_object_pose_method_dispatch(void* object,
                                          void* alternate_frame,
                                          float parameter_3,
                                          float parameter_4,
@@ -1292,7 +1292,7 @@ typedef void (*AdvisorCompanionApplyFn)(void* object,
 void advisor_companion_apply_hooks_set(const void* transform,
                                        AdvisorCompanionApplyFn object_apply,
                                        AdvisorCompanionApplyFn scene_apply);
-void advisor_companion_transform_apply(void* unused, void** object_reference);
+extern "C" void advisor_companion_transform_apply(void* unused, void** object_reference);
 
 /* SceneObjectQueryValueIfReady (FUN_00476f70): inspect object +0x10's
  * readiness interface, then query the current value and release the +8

@@ -12,7 +12,6 @@ src/compat/msvc5/stdint.h
 src/crt/crt.cpp
 src/crt/crt.h
 src/crt/crt.hpp
-src/crt/crt_for_advisor.hpp
 src/crt/crt_for_bubbles.hpp
 src/crt/crt_for_building_model.hpp
 src/crt/crt_for_dependencies.hpp
@@ -40,7 +39,9 @@ src/crt/vc5names.h
 src/game/activity_timeout.hpp
 src/game/actor_scene.cpp
 src/game/actor_scene.hpp
-src/game/advisor.cpp
+src/game/advisor.c
+src/game/advisor.h
+src/game/advisor_maths.h
 src/game/ai.cpp
 src/game/ai.hpp
 src/game/ai_for_bubbles.hpp
@@ -165,7 +166,6 @@ src/game/object_overlays.cpp
 src/game/object_state_file.cpp
 src/game/objective.cpp
 src/game/objective.hpp
-src/game/objective_for_advisor.hpp
 src/game/objective_for_objective_unit.hpp
 src/game/objective_for_reward.hpp
 src/game/objective_for_tutorial_script.hpp
@@ -286,14 +286,15 @@ src/gods98/draw_port.cpp
 src/gods98/dxerror.c
 src/gods98/dxerror.h
 src/gods98/engine.cpp
+src/gods98/engine.h
 src/gods98/engine.hpp
-src/gods98/engine_for_advisor.hpp
 src/gods98/engine_for_file_list_streams.hpp
 src/gods98/engine_for_grid_cell_records.hpp
 src/gods98/engine_for_text.hpp
 src/gods98/engine_for_tutorial_script.hpp
 src/gods98/engine_shared.hpp
 src/gods98/entity.cpp
+src/gods98/entity.h
 src/gods98/entity.hpp
 src/gods98/file_list_streams.cpp
 src/gods98/flic.cpp
@@ -301,6 +302,7 @@ src/gods98/flic.hpp
 src/gods98/flic_for_flic_unit.hpp
 src/gods98/flic_shared.hpp
 src/gods98/flic_unit.cpp
+src/gods98/font.h
 src/gods98/frameloop.cpp
 src/gods98/frameloop.hpp
 src/gods98/frameloop_for_screen_effect_quads.hpp
@@ -343,6 +345,7 @@ src/gods98/media.hpp
 src/gods98/media_for_pointer.hpp
 src/gods98/media_shared.hpp
 src/gods98/message.cpp
+src/gods98/message.h
 src/gods98/message.hpp
 src/gods98/message_for_info.hpp
 src/gods98/message_for_text.hpp
@@ -389,6 +392,7 @@ src/gods98/resource_shared.hpp
 src/gods98/scene_pool.cpp
 src/gods98/scene_pool.hpp
 src/gods98/scene_resources.cpp
+src/gods98/scene_resources.h
 src/gods98/scene_resources.hpp
 src/gods98/scene_resources_for_lws.hpp
 src/gods98/scene_resources_for_viewports.hpp
@@ -428,6 +432,7 @@ src/gods98/tickers.hpp
 src/gods98/utils.c
 src/gods98/utils.h
 src/gods98/view.cpp
+src/gods98/view.h
 src/gods98/view.hpp
 src/gods98/view_for_animation_object.hpp
 src/gods98/view_for_building_model.hpp

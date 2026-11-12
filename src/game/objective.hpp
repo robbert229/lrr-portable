@@ -180,20 +180,22 @@ int objective_voice_alias_raise_commit(LevelState* s);
  * case, deviation documented). */
 int objective_voice_alias_raise_gate_bit27(LevelState* s);
 
-/* --- the advisor action window band (2026-10-25) ---------------------------
- * The corpus keeps the advisor's per-action records in an unowned word
- * region (base word + row * 0x24). The port models the region as a bounded
- * module table (the widened-window convention).
- * The scene request model exposes render/audio effects through an action
- * callback and scene readiness through a small owner-side state bit. */
+/* --- the advisor (GAME-001, Advisor.c; finding 550) ------------------------
+ * The advisor's records and state are Advisor.c's globals (game/advisor.c),
+ * and game/advisor.h documents its functions, which keep the port's names.
+ * The hook types and the setters and adapters marked "superseded" below
+ * belonged to the port's former model of the advisor scene: nothing defines
+ * or calls them. They stay because removing them shifts the symbol count of
+ * every includer (ADR 0005 entropy rule 1, finding 550). The action enum
+ * lost its last member to keep that count with the loader's extra
+ * parameter. */
 enum {
     ADVISOR_SCENE_ACTION_RESET = 0,
     ADVISOR_SCENE_ACTION_HIDE = 1,
     ADVISOR_SCENE_ACTION_SOUND = 2,
     ADVISOR_SCENE_ACTION_VISUAL_INIT = 3,
     ADVISOR_SCENE_ACTION_CONTROLLER_INIT = 4,
-    ADVISOR_SCENE_ACTION_NOTIFY = 5,
-    ADVISOR_SCENE_ACTION_ATTACH = 6
+    ADVISOR_SCENE_ACTION_NOTIFY = 5
 };
 typedef void (*AdvisorSceneActionHook)(int action, int row,
                                        uint32_t animation, void* user);
@@ -247,57 +249,55 @@ typedef int (*AdvisorAnimationTargetConfigLookupHook)(
     void* scene_context, void* config_context, const char* animation_name,
     uint32_t* handle, float* start_time, float* end_time, void* user);
 void advisor_scene_ready_set(int ready);
+/* Superseded: */
 void advisor_scene_action_hook_set(AdvisorSceneActionHook hook, void* user);
 void advisor_companion_scene_create_hook_set(
     AdvisorCompanionSceneCreateHook hook, void* user);
-void advisor_scene_controller_initialize(void* config_context,
-                                         const uint32_t* scene_context_words,
-                                         uint32_t transform_context_handle);
-void advisor_transition_worker(float delta); /* FUN_00401990 */
-void advisor_scene_visual_state_initialize(void); /* FUN_00401210 */
-float advisor_scene_scale_get(void);
-void advisor_transform_apply_hook_set(AdvisorTransformApplyHook hook,
+extern "C" void advisor_scene_controller_initialize(const char* gameName,
+                                         void* camera,
+                                         void* viewMain);
+extern "C" void advisor_transition_worker(float delta); /* FUN_00401990 */
+extern "C" void advisor_scene_visual_state_initialize(float); /* FUN_00401210 */
+float advisor_scene_scale_get(void); /* superseded */
+void advisor_transform_apply_hook_set( /* superseded */AdvisorTransformApplyHook hook,
                                       void* user);
-void advisor_apply_slot_transform(int row); /* FUN_00401b30 */
-void advisor_position_config_load(BlockFile* config,
+extern "C" void advisor_apply_slot_transform(int row); /* FUN_00401b30 */
+extern "C" void advisor_position_config_load(BlockFile* config, const char*,
                                   int resolution_width,
                                   int resolution_height); /* FUN_00401530 */
-int advisor_position_config_entries_load(
+int advisor_position_config_entries_load( /* superseded */
     const AdvisorPositionConfigEntry* entries, uint32_t count);
 int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
-                              void* user); /* portable adapter */
-void advisor_animation_target_config_lookup_set(
+                              void* user); /* superseded */
+void advisor_animation_target_config_lookup_set( /* superseded */
     AdvisorAnimationTargetConfigLookupHook lookup, void* user);
-void advisor_config_slots_load_target(void* scene_context,
-                                      void* config_context); /* 0x00401270 */
-int advisor_request_admit(int row, int immediate); /* FUN_004018c0 */
-void advisor_request_reset_and_submit_sound(int row); /* FUN_00401930 */
-void advisor_animation_end_cleanup(void); /* FUN_004011c0 */
-void advisor_animation_hooks_set(const AdvisorAnimationHooks* hooks);
-void advisor_animation_slot_install(int slot, uint32_t handle,
+extern "C" void advisor_config_slots_load_target(BlockFile* config,
+                                      const char* gameName); /* 0x00401270 */
+extern "C" int advisor_request_admit(int row, int immediate); /* FUN_004018c0 */
+extern "C" void advisor_request_reset_and_submit_sound(int row); /* FUN_00401930 */
+extern "C" void advisor_animation_end_cleanup(void); /* FUN_004011c0 */
+void advisor_animation_hooks_set(const AdvisorAnimationHooks* hooks); /* superseded */
+void advisor_animation_slot_install(int slot, uint32_t handle, /* superseded */
                                     float start_time, float end_time);
-int advisor_scene_advance_completion_check(int animation_slot,
+extern "C" int advisor_scene_advance_completion_check(int animation_slot,
                                            float delta); /* FUN_00401a70 */
 
-/* AdvisorPositionRecordInitialize (FUN_004017b0) initializes the action
- * record and flags. */
-void advisor_position_record_initialize(int row, uint32_t animation_index,
-                                        int position_type,
-                                        uint32_t position_mode,
-                                        int action_mode, uint32_t x,
-                                        uint32_t y);
-/* AdvisorActionPositionAndModeSet (FUN_00401840): stores the mode and
- * position pair, raising flag word bit 0x10000 when mode is 0xc and
- * clearing it otherwise. */
-void advisor_action_position_and_mode_set(int row, int mode,
-                                          uint32_t dword_a,
-                                          uint32_t dword_b); /* FUN_00401840 */
+/* Advisor_InitPosition (FUN_004017b0). */
+extern "C" void advisor_position_record_initialize(int row, int animation_index,
+                                        int text_type,
+                                        int sfx_id,
+                                        int panel_type, float x,
+                                        float y);
+/* Advisor_SetParameters (FUN_00401840): the panel type and the current
+ * position; panel type 0xc (none) raises flag 0x10000, any other clears it. */
+extern "C" void advisor_action_position_and_mode_set(int row, int panel_type,
+                                          float x,
+                                          float y); /* FUN_00401840 */
 
-/* AdvisorActionPositionGet (FUN_00401890): reads the record's +0x18 and
- * +0x1c dwords. The setter writes its second coordinate to +0x18; +0x1c
- * remains the initialized current-position value. NULL outputs are skipped. */
-void advisor_action_position_get(int row, uint32_t* dword_c,
-                                 uint32_t* dword_d);          /* FUN_00401890 */
+/* Advisor_GetOrigPos (FUN_00401890): the configured position, which
+ * Advisor_SetParameters does not change. */
+extern "C" void advisor_action_position_get(int row, float* x,
+                                 float* y);          /* FUN_00401890 */
 
 /* AdvisorAnimationPositionAndRequestUpdate (FUN_0041c4f0). The controller
  * uses live frontend mode/interaction state, while the target's indicator
@@ -333,7 +333,7 @@ void advisor_animation_position_and_request_update(
     int position_mode, int input_a, int input_b, const float* position);
 
 /* Observer hook for the flag word (test pin; not corpus API). */
-uint32_t advisor_action_flags_peek(int row);
+extern "C" uint32_t advisor_action_flags_peek(int row);
 
 /* ObjectiveAdvisorTokenLookup (FUN_00453200): reads the advisor token
  * table (the corpus's unowned count word and table pointer); a
@@ -373,7 +373,7 @@ uint32_t objective_advisor_token_generation_get(void);
 void objective_advisor_tokens_install(const uint32_t* table, uint32_t count);
 
 /* Advisor name tables (FUN_004013e0/FUN_004014c0). */
-int advisor_position_name_to_index(const char* name, int* index);
-int advisor_animation_name_to_index(const char* name, int* index);
+extern "C" int advisor_position_name_to_index(const char* name, int* index);
+extern "C" int advisor_animation_name_to_index(const char* name, int* index);
 
 #endif /* LEGORRR_GAME_OBJECTIVE_HPP */

@@ -184,3 +184,17 @@ void entity_assembly_free(EntityAssembly* ea)
     free(ea->acts);
     free(ea);
 }
+
+/* Container_Load's signature (ADR 0005 step 6) for units rebuilt as C,
+ * declared in gods98/entity.h. The port's 0x00472cd0 is the .ae assembly
+ * parser above, with a different contract, and the port has no container
+ * loader yet: this adapter loads nothing. */
+extern "C" void* container_load(void* parent, const char* filename,
+                                const char* typeString, int looseLoad)
+{
+    (void)parent;
+    (void)filename;
+    (void)typeString;
+    (void)looseLoad;
+    return NULL;
+}

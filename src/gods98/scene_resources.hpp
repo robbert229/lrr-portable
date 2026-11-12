@@ -112,7 +112,7 @@ void scene_node_matrix_apply_hook_set(SceneNodeMatrixApplyHook hook,
 void scene_node_transform_matrix_apply(void* owner, const void* track,
     const float position[3], const float rotation[3], const float scale[3]);
 void resource_interface_call_slot48(void* wrapper, void* value); /* 0x00476f50 */
-void resource_interface_call_slot8c(void* wrapper); /* 0x00476fd0 */
-void resource_interface_call_slot90(void* wrapper); /* 0x00476ff0 */
+extern "C" float resource_interface_call_slot8c(void* wrapper); /* 0x00476fd0 */
+extern "C" float resource_interface_call_slot90(void* wrapper); /* 0x00476ff0 */
 }
 #endif

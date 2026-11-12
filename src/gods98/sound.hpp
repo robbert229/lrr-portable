@@ -336,7 +336,7 @@ double sound_deferred_last_alias(void);
  * (`loop` nonzero marks the queued submission as looping — the corpus's
  * menu/reward callers pass 1 only for the two music loops). Drops when
  * full, like the corpus. */
-void sound_request_queue_submit(int alias, int loop);
+extern "C" void sound_request_queue_submit(int alias, int loop);
 
 /* Pending count (DAT_00502bd0). */
 int sound_request_queue_count(void);
@@ -464,7 +464,7 @@ int sound_variant_chain(int alias_index, int* out_slots, int max);
  * immediately when not batching (variant draw + play seam when the
  * chain's head holds a record), or deferred to the batch table. Returns
  * the encoded bank/buffer handle on successful immediate playback, else -1. */
-int sound_alias_play(int alias, int loop);
+extern "C" int sound_alias_play(int alias, int loop);
 
 /* PositionalSoundSubmit @ 0x465090: like sound_alias_play but carries a
  * position: `positional` selects the position-word form (`position`) or

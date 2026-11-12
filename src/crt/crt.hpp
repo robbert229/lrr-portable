@@ -543,7 +543,7 @@ void     global_value_004ffe48_set(uint32_t value);
  * DAT_00557860 is the task-refresh flag the 0x407340/60 pair toggles and
  * reads (finding 392); the rest are the unresolved or config-domain
  * stores below. */
-uint32_t global_flag_bit0_is_set(void);            /* FUN_00401c20 */
+extern "C" uint32_t global_flag_bit0_is_set(void); /* FUN_00401c20 */
 void     state_flag_toggle_when_zero(void);        /* FUN_00407340 */
 uint32_t global_task_refresh_flag_get(void);       /* FUN_00407360 */
 void     level_state_stored_value_set(uint32_t v); /* FUN_00409d40 */
@@ -552,8 +552,8 @@ uint32_t global_mode_zero_input_peek(void);         /* port hook */
 void     rockfall_style_table_base_set(uint32_t v);/* FUN_0040bfc0 */
 void     global_flag_bit0_clear(void);             /* FUN_0040e7e0 */
 void     global_config_value_set(uint32_t v);      /* FUN_0040f5e0 */
-uint32_t advisor_state_word_peek(void);            /* port hook */
-void     advisor_state_word_set(uint32_t v);       /* port hook */
+extern "C" uint32_t advisor_state_word_peek(void); /* port hook */
+extern "C" void advisor_state_word_set(uint32_t v); /* port hook */
 uint32_t level_stored_word_peek(void);             /* port hook */
 uint32_t mode_zero_input_flag_peek(void);          /* port hook */
 uint32_t rockfall_table_base_peek(void);           /* port hook */
@@ -569,11 +569,11 @@ uint32_t global_config_word_peek(void);            /* port hook */
  * (panel layer unported): a zero-init flag-word window, corpus-blind
  * indexing guarded to 18 entries (deviation), port-side setter for the
  * unported record writers. */
-int  display_width_get(void);
-int  display_height_get(void);
+extern "C" int display_width_get(void);
+extern "C" int display_height_get(void);
 void display_dimensions_set(int w, int h); /* port hook */
-extern int s_display_w; /* DAT_00505924 */
-extern int s_display_h; /* DAT_00505928 */
+extern "C" int s_display_w; /* DAT_00505924 */
+extern "C" int s_display_h; /* DAT_00505928 */
 int  request_record_ready_flag4(int index);   /* FUN_0045ab30 */
 extern "C" int  request_record_ready_flag4_target(int index); /* unchecked target body */
 int  request_record_ready_flag2(int index);   /* FUN_0045ab60 */
@@ -609,7 +609,7 @@ void     font_cursor_word_set(int index, uint32_t v); /* port hook */
 void crt_load_control_word(uint32_t control_word);
 void crt_no_op_stub_variant(void);      /* FUN_00497870 */
 #endif
-void advisor_clear_active_state(void);  /* FUN_00401b20 */
+extern "C" void advisor_clear_active_state(void); /* FUN_00401b20 */
 
 /* ByteRangeSwap (FUN_0048e030): VC5 qsort.obj's private _swap helper is
  * linked with qsort on MSVC; this portable fallback is used by the CRT test. */
@@ -1015,7 +1015,7 @@ extern uint32_t s_render_feature_flags; /* DAT_0050608c */
  * low-texture flag setter turns on bit 5 while bit 0x40000 is clear. */
 uint32_t engine_feature_word_peek(void);
 void     engine_feature_word_install(uint32_t value); /* port hook */
-extern uint32_t s_engine_feature_word; /* DAT_00505f84 */
+extern "C" uint32_t s_engine_feature_word; /* DAT_00505f84 */
 void     low_texture_flag_set(void);                  /* FUN_00477bd0 */
 
 /* --- integer/string helper band (2026-10-25) -------------------------------

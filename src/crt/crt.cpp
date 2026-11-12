@@ -1702,8 +1702,6 @@ uint32_t global_mode_zero_input_peek(void)
     return s_mode_zero_flag;
 }
 
-uint32_t advisor_state_word_peek(void)  { return s_advisor_state_word; }
-void     advisor_state_word_set(uint32_t v) { s_advisor_state_word = v; }
 uint32_t level_stored_word_peek(void)   { return s_level_stored_word; }
 uint32_t mode_zero_input_flag_peek(void){ return s_mode_zero_flag; }
 uint32_t rockfall_table_base_peek(void) { return s_rockfall_base; }

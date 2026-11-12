@@ -52,7 +52,6 @@ game_sources = [
   'screen_effect_quads.cpp',
   'building_model.cpp',
   'animation_object.cpp',
-  'advisor.cpp',
   'cmd.cpp',
   'dependency_grid.cpp',
   'options.cpp',
@@ -85,6 +84,7 @@ game_sources = [
   'seh_runtime.cpp',
 ]
 game_c_sources = [
+  'advisor.c',
   'bezier.c',
   'priorities.c',
   'steering.c',

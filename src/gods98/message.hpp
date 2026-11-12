@@ -60,7 +60,7 @@ void ui_message_strings_initialize(void* primary_font, void* secondary_font,
 void* ui_message_text_output_get(int alternate); /* DAT_0050361c/620 */
 void ui_message_overlay_state_initialize(void); /* FUN_0046aa90 */
 const char* ui_message_label_get(unsigned int index);
-int ui_message_label_index_find(const char* label, int* out_index); /* FUN_0046aad0 */
+extern "C" int ui_message_label_index_find(const char* label, int* out_index); /* FUN_0046aad0 */
 void ui_message_text_slot_assign(int index, const char* text); /* FUN_0046ab10 */
 void ui_message_text_slot_assign_with_image(int index, const char* text,
                                             const char* image_path,

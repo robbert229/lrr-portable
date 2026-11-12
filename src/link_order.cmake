@@ -33,7 +33,7 @@
 # unit's .c file is compiled as C in the matching build and as C++ elsewhere.
 
 # Ordered game and gods98 segments, port tail, then CRT-range legacy files.
-lrr_link(unit   GAME-001 game          game/advisor.cpp)
+lrr_link(unit   GAME-001 game          game/advisor.c)
 lrr_link(legacy 00403a10 game          game/cmd.cpp)
 lrr_link(unit   GAME-003 game          game/bezier.c)
 lrr_link(unit   GAME-004 game          game/animation_object.cpp)
