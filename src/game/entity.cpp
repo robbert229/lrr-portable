@@ -12292,8 +12292,6 @@ typedef struct SpatialEntityQueryRequest {
 static EntitySpatialQueryHook s_spatial_entity_query_hook;
 static void* s_spatial_entity_query_context;
 
-namespace unported_ledger_stubs {
-
 // FUNCTION: LEGORR 0x00444460
 void ledger_stub_00444460_FlaggedVectorStepCommandIssue(
     EntitySlot* entity, const float vector[2])
@@ -12391,8 +12389,6 @@ route_finish:
     entity->flags_3e0 |= 0x800000u;
     idle_queue_register(entity);
 }
-
-} // namespace unported_ledger_stubs
 
 void entity_spatial_query_hook_set(EntitySpatialQueryHook hook, void* context)
 {
