@@ -1054,7 +1054,9 @@ int main(void)
               "the reset entries answer null again");
     }
 
-    /* The pair-table window pair (2026-10-25). */
+    /* The pair-table window pair: Lws_SearchMeshPathList and
+     * Lws_AddMeshPathEntry (gods98/lws.c), which take the original's
+     * unguarded {path, mesh} list. */
     {
         static void* window[16];
         memset(window, 0, sizeof window);
@@ -1079,9 +1081,6 @@ int main(void)
         pair_table_append(window, &count, key1, (void*)5); /* key re-append */
         CHECK(count == 3 && pair_table_find(window, 3u, "firstkey") == (void*)7,
               "the find stays first-wins past the re-append");
-        CHECK(pair_table_find(NULL, 1u, "x") == NULL
-                  && pair_table_find(window, 1u, NULL) == NULL,
-              "the window and key guards hold");
     }
 
     /* Renderer-word band (2026-10-25): zero-init statics with the

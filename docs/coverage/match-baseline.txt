@@ -1,4 +1,4 @@
-# input_sha256: 28df128483429fbd332020d9eddc667b13f12af8f7fbbc2d0287b056127cc131
+# input_sha256: ea2e4b6478b767018fdd4c4760b080508b9d2a3c185a330900b14f012fa2cb48
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2182 mapped functions
+[game-only] 2186 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2076,27 +2076,31 @@
 0x00486900 33.33 Draw_Pixel16HalfTrans
 0x004869a0 100.00 Draw_Pixel24
 0x004869d0 100.00 Draw_Pixel32
-0x004869f0 7.69 ledger_stub_004869f0_LoadLWSCScene
-0x004876c0 0.00 shared_object_directory_scan_configure
-0x00487760 15.69 lego::scene_resource_string_tables_free
+0x004869f0 94.25 lws_parse
+0x004876c0 98.11 lws_initialise
+0x00487760 100.00 lws_shutdown
 0x004877d0 100.00 resource_entry_id_get
-0x004877e0 20.64 shared_object_scene_entry_slot_table_expand
-0x00487a00 21.28 shared_object_clone
-0x00487ba0 57.29 ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate
-0x00487cb0 27.03 animation_track_find_keyframe_and_fraction
-0x00487d50 14.04 ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch
-0x00487de0 21.88 shared_object_timed_sound_event_update
-0x00487ed0 40.58 lego::shared_object_sample_time_matches
-0x00487fc0 42.34 lego::keyframe_time_segment_fraction
-0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
-0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 14.00 scene_node_transform_matrix_apply
-0x004885c0 41.33 model_resource_resolve_or_load
-0x00488730 45.16 pair_table_find
-0x00488790 31.82 pair_table_append
-0x004887c0 11.11 ledger_stub_004887c0_SceneHierarchyInterfaceRegisterRecursive
-0x004889d0 17.24 ledger_stub_004889d0_ResourceTreeCallbackReferenceChainRelease
-0x00488a70 8.57 ledger_stub_00488a70_LoadRecordInterfacesReleaseFree
+0x004877e0 98.47 lws_sound_triggers_setup
+0x00487990 100.00 lws_meshes_load
+0x00487a00 99.33 lws_clone
+0x00487ba0 100.00 lws_time_set
+0x00487cb0 100.00 animation_track_find_keyframe_and_fraction
+0x00487d50 98.11 lws_textures_animate
+0x00487de0 100.00 lws_trigger_handle
+0x00487ed0 100.00 shared_object_sample_time_matches
+0x00487fc0 100.00 keyframe_time_segment_fraction
+0x00488070 75.00 lws_dissolve_interpolate
+0x004880d0 98.51 lws_dissolve_level_set
+0x00488170 34.17 lws_interpolate
+0x004882e0 23.88 lws_absolute_key_set
+0x004885c0 97.12 lws_mesh_load
+0x00488730 100.00 pair_table_find
+0x00488790 100.00 pair_table_append
+0x004887c0 100.00 lws_frames_create
+0x00488900 100.00 lws_nodes_load
+0x004889a0 100.00 lws_node_transform_setup
+0x004889d0 100.00 lws_free
+0x00488a70 98.78 lws_node_free
 0x00488b50 100.00 media_cd_audio_device_state_update
 0x00488b90 100.00 media_cd_audio_playback_available
 0x00488bb0 100.00 media_cd_audio_track_start
@@ -2122,7 +2126,7 @@
 0x004895c0 73.68 resource_tree_callback_context_create_for_resource
 0x00489660 28.57 scene_act_frame_record_clone_or_create
 0x00489750 49.57 scene_object_owner_link_release
-0x004897e0 10.07 ddiscene_timed_hook_dispatch
+0x004897e0 17.45 ddiscene_timed_hook_dispatch
 0x004898e0 100.00 resource_tree_callback_count_increment
 0x004898f0 100.00 resource_tree_callback_array_append
 0x00489910 56.50 resource_tree_callback_count
@@ -2190,7 +2194,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2418 mapped functions
+[full] 2422 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -4260,27 +4264,31 @@
 0x00486900 33.33 Draw_Pixel16HalfTrans
 0x004869a0 100.00 Draw_Pixel24
 0x004869d0 100.00 Draw_Pixel32
-0x004869f0 7.69 ledger_stub_004869f0_LoadLWSCScene
-0x004876c0 0.00 shared_object_directory_scan_configure
-0x00487760 15.69 lego::scene_resource_string_tables_free
+0x004869f0 94.25 lws_parse
+0x004876c0 98.11 lws_initialise
+0x00487760 100.00 lws_shutdown
 0x004877d0 100.00 resource_entry_id_get
-0x004877e0 20.64 shared_object_scene_entry_slot_table_expand
-0x00487a00 21.28 shared_object_clone
-0x00487ba0 57.29 ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate
-0x00487cb0 27.03 animation_track_find_keyframe_and_fraction
-0x00487d50 14.04 ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch
-0x00487de0 21.88 shared_object_timed_sound_event_update
-0x00487ed0 40.58 lego::shared_object_sample_time_matches
-0x00487fc0 42.34 lego::keyframe_time_segment_fraction
-0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
-0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 14.00 scene_node_transform_matrix_apply
-0x004885c0 41.33 model_resource_resolve_or_load
-0x00488730 45.16 pair_table_find
-0x00488790 31.82 pair_table_append
-0x004887c0 11.11 ledger_stub_004887c0_SceneHierarchyInterfaceRegisterRecursive
-0x004889d0 17.24 ledger_stub_004889d0_ResourceTreeCallbackReferenceChainRelease
-0x00488a70 8.57 ledger_stub_00488a70_LoadRecordInterfacesReleaseFree
+0x004877e0 98.47 lws_sound_triggers_setup
+0x00487990 100.00 lws_meshes_load
+0x00487a00 99.33 lws_clone
+0x00487ba0 100.00 lws_time_set
+0x00487cb0 100.00 animation_track_find_keyframe_and_fraction
+0x00487d50 98.11 lws_textures_animate
+0x00487de0 100.00 lws_trigger_handle
+0x00487ed0 100.00 shared_object_sample_time_matches
+0x00487fc0 100.00 keyframe_time_segment_fraction
+0x00488070 75.00 lws_dissolve_interpolate
+0x004880d0 98.51 lws_dissolve_level_set
+0x00488170 34.17 lws_interpolate
+0x004882e0 23.88 lws_absolute_key_set
+0x004885c0 97.12 lws_mesh_load
+0x00488730 100.00 pair_table_find
+0x00488790 100.00 pair_table_append
+0x004887c0 100.00 lws_frames_create
+0x00488900 100.00 lws_nodes_load
+0x004889a0 100.00 lws_node_transform_setup
+0x004889d0 100.00 lws_free
+0x00488a70 98.78 lws_node_free
 0x00488b50 100.00 media_cd_audio_device_state_update
 0x00488b90 100.00 media_cd_audio_playback_available
 0x00488bb0 100.00 media_cd_audio_track_start
@@ -4306,7 +4314,7 @@
 0x004895c0 73.68 resource_tree_callback_context_create_for_resource
 0x00489660 28.57 scene_act_frame_record_clone_or_create
 0x00489750 49.57 scene_object_owner_link_release
-0x004897e0 10.07 ddiscene_timed_hook_dispatch
+0x004897e0 17.45 ddiscene_timed_hook_dispatch
 0x004898e0 100.00 resource_tree_callback_count_increment
 0x004898f0 100.00 resource_tree_callback_array_append
 0x00489910 56.50 resource_tree_callback_count

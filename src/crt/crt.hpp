@@ -866,9 +866,9 @@ void string_cache_font_loader_set(void* (*hook)(const char*));
  * fields). Quirk pinned: the corpus bounds its scan with the walk index
  * masked to its low 16 bits. Deviations: the port guards the table, the
  * key, and the count pointer. */
-void* pair_table_find(const void* table, uint32_t count, const char* key);
+extern "C" void* pair_table_find(const void* table, uint32_t count, const char* key);
                                                 /* FUN_00488730 */
-void pair_table_append(void* table, int* count, const char* key,
+extern "C" void pair_table_append(void* table, int* count, const char* key,
                        void* value);             /* FUN_00488790 */
 
 /* SelectionMarkerResourcesRelease (FUN_0040ce30, findings 378/434): frees

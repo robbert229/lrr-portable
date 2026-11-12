@@ -347,9 +347,9 @@ int wad_file_read(void* destination, int element_size, int element_count,
 int wad_file_seek(GameFileHandle* handle, int offset, int origin); /* FUN_0047f850 */
 int wad_file_cursor_get(GameFileHandle* handle);                   /* FUN_0047fb10 */
 void game_file_handle_release(GameFileHandle* handle);            /* FUN_0047ff50 */
-int game_file_close(GameFileHandle* handle);                      /* FUN_0047fac0 */
+extern "C" int game_file_close(GameFileHandle* handle);                      /* FUN_0047fac0 */
 /* Resolve and open through the reference WAD/loose-file route selector. */
-GameFileHandle* game_file_open_dispatch(const char* path,
+extern "C" GameFileHandle* game_file_open_dispatch(const char* path,
                                         const char* mode);          /* FUN_0047f6e0 */
 /* Open a loose-file GameFileHandle after resolving the game's data root.
  * WAD-only read routes are not representable by this FILE-backed adapter. */
@@ -367,7 +367,7 @@ char* game_file_read_line(char* buffer, int capacity,
                           GameFileHandle* handle);                /* FUN_0047fce0 */
 char* game_file_read_line_dispatch(char* buffer, int capacity,
                                    GameFileHandle* handle);       /* FUN_0047fd40 */
-char* game_file_read_crlf_line(char* buffer, int capacity,
+extern "C" char* game_file_read_crlf_line(char* buffer, int capacity,
                                GameFileHandle* handle);           /* FUN_00480050 */
 
 /* The stream-slot opener's three corpus dwords, front to back. */

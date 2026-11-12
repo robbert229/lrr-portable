@@ -16,7 +16,7 @@ gods98_sources = [
   'files.cpp',
   'lwo.cpp',
   'wad.cpp',
-  'lws.cpp',
+  'lws_port.cpp',
   'viewports.cpp',
   'com_object_tree.cpp',
   'file_list_streams.cpp',
@@ -76,6 +76,7 @@ gods98_c_sources = [
   'g98_026.c',
   'dxerror.c',
   'g98_029.c',
+  'lws.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 gods98_c_as_cpp = []

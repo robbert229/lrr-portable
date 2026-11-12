@@ -163,7 +163,7 @@ uint32_t entity_type_mask_get(const void* record);
 
 /* PointerValueGet (FUN_00482210, findings 381/411): the dword it points
  * at (offset +0 of the passed pointer). */
-uint32_t pointer_value_get(const void* pointed);
+extern "C" uint32_t pointer_value_get(const void* pointed);
 
 /* SceneObjectFlagsGet (FUN_00408850, findings 373/435): +0x70. */
 uint32_t scene_object_flags_get(const void* scene_object);
@@ -211,7 +211,7 @@ void renderer_object_update_from_record_field6c(void* record, int enabled,
 
 /* ResourceEntryIdGet (FUN_004877d0, findings 381/416): the 16-bit entry
  * id word at +2 (zero-extended, as the corpus returns it). */
-uint32_t resource_entry_id_get(const void* entry);
+extern "C" uint32_t resource_entry_id_get(const void* entry);
 
 /* IndexedWordTableLookup (FUN_004850c0, findings 373/431): word table
  * CORPUS ORDER — (index, table): (index & 0xff) steps 2 bytes from the

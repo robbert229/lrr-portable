@@ -14,8 +14,8 @@ int scene_resource_slot_set(unsigned int index, void* resource);
 void scene_resource_string_tables_set(void** first, unsigned int first_count,
                                       void** second, unsigned int second_count);
 void scene_resource_string_tables_free(); /* 0x00487760 */
-int shared_object_sample_time_matches(const void* record, uint32_t time); /* 0x00487ed0 */
-float keyframe_time_segment_fraction(const void* track, float time, uint16_t* segment_out); /* 0x00487fc0 */
+extern "C" int shared_object_sample_time_matches(const void* record, uint32_t time); /* 0x00487ed0 */
+extern "C" float keyframe_time_segment_fraction(const void* track, float time, uint16_t* segment_out); /* 0x00487fc0 */
 int animated_texture_frame_count(const void* texture); /* 0x00474a20 */
 extern "C" void animated_texture_frame_bind(void* texture, uint32_t frame_index,
                                  int mode); /* 0x00474a60 */

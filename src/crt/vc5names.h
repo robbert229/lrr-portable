@@ -36,6 +36,17 @@ int double_is_finite(double value);
 
 #define malloc(size) engine_heap_alloc((long)(size))
 #define free(ptr) engine_heap_free(ptr)
+#ifdef __cplusplus
+/* _realloc (FUN_0048dc80): the port's model in crt.cpp, over the same heap
+ * as engine_heap_alloc. Other compilers build the units as C++. */
+namespace unported_ledger_stubs {
+void* ledger_stub_0048dc80_GrowHeapArray(void* allocation,
+                                         unsigned int requested_size);
+}
+#define realloc(ptr, size) \
+    unported_ledger_stubs::ledger_stub_0048dc80_GrowHeapArray( \
+        (ptr), (unsigned int)(size))
+#endif
 #define _strcmpi strcasecmp_lite
 #define _strnicmp(a, b, count) strnicmp_lite((a), (b), (int)(count))
 #define _finite double_is_finite

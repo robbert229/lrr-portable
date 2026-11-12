@@ -417,6 +417,7 @@ src/gods98/entity.hpp
 src/gods98/file_list_streams.cpp
 src/gods98/files.cpp
 src/gods98/files.h
+src/gods98/files_open.h
 src/gods98/flic.cpp
 src/gods98/flic.h
 src/gods98/flic.hpp
@@ -462,13 +463,16 @@ src/gods98/input_unit.cpp
 src/gods98/keys.c
 src/gods98/keys.h
 src/gods98/lwo.cpp
-src/gods98/lws.cpp
+src/gods98/lws.c
+src/gods98/lws.h
+src/gods98/lws_port.cpp
 src/gods98/lwsc_miniwin.cpp
 src/gods98/lwsc_miniwin.hpp
 src/gods98/lwsc_scene.cpp
 src/gods98/lwsc_scene.hpp
 src/gods98/lwsc_winapi.cpp
 src/gods98/lwsc_winapi.hpp
+src/gods98/main.h
 src/gods98/mainsim.cpp
 src/gods98/mainsim.hpp
 src/gods98/maths.c
@@ -481,6 +485,7 @@ src/gods98/media_for_pointer.hpp
 src/gods98/media_shared.hpp
 src/gods98/mesh.h
 src/gods98/mesh_unit.cpp
+src/gods98/mesh_unit.h
 src/gods98/message.cpp
 src/gods98/message.h
 src/gods98/message.hpp

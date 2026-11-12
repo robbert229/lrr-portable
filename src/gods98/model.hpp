@@ -132,7 +132,7 @@ Model* model_open(const char* path);
 
 /* Portable parsed-model adapter for LwoModelEntryLoad: opens the model from
  * the full path. It does not create the retail renderer resource instance. */
-Model* lwo_model_entry_load(const char* path, void* flags, void* context);
+extern "C" Model* lwo_model_entry_load(const char* path, void* flags, void* context);
 
 /* Portable parsed-model adapter: case-insensitive cache over the joined
  * "%s%s" path, with the raw-path secondary table under the fallback
