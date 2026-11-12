@@ -780,6 +780,32 @@ bytes up to the next symbol, so a large static without a map symbol is counted
 to the symbol before it. Read sizes from the COFF objects when that matters.
 The tool does not change `binary-progress.json`.
 
+## The original's link mode (`opt_ref_link.py`)
+
+The gate links with `/DEBUG` for Reccmp's PDB, which makes LINK 5.0 keep every
+unreferenced COMDAT (`/OPT:NOREF`). The original was linked without `/DEBUG`,
+so with `/OPT:REF` (findings 563 and 576). `make opt-ref-link` reruns the
+gate's `link.txt` without `/DEBUG` and `/pdb:`, writing
+`$(RECCMP_BUILD_DIR)/opt-ref/LegoRR.exe` and its map (about 2 s, toolchain
+needed, no recompile). `make opt-ref` compares the two maps:
+- the `.text` bytes and symbols `/OPT:REF` removes, by `winapi_link_audit.py`'s
+  categories, and the annotated code by link-order kind;
+- the Reccmp-mapped functions it removes and how many are exact, for the full
+  and game-only reports;
+- the relinked image: sections, `.data` and `.bss`, thunks and their order,
+  the entry point, the import order and `Characteristics`.
+
+`make binary-progress-compare` (so `make match-progress`) runs the relink and
+records the measure as `opt_ref` in `binary-progress.json` (schema 4), with
+the relinked sections' bytes against the original. A symbol counts as removed
+when the relink's map has no `.text` symbol of that name from that object, so
+aliases at one address are not miscounted. On `1d31a556` this agrees function
+for function with a Reccmp run on a `/DEBUG /OPT:REF` relink.
+
+`python3 tools/opt_ref_link.py relink --out DIR [--keep-debug] [--flag /X]`
+makes scratch variants, and `measure --out DIR` reads them. Tests:
+`tools/tests/test_opt_ref_link.py`, in `make tools-test`.
+
 ## Native code in winapi links (`winapi_link_audit.py`)
 
 The matching build and the MinGW reference build must link no native-backend
@@ -798,8 +824,8 @@ entry-chain symbol (`LegorrrMain`, `LegorrrRun`, `gods98_engine_name`,
 It then prints `.text` by category: annotated original code (from
 `reccmp-report/results.json`), port code by link-order kind, LIBC and import
 thunks; `--json` writes both. `make reccmp-check` and `make match-progress`
-run it. How much port code `/OPT:REF` would drop is #562's measure, not this
-tool's.
+run it. How much of each category `/OPT:REF` would drop is `opt_ref_link.py`'s
+measure (finding 576), which reuses these categories.
 
 Port-only code inside a shared file that only the native backend or the
 native tests use goes in `#if !defined(LEGORRR_BACKEND_WINAPI)`, after the

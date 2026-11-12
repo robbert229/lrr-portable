@@ -88,6 +88,10 @@ That PR also measures `/OPT:REF`. With `/DEBUG`, LINK defaults to
 `/OPT:NOREF` and keeps unreferenced COMDATs; the original was probably
 linked without `/DEBUG`. Adopt `/OPT:REF` only if it changes no score.
 
+*Amended by the link-mode addendum of 2026-11-12 (#562, finding 576): the
+matching build keeps two links of the same objects, and the gate takes
+`/OPT:REF` only when no annotated function is unreferenced.*
+
 ### 3. Units are relocated before they are converted
 
 Restructuring separates two operations:
@@ -343,6 +347,28 @@ Of six orders tested, only the one above reproduces all three properties of the 
 - `RtlUnwind`'s thunk last, after `dsound`'s.
 
 `libc.lib` must be listed explicitly, after `kernel32.lib` and before `d3drm.lib`. Its position relative to `ole32.lib`, and that of `oldnames.lib`, are not fixed by the evidence. In the `/DEBUG` gate (`/OPT:NOREF`), `kernel32.lib`'s unreferenced first-pass thunks precede LIBC until the link mode changes (#562).
+
+## Addendum (2026-11-12): link mode
+
+**Status: proposed by #562** ([finding 576](../findings/576-link-mode-and-unreferenced-code.md)). It amends decision 2's `/OPT:REF` paragraph.
+
+The original was linked without `/DEBUG`, so `/OPT:REF` was in effect (finding 563). Reccmp needs the linker's PDB, which LINK 5.0 writes only with `/DEBUG`, and it reads no map file. The matching build therefore keeps **two links of one set of objects**:
+
+1. **The gate** links with `/DEBUG` (so `/OPT:NOREF`). It gives Reccmp its PDB, the scores and the baseline.
+2. **The original-mode link** relinks the gate's objects without `/DEBUG` (`make opt-ref-link`, `tools/opt_ref_link.py`; no recompile). `make match-progress` runs it, and `binary-progress.json` records it as `opt_ref`:
+   - what `/OPT:REF` removes, per link-order category;
+   - the annotated and exact functions among the removed code;
+   - the relinked image compared with the original.
+
+At equal `/OPT` setting the two links differ only in `.rdata`: the 84-byte debug directory moves 102 items by 80 or 88 bytes, and the operands that refer to them change. Function addresses, `.data`, `.bss`, `.idata` and the entry point are equal.
+
+**When the gate takes `/OPT:REF`.** On `1d31a556`, `/OPT:REF` removes 1,262 annotated functions, 528 of them exact, because their live callers are still port code. The gate's link takes `/OPT:REF`, with `/DEBUG` kept, once `opt_ref.annotated.full.removed` reaches its floor. The floor is zero, or the annotated subset of the original's own unreferenced functions while the objects keep `/Gy` (#553).
+- The switch is a link-only PR (decision 7 rule 1).
+- The whole-binary measures of `binary-progress.json` can then move to the original-mode link.
+
+**Rejected:**
+- Stripping or relocating the debug directory after a `/DEBUG` link: the image has no `.reloc`, the shift is not uniform, and the PDB would no longer describe the patched executable.
+- Pairing a PDB from one link with another link's executable: it loses 45 exact matches through the `.rdata` shift.
 
 ## Consequences
 

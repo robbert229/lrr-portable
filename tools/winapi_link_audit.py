@@ -23,8 +23,8 @@ must never reach them.
 
 The category report splits ``.text`` into annotated original code, port code
 (non-annotated code in unit, legacy and tail objects), LIBC and import
-thunks. How much of the port code ``/OPT:REF`` would drop is #562's
-measure; this tool does not repeat it.
+thunks. How much of it ``/OPT:REF`` would drop is #562's measure
+(``opt_ref_link.py``, finding 576); it reuses these categories.
 """
 
 from __future__ import annotations
@@ -141,8 +141,8 @@ def check_link(entries, objects: list[str], libraries: list[str], map_text: str)
     return problems
 
 
-def text_categories(map_text: str, entries, annotated: set[int] | None) -> dict:
-    """Bytes and function counts of the linked .text, by category.
+def text_symbols(map_text: str, entries, annotated: set[int] | None) -> list[dict]:
+    """The linked .text's map symbols, each with its size and category.
 
     Each map symbol owns the bytes up to the next one. ``annotated`` holds the
     rebuilt addresses of Reccmp's mapped functions; without it every unit,
@@ -153,29 +153,35 @@ def text_categories(map_text: str, entries, annotated: set[int] | None) -> dict:
     text = sorted((s for s in symbols if s["section"] == 1), key=lambda s: s["offset"])
     ends = [g["offset"] + g["length"] for g in groups if g["section"] == 1]
     end = max(ends) if ends else (text[-1]["offset"] if text else 0)
-    out: dict[str, dict] = {}
-
-    def add(category: str, size: int) -> None:
-        row = out.setdefault(category, {"bytes": 0, "functions": 0})
-        row["bytes"] += size
-        row["functions"] += 1
-
+    out = []
     for i, s in enumerate(text):
         size = (text[i + 1]["offset"] if i + 1 < len(text) else end) - s["offset"]
         if size <= 0:
             continue
         kind = pe_audit.classify_object(s["object"], kinds)
+        address = TEXT_BASE + s["offset"]
         if kind in ("unit", "legacy", "tail"):
-            if annotated is not None and TEXT_BASE + s["offset"] in annotated:
-                add("original_annotated", size)
+            if annotated is not None and address in annotated:
+                category = "original_annotated"
             else:
-                add("port_" + kind, size)
+                category = "port_" + kind
         elif kind == "libc":
-            add("libc", size)
+            category = "libc"
         elif kind == "import":
-            add("import_thunks", size)
+            category = "import_thunks"
         else:
-            add("other", size)
+            category = "other"
+        out.append(dict(s, size=size, address=address, kind=kind, category=category))
+    return out
+
+
+def text_categories(map_text: str, entries, annotated: set[int] | None) -> dict:
+    """Bytes and function counts of the linked .text, by category (``text_symbols``)."""
+    out: dict[str, dict] = {}
+    for s in text_symbols(map_text, entries, annotated):
+        row = out.setdefault(s["category"], {"bytes": 0, "functions": 0})
+        row["bytes"] += s["size"]
+        row["functions"] += 1
     out["total"] = {"bytes": sum(r["bytes"] for r in out.values()),
                     "functions": sum(r["functions"] for r in out.values())}
     return out
@@ -191,8 +197,8 @@ def annotated_addresses(report_dir: Path) -> set[int] | None:
 
 
 def format_categories(categories: dict) -> str:
-    lines = ["winapi link .text by category (port code includes code /OPT:REF would drop; "
-             "see #562):"]
+    lines = ["winapi link .text by category (what /OPT:REF would drop: "
+             "tools/opt_ref_link.py):"]
     for name in ("original_annotated", "port_unit", "port_legacy", "port_tail", "libc",
                  "import_thunks", "other", "total"):
         if name in categories:
