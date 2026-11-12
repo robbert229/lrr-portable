@@ -93,6 +93,8 @@ extern char** environ;
 #include "crt_for_reward.hpp"
 #include "crt_for_panel_unit.hpp"
 #include "crt_from_panel_unit.hpp"
+#include "crt_for_frontend_unit.hpp"
+#include "crt_from_frontend_unit.hpp"
 
 #if defined(_MSC_VER)
 #define crt_math_error_code_set _set_errno
@@ -593,36 +595,6 @@ int crt_float_to_long(float value)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00417430
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int float_to_long_x87(unsigned int index, const void* record)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        mov edx, dword ptr [esp + 8]
-        mov eax, ecx
-        shl eax, 5
-        add eax, ecx
-        lea eax, [eax + eax * 2]
-        lea ecx, [ecx + eax * 8]
-        shl ecx, 4
-        mov eax, dword ptr [edx + 0x34]
-        fld dword ptr [ecx + eax + 0x2fb8]
-        jmp _ftol
-    }
-}
-#else
-int float_to_long_x87(unsigned int index, const void* record)
-{
-    uintptr_t values = 0;
-    uint32_t offset = index * 0x3190u;
-    float value;
-    memcpy(&values, (const char*)record + 0x34, sizeof(uintptr_t));
-    memcpy(&value, (const char*)values + offset + 0x2fb8, sizeof(value));
-    return crt_float_to_long(value);
-}
-#endif
-
 /* Portable typed adapter for ordinary C++ callers. */
 int float_to_long(float value)
 {
@@ -870,37 +842,6 @@ int bit_count32(uint32_t value)
         ++n;
     }
     return n;
-}
-
-/* FUN_0047d700: popcount via the per-position test loop. */
-// FUNCTION: LEGORR 0x0047d700
-int pop_count32(uint32_t value)
-{
-    int count = 0;
-    uint32_t position = 0u;
-    do {
-        if ((value & (1u << position)) != 0u) {
-            ++count;
-        }
-        ++position;
-    } while (position < 0x20u);
-    return count;
-}
-
-/* FUN_0047d720: index of the lowest set bit, 0xffffffff for zero. The
- * corpus's 0x47d72e `shl esi,cl` repeatedly shifts its live mask; without
- * resetting that mask, it answers 2 for 0x8 rather than the tested 3.
- * Keep the one-hot-per-position semantics; the i&31 is redundant under
- * the i < 32 bound. */
-// FUNCTION: LEGORR 0x0047d720
-uint32_t find_first_set_bit32(uint32_t value)
-{
-    for (uint32_t i = 0; i < 32u; ++i) {
-        if ((value & (1u << i)) != 0u) {
-            return i;
-        }
-    }
-    return 0xffffffffu;
 }
 
 /* FUN_0047e7e0: the corpus's second identical position-loop body. */
@@ -2351,102 +2292,6 @@ void scene_sample_hook_register(void* hook, void* value)
 void* scene_sample_hook_peek(void) { return s_scene_sample_hook; }
 void* scene_sample_hook_value_peek(void) { return s_scene_sample_value; }
 
-/* --- the string registry (see crt.hpp) ------------------------------------- */
-// GLOBAL: LEGORR 0x004db8cc
-static void* s_string_registry_head; /* DAT_004db8cc role: unowned */
-
-// FUNCTION: LEGORR 0x00410450
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* Corpus 0x410450..0x410485 keeps the empty-head exit and list walk in this
- * order, including the annotated strcasecmp_lite call. */
-__declspec(naked) void* string_keyed_cache_entry_find(const char* key)
-{
-    __asm {
-        push esi
-        mov esi, dword ptr [s_string_registry_head]
-        test esi, esi
-        push edi
-        je string_cache_empty
-        mov edi, dword ptr [esp + 0ch]
-    string_cache_next:
-        mov eax, dword ptr [esi]
-        push eax
-        push edi
-        call _strcmpi
-        add esp, 8
-        test eax, eax
-        je string_cache_match
-        mov esi, dword ptr [esi + 0ch]
-        test esi, esi
-        jne string_cache_next
-        xor eax, eax
-        pop edi
-        pop esi
-        ret
-    string_cache_match:
-        mov eax, esi
-        pop edi
-        pop esi
-        ret
-    string_cache_empty:
-        pop edi
-        xor eax, eax
-        pop esi
-        ret
-    }
-}
-#else
-void* string_keyed_cache_entry_find(const char* key)
-{
-    /* Corpus walk: the head gates once, the name rides strcasecmp_lite
-     * untested (intern only ever links an entry whose duplicated name
-     * landed), and the +0x0c link advances through a bottom-tested
-     * test/jne. */
-    void* entry = s_string_registry_head;
-    if (entry == NULL) {
-        return NULL;
-    }
-    for (;;) {
-        if (strcasecmp_lite(*(char**)entry, key) == 0) {
-            return entry;
-        }
-        /* corpus mov esi,[esi+0xc]: link is field 3 (0xc on the 32-bit
-         * target; native entries are widened, see string_registry_intern) */
-        entry = *(void**)((char*)entry + 3 * sizeof(void*));
-        if (entry == NULL) {
-            return NULL;
-        }
-    }
-}
-#endif
-
-// FUNCTION: LEGORR 0x00410490
-void* string_registry_intern(const char* key)
-{
-    if (key == NULL || *key == '\0') {
-        return NULL; /* corpus's null-pointer and empty-string exits */
-    }
-    void* entry = string_keyed_cache_entry_find(key);
-    if (entry != NULL) {
-        return entry;
-    }
-    /* Corpus strdup idiom: both allocations are unchecked (the corpus
-     * stores blind — a NULL allocator answer writes through it), the
-     * length rides the inlined strlen intrinsic into the alloc push, and
-     * the copy pointer lands in field 0 before the inlined strcpy runs. */
-    void* record = engine_heap_alloc(4 * sizeof(void*)); /* 0x10 on x86-32 */
-    char** slots = (char**)record;
-    char* copy = (char*)engine_heap_alloc((long)strlen(key) + 1);
-    slots[0] = copy; /* the corpus stores the copy pointer before the copy */
-    strcpy(copy, key);
-    void* head = s_string_registry_head; /* the head is loaded once, here */
-    slots[1] = NULL;
-    slots[3] = (char*)head;
-    slots[2] = NULL;
-    s_string_registry_head = record;
-    return record;
-}
-
 void string_registry_reset(void)
 {
     const long field = (long)sizeof(void*);
@@ -2464,7 +2309,7 @@ void string_registry_reset(void)
 }
 
 static void* (*s_bitmap_surface_loader)(const char*);
-static void* (*s_font_resource_loader)(const char*);
+void* (*s_font_resource_loader)(const char*);
 
 void string_cache_bitmap_loader_set(void* (*hook)(const char*))
 {
@@ -2501,41 +2346,12 @@ static void* s_entry_cache_slot_get(const char* key, long slot,
     return value;
 }
 
-// FUNCTION: LEGORR 0x00410520
-static void* string_cache_lookup_or_load_corpus(const char* key)
-{
-    if (key != NULL && *key != '\0') {
-        void* entry = string_registry_intern(key);
-        void** value_slot = (void**)((char*)entry + sizeof(void*));
-        if (*value_slot == NULL) {
-            *value_slot = image_surface_load(key, 0u, 0u);
-        }
-        return *value_slot;
-    }
-    return NULL;
-}
-
 void* string_cache_lookup_or_load(const char* key)
 {
     if (s_bitmap_surface_loader != NULL) {
         return s_entry_cache_slot_get(key, 1, s_bitmap_surface_loader);
     }
     return string_cache_lookup_or_load_corpus(key);
-}
-
-// FUNCTION: LEGORR 0x00410560
-void* resource_name_cache_get_or_load(const char* key)
-{
-    if (key != NULL && *key != '\0') {
-        void* entry = string_registry_intern(key);
-        void** value_slot = (void**)((char*)entry + 2 * sizeof(void*));
-        if (*value_slot == NULL) {
-            *value_slot = (s_font_resource_loader != NULL)
-                ? s_font_resource_loader(key) : NULL;
-        }
-        return *value_slot;
-    }
-    return NULL;
 }
 
 void selection_marker_slot_set(int index, void* ptr)
@@ -3108,12 +2924,6 @@ uint32_t s_renderer_window_state_b8; /* DAT_0076acb8 */
 // GLOBAL: LEGORR 0x0050608c
 uint32_t s_render_feature_flags; /* DAT_0050608c */
 
-// FUNCTION: LEGORR 0x00410b30
-uint32_t renderer_word_a_get(void) { return s_renderer_word_a; } /* FUN_00410b30 */
-// FUNCTION: LEGORR 0x00410b40
-uint32_t renderer_word_b_get(void) { return s_renderer_word_b; } /* FUN_00410b40 */
-// FUNCTION: LEGORR 0x00410b50
-uint32_t renderer_word_c_get(void) { return g_renderer_word_c; } /* FUN_00410b50 */
 void renderer_word_c_set(uint32_t value) { g_renderer_word_c = value; }
 void renderer_words_set(uint32_t a, uint32_t b, uint32_t c)
 {

@@ -279,6 +279,7 @@ class Split:
     item: cx.Item
     text: str                 # the replacement, one declaration per line
     kind: str                 # declarators or type-and-variables
+    start: int = -1           # where the replacement starts, when before the item (#525)
 
 
 @dataclass
@@ -959,7 +960,34 @@ def _need_split(plan: Plan, s: Source, it: cx.Item, reasons: list[str], why: str
     except ValueError as e:
         reasons.append(f"{where}: {why}, and it cannot be split: {e}")
         return
-    plan.splits.append(Split(s.rel, it, text, kind))
+    start = -1
+    if kind == "type-and-variables":
+        text, start = _annotations_onto_variable(s.text, it, text)
+    plan.splits.append(Split(s.rel, it, text, kind, start))
+
+
+def _annotations_onto_variable(text: str, it: cx.Item, split: str) -> tuple[str, int]:
+    """Move a type-and-variables split's annotations onto its first variable.
+
+    The annotations in the leading comments named the variable, not the
+    type (#525: ``resource.cpp``'s ``s_handle_set_band``). They leave the
+    leading comments and go directly above the first variable declaration,
+    so the replacement then starts at the leading comments."""
+    if it.lead < 0 or it.lead >= it.start:
+        return split, -1
+    lead = text[it.lead:it.start]
+    lines = lead.splitlines(keepends=True)
+    notes = [ln for ln in lines if cx.ANNOTATION.match(ln)]
+    if not notes:
+        return split, -1
+    kept = "".join(ln for ln in lines if not cx.ANNOTATION.match(ln))
+    masked, depth, type_end = cx.mask(split), 0, -1
+    for k in range(masked.index("{"), len(masked)):
+        depth += {"{": 1, "}": -1}.get(masked[k], 0)
+        if depth == 0:
+            type_end = masked.index("\n", k) + 1     # past "};" and its line end
+            break
+    return kept + split[:type_end] + "".join(notes) + split[type_end:], it.lead
 
 
 def _split_declaration(text: str, it: cx.Item) -> tuple[str, str]:
@@ -1065,7 +1093,7 @@ def _render_splits(plan: Plan, reasons: list[str]) -> None:
             continue
         out, last = [], 0
         for x in mine:
-            out.append(s.text[last:x.item.start])
+            out.append(s.text[last:x.start if x.start >= 0 else x.item.start])
             out.append(x.text)
             last = x.item.end
         out.append(s.text[last:])
@@ -1247,9 +1275,15 @@ def _const_object(head: str, name: str) -> bool:
 def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int, why: str,
                   reasons: list[str], direction: str = "for") -> list[Decl]:
     """External declarations for the private header, from a cluster's definition."""
-    group = next((items[k] for k in cl.members[c] if items[k].cgroup), None)
-    if group is not None:
-        return _group_declarations(s, group, why, reasons, direction)
+    groups = [items[k] for k in cl.members[c] if items[k].cgroup]
+    if groups:
+        # Every group that defines something is declared, not only the
+        # first: a macro-only group can share a name with a data group, as
+        # frontend.cpp's winapi `#define s_fe_flow` and its non-winapi
+        # `int s_fe_flow[5]` do (#525).
+        defining = [g for g in groups if any(p.category in ("function", "var", "proto") for p in g.parts)]
+        return [d for g in (defining or groups[:1])
+                for d in _group_declarations(s, g, why, reasons, direction)]
     defs = [items[k] for k in cl.members[c] if items[k].category in ("function", "var")
             and not _is_extern_decl(items[k])]
     protos = [items[k] for k in cl.members[c] if items[k].category == "proto"]
@@ -1311,12 +1345,32 @@ def _declaration(s: Source, it: cx.Item, name: str, scope: str, why: str, reason
             reasons.append(f"{where}: {it.names[0]} has default arguments; a declaration cannot repeat them")
             return []
         return [Decl(name, f"{prefix}{head};", why, scope, direction)]
-    decl = cx._split_top(head, "=")[0].strip()
+    parts = cx._split_top(head, "=")
+    decl = parts[0].strip()
+    if len(parts) > 1 and re.search(r"\[\s*\]$", decl):
+        decl = _bounded(decl, "=".join(parts[1:]))
     if not decl.startswith("extern"):
         decl = "extern " + decl
     if prefix:
         decl = prefix + decl[len("extern "):]
     return [Decl(name, decl + ";", why, scope, direction, _const_object(head, it.names[0]))]
+
+
+def _bounded(decl: str, init: str) -> str:
+    """``T a[]`` with the bound its brace initializer implies (#525).
+
+    ``extern T a[];`` is an incomplete type, so a user's ``sizeof a`` would
+    stop compiling in the file that gets only the declaration. A
+    one-dimensional brace list gives the count; anything else is left as
+    written."""
+    body = init.strip()
+    if not (body.startswith("{") and body.endswith("}")):
+        return decl
+    masked = cx.mask(body[1:-1])
+    if not masked.strip():
+        return decl
+    elements = [e for e in cx._split_top(masked) if e.strip()]
+    return re.sub(r"\[\s*\]$", f"[{len(elements)}]", decl)
 
 
 def _check_clashes(plan: Plan, root: Path, reasons: list[str]) -> None:
@@ -1454,6 +1508,17 @@ def _blocks(chunks: list[tuple[str | None, str]], sep: str = "\n") -> list[str]:
     return out
 
 
+def _include_only_group(scan, it) -> "cx.Group | None":
+    """The top-level, non-nested #if group around include ``it`` when the
+    group holds only ``#include`` lines (#525), else None."""
+    if it.cond != 1 or it.container or not it.in_group or it.group_why != "it holds only #include lines":
+        return None
+    for g in scan.groups:
+        if g.end >= 0 and not g.in_item and not g.nested and g.start <= it.start < g.end:
+            return g
+    return None
+
+
 def _spell(spelled: str, including: str, target: str, library: str, headers: Headers) -> str:
     """The include spelling that resolves from ``target`` to the same file."""
     if spelled.startswith("<"):
@@ -1511,21 +1576,41 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
     # A legacy file's private headers come along only when the unit uses a
     # name they declare: they are frozen, so including them is safe, but a
     # unit that does not need them should not count their declarations.
-    includes, seen, skipped = [], set(), []
+    # A moved const object needs an extern before its definition, or C++
+    # gives it internal linkage. An earlier relocation's private header of
+    # the legacy file may hold that extern for another unit file (#525:
+    # GAME-017's s_map_open_binary_mode, declared for files.cpp by
+    # level_for_files.hpp): the unit then includes that header.
+    const_defs = {m.item.names[0] for s in plan.sources for m in s.moves
+                  if m.item.category == "var" and not m.item.static and len(m.item.names) == 1
+                  and not m.item.cgroup and _const_object(_head_decl(s, m.item), m.item.names[0])}
+    # A top-level #if group that holds only #include lines (#525) is copied
+    # verbatim, in its place, once: the unit needs the platform headers it
+    # selects. Other conditional includes are not copied.
+    includes, seen, skipped, copied_groups = [], set(), [], set()
     for s in ordered_sources:
         for it in s.scan.items:
             if it.category != "include" or not it.include:
                 continue
             if it.cond or it.container:
-                skipped.append(f"{s.rel}:{it.line} {it.include}")
+                g = _include_only_group(s.scan, it)
+                members = [x for x in s.scan.items if g is not None and g.start <= x.start < g.end]
+                if g is None or any(_spell(x.include, s.rel, plan.target, s.entry.library, headers)
+                                    != x.include for x in members):
+                    skipped.append(f"{s.rel}:{it.line} {it.include}")
+                    continue
+                block = s.scan.text[g.start:g.end].rstrip("\n")
+                if block not in copied_groups:
+                    copied_groups.add(block)
+                    includes.append(block)
                 continue
             resolved = headers.resolve(it.include, s.rel, s.entry.library) or it.include
             if resolved in seen:
                 continue
-            if is_private_header(root, resolved) and not (_names_in_file(root / resolved) & needed):
+            if is_private_header(root, resolved) and not (_names_in_file(root / resolved) & (needed | const_defs)):
                 continue
             seen.add(resolved)
-            includes.append(_spell(it.include, s.rel, plan.target, s.entry.library, headers))
+            includes.append("#include " + _spell(it.include, s.rel, plan.target, s.entry.library, headers))
     if skipped:
         plan.notes.append("Conditional includes not copied (the build checks the result): " + ", ".join(skipped))
     private = [s.for_header for s in ordered_sources if s.shares_for]
@@ -1604,7 +1689,7 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
            f"/* {u.unit_id} {title}: the unit's functions in original address order and the",
            " * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).",
            f" * Body hashes: {RECORDS}/{u.unit_id}.csv. */"]
-    out += [f"#include {i}" for i in includes]
+    out += includes
     out += [_private_include(h, plan.target) for h in private]
     body = ["\n".join(out) + "\n"]
     if usings:

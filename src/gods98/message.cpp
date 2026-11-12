@@ -15,11 +15,8 @@
 #include "crt/crt.hpp"
 #include "message_shared.hpp"
 #include "message_for_lego.hpp"
+#include "message_for_interface.hpp"
 
-/* UI-owned operations used by IncidentMessageTextConsumer. The text output
- * record layout and implementations live in game/frontend.cpp; forward
- * declarations avoid pulling its broad header into the engine message module. */
-extern uint32_t interaction_flags_peek(void);
 extern void interaction_flags_set(uint32_t flags);
 
 void* s_ui_message_primary_font;
@@ -71,11 +68,10 @@ void* s_message_nodes[MESSAGE_NODE_LIMIT];
 int s_message_node_count;
 MessagePanelRefreshHook s_panel_refresh_hook;
 void* s_panel_refresh_context;
-#define CATALOG_SLOT_CAPACITY 256
-static CatalogSlotPredicateHook s_catalog_slot_eligible;
-static CatalogSlotPredicateHook s_catalog_slot_available;
-static CatalogSlotRankHook s_catalog_slot_rank;
-static void* s_catalog_slot_context;
+CatalogSlotPredicateHook s_catalog_slot_eligible;
+CatalogSlotPredicateHook s_catalog_slot_available;
+CatalogSlotRankHook s_catalog_slot_rank;
+void* s_catalog_slot_context;
 InfoMessageQueueTickOps s_info_message_queue_tick_ops;
 IncidentMessageTextConsumerOps s_incident_message_text_ops;
 
@@ -89,7 +85,7 @@ void catalog_slot_flag_hooks_set(CatalogSlotPredicateHook eligible,
     s_catalog_slot_context = context;
 }
 
-static int catalog_slot_table_index(int category)
+int catalog_slot_table_index(int category)
 {
     if (category == 1) return 0;
     if (category == 4) return 1;
@@ -115,46 +111,6 @@ void catalog_slot_flag_global_state_set(uint32_t flags)
     interaction_flags_set(flags);
 }
 
-// FUNCTION: LEGORR 0x0041c800
-void catalog_slot_flag_update(int category, int slot)
-{
-    uint32_t flags;
-    int should_clear = 0;
-    if (catalog_slot_table_index(category) < 0 || slot < 0 ||
-        slot >= CATALOG_SLOT_CAPACITY) return;
-    flags = input_binding_state_word_get(category, slot);
-    if ((flags & 2u) == 0 &&
-        (interaction_flags_peek() & 0x80u) != 0u) {
-        if (s_catalog_slot_eligible != NULL
-            && s_catalog_slot_available != NULL
-            && s_catalog_slot_eligible(category, slot,
-                                        s_catalog_slot_context) != 0
-            && s_catalog_slot_available(category, slot,
-                                        s_catalog_slot_context) != 0) {
-            if (category == 4) {
-                should_clear = 1;
-            }
-            else {
-                /* The retail path calls FUN_00469af0, then the empty
-                 * FUN_0041f8e0. Its EAX is therefore still the rank, so the
-                 * caller's `rank <= result` test is rank <= rank. Preserve
-                 * the rank query's side effects when a live owner supplies
-                 * one, but don't replace that no-op with an invented limit. */
-                if (s_catalog_slot_rank != NULL)
-                    (void)s_catalog_slot_rank(category, slot,
-                                              s_catalog_slot_context);
-                should_clear = 1;
-            }
-        }
-        if (should_clear) flags &= ~1u;
-        else flags |= 1u;
-    }
-    else {
-        flags |= 1u;
-    }
-    input_binding_state_word_set(category, slot, flags);
-}
-
 /* The InfoMessages catalog — finding 22's 40 names, in table order. The
  * corpus copies these pointers into the zero-filled runtime table at
  * DAT_004dc658 during CatalogInit. */
@@ -170,8 +126,6 @@ const char* const s_catalog_defaults[MESSAGE_MAX_ID] = {
     "CanTrainMinifigure", "CrystalSeamFound", "GenericSeamFound",
     "GenericDeath", "GenericMonster",
 };
-// GLOBAL: LEGORR 0x004dcd58
-uint32_t s_incident_state;
 
 void message_init_defaults(void)
 {
@@ -391,23 +345,6 @@ float message_cooldown(int id)
 uint32_t deferred_callback_peek(void)
 {
     return s_deferred_callback_presence;
-}
-
-/* HasActiveResource (FUN_004119d0) — see message.hpp. */
-// FUNCTION: LEGORR 0x004119d0
-int has_active_resource(const void* record)
-{
-    uint32_t handle = 0u;
-    if (record != NULL) {
-        __builtin_memcpy(&handle, (const char*)record + 0x38, sizeof handle);
-    }
-    if (record == NULL || handle == 0u) {
-        return 0;
-    }
-    if (system_state_flags_get() == 0u) {
-        return 0;
-    }
-    return 1;
 }
 
 /* --- the indexed-list window (see message.hpp) ---------------------------- */

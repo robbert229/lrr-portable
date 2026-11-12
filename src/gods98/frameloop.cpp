@@ -2009,6 +2009,8 @@ static void frame_camera_target_registry_update(EngineContext* engine,
     engine->camera_target_count = count;
 }
 #include "game/util.hpp"
+#include "frameloop_for_frontend_unit.hpp"
+#include "frameloop_from_frontend_unit.hpp"
 
 static const char* env_get(const char* name, const char* fallback)
 {
@@ -2060,7 +2062,7 @@ static void frameloop_resource_startup_services_install(void)
     resource_startup_ops_set(&ops);
 }
 
-static int s_icontains(const char* haystack, const char* needle)
+int s_icontains(const char* haystack, const char* needle)
 {
     if (haystack == NULL || needle == NULL) {
         return 0;
@@ -2451,12 +2453,7 @@ static void frameloop_load_level(FILE* log, const char* wad_dir,
     (void)views;
 }
 
-static void menu_save_image_config_rect_blit(FrontEnd* fe,
-                                             GameContext* game,
-                                             int item_index, void* pixels,
-                                             int pitch, int width, int height);
-
-static void frameloop_blit_texture_scaled(const TextureSurface* texture,
+void frameloop_blit_texture_scaled(const TextureSurface* texture,
                                           void* pixels, int pitch,
                                           int width, int height, int x, int y,
                                           int draw_w, int draw_h)
@@ -2814,54 +2811,6 @@ static void frameloop_level_return_begin(FrameloopApplicationState* app)
     app->reward_frame.zone_action_consumed = 0;
 }
 
-/* MenuOverlaySurfaceAndTextSetup (FUN_004129d0): the corpus resets the
- * save/load panel surface and its text resources when entering these menu
- * records. The frame-driven adapter composes the typed panel layout and the
- * current menu text on the software surface. */
-// FUNCTION: LEGORR 0x004129d0
-static void menu_overlay_surface_and_text_setup(
-    FrontEnd* fe, const TextureSurface* hi_font, const TextureSurface* lo_font,
-    void* pixels, int pitch, int width, int height, int draw_cursor)
-{
-    if (fe == NULL || pixels == NULL) {
-        return;
-    }
-    const char* image = frontend_active_image(fe);
-    const FeSubmenu* active = frontend_active_submenu(fe);
-    const int picker = frontend_picker_active(fe);
-    if (picker) {
-        frontend_render_menu_pass(fe, hi_font, lo_font, width, height,
-                                  pixels, pitch, 1, draw_cursor);
-    }
-    if (active != NULL
-        && (frontend_picker_active(fe) || fe->menu == FE_MENU_SAVE
-            || (fe->menu == FE_MENU_MAIN && image != NULL
-                && s_icontains(image, "SaveLoad")))) {
-        const FeSaveMenuLayout* layout = frontend_picker_active(fe)
-                                             ? &fe->level_text_layout
-                                             : &fe->save_text_layout;
-        if (layout->has_panel && layout->panel_path[0] != '\0') {
-            TextureSurface* panel = texture_get_or_load(NULL,
-                                                        layout->panel_path);
-            if (panel != NULL) {
-                frameloop_blit_texture_scaled(panel, pixels, pitch, width,
-                                              height, layout->panel_x,
-                                              layout->panel_y, layout->panel_w,
-                                              layout->panel_h);
-                texture_release(panel);
-            }
-        }
-    }
-    frontend_picker_panel_text(fe, hi_font, pixels, pitch, width, height);
-    if (picker) {
-        frontend_render_menu_pass(fe, hi_font, lo_font, width, height,
-                                  pixels, pitch, 2, draw_cursor);
-    } else {
-        frontend_render_menu_pass(fe, hi_font, lo_font, width, height,
-                                  pixels, pitch, 0, draw_cursor);
-    }
-}
-
 /* The portable frontend owns modal menu admission. TransitionControl still
  * owns the reference pause bit, sound stop and eventual resume effects. */
 /* Choose the authored group at the real frame caller, not in TransitionControl. */
@@ -2946,76 +2895,6 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
     platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
     surface_unlock(surf, pixels);
-}
-
-/* MenuSaveImageConfigRectBlit (FUN_004124f0): load the selected slot's
- * framebuffer thumbnail and draw it in the configured SaveImage rectangle.
- * The port's TextureSurface replaces the corpus's cached DirectDraw handle. */
-// FUNCTION: LEGORR 0x004124f0
-static void menu_save_image_config_rect_blit(FrontEnd* fe,
-                                             GameContext* game,
-                                             int item_index, void* pixels,
-                                             int pitch, int width, int height)
-{
-    if (fe == NULL || game == NULL || pixels == NULL || fe->cfg == NULL
-        || item_index < 0) {
-        return;
-    }
-    const FeSubmenu* sub = frontend_active_submenu(fe);
-    const char* image = frontend_active_image(fe);
-    if (sub == NULL || image == NULL || !s_icontains(image, "SaveLoad")
-        || item_index >= sub->item_count) {
-        return;
-    }
-    const FeItem* item = &sub->items[item_index];
-    if (item->load_slot <= 0) {
-        return;
-    }
-
-    char key[160];
-    snprintf(key, sizeof(key), "%s::Menu::SaveImage::pos%d",
-             util_root_name(fe->cfg), item->load_slot);
-    const char* position = block_get_strptr(fe->cfg, key);
-    if (position == NULL) {
-        return;
-    }
-    const char* separator = strchr(position, ':');
-    if (separator == NULL || separator == position || separator[1] == '\0') {
-        return;
-    }
-    int x = atoi(position);
-    int y = atoi(separator + 1);
-    snprintf(key, sizeof(key), "%s::Menu::SaveImage::Width",
-             util_root_name(fe->cfg));
-    const char* width_value = block_get_strptr(fe->cfg, key);
-    int draw_w = atoi(width_value != NULL ? width_value : "");
-    snprintf(key, sizeof(key), "%s::Menu::SaveImage::Height",
-             util_root_name(fe->cfg));
-    const char* height_value = block_get_strptr(fe->cfg, key);
-    int draw_h = atoi(height_value != NULL ? height_value : "");
-    if (draw_w <= 0 || draw_h <= 0 || draw_w > width * 2
-        || draw_h > height * 2) {
-        return;
-    }
-
-    char thumb_path[320];
-    save_slot_path(game, thumb_path, sizeof(thumb_path), frontend_slot_raw_index(item->load_slot),
-                   "dat");
-    const int cache_index = item->load_slot - 1;
-    if (cache_index < 0 || cache_index >= FE_SAVE_THUMBNAIL_COUNT) {
-        return;
-    }
-    if (fe->save_thumbnails[cache_index] == NULL) {
-        fe->save_thumbnails[cache_index] =
-            texture_get_or_load(NULL, thumb_path);
-    }
-    TextureSurface* thumb = fe->save_thumbnails[cache_index];
-    if (thumb == NULL || thumb->pixels == NULL || thumb->width <= 0
-        || thumb->height <= 0) {
-        return;
-    }
-    frameloop_blit_texture_scaled(thumb, pixels, pitch, width, height,
-                                  (int)x, (int)y, draw_w, draw_h);
 }
 
 static int frameloop_game_init_callback(const char* root, void* user)

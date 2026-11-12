@@ -192,6 +192,50 @@ class ScannerTest(unittest.TestCase):
         self.assertEqual(by[("member",)].qualifier, "obj")
         self.assertEqual(by[("member",)].problems, [])
 
+    def test_block_scope_typedef_is_not_a_use_of_the_file_scope_name(self):
+        # surface.cpp's font_device_pixel_format_query (#525) declares its own
+        # SurfaceLockFn; the winapi region's file-scope one is not used.
+        text = textwrap.dedent("""\
+            typedef int (*LockFn)(void*);
+            typedef struct Desc { int size; } Desc;
+            static int query(void* device)
+            {
+                {
+                    typedef int (__stdcall *LockFn)(void*, void*);
+                    typedef struct { int a; int b; } Pair;
+                    LockFn lock = (LockFn)device;
+                    Pair p;
+                    return lock(device, &p) + (int)sizeof(Desc);
+                }
+            }
+            """)
+        query = next(i for i in cx.scan(text).items if i.names == ["query"])
+        self.assertNotIn("LockFn", query.uses)
+        self.assertNotIn("Pair", query.uses)
+        self.assertIn("Desc", query.uses)
+
+    def test_single_branch_group_around_one_annotated_datum_moves_whole(self):
+        # frontend.cpp's flow words (#525): the annotation sits on the
+        # declaration, inside the #if, because Reccmp reads the next line.
+        text = textwrap.dedent("""\
+            #if defined(WINAPI)
+            // GLOBAL: LEGORR 0x0055701c
+            static int s_flow_quit;
+            #endif
+            #if defined(WINAPI)
+            // GLOBAL: LEGORR 0x00557020
+            static int s_a;
+            #define A_REF s_a
+            #endif
+            """)
+        items = cx.scan(text).items
+        one = next(i for i in items if "s_flow_quit" in i.names)
+        self.assertTrue(one.cgroup)
+        self.assertEqual(one.problems, [])
+        self.assertEqual(one.annotations, [("GLOBAL", 0x0055701c)])
+        two = next(i for i in items if "s_a" in i.names)
+        self.assertTrue(any("only unannotated groups move whole" in p for p in two.problems), two.problems)
+
     def test_if_group_of_alternatives_merges(self):
         text = textwrap.dedent("""\
             // FUNCTION: LEGORR 0x00401000
@@ -641,6 +685,40 @@ class R1DefectTest(unittest.TestCase):
         finally:
             fx.close()
 
+    def test_include_only_if_group_is_copied_in_place(self):
+        # G98-014's resource.cpp (#525): a platform include group the moved
+        # code needs is copied verbatim, in order; a mixed group is not.
+        grouped = MIXED.replace('#include <string.h>\n',
+                                '#include <string.h>\n#if defined(_WIN32)\n#include <windows.h>\n'
+                                '#else\n#include <dirent.h>\n#endif\n'
+                                '#if defined(PORT_EXTRA)\n#include <stddef.h>\n#define PORT_EXTRA_ON 1\n#endif\n')
+        fx = Fixture(grouped)
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            unit = plan.files["src/game/alpha.cpp"]
+            block = "#if defined(_WIN32)\n#include <windows.h>\n#else\n#include <dirent.h>\n#endif\n"
+            self.assertEqual(unit.count(block), 1)
+            self.assertLess(unit.index("#include <string.h>"), unit.index(block))
+            self.assertLess(unit.index(block), unit.index('#include "mixed.hpp"'))
+            self.assertNotIn("<stddef.h>", unit)
+        finally:
+            fx.close()
+
+    def test_shared_unbounded_array_is_declared_with_its_bound(self):
+        # GAME-020's s_interface_menu_action_labels (#525): a moved user takes
+        # sizeof, so ``extern T a[];`` would be an incomplete type there.
+        labels = MIXED.replace("static int s_shared_counter;",
+                               'static int s_shared_counter;\nstatic const char* const s_labels[] = {\n'
+                               '    "a,b", /* one, */\n    "c",\n};') \
+            .replace("    s_shared_counter++;\n", "    s_shared_counter += (int)sizeof(s_labels[0][0]);\n") \
+            .replace("    s_shared_counter += p.a;\n", "    s_shared_counter += p.a + (int)sizeof(s_labels);\n")
+        fx = Fixture(labels)
+        try:
+            header = ru.plan_relocation("GAME-001", fx.root).files["src/game/mixed_for_alpha.hpp"]
+            self.assertIn("extern const char* const s_labels[2];", header)
+        finally:
+            fx.close()
+
     def test_late_private_include_is_caught(self):
         fx = Fixture(MIXED)
         original = ru._insert_include
@@ -758,6 +836,24 @@ class PerRelocationHeaderTest(unittest.TestCase):
         try:
             plan = ru.plan_relocation("GAME-001", fx.root)
             self.assertIn('#include "mixed_from_alpha.hpp"', plan.files["src/game/alpha.cpp"])
+        finally:
+            fx.close()
+
+    def test_const_object_keeps_an_earlier_private_header_with_its_extern(self):
+        # GAME-017's s_map_open_binary_mode (#525): an earlier relocation's
+        # frozen header of the legacy file declares the const object for its
+        # own unit file. The moved definition needs that extern first.
+        earlier = ("// SPDX-License-Identifier: LGPL-3.0-or-later\n#ifndef MIXED_FOR_GAMMA_HPP\n"
+                   "#define MIXED_FOR_GAMMA_HPP\nextern const char s_alpha_mode[];\n#endif\n")
+        mixed = MIXED.replace('#include "mixed.hpp"\n', '#include "mixed.hpp"\n#include "mixed_for_gamma.hpp"\n') \
+            .replace("// GLOBAL: LEGORR 0x004b0000\nstatic int s_alpha_state = 0; /* owned by Alpha */",
+                     '// GLOBAL: LEGORR 0x004b0000\nconst char s_alpha_mode[] = "rb";\n'
+                     "static int s_alpha_state = 0; /* owned by Alpha */")
+        fx = Fixture(mixed, {"src/game/mixed_for_gamma.hpp": earlier})
+        try:
+            unit = ru.plan_relocation("GAME-001", fx.root).files["src/game/alpha.cpp"]
+            self.assertIn('const char s_alpha_mode[] = "rb";', unit)
+            self.assertLess(unit.index('#include "mixed_for_gamma.hpp"'), unit.index("s_alpha_mode"))
         finally:
             fx.close()
 
@@ -951,6 +1047,20 @@ class SplitTest(unittest.TestCase):
         header = relocation.files["src/game/mixed_for_alpha.hpp"]
         self.assertIn("struct Counter {", header)                  # the type, shared
         self.assertIn("extern struct Counter s_counter_record;", header)
+
+    def test_type_and_variable_split_moves_the_annotation_onto_the_variable(self):
+        # GAME-020's s_handle_set_band (#525): the GLOBAL names the variable.
+        mixed = MIXED.replace("static int s_shared_counter;",
+                              "/* The band. */\n// GLOBAL: LEGORR 0x004b0008\nstatic struct Counter {\n"
+                              "    struct { int x; } inner;\n    int value;\n} s_counter_record; /* tail */\n"
+                              "static int s_shared_counter;") \
+            .replace("    s_shared_counter++;\n", "    s_shared_counter++;\n    s_counter_record.value++;\n") \
+            .replace("    s_shared_counter += p.a;\n", "    s_shared_counter += p.a + s_counter_record.value;\n")
+        fx = self.split_fixture(mixed)
+        plan = ru.plan_relocation("GAME-001", fx.root, split=True)
+        self.assertIn("/* The band. */\nstruct Counter {\n    struct { int x; } inner;\n    int value;\n};\n"
+                      "// GLOBAL: LEGORR 0x004b0008\nstatic struct Counter s_counter_record; /* tail */\n",
+                      plan.files["src/game/mixed.cpp"])
 
     def test_untagged_type_cannot_be_split(self):
         mixed = MIXED.replace("static int s_shared_counter;",
@@ -1347,6 +1457,16 @@ class ConditionalGroupTest(unittest.TestCase):
         fx, plan = self.plan(self.guarded(group))
         self.assertIn("#if defined(FEATURE)\nextern int s_cond;\n#endif\n",
                       plan.files["src/game/mixed_for_alpha.hpp"])
+
+    def test_macro_group_sharing_a_name_with_a_data_group(self):
+        # frontend.cpp (#525): a winapi-only `#define s_cond …` and a
+        # non-winapi `static int s_cond;` share a name and so a cluster; the
+        # data group still gets its guarded declaration.
+        group = ("#if defined(OTHER)\n#define s_cond (s_shared_counter + 1)\n#endif\n"
+                 "#if defined(FEATURE)\nstatic int s_cond;\n#endif\n")
+        fx, plan = self.plan(self.guarded(group))
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
+        self.assertIn("#if defined(FEATURE)\nextern int s_cond;\n#endif\n", header)
 
     def test_static_outside_the_first_branch_refuses(self):
         group = "#if defined(OTHER)\n#define s_cond_alias 1\n#else\nstatic int s_cond;\n#endif\n"

@@ -11,6 +11,7 @@
 #include "gods98/heap.hpp"
 #include "gods98/audio.hpp"
 #include "gods98/string.hpp"
+#include "options_for_frontend_unit.hpp"
 
 /* One descriptor per control: banner name (normalized for matching), the
  * shipped config range, the documented default, and the store field. The
@@ -105,7 +106,7 @@ static int* option_field(GameOptions* o, int id)
 }
 
 /* The corpus's fallback assigns only this effective option triple. */
-static void options_load_corpus_defaults(GameOptions* o)
+void options_load_corpus_defaults(GameOptions* o)
 {
     if (o == NULL) {
         return;
@@ -115,7 +116,7 @@ static void options_load_corpus_defaults(GameOptions* o)
     o->brightness = OPT_RETAIL_BRIGHTNESS_FALLBACK;
 }
 
-static int s_options_frontend_selection = -1;
+int s_options_frontend_selection = -1;
 
 void options_frontend_selection_set(int selected_slot)
 {
@@ -128,31 +129,6 @@ void options_load_or_default(struct GameContext* ctx, int load_options,
 {
     if (ctx != NULL) save_context_bind(ctx);
     options_load_or_default_target(load_options, reset_frontend);
-}
-
-/* OptionsLoadOrDefault @ 0x00416940 takes (load_options, reset_frontend).
- * The frontend supplies the separate DAT_00557028 selection gate. */
-// FUNCTION: LEGORR 0x00416940
-void options_load_or_default_target(int load_options, int reset_frontend)
-{
-    GameContext* ctx = save_current_context_get();
-    if (reset_frontend != 0) {
-        frontend_flow_word_set(0, 0);
-        frontend_flow_word_set(1, -1);
-        frontend_flow_word_set(2, -1);
-        frontend_flow_word_set(3, 0);
-    }
-    if (load_options != 0 && ctx != NULL) {
-        if (s_options_frontend_selection == -1 ||
-            sav_build_ctx_target() == NULL ||
-            ctx->active_slot != ctx->save_slot) {
-            options_load_corpus_defaults(&ctx->options);
-        } else {
-            ctx->options.sfx_volume = ctx->saved_sfx_volume;
-            ctx->options.game_speed = ctx->saved_scroll_index;
-            ctx->options.brightness = ctx->saved_brightness;
-        }
-    }
 }
 
 void options_defaults(GameOptions* o)
@@ -306,11 +282,8 @@ int options_load_header(GameOptions* o, const uint8_t* blk)
     return 1;
 }
 
-/* Typed OptionsWriteToSlot adapter. */
-/* The corpus's 0xb8-byte slot window is carried in host-width module state. */
-#define OPTIONS_SLOT_WINDOW_DWORDS 46
-static uint32_t s_options_slot_window[OPTIONS_SLOT_WINDOW_DWORDS];
-static void* s_options_slot_resource;
+uint32_t s_options_slot_window[OPTIONS_SLOT_WINDOW_DWORDS];
+void* s_options_slot_resource;
 
 void options_write_to_slot(GameContext* ctx)
 {
@@ -328,21 +301,6 @@ void options_apply_from_slot(GameContext* ctx)
     audio_menu_volume_set(ctx->saved_music_volume);
 }
 
-/* OptionsWriteToSlot @ 0x00416910 reads the current game and save contexts. */
-// FUNCTION: LEGORR 0x00416910
-void options_write_to_slot_target(void)
-{
-    GameContext* ctx = (GameContext*)sav_build_ctx_target();
-    if (ctx == NULL) return;
-    /* The host-width sidecar carries retail's SFX/speed/brightness words. */
-    s_options_slot_window[2] = (uint32_t)ctx->options.sfx_volume;
-    s_options_slot_window[3] = (uint32_t)ctx->options.game_speed;
-    s_options_slot_window[4] = (uint32_t)ctx->options.brightness;
-    ctx->saved_sfx_volume = ctx->options.sfx_volume;
-    ctx->saved_scroll_index = ctx->options.game_speed;
-    ctx->saved_brightness = ctx->options.brightness;
-}
-
 /* Typed OptionsContextSixFieldSet adapter. */
 void options_context_six_field_set(struct GameContext* ctx,
                                    const uint32_t* src)
@@ -350,15 +308,6 @@ void options_context_six_field_set(struct GameContext* ctx,
     if (ctx == NULL || src == NULL) return;
     save_context_bind(ctx);
     options_context_six_field_set_target(src);
-}
-
-/* OptionsContextSixFieldSet @ 0x00417f20 has one source pointer argument. */
-// FUNCTION: LEGORR 0x00417f20
-void options_context_six_field_set_target(const uint32_t* src)
-{
-    if (sav_build_ctx_target() == NULL) return;
-    uint32_t* dst = s_options_slot_window + 7;
-    memcpy(dst, src, 6u * sizeof(*src));
 }
 
 /* --- the slot-context options window (see options.hpp) ---------------------
@@ -374,21 +323,6 @@ void options_context_copy_and_replace_resource(GameContext* ctx,
     if (ctx == NULL || source == NULL) return;
     save_context_bind(ctx);
     options_context_copy_and_replace_resource_target(source);
-}
-
-/* OptionsContextCopyAndReplaceResource @ 0x004180c0 copies the 0xb8-byte
- * active slot window and transfers ownership of its resource word. */
-// FUNCTION: LEGORR 0x004180c0
-void options_context_copy_and_replace_resource_target(const uint32_t* source)
-{
-    if (sav_build_ctx_target() == NULL) return;
-    if (s_options_slot_resource != NULL) {
-        engine_heap_free(s_options_slot_resource);
-    }
-    __builtin_memcpy(s_options_slot_window, source,
-                     sizeof s_options_slot_window);
-    s_options_slot_resource = (void*)(uintptr_t)source[13];
-    s_options_slot_window[13] = source[13];
 }
 
 void options_slot_window_install(const uint32_t* block, void* resource)
@@ -415,62 +349,3 @@ void* options_slot_resource_peek(void)
     return s_options_slot_resource;
 }
 
-/* --- the scroll speed index band (see options.hpp) ----------------------- */
-// FUNCTION: LEGORR 0x00415030
-int scroll_to_slider_index(void)
-{
-    const double v = (double)scroll_scale_peek(); /* corpus reads the _DAT
-                                                   * alias of its scale word */
-    if (v < 0.6666667) {
-        return 0;
-    }
-    if (v < 1.0) {
-        return 1;
-    }
-    if (v < 1.3333334) {
-        return 2;
-    }
-    if (v < 1.6666666) {
-        return 3;
-    }
-    return (2.0 <= v) ? 5 : 4; /* corpus shape: NaN skips both tests, 4 */
-}
-
-/* ScrollToSliderIndexStore (FUN_00414f90) stores the same speed band in the
- * context-owned option word; the corpus writes its module global. */
-// FUNCTION: LEGORR 0x414f90
-void options_scroll_index_store(struct GameContext* ctx)
-{
-    if (ctx == NULL) {
-        return; /* deviation: the corpus stores the global blindly */
-    }
-    const double v = (double)scroll_scale_peek();
-    if (v < 0.6666667) {
-        ctx->options.game_speed = 0;
-        return;
-    }
-    if (v < 1.0) {
-        ctx->options.game_speed = 1;
-        return;
-    }
-    if (v < 1.3333334) {
-        ctx->options.game_speed = 2;
-        return;
-    }
-    if (v < 1.6666666) {
-        ctx->options.game_speed = 3;
-        return;
-    }
-    ctx->options.game_speed = 4;
-    if (2.0 <= v) {
-        ctx->options.game_speed = 5;
-    }
-}
-
-// FUNCTION: LEGORR 0x00415360
-void scroll_slider_refresh(struct GameContext* ctx)
-{
-    if (ctx != NULL) {
-        ctx->options.game_speed = scroll_to_slider_index();
-    }
-}

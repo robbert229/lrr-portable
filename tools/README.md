@@ -61,6 +61,10 @@ make relocate-unit UNIT=GAME-001 RELOCATE_ARGS=--dry-run
 - Unmarked code with external linkage stays where it is. So does an item
   annotated for another unit, even if only moved code uses it.
 - Each item keeps its leading comments.
+- A `typedef` inside a function body is local: it shadows a file-scope name
+  of the same spelling, so it is not a use of that name (#525). The scanner
+  does not track block scopes, so a use of the file-scope name elsewhere in
+  the same function is missed; the relocated file's compile catches it.
 
 **Named namespaces** (#471). A member of `namespace X { }` moves verbatim
 into a reopened `namespace X { }` in the unit file. Consecutive members share
@@ -88,7 +92,10 @@ legacy `frontend.cpp`), the tool uses `<stem>_unit` and says so;
 1. The includes of the source with the most moved functions, in order; then
    the other sources' unconditional includes that are not already there.
    Spellings are re-spelled only when they would resolve to a different
-   file.
+   file. A top-level `#if` group that holds only `#include` lines (a
+   platform-header group) is copied verbatim, in its place, when each of
+   its includes resolves the same from the unit file (#525). Other
+   conditional includes are listed in the plan's notes and not copied.
 2. Types and macros.
 3. The owned globals in address order, then the closure variables. A
    variable moves up to just before its first user.
@@ -100,7 +107,9 @@ legacy `frontend.cpp`), the tool uses `<stem>_unit` and says so;
 **Sharing without editing shared headers: per-relocation private headers
 (#496).** Sometimes moved code and the code left behind both need something.
 - A static gets external linkage: `static` is removed and the static is
-  declared in a private header.
+  declared in a private header. An array defined as `T a[] = { … }` is
+  declared with the bound its one-dimensional brace list implies, so a
+  `sizeof a` in the other file still compiles (#525).
 - A file-local type or macro moves into a private header.
 
 Each relocation of unit U from legacy file L writes its own pair, next to L:
@@ -121,7 +130,9 @@ writes its own pair. A header that already exists is refused. So:
 
 Each header includes the earlier private headers of L whose names it uses,
 so it is self-contained. A new unit file copies L's include list but keeps
-an earlier private header only when it uses a name the header declares.
+an earlier private header only when it uses a name the header declares, or
+when the header declares a `const` object the unit defines: C++ gives that
+object external linkage only after an `extern` (#525).
 
 Headers that other files include are never edited (finding 506).
 
@@ -184,7 +195,9 @@ A second run finds the unit relocated and does nothing. A half-done state
   The split step only rewrites the declarations the relocation needs split:
   - `static int a = 0, b = 0;` becomes one declaration per name;
   - `static struct T {…} v[3];` becomes `struct T {…};` and
-    `static struct T v[3];`; an untagged type is refused.
+    `static struct T v[3];`; an untagged type is refused. Annotations in
+    the leading comments move below the type, onto the first variable,
+    because they name the variable (#525).
 
   Each split is recorded in `docs/coverage/relocations/<unit>-splits.csv`,
   with hashes before and after, and the result is re-scanned for one name
@@ -218,6 +231,12 @@ A second run finds the unit relocated and does nothing. A half-done state
   `for` header when both files use it and it holds only macros, types,
   prototypes and `#include`s. The hash check covers the group's whole
   text.
+  - **An annotated datum in a group (#525).** A group may hold an
+    annotated item only when it is a single-branch group around one
+    `GLOBAL`-annotated variable, with the annotation directly on the
+    declaration, inside the `#if`. Reccmp reads the line after a `GLOBAL`
+    annotation as its declaration, so above the `#if` it would name the
+    variable `defined`. Such a group moves as that owned global.
   - **Macros in such a group** are alternatives, not redefinitions: one
     definition per branch is accepted. An `#undef` after the macro's last
     use stays where it is and is reported in the plan's notes. An `#undef`

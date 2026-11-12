@@ -465,10 +465,27 @@ def scan(text: str) -> Scan:
         item.line = _line_of(text, item.start)
         for m in ANNOTATION.finditer(text, item.lead, item.end if item.group or item.cgroup else item.start):
             item.annotations.append((m.group(1), int(m.group(2), 16)))
-        if item.cgroup and ANNOTATION.search(text, item.start, item.end):
+        if item.cgroup and ANNOTATION.search(text, item.start, item.end) and not _one_annotated_datum(item, text):
             item.problems.append(f"the #if group at line {item.line} holds an annotated item; "
                                  "only unannotated groups move whole")
     return Scan(text, masked, items, groups, problems)
+
+
+def _one_annotated_datum(item: Item, text: str) -> bool:
+    """A single-branch group around one ``GLOBAL``-annotated variable (#525).
+
+    ``#if C`` / ``// GLOBAL: …`` / ``static int v;`` / ``#endif``: the
+    annotation must sit on the declaration, because Reccmp reads the line
+    after it as the declaration (above the ``#if`` it names ``defined``). Such
+    a group is the variable, guarded, so it moves whole like an unannotated
+    one, and its address comes from the annotation."""
+    if item.branches != 1 or len(item.parts) != 1:
+        return False
+    part = item.parts[0]
+    if part.category != "var" or len(part.names) != 1 or part.multi:
+        return False
+    found = list(ANNOTATION.finditer(text, item.start, item.end))
+    return len(found) == 1 and found[0].group(1) == "GLOBAL" and not text[found[0].end():part.start].strip()
 
 
 def _lead(item: Item, text: str, masked: str) -> int:
@@ -585,6 +602,57 @@ def _function_name(head: str) -> tuple[str | None, list[str], str | None]:
     return m.group(1), problems, qualifier
 
 
+def _typedef_names(stripped: str) -> list[str]:
+    """The names a ``typedef`` declaration (without ``;``) introduces."""
+    rest, bodies = _strip_braced(stripped[len("typedef"):])
+    names = []
+    tm = re.match(r"\s*(?:struct|union|enum|class)\s+([A-Za-z_]\w*)", rest)
+    if tm:
+        names.append(tm.group(1))
+    for part in _split_top(rest):
+        # (*Name), (__stdcall *Name) or (CONV_MACRO *Name) (#501)
+        fp = re.search(r"\(\s*(?:[A-Za-z_]\w*\s+)*\*\s*([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*\)",
+                       DECL_STRIP.sub(" ", part))
+        if fp:
+            names.append(fp.group(1))
+            continue
+        part = re.sub(r"\[[^\]]*\]", " ", part)
+        m = re.search(r"([A-Za-z_]\w*)\s*$", part)
+        if m:
+            names.append(m.group(1))
+    if re.match(r"\s*enum\b", rest):
+        for body in bodies:
+            names.extend(_enumerators(body))
+    return list(dict.fromkeys(names))
+
+
+def _local_typedefs(body: str) -> set[str]:
+    """Names of block-scope ``typedef``s in a masked function body (#525).
+
+    They shadow any file-scope name of the same spelling, as
+    ``font_device_pixel_format_query``'s ``SurfaceLockFn`` does in
+    ``surface.cpp``, so they are not uses of it. The scanner does not track
+    scopes: a later use of the file-scope name in the same function, outside
+    the block, is missed, and the relocated file's compile catches that."""
+    out: set[str] = set()
+    for m in re.finditer(r"\btypedef\b", body):
+        depth, end = 0, -1
+        for k in range(m.start(), len(body)):
+            ch = body[k]
+            if ch in "([{":
+                depth += 1
+            elif ch in ")]}":
+                depth -= 1
+                if depth < 0:
+                    break
+            elif ch == ";" and depth == 0:
+                end = k
+                break
+        if end > 0:
+            out.update(_typedef_names(body[m.start():end].strip()))
+    return out
+
+
 def _describe(item: Item, text: str, masked: str) -> None:
     if item.kind in ("macro", "include", "directive"):
         return
@@ -605,6 +673,8 @@ def _describe(item: Item, text: str, masked: str) -> None:
         item.names = [name] if name else []
         item.problems.extend(probs)
         item.uses -= set(item.names)
+        if item.body >= 0:
+            item.uses -= _local_typedefs(masked[item.body:item.end])
         if item.qualifier:
             item.uses.discard(f"{item.qualifier}::{name}")
             item.uses.add(item.qualifier)
@@ -614,26 +684,7 @@ def _describe(item: Item, text: str, masked: str) -> None:
     words = stripped.split()
     if words and words[0] == "typedef":
         item.category = "type"
-        rest, bodies = _strip_braced(stripped[len("typedef"):])
-        names = []
-        tm = re.match(r"\s*(?:struct|union|enum|class)\s+([A-Za-z_]\w*)", rest)
-        if tm:
-            names.append(tm.group(1))
-        for part in _split_top(rest):
-            # (*Name), (__stdcall *Name) or (CONV_MACRO *Name) (#501)
-            fp = re.search(r"\(\s*(?:[A-Za-z_]\w*\s+)*\*\s*([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*\)",
-                           DECL_STRIP.sub(" ", part))
-            if fp:
-                names.append(fp.group(1))
-                continue
-            part = re.sub(r"\[[^\]]*\]", " ", part)
-            m = re.search(r"([A-Za-z_]\w*)\s*$", part)
-            if m:
-                names.append(m.group(1))
-        if re.match(r"\s*enum\b", rest):
-            for body in bodies:
-                names.extend(_enumerators(body))
-        item.names = list(dict.fromkeys(names))
+        item.names = _typedef_names(stripped)
         if not item.names:
             item.problems.append("a typedef whose name the scanner cannot find")
     elif words and words[0] in TYPE_KEYWORDS and "{" in stripped:

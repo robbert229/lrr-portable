@@ -183,33 +183,6 @@ static Sound* sound_sample_file_load_by_name(const char* name)
     return s;
 }
 
-/* SoundSampleFileOpenByName (FUN_0047fb60) is a presence query: the retail
- * code opens and closes loose files, but returns the matching WAD entry
- * index for an archive-backed sample. Keep the decoded Sound loader below
- * this probe so the portable audio API can still consume sample data. */
-// FUNCTION: LEGORR 0x0047fb60
-int sound_sample_file_open_by_name(const char* name)
-{
-    const char* resolved;
-    char* wad_name;
-    int route;
-    if (name == NULL || name[0] == '\0') return 0;
-    resolved = resource_path_resolve_against_base(name);
-    if (resolved == NULL) return 0;
-    route = game_file_open_route_select(resolved, "r");
-    if (route == 1) {
-        GameFileHandle* handle = game_file_open_dispatch(name, "r");
-        if (handle == NULL) return 0;
-        game_file_close(handle);
-        return 1;
-    }
-    if (route == 0) {
-        wad_name = game_file_mounted_path_prefix_rewrite(resolved);
-        return wad_entry_find_across_mounted_archives(wad_name, -1);
-    }
-    return 0;
-}
-
 /* Public resource-layer adapter used by the bank loader and other callers. */
 Sound* sound_load(const char* name)
 {
@@ -706,33 +679,6 @@ int sound_active_request_get(int index, int* alias, int* loop)
  *  records yield infinity/NaN, and a NaN cooldown would then never
  *  expire (finding 217), kept as-is.
  * ------------------------------------------------------------------ */
-
-// FUNCTION: LEGORR 0x00416150
-int sound_stream_play_level(int level)
-{
-    /* StreamPlayLevel @ 0x416150: the Stream_LevelName_Level%d alias at
-     * 0x4a25c8, submitted through the global cooldown when it resolves. */
-    char name[128];
-    snprintf(name, sizeof(name), "Stream_LevelName_Level%d", level);
-    int alias = 0;
-    if (sound_alias_lookup(name, &alias) != 0) {
-        return sound_submit_with_global_cooldown(alias, NULL);
-    }
-    return 0;
-}
-
-// FUNCTION: LEGORR 0x004161a0
-int sound_stream_play_tutorial(int level)
-{
-    /* StreamPlayTutorial @ 0x4161a0. */
-    char name[128];
-    snprintf(name, sizeof(name), "Stream_LevelName_TLevel%d", level);
-    int alias = 0;
-    if (sound_alias_lookup(name, &alias) != 0) {
-        return sound_submit_with_global_cooldown(alias, NULL);
-    }
-    return 0;
-}
 
 /* KeyedResourceEntryRemove (FUN_0047b2a0) removes the first global
  * association whose third word is the stopped instance. The provider is

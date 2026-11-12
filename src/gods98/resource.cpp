@@ -6,9 +6,6 @@
 
 #if defined(_WIN32)
 #include <windows.h>
-#ifndef INVALID_FILE_ATTRIBUTES
-#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
-#endif
 #else
 #include <dirent.h>
 #include <sys/stat.h>
@@ -29,40 +26,16 @@
 #include "resource_from_wad.hpp"
 #include "resource_for_lego.hpp"
 #include "resource_from_sound3d.hpp"
+#include "resource_for_files.hpp"
+#include "resource_from_files.hpp"
+#include "resource_for_interface.hpp"
+#include "resource_from_interface.hpp"
 
 // GLOBAL: LEGORR 0x0049f988
 const unsigned char s_resource_tree_child_iid[16] = {
     0x70, 0x7f, 0x6b, 0xff, 0x0e, 0xa4, 0xd1, 0x11,
     0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66
 };
-
-/* Shared file-layer diagnostics used by the reference dispatchers. */
-// GLOBAL: LEGORR 0x004ab028
-static const char s_game_file_unknown_type_format[] =
-    "%s(%i) : Unknown file system in call to %s";
-// GLOBAL: LEGORR 0x004aafd4
-static const char s_game_file_source_path[] =
-    "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Files.c";
-// GLOBAL: LEGORR 0x004ab054
-static const char s_game_file_seek_name[] = "File_Seek";
-// GLOBAL: LEGORR 0x004ab010
-static const char s_game_file_seek_mode_format[] = "Uknown seek mode (%i)";
-// GLOBAL: LEGORR 0x004ab0a0
-static const char s_game_file_tell_name[] = "File_Tell";
-static const char s_game_file_open_name[] = "File_Open";
-static const char s_game_file_close_name[] = "File_Close";
-static const char s_game_file_write_name[] = "File_Write";
-static const char s_game_file_write_wad_error[] =
-    "Cannot write to a file stored in a WAD";
-// GLOBAL: LEGORR 0x004ab0b8
-static const char s_game_file_gets_name[] = "File_GetS";
-// GLOBAL: LEGORR 0x004ab0ac
-static const char s_game_file_getc_name[] = "File_GetC";
-// GLOBAL: LEGORR 0x004ab0c4
-static const char s_game_file_printf_wad_error[] =
-    "\"fprintf\" is unsupprted for wad files";
-// GLOBAL: LEGORR 0x004ab0ec
-static const char s_game_file_printf_name[] = "File_PrintF";
 
 /* Explicit vtable layouts used by the three small resource wrappers below.
  * The corpus uses 32-bit COM-style interfaces; these declarations preserve
@@ -1380,30 +1353,17 @@ struct ResourceStream {
 
 ResourceWad s_wads[RESOURCE_MAX_WADS];
 int       s_wad_count = 0;
-static char      s_wad_prefix[RESOURCE_PATH_MAX] = "LegoRR";
-static ResourceFileTokenList s_resource_file_tokens;
-static char s_resource_directory_root[RESOURCE_PATH_MAX];
-// GLOBAL: LEGORR 0x005339a0
-static char      s_wad_mount_path_cache[0x400];
-// GLOBAL: LEGORR 0x005343b8
-static int       s_wad_mount_path_cache_valid;
-// GLOBAL: LEGORR 0x00533da0
-static char      s_wad_mount_path_rewrite[0x400];
+char      s_wad_prefix[RESOURCE_PATH_MAX] = "LegoRR";
+char s_resource_directory_root[RESOURCE_PATH_MAX];
 
-/* CD/STD fallback state (finding 01). */
-#ifdef LEGORRR_BACKEND_WINAPI
-#  define RES_PATH_SEP '\\' /* the corpus's "%c:\%s\%s" uses DOS separators */
-#else
-#  define RES_PATH_SEP '/'  /* host-native on the POSIX port */
-#endif
-static char  s_cd_drive    = 'A'; /* DAT_005343b4 analog; default mirrors .rdata */
-static char  s_cd_data_dir[RESOURCE_PATH_MAX] = "Data";
-static char  s_cd_root[RESOURCE_PATH_MAX] = ""; /* "" = "%c:\" default */
-static ResourceDriveTypeQueryFn s_cd_drive_type_query;
-static ResourcePathExistsFn s_cd_path_exists;
-static void* s_cd_probe_context;
-static ResourceStartupOps s_resource_startup_ops;
-static int s_resource_startup_result = RESOURCE_STARTUP_OK;
+char  s_cd_drive    = 'A'; /* DAT_005343b4 analog; default mirrors .rdata */
+char  s_cd_data_dir[RESOURCE_PATH_MAX] = "Data";
+char  s_cd_root[RESOURCE_PATH_MAX] = ""; /* "" = "%c:\" default */
+ResourceDriveTypeQueryFn s_cd_drive_type_query;
+ResourcePathExistsFn s_cd_path_exists;
+void* s_cd_probe_context;
+ResourceStartupOps s_resource_startup_ops;
+int s_resource_startup_result = RESOURCE_STARTUP_OK;
 static int s_resource_startup_require_cd;
 
 void resource_startup_require_cd_set(int require_cd)
@@ -1436,7 +1396,7 @@ const char* resource_directory_scan_root_get(void)
     return s_resource_directory_root;
 }
 
-static const char* ares_cd_path(const char* name, char* out, size_t out_sz)
+const char* ares_cd_path(const char* name, char* out, size_t out_sz)
 {
     size_t off;
     if (s_cd_root[0] != '\0') {
@@ -1462,50 +1422,6 @@ static const char* ares_cd_path(const char* name, char* out, size_t out_sz)
     return out;
 }
 
-/* PathResolveAgainstBase (FUN_00480220): form a path under the configured
- * data root and reject parent-directory components that escape that root. */
-// FUNCTION: LEGORR 0x00480220
-const char* resource_path_resolve_against_base(const char* path)
-{
-    static char resolved[RESOURCE_PATH_MAX];
-    char base[RESOURCE_PATH_MAX];
-    const char* part;
-    size_t length;
-    if (path == NULL) return NULL;
-    if (*path == '\\') ++path;
-    length = strlen(path);
-    if (length >= sizeof(resolved)) return NULL;
-    if (*path == '/' || strchr(path, ':') != NULL) return NULL;
-    part = path;
-    while (*part != '\0') {
-        const char* end = part;
-        size_t segment_length;
-        while (*end != '\0' && *end != '/' && *end != '\\') ++end;
-        segment_length = (size_t)(end - part);
-        if (segment_length == 2 && part[0] == '.' && part[1] == '.') {
-            return NULL;
-        }
-        part = (*end == '\0') ? end : end + 1;
-    }
-    ares_cd_path("", base, sizeof(base));
-    if (strlen(base) + length >= sizeof(resolved)) return NULL;
-    snprintf(resolved, sizeof(resolved), "%s%s", base, path);
-    return resolved;
-}
-
-/* SoundPathFallbackFormat (FUN_0047f660): only format the fallback when a
- * drive is configured. The port permits a mounted-root override and applies
- * host separators/bounds checks inside ares_cd_path. */
-// FUNCTION: LEGORR 0x0047f660
-static int ares_cd_fallback_path(const char* name, char* out, size_t out_sz)
-{
-    if (s_cd_drive == 0) {
-        return 0;
-    }
-    ares_cd_path(name, out, out_sz);
-    return 1;
-}
-
 void resource_set_cd_drive(char drive)
 {
     s_cd_drive = drive;
@@ -1527,7 +1443,7 @@ void resource_set_cd_root(const char* root)
     }
 }
 
-static const char* ares_cd_root_path(const char* name, char* out, size_t out_sz)
+const char* ares_cd_root_path(const char* name, char* out, size_t out_sz)
 {
     if (s_cd_root[0] != '\0') {
         snprintf(out, out_sz, "%s%c%s", s_cd_root, RES_PATH_SEP, name);
@@ -1544,62 +1460,6 @@ void resource_cd_probe_hooks_set(ResourceDriveTypeQueryFn drive_type,
     s_cd_drive_type_query = drive_type;
     s_cd_path_exists = path_exists;
     s_cd_probe_context = context;
-}
-
-static int resource_cd_key_path_exists(const char* path)
-{
-    FILE* fp;
-    if (s_cd_path_exists != NULL) {
-        return s_cd_path_exists(path, s_cd_probe_context);
-    }
-    fp = fopen(path, "rb");
-    if (fp == NULL) return 0;
-    fclose(fp);
-    return 1;
-}
-
-/* FindCdKeyDrive (FUN_0047f4f0): scan optical drive letters C through Z,
- * retaining the first drive with a readable cd.key marker. Platform hooks
- * supply drive type and file probes; a mounted root uses its file probe. */
-// FUNCTION: LEGORR 0x0047f4f0
-int resource_find_cd_key_drive(void)
-{
-    char path[RESOURCE_PATH_MAX];
-    char drive;
-    if (s_cd_root[0] != '\0') {
-        ares_cd_root_path("cd.key", path, sizeof(path));
-        return resource_cd_key_path_exists(path);
-    }
-    for (drive = 'C'; drive <= 'Z'; ++drive) {
-        int drive_type;
-        if (s_cd_drive_type_query != NULL) {
-            drive_type = s_cd_drive_type_query(drive, s_cd_probe_context);
-        }
-#if defined(_WIN32)
-        else {
-            char drive_root[4];
-            drive_root[0] = drive;
-            drive_root[1] = ':';
-            drive_root[2] = '\\';
-            drive_root[3] = '\0';
-            drive_type = (int)GetDriveTypeA(drive_root);
-        }
-#else
-        else {
-            drive_type = 0;
-        }
-#endif
-        if (drive_type != 5) {
-            continue;
-        }
-        snprintf(path, sizeof(path), "%c:%c%s%ccd.key", drive,
-                 RES_PATH_SEP, s_cd_data_dir, RES_PATH_SEP);
-        if (resource_cd_key_path_exists(path)) {
-            s_cd_drive = drive;
-            return 1;
-        }
-    }
-    return 0;
 }
 
 int resource_cd_present(void)
@@ -1764,54 +1624,6 @@ int ares_parse(FILE* fp, ResourceWad* out)
     return 1;
 }
 
-/* WadMountPathCacheStore (FUN_0047f590): keep a nonempty path shorter than
- * 0x401 bytes; invalid input clears the cache and its validity flag. */
-// FUNCTION: LEGORR 0x0047f590
-void wad_mount_path_cache_store(const char* path)
-{
-    size_t length;
-    if (path != NULL) {
-        length = strlen(path);
-        if (length != 0 && length < sizeof(s_wad_mount_path_cache)) {
-            strncpy(s_wad_mount_path_cache, path, length + 1);
-            s_wad_mount_path_cache_valid = 1;
-            return;
-        }
-    }
-    s_wad_mount_path_cache[0] = '\0';
-    s_wad_mount_path_cache_valid = 0;
-}
-
-/* MountWadFromPath (FUN_0047f640): reset mounted archive state and load the
- * requested archive path. */
-// FUNCTION: LEGORR 0x0047f640
-void mount_wad_from_path(const char* path)
-{
-    resource_unmount_all();
-    if (path != NULL) {
-        char root[RESOURCE_PATH_MAX];
-        char* slash;
-        snprintf(root, sizeof(root), "%s", path);
-        slash = strrchr(root, '/');
-        {
-            char* backslash = strrchr(root, '\\');
-            if (backslash != NULL && (slash == NULL || backslash > slash))
-                slash = backslash;
-        }
-        if (slash == NULL) {
-            snprintf(root, sizeof(root), ".");
-        }
-        else if (slash == root) {
-            root[1] = '\0';
-        }
-        else {
-            *slash = '\0';
-        }
-        resource_directory_scan_root_set(root);
-        (void)wwad_archive_index_load(path);
-    }
-}
-
 /* ------------------------------------------------------------------ *
  *  Public API
  * ------------------------------------------------------------------ */
@@ -1864,200 +1676,6 @@ void resource_startup_ops_set(const ResourceStartupOps* ops)
 int resource_startup_result_get(void)
 {
     return s_resource_startup_result;
-}
-
-static int resource_startup_current_directory(char* path, size_t capacity)
-{
-    if (path == NULL || capacity == 0u) return 0;
-#if defined(_WIN32)
-    {
-        DWORD length = GetCurrentDirectoryA((DWORD)capacity, path);
-        return length != 0u && length < capacity;
-    }
-#else
-    return getcwd(path, capacity) != NULL;
-#endif
-}
-
-static int resource_startup_directory_exists(const char* path)
-{
-#if defined(_WIN32)
-    DWORD attributes = GetFileAttributesA(path);
-    return attributes != INVALID_FILE_ATTRIBUTES
-        && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0u;
-#else
-    struct stat status;
-    return stat(path, &status) == 0 && S_ISDIR(status.st_mode);
-#endif
-}
-
-static void resource_startup_directory_create(const char* path)
-{
-#if defined(_WIN32)
-    (void)CreateDirectoryA(path, NULL);
-#else
-    (void)mkdir(path, 0755);
-#endif
-}
-
-static int resource_startup_localized_text(const char* registry_key,
-                                           const char* text_key,
-                                           char* output, size_t capacity)
-{
-    int loaded;
-    if (output == NULL || capacity == 0u) return 0;
-    output[0] = '\0';
-    if (s_resource_startup_ops.text_lookup == NULL) return 0;
-    loaded = s_resource_startup_ops.text_lookup(
-        s_resource_startup_ops.context, registry_key, text_key,
-        output, capacity);
-    output[capacity - 1u] = '\0';
-    return loaded != 0 && output[0] != '\0';
-}
-
-static void resource_startup_exit(int result)
-{
-    s_resource_startup_result = result;
-    if (s_resource_startup_ops.exit_process != NULL) {
-        s_resource_startup_ops.exit_process(s_resource_startup_ops.context, 0);
-    }
-}
-
-static int resource_startup_missing_data_dialog(const char* registry_key)
-{
-    char message[1024];
-    char caption[128];
-    if (s_resource_startup_ops.message_box == NULL ||
-        !resource_startup_localized_text(registry_key, "DataMissing",
-                                         message, sizeof(message)) ||
-        !resource_startup_localized_text(registry_key, "SetupError",
-                                         caption, sizeof(caption))) {
-        s_resource_startup_result = RESOURCE_STARTUP_DEPENDENCY_MISSING;
-        return 0;
-    }
-    (void)s_resource_startup_ops.message_box(s_resource_startup_ops.context,
-                                             message, caption, 0u);
-    resource_startup_exit(RESOURCE_STARTUP_MISSING_DATA);
-    return 1;
-}
-
-static int resource_startup_cd_retry(const char* registry_key)
-{
-    char message[1024];
-    char caption[128];
-    if (s_resource_startup_ops.message_box == NULL ||
-        !resource_startup_localized_text(registry_key, "CDMissing",
-                                         message, sizeof(message)) ||
-        !resource_startup_localized_text(registry_key, "SetupError",
-                                         caption, sizeof(caption))) {
-        s_resource_startup_result = RESOURCE_STARTUP_DEPENDENCY_MISSING;
-        return 0;
-    }
-    if (s_resource_startup_ops.message_box(s_resource_startup_ops.context,
-                                           message, caption, 1u) == 2) {
-        resource_startup_exit(RESOURCE_STARTUP_CD_CANCELLED);
-        return 0;
-    }
-    return 1;
-}
-
-static void resource_startup_delme_marker_remove(const char* path)
-{
-#if defined(_WIN32)
-    DWORD attributes = GetFileAttributesA(path);
-    if (attributes != INVALID_FILE_ATTRIBUTES) {
-        (void)SetFileAttributesA(path, attributes & ~FILE_ATTRIBUTE_READONLY);
-        (void)DeleteFileA(path);
-    }
-#else
-    struct stat status;
-    if (stat(path, &status) == 0) {
-        (void)chmod(path, status.st_mode | S_IWUSR);
-        (void)remove(path);
-    }
-#endif
-}
-
-/* WadMountStartup @ 0x0047f130. The startup owner supplies the executable
- * prefix and registry key; the resource module owns numbered archive
- * mounting, Data-root derivation, CD-marker probing, and mount-path caching.
- * Localized prompts and modal UI are host operations; process exit remains
- * optional so portable callers can inspect the startup result. */
-// FUNCTION: LEGORR 0x0047f130
-void resource_mount_startup_target(const char* prefix, int require_cd,
-                                   const char* registry_key)
-{
-    char working_directory[260];
-    char data_directory[RESOURCE_PATH_MAX];
-    char marker_path[RESOURCE_PATH_MAX];
-    size_t length;
-    int mounted;
-    int cd_found;
-    int data_directory_found;
-    int data_missing;
-
-    s_resource_startup_result = RESOURCE_STARTUP_OK;
-    if (prefix == NULL || prefix[0] == '\0') prefix = s_wad_prefix;
-    if (!resource_startup_current_directory(working_directory,
-                                            sizeof(working_directory))) {
-        s_resource_startup_result = RESOURCE_STARTUP_PATH_ERROR;
-        return;
-    }
-    length = strlen(working_directory);
-    if (length > 1u &&
-        (working_directory[length - 1u] == '/' ||
-         working_directory[length - 1u] == '\\')) {
-        working_directory[length - 1u] = '\0';
-    }
-    if (snprintf(data_directory, sizeof(data_directory), "%s%cData",
-                 working_directory, RES_PATH_SEP) < 0 ||
-        strlen(data_directory) >= sizeof(data_directory)) {
-        s_resource_startup_result = RESOURCE_STARTUP_PATH_ERROR;
-        return;
-    }
-
-    resource_unmount_all();
-    s_cd_root[0] = '\0';
-    s_cd_drive = 'A';
-    snprintf(s_cd_data_dir, sizeof(s_cd_data_dir), "%s", "Data");
-    resource_set_wad_prefix(prefix);
-    mounted = resource_mount(working_directory, prefix);
-    /* resource_mount is also the explicit-root test API; restore the retail
-     * startup Data directory after its modern-root cache setup. */
-    resource_directory_scan_root_set(data_directory);
-    wad_mount_path_cache_store(data_directory);
-
-    cd_found = resource_find_cd_key_drive();
-    while (!cd_found && require_cd != 0) {
-        if (!resource_startup_cd_retry(registry_key)) return;
-        cd_found = resource_find_cd_key_drive();
-    }
-
-    data_directory_found = resource_startup_directory_exists(data_directory);
-    if (!cd_found && data_directory_found) {
-        /* A loose Data tree is the retail fallback when neither a WAD nor a
-         * CD key drive is available. Mounted CD paths remain drive-rooted. */
-        snprintf(s_cd_root, sizeof(s_cd_root), "%s", working_directory);
-    }
-    data_missing = (!cd_found && mounted == 0 && !data_directory_found);
-    if (require_cd != 0 &&
-        snprintf(marker_path, sizeof(marker_path), "%s%cData%ccd.key",
-                 working_directory, RES_PATH_SEP, RES_PATH_SEP) >= 0 &&
-        resource_cd_key_path_exists(marker_path)) {
-        data_missing = 1;
-    }
-    if (data_missing) {
-        (void)resource_startup_missing_data_dialog(registry_key);
-        return;
-    }
-
-    resource_startup_directory_create(data_directory);
-
-    if (snprintf(marker_path, sizeof(marker_path), "%s%cData%cdelme.dat",
-                 working_directory, RES_PATH_SEP, RES_PATH_SEP) >= 0 &&
-        resource_cd_key_path_exists(marker_path)) {
-        resource_startup_delme_marker_remove(marker_path);
-    }
 }
 
 int resource_mount_startup(const char* prefix, int require_cd,
@@ -2166,49 +1784,6 @@ int wad_entry_find_across_mounted_archives(const char* name, int wad_idx)
         }
     }
     return -1;
-}
-
-// FUNCTION: LEGORR 0x0047ffc0
-char* game_file_mounted_path_prefix_rewrite(const char* path)
-{
-    size_t path_length;
-    size_t prefix_length;
-    const char* relative_path;
-    char prefix[0x400];
-    if (!s_wad_mount_path_cache_valid || path == NULL) return (char*)path;
-    path_length = strlen(path);
-    prefix_length = strlen(s_wad_mount_path_cache);
-    if (path_length <= prefix_length || prefix_length == 0u
-        || prefix_length >= sizeof(prefix)) return (char*)path;
-    memcpy(prefix, path, prefix_length);
-    prefix[prefix_length] = '\0';
-    if (strcasecmp_lite(prefix, s_wad_mount_path_cache) != 0)
-        return (char*)path;
-    relative_path = path + prefix_length;
-    /* PathResolveAgainstBase forms `<Data root><separator><name>`, while the
-     * WAD directory stores names without a leading separator. Strip that
-     * join separator at the root boundary before looking up the archive
-     * entry; otherwise a valid `Lego.cfg` is treated as a loose file. */
-    while (*relative_path == '/' || *relative_path == '\\') {
-        ++relative_path;
-    }
-    snprintf(s_wad_mount_path_rewrite, sizeof(s_wad_mount_path_rewrite),
-             "%s", relative_path);
-    return s_wad_mount_path_rewrite;
-}
-
-/* FileOpenRouteSelect (FUN_0047fe30): choose loose-file handling for
- * non-write modes only when the rewritten path is not present in a mounted
- * archive. */
-// FUNCTION: LEGORR 0x0047fe30
-int game_file_open_route_select(const char* path, const char* mode)
-{
-    char* rewritten;
-    if (path == NULL || path[0] == '\0' || mode == NULL || mode[0] == '\0')
-        return 2;
-    if (mode[0] == 'w' || mode[0] == 'W') return 1;
-    rewritten = game_file_mounted_path_prefix_rewrite(path);
-    return wad_entry_find_across_mounted_archives(rewritten, -1) == -1;
 }
 
 /* Open a loose file (STD branch) — payload read lazily by resource_read. */
@@ -2429,7 +2004,7 @@ void resource_stream_close(ResourceStream* stream)
     free(stream);
 }
 
-static int resource_file_token_list_parse(const char* token_file,
+int resource_file_token_list_parse(const char* token_file,
                                           ResourceFileTokenList* list,
                                           int clear_before_open)
 {
@@ -2484,48 +2059,7 @@ int resource_file_token_list_load_and_tree_scan(
     return count;
 }
 
-/* FileTokenListLoadAndTreeScan (FUN_004802d0): retail ABI takes only the
- * token filename; root and token table are module-owned loader state. */
-// FUNCTION: LEGORR 0x004802d0
-void resource_file_token_list_load_and_tree_scan_target(
-    const char* token_file)
-{
-    int result;
-    if (token_file == NULL) return;
-    result = resource_file_token_list_parse(token_file,
-                                            &s_resource_file_tokens, 0);
-    if (result < 0) return;
-    if (s_resource_directory_root[0] != '\0')
-        resource_directory_tree_scan_target(s_resource_directory_root);
-}
-
-/* DirectoryTokenListCompare (FUN_00480570): find a token with the same
- * ASCII case-folded spelling. The original discards the comparison result;
- * this API exposes it to the reconstructed directory walker. */
-// FUNCTION: LEGORR 0x00480570
-int resource_directory_token_list_contains(
-    const ResourceFileTokenList* list, const char* token)
-{
-    uint32_t index;
-    if (list == NULL || token == NULL) return 0;
-    for (index = 0u; index < list->count && index < 512u; ++index) {
-        if (strcasecmp_lite(token, list->tokens[index]) == 0) return 1;
-    }
-    return 0;
-}
-
-typedef struct ResourceDirectoryScanHandle {
-#if defined(_WIN32)
-    HANDLE search;
-    WIN32_FIND_DATAA data;
-    int first;
-#else
-    DIR* directory;
-    char root[1024];
-#endif
-} ResourceDirectoryScanHandle;
-
-static int resource_directory_scan_default_open(void*, const char* pattern,
+int resource_directory_scan_default_open(void*, const char* pattern,
                                                void** scan_out)
 {
     ResourceDirectoryScanHandle* scan;
@@ -2576,7 +2110,7 @@ static int resource_directory_scan_default_open(void*, const char* pattern,
     return 1;
 }
 
-static int resource_directory_scan_default_next(void*, void* handle,
+int resource_directory_scan_default_next(void*, void* handle,
                                                 char name_out[260],
                                                 int* is_directory_out)
 {
@@ -2625,7 +2159,7 @@ static int resource_directory_scan_default_next(void*, void* handle,
     return 1;
 }
 
-static void resource_directory_scan_default_close(void*, void* handle)
+void resource_directory_scan_default_close(void*, void* handle)
 {
     ResourceDirectoryScanHandle* scan =
         (ResourceDirectoryScanHandle*)handle;
@@ -2711,72 +2245,6 @@ void resource_directory_tree_scan(const char* root,
                                   const ResourceDirectoryScanOps* ops)
 {
     resource_directory_tree_scan_walk(root, tokens, ops);
-}
-
-/* DirectoryTreeScan (FUN_00480390): retail ABI takes one root and reads the
- * process-wide token state populated by FileTokenListLoadAndTreeScan. */
-// FUNCTION: LEGORR 0x00480390
-void resource_directory_tree_scan_target(const char* root)
-{
-    ResourceDirectoryScanHandle* scan = NULL;
-    char pattern[1024];
-    char name[260];
-    char child_path[1024];
-    unsigned int root_length;
-    unsigned int offset;
-    if (root == NULL) return;
-
-    /* Keep the target's local root\*.* pattern construction here instead
-     * of forwarding through the portable explicit-state walker. */
-    root_length = (unsigned int)strlen(root);
-    if (root_length + 5u >= sizeof(pattern)) return;
-    memcpy(pattern, root, root_length);
-    offset = root_length;
-    if (offset != 0u && pattern[offset - 1u] != '/' &&
-        pattern[offset - 1u] != '\\') {
-        pattern[offset++] = '\\';
-    }
-    memcpy(pattern + offset, "*.*", 4u);
-    if (!resource_directory_scan_default_open(NULL, pattern,
-                                               (void**)&scan) ||
-        scan == NULL) return;
-
-    for (;;) {
-        int is_directory = 0;
-        unsigned int name_length;
-        int next;
-        name[0] = '\0';
-        next = resource_directory_scan_default_next(NULL, scan, name,
-                                                     &is_directory);
-        if (next <= 0) break;
-        name[259] = '\0';
-        if (name[0] == '\0' || strcmp(name, ".") == 0 ||
-            strcmp(name, "..") == 0) continue;
-        root_length = (unsigned int)strlen(root);
-        name_length = (unsigned int)strlen(name);
-        if (root_length + name_length + 2u >= sizeof(child_path)) continue;
-        memcpy(child_path, root, root_length);
-        offset = root_length;
-        if (offset != 0u && child_path[offset - 1u] != '/' &&
-            child_path[offset - 1u] != '\\') {
-#if defined(_WIN32)
-            child_path[offset++] = '\\';
-#else
-            child_path[offset++] = '/';
-#endif
-        }
-        memcpy(child_path + offset, name, name_length + 1u);
-        if (is_directory != 0) {
-            resource_directory_tree_scan_target(child_path);
-        }
-        else {
-            /* Retail calls the comparator for its side effect and ignores
-             * the membership result. */
-            (void)resource_directory_token_list_contains(
-                &s_resource_file_tokens, child_path);
-        }
-    }
-    resource_directory_scan_default_close(NULL, scan);
 }
 
 int32_t resource_read(Resource* r)
@@ -2964,11 +2432,6 @@ FixedRecordSlot s_fixed_slots[FIXED_RECORD_SLOTS];
 void* s_fixed_slot_resources[FIXED_RECORD_SLOTS];
 #endif
 
-typedef struct WadFileStreamState {
-    int slot;
-    int32_t cursor;
-} WadFileStreamState;
-
 /* FUNCTION: LEGORR 0x0048bd30 */
 int wad_entry_slot_allocate(void)
 {
@@ -2985,212 +2448,6 @@ void* fixed_record_slot_resource_get(int slot)
 {
     if ((unsigned int)slot >= FIXED_RECORD_SLOTS) return NULL;
     return fixed_record_slot_resource_get_target(slot);
-}
-
-/* Port-side payload length used by the file seek implementation. */
-static int resource_slot_length_get(int slot)
-{
-    Resource* resource;
-    int32_t length;
-    resource = (Resource*)fixed_record_slot_resource_get(slot);
-    if (resource == NULL) {
-        return 0;
-    }
-    length = resource_read(resource);
-    return length > 0 ? (int)length : 0;
-}
-
-/* WadFileSeek (FUN_0047f850): update the WAD stream cursor for SET/CUR/END.
- * The END case preserves the corpus's length-plus-offset behavior. */
-// FUNCTION: LEGORR 0x0047f850
-int wad_file_seek(GameFileHandle* handle, int offset, int origin)
-{
-    WadFileStreamState* state;
-    int length;
-    uint32_t type;
-    if (handle == NULL) return 0;
-    type = game_file_system_type_get(handle);
-    if (type == 1u) {
-        if (handle->stream == NULL) return 0;
-        return fseek((FILE*)handle->stream, offset, origin);
-    }
-    if (type != 0u) {
-        resource_debug_output_format(s_game_file_unknown_type_format,
-            s_game_file_source_path, 0x170, s_game_file_seek_name);
-        return 0;
-    }
-    if (handle->stream == NULL) return 0;
-    state = (WadFileStreamState*)handle->stream;
-    if (origin == 0) {
-        state->cursor = offset;
-        length = resource_slot_length_get(state->slot);
-        if (length < state->cursor) state->cursor = length;
-        if (state->cursor < 0) state->cursor = 0;
-    }
-    else if (origin == 1) {
-        state->cursor += offset;
-        length = resource_slot_length_get(state->slot);
-        if (length < state->cursor) state->cursor = length;
-        if (state->cursor < 0) state->cursor = 0;
-    }
-    else if (origin == 2) {
-        state->cursor = resource_slot_length_get(state->slot) + offset;
-    }
-    else {
-        resource_debug_output_format(s_game_file_seek_mode_format, origin);
-    }
-    return 0;
-}
-
-/* WadFileRead (FUN_0047f980): read complete elements from the slot resource,
- * clipping the byte count at its end and advancing the cursor. */
-// FUNCTION: LEGORR 0x0047f980
-int wad_file_read(void* destination, int element_size, int element_count,
-                  GameFileHandle* handle)
-{
-    WadFileStreamState* state;
-    Resource* resource;
-    int length;
-    unsigned int bytes;
-    uint32_t type;
-    if (handle == NULL) {
-        return 0;
-    }
-    type = game_file_system_type_get(handle);
-    if (type == 1u) {
-        if (destination == NULL || handle->stream == NULL || element_size <= 0
-            || element_count <= 0) return 0;
-        return (int)fread(destination, (size_t)element_size,
-                          (size_t)element_count, (FILE*)handle->stream);
-    }
-    if (type != 0u) {
-        resource_debug_output_format(s_game_file_unknown_type_format,
-            s_game_file_source_path, 0x18b, "WadFileRead");
-        return 0;
-    }
-    if (destination == NULL || handle->stream == NULL || element_size <= 0
-        || element_count <= 0) return 0;
-    state = (WadFileStreamState*)handle->stream;
-    resource = (Resource*)fixed_record_slot_resource_get(state->slot);
-    if (resource == NULL) return 0;
-    length = resource_read(resource);
-    if (length <= 0 || state->cursor < 0 || state->cursor >= length) return 0;
-    bytes = (unsigned int)element_size * (unsigned int)element_count;
-    if (bytes > (unsigned int)(length - state->cursor)) {
-        bytes = (unsigned int)(length - state->cursor);
-    }
-    memcpy(destination, resource->data + state->cursor, bytes);
-    state->cursor += (int32_t)bytes;
-    return (int)(bytes / (unsigned int)element_size);
-}
-
-/* WadFileCursorGet (FUN_0047fb10): return the current WAD stream cursor. */
-// FUNCTION: LEGORR 0x0047fb10
-int wad_file_cursor_get(GameFileHandle* handle)
-{
-    WadFileStreamState* state;
-    uint32_t type;
-    if (handle == NULL) return 0;
-    type = game_file_system_type_get(handle);
-    if (type == 0u) {
-        if (handle->stream == NULL) return 0;
-        state = (WadFileStreamState*)handle->stream;
-        return state->cursor;
-    }
-    if (type == 1u) {
-        if (handle->stream == NULL) return 0;
-        return (int)ftell((FILE*)handle->stream);
-    }
-    resource_debug_output_format(s_game_file_unknown_type_format,
-        s_game_file_source_path, 0x1d5, s_game_file_tell_name);
-    return 0;
-}
-
-/* GameFileReadByte (FUN_0047fc20) and its line readers (FUN_0047fce0,
- * FUN_0047fd40): type 0 dispatches to the WAD cursor buffer and type 1 to
- * the FILE-backed CRT stream. */
-// FUNCTION: LEGORR 0x0047fc20
-int game_file_read_byte(GameFileHandle* handle)
-{
-    WadFileStreamState* state;
-    Resource* resource;
-    int length;
-    int value;
-    uint32_t type;
-    if (handle == NULL) return -1;
-    type = game_file_system_type_get(handle);
-    if (type == 1u) {
-        return handle->stream != NULL ? fgetc((FILE*)handle->stream) : -1;
-    }
-    if (type != 0u) {
-        resource_debug_output_format(s_game_file_unknown_type_format,
-            s_game_file_source_path, 0x221, s_game_file_getc_name);
-        return 0;
-    }
-    if (handle->stream == NULL) return -1;
-    state = (WadFileStreamState*)handle->stream;
-    resource = (Resource*)fixed_record_slot_resource_get(state->slot);
-    if (resource == NULL) return -1;
-    length = resource_read(resource);
-    if (length <= 0 || state->cursor < 0 || state->cursor >= length) return -1;
-    value = resource->data[state->cursor++];
-    return value;
-}
-
-// FUNCTION: LEGORR 0x0047fce0
-char* game_file_read_line(char* buffer, int capacity,
-                          GameFileHandle* handle)
-{
-    int count = 0;
-    int c;
-    if (buffer == NULL || capacity <= 1) return NULL;
-    while (count < capacity - 1) {
-        c = game_file_read_byte(handle);
-        if (c < 0) break;
-        buffer[count++] = (char)c;
-        if (c == '\0' || c == '\n') break;
-    }
-    if (count == 0) return NULL;
-    buffer[count] = '\0';
-    return buffer;
-}
-
-// FUNCTION: LEGORR 0x0047fd40
-char* game_file_read_line_dispatch(char* buffer, int capacity,
-                                   GameFileHandle* handle)
-{
-    uint32_t type;
-    if (handle == NULL) return NULL;
-    type = game_file_system_type_get(handle);
-    if (type == 0u) {
-        return game_file_read_line(buffer, capacity, handle);
-    }
-    if (type == 1u) {
-        if (buffer == NULL || capacity <= 0 || handle->stream == NULL) {
-            return NULL;
-        }
-        return fgets(buffer, capacity, (FILE*)handle->stream);
-    }
-    resource_debug_output_format(s_game_file_unknown_type_format,
-        s_game_file_source_path, 0x24b, s_game_file_gets_name);
-    return NULL;
-}
-
-// FUNCTION: LEGORR 0x00480050
-char* game_file_read_crlf_line(char* buffer, int capacity,
-                               GameFileHandle* handle)
-{
-    char* result = game_file_read_line_dispatch(buffer, capacity, handle);
-    size_t length;
-    if (result == NULL) return NULL;
-    length = strlen(buffer);
-    if (length != 0u && buffer[length - 1u] == '\n') {
-        buffer[--length] = '\0';
-    }
-    if (length != 0u && buffer[length - 1u] == '\r') {
-        buffer[length - 1u] = '\0';
-    }
-    return result;
 }
 
 void fixed_record_slot_install(int slot, void* resource)
@@ -3211,122 +2468,7 @@ int fixed_record_slot_flag_peek(int slot)
     return (slot >= 0 && slot < FIXED_RECORD_SLOTS) ? (int)s_fixed_slots[slot].in_use : 0;
 }
 
-static void fixed_record_slot_release(int slot)
-{
-    if (slot < 0 || slot >= FIXED_RECORD_SLOTS) return;
-    if (fixed_record_slot_pointer_get(slot) != NULL) {
-        resource_free((Resource*)fixed_record_slot_pointer_get(slot));
-    }
-#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
-    s_fixed_slot_resources[slot] = NULL;
-#endif
-    s_fixed_slots[slot].resource = 0u;
-    s_fixed_slots[slot].in_use = 0;
-}
 #undef fixed_record_slot_pointer_get
-
-// FUNCTION: LEGORR 0x0047ff50
-void game_file_handle_release(GameFileHandle* handle)
-{
-    if (handle == NULL) return;
-    if (handle->flag == 1) {
-        if (handle->stream != NULL) fclose((FILE*)handle->stream);
-        engine_heap_free_wrapper(handle);
-        return;
-    }
-    else if (handle->flag == 0) {
-        WadFileStreamState* state = (WadFileStreamState*)handle->stream;
-        if (state != NULL) {
-            fixed_record_slot_release(state->slot);
-            engine_heap_free_wrapper(state);
-        }
-    }
-    else {
-        return;
-    }
-    engine_heap_free_wrapper(handle);
-}
-
-// FUNCTION: LEGORR 0x0047fac0
-int game_file_close(GameFileHandle* handle)
-{
-    if (handle == NULL) return 0;
-    if (handle->flag == 0 || handle->flag == 1) {
-        game_file_handle_release(handle);
-        return 0;
-    }
-    resource_debug_output_format(s_game_file_unknown_type_format,
-        s_game_file_source_path, 0x1af, s_game_file_close_name);
-    return 0;
-}
-
-/* GameFileWrite (FUN_0047fa50): writes are supported by loose-file streams;
- * WAD entries are immutable and report a zero item count. */
-// FUNCTION: LEGORR 0x0047fa50
-uint32_t game_file_write(const void* data, uint32_t size,
-                         uint32_t count, GameFileHandle* handle)
-{
-    uint32_t type;
-    if (handle == NULL) {
-        return 0u;
-    }
-    type = game_file_system_type_get(handle);
-    if (type == 0u) {
-        resource_debug_output_format(s_game_file_write_wad_error);
-        return 0u;
-    }
-    if (type != 1u) {
-        resource_debug_output_format(s_game_file_unknown_type_format,
-            s_game_file_source_path, 0x19e, s_game_file_write_name);
-        return 0u;
-    }
-    if (handle->stream == NULL || data == NULL || size == 0u || count == 0u)
-        return 0u;
-    return (uint32_t)fwrite(data, (size_t)size, (size_t)count,
-                            (FILE*)handle->stream);
-}
-
-/* GameFilePrintFormat (FUN_0047fdb0): forward formatted text to a loose
- * stream, returning the corpus's fixed zero status. */
-// FUNCTION: LEGORR 0x0047fdb0
-int game_file_print_format(GameFileHandle* handle, const char* format, ...)
-{
-    uint32_t type;
-    va_list args;
-    if (handle == NULL) return 0;
-    type = game_file_system_type_get(handle);
-    if (type == 0u) {
-        resource_debug_output_format(s_game_file_printf_wad_error);
-        return 0;
-    }
-    if (type != 1u) {
-        resource_debug_output_format(s_game_file_unknown_type_format,
-            s_game_file_source_path, 0x264, s_game_file_printf_name);
-        return 0;
-    }
-    if (handle->stream == NULL || format == NULL) return 0;
-    va_start(args, format);
-    (void)vfprintf((FILE*)handle->stream, format, args);
-    va_end(args);
-    return 0;
-}
-
-/* DebugOutputFormat (FUN_0047f600) formats one variadic message into the
- * same 1024-byte scratch size as the reference and emits it to the process
- * debug stream. The portable backend uses stderr for that stream. */
-// FUNCTION: LEGORR 0x0047f600
-void resource_debug_output_format(const char* format, ...)
-{
-    char buffer[1024];
-    va_list args;
-    if (format == NULL) {
-        return;
-    }
-    va_start(args, format);
-    vsprintf(buffer, format, args);
-    va_end(args);
-    fputs(buffer, stderr);
-}
 
 /* --- wad payload band (2026-10-25; finding 01 codec story) ---------------
  * The corpus decodes expanded wad entries through the RNC-header dispatch
@@ -3610,107 +2752,6 @@ void wad_huffman_table_clear(void* table, uint8_t count)
     } while (count != 0u);
 }
 
-/* GameFileHandleAllocate (FUN_0047fed0): the file-layer handle pair. Kind 1
- * (wads) is the 8-byte record flagged 1 with no stream buffer; kind 0 (the
- * loose-file route) flags 0 and carries the 12-byte stream buffer behind,
- * releasing the record if the buffer alloc fails. Deviations: the record
- * fields widen to (int32_t flag; void* stream) for LP64 (the corpus's
- * dwords, 8 bytes, alias this record's front half) and the corpus's
- * blind-first store for kind 1 is guarded. The corpus's wrapper chain
- * 0x47ff30 is a bare call into the heap's alloc entry. */
-// FUNCTION: LEGORR 0x0047fed0
-void* game_file_handle_allocate(int kind)
-{
-    GameFileHandle* h;
-    if (kind == 1) {
-        h = (GameFileHandle*)engine_heap_alloc((long)sizeof(GameFileHandle));
-        if (h == NULL) {
-            return NULL;
-        }
-        h->flag = 1;
-        /* Test-pinned deviation: unlike the corpus, the port leaves the
-         * kind-1 stream slot deterministically NULL. */
-        h->stream = NULL;
-        return h;
-    }
-    if (kind != 0) {
-        return NULL;
-    }
-    h = (GameFileHandle*)engine_heap_alloc((long)sizeof(GameFileHandle));
-    if (h == NULL) {
-        return NULL;
-    }
-    h->flag = 0;
-    h->stream = engine_heap_alloc(12);
-    if (h->stream != NULL) {
-        return h;
-    }
-    engine_heap_free_wrapper(h);
-    return NULL;
-}
-
-/* GameFileOpenDispatch (FUN_0047f6e0): resolve the path, select WAD versus
- * loose-file storage, then return the corresponding GameFileHandle. The WAD
- * stream owns a fixed resource slot plus a cursor record; loose streams keep
- * their CRT FILE handle directly. */
-// FUNCTION: LEGORR 0x0047f6e0
-GameFileHandle* game_file_open_dispatch(const char* path, const char* mode)
-{
-    const char* resolved;
-    GameFileHandle* handle;
-    int route;
-    if (path == NULL || mode == NULL) return NULL;
-    resolved = resource_path_resolve_against_base(path);
-    if (resolved == NULL) return NULL;
-    route = game_file_open_route_select(resolved, mode);
-    if (route == 0) {
-        char* wad_name = game_file_mounted_path_prefix_rewrite(resolved);
-        Resource* resource = resource_open(wad_name, RESOURCE_WAD_ONLY);
-        WadFileStreamState* state;
-        int slot;
-        if (resource == NULL) return NULL;
-        slot = wad_entry_slot_allocate();
-        if (slot < 0) {
-            resource_free(resource);
-            return NULL;
-        }
-        handle = (GameFileHandle*)game_file_handle_allocate(0);
-        if (handle == NULL) {
-            resource_free(resource);
-            return NULL;
-        }
-        state = (WadFileStreamState*)handle->stream;
-        state->slot = slot;
-        state->cursor = 0;
-        fixed_record_slot_install(slot, resource);
-        return handle;
-    }
-    if (route != 1) {
-        resource_debug_output_format(s_game_file_unknown_type_format,
-            s_game_file_source_path, 0x14a, s_game_file_open_name);
-        return NULL;
-    }
-
-    handle = (GameFileHandle*)game_file_handle_allocate(1);
-    if (handle == NULL) return NULL;
-    handle->stream = fopen(resolved, mode);
-    /* The corpus gates its CD fallback on CaseInsensitiveSubstringFind(mode,
-     * "w"), rather than checking the first byte. That distinction matters
-     * for update modes such as "r+w": fopen may accept the path, but the
-     * fallback must not redirect that writable stream to the data directory. */
-    if (handle->stream == NULL &&
-        case_insensitive_substring_find(mode, "w") == NULL) {
-        char fallback[RESOURCE_PATH_MAX];
-        if (ares_cd_fallback_path(path, fallback, sizeof(fallback)))
-            handle->stream = fopen(fallback, mode);
-    }
-    if (handle->stream == NULL) {
-        game_file_close(handle);
-        return NULL;
-    }
-    return handle;
-}
-
 /* Narrow startup adapter retained for callers that explicitly require a
  * loose file (including output paths); the retail dispatch handles both
  * storage branches. */
@@ -3735,39 +2776,7 @@ GameFileHandle* game_file_open_loose_path(const char* path,
     return handle;
 }
 
-/* WadEntryReadIntoStreamSlot (FUN_0047fea0): zero the slot pair behind the
- * handle, resolve the entry through the corpus's wad path opener with the
- * search-all selector, and answer whether the entry exists. Deviations:
- * the opener's record-slot handle (its slot table is modeled in
- * fixed_record_slot_resource_get) rides as the opened resource pointer and
- * the corpus's -1 sentinel becomes NULL; the search-all index arrives as
- * the wad-only open mode with the corpus's global at -1 inlined. */
-// FUNCTION: LEGORR 0x0047fea0
-int wad_entry_read_into_stream_slot(WadStreamSlots* slots, const char* name)
-{
-    if (slots == NULL) {
-        return 0; /* deviation: the corpus strides the slots blindly */
-    }
-    slots->word2 = 0u;
-    slots->stream = NULL;
-    const Resource* handle = resource_open(name, RESOURCE_WAD_ONLY);
-    slots->handle = handle;
-    return handle != NULL;
-}
-
-/* --- resource-handle release band (2026-10-25; corpus .data band) ---------
- * ResourceHandleSetRelease (FUN_0041a850) frees the corpus's global handle
- * set: the DAT_004ddc04 stride-8 record band (the first DWORD of each pair,
- * while the walker stays below DAT_004ddcc4) followed by twelve named
- * globals, freed in corpus order. Deviations: the band lands as
- * own storage (install/peek hooks for the named globals), the
- * corpus frees without clearing, and the port nulls each freed slot. */
-// GLOBAL: LEGORR 0x004ddc04
-static struct {
-    void* handle;      /* corpus band dword (stride 8; the word behind rides) */
-    uint32_t word2;
-} s_handle_set_band[24]; /* DAT_004ddc04..DAT_004ddcc4, stride 8 */
-static void* s_handle_set_named[12]; /* DAT_004dd734..9a8/DAT_004ddad4/d8 */
+void* s_handle_set_named[12]; /* DAT_004dd734..9a8/DAT_004ddad4/d8 */
 
 /* Port hook: slots 0..23 are the band (stride-8 units), 24..35 the named
  * globals in address order: 734, 738, 73c, 740, 744, 748, 99c, 9a0, 9a4,
@@ -3792,92 +2801,6 @@ void* resource_handle_set_slot_peek(int slot)
     return NULL;
 }
 
-// FUNCTION: LEGORR 0x0041a850
-void resource_handle_set_release(void)
-{
-    for (int i = 0; i != 24; ++i) {
-        /* corpus: stride the band, free the non-zero dwords under cc4 */
-        if (s_handle_set_band[i].handle != NULL) {
-            engine_heap_free(s_handle_set_band[i].handle); /* FUN_0048db80 */
-            s_handle_set_band[i].handle = NULL; /* deviation: the corpus dangles */
-        }
-    }
-    /* corpus free order: 734 73c 744 ad4 99c 9a4 738 740 748 ad8 9a0 9a8 */
-    static const size_t order[12] = { 0, 2, 4, 10, 6, 8, 1, 3, 5, 11, 7, 9 };
-    for (size_t k = 0; k != 12; ++k) {
-        void** p = &s_handle_set_named[order[k]];
-        if (*p != NULL) {
-            engine_heap_free(*p);
-            *p = NULL;
-        }
-    }
-}
-
-/* --- the key-group action-code band (see resource.hpp) ---------------------
- * InputKeyGroupRegister (FUN_0041a7d0) stages one interaction-action group:
- * the count word rides in at the pair's +4 slot FIRST (corpus order), then
- * a count*4 heap array takes the code dwords. The codes ride the stack as
- * the corpus's own cdecl varargs and are read out with va_arg in index
- * order. Deviations: the staging copy of the variadic window into locals
- * (and the always-zero byte tail) fold into a direct dword copy, and the
- * group guard answers where the corpus strides the band blindly.
- * Registering the same group twice re-stages in place; the corpus leaks the
- * superseded array, and so does the port. */
-// FUNCTION: LEGORR 0x0041a7d0
-void resource_input_key_group_register(int group, int count, ...)
-{
-    va_list ap;
-
-    if (group < 0 || group >= 24) {
-        return; /* deviation: the corpus strides the band blindly */
-    }
-    s_handle_set_band[group].word2 = (uint32_t)count;
-    void* array = engine_heap_alloc((long)count * 4); /* FUN_0048dbd0 */
-    s_handle_set_band[group].handle = array;
-    va_start(ap, count);
-    if (array != NULL) {
-        uint32_t* dst = (uint32_t*)array;
-        const uint32_t n = (uint32_t)count & 0x3fffffffu;
-        for (uint32_t i = 0; i != n; ++i) {
-            dst[i] = (uint32_t)va_arg(ap, int);
-        }
-    }
-    va_end(ap);
-}
-
-/* InteractionActionCodeMapInitialize (FUN_0041a660): registers the fixed
- * eighteen interaction-action groups in the corpus's call order — groups
- * 0..5, 7, 8, then 0xa, 0xb, 0xc, with group 9 landing between 0xc and
- * 0xd, and group 6 left unregistered (the corpus skips it). The action
- * codes ride as the corpus's own pushed constants, one push per code. */
-// FUNCTION: LEGORR 0x0041a660
-void interaction_action_code_map_initialize(void)
-{
-    resource_input_key_group_register(0, 4, 1, 2, 3, 4);
-    resource_input_key_group_register(1, 3, 5, 6, 0xe);
-    resource_input_key_group_register(2, 1, 7);
-    resource_input_key_group_register(3, 1, 0xe);
-    resource_input_key_group_register(4, 1, 0x10);
-    resource_input_key_group_register(5, 2, 9, 0xe);
-    resource_input_key_group_register(7, 4, 0xb, 0xc, 0xd, 0xf);
-    resource_input_key_group_register(8, 2, 0x2b, 0x2f);
-    resource_input_key_group_register(0xa, 7, 0x16, 0x14, 0x42, 0x19,
-                                      0x2d, 0x2e, 0x29);
-    resource_input_key_group_register(0xb, 6, 0x16, 0x14, 0x19, 0x2d, 0x2e,
-                                      0x1a);
-    resource_input_key_group_register(0xc, 2, 0x18, 0x29);
-    resource_input_key_group_register(9, 10, 0x1f, 0x17, 0x15, 0x30, 0x21,
-                                      0x40, 0x39, 0x2d, 0x2e, 0x20);
-    resource_input_key_group_register(0xd, 4, 0x24, 0x22, 0x41, 0x28);
-    resource_input_key_group_register(0xe, 1, 0x2a);
-    resource_input_key_group_register(0xf, 3, 0x2c, 0x2e, 0x2d);
-    resource_input_key_group_register(0x10, 8, 0x31, 0x32, 0x33, 0x34, 0x35,
-                                      0x36, 0x37, 0x38);
-    resource_input_key_group_register(0x11, 6, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e,
-                                      0x3f);
-    resource_input_key_group_register(0x12, 4, 0x43, 0x44, 0x45, 0x46);
-}
-
 void resource_handle_set_band_word_install(int unit, uint32_t value)
 {
     if (unit >= 0 && unit < 24) {
@@ -3888,46 +2811,6 @@ void resource_handle_set_band_word_install(int unit, uint32_t value)
 uint32_t resource_handle_set_band_word_peek(int unit)
 {
     return (unit >= 0 && unit < 24) ? s_handle_set_band[unit].word2 : 0u;
-}
-
-/* ResourceHandleListDispose (FUN_00410ae0): free the list's non-zero
- * handles (the count lives behind), then the array, then the record — the
- * record is freed even when its array word is zero. Deviations: the record
- * fields widen LP64-safe and the NULL record is guarded (the corpus strides
- * blindly). */
-// FUNCTION: LEGORR 0x00410ae0
-void resource_handle_list_dispose(ResourceHandleList* list)
-{
-    if (list == NULL) {
-        return; /* deviation: the corpus derefs blindly */
-    }
-    if (list->handles != NULL) {
-        for (int32_t i = 0; i < list->count; ++i) {
-            if (list->handles[i] != NULL) {
-                engine_heap_free(list->handles[i]); /* FUN_0048db80 */
-            }
-        }
-        engine_heap_free(list->handles);
-    }
-    engine_heap_free(list);
-}
-
-/* ResourceHandleListAppend (FUN_00410aa0): append a heap-owned string only
- * while the preallocated handle array has capacity. */
-// FUNCTION: LEGORR 0x00410aa0
-void resource_handle_list_append(ResourceHandleList* list, const char* value)
-{
-    if (list == NULL || list->handles == NULL
-        || list->count >= (int32_t)(uint32_t)list->word1 || value == NULL) {
-        return;
-    }
-    const size_t length = strlen(value);
-    if (length >= 0x7fffffffU) return;
-    char* copy = (char*)engine_heap_alloc((long)length + 1);
-    if (copy == NULL) return;
-    strncpy(copy, value, length + 1);
-    list->handles[list->count] = copy;
-    ++list->count;
 }
 
 namespace unported_ledger_stubs {

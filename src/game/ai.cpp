@@ -626,18 +626,6 @@ int entity_kind6_tick_down_marker_spawn(GameContext* ctx, EntitySlot* e)
     return 1;
 }
 
-/* RemoveObjectIfClass6 (FUN_0041f840) performs the activity-6 scan and
- * raises the tick-down marker when available; the corpus returns zero
- * regardless of whether the marker was created. */
-// FUNCTION: LEGORR 0x0041f840
-int entity_remove_object_if_class6(GameContext* ctx, EntitySlot* e)
-{
-    if (e != NULL && ai_activity_scan(e, 6) != 0) {
-        entity_kind6_tick_down_marker_spawn(ctx, e);
-    }
-    return 0;
-}
-
 char s_bubble_action_names[BUBBLE_ACTION_NAME_COUNT]
                                   [BUBBLE_ACTION_NAME_CAPACITY];
 // GLOBAL: LEGORR 0x00557864

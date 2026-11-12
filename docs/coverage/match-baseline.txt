@@ -1,4 +1,4 @@
-# input_sha256: 2fac1fb543d3b339cb831dc7f79a79aaa91ea5f6fcef2ea2cfd5674473a20128
+# input_sha256: 99a91b003e41ec70dfafec89b64e019ce15dad286a9e05d84879b65de288d87c
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2164 mapped functions
+[game-only] 2166 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -370,6 +370,7 @@
 0x004105a0 100.00 campaign_level_fallback_label
 0x004105f0 100.00 menu_param_record_create
 0x00410690 100.00 menu_record_resources_release
+0x00410740 10.07 fe_save_menu_list_entry_append
 0x00410a10 100.00 menu_item_choice_strings_allocate
 0x00410aa0 32.43 resource_handle_list_append
 0x00410ae0 100.00 resource_handle_list_dispose
@@ -438,6 +439,7 @@
 0x00416940 9.41 options_load_or_default_target
 0x004169c0 12.00 frontend_state_change
 0x00416c80 24.24 menu_enter
+0x00416d00 10.00 frontend_enabled
 0x00416d50 100.00 save_slot_open
 0x00416d60 100.00 is_in_game
 0x00416d70 10.00 fe_selected_level_action
@@ -470,7 +472,7 @@
 0x00417eb0 10.53 save_mark_record
 0x00417f20 76.92 options_context_six_field_set_target
 0x00417f40 34.78 save_write_record_target
-0x00417f90 70.27 sav_record_ptr_target
+0x00417f90 75.68 sav_record_ptr_target
 0x00417fc0 10.81 save_commit
 0x00417fe0 100.00 current_selection_context_get
 0x00417ff0 100.00 current_selection_context_set
@@ -536,7 +538,7 @@
 0x0041a300 44.07 interface_menu_action_labels_init
 0x0041a660 100.00 interaction_action_code_map_initialize
 0x0041a7d0 27.45 resource_input_key_group_register
-0x0041a850 35.09 resource_handle_set_release
+0x0041a850 38.60 resource_handle_set_release
 0x0041a920 24.59 lego::level_state_counters_clear
 0x0041a990 100.00 objective_selection_state_reset
 0x0041a9c0 93.10 interface_menu_action_label_find
@@ -559,7 +561,7 @@
 0x0041baa0 15.26 simulation_pointer_action_dispatch_impl
 0x0041c1c0 11.49 advisor_overlay_hit_resolve
 0x0041c440 31.11 advisor_callback_schedule_gate
-0x0041c4f0 13.23 advisor_animation_position_and_request_update_internal
+0x0041c4f0 13.10 advisor_animation_position_and_request_update_internal
 0x0041c6e0 84.77 pointer_action_state_dispatch
 0x0041c7b0 19.75 input_action_state_update
 0x0041c800 22.08 catalog_slot_flag_update
@@ -991,8 +993,8 @@
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
 0x00444460 22.72 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
-0x00444680 4.88 entity_step_movement_vector_resolve
-0x00444fb0 26.04 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
+0x00444680 4.89 entity_step_movement_vector_resolve
+0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
@@ -1874,7 +1876,7 @@
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
-0x0047d800 29.34 surface_bitmap24_bit_surface_convert
+0x0047d800 29.17 surface_bitmap24_bit_surface_convert
 0x0047db90 100.00 rgb_channels_pack
 0x0047dbc0 22.22 resource_record_add_ref
 0x0047dbf0 18.87 image_surface_blit_transformed
@@ -1969,7 +1971,7 @@
 0x004823e0 13.56 terrain_cell_quad_vertices_write
 0x00482470 11.86 indexed_geometry_data_copy_to_output
 0x00482500 9.22 instance_quad_vertex_data_fill
-0x00482620 31.30 mesh_segment_vertex_fill
+0x00482620 26.09 mesh_segment_vertex_fill
 0x004826c0 9.64 mesh_vertex_record_fill
 0x00482780 100.00 indexed_record_flag6c_bit0_get
 0x004827a0 100.00 indexed_record_flag6c_bit0_set
@@ -1989,7 +1991,7 @@
 0x00483240 51.28 indexed_record_transform_copy_in
 0x00483270 16.34 render_object_color_vector_set
 0x00483400 100.00 indexed_record_data_address_get_target
-0x00483420 36.16 screen_effect_item_opacity_set_target
+0x00483420 30.51 screen_effect_item_opacity_set_target
 0x00483540 100.00 matrix4_identity_initialize
 0x00483580 18.18 render_interface_capability_check
 0x00483600 24.24 direct3d_viewport_setup
@@ -2172,7 +2174,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2400 mapped functions
+[full] 2402 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2536,6 +2538,7 @@
 0x004105a0 100.00 campaign_level_fallback_label
 0x004105f0 100.00 menu_param_record_create
 0x00410690 100.00 menu_record_resources_release
+0x00410740 10.07 fe_save_menu_list_entry_append
 0x00410a10 100.00 menu_item_choice_strings_allocate
 0x00410aa0 32.43 resource_handle_list_append
 0x00410ae0 100.00 resource_handle_list_dispose
@@ -2604,6 +2607,7 @@
 0x00416940 9.41 options_load_or_default_target
 0x004169c0 12.00 frontend_state_change
 0x00416c80 24.24 menu_enter
+0x00416d00 10.00 frontend_enabled
 0x00416d50 100.00 save_slot_open
 0x00416d60 100.00 is_in_game
 0x00416d70 10.00 fe_selected_level_action
@@ -2636,7 +2640,7 @@
 0x00417eb0 10.53 save_mark_record
 0x00417f20 76.92 options_context_six_field_set_target
 0x00417f40 34.78 save_write_record_target
-0x00417f90 70.27 sav_record_ptr_target
+0x00417f90 75.68 sav_record_ptr_target
 0x00417fc0 10.81 save_commit
 0x00417fe0 100.00 current_selection_context_get
 0x00417ff0 100.00 current_selection_context_set
@@ -2702,7 +2706,7 @@
 0x0041a300 44.07 interface_menu_action_labels_init
 0x0041a660 100.00 interaction_action_code_map_initialize
 0x0041a7d0 27.45 resource_input_key_group_register
-0x0041a850 35.09 resource_handle_set_release
+0x0041a850 38.60 resource_handle_set_release
 0x0041a920 24.59 lego::level_state_counters_clear
 0x0041a990 100.00 objective_selection_state_reset
 0x0041a9c0 93.10 interface_menu_action_label_find
@@ -2725,7 +2729,7 @@
 0x0041baa0 15.26 simulation_pointer_action_dispatch_impl
 0x0041c1c0 11.49 advisor_overlay_hit_resolve
 0x0041c440 31.11 advisor_callback_schedule_gate
-0x0041c4f0 13.23 advisor_animation_position_and_request_update_internal
+0x0041c4f0 13.10 advisor_animation_position_and_request_update_internal
 0x0041c6e0 84.77 pointer_action_state_dispatch
 0x0041c7b0 19.75 input_action_state_update
 0x0041c800 22.08 catalog_slot_flag_update
@@ -3157,8 +3161,8 @@
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
 0x00444460 22.72 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
-0x00444680 4.88 entity_step_movement_vector_resolve
-0x00444fb0 26.04 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
+0x00444680 4.89 entity_step_movement_vector_resolve
+0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
@@ -4040,7 +4044,7 @@
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
-0x0047d800 29.34 surface_bitmap24_bit_surface_convert
+0x0047d800 29.17 surface_bitmap24_bit_surface_convert
 0x0047db90 100.00 rgb_channels_pack
 0x0047dbc0 22.22 resource_record_add_ref
 0x0047dbf0 18.87 image_surface_blit_transformed
@@ -4135,7 +4139,7 @@
 0x004823e0 13.56 terrain_cell_quad_vertices_write
 0x00482470 11.86 indexed_geometry_data_copy_to_output
 0x00482500 9.22 instance_quad_vertex_data_fill
-0x00482620 31.30 mesh_segment_vertex_fill
+0x00482620 26.09 mesh_segment_vertex_fill
 0x004826c0 9.64 mesh_vertex_record_fill
 0x00482780 100.00 indexed_record_flag6c_bit0_get
 0x004827a0 100.00 indexed_record_flag6c_bit0_set
@@ -4155,7 +4159,7 @@
 0x00483240 51.28 indexed_record_transform_copy_in
 0x00483270 16.34 render_object_color_vector_set
 0x00483400 100.00 indexed_record_data_address_get_target
-0x00483420 36.16 screen_effect_item_opacity_set_target
+0x00483420 30.51 screen_effect_item_opacity_set_target
 0x00483540 100.00 matrix4_identity_initialize
 0x00483580 18.18 render_interface_capability_check
 0x00483600 24.24 direct3d_viewport_setup

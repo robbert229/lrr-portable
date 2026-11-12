@@ -2304,69 +2304,6 @@ void movie_scale_rgba_rect(const uint8_t* src, int sw, int sh, int spitch,
     }
 }
 
-// FUNCTION: LEGORR 0x00414ce0
-int movie_avis_enabled(BlockFile* cfg)
-{
-    int dont_play_avis = 0;
-    if (cfg != NULL) {
-        dont_play_avis = block_get_bool_path(cfg, "Lego*::Main::DontPlayAvis");
-    }
-    /* AvisEnabled @ 0x414ce0 also suppresses playback in app modes >= 3. */
-    return dont_play_avis != 1 && engine_app_mode_get() < 3;
-}
-
-/* Partial MoviePlayNamed (FUN_00415910): extracts and normalizes the named
- * Lego*::Main path; opening and playback are dispatched by the frame loop. */
-// FUNCTION: LEGORR 0x00415910
-int movie_key_path(BlockFile* cfg, const char* key, char* out, size_t sz)
-{
-    if (cfg == NULL || key == NULL || out == NULL || sz == 0) {
-        return 0;
-    }
-    char path[256];
-    snprintf(path, sizeof(path), "Lego*::Main::%s", key);
-    const char* v = block_get_strptr(cfg, path);
-    if (v == NULL || v[0] == '\0') {
-        return 0;
-    }
-    /* normalize '\' -> '/' (the config spells `avi\intro.avi`) */
-    size_t i = 0;
-    for (; i < sz - 1 && v[i] != '\0'; ++i) {
-        out[i] = (v[i] == '\\') ? '/' : v[i];
-    }
-    out[i] = '\0';
-    return 1;
-}
-
-/* Partial MoviePlayLevelVideo (FUN_00415990): reads and normalizes the
- * level's Video config path; opening and playback happen in the caller. */
-// FUNCTION: LEGORR 0x00415990
-int movie_level_video_path(BlockFile* cfg, const char* level,
-                           char* out, size_t sz)
-{
-    if (cfg == NULL || level == NULL || out == NULL || sz == 0) {
-        return 0;
-    }
-    /* shipped layout: root { Levels { <level> { Video … } } } */
-    char path[256];
-    snprintf(path, sizeof(path), "Lego*::Levels::%s::Video", level);
-    const char* v = block_get_strptr(cfg, path);
-    if (v == NULL) {
-        /* fixture/legacy flat shape */
-        snprintf(path, sizeof(path), "Lego*::%s::Video", level);
-        v = block_get_strptr(cfg, path);
-    }
-    if (v == NULL || v[0] == '\0') {
-        return 0;
-    }
-    size_t i = 0;
-    for (; i < sz - 1 && v[i] != '\0'; ++i) {
-        out[i] = (v[i] == '\\') ? '/' : v[i];
-    }
-    out[i] = '\0';
-    return 1;
-}
-
 /* --- case-insensitive loose-file resolution ---------------------------- */
 
 #if defined(LEGORRR_BACKEND_MINIWIN)

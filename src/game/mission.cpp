@@ -96,21 +96,6 @@ int task_get_int(const GameTask* t, int off)
     return (int)v;
 }
 
-/* StrReplace (FUN_00413f00): replace one byte throughout a NUL-terminated
- * string and return the original pointer. */
-// FUNCTION: LEGORR 0x00413f00
-char* mission_replace_char(char* text, char from, char to)
-{
-    char* const original = text;
-    while (*text != '\0') {
-        if (*text == from) {
-            *text = to;
-        }
-        ++text;
-    }
-    return original;
-}
-
 /* ------------------------------------------------------------------ *
  *  Field loaders (corpus order in TaskBlockInit).
  * ------------------------------------------------------------------ */

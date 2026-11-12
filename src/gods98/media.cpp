@@ -179,18 +179,5 @@ float media_min_distance_ref_distance(void)
     return s_mind_ref;
 }
 
-/* LoaderProgressCallbackSet (FUN_004802b0) — see media.hpp. */
-// GLOBAL: LEGORR 0x005343ac
-void* s_loader_progress_callback; /* DAT_005343ac role: unowned */
-// GLOBAL: LEGORR 0x005343b0
-void* s_loader_progress_context;  /* DAT_005343b0 role: unowned */
-
-// FUNCTION: LEGORR 0x004802b0
-void loader_progress_callback_set(void* callback, void* context)
-{
-    s_loader_progress_callback = callback;
-    s_loader_progress_context = context;
-}
-
 void* loader_progress_callback_peek(void) { return s_loader_progress_callback; }
 void* loader_progress_context_peek(void) { return s_loader_progress_context; }

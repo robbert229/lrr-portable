@@ -42,6 +42,7 @@
 #include "level_shared.hpp"
 #include "level_for_lego.hpp"
 #include "level_from_lego.hpp"
+#include "level_for_files.hpp"
 
 /* Cell mutation's cheat branch calls the existing entity-side implementation
  * of SmallSpiderCellSwarmSpawn. Its runtime prerequisites are checked by that
@@ -314,40 +315,6 @@ int level_random_draw15(void)
 /* ------------------------------------------------------------------ *
  *  `.map` file container (finding 07): raw image, direct-mapped.
  * ------------------------------------------------------------------ */
-
-/* MapOpen2 (FUN_00480170): preserve the retail open, seek/tell, progress,
- * allocate, rewind/read, and close order against the level-owned map slots. */
-// GLOBAL: LEGORR 0x004a2770
-static const char s_map_open_binary_mode[] = "rb";
-// FUNCTION: LEGORR 0x00480170
-int map_open2(const char* path, int32_t* size_out)
-{
-    GameFileHandle* handle = game_file_open_dispatch(
-        path, s_map_open_binary_mode);
-    if (handle != NULL) {
-        int size;
-        int slot;
-        void* map_data;
-        (void)wad_file_seek(handle, 0, 2);
-        size = wad_file_cursor_get(handle);
-        if (s_loader_progress_callback != NULL) {
-            typedef void (*ProgressProc)(const char*, uint32_t, void*);
-            ((ProgressProc)s_loader_progress_callback)(
-                path, (uint32_t)size, s_loader_progress_context);
-        }
-        slot = level_map_slot_allocate((size_t)size);
-        if (slot != -1) {
-            map_data = level_map_slot_get((uint32_t)slot);
-            (void)wad_file_seek(handle, 0, 0);
-            (void)wad_file_read(map_data, 1, size, handle);
-            if (size_out != NULL) *size_out = size;
-            (void)game_file_close(handle);
-            return slot;
-        }
-        (void)game_file_close(handle);
-    }
-    return -1;
-}
 
 MapFile* level_map_open(const char* name)
 {
@@ -1688,31 +1655,6 @@ uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
         return 0;
     }
     return 1;
-}
-
-/* CellFourNeighborWalkCheck (FUN_0041f740): the tutorial path gate uses
- * this asymmetric cardinal-neighbor rule before submitting a cell action.
- * Neighbor order follows the corpus's local table: east, south, west,
- * north. */
-// FUNCTION: LEGORR 0x0041f740
-int cell_four_neighbor_walk_check(const LevelState* s, int cx, int cy)
-{
-    static const int8_t offsets[4][2] = {
-        { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 },
-    };
-    const int marked = level_cell_mask_c0(s, cx, cy) != 0;
-    int occupied_neighbors = 0;
-    for (int i = 0; i < 4; ++i) {
-        const int neighbor = level_cell_occupied_or_flag(
-            s, cx + offsets[i][0], cy + offsets[i][1], 1) != 0;
-        if (neighbor != 0) {
-            if (marked == 0) {
-                return 0;
-            }
-            ++occupied_neighbors;
-        }
-    }
-    return marked == 0 || occupied_neighbors <= 1;
 }
 
 uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy)

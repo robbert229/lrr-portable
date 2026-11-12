@@ -25,12 +25,6 @@ struct AudioBuffer {
     int playing_loop;
 };
 
-/* The corpus menu-volume gain is a standalone .rdata dword (verified
- * 0x49e1e0 = 0.11111111f); the compat band's volume_scale member is now
- * dead space whose bytes the band still carries. */
-// GLOBAL: LEGORR 0x0049e1e0
-static const float s_menu_volume_scale = 0.11111111f; /* DAT_0049e1e0 */
-
 #if defined(LEGORRR_BACKEND_WINAPI)
 #pragma pack(push, 1)
 struct MenuCompatData {
@@ -170,40 +164,6 @@ void audio_active_sound_volume_set(int millibels)
 {
     audio_sound_volume_set(millibels);
 }
-
-/* GameSpeedSelect (FUN_00414de0): the ledger name is misleading; this is
- * the SFX slider callback and simply forwards its index. */
-// FUNCTION: LEGORR 0x00414de0
-void audio_menu_sfx_volume_set(int index)
-{
-    audio_sound_volume_index_set(index);
-}
-
-/* VolumeSet (FUN_00414df0): the corpus sends param_1 / 9 to both mixer
- * channels. AudioPlayer exposes one master output gain, so apply the same
- * normalized value once; audio_set_volume provides the device-side clamp. */
-// FUNCTION: LEGORR 0x00414df0
-#if defined(LEGORRR_BACKEND_WINAPI)
-__declspec(naked) void audio_menu_volume_set(int value)
-{
-    __asm {
-        fild dword ptr [esp + 4]
-        fmul dword ptr [s_menu_volume_scale]
-        fstp dword ptr [esp + 4]
-        mov eax, dword ptr [esp + 4]
-        push eax
-        push eax
-        call music_mixer_volume_set
-        add esp, 8
-        ret
-    }
-}
-#else
-void audio_menu_volume_set(int value)
-{
-    audio_set_volume(s_active_audio_player, (float)value * 0.11111111f);
-}
-#endif
 
 // FUNCTION: LEGORR 0x00478980
 void music_mixer_volume_set(float music, float sfx)

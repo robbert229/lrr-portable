@@ -831,6 +831,7 @@ extern "C" float random_float_range(float minimum, float maximum);
 #include "entity_for_entity_stats.hpp"
 #include "entity_for_lego.hpp"
 #include "entity_for_weapons.hpp"
+#include "entity_for_interface.hpp"
 
 static uint32_t s_entity_finalize_mode_flags;
 static EntityFinalizeHook s_entity_type5_timeout_hook;
@@ -1538,7 +1539,7 @@ void entity_table_maps_release(EntityTableMaps* maps)
     memset(maps, 0, sizeof(*maps));
 }
 
-static EntityTableMaps s_entity_table_maps;
+EntityTableMaps s_entity_table_maps;
 
 void entity_table_maps_allocate_for_counts(EntityTableMaps* maps,
                                            unsigned int count_a,
@@ -7586,38 +7587,6 @@ uint32_t stats_table_word_at_b0(int type, int row, int stride_index)
 // GLOBAL: LEGORR 0x0055627c
 uint32_t s_catalog_counts[5]; /* DAT_0055627c/80/84/88/8c roles */
 static const void* s_catalog_name_tables[4]; /* DAT_005561e8/ec/f0/f4 roles */
-#define CATALOG_ID_PAIRS 24u
-
-// FUNCTION: LEGORR 0x0041b3c0
-int entity_query_flag_count(int query)
-{
-    if (query == 0x13) {
-        return (int)s_catalog_counts[1];
-    }
-    if (query == 0x14 || query == 0x15) {
-        int count = 0;
-        for (uint32_t row = 0; row < s_catalog_counts[0]; ++row) {
-            const uint32_t w148 = stats_table_word_at_148(1, (int)row);
-            const uint32_t w14c = stats_table_word_at_14c(1, (int)row);
-            if (query == 0x14) {
-                if (((w148 & 0x1000u) != 0u || (w148 & 0x2000u) != 0u)
-                    && (w14c & 8u) == 0u) {
-                    count = count + 1;
-                }
-            } else if ((w148 & 0x800u) != 0u || (w14c & 8u) != 0u) {
-                count = count + 1;
-            }
-        }
-        return count;
-    }
-    if (query < 0 || (unsigned)query >= CATALOG_ID_PAIRS) {
-        return 0; /* deviation: the corpus strides blindly */
-    }
-    /* The pair word is the stride-8 band's count word (the corpus reads
-     * one and the same window for both roles); the merged model lives
-     * behind the resource band accessor. */
-    return (int)resource_handle_set_band_word_peek(query);
-}
 
 void catalog_count_install(int which, uint32_t value)
 {
@@ -7629,25 +7598,6 @@ void catalog_count_install(int which, uint32_t value)
 uint32_t catalog_count_peek(int which)
 {
     return (which >= 0 && which < 5) ? s_catalog_counts[which] : 0u;
-}
-
-/* EntityTableMapsAllocate (FUN_0041aa00): the retail entry has no arguments
- * and sizes its six zeroed maps from the loaded vehicle/building counts.
- * Native pointers remain in this owner; the table payloads are retail-width
- * dword/byte arrays and are never used to carry host pointers. */
-// FUNCTION: LEGORR 0x0041AA00
-void entity_table_maps_allocate(void)
-{
-    entity_table_maps_current_release();
-    entity_table_maps_allocate_for_counts(&s_entity_table_maps,
-                                          s_catalog_counts[0],
-                                          s_catalog_counts[3]);
-    resource_handle_set_slot_install(30, s_entity_table_maps.flags_a);
-    resource_handle_set_slot_install(31, s_entity_table_maps.flags_b);
-    resource_handle_set_slot_install(32, s_entity_table_maps.secondary_a);
-    resource_handle_set_slot_install(33, s_entity_table_maps.secondary_b);
-    resource_handle_set_slot_install(34, s_entity_table_maps.primary_a);
-    resource_handle_set_slot_install(35, s_entity_table_maps.primary_b);
 }
 
 const EntityTableMaps* entity_table_maps_current_peek(void)
@@ -7667,83 +7617,6 @@ void catalog_name_table_install(int kind, const void* names)
 const void* catalog_name_table_peek(int kind)
 {
     return (kind >= 0 && kind < 4) ? s_catalog_name_tables[kind] : NULL;
-}
-
-/* CatalogCallbackByIdDispatch (FUN_0041b680): dispatch over the shared
- * stride-8 band. Query 0x13 walks the second catalog count, handing the
- * callback the row lane; 0x14 walks the first catalog's rows and calls
- * the callback on the rows whose +148 word raises bit 0x1000 or 0x2000
- * while the +14c bit 8 stays clear (the first callback that answers
- * nonzero wins); 0x15 hands over rows raising bit 0x800 or the +14c bit
- * 8; any other query needs a nonzero pair count and walks the group's
- * code array through the callback — 0x22/0x23 codes ride through the
- * selection-code resolve, which rewrites the array element in place
- * (the corpus's cached pick). Deviations: the query lanes thread the
- * context block (the resolve's state window is not a corpus argument),
- * NULL callback/pair arrays answer zero where the corpus strides
- * blindly, and the guarded reads fold the corpus's blind strides. */
-// FUNCTION: LEGORR 0x0041b680
-int catalog_callback_by_id_dispatch(const GameContext* ctx, int query,
-                                    int (*callback)(int, int, int, void*),
-                                    void* payload)
-{
-    if (callback == NULL) {
-        return 0; /* deviation: the corpus calls the pointer blindly */
-    }
-    if (query == 0x13) {
-        for (uint32_t row = 0; row < s_catalog_counts[1]; ++row) {
-            if (callback(0x49, 4, (int)row, payload) != 0) {
-                return 1;
-            }
-        }
-        return 0;
-    }
-    if (query == 0x14 || query == 0x15) {
-        for (uint32_t row = 0; row < s_catalog_counts[0]; ++row) {
-            int answer = 0;
-            if (query == 0x14) {
-                if ((stats_table_word_at_148(1, (int)row) & 0x1000u) != 0u
-                    || (stats_table_word_at_148(1, (int)row) & 0x2000u) != 0u) {
-                    if ((stats_table_word_at_14c(1, (int)row) & 8u) == 0u) {
-                        answer = callback(0x49, 1, (int)row, payload);
-                    }
-                }
-            } else {
-                if ((stats_table_word_at_148(1, (int)row) & 0x800u) != 0u
-                    || (stats_table_word_at_14c(1, (int)row) & 8u) != 0u) {
-                    answer = callback(0x49, 1, (int)row, payload);
-                }
-            }
-            if (answer != 0) {
-                return 1;
-            }
-        }
-        return 0;
-    }
-    if (resource_handle_set_band_word_peek(query) == 0u) {
-        return 0;
-    }
-    int* codes = (int*)resource_handle_set_slot_peek(query);
-    if (codes == NULL) {
-        return 0; /* deviation: the corpus strides the pair blindly */
-    }
-    for (uint32_t i = 0;;) {
-        if (codes[i] == 0x22 || codes[i] == 0x23) {
-            /* the corpus rewrites the cached element through the resolve */
-            selection_entity_code_resolve(ctx, &codes[i]);
-        }
-        if (callback(codes[i], 0, 0, payload) != 0) {
-            return 1;
-        }
-        /* corpus order: the index increments and the band word re-reads
-         * every hop (a callback that re-registers the group retargets the
-         * walk mid-sweep), and the walk stops before the first index the
-         * count no longer covers */
-        if (++i == 0u
-                || resource_handle_set_band_word_peek(query) <= i) {
-            return 0;
-        }
-    }
 }
 
 void catalog_id_pair_install(int entry, uint32_t size)

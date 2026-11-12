@@ -1,0 +1,2 @@
+role,address,name,from,to,before_sha256,after_sha256,edit
+split-type-and-variables,,"ResourceHandleSetBandSlot,s_handle_set_band",src/gods98/resource.cpp:2785,src/gods98/resource.cpp:2785,f4ad65fa95426d1afcc0600434dfb1a4dcc8bb0ed6935efbbf30211bf68e44b2,518e609b12e1a9a524a57499b824e02db6ba366b6dce014e4c0268abb1596d52,split into 2 declarations
