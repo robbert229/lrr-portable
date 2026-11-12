@@ -5806,8 +5806,8 @@ void entity_build_placement_command_batch_expand(const int cell_xy[2])
 /* EntityActionKindSupported (FUN_0043a7c0): the kind-6 call is a no-op after
  * the stats flags have been loaded, so its x86 return residue is that
  * nonzero flags word. The kind-7 call reads the selected live level balance. */
-static int entity_action_kind_supported(const EntitySlot* source, int kind,
-                                        int selector)
+static int entity_action_kind_supported_const_unused(const EntitySlot* source,
+                                                     int kind, int selector)
 {
     uint32_t flags;
     const LevelState* level;
