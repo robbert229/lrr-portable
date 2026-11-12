@@ -6,13 +6,14 @@
 
 #if defined(_WIN32)
 #include <windows.h>
-#ifndef INVALID_FILE_ATTRIBUTES
-#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
-#endif
 #else
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#endif
+
+#if defined(_WIN32) && !defined(INVALID_FILE_ATTRIBUTES)
+#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
 #endif
 
 #include "resource.hpp"
