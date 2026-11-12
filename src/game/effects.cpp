@@ -30,6 +30,7 @@
 #include "effects_shared.hpp"
 #include "effects_for_weapons.hpp"
 #include "effects_for_interface.hpp"
+#include "effects_for_legoobject.hpp"
 
 uint32_t s_active_effect_occupied[10];
 uint32_t s_active_segment_visual_occupied[10];
@@ -47,7 +48,7 @@ void* s_timed_segment_visual_owners[10];
 SimtickSfxTimedVisualRecord s_timed_segment_tick_records[10];
 static SimtickSfxProjectileRecord s_active_effect_tick_records[10];
 static int s_sfx_tick_hooks_installed;
-static KindEffectDispatchHooks s_kind_effect_dispatch_hooks;
+KindEffectDispatchHooks s_kind_effect_dispatch_hooks;
 EffectApplyHooks s_effect_apply_hooks;
 static ScreenSpaceEffectDispatchHook s_screen_space_effect_dispatch_hook;
 struct ScreenEffectTickRecord s_screen_effect_tick_records[3][50];
@@ -68,8 +69,8 @@ TimedEffectRuntimeHooks s_timed_effect_runtime_hooks;
 TimedEffectSlotRenderHooks s_timed_effect_slot_render_hooks;
 SceneTransformState s_scene_transform_state;
 LightEffectParameterState s_light_effect_parameters;
-static EntityNodeScaleApplyHook s_entity_node_scale_apply_hook;
-static void* s_entity_node_scale_apply_context;
+EntityNodeScaleApplyHook s_entity_node_scale_apply_hook;
+void* s_entity_node_scale_apply_context;
 EventTimerActionHook s_event_timer_action_hook;
 void* s_event_timer_action_context;
 static EventTimerInteractionFlagsHook s_event_timer_interaction_flags_hook;
@@ -258,34 +259,6 @@ void entity_node_scale_apply_hook_set(EntityNodeScaleApplyHook hook,
     s_entity_node_scale_apply_context = context;
 }
 
-// EntityNodeScaleUpdate (FUN_0044bb30): the accessor call sites pass an extra
-// value that the one-argument cdecl readers ignore; only the final scaling
-// affects the selected record value.
-// FUNCTION: LEGORR 0x0044bb30
-void entity_node_scale_update(void* entity_ptr, int doubled)
-{
-    EntitySlot* entity = (EntitySlot*)entity_ptr;
-    float first;
-    float second;
-    if (entity == NULL || s_entity_node_scale_apply_hook == NULL) return;
-    first = entity_stats_float_at128(entity);
-    second = entity_stats_float_at12c(entity);
-    if (doubled != 0) {
-        first = entity_stats_float_at124(entity);
-        first = entity_stats_float_at120(entity);
-        first += first;
-        second = entity_stats_float_at128(entity);
-        second = entity_stats_float_at124(entity);
-        second = entity_stats_float_at120(entity);
-        second *= 4.0f;
-    }
-    else {
-        first = entity_stats_float_at120(entity);
-        second = entity_stats_float_at120(entity);
-    }
-    s_entity_node_scale_apply_hook(s_entity_node_scale_apply_context,
-                                   entity, first, second);
-}
 LightEffectConfigLoadHook s_light_effect_config_load_hook;
 void* s_light_effect_config_load_context;
 
@@ -513,95 +486,6 @@ void kind_effect_dispatch_hooks_set(const KindEffectDispatchHooks* hooks)
         return;
     }
     s_kind_effect_dispatch_hooks = *hooks;
-}
-
-// FUNCTION: LEGORR 0x004420d0
-void kind_effect_slot_init_dispatch(void* entity, int kind)
-{
-    const char* resource_name;
-    uint32_t resource_index;
-    float position[3];
-    float direction[3];
-    float duration;
-    EntitySlot* owner = (EntitySlot*)entity;
-    GameContext* game;
-    LevelState* level;
-    if (owner == NULL) return;
-    switch (kind) {
-    case 1: resource_name = "Lazer"; break;
-    case 2: resource_name = "Pusher"; break;
-    case 3: resource_name = "Freezer"; break;
-    case 4: resource_name = "Lazer"; break;
-    default: return;
-    }
-    game = owner->owner_ctx;
-    if (game == NULL) game = entity_pool_callback_context_get();
-    level = game != NULL ? game->level : NULL;
-    if (s_kind_effect_dispatch_hooks.entity_position_get != NULL) {
-        if (!s_kind_effect_dispatch_hooks.entity_position_get(
-                s_kind_effect_dispatch_hooks.context, entity, position)) return;
-    }
-    else if (owner->attached_scene_object != NULL &&
-             ddiscene_object_position_get(owner->attached_scene_object, NULL,
-                                          position)) {
-        /* Use the live scene pose when it has been installed. */
-    }
-    else {
-        position[0] = owner->x;
-        position[1] = owner->y;
-        position[2] = owner->z;
-    }
-    if (s_kind_effect_dispatch_hooks.facing_vector_get != NULL) {
-        s_kind_effect_dispatch_hooks.facing_vector_get(
-            s_kind_effect_dispatch_hooks.context, entity, direction);
-    }
-    else if (owner->attached_scene_object != NULL &&
-             ddiscene_object_facing_get(owner->attached_scene_object, NULL,
-                                        direction)) {
-        /* The renderer's facing vector is authoritative when available. */
-    }
-    else {
-        direction[0] = (float)cos((double)owner->rot);
-        direction[1] = (float)sin((double)owner->rot);
-        direction[2] = 0.0f;
-    }
-    if (s_kind_effect_dispatch_hooks.terrain_height_get != NULL) {
-        position[2] = s_kind_effect_dispatch_hooks.terrain_height_get(
-            s_kind_effect_dispatch_hooks.context, position[0], position[1]);
-    }
-    else if (level != NULL && level->ptr_terrain != NULL) {
-        position[2] = terrain_surface_height_interpolate(
-            level->ptr_terrain, position[0], position[1]);
-    }
-    else {
-        return;
-    }
-    position[2] -= s_kind_effect_dispatch_hooks.entity_half_height_get != NULL
-        ? s_kind_effect_dispatch_hooks.entity_half_height_get(
-              s_kind_effect_dispatch_hooks.context, entity)
-        : entity_stats_float_at74(owner) * 0.5f;
-    resource_index = lego::object_type_name_index_find(resource_name);
-    duration = s_kind_effect_dispatch_hooks.resource_duration_get != NULL
-        ? s_kind_effect_dispatch_hooks.resource_duration_get(
-              s_kind_effect_dispatch_hooks.context, resource_name)
-        : lego::weapon_type_recharge_time_get((int)resource_index);
-    if (s_kind_effect_dispatch_hooks.effect_spawn != NULL) {
-        s_kind_effect_dispatch_hooks.effect_spawn(
-            s_kind_effect_dispatch_hooks.context, entity, kind, position,
-            direction, duration);
-    }
-    else if (kind >= 1 && kind <= 3) {
-        /* FUN_0046faf0 owns the three direct-emitter modes. Its auxiliary
-         * argument is the resolved object-type index used by the spawn
-         * record, and the mode is the action kind. Kind 4 uses the separate
-         * flight-curve record and needs the endpoint at owner +0x3a8, which
-         * EntitySlot does not currently expose. */
-        (void)entity_spawn_record_slot_init(owner, position, direction,
-                                            resource_index, (uint32_t)kind);
-    }
-    if (s_kind_effect_dispatch_hooks.cooldown_set != NULL)
-        s_kind_effect_dispatch_hooks.cooldown_set(
-            s_kind_effect_dispatch_hooks.context, entity, duration);
 }
 
 void active_effect_build_hooks_set(const ActiveEffectBuildHooks* hooks)

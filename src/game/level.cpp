@@ -43,6 +43,8 @@
 #include "level_for_lego.hpp"
 #include "level_from_lego.hpp"
 #include "level_for_files.hpp"
+#include "level_for_legoobject.hpp"
+#include "level_from_legoobject.hpp"
 
 /* Cell mutation's cheat branch calls the existing entity-side implementation
  * of SmallSpiderCellSwarmSpawn. Its runtime prerequisites are checked by that
@@ -956,12 +958,6 @@ uint8_t* voxel_at(LevelState* s, int x, int y)
            + ((size_t)y * w + x) * LEVEL_VOXEL_STRIDE;
 }
 
-/* The corpus keeps a bounded twenty-entry pool of the predug coordinates
- * encountered while loading the layer. */
-// GLOBAL: LEGORR 0x004e844c
-int s_predug_coordinates[20][2];
-// GLOBAL: LEGORR 0x004e853c
-unsigned int s_predug_coordinate_count;
 unsigned int level_predug_coordinate_count_get(void)
 {
     return s_predug_coordinate_count;
@@ -978,40 +974,6 @@ void level_predug_coordinate_pool_clear(void)
     memset(s_predug_coordinates, 0, sizeof(s_predug_coordinates));
     s_predug_coordinate_count = 0u;
 }
-// FUNCTION: LEGORR 0x0044A4B0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void predug_coordinate_pool_append(const int cell_xy[2])
-{
-    __asm {
-        mov ecx, dword ptr [s_predug_coordinate_count]
-        cmp ecx, 14h
-        jae predug_append_return
-        mov eax, dword ptr [esp + 4]
-        mov edx, dword ptr [eax]
-        mov dword ptr [ecx*8 + s_predug_coordinates], edx
-        mov ecx, dword ptr [s_predug_coordinate_count]
-        mov eax, dword ptr [eax + 4]
-        mov dword ptr [ecx*8 + s_predug_coordinates + 4], eax
-        mov eax, dword ptr [s_predug_coordinate_count]
-        inc eax
-        mov dword ptr [s_predug_coordinate_count], eax
-    predug_append_return:
-        ret
-    }
-}
-#else
-void predug_coordinate_pool_append(const int cell_xy[2])
-{
-    volatile unsigned int* count = &s_predug_coordinate_count;
-    unsigned int slot = *count;
-    if (slot < 20u) {
-        s_predug_coordinates[slot][0] = cell_xy[0];
-        slot = *count;
-        s_predug_coordinates[slot][1] = cell_xy[1];
-        *count = slot + 1u;
-    }
-}
-#endif
 
 TerrainActivityBuildRecordModel s_terrain_activity_build_records[256];
 
@@ -1249,21 +1211,6 @@ uint8_t* level_voxel(const LevelState* s, int x, int y)
 int level_cell_of(float v)
 {
     return crt_float_to_long(v);
-}
-
-/* EntityPositionToTerrainCell (FUN_004424f0): the corpus obtains the
- * entity's scene position, then passes its world x/y pair through the
- * terrain grid picker. EntitySlot::x/y are the portable position values. */
-// FUNCTION: LEGORR 0x004424F0
-void entity_position_to_terrain_cell(const struct EntitySlot* entity,
-                                     const LevelState* s,
-                                     int* cell_x, int* cell_y)
-{
-    if (entity == NULL || s == NULL || cell_x == NULL || cell_y == NULL) {
-        return;
-    }
-    if (!terrain_world_xy_to_cell(s->ptr_terrain, entity->x, entity->y,
-                                  cell_x, cell_y)) return;
 }
 
 int level_walkable(const LevelState* s, int cx, int cy)
@@ -1946,8 +1893,8 @@ static TerrainCellVariantCompleteHook s_terrain_cell_variant_complete_hook;
 static void* s_terrain_cell_variant_complete_context;
 static TerrainCellStateProjectionHook s_terrain_cell_state_projection_hook;
 static void* s_terrain_cell_state_projection_context;
-static DockDefinitionCellGetHook s_dock_definition_cell_get_hook;
-static void* s_dock_definition_cell_get_context;
+DockDefinitionCellGetHook s_dock_definition_cell_get_hook;
+void* s_dock_definition_cell_get_context;
 static SpatialObjectQueryHook s_spatial_object_query_hook;
 static void* s_spatial_object_query_context;
 static TerrainCellRecordCountIncrementHook s_terrain_cell_record_count_hook;
@@ -2294,17 +2241,6 @@ void dock_definition_cell_get_hook_install(DockDefinitionCellGetHook hook,
     s_dock_definition_cell_get_context = context;
 }
 
-// FUNCTION: LEGORR 0x00438f60
-int dock_definition_matches_cell(const int cell_xy[2])
-{
-    int dock_xy[2];
-    if (cell_xy == NULL || s_dock_definition_cell_get_hook == NULL) return 0;
-    if (!s_dock_definition_cell_get_hook(dock_xy,
-                                         s_dock_definition_cell_get_context)) {
-        return 0;
-    }
-    return dock_xy[0] == cell_xy[0] && dock_xy[1] == cell_xy[1];
-}
 TerrainCellLinkedEntryRemoveHook s_terrain_cell_linked_entry_remove_hook;
 void* s_terrain_cell_linked_entry_remove_context;
 
@@ -3096,18 +3032,7 @@ uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
     return terrain_neighbor_coordinate_check_explicit(s, x, y, kind, mode);
 }
 
-/* --- grid-record count tables (see level.hpp) ------------------------------
- * The corpus's two adjacent tables (DAT pairs 0x4e3944/0x4dee44) as two
- * zero-initialized module statics: no ported code feeds them. The first
- * table is at 0x4e3944; the second, read as the difference's minuend, is at
- * 0x4dee44. */
-#define GRID_COUNT_TABLE_DWORDS 0x12c0 /* 300 cells * 16 slots */
-
-// GLOBAL: LEGORR 0x004e3944
-static uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
-// GLOBAL: LEGORR 0x004dee44
-static uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
-static int64_t grid_count_index(int row, int column, int slot)
+int64_t grid_count_index(int row, int column, int slot)
 {
     const int64_t cell = (int64_t)row * 15 + column;
     const int64_t idx = cell * 16 + slot;
@@ -3115,39 +3040,6 @@ static int64_t grid_count_index(int row, int column, int slot)
         return -1; /* bounds deviation (corpus indexes blindly) */
     }
     return idx;
-}
-
-// FUNCTION: LEGORR 0x00437440
-void grid_record_count_tables_clear(void)
-{
-    for (size_t k = 0; k < GRID_COUNT_TABLE_DWORDS; ++k) {
-        s_grid_count_first[k] = 0u;
-    }
-    for (size_t second_index = 0; second_index < GRID_COUNT_TABLE_DWORDS;
-         ++second_index) {
-        s_grid_count_second[second_index] = 0u;
-    }
-}
-
-// FUNCTION: LEGORR 0x00437460
-int grid_record_count_difference_get(int row, int column, int slot,
-                                     int subtract_first_table)
-{
-    const int64_t idx = grid_count_index(row, column, slot);
-    if (idx < 0) {
-        return 0;
-    }
-    const int v = (int)s_grid_count_second[(size_t)idx];
-    return (subtract_first_table != 0)
-        ? v - (int)s_grid_count_first[(size_t)idx]
-        : v;
-}
-
-// FUNCTION: LEGORR 0x004374a0
-uint32_t grid_record_count_get(int row, int column, int slot)
-{
-    const int64_t idx = grid_count_index(row, column, slot);
-    return (idx < 0) ? 0u : s_grid_count_first[(size_t)idx];
 }
 
 /* FUNCTION: LEGORR 0x00455300
@@ -3380,53 +3272,6 @@ uint32_t level_fielda8_get(const LevelState* s)
     return s != NULL ? (uint32_t)level_int(s, 0xA8) : 0u;
 }
 
-/* TerrainObjectTypeSfxAtCellGet (FUN_0044ad80) — see level.hpp. */
-#define TERRAIN_SFX_GRID_CELLS 300
-// GLOBAL: LEGORR 0x004de814
-static int s_terrain_sfx_grid[TERRAIN_SFX_GRID_CELLS]; /* DAT_004de814 role */
-
-// FUNCTION: LEGORR 0x0044ad80
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int terrain_object_type_sfx_at_cell_get(
-    const void* position_record)
-{
-    __asm {
-        push ecx
-        mov edx, dword ptr [esp + 8]
-        lea eax, dword ptr [esp]
-        lea ecx, dword ptr [esp + 8]
-        push eax
-        push ecx
-        push edx
-        call copy_two_dword_pair_to_outputs
-        mov eax, dword ptr [esp + 14h]
-        mov ecx, dword ptr [esp + 0ch]
-        add esp, 0ch
-        lea eax, dword ptr [eax + eax*2]
-        lea edx, dword ptr [ecx*4]
-        lea eax, dword ptr [eax + eax*4]
-        mov eax, dword ptr [edx + eax*4 + s_terrain_sfx_grid]
-        pop ecx
-        ret
-    }
-}
-#else
-int terrain_object_type_sfx_at_cell_get(const void* position_record)
-{
-    uint32_t x = 0, y = 0;
-    if (position_record == NULL) {
-        return 0; /* deviation: the corpus strides blindly */
-    }
-    __builtin_memcpy(&x, (const char*)position_record, 4);
-    __builtin_memcpy(&y, (const char*)position_record + 4, 4);
-    const int cell = (int)(y + x * 15u); /* corpus's second-word-first index */
-    if (cell < 0 || cell >= TERRAIN_SFX_GRID_CELLS) {
-        return 0;
-    }
-    return s_terrain_sfx_grid[cell];
-}
-#endif
-
 void terrain_sfx_grid_cell_set(int cell, int handle)
 {
     if (cell >= 0 && cell < TERRAIN_SFX_GRID_CELLS) {
@@ -3440,54 +3285,6 @@ int terrain_sfx_grid_cell_peek(int cell)
         return 0;
     }
     return s_terrain_sfx_grid[cell];
-}
-
-/* TerrainObjectTypeSfxGridConfigLoad (FUN_0044acc0) — see level.hpp.
- * Deviations: the corpus strides its zero loop blindly (the port memsets
- * the window); the corpus's two dead preamble loops leave the running
- * pair initialized 20/15, but the resolver zeroes the row half at its
- * entry (0x42e8b8) — only the TYPE half carries across entries, and only
- * into skipped (`continue`) iterations; a resolved name therefore always
- * sees a fresh row (the port's resolver carries the entry zeroing); the corpus
- * strides a missing value string into the alias table (the port's lookup
- * guards NULL) and stores blind past the 300-entry window (the port
- * stores blind as well). The entry chain is the subgroup record followed
- * by its equal-key siblings, entry name = the object name (the corpus
- * reads the name blind at its record +4, the BlockRec key), entry value =
- * the sound alias reference. */
-// FUNCTION: LEGORR 0x0044acc0
-void terrain_object_sfx_grid_config_load(BlockFile* config,
-                                         const char* root_path)
-{
-    memset(s_terrain_sfx_grid, 0, sizeof s_terrain_sfx_grid);
-    int obj_x = 20;
-    int init_count = 20;
-    int obj_y;
-    /* The corpus writes the row output on each pass through this 20-count
-     * pre-loop. Keep those stores visible to VC5; final outputs remain 20/15. */
-    do {
-        --init_count;
-        *(volatile int*)&obj_y = 15;
-    } while (init_count != 0);
-    const char* path = string_path_join(root_path, "ObjTtSFXs", NULL);
-    for (BlockRec* entry = block_subgroup(config, path);
-         entry != NULL; entry = block_next_equal_key(entry)) {
-        /* The corpus loads the name blind (mov ecx,[esi+4]), the record
-         * key. The chain already proved entry non-NULL. */
-        const char* name = entry->key;
-        if (entity_type_row_for_name(name, &obj_x,
-                                     &obj_y) == 0) {
-            continue;
-        }
-        int sfx = 0;
-        /* The entry chain proves non-NULL; read its value blind. */
-        const char* value = entry->value;
-        if (sound_alias_lookup(value, &sfx) == 0) {
-            continue;
-        }
-        const int cell = obj_y + obj_x * 15;
-        s_terrain_sfx_grid[cell] = sfx; /* the corpus's blind scale store */
-    }
 }
 
 TerrainChoiceWindow s_choice_windows[4];
@@ -3545,25 +3342,6 @@ uint32_t terrain_choice_active_peek(void) { return s_choice_active; }
 uint32_t terrain_choice_flags_peek(void) { return s_choice_flags; }
 void terrain_choice_flags_set(uint32_t flags) { s_choice_flags = flags; }
 uintptr_t terrain_choice_record_peek(void) { return s_choice_record; }
-
-/* EntityAvailableResourceSpend (FUN_00438720) — see level.hpp.
- * The corpus's comparison value is the unconsumed EAX of the void no-op
- * callback; pinning it to 0 matches the corpus call's observable shape. */
-// FUNCTION: LEGORR 0x00438720
-int entity_available_resource_spend(LevelState* level, int amount,
-                                    const void* resource_hint)
-{
-    if (level != NULL && level_int(level, 0x1f8) != 0) {
-        amount = 0;
-    }
-    const int probe = 0; /* FUN_0041f8e0's void call: pinned residue */
-    if (probe < amount) {
-        message_dispatch(0xe, 0, 0, resource_hint);
-        return 0;
-    }
-    global_object_field98_add_for_level(level, amount);
-    return 1;
-}
 
 /* CellCardinalNeighborApply (FUN_00409cd0) — see level.hpp. The corpus's
  * offset pairs, in its loop order: north, east, south, west. */
@@ -4419,69 +4197,6 @@ int first_free_neighbor_cell_pick(const struct EntitySlot* entity,
         }
     }
     return 0;
-}
-
-/* The six-dword render snapshot is a separate zero-filled global block in
- * the corpus (DAT_004ea7ac). Its individual values are unresolved; keep the
- * storage opaque and expose only the exact copy/clear operations. */
-// GLOBAL: LEGORR 0x004ea7ac
-static uint32_t s_render_config_snapshot[6];
-
-// FUNCTION: LEGORR 0x004370b0
-void render_config_six_field_copy_out(uint32_t out[6])
-{
-    if (out == NULL) {
-        return; /* deviation: the corpus copies through the pointer blindly */
-    }
-    const uint32_t* source = s_render_config_snapshot;
-    int remaining = 6;
-    do {
-        *out++ = *source++;
-        --remaining;
-    } while (remaining != 0);
-}
-
-// FUNCTION: LEGORR 0x004370d0
-void render_config_six_field_copy_in_or_clear(const uint32_t in[6])
-{
-    if (in != NULL) {
-        uint32_t* destination = s_render_config_snapshot;
-        int remaining = 6;
-        do {
-            *destination++ = *in++;
-            --remaining;
-        } while (remaining != 0);
-        return;
-    }
-    uint32_t* destination = s_render_config_snapshot;
-    int remaining = 6;
-    do {
-        *destination++ = 0;
-        --remaining;
-    } while (remaining != 0);
-}
-
-// FUNCTION: LEGORR 0x00437100
-int grid_record_count_difference_sum(int type, int skip_flagged_rows)
-{
-    int total = 0;
-    unsigned row;
-    unsigned slot;
-
-    row = 0;
-    do {
-        slot = 0;
-        do {
-            if (skip_flagged_rows == 0
-                || (stats_table_word_at_144(type, (int)row) & 8u) == 0u) {
-                total += grid_record_count_difference_get(type, (int)row,
-                                                           (int)slot, 1);
-            }
-            ++slot;
-        } while (slot < 16);
-        ++row;
-    } while (row < 15u);
-    return total;
 }
 
 namespace unported_ledger_stubs {
