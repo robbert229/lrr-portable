@@ -3903,7 +3903,7 @@ typedef struct QueueRec {
 // GLOBAL: LEGORR 0x004eaf20
 static QueueRec s_queue[2][CMD_QUEUE_CAP];
 // GLOBAL: LEGORR 0x004fef20
-static int      s_queue_count[2];
+static int      s_queued_count[2];
 // GLOBAL: LEGORR 0x004fef28
 static int      s_ping; /* active producer block (DAT_004fef28) */
 void cmd_context_set(GameContext* ctx)
@@ -3915,7 +3915,7 @@ void cmd_context_set(GameContext* ctx)
     cmd_place_eligibility_ops_bind();
     s_ping = 0;
     for (int i = 0; i < 2; ++i) {
-        s_queue_count[i] = 0;
+        s_queued_count[i] = 0;
     }
 }
 
@@ -3923,10 +3923,10 @@ void cmd_context_set(GameContext* ctx)
 void cmd_produce(int op, const void* a1, int a2, const int* pair)
 {
     int block = s_ping;
-    if ((unsigned)s_queue_count[block] >= CMD_QUEUE_CAP) {
+    if ((unsigned)s_queued_count[block] >= CMD_QUEUE_CAP) {
         return; /* queue full: silent drop (FUN_00452060) */
     }
-    QueueRec* q = &s_queue[block][s_queue_count[block]++];
+    QueueRec* q = &s_queue[block][s_queued_count[block]++];
     /* b63 note: an explicit zero-fill phase + single pair null-test was
      * tried (corpus 0x452092..0x4520ba shape) and measured LOWER — the
      * toolchain's store/register scheduling diverges; the fused writes
@@ -3999,7 +3999,7 @@ void cmd_queue_tick(void)
     /* 2. Remap the first dword of every queued record while the old bank
      *    is still active. This is FUN_0045d870 over each 0x14-byte record. */
     int block = s_ping;
-    int count = s_queue_count[block];
+    int count = s_queued_count[block];
     for (i = 0; i < count; ++i) {
         QueueRec* q = &s_queue[block][i];
         command_entity_reference_remap((uint32_t*)q);
@@ -4008,9 +4008,9 @@ void cmd_queue_tick(void)
 
     /* 3. Retire the old producer bank, flip the ping-pong selector, and
      *    clear the newly active bank before dispatching the saved count. */
-    s_queue_count[block] = 0;
+    s_queued_count[block] = 0;
     s_ping = !s_ping;
-    s_queue_count[s_ping] = 0;
+    s_queued_count[s_ping] = 0;
 
     /* 4. The opcode switch (finding 06/10 §"The queue executor"). */
     for (i = 0; i < count; ++i) {
@@ -4146,13 +4146,13 @@ void cmd_queue_tick(void)
 void cmd_queue_cancel_match(int value)
 {
     const int block = s_ping;
-    int count = s_queue_count[block];
+    int count = s_queued_count[block];
     unsigned i = 0;
     while ((int)i < count) {
         if ((uint32_t)(uintptr_t)s_queue[block][i].a1 == (uint32_t)value) {
             count = count - 1;
             s_queue[block][i] = s_queue[block][count];
-            s_queue_count[block] = count;
+            s_queued_count[block] = count;
         }
         i = i + 1;
     }
@@ -4192,7 +4192,7 @@ int cmd_array_find_value_index(const int* array, unsigned count, int value,
 
 int cmd_queue_active_count_peek(void)
 {
-    return s_queue_count[s_ping];
+    return s_queued_count[s_ping];
 }
 
 /* --- selection snapshot / dispatch (see cmd.hpp) -----------------------------
