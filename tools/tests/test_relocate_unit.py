@@ -839,6 +839,24 @@ class PerRelocationHeaderTest(unittest.TestCase):
         finally:
             fx.close()
 
+    def test_const_object_keeps_an_earlier_private_header_with_its_extern(self):
+        # GAME-017's s_map_open_binary_mode (#525): an earlier relocation's
+        # frozen header of the legacy file declares the const object for its
+        # own unit file. The moved definition needs that extern first.
+        earlier = ("// SPDX-License-Identifier: LGPL-3.0-or-later\n#ifndef MIXED_FOR_GAMMA_HPP\n"
+                   "#define MIXED_FOR_GAMMA_HPP\nextern const char s_alpha_mode[];\n#endif\n")
+        mixed = MIXED.replace('#include "mixed.hpp"\n', '#include "mixed.hpp"\n#include "mixed_for_gamma.hpp"\n') \
+            .replace("// GLOBAL: LEGORR 0x004b0000\nstatic int s_alpha_state = 0; /* owned by Alpha */",
+                     '// GLOBAL: LEGORR 0x004b0000\nconst char s_alpha_mode[] = "rb";\n'
+                     "static int s_alpha_state = 0; /* owned by Alpha */")
+        fx = Fixture(mixed, {"src/game/mixed_for_gamma.hpp": earlier})
+        try:
+            unit = ru.plan_relocation("GAME-001", fx.root).files["src/game/alpha.cpp"]
+            self.assertIn('const char s_alpha_mode[] = "rb";', unit)
+            self.assertLess(unit.index('#include "mixed_for_gamma.hpp"'), unit.index("s_alpha_mode"))
+        finally:
+            fx.close()
+
     def test_function_declared_only_in_the_from_header_gets_a_forward_declaration(self):
         # alpha_second moves (annotated) and beta_one, which stays, calls it;
         # no public header declares it, so its declaration goes to

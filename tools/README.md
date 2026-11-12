@@ -130,7 +130,9 @@ writes its own pair. A header that already exists is refused. So:
 
 Each header includes the earlier private headers of L whose names it uses,
 so it is self-contained. A new unit file copies L's include list but keeps
-an earlier private header only when it uses a name the header declares.
+an earlier private header only when it uses a name the header declares, or
+when the header declares a `const` object the unit defines: C++ gives that
+object external linkage only after an `extern` (#525).
 
 Headers that other files include are never edited (finding 506).
 

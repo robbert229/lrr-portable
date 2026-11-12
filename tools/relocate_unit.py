@@ -1576,6 +1576,14 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
     # A legacy file's private headers come along only when the unit uses a
     # name they declare: they are frozen, so including them is safe, but a
     # unit that does not need them should not count their declarations.
+    # A moved const object needs an extern before its definition, or C++
+    # gives it internal linkage. An earlier relocation's private header of
+    # the legacy file may hold that extern for another unit file (#525:
+    # GAME-017's s_map_open_binary_mode, declared for files.cpp by
+    # level_for_files.hpp): the unit then includes that header.
+    const_defs = {m.item.names[0] for s in plan.sources for m in s.moves
+                  if m.item.category == "var" and not m.item.static and len(m.item.names) == 1
+                  and not m.item.cgroup and _const_object(_head_decl(s, m.item), m.item.names[0])}
     # A top-level #if group that holds only #include lines (#525) is copied
     # verbatim, in its place, once: the unit needs the platform headers it
     # selects. Other conditional includes are not copied.
@@ -1599,7 +1607,7 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
             resolved = headers.resolve(it.include, s.rel, s.entry.library) or it.include
             if resolved in seen:
                 continue
-            if is_private_header(root, resolved) and not (_names_in_file(root / resolved) & needed):
+            if is_private_header(root, resolved) and not (_names_in_file(root / resolved) & (needed | const_defs)):
                 continue
             seen.add(resolved)
             includes.append("#include " + _spell(it.include, s.rel, plan.target, s.entry.library, headers))
