@@ -1,4 +1,4 @@
-# input_sha256: 738fb897432e7e69e0ec76bc48defb546f28ca9dd920d5aacb5e4322c12482b0
+# input_sha256: 011ecc41e71bd5ae5ec32438dd5a4b94c09e2201d6343b9929c74cae915696f1
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -141,7 +141,7 @@
 0x00406360 100.00 aitask_entity_record_attach_and_relink
 0x004063e0 100.00 aitask_pending_record_entity_reference_clear
 0x00406400 100.00 aitask_cmd_pending_record_copy
-0x00406440 60.87 aitask_cmd_alloc
+0x00406440 65.22 aitask_cmd_alloc
 0x00406480 100.00 aitask_cmd_free
 0x004064c0 100.00 aitask_cmd_pool_grow
 0x00406540 100.00 aitask_entity_pool_callback_search
@@ -2403,7 +2403,7 @@
 0x00406360 100.00 aitask_entity_record_attach_and_relink
 0x004063e0 100.00 aitask_pending_record_entity_reference_clear
 0x00406400 100.00 aitask_cmd_pending_record_copy
-0x00406440 60.87 aitask_cmd_alloc
+0x00406440 65.22 aitask_cmd_alloc
 0x00406480 100.00 aitask_cmd_free
 0x004064c0 100.00 aitask_cmd_pool_grow
 0x00406540 100.00 aitask_entity_pool_callback_search

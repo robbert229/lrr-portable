@@ -6165,7 +6165,7 @@ AITask* aitask_cmd_alloc(int type)
     aiTaskGlobs.freeList = task->nextFree;
     memset(task, 0, sizeof(AITask));
     task->nextFree = task;
-    task->field_50 = timeGetTime();
+    task->field_50 = main_time_get();
     task->type = type;
     return task;
 }

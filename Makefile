@@ -19,7 +19,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: opt-ref-link opt-ref unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
+.PHONY: opt-ref-link opt-ref opt-ref-callers unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -124,6 +124,12 @@ opt-ref-link:
 
 opt-ref:
 	python3 tools/opt_ref_link.py measure --build "$(RECCMP_BUILD_DIR)"
+
+# Per object, the removed annotated functions with their original callers
+# and the port substitutes live callers call instead (finding 579).
+# OPT_REF_ARGS passes options, e.g. OPT_REF_ARGS="--object reward.c.obj".
+opt-ref-callers:
+	python3 tools/opt_ref_link.py callers --build "$(RECCMP_BUILD_DIR)" $(OPT_REF_ARGS)
 
 unit-data-offsets:
 	python3 tools/unit_data_offsets.py --build "$(RECCMP_BUILD_DIR)"

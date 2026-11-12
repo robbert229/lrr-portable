@@ -297,13 +297,9 @@ void* scene_object_secondary_handle_get_or_create(void* record);     /* 004087e0
 /* --- end group D --- */
 
 /* --- group E (00405c10-004065e0) --- */
-/* WINMM timeGetTime (import thunk), as frameloop.h declares it for the
- * matching build; natively, winmm.h's DWORD is a uint32_t. */
-#if defined(_MSC_VER) || defined(_WIN32)
-unsigned long __stdcall timeGetTime(void);
-#else
-unsigned int timeGetTime(void);
-#endif
+/* Main.c's millisecond clock (frameloop.h), a tail call to WINMM's
+ * timeGetTime. The original AITask.c calls it, not the import (#589). */
+unsigned long main_time_get(void);                                   /* 00478000 */
 /* Bubbles.c (cmd_shared.hpp; bubbles.cpp). */
 void idle_register(struct EntitySlot* object);                       /* 00407450 */
 /* DirectDraw globals (crt.hpp, crt.h; crt.cpp). */
