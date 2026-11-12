@@ -34,11 +34,7 @@
 
 # Ordered game and gods98 segments, port tail, then CRT-range legacy files.
 lrr_link(unit   GAME-001 game          game/advisor.c)
-lrr_link(legacy 004027a0 gods98        gods98/simtick.cpp)
-lrr_link(legacy 004031e0 game          game/ai.cpp)
-lrr_link(legacy 00403430 game          game/cmd.cpp)
-lrr_link(legacy 00403810 game          game/level.cpp)
-lrr_link(legacy 00403c00 game          game/entity.cpp)
+lrr_link(unit   GAME-002 game          game/aitask.cpp)
 lrr_link(unit   GAME-003 game          game/bezier.c)
 lrr_link(unit   GAME-004 game          game/animation_object.c)
 lrr_link(unit   GAME-005 game          game/bubbles.cpp)
@@ -184,12 +180,17 @@ lrr_link(tail   -        game          game/objective.cpp)
 lrr_link(tail   -        game          game/terrain_grid.cpp)
 lrr_link(tail   -        gods98        gods98/camera.cpp)
 lrr_link(tail   -        game          game/select.cpp)
+lrr_link(tail   -        game          game/ai.cpp)
+lrr_link(tail   -        game          game/cmd.cpp)
+lrr_link(tail   -        game          game/entity.cpp)
+lrr_link(tail   -        gods98        gods98/simtick.cpp)
+lrr_link(legacy 0048e160 game          game/level.cpp)
 lrr_link(legacy 0048e1e0 gods98        gods98/string.cpp)
 
 # Legacy files whose functions lie in the CRT range, just before LIBC
 lrr_link(legacy 0048ed00 game          game/seh_runtime.cpp)
 lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp)
-lrr_link(legacy 00493c10 gods98        crt/crt.cpp)
+lrr_link(legacy 00493c40 gods98        crt/crt.cpp)
 lrr_link(legacy 0049cc70 gods98        gods98/resource.cpp)
 
 # Libraries of the matching build, after the objects: LIBC (the /ML runtime),
