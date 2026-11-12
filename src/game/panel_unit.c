@@ -893,7 +893,7 @@ void ui_scroll_info_panel_initialize(void)
     Area2F rect;
 
     // STRING: LEGORR 0x004a8968
-    info_panel_initialise("Interface_InfoPanel_scrollInfo_b", 0, 0, 7, 0);
+    info_panel_initialise("Interface\\InfoPanel\\scrollInfo.bmp", 0, 0, 7, 0);
     indexed_float_pair_set(0, 8, 33);
     rect.x = 0.0f;
     rect.y = 0.0f;
@@ -910,7 +910,7 @@ void ui_scroll_info_panel_initialize(void)
     rect.width = 0.0f;
     rect.height = 0.0f;
     // STRING: LEGORR 0x004a8944
-    scroll_rect_payload_record_create(0, &rect.x, 1, 0, "Interface_Buttons_scrollInfoSld_");
+    scroll_rect_payload_record_create(0, &rect.x, 1, 0, "Interface\\Buttons\\scrollInfoSld.bmp");
     rect.x = 40.0f;
     rect.y = 12.0f;
     rect.width = 180.0f;
