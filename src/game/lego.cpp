@@ -432,6 +432,7 @@ static int control_probe(uint32_t mask);
  * zero when no level object is active (the corpus's own DAT-null rule,
  * which doubles as the port's NULL guard). */
 /* Port model of 0x0041f900 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0041f900, retires to the tail in GAME-021 part 3
 uint32_t upgrade_resource_check(const LevelState* s, int selector)
 {
     if (s == NULL) {
@@ -445,6 +446,7 @@ uint32_t upgrade_resource_check(const LevelState* s, int selector)
 /* RuntimeFlag40000000Get (FUN_0041f970): the faithful masked read of the
  * port's engine-state word. */
 /* Port model of 0x0041f970 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0041f970, retires to the tail in GAME-021 part 3
 uint32_t runtime_flag40000000_get(const EngineContext* ctx)
 {
     return ctx != NULL ? (ctx->state & 0x40000000u) : 0u;
@@ -457,6 +459,7 @@ uint32_t runtime_flag40000000_get(const EngineContext* ctx)
  * overlay advance half runs outside it (corpus order), so the guarded
  * no-level path keeps stepping the float. */
 /* Port model of 0x0041f9a0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0041f9a0, retires to the tail in GAME-021 part 3
 void level_resource_balance_add_and_sound(int selector)
 {
     if (s_ctx != NULL && s_ctx->level != NULL) {
@@ -479,6 +482,7 @@ void level_resource_balance_add_and_sound(int selector)
  * constant 5 regardless of the amount — selector 0 steps the amount.
  * Deviation: the corpus's DAT-null gate is the port's ctx/level guard. */
 /* Port model of 0x0041f9e0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0041f9e0, retires to the tail in GAME-021 part 3
 void upgrade_resource_debit(int selector, int amount)
 {
     if (s_ctx != NULL && s_ctx->level != NULL) {
@@ -502,6 +506,7 @@ void upgrade_resource_debit(int selector, int amount)
  * by the frame loop; the context-taking EngineTick/EngineShutdown functions
  * themselves are never published as incompatible raw callbacks. */
 /* Port model of 0x0041fa20 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0041fa20, retires to the tail in GAME-021 part 3
 void engine_game_config_callback_registry_init(const char* root)
 {
     size_t callbacks[3];
@@ -524,6 +529,7 @@ void engine_game_config_callback_registry_init(const char* root)
 
 namespace unported_ledger_stubs {
 /* Port model of 0x0041fa80 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0041fa80, retires to the tail in GAME-021 part 3
 void ledger_stub_0041fa80_StartLevelPilots(void)
 {
     GameContext* ctx = entity_pool_callback_context_get();
@@ -577,6 +583,7 @@ void ledger_stub_0041fa80_StartLevelPilots(void)
 
 namespace unported_ledger_stubs {
 /* Port model of 0x00422850 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00422850, retires to the tail in GAME-021 part 3
 void misc_object_resources_load(void* config)
 {
     static const MiscResourceSpec specs[22] = {
@@ -633,6 +640,7 @@ void misc_object_resources_load(void* config)
  * table (deviation: NULL slots answer zero, corpus dereferences blindly).
  */
 /* Port model of 0x00423080 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00423080, retires to the tail in GAME-021 part 3
 int mode_dependent_field24_get(const EngineContext* ctx)
 {
     if (ctx == NULL) {
@@ -655,6 +663,7 @@ int mode_dependent_field24_get(const EngineContext* ctx)
  * 12.5 seconds, resolve an empty string from the active selection, clamp its
  * horizontal placement, and draw it centered vertically on its font row. */
 /* Port model of 0x004230c0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004230c0, retires to the tail in GAME-021 part 3
 void debug_panel_text_draw_update(float elapsed, int screen_width,
                                   const char* text)
 {
@@ -703,6 +712,7 @@ void debug_panel_text_draw_update(float elapsed, int screen_width,
 
 /* Retail-shaped EnginePreTick @ 0x4231f0 uses global input/text state. */
 /* Port model of 0x004231f0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004231f0, retires to the tail in GAME-021 part 3
 void EnginePreTick(void)
 {
     EngineContext* ctx = s_engine_pre_tick_context;
@@ -763,6 +773,7 @@ void EnginePreTick(void)
  * observed call order and must stay stable.
  */
 /* Port model of 0x004232e0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004232e0, retires to the tail in GAME-021 part 3
 int EngineTick(EngineContext* ctx, float dt)
 {
     engine_current_context_bind(ctx);
@@ -870,6 +881,7 @@ int EngineTick(EngineContext* ctx, float dt)
  * accumulation is modelled with the port's double — the documented
  * extended-precision deviation. */
 /* Port model of 0x00424560 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00424560, retires to the tail in GAME-021 part 3
 void air_supply_amount_update(LevelState* s, const struct EntitySlot* e,
                               float delta)
 {
@@ -897,6 +909,7 @@ void air_supply_amount_update(LevelState* s, const struct EntitySlot* e,
 }
 
 /* Port model of 0x00424730 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00424730, retires to the tail in GAME-021 part 3
 void sine_phase_midpoint_blend_dispatch(void* object, float delta)
 {
     SinePhaseBlendState* state = &s_sine_phase_blend_state;
@@ -922,6 +935,7 @@ void sine_phase_midpoint_blend_dispatch(void* object, float delta)
 }
 
 /* Port model of 0x004247d0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004247d0, retires to the tail in GAME-021 part 3
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) int entity_default_transform_apply_if_flagged(
     EntitySlot* entity, void* argument)
@@ -965,6 +979,7 @@ int entity_default_transform_apply_if_flagged(EntitySlot* entity,
 #endif
 
 /* Port model of 0x00424810 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00424810, retires to the tail in GAME-021 part 3
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void entity_default_transform_apply_all(void* argument)
 {
@@ -991,6 +1006,7 @@ void entity_default_transform_apply_all(void* argument)
 /* SelectedObjectOutlinesDraw (FUN_00424830): draw the first selected entry
  * green, then the rest yellow. The scene-marker builder is renderer-owned. */
 /* Port model of 0x00424830 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00424830, retires to the tail in GAME-021 part 3
 void selected_object_outlines_draw(
     const GameContext* ctx, SelectedObjectOutlineDrawFn draw,
     void* context)
@@ -1013,6 +1029,7 @@ void selected_object_outlines_draw(
  * ground point, reject off-screen markers, build the beveled eight-point
  * ground outline, then update its optional label tint. */
 /* Port model of 0x004248b0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004248b0, retires to the tail in GAME-021 part 3
 int selected_entity_ground_marker_render(void* entity, void* camera,
                                          float red, float green, float blue)
 {
@@ -1089,6 +1106,7 @@ int selected_entity_ground_marker_render(void* entity, void* camera,
 }
 
 /* Port model of 0x004250c0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004250c0, retires to the tail in GAME-021 part 3
 int main_sim_step(EngineContext* ctx, float scale,
                   uint32_t* o1, uint32_t* o2, uint32_t* o3)
 {
@@ -1196,6 +1214,7 @@ int main_sim_step(EngineContext* ctx, float scale,
  * callback over live entity records, skipping the corpus's +0x3e8 bit
  * 0x80000 flagged entries and stopping when a callback reports a match. */
 /* Port model of 0x00425b40 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00425b40, retires to the tail in GAME-021 part 3
 void periodic_entity_callback_dispatch(void* payload)
 {
     entity_pool_find_by_callback_filtered_current(
@@ -1204,6 +1223,7 @@ void periodic_entity_callback_dispatch(void* payload)
 
 namespace unported_ledger_stubs {
 /* Port model of 0x00425c30 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00425c30, retires to the tail in GAME-021 part 3
 void ledger_stub_00425c30_TransitionControl(int enabled, uint32_t parameter)
 {
     uint32_t* engine_state = engine_current_state_word();
@@ -1234,6 +1254,7 @@ void ledger_stub_00425c30_TransitionControl(int enabled, uint32_t parameter)
 
 
 /* Port model of 0x00425ce0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00425ce0, retires to the tail in GAME-021 part 3
 void scroll_scale_set_and_clamp(float scale)
 {
     if (s_scroll_scale <= scale || s_scroll_guard == 0) {
@@ -1248,6 +1269,7 @@ void scroll_scale_set_and_clamp(float scale)
 }
 
 /* Port model of 0x00425d90 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00425d90, retires to the tail in GAME-021 part 3
 void simtick_mouse_world(EngineContext* c, float dt)
 {
     (void)dt;
@@ -1272,6 +1294,7 @@ void simtick_mouse_world(EngineContext* c, float dt)
 }
 
 /* Port model of 0x004261c0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004261c0, retires to the tail in GAME-021 part 3
 void camera_spawn_countdown(float dt)
 {
     const uint8_t* level = s_spawn_level_block;
@@ -1295,6 +1318,7 @@ void camera_spawn_countdown(float dt)
 }
 
 /* Port model of 0x00426230 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00426230, retires to the tail in GAME-021 part 3
 void global_triple_copy_out(uint32_t* out)
 {
     if (out == NULL) {
@@ -1310,6 +1334,7 @@ void global_triple_copy_out(uint32_t* out)
  * writers are this setter), so it rides module storage per the unowned-
  * global convention; the enable bit rides the bound debug word. */
 /* Port model of 0x00426320 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00426320, retires to the tail in GAME-021 part 3
 void objective_task_text_origin_set(EngineContext* ctx, const float* pair)
 {
     if (pair != NULL) {
@@ -1325,6 +1350,7 @@ void objective_task_text_origin_set(EngineContext* ctx, const float* pair)
     }
 }
 /* Port model of 0x004263c0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004263c0, retires to the tail in GAME-021 part 3
 void unported_ledger_stubs::ledger_stub_004263c0_GlobalSubsystemStateReset(
     void)
 {
@@ -1345,6 +1371,7 @@ void unported_ledger_stubs::ledger_stub_004263c0_GlobalSubsystemStateReset(
  * ordered samples and central world owner; raw aggregate presses cannot
  * bypass UI or emit a second command after the operation queue has drained. */
 /* Port model of 0x00426520 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00426520, retires to the tail in GAME-021 part 3
 void simtick_vu_meter(EngineContext* c, float dt)
 {
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -1410,6 +1437,7 @@ void simtick_vu_meter(EngineContext* c, float dt)
  * the ToolTipInfo group. The corpus heap-copies each value into a global;
  * this model keeps bounded module-owned copies so they survive block_close. */
 /* Port model of 0x00427e00 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00427e00, retires to the tail in GAME-021 part 3
 void tooltip_info_strings_load(BlockFile* cfg)
 {
     static const char* const paths[9] = {
@@ -1433,6 +1461,7 @@ void tooltip_info_strings_load(BlockFile* cfg)
 
 namespace lego {
 /* Port model of 0x00427f80 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00427f80, retires to the tail in GAME-021 part 3
 void level_upgrade_name_strings_load(void* config)
 {
     uint32_t i;
@@ -1505,6 +1534,7 @@ void level_upgrade_name_strings_load(void* config)
  * observed entity after a selection switch, clears stale empty command text,
  * and routes changed command/status text through the UI adapter. */
 /* Port model of 0x00428020 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00428020, retires to the tail in GAME-021 part 3
 void entity_command_status_feedback_dispatch(EntitySlot* entity)
 {
     const char* command;
@@ -1549,6 +1579,7 @@ void entity_command_status_feedback_dispatch(EntitySlot* entity)
 
 namespace unported_ledger_stubs {
 /* Port model of 0x00428330 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00428330, retires to the tail in GAME-021 part 3
 void ledger_stub_00428330_TerrainCommandFeedbackDispatch(
     TerrainCommandFeedbackState* state, int details_requested,
     int parameter_three, int parameter_four,
@@ -1575,6 +1606,7 @@ void ledger_stub_00428330_TerrainCommandFeedbackDispatch(
  * bounds-checking voxel accessor for that latter path. CurrentLevelGet's
  * block is the bound level_block here. */
 /* Port model of 0x00428780 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00428780, retires to the tail in GAME-021 part 3
 int terrain_cell_command_predicate(const EngineContext* ctx, int x, int y)
 {
     if (system_state_flags_get() != 0u) {
@@ -1597,6 +1629,7 @@ int terrain_cell_command_predicate(const EngineContext* ctx, int x, int y)
 /* TerrainCellPaletteResourceAtGridPosition returns the cell's palette
  * texture handle from the current level's +0x7c resource grid. */
 /* Port model of 0x00429160 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00429160, retires to the tail in GAME-021 part 3
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void* terrain_cell_palette_resource_at_grid_position_current(
     const int cell_xy[2])
@@ -1679,6 +1712,7 @@ void* terrain_cell_palette_resource_at_grid_position_current(
 #endif
 
 /* Port model of 0x004291a0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004291a0, retires to the tail in GAME-021 part 3
 void simtick_render_pass(EngineContext* c, float dt, float scale, uint32_t o1)
 {
     (void)o1;
@@ -1720,6 +1754,7 @@ void simtick_render_pass(EngineContext* c, float dt, float scale, uint32_t o1)
 }
 
 /* Port model of 0x004295a0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004295a0, retires to the tail in GAME-021 part 3
 uint32_t context_selected_global_pointer_get(void)
 {
     return (media_min_distance_mode() != 0) ? s_ctx_sel_ptr_second
@@ -1727,6 +1762,7 @@ uint32_t context_selected_global_pointer_get(void)
 }
 
 /* Port model of 0x004295c0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004295c0, retires to the tail in GAME-021 part 3
 int entity_matches_current_selection_or_owner(const void* entity)
 {
     if (entity == NULL) {
@@ -1744,6 +1780,7 @@ int entity_matches_current_selection_or_owner(const void* entity)
 }
 
 /* Port model of 0x004295f0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004295f0, retires to the tail in GAME-021 part 3
 void media_min_distance_update_mode(int mode, void* context,
                                     int scalar_selector)
 {
@@ -1774,6 +1811,7 @@ void media_min_distance_update_mode(int mode, void* context,
     s_mind_mode = mode;
 }
 /* Port model of 0x004297b0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x004297b0, retires to the tail in GAME-021 part 3
 void media_cd_watchdog_update(int enable)
 {
     uint32_t* flags = engine_shared_state_word();
@@ -1789,6 +1827,7 @@ void media_cd_watchdog_update(int enable)
 }
 
 /* Port model of 0x00429810 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00429810, retires to the tail in GAME-021 part 3
 void media_audio_playback_toggle(int enable)
 {
     if (enable != 0) {
@@ -1805,6 +1844,7 @@ void media_audio_playback_toggle(int enable)
 /* EngineFloatField260Get (FUN_00429880, findings 295/392): the float at
  * active engine-state +0x260. */
 /* Port model of 0x00429890 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x00429890, retires to the tail in GAME-021 part 3
 LevelState* level_load(BlockFile* cfg, const char* level_name)
 {
     GameContext* game;
@@ -2129,6 +2169,7 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
  * active, route the record words at +4/+8 to the global update and resource
  * counter helpers, in decompiled order. */
 /* Port model of 0x0042b2f0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042b2f0, retires to the tail in GAME-021 part 3
 void entity_effect_counters_apply_from_record(EntitySlot* e,
                                               const void* record)
 {
@@ -2164,6 +2205,7 @@ void entity_effect_counters_apply_from_record(EntitySlot* e,
  * TileModelEntityRegister records. The editor path leaves it zeroed; normal
  * play registers one paired visual record for every surface-text cell. */
 /* Port model of 0x0042b330 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042b330, retires to the tail in GAME-021 part 3
 int terrain_tile_mesh_grid_load_level(LevelState* level,
                                       const char* bitmap_prefix)
 {
@@ -2226,6 +2268,7 @@ int terrain_tile_mesh_grid_load_level(LevelState* level,
 }
 
 /* Port model of 0x0042b480 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042b480, retires to the tail in GAME-021 part 3
 void rectangular_resource_table_destroy(RectangularResourceTable* table)
 {
     unsigned long i;

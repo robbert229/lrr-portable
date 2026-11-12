@@ -112,6 +112,23 @@ def matching_open_paren(masked: str, close: int) -> int | None:
     return None
 
 
+def blank_directives(text: str) -> str:
+    """Blank preprocessor directive lines (and their backslash continuations),
+    keeping every newline and offset. A brace block that opens right after
+    `#if defined(X)` must not read the directive's `defined(X)` as a
+    declarator."""
+    out = []
+    in_directive = False
+    for line in re.findall(r"[^\n]*\n|[^\n]+$", text):
+        directive = in_directive or line.lstrip().startswith("#")
+        in_directive = directive and line.rstrip("\n").rstrip().endswith("\\")
+        if directive:
+            out.append(re.sub(r"[^\n]", " ", line))
+        else:
+            out.append(line)
+    return "".join(out)
+
+
 def function_definitions(source: str) -> list[tuple[int, str, int, int]]:
     """Return (key offset, function name, body brace, definition offset) for
     recognizable bodies.
@@ -127,7 +144,7 @@ def function_definitions(source: str) -> list[tuple[int, str, int, int]]:
         if char != "{":
             continue
         boundary = max(masked.rfind(";", 0, brace), masked.rfind("{", 0, brace), masked.rfind("}", 0, brace)) + 1
-        header = masked[boundary:brace]
+        header = blank_directives(masked[boundary:brace])
         # A constructor's member initializer list may contain further calls;
         # only inspect the declarator before its top-level colon.
         depth = 0

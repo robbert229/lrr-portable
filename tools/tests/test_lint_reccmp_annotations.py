@@ -124,6 +124,22 @@ class RatchetTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("annotated", result.stdout)
 
+    def test_if_defined_before_inner_block_is_not_a_definition(self):
+        # A brace block that opens right after `#if defined(X)` inside a
+        # body used to be read as a definition named `defined`.
+        self.source.write_text("// FUNCTION: LEGORR 0x1000\nvoid f(int x) {}\n")
+        self.baseline()
+        self.source.write_text(
+            "// FUNCTION: LEGORR 0x1000\n"
+            "void f(int x)\n{\n"
+            "    if (x == 0) return;\n"
+            "#if defined(_WIN32) && \\\n    !defined(_WIN64)\n"
+            "    {\n        x = 1;\n    }\n"
+            "#endif\n}\n")
+        result = self.run_lint()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("defined", result.stdout)
+
     def test_annotation_above_if_group_covers_every_branch(self):
         # ADR 0006 reshape commits: one annotation above a group of whole
         # alternative definitions, nested groups and unconditional
