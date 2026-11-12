@@ -93,7 +93,7 @@ void options_load_or_default(struct GameContext* ctx, int load_options,
                              int reset_frontend);
 /* Mirror the frontend's separate DAT_00557028 selection gate. */
 void options_frontend_selection_set(int selected_slot);
-void options_load_or_default_target(int load_options,
+extern "C" void options_load_or_default_target(int load_options,
                                     int reset_frontend); /* FUN_00416940 */
 
 /* Get/set by id. `options_set` clamps to the shipped range and silently

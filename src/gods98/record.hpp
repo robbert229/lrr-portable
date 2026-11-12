@@ -18,6 +18,9 @@
 
 /* RecordField14Get (FUN_00435f0b, findings 03/354): the dword at +0x14.
  * The corpus's editor-camera record uses it through DAT_00556160. */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t record_field14_get(const void* record);
 
 /* ObjectField10Get (FUN_004850e0, findings 04/378): the dword at +0x10. */
@@ -94,6 +97,9 @@ int map_cell_to_world_center(const void* map, uint32_t cell_x,
  * of the task record's flag word at +0x98. A nonzero suppress answers
  * 0 when the bit is SET (the corpus's "skip if flagged and asked not
  * to" form), otherwise the mask value. */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress);
 
 /* TaskField84GetAndField88Out (FUN_00408360, finding 366): return the
@@ -109,7 +115,10 @@ uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88);
  * corpus's own guard. Deviation: the corpus's 32-bit cell-array slot is
  * read as a native pointer (the port's model of a corpus pointer
  * field). */
-extern "C" uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell);
+#ifdef __cplusplus
+extern "C"
+#endif
+uint32_t packed_grid_cell_value_get(const void* grid, unsigned char packed_cell);
 
 /* ObjectPoolListHeadGet (FUN_00456c30, finding 374): the list-head slot
  * table — index -1..0x37 (exclusive) over +0x114, with the corpus's
@@ -155,7 +164,10 @@ uint32_t entity_type_flag_bit1_get_target(const void* record);
 uint32_t object_record_field11c_get(const void* record);
 
 /* ObjectFieldBE4DwordGet (FUN_0047a540, findings 361/411): +0xbe4. */
-extern "C" uint32_t object_field_be4_dword_get(const void* record);
+#ifdef __cplusplus
+extern "C"
+#endif
+uint32_t object_field_be4_dword_get(const void* record);
 
 /* EntityTypeMaskGet (FUN_0046cf80, findings 357/432): dword at +0x12c
  * (Ghidra prints this offset as decimal 300). */
@@ -163,7 +175,10 @@ uint32_t entity_type_mask_get(const void* record);
 
 /* PointerValueGet (FUN_00482210, findings 381/411): the dword it points
  * at (offset +0 of the passed pointer). */
-extern "C" uint32_t pointer_value_get(const void* pointed);
+#ifdef __cplusplus
+extern "C"
+#endif
+uint32_t pointer_value_get(const void* pointed);
 
 /* SceneObjectFlagsGet (FUN_00408850, findings 373/435): +0x70. */
 uint32_t scene_object_flags_get(const void* scene_object);
@@ -193,10 +208,16 @@ uint32_t scene_object_flag_bit3_get_target(const void* scene_object);
  * word equals 1. Defined in game/bezier.c (GAME-003, finding 514); kept
  * here, with C linkage, to preserve the declaration count of the units that
  * include this header (finding 506). */
-extern "C" int scene_object_mode_is_one(const void* scene_object);
+#ifdef __cplusplus
+extern "C"
+#endif
+int scene_object_mode_is_one(const void* scene_object);
 
 /* AnimationObjectHandleGet (FUN_00406e30, findings 356/435): +0x04. */
-extern "C" void* animation_object_handle_get(const void* animation_object);
+#ifdef __cplusplus
+extern "C"
+#endif
+void* animation_object_handle_get(const void* animation_object);
 /* Renderer-record adapters for the resource-list updater (FUN_00406c00,
  * FUN_00406c30, FUN_00406c60). `enabled` is forwarded as the corpus's
  * boolean update value (`enabled == 0`), while `update_value` is the third
@@ -211,7 +232,10 @@ void renderer_object_update_from_record_field6c(void* record, int enabled,
 
 /* ResourceEntryIdGet (FUN_004877d0, findings 381/416): the 16-bit entry
  * id word at +2 (zero-extended, as the corpus returns it). */
-extern "C" uint32_t resource_entry_id_get(const void* entry);
+#ifdef __cplusplus
+extern "C"
+#endif
+uint32_t resource_entry_id_get(const void* entry);
 
 /* IndexedWordTableLookup (FUN_004850c0, findings 373/431): word table
  * CORPUS ORDER — (index, table): (index & 0xff) steps 2 bytes from the
@@ -248,8 +272,11 @@ void* indexed_record_data_address_get(const void* record, int index);
  * coordinate-pair count — `count` (word +0x20) entry pointers stored
  * inline from +0x2c, each entry's first two dwords tested. Deviation:
  * the inline entry slots hold native pointers. */
+#ifdef __cplusplus
+extern "C"
+#endif
 int count_matching_coordinates_in_list(const void* manager,
-                                       int32_t coord_x, int32_t coord_y);
+                                                  int32_t coord_x, int32_t coord_y);
 
 /* AviPlayerReadyGet (FUN_0047ed80, findings 185/414): the movie
  * object's ready BYTE at +0x99 — one when the AVI open chain succeeded,
@@ -333,10 +360,16 @@ void scene_object_resource_handle_set(void* object, uint32_t handle);
  * NULL records skip the stores (documented deviation; corpus callers
  * dereference blindly). The corpus writes blindly into whatever record
  * its callers hand in; the port keeps the write shape. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void record_fields_4_and_14_set(void* record, uint32_t value_a,
                                 uint32_t value_b);
 void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
                                         uint32_t value_b);
+#ifdef __cplusplus
+extern "C"
+#endif
 void entity_b8_bit3_set_or_clear(void* record, int set);
 
 /* --- the record-field write band (2026-10-24; findings 324/386) ------------
@@ -353,12 +386,18 @@ void entity_b8_bit3_set_or_clear(void* record, int set);
 void record_field18_set(void* record, uint32_t value);
 void record_flags_24_or(void* record, uint32_t flags);
 void object_field14_set(void* record, uint32_t value);
-extern "C" void linked_record_field4_clear(void* record);
+#ifdef __cplusplus
+extern "C"
+#endif
+void linked_record_field4_clear(void* record);
 
 /* CopyTwoDwordPairToOutputs (FUN_00439930): split a two-dword record
  * field across two output words — the corpus's blind dereferences get
  * entry NULL guards (documented). */
-extern "C" void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
+#ifdef __cplusplus
+extern "C"
+#endif
+void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
                                     uint32_t* out_b);
 
 /* SceneObjectOwnerSet (FUN_00473da0): dword store at +0x20; the MSVC x86
@@ -380,12 +419,18 @@ void indexed_record_field64_set(void* record, int index, uint32_t value);
 /* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
  * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void object_vector3_set(void* object_block, float x, float y, float z);
-extern "C" void float_pair_at_offset4_set_from_ints(void* record, int x, int y);
+#ifdef __cplusplus
+extern "C"
+#endif
+void float_pair_at_offset4_set_from_ints(void* record, int x, int y);
 void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
                                           uint32_t y);
 void object_state_pair_get(const void* record, uint32_t* out_a,
                            uint32_t* out_b);
-extern "C" void object_state_pair_get_target(const void* record, uint32_t* out_a,
+#ifdef __cplusplus
+extern "C"
+#endif
+void object_state_pair_get_target(const void* record, uint32_t* out_a,
                                   uint32_t* out_b);
 
 /* --- scene-visibility wrapper band (2026-10-24; findings 446/370/435/356/
@@ -409,6 +454,9 @@ extern "C" void object_state_pair_get_target(const void* record, uint32_t* out_a
 void scene_visibility_hook_reset(void);             /* port hook */
 int  scene_visibility_calls(void);                  /* port hook */
 void scene_visibility_last_call(void** out_object, int* out_flag); /* hook */
+#ifdef __cplusplus
+extern "C"
+#endif
 void graphics_overlay_visibility_set(uint32_t flag);
                                                 /* FUN_004634b0 */
 void graphics_overlay_word_set(uint32_t handle);    /* port hook */
@@ -416,6 +464,9 @@ uint32_t graphics_overlay_word_peek(void);          /* port hook */
 void indexed_surface_grid_install(uint32_t width, const void* const* entries,
                                   uint32_t entry_count);
 void indexed_surface_entry_hide_and_record(int x, int y); /* FUN_004634f0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void indexed_surface_entries_restore(void); /* FUN_00463540 */
 /* A software scene owner may recognize its own complete resource before the
  * raw DDi path. Nonzero means visibility was applied; zero leaves the record
@@ -426,15 +477,24 @@ int surface_visibility_adapter_install(SurfaceVisibilityAdapter adapter,
                                         void* context);
 int surface_visibility_adapter_remove(SurfaceVisibilityAdapter adapter,
                                        void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 void surface_visibility_set(const void* record, uint32_t flag);
                                                 /* FUN_00464720 */
-extern "C" void animation_object_visibility_set(const void* anim, uint32_t flag);
+#ifdef __cplusplus
+extern "C"
+#endif
+void animation_object_visibility_set(const void* anim, uint32_t flag);
                                                 /* FUN_00406c90 */
 void scene_object_pair_apply_mode(const void* record, uint32_t flag);
                                                 /* FUN_00408670 */
 /* SceneRenderLockToggle (FUN_00473b40): update the selected render-interface
  * pair and toggle scene flag bit 3. */
-extern "C" void scene_render_lock_toggle(void* scene_object, int enabled);
+#ifdef __cplusplus
+extern "C"
+#endif
+void scene_render_lock_toggle(void* scene_object, int enabled);
 
 /* SceneResourceVisibilitySet (FUN_0046d2c0): raise or clear bit 1 of the
  * record's +0x1e8 word, then route the raw flag through the visibility
@@ -481,15 +541,21 @@ void six_resource_slots_set_state(const void* record, uint32_t flag);
 /* UIRecordCallbackForward (FUN_0045a630, findings 386/439): dereferences the
  * UI record's +0 handle and forwards the two outputs through the ported
  * state-pair read. Widened handle slot like the other handle rows. */
-extern "C" void ui_record_callback_forward(const void* const* ui_record,
+#ifdef __cplusplus
+extern "C"
+#endif
+void ui_record_callback_forward(const void* const* ui_record,
                                 uint32_t* out_a, uint32_t* out_b);
                                                 /* FUN_0045a630 */
 
 /* RecordFlagBitTest (FUN_0046cf40, findings 367/432): the selected bit of
  * the record's +0x130 word, optionally rejecting bits already raised in
  * the associated type mask. The NULL guards are the documented deviations. */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
-                              int reject_masked);   /* FUN_0046cf40 */
+                                         int reject_masked);   /* FUN_0046cf40 */
 
 /* --- the UI record factories (2026-10-24; findings 305/397) -----------------
  * BoundedFloatRecordCreate (FUN_00410b90): a `kind` record bounded to the

@@ -359,7 +359,7 @@ int selected_entity_state_monitor(void);
  * command records for a type-3 entry whose payload is this entity before
  * creating a fallback task. NULL entity answers inert (deviation). */
 void entity_command15_validated_record_queue(EntitySlot* e);
-void entity_deferred_work_schedule(EntitySlot* e);
+extern "C" void entity_deferred_work_schedule(EntitySlot* e);
 
 /* --- registry accessors / match marker (2026-10-24) --------------------------
  * CmdMarkMatching (FUN_00402000, finding 466): walks the task list, raising
@@ -415,10 +415,10 @@ int cmd_rec_param2_get(const void* rec);
 void cmd_flush_all(int disable_mode);
 int  cmd_global_enabled_peek(void);
 void* engine_memory_allocate(long size);
-void engine_memory_free(void* ptr);
-void handle_array_release_and_reset(void);
-void entity_command14_batch_issue(int count);
-void level_no_gather_object_setup(int mode);
+extern "C" void engine_memory_free(void* ptr);
+extern "C" void handle_array_release_and_reset(void);
+extern "C" void entity_command14_batch_issue(int count);
+extern "C" void level_no_gather_object_setup(int mode);
 
 /* TaskTableContentsRelease (FUN_00462960): drain-and-free the contents of a
  * task-table record window — count at +0x1c, entry-pointer array at +0x20,
@@ -807,7 +807,7 @@ const void* upgrade_name_entry_find(const char* name);
  * draw / 50. A positive timer answers zero through the corpus's flag fold
  * (pinned); a missing level skips the cell loop but the re-arm draw runs
  * (deviation: the corpus strides a null handle and modulo zero blindly). */
-uint32_t kind_six_random_sweep_dispatch(float delta);
+extern "C" uint32_t kind_six_random_sweep_dispatch(float delta);
                                                 /* FUN_0040f0e0 */
 void kind_six_sweep_timer_install(float value); /* port hook */
 float kind_six_sweep_timer_peek(void);          /* port hook */

@@ -9,6 +9,10 @@ import sys
 # function, com_property_result_get (0x00477310), was relocated with G98-003
 # (Viewports.c) from view.cpp into viewports.cpp.
 ALLOW = [re.compile(r'[/\\]src[/\\]gods98[/\\]viewports\.cpp\(\d+\) : warning C4172: returning address of local variable or temporary$', re.I),
+         # Lego_MainLoop (0x004232e0, GAME-021 lego_unit.c) passes two locals
+         # it never sets to the crystal panel when there is no level: the
+         # original reads the same uninitialised stack slots (issue #544).
+         re.compile(r'[/\\]src[/\\]game[/\\]lego_unit\.c\(\d+\) : warning C4700: local variable \'(used|crystals)\' used without having been initialized$', re.I),
          # This toolchain omits the optional resource-compiler message catalog.
          re.compile(r'^WARNING:  missing cvtres\.err; displaying error numbers without messages\.$')]
 DIAGNOSTIC = re.compile(r'\[(?:ERROR|WARNING|CRITICAL)\]|\bwarning\s+(?:[A-Z]+\d+\s*:|:)|^\s*(?:warning|error|fatal error)\s*:', re.I)

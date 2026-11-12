@@ -74,7 +74,7 @@ void camera_spawn_level_block_bind(const void* level_block);
 /* --- reconstruction-owned globals ---------------------------------------- */
 extern int   g_camera_scale_14;   /* DAT_00556f14 */
 extern int   g_camera_grid_enabled;/* DAT_00556f18 */
-extern float g_camera_countdown;  /* DAT_00556ed8 */
+extern "C" float g_camera_countdown;  /* DAT_00556ed8 */
 
 /* DAT_004aa450 movement-hook enable (reconstruction-owned). */
 int g_move_hook_enabled(void);
@@ -110,8 +110,8 @@ void camera_spawn_hooks_install(CameraSpawnRandomIndexHook random_index,
                                 CameraSpawnCreateHook create,
                                 CameraSpawnInitializeHook initialize,
                                 void* context);
-void* predug_spawn_coordinate_select_and_create(int source_object,
-                                                int type); /* FUN_0043ad50 */
+extern "C" void* predug_spawn_coordinate_select_and_create(int source_object,
+                                                           int type); /* FUN_0043ad50 */
 
 /* Stub boundaries (corpus addresses; fill one at a time):
  *  FUN_0040f190 /

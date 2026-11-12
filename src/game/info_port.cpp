@@ -955,3 +955,14 @@ static int incident_message_text_append_default(
     return 0; /* the host-width output record resolves its buffer by sidecar */
 #endif
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_0041a1a0 takes the pointer position and both release flags;
+ * the port's entry takes one click flag. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (0041a1a0 -> ui_entry_hit_test_and_dispatch)
+extern "C" int info_check_click_adapter(int x, int y, int leftReleased,
+                                        int rightReleased)
+{
+    (void)rightReleased;
+    return unported_ledger_stubs::ui_entry_hit_test_and_dispatch(x, y, leftReleased);
+}

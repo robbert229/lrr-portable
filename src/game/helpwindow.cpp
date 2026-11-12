@@ -917,3 +917,12 @@ static void help_window_button_layout_load_with_ops(
         }
     }
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: HelpWindow_Initialise (004181b0) takes the config and the game name; the port's entry takes a resource-op table. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (help_window_resources_init)
+extern "C" void help_window_initialise_adapter(struct BlockRec* config,
+                                               const char* gameName)
+{
+    (void)gameName;
+    help_window_resources_init(config, NULL);
+}

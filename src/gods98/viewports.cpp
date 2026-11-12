@@ -313,7 +313,7 @@ float resource_interface_call_slot90(void* wrapper)
 namespace unported_ledger_stubs {
 // DDiSceneDrawBegin
 // FUNCTION: LEGORR 0x00477010
-void ledger_stub_00477010_DDiSceneDrawBegin(void* render_object, int begin)
+extern "C" void ledger_stub_00477010_DDiSceneDrawBegin(void* render_object, int begin)
 {
     ddiscene_draw_begin(render_object, begin);
 }
@@ -599,3 +599,23 @@ static void resource_interface_call_noargs(void* wrapper, unsigned int byte_offs
 }
 #endif
 } // namespace lego
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_00477240 stores a float (the field of view) at +0x14; the
+ * port's entry above types the slot as a pointer. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (scene_current_object_set)
+extern "C" void scene_current_object_set_original(void* view, float field)
+{
+    if (view != NULL) {
+        memcpy((char*)view + 0x14, &field, sizeof field);
+    }
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: Viewport_Create (00476e50) takes the position first; the port's ledger stub takes the size first. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (unported_ledger_stubs::ledger_stub_00476e50_ScreenBoundedSurfaceResourceAllocate)
+extern "C" void* render_target_viewport_create_original(int x, int y, int width,
+                                                        int height, void* camera)
+{
+    return unported_ledger_stubs::ledger_stub_00476e50_ScreenBoundedSurfaceResourceAllocate(
+        (uint32_t)width, (uint32_t)height, camera, x, y);
+}

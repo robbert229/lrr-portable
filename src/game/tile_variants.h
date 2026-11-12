@@ -15,7 +15,7 @@ extern "C" {
 /* Detail_GetTexture (FUN_0040b850): the texture of `packed_cell` in the
  * texture set `grid`. */
 unsigned int packed_grid_cell_value_get(const void* grid,
-                                        unsigned int packed_cell);
+                                        unsigned char packed_cell);
 
 #ifdef __cplusplus
 }

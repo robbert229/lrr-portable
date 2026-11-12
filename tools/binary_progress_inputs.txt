@@ -198,6 +198,10 @@ src/game/lava_erosion.cpp
 src/game/lego.cpp
 src/game/lego.h
 src/game/lego_api.h
+src/game/lego_maths.h
+src/game/lego_unit.c
+src/game/lego_unit.h
+src/game/lego_unit_imports.h
 src/game/legoobject.cpp
 src/game/level.cpp
 src/game/level.h

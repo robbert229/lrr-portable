@@ -91,7 +91,7 @@ typedef struct EntityTableMaps {
 void entity_table_maps_allocate_for_counts(EntityTableMaps* maps,
                                            unsigned int count_a,
                                            unsigned int count_b);
-void entity_table_maps_allocate(void); /* FUN_0041aa00 */
+extern "C" void entity_table_maps_allocate(void); /* FUN_0041aa00 */
 void entity_table_maps_current_release(void);
 const EntityTableMaps* entity_table_maps_current_peek(void);
 void entity_table_maps_release(EntityTableMaps* maps);
@@ -101,7 +101,7 @@ void entity_surface_vector_normalize(void* surface, float out_xy[2]); /* FUN_004
 int entity_surface_vector_normalize_if_available(void* surface,
                                                   float out_xy[2]);
 float entity_vector_direction_angle_radians_get(void* surface); /* FUN_00442480 */
-void entity_action_sequence_reset(EntitySlot* entity, int preserve_mode); /* FUN_00441940 */
+extern "C" void entity_action_sequence_reset(EntitySlot* entity, int preserve_mode); /* FUN_00441940 */
 /* The retail route list is represented by EntitySlot's 0x14-byte waypoint
  * records. These entry points advance the matching portable path cursor and
  * movement vector state. */
@@ -416,7 +416,7 @@ enum EntityTeardownOperation {
     ENTITY_TEARDOWN_FINALIZE = 10
 };
 void entity_teardown_hooks_set(const EntityTeardownHooks* hooks);
-int entity_teardown(EntitySlot* entity); /* 0x437540 */
+extern "C" int entity_teardown(EntitySlot* entity); /* 0x437540 */
 typedef struct EntityCommandStatusFeedbackHooks {
     void* context;
     const char* (*command_text_get)(EntitySlot* entity, void* context);
@@ -598,10 +598,10 @@ int entity_grouped_code_table_find_value_index(uint32_t value,
                                                int* out_group); /* FUN_0046a120 */
 void entity_indexed_record_table_set(int group, const void* const* records,
                                      uint32_t count);
-uint32_t entity_indexed_record_word_at_b0_get(int group, int index,
-                                              int slot); /* FUN_00469ac0 */
+extern "C" uint32_t entity_indexed_record_word_at_b0_get(int group, int index,
+                                                         int slot); /* FUN_00469ac0 */
 extern "C" uint32_t entity_indexed_record_word_at_b4_get(int group, int index,
-                                              int slot); /* FUN_00469af0 */
+                                                         int slot); /* FUN_00469af0 */
 uint32_t entity_indexed_record_word_at_b8_get(int group, int index,
                                               int slot); /* FUN_00469b20 */
 uint32_t entity_indexed_record_word_at_f0_get(int group, int index,
@@ -808,17 +808,17 @@ float entity_stats_float_atd4(const EntitySlot* e);   /* FUN_00469ce0 */
 float entity_stats_float_at9c(const EntitySlot* e);   /* FUN_00469d00 */
 float entity_stats_float_atd8(const EntitySlot* e);   /* FUN_00469d20 */
 float entity_stats_float_at6c(const EntitySlot* e);   /* FUN_00469d40 */
-float entity_stats_float_at74(const EntitySlot* e);   /* FUN_00469d50 */
-float entity_stats_float_at78(const EntitySlot* e);   /* FUN_00469d60 */
+extern "C" float entity_stats_float_at74(const EntitySlot* e);   /* FUN_00469d50 */
+extern "C" float entity_stats_float_at78(const EntitySlot* e);   /* FUN_00469d60 */
 float entity_stats_float_ate8(const EntitySlot* e);   /* FUN_00469d70 */
 void entity_stats_float_ate8_set(EntitySlot* e, float value); /* tutorial write */
 float entity_stats_float_at70(const EntitySlot* e);   /* FUN_00469d90 */
 void* entity_stats_field_at_a0(const EntitySlot* e);  /* FUN_00469da0: the
                                          * record+0xa0 address itself */
-float entity_stats_float_at7c(const EntitySlot* e);   /* FUN_00469db0 */
+extern "C" float entity_stats_float_at7c(const EntitySlot* e);   /* FUN_00469db0 */
 float entity_stats_float_at80(const EntitySlot* e);   /* FUN_00469dc0 */
 float entity_energy_decay_rate_get(const EntitySlot* e); /* FUN_00469de0 (+84) */
-float entity_stats_float_atdc(const EntitySlot* e);   /* FUN_00469e20 */
+extern "C" float entity_stats_float_atdc(const EntitySlot* e);   /* FUN_00469e20 */
 uint32_t entity_stats_word_atac(const EntitySlot* e); /* FUN_00469e40 */
 extern "C" uint32_t entity_stats_word_get(const EntitySlot* e);  /* FUN_00469e60 (+144) */
 extern "C" uint32_t entity_state_flags_get(const EntitySlot* e); /* FUN_00469e80 (+148) */
@@ -840,16 +840,16 @@ int entity_state_override_stack_set(const EntityStateOverrideEntry* entries,
                                     uint32_t count);
 int entity_state_override_stack_push(const EntityStateOverrideEntry* entry);
 int entity_state_override_pop(EntitySlot* entity); /* FUN_00459240 */
-void entity_record_flag400_toggle_and_refresh(EntitySlot* e); /* FUN_0046a330 */
+extern "C" void entity_record_flag400_toggle_and_refresh(EntitySlot* e); /* FUN_0046a330 */
 extern "C" uint32_t entity_capability_flags_get(const EntitySlot* e); /* FUN_00469ea0 (+14c) */
 float entity_stats_float_at88(const EntitySlot* e);   /* FUN_00469f20
                                          * (the "screen shake" reader) */
-uint32_t entity_stats_word_at_c0_or_c4(const EntitySlot* e, int selector);
+extern "C" uint32_t entity_stats_word_at_c0_or_c4(const EntitySlot* e, int selector);
 /* Record +0xec value used by tutorial action 0x14/0x15. */
 uint32_t entity_stats_word_at_ec(const EntitySlot* e);
                                       /* FUN_00469f90: +c4 if selector
                                        * nonzero, else +c0 */
-uint32_t entity_stats_word_atc8(const EntitySlot* e); /* FUN_00469fc0 */
+extern "C" uint32_t entity_stats_word_atc8(const EntitySlot* e); /* FUN_00469fc0 */
 float entity_stats_float_at8c(const EntitySlot* e);   /* FUN_00469fe0 */
 float entity_stats_float_at90(const EntitySlot* e);   /* FUN_0046a000 */
 float entity_stats_float_at98(const EntitySlot* e);   /* FUN_0046a020 */
@@ -858,12 +858,12 @@ float entity_stats_float_atf4(const EntitySlot* e);   /* FUN_0046a080 */
 float entity_speed_component_get(const EntitySlot* e); /* FUN_0046a0a0 (+f8) */
 /* EntityTypeComponentGet (FUN_0044a200): inspect the legacy entity-record
  * layout and return the type-specific renderer component handle. */
-void* entity_type_component_get(const void* entity_record);
+extern "C" void* entity_type_component_get(const void* entity_record);
 void entity_slot_type_component_set(EntitySlot* entity, void* component);
 void entity_follow_target_pose_get(EntitySlot* entity, int index,
                                    float position[3], float facing[3]);
                                   /* FUN_0044a070 */
-uint32_t entity_type_operation_release(const EntitySlot* entity); /* FUN_00449ff0 */
+extern "C" uint32_t entity_type_operation_release(const EntitySlot* entity); /* FUN_00449ff0 */
 void entity_type_operation_fallback_handle_set(EntitySlot* entity,
                                                void* handle_1c);
 float entity_stats_float_at130(const EntitySlot* e);  /* FUN_0046a170 */
@@ -955,7 +955,7 @@ typedef void (*EntityTypeTwoEventHook)(const EntitySlot* entity,
                                        uint32_t argument_b, void* context);
 void entity_type_two_event_hook_set(EntityTypeTwoEventHook hook,
                                     void* context);
-void entity_type_two_event_dispatch(const EntitySlot* entity,
+extern "C" void entity_type_two_event_dispatch(const EntitySlot* entity,
                                     uint32_t argument_a,
                                     uint32_t argument_b); /* 0x0043b820 */
 typedef struct EntityTypeTwoPositionedHooks {
@@ -969,7 +969,7 @@ typedef struct EntityTypeTwoPositionedHooks {
 } EntityTypeTwoPositionedHooks;
 void entity_type_two_positioned_hooks_set(
     const EntityTypeTwoPositionedHooks* hooks);
-void entity_type_two_positioned_callback_dispatch(
+extern "C" void entity_type_two_positioned_callback_dispatch(
     const EntitySlot* entity, void* scene_object, float inner_range,
     float outer_range, int mode); /* 0x0043b850 */
 typedef int (*EntityTaskCoordinateMatchHook)(void* context,
@@ -978,7 +978,7 @@ typedef int (*EntityTaskCoordinateMatchHook)(void* context,
 void entity_task_count_context_set(GameContext* context,
                                    EntityTaskCoordinateMatchHook match,
                                    void* user);
-int entity_task_at_grid_coordinate_find(uint32_t x, uint32_t y,
+extern "C" int entity_task_at_grid_coordinate_find(uint32_t x, uint32_t y,
                                         EntitySlot** out_entity);
 typedef void (*EntityIndexedFlagPublishHook)(EntitySlot* entity,
                                              uint32_t flags,
@@ -995,7 +995,7 @@ void entity_tool_name_load_hook_set(EntityToolNameLoadHook hook,
 /* FUN_00439950 args are the parsed config file and config root path. When no
  * override is installed, loads each known ToolNames value and duplicates it
  * into the indexed handle table. */
-void entity_tool_name_strings_load(void* string_loader,
+extern "C" void entity_tool_name_strings_load(void* string_loader,
                                    void* config); /* 0x00439950 */
 void* entity_tool_name_string_get(int slot);
 typedef struct EntityBuildPlacementHooks {
@@ -1058,7 +1058,7 @@ typedef struct EntityClippedRectangleHooks {
 } EntityClippedRectangleHooks;
 void entity_clipped_rectangle_hooks_set(
     const EntityClippedRectangleHooks* hooks);
-void entity_clipped_rectangle_callback_dispatch(
+extern "C" void entity_clipped_rectangle_callback_dispatch(
     void* payload, const float rect_a[2],
     const float rect_b[2]); /* 0x0043b6c0 */
 
@@ -1073,7 +1073,7 @@ int entity_cell_type_speed_multiplier_resolve_current(
 int entity_route_cell_candidate_accept(const EntitySlot* entity,
                                        const struct LevelState* level,
                                        int x, int y, int mode); /* FUN_00443840 */
-void entity_transform_position_get_outputs(const EntitySlot* entity,
+extern "C" void entity_transform_position_get_outputs(const EntitySlot* entity,
                                            float* out_x,
                                            float* out_y); /* FUN_00442260 */
 void entity_transform_position_get(const EntitySlot* entity,
@@ -1101,7 +1101,7 @@ void entity_type5_finalize_if_allowed(EntitySlot* entity); /* FUN_00441ea0 */
 typedef int (*EntityRouteStateHook)(EntitySlot* entity);
 void entity_route_state_hook_set(EntityRouteStateHook hook);
 void entity_action_route_state_initialize(EntitySlot* entity); /* FUN_00442210 */
-void entity_enter_event21_state_once(EntitySlot* entity); /* FUN_00444620 */
+extern "C" void entity_enter_event21_state_once(EntitySlot* entity); /* FUN_00444620 */
 
 /* FUN_00447730 — routing-progress advance (findings 377/448): add 25 to
  * the +0x344 progress float, clear the +0x2fc link field, clamp to the
@@ -1114,7 +1114,7 @@ void entity_linked_route_flag_clear(GameContext* ctx, EntitySlot* e);
 
 /* EntityClearNestedState8Fields (FUN_004487c0): when gated and linked to a
  * type-8 entity, clear its +0x2f4 word and detach attached objects. */
-void entity_clear_nested_state_8_fields(EntitySlot* e);
+extern "C" void entity_clear_nested_state_8_fields(EntitySlot* e);
 
 /* TypeFourEntityCallbackDispatch (FUN_00447900): on a type-4 source,
  * reset the action sequence of each live type-5 entity whose +0x2fc link
@@ -1186,9 +1186,9 @@ EntitySceneSlotNode* entity_scene_slot_node_append(EntitySlot* entity,
                                                    void* renderer_record,
                                                    void* payload);
 void entity_scene_slot_nodes_clear(EntitySlot* entity);
-void entity_payload_state_set(EntitySlot* e, int state);
-void entity_payload_release_subslots(EntitySlot* e);
-void entity_payload_teardown(EntitySlot* e);
+extern "C" void entity_payload_state_set(EntitySlot* e, int state);
+extern "C" void entity_payload_release_subslots(EntitySlot* e);
+extern "C" void entity_payload_teardown(EntitySlot* e);
 typedef struct EntityHeadingStepState {
     float position[2];
     float direction[2];
@@ -1378,7 +1378,7 @@ uint32_t entity_global_animation_state_peek(void);          /* port hook */
  * discarded in the body (calling-convention residue, 0x460200 precedent). */
 int entity_flag100_and_shared_eligibility_check(const EntitySlot* e);
                                                 /* FUN_00471ce0 */
-int entity_quad_mesh_render_record_allowed(const EntitySlot* e);
+extern "C" int entity_quad_mesh_render_record_allowed(const EntitySlot* e);
                                                 /* FUN_0040aae0 */
 int task_type_and_condition_check(const void* unused,
                                  const EntitySlot* target, int condition);
@@ -1449,7 +1449,7 @@ void* pooled_record_allocate_and_reset(void);
 void pooled_record_pool_initialize(void); /* reset pool storage for 0x436c20 */
 /* EntityPoolResourcesRelease (FUN_00437050): release all tracked pool blocks
  * and clear the allocator head/count so a later initialization can regrow. */
-void pooled_record_pool_resources_release(void);
+extern "C" void pooled_record_pool_resources_release(void);
 
 /* ResolvedEntityOperationDispatch (FUN_00460910): resolves the name through
  * the corpus resolver's (type, row) pair and feeds the count-difference
@@ -1479,7 +1479,7 @@ int entity_task_state_capacity_bind(EntitySlot* entity);
 /* FUN_00469f40: raw float word for the stats loader's parsed level count. */
 extern "C" uint32_t building_upgrade_admission_check(int type, int row);
 
-uint32_t stats_table_word_at_b8(int type, int row, int stride_index = 0); /* FUN_00469b20 */
+extern "C" uint32_t stats_table_word_at_b8(int type, int row, int stride_index = 0); /* FUN_00469b20 */
 uint32_t stats_table_word_at_b0(int type, int row, int stride_index);
 float stats_table_float_at_dc(int type, int row);    /* FUN_00469e00 */
 uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
@@ -1514,7 +1514,7 @@ void entity_localized_name_tables_install(int kind,
                                           const char* const* names,
                                           const char* const* the_names,
                                           uint32_t count);
-const char* entity_display_name_lookup(const EntitySlot* entity); /* FUN_004395e0 */
+extern "C" const char* entity_display_name_lookup(const EntitySlot* entity); /* FUN_004395e0 */
 extern "C" const char* localized_object_name_get(uint32_t kind, int index); /* FUN_00439860 */
 const char* localized_object_the_name_get(uint32_t kind,
                                           int index); /* FUN_00439790 */
@@ -1611,9 +1611,9 @@ typedef struct EmergenceSpawnHooks {
 void emergence_spawn_hooks_set(const EmergenceSpawnHooks* hooks);
 EntitySlot* emergence_random_spawn_attempt(int entity_index, int owner_index,
                                            int grid_width, int grid_height);
-EntitySlot* creature_spawn_from_emergence(void* base_entity, int mode_token,
-                                          int owner_index, int cell_x,
-                                          int cell_y); /* FUN_0043af30 */
+extern "C" EntitySlot* creature_spawn_from_emergence(void* base_entity, int mode_token,
+                                                     int owner_index, int cell_x,
+                                                     int cell_y); /* FUN_0043af30 */
 void entity_cell_step_hooks_set(CellStepPathResolveHook path_hook,
                                 CellStepRandomRangeHook random_hook,
                                 void* user);
@@ -1623,7 +1623,7 @@ float entity_cell_step_random_range(float minimum, float maximum);
 int entity_cell_step_command_issue_with_jitter(
     EntitySlot* entity, const int target_xy[2], const float input_xy[2],
     int action_mode, int mark_pending); /* FUN_0043a120 */
-void entity_attached_object_list_detach(EntitySlot* entity,
+extern "C" void entity_attached_object_list_detach(EntitySlot* entity,
                                         int reset_mode); /* FUN_00439e70 */
 int entity_capacity_or_state_predicate(
     const EntitySlot* entity); /* FUN_0043c650 */

@@ -27,14 +27,14 @@ typedef struct SpawnTypeFiveFrameResourceOps {
 } SpawnTypeFiveFrameResourceOps;
 void spawn_type_five_frame_resource_ops_set(
     const SpawnTypeFiveFrameResourceOps* ops);
-void object_list_field_assign_all(::EntitySlot* entity,
-                                  void* texture_resource); /* 0x00440bf0 */
+extern "C" void object_list_field_assign_all(::EntitySlot* entity,
+                                             void* texture_resource); /* 0x00440bf0 */
 int entity_try_create_linked_at_position(::EntitySlot* entity, float cell_x,
                                          float cell_y,
                                          ::EntitySlot* linked); /* 0x004471b0 */
 int entity_adjacent_placement_cell_search(::EntitySlot* entity,
                                           ::EntitySlot* target); /* 0x00447210 */
-void scatter_spawn_gate_set(int enabled); /* 0x0044adc0 */
+extern "C" void scatter_spawn_gate_set(int enabled); /* 0x0044adc0 */
 int scatter_spawn_gate_get();
 void entity_kind_one_random_spawn_trigger(void* entity); /* 0x0044ade0 */
 void random_kind_six_scatter_spawn(void* entity, int count, int mode); /* 0x0044ae50 */

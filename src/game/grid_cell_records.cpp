@@ -32,6 +32,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+/* GAME-021 lego_unit.c reads this word (C linkage, ADR 0005 step 6). */
+extern "C" uint32_t s_overlay_word_03610;
 #include "engine_for_grid_cell_records.hpp"
 #include <math.h>
 #include <float.h>
@@ -338,4 +340,14 @@ static int post_step_cell_sight_callback(EntitySlot* entity, void* payload)
         ledger_stub_00466490_CellSightRayCheckAndFlag(entity);
     /* LAB_004665e0's result does not terminate the entity-pool walk. */
     return 0;
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * port's FUN_00466250 is a namespaced ledger stub, which cannot take C
+ * linkage. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (ledger stub 00466250)
+extern "C" int expand_cell_entity_spawn_adapter(int x, int y)
+{
+    return unported_ledger_stubs::ledger_stub_00466250_ExpandCellEntitySpawn(
+        x, y);
 }

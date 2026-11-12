@@ -165,11 +165,11 @@ __declspec(allocate(".data$zzzzzz")) static unsigned char
  * s_menu_global_bytes band cannot hold the annotation, same precedent as the
  * s_fe_flow_* carve-outs). Own storage, zero-init like the corpus's tail. */
 // GLOBAL: LEGORR 0x0055613c
-void* DAT_0055613c;
+extern "C" { void* DAT_0055613c; }
 // GLOBAL: LEGORR 0x00556f50
-void* DAT_00556f50;
+extern "C" { void* DAT_00556f50; }
 // GLOBAL: LEGORR 0x00556f54
-void* DAT_00556f54;
+extern "C" { void* DAT_00556f54; }
 #if defined(LEGORRR_BACKEND_WINAPI)
 #define s_fe_flow (s_menu_global_words + 0x3b7)
 #endif
@@ -231,6 +231,9 @@ uint32_t s_interface_build_image_counts[2];
 #include "gods98/resource.hpp"
 #include "entity.hpp"
 #include "level.hpp"
+/* C linkage for ToolTip_SetSFX, which GAME-021's lego_unit.c calls (issue
+ * #544). The frozen header below redeclares it and inherits it. */
+extern "C" void timed_effect_cue_request_set_corpus(int index, uint32_t value);
 #include "frontend_shared.hpp"
 #include "frontend_for_helpwindow.hpp"
 #include "frontend_from_helpwindow.hpp"

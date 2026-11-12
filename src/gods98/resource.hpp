@@ -56,7 +56,10 @@ void resource_cd_probe_hooks_set(ResourceDriveTypeQueryFn drive_type,
                                  ResourcePathExistsFn path_exists,
                                  void* context);
 int resource_find_cd_key_drive(void); /* FUN_0047f4f0 */
-extern "C" const char* resource_path_resolve_against_base(const char* path); /* FUN_00480220 */
+#ifdef __cplusplus
+extern "C"
+#endif
+const char* resource_path_resolve_against_base(const char* path); /* FUN_00480220 */
 
 /* Marker-file probes (finding 01): cd.key = CD present, delme.dat = data
  * installed (CDMissing / DataMissing dialogs in the original). 1 = present. */
@@ -203,7 +206,10 @@ void* resource_name_register_or_query(ResourceTreeNode* root,
                                       const char* name, int mode,
                                       uint32_t* match_count_or_index);
                                                 /* 0x00473bc0 */
-extern "C" void* resource_name_register_or_query_target(
+#ifdef __cplusplus
+extern "C"
+#endif
+void* resource_name_register_or_query_target(
     void** root, const char* name, int mode,
     uint32_t* match_count_or_index); /* retail 0x00473bc0 ABI */
 int nested_record_list_remove_matching_key(void* owner, void* key,
@@ -266,7 +272,10 @@ typedef void (*WholeFileProgressHook)(const char* path, uint32_t size,
 void whole_file_progress_hook_set(WholeFileProgressHook hook, void* user);
 void* read_whole_file_with_progress(const char* path, int32_t* size_out,
                                     int binary_mode);
-extern "C" void* read_whole_file(const char* path, int32_t* size_out); /* FUN_004800a0 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void* read_whole_file(const char* path, int32_t* size_out); /* FUN_004800a0 */
 
 /* --- fixed-record slot resources (2026-10-24; findings 375/251) ------------
  * The corpus's fixed-record slot table (DAT_005756a0, stride 0x10: resource
@@ -303,11 +312,17 @@ typedef struct ResourceInterfaceWrapper {
     void* interface_object;
     uint32_t field14;
 } ResourceInterfaceWrapper;
+#ifdef __cplusplus
+extern "C"
+#endif
 void resource_interface_call_slot40_and_clear_field14(
     ResourceInterfaceWrapper* wrapper, uint32_t value);
 
 /* RenderResourceTrackAndRetain (FUN_00477220): prepend the object to the
  * tracked-resource chain and retain its interface at +0x10. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void render_resource_track_and_retain(void* resource);
 
 /* ResourceInterfaceCallSlot88 (FUN_00477270): invoke interface vtable slot
@@ -347,9 +362,15 @@ int wad_file_read(void* destination, int element_size, int element_count,
 int wad_file_seek(GameFileHandle* handle, int offset, int origin); /* FUN_0047f850 */
 int wad_file_cursor_get(GameFileHandle* handle);                   /* FUN_0047fb10 */
 void game_file_handle_release(GameFileHandle* handle);            /* FUN_0047ff50 */
-extern "C" int game_file_close(GameFileHandle* handle);                      /* FUN_0047fac0 */
+#ifdef __cplusplus
+extern "C"
+#endif
+int game_file_close(GameFileHandle* handle);                      /* FUN_0047fac0 */
 /* Resolve and open through the reference WAD/loose-file route selector. */
-extern "C" GameFileHandle* game_file_open_dispatch(const char* path,
+#ifdef __cplusplus
+extern "C"
+#endif
+GameFileHandle* game_file_open_dispatch(const char* path,
                                         const char* mode);          /* FUN_0047f6e0 */
 /* Open a loose-file GameFileHandle after resolving the game's data root.
  * WAD-only read routes are not representable by this FILE-backed adapter. */
@@ -367,7 +388,10 @@ char* game_file_read_line(char* buffer, int capacity,
                           GameFileHandle* handle);                /* FUN_0047fce0 */
 char* game_file_read_line_dispatch(char* buffer, int capacity,
                                    GameFileHandle* handle);       /* FUN_0047fd40 */
-extern "C" char* game_file_read_crlf_line(char* buffer, int capacity,
+#ifdef __cplusplus
+extern "C"
+#endif
+char* game_file_read_crlf_line(char* buffer, int capacity,
                                GameFileHandle* handle);           /* FUN_00480050 */
 
 /* The stream-slot opener's three corpus dwords, front to back. */
@@ -390,6 +414,9 @@ int file_resource_record_slot_allocate(void); /* FUN_0048be00 */
  * writer, so the set lands as own storage behind install/peek hooks; the
  * release frees non-null slots in corpus order through the engine-heap
  * free seam and clears them (deviation: the corpus dangles). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void resource_handle_set_release(void);                          /* FUN_0041a850 */
 void  resource_handle_set_slot_install(int slot, void* res);     /* port hook */
 void* resource_handle_set_slot_peek(int slot);                   /* port hook */
@@ -426,6 +453,9 @@ void resource_handle_list_append(ResourceHandleList* list,
 /* Rock-fall style names (FUN_0040bf70): lookup the installed config-name
  * table case-insensitively. The parser side is a separate scene-resource
  * owner, so the native table is seeded through this install hook. */
+#ifdef __cplusplus
+extern "C"
+#endif
 int rock_fall_style_name_lookup(const char* name, uint32_t* index);
 void rock_fall_style_names_install(const char* const* names, uint32_t count);
 typedef void (*RockFallStyleRegisterHook)(const char* token, uint32_t style,
@@ -465,13 +495,19 @@ void global_resource_release_callback_set(GlobalResourceReleaseFn callback,
 typedef void (*GlobalResourceCleanupFn)(void* user);
 void global_resource_cleanup_callback_set(GlobalResourceCleanupFn callback,
                                           void* user);
+#ifdef __cplusplus
+extern "C"
+#endif
 void global_resource_handle_release(void); /* FUN_0044e0a0 */
 void* panel_event_entry_append(void* panel, const char* name, uint32_t payload,
                                uint32_t value_a, uint32_t value_b,
                                uint32_t flags); /* FUN_004629d0 */
 typedef void* (*PanelResourceLoadFn)(const char* name, void* user);
 void panel_resource_loader_set(PanelResourceLoadFn callback, void* user);
-extern "C" void scroll_rect_payload_record_create(int slot, const float rect[4],
+#ifdef __cplusplus
+extern "C"
+#endif
+void scroll_rect_payload_record_create(int slot, const float rect[4],
                                        int count, uint32_t value,
                                        const char* resource_name);
 void* scroll_rect_payload_record_get(int slot);
@@ -486,7 +522,10 @@ typedef void (*ResourceListUpdateFn)(void* handle, void* object,
                                      void* update_value, void* user);
 void resource_list_update_hooks_set(ResourceListCreateFn create,
                                     ResourceListUpdateFn update, void* user);
-extern "C" void resource_list_update_matching_key_superseded(void* list, void* library,
+#ifdef __cplusplus
+extern "C"
+#endif
+void resource_list_update_matching_key_superseded(void* list, void* library,
                                       void* update_value,
                                       uint32_t key); /* 0x00451bc0 */
 typedef void (*OwnedObjectReleaseFn)(void* object, void* user);
@@ -494,10 +533,19 @@ void owned_object_release_hooks_set(OwnedObjectReleaseFn object_release,
                                     OwnedObjectReleaseFn scene_destroy,
                                     OwnedObjectReleaseFn node_free,
                                     void* user);
-extern "C" void owned_object_reference_chain_release_superseded(void* head); /* 0x00451c50 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void owned_object_reference_chain_release_superseded(void* head); /* 0x00451c50 */
 int string_table_entry_install(const char* name);
+#ifdef __cplusplus
+extern "C"
+#endif
 void string_table_entry_set_current(const char* name); /* 0x0044dde0 */
 const char* string_table_entry_current(void);
+#ifdef __cplusplus
+extern "C"
+#endif
 void message_string_table_initialize(void); /* 0x00451cd0 */
 const char* message_string_table_get(uint32_t index);
 typedef void (*FileLoadingProgressDrawFn)(float progress, const float rect[4],
@@ -554,6 +602,9 @@ int misc_objects_effect_slots_bind(const MiscEffectResourceEntry* entries,
 typedef void* (*NumberedBitmapLoadHook)(const char* path, void* context);
 void numbered_bitmap_load_hook_install(NumberedBitmapLoadHook hook,
                                         void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 void preload_numbered_bitmaps(const char* directory, const char* prefix);
 void* numbered_bitmap_slot_peek(int index);
 typedef float (*SceneAnimationDurationHook)(void* handle, uint32_t mode,
@@ -648,6 +699,9 @@ void scene_object_attached_resource_release(void* record); /* FUN_0046d1a0 */
 typedef void (*SceneOwnedMemoryReleaseHook)(void* memory, void* context);
 void scene_payload_memory_release_hook_install(
     SceneOwnedMemoryReleaseHook release, void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 void entity_payload_type1_release(ScenePairedAnimationState* state);
                                                 /* FUN_0046ce10 */
 int scene_record_template_instantiate(
@@ -754,6 +808,9 @@ void scene_availability_transient_slot_install(int group, int slot,
                                                void* handle, int configured);
 void scene_cell_table_pair_install(int style, int group, int slot,
                                    uint32_t first, uint32_t second);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_cell_table_pair_read(int group, int slot, uint32_t* first,
                                 uint32_t* second); /* FUN_0040c570 */
 typedef void* (*SceneResourceNameFormatHook)(void* handle, uint32_t name_base,
@@ -778,8 +835,11 @@ void scene_resource_instance_hooks_install(SceneResourceParentLoadHook load,
                                            SceneResourceChildCreateHook clone,
                                            SceneResourceLockHook lock,
                                            void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 int indexed_resource_handle_set_create(void* scene, const char* path,
-                                       int group); /* FUN_0040c1b0 */
+                                                  int group); /* FUN_0040c1b0 */
 typedef void* (*SceneActLoadHook)(void* scene, const char* path,
                                   const char* type, void* context);
 typedef void (*SceneActNameRegisterHook)(void* parent, const char* name,
@@ -798,6 +858,9 @@ void scene_slot_pose_hook_install(SceneSlotPoseHook hook, void* context);
 int scene_slot_pose_scale_register(int group, uint32_t first, uint32_t second,
                                    float x, float y, float z,
                                    float heading, float pitch); /* FUN_0040c230 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void rock_fall_style_scene_resources_release(void); /* FUN_0040c6c0 */
 void terrain_point_object_install(int slot, void* handle);
 void terrain_point_objects_remove_matching(float delta); /* FUN_0040c830 */
@@ -810,6 +873,9 @@ void transient_effect_configure_hook_install(
 int transient_effect_render_slot_configure(int group, float x, float y,
                                            float size, float heading,
                                            float dx, float dy); /* FUN_0040c2f0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 int scene_resource_availability_sweep(float delta, uint32_t** groups_out,
                                       uint32_t** slots_out);
 
@@ -824,9 +890,15 @@ typedef struct MiscObjectResourceHooks {
 void misc_object_resource_hooks_set(const MiscObjectResourceHooks* hooks);
 void misc_object_resources_load(void* config); /* FUN_00422850 */
 void* misc_object_resource_peek(unsigned int slot);
-extern "C" void directx_error_message_format(const char* name,
+#ifdef __cplusplus
+extern "C"
+#endif
+void directx_error_message_format(const char* name,
                                              const char* description);
-extern "C" int directx_result_diagnostic_dispatch(int result,
+#ifdef __cplusplus
+extern "C"
+#endif
+int directx_result_diagnostic_dispatch(int result,
                                                  int diagnostic_kind,
                                                  const char* source_file,
                                                  int source_line);

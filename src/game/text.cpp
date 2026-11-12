@@ -57,6 +57,8 @@
 #include "game/actor_scene.hpp"
 #include "game/scene_render.hpp"
 #include "scene_pool.hpp"
+/* GAME-021 lego_unit.c reads this word (C linkage, ADR 0005 step 6). */
+extern "C" uint32_t s_overlay_word_03610;
 #include "engine_for_text.hpp"
 
 // GLOBAL: LEGORR 0x00503190

@@ -93,6 +93,8 @@
 #include "game/savegame.hpp"
 #include "gods98/frameloop.hpp"
 #include "game/reward.h"
+extern "C" int s_cursor_delta_x; /* lego_unit_imports.h: C linkage */
+extern "C" int s_cursor_delta_y;
 #include "gods98/input_shared.hpp"
 #include "gods98/flic.hpp"
 #include "game/options.hpp"
@@ -131,6 +133,29 @@
 #include "game/interface_callees.h"
 #include "game/info_unit.h"
 #include "game/info_api.h"
+#include "game/terrain_grid.hpp"
+#include "game/level.hpp"
+#include "gods98/sound.hpp"
+#include "gods98/media.hpp"
+#include "game/panel_unit.h"
+#include "game/select.hpp"
+#include "game/effects.hpp"
+#include "game/savegame.hpp"
+#include "gods98/camera.hpp"
+#include "game/objective.hpp"
+#include "game/select.hpp"
+#include "game/frontend.hpp"
+#include "gods98/resource.hpp"
+#include "gods98/scene_pool.hpp"
+#include "gods98/scene_resources.hpp"
+#include "gods98/flic.hpp"
+#include "gods98/heap.hpp"
+#include "game/advisor.h"
+#include "gods98/sound3d.h"
+#include "gods98/soundsys.h"
+#include "gods98/draw.h"
+#include "game/lego_unit.h"
+#include "game/lego_unit_imports.h"
 
 int main(void)
 {

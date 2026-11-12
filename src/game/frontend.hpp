@@ -428,9 +428,9 @@ typedef struct ToolTipIconConfigHooks {
 void tooltip_icon_config_hooks_set(const ToolTipIconConfigHooks* hooks,
                                    const char* const primary_names[11],
                                    const char* const secondary_names[6]);
-void tooltip_icons_config_load(void* config); /* 0x437150 */
+extern "C" void tooltip_icons_config_load(void* config); /* 0x437150 */
 void* tooltip_icon_handle_get(unsigned int bank, unsigned int index);
-void advisor_tooltip_and_sound_config_load(BlockFile* config); /* 0x434da0 */
+extern "C" void advisor_tooltip_and_sound_config_load(BlockFile* config); /* 0x434da0 */
 void tooltip_software_initialize(const TextureSurface* font, int width,
                                  int height, float r, float g, float b);
 void tooltip_software_shutdown(void);
@@ -461,7 +461,7 @@ int option_music_default(void); /* FUN_00414e10 */
 int  frontend_build(FrontEnd* fe, BlockFile* cfg);
 /* Pointer cursor config/draw target entry points. Config rows are the child
  * records of Lego.cfg's Pointers group. */
-void pointer_cursor_config_load_target(BlockRec* first_entry);
+extern "C" void pointer_cursor_config_load_target(BlockRec* first_entry);
 void frontend_pointer_config_load(BlockFile* cfg);
 extern "C" int pointer_cursor_config_parse_target(const char* name, int* index_out);
 extern "C" void pointer_cursor_draw_target(uint32_t x, uint32_t y);
@@ -483,7 +483,7 @@ extern "C" int  frontend_enabled(BlockFile* cfg);
  * colors, hunger images and position, then the bubble position from the
  * value/key config pair. Called during game config setup before rendering. */
 void frontend_hud_runtime_install(void);
-void frontend_render_three_pass_update(BlockFile* values,
+extern "C" void frontend_render_three_pass_update(BlockFile* values,
                                        const char* config_root);
 int frontend_bubble_images_position_config_load(BlockFile* values,
                                                 const char* config_root);
@@ -494,7 +494,7 @@ char* ui_text_underscores_to_spaces_target(char* text);
 /* InterfaceMenuActionLabelsInit / CaseInsensitiveStringTableIndexFind
  * (FUN_0041a300 / FUN_0041a9c0): initialize the 74 action-name keys and
  * selection region, then find a key case-insensitively (zero-based index). */
-void interface_menu_action_labels_init(uint32_t x, uint32_t y,
+extern "C" void interface_menu_action_labels_init(uint32_t x, uint32_t y,
                                        const void* context);
 const char* interface_menu_action_label_get(int index);
 int interface_menu_action_label_find(const char* name, int* out_index);
@@ -664,7 +664,7 @@ int overlay_menu_gate(FeOverlayMenuGateState* state, int mode,
                       FeOverlayMenuTick menu_tick, void* context);
 void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
                                  int w, int h, void* px, int pitch);
-void interface_message_tab_info_text_load(const char* path); /* FUN_00419430 */
+extern "C" void interface_message_tab_info_text_load(const char* path); /* FUN_00419430 */
 TextureSurface* interface_message_tab_info_text(void); /* port accessor */
 
 /* Draw one frame of the scrolling credits lane over the caller's backdrop.
@@ -728,7 +728,7 @@ uint32_t selection_state_flags_peek(void);
 /* SelectionModeStateSet (FUN_00418190, finding 478): the corpus stores the
  * selection-mode word (DAT_004db8e8) beside the selection-state word this
  * band models; no ported feeder, so zero-init storage with a peek. */
-void     selection_mode_state_set(uint32_t value);
+extern "C" void     selection_mode_state_set(uint32_t value);
 uint32_t selection_mode_state_peek(void);
 
 /* UiModeResourceBit40Get (FUN_004191f0, findings 443/474): bit 0x40 of the
@@ -841,7 +841,7 @@ typedef void (*AdvisorTutorialIconInitializeFn)(void* icon, void* context);
 void advisor_tutorial_icon_hooks_set(AdvisorTutorialIconLoadFn load,
                                      AdvisorTutorialIconInitializeFn initialize,
                                      void* context);
-void advisor_tutorial_icon_image_load(BlockFile* cfg); /* FUN_00434a00 */
+extern "C" void advisor_tutorial_icon_image_load(BlockFile* cfg); /* FUN_00434a00 */
 void* advisor_tutorial_icon_get(void);
 /* Production startup/reload and shutdown; legacy hooks above lend images. */
 void advisor_tutorial_icon_runtime_initialize(BlockFile* cfg);
@@ -912,7 +912,7 @@ typedef struct AdvisorTextDisplayOps {
                              float delta);
 } AdvisorTextDisplayOps;
 void advisor_text_display_ops_set(const AdvisorTextDisplayOps* ops);
-void advisor_text_display_worker(float delta); /* FUN_0046ad00 */
+extern "C" void advisor_text_display_worker(float delta); /* FUN_0046ad00 */
 typedef void (*AdvisorInlineImageDrawFn)(void* context, void* image_handle,
                                          uint32_t image_index, float x,
                                          float y);
@@ -996,7 +996,7 @@ typedef struct OverlayTextBufferOps {
     void (*reset)(void* context);
 } OverlayTextBufferOps;
 void overlay_text_buffer_ops_set(const OverlayTextBufferOps* ops);
-int overlay_text_buffer_refresh(void); /* FUN_00418a00 */
+extern "C" int overlay_text_buffer_refresh(void); /* FUN_00418a00 */
 typedef struct AdvisorDialogStackEntry {
     void* record;
     uint32_t item_id;
@@ -1161,7 +1161,7 @@ typedef uint32_t (*TooltipFontMetricQueryFn)(void* font, void* context);
  * multiplier, display width/height, inset word, and tooltip RGB. The retail
  * GameConfigInit call leaves five words from its color helper calls beneath
  * the five explicit arguments; keep this entry's full target signature. */
-void tooltip_overlay_state_initialize(
+extern "C" void tooltip_overlay_state_initialize(
     void* font, uint32_t geometry_a, uint32_t geometry_b, float duration_scale,
     uint32_t display_width, uint32_t display_height, uint32_t inset_word,
     float color_r, float color_g, float color_b); /* FUN_0046b1d0 */
@@ -1177,7 +1177,7 @@ void     help_window_resources_init(BlockFile* cfg,
 void     help_window_button_layout_load(
              BlockFile* cfg, BlockFile* config_root);
 void     help_window_sound_clear_hook_set(void (*hook)(int));
-int      help_window_button_hit_test(uint32_t x, uint32_t y, int mode,
+extern "C" int      help_window_button_hit_test(uint32_t x, uint32_t y, int mode,
                                      int transition_flags, int active,
                                      float feedback_amount);
 void     layout_position_set(int entry, int x, int y); /* diagnostics */
@@ -1194,9 +1194,9 @@ int      layout_position_get(int entry, int* x, int* y);
  * The port-side setter stands in for the unported callback bindings. */
 extern "C" int save_slot_open(void);       /* FUN_00416d50: DAT_00557020 != -1 */
 extern "C" int is_in_game(void);           /* FUN_00416d60: DAT_00557024 != -1 */
-int quit_menu_probe(void);      /* FUN_00416dd0: DAT_0055701c verbatim */
-int level_start_flag(void);     /* FUN_00416de0: DAT_00557048 != 0 */
-int menu_options_flag(void);    /* FUN_00416df0: DAT_0055704c != 0 */
+extern "C" int quit_menu_probe(void);      /* FUN_00416dd0: DAT_0055701c verbatim */
+extern "C" int level_start_flag(void);     /* FUN_00416de0: DAT_00557048 != 0 */
+extern "C" int menu_options_flag(void);    /* FUN_00416df0: DAT_0055704c != 0 */
 void frontend_flow_word_set(int which, int value); /* port-side setter */
 
 /* MainSimStateAdmissionPredicate (FUN_004191a0): the corpus's sim-admission
@@ -1204,7 +1204,7 @@ void frontend_flow_word_set(int which, int value); /* port-side setter */
  * leaf above, and the message module's system-state word clear. All three
  * models are the port's own (the same s_sel_state the selection band
  * reads and the message_system_state model), so no new storage lands. */
-int main_sim_state_admission_predicate(void);
+extern "C" int main_sim_state_admission_predicate(void);
 
 /* MenuWipeEnd (FUN_00410440): clears the wipe flag's low two bits — the
  * corpus's word DAT_005574f0, whose setter half (wipe start, setting 3)
@@ -1240,7 +1240,7 @@ void objective_selection_state_reset(void);
 void interaction_timer_reset_and_flag_clear(void);
 /* interaction_timer_reset_and_flag_clear (FUN_0041ee60): restocks the
  * interaction timer (25.0) and clears bit 0x800. */
-void mode_flag_pair_apply_if_bit2(int value);
+extern "C" void mode_flag_pair_apply_if_bit2(int value);
 /* mode_flag_pair_apply_if_bit2 (FUN_00418800): with bit 2 of the
  * selection word set, nonzero arms bits (1 set, 0 clear) and zero drops
  * both. */
@@ -1294,7 +1294,7 @@ void ui_text_output_record_slot_draw(void* const* holder,
                                      uint32_t start_line, float line_scale);
 void frontend_event_timer_state_get(EventTimerState* state);
 void frontend_event_timer_state_set(const EventTimerState* state);
-void timed_status_and_event_tick(float delta); /* FUN_0041b930 */
+extern "C" void timed_status_and_event_tick(float delta); /* FUN_0041b930 */
 float    interaction_timer_peek(void);          /* port hook */
 uint32_t interaction_flags_peek(void);          /* port hook */
 void interaction_flags_set(uint32_t flags);     /* port hook, same owner */
@@ -1478,7 +1478,7 @@ uint32_t screen_right_edge_cache_peek(void);    /* port hook */
  * drawing. The decompiler labels the wrapper void, but its callers consume
  * the advance returned by FUN_0047a470; this port derives the same value from
  * the bitmap ink bounds used by its renderer. */
-int bitmap_font_glyph_measure_width(void* font, unsigned char glyph);
+extern "C" int bitmap_font_glyph_measure_width(void* font, unsigned char glyph);
 TextureSurface* bitmap_font_resource_load(const char* name); /* FUN_00479ee0 */
                                                 /* FUN_0047a520 */
 
@@ -1533,7 +1533,7 @@ void     panel_position_offsets_set(float x, float y);   /* port hook */
 /* InterfaceButtonImagesLoad (FUN_0041b270): load the two button images
  * through the surface-load seam and call the transform seam per non-zero
  * handle. The peek hook reads the DAT window roles (own storage). */
-void     interface_button_images_load(const char* left_path,
+extern "C" void     interface_button_images_load(const char* left_path,
                                       const char* right_path);
 uint32_t interface_button_surface_peek(int which);   /* port hook */
 
@@ -1547,7 +1547,7 @@ uint32_t interface_button_surface_peek(int which);   /* port hook */
  * Deviations: the name tables and counts ride own storage (the corpus's
  * catalog loader is unported), NULL config/value answers where the corpus
  * strides, and the "r" mode maps to the port's AUTO open. */
-void encyclopedia_config_files_open(BlockFile* cfg, const char* root_path);
+extern "C" void encyclopedia_config_files_open(BlockFile* cfg, const char* root_path);
 void* encyclopedia_file_window_peek(int group);      /* port hook, 0..3 */
 void* encyclopedia_crystal_file_peek(void);          /* port hook */
 void* encyclopedia_ore_file_peek(void);              /* port hook */
@@ -1593,7 +1593,7 @@ void     panel_layout_surface_install(void* surface);  /* test hook */
  * Quirks pinned: the last primary pair stays zero while its mirror
  * takes 320/40, and the first mirror row's pair differs from the
  * primary's. */
-void     screen_coord_normalize_init(void);               /* FUN_0045d8b0 */
+extern "C" void     screen_coord_normalize_init(void);               /* FUN_0045d8b0 */
 void     screen_coord_normalize_reset(void);              /* port hook */
 float    screen_coord_normalize_color_peek(int index);    /* port hook */
 float    screen_coord_normalize_pair_peek(int mirror, int row,

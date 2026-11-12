@@ -3553,7 +3553,7 @@ static uint32_t* player_click_count_table(int kind)
 /* Declared only in frozen per-unit headers. */
 int entity_type_pair_for_name(const char* name, int* type_out, int* row_out,
                               int* zero_out);
-float engine_float_field260_get_current_target(void);
+extern "C" float engine_float_field260_get_current_target(void); /* lego_unit.c */
 void timed_effect_persistence_set_corpus(int index, int set);
 void timed_effect_timestamp_reset_corpus(int index);
 namespace unported_ledger_stubs {
@@ -3770,3 +3770,16 @@ void tooltip_reset_timer(int index)
 }
 
 } /* extern "C" */
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_0041baa0 takes the pointer position, the left button, its
+ * previous state, the release flag and the frame time; the port's entry
+ * takes five words and no time. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (0041baa0 -> simulation_pointer_action_dispatch_impl)
+extern "C" int interface_handle_mouse_adapter(int x, int y, int leftButton,
+                                              int leftButtonLast, int leftReleased,
+                                              float elapsed)
+{
+    (void)elapsed;
+    return unported_ledger_stubs::simulation_pointer_action_dispatch_impl(
+        x, y, leftButton, leftButtonLast, leftReleased);
+}

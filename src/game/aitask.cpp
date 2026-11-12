@@ -298,6 +298,8 @@ int cmd_kind_by_name(const char* name, int* out)
     }
     return 0;
 }
+/* C linkage for GAME-021 lego_unit.c (the frozen header declares it without). */
+extern "C" void cmd_registry_init_target(void);
 // FUNCTION: LEGORR 0x00401cf0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void cmd_registry_init_target(void)
@@ -5119,4 +5121,33 @@ static uint32_t filt_dword(const void* rec, size_t off)
         __builtin_memcpy(&v, (const char*)rec + off, sizeof v);
     }
     return v;
+}
+
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-021's lego_unit.c. */
+
+/* FUN_00402510: the original takes the block position as a Point2I; the
+ * port's entry takes x and y. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00402510 -> terrain_cell_command_create)
+extern "C" void terrain_cell_command_create_adapter(const int* blockPos, int flag,
+                                                    int raise20)
+{
+    terrain_cell_command_create(blockPos[0], blockPos[1], flag, raise20);
+}
+
+/* FUN_00402000: the original's second argument is an object pointer; the
+ * port's entry takes it as a word. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00402000 -> cmd_mark_matching)
+extern "C" void cmd_mark_matching_adapter(int type, struct EntitySlot* object,
+                                          const int* coords)
+{
+    cmd_mark_matching(type, (int)(uintptr_t)object, coords);
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_00402e40 takes the block position by pointer; the port's
+ * entry above takes the two coordinates. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (cell_command_type13_issue 00402e40)
+extern "C" void cell_command_type13_issue_original(const int* blockPos)
+{
+    cell_command_type13_issue(blockPos[0], blockPos[1]);
 }

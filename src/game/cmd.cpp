@@ -32,6 +32,7 @@ int ledger_stub_004446e40_EntityNearestCellRouteCommit(
 CommandKindRecordHooks s_command_kind_record_hooks;
 #include "gods98/string.hpp"
 #include "cmd_shared.hpp"
+extern "C" void* s_upgrade_records; /* lego_unit.c (C) reads it */
 #include "cmd_for_lego.hpp"
 #include "cmd_for_weapons.hpp"
 #include "cmd_from_weapons.hpp"
@@ -40,6 +41,7 @@ CommandKindRecordHooks s_command_kind_record_hooks;
 #include "cmd_for_message_unit.hpp"
 #include "cmd_from_message_unit.hpp"
 #include "cmd_for_aitask.hpp"
+extern "C" void cmd_registry_init_target(void);
 #include "cmd_from_aitask.hpp"
 
 /* ------------------------------------------------------------------ *

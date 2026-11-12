@@ -311,3 +311,16 @@ static void move_post_hook(void)
             game, move_post_callback_dispatch, NULL);
     }
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_0046a510 takes (selector, mode, flags) and reaches the
+ * per-object effect (LAB_0046a3c0) itself; the port's entry above adds the
+ * game context and the callback. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (scene_object_state_dispatch)
+extern "C" void scene_object_state_dispatch_original(uint32_t selector,
+                                                     uint32_t mode,
+                                                     uint32_t flags)
+{
+    scene_object_state_dispatch(entity_pool_callback_context_get(), selector,
+                                mode, flags, NULL, NULL);
+}

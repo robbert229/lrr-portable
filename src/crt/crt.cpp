@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "gods98/texture.hpp"
+/* C linkage for a legoGlobs field that GAME-021's lego_unit.c reads (issue
+ * #544). The frozen header below redeclares it and inherits it. */
+extern "C" float s_global_float_00556f00;
 #include "crt_for_lego.hpp"
 #include "crt_for_avi_player.hpp"
 #if defined(_MSC_VER)

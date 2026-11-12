@@ -18,8 +18,14 @@
 #include <stdarg.h>
 #if defined(_MSC_VER) && defined(_M_IX86)
 #include <stdlib.h>
-extern "C" void* __cdecl _heap_alloc(size_t size);
-extern "C" void* __cdecl _nh_malloc(size_t size, int retry_via_new_handler);
+#ifdef __cplusplus
+extern "C"
+#endif
+void* __cdecl _heap_alloc(size_t size);
+#ifdef __cplusplus
+extern "C"
+#endif
+void* __cdecl _nh_malloc(size_t size, int retry_via_new_handler);
 #endif
 
 #ifndef LEGORRR_GODS98_HEAP_HPP
@@ -103,12 +109,18 @@ void* engine_calloc(long size);                  /* FUN_0048ead0 */
 
 /* OptionalResourceDestroy (FUN_0040f7b0): frees the optional resource
  * record only when one is there — the corpus's gate over the engine free. */
-extern "C" void optional_resource_destroy(void* record);
+#ifdef __cplusplus
+extern "C"
+#endif
+void optional_resource_destroy(void* record);
 
 /* TextBufferDestroy (FUN_00485190): frees the buffer held in the text
  * buffer record's +0x14 slot, then the record itself. The mapped body is
  * unchecked; the portable API also releases the host-width font sidecar. */
 void text_buffer_destroy(void* record);
+#ifdef __cplusplus
+extern "C"
+#endif
 void text_buffer_destroy_target(void* record); /* unchecked retail body */
 
 /* TextOutputField82CBit2SetClear (FUN_00485160): the text-output record's
@@ -122,7 +134,10 @@ void text_output_field82c_bit2_set_clear(void* record, int set_bit);
  * record's +0x38 slot while one is there. The corpus's slot is a 32-bit
  * dword; the port carries a host-width pointer (documented deviation). */
 void object_field_38_release(void* record);
-extern "C" void object_field_38_release_target(void* record); /* unchecked target body */
+#ifdef __cplusplus
+extern "C"
+#endif
+void object_field_38_release_target(void* record); /* unchecked target body */
 
 /* TextBufferReset (FUN_004859b0): clears the text-output record in place.
  * The record's +0x418 count of buffer bytes and +0x14 buffer pointer
@@ -136,7 +151,10 @@ extern "C" void object_field_38_release_target(void* record); /* unchecked targe
  * keeping the record usable (the corpus-visible padding bytes stay
  * zeroed for any pointer below 4 GiB). */
 void text_buffer_reset(void* record);           /* FUN_004859b0 */
-extern "C" void text_buffer_reset_target(void* record);    /* unchecked retail body */
+#ifdef __cplusplus
+extern "C"
+#endif
+void text_buffer_reset_target(void* record);    /* unchecked retail body */
 
 /* TextBufferCreate (FUN_004850f0): allocates the 0x830-byte text-output
  * record, zero-clears it, installs the caller's font-resource handle and four header
@@ -145,10 +163,19 @@ extern "C" void text_buffer_reset_target(void* record);    /* unchecked retail b
  * as a dword at +0x418, and raises the +0x82c bit 2. Deviations: the
  * buffer-slot widening, and the record half answering NULL where the
  * corpus strides the allocation blindly. */
-extern "C" void* text_buffer_create(uintptr_t font_handle, const uint32_t* header,
+#ifdef __cplusplus
+extern "C"
+#endif
+void* text_buffer_create(uintptr_t font_handle, const uint32_t* header,
                          long size);
-extern "C" void text_buffer_append_vformat(void* record, int skip_bells,
+#ifdef __cplusplus
+extern "C"
+#endif
+void text_buffer_append_vformat(void* record, int skip_bells,
                                 const char* format, va_list args);
+#ifdef __cplusplus
+extern "C"
+#endif
 void text_buffer_append_format(void* record, const char* format, ...);
 void formatted_text_append_to_ring_buffer(void* record, int skip_bells,
                                           const char* format, ...);
@@ -170,7 +197,10 @@ void text_buffer_draw_ops_get(TextBufferDrawOps* ops);
 void text_buffer_draw_framebuffer_install(void* pixels, int pitch, int width, int height);
 /* Install the software bitmap-atlas renderer used by portable gameplay. */
 void text_buffer_draw_software_install(void);
-extern "C" int text_buffer_draw_wrapped(void* record, uint32_t start_line,
+#ifdef __cplusplus
+extern "C"
+#endif
+int text_buffer_draw_wrapped(void* record, uint32_t start_line,
                              float line_scale, int* height_out);
 int text_wrap_measure_and_draw_lines(void* record, float elapsed,
                                      int* height_out);
@@ -179,7 +209,10 @@ int text_wrap_measure_and_draw_lines(void* record, float elapsed,
  * record held in the caller's pointer slot with blind accesses. The public
  * adapter guards both the holder and its record pointer. */
 void ui_text_output_object_release(void* const* holder);
-extern "C" void ui_text_output_object_release_target(void* const* holder);
+#ifdef __cplusplus
+extern "C"
+#endif
+void ui_text_output_object_release_target(void* const* holder);
                                                 /* FUN_0045a620 */
 
 /* --- dword-list allocator (2026-10-25) -----------------------------------

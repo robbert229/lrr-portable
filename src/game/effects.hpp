@@ -156,7 +156,7 @@ typedef struct SceneTransformState {
 } SceneTransformState;
 void scene_transform_state_initialize(void* target, void* owner,
                                       float x, float y, float z);
-void scene_transform_enable_set(int enabled);
+extern "C" void scene_transform_enable_set(int enabled);
 void scene_transform_current_set(float x, float y, float z);
 void scene_transform_rgb_clamp_apply(void); /* FUN_0044cff0 */
 const SceneTransformState* scene_transform_state_peek(void);
@@ -193,7 +193,7 @@ uint32_t light_effect_fade_config_load(void* config, void* section);
  * ranges, and seeds the live jitter state when its scene target is bound. */
 uint32_t light_effect_move_config_load(void* config,
                                        const char* config_root);
-void light_effect_configuration_load(void* config,
+extern "C" void light_effect_configuration_load(void* config,
                                      const char* config_root);
 /* LightEffects FadeRGBMin/Max and range pairs initialize the twelve values
  * consumed by RandomWaypointTimerStepApply (0x0044d280). The config root is
@@ -212,7 +212,7 @@ typedef struct TransientEffectHooks {
     void (*instance_release)(void* context, void* instance, void* resource);
 } TransientEffectHooks;
 void transient_effect_hooks_set(const TransientEffectHooks* hooks);
-void transient_effect_textures_preload(const char* filename_prefix,
+extern "C" void transient_effect_textures_preload(const char* filename_prefix,
                                        const char* filename_format,
                                        uint32_t texture_count);
 void* transient_effect_emitter_create(void* scene_context,

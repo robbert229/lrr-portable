@@ -121,7 +121,7 @@ uint32_t flic_opcode25_success_stub(void);
 
 /* FlicOpcode27FallbackNoop (FUN_00484c90, finding 155): the corpus's
  * fallback for unknown opcode 27 records is a pure return — faithful. */
-void flic_opcode27_fallback_noop(void);
+extern "C" void flic_opcode27_fallback_noop(void);
 
 /* FlicOpcode16ModeDispatch (FUN_00484880): mode-word dispatch over the
  * frame-record window (+0x6d4 opcode, +0x6d8 mode word). Mode 0x10 takes

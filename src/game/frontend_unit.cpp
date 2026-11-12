@@ -98,6 +98,9 @@
 #include "scene_pool.hpp"
 #include "scene_resources.hpp"
 #include "model.hpp"
+extern "C" void* DAT_0055613c;
+extern "C" void* DAT_00556f50;
+extern "C" void* DAT_00556f54;
 #include "frontend_for_frontend_unit.hpp"
 #include "crt/crt_for_frontend_unit.hpp"
 #include "options_for_frontend_unit.hpp"
@@ -2302,6 +2305,8 @@ static int fe_item_kind(const char* tok)
 
 /* StrReplace (FUN_00413f00): replace one byte throughout a NUL-terminated
  * string and return the original pointer. */
+/* C linkage for GAME-021 lego_unit.c (the frozen header declares it without). */
+extern "C" char* mission_replace_char(char* text, char from, char to);
 // FUNCTION: LEGORR 0x00413f00
 extern "C" char* mission_replace_char(char* text, char from, char to)
 {
@@ -5008,4 +5013,41 @@ void movie_play_wait(struct DirectShowGraphState* movie, int skippable)
 {
     (void)movie;
     (void)skippable;
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_00414f90 takes no argument; the port's entry above takes the
+ * game context. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (options_scroll_index_store)
+extern "C" void options_scroll_index_store_current(float speed)
+{
+    (void)speed;
+    options_scroll_index_store(entity_pool_callback_context_get());
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_00415990 plays the level's Video for a level name; the
+ * port's movie_level_video_path above only resolves the path and its
+ * callers play it. No port equivalent of the playback: nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (no port equivalent of 0x00415990)
+extern "C" void movie_play_level_video_adapter(const char* levelName,
+                                               int flag)
+{
+    (void)levelName;
+    (void)flag;
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: Front_IsFrontEndEnabled (00416d00) takes nothing; the port's entry reads the config. */
+extern "C" struct BlockRec* legoGlobs_config;
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (frontend_enabled)
+extern "C" int frontend_enabled_original(void)
+{
+    return frontend_enabled(legoGlobs_config);
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: Front_IsIntrosEnabled (00414ce0) takes nothing; the port's entry reads the config. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (movie_avis_enabled)
+extern "C" int movie_avis_enabled_original(void)
+{
+    return movie_avis_enabled(legoGlobs_config);
 }

@@ -28,7 +28,10 @@ typedef struct BlockRec BlockFile;
 
 /* In-place token split (FUN_00477440, gods98/utils.c) used by config
  * paths, menu image records and sound variants. */
-extern "C" int sound_variant_split(char* text, char** out, const char* separators);
+#ifdef __cplusplus
+extern "C"
+#endif
+int sound_variant_split(char* text, char** out, const char* separators);
 
 /* fmt chunk (16 bytes, PCM). */
 typedef struct WavSample {
@@ -76,7 +79,10 @@ void sound_free(Sound* s);
 
 /* Load by resource name (disk or WAD) through the resource layer. */
 Sound* sound_load(const char* name);
-extern "C" int sound_sample_file_open_by_name(const char* name); /* 0x0047fb60 */
+#ifdef __cplusplus
+extern "C"
+#endif
+int sound_sample_file_open_by_name(const char* name); /* 0x0047fb60 */
 int sound_sample_load_into(Sound* output, const char* name, int mode_flags);
 void sound_sample_clear(Sound* sound);
 
@@ -128,23 +134,35 @@ int sound_bank_free_slot_find(int* out_slot);
  * raise busy+loaded. Returns the slot index, or -1 when sound is off,
  * no slot is free, or the file fails to load (the claimed slot's flags
  * stay zeroed, exactly as shipped). No dedupe — the corpus has none. */
-extern "C" int sound_bank_entry_load(const char* name, int streamed, int looping,
+#ifdef __cplusplus
+extern "C"
+#endif
+int sound_bank_entry_load(const char* name, int streamed, int looping,
                           int volume);
 
 /* SoundBankEntryRelease @ 0x47ab00: clear the busy bit and free the
  * record's sample memory and its portable PCM duplicate buffers. Returns 1
  * when the sound system is enabled and the slot is valid, otherwise 0. */
-extern "C" int sound_bank_entry_release(int slot);
+#ifdef __cplusplus
+extern "C"
+#endif
+int sound_bank_entry_release(int slot);
 
 /* SoundVolumeValueValid @ 0x47a850: the millibel sanity gate — valid
  * while (-10001 < v < 1). */
-extern "C" int sound_volume_value_valid(int millibels);
+#ifdef __cplusplus
+extern "C"
+#endif
+int sound_volume_value_valid(int millibels);
 
 /* Record inspection: flag word / stored volume for a slot, or
  * 0/0-invalid when the index is out of range. The volume read is the
  * corpus's IndexedRecordStride134WordGet. */
 uint32_t sound_bank_entry_flags(int slot);
-extern "C" int sound_bank_entry_volume(int slot);
+#ifdef __cplusplus
+extern "C"
+#endif
+int sound_bank_entry_volume(int slot);
 Sound* sound_bank_entry_sample_get(int slot);
 /* Create up to three portable duplicate-buffer records for the loaded slot. */
 int sound_record_create_buffers(int slot);
@@ -156,7 +174,10 @@ int sound_bank_entry_play_mode(int slot, int loop, int mode);
  * when invalid) into the record's volume word and apply the equivalent
  * gain to buffer 0 or all three duplicate buffers when the loop bit is set.
  * The port guards the corpus's unbounded slot write. */
-extern "C" void sound_bank_entry_volume_set(int slot, int millibels);
+#ifdef __cplusplus
+extern "C"
+#endif
+void sound_bank_entry_volume_set(int slot, int millibels);
 
 /* ------------------------------------------------------------------ *
  *  Configured variant properties (issues #319 / #320).
@@ -177,6 +198,9 @@ extern "C" void sound_bank_entry_volume_set(int slot, int millibels);
  * ------------------------------------------------------------------ */
 
 /* Set the head variant's record volume (see above). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void sound_variant_property_set(int alias_index, int millibels);
 
 /* Rotate the variant chain, discarding the read (as shipped). */
@@ -212,6 +236,9 @@ uint32_t sound_pcm_hash(Sound* s);
 /* SoundAliasRegistryInit @ 0x00464740: rebuild the built-in and retained
  * dynamic hashes in reference order and idempotently register the scene
  * sample callback. Reinitialization preserves dynamic names and indices. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void sound_alias_registry_init(void);
 
 /* SoundDynamicAliasRegistrationSet @ 0x00464c50: enable (nonzero) or
@@ -224,7 +251,10 @@ void sound_alias_registration_set(int enable);
  * corpus's param_1 guard). A miss appends at the first free slot only
  * while registration is enabled — and the port returns 0 instead of the
  * corpus's out-of-bounds write once SOUND_ALIAS_MAX slots are full. */
-extern "C" int sound_alias_lookup(const char* name, int* out_index);
+#ifdef __cplusplus
+extern "C"
+#endif
+int sound_alias_lookup(const char* name, int* out_index);
 
 /* Current table size (built-ins + dynamic), i.e. DAT_00502a24 + 45. */
 int sound_alias_count(void);
@@ -258,12 +288,21 @@ void sound_subsystem_enable_set(int enable, int stop_active);
 
 /* SoundSubsystemEnableSetAndStop @ 0x4652a0: enable_set with the stop
  * seam armed. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void sound_subsystem_enable_set_and_stop(int enable);
 
 /* SoundBufferStopHandle @ 0x47b130: stop the selected duplicate buffer's
  * active voice when the backend supports per-submission cancellation. */
-extern "C" void sound_buffer_stop_handle(int buffer_handle);
-extern "C" void sound_handle_stop_forward(int buffer_handle); /* 0x465190 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void sound_buffer_stop_handle(int buffer_handle);
+#ifdef __cplusplus
+extern "C"
+#endif
+void sound_handle_stop_forward(int buffer_handle); /* 0x465190 */
 struct AudioBuffer;
 struct AudioBuffer* sound_handle_buffer_get(int buffer_handle); /* 0x47b0f0 */
 typedef void (*SoundBufferObjectStopHook)(void* context, void* buffer_object);
@@ -276,8 +315,14 @@ int sound_stream_drain_check(int stream_index);
 void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
                                       void* context);
 void sound_buffer_association_stop_all(void);
-extern "C" int sound_stream_stop_and_release(int stream_index);
-extern "C" void sound_subsystem_stop_all(void);
+#ifdef __cplusplus
+extern "C"
+#endif
+int sound_stream_stop_and_release(int stream_index);
+#ifdef __cplusplus
+extern "C"
+#endif
+void sound_subsystem_stop_all(void);
 typedef void (*SoundPositionApplyHook)(void* context, void* buffer_object,
                                        const float position[3],
                                        uint32_t flags);
@@ -303,13 +348,22 @@ void sound_spatial_refresh_hooks_set(SoundSpatialRefreshHook refresh,
                                      void* context);
 /* SoundSourceSpatialRefresh @ 0x47b410; called by the production sound tick. */
 void sound_source_spatial_refresh(void* sound_object);
-extern "C" void sound_source_spatial_refresh_all(void);
+#ifdef __cplusplus
+extern "C"
+#endif
+void sound_source_spatial_refresh_all(void);
 void sound_stream_ring_buffer_tick(int stream_index);
 
 /* SoundSubsystemEnabledGet @ 0x465370: bit 0. */
+#ifdef __cplusplus
+extern "C"
+#endif
 int sound_subsystem_enabled(void);
 
 /* SoundBatchModeGet @ 0x4652b0: bit 3. */
+#ifdef __cplusplus
+extern "C"
+#endif
 int sound_batch_mode_get(void);
 
 /* The corpus's cooldown word _DAT_00502b2c: holds the alias submitted
@@ -336,7 +390,10 @@ double sound_deferred_last_alias(void);
  * (`loop` nonzero marks the queued submission as looping — the corpus's
  * menu/reward callers pass 1 only for the two music loops). Drops when
  * full, like the corpus. */
-extern "C" void sound_request_queue_submit(int alias, int loop);
+#ifdef __cplusplus
+extern "C"
+#endif
+void sound_request_queue_submit(int alias, int loop);
 
 /* Pending count (DAT_00502bd0). */
 int sound_request_queue_count(void);
@@ -419,11 +476,17 @@ int sound_deferred_handle(void);
 int sound_sample_marker_parse(const char* spec, int alias_index);
 /* Load the Samples section after the audio bank has been enabled.
  * allow_marked controls the reference's leading-`!` reduce-samples gate. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void sound_samples_config_load(BlockFile* config, int allow_marked);
 
 /* SoundSampleVariantSelect @ 0x464e20: rotate the chain with the
  * corpus's 15-bit draw and return the head's bank slot (-1 for the
  * null alias 0, or a head that holds none). */
+#ifdef __cplusplus
+extern "C"
+#endif
 int sound_variant_select(int alias_index);
 
 /* Chain inspection for callers/tests: write the chain's bank slots in
@@ -464,17 +527,26 @@ int sound_variant_chain(int alias_index, int* out_slots, int max);
  * immediately when not batching (variant draw + play seam when the
  * chain's head holds a record), or deferred to the batch table. Returns
  * the encoded bank/buffer handle on successful immediate playback, else -1. */
-extern "C" int sound_alias_play(int alias, int loop);
+#ifdef __cplusplus
+extern "C"
+#endif
+int sound_alias_play(int alias, int loop);
 
 /* PositionalSoundSubmit @ 0x465090: like sound_alias_play but carries a
  * position: `positional` selects the position-word form (`position`) or
  * the coordinate-vector form (`xyz`, three floats); the deferred form
  * keeps both. Immediate playback returns its encoded bank/buffer handle;
  * deferred or unsuccessful playback returns 0. */
+#ifdef __cplusplus
+extern "C"
+#endif
 int sound_positional_sound_submit(int position, int alias, int loop,
                                   int positional, const float* xyz);
 /* SoundSubmissionRouteWrapper @ 0x465050: unwraps the optional position
  * handle before forwarding the request to PositionalSoundSubmit. */
+#ifdef __cplusplus
+extern "C"
+#endif
 int sound_submission_route_wrapper(const void* wrapped_position, int alias,
                                    int loop, int positional,
                                    const float* xyz);
@@ -483,6 +555,9 @@ int sound_submission_route_wrapper(const void* wrapped_position, int alias,
  * return (the corpus stops there); otherwise clear batch mode and, when
  * `replay`, re-run every deferred entry through the route before
  * clearing the queue count. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void sound_batch_queue_drain(int batch_set, int replay);
 
 /* SoundDeferredQueueDrain @ 0x4652c0: batch_queue_drain(batch_set, 1). */
@@ -497,7 +572,10 @@ int sound_batch_queue_get(int index, int* alias, int* position,
                           uint32_t* mode, float* xyz);
 
 /* SoundSubsystemFrameTick @ 0x4651a0. */
-extern "C" void sound_subsystem_frame_tick(float dt);
+#ifdef __cplusplus
+extern "C"
+#endif
+void sound_subsystem_frame_tick(float dt);
 
 /* The rotated queue the frame tick replays each frame (the corpus's
  * active copies DAT_00502b80/DAT_00502ba8/DAT_00502bd4). */
@@ -517,7 +595,10 @@ int sound_active_request_get(int index, int* alias, int* loop);
  * Deviation: the corpus keeps stream records in a side table with a
  * cached-vs-dereferenced rate word selected by the stream flag; the
  * port reads its bank record (the same value for both branches). */
-extern "C" float sound_streamed_wave_buffer_step_rate(int slot);
+#ifdef __cplusplus
+extern "C"
+#endif
+float sound_streamed_wave_buffer_step_rate(int slot);
 
 /* SoundObjectDurationGet @ 0x465160: duration of whatever `alias`'s
  * chain selects — consumes one variant draw per call. Alias 0
@@ -554,6 +635,9 @@ void* sound_buffer_association_head_peek(void);      /* port hook */
 
 /* SoundMinimumDistanceUpdateMode (FUN_004295f0) applies this raw float
  * bit pattern to every tracked buffer through its min-distance method. */
-extern "C" void sound_tracked_buffers_set_min_distance(float value);
+#ifdef __cplusplus
+extern "C"
+#endif
+void sound_tracked_buffers_set_min_distance(float value);
 
 #endif /* LEGORRR_SOUND_HPP */

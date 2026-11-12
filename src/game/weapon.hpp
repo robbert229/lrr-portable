@@ -72,7 +72,7 @@ typedef int (*WeaponDefinitionsParseHook)(void* config, void* context,
                                           uint32_t* count_out);
 
 void weapon_definitions_parse_hook_set(WeaponDefinitionsParseHook hook);
-int weapon_type_config_load(void* config, void* context); /* FUN_0046eb80 */
+extern "C" int weapon_type_config_load(void* config, void* context); /* FUN_0046eb80 */
 uint32_t object_type_name_index_find(const char* name); /* FUN_0046f0d0 */
 float weapon_type_recharge_time_get(int type); /* FUN_0046f110 */
 float weapon_type_discharge_rate_get(int type); /* FUN_0046f140 */

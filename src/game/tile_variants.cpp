@@ -282,7 +282,7 @@ void cell_visual_channel_table_resources_clear(CellVisualChannelTable* table)
  * * width + high nibble indexes the cell dwords; the corpus's own NULL
  * grid guard answers 0, reproduced. */
 // FUNCTION: LEGORR 0x0040b850
-uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell)
+uint32_t packed_grid_cell_value_get(const void* grid, unsigned char packed_cell)
 {
     void* cells = rec_ptr(grid, 0x08);
     if (cells == NULL) {
@@ -495,4 +495,34 @@ static uint32_t cells_dword(const void* cells, size_t off)
         __builtin_memcpy(&v, (const char*)cells + off, sizeof(v));
     }
     return v;
+}
+
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-021's lego_unit.c:
+ * LoadTileMeshes (0x0042b330) and RectangularResourceTableDestroy
+ * (0x0042b480). The original FUN_0040b5f0 takes the texture set as its last
+ * argument; the port's entry takes an integer parameter and its loader
+ * hooks, which this caller does not have, so there is no port equivalent:
+ * returns NULL. FUN_0040b7d0 has the original's contract but lives in a
+ * namespace. */
+struct Lego_Level;
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (no port equivalent of 0x0040b5f0)
+extern "C" void* tile_model_entity_register_original(void* manager,
+                                                     const char* nameA,
+                                                     const char* nameB,
+                                                     float blockSize,
+                                                     void* textureSet)
+{
+    (void)manager;
+    (void)nameA;
+    (void)nameB;
+    (void)blockSize;
+    (void)textureSet;
+    return NULL;
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (cell_visual_channel_table_dispose, 0x0040b7d0)
+extern "C" void cell_visual_channel_table_dispose_original(void* table)
+{
+    unported_ledger_stubs::cell_visual_channel_table_dispose(
+        (unported_ledger_stubs::CellVisualChannelTable*)table);
 }

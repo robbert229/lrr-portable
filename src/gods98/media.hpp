@@ -87,8 +87,14 @@ void media_audio_playback_toggle(int enable);
 
 /* PointerCursorSelect @ 0x45cc20: writes the cursor slot only while no
  * override value is active. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void media_pointer_cursor_select(int slot);
 /* PointerCursorOverrideSet @ 0x45cc40. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void media_pointer_cursor_override_set(int slot, float value);
 void media_pointer_cursor_override_tick(float delta);
 int   media_pointer_cursor_slot(void);
@@ -103,6 +109,9 @@ void media_action_feedback_sound_dispatch(int event);
 /* ActionCodeToSoundAlias @ 0x4351a0: action-record codes 1-5, 8, 10, 11
  * map to cues 0x2b-0x2f, 0x32, 0x34, 0x35 through the cursor select;
  * other codes do nothing. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void media_action_code_to_sound_alias(int code);
 
 /* ------------------------------------------------------------------ *

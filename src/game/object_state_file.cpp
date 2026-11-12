@@ -245,3 +245,18 @@ int osf_read(GameContext* ctx, const char* path)
     fclose(fp);
     return 1;   /* uVar3 — the file opened */
 }
+
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_004593d0 and FUN_00459470 take no context; the port's
+ * entries above take the game context. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (osf_read_dirty_flag_get, 0x004593d0)
+extern "C" int osf_read_dirty_flag_get_original(void)
+{
+    return osf_read_dirty_flag_get(entity_pool_callback_context_get());
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (osf_read, 0x00459470)
+extern "C" int osf_read_original(const char* path)
+{
+    return osf_read(entity_pool_callback_context_get(), path);
+}

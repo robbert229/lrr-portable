@@ -31,8 +31,27 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+extern "C" uint32_t s_overlay_word_03610; /* text.cpp; lego_unit.c reads it (issue #544) */
 #include "engine_shared.hpp"
+/* C linkage for the legoGlobs fields that GAME-021's lego_unit.c reads
+ * (issue #544). The frozen header below redeclares them and inherits it. */
+extern "C" {
+extern const char* s_engine_config_root;
+extern uint32_t s_triple_first;
+extern uint32_t s_triple_second;
+extern uint32_t s_triple_third;
+extern float s_task_text_origin_x;
+extern float s_task_text_origin_y;
+extern float s_score_text_origin_x;
+extern float s_score_text_origin_y;
+extern uint32_t s_global_low_word;
+extern void* s_refresh_record;
+extern void* s_position_handle;
+extern float s_scroll_scale;
+extern float s_panel_highlight_timer; /* group B */
+}
 #include "engine_for_lego.hpp"
+extern "C" int s_scroll_guard; /* lego_unit.c reads it (issue #544) */
 #include "engine_from_lego.hpp"
 
 /* PanelSelectionHighlightToggle/EngineTick DAT globals (see the function

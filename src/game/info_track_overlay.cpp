@@ -376,3 +376,12 @@ int info_panel_check_collision(int* released, int mouseX, int mouseY,
     *released = 0;
     return 0;
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: SelectPlace_Create (00463f00) takes the root and a size; the port's entry takes a hook table. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (scene_quad_grid_emit)
+extern "C" void* select_place_create_adapter(void* root, float size)
+{
+    uint32_t bits;
+    memcpy(&bits, &size, sizeof(bits));
+    return scene_quad_grid_emit(root, bits, NULL);
+}

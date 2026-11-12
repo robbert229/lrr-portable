@@ -104,12 +104,12 @@ uint32_t ai_activity_resource_slot_get(int id);
 /* FUN_00436c20: clear the entity-pool/grid-count state and install the
  * activity/ability/tool names and selectors. The separate idle-registration
  * table and global animation word are outside its cleared range. */
-void ai_activity_name_table_initialize(void);
-void ai_idle_chain_record_attach(EntitySlot* entity); /* FUN_00403f30 */
+extern "C" void ai_activity_name_table_initialize(void);
+extern "C" void ai_idle_chain_record_attach(EntitySlot* entity); /* FUN_00403f30 */
 
 /* FUN_004409e0 semantics: set the entity's activity (name-table index),
  * store the param, reset the activity timer. Out-of-range ids ignored. */
-void ai_set_activity(EntitySlot* e, int id, int param);
+extern "C" void ai_set_activity(EntitySlot* e, int id, int param);
 
 /* EntityActivityToggle (FUN_004373d0): the activity on/off fold. Off with
  * the +0x3ec bit 13 raised drops it and raises bit 14, requesting the
@@ -140,7 +140,7 @@ void bubble_texture_load_hooks_set(BubbleTextureResourceLoadFn load,
                                    BubbleTextureInitializeFn initialize,
                                    void* context);
 void bubble_config_global_flags_set(uint32_t flags);
-void bubble_config_texture_load(BlockFile* cfg);
+extern "C" void bubble_config_texture_load(BlockFile* cfg);
 uint32_t bubble_texture_handle_peek(int index);
 void bubble_texture_handle_set(int index, uint32_t handle);
 
@@ -228,7 +228,7 @@ int ai_minion_state_for(int type);
  * entities use the port's same-name Stats-row adapter, or zero when that row
  * is unavailable. Only entities with neither source use the context
  * fallback. The result is clamped to the inline span. */
-int ai_activity_cap(const EntitySlot* e); /* 0x0046a060 raw Stats +0xcc read */
+extern "C" int ai_activity_cap(const EntitySlot* e); /* 0x0046a060 raw Stats +0xcc read */
 int ai_activity_cap_for_context(const GameContext* ctx, const EntitySlot* e);
 
 /* FUN_0044b370: install one activity grant onto the entity's list — the
@@ -256,7 +256,7 @@ extern uint32_t s_bubble_texture_handles[39];
 void entity_queue_for_rockfall_processing_if_eligible(EntitySlot* e);
 /* Ported activity-change tail (FUN_00447c40): attach the idle-chain record
  * when the activity changes, then refresh the activity timer. */
-int activity_register_bookkeeping(EntitySlot* e);
+extern "C" int activity_register_bookkeeping(EntitySlot* e);
 
 /* --- activity-request wrappers (2026-10-24; findings 448/223/377) -----------
  * EntityDispatchEvent5AndSetFlag (FUN_00447b00): requests corpus activity

@@ -70,9 +70,12 @@
 #include "game/building_scene.hpp"
 #include "game/actor_scene.hpp"
 #include "scene_pool.hpp"
+/* GAME-021 lego_unit.c reads this word (C linkage, ADR 0005 step 6). */
+extern "C" uint32_t s_overlay_word_03610;
 #include "engine_for_tutorial_script.hpp"
 #include "message_for_tutorial_script.hpp"
 #include "record_for_tutorial_script.hpp"
+extern "C" int tutorial_script_file_load_target(const char* path);
 #include "tutorial_hud_for_tutorial_script.hpp"
 
 /* DeferredCallbackSet (FUN_00453900) — zero-init module static (the
@@ -1048,4 +1051,14 @@ static int tutorial_camera_focus_target_apply(GameContext* game,
     engine->state = clamp_state.global_flags;
     view_primary_target_request(engine, world[0], world[1], 1);
     return 1;
+}
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_00456240 (NERPFunc__GetTutorialFlags) takes the NERPs
+ * parameter stack; the port's entry takes none. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (NERPFunc__GetTutorialFlags 00456240)
+extern "C" uint32_t system_state_flags_get_original(const int* parameters)
+{
+    (void)parameters;
+    return system_state_flags_get();
 }

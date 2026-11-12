@@ -52,10 +52,10 @@ void reward_task_box_image_surface_set(unsigned int slot, void* surface);
 void* reward_task_box_image_surface_get(unsigned int slot);
 void reward_task_flush_images(RewardTaskResourceRecord* task);
 void reward_task_flush_font(RewardTaskResourceRecord* task);
-void reward_task_block_finish(void);
+extern "C" void reward_task_block_finish(void);
 typedef void (*ObjectiveDeferredCallback)(void);
 void objective_deferred_callback_set(ObjectiveDeferredCallback callback);
-void objective_deferred_callback_invoke_if_set(void);
+extern "C" void objective_deferred_callback_invoke_if_set(void);
 typedef struct AdvisorTimerState {
     float timers[4];
     float countdown;
@@ -111,7 +111,7 @@ int objective_check(LevelState* s, int* mark, float dt);
  *   0 pending / 1 achieved / 2 failed / 3 failed-with-crystals.
  * The mapped entry uses the active level, like the reference current-level
  * getter. Local port callers can use the explicit-level adapter below. */
-void objective_announce_current(int who); /* FUN_00458670, one argument */
+extern "C" void objective_announce_current(int who); /* FUN_00458670, one argument */
 void objective_announce(LevelState* s, int who);
 void objective_active_level_bind(LevelState* s);
 void objective_active_level_clear(LevelState* s);
@@ -149,7 +149,7 @@ int objective_advisor_shown(const LevelState* s);
  * DAT_00556140, `s` is DAT_005560d4, checker_dt is passed to ObjectiveCheck,
  * and frame_dt advances result-stream timing. The renderer/UI lanes whose
  * owner is the engine are represented only where this module has a real API. */
-void objective_tick_target(void* engine, LevelState* s,
+extern "C" void objective_tick_target(void* engine, LevelState* s,
                            float checker_dt, float frame_dt);
 
 /* Explicit-level adapter used by the portable frame loop. Returns 0 only
@@ -170,7 +170,7 @@ int objective_sidecar_append_gate(struct EntitySlot* entity);
  * raise calls the announcer with 1 and answers 1 — deviation: the
  * port's announcer needs the threaded level block the corpus reads
  * blindly. */
-int objective_voice_alias_raise_commit(LevelState* s);
+extern "C" int objective_voice_alias_raise_commit(LevelState* s);
 
 /* ObjectiveVoiceAliasRaiseGateBit27 (FUN_00454b80): when the engine-state
  * word's bit 27 is clear the corpus raises the failed-result announcer and
@@ -178,7 +178,7 @@ int objective_voice_alias_raise_commit(LevelState* s);
  * unported — so the gate reads through the port's modeled state word and
  * stays clear (the announcer therefore always fires, the corpus's unset
  * case, deviation documented). */
-int objective_voice_alias_raise_gate_bit27(LevelState* s);
+extern "C" int objective_voice_alias_raise_gate_bit27(LevelState* s);
 
 /* --- the advisor (GAME-001, Advisor.c; finding 550) ------------------------
  * The advisor's records and state are Advisor.c's globals (game/advisor.c),
@@ -357,7 +357,7 @@ int objective_advisor_tokens_parse(const char* source, uint32_t source_length,
                                    void* user);
 /* Objective/advisor stream loader: RESOURCE_AUTO path lookup plus the
  * native bitmap and sound-bank loaders used by the retail token tables. */
-int objective_advisor_token_file_load(const char* path);
+extern "C" int objective_advisor_token_file_load(const char* path);
 void objective_advisor_tokens_release(void);
 const char* objective_advisor_token_text_get(uint32_t index);
 uint32_t objective_advisor_image_token_count(void);

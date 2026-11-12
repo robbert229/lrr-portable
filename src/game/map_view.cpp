@@ -569,3 +569,18 @@ static void terrain_tile_palette_copy(void* output, uint32_t palette)
         memcpy((unsigned char*)output + 0x10, color, sizeof(color));
     }
 }
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_0045e6d0 (RadarMap_ScreenToBlockPos) returns the block
+ * through two pointers; the port's entry above takes two words for its
+ * pick hook instead and does not report the block. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (terrain_point_pick_resolve 0045e6d0)
+extern "C" int terrain_point_pick_resolve_original(
+    const TerrainPointPickRegion* region, uint32_t screen_x, uint32_t screen_y,
+    float out_world_xy[2], uint32_t* out_block_x, uint32_t* out_block_y)
+{
+    (void)out_block_x;
+    (void)out_block_y;
+    return terrain_point_pick_resolve(region, screen_x, screen_y, out_world_xy,
+                                      0u, 0u);
+}

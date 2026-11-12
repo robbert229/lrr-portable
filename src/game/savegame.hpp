@@ -64,7 +64,7 @@ extern "C" void save_slot_set_target(int slot);          /* SavSetSlot @ 0x417ea
  * slot selection back to the corpus's closed sentinel (-1). The corpus
  * writes DAT_005574d0 blindly; NULL answers nothing (documented). */
 void save_slot_selection_clear(GameContext* ctx);
-void save_slot_selection_clear_target(void);  /* @ 0x415cf0 */
+extern "C" void save_slot_selection_clear_target(void);  /* @ 0x415cf0 */
 
 /* Typed SavSlotCtx adapter and its one-argument target ABI entry. */
 void* sav_slot_ctx(GameContext* ctx, int slot);

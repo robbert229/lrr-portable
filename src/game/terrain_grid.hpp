@@ -399,7 +399,7 @@ void terrain_cell_change_queue_flush(TerrainSurfaceGrid* grid); /* FUN_00450780 
 /* MapCellRecordGridInitialize/MapCellStateBufferRebuild (FUN_0040cdc0,
  * FUN_0040ce80): own the map's width*height array of 0x14-byte cell records. */
 void map_cell_record_grid_initialize(void* level);
-void map_cell_state_buffer_rebuild(void* level);
+extern "C" void map_cell_state_buffer_rebuild(void* level);
 void map_cell_record_grid_activate(void* level);
 void map_cell_record_grid_release(void* level);
 void map_cell_record_grid_release_current(void);
@@ -435,8 +435,8 @@ void terrain_cell_object_hooks_install(TerrainCellObjectAvailableHook available,
                                       TerrainCellObjectCreateHook create,
                                       TerrainCellObjectDeleteHook destroy,
                                       void* context);
-int create_cell_object_if_available(int x, int y); /* FUN_0040d170 */
-int delete_cell_object(int x, int y); /* FUN_0040d1f0 */
+extern "C" int create_cell_object_if_available(int x, int y); /* FUN_0040d170 */
+extern "C" int delete_cell_object(int x, int y); /* FUN_0040d1f0 */
 typedef void* (*TerrainCellSceneObjectCreateHook)(
     struct LevelState* level, uint32_t x, uint32_t y,
     float world_x, float world_y, void* context);
@@ -461,7 +461,7 @@ void terrain_activation_hooks_install(TerrainActivationPrepareHook prepare,
                                      TerrainActivationSpecialCellHook special,
                                      TerrainActivationFloodHook flood,
                                      void* context);
-int terrain_cell_activation_try(void* object, int x, int y); /* FUN_0040d4f0 */
+extern "C" int terrain_cell_activation_try(void* object, int x, int y); /* FUN_0040d4f0 */
 /* Flood-state query overrides for the active level. Without an override the
  * implementation uses TerrainCellSpecialStatePredicate directly: mode 0
  * tests primary bit 0x400; mode 1 also requires secondary bit 0x100. Edge

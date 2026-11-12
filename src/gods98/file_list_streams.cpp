@@ -35,6 +35,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+/* GAME-021 lego_unit.c reads this word (C linkage, ADR 0005 step 6). */
+extern "C" uint32_t s_overlay_word_03610;
 #include "engine_for_file_list_streams.hpp"
 #include "game/startup_config_for_file_list_streams.hpp"
 #include "engine_for_file_list_streams.hpp"

@@ -146,7 +146,10 @@ uint32_t* engine_current_feature_word(void);
  * active frame. NULL outside an active engine context. */
 uint32_t* engine_current_state_word(void);
 /* Shared DAT_00556ecc owner, including the pre-bind bootstrap lifetime. */
-extern "C" uint32_t* engine_shared_state_word(void);
+#ifdef __cplusplus
+extern "C"
+#endif
+uint32_t* engine_shared_state_word(void);
 void engine_current_context_bind(EngineContext* ctx);
 /* Current primary follow view (DAT_005560e4), while an EngineContext owns
  * the active frame. NULL outside an active engine context or without a view. */
@@ -256,7 +259,10 @@ void engine_keep_running_hook_set(EngineKeepRunningHook hook, void* user);
 int EngineKeepRunning(EngineContext* ctx);
 
 /* Retail TimeScaleGet @ 0x0041fb40 reads the shared DAT_0055615c global. */
-extern "C" float EngineTimeScale(void);
+#ifdef __cplusplus
+extern "C"
+#endif
+float EngineTimeScale(void);
 /* Portable context adapter used by EngineTick and local callers. */
 float EngineTimeScale(EngineContext* ctx);
 
@@ -317,7 +323,10 @@ int mode_dependent_field24_get(const EngineContext* ctx);
  * documented: the corpus's only writer is the unported sim-interaction
  * renderer update. Deviation: the corpus strides the caller's buffer
  * blindly; the port guards it (NULL skips the three stores). */
-bool   current_engine_mode_is_zero(void);
+#ifdef __cplusplus
+extern "C"
+#endif
+int current_engine_mode_is_zero(void);
 void   engine_context_mode_global_set(int32_t mode);
 void   window_mode_flag_set(uint32_t mode);
 
@@ -328,6 +337,9 @@ void   window_mode_flag_set(uint32_t mode);
  * `and ah,0xbf`); a null pair drops it. The earlier ctx parameter was a
  * port-only invention that added a call-site push the corpus never makes
  * (0x4189d0 pushes one zero) and rerouted the flag to ctx->debug. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void objective_score_text_origin_set(const float* pair);
 void objective_score_text_origin_peek(float out[2]);
 uint32_t engine_debug_word_peek(void);
@@ -340,8 +352,17 @@ void engine_debug_word_bit_set(uint32_t mask, int enabled);
  * answers the mode. Deviation: the corpus strides the caller's mode
  * pointer blindly — the port guards it and answers zero. */
 int engine_mode_set(EngineContext* ctx, const int* mode);
+#ifdef __cplusplus
+extern "C"
+#endif
 int engine_mode_set_target(const int* mode); /* target ABI: 0x004565f0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void engine_global_state_flags_bit7_set_target(int value);
+#ifdef __cplusplus
+extern "C"
+#endif
 void engine_global_state_flags_bits6_and_9_set_target(int value,
                                                        int set_bit9);
 uint32_t engine_overlay_word_peek(int which); /* 0: DAT_00503610,
@@ -350,6 +371,9 @@ void engine_overlay_words_set(uint32_t flags, uint32_t request);
 void   global_state_flags_bit7_set(EngineContext* ctx, int value);
 void   global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
                                           int set_bit9); /* FUN_00426360 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void   global_scroll_guard_set(int value);
 int    global_scroll_guard_peek(void); /* port-side hook: the corpus's reader
                                         * is ScrollScaleSetAndClamp @ 0x425ce0 */
@@ -396,14 +420,20 @@ int camera_focus_scroll_scale_commit(const EngineContext* ctx,
  * Deviations: the corpus writes its DAT globals blindly; the port threads
  * them through the context (NULL skips the words, both branches still fire
  * the panel write). */
-extern "C" void panel_selection_highlight_toggle(EngineContext* ctx, int on);
+#ifdef __cplusplus
+extern "C"
+#endif
+void panel_selection_highlight_toggle(EngineContext* ctx, int on);
                                                 /* FUN_00435aa0 */
 void   global_triple_copy_out(uint32_t* out);
 
 /* GlobalField505f88Get (FUN_00401bf0, finding 02): application-mode global
  * at DAT_00505f88. The startup parser's writer is not ported yet, so native
  * setup code installs the value through this seam. */
-extern "C" int engine_app_mode_get(void);
+#ifdef __cplusplus
+extern "C"
+#endif
+int engine_app_mode_get(void);
 void engine_app_mode_global_set(int32_t mode);
 
 /* --- the grid-cell record buffer (2026-10-24; finding 463) ------------------
@@ -424,7 +454,10 @@ void engine_app_mode_global_set(int32_t mode);
  * GridCellRecordBufferReplace (FUN_00466230): release, then allocate. */
 void        grid_cell_record_buffer_allocate(EngineState* block); /* FUN_004661c0 */
 void        entity_field_grid_buffer_release(void);               /* FUN_00466210 */
-void        grid_cell_record_buffer_replace(EngineState* block);  /* FUN_00466230 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void grid_cell_record_buffer_replace(EngineState* block);  /* FUN_00466230 */
 void*       entity_field_grid_buffer_peek(void);
 EngineState* entity_field_grid_descriptor_peek(void);
 int         entity_field_grid_cell_get(int x, int y, void** entity_out,

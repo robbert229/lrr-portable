@@ -103,12 +103,18 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale);
  * declaration count (finding 506): removing them moves
  * lava_erosion_delay_from_cell (0040e9c0) from 100% to 84.21%. */
 void viewport_rectangle_set(float left, float top, float right, float bottom);
-extern "C" void viewport_rectangle_get(struct Area2F* window); /* FUN_00485fb0, draw.h */
+#ifdef __cplusplus
+extern "C"
+#endif
+void viewport_rectangle_get(struct Area2F* window); /* FUN_00485fb0, draw.h */
 typedef int (*ViewportDimensionsQueryFn)(void* context, float* width,
                                          float* height);
 void viewport_dimensions_query_hook_set(ViewportDimensionsQueryFn query,
                                         void* context);
-extern "C" void viewport_subrectangle_set(const struct Area2F* window); /* FUN_00485ea0, draw.h */
+#ifdef __cplusplus
+extern "C"
+#endif
+void viewport_subrectangle_set(const struct Area2F* window); /* FUN_00485ea0, draw.h */
 void model_transform_copy_to_scene_node(void* model_record,
                                         void* source_scene_node);
 typedef void (*CameraViewContextReleaseHook)(void* context, void* view,
@@ -117,6 +123,9 @@ typedef void (*CameraViewContextFreeHook)(void* context, void* view);
 void camera_view_context_close_hooks_set(CameraViewContextReleaseHook release,
                                          CameraViewContextFreeHook free_view,
                                          void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 void camera_view_context_close(void* view); /* FUN_00435dc8 */
 typedef void (*AnimationObjectTransformApplyHook)(void* context,
                                                   void* render_object,
@@ -139,7 +148,10 @@ void render_node_position_from_callback(void* record, float x, float y,
 typedef void (*SceneMatrixApplyHook)(void* context, void* target,
                                      const float matrix[16]);
 void scene_matrix_apply_hook_set(SceneMatrixApplyHook hook, void* context);
-extern "C" float animation_track_find_keyframe_and_fraction(const void* track,
+#ifdef __cplusplus
+extern "C"
+#endif
+float animation_track_find_keyframe_and_fraction(const void* track,
                                                  float time,
                                                  uint16_t* keyframe_out); /* 0x00487cb0 */
 void animation_track_keys_interpolate(void* owner, const void* track,
@@ -468,6 +480,9 @@ void render_resource_binding_initialize(RenderResourceBinding* binding,
 void render_resource_binding_copy_and_convert(
     const RenderResourceBinding* source,
     RenderResourceBinding* destination);
+#ifdef __cplusplus
+extern "C"
+#endif
 void render_resource_binding_release(RenderResourceBinding* binding);
 float animation_resource_advance_time(RenderResourceBinding* binding,
                                      void* argument);
@@ -491,6 +506,9 @@ typedef struct SceneObjectChainHooks {
     void (*node_attach)(void* context, void* node, void* child);
 } SceneObjectChainHooks;
 void scene_object_chain_hooks_set(const SceneObjectChainHooks* hooks);
+#ifdef __cplusplus
+extern "C"
+#endif
 SceneObjectChainRecord* scene_object_chain_record_create(void* parent,
                                                          int type);
 void scene_object_chain_record_release(SceneObjectChainRecord* record);
@@ -531,15 +549,42 @@ void view_follow_target_hooks_set(ViewObjectLookupHook lookup,
  * FUN_004016c0 / FUN_00401470 / FUN_00401750 / FUN_00401420 / FUN_004016f0 /
  * FUN_004013a0 / FUN_00401240 / FUN_00406730 / FUN_0047c0c0; finding 280) --
  * 3D unless noted; x87 float10 corpus math is byte-equivalent float here. */
-extern "C" float* vec_scale(float* dst, const float* src, float s);
-extern "C" float* vec_add(float* dst, const float* a, const float* b);
-extern "C" float* vec_sub(float* dst, const float* a, const float* b);
-extern "C" float* vec_cross(float* dst, const float* b, const float* c);
-extern "C" void vec_normalize(float* v); /* zero length unguarded, as corpus */
-extern "C" float vec_dist(const float* a, const float* b);
-extern "C" float vec_dot(const float* a, const float* b);
-extern "C" float vec_len(const float* a);
-extern "C" float vec2_dist(const float* a, const float* b);   /* 2D */
+#ifdef __cplusplus
+extern "C"
+#endif
+float* vec_scale(float* dst, const float* src, float s);
+#ifdef __cplusplus
+extern "C"
+#endif
+float* vec_add(float* dst, const float* a, const float* b);
+#ifdef __cplusplus
+extern "C"
+#endif
+float* vec_sub(float* dst, const float* a, const float* b);
+#ifdef __cplusplus
+extern "C"
+#endif
+float* vec_cross(float* dst, const float* b, const float* c);
+#ifdef __cplusplus
+extern "C"
+#endif
+void vec_normalize(float* v); /* zero length unguarded, as corpus */
+#ifdef __cplusplus
+extern "C"
+#endif
+float vec_dist(const float* a, const float* b);
+#ifdef __cplusplus
+extern "C"
+#endif
+float vec_dot(const float* a, const float* b);
+#ifdef __cplusplus
+extern "C"
+#endif
+float vec_len(const float* a);
+#ifdef __cplusplus
+extern "C"
+#endif
+float vec2_dist(const float* a, const float* b);   /* 2D */
 /* Unused: kept only to preserve the declaration count of every unit that
  * includes this header (finding 506) until the #388 relocation. The
  * function is game/bezier.c's (GAME-003, finding 514). */
@@ -555,17 +600,26 @@ float point_to_polyline_minimum_segment_distance(const float* point,
  * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void matrix_rotation_compose_xyz(float* record); /* FUN_0040fb00 */
 /* D3DRMVectorRandom takes one D3DVECTOR* (three adjacent floats). */
-extern "C" float* d3drm_vector_random(float* r); /* FUN_00479500 */
+#ifdef __cplusplus
+extern "C"
+#endif
+float* d3drm_vector_random(float* r); /* FUN_00479500 */
 /* FUN_00479510: rotates vector by angle around axis; the import normalizes
  * axis in place. The DLL ABI is (return-vector, source-vector, axis, angle);
  * out may alias either vector input or axis. */
-extern "C" float* d3drm_vector_rotate(float* r, float* v, float* axis,
+#ifdef __cplusplus
+extern "C"
+#endif
+float* d3drm_vector_rotate(float* r, float* v, float* axis,
                                       float theta);
 /* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
  * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void vector_scale_components_in_place(float* vector, float sx, float sy,
                                       float sz); /* FUN_0040fcc0 */
-extern "C" int vec_exact_equal(const float* a, const float* b);
+#ifdef __cplusplus
+extern "C"
+#endif
+int vec_exact_equal(const float* a, const float* b);
 
 typedef void (*ViewPointProjectCallback)(void* context, float* output,
                                          const float* input);
@@ -608,10 +662,13 @@ typedef struct ViewportPointDispatchHooks {
     int (*position_get)(uint32_t object_handle, float out_xyz[3], void* user);
 } ViewportPointDispatchHooks;
 void viewport_point_dispatch_hooks_set(const ViewportPointDispatchHooks* hooks);
+#ifdef __cplusplus
+extern "C"
+#endif
 int viewport_point_callback_dispatch(const TerrainPointPickRegion* region,
-                                     uint32_t screen_x, uint32_t screen_y,
-                                     uint32_t* object_handle,
-                                     float out_position_xy[2]);
+                                                uint32_t screen_x, uint32_t screen_y,
+                                                uint32_t* object_handle,
+                                                float out_position_xy[2]);
 typedef struct TexturedSceneDrawHooks {
     void* user;
     int (*state_save)(void* user, float out_matrix[16]);
@@ -624,8 +681,14 @@ void textured_scene_draw_hooks_set(const TexturedSceneDrawHooks* hooks);
 void textured_scene_object_draw_at_position(const void* view,
                                             const float position_xy[2],
                                             float z, float size); /* FUN_0045db00 */
-extern "C" void camera_screen_coordinate_project(const ViewProjectionAdapter* adapter,
+#ifdef __cplusplus
+extern "C"
+#endif
+void camera_screen_coordinate_project(const ViewProjectionAdapter* adapter,
                                       float* output, const float* input);
+#ifdef __cplusplus
+extern "C"
+#endif
 void camera_project_point_to_screen(const ViewProjectionAdapter* adapter,
                                    float* output_xy, const float* input_xyz);
 float projected_quad_screen_area_calculate(
@@ -641,9 +704,15 @@ void point2d_project_onto_direction(const float* origin, const float* direction,
 /* --- geometry helpers (corpus FUN_0045b8a0 / FUN_0045e660 / FUN_00479a30 /
  * FUN_00479af0 / FUN_00479c10; findings 363/323) --------------------------- */
 /* True when distance (x1,y1)-(x2,y2) < radius (FUN_0045b8a0). */
-extern "C" int point_distance_within_radius(int x1, int y1, int x2, int y2,
+#ifdef __cplusplus
+extern "C"
+#endif
+int point_distance_within_radius(int x1, int y1, int x2, int y2,
                                  int radius);
 /* Half-open rect test on the record's float quad at offsets +4 through +0x10. */
+#ifdef __cplusplus
+extern "C"
+#endif
 int rect_contains_point_half_open(const float* rect_record, int x, int y);
 
 /* --- offset-point rect family (corpus FUN_0045b590 / FUN_00463c00 /
@@ -693,18 +762,27 @@ int menu_overlay_list_count(const void* menu);
 /* t = dot(q-p, n) / dot(d, n) into t_out for ray (p,d) × plane (q,n);
  * answers 0 for zero/unordered denominator and leaves t_out unchanged.
  * Negative t is accepted (FUN_00479a30). */
-extern "C" int ray_plane_intersection_parameter(float* t_out, const float* p,
+#ifdef __cplusplus
+extern "C"
+#endif
+int ray_plane_intersection_parameter(float* t_out, const float* p,
                                      const float* d, const float* q,
                                      const float* n);
 /* Line1 (p1,d1) × line2 (p2,d2): writes the hit into out, returns it;
  * NULL for zero/unordered determinant, leaving out untouched
  * (FUN_00479af0). */
-extern "C" float* line_intersection_2d_compute(float* out, const float* p1,
+#ifdef __cplusplus
+extern "C"
+#endif
+float* line_intersection_2d_compute(float* out, const float* p1,
                                     const float* d1, const float* p2,
                                     const float* d2);
 /* Positive-discriminant ray-sphere test, corpus expression verbatim;
  * `radius2` is the corpus's squared-radius parameter (FUN_00479c10). */
-extern "C" int sphere_ray_intersection_discriminant_positive(const float* center,
+#ifdef __cplusplus
+extern "C"
+#endif
+int sphere_ray_intersection_discriminant_positive(const float* center,
                                                   float radius2,
                                                   const float* origin,
                                                   const float* dir);
@@ -722,7 +800,10 @@ uint32_t ddiscene_action_record_field_0c_get(void* scene_interface);
 const char* scene_property_secondary_name_get(void* property);
 uint32_t scene_property_value_at08_get(void* scene_interface);
 float scene_property_float_at14_get(void* property); /* 0x004761c0 */
-extern "C" float typed_child_resource_scalar_get(void* scene_object); /* 0x004757f0 */
+#ifdef __cplusplus
+extern "C"
+#endif
+float typed_child_resource_scalar_get(void* scene_object); /* 0x004757f0 */
 void attached_object_data_release_and_clear(void* property); /* 0x004760e0 */
 void callback_record_set_flag10_and_refresh(void* property); /* 0x00475e10 */
 typedef struct SceneChildSearchHooks {
@@ -758,6 +839,9 @@ void scene_object_transform_matrix_set(void* object, uint32_t mode,
 void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
                                             float x, float y, float z);
 void render_object_set_identity_transform(void* object);
+#ifdef __cplusplus
+extern "C"
+#endif
 void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,
                                float z, float angle); /* 0x00475580 */
 /* SceneObjectBoundsUnion (FUN_00474f10): query the primary scene interface,
@@ -809,7 +893,10 @@ typedef int (*SceneActionNameLookupHook)(void* scene_object, void* action_name,
 void scene_action_name_lookup_hook_set(SceneActionNameLookupHook hook,
                                        void* context);
 uint32_t scene_action_name_present(void* scene_object, void* action_name);
-extern "C" uint32_t scene_action_name_set(void* scene_object, const char* action_name);
+#ifdef __cplusplus
+extern "C"
+#endif
+uint32_t scene_action_name_set(void* scene_object, const char* action_name);
 typedef struct SceneActFrameScanHooks {
     void* context;
     void* (*animation_interface_get)(void* scene_object, unsigned int slot,
@@ -885,7 +972,10 @@ typedef struct EntityVisualResourceLoadHooks {
 } EntityVisualResourceLoadHooks;
 void entity_visual_resource_load_hooks_set(
     const EntityVisualResourceLoadHooks* hooks);
-extern "C" void* entity_visual_resource_load(void* scene_object); /* 0x473690 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void* entity_visual_resource_load(void* scene_object); /* 0x473690 */
 typedef void* (*SceneActionInterfaceGetHook)(void* scene_object,
                                              void* action_name,
                                              uint32_t selector,
@@ -931,7 +1021,10 @@ typedef struct DDiSceneAnimationHookRecordHooks {
 } DDiSceneAnimationHookRecordHooks;
 void ddiscene_animation_hook_record_hooks_set(
     const DDiSceneAnimationHookRecordHooks* hooks);
-extern "C" void ddiscene_animation_hook_create(void* scene_object, int callback,
+#ifdef __cplusplus
+extern "C"
+#endif
+void ddiscene_animation_hook_create(void* scene_object, int callback,
                                     const char* name,
                                     const uint32_t* value_0c, int value_08,
                                     const uint32_t* value_10,
@@ -970,7 +1063,10 @@ typedef struct DDiSceneLightCreateHooks {
                                void* context);
 } DDiSceneLightCreateHooks;
 void ddiscene_light_create_hooks_set(const DDiSceneLightCreateHooks* hooks);
-extern "C" void* ddiscene_light_create(void* owner, uint32_t value_a,
+#ifdef __cplusplus
+extern "C"
+#endif
+void* ddiscene_light_create(void* owner, uint32_t value_a,
                             uint32_t value_b, uint32_t value_c,
                             uint32_t value_d); /* 0x4734f0 */
 typedef struct DDiSceneKindModeSetupHooks {
@@ -991,6 +1087,9 @@ typedef void (*DDiSceneDrawBeginHook)(void* render_object, int begin,
 void ddiscene_draw_begin_hook_set(DDiSceneDrawBeginHook hook,
                                   void* context);
 void ddiscene_draw_begin(void* render_object, int begin); /* 0x477010 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void ddiscene_draw_end(void* render_object, const void* commit_source,
                        float frame_delta); /* 0x477150 */
 void* com_property_result_get(void* resource_owner); /* 0x477310 */
@@ -1039,7 +1138,10 @@ void shared_object_sound_callbacks_get(
     SharedObjectSoundSubmitFn* submit_out);
 void shared_object_timed_sound_event_update(void* owner, void* track); /* 0x487de0 */
 void scene_material_manager_set(void* manager);
-extern "C" void* scene_material_create(float color0, float color1, float color2,
+#ifdef __cplusplus
+extern "C"
+#endif
+void* scene_material_create(float color0, float color1, float color2,
                             float color3, float color4, float color5,
                             float power); /* 0x4894c0 */
 
@@ -1105,8 +1207,14 @@ void ddiscene_object_destroy_hook_set(DDiSceneObjectDestroyHook hook,
                                       void* context);
 void ddiscene_object_destroy(void* scene_object); /* 0x472a40 */
 void ddiscene_object_destroy_with_mode(void* scene_object, int mode); /* 0x472a50 */
-extern "C" float ddiscene_object_length_get(void* scene_object); /* 0x00475390 */
-extern "C" uint32_t ddiscene_object_frame_position_get(
+#ifdef __cplusplus
+extern "C"
+#endif
+float ddiscene_object_length_get(void* scene_object); /* 0x00475390 */
+#ifdef __cplusplus
+extern "C"
+#endif
+uint32_t ddiscene_object_frame_position_get(
     void* scene_object); /* 0x004753f0 */
 void ddiscene_animation_callbacks_set(void* scene_object,
                                       void* callback_a, void* callback_b,
@@ -1164,16 +1272,25 @@ int ddiscene_sample_hook_add(DDiSceneSampleHook sample_hook,
  * pretending that their native records have the original ACT layout. */
 void ddiscene_activity_sample_dispatch(const char* sample, void* scene_object);
 void ddiscene_activity_trigger_dispatch(void* scene_object);
-extern "C" float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 0x475140 */
+#ifdef __cplusplus
+extern "C"
+#endif
+float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 0x475140 */
 float ddiscene_advance_by_time(void* scene_object, float delta); /* 0x00475120 */
-extern "C" float ddiscene_advance_by_time_target(void* scene_object, float delta);
+#ifdef __cplusplus
+extern "C"
+#endif
+float ddiscene_advance_by_time_target(void* scene_object, float delta);
 typedef float (*SceneTimingValueGetHook)(void* frame, void* argument,
                                          void* context);
 typedef int (*SceneTimingCountGetHook)(void* frame, void* context);
 void scene_timing_value_hooks_install(SceneTimingValueGetHook value_get,
                                       SceneTimingCountGetHook count_get,
                                       void* context);
-extern "C" float renderer_object_timing_value_adjust_by_count(void* record,
+#ifdef __cplusplus
+extern "C"
+#endif
+float renderer_object_timing_value_adjust_by_count(void* record,
                                                    float time,
                                                    uint32_t count); /* FUN_00406d30 */
 typedef void (*AnimationObjectTimeUpdateHook)(void* frame, float time,
@@ -1204,7 +1321,10 @@ void* renderer_object_subobject_find_apply(void* record, void* key);
 /* Superseded, like the line above; FUN_00406f50 is now
  * animation_object_null_find in game/animation_object.c. */
 void renderer_object_subobject_dispatch(void* record, void* key);
-extern "C" void* renderer_cached_handle_48_get_or_create(void* record);
+#ifdef __cplusplus
+extern "C"
+#endif
+void* renderer_cached_handle_48_get_or_create(void* record);
                                                 /* FUN_00406fe0 */
 /* Superseded by game/animation_object.c (GAME-004, finding 549); kept
  * uncalled so that the symbol count of every includer is unchanged (ADR 0005
@@ -1235,15 +1355,27 @@ void scene_object_coordinate_transform_in_place(void* object,
 /* DDiSceneObject position/pose dispatch (FUN_004754c0/430/470). These
  * typed wrappers normalize the object and optional alternate frame, then
  * call the scene object's +0x60/+0xf0/+0xec interface methods. */
+#ifdef __cplusplus
+extern "C"
+#endif
 int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);
 int ddiscene_object_facing_get(void* object, void* alternate_frame,
                                float facing[3]); /* FUN_00475500 */
+#ifdef __cplusplus
+extern "C"
+#endif
 int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3]);
-extern "C" int ddiscene_object_position_set(void* object, void* alternate_frame,
+#ifdef __cplusplus
+extern "C"
+#endif
+int ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z);
-extern "C" int ddiscene_object_pose_method_dispatch(void* object,
+#ifdef __cplusplus
+extern "C"
+#endif
+int ddiscene_object_pose_method_dispatch(void* object,
                                          void* alternate_frame,
                                          float parameter_3,
                                          float parameter_4,
@@ -1277,11 +1409,17 @@ void ddiscene_render_surface_pool_release_all(void);
  * an optional callback resolves/releases that token on hosts where the
  * reference's 32-bit interface pointer cannot be called directly. */
 typedef void (*SceneRegistrySurfaceReleaseFn)(uint32_t interface_token);
-extern "C" void image_surface_release(void* record); /* 0x0047d470 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void image_surface_release(void* record); /* 0x0047d470 */
 void scene_object_registry_surface_release_set(
     SceneRegistrySurfaceReleaseFn release);
 void scene_object_registry_pool_block_register(void* block);
 void scene_object_registry_release_all(void);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_registry_teardown(void);
 
 /* Owner-link records retain up to two direct references, an optional child
@@ -1310,7 +1448,10 @@ typedef void (*AdvisorCompanionApplyFn)(void* object,
 void advisor_companion_apply_hooks_set(const void* transform,
                                        AdvisorCompanionApplyFn object_apply,
                                        AdvisorCompanionApplyFn scene_apply);
-extern "C" void advisor_companion_transform_apply(void* unused, void** object_reference);
+#ifdef __cplusplus
+extern "C"
+#endif
+void advisor_companion_transform_apply(void* unused, void** object_reference);
 
 /* SceneObjectQueryValueIfReady (FUN_00476f70): inspect object +0x10's
  * readiness interface, then query the current value and release the +8
@@ -1330,12 +1471,18 @@ uint32_t scene_object_query_value_if_ready(void* object);
  * Row-major float storage; corpus x87 math is byte-equivalent float here. */
 
 /* Zero the matrix (FUN_00479ea0: 16 stores). */
-extern "C" void matrix4_set_zero(float* out);
+#ifdef __cplusplus
+extern "C"
+#endif
+void matrix4_set_zero(float* out);
 
 /* Multiply: corpus takes (out, right, left) and accumulates each output
  * cell as a four-term dot product, i.e. out = left × right, row-major
  * (FUN_00479ce0). */
-extern "C" void matrix4_multiply(float* out, const float* right,
+#ifdef __cplusplus
+extern "C"
+#endif
+void matrix4_multiply(float* out, const float* right,
                                  const float* left);
 
 /* Even-odd horizontal-ray crossing parity (FUN_00479b80). Edge k runs
@@ -1344,7 +1491,10 @@ extern "C" void matrix4_multiply(float* out, const float* right,
  * vertex array shifted one vertex (the typical ring form) behaves 1:1.
  * No zero-span/boundary handling beyond the corpus's, including the
  * potentially zero-span divide. */
-extern "C" int point_in_polygon_2d(const float* point, const float* verts,
+#ifdef __cplusplus
+extern "C"
+#endif
+int point_in_polygon_2d(const float* point, const float* verts,
                                    const float* next, unsigned int count);
 
 /* --- matrix/ray math leaves (2026-10-24) ----------------------------------
@@ -1356,7 +1506,10 @@ extern "C" int point_in_polygon_2d(const float* point, const float* verts,
  * nearly every angle. */
 
 /* out = origin + t · dir, corpus component order (FUN_00479ab0). */
-extern "C" void point_along_ray(float* out, const float* origin,
+#ifdef __cplusplus
+extern "C"
+#endif
+void point_along_ray(float* out, const float* origin,
                                 const float* dir, float t);
 
 /* ViewRayIntersectionTest (FUN_004798e0): normalizes both directions,
@@ -1364,20 +1517,32 @@ extern "C" void point_along_ray(float* out, const float* origin,
  * normalized dir_b as normal (through ray_plane_intersection_parameter),
  * and writes out = p + t · normalized dir_a, answering 1; parallel rays
  * answer 0 with `out` untouched. */
-extern "C" int view_ray_intersection_test(float* out, const float* p,
+#ifdef __cplusplus
+extern "C"
+#endif
+int view_ray_intersection_test(float* out, const float* p,
                                const float* dir_a, const float* q,
                                const float* dir_b);
 
 /* Matrix4SetIdentity (FUN_00479e70): 1 on the diagonal, 0 elsewhere. */
-extern "C" void matrix4_set_identity(float* out);
+#ifdef __cplusplus
+extern "C"
+#endif
+void matrix4_set_identity(float* out);
 
 /* MatrixIdentityAndTranslationSet (FUN_00479e40): the identity with the
  * translation triad written into row-major row 3. */
-extern "C" void matrix4_identity_translation_set(float* out,
+#ifdef __cplusplus
+extern "C"
+#endif
+void matrix4_identity_translation_set(float* out,
                                                  const float* translation);
 
 /* Matrix4Copy (FUN_00479eb0): 16 dword copies. */
-extern "C" void matrix4_copy(float* out, const float* src);
+#ifdef __cplusplus
+extern "C"
+#endif
+void matrix4_copy(float* out, const float* src);
 
 /* Rotation setters: each writes the identity, then overwrites the
  * two-row/two-column rotation block with (cos, −sin/sin, cos) at the
@@ -1388,9 +1553,18 @@ extern "C" void matrix4_copy(float* out, const float* src);
  * The corpus reference names call FUN_00479d50 "Matrix4SetRotationZ" as
  * well as FUN_00479df0; the row/column blocks distinguish the three and
  * are what the port names. */
-extern "C" void matrix4_set_rotation_x(float* out, float angle); /* FUN_00479d50 */
-extern "C" void matrix4_set_rotation_y(float* out, float angle); /* FUN_00479da0 */
-extern "C" void matrix4_set_rotation_z(float* out, float angle); /* FUN_00479df0 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void matrix4_set_rotation_x(float* out, float angle); /* FUN_00479d50 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void matrix4_set_rotation_y(float* out, float angle); /* FUN_00479da0 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void matrix4_set_rotation_z(float* out, float angle); /* FUN_00479df0 */
 
 /* BuildPerspectiveProjectionMatrix (FUN_0040bd60): zeroes the matrix,
  * sets m[10] = m[15] = 1, then the three quotients m[0] = p4/p1,
@@ -1422,6 +1596,9 @@ void cam_set_facing(CameraHandle* c, const float* r);       /* FUN_00475470 */
 /* TerrainGridBorderInsetGet (FUN_00435f28): the tile-count edge clamp —
  * g_view_grid_edge is DAT_005560ac with its ported writer, so this is
  * the faithful getter. */
+#ifdef __cplusplus
+extern "C"
+#endif
 int view_grid_edge_get(void);
 
 /* --- camera-selection cluster (2026-10-24) ---------------------------------
@@ -1438,12 +1615,21 @@ int view_grid_edge_get(void);
  * amount * pan scale, caps it, scales the vector by accumulator * amount,
  * and accumulates it into the follow offsets (the corpus's +0x18 field).
  * Zero-length vectors normalize as-is (the corpus's unguarded leaf). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void camera_view_context_set(float cap, float follow_scale,
                              float pan_scale, int edge);
+#ifdef __cplusplus
+extern "C"
+#endif
 void selection_record_point_set(ViewContext* v, float x, float y);
 int  camera_get_position_with_terrain_height(ViewContext* v,
                                              EngineContext* ctx,
                                              float out[3]);
+#ifdef __cplusplus
+extern "C"
+#endif
 void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount);
 
 /* --- the camera-controller bounds band (2026-10-24; finding 280) ------------
@@ -1455,6 +1641,9 @@ void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount);
  * per-view camera objects) — these take a raw record pointer and write
  * fixed offsets, the port's record-module style, entry-guarded where the
  * corpus dereferences blindly (documented deviations). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void camera_tilt_bounds_set(void* camera, float lo, float hi);
                                         /* FUN_00436831 */
 typedef void (*CameraPoseDispatchHook)(void* scene_object, void* pose_context,
@@ -1466,7 +1655,10 @@ void camera_pose_dispatch_hook_install(CameraPoseDispatchHook hook,
 void camera_tilt_set(void* camera, float value); /* FUN_00436860 */
 /* Signature also fits CameraDragHooks' camera_vertical_apply callback when
  * its context is the controller record. */
-extern "C" void camera_pan_axis_update(void* camera, float delta); /* FUN_00436900 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void camera_pan_axis_update(void* camera, float delta); /* FUN_00436900 */
 void screen_effect_record_set(void* camera_record,
                               uint32_t field4, uint32_t field8,
                               uint32_t fieldc, float tilt,
@@ -1474,14 +1666,23 @@ void screen_effect_record_set(void* camera_record,
 void camera_scalar_bounds_set(void* camera, float lo, float hi);
                                         /* FUN_00436921 */
 void camera_rotation_set(void* camera, float value); /* FUN_00436953 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void camera_distance_bounds_set(void* camera, float lo, float hi);
                                         /* FUN_00436a18 */
 void camera_distance_set(void* camera, float value); /* FUN_00436a4a */
-extern "C" void camera_zoom_update(void* camera, float delta);  /* FUN_00436aa5 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void camera_zoom_update(void* camera, float delta);  /* FUN_00436aa5 */
 
 /* CursorScreenRayContextReset (FUN_00435f16): clear the modeled ViewContext
  * pan accumulator at +0x9c. The target x86 body is the corpus's blind store;
  * the portable path retains a NULL guard. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void cursor_screen_ray_context_reset(ViewContext* v);
 
 /* CurrentLevelTerrainGridPick (FUN_00433be0): the corpus's per-level pick
@@ -1515,11 +1716,17 @@ void float_negate_absolute_value(float* value);
 /* Unused: kept for the declaration count (see vec2_dist_alt above). */
 void vector2_set_length(float v[2], float length);
 void camera_zoom_step_context_set(void* context);
-extern "C" void camera_zoom_step_adjust(int direction, float step);
+#ifdef __cplusplus
+extern "C"
+#endif
+void camera_zoom_step_adjust(int direction, float step);
 
 /* SelectionRecordPointGet (FUN_00436ae9): the follow-mode readback — the
  * selection record's camera position through the corpus's move-or-pose read
  * (cam_get_pos). Non-follow records answer nothing (the corpus's gate). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void selection_record_point_get(ViewContext* v, float out[3]); /* FUN_00436ae9 */
 
 /* SelectedGlobalPointTransformAndReturnX (FUN_0046a420, finding 426): picks
@@ -1598,8 +1805,14 @@ void* scene_root_peek(void);                    /* port hook */
 void* scene_root_object_get(void);              /* FUN_00472940 */
 /* Direct scene-interface wrappers: the interface pointer is at object + 0x10;
  * clip distance uses vtable byte slot 0x3c and point transform uses 0x50. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void renderer_object_set_clip_distance(void* object, float distance);
-extern "C" void render_interface_transform_point(void* object, void* output,
+#ifdef __cplusplus
+extern "C"
+#endif
+void render_interface_transform_point(void* object, void* output,
                                       const void* input);
 /* SceneProperty callback returns a two-dword value record; null inputs or
  * missing callback/record return zero (the native port's guard policy). */
@@ -1638,10 +1851,16 @@ void matrix4_identity_initialize(float* out);   /* FUN_00483540 */
  * the unit cross product of the edges (p3 − p2) and (p4 − p3). Deviation
  * kept faithful: there is no zero-length guard before the reciprocal, so
  * degenerate input yields the corpus's inf/NaN. */
-extern "C" float* surface_triangle_normal_calculate(float* out, const float* p2,
+#ifdef __cplusplus
+extern "C"
+#endif
+float* surface_triangle_normal_calculate(float* out, const float* p2,
                                        const float* p3, const float* p4);
                                                 /* FUN_00479530 */
-extern "C" float surface_triangle_area_calculate(const float* p1, const float* p2,
+#ifdef __cplusplus
+extern "C"
+#endif
+float surface_triangle_area_calculate(const float* p1, const float* p2,
                                       const float* p3,
                                       int only_downward); /* FUN_00479630 */
 
@@ -1652,13 +1871,19 @@ extern "C" float surface_triangle_area_calculate(const float* p1, const float* p
  * slot-0 color set and the alpha through the mode-4 opacity composition.
  * Deviations: the corpus strides both link slots blindly — the port
  * guards them, and a missing record leaves both windows untouched. */
-extern "C" void scene_mesh_color_and_alpha_set(void* object, int block, float red,
+#ifdef __cplusplus
+extern "C"
+#endif
+void scene_mesh_color_and_alpha_set(void* object, int block, float red,
                                     float green, float blue, float alpha);
 
 /* SceneMeshColorSet (FUN_00474ff0): the color triple without the alpha,
  * mode three of the ported color-vector setter (the block's +0x34 slot).
  * Deviation: the corpus strides both record links blindly. */
-extern "C" void scene_mesh_color_set(void* object, int block, float red, float green,
+#ifdef __cplusplus
+extern "C"
+#endif
+void scene_mesh_color_set(void* object, int block, float red, float green,
                           float blue);
                                                 /* FUN_00475020 */
 
@@ -1721,7 +1946,10 @@ void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver);
  * entropy rule 1). */
 void* activity_runner_state_read(void* runner, int index);
 void* scene_activity_change_secondary(void* activity, int index);
-extern "C" void* renderer_cached_handle_40_get_or_create(void* renderer);
+#ifdef __cplusplus
+extern "C"
+#endif
+void* renderer_cached_handle_40_get_or_create(void* renderer);
 typedef int (*SceneActivityChangeFn)(void* activity, void* state,
                                      void* value);
 void scene_activity_change_callback_set(SceneActivityChangeFn callback);
@@ -1737,6 +1965,9 @@ typedef void (*GlobalEntityRenderParamFn)(void* entity, float first,
 void global_entity_render_parameters_install(void** entities, uint32_t count,
                                              GlobalEntityRenderParamFn update,
                                              void* user);
+#ifdef __cplusplus
+extern "C"
+#endif
 void global_entity_render_parameter_mode_set(int mode); /* 0x0046e1c0 */
 typedef void* (*GridSurfaceLookupFn)(void* surface, int key,
                                      int* entry_index, void* user);

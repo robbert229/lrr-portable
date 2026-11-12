@@ -25,6 +25,7 @@
 #include "../gods98/frameloop.hpp"
 #include "../platform/platform.h"
 #include "mission_shared.hpp"
+extern "C" char* mission_replace_char(char* text, char from, char to);
 #include "mission_for_reward.hpp"
 #include "mission_from_reward.hpp"
 #include "mission_from_panel_unit.hpp"

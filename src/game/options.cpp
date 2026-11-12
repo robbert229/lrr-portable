@@ -349,3 +349,13 @@ void* options_slot_resource_peek(void)
     return s_options_slot_resource;
 }
 
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original FUN_00415150 takes no argument; the port's entry above takes the
+ * game context. */
+extern "C" GameContext* entity_pool_callback_context_get(void); /* entity.hpp */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (options_apply_from_slot, 0x00415150)
+extern "C" void options_apply_from_slot_original(void)
+{
+    options_apply_from_slot(entity_pool_callback_context_get());
+}

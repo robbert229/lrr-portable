@@ -103,7 +103,10 @@ int  simtick_manager_timer_bit(int which);        /* index-9 timer word bit */
 void simtick_manager_set_timer_word(uint32_t w);  /* DAT_00500860 seed */
 
 /* --- tranche 8 tickers ---------------------------------------------------- */
-extern "C" void simtick_sound_keepalive(EngineContext* c);  /* FUN_0047aba0 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void simtick_sound_keepalive(EngineContext* c);  /* FUN_0047aba0 */
 void simtick_editor_steps(EngineContext* c);     /* legacy editor-step seam */
 void simtick_cooldown_tick(EngineContext* c, float dt); /* FUN_0041a2c0 -> bus */
 void simtick_bitfield_tree(int* base, int code);
@@ -267,12 +270,18 @@ extern "C" void simtick_selection_group_clear(const uint32_t key_pair[2]);   /* 
 /* SimulationGlobalWordSet (FUN_0041ba90, finding 474): the corpus assigns
  * its argument to the global DAT_004de1f4 — the mute word the simtick
  * models. NULL-free by shape: this is a blind global store. */
-extern "C" void simulation_global_word_set(uint32_t value);
+#ifdef __cplusplus
+extern "C"
+#endif
+void simulation_global_word_set(uint32_t value);
 
 /* DirectSoundListenerViewSet (FUN_0047ab80): the view provider stores the
  * current listener object in the DAT_00506688 slot (this module's sound
  * guard) only while the sound system is up. The keep-alive ticker reads
  * the slot; the provider call feeds it exactly where the corpus does. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void simtick_directsound_listener_view_set(int view); /* FUN_0047ab80 */
 
 /* RoutePositionBlockedStateSet (FUN_0044da20): a blocked route sets the
@@ -283,9 +292,15 @@ void simtick_directsound_listener_view_set(int view); /* FUN_0047ab80 */
  * index-9 timer word (the corpus's DAT_00500860 — the same word the
  * shared-timer dispatch reads). The peek hooks stand in for the corpus's
  * readers of both words. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void simtick_route_position_blocked_state_set(int blocked);
                                         /* FUN_0044da20 */
-extern "C" void simtick_global_ui_flags_clear_bits12(void); /* FUN_0045b610 */
+#ifdef __cplusplus
+extern "C"
+#endif
+void simtick_global_ui_flags_clear_bits12(void); /* FUN_0045b610 */
 void simtick_global_ui_flags_set_bit2(void);
 uint32_t simtick_route_position_state_peek(void);
 uint32_t simtick_global_ui_flags_word(void);
@@ -297,6 +312,9 @@ uint32_t simtick_global_ui_flags_word(void);
  * initializer, so they land as module statics with hooks — deviation: the
  * corpus reads the owner pose through the scene-object vtable seam, modeled
  * here as the current triple. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void simtick_scene_position_reset_and_effect_motion_cancel(void);
                                      /* FUN_0044cf70 */
 void         simtick_scene_transform_current_set(const float xyz[3]);

@@ -68,3 +68,14 @@ void object_field14_set(void* record, uint32_t value)
     __builtin_memcpy((char*)record + 0x14, &value, sizeof(value));
 }
 #endif
+
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
+ * original RadarMap_SetZoom (FUN_0045d8a0) takes the zoom as a float; the
+ * port's object_field14_set takes its bits. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (RadarMap_SetZoom 0045d8a0 -> object_field14_set)
+extern "C" void radar_map_zoom_set_adapter(void* radarMap, float zoom)
+{
+    uint32_t bits;
+    memcpy(&bits, &zoom, sizeof(bits));
+    object_field14_set(radarMap, bits);
+}
