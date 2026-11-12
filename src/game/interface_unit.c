@@ -2787,7 +2787,6 @@ void interface_draw_object_count(int objType, int objIndex,
         }
     }
     if (count != 0) {
-        // STRING: LEGORR 0x004a2b54
         font_print_f(interfaceGlobs.font, (int)position->x + 3, (int)position->y + 3, "%i", count);
     }
 }
