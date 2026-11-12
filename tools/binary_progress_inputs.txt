@@ -451,9 +451,12 @@ src/gods98/entity.cpp
 src/gods98/entity.h
 src/gods98/entity.hpp
 src/gods98/file_list_streams.cpp
-src/gods98/files.cpp
+src/gods98/files.c
 src/gods98/files.h
+src/gods98/files_native.h
 src/gods98/files_open.h
+src/gods98/files_paths.h
+src/gods98/files_port.cpp
 src/gods98/flic.cpp
 src/gods98/flic.h
 src/gods98/flic.hpp
@@ -677,6 +680,7 @@ src/gods98/view_for_viewports.hpp
 src/gods98/view_shared.hpp
 src/gods98/viewports.cpp
 src/gods98/wad.cpp
+src/gods98/wad.h
 src/gods98/winmm.h
 src/gods98/winmm_port.cpp
 src/link_order.cmake

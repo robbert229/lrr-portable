@@ -176,6 +176,9 @@ void media_cd_audio_watchdog_tick(int cdtrack); /* 0x00488c00 */
  * progress callback pair (DAT_005343ac/DAT_005343b0, finding 118). The
  * corpus's read tap lives with the unported whole-file read loop, so the
  * pair lands as zero-init module storage with setter/peek hooks. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void  loader_progress_callback_set(void* callback, void* context);
                                  /* FUN_004802b0 */
 extern void* s_loader_progress_callback;

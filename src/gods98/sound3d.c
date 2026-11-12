@@ -36,7 +36,7 @@
 #include "winmm.h"
 #include "soundsys.h"
 #include "resource.h"
-#include "files.h"
+#include "files_paths.h"
 #include "container_frame.h"
 
 /* The COM interfaces the unit calls, with the method-table slots at their
