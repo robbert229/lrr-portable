@@ -117,6 +117,45 @@ class RatchetTest(unittest.TestCase):
             self.assertEqual(result.returncode, 1, between)
             self.assertEqual(result.stdout.count("new: src/one.cpp"), 3, between + result.stdout)
 
+    def test_native_only_branches_need_no_annotation(self):
+        # The matching build never defines LEGORRR_BACKEND_MINIWIN, so a
+        # definition in a branch that requires it cannot carry an address.
+        self.source.write_text("")
+        self.baseline()
+        self.source.write_text(
+            "#if defined(LEGORRR_BACKEND_MINIWIN)\n"
+            "int whole_file(int x) { return x; }\n"
+            "#endif\n"
+            "#ifdef LEGORRR_BACKEND_MINIWIN\nint by_ifdef(int x) { return x; }\n#endif\n"
+            "#if defined(LEGORRR_BACKEND_WINAPI)\nint other(int x) { return 1; }\n"
+            "#elif defined(LEGORRR_BACKEND_MINIWIN) && !defined(_WIN32)\n"
+            "#if X\nint nested(int x) { return 2; }\n#endif\n"
+            "int by_elif(int x) { return 2; }\n"
+            "#else\nint fallback(int x) { return 3; }\n#endif\n"
+            "#if (defined LEGORRR_BACKEND_MINIWIN && \\\n    defined(Y))\n"
+            "int continued(int x) { return x; }\n#endif\n")
+        result = self.run_lint()
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        for name in ("whole_file", "by_ifdef", "nested", "by_elif", "continued"):
+            self.assertNotIn(name, result.stdout)
+        self.assertIn("other", result.stdout)
+        self.assertIn("fallback", result.stdout)
+
+    def test_native_alternatives_or_negations_still_need_annotation(self):
+        self.source.write_text("")
+        self.baseline()
+        self.source.write_text(
+            "#if defined(LEGORRR_BACKEND_MINIWIN) || defined(A)\n"
+            "int either(int x) { return x; }\n#endif\n"
+            "#if !defined(LEGORRR_BACKEND_MINIWIN)\n"
+            "int negated(int x) { return x; }\n#endif\n"
+            "#ifndef LEGORRR_BACKEND_MINIWIN\nint ifndef(int x) { return x; }\n#endif\n"
+            "#if defined(LEGORRR_BACKEND_MINIWIN_EXTRA)\n"
+            "int other_macro(int x) { return x; }\n#endif\n")
+        result = self.run_lint()
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.stdout.count("new: src/one.cpp"), 4, result.stdout)
+
     def test_duplicate_counts_and_ledger(self):
         self.source.write_text("void same() {}\n")
         ledger = self.root / "ledger.csv"

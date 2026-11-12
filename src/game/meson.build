@@ -19,6 +19,7 @@ game_sources = [
   'weapons.cpp',
   'lego.cpp',
   'entity_stats.cpp',
+  'creature_scene.cpp',
   'reward.cpp',
   'camera_control.cpp',
   'helpwindow.cpp',

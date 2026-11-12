@@ -79,6 +79,8 @@ src/game/cmd_for_weapons.hpp
 src/game/cmd_from_weapons.hpp
 src/game/cmd_shared.hpp
 src/game/combat_ray_ports.hpp
+src/game/creature_scene.cpp
+src/game/creature_scene.hpp
 src/game/dependencies.cpp
 src/game/dependency_grid.cpp
 src/game/dependency_grid_for_dependencies.hpp
@@ -354,6 +356,10 @@ src/gods98/config.c
 src/gods98/config.h
 src/gods98/container.h
 src/gods98/container_frame.h
+src/gods98/container_native.cpp
+src/gods98/container_native.hpp
+src/gods98/container_route.cpp
+src/gods98/container_route.h
 src/gods98/draw.c
 src/gods98/draw.h
 src/gods98/draw_port.cpp
@@ -417,6 +423,8 @@ src/gods98/keys.c
 src/gods98/keys.h
 src/gods98/lwo.cpp
 src/gods98/lws.cpp
+src/gods98/lwsc_miniwin.cpp
+src/gods98/lwsc_miniwin.hpp
 src/gods98/lwsc_scene.cpp
 src/gods98/lwsc_scene.hpp
 src/gods98/lwsc_winapi.cpp

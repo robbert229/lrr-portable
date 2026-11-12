@@ -29,6 +29,10 @@
 #include "port_loop_ports.hpp"
 #include "select.hpp"
 #include "texture.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "creature_scene.hpp"
+#include "gods98/model.hpp"
+#endif
 
 typedef struct SceneVec3 { float x, y, z; } SceneVec3;
 typedef struct ScenePoint { float x, y, z; } ScenePoint;
@@ -1194,12 +1198,154 @@ static void figure_box(SceneCamera* c, SceneVec3 origin, float yaw,
     }
 }
 
+#if defined(LEGORRR_BACKEND_MINIWIN)
+typedef struct SceneCreatureDraw {
+    SceneCamera* camera;
+    SceneVec3 origin;
+    float yaw;
+} SceneCreatureDraw;
+
+/* LightWave space is y-up with z forward; figure space faces -z. */
+static SceneVec3 scene_creature_point(const SceneCreatureDraw* draw,
+                                      const float m[16], const float* v)
+{
+    float x = v[0] * m[0] + v[1] * m[4] + v[2] * m[8] + m[12];
+    float y = v[0] * m[1] + v[1] * m[5] + v[2] * m[9] + m[13];
+    float z = v[0] * m[2] + v[1] * m[6] + v[2] * m[10] + m[14];
+    return figure_point(draw->origin, x, y, -z, draw->yaw);
+}
+
+/* Surface textures, loaded once per authored surface. Models live as long
+ * as their type's scene, so the surface pointer is a stable key. */
+#define SCENE_CREATURE_TEXTURES_MAX 512
+static struct {
+    const ModelSurface* surface;
+    TextureSurface* texture;
+} s_scene_creature_textures[SCENE_CREATURE_TEXTURES_MAX];
+static int s_scene_creature_texture_count;
+
+static const TextureSurface* scene_creature_surface_texture(
+    const Model* model, uint16_t surface)
+{
+    const ModelSurface* record;
+    const char* file;
+    const char* scan;
+    TextureSurface* texture;
+    int i;
+    if (surface >= model->n_surfaces) return NULL;
+    record = &model->surfaces[surface];
+    if (record->timg == NULL || record->timg[0] == '\0') return NULL;
+    for (i = 0; i < s_scene_creature_texture_count; ++i)
+        if (s_scene_creature_textures[i].surface == record)
+            return s_scene_creature_textures[i].texture;
+    if (s_scene_creature_texture_count >= SCENE_CREATURE_TEXTURES_MAX)
+        return NULL;
+    /* LightWave stores the artist's path; the image sits beside the mesh. */
+    file = record->timg;
+    for (scan = record->timg; *scan != '\0'; ++scan)
+        if (*scan == '\\' || *scan == '/' || *scan == ':') file = scan + 1;
+    texture = texture_get_or_load(
+        model->render_source != NULL ? model->render_source->path_prefix
+                                     : NULL, file);
+    /* Like the meshes, shared images resolve through Main::SharedObjects. */
+    if (texture == NULL && shared_object_directory_root_get() != NULL)
+        texture = texture_get_or_load(shared_object_directory_root_get(), file);
+    s_scene_creature_textures[s_scene_creature_texture_count].surface = record;
+    s_scene_creature_textures[s_scene_creature_texture_count].texture = texture;
+    ++s_scene_creature_texture_count;
+    return texture;
+}
+
+static SceneColor scene_creature_surface_color(const Model* model,
+                                               uint16_t surface)
+{
+    if (surface < model->n_surfaces && model->surfaces[surface].has_colr) {
+        const uint8_t* rgb = model->surfaces[surface].colr_bytes;
+        return scene_color(rgb[0], rgb[1], rgb[2]);
+    }
+    return scene_color(160, 160, 160);
+}
+
+/* One authored mesh of a creature's current activity pose, flat shaded
+ * with its surface colour. */
+static void scene_creature_mesh_draw(void* context, const Model* model,
+                                     const float model_to_creature[16],
+                                     float opacity)
+{
+    const SceneCreatureDraw* draw = (const SceneCreatureDraw*)context;
+    static const SceneVec3 light = { 0.38f, 0.83f, -0.41f };
+    size_t poly;
+    (void)opacity;
+    if (model == NULL || model->verts == NULL) return;
+    for (poly = 0; poly < model->n_polys; ++poly) {
+        const ModelPoly* p = &model->polys[poly];
+        SceneVec3 first, previous, current, normal;
+        const TextureSurface* texture;
+        SceneColor color;
+        float shade;
+        uint16_t corner;
+        if (p->count < 3u || p->ring == NULL) continue;
+        if (p->ring[0] >= model->n_verts || p->ring[1] >= model->n_verts ||
+            p->ring[2] >= model->n_verts) continue;
+        first = scene_creature_point(draw, model_to_creature,
+                                     &model->verts[p->ring[0] * 3u]);
+        previous = scene_creature_point(draw, model_to_creature,
+                                        &model->verts[p->ring[1] * 3u]);
+        current = scene_creature_point(draw, model_to_creature,
+                                       &model->verts[p->ring[2] * 3u]);
+        normal = scene_normalize(scene_cross(scene_sub(previous, first),
+                                             scene_sub(current, first)));
+        shade = scene_abs(scene_dot(normal, light));
+        texture = p->uv != NULL && p->uv_count >= p->count
+            ? scene_creature_surface_texture(model, p->surface) : NULL;
+        color = texture != NULL ? scene_color(255, 255, 255)
+                                : scene_creature_surface_color(model,
+                                                               p->surface);
+        color = color_scale(color, 0.45f + 0.65f * shade);
+        for (corner = 2u; corner < p->count; ++corner) {
+            if (corner > 2u) {
+                if (p->ring[corner] >= model->n_verts) break;
+                previous = current;
+                current = scene_creature_point(
+                    draw, model_to_creature,
+                    &model->verts[p->ring[corner] * 3u]);
+            }
+            /* The .uv sidecar loader stores v negated. */
+            if (texture != NULL) {
+                scene_triangle_sampled(draw->camera, first, previous, current,
+                    color, texture, p->uv[0], -p->uv[1],
+                    p->uv[(corner - 1u) * 2u], -p->uv[(corner - 1u) * 2u + 1u],
+                    p->uv[corner * 2u], -p->uv[corner * 2u + 1u]);
+            }
+            else {
+                scene_triangle(draw->camera, first, previous, current, color);
+            }
+        }
+    }
+}
+
+/* The creature's real Container meshes (Creature unit, native scene). */
+static int render_creature(SceneCamera* c, const EntitySlot* e,
+                           SceneVec3 origin)
+{
+    SceneCreatureDraw draw;
+    draw.camera = c;
+    draw.origin = origin;
+    draw.yaw = e->rot;
+    return creature_scene_meshes_visit(e, scene_creature_mesh_draw,
+                                       &draw) != 0u;
+}
+#endif
+
 static void render_raider(SceneCamera* c, const EntitySlot* e,
                           float block, SceneVec3 origin, int selected)
 {
     if (e == NULL) return;
     float yaw = e->rot; /* OList and entity pose headings are radians. */
     float u = block * 0.22f;
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (render_creature(c, e, origin)) goto selection;
+#endif
     /* Boots and legs. */
     figure_box(c,origin,yaw,-u,block*0.18f,0,u*0.82f,block*0.32f,u,
                scene_color(89,75,61));
@@ -1225,6 +1371,9 @@ static void render_raider(SceneCamera* c, const EntitySlot* e,
                block*0.035f,block*0.035f,block*0.018f,scene_color(33,30,22));
     figure_box(c,origin,yaw,0,block*0.73f,-block*0.178f,block*0.12f,
                block*0.025f,block*0.016f,scene_color(48,35,19));
+#if defined(LEGORRR_BACKEND_MINIWIN)
+selection:
+#endif
     if (selected) {
         SceneColor marker = {235, 208, 48};
         float span = block * 0.40f, rail = block * 0.045f;
@@ -1334,6 +1483,9 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
                            0,block*0.58f,block*0.14f,block*0.52f,
                            scene_color(181,145,75));
             } else {
+#if defined(LEGORRR_BACKEND_MINIWIN)
+                if (render_creature(&camera, e, origin)) continue;
+#endif
                 figure_box(&camera,origin,e->rot,0,block*0.25f,
                            0,block*0.48f,block*0.45f,block*0.38f,
                            scene_color(140,138,129));

@@ -9,6 +9,11 @@ It is a source heuristic, not a C++ parser; it scans conditional alternatives
 without preprocessing and accepts nearby FUNCTION, STUB or LIBRARY markers.
 It looks for the marker above the definition itself, skipping preprocessor
 directives and their backslash continuation lines (finding 540).
+Definitions in a branch whose condition requires `LEGORRR_BACKEND_MINIWIN`
+(`#ifdef`, or an `#if`/`#elif` with `defined(LEGORRR_BACKEND_MINIWIN)` as a
+top-level `&&` conjunct and no top-level `||`) need no marker: the matching
+build never defines that macro, so they never reach Reccmp. Native-only port
+files wrap their body in such a group (finding 555).
 It needs only Python's standard library, and runs in `make tools-test`.
 
 The sorted `docs/coverage/reccmp-lint-baseline.txt` records existing debt.
