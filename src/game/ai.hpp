@@ -353,23 +353,23 @@ extern "C" void entity_pointer_registries_remove(EntitySlot* record); /* FUN_004
 
 /* Type4ObjectRegistryInsert (FUN_00407410): a type-4 record goes into the
  * type-4 window when absent — first empty slot, timer word untouched. */
-void type4_object_registry_insert(EntitySlot* record);     /* FUN_00407410 */
+extern "C" void type4_object_registry_insert(EntitySlot* record);     /* FUN_00407410 */
 
 /* Type2TimedRegistryInsert (FUN_004074b0): the type-2 timed window has 50
  * two-word slots. A hit re-seeds its timer; a miss stores into the first
  * empty slot and seeds it, while a full table drops the record. */
-void type2_timed_registry_insert(EntitySlot* record);      /* FUN_004074b0 */
+extern "C" void type2_timed_registry_insert(EntitySlot* record);      /* FUN_004074b0 */
 
 /* SetType2ObjectRecordValue (FUN_00407510): a type-2 record broadcasts its
  * value into the timer word of every occupied timed-window slot. */
-void set_type2_object_record_value(EntitySlot* record, uint32_t value);
+extern "C" void set_type2_object_record_value(EntitySlot* record, uint32_t value);
                                                 /* FUN_00407510 */
 
 /* FlaggedObjectTimerRegistryInsert (FUN_00407540): with the stats word's
  * bit 0x80 raised (the ported capability reader), register into the
  * flagged-timer window — hit re-seeds, miss appends at the first empty
  * slot with the seed, and a full window drops the record. */
-void flagged_object_timer_registry_insert(EntitySlot* record);
+extern "C" void flagged_object_timer_registry_insert(EntitySlot* record);
                                                 /* FUN_00407540 */
 
 /* port hooks: peek/set windows (0 = flagged, 1 = type-4, 2 = type-2 timed);
@@ -407,9 +407,9 @@ void ai_idle_table_pointer_remove(void* pointer);
  * touching state. Otherwise: fold activity 0 out, queue the cell's terrain
  * work transition (FUN_00431140), blank the +0x2f4/+0x2f8 pair to -1.0,
  * write 1 through the result word, and clear the occupied mark. */
-int entity_activity_terrain_eligibility_transition(GameContext* ctx,
-                                                   EntitySlot* e, float x,
-                                                   float y, int* out);
+extern "C" int entity_activity_terrain_eligibility_transition(GameContext* ctx,
+                                                              EntitySlot* e, float x,
+                                                              float y, int* out);
                                                 /* FUN_00449980 */
 
 /* --- pair predicate + active-list scan (2026-10-25) -----------------------

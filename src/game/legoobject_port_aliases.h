@@ -92,7 +92,72 @@
 #define simulation_mode_counter_add legoobject_simulation_mode_counter_add /* 0043a910 */
 #define ai_idle_table_pointer_remove legoobject_tracked_pointer_remove /* 0043a930 */
 #define ai_lava_crust_activity_register legoobject_lava_crust_activity_register /* 0043a960 */
+/* GAME-023 part 1 (issue #575) ends; 0043c490 is part 2's (pulled forward). */
 #define task_type_and_condition_check legoobject_task_type_and_condition_check /* 0043c490 */
+/* GAME-023 part 2 (issue #588): 0043a9e0-00445830. */
+#define entity_queue_for_rockfall_processing_if_eligible legoobject_queue_for_rockfall_processing_if_eligible /* 0043a9e0 */
+#define entity_pair_interaction_gate legoobject_pair_interaction_gate /* 0043a9f0 */
+#define entity_proximity_activity_raise legoobject_proximity_activity_raise /* 0043aab0 */
+#define terrain_cell_variant_update_queue legoobject_terrain_cell_variant_update_queue /* 0043abf0 */
+#define predug_spawn_coordinate_select_and_create legoobject_predug_spawn_coordinate_select_and_create /* 0043ad50 */
+#define creature_spawn_from_emergence legoobject_creature_spawn_from_emergence /* 0043af30 */
+#define entity_iteration_callback_guard legoobject_remove_all /* 0043b320 */
+#define entity_task_at_grid_coordinate_find legoobject_pick_at_screen_position /* 0043b360 */
+#define entity_clipped_rectangle_callback_dispatch legoobject_select_in_screen_rect /* 0043b6c0 */
+#define entity_type_two_event_dispatch legoobject_first_person_meshes_swap /* 0043b820 */
+#define entity_type_two_positioned_callback_dispatch legoobject_lod_meshes_update /* 0043b850 */
+#define entity_flags_mask107c33de_or_1c00203_any_test legoobject_flags_mask107c33de_or_1c00203_any_test /* 0043baf0 */
+#define entity_building_deposit_state_monitor legoobject_building_deposit_state_monitor /* 0043bb20 */
+#define entity_detach_carried_object_and_reset_state legoobject_detach_carried_object_and_reset_state /* 0043bbc0 */
+#define objective_sidecar_append_gate legoobject_objective_sidecar_append_gate /* 0043bc40 */
+#define entity_state_pair_predicate legoobject_state_pair_predicate /* 0043c200 */
+#define entity_nested_float_add_unless_blocked legoobject_nested_float_add_unless_blocked /* 0043c280 */
+#define entity_type26_command_completion_gate legoobject_type26_command_completion_gate /* 0043c3e0 */
+#define ai_activity_probe legoobject_can_do_activity_classify /* 0043c440 */
+#define entity_finish_state_1a legoobject_finish_state_1a /* 0043c4c0 */
+#define entity_mark_and_finish_state_1a legoobject_mark_and_finish_state_1a /* 0043c530 */
+#define entity_kind_four_post_create_resolve legoobject_kind_four_post_create_resolve /* 0043c570 */
+#define entity_capacity_or_state_predicate legoobject_capacity_or_state_predicate /* 0043c650 */
+#define entity_activity_counters_advance legoobject_activity_counters_advance /* 0043c6b0 */
+#define entity_linked_route_flag_clear legoobject_linked_route_flag_clear /* 0043f100 */
+#define entity_spawn_request_queue_add legoobject_spawn_request_queue_add /* 0043f150 */
+#define entity_spawn_request_queue_process legoobject_spawn_request_queue_process /* 0043f190 */
+#define entity_pool_find_with_local_predicate legoobject_pool_find_with_local_predicate /* 0043f560 */
+#define entity_damage_apply legoobject_damage_apply /* 0043f6a0 */
+#define entity_update_and_unregister_at_tile legoobject_update_and_unregister_at_tile /* 00440130 */
+#define spatial_entity_damage_radius_callback legoobject_spatial_callback_query_visit /* 00440800 */
+#define spatial_entity_vector_step_callback legoobject_spatial_callback_query_at_optional_coordinate_visit /* 00440920 */
+#define ai_set_activity legoobject_set_activity /* 004409e0 */
+#define object_list_field_assign_all legoobject_object_list_field_assign_all /* 00440bf0 */
+#define terrain_grid_path_search legoobject_terrain_grid_path_search /* 00440c70 */
+#define terrain_neighbor_path_check_current legoobject_terrain_neighbor_path_check /* 004410f0 */
+#define entity_route_setup_and_marker_associate legoobject_route_setup_and_marker_associate /* 00441700 */
+#define entity_action_sequence_reset legoobject_action_sequence_reset /* 00441940 */
+#define entity_state_reset legoobject_state_reset /* 00441b30 */
+#define entity_type5_finalize_if_allowed legoobject_type5_finalize_if_allowed /* 00441ea0 */
+#define entity_face_target_action_start legoobject_face_target_action_start /* 00441ed0 */
+#define kind_effect_slot_init_dispatch legoobject_kind_effect_slot_init_dispatch /* 004420d0 */
+#define entity_action_route_state_initialize legoobject_action_route_state_initialize /* 00442210 */
+#define entity_transform_position_get_outputs legoobject_transform_position_get /* 00442260 */
+#define entity_surface_vector_normalize legoobject_surface_vector_normalize /* 004422a0 */
+#define entity_velocity_vector_dispatch legoobject_velocity_vector_dispatch /* 00442300 */
+#define entity_vector_direction_angle_radians_get legoobject_vector_direction_angle_radians_get /* 00442480 */
+#define entity_position_to_terrain_cell legoobject_position_to_terrain_cell /* 004424f0 */
+#define grid_operation_argument_adapter legoobject_world_z_callback /* 00442540 */
+#define entity_world_position_set legoobject_world_position_set /* 004428a0 */
+#define scene_object_pose_position_sync legoobject_scene_object_pose_position_sync /* 00443510 */
+#define entity_random_activity_attempt legoobject_random_activity_attempt /* 00443670 */
+#define entity_type3_flag04000000_test legoobject_type3_flag04000000_test /* 004436f0 */
+#define entity_dispatch_event31_for_pending_flag legoobject_dispatch_event31_for_pending_flag /* 004437f0 */
+#define entity_route_cell_candidate_accept legoobject_route_cell_candidate_accept /* 00443840 */
+#define entity_path_step_advance_and_arrival_check legoobject_path_step_advance_and_arrival_check /* 004438b0 */
+#define linked_entity_flag_and_command_update legoobject_linked_flag_and_command_update /* 004440a0 */
+#define entity_enter_event21_state_once legoobject_enter_event21_state_once /* 00444620 */
+#define entity_step_movement_vector_resolve legoobject_step_movement_vector_resolve /* 00444680 */
+/* Port entries in entity.cpp (no FUNCTION annotation there). */
+#define entity_action_target_cell_is_valid legoobject_action_target_cell_is_valid /* 0043fdc0 */
+#define entity_route_to_explicit_target legoobject_route_to_explicit_target /* 0043fe70 */
+#define entity_route_marker_setup legoobject_route_marker_setup /* 0043fff0 */
 /* Original-ABI adapters other port tails give converted C units. A file
  * that defines them sets LEGORRR_LEGOOBJECT_ALIASES_NO_ADAPTERS first. */
 #if !defined(LEGORRR_LEGOOBJECT_ALIASES_NO_ADAPTERS)
@@ -102,6 +167,17 @@
 #define entity_custom_name_set_adapter legoobject_rename /* 00437880 */
 #define lego_object_create_adapter legoobject_create /* 00437d00 */
 #define entity_pool_find_by_callback_filtered_current_original legoobject_run_through_lists_skip_upgrade_parts /* 004377b0 */
+/* Part 2 (#588): lego_port.cpp's, aitask_port.cpp's and interface_port.cpp's
+ * original-ABI adapters, whose contract is the original's. */
+#define simtick_scene_pass_original legoobject_update_all /* 0043b270 */
+#define lego_object_pair_requirement_met legoobject_state_pair_predicate /* 0043c200 */
+#define periodic_timer25_advance_original legoobject_periodic_timer25_advance /* 0043c2b0 */
+#define lego_object_drop_carried legoobject_record_pair_pose_copy_and_activity_raise /* 0043fc20 */
+#define lego_object_go_to_block legoobject_terrain_cell_to_world_position /* 004401b0 */
+#define level_debug_cell_retarget_adapter legoobject_level_debug_cell_retarget_dispatch /* 004403d0 */
+#define aitask_grid_route_search_adapter legoobject_grid_route_search_adapter /* 00440c30 */
+#define entity_position_to_terrain_cell_adapter legoobject_position_to_terrain_cell /* 004424f0 */
+#define aitask_cell_step_command_issue_adapter legoobject_cell_step_command_issue_with_jitter /* 0043a120 */
 #endif
 #endif
 

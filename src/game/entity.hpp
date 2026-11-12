@@ -856,7 +856,7 @@ extern "C" uint32_t entity_stats_word_atc8(const EntitySlot* e); /* FUN_00469fc0
 float entity_stats_float_at8c(const EntitySlot* e);   /* FUN_00469fe0 */
 float entity_stats_float_at90(const EntitySlot* e);   /* FUN_0046a000 */
 extern "C" float entity_stats_float_at98(const EntitySlot* e);   /* FUN_0046a020 */
-float entity_stats_float_at94(const EntitySlot* e);   /* FUN_0046a040 */
+extern "C" float entity_stats_float_at94(const EntitySlot* e);   /* FUN_0046a040 */
 float entity_stats_float_atf4(const EntitySlot* e);   /* FUN_0046a080 */
 float entity_speed_component_get(const EntitySlot* e); /* FUN_0046a0a0 (+f8) */
 /* EntityTypeComponentGet (FUN_0044a200): inspect the legacy entity-record
@@ -1379,7 +1379,7 @@ uint32_t entity_global_animation_state_peek(void);          /* port hook */
  * TaskTypeAndConditionCheck (FUN_0043c490): the gate in relaxed mode over
  * the target and the caller's condition; the corpus's first argument is
  * discarded in the body (calling-convention residue, 0x460200 precedent). */
-int entity_flag100_and_shared_eligibility_check(const EntitySlot* e);
+extern "C" int entity_flag100_and_shared_eligibility_check(const EntitySlot* e);
                                                 /* FUN_00471ce0 */
 extern "C" int entity_quad_mesh_render_record_allowed(const EntitySlot* e);
                                                 /* FUN_0040aae0 */
@@ -1430,7 +1430,7 @@ void entity_detach_carried_object_and_reset_state(struct EntitySlot* e,
  * reference / store flag for kinds 7/0xc/0x17).
  * Deviations: the corpus dereferences a missing carried slot blindly
  * (the port guards); the null slot and gate skip is the faithful shape. */
-void entity_clear_linked_object_state(EntitySlot* e);
+extern "C" void entity_clear_linked_object_state(EntitySlot* e);
                                                 /* FUN_00447780 */
 
 /* PooledRecordChunkAllocateAndLink (FUN_00438310): grows a power-of-two
@@ -1651,7 +1651,7 @@ void* ledger_stub_00438df0_EntityLookupAtWorldPosition(
     const float center[2]);
 void* ledger_stub_00438e50_SpatialObjectQueryCenterMask100(
     const EntitySlot* entity, const float center[2], uint32_t extra);
-int ledger_stub_004469c0_EntityNearestConnectedTerrainCellRouteSelect(
+extern "C" int ledger_stub_004469c0_EntityNearestConnectedTerrainCellRouteSelect(
     EntitySlot* entity, unsigned int goal_x, unsigned int goal_y,
     int include_diagonals, unsigned int* out_candidate, int strict);
 }

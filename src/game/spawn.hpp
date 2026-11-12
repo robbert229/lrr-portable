@@ -36,7 +36,7 @@ int entity_adjacent_placement_cell_search(::EntitySlot* entity,
                                           ::EntitySlot* target); /* 0x00447210 */
 extern "C" void scatter_spawn_gate_set(int enabled); /* 0x0044adc0 */
 int scatter_spawn_gate_get();
-void entity_kind_one_random_spawn_trigger(void* entity); /* 0x0044ade0 */
+extern "C" void entity_kind_one_random_spawn_trigger(void* entity); /* 0x0044ade0 */
 void random_kind_six_scatter_spawn(void* entity, int count, int mode); /* 0x0044ae50 */
 #if defined(_MSC_VER)
 /* MSVC 5 has no __thiscall keyword. __fastcall places the object in ECX,

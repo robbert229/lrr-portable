@@ -448,7 +448,7 @@ typedef struct QuadMeshRenderHooks {
                               uint32_t count);
 } QuadMeshRenderHooks;
 void quad_mesh_render_hooks_set(const QuadMeshRenderHooks* hooks);
-void quad_mesh_render_record_create(void* entity, uint32_t count);
+extern "C" void quad_mesh_render_record_create(void* entity, uint32_t count);
 typedef struct SinePhaseBlendState {
     uint32_t flags;
     float period;
@@ -693,7 +693,7 @@ typedef struct TexturedSceneDrawHooks {
     void (*state_restore)(void* user, const float matrix[16]);
 } TexturedSceneDrawHooks;
 void textured_scene_draw_hooks_set(const TexturedSceneDrawHooks* hooks);
-void textured_scene_object_draw_at_position(const void* view,
+extern "C" void textured_scene_object_draw_at_position(const void* view,
                                             const float position_xy[2],
                                             float z, float size); /* FUN_0045db00 */
 #ifdef __cplusplus
@@ -857,6 +857,9 @@ void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* source_pair_record);
 void scene_object_transform_matrix_set(void* object, uint32_t mode,
                                        const float* matrix);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
                                             float x, float y, float z);
 void render_object_set_identity_transform(void* object);
@@ -1056,6 +1059,9 @@ void ddiscene_animation_hook_create(void* scene_object, int callback,
  * +0x74 dispatch; it is not a float output buffer. */
 void ddiscene_timed_hook_dispatch(void* hook_record, float time,
                                   void* interface_value); /* 0x4897e0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void ddiscene_apply_act_frame_timing(void* scene_object); /* 0x475300 */
 typedef struct DDiSceneFrameRecordFindHooks {
     void* context;
@@ -1359,6 +1365,9 @@ void renderer_handle_scalar_hook_install(RendererHandleScalarGetHook hook,
  * uncalled so that the symbol count of every includer is unchanged (ADR 0005
  * entropy rule 1). */
 int renderer_cached_handle_4c_is_not_one(void* record); /* FUN_00407040 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_object_indexed_handle_get_or_create(void* record, int index);
 #ifdef __cplusplus
 extern "C"
@@ -1375,7 +1384,7 @@ void* scene_object_indexed_secondary_handle_get_or_create(void* record,
                                                            int index);
 float animation_loop_time_adjust(void* record, float argument,
                                  uint32_t count); /* FUN_00408860 */
-void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
+extern "C" void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
                            float z); /* 0x004755b0 */
 void scene_object_coordinate_transform_to_output(void* object,
                                                   void* input, void* output);
@@ -1741,6 +1750,9 @@ void cursor_screen_ray_context_reset(ViewContext* v);
  * in, grid indices out. The port's grid_pick models the pick (with the
  * stub-boundary note above); this is the wrapper shape, and NULL index
  * outputs skip their stores the way the corpus's bounds check does. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
                                      int* gx, int* gy);
 

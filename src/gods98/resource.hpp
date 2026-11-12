@@ -725,8 +725,14 @@ extern "C"
 #endif
 void* scene_resource_cached_slot_b8_get(
     SceneResourceAnimationRecord* record); /* FUN_0046dac0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_resource_cached_slot_c0_get(
     SceneResourceAnimationRecord* record); /* FUN_0046daf0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void* attached_entity_slot_object_get(SceneResourceAnimationRecord* record,
                                       int index); /* FUN_0046db20 */
 void scene_object_resource_release(void* record);
@@ -761,8 +767,14 @@ void scene_animation_track_hook_install(SceneAnimationTrackApplyHook hook,
 void scene_resource_owner_hook_install(SceneResourceOwnerApplyHook hook,
                                        SceneAttachedResourceReleaseHook release,
                                        void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 void paired_resource_state_set(ScenePairedAnimationState* state,
                                int enabled); /* FUN_0046ced0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_entity_animation_tracks_set_enabled(
     ScenePairedAnimationState* state, int enabled); /* FUN_0046cf20 */
 #ifdef __cplusplus
@@ -770,6 +782,9 @@ extern "C"
 #endif
 void scene_assign_owner_from_model(ScenePairedAnimationState* state,
                                    void* owner); /* FUN_0046d140 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_attached_resource_release(void* record); /* FUN_0046d1a0 */
 typedef void (*SceneOwnedMemoryReleaseHook)(void* memory, void* context);
 void scene_payload_memory_release_hook_install(
@@ -785,7 +800,7 @@ extern "C"
 int scene_record_template_instantiate(
     const ScenePairedAnimationState* source,
     ScenePairedAnimationState* destination); /* FUN_0046cff0 */
-void scene_resource_draw_at_origin(SceneResourceAnimationRecord* record,
+extern "C" void scene_resource_draw_at_origin(SceneResourceAnimationRecord* record,
                                    float x, float y, float z); /* FUN_0046d350 */
 typedef uint32_t (*SceneAnimationChannelUpdateHook)(void* resource,
                                                     uint32_t channel,
@@ -869,9 +884,12 @@ void terrain_point_object_create(void* object, const float* xy); /* FUN_0040c750
 extern "C"
 #endif
 void scene_light_create_at_position(const float position[3]);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_marker_create_at_position_or_object(void* object,
                                                const float position[3]);
-void scene_marker_create_at_object_position(void* object);
+extern "C" void scene_marker_create_at_object_position(void* object);
 int global_resource_handle_load_and_enable(const char* path);
 Resource* global_resource_handle_peek(void); /* port state peek */
 void global_resource_handle_release(void); /* port lifecycle hook */
@@ -908,6 +926,9 @@ void scene_resource_name_slot_install(int style, int group, int slot,
                                       uint32_t handle_key,
                                       uint32_t secondary_key, void* handle,
                                       uint32_t name_base, uint32_t name_count);
+#ifdef __cplusplus
+extern "C"
+#endif
 int scene_resource_slot_register_name(uint32_t handle_key,
                                       uint32_t secondary_key); /* FUN_0040c5b0 */
 typedef void* (*SceneResourceParentLoadHook)(void* scene, const char* path,

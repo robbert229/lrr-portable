@@ -193,15 +193,18 @@ extern "C"
 uint32_t scene_object_flags_get(const void* scene_object);
 
 /* SceneObjectOwnerGet (FUN_00473db0, finding 430): +0x20. */
-uint32_t scene_object_owner_get(const void* scene_object);
+extern "C" uint32_t scene_object_owner_get(const void* scene_object);
 
 /* SceneObjectScalarAdjustByDirection (FUN_004082e0): scale the record's
  * +0x80 float scalar toward/below zero by the direction's step and raise
  * the +0x148 word's bit 2. Deviation: the corpus strides the record
  * blindly. */
-void scene_object_scalar_adjust_by_direction(void* record, int direction);
+extern "C" void scene_object_scalar_adjust_by_direction(void* record, int direction);
 
 /* SceneObjectResourceGet (FUN_0046d9e0, findings 357/432): +0x08. */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t scene_object_resource_get(const void* scene_object);
 
 /* SceneObjectWrappedPointerGet (FUN_00473680, findings 337/430): the
@@ -534,9 +537,12 @@ void scene_resource_visibility_set(void* record, uint32_t flag);
  * corpus consumes the probe's undefined float return as the z; the port
  * pins it to zero. Both stride the +4 handle, then the +0x7c partner
  * when non-NULL. */
-void scene_object_pair_set_render_parameters(void* pair, float x, float y);
+extern "C" void scene_object_pair_set_render_parameters(void* pair, float x, float y);
                                                 /* FUN_004086c0 */
 typedef void (*SceneScalarProbe)(float x, float y, void* arg);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
                                            SceneScalarProbe probe,
                                            void* arg); /* FUN_00408710 */

@@ -264,6 +264,9 @@ void simtick_bobbin_action_hooks_set(SimtickBobbinSpawnHook spawn,
     SimtickBobbinActionHook clear_delay, SimtickBobbinActionHook die,
     void* context);
 int  simtick_bobbin_advanced(void); /* helper-invocation counter */
+#ifdef __cplusplus
+extern "C"
+#endif
 void simtick_selection_group_release(const uint32_t key_pair[2]); /* FUN_00409110 */
 extern "C" void simtick_selection_group_clear(const uint32_t key_pair[2]);   /* FUN_00409150 */
 
