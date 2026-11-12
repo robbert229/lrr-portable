@@ -383,6 +383,7 @@ static void dgbits(uint32_t* h, float f)
     dg32(h, u);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t model_digest(const Model* m)
 {
     uint32_t h = 2166136261u;
@@ -428,6 +429,7 @@ uint32_t model_digest(const Model* m)
     }
     return h;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 namespace unported_ledger_stubs {
 // LwoModelEntryLoad (implemented in gods98/model.cpp)

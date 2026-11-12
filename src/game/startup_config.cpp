@@ -93,6 +93,7 @@ void buffered_char_stream_read_hook_set(BufferedCharReadHook read_char,
     s_buffered_char_read_context = context;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void dependency_config_entry_hook_set(DependencyConfigEntryHook hook,
                                       void* context)
 {
@@ -121,6 +122,7 @@ int dependency_grid_config_load(void* config, int level)
     }
     return processed;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int dependency_config_entry_should_load(int level, const char* name,
                                         const char* value)

@@ -562,6 +562,7 @@ void texture_cache_clear(void)
     s_shared_cache_count = 0;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t texture_pixel_hash(TextureSurface* t)
 {
     uint32_t h = 2166136261u;
@@ -584,6 +585,7 @@ uint32_t texture_pixel_hash(TextureSurface* t)
     }
     return h;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 namespace unported_ledger_stubs {
 const char* ledger_stub_00473c60_XfTextureNameFormat(

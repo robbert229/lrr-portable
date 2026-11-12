@@ -895,6 +895,7 @@ int interface_back_button_config_load(BlockFile* cfg)
     return 1;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void interface_button_images_load(const char* left_path,
                                   const char* right_path)
 {
@@ -943,6 +944,7 @@ void menu_selection_resource_update(int kind, const uint32_t coord[2])
         }
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int entity_query_flag_count(int query)
 {
@@ -1070,10 +1072,12 @@ void timed_status_and_event_tick(float delta)
     s_inter_flags |= 0x800u;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t sim_status_banner_word_get_port(void)
 {
     return s_status_banner_word;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* SelectionEntityCodeResolve (FUN_0041b9c0) — see frontend.hpp. The corpus
  * reads the first selection first and branches afterwards; the port's
@@ -1542,6 +1546,7 @@ uint32_t player_input_flag8_get(int kind, int action)
     return table[action] & 8u;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t indexed_entity_value_get(const EngineContext* ctx, int index)
 {
     if (index < 0 || index >= INPUT_INDEXED_WINDOW_SLOTS) {
@@ -1555,6 +1560,7 @@ uint32_t indexed_entity_value_get(const EngineContext* ctx, int index)
     }
     return s_indexed_window_c[index];     /* DAT_004dcff8 window */
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* InputBindingValueGet (FUN_0041caf0): resolve a catalog image from the
  * input binding's pressed state, then its flag-8 state, else the normal
@@ -1577,6 +1583,7 @@ TextureSurface* interface_build_image_binding_value_get(
     return image->normal;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* InputBindingDefaultValueGet (FUN_0041cb90): return the catalog's default
  * image field for kinds 1 and 4. Kinds 2, 11, and 15 read zero-initialized
  * scalar globals in the corpus image; no writer is present in the ledger. */
@@ -1598,6 +1605,7 @@ void* input_binding_default_value_get_port(int kind, int index, int mode)
     }
     return 0u;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void cursor_tile_selection_update_by_type(int kind, uint32_t first,
                                           uint32_t second)
@@ -1725,6 +1733,7 @@ void selection_target_command_update(GameContext* ctx, EntitySlot* entity)
         }
     }
 }
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* SelectionMode7CancelAtPoint (FUN_0041cf80): cancel on a matching map
  * coordinate while objective selection mode 7 is active. */
 void selection_mode7_cancel_at_point_port(const uint32_t coordinate[2])
@@ -1753,6 +1762,7 @@ void selection_mode5_cancel_at_point_port(const uint32_t coordinate[2])
         selection_clear_request_and_hud_reset();
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* SelectionCancelIfCursorHitsObject (FUN_0041d010): only active in game
  * context, and only when the entity is selected or has the cursor-hit flag.
@@ -2233,6 +2243,7 @@ action_flag_toggle:
     return 1;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void selection_clear_request_and_hud_reset_port(void)
 {
     /* FUN_0041e750 enqueues command 3 with a null entity and pair, then posts
@@ -2240,6 +2251,7 @@ void selection_clear_request_and_hud_reset_port(void)
     cmd_produce(3, NULL, 0, NULL); /* FUN_00452060 */
     command_context_post_to_hud(0, NULL);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 uint32_t input_action_click_count_swap(int action, uint32_t value)
 {
@@ -2295,6 +2307,7 @@ void selection_region_parameters_set(uint32_t a, uint32_t b, uint32_t c,
     s_reg_f0 = e * s_region_scale_004;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void store_selected_map_coordinate(int kind, const uint32_t coord[2])
 {
     if ((s_inter_flags & 0x80u) == 0u
@@ -2316,6 +2329,7 @@ void store_selected_map_coordinate(int kind, const uint32_t coord[2])
     }
     s_map_store_kind = (uint32_t)kind;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void event_timer_countdown_advance(float delta)
 {
@@ -2451,11 +2465,13 @@ void advisor_dialog_stack_layout(float y, uint32_t parameter,
     }
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void interaction_timer_reset_and_flag_clear(void)
 {
     s_inter_timer = 25.0f; /* corpus 0x41c80000 */
     s_inter_flags &= ~0x800u;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 namespace unported_ledger_stubs {
 int ledger_stub_0041ee80_CellGridPointHitTest(
@@ -2862,11 +2878,13 @@ static void ui_action_dispatch_global_low_byte_clear(
     state->action_flags &= ~0xffu;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 static int menu_kind_gated(int kind)
 {
     return kind == 1 || kind == 2 || kind == 3 || kind == 4
         || kind == 5 || kind == 7;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static int entity_action_request_matches(EntitySlot* entity, void* payload)
 {
@@ -3519,6 +3537,7 @@ static int tutorial_path_menu_action_precheck_raw(
     return 0;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 static int selected_map_coordinate_matches(const uint32_t coordinate[2])
 {
     return coordinate != NULL
@@ -3534,6 +3553,7 @@ static void cancel_action_if_map_coordinate_matches(uint32_t mode,
         selection_clear_request_and_hud_reset();
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static uint32_t* player_click_count_table(int kind)
 {

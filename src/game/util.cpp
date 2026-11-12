@@ -239,12 +239,14 @@ static uint32_t s_motion_gameplay_scene_flags;
 MotionJitterState s_motion_jitter_state;
 void motion_jitter_center_refresh(void);
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 float motion_waypoint_default_random(void* context, float minimum,
                                             float maximum)
 {
     (void)context;
     return random_float_range(minimum, maximum);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void motion_drift_state_install(MotionDriftState* state,
                                 MotionRandomRangeFn random_range,
@@ -297,6 +299,7 @@ void motion_jitter_center_refresh(void)
     }
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void motion_jitter_state_step(MotionJitterState* state, float delta,
                               PortLoopRandomRangeHook random_range,
                               const MotionJitterHooks* hooks)
@@ -359,6 +362,7 @@ void motion_jitter_state_step(MotionJitterState* state, float delta,
     state->remaining -= state->lifetime;
     if (state->remaining <= 0.0f) state->flags &= ~0x80u;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void motion_waypoint_position_bind(float x, float y, float z)
 {

@@ -2748,12 +2748,14 @@ void* resource_handle_set_slot_peek(int slot)
     return NULL;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void resource_handle_set_band_word_install(int unit, uint32_t value)
 {
     if (unit >= 0 && unit < 24) {
         s_handle_set_band[unit].word2 = value;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 uint32_t resource_handle_set_band_word_peek(int unit)
 {
@@ -2913,9 +2915,11 @@ void* resource_name_register_or_query(ResourceTreeNode* root,
         root, name, mode, match_count_or_index);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int nested_record_list_remove_matching_key(void* owner, void* key,
                                            void* record)
 {
     return unported_ledger_stubs::nested_record_list_remove_matching_key_impl(
         owner, key, record);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */

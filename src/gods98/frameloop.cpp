@@ -4827,6 +4827,7 @@ void frameloop_application_shutdown(void)
     memset(&app, 0, sizeof(app));
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int LegorrrRun(void)
 {
     FrameloopApplicationState& app = s_frameloop_application;
@@ -4842,6 +4843,7 @@ int LegorrrRun(void)
     frameloop_application_shutdown();
     return 0;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 namespace unported_ledger_stubs {
 
