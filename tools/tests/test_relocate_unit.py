@@ -873,6 +873,22 @@ class PerRelocationHeaderTest(unittest.TestCase):
         finally:
             fx.close()
 
+    def test_forward_declaration_precedes_a_variable_whose_initializer_uses_it(self):
+        # G98-015's s_portable_model_render_dispatch_ops (#543): a closure
+        # variable initialised with a static helper that has no prototype.
+        # Helpers go last in the unit file, so the helper's forward
+        # declaration must come before the variable, not after the data.
+        mixed = MIXED.replace("    s_alpha_state = x;\n", "    s_alpha_state = s_alpha_hook(x);\n") \
+            + "\nstatic int alpha_hook(int v)\n{\n    return v;\n}\n\n" \
+              "static int (*s_alpha_hook)(int) = alpha_hook;\n"
+        fx = Fixture(mixed)
+        try:
+            unit = ru.plan_relocation("GAME-001", fx.root).files["src/game/alpha.cpp"]
+            self.assertLess(unit.index("static int alpha_hook(int v);"),
+                            unit.index("(*s_alpha_hook)(int) = alpha_hook;"))
+        finally:
+            fx.close()
+
     def test_frozen_header_is_never_rewritten(self):
         fx = Fixture(MIXED)
         try:

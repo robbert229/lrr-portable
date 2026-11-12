@@ -1694,6 +1694,13 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
             defined_at.setdefault(n, pos)
     forward: list[tuple[str, str]] = []           # (namespace, declaration)
     declared = set()
+    # The forward declarations go before the first item that needs them.
+    # That is usually a function, but a closure variable's initializer can
+    # name a static helper, and helpers go last (#543). Types and macros
+    # never count: a macro body needs no declaration, and the declarations
+    # may need the types.
+    prefix_len = len(types) + len(globals_) + len(variables) + len(protos) + len(groups)
+    forward_at = prefix_len
     for pos, m in enumerate(plan.order):
         if m.item.category == "proto":
             declared.update(m.item.qnames)
@@ -1717,6 +1724,8 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
                 decl = 'extern "C" ' + decl
             forward.append((target_move.item.scope, decl, anon))
             declared.add(n)
+            if len(types) <= pos < forward_at:
+                forward_at = pos
     plan.forward = [_ns_block(ns.split("::") if ns else [], d, anon=anon, inline=True) if ns or anon else d
                     for ns, d, anon in forward]
 
@@ -1748,7 +1757,7 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
         else:
             chunks.append((m.wrap, text))
         prev = m
-    for m in types + globals_ + variables + protos + groups:
+    for m in plan.order[:forward_at]:
         add(m)
     body.extend(_blocks(chunks))
     chunks = []
@@ -1756,7 +1765,7 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
     if plan.forward:
         body.append("/* Defined below (forward declarations added by tools/relocate_unit.py). */\n"
                     + "\n".join(plan.forward) + "\n")
-    for m in functions + helpers:
+    for m in plan.order[forward_at:]:
         add(m)
     body.extend(_blocks(chunks))
     plan.files[plan.target] = "\n".join(b.rstrip("\n") + "\n" for b in body)

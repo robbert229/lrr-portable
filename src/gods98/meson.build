@@ -8,6 +8,8 @@ if get_option('platform') == 'winapi'
 endif
 
 gods98_sources = [
+  'mesh_unit.cpp',
+  'container_unit.cpp',
   'directdraw.cpp',
   'avi_player.cpp',
   'images_unit.cpp',

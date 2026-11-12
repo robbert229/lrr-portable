@@ -594,18 +594,4 @@ uint32_t input_indexed_window_peek(int which, int index)
 
 namespace unported_ledger_stubs {
 
-static InputActionToggleState s_input_action_toggle_state;
-
-// FUNCTION: LEGORR 0x00483810
-int ledger_stub_00483810_InputActionStateToggle(unsigned int action,
-                                                 const void* data)
-{
-    return input_action_state_toggle(&s_input_action_toggle_state, NULL,
-                                     action, data);
-}
-
-
-
-
-
 } // namespace unported_ledger_stubs

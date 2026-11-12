@@ -20,22 +20,15 @@
 #include "surface_for_images_unit.hpp"
 #include "surface_from_images_unit.hpp"
 #include "surface_for_directdraw.hpp"
+#include "surface_for_container_unit.hpp"
+#include "surface_for_mesh_unit.hpp"
+#include "surface_from_mesh_unit.hpp"
 
-static void* mesh_record_default_allocate(void*, size_t bytes)
-{
-    return engine_heap_alloc((long)bytes);
-}
-
-static void mesh_record_default_release(void*, void* memory)
-{
-    engine_heap_free(memory);
-}
-
-static MeshRecordAppendOps s_mesh_record_append_ops;
-static ModelTextureBindOps s_model_texture_bind_ops;
-static MaterialPassOps s_material_pass_ops;
-static TextureSurfaceCreateHook s_texture_surface_create_hook;
-static void* s_texture_surface_create_context;
+MeshRecordAppendOps s_mesh_record_append_ops;
+ModelTextureBindOps s_model_texture_bind_ops;
+MaterialPassOps s_material_pass_ops;
+TextureSurfaceCreateHook s_texture_surface_create_hook;
+void* s_texture_surface_create_context;
 static DisplaySurface* s_active_render_target;
 static void* s_screen_bounded_surface_renderer;
 void* s_screen_bounded_surface_device;
@@ -148,140 +141,6 @@ int mesh_record_allocate_or_append_ops_set(const MeshRecordAppendOps* ops)
     return 1;
 }
 
-/* FUN_00482220: append a zeroed render record, copy every other source
- * index word, allocate its vertex payload, then publish the new slot. */
-// FUNCTION: LEGORR 0x00482220
-int mesh_record_allocate_and_fill(MeshRecordPool* pool,
-                                  uint32_t vertex_count,
-                                  uint32_t index_rows,
-                                  uint32_t index_columns,
-                                  const uint16_t* source_indices)
-{
-    void* (*allocate)(void*, size_t);
-    void (*release)(void*, void*);
-    uint32_t index_count;
-    uint32_t index;
-    uint32_t old_count;
-    size_t slot_bytes;
-    size_t index_bytes;
-    size_t vertex_bytes;
-    MeshRenderRecord* records;
-    MeshRenderRecord* record;
-    uint32_t i;
-
-    if (pool == NULL || (index_rows != 0 &&
-        index_columns > 0xffffffffu / index_rows)) return -1;
-    index_count = index_rows * index_columns;
-    if (index_count != 0 && source_indices == NULL) return -1;
-    if (vertex_count > (size_t)-1 / 32u ||
-        index_count > (size_t)-1 / sizeof(uint16_t)) return -1;
-    allocate = pool->allocate != NULL ? pool->allocate :
-                                         mesh_record_default_allocate;
-    release = pool->release != NULL ? pool->release :
-                                       mesh_record_default_release;
-
-    if (pool->records == NULL) {
-        pool->capacity = 10;
-        pool->count = 0;
-        slot_bytes = (size_t)pool->capacity * sizeof(MeshRenderRecord);
-        pool->records = (MeshRenderRecord*)allocate(pool->context, slot_bytes);
-        if (pool->records == NULL) {
-            pool->count = 0;
-            pool->capacity = 0;
-            return -1;
-        }
-        index = 0;
-        old_count = 0;
-    }
-    else {
-        if (pool->count > pool->capacity) return -1;
-        old_count = pool->count;
-        index = pool->count;
-        pool->count++;
-        if (index == pool->capacity) {
-            uint32_t new_capacity = (pool->capacity * 150u) / 100u;
-            MeshRenderRecord* grown;
-            if (new_capacity <= pool->capacity) new_capacity = pool->capacity + 1;
-            slot_bytes = (size_t)new_capacity * sizeof(MeshRenderRecord);
-            grown = (MeshRenderRecord*)allocate(pool->context, slot_bytes);
-            if (grown == NULL) return -1;
-            memcpy(grown, pool->records,
-                   (size_t)pool->capacity * sizeof(MeshRenderRecord));
-            release(pool->context, pool->records);
-            pool->records = grown;
-            pool->capacity = new_capacity;
-        }
-    }
-
-    if (pool->count == 0u) pool->count = 1u;
-    record = &pool->records[index];
-    memset(record, 0, sizeof(*record));
-    {
-        /* FUN_00483170 initializes the eighty-byte D3DMATERIAL beginning
-         * at record +0x10: size0x50, diffuse RGBA1, then zeros. On
-         * the 32-bit reference build `reserved` starts at +0x10. On wider
-         * hosts it remains an adapter payload after the host pointers. */
-        static const uint32_t initial_state[20] = {
-            0x50u, 0x3f800000u, 0x3f800000u, 0x3f800000u, 0x3f800000u,
-            0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
-            0u, 0u
-        };
-        memcpy(record->reserved, initial_state, sizeof(initial_state));
-    }
-    index_bytes = (size_t)index_count * sizeof(uint16_t);
-    record->indices = index_bytes != 0 ?
-        (uint16_t*)allocate(pool->context, index_bytes) : NULL;
-    if (index_bytes != 0 && record->indices == NULL) {
-        memset(record, 0, sizeof(*record));
-        pool->count = old_count;
-        return -1;
-    }
-    record->index_count = index_count;
-    for (i = 0; i < index_count; ++i)
-        record->indices[i] = source_indices[i * 2u];
-
-    vertex_bytes = (size_t)vertex_count * 32u;
-    record->vertices = vertex_bytes != 0 ?
-        allocate(pool->context, vertex_bytes) : NULL;
-    if (vertex_bytes != 0 && record->vertices == NULL) {
-        if (record->indices != NULL) release(pool->context, record->indices);
-        memset(record, 0, sizeof(*record));
-        pool->count = old_count;
-        return -1;
-    }
-    if (record->vertices != NULL) memset(record->vertices, 0, vertex_bytes);
-    record->vertex_count = vertex_count;
-    if (pool->record_registered != NULL)
-        pool->record_registered(pool->context, index);
-    return (int)index;
-}
-
-/* MeshRecordAllocateOrAppend (FUN_004748f0): use the in-memory mesh pool
- * when present; otherwise route through the legacy Direct3DRM record path. */
-// FUNCTION: LEGORR 0x004748f0
-int mesh_record_allocate_or_append(void* object, uint32_t vertex_count,
-                                   uint32_t index_rows,
-                                   uint32_t index_columns,
-                                   const uint16_t* source_indices)
-{
-    MeshRecordPool* pool = NULL;
-    if (object == NULL) return -1;
-    if (s_mesh_record_append_ops.pool_get != NULL) {
-        pool = s_mesh_record_append_ops.pool_get(
-            s_mesh_record_append_ops.context, object);
-    }
-    if (pool != NULL) {
-        return mesh_record_allocate_and_fill(pool, vertex_count, index_rows,
-                                             index_columns, source_indices);
-    }
-    if (s_mesh_record_append_ops.legacy_append != NULL) {
-        return s_mesh_record_append_ops.legacy_append(
-            s_mesh_record_append_ops.context, object, vertex_count,
-            index_rows, index_columns, source_indices);
-    }
-    return -1;
-}
-
 void model_texture_bind_ops_set(const ModelTextureBindOps* ops)
 {
     if (ops != NULL) s_model_texture_bind_ops = *ops;
@@ -289,7 +148,7 @@ void model_texture_bind_ops_set(const ModelTextureBindOps* ops)
                 sizeof(s_model_texture_bind_ops));
 }
 
-static int model_texture_frame_name(const char* name, uint32_t frame,
+int model_texture_frame_name(const char* name, uint32_t frame,
                                     char output[260])
 {
     size_t length;
@@ -475,249 +334,6 @@ int bind_model_texture_inputs(void* device, const ModelTextureInput* inputs,
         memcpy(binding->values, input->values, sizeof(input->values));
     }
     return 1;
-}
-
-/* Parse the filename as VC5's _splitpath does. The MSVC build resolves its
- * target entry to splitpat.obj; this bounded ASCII fallback serves other hosts. */
-static void model_asset_path_components_parse(const char* path,
-                                              char drive[3],
-                                              char directory[256],
-                                              char basename[256],
-                                              char extension[256])
-{
-    const char* start;
-    const char* end;
-    const char* separator = NULL;
-    const char* dot = NULL;
-    size_t count;
-    drive[0] = '\0';
-    directory[0] = '\0';
-    basename[0] = '\0';
-    extension[0] = '\0';
-    if (path == NULL) return;
-#if defined(_MSC_VER)
-    /* The MSVC build links this target entry to VC5's splitpat.obj. */
-    _splitpath(path, drive, directory, basename, extension);
-#else
-    start = path;
-    if (path[0] != '\0' && path[1] == ':') {
-        drive[0] = path[0]; drive[1] = ':'; drive[2] = '\0';
-        start += 2;
-    }
-    for (end = start; *end != '\0'; ++end) {
-        if (*end == '/' || *end == '\\') separator = end;
-    }
-    for (end = separator != NULL ? separator + 1 : start;
-         *end != '\0'; ++end) {
-        if (*end == '.') dot = end;
-    }
-    if (separator != NULL) {
-        count = (size_t)(separator + 1 - start);
-        if (count > 255u) count = 255u;
-        memcpy(directory, start, count);
-        directory[count] = '\0';
-    }
-    start = separator != NULL ? separator + 1 : start;
-    end = dot != NULL ? dot : path + strlen(path);
-    count = (size_t)(end - start);
-    if (count > 255u) count = 255u;
-    memcpy(basename, start, count);
-    basename[count] = '\0';
-    if (dot != NULL) {
-        count = strlen(dot);
-        if (count > 255u) count = 255u;
-        memcpy(extension, dot, count);
-        extension[count] = '\0';
-    }
-#endif
-}
-
-static int model_texture_name_build(const char* path_prefix,
-                                    const char* image_name,
-                                    char output[260])
-{
-    char drive[3];
-    char directory[256];
-    char basename[256];
-    char extension[256];
-    size_t length = 0u;
-    size_t i;
-    model_asset_path_components_parse(image_name, drive, directory,
-                                      basename, extension);
-    for (i = 0u; basename[i] != '\0'; ++i) {
-        if (length + 1u >= 260u) return 0;
-        output[length++] = basename[i];
-    }
-    for (i = 0u; extension[i] != '\0'; ++i) {
-        if (length + 1u >= 260u) return 0;
-        output[length++] = extension[i];
-    }
-    output[length] = '\0';
-    (void)directory; /* the reference discards TIMG's parsed directory */
-    (void)drive;     /* the caller's model path prefix owns the lookup root */
-    (void)path_prefix;
-    return 1;
-}
-
-static int model_texture_path_join(const char* prefix, const char* name,
-                                   char output[260])
-{
-    size_t length = 0u;
-    size_t i;
-    if (prefix != NULL) {
-        for (i = 0u; prefix[i] != '\0'; ++i) {
-            if (length + 1u >= 260u) return 0;
-            output[length++] = prefix[i];
-        }
-    }
-    for (i = 0u; name[i] != '\0'; ++i) {
-        if (length + 1u >= 260u) return 0;
-        output[length++] = name[i];
-    }
-    output[length] = '\0';
-    return 1;
-}
-
-static void* model_texture_lookup(const char* path_prefix, const char* name,
-                                  ModelTextureBinding* binding)
-{
-    char resolved_name[260];
-    void* texture;
-    if (!model_texture_path_join(path_prefix, name, resolved_name))
-        return NULL;
-    if (s_model_texture_bind_ops.texture_get_or_create != NULL) {
-        texture = s_model_texture_bind_ops.texture_get_or_create(
-            s_model_texture_bind_ops.context, (void*)path_prefix,
-            resolved_name);
-        if (texture != NULL) binding->texture_callback_owned = 1u;
-        return texture;
-    }
-    texture = texture_get_or_load(NULL, resolved_name);
-    if (texture != NULL) binding->texture_surface_owned = 1u;
-    return texture;
-}
-
-// FUNCTION: LEGORR 0x00481820
-void bind_model_textures_for_model(const char* path_prefix,
-                                   const Model* model,
-                                   ModelTextureBinding* bindings,
-                                   int force_source_color)
-{
-    size_t index;
-    if (model == NULL || model->n_surfaces > 0xffffffffu ||
-        (model->n_surfaces != 0u && model->surfaces == NULL) ||
-        (model->n_surfaces != 0u && bindings == NULL)) return;
-    for (index = 0u; index < model->n_surfaces; ++index) {
-        const ModelSurface* source = &model->surfaces[index];
-        ModelTextureBinding* binding = &bindings[index];
-        uint16_t material_flags = source->has_material_flags ?
-            source->material_flags : 0u;
-        uint16_t texture_flags = source->has_texture_flags ?
-            source->texture_flags : 0u;
-        memset(binding, 0, sizeof(*binding));
-        if (source->has_tsiz != 0) {
-            binding->texture_scale[0] = source->tsiz[0];
-            binding->texture_scale[1] = source->tsiz[1];
-            binding->texture_scale[2] = source->tsiz[2];
-            binding->has_texture_scale = 1u;
-        }
-        if (source->has_tctr != 0) {
-            binding->texture_center[0] = source->tctr[0];
-            binding->texture_center[1] = source->tctr[1];
-            binding->texture_center[2] = source->tctr[2];
-        }
-        if (source->timg != NULL && force_source_color == 0) {
-            char lookup_name[260];
-            if (!model_texture_name_build(path_prefix, source->timg,
-                                          lookup_name)) {
-                /* The retail path continues building later material slots
-                 * when a path cannot be represented; only this lookup is
-                 * skipped. */
-                if ((texture_flags & 0x0080u) != 0u) {
-                    binding->color[0] =
-                        (float)source->colr_bytes[0] / 256.0f;
-                    binding->color[1] =
-                        (float)source->colr_bytes[1] / 256.0f;
-                    binding->color[2] =
-                        (float)source->colr_bytes[2] / 256.0f;
-                } else {
-                    binding->color[0] = 1.0f;
-                    binding->color[1] = 1.0f;
-                    binding->color[2] = 1.0f;
-                }
-                binding->surface_luminosity = source->luminosity;
-                binding->surface_diffuse = source->diffuse;
-                binding->surface_specular = source->specular;
-                binding->surface_reflection = source->reflection;
-                binding->surface_glossiness = source->glossiness;
-                binding->surface_transparency = source->transparency;
-                binding->surface_texture_flags = texture_flags;
-                binding->surface_material_flags = material_flags;
-                continue;
-            }
-            /* BindModelTextures tests the byte at SURF + 0x14 for the
-             * numbered-image path. That is FLAG/material_flags; TFLG is at
-             * +0x18 and controls the later render-state flags. */
-            if ((material_flags & 0x0080u) != 0u) {
-                uint32_t frame;
-                binding->animation_frames = (void**)malloc(
-                    100u * sizeof(void*));
-                if (binding->animation_frames != NULL) {
-                    binding->animation_array_owned = 1u;
-                    for (frame = 0u; frame < 100u; ++frame) {
-                        char frame_name[260];
-                        void* texture;
-                        if (!model_texture_frame_name(lookup_name, frame,
-                                                      frame_name)) break;
-                        texture = model_texture_lookup(path_prefix, frame_name,
-                                                       binding);
-                        if (texture == NULL) break;
-                        binding->animation_frames[frame] = texture;
-                        ++binding->animation_frame_count;
-                    }
-                    if (binding->animation_frame_count == 0u) {
-                        free(binding->animation_frames);
-                        binding->animation_frames = NULL;
-                        binding->animation_array_owned = 0u;
-                    }
-                    else {
-                        void** frames = (void**)realloc(
-                            binding->animation_frames,
-                            (size_t)binding->animation_frame_count *
-                                sizeof(void*));
-                        if (frames != NULL) binding->animation_frames = frames;
-                    }
-                }
-            }
-            else binding->texture = model_texture_lookup(path_prefix,
-                                                         lookup_name, binding);
-            if ((texture_flags & 0x0080u) != 0u) {
-                binding->color[0] = (float)source->colr_bytes[0] / 256.0f;
-                binding->color[1] = (float)source->colr_bytes[1] / 256.0f;
-                binding->color[2] = (float)source->colr_bytes[2] / 256.0f;
-            }
-            else {
-                binding->color[0] = 1.0f;
-                binding->color[1] = 1.0f;
-                binding->color[2] = 1.0f;
-            }
-        }
-        else {
-            /* Retail always converts source bytes with 1/256, including a
-             * default-zero record whose COLR block was absent. */
-            binding->color[0] = (float)source->colr_bytes[0] / 256.0f;
-            binding->color[1] = (float)source->colr_bytes[1] / 256.0f;
-            binding->color[2] = (float)source->colr_bytes[2] / 256.0f;
-        }
-        binding->surface_luminosity = source->luminosity;
-        binding->surface_diffuse = source->diffuse;
-        binding->surface_specular = source->specular;
-        binding->surface_reflection = source->reflection;
-        binding->surface_glossiness = source->glossiness;
-        binding->surface_transparency = source->transparency;
-        binding->surface_texture_flags = texture_flags;
-        binding->surface_material_flags = material_flags;
-    }
 }
 
 void model_texture_bindings_release(ModelTextureBinding* bindings,
@@ -1236,26 +852,13 @@ int material_pass_submit(const char* path_prefix, void* render_object,
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00480ac0
-int material_pass_execute(const char* path_prefix, void* render_object,
-                          const Model* model, uint32_t flags)
-{
-    MaterialPassPreparedModel prepared;
-    int result;
-    if (render_object == NULL ||
-        !material_pass_prepare(path_prefix, model, flags, &prepared)) return 0;
-    result = material_pass_submit(path_prefix, render_object, &prepared);
-    material_pass_prepared_release(&prepared);
-    return result;
-}
-
 FontPixelFormatQueryFn s_font_pixel_format_query;
 FontPixelFormatReleaseFn s_font_pixel_format_release;
 static SurfacePixelBitsQueryFn s_surface_pixel_bits_query;
 SurfaceWriterUnlockHook s_surface_writer_unlock_hook;
 static RendererBeginFrameHook s_renderer_begin_frame_hook;
 static void* s_renderer_begin_frame_device;
-static RenderStateApplyOps s_render_state_apply_ops;
+RenderStateApplyOps s_render_state_apply_ops;
 static uint32_t s_d3d_material_state_saved[200];
 static uint8_t s_d3d_material_state_dirty[200];
 static RendererWindowModeOps s_renderer_window_mode_ops;
@@ -1268,37 +871,23 @@ DirectDrawEnumerationHook s_directdraw_enumeration_hook;
 void* s_directdraw_enumeration_context;
 static Direct3DRenderPreferenceApplyHook s_render_preference_apply_hook;
 static void* s_render_preference_apply_context;
-static Direct3DMatrixOps s_direct3d_matrix_ops;
-static ModelRenderRecordStateOps s_model_render_record_state_ops;
-static ModelRenderChildPassOps s_model_render_child_pass_ops;
-static ModelRenderPassDispatchOps s_model_render_pass_dispatch_ops;
-typedef struct PortableModelRenderEntry {
-    struct PortableModelRenderEntry* next;
-    Model* model;
-    uint32_t entry_flags;
-    float parameters[16];
-    char path_prefix[260];
-} PortableModelRenderEntry;
-static PortableModelRenderEntry* s_portable_model_render_head;
+Direct3DMatrixOps s_direct3d_matrix_ops;
+ModelRenderRecordStateOps s_model_render_record_state_ops;
+ModelRenderChildPassOps s_model_render_child_pass_ops;
+ModelRenderPassDispatchOps s_model_render_pass_dispatch_ops;
+PortableModelRenderEntry* s_portable_model_render_head;
 static PortableModelRenderEntry* s_portable_model_render_tail;
-static PortableModelRenderEntry* s_portable_model_render_active;
+PortableModelRenderEntry* s_portable_model_render_active;
 ProjectionOverlayBlitHook s_projection_overlay_blit_hook;
 void* s_projection_overlay_blit_context;
 DirectDrawClipperRegionOps s_directdraw_clipper_region_ops;
-static Direct3DRenderStateSnapshotOps s_d3d_render_state_snapshot_ops;
-static uint32_t s_d3d_snapshot_light;
-static uint32_t s_d3d_snapshot_render;
-static uint32_t s_d3d_snapshot_texture_stage;
-static Direct3DDeviceStateOps s_direct3d_device_state_ops;
-static void* s_direct3d_cached_texture;
-static uint32_t s_direct3d_cached_material_handle;
-// GLOBAL: LEGORR 0x0054057c
-static uint32_t s_model_material_handle;
-static int s_direct3d_device_texture_dirty;
-static ModelMaterialUpdateHook s_model_material_update_hook;
-static void* s_model_material_update_context;
-static ModelChildMaterialOps s_model_child_material_ops;
-static Direct3DInterfaceOps s_direct3d_interface_ops;
+Direct3DRenderStateSnapshotOps s_d3d_render_state_snapshot_ops;
+Direct3DDeviceStateOps s_direct3d_device_state_ops;
+int s_direct3d_device_texture_dirty;
+ModelMaterialUpdateHook s_model_material_update_hook;
+void* s_model_material_update_context;
+ModelChildMaterialOps s_model_child_material_ops;
+Direct3DInterfaceOps s_direct3d_interface_ops;
 DirectDrawDeviceCreateOps s_directdraw_device_create_ops;
 DirectDrawRendererInitOps s_directdraw_renderer_init_ops;
 #if !defined(_WIN32)
@@ -1384,90 +973,6 @@ void d3d_material_state_flush(void)
     }
 }
 
-/* RendererCommandModeAndPairSend (FUN_00482cb0) changes the mode state and
- * the two packed render-state values as one logical command. */
-// FUNCTION: LEGORR 0x00482cb0
-void renderer_command_mode_and_pair_send(uint32_t first, uint32_t second)
-{
-    RenderStateSetHook set_state = s_render_state_apply_ops.set_state;
-    if (set_state == NULL) return;
-    direct3d_render_state_set_cached(0x1bu, 1u);
-    direct3d_render_state_set_cached(0x13u, first);
-    direct3d_render_state_set_cached(0x14u, second);
-}
-
-/* RenderStateFlagsApply (FUN_00482b50) translates the material flags into
- * the D3D state sequence. Device-specific state and matrix operations are
- * supplied by the renderer seam. */
-// FUNCTION: LEGORR 0x00482b50
-void render_state_flags_apply(uint32_t flags, const float* transform,
-                              int alternate_mode)
-{
-    RenderStateSetHook set_state = s_render_state_apply_ops.set_state;
-    void* context = s_render_state_apply_ops.context;
-    uint32_t mode_flags = flags & 0x1c00u;
-    uint32_t value;
-    float default_transform[16];
-    const float* selected_transform = transform;
-
-    if (set_state == NULL) return;
-    if (mode_flags != 0u && alternate_mode != 0) {
-        direct3d_render_state_set_cached(0x1cu, 0u);
-    }
-    if (mode_flags == 0u || alternate_mode != 0) {
-        if ((flags & 0x400u) != 0u) {
-            renderer_command_mode_and_pair_send(2u, 2u);
-        }
-        else if ((flags & 0x800u) != 0u) {
-            renderer_command_mode_and_pair_send(5u, 2u);
-        }
-        else if ((flags & 0x1000u) != 0u) {
-            renderer_command_mode_and_pair_send(5u, 6u);
-        }
-        else {
-            direct3d_render_state_set_cached(0x1bu, 0u);
-        }
-    }
-    else {
-        direct3d_render_state_set_cached(0x1bu, 0u);
-    }
-
-    value = ((flags & 0x4000000u) != 0u) ? 1u : 3u;
-    direct3d_render_state_set_cached(0x16u, value);
-    if (s_render_state_apply_ops.render_flag_test == NULL ||
-        !s_render_state_apply_ops.render_flag_test(context, 0x20u)) {
-        if ((flags & 0x20000u) != 0u) value = 2u;
-        else if ((flags & 0x40000u) != 0u) value = 3u;
-        else value = 4u;
-        direct3d_render_state_set_cached(4u, value);
-    }
-    direct3d_render_state_set_cached(7u, 1u);
-    value = (mode_flags != 0u && alternate_mode == 0) ? 0u : 1u;
-    direct3d_render_state_set_cached(0xeu, value);
-
-    if ((flags & 0x2000u) == 0u && (flags & 0x4000u) != 0u) {
-        if (s_render_state_apply_ops.texture_transform_default != NULL &&
-            s_render_state_apply_ops.texture_transform_default(
-                context, default_transform)) {
-            selected_transform = default_transform;
-        }
-    }
-    if ((flags & 0x2000u) != 0u || (flags & 0x4000u) != 0u) {
-        if (s_render_state_apply_ops.texture_transform_apply != NULL) {
-            s_render_state_apply_ops.texture_transform_apply(
-                context, 1, selected_transform);
-        }
-    }
-    if ((flags & 0x800000u) != 0u) {
-        direct3d_render_state_set_cached(0x11u, 1u);
-        direct3d_render_state_set_cached(0x12u, 1u);
-    }
-    else {
-        direct3d_render_state_set_cached(0x11u, 2u);
-        direct3d_render_state_set_cached(0x12u, 4u);
-    }
-}
-
 void renderer_window_mode_ops_set(const RendererWindowModeOps* ops)
 {
     if (ops != NULL) s_renderer_window_mode_ops = *ops;
@@ -1520,80 +1025,11 @@ void direct3d_matrix_ops_set(const Direct3DMatrixOps* ops)
                 sizeof(s_direct3d_matrix_ops));
 }
 
-/* MatrixMethodPairApply (FUN_00483690): compare the requested 4x4 transform
- * against the device's current transform and issue the update only on change. */
-// FUNCTION: LEGORR 0x00483690
-int matrix_method_pair_apply(uint32_t method, const float matrix[16])
-{
-    float current[16];
-    int current_available = 0;
-    int index;
-    int changed = 0;
-    if (matrix == NULL) return 0;
-    memset(current, 0, sizeof(current));
-    if (s_direct3d_matrix_ops.get_transform != NULL) {
-        current_available = (s_direct3d_matrix_ops.get_transform(
-            s_direct3d_matrix_ops.context, method, current) == 0);
-    }
-    if (!current_available) changed = 1;
-    else {
-        for (index = 0; index < 16; ++index) {
-            if (current[index] != matrix[index]) {
-                changed = 1;
-                break;
-            }
-        }
-    }
-    if (changed) {
-        if (s_direct3d_matrix_ops.set_transform == NULL ||
-            s_direct3d_matrix_ops.set_transform(
-                s_direct3d_matrix_ops.context, method, matrix) != 0) return 0;
-    }
-    return 1;
-}
-
 void model_render_record_state_ops_set(const ModelRenderRecordStateOps* ops)
 {
     if (ops != NULL) s_model_render_record_state_ops = *ops;
     else memset(&s_model_render_record_state_ops, 0,
                 sizeof(s_model_render_record_state_ops));
-}
-
-/* ModelRenderRecordStateSetup (FUN_00482ac0): invoke the record callback,
- * establish the baseline render states and texture-stage defaults, then
- * apply the record's material flags. */
-// FUNCTION: LEGORR 0x00482ac0
-void model_render_record_state_setup(void* record, void* parameter,
-                                     const float* transform,
-                                     int alternate_mode)
-{
-    uint32_t flags = 0u;
-    if (record == NULL) return;
-    if (s_model_render_record_state_ops.record_apply != NULL) {
-        s_model_render_record_state_ops.record_apply(
-            s_model_render_record_state_ops.context, record, parameter);
-    }
-    memcpy(&flags, (const char*)record + 0x18, sizeof(flags));
-    if (s_render_state_apply_ops.set_state != NULL) {
-        direct3d_render_state_set_cached(0x1du, 0u);
-        direct3d_render_state_set_cached(9u, 2u);
-        direct3d_render_state_set_cached(0x1au, 1u);
-    }
-    if (s_render_state_apply_ops.render_flag_test == NULL ||
-        !s_render_state_apply_ops.render_flag_test(
-            s_render_state_apply_ops.context, 0x20u)) {
-        if (s_model_render_record_state_ops.texture_stage_state_set != NULL) {
-            s_model_render_record_state_ops.texture_stage_state_set(
-                s_model_render_record_state_ops.context, 2u, 2u);
-            s_model_render_record_state_ops.texture_stage_state_set(
-                s_model_render_record_state_ops.context, 3u, 0u);
-            s_model_render_record_state_ops.texture_stage_state_set(
-                s_model_render_record_state_ops.context, 5u, 2u);
-            s_model_render_record_state_ops.texture_stage_state_set(
-                s_model_render_record_state_ops.context, 6u, 0u);
-        }
-    }
-    render_state_flags_apply(flags, transform, alternate_mode);
 }
 
 void model_render_child_pass_ops_set(const ModelRenderChildPassOps* ops)
@@ -1603,137 +1039,12 @@ void model_render_child_pass_ops_set(const ModelRenderChildPassOps* ops)
                 sizeof(s_model_render_child_pass_ops));
 }
 
-/* ModelRenderChildPassDispatch (FUN_004839c0): render eligible children in
- * two ordered passes, first those without a material record, then those with
- * one. A failed child marks the aggregate false while the walk continues. */
-// FUNCTION: LEGORR 0x004839c0
-int model_render_child_pass_dispatch(void* model, const void* parameter,
-                                     int material_pass)
-{
-    uint32_t index;
-    int pass;
-    int all_succeeded = 1;
-    if (model == NULL || s_model_render_child_pass_ops.child_count == NULL ||
-        s_model_render_child_pass_ops.child_get == NULL) return all_succeeded;
-    for (pass = 0; pass < 2; ++pass) {
-        for (index = 0u; ; ++index) {
-            void* child;
-            uint32_t flags;
-            int has_material;
-            if (index >= s_model_render_child_pass_ops.child_count(
-                    s_model_render_child_pass_ops.context, model)) break;
-            child = s_model_render_child_pass_ops.child_get(
-                s_model_render_child_pass_ops.context, model, index);
-            if (child == NULL ||
-                s_model_render_child_pass_ops.child_flags_get == NULL ||
-                s_model_render_child_pass_ops.child_has_material == NULL ||
-                s_model_render_child_pass_ops.child_render == NULL) continue;
-            flags = s_model_render_child_pass_ops.child_flags_get(
-                s_model_render_child_pass_ops.context, child);
-            if ((flags & 0x10000001u) != 0u) continue;
-            has_material = s_model_render_child_pass_ops.child_has_material(
-                s_model_render_child_pass_ops.context, child);
-            if ((pass == 0 && has_material != 0) ||
-                (pass != 0 && has_material == 0)) continue;
-            if (s_model_render_child_pass_ops.child_render(
-                    s_model_render_child_pass_ops.context, model, child,
-                    parameter, material_pass) == 0) {
-                all_succeeded = 0;
-            }
-        }
-    }
-    return all_succeeded;
-}
-
 void direct3d_render_state_snapshot_ops_set(
     const Direct3DRenderStateSnapshotOps* ops)
 {
     if (ops != NULL) s_d3d_render_state_snapshot_ops = *ops;
     else memset(&s_d3d_render_state_snapshot_ops, 0,
                 sizeof(s_d3d_render_state_snapshot_ops));
-}
-
-/* D3DRenderStateSync (FUN_004838b0): snapshot light/render state 1 and,
- * outside the alternate renderer mode, texture-stage state 0. Seed the draw
- * caches from these live values before deciding which setters may be skipped.
- * Temporarily clear render state 1 when it was set. */
-// FUNCTION: LEGORR 0x004838b0
-void d3d_render_state_sync(void)
-{
-    uint32_t value = 0u;
-    if (s_d3d_render_state_snapshot_ops.light_get != NULL &&
-        s_d3d_render_state_snapshot_ops.light_get(
-            s_d3d_render_state_snapshot_ops.context, 1u, &value) == 0) {
-        s_d3d_snapshot_light = value;
-        s_direct3d_cached_material_handle = value;
-    }
-    if ((s_renderer_window_mode_flags & 0x20u) == 0u) {
-        value = 0u;
-        if (s_d3d_render_state_snapshot_ops.texture_stage_get != NULL &&
-            s_d3d_render_state_snapshot_ops.texture_stage_get(
-                s_d3d_render_state_snapshot_ops.context, 0u, &value) == 0) {
-            s_d3d_snapshot_texture_stage = value;
-            s_direct3d_cached_texture = (void*)(uintptr_t)value;
-        }
-        value = 0u;
-        if (s_d3d_render_state_snapshot_ops.render_state_get != NULL &&
-            s_d3d_render_state_snapshot_ops.render_state_get(
-                s_d3d_render_state_snapshot_ops.context, 1u, &value) == 0) {
-            s_d3d_snapshot_render = value;
-            if (value != 0u &&
-                s_d3d_render_state_snapshot_ops.render_state_set != NULL) {
-                s_d3d_render_state_snapshot_ops.render_state_set(
-                    s_d3d_render_state_snapshot_ops.context, 1u, 0u);
-            }
-        }
-    }
-    else if (s_d3d_render_state_snapshot_ops.render_state_get != NULL) {
-        value = 0u;
-        if (s_d3d_render_state_snapshot_ops.render_state_get(
-                s_d3d_render_state_snapshot_ops.context, 1u, &value) == 0) {
-            s_d3d_snapshot_render = value;
-        }
-    }
-}
-
-/* Direct3DRenderStateRestore (FUN_00483940): restore the captured device
- * states only where the current values differ, respecting alternate mode. */
-// FUNCTION: LEGORR 0x00483940
-void direct3d_render_state_restore(void)
-{
-    uint32_t current = 0u;
-    if (s_d3d_render_state_snapshot_ops.light_get != NULL &&
-        s_d3d_render_state_snapshot_ops.light_get(
-            s_d3d_render_state_snapshot_ops.context, 1u, &current) == 0 &&
-        current != s_d3d_snapshot_light &&
-        s_d3d_render_state_snapshot_ops.light_set != NULL) {
-        s_d3d_render_state_snapshot_ops.light_set(
-            s_d3d_render_state_snapshot_ops.context, 1u,
-            s_d3d_snapshot_light);
-    }
-    if ((s_renderer_window_mode_flags & 0x20u) == 0u) {
-        current = 0u;
-        if (s_d3d_render_state_snapshot_ops.texture_stage_get != NULL &&
-            s_d3d_render_state_snapshot_ops.texture_stage_get(
-                s_d3d_render_state_snapshot_ops.context, 0u, &current) == 0 &&
-            current != s_d3d_snapshot_texture_stage &&
-            s_d3d_render_state_snapshot_ops.texture_stage_set != NULL) {
-            s_d3d_render_state_snapshot_ops.texture_stage_set(
-                s_d3d_render_state_snapshot_ops.context, 0u,
-                s_d3d_snapshot_texture_stage);
-        }
-        if (s_d3d_snapshot_render != 0u &&
-            s_d3d_render_state_snapshot_ops.render_state_set != NULL) {
-            s_d3d_render_state_snapshot_ops.render_state_set(
-                s_d3d_render_state_snapshot_ops.context, 1u,
-                s_d3d_snapshot_render);
-        }
-    }
-    else if (s_d3d_render_state_snapshot_ops.render_state_set != NULL) {
-        s_d3d_render_state_snapshot_ops.render_state_set(
-            s_d3d_render_state_snapshot_ops.context, 1u,
-            s_d3d_snapshot_render);
-    }
 }
 
 void direct3d_device_state_ops_set(const Direct3DDeviceStateOps* ops)
@@ -1746,60 +1057,6 @@ void direct3d_device_state_ops_set(const Direct3DDeviceStateOps* ops)
 void direct3d_device_texture_dirty_set(int dirty)
 {
     s_direct3d_device_texture_dirty = (dirty != 0) ? 1 : 0;
-}
-
-/* Direct3DDeviceStateApply (FUN_00483b70): bind the selected texture path,
- * update D3DLIGHTSTATE_MATERIAL(1) when its handle changes, then submit. */
-// FUNCTION: LEGORR 0x00483b70
-int direct3d_device_state_apply(uint32_t material_handle, void* texture,
-                                uint32_t a, uint32_t b, uint32_t c,
-                                uint32_t d, uint32_t e)
-{
-    int result = 1;
-    if ((s_renderer_window_mode_flags & 0x20u) == 0u) {
-        if (texture != s_direct3d_cached_texture) {
-            if (s_direct3d_device_state_ops.texture_stage_set == NULL ||
-                s_direct3d_device_state_ops.texture_stage_set(
-                    s_direct3d_device_state_ops.context, 0u, texture) != 0) {
-                result = 0;
-            }
-            else {
-                s_direct3d_cached_texture = texture;
-            }
-        }
-    }
-    else {
-        if (texture != NULL &&
-            (s_direct3d_device_state_ops.texture_interface_bind == NULL ||
-             s_direct3d_device_state_ops.texture_interface_bind(
-                 s_direct3d_device_state_ops.context, texture) != 0)) {
-            result = 0;
-        }
-        if (s_direct3d_device_texture_dirty != 0) {
-            if (s_direct3d_device_state_ops.render_state_set != NULL) {
-                s_direct3d_device_state_ops.render_state_set(
-                    s_direct3d_device_state_ops.context, 1u, 0u);
-            }
-            else result = 0;
-            s_direct3d_device_texture_dirty = 0;
-        }
-    }
-    if (material_handle != s_direct3d_cached_material_handle) {
-        if (s_direct3d_device_state_ops.light_state_set == NULL ||
-            s_direct3d_device_state_ops.light_state_set(
-                s_direct3d_device_state_ops.context, 1u, material_handle) != 0) {
-            result = 0;
-        }
-        else {
-            s_direct3d_cached_material_handle = material_handle;
-        }
-    }
-    if (s_direct3d_device_state_ops.primitive_submit == NULL ||
-        s_direct3d_device_state_ops.primitive_submit(
-            s_direct3d_device_state_ops.context, 4u, a, b, c, d, e) != 0) {
-        result = 0;
-    }
-    return result;
 }
 
 void model_material_update_hook_set(ModelMaterialUpdateHook hook,
@@ -1824,78 +1081,6 @@ void model_child_material_ops_set(const ModelChildMaterialOps* ops)
     if (ops != NULL) s_model_child_material_ops = *ops;
     else memset(&s_model_child_material_ops, 0,
                 sizeof(s_model_child_material_ops));
-}
-
-/* WorldObjectRenderStateApply (FUN_00483b00): select the texture-stage
- * operation from the child flags, set the material's boolean state, then
- * apply the child material flags when present. */
-// FUNCTION: LEGORR 0x00483b00
-int world_object_render_state_apply(void* child, const float* transform,
-                                    int alternate_mode)
-{
-    uint32_t flags = 0u;
-    uint32_t material_flags = 0u;
-    if (child == NULL) return 0;
-    if (s_model_child_material_ops.flags_get != NULL) {
-        flags = s_model_child_material_ops.flags_get(
-            s_model_child_material_ops.context, child);
-    }
-    if ((s_renderer_window_mode_flags & 0x20u) == 0u &&
-        s_model_render_record_state_ops.texture_stage_state_set != NULL) {
-        int stage_value = ((flags & 0x100000u) != 0u &&
-            s_model_child_material_ops.texture_get != NULL &&
-            s_model_child_material_ops.texture_get(
-                s_model_child_material_ops.context, child) != NULL) ? 2 : 4;
-        s_model_render_record_state_ops.texture_stage_state_set(
-            s_model_render_record_state_ops.context, 1u,
-            (uint32_t)stage_value);
-    }
-    direct3d_render_state_set_cached(
-        0x29u, ((flags & 0x400000u) != 0u) ? 1u : 0u);
-    if (s_model_child_material_ops.material_flags_get != NULL) {
-        material_flags = s_model_child_material_ops.material_flags_get(
-            s_model_child_material_ops.context, child);
-    }
-    if (material_flags == 0u) return 0;
-    render_state_flags_apply(material_flags, transform, alternate_mode);
-    return 1;
-}
-
-/* ModelRenderChildMaterialPass (FUN_00483a90): apply world/material state,
- * update the material record, then submit the child's primitive. */
-// FUNCTION: LEGORR 0x00483a90
-int model_render_child_material_pass(void* model, void* child,
-                                     const float* transform,
-                                     int alternate_mode)
-{
-    uint32_t arguments[4] = { 0u, 0u, 0u, 0u };
-    void* texture = NULL;
-    const void* material = NULL;
-    int material_ok = 0;
-    int render_ok;
-    (void)model;
-    if (child == NULL) return 0;
-    world_object_render_state_apply(child, transform, alternate_mode);
-    if (s_model_child_material_ops.texture_get != NULL) {
-        texture = s_model_child_material_ops.texture_get(
-            s_model_child_material_ops.context, child);
-    }
-    if (s_model_child_material_ops.material_record_get != NULL) {
-        material = s_model_child_material_ops.material_record_get(
-            s_model_child_material_ops.context, child);
-    }
-    if (s_model_material_update_hook != NULL && material != NULL) {
-        material_ok = s_model_material_update_hook(
-            s_model_material_update_context, material) != 0;
-    }
-    if (s_model_child_material_ops.render_arguments_get != NULL) {
-        s_model_child_material_ops.render_arguments_get(
-            s_model_child_material_ops.context, child, arguments);
-    }
-    render_ok = direct3d_device_state_apply(
-        s_model_material_handle, texture, 0x112u, arguments[3],
-        arguments[1], arguments[2], arguments[0]);
-    return (render_ok != 0 && material_ok != 0) ? 1 : 0;
 }
 
 void model_render_pass_dispatch_ops_set(
@@ -1970,251 +1155,11 @@ void model_render_dispatch_queue_clear(void)
     s_portable_model_render_active = NULL;
 }
 
-static void* portable_model_render_first(void*)
-{
-    return s_portable_model_render_head;
-}
-
-static void* portable_model_render_next(void*, void* opaque_entry)
-{
-    PortableModelRenderEntry* entry =
-        (PortableModelRenderEntry*)opaque_entry;
-    return entry != NULL ? entry->next : NULL;
-}
-
-static void* portable_model_render_model(void*, void* opaque_entry)
-{
-    s_portable_model_render_active =
-        (PortableModelRenderEntry*)opaque_entry;
-    return s_portable_model_render_active != NULL ?
-        s_portable_model_render_active->model : NULL;
-}
-
-static const void* portable_model_render_parameters(void*, void* opaque_entry)
-{
-    PortableModelRenderEntry* entry =
-        (PortableModelRenderEntry*)opaque_entry;
-    return entry != NULL ? entry->parameters : NULL;
-}
-
-static uint32_t portable_model_render_entry_flags(void*, void* opaque_entry)
-{
-    PortableModelRenderEntry* entry =
-        (PortableModelRenderEntry*)opaque_entry;
-    return entry != NULL ? entry->entry_flags : 0u;
-}
-
-static uint32_t portable_model_render_model_flags(void*, void* opaque_model)
-{
-    (void)opaque_model;
-    /* The retail dispatch reads both tests from model + 0x2c.  The portable
-     * queue keeps that modeled word beside its borrowed Model pointer. */
-    return s_portable_model_render_active != NULL ?
-        s_portable_model_render_active->entry_flags : 0u;
-}
-
-static void portable_model_render_base_pass(void*, void* model, void* device,
-                                            const void*)
-{
-    if (s_portable_model_render_active == NULL || model == NULL ||
-        s_material_pass_ops.surface_submit == NULL) return;
-    (void)material_pass_execute(
-        s_portable_model_render_active->path_prefix, device,
-        (const Model*)model, 0u);
-}
-
-static void portable_model_render_queue_flush(void*)
-{
-    model_render_dispatch_queue_clear();
-}
-
-static ModelRenderPassDispatchOps s_portable_model_render_dispatch_ops = {
-    NULL,
-    portable_model_render_first,
-    portable_model_render_next,
-    portable_model_render_model,
-    portable_model_render_parameters,
-    portable_model_render_entry_flags,
-    portable_model_render_model_flags,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    portable_model_render_base_pass,
-    NULL,
-    NULL,
-    portable_model_render_queue_flush,
-    NULL
-};
-
-/* ModelRenderPassDispatch (FUN_00482d60): preserve the retail list order,
- * two child-material passes, alternate-model branch, and renderer cleanup.
- * The record access and draw calls remain supplied by the renderer owner. */
-// FUNCTION: LEGORR 0x00482d60
-void model_render_pass_dispatch(void* device)
-{
-    ModelRenderPassDispatchOps* ops = &s_model_render_pass_dispatch_ops;
-    void* entry;
-    if (ops->first == NULL)
-        ops = &s_portable_model_render_dispatch_ops;
-    entry = ops->first(ops->context);
-    if (entry == NULL) return;
-    if (ops->frame_setup != NULL)
-        ops->frame_setup(ops->context, device);
-    else
-        direct3d_viewport_setup(device);
-    if (ops->render_mode_begin != NULL) {
-        ops->render_mode_begin(ops->context);
-    }
-    else {
-        d3d_render_state_sync();
-    }
-    while (entry != NULL) {
-        void* model = ops->model != NULL ?
-            ops->model(ops->context, entry) : NULL;
-        const void* parameters = ops->parameters != NULL ?
-            ops->parameters(ops->context, entry) : NULL;
-        uint32_t model_flags = model != NULL && ops->model_flags != NULL ?
-            ops->model_flags(ops->context, model) :
-            (model != NULL && ops->entry_flags != NULL ?
-             ops->entry_flags(ops->context, entry) : 0u);
-        if (model != NULL && (model_flags & 1u) == 0u) {
-            if (ops->model_base_pass != NULL)
-                ops->model_base_pass(ops->context, model, device, parameters);
-            else if (parameters != NULL)
-                model_render_record_state_setup(
-                    model, device, (const float*)parameters, 1);
-
-            /* FUN_00482ac0 may update the record; the reference reloads its
-             * model pointer and flags after that operation. */
-            model = ops->model != NULL ?
-                ops->model(ops->context, entry) : model;
-            if (model != NULL &&
-                (((ops->model_flags != NULL ?
-                   ops->model_flags(ops->context, model) : 0u) & 2u) != 0u)) {
-                if (ops->model_alternate_pass != NULL)
-                    ops->model_alternate_pass(ops->context, model,
-                                              parameters, 1);
-                else if (parameters != NULL) {
-                    (void)model_render_child_pass_dispatch(
-                        model, parameters, 1);
-                }
-            }
-            else if (model != NULL && ops->record_count != NULL &&
-                     ops->record != NULL) {
-                int pass;
-                for (pass = 0; pass < 2; ++pass) {
-                    uint32_t index = 0u;
-                    for (;;) {
-                        uint32_t count;
-                        void* current_model = ops->model != NULL ?
-                            ops->model(ops->context, entry) : model;
-                        void* record;
-                        uint32_t record_flags;
-                        int has_secondary;
-                        if (current_model == NULL) break;
-                        count = ops->record_count(ops->context,
-                                                  current_model);
-                        if (index >= count) break;
-                        record = ops->record(ops->context, current_model,
-                                             index);
-                        if (record != NULL &&
-                            ops->record_ready != NULL &&
-                            ops->record_ready(ops->context, record) != 0 &&
-                            ops->record_flags != NULL &&
-                            ops->record_has_secondary_material != NULL) {
-                            record_flags = ops->record_flags(
-                                ops->context, record);
-                            has_secondary =
-                                ops->record_has_secondary_material(
-                                    ops->context, record);
-                            if ((record_flags & 0x80000u) != 0u &&
-                                ((pass == 0 && has_secondary == 0) ||
-                                 (pass != 0 && has_secondary != 0))) {
-                                if (ops->model_child_pass != NULL)
-                                    ops->model_child_pass(
-                                        ops->context, current_model, record,
-                                        parameters, 1);
-                                else if (parameters != NULL) {
-                                    (void)model_render_child_material_pass(
-                                        current_model, record,
-                                        (const float*)parameters, 1);
-                                }
-                            }
-                        }
-                        ++index;
-                    }
-                }
-            }
-        }
-        if (ops->next == NULL) break;
-        entry = ops->next(ops->context, entry);
-    }
-    if (ops->render_queue_flush != NULL)
-        ops->render_queue_flush(ops->context);
-    else
-        model_render_list_clear();
-    if (ops->render_state_flush != NULL)
-        ops->render_state_flush(ops->context);
-    else
-        d3d_material_state_flush();
-    direct3d_render_state_restore();
-}
-
 void direct3d_interface_ops_set(const Direct3DInterfaceOps* ops)
 {
     if (ops != NULL) s_direct3d_interface_ops = *ops;
     else memset(&s_direct3d_interface_ops, 0,
                 sizeof(s_direct3d_interface_ops));
-}
-
-static int direct3d_interface_create_from_device(void* device)
-{
-    void* interface_pointer = NULL;
-    int success = 0;
-    if (device == NULL || s_direct3d_interface_ops.capability_check == NULL ||
-        s_direct3d_interface_ops.interface_query == NULL ||
-        s_direct3d_interface_ops.renderer_interface_attach == NULL) return 0;
-    if (s_direct3d_interface_ops.capability_check(
-            s_direct3d_interface_ops.context, device) == 0 &&
-        s_direct3d_interface_ops.interface_query(
-            s_direct3d_interface_ops.context, device,
-            &interface_pointer) == 0 &&
-        interface_pointer != NULL &&
-        s_direct3d_interface_ops.renderer_interface_attach(
-            s_direct3d_interface_ops.context, interface_pointer) == 0) {
-        success = 1;
-    }
-    if (interface_pointer != NULL &&
-        s_direct3d_interface_ops.interface_release != NULL) {
-        s_direct3d_interface_ops.interface_release(
-            s_direct3d_interface_ops.context, interface_pointer);
-    }
-    return success;
-}
-
-/* RenderInterfaceCapabilityCheck (FUN_00483580): query device capabilities,
- * obtain the required interface and attach it to the renderer. */
-// FUNCTION: LEGORR 0x00483580
-int render_interface_capability_check(void* device)
-{
-    return direct3d_interface_create_from_device(device);
-}
-
-/* Direct3DViewportSetup (FUN_00483600): get the viewport's device and run
- * the common renderer-interface setup path. */
-// FUNCTION: LEGORR 0x00483600
-int direct3d_viewport_setup(void* viewport)
-{
-    void* device;
-    if (viewport == NULL ||
-        s_direct3d_interface_ops.viewport_device_get == NULL) return 0;
-    device = s_direct3d_interface_ops.viewport_device_get(
-        s_direct3d_interface_ops.context, viewport);
-    return direct3d_interface_create_from_device(device);
 }
 
 void directdraw_device_create_ops_set(const DirectDrawDeviceCreateOps* ops)
@@ -2661,144 +1606,6 @@ void renderer_begin_frame_once_retail(void)
     s_engine_feature_word |= 1u;
 }
 
-/* RenderObjectStateApplyToEntries (FUN_00473ec0): state kind 4 snapshots
- * the child set and applies each child callback; kind 1 applies the surface
- * property to each layer in order. */
-// FUNCTION: LEGORR 0x00473ec0
-void render_object_state_apply_to_entries(void* object, uint32_t value,
-                                          const RenderObjectStateOps* ops)
-{
-    unsigned int i;
-    int kind;
-    if (object == NULL || ops == NULL || ops->object_kind == NULL) return;
-    kind = ops->object_kind(ops->context, object);
-    if (kind == 4 && ops->children_snapshot != NULL &&
-        ops->child_state_apply != NULL) {
-        void** children = NULL;
-        unsigned int count = 0;
-        if (ops->children_snapshot(ops->context, object, &children,
-                                   &count) == 0 || children == NULL) {
-            return;
-        }
-        for (i = 0; i < count; ++i) {
-            if (children[i] != NULL)
-                ops->child_state_apply(ops->context, children[i], value);
-        }
-        if (ops->children_snapshot_release != NULL)
-            ops->children_snapshot_release(ops->context, children);
-    }
-    else if (kind == 1 && ops->layer_count != NULL &&
-             ops->layer_property_set != NULL) {
-        unsigned int count = ops->layer_count(ops->context, object);
-        for (i = 0; i < count; ++i) {
-            ops->layer_property_set(ops->context, object, i, value);
-        }
-    }
-}
-
-/* TerrainSurfacePropertySet (FUN_00474e30): mesh-backed objects already
- * receive material state through their mesh; regular layers get property
- * bit 4 set or cleared on the resolved animated layer frame. */
-// FUNCTION: LEGORR 0x00474e30
-void terrain_surface_property_set(void* object, unsigned int layer_index,
-                                  int enabled,
-                                  const TerrainSurfacePropertyOps* ops)
-{
-    unsigned int frame = 0u;
-    void* layer;
-    if (object == NULL || ops == NULL || ops->layer_resolve == NULL ||
-        ops->property_set == NULL) return;
-    if (ops->has_mesh != NULL && ops->has_mesh(ops->context, object) != 0) {
-        return;
-    }
-    layer = ops->layer_resolve(ops->context, object, layer_index, &frame);
-    if (layer != NULL) {
-        ops->property_set(ops->context, layer, frame,
-                          enabled != 0 ? 4u : 0u);
-    }
-}
-
-/* LwoLayerEnabledSet (FUN_00474b30): route mesh-backed entries to their
- * mesh setter; otherwise attach/detach the selected layer and maintain its
- * disabled high bit. Index zero uses the collection's base enabled field. */
-// FUNCTION: LEGORR 0x00474b30
-void lwo_layer_enabled_set(void* object, unsigned int index, int enabled,
-                           const LwoLayerEnabledOps* ops)
-{
-    void* mesh;
-    void* layer;
-    int current_enabled;
-    uint32_t flags;
-    if (object == NULL || ops == NULL) return;
-    mesh = ops->mesh_get != NULL
-        ? ops->mesh_get(ops->context, object) : NULL;
-    if (mesh != NULL) {
-        if (ops->mesh_set != NULL)
-            ops->mesh_set(ops->context, mesh, index, enabled);
-        return;
-    }
-    if (ops->layer_get == NULL) return;
-    layer = ops->layer_get(ops->context, object, index);
-    if (layer == NULL) return;
-    if (index == 0u) {
-        current_enabled = ops->base_enabled_get != NULL
-            ? ops->base_enabled_get(ops->context, layer) : 0;
-        if (enabled != 0 && current_enabled == 0 &&
-            ops->layer_attach != NULL) {
-            ops->layer_attach(ops->context, object, layer);
-        }
-        else if (enabled == 0 && current_enabled != 0 &&
-                 ops->layer_detach != NULL) {
-            ops->layer_detach(ops->context, object, layer);
-        }
-        if (ops->base_enabled_set != NULL)
-            ops->base_enabled_set(ops->context, layer, enabled);
-        return;
-    }
-    if (ops->layer_flags_get == NULL || ops->layer_flags_set == NULL) return;
-    flags = ops->layer_flags_get(ops->context, layer);
-    current_enabled = (flags & 0x80000000u) == 0u;
-    if (enabled != 0 && current_enabled == 0 && ops->layer_attach != NULL) {
-        ops->layer_attach(ops->context, object, layer);
-    }
-    else if (enabled == 0 && current_enabled != 0 &&
-             ops->layer_detach != NULL) {
-        ops->layer_detach(ops->context, object, layer);
-    }
-    flags = (flags & 0x7fffffffu) |
-            (enabled != 0 ? 0u : 0x80000000u);
-    ops->layer_flags_set(ops->context, layer, flags);
-}
-
-// FUNCTION: LEGORR 0x00474c40
-uint32_t lwo_layer_polygon_vertex_count(
-    void* object, int block, uint32_t* field_out, uint32_t reserved,
-    uint32_t* kind_out, uint32_t* count_out, uint32_t* indices_out)
-{
-    void* owner = *(void**)((char*)object + 0x0c);
-    void* mesh = *(void**)((char*)owner + 0x0c);
-    if (mesh != NULL) {
-        indexed_record_entry_read(mesh, block, field_out, reserved, kind_out,
-                                  count_out, indices_out);
-        return 0u;
-    }
-    else {
-        void* interface_object = *(void**)((char*)owner + 8);
-        int resolved_block = block;
-        void** vtable;
-        typedef int32_t (SURFACE_COM_CALL *PolygonVertexCountFn)(
-            void*, int, uint32_t*, uint32_t, uint32_t*, uint32_t*,
-            uint32_t*);
-        (void)lego::animated_texture_frame_resolve(&interface_object,
-                                                  &resolved_block);
-        vtable = *(void***)interface_object;
-        return (uint32_t)(((PolygonVertexCountFn)
-            vtable[0x5c / sizeof(void*)])(
-                interface_object, resolved_block, field_out, reserved,
-                kind_out, count_out, indices_out) == 0);
-    }
-}
-
 uint32_t lwo_layer_polygon_vertex_count_dispatch(
     void* object, unsigned int layer_index, const void* request,
     const LwoLayerDispatchOps* ops)
@@ -2818,35 +1625,6 @@ uint32_t lwo_layer_polygon_vertex_count_dispatch(
     if (layer == NULL) return 0u;
     return ops->layer_polygon_vertex_count(ops->context, layer, frame,
                                            request) == 0 ? 1u : 0u;
-}
-
-// FUNCTION: LEGORR 0x00474cc0
-uint32_t lwo_layer_polygon_vertex_data_read(
-    void* object, int block, int first_vertex, int count, void* output)
-{
-    void* owner = *(void**)((char*)object + 0x0c);
-    void* mesh = *(void**)((char*)owner + 0x0c);
-    if (mesh != NULL) {
-        indexed_geometry_data_copy_to_output(mesh, block, first_vertex,
-                                             count, output);
-        return 0u;
-    }
-    else {
-        void* interface_object = *(void**)((char*)owner + 8);
-        int resolved_block = block;
-        void** vtable;
-        typedef int32_t (SURFACE_COM_CALL *PolygonVertexDataReadFn)(
-            void*, int, int, int, void*);
-        (void)lego::animated_texture_frame_resolve(&interface_object,
-                                                  &resolved_block);
-        vtable = *(void***)interface_object;
-        if (((PolygonVertexDataReadFn)vtable[0x60 / sizeof(void*)])(
-                interface_object, resolved_block, first_vertex, count,
-                output) != 0) {
-            return 0xffffffffu;
-        }
-        return 0u;
-    }
 }
 
 uint32_t lwo_layer_polygon_vertex_data_read_dispatch(
@@ -2869,64 +1647,6 @@ uint32_t lwo_layer_polygon_vertex_data_read_dispatch(
     if (layer == NULL) return 0u;
     return ops->layer_polygon_vertex_data_read(ops->context, layer, frame,
             request) == 0 ? 0u : 0xffffffffu;
-}
-
-// FUNCTION: LEGORR 0x00474d30
-uint32_t terrain_cell_quad_vertex_emit(
-    void* object, unsigned int layer_index, const void* request,
-    const LwoLayerDispatchOps* ops)
-{
-    void* mesh;
-    void* layer;
-    unsigned int frame = 0u;
-    if (object == NULL || ops == NULL || ops->mesh_get == NULL) return 0u;
-    mesh = ops->mesh_get(ops->context, object);
-    if (mesh != NULL) {
-        return ops->mesh_terrain_quad_emit != NULL
-            ? ops->mesh_terrain_quad_emit(ops->context, mesh, request) : 0u;
-    }
-    if (ops->layer_resolve == NULL ||
-        ops->layer_terrain_quad_emit == NULL) return 0u;
-    layer = ops->layer_resolve(ops->context, object, layer_index, &frame);
-    if (layer == NULL) return 0u;
-    return ops->layer_terrain_quad_emit(ops->context, layer, frame, request)
-        == 0 ? 0xffffffffu : 0u;
-}
-
-/* TerrainDetailEntryGetAtIndex (FUN_00474ae0): mesh paths delegate directly;
- * layer paths query child flags, with index zero reading the collection's
- * base enabled value. If no child array is available, the original returns
- * the requested index. */
-// FUNCTION: LEGORR 0x00474ae0
-uint32_t terrain_detail_entry_get_at_index(void* object,
-                                           unsigned int index)
-{
-    void* owner = *(void**)((char*)object + 0x0c);
-    void* mesh = *(void**)((char*)owner + 0x0c);
-    if (mesh != NULL) {
-        return indexed_record_flag6c_bit0_get(mesh, (int)index);
-    }
-    else {
-        void* layer = *(void**)((char*)owner + 8);
-        void** layer_vtable = *(void***)layer;
-        typedef void* (SURFACE_COM_CALL *LayerCollectionGetFn)(void*);
-        void* children = ((LayerCollectionGetFn)
-            layer_vtable[0x1c / sizeof(void*)])(layer);
-        if (children != NULL) {
-            if (index != 0u) {
-                void* data = *(void**)children;
-                void* child = *(void**)((char*)data - sizeof(uint32_t) +
-                    (size_t)index * sizeof(void*));
-                void** child_vtable = *(void***)child;
-                typedef uint32_t (SURFACE_COM_CALL *LayerFlagsGetFn)(void*);
-                uint32_t flags = ((LayerFlagsGetFn)
-                    child_vtable[0x1c / sizeof(void*)])(child);
-                return ~flags >> 31;
-            }
-            return *(uint32_t*)((char*)children + 0x0c);
-        }
-        return index;
-    }
 }
 
 uint32_t terrain_detail_entry_get_at_index_dispatch(
@@ -3049,31 +1769,6 @@ void font_pixel_format_hooks_set(FontPixelFormatQueryFn query,
     s_font_pixel_format_release = release;
 }
 
-// FUNCTION: LEGORR 0x00474410
-int parse_indexed_surface_name(const char* path, uint32_t* index_out)
-{
-    const char* component;
-    const char* digits;
-    uint32_t value;
-    unsigned int i;
-    if (path == NULL || index_out == NULL) return 0;
-    component = path;
-    while (*path != '\0') {
-        if (*path == '\\' || *path == '/') component = path + 1;
-        ++path;
-    }
-    if (component[0] != 'a' && component[0] != 'A') return 0;
-    digits = component + 1;
-    value = 0;
-    for (i = 0; i < 3; ++i) {
-        if (digits[i] < '0' || digits[i] > '9') return 0;
-        value = value * 10u + (uint32_t)(digits[i] - '0');
-    }
-    if (digits[3] != '_') return 0;
-    *index_out = value;
-    return 1;
-}
-
 void projection_overlay_blit_hook_set(ProjectionOverlayBlitHook hook,
                                       void* context)
 {
@@ -3086,60 +1781,6 @@ void directdraw_clipper_region_ops_set(const DirectDrawClipperRegionOps* ops)
     if (ops != NULL) s_directdraw_clipper_region_ops = *ops;
     else memset(&s_directdraw_clipper_region_ops, 0,
                 sizeof(s_directdraw_clipper_region_ops));
-}
-
-struct SurfacePixelInfo {
-    int width;
-    int height;
-    int reserved2;
-    int reserved3;
-    int bits_per_pixel;
-    int reserved5;
-    int row_stride;
-    void* pixels;
-};
-
-class SurfacePixelInfoOwner {
-public:
-    virtual void slot00() = 0; virtual void slot04() = 0;
-    virtual void slot08() = 0; virtual void slot0c() = 0;
-    virtual void slot10() = 0; virtual void slot14() = 0;
-    virtual void slot18() = 0; virtual void slot1c() = 0;
-    virtual void slot20() = 0; virtual void slot24() = 0;
-    virtual void slot28() = 0; virtual void slot2c() = 0;
-    virtual void slot30() = 0; virtual void slot34() = 0;
-    virtual void slot38() = 0; virtual void slot3c() = 0;
-    virtual void slot40() = 0; virtual void slot44() = 0;
-    virtual void slot48() = 0; virtual void slot4c() = 0;
-    virtual void slot50() = 0; virtual void slot54() = 0;
-    virtual void slot58() = 0; virtual void slot5c() = 0;
-    virtual SurfacePixelInfo* get_pixel_info() = 0;
-};
-
-// FUNCTION: LEGORR 0x00476bf0
-void surface_pixel_rows_flip_in_place(void* surface)
-{
-    SurfacePixelInfo* info =
-        ((SurfacePixelInfoOwner*)surface)->get_pixel_info();
-    if (info != NULL) {
-        const int row_bits = info->bits_per_pixel * info->width;
-        const uint32_t row_bytes = (uint32_t)(
-            (row_bits + ((row_bits >> 31) & 7)) >> 3);
-        unsigned char* scratch = (unsigned char*)engine_heap_alloc(row_bytes);
-        if (scratch != NULL) {
-            unsigned char* top = (unsigned char*)info->pixels;
-            unsigned char* bottom = top
-                + (ptrdiff_t)(info->height - 1) * info->row_stride;
-            for (int row = 0; row < info->height / 2; ++row) {
-                memcpy(scratch, bottom, row_bytes);
-                memcpy(bottom, top, row_bytes);
-                memcpy(top, scratch, row_bytes);
-                top += info->row_stride;
-                bottom -= info->row_stride;
-            }
-            engine_heap_free(scratch);
-        }
-    }
 }
 
 /* Convert the frontend's RGBA bytes using the destination surface's masks. */
@@ -4805,25 +3446,6 @@ void texture_surface_create_hook_set(TextureSurfaceCreateHook hook,
 {
     s_texture_surface_create_hook = hook;
     s_texture_surface_create_context = context;
-}
-
-/* TextureSurfaceCreate (FUN_004744f0): mode zero resolves the configured
- * renderer surface database; nonzero mode uses the named bitmap path. The
- * configured database and its COM object tree are renderer-owned, so the
- * hook handles that route. Mode one can use the portable BMP decoder and its
- * release-tracked host record. */
-// FUNCTION: LEGORR 0x004744f0
-void* texture_surface_create(const char* name, uint32_t mode,
-                             uint32_t* value_out, uint32_t mode_data)
-{
-    if (name == NULL) return NULL;
-    if (s_texture_surface_create_hook != NULL) {
-        return s_texture_surface_create_hook(s_texture_surface_create_context,
-                                             name, mode, value_out,
-                                             mode_data);
-    }
-    if (mode != 1u) return NULL;
-    return texture_surface_create_host_record(name, mode);
 }
 
 #undef SURFACE_COM_CALL

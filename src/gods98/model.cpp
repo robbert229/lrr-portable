@@ -341,64 +341,6 @@ done:
 
 /* --- open / free / digest ------------------------------------------------------------- */
 
-/* LwoModelEntryLoad (FUN_004809e0) derives a directory prefix, opens and
- * parses the model, then binds each parsed surface's texture through the
- * existing host resource/cache path. The task-record and renderer-object
- * inputs still have no portable owner. The bounded copy preserves the valid
- * path prefix behavior without reproducing the retail stack overwrite. */
-// FUNCTION: LEGORR 0x004809e0
-Model* lwo_model_entry_load(const char* path, void* flags, void* context)
-{
-    char directory[260];
-    size_t length;
-    size_t last_separator;
-    size_t i;
-    Model* model;
-
-    (void)flags;    /* task callback flags have no host material equivalent */
-    (void)context;  /* renderer object creation remains a backend operation */
-    if (path == NULL) return NULL;
-    length = strlen(path);
-    if (length >= sizeof(directory)) length = sizeof(directory) - 1u;
-    memcpy(directory, path, length);
-    directory[length] = '\0';
-    last_separator = 0u;
-    for (i = 0; i < length; ++i)
-        if (directory[i] == '\\' || directory[i] == '/')
-            last_separator = i + 1u;
-    directory[last_separator] = '\0';   /* keeps the backslash, else empties */
-    model = model_open(path);
-    if (model != NULL) {
-        model->render_source = (ModelRenderSourceRecord*)calloc(
-            1u, sizeof(*model->render_source));
-        if (model->render_source != NULL) {
-            model->render_source->model = model;
-            memcpy(model->render_source->path_prefix, directory,
-                   strlen(directory) + 1u);
-        }
-    }
-    if (model != NULL && model->n_surfaces != 0u &&
-        model->n_surfaces <= (size_t)(0x7fffffffL /
-                                      sizeof(ModelTextureBinding))) {
-        size_t bytes = model->n_surfaces * sizeof(ModelTextureBinding);
-        ModelTextureBinding* bindings =
-            (ModelTextureBinding*)calloc(1u, bytes);
-        if (bindings != NULL) {
-            bind_model_textures_for_model(directory, model, bindings, 0);
-            model->material_bindings = bindings;
-            model->material_binding_count = model->n_surfaces;
-        }
-        else {
-            if (bindings != NULL) {
-                model_texture_bindings_release(bindings,
-                    (uint32_t)model->n_surfaces);
-                free(bindings);
-            }
-        }
-    }
-    return model;
-}
-
 void model_resource_cache_clear(void)
 {
     int i;

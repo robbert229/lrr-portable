@@ -96,6 +96,8 @@ extern char** environ;
 #include "crt_from_panel_unit.hpp"
 #include "crt_for_frontend_unit.hpp"
 #include "crt_from_frontend_unit.hpp"
+#include "crt_for_container_unit.hpp"
+#include "crt_from_mesh_unit.hpp"
 
 #if defined(_MSC_VER)
 #define crt_math_error_code_set _set_errno
@@ -2117,49 +2119,8 @@ void crt_no_op_stub_variant2(void)
 void* linked_list_global_aux_peek(void) { return s_linked_list_aux; }
 void  linked_list_global_aux_set(void* word) { s_linked_list_aux = word; }
 
-/* ModelRenderListClear (FUN_00482d30) — see crt.hpp. */
-// GLOBAL: LEGORR 0x005343c4
-static void* s_model_render_list_head; /* DAT_005343c4 role: unowned */
-
-// FUNCTION: LEGORR 0x00482d30
-void model_render_list_clear(void)
-{
-    void* node = s_model_render_list_head;
-    while (node != NULL) {
-        void* next = NULL;
-        __builtin_memcpy(&next, (char*)node + 0x44, sizeof next);
-        engine_heap_free(node);
-        node = next;
-    }
-    s_model_render_list_head = NULL;
-}
-
 void model_render_list_head_set(void* node) { s_model_render_list_head = node; }
 void* model_render_list_head_peek(void) { return s_model_render_list_head; }
-
-/* RendererCommandNodePrepend (FUN_00482ce0) — see crt.hpp. */
-// FUNCTION: LEGORR 0x00482ce0
-void renderer_command_node_prepend(uint32_t kind, const uint32_t* payload)
-{
-    /* Deviation: the port lays the corpus's dword node window out with
-     * the widened host-word window (the CrtOwnedStreamBufferRelease
-     * convention) while the next link rides as a widened void* at the
-     * corpus's byte slot +0x44 (the ModelRenderListClear precedent). */
-    char* node = (char*)engine_heap_alloc(18 * (long)sizeof(void*));
-    if (node == NULL) {
-        return; /* deviation: the corpus strides its alloc blindly */
-    }
-    memset(node, 0, 18 * (size_t)sizeof(void*));
-    const uint32_t zero = 0u;
-    __builtin_memcpy(node + 0x00, &kind, sizeof kind);
-    for (int i = 0; i < 16; ++i) {
-        const uint32_t v = (payload != NULL) ? payload[i] : zero;
-        __builtin_memcpy(node + 0x04 + (size_t)i * sizeof v, &v, sizeof v);
-    }
-    void* head = model_render_list_head_peek();
-    __builtin_memcpy(node + 0x44, &head, sizeof head);
-    model_render_list_head_set(node);
-}
 
 /* CrtOwnedStreamBufferRelease (FUN_00494df0) — see crt.hpp. */
 // LIBRARY: LEGORR 0x00494df0 SYMBOL
@@ -2182,13 +2143,7 @@ void crt_owned_stream_buffer_release(char* record)
 
 /* --- the shared texture directory word (see crt.hpp) ------------------------ */
 // GLOBAL: LEGORR 0x0076cd88
-static char* s_shared_texture_dir; /* DAT_0076cd88 role: unowned */
-
-// FUNCTION: LEGORR 0x004728c0
-void shared_texture_directory_set(const char* path)
-{
-    s_shared_texture_dir = string_duplicate(path);
-}
+char* s_shared_texture_dir; /* DAT_0076cd88 role: unowned */
 
 char* shared_texture_directory_peek(void) { return s_shared_texture_dir; }
 void shared_texture_directory_clear(void)
@@ -2199,42 +2154,20 @@ void shared_texture_directory_clear(void)
 
 /* --- the renderer flag word + scene hook pair band (see crt.hpp) ----------- */
 // GLOBAL: LEGORR 0x0076cd94
-static uint32_t s_renderer_flag_word; /* DAT_0076cd94 role: unowned */
+uint32_t s_renderer_flag_word; /* DAT_0076cd94 role: unowned */
 // GLOBAL: LEGORR 0x0076cd80
-static void*    s_scene_end_hook;     /* DAT_0076cd80 role: unowned */
+void*    s_scene_end_hook;     /* DAT_0076cd80 role: unowned */
 // GLOBAL: LEGORR 0x0076cd84
-static void*    s_scene_end_value;    /* DAT_0076cd84 role: unowned */
+void*    s_scene_end_value;    /* DAT_0076cd84 role: unowned */
 // GLOBAL: LEGORR 0x0076cd78
-static void*    s_scene_sample_hook;  /* DAT_0076cd78 role: unowned */
+void*    s_scene_sample_hook;  /* DAT_0076cd78 role: unowned */
 // GLOBAL: LEGORR 0x0076cd7c
-static void*    s_scene_sample_value; /* DAT_0076cd7c role: unowned */
-
-// FUNCTION: LEGORR 0x004728e0
-void renderer_flag_bit6_set(int value)
-{
-    s_renderer_flag_word = (value != 0) ? (s_renderer_flag_word | 0x40u)
-                                        : (s_renderer_flag_word & ~0x40u);
-}
+void*    s_scene_sample_value; /* DAT_0076cd7c role: unowned */
 
 uint32_t renderer_flag_word_peek(void) { return s_renderer_flag_word; }
 
-// FUNCTION: LEGORR 0x00472900
-void scene_end_hook_register(void* hook, void* value)
-{
-    s_scene_end_hook = hook;
-    s_scene_end_value = value;
-}
-
 void* scene_end_hook_peek(void) { return s_scene_end_hook; }
 void* scene_end_hook_value_peek(void) { return s_scene_end_value; }
-
-// FUNCTION: LEGORR 0x00472920
-void scene_sample_hook_register(void* hook, void* value)
-{
-    s_scene_sample_hook = hook;
-    s_scene_sample_value = value;
-    s_renderer_flag_word |= 0x40u;
-}
 
 void* scene_sample_hook_peek(void) { return s_scene_sample_hook; }
 void* scene_sample_hook_value_peek(void) { return s_scene_sample_value; }
