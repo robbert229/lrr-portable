@@ -833,18 +833,6 @@ int crt_runtime_error_message_box_display(const char* message,
 }
 #endif
 
-/* FUN_0047d3f0: popcount via the clear-lowest-set-bit loop. */
-// FUNCTION: LEGORR 0x0047d3f0
-int bit_count32(uint32_t value)
-{
-    int n = 0;
-    while (value != 0u) {
-        value &= value - 1u;
-        ++n;
-    }
-    return n;
-}
-
 #undef LEGORRR_CRT_STDCALL
 
 /* VC5 LIBC.LIB intrncvt.obj supplies this three-dword zero test. */
