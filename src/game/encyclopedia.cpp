@@ -2,6 +2,8 @@
 /* GAME-014 Encyclopedia.c: the unit's functions in original address order and the
  * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
  * Body hashes: docs/coverage/relocations/GAME-014.csv. */
+/* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
+#include "legoobject_port_aliases.h"
 #include <math.h>
 #include <float.h>
 #include <ctype.h>

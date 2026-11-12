@@ -1556,7 +1556,7 @@ unsigned int level_predug_coordinate_count_get(void);
 int level_predug_coordinate_get(unsigned int index, int cell_xy_out[2]);
 void level_predug_coordinate_pool_clear(void);
 void predug_coordinate_pool_append(const int cell_xy[2]);
-void spawn_coordinate_pool_clear(void); /* FUN_004372a0 */
+extern "C" void spawn_coordinate_pool_clear(void); /* FUN_004372a0 */
                                  /* FUN_0044ad80 */
 void terrain_sfx_grid_cell_set(int cell, int handle);  /* port hook */
 int  terrain_sfx_grid_cell_peek(int cell);             /* port hook */

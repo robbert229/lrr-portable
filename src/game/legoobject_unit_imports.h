@@ -239,7 +239,6 @@ void building_upgrade_state_changed_dispatch(int type, int row, int column,
  * namespaced ledger stub with another contract: adapters at the end of
  * legoobject.cpp. 00449f50: GAME-021's adapter in lego.cpp. */
 void entity_kind_four_post_create_resolve(struct EntitySlot* entity); /* 0043c570 */
-int legoobject_gc_pool_find_with_local_predicate_adapter(struct EntitySlot* e); /* 0043f560 */
 int activity_register_bookkeeping(struct EntitySlot* e);      /* 00447c40 */
 void entity_type_operation_dispatch_adapter(struct EntitySlot* entity,
                                             int operation);   /* 00449f50 */
@@ -374,7 +373,6 @@ struct TerrainMap;
 /* legoGlobs.toolName (005561fc, ai.cpp's s_tool_type_names) and, right
  * after it in the original's Lego_Globs, langToolName (00556228). */
 #define LEGO_TOOL_TYPE_COUNT 11
-extern const char* s_tool_type_names[8];                     /* ai.cpp, 005561fc */
 #define legoGlobs_toolName (s_tool_type_names)
 #define legoGlobs_langToolName ((char**)(s_tool_type_names + LEGO_TOOL_TYPE_COUNT))
 

@@ -516,7 +516,7 @@ int legoobject_remove(Lego_Object* obj)
         sound_handle_stop_forward(obj->drillSoundHandle);
     }
     if (obj->flags4 & 0x80000) {
-        sound_handle_stop_forward(LEGOOBJ_FIELD(obj, int, 0x354));
+        sound_handle_stop_forward(obj->soundHandle);
     }
 
     legoobject_run_through_lists_skip_upgrade_parts(
@@ -525,8 +525,8 @@ int legoobject_remove(Lego_Object* obj)
     if (obj->type == 3) {
         argument_callback_dispatch(obj);
     }
-    if (LEGOOBJ_FIELD(obj, void*, 0x2e4) != NULL) {
-        ledger_stub_00472a40_DDiSceneObjectDestroy(LEGOOBJ_FIELD(obj, void*, 0x2e4));
+    if (obj->activityCont != NULL) {
+        ledger_stub_00472a40_DDiSceneObjectDestroy(obj->activityCont);
     }
     if (obj->carryingThisObject != NULL) {
         legoobject_attached_object_list_detach(obj->carryingThisObject, 0);
@@ -913,14 +913,14 @@ Lego_Object* legoobject_create(void* model, int type, int id)
             }
         }
 
-        LEGOOBJ_FIELD(obj, const char*, 0x2ec) = s_activity[0];
-        LEGOOBJ_FIELD(obj, const char*, 0x2e8) = s_activity[9];
+        obj->activityName2 = s_activity[0];
+        obj->activityName1 = s_activity[9];
         if (activity_register_bookkeeping((struct EntitySlot*)obj)) obj->flags3 |= 0x8;
-        LEGOOBJ_FIELD(obj, const char*, 0x2e8) = s_activity[16];
+        obj->activityName1 = s_activity[16];
         if (activity_register_bookkeeping((struct EntitySlot*)obj)) obj->flags3 |= 0x4000000;
-        LEGOOBJ_FIELD(obj, const char*, 0x2e8) = s_activity[2];
+        obj->activityName1 = s_activity[2];
         if (activity_register_bookkeeping((struct EntitySlot*)obj)) obj->flags3 |= 0x10000000;
-        LEGOOBJ_FIELD(obj, const char*, 0x2e8) = s_activity[0];
+        obj->activityName1 = s_activity[0];
         activity_register_bookkeeping((struct EntitySlot*)obj);
 
         task_record_kind14_remove_if_head((struct EntitySlot*)obj);
@@ -1027,7 +1027,7 @@ void legoobject_kind_record_update_dispatch(Lego_Object* obj)
         six_resource_slots_set_state(obj->vehicle, 0);
     }
 
-    if (obj->type == 2 || obj->type == 1) legoobject_gc_pool_find_with_local_predicate_adapter((struct EntitySlot*)obj);
+    if (obj->type == 2 || obj->type == 1) legoobject_gb_pool_find_with_local_predicate_adapter(obj);
 
     building_upgrade_state_changed_dispatch(obj->type, obj->id, 0, obj->flags4 & 0x200);
 
@@ -2340,4 +2340,20 @@ void legoobject_lava_crust_activity_register(Lego_Object* obj)
             LegoObjG_liveCount++;
         }
     }
+}
+
+/* ---- pulled forward from part 2 ---- */
+
+/* 0043c490 is part 2's (issue #575 converts only 00436c20-0043a960). It is
+ * here because it calls 004385b0: once that address names the unit's
+ * function, the port's copy in legoobject.cpp would lose its exact match,
+ * and legoobject.cpp cannot alias the call without a new declaration
+ * (which shifts the symbol counter for the rest of parts 2 and 3). Part 2
+ * moves it into address order. */
+// FUNCTION: LEGORR 0x0043c490
+int legoobject_task_type_and_condition_check(void* unused, Lego_Object* target, int condition)
+{
+    if (legoobject_shared_eligibility_check(target, 1) && condition)
+        return 1;
+    return 0;
 }

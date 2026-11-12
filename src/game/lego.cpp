@@ -2,6 +2,9 @@
 /* GAME-021 Lego.c: the unit's functions in original address order and the
  * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
  * Body hashes: docs/coverage/relocations/GAME-021.csv. */
+/* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
+#define LEGORRR_LEGOOBJECT_ALIASES_NO_ADAPTERS
+#include "legoobject_port_aliases.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

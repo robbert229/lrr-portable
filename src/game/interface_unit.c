@@ -14,6 +14,8 @@
  * 560). Callee contracts that this reconstruction has not converted yet are
  * used as they are, or through the thin adapters that game/interface_callees.h
  * lists. */
+/* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
+#include "legoobject_port_aliases.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

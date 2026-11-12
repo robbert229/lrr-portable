@@ -43,9 +43,13 @@
 #include "crt/crt.hpp"
 #include "frontend.hpp"
 #include "entity_shared.hpp"
-/* C linkage for legoobject_unit.c (the frozen header below redeclares it). */
-extern "C" int entity_building_index_set(EntitySlot* entity, uint32_t state);
+/* C linkage for 00469c10, which legoobject_unit.c calls: the frozen header
+ * is wrapped rather than pre-declared, so no declaration is added (a
+ * pre-declaration shifts the symbol counter for parts 2 and 3). This file
+ * uses none of the header's other declarations. */
+extern "C" {
 #include "entity_from_entity_stats.hpp"
+}
 #include "entity_from_lego.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
@@ -4191,7 +4195,8 @@ int ai_activity_probe(const EntitySlot* e)
 }
 
 /* TaskTypeAndConditionCheck (FUN_0043c490) — see entity.hpp. */
-// FUNCTION: LEGORR 0x0043c490
+/* Port model of 0x0043c490 (GAME-023, part 2); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x0043c490, retires to the tail in GAME-023 part 3
 int task_type_and_condition_check(const void* unused,
                                   const EntitySlot* target, int condition)
 {
@@ -11314,15 +11319,6 @@ extern "C" float legoobject_activity_tick_adapter(EntitySlot* entity, float delt
  * group C (LegoObject_Create 0x00437d00 and 0x00438460). The port's
  * 0043f560 and 0044b370 take the GameContext too, and its 0044b680 is a
  * ledger stub with another contract. Nothing calls these natively. */
-
-/* 0043f560 takes only the object. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0043f560 takes the object only)
-extern "C" int legoobject_gc_pool_find_with_local_predicate_adapter(
-    EntitySlot* e)
-{
-    return entity_pool_find_with_local_predicate(
-        e != NULL ? e->owner_ctx : NULL, e);
-}
 
 /* 0044b370 takes the object and the activity value. */
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0044b370 takes no GameContext)

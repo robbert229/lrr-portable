@@ -65,9 +65,9 @@ typedef struct Lego_Object {
     unsigned int animRepeat;          /* +0x2d8 */
     void* field_2dc;                  /* +0x2dc */
     int field_2e0;                    /* +0x2e0 */
-    int field_2e4;                    /* +0x2e4 */
-    int activity;                     /* +0x2e8 activity index */
-    int field_2ec;                    /* +0x2ec */
+    void* activityCont;               /* +0x2e4 container the activity runs */
+    const char* activityName1;        /* +0x2e8 activityName entries */
+    const char* activityName2;        /* +0x2ec */
     void* aiTask;                     /* +0x2f0 command chain head */
     float targetBlockPos[2];          /* +0x2f4 */
     struct Lego_Object* routeToObject;  /* +0x2fc */
@@ -87,7 +87,7 @@ typedef struct Lego_Object {
     void* field_348;                  /* +0x348 */
     int field_34c;                    /* +0x34c */
     int drillSoundHandle;             /* +0x350 */
-    void* field_354;                  /* +0x354 */
+    int soundHandle;                  /* +0x354 */
     unsigned char pad_358[0x360 - 0x358];
     float field_360;                  /* +0x360 */
     void* field_364;                  /* +0x364 */
@@ -311,6 +311,9 @@ void legoobject_simulation_update_counter_add(int unused, unsigned int count); /
 void legoobject_simulation_mode_counter_add(int unused, unsigned int count); /* 0043a910 */
 void legoobject_tracked_pointer_remove(void* pointer);          /* 0043a930 */
 void legoobject_lava_crust_activity_register(Lego_Object* obj); /* 0043a960 */
+
+/* ---- pulled forward from part 2 ---- */
+int legoobject_task_type_and_condition_check(void* unused, Lego_Object* target, int condition); /* 0043c490 */
 
 #ifdef __cplusplus
 }

@@ -2,6 +2,8 @@
 /* GAME-037: the level reward screen (the original's Reward.c), rebuilt in
  * original shape (ADR 0005, finding 560). Text 0045f030-00462da0. See
  * reward.h for the state and the port's split. */
+/* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
+#include "legoobject_port_aliases.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
