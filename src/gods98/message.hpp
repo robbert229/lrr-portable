@@ -58,7 +58,7 @@ extern "C" void ui_message_strings_initialize(void* primary_font, void* secondar
                                    void* message_resource, void* subtitle_font,
                                    float line_delay); /* FUN_0046a7f0 */
 void* ui_message_text_output_get(int alternate); /* DAT_0050361c/620 */
-void ui_message_overlay_state_initialize(void); /* FUN_0046aa90 */
+extern "C" void ui_message_overlay_state_initialize(void); /* FUN_0046aa90 */
 const char* ui_message_label_get(unsigned int index);
 extern "C" int ui_message_label_index_find(const char* label, int* out_index); /* FUN_0046aad0 */
 void ui_message_text_slot_assign(int index, const char* text); /* FUN_0046ab10 */

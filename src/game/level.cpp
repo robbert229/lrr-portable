@@ -45,11 +45,20 @@
 extern "C" int level_coord_pair_within_bounds_target(
     const uint32_t* dimensions, uint32_t cx, uint32_t cy);
 #include "level_shared.hpp"
+/* GAME-021's lego_unit.c reads the block-update lists (issue #574): C
+ * linkage, which the frozen header below and the definitions inherit. */
+extern "C" int32_t s_cell_refresh_track[][2];
+extern "C" int s_cell_refresh_track_count;
+extern "C" int32_t s_cell_previous_track[][2];
+extern "C" int s_cell_previous_track_count;
+extern "C" int32_t s_cell_visited_track[][2];
+extern "C" int s_cell_visited_track_count;
 #include "level_for_lego.hpp"
 /* Defined in GAME-021's lego_unit.c (issue #544): C linkage, which the
  * frozen header below inherits. */
 extern "C" float engine_float_field260_get_current_target(void);
 extern "C" uint32_t global_state_field84_get_current_target(void);
+extern "C" uint32_t s_neighbor_pick_rotation;
 #include "level_from_lego.hpp"
 #include "level_for_files.hpp"
 #include "level_for_legoobject.hpp"

@@ -253,7 +253,7 @@ extern uint32_t s_bubble_texture_handles[39];
  * the idle table only when its stats gate passes and its current level tile
  * is type 9. Duplicate registrations consume slots, as in the reference;
  * the 100-entry extent is a high-water bound (findings 41, 457, 480). */
-void entity_queue_for_rockfall_processing_if_eligible(EntitySlot* e);
+extern "C" void entity_queue_for_rockfall_processing_if_eligible(EntitySlot* e);
 /* Ported activity-change tail (FUN_00447c40): attach the idle-chain record
  * when the activity changes, then refresh the activity timer. */
 extern "C" int activity_register_bookkeeping(EntitySlot* e);

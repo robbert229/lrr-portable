@@ -499,6 +499,9 @@ extern "C"
 #endif
 void animation_object_visibility_set(const void* anim, uint32_t flag);
                                                 /* FUN_00406c90 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_pair_apply_mode(const void* record, uint32_t flag);
                                                 /* FUN_00408670 */
 /* SceneRenderLockToggle (FUN_00473b40): update the selected render-interface
@@ -513,6 +516,9 @@ void scene_render_lock_toggle(void* scene_object, int enabled);
  * operation: unconditionally on +8, on +0xc when set, and on every live child
  * of the +0x10 window counted at +0x40. Deviations in the module notes
  * (window-guarded native-size slot stride, single count read, NULL guard). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_resource_visibility_set(void* record, uint32_t flag);
                                                 /* FUN_0046d2c0 */
 /* SceneObjectPairSetRenderParameters (FUN_004086c0): the pair's pose

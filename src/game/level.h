@@ -13,8 +13,20 @@ extern "C" {
 #endif
 
 struct LevelState;
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* The matching build calls Lego.c's original-shape entry in lego_unit.c
+ * (GAME-021 part 2, finding 571); the port model is unannotated. One
+ * declaration either way (finding 538, rule B). */
+int lego_terrain_cell_byte_state_classify_current(const int* blockPos,
+    unsigned int* crystalsLv0, unsigned int* crystalsLv1,
+    unsigned int* oreLv0, unsigned int* oreLv1);                /* 0042c5b0 */
+#define terrain_cell_byte_state_classify_current(xy, a, b, c, d) \
+    lego_terrain_cell_byte_state_classify_current((xy), (unsigned int*)(a), \
+        (unsigned int*)(b), (unsigned int*)(c), (unsigned int*)(d))
+#else
 int terrain_cell_byte_state_classify_current(const int xy[2],
     uint32_t* out_a, uint32_t* out_b, uint32_t* out_c, uint32_t* out_d); /* 0042c5b0 */
+#endif
 int grid_record_count_difference_get(int row, int column, int slot,
                                      int subtract_first_table); /* 00437460 */
 void render_config_six_field_copy_out(uint32_t out[6]);    /* 004370b0 */
