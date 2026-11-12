@@ -700,8 +700,8 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
                     ledger_stub_00425c30_TransitionControl(1, 0);
                     s_panel_highlight_flags ^= 0x100;
                 } else if (button == 2) {
-                    if (s_panel_highlight_flags & 1) panel_selection_highlight_toggle(NULL, 0);
-                    else panel_selection_highlight_toggle(NULL, 1);
+                    if (s_panel_highlight_flags & 1) lego_panel_selection_highlight_toggle(0);
+                    else lego_panel_selection_highlight_toggle(1);
                 }
                 break;
             case PANEL_PRIORITY_LIST:

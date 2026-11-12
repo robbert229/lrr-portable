@@ -429,6 +429,9 @@ typedef struct EntityCommandStatusFeedbackHooks {
 } EntityCommandStatusFeedbackHooks;
 void entity_command_status_feedback_hooks_set(
     const EntityCommandStatusFeedbackHooks* hooks);
+#ifdef __cplusplus
+extern "C"
+#endif
 void entity_command_status_feedback_dispatch(EntitySlot* entity); /* 0x428020 */
 typedef struct EntityActionPrerequisiteHooks {
     void* context;
@@ -724,7 +727,7 @@ void scene_object_state_dispatch(GameContext* ctx, uint32_t selector,
 /* EntitySpawnRequestQueueAdd/Process (FUN_0043f150/0x0043f190): bounded
  * nine-entry deferred spawn request queue. The port processes the first
  * valid entity-type request when an eligible requester is ticked. */
-int entity_spawn_request_queue_add(GameContext* ctx, int type,
+extern "C" int entity_spawn_request_queue_add(GameContext* ctx, int type,
                                   int request_kind);
 void entity_spawn_request_queue_process(EntitySlot* requester);
 
@@ -802,7 +805,7 @@ const void* entity_model(const EntitySlot* e);
  * Missing Stats returns zero; callers must explicitly convert their time unit. */
 float entity_route_speed(EntitySlot* entity);
 float entity_stats_float_at20(const EntitySlot* e);   /* 0x469cb0: RouteSpeed */
-float entity_stats_float_at24_indexed(const EntitySlot* e, int index);
+extern "C" float entity_stats_float_at24_indexed(const EntitySlot* e, int index);
                                       /* 0x469cc0: drill times at +24..34, in reference ticks */
 float entity_stats_float_atd4(const EntitySlot* e);   /* FUN_00469ce0 */
 float entity_stats_float_at9c(const EntitySlot* e);   /* FUN_00469d00 */
@@ -1067,7 +1070,7 @@ int entity_cell_type_speed_multiplier_resolve(const EntitySlot* entity,
                                               const struct LevelState* level,
                                               int x, int y, float scale,
                                               float* out_scale); /* FUN_00433180 */
-int entity_cell_type_speed_multiplier_resolve_current(
+extern "C" int entity_cell_type_speed_multiplier_resolve_current(
     const EntitySlot* entity, int x, int y, float scale,
     float* out_scale); /* FUN_00433180 retail ABI */
 int entity_route_cell_candidate_accept(const EntitySlot* entity,

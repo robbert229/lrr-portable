@@ -728,6 +728,18 @@ void lego_terrain_cell_flags_set_mask20108000(int bx, int by);       /* 00432490
 
 /* ---- part 2 declarations, group 2G: end ---- */
 
+/* ---- part 3 declarations, group 3A (004324d0-00433330): begin ---- */
+
+/* ---- part 3 declarations, group 3A: end ---- */
+
+/* ---- part 3 declarations, group 3B (00433380-00434530): begin ---- */
+
+/* ---- part 3 declarations, group 3B: end ---- */
+
+/* ---- part 3 declarations, group 3C (00434570-00435aa0): begin ---- */
+
+/* ---- part 3 declarations, group 3C: end ---- */
+
 #ifdef __cplusplus
 }
 #endif

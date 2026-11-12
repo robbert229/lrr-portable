@@ -598,6 +598,9 @@ typedef struct GlobalSubsystemResetState {
     uint32_t* word_00503618;
 } GlobalSubsystemResetState;
 void global_subsystem_reset_state_bind(GlobalSubsystemResetState* state);
+#ifdef __cplusplus
+extern "C"
+#endif
 void ledger_stub_004263c0_GlobalSubsystemStateReset(void);
 }
 #endif

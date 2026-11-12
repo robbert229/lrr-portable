@@ -19,7 +19,7 @@ game_sources = [
   'frontend_unit.cpp',
   'interface_port.cpp',
   'weapons.cpp',
-  'lego.cpp',
+  'lego_port.cpp',
   'entity_stats.cpp',
   'creature_scene.cpp',
   'reward_port.cpp',

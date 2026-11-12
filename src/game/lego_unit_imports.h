@@ -42,7 +42,7 @@ extern float s_task_text_origin_y;            /* engine.cpp, 00556f28 */
 extern void* s_refresh_record;                /* engine.cpp, 005563b4 */
 extern void* s_position_handle;               /* engine.cpp, 00556f3c */
 /* Lego.c's own .bss that the port's lego.cpp still defines. */
-extern int s_scroll_guard;                    /* lego.cpp, 004de548 */
+extern int s_scroll_guard;                    /* 004de548, defined at the end */
 
 /* GAME-032 Panel.c (panel_unit.h). */
 void ui_overlay_animation_advance(int up, unsigned int count); /* 0045c580 */
@@ -220,8 +220,8 @@ void deferred_callback_set(uint32_t value);                /* 00453900 */
 void message_load_infomessages(struct BlockRec* cfg);      /* 00434c10 */
 /* GAME-021 parts 2-3, still in lego.cpp (entity_config_from_lego.hpp,
  * frontend.hpp). */
-void entity_object_names_load(struct BlockRec* config);    /* 0042d600 */
-void entity_object_the_names_load(struct BlockRec* config); /* 0042da20 */
+void lego_object_names_load(struct BlockRec* config);      /* 0042d600, called by 0041fb50 */
+void lego_object_the_names_load(struct BlockRec* config);  /* 0042da20, called by 0041fb50 */
 void advisor_tooltip_and_sound_config_load(struct BlockRec* config); /* 00434da0 */
 void advisor_tutorial_icon_image_load(struct BlockRec* cfg); /* 00434a00 */
 /* G98 Sound3D.c (sound3d.c, simtick.hpp, sound3d.h). The native port's
@@ -1016,8 +1016,8 @@ uint32_t entity_indexed_record_word_at_b4_get(int group, int index,
 uint32_t stats_table_word_at_b8(int type, int row, int stride_index); /* 00469b20 */
 /* GAME-021 part 3 (lego.cpp, level.hpp): Lego_GetSurfaceTypeDescription
  * and Lego_GetSurfaceTypeSFX. */
-const char* terrain_surface_type_name_get(int index);     /* 00435170 */
-uint32_t surface_type_configured_value_at_index(int index); /* 00435190 */
+const char* lego_terrain_surface_type_name_get(int surfaceType); /* 00435170 */
+uint32_t lego_surface_type_configured_value_at_index(int surfaceType); /* 00435190 */
 /* G98 Input (crt.cpp, crt.hpp): the mouse position and left button. */
 /* GAME-033 Pointer.c (pointer.cpp, media.hpp): Pointer_SetCurrent_IfTimerFinished. */
 void media_pointer_cursor_select(int slot);               /* 0045cc20 */
@@ -1555,14 +1555,13 @@ extern int s_cell_visited_track_count;
 extern uint32_t s_neighbor_pick_rotation;
 /* G98 Map file images (g98_024.h): 004894a0; lego.cpp (level.hpp): 004334c0. */
 unsigned char* level_map_slot_get(unsigned int slot);
-/* GAME-021 part 3 (lego.cpp, level.hpp): 00432770. 00432a20 takes the
- * level as well; adapter at the end of lego.cpp. */
+/* GAME-021 part 3: 00432770 (shared in the matching build), 00432a20. */
 int terrain_cell_walkability_query_current(const struct EntitySlot* entity,
                                            uint32_t x, uint32_t y,
                                            int require_stat_bit,
                                            int gated_mode);
-int terrain_cell_allows_placement_adapter(const struct EntitySlot* e,
-                                          int bx, int by);
+int lego_terrain_cell_allows_placement(struct EntitySlot* liveObj,
+                                       unsigned int bx, unsigned int by); /* 00432a20, part 3 */
 /* placement.cpp (level.hpp): the block's path descriptor (004090a0). */
 /* Stats.c (entity.hpp): 00469e80. */
 uint32_t entity_state_flags_get(const struct EntitySlot* e);
@@ -1578,6 +1577,18 @@ int scene_slot_pose_scale_register(int group, uint32_t first, uint32_t second,
                                    float heading, float pitch);
 
 /* ---- part 2 imports, group 2G: end ---- */
+
+/* ---- part 3 imports, group 3A (004324d0-00433330): begin ---- */
+
+/* ---- part 3 imports, group 3A: end ---- */
+
+/* ---- part 3 imports, group 3B (00433380-00434530): begin ---- */
+
+/* ---- part 3 imports, group 3B: end ---- */
+
+/* ---- part 3 imports, group 3C (00434570-00435aa0): begin ---- */
+
+/* ---- part 3 imports, group 3C: end ---- */
 
 #ifdef __cplusplus
 }

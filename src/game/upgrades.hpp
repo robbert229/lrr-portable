@@ -46,6 +46,9 @@ typedef int (*UpgradeConfigEntryHook)(void* config, uint32_t index,
                                       uint32_t* value_out);
 void level_upgrade_config_hooks_set(UpgradeConfigEntryHook entry_hook,
                                     uint32_t (*entry_count_hook)(void*));
+#ifdef __cplusplus
+extern "C"
+#endif
 void level_upgrade_name_strings_load(void* config); /* FUN_00427f80 */
 uint32_t level_upgrade_name_value_get(uint32_t index);
 const char* level_upgrade_name_string_get(uint32_t index);

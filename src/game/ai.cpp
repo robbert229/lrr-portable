@@ -3,6 +3,8 @@
  * EntityFrameUpdateDispatch in gods98/simtick.cpp. This module also owns the
  * separate game-layer command/task executor. See ai.hpp for the anatomy;
  * branch comments carry corpus addresses. */
+/* Matching build: Lego.c callers call lego_unit.c (#587). */
+#include "lego_port_aliases.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

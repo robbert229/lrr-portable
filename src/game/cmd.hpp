@@ -794,6 +794,9 @@ void upgrade_resource_debit(int selector, int amount);
                                                 /* FUN_0041f9e0 */
 void upgrade_name_table_install(void* records, const char* const* names,
                                 int count);     /* port hook */
+#ifdef __cplusplus
+extern "C"
+#endif
 const void* upgrade_name_entry_find(const char* name);
                                                 /* FUN_0042cd50 */
 

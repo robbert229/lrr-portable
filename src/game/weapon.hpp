@@ -83,7 +83,7 @@ void weapon_indexed_float_table_install(
     const WeaponIndexedTypeRecord* records, uint32_t record_count);
 float weapon_indexed_float_lookup(
     int weapon_type, const WeaponIndexedEntityState* entity_state);
-float entity_indexed_float_lookup_with_minus_one_fallback(
+extern "C" float entity_indexed_float_lookup_with_minus_one_fallback(
     int weapon_type, const void* entity_record); /* 0x0046f1d0 */
 
 } // namespace lego

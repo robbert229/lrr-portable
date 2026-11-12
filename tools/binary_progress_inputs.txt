@@ -208,11 +208,12 @@ src/game/interface_port.cpp
 src/game/interface_unit.c
 src/game/interface_unit.h
 src/game/lava_erosion.cpp
-src/game/lego.cpp
 src/game/lego.h
 src/game/lego_api.h
 src/game/lego_blocks.h
 src/game/lego_maths.h
+src/game/lego_port.cpp
+src/game/lego_port_aliases.h
 src/game/lego_unit.c
 src/game/lego_unit.h
 src/game/lego_unit_imports.h

@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
+/* Matching build: Lego.c callers call lego_unit.c (#587). */
+#include "game/lego_port_aliases.h"
 #include "camera.hpp"
 #include "engine.hpp"
 #include "frameloop.hpp"

@@ -312,9 +312,7 @@ int cmd_array_find_value_index(const int* array, unsigned count, int value,
                                unsigned* index_out);                 /* 00452650 */
 void cmd_produce(int op, const void* a1, int a2, const int* pair);   /* 00452060 */
 /* Lego.c (level.hpp; lego.cpp). */
-int first_free_neighbor_cell_pick_current(const struct EntitySlot* entity,
-                                          const int* cell_in, int* cell_out,
-                                          int mode);                 /* 00431c70 */
+/* 00431c70: lego_first_free_neighbor_cell_pick (lego_unit.h). */
 /* LegoObject.c (legoobject.h). */
 void entity_surface_vector_normalize(void* surface, float out_xy[2]); /* 004422a0 */
 /* 00440c30 (route search) and 00438e50 (nearest object by type mask): the

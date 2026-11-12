@@ -81,6 +81,9 @@ typedef struct TerrainTileMeshGrid {
 } TerrainTileMeshGrid;
 int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid,
                                 const char* bitmap_prefix);
+#ifdef __cplusplus
+extern "C"
+#endif
 int terrain_tile_mesh_grid_load_level(struct LevelState* level,
                                       const char* bitmap_prefix); /* 0x0042b330 */
 int entity_neighbor_blocked_cell_step_probe(struct EntitySlot* entity,
@@ -92,6 +95,9 @@ struct BlockRec;
 void terrain_texture_set_config_context_bind(struct BlockRec* config);
 int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
                                     const char* group_name);
+#ifdef __cplusplus
+extern "C"
+#endif
 int terrain_texture_set_config_load_level(struct LevelState* level,
                                           const char* group_name);
 int terrain_texture_set_config_load_current(TerrainTileMeshGrid* grid,
@@ -568,6 +574,9 @@ void terrain_neighbor_path_cost_release(void);
 }
 
 namespace unported_ledger_stubs {
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t terrain_placement_blocked_adjacent_cell_scan(
     int x, int y, int mode, int duplicate_pair); /* 0x00431b20 */
 }
