@@ -520,6 +520,66 @@ void lego_periodic_callback_dispatch(int on);   /* E, 00425b40 */
 
 /* ---- part 2 declarations, group 2A (0042b510-0042c440): begin ---- */
 
+struct TerrainMap;
+
+/* Maths.h's Point2I. */
+typedef struct LegoPoint2I2A {
+    int x, y;
+} LegoPoint2I2A;
+
+/* The EmergeMap's records (0x4c bytes each): Lego_Level.emergeMap (+0x08)
+ * holds f_00c of them. EmergeMap value v = 6n + k + 1 names record n:
+ * k = 0 is the trigger block, k = 1..5 emerge point k - 1. */
+typedef struct LegoEmergeBlock2A {
+    LegoPoint2I2A blockPos;
+    int used;                       /* +0x08 */
+} LegoEmergeBlock2A;
+typedef struct LegoEmergeTrigger2A {
+    uint32_t f_00;
+    LegoPoint2I2A blockPos;         /* +0x04 */
+    float timer;                    /* +0x0c */
+    LegoEmergeBlock2A emergePoints[5]; /* +0x10 */
+} LegoEmergeTrigger2A;
+
+int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
+                           const char* predugMap, int predugParam,
+                           const char* terrainMap, int terrainParam,
+                           const char* blockPointersMap, int blockPointersParam,
+                           const char* cryOreMap, int cryOreParam,
+                           const char* erodeMap, const char* pathMap,
+                           int pathParam, const char* textureSet,
+                           const char* emergeMap, const char* aiMap,
+                           const char* fallinMap);
+void lego_surface_text_character_map_initialize(struct TerrainMap* map);
+int lego_texture_set_config_load(Lego_Level* level, const char* textureSet);
+int lego_load_predug_layer(Lego_Level* level, const char* filename,
+                           int modifier);
+int lego_load_emerge_layer(Lego_Level* level, const char* filename);
+int lego_load_layer_m(Lego_Level* level, const char* filename);
+int lego_load_layer_l(Lego_Level* level, const char* filename);
+int lego_emerge_map_trigger_spawn(Lego_Level* level,
+                                  const LegoPoint2I2A* blockPos,
+                                  LegoPoint2I2A* outPos);
+void lego_level_record_timer_countdown(Lego_Level* level, float elapsed);
+
+/* Assumed from other groups (original signatures as the callers in
+ * 0042b510-0042c440 push them). */
+int lego_load_erode_cryore_layers(Lego_Level* level, const char* filename,
+                                  int modifier);            /* 2B 0042c480 */
+int lego_load_path_ai_layers(Lego_Level* level, const char* filename,
+                             int modifier);                 /* 2B 0042c6a0 */
+int lego_load_fallin_layer(Lego_Level* level, const char* filename,
+                           int modifier);                   /* 2B 0042c760 */
+int lego_load_block_pointers(Lego_Level* level, const char* filename); /* 2B 0042c9d0 */
+int lego_load_terrain_map(Lego_Level* level, const char* filename,
+                          int modifier);                    /* 2B 0042cc90 */
+void lego_cell_init_pass(Lego_Level* level, unsigned int x, unsigned int y,
+                         int reserved);                     /* 2E 0042f6f0 */
+int lego_terrain_cell_mutation(Lego_Level* level, unsigned int x,
+                               unsigned int y, int reserved); /* 2F 00430530 */
+uint32_t lego_map_file_cell_get(uint32_t handle, unsigned int x,
+                                unsigned int y);           /* 2G 004319e0 */
+
 /* ---- part 2 declarations, group 2A: end ---- */
 
 /* ---- part 2 declarations, group 2B (0042c480-0042d460): begin ---- */

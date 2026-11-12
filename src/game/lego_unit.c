@@ -1798,7 +1798,7 @@ int lego_engine_tick(float elapsed)
 
     camera_move_pipeline_original(elapsedWorld);
     camera_registry_probe_original();
-    camera_grid_timers_original(level_current_owner_get(), elapsed);
+    lego_level_record_timer_countdown((Lego_Level*)level_current_owner_get(), elapsed);
     camera_grid_expiry_original(elapsedWorld);
     lego_spawn_coordinate_pool_tick(elapsedWorld);
 
@@ -4893,7 +4893,7 @@ int lego_level_load(const char* levelName)
             if (fallinMap && sound_variant_split(fallinMap, parts, ":") == 2) fallinParam = atoi(parts[1]);
             if (emergeMap && sound_variant_split(emergeMap, parts, ":") == 2) pathParam = atoi(parts[1]);
 
-            if (map_pipeline_original(level, surfaceMap, predugMap, predugParam, terrainMap, terrainParam,
+            if (lego_map_load_pipeline(level, surfaceMap, predugMap, predugParam, terrainMap, terrainParam,
                                            blockPointersMap, blockPointersParam, cryOreMap, cryOreParam,
                                            erodeMap, pathMap, pathParam, textureSet, emergeMap, aiMap,
                                            fallinMap)) {
@@ -5043,6 +5043,397 @@ uint32_t global_state_field84_get_current_target(void)
 /* ------------------------------------------------------------------ */
 
 /* ---- part 2 functions, group 2A (0042b510-0042c440): begin ---- */
+
+/* Lego_Level.blocks[y * width + x]. */
+#define LEGO_2A_BLOCK(level, x, y) \
+    (LEGO_LEVEL_PTR(Lego_Block, (level)->blocks)[((y) * (level)->width) + (x)])
+/* Lego_Level.emergeMap (+0x08) as its records. */
+#define LEGO_2A_TRIGGERS(level) \
+    ((LegoEmergeTrigger2A*)LEGO_LEVEL_PTR(void, (level)->emergeMap))
+
+/* MapLoadPipeline [group 2A]: Lego_LoadMapSet. Builds the level's map and
+ * blocks from the level's map files, in the order the original reads them.
+ * Every failure returns the value it tested (a null map or block array, or
+ * a loader's 0): the original jumps straight to the epilogue with that 0 in
+ * eax, which only a result variable assigned from each test reproduces. */
+// FUNCTION: LEGORR 0x0042b510
+int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
+                           const char* predugMap, int predugParam,
+                           const char* terrainMap, int terrainParam,
+                           const char* blockPointersMap, int blockPointersParam,
+                           const char* cryOreMap, int cryOreParam,
+                           const char* erodeMap, const char* pathMap,
+                           int pathParam, const char* textureSet,
+                           const char* emergeMap, const char* aiMap,
+                           const char* fallinMap)
+{
+    unsigned int x, y;
+    int result;
+
+    LEGO_LEVEL_PTR_SET(level->map, terrain_map_create(legoGlobs_rootCont, surfaceMap, level->blockSize,
+                                                      level->roughLevel));
+    if ((result = (int)(uintptr_t)LEGO_LEVEL_PTR(void, level->map))) {
+        level->f_084 = (uint32_t)(uintptr_t)ui_render_record_create(
+            LEGO_LEVEL_PTR(void, level->map), (const uint32_t*)legoGlobs_f_5563e4,
+            LEGO_FIELD(&s_lego_radar_zoom, uint32_t, 0));
+        terrain_map_perspective_correction_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 1);
+        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
+        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
+        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
+        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
+        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
+        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
+
+        level->width = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), uint32_t, 0x8);
+        level->height = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), uint32_t, 0xc);
+
+        electric_fence_restart((struct ElectricFenceLevel*)level);
+        grid_cell_record_buffer_replace((struct EngineState*)level);
+
+        if (level->useRoof) {
+            indexed_surface_resource_allocate(legoGlobs_rootCont, level->width, level->height);
+            graphics_overlay_visibility_set(1);
+        }
+
+        if ((result = lego_texture_set_config_load(level, textureSet))) {
+            LEGO_LEVEL_PTR_SET(level->blocks, (Lego_Block*)malloc(sizeof(Lego_Block) * level->width * level->height));
+            if ((result = (int)(uintptr_t)LEGO_LEVEL_PTR(void, level->blocks))) {
+                memset(LEGO_LEVEL_PTR(Lego_Block, level->blocks), 0, sizeof(Lego_Block) * level->width * level->height);
+                for (y = 0; y < level->height; y++) {
+                    for (x = 0; x < level->width; x++) {
+                        LEGO_2A_BLOCK(level, x, y).f_00 = 0;
+                        LEGO_2A_BLOCK(level, x, y).texture = 0;
+                        LEGO_2A_BLOCK(level, x, y).f_02 = 0;
+                        LEGO_2A_BLOCK(level, x, y).flags1 = 0;
+                        LEGO_2A_BLOCK(level, x, y).f_03 = 0;
+                        LEGO_2A_BLOCK(level, x, y).f_10[2] = 0;
+                        LEGO_2A_BLOCK(level, x, y).f_10[1] = 0;
+                        LEGO_FIELD(&LEGO_2A_BLOCK(level, x, y), short, 0x20) = rng_thunk_draw15();
+                    }
+                }
+
+                if ((result = lego_load_predug_layer(level, predugMap, predugParam))) {
+                    if ((result = lego_load_erode_cryore_layers(level, terrainMap, terrainParam))) {
+                        lego_load_path_ai_layers(level, cryOreMap, cryOreParam);
+                        lego_load_emerge_layer(level, erodeMap);
+                        lego_load_fallin_layer(level, pathMap, pathParam);
+                        lego_load_layer_l(level, emergeMap);
+                        lego_load_layer_m(level, aiMap);
+                        lego_load_block_pointers(level, fallinMap);
+                        if (lego_load_terrain_map(level, blockPointersMap, blockPointersParam)) {
+                            LEGO_FIELD(level, int, 0x110) = 1;
+                        }
+
+                        for (y = 0; y < level->height; y++) {
+                            for (x = 0; x < level->width; x++) {
+                                lego_cell_init_pass(level, x, y, 1);
+                            }
+                        }
+
+                        terrain_map_vertex_normals_update_all(LEGO_LEVEL_PTR(struct TerrainMap, level->map));
+                        terrain_cell_quad_run_stage_level(legoGlobs_rootCont, (struct LevelState*)level);
+                        result = 1;
+                    }
+                }
+            }
+        }
+    }
+    return result;
+}
+
+/* SurfaceTextCharacterMapInitialize [group 2A]: Lego_InitTextureMappings.
+ * Registers the surface texture pairs the map fades between. */
+// FUNCTION: LEGORR 0x0042b850
+void lego_surface_text_character_map_initialize(struct TerrainMap* map)
+{
+    unsigned char noFade[] = { 0x70, 0x70, 0x70, 0x70, 0x70, 0x70 };
+    unsigned char floors[] = { 0x00, 0x00, 0x00, 0x00, 0x46, 0x47, 0x45, 0x00,
+                               0x76, 0x66, 0x10, 0x11, 0x12, 0x13, 0x06, 0x16,
+                               0x26, 0x36, 0x07, 0x61, 0x60, 0x62, 0x63, 0x64,
+                               0x65, 0x71, 0x72, 0x73, 0x74, 0x75, 0x30 };
+    unsigned char walls[] = { 0x05, 0x04, 0x03, 0x02, 0x01, 0x40, 0x20, 0x67,
+                              0x05, 0x04, 0x03, 0x02, 0x01, 0x40, 0x20, 0x67 };
+    unsigned char list1[] = { 0x25, 0x24, 0x23, 0x22, 0x21 };
+    unsigned char list2[] = { 0x35, 0x34, 0x33, 0x32, 0x31 };
+    unsigned char list3[] = { 0x35, 0x34, 0x33, 0x32, 0x31 };
+    unsigned char list4[] = { 0x55, 0x54, 0x53, 0x52, 0x51 };
+    unsigned char list5[] = { 0x55, 0x54, 0x53, 0x52, 0x51 };
+    unsigned char list6[] = { 0x77, 0x77, 0x77, 0x77, 0x77 };
+    unsigned int i, j;
+
+    for (i = 0; i < sizeof(floors); i++) {
+        for (j = 0; j < sizeof(walls); j++) terrain_map_fade_pair_add(map, floors[i], walls[j]);
+        for (j = 0; j < sizeof(list1); j++) terrain_map_fade_pair_add(map, floors[i], list1[j]);
+        for (j = 0; j < sizeof(list2); j++) terrain_map_fade_pair_add(map, floors[i], list2[j]);
+        for (j = 0; j < sizeof(list3); j++) terrain_map_fade_pair_add(map, floors[i], list3[j]);
+        for (j = 0; j < sizeof(list4); j++) terrain_map_fade_pair_add(map, floors[i], list4[j]);
+        for (j = 0; j < sizeof(list5); j++) terrain_map_fade_pair_add(map, floors[i], list5[j]);
+        for (j = 0; j < sizeof(list6); j++) terrain_map_fade_pair_add(map, floors[i], list6[j]);
+    }
+    for (i = 0; i < sizeof(noFade); i++) {
+        for (j = 0; j < sizeof(walls); j++) terrain_map_fade_pair_add(map, noFade[i], walls[j]);
+        for (j = 0; j < sizeof(list1); j++) terrain_map_fade_pair_add(map, noFade[i], list1[j]);
+        for (j = 0; j < sizeof(list2); j++) terrain_map_fade_pair_add(map, noFade[i], list2[j]);
+        for (j = 0; j < sizeof(list3); j++) terrain_map_fade_pair_add(map, noFade[i], list3[j]);
+        for (j = 0; j < sizeof(list4); j++) terrain_map_fade_pair_add(map, noFade[i], list4[j]);
+        for (j = 0; j < sizeof(list5); j++) terrain_map_fade_pair_add(map, noFade[i], list5[j]);
+        for (j = 0; j < sizeof(list6); j++) terrain_map_fade_pair_add(map, noFade[i], list6[j]);
+    }
+}
+
+/* TextureSetConfigLoad [group 2A]: Lego_LoadTextureSet. Reads the level's
+ * texture set block: the surface texture grid, its meshes and textures and
+ * the roof texture. */
+// FUNCTION: LEGORR 0x0042bb60
+int lego_texture_set_config_load(Lego_Level* level, const char* textureSet)
+{
+    struct BlockRec* config = legoGlobs_config;
+    int ok = 0;
+    unsigned int width, height;
+    const char* meshBaseName;
+    const char* textureBaseName;
+    const char* roofTexture;
+
+    // STRING: LEGORR 0x004a4620
+    if ((width = LEGO_A_CFG_INT(config, string_path_join(s_engine_config_root, textureSet, "surftextwidth", 0)))) {
+        // STRING: LEGORR 0x004a4610
+        if ((height = LEGO_A_CFG_INT(config, string_path_join(s_engine_config_root, textureSet, "surftextheight", 0)))) {
+            level->f_074 = width;
+            level->f_078 = height;
+            lego_surface_text_character_map_initialize(LEGO_LEVEL_PTR(struct TerrainMap, level->map));
+            terrain_map_vertex_normals_update_all(LEGO_LEVEL_PTR(struct TerrainMap, level->map));
+
+            // STRING: LEGORR 0x004a4600
+            if ((meshBaseName = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "meshbasename", 0)))) {
+                // STRING: LEGORR 0x004a45f0
+                if ((textureBaseName = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "texturebasename", 0)))) {
+                    if (LEGO_LEVEL_PTR_SET(level->textureSet, (void*)terrain_cell_resource_grid_load(textureBaseName, level->f_074, level->f_078))) {
+                        terrain_map_texture_set_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
+                                                    LEGO_LEVEL_PTR(void, level->textureSet));
+                        if (lego_load_tile_meshes(level, meshBaseName)) {
+                            // STRING: LEGORR 0x004a45e4
+                            if ((roofTexture = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "rooftexture", 0)))) {
+                                if (animated_texture_replace(roofTexture)) ok = 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return ok;
+}
+
+/* LoadPredugLayer [group 2A]: Lego_LoadPreDugMap. Opens the level's
+ * pre-dug caverns (1, 3 visible; 2, 4 hidden; 3 and 4 also slug holes). */
+// FUNCTION: LEGORR 0x0042bd20
+int lego_load_predug_layer(Lego_Level* level, const char* filename, int modifier)
+{
+    uint32_t handle;
+    uint32_t width, height;
+    unsigned int x, y;
+    int value;
+    LegoPoint2I2A pos;
+
+    if (filename && (handle = map_open2(filename, NULL)) != (uint32_t)-1) {
+        level_map_dimensions_get(handle, &width, &height);
+        if (width == level->width && height == level->height) {
+            for (y = 1; y < height - 1; y++) {
+                for (x = 1; x < width - 1; x++) {
+                    value = lego_map_file_cell_get(handle, x, y) - modifier;
+                    if (value == 1 || value == 3) {
+                        lego_terrain_cell_mutation(level, x, y, 1);
+                        {
+                            LegoPoint2I2A offsets[9] = { { -1, -1 }, { 0, -1 }, { 1, -1 },
+                                                         { 1, 0 }, { 1, 1 }, { 0, 1 },
+                                                         { -1, 1 }, { -1, 0 } };
+                            unsigned int i;
+                            for (i = 0; i < 9; i++) {
+                                LEGO_2A_BLOCK(level, x + offsets[i].x, y + offsets[i].y).flags1 |= 0x4000000;
+                            }
+                        }
+                    } else if (value == 2 || value == 4) {
+                        LEGO_2A_BLOCK(level, x, y).flags1 |= 0x20000;
+                    }
+                    if (value == 3) {
+                        pos.x = x;
+                        pos.y = y;
+                        LEGO_2A_BLOCK(level, x, y).flags2 |= 0x20;
+                        predug_coordinate_pool_append(&pos.x);
+                    }
+                    if (value == 4) {
+                        LEGO_2A_BLOCK(level, x, y).flags2 |= 0x200;
+                    }
+                }
+            }
+            level_map_slot_release(handle);
+            return 1;
+        }
+        level_map_slot_release(handle);
+    }
+    return 0;
+}
+
+/* LoadEmergeLayer [group 2A]: Lego_LoadErodeMap. An even nonzero value
+ * starts the block eroding; every value sets the block's erode speed. */
+// FUNCTION: LEGORR 0x0042bf40
+int lego_load_emerge_layer(Lego_Level* level, const char* filename)
+{
+    uint32_t handle;
+    uint32_t width, height;
+    unsigned int x, y;
+    uint32_t value;
+    int erode;
+    LegoPoint2I2A pos;
+
+    if (filename && (handle = map_open2(filename, NULL)) != (uint32_t)-1) {
+        level_map_dimensions_get(handle, &width, &height);
+        if (width == level->width && height == level->height) {
+            for (y = 0; y < height; y++) {
+                for (x = 0; x < width; x++) {
+                    pos.x = x;
+                    pos.y = y;
+                    value = lego_map_file_cell_get(handle, x, y);
+                    erode = 0;
+                    if (value == 0 || (value % 2) == 1) value++;
+                    else erode = 1;
+                    LEGO_2A_BLOCK(level, x, y).f_06 = (unsigned char)(value >> 1);
+                    if (erode) lava_erosion_stage_register(&pos.x, rng_thunk_draw15() % 4);
+                }
+            }
+            level_map_slot_release(handle);
+            return 1;
+        }
+        level_map_slot_release(handle);
+    }
+    return 0;
+}
+
+/* LoadLayerM [group 2A]: Lego_LoadAIMap. Each block's AI node byte. */
+// FUNCTION: LEGORR 0x0042c060
+int lego_load_layer_m(Lego_Level* level, const char* filename)
+{
+    uint32_t handle;
+    uint32_t width, height;
+    unsigned int x, y;
+
+    if (filename && (handle = map_open2(filename, NULL)) != (uint32_t)-1) {
+        level_map_dimensions_get(handle, &width, &height);
+        if (width == level->width && height == level->height) {
+            for (y = 0; y < height; y++) {
+                for (x = 0; x < width; x++) {
+                    LEGO_FIELD(&LEGO_2A_BLOCK(level, x, y), unsigned char, 0x34) =
+                        (unsigned char)lego_map_file_cell_get(handle, x, y);
+                }
+            }
+            level_map_slot_release(handle);
+            return 1;
+        }
+        level_map_slot_release(handle);
+    }
+    return 0;
+}
+
+/* LoadLayerL [group 2A]: Lego_LoadEmergeMap. Value 6n + 1 is record n's
+ * trigger block, 6n + 2..6n + 6 its emerge points. */
+// FUNCTION: LEGORR 0x0042c120
+int lego_load_layer_l(Lego_Level* level, const char* filename)
+{
+    uint32_t handle;
+    uint32_t width, height;
+    unsigned int x, y;
+    uint32_t value, index, slot;
+
+    if (filename) {
+        handle = map_open2(filename, NULL);
+        if (handle != (uint32_t)-1 &&
+            (level_map_dimensions_get(handle, &width, &height), width == level->width) &&
+            height == level->height) {
+            for (y = 0; y < height; y++) {
+                for (x = 0; x < width; x++) {
+                    if ((value = lego_map_file_cell_get(handle, x, y))) {
+                        value--;
+                        slot = value % 6;
+                        index = value / 6;
+                        if (index + 1 > level->f_00c) {
+                            if (!level->emergeMap) {
+                                LEGO_LEVEL_PTR_SET(level->emergeMap,
+                                                   malloc(sizeof(LegoEmergeTrigger2A) * (index + 1)));
+                            } else {
+                                LEGO_LEVEL_PTR_SET(level->emergeMap,
+                                                   realloc(LEGO_LEVEL_PTR(void, level->emergeMap),
+                                                           sizeof(LegoEmergeTrigger2A) * (index + 1)));
+                            }
+                            memset(&LEGO_2A_TRIGGERS(level)[level->f_00c], 0,
+                                   sizeof(LegoEmergeTrigger2A) * ((index + 1) - level->f_00c));
+                            level->f_00c = index + 1;
+                        }
+                        if (slot) {
+                            LEGO_2A_BLOCK(level, x, y).flags2 |= 0x40;
+                            LEGO_2A_TRIGGERS(level)[index].emergePoints[slot - 1].blockPos.x = x;
+                            LEGO_2A_TRIGGERS(level)[index].emergePoints[slot - 1].blockPos.y = y;
+                            LEGO_2A_TRIGGERS(level)[index].emergePoints[slot - 1].used = 1;
+                        } else {
+                            LEGO_2A_BLOCK(level, x, y).flags2 |= 0x80;
+                            LEGO_2A_TRIGGERS(level)[index].blockPos.x = x;
+                            LEGO_2A_TRIGGERS(level)[index].blockPos.y = y;
+                        }
+                    }
+                }
+            }
+            level_map_slot_release(handle);
+            return 1;
+        }
+        level_map_slot_release(handle);
+    }
+    return 0;
+}
+
+/* EmergeMapTriggerSpawn [group 2A]: Lego_EmergeTrigger? When blockPos is an
+ * expired trigger block, the first emerge point that spawns a rock monster
+ * of the level's emerge type restarts the trigger's timer. */
+// FUNCTION: LEGORR 0x0042c330
+int lego_emerge_map_trigger_spawn(Lego_Level* level, const LegoPoint2I2A* blockPos,
+                                  LegoPoint2I2A* outPos)
+{
+    unsigned int i, j;
+
+    for (i = 0; i < level->f_00c; i++) {
+        if (blockPos->x == LEGO_2A_TRIGGERS(level)[i].blockPos.x &&
+            blockPos->y == LEGO_2A_TRIGGERS(level)[i].blockPos.y &&
+            LEGO_2A_TRIGGERS(level)[i].timer <= 0.0f) {
+            for (j = 0; j < 5; j++) {
+                if (LEGO_2A_TRIGGERS(level)[i].emergePoints[j].used) {
+                    if (creature_spawn_from_emergence(&legoGlobs_rockMonsterData[level->f_0b0], 3, level->f_0b0,
+                                                      LEGO_2A_TRIGGERS(level)[i].emergePoints[j].blockPos.x,
+                                                      LEGO_2A_TRIGGERS(level)[i].emergePoints[j].blockPos.y)) {
+                        LEGO_2A_TRIGGERS(level)[i].timer = level->emergeTimeOut;
+                        if (outPos) {
+                            outPos->x = LEGO_2A_TRIGGERS(level)[i].emergePoints[j].blockPos.x;
+                            outPos->y = LEGO_2A_TRIGGERS(level)[i].emergePoints[j].blockPos.y;
+                        }
+                        return 1;
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+/* LevelRecordTimerCountdown [group 2A]: Lego_UpdateEmergeTriggers? Counts
+ * the running trigger timers down. */
+// FUNCTION: LEGORR 0x0042c440
+void lego_level_record_timer_countdown(Lego_Level* level, float elapsed)
+{
+    unsigned int i;
+
+    for (i = 0; i < level->f_00c; i++) {
+        if (LEGO_2A_TRIGGERS(level)[i].timer > 0.0f) {
+            LEGO_2A_TRIGGERS(level)[i].timer -= elapsed;
+        }
+    }
+}
 
 /* ---- part 2 functions, group 2A: end ---- */
 

@@ -1555,6 +1555,9 @@ extern "C" int terrain_object_type_sfx_at_cell_get(const void* position_record);
 unsigned int level_predug_coordinate_count_get(void);
 int level_predug_coordinate_get(unsigned int index, int cell_xy_out[2]);
 void level_predug_coordinate_pool_clear(void);
+#ifdef __cplusplus
+extern "C"
+#endif
 void predug_coordinate_pool_append(const int cell_xy[2]);
 void spawn_coordinate_pool_clear(void); /* FUN_004372a0 */
                                  /* FUN_0044ad80 */

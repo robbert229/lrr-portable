@@ -565,7 +565,13 @@ void indexed_surface_resource_hooks_set(IndexedSurfaceCreateFn create,
                                         IndexedSurfaceReleaseFn release,
                                         IndexedSurfaceTextureSetFn set_texture,
                                         void* user);
+#ifdef __cplusplus
+extern "C"
+#endif
 int indexed_surface_resource_allocate(void* owner, int width, int height);
+#ifdef __cplusplus
+extern "C"
+#endif
 int animated_texture_replace(const char* name); /* 0x00462e60 */
 void graphics_overlay_resources_release(void); /* 0x00462ed0 */
 /* Native frame owner is distinct from the software quad indices. */

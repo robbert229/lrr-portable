@@ -2292,7 +2292,8 @@ void rectangular_resource_table_destroy(RectangularResourceTable* table)
 
 /* GlobalStateField84Get (FUN_0042b500, findings 324/392): the retail getter
  * reads +0x84 from the active level global and takes no arguments. */
-// FUNCTION: LEGORR 0x0042b510
+/* Port model of 0x0042b510 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042b510, retires to the tail in GAME-021 part 3
 static int map_pipeline(LevelState* s, const char** names, const int* biases,
                         const char* texture_set_name)
 {
@@ -2426,7 +2427,8 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases,
 
 /* Retail TextureSetConfigLoad receives the level record and resolves its
  * +0x74/+0x78 grid and +0x04 terrain owner before loading resources. */
-// FUNCTION: LEGORR 0x0042BB60
+/* Port model of 0x0042bb60 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042bb60, retires to the tail in GAME-021 part 3
 int terrain_texture_set_config_load_level(LevelState* level,
                                           const char* group_name)
 {
@@ -2437,7 +2439,8 @@ int terrain_texture_set_config_load_level(LevelState* level,
 }
 
 /* LoadPredugLayer @ 0x42bd20 */
-// FUNCTION: LEGORR 0x0042bd20
+/* Port model of 0x0042bd20 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042bd20, retires to the tail in GAME-021 part 3
 static int load_predug(LevelState* s, const char* name, int bias)
 {
     s_predug_coordinate_count = 0;
@@ -2490,7 +2493,8 @@ static int load_predug(LevelState* s, const char* name, int bias)
 
 /* LoadEmergeLayer @ 0x42bf40 — even nonzero values seed an erosion stage;
  * zero and odd values are rounded up before the voxel's +0x06 write. */
-// FUNCTION: LEGORR 0x0042bf40
+/* Port model of 0x0042bf40 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042bf40, retires to the tail in GAME-021 part 3
 static int load_emerge(LevelState* s, const char* name)
 {
     uint32_t width;
@@ -2539,7 +2543,8 @@ static int load_emerge(LevelState* s, const char* name)
 }
 
 /* LoadLayerM @ 0x42c060 — reads the AIMap, writes raw byte at voxel +0x34. */
-// FUNCTION: LEGORR 0x0042c060
+/* Port model of 0x0042c060 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042c060, retires to the tail in GAME-021 part 3
 static int load_layer_m(LevelState* s, const char* name)
 {
     uint32_t width;
@@ -2570,7 +2575,8 @@ static int load_layer_m(LevelState* s, const char* name)
 }
 /* LoadLayerL @ 0x42c120 — reads the EmergeMap; ORs `0x40`/`0x80` flag bits
  * at voxel +0x0C and appends 0x4C-stride records into level+0x08. */
-// FUNCTION: LEGORR 0x0042c120
+/* Port model of 0x0042c120 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042c120, retires to the tail in GAME-021 part 3
 static int load_layer_l(LevelState* s, const char* name)
 {
     uint32_t width;
@@ -2652,7 +2658,8 @@ static int load_layer_l(LevelState* s, const char* name)
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x0042c330
+/* Port model of 0x0042c330 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042c330, retires to the tail in GAME-021 part 3
 int ledger_stub_0042c330_EmergeMapTriggerSpawn(
     LevelState* level, const int cell_xy[2], int output_xy[2])
 {
@@ -2708,7 +2715,8 @@ int ledger_stub_0042c330_EmergeMapTriggerSpawn(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x0042c440
+/* Port model of 0x0042c440 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042c440, retires to the tail in GAME-021 part 3
 void camera_grid_timers(EngineContext* ctx, float dt)
 {
     EngineState* st = ctx != NULL ? ctx->state_block : NULL;
@@ -10077,15 +10085,6 @@ extern "C" void camera_registry_probe_original(void) /* 0x00435a50 */
     camera_registry_probe(s_callback_registry_context);
 }
 
-/* 0x0042c440 takes the level; the port reads it from the context. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (camera_grid_timers)
-extern "C" void camera_grid_timers_original(struct LevelState* level,
-                                            float elapsed)
-{
-    (void)level;
-    camera_grid_timers(s_callback_registry_context, elapsed);
-}
-
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (camera_grid_expiry)
 extern "C" void camera_grid_expiry_original(float elapsedWorld) /* 0x0042cb70 */
 {
@@ -10274,26 +10273,6 @@ void renderer_fog_color_set(float red, float green, float blue);
 void renderer_fog_mode_set(unsigned int mode);
 void renderer_fog_parameters_set(unsigned int start, unsigned int end,
                                  unsigned int density);
-
-/* MapLoadPipeline (FUN_0042b510) takes the ten map names and the bias
- * words as separate arguments (the names already cut at their ':'); the
- * port's map_pipeline takes them as arrays in LevelLoad's key order. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (map_pipeline, 0x0042b510)
-extern "C" int map_pipeline_original(
-    struct Lego_Level* level, char* surfaceMap, char* predugMap,
-    int predugParam, char* terrainMap, int terrainParam,
-    char* blockPointersMap, int blockPointersParam, char* cryOreMap,
-    int cryOreParam, char* erodeMap, char* pathMap, int pathParam,
-    const char* textureSet, char* emergeMap, char* aiMap, char* fallinMap)
-{
-    const char* names[10] = { surfaceMap, predugMap, terrainMap,
-                              blockPointersMap, cryOreMap, erodeMap,
-                              pathMap, emergeMap, aiMap, fallinMap };
-    const int biases[10] = { 0, predugParam, terrainParam,
-                             blockPointersParam, cryOreParam, 0, pathParam,
-                             0, 0, 0 };
-    return map_pipeline((LevelState*)level, names, biases, textureSet);
-}
 
 /* OListEntityRecordParse (FUN_0042e020) takes the level; the port's entry
  * takes the game context. */

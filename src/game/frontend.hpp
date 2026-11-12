@@ -1397,6 +1397,9 @@ typedef struct UiRenderRecord {
     uint32_t  extra;        /* corpus dword +20 */
     float     float_at_10;  /* corpus dword +24: source's float at +0x10 */
 } UiRenderRecord;
+#ifdef __cplusplus
+extern "C"
+#endif
 UiRenderRecord* ui_render_record_create(void* source,
                                         const uint32_t* payload,
                                         uint32_t extra);       /* FUN_0045da90 */

@@ -512,7 +512,6 @@ void media_cd_audio_watchdog_tick(int cdtrack);            /* 00488c00 */
 int keep_running_original(void);                           /* 00435940 */
 void camera_move_pipeline_original(float elapsedWorld);    /* 0046a730 */
 void camera_registry_probe_original(void);                 /* 00435a50 */
-void camera_grid_timers_original(struct LevelState* level, float elapsed); /* 0042c440 */
 void camera_grid_expiry_original(float elapsedWorld);      /* 0042cb70 */
 void simtick_table_dispatch_original(float elapsed);       /* 0040aa10 */
 void simtick_scene_pass_original(float elapsedWorld);      /* 0043b270 */
@@ -782,14 +781,6 @@ void options_apply_from_slot_original(void);           /* options.cpp, 00415150 
 void movie_play_level_video_adapter(const char* levelName, int flag); /* frontend_unit.cpp, 00415990 */
 int entity_type_pair_for_name_original(const char* name, int* type_out,
                                        int* index_out, int* zero_out); /* lego.cpp, 0042e8b0 */
-int map_pipeline_original(struct Lego_Level* level, char* surfaceMap,
-                          char* predugMap, int predugParam,
-                          char* terrainMap, int terrainParam,
-                          char* blockPointersMap, int blockPointersParam,
-                          char* cryOreMap, int cryOreParam, char* erodeMap,
-                          char* pathMap, int pathParam,
-                          const char* textureSet, char* emergeMap,
-                          char* aiMap, char* fallinMap); /* lego.cpp, 0042b510 */
 int object_list_load_file_original(struct Lego_Level* level,
                                    const char* fileName); /* lego.cpp, 0042e020 */
 void lego_play_movie_adapter(const char* fileName, const float* screenPt); /* lego.cpp, 0042efc0 */
@@ -1284,6 +1275,46 @@ void terrain_map_wobble_emissive_set(struct TerrainMap* map, int on); /* 00450a8
 /* ---- GAME-021 part 2 (issue #574) ---- */
 
 /* ---- part 2 imports, group 2A (0042b510-0042c440): begin ---- */
+
+struct TerrainMap;
+struct LevelState;
+struct EngineState;
+struct ElectricFenceLevel;
+struct UiRenderRecord;
+struct TerrainCellResourceGrid;
+/* GAME Map3D.c (terrain_map.h). */
+struct TerrainMap* terrain_map_create(void* root, const char* filename,
+                                      float blockSize, float roughLevel); /* 0044e0c0 */
+void terrain_map_texture_no_fade_set(struct TerrainMap* map,
+                                     unsigned char texture);  /* 0044e6b0 */
+void terrain_map_vertex_normals_update_all(struct TerrainMap* map); /* 0044e880 */
+void terrain_map_fade_pair_add(struct TerrainMap* map, unsigned char texA,
+                               unsigned char texB);           /* 0044f1a0 */
+void terrain_map_texture_set_set(struct TerrainMap* map, void* textureSet); /* 0044f220 */
+void terrain_map_perspective_correction_set(struct TerrainMap* map, int on); /* 0044f490 */
+/* RadarMap_Create (map_view.cpp, frontend.hpp): the port takes the zoom
+ * as a word. */
+struct UiRenderRecord* ui_render_record_create(void* source,
+                                               const uint32_t* payload,
+                                               uint32_t extra); /* 0045da90 */
+/* Roof (resource.hpp). */
+int indexed_surface_resource_allocate(void* owner, int width, int height); /* 00462da0 */
+int animated_texture_replace(const char* name);               /* 00462e60 */
+/* Detail_LoadTextureSet (tile_variants.cpp, terrain_grid.hpp). */
+struct TerrainCellResourceGrid* terrain_cell_resource_grid_load(
+    const char* bitmap_prefix, uint32_t width, uint32_t height); /* 0040b310 */
+/* GAME-005 erosion (level.hpp). */
+int lava_erosion_stage_register(const int xy[2], int stage); /* 0040ea10 */
+/* SpiderWeb/predug coordinate pool (legoobject.cpp, level.hpp). */
+void predug_coordinate_pool_append(const int cell_xy[2]);   /* 0044a4b0 */
+/* Smoke/cell passes (cell_flood_passes.cpp, terrain_grid.hpp). */
+void terrain_cell_quad_run_stage_level(void* scene,
+                                       struct LevelState* level); /* 0046db90 */
+/* Map files (files.cpp, lego.cpp, g98_024.c; level.hpp). */
+int map_open2(const char* path, int32_t* size_out);         /* 00480170 */
+void level_map_dimensions_get(uint32_t slot, uint32_t* width,
+                              uint32_t* height);             /* 004334c0 */
+void level_map_slot_release(uint32_t slot);                  /* 00489460 */
 
 /* ---- part 2 imports, group 2A: end ---- */
 
