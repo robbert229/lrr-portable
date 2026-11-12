@@ -532,6 +532,19 @@ void lego_periodic_callback_dispatch(int on);   /* E, 00425b40 */
 
 /* ---- part 2 declarations, group 2D (0042e020-0042ef40): begin ---- */
 
+struct Lego_Level;
+int lego_object_list_load_file(struct Lego_Level* level,
+                               const char* fileName);      /* 0042e020 */
+int lego_entity_type_pair_lookup(const char* objName, int* outType,
+                                 unsigned int* outID,
+                                 void** outModel);          /* 0042e8b0 */
+int lego_entity_at(int objType, unsigned int objID,
+                   void** outModel);                        /* 0042ed70 */
+unsigned int lego_stats_level_record_count_for_stat_type(int objType); /* 0042ef40 */
+/* Assumed from other groups: none (group 2D calls no other part-2
+ * function). */
+
+
 /* ---- part 2 declarations, group 2D: end ---- */
 
 /* ---- part 2 declarations, group 2E (0042efc0-0042f6f0): begin ---- */

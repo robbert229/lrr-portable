@@ -4790,7 +4790,7 @@ int lego_level_load(const char* levelName)
 
         // STRING: LEGORR 0x004a42f8
         if ((str = LEGO_D_TEMP("Slug")) != NULL) {
-            if (entity_type_pair_for_name_original(str, &objType, (int*)&level->f_26c, NULL)) {
+            if (lego_entity_type_pair_lookup(str, &objType, &level->f_26c, NULL)) {
                 // STRING: LEGORR 0x004a42ec
                 value = LEGO_D_FLOAT("SlugTime");
                 level->f_268 = value;
@@ -4811,7 +4811,7 @@ int lego_level_load(const char* levelName)
         legoGlobs_f_556ec0 = (LEGO_D_BOOL("noFallins") != 1);
 
         mission_crystal_quota_setup(config, s_engine_config_root, levelName);
-        entity_type_pair_for_name_original(emergeCreature, &objType, (int*)&level->f_0b0, NULL);
+        lego_entity_type_pair_lookup(emergeCreature, &objType, &level->f_0b0, NULL);
 
         if (config_rgb_vector_read(legoGlobs_config,
                                    // STRING: LEGORR 0x004a42b0
@@ -4913,7 +4913,7 @@ int lego_level_load(const char* levelName)
                 objective_announce_current(0);
                 objective_tick_target(legoGlobs_textOnlyWindow, (struct LevelState*)legoGlobs_currLevel, 1.0f, 1.0f);
 
-                if (object_list_load_file_original(level, objectList)) {
+                if (lego_object_list_load_file(level, objectList)) {
                     LegoInitialResourcesD resources;
                     float pos[2];
 
@@ -5055,6 +5055,405 @@ uint32_t global_state_field84_get_current_target(void)
 /* ---- part 2 functions, group 2C: end ---- */
 
 /* ---- part 2 functions, group 2D (0042e020-0042ef40): begin ---- */
+
+/* OListEntityRecordParse: Lego_LoadOLObjectList. Create the objects of a
+ * level's object list (`.ol`): each item gives a type, a block position
+ * (1-based, fractional), a heading in degrees, a health and the item name
+ * of the object it drives. TVCamera places the top-down camera instead.
+ * Objects on blocks not yet uncovered are registered hidden. The `driving`
+ * links are resolved once every object exists. */
+// FUNCTION: LEGORR 0x0042e020
+int lego_object_list_load_file(Lego_Level* level, const char* fileName)
+{
+    struct BlockRec* ol;
+    struct BlockRec* item;
+    char* typeName;
+    char* olName;
+    char* drivingName;
+    float xPos;
+    float yPos;
+    float heading;
+    float health;
+    unsigned int bx;
+    unsigned int by;
+    LegoPoint2FC wPos;
+    LegoPoint2FC hiddenPos;
+    int objType;
+    unsigned int objID;
+    void* objModel;
+    struct EntitySlot* obj;
+    struct EntitySlot* target;
+    int blockPos[2];
+    void* shape;
+    unsigned int shapeCount;
+    unsigned int dir;
+    unsigned int i;
+    unsigned int j;
+    int first = 1;
+    unsigned int result = 0;
+    unsigned int count = 0;
+    struct EntitySlot* objList[200];
+    char* olNames[200];
+    char* drivingNames[200];
+
+    if ((ol = block_open(fileName)) != NULL) {
+        memset(legoGlobs_recordObjs, 0, sizeof(void*) * 10);
+        legoGlobs_recordObjsCount = 0;
+
+        if ((item = block_subgroup(ol, string_path_join(s_engine_config_root, NULL))) != NULL) {
+            for (; item != NULL; item = block_next_equal_key(item)) {
+                if ((typeName = block_get_str_copy(ol, string_path_join(s_engine_config_root, item->key,
+                        // STRING: LEGORR 0x004a46d4
+                        "type", NULL))) == NULL) break;
+                if (block_find(ol, string_path_join(s_engine_config_root, item->key,
+                        // STRING: LEGORR 0x004a46cc
+                        "xpos", NULL)) == NULL) break;
+                if (block_find(ol, string_path_join(s_engine_config_root, item->key,
+                        // STRING: LEGORR 0x004a46c4
+                        "ypos", NULL)) == NULL) break;
+                if (block_find(ol, string_path_join(s_engine_config_root, item->key,
+                        // STRING: LEGORR 0x004a46bc
+                        "heading", NULL)) == NULL) break;
+
+                xPos = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "xpos", NULL));
+                yPos = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "ypos", NULL));
+                heading = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "heading", NULL));
+                if ((health = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key,
+                        // STRING: LEGORR 0x004a46b4
+                        "health", NULL))) == 0.0f) health = 100.0f;
+                drivingNames[count] = drivingName = block_get_str_copy(ol, string_path_join(s_engine_config_root, item->key,
+                        // STRING: LEGORR 0x004a46ac
+                        "driving", NULL));
+                olNames[count] = olName = string_duplicate(item->key);
+
+                xPos -= 1.0f;
+                yPos -= 1.0f;
+                bx = (unsigned int)xPos;
+                by = (unsigned int)yPos;
+                terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by, &wPos.x, &wPos.y);
+                wPos.x += (xPos - (bx + 0.5f)) * level->blockSize;
+                yPos = (yPos - (by + 0.5f)) * level->blockSize;
+                wPos.y -= yPos;
+                heading = (heading * (1.0f / 180.0f)) * 3.1415927f;
+
+                if (!lego_entity_type_pair_lookup(typeName, &objType, &objID, &objModel)) break;
+
+                obj = NULL;
+                if (objType == -1) {
+                    selection_record_point_set((struct ViewContext*)s_zoom_step_context, wPos.x, wPos.y);
+                    camera_rotation_set(s_zoom_step_context, heading);
+                    camera_tilt_set(s_zoom_step_context, 0.8f);
+                    legoGlobs_f_5563f8 = wPos;
+                    s_lego_radar_zoom = 15.0f;
+                } else if (!((bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
+                                 ? (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+                                        [legoGlobs_currLevel->width * by + bx].flags1 & 8)
+                                 : 0)) {
+                    hiddenPos = wPos;
+                    deferred_olist_entity_queue_add_original(objModel, objType, objID, &hiddenPos.x,
+                                                             heading, health, olName, drivingName);
+                } else if (objType == 4) {
+                    blockPos[0] = bx;
+                    blockPos[1] = by;
+                    shape = (void*)(uintptr_t)task_field84_get_and_field88_out(&legoGlobs_buildingData[objID], (uint32_t*)&shapeCount);
+                    dir = (unsigned int)(heading * 0.15915494f * 8.0f);
+                    dir = ((dir & 1) + dir) >> 1;
+                    shape = rotated_pairs_scratch_fill(blockPos, (const int*)shape, shapeCount, dir);
+                    obj = world_object_create_with_transform_original(objID, blockPos, dir, shape,
+                        shapeCount, level->disableStartTeleport);
+                    if (obj) entity_kind_record_update_dispatch(obj);
+                } else {
+                    obj = object_create_from_container_adapter(objModel, objType, objID);
+                }
+
+                objList[count] = obj;
+                if (obj) {
+                    if (first) {
+                        screen_effect_record_set_original(legoGlobs_cameraTrack, obj, 2.0f,
+                                                          entity_stats_float_at7c(obj), 0.7f, 0.01f);
+                    }
+                    first = 0;
+                    if (objType != 4) entity_world_position_set(obj, wPos.x, wPos.y, heading, 1);
+                    if (objType == 6 || objType == 7 || objType == 8 || objType == 9) cmd_create_task(obj, 0);
+                    if (s_lego_f_4e8448 == NULL && LEGO_FIELD(obj, int, 0x0) == 2) s_lego_f_4e8448 = obj;
+                    if (legoGlobs_recordObjsCount < 10) {
+                        legoGlobs_recordObjs[legoGlobs_recordObjsCount] = obj;
+                        legoGlobs_recordObjsCount++;
+                    }
+                    LEGO_FIELD(obj, uint32_t, 0x3ec) |= 0x200;
+                    LEGO_FIELD(obj, float, 0x340) = health;
+                    building_upgrade_state_changed_dispatch_original(LEGO_FIELD(obj, int, 0x0),
+                                                                     LEGO_FIELD(obj, int, 0x4), 0, 1);
+                    if (s_panel_highlight_flags & 0x40000) entity_state_override_pop(obj);
+                    entity_queue_for_rockfall_processing_if_eligible(obj);
+                    if (objType == 12) {
+                        LEGO_FIELD(obj, uint32_t, 0x3e8) |= 0x10000;
+                        scene_action_name_set(LEGO_FIELD(obj, void*, 0x1c),
+                            // STRING: LEGORR 0x004a46a0
+                            "FlapInWind");
+                        ddiscene_frame_update_and_callbacks(LEGO_FIELD(obj, void*, 0x1c), 0.0f);
+                        set_expansion_entity_at_grid_cell(bx, by, obj);
+                    } else if (objType == 11) {
+                        electric_fence_add((struct ElectricFenceObject*)obj);
+                    }
+                }
+
+                lego_e_mem_free(typeName);
+                count++;
+            }
+
+            if (item == NULL) result = 1;
+        }
+        block_close(ol);
+    }
+
+    if (result) {
+    for (result = 0; result < count; result++) {
+        if ((obj = objList[result]) != NULL && (drivingName = drivingNames[result]) != NULL) {
+            for (j = 0; j < count; j++) {
+                if (!_strcmpi(drivingName, olNames[j])) {
+                    if ((target = objList[j]) != NULL) {
+                        LEGO_FIELD(obj, struct EntitySlot*, 0x2fc) = target;
+                        LEGO_FIELD(obj, uint32_t, 0x3e4) |= 4;
+                        entity_linked_activity_event_dispatch(obj,
+                            (entity_capability_flags_get(target) & 0x100) ? 1 :
+                            (entity_stats_word_get(target) & 0x1000000) ?
+                                ((entity_stats_word_get(target) & 0x2000000) ? 1 : 2) : 4);
+                        entity_linked_route_flag_clear_original(obj, target);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    for (i = 0; i < count; i++) {
+        if (olNames[i]) lego_e_mem_free(olNames[i]);
+        if (drivingNames[i]) lego_e_mem_free(drivingNames[i]);
+    }
+
+    return 1;
+    }
+    return 0;
+}
+
+/* ObjectListEntityTypeResolve: Lego_GetObjectByName. The object type, the
+ * type's index and its model (the type data record or the MiscObjects
+ * container) of an object list's type name. The rock monsters are matched
+ * first, then the special objects, then the vehicles, mini-figures and
+ * buildings. "tvcamera", "ProcessedOre", "Dynamite", "ElectricFence",
+ * "SpiderWeb", "Barrier" and "OohScary" carry no STRING marker: lego.cpp
+ * annotates their addresses as the port's s_item_name_* GLOBALs (C++
+ * linkage, used by entity.cpp and legoobject.cpp), and "PowerCrystal",
+ * "Ore" and "Path" belong to other units. */
+// FUNCTION: LEGORR 0x0042e8b0
+int lego_entity_type_pair_lookup(const char* objName, int* outType,
+                                 unsigned int* outID, void** outModel)
+{
+    unsigned int i;
+
+    *outID = 0;
+    for (i = 0; i < legoGlobs_catalogCounts[2]; i++) {
+        if (!_strcmpi(legoGlobs_rockMonsterName[i], objName)) {
+            *outType = 3;
+            *outID = i;
+            if (outModel) *outModel = &legoGlobs_rockMonsterData[i];
+            return 1;
+        }
+    }
+
+    if (!_strcmpi("tvcamera", objName)) {
+        *outType = -1;
+        if (outModel) *outModel = NULL;
+    } else if (!_strcmpi("PowerCrystal", objName)) {
+        *outType = 6;
+        if (outModel) *outModel = legoGlobs_contCrystal;
+    } else if (!_strcmpi("Ore", objName)) {
+        *outType = 7;
+        *outID = 0;
+        if (outModel) *outModel = legoGlobs_contOresTable;
+    } else if (!_strcmpi("ProcessedOre", objName)) {
+        *outType = 7;
+        *outID = 1;
+        if (outModel) *outModel = legoGlobs_contProcessedOre;
+    } else if (!_strcmpi(
+                   // STRING: LEGORR 0x004a401c
+                   "Boulder", objName)) {
+        *outType = 5;
+        if (outModel) *outModel = legoGlobs_contBoulder;
+    } else if (!_strcmpi(
+                   // STRING: LEGORR 0x004a3f10
+                   "Pusher", objName)) {
+        *outType = 16;
+        if (outModel) *outModel = legoGlobs_contPusher;
+    } else if (!_strcmpi("LaserShot", objName)) {
+        *outType = 19;
+        if (outModel) *outModel = legoGlobs_contLaserShot;
+    } else if (!_strcmpi(
+                   // STRING: LEGORR 0x004a3f08
+                   "Freezer", objName)) {
+        *outType = 17;
+        if (outModel) *outModel = legoGlobs_contFreezer;
+    } else if (!_strcmpi("Dynamite", objName)) {
+        *outType = 8;
+        if (outModel) *outModel = legoGlobs_contDynamite;
+    } else if (!_strcmpi("ElectricFence", objName)) {
+        *outType = 11;
+        if (outModel) *outModel = legoGlobs_contElectricFence;
+    } else if (!_strcmpi("SpiderWeb", objName)) {
+        *outType = 12;
+        if (outModel) *outModel = legoGlobs_contSpiderWeb;
+    } else if (!_strcmpi("Barrier", objName)) {
+        *outType = 9;
+        if (outModel) *outModel = legoGlobs_contBarrier;
+    } else if (!_strcmpi("OohScary", objName)) {
+        *outType = 13;
+        if (outModel) *outModel = legoGlobs_contOohScary;
+    } else if (!_strcmpi("Path", objName)) {
+        *outType = 15;
+        if (outModel) *outModel = NULL;
+    } else {
+        for (i = 0; i < legoGlobs_catalogCounts[0]; i++) {
+            if (!_strcmpi(legoGlobs_vehicleName[i], objName)) {
+                *outType = 1;
+                *outID = i;
+                if (outModel) *outModel = &legoGlobs_vehicleData[i];
+                return 1;
+            }
+        }
+        for (i = 0; i < legoGlobs_catalogCounts[1]; i++) {
+            if (!_strcmpi(legoGlobs_miniFigureName[i], objName)) {
+                *outType = 2;
+                *outID = i;
+                if (outModel) *outModel = &legoGlobs_miniFigureData[i];
+                return 1;
+            }
+        }
+        for (i = 0; i < legoGlobs_catalogCounts[3]; i++) {
+            if (!_strcmpi(legoGlobs_buildingName[i], objName)) {
+                *outType = 4;
+                *outID = i;
+                if (outModel) *outModel = &legoGlobs_buildingData[i];
+                return 1;
+            }
+        }
+        return 0;
+    }
+    return 1;
+}
+
+/* EntityPointer: Lego_GetObjectTypeModel. The model of an object type and
+ * index: its type data record or its MiscObjects container. */
+// FUNCTION: LEGORR 0x0042ed70
+int lego_entity_at(int objType, unsigned int objID, void** outModel)
+{
+    if (objType == -1) {
+        *outModel = NULL;
+        return 1;
+    }
+    if (objType == 6) {
+        *outModel = legoGlobs_contCrystal;
+        return 1;
+    }
+    if (objType == 7) {
+        *outModel = (&legoGlobs_contOresTable)[objID];
+        return 1;
+    }
+    if (objType == 8) {
+        *outModel = legoGlobs_contDynamite;
+        return 1;
+    }
+    if (objType == 9) {
+        *outModel = legoGlobs_contBarrier;
+        return 1;
+    }
+    if (objType == 11) {
+        *outModel = legoGlobs_contElectricFence;
+        return 1;
+    }
+    if (objType == 12) {
+        *outModel = legoGlobs_contSpiderWeb;
+        return 1;
+    }
+    if (objType == 13) {
+        *outModel = legoGlobs_contOohScary;
+        return 1;
+    }
+    if (objType == 15) {
+        *outModel = NULL;
+        return 1;
+    }
+    if (objType == 5) {
+        *outModel = legoGlobs_contBoulder;
+        return 1;
+    }
+    if (objType == 1) {
+        *outModel = &legoGlobs_vehicleData[objID];
+        return 1;
+    }
+    if (objType == 2) {
+        *outModel = &legoGlobs_miniFigureData[objID];
+        return 1;
+    }
+    if (objType == 3) {
+        *outModel = &legoGlobs_rockMonsterData[objID];
+        return 1;
+    }
+    if (objType == 4) {
+        *outModel = &legoGlobs_buildingData[objID];
+        return 1;
+    }
+    if (objType == 16) {
+        *outModel = legoGlobs_contPusher;
+        return 1;
+    }
+    if (objType == 19) {
+        *outModel = legoGlobs_contLaserShot;
+        return 1;
+    }
+    if (objType == 17) {
+        *outModel = legoGlobs_contFreezer;
+        return 1;
+    }
+    return 0;
+}
+
+/* StatsLevelRecordCountForStatType: Lego_GetObjectTypeIDCount. How many
+ * indices an object type has. Like the original, an unknown type returns
+ * no value (eax holds the switch index). */
+// FUNCTION: LEGORR 0x0042ef40
+unsigned int lego_stats_level_record_count_for_stat_type(int objType)
+{
+    switch (objType) {
+    case 2:
+        return legoGlobs_catalogCounts[1];
+    case 1:
+        return legoGlobs_catalogCounts[0];
+    case 3:
+        return legoGlobs_catalogCounts[2];
+    case 4:
+        return legoGlobs_catalogCounts[3];
+    case 10:
+        return legoGlobs_catalogCounts[4];
+    case 7:
+        return 2;
+    case 5:
+    case 6:
+    case 8:
+    case 9:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+    case 18:
+    case 19:
+        return 1;
+    }
+}
+
 
 /* ---- part 2 functions, group 2D: end ---- */
 

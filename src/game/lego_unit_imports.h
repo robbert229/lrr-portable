@@ -1297,6 +1297,66 @@ void terrain_map_wobble_emissive_set(struct TerrainMap* map, int on); /* 00450a8
 
 /* ---- part 2 imports, group 2D (0042e020-0042ef40): begin ---- */
 
+/* legoGlobs' list of the first ten objects an object list creates
+ * (005563b8, and its count at 005563e0). The port's copies are
+ * entity.cpp globals with C++ linkage declared only in a frozen header
+ * (s_object_pointer_registry_words/_count), so the unit reads them at their
+ * offsets in legoGlobs, as part 1 does for the catalogue counts. */
+#define legoGlobs_recordObjs ((void**)((char*)&legoGlobs_config + 0x2f8))
+#define legoGlobs_recordObjsCount LEGO_FIELD(&legoGlobs_config, uint32_t, 0x320)
+
+struct TerrainMap;
+struct ViewContext;
+struct EntitySlot;
+struct ElectricFenceObject;
+/* GAME Map3D.c (terrain_map.h). */
+int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,
+                               unsigned int by, float* xOut,
+                               float* yOut);                   /* 0044f640 */
+/* GAME-024 camera (view.hpp): Camera_SetTilt and Camera_SetRotation. */
+void camera_tilt_set(void* camera, float value);                /* 00436860 */
+void camera_rotation_set(void* camera, float value);            /* 00436953 */
+/* GAME Building.c (building_model.h): Building_GetShapePoints. */
+uint32_t task_field84_get_and_field88_out(const void* task,
+                                          uint32_t* out88);     /* 00408360 */
+/* GAME Construction.c (placement_footprint.h): the shape rotated to a
+ * direction around a block. */
+void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
+                                 int count, int rotation);      /* 00464110 */
+/* GAME-022 LegoObject.c (entity.hpp, ai.hpp, cmd.hpp). */
+void entity_kind_record_update_dispatch(struct EntitySlot* entity); /* 00438460 */
+void entity_queue_for_rockfall_processing_if_eligible(struct EntitySlot* e); /* 0043a9e0 */
+void entity_linked_activity_event_dispatch(struct EntitySlot* entity,
+                                           uint32_t events);    /* 0043f5b0 */
+void entity_world_position_set(struct EntitySlot* entity, float x, float y,
+                               float heading, int update_heading); /* 004428a0 */
+void cmd_create_task(struct EntitySlot* e, int32_t parameter);  /* 00402720 */
+int entity_state_override_pop(struct EntitySlot* entity);       /* 00459240 */
+/* G98 Container.c (view.hpp): Container_SetActivity and
+ * Container_SetAnimationTime. */
+uint32_t scene_action_name_set(void* scene_object, const char* action_name); /* 00473370 */
+float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 00475140 */
+/* GAME SpiderWeb.c (engine.hpp): SpiderWeb_Add. */
+void set_expansion_entity_at_grid_cell(int x, int y, void* entity); /* 00466380 */
+/* GAME-013 ElectricFence.c (terrain_cell_objects.h): ElectricFence_Add. */
+void electric_fence_add(struct ElectricFenceObject* object);   /* 0040cf50 */
+/* Original-ABI adapters at the end of lego.cpp (group 2D), where the
+ * port's entry takes another contract. */
+void deferred_olist_entity_queue_add_original(void* objModel, int objType,
+                                              unsigned int objID,
+                                              const float* position,
+                                              float heading, float health,
+                                              const char* olName,
+                                              const char* drivingName); /* 00437c20 */
+struct EntitySlot* world_object_create_with_transform_original(
+    unsigned int buildingID, const int* blockPos, unsigned int dir,
+    void* shape, unsigned int shapeCount, int teleportDown);   /* 00409a90 */
+void building_upgrade_state_changed_dispatch_original(int type, int id,
+                                                      int level, int on); /* 00418830 */
+void entity_linked_route_flag_clear_original(struct EntitySlot* object,
+                                             struct EntitySlot* driven); /* 0043f100 */
+
+
 /* ---- part 2 imports, group 2D: end ---- */
 
 /* ---- part 2 imports, group 2E (0042efc0-0042f6f0): begin ---- */

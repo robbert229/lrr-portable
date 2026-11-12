@@ -98,7 +98,7 @@ void cmd_create_gated(EntitySlot* e, void* target);
 /* EntityActivityRecordRemoveByType (FUN_00403c00) passes 0x43160000 (150.0f
  * bits) for action-record removals; the port wires that through its +0x2f0
  * command-chain representation. */
-void cmd_create_task(EntitySlot* e, int32_t parameter = 0); /* +0x18 argument */
+extern "C" void cmd_create_task(EntitySlot* e, int32_t parameter = 0); /* +0x18 argument */
 extern "C" void object_command_task_create(EntitySlot* entity, int parameter);
 int object_path_submit_to_grid_target(EntitySlot* entity,
                                       struct LevelState* level,

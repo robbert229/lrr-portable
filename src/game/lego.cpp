@@ -3219,7 +3219,8 @@ int object_pointer_registry_get_slot(uint32_t index, int32_t* out)
     }
     return v != 0 ? 1 : 0;
 }
-// FUNCTION: LEGORR 0x0042e020
+/* Port model of 0x0042e020 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042e020, retires to the tail in GAME-021 part 3
 int object_list_load_file(GameContext* ctx, const char* olist)
 {
     if (ctx == NULL || olist == NULL || olist[0] == '\0') {
@@ -3474,7 +3475,8 @@ int object_list_load_file(GameContext* ctx, const char* olist)
  * both, the special names write the dedicated ore-pair rows (0/1) only,
  * so everything else answers a zero row (the dispatch aliases that slot
  * onto its first argument's word — a corpus quirk, pinned in the tests). */
-// FUNCTION: LEGORR 0x0042e8b0
+/* Port model of 0x0042e8b0 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042e8b0, retires to the tail in GAME-021 part 3
 extern "C" int entity_type_pair_lookup(const char* name, int* type_out,
                                      int* row_out, int* zero_out)
 {
@@ -3602,7 +3604,8 @@ extern "C" int entity_type_pair_lookup(const char* name, int* type_out,
 /* EntityPointer's types 1..4 table lookup (FUN_0042ed70). The port adds
  * bounds/null guards and groups the original special singleton types into
  * one table, so only the regular typed-array branch is represented here. */
-// FUNCTION: LEGORR 0x0042ed70
+/* Port model of 0x0042ed70 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042ed70, retires to the tail in GAME-021 part 3
 const EntitySlot* entity_at(GameContext* ctx, int type, int index)
 {
     if (ctx == NULL || type < 1 || type > 19) {
@@ -3615,7 +3618,8 @@ const EntitySlot* entity_at(GameContext* ctx, int type, int index)
     return &ctx->entity[tab][index];
 }
 
-// FUNCTION: LEGORR 0x0042ef40
+/* Port model of 0x0042ef40 (GAME-021); the original-shape function is in lego_unit.c. */
+// PORT-ONLY: port model of 0x0042ef40, retires to the tail in GAME-021 part 3
 int stats_level_record_count_for_stat_type(int stat_type)
 {
     switch (stat_type) {
@@ -10754,6 +10758,68 @@ extern "C" const char* main_get_start_level_adapter(void)
 /* ---- part 2 adapters, group 2C: end ---- */
 
 /* ---- part 2 adapters, group 2D (0042e020-0042ef40): begin ---- */
+
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-021 part 2's
+ * lego_object_list_load_file (0x0042e020). Nothing calls them natively. */
+
+/* LegoObject_RegisterHidden (FUN_00437c20) takes the object model, type,
+ * index, world position, heading, health and the two object-list names; the
+ * port's queue takes the game context and the position and floats as words. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (deferred_olist_entity_queue_add 00437c20; the port takes the GameContext and word-typed floats)
+extern "C" void deferred_olist_entity_queue_add_original(
+    void* objModel, int objType, unsigned int objID, const float* position,
+    float heading, float health, const char* olName,
+    const char* drivingName)
+{
+    uint32_t world[2];
+    int heading_bits;
+    int health_bits;
+    (void)objModel;
+    memcpy(world, position, sizeof(world));
+    memcpy(&heading_bits, &heading, sizeof(heading_bits));
+    memcpy(&health_bits, &health, sizeof(health_bits));
+    deferred_olist_entity_queue_add(entity_pool_callback_context_get(), world,
+                                    0, objType, (int)objID, heading_bits,
+                                    health_bits, olName, drivingName);
+}
+
+/* Construction_SpawnBuilding (FUN_00409a90) returns the new building; the
+ * port's entry takes a hook table and returns nothing, so no port function
+ * has the original's contract. Answers no object. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (world_object_create_with_transform 00409a90; the port takes a hook table and returns nothing)
+extern "C" EntitySlot* world_object_create_with_transform_original(
+    unsigned int buildingID, const int* blockPos, unsigned int dir,
+    void* shape, unsigned int shapeCount, int teleportDown)
+{
+    (void)buildingID;
+    (void)blockPos;
+    (void)dir;
+    (void)shape;
+    (void)shapeCount;
+    (void)teleportDown;
+    return NULL;
+}
+
+/* FUN_00418830: the same contract, but the port's entry is in namespace
+ * lego (upgrades.hpp). */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (building_upgrade_state_changed_dispatch 00418830; namespaced C++ entry)
+extern "C" void building_upgrade_state_changed_dispatch_original(int type,
+                                                                 int id,
+                                                                 int level,
+                                                                 int on)
+{
+    lego::building_upgrade_state_changed_dispatch(type, id, level, on);
+}
+
+/* FUN_0043f100 takes (object, driven object) and clears the route bit on
+ * the second and its link; the port's entry takes the game context first. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (entity_linked_route_flag_clear 0043f100; the port takes the GameContext first)
+extern "C" void entity_linked_route_flag_clear_original(EntitySlot* object,
+                                                        EntitySlot* driven)
+{
+    (void)object;
+    entity_linked_route_flag_clear(entity_pool_callback_context_get(), driven);
+}
 
 /* ---- part 2 adapters, group 2D: end ---- */
 

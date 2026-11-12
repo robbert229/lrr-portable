@@ -463,7 +463,7 @@ typedef struct EntityKindRecordUpdateHooks {
 } EntityKindRecordUpdateHooks;
 void entity_kind_record_update_hooks_set(
     const EntityKindRecordUpdateHooks* hooks);
-void entity_kind_record_update_dispatch(EntitySlot* entity); /* 0x438460 */
+extern "C" void entity_kind_record_update_dispatch(EntitySlot* entity); /* 0x438460 */
 /* 0x447b30: returns scaled frame delta; completion lives in activity_timer
  * and is supplied by the actual type-specific animation owner. */
 float entity_activity_tick(EntitySlot* entity, float delta);
@@ -695,7 +695,7 @@ typedef void (*EntityLinkedEventSubmitFn)(uint32_t event, EntitySlot* entity,
                                           void* user);
 void entity_linked_event_submit_hook_set(EntityLinkedEventSubmitFn hook,
                                          void* user);
-void entity_linked_activity_event_dispatch(EntitySlot* entity,
+extern "C" void entity_linked_activity_event_dispatch(EntitySlot* entity,
                                            uint32_t events); /* 0x0043f5b0 */
 /* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
  * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
@@ -839,7 +839,7 @@ void entity_state_override_hooks_set(
 int entity_state_override_stack_set(const EntityStateOverrideEntry* entries,
                                     uint32_t count);
 int entity_state_override_stack_push(const EntityStateOverrideEntry* entry);
-int entity_state_override_pop(EntitySlot* entity); /* FUN_00459240 */
+extern "C" int entity_state_override_pop(EntitySlot* entity); /* FUN_00459240 */
 extern "C" void entity_record_flag400_toggle_and_refresh(EntitySlot* e); /* FUN_0046a330 */
 extern "C" uint32_t entity_capability_flags_get(const EntitySlot* e); /* FUN_00469ea0 (+14c) */
 float entity_stats_float_at88(const EntitySlot* e);   /* FUN_00469f20
@@ -1091,7 +1091,7 @@ int entity_centers_within_configured_radius(const EntitySlot* first,
                                             const EntitySlot* second); /* FUN_00472080 */
 int entity_centers_within_object_radius(const EntitySlot* first,
                                         const EntitySlot* second); /* FUN_00472130 */
-void entity_world_position_set(EntitySlot* entity, float x, float y,
+extern "C" void entity_world_position_set(EntitySlot* entity, float x, float y,
                                float heading, int update_heading); /* FUN_004428a0 */
 typedef void (*EntityFinalizeHook)(EntitySlot* entity);
 void entity_type5_finalize_environment_set(uint32_t mode_flags,
