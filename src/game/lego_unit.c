@@ -710,6 +710,24 @@ int s_object_f_4eabc8;
 
 /* ---- part 3 state, group 3C (00434570-00435aa0): begin ---- */
 
+/* legoGlobs.placeDirection? The building placement direction (00556448),
+ * from the camera's facing. */
+// GLOBAL: LEGORR 0x00556448
+int legoGlobs_f_556448;
+
+/* legoGlobs.TutorialIcon (0055645c). The port keeps its own copy
+ * (s_tutorial_icon, lego.cpp). */
+// GLOBAL: LEGORR 0x0055645c
+struct Image* legoGlobs_TutorialIcon;
+
+/* Input's left mouse button (0076ab3c) at the last release check. */
+// GLOBAL: LEGORR 0x004de424
+uint32_t s_lego_mslbLast;
+
+/* The tutorial icon's bob phase. */
+// GLOBAL: LEGORR 0x004de58c
+float s_lego_tutorialIconPhase;
+
 /* ---- part 3 state, group 3C: end ---- */
 
 
@@ -8099,5 +8117,652 @@ void lego_terrain_cell_flags_set_mask20108000(int bx, int by)
 /* ---- part 3 functions, group 3B: end ---- */
 
 /* ---- part 3 functions, group 3C (00434570-00435aa0): begin ---- */
+
+/* TerrainCellProgressUpdate [group 3C]: Level_Block_Damage. Adds
+ * elapsed / destroyTime to the block's damage and reports whether it is
+ * past 1. Shared under MSVC x86 (the level's pointer words). */
+#if defined(_MSC_VER) && defined(_M_IX86)
+// FUNCTION: LEGORR 0x00434570
+int terrain_cell_drill_work_add_current(int bx, int by, float destroyTime,
+                                        float elapsed)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+
+    if (0.0f != destroyTime) {
+        LEGO_BLOCK_DAMAGE(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx]) += elapsed / destroyTime;
+        if (LEGO_BLOCK_DAMAGE(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx]) > 1.0f) return 1;
+    }
+    return 0;
+}
+#endif
+
+/* PanelsConfigEntryApply [group 3C]: Lego_LoadPanels. */
+// FUNCTION: LEGORR 0x004345f0
+void lego_panels_config_entry_apply(struct BlockRec* config,
+                                    unsigned int screenWidth,
+                                    unsigned int screenHeight)
+{
+    char buff[256];
+    struct BlockRec* arrayItem;
+    int panelType;
+    char* argv[10];
+
+    // STRING: LEGORR 0x004a47d8
+    sprintf(buff, "Panels%ix%i", screenWidth, screenHeight);
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (ui_panel_name_table_lookup(arrayItem->key, &panelType)) {
+            strcpy(buff, arrayItem->value);
+            sound_variant_split(buff, argv, ",");
+            legacy_overlay_image_record_load(argv[0], panelType, 4);
+            panel_category_bounds_set(panelType, atoi(argv[1]), atoi(argv[2]),
+                                      atoi(argv[3]), atoi(argv[4]));
+        }
+    }
+}
+
+/* PanelButtonLayoutConfigLoad [group 3C]: Lego_LoadPanelButtons. */
+// FUNCTION: LEGORR 0x00434710
+void lego_panel_button_layout_config_load(struct BlockRec* config,
+                                          unsigned int screenWidth,
+                                          unsigned int screenHeight)
+{
+    char buff[256];
+    char* argv[9];
+    unsigned int buttonCount[12];
+    unsigned int buttonTypes[12][24];
+    char* normalNames[12][24];
+    char* highlightNames[12][24];
+    char* pressedNames[12][24];
+    float areas[12][24][4];
+    int toolTips[12][24];
+    char* copies[100];
+    unsigned int copyCount;
+    struct BlockRec* arrayItem;
+    int panelType;
+    unsigned int buttonType;
+    unsigned int i;
+
+    copyCount = 0;
+    memset(buttonCount, 0, sizeof(buttonCount));
+    // STRING: LEGORR 0x004a47e4
+    sprintf(buff, "Buttons%ix%i", screenWidth, screenHeight);
+    if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0))) != NULL) {
+        do {
+            if (ui_panel_name_table_lookup(arrayItem->key, &panelType)) {
+                copies[copyCount] = string_duplicate(arrayItem->value);
+                sound_variant_split(copies[copyCount], argv, ",");
+                if (ui_panel_indexed_name_lookup(panelType, argv[0], &buttonType)) {
+                    buttonTypes[panelType][buttonCount[panelType]] = buttonType;
+                    for (i = 0; i < 3; i++) {
+                        char** names = (i == 0) ? normalNames[panelType] : (i == 1) ? highlightNames[panelType] : pressedNames[panelType];
+                        if (_strcmpi("NULL", argv[1 + i]) == 0) names[buttonCount[panelType]] = NULL;
+                        else names[buttonCount[panelType]] = argv[1 + i];
+                    }
+                    areas[panelType][buttonCount[panelType]][0] = (float)atoi(argv[4]);
+                    areas[panelType][buttonCount[panelType]][1] = (float)atoi(argv[5]);
+                    areas[panelType][buttonCount[panelType]][2] = (float)atoi(argv[6]);
+                    areas[panelType][buttonCount[panelType]][3] = (float)atoi(argv[7]);
+                    if (case_insensitive_name_table_lookup(argv[8], &toolTips[panelType][buttonCount[panelType]]) == 0)
+                        toolTips[panelType][buttonCount[panelType]] = 0;
+                    buttonCount[panelType]++;
+                    copyCount++;
+                }
+            }
+        } while ((arrayItem = block_next_equal_key(arrayItem)) != NULL);
+
+        for (i = 0; i < 12; i++) {
+            panel_texture_slots_allocate(i, buttonCount[i], buttonTypes[i], &areas[i][0][0],
+                                         normalNames[i], highlightNames[i], pressedNames[i],
+                                         toolTips[i]);
+        }
+        for (; copyCount != 0; copyCount--) free(copies[copyCount - 1]);
+    }
+}
+
+/* AdvisorTutorialIconImageLoad [group 3C]: Lego_LoadTutorialIcon. */
+// FUNCTION: LEGORR 0x00434a00
+void lego_advisor_tutorial_icon_image_load(struct BlockRec* config)
+{
+    char* fileName;
+
+    // STRING: LEGORR 0x004a47f4
+    if ((fileName = block_get_str_copy(config, string_path_join(s_engine_config_root, "Main", "TutorialIcon", 0))) != NULL) {
+        if ((legoGlobs_TutorialIcon = image_load_bmp_scaled(fileName, 0, 0)) != NULL) {
+            resource_record_add_ref(legoGlobs_TutorialIcon);
+        }
+    }
+}
+
+/* SoundSamplesConfigLoad [group 3C]: Lego_LoadSamples. A leading '!' marks
+ * a sample skipped when reduceSamples is set. */
+// FUNCTION: LEGORR 0x00434a50
+void lego_sound_samples_config_load(struct BlockRec* config, int noReduceSamples)
+{
+    struct BlockRec* arrayItem;
+    const char* name;
+    int sfxType;
+    int skip;
+
+    // STRING: LEGORR 0x004a4804
+    if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "Samples", 0))) != NULL) {
+        sound_alias_registration_set(1);
+        do {
+            name = arrayItem->key;
+            skip = 0;
+            if (*name == '!') {
+                name++;
+                if (!noReduceSamples) skip = 1;
+            }
+            if (!skip) {
+                if (sound_alias_lookup(name, &sfxType)) {
+                    sound_sample_marker_parse(arrayItem->value, sfxType);
+                }
+            }
+        } while ((arrayItem = block_next_equal_key(arrayItem)) != NULL);
+        sound_alias_registration_set(0);
+    }
+}
+
+/* TextMessagesConfigLoad [group 3C]: Lego_LoadTextMessages. */
+// FUNCTION: LEGORR 0x00434af0
+void lego_text_messages_config_load(struct BlockRec* config)
+{
+    char buff[512];
+    struct BlockRec* arrayItem;
+    int textType;
+    char* argv[10];
+
+    // STRING: LEGORR 0x004a4824
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "TextMessages", 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (ui_message_label_index_find(arrayItem->key, &textType)) {
+            ui_message_text_slot_assign(textType, arrayItem->value);
+        }
+    }
+    // STRING: LEGORR 0x004a480c
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "TextMessagesWithImages", 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (ui_message_label_index_find(arrayItem->key, &textType)) {
+            strcpy(buff, arrayItem->value);
+            sound_variant_split(buff, argv, ":");
+            ui_message_text_slot_assign_with_image(textType, argv[0], argv[1], argv[2]);
+        }
+    }
+}
+
+/* IncidentMessageConfigLoad [group 3C]: Lego_LoadInfoMessages. */
+// FUNCTION: LEGORR 0x00434c10
+void lego_message_load_infomessages(struct BlockRec* config)
+{
+    char buff[1024];
+    struct BlockRec* arrayItem;
+    int infoType;
+    int sfxType;
+    char* argv[10];
+    unsigned int argc;
+
+    // STRING: LEGORR 0x004a484c
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "InfoMessages", 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (info_get_type(arrayItem->key, &infoType)) {
+            strcpy(buff, arrayItem->value);
+            argc = sound_variant_split(buff, argv, ":");
+            info_set_text(infoType, argv[0]);
+            info_set_image_file(infoType, argv[1]);
+            if (sound_alias_lookup(argv[2], &sfxType)) info_set_sfx(infoType, sfxType);
+            if (argc > 3) {
+                // STRING: LEGORR 0x004a4844
+                if (!_strcmpi(argv[3], "SLOW")) info_set_type_auto_game_speed(infoType, 1);
+                else info_set_type_auto_game_speed(infoType, 0);
+                // STRING: LEGORR 0x004a4834
+                if (!_strcmpi(argv[3], "ALWAYSPLAYSFX")) info_set_type_play_always(infoType, 1);
+                else if (argc > 4 && !_strcmpi(argv[4], "ALWAYSPLAYSFX")) info_set_type_play_always(infoType, 1);
+                else info_set_type_play_always(infoType, 0);
+            } else {
+                info_set_type_auto_game_speed(infoType, 1);
+                info_set_type_play_always(infoType, 0);
+            }
+        }
+    }
+}
+
+/* AdvisorTooltipAndTooltipSoundConfigLoad [group 3C]: Lego_LoadToolTips. */
+// FUNCTION: LEGORR 0x00434da0
+void lego_advisor_tooltip_and_sound_config_load(struct BlockRec* config)
+{
+    struct BlockRec* arrayItem;
+    int toolTipType;
+    int sfxType;
+
+    // STRING: LEGORR 0x004a486c
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "ToolTips", 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (case_insensitive_name_table_lookup(arrayItem->key, &toolTipType)) {
+            tooltip_set_content(toolTipType, arrayItem->value);
+        }
+    }
+    // STRING: LEGORR 0x004a485c
+    for (arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, "ToolTipsSFXs", 0));
+         arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
+        if (case_insensitive_name_table_lookup(arrayItem->key, &toolTipType) &&
+            sound_alias_lookup(arrayItem->value, &sfxType)) {
+            timed_effect_cue_request_set_corpus(toolTipType, sfxType);
+        }
+    }
+}
+
+/* InterfaceSpawnRequestEnqueue [group 3C]: starts placing a building (the
+ * two directional types) or teleports the object in from the first
+ * teleporter that takes its kind. */
+// FUNCTION: LEGORR 0x00434e80
+int lego_interface_spawn_request_enqueue(int objType, int objIndex)
+{
+    LegoVector3F3C dir;
+    int direction;
+
+    s_global_low_word &= ~0x80;
+    mode_flag_pair_apply_if_bit2(1);
+    if (objType == 4 || objType == 11) {
+        s_global_low_word |= 0x80;
+        legoGlobs_f_556440 = objType;
+        legoGlobs_f_556444 = objIndex;
+        ddiscene_object_facing_pair_get(LEGO_FIELD(s_zoom_step_context, void*, 0x24), NULL,
+                                        (float*)&dir, NULL);
+        if (fabs(dir.x) > fabs(dir.y)) {
+            if (dir.x > 0.0f) direction = 3;
+            else direction = 1;
+        } else {
+            if (dir.y > 0.0f) direction = 2;
+            else direction = 0;
+        }
+        legoGlobs_f_556448 = direction;
+        return 1;
+    }
+    if (stats_table_word_at_148(objType, objIndex) & 0x1000)
+        return entity_spawn_request_queue_add((struct GameContext*)legoGlobs_f_55644c, objType, objIndex);
+    if (stats_table_word_at_148(objType, objIndex) & 0x800)
+        return entity_spawn_request_queue_add((struct GameContext*)legoGlobs_f_556450, objType, objIndex);
+    if (stats_table_word_at_148(objType, objIndex) & 0x2000)
+        return entity_spawn_request_queue_add((struct GameContext*)legoGlobs_f_556454, objType, objIndex);
+    if (stats_table_word_at_148(objType, objIndex) & 0x400000)
+        return entity_spawn_request_queue_add(NULL, objType, objIndex);
+    return 0;
+}
+
+/* TerrainCellWorkFlagCircleSet [group 3C]: Level_Block_SetBusyArea?
+ * Raises the work flag on the blocks within the radius. Shared under
+ * MSVC x86 (the level's pointer words). */
+#if defined(_MSC_VER) && defined(_M_IX86)
+// FUNCTION: LEGORR 0x00435010
+void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
+                                               int radius)
+{
+    Lego_Level* level = legoGlobs_currLevel;
+    int x, y;
+
+    for (y = -radius; y <= radius; y++) {
+        for (x = -radius; x <= radius; x++) {
+            if (x * x + y * y <= radius * radius &&
+                x + center_xy[0] >= 0 && x + center_xy[0] < (int)level->width &&
+                center_xy[1] + y >= 0 && center_xy[1] + y < (int)level->height) {
+                terrain_cell_work_flag_set_current(x + center_xy[0], center_xy[1] + y);
+            }
+        }
+    }
+}
+#endif
+
+/* legoGlobs.langSurface_name, langSurface_desc and langSurface_sound: three
+ * adjacent arrays (00556290, 005562d8, 00556320). */
+typedef struct LegoSurfaceDescs3C {
+    const char* name[18];
+    const char* desc[18];
+    uint32_t sfx[18];
+} LegoSurfaceDescs3C;
+#define LEGO_SURFACE_DESCS_3C ((LegoSurfaceDescs3C*)legoGlobs_langSurface_name)
+
+/* SurfaceTypeDescriptionsConfigLoad [group 3C]:
+ * Lego_LoadSurfaceTypeDescriptions_sound. */
+// FUNCTION: LEGORR 0x004350a0
+void lego_surface_type_descriptions_config_load(struct BlockRec* config,
+                                                const char* gameName)
+{
+    char buff[1024];
+    char* argv[10];
+    const char* str;
+    int sfxType;
+    uint32_t* sfx;
+
+    for (sfx = s_surface_type_values; sfx < &s_surface_type_values[18]; sfx++) {
+        // STRING: LEGORR 0x004a4878
+        if ((str = block_get_strptr(config, string_path_join(gameName, "SurfaceTypeDescriptions",
+                                                             ((const char**)sfx)[-36], 0))) != NULL) {
+            strcpy(buff, str);
+            sound_variant_split((char*)str, argv, ",");
+            ((const char**)sfx)[-18] = formatted_text_escape_decode_and_emit(argv[0]);
+            *sfx = sound_alias_lookup(argv[1], &sfxType) ? sfxType : 0;
+        }
+    }
+}
+
+/* TerrainSurfaceTypeNameGet [group 3C]: Lego_GetSurfaceTypeDescription. */
+// FUNCTION: LEGORR 0x00435170
+const char* lego_terrain_surface_type_name_get(int surfaceType)
+{
+    const char* name = s_surface_type_names[surfaceType];
+    // STRING: LEGORR 0x004a4890
+    if (name == NULL) name = "Need config for surface type.";
+    return name;
+}
+
+/* SurfaceTypeConfiguredValueAtIndex [group 3C]:
+ * Lego_GetSurfaceTypeSFX. */
+// FUNCTION: LEGORR 0x00435190
+uint32_t lego_surface_type_configured_value_at_index(int surfaceType)
+{
+    return s_surface_type_values[surfaceType];
+}
+
+/* ActionCodeToSoundAlias [group 3C]: the pointer for a block's surface
+ * action. Shared (the port's callers use the original's contract). */
+// FUNCTION: LEGORR 0x004351a0
+void media_action_code_to_sound_alias(int code)
+{
+    if (code == 1) {
+        media_pointer_cursor_select(0x2b);
+        return;
+    }
+    if (code == 2) {
+        media_pointer_cursor_select(0x2c);
+        return;
+    }
+    if (code == 3) {
+        media_pointer_cursor_select(0x2d);
+        return;
+    }
+    if (code == 4) {
+        media_pointer_cursor_select(0x2e);
+        return;
+    }
+    if (code == 5) {
+        media_pointer_cursor_select(0x2f);
+        return;
+    }
+    if (code == 8) {
+        media_pointer_cursor_select(0x32);
+        return;
+    }
+    if (code == 10) {
+        media_pointer_cursor_select(0x34);
+        return;
+    }
+    if (code == 11) {
+        media_pointer_cursor_select(0x35);
+        return;
+    }
+}
+
+/* RandomVariantCellScatter [group 3C]: random lava erosion around a block
+ * (Level_GenerateLavaErosion-like). Stops at the first erosion when
+ * stopAtFirst is set; otherwise tries a quarter of the box. */
+// FUNCTION: LEGORR 0x00435230
+void lego_random_variant_cell_scatter(const int* blockPos, int radius, int stopAtFirst)
+{
+    int done[100];
+    unsigned int count;
+    unsigned int size;
+    unsigned int dx, dy;
+    int pos[2];
+
+    memset(done, 0, sizeof(done));
+    size = radius * 2;
+    for (count = 0; count < (stopAtFirst ? size * size : (size * size) / 4); count++) {
+        dx = rng_thunk_draw15() % size;
+        dy = rng_thunk_draw15() % size;
+        pos[0] = (dx + blockPos[0]) - radius;
+        pos[1] = (blockPos[1] + dy) - radius;
+        if (!done[dx * 10 + dy]) {
+            if (lava_erosion_cell_eligible_and_mutate(pos, 1) && stopAtFirst) return;
+            done[dx * 10 + dy] = 1;
+        }
+    }
+}
+
+/* FUN_00435300 [group 3C]: draws the tutorial icon over the blocks the
+ * tutorial flags and highlights them. */
+// FUNCTION: LEGORR 0x00435300
+void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
+                                      float elapsedWorld, float elapsed)
+{
+    float bob = (float)sin(s_lego_tutorialIconPhase);
+    unsigned int bx, by;
+    Lego_Block* block;
+    float wPos[3];
+    float sPos[2];
+
+    s_lego_tutorialIconPhase -= elapsed * 25.0f * -0.013333334f;
+    if (system_state_flags_get_original(NULL)) {
+        for (by = 0; by < ((unsigned int*)LEGO_LEVEL_PTR(void, level->map))[1]; by++) {
+            for (bx = 0; bx < ((unsigned int*)LEGO_LEVEL_PTR(void, level->map))[0]; bx++) {
+                if (!grid_cell_entity_eligibility_check(bx, by)) {
+                    block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+                    if (block->f_04) {
+                        terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by,
+                                                   &wPos[0], &wPos[1]);
+                        wPos[2] = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
+                                                          wPos[0], wPos[1]);
+                        camera_project_point_to_screen(view, sPos, wPos);
+                        sPos[0] -= (float)(legoGlobs_TutorialIcon->width / 2);
+                        sPos[1] -= bob * 20.0f + (float)(legoGlobs_TutorialIcon->height * 2);
+                        image_display_scaled(legoGlobs_TutorialIcon, NULL, (const struct Point2F*)sPos, NULL);
+                        if (LEGO_FIELD(&interfaceGlobs, int, 0xfc4)) {
+                            terrain_map_block_highlight_set(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by, 5);
+                        } else {
+                            terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by);
+                        }
+                        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_10[13] = 1;
+                    } else if (block->f_10[13] == 1) {
+                        block->f_10[13] = 0;
+                        if (!(system_state_flags_get_original(NULL) & 2) &&
+                            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_10[6] &&
+                            !LEGO_FIELD(&interfaceGlobs, int, 0xf74)) {
+                            terrain_map_block_highlight_set(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by, 4);
+                        } else {
+                            terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by);
+                        }
+                    } else if (block->f_10[13] == 0 &&
+                               terrain_map_block_highlight_get(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by) == 5) {
+                        terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* GlobalStateZeroTransitionDetect [group 3C]: Lego_IsLeftButtonReleased-
+ * like. Shared (reward.c and the port call it with the original's
+ * contract). */
+// FUNCTION: LEGORR 0x00435550
+int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void)
+{
+    uint32_t current = legoInput_mslb;
+    int released = current == 0 && s_lego_mslbLast != 0;
+    s_lego_mslbLast = current;
+    return released;
+}
+
+/* GlobalHandlePositionApplyIfPresent [group 3C]: draws the dialog's
+ * contrast overlay at the origin. */
+// FUNCTION: LEGORR 0x00435580
+int lego_global_handle_position_apply_if_present(void)
+{
+    float pos[2];
+
+    pos[0] = 0.0f;
+    pos[1] = 0.0f;
+    if (s_position_handle) {
+        image_display_scaled((struct Image*)s_position_handle, NULL, (const struct Point2F*)pos, NULL);
+        return 1;
+    }
+    return 0;
+}
+
+/* MenuOptionPanelTextureUpdate [group 3C]: draws the in-game dialog and
+ * returns 1 for OK, 0 for Cancel and -1 for neither. */
+// FUNCTION: LEGORR 0x004355c0
+int lego_menu_option_panel_texture_update(const char* title, const char* msg,
+                                          const char* ok, const char* cancel)
+{
+    float pos[2];
+    float wndRect[4];
+    float textX;
+    unsigned int textWidth;
+    unsigned int textHeight;
+    int result = -1;
+
+    if (legoGlobs_DialogImage && legoGlobs_DialogTextWndTitle && legoGlobs_DialogTextWndMessage) {
+        lego_global_handle_position_apply_if_present();
+        pos[0] = (float)(s_display_w / 2) - (float)(legoGlobs_DialogImage->width >> 1);
+        pos[1] = (float)(s_display_h / 2) - (float)(legoGlobs_DialogImage->height >> 1);
+        image_display_scaled(legoGlobs_DialogImage, NULL, (const struct Point2F*)pos, NULL);
+        text_buffer_reset_target(legoGlobs_DialogTextWndTitle);
+        text_buffer_reset_target(legoGlobs_DialogTextWndMessage);
+        text_buffer_reset_target(legoGlobs_DialogTextWndOK);
+        text_buffer_reset_target(legoGlobs_DialogTextWndCancel);
+        if (ok) {
+            wndRect[0] = 0.0f;
+            wndRect[1] = 0.0f;
+            wndRect[2] = 0.0f;
+            textWidth = formatted_text_printf_width(legoGlobs_fontBriefingHi, ok);
+            textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
+            textX = ((float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 4) -
+                     (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 12) * -0.5f) - (float)(textWidth >> 1);
+            wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 8);
+            wndRect[2] = (float)textHeight;
+            if (legoInput_mouseX < textX || legoInput_mouseX >= textX + textWidth ||
+                legoInput_mouseY < wndRect[0] || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
+                LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingHi;
+                text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
+            } else {
+                LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingLo;
+                text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
+                if (ledger_stub_00435550_GlobalStateZeroTransitionDetect()) result = 1;
+            }
+        }
+        if (cancel) {
+            wndRect[0] = 0.0f;
+            wndRect[1] = 0.0f;
+            wndRect[2] = 0.0f;
+            textWidth = formatted_text_printf_width(legoGlobs_fontBriefingHi, cancel);
+            textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
+            textX = ((float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 4) -
+                     (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 12) * -0.5f) - (float)(textWidth >> 1);
+            wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 8);
+            wndRect[2] = (float)textHeight;
+            if (legoInput_mouseX < textX || legoInput_mouseX >= textX + textWidth ||
+                legoInput_mouseY < wndRect[0] || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
+                LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingHi;
+                text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
+            } else {
+                LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingLo;
+                text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
+                if (ledger_stub_00435550_GlobalStateZeroTransitionDetect()) result = 0;
+            }
+        }
+        text_buffer_append_format(legoGlobs_DialogTextWndTitle, title);
+        text_buffer_append_format(legoGlobs_DialogTextWndMessage, msg);
+        text_buffer_draw_wrapped(legoGlobs_DialogTextWndTitle, 0, 1.0f, NULL);
+        text_buffer_draw_wrapped(legoGlobs_DialogTextWndMessage, 0, 1.0f, NULL);
+        text_buffer_draw_wrapped(legoGlobs_DialogTextWndOK, 0, 1.0f, NULL);
+        text_buffer_draw_wrapped(legoGlobs_DialogTextWndCancel, 0, 1.0f, NULL);
+        return result;
+    }
+    return -1;
+}
+
+/* KeepRunning [group 3C]: Lego_EndLevel. Frees the level, runs the
+ * rewards and the front end, and loads the next level. */
+// FUNCTION: LEGORR 0x00435940
+int lego_keep_running(void)
+{
+    int saveOpen, inGame;
+    const char* levelName;
+
+    level_current_owner_get();
+    saveOpen = save_slot_open();
+    inGame = is_in_game();
+    sound_subsystem_stop_all();
+    if (frontend_enabled_original()) {
+        reward_prepare_level();
+        reward_prepare_results();
+        reward_loop();
+        reward_free_level();
+    }
+    lego_sound_minimum_distance_update_mode(1, NULL, 0);
+    text_buffer_reset_target(legoGlobs_textOnlyWindow);
+    levelName = lego_level_free();
+    if (frontend_enabled_original()) {
+        if (saveOpen) {
+            front_run_screen_menu_type_adapter(1);
+            if (quit_menu_probe()) return 0;
+            levelName = front_get_selected_level_adapter();
+        } else if (inGame) {
+            front_run_screen_menu_type_adapter(2);
+            if (quit_menu_probe()) return 0;
+            levelName = front_get_selected_level_adapter();
+        }
+    }
+    options_load_or_default_target(1, 0);
+    if (levelName && lego_level_load(levelName)) {
+        free((void*)levelName);
+        return 1;
+    }
+    return 0;
+}
+
+/* GlobalStateLowByteClearAndRefresh [group 3C]: clears the low byte of
+ * flags3 and hides the placement marker. Shared. */
+// FUNCTION: LEGORR 0x00435a20
+void global_state_low_byte_clear_and_refresh(void)
+{
+    s_global_low_word &= ~0x2;
+    s_global_low_word &= ~0x4;
+    s_global_low_word &= ~0x8;
+    s_global_low_word &= ~0x10;
+    s_global_low_word &= ~0x20;
+    s_global_low_word &= ~0x40;
+    s_global_low_word &= ~0x80;
+    s_global_low_word &= ~0x1;
+    surface_visibility_set(s_refresh_record, 1);
+}
+
+/* MainSimFeatureFlagLatch [group 3C]. */
+// FUNCTION: LEGORR 0x00435a50
+void lego_camera_registry_probe(void)
+{
+    if (legoGlobs_flags1 & 0x8000000) {
+        if (entity_flag_mask_callbacks_all_pass(0x40b)) s_panel_highlight_flags |= 0x2;
+    }
+}
+
+/* PanelSelectionHighlightToggle [group 3C]: Lego_SetCallToArmsOn. */
+// FUNCTION: LEGORR 0x00435aa0
+void lego_panel_selection_highlight_toggle(int on)
+{
+    if (on) {
+        s_panel_highlight_flags |= 0x1;
+        if (s_panel_highlight_timer <= 0.0f) {
+            sound_alias_play(0x19, 0);
+            s_panel_highlight_timer = 250.0f;
+        }
+        panel_item_flag8_set_if_enabled(6, 2, 1);
+    } else {
+        s_panel_highlight_flags &= ~0x1;
+        s_panel_highlight_timer = 0.0f;
+        panel_item_flag8_set_if_enabled(6, 2, 0);
+    }
+}
 
 /* ---- part 3 functions, group 3C: end ---- */

@@ -1589,6 +1589,78 @@ int scene_slot_pose_scale_register(int group, uint32_t first, uint32_t second,
 
 /* ---- part 3 imports, group 3C (00434570-00435aa0): begin ---- */
 
+/* gods98 Image.c (images_unit.cpp): Image_SetPenZeroTrans (0047dbc0). */
+void resource_record_add_ref(void* record);
+/* GAME-030 Panel.c (panel_unit.h). */
+int ui_panel_name_table_lookup(const char* name, int* panel);   /* 0045a370 */
+void legacy_overlay_image_record_load(const char* fileName, int panel,
+                                      unsigned int flags);      /* 0045a2e0 */
+int ui_panel_indexed_name_lookup(int panel, const char* name,
+                                 unsigned int* button);         /* 0045a410 */
+void panel_category_bounds_set(int panel, int xOut, int yOut, int xIn,
+                               int yIn);                        /* 0045a650 */
+void panel_item_flag8_set_if_enabled(int panel, int button, int on); /* 0045abf0 */
+void panel_texture_slots_allocate(int panel, unsigned int count,
+                                  const unsigned int* buttonTypes,
+                                  const float* areas,
+                                  char** normalNames,
+                                  char** highlightNames,
+                                  char** pressedNames,
+                                  const int* toolTips);         /* 0045ac30 */
+/* ToolTip.c (frontend.hpp, tooltip.cpp): ToolTip_GetType (0046b4d0). */
+int case_insensitive_name_table_lookup(const char* name, int* out_index);
+/* SFX.c (sound.hpp, sfx.cpp): 00464c50, 00464d00. */
+void sound_alias_registration_set(int enable);
+int sound_sample_marker_parse(const char* spec, int alias_index);
+/* Text.c (message.hpp, text.cpp): 0046aad0, 0046ab10, 0046abb0. */
+int ui_message_label_index_find(const char* label, int* out_index);
+void ui_message_text_slot_assign(int index, const char* text);
+void ui_message_text_slot_assign_with_image(int index, const char* text,
+                                            const char* image_path,
+                                            const char* display_path);
+/* GAME-019 Info.c (info_unit.h). */
+int info_get_type(const char* name, int* type);                 /* 004193e0 */
+void info_set_type_auto_game_speed(int type, int on);           /* 00419470 */
+void info_set_text(int type, char* text);                       /* 004194b0 */
+void info_set_type_play_always(int type, int on);               /* 004194f0 */
+void info_set_image_file(int type, const char* filename);       /* 00419650 */
+void info_set_sfx(int type, int sfxType);                       /* 00419680 */
+/* Stats.c (entity.hpp): 00469ee0. */
+uint32_t stats_table_word_at_148(int type, int row);
+/* LegoObject.c (entity.hpp, legoobject.cpp): 0043f150. The original's first
+ * argument is the teleporter; the port's entry does not read it. */
+struct GameContext;
+int entity_spawn_request_queue_add(struct GameContext* ctx, int type,
+                                   int request_kind);
+/* lego.cpp (level.hpp): 004332f0, 00433e30. */
+void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy);
+int grid_cell_entity_eligibility_check(int x, int y);
+/* level.cpp (level_for_lego.hpp): legoGlobs.langSurface_desc (005562d8)
+ * and langSurface_sound (00556320). */
+extern const char* s_surface_type_names[18];
+extern uint32_t s_surface_type_values[18];
+/* GAME-026 Map3D.c (terrain_map.h): 0044f4e0, 0044f540. */
+int terrain_map_block_highlight_set(struct TerrainMap* map, int bx, int by,
+                                    int highlight);
+int terrain_map_block_highlight_get(struct TerrainMap* map, int bx, int by);
+/* GAME-023 LegoObject.c (legoobject_unit.c): the third teleporter. */
+extern struct Lego_Object* legoGlobs_f_556454;                  /* 00556454 */
+/* GAME-020 Interface.c (interface_unit.h), read by offset. */
+extern struct InterfaceGlobs interfaceGlobs;                    /* 004dcd58 */
+/* gods98 TextWindow.c (heap.hpp): TextWindow_Update (00485390). */
+int text_buffer_draw_wrapped(void* record, uint32_t start_line,
+                             float line_scale, int* height_out);
+/* GAME-015 FrontEnd.c (frontend_api.h): 00416d50, 00416d60. */
+int save_slot_open(void);
+int is_in_game(void);
+/* GAME-031 Reward.c (reward.h). */
+int reward_prepare_level(void);                                 /* 0045fda0 */
+void reward_free_level(void);                                   /* 004601e0 */
+int reward_prepare_results(void);                               /* 00460360 */
+int reward_loop(void);                                          /* 00461410 */
+/* Stats.c / record_chains.cpp (entity.hpp): 0046a4c0. */
+int entity_flag_mask_callbacks_all_pass(uint32_t mask);
+
 /* ---- part 3 imports, group 3C: end ---- */
 
 #ifdef __cplusplus

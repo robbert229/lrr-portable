@@ -724,7 +724,7 @@ void scene_object_state_dispatch(GameContext* ctx, uint32_t selector,
 /* EntitySpawnRequestQueueAdd/Process (FUN_0043f150/0x0043f190): bounded
  * nine-entry deferred spawn request queue. The port processes the first
  * valid entity-type request when an eligible requester is ticked. */
-int entity_spawn_request_queue_add(GameContext* ctx, int type,
+extern "C" int entity_spawn_request_queue_add(GameContext* ctx, int type,
                                   int request_kind);
 void entity_spawn_request_queue_process(EntitySlot* requester);
 

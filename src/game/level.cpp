@@ -53,6 +53,10 @@ extern "C" int32_t s_cell_previous_track[][2];
 extern "C" int s_cell_previous_track_count;
 extern "C" int32_t s_cell_visited_track[][2];
 extern "C" int s_cell_visited_track_count;
+/* GAME-021's lego_unit.c reads the surface type descriptions (issue #587):
+ * C linkage, which the frozen header below and the definitions inherit. */
+extern "C" const char* s_surface_type_names[];
+extern "C" uint32_t s_surface_type_values[];
 #include "level_for_lego.hpp"
 /* Defined in GAME-021's lego_unit.c (issue #544): C linkage, which the
  * frozen header below inherits. */

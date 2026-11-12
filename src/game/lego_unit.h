@@ -738,6 +738,56 @@ void lego_terrain_cell_flags_set_mask20108000(int bx, int by);       /* 00432490
 
 /* ---- part 3 declarations, group 3C (00434570-00435aa0): begin ---- */
 
+/* Maths.h's Vector3F. */
+typedef struct LegoVector3F3C { float x, y, z; } LegoVector3F3C;
+
+/* Lego_Block +0x14: the drill damage (0 to 1). */
+#define LEGO_BLOCK_DAMAGE(block) (*(float*)&(block)->f_10[1])
+
+/* legoGlobs fields and Lego.c .bss the port does not model (stand-ins in
+ * lego_unit.c). */
+extern int legoGlobs_f_556448;                  /* 00556448 placement direction */
+extern struct Image* legoGlobs_TutorialIcon;    /* 0055645c */
+extern uint32_t s_lego_mslbLast;                /* 004de424 */
+extern float s_lego_tutorialIconPhase;          /* 004de58c */
+
+/* Shared under MSVC x86 (the port keeps its models in lego.cpp elsewhere). */
+int terrain_cell_drill_work_add_current(int bx, int by, float destroyTime,
+                                        float elapsed);
+void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
+                                               int radius);
+/* Shared. */
+int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void);
+
+/* The unit's own entries (the port keeps its models in lego.cpp). */
+void lego_panels_config_entry_apply(struct BlockRec* config,
+                                    unsigned int screenWidth,
+                                    unsigned int screenHeight);
+void lego_panel_button_layout_config_load(struct BlockRec* config,
+                                          unsigned int screenWidth,
+                                          unsigned int screenHeight);
+void lego_advisor_tutorial_icon_image_load(struct BlockRec* config);
+void lego_sound_samples_config_load(struct BlockRec* config,
+                                    int noReduceSamples);
+void lego_text_messages_config_load(struct BlockRec* config);
+void lego_message_load_infomessages(struct BlockRec* config);
+void lego_advisor_tooltip_and_sound_config_load(struct BlockRec* config);
+int lego_interface_spawn_request_enqueue(int objType, int objIndex);
+void lego_surface_type_descriptions_config_load(struct BlockRec* config,
+                                                const char* gameName);
+const char* lego_terrain_surface_type_name_get(int surfaceType);
+uint32_t lego_surface_type_configured_value_at_index(int surfaceType);
+void lego_random_variant_cell_scatter(const int* blockPos, int radius,
+                                      int stopAtFirst);
+void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
+                                      float elapsedWorld, float elapsed);
+int lego_global_handle_position_apply_if_present(void);
+int lego_menu_option_panel_texture_update(const char* title, const char* msg,
+                                          const char* ok, const char* cancel);
+int lego_keep_running(void);
+void lego_camera_registry_probe(void);
+void lego_panel_selection_highlight_toggle(int on);
+
 /* ---- part 3 declarations, group 3C: end ---- */
 
 #ifdef __cplusplus
