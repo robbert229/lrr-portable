@@ -8,27 +8,25 @@
 #include <string.h>
 #include "camera_shared.hpp"
 #include "camera_for_lego.hpp"
-
-extern "C" short rng_thunk_draw15(void);
-extern "C" float random_float_range(float minimum, float maximum);
+#include "camera_for_legoobject.hpp"
 
 /* Reconstruction symbols for corpus globals. */
 int   g_camera_scale_14   = 1;      /* DAT_00556f14, integer multiplier */
 int   g_camera_grid_enabled = 1;    /* DAT_00556f18 */
 // GLOBAL: LEGORR 0x00556ed8
 float g_camera_countdown  = 0.0f;    /* DAT_00556ed8 */
-static int s_predug_spawn_cells[256][2];
+int s_predug_spawn_cells[256][2];
 uint32_t s_predug_spawn_count;
 int s_predug_spawn_enabled;
 const uint8_t* s_spawn_level_block;
-static CameraSpawnRandomIndexHook s_spawn_random_index_hook;
-static CameraSpawnRandomAngleHook s_spawn_random_angle_hook;
-static CameraSpawnObjectCellHook s_spawn_object_cell_hook;
-static CameraSpawnCoordinateHook s_spawn_coordinate_hook;
-static CameraSpawnCreateHook s_spawn_create_hook;
-static CameraSpawnInitializeHook s_spawn_initialize_hook;
-static void* s_spawn_hook_context;
-static void* s_spawn_coordinate_context;
+CameraSpawnRandomIndexHook s_spawn_random_index_hook;
+CameraSpawnRandomAngleHook s_spawn_random_angle_hook;
+CameraSpawnObjectCellHook s_spawn_object_cell_hook;
+CameraSpawnCoordinateHook s_spawn_coordinate_hook;
+CameraSpawnCreateHook s_spawn_create_hook;
+CameraSpawnInitializeHook s_spawn_initialize_hook;
+void* s_spawn_hook_context;
+void* s_spawn_coordinate_context;
 CameraGridSpawnHook s_grid_spawn_hook;
 void* s_grid_spawn_context;
 CameraSpawnRegistryProbeHook s_spawn_registry_probe_hook;
@@ -125,60 +123,6 @@ void camera_spawn_hooks_install(CameraSpawnRandomIndexHook random_index,
     s_spawn_initialize_hook = initialize;
     s_spawn_hook_context = context;
     s_spawn_coordinate_context = context;
-}
-
-/* PredugSpawnCoordinateSelectAndCreate (FUN_0043ad50): choose a configured
- * predug cell or resolve the source entity's cell, add the corpus 12.75-unit
- * radial offset, create the requested entity, and run its setup callback. */
-// FUNCTION: LEGORR 0x0043AD50
-void* predug_spawn_coordinate_select_and_create(int source_object, int type)
-{
-    int cell_x;
-    int cell_y;
-    int selected;
-    float angle = 0.0f;
-    float world_x;
-    float world_y;
-    void* entity;
-    if (s_predug_spawn_enabled == 0 || s_predug_spawn_count == 0u
-        || s_spawn_coordinate_hook == NULL) {
-        return NULL;
-    }
-    if (source_object == 0) {
-        selected = s_spawn_random_index_hook != NULL
-            ? s_spawn_random_index_hook((int)s_predug_spawn_count,
-                                        s_spawn_hook_context)
-            : (int)(rng_thunk_draw15() % s_predug_spawn_count);
-        if (selected < 0 || (uint32_t)selected >= s_predug_spawn_count) {
-            selected = 0;
-        }
-        cell_x = s_predug_spawn_cells[selected][0];
-        cell_y = s_predug_spawn_cells[selected][1];
-    } else if (s_spawn_object_cell_hook == NULL
-               || s_spawn_object_cell_hook(source_object, &cell_x, &cell_y,
-                                            s_spawn_hook_context) == 0) {
-        return NULL;
-    }
-    if (s_spawn_random_angle_hook != NULL) {
-        angle = s_spawn_random_angle_hook(s_spawn_hook_context);
-    } else {
-        angle = random_float_range(0.0f, 6.2831855f);
-    }
-    if (s_spawn_coordinate_hook(cell_x, cell_y, &world_x, &world_y,
-                                s_spawn_coordinate_context) == 0) {
-        return NULL;
-    }
-    world_x += (float)sin((double)angle) * 12.75f;
-    world_y += (float)cos((double)angle) * 12.75f;
-    if (s_spawn_create_hook == NULL) {
-        return NULL;
-    }
-    entity = s_spawn_create_hook(source_object, type, world_x, world_y, angle,
-                                 s_spawn_hook_context);
-    if (entity != NULL && s_spawn_initialize_hook != NULL) {
-        s_spawn_initialize_hook(entity, s_spawn_hook_context);
-    }
-    return entity;
 }
 
 /* --- the six corpus functions -------------------------------------------- */

@@ -30,6 +30,7 @@
 #include "view_for_panel_unit.hpp"
 #include "view_for_lego.hpp"
 #include "view_for_images_unit.hpp"
+#include "view_for_legoobject.hpp"
 
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
@@ -65,10 +66,10 @@ void* s_view_context_close_context;
 AnimationObjectTransformApplyHook s_animation_orientation_hook;
 RenderNodePositionApplyHook s_render_node_position_hook;
 void* s_animation_transform_context;
-static SceneMatrixApplyHook s_scene_matrix_apply_hook;
-static void* s_scene_matrix_apply_context;
+SceneMatrixApplyHook s_scene_matrix_apply_hook;
+void* s_scene_matrix_apply_context;
 SceneObjectChainHooks s_scene_object_chain_hooks;
-static SceneObjectDisposeHooks s_scene_object_dispose_hooks;
+SceneObjectDisposeHooks s_scene_object_dispose_hooks;
 static SceneObjectBoundsHooks s_scene_object_bounds_hooks;
 static RenderPackedRgbaHooks s_render_packed_rgba_hooks;
 static RenderHierarchyFloat3Hooks s_render_hierarchy_float3_hooks;
@@ -2361,40 +2362,6 @@ void scene_matrix_apply_hook_set(SceneMatrixApplyHook hook, void* context)
     s_scene_matrix_apply_context = context;
 }
 
-// MatrixApplyRotationAboutZWithOffset (FUN_0044b7a0).
-// FUNCTION: LEGORR 0x0044b7a0
-void matrix_apply_rotation_about_z_with_offset(void* target,
-                                               float matrix[16],
-                                               float offset)
-{
-    float original[16];
-    float rotated[16];
-    float old_x;
-    float old_y;
-    float old_z;
-    int column;
-    if (matrix == NULL) return;
-    memcpy(original, matrix, sizeof(original));
-    old_x = original[12];
-    old_y = original[13];
-    old_z = original[14];
-    for (column = 0; column < 4; ++column) {
-        int base = column * 4;
-        rotated[base + 0] = -original[base + 1];
-        rotated[base + 1] = original[base + 0];
-        rotated[base + 2] = original[base + 2];
-        rotated[base + 3] = original[base + 3];
-    }
-    rotated[12] = old_x;
-    rotated[13] = old_z;
-    rotated[14] = -old_y - offset;
-    memcpy(matrix, rotated, sizeof(rotated));
-    if (s_scene_matrix_apply_hook != NULL) {
-        s_scene_matrix_apply_hook(s_scene_matrix_apply_context,
-                                  target, matrix);
-    }
-}
-
 void renderer_record_clone_hooks_set(const RendererRecordCloneHooks* hooks)
 {
     if (hooks == NULL) {
@@ -2476,35 +2443,6 @@ void scene_object_dispose_hooks_set(const SceneObjectDisposeHooks* hooks)
     }
     else {
         s_scene_object_dispose_hooks = *hooks;
-    }
-}
-
-// FUNCTION: LEGORR 0x0044bae0
-void scene_object_resource_and_callback_state_dispose(void** owner)
-{
-    void* scene_object;
-    void** resource_slot;
-    void* resource;
-    SceneObjectDisposeHooks* hooks = &s_scene_object_dispose_hooks;
-    if (owner == NULL || *owner == NULL) return;
-    if (hooks->callback_state_remove != NULL) {
-        hooks->callback_state_remove(hooks->context, owner,
-                                     0x0044bab0u, 0);
-    }
-    scene_object = *owner;
-    resource_slot = (void**)((char*)scene_object + 0x98);
-    resource = *resource_slot;
-    if (resource != NULL) {
-        if (hooks->scene_node_detach != NULL) {
-            hooks->scene_node_detach(hooks->context, resource);
-        }
-        if (hooks->scene_node_release != NULL) {
-            hooks->scene_node_release(hooks->context, resource);
-        }
-        *resource_slot = NULL;
-    }
-    if (hooks->owner_record_release != NULL) {
-        hooks->owner_record_release(hooks->context, owner);
     }
 }
 
@@ -3039,16 +2977,6 @@ void textured_scene_draw_hooks_set(const TexturedSceneDrawHooks* hooks)
                sizeof(s_textured_scene_draw_hooks));
     else
         s_textured_scene_draw_hooks = *hooks;
-}
-
-/* GridOperationArgumentAdapter (FUN_00442540) — see view.hpp. */
-// FUNCTION: LEGORR 0x00442540
-void grid_operation_argument_adapter(float x, float y, EngineContext* ctx)
-{
-    if (ctx == NULL) {
-        return; /* deviation: the corpus reads its own world blindly */
-    }
-    (void)terrain_height(ctx, x, y);
 }
 
 /* CameraZoomStepAdjust (FUN_0045bf20) — see view.hpp. */

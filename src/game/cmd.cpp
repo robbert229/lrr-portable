@@ -78,6 +78,7 @@ extern "C" float random_float_range(float minimum, float maximum);
 #include "cmd_for_weapons.hpp"
 #include "cmd_from_weapons.hpp"
 #include "cmd_for_interface.hpp"
+#include "cmd_for_legoobject.hpp"
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
@@ -5279,70 +5280,6 @@ void task_type23_create_for_category_mask(EntitySlot* e, int selector,
     rec->state &= ~0x40u; /* the corpus clears bit 6 after the link */
 }
 
-/* --- the task-kind filtered search (see cmd.hpp) -----------------------------
- * The corpus's pool walk hands the callback the slot pointer and the
- * argument block; the port models that argument block as the selector word. */
-// FUNCTION: LEGORR 0x0043a7c0
-int entity_action_kind_supported(EntitySlot* e, int kind, int arg)
-{
-    if (e == NULL) {
-        return 0; /* deviation: the corpus reads the entity blindly */
-    }
-    if ((entity_stats_word_get(e) & 8u) == 0u) {
-        return 0;
-    }
-    switch (kind) {
-    case 6:
-        /* Corpus: NoOpCallback(1) — the callable no-op's return is
-         * corpus-undefined (finding 381), so the port never passes. */
-        return 0;
-    case 7:
-        return upgrade_resource_check((s_ctx != NULL) ? s_ctx->level
-                                                      : NULL, arg)
-                   != 0u;
-    case 9:
-    case 8:
-    case 0xb:
-    case 0xd:
-        return 1;
-    default:
-        return 0;
-    }
-}
-// FUNCTION: LEGORR 0x00439240
-int task_entity_flags_and_cell_task_match(const EntitySlot* e, int kind)
-{
-    /* Corpus: test al,0x8 — the byte test of the stats word return. */
-    if (((unsigned char)entity_stats_word_get(e) & 0x8u) != 0u) {
-        if (entity_action_kind_supported((EntitySlot*)e, kind, 0) != 0) {
-            return 1; /* corpus: mov eax,0x1 ahead of the shared return-0 tail */
-        }
-    }
-    return 0;
-}
-// FUNCTION: LEGORR 0x00439200
-int task_kind_filtered_search(int selector)
-{
-    if (selector == 1 || selector == 2 || selector == 4) {
-        return 0;
-    }
-    if (s_ctx == NULL) {
-        return 0; /* deviation: the corpus walks the pool blindly */
-    }
-    for (int t = 0; t < ENTITY_TYPES; ++t) {
-        for (int i = 0; i < s_ctx->entity_count[t]; ++i) {
-            const EntitySlot* e = entity_at(s_ctx, t + 1, i);
-            if (e == NULL || e->type == 0) {
-                continue; /* walker liveness: the +0x408 slot mirror */
-            }
-            if (task_entity_flags_and_cell_task_match(e, selector) != 0) {
-                return 1;
-            }
-        }
-    }
-    return 0;
-}
-
 /* --- the task-record queue producers (see cmd.hpp) ---------------------------
  * The pair staging uses the corpus's int view of the coordinate slots. */
 static void cmd_pair_stage(CmdRec* rec, const int pair[2])
@@ -5874,51 +5811,8 @@ void entity_task_batch_append(EntitySlot* const* entities, int count,
     }
 }
 
-/* DeferredOListEntityQueueAdd (FUN_00437c20) — see cmd.hpp. The bounded
- * portable band retains the eleven-word record and owns duplicated names.
- * Its consumer transfers those names before removing a matching entry. */
-#define DEFERRED_OLIST_SLOTS 200
-
-struct DeferredOListEntry {
-    uint32_t w[9];    /* entry +0x00 .. +0x20 (the 11-dword stride)   */
-    char*    names[2]; /* widened mirrors of entry +0x24 / +0x28       */
-};
-
-static DeferredOListEntry s_deferred_olist[DEFERRED_OLIST_SLOTS];
-static uint32_t           s_deferred_olist_next; /* DAT_004ea7a4 */
-
-// FUNCTION: LEGORR 0x00437c20
-void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
-                                     int p1, int p2, int p3, int p5, int p6,
-                                     const char* name1, const char* name2)
-{
-    if (s_deferred_olist_next >= DEFERRED_OLIST_SLOTS) return;
-    const uint32_t slot = s_deferred_olist_next++;
-    if (record == NULL) return;
-    DeferredOListEntry* e = &s_deferred_olist[slot];
-    float x, y;
-    __builtin_memcpy(&x, &record[0], sizeof(x));
-    __builtin_memcpy(&y, &record[1], sizeof(y));
-    int cell_x = float_to_long(x), cell_y = float_to_long(y);
-    if (ctx != NULL && ctx->level != NULL)
-        (void)terrain_world_xy_to_cell(ctx->level->ptr_terrain, x, y,
-                                      &cell_x, &cell_y);
-    e->w[0] = (uint32_t)cell_x;
-    e->w[1] = (uint32_t)cell_y;
-    e->w[2] = record[0];
-    e->w[3] = record[1];
-    e->w[4] = (uint32_t)p5; /* entry +0x10 */
-    e->w[5] = (uint32_t)p1; /* entry +0x14 */
-    e->w[6] = (uint32_t)p2; /* entry +0x18 */
-    e->w[7] = (uint32_t)p3; /* entry +0x1c */
-    e->w[8] = (uint32_t)p6; /* entry +0x20 */
-    if (name1 != NULL) {
-        e->names[0] = string_duplicate(name1); /* FUN_00477550 */
-    }
-    if (name2 != NULL) {
-        e->names[1] = string_duplicate(name2); /* FUN_00477550 */
-    }
-}
+DeferredOListEntry s_deferred_olist[DEFERRED_OLIST_SLOTS];
+uint32_t           s_deferred_olist_next; /* DAT_004ea7a4 */
 
 uint32_t deferred_olist_entry_word(int slot, int word)
 {
@@ -6026,17 +5920,6 @@ void upgrade_name_table_install(void* records, const char* const* names,
 
 void kind_six_sweep_timer_install(float value) { s_sweep_timer = value; }
 float kind_six_sweep_timer_peek(void) { return s_sweep_timer; }
-
-// FUNCTION: LEGORR 0x0043a910
-void simulation_mode_counter_add(int mode, int count)
-{
-    (void)mode; /* register residue: the corpus ignores it, count only */
-    /* Deviation: the corpus loops `count != 0` down by one, so a negative
-     * count runs away; the port counts toward zero. */
-    for (int i = count; i != 0; i = i > 0 ? i - 1 : i + 1) {
-        level_resource_balance_add_and_sound(0);
-    }
-}
 
 uint32_t command_sample_stats_peek(int kind, int field)
 {

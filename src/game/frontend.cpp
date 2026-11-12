@@ -243,6 +243,7 @@ uint32_t s_interface_build_image_counts[2];
 #include "frontend_from_interface.hpp"
 #include "frontend_for_frontend_unit.hpp"
 #include "frontend_from_frontend_unit.hpp"
+#include "frontend_for_legoobject.hpp"
 
 static int s_toupper(int c)
 {
@@ -1866,22 +1867,22 @@ int ui_panel_string_equal_case_insensitive(const char* first,
 }
 
 static ToolTipIconConfigHooks s_tooltip_icon_config_hooks;
-static const char* s_tooltip_primary_names[11] = {
+const char* s_tooltip_primary_names[11] = {
     "LegoObject_ToolType_Drill", "LegoObject_ToolType_Spade",
     "LegoObject_ToolType_Hammer", "LegoObject_ToolType_Spanner",
     "LegoObject_ToolType_Laser", "LegoObject_ToolType_PusherGun",
     "LegoObject_ToolType_BirdScarer", "LegoObject_ToolType_FreezerGun",
     NULL, NULL, NULL
 };
-static const char* s_tooltip_secondary_names[6] = {
+const char* s_tooltip_secondary_names[6] = {
     "LegoObject_AbilityType_Pilot", "LegoObject_AbilityType_Sailor",
     "LegoObject_AbilityType_Driver", "LegoObject_AbilityType_Dynamite",
     "LegoObject_AbilityType_Repair", "LegoObject_AbilityType_Scanner"
 };
-static void* s_tooltip_primary_handles[11];
-static void* s_tooltip_secondary_handles[6];
-static void* s_tooltip_blank_handle;
-static void* s_tooltip_cursor_handle;
+void* s_tooltip_primary_handles[11];
+void* s_tooltip_secondary_handles[6];
+void* s_tooltip_blank_handle;
+void* s_tooltip_cursor_handle;
 
 void tooltip_icon_config_hooks_set(const ToolTipIconConfigHooks* hooks,
                                    const char* const primary_names[11],
@@ -1927,57 +1928,6 @@ int advisor_tooltip_sound_get(int index)
     TimedEffectRecord* record = index >= 0 && index < 38
         ? timed_effect_record_get((unsigned int)index + 1u) : NULL;
     return record != NULL ? (int)record->cue : 0;
-}
-
-/* ToolTipIconsConfigLoad (FUN_00437150): load matching images from the
- * ToolTipIcons config section into the two named icon banks and special
- * Blank/Cursor slots. */
-// FUNCTION: LEGORR 0x00437150
-void tooltip_icons_config_load(void* config)
-{
-    BlockRec* section = block_subgroup((BlockFile*)config,
-        string_path_join(util_root_name((BlockFile*)config), "ToolTipIcons",
-                         (const char*)NULL));
-    BlockRec* entry;
-    if (section == NULL) {
-        if (s_tooltip_cursor_handle != NULL) {
-            texture_release((TextureSurface*)s_tooltip_cursor_handle);
-        }
-        s_tooltip_cursor_handle = NULL;
-        return;
-    }
-    entry = section;
-    while (entry != NULL) {
-        const char* name = block_name(entry);
-        const char* value = block_value(entry);
-        unsigned int i;
-        int matched = 0;
-        for (i = 0; i < 11u; ++i) {
-            if (ui_panel_string_equal_case_insensitive(
-                    name, s_tooltip_primary_names[i])) {
-                s_tooltip_primary_handles[i] = image_surface_load(value, 0u, 0u);
-                matched = 1;
-                break;
-            }
-        }
-        if (!matched) {
-            for (i = 0; i < 6u; ++i) {
-                if (ui_panel_string_equal_case_insensitive(
-                        name, s_tooltip_secondary_names[i])) {
-                    s_tooltip_secondary_handles[i] = image_surface_load(
-                        value, 0u, 0u);
-                    matched = 1;
-                    break;
-                }
-            }
-        }
-        if (!matched && ui_panel_string_equal_case_insensitive(name, "Blank"))
-            s_tooltip_blank_handle = image_surface_load(value, 0u, 0u);
-        else if (!matched && ui_panel_string_equal_case_insensitive(
-                                 name, "Cursor"))
-            s_tooltip_cursor_handle = image_surface_load(value, 0u, 0u);
-        entry = block_next_sibling(entry);
-    }
 }
 
 /* Item display position — the MenuTick @ 0x412c00 arithmetic: each item

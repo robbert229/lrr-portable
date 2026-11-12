@@ -17,6 +17,7 @@
 #include "render.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/view.hpp"
+#include "select_from_legoobject.hpp"
 
 static GameContext* s_selection_active_context;
 // GLOBAL: LEGORR 0x004ff298
@@ -77,27 +78,6 @@ void selection_remove(GameContext* ctx, const EntitySlot* e)
     ctx->selection[index] = ctx->selection[ctx->selection_count - 1];
     --ctx->selection_count;
     selection_active_context_sync(ctx);
-}
-
-/* SelectionCandidateFilter (FUN_004526e0) operates on the active selection
- * globals. The command-layer adapter binds and publishes the GameContext. */
-/* The reference callback at 0x0044c500 clears the transient selection marker
- * on every filtered-pool entity and clears the engine-state dirty bit when
- * that marker was present. Its body is visible in the reference executable's
- * code at this address, though omitted from the checked-in decompile. */
-// FUNCTION: LEGORR 0x0044c500
-static int selection_candidate_filter_pool_refresh_callback(
-    EntitySlot* entity, void* payload)
-{
-    if ((entity->flags_3ec & 1u) != 0u) {
-        uint32_t* state = engine_current_state_word();
-        if (state != NULL) {
-            *state &= ~0x10000000u;
-        }
-    }
-    entity->flags_3ec &= ~1u;
-    (void)payload;
-    return 0;
 }
 
 #if !defined(_MSC_VER) || !defined(_M_IX86)
@@ -606,24 +586,6 @@ int selection_active_candidate_already_selected_or_marked(EntitySlot* entity)
         return 0;
     }
     return 1;
-}
-
-/* SelectionClearMarkerAndResetHud (FUN_0044c4a0) uses the active engine
- * state word, corresponding to DAT_00556ecc. */
-// FUNCTION: LEGORR 0x0044c4a0
-void selection_clear_marker_and_reset_hud(EntitySlot* e)
-{
-    if ((e->flags_3ec & 2u) != 0u) {
-        if ((entity_state_flags_get(e) & 0x20000u) != 0u) {
-            if ((entity_stats_word_get(e) & 0x20000u) == 0u
-                || e->owner_36c != NULL) {
-                uint32_t* state = engine_current_state_word();
-                if (state != NULL) *state |= 0x10000000u;
-                e->flags_3ec |= 1u;
-            }
-        }
-    }
-    selection_clear_request_and_hud_reset(); /* FUN_0041e750 */
 }
 
 /* Compatibility entry retained for callers and tests that own an explicit
