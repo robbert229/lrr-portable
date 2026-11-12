@@ -101,6 +101,7 @@ class Headers:
     def __init__(self, root: Path):
         self.root = root
         self.names: dict[str, set[str]] = {}
+        self.type_names: dict[str, set[str]] = {}
         self.includes: dict[str, list[str]] = {}
 
     def resolve(self, spelled: str, including: str, library: str) -> str | None:
@@ -128,18 +129,37 @@ class Headers:
         """Functions and variables a header declares, as ``n`` or ``X::n``."""
         if rel not in self.names:
             scan = cx.scan((self.root / rel).read_text(encoding="utf-8", errors="replace"))
-            names = set()
+            names, types = set(), set()
             for it in (p for x in scan.items for p in (x.parts or [x])):
-                if it.category not in ("function", "proto", "var"):
+                if it.category not in ("function", "proto", "var", "type"):
                     continue
                 scope = _container_namespace(it.container) or it.qualifier or ""
-                names.update(_qualify(scope, n) for n in it.names)
+                (types if it.category == "type" else names).update(_qualify(scope, n) for n in it.names)
             self.names[rel] = names
+            self.type_names[rel] = types
         return self.names[rel]
+
+    def declared_types(self, rel: str) -> set[str]:
+        """Types (typedefs, tags, forward declarations) a header declares."""
+        self.declared(rel)
+        return self.type_names[rel]
 
     def visible(self, spelled: list[str], including: str, library: str) -> set[str]:
         """Function and variable names declared by the headers reachable from
         ``spelled`` includes of ``including`` (conditional includes too)."""
+        names: set[str] = set()
+        for rel in self._reachable(spelled, including, library):
+            names |= self.declared(rel)
+        return names
+
+    def visible_types(self, spelled: list[str], including: str, library: str) -> set[str]:
+        """Type names declared by the headers reachable from ``spelled``."""
+        names: set[str] = set()
+        for rel in self._reachable(spelled, including, library):
+            names |= self.declared_types(rel)
+        return names
+
+    def _reachable(self, spelled: list[str], including: str, library: str) -> set[str]:
         seen: set[str] = set()
         todo = [(s, including) for s in spelled]
         while todo:
@@ -149,10 +169,7 @@ class Headers:
                 continue
             seen.add(rel)
             todo.extend((x, rel) for x in self._includes(rel))
-        names: set[str] = set()
-        for rel in seen:
-            names |= self.declared(rel)
-        return names
+        return seen
 
 
 def _qualify(scope: str, name: str) -> str:
@@ -765,11 +782,27 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
     pinned = {c for c in cl.members if c not in core and any(
         kind in FUNCTION_KINDS + ("LIBRARY", "GLOBAL") for k in cl.members[c] for kind, _ in items[k].annotations)}
     local = {c for c in cl.members if kinds[c] in ("local", "internal", "declaration")} - set(core) - pinned
+    stay_includes = [it.include for it in items if it.category == "include" and it.include]
+    visible_here = headers.visible(stay_includes, s.rel, s.entry.library)
+    # A use of a type name that an included header declares, where the file
+    # defines that name only as a type inside #if groups, binds to the
+    # header's declaration (#525: G98-012's Movie, defined per movie backend;
+    # movie.hpp declares `typedef struct Movie Movie;` and the unit uses it
+    # by pointer). The definitions stay; the unit file includes the header.
+    # A use that needs the complete type fails the unit file's compile.
+    header_types = headers.visible_types(stay_includes, s.rel, s.entry.library)
+    definitions: dict[str, list[cx.Item]] = {}
+    for it in items:
+        for p in (it.parts if it.cgroup else [it]):
+            for n in p.names:
+                definitions.setdefault(_qualify(it.scope, n), []).append(p)
+    by_header = {n for n in header_types if n in definitions
+                 and all(p.category == "type" and p.cond for p in definitions[n])}
 
     def touched(roots):
         seen = set()
         for c in roots:
-            for n in cl.uses[c]:
+            for n in cl.uses[c] - by_header:
                 d = cl.definer.get(n)
                 if d is not None and d not in core:
                     seen.add(d)
@@ -799,8 +832,6 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
     to_header = {c for c in shared if kinds[c] in ("local", "declaration") and c not in pinned}
     exported = {c for c in shared if kinds[c] == "internal"}
 
-    stay_includes = [it.include for it in items if it.category == "include" and it.include]
-    visible_here = headers.visible(stay_includes, s.rel, s.entry.library)
     def first(c):
         return cl.members[c][0]
     for c in sorted(core, key=first):
@@ -848,7 +879,7 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
         need_extra: set[str] = set()
         for n in list(need):
             d = cl.definer.get(n)
-            if d is None or d in to_header:
+            if d is None or d in to_header or n in by_header:
                 continue
             if kinds[d] in ("local", "declaration"):
                 add.add(d)

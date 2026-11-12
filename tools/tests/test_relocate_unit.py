@@ -1533,6 +1533,35 @@ class ConditionalGroupTest(unittest.TestCase):
         fx, plan = self.plan(self.guarded(group))
         self.assertIn("extern int s_cond;", plan.files["src/game/mixed_for_alpha.hpp"])
 
+    # -- a type an included header declares (#525: G98-012's Movie)
+
+    HANDLE_HEADER = HEADER.replace("int beta_one(void);\n",
+                                   "int beta_one(void);\ntypedef struct AlphaHandle AlphaHandle;\n")
+
+    def with_handle(self, definitions: str) -> str:
+        return MIXED.replace("static int s_shared_counter;", definitions + "static int s_shared_counter;") \
+            .replace("    s_alpha_state = x;\n",
+                     "    AlphaHandle* h = 0;\n    s_alpha_state = x + (h != 0);\n")
+
+    def test_type_defined_only_in_if_groups_binds_to_the_header_declaration(self):
+        # Each backend defines the type in its own branch, beside code the
+        # unit does not use; the unit uses it by pointer.
+        group = ("#if defined(FEATURE)\nstruct AlphaHandle { int fd; };\n#undef FEATURE_LOCAL\n"
+                 "#else\ntypedef struct AlphaHandle { int x; } AlphaHandle;\n#endif\n")
+        fx, plan = self.plan(self.with_handle(group), extra={"src/game/mixed.hpp": self.HANDLE_HEADER})
+        self.assertNotIn("struct AlphaHandle {", plan.files["src/game/alpha.cpp"])
+        self.assertIn('#include "mixed.hpp"', plan.files["src/game/alpha.cpp"])
+        self.assertIn(group, plan.files["src/game/mixed.cpp"])
+        # Without the header's declaration, the use reaches the group.
+        reasons = self.refused(self.with_handle(group))
+        self.assertTrue(any("AlphaHandle" in r and "inside an #if block" in r for r in reasons), reasons)
+
+    def test_unconditional_type_still_moves_when_a_header_declares_it(self):
+        definition = "struct AlphaHandle { int fd; };\n"
+        fx, plan = self.plan(self.with_handle(definition), extra={"src/game/mixed.hpp": self.HANDLE_HEADER})
+        self.assertIn(definition, plan.files["src/game/alpha.cpp"])
+        self.assertNotIn("struct AlphaHandle {", plan.files["src/game/mixed.cpp"])
+
 
 class RemainingRefusalsTest(unittest.TestCase):
     """#514: nested namespaces, out-of-line class members, anonymous-namespace
