@@ -1,4 +1,4 @@
-# input_sha256: 9d34c0ddc4c914f2b839af5b128cc9da0245e802c23aa633cfbf3a48f5693f8e
+# input_sha256: 40960590f7a43eb95268dc915c394601c9f1b3918aa1f277078957d462178ba7
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2239 mapped functions
+[game-only] 2240 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -88,7 +88,7 @@
 0x004034e0 100.00 task_pair_record_enqueue
 0x00403520 100.00 task_record_kind10_queue
 0x00403560 31.11 task_registry_remove_type10_entries_for_entity
-0x004035c0 48.00 cmd_create_move(1)
+0x004035c0 48.00 cmd_create_move
 0x00403610 38.10 cmd_create_gated
 0x00403650 43.30 entity_task_batch_append
 0x004036c0 73.68 cmd_create_target
@@ -175,7 +175,7 @@
 0x00407540 40.00 flagged_object_timer_registry_insert
 0x004075a0 9.32 screen_effects_tick
 0x004078c0 10.26 ledger_stub_004078c0_EntityCursorTargetStepResolveAndTimerAdvance
-0x00407a10 50.97 pending_type_value_slot_select
+0x00407a10 51.95 pending_type_value_slot_select
 0x00407d60 20.51 entity_building_type_config_record_parse
 0x004082e0 26.67 scene_object_scalar_adjust_by_direction
 0x00408360 56.00 task_field84_get_and_field88_out
@@ -218,7 +218,7 @@
 0x00409450 100.00 ledger_stub_00409450_FindNearbyPlacementCandidate
 0x00409470 26.34 ledger_stub_00409470_NeighborCellEntitySearchRecurse
 0x00409550 60.27 descriptor_transition_apply
-0x00409600 16.06 ledger_stub_00409600_TerrainDescriptorTilesResetAndFree
+0x00409600 16.87 ledger_stub_00409600_TerrainDescriptorTilesResetAndFree
 0x00409790 22.91 ledger_stub_00409790_CellPathRecordRegisterApply
 0x00409940 15.38 terrain_cell_refresh_eight_neighbors_current
 0x004099d0 100.00 path_record_release_all
@@ -241,7 +241,7 @@
 0x0040aae0 100.00 entity_quad_mesh_render_record_allowed
 0x0040ab10 100.00 global_mode_zero_input_set
 0x0040ab30 50.00 grid_record_flag_mask_clear
-0x0040ab70 11.76 dependency_grid_config_load(struct BlockRec *, struct BlockRec *)
+0x0040ab70 11.76 dependency_grid_config_load
 0x0040aea0 26.58 ensure_cell_entries_loaded
 0x0040af40 25.97 terrain_cell_resource_entry_matches
 0x0040af90 100.00 terrain_cell_record_get_target
@@ -657,7 +657,7 @@
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 86.27 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
-0x0041fb50 93.74 lego_game_config_init
+0x0041fb50 93.77 lego_game_config_init
 0x00422850 89.52 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
@@ -716,7 +716,7 @@
 0x00429880 100.00 engine_float_field260_get_current_target
 0x00429890 90.50 lego_level_load
 0x0042b2f0 91.30 lego_entity_effect_counters_apply_from_record
-0x0042b330 98.17 lego_load_tile_meshes
+0x0042b330 99.08 lego_load_tile_meshes
 0x0042b480 97.73 lego_rectangular_resource_table_destroy
 0x0042b500 100.00 global_state_field84_get_current_target
 0x0042b510 27.40 map_pipeline
@@ -755,7 +755,7 @@
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 17.54 terrain_neighbor_flag_set
-0x00430530 12.20 terrain_cell_mutate
+0x00430530 12.41 terrain_cell_mutate
 0x00430df0 18.48 terrain_neighbor_refresh
 0x00430ee0 11.27 terrain_cell_initialize
 0x004310f0 32.84 terrain_cell_flag20_clear_and_refresh
@@ -985,8 +985,8 @@
 0x0043b850 19.13 entity_type_two_positioned_callback_dispatch
 0x0043baf0 100.00 entity_flags_mask107c33de_or_1c00203_any_test
 0x0043bb20 28.15 entity_building_deposit_state_monitor
-0x0043bbc0 61.11 entity_detach_carried_object_and_reset_state
-0x0043bc40 38.90 objective_sidecar_append_gate
+0x0043bbc0 63.89 entity_detach_carried_object_and_reset_state
+0x0043bc40 39.43 objective_sidecar_append_gate
 0x0043c200 26.36 entity_state_pair_predicate
 0x0043c280 85.71 entity_nested_float_add_unless_blocked
 0x0043c2b0 14.41 periodic_timer25_advance
@@ -1003,7 +1003,7 @@
 0x0043f190 15.78 entity_spawn_request_queue_process
 0x0043f560 14.81 entity_pool_find_with_local_predicate
 0x0043f6a0 66.67 entity_damage_apply
-0x0043f7d0 28.11 ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick
+0x0043f7d0 28.83 ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick
 0x0043fc20 22.53 ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise
 0x00440130 61.90 entity_update_and_unregister_at_tile
 0x004401b0 17.18 ledger_stub_004401b0_TerrainCellToWorldPosition
@@ -1072,7 +1072,7 @@
 0x00447b00 88.24 entity_dispatch_event5_and_set_flag
 0x00447b30 26.21 ledger_stub_00447b30_EntityActivityTick
 0x00447c40 19.80 activity_register_bookkeeping
-0x00447ea0 13.94 ledger_stub_00447ea0_EntityTypeBehaviorUpdate
+0x00447ea0 14.40 ledger_stub_00447ea0_EntityTypeBehaviorUpdate
 0x004487c0 21.62 entity_clear_nested_state_8_fields
 0x00448800 31.01 ledger_stub_00448800_EntityMoveToCellCoordinates
 0x00448880 23.77 ledger_stub_00448880_RecordGatedStepCommandIssue
@@ -1127,12 +1127,12 @@
 0x0044b7a0 14.58 matrix_apply_rotation_about_z_with_offset
 0x0044bae0 22.22 scene_object_resource_and_callback_state_dispose
 0x0044bb30 31.93 entity_node_scale_update
-0x0044bfd0 73.68 lego::configured_monster_spawn_behavior_tick
+0x0044bfd0 77.19 lego::configured_monster_spawn_behavior_tick
 0x0044c030 32.46 entity_one_shot_attached_effect_start
 0x0044c110 31.58 ai_attached_entity_wake
 0x0044c150 42.25 entity_pair_scalar_fields_set
 0x0044c1b0 29.72 ledger_stub_0044c1b0_EntityHeadingStepMove
-0x0044c4a0 68.00 selection_clear_marker_and_reset_hud(struct EntitySlot *)
+0x0044c4a0 68.00 selection_clear_marker_and_reset_hud
 0x0044c500 13.79 selection_candidate_filter_pool_refresh_callback
 0x0044c530 59.26 ai_can_do
 0x0044c550 15.62 global_scatter_spawn_enable_and_drain
@@ -1412,7 +1412,7 @@
 0x00460950 90.86 reward_calculate_score
 0x00460f00 99.09 reward_create_scroll
 0x00461070 99.28 reward_format_values
-0x00461410 97.25 reward_loop
+0x00461410 98.28 reward_loop
 0x00461790 92.46 reward_draw_item
 0x00461c90 90.91 reward_draw_score
 0x00461dd0 96.12 reward_do_buttons
@@ -1814,12 +1814,13 @@
 0x00477710 100.00 block_get_bool
 0x004777a0 31.83 WinMain
 0x00477bd0 100.00 low_texture_flag_set
-0x00477bf0 79.91 winmain_parse_options
+0x00477bf0 80.35 winmain_parse_options
 0x00477f30 60.47 main_loop_frame_pump
 0x00477f70 100.00 render_feature_flags_get
 0x00477f80 85.71 window_runtime_display_caps_query
 0x00477fa0 90.00 renderer_begin_frame_once_retail
 0x00477fd0 71.43 window_runtime_callback_triplet_set
+0x00478000 100.00 main_time_get
 0x00478010 92.86 window_runtime_message_dispatch_filter
 0x00478040 62.96 window_message_dispatch_pump
 0x004780b0 25.00 renderer_window_mode_apply
@@ -2047,7 +2048,7 @@
 0x004827d0 100.00 record_flag2c_bit0_set
 0x004827f0 0.00 scene_runtime_user_visual_manager
 0x00482ac0 55.81 model_render_record_state_setup
-0x00482b50 59.44 render_state_flags_apply
+0x00482b50 60.14 render_state_flags_apply
 0x00482cb0 78.95 renderer_command_mode_and_pair_send
 0x00482ce0 21.33 renderer_command_node_prepend
 0x00482d30 100.00 model_render_list_clear
@@ -2247,7 +2248,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2475 mapped functions
+[full] 2476 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2329,7 +2330,7 @@
 0x004034e0 100.00 task_pair_record_enqueue
 0x00403520 100.00 task_record_kind10_queue
 0x00403560 31.11 task_registry_remove_type10_entries_for_entity
-0x004035c0 48.00 cmd_create_move(1)
+0x004035c0 48.00 cmd_create_move
 0x00403610 38.10 cmd_create_gated
 0x00403650 43.30 entity_task_batch_append
 0x004036c0 73.68 cmd_create_target
@@ -2416,7 +2417,7 @@
 0x00407540 40.00 flagged_object_timer_registry_insert
 0x004075a0 9.32 screen_effects_tick
 0x004078c0 10.26 ledger_stub_004078c0_EntityCursorTargetStepResolveAndTimerAdvance
-0x00407a10 50.97 pending_type_value_slot_select
+0x00407a10 51.95 pending_type_value_slot_select
 0x00407d60 20.51 entity_building_type_config_record_parse
 0x004082e0 26.67 scene_object_scalar_adjust_by_direction
 0x00408360 56.00 task_field84_get_and_field88_out
@@ -2459,7 +2460,7 @@
 0x00409450 100.00 ledger_stub_00409450_FindNearbyPlacementCandidate
 0x00409470 26.34 ledger_stub_00409470_NeighborCellEntitySearchRecurse
 0x00409550 60.27 descriptor_transition_apply
-0x00409600 16.06 ledger_stub_00409600_TerrainDescriptorTilesResetAndFree
+0x00409600 16.87 ledger_stub_00409600_TerrainDescriptorTilesResetAndFree
 0x00409790 22.91 ledger_stub_00409790_CellPathRecordRegisterApply
 0x00409940 15.38 terrain_cell_refresh_eight_neighbors_current
 0x004099d0 100.00 path_record_release_all
@@ -2482,7 +2483,7 @@
 0x0040aae0 100.00 entity_quad_mesh_render_record_allowed
 0x0040ab10 100.00 global_mode_zero_input_set
 0x0040ab30 50.00 grid_record_flag_mask_clear
-0x0040ab70 11.76 dependency_grid_config_load(struct BlockRec *, struct BlockRec *)
+0x0040ab70 11.76 dependency_grid_config_load
 0x0040aea0 26.58 ensure_cell_entries_loaded
 0x0040af40 25.97 terrain_cell_resource_entry_matches
 0x0040af90 100.00 terrain_cell_record_get_target
@@ -2898,7 +2899,7 @@
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 86.27 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
-0x0041fb50 93.74 lego_game_config_init
+0x0041fb50 93.77 lego_game_config_init
 0x00422850 89.52 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
@@ -2957,7 +2958,7 @@
 0x00429880 100.00 engine_float_field260_get_current_target
 0x00429890 90.50 lego_level_load
 0x0042b2f0 91.30 lego_entity_effect_counters_apply_from_record
-0x0042b330 98.17 lego_load_tile_meshes
+0x0042b330 99.08 lego_load_tile_meshes
 0x0042b480 97.73 lego_rectangular_resource_table_destroy
 0x0042b500 100.00 global_state_field84_get_current_target
 0x0042b510 27.40 map_pipeline
@@ -2996,7 +2997,7 @@
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 17.54 terrain_neighbor_flag_set
-0x00430530 12.20 terrain_cell_mutate
+0x00430530 12.41 terrain_cell_mutate
 0x00430df0 18.48 terrain_neighbor_refresh
 0x00430ee0 11.27 terrain_cell_initialize
 0x004310f0 32.84 terrain_cell_flag20_clear_and_refresh
@@ -3226,8 +3227,8 @@
 0x0043b850 19.13 entity_type_two_positioned_callback_dispatch
 0x0043baf0 100.00 entity_flags_mask107c33de_or_1c00203_any_test
 0x0043bb20 28.15 entity_building_deposit_state_monitor
-0x0043bbc0 61.11 entity_detach_carried_object_and_reset_state
-0x0043bc40 38.90 objective_sidecar_append_gate
+0x0043bbc0 63.89 entity_detach_carried_object_and_reset_state
+0x0043bc40 39.43 objective_sidecar_append_gate
 0x0043c200 26.36 entity_state_pair_predicate
 0x0043c280 85.71 entity_nested_float_add_unless_blocked
 0x0043c2b0 14.41 periodic_timer25_advance
@@ -3244,7 +3245,7 @@
 0x0043f190 15.78 entity_spawn_request_queue_process
 0x0043f560 14.81 entity_pool_find_with_local_predicate
 0x0043f6a0 66.67 entity_damage_apply
-0x0043f7d0 28.11 ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick
+0x0043f7d0 28.83 ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick
 0x0043fc20 22.53 ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise
 0x00440130 61.90 entity_update_and_unregister_at_tile
 0x004401b0 17.18 ledger_stub_004401b0_TerrainCellToWorldPosition
@@ -3313,7 +3314,7 @@
 0x00447b00 88.24 entity_dispatch_event5_and_set_flag
 0x00447b30 26.21 ledger_stub_00447b30_EntityActivityTick
 0x00447c40 19.80 activity_register_bookkeeping
-0x00447ea0 13.94 ledger_stub_00447ea0_EntityTypeBehaviorUpdate
+0x00447ea0 14.40 ledger_stub_00447ea0_EntityTypeBehaviorUpdate
 0x004487c0 21.62 entity_clear_nested_state_8_fields
 0x00448800 31.01 ledger_stub_00448800_EntityMoveToCellCoordinates
 0x00448880 23.77 ledger_stub_00448880_RecordGatedStepCommandIssue
@@ -3368,12 +3369,12 @@
 0x0044b7a0 14.58 matrix_apply_rotation_about_z_with_offset
 0x0044bae0 22.22 scene_object_resource_and_callback_state_dispose
 0x0044bb30 31.93 entity_node_scale_update
-0x0044bfd0 73.68 lego::configured_monster_spawn_behavior_tick
+0x0044bfd0 77.19 lego::configured_monster_spawn_behavior_tick
 0x0044c030 32.46 entity_one_shot_attached_effect_start
 0x0044c110 31.58 ai_attached_entity_wake
 0x0044c150 42.25 entity_pair_scalar_fields_set
 0x0044c1b0 29.72 ledger_stub_0044c1b0_EntityHeadingStepMove
-0x0044c4a0 68.00 selection_clear_marker_and_reset_hud(struct EntitySlot *)
+0x0044c4a0 68.00 selection_clear_marker_and_reset_hud
 0x0044c500 13.79 selection_candidate_filter_pool_refresh_callback
 0x0044c530 59.26 ai_can_do
 0x0044c550 15.62 global_scatter_spawn_enable_and_drain
@@ -3653,7 +3654,7 @@
 0x00460950 90.86 reward_calculate_score
 0x00460f00 99.09 reward_create_scroll
 0x00461070 99.28 reward_format_values
-0x00461410 97.25 reward_loop
+0x00461410 98.28 reward_loop
 0x00461790 92.46 reward_draw_item
 0x00461c90 90.91 reward_draw_score
 0x00461dd0 96.12 reward_do_buttons
@@ -4055,12 +4056,13 @@
 0x00477710 100.00 block_get_bool
 0x004777a0 31.83 WinMain
 0x00477bd0 100.00 low_texture_flag_set
-0x00477bf0 79.91 winmain_parse_options
+0x00477bf0 80.35 winmain_parse_options
 0x00477f30 60.47 main_loop_frame_pump
 0x00477f70 100.00 render_feature_flags_get
 0x00477f80 85.71 window_runtime_display_caps_query
 0x00477fa0 90.00 renderer_begin_frame_once_retail
 0x00477fd0 71.43 window_runtime_callback_triplet_set
+0x00478000 100.00 main_time_get
 0x00478010 92.86 window_runtime_message_dispatch_filter
 0x00478040 62.96 window_message_dispatch_pump
 0x004780b0 25.00 renderer_window_mode_apply
@@ -4288,7 +4290,7 @@
 0x004827d0 100.00 record_flag2c_bit0_set
 0x004827f0 0.00 scene_runtime_user_visual_manager
 0x00482ac0 55.81 model_render_record_state_setup
-0x00482b50 59.44 render_state_flags_apply
+0x00482b50 60.14 render_state_flags_apply
 0x00482cb0 78.95 renderer_command_mode_and_pair_send
 0x00482ce0 21.33 renderer_command_node_prepend
 0x00482d30 100.00 model_render_list_clear

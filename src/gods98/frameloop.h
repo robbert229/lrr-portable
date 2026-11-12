@@ -14,11 +14,9 @@ extern "C" {
 
 void main_loop_frame_pump(int draw_projection_overlay);    /* 00477f30 */
 
-#if defined(_MSC_VER)
-/* WINMM's timeGetTime, called through its import thunk (00478000), as
- * Reward.c calls it. Other compilers take winmm.h's declaration. */
-unsigned long __stdcall timeGetTime(void);
-#endif
+/* Main.c's millisecond clock: a tail call to WINMM's timeGetTime, which
+ * Reward.c calls directly (finding 574). */
+unsigned long main_time_get(void);                          /* 00478000 */
 
 #ifdef __cplusplus
 }

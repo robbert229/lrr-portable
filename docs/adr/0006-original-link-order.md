@@ -37,7 +37,9 @@ object, in original order**:
 - then the *port tail* (decision 4);
 - then the libraries: LIBC (default library), `oldnames.lib`, and the import
   libraries in the original's thunk order (`d3drm`, `ddraw`, `avifil32`,
-  `dinput`, `dsound`, `kernel32`, then the rest).
+  `dinput`, `dsound`, `kernel32`, then the rest). *Superseded by the
+  addendum of 2026-11-12: `kernel32`, LIBC, `oldnames`, then the import
+  libraries in descriptor order.*
 
 One **link-order list** holds the order: one entry per unit, giving its
 unit id and source file. It is checked against
@@ -320,6 +322,27 @@ lists along with CMake's.
    It doesn't change a contract, collapse a dual path (#389), or edit a shared header.
 3. Reshapes follow rule 3: one commit per file, never in the same commit as a relocation, conversion or fix. They may share a PR with the relocation they prepare.
 4. The relocation tool moves a top-level conditional group whole and verbatim (#501). When it writes a private-header declaration for a conditional item, it wraps the declaration in that item's group condition, copied verbatim, and records it in the relocation CSV like a `static` removal.
+
+## Addendum (2026-11-12): library order
+
+**Status: proposed by #563** ([finding 574](../findings/574-import-directory-and-library-order.md)). It amends the library part of decision 1.
+
+The matching build links its libraries in this order:
+
+`kernel32, libc, oldnames, ole32, d3drm, ddraw, winmm, vfw32, dinput, dsound, user32, gdi32, advapi32`
+
+The DirectX libraries the toolchain lacks are rebuilt from source in `cross/msvc5-importlibs/`, and `dxguid` follows the import libraries.
+
+**Why.** Decision 1 derived its order from the import thunks alone. The import descriptors also follow command-line library order, and the original's start with `KERNEL32`. Scratch relinks under `/OPT:REF`, the original's mode, show:
+- the descriptor order is the order of the import libraries;
+- the thunk order is member pull order, and only referenced thunks survive.
+
+Of six orders tested, only the one above reproduces all three properties of the original:
+- the descriptor order;
+- LIBC's code before the thunks;
+- `RtlUnwind`'s thunk last, after `dsound`'s.
+
+`libc.lib` must be listed explicitly, after `kernel32.lib` and before `d3drm.lib`. Its position relative to `ole32.lib`, and that of `oldnames.lib`, are not fixed by the evidence. In the `/DEBUG` gate (`/OPT:NOREF`), `kernel32.lib`'s unreferenced first-pass thunks precede LIBC until the link mode changes (#562).
 
 ## Consequences
 

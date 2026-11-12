@@ -16,6 +16,7 @@ docs/adr/           Architecture decision records (build/port decisions)
 reference/          (gitignored) the original, unmodified game files
 unpacked/           (gitignored) 5,845 assets extracted from the .wad archives
 cross/              MinGW-w64 Win32 toolchain inputs
+  msvc5-importlibs/ DirectX import libraries the MSVC 5.0 matching build rebuilds (finding 574)
 CMakeLists.txt      Active CMake build (PLATFORM=native|winapi)
 src/link_order.cmake
                     The link-order list (ADR 0006): every game, gods98,

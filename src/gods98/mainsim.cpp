@@ -20,9 +20,11 @@ void main_hud_text(EngineContext* ctx, const char* s)
     fprintf(stderr, "hud: %s\n", s != NULL ? s : "");
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int main_sim_step(EngineContext* ctx, float scale, float dt,
                   uint32_t* o1, uint32_t* o2, uint32_t* o3)
 {
     (void)dt;
     return main_sim_step(ctx, scale, o1, o2, o3);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */

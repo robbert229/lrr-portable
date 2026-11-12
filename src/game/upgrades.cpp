@@ -76,32 +76,38 @@ uint32_t level_upgrade_name_value_get(uint32_t index)
     return s_level_upgrade_names[index];
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 const char* level_upgrade_name_string_get(uint32_t index)
 {
     if (index >= UPGRADE_NAME_SLOT_COUNT) return 0;
     return s_level_upgrade_name_strings[index];
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void upgrade_type_load_hook_set(UpgradeTypeLoadHook hook)
 {
     s_upgrade_type_load_hook = hook;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t upgrade_type_count_get(void)
 {
     return s_upgrade_type_count;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 const UpgradeTypeRecord* upgrade_type_record_get(uint32_t index)
 {
     return index < s_upgrade_type_count ? &s_upgrade_types[index] : 0;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 const char* upgrade_type_name_get(uint32_t index)
 {
     return index < s_upgrade_type_count && s_upgrade_type_names != 0
         ? s_upgrade_type_names[index] : 0;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void building_upgrade_event_hooks_set(
     void (*begin_hook)(void),

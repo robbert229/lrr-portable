@@ -219,12 +219,14 @@ void scene_visibility_hook_call(void* object, int flag)
     scene_render_lock_toggle(object, flag);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void scene_visibility_hook_reset(void)
 {
     s_scene_vis_calls = 0;
     s_scene_vis_last_obj = NULL;
     s_scene_vis_last_flag = 0;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int scene_visibility_calls(void) { return s_scene_vis_calls; }
 

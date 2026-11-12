@@ -867,6 +867,7 @@ void entity_table_maps_current_release(void)
 }
 EntityRouteStateHook s_entity_route_state_hook;
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int entity_stride(int type)
 {
     switch (type) {
@@ -882,6 +883,7 @@ int entity_stride(int type)
         return (type >= 5 && type <= 19) ? 0x74 : 0;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* Table index for a corpus type code (FUN_0042e8b0):
  * 1..4 map to the four typed tables, 5..19 map to the special table. */
@@ -1564,6 +1566,7 @@ void* entity_type1_scene_resource_indexed_get(
     return handle;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void entity_activity_runner_cache_clear(EntitySlot* entity, int type)
 {
     EntityActivityRunnerSidecar* runner;
@@ -1612,6 +1615,7 @@ int entity_activity_runner_activity_update(EntitySlot* entity, int type,
     }
     return result;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void entity_activity_runner_release(EntitySlot* entity)
 {
@@ -2459,12 +2463,14 @@ const uint8_t* stats_rec(const EntitySlot* e)
     return rec != NULL ? rec : s_stats_zero_record;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 float stats_rec_float(const EntitySlot* e, int off)
 {
     float f = 0.0f;
     __builtin_memcpy(&f, stats_rec(e) + off, sizeof(f));
     return f;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static void stats_rec_float_set(EntitySlot* e, int off, float value)
 {
@@ -2472,12 +2478,14 @@ static void stats_rec_float_set(EntitySlot* e, int off, float value)
     __builtin_memcpy((uint8_t*)e->stats_record + off, &value, sizeof(value));
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t stats_rec_word(const EntitySlot* e, int off)
 {
     uint32_t w = 0;
     __builtin_memcpy(&w, stats_rec(e) + off, sizeof(w));
     return w;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* The retail x86 readers dereference the selected record at +0x334 directly.
  * Keep the null-template adapter for other hosts, but preserve the unchecked
@@ -3463,10 +3471,12 @@ unsigned int entity_stats_config_load(
     return committed;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t object_pointer_registry_count_peek(void)
 {
     return s_object_pointer_registry_count;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* --- context-selected globals (see entity.hpp) -----------------------------
  * The corpus reads the context-mode global (DAT_00556ec8) and the
@@ -3477,6 +3487,7 @@ uint32_t object_pointer_registry_count_peek(void)
 uint32_t s_ctx_sel_ptr_first  = 0u; /* DAT_005560f8 */
 uint32_t s_ctx_sel_ptr_second = 0u; /* DAT_00556104 */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void context_selected_pointer_pair_set(uint32_t first, uint32_t second)
 {
     s_ctx_sel_ptr_first = first;
@@ -3492,6 +3503,7 @@ uint32_t entity_global_animation_state_peek(void)
 {
     return s_global_animation_state;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* --- the pooled-record chunk window + resolved dispatch band (2026-10-25) -- */
 
@@ -3524,8 +3536,10 @@ void pooled_record_pool_initialize(void)
     pooled_record_storage_clear();
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void* pooled_record_head_peek(void) { return s_pool_record_head; }
 uint32_t pooled_record_chunk_count_peek(void) { return s_pool_chunk_count; }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* --- DAT_00502bd8 indexed stats-type tables (2026-10-25) ------------------
  * The corpus reads `*(row_table[type][row])` through DAT_00502bd8's pointer
@@ -3684,6 +3698,7 @@ const void* catalog_name_table_peek(int kind)
     return (kind >= 0 && kind < 4) ? s_catalog_name_tables[kind] : NULL;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void catalog_id_pair_install(int entry, uint32_t size)
 {
     /* The pair word rides the merged stride-8 band window (see above),
@@ -3692,6 +3707,7 @@ void catalog_id_pair_install(int entry, uint32_t size)
         resource_handle_set_band_word_install(entry, size);
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 namespace unported_ledger_stubs {
 

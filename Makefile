@@ -19,7 +19,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: unit-data-offsets pe-audit match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
+.PHONY: unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -36,6 +36,7 @@ build: setup
 # digests and the whole-binary comparison from it; review the gate and
 # entropy policy before accepting drops.
 match-progress: reccmp-report
+	$(MAKE) winapi-link-check
 	$(MAKE) reccmp-baseline-update
 	$(MAKE) binary-progress-compare
 
@@ -64,8 +65,14 @@ reccmp-report:
 # any function's score fell below the committed baseline. reccmp-compare does
 # the same against an existing report without rebuilding. reccmp-baseline-update
 # accepts the current report as the new baseline (run it after a rebuild).
-reccmp-check: reccmp-report reccmp-compare
+reccmp-check: reccmp-report reccmp-compare winapi-link-check
 	@python3 tools/link_order.py check-map "$(RECCMP_BUILD_DIR)/LegoRR.map" || echo "Warning: link-order map check failed" >&2
+
+# No native-backend object, library or symbol in the existing matching build
+# (finding 575); also prints its .text by category.
+winapi-link-check:
+	python3 tools/winapi_link_audit.py check-link --build "$(RECCMP_BUILD_DIR)" \
+	  --report-dir "$(RECCMP_BUILD_DIR)/reccmp-report"
 
 reccmp-compare:
 	python3 ./tools/match_baseline.py check \
@@ -123,6 +130,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_lint_reccmp_annotations.py'
 	python3 -m unittest discover -s tools/tests -p 'test_reccmp_diagnostics.py'
 	python3 tools/link_order.py check
+	python3 tools/winapi_link_audit.py check-list
 	python3 tools/meson_source_parity.py
 	python3 -m unittest discover -s tools/tests -p 'test_meson_source_parity.py'
 	python3 -m unittest discover -s tools -p 'test_convert_unit.py'
@@ -137,6 +145,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_relocate_unit.py'
 	python3 -m unittest discover -s tools/tests -p 'test_reshape_check.py'
 	python3 -m unittest discover -s tools/tests -p 'test_x87_operand_swaps.py'
+	python3 -m unittest discover -s tools/tests -p 'test_winapi_link_audit.py'
 
 # Check match_function.py against an existing full report from the same tree.
 match-function-parity:

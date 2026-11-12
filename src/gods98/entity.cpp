@@ -18,6 +18,7 @@
 
 /* --- .ae assembly (FUN_00472cd0, ACT branch) ---------------------------------- */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 EntityAssembly* entity_assembly_open(const char* name, const char* root,
                                      uint32_t feature)
 {
@@ -47,6 +48,7 @@ EntityAssembly* entity_assembly_open(const char* name, const char* root,
     block_close(bf);
     return ea;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void entity_assembly_free(EntityAssembly* ea)
 {

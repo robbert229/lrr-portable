@@ -106,10 +106,12 @@ uint32_t catalog_slot_flag_word_get(int category, int slot)
     return input_binding_state_word_get(category, slot);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void catalog_slot_flag_global_state_set(uint32_t flags)
 {
     interaction_flags_set(flags);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* The InfoMessages catalog — finding 22's 40 names, in table order. The
  * corpus copies these pointers into the zero-filled runtime table at
@@ -274,6 +276,7 @@ void message_config_set(int id, const char* sound, float cooldown,
     c->flags = flags;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void message_set_flags(uint32_t flags)        { s_flags = flags; }
 uint32_t message_flags_peek(void)             { return s_flags; }
 uint32_t message_config_flags(int id)
@@ -281,6 +284,7 @@ uint32_t message_config_flags(int id)
     return (id >= 0 && id < MESSAGE_MAX_ID) ? s_cfg[id].flags : 0u;
 }
 void message_set_system_state(uint32_t v)     { s_system_state = v; }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 uint32_t system_state_flags_set(const uint32_t* value)
 {
@@ -304,10 +308,12 @@ const char* message_sound(int id)
     return s_cfg[id].sound;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void message_update(float dt)
 {
     s_now += dt;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void info_message_queue_tick_ops_set(const InfoMessageQueueTickOps* ops)
 {
@@ -324,6 +330,7 @@ void incident_message_text_consumer_ops_set(
                 sizeof(s_incident_message_text_ops));
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int message_active_count(void)
 {
     return s_queue_count;
@@ -341,6 +348,7 @@ float message_cooldown(int id)
     }
     return s_cfg[id].cooldown;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 uint32_t deferred_callback_peek(void)
 {
@@ -349,6 +357,7 @@ uint32_t deferred_callback_peek(void)
 
 /* --- the indexed-list window (see message.hpp) ---------------------------- */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void indexed_list_install(int list, void* head, int count)
 {
     if (list >= 0 && list < IDX_LIST_SLOTS) {
@@ -356,6 +365,7 @@ void indexed_list_install(int list, void* head, int count)
         s_idx_count[list] = count;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void incident_message_panel_refresh_hook_install(
     MessagePanelRefreshHook hook, void* context)

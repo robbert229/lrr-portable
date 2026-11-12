@@ -1348,6 +1348,7 @@ TerrainWorldSpatialRecord* terrain_world_spatial_record_find_at(
     return NULL;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* GridSurfaceEntryReset (FUN_0046e330): clear the indexed item's active
  * field and update the owning staged-record flags. */
 void terrain_cell_surface_quad_reset_level(LevelState* level, int x, int y)
@@ -1363,6 +1364,7 @@ void terrain_cell_surface_quad_reset_level(LevelState* level, int x, int y)
     scene_render_terrain_cell_overlay_slot_reset(
         level, (uint32_t)x, (uint32_t)y);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void terrain_cell_surface_quad_reset_current(int x, int y)
 {

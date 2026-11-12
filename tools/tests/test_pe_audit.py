@@ -77,6 +77,7 @@ class ComparisonTests(unittest.TestCase):
         rebuilt = [("DSOUND.dll", ["DirectSoundCreate"]), ("KERNEL32.dll", ["Sleep", "ExitProcess"])]
         result = pe_audit.compare_imports(original, rebuilt)
         self.assertFalse(result["dll_order_equal"])
+        self.assertFalse(result["common_dll_order_equal"])
         self.assertEqual(result["missing_dlls"], ["ole32.dll"])
         self.assertEqual(result["extra_dlls"], [])
         self.assertEqual((result["original_names"], result["rebuilt_names"]), (4, 3))
@@ -84,6 +85,9 @@ class ComparisonTests(unittest.TestCase):
         self.assertEqual(result["per_dll"]["dsound.dll"]["missing"], ["#1"])
         self.assertEqual(result["per_dll"]["dsound.dll"]["extra"], ["DirectSoundCreate"])
         self.assertTrue(pe_audit.compare_imports(original, original)["dll_order_equal"])
+        subset = pe_audit.compare_imports(original, [rebuilt[1], rebuilt[0]])
+        self.assertFalse(subset["dll_order_equal"])
+        self.assertTrue(subset["common_dll_order_equal"])
 
     def test_compare_resources(self):
         leaf = lambda t, n, lang, sha: {"type": t, "name": n, "lang": lang, "size": 4, "sha256": sha}

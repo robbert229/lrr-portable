@@ -1,4 +1,12 @@
 CMakeLists.txt
+cross/msvc5-importlibs/dilib1.c
+cross/msvc5-importlibs/dilib2.c
+cross/msvc5-importlibs/dinput.def
+cross/msvc5-importlibs/dinput_formats.h
+cross/msvc5-importlibs/dsound.def
+cross/msvc5-importlibs/dxguid.c
+cross/msvc5-importlibs/importlibs.cmake
+cross/msvc5-importlibs/sdk_exports.c
 cross/msvc5-toolchain.cmake
 docs/coverage/function-areas.csv
 docs/coverage/ledger.csv

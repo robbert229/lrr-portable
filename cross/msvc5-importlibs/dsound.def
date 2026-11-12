@@ -1,0 +1,8 @@
+; SPDX-License-Identifier: LGPL-3.0-or-later
+;
+; DSOUND.DLL import library of the matching build (finding 574). The original
+; imports DirectSoundCreate by ordinal 1, with no name (as the DirectX 6 SDK's
+; dsound.lib does); the toolchain's dsound.lib imports it by name.
+LIBRARY DSOUND.dll
+EXPORTS
+    DirectSoundCreate @1 NONAME

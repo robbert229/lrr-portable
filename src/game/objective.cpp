@@ -562,12 +562,14 @@ int objective_advisor_tokens_parse(const char* source, uint32_t source_length,
     return 1;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void objective_advisor_tokens_install(const uint32_t* table, uint32_t count)
 {
     objective_advisor_tokens_release();
     s_adv_tokens = table;
     s_adv_token_count = count;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 const char* objective_advisor_token_text_get(uint32_t index)
 {

@@ -1708,6 +1708,7 @@ int screen_ray_terrain_cell_pick_target(
     return found;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* RandomReachableGridPointSelect (FUN_00450560): the ray-descending
  * grid-point pick — see view.hpp for the plane geometry. Both float*
  * direction arguments ride the corpus's forwarded-dword convention:
@@ -1730,6 +1731,7 @@ void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
     }
     (void)engine_context_grid_pick(ctx, out, gx, gy);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* FUN_00450600: clear and queue every in-bounds cell in the inclusive circle.
  * The callback runs after the surface value is cleared but before the
@@ -1901,6 +1903,7 @@ void terrain_cell_dirty_queue_push_and_clear(void* terrain, int x, int y,
     *flag |= 0x10;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* Port model of 0x00450a80 (GAME-026); the original-shape
  * function is in terrain_map.c. */
 void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
@@ -1936,6 +1939,7 @@ void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
         s_cell_list_flags &= ~4u;
     }
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* TerrainCellSpecialStatePredicate (FUN_0040d3f0) — see level.hpp. */
 /* CellVariantEntryMatchCheck (FUN_00451180) — see level.hpp. The
@@ -1997,6 +2001,7 @@ void terrain_cell_surface_vector_write(TerrainSurfaceGrid* grid,
            sizeof(float) * 3);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* --- corner normal sampling (see level.hpp) ------------------------------- */
 /* Port model of 0x004512d0 (GAME-026); the original-shape
  * function is in terrain_map.c. */
@@ -2094,6 +2099,7 @@ int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
     return 1;
 }
 #endif
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* Port model of 0x00451450 (GAME-026); the original-shape
  * function is in terrain_map.c. */
@@ -2141,6 +2147,7 @@ void terrain_cell_surface_vectors_rebuild(TerrainSurfaceGrid* grid,
     memcpy(record + 0x0c, second, sizeof(second));
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* FUN_004515a0: header dims at +0x08/+0x0C (port guards a NULL image). */
 /* Port model of 0x004515a0 (GAME-026); the original-shape
  * function is in terrain_map.c. */
@@ -2181,6 +2188,7 @@ uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y)
     return cell;
 #endif
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* Port model of 0x004515e0 (GAME-026); the original-shape
  * function is in terrain_map.c. */
