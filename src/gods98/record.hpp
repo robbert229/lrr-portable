@@ -161,6 +161,9 @@ uint32_t entity_type_flag_bit1_get_target(const void* record);
  * ------------------------------------------------------------------ */
 
 /* ObjectRecordField11CGet (FUN_0046db60, findings 372/432): +0x11c. */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t object_record_field11c_get(const void* record);
 
 /* ObjectFieldBE4DwordGet (FUN_0047a540, findings 361/411): +0xbe4. */
@@ -184,6 +187,9 @@ extern "C"
 uint32_t pointer_value_get(const void* pointed);
 
 /* SceneObjectFlagsGet (FUN_00408850, findings 373/435): +0x70. */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t scene_object_flags_get(const void* scene_object);
 
 /* SceneObjectOwnerGet (FUN_00473db0, finding 430): +0x20. */
@@ -405,6 +411,9 @@ void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
 
 /* SceneObjectOwnerSet (FUN_00473da0): dword store at +0x20; the MSVC x86
  * body matches the unchecked retail store, while other targets guard NULL. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_owner_set(void* scene_object, uint32_t owner);
 
 /* --- the record primitive band (2026-10-24; findings 393/386) ---------------
@@ -524,6 +533,9 @@ void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
                                            void* arg); /* FUN_00408710 */
 uint32_t animation_object_visibility_get(const void* anim);
                                                 /* FUN_004086a0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_assign_entity_owner(const void* scene, uint32_t owner);
                                                 /* FUN_00408380 */
 
@@ -538,6 +550,9 @@ void scene_current_object_set(void* record, void* object);
  * six resource slots from +0x10 — each nonzero handle rides the visibility
  * leaf with the flag. Deviation: the slots are handled through the module's
  * widened pointer model (stride native), matching the other handle slots. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void six_resource_slots_set_state(const void* record, uint32_t flag);
                                                 /* FUN_0046cfc0 */
 

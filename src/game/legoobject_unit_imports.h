@@ -132,6 +132,85 @@ void* legoobject_gb_world_object_create_adapter(int id, void* position,
 void legoobject_gb_tutorial_counter_increment_adapter(int type);   /* 00454880 */
 
 /* ---- group C ---- */
+/* legoGlobs stand-ins defined in lego_unit.c (GAME-021). */
+extern float legoGlobs_PowerCrystalRGB[3];                    /* 00556428 */
+extern float legoGlobs_UnpoweredCrystalRGB[3];                /* 00556434 */
+extern uint32_t legoGlobs_f_55644c;                           /* 0055644c */
+extern uint32_t legoGlobs_f_556450;                           /* 00556450 */
+struct ScenePairedAnimationState;
+struct AnimationObject;
+struct SceneObjectRecord;
+struct RenderResourceBinding;
+/* G98 (crt.hpp, sound.hpp, view.hpp, record.hpp, mesh.h,
+ * scene_resources.hpp). */
+void renderer_flag_bit6_set(int value);                       /* 004728e0 */
+int sound_subsystem_enabled(void);                            /* 00465370 */
+void sound_subsystem_enable_set(int enable, int stop_active); /* 00465260 */
+void* entity_visual_resource_load(void* scene_object);        /* 00473690 */
+void scene_object_owner_set(void* scene_object, uint32_t owner); /* 00473da0 */
+int animated_texture_frame_count(const void* texture);        /* 00474a20 */
+void scene_mesh_color_set(void* object, int block, float red, float green,
+                          float blue);                        /* 00474ff0 */
+void scene_mesh_color_and_alpha_set(void* object, int block, float red,
+                                    float green, float blue,
+                                    float alpha);             /* 00475020 */
+/* FlicOpcode25SuccessStub (flic.hpp): six bytes that return 1. The
+ * original's creature call (carry null frames) links to it with one
+ * argument, so the unit calls it through a one-argument cast. */
+uint32_t flic_opcode25_success_stub(void);                    /* 00484b90 */
+/* Creature.c and Building.c (animation_object.h, record.hpp, view.hpp,
+ * entity.hpp). */
+void renderer_record_clone(struct AnimationObject* source,
+                           struct AnimationObject* destination); /* 00406cb0 */
+void scene_assign_entity_owner(const void* scene, uint32_t owner); /* 00408380 */
+void scene_object_record_clone_retain_handles(
+    const struct SceneObjectRecord* source,
+    struct SceneObjectRecord* destination);                   /* 00408620 */
+uint32_t scene_object_flags_get(const void* scene_object);    /* 00408850 */
+void entity_payload_state_set(struct EntitySlot* e, int state); /* 004089a0 */
+/* Upgrade.c (view.hpp). */
+void render_resource_binding_copy_and_convert(
+    const struct RenderResourceBinding* source,
+    struct RenderResourceBinding* destination);               /* 0046c0b0 */
+/* Vehicle.c (resource.hpp, record.hpp). Vehicle_SetUpgradeLevel's port
+ * entry takes the record list and the channel state: the adapter at the
+ * end of vehicle_model.cpp (GAME-021). */
+void scene_record_indexed_entries_rebuild_original(void* vehicleModel,
+                                                   int upgradeLevel); /* 0046cf90 */
+void six_resource_slots_set_state(const void* record, uint32_t flag); /* 0046cfc0 */
+int scene_record_template_instantiate(
+    const struct ScenePairedAnimationState* source,
+    struct ScenePairedAnimationState* destination);           /* 0046cff0 */
+void scene_assign_owner_from_model(struct ScenePairedAnimationState* state,
+                                   void* owner);              /* 0046d140 */
+uint32_t object_record_field11c_get(const void* record);      /* 0046db60 */
+/* Stats.c (entity_stats.cpp; entity.hpp, entity_from_entity_stats.hpp). */
+int entity_building_index_set(struct EntitySlot* entity, uint32_t state); /* 00469c10 */
+uint32_t entity_stats_word_get(const struct EntitySlot* e);   /* 00469e60 */
+uint32_t entity_state_flags_get(const struct EntitySlot* e);  /* 00469e80 */
+/* AITask.c (aitask.cpp; cmd.hpp, level.hpp). */
+void entity_command15_validated_record_queue(struct EntitySlot* e); /* 00402670 */
+void scalar_task_record_queue(void* scalar);                  /* 004034a0 */
+void task_record_kind10_queue(void* payload);                 /* 00403520 */
+void* timed_task_record_initialize_and_link(void* payload, int arg1,
+                                            int arg2, int arg3); /* 004038c0 */
+void task_record_create_and_scan_grid(void* entity);          /* 004039a0 */
+void task_record_kind11_timed_queue(void* payload);           /* 004039d0 */
+void task_record_kind14_remove_if_head(struct EntitySlot* e); /* 00403f60 */
+/* HelpWindow.c (helpwindow.cpp, upgrades.hpp). */
+void building_upgrade_state_changed_dispatch(int type, int row, int column,
+                                             int state);      /* 00418830 */
+/* LegoObject.c parts 2 and 3 (legoobject.cpp; entity.hpp, ai.hpp). The
+ * port's 0043f560 and 0044b370 take a GameContext and 0044b680 is a
+ * namespaced ledger stub with another contract: adapters at the end of
+ * legoobject.cpp. 00449f50: GAME-021's adapter in lego.cpp. */
+void entity_kind_four_post_create_resolve(struct EntitySlot* entity); /* 0043c570 */
+int legoobject_gc_pool_find_with_local_predicate_adapter(struct EntitySlot* e); /* 0043f560 */
+int activity_register_bookkeeping(struct EntitySlot* e);      /* 00447c40 */
+void entity_type_operation_dispatch_adapter(struct EntitySlot* entity,
+                                            int operation);   /* 00449f50 */
+void legoobject_gc_activity_grant_adapter(struct EntitySlot* e, int value); /* 0044b370 */
+int legoobject_gc_scene_object_tree_attach_adapter(struct EntitySlot* e); /* 0044b680 */
 
 /* ---- group D ---- */
 

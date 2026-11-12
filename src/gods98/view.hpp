@@ -405,6 +405,9 @@ typedef struct SceneObjectRecord {
 typedef void* (*SceneObjectRecordRetainHook)(void* context, void* resource);
 void scene_object_record_retain_hook_set(SceneObjectRecordRetainHook hook,
                                          void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_record_clone_retain_handles(
     const SceneObjectRecord* source, SceneObjectRecord* destination);
 /* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
@@ -477,6 +480,9 @@ void render_resource_binding_hooks_set(
 void render_resource_binding_initialize(RenderResourceBinding* binding,
                                         void* key, void* config_a,
                                         void* config_b);
+#ifdef __cplusplus
+extern "C"
+#endif
 void render_resource_binding_copy_and_convert(
     const RenderResourceBinding* source,
     RenderResourceBinding* destination);

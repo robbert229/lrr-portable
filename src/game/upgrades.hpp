@@ -65,7 +65,7 @@ void building_upgrade_event_hooks_set(
     int (*already_changed_hook)(int type, int row, int column),
     void (*apply_hook)(int type, int row, int column),
     BuildingUpgradeEventHook event_hook);
-void building_upgrade_state_changed_dispatch(int type, int row, int column,
+extern "C" void building_upgrade_state_changed_dispatch(int type, int row, int column,
                                              int state); /* FUN_00418830 */
 
 } // namespace lego

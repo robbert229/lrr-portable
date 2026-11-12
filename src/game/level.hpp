@@ -965,7 +965,7 @@ void terrain_cell_record_count_increment(int a, int b, int c);
 void terrain_cell_record_count_update(const int cell_xy[2], int a, int b,
                                      int c); /* 0x00403810 */
 extern "C" void terrain_cell_record_counts_prune(void* entity); /* 0x00403910 */
-void task_record_create_and_scan_grid(void* entity); /* 0x004039a0 */
+extern "C" void task_record_create_and_scan_grid(void* entity); /* 0x004039a0 */
 typedef struct TerrainCellSurfaceUpdateHooks {
     void* context;
     void* (*resource_get)(void* context, unsigned int channel,

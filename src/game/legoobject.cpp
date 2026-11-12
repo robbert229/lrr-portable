@@ -1464,7 +1464,8 @@ int entity_flag40000_threshold_compare(const EntitySlot* e)
  * (the corpus's -1.5 pair). Deviations: the port's link slot is
  * native-size (the pool-stride convention), and the grow half answers
  * NULL when the allocator is empty where the corpus strides the word. */
-// FUNCTION: LEGORR 0x004382c0
+/* Port model of 0x004382c0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004382c0, retires to the tail in GAME-023 part 3
 void* pooled_record_allocate_and_reset(void)
 {
     if (s_pool_record_head == NULL) {
@@ -1485,7 +1486,8 @@ void* pooled_record_allocate_and_reset(void)
     __builtin_memcpy(record + 0x2f8, &seeded, 4);
     return record;
 }
-// FUNCTION: LEGORR 0x00438310
+/* Port model of 0x00438310 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438310, retires to the tail in GAME-023 part 3
 void pooled_record_chunk_allocate_and_link(void)
 {
     const uint32_t n =
@@ -1508,14 +1510,16 @@ void pooled_record_chunk_allocate_and_link(void)
                      sizeof(s_pool_record_head));
     s_pool_record_head = base;
 }
-// FUNCTION: LEGORR 0x004383a0
+/* Port model of 0x004383a0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004383a0, retires to the tail in GAME-023 part 3
 void entity_global_animation_state_set(uint32_t value)
 {
     s_global_animation_state = value;
 }
 /* RoverWorkQueueUpdate (FUN_004383b0): apply the selected global work
  * position to every animation component in the rover's scene model. */
-// FUNCTION: LEGORR 0x004383B0
+/* Port model of 0x004383b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004383b0, retires to the tail in GAME-023 part 3
 void rover_work_queue_update(EntitySlot* entity, int mode)
 {
     RoverWorkQueueHooks* const hooks = &s_rover_work_queue_hooks;
@@ -1541,7 +1545,8 @@ void rover_work_queue_update(EntitySlot* entity, int mode)
 /* EntityKindRecordUpdateDispatch (FUN_00438460): preserve type-specific
  * update order, action transitions, event flags, and the two shared flag
  * updates while leaving engine-owned side effects behind typed callbacks. */
-// FUNCTION: LEGORR 0x00438460
+/* Port model of 0x00438460 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438460, retires to the tail in GAME-023 part 3
 void entity_kind_record_update_dispatch(EntitySlot* entity)
 {
     EntityKindRecordUpdateHooks* const hooks =
@@ -1597,7 +1602,8 @@ void entity_kind_record_update_dispatch(EntitySlot* entity)
     if ((type == 1 || type == 4)) entity->flags_3ec |= 0x40000u;
 }
 
-// FUNCTION: LEGORR 0x00438580
+/* Port model of 0x00438580 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00438580, retires to the tail in GAME-023 part 3
 void entity_flag80000000_set_or_clear(GameContext* ctx, EntitySlot* e,
                                       int param)
 {
@@ -11357,4 +11363,35 @@ extern "C" void legoobject_gb_tutorial_counter_increment_adapter(int type)
 extern "C" float legoobject_activity_tick_adapter(EntitySlot* entity, float delta)
 {
     return unported_ledger_stubs::ledger_stub_00447b30_EntityActivityTick(entity, delta);
+}
+
+/* ---- group C adapters ---- */
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-023 legoobject_unit.c,
+ * group C (LegoObject_Create 0x00437d00 and 0x00438460). The port's
+ * 0043f560 and 0044b370 take the GameContext too, and its 0044b680 is a
+ * ledger stub with another contract. Nothing calls these natively. */
+
+/* 0043f560 takes only the object. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0043f560 takes the object only)
+extern "C" int legoobject_gc_pool_find_with_local_predicate_adapter(
+    EntitySlot* e)
+{
+    return entity_pool_find_with_local_predicate(
+        e != NULL ? e->owner_ctx : NULL, e);
+}
+
+/* 0044b370 takes the object and the activity value. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0044b370 takes no GameContext)
+extern "C" void legoobject_gc_activity_grant_adapter(EntitySlot* e, int value)
+{
+    ai_activity_grant(e != NULL ? e->owner_ctx : NULL, e, value);
+}
+
+/* 0044b680 attaches the object's scene tree; the port's ledger stub takes
+ * the scene objects and a hook instead. No port equivalent: nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (no port equivalent of 0x0044b680)
+extern "C" int legoobject_gc_scene_object_tree_attach_adapter(EntitySlot* e)
+{
+    (void)e;
+    return 0;
 }
