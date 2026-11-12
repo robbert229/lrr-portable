@@ -119,6 +119,10 @@
 #include "game/video_graph.h"
 #include "game/mission.h"
 #include "game/lego_api.h"
+#include "gods98/lws.h"
+#include "gods98/mesh_unit.h"
+#include "gods98/files_open.h"
+#include "gods98/main.h"
 
 int main(void)
 {

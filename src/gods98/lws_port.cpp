@@ -1,7 +1,32 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-020 Lws.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-020.csv. */
+/* Port tail (ADR 0006) for G98-020 Lws.c. The original-shape unit is
+ * gods98/lws.c; this file keeps the port's earlier models of seven of its
+ * functions, which port code still calls with the port's contracts, and the
+ * helpers and state they use. None of it is annotated: the addresses belong
+ * to lws.c.
+ *
+ * - shared_object_directory_scan_configure (Lws_Initialise),
+ *   shared_object_scene_entry_slot_table_expand (Lws_SetupSoundTriggers),
+ *   shared_object_clone (Lws_Clone), animation_track_keys_interpolate
+ *   (Lws_Interpolate): called from view.cpp's wrappers. They work through
+ *   the port's hook tables instead of Direct3DRM.
+ * - ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate
+ *   (Lws_SetTime), with ledger_stub_00487d50 (Lws_AnimateTextures),
+ *   shared_object_timed_sound_event_update (Lws_HandleTrigger),
+ *   lego::shared_object_float_track_interpolate_apply
+ *   (Lws_InterpolateDissolve) and scene_node_transform_matrix_apply
+ *   (Lws_SetAbsoluteKey): com_object_tree.cpp's timed hooks and
+ *   scene_resources.cpp call them. They guard every pointer and interface
+ *   slot, and forward dissolve levels to a hook.
+ * - model_resource_resolve_or_load (Lws_LoadMesh) and
+ *   lego::scene_resource_string_tables_free (Lws_Shutdown): the port's
+ *   parsed-Model cache (model.cpp, entity.cpp, engine.cpp).
+ * They call lws.c's data-only functions (Lws_FindPrevKey,
+ * Lws_FindPrevDissolve, Lws_KeyPassed, Lws_GetFrameCount and the mesh path
+ * list), whose contracts match.
+ *
+ * The file also holds the four adapters gods98/mesh_unit.h describes, for Mesh.c
+ * entries the port has no original-ABI version of. */
 #include <math.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -31,6 +56,13 @@
 #include "view_for_lws.hpp"
 #include "model_for_lws.hpp"
 #include "scene_resources_for_lws.hpp"
+#include "mesh_unit.h"
+#include "main.h"
+
+/* mainGlobs.lpD3DRM (G98-005), which lws.c's Lws_CreateFrames reads. A
+ * stand-in: the port does not own Main.c's renderer (gods98/main.h). */
+// GLOBAL: LEGORR 0x00505914
+void* s_main_d3drm;
 
 namespace unported_ledger_stubs {
 typedef struct LedgerSceneGuid {
@@ -47,25 +79,10 @@ typedef uint32_t (LEDGER_SCENE_COM_STDCALL *SceneInterfaceReleaseMethod)(
     void* object);
 typedef void* (LEDGER_SCENE_COM_STDCALL *SceneAnimationResourceGetMethod)(
     void* object);
-
-// ResourceTreeCallbackReferenceChainRelease
-typedef void (*ResourceReferenceReleaseHook)(void* resource, void* context);
-typedef struct ResourceReferenceChain {
-    void* resource;
-    struct ResourceReferenceChain* next;
-} ResourceReferenceChain;
-
-// LoadRecordInterfacesReleaseFree
-typedef struct LoadRecordInterfaceList {
-    void** interfaces;
-    uint32_t count;
-} LoadRecordInterfaceList;
 } // namespace unported_ledger_stubs
 
-// GLOBAL: LEGORR 0x005446bc
 int s_model_resource_primary_count;
 
-// GLOBAL: LEGORR 0x005446c0
 int s_model_resource_secondary_count;
 
 static SharedObjectEntryResolveFn s_shared_object_entry_resolve;
@@ -76,31 +93,15 @@ void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
 
 void ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
     void* owner, void* track);
-
-// SharedObjectAnimationAndTimedEventUpdate
-void ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
-    void* owner, void* track);
 } // namespace unported_ledger_stubs
 
-/* Defined below (forward declarations added by tools/relocate_unit.py). */
+/* Defined below. */
 static int scene_entry_comma_split(char* text, char** tokens, int token_capacity);
 namespace unported_ledger_stubs { static void ledger_scene_interface_release(void* object); }
 static void model_resource_path_join(char* output, size_t output_size, const char* prefix, const char* path);
 
-namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x004869f0
-void* ledger_stub_004869f0_LoadLWSCScene(
-    const char* path, void* context,
-    void* (*scene_load)(const char* path, void* context))
-{
-    if (path == NULL || path[0] == '\0' || scene_load == NULL) return NULL;
-    return scene_load(path, context);
-}
-} // namespace unported_ledger_stubs
-
 /* SharedObjectDirectoryScan (FUN_004876c0) installs the directory prefix and
  * three callbacks consumed by the scene-entry and timed-sound paths. */
-// FUNCTION: LEGORR 0x004876c0
 void shared_object_directory_scan_configure(
     const char* directory, SharedObjectEntryResolveFn resolve,
     SharedObjectSoundEnabledFn sound_enabled,
@@ -113,7 +114,6 @@ void shared_object_directory_scan_configure(
 }
 
 namespace lego {
-// FUNCTION: LEGORR 0x00487760
 void scene_resource_string_tables_free()
 {
     unsigned int i;
@@ -132,33 +132,9 @@ void scene_resource_string_tables_free()
 }
 } // namespace lego
 
-// FUNCTION: LEGORR 0x004877d0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t resource_entry_id_get(const void* entry)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        xor eax, eax
-        mov ax, word ptr [ecx + 2]
-        ret
-    }
-}
-#else
-uint32_t resource_entry_id_get(const void* entry)
-{
-    if (entry != NULL) {
-        uint16_t v = 0;
-        __builtin_memcpy(&v, (const char*)entry + 2, sizeof(v));
-        return v;
-    }
-    return 0u;
-}
-#endif
-
 /* SceneEntrySlotTableExpand (FUN_004877e0) consumes the directory callback
  * from 0x4876c0, resolves only records with entry flag bit 1, then records the
  * numeric prefix/suffix of each post-comma token in the 0xd0-byte output row. */
-// FUNCTION: LEGORR 0x004877e0
 void shared_object_scene_entry_slot_table_expand(void* scene)
 {
     SceneEntryExpandOps* const ops = &s_scene_entry_expand_ops;
@@ -237,7 +213,6 @@ void shared_object_scene_entry_slot_table_expand(void* scene)
  * interface component through its scene owner, link/refcount the source, and
  * finish by updating the clone at time zero. The interface callbacks preserve
  * the renderer-owned COM method sequence without byte-cloning interfaces. */
-// FUNCTION: LEGORR 0x00487a00
 void* shared_object_clone(void* source, void* caller_context)
 {
     SharedObjectCloneOps* const ops = &s_shared_object_clone_ops;
@@ -301,7 +276,6 @@ void* shared_object_clone(void* source, void* caller_context)
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00487ba0
 void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
     void* shared_object, float time)
 {
@@ -348,45 +322,7 @@ void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00487cb0
-/* AnimationTrackFindKeyframeAndFraction helper. The track contains
- * a count at +0x24 and 0x28-byte key records at +0x18; each key's time is at
- * +0x24. Keep the original lower-bound binary search and interpolation
- * denominator (the next key's timestamp) intact. */
-float animation_track_find_keyframe_and_fraction(const void* track,
-                                                 float time,
-                                                 uint16_t* keyframe_out)
-{
-    const unsigned char* bytes =
-        static_cast<const unsigned char*>(track);
-    const unsigned char* keys;
-    uint16_t count;
-    uint32_t low = 0;
-    uint32_t high;
-    uint32_t middle;
-    uint16_t key_time;
-    uint16_t next_time;
-    if (track == NULL || keyframe_out == NULL) return 0.0f;
-    memcpy(&count, bytes + 0x24, sizeof(count));
-    memcpy(&keys, bytes + 0x18, sizeof(keys));
-    high = (uint32_t)count;
-    do {
-        middle = (high + low) / 2u;
-        memcpy(&key_time, keys + middle * 0x28u + 0x24,
-               sizeof(key_time));
-        if (middle == low) break;
-        if (time < (float)key_time) high = middle;
-        else low = middle;
-    } while (1);
-    *keyframe_out = (uint16_t)middle;
-    memcpy(&next_time, keys + middle * 0x28u + 0x4c,
-           sizeof(next_time));
-    return (time - (float)key_time) /
-           ((float)next_time - (float)key_time);
-}
-
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00487d50
 void ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
     void* owner, void* track)
 {
@@ -456,7 +392,6 @@ void ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
 
 /* SharedObjectTimedSoundEventUpdate (FUN_00487de0) walks the event times and
  * saved sound handles in the expanded entry selected by track byte +8. */
-// FUNCTION: LEGORR 0x00487de0
 void shared_object_timed_sound_event_update(void* owner, void* track)
 {
     unsigned char* owner_bytes = (unsigned char*)owner;
@@ -515,46 +450,6 @@ void shared_object_timed_sound_event_update(void* owner, void* track)
 }
 
 namespace lego {
-// FUNCTION: LEGORR 0x00487ed0
-int shared_object_sample_time_matches(const void* record, uint32_t time)
-{
-    const unsigned char* bytes = static_cast<const unsigned char*>(record);
-    float a, b, low, high, sample_time;
-    uint32_t duration;
-    if (record == 0) return 0;
-    memcpy(&a, bytes + 0x0c, sizeof(float));
-    memcpy(&b, bytes + 0x10, sizeof(float));
-    sample_time = (float)time;
-    duration = resource_entry_id_get(record);
-    high = b;
-    if (b < a) high = a;
-    low = b;
-    if (a < b) low = a;
-    if (0.5f <= (high - low) / (float)duration) {
-        if (high <= sample_time || sample_time <= low) return 1;
-    }
-    else if (sample_time <= high && low <= sample_time) {
-        return 1;
-    }
-    return 0;
-}
-// FUNCTION: LEGORR 0x00487fc0
-float keyframe_time_segment_fraction(const void* track, float time, uint16_t* segment_out)
-{
-    const unsigned char* bytes = static_cast<const unsigned char*>(track);
-    uint16_t count, i, *times;
-    if (track == 0 || segment_out == 0) return 0.0f;
-    memcpy(&count, bytes + 0x26, sizeof(count));
-    if (count < 2) { *segment_out = (uint16_t)(count - 1); return 0.0f; }
-    memcpy(&times, bytes + 0x20, sizeof(times));
-    if (times == 0) { *segment_out = (uint16_t)(count - 1); return 0.0f; }
-    for (i = 1; i < count; ++i) if (time <= (float)times[i]) {
-        *segment_out = (uint16_t)(i - 1);
-        return (time - (float)times[i - 1]) / ((float)times[i] - (float)times[i - 1]);
-    }
-    *segment_out = (uint16_t)(count - 1); return 0.0f;
-}
-// FUNCTION: LEGORR 0x00488070
 /* SharedObjectFloatTrackInterpolateApply masks the key index to 16 bits,
  * uses the final value directly, or interpolates to the following key before
  * forwarding the result to the renderer's value-apply seam. */
@@ -580,7 +475,6 @@ void shared_object_float_track_interpolate_apply(
 }
 } // namespace lego
 
-// FUNCTION: LEGORR 0x00488170
 /* AnimationTrackKeysInterpolate helper. */
 void animation_track_keys_interpolate(void* owner, const void* track,
                                       uint32_t keyframe, float fraction)
@@ -611,7 +505,6 @@ void animation_track_keys_interpolate(void* owner, const void* track,
  * current matrix through that interface into the local matrix; Release then
  * drops the temporary interface before scaling its diagonal and replacing
  * translation. */
-// FUNCTION: LEGORR 0x004882e0
 void scene_node_transform_matrix_apply(void* owner, const void* track,
                                        const float position[3],
                                        const float rotation[3],
@@ -717,7 +610,6 @@ void scene_node_transform_matrix_apply(void* owner, const void* track,
  * the primary case-insensitive cache, load and cache on a miss, then retry
  * through the shared model root. The renderer instance operation remains a
  * backend seam; the portable cache owns parsed Model records. */
-// FUNCTION: LEGORR 0x004885c0
 Model* model_resource_resolve_or_load(const char* prefix, const char* path,
                                       void* flags, void* context)
 {
@@ -768,94 +660,6 @@ Model* model_resource_resolve_or_load(const char* prefix, const char* path,
     return NULL;
 }
 
-/* --- the pair-table window pair (see crt.hpp) ------------------------------
- * The find scan keeps the corpus's masked walk: the compare index is the
- * low 16 bits of the hop counter and the bound test reads that mask. It also
- * calls the shared strcasecmp_lite helper, as the corpus does.
- * Deviations: the port guards the table and the key; the corpus strides
- * them (and its append blindly stores past the caller's window). */
-// FUNCTION: LEGORR 0x00488730
-void* pair_table_find(const void* table, uint32_t count, const char* key)
-{
-    if (table == NULL || count == 0u || key == NULL) {
-        return NULL; /* deviation: the corpus strides the table blindly */
-    }
-    const long field = (long)sizeof(void*);
-    uint32_t hops = 0;
-    for (;;) {
-        const uint32_t idx = hops & 0xffffu; /* pinned: corpus walk mask */
-        char* name = NULL;
-        __builtin_memcpy(&name, (const char*)table + (long)idx * 2 * field,
-                         sizeof name);
-        void* value = NULL;
-        __builtin_memcpy(&value,
-                         (const char*)table + ((long)idx * 2 + 1) * field,
-                         sizeof value);
-        if (name != NULL && strcasecmp_lite(key, name) == 0) {
-            return value;
-        }
-        ++hops;
-        if ((hops & 0xffffu) >= count) {
-            return NULL;
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x00488790
-void pair_table_append(void* table, int* count, const char* key,
-                       void* value)
-{
-    if (table == NULL || count == NULL) {
-        return; /* deviation: the corpus strides both blindly */
-    }
-    const long field = (long)sizeof(void*);
-    char* copy = string_duplicate(key); /* FUN_00477550 */
-    char* entry = (char*)table + (long)*count * 2 * field;
-    __builtin_memcpy(entry, &copy, sizeof copy);
-    __builtin_memcpy(entry + field, &value, sizeof value);
-    *count += 1;
-}
-
-namespace unported_ledger_stubs {
-// SceneHierarchyInterfaceRegisterRecursive
-// FUNCTION: LEGORR 0x004887c0
-void ledger_stub_004887c0_SceneHierarchyInterfaceRegisterRecursive(
-    unsigned short* next_index, void* root, void* node)
-{
-    scene_hierarchy_interface_register_recursive(next_index, root, node);
-}
-
-// FUNCTION: LEGORR 0x004889d0
-uint32_t ledger_stub_004889d0_ResourceTreeCallbackReferenceChainRelease(
-    ResourceReferenceChain* chain, ResourceReferenceReleaseHook release,
-    void* context)
-{
-    uint32_t count = 0u;
-    while (chain != NULL) {
-        ResourceReferenceChain* next = chain->next;
-        if (chain->resource != NULL && release != NULL)
-            release(chain->resource, context);
-        engine_heap_free(chain);
-        chain = next;
-        ++count;
-    }
-    return count;
-}
-
-// FUNCTION: LEGORR 0x00488a70
-void ledger_stub_00488a70_LoadRecordInterfacesReleaseFree(
-    LoadRecordInterfaceList* list, void (*release)(void* interface_ptr))
-{
-    uint32_t i;
-    if (list == NULL) return;
-    for (i = 0u; i < list->count; ++i)
-        if (list->interfaces != NULL && list->interfaces[i] != NULL &&
-            release != NULL) release(list->interfaces[i]);
-    if (list->interfaces != NULL) engine_heap_free(list->interfaces);
-    list->interfaces = NULL;
-    list->count = 0u;
-}
-} // namespace unported_ledger_stubs
 
 static int scene_entry_comma_split(char* text, char** tokens,
                                    int token_capacity)
@@ -906,4 +710,42 @@ static void model_resource_path_join(char* output, size_t output_size,
     while (*source != '\0' && position + 1u < output_size)
         output[position++] = *source++;
     output[position] = '\0';
+}
+
+/* Mesh_Clone (FUN_00480900) with the original's arguments, for lws.c. The
+ * port's entry at that address takes the mesh only. */
+void* mesh_clone(void* mesh, void* frame)
+{
+    (void)frame;
+    return lego::cached_render_resource_instance_create(
+        (lego::CachedRenderResourceTemplateRecord*)mesh);
+}
+
+/* Mesh_SetGroupMaterialValues (FUN_00483420) for lws.c. The port's entry
+ * in mesh_unit.cpp has C++ linkage; its only header is record.cpp's frozen
+ * record_from_mesh_unit.hpp, so it is declared here. */
+uint32_t screen_effect_item_opacity_set_target(void* record, int block,
+                                               float opacity, int mode);
+uint32_t mesh_group_material_values_set(void* mesh, int group, float value,
+                                        int type)
+{
+    return screen_effect_item_opacity_set_target(mesh, group, value, type);
+}
+
+/* Mesh_SetTextureTime2 (FUN_00482040) with the original's arguments, for
+ * lws.c. The port's entry at that address takes an integer frame offset. */
+int mesh_texture_time_set(void* mesh, float time)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
+            mesh, (int)time);
+}
+
+/* Mesh_Remove (FUN_004820d0) for lws.c. The port has no model of Mesh.c's
+ * frame attachments, and nothing in the port reaches the caller
+ * (Lws_FreeNode), so there is nothing to detach. */
+void mesh_remove(void* mesh, void* frame)
+{
+    (void)mesh;
+    (void)frame;
 }

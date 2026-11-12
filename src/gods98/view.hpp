@@ -139,7 +139,7 @@ void render_node_position_from_callback(void* record, float x, float y,
 typedef void (*SceneMatrixApplyHook)(void* context, void* target,
                                      const float matrix[16]);
 void scene_matrix_apply_hook_set(SceneMatrixApplyHook hook, void* context);
-float animation_track_find_keyframe_and_fraction(const void* track,
+extern "C" float animation_track_find_keyframe_and_fraction(const void* track,
                                                  float time,
                                                  uint16_t* keyframe_out); /* 0x00487cb0 */
 void animation_track_keys_interpolate(void* owner, const void* track,

@@ -356,6 +356,7 @@ static void test_reader_sweep(void)
     char two[8];
     memset(two, 0, sizeof(two));
     two[2] = (char)0xab;
+    /* Lws_GetFrameCount (gods98/lws.c): the scene's last frame at +2. */
     CHECK(resource_entry_id_get(two) == 0xabu, "entry id word zero-extends");
 
     /* Bit/flag corners. */
@@ -378,7 +379,6 @@ static void test_reader_sweep(void)
     CHECK(object_record_field11c_get(NULL) == 0u, "NULL record reads zero");
     CHECK(object_field_be4_dword_get(NULL) == 0u, "NULL wide field reads zero");
     CHECK(entity_type_mask_get(NULL) == 0u, "NULL mask reads zero");
-    CHECK(resource_entry_id_get(NULL) == 0u, "NULL entry id reads zero");
     CHECK(pointer_value_get(NULL) == 0u, "NULL pointer reads zero");
 }
 
