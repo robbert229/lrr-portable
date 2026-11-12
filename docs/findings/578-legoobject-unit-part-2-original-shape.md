@@ -213,10 +213,12 @@ As finding 572:
 - **Strings**: `"SND_Hurt"`, `"Lazer"`, `"RockMonster"`, `"Lavamonster"`,
   `"Icemonster"`, `"BatAttack"`, `"Scorpion"`; pooled literals other units
   annotate (`"Barracks"`) stay unmarked.
-- **Callees.** `extern "C"` in place on `ai.hpp`, `entity.hpp`, `level.hpp`,
-  `spawn.hpp`, `weapon.hpp`, `gods98/record.hpp`, `gods98/resource.hpp`,
-  `gods98/view.hpp`, `gods98/simtick.hpp` and `gods98/sound.hpp` (the last
-  three in the `#ifdef __cplusplus` form). No frozen header is edited and no
+- **Callees.** `extern "C"` in place on `ai.hpp`, `entity.hpp`, `spawn.hpp`,
+  `gods98/record.hpp`, `gods98/resource.hpp`, `gods98/view.hpp` and
+  `gods98/simtick.hpp` (the last two partly in the `#ifdef __cplusplus` form,
+  because `sound3d.c` includes them); the `level.hpp`, `weapon.hpp` and
+  `gods98/sound.hpp` entries the groups needed already have C linkage on
+  `main`. No frozen header is edited and no
   function is pre-declared before one. Original-ABI adapters, unannotated and
   `PORT-ONLY`, are in the group sections at the end of `legoobject.cpp`
   where the port's entry is a namespaced ledger stub or has another
