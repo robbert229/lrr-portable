@@ -1815,7 +1815,9 @@ void* s_scene_root;
 
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 #include "lwsc_winapi.hpp"
+#endif
 
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 // FUNCTION: LEGORR 0x004827f0
 int __cdecl scene_runtime_user_visual_manager(
     IDirect3DRMUserVisual* visual, void* cookie, SceneUserVisualReason reason,
@@ -1826,7 +1828,9 @@ int __cdecl scene_runtime_user_visual_manager(
     return scene_user_visual_manager_dispatch(
         (EngineTaskCallbackRecord*)cookie, (uint32_t)reason, viewport);
 }
+#endif
 
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static struct SceneCameraBinding {
     CameraHandle* camera;
     void* scene;
