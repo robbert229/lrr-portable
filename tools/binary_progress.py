@@ -17,7 +17,7 @@ def percent(n, d):
 
 
 RUN_LENGTH = 16
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def run_bytes(original, rebuilt):
@@ -81,7 +81,27 @@ def directory_bytes(pe, index):
     return pe.get_data(d.VirtualAddress, d.Size) if d.VirtualAddress and d.Size else b''
 
 
-def report(orig_path, rebuilt_path, report_dir):
+def opt_ref(orig_path, rebuilt_path, report_dir, opt_ref_dir):
+    """The gate's objects relinked without /DEBUG (#562, finding 576).
+
+    What /OPT:REF removes from the gate's .text, and the relinked image
+    compared with the original.
+    """
+    import opt_ref_link
+    import pe_audit
+    import pefile
+    missing = [p for p in (opt_ref_dir / 'LegoRR.exe', opt_ref_dir / 'LegoRR.map') if not p.is_file()]
+    if missing:
+        raise SystemExit(f'missing {missing[0]}; run make opt-ref-link first')
+    result = opt_ref_link.measure(rebuilt_path.parent, opt_ref_dir, orig_path, report_dir)
+    orig, ref = pefile.PE(str(orig_path)), pefile.PE(str(opt_ref_dir / 'LegoRR.exe'))
+    result['image']['section_bytes'] = {
+        name: pe_audit.byte_difference(pe_audit.section_data(orig, name), pe_audit.section_data(ref, name))
+        for name in ('.text', '.rdata', '.data', '.idata')}
+    return result
+
+
+def report(orig_path, rebuilt_path, report_dir, opt_ref_dir=None):
     import pefile
     original = Binary(orig_path)
     rebuilt = pefile.PE(str(rebuilt_path))
@@ -115,11 +135,14 @@ def report(orig_path, rebuilt_path, report_dir):
                                      json.loads((report_dir / 'entities.json').read_text()),
                                      layout_progress.read_rows(layout_progress.RANGES),
                                      layout_progress.annotation_addresses(), rebuilt_path.parent / 'LegoRR.map')
-    return {'layout': layout, 'schema_version': SCHEMA_VERSION, 'minimum_identical_run_bytes': RUN_LENGTH, 'input_sha256': input_hash(), 'sections': sections,
+    result = {'layout': layout, 'schema_version': SCHEMA_VERSION, 'minimum_identical_run_bytes': RUN_LENGTH, 'input_sha256': input_hash(), 'sections': sections,
             'text_at_original_addresses': at_address, 'function_order_inversions': {'full': inversions(full), 'game_only': inversions(game)},
             'fully_identical_functions_at_original_address': {'count': len(positioned), 'bytes': sum(f.end - f.address for f in positioned)},
             'exact_function_code_bytes': {'bytes': covered, 'original_text_bytes': len(text), 'percent': percent(covered, len(text))},
             'accuracy_percent': {'game_only': mean(game), 'full': mean(full)}, 'pe_header_differences': headers}
+    if opt_ref_dir is not None:
+        result['opt_ref'] = opt_ref(orig_path, rebuilt_path, report_dir, opt_ref_dir)
+    return result
 
 
 def main():
@@ -128,8 +151,11 @@ def main():
     parser.add_argument('--rebuilt', type=Path, default=ROOT / 'build-reccmp/LegoRR.exe')
     parser.add_argument('--report-dir', type=Path, default=ROOT / 'build-reccmp/reccmp-report')
     parser.add_argument('--output', type=Path, default=ROOT / 'docs/coverage/binary-progress.json')
+    parser.add_argument('--opt-ref-dir', type=Path,
+                        help='the no-/DEBUG relink (make opt-ref-link); default <rebuilt dir>/opt-ref')
     args = parser.parse_args()
-    result = report(args.original, args.rebuilt, args.report_dir)
+    result = report(args.original, args.rebuilt, args.report_dir,
+                    args.opt_ref_dir or args.rebuilt.parent / 'opt-ref')
     result['baseline_sha256'] = hashlib.sha256((ROOT / 'docs/coverage/match-baseline.txt').read_bytes()).hexdigest()
     result['listing_digests_sha256'] = hashlib.sha256((ROOT / 'docs/coverage/match-listing-digests.txt').read_bytes()).hexdigest()
     output = json.dumps(result, indent=2, sort_keys=True) + '\n'

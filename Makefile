@@ -19,7 +19,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
+.PHONY: opt-ref-link opt-ref unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -45,7 +45,8 @@ binary-progress: reccmp-report
 	$(MAKE) binary-progress-compare
 
 # Compare the existing matching build with the original, without rebuilding.
-binary-progress-compare:
+# It relinks the build's objects without /DEBUG first (opt-ref-link, ~2 s).
+binary-progress-compare: opt-ref-link
 	$(BINARY_PROGRESS_PYTHON) tools/binary_progress.py --rebuilt "$(RECCMP_BUILD_DIR)/LegoRR.exe" \
 	  --report-dir "$(RECCMP_BUILD_DIR)/reccmp-report"
 
@@ -115,6 +116,15 @@ relocate-unit:
 	fi
 	@python3 ./tools/relocate_unit.py $(UNIT) $(RELOCATE_ARGS)
 
+# The original's link mode (no /DEBUG, so /OPT:REF; #562, finding 576):
+# relink the existing matching build's objects into $(RECCMP_BUILD_DIR)/opt-ref.
+# The gate keeps /DEBUG for Reccmp's PDB. opt-ref prints what /OPT:REF removes.
+opt-ref-link:
+	python3 tools/opt_ref_link.py relink --build "$(RECCMP_BUILD_DIR)"
+
+opt-ref:
+	python3 tools/opt_ref_link.py measure --build "$(RECCMP_BUILD_DIR)"
+
 unit-data-offsets:
 	python3 tools/unit_data_offsets.py --build "$(RECCMP_BUILD_DIR)"
 
@@ -146,6 +156,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_reshape_check.py'
 	python3 -m unittest discover -s tools/tests -p 'test_x87_operand_swaps.py'
 	python3 -m unittest discover -s tools/tests -p 'test_winapi_link_audit.py'
+	python3 -m unittest discover -s tools/tests -p 'test_opt_ref_link.py'
 
 # Check match_function.py against an existing full report from the same tree.
 match-function-parity:

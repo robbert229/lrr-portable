@@ -18,7 +18,7 @@ MARKER = '<!-- matching-progress-report -->'
 
 def read_progress(root):
     data = json.loads((root / PROGRESS).read_text(encoding='utf-8'))
-    if data['schema_version'] not in (2, 3):
+    if data['schema_version'] not in (2, 3, 4):
         raise ValueError('unsupported binary progress schema')
     return data
 
@@ -59,6 +59,8 @@ def render(base, head):
         ('Adjacent inversions, game-only', ('function_order_inversions', 'game_only', 'adjacent'), -1),
         ('Accuracy, game-only (%)', ('accuracy_percent', 'game_only'), 1),
         ('Accuracy, full (%)', ('accuracy_percent', 'full'), 1),
+        ('.text bytes /OPT:REF removes', ('opt_ref', 'removed_bytes'), -1),
+        ('Annotated functions /OPT:REF removes', ('opt_ref', 'annotated', 'full', 'removed'), -1),
     ]
     lines = [MARKER, '## Matching-build progress', '', '| Metric | Base | PR | Direction |', '| --- | ---: | ---: | --- |']
     for label, path, direction in metrics:
