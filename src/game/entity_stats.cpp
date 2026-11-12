@@ -315,7 +315,7 @@ uint32_t stats_instance_word_at_f0(const void* config_block)
 /* EntityBuildingIndexSet (FUN_00469c10): select one of the entity type's
  * 0x150-byte records and update the two transition counters. */
 // FUNCTION: LEGORR 0x00469c10
-int entity_building_index_set(EntitySlot* entity, uint32_t state)
+extern "C" int entity_building_index_set(EntitySlot* entity, uint32_t state)
 {
     int type;
     int row;

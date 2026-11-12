@@ -806,7 +806,7 @@ void  shared_texture_directory_clear(void);          /* port hook: free */
 
 /* RendererFlagBit6Set (FUN_004728e0): sets or clears bit 0x40 in the
  * renderer flag word. */
-void renderer_flag_bit6_set(int value);             /* FUN_004728e0 */
+extern "C" void renderer_flag_bit6_set(int value);             /* FUN_004728e0 */
 uint32_t renderer_flag_word_peek(void);             /* port hook */
 
 /* DDiSceneEndHookRegister (FUN_00472900): stores the scene-end callback

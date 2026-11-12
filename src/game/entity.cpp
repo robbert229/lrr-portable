@@ -46,6 +46,7 @@
 #include "crt/crt.hpp"
 #include "frontend.hpp"
 #include "entity_shared.hpp"
+extern "C" int entity_building_index_set(EntitySlot* entity, uint32_t state);
 #include "entity_from_entity_stats.hpp"
 #include "entity_from_lego.hpp"
 #include "entity_for_legoobject.hpp"
