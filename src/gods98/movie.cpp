@@ -374,11 +374,137 @@ int movie_available(void)
     return ff_bind();
 }
 
+#elif defined(LEGORRR_BACKEND_WINAPI) && !defined(LEGORRR_MOVIES_CFG_DISABLED)
+
+/* The Windows backend uses the same documented AVIFIL32 entry points as the
+ * reference executable. The developer distrobox has the AVIFIL32 import
+ * library, but not vfw.h; resolve the documented exports at runtime and keep
+ * AVIStream opaque. BITMAPINFOHEADER itself comes from windows.h. */
+typedef HRESULT (WINAPI *movie_avi_open_fn)(void**, LPCSTR, DWORD, LONG,
+                                             UINT, CLSID*);
+typedef void (WINAPI *movie_avi_file_fn)(void);
+typedef void* (WINAPI *movie_avi_getframe_open_fn)(void*, LPBITMAPINFOHEADER);
+typedef LPVOID (WINAPI *movie_avi_getframe_fn)(void*, LONG);
+typedef ULONG (WINAPI *movie_avi_release_fn)(void*);
+typedef LONG (WINAPI *movie_avi_start_fn)(void*);
+typedef struct movie_avi_stream_info {
+    DWORD fccType;
+    DWORD fccHandler;
+    DWORD dwFlags;
+    DWORD dwCaps;
+    WORD wPriority;
+    WORD wLanguage;
+    DWORD dwScale;
+    DWORD dwRate;
+    DWORD dwStart;
+    DWORD dwLength;
+    DWORD dwInitialFrames;
+    DWORD dwSuggestedBufferSize;
+    DWORD dwQuality;
+    DWORD dwSampleSize;
+    RECT rcFrame;
+    DWORD dwEditCount;
+    DWORD dwFormatChangeCount;
+    CHAR szName[64];
+} movie_avi_stream_info;
+typedef HRESULT (WINAPI *movie_avi_stream_info_fn)(void*,
+                                                    movie_avi_stream_info*,
+                                                    LONG);
+
+typedef struct movie_winapi_binding {
+    HMODULE module;
+    int initialized;
+    movie_avi_file_fn file_init;
+    movie_avi_file_fn file_exit;
+    movie_avi_open_fn stream_open;
+    movie_avi_getframe_open_fn frame_open;
+    movie_avi_getframe_fn get_frame;
+    movie_avi_release_fn stream_release;
+    movie_avi_start_fn stream_start;
+    movie_avi_stream_info_fn stream_info;
+} movie_winapi_binding;
+
+static movie_winapi_binding movie_vfw;
+
+#define MOVIE_VFW_LOAD(field, symbol, type)                                  \
+    do {                                                                      \
+        movie_vfw.field = (type)GetProcAddress(movie_vfw.module, symbol);     \
+        if (movie_vfw.field == NULL) {                                        \
+            FreeLibrary(movie_vfw.module);                                    \
+            memset(&movie_vfw, 0, sizeof(movie_vfw));                         \
+            return 0;                                                         \
+        }                                                                     \
+    } while (0)
+
+typedef struct Movie {
+    int ok;
+    int width;
+    int height;
+    int fps_num;
+    int fps_den;
+    int has_pending;
+    uint32_t frame_count;
+    uint32_t next_frame_index;
+    LONG stream_start;
+    void* stream;
+    void* retriever;
+    char* path;
+    uint8_t* rgba;
+    int rgba_pitch;
+} Movie;
+
+static int movie_vfw_bind(void)
+{
+    if (movie_vfw.module != NULL) {
+        return 1;
+    }
+    movie_vfw.module = LoadLibraryA("avifil32.dll");
+    if (movie_vfw.module == NULL) {
+        return 0;
+    }
+    MOVIE_VFW_LOAD(file_init, "AVIFileInit", movie_avi_file_fn);
+    MOVIE_VFW_LOAD(file_exit, "AVIFileExit", movie_avi_file_fn);
+    MOVIE_VFW_LOAD(stream_open, "AVIStreamOpenFromFileA",
+                   movie_avi_open_fn);
+    MOVIE_VFW_LOAD(frame_open, "AVIStreamGetFrameOpen",
+                   movie_avi_getframe_open_fn);
+    MOVIE_VFW_LOAD(get_frame, "AVIStreamGetFrame", movie_avi_getframe_fn);
+    MOVIE_VFW_LOAD(stream_release, "AVIStreamRelease",
+                   movie_avi_release_fn);
+    MOVIE_VFW_LOAD(stream_start, "AVIStreamStart", movie_avi_start_fn);
+    MOVIE_VFW_LOAD(stream_info, "AVIStreamInfoA",
+                   movie_avi_stream_info_fn);
+    return 1;
+}
+
+#else /* native movies disabled or unsupported backend */
+
+int movie_available(void) { return 0; }
+#endif
+
+#if defined(LEGORRR_BACKEND_MINIWIN) && !defined(LEGORRR_MOVIES_CFG_DISABLED)
 static void movie_avi_file_initialize(void)
 {
     /* The native FFmpeg backend has no AVIFIL32 global lifecycle. */
 }
 
+#elif defined(LEGORRR_BACKEND_WINAPI) && !defined(LEGORRR_MOVIES_CFG_DISABLED)
+/* AviFileInitialize is a separate retail startup operation. Resolving movie
+ * APIs must not silently stand in for AVIFileInit: the target stores the
+ * renderer's DirectDraw interface and then initializes AVIFIL32. */
+static void movie_avi_file_initialize(void)
+{
+    if (movie_vfw_bind() && !movie_vfw.initialized) {
+        movie_vfw.file_init();
+        movie_vfw.initialized = 1;
+    }
+}
+
+#else /* native movies disabled or unsupported backend */
+static void movie_avi_file_initialize(void) { }
+#endif
+
+#if defined(LEGORRR_BACKEND_MINIWIN) && !defined(LEGORRR_MOVIES_CFG_DISABLED)
 void movie_unload(void)
 {
     ff_dlopen_close();
@@ -944,119 +1070,6 @@ int movie_info(struct Movie* m, MovieInfo* out)
 }
 
 #elif defined(LEGORRR_BACKEND_WINAPI) && !defined(LEGORRR_MOVIES_CFG_DISABLED)
-
-/* The Windows backend uses the same documented AVIFIL32 entry points as the
- * reference executable. The developer distrobox has the AVIFIL32 import
- * library, but not vfw.h; resolve the documented exports at runtime and keep
- * AVIStream opaque. BITMAPINFOHEADER itself comes from windows.h. */
-typedef HRESULT (WINAPI *movie_avi_open_fn)(void**, LPCSTR, DWORD, LONG,
-                                             UINT, CLSID*);
-typedef void (WINAPI *movie_avi_file_fn)(void);
-typedef void* (WINAPI *movie_avi_getframe_open_fn)(void*, LPBITMAPINFOHEADER);
-typedef LPVOID (WINAPI *movie_avi_getframe_fn)(void*, LONG);
-typedef ULONG (WINAPI *movie_avi_release_fn)(void*);
-typedef LONG (WINAPI *movie_avi_start_fn)(void*);
-typedef struct movie_avi_stream_info {
-    DWORD fccType;
-    DWORD fccHandler;
-    DWORD dwFlags;
-    DWORD dwCaps;
-    WORD wPriority;
-    WORD wLanguage;
-    DWORD dwScale;
-    DWORD dwRate;
-    DWORD dwStart;
-    DWORD dwLength;
-    DWORD dwInitialFrames;
-    DWORD dwSuggestedBufferSize;
-    DWORD dwQuality;
-    DWORD dwSampleSize;
-    RECT rcFrame;
-    DWORD dwEditCount;
-    DWORD dwFormatChangeCount;
-    CHAR szName[64];
-} movie_avi_stream_info;
-typedef HRESULT (WINAPI *movie_avi_stream_info_fn)(void*,
-                                                    movie_avi_stream_info*,
-                                                    LONG);
-
-typedef struct movie_winapi_binding {
-    HMODULE module;
-    int initialized;
-    movie_avi_file_fn file_init;
-    movie_avi_file_fn file_exit;
-    movie_avi_open_fn stream_open;
-    movie_avi_getframe_open_fn frame_open;
-    movie_avi_getframe_fn get_frame;
-    movie_avi_release_fn stream_release;
-    movie_avi_start_fn stream_start;
-    movie_avi_stream_info_fn stream_info;
-} movie_winapi_binding;
-
-static movie_winapi_binding movie_vfw;
-
-#define MOVIE_VFW_LOAD(field, symbol, type)                                  \
-    do {                                                                      \
-        movie_vfw.field = (type)GetProcAddress(movie_vfw.module, symbol);     \
-        if (movie_vfw.field == NULL) {                                        \
-            FreeLibrary(movie_vfw.module);                                    \
-            memset(&movie_vfw, 0, sizeof(movie_vfw));                         \
-            return 0;                                                         \
-        }                                                                     \
-    } while (0)
-
-typedef struct Movie {
-    int ok;
-    int width;
-    int height;
-    int fps_num;
-    int fps_den;
-    int has_pending;
-    uint32_t frame_count;
-    uint32_t next_frame_index;
-    LONG stream_start;
-    void* stream;
-    void* retriever;
-    char* path;
-    uint8_t* rgba;
-    int rgba_pitch;
-} Movie;
-
-static int movie_vfw_bind(void)
-{
-    if (movie_vfw.module != NULL) {
-        return 1;
-    }
-    movie_vfw.module = LoadLibraryA("avifil32.dll");
-    if (movie_vfw.module == NULL) {
-        return 0;
-    }
-    MOVIE_VFW_LOAD(file_init, "AVIFileInit", movie_avi_file_fn);
-    MOVIE_VFW_LOAD(file_exit, "AVIFileExit", movie_avi_file_fn);
-    MOVIE_VFW_LOAD(stream_open, "AVIStreamOpenFromFileA",
-                   movie_avi_open_fn);
-    MOVIE_VFW_LOAD(frame_open, "AVIStreamGetFrameOpen",
-                   movie_avi_getframe_open_fn);
-    MOVIE_VFW_LOAD(get_frame, "AVIStreamGetFrame", movie_avi_getframe_fn);
-    MOVIE_VFW_LOAD(stream_release, "AVIStreamRelease",
-                   movie_avi_release_fn);
-    MOVIE_VFW_LOAD(stream_start, "AVIStreamStart", movie_avi_start_fn);
-    MOVIE_VFW_LOAD(stream_info, "AVIStreamInfoA",
-                   movie_avi_stream_info_fn);
-    return 1;
-}
-
-/* AviFileInitialize is a separate retail startup operation. Resolving movie
- * APIs must not silently stand in for AVIFileInit: the target stores the
- * renderer's DirectDraw interface and then initializes AVIFIL32. */
-static void movie_avi_file_initialize(void)
-{
-    if (movie_vfw_bind() && !movie_vfw.initialized) {
-        movie_vfw.file_init();
-        movie_vfw.initialized = 1;
-    }
-}
-
 int movie_available(void)
 {
     return movie_vfw_bind();
@@ -1452,9 +1465,6 @@ int movie_seek_frame(Movie* m, uint32_t frame_index)
 #undef MOVIE_VFW_LOAD
 
 #else /* native movies disabled or unsupported backend */
-
-int movie_available(void) { return 0; }
-static void movie_avi_file_initialize(void) { }
 void movie_unload(void) { }
 Movie* movie_open_path(const char* os_path) { (void)os_path; return NULL; }
 Movie* movie_avi_retriever_open(const char* os_path)
