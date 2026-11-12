@@ -63,7 +63,7 @@ int configured_monster_spawn_behavior_tick(::EntitySlot* entity);
 }
 
 namespace unported_ledger_stubs {
-void type11_cell_coordinate_append(const int* coordinate);
+extern "C" void type11_cell_coordinate_append(const int* coordinate);
 int type11_cell_coordinate_nearest_resolve(const ::EntitySlot* target,
                                            int cell_xy_out[2]);
 }

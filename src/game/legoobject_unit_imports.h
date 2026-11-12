@@ -334,11 +334,29 @@ extern const char** s_object_the_name_kind3;        /* 00556270 */
 extern const char** s_object_the_name_kind4;        /* 00556274 */
 extern const char** s_object_the_name_kind10;       /* 00556278 */
 /* GAME-021 Lego.c (lego.cpp, level.hpp, entity_api.h). */
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* The matching build calls Lego.c's original-shape entries in lego_unit.c
+ * (GAME-021 part 2, finding 571); their port models are unannotated. One
+ * declaration either way (finding 538, rule B). */
+int lego_entity_type_pair_lookup(const char* objName, int* outType,
+                                 unsigned int* outID,
+                                 void** outModel);              /* 0042e8b0 */
+#define entity_type_pair_lookup(name, type_out, row_out, zero_out) \
+    lego_entity_type_pair_lookup((name), (type_out), \
+                                 (unsigned int*)(row_out), (void**)(zero_out))
+int lego_terrain_cell_byte_state_classify_current(const int* blockPos,
+    unsigned int* crystalsLv0, unsigned int* crystalsLv1,
+    unsigned int* oreLv0, unsigned int* oreLv1);                /* 0042c5b0 */
+#define terrain_cell_byte_state_classify_current(xy, a, b, c, d) \
+    lego_terrain_cell_byte_state_classify_current((xy), (unsigned int*)(a), \
+        (unsigned int*)(b), (unsigned int*)(c), (unsigned int*)(d))
+#else
 int entity_type_pair_lookup(const char* name, int* type_out, int* row_out,
                             int* zero_out);                     /* 0042e8b0 */
 int terrain_cell_byte_state_classify_current(const int xy[2],
     uint32_t* out_a, uint32_t* out_b, uint32_t* out_c,
     uint32_t* out_d);                                           /* 0042c5b0 */
+#endif
 struct LevelState* level_current_owner_get(void);               /* 00431560 */
 /* GAME-019 Info.c (info_unit.h). */
 void info_send(int type, char* text, void* object,
@@ -386,9 +404,18 @@ void global_object_field98_clear_current(void);                              /* 
 void* level_current_terrain_get(int cell_x, int cell_y);                     /* 00431570 */
 #define Lego_GetMap() ((struct TerrainMap*)((void* (*)(void))level_current_terrain_get)())
 uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);      /* 00432b50 */
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* Matching build: lego_unit.c's original-shape entry (finding 571). */
+int lego_terrain_cell_route_and_occupancy_check(struct EntitySlot* liveObj,
+    int bx, int by, int toX, int toY, int ignoreOwnBlock);                   /* 00431da0 */
+#define terrain_cell_route_and_occupancy_check_current(e, fx, fy, tx, ty, s) \
+    lego_terrain_cell_route_and_occupancy_check((struct EntitySlot*)(e), \
+        (fx), (fy), (tx), (ty), (s))
+#else
 int terrain_cell_route_and_occupancy_check_current(
     const struct EntitySlot* entity, int from_x, int from_y,
     int to_x, int to_y, int strict);                                         /* 00431da0 */
+#endif
 /* GAME-026 Map3D (terrain_map.h). */
 int terrain_map_world_to_block(struct TerrainMap* map, float x, float y,
                                int* bx, int* by);                            /* 0044f6d0 */

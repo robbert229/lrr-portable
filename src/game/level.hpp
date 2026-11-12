@@ -345,7 +345,7 @@ uint8_t* level_voxel(const LevelState* s, int x, int y);
 #define LEVEL_MAP_SLOT_COUNT 2000 /* the corpus table length */
 
 /* FUN_00480170: load a file through the level map-slot table. */
-int map_open2(const char* path, int32_t* size_out);
+extern "C" int map_open2(const char* path, int32_t* size_out);
 
 /* FUN_004893f0: zero every slot pair. */
 extern "C" void level_map_slots_reset(void);
@@ -371,12 +371,12 @@ uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y);
 
 /* FUN_004334c0: header dims via the slot. An unresolved slot yields
  * 0/0 (the corpus reads address 0x8/0xC — documented deviation). */
-void level_map_dimensions_get(uint32_t slot, uint32_t* width,
-                              uint32_t* height);
+extern "C" void level_map_dimensions_get(uint32_t slot, uint32_t* width,
+                                         uint32_t* height);
 
 /* FUN_004319e0: cell via the slot (row y, column x; the width comes
  * from the image header). Unresolved slot reads 0. */
-uint16_t level_map_cell_get(uint32_t slot, int x, int y);
+extern "C" uint32_t level_map_cell_get(uint32_t slot, int x, int y);
 
 /* --- tile semantics (entity-callback queries, finding 10) -------------- *
  * The voxel record fields these read are the ones the layer loaders write
@@ -921,7 +921,7 @@ int terrain_cell_variant_flag_propagate(LevelState* s,
 int terrain_cell_variant_flag_propagate_current(const int cell_xy[2]);
 void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
                                                const int cell_xy[2]);
-void map_cell_tracking_flags_clear_and_refresh_current(
+extern "C" void map_cell_tracking_flags_clear_and_refresh_current(
     const int cell_xy[2]); /* FUN_004302b0 */
 typedef void (*TerrainCellStateProjectionHook)(const int cell_xy[2],
                                                const float position[3],
@@ -988,7 +988,7 @@ int terrain_cell_drill_work_add(LevelState* level, int x, int y,
                                 float divisor, float elapsed);
 int terrain_cell_drill_work_add_current(int x, int y, float divisor,
                                         float elapsed);
-void terrain_cell_mutation_progress(LevelState* level, uint32_t x,
+extern "C" void terrain_cell_mutation_progress(LevelState* level, uint32_t x,
                                     uint32_t y); /* 0x00433380 */
 void terrain_cell_mutation_progress_current(int x, int y);
 extern "C" int terrain_cell_mutate(LevelState* level, uint32_t x, uint32_t y,
@@ -1118,7 +1118,7 @@ void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
  * (width + height)-based capacity assumption. */
 void terrain_neighbor_work_flag_scan(LevelState* s, unsigned int seed_x,
                                      unsigned int seed_y);
-void terrain_neighbor_work_flag_scan_current(unsigned int seed_x,
+extern "C" void terrain_neighbor_work_flag_scan_current(unsigned int seed_x,
                                              unsigned int seed_y);
 
 /* TerrainCellQueuedWorkTransition (FUN_00431140): mapped current-level
@@ -1198,7 +1198,7 @@ void lava_erosion_level_context_set(LevelState* s);
 void lava_erosion_level_context_release(LevelState* s);
 int lava_erosion_neighbor_eligible(const LevelState* s, int x, int y);
 int lava_erosion_neighbor_eligible_current(const int xy[2]);
-void lava_erosion_pending_cell_add(const int xy[2], int add);
+extern "C" void lava_erosion_pending_cell_add(const int xy[2], int add);
 /* Ordered EmergeMap registration and its tick-side state. Pending cells are
  * exposed in the same swap-removed order used by the reference table. */
 int lava_erosion_stage_register(const int xy[2], int stage);
@@ -1229,7 +1229,7 @@ extern "C" void lava_erosion_neighbor_mutate(const int xy[2], unsigned int direc
                                             int propagate);
 void lava_erosion_eight_neighbor_propagate(const int xy[2],
                                            unsigned int direction);
-int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint);
+extern "C" int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint);
 
 /* CellDirtyQueuePushAndClear (FUN_00450960): the terrain-owned dirty
  * cell queue over the physical block table. push != 0: when the cell's
@@ -1271,7 +1271,7 @@ uint32_t cell_list_apply_flags_peek(void);
 
 /* GridRecordFlagMaskClear (FUN_0040ab30): sweep the whole region and
  * clear mask 0x10c from each of the first sixteen block words. */
-void grid_record_flag_mask_clear(void);
+extern "C" void grid_record_flag_mask_clear(void);
 
 /* TerrainCellRecordGet (FUN_0040af90, findings 377/380/451): resolve the
  * selector at cell * 0x31, then return pointer/count from the parallel tables
@@ -1503,12 +1503,12 @@ void terrain_cell_refresh_entity_callback_install(
 void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
                                    int y);
 extern "C" void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode);
-void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2]);
+extern "C" void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2]);
 /* CellInitPass (FUN_0042f6f0), exposed for path-record mutations that must
  * rebuild the cell variant after changing its path flags. */
 void level_cell_init_pass(LevelState* level, int x, int y);
 void coordinate_callback_dispatch(const void* coord_pair, int value);
-void coordinate_callback_dispatch_current(const void* coord_pair);
+extern "C" void coordinate_callback_dispatch_current(const void* coord_pair);
 typedef int (*CoordinateEntityDispatchHook)(struct EntitySlot* entity,
                                             const void* coordinate_pair,
                                             int extra, void* context);
@@ -1555,6 +1555,9 @@ extern "C" int terrain_object_type_sfx_at_cell_get(const void* position_record);
 unsigned int level_predug_coordinate_count_get(void);
 int level_predug_coordinate_get(unsigned int index, int cell_xy_out[2]);
 void level_predug_coordinate_pool_clear(void);
+#ifdef __cplusplus
+extern "C"
+#endif
 void predug_coordinate_pool_append(const int cell_xy[2]);
 extern "C" void spawn_coordinate_pool_clear(void); /* FUN_004372a0 */
                                  /* FUN_0044ad80 */
@@ -1684,7 +1687,7 @@ uint32_t terrain_kind_nine_neighbor_emit_for_footprint_cells(
 void terrain_kind_nine_neighbor_emit_for_footprint_cells_current(
     const int cell_xy[2], const int* footprint_xy,
     uint32_t footprint_count);
-void path_record_release_all(void); /* FUN_004099d0 */
+extern "C" void path_record_release_all(void); /* FUN_004099d0 */
 /* EntityCellPathEffectsApply (FUN_00409d50): retail one-entity ABI. */
 void entity_cell_path_effects_apply_current(struct EntitySlot* entity);
 

@@ -61,7 +61,7 @@ int tutorial_objective_token_load(const char* path);
 int tutorial_objective_token_file_load(const char* path,
                                        char** output_tokens);
 const char* tutorial_objective_token_lookup(uint32_t index);
-int tutorial_display_resources_release(void);
+extern "C" int tutorial_display_resources_release(void);
 void tutorial_indirect_handle_resolve(uint32_t* value);
 extern "C" void tutorial_frame_timer_array_advance(float delta);
 extern "C" void tutorial_script_command_dispatch(float delta);

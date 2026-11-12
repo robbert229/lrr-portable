@@ -473,6 +473,9 @@ int         entity_field_grid_cell_get(int x, int y, void** entity_out,
 /* SetExpansionEntityAtGridCell (FUN_00466380): park the entity on the
  * cell slot (re-reading order: pointer, flag raise, then the corpus's
  * 0x42c80000 timer store — 100.0f). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void set_expansion_entity_at_grid_cell(int x, int y, void* entity);
                                                 /* FUN_00466380 */
 

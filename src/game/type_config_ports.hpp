@@ -187,7 +187,7 @@ extern "C" int entity_type_config_resource_row_load(void* destination,
                                         const char* asset_path,
                                         void* engine_config,
                                         uint32_t row_kind);
-int entity_building_type_config_record_parse(void* destination,
+extern "C" int entity_building_type_config_record_parse(void* destination,
                                              uint32_t row_index,
                                              void* scene_context,
                                              const char* asset_path,

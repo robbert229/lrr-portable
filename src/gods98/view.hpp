@@ -477,6 +477,9 @@ typedef struct RenderResourceBindingHooks {
 } RenderResourceBindingHooks;
 void render_resource_binding_hooks_set(
     const RenderResourceBindingHooks* hooks);
+#ifdef __cplusplus
+extern "C"
+#endif
 void render_resource_binding_initialize(RenderResourceBinding* binding,
                                         void* key, void* config_a,
                                         void* config_b);
@@ -1664,6 +1667,9 @@ typedef void (*CameraPoseDispatchHook)(void* scene_object, void* pose_context,
                                        void* context);
 void camera_pose_dispatch_hook_install(CameraPoseDispatchHook hook,
                                        void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 void camera_tilt_set(void* camera, float value); /* FUN_00436860 */
 /* Signature also fits CameraDragHooks' camera_vertical_apply callback when
  * its context is the controller record. */
@@ -1677,12 +1683,18 @@ void screen_effect_record_set(void* camera_record,
                               uint32_t field10); /* FUN_00435ebb */
 void camera_scalar_bounds_set(void* camera, float lo, float hi);
                                         /* FUN_00436921 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void camera_rotation_set(void* camera, float value); /* FUN_00436953 */
 #ifdef __cplusplus
 extern "C"
 #endif
 void camera_distance_bounds_set(void* camera, float lo, float hi);
                                         /* FUN_00436a18 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void camera_distance_set(void* camera, float value); /* FUN_00436a4a */
 #ifdef __cplusplus
 extern "C"
@@ -1994,6 +2006,9 @@ typedef struct WorldSpatialRecordModel {
 } WorldSpatialRecordModel;
 void world_spatial_records_install(WorldSpatialRecordModel* records,
                                    uint32_t count);
+#ifdef __cplusplus
+extern "C"
+#endif
 WorldSpatialRecordModel* world_spatial_record_find_at_grid_coordinate(
     int x, int y, uint32_t* point_index); /* 0x0046e8a0 */
 typedef void* (*UIRenderTreeHook)(int operation, void* tree, void* entry,
