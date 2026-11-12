@@ -85,6 +85,7 @@
 #include "game/lego.h"
 #include "game/message.h"
 #include "game/tutorial_script.h"
+#include "game/tutorial_script_imports.h"
 #include "game/spawn.hpp"
 #include "game/port_loop_ports.hpp"
 #include "game/terrain_grid.hpp"

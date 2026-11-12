@@ -54,7 +54,7 @@ static uint32_t s_tutorial_program_capacity;
 uint32_t s_tutorial_nerp_registers[8];
 float s_tutorial_nerp_timers[4];
 NerpRuntimeState s_nerp_runtime;
-// GLOBAL: LEGORR 0x00555d40
+/* The port's copy of nerpsGlobs (00555d40), which is tutorial_script.c's. */
 uint32_t s_tutorial_555d40_state[45];
 static TutorialTokenEntry s_tutorial_tokens[512];
 static uint32_t s_tutorial_token_count;

@@ -31,6 +31,11 @@ int grid_record_count_difference_get(int row, int column, int slot,
                                      int subtract_first_table); /* 00437460 */
 void render_config_six_field_copy_out(uint32_t out[6]);    /* 004370b0 */
 uint32_t grid_record_count_get(int row, int column, int slot); /* 004374a0 */
+/* NERPs.c's 00455300 (tutorial_script.c, finding 586): the C matching
+ * build's callers (reward.c) call the unit's; natively the port's level.cpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+#define entity_type_grid_record_count_get nerps_object_count
+#endif
 uint32_t entity_type_grid_record_count_get(const char* type_name, int slot); /* 00455300 */
 int level_objective_result_get(const struct LevelState* s); /* 00458650 */
 

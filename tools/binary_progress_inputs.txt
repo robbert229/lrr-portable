@@ -376,8 +376,11 @@ src/game/tutorial_hud_for_panel_unit.hpp
 src/game/tutorial_hud_for_tutorial_script.hpp
 src/game/tutorial_hud_ports.hpp
 src/game/tutorial_hud_shared.hpp
-src/game/tutorial_script.cpp
+src/game/tutorial_script.c
 src/game/tutorial_script.h
+src/game/tutorial_script_imports.h
+src/game/tutorial_script_port.cpp
+src/game/tutorial_script_port_functions.h
 src/game/tutorial_world_arrows.cpp
 src/game/tutorial_world_arrows.hpp
 src/game/type_config_ports.hpp

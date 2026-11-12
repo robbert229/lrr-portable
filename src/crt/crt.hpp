@@ -403,7 +403,7 @@ uint32_t crt_floating_point_feature_probe(void);
 /* FlhMagicUuNoop (FUN_00456210, finding 440): the FLH magic 'UU'
  * pass's silent leaf — returns zero without changing state; the corpus
  * call sites (FLIC and CRT paths) do not reveal a further role. */
-uint32_t flh_magic_uu_noop(void);
+extern "C" uint32_t flh_magic_uu_noop(void); /* tutorial_script.c */
 
 /* GlobalFloatField00556F00Get (FUN_004230b0, findings 295/392): reads
  * the global float at DAT_00556f00 as the corpus does (fld DWORD).
