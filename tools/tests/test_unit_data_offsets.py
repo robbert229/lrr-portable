@@ -24,7 +24,7 @@ def fixture():
 
 
 def pooled_fixture():
-    """One .data piece, then two string COMDATs (finding 563)."""
+    """One .data piece, then two string COMDATs (finding 569)."""
     def section(size, flags):
         return struct.pack('<8sIIIIIIHHI', b'.data', 0, 0, size, 0, 0, 0, 0, 0, flags)
     comdat = 0xc0301040  # read/write initialised data, 4-byte aligned, COMDAT

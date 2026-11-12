@@ -233,7 +233,7 @@ void advisor_config_slots_load_target(BlockFile* config, const char* gameName)
         }
         if (str) {
             /* "," is pooled with 16 other units' uses; this unit owns it
-             * (finding 563). */
+             * (finding 569). */
             // STRING: LEGORR 0x004a13e4
             sound_variant_split((char*)str, argv, ",");
             // STRING: LEGORR 0x004a13e0
@@ -370,7 +370,7 @@ void advisor_position_config_load(BlockFile* config, const char* gameName,
             sound_variant_split(item->value, argv, ",");
             if (advisor_animation_name_to_index(argv[0], &animType)) {
                 /* "NULL" is pooled with four other units' uses; this unit owns
-                 * it (finding 563). */
+                 * it (finding 569). */
                 // STRING: LEGORR 0x004a13f4
                 if (_strcmpi("NULL", argv[1]) == 0 || ui_message_label_index_find(argv[1], &textType)) {
                     if (sound_alias_lookup(argv[2], &sfxType)) {

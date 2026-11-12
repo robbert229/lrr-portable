@@ -34,7 +34,7 @@ def coff(data, discarded=None):
     """Return (sections, symbols) from an i386 COFF object, checking bounds.
 
     ``discarded(name)`` is true when the link took the COMDAT named ``name``
-    from another object (finding 563: MSVC 5.0's /O2 pools every string
+    from another object (finding 569: MSVC 5.0's /O2 pools every string
     literal as a ``??_C@`` COMDAT, and the first object in link order keeps
     it). Such a section adds no bytes to this object's contribution, so it
     takes no space when the following section bases are laid out.

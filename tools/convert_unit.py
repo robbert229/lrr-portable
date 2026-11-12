@@ -500,7 +500,7 @@ def render_source(u, fp, stem, ranges, struct_fields, bss_refs, g_start, g_end,
         w("/* String literals. Annotate each where the code uses it, as")
         w(" * `// STRING: LEGORR 0x...` on the line before the literal (utils.c),")
         w(" * one literal per marked line. The matching build pools literals the way")
-        w(" * the original did (finding 563), so mark each address once in the whole")
+        w(" * the original did (finding 569), so mark each address once in the whole")
         w(" * tree: Reccmp drops a second marker for it. Mark this unit's own")
         w(" * literals here, even when other units reuse them. Leave the ones pooled")
         w(" * with another unit unmarked; that unit's conversion marks them. */")

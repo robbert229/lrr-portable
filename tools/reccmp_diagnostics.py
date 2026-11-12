@@ -18,7 +18,7 @@ ALLOW = [re.compile(r'[/\\]src[/\\]gods98[/\\]viewports\.cpp\(\d+\) : warning C4
 DIAGNOSTIC = re.compile(r'\[(?:ERROR|WARNING|CRITICAL)\]|\bwarning\s+(?:[A-Z]+\d+\s*:|:)|^\s*(?:warning|error|fatal error)\s*:', re.I)
 
 # Reccmp colours its log level ("[\x1b[31mERROR\x1b[0m]"), which hid its
-# diagnostics from DIAGNOSTIC until the colour codes were removed (finding 563).
+# diagnostics from DIAGNOSTIC until the colour codes were removed (finding 569).
 ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
 
 def unexpected(lines):
