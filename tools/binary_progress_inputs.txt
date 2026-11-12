@@ -326,7 +326,12 @@ src/game/select.cpp
 src/game/select.hpp
 src/game/select_from_legoobject.hpp
 src/game/select_from_message_unit.hpp
-src/game/sfx.cpp
+src/game/sfx.c
+src/game/sfx.h
+src/game/sfx_imports.h
+src/game/sfx_link_names.h
+src/game/sfx_maths.h
+src/game/sfx_port.cpp
 src/game/simulation_ui_ports.hpp
 src/game/spawn.cpp
 src/game/spawn.hpp

@@ -204,7 +204,7 @@ extern "C"
 void sound_variant_property_set(int alias_index, int millibels);
 
 /* Rotate the variant chain, discarding the read (as shipped). */
-void sound_variant_property_read(int alias_index);
+extern "C" void sound_variant_property_read(int alias_index);
 
 /* FNV-1a over the PCM payload (tests compare against wave-module-derived
  * reference hashes from the shipped corpus). */
@@ -428,12 +428,12 @@ void sound_request_queue_clear(void);
  * `seconds` while idle (timer <= 0), forgetting any recorded handle
  * (the corpus writes -1 so the arming submit cannot be expired); 1 if
  * armed, 0 if a cooldown was already running. */
-int sound_deferred_timer_set_if_idle(float seconds);
+extern "C" int sound_deferred_timer_set_if_idle(float seconds);
 
 /* DeferredSoundPlayExpire @ 0x464e80: when a handle is recorded and
  * the timer still runs, submit it to the buffer-stop hook, record -1, and zero
  * the timer. Otherwise a no-op. */
-void sound_deferred_play_expire(void);
+extern "C" void sound_deferred_play_expire(void);
 
 /* The cooldown timer word (_DAT_00502b24). */
 float sound_deferred_cooldown(void);
@@ -570,7 +570,7 @@ extern "C"
 void sound_batch_queue_drain(int batch_set, int replay);
 
 /* SoundDeferredQueueDrain @ 0x4652c0: batch_queue_drain(batch_set, 1). */
-void sound_deferred_queue_drain(int batch_set);
+extern "C" void sound_deferred_queue_drain(int batch_set);
 
 /* Inspection of the batch-deferred table (mode word bits: bit 0
  * positional, bit 1 loop, bit 2 position selector). `xyz`, when given,

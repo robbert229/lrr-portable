@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-041 SFX.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-041.csv. */
+/* GAME-041 SFX.c port tail (finding 585): the port's models of the unit,
+ * unannotated. The original-shape unit is sfx.c; these models keep the
+ * port's contracts (the port's alias hashing and chain pool, NULL guards and
+ * bounds, the smoke emitters' renderer hooks and 64-bit link table) for the
+ * native port, which calls them by these names.
+ *
+ * In the matching build (MSVC 5.0) sfx.c defines these names itself
+ * (sfx_link_names.h), so their definitions here are compiled out there;
+ * the state that sound.cpp reads stays defined in every build. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,51 +44,52 @@
 #include "effects_for_sfx.hpp"
 #include "gods98/sound_for_sfx.hpp"
 
-/* The corpus compares against a file-backed .rdata dword (0x49e73c, bytes
- * 00 00 00 00). A const zero-initialized static lands with real file bytes
- * in .rdata — plain zero-initialized storage would sit in the image's zero
- * tail, which reccmp-datacmp reads as uninitialized. */
-// GLOBAL: LEGORR 0x0049e73c
-static const float s_deferred_zero = 0.0f; /* DAT_0049e73c role: 0.0 constant */
-// GLOBAL: LEGORR 0x00502a24
+/* Port model of 0x00502a24 */
 int   s_alias_dynamic_count;
 
-/* The corpus's DAT_00502a2c sound flag word: bit 0 subsystem-enabled
- * (enable-set @ 0x465260), bit 1 dynamic-alias registration, bit 3 batch
- * mode (batch-mode-get @ 0x4652b0). */
-// GLOBAL: LEGORR 0x00502a2c
-static uint32_t s_sound_flags;
-
-// GLOBAL: LEGORR 0x00502a44
+/* Port model of 0x00502a44 */
 BatchEntry s_batch_entry[SOUND_BATCH_QUEUE_CAPACITY];
-// GLOBAL: LEGORR 0x00502b20
+/* Port model of 0x00502b20 */
 int        s_batch_count;   /* DAT_00502b20 */
-// GLOBAL: LEGORR 0x00502b24
+/* Port model of 0x00502b24 */
 float s_cooldown_timer;   /* _DAT_00502b24 (zero-initialised) */
-// GLOBAL: LEGORR 0x00502b28
+/* Port model of 0x00502b28 */
 int   s_cooldown_handle;  /* DAT_00502b28  (zero-initialised) */
 /* _DAT_00502b2c — the global-cooldown word (the corpus types it as a
  * double; it holds the alias submitted under the cooldown, whose writer
  * lands with #296). */
-// GLOBAL: LEGORR 0x00502b2c
+/* Port model of 0x00502b2c */
 double s_cooldown_alias;
 
-// GLOBAL: LEGORR 0x00502b30
+/* Port model of 0x00502b30 */
 int s_queue_alias[SOUND_REQUEST_QUEUE_CAPACITY];  /* DAT_00502b30 */
-// GLOBAL: LEGORR 0x00502b58
+/* Port model of 0x00502b58 */
 int s_queue_loop[SOUND_REQUEST_QUEUE_CAPACITY];   /* DAT_00502b58 */
 
 /* The frame tick's active replay copies (DAT_00502b80 alias words,
  * DAT_00502ba8 loop words, count DAT_00502bd4). */
-// GLOBAL: LEGORR 0x00502b80
+/* Port model of 0x00502b80 */
 int s_active_alias[SOUND_REQUEST_QUEUE_CAPACITY];
-// GLOBAL: LEGORR 0x00502ba8
+/* Port model of 0x00502ba8 */
 int s_active_loop[SOUND_REQUEST_QUEUE_CAPACITY];
-// GLOBAL: LEGORR 0x00502bd0
+/* Port model of 0x00502bd0 */
 int s_sound_queue_count;                                /* DAT_00502bd0 */
 
-// GLOBAL: LEGORR 0x00502bd4
+/* Port model of 0x00502bd4 */
 int s_active_count;
+/* sfx.c owns these names in the matching build (sfx_link_names.h), and
+ * the state below only serves them. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+
+/* 0x49e73c's role: the 0.0 constant the duration and timer read. */
+static const float s_deferred_zero = 0.0f;
+
+/* The corpus's DAT_00502a2c sound flag word: bit 0 subsystem-enabled
+ * (enable-set @ 0x465260), bit 1 dynamic-alias registration, bit 3 batch
+ * mode (batch-mode-get @ 0x4652b0). */
+/* Port model of 0x00502a2c */
+static uint32_t s_sound_flags;
+
 /* SoundAliasLookup compares the GameStringHashCompute result, not the
  * original text. Retain the hashes in slot order so collisions resolve to
  * the first registered alias as they do in the reference. */
@@ -106,7 +113,7 @@ static void* transient_effect_next_get(void* instance);
 static void* transient_effect_previous_get(void* instance);
 static void* transient_effect_render_record_get(void* instance);
 
-// FUNCTION: LEGORR 0x00464740
+/* Port model of 0x00464740 */
 void sound_alias_registry_init(void)
 {
     /* Keep the dynamic count and names, as the reference does, but rebuild
@@ -137,7 +144,7 @@ void sound_alias_registry_init(void)
     (void)ddiscene_sample_hook_add(sound_alias_scene_sample_callback, NULL);
 }
 
-// FUNCTION: LEGORR 0x00464c50
+/* Port model of 0x00464c50 */
 void sound_alias_registration_set(int enable)
 {
     /* SoundDynamicAliasRegistrationSet @ 0x00464c50: raises/clears the
@@ -149,7 +156,7 @@ void sound_alias_registration_set(int enable)
     }
 }
 
-// FUNCTION: LEGORR 0x00464c70
+/* Port model of 0x00464c70 */
 int sound_alias_lookup(const char* name, int* out_index)
 {
     /* SoundAliasLookup @ 0x00464c70 compares GameStringHashCompute values
@@ -185,7 +192,7 @@ int sound_alias_lookup(const char* name, int* out_index)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00464d00
+/* Port model of 0x00464d00 */
 int sound_sample_marker_parse(const char* spec, int alias_index)
 {
     if (spec == NULL || alias_index < 0 || alias_index >= SOUND_ALIAS_MAX) {
@@ -294,7 +301,7 @@ int sound_sample_marker_parse(const char* spec, int alias_index)
     return ok;
 }
 
-// FUNCTION: LEGORR 0x00464e20
+/* Port model of 0x00464e20 */
 int sound_variant_select(int alias_index)
 {
     if (alias_index <= 0 || alias_index >= SOUND_ALIAS_MAX) {
@@ -322,7 +329,7 @@ int sound_variant_select(int alias_index)
     }
     return s_variant_slot[alias_index];
 }
-// FUNCTION: LEGORR 0x00464e80
+/* Port model of 0x00464e80 */
 void sound_deferred_play_expire(void)
 {
     /* DeferredSoundPlayExpire @ 0x464e80. */
@@ -335,7 +342,7 @@ void sound_deferred_play_expire(void)
         s_cooldown_timer = 0.0f;
     }
 }
-// FUNCTION: LEGORR 0x00464ec0
+/* Port model of 0x00464ec0 */
 int sound_deferred_timer_set_if_idle(float seconds)
 {
     /* DeferredSoundTimerSetIfIdle @ 0x464ec0. */
@@ -347,7 +354,7 @@ int sound_deferred_timer_set_if_idle(float seconds)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00464ef0
+/* Port model of 0x00464ef0 */
 int sound_submit_with_global_cooldown(int alias, int* out_handle)
 {
     /* SoundSubmitWithGlobalCooldown @ 0x464ef0. */
@@ -369,7 +376,7 @@ int sound_submit_with_global_cooldown(int alias, int* out_handle)
     }
     return 0;
 }
-// FUNCTION: LEGORR 0x00464f60
+/* Port model of 0x00464f60 */
 void sound_request_queue_submit(int alias, int loop)
 {
     /* SoundRequestQueueSubmit @ 0x464f60. */
@@ -384,7 +391,7 @@ void sound_request_queue_submit(int alias, int loop)
     ++s_sound_queue_count;
 }
 
-// FUNCTION: LEGORR 0x00464fa0
+/* Port model of 0x00464fa0 */
 int sound_alias_play(int alias, int loop)
 {
     /* SoundAliasPlay @ 0x464fa0. */
@@ -410,7 +417,7 @@ int sound_alias_play(int alias, int loop)
     }
     return -1;
 }
-// FUNCTION: LEGORR 0x00465010
+/* Port model of 0x00465010 */
 void sound_variant_property_set(int alias_index, int millibels)
 {
     /* ConfiguredVariantPropertySet @ 0x465010. Keep the selector nested in
@@ -421,7 +428,7 @@ void sound_variant_property_set(int alias_index, int millibels)
     sound_bank_entry_volume_set(sound_variant_select(alias_index), millibels);
 }
 
-// FUNCTION: LEGORR 0x00465030
+/* Port model of 0x00465030 */
 void sound_variant_property_read(int alias_index)
 {
     /* ConfiguredVariantPropertyRead @ 0x465030: only the variant draw
@@ -431,7 +438,7 @@ void sound_variant_property_read(int alias_index)
     (void)sound_bank_entry_volume(slot);
 }
 
-// FUNCTION: LEGORR 0x00465050
+/* Port model of 0x00465050 */
 int sound_submission_route_wrapper(const void* wrapped_position, int alias,
                                     int loop, int positional,
                                     const float* xyz)
@@ -442,7 +449,7 @@ int sound_submission_route_wrapper(const void* wrapped_position, int alias,
     }
     return sound_positional_sound_submit(position, alias, loop, positional, xyz);
 }
-// FUNCTION: LEGORR 0x00465090
+/* Port model of 0x00465090 */
 int sound_positional_sound_submit(int position, int alias, int loop,
                                   int positional, const float* xyz)
 {
@@ -477,7 +484,7 @@ int sound_positional_sound_submit(int position, int alias, int loop,
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00465160
+/* Port model of 0x00465160 */
 double sound_object_duration_get(int alias)
 {
     /* SoundObjectDurationGet @ 0x465160: duration of whatever the alias's
@@ -492,13 +499,13 @@ double sound_object_duration_get(int alias)
     return s_deferred_zero; /* the corpus's test/je tail: a zero chain head
                              * (no sound) loads the 0x49e73c zero instead */
 }
-// FUNCTION: LEGORR 0x00465190
+/* Port model of 0x00465190 */
 void sound_handle_stop_forward(int buffer_handle)
 {
     sound_buffer_stop_handle(buffer_handle);
 }
 
-// FUNCTION: LEGORR 0x004651a0
+/* Port model of 0x004651a0 */
 void sound_subsystem_frame_tick(float dt)
 {
     /* SoundSubsystemFrameTick @ 0x4651a0. */
@@ -529,7 +536,7 @@ void sound_subsystem_frame_tick(float dt)
      * remove stale associations, and advance both streamed-wave slots. */
     sound_source_spatial_refresh_all();
 }
-// FUNCTION: LEGORR 0x00465260
+/* Port model of 0x00465260 */
 void sound_subsystem_enable_set(int enable, int stop_active)
 {
     /* SoundSubsystemEnableSet @ 0x00465260. */
@@ -548,14 +555,14 @@ void sound_subsystem_enable_set(int enable, int stop_active)
     s_cooldown_alias = 0.0;
 }
 
-// FUNCTION: LEGORR 0x004652a0
+/* Port model of 0x004652a0 */
 void sound_subsystem_enable_set_and_stop(int enable)
 {
     /* SoundSubsystemEnableSetAndStop @ 0x004652a0. */
     sound_subsystem_enable_set(enable, 1);
 }
 
-// FUNCTION: LEGORR 0x004652b0
+/* Port model of 0x004652b0 */
 int sound_batch_mode_get(void)
 {
     /* SoundBatchModeGet @ 0x004652b0: `return DAT_00502a2c & 8` — the
@@ -563,13 +570,13 @@ int sound_batch_mode_get(void)
     return (int)(s_sound_flags & SOUND_FLAG_BATCH);
 }
 
-// FUNCTION: LEGORR 0x004652c0
+/* Port model of 0x004652c0 */
 void sound_deferred_queue_drain(int batch_set)
 {
     /* SoundDeferredQueueDrain @ 0x4652c0. */
     sound_batch_queue_drain(batch_set, 1);
 }
-// FUNCTION: LEGORR 0x004652d0
+/* Port model of 0x004652d0 */
 void sound_batch_queue_drain(int batch_set, int replay)
 {
     /* SoundBatchQueueDrain @ 0x4652d0. */
@@ -599,13 +606,13 @@ void sound_batch_queue_drain(int batch_set, int replay)
     }
     s_batch_count = 0;
 }
-// FUNCTION: LEGORR 0x00465370
+/* Port model of 0x00465370 */
 int sound_subsystem_enabled(void)
 {
     return (s_sound_flags & SOUND_FLAG_ENABLED) != 0;
 }
 
-// FUNCTION: LEGORR 0x00465380
+/* Port model of 0x00465380 */
 int scene_effect_registry_reset(void)
 {
     s_scene_effect_head = 0u;    /* corpus clears in address order */
@@ -614,7 +621,7 @@ int scene_effect_registry_reset(void)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x004653a0
+/* Port model of 0x004653a0 */
 void transient_effect_textures_preload(const char* filename_prefix,
                                       const char* filename_format,
                                       uint32_t texture_count)
@@ -649,7 +656,7 @@ void transient_effect_textures_preload(const char* filename_prefix,
 
 /* Renderer-owned resource creation stays behind the narrow record and mesh
  * hooks; the emitter record setup, simulation warm-up, and registry do not. */
-// FUNCTION: LEGORR 0x00465430
+/* Port model of 0x00465430 */
 void* transient_effect_emitter_create(void* scene_context,
                                       uint32_t position_x,
                                       uint32_t position_y, int* direction,
@@ -898,7 +905,7 @@ void* transient_effect_emitter_create(void* scene_context,
     return instance;
 }
 
-// FUNCTION: LEGORR 0x00465970
+/* Port model of 0x00465970 */
 void transient_effect_registry_release_all(void)
 {
     while (s_transient_effect_head != NULL) {
@@ -909,7 +916,7 @@ void transient_effect_registry_release_all(void)
     s_transient_effect_head = NULL;
     s_transient_effect_tail = NULL;
 }
-// FUNCTION: LEGORR 0x004659b0
+/* Port model of 0x004659b0 */
 void transient_effect_instance_release(void* instance, void* resource)
 {
     unsigned char* bytes;
@@ -980,7 +987,7 @@ void transient_effect_instance_release(void* instance, void* resource)
     if (links != NULL) free(links);
 }
 
-// FUNCTION: LEGORR 0x00465a90
+/* Port model of 0x00465a90 */
 void transient_effect_registry_enable_set(int enabled)
 {
     void* instance;
@@ -991,7 +998,7 @@ void transient_effect_registry_enable_set(int enabled)
     }
 }
 
-// FUNCTION: LEGORR 0x00465ac0
+/* Port model of 0x00465ac0 */
 void transient_effect_enable_set(void* instance, int enabled)
 {
     unsigned char* bytes;
@@ -1004,7 +1011,7 @@ void transient_effect_enable_set(void* instance, int enabled)
     if (enabled != 0) *flags |= 1u;
     else *flags &= ~1u;
 }
-// FUNCTION: LEGORR 0x00465b00
+/* Port model of 0x00465b00 */
 void transient_effect_instances_tick(float delta)
 {
     void* instance = s_transient_effect_head;
@@ -1056,7 +1063,7 @@ void transient_effect_instances_tick(float delta)
         instance = next;
     }
 }
-// FUNCTION: LEGORR 0x00465c50
+/* Port model of 0x00465c50 */
 int transient_effect_particle_slot_initialize(void* emitter,
                                               uint32_t slot)
 {
@@ -1109,7 +1116,7 @@ int transient_effect_particle_slot_initialize(void* emitter,
     return result;
 }
 
-// FUNCTION: LEGORR 0x00465e00
+/* Port model of 0x00465e00 */
 void transient_effect_segment_advance(void* emitter, uint32_t slot,
                                       float delta)
 {
@@ -1139,7 +1146,7 @@ void transient_effect_segment_advance(void* emitter, uint32_t slot,
  * center/size/distance and scene orientation to build its four corners.
  * Hosts may override the orientation lookup, while the normal scene object
  * path uses the same pose interface as the retail +0x7c call. */
-// FUNCTION: LEGORR 0x00465f40
+/* Port model of 0x00465f40 */
 void transient_effect_instance_quad_vertices_build(
     void* instance, uint32_t slot, void* transform_source,
     const float triple[3])
@@ -1320,11 +1327,40 @@ static void* transient_effect_previous_get(void* instance)
     return NULL;
 }
 
+#endif /* !(MSVC 5.0) */
+
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
  * original ConfiguredVariantPropertyRead (FUN_00465030) returns the
- * variant's volume; the port's entry above discards it. */
+ * variant's volume; the port's entry above discards it. In the matching
+ * build aitask_port_aliases.h points lego_unit.c at sfx.c's 00465030. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (sound_variant_select, sound_bank_entry_volume)
 extern "C" int sound_variant_property_read_original(int alias_index)
 {
     return sound_bank_entry_volume(sound_variant_select(alias_index));
+}
+#endif
+
+/* Mesh_LoadTexture (FUN_00482e70) for sfx.c's Smoke_LoadTextures. The
+ * port's get-or-load entry (texture.cpp) takes the directory and the name
+ * and has C++ linkage; it reports no size. */
+// PORT-ONLY: original-ABI adapter for GAME-041 sfx.c (00482e70; the port's entry takes other parameters)
+extern "C" void* sfx_mesh_load_texture_adapter(const char* basePath,
+                                               const char* name,
+                                               unsigned int* width,
+                                               unsigned int* height)
+{
+    (void)width;
+    (void)height;
+    return texture_get_or_load(basePath, name);
+}
+
+/* Mesh_SetGroupTexture (FUN_004830c0) for sfx.c's Smoke_CreateSmokeArea.
+ * The port's entry has C++ linkage in namespace lego. */
+// PORT-ONLY: original-ABI adapter for GAME-041 sfx.c (004830c0; C++ linkage in namespace lego)
+extern "C" void sfx_mesh_set_group_texture_adapter(void* mesh, int group,
+                                                   void* texture)
+{
+    lego::animated_texture_frame_surface_set(mesh, group,
+                                             (const void*)texture);
 }

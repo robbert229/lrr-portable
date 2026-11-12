@@ -821,7 +821,7 @@ void* scene_end_hook_value_peek(void);                 /* port hook */
 
 /* DDiSceneSampleHookRegister (FUN_00472920): stores the sample callback
  * pair and raises the flag word's bit 0x40 alongside it. */
-void scene_sample_hook_register(void* hook, void* value); /* FUN_00472920 */
+extern "C" void scene_sample_hook_register(void* hook, void* value); /* FUN_00472920 */
 void* scene_sample_hook_peek(void);                       /* port hook */
 void* scene_sample_hook_value_peek(void);                 /* port hook */
 

@@ -1,4 +1,4 @@
-# input_sha256: b2f550872fa882389f19179a8595112a9cf7eea1aa515e21534956e01e7767a9
+# input_sha256: 1bbd6b548b0d78a9be59f4a095c0ef353a38a303f1446f437997cd4d000a4556
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2289 mapped functions
+[game-only] 2292 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -677,7 +677,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 94.74 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 96.80 lego_engine_tick
+0x004232e0 96.88 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 98.90 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
@@ -1496,40 +1496,43 @@
 0x00463f00 15.83 scene_quad_grid_emit
 0x00464110 10.85 rotated_pairs_scratch_fill
 0x00464720 9.76 surface_visibility_set
-0x00464740 8.70 sound_alias_registry_init
+0x00464740 100.00 sound_alias_registry_init
+0x00464c20 100.00 sfx_container_sound_trigger_callback
 0x00464c50 100.00 sound_alias_registration_set
-0x00464c70 28.35 sound_alias_lookup
-0x00464d00 25.09 sound_sample_marker_parse
-0x00464e20 9.41 sound_variant_select
-0x00464e80 92.86 sound_deferred_play_expire
+0x00464c70 84.00 sound_alias_lookup
+0x00464d00 100.00 sound_sample_marker_parse
+0x00464e20 100.00 sound_variant_select
+0x00464e80 100.00 sound_deferred_play_expire
 0x00464ec0 100.00 sound_deferred_timer_set_if_idle
-0x00464ef0 45.71 sound_submit_with_global_cooldown
-0x00464f60 44.44 sound_request_queue_submit
-0x00464fa0 40.00 sound_alias_play
+0x00464ef0 100.00 sound_submit_with_global_cooldown
+0x00464f60 100.00 sound_request_queue_submit
+0x00464fa0 100.00 sound_alias_play
 0x00465010 100.00 sound_variant_property_set
 0x00465030 100.00 sound_variant_property_read
-0x00465050 64.86 sound_submission_route_wrapper
-0x00465090 41.10 sound_positional_sound_submit
+0x00465050 100.00 sound_submission_route_wrapper
+0x00465090 100.00 sound_positional_sound_submit
 0x00465160 100.00 sound_object_duration_get
 0x00465190 100.00 sound_handle_stop_forward
-0x004651a0 58.95 sound_subsystem_frame_tick
-0x00465260 81.08 sound_subsystem_enable_set
+0x004651a0 100.00 sound_subsystem_frame_tick
+0x00465250 100.00 sfx_sound3d_update
+0x00465260 100.00 sound_subsystem_enable_set
 0x004652a0 100.00 sound_subsystem_enable_set_and_stop
 0x004652b0 100.00 sound_batch_mode_get
 0x004652c0 100.00 sound_deferred_queue_drain
-0x004652d0 53.21 sound_batch_queue_drain
+0x004652d0 100.00 sound_batch_queue_drain
 0x00465370 100.00 sound_subsystem_enabled
-0x00465380 50.00 scene_effect_registry_reset
-0x004653a0 23.53 transient_effect_textures_preload
-0x00465430 23.50 transient_effect_emitter_create
-0x00465970 30.43 transient_effect_registry_release_all
-0x004659b0 13.08 transient_effect_instance_release
-0x00465a90 34.04 transient_effect_registry_enable_set
-0x00465ac0 74.07 transient_effect_enable_set
-0x00465b00 62.93 transient_effect_instances_tick
-0x00465c50 18.18 transient_effect_particle_slot_initialize
-0x00465e00 27.91 transient_effect_segment_advance
-0x00465f40 21.46 transient_effect_instance_quad_vertices_build
+0x00465380 100.00 scene_effect_registry_reset
+0x004653a0 97.78 transient_effect_textures_preload
+0x00465430 94.12 transient_effect_emitter_create
+0x00465970 100.00 transient_effect_registry_release_all
+0x004659b0 96.72 transient_effect_instance_release
+0x00465a90 100.00 transient_effect_registry_enable_set
+0x00465ac0 100.00 transient_effect_enable_set
+0x00465b00 100.00 transient_effect_instances_tick
+0x00465c50 96.33 transient_effect_particle_slot_initialize
+0x00465e00 87.67 transient_effect_segment_advance
+0x00465ee0 100.00 smoke_mesh_render_callback
+0x00465f40 33.15 transient_effect_instance_quad_vertices_build
 0x004661c0 25.93 grid_cell_record_buffer_allocate
 0x00466210 100.00 entity_field_grid_buffer_release
 0x00466230 100.00 grid_cell_record_buffer_replace
@@ -2297,7 +2300,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2525 mapped functions
+[full] 2528 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2968,7 +2971,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 94.74 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 96.80 lego_engine_tick
+0x004232e0 96.88 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 98.90 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
@@ -3787,40 +3790,43 @@
 0x00463f00 15.83 scene_quad_grid_emit
 0x00464110 10.85 rotated_pairs_scratch_fill
 0x00464720 9.76 surface_visibility_set
-0x00464740 8.70 sound_alias_registry_init
+0x00464740 100.00 sound_alias_registry_init
+0x00464c20 100.00 sfx_container_sound_trigger_callback
 0x00464c50 100.00 sound_alias_registration_set
-0x00464c70 28.35 sound_alias_lookup
-0x00464d00 25.09 sound_sample_marker_parse
-0x00464e20 9.41 sound_variant_select
-0x00464e80 92.86 sound_deferred_play_expire
+0x00464c70 84.00 sound_alias_lookup
+0x00464d00 100.00 sound_sample_marker_parse
+0x00464e20 100.00 sound_variant_select
+0x00464e80 100.00 sound_deferred_play_expire
 0x00464ec0 100.00 sound_deferred_timer_set_if_idle
-0x00464ef0 45.71 sound_submit_with_global_cooldown
-0x00464f60 44.44 sound_request_queue_submit
-0x00464fa0 40.00 sound_alias_play
+0x00464ef0 100.00 sound_submit_with_global_cooldown
+0x00464f60 100.00 sound_request_queue_submit
+0x00464fa0 100.00 sound_alias_play
 0x00465010 100.00 sound_variant_property_set
 0x00465030 100.00 sound_variant_property_read
-0x00465050 64.86 sound_submission_route_wrapper
-0x00465090 41.10 sound_positional_sound_submit
+0x00465050 100.00 sound_submission_route_wrapper
+0x00465090 100.00 sound_positional_sound_submit
 0x00465160 100.00 sound_object_duration_get
 0x00465190 100.00 sound_handle_stop_forward
-0x004651a0 58.95 sound_subsystem_frame_tick
-0x00465260 81.08 sound_subsystem_enable_set
+0x004651a0 100.00 sound_subsystem_frame_tick
+0x00465250 100.00 sfx_sound3d_update
+0x00465260 100.00 sound_subsystem_enable_set
 0x004652a0 100.00 sound_subsystem_enable_set_and_stop
 0x004652b0 100.00 sound_batch_mode_get
 0x004652c0 100.00 sound_deferred_queue_drain
-0x004652d0 53.21 sound_batch_queue_drain
+0x004652d0 100.00 sound_batch_queue_drain
 0x00465370 100.00 sound_subsystem_enabled
-0x00465380 50.00 scene_effect_registry_reset
-0x004653a0 23.53 transient_effect_textures_preload
-0x00465430 23.50 transient_effect_emitter_create
-0x00465970 30.43 transient_effect_registry_release_all
-0x004659b0 13.08 transient_effect_instance_release
-0x00465a90 34.04 transient_effect_registry_enable_set
-0x00465ac0 74.07 transient_effect_enable_set
-0x00465b00 62.93 transient_effect_instances_tick
-0x00465c50 18.18 transient_effect_particle_slot_initialize
-0x00465e00 27.91 transient_effect_segment_advance
-0x00465f40 21.46 transient_effect_instance_quad_vertices_build
+0x00465380 100.00 scene_effect_registry_reset
+0x004653a0 97.78 transient_effect_textures_preload
+0x00465430 94.12 transient_effect_emitter_create
+0x00465970 100.00 transient_effect_registry_release_all
+0x004659b0 96.72 transient_effect_instance_release
+0x00465a90 100.00 transient_effect_registry_enable_set
+0x00465ac0 100.00 transient_effect_enable_set
+0x00465b00 100.00 transient_effect_instances_tick
+0x00465c50 96.33 transient_effect_particle_slot_initialize
+0x00465e00 87.67 transient_effect_segment_advance
+0x00465ee0 100.00 smoke_mesh_render_callback
+0x00465f40 33.15 transient_effect_instance_quad_vertices_build
 0x004661c0 25.93 grid_cell_record_buffer_allocate
 0x00466210 100.00 entity_field_grid_buffer_release
 0x00466230 100.00 grid_cell_record_buffer_replace

@@ -33,7 +33,7 @@ game_sources = [
   'text.cpp',
   'record_chains.cpp',
   'grid_cell_records.cpp',
-  'sfx.cpp',
+  'sfx_port.cpp',
   'placement_footprint.cpp',
   'info_track_overlay.cpp',
   'terrain_overlay_quads.cpp',
@@ -107,6 +107,7 @@ game_c_sources = [
   'terrain_cell_objects.c',
   'terrain_map.c',
   'weapons.c',
+  'sfx.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

@@ -209,7 +209,7 @@ uint32_t scene_object_resource_get(const void* scene_object);
 
 /* SceneObjectWrappedPointerGet (FUN_00473680, findings 337/430): the
  * wrapped pointer's contents (the target's dword at +0). */
-uint32_t scene_object_wrapped_pointer_get(const void* wrapped);
+extern "C" uint32_t scene_object_wrapped_pointer_get(const void* wrapped);
 
 /* SceneObjectFlagBit3Get (FUN_00473ba0, findings 305/430): bit 3 of the
  * flag byte at +0x14. */
@@ -262,10 +262,10 @@ uint32_t indexed_record_flag6c_bit0_get(const void* record, int index);
 /* IndexedRecordFlag6CBit0Set (FUN_004827a0): update bit zero in the
  * indexed +0x6c word, using the table pointer at record +0x08 (stride
  * 0x70). */
-void indexed_record_flag6c_bit0_set(void* record, int index, int set);
+extern "C" void indexed_record_flag6c_bit0_set(void* record, int index, int set);
 
 /* RecordFlag2CBit0Set (FUN_004827d0): set or clear bit zero at +0x2c. */
-void record_flag2c_bit0_set(void* record, int set);
+extern "C" void record_flag2c_bit0_set(void* record, int set);
 
 /* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
  * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
@@ -729,7 +729,7 @@ void terrain_cell_quad_vertices_write(void* record, int block,
                                       int first_vertex, int count,
                                       const void* source);
 
-void instance_quad_vertex_data_fill(void* record, int block,
+extern "C" void instance_quad_vertex_data_fill(void* record, int block,
                                     int first_vertex, int count,
                                     const float* positions,
                                     const float triple[3],

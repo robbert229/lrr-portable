@@ -57,9 +57,9 @@ static void* s_screen_space_effect_dispatch_context;
 TransientEffectHooks s_transient_effect_hooks;
 TransientEffectQuadBasisGetHook s_transient_effect_quad_basis_hook;
 void* s_transient_effect_quad_basis_context;
-// GLOBAL: LEGORR 0x00552100
+/* The port's models of Smoke's texture table and count; sfx.c holds the
+ * original's (00552100, 00552130). */
 TextureSurface* s_transient_effect_textures[12];
-// GLOBAL: LEGORR 0x00552130
 uint32_t s_transient_effect_texture_count;
 void* s_transient_effect_head;
 void* s_transient_effect_tail;
