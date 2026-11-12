@@ -449,7 +449,7 @@ void surface_blit_texture(void* px, int pitch, int w, int h,
                           const TextureSurface* t, int x, int y);
 /* ImageSurfaceBlitTransformed (FUN_0047dbf0): convert two RGB triples to
  * color-key endpoints and mark the wrapped image resource initialized. */
-void image_surface_blit_transformed(TextureSurface* surface,
+extern "C" void image_surface_blit_transformed(TextureSurface* surface,
                                     float low_red, float low_green,
                                     float low_blue, float high_red,
                                     float high_green, float high_blue);

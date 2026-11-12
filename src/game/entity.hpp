@@ -707,7 +707,7 @@ typedef int (*EntityFlagMaskPredicate)(EntitySlot*, uint32_t, void*);
 int entity_flag_mask_callbacks_predicate_all_pass(
     GameContext* ctx, uint32_t mask, EntityFlagMaskPredicate predicate,
     void* user);
-void entity_iteration_callback_guard(void); /* FUN_0043b320 */
+extern "C" void entity_iteration_callback_guard(void); /* FUN_0043b320 */
 uint32_t entity_iteration_guard_flags_peek(void); /* port hook */
 void entity_iteration_guard_flags_set(uint32_t flags); /* FUN_00436c20 / 437050 */
 typedef int (*SceneObjectStateCallback)(EntitySlot*, uint32_t, uint32_t,
@@ -1482,7 +1482,7 @@ extern "C" uint32_t building_upgrade_admission_check(int type, int row);
 extern "C" uint32_t stats_table_word_at_b8(int type, int row, int stride_index = 0); /* FUN_00469b20 */
 uint32_t stats_table_word_at_b0(int type, int row, int stride_index);
 float stats_table_float_at_dc(int type, int row);    /* FUN_00469e00 */
-uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
+extern "C" uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
 extern "C" uint32_t stats_table_word_at_148(int type, int row); /* FUN_00469ee0 */
 extern "C" uint32_t stats_table_word_at_14c(int type, int row); /* FUN_00469f00 */
 

@@ -161,7 +161,7 @@ extern "C" float weapon_type_recharge_time_get_target(int type)
 }
 
 // FUNCTION: LEGORR 0x0046F140
-float weapon_type_discharge_rate_get_target(int type)
+extern "C" float weapon_type_discharge_rate_get_target(int type)
 {
     return s_weapon_indexed_records[type].discharge_rate;
 }
