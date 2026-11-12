@@ -50,6 +50,7 @@ extern "C" int level_coord_pair_within_bounds_target(
 #include "level_for_files.hpp"
 #include "level_for_legoobject.hpp"
 #include "level_from_legoobject.hpp"
+#include "level_for_aitask.hpp"
 
 /* Cell mutation's cheat branch calls the existing entity-side implementation
  * of SmallSpiderCellSwarmSpawn. Its runtime prerequisites are checked by that
@@ -1942,92 +1943,6 @@ void terrain_cell_record_count_increment(int a, int b, int c)
     }
 }
 
-/* TerrainCellRecordCountUpdate (FUN_00403810): query at the cell center,
- * issue the requested entity action when found, and otherwise increment the
- * flattened pending-count table. The spatial callback predicate is still
- * owned by the spatial-query adapter; this routine preserves the exact
- * query/action/fallback order around it. */
-// FUNCTION: LEGORR 0x00403810
-void terrain_cell_record_count_update(const int cell_xy[2], int a, int b,
-                                      int c)
-{
-    EntitySlot* entity;
-    entity = (EntitySlot*)
-        unported_ledger_stubs::
-            ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
-                cell_xy, (uint32_t)a, (uint32_t)b, (uint32_t)c);
-    if (entity == NULL) {
-        if (c != 0 && b == 7) {
-            entity = (EntitySlot*)
-                unported_ledger_stubs::
-                    ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
-                        cell_xy, 7u, 0u, (uint32_t)c);
-            if (entity != NULL) {
-                EntitySlot* count_entity = (EntitySlot*)
-                    unported_ledger_stubs::
-                        ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
-                            NULL, cell_xy, 7u, 0u);
-                uint32_t count = stats_instance_word_at_ec(count_entity);
-                if (count == 0u) return;
-                do {
-                    (void)entity_action_kind_entity_create_and_command_issue(
-                        entity, 7, 0, c);
-                    --count;
-                } while (count != 0u);
-                return;
-            }
-        }
-    }
-    else if (entity_action_kind_entity_create_and_command_issue(
-                 entity, a, b, c) != NULL) {
-        return;
-    }
-    /* DAT_004b34f4 is the 20 x 15 x 16 counter table also swept by
-     * CellRecordCountsPruneForEntity. Keep the retail flattening expression;
-     * the bounds guard protects the host table when callers provide an
-     * invalid selector (the reference writes blindly). */
-    if (a >= 0 && a < 20 && b >= 0 && b < 15 && c >= 0 && c < 16)
-        ++cmd_pending_command_counts[b * 16 + a * 0xf0 + c];
-}
-
-// FUNCTION: LEGORR 0x00403910
-void terrain_cell_record_counts_prune(void* entity)
-{
-    int a, b, c;
-    uint32_t* count = cmd_pending_command_counts;
-    for (a = 0; a < 20; ++a) {
-        for (b = 0; b < 15; ++b) {
-            for (c = 0; c < 16; ++c, ++count) {
-                uint32_t ordinal = 0;
-                uint32_t removed = 0;
-                while (ordinal < *count) {
-                    if (unported_ledger_stubs::
-                            object_task_target_filter_find((uint32_t)a,
-                                (uint32_t)b, (uint32_t)c) == NULL ||
-                        entity_action_kind_entity_create_and_command_issue(
-                            (EntitySlot*)entity, a, b, c) != NULL) {
-                        ++removed;
-                    }
-                    ++ordinal;
-                }
-                *count -= removed;
-            }
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x004039a0
-void task_record_create_and_scan_grid(
-    void* entity)
-{
-    void* record;
-    /* FUN_004039a0 always creates the timed kind-5 record with
-     * (payload, 0, -1, 0), then changes its command kind to 9. */
-    record = timed_task_record_initialize_and_link(entity, 0, -1, 0);
-    if (record != NULL) cmd_set_kind(record, 9);
-    terrain_cell_record_counts_prune(entity);
-}
-
 int terrain_cell_surface_update_dispatch(
     const uint8_t* cell, int x, int y, void* param_a, void* param_b,
     const TerrainCellSurfaceUpdateHooks* hooks)
@@ -3068,20 +2983,10 @@ int32_t grid_count_table_slot_peek(int row, int column, int slot, int table)
                             : s_grid_count_first[(size_t)idx]);
 }
 
-/* --- coordinate-callback dispatchers (see level.hpp) -------------------------
- * The target walks EntityPoolCallbackSearch with LAB_00402bb0, whose body is
- * absent from the recovered corpus, then resets the terrain surface type.
- * Preserve the known traversal and ordering while leaving the callback's
- * effects to an explicit runtime binding. */
-typedef struct TerrainCellRefreshCallbackPayload {
-    const int* cell_xy;
-    int mode;
-} TerrainCellRefreshCallbackPayload;
-
 static TerrainCellRefreshEntityCallback s_terrain_cell_refresh_callback;
 static void* s_terrain_cell_refresh_callback_context;
 
-static int terrain_cell_refresh_callback_adapter(EntitySlot* entity,
+int terrain_cell_refresh_callback_adapter(EntitySlot* entity,
                                                   void* payload)
 {
     TerrainCellRefreshCallbackPayload* data =
@@ -3125,35 +3030,9 @@ void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
     terrain_cell_refresh_dispatch_level(lvl, cell_xy, 0);
 }
 
-/* Retail ABI: coordinate pair plus mode, current level fetched internally.
- * The level-taking helper above remains for portable callers with an
- * explicit context. */
-// FUNCTION: LEGORR 0x00402ae0
-void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode)
-{
-    LevelState* lvl = level_current_owner_get();
-    TerrainCellRefreshCallbackPayload payload;
-    void* terrain;
-#if !defined(_MSC_VER) || !defined(_M_IX86)
-    if (lvl == NULL || cell_xy == NULL) return;
-#endif
-    payload.cell_xy = cell_xy;
-    payload.mode = mode;
-    (void)entity_pool_callback_search(
-        terrain_cell_refresh_callback_adapter, &payload);
-#if defined(_MSC_VER) && defined(_M_IX86)
-    terrain = (void*)lvl->word[1];
-    terrain_cell_surface_type_reset(terrain, cell_xy[0], cell_xy[1]);
-#else
-    terrain = lvl->ptr_terrain;
-    if (terrain != NULL)
-        terrain_cell_surface_type_reset(terrain, cell_xy[0], cell_xy[1]);
-#endif
-}
-
-static CoordinateEntityDispatchHook s_coordinate_direct_callback;
-static CoordinateEntityDispatchHook s_coordinate_mode_zero_callback;
-static CoordinateEntityDispatchHook s_coordinate_mode_nonzero_callback;
+CoordinateEntityDispatchHook s_coordinate_direct_callback;
+CoordinateEntityDispatchHook s_coordinate_mode_zero_callback;
+CoordinateEntityDispatchHook s_coordinate_mode_nonzero_callback;
 static void* s_coordinate_dispatch_context;
 
 void coordinate_entity_dispatch_hooks_install(
@@ -3167,13 +3046,7 @@ void coordinate_entity_dispatch_hooks_install(
     s_coordinate_dispatch_context = context;
 }
 
-struct CoordinateEntityDispatchPayload {
-    const void* coordinate_pair;
-    int extra;
-    CoordinateEntityDispatchHook callback;
-};
-
-static int coordinate_entity_dispatch_adapter(EntitySlot* entity,
+int coordinate_entity_dispatch_adapter(EntitySlot* entity,
                                               void* payload)
 {
     CoordinateEntityDispatchPayload* const data =
@@ -3191,27 +3064,6 @@ void coordinate_callback_dispatch(const void* coord_pair, int value)
     payload.coordinate_pair = coord_pair;
     payload.extra = value;
     payload.callback = s_coordinate_direct_callback;
-    entity_pool_callback_search(coordinate_entity_dispatch_adapter, &payload);
-}
-
-// FUNCTION: LEGORR 0x00402b30
-void coordinate_callback_dispatch_current(const void* coord_pair)
-{
-    CoordinateEntityDispatchPayload payload;
-    payload.coordinate_pair = coord_pair;
-    payload.extra = 0;
-    payload.callback = s_coordinate_direct_callback;
-    entity_pool_callback_search(coordinate_entity_dispatch_adapter, &payload);
-}
-
-// FUNCTION: LEGORR 0x00402b60
-void coordinate_callback_dispatch_by_mode(const void* coord_pair, int mode)
-{
-    CoordinateEntityDispatchPayload payload;
-    payload.coordinate_pair = coord_pair;
-    payload.extra = 0;
-    payload.callback = mode != 0 ? s_coordinate_mode_nonzero_callback
-                                 : s_coordinate_mode_zero_callback;
     entity_pool_callback_search(coordinate_entity_dispatch_adapter, &payload);
 }
 

@@ -28,6 +28,8 @@
 #include "ai_from_lego.hpp"
 #include "ai_for_legoobject.hpp"
 #include "ai_from_legoobject.hpp"
+#include "ai_for_aitask.hpp"
+#include "ai_from_aitask.hpp"
 
 /* The command record's mutable `now` doubles as the task countdown for
  * task commands (the link primitives seed it with the 1500.0 "now"
@@ -127,20 +129,6 @@ void bubble_texture_handle_set(int index, uint32_t handle)
 {
     if (index >= 0 && index < BUBBLE_ACTION_NAME_COUNT) {
         s_bubble_texture_handles[index] = handle;
-    }
-}
-
-/* FUN_00403f30: when the chain head is absent or is not kind 0xe, allocate
- * an idle record, link the former head through +0x60, and install it. */
-// FUNCTION: LEGORR 0x00403F30
-void ai_idle_chain_record_attach(EntitySlot* entity)
-{
-    if (entity->cmd_head == NULL || cmd_rec_type(entity->cmd_head) != 0xe) {
-        void* rec = cmd_alloc(0xe);
-        if (rec != NULL) {
-            cmd_rec_set_next(rec, entity->cmd_head);
-            entity->cmd_head = rec;
-        }
     }
 }
 
@@ -1291,27 +1279,6 @@ void ai_idle_table_reset(void)
     s_idle100_n = 0;
 }
 
-/* ActiveEntityListContainsCode (FUN_004031e0): a permitted-activity scan
- * (FUN_0044b480) over the selection when it is non-empty, else over the
- * corpus's global active-entity list. The selection branch caches the
- * count (the corpus's ebx), walks the record array with a pointer and an
- * unsigned counter (add reg,4 / inc / cmp-jb) and passes entries BLIND to
- * the scan — the corpus has no NULL-entry test there, the scan itself
- * answers 0; the fallback branch skips NULL entries (the corpus's
- * test/je) and re-reads the count every iteration. The selection branch
- * answers on the first hit and never falls back to the list
- * (pinned branch isolation).
- * The global list mirrors the entity pool's create/teardown lifecycle; the
- * explicit install adapter remains available to replace it for callers that
- * have a more specific active set. The 50-entry host bound matches the
- * corpus region; the corpus strides a NULL selection entry into the activity
- * scan, while the port's scan answers 0 for it (guarded). */
-#define ACTIVE_ENTITY_LIST_MAX 50 /* corpus region DAT_004b335c..3424 */
-// GLOBAL: LEGORR 0x004b335c
-static EntitySlot* s_active_list[ACTIVE_ENTITY_LIST_MAX];
-// GLOBAL: LEGORR 0x004b3424
-static int s_active_count;
-
 void active_entity_list_install(const EntitySlot* const* entries, int count)
 {
     if (entries == NULL || count < 0) {
@@ -1327,40 +1294,40 @@ void active_entity_list_install(const EntitySlot* const* entries, int count)
     for (i = count; i < ACTIVE_ENTITY_LIST_MAX; ++i) {
         s_active_list[i] = NULL;
     }
-    s_active_count = count;
+    s_active_list_used = count;
 }
 
 int active_entity_list_count(void)
 {
-    return s_active_count;
+    return s_active_list_used;
 }
 
 const EntitySlot* active_entity_list_entry_get(int index)
 {
-    return index >= 0 && index < s_active_count ? s_active_list[index] : NULL;
+    return index >= 0 && index < s_active_list_used ? s_active_list[index] : NULL;
 }
 
 void active_entity_list_entity_add(const EntitySlot* entity)
 {
     int i;
     if (entity == NULL) return;
-    for (i = 0; i < s_active_count; ++i) {
+    for (i = 0; i < s_active_list_used; ++i) {
         if (s_active_list[i] == entity) return;
     }
-    if (s_active_count < ACTIVE_ENTITY_LIST_MAX)
-        s_active_list[s_active_count++] = (EntitySlot*)entity;
+    if (s_active_list_used < ACTIVE_ENTITY_LIST_MAX)
+        s_active_list[s_active_list_used++] = (EntitySlot*)entity;
 }
 
 void active_entity_list_entity_remove(const EntitySlot* entity)
 {
     int i;
     if (entity == NULL) return;
-    for (i = 0; i < s_active_count; ++i) {
+    for (i = 0; i < s_active_list_used; ++i) {
         if (s_active_list[i] == entity) {
             int j;
-            for (j = i; j + 1 < s_active_count; ++j)
+            for (j = i; j + 1 < s_active_list_used; ++j)
                 s_active_list[j] = s_active_list[j + 1];
-            s_active_list[--s_active_count] = NULL;
+            s_active_list[--s_active_list_used] = NULL;
             return;
         }
     }
@@ -1371,40 +1338,7 @@ void active_entity_list_clear(void)
     int i;
     for (i = 0; i < ACTIVE_ENTITY_LIST_MAX; ++i)
         s_active_list[i] = NULL;
-    s_active_count = 0;
-}
-
-// FUNCTION: LEGORR 0x004031e0
-int active_entity_list_contains_code(GameContext* ctx, int code)
-{
-    unsigned count;
-    EntitySlot* const* records;
-    EntitySlot* const* walk;
-    unsigned i;
-
-    if (selection_has_any(ctx) == 0) {
-        /* the fallback re-reads the count (the corpus's DAT_004b3424
-         * load) on every iteration and skips NULL entries (test/je). */
-        for (i = 0; i < (unsigned) s_active_count; ++i) {
-            if (s_active_list[i] != NULL
-                && ai_activity_scan(s_active_list[i], code) != 0) {
-                return 1;
-            }
-        }
-        return 0;
-    }
-    /* selection branch: cached count (corpus ebx), unsigned counter and
-     * a walk pointer (inc / add reg,4 / cmp-jb); entries go BLIND to
-     * the scan — the corpus has no NULL test here and the scan
-     * (FUN_0044b480) answers 0 for NULL. */
-    count = (unsigned) selection_count(ctx);
-    records = selection_record_array(ctx);
-    for (i = 0, walk = records; records != NULL && i < count; ++i, ++walk) {
-        if (ai_activity_scan(*walk, code) != 0) {
-            return 1;
-        }
-    }
-    return 0;
+    s_active_list_used = 0;
 }
 
 /* DAT_004eabc8, LegoObject.c's tool-tip gate that Panel.c reads (game/ai.h).

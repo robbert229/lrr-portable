@@ -13,6 +13,8 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'aitask.cpp',
+  'message_unit.cpp',
   'legoobject.cpp',
   'frontend_unit.cpp',
   'interface.cpp',

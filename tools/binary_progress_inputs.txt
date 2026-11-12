@@ -48,11 +48,14 @@ src/game/advisor_maths.h
 src/game/ai.cpp
 src/game/ai.h
 src/game/ai.hpp
+src/game/ai_for_aitask.hpp
 src/game/ai_for_bubbles.hpp
 src/game/ai_for_legoobject.hpp
+src/game/ai_from_aitask.hpp
 src/game/ai_from_lego.hpp
 src/game/ai_from_legoobject.hpp
 src/game/ai_shared.hpp
+src/game/aitask.cpp
 src/game/animation_object.c
 src/game/animation_object.h
 src/game/bezier.c
@@ -68,14 +71,18 @@ src/game/cell_flood_passes.cpp
 src/game/cmd.cpp
 src/game/cmd.h
 src/game/cmd.hpp
+src/game/cmd_for_aitask.hpp
 src/game/cmd_for_bubbles.hpp
 src/game/cmd_for_interface.hpp
 src/game/cmd_for_lava_erosion.hpp
 src/game/cmd_for_lego.hpp
 src/game/cmd_for_legoobject.hpp
+src/game/cmd_for_message_unit.hpp
 src/game/cmd_for_placement.hpp
 src/game/cmd_for_tooltip.hpp
 src/game/cmd_for_weapons.hpp
+src/game/cmd_from_aitask.hpp
+src/game/cmd_from_message_unit.hpp
 src/game/cmd_from_weapons.hpp
 src/game/cmd_shared.hpp
 src/game/combat_ray_ports.hpp
@@ -180,6 +187,7 @@ src/game/lego.h
 src/game/legoobject.cpp
 src/game/level.cpp
 src/game/level.hpp
+src/game/level_for_aitask.hpp
 src/game/level_for_dependencies.hpp
 src/game/level_for_encyclopedia.hpp
 src/game/level_for_entity_cell_effects.hpp
@@ -203,6 +211,7 @@ src/game/lighteffects.cpp
 src/game/loading_progress.cpp
 src/game/map_view.cpp
 src/game/message.h
+src/game/message_unit.cpp
 src/game/mission.cpp
 src/game/mission.hpp
 src/game/mission_for_reward.hpp
@@ -263,6 +272,7 @@ src/game/seh_runtime.hpp
 src/game/select.cpp
 src/game/select.hpp
 src/game/select_from_legoobject.hpp
+src/game/select_from_message_unit.hpp
 src/game/sfx.cpp
 src/game/simulation_ui_ports.hpp
 src/game/spawn.cpp
@@ -507,6 +517,7 @@ src/gods98/scene_resources_for_viewports.hpp
 src/gods98/simtick.cpp
 src/gods98/simtick.h
 src/gods98/simtick.hpp
+src/gods98/simtick_for_aitask.hpp
 src/gods98/simtick_for_cell_flood_passes.hpp
 src/gods98/simtick_for_grid_cell_records.hpp
 src/gods98/simtick_for_interface.hpp

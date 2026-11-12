@@ -2911,12 +2911,8 @@ void renderer_words_set(uint32_t a, uint32_t b, uint32_t c)
     g_renderer_word_c = c;
 }
 
-// FUNCTION: LEGORR 0x004065d0
-uint32_t renderer_global_dword_get(void) { return s_renderer_global_dword; }
 void renderer_global_dword_set(uint32_t value) { s_renderer_global_dword = value; }
 
-// FUNCTION: LEGORR 0x004065e0
-uint32_t render_surface_secondary_get(void) { return s_render_surface_secondary; }
 void render_surface_secondary_set(uint32_t value) { s_render_surface_secondary = value; }
 
 // FUNCTION: LEGORR 0x00477f70

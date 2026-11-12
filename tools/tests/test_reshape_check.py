@@ -32,6 +32,21 @@ class CoffTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, '; '.join(rc.compare_objects(obj(), other)))
 
+    def test_rename_maps_base_names(self):
+        self.assertIn('symbol table', '; '.join(rc.compare_objects(obj(symbol=b'old'), obj(symbol=b'new'))))
+        self.assertEqual(rc.compare_objects(obj(symbol=b'old'), obj(symbol=b'new'), renames={'old': 'new'}), [])
+        # Whole identifiers only: a longer name is not renamed.
+        self.assertIn('symbol table', '; '.join(rc.compare_objects(obj(symbol=b'old_x'), obj(symbol=b'new_x'), renames={'old': 'new'})))
+
+    def test_rename_identifier_in_mangled_name(self):
+        self.assertEqual(rc.rename_identifier('?s_old@@3PAHA', {'s_old': 's_new'}), '?s_new@@3PAHA')
+        self.assertEqual(rc.rename_identifier('?s_old_x@@3HA', {'s_old': 's_new'}), '?s_old_x@@3HA')
+        # File statics are `_name$S<n>`, C names `_name`.
+        self.assertEqual(rc.rename_identifier('_s_old$S46642', {'s_old': 's_new'}), '_s_new$S46642')
+        self.assertEqual(rc.rename_identifier('_s_old', {'s_old': 's_new'}), '_s_new')
+        self.assertEqual(rc.rename_identifier('_s_old_x$S1', {'s_old': 's_new'}), '_s_old_x$S1')
+        self.assertEqual(rc.rename_identifier('_x_s_old', {'s_old': 's_new'}), '_x_s_old')
+
 
 class TokenTests(unittest.TestCase):
     def test_markers_and_tokens(self):
