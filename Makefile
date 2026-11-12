@@ -129,6 +129,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_link_order.py'
 	python3 -m unittest discover -s tools/tests -p 'test_relocate_unit.py'
 	python3 -m unittest discover -s tools/tests -p 'test_reshape_check.py'
+	python3 -m unittest discover -s tools/tests -p 'test_x87_operand_swaps.py'
 
 # Check match_function.py against an existing full report from the same tree.
 match-function-parity:

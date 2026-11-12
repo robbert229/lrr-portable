@@ -1317,7 +1317,7 @@ void advisor_progress_bar_fill_draw(int panelType, float air)
     if (panelGlobs.airMeterJuiceImage != NULL && air > 0.0f) {
         size.y = (float)(int)panelGlobs.airMeterJuiceImage->height;
         if (air > 100.0f) air = 100.0f;
-        size.x = (float)panelGlobs.airMeterJuiceLength * 0.01f * air;
+        size.x = air * ((float)panelGlobs.airMeterJuiceLength * 0.01f);
         position.x = panelGlobs.panelTable[panelType].xCurr + panelGlobs.airMeterJuiceOffset.x;
         position.y = panelGlobs.panelTable[panelType].yCurr + panelGlobs.airMeterJuiceOffset.y;
         image_display_scaled(panelGlobs.airMeterJuiceImage, NULL, &position, &size);
