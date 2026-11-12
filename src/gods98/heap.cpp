@@ -14,19 +14,6 @@
 /* Engine heap records and text helpers. CRT allocation implementation lives
  * in ../crt/crt_heap.cpp. */
 
-// FUNCTION: LEGORR 0x0047ff40
-void engine_heap_free_wrapper(void* ptr)
-{
-    engine_heap_free(ptr);
-}
-
-// FUNCTION: LEGORR 0x0047ff30
-void engine_heap_allocate(long size)
-{
-    (void)engine_heap_alloc(size);
-}
-
-
 TextBufferFontBinding* s_text_buffer_font_bindings;
 
 static void text_buffer_font_binding_remove(const void* record)

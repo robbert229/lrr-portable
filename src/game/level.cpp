@@ -42,6 +42,7 @@
 #include "level_shared.hpp"
 #include "level_for_lego.hpp"
 #include "level_from_lego.hpp"
+#include "level_for_files.hpp"
 
 /* Cell mutation's cheat branch calls the existing entity-side implementation
  * of SmallSpiderCellSwarmSpawn. Its runtime prerequisites are checked by that
@@ -318,36 +319,7 @@ int level_random_draw15(void)
 /* MapOpen2 (FUN_00480170): preserve the retail open, seek/tell, progress,
  * allocate, rewind/read, and close order against the level-owned map slots. */
 // GLOBAL: LEGORR 0x004a2770
-static const char s_map_open_binary_mode[] = "rb";
-// FUNCTION: LEGORR 0x00480170
-int map_open2(const char* path, int32_t* size_out)
-{
-    GameFileHandle* handle = game_file_open_dispatch(
-        path, s_map_open_binary_mode);
-    if (handle != NULL) {
-        int size;
-        int slot;
-        void* map_data;
-        (void)wad_file_seek(handle, 0, 2);
-        size = wad_file_cursor_get(handle);
-        if (s_loader_progress_callback != NULL) {
-            typedef void (*ProgressProc)(const char*, uint32_t, void*);
-            ((ProgressProc)s_loader_progress_callback)(
-                path, (uint32_t)size, s_loader_progress_context);
-        }
-        slot = level_map_slot_allocate((size_t)size);
-        if (slot != -1) {
-            map_data = level_map_slot_get((uint32_t)slot);
-            (void)wad_file_seek(handle, 0, 0);
-            (void)wad_file_read(map_data, 1, size, handle);
-            if (size_out != NULL) *size_out = size;
-            (void)game_file_close(handle);
-            return slot;
-        }
-        (void)game_file_close(handle);
-    }
-    return -1;
-}
+const char s_map_open_binary_mode[] = "rb";
 
 MapFile* level_map_open(const char* name)
 {

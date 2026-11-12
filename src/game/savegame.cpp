@@ -27,14 +27,6 @@
 #  define SAVE_SEP '/'   /* host-native on the POSIX port */
 #endif
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-#  include <direct.h>
-#  define LRR_MKDIR(p) _mkdir(p)
-#else
-#  include <sys/stat.h>
-#  define LRR_MKDIR(p) mkdir(p, 0755)
-#endif
-
 /* The `.sav` open modes (corpus constants): DAT_004a2770 ("rb") and
  * DAT_004a2794 ("wb"). */
 const char* MODE_RB = "rb";
@@ -177,17 +169,6 @@ static int save_current_level_counts(uint32_t* campaign_count,
     if (!save_tree_level_count(1, tutorial_count))
         *tutorial_count = 0u;
     return campaign_found;
-}
-
-/* SaveDirectoryEnsureExists (FUN_0047f6a0): the engine's directory-create
- * wrapper. The port receives the resolved save path directly rather than
- * prefixing the corpus's shared `Data` directory. */
-// FUNCTION: LEGORR 0x0047f6a0
-void save_directory_ensure_exists(const char* path)
-{
-    if (path != NULL && path[0] != '\0') {
-        LRR_MKDIR(path);
-    }
 }
 
 void save_init(GameContext* ctx)
@@ -842,19 +823,6 @@ int osf_write_path(GameContext* ctx, int slot)
     char path[280];
     save_slot_path(ctx, path, sizeof(path), slot, "osf");
     return osf_write(ctx, path);
-}
-
-/* GameFileLengthGet (FUN_0047fca0): query the stream length and restore its
- * original position, matching the original's save/seek-end/read-position /
- * seek-back sequence. */
-// FUNCTION: LEGORR 0x0047fca0
-long save_stream_length(FILE* fp)
-{
-    long position = ftell(fp);
-    fseek(fp, 0, SEEK_END);
-    long length = ftell(fp);
-    fseek(fp, position, SEEK_SET);
-    return length;
 }
 
 int osf_read_path(GameContext* ctx, int slot)

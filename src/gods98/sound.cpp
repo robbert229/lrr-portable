@@ -183,33 +183,6 @@ static Sound* sound_sample_file_load_by_name(const char* name)
     return s;
 }
 
-/* SoundSampleFileOpenByName (FUN_0047fb60) is a presence query: the retail
- * code opens and closes loose files, but returns the matching WAD entry
- * index for an archive-backed sample. Keep the decoded Sound loader below
- * this probe so the portable audio API can still consume sample data. */
-// FUNCTION: LEGORR 0x0047fb60
-int sound_sample_file_open_by_name(const char* name)
-{
-    const char* resolved;
-    char* wad_name;
-    int route;
-    if (name == NULL || name[0] == '\0') return 0;
-    resolved = resource_path_resolve_against_base(name);
-    if (resolved == NULL) return 0;
-    route = game_file_open_route_select(resolved, "r");
-    if (route == 1) {
-        GameFileHandle* handle = game_file_open_dispatch(name, "r");
-        if (handle == NULL) return 0;
-        game_file_close(handle);
-        return 1;
-    }
-    if (route == 0) {
-        wad_name = game_file_mounted_path_prefix_rewrite(resolved);
-        return wad_entry_find_across_mounted_archives(wad_name, -1);
-    }
-    return 0;
-}
-
 /* Public resource-layer adapter used by the bank loader and other callers. */
 Sound* sound_load(const char* name)
 {

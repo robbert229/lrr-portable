@@ -506,28 +506,6 @@ uint32_t avi_player_ready_get(const void* movie)
 }
 #endif
 
-/* GameFileSystemTypeGet (FUN_0047fe20, findings 234/404): the handle's
- * leading type dword. */
-// FUNCTION: LEGORR 0x0047fe20
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t game_file_system_type_get(const void* handle)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax]
-        ret
-    }
-}
-#else
-uint32_t game_file_system_type_get(const void* handle)
-{
-    if (handle == NULL) {
-        return 0u; /* pinned deviation: the corpus loads blindly */
-    }
-    return *(const uint32_t*)handle;
-}
-#endif
-
 /* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): the
  * inline-block copy into the indexed record's data slot. Deviation: the
  * corpus strides both links and the copy blindly; the three null answers
