@@ -633,6 +633,12 @@ def compare_function(analysis: Analysis, ctx: ProjectContext, address: int) -> F
     comparator = rf.FunctionComparator(
         db, analysis.lines_db, ctx.orig_bin, analysis.image, _null_report, CvdumpTypesParser()
     )
+    # Same rebuilt-side treatment of the original's plain immediates as the
+    # full run (reccmp_full_diff.py). Deviation (scoring only), finding 584.
+    import reccmp_plain_immediates
+
+    if os.environ.get("RECCMP_PLAIN_IMMEDIATES", "1") != "0":
+        reccmp_plain_immediates.attach(comparator)
     result = comparator.compare_function(match)
 
     res.matching = result.match_ratio

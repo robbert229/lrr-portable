@@ -10,6 +10,14 @@ from reccmp.compare.diff import raw_diff_to_udiff
 from reccmp.compare import Compare
 from reccmp.types import ImageId
 
+import reccmp_plain_immediates
+
+# Deviation (scoring only): the original's plain immediates outside its image
+# stay plain on the rebuilt side (#604, finding 584). RECCMP_PLAIN_IMMEDIATES=0
+# turns it off, to measure what it changes.
+if os.environ.get("RECCMP_PLAIN_IMMEDIATES", "1") != "0":
+    reccmp_plain_immediates.install()
+
 _original_report = Compare.to_report
 def export_entities(self, *args, **kwargs):
     result = _original_report(self, *args, **kwargs)

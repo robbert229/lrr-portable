@@ -313,6 +313,25 @@ def function_fill(funcs) -> dict:
 # Report
 
 
+# Plain constants that mapped original functions use past the original image
+# end (0x771000) and below 0x2000000, measured on main 05cd8938 (finding 584):
+# the flag bit 0x800000 (21 functions, Stats_Initialise among them), the
+# colour mask 0xff0000 (2) and the flag bit 0x1000000 (18). Once the rebuilt
+# image covers one, Reccmp names it on the rebuilt side unless
+# reccmp_plain_immediates.py keeps it plain; `reccmp-compare` checks that.
+FLAG_CONSTANTS = (0x800000, 0xff0000, 0x1000000)
+
+
+def image_end_report(orig_base: int, orig_size: int, rebuilt_base: int, rebuilt_size: int,
+                     constants=FLAG_CONSTANTS) -> dict:
+    orig_end, rebuilt_end = orig_base + orig_size, rebuilt_base + rebuilt_size
+    covered = [c for c in constants if orig_end <= c < rebuilt_end]
+    return {"original": orig_end, "rebuilt": rebuilt_end,
+            "covered_constants": covered,
+            "margin_below_first_constant": min((c for c in constants if c >= orig_end),
+                                               default=rebuilt_end) - rebuilt_end}
+
+
 def audit(original_path: Path, rebuilt_path: Path, map_path: Path | None,
           ranges_path: Path = RANGES, with_functions: bool = True) -> dict:
     import pefile
@@ -342,6 +361,8 @@ def audit(original_path: Path, rebuilt_path: Path, map_path: Path | None,
                                                   "rebuilt": resource_timestamp(r)}
     result["strings"] = {side: {n: repeated_strings(section_data(pe, n)) for n in (".rdata", ".data")}
                          for side, pe in (("original", o), ("rebuilt", r))}
+    result["image_end"] = image_end_report(o.OPTIONAL_HEADER.ImageBase, o.OPTIONAL_HEADER.SizeOfImage,
+                                           r.OPTIONAL_HEADER.ImageBase, r.OPTIONAL_HEADER.SizeOfImage)
     if ranges_path.exists():
         with ranges_path.open(newline="") as fh:
             result["original_text_by_unit_kind"] = original_text_composition(list(csv.DictReader(fh)))
@@ -369,6 +390,15 @@ def summary(result: dict) -> str:
     for k, v in sorted(result["header_differences"].items()):
         fmt = (lambda x: f"{x[0]:#x}+{x[1]:#x}") if isinstance(v["original"], tuple) else hex
         lines.append(f"  {k}: {fmt(v['original'])} -> {fmt(v['rebuilt'])}")
+    end = result.get("image_end")
+    if end:
+        lines.append(f"image end: original {end['original']:#x}, rebuilt {end['rebuilt']:#x}, "
+                     f"margin below the first flag constant {end['margin_below_first_constant']:,}")
+        if end["covered_constants"]:
+            lines.append("WARNING: the rebuilt image covers the original's plain constant(s) " +
+                         ", ".join(f"{c:#x}" for c in end["covered_constants"]) +
+                         "; Reccmp names them on the rebuilt side unless "
+                         "tools/reccmp_plain_immediates.py keeps them plain (finding 584)")
     lines.append("section  orig_vsize  rebuilt_vsize  orig_raw  rebuilt_raw  equal  differing")
     for n, b in result["section_bytes"].items():
         v = result["section_virtual_sizes"][n]

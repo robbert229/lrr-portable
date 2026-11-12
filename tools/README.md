@@ -780,6 +780,23 @@ bytes up to the next symbol, so a large static without a map symbol is counted
 to the symbol before it. Read sizes from the COFF objects when that matters.
 The tool does not change `binary-progress.json`.
 
+## Plain immediates past the original image (`reccmp_plain_immediates.py`)
+
+The original image ends at `0x771000`, but the rebuilt image is larger. When
+rebuilt `.bss` covers a value that the original uses as a plain constant
+(the flag `0x800000`), Reccmp names the rebuilt operand and shifts every later
+`<OFFSETn>` (finding 584). `reccmp_full_diff.py` and `match_function.py`
+attach this module to Reccmp's `FunctionComparator` at run time. For each
+function, the rebuilt side doesn't treat as an address any value that the
+original's listing keeps plain at or past the original image's end. It is a
+`Deviation (scoring only)`. `RECCMP_PLAIN_IMMEDIATES=0` turns it off in the
+full run.
+
+`python3 tools/reccmp_plain_immediates.py check [--report-dir DIR]` fails when
+a report still names such an operand. `make reccmp-compare` runs it, and
+`make pe-audit` warns when the rebuilt image covers one of the original's
+known constants.
+
 ## The original's link mode (`opt_ref_link.py`)
 
 The gate links with `/DEBUG` for Reccmp's PDB, which makes LINK 5.0 keep every
