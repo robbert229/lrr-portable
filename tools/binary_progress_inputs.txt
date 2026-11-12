@@ -12,6 +12,7 @@ src/compat/msvc5/stdint.h
 src/crt/crt.cpp
 src/crt/crt.h
 src/crt/crt.hpp
+src/crt/crt_for_avi_player.hpp
 src/crt/crt_for_bubbles.hpp
 src/crt/crt_for_building_model.hpp
 src/crt/crt_for_dependencies.hpp
@@ -356,6 +357,7 @@ src/gods98/audio.h
 src/gods98/audio.hpp
 src/gods98/audio_for_sound3d.hpp
 src/gods98/audio_from_sound3d.hpp
+src/gods98/avi_player.cpp
 src/gods98/bitmap_font.cpp
 src/gods98/block.cpp
 src/gods98/block.hpp
@@ -374,6 +376,7 @@ src/gods98/container_native.cpp
 src/gods98/container_native.hpp
 src/gods98/container_route.cpp
 src/gods98/container_route.h
+src/gods98/directdraw.cpp
 src/gods98/draw.c
 src/gods98/draw.h
 src/gods98/draw_port.cpp
@@ -469,6 +472,8 @@ src/gods98/model_for_lws.hpp
 src/gods98/model_from_lws.hpp
 src/gods98/movie.cpp
 src/gods98/movie.hpp
+src/gods98/movie_for_avi_player.hpp
+src/gods98/movie_from_avi_player.hpp
 src/gods98/ptrstack.cpp
 src/gods98/ptrstack.hpp
 src/gods98/record.cpp
@@ -551,6 +556,7 @@ src/gods98/string.hpp
 src/gods98/surface.cpp
 src/gods98/surface.hpp
 src/gods98/surface_for_bitmap_font.hpp
+src/gods98/surface_for_directdraw.hpp
 src/gods98/surface_for_images_unit.hpp
 src/gods98/surface_for_viewports.hpp
 src/gods98/surface_from_images_unit.hpp
