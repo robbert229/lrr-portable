@@ -38,6 +38,8 @@ def body(listing: Path, prefix: str) -> list[str] | None:
             return out
         if inside:
             line = re.sub(r"\$[A-Z]\d+", "$N", line.split(";", 1)[0]).strip()
+            # Goto labels carry a counter number too: $message_tail$51964.
+            line = re.sub(r"(\$\w+)\$\d+", r"\1$N", line)
             if line:
                 out.append(re.sub(r"\s+", " ", line))
     return None

@@ -569,6 +569,40 @@ Functions in objects the link never pulls in (`ptrstack.cpp`,
 `video_graph.cpp`) are scored here but absent from the full report. Before
 handing work back, `make reccmp-check` remains the gate.
 
+## `x87_operand_swaps.py` — find x87 operand-order swaps (finding 538, rule A)
+
+Lists the functions whose remaining mismatch includes two x87 operations with
+their memory operands exchanged: `fld a; fmul b` against `fld b; fmul a`,
+`fmul a; fmul b` against `fmul b; fmul a`, `fld a; fsub b` against
+`fld b; fsubr a`, or the same with one operand already on the x87 stack
+(`fld st(0); fmul [x]` against `fld [x]; fmul st(1)`). Comparisons
+(`fcomp`) with exchanged operands are listed as `compare`, since rule A does
+not cover them. It reads Reccmp's `results.json` or `match_function.py --json`
+output; it needs no toolchain.
+
+```sh
+python3 tools/x87_operand_swaps.py build-reccmp/reccmp-report/results.json
+python3 tools/x87_operand_swaps.py results.json --loose --json
+python3 tools/match_function.py 0x45c3f0 --json | python3 tools/x87_operand_swaps.py -
+```
+
+- Pairs are taken from each listing's x87 subsequence, so integer code
+  scheduled between two x87 operations does not hide a swap.
+- Reccmp numbers float literals per side (`<OFFSET7>` against `<OFFSET11>`);
+  the tool ignores the number.
+- The original side names only annotated addresses. An unannotated global is
+  `<OFFSETn>` there and a symbol in the recomp listing; the tool recovers the
+  pairing from aligned rows that agree apart from such operands.
+- `--loose` also masks base registers and stack offsets, which often differ
+  between the listings. Its hits are marked `~` and need reading.
+- *Expected gain* ranks the results: two instructions per swap, as a share of
+  the longer listing. It is an estimate, not Reccmp's delta.
+
+A hit is a candidate, not a rule A case: finding 558 shows that most hits are
+expression shape, scheduling or noise in a function that is far from matching.
+Prove the cause with a minimal compile (`tools/experiments/486/`) and the
+fix with `make match-function`.
+
 ## `rrlwo.py` — `.lwo` (LightWave 4) → glTF 2.0 converter
 
 Reads the game's 1,132 embedded models (`\Models\…` inside `LegoRR0.wad`)
