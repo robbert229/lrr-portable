@@ -181,7 +181,7 @@ void entity_type_config_runtime_ops_install(
     const EntityTypeConfigRuntimeOps* ops);
 int entity_type_config_row_parse(void* context, void* entry,
                                  void* destination, uint32_t row_kind);
-int entity_type_config_resource_row_load(void* destination,
+extern "C" int entity_type_config_resource_row_load(void* destination,
                                         uint32_t row_index,
                                         void* scene_context,
                                         const char* asset_path,

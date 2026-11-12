@@ -625,7 +625,10 @@ typedef int (*ActivityRunnerChangeFn)(void* scene_owner, void* state,
                                       void* value, void* user);
 void activity_runner_hooks_set(ActivityRecordClearFn clear_records,
                                ActivityRunnerChangeFn change, void* user);
-int activity_runner_update(void* runner, void* state, void* value);
+/* Superseded by game/animation_object.c (GAME-004, finding 549); kept
+ * renamed and uncalled so that the symbol count of every includer is
+ * unchanged (ADR 0005 entropy rule 1). */
+int activity_runner_update_superseded(void* runner, void* state, void* value);
 typedef struct EntityActivityRunnerResourceOps {
     void* context;
     void* (*scene_clone)(void* context, uint32_t scene_token);

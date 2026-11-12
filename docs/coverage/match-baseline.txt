@@ -1,4 +1,4 @@
-# input_sha256: c2672cdbedb3e0bd54b98f79d4056b6381cd0ea0f06fcc50c9f60f1e0a017ce9
+# input_sha256: 6ecf315da12c004628722ce2ac60d2995362ea0d9a58d86a59ba65eef72549ea
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2161 mapped functions
+[game-only] 2164 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -140,24 +140,27 @@
 0x00406820 98.08 bezier_curve_samples_build
 0x004068c0 75.76 path_arc_length_interpolate
 0x00406980 100.00 scene_object_mode_is_one
-0x00406990 13.27 entity_type_config_resource_row_load
+0x00406990 97.60 entity_type_config_resource_row_load
 0x00406c00 92.86 renderer_object_update_from_record_field64
 0x00406c30 92.86 renderer_object_update_from_record_field68
 0x00406c60 93.33 renderer_object_update_from_record_field6c
 0x00406c90 100.00 animation_object_visibility_set
-0x00406cb0 23.53 renderer_record_clone
-0x00406d10 11.76 animation_object_time_update
-0x00406d30 42.55 renderer_object_timing_value_adjust_by_count
-0x00406da0 11.11 animation_object_time_get
-0x00406dc0 13.95 animation_object_transform_set
-0x00406df0 37.68 render_node_position_from_callback
+0x00406cb0 100.00 renderer_record_clone
+0x00406d10 100.00 animation_object_time_update
+0x00406d30 100.00 renderer_object_timing_value_adjust_by_count
+0x00406da0 100.00 animation_object_time_get
+0x00406dc0 100.00 animation_object_transform_set
+0x00406df0 100.00 render_node_position_from_callback
 0x00406e30 100.00 animation_object_handle_get
-0x00406ec0 23.30 entity_payload_release_subslots
-0x00406f80 21.54 activity_runner_state_read
-0x00406fe0 20.00 renderer_cached_handle_48_get_or_create
-0x00407010 20.00 renderer_cached_handle_50_get_or_create
-0x00407040 58.33 renderer_cached_handle_4c_is_not_one
-0x00407090 11.11 animation_object_value_get
+0x00406e40 100.00 activity_runner_update
+0x00406ec0 94.34 entity_payload_release_subslots
+0x00406f50 100.00 animation_object_null_find
+0x00406f80 81.82 activity_runner_state_read
+0x00406fb0 100.00 renderer_cached_handle_40_get_or_create
+0x00406fe0 100.00 renderer_cached_handle_48_get_or_create
+0x00407010 100.00 renderer_cached_handle_50_get_or_create
+0x00407040 100.00 renderer_cached_handle_4c_is_not_one
+0x00407090 100.00 animation_object_value_get
 0x004070b0 100.00 bubble_action_strings_initialize
 0x00407240 26.19 bubble_config_texture_load
 0x00407300 56.34 bubble_action_name_to_index
@@ -2169,7 +2172,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2397 mapped functions
+[full] 2400 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2303,24 +2306,27 @@
 0x00406820 98.08 bezier_curve_samples_build
 0x004068c0 75.76 path_arc_length_interpolate
 0x00406980 100.00 scene_object_mode_is_one
-0x00406990 13.27 entity_type_config_resource_row_load
+0x00406990 97.60 entity_type_config_resource_row_load
 0x00406c00 92.86 renderer_object_update_from_record_field64
 0x00406c30 92.86 renderer_object_update_from_record_field68
 0x00406c60 93.33 renderer_object_update_from_record_field6c
 0x00406c90 100.00 animation_object_visibility_set
-0x00406cb0 23.53 renderer_record_clone
-0x00406d10 11.76 animation_object_time_update
-0x00406d30 42.55 renderer_object_timing_value_adjust_by_count
-0x00406da0 11.11 animation_object_time_get
-0x00406dc0 13.95 animation_object_transform_set
-0x00406df0 37.68 render_node_position_from_callback
+0x00406cb0 100.00 renderer_record_clone
+0x00406d10 100.00 animation_object_time_update
+0x00406d30 100.00 renderer_object_timing_value_adjust_by_count
+0x00406da0 100.00 animation_object_time_get
+0x00406dc0 100.00 animation_object_transform_set
+0x00406df0 100.00 render_node_position_from_callback
 0x00406e30 100.00 animation_object_handle_get
-0x00406ec0 23.30 entity_payload_release_subslots
-0x00406f80 21.54 activity_runner_state_read
-0x00406fe0 20.00 renderer_cached_handle_48_get_or_create
-0x00407010 20.00 renderer_cached_handle_50_get_or_create
-0x00407040 58.33 renderer_cached_handle_4c_is_not_one
-0x00407090 11.11 animation_object_value_get
+0x00406e40 100.00 activity_runner_update
+0x00406ec0 94.34 entity_payload_release_subslots
+0x00406f50 100.00 animation_object_null_find
+0x00406f80 81.82 activity_runner_state_read
+0x00406fb0 100.00 renderer_cached_handle_40_get_or_create
+0x00406fe0 100.00 renderer_cached_handle_48_get_or_create
+0x00407010 100.00 renderer_cached_handle_50_get_or_create
+0x00407040 100.00 renderer_cached_handle_4c_is_not_one
+0x00407090 100.00 animation_object_value_get
 0x004070b0 100.00 bubble_action_strings_initialize
 0x00407240 26.19 bubble_config_texture_load
 0x00407300 56.34 bubble_action_name_to_index

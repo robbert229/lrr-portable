@@ -203,7 +203,7 @@ void* resource_name_register_or_query(ResourceTreeNode* root,
                                       const char* name, int mode,
                                       uint32_t* match_count_or_index);
                                                 /* 0x00473bc0 */
-void* resource_name_register_or_query_target(
+extern "C" void* resource_name_register_or_query_target(
     void** root, const char* name, int mode,
     uint32_t* match_count_or_index); /* retail 0x00473bc0 ABI */
 int nested_record_list_remove_matching_key(void* owner, void* key,
@@ -486,7 +486,7 @@ typedef void (*ResourceListUpdateFn)(void* handle, void* object,
                                      void* update_value, void* user);
 void resource_list_update_hooks_set(ResourceListCreateFn create,
                                     ResourceListUpdateFn update, void* user);
-void resource_list_update_matching_key(void* list, void* library,
+extern "C" void resource_list_update_matching_key(void* list, void* library,
                                       void* update_value,
                                       uint32_t key); /* 0x00451bc0 */
 typedef void (*OwnedObjectReleaseFn)(void* object, void* user);
@@ -494,7 +494,7 @@ void owned_object_release_hooks_set(OwnedObjectReleaseFn object_release,
                                     OwnedObjectReleaseFn scene_destroy,
                                     OwnedObjectReleaseFn node_free,
                                     void* user);
-void owned_object_reference_chain_release(void* head); /* 0x00451c50 */
+extern "C" void owned_object_reference_chain_release(void* head); /* 0x00451c50 */
 int string_table_entry_install(const char* name);
 void string_table_entry_set_current(const char* name); /* 0x0044dde0 */
 const char* string_table_entry_current(void);

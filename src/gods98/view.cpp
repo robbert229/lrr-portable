@@ -3076,36 +3076,6 @@ void renderer_subobject_hooks_install(RendererSubobjectFindHook find,
     s_renderer_subobject_hooks_context = context;
 }
 
-/* RendererObjectSubobjectDispatch (FUN_00406f50): resolve the requested
- * child from the frame interface, then apply it in the default mode. */
-void* renderer_object_subobject_find_apply(void* record, void* key)
-{
-    void* frame;
-    void* details = NULL;
-    void* subobject;
-    if (record == NULL || s_renderer_subobject_find_hook == NULL ||
-        s_renderer_subobject_apply_hook == NULL) {
-        return NULL;
-    }
-    frame = *(void**)((char*)record + 4);
-    if (frame == NULL) {
-        return NULL;
-    }
-    subobject = s_renderer_subobject_find_hook(
-        frame, key, &details, s_renderer_subobject_hooks_context);
-    s_renderer_subobject_apply_hook(frame, subobject, 0, 0,
-                                    s_renderer_subobject_hooks_context);
-    return subobject;
-}
-
-/* Portable adapter for FUN_00406f50. The retail resolver calls the resource
- * tree helpers FUN_00473c60/FUN_00473bc0; no production owner currently
- * supplies that tree through these optional callbacks. */
-void renderer_object_subobject_dispatch(void* record, void* key)
-{
-    (void)renderer_object_subobject_find_apply(record, key);
-}
-
 void renderer_handle_scalar_hook_install(RendererHandleScalarGetHook hook,
                                          void* context)
 {
@@ -4591,12 +4561,6 @@ static void* scene_object_cached_subobject_get(void* owner,
     return cached;
 }
 
-/* FUNCTION: LEGORR 0x00406fb0 */
-void* renderer_cached_handle_40_get_or_create(void* renderer)
-{
-    return scene_object_cached_subobject_get(renderer, 0x2cu, 0x40u, 0);
-}
-
 static SceneActivityChangeFn s_scene_activity_change;
 
 void scene_activity_change_callback_set(SceneActivityChangeFn callback)
@@ -4823,7 +4787,7 @@ void ledger_stub_00472a50_DDiSceneObjectDestroy(void* scene_object,
                                                  int mode);
 
 // FUNCTION: LEGORR 0x00472a40
-void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object)
+extern "C" void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object)
 {
     ddiscene_object_destroy_with_mode(scene_object, 0);
 }
@@ -4896,7 +4860,7 @@ uint32_t ledger_stub_004753f0_DDiSceneObjectFramePositionGet(
 
 namespace unported_ledger_stubs {
 // FUNCTION: LEGORR 0x004756d0
-float ledger_stub_004756d0_VideoObjectAspectRatioGet(void* video_object)
+extern "C" float ledger_stub_004756d0_VideoObjectAspectRatioGet(void* video_object)
 {
     return video_object_aspect_ratio_get(video_object);
 }

@@ -196,11 +196,14 @@ uint32_t scene_object_flag_bit3_get_target(const void* scene_object);
 extern "C" int scene_object_mode_is_one(const void* scene_object);
 
 /* AnimationObjectHandleGet (FUN_00406e30, findings 356/435): +0x04. */
-uint32_t animation_object_handle_get(const void* animation_object);
+extern "C" void* animation_object_handle_get(const void* animation_object);
 /* Renderer-record adapters for the resource-list updater (FUN_00406c00,
  * FUN_00406c30, FUN_00406c60). `enabled` is forwarded as the corpus's
  * boolean update value (`enabled == 0`), while `update_value` is the third
  * wrapper's opaque value. */
+/* Superseded by game/animation_object.c (GAME-004, finding 549); kept
+ * uncalled so that the symbol count of every includer is unchanged (ADR 0005
+ * entropy rule 1). */
 void renderer_object_update_from_record_field64(void* record, int enabled);
 void renderer_object_update_from_record_field68(void* record, int enabled);
 void renderer_object_update_from_record_field6c(void* record, int enabled,
@@ -350,7 +353,7 @@ void entity_b8_bit3_set_or_clear(void* record, int set);
 void record_field18_set(void* record, uint32_t value);
 void record_flags_24_or(void* record, uint32_t flags);
 void object_field14_set(void* record, uint32_t value);
-void linked_record_field4_clear(void* record);
+extern "C" void linked_record_field4_clear(void* record);
 
 /* CopyTwoDwordPairToOutputs (FUN_00439930): split a two-dword record
  * field across two output words — the corpus's blind dereferences get
@@ -425,7 +428,7 @@ int surface_visibility_adapter_remove(SurfaceVisibilityAdapter adapter,
                                        void* context);
 void surface_visibility_set(const void* record, uint32_t flag);
                                                 /* FUN_00464720 */
-void animation_object_visibility_set(const void* anim, uint32_t flag);
+extern "C" void animation_object_visibility_set(const void* anim, uint32_t flag);
                                                 /* FUN_00406c90 */
 void scene_object_pair_apply_mode(const void* record, uint32_t flag);
                                                 /* FUN_00408670 */

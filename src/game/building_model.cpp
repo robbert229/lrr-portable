@@ -429,7 +429,7 @@ uint32_t scene_object_flags_get(const void* scene_object)
 // AnimationLoopTimeAdjust (FUN_00408860) shares the counted scene-time
 // adjustment, then refreshes and clears the optional loop-time latch.
 // FUNCTION: LEGORR 0x00408860
-float animation_loop_time_adjust(void* record, void* argument,
+float animation_loop_time_adjust(void* record, float argument,
                                  uint32_t count)
 {
     uint32_t* flags;
