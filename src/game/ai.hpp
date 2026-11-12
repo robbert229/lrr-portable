@@ -205,7 +205,7 @@ int ai_activity_probe(const EntitySlot* e);
 
 /* FUN_0044c530: the "can do" probe — 1 for a type-2 entity whose list
  * permits drill/teleport/reinforce, else 0. */
-int ai_can_do(const EntitySlot* e);
+extern "C" int ai_can_do(const EntitySlot* e);
 
 /* --- static task-state selector (spawn-dispatch switch 0x438150) --------- *
  * EntityCreateByType routes types 8, 9, 0xc..0xe, and 0x10..0x13 to one of
@@ -267,7 +267,7 @@ extern "C" int activity_register_bookkeeping(EntitySlot* e);
  * (The corpus names suggest place-semantics for the second, but the name
  * table's index 30 entry is "Activity_Clear" — no semantic claim.) */
 void entity_dispatch_event5_and_set_flag(EntitySlot* e); /* FUN_00447b00 */
-int  entity_set_activity_place(EntitySlot* e);           /* FUN_00448c50 */
+extern "C" int  entity_set_activity_place(EntitySlot* e);           /* FUN_00448c50 */
 
 /* --- entity activity scene-state leaf (2026-10-24; findings 251/469) -------
  * EntityActivitySceneStateUpdate (FUN_00439990): when the manager flag
@@ -285,7 +285,7 @@ extern "C" uint32_t s_entity_state_flags; /* DAT_004dee14 shared state word */
 /* SceneObjectHasTaskType4_5_7 (FUN_004493e0, finding 469): a type-2 entity
  * answers 1 when its activity list carries drill (4), teleport (5), or
  * reinforce (7) — the corpus's short-circuit chain, reproduced in order. */
-int scene_object_has_task_type_4_5_7(const EntitySlot* e); /* FUN_004493e0 */
+extern "C" int scene_object_has_task_type_4_5_7(const EntitySlot* e); /* FUN_004493e0 */
 
 /* --- entity activity gate band (2026-10-24; findings 251/469) -------------
  * EntityDispatchEvent31ForPendingFlag (FUN_004437f0): a type-3 entity whose
@@ -309,7 +309,7 @@ extern "C" void entity_activity23_state_transition(EntitySlot* e); /* FUN_00449a
  *   dispatches the helper answers 0. Type-2/type-3 scene runner callbacks
  *   are not installed by the current backend, so this path can remain
  *   unsuccessful at runtime. */
-int entity_random_activity_attempt(EntitySlot* e); /* FUN_00443670 */
+extern "C" int entity_random_activity_attempt(EntitySlot* e); /* FUN_00443670 */
 
 /* --- entity counter + link band (2026-10-24; findings 251/469/435) --------
  * SimulationUpdateCounterAdd (FUN_0043a8f0): bumps the global object's

@@ -175,7 +175,7 @@ int scene_segment_trace_nearest_hit(const float start[3],
                                    float* max_distance_io,
                                    void* ignored_object); /* FUN_00471860 */
 int object_pair_ray_hit_check(void* first, void* second); /* FUN_004718d0 */
-int see_through_walls_ray_check(void* first, void* second); /* FUN_00471960 */
+extern "C" int see_through_walls_ray_check(void* first, void* second); /* FUN_00471960 */
 typedef struct EntityVelocitySteerState {
     void* primary;
     void* secondary;
@@ -591,11 +591,11 @@ int entity_spatial_query_dispatch(EntitySlot* subject,
                                   const float values[3]);
 /* EntityLookupAtWorldPosition (FUN_00438df0): run the mask-8 spatial query
  * around an explicit world XY point with radius 10,000. */
-EntitySlot* entity_lookup_at_world_position(const float world_position[2]);
+extern "C" EntitySlot* entity_lookup_at_world_position(const float world_position[2]);
 void entity_indexed_value_table_clear(void);
 void entity_indexed_value_append(int group, uint32_t value); /* FUN_00469a90 */
-int entity_grouped_code_table_find_value_index(uint32_t value,
-                                               int* out_group); /* FUN_0046a120 */
+extern "C" int entity_grouped_code_table_find_value_index(uint32_t value,
+                                                          int* out_group); /* FUN_0046a120 */
 void entity_indexed_record_table_set(int group, const void* const* records,
                                      uint32_t count);
 extern "C" uint32_t entity_indexed_record_word_at_b0_get(int group, int index,
@@ -810,7 +810,7 @@ float entity_stats_float_atd8(const EntitySlot* e);   /* FUN_00469d20 */
 float entity_stats_float_at6c(const EntitySlot* e);   /* FUN_00469d40 */
 extern "C" float entity_stats_float_at74(const EntitySlot* e);   /* FUN_00469d50 */
 extern "C" float entity_stats_float_at78(const EntitySlot* e);   /* FUN_00469d60 */
-float entity_stats_float_ate8(const EntitySlot* e);   /* FUN_00469d70 */
+extern "C" float entity_stats_float_ate8(const EntitySlot* e);   /* FUN_00469d70 */
 void entity_stats_float_ate8_set(EntitySlot* e, float value); /* tutorial write */
 float entity_stats_float_at70(const EntitySlot* e);   /* FUN_00469d90 */
 void* entity_stats_field_at_a0(const EntitySlot* e);  /* FUN_00469da0: the
@@ -852,7 +852,7 @@ uint32_t entity_stats_word_at_ec(const EntitySlot* e);
 extern "C" uint32_t entity_stats_word_atc8(const EntitySlot* e); /* FUN_00469fc0 */
 float entity_stats_float_at8c(const EntitySlot* e);   /* FUN_00469fe0 */
 float entity_stats_float_at90(const EntitySlot* e);   /* FUN_0046a000 */
-float entity_stats_float_at98(const EntitySlot* e);   /* FUN_0046a020 */
+extern "C" float entity_stats_float_at98(const EntitySlot* e);   /* FUN_0046a020 */
 float entity_stats_float_at94(const EntitySlot* e);   /* FUN_0046a040 */
 float entity_stats_float_atf4(const EntitySlot* e);   /* FUN_0046a080 */
 float entity_speed_component_get(const EntitySlot* e); /* FUN_0046a0a0 (+f8) */
@@ -897,7 +897,7 @@ extern "C" int entity_flags_mask107c33de_or_1c00203_any_test(const EntitySlot* e
 extern "C" int entity_shared_eligibility_check(const EntitySlot* e, int relaxed);
 
 /* FUN_004436f0 — kind-3 predicate: type == 3 and +0x3e8 bit 0x04000000. */
-int entity_type3_flag04000000_test(const EntitySlot* e);
+extern "C" int entity_type3_flag04000000_test(const EntitySlot* e);
 
 /* VehicleUnloadAdjacentCellFind and its two stat-flag gates (0x439d50,
  * 0x439e10, 0x439e40): direct level-backed neighbor selection. */
@@ -906,12 +906,12 @@ int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
 extern "C" int entity_vehicle_unload_cell_find_if_eligible(const EntitySlot* entity,
                                                 int out_xy[2]);
 extern "C" int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2]);
-int entity_accepts_target_for_task_check(const EntitySlot* entity,
+extern "C" int entity_accepts_target_for_task_check(const EntitySlot* entity,
                                          const EntitySlot* target,
                                          int apply_extra_gate); /* 0x00439bd0 */
 int entity_gated_step_command_issue(EntitySlot* entity,
                                     EntitySlot* target); /* 0x00439a20 */
-int entity_task_target_cell_eligibility_check(
+extern "C" int entity_task_target_cell_eligibility_check(
     const EntitySlot* entity, const EntitySlot* target); /* 0x00439b80 */
 void entity_pair_interaction_activity_sentinel_set(int activity);
 void entity_pair_interaction_gate(EntitySlot* entity,
@@ -1089,7 +1089,7 @@ int entity_world_center_position_read(const EntitySlot* entity,
                                       float out_xyz[3]); /* FUN_00471ca0 */
 int entity_centers_within_configured_radius(const EntitySlot* first,
                                             const EntitySlot* second); /* FUN_00472080 */
-int entity_centers_within_object_radius(const EntitySlot* first,
+extern "C" int entity_centers_within_object_radius(const EntitySlot* first,
                                         const EntitySlot* second); /* FUN_00472130 */
 extern "C" void entity_world_position_set(EntitySlot* entity, float x, float y,
                                float heading, int update_heading); /* FUN_004428a0 */
@@ -1336,14 +1336,14 @@ int selection_candidate_eligibility_check(const EntitySlot* e);
  * record-queue validator — the state flags (stats record +0x148) must carry
  * bit 0x40000 and the nested float at +0xe8 must fall below the entity's
  * own +0x340 bound; missing state records read zero, so the test fails. */
-int entity_flag40000_threshold_compare(const EntitySlot* e);
+extern "C" int entity_flag40000_threshold_compare(const EntitySlot* e);
 
 /* EntityFlagsContainRequestedSingleBit (FUN_00438ed0, findings 327/449):
  * the selector is accepted when it is 1/2/4/8/0x10/0x20 and the state-flag
  * word's corresponding bit 4/8/0x10/0x20/0x40/0x80 is set — the corpus's
  * chain of word re-reads, collapsed to the equivalent switch. Feeds
  * TaskType23CreateForCategoryMask (cmd.*). */
-int entity_flags_contain_requested_single_bit(const EntitySlot* e,
+extern "C" int entity_flags_contain_requested_single_bit(const EntitySlot* e,
                                               int selector);
 
 /* TaskCounterIncrementByBranch (Finding 464): count its zero/nonzero paths;
@@ -1532,7 +1532,7 @@ typedef int (*EntityHealthThresholdReadHook)(const EntitySlot* entity,
                                              void* context);
 void entity_health_threshold_read_hook_install(
     EntityHealthThresholdReadHook hook, void* context);
-int entity_flag400_and_health_threshold_check(
+extern "C" int entity_flag400_and_health_threshold_check(
     const EntitySlot* entity); /* FUN_004399c0 */
 int entity_animation_state_set(EntitySlot* entity,
                                uint32_t state); /* FUN_00439cd0 */
@@ -1625,17 +1625,17 @@ int entity_cell_step_command_issue_with_jitter(
     int action_mode, int mark_pending); /* FUN_0043a120 */
 extern "C" void entity_attached_object_list_detach(EntitySlot* entity,
                                         int reset_mode); /* FUN_00439e70 */
-int entity_capacity_or_state_predicate(
+extern "C" int entity_capacity_or_state_predicate(
     const EntitySlot* entity); /* FUN_0043c650 */
-void* ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
+extern "C" void* ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
     const int cell_xy[2], uint32_t filter_a, uint32_t filter_b,
     uint32_t filter_c);
-void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
+extern "C" void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
     const EntitySlot* entity, const int cell_xy[2], uint32_t filter_a,
     uint32_t filter_b);
 void* ledger_stub_00438b80_SpatialObjectQueryCenterMaskFromArgument(
     const EntitySlot* entity, uint32_t mask);
-void* ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(
+extern "C" void* ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(
     const EntitySlot* entity);
 void* ledger_stub_00438c60_EntityCandidateSearch(const EntitySlot* entity);
 void* ledger_stub_00438cd0_SpatialObjectQueryCenterMask20(

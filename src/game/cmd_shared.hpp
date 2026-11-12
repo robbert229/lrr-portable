@@ -9,7 +9,7 @@
 extern GameContext* s_ctx;
 extern float s_sweep_timer;
 
-void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
+extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
 
 #define IDLE_TABLE_MAX 20
 
@@ -18,7 +18,7 @@ typedef struct IdleQueueRecord {
     float timer;
 } IdleQueueRecord;
 
-void idle_register(EntitySlot* e);
+extern "C" void idle_register(EntitySlot* e);
 extern IdleQueueRecord s_idle[IDLE_TABLE_MAX];
 
 /* --- command sample stats -----------------------------------------------

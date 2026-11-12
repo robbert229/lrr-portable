@@ -41,6 +41,11 @@
 #include "scene_render.hpp"
 #include "tutorial_hud_ports.hpp"
 #include "level_for_placement.hpp"
+/* C linkage for AITask.c (aitask.c, ADR 0005 step 6, finding 570): the
+ * frozen header below redeclares idle_register and
+ * cmd_operation_group_append_object and inherits it. */
+extern "C" void idle_register(EntitySlot* e);
+extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
 #include "cmd_for_placement.hpp"
 #include <float.h>
 #include <ctype.h>
@@ -67,6 +72,11 @@
 #include "scene_pool.hpp"
 #include "view_for_placement.hpp"
 #include "level_for_placement.hpp"
+/* C linkage for AITask.c (aitask.c, ADR 0005 step 6, finding 570): the
+ * frozen header below redeclares idle_register and
+ * cmd_operation_group_append_object and inherits it. */
+extern "C" void idle_register(EntitySlot* e);
+extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
 #include "cmd_for_placement.hpp"
 #include "entity_for_placement.hpp"
 #include "util_for_placement.hpp"

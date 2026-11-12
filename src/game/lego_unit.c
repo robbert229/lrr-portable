@@ -23,6 +23,7 @@
  * each, as stand-ins until the port's owners are converted. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
+#include "aitask_port_aliases.h"
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>

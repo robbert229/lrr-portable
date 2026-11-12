@@ -167,6 +167,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/rock_fall_styles.h"
 #include "game/stats.h"
 #include "game/weapons.h"
+#include "game/aitask.h"
+#include "game/aitask_imports.h"
 
 int main(void)
 {

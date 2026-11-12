@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-002 AITask.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-002.csv. */
+/* GAME-002 AITask.c port tail (ADR 0006 decision 4, finding 570). The
+ * original-shape unit is aitask.c; this file keeps the port's command-record
+ * implementation (CmdRec, its pool, lists and hooks) under the port's names,
+ * unannotated, so native callers and tests are unchanged. The functions were
+ * relocated verbatim by tools/relocate_unit.py (body hashes:
+ * docs/coverage/relocations/GAME-002.csv) and are kept in original address
+ * order; "Port model of 0x..." names the original each one models. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,6 +75,22 @@
 #include "ai_for_aitask.hpp"
 #include "level_for_aitask.hpp"
 #include "gods98/simtick_for_aitask.hpp"
+/* AITask.c's priority tables live in the unit's state (aitask.c); the
+ * frozen headers' s_behaviour/s_priority_state declarations are not
+ * defined anywhere since finding 570. */
+extern "C" int* aitask_port_priority_values(void);
+extern "C" int* aitask_port_priority_states(void);
+#define s_behaviour (aitask_port_priority_values())
+#define s_priority_state (aitask_port_priority_states())
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* The frozen header defines these only for other compilers: the port's
+ * naked-asm registry initialiser was dropped by finding 570, so the C body
+ * now builds under MSVC too. */
+#define CMD_TASK_NAME_SET(index, value) \
+    (((const char* volatile*)s_task_names)[index] = value)
+#define CMD_PRIORITY_NAME_SET(index, value) \
+    (((const char* volatile*)s_priority_names)[index] = value)
+#endif
 
 struct TerrainMap;
 extern "C" void terrain_map_block_highlight_clear(TerrainMap* map, int bx, int by);
@@ -86,42 +106,42 @@ struct CoordinatePairCallbackPayload {
     const void* coordinate_pair;
     int extra;
 };
-// GLOBAL: LEGORR 0x004b31c8
+/* Port state for 0x004b31c8 (GAME-002). */
 CmdRec* s_blocks[CMD_POOL_MAX_BLOCKS] = { 0 };
 /* The corpus table ends at the free-list head: HandleArrayReleaseAndReset
  * advances four bytes at a time and compares esi with 0x4b31f8. Keep this
  * declaration immediately after the 12 table entries. */
-// GLOBAL: LEGORR 0x004b31f8
+/* Port state for 0x004b31f8 (GAME-002). */
 void*   s_free       = NULL;
-// GLOBAL: LEGORR 0x004b31fc
+/* Port state for 0x004b31fc (GAME-002). */
 int     s_pool_level = 0;
 
-// GLOBAL: LEGORR 0x004b3200
+/* Port state for 0x004b3200 (GAME-002). */
 const char* s_task_names[31];
-// GLOBAL: LEGORR 0x004b327c
+/* Port state for 0x004b327c (GAME-002). */
 const char* s_priority_names[27];
-// GLOBAL: LEGORR 0x004b32e8
-int32_t s_behaviour[27]; /* DAT_004b32e8 by kind, DWORD stride */
-// GLOBAL: LEGORR 0x004b3354
+/* Port state for 0x004b32e8 (GAME-002). */
+/* in aitask.c's state (finding 570); see the accessors above */
+/* Port state for 0x004b3354 (GAME-002). */
 CmdRec* s_global_head = NULL; /* DAT_004b3354 */
 
-// GLOBAL: LEGORR 0x004b335c
+/* Port state for 0x004b335c (GAME-002). */
 EntitySlot* s_active_list[ACTIVE_ENTITY_LIST_MAX];
-// GLOBAL: LEGORR 0x004b3424
+/* Port state for 0x004b3424 (GAME-002). */
 int s_active_list_used;
 
-// GLOBAL: LEGORR 0x004b34f0
+/* Port state for 0x004b34f0 (GAME-002). */
 unsigned s_pending_timer_count;
 
 /* --- registry accessors / match marker (see cmd.hpp) -------------------------
  * DAT_004b7ff4: the per-priority state table, zeroed by the (unported)
  * registry initializer loop — zero-init static, 27 entries. The preceding
  * command-count matrix occupies 0x12c0 dwords and ends at this table. */
-// GLOBAL: LEGORR 0x004b34f4
+/* Port state for 0x004b34f4 (GAME-002). */
 uint32_t cmd_pending_command_counts[CMD_PENDING_COMMAND_COUNT_TABLE_SIZE];
-// GLOBAL: LEGORR 0x004b7ff4
-int s_priority_state[PRIORITY_ENTRY_COUNT];
-// GLOBAL: LEGORR 0x004b8060
+/* Port state for 0x004b7ff4 (GAME-002). */
+/* in aitask.c's state (finding 570); see the accessors above */
+/* Port state for 0x004b8060 (GAME-002). */
 int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
 static EntitySlot* s_pending_assignment_candidates[PENDING_CANDIDATE_CAPACITY];
 static EntitySlot* s_pending_timer_candidates[PENDING_CANDIDATE_CAPACITY];
@@ -281,7 +301,7 @@ static void cmd_pool_grow(void);
 static void cmd_pool_record_live_set(CmdRec* record, int live);
 static void cmd_gettool_reference_release(CmdRec* record);
 
-// FUNCTION: LEGORR 0x00401cb0
+/* Port model of 0x00401cb0 (GAME-002). */
 int cmd_kind_by_name(const char* name, int* out)
 {
     /* stride-4 name-table walk, as the corpus: unsigned end compare (the
@@ -300,106 +320,7 @@ int cmd_kind_by_name(const char* name, int* out)
 }
 /* C linkage for GAME-021 lego_unit.c (the frozen header declares it without). */
 extern "C" void cmd_registry_init_target(void);
-// FUNCTION: LEGORR 0x00401cf0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void cmd_registry_init_target(void)
-{
-    __asm {
-        push edi
-        mov ecx, 0ch
-        xor eax, eax
-        mov edi, offset s_blocks
-        rep stosd
-        mov ecx, 1bh
-        mov eax, 31h
-        mov edi, offset s_behaviour
-        mov dword ptr [s_task_names + 0h], offset s_cmd_task_goto
-        mov dword ptr [s_task_names + 4h], offset s_cmd_task_follow
-        mov dword ptr [s_task_names + 8h], offset s_cmd_task_follow_attack
-        mov dword ptr [s_task_names + 0ch], offset s_cmd_task_collect
-        mov dword ptr [s_task_names + 10h], offset s_cmd_task_gather
-        mov dword ptr [s_task_names + 30h], offset s_cmd_task_clear
-        mov dword ptr [s_task_names + 14h], offset s_cmd_task_deposit
-        mov dword ptr [s_task_names + 18h], offset s_cmd_task_dump
-        mov dword ptr [s_task_names + 1ch], offset s_cmd_task_request
-        mov dword ptr [s_task_names + 28h], offset s_cmd_task_repair
-        mov dword ptr [s_task_names + 20h], offset s_cmd_task_dig
-        mov dword ptr [s_task_names + 24h], offset s_cmd_task_dynamite
-        mov dword ptr [s_task_names + 2ch], offset s_cmd_task_reinforce
-        mov dword ptr [s_task_names + 34h], offset s_cmd_task_wait
-        mov dword ptr [s_task_names + 38h], offset s_cmd_task_animation_wait
-        mov dword ptr [s_task_names + 3ch], offset s_cmd_task_elec_fence
-        mov dword ptr [s_task_names + 40h], offset s_cmd_task_eat
-        mov dword ptr [s_task_names + 44h], offset s_cmd_task_goto_eat
-        mov dword ptr [s_task_names + 48h], offset s_cmd_task_find_driver
-        mov dword ptr [s_task_names + 4ch], offset s_cmd_task_get_tool
-        mov dword ptr [s_task_names + 50h], offset s_cmd_task_bird_scarer
-        mov dword ptr [s_task_names + 54h], offset s_cmd_task_upgrade
-        mov dword ptr [s_task_names + 58h], offset s_cmd_task_build_path
-        mov dword ptr [s_task_names + 5ch], offset s_cmd_task_train
-        mov dword ptr [s_task_names + 60h], offset s_cmd_task_depart
-        mov dword ptr [s_task_names + 64h], offset s_cmd_task_attack_path
-        mov dword ptr [s_task_names + 68h], offset s_cmd_task_attack_rock_monster
-        mov dword ptr [s_task_names + 6ch], offset s_cmd_task_recharge
-        mov dword ptr [s_task_names + 70h], offset s_cmd_task_dock
-        mov dword ptr [s_task_names + 74h], offset s_cmd_task_attack_object
-        mov dword ptr [s_task_names + 78h], offset s_cmd_task_find_load
-        mov dword ptr [s_priority_names + 0h], offset s_cmd_priority_crystal
-        mov dword ptr [s_priority_names + 4h], offset s_cmd_priority_ore
-        mov dword ptr [s_priority_names + 8h], offset s_cmd_priority_default_collect
-        mov dword ptr [s_priority_names + 0ch], offset s_cmd_priority_destruction
-        mov dword ptr [s_priority_names + 10h], offset s_cmd_priority_construction
-        mov dword ptr [s_priority_names + 14h], offset s_cmd_priority_request
-        mov dword ptr [s_priority_names + 18h], offset s_cmd_priority_reinforce
-        mov dword ptr [s_priority_names + 1ch], offset s_cmd_priority_repair
-        mov dword ptr [s_priority_names + 20h], offset s_cmd_priority_clearing
-        mov dword ptr [s_priority_names + 24h], offset s_cmd_priority_storage
-        mov dword ptr [s_priority_names + 28h], offset s_cmd_priority_refining
-        mov dword ptr [s_priority_names + 2ch], offset s_cmd_priority_health_low
-        mov dword ptr [s_priority_names + 30h], offset s_cmd_priority_get_in
-        mov dword ptr [s_priority_names + 34h], offset s_cmd_priority_upgrade
-        mov dword ptr [s_priority_names + 38h], offset s_cmd_priority_build_path
-        mov dword ptr [s_priority_names + 3ch], offset s_cmd_priority_attack_rock_monster
-        mov dword ptr [s_priority_names + 40h], offset s_cmd_priority_barrier
-        mov dword ptr [s_priority_names + 44h], offset s_cmd_priority_find_load
-        mov dword ptr [s_priority_names + 48h], offset s_cmd_priority_recharge
-        mov dword ptr [s_priority_names + 4ch], offset s_cmd_priority_upgrade_building
-        mov dword ptr [s_priority_names + 50h], offset s_cmd_priority_gather
-        mov dword ptr [s_priority_names + 54h], offset s_cmd_priority_steal
-        mov dword ptr [s_priority_names + 58h], offset s_cmd_priority_punch
-        mov dword ptr [s_priority_names + 5ch], offset s_cmd_priority_depart
-        mov dword ptr [s_priority_names + 60h], offset s_cmd_priority_attack_path
-        mov dword ptr [s_priority_names + 68h], offset s_cmd_priority_congregate
-        mov dword ptr [s_priority_names + 64h], offset s_cmd_priority_attack_object
-        mov edx, 63h
-        rep stosd
-        mov ecx, 14h
-        mov dword ptr [s_behaviour + 10h], 3ch
-        mov dword ptr [s_behaviour + 0ch], 28h
-        mov dword ptr [s_behaviour], 37h
-        mov dword ptr [s_behaviour + 24h], 5
-        mov dword ptr [s_behaviour + 20h], ecx
-        mov dword ptr [s_behaviour + 28h], 0fh
-        mov dword ptr [s_behaviour + 14h], ecx
-        mov dword ptr [s_behaviour + 18h], 46h
-        mov dword ptr [s_behaviour + 3ch], 38h
-        mov dword ptr [s_behaviour + 4ch], edx
-        mov dword ptr [s_behaviour + 54h], 5ah
-        mov dword ptr [s_behaviour + 58h], eax
-        mov dword ptr [s_behaviour + 50h], eax
-        xor eax, eax
-        mov dword ptr [s_behaviour + 5ch], eax
-        mov dword ptr [s_behaviour + 60h], ecx
-        mov dword ptr [s_behaviour + 68h], edx
-        mov dword ptr [s_behaviour + 64h], 1eh
-        mov dword ptr [s_free], eax
-        mov dword ptr [s_pool_level], eax
-        mov dword ptr [s_global_enabled], 1
-        pop edi
-        ret
-    }
-}
-#else
+/* Port model of 0x00401cf0 (GAME-002). */
 void cmd_registry_init_target(void)
 {
     int i;
@@ -491,13 +412,12 @@ void cmd_registry_init_target(void)
     s_pool_level = 0;
     s_global_enabled = 1;
 }
-#endif
 
-// FUNCTION: LEGORR 0x00402000
+/* Port model of 0x00402000 (GAME-002). */
 void cmd_mark_matching(int type, int payload, const int coords[2])
 {
     for (CmdRec* cur = s_global_head; cur != NULL;
-         cur = as_rec(cur->global_next)) {
+         cur = as_rec(cur->next)) {
         if (cur->type == type) {
             /* corpus compares the record's +0x10 word (32-bit) against the
              * argument: the port matches the low-word view. */
@@ -515,7 +435,7 @@ void cmd_mark_matching(int type, int payload, const int coords[2])
         }
     }
 }
-// FUNCTION: LEGORR 0x00402060
+/* Port model of 0x00402060 (GAME-002). */
 void cmd_set_kind(void* rec, int kind)
 {
     /* Keep this cast at the call site: the original accesses the record's
@@ -529,31 +449,12 @@ void cmd_set_kind(void* rec, int kind)
         r->kind = kind;
     }
 }
-// FUNCTION: LEGORR 0x00402090
-void priority_entry_order_value_set(int kind, int value)
-{
-    /* Config callers pass the registered 0..26 kind index. The reference
-     * writes directly to DAT_004b32e8[kind] without a range check. */
-    s_behaviour[kind] = value;
-}
-// FUNCTION: LEGORR 0x004020a0
-void priority_entry_state_set(int kind, int value)
-{
-    /* Match the corpus's direct indexed write to DAT_004b7ff4[kind]. */
-    s_priority_state[kind] = value;
-}
-// FUNCTION: LEGORR 0x004020b0
-int priority_entry_state_get(int kind)
-{
-    /* Match the corpus's direct indexed read from DAT_004b7ff4[kind]. */
-    return s_priority_state[kind];
-}
 
 /* TaskTableContentsRelease (FUN_004020c0): frees every non-null pool
  * block pointer. The corpus increments esi by four and compares it with
  * s_free at 0x4b31f8 ("cmp esi, 0x4b31f8"), then clears that head and the
  * scheduler word at 0x4b8060. */
-// FUNCTION: LEGORR 0x004020c0
+/* Port model of 0x004020c0 (GAME-002). */
 void handle_array_release_and_reset(void)
 {
     CmdRec** walk = s_blocks;
@@ -577,7 +478,7 @@ void handle_array_release_and_reset(void)
  * cmd pool block array (0x4b31c8 band, bounded by the freelist head at
  * 0x4b31f8 — corpus-verified at 0x004020c0), so the release walks the pool
  * statics directly rather than a duplicate model. */
-// FUNCTION: LEGORR 0x00402100
+/* Port model of 0x00402100 (GAME-002). */
 void cmd_flush_all(int disable_mode)
 {
     if (disable_mode != 0) {
@@ -602,7 +503,7 @@ void cmd_flush_all(int disable_mode)
     }
 }
 
-// FUNCTION: LEGORR 0x00402170
+/* Port model of 0x00402170 (GAME-002). */
 void level_no_gather_object_setup(int mode)
 {
     if (mode == 0) {
@@ -622,26 +523,7 @@ void level_no_gather_object_setup(int mode)
     cmd_link_head(other, 0);
     other->state = (other->state & ~0x10u) | 0x440u;
 }
-// FUNCTION: LEGORR 0x004021e0
-void* engine_memory_allocate(long size)
-{
-    /* The reference calls VC5's _malloc entry directly. */
-#if defined(_MSC_VER) && defined(_M_IX86)
-    return malloc((size_t)size);
-#else
-    return engine_heap_alloc(size);
-#endif
-}
-// FUNCTION: LEGORR 0x00402210
-void engine_memory_free(void* ptr)
-{
-#if defined(_MSC_VER) && defined(_M_IX86)
-    free(ptr);
-#else
-    engine_heap_free(ptr);
-#endif
-}
-// FUNCTION: LEGORR 0x00402220
+/* Port model of 0x00402220 (GAME-002). */
 void cmd_tick_global_delta(float delta)
 {
     int threshold;
@@ -657,7 +539,7 @@ void cmd_tick_global_delta(float delta)
     cmd_pool_timer_delta_walk(&delta);
 
     for (current = s_global_head; current != NULL;
-         current = as_rec(current->global_next)) {
+         current = as_rec(current->next)) {
         EntitySlot* entity;
         if (current->type != 10 ||
             (current->state & 0x200000u) != 0u || current->payload == NULL)
@@ -678,7 +560,7 @@ void cmd_tick_global_delta(float delta)
     pending_command_timer_fire_scan();
     s_pending_candidates_from_entity_walk = 0;
 }
-// FUNCTION: LEGORR 0x00402310
+/* Port model of 0x00402310 (GAME-002). */
 static void cmd_global_list_purge(CmdRec** head)
 {
     CmdRec* records[300];
@@ -691,11 +573,11 @@ static void cmd_global_list_purge(CmdRec** head)
     previous = NULL;
     current = *head;
     while (current != NULL) {
-        CmdRec* next = as_rec(current->global_next);
+        CmdRec* next = as_rec(current->next);
         if ((current->state & CMD_STATE_DONE) != 0u) {
             if (previous == NULL) *head = next;
-            else previous->global_next = next;
-            current->global_next = NULL;
+            else previous->next = next;
+            current->next = NULL;
             cmd_free(current, 0);
         } else {
             previous = current;
@@ -757,7 +639,7 @@ static void cmd_global_list_purge(CmdRec** head)
                 }
             }
         }
-        current = as_rec(current->global_next);
+        current = as_rec(current->next);
     }
     if (current != NULL) overflow = current;
     if (count > 1) {
@@ -767,13 +649,13 @@ static void cmd_global_list_purge(CmdRec** head)
     }
     if (count != 0) {
         for (i = 0; i + 1 < count; ++i)
-            records[i]->global_next = records[i + 1];
-        records[count - 1]->global_next = overflow;
+            records[i]->next = records[i + 1];
+        records[count - 1]->next = overflow;
         *head = records[0];
     }
 }
 
-// FUNCTION: LEGORR 0x00402510
+/* Port model of 0x00402510 (GAME-002). */
 void terrain_cell_command_create(int x, int y, int flag, int raise20)
 {
     CmdRec* rec = NULL;
@@ -825,7 +707,7 @@ void terrain_cell_command_create(int x, int y, int flag, int raise20)
  * FUN_00402600 snapshots the selected entity pointers onto the command
  * record, resets each entity's action sequence, and optionally detaches its
  * carried object. */
-// FUNCTION: LEGORR 0x00402600
+/* Port model of 0x00402600 (GAME-002). */
 void entity_record_array_apply_zero_state(void* rec, int mode)
 {
     if (rec == NULL) {
@@ -852,7 +734,7 @@ void entity_record_array_apply_zero_state(void* rec, int mode)
         }
     }
 }
-// FUNCTION: LEGORR 0x00402670
+/* Port model of 0x00402670 (GAME-002). */
 void entity_command15_validated_record_queue(EntitySlot* e)
 {
     current_level_get(); /* corpus: call 0x431560 on entry, result discarded */
@@ -872,7 +754,7 @@ void entity_command15_validated_record_queue(EntitySlot* e)
     }
 }
 
-// FUNCTION: LEGORR 0x004026c0
+/* Port model of 0x004026c0 (GAME-002). */
 void entity_deferred_work_schedule(EntitySlot* e)
 {
     if (e == NULL) {
@@ -887,7 +769,7 @@ void entity_deferred_work_schedule(EntitySlot* e)
         }
     }
 }
-// FUNCTION: LEGORR 0x00402720
+/* Port model of 0x00402720 (GAME-002). */
 void cmd_create_task(EntitySlot* e, int32_t parameter)
 {
     if (e == NULL) {
@@ -907,7 +789,7 @@ void cmd_create_task(EntitySlot* e, int32_t parameter)
     cmd_minion_companion(e);
 }
 
-// FUNCTION: LEGORR 0x004027a0
+/* Port model of 0x004027a0 (GAME-002). */
 void bobbin_clear_delay(SimtickBobbin* node)
 {
     if (node == NULL) return;
@@ -939,7 +821,7 @@ void bobbin_clear_delay(SimtickBobbin* node)
     cmd_link_global_head(command, 0xe);
 } /* FUN_004027a0 */
 
-// FUNCTION: LEGORR 0x00402800
+/* Port model of 0x00402800 (GAME-002). */
 /* EntityCommand14BatchIssue (FUN_00402800): the corpus materializes the
  * flag by mutation, not by a sete — edi starts at 0, the count==0
  * fall-through stores 1 into it and reuses it as the loop bound (the
@@ -968,7 +850,7 @@ void entity_command14_batch_issue(int count)
 }
 /* MinionCompanionCmd (FUN_00402850): append the extra kind-0x15 task that
  * accompanies a type-6 minion's primary task. */
-// FUNCTION: LEGORR 0x00402850
+/* Port model of 0x00402850 (GAME-002). */
 void cmd_minion_companion(EntitySlot* e)
 {
     /* Corpus parity: strides the entity blindly, uses the record blindly,
@@ -989,7 +871,7 @@ void cmd_minion_companion(EntitySlot* e)
  * entity slot because the selector gate reads its stats record. The allocator's
  * result is stored blindly, +0x10 payload before +0x3c extra, the selector
  * riding the interleaved stores straight from the argument. */
-// FUNCTION: LEGORR 0x00402890
+/* Port model of 0x00402890 (GAME-002). */
 void task_type23_create_for_category_mask(EntitySlot* e, int selector,
                                           int issue_records)
 {
@@ -1018,7 +900,7 @@ void task_type23_create_for_category_mask(EntitySlot* e, int selector,
     cmd_link_head(rec, kind);
     rec->state &= ~0x40u; /* the corpus clears bit 6 after the link */
 }
-// FUNCTION: LEGORR 0x00402960
+/* Port model of 0x00402960 (GAME-002). */
 void entity_kind_command_issue(EntitySlot* e)
 {
     if (e == NULL) {
@@ -1059,7 +941,7 @@ void entity_kind_command_issue(EntitySlot* e)
     cmd_link_head(rec, 0xc);
 }
 
-// FUNCTION: LEGORR 0x00402a40
+/* Port model of 0x00402a40 (GAME-002). */
 void coordinate_pair_callback_dispatch(const void* coord_pair)
 {
     CoordinatePairCallbackPayload payload;
@@ -1068,7 +950,7 @@ void coordinate_pair_callback_dispatch(const void* coord_pair)
     entity_pool_callback_search(coordinate_pair_callback_adapter, &payload);
 }
 
-// FUNCTION: LEGORR 0x00402aa0
+/* Port model of 0x00402aa0 (GAME-002). */
 void argument_callback_dispatch(void* arg)
 {
     entity_pool_callback_search(argument_callback_adapter, arg);
@@ -1077,7 +959,7 @@ void argument_callback_dispatch(void* arg)
 /* Retail ABI: coordinate pair plus mode, current level fetched internally.
  * The level-taking helper above remains for portable callers with an
  * explicit context. */
-// FUNCTION: LEGORR 0x00402ae0
+/* Port model of 0x00402ae0 (GAME-002). */
 void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode)
 {
     LevelState* lvl = level_current_owner_get();
@@ -1100,7 +982,7 @@ void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode)
 #endif
 }
 
-// FUNCTION: LEGORR 0x00402b30
+/* Port model of 0x00402b30 (GAME-002). */
 void coordinate_callback_dispatch_current(const void* coord_pair)
 {
     CoordinateEntityDispatchPayload payload;
@@ -1110,7 +992,7 @@ void coordinate_callback_dispatch_current(const void* coord_pair)
     entity_pool_callback_search(coordinate_entity_dispatch_adapter, &payload);
 }
 
-// FUNCTION: LEGORR 0x00402b60
+/* Port model of 0x00402b60 (GAME-002). */
 void coordinate_callback_dispatch_by_mode(const void* coord_pair, int mode)
 {
     CoordinateEntityDispatchPayload payload;
@@ -1126,7 +1008,7 @@ void coordinate_callback_dispatch_by_mode(const void* coord_pair, int mode)
  * shipped binary's spawn-dispatch switch allocates through CmdAlloc(0x13);
  * the validated auxiliary-work producer installs a reciprocal pair. Direct
  * numeric-selector jobs leave this slot NULL. */
-// FUNCTION: LEGORR 0x00402cd0
+/* Port model of 0x00402cd0 (GAME-002). */
 void cmd_cancel_ref(void* rec)
 {
     if (rec == NULL) {
@@ -1146,14 +1028,14 @@ void cmd_cancel_ref(void* rec)
         return;
     }
     for (CmdRec* cur = s_global_head; cur != NULL;
-         cur = as_rec(cur->global_next)) {
+         cur = as_rec(cur->next)) {
         if (cur->type == 0x13 && cur == (CmdRec*)r->ref) {
             cur->state |= 0x20u; /* the completion/cancel flag */
         }
     }
 }
 
-// FUNCTION: LEGORR 0x00402d50
+/* Port model of 0x00402d50 (GAME-002). */
 int kind_nine_cell_command_issue(int x, int y, int mode)
 {
     LevelState* lvl = (s_ctx != NULL) ? (LevelState*)s_ctx->level : NULL;
@@ -1190,7 +1072,7 @@ int kind_nine_cell_command_issue(int x, int y, int mode)
     }
     return 1;
 }
-// FUNCTION: LEGORR 0x00402e40
+/* Port model of 0x00402e40 (GAME-002). */
 void cell_command_type13_issue(int x, int y)
 {
     const LevelState* lvl = (s_ctx != NULL) ? s_ctx->level : NULL;
@@ -1218,7 +1100,7 @@ void cell_command_type13_issue(int x, int y)
         terrain_cell_record_count_update(cell_xy, 0xd, 0, 0);
     }
 }
-// FUNCTION: LEGORR 0x00402ec0
+/* Port model of 0x00402ec0 (GAME-002). */
 void entity_conditional_task_schedule(EntitySlot* e)
 {
     if (e == NULL) {
@@ -1237,7 +1119,7 @@ void entity_conditional_task_schedule(EntitySlot* e)
         rec->state = (rec->state & ~0x40u) | 0x100010u;
     }
 }
-// FUNCTION: LEGORR 0x00402f30
+/* Port model of 0x00402f30 (GAME-002). */
 void entity_threshold_progress_event_queue(void* payload, int flag)
 {
     const int set_flag = (flag != 0);
@@ -1253,7 +1135,7 @@ void entity_threshold_progress_event_queue(void* payload, int flag)
     /* corpus kind: (-1 & 0xc) + 7 = 0x13 when the flag is set, else 7. */
     cmd_link_head(rec, set_flag ? 0x13 : 7);
 }
-// FUNCTION: LEGORR 0x00402f70
+/* Port model of 0x00402f70 (GAME-002). */
 void entity_target_command_queue(EntitySlot* e, void* target)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x11);
@@ -1269,7 +1151,7 @@ void entity_target_command_queue(EntitySlot* e, void* target)
      * clear, no idle registration (the append helper's extras). */
 }
 
-// FUNCTION: LEGORR 0x00402fb0
+/* Port model of 0x00402fb0 (GAME-002). */
 void cell_command_type11_issue(int x, int y)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0xf);
@@ -1295,7 +1177,7 @@ void cell_command_type11_issue(int x, int y)
 }
 
 /* CellCommandType3Issue (FUN_00403030) — see cmd.hpp. */
-// FUNCTION: LEGORR 0x00403030
+/* Port model of 0x00403030 (GAME-002). */
 void cell_command_type3_issue(int x, int y)
 {
     const LevelState* lvl = (s_ctx != NULL)
@@ -1325,7 +1207,7 @@ void cell_command_type3_issue(int x, int y)
         terrain_cell_surface_type_set(lvl->ptr_terrain, x, y, 1);
     }
 }
-// FUNCTION: LEGORR 0x004030b0
+/* Port model of 0x004030b0 (GAME-002). */
 void coordinate_pair_event_queue(const int pair[2], void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0xc);
@@ -1341,7 +1223,7 @@ void coordinate_pair_event_queue(const int pair[2], void* payload)
  * when its leading code is present in the grouped code table. The optional
  * payload allocation uses the full count word, while the copy loop masks it
  * to 30 bits, matching the reference's encoded-count handling. */
-// FUNCTION: LEGORR 0x004030e0
+/* Port model of 0x004030e0 (GAME-002). */
 void cmd_validated_record_queue(void* record)
 {
     CmdRec* const source = as_rec(record);
@@ -1382,7 +1264,7 @@ void cmd_validated_record_queue(void* record)
     source->ref = copy;
     cmd_link_head(copy, source->kind);
 }
-// FUNCTION: LEGORR 0x00403190
+/* Port model of 0x00403190 (GAME-002). */
 int object_event_type2_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x13);
@@ -1395,7 +1277,7 @@ int object_event_type2_queue(void* payload)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x004031e0
+/* Port model of 0x004031e0 (GAME-002). */
 int active_entity_list_contains_code(GameContext* ctx, int code)
 {
     unsigned count;
@@ -1430,7 +1312,7 @@ int active_entity_list_contains_code(GameContext* ctx, int code)
 
 /* Queue operation 8 addresses the active selection, not its object word.
  * The coordinate pair remains two raw integer cell words. */
-// FUNCTION: LEGORR 0x00403270
+/* Port model of 0x00403270 (GAME-002). */
 void selection_drag_area_command_create(EntitySlot* const* entities,
     unsigned int count, const int cell_xy[2], int replace)
 {
@@ -1456,7 +1338,7 @@ void selection_drag_area_command_create(EntitySlot* const* entities,
 /* ObjectCommandTaskCreate (FUN_00403320): resolve a task target according to
  * the entity kind, then append a type-0x15 record carrying that target and
  * the caller's parameter. */
-// FUNCTION: LEGORR 0x00403320
+/* Port model of 0x00403320 (GAME-002). */
 void object_command_task_create(EntitySlot* entity, int parameter)
 {
     void* target = NULL;
@@ -1488,7 +1370,7 @@ void object_command_task_create(EntitySlot* entity, int parameter)
 }
 
 /* ObjectAttachedRecordAllocate (FUN_004033c0) — see cmd.hpp. */
-// FUNCTION: LEGORR 0x004033c0
+/* Port model of 0x004033c0 (GAME-002). */
 void object_attached_record_allocate(EntitySlot* e)
 {
     if (e == NULL) {
@@ -1503,7 +1385,7 @@ void object_attached_record_allocate(EntitySlot* e)
     }
     e->cmd_head = rec; /* corpus store at entity +0x2f0 */
 }
-// FUNCTION: LEGORR 0x004033f0
+/* Port model of 0x004033f0 (GAME-002). */
 void coordinate_pair_task_record_queue(const int pair[2])
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0);
@@ -1516,7 +1398,7 @@ void coordinate_pair_task_record_queue(const int pair[2])
     cmd_link_tail(rec);
 }
 
-// FUNCTION: LEGORR 0x00403430
+/* Port model of 0x00403430 (GAME-002). */
 void task_registry_remove_type0_entry_by_pair(const int pair[2])
 {
     if (pair == NULL) {
@@ -1524,12 +1406,12 @@ void task_registry_remove_type0_entry_by_pair(const int pair[2])
     }
     CmdRec* prev = NULL;
     for (CmdRec* cur = s_global_tail; cur != NULL;) {
-        CmdRec* next = as_rec(cur->global_next);
+        CmdRec* next = as_rec(cur->next);
         int cx = 0, cy = 0;
         cmd_rec_cell_xy_get(cur, &cx, &cy);
         if (cur->type == 0 && cx == pair[0] && cy == pair[1]) {
             if (prev != NULL) {
-                prev->global_next = next;
+                prev->next = next;
             } else {
                 s_global_tail = next;
             }
@@ -1540,7 +1422,7 @@ void task_registry_remove_type0_entry_by_pair(const int pair[2])
         cur = next;
     }
 }
-// FUNCTION: LEGORR 0x004034a0
+/* Port model of 0x004034a0 (GAME-002). */
 void scalar_task_record_queue(void* scalar)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x1d);
@@ -1555,7 +1437,7 @@ void scalar_task_record_queue(void* scalar)
      * global_flag_bit0_clear lesson). */
     rec->state = rec->state | 0x40u; /* +0x5c */
 }
-// FUNCTION: LEGORR 0x004034e0
+/* Port model of 0x004034e0 (GAME-002). */
 void task_pair_record_enqueue(const int pair[2])
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x19);
@@ -1566,7 +1448,7 @@ void task_pair_record_enqueue(const int pair[2])
     cmd_set_kind(rec, 0x18);
     cmd_link_tail(rec);
 }
-// FUNCTION: LEGORR 0x00403520
+/* Port model of 0x00403520 (GAME-002). */
 void task_record_kind10_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(10);
@@ -1582,15 +1464,15 @@ void task_record_kind10_queue(void* payload)
     rec->state = rec->state | 0x40u; /* +0x5c */
 }
 
-// FUNCTION: LEGORR 0x00403560
+/* Port model of 0x00403560 (GAME-002). */
 void task_registry_remove_type10_entries_for_entity(const EntitySlot* e)
 {
     CmdRec* prev = NULL;
     for (CmdRec* cur = s_global_tail; cur != NULL;) {
-        CmdRec* next = as_rec(cur->global_next);
+        CmdRec* next = as_rec(cur->next);
         if (cur->type == 10 && cur->payload == (void*)e) {
             if (prev != NULL) {
-                prev->global_next = next;
+                prev->next = next;
             } else {
                 s_global_tail = next;
             }
@@ -1602,7 +1484,7 @@ void task_registry_remove_type10_entries_for_entity(const EntitySlot* e)
         cur = next;
     }
 }
-// FUNCTION: LEGORR 0x004035c0
+/* Port model of 0x004035c0 (GAME-002). */
 void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag)
 {
     CmdRec* rec;
@@ -1622,7 +1504,7 @@ void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag)
     }
 }
 
-// FUNCTION: LEGORR 0x00403610
+/* Port model of 0x00403610 (GAME-002). */
 void cmd_create_gated(EntitySlot* e, void* target)
 {
     if (e == NULL) {
@@ -1641,7 +1523,7 @@ void cmd_create_gated(EntitySlot* e, void* target)
 }
 
 /* EntityTaskBatchAppend (FUN_00403650) — see cmd.hpp. */
-// FUNCTION: LEGORR 0x00403650
+/* Port model of 0x00403650 (GAME-002). */
 void entity_task_batch_append(EntitySlot* const* entities, int count,
                               void* payload)
 {
@@ -1666,7 +1548,7 @@ void entity_task_batch_append(EntitySlot* const* entities, int count,
         }
     }
 }
-// FUNCTION: LEGORR 0x004036c0
+/* Port model of 0x004036c0 (GAME-002). */
 void cmd_create_target(EntitySlot* e, void* target)
 {
     CmdRec* rec;
@@ -1691,14 +1573,13 @@ void cmd_create_target(EntitySlot* e, void* target)
     }
 }
 
-/* CmdCancelByCoords (FUN_00403700) — see cmd.hpp. The corpus strides the
- * global chain through the +0x60 link; the port's global link lands in
- * global_next (deviation note in the struct header). */
-// FUNCTION: LEGORR 0x403700
+/* CmdCancelByCoords (FUN_00403700) — see cmd.hpp. Strides the global
+ * chain through the one +0x60 link, as the original does (finding 570). */
+/* Port model of 0x403700 (GAME-002). */
 void cmd_cancel_by_coords(int zone, int probe, int x, int y)
 {
     for (CmdRec* cur = s_global_head; cur != NULL;
-         cur = (CmdRec*)cur->global_next) {
+         cur = (CmdRec*)cur->next) {
         if (cur->type == 7 && cur->zone == zone
             && (probe == 0
                 || (x == cur->cell_act && y == cur->cell_target))) {
@@ -1707,7 +1588,7 @@ void cmd_cancel_by_coords(int zone, int probe, int x, int y)
     }
 }
 // CommandKindRecordIssueAndLink (FUN_00403750).
-// FUNCTION: LEGORR 0x00403750
+/* Port model of 0x00403750 (GAME-002). */
 void cmd_command_kind_record_issue(uint32_t a, uint32_t b, uint32_t c,
                                    const int cell_xy[2], uint32_t zone,
                                    const float* random_pair, int set_flag)
@@ -1759,7 +1640,7 @@ void cmd_command_kind_record_issue(uint32_t a, uint32_t b, uint32_t c,
  * flattened pending-count table. The spatial callback predicate is still
  * owned by the spatial-query adapter; this routine preserves the exact
  * query/action/fallback order around it. */
-// FUNCTION: LEGORR 0x00403810
+/* Port model of 0x00403810 (GAME-002). */
 void terrain_cell_record_count_update(const int cell_xy[2], int a, int b,
                                       int c)
 {
@@ -1802,7 +1683,7 @@ void terrain_cell_record_count_update(const int cell_xy[2], int a, int b,
         ++cmd_pending_command_counts[b * 16 + a * 0xf0 + c];
 }
 
-// FUNCTION: LEGORR 0x004038c0
+/* Port model of 0x004038c0 (GAME-002). */
 void* timed_task_record_initialize_and_link(void* payload, int arg1,
                                             int arg2, int arg3)
 {
@@ -1821,7 +1702,7 @@ void* timed_task_record_initialize_and_link(void* payload, int arg1,
     return rec;
 }
 
-// FUNCTION: LEGORR 0x00403910
+/* Port model of 0x00403910 (GAME-002). */
 void terrain_cell_record_counts_prune(void* entity)
 {
     int a, b, c;
@@ -1847,7 +1728,7 @@ void terrain_cell_record_counts_prune(void* entity)
     }
 }
 
-// FUNCTION: LEGORR 0x004039a0
+/* Port model of 0x004039a0 (GAME-002). */
 void task_record_create_and_scan_grid(
     void* entity)
 {
@@ -1859,7 +1740,7 @@ void task_record_create_and_scan_grid(
     terrain_cell_record_counts_prune(entity);
 }
 
-// FUNCTION: LEGORR 0x004039d0
+/* Port model of 0x004039d0 (GAME-002). */
 void task_record_kind11_timed_queue(void* payload)
 {
     CmdRec* rec = (CmdRec*)cmd_alloc(0x11);
@@ -1872,13 +1753,13 @@ void task_record_kind11_timed_queue(void* payload)
      * mov [+0x5c],ecx — the plain round-trip form (b45 lesson). */
     rec->state = (rec->state & ~CMD_STATE_PENDING) | 0xc0u; /* +0x5c */
 }
-// FUNCTION: LEGORR 0x00403a10
+/* Port model of 0x00403a10 (GAME-002). */
 void task_callback_dispatch(void* payload)
 {
     entity_pool_callback_search(task_callback_entity_adapter, payload);
 }
 
-// FUNCTION: LEGORR 0x00403a50
+/* Port model of 0x00403a50 (GAME-002). */
 void entity_drain_command_chain(EntitySlot* e)
 {
     if (e == NULL) {
@@ -1908,7 +1789,7 @@ void entity_drain_command_chain(EntitySlot* e)
      * LAB_00403ad0 callback (bit 5 onto the records whose +0x10 payload
      * is this entity) — is the DAT_004b31c8 registry seam. */
 }
-// FUNCTION: LEGORR 0x00403af0
+/* Port model of 0x00403af0 (GAME-002). */
 void entity_task_state_update_after_cleanup(EntitySlot* e, int flag)
 {
     if (e->cmd_head == NULL) {
@@ -1927,7 +1808,7 @@ void entity_task_state_update_after_cleanup(EntitySlot* e, int flag)
         }
     }
 }
-// FUNCTION: LEGORR 0x00403b40
+/* Port model of 0x00403b40 (GAME-002). */
 void entity_pending_task_flag_clear(EntitySlot* e)
 {
     if (e != NULL && e->cmd_head != NULL) {
@@ -1935,7 +1816,7 @@ void entity_pending_task_flag_clear(EntitySlot* e)
     }
 }
 
-// FUNCTION: LEGORR 0x00403b60
+/* Port model of 0x00403b60 (GAME-002). */
 void entity_activity_records_refresh(void* entity)
 {
 #if !defined(_MSC_VER) || !defined(_M_IX86)
@@ -1967,7 +1848,7 @@ void entity_activity_records_refresh(void* entity)
 /* The raw record model retains the corpus +0x2f0 head and +0x60 next-link
  * offsets. */
 #if defined(_MSC_VER) && defined(_M_IX86)
-// FUNCTION: LEGORR 0x00403c00
+/* Port model of 0x00403c00 (GAME-002). */
 __declspec(naked) void entity_activity_record_remove_by_type(
     void* entity, int type, void* action_context)
 {
@@ -2141,7 +2022,7 @@ void entity_activity_record_remove_by_type(void* entity, int type,
 }
 #endif
 
-// FUNCTION: LEGORR 0x00403d10
+/* Port model of 0x00403d10 (GAME-002). */
 void entity_command_unlink_by_kind(EntitySlot* e, int type,
                                    const void* extra, int unlink)
 {
@@ -2228,7 +2109,7 @@ void entity_command_unlink_by_kind(EntitySlot* e, int type,
     if (type == 3) pending_record_callback_dispatch((void*)extra);
 }
 
-// FUNCTION: LEGORR 0x00403ef0
+/* Port model of 0x00403ef0 (GAME-002). */
 void pending_record_callback_dispatch(void* payload)
 {
     int block_index;
@@ -2259,7 +2140,7 @@ void pending_record_callback_dispatch(void* payload)
 
 /* FUN_00403f30: when the chain head is absent or is not kind 0xe, allocate
  * an idle record, link the former head through +0x60, and install it. */
-// FUNCTION: LEGORR 0x00403F30
+/* Port model of 0x00403F30 (GAME-002). */
 void ai_idle_chain_record_attach(EntitySlot* entity)
 {
     if (entity->cmd_head == NULL || cmd_rec_type(entity->cmd_head) != 0xe) {
@@ -2271,7 +2152,7 @@ void ai_idle_chain_record_attach(EntitySlot* entity)
     }
 }
 
-// FUNCTION: LEGORR 0x00403f60
+/* Port model of 0x00403f60 (GAME-002). */
 void task_record_kind14_remove_if_head(EntitySlot* e)
 {
     if (e != NULL && e->cmd_head != NULL
@@ -2279,27 +2160,27 @@ void task_record_kind14_remove_if_head(EntitySlot* e)
         entity_command_chain_head_remove(e);
     }
 }
-// FUNCTION: LEGORR 0x00404030
+/* Port model of 0x00404030 (GAME-002). */
 void cmd_link_head(CmdRec* rec, int kind)
 {
-    rec->global_next = s_global_head;
+    rec->next = s_global_head;
     s_global_head = rec;
     rec->now = 1500.0f;
     rec->state = (rec->state & ~1u) | CMD_STATE_PENDING;
     cmd_bind_kind(rec, kind);
 }
 
-// FUNCTION: LEGORR 0x00404070
+/* Port model of 0x00404070 (GAME-002). */
 static void cmd_link_tail(CmdRec* rec)
 {
-    rec->global_next = s_global_tail;
+    rec->next = s_global_tail;
     s_global_tail = rec;
     rec->now = 1500.0f;
     rec->state &= ~(CMD_STATE_PENDING | 0x10u);
 }
 
 // EntityTaskQueueFlush (FUN_004040a0).
-// FUNCTION: LEGORR 0x004040a0
+/* Port model of 0x004040a0 (GAME-002). */
 void entity_task_queue_flush(EntitySlot* entity)
 {
     EntityTaskQueueFlushHooks* hooks = &s_entity_task_queue_flush_hooks;
@@ -2335,7 +2216,7 @@ void entity_task_queue_flush(EntitySlot* entity)
     }
 }
 
-// FUNCTION: LEGORR 0x00404100
+/* Port model of 0x00404100 (GAME-002). */
 void command_queue_sweep_relink(EntitySlot* e)
 {
     if (e == NULL) {
@@ -2368,7 +2249,7 @@ void command_queue_sweep_relink(EntitySlot* e)
     }
     e->cmd_head = keep;
 }
-// FUNCTION: LEGORR 0x00404190
+/* Port model of 0x00404190 (GAME-002). */
 void* cmd_chain_walk(const EntitySlot* e)
 {
     if (e == NULL || e->cmd_head == NULL) {
@@ -2383,7 +2264,7 @@ void* cmd_chain_walk(const EntitySlot* e)
     }
 }
 
-// FUNCTION: LEGORR 0x004041b0
+/* Port model of 0x004041b0 (GAME-002). */
 int entity_task_chain_contains_kind(const EntitySlot* e, int type)
 {
     if (e == NULL) {
@@ -2397,7 +2278,7 @@ int entity_task_chain_contains_kind(const EntitySlot* e, int type)
     }
     return 0;
 }
-// FUNCTION: LEGORR 0x004041e0
+/* Port model of 0x004041e0 (GAME-002). */
 void* entity_command_chain_head_remove(EntitySlot* e)
 {
     /* The corpus's three tail-chain arms (here 0x40421b, 0x403a85 in
@@ -2431,7 +2312,7 @@ void* entity_command_chain_head_remove(EntitySlot* e)
  * argument two points at the caller's frame delta. The retail pool walk
  * tests each record's +0x64 self-link; the port live-slot sidecar represents
  * that same allocated-record set. */
-// FUNCTION: LEGORR 0x00404250
+/* Port model of 0x00404250 (GAME-002). */
 static int cmd_pool_timer_delta_apply(CmdRec* record, void* delta_payload)
 {
     const float delta = *(const float*)delta_payload;
@@ -2449,7 +2330,7 @@ static int cmd_pool_timer_delta_apply(CmdRec* record, void* delta_payload)
  * slot.  The recovered outer gate and the chain-head expiry transitions are
  * represented here.  Record kinds with renderer/task-specific dispatch stay
  * in their own entity helpers; this callback does not substitute ai_tick. */
-// FUNCTION: LEGORR 0x00404280
+/* Port model of 0x00404280 (GAME-002). */
 int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload)
 {
     const float delta = *(const float*)delta_payload;
@@ -2693,7 +2574,7 @@ int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload)
 /* ObjectPathSubmitToGridTarget (FUN_00404e00): a target already on the
  * actor's cell is submitted as a one-point path; otherwise resolve the
  * cardinal route and pass its points to the entity route installer. */
-// FUNCTION: LEGORR 0x00404e00
+/* Port model of 0x00404e00 (GAME-002). */
 int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
                                       const int target_xy[2],
                                       const float* final_marker_position)
@@ -2764,7 +2645,7 @@ int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00404ed0
+/* Port model of 0x00404ed0 (GAME-002). */
 void ledger_stub_00404ed0_CheckObjectCandidate(
     const EntitySlot* candidate)
 {
@@ -2778,7 +2659,7 @@ void ledger_stub_00404ed0_CheckObjectCandidate(
         (uint32_t)candidate->type, (uint32_t)candidate->etype,
         (uint32_t)candidate->indexed_record_slot_330);
 }
-// FUNCTION: LEGORR 0x00404F10
+/* Port model of 0x00404F10 (GAME-002). */
 int object_task_target_filter_find(
     uint32_t type, uint32_t selector, uint32_t companion)
 {
@@ -2800,7 +2681,7 @@ int object_task_target_filter_find(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00404f50
+/* Port model of 0x00404f50 (GAME-002). */
 int object_filter_matches_action_target(const void* filter_rec,
                                         const void* target_rec)
 {
@@ -2834,7 +2715,7 @@ int object_filter_matches_action_target(const void* filter_rec,
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00404fc0
+/* Port model of 0x00404fc0 (GAME-002). */
 int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
     const ObjectTaskEligibilityRecord* command, EntitySlot* entity,
     float screen_xy[2], float world_xy[2], uint32_t* out_flag,
@@ -3545,7 +3426,7 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00405950
+/* Port model of 0x00405950 (GAME-002). */
 /* PendingCommandTimerFireScan (FUN_00405950). The decompile walks the
  * tail-linked list and the separate DAT_004b3428 candidate pool. CmdTickGlobal
  * builds that pool in LAB_00404280; direct calls reconstruct the no-head
@@ -3563,7 +3444,7 @@ void pending_command_timer_fire_scan(void)
         s_pending_timer_count = count;
     }
     while (record != NULL) {
-        CmdRec* next = as_rec(record->global_next);
+        CmdRec* next = as_rec(record->next);
         int removed = 0;
         if ((*(float*)&record->param2) <= 0.0f) {
             unsigned i = 0;
@@ -3652,8 +3533,8 @@ void pending_command_timer_fire_scan(void)
                         s_pending_timer_candidates[s_pending_timer_count];
                     if ((record->state & 0x40u) == 0u) {
                         if (previous == NULL) s_global_tail = next;
-                        else previous->global_next = next;
-                        record->global_next = NULL;
+                        else previous->next = next;
+                        record->next = NULL;
                         entity->cmd_head = record;
                         removed = 1;
                     }
@@ -3669,7 +3550,7 @@ void pending_command_timer_fire_scan(void)
     }
 }
 
-// FUNCTION: LEGORR 0x00405c10
+/* Port model of 0x00405c10 (GAME-002). */
 /* PendingCommandEntityAssignmentTick (FUN_00405c10). Candidate membership
  * uses the recovered 0x452610 stats mask or the record's explicit pointer
  * array (0x452650). Coordinate/target kinds 0, 3, 8, 0xb, 0xc, 0x12, 0x13,
@@ -3706,7 +3587,7 @@ void pending_command_entity_assignment_tick(void)
         s_pending_assignment_count = count;
     }
     while (record != NULL) {
-        CmdRec* next = as_rec(record->global_next);
+        CmdRec* next = as_rec(record->next);
         const int command_admitted = (*(float*)&record->param2 <= 0.0f) &&
             (record->state & 0x80400u) == 0u;
         if (command_admitted) {
@@ -4249,12 +4130,11 @@ void pending_command_entity_assignment_tick(void)
 }
 
 /* EntityRecordAttachAndRelink (FUN_00406360) — see cmd.hpp. The record's
- * global-list unlink rides the port's global_next slot (the corpus's one
- * +0x60 word; the chain/global context split is documented in the
- * entity command-chain housekeeping band). Deviations: NULL records /
+ * global-list unlink and its entity-chain link share the one +0x60 word,
+ * as in the original (finding 570). Deviations: NULL records /
  * entities guard where the corpus strides blindly, and the +0x18
  * task-param word takes the corpus's float-bit constant raw. */
-// FUNCTION: LEGORR 0x00406360
+/* Port model of 0x00406360 (GAME-002). */
 void entity_record_attach_and_relink(void* record, void* previous,
                                     EntitySlot* entity)
 {
@@ -4266,11 +4146,11 @@ void entity_record_attach_and_relink(void* record, void* previous,
         cmd_gettool_record_release(as_rec(entity->cmd_head));
     if ((rec->state & 0x40u) == 0u) {
         if (previous == NULL) {
-            s_global_head = as_rec(rec->global_next);
+            s_global_head = as_rec(rec->next);
         } else {
-            as_rec(previous)->global_next = rec->global_next;
+            as_rec(previous)->next = rec->next;
         }
-        rec->global_next = NULL;
+        rec->next = NULL;
         if (entity != NULL) {
             entity->cmd_head = rec; /* corpus entity +0x2f0 */
         }
@@ -4291,11 +4171,11 @@ void entity_record_attach_and_relink(void* record, void* previous,
  * corpus strides the global list's +0x60 link and the +0x48 dword
  * blindly; the port rides its native-size link slot and reference slot
  * (documented deviations). */
-// FUNCTION: LEGORR 0x004063e0
+/* Port model of 0x004063e0 (GAME-002). */
 void pending_record_entity_reference_clear(void* reference)
 {
     for (CmdRec* cur = s_global_head; cur != NULL;
-         cur = as_rec(cur->global_next)) {
+         cur = as_rec(cur->next)) {
         if (cur->entity_ref == reference) {
             cur->entity_ref = NULL;
         }
@@ -4306,7 +4186,7 @@ void pending_record_entity_reference_clear(void* reference)
  * copies the 26-dword record window, then restores the allocator self-link at
  * +0x64, clears the entity-chain link at +0x60, and sets state bit 0x200.
  * The timer at +0x18 is part of the copied window and remains unchanged. */
-// FUNCTION: LEGORR 0x00406400
+/* Port model of 0x00406400 (GAME-002). */
 void* cmd_pending_record_copy(const void* rec)
 {
     if (rec == NULL) {
@@ -4320,12 +4200,11 @@ void* cmd_pending_record_copy(const void* rec)
     *dst = *src;
     memset(&dst->gettool, 0, sizeof(dst->gettool));
     if (dst->type == 19) dst->state &= ~CMD_STATE_ISSUED;
-    dst->next = NULL;        /* corpus +0x60 = 0 */
-    dst->global_next = NULL; /* port-only bookkeeping: unattached */
+    dst->next = NULL;        /* corpus +0x60 = 0: on no chain or list */
     dst->state |= 0x200u;    /* corpus +0x17 |= 0x200 */
     return dst;
 }
-// FUNCTION: LEGORR 0x00406440
+/* Port model of 0x00406440 (GAME-002). */
 void* cmd_alloc(int type)
 {
     if (s_free == NULL) {
@@ -4343,7 +4222,7 @@ void* cmd_alloc(int type)
     return rec;
 }
 
-// FUNCTION: LEGORR 0x00406480
+/* Port model of 0x00406480 (GAME-002). */
 void cmd_free(void* rec, int cancel)
 {
     /* corpus: no NULL-record path — the gate is the second argument
@@ -4367,7 +4246,7 @@ void cmd_free(void* rec, int cancel)
     CMD_POOL_LINK_SET(r, s_free);
     s_free = r;
 }
-// FUNCTION: LEGORR 0x004064c0
+/* Port model of 0x004064c0 (GAME-002). */
 static void cmd_pool_grow(void)
 {
     int level = s_pool_level;
@@ -4397,11 +4276,8 @@ static void cmd_pool_grow(void)
     s_free = block;
 }
 
-// FUNCTION: LEGORR 0x004065d0
-uint32_t renderer_global_dword_get(void) { return s_renderer_global_dword; }
-
-// FUNCTION: LEGORR 0x004065e0
-uint32_t render_surface_secondary_get(void) { return s_render_surface_secondary; }
+/* 0x004065d0 renderer_global_dword_get and 0x004065e0
+ * render_surface_secondary_get are defined in aitask.c (C linkage). */
 
 static int cmd_entity_chain_kind_dispatch(EntitySlot* entity, CmdRec* record)
 {
@@ -4778,7 +4654,7 @@ static int cmd_entity_global_record_assign(EntitySlot* entity)
     CmdRec* previous = NULL;
     CmdRec* record = s_global_head;
     while (record != NULL) {
-        CmdRec* next = as_rec(record->global_next);
+        CmdRec* next = as_rec(record->next);
         int eligible = 1;
         if ((record->state & 0x80000u) != 0u) {
             eligible = 0;
@@ -5003,12 +4879,12 @@ static int cmd_has_entity_task_record(const EntitySlot* entity)
 {
     CmdRec* record;
     for (record = s_global_head; record != NULL;
-         record = as_rec(record->global_next)) {
+         record = as_rec(record->next)) {
         if (record->type == 3 &&
             (const void*)record->payload == (const void*)entity) return 1;
     }
     for (record = s_global_tail; record != NULL;
-         record = as_rec(record->global_next)) {
+         record = as_rec(record->next)) {
         if (record->type == 3 &&
             (const void*)record->payload == (const void*)entity) return 1;
     }
@@ -5082,14 +4958,12 @@ static void cmd_pair_stage(CmdRec* rec, const int pair[2])
  * DAT_004b3354 and DAT_004b3358 are separate roots that each use +0x60. */
 static void cmd_raw_head_insert(CmdRec* rec)
 {
-    rec->global_next = s_global_head;
-    rec->next = NULL;
+    rec->next = s_global_head;
     s_global_head = rec;
 }
 static void cmd_raw_tail_insert(CmdRec* rec)
 {
-    rec->global_next = s_global_tail;
-    rec->next = NULL;
+    rec->next = s_global_tail;
     s_global_tail = rec;
 }
 
@@ -5150,4 +5024,285 @@ extern "C" void cmd_mark_matching_adapter(int type, struct EntitySlot* object,
 extern "C" void cell_command_type13_issue_original(const int* blockPos)
 {
     cell_command_type13_issue(blockPos[0], blockPos[1]);
+}
+
+/* ---- GAME-002 group D adapters (ADR 0005 step 6) ----
+ * Original-ABI entries for aitask.c's 0x00404fc0. Natively nothing calls
+ * them: the port tail keeps its own eligibility check above. */
+namespace unported_ledger_stubs {
+int ledger_stub_0044b4c0_TypeTwoEntityTargetResolveAndApply(
+    EntitySlot* entity, uint32_t code);
+}
+
+/* FUN_0043a5f0 (LegoObject_GetActivityContainer-style): the original returns
+ * the object's container; the port's entry
+ * (entity_visual_resource_get_or_create) returns nothing, and the port has
+ * no original container. */
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (0043a5f0 -> no port container)
+extern "C" void* aitask_object_container_get_adapter(struct EntitySlot* object)
+{
+    (void)object;
+    return NULL;
+}
+
+/* FUN_0044b4c0: the port's definition has C++ linkage, in a namespace, and
+ * no header declaration that legoobject.cpp sees. */
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (0044b4c0 -> ledger_stub_0044b4c0_TypeTwoEntityTargetResolveAndApply)
+extern "C" int aitask_object_command_gate_adapter(struct EntitySlot* object, int type)
+{
+    return unported_ledger_stubs::
+        ledger_stub_0044b4c0_TypeTwoEntityTargetResolveAndApply(
+            object, (uint32_t)type);
+}
+
+/* FUN_00432550: the original takes the block position (and ignores it); the
+ * port's entry takes no argument. */
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00432550 -> always_accept_place_command_cell)
+extern "C" int aitask_place_command_cell_accept_adapter(int* blockPos)
+{
+    (void)blockPos;
+    return always_accept_place_command_cell();
+}
+
+/* ---- GAME-002 group E adapters (ADR 0005 step 6) ----
+ * Original-ABI entries for aitask.c's 0x00405c10. Natively nothing calls
+ * them: the port tail keeps its own assignment tick above. */
+/* FUN_00440c30: the original returns whether a route exists; the port's
+ * entry is a void namespaced ledger stub, so call the route check it
+ * forwards to. */
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00440c30 -> terrain_neighbor_path_check)
+extern "C" int aitask_grid_route_search_adapter(struct EntitySlot* object,
+                                                unsigned int startX,
+                                                unsigned int startY,
+                                                unsigned int goalX,
+                                                unsigned int goalY,
+                                                int** outX, int** outY,
+                                                unsigned int* outCount)
+{
+    return terrain_neighbor_path_check(object, startX, startY, goalX, goalY,
+                                       outX, outY, outCount, NULL, NULL);
+}
+
+/* FUN_00438e50: the port's entry is a namespaced ledger stub. */
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00438e50 -> ledger_stub_00438e50_SpatialObjectQueryCenterMask100)
+extern "C" struct EntitySlot* aitask_object_find_trainer_adapter(
+    struct EntitySlot* object, const float* center, unsigned int mask)
+{
+    return (struct EntitySlot*)unported_ledger_stubs::
+        ledger_stub_00438e50_SpatialObjectQueryCenterMask100(object, center,
+                                                             mask);
+}
+
+/* ---- GAME-002 group C adapters (ADR 0005 step 6) ----
+ * Original-ABI entries for aitask.c's 0x00404280 (the per-entity command
+ * chain tick), 0x00404e00 and 0x00404ed0. Natively nothing calls them: the
+ * port tail keeps its own chain tick above. Most of the callees' port
+ * definitions are namespaced ledger stubs in legoobject.cpp. */
+
+/* FUN_0043a120: namespaced port entry; the original passes the command's
+ * +0x30 position pair untyped. */
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (0043a120 -> entity_cell_step_command_issue_with_jitter)
+extern "C" int aitask_cell_step_command_issue_adapter(struct EntitySlot* object,
+                                                      int* blockPos, void* wPos,
+                                                      int actionMode,
+                                                      int markPending)
+{
+    return unported_ledger_stubs::entity_cell_step_command_issue_with_jitter(
+        object, blockPos, (const float*)wPos, actionMode, markPending);
+}
+
+/* FUN_00441700: the original takes the route as block coordinates; the
+ * port's entry takes them as floats. */
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00441700 -> entity_route_setup_and_marker_associate)
+extern "C" int aitask_route_setup_adapter(struct EntitySlot* object,
+                                          unsigned int count, int* routeX,
+                                          int* routeY, float* wPos)
+{
+    float* x = (float*)malloc((count != 0u ? count : 1u) * sizeof(float));
+    float* y = (float*)malloc((count != 0u ? count : 1u) * sizeof(float));
+    unsigned int i;
+    int result = 0;
+    if (x != NULL && y != NULL) {
+        for (i = 0u; i < count; ++i) {
+            x[i] = (float)routeX[i];
+            y[i] = (float)routeY[i];
+        }
+        result = entity_route_setup_and_marker_associate(object, count, x, y,
+                                                         wPos);
+    }
+    free(x);
+    free(y);
+    return result;
+}
+
+/* FUN_00443710: namespaced port entry without the original's fourth
+ * argument. */
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00443710 -> ledger_stub_00443710_AdjacentPositionCandidateFind)
+extern "C" int aitask_adjacent_position_find_adapter(struct EntitySlot* object,
+                                                     int* blockPos,
+                                                     int* outPos, int mode)
+{
+    (void)mode;
+    return unported_ledger_stubs::
+        ledger_stub_00443710_AdjacentPositionCandidateFind(object, blockPos,
+                                                           outPos);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00446e40 -> ledger_stub_00446e40_EntityNearestCellRouteCommit)
+extern "C" int aitask_nearest_cell_route_commit_adapter(struct EntitySlot* object,
+                                                        unsigned int x,
+                                                        unsigned int y,
+                                                        int mode)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00446e40_EntityNearestCellRouteCommit(object, x, y, mode);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (004470d0 -> lego::entity_conditional_type_five_spawn)
+extern "C" int aitask_type_five_spawn_adapter(struct EntitySlot* object)
+{
+    return lego::entity_conditional_type_five_spawn(object);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00448800 -> ledger_stub_00448800_EntityMoveToCellCoordinates)
+extern "C" int aitask_move_to_cell_adapter(struct EntitySlot* object,
+                                           int* blockPos)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00448800_EntityMoveToCellCoordinates(object, blockPos);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00448880 -> ledger_stub_00448880_RecordGatedStepCommandIssue)
+extern "C" int aitask_gated_step_record_adapter(struct EntitySlot* object,
+                                                int* blockPos)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00448880_RecordGatedStepCommandIssue(object, blockPos);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00448a60 -> ledger_stub_00448a60_EntityNeighborCellMoveCommandHandle)
+extern "C" int aitask_neighbor_cell_move_adapter(struct EntitySlot* object,
+                                                 int* blockPos)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00448a60_EntityNeighborCellMoveCommandHandle(object,
+                                                                 blockPos);
+}
+
+namespace unported_ledger_stubs {
+int ledger_stub_00448c90_CardinalStepCommandIssueAndLink(
+    EntitySlot* entity, EntitySlot* target, int link_mode);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00448c90 -> ledger_stub_00448c90_CardinalStepCommandIssueAndLink)
+extern "C" int aitask_cardinal_step_link_adapter(struct EntitySlot* object,
+                                                 struct EntitySlot* target,
+                                                 int linkMode)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00448c90_CardinalStepCommandIssueAndLink(object, target,
+                                                             linkMode);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00448eb0 -> ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter)
+extern "C" int aitask_proximity_step_jitter_adapter(struct EntitySlot* object,
+                                                    struct EntitySlot* target,
+                                                    int marker)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(object, target,
+                                                                 marker);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00449010 -> ledger_stub_00449010_EntityKind6RecordApproachRouteIssue)
+extern "C" int aitask_kind6_approach_route_adapter(struct EntitySlot* object)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00449010_EntityKind6RecordApproachRouteIssue(object);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (004490a0 -> ledger_stub_004490a0_ProximityStepCommandIssueWithLink)
+extern "C" int aitask_proximity_step_link_adapter(struct EntitySlot* object,
+                                                  struct EntitySlot* target,
+                                                  int mode, int setGlobalGate)
+{
+    return unported_ledger_stubs::
+        ledger_stub_004490a0_ProximityStepCommandIssueWithLink(
+            object, target, mode, setGlobalGate);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00449240 -> ledger_stub_00449240_EntityWalkableTargetCellRouteIssue)
+extern "C" int aitask_walkable_cell_route_adapter(struct EntitySlot* object,
+                                                  int* blockPos)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00449240_EntityWalkableTargetCellRouteIssue(object,
+                                                                blockPos);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (004492b0 -> ledger_stub_004492b0_CellStepCommandIssueWithTargetMark)
+extern "C" int aitask_cell_step_mark_adapter(struct EntitySlot* object,
+                                             int* blockPos)
+{
+    return unported_ledger_stubs::
+        ledger_stub_004492b0_CellStepCommandIssueWithTargetMark(object,
+                                                                blockPos);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00449430 -> ledger_stub_00449430_EntityTargetCellRouteAndAssociate)
+extern "C" int aitask_target_cell_route_associate_adapter(
+    struct EntitySlot* object, struct EntitySlot* target)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00449430_EntityTargetCellRouteAndAssociate(object, target);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00449520 -> ledger_stub_00449520_EntityTargetCellRouteMarker14)
+extern "C" int aitask_target_cell_route_marker14_adapter(
+    struct EntitySlot* object, struct EntitySlot* target)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00449520_EntityTargetCellRouteMarker14(object, target);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00449610 -> ledger_stub_00449610_EntityCoordinateRouteAndMark)
+extern "C" int aitask_coordinate_route_mark_adapter(struct EntitySlot* object,
+                                                    int* blockPos)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00449610_EntityCoordinateRouteAndMark(object, blockPos);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00449700 -> ledger_stub_00449700_RouteStepCommandIssue)
+extern "C" int aitask_route_step_adapter(struct EntitySlot* object)
+{
+    return unported_ledger_stubs::ledger_stub_00449700_RouteStepCommandIssue(
+        object);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (00449ac0 -> ledger_stub_00449ac0_ProximityStepCommandIssueClearingGate)
+extern "C" int aitask_proximity_step_clearing_adapter(struct EntitySlot* object,
+                                                      struct EntitySlot* target)
+{
+    return unported_ledger_stubs::
+        ledger_stub_00449ac0_ProximityStepCommandIssueClearingGate(object,
+                                                                   target);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (0044a3d0 -> type11_cell_coordinate_nearest_resolve)
+extern "C" int aitask_type11_nearest_resolve_adapter(struct EntitySlot* object,
+                                                     int* outPos)
+{
+    return unported_ledger_stubs::type11_cell_coordinate_nearest_resolve(object,
+                                                                        outPos);
+}
+
+/* FUN_0044b500: the original passes the command's +0x38 word. */
+// PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (0044b500 -> ledger_stub_0044b500_ObjectPositionStepCommandIssueAndLink)
+extern "C" int aitask_position_step_link_adapter(struct EntitySlot* object,
+                                                 void* selector)
+{
+    return unported_ledger_stubs::
+        ledger_stub_0044b500_ObjectPositionStepCommandIssueAndLink(
+            object, (uint32_t)(uintptr_t)selector);
 }

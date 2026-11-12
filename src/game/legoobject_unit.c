@@ -21,6 +21,7 @@
  * legoobject.cpp, which this unit reads with C linkage
  * (legoobject_unit_imports.h). Fields the port does not model are defined
  * here, one annotated global each. */
+#include "aitask_port_aliases.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

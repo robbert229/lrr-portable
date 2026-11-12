@@ -67,7 +67,11 @@ src/game/ai_from_aitask.hpp
 src/game/ai_from_lego.hpp
 src/game/ai_from_legoobject.hpp
 src/game/ai_shared.hpp
-src/game/aitask.cpp
+src/game/aitask.c
+src/game/aitask.h
+src/game/aitask_imports.h
+src/game/aitask_port.cpp
+src/game/aitask_port_aliases.h
 src/game/animation_object.c
 src/game/animation_object.h
 src/game/bezier.c

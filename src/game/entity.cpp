@@ -1280,9 +1280,11 @@ uint32_t entity_indexed_record_word_at_f0_get(int group, int index, int slot)
     return entity_indexed_record_word_get(group, index, slot, 0xf0u);
 }
 
-/* FUNCTION: LEGORR 0x00406540
- * Pool storage is represented by the most recently active portable game
- * context; live slots are walked in the same callback-until-match style. */
+/* Not 0x00406540: that original (aitask.c's
+ * aitask_entity_pool_callback_search) walks the AITask pool, not the entity
+ * pool (finding 570). Pool storage is represented by the most recently
+ * active portable game context; live slots are walked in the same
+ * callback-until-match style. */
 int entity_pool_callback_search(int (*callback)(EntitySlot*, void*),
                                 void* payload)
 {

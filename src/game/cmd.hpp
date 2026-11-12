@@ -196,8 +196,7 @@ void  cmd_rec_entity_ref_install(void* rec, void* ref); /* port hook */
  * to a cmd_pending_record_copy copy, and the +0x5c bit 0x40000 stamp
  * writes the corpus's 25.0-float bits into the copy-source record's
  * +0x18. Both lanes end with the entity-reference sweep and the idle
- * registration. Deviations: NULL record/entity guards and the
- * port-split global-list link (see the .cpp). */
+ * registration. Deviation: NULL record/entity guards. */
 void entity_record_attach_and_relink(void* record, void* previous,
                                      EntitySlot* entity);
 
@@ -301,7 +300,7 @@ int cmd_queue_active_count_peek(void);
  * indirection, and drive the sound-minimum-distance leaf with mode 0 and
  * the dispatch parameter as the scalar selector. NULL array output and
  * failed allocations skip (documented deviations). */
-int selection_snapshot_create(void** array_out, unsigned* count_out);
+extern "C" int selection_snapshot_create(void** array_out, unsigned* count_out);
 int selection_command_dispatch(int param);
 
 /* --- random-cell producer / entity remove (2026-10-24) ----------------------
@@ -379,9 +378,9 @@ extern "C" void entity_deferred_work_schedule(EntitySlot* e);
  * seam); guarded access (deviation). */
 extern "C" void cmd_mark_matching(int type, int payload, const int coords[2]);
 void cmd_set_kind(void* rec, int kind);
-void priority_entry_order_value_set(int kind, int value);
-void priority_entry_state_set(int kind, int value);
-int  priority_entry_state_get(int kind);
+extern "C" void priority_entry_order_value_set(int kind, int value); /* aitask.c */
+extern "C" void priority_entry_state_set(int kind, int value);       /* aitask.c */
+extern "C" int  priority_entry_state_get(int kind);                  /* aitask.c */
 
 /* Diagnostic: overwrite a record's +0x5c state word. */
 void cmd_rec_state_set(void* rec, uint32_t state);
@@ -414,8 +413,8 @@ int cmd_rec_param2_get(const void* rec);
  * 0 with bits 6/7/10 raised and bit 4 cleared. */
 void cmd_flush_all(int disable_mode);
 int  cmd_global_enabled_peek(void);
-void* engine_memory_allocate(long size);
-extern "C" void engine_memory_free(void* ptr);
+extern "C" void* engine_memory_allocate(long size); /* aitask.c */
+extern "C" void engine_memory_free(void* ptr);      /* aitask.c */
 extern "C" void handle_array_release_and_reset(void);
 extern "C" void entity_command14_batch_issue(int count);
 extern "C" void level_no_gather_object_setup(int mode);

@@ -12,6 +12,7 @@
  * config layer is the original's since Config.c was converted (#394), and
  * the panel position and flags are Panel.c's since GAME-032 was converted
  * (finding 554). */
+#include "aitask_port_aliases.h"
 #include <stdio.h>
 #include <stdlib.h>
 

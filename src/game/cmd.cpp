@@ -43,6 +43,13 @@ extern "C" void* s_upgrade_records; /* lego_unit.c (C) reads it */
 #include "cmd_for_aitask.hpp"
 extern "C" void cmd_registry_init_target(void);
 #include "cmd_from_aitask.hpp"
+/* AITask.c's priority tables live in the unit's state (aitask.c); the
+ * frozen headers' s_behaviour/s_priority_state declarations are not
+ * defined anywhere since finding 570. */
+extern "C" int* aitask_port_priority_values(void);
+extern "C" int* aitask_port_priority_states(void);
+#define s_behaviour (aitask_port_priority_values())
+#define s_priority_state (aitask_port_priority_states())
 
 /* ------------------------------------------------------------------ *
  *  Command record (finding 10 §"Command record" — corpus stride 0x68).
@@ -920,7 +927,7 @@ void* cmd_global_pending_head(void)
 
 void* cmd_global_next(const void* rec)
 {
-    return rec != NULL ? cas_rec(rec)->global_next : NULL;
+    return rec != NULL ? cas_rec(rec)->next : NULL;
 }
 #endif /* !LEGORRR_BACKEND_WINAPI */
 
@@ -937,14 +944,14 @@ void cmd_global_unlink(const void* rec)
         while (current != NULL) {
             if ((const void*)current == rec) {
                 if (previous != NULL)
-                    previous->global_next = current->global_next;
+                    previous->next = current->next;
                 else
-                    *roots[root_index] = as_rec(current->global_next);
-                current->global_next = NULL;
+                    *roots[root_index] = as_rec(current->next);
+                current->next = NULL;
                 return;
             }
             previous = current;
-            current = as_rec(current->global_next);
+            current = as_rec(current->next);
         }
     }
 }
@@ -1096,6 +1103,11 @@ int cmd_purge_compare_default(const void* left, const void* right)
     int b_behaviour = b->behaviour;
     if (a_state != 0u && b_state == 0u) return -1;
     if (a_state != 0u && b_state != 0u) {
+        /* The original's comparator (0x403f80) orders flag-0x100 records by
+         * the unsigned word at +0x50, not by a link. The frozen CmdRec names
+         * that word global_next; since finding 570 merged the global-list
+         * link into +0x60, nothing in the port writes it (its original
+         * writer is unrecovered), so it reads as zero here. */
         const uintptr_t a_order = (uintptr_t)a->global_next;
         const uintptr_t b_order = (uintptr_t)b->global_next;
         if (a_order > b_order) return -1;

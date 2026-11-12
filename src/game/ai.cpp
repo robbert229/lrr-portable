@@ -1220,8 +1220,8 @@ int ai_tick(GameContext* ctx, float dt)
         }
     }
     /* 2. Global command list: task records (CmdLinkHead) run their yield.
-     *    Move/target records in the global list are the same objects as the
-     *    chain heads handled above — already unlinked when completed. */
+     *    A record is on an entity chain or on a global list, never both:
+     *    the two share the +0x60 link (finding 570). */
     {
         void* rec = cmd_global_head();
         while (rec != NULL) {
