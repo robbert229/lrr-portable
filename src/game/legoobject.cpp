@@ -10062,6 +10062,7 @@ static void entity_carried_slot_set(EntitySlot* entity, int index,
     else entity->carry_extra_links[index - 1] = carried;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static void entity_carried_links_clear(EntitySlot* entity)
 {
     int index;
@@ -10076,6 +10077,7 @@ static void entity_carried_links_clear(EntitySlot* entity)
     entity->carry_state_324 = 0;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static void entity_action_consume_counter_sidecar_release(EntitySlot* owner)
 {
     EntityActionConsumeCounterSidecar** link =
@@ -10097,6 +10099,7 @@ static void entity_action_consume_counter_sidecar_release(EntitySlot* owner)
     }
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int entity_display_name_config_index(const EntitySlot* entity)
 {
     uint32_t i;
@@ -10112,12 +10115,14 @@ static int entity_display_name_config_index(const EntitySlot* entity)
     return -1;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static void* entity_spatial_query_execute_current(
     const SpatialObjectQueryRequest* request)
 {
     return entity_spatial_object_query_hook(
         entity_pool_callback_context_get(), request);
 }
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int entity_route_marker_query_match(
     EntitySlot* candidate, const EntityRouteMarkerSearchRequest* request)
 {
@@ -10180,6 +10185,7 @@ static int entity_route_marker_query_match(
     return matched;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int queued_grid_animation_anchor_cell_get(void* anchor,
                                                   float position[2])
 {
@@ -10196,6 +10202,7 @@ static int queued_grid_animation_anchor_cell_get(void* anchor,
     return 1;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static EntitySlot* queued_grid_animation_spatial_find(
     const float position[2], int type, int filter_a, int filter_b)
 {
@@ -10221,6 +10228,7 @@ static EntitySlot* queued_grid_animation_spatial_find(
     return (EntitySlot*)spatial_object_query_execute(&request);
 }
 
+// PORT-ONLY: port model of 0x004386b0, retires to the tail in GAME-023 part 3
 static int entity_grid_position_match(EntitySlot* entity, void* payload)
 {
     EntityGridFindQuery* const query = (EntityGridFindQuery*)payload;
@@ -10325,6 +10333,7 @@ static int entity_spawn_request_pair_matches(const EntitySpawnRequest* request,
         request->type, request->kind, barracks_type, barracks_row, context);
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static GameContext* building_upgrade_context_get(EntitySlot* building)
 {
     if (building != NULL && building->owner_ctx != NULL)
@@ -10332,6 +10341,7 @@ static GameContext* building_upgrade_context_get(EntitySlot* building)
     return entity_pool_callback_context_get();
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static uint32_t building_upgrade_config_cost_get(GameContext* context,
                                                   int selector)
 {
@@ -10342,6 +10352,7 @@ static uint32_t building_upgrade_config_cost_get(GameContext* context,
     return (uint32_t)block_get_int(context->cfg, key, default_cost);
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int building_upgrade_live_payment_select(EntitySlot* building,
                                                 uint32_t* resource_out,
                                                 uint32_t* amount_out)
@@ -10364,6 +10375,7 @@ static int building_upgrade_live_payment_select(EntitySlot* building,
     return 1;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int deferred_olist_string_equal(const char* first, const char* second)
 {
     if (first == NULL || second == NULL) return 0;
@@ -10455,6 +10467,7 @@ static int entity_task_at_grid_coordinate_candidate(
     return 1;
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int entity_deposit_position_get(EntitySlot* entity, float position[3])
 {
     if (entity->attached_scene_object != NULL) {
@@ -10532,6 +10545,7 @@ static void entity_kind_four_adjacent_expand(LevelState* level, int x, int y)
     }
 }
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static int entity_unload_adjacent_cell_find_on_level(
     const EntitySlot* entity, const LevelState* level, int out_xy[2])
 {
@@ -10922,6 +10936,7 @@ static int nearest_open_cell_candidate_compare(const void* first,
 }
 } // namespace unported_ledger_stubs
 
+// PORT-ONLY: helper of GAME-023 part-1 port models, retires to the tail in GAME-023 part 3
 static void idle100_register(EntitySlot* e)
 {
     if (s_idle100_n < AI_IDLE_TABLE_MAX) {
