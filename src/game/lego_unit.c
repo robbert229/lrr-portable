@@ -5268,14 +5268,13 @@ int lego_terrain_placement_blocked_adjacent_cell_scan(int bx, int by,
 
 /* Is the block inside the map's border, flags1 0x10 set and 8 clear? The
  * original inlines this test (it materialises the 0/1 result). */
-static __inline int lego_block_flag10_without_8(unsigned int bx, unsigned int by)
+static __inline int lego_block_flag10_without_8(Lego_Level* level,
+                                                unsigned int bx, unsigned int by)
 {
     int result = 0;
-    if (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1 &&
-        (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
-             [by * legoGlobs_currLevel->width + bx].flags1 & 0x10) &&
-        !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
-              [by * legoGlobs_currLevel->width + bx].flags1 & 8))
+    if (bx < level->width - 1 && by < level->height - 1 &&
+        (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].flags1 & 0x10) &&
+        !(LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].flags1 & 8))
         result = 1;
     return result;
 }
@@ -5295,7 +5294,7 @@ int lego_first_free_neighbor_cell_pick(struct EntitySlot* liveObj,
     for (i = 0; i < 4; i++) {
         dir = (s_neighbor_pick_rotation + i) & 3;
         if (!skipWalls ||
-            !lego_block_flag10_without_8(DIRECTIONS[dir][0] + blockPos[0],
+            !lego_block_flag10_without_8(legoGlobs_currLevel, DIRECTIONS[dir][0] + blockPos[0],
                                          DIRECTIONS[dir][1] + blockPos[1])) {
             if (lego_terrain_cell_route_and_occupancy_check(liveObj,
                     DIRECTIONS[dir][0] + blockPos[0], DIRECTIONS[dir][1] + blockPos[1],
@@ -5416,8 +5415,9 @@ void lego_terrain_cell_flag100_set_and_track(const int blockPos[2])
 // FUNCTION: LEGORR 0x00432170
 uint32_t lego_terrain_cell_secondary_flag_100(const int blockPos[2])
 {
-    return LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
-        [blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags2 & 0x100;
+    Lego_Level* level = legoGlobs_currLevel;
+    return LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+        [blockPos[1] * level->width + blockPos[0]].flags2 & 0x100;
 }
 
 // FUNCTION: LEGORR 0x004321a0
@@ -5543,8 +5543,9 @@ void lego_terrain_cell_primary_flags_mask_clear_and_refresh(const int blockPos[2
 // FUNCTION: LEGORR 0x004323c0
 void lego_terrain_cell_secondary_bit0_clear(const int blockPos[2])
 {
-    LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
-        [blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags2 &= ~1;
+    Lego_Level* level = legoGlobs_currLevel;
+    LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+        [blockPos[1] * level->width + blockPos[0]].flags2 &= ~1;
 }
 
 // FUNCTION: LEGORR 0x004323f0
