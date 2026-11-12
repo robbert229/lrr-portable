@@ -159,6 +159,7 @@ __declspec(allocate(".data$zzzzzz")) static unsigned char
     s_menu_global_bytes[0x13c0] = { 0 };
 #pragma data_seg()
 #define s_menu_global_words ((uint32_t*)s_menu_global_bytes)
+#endif
 /* main_menu_text_item (FUN_004103d0) reads these three dwords individually;
  * dedicated annotated statics carry them (whole-object resolution — the
  * s_menu_global_bytes band cannot hold the annotation, same precedent as the
@@ -169,20 +170,36 @@ static void* DAT_0055613c;
 static void* DAT_00556f50;
 // GLOBAL: LEGORR 0x00556f54
 static void* DAT_00556f54;
+#if defined(LEGORRR_BACKEND_WINAPI)
 #define s_fe_flow (s_menu_global_words + 0x3b7)
+#endif
 /* The five flow words land as own storage: the corpus addresses them as
  * individual dwords, and Reccmp only resolves whole-object operands (the
  * s_menu_global_bytes band cannot carry the annotation). */
+#if defined(LEGORRR_BACKEND_WINAPI)
 // GLOBAL: LEGORR 0x0055701c
 static int s_fe_flow_quit;
+#endif
+#if defined(LEGORRR_BACKEND_WINAPI)
 // GLOBAL: LEGORR 0x00557020
 static int s_fe_flow_save_slot;
+#endif
+#if defined(LEGORRR_BACKEND_WINAPI)
 // GLOBAL: LEGORR 0x00557024
 static int s_fe_flow_ingame;
+#endif
+#if defined(LEGORRR_BACKEND_WINAPI)
 // GLOBAL: LEGORR 0x00557048
 static int s_fe_flow_level_start;
+#endif
+#if defined(LEGORRR_BACKEND_WINAPI)
 // GLOBAL: LEGORR 0x0055704c
 static int s_fe_flow_menu_options;
+#endif
+#if !defined(LEGORRR_BACKEND_WINAPI)
+static int s_fe_flow[5];
+#endif
+#if defined(LEGORRR_BACKEND_WINAPI)
 #define FE_FLOW_LEVEL_START_SLOT 11
 #define FE_FLOW_MENU_OPTIONS_SLOT 12
 #define FE_FLOW_QUIT_WORD       s_fe_flow_quit
@@ -191,10 +208,6 @@ static int s_fe_flow_menu_options;
 #define FE_FLOW_LEVEL_START     s_fe_flow_level_start
 #define FE_FLOW_MENU_OPTIONS    s_fe_flow_menu_options
 #else
-static void* DAT_0055613c;
-static void* DAT_00556f50;
-static void* DAT_00556f54;
-static int s_fe_flow[5];
 #define FE_FLOW_LEVEL_START_SLOT 3
 #define FE_FLOW_MENU_OPTIONS_SLOT 4
 #define FE_FLOW_QUIT_WORD       s_fe_flow[0]
