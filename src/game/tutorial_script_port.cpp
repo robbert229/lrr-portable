@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-028 GAME-028: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-028.csv. */
+/* The port tail of NERPs.c (GAME-028; finding 586). The original-shape unit
+ * is tutorial_script.c. This file keeps the port's tutorial script, relocated
+ * from the unit (#496): it runs through the port's hook tables
+ * (s_tutorial_script_ops, s_advisor_inline_token_ops) and its own state, and
+ * native callers and tests use it under the port's names. Nothing here is
+ * annotated: each former FUNCTION marker is a "Port model of" comment, and
+ * the original's storage is tutorial_script.c's. At the end, the adapters
+ * that tutorial_script.c's NERP function table names for the functions not
+ * yet rebuilt in original shape. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#588). */
 #include "legoobject_port_aliases.h"
 #include <stdio.h>
@@ -73,7 +79,7 @@
 #include "game/actor_scene.hpp"
 #include "scene_pool.hpp"
 /* GAME-021 lego_unit.c reads this word (C linkage, ADR 0005 step 6). */
-extern "C" uint32_t s_overlay_word_03610;
+extern "C" uint32_t s_overlay_word_03610, s_overlay_word_03614;
 #include "engine_for_tutorial_script.hpp"
 #include "message_for_tutorial_script.hpp"
 #include "record_for_tutorial_script.hpp"
@@ -82,32 +88,25 @@ extern "C" int tutorial_script_file_load_target(const char* path);
 
 /* DeferredCallbackSet (FUN_00453900) — zero-init module static (the
  * corpus's DAT_004a673c presence word). */
-// GLOBAL: LEGORR 0x004a673c
 uint32_t s_deferred_callback_presence;
 
-// GLOBAL: LEGORR 0x004a6768
 int s_advisor_sound_slot = -1;
 
-// GLOBAL: LEGORR 0x004ff958
 static uint32_t s_tutorial_4ff958_state[11];
 
 /* --- the remaining unowned DAT one-liners (see crt.hpp) ---------------------
  * Zero-initialized module statics per the s_system_state precedent — the
  * globals' meanings are unresolved (finding 383) and none has a ported
  * feeder. */
-// GLOBAL: LEGORR 0x004ff978
 uint32_t s_flag_004ff978 = 0u;
 
-// GLOBAL: LEGORR 0x004ff980
 uint32_t      s_system_state = 0u;   /* DAT_004ff980 */
 
 /* --- unowned DAT-global counter/accumulator band (see crt.hpp) -----------
  * None of these globals has a ported owner or feeder, so each lands as a
  * zero-initialized module static (the s_system_state precedent). */
-// GLOBAL: LEGORR 0x004ff990
 uint32_t s_counter_004ff990 = 0u;
 
-// GLOBAL: LEGORR 0x004ff9bc
 uint32_t             s_objective_switch = 0u; /* DAT_004ff9bc */
 
 extern uint32_t s_objective_switch;
@@ -152,7 +151,7 @@ static void advisor_inline_output_char(char* output, uint32_t output_size, uint3
 /* TutorialNerpScriptFileLoad @ 0x00452df0. The two global clear bands have
  * exact extents of 45 and 11 dwords; retain their unmapped fields as raw
  * sidecars while keeping the observed engine calls in their original order. */
-// FUNCTION: LEGORR 0x00452df0
+/* Port model of 0x00452df0. */
 int tutorial_script_file_load_target(const char* path)
 {
     uint32_t size = 0u;
@@ -184,7 +183,7 @@ int tutorial_script_file_load_target(const char* path)
     return data != NULL;
 }
 
-// FUNCTION: LEGORR 0x00452e70
+/* Port model of 0x00452e70. */
 int objective_advisor_token_file_load(const char* path)
 {
     Resource* resource;
@@ -207,7 +206,7 @@ int objective_advisor_token_file_load(const char* path)
     return result;
 }
 
-// FUNCTION: LEGORR 0x00453200
+/* Port model of 0x00453200. */
 int objective_advisor_token_lookup(uint32_t index)
 {
     if (index < s_adv_token_count && s_adv_tokens != NULL) {
@@ -218,7 +217,7 @@ int objective_advisor_token_lookup(uint32_t index)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00453220
+/* Port model of 0x00453220. */
 int tutorial_display_resources_release(void)
 {
     tutorial_script_data_release(s_tutorial_script_data);
@@ -245,7 +244,7 @@ int tutorial_display_resources_release(void)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x004532e0
+/* Port model of 0x004532e0. */
 void tutorial_indirect_handle_resolve(uint32_t* value)
 {
     uint32_t index;
@@ -270,7 +269,7 @@ void tutorial_indirect_handle_resolve(uint32_t* value)
         *value = resolved;
 }
 
-// FUNCTION: LEGORR 0x00453320
+/* Port model of 0x00453320. */
 void tutorial_script_command_dispatch(float delta)
 {
     uint32_t pc = 0u;
@@ -380,7 +379,7 @@ void tutorial_script_command_dispatch(float delta)
 
 /* CameraFocusScrollScaleCommit (FUN_004538a0) — see engine.hpp. The corpus
  * reads the level-state root global and strides both windows blindly. */
-// FUNCTION: LEGORR 0x004538a0
+/* Port model of 0x004538a0. */
 int camera_focus_scroll_scale_commit(const EngineContext* ctx,
                                      const void* record)
 {
@@ -402,20 +401,20 @@ int camera_focus_scroll_scale_commit(const EngineContext* ctx,
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00453900
+/* Port model of 0x00453900. */
 void deferred_callback_set(uint32_t value)
 {
     s_deferred_callback_presence = value;
 }
 
-// FUNCTION: LEGORR 0x00453910
+/* Port model of 0x00453910. */
 void objective_deferred_callback_invoke_if_set(void)
 {
     if (s_objective_deferred_callback != NULL)
         s_objective_deferred_callback();
 }
 
-// FUNCTION: LEGORR 0x00453920
+/* Port model of 0x00453920. */
 void tutorial_advisor_scroll_step_advance(void)
 {
     static const uint32_t scroll_scale_record[2] = { 100u, 0u };
@@ -448,7 +447,7 @@ void tutorial_advisor_scroll_step_advance(void)
         s_nerp_runtime.message_pending_ack = 0u;
     }
 }
-// FUNCTION: LEGORR 0x00453bb0
+/* Port model of 0x00453bb0. */
 void tutorial_frame_timer_array_advance(float delta)
 {
     const float timer_delta = delta * 1000.0f * 0.04f;
@@ -482,7 +481,7 @@ message_tail:
         advisor_clear_active_state();
 }
 
-// FUNCTION: LEGORR 0x00453da0
+/* Port model of 0x00453da0. */
 void tutorial_camera_focus_tween_update(float delta)
 {
     float scale = 1.0f;
@@ -554,19 +553,19 @@ void tutorial_camera_focus_tween_update(float delta)
                                             s_tutorial_script_ops.context);
 }
 
-// FUNCTION: LEGORR 0x00454880
+/* Port model of 0x00454880. */
 void global_counter_004ff990_increment(void)
 {
     s_counter_004ff990 = s_counter_004ff990 + 1u;
 }
 
-// FUNCTION: LEGORR 0x00454890
+/* Port model of 0x00454890. */
 void global_counter_004ff990_reset(void)
 {
     s_counter_004ff990 = 0u;
 }
 
-// FUNCTION: LEGORR 0x00454b70
+/* Port model of 0x00454b70. */
 int objective_voice_alias_raise_commit(LevelState* s)
 {
     if (s != NULL) s_objective_active_level = s;
@@ -575,7 +574,7 @@ int objective_voice_alias_raise_commit(LevelState* s)
 }
 
 /* ObjectiveVoiceAliasRaiseGateBit27 (FUN_00454b80) — see objective.hpp. */
-// FUNCTION: LEGORR 0x00454b80
+/* Port model of 0x00454b80. */
 int objective_voice_alias_raise_gate_bit27(LevelState* s)
 {
     if ((media_cd_flags_get() & 0x8000000u) == 0u) {
@@ -585,19 +584,23 @@ int objective_voice_alias_raise_gate_bit27(LevelState* s)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00456210
+/* 0x00456210: tutorial_script.c defines flh_magic_uu_noop under MSVC x86
+ * (it has no state, so it serves the port's callers too); elsewhere this
+ * definition does. */
+#if !(defined(_MSC_VER) && defined(_M_IX86))
 uint32_t flh_magic_uu_noop(void)
 {
     return 0u;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00456240
+/* Port model of 0x00456240. */
 uint32_t system_state_flags_get(void)
 {
     return s_system_state;
 }
 
-// FUNCTION: LEGORR 0x00456550
+/* Port model of 0x00456550. */
 uint32_t system_state_flags_set_target(const uint32_t* value)
 {
     s_system_state = *value;
@@ -606,7 +609,7 @@ uint32_t system_state_flags_set_target(const uint32_t* value)
 
 /* The mapped body takes only the mode pointer; keep the portable context
  * adapter separate to preserve that x86 argument layout. */
-// FUNCTION: LEGORR 0x004565f0
+/* Port model of 0x004565f0. */
 int engine_mode_set_target(const int* mode)
 {
     global_flag_004ff978_install((uint32_t)*mode);
@@ -619,21 +622,21 @@ int engine_mode_set_target(const int* mode)
     return *mode;
 }
 
-// FUNCTION: LEGORR 0x00456640
+/* Port model of 0x00456640. */
 uint32_t global_flag_004ff978_get(void)
 {
     return s_flag_004ff978;
 }
 /* Mapped target: stores the input dword globally and returns the same value;
  * the retail body dereferences the pointer without a null check. */
-// FUNCTION: LEGORR 0x004567c0
+/* Port model of 0x004567c0. */
 uint32_t global_value_004ff9bc_store_and_return_target(const void* value)
 {
     s_objective_switch = *(const uint32_t*)value;
     return *(const uint32_t*)value;
 }
 
-// FUNCTION: LEGORR 0x004567d0
+/* Port model of 0x004567d0. */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t objective_switch_state_get(void)
 {
@@ -662,14 +665,14 @@ uint32_t objective_switch_state_get(void)
 /* SoundAliasPlayGlobal (FUN_00456810) forwards the configured bank slot
  * directly to SoundBufferPlayWithPosition in global mode 2, with loop 0.
  * It does not run alias lookup or variant selection. */
-// FUNCTION: LEGORR 0x00456810
+/* Port model of 0x00456810. */
 void advisor_sound_alias_play_global(void)
 {
     if (s_advisor_sound_slot != -1 && sound_bank_sound_on())
         (void)sound_bank_entry_play_mode(s_advisor_sound_slot, 0, 2);
 }
 
-// FUNCTION: LEGORR 0x00456830
+/* Port model of 0x00456830. */
 void advisor_inline_token_render(char* source, char* output, int draw)
 {
     const uint32_t output_size = 512u;
@@ -821,7 +824,7 @@ void advisor_inline_token_render(char* source, char* output, int draw)
 /* TutorialPathCoordinateIndex (FUN_00456b80) — see level.hpp. The corpus
  * sweeps x-outer/y-inner over the grid dims and head-pushes each cell's
  * coordinate byte onto the chain table, clearing the byte as consumed. */
-// FUNCTION: LEGORR 0x00456b80
+/* Port model of 0x00456b80. */
 void tutorial_path_coordinate_index(LevelState* s)
 {
     if (s == NULL) {
@@ -863,7 +866,7 @@ void tutorial_path_coordinate_index(LevelState* s)
 
 /* ObjectPoolListHeadGet (FUN_00456c30, finding 374): the corpus's exact
  * in-range bounds (-1 < index < 0x37) over the +0x114 slot table. */
-// FUNCTION: LEGORR 0x00456c30
+/* Port model of 0x00456c30. */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) int object_pool_list_head_get(const void* pools, int index)
 {
@@ -901,7 +904,7 @@ int object_pool_list_head_get(const void* pools, int index)
 /* ObjectPoolListsFreeAll (FUN_00456c60) — see record.hpp. The corpus reads
  * each head through the bounds-checked getter and strides the dword slot
  * blind for the clear; the port reads/clears the native link slot. */
-// FUNCTION: LEGORR 0x00456c60
+/* Port model of 0x00456c60. */
 void object_pool_lists_free_all(void* pools)
 {
     if (pools == NULL) {
@@ -926,7 +929,7 @@ void object_pool_lists_free_all(void* pools)
 
 namespace unported_ledger_stubs {
 // CoordinateListCallbackVisit
-// FUNCTION: LEGORR 0x00456cb0
+/* Port model of 0x00456cb0. */
 void ledger_stub_00456cb0_CoordinateListCallbackVisit(
     void* list_key, CoordinateListVisitCallback callback, void* user)
 {
@@ -1064,3 +1067,32 @@ extern "C" uint32_t system_state_flags_get_original(const int* parameters)
     (void)parameters;
     return system_state_flags_get();
 }
+
+/* ------------------------------------------------------------------ */
+/* The NERP function table's port rows (tutorial_script.c, 004a5948).   */
+/* ------------------------------------------------------------------ */
+
+/* Runs the port's NERP implementation for one table row with the
+ * original's argument words, as the port's dispatcher does: the row's kind
+ * gives the argument count (1 and 2 for functions, 4-6 for statements). */
+static int nerps_port_call(uint32_t row, unsigned int* stack)
+{
+    const uint32_t kind = tutorial_command_kind_default(row);
+    uint32_t argc = 0u;
+    uint32_t result = 0u;
+    if (kind == 1u || kind == 2u) argc = kind;
+    else if (kind >= 4u && kind <= 6u) argc = kind - 3u;
+    (void)tutorial_command_invoke(row, argc == 0u ? NULL : stack, argc,
+                                  &result);
+    return (int)result;
+}
+
+/* One adapter per function of tutorial_script_port_functions.h, with the
+ * original's NERP function signature and C linkage. */
+#define NERPS_PORT_FUNCTION(name, row)                                  \
+    extern "C" int nerps_port_##name(unsigned int* stack)                \
+    {                                                                    \
+        return nerps_port_call((uint32_t)(row), stack);                  \
+    }
+#include "tutorial_script_port_functions.h"
+#undef NERPS_PORT_FUNCTION

@@ -417,9 +417,9 @@ static uint32_t s_adv_token_generation;
 /* Compatibility table for the old 32-bit pointer-return interface and its
  * test installer. Parsed callers should use objective_advisor_token_text_get
  * on 64-bit hosts, where a native pointer cannot fit in the target dword. */
-// GLOBAL: LEGORR 0x00555da8
+/* The port's copy of nerpsGlobs.messageLines (00555da8, tutorial_script.c). */
 const uint32_t* s_adv_tokens;
-// GLOBAL: LEGORR 0x00555da4
+/* The port's copy of nerpsGlobs.messageCount (00555da4). */
 uint32_t s_adv_token_count;
 
 void objective_advisor_tokens_release(void)

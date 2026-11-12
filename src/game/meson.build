@@ -43,7 +43,7 @@ game_sources = [
   'object_overlays.cpp',
   'object_state_file.cpp',
   'objective_unit.cpp',
-  'tutorial_script.cpp',
+  'tutorial_script_port.cpp',
   'terrain_map_port.cpp',
   'loading_progress.cpp',
   'lighteffects.cpp',
@@ -106,6 +106,7 @@ game_c_sources = [
   'steering.c',
   'terrain_cell_objects.c',
   'terrain_map.c',
+  'tutorial_script.c',
   'weapons.c',
   'sfx.c',
 ]

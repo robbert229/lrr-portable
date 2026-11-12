@@ -1,4 +1,4 @@
-# input_sha256: 1bbd6b548b0d78a9be59f4a095c0ef353a38a303f1446f437997cd4d000a4556
+# input_sha256: f44ac38ad9f1eceb3942b15fab068f40d12c1064248ce1c23adef8f8fcd52b94
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2292 mapped functions
+[game-only] 2294 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -130,7 +130,7 @@
 0x004041b0 93.33 aitask_entity_task_chain_contains_kind
 0x004041e0 100.00 aitask_entity_command_chain_head_remove
 0x00404250 100.00 aitask_cmd_pool_timer_delta_apply
-0x00404280 80.81 aitask_cmd_entity_command_chain_tick
+0x00404280 80.93 aitask_cmd_entity_command_chain_tick
 0x00404e00 98.65 aitask_object_path_submit_to_grid_target
 0x00404ed0 94.74 aitask_check_object_candidate
 0x00404f10 100.00 aitask_object_task_target_filter_find
@@ -413,7 +413,7 @@
 0x00411790 75.52 menu_pick_widget_under_pointer
 0x00411840 100.00 frontend_progress_value_changed
 0x00411870 18.00 fe_slider_pointer_handle
-0x004119d0 41.38 has_active_resource
+0x004119d0 34.48 has_active_resource
 0x00411f00 100.00 input_key_context_check
 0x00411f10 13.42 menu_percent_split_surface_blit
 0x00412170 100.00 menu_overlay_list_count
@@ -515,7 +515,7 @@
 0x00419030 71.15 help_window_button_feedback_update
 0x00419100 71.64 ui_mode_resource_positions_apply
 0x00419150 100.00 selection_state_handle_get
-0x004191a0 55.56 main_sim_state_admission_predicate
+0x004191a0 51.85 main_sim_state_admission_predicate
 0x004191f0 100.00 ui_mode_resource_bit40_get
 0x00419200 100.00 ui_mode_resource_bit40_set_clear
 0x00419230 100.00 info_initialise
@@ -544,7 +544,7 @@
 0x00419b00 100.00 info_has_text
 0x00419b20 100.00 info_find_message
 0x00419b50 100.00 info_get_next_y
-0x00419b80 96.77 info_send
+0x00419b80 100.00 info_send
 0x00419da0 95.24 incident_message_panel_refresh_if_active
 0x00419de0 100.00 pending_record_list_entry_move_to_front
 0x00419e60 100.00 pending_record_release_if_present
@@ -591,8 +591,8 @@
 0x0041c6e0 93.51 interface_handle_item_press
 0x0041c7b0 75.00 interface_update_item_enabled
 0x0041c800 98.82 interface_update_object_item_enabled
-0x0041c8f0 83.64 interface_is_item_disabled
-0x0041c950 90.38 interface_is_object_item_disabled
+0x0041c8f0 96.67 interface_is_item_disabled
+0x0041c950 98.18 interface_is_object_item_disabled
 0x0041c9f0 100.00 interface_set_item_pressed
 0x0041ca20 64.86 interface_set_object_item_pressed
 0x0041ca60 100.00 interface_is_item_pressed
@@ -621,7 +621,7 @@
 0x0041e860 100.00 interface_get_object_item_clicks
 0x0041e890 100.00 interface_set_advisor_item
 0x0041e8d0 30.00 interface_get_advisor_type
-0x0041e990 83.33 cell_action_permission_get
+0x0041e990 100.00 cell_action_permission_get
 0x0041e9d0 100.00 interface_set_slide_positions
 0x0041ea50 100.00 interface_set_menu
 0x0041eac0 70.59 interface_update_slide
@@ -669,7 +669,7 @@
 0x0041f9a0 100.00 lego_level_resource_balance_add_and_sound
 0x0041f9e0 100.00 lego_upgrade_resource_debit
 0x0041fa20 100.00 lego_game_config_callback_registry_init
-0x0041fa80 86.27 lego_start_level_pilots
+0x0041fa80 88.24 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
 0x0041fb50 93.67 lego_game_config_init
 0x00422850 90.00 lego_misc_object_resources_load
@@ -688,7 +688,7 @@
 0x00424cf0 100.00 lego_engine_shutdown_alt
 0x00424d00 90.07 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
-0x004250c0 88.67 lego_main_sim_step
+0x004250c0 88.80 lego_main_sim_step
 0x00425b40 100.00 lego_periodic_callback_dispatch
 0x00425b60 100.00 lego_object_sound_restart_callback
 0x00425c30 100.00 lego_transition_control
@@ -696,7 +696,7 @@
 0x00425ce0 96.30 lego_game_speed_set
 0x00425d50 100.00 lego_render_record_set_from_input
 0x00425d80 100.00 current_engine_mode_is_zero
-0x00425d90 87.58 lego_terrain_pointer_command_update
+0x00425d90 87.92 lego_terrain_pointer_command_update
 0x004261c0 96.15 lego_spawn_coordinate_pool_tick
 0x00426230 100.00 lego_global_triple_copy_out
 0x00426250 94.74 lego_update_render_viewport_state
@@ -705,13 +705,13 @@
 0x00426360 100.00 engine_global_state_flags_bits6_and_9_set_target
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 100.00 lego_global_subsystem_state_reset
-0x00426420 94.37 lego_cursor_ray_to_camera_route
-0x00426520 70.28 lego_main_sim_interaction_and_cell_update
+0x00426420 95.77 lego_cursor_ray_to_camera_route
+0x00426520 70.50 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 94.74 lego_level_upgrade_name_strings_load
 0x00428020 98.52 lego_entity_command_status_feedback_dispatch
 0x00428330 71.50 lego_terrain_command_feedback_dispatch
-0x00428780 90.24 lego_terrain_cell_command_predicate
+0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
 0x004288e0 97.05 lego_level_debug_input_cell_mutator_dispatch
 0x00429110 49.06 lego_block_visible_callback
@@ -765,14 +765,14 @@
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
 0x0042efc0 95.00 lego_play_movie
-0x0042f0c0 83.92 lego_level_free
+0x0042f0c0 84.62 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
 0x0042f6f0 77.84 lego_cell_init_pass
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 96.88 lego_terrain_neighbor_flag_set
-0x00430530 95.31 lego_terrain_cell_mutate
+0x00430530 95.45 lego_terrain_cell_mutate
 0x00430df0 90.17 lego_terrain_neighbor_refresh
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
@@ -870,7 +870,7 @@
 0x00435190 100.00 lego_surface_type_configured_value_at_index
 0x004351a0 100.00 media_action_code_to_sound_alias
 0x00435230 72.87 lego_random_variant_cell_scatter
-0x00435300 58.24 lego_tutorial_block_icons_update
+0x00435300 59.34 lego_tutorial_block_icons_update
 0x00435550 100.00 ledger_stub_00435550_GlobalStateZeroTransitionDetect
 0x00435580 71.79 lego_global_handle_position_apply_if_present
 0x004355c0 58.69 lego_menu_option_panel_texture_update
@@ -1286,35 +1286,37 @@
 0x00452c50 97.06 selection_entity_remove_active
 0x00452cc0 27.35 selected_entity_state_monitor
 0x00452d60 29.20 selection_command_dispatch
-0x00452df0 34.62 tutorial_script_file_load_target
-0x00452e70 12.66 objective_advisor_token_file_load
-0x00453200 50.00 objective_advisor_token_lookup
-0x00453220 11.11 tutorial_display_resources_release
-0x004532e0 11.11 tutorial_indirect_handle_resolve
-0x00453320 6.13 tutorial_script_command_dispatch
-0x004538a0 39.44 camera_focus_scroll_scale_commit
-0x00453900 100.00 deferred_callback_set
-0x00453910 25.00 objective_deferred_callback_invoke_if_set
-0x00453920 59.81 tutorial_advisor_scroll_step_advance
-0x00453bb0 50.00 tutorial_frame_timer_array_advance
-0x00453da0 11.90 tutorial_camera_focus_tween_update
-0x00454880 100.00 global_counter_004ff990_increment
-0x00454890 100.00 global_counter_004ff990_reset
-0x00454b70 71.43 objective_voice_alias_raise_commit
-0x00454b80 40.00 objective_voice_alias_raise_gate_bit27
+0x00452df0 100.00 nerps_file_load_script_file
+0x00452e70 78.61 nerps_file_load_message_file
+0x00453200 100.00 nerps_file_get_message_line
+0x00453220 90.60 nerps_shutdown
+0x004532e0 95.00 nerps_runtime_resolve_argument
+0x00453320 67.49 nerps_runtime_execute
+0x004538a0 100.00 nerpfunc_set_game_speed
+0x00453900 100.00 nerps_set_has_next_button
+0x00453910 100.00 nerps_replay_message_sound
+0x00453920 100.00 nerps_message_previous
+0x00453bb0 96.97 nerps_runtime_update_timers
+0x00453da0 92.62 nerps_runtime_update_camera
+0x00454600 96.05 nerps_draw_tutorial_icon
+0x00454880 100.00 nerps_monster_destroyed
+0x00454890 100.00 nerps_monsters_destroyed_reset
+0x00454b70 100.00 nerpfunc_set_level_completed
+0x00454b80 100.00 nerpfunc_set_level_fail
+0x00455300 100.00 nerps_object_count
 0x00456210 100.00 flh_magic_uu_noop
-0x00456240 100.00 system_state_flags_get
-0x00456550 100.00 system_state_flags_set_target
-0x004565f0 81.82 engine_mode_set_target
-0x00456640 100.00 global_flag_004ff978_get
-0x004567c0 100.00 global_value_004ff9bc_store_and_return_target
-0x004567d0 100.00 objective_switch_state_get
-0x00456810 29.63 advisor_sound_alias_play_global
-0x00456830 14.26 advisor_inline_token_render
-0x00456b80 17.52 tutorial_path_coordinate_index
-0x00456c30 100.00 object_pool_list_head_get
-0x00456c60 44.90 object_pool_lists_free_all
-0x00456cb0 10.53 ledger_stub_00456cb0_CoordinateListCallbackVisit
+0x00456240 100.00 nerpfunc_get_tutorial_flags
+0x00456550 100.00 nerpfunc_set_tutorial_flags
+0x004565f0 100.00 nerpfunc_set_message_permit
+0x00456640 100.00 nerps_get_message_permit
+0x004567c0 100.00 nerpfunc_set_objective_switch
+0x004567d0 100.00 nerpfunc_get_objective_switch
+0x00456810 100.00 nerps_play_message_sound
+0x00456830 67.19 nerps_parse_message
+0x00456b80 100.00 nerps_init_block_pointers_table
+0x00456c30 100.00 nerps_get_block_pointer
+0x00456c60 100.00 nerps_free_block_pointers
+0x00456cb0 100.00 nerps_block_pointer_enumerate
 0x00457d40 9.21 objective_load
 0x00458580 100.00 obj_set_resources_target
 0x004585c0 100.00 obj_set_block_target
@@ -1368,7 +1370,7 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 95.97 panel_texture_slots_allocate
-0x0045adb0 81.47 panel_cursor_interaction_update
+0x0045adb0 82.26 panel_cursor_interaction_update
 0x0045b310 57.28 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
@@ -1448,7 +1450,7 @@
 0x004601e0 100.00 reward_free_level
 0x004601f0 100.00 reward_level_get
 0x00460200 100.00 reward_current_level_get
-0x00460220 94.59 reward_level_start
+0x00460220 97.30 reward_level_start
 0x00460290 100.00 reward_building_counts_get
 0x00460310 100.00 reward_building_counts_callback
 0x00460360 66.13 reward_prepare_results
@@ -1619,7 +1621,7 @@
 0x0046aad0 73.53 ui_message_label_index_find
 0x0046ab10 39.39 ui_message_text_slot_assign
 0x0046abb0 36.96 ui_message_text_slot_assign_with_image
-0x0046ac20 45.45 advisor_text_request_setup
+0x0046ac20 40.91 advisor_text_request_setup
 0x0046ac60 35.09 advisor_text_animation_update
 0x0046ad00 13.25 advisor_text_display_worker
 0x0046b1d0 9.52 tooltip_overlay_state_initialize
@@ -2300,7 +2302,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2528 mapped functions
+[full] 2530 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2424,7 +2426,7 @@
 0x004041b0 93.33 aitask_entity_task_chain_contains_kind
 0x004041e0 100.00 aitask_entity_command_chain_head_remove
 0x00404250 100.00 aitask_cmd_pool_timer_delta_apply
-0x00404280 80.81 aitask_cmd_entity_command_chain_tick
+0x00404280 80.93 aitask_cmd_entity_command_chain_tick
 0x00404e00 98.65 aitask_object_path_submit_to_grid_target
 0x00404ed0 94.74 aitask_check_object_candidate
 0x00404f10 100.00 aitask_object_task_target_filter_find
@@ -2707,7 +2709,7 @@
 0x00411790 75.52 menu_pick_widget_under_pointer
 0x00411840 100.00 frontend_progress_value_changed
 0x00411870 18.00 fe_slider_pointer_handle
-0x004119d0 41.38 has_active_resource
+0x004119d0 34.48 has_active_resource
 0x00411f00 100.00 input_key_context_check
 0x00411f10 13.42 menu_percent_split_surface_blit
 0x00412170 100.00 menu_overlay_list_count
@@ -2809,7 +2811,7 @@
 0x00419030 71.15 help_window_button_feedback_update
 0x00419100 71.64 ui_mode_resource_positions_apply
 0x00419150 100.00 selection_state_handle_get
-0x004191a0 55.56 main_sim_state_admission_predicate
+0x004191a0 51.85 main_sim_state_admission_predicate
 0x004191f0 100.00 ui_mode_resource_bit40_get
 0x00419200 100.00 ui_mode_resource_bit40_set_clear
 0x00419230 100.00 info_initialise
@@ -2838,7 +2840,7 @@
 0x00419b00 100.00 info_has_text
 0x00419b20 100.00 info_find_message
 0x00419b50 100.00 info_get_next_y
-0x00419b80 96.77 info_send
+0x00419b80 100.00 info_send
 0x00419da0 95.24 incident_message_panel_refresh_if_active
 0x00419de0 100.00 pending_record_list_entry_move_to_front
 0x00419e60 100.00 pending_record_release_if_present
@@ -2885,8 +2887,8 @@
 0x0041c6e0 93.51 interface_handle_item_press
 0x0041c7b0 75.00 interface_update_item_enabled
 0x0041c800 98.82 interface_update_object_item_enabled
-0x0041c8f0 83.64 interface_is_item_disabled
-0x0041c950 90.38 interface_is_object_item_disabled
+0x0041c8f0 96.67 interface_is_item_disabled
+0x0041c950 98.18 interface_is_object_item_disabled
 0x0041c9f0 100.00 interface_set_item_pressed
 0x0041ca20 64.86 interface_set_object_item_pressed
 0x0041ca60 100.00 interface_is_item_pressed
@@ -2915,7 +2917,7 @@
 0x0041e860 100.00 interface_get_object_item_clicks
 0x0041e890 100.00 interface_set_advisor_item
 0x0041e8d0 30.00 interface_get_advisor_type
-0x0041e990 83.33 cell_action_permission_get
+0x0041e990 100.00 cell_action_permission_get
 0x0041e9d0 100.00 interface_set_slide_positions
 0x0041ea50 100.00 interface_set_menu
 0x0041eac0 70.59 interface_update_slide
@@ -2963,7 +2965,7 @@
 0x0041f9a0 100.00 lego_level_resource_balance_add_and_sound
 0x0041f9e0 100.00 lego_upgrade_resource_debit
 0x0041fa20 100.00 lego_game_config_callback_registry_init
-0x0041fa80 86.27 lego_start_level_pilots
+0x0041fa80 88.24 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
 0x0041fb50 93.67 lego_game_config_init
 0x00422850 90.00 lego_misc_object_resources_load
@@ -2982,7 +2984,7 @@
 0x00424cf0 100.00 lego_engine_shutdown_alt
 0x00424d00 90.07 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
-0x004250c0 88.67 lego_main_sim_step
+0x004250c0 88.80 lego_main_sim_step
 0x00425b40 100.00 lego_periodic_callback_dispatch
 0x00425b60 100.00 lego_object_sound_restart_callback
 0x00425c30 100.00 lego_transition_control
@@ -2990,7 +2992,7 @@
 0x00425ce0 96.30 lego_game_speed_set
 0x00425d50 100.00 lego_render_record_set_from_input
 0x00425d80 100.00 current_engine_mode_is_zero
-0x00425d90 87.58 lego_terrain_pointer_command_update
+0x00425d90 87.92 lego_terrain_pointer_command_update
 0x004261c0 96.15 lego_spawn_coordinate_pool_tick
 0x00426230 100.00 lego_global_triple_copy_out
 0x00426250 94.74 lego_update_render_viewport_state
@@ -2999,13 +3001,13 @@
 0x00426360 100.00 engine_global_state_flags_bits6_and_9_set_target
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 100.00 lego_global_subsystem_state_reset
-0x00426420 94.37 lego_cursor_ray_to_camera_route
-0x00426520 70.28 lego_main_sim_interaction_and_cell_update
+0x00426420 95.77 lego_cursor_ray_to_camera_route
+0x00426520 70.50 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 94.74 lego_level_upgrade_name_strings_load
 0x00428020 98.52 lego_entity_command_status_feedback_dispatch
 0x00428330 71.50 lego_terrain_command_feedback_dispatch
-0x00428780 90.24 lego_terrain_cell_command_predicate
+0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
 0x004288e0 97.05 lego_level_debug_input_cell_mutator_dispatch
 0x00429110 49.06 lego_block_visible_callback
@@ -3059,14 +3061,14 @@
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
 0x0042efc0 95.00 lego_play_movie
-0x0042f0c0 83.92 lego_level_free
+0x0042f0c0 84.62 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
 0x0042f6f0 77.84 lego_cell_init_pass
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 96.88 lego_terrain_neighbor_flag_set
-0x00430530 95.31 lego_terrain_cell_mutate
+0x00430530 95.45 lego_terrain_cell_mutate
 0x00430df0 90.17 lego_terrain_neighbor_refresh
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
@@ -3164,7 +3166,7 @@
 0x00435190 100.00 lego_surface_type_configured_value_at_index
 0x004351a0 100.00 media_action_code_to_sound_alias
 0x00435230 72.87 lego_random_variant_cell_scatter
-0x00435300 58.24 lego_tutorial_block_icons_update
+0x00435300 59.34 lego_tutorial_block_icons_update
 0x00435550 100.00 ledger_stub_00435550_GlobalStateZeroTransitionDetect
 0x00435580 71.79 lego_global_handle_position_apply_if_present
 0x004355c0 58.69 lego_menu_option_panel_texture_update
@@ -3580,35 +3582,37 @@
 0x00452c50 97.06 selection_entity_remove_active
 0x00452cc0 27.35 selected_entity_state_monitor
 0x00452d60 29.20 selection_command_dispatch
-0x00452df0 34.62 tutorial_script_file_load_target
-0x00452e70 12.66 objective_advisor_token_file_load
-0x00453200 50.00 objective_advisor_token_lookup
-0x00453220 11.11 tutorial_display_resources_release
-0x004532e0 11.11 tutorial_indirect_handle_resolve
-0x00453320 6.13 tutorial_script_command_dispatch
-0x004538a0 39.44 camera_focus_scroll_scale_commit
-0x00453900 100.00 deferred_callback_set
-0x00453910 25.00 objective_deferred_callback_invoke_if_set
-0x00453920 59.81 tutorial_advisor_scroll_step_advance
-0x00453bb0 50.00 tutorial_frame_timer_array_advance
-0x00453da0 11.90 tutorial_camera_focus_tween_update
-0x00454880 100.00 global_counter_004ff990_increment
-0x00454890 100.00 global_counter_004ff990_reset
-0x00454b70 71.43 objective_voice_alias_raise_commit
-0x00454b80 40.00 objective_voice_alias_raise_gate_bit27
+0x00452df0 100.00 nerps_file_load_script_file
+0x00452e70 78.61 nerps_file_load_message_file
+0x00453200 100.00 nerps_file_get_message_line
+0x00453220 90.60 nerps_shutdown
+0x004532e0 95.00 nerps_runtime_resolve_argument
+0x00453320 67.49 nerps_runtime_execute
+0x004538a0 100.00 nerpfunc_set_game_speed
+0x00453900 100.00 nerps_set_has_next_button
+0x00453910 100.00 nerps_replay_message_sound
+0x00453920 100.00 nerps_message_previous
+0x00453bb0 96.97 nerps_runtime_update_timers
+0x00453da0 92.62 nerps_runtime_update_camera
+0x00454600 96.05 nerps_draw_tutorial_icon
+0x00454880 100.00 nerps_monster_destroyed
+0x00454890 100.00 nerps_monsters_destroyed_reset
+0x00454b70 100.00 nerpfunc_set_level_completed
+0x00454b80 100.00 nerpfunc_set_level_fail
+0x00455300 100.00 nerps_object_count
 0x00456210 100.00 flh_magic_uu_noop
-0x00456240 100.00 system_state_flags_get
-0x00456550 100.00 system_state_flags_set_target
-0x004565f0 81.82 engine_mode_set_target
-0x00456640 100.00 global_flag_004ff978_get
-0x004567c0 100.00 global_value_004ff9bc_store_and_return_target
-0x004567d0 100.00 objective_switch_state_get
-0x00456810 29.63 advisor_sound_alias_play_global
-0x00456830 14.26 advisor_inline_token_render
-0x00456b80 17.52 tutorial_path_coordinate_index
-0x00456c30 100.00 object_pool_list_head_get
-0x00456c60 44.90 object_pool_lists_free_all
-0x00456cb0 10.53 ledger_stub_00456cb0_CoordinateListCallbackVisit
+0x00456240 100.00 nerpfunc_get_tutorial_flags
+0x00456550 100.00 nerpfunc_set_tutorial_flags
+0x004565f0 100.00 nerpfunc_set_message_permit
+0x00456640 100.00 nerps_get_message_permit
+0x004567c0 100.00 nerpfunc_set_objective_switch
+0x004567d0 100.00 nerpfunc_get_objective_switch
+0x00456810 100.00 nerps_play_message_sound
+0x00456830 67.19 nerps_parse_message
+0x00456b80 100.00 nerps_init_block_pointers_table
+0x00456c30 100.00 nerps_get_block_pointer
+0x00456c60 100.00 nerps_free_block_pointers
+0x00456cb0 100.00 nerps_block_pointer_enumerate
 0x00457d40 9.21 objective_load
 0x00458580 100.00 obj_set_resources_target
 0x004585c0 100.00 obj_set_block_target
@@ -3662,7 +3666,7 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 95.97 panel_texture_slots_allocate
-0x0045adb0 81.47 panel_cursor_interaction_update
+0x0045adb0 82.26 panel_cursor_interaction_update
 0x0045b310 57.28 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
@@ -3742,7 +3746,7 @@
 0x004601e0 100.00 reward_free_level
 0x004601f0 100.00 reward_level_get
 0x00460200 100.00 reward_current_level_get
-0x00460220 94.59 reward_level_start
+0x00460220 97.30 reward_level_start
 0x00460290 100.00 reward_building_counts_get
 0x00460310 100.00 reward_building_counts_callback
 0x00460360 66.13 reward_prepare_results
@@ -3913,7 +3917,7 @@
 0x0046aad0 73.53 ui_message_label_index_find
 0x0046ab10 39.39 ui_message_text_slot_assign
 0x0046abb0 36.96 ui_message_text_slot_assign_with_image
-0x0046ac20 45.45 advisor_text_request_setup
+0x0046ac20 40.91 advisor_text_request_setup
 0x0046ac60 35.09 advisor_text_animation_update
 0x0046ad00 13.25 advisor_text_display_worker
 0x0046b1d0 9.52 tooltip_overlay_state_initialize

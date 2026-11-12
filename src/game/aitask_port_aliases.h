@@ -60,6 +60,29 @@
  * sfx.c defines 00465030, which returns the volume, under the port's name
  * (sfx_link_names.h); the port's adapter is native-only. */
 #define sound_variant_property_read_original sound_variant_property_read /* 00465030 */
+/* GAME-028 NERPs.c (finding 586), for lego_unit.c and legoobject_unit.c
+ * (which include this header first): the port's tutorial-script entries
+ * whose contract is the original's. Natively they stay the port's. */
+#define tutorial_script_file_load_target nerps_file_load_script_file /* 00452df0 */
+#define objective_advisor_token_file_load nerps_file_load_message_file /* 00452e70 */
+#define tutorial_display_resources_release nerps_shutdown /* 00453220 */
+#define tutorial_script_command_dispatch nerps_runtime_execute /* 00453320 */
+#define deferred_callback_set nerps_set_has_next_button /* 00453900 */
+#define objective_deferred_callback_invoke_if_set nerps_replay_message_sound /* 00453910 */
+#define tutorial_advisor_scroll_step_advance nerps_message_previous /* 00453920 */
+#define tutorial_frame_timer_array_advance nerps_runtime_update_timers /* 00453bb0 */
+#define global_counter_004ff990_reset nerps_monsters_destroyed_reset /* 00454890 */
+#define objective_voice_alias_raise_commit nerpfunc_set_level_completed /* 00454b70 */
+#define objective_voice_alias_raise_gate_bit27 nerpfunc_set_level_fail /* 00454b80 */
+#define entity_type_grid_record_count_get nerps_object_count /* 00455300 */
+#define system_state_flags_get_original nerpfunc_get_tutorial_flags /* 00456240 */
+/* legoobject_unit.c (#610) calls 00456240 with the original's argument
+ * through LegoObjH_NERPsTutorialFlags, a cast of the port's declaration. */
+#define system_state_flags_get nerpfunc_get_tutorial_flags /* 00456240 */
+#define system_state_flags_set_target nerpfunc_set_tutorial_flags /* 00456550 */
+#define engine_mode_set_target nerpfunc_set_message_permit /* 004565f0 */
+#define tutorial_path_coordinate_index nerps_init_block_pointers_table /* 00456b80 */
+#define lego_object_pool_lists_free_all_adapter nerps_free_block_pointers /* 00456c60 */
 #endif
 
 #endif /* LEGORRR_GAME_AITASK_PORT_ALIASES_H */

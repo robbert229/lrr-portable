@@ -869,7 +869,7 @@ void advisor_message_source_clear(void);
 uint32_t advisor_inline_last_sound_get(void);
 void advisor_text_request_action_hook_set(AdvisorTextRequestActionFn hook,
                                           void* context);
-void advisor_text_request_setup(uint32_t request, uint32_t flags);
+extern "C" void advisor_text_request_setup(uint32_t request, uint32_t flags);
 void advisor_text_request_setup_text(const char* source, uint32_t flags);
 uint32_t advisor_text_request_flags_get(void);
 typedef struct AdvisorTextDisplayState {

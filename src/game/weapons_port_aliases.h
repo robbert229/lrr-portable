@@ -25,6 +25,9 @@
 #if defined(_MSC_VER) && _MSC_VER < 1200
 #define see_through_walls_ray_check weapons_see_through_walls_check /* 00471960 */
 #define entity_centers_within_object_radius weapons_object_in_touch_range /* 00472130 */
+/* GAME-028 NERPs.c (finding 586), for aitask.c, which includes this header
+ * and not aitask_port_aliases.h. */
+#define system_state_flags_get_original nerpfunc_get_tutorial_flags /* 00456240 */
 #endif
 
 #endif /* LEGORRR_GAME_WEAPONS_PORT_ALIASES_H */
