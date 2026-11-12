@@ -5,6 +5,6 @@
 #ifndef LRR_GODS98_AUDIO_FROM_SOUND3D_HPP
 #define LRR_GODS98_AUDIO_FROM_SOUND3D_HPP
 
-extern const int s_sfx_attenuation[11];
+extern "C" int s_sfx_attenuation[11];
 
 #endif /* LRR_GODS98_AUDIO_FROM_SOUND3D_HPP */

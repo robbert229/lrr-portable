@@ -1176,3 +1176,11 @@ static void fixed_record_slot_release(int slot)
     s_fixed_slots[slot].resource = 0u;
     s_fixed_slots[slot].in_use = 0;
 }
+
+/* File_GetCDFilePath (FUN_0047f660) with the original's (out, name)
+ * argument order, for gods98/sound3d.c (ADR 0005 step 6). The out buffer
+ * is MAX_PATH bytes there. */
+extern "C" int resource_cd_file_path_get(char* out, const char* name)
+{
+    return ares_cd_fallback_path(name, out, 260);
+}

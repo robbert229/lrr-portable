@@ -101,7 +101,7 @@ int  simtick_manager_timer_bit(int which);        /* index-9 timer word bit */
 void simtick_manager_set_timer_word(uint32_t w);  /* DAT_00500860 seed */
 
 /* --- tranche 8 tickers ---------------------------------------------------- */
-void simtick_sound_keepalive(EngineContext* c);  /* FUN_0047aba0 */
+extern "C" void simtick_sound_keepalive(EngineContext* c);  /* FUN_0047aba0 */
 void simtick_editor_steps(EngineContext* c);     /* legacy editor-step seam */
 void simtick_cooldown_tick(EngineContext* c, float dt); /* FUN_0041a2c0 -> bus */
 void simtick_bitfield_tree(int* base, int code);

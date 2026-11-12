@@ -56,7 +56,7 @@ void resource_cd_probe_hooks_set(ResourceDriveTypeQueryFn drive_type,
                                  ResourcePathExistsFn path_exists,
                                  void* context);
 int resource_find_cd_key_drive(void); /* FUN_0047f4f0 */
-const char* resource_path_resolve_against_base(const char* path); /* FUN_00480220 */
+extern "C" const char* resource_path_resolve_against_base(const char* path); /* FUN_00480220 */
 
 /* Marker-file probes (finding 01): cd.key = CD present, delme.dat = data
  * installed (CDMissing / DataMissing dialogs in the original). 1 = present. */

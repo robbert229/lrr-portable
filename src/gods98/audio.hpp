@@ -41,7 +41,7 @@ int  audio_open(AudioPlayer* p);     /* 0 on success, non-zero otherwise */
 void audio_close(AudioPlayer* p);
 void audio_system_player_set(AudioPlayer* p);
 AudioPlayer* audio_system_player_get(void);
-void audio_active_shutdown(void); /* 0x0047a800 */
+extern "C" void audio_active_shutdown(void); /* 0x0047a800 */
 void audio_system_shutdown(void);
 typedef int (*AudioSystemInitHook)(void* context, void* window);
 void audio_system_init_hook_set(AudioSystemInitHook hook, void* context);
@@ -54,13 +54,13 @@ void audio_set_volume(AudioPlayer* p, float volume);
 float audio_sfx_volume_gain(int index);
 /* SoundBufferVolumeSet (FUN_0047b500): apply DirectSound hundredth-dB
  * attenuation as the port's single output gain. */
-void audio_sound_volume_set(int millibels);
+extern "C" void audio_sound_volume_set(int millibels);
 /* Apply attenuation to the currently installed AudioPlayer. */
 void audio_active_sound_volume_set(int millibels);
 void audio_sound_volume_minus_300(void); /* 0x0047b550 */
 /* SoundVolumeIndexSet (FUN_0047b530): map the options index 0..10 through
  * the corpus attenuation table and apply it. */
-void audio_sound_volume_index_set(int index);
+extern "C" void audio_sound_volume_index_set(int index);
 /* GameSpeedSelect (FUN_00414de0; actually the SFX volume callback): delegate
  * the selected slider index to SoundVolumeIndexSet. */
 void audio_menu_sfx_volume_set(int index);

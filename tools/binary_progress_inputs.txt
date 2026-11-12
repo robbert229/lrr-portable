@@ -344,6 +344,7 @@ src/gods98/com_object_tree.cpp
 src/gods98/config.c
 src/gods98/config.h
 src/gods98/container.h
+src/gods98/container_frame.h
 src/gods98/draw.c
 src/gods98/draw.h
 src/gods98/draw_port.cpp
@@ -364,6 +365,7 @@ src/gods98/entity.h
 src/gods98/entity.hpp
 src/gods98/file_list_streams.cpp
 src/gods98/files.cpp
+src/gods98/files.h
 src/gods98/flic.cpp
 src/gods98/flic.hpp
 src/gods98/flic_for_flic_unit.hpp
@@ -500,7 +502,8 @@ src/gods98/simtick_shared.hpp
 src/gods98/sound.cpp
 src/gods98/sound.h
 src/gods98/sound.hpp
-src/gods98/sound3d.cpp
+src/gods98/sound3d.c
+src/gods98/sound3d.h
 src/gods98/sound_for_sfx.hpp
 src/gods98/sound_for_sound3d.hpp
 src/gods98/sound_from_sound3d.hpp

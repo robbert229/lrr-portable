@@ -1,4 +1,4 @@
-# input_sha256: f97b586c23b51f0ada5a2d2bbc70981485074ab1c0c2a25b74f8d9eebc831ec0
+# input_sha256: 7c124e5fa10e59c33ebb740634570cabddb3158b0ad3537648211a9120d39b51
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2166 mapped functions
+[game-only] 2170 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -637,7 +637,7 @@
 0x004248b0 7.61 selected_entity_ground_marker_render
 0x004250c0 9.72 main_sim_step(struct EngineContext *, float, unsigned int *, unsigned int *, unsigned int *)
 0x00425b40 66.67 periodic_entity_callback_dispatch
-0x00425c30 38.71 ledger_stub_00425c30_TransitionControl
+0x00425c30 40.86 ledger_stub_00425c30_TransitionControl
 0x00425cd0 100.00 global_scroll_guard_set
 0x00425ce0 43.48 scroll_scale_set_and_clamp
 0x00425d80 100.00 current_engine_mode_is_zero
@@ -660,7 +660,7 @@
 0x004291a0 8.82 simtick_render_pass
 0x004295a0 33.33 context_selected_global_pointer_get
 0x004295c0 14.55 entity_matches_current_selection_or_owner
-0x004295f0 14.58 media_min_distance_update_mode
+0x004295f0 9.52 media_min_distance_update_mode
 0x004297b0 26.67 media_cd_watchdog_update
 0x00429810 28.57 media_audio_playback_toggle
 0x00429850 100.00 active_engine_field_b0_get_current
@@ -1815,43 +1815,47 @@
 0x0047a520 11.94 bitmap_font_glyph_measure_width
 0x0047a540 100.00 object_field_be4_dword_get
 0x0047a550 43.75 font_atlas_record_release
-0x0047a640 17.50 audio_system_init
-0x0047a800 18.60 audio_active_shutdown
+0x0047a640 99.25 audio_system_init
+0x0047a800 100.00 audio_active_shutdown
 0x0047a850 100.00 sound_volume_value_valid
-0x0047a870 26.39 sound_bank_entry_load
-0x0047aad0 46.15 sound_bank_free_slot_find
-0x0047ab00 23.53 sound_bank_entry_release
+0x0047a870 98.34 sound_bank_entry_load
+0x0047aad0 92.86 sound_bank_free_slot_find
+0x0047ab00 100.00 sound_bank_entry_release
 0x0047ab80 100.00 simtick_directsound_listener_view_set
-0x0047aba0 41.38 simtick_sound_keepalive
-0x0047ad10 17.65 sound_position_set_from_vector
-0x0047ad30 51.06 sound_attached_stop_by_entity
-0x0047ad70 12.42 s_play_seam
-0x0047b020 38.71 sound_buffer_association_add
-0x0047b050 37.97 sound_bank_entry_volume_set
-0x0047b0d0 83.33 sound_bank_entry_volume
-0x0047b0f0 56.00 sound_handle_buffer_get
-0x0047b130 64.86 sound_buffer_stop_handle
-0x0047b160 36.84 sound_subsystem_stop_all
-0x0047b1a0 8.96 sound_instance_track_register
-0x0047b220 25.56 sound_instance_track_stop_and_remove
-0x0047b2a0 25.64 keyed_resource_entry_remove
-0x0047b2e0 29.51 nested_record_list_remove_by_key_recursive
-0x0047b330 40.00 nested_record_list_remove_matching_key_impl
-0x0047b390 36.19 sound_source_spatial_refresh_all
-0x0047b410 14.63 sound_source_spatial_refresh
-0x0047b4a0 44.44 sound_tracked_buffers_set_min_distance
-0x0047b4d0 44.44 sound_tracked_buffers_set_max_distance
-0x0047b500 37.93 audio_sound_volume_set
-0x0047b530 80.00 audio_sound_volume_index_set
-0x0047b550 36.36 audio_sound_volume_minus_300
-0x0047b6c0 20.22 sound_record_create_buffers
-0x0047b790 11.63 sound_wave_sample_duplicate_buffer_create
-0x0047b8e0 24.66 sound_streamed_wave_buffer_step_rate
-0x0047ba20 9.38 sound_stream_stop_and_release
-0x0047bc30 12.77 sound_stream_drain_check
-0x0047bdb0 8.11 sound_stream_ring_buffer_tick
+0x0047aba0 100.00 simtick_sound_keepalive
+0x0047abc0 100.00 sound_listener_frame_update
+0x0047ad10 100.00 sound_position_set_from_vector
+0x0047ad30 100.00 sound_attached_stop_by_entity
+0x0047ad70 96.73 s_play_seam
+0x0047b020 100.00 sound_buffer_association_add
+0x0047b050 100.00 sound_bank_entry_volume_set
+0x0047b0d0 100.00 sound_bank_entry_volume
+0x0047b0f0 100.00 sound_handle_buffer_get
+0x0047b130 100.00 sound_buffer_stop_handle
+0x0047b160 100.00 sound_subsystem_stop_all
+0x0047b1a0 94.23 sound_instance_track_register
+0x0047b220 100.00 sound_instance_track_stop_and_remove
+0x0047b2a0 100.00 keyed_resource_entry_remove
+0x0047b2e0 100.00 nested_record_list_remove_by_key_recursive
+0x0047b330 100.00 nested_record_list_remove_matching_key_impl
+0x0047b390 100.00 sound_source_spatial_refresh_all
+0x0047b410 100.00 sound_source_spatial_refresh
+0x0047b4a0 100.00 sound_tracked_buffers_set_min_distance
+0x0047b4d0 100.00 sound_tracked_buffers_set_max_distance
+0x0047b500 100.00 audio_sound_volume_set
+0x0047b530 100.00 audio_sound_volume_index_set
+0x0047b550 100.00 audio_sound_volume_minus_300
+0x0047b580 99.09 sound_wave_sample_load
+0x0047b6c0 100.00 sound_record_create_buffers
+0x0047b790 100.00 sound_wave_sample_duplicate_buffer_create
+0x0047b8e0 100.00 sound_streamed_wave_buffer_step_rate
+0x0047b970 100.00 sound_streamed_wave_play
+0x0047ba20 100.00 sound_stream_stop_and_release
+0x0047baa0 82.51 sound_streamed_wave_buffer_setup
+0x0047bc30 84.77 sound_stream_drain_check
+0x0047bdb0 81.98 sound_stream_ring_buffer_tick
 0x0047c0c0 100.00 vec_exact_equal
-0x0047c100 68.18 ledger_stub_0047c100_DirectSoundListenerRolloffSet
+0x0047c100 100.00 ledger_stub_0047c100_DirectSoundListenerRolloffSet
 0x0047c160 100.00 constant_negative_10000_get
 0x0047c170 100.00 window_state_initialize_retail
 0x0047c1c0 9.30 directdraw_enumerate_and_store_result
@@ -2174,7 +2178,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2402 mapped functions
+[full] 2406 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2805,7 +2809,7 @@
 0x004248b0 7.61 selected_entity_ground_marker_render
 0x004250c0 9.72 main_sim_step(struct EngineContext *, float, unsigned int *, unsigned int *, unsigned int *)
 0x00425b40 66.67 periodic_entity_callback_dispatch
-0x00425c30 38.71 ledger_stub_00425c30_TransitionControl
+0x00425c30 40.86 ledger_stub_00425c30_TransitionControl
 0x00425cd0 100.00 global_scroll_guard_set
 0x00425ce0 43.48 scroll_scale_set_and_clamp
 0x00425d80 100.00 current_engine_mode_is_zero
@@ -2828,7 +2832,7 @@
 0x004291a0 8.82 simtick_render_pass
 0x004295a0 33.33 context_selected_global_pointer_get
 0x004295c0 14.55 entity_matches_current_selection_or_owner
-0x004295f0 14.58 media_min_distance_update_mode
+0x004295f0 9.52 media_min_distance_update_mode
 0x004297b0 26.67 media_cd_watchdog_update
 0x00429810 28.57 media_audio_playback_toggle
 0x00429850 100.00 active_engine_field_b0_get_current
@@ -3983,43 +3987,47 @@
 0x0047a520 11.94 bitmap_font_glyph_measure_width
 0x0047a540 100.00 object_field_be4_dword_get
 0x0047a550 43.75 font_atlas_record_release
-0x0047a640 17.50 audio_system_init
-0x0047a800 18.60 audio_active_shutdown
+0x0047a640 99.25 audio_system_init
+0x0047a800 100.00 audio_active_shutdown
 0x0047a850 100.00 sound_volume_value_valid
-0x0047a870 26.39 sound_bank_entry_load
-0x0047aad0 46.15 sound_bank_free_slot_find
-0x0047ab00 23.53 sound_bank_entry_release
+0x0047a870 98.34 sound_bank_entry_load
+0x0047aad0 92.86 sound_bank_free_slot_find
+0x0047ab00 100.00 sound_bank_entry_release
 0x0047ab80 100.00 simtick_directsound_listener_view_set
-0x0047aba0 41.38 simtick_sound_keepalive
-0x0047ad10 17.65 sound_position_set_from_vector
-0x0047ad30 51.06 sound_attached_stop_by_entity
-0x0047ad70 12.42 s_play_seam
-0x0047b020 38.71 sound_buffer_association_add
-0x0047b050 37.97 sound_bank_entry_volume_set
-0x0047b0d0 83.33 sound_bank_entry_volume
-0x0047b0f0 56.00 sound_handle_buffer_get
-0x0047b130 64.86 sound_buffer_stop_handle
-0x0047b160 36.84 sound_subsystem_stop_all
-0x0047b1a0 8.96 sound_instance_track_register
-0x0047b220 25.56 sound_instance_track_stop_and_remove
-0x0047b2a0 25.64 keyed_resource_entry_remove
-0x0047b2e0 29.51 nested_record_list_remove_by_key_recursive
-0x0047b330 40.00 nested_record_list_remove_matching_key_impl
-0x0047b390 36.19 sound_source_spatial_refresh_all
-0x0047b410 14.63 sound_source_spatial_refresh
-0x0047b4a0 44.44 sound_tracked_buffers_set_min_distance
-0x0047b4d0 44.44 sound_tracked_buffers_set_max_distance
-0x0047b500 37.93 audio_sound_volume_set
-0x0047b530 80.00 audio_sound_volume_index_set
-0x0047b550 36.36 audio_sound_volume_minus_300
-0x0047b6c0 20.22 sound_record_create_buffers
-0x0047b790 11.63 sound_wave_sample_duplicate_buffer_create
-0x0047b8e0 24.66 sound_streamed_wave_buffer_step_rate
-0x0047ba20 9.38 sound_stream_stop_and_release
-0x0047bc30 12.77 sound_stream_drain_check
-0x0047bdb0 8.11 sound_stream_ring_buffer_tick
+0x0047aba0 100.00 simtick_sound_keepalive
+0x0047abc0 100.00 sound_listener_frame_update
+0x0047ad10 100.00 sound_position_set_from_vector
+0x0047ad30 100.00 sound_attached_stop_by_entity
+0x0047ad70 96.73 s_play_seam
+0x0047b020 100.00 sound_buffer_association_add
+0x0047b050 100.00 sound_bank_entry_volume_set
+0x0047b0d0 100.00 sound_bank_entry_volume
+0x0047b0f0 100.00 sound_handle_buffer_get
+0x0047b130 100.00 sound_buffer_stop_handle
+0x0047b160 100.00 sound_subsystem_stop_all
+0x0047b1a0 94.23 sound_instance_track_register
+0x0047b220 100.00 sound_instance_track_stop_and_remove
+0x0047b2a0 100.00 keyed_resource_entry_remove
+0x0047b2e0 100.00 nested_record_list_remove_by_key_recursive
+0x0047b330 100.00 nested_record_list_remove_matching_key_impl
+0x0047b390 100.00 sound_source_spatial_refresh_all
+0x0047b410 100.00 sound_source_spatial_refresh
+0x0047b4a0 100.00 sound_tracked_buffers_set_min_distance
+0x0047b4d0 100.00 sound_tracked_buffers_set_max_distance
+0x0047b500 100.00 audio_sound_volume_set
+0x0047b530 100.00 audio_sound_volume_index_set
+0x0047b550 100.00 audio_sound_volume_minus_300
+0x0047b580 99.09 sound_wave_sample_load
+0x0047b6c0 100.00 sound_record_create_buffers
+0x0047b790 100.00 sound_wave_sample_duplicate_buffer_create
+0x0047b8e0 100.00 sound_streamed_wave_buffer_step_rate
+0x0047b970 100.00 sound_streamed_wave_play
+0x0047ba20 100.00 sound_stream_stop_and_release
+0x0047baa0 82.51 sound_streamed_wave_buffer_setup
+0x0047bc30 84.77 sound_stream_drain_check
+0x0047bdb0 81.98 sound_stream_ring_buffer_tick
 0x0047c0c0 100.00 vec_exact_equal
-0x0047c100 68.18 ledger_stub_0047c100_DirectSoundListenerRolloffSet
+0x0047c100 100.00 ledger_stub_0047c100_DirectSoundListenerRolloffSet
 0x0047c160 100.00 constant_negative_10000_get
 0x0047c170 100.00 window_state_initialize_retail
 0x0047c1c0 9.30 directdraw_enumerate_and_store_result

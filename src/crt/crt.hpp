@@ -384,7 +384,7 @@ double constant_zero_float_get(void);
 /* ConstantNegative10000Get (FUN_0047c160, findings 383/406): returns
  * -10000 (the corpus's dword 0xffffd8f0) — the DirectSound
  * minimum-volume constant. */
-int32_t constant_negative_10000_get(void);
+extern "C" int32_t constant_negative_10000_get(void);
 
 /* ProcessorFeatureFallbackFalse (FUN_00490230, findings 386/399): zero
  * — the fallback when IsProcessorFeaturePresent cannot be resolved. */

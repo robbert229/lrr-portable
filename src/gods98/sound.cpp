@@ -680,6 +680,9 @@ int sound_active_request_get(int index, int* alias, int* loop)
  *  expire (finding 217), kept as-is.
  * ------------------------------------------------------------------ */
 
+#if defined(LEGORRR_BACKEND_MINIWIN)
+/* The native port's model of the unit's association list (sound3d.c);
+ * the DirectSound builds keep the list in sound3d.c's globals. */
 /* KeyedResourceEntryRemove (FUN_0047b2a0) removes the first global
  * association whose third word is the stopped instance. The provider is
  * passed through the original recursion but does not participate in its key
@@ -727,6 +730,7 @@ void  sound_buffer_association_head_set(void* node)
     s_buffer_assoc_head = node;
 }
 void* sound_buffer_association_head_peek(void) { return s_buffer_assoc_head; }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 namespace unported_ledger_stubs {
 

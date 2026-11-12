@@ -1256,7 +1256,7 @@ void ledger_stub_00425c30_TransitionControl(int enabled, uint32_t parameter)
 
     if (parameter != 0u) {
         if ((*engine_state & 0x100000u) == 0u) {
-            sound_buffer_association_stop_all();
+            sound_subsystem_stop_all();
         }
         engine_state = engine_current_state_word();
         if (engine_state != NULL) *engine_state |= 0x100000u;
@@ -1891,8 +1891,7 @@ void media_min_distance_update_mode(int mode, void* context,
         s_mind_listener = scalar_selector != 0 ? 0.6f : 0.9f;
         s_mind_clip = s_mind_dist_base * s_mind_cell_scale;
         s_mind_ref = 50.0f; /* 0x42480000 */
-        sound_tracked_buffers_set_min_distance(
-            media_float_bits(s_mind_ref));
+        sound_tracked_buffers_set_min_distance(s_mind_ref);
         /* Context release / entity-kind hooks land at the entity layer
          * (unported seams); storing is the observable half. The corpus
          * dereferences the context unchecked; the port guards NULL. */
@@ -1907,8 +1906,7 @@ void media_min_distance_update_mode(int mode, void* context,
         s_mind_listener = 0.5f; /* 0x3f000000 */
         s_mind_clip = s_mind_clip_base;
         s_mind_ref = s_mind_ref_base;
-        sound_tracked_buffers_set_min_distance(
-            media_float_bits(s_mind_ref));
+        sound_tracked_buffers_set_min_distance(s_mind_ref);
     }
     /* Other modes update only the mode global, like the corpus. */
     s_mind_mode = mode;
