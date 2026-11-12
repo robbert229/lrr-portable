@@ -86,6 +86,9 @@
 #include "simtick_shared.hpp"
 #include "view_shared.hpp"
 #include "entity_for_legoobject.hpp"
+/* GAME-023 legoobject_unit.c reads legoGlobs.toolName (005561fc) from C;
+ * declared so before the frozen header gives it C linkage. */
+extern "C" const char* s_tool_type_names[AI_TOOL_TYPE_COUNT];
 #include "ai_for_legoobject.hpp"
 #include "cmd_for_legoobject.hpp"
 #include "effects_for_legoobject.hpp"
@@ -180,187 +183,96 @@ typedef struct TerrainVariantVisitContext {
 // GLOBAL: LEGORR 0x0049e3a4
 static const float s_eligibility_floor = 0.0f;   /* DAT_0049e3a4, verified */
 
-// GLOBAL: LEGORR 0x004a48d4
 const char s_tool_name_birdscarer[] = "LegoObject_ToolType_BirdScarer";
-// GLOBAL: LEGORR 0x004a48f4
 const char s_tool_name_pushergun[] = "LegoObject_ToolType_PusherGun";
-// GLOBAL: LEGORR 0x004a4914
 const char s_tool_name_laser[] = "LegoObject_ToolType_Laser";
-// GLOBAL: LEGORR 0x004a4930
 const char s_tool_name_spanner[] = "LegoObject_ToolType_Spanner";
-// GLOBAL: LEGORR 0x004a494c
 const char s_tool_name_hammer[] = "LegoObject_ToolType_Hammer";
-// GLOBAL: LEGORR 0x004a4968
 const char s_tool_name_spade[] = "LegoObject_ToolType_Spade";
-// GLOBAL: LEGORR 0x004a4984
 const char s_tool_name_drill[] = "LegoObject_ToolType_Drill";
-// GLOBAL: LEGORR 0x004a49a0
 static const char s_ability_name_scanner[] = "LegoObject_AbilityType_Scanner";
-// GLOBAL: LEGORR 0x004a49c0
 static const char s_ability_name_repair[] = "LegoObject_AbilityType_Repair";
-// GLOBAL: LEGORR 0x004a49e0
 static const char s_ability_name_dynamite[] = "LegoObject_AbilityType_Dynamite";
-// GLOBAL: LEGORR 0x004a4a00
 static const char s_ability_name_driver[] = "LegoObject_AbilityType_Driver";
-// GLOBAL: LEGORR 0x004a4a20
 static const char s_ability_name_sailor[] = "LegoObject_AbilityType_Sailor";
-// GLOBAL: LEGORR 0x004a4a40
 static const char s_ability_name_pilot[] = "LegoObject_AbilityType_Pilot";
-// GLOBAL: LEGORR 0x004a4a60
 static const char s_activity_name_activity_teleportin[] = "Activity_TeleportIn";
-// GLOBAL: LEGORR 0x004a4a74
 static const char s_activity_name_activity_crumble[] = "Activity_Crumble";
-// GLOBAL: LEGORR 0x004a4a88
 static const char s_activity_name_activity_waiting21[] = "Activity_Waiting21";
-// GLOBAL: LEGORR 0x004a4a9c
 static const char s_activity_name_activity_waiting20[] = "Activity_Waiting20";
-// GLOBAL: LEGORR 0x004a4ab0
 static const char s_activity_name_activity_waiting19[] = "Activity_Waiting19";
-// GLOBAL: LEGORR 0x004a4ac4
 static const char s_activity_name_activity_waiting18[] = "Activity_Waiting18";
-// GLOBAL: LEGORR 0x004a4ad8
 static const char s_activity_name_activity_waiting17[] = "Activity_Waiting17";
-// GLOBAL: LEGORR 0x004a4aec
 static const char s_activity_name_activity_waiting16[] = "Activity_Waiting16";
-// GLOBAL: LEGORR 0x004a4b00
 static const char s_activity_name_activity_waiting15[] = "Activity_Waiting15";
-// GLOBAL: LEGORR 0x004a4b14
 static const char s_activity_name_activity_waiting14[] = "Activity_Waiting14";
-// GLOBAL: LEGORR 0x004a4b28
 static const char s_activity_name_activity_waiting13[] = "Activity_Waiting13";
-// GLOBAL: LEGORR 0x004a4b3c
 static const char s_activity_name_activity_waiting12[] = "Activity_Waiting12";
-// GLOBAL: LEGORR 0x004a4b50
 static const char s_activity_name_activity_waiting11[] = "Activity_Waiting11";
-// GLOBAL: LEGORR 0x004a4b64
 static const char s_activity_name_activity_waiting10[] = "Activity_Waiting10";
-// GLOBAL: LEGORR 0x004a4b78
 static const char s_activity_name_activity_waiting9[] = "Activity_Waiting9";
-// GLOBAL: LEGORR 0x004a4b8c
 static const char s_activity_name_activity_waiting8[] = "Activity_Waiting8";
-// GLOBAL: LEGORR 0x004a4ba0
 static const char s_activity_name_activity_waiting7[] = "Activity_Waiting7";
-// GLOBAL: LEGORR 0x004a4bb4
 static const char s_activity_name_activity_waiting6[] = "Activity_Waiting6";
-// GLOBAL: LEGORR 0x004a4bc8
 static const char s_activity_name_activity_waiting5[] = "Activity_Waiting5";
-// GLOBAL: LEGORR 0x004a4bdc
 static const char s_activity_name_activity_waiting4[] = "Activity_Waiting4";
-// GLOBAL: LEGORR 0x004a4bf0
 static const char s_activity_name_activity_waiting3[] = "Activity_Waiting3";
-// GLOBAL: LEGORR 0x004a4c04
 static const char s_activity_name_activity_waiting2[] = "Activity_Waiting2";
-// GLOBAL: LEGORR 0x004a4c18
 static const char s_activity_name_activity_waiting1[] = "Activity_Waiting1";
-// GLOBAL: LEGORR 0x004a4c2c
 static const char s_activity_name_activity_open[] = "Activity_Open";
-// GLOBAL: LEGORR 0x004a4c3c
 static const char s_activity_name_activity_closing[] = "Activity_Closing";
-// GLOBAL: LEGORR 0x004a4c50
 static const char s_activity_name_activity_opening[] = "Activity_Opening";
-// GLOBAL: LEGORR 0x004a4c64
 static const char s_activity_name_activity_floatoff[] = "Activity_FloatOff";
-// GLOBAL: LEGORR 0x004a4c78
 static const char s_activity_name_activity_floaton[] = "Activity_FloatOn";
-// GLOBAL: LEGORR 0x004a4c8c
 static const char s_activity_name_activity_train[] = "Activity_Train";
-// GLOBAL: LEGORR 0x004a4c9c
 static const char s_activity_name_activity_wakeup[] = "Activity_WakeUp";
-// GLOBAL: LEGORR 0x004a4cac
 static const char s_activity_name_activity_recharge[] = "Activity_Recharge";
-// GLOBAL: LEGORR 0x004a4cc0
 static const char s_activity_name_activity_freezemelt[] = "Activity_FreezeMelt";
-// GLOBAL: LEGORR 0x004a4cd4
 static const char s_activity_name_activity_freezestart[] = "Activity_FreezeStart";
-// GLOBAL: LEGORR 0x004a4cec
 static const char s_activity_name_activity_freezed[] = "Activity_Freezed";
-// GLOBAL: LEGORR 0x004a4d00
 static const char s_activity_name_activity_firelaser[] = "Activity_FireLaser";
-// GLOBAL: LEGORR 0x004a4d14
 static const char s_activity_name_activity_unpowered[] = "Activity_Unpowered";
-// GLOBAL: LEGORR 0x004a4d28
 static const char s_activity_name_activity_explode[] = "Activity_Explode";
-// GLOBAL: LEGORR 0x004a4d3c
 static const char s_activity_name_activity_upgrade[] = "Activity_Upgrade";
-// GLOBAL: LEGORR 0x004a4d50
 static const char s_activity_name_activity_buildpath[] = "Activity_BuildPath";
-// GLOBAL: LEGORR 0x004a4d64
 static const char s_activity_name_activity_getup[] = "Activity_GetUp";
-// GLOBAL: LEGORR 0x004a4d74
 static const char s_activity_name_activity_thrownbyrockmonster[] = "Activity_ThrownByRockMonster";
-// GLOBAL: LEGORR 0x004a4d94
 static const char s_activity_name_activity_throwman[] = "Activity_ThrowMan";
-// GLOBAL: LEGORR 0x004a4da8
 static const char s_activity_name_activity_stamp[] = "Activity_Stamp";
-// GLOBAL: LEGORR 0x004a4db8
 static const char s_activity_name_activity_eat[] = "Activity_Eat";
-// GLOBAL: LEGORR 0x004a4dc8
 static const char s_activity_name_activity_rest[] = "Activity_Rest";
-// GLOBAL: LEGORR 0x004a4dd8
 static const char s_activity_name_activity_slip[] = "Activity_Slip";
-// GLOBAL: LEGORR 0x004a4de8
 static const char s_activity_name_activity_repair[] = "Activity_Repair";
-// GLOBAL: LEGORR 0x004a4df8
 static const char s_activity_name_activity_place[] = "Activity_Place";
-// GLOBAL: LEGORR 0x004a4e08
 static const char s_activity_name_activity_clear[] = "Activity_Clear";
-// GLOBAL: LEGORR 0x004a4e18
 static const char s_activity_name_activity_deposit[] = "Activity_Deposit";
-// GLOBAL: LEGORR 0x004a4e2c
 static const char s_activity_name_activity_dynamite[] = "Activity_Dynamite";
-// GLOBAL: LEGORR 0x004a4e40
 static const char s_activity_name_activity_hithard[] = "Activity_HitHard";
-// GLOBAL: LEGORR 0x004a4e54
 static const char s_activity_name_activity_hitback[] = "Activity_HitBack";
-// GLOBAL: LEGORR 0x004a4e68
 static const char s_activity_name_activity_hitfront[] = "Activity_HitFront";
-// GLOBAL: LEGORR 0x004a4e7c
 static const char s_activity_name_activity_hitright[] = "Activity_HitRight";
-// GLOBAL: LEGORR 0x004a4e90
 static const char s_activity_name_activity_hitleft[] = "Activity_HitLeft";
-// GLOBAL: LEGORR 0x004a4ea4
 static const char s_activity_name_activity_carrystand[] = "Activity_CarryStand";
-// GLOBAL: LEGORR 0x004a4eb8
 static const char s_activity_name_activity_carryturnright[] = "Activity_CarryTurnRight";
-// GLOBAL: LEGORR 0x004a4ed0
 static const char s_activity_name_activity_carryturnleft[] = "Activity_CarryTurnLeft";
-// GLOBAL: LEGORR 0x004a4ee8
 static const char s_activity_name_activity_throw[] = "Activity_Throw";
-// GLOBAL: LEGORR 0x004a4ef8
 static const char s_activity_name_activity_carryrubble[] = "Activity_CarryRubble";
-// GLOBAL: LEGORR 0x004a4f10
 static const char s_activity_name_activity_carry[] = "Activity_Carry";
-// GLOBAL: LEGORR 0x004a4f20
 static const char s_activity_name_activity_gather[] = "Activity_Gather";
-// GLOBAL: LEGORR 0x004a4f30
 static const char s_activity_name_activity_collect[] = "Activity_Collect";
-// GLOBAL: LEGORR 0x004a4f44
 static const char s_activity_name_activity_enterrein[] = "Activity_EnterRein";
-// GLOBAL: LEGORR 0x004a4f58
 static const char s_activity_name_activity_enter[] = "Activity_Enter";
-// GLOBAL: LEGORR 0x004a4f68
 static const char s_activity_name_activity_emerge[] = "Activity_Emerge";
-// GLOBAL: LEGORR 0x004a4f78
 static const char s_activity_name_activity_cantdo[] = "Activity_CantDo";
-// GLOBAL: LEGORR 0x004a4f88
 static const char s_activity_name_activity_turnright[] = "Activity_TurnRight";
-// GLOBAL: LEGORR 0x004a4f9c
 static const char s_activity_name_activity_turnleft[] = "Activity_TurnLeft";
-// GLOBAL: LEGORR 0x004a4fb0
 static const char s_activity_name_activity_reverse[] = "Activity_Reverse";
-// GLOBAL: LEGORR 0x004a4fc4
 static const char s_activity_name_activity_reinforce[] = "Activity_Reinforce";
-// GLOBAL: LEGORR 0x004a4fd8
 static const char s_activity_name_activity_walk[] = "Activity_Walk";
-// GLOBAL: LEGORR 0x004a4fe8
 static const char s_activity_name_activity_teleport[] = "Activity_Teleport";
-// GLOBAL: LEGORR 0x004a4ffc
 static const char s_activity_name_activity_drill[] = "Activity_Drill";
-// GLOBAL: LEGORR 0x004a500c
 static const char s_activity_name_activity_runpanic[] = "Activity_RunPanic";
-// GLOBAL: LEGORR 0x004a5020
 static const char s_activity_name_activity_routerubble[] = "Activity_RouteRubble";
-// GLOBAL: LEGORR 0x004a5038
 static const char s_activity_name_activity_route[] = "Activity_Route";
 
 /* The unit (legoobject_unit.c) reads this state with C linkage; the
@@ -407,8 +319,10 @@ const char* s_activity[AI_ACTIVITY_COUNT] = {
 
 } /* extern "C" */
 
+extern "C" {
 // GLOBAL: LEGORR 0x004dee00
 float* s_terrain_neighbor_path_cost;
+}
 /* DAT_004dee04 / DAT_004dee08: the retail path-search functions share and
  * reuse one zeroed dword per map cell. */
 // GLOBAL: LEGORR 0x004dee04
@@ -640,7 +554,8 @@ namespace lego { namespace { static int global_scatter_find(int mode); } }
 
 /* ActivityNameTableInit (FUN_00436c20) resets state represented by the
  * cleared global range, then installs activity, ability, and tool names. */
-// FUNCTION: LEGORR 0x00436C20
+/* Port model of 0x00436c20 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00436c20, retires to the tail in GAME-023 part 3
 void ai_activity_name_table_initialize(void)
 {
     /* The retail initializer writes these same table values on every call.
@@ -789,7 +704,8 @@ void ai_activity_name_table_initialize(void)
  * the pool/lifecycle state. DAT_004dee00 is the terrain-grid cost map; retail
  * frees it without nulling the global pointer, while the portable owner
  * clears it to make repeated teardown safe. */
-// FUNCTION: LEGORR 0x00437050
+/* Port model of 0x00437050 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437050, retires to the tail in GAME-023 part 3
 void pooled_record_pool_resources_release(void)
 {
     uint32_t i;
@@ -809,7 +725,8 @@ void pooled_record_pool_resources_release(void)
     s_entity_iteration_guard_flags &= ~1u;
 }
 
-// FUNCTION: LEGORR 0x004370b0
+/* Port model of 0x004370b0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004370b0, retires to the tail in GAME-023 part 3
 void render_config_six_field_copy_out(uint32_t out[6])
 {
     if (out == NULL) {
@@ -823,7 +740,8 @@ void render_config_six_field_copy_out(uint32_t out[6])
     } while (remaining != 0);
 }
 
-// FUNCTION: LEGORR 0x004370d0
+/* Port model of 0x004370d0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004370d0, retires to the tail in GAME-023 part 3
 void render_config_six_field_copy_in_or_clear(const uint32_t in[6])
 {
     if (in != NULL) {
@@ -843,7 +761,8 @@ void render_config_six_field_copy_in_or_clear(const uint32_t in[6])
     } while (remaining != 0);
 }
 
-// FUNCTION: LEGORR 0x00437100
+/* Port model of 0x00437100 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437100, retires to the tail in GAME-023 part 3
 int grid_record_count_difference_sum(int type, int skip_flagged_rows)
 {
     int total = 0;
@@ -869,7 +788,8 @@ int grid_record_count_difference_sum(int type, int skip_flagged_rows)
 /* ToolTipIconsConfigLoad (FUN_00437150): load matching images from the
  * ToolTipIcons config section into the two named icon banks and special
  * Blank/Cursor slots. */
-// FUNCTION: LEGORR 0x00437150
+/* Port model of 0x00437150 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437150, retires to the tail in GAME-023 part 3
 void tooltip_icons_config_load(void* config)
 {
     BlockRec* section = block_subgroup((BlockFile*)config,
@@ -917,7 +837,8 @@ void tooltip_icons_config_load(void* config)
     }
 }
 
-// FUNCTION: LEGORR 0x004372a0
+/* Port model of 0x004372a0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004372a0, retires to the tail in GAME-023 part 3
 void spawn_coordinate_pool_clear(void)
 {
     unsigned int i;
@@ -939,7 +860,8 @@ void spawn_coordinate_pool_clear(void)
 
 /* ProcessQueuedGridAnimations (FUN_00437300): accumulate scaled fractional
  * work, then consume one queued type-six animation for each whole unit. */
-// FUNCTION: LEGORR 0x00437300
+/* Port model of 0x00437300 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437300, retires to the tail in GAME-023 part 3
 void process_queued_grid_animations(void* anchor, int mode, float delta)
 {
     QueuedGridAnimationHooks* const hooks = &s_queued_grid_animation_hooks;
@@ -987,7 +909,8 @@ void process_queued_grid_animations(void* anchor, int mode, float delta)
  * shared tail at 0x437431) — on the FUN_00447c40 bookkeeping call, so the
  * port calls the file-local carrier there for code shape; the flag folds
  * stay the dword spelling of the corpus's byte ops on the +0x3ec word. */
-// FUNCTION: LEGORR 0x004373d0
+/* Port model of 0x004373d0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004373d0, retires to the tail in GAME-023 part 3
 void entity_activity_toggle(EntitySlot* e, int on)
 {
     if (e == NULL) {
@@ -1006,7 +929,8 @@ void entity_activity_toggle(EntitySlot* e, int on)
     activity_register_bookkeeping(e); /* FUN_00447c40, corpus tail call */
 }
 
-// FUNCTION: LEGORR 0x00437440
+/* Port model of 0x00437440 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437440, retires to the tail in GAME-023 part 3
 void grid_record_count_tables_clear(void)
 {
     for (size_t k = 0; k < GRID_COUNT_TABLE_DWORDS; ++k) {
@@ -1018,7 +942,8 @@ void grid_record_count_tables_clear(void)
     }
 }
 
-// FUNCTION: LEGORR 0x00437460
+/* Port model of 0x00437460 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437460, retires to the tail in GAME-023 part 3
 int grid_record_count_difference_get(int row, int column, int slot,
                                      int subtract_first_table)
 {
@@ -1032,7 +957,8 @@ int grid_record_count_difference_get(int row, int column, int slot,
         : v;
 }
 
-// FUNCTION: LEGORR 0x004374a0
+/* Port model of 0x004374a0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004374a0, retires to the tail in GAME-023 part 3
 uint32_t grid_record_count_get(int row, int column, int slot)
 {
     const int64_t idx = grid_count_index(row, column, slot);
@@ -1040,7 +966,8 @@ uint32_t grid_record_count_get(int row, int column, int slot)
 }
 
 /* TaskCounterIncrementByBranch (FUN_004374d0). */
-// FUNCTION: LEGORR 0x004374d0
+/* Port model of 0x004374d0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004374d0, retires to the tail in GAME-023 part 3
 void entity_task_counter_increment_by_branch(int nonzero)
 {
     if (nonzero != 0) {
@@ -1053,7 +980,8 @@ void entity_task_counter_increment_by_branch(int nonzero)
 /* EntityCallbackDispatchUnlessTypeFive (FUN_004374f0): type five is a
  * non-dispatchable source; otherwise clear every live candidate route that
  * points back to it, then notify the optional host observer. */
-// FUNCTION: LEGORR 0x004374F0
+/* Port model of 0x004374f0 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x004374f0, retires to the tail in GAME-023 part 3
 void entity_callback_dispatch_unless_type_five(EntitySlot* entity)
 {
     if (entity == NULL || entity->type == 5) return;
@@ -1064,7 +992,8 @@ void entity_callback_dispatch_unless_type_five(EntitySlot* entity)
                                         s_entity_callback_dispatch_context);
     }
 }
-// FUNCTION: LEGORR 0x00437510
+/* Port model of 0x00437510 (GAME-023); the original-shape function is in legoobject_unit.c. */
+// PORT-ONLY: port model of 0x00437510, retires to the tail in GAME-023 part 3
 static int entity_linked_route_clear_callback(EntitySlot* candidate,
                                               void* payload)
 {

@@ -26,6 +26,9 @@
 #include "util.hpp"
 #include "ai_shared.hpp"
 #include "ai_from_lego.hpp"
+/* GAME-023 legoobject_unit.c reads legoGlobs.toolName (005561fc) from C;
+ * declared so before the frozen header gives it C linkage. */
+extern "C" const char* s_tool_type_names[AI_TOOL_TYPE_COUNT];
 #include "ai_for_legoobject.hpp"
 /* C linkage for LegoObject.c state that legoobject_unit.c also reads
  * (defined in legoobject.cpp; the frozen header below redeclares it). */

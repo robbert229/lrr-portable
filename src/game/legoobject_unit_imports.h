@@ -51,6 +51,40 @@ extern uint32_t s_global_animation_state;           /* 004eadc4 */
 extern struct EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records; /* 004eadd0 */
 
 /* ---- group A ---- */
+/* Config.c and Images.c records (BlockRec, Image). */
+#include "gods98/config.h"
+#include "gods98/images.h"
+
+struct TextureSurface;
+
+/* legoGlobs fields the port keeps as port globals. */
+extern const char* s_engine_config_root;  /* engine.cpp, 005560c4 gameName */
+extern const char* s_tool_type_names[];   /* ai.cpp, 005561fc toolName[11] */
+/* objectGlobs fields defined elsewhere. */
+extern float* s_terrain_neighbor_path_cost;      /* legoobject.cpp, 004dee00 */
+extern void* s_object_toolTipIconAbilities[6];   /* lego_unit.c, 004ead78 */
+extern void* s_object_toolTipIcons[11];          /* lego_unit.c, 004ead90 */
+extern void* s_object_toolTipIconBlank;          /* lego_unit.c, 004eadbc */
+
+/* LegoObject.c's own part-2/3 functions (legoobject.cpp, entity.hpp,
+ * ai.hpp) whose port contract is the original's. */
+void entity_iteration_callback_guard(void);              /* 0043b320 RemoveAll */
+void ai_set_activity(struct EntitySlot* e, int id, int param); /* 004409e0 */
+void entity_action_sequence_reset(struct EntitySlot* entity,
+                                  int preserve_mode);    /* 00441940 */
+int activity_register_bookkeeping(struct EntitySlot* e); /* 00447c40 */
+/* LegoObject_GetBlockPos (004424f0): the port's entry also takes the level;
+ * the GAME-013 port-tail adapter (legoobject.h) passes the current one. */
+void legoobject_block_position_get(struct EntitySlot* entity, int* bx,
+                                   int* by);
+/* Stats.c (entity.hpp) and Weapons.c (weapons.cpp). */
+uint32_t stats_table_word_at_144(int type, int row);     /* 00469ec0 */
+float weapon_type_discharge_rate_get_target(int type);   /* 0046f140 */
+/* Images.c: Image_SetupTrans (surface.hpp; the port takes the surface). */
+void image_surface_blit_transformed(struct TextureSurface* surface,
+                                    float low_red, float low_green,
+                                    float low_blue, float high_red,
+                                    float high_green, float high_blue); /* 0047dbf0 */
 
 /* ---- group B ---- */
 
