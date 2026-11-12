@@ -201,7 +201,7 @@ unsigned int string_queue_count_get(void);
 void string_queue_record_or_flush(uint32_t first, uint32_t second,
                                   uint32_t third, const char* text,
                                   int record); /* FUN_00410320 */
-/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
  * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1).
  * Renamed from callback_operation_run_and_return_status, which this extern "C"
  * block would otherwise clash with; a name costs no symbol. */

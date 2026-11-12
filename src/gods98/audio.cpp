@@ -25,21 +25,6 @@ struct AudioBuffer {
     int playing_loop;
 };
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-#pragma pack(push, 1)
-struct MenuCompatData {
-    unsigned char scale_prefix[0x25a08];
-    float volume_scale;
-    unsigned char null_label_prefix[0x4210];
-    char null_label[5];
-};
-#pragma pack(pop)
-#pragma data_seg(".data$yyyyyy")
-__declspec(allocate(".data$yyyyyy")) static MenuCompatData
-    s_menu_compat_data = { { 0 }, 0.11111111f, { 0 }, "Null" };
-#pragma data_seg()
-#endif
-
 int audio_open(AudioPlayer* p)
 {
     if (p == NULL) {

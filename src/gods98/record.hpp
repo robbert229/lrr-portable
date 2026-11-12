@@ -214,7 +214,7 @@ uint32_t scene_object_flag_bit3_get(const void* scene_object);
 uint32_t scene_object_flag_bit3_get_target(const void* scene_object);
 
 /* SceneObjectModeIsOne (FUN_00406980, findings 373/435): the +0x28 mode
- * word equals 1. Defined in game/bezier.c (GAME-003, finding 514); kept
+ * word equals 1. Deviation (scoring only): defined in game/bezier.c (GAME-003, finding 514); kept
  * here, with C linkage, to preserve the declaration count of the units that
  * include this header (finding 506). */
 #ifdef __cplusplus
@@ -231,7 +231,7 @@ void* animation_object_handle_get(const void* animation_object);
  * FUN_00406c30, FUN_00406c60). `enabled` is forwarded as the corpus's
  * boolean update value (`enabled == 0`), while `update_value` is the third
  * wrapper's opaque value. */
-/* Superseded by game/animation_object.c (GAME-004, finding 549); kept
+/* Deviation (scoring only): superseded by game/animation_object.c (GAME-004, finding 549); kept
  * uncalled so that the symbol count of every includer is unchanged (ADR 0005
  * entropy rule 1). */
 void renderer_object_update_from_record_field64(void* record, int enabled);
@@ -264,7 +264,7 @@ void indexed_record_flag6c_bit0_set(void* record, int index, int set);
 /* RecordFlag2CBit0Set (FUN_004827d0): set or clear bit zero at +0x2c. */
 void record_flag2c_bit0_set(void* record, int set);
 
-/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
  * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 /* ThreeValueRecordCopyAndMarkReady (FUN_0040fdb0): copy three dwords to
  * the record's pointed-to vector and raise the ready word at +0x10. */
@@ -428,7 +428,7 @@ void scene_object_owner_set(void* scene_object, uint32_t owner);
  * Entry NULL guards stand in for the corpus's blind dereferences
  * (documented deviations). */
 void indexed_record_field64_set(void* record, int index, uint32_t value);
-/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
  * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void object_vector3_set(void* object_block, float x, float y, float z);
 #ifdef __cplusplus

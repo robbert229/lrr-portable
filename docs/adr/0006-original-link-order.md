@@ -193,8 +193,9 @@ measured per unit (unit-relative offsets), not at absolute addresses.
 **Deviations made only for scoring.** Some conversions change the program
 only to help the score. There are two kinds:
 
-- **Storage deviations** change data. `keys.c` declares `key_names` with
-  257 slots so the past-the-end operand gets a name (finding 513).
+- **Storage deviations** change data. `keys.c` declared `key_names` with
+  257 slots so the past-the-end operand got a name (finding 513). #448
+  removed the spare slot (finding 580), so none remain.
 - **Declaration-only deviations** change no storage. They keep a symbol
   count. `view.hpp` keeps six superseded C++ declarations that nothing
   defines or calls, and `record.hpp` keeps `scene_object_mode_is_one`
@@ -213,7 +214,9 @@ From now on:
     original order, Files.c's table at `005769e0` follows `key_names` in the
     rebuild too, so the spare slot can go;
   - a Reccmp `data_sources` CSV row that gives the original entity its
-    size. It changes no code; prototype it before relying on it;
+    size. It changes no code; prototype it before relying on it. For
+    `key_names` it does not help: the row sizes only the original side, and
+    the rebuilt side still names the next common (finding 580);
   - otherwise, accept the lower score. The bytes are identical, and the
     whole-binary report counts them.
 - **Declaration-only deviations** move no data, so the data stage does not
@@ -228,7 +231,7 @@ From now on:
     PR after the last relocation wave, or the conversion that shrinks the
     header to its own unit.
 - **Ledger.** Every scoring-only deviation of either kind carries the
-  comment phrase `Deviation (scoring only)`, as `keys.c` already does, so
+  comment phrase `Deviation (scoring only)` (ADR 0005 entropy rule 4), so
   one grep lists them. The data stage closes the storage entries. The
   header cleanup closes the declaration-only entries.
 

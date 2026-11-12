@@ -25,6 +25,30 @@ class RatchetTest(unittest.TestCase):
         result = self.run_lint("--update", "--allow-growth")
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_named_section_storage_fails_everywhere(self):
+        self.source.write_text("// FUNCTION: LEGORR 0x1234\nvoid old() {}\n")
+        self.baseline()
+        self.assertEqual(self.run_lint().returncode, 0)
+        # Comments and literals do not count.
+        self.source.write_text('// FUNCTION: LEGORR 0x1234\nvoid old() {}\n'
+                               '/* #pragma data_seg(".data$x") */\n'
+                               'const char* s = "__declspec(allocate(";\n')
+        self.assertEqual(self.run_lint().returncode, 0)
+        cases = {
+            "tail.cpp": '#pragma data_seg(".data$zzzzzz")\n#pragma data_seg()\n',
+            "pad.hpp": '#define PAD __declspec(allocate(".data$zzzzzz"))\n',
+            "pad.c": '#  pragma bss_seg(".bss$x")\n',
+        }
+        for name, text in cases.items():
+            with self.subTest(name=name):
+                path = self.root / "src" / name
+                path.write_text(text)
+                result = self.run_lint()
+                self.assertEqual(result.returncode, 1)
+                self.assertIn(f"named-section storage: src/{name}:1", result.stdout)
+                self.assertIn("finding 580", result.stderr)
+                path.unlink()
+
     def test_new_fixed_and_update_guard(self):
         self.source.write_text("void old() {}\n")
         self.baseline()

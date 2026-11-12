@@ -28,7 +28,7 @@ struct UiOverlayInitSink {
                             int flags);
     void (*handle_store)(void* context, int which, void* handle);
 };
-/* Superseded by game/panel_unit.h (GAME-032, finding 554), where
+/* Deviation (scoring only): superseded by game/panel_unit.h (GAME-032, finding 554), where
  * FUN_0045b740 and FUN_0045b850 take no arguments. Kept uncalled, renamed,
  * so the symbol count of every includer is unchanged (ADR 0005 entropy
  * rule 1). */

@@ -79,7 +79,7 @@ typedef struct SimtickManagerSlot {
 void simtick_manager_clear(void);
 void simtick_manager_set_slots(SimtickManagerSlot* slots, int count);
 
-/* Superseded by Panel_Update (FUN_0045a730, game/panel_unit.h; GAME-032,
+/* Deviation (scoring only): superseded by Panel_Update (FUN_0045a730, game/panel_unit.h; GAME-032,
  * finding 554), which takes the panel and the elapsed time. Kept uncalled,
  * renamed, so the symbol count of every includer is unchanged (ADR 0005
  * entropy rule 1). */

@@ -84,6 +84,10 @@ class PortOnlyChecklistTest(unittest.TestCase):
                             for item in cu.CHECKLIST))
 
 
+    def test_conversion_checklist_requires_scoring_only_phrase(self):
+        self.assertTrue(any("`Deviation (scoring only)`" in item for item in cu.CHECKLIST))
+
+
 class HeaderScanTest(unittest.TestCase):
     def test_linkage_and_bodies(self):
         scan = cf.HeaderScan(

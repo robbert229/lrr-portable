@@ -958,7 +958,7 @@ int selected_entity_ground_marker_render(void* entity, void* camera,
 typedef struct PositionTrackerBoxDrawOps {
     void* context;
     uint32_t (*interface_flags_get)(void* context);
-    /* Unused: position_tracker_box_draw calls surface_draw_polyline
+    /* Deviation (scoring only): unused; position_tracker_box_draw calls surface_draw_polyline
      * (draw.c) as the original does. Kept to hold the declaration count
      * (finding 506); removing it moves 0040e9c0 from 100% to 84.21%. */
     void (*outline_draw)(void* context, const float* points0,
