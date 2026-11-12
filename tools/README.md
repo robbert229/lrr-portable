@@ -14,6 +14,7 @@ Definitions in a branch whose condition requires `LEGORRR_BACKEND_MINIWIN`
 top-level `&&` conjunct and no top-level `||`) need no marker: the matching
 build never defines that macro, so they never reach Reccmp. Native-only port
 files wrap their body in such a group (finding 555).
+Definitions in `tail` entries in `src/link_order.cmake` are exempt, as are definitions directly preceded by `// PORT-ONLY: <reason>` or inside a directly marked `#if` group; the reason is required.
 It needs only Python's standard library, and runs in `make tools-test`.
 
 The sorted `docs/coverage/reccmp-lint-baseline.txt` records existing debt.

@@ -10096,6 +10096,7 @@ float s_lego_radar_zoom;
  * entity_type_pair_lookup, for Reward.c (GAME-037, finding 560). entity.cpp
  * reaches it through its frozen private header under the port's name, so
  * this unannotated forwarder keeps that name. */
+// PORT-ONLY: adapter or forwarder for the port contract
 int entity_type_pair_for_name(const char* name, int* type_out, int* row_out,
                               int* zero_out)
 {

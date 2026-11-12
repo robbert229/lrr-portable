@@ -502,6 +502,7 @@ void scene_object_set_animation_with_fallback(
  * carry, so the box is described but not drawn. */
 #include "effects.h"
 
+// PORT-ONLY: adapter or forwarder for the port contract
 void tooltip_draw_box(Area2F rect, ColourRGBF fill, ColourRGBF highlight,
                       ColourRGBF shadow, int dark)
 {

@@ -3217,6 +3217,7 @@ extern "C" __declspec(naked) int front_level_set_index_of(
     }
 }
 #else
+// PORT-ONLY: adapter or forwarder for the port contract
 extern "C" int front_level_set_index_of(const SavListWindow* win, const char* name)
 {
     int i;
@@ -4989,17 +4990,20 @@ int g_front_save_menu_open;
 /* Front_LevelSet_IndexOf (00416e20) has C linkage under the name
  * front_level_set_index_of; savegame.cpp reaches it through its frozen
  * private header under the port's name, which this forwarder keeps. */
+// PORT-ONLY: adapter or forwarder for the port contract
 int list_find_name_target(const SavListWindow* win, const char* name)
 {
     return front_level_set_index_of(win, name);
 }
 
+// PORT-ONLY: adapter or forwarder for the port contract
 int front_campaign_snapshot_create(void* snapshot)
 {
     return unported_ledger_stubs::ledger_stub_00418040_CampaignChainSnapshotCreate(
         save_current_context_get(), snapshot, 0xb8u);
 }
 
+// PORT-ONLY: adapter or forwarder for the port contract
 void movie_play_wait(struct DirectShowGraphState* movie, int skippable)
 {
     (void)movie;

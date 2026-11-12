@@ -355,6 +355,7 @@ static void scene_quad_grid_vertices_build(uint32_t quad,
  * is not built, and the mouse is never over it. */
 #include "info.h"
 
+// PORT-ONLY: adapter or forwarder for the port contract
 void info_panel_initialise(const char* name, int a, int b, int panel, int c)
 {
     (void)name;
@@ -364,6 +365,7 @@ void info_panel_initialise(const char* name, int a, int b, int panel, int c)
     (void)c;
 }
 
+// PORT-ONLY: adapter or forwarder for the port contract
 int info_panel_check_collision(int* released, int mouseX, int mouseY,
                                int leftButton, int leftButtonLast)
 {

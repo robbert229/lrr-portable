@@ -16,6 +16,8 @@ import re
 import sys
 from pathlib import Path
 
+import link_order
+
 
 ANNOTATION = re.compile(
     r"^\s*//\s*(?:FUNCTION|STUB|LIBRARY):\s+[A-Z0-9_]+\s+"
@@ -25,6 +27,7 @@ LEGORR_ADDRESS_ANNOTATION = re.compile(
     r"^\s*//\s*(?:FUNCTION|STUB|LIBRARY):\s+LEGORR\s+"
     r"0x([0-9a-fA-F]+)(?:\s+SYMBOL)?\s*$"
 )
+PORT_ONLY = re.compile(r"^\s*//\s*PORT-ONLY:(.*)$")
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z_0-9]*\s*$")
 CONTROL_NAMES = {
     "if",
@@ -254,6 +257,28 @@ def annotated_group_lines(source: str, masked: str) -> set[int]:
     return covered
 
 
+def port_only_lines(source: str, masked: str, path: Path) -> set[int]:
+    """Find direct markers and marked conditional groups; reject empty reasons."""
+    lines = source.splitlines()
+    masked_lines = masked.splitlines()
+    covered: set[int] = set()
+    stack: list[bool] = []
+    for index, line in enumerate(lines):
+        marker = PORT_ONLY.fullmatch(line)
+        if marker and not marker.group(1).strip():
+            raise ValueError(f"{path}:{index + 1}: PORT-ONLY marker requires a reason")
+        previous = PORT_ONLY.fullmatch(lines[index - 1]) if index else None
+        text = masked_lines[index]
+        if CONDITIONAL_OPEN.match(text):
+            stack.append(bool(previous))
+        elif CONDITIONAL_CLOSE.match(text):
+            if stack:
+                stack.pop()
+        elif previous or any(stack):
+            covered.add(index)
+    return covered
+
+
 NATIVE_ONLY_MACRO = "LEGORRR_BACKEND_MINIWIN"
 IFDEF_NATIVE = re.compile(r"\s*#\s*ifdef\s+" + NATIVE_ONLY_MACRO + r"\s*$")
 IF_OR_ELIF = re.compile(r"\s*#\s*(if|elif)\b(.*)$")
@@ -413,13 +438,19 @@ LINKAGE_TOKENS = frozenset({"static", "inline", "__inline", "__forceinline"})
 
 def collect(root: Path, ledger_path: Path | None) -> dict[str, list[str]]:
     violations: dict[str, list[str]] = defaultdict(list)
+    tail_paths = {entry.path for entry in link_order.load(root) if entry.kind == "tail"}
     for path in source_files(root / "src"):
         source = path.read_text(encoding="utf-8", errors="replace")
         masked = mask_comments_and_literals(source)
+        port_only = port_only_lines(source, masked, path.relative_to(root))
+        if path.relative_to(root).as_posix() in tail_paths:
+            continue
         scopes = scopes_at_braces(masked)
         grouped = annotated_group_lines(source, masked)
         native_only = native_only_lines(masked)
         for offset, name, brace, definition in function_definitions(source):
+            if source.count("\n", 0, definition) in port_only:
+                continue
             if has_nearby_annotation(source, definition):
                 continue
             if source.count("\n", 0, definition) in grouped:
@@ -476,6 +507,10 @@ def main() -> int:
             if new and not args.allow_growth:
                 print("Refusing to add baseline entries; pass --allow-growth to accept them.", file=sys.stderr)
                 return 1
+            if new and args.allow_growth:
+                print("New ledger debt (justify each in the PR):")
+                for key in sorted(new.elements()):
+                    print(key)
             baseline.parent.mkdir(parents=True, exist_ok=True)
             baseline.write_text(HEADER + "".join(key + "\n" for key in sorted(current.elements())), encoding="utf-8")
             print(f"Updated {baseline}: {sum(current.values())} entries")

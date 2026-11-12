@@ -58,5 +58,5 @@
   licensed inputs and the MSVC 5.0 toolchain, so run them locally.
 - No separate repository-wide formatter, linter, or pre-commit configuration is
   present. The Makefile exposes `make reccmp-lint` for the
-  Reccmp annotation ledger. Follow the surrounding C++ style and retain the
+  Reccmp annotation ledger; tail files and definitions marked `// PORT-ONLY: <reason>` are exempt. Follow the surrounding C++ style and retain the
   SPDX headers used by source files.

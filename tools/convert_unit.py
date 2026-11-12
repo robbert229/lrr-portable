@@ -731,6 +731,7 @@ CHECKLIST = (
     "each with `// GLOBAL: LEGORR 0x…` (scaffolded; rename the fields)",
     "Functions in original address order with original signatures and direct global "
     "access; port-only accessors last",
+    "mark each adapter and forwarder `// PORT-ONLY: <reason>` directly above its definition or leading #if",
     "C subset: `gcc -std=gnu89 -Werror=declaration-after-statement -fsyntax-only`",
     "Callees: C linkage for every callee and global ({callees} callee(s) need work, "
     "{globals} global(s)); boundary declarations; pairs in `test_c_boundaries.cpp`; "
