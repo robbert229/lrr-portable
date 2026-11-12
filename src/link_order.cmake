@@ -134,6 +134,7 @@ lrr_link(unit   G98-031  gods98        gods98/lwo.cpp)
 # Port tail
 lrr_link(tail   -        game          game/actor_scene.cpp winapi)
 lrr_link(tail   -        game          game/building_scene.cpp winapi)
+lrr_link(tail   -        game          game/creature_scene.cpp native)
 lrr_link(tail   -        game          game/entity_motion_owner.cpp)
 lrr_link(tail   -        game          game/game.cpp)
 lrr_link(tail   -        game          game/opgroup.cpp)

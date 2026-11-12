@@ -97,6 +97,9 @@
 #include "gods98/simtick_for_legoobject.hpp"
 #include "gods98/view_for_legoobject.hpp"
 #include "ai_from_legoobject.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "creature_scene.hpp"
+#endif
 
 struct EntityGridFindQuery {
     int x;
@@ -1080,6 +1083,9 @@ int entity_teardown(EntitySlot* entity)
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (entity->type == 4) building_scene_entity_release(entity);
     if (entity->type == 2 || entity->type == 3) actor_scene_entity_release(entity);
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+    /* EntityTeardown (0x437540): Creature_Remove, then free the record. */
+    creature_scene_entity_release(entity);
 #endif
     type = entity->type;
     flags = (uint32_t)entity->flags_3ec;
@@ -6072,6 +6078,8 @@ void entity_world_position_set(EntitySlot* entity, float x, float y,
     if (entity->type == 4) (void)building_scene_pose_set(entity);
     if (entity->type == 2 || entity->type == 3)
         (void)actor_scene_pose_set(entity);
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+    creature_scene_pose_apply(entity);
 #endif
     /* Corpus writes 0.01 to the +0xae tick scale after every update. */
     entity->movement_tick_scale = 0.01f;
@@ -7636,6 +7644,10 @@ float ledger_stub_00447b30_EntityActivityTick(
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
             else advanced = actor_scene_advance(entity, scaled_delta,
                 (uint32_t)entity->activity_param, &overflow);
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+            /* EntityActivityTick (0x447b30): Creature_UpdateAnimation. */
+            else advanced = creature_scene_advance(entity, scaled_delta,
+                (uint32_t)entity->activity_param, &overflow);
 #endif
             if (advanced && generation == entity->activity_generation &&
                 activity == entity->activity && overflow == overflow &&
@@ -7688,6 +7700,9 @@ int activity_register_bookkeeping(EntitySlot* e)
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
         result = actor_scene_activity_set(e, ai_activity_name(e->activity),
                                            e->activity_timer);
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+        result = creature_scene_activity_set(e, ai_activity_name(e->activity),
+                                             e->activity_timer);
 #else
         uint32_t initial_time;
         memcpy(&initial_time, &e->activity_timer, sizeof(initial_time));

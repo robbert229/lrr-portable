@@ -28,6 +28,9 @@
 #include "cmd.hpp"
 
 #include "select.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "creature_scene.hpp"
+#endif
 #include "gods98/model.hpp"
 #include "gods98/view.hpp"
 #include "gods98/engine.hpp"
@@ -2337,6 +2340,11 @@ EntitySlot* entity_create_with_position_subtype(GameContext* context, int type,
         (void)entity_teardown(created);
         return NULL;
     }
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+    /* EntityCreateByType (0x437d00) clones the type row's AnimationObject. A
+     * type without a loadable scene keeps the port's drawn stand-in. */
+    if ((type == 2 || type == 3) && creature_scene_entity_create(created))
+        creature_scene_pose_apply(created);
 #endif
     entity_scene_slot_table_rebuild(created, 0);
     if (type == 6 || type == 7) {

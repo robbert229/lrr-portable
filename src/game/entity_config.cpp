@@ -5,6 +5,9 @@
 #include "entity.hpp"
 #include "building_scene.hpp"
 #include "actor_scene.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include "creature_scene.hpp"
+#endif
 #include "crt/crt.hpp"
 #include "frontend.hpp"
 #include "cmd.hpp"
@@ -647,6 +650,22 @@ int entity_type_config_row_parse_path(void* context,
             block_close(ae); return 0;
         }
     }
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+    /* Creature_Load (0x406990) for minifigure and rock-monster rows; the
+     * scene itself loads when the first entity of the row is created. */
+    if (row_kind == 1u || row_kind == 3u) {
+        TypeConfigTable* table = (TypeConfigTable*)context;
+        size_t offset;
+        if (table != NULL && table->rows != NULL && table->row_stride != 0u) {
+            offset = (size_t)((char*)destination - (char*)table->rows);
+            if (offset % table->row_stride == 0u &&
+                offset / table->row_stride < table->capacity)
+                (void)creature_scene_type_path_set(
+                    row_kind == 1u ? 2 : 3,
+                    (uint32_t)(offset / table->row_stride), asset_path,
+                    engine_feature_word_peek());
+        }
+    }
 #endif
     block_close(ae);
     return 1;
@@ -689,6 +708,8 @@ void entity_type_config_family_release(TypeConfigTable* table, uint32_t kind)
     if ((kind == 1u || kind == 3u) &&
         !actor_scene_types_clear(kind == 1u ? 2 : 3))
         actor_scene_require_stopped();
+#elif defined(LEGORRR_BACKEND_MINIWIN)
+    if (kind == 1u || kind == 3u) creature_scene_types_clear(kind == 1u ? 2 : 3);
 #else
     (void)kind;
 #endif
