@@ -1275,9 +1275,15 @@ def _const_object(head: str, name: str) -> bool:
 def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int, why: str,
                   reasons: list[str], direction: str = "for") -> list[Decl]:
     """External declarations for the private header, from a cluster's definition."""
-    group = next((items[k] for k in cl.members[c] if items[k].cgroup), None)
-    if group is not None:
-        return _group_declarations(s, group, why, reasons, direction)
+    groups = [items[k] for k in cl.members[c] if items[k].cgroup]
+    if groups:
+        # Every group that defines something is declared, not only the
+        # first: a macro-only group can share a name with a data group, as
+        # frontend.cpp's winapi `#define s_fe_flow` and its non-winapi
+        # `int s_fe_flow[5]` do (#525).
+        defining = [g for g in groups if any(p.category in ("function", "var", "proto") for p in g.parts)]
+        return [d for g in (defining or groups[:1])
+                for d in _group_declarations(s, g, why, reasons, direction)]
     defs = [items[k] for k in cl.members[c] if items[k].category in ("function", "var")
             and not _is_extern_decl(items[k])]
     protos = [items[k] for k in cl.members[c] if items[k].category == "proto"]

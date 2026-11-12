@@ -1440,6 +1440,16 @@ class ConditionalGroupTest(unittest.TestCase):
         self.assertIn("#if defined(FEATURE)\nextern int s_cond;\n#endif\n",
                       plan.files["src/game/mixed_for_alpha.hpp"])
 
+    def test_macro_group_sharing_a_name_with_a_data_group(self):
+        # frontend.cpp (#525): a winapi-only `#define s_cond …` and a
+        # non-winapi `static int s_cond;` share a name and so a cluster; the
+        # data group still gets its guarded declaration.
+        group = ("#if defined(OTHER)\n#define s_cond (s_shared_counter + 1)\n#endif\n"
+                 "#if defined(FEATURE)\nstatic int s_cond;\n#endif\n")
+        fx, plan = self.plan(self.guarded(group))
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
+        self.assertIn("#if defined(FEATURE)\nextern int s_cond;\n#endif\n", header)
+
     def test_static_outside_the_first_branch_refuses(self):
         group = "#if defined(OTHER)\n#define s_cond_alias 1\n#else\nstatic int s_cond;\n#endif\n"
         group = group.replace("#define s_cond_alias 1", "#define s_cond_alias s_cond")
