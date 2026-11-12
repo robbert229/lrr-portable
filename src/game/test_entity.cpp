@@ -600,9 +600,9 @@ static void layout_probe_window_2f0(GameContext* ctx, EntitySlot* building,
      * bound, clearing the +0x2fc link. */
     pilot->progress_344 = 0.0f;
     pilot->field_340 = 40.0f;
-    pilot->link_2fc = (uintptr_t)monster;
+    pilot->link_2fc = monster;
     CHECK(entity_progress_advance_by_25(pilot) == 0
-              && pilot->progress_344 == 25.0f && pilot->link_2fc == 0u,
+              && pilot->progress_344 == 25.0f && pilot->link_2fc == NULL,
           "--real-layout: +0x344 advances and +0x2fc clears");
     CHECK(entity_progress_advance_by_25(pilot) == 1
               && pilot->progress_344 == 40.0f,
@@ -611,13 +611,13 @@ static void layout_probe_window_2f0(GameContext* ctx, EntitySlot* building,
     pilot->field_340 = 0.0f;
 
     /* LinkedEntityRouteFlagClear (0x43f100) follows +0x2fc. */
-    pilot->link_2fc = (uintptr_t)monster;
+    pilot->link_2fc = monster;
     pilot->flags_3ec = 0x40u;
     monster->flags_3ec = 0x42u;
     entity_linked_route_flag_clear(ctx, pilot);
     CHECK(pilot->flags_3ec == 0u && monster->flags_3ec == 2u,
           "--real-layout: +0x2fc link has its route bit cleared");
-    pilot->link_2fc = 0u;
+    pilot->link_2fc = NULL;
     monster->flags_3ec = 0u;
 
     /* SelectionCandidateFilterActive (0x4526e0) tests the +0x304 object in
@@ -682,7 +682,8 @@ static void layout_probe_window_2f0(GameContext* ctx, EntitySlot* building,
     pilot->wp_count = 0x28;
     pilot->pos_pair_2f4 = 2.0f;
     pilot->pos_pair_2f8 = 3.0f;
-    pilot->link_2fc = 0x2fcu;
+    pilot->link_2fc = monster;
+    pilot->link_300 = building;
     pilot->attach_304 = building;
     pilot->carry_link_308 = monster;
     pilot->indexed_record_slot_330 = 0x330;
@@ -691,7 +692,8 @@ static void layout_probe_window_2f0(GameContext* ctx, EntitySlot* building,
     CHECK(pilot->stats_record == record && entity_stats_float_at20(pilot) == 1.1f
               && pilot->cmd_head != NULL && pilot->wp_count == 0x28
               && pilot->pos_pair_2f4 == 2.0f && pilot->pos_pair_2f8 == 3.0f
-              && pilot->link_2fc == 0x2fcu && pilot->attach_304 == building
+              && pilot->link_2fc == monster && pilot->link_300 == building
+              && pilot->attach_304 == building
               && pilot->carry_link_308 == monster
               && pilot->indexed_record_slot_330 == 0x330
               && pilot->progress_344 == 4.0f && pilot->pair_link_3c0 == 0x3c0u,
@@ -699,7 +701,8 @@ static void layout_probe_window_2f0(GameContext* ctx, EntitySlot* building,
     pilot->wp_count = 0;
     pilot->attach_304 = NULL;
     pilot->carry_link_308 = NULL;
-    pilot->link_2fc = 0u;
+    pilot->link_2fc = NULL;
+    pilot->link_300 = NULL;
     pilot->pair_link_3c0 = 0u;
     pilot->indexed_record_slot_330 = 0;
 }
@@ -1217,10 +1220,10 @@ static void progress_advance_test(void)
     /* Clamping bound: +0x340. */
     e.field_340 = 40.0f;
     e.progress_344 = 10.0f;
-    e.link_2fc = 0xcafebabeu;
+    e.link_2fc = &e;
     CHECK(entity_progress_advance_by_25(&e) == 0, "under the bound stays put");
     CHECK(e.progress_344 == 35.0f, "one step adds 25");
-    CHECK(e.link_2fc == 0u, "the advance clears the link field");
+    CHECK(e.link_2fc == NULL, "the advance clears the link field");
 
     CHECK(entity_progress_advance_by_25(&e) == 1, "crossing the bound reports");
     CHECK(e.progress_344 == 40.0f, "the value clamps to the +0x340 bound");

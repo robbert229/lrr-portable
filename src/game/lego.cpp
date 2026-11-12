@@ -3571,7 +3571,7 @@ int object_list_load_file(GameContext* ctx, const char* olist)
                     strcasecmp_lite(source->driving, target->name) != 0) {
                     continue;
                 }
-                source->link_2fc = (uintptr_t)target;
+                source->link_2fc = target;
                 source->flags_3e4 |= 4u;
                 capabilities = entity_capability_flags_get(target);
                 if ((capabilities & 0x100u) != 0u) {

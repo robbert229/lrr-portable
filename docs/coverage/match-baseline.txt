@@ -1,4 +1,4 @@
-# input_sha256: 05d28c8ba9da75f35140d8ef32fd47bac528380020f0f53af0b5e1ba44c27808
+# input_sha256: 1785833ba406e5b192d56b5be5ef85b53ac4e6fa7d655a61221b78056c8e3cca
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -723,7 +723,7 @@
 0x0042dff0 30.30 object_pointer_registry_get_slot
 0x0042e020 14.13 object_list_load_file
 0x0042e8b0 25.43 entity_type_pair_lookup
-0x0042ed70 11.32 entity_at
+0x0042ed70 10.71 entity_at
 0x0042ef40 86.79 stats_level_record_count_for_stat_type
 0x0042efc0 6.80 movie_video_playback_loop
 0x0042f2e0 45.61 terrain_cell_edge_flag_set_and_update
@@ -991,7 +991,7 @@
 0x00440c70 16.79 terrain_grid_path_search
 0x004410f0 13.49 terrain_neighbor_path_check_current
 0x00441700 23.22 entity_route_setup_and_marker_associate
-0x00441940 45.21 entity_action_sequence_reset
+0x00441940 45.89 entity_action_sequence_reset
 0x00441b30 42.15 entity_state_reset
 0x00441ea0 40.74 entity_type5_finalize_if_allowed
 0x00441ed0 18.72 entity_face_target_action_start
@@ -1020,7 +1020,7 @@
 0x00444460 22.72 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
 0x00444680 4.88 entity_step_movement_vector_resolve
-0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
+0x00444fb0 26.04 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
@@ -2936,7 +2936,7 @@
 0x0042dff0 30.30 object_pointer_registry_get_slot
 0x0042e020 14.13 object_list_load_file
 0x0042e8b0 25.43 entity_type_pair_lookup
-0x0042ed70 11.32 entity_at
+0x0042ed70 10.71 entity_at
 0x0042ef40 86.79 stats_level_record_count_for_stat_type
 0x0042efc0 6.80 movie_video_playback_loop
 0x0042f2e0 45.61 terrain_cell_edge_flag_set_and_update
@@ -3204,7 +3204,7 @@
 0x00440c70 16.79 terrain_grid_path_search
 0x004410f0 13.49 terrain_neighbor_path_check_current
 0x00441700 23.22 entity_route_setup_and_marker_associate
-0x00441940 45.21 entity_action_sequence_reset
+0x00441940 45.89 entity_action_sequence_reset
 0x00441b30 42.15 entity_state_reset
 0x00441ea0 40.74 entity_type5_finalize_if_allowed
 0x00441ed0 18.72 entity_face_target_action_start
@@ -3233,7 +3233,7 @@
 0x00444460 22.72 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
 0x00444680 4.88 entity_step_movement_vector_resolve
-0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
+0x00444fb0 26.04 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick

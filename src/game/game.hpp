@@ -271,7 +271,11 @@ typedef struct EntitySlot {
     /* --- command layer (finding 10) --- */
     float auxiliary_state_388; /* +0x388: cursor-target timeout; in
                                 * cmd_head's old 32-bit slot */
-    void*   route_partner_300; /* reciprocal partner link for step commands */
+    /* Scene-owner sidecar for the corpus's variable attachment array at
+     * +0x308/+0x324, in the old route_partner_300 slot (finding 565).
+     * The pointer is borrowed from the scene owner; entity creation
+     * zero-initializes it and the scene owner clears it on release. */
+    struct EntitySlot** attached_children;
     /* Retail +0xa0/+0xb8/+0xc4 windows are separate per-payload arrays:
      * two repeated +0x1c registrations, then one +0x24 and one +0x20.
      * The +0x1c pairs fill the 32-bit slots the entity flag words left
@@ -301,8 +305,7 @@ typedef struct EntitySlot {
     void*    wake_target;    /* +0x364: attached wake target (FUN_0044c110;
                                * the corpus fills it via the attach-pair
                                * writer 0x44c0e2, which is not ported)      */
-    uintptr_t field_300;      /* retail +0x300 pointer tested by the spatial
-                               * filter; no portable producer is recovered */
+    float activity_advance_overflow; /* in field_300's old 32-bit slot */
     uint32_t attached_child_count; /* in attach_304's old 32-bit slot */
     void* payload_aux_handle_7c; /* in owner_36c's old 32-bit slot */
     /* --- carried-object pair (corpus +0x308/+0x324/+0x348) ---------------
@@ -352,15 +355,14 @@ typedef struct EntitySlot {
      * queued work. */
     float    pos_pair_2f4; /* +0x2f4: pair x                                */
     float    pos_pair_2f8; /* +0x2f8: pair y                                */
-    uintptr_t link_2fc;    /* +0x2fc: link field the route-progress advance
-                            * clears (corpus dword link, widened for the
-                            * port) */
-    /* Scene-owner sidecar for the corpus's variable attachment array at
-     * +0x308/+0x324. The pointer is borrowed from the scene owner; entity
-     * creation zero-initializes it and the scene owner clears it on release.
-     * Retail +0x300 is split between route_partner_300 and field_300, so
-     * neither is placed (finding 526). */
-    struct EntitySlot** attached_children;
+    /* Retail +0x2fc/+0x300: the entity link pair (finding 565). Route and
+     * step commands store their target in link_2fc; the reciprocal writers
+     * (0x4471b0, 0x448c90 and the 0x43c6b0 activity tick) store the source
+     * back in the target's link_300, and the resets clear both. The
+     * route-marker search callback tests link_300 for zero. */
+    struct EntitySlot* link_2fc; /* +0x2fc: linked (route-to) entity */
+    struct EntitySlot* link_300; /* +0x300: reciprocal link to the entity
+                                  * whose link_2fc names this one */
     const void* attach_304;  /* +0x304: attached object the selection
                               * filter follows in place of the candidate   */
     void*    carry_link_308;  /* +0x308: carried object link            */
@@ -455,7 +457,6 @@ typedef struct EntitySlot {
     uint32_t activity_advance_valid;
     uint32_t activity_advance_generation;
     int activity_advance_activity;
-    float activity_advance_overflow;
 } EntitySlot;
 
 /* Waypoint consumers use this accessor so routes grown past the inline

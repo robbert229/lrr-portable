@@ -1046,7 +1046,7 @@ static int ai_action_route_frame_update(EntitySlot* entity, float dt)
      * the EngineTick scaled carrier; do not multiply by 25 again. */
     (void)entity_path_step_advance_and_arrival_check(entity, dt);
     if ((entity->flags_3e0 & 0x200u) == 0u) return 0;
-    target = (EntitySlot*)entity->link_2fc;
+    target = entity->link_2fc;
     if (target == NULL || target->attach_304 != NULL) {
         entity->flags_3e0 &= ~0x200u;
         return 1;
@@ -1062,7 +1062,7 @@ static int ai_action_route_frame_update(EntitySlot* entity, float dt)
     }
     if (index == 0) entity->carry_link_308 = target;
     else entity->carry_extra_links[index - 1] = target;
-    entity->link_2fc = 0u;
+    entity->link_2fc = NULL;
     target->attach_304 = entity;
     target->attached_scene_slot_index = index;
     /* 0x43e23c retains arrival 0x200 while starting the pickup activity.
