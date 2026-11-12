@@ -27,6 +27,7 @@
 #include "view_for_com_object_tree.hpp"
 #include "view_for_viewports.hpp"
 #include "view_for_lws.hpp"
+#include "view_for_panel_unit.hpp"
 
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
@@ -48,7 +49,7 @@ void view_follow_target_hooks_set(ViewObjectLookupHook lookup,
 /* CameraZoomStepAdjust reads the primary view/camera context directly from
  * the corpus's active-view global. Its owner is the unported config setup. */
 // GLOBAL: LEGORR 0x005560e4
-static void* s_zoom_step_context;
+void* s_zoom_step_context;
 TerrainPointPickCellCheckHook s_terrain_point_pick_hook;
 void* s_terrain_point_pick_user;
 ViewportPointDispatchHooks s_viewport_point_dispatch_hooks;
@@ -2680,59 +2681,6 @@ extern "C" float* D3DRMVectorRotate(float* out, float* vector, float* axis,
  * Pure math leaves, corpus-exact operations: the corpus computes on x87
  * long doubles, the port on single precision (documented deviation). */
 
-/* PointDistanceWithinRadius (FUN_0045b8a0): true when the point
- * (x1,y1)-(x2,y2) distance is under `radius`. */
-// FUNCTION: LEGORR 0x0045b8a0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int point_distance_within_radius(int x1, int y1, int x2,
-                                                   int y2, int radius)
-{
-    __asm {
-        sub esp, 8
-        mov eax, dword ptr [esp + 0x14]
-        mov edx, dword ptr [esp + 0x0c]
-        mov ecx, dword ptr [esp + 0x18]
-        sub eax, edx
-        mov edx, dword ptr [esp + 0x10]
-        mov dword ptr [esp + 0x14], eax
-        fild dword ptr [esp + 0x14]
-        fild dword ptr [esp + 0x1c]
-        sub ecx, edx
-        mov dword ptr [esp + 0x18], ecx
-        fild dword ptr [esp + 0x18]
-        fld st(2)
-        fmul st, st(3)
-        fxch st(1)
-        fst dword ptr [esp + 4]
-        fmul dword ptr [esp + 4]
-        faddp st(1), st
-        fsqrt
-        fst dword ptr [esp + 0x14]
-        fxch st(1)
-        fcompp
-        fnstsw ax
-        test ah, 0x41
-        fstp st(0)
-        jne point_distance_outside_radius
-        mov eax, 1
-        add esp, 8
-        ret
-
-    point_distance_outside_radius:
-        xor eax, eax
-        add esp, 8
-        ret
-    }
-}
-#else
-int point_distance_within_radius(int x1, int y1, int x2, int y2, int radius)
-{
-    const float dx = (float)(x2 - x1);
-    const float dy = (float)(y2 - y1);
-    return sqrtf(dx * dx + dy * dy) < (float)radius;
-}
-#endif
-
 /* ---- offset-point rect family (findings 241/363/446) --------------------- */
 
 /* Shared body of the portable rectangle helpers. The retail leaves obtain
@@ -3235,19 +3183,6 @@ void grid_operation_argument_adapter(float x, float y, EngineContext* ctx)
 void camera_zoom_step_context_set(void* context)
 {
     s_zoom_step_context = context;
-}
-
-// FUNCTION: LEGORR 0x0045bf20
-void camera_zoom_step_adjust(int direction, float step)
-{
-    if (direction == 0) {
-        camera_zoom_update(s_zoom_step_context, step * -3.0f);
-        return; /* layout: the corpus's arm0 ends at its own ret (0x45bf44) */
-    }
-    if (direction == 1) {
-        camera_zoom_update(s_zoom_step_context, step * 3.0f);
-    }
-    /* other directions: the corpus's early exit — inert */
 }
 
 /* ---- scene-root hook band (2026-10-24) ----------------------------------- *

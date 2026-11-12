@@ -1044,21 +1044,3 @@ int objective_sidecar_append_gate(EntitySlot* entity)
 }
 
 
-namespace unported_ledger_stubs {
-
-// AdvisorAnimationSceneLookupAndRequest
-// FUNCTION: LEGORR 0x0045c670
-int ledger_stub_0045c670_AdvisorAnimationSceneLookupAndRequest(
-    int scene, int animation, int request_mode)
-{
-    uint32_t slot;
-    if (!advisor_animation_slot_id_resolve((uint32_t)scene,
-                                           (uint32_t)animation, &slot))
-        return 0;
-    (void)advisor_request_admit((int)slot, request_mode);
-    return 1;
-}
-
-
-
-} // namespace unported_ledger_stubs

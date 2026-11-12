@@ -969,18 +969,6 @@ void scene_render_lock_toggle(void* scene_object, int enabled)
 }
 #endif
 
-/* UIRecordCallbackForward (FUN_0045a630) — see record.hpp. */
-// FUNCTION: LEGORR 0x0045a630
-void ui_record_callback_forward(const void* const* ui_record,
-                                uint32_t* out_a, uint32_t* out_b)
-{
-    if (ui_record == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    void* handle = rec_ptr(ui_record, 0x00);
-    object_state_pair_get(handle, out_a, out_b);
-}
-
 /* --- the UI record factories (see record.hpp) ------------------------------
  * Corpus record windows stride as dwords; the port lays both shapes out as
  * native field words (the crt_stream_record window convention). Field reads

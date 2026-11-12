@@ -1,4 +1,4 @@
-# input_sha256: 9cc828dba87c86fc0a7c328633a252a76a8f7627283a01b0a0be8e7eb4e69ba1
+# input_sha256: c8e28d79c2e7c55a61eb8379df4ab5e02f3b0e1fa8bce486b7b7804ab19c31f6
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1966,7 +1966,7 @@
 0x004823e0 13.56 terrain_cell_quad_vertices_write
 0x00482470 11.86 indexed_geometry_data_copy_to_output
 0x00482500 9.22 instance_quad_vertex_data_fill
-0x00482620 31.30 mesh_segment_vertex_fill
+0x00482620 26.09 mesh_segment_vertex_fill
 0x004826c0 9.64 mesh_vertex_record_fill
 0x00482780 100.00 indexed_record_flag6c_bit0_get
 0x004827a0 100.00 indexed_record_flag6c_bit0_set
@@ -4129,7 +4129,7 @@
 0x004823e0 13.56 terrain_cell_quad_vertices_write
 0x00482470 11.86 indexed_geometry_data_copy_to_output
 0x00482500 9.22 instance_quad_vertex_data_fill
-0x00482620 31.30 mesh_segment_vertex_fill
+0x00482620 26.09 mesh_segment_vertex_fill
 0x004826c0 9.64 mesh_vertex_record_fill
 0x00482780 100.00 indexed_record_flag6c_bit0_get
 0x004827a0 100.00 indexed_record_flag6c_bit0_set

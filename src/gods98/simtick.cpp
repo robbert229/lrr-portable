@@ -20,6 +20,8 @@
 #include "game/terrain_grid.hpp"
 #include "view.hpp"
 #include "simtick_shared.hpp"
+#include "simtick_for_panel_unit.hpp"
+#include "simtick_from_panel_unit.hpp"
 
 #define SIMTICK_MUTE_RESET 25.0f
 
@@ -246,17 +248,15 @@ float g_manager_smooth_b = -1.0f;  /* denominator subtracts -1.0 */
 float g_manager_snap     = 1.0f;   /* _DAT_0049e5e0 */
 float g_manager_dt_const = 0.0f;  /* _DAT_0049e5d8 (skip when dt == ) */
 
-static SimtickManagerSlot* s_mgr = NULL; /* table held by pointer (corpus) */
-static int  s_mgr_count = 0;
-static int  (*s_repos)(int, int, int) = NULL;
-static int  (*s_attach)(int, int, int, int) = NULL;
-static int  s_metrics[2] = { 0, 0 };
-static int  s_repos_n = 0, s_attach_n = 0;
+SimtickManagerSlot* s_mgr = NULL; /* table held by pointer (corpus) */
+int  s_mgr_count = 0;
+int  (*s_repos)(int, int, int) = NULL;
+int  (*s_attach)(int, int, int, int) = NULL;
+int  s_metrics[2] = { 0, 0 };
+int s_repos_n = 0;
+int s_attach_n = 0;
 
-// GLOBAL: LEGORR 0x00500860
-extern "C" uint32_t simtick_timer_word = 0;
-static int      s_timer_handles[4] = { 0, 0, 0, 0 }; /* DAT_00500850..5c */
-static const uint32_t s_timer_bits[4] = { 0x10u, 0x20u, 0x40u, 0x80u };
+const uint32_t s_timer_bits[4] = { 0x10u, 0x20u, 0x40u, 0x80u };
 
 void simtick_manager_clear(void)
 {
@@ -313,100 +313,6 @@ int simtick_manager_timer_bit(int which)
 void simtick_manager_set_timer_word(uint32_t w)
 {
     simtick_timer_word = w;
-}
-
-// FUNCTION: LEGORR 0x0045a730
-void simtick_manager_tick(int index, float dt, int ingame)
-{
-    SimtickManagerSlot local;
-    SimtickManagerSlot* slot;
-    int authoritative = (s_mgr == NULL);
-    uint32_t xbits, ybits;
-    if (authoritative) {
-        if (index < 0 || index >= 18) return;
-        memset(&local, 0, sizeof(local));
-        request_record_panel_bounds_peek(index, &local.target_a[0], &local.target_a[1], &local.target_b[0], &local.target_b[1]);
-        indexed_pair_get(index, &xbits, &ybits);
-        memcpy(&local.smoothed[0], &xbits, sizeof(xbits));
-        memcpy(&local.smoothed[1], &ybits, sizeof(ybits));
-        local.flags = request_record_flags_peek(index);
-        slot = &local;
-    } else {
-        if (index < 0 || index >= s_mgr_count) return;
-        slot = &s_mgr[index];
-    }
-
-    /* Both configured targets are float pairs; bit 4 selects the second. */
-    float tx, ty;
-    if ((slot->flags & 4u) != 0) {
-        tx = slot->target_b[0];
-        ty = slot->target_b[1];
-    } else {
-        tx = slot->target_a[0];
-        ty = slot->target_a[1];
-    }
-
-    /* exponential smoothing (skip when dt equals the stored constant). */
-    if (dt != g_manager_dt_const) {
-        float denom = g_manager_smooth_a / dt - g_manager_smooth_b;
-        if (fabsf(slot->smoothed[0] - tx) <= g_manager_snap) {
-            slot->smoothed[0] = tx;
-        } else {
-            slot->smoothed[0] =
-                ((g_manager_smooth_a / dt) * slot->smoothed[0] + tx) / denom;
-        }
-        if (fabsf(slot->smoothed[1] - ty) <= g_manager_snap) {
-            slot->smoothed[1] = ty;
-        } else {
-            slot->smoothed[1] =
-                ((g_manager_smooth_a / dt) * slot->smoothed[1] + ty) / denom;
-        }
-    }
-
-    /* The corpus floors each coordinate before the integer conversion. */
-    int ix = (int)floor((double)slot->smoothed[0]);
-    int iy = (int)floor((double)slot->smoothed[1]);
-
-    if (authoritative) {
-        /* The fixture routing fields are not the panel owner. */
-    } else if (slot->mode == 0) {
-        ++s_repos_n;
-        if (s_repos != NULL) {
-            s_repos(slot->handle, ix, iy);
-        }
-    } else if (slot->mode == 1) {
-        ++s_attach_n;
-        if (s_attach != NULL) {
-            s_attach(slot->handle, s_metrics[0], s_metrics[1], ingame);
-        }
-    }
-
-    /* index 9: stop the four shared timers (DAT_00500860 bits 0x10..0x80). */
-    if (index == 9) {
-        for (int k = 0; k < 4; ++k) {
-            if ((simtick_timer_word & s_timer_bits[k]) != 0) {
-                simtick_timer_word &= ~s_timer_bits[k];
-                /* FUN_0047dcb0(timer_handle, 0, &coord, 0) — see hook:
-                 * a stop state is recorded through the reposition hook. */
-                if (s_repos != NULL) {
-                    s_repos(s_timer_handles[k], 0, 0);
-                }
-            }
-        }
-    }
-
-    /* Retail truncates each difference from the selected target before
-     * testing absolute distance <= 1, including nonzero screen positions. */
-    if ((int)(slot->smoothed[0] - tx) < 2 && (int)(slot->smoothed[0] - tx) > -2
-        && (int)(slot->smoothed[1] - ty) < 2 && (int)(slot->smoothed[1] - ty) > -2) {
-        slot->flags &= ~8u;
-    }
-    if (authoritative) {
-        memcpy(&xbits, &slot->smoothed[0], sizeof(xbits));
-        memcpy(&ybits, &slot->smoothed[1], sizeof(ybits));
-        indexed_pair_set(index, xbits, ybits);
-        request_record_flags_set(index, slot->flags);
-    }
 }
 
 /* ---- tranche 8: sound keep-alive (FUN_0047aba0) ------------------------- */
@@ -1236,13 +1142,6 @@ void simtick_directsound_listener_view_set(int view)
 uint32_t simtick_route_position_state_peek(void)
 {
     return s_motion_jitter_flags;
-}
-
-/* GlobalUIFlagsClearBits12 (FUN_0045b610) — see simtick.hpp. */
-// FUNCTION: LEGORR 0x0045b610
-void simtick_global_ui_flags_clear_bits12(void)
-{
-    simtick_timer_word &= 0xfffffff9u;
 }
 
 void simtick_global_ui_flags_set_bit2(void)

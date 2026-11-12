@@ -115,29 +115,6 @@ void text_buffer_reset(void* record)
     text_buffer_reset_target(record);
 }
 
-/* The mapped release body blindly dereferences the holder and calls the
- * unchecked TextBufferReset target. */
-// FUNCTION: LEGORR 0x0045a620
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void ui_text_output_object_release_target(
-    void* const* holder)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [eax]
-        push ecx
-        call text_buffer_reset_target
-        add esp, 4
-        ret
-    }
-}
-#else
-void ui_text_output_object_release_target(void* const* holder)
-{
-    text_buffer_reset_target(*holder);
-}
-#endif
-
 void ui_text_output_object_release(void* const* holder)
 {
     if (holder == NULL || *holder == NULL) return;

@@ -90,6 +90,8 @@ extern char** environ;
 #include "string.hpp"
 #include "crt_shared.hpp"
 #include "crt_for_reward.hpp"
+#include "crt_for_panel_unit.hpp"
+#include "crt_from_panel_unit.hpp"
 
 #if defined(_MSC_VER)
 #define crt_math_error_code_set _set_errno
@@ -590,13 +592,6 @@ int crt_float_to_long(float value)
 }
 #endif
 
-/* The raw x86 body indexes the float table at record+0x34 with a 0x3190
- * stride, loads the float at +0x2fb8, and tail-jumps to __ftol. Ghidra
- * treated the x87 input as the whole function and lost both parameters. */
-#if defined(_MSC_VER) && defined(_M_IX86)
-extern "C" int __cdecl _ftol(void);
-#endif
-
 // FUNCTION: LEGORR 0x00417430
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) int float_to_long_x87(unsigned int index, const void* record)
@@ -966,51 +961,6 @@ int double_is_finite(double value)
     __builtin_memcpy(&bits, &value, sizeof bits);
     return ((bits >> 52u) & 0x7ffu) != 0x7ffu;
 #endif
-}
-#endif
-
-/* FUN_0045b900: the corpus casts the int pair and the divisor to float
- * before both divides (the results land in a caller float pair). */
-// FUNCTION: LEGORR 0x0045b900
-void integer_pair_divide_to_float_pair(int x, int y, int divisor,
-                                       float* out_x, float* out_y)
-{
-    *out_x = (float)x / (float)divisor;
-    *out_y = (float)y / (float)divisor;
-}
-
-#if defined(_MSC_VER) && defined(_M_IX86)
-extern "C" int __cdecl _ftol(void);
-#endif
-
-/* FUN_0045b930's caller has the two source values in ST(0)/ST(1); its
- * arguments are only the output pointers. Keep that x87 ABI on the x86
- * reference backend, where each _ftol consumes the next stack value. */
-#if defined(_MSC_VER) && defined(_M_IX86)
-// FUNCTION: LEGORR 0x0045b930
-__declspec(naked) void float_pair_to_integer_pair_x87(int* out_x, int* out_y)
-{
-    __asm {
-        push esi
-        push edi
-        mov esi, dword ptr [esp + 0x0c]
-        mov edi, dword ptr [esp + 0x10]
-        call _ftol
-        mov dword ptr [esi], eax
-        call _ftol
-        mov dword ptr [edi], eax
-        pop edi
-        pop esi
-        ret
-    }
-}
-#else
-void float_pair_to_integer_pair_x87(int* out_x, int* out_y)
-{
-    /* Portable callers cannot supply the legacy x87 stack as an ABI input.
-     * Callers on these targets use the explicit four-argument adapter below. */
-    if (out_x != NULL) *out_x = 0;
-    if (out_y != NULL) *out_y = 0;
 }
 #endif
 
@@ -1772,29 +1722,6 @@ void display_dimensions_set(int w, int h)
     s_display_h = h;
 }
 
-// GLOBAL: LEGORR 0x00500110
-RequestRecord s_request_records[REQUEST_RECORD_COUNT];
-
-// FUNCTION: LEGORR 0x0045a650
-void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2)
-{
-    RequestRecord* record = s_request_records + panel;
-    uint8_t flags;
-    record->bounds_x1 = (float)x1;
-    record->bounds_x2 = (float)x2;
-    flags = (uint8_t)record->flags;
-    record->bounds_y1 = (float)y1;
-    record->bounds_y2 = (float)y2;
-    record->category_word = 0u;
-    if ((flags & 2u) != 0u) {
-        *(float*)&record->pair_x = (float)x1;
-        *(float*)&record->pair_y = (float)y1;
-        return;
-    }
-    *(float*)&record->pair_x = (float)x2;
-    *(float*)&record->pair_y = (float)y2;
-}
-
 void request_record_panel_bounds_peek(int panel, float* out_x1,
                                       float* out_y1, float* out_x2,
                                       float* out_y2)
@@ -1806,123 +1733,16 @@ void request_record_panel_bounds_peek(int panel, float* out_x1,
     if (out_y2 != NULL) *out_y2 = record->bounds_y2;
 }
 
-#if defined(_MSC_VER) && defined(_M_IX86)
-// FUNCTION: LEGORR 0x0045ab30
-__declspec(naked) int request_record_ready_flag4_target(int index)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        lea eax, dword ptr [eax + eax*2]
-        shl eax, 4
-        add eax, offset s_request_records
-        mov eax, dword ptr [eax + 0x2c]
-        test al, 4
-        je request_record_ready_flag4_false
-        test al, 8
-        jne request_record_ready_flag4_false
-        mov eax, 1
-        ret
-    request_record_ready_flag4_false:
-        xor eax, eax
-        ret
-        nop
-        nop
-        nop
-        nop
-    }
-}
-#else
-int request_record_ready_flag4_target(int index)
-{
-    const RequestRecord* record = (const RequestRecord*)((const uint8_t*)
-        s_request_records + (uint32_t)index * 0x30u);
-    const uint32_t flags = record->flags;
-    return (flags & 4u) != 0u && (flags & 8u) == 0u ? 1 : 0;
-}
-#endif
-
 int request_record_ready_flag4(int index)
 {
     if ((unsigned)index >= REQUEST_RECORD_COUNT) return 0;
     return request_record_ready_flag4_target(index);
 }
 
-/* The corpus's 0x45ab6a/6f sequence adds the unchecked 0x30-byte record
- * address to DAT_00500110, then loads +0x2c; the 0x45ab72/78 tests keep bit
- * 2 then bit 8 in this short-circuit order. Keep the pointer step explicit
- * rather than folding the field offset into the global's displacement. */
-#if defined(_MSC_VER) && defined(_M_IX86)
-// FUNCTION: LEGORR 0x0045ab60
-__declspec(naked) int request_record_ready_flag2_target(int index)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        lea eax, dword ptr [eax + eax*2]
-        shl eax, 4
-        add eax, offset s_request_records
-        mov eax, dword ptr [eax + 0x2c]
-        test al, 2
-        je request_record_ready_flag2_false
-        test al, 8
-        jne request_record_ready_flag2_false
-        mov eax, 1
-        ret
-    request_record_ready_flag2_false:
-        xor eax, eax
-        ret
-        nop
-        nop
-        nop
-        nop
-    }
-}
-#else
-int request_record_ready_flag2_target(int index)
-{
-    RequestRecord* record = (RequestRecord*)((uint8_t*)s_request_records +
-        (uint32_t)index * 0x30u);
-    const uint32_t f = record->flags;
-    if ((f & 2u) != 0u && (f & 8u) == 0u) {
-        return 1;
-    }
-    return 0;
-}
-#endif
-
 int request_record_ready_flag2(int index)
 {
     return request_record_ready_flag2_target(index);
 }
-
-#if defined(_MSC_VER) && defined(_M_IX86)
-// FUNCTION: LEGORR 0x0045ab90
-__declspec(naked) int request_record_flag8_is_set_target(int index)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        lea eax, dword ptr [eax + eax*2]
-        shl eax, 4
-        mov eax, dword ptr [eax + s_request_records + 0x2c]
-        and eax, 8
-        ret
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-    }
-}
-#else
-int request_record_flag8_is_set_target(int index)
-{
-    RequestRecord* record = (RequestRecord*)((uint8_t*)s_request_records +
-        (uint32_t)index * 0x30u);
-    return (int)(record->flags & 8u);
-}
-#endif
 
 int request_record_flag8_is_set(int index)
 {
@@ -1945,16 +1765,6 @@ uint32_t request_record_flags_peek(int index)
         return 0u;
     }
     return s_request_records[index].flags;
-}
-
-/* --- the remaining DAT one-liner stores/reads (see crt.hpp) ----------------- */
-// GLOBAL: LEGORR 0x0050080c
-static uint32_t s_value_0050080c = 0u;
-
-// FUNCTION: LEGORR 0x0045c4a0
-void global_value_0050080c_set(uint32_t value)
-{
-    s_value_0050080c = value;
 }
 
 uint32_t global_value_0050080c_peek(void)
@@ -2031,29 +1841,8 @@ void byte_range_swap(void* a, void* b, size_t n)
 float    s_fpair_a[DAT_WINDOW_COUNT]; /* DAT_00552144 entries */
 float    s_fpair_b[DAT_WINDOW_COUNT]; /* DAT_00552148 entries */
 void*    s_metric_records[DAT_WINDOW_COUNT]; /* DAT_00552154 */
-static void*    s_panel_records[DAT_WINDOW_COUNT]; /* DAT_00500134 */
+void*    s_panel_records[DAT_WINDOW_COUNT]; /* DAT_00500134 */
 
-
-// FUNCTION: LEGORR 0x0045a6e0
-void indexed_pair_set(int index, uint32_t x, uint32_t y)
-{
-    if (index < 0 || index >= DAT_WINDOW_COUNT) {
-        return; /* deviation: the corpus strides blindly */
-    }
-    s_request_records[index].pair_x = x;
-    s_request_records[index].pair_y = y;
-}
-
-// FUNCTION: LEGORR 0x0045a700
-void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y)
-{
-    if (index < 0 || index >= DAT_WINDOW_COUNT
-        || out_x == NULL || out_y == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    *out_x = s_request_records[index].pair_x;
-    *out_y = s_request_records[index].pair_y;
-}
 
 void indexed_float_pair_peek(int index, float* out_x, float* out_y)
 {
@@ -2133,52 +1922,6 @@ void* panel_draw_records_peek(int index)
         return NULL;
     }
     return s_panel_records[index];
-}
-
-static uint32_t* panel_item_word(int panel, int item)
-{
-    if (panel < 0 || panel >= DAT_WINDOW_COUNT) {
-        return NULL;
-    }
-    char* block = (char*)s_panel_records[panel];
-    if (block == NULL || item < 0) {
-        return NULL; /* deviation: the corpus strides blindly */
-    }
-    return (uint32_t*)(block + 0x28 + (size_t)item * 0x2c);
-}
-
-// FUNCTION: LEGORR 0x0045aac0
-void panel_item_flag16_set(int panel, int item, int value)
-{
-    uint32_t* w = panel_item_word(panel, item);
-    if (w == NULL) {
-        return;
-    }
-    *w = value != 0 ? *w | 0x10u : *w & ~0x10u;
-}
-
-// FUNCTION: LEGORR 0x0045abb0
-void panel_item_flag32_set(int panel, int item, int value)
-{
-    uint32_t* w = panel_item_word(panel, item);
-    if (w == NULL) {
-        return;
-    }
-    *w = value != 0 ? *w | 0x20u : *w & ~0x20u;
-}
-
-// FUNCTION: LEGORR 0x0045ab00
-void panel_state_flags_toggle(int index)
-{
-    if ((unsigned)index >= DAT_WINDOW_COUNT) {
-        return;
-    }
-    const uint32_t f = s_request_records[index].flags;
-    if ((f & 2u) != 0u) {
-        s_request_records[index].flags = f & ~2u | 0xcu;
-    } else {
-        s_request_records[index].flags = f & ~4u | 0xau;
-    }
 }
 
 // GLOBAL: LEGORR 0x00555738
@@ -2349,74 +2092,6 @@ int panel_draw_count_peek(int panel)
         return 0;
     }
     return s_panel_count[panel];
-}
-
-/* PanelItemFlag8SetIfEnabled (FUN_0045abf0) — see crt.hpp. Bit 8 of the
- * stride-0x2c item's word at +0x28 only follows the flag while bit 32
- * (the enable gate) is set; otherwise the write is skipped. */
-// FUNCTION: LEGORR 0x0045abf0
-void panel_item_flag8_set_if_enabled(int panel, int item, int value)
-{
-    uint32_t* w = panel_item_word(panel, item);
-    if (w == NULL) {
-        return;
-    }
-    if ((*w & 0x20u) == 0u) {
-        return;
-    }
-    *w = value != 0 ? *w | 8u : *w & ~8u;
-}
-
-/* PanelTextureSlotsAllocate (FUN_0045ac30) — see crt.hpp. Draw-record
- * fields: +0x00/+0x04 position, +0x08/+0x0c the size sums, +0x10/+0x14/
- * +0x18 the texture-slot handles, +0x20 the id word, +0x28 the flag word.
- * The corpus stores the new block over the panel's previous one without
- * freeing it (faithful); a null allocator answer skips the fill loop
- * (deviation: the corpus strides on through the failure). */
-// FUNCTION: LEGORR 0x0045ac30
-void panel_texture_slots_allocate(int panel, int count, const int* slot_index,
-                                  const float* stream, const int* tex1,
-                                  const int* tex2, const int* tex3,
-                                  const int* ids)
-{
-    if (panel < 0 || panel >= DAT_WINDOW_COUNT || count <= 0) {
-        return;
-    }
-    float* block = (float*)engine_heap_alloc((long)count * 0x2c);
-    panel_draw_records_set(panel, block);
-    panel_draw_count_set(panel, count);
-    if (block == NULL) {
-        return;
-    }
-    for (int i = 0; i < count; ++i) {
-        const int slot = (slot_index != NULL) ? slot_index[i] : i;
-        if (slot < 0 || slot >= count) {
-            continue; /* deviation: the corpus strides blindly */
-        }
-        float* rec = block + (size_t)slot * 11;
-        const float* s = stream + (size_t)i * 4;
-        rec[0] = s[0];
-        rec[1] = s[1];
-        rec[2] = s[2] + s[0];
-        rec[3] = s[3] + s[1];
-        rec[4] = 0.0f;
-        rec[5] = 0.0f;
-        rec[6] = 0.0f;
-        rec[10] = 0.0f;
-        if (ids != NULL) {
-            rec[8] = crt_float_bits((uint32_t)ids[i]);
-        }
-        const int* tex[3] = { tex1, tex2, tex3 };
-        const int field[3] = { 6, 4, 5 }; /* corpus slot order: +0x18,
-                                            +0x10, +0x14 */
-        for (int t = 0; t < 3; ++t) {
-            if (tex[t] != NULL && tex[t][i] != 0) {
-                const uint32_t h = crt_surface_handle_next();
-                rec[field[t]] = crt_float_bits(h); /* load seam: a handle */
-                crt_surface_blit_record(h, 0.0f, 0.0f); /* transform call */
-            }
-        }
-    }
 }
 
 void panel_texture_slots_allocate_named(

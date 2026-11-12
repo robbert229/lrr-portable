@@ -7,71 +7,9 @@
 #include "gods98/media.hpp"
 #include "ui_list_shared.hpp"
 
-// FUNCTION: LEGORR 0x0045b620
-void ui_list_priority_button_action_dispatch(uint32_t action)
-{
-    switch (action) {
-    case 0: priorities_toggle(0); return;
-    case 1: priorities_toggle(1); return;
-    case 2: priorities_toggle(2); return;
-    case 3: priorities_toggle(3); return;
-    case 4: priorities_toggle(4); return;
-    case 5: priorities_toggle(5); return;
-    case 6: priorities_toggle(6); return;
-    case 7: priorities_toggle(7); return;
-    case 8: priorities_toggle(8); return;
-    case 9: priorities_move_up(1); return;
-    case 10: priorities_move_up(2); return;
-    case 11: priorities_move_up(3); return;
-    case 12: priorities_move_up(4); return;
-    case 13: priorities_move_up(5); return;
-    case 14: priorities_move_up(6); return;
-    case 15: priorities_move_up(7); return;
-    case 16: priorities_move_up(8); return;
-    default: return;
-    }
-}
-
-
 const char* ui_pointer_cursor_name_get(uint32_t index)
 {
     return index < 56 ? s_pointer_cursor_names[index] : NULL;
-}
-
-// FUNCTION: LEGORR 0x0045b740
-void ui_scroll_info_panel_initialize(const UiOverlayInitSink* sink)
-{
-    void* handle;
-    if (sink == NULL) return;
-    if (sink->panel_create != NULL)
-        sink->panel_create(sink->context, "Interface_InfoPanel_scrollInfo_b", 0,
-                           0, 0, 7, 0, 0);
-    if (sink->element_add != NULL) {
-        sink->element_add(sink->context, 0, 8, 0.0f, 0.0f, 18.0f, 11.0f, NULL);
-        sink->element_add(sink->context, 0, 0, 0.0f, 11.0f, 18.0f, 11.0f, NULL);
-        sink->element_add(sink->context, 0, 1, 0.0f, 0.0f, 0.0f, 0.0f,
-                          "Interface_Buttons_scrollInfoSld_");
-    }
-    if (sink->element_create != NULL) {
-        handle = sink->element_create(sink->context, 7, 0, 40.0f, 12.0f,
-                                      180.0f, 43.0f, 0x100);
-        if (sink->handle_store != NULL)
-            sink->handle_store(sink->context, 0, handle);
-        /* DAT_005007d8 is the text-output wrapper consumed by the panel
-         * callback path; keep its portable owner in sync with the sink slot. */
-        panel_ui_record_set(handle);
-    }
-}
-
-// FUNCTION: LEGORR 0x0045b850
-void ui_overlay_create_configured_element(const UiOverlayInitSink* sink)
-{
-    void* handle;
-    if (sink == NULL || sink->element_create == NULL ||
-        sink->handle_store == NULL) return;
-    handle = sink->element_create(sink->context, 11, 0, 21.0f, 11.0f,
-                                  221.0f, 227.0f, 0x400);
-    sink->handle_store(sink->context, 1, handle);
 }
 
 uint32_t ui_info_panel_string_entries_initialize(
