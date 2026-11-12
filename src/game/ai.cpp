@@ -1310,7 +1310,7 @@ void ai_idle_table_reset(void)
 // GLOBAL: LEGORR 0x004b335c
 static EntitySlot* s_active_list[ACTIVE_ENTITY_LIST_MAX];
 // GLOBAL: LEGORR 0x004b3424
-static int s_active_count;
+static int s_active_list_used;
 
 void active_entity_list_install(const EntitySlot* const* entries, int count)
 {
@@ -1327,40 +1327,40 @@ void active_entity_list_install(const EntitySlot* const* entries, int count)
     for (i = count; i < ACTIVE_ENTITY_LIST_MAX; ++i) {
         s_active_list[i] = NULL;
     }
-    s_active_count = count;
+    s_active_list_used = count;
 }
 
 int active_entity_list_count(void)
 {
-    return s_active_count;
+    return s_active_list_used;
 }
 
 const EntitySlot* active_entity_list_entry_get(int index)
 {
-    return index >= 0 && index < s_active_count ? s_active_list[index] : NULL;
+    return index >= 0 && index < s_active_list_used ? s_active_list[index] : NULL;
 }
 
 void active_entity_list_entity_add(const EntitySlot* entity)
 {
     int i;
     if (entity == NULL) return;
-    for (i = 0; i < s_active_count; ++i) {
+    for (i = 0; i < s_active_list_used; ++i) {
         if (s_active_list[i] == entity) return;
     }
-    if (s_active_count < ACTIVE_ENTITY_LIST_MAX)
-        s_active_list[s_active_count++] = (EntitySlot*)entity;
+    if (s_active_list_used < ACTIVE_ENTITY_LIST_MAX)
+        s_active_list[s_active_list_used++] = (EntitySlot*)entity;
 }
 
 void active_entity_list_entity_remove(const EntitySlot* entity)
 {
     int i;
     if (entity == NULL) return;
-    for (i = 0; i < s_active_count; ++i) {
+    for (i = 0; i < s_active_list_used; ++i) {
         if (s_active_list[i] == entity) {
             int j;
-            for (j = i; j + 1 < s_active_count; ++j)
+            for (j = i; j + 1 < s_active_list_used; ++j)
                 s_active_list[j] = s_active_list[j + 1];
-            s_active_list[--s_active_count] = NULL;
+            s_active_list[--s_active_list_used] = NULL;
             return;
         }
     }
@@ -1371,7 +1371,7 @@ void active_entity_list_clear(void)
     int i;
     for (i = 0; i < ACTIVE_ENTITY_LIST_MAX; ++i)
         s_active_list[i] = NULL;
-    s_active_count = 0;
+    s_active_list_used = 0;
 }
 
 // FUNCTION: LEGORR 0x004031e0
@@ -1385,7 +1385,7 @@ int active_entity_list_contains_code(GameContext* ctx, int code)
     if (selection_has_any(ctx) == 0) {
         /* the fallback re-reads the count (the corpus's DAT_004b3424
          * load) on every iteration and skips NULL entries (test/je). */
-        for (i = 0; i < (unsigned) s_active_count; ++i) {
+        for (i = 0; i < (unsigned) s_active_list_used; ++i) {
             if (s_active_list[i] != NULL
                 && ai_activity_scan(s_active_list[i], code) != 0) {
                 return 1;
