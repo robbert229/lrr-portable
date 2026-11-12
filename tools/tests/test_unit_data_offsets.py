@@ -23,7 +23,29 @@ def fixture():
     return struct.pack('<HHIIIHH', 0x14c, 2, 0, 100, 3, 0, 0) + section1 + section2 + symbols + strings
 
 
+def pooled_fixture():
+    """One .data piece, then two string COMDATs (finding 563)."""
+    def section(size, flags):
+        return struct.pack('<8sIIIIIIHHI', b'.data', 0, 0, size, 0, 0, 0, 0, 0, flags)
+    comdat = 0xc0301040  # read/write initialised data, 4-byte aligned, COMDAT
+    sections = section(5, 0xc0300040) + section(7, comdat) + section(6, comdat)
+    symbols = b''.join([
+        struct.pack('<8sIhHBB', b'_table', 0, 1, 0, 2, 0),
+        struct.pack('<8sIhHBB', b'??_C@x', 0, 2, 0, 2, 0),
+        struct.pack('<8sIhHBB', b'??_C@y', 0, 3, 0, 2, 0),
+    ])
+    header = struct.pack('<HHIIIHH', 0x14c, 3, 0, 20 + 3 * 40, 3, 0, 0)
+    return header + sections + symbols + struct.pack('<I', 4)
+
+
 class CoffTests(unittest.TestCase):
+    def test_comdat_taken_from_another_object_takes_no_space(self):
+        sections, _ = offsets.coff(pooled_fixture())
+        self.assertEqual([s['base'] for s in sections[1:]], [0, 8, 16])
+        sections, _ = offsets.coff(pooled_fixture(), lambda name: name == '??_C@x')
+        self.assertEqual([s['discarded'] for s in sections[1:]], [False, True, False])
+        self.assertEqual(sections[3]['base'], 8)
+
     def test_sections_symbols_and_commons(self):
         sections, symbols = offsets.coff(fixture())
         self.assertEqual(sections[1]['base'], 0)

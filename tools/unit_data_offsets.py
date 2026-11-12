@@ -30,8 +30,15 @@ MAP_SYMBOL = re.compile(r'^\s*[0-9a-f]{4}:[0-9a-f]{8}\s+(\S+)\s+([0-9a-f]{8})\s+
 MAP = re.compile(r'^\s*[0-9a-f]{4}:[0-9a-f]{8}\s+\S+\s+[0-9a-f]{8}\s+(?:[fi]\s+)*(\S+\.obj)\s*$', re.I | re.M)
 
 
-def coff(data):
-    """Return (sections, symbols) from an i386 COFF object, checking bounds."""
+def coff(data, discarded=None):
+    """Return (sections, symbols) from an i386 COFF object, checking bounds.
+
+    ``discarded(name)`` is true when the link took the COMDAT named ``name``
+    from another object (finding 563: MSVC 5.0's /O2 pools every string
+    literal as a ``??_C@`` COMDAT, and the first object in link order keeps
+    it). Such a section adds no bytes to this object's contribution, so it
+    takes no space when the following section bases are laid out.
+    """
     def unpack(fmt, pos):
         size = struct.calcsize(fmt)
         if pos < 0 or pos + size > len(data):
@@ -53,7 +60,6 @@ def coff(data):
             raise ValueError('unterminated COFF string')
         return strings[offset:end].decode('ascii', 'replace')
     sections = [None]
-    bases = collections.defaultdict(int)
     for i in range(count):
         raw, _, _, size, _, _, _, _, _, flags = unpack('<8sIIIIIIHHI', 20 + i * 40)
         name = raw.rstrip(b'\0').decode('ascii', 'replace')
@@ -64,9 +70,7 @@ def coff(data):
         if code == 15:
             raise ValueError('invalid COFF section alignment')
         align = 1 << (code - 1) if code else 1
-        base = (bases[group] + align - 1) // align * align
-        bases[group] = base + size
-        sections.append({'name': name, 'group': group, 'base': base, 'size': size,
+        sections.append({'name': name, 'group': group, 'size': size,
                          'align': align, 'comdat': bool(flags & 0x1000)})
     symbols = []
     i = 0
@@ -78,6 +82,19 @@ def coff(data):
         name = longname(offset) if zero == 0 else raw.rstrip(b'\0').decode('ascii', 'replace')
         symbols.append({'name': name, 'value': value, 'section': sec, 'storage': storage})
         i += 1 + aux
+    # The COMDAT's own symbol is its section's first external definition.
+    leaders = {}
+    for sym in symbols:
+        if sym['storage'] == 2 and 0 < sym['section'] < len(sections):
+            leaders.setdefault(sym['section'], sym['name'])
+    bases = collections.defaultdict(int)
+    for index, section in enumerate(sections[1:], 1):
+        section['discarded'] = bool(section['comdat'] and discarded and index in leaders
+                                    and discarded(leaders[index]))
+        group, align = section['group'], section['align']
+        section['base'] = (bases[group] + align - 1) // align * align
+        if not section['discarded']:
+            bases[group] = section['base'] + section['size']
     return sections, symbols
 
 
@@ -164,8 +181,10 @@ def measure(root, build):
     maptext = (build / 'LegoRR.map').read_text(errors='replace')
     linked = {m.lower() for m in MAP.findall(maptext)}
     map_symbols = collections.defaultdict(list)
+    map_objects = collections.defaultdict(set)
     for name, address, obj in MAP_SYMBOL.findall(maptext):
         map_symbols[(int(address, 16), obj.lower())].append(name)
+        map_objects[name].add(obj.lower())
     entity_file = build / 'reccmp-report/entities.json'
     entities = json.loads(entity_file.read_text()) if entity_file.exists() else []
     mapped = collections.defaultdict(set)
@@ -188,7 +207,9 @@ def measure(root, build):
             reason = 'object absent from map'
         elif len(candidates) != 1:
             reason = 'object missing or ambiguous'
-        sections, symbols = coff(candidates[0].read_bytes()) if not reason else ([], [])
+        def discarded(name, obj=(object_name or '').lower()):
+            return bool(map_objects.get(name)) and obj not in map_objects[name]
+        sections, symbols = coff(candidates[0].read_bytes(), discarded) if not reason else ([], [])
         byname = collections.defaultdict(list)
         for sym in symbols:
             if sym['storage'] in (2, 3) and not sym['name'].startswith('.'):
@@ -214,7 +235,7 @@ def measure(root, build):
                     report['commons'].append({'address': addr, 'name': sym['name'], 'size': sym['value']})
                     continue
                 sec = sections[sym['section']]
-                if sec['group'] != section:
+                if sec['group'] != section or sec['discarded']:
                     items.append((addr, None)); continue
                 items.append((addr, sec['base'] + sym['value']))
             report['sections'][section] = classify(items, ANCHORS.get(unit) if section == '.rdata' else None)
