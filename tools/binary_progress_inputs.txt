@@ -160,7 +160,11 @@ src/game/entity_motion_probe.hpp
 src/game/entity_pose_delta.hpp
 src/game/entity_quad_collision.hpp
 src/game/entity_shared.hpp
-src/game/entity_stats.cpp
+src/game/entity_stats.c
+src/game/entity_stats.h
+src/game/entity_stats_link_names.h
+src/game/entity_stats_port.cpp
+src/game/entity_stats_port.hpp
 src/game/frontend.cpp
 src/game/frontend.h
 src/game/frontend.hpp

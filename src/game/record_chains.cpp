@@ -80,6 +80,9 @@ void* s_linked_list_aux = NULL; /* DAT_004aa450 role: unowned, zero-init */
 // GLOBAL: LEGORR 0x004aa458
 void* s_linked_list_head = NULL;  /* DAT_004aa458 role */
 
+/* The original's .bss word at 0x503188, directly after Stats.c's statsGlobs
+ * (finding 581): Stats_FindToolFromTaskType's loop ends at its address. */
+// GLOBAL: LEGORR 0x00503188
 static uint32_t s_entity_flag_mask_all_pass;
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */

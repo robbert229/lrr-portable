@@ -1484,7 +1484,7 @@ extern "C" uint32_t building_upgrade_admission_check(int type, int row);
 
 extern "C" uint32_t stats_table_word_at_b8(int type, int row, int stride_index = 0); /* FUN_00469b20 */
 uint32_t stats_table_word_at_b0(int type, int row, int stride_index);
-float stats_table_float_at_dc(int type, int row);    /* FUN_00469e00 */
+extern "C" float stats_table_float_at_dc(int type, int row);    /* FUN_00469e00 */
 extern "C" uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
 extern "C" uint32_t stats_table_word_at_148(int type, int row); /* FUN_00469ee0 */
 extern "C" uint32_t stats_table_word_at_14c(int type, int row); /* FUN_00469f00 */
@@ -1492,18 +1492,18 @@ extern "C" uint32_t stats_table_word_at_14c(int type, int row); /* FUN_00469f00 
 /* Strided triplets: the corpus takes the instance index as its third
  * argument (offset + index * 0x150 into the template). */
 uint32_t stats_table_word_at_b4(int type, int row, int stride_index);
-uint32_t stats_table_word_at_d0(int type, int row, int stride_index);
+extern "C" uint32_t stats_table_word_at_d0(int type, int row, int stride_index);
                                                    /* FUN_00469f60 */
-uint32_t stats_table_word_at_100(int type, int row, int stride_index);
+extern "C" uint32_t stats_table_word_at_100(int type, int row, int stride_index);
                                                    /* FUN_0046a0f0 */
 
 /* Entity-indexed twins: the corpus's parameter is a config-block window
  * holding the type dword at +0x00, the row dword at +0x04, and the
  * instance index dword at +0x330. */
-uint32_t stats_instance_word_at_bc(const void* config_block); /* FUN_00469b50 */
-uint32_t stats_instance_word_at_e0(const void* config_block); /* FUN_00469b80 */
+extern "C" uint32_t stats_instance_word_at_bc(const void* config_block); /* FUN_00469b50 */
+extern "C" uint32_t stats_instance_word_at_e0(const void* config_block); /* FUN_00469b80 */
 extern "C" uint32_t stats_instance_word_at_ec(const void* config_block); /* FUN_00469bb0 */
-uint32_t stats_instance_word_at_f0(const void* config_block); /* FUN_00469be0 */
+extern "C" uint32_t stats_instance_word_at_f0(const void* config_block); /* FUN_00469be0 */
 
 /* CreateRepeatedResourceInstances (FUN_00408e50): increments the matching
  * path-record sequence and issues the requested number of commands. */
