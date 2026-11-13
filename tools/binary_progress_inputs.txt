@@ -345,6 +345,7 @@ src/game/render.hpp
 src/game/reward.c
 src/game/reward.h
 src/game/reward_maths.h
+src/game/reward_movie.h
 src/game/reward_port.cpp
 src/game/rock_fall_styles.c
 src/game/rock_fall_styles.h
@@ -492,9 +493,6 @@ src/game/vehicle_model_imports.h
 src/game/vehicle_model_link_names.h
 src/game/vehicle_model_maths.h
 src/game/vehicle_model_port.cpp
-src/game/video_graph.cpp
-src/game/video_graph.h
-src/game/video_graph.hpp
 src/game/water.c
 src/game/water.h
 src/game/water_imports.h
@@ -664,6 +662,8 @@ src/gods98/movie.cpp
 src/gods98/movie.hpp
 src/gods98/movie_for_avi_player.hpp
 src/gods98/movie_from_avi_player.hpp
+src/gods98/movie_unit.cpp
+src/gods98/movie_unit.h
 src/gods98/ptrstack.cpp
 src/gods98/ptrstack.hpp
 src/gods98/record.cpp
@@ -776,6 +776,7 @@ src/gods98/tickers.cpp
 src/gods98/tickers.hpp
 src/gods98/utils.c
 src/gods98/utils.h
+src/gods98/video_graph_port.cpp
 src/gods98/view.cpp
 src/gods98/view.h
 src/gods98/view.hpp

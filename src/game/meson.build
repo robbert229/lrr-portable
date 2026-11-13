@@ -80,7 +80,6 @@ game_sources = [
   'mission.cpp',
   'effects.cpp',
   'weapon.cpp',
-  'video_graph.cpp',
   'startup_config.cpp',
   'entity_motion_owner.cpp',
   'game.cpp',

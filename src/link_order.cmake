@@ -86,9 +86,8 @@ lrr_link(unit   GAME-048 game          game/vehicle_model.c)
 lrr_link(unit   GAME-049 game          game/water.c)
 lrr_link(unit   GAME-050 game          game/weapons.c)
 
-# gods98 segment. G98-001 is still in src/game and the game library;
-# it moves with its relocation.
-lrr_link(unit   G98-001  game          game/video_graph.cpp)
+# gods98 segment.
+lrr_link(unit   G98-001  gods98        gods98/movie_unit.cpp)
 lrr_link(unit   G98-002  gods98        gods98/container_unit.cpp)
 lrr_link(unit   G98-003  gods98        gods98/viewports.c)
 lrr_link(unit   G98-004  gods98        gods98/utils.c)
@@ -149,6 +148,7 @@ lrr_link(tail   -        gods98        gods98/sound_wave.cpp)
 lrr_link(tail   -        gods98        gods98/bitmap_font_port.cpp)
 lrr_link(tail   -        gods98        gods98/text_window_port.cpp)
 lrr_link(tail   -        gods98        gods98/tickers.cpp)
+lrr_link(tail   -        gods98        gods98/video_graph_port.cpp native)
 lrr_link(tail   -        gods98        gods98/viewports_port.cpp)
 lrr_link(tail   -        gods98        gods98/winmm_port.cpp)
 lrr_link(tail   -        program       main.cpp native)

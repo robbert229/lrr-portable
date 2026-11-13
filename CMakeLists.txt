@@ -286,8 +286,10 @@ else()
   if(PLATFORM STREQUAL "winapi")
     # ddraw: DirectDraw.c (gods98/directdraw.c) imports DirectDrawCreate and
     # DirectDrawEnumerateA, as the original does (finding 596); vfw32: the
-    # AVI player (gods98/avi_player.cpp) imports AVIFIL32 (finding 604).
-    target_link_libraries(program PRIVATE winmm d3drm ddraw vfw32 advapi32)
+    # AVI player (gods98/avi_player.cpp) imports AVIFIL32 (finding 604);
+    # ole32: the movie unit (gods98/movie_unit.cpp) imports CoInitialize and
+    # CoCreateInstance (finding 618).
+    target_link_libraries(program PRIVATE winmm d3drm ddraw vfw32 ole32 advapi32)
   endif()
 endif()
 if(WIN32)
