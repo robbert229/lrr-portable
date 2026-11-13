@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-036 GAME-036: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-036.csv. */
+/* The port's radar map (GAME-036 RadarMap.c, finding 606): the port tail.
+ * The original unit is rebuilt in original shape as radarmap.c; these are
+ * the port's models of its functions, unannotated, which the native build
+ * keeps calling.
+ *
+ * In the matching build (MSVC 5.0) radarmap.c defines eight of these names
+ * itself (radarmap_link_names.h), so their definitions here are compiled
+ * out there (LRR_MAP_VIEW_PORT_NAMES). entity_type_and_state_flag_predicate,
+ * terrain_point_pick_resolve, view_point_to_screen_geometry_transform and
+ * terrain_tile_style_resolve, whose port names have C++ linkage and the
+ * port's contracts, stay in every build.
+ * Relocated from the verbatim map_view.cpp (body hashes:
+ * docs/coverage/relocations/GAME-036.csv). */
 #include <math.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -141,11 +151,20 @@ static const TerrainTilePaletteWords s_terrain_tile_palette[] = {
     { { 0x42d80000u, 0x00000000u, 0x00000000u } }  /* 0x4a9084 */
 };
 
+/* The port's definitions of the names the unit takes in the matching build
+ * (radarmap_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_MAP_VIEW_PORT_NAMES 0
+#else
+#define LRR_MAP_VIEW_PORT_NAMES 1
+#endif
+
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static void terrain_tile_palette_copy(void* output, uint32_t palette);
 static uint32_t terrain_tile_palette_index(uint32_t material, int walkable, int wave);
 
-// FUNCTION: LEGORR 0x0045d8b0
+#if LRR_MAP_VIEW_PORT_NAMES /* radarmap.c serves these names in the matching build */
+/* Port model of 0x0045d8b0 */
 void screen_coord_normalize_init(void)
 {
     const double color_k = (double)((float)(1.0 / 255.0));
@@ -189,7 +208,7 @@ void screen_coord_normalize_init(void)
  * is exact, so the port copies). Deviations: the record fields widen
  * LP64-safe, the payload array and source are guarded, and the corpus's
  * uninitialized record tail stays absent from the modeled record. */
-// FUNCTION: LEGORR 0x0045da90
+/* Port model of 0x0045da90 */
 UiRenderRecord* ui_render_record_create(void* source,
                                         const uint32_t* payload,
                                         uint32_t extra)
@@ -213,13 +232,13 @@ UiRenderRecord* ui_render_record_create(void* source,
     return rec;
 }
 
-// FUNCTION: LEGORR 0x0045daf0
+/* Port model of 0x0045daf0 */
 void ui_render_record_free(void* record)
 {
     engine_heap_free(record);
 }
 
-// FUNCTION: LEGORR 0x0045db00
+/* Port model of 0x0045db00 */
 void textured_scene_object_draw_at_position(const void* view,
                                             const float position_xy[2],
                                             float z, float size)
@@ -251,8 +270,10 @@ void textured_scene_object_draw_at_position(const void* view,
             s_textured_scene_draw_hooks.user, saved_matrix);
 }
 
+#endif /* LRR_MAP_VIEW_PORT_NAMES */
+
 /* EntityTypeAndStateFlagPredicate (FUN_0045e400) — see entity.hpp. */
-// FUNCTION: LEGORR 0x0045e400
+/* Port model of 0x0045e400 */
 int entity_type_and_state_flag_predicate(const EntitySlot* e)
 {
     if (e == NULL) {
@@ -267,9 +288,10 @@ int entity_type_and_state_flag_predicate(const EntitySlot* e)
     return 0;
 }
 
+#if LRR_MAP_VIEW_PORT_NAMES /* radarmap.c serves these names in the matching build */
 /* RectContainsPointHalfOpen (FUN_0045e660): rect is the corpus record's
  * float quad {x, y, w, h} at +0x4…+0x10 — half-open in both axes. */
-// FUNCTION: LEGORR 0x0045e660
+/* Port model of 0x0045e660 */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) int rect_contains_point_half_open(const float* rect_record,
                                                     int x, int y)
@@ -334,7 +356,9 @@ int rect_contains_point_half_open(const float* rect_record, int x, int y)
 }
 #endif
 
-// FUNCTION: LEGORR 0x0045e6d0
+#endif /* LRR_MAP_VIEW_PORT_NAMES */
+
+/* Port model of 0x0045e6d0 */
 int terrain_point_pick_resolve(const TerrainPointPickRegion* region,
                                uint32_t screen_x, uint32_t screen_y,
                                float out_world_xy[2],
@@ -371,7 +395,8 @@ int terrain_point_pick_resolve(const TerrainPointPickRegion* region,
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0045e820
+#if LRR_MAP_VIEW_PORT_NAMES /* radarmap.c serves these names in the matching build */
+/* Port model of 0x0045e820 */
 int viewport_point_callback_dispatch(const TerrainPointPickRegion* region,
                                      uint32_t screen_x, uint32_t screen_y,
                                      uint32_t* object_handle,
@@ -403,12 +428,14 @@ int viewport_point_callback_dispatch(const TerrainPointPickRegion* region,
     return 1;
 }
 
+#endif /* LRR_MAP_VIEW_PORT_NAMES */
+
 /* ViewPointToScreenGeometryTransform (FUN_0045e940) — see view.hpp. The
  * record window is the projection block: center +4/+8, half-size +c/+10,
  * scale pair +14/+18, screen offsets +1c/+20. Deviations: NULL guards on
  * both inputs (the corpus dereferences blindly). The scale ratio is
  * recomputed at each output as in the corpus. */
-// FUNCTION: LEGORR 0x0045e940
+/* Port model of 0x0045e940 */
 void view_point_to_screen_geometry_transform(const void* view, float p[4])
 {
     if (view == NULL || p == NULL) {
@@ -440,7 +467,7 @@ void view_point_to_screen_geometry_transform(const void* view, float p[4])
  * palette triplet only on the branches where the retail body selects one.
  * Recognized palette words are recorded verbatim from the retail data at
  * 0x4a8f34..0x4a908c. */
-// FUNCTION: LEGORR 0x0045e9e0
+/* Port model of 0x0045e9e0 */
 int terrain_tile_style_resolve(void* output, int x, int y)
 {
     GameContext* game = entity_pool_callback_context_get();
@@ -570,6 +597,7 @@ static void terrain_tile_palette_copy(void* output, uint32_t palette)
     }
 }
 
+#if LRR_MAP_VIEW_PORT_NAMES /* radarmap.c serves these names in the matching build */
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
  * original FUN_0045e6d0 (RadarMap_ScreenToBlockPos) returns the block
  * through two pointers; the port's entry above takes two words for its
@@ -584,3 +612,4 @@ extern "C" int terrain_point_pick_resolve_original(
     return terrain_point_pick_resolve(region, screen_x, screen_y, out_world_xy,
                                       0u, 0u);
 }
+#endif /* LRR_MAP_VIEW_PORT_NAMES */

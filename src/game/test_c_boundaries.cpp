@@ -204,6 +204,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/fallin_imports.h"
 #include "game/text.h"
 #include "game/text_imports.h"
+#include "game/radarmap.h"
+#include "game/radarmap_imports.h"
 
 int main(void)
 {

@@ -37,7 +37,7 @@ game_sources = [
   'placement_footprint.cpp',
   'info_track_overlay.cpp',
   'terrain_overlay_quads.cpp',
-  'map_view.cpp',
+  'map_view_port.cpp',
   'level_id_remap.cpp',
   'pointer.cpp',
   'object_overlays.cpp',
@@ -119,6 +119,7 @@ game_c_sources = [
   'erode.c',
   'fallin.c',
   'text.c',
+  'radarmap.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

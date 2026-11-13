@@ -620,9 +620,10 @@ void camera_pointer_pan_update(struct ViewContext* v, float vec[3],
 /* legoobject_port.cpp (entity.hpp): LegoObject_GetPosition (00442260). */
 void entity_transform_position_get_outputs(const struct EntitySlot* entity,
                                            float* out_x, float* out_y);
-/* RadarMap_SetZoom (0045d8a0; the port's entry takes the float as a word)
- * and RadarMap_SetTVPosition (0045dbc0; no port function): adapters at the
- * end of lego.cpp. */
+/* RadarMap_SetZoom (0045d8a0; the port's entry takes the float as a word):
+ * adapter in level_id_remap.cpp. RadarMap_Draw (0045dbc0): radarmap.c's
+ * definition takes this name in the matching build (radarmap_link_names.h,
+ * finding 606); natively a no-op adapter at the end of lego_port.cpp. */
 void radar_map_zoom_set_adapter(void* radarMap, float zoom);
 void radar_map_tv_position_set_adapter(void* radarMap, const float* pos);
 /* NERPs' tutorial flags (00456240): the original passes the NERPs stack
@@ -671,7 +672,7 @@ int interface_handle_mouse_adapter(int x, int y, int leftButton,
  * arity, in a namespace; adapter at the end of info.cpp. */
 int info_check_click_adapter(int x, int y, int leftReleased,
                              int rightReleased);
-/* map_view.cpp: RadarMap_InsideRadar (0045e660). */
+/* RadarMap.c (radarmap.c; map_view_port.cpp natively): RadarMap_InsideRadar (0045e660). */
 int rect_contains_point_half_open(const float* rect_record, int x, int y);
 /* frontend.h: tooltip activation (0046b770) and the advisor animation
  * (0046ac60). */
@@ -1061,10 +1062,12 @@ uint32_t lego_surface_type_configured_value_at_index(int surfaceType); /* 004351
 /* G98 Input (crt.cpp, crt.hpp): the mouse position and left button. */
 /* GAME-033 Pointer.c (pointer.cpp, media.hpp): Pointer_SetCurrent_IfTimerFinished. */
 void media_pointer_cursor_select(int slot);               /* 0045cc20 */
-/* GAME-034 RadarMap.c (map_view.cpp, view.hpp). ScreenToBlockPos returns
- * the block through two pointers; the port's entry takes two words, so an
- * adapter at the end of map_view.cpp stands in. GetObjectAtScreen returns
- * the object as a word. */
+/* GAME-036 RadarMap.c (radarmap.c; map_view_port.cpp natively, view.hpp).
+ * In the matching build radarmap.c defines these names
+ * (radarmap_link_names.h, finding 606). Natively the port tail serves
+ * them: ScreenToBlockPos's port entry takes two words, so its adapter at
+ * the end of map_view_port.cpp stands in. TrySelectObject returns the
+ * object as a word. */
 struct TerrainPointPickRegion;
 int rect_contains_point_half_open(const float* rect_record, int x, int y); /* 0045e660 */
 int terrain_point_pick_resolve_original(const struct TerrainPointPickRegion* region,
@@ -1322,8 +1325,8 @@ void terrain_map_fade_pair_add(struct TerrainMap* map, unsigned char texA,
                                unsigned char texB);           /* 0044f1a0 */
 void terrain_map_texture_set_set(struct TerrainMap* map, void* textureSet); /* 0044f220 */
 void terrain_map_perspective_correction_set(struct TerrainMap* map, int on); /* 0044f490 */
-/* RadarMap_Create (map_view.cpp, frontend.hpp): the port takes the zoom
- * as a word. */
+/* RadarMap_Create (radarmap.c; map_view_port.cpp natively, frontend.hpp):
+ * the zoom passes as the same stack word. */
 struct UiRenderRecord* ui_render_record_create(void* source,
                                                const uint32_t* payload,
                                                uint32_t extra); /* 0045da90 */
