@@ -27,6 +27,11 @@ extern uint32_t legoGlobs_flags1;
 /* Utils.c (utils.c): Util_Tokenise. */
 int sound_variant_split(char* text, char** out, const char* separators); /* 00477440 */
 
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
+#endif
 /* Images.c (images_unit.cpp): Image_SetupTrans. Image_LoadBMPScaled
  * (0047d9d0) and Image_DisplayScaled (0047dcb0) are images.h's adapters;
  * Flic_Setup (00483c80), Flic_Animate (00484070) and the flic's width and

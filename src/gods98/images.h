@@ -25,13 +25,26 @@ typedef struct Area2F {
     float height;
 } Area2F;
 
-/* The original Image record. Callers read the size directly at +4/+8. */
+/* The original Image record (0x20 bytes; Images.c, finding 632). Callers
+ * read the size directly at +4/+8. The port's adapters (texture.cpp) fill
+ * the first three fields. */
 typedef struct Image {
-    void* surface;          /* +0: TextureSurface* (a DirectDraw surface originally) */
-    unsigned int width;     /* +4 */
-    unsigned int height;    /* +8 */
+    void* surface;          /* +0x00: TextureSurface* (a DirectDraw surface originally) */
+    unsigned int width;     /* +0x04 */
+    unsigned int height;    /* +0x08 */
+    unsigned int penZero;   /* +0x0c pen 0 in the surface's pixel format */
+    unsigned int pen255;    /* +0x10 pen 255 in the surface's pixel format */
+    unsigned int penZeroRGB; /* +0x14 pen 0 as 0x00BBGGRR */
+    unsigned int flags;     /* +0x18 IMAGE_FLAG_TRANS */
+    struct Image* nextFree; /* +0x1c the free list; itself when in use */
 } Image;
 
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_load_bmp_scaled Image_LoadBMPScaled /* 0047d9d0 */
+#define image_display_scaled Image_DisplayScaled /* 0047dcb0 */
+#endif
 /* Image_LoadBMPScaled (FUN_0047d9d0): load a bitmap resource. Port adapter:
  * a non-zero width or height asks the original to scale; the port ignores
  * it (every converted caller passes 0, 0). NULL when the load fails. */

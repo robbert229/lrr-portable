@@ -12,6 +12,11 @@
 extern "C" {
 #endif
 
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_surface_release Image_Remove /* 0047d470 */
+#endif
 void image_surface_release(void* record);                  /* 0047d470 */
 
 #ifdef __cplusplus

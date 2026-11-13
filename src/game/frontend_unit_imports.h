@@ -125,6 +125,14 @@ uint32_t object_field_be4_dword_get(const void* record);          /* 0047a540 */
 /* gods98 Sound3D.c (sound3d.c). */
 void audio_sound_volume_index_set(int index);                     /* 0047b530 */
 int sound_stream_stop_and_release(int stream_index);              /* 0047ba20 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_surface_release Image_Remove /* 0047d470 */
+#define resource_record_add_ref Image_SetPenZeroTrans /* 0047dbc0 */
+#define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
+#define front_image_save_bmp_adapter Image_SaveBMP /* 0047e440 */
+#endif
 /* gods98 Images.c (images_unit.cpp, images.h). */
 void image_surface_release(void* record);                         /* 0047d470 */
 void resource_record_add_ref(void* record);                       /* 0047dbc0 */

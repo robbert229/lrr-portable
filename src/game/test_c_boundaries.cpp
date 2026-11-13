@@ -244,6 +244,10 @@ extern "C" int s_cursor_delta_y;
 #include "game/objective_unit_imports.h"
 #include "game/message_unit.h"
 #include "game/message_unit_imports.h"
+#include "gods98/flic_unit.h"
+#include "gods98/images_unit.h"
+#include "gods98/flic_imports.h"
+#include "gods98/images_imports.h"
 
 int main(void)
 {

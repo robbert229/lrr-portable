@@ -23,6 +23,11 @@ extern "C" {
 
 struct TextureSurface;
 
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
+#endif
 /* G98-011 Images.c (images_unit.cpp): Image_SetupTrans. */
 void image_surface_blit_transformed(struct TextureSurface* surface,
                                     float low_red, float low_green,

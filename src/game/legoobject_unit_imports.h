@@ -71,6 +71,11 @@ int legoobject_activity_register_bookkeeping(Lego_Object* obj); /* 00447c40 */
 /* Stats.c (entity.hpp) and Weapons.c (weapons.cpp). */
 uint32_t stats_table_word_at_144(int type, int row);     /* 00469ec0 */
 float weapon_type_discharge_rate_get_target(int type);   /* 0046f140 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
+#endif
 /* Images.c: Image_SetupTrans (surface.hpp; the port takes the surface). */
 void image_surface_blit_transformed(struct TextureSurface* surface,
                                     float low_red, float low_green,

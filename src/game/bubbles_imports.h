@@ -43,6 +43,11 @@ int ddiscene_object_position_get(void* object, void* alternate_frame,
 float entity_stats_float_at74(const struct EntitySlot* e);      /* 00469d50 */
 uint32_t entity_capability_flags_get(const struct EntitySlot* e); /* 00469ea0 */
 
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
+#endif
 /* Images.c (images_unit.cpp): Image_SetupTrans. */
 void image_surface_blit_transformed(struct TextureSurface* surface,
                                     float low_red, float low_green,

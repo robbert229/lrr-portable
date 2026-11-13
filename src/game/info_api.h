@@ -27,6 +27,11 @@ void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
                                    uint32_t* out_y);            /* 00463ea0 */
 void indexed_text_metrics_pair_set(int index, uint32_t x,
                                    uint32_t y);                 /* 00463ed0 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define resource_record_add_ref Image_SetPenZeroTrans /* 0047dbc0 */
+#endif
 /* Image_SetPenZeroTrans (0047dbc0). The port's entry takes its
  * TextureSurface; info_unit.c passes the Image, as the original does. The
  * unit's image setters have no native caller (finding 567). */

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-016 Flic.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-016.csv. */
+/* The port tail of G98-016 Flic.c (finding 632): the port's FLIC player
+ * (flic.hpp), as tools/relocate_unit.py relocated it out of flic.cpp (ADR
+ * 0006; body hashes: docs/coverage/relocations/G98-016.csv). Flic.c itself
+ * is rebuilt in original shape as flic_unit.c; this file is unannotated
+ * port-only code. In the matching build flic_unit.c takes three of the names
+ * defined here (flic_link_names.h), so their definitions are compiled out
+ * there. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +32,6 @@ static int fli_decode_chunk(Flic* f, const FlicChunk* ch);
 static int flic_stream_chunk_load(Flic* f);
 static int flic_window_find(const void* rec, void** stream, void** pixels);
 
-// FUNCTION: LEGORR 0x00483c80
 Flic* flic_open(const char* name)
 {
     Flic* stream_flic;
@@ -149,7 +152,6 @@ Flic* flic_open(const char* name)
     return f;
 }
 
-// FUNCTION: LEGORR 0x00483f00
 int flic_close(Flic* f)
 {
     if (f == NULL) {
@@ -165,7 +167,6 @@ int flic_close(Flic* f)
     free(f);
     return 1;
 }
-// FUNCTION: LEGORR 0x00483f60
 int flic_file_header_validate_path(const char* path, void* context)
 {
     uint8_t header_bytes[FLIC_HEADER];
@@ -205,7 +206,6 @@ int flic_file_header_validate_path(const char* path, void* context)
     return valid;
 }
 
-// FUNCTION: LEGORR 0x004841d0
 int flic_tick_loop(Flic* f, int loop)
 {
     int reached_end;
@@ -247,7 +247,6 @@ int flic_tick_loop(Flic* f, int loop)
     f->eof = 0;
     return f->idx;
 }
-// FUNCTION: LEGORR 0x00484260
 /* FlicStreamFrameAdvance: stream mode reads one chunk at the current file
  * cursor, lets FlicChunkWalk buffer ancillary chunks and decode the next
  * frame, then advances the two frame counters. The loop cursor is captured
@@ -274,7 +273,6 @@ int flic_stream_frame_advance(Flic* f)
     f->eof = 0;
     return 0;
 }
-// FUNCTION: LEGORR 0x00484320
 /* FlicChunkWalk: advance through non-frame chunks until the next F1FA frame
  * is found. The RAM branch uses the indexed image; stream mode reads a header
  * then dispatches LK/type-0B through their seek-and-buffer handlers. */
@@ -329,7 +327,6 @@ int flic_chunk_walk(Flic* f)
     }
     return 0;
 }
-// FUNCTION: LEGORR 0x004844b0
 /* FlicFrameRecordWalk: walk the signed byte count of subrecords after the
  * 16-byte chunk header. Stream mode buffers only the body, as the retail
  * reader does; RAM mode uses the retained file image. */
@@ -375,7 +372,6 @@ int flic_frame_record_walk(Flic* f)
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00484610
 int ledger_stub_00484610_FlicSubrecordOpcodeDispatch(void* record)
 {
     uint8_t* rec = (uint8_t*)record;
@@ -411,7 +407,6 @@ int ledger_stub_00484610_FlicSubrecordOpcodeDispatch(void* record)
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00484720
 /* FlicChunkBufferAndContinueLK (FUN_00484720): in stream mode, the 16-byte
  * header has already been read into the initial scratch area. Replace that
  * allocation only when the declared chunk size exceeds its recorded
@@ -445,7 +440,6 @@ int flic_chunk_buffer_and_continue_lk(Flic* f)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x004847d0
 /* FlicChunkBufferAndContinueType0B has the same stream read path; retail's
  * allocation failure uniquely returns one. */
 int flic_chunk_buffer_and_continue_type0b(Flic* f)
@@ -480,7 +474,6 @@ int flic_chunk_buffer_and_continue_type0b(Flic* f)
  * the dispatch words from its frame record; the port takes the record as a
  * byte window (the corpus buffer shape). The fallback callee is the pure
  * no-op the port already models, so every branch observes as 1. */
-// FUNCTION: LEGORR 0x00484880
 int flic_opcode16_mode_dispatch(const uint8_t* rec)
 {
     uint32_t mode = 0u, op = 0u;
@@ -504,7 +497,6 @@ int flic_opcode16_mode_dispatch(const uint8_t* rec)
 /* FlicDecode8BitOpcode25Mode4 (FUN_004848d0) — see flic.hpp. The byte
  * stream rides stream+7; the row walk ends each pass one byte short and
  * the palette store lands through the indexed word window. */
-// FUNCTION: LEGORR 0x004848d0
 int flic_decode8_bit_opcode25_mode4(void* record)
 {
     if (record == NULL) {
@@ -574,7 +566,6 @@ int flic_decode8_bit_opcode25_mode4(void* record)
  * rides stream+7; each row re-reads the row length +0xc (the corpus walks
  * one straddle byte past the row) and targets pixel_base +0x6cc with the
  * pitch/2 stride of the row index; the row count +0x10 is read once. */
-// FUNCTION: LEGORR 0x004849d0
 int flic_decode16_bit_keyframe(void* record)
 {
     if (record == NULL) {
@@ -666,7 +657,6 @@ int flic_decode16_bit_keyframe(void* record)
  * Deviation: the corpus's keyframe call passes no argument (the record
  * pointer rides the register) — the port threads the record through, as
  * the window band's precedent requires. */
-// FUNCTION: LEGORR 0x00484b20
 int flic_opcode25_decode_dispatch(void* record)
 {
     if (record == NULL) {
@@ -692,15 +682,15 @@ int flic_opcode25_decode_dispatch(void* record)
     return 1;
 }
 /* FlicOpcode25SuccessStub (FUN_00484b90, finding 21): success, no work. */
-// FUNCTION: LEGORR 0x00484b90
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* flic_unit.c takes this name (flic_link_names.h) */
 uint32_t flic_opcode25_success_stub(void)
 {
     return 1u;
 }
+#endif
 
 /* PackedTripletTableToWordBuild (FUN_00484ba0) — the retail body strides
  * its frame-record pointer blindly, folding 256 packed triplets. */
-// FUNCTION: LEGORR 0x00484ba0
 void flic_packed_triplet_table_to_word_build_target(void* record)
 {
     uint8_t* src = (uint8_t*)record + 0x11c;
@@ -721,7 +711,6 @@ void flic_packed_triplet_table_to_word_build_target(void* record)
  * lands each source byte >>2; the zero-flag chunk restarts the table for a
  * full 0x100-triplet pass on the loop's last lap; op 4 hands off to the
  * triplet fold. */
-// FUNCTION: LEGORR 0x00484c00
 int flic_decode16_bit_row_records(void* record)
 {
     if (record == NULL) {
@@ -766,11 +755,12 @@ int flic_decode16_bit_row_records(void* record)
     }
     return 1;
 }
-// FUNCTION: LEGORR 0x00484c90
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* flic_unit.c takes this name (flic_link_names.h) */
 void flic_opcode27_fallback_noop(void)
 {
     /* FUN_00484c90: pure return — faithful. */
 }
+#endif
 
 /* FlicDecode8BitAlternateDelta (FUN_00484ca0) — see flic.hpp. The opcode-27
  * 8-bit sibling of flic_decode16_bit_delta: the chunk stream rides stream+8
@@ -782,7 +772,6 @@ void flic_opcode27_fallback_noop(void)
  * (guarded here, like the rest of the band), and the corpus's zero-argument
  * callee calls leave the record pointer in a register — the port threads
  * it through, the way the window-slot fix must for the whole band. */
-// FUNCTION: LEGORR 0x00484ca0
 int flic_decode8_bit_alternate_delta(void* record)
 {
     if (record == NULL) {
@@ -896,7 +885,6 @@ int flic_decode8_bit_alternate_delta(void* record)
  * a lone BYTE store at the walk's end, and 4-type ends the record. The
  * pair words advance the target by the pair's low byte and expand their
  * own words (or a repeated one on the back-count quirk). */
-// FUNCTION: LEGORR 0x00484e50
 int flic_decode16_bit_delta(void* record)
 {
     if (record == NULL) {
@@ -1019,7 +1007,6 @@ int flic_decode16_bit_delta(void* record)
  * loads, no staging. The literal 0x1234 goes to the fallback, and so does a
  * mismatch; the 8-bit op-4 route lands in the alternate delta. Deviations
  * ride the same two notes as flic_opcode25_decode_dispatch. */
-// FUNCTION: LEGORR 0x00485030
 int flic_opcode27_decode_dispatch(void* record)
 {
     if (record == NULL) {
@@ -1050,7 +1037,6 @@ int flic_opcode27_decode_dispatch(void* record)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x004850c0
 uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
 {
     const size_t off = 0x41c + (size_t)(index & 0xffu) * 2u;
@@ -1062,13 +1048,14 @@ uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
     return 0u;
 }
 /* ObjectField10Get (FUN_004850e0). */
-// FUNCTION: LEGORR 0x004850e0
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* flic_unit.c takes this name (flic_link_names.h) */
 uint32_t object_field10_get(const void* object)
 {
     uint32_t value;
     __builtin_memcpy(&value, (const char*)object + 0x10, sizeof(value));
     return value;
 }
+#endif
 
 /* Keyframe, opcode 25: FLI16 byte-RLE, body at record+7, one terminator
  * byte after each row (the engine over-reads the final one by up to a byte;
