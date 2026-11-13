@@ -832,7 +832,8 @@ int main(void)
         parent[2] = NULL;
         owned_resource_tree_release(parent, 0); /* node stays, tree frees */
         engine_heap_free(parent);
-        owned_resource_tree_release(NULL, 1); /* guarded */
+        /* The unit's release (gods98/lwo.c, 0x0048c180) is unguarded, as
+         * the original is: no NULL call. */
         void** leaf = (void**)engine_heap_alloc(3 * sizeof(void*));
         leaf[0] = engine_heap_alloc(8);
         leaf[1] = NULL;

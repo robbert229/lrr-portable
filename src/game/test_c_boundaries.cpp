@@ -192,6 +192,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/tooltip_imports.h"
 #include "gods98/directdraw.h"
 #include "gods98/directdraw_imports.h"
+#include "gods98/model.hpp"
+#include "gods98/lwo.h"
 
 int main(void)
 {

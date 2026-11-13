@@ -715,8 +715,8 @@ int main(int argc, char** argv)
               "the empty dup allocates the rounded byte block");
         engine_heap_free(empty); /* engine-heap allocated */
 
-        CHECK(lwo_string_duplicate(NULL) == NULL,
-              "the null guard answers null");
+        /* The unit's dup (gods98/lwo.c, 0x0048c0c0) reads its string
+         * unguarded, as the original does: no NULL check. */
 
         CHECK(lwo_texture_projection_mode_parse("PLANAR") == 0,
               "PLANAR answers 0");

@@ -117,10 +117,8 @@ int main(void)
                   && string_case_substring_find(hay, "", &idx, &len) == NULL,
               "the gate answers null");
 
-        /* pointer guards */
-        CHECK(string_case_substring_find(NULL, "x", &idx, &len) == NULL
-                  && string_case_substring_find(hay, NULL, &idx, &len)
-                        == NULL, "the pointer guards hold");
+        /* The unit's stristr (gods98/lwo.c, 0x0048c040) reads both strings
+         * unguarded, as the original does, so the NULL guards are gone. */
 
         /* string_folded_compare: ASCII fold over the bound, NUL-stop */
         CHECK(string_folded_compare("AbC", "aBc", 3u) == 0,

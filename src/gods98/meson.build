@@ -14,7 +14,7 @@ gods98_sources = [
   'avi_player.cpp',
   'images_unit.cpp',
   'files_port.cpp',
-  'lwo.cpp',
+  'lwo_port.cpp',
   'wad_port.cpp',
   'lws_port.cpp',
   'viewports_port.cpp',
@@ -81,6 +81,7 @@ gods98_c_sources = [
   'lws.c',
   'files.c',
   'wad.c',
+  'lwo.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 gods98_c_as_cpp = []

@@ -74,7 +74,8 @@ const char* case_insensitive_substring_find(const char* haystack,
  * case-insensitive substring walk — same __strnicmp shape (the bounded
  * ASCII fold compare, exposed here for the LWO bands), but the match also
  * reports its byte index and the needle length through the optional
- * outputs. Same gates/deviations as CaseInsensitiveSubstringFind. */
+ * outputs. Defined by gods98/lwo.c (G98-031); neither string may be
+ * NULL. */
 #if defined(_MSC_VER) && defined(_M_IX86)
 #define string_folded_compare(a, b, n) _strnicmp((a), (b), (n))
 #else
