@@ -382,7 +382,7 @@ uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index);
  * land as zero, and the walks thread no EngineContext (the gate reads
  * the port's zeroed app-mode default). */
 void save_menu_refresh(GameContext* ctx, int slot);  /* FUN_004150b0 */
-void save_menu_refresh_target(uint32_t unused, int slot);
+extern "C" void save_menu_refresh_target(uint32_t unused, int slot);
 void show_level_overlay_for_current_selection(GameContext* ctx); /* FUN_00418000 */
 extern "C" void show_level_overlay_target(void);
 

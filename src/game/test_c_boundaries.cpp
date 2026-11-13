@@ -238,6 +238,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/spiderweb_imports.h"
 #include "game/roof.h"
 #include "game/roof_imports.h"
+#include "game/frontend_unit.h"
+#include "game/frontend_unit_imports.h"
 
 int main(void)
 {

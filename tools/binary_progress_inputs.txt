@@ -227,8 +227,12 @@ src/game/frontend_from_interface.hpp
 src/game/frontend_from_lego.hpp
 src/game/frontend_from_panel_unit.hpp
 src/game/frontend_from_reward.hpp
+src/game/frontend_port.cpp
 src/game/frontend_shared.hpp
-src/game/frontend_unit.cpp
+src/game/frontend_unit.c
+src/game/frontend_unit.h
+src/game/frontend_unit_imports.h
+src/game/frontend_unit_link_names.h
 src/game/game.cpp
 src/game/game.hpp
 src/game/helpwindow.c

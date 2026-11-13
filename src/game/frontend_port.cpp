@@ -163,7 +163,7 @@ static const float s_menu_volume_scale = 0.11111111f; /* DAT_0049e1e0 */
 /* DAT_004a1f60 is a file-backed 256-entry scan-code-to-character table.
  * These bytes were read from reference/LegoRR.exe at file offset 0xa0d60;
  * the table has no runtime writer in the observed input paths. */
-// GLOBAL: LEGORR 0x004A1F60
+/* Was annotated at 0x004A1F60; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const uint32_t s_key_context_table[INPUT_KEY_COUNT] = {
     0x00u, 0x00u, 0x31u, 0x32u, 0x33u, 0x34u, 0x35u, 0x36u,
     0x37u, 0x38u, 0x39u, 0x30u, 0x00u, 0x00u, 0x00u, 0x00u,
@@ -199,7 +199,7 @@ static const uint32_t s_key_context_table[INPUT_KEY_COUNT] = {
     0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u
 };
 
-// GLOBAL: LEGORR 0x004a2360
+/* Was annotated at 0x004a2360; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const char s_filename_bitmap_suffix[5] = ".bmp";
 
 /* Item-kind matcher. The corpus compares all six names through the CRT's
@@ -216,31 +216,31 @@ static const char s_filename_bitmap_suffix[5] = ".bmp";
  * next, realslider, slider, textinput, trigger, cycle). Annotating them as
  * DATs lets each `push` land on the corpus's immediate address — the six
  * `push imm` vs `push STRING` pairs were this function's entire residual. */
-// GLOBAL: LEGORR 0x004a23ac
+/* Was annotated at 0x004a23ac; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const char s_item_token_next[5] = "next";
-// GLOBAL: LEGORR 0x004a23b4
+/* Was annotated at 0x004a23b4; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const char s_item_token_realslider[11] = "realslider";
-// GLOBAL: LEGORR 0x004a23c0
+/* Was annotated at 0x004a23c0; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const char s_item_token_slider[7] = "slider";
-// GLOBAL: LEGORR 0x004a23c8
+/* Was annotated at 0x004a23c8; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const char s_item_token_textinput[10] = "textinput";
-// GLOBAL: LEGORR 0x004a23d4
+/* Was annotated at 0x004a23d4; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const char s_item_token_trigger[8] = "trigger";
-// GLOBAL: LEGORR 0x004a23dc
+/* Was annotated at 0x004a23dc; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const char s_item_token_cycle[6] = "cycle";
 
-// GLOBAL: LEGORR 0x004a23e4
+/* Was annotated at 0x004a23e4; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const char s_filename_lightwave_suffix[5] = ".lws";
 /* FilenameExtensionClassify compares these exact .data strings in order;
  * their mapped addresses and bytes are verified in the data annotation
  * inventory. */
-// GLOBAL: LEGORR 0x004a23ec
+/* Was annotated at 0x004a23ec; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const char s_filename_avi_suffix[5] = ".avi";
 
 /* The corpus compares names against the .data "Null" literal (objdump-
  * verified bytes 4E 75 6C 6C 00 at 0x4a23f4); a named const array keeps
  * the push operand resolvable by Reccmp. */
-// GLOBAL: LEGORR 0x004a23f4
+/* Was annotated at 0x004a23f4; frontend_unit.c (GAME-017 part 1) owns the address. */
 static const char s_menu_null_label[5] = "Null";
 
 /* MapOpen2 (FUN_00480170): preserve the retail open, seek/tell, progress,
@@ -249,18 +249,18 @@ static const char s_menu_null_label[5] = "Null";
  * 583); this copy serves the port's map_open2 (files_port.cpp). */
 const char s_map_open_binary_mode[] = "rb";
 
-// GLOBAL: LEGORR 0x004db748
+/* Was annotated at 0x004db748; frontend_unit.c (GAME-017 part 1) owns the address. */
 static char s_ui_text_underscore_buffer[256];
 
 /* --- the string registry (see crt.hpp) ------------------------------------- */
-// GLOBAL: LEGORR 0x004db8cc
+/* Was annotated at 0x004db8cc; frontend_unit.c (GAME-017 part 1) owns the address. */
 void* s_string_registry_head; /* DAT_004db8cc role: unowned */
 
 /* The previous-renderer-word memory is corpus-owned (DAT_004db8d4, the
  * zero-filled tail); the current word is crt's g_renderer_word_c — the
  * corpus loads both directly, so the port does too (the getter call was
  * the only operand mismatch). */
-// GLOBAL: LEGORR 0x004db8d4
+/* Was annotated at 0x004db8d4; frontend_unit.c (GAME-017 part 1) owns the address. */
 static uint32_t s_progress_previous;
 
 static StringQueueEntry s_string_queue[STRING_QUEUE_CAPACITY];
@@ -312,7 +312,7 @@ static int save_slot_write_fresh_file(GameContext* ctx, int slot, uint32_t recor
 
 /* The mapped target assumes a valid mutable input pointer, returns it
  * unchanged at 256 bytes or more, and otherwise copies to shared storage. */
-// FUNCTION: LEGORR 0x004102b0
+// PORT-ONLY: port model of 0x004102b0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 char* ui_text_underscores_to_spaces_target(char* text)
 {
     char* const display = s_ui_text_underscore_buffer;
@@ -332,7 +332,7 @@ char* ui_text_underscores_to_spaces_target(char* text)
     return display;
 }
 
-// FUNCTION: LEGORR 0x00410320
+// PORT-ONLY: port model of 0x00410320 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void string_queue_record_or_flush(uint32_t first, uint32_t second,
                                   uint32_t third, const char* text,
                                   int record)
@@ -360,7 +360,10 @@ void string_queue_record_or_flush(uint32_t first, uint32_t second,
     ++s_string_queue_count;
 }
 
-// FUNCTION: LEGORR 0x004103d0
+/* The matching build links frontend_unit.c's Front_Callback_TriggerPlayCredits
+ * under this name (frontend_unit_link_names.h). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+// PORT-ONLY: port model of 0x004103d0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void main_menu_text_item(void)
 {
@@ -382,8 +385,9 @@ void main_menu_text_item(void)
     scrolling_text_display(DAT_00556f50, DAT_0055613c, DAT_00556f54);
 }
 #endif
+#endif
 
-// FUNCTION: LEGORR 0x004103f0
+// PORT-ONLY: port model of 0x004103f0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void menu_wipe_start(void)
 {
@@ -425,7 +429,7 @@ void menu_wipe_start(void)
 #endif
 /* MenuWipeEnd (FUN_00410440) — DAT_005574f0 as a zero-init static; the
  * corpus's MenuWipeStart-side setter is unported. */
-// FUNCTION: LEGORR 0x410440
+// PORT-ONLY: port model of 0x00410440 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void menu_wipe_end(void)
 {
@@ -448,7 +452,7 @@ void menu_wipe_end(void)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00410450
+// PORT-ONLY: port model of 0x00410450 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(_MSC_VER) && defined(_M_IX86)
 /* Corpus 0x410450..0x410485 keeps the empty-head exit and list walk in this
  * order, including the annotated strcasecmp_lite call. */
@@ -513,7 +517,7 @@ void* string_keyed_cache_entry_find(const char* key)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00410490
+// PORT-ONLY: port model of 0x00410490 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void* string_registry_intern(const char* key)
 {
     if (key == NULL || *key == '\0') {
@@ -540,7 +544,7 @@ void* string_registry_intern(const char* key)
     return record;
 }
 
-// FUNCTION: LEGORR 0x00410520
+// PORT-ONLY: port model of 0x00410520 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void* string_cache_lookup_or_load_corpus(const char* key)
 {
     if (key != NULL && *key != '\0') {
@@ -554,7 +558,7 @@ void* string_cache_lookup_or_load_corpus(const char* key)
     return NULL;
 }
 
-// FUNCTION: LEGORR 0x00410560
+// PORT-ONLY: port model of 0x00410560 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void* resource_name_cache_get_or_load(const char* key)
 {
     if (key != NULL && *key != '\0') {
@@ -569,7 +573,7 @@ void* resource_name_cache_get_or_load(const char* key)
     return NULL;
 }
 
-// FUNCTION: LEGORR 0x004105a0
+// PORT-ONLY: port model of 0x004105a0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 char* campaign_level_fallback_label(const char* label)
 {
     if (label == NULL) {
@@ -587,7 +591,7 @@ char* campaign_level_fallback_label(const char* label)
     return copy;
 }
 
-// FUNCTION: LEGORR 0x004105f0
+// PORT-ONLY: port model of 0x004105f0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void* menu_param_record_create(
     uint32_t mode, const char* first, const char* second, uint32_t f4,
@@ -685,7 +689,7 @@ void* menu_param_record_create(uint32_t mode, const char* first,
 }
 #endif
 
-// FUNCTION: LEGORR 0x00410690
+// PORT-ONLY: port model of 0x00410690 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void menu_record_resources_release(void* record)
 {
@@ -788,7 +792,7 @@ void menu_record_resources_release(void* record)
 
 /* SaveMenuListEntryAppend (FUN_00410740), adapted to FeItem instead of the
  * corpus's packed 0x20-byte resource row. */
-// FUNCTION: LEGORR 0x00410740
+// PORT-ONLY: port model of 0x00410740 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int fe_save_menu_list_entry_append(FeSubmenu* submenu,
                                           const FeSlot* slot, int row)
 {
@@ -809,7 +813,7 @@ int fe_save_menu_list_entry_append(FeSubmenu* submenu,
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00410a10
+// PORT-ONLY: port model of 0x00410a10 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void* menu_item_choice_strings_allocate(
     uint32_t count, uint32_t f3, uint32_t f4, uint32_t f5, uint32_t f6)
@@ -904,7 +908,7 @@ void* menu_item_choice_strings_allocate(uint32_t count, uint32_t f3,
 
 /* ResourceHandleListAppend (FUN_00410aa0): append a heap-owned string only
  * while the preallocated handle array has capacity. */
-// FUNCTION: LEGORR 0x00410aa0
+// PORT-ONLY: port model of 0x00410aa0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void resource_handle_list_append(ResourceHandleList* list, const char* value)
 {
     if (list == NULL || list->handles == NULL
@@ -924,7 +928,7 @@ void resource_handle_list_append(ResourceHandleList* list, const char* value)
  * record is freed even when its array word is zero. Deviations: the record
  * fields widen LP64-safe and the NULL record is guarded (the corpus strides
  * blindly). */
-// FUNCTION: LEGORR 0x00410ae0
+// PORT-ONLY: port model of 0x00410ae0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void resource_handle_list_dispose(ResourceHandleList* list)
 {
     if (list == NULL) {
@@ -941,15 +945,11 @@ void resource_handle_list_dispose(ResourceHandleList* list)
     engine_heap_free(list);
 }
 
-// FUNCTION: LEGORR 0x00410b30
-uint32_t renderer_word_a_get(void) { return s_renderer_word_a; } /* FUN_00410b30 */
-// FUNCTION: LEGORR 0x00410b40
-uint32_t renderer_word_b_get(void) { return s_renderer_word_b; } /* FUN_00410b40 */
-// FUNCTION: LEGORR 0x00410b50
-uint32_t renderer_word_c_get(void) { return g_renderer_word_c; } /* FUN_00410b50 */
+/* renderer_word_a_get, renderer_word_b_get and renderer_word_c_get
+ * (00410b30-00410b50) are defined in frontend_unit.c. */
 
 /* ThreeWordRecordAllocateAndInitialize (FUN_00410b60) — see heap.hpp. */
-// FUNCTION: LEGORR 0x00410b60
+// PORT-ONLY: port model of 0x00410b60 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void* three_word_record_allocate_and_initialize(uint32_t a, uint32_t b,
                                                 uint32_t c)
 {
@@ -964,7 +964,7 @@ void* three_word_record_allocate_and_initialize(uint32_t a, uint32_t b,
 }
 
 /* BoundedFloatRecordCreate (FUN_00410b90) — see record.hpp. */
-// FUNCTION: LEGORR 0x00410b90
+// PORT-ONLY: port model of 0x00410b90 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void* bounded_float_record_create(int kind, float min_v, float max_v,
                                   uint32_t f3, uint32_t f4, uint32_t f5,
                                   uint32_t f6)
@@ -990,7 +990,7 @@ void* bounded_float_record_create(int kind, float min_v, float max_v,
 /* MenuItemNumericRangeRecordAllocate (FUN_00410bf0) — see record.hpp.
  * The record has fourteen dword fields: kind, bounds, then eleven payload
  * words. Bounds are stored after the first payload fields in corpus order. */
-// FUNCTION: LEGORR 0x00410bf0
+// PORT-ONLY: port model of 0x00410bf0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void* menu_item_numeric_range_record_allocate(
     int kind, int min_v, int max_v, uint32_t f3, uint32_t f4, uint32_t f5,
@@ -1079,7 +1079,7 @@ void* menu_item_numeric_range_record_allocate(int kind, int min_v, int max_v,
     return rec;
 }
 #endif
-// FUNCTION: LEGORR 0x00410c70
+// PORT-ONLY: port model of 0x00410c70 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void resource_variant_record_release(void* record)
 {
     if (record == NULL) return;
@@ -1107,7 +1107,7 @@ void resource_variant_record_release(void* record)
 
 /* MenuTextRecordMake (FUN_00410d50): stores a copied label, layout words,
  * font handles and optional negative half-width offsets. */
-// FUNCTION: LEGORR 0x00410d50
+// PORT-ONLY: port model of 0x00410d50 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void* menu_text_record_make(
     const char* text, const TextureSurface* font_a,
@@ -1243,7 +1243,7 @@ void* menu_text_record_make(const char* text, const TextureSurface* font_a,
 
 /* MenuButtonRecordMake (FUN_00410e20): create a 15-slot image-backed menu
  * item, including its optional tooltip-name index. */
-// FUNCTION: LEGORR 0x00410e20
+// PORT-ONLY: port model of 0x00410e20 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void* menu_button_record_make(const char* text,
                               const TextureSurface* normal_font,
                               const TextureSurface* selected_font,
@@ -1304,7 +1304,7 @@ void* menu_button_record_make(const char* text,
     return record;
 }
 
-// FUNCTION: LEGORR 0x00410f30
+// PORT-ONLY: port model of 0x00410f30 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void resource_record_and_children_release(void* record)
 {
     if (record == NULL) return;
@@ -1325,7 +1325,7 @@ void resource_record_and_children_release(void* record)
     engine_heap_free(record);
 }
 
-// FUNCTION: LEGORR 0x00410fb0
+// PORT-ONLY: port model of 0x00410fb0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int menu_item_image_set(void* item, const char* image_config, int primary)
 {
     if (item == NULL || image_config == NULL) return 0;
@@ -1361,7 +1361,7 @@ int menu_item_image_set(void* item, const char* image_config, int primary)
     }
     return 1;
 }
-// FUNCTION: LEGORR 0x00411100
+// PORT-ONLY: port model of 0x00411100 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void* menu_section_record_create(const char* name, const char* title,
                                  uint32_t f3, uint32_t f4, uint32_t f5,
                                  uint32_t f6, uint32_t f7, uint32_t f8,
@@ -1423,7 +1423,7 @@ void* menu_section_record_create(const char* name, const char* title,
     return rec;
 }
 
-// FUNCTION: LEGORR 0x00411260
+// PORT-ONLY: port model of 0x00411260 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int menu_list_append(void* list, void* value)
 {
     if (list == NULL || value == NULL) return 0;
@@ -1474,7 +1474,7 @@ int menu_list_append(void* list, void* value)
  * reproduced clause-for-clause — inclusive lower corners, inclusive
  * upper corners via origin+size (finding 23: the widget rectangle is
  * the 100x20 row band this routine hit-tests). */
-// FUNCTION: LEGORR 0x004112e0
+// PORT-ONLY: port model of 0x004112e0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) int menu_pointer_rectangle_hit_test(
     int x, int y, int rect_x, int rect_y, int rect_w, int rect_h)
@@ -1514,7 +1514,7 @@ int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
 #endif
 
 /* TextLayoutOffsetForCentering (FUN_00411320) — see frontend.hpp. */
-// FUNCTION: LEGORR 0x411320
+// PORT-ONLY: port model of 0x00411320 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
                                      int rect_w, int rect_h, int center)
 {
@@ -1524,7 +1524,7 @@ int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
 }
 /* MenuMouseCoordinateUpdate (FUN_00411360): test the two row labels first,
  * then the visible type-6 resource entries. */
-// FUNCTION: LEGORR 0x00411360
+// PORT-ONLY: port model of 0x00411360 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int menu_mouse_coordinate_update(const void* root, const void* item,
                                  const void* row)
 {
@@ -1599,7 +1599,7 @@ int menu_mouse_coordinate_update(const void* root, const void* item,
 
 /* HasType6ItemAtIndex (FUN_004114f0): the item is active when its row
  * renderer reports any hit result other than the no-hit sentinel. */
-// FUNCTION: LEGORR 0x004114f0
+// PORT-ONLY: port model of 0x004114f0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int has_type6_item_at_index(const void* menu, int index)
 {
     if (menu == NULL || index < 0
@@ -1619,7 +1619,7 @@ int has_type6_item_at_index(const void* menu, int index)
 /* MenuWidgetItemScreenRect (FUN_00411530): calculate a menu item's clickable
  * screen rectangle. Legacy menu records store scalar values in the low dword
  * of each native-width slot, which keeps this layout usable in 64-bit builds. */
-// FUNCTION: LEGORR 0x00411530
+// PORT-ONLY: port model of 0x00411530 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int menu_widget_item_screen_rect(const void* menu, int index, int* x, int* y,
                                  int* width, int* height)
 {
@@ -1701,7 +1701,7 @@ int menu_widget_item_screen_rect(const void* menu, int index, int* x, int* y,
 
 /* MenuPickWidgetUnderPointer (FUN_00411790): the regular-rect helper gates
  * the walk; a failed rect returns unless the type-6 helper hits. */
-// FUNCTION: LEGORR 0x00411790
+// PORT-ONLY: port model of 0x00411790 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int menu_pick_widget_under_pointer(const void* menu, int* picked_index)
 {
     int x = 0, y = 0, width = 0, height = 0;
@@ -1728,7 +1728,7 @@ int menu_pick_widget_under_pointer(const void* menu, int* picked_index)
 
 /* FrontendProgressValueChanged (FUN_00411840): detect the transition from
  * progress-active (1) back to idle (0) in the renderer's third word. */
-// FUNCTION: LEGORR 0x00411840
+// PORT-ONLY: port model of 0x00411840 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int frontend_progress_value_changed(void)
 {
     const uint32_t current = g_renderer_word_c;
@@ -1738,7 +1738,7 @@ int frontend_progress_value_changed(void)
 }
 /* MenuSliderPointerHandler (FUN_00411870): the track drag plus the two
  * resource-sized arrow hit zones from the retail numeric-range record. */
-// FUNCTION: LEGORR 0x00411870
+// PORT-ONLY: port model of 0x00411870 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void fe_slider_pointer_handle(FrontEnd* fe, FeSubmenu* sub,
                                      const FeInput* in,
                                      const TextureSurface* measure)
@@ -1807,7 +1807,7 @@ void fe_slider_pointer_handle(FrontEnd* fe, FeSubmenu* sub,
 }
 
 /* HasActiveResource (FUN_004119d0) — see message.hpp. */
-// FUNCTION: LEGORR 0x004119d0
+// PORT-ONLY: port model of 0x004119d0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int has_active_resource(const void* record)
 {
     uint32_t handle = 0u;
@@ -1823,14 +1823,7 @@ int has_active_resource(const void* record)
     return 1;
 }
 
-/* KeyContextCheck (FUN_00411f00) returns the character mapped to a DirectInput
- * scan-code index. The retail caller supplies an index in the 256-byte
- * keyboard state domain, and the original performs no range check. */
-// FUNCTION: LEGORR 0x00411F00
-uint32_t input_key_context_check(int key)
-{
-    return s_key_context_table[key];
-}
+/* input_key_context_check (00411f00) is defined in frontend_unit.c. */
 
 /* PercentSplitSurfaceBlit (FUN_00411f10): two ten-pixel-high source lanes
  * are split at (numerator * 100) / denominator. The original packed record
@@ -1838,7 +1831,7 @@ uint32_t input_key_context_check(int key)
  * optional overlays and two independently hoverable handles are layered on
  * top. The handle hit rectangles use the normal image dimensions, matching
  * MenuPointerRectangleHitTest's inclusive edges. */
-// FUNCTION: LEGORR 0x00411F10
+// PORT-ONLY: port model of 0x00411f10 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void menu_percent_split_surface_blit(void* px, int pitch, int w, int h,
                                      const FePercentSplitSurface* surface,
                                      int x, int y, int numerator,
@@ -1886,7 +1879,7 @@ void menu_percent_split_surface_blit(void* px, int pitch, int w, int h,
 /* MenuOverlayListCount (FUN_00412170): head slot + record+0x40, next
  * slot + node+0x18, both native-size (pointer-slot deviation; see the
  * header). */
-// FUNCTION: LEGORR 0x00412170
+// PORT-ONLY: port model of 0x00412170 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int menu_overlay_list_count(const void* menu)
 {
     int count = 0;
@@ -1898,7 +1891,7 @@ int menu_overlay_list_count(const void* menu)
     return count;
 }
 
-// FUNCTION: LEGORR 0x00412190
+// PORT-ONLY: port model of 0x00412190 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) bool menu_audio_tick_interval_reached(void)
 {
@@ -1922,7 +1915,7 @@ bool menu_audio_tick_interval_reached(void)
 /* MenuOverlayFlicPlaybackController (FUN_004121b0): the retail path has one
  * active FLIC player. PlayRandom starts one configured entry on the rand()%400
  * gate; non-random hover FLIC selection needs the renderer's type-6 menu rows. */
-// FUNCTION: LEGORR 0x004121b0
+// PORT-ONLY: port model of 0x004121b0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void fe_overlay_step(FrontEnd* fe)
 {
     if (fe == NULL || !fe->open) {
@@ -1961,7 +1954,7 @@ void fe_overlay_step(FrontEnd* fe)
 
 /* RenderUiFrameCell @ 0x412450 selects either the supplied direct surface
  * or one of eight animation frames in the renderer-owned frame table. */
-// FUNCTION: LEGORR 0x00412450
+// PORT-ONLY: port model of 0x00412450 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void menu_render_ui_frame_cell(void* px, int pitch, int w, int h,
                                int x, int y,
                                const TextureSurface* direct_surface,
@@ -1996,7 +1989,7 @@ void menu_render_ui_frame_cell(void* px, int pitch, int w, int h,
 /* MenuSaveImageConfigRectBlit (FUN_004124f0): load the selected slot's
  * framebuffer thumbnail and draw it in the configured SaveImage rectangle.
  * The port's TextureSurface replaces the corpus's cached DirectDraw handle. */
-// FUNCTION: LEGORR 0x004124f0
+// PORT-ONLY: port model of 0x004124f0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void menu_save_image_config_rect_blit(FrontEnd* fe,
                                              GameContext* game,
                                              int item_index, void* pixels,
@@ -2067,7 +2060,7 @@ void menu_save_image_config_rect_blit(FrontEnd* fe,
  * selection has been updated. In this single-window software frontend the
  * active FeItem is the focused row; its status is the port-side text payload
  * where the native menu's type-6 child records are not available. */
-// FUNCTION: LEGORR 0x00412750
+// PORT-ONLY: port model of 0x00412750 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
                                  int w, int h, void* px, int pitch)
 {
@@ -2155,7 +2148,7 @@ void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
  * save/load panel surface and its text resources when entering these menu
  * records. The frame-driven adapter composes the typed panel layout and the
  * current menu text on the software surface. */
-// FUNCTION: LEGORR 0x004129d0
+// PORT-ONLY: port model of 0x004129d0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void menu_overlay_surface_and_text_setup(
     FrontEnd* fe, const TextureSurface* hi_font, const TextureSurface* lo_font,
     void* pixels, int pitch, int width, int height, int draw_cursor)
@@ -2199,7 +2192,7 @@ void menu_overlay_surface_and_text_setup(
     }
 }
 
-// FUNCTION: LEGORR 0x00412af0
+// PORT-ONLY: port model of 0x00412af0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void menu_surface_blit_scaled(int percent_side)
 {
     const uint32_t handle
@@ -2217,7 +2210,7 @@ void menu_surface_blit_scaled(int percent_side)
                              640.0f, 480.0f };
     crt_surface_blit_record_rect(handle, 0.0f, 0.0f, rect1, NULL);
 }
-// FUNCTION: LEGORR 0x00412c00
+// PORT-ONLY: port model of 0x00412c00 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
                         int w, const TextureSurface* measure, int* x, int* y)
 {
@@ -2254,7 +2247,7 @@ void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
 /* InterfaceResourceHandlesRelease (FUN_00413b50): release the five cached
  * save-thumbnail surfaces when the menu loop exits. The corpus stores them
  * in a fixed global handle band; the frontend keeps those handles per instance. */
-// FUNCTION: LEGORR 0x00413b50
+// PORT-ONLY: port model of 0x00413b50 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void interface_resource_handles_release(FrontEnd* fe)
 {
     if (fe == NULL) {
@@ -2285,7 +2278,7 @@ void interface_resource_handles_release(FrontEnd* fe)
 /* MenuShow (FUN_00413e20): clear every submenu's run flag, then enter the
  * requested submenu. The native call blocks in MenuRunLoop; the portable
  * frontend leaves that selected state open for the frame loop to advance. */
-// FUNCTION: LEGORR 0x00413e20
+// PORT-ONLY: port model of 0x00413e20 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int frontend_open_submenu(FrontEnd* fe, int menu, int submenu_index)
 {
     if (fe == NULL || !fe->built || menu < 0 || menu >= FE_MENU_COUNT ||
@@ -2298,7 +2291,7 @@ int frontend_open_submenu(FrontEnd* fe, int menu, int submenu_index)
     }
     return frontend_open_prepare(fe, menu, submenu_index);
 }
-// FUNCTION: LEGORR 0x00413e60
+// PORT-ONLY: port model of 0x00413e60 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 static int fe_item_kind(const char* tok)
 {
     if (strcasecmp_lite(tok, s_item_token_cycle) == 0)      return FE_ITEM_CYCLE;
@@ -2309,24 +2302,9 @@ static int fe_item_kind(const char* tok)
     return strcasecmp_lite(tok, s_item_token_next) == 0 ? FE_ITEM_NEXT : -1;
 }
 
-/* StrReplace (FUN_00413f00): replace one byte throughout a NUL-terminated
- * string and return the original pointer. */
-/* C linkage for GAME-021 lego_unit.c (the frozen header declares it without). */
-extern "C" char* mission_replace_char(char* text, char from, char to);
-// FUNCTION: LEGORR 0x00413f00
-extern "C" char* mission_replace_char(char* text, char from, char to)
-{
-    char* const original = text;
-    while (*text != '\0') {
-        if (*text == from) {
-            *text = to;
-        }
-        ++text;
-    }
-    return original;
-}
+/* mission_replace_char (00413f00) is defined in frontend_unit.c. */
 
-// FUNCTION: LEGORR 0x00413f30
+// PORT-ONLY: port model of 0x00413f30 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int filename_extension_classify(const void* record)
 {
     const char* suffix = *(const char* const*)record;
@@ -2337,7 +2315,7 @@ int filename_extension_classify(const void* record)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00413f90
+// PORT-ONLY: port model of 0x00413f90 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) void* menu_item_record_alloc(const char* name,
                                                void** list_head,
@@ -2418,7 +2396,7 @@ void* menu_item_record_alloc(const char* name, void** list_head,
  * pointers at byte offset 0x20. This port reads the equivalent eight
  * native-width pointer slots beginning at slot 4, preserving handles on
  * 64-bit hosts. */
-// FUNCTION: LEGORR 0x00414010
+// PORT-ONLY: port model of 0x00414010 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void load_item_strings(uint32_t record_type, const void* record,
                        void* out_resources[8])
 {
@@ -2443,7 +2421,7 @@ void load_item_strings(uint32_t record_type, const void* record,
 }
 
 /* DwordListAllocateAndZero (FUN_00414070) — see heap.hpp. */
-// FUNCTION: LEGORR 0x00414070
+// PORT-ONLY: port model of 0x00414070 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void** dword_list_allocate_and_zero(uint32_t count)
 {
     void** hdr = (void**)engine_heap_alloc(2 * sizeof(void*));
@@ -2471,7 +2449,7 @@ void** dword_list_allocate_and_zero(uint32_t count)
 
 /* Per-menu config constructor (the surrounding frontend_build composes the
  * main/save/pause/options menus; submenu/item parsing is delegated below). */
-// FUNCTION: LEGORR 0x004140c0
+// PORT-ONLY: port model of 0x004140c0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int fe_parse_menu(FrontEnd* fe, int mi, const char* name)
 {
     if (fe == NULL || mi < 0 || mi >= FE_MENU_COUNT || name == NULL) {
@@ -2501,7 +2479,7 @@ int fe_parse_menu(FrontEnd* fe, int mi, const char* name)
     return count > 0;
 }
 
-// FUNCTION: LEGORR 0x00414c90
+// PORT-ONLY: port model of 0x00414c90 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 #if defined(LEGORRR_BACKEND_WINAPI)
 __declspec(naked) int menu_list_find_name(const void* list, const char* name)
 {
@@ -2568,7 +2546,7 @@ int menu_list_find_name(const void* list, const char* name)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00414ce0
+// PORT-ONLY: port model of 0x00414ce0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 int movie_avis_enabled(BlockFile* cfg)
 {
     int dont_play_avis = 0;
@@ -2581,7 +2559,7 @@ int movie_avis_enabled(BlockFile* cfg)
 
 /* GameSpeedSelect (FUN_00414de0): the ledger name is misleading; this is
  * the SFX slider callback and simply forwards its index. */
-// FUNCTION: LEGORR 0x00414de0
+// PORT-ONLY: port model of 0x00414de0 (GAME-017 part 1, now frontend_unit.c); retires to the tail in part 2
 void audio_menu_sfx_volume_set(int index)
 {
     audio_sound_volume_index_set(index);
@@ -4260,6 +4238,7 @@ static const char* fe_level_group_name(const char* name)
 }
 
 /* The cfg submenu record name ("Menu<i+1>"). */
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static const char* fe_menu_name_idx(int idx)
 {
     static char n[16];
@@ -4271,6 +4250,7 @@ static const char* fe_menu_name_idx(int idx)
  * (OptionsLoadOrDefault: speed 1, SFX 8, music 5, brightness 8). With
  * `fe.opts` attached (issue #85) the *effective* store value wins —
  * fe_options_seed overrides these — and menu edits write back. */
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static int fe_option_default(const char* banner, int lo, int hi)
 {
     int d = lo;
@@ -4288,6 +4268,7 @@ static int fe_option_default(const char* banner, int lo, int hi)
  * Next/Trigger put it at field 3, Slider/Cycle/RealSlider at field 5
  * (x1:y1:x2:y2). Image-backed Next/Trigger entries carry normal and
  * selected images plus a tooltip before their target/flag. */
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void fe_parse_item(const char* value, FeItem* it)
 {
     it->kind = FE_ITEM_NEXT;
@@ -4431,6 +4412,7 @@ static void fe_parse_item(const char* value, FeItem* it)
 
 /* MenuImageLoad (0x410fb0): normal and dark images share the optional
  * floating-point origin. Only a four-field tuple ending in 1 enables a key. */
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void fe_parse_menu_image(FeSubmenu* sub, const char* value, int dark)
 {
     char fields[5][FE_PATH_MAX];
@@ -4459,6 +4441,7 @@ static void fe_parse_menu_image(FeSubmenu* sub, const char* value, int dark)
     else sub->image_keyed = keyed;
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
                              int idx)
 {
@@ -4635,6 +4618,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
 
 /* VC5 rand.obj owns the shared target stream in the classic x86 build. Other
  * builds keep the frontend's isolated LCG model. */
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static uint32_t fe_overlay_random(FrontEnd* fe)
 {
 #if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
@@ -4646,6 +4630,7 @@ static uint32_t fe_overlay_random(FrontEnd* fe)
 #endif
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void fe_overlay_play_sfx(FrontEnd* fe, const FeOverlay* o)
 {
     if (fe == NULL || o == NULL || fe->audio == NULL
@@ -4668,6 +4653,7 @@ static void fe_overlay_play_sfx(FrontEnd* fe, const FeOverlay* o)
     audio_play_named(fe->audio, resource);
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void fe_overlay_start_random(FrontEnd* fe, const FeSubmenu* sub)
 {
     if (sub->overlay_count <= 0 || fe_overlay_random(fe) % 400u != 0) {
@@ -4770,6 +4756,7 @@ static void fe_sav_menu_list_walk(FeSavMenuListBuild* build,
 }
 
 /* Prepare the portable modal state after MenuShow has reset run flags. */
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static int frontend_open_prepare(FrontEnd* fe, int menu, int submenu_index)
 {
     fe_overlay_close_all(fe);
@@ -4831,6 +4818,7 @@ static int frontend_open_prepare(FrontEnd* fe, int menu, int submenu_index)
  * across frontend_credits_lines_load/render_credits and frameloop_credits
  * because this module does not own the platform window or render surface. */
 #if !(defined(_MSC_VER) && _MSC_VER < 1200)
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void scrolling_text_display(void* text, void* font, void* background)
 {
     /* The retail arguments are renderer handles. In the portable boot path,
@@ -4844,12 +4832,14 @@ static void scrolling_text_display(void* text, void* font, void* background)
 }
 #endif
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void fe_menu_record_put_word(void* record, int field, uint32_t value)
 {
     __builtin_memcpy((char*)record + (size_t)field * sizeof(void*), &value,
                      sizeof(value));
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static uint32_t fe_legacy_dword(const void* record, size_t field)
 {
     uint32_t value = 0;
@@ -4860,6 +4850,7 @@ static uint32_t fe_legacy_dword(const void* record, size_t field)
     return value;
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void* fe_legacy_pointer(const void* record, size_t field)
 {
     void* value = NULL;
@@ -4870,6 +4861,7 @@ static void* fe_legacy_pointer(const void* record, size_t field)
     return value;
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static int fe_legacy_hit(uint32_t mouse_x, uint32_t mouse_y,
                          int32_t x, int32_t y, int32_t width, int32_t height)
 {
@@ -4943,6 +4935,7 @@ static void* sav_current_slot_record_window(void)
     return NULL;
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void record_window_put(void* rec, int field, const void* src)
 {
     if (rec == NULL || src == NULL) {
@@ -4952,6 +4945,7 @@ static void record_window_put(void* rec, int field, const void* src)
                      sizeof(uint32_t));
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void record_window_put_ptr(void* rec, int field, const void* value)
 {
     if (rec != NULL) {
@@ -4960,16 +4954,19 @@ static void record_window_put_ptr(void* rec, int field, const void* value)
     }
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void record_window_put_u32(void* rec, int field, uint32_t value)
 {
     record_window_put(rec, field, &value);
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void menu_texture_surface_release(TextureSurface* surface)
 {
     texture_release(surface);
 }
 
+// PORT-ONLY: helper of the GAME-017 part-1 port models; retires to the tail in part 2
 static void menu_resource_entry_release(MenuResourceEntry* entry)
 {
     if ((entry->flags & 1u) != 0) {
@@ -4994,11 +4991,10 @@ static void menu_resource_entry_release(MenuResourceEntry* entry)
 
 char* g_front_end_avi1;
 char* g_front_end_avi2;
-void* g_front_main_menu_set;
+/* g_front_main_menu_set (00556fc4), g_front_save_menu_result (00557504)
+ * and g_front_save_menu_open (00557508) are defined in frontend_unit.c. */
 void* g_front_save_tree;
 uint8_t g_front_save_slot_buffer[0xec];
-int g_front_save_menu_result;
-int g_front_save_menu_open;
 
 /* Front_LevelSet_IndexOf (00416e20) has C linkage under the name
  * front_level_set_index_of; savegame.cpp reaches it through its frozen
@@ -5058,4 +5054,15 @@ extern "C" int frontend_enabled_original(void)
 extern "C" int movie_avis_enabled_original(void)
 {
     return movie_avis_enabled(legoGlobs_config);
+}
+
+/* Image_SaveBMP (0047e440) has no port entry. frontend_unit.c's
+ * Front_RunScreenMenu saves the level's screenshot as the slot image
+ * through it; the port keeps its own save thumbnails, so nothing. */
+// PORT-ONLY: original-ABI adapter for GAME-017 frontend_unit.c (no port equivalent of 0x0047e440)
+extern "C" int front_image_save_bmp_adapter(void* image, const char* fname)
+{
+    (void)image;
+    (void)fname;
+    return 0;
 }

@@ -148,6 +148,11 @@ int incident_message_config_lookup(const char* name, int* out_id)
  * 0x14-byte records. Keep that stride in the portable storage. */
 uint32_t incident_message_text_catalog_get(int id)
 {
+    /* The window is MSG_DAT_WINDOW records; message_test reads id
+     * MESSAGE_MAX_ID (one past the end), which read the next global. */
+    if (id < 0 || id >= MSG_DAT_WINDOW) {
+        return 0u;
+    }
     return s_msg_catalog[id].resource;
 }
 

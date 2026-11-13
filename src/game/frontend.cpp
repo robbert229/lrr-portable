@@ -180,15 +180,15 @@ int s_fe_flow[5];
 /* The wipe quad lands as own storage: the corpus addresses each word as
  * an individual dword (objdump-verified 0x5574ec/f0/f4/f8) and Reccmp
  * only resolves whole-object operands. */
-// GLOBAL: LEGORR 0x005574ec
+/* 0x005574ec: frontend_unit.c (GAME-017) owns the address. */
 uint32_t s_menu_wipe_arm;
-// GLOBAL: LEGORR 0x005574f0
+/* 0x005574f0: frontend_unit.c (GAME-017) owns the address. */
 uint32_t s_menu_wipe;
-// GLOBAL: LEGORR 0x005574f4
+/* 0x005574f4: frontend_unit.c (GAME-017) owns the address. */
 uint32_t s_menu_wipe_stop;
-// GLOBAL: LEGORR 0x005574f8
+/* 0x005574f8: frontend_unit.c (GAME-017) owns the address. */
 float s_menu_wipe_clock;
-// GLOBAL: LEGORR 0x005574dc
+/* 0x005574dc: frontend_unit.c (GAME-017) owns the address. */
 float s_menu_plane_pan[2];
 int s_main_menu_text_item_pending;
 /* The original reward-save entry point has no explicit front-end argument.
