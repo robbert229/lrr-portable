@@ -9404,6 +9404,9 @@ extern "C" void stats_initialise_adapter(struct BlockRec* config, const char* ga
     (void)gameName;
 }
 
+/* dependencies.c serves this name in the matching build
+ * (dependencies_link_names.h, finding 612). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Dependencies_Initialise 0040ab70; the port's entry takes the level block)
 extern "C" void dependencies_initialise_adapter(struct BlockRec* config,
                                                 const char* gameName)
@@ -9411,6 +9414,7 @@ extern "C" void dependencies_initialise_adapter(struct BlockRec* config,
     (void)config;
     (void)gameName;
 }
+#endif
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (the empty function at 00484c90, called with two arguments)
 extern "C" void lego_noop_load_adapter(void* root, const char* name)

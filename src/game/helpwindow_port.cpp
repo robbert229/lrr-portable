@@ -950,6 +950,9 @@ extern "C" void help_window_initialise_adapter(struct BlockRec* config,
  * flag adapters forward to level.hpp's public wrappers, which add the
  * dependency grid's override and bounds checks, as the port's own model
  * of 00418830 does. */
+/* dependencies.c serves these five names in the matching build
+ * (dependencies_link_names.h, finding 612). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 // PORT-ONLY: original-ABI adapter for helpwindow.c (dependency_grid_matches_collect 0040b000; C++ linkage)
 extern "C" void help_window_dependencies_matches_adapter(int type, int index,
                                                          int level,
@@ -989,3 +992,4 @@ extern "C" unsigned int help_window_dependencies_flag100_adapter(int type,
 {
     return cell_flag100_is_set(type, index, level);
 }
+#endif

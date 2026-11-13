@@ -3643,6 +3643,10 @@ void lego_path_remove(const Point2I* blockPos)
 }
 #endif
 
+/* dependencies.c serves this name in the matching build: it is
+ * Dependencies.c's 0040af90, with the same contract
+ * (dependencies_link_names.h, finding 612). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void dependencies_get_requirements(int objType, int objIndex, int level,
                                    InterfaceDependency** list,
                                    unsigned int* count)
@@ -3655,6 +3659,7 @@ void dependencies_get_requirements(int objType, int objIndex, int level,
     *list = NULL;
     *count = 0;
 }
+#endif
 
 int lego_block_has_lava_neighbour(int x, int y)
 {

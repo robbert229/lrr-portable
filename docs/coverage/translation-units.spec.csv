@@ -9,7 +9,7 @@ start,unit_id,name,kind,name_basis,note
 00408c80,GAME-052,Construction.c,game,inferred,construction zones (finding 603): the zone list .bss 0x4b8a20-0x4b8a54 (nextHandle 4b8a20 list head 4b8a24 building-base names 4b8a3c count 4b8a50) and .rdata 49e090-49e09c (8.8f 0.5f 1.0f 1.5707964f); 27 functions plus the static callback 409290; 409cd0 is called only by 409b30 and ends the object: GAME-008 at 409d40 loads its own 1.0f at 49e0a4 and owns .bss 0x4b8a54
 00409d40,GAME-008,,game,none,small unit with .bss 0x4b8a54 only; boundary uncertain
 0040a0c0,GAME-009,,game,none,numbered digit bitmaps ('%i.bmp') and per-entity screen-effect quads; .bss 0x4b8a58-0x4b8be0
-0040ab70,GAME-010,Dependencies.c,game,config-key,'Dependencies' config section; .bss 0x4b8bc8-0x4c71fc
+0040ab10,GAME-010,Dependencies.c,game,config-key,'Dependencies' config section (finding 612): Dependencies_SetEnabled 40ab10 and Dependencies_Reset_ClearAllLevelFlags_10c 40ab30 touch only the table; .bss 0x4b8bc8-0x4c717c (20 x 15 objects of 0xc4 bytes then the disabled word 4c7178)
 0040b310,GAME-011,,game,none,tile variant textures ('%s%0.1x%0.1x.bmp' and 'LWO:NOTEXTURE') and projected quad helpers
 0040bdc0,GAME-012,,game,none,rock-fall styles and misc effect objects ('RockFallStyles' 'UpgradeEffect' 'LavaErosionSmoke*'); .bss 0x4c71e0-0x4c7e5c
 0040cdc0,GAME-013,,game,none,terrain cell object records and fence sparks ('FenceSpark'); .bss 0x4c7df8-0x4c7e84
