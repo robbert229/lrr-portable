@@ -213,6 +213,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/dependencies_imports.h"
 #include "game/pointer.h"
 #include "game/pointer_imports.h"
+#include "game/scrollinfo.h"
+#include "game/scrollinfo_imports.h"
 
 int main(void)
 {

@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-039 GAME-039: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-039.csv. */
+/* GAME-039 ScrollInfo.c's port tail (finding 611): the port's model of
+ * the information panel's scroll bar, unannotated (ADR 0006 decision 4).
+ * The original-shape unit is scrollinfo.c.
+ *
+ * In the matching build (MSVC 5.0) scrollinfo.c defines the port's names of
+ * the unit's functions itself (scrollinfo_link_names.h), so their
+ * definitions here are compiled out there (LRR_SCROLLINFO_PORT_NAMES). The
+ * port's track-pointer word stays in every build: ui_list.cpp and
+ * pointer.cpp read it. Relocated from the verbatim info_track_overlay.cpp
+ * (body hashes: docs/coverage/relocations/GAME-039.csv); SelectPlace_Create
+ * (00463f00) moved to placement_footprint.cpp (GAME-040). */
 #include <math.h>
 #include <float.h>
 #include <ctype.h>
@@ -62,15 +70,24 @@
 #include "scene_pool.hpp"
 #include "model.hpp"
 #include "view_for_info_track_overlay.hpp"
+#include "info.h"
 
-// GLOBAL: LEGORR 0x005013c0
+/* Port state of 0x005013c0 */
 int s_ui_track_pointer_outer_gate;
 
+/* The port's definitions of the names scrollinfo.c takes in the matching
+ * build (scrollinfo_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_SCROLLINFO_PORT_NAMES 0
+#else
+#define LRR_SCROLLINFO_PORT_NAMES 1
+#endif
+
+#if LRR_SCROLLINFO_PORT_NAMES /* scrollinfo.c serves these names in the matching build */
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static uint32_t float_bits(float f);
-static void scene_quad_grid_vertices_build(uint32_t quad, float vertices[4][9]);
 
-// FUNCTION: LEGORR 0x00463730
+/* Port model of 0x00463730 */
 void indexed_float_pair_set(int index, uint32_t x, uint32_t y)
 {
     if (index < 0 || index >= DAT_WINDOW_COUNT) {
@@ -85,7 +102,7 @@ void indexed_float_pair_set(int index, uint32_t x, uint32_t y)
  * the surface-load seam (FUN_0047d9d0 with the handle and zero positions)
  * answers NULL (the panel-load precedent), so the dim halves stay zero
  * (deviation). */
-// FUNCTION: LEGORR 0x463770
+/* Port model of 0x00463770 */
 void scroll_rect_resource_record_create(int view, int mode,
                                         const float* quad, int tex_a,
                                         int tex_b)
@@ -122,25 +139,12 @@ void scroll_rect_resource_record_create(int view, int mode,
     view_blit_window_set(view, handle, rect_a, rect_b, region);
 }
 
-namespace unported_ledger_stubs {
-// SimTrackCursorHitTest
-// FUNCTION: LEGORR 0x004638a0
-int ledger_stub_004638a0_SimTrackCursorHitTest(
-    UiTrackCursorState* state, int x, int y, int mode, int allow_mode_change,
-    const UiTrackCursorHitHooks* hooks, unsigned int* slot_index_out)
-{
-    return ui_sim_track_cursor_hit_test(state, x, y, mode,
-                                        allow_mode_change, hooks,
-                                        slot_index_out);
-}
-} // namespace unported_ledger_stubs
-
 /* ViewBlitRectPositionsApply (FUN_00463d20) — see crt.hpp. Rect records:
  * +0x00/+0x04 position, +0x10/+0x14 the size pair (bit-for-bit blit
  * handles), +0x18 the flag word. The corpus strides its own block and
  * dereferences every window blindly — the guards here are the documented
  * deviation. */
-// FUNCTION: LEGORR 0x00463d20
+/* Port model of 0x00463d20 */
 void view_blit_rect_positions_apply(int view)
 {
     if (view < 0 || view >= DAT_WINDOW_COUNT) {
@@ -186,7 +190,7 @@ void view_blit_rect_positions_apply(int view)
 /* FloatRoundToNearestInt (FUN_00463e40): the caller uses the returned
  * integer as a row index. The corpus compares the fractional part against
  * 0.5, choosing floor below it and ceil at/above it (ties toward +infinity). */
-// FUNCTION: LEGORR 0x00463e40
+/* Port model of 0x00463e40 */
 int float_round_to_nearest_int(float value)
 {
     const double value_double = (double)value;
@@ -199,7 +203,7 @@ int float_round_to_nearest_int(float value)
         crt_round_to_integral_with_math_error_handling_variant(value_double));
 }
 
-// FUNCTION: LEGORR 0x00463ea0
+/* Port model of 0x00463ea0 */
 void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
                                    uint32_t* out_y)
 {
@@ -214,7 +218,7 @@ void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
     __builtin_memcpy(out_x, rec + 0x1c, sizeof(*out_x));
     __builtin_memcpy(out_y, rec + 0x20, sizeof(*out_y));
 }
-// FUNCTION: LEGORR 0x00463ed0
+/* Port model of 0x00463ed0 */
 void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y)
 {
     if (index < 0 || index >= DAT_WINDOW_COUNT) {
@@ -230,85 +234,6 @@ void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y)
     __builtin_memcpy(rec + 0x24, &one, sizeof(one));
 }
 
-// SceneQuadGridEmit
-// FUNCTION: LEGORR 0x00463f00
-SceneQuadGridRecord* scene_quad_grid_emit(
-    void* scene, uint32_t parameter, const SceneQuadGridEmitHooks* hooks)
-{
-    static const uint32_t base_indices[6] = { 0u, 1u, 3u, 1u, 2u, 3u };
-    uint32_t indices[30];
-    uint16_t index_words[60];
-    SceneQuadGridRecord* record;
-    uint32_t face;
-    if (hooks == NULL || hooks->mesh_create == NULL ||
-        hooks->mesh_release == NULL ||
-        hooks->face_vertices_emit == NULL ||
-        hooks->face_texture_bind_by_mode == NULL ||
-        hooks->scene_render_lock_toggle == NULL)
-        return NULL;
-    record = (SceneQuadGridRecord*)engine_heap_alloc(
-        (long)sizeof(*record));
-    if (record == NULL) return NULL;
-    record->mesh = NULL;
-    record->parameter = parameter;
-    record->mesh = hooks->mesh_create(hooks->context, scene, 3);
-    if (record->mesh == NULL) {
-        engine_heap_free(record);
-        return NULL;
-    }
-    for (face = 0; face < 5u; ++face) {
-        uint32_t i;
-        for (i = 0; i < 6u; ++i)
-            indices[face * 6u + i] = base_indices[i] + face * 4u;
-    }
-    for (face = 0; face < 10u; ++face) {
-        uint32_t quad;
-        uint32_t index;
-        int group;
-        /* FUN_00463f00 appends a 20-vertex record for each face group before
-         * filling that group's five quads. The retail index pointer is a
-         * dword table; the in-memory pool adapter consumes the low word of
-         * each dword through its two-word source stride. */
-        for (index = 0u; index < 30u; ++index) {
-            index_words[index * 2u] = (uint16_t)indices[index];
-            index_words[index * 2u + 1u] = 0u;
-        }
-        if (hooks->mesh_record_allocate_or_append != NULL) {
-            group = hooks->mesh_record_allocate_or_append(
-                hooks->context, record->mesh, 20u, 10u, 3u, indices);
-        }
-        else {
-            group = mesh_record_allocate_or_append(
-                record->mesh, 20u, 10u, 3u, index_words);
-        }
-        /* A fresh mesh must append in face order; every later write uses
-         * that group index. Reject stale or incomplete adapter storage. */
-        if (group != (int)face) {
-            scene_quad_grid_release(record, hooks);
-            return NULL;
-        }
-        for (quad = 0; quad < 5u; ++quad) {
-            float vertices[4][9];
-            scene_quad_grid_vertices_build(quad, vertices);
-            if (!hooks->face_vertices_emit(hooks->context, record->mesh,
-                                           face, quad, vertices)) {
-                scene_quad_grid_release(record, hooks);
-                return NULL;
-            }
-        }
-        if (!hooks->face_texture_bind_by_mode(hooks->context, record->mesh,
-                                              face, 3u)) {
-            scene_quad_grid_release(record, hooks);
-            return NULL;
-        }
-    }
-    if (!hooks->scene_render_lock_toggle(hooks->context, record->mesh, 1)) {
-        scene_quad_grid_release(record, hooks);
-        return NULL;
-    }
-    return record;
-}
-
 static uint32_t float_bits(float f)
 {
     uint32_t b = 0u;
@@ -316,45 +241,12 @@ static uint32_t float_bits(float f)
     return b;
 }
 
-static void scene_quad_grid_vertices_build(uint32_t quad,
-                                           float vertices[4][9])
-{
-    static const float position_components[4][2] = {
-        { 0.0f, 0.0f }, { 1.0f, 0.0f },
-        { 1.0f, 1.0f }, { 0.0f, 1.0f }
-    };
-    static const float face_normals[5][3] = {
-        { 0.0f, 0.0f, -1.0f },
-        { 0.0f, 1.0f, 0.0f },
-        { 1.0f, 0.0f, 0.0f },
-        { 0.0f, -1.0f, 0.0f },
-        { -1.0f, 0.0f, 0.0f }
-    };
-    uint32_t vertex;
-    uint32_t color_word = 0xffffffffu;
-
-    /* The output record is three indeterminate words, normal xyz, the two
-     * unit-square components in y,x order, then the opaque word. Clear only
-     * the three untouched words on the portable path. */
-    memset(vertices, 0, 4u * 9u * sizeof(float));
-    for (vertex = 0u; vertex < 4u; ++vertex) {
-        vertices[vertex][3] = face_normals[quad][0];
-        vertices[vertex][4] = face_normals[quad][1];
-        vertices[vertex][5] = face_normals[quad][2];
-        vertices[vertex][6] = position_components[vertex][0];
-        vertices[vertex][7] = position_components[vertex][1];
-        memcpy(&vertices[vertex][8], &color_word, sizeof(color_word));
-    }
-}
-
 /* --- InfoPanel entry points Panel.c calls (game/info.h) --------------------
  * FUN_004636b0 creates the information panel's scroll widget and
- * FUN_004638a0 tests the mouse against it. The port has no entries at
- * these addresses; these unannotated adapters (ADR 0005 step 6) serve
- * Panel.c (GAME-032, finding 554) until this unit is converted: the widget
- * is not built, and the mouse is never over it. */
-#include "info.h"
-
+ * FUN_004638a0 tests the mouse against it. Natively these adapters serve
+ * Panel.c (GAME-032, finding 554): the widget is not built, and the mouse
+ * is never over it. In the matching build scrollinfo.c serves both
+ * names. */
 // PORT-ONLY: adapter or forwarder for the port contract
 void info_panel_initialise(const char* name, int a, int b, int panel, int c)
 {
@@ -376,12 +268,4 @@ int info_panel_check_collision(int* released, int mouseX, int mouseY,
     *released = 0;
     return 0;
 }
-
-/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: SelectPlace_Create (00463f00) takes the root and a size; the port's entry takes a hook table. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (scene_quad_grid_emit)
-extern "C" void* select_place_create_adapter(void* root, float size)
-{
-    uint32_t bits;
-    memcpy(&bits, &size, sizeof(bits));
-    return scene_quad_grid_emit(root, bits, NULL);
-}
+#endif /* LRR_SCROLLINFO_PORT_NAMES */

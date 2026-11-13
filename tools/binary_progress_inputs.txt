@@ -235,7 +235,6 @@ src/game/helpwindow_port.cpp
 src/game/info.h
 src/game/info_api.h
 src/game/info_port.cpp
-src/game/info_track_overlay.cpp
 src/game/info_unit.c
 src/game/info_unit.h
 src/game/interface.h
@@ -364,6 +363,11 @@ src/game/screen_pick.cpp
 src/game/screen_pick.hpp
 src/game/screen_pick_for_terrain_map.hpp
 src/game/screen_pick_shared.hpp
+src/game/scrollinfo.c
+src/game/scrollinfo.h
+src/game/scrollinfo_imports.h
+src/game/scrollinfo_link_names.h
+src/game/scrollinfo_port.cpp
 src/game/select.cpp
 src/game/select.hpp
 src/game/select_from_legoobject.hpp

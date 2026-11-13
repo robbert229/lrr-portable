@@ -35,7 +35,7 @@ game_sources = [
   'grid_cell_records.cpp',
   'sfx_port.cpp',
   'placement_footprint.cpp',
-  'info_track_overlay.cpp',
+  'scrollinfo_port.cpp',
   'terrain_overlay_quads.cpp',
   'map_view_port.cpp',
   'level_id_remap.cpp',
@@ -123,6 +123,7 @@ game_c_sources = [
   'radarmap.c',
   'collision.c',
   'construction.c',
+  'scrollinfo.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

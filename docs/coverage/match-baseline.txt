@@ -1,4 +1,4 @@
-# input_sha256: ff6017261fc84a39613c85cd818ebb325b32f0d73a7098eeb5127edcbf7031a6
+# input_sha256: 6941e7c46b69be08ba50d8cb6f8f67f90519f721b2252a5885bf49384c91f2d5
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2338 mapped functions
+[game-only] 2342 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -1390,12 +1390,12 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 95.97 panel_texture_slots_allocate
-0x0045adb0 82.26 panel_cursor_interaction_update
+0x0045adb0 82.48 panel_cursor_interaction_update
 0x0045b310 57.28 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
 0x0045b620 100.00 ui_list_priority_button_action_dispatch
-0x0045b740 96.88 ui_scroll_info_panel_initialize
+0x0045b740 100.00 ui_scroll_info_panel_initialize
 0x0045b850 100.00 ui_overlay_create_configured_element
 0x0045b8a0 100.00 point_distance_within_radius
 0x0045b900 100.00 integer_pair_divide_to_float_pair
@@ -1510,14 +1510,18 @@
 0x004634b0 89.47 graphics_overlay_visibility_set
 0x004634f0 16.95 indexed_surface_entry_hide_and_record
 0x00463540 47.62 indexed_surface_entries_restore
-0x00463590 33.99 terrain_cell_surface_normal_get
-0x00463730 39.02 indexed_float_pair_set
-0x00463770 29.41 scroll_rect_resource_record_create
-0x004638a0 6.06 ledger_stub_004638a0_SimTrackCursorHitTest
-0x00463d20 9.43 view_blit_rect_positions_apply
+0x00463590 36.60 terrain_cell_surface_normal_get
+0x004636b0 97.92 info_panel_initialise
+0x00463730 100.00 indexed_float_pair_set
+0x00463770 96.15 scroll_rect_resource_record_create
+0x00463810 97.73 scroll_info_add_create_structure
+0x004638a0 94.76 info_panel_check_collision
+0x00463c00 94.85 scroll_info_mouse_over_structure
+0x00463c90 100.00 scroll_info_mouse_over_create_structure
+0x00463d20 83.33 view_blit_rect_positions_apply
 0x00463e40 100.00 float_round_to_nearest_int
-0x00463ea0 19.51 indexed_text_metrics_pair_get
-0x00463ed0 29.63 indexed_text_metrics_pair_set
+0x00463ea0 100.00 indexed_text_metrics_pair_get
+0x00463ed0 100.00 indexed_text_metrics_pair_set
 0x00463f00 15.83 scene_quad_grid_emit
 0x00464110 10.85 rotated_pairs_scratch_fill
 0x00464720 9.76 surface_visibility_set
@@ -2346,7 +2350,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2583 mapped functions
+[full] 2587 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -3730,12 +3734,12 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 95.97 panel_texture_slots_allocate
-0x0045adb0 82.26 panel_cursor_interaction_update
+0x0045adb0 82.48 panel_cursor_interaction_update
 0x0045b310 57.28 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
 0x0045b620 100.00 ui_list_priority_button_action_dispatch
-0x0045b740 96.88 ui_scroll_info_panel_initialize
+0x0045b740 100.00 ui_scroll_info_panel_initialize
 0x0045b850 100.00 ui_overlay_create_configured_element
 0x0045b8a0 100.00 point_distance_within_radius
 0x0045b900 100.00 integer_pair_divide_to_float_pair
@@ -3850,14 +3854,18 @@
 0x004634b0 89.47 graphics_overlay_visibility_set
 0x004634f0 16.95 indexed_surface_entry_hide_and_record
 0x00463540 47.62 indexed_surface_entries_restore
-0x00463590 33.99 terrain_cell_surface_normal_get
-0x00463730 39.02 indexed_float_pair_set
-0x00463770 29.41 scroll_rect_resource_record_create
-0x004638a0 6.06 ledger_stub_004638a0_SimTrackCursorHitTest
-0x00463d20 9.43 view_blit_rect_positions_apply
+0x00463590 36.60 terrain_cell_surface_normal_get
+0x004636b0 97.92 info_panel_initialise
+0x00463730 100.00 indexed_float_pair_set
+0x00463770 96.15 scroll_rect_resource_record_create
+0x00463810 97.73 scroll_info_add_create_structure
+0x004638a0 94.76 info_panel_check_collision
+0x00463c00 94.85 scroll_info_mouse_over_structure
+0x00463c90 100.00 scroll_info_mouse_over_create_structure
+0x00463d20 83.33 view_blit_rect_positions_apply
 0x00463e40 100.00 float_round_to_nearest_int
-0x00463ea0 19.51 indexed_text_metrics_pair_get
-0x00463ed0 29.63 indexed_text_metrics_pair_set
+0x00463ea0 100.00 indexed_text_metrics_pair_get
+0x00463ed0 100.00 indexed_text_metrics_pair_set
 0x00463f00 15.83 scene_quad_grid_emit
 0x00464110 10.85 rotated_pairs_scratch_fill
 0x00464720 9.76 surface_visibility_set

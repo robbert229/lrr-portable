@@ -354,7 +354,6 @@ definition flic_stream_chunk_header_read 9ad6644d998bb11f
 definition flic_stream_chunk_load 03003570cdf03452
 definition flic_stream_frame_advance 5cd17c67c38d50cd
 definition flic_window_find 0c4d9606c850c5f3
-definition float_bits fb07d17f57237a5b
 definition float_pair_to_integer_pair a3cd1265dde79c37
 definition float_to_long 5971711ba589f3ca
 definition font_atlas_record_glyph_get 88e1e695c961536e
