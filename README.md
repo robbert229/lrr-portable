@@ -12,20 +12,25 @@ in a playable state before the end of November 2026.
      with `python3 tools/readme_status.py` (no build needed); recount the
      source ledger with `python3 tools/coverage_ledger.py`. -->
 
-Verified **2026-11-12** on `main` at `18fd3881`, with MSVC 5.0 and Reccmp:
+Verified **2026-11-12** on `main` at `18cc9483`, with MSVC 5.0 and Reccmp:
 
 | Measure | Value |
 | --- | ---: |
-| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **148,281 / 642,549 bytes (23.08%)** |
-| Accuracy: mean Reccmp score of mapped functions, game-only / full | 75.46% / 77.67% |
-| Mapped functions, game-only / full | 2,294 / 2,530 |
-| Exact (100%) functions, game-only / full | 1,156 / 1,356 |
-| Functions byte-identical at their original address | 8 (384 bytes) |
+| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **183,830 / 642,549 bytes (28.61%)** |
+| Accuracy: mean Reccmp score of mapped functions, game-only / full | 82.73% / 84.26% |
+| Mapped functions, game-only / full | 2,326 / 2,564 |
+| Exact (100%) functions, game-only / full | 1,380 / 1,582 |
+| Functions byte-identical at their original address | 11 (462 bytes) |
 
 The old headline, Reccmp's game-only "progress" (47.77% on 2026-11-04), is no
 longer tracked; exact-function code bytes replaced it, and accuracy is the same
 Reccmp measure as before (then 48.27%).
 [Report details and reproduction](docs/coverage/reccmp.md).
+
+`LegoObject.c` and `Lego.c` are now fully
+converted to their original shape. The leaner `/OPT:REF` link of the matching
+build now ends below the original's image end
+([finding 602](docs/findings/602-port-only-bss-rightsize.md)).
 
 The [source ledger](docs/coverage/README.md) records **2,283 / 2,564 functions
 (89.0%) with source citations**, plus 279 runtime/import functions and 2 named
