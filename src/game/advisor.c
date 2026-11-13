@@ -592,9 +592,8 @@ int display_height_get(void)
     return s_display_h;
 }
 
-/* The two Font.h inlines keep the port's text contract: its renderer
- * (formatted_text_format_draw, G98-008) draws into a software target
- * rather than taking a position and a va_list. */
+/* Font_GetStringWidth, a Font.h inline: Font_VGetStringInfo (0047a150,
+ * font.c in the matching build; the port's adapter natively). */
 // FUNCTION: LEGORR 0x00401c50
 uint32_t formatted_text_printf_width(const struct TextureSurface* font,
                                      const char* text, ...)
@@ -602,24 +601,23 @@ uint32_t formatted_text_printf_width(const struct TextureSurface* font,
     uint32_t width;
     va_list args;
 
-    width = 0;
     va_start(args, text);
-    formatted_text_format_draw(font, &width, 0, 0, 0, 0, 0, 0, 0, text, args);
+    font_v_get_string_info(font, &width, NULL, text, args);
     va_end(args);
     return width;
 }
 
+/* Font_GetStringInfo, the other Font.h inline, over Font_VGetStringInfo.
+ * ToolTip.c (tooltip.c) calls it. */
 // FUNCTION: LEGORR 0x00401c80
 void formatted_text_printf(const struct TextureSurface* font,
-                           uint32_t* width_out, int* line_count,
-                           void* px, int pitch, int w, int h,
-                           int x, int y, const char* format, ...)
+                           uint32_t* width, uint32_t* lineCount,
+                           const char* msg, ...)
 {
     va_list args;
 
-    va_start(args, format);
-    formatted_text_format_draw(font, width_out, line_count, px, pitch, w, h,
-                               x, y, format, args);
+    va_start(args, msg);
+    font_v_get_string_info(font, width, lineCount, msg, args);
     va_end(args);
 }
 

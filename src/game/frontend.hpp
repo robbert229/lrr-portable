@@ -392,9 +392,8 @@ extern "C" void formatted_text_format_draw(const TextureSurface* font,
                                 int x, int y, const char* format,
                                 va_list args);
 extern "C" void formatted_text_printf(const TextureSurface* font,
-                           uint32_t* width_out, int* line_count,
-                           void* px, int pitch, int w, int h,
-                           int x, int y, const char* format, ...);
+                           uint32_t* width, uint32_t* lineCount,
+                           const char* msg, ...); /* FUN_00401c80 */
 void reward_text_draw(const TextureSurface* font, void* px, int pitch,
                       int w, int h, int x, int y, const char* format, ...);
 /* FormattedTextEscapeDecodeAndEmit (FUN_00477590, gods98/utils.c): format

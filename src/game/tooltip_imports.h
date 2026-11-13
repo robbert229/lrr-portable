@@ -15,13 +15,11 @@
 extern "C" {
 #endif
 
-/* Font_GetStringInfo (the Font.h inline at 00401c80) in the original ABI.
- * The port's entry at that address, advisor.c's formatted_text_printf,
- * takes a render target, so this is the PORT-ONLY adapter at the end of
- * gods98/bitmap_font.cpp, over font_v_get_string_info. */
-void font_get_string_info(const struct TextureSurface* font,
-                          unsigned int* width, unsigned int* lineCount,
-                          const char* msg, ...);
+/* Font_GetStringInfo (the Font.h inline at 00401c80), by the port's name:
+ * advisor.c's formatted_text_printf, over Font_VGetStringInfo. */
+void formatted_text_printf(const struct TextureSurface* font,
+                           uint32_t* width, uint32_t* lineCount,
+                           const char* msg, ...);
 
 /* SFX.c's SFX_Random_SetAndPlayGlobalSample (00464ef0), by the port's name,
  * which sfx.c's definition takes in the matching build. */

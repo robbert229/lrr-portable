@@ -24,6 +24,13 @@ void formatted_text_format_draw(const struct TextureSurface* font,
                                 int x, int y, const char* format,
                                 va_list args);
 
+/* Font_VGetStringInfo (FUN_0047a150) in the original ABI: font.c in the
+ * matching build, the PORT-ONLY adapter in bitmap_font_port.cpp natively
+ * (image_adapters.h declares it too). */
+void font_v_get_string_info(const struct TextureSurface* font,
+                            uint32_t* width, uint32_t* lineCount,
+                            const char* msg, va_list args);
+
 #ifdef __cplusplus
 }
 #endif

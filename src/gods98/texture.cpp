@@ -645,3 +645,53 @@ void image_set_pen_zero_trans(Image* image)
     if (image == NULL) return;
     texture_source_color_key_set((TextureSurface*)image->surface, 0u, 0u);
 }
+
+/* Image_GetPen255 (FUN_0047def0), Image_GetPixelMask (FUN_0047df50),
+ * Image_LockSurface (FUN_0047de60) and Image_UnlockSurface (FUN_0047ded0) in
+ * the original ABI, for Font.c (G98-008, finding 605), which reads each
+ * glyph cell's top row as four bytes, most significant first. The software
+ * surface is 32-bit 0xAARRGGBB, so the pen is the second colour key with
+ * its bytes in that order, and the mask keeps the colour bytes. Declared in
+ * gods98/font_imports.h. */
+static unsigned int image_adapter_byte_order(uint32_t value)
+{
+    return (unsigned int)(((value & 0xffu) << 24) | ((value & 0xff00u) << 8) |
+                          ((value >> 8) & 0xff00u) | (value >> 24));
+}
+
+// PORT-ONLY: adapter or forwarder for the port contract
+extern "C" unsigned int image_get_pen255(Image* image)
+{
+    const TextureSurface* surface;
+    if (image == NULL || image->surface == NULL) return 0u;
+    surface = (const TextureSurface*)image->surface;
+    if (surface->key_count >= 2) return image_adapter_byte_order(surface->keys[1]);
+    return surface->pixels != NULL ? image_adapter_byte_order(surface->pixels[0])
+                                   : 0u;
+}
+
+// PORT-ONLY: adapter or forwarder for the port contract
+extern "C" unsigned int image_get_pixel_mask(Image* image)
+{
+    (void)image;
+    return image_adapter_byte_order(0x00ffffffu);
+}
+
+// PORT-ONLY: adapter or forwarder for the port contract
+extern "C" void* image_lock_surface(Image* image, unsigned int* pitch,
+                                    unsigned int* bpp)
+{
+    const TextureSurface* surface;
+    if (image == NULL || image->surface == NULL) return NULL;
+    surface = (const TextureSurface*)image->surface;
+    if (surface->pixels == NULL) return NULL;
+    *pitch = (unsigned int)surface->width * 4u;
+    *bpp = 32u;
+    return surface->pixels;
+}
+
+// PORT-ONLY: adapter or forwarder for the port contract
+extern "C" void image_unlock_surface(Image* image)
+{
+    (void)image;
+}

@@ -196,6 +196,7 @@ extern "C" int s_cursor_delta_y;
 #include "gods98/lwo.h"
 #include "game/bubbles.h"
 #include "game/bubbles_imports.h"
+#include "gods98/font_imports.h"
 #include "gods98/textwindow_imports.h"
 #include "game/erode.h"
 #include "game/erode_imports.h"

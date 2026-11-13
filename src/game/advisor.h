@@ -90,14 +90,13 @@ uint32_t global_flag_bit0_is_set(void);
 int display_width_get(void);
 /* FUN_00401c40 Main_GetWindowHeight (Main.h inline). */
 int display_height_get(void);
-/* FUN_00401c50 Font_GetStringWidth (Font.h inline), port contract. */
+/* FUN_00401c50 Font_GetStringWidth (Font.h inline). */
 uint32_t formatted_text_printf_width(const struct TextureSurface* font,
                                      const char* text, ...);
-/* FUN_00401c80 Font_PrintF (Font.h inline), port contract. */
+/* FUN_00401c80 Font_GetStringInfo (Font.h inline). */
 void formatted_text_printf(const struct TextureSurface* font,
-                           uint32_t* width_out, int* line_count,
-                           void* px, int pitch, int w, int h,
-                           int x, int y, const char* format, ...);
+                           uint32_t* width, uint32_t* lineCount,
+                           const char* msg, ...);
 
 /* Port-only test accessors (not in the matching build). */
 uint32_t advisor_state_word_peek(void);

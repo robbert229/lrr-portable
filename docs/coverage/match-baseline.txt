@@ -1,4 +1,4 @@
-# input_sha256: f5cf5a77bce3d33878dcd09b5768f65af9c9d6a158acb7e117cf33c55d83e347
+# input_sha256: 904f821d13699f861735bc9d1b61fe5eed8fb046c6dde97336a1c9643e849df8
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2328 mapped functions
+[game-only] 2330 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -36,8 +36,8 @@
 0x00401c20 100.00 global_flag_bit0_is_set
 0x00401c30 100.00 display_width_get
 0x00401c40 100.00 display_height_get
-0x00401c50 29.17 formatted_text_printf_width
-0x00401c80 26.92 formatted_text_printf
+0x00401c50 100.00 formatted_text_printf_width
+0x00401c80 100.00 formatted_text_printf
 0x00401cb0 100.00 aitask_cmd_kind_by_name
 0x00401cf0 100.00 aitask_cmd_registry_init_target
 0x00402000 100.00 aitask_cmd_mark_matching
@@ -512,7 +512,7 @@
 0x00418830 95.71 building_upgrade_state_changed_dispatch
 0x00418920 96.00 help_window_list_dependencies
 0x004189d0 100.00 help_window_close
-0x00418a00 91.51 help_window_update
+0x00418a00 92.25 help_window_update
 0x00418da0 88.75 help_window_button_hit_test
 0x00418f80 100.00 help_window_button_tooltip
 0x00418fc0 100.00 help_window_press_button
@@ -554,7 +554,7 @@
 0x00419e60 100.00 pending_record_release_if_present
 0x00419e80 100.00 pending_record_list_entry_remove_and_release
 0x00419f10 100.00 pending_record_release_all
-0x00419f30 97.35 info_draw
+0x00419f30 98.23 info_draw
 0x0041a080 100.00 info_draw_panel
 0x0041a1a0 100.00 ui_entry_hit_test_and_dispatch
 0x0041a250 100.00 scroll_offset_from_cursor_update
@@ -629,8 +629,8 @@
 0x0041e9d0 100.00 interface_set_slide_positions
 0x0041ea50 100.00 interface_set_menu
 0x0041eac0 70.59 interface_update_slide
-0x0041ec30 83.78 interface_draw_object_count
-0x0041eca0 49.40 interface_draw_dependencies
+0x0041ec30 86.49 interface_draw_object_count
+0x0041eca0 50.20 interface_draw_dependencies
 0x0041ee60 100.00 interface_reset_dependency_timer
 0x0041ee80 63.11 interface_get_dependency_at_point
 0x0041f100 68.42 interface_object_type_present
@@ -656,7 +656,7 @@
 0x0041f690 100.00 interface_callback_get_tool
 0x0041f6c0 96.77 interface_callback_detach
 0x0041f720 100.00 interface_primary_has_ability
-0x0041f740 59.17 interface_can_lay_path
+0x0041f740 61.54 interface_can_lay_path
 0x0041f820 100.00 interface_callback_has_tool
 0x0041f840 92.86 interface_callback_remove_spider
 0x0041f870 100.00 global_object_field8c_increment
@@ -679,16 +679,16 @@
 0x00422850 94.60 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
-0x004230c0 94.74 lego_debug_panel_text_draw_update
+0x004230c0 95.79 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 97.09 lego_engine_tick
+0x004232e0 97.44 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
 0x004247d0 100.00 lego_default_transform_apply_if_flagged
 0x00424810 100.00 lego_default_transform_apply_all
 0x00424830 100.00 lego_selected_object_outlines_draw
-0x004248b0 99.36 lego_selected_entity_ground_marker_render
+0x004248b0 99.68 lego_selected_entity_ground_marker_render
 0x00424cf0 100.00 lego_engine_shutdown_alt
 0x00424d00 90.44 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
@@ -1353,7 +1353,7 @@
 0x004592e0 40.96 osf_snapshot
 0x004593d0 10.53 osf_read_dirty_flag_get
 0x004593e0 26.09 osf_write
-0x00459470 9.71 osf_read
+0x00459470 20.28 osf_read
 0x00459530 100.00 frontend_render_three_pass_update
 0x00459560 4.24 legacy_health_bar_config_load
 0x00459900 17.58 legacy_hunger_images_position_config_load
@@ -1369,7 +1369,7 @@
 0x0045a370 100.00 ui_panel_name_table_lookup
 0x0045a3b0 97.14 legacy_panel_slot_coordinate_hit_test
 0x0045a410 100.00 ui_panel_indexed_name_lookup
-0x0045a460 96.08 panel_print_f
+0x0045a460 100.00 panel_print_f
 0x0045a500 100.00 ui_text_output_record_allocate
 0x0045a590 100.00 panel_text_window_print_f
 0x0045a5b0 100.00 ui_text_output_position_and_draw
@@ -1477,8 +1477,8 @@
 0x00460f00 100.00 reward_create_scroll
 0x00461070 99.64 reward_format_values
 0x00461410 98.28 reward_loop
-0x00461790 93.03 reward_draw_item
-0x00461c90 92.73 reward_draw_score
+0x00461790 94.17 reward_draw_item
+0x00461c90 93.64 reward_draw_score
 0x00461dd0 96.12 reward_do_buttons
 0x00462030 61.54 reward_save_menu
 0x00462270 82.83 reward_advance
@@ -1501,7 +1501,7 @@
 0x004629d0 93.67 reward_scroll_add_label
 0x00462ab0 100.00 reward_scroll_length_set
 0x00462ac0 100.00 reward_scroll_flags_set
-0x00462ad0 85.59 reward_scroll_update
+0x00462ad0 85.16 reward_scroll_update
 0x004634b0 89.47 graphics_overlay_visibility_set
 0x004634f0 16.95 indexed_surface_entry_hide_and_record
 0x00463540 47.62 indexed_surface_entries_restore
@@ -1646,7 +1646,7 @@
 0x0046ad00 99.70 advisor_text_display_worker
 0x0046b1d0 100.00 tooltip_overlay_state_initialize
 0x0046b4d0 100.00 case_insensitive_name_table_lookup
-0x0046b520 96.74 tooltip_set_content
+0x0046b520 97.83 tooltip_set_content
 0x0046b660 100.00 command_sample_stats_accumulate
 0x0046b700 100.00 timed_effect_cue_request_set_corpus
 0x0046b730 100.00 tooltip_set_flag10
@@ -1654,7 +1654,7 @@
 0x0046b7a0 100.00 tooltip_reset_timer
 0x0046b7c0 57.14 timed_effect_runtime_update
 0x0046b8b0 34.47 tooltip_draw_box
-0x0046bc30 86.16 tooltip_draw
+0x0046bc30 86.51 tooltip_draw
 0x0046c030 91.11 render_resource_binding_initialize
 0x0046c0b0 100.00 render_resource_binding_copy_and_convert
 0x0046c0f0 100.00 render_resource_binding_release
@@ -1947,15 +1947,17 @@
 0x00479e70 100.00 matrix4_set_identity
 0x00479ea0 100.00 matrix4_set_zero
 0x00479eb0 100.00 matrix4_copy
-0x00479ee0 9.93 font_atlas_record_create
-0x0047a150 14.16 formatted_text_format_draw
-0x0047a180 25.00 reward_text_draw
-0x0047a1b0 20.34 formatted_text_draw
-0x0047a1e0 9.73 formatted_text_draw_and_measure
-0x0047a470 12.05 fe_font_glyph_draw_and_measure
-0x0047a520 11.94 bitmap_font_glyph_measure_width
+0x00479ee0 75.43 font_atlas_record_create
+0x0047a150 100.00 font_v_get_string_info
+0x0047a180 100.00 font_print_f
+0x0047a1b0 100.00 font_v_print_f
+0x0047a1e0 97.26 font_v_print_f2
+0x0047a470 98.36 font_output_char
+0x0047a520 100.00 bitmap_font_glyph_measure_width
 0x0047a540 100.00 object_field_be4_dword_get
-0x0047a550 43.75 font_atlas_record_release
+0x0047a550 100.00 font_atlas_record_release
+0x0047a580 61.11 font_create
+0x0047a5c0 100.00 font_add_list
 0x0047a640 99.25 audio_system_init
 0x0047a800 100.00 audio_active_shutdown
 0x0047a850 100.00 sound_volume_value_valid
@@ -2188,8 +2190,8 @@
 0x00485230 100.00 text_buffer_append_format
 0x00485250 98.21 text_buffer_append_vformat
 0x00485300 97.62 objective_advisor_text_copy
-0x00485390 87.80 text_buffer_draw_wrapped
-0x00485710 99.01 text_wrap_measure_and_draw_lines
+0x00485390 88.18 text_buffer_draw_wrapped
+0x00485710 99.50 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 100.00 keyboard_key_names_init
@@ -2336,7 +2338,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2566 mapped functions
+[full] 2568 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2366,8 +2368,8 @@
 0x00401c20 100.00 global_flag_bit0_is_set
 0x00401c30 100.00 display_width_get
 0x00401c40 100.00 display_height_get
-0x00401c50 29.17 formatted_text_printf_width
-0x00401c80 26.92 formatted_text_printf
+0x00401c50 100.00 formatted_text_printf_width
+0x00401c80 100.00 formatted_text_printf
 0x00401cb0 100.00 aitask_cmd_kind_by_name
 0x00401cf0 100.00 aitask_cmd_registry_init_target
 0x00402000 100.00 aitask_cmd_mark_matching
@@ -2842,7 +2844,7 @@
 0x00418830 95.71 building_upgrade_state_changed_dispatch
 0x00418920 96.00 help_window_list_dependencies
 0x004189d0 100.00 help_window_close
-0x00418a00 91.51 help_window_update
+0x00418a00 92.25 help_window_update
 0x00418da0 88.75 help_window_button_hit_test
 0x00418f80 100.00 help_window_button_tooltip
 0x00418fc0 100.00 help_window_press_button
@@ -2884,7 +2886,7 @@
 0x00419e60 100.00 pending_record_release_if_present
 0x00419e80 100.00 pending_record_list_entry_remove_and_release
 0x00419f10 100.00 pending_record_release_all
-0x00419f30 97.35 info_draw
+0x00419f30 98.23 info_draw
 0x0041a080 100.00 info_draw_panel
 0x0041a1a0 100.00 ui_entry_hit_test_and_dispatch
 0x0041a250 100.00 scroll_offset_from_cursor_update
@@ -2959,8 +2961,8 @@
 0x0041e9d0 100.00 interface_set_slide_positions
 0x0041ea50 100.00 interface_set_menu
 0x0041eac0 70.59 interface_update_slide
-0x0041ec30 83.78 interface_draw_object_count
-0x0041eca0 49.40 interface_draw_dependencies
+0x0041ec30 86.49 interface_draw_object_count
+0x0041eca0 50.20 interface_draw_dependencies
 0x0041ee60 100.00 interface_reset_dependency_timer
 0x0041ee80 63.11 interface_get_dependency_at_point
 0x0041f100 68.42 interface_object_type_present
@@ -2986,7 +2988,7 @@
 0x0041f690 100.00 interface_callback_get_tool
 0x0041f6c0 96.77 interface_callback_detach
 0x0041f720 100.00 interface_primary_has_ability
-0x0041f740 59.17 interface_can_lay_path
+0x0041f740 61.54 interface_can_lay_path
 0x0041f820 100.00 interface_callback_has_tool
 0x0041f840 92.86 interface_callback_remove_spider
 0x0041f870 100.00 global_object_field8c_increment
@@ -3009,16 +3011,16 @@
 0x00422850 94.60 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
-0x004230c0 94.74 lego_debug_panel_text_draw_update
+0x004230c0 95.79 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 97.09 lego_engine_tick
+0x004232e0 97.44 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
 0x004247d0 100.00 lego_default_transform_apply_if_flagged
 0x00424810 100.00 lego_default_transform_apply_all
 0x00424830 100.00 lego_selected_object_outlines_draw
-0x004248b0 99.36 lego_selected_entity_ground_marker_render
+0x004248b0 99.68 lego_selected_entity_ground_marker_render
 0x00424cf0 100.00 lego_engine_shutdown_alt
 0x00424d00 90.44 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
@@ -3683,7 +3685,7 @@
 0x004592e0 40.96 osf_snapshot
 0x004593d0 10.53 osf_read_dirty_flag_get
 0x004593e0 26.09 osf_write
-0x00459470 9.71 osf_read
+0x00459470 20.28 osf_read
 0x00459530 100.00 frontend_render_three_pass_update
 0x00459560 4.24 legacy_health_bar_config_load
 0x00459900 17.58 legacy_hunger_images_position_config_load
@@ -3699,7 +3701,7 @@
 0x0045a370 100.00 ui_panel_name_table_lookup
 0x0045a3b0 97.14 legacy_panel_slot_coordinate_hit_test
 0x0045a410 100.00 ui_panel_indexed_name_lookup
-0x0045a460 96.08 panel_print_f
+0x0045a460 100.00 panel_print_f
 0x0045a500 100.00 ui_text_output_record_allocate
 0x0045a590 100.00 panel_text_window_print_f
 0x0045a5b0 100.00 ui_text_output_position_and_draw
@@ -3807,8 +3809,8 @@
 0x00460f00 100.00 reward_create_scroll
 0x00461070 99.64 reward_format_values
 0x00461410 98.28 reward_loop
-0x00461790 93.03 reward_draw_item
-0x00461c90 92.73 reward_draw_score
+0x00461790 94.17 reward_draw_item
+0x00461c90 93.64 reward_draw_score
 0x00461dd0 96.12 reward_do_buttons
 0x00462030 61.54 reward_save_menu
 0x00462270 82.83 reward_advance
@@ -3831,7 +3833,7 @@
 0x004629d0 93.67 reward_scroll_add_label
 0x00462ab0 100.00 reward_scroll_length_set
 0x00462ac0 100.00 reward_scroll_flags_set
-0x00462ad0 85.59 reward_scroll_update
+0x00462ad0 85.16 reward_scroll_update
 0x004634b0 89.47 graphics_overlay_visibility_set
 0x004634f0 16.95 indexed_surface_entry_hide_and_record
 0x00463540 47.62 indexed_surface_entries_restore
@@ -3976,7 +3978,7 @@
 0x0046ad00 99.70 advisor_text_display_worker
 0x0046b1d0 100.00 tooltip_overlay_state_initialize
 0x0046b4d0 100.00 case_insensitive_name_table_lookup
-0x0046b520 96.74 tooltip_set_content
+0x0046b520 97.83 tooltip_set_content
 0x0046b660 100.00 command_sample_stats_accumulate
 0x0046b700 100.00 timed_effect_cue_request_set_corpus
 0x0046b730 100.00 tooltip_set_flag10
@@ -3984,7 +3986,7 @@
 0x0046b7a0 100.00 tooltip_reset_timer
 0x0046b7c0 57.14 timed_effect_runtime_update
 0x0046b8b0 34.47 tooltip_draw_box
-0x0046bc30 86.16 tooltip_draw
+0x0046bc30 86.51 tooltip_draw
 0x0046c030 91.11 render_resource_binding_initialize
 0x0046c0b0 100.00 render_resource_binding_copy_and_convert
 0x0046c0f0 100.00 render_resource_binding_release
@@ -4277,15 +4279,17 @@
 0x00479e70 100.00 matrix4_set_identity
 0x00479ea0 100.00 matrix4_set_zero
 0x00479eb0 100.00 matrix4_copy
-0x00479ee0 9.93 font_atlas_record_create
-0x0047a150 14.16 formatted_text_format_draw
-0x0047a180 25.00 reward_text_draw
-0x0047a1b0 20.34 formatted_text_draw
-0x0047a1e0 9.73 formatted_text_draw_and_measure
-0x0047a470 12.05 fe_font_glyph_draw_and_measure
-0x0047a520 11.94 bitmap_font_glyph_measure_width
+0x00479ee0 75.43 font_atlas_record_create
+0x0047a150 100.00 font_v_get_string_info
+0x0047a180 100.00 font_print_f
+0x0047a1b0 100.00 font_v_print_f
+0x0047a1e0 97.26 font_v_print_f2
+0x0047a470 98.36 font_output_char
+0x0047a520 100.00 bitmap_font_glyph_measure_width
 0x0047a540 100.00 object_field_be4_dword_get
-0x0047a550 43.75 font_atlas_record_release
+0x0047a550 100.00 font_atlas_record_release
+0x0047a580 61.11 font_create
+0x0047a5c0 100.00 font_add_list
 0x0047a640 99.25 audio_system_init
 0x0047a800 100.00 audio_active_shutdown
 0x0047a850 100.00 sound_volume_value_valid
@@ -4518,8 +4522,8 @@
 0x00485230 100.00 text_buffer_append_format
 0x00485250 98.21 text_buffer_append_vformat
 0x00485300 97.62 objective_advisor_text_copy
-0x00485390 87.80 text_buffer_draw_wrapped
-0x00485710 99.01 text_wrap_measure_and_draw_lines
+0x00485390 88.18 text_buffer_draw_wrapped
+0x00485710 99.50 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 100.00 keyboard_key_names_init
