@@ -20,7 +20,9 @@ Each unit has a `.h`, an `_imports.h` and, where callers use port names, a
 `selectplace_port.cpp` (`git mv`, `tail` entries in `src/link_order.cmake`).
 
 "Before" is the *match baseline* at `main` `7835ce86`. "After" is this
-change, from the full matching build (`make reccmp-check`).
+change, from the full matching build (`make reccmp-check`). The change is
+stacked on #723 (`f158ab47`, finding 637). #723 changes no scores, so its
+figures are the same "before".
 
 ## Result
 
