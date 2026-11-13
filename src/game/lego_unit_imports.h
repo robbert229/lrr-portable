@@ -349,7 +349,7 @@ extern "C" {
 int scene_lights_build_from_config_original(void);
 int render_quality_config_apply_original(void);
 /* SelectPlace_Create (00463f00): the port's entry takes a hook table
- * (info_track_overlay.cpp). */
+ * (placement_footprint.cpp). */
 void* select_place_create_adapter(void* root, float size);
 /* HelpWindow_Initialise (004181b0): the port's entry takes a resource-op
  * table (helpwindow.cpp). */

@@ -22,23 +22,26 @@ void pending_record_list_entry_move_to_front(unsigned int index);
 void pending_record_release_if_present(void);
 void screen_right_edge_cache_refresh(void);
 
-/* FUN_004636b0 (GAME-039): the information panel's scroll widget. The port
- * has no entry at this address; thin unannotated adapter (ADR 0005 step 6)
- * in info_track_overlay.cpp. */
+/* ScrollInfo.c (GAME-039, finding 611), by the port's names. In the
+ * matching build scrollinfo.c's definitions take these names
+ * (scrollinfo_link_names.h); natively the port tail scrollinfo_port.cpp
+ * serves them (FUN_004636b0 and FUN_004638a0 as no-op adapters). */
 void info_panel_initialise(const char* name, int a, int b, int panel,
-                           int c);
-/* FUN_00463730, FUN_00463770, FUN_00463810 (GAME-039). */
-void indexed_float_pair_set(int index, uint32_t x, uint32_t y);
+                           int c);                              /* 004636b0 */
+void indexed_float_pair_set(int index, uint32_t x, uint32_t y); /* 00463730 */
 void scroll_rect_resource_record_create(int view, int mode,
                                         const float* quad, int tex_a,
-                                        int tex_b);
+                                        int tex_b);             /* 00463770 */
+/* FUN_00463810: the port's name is gods98/resource.cpp's model, so in the
+ * matching build Panel.c calls the unit's own name. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define scroll_rect_payload_record_create scroll_info_add_create_structure
+#endif
 void scroll_rect_payload_record_create(int slot, const float rect[4],
                                        int count, uint32_t value,
-                                       const char* resource_name);
-/* FUN_004638a0 (GAME-039): the mouse over the scroll widget. Thin
- * unannotated adapter in info_track_overlay.cpp. */
+                                       const char* resource_name); /* 00463810 */
 int info_panel_check_collision(int* released, int mouseX, int mouseY,
-                               int leftButton, int leftButtonLast);
+                               int leftButton, int leftButtonLast); /* 004638a0 */
 
 #ifdef __cplusplus
 }
