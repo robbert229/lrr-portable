@@ -179,6 +179,7 @@ extern "C" int s_cursor_delta_y;
 #include "game/sfx.h"
 #include "game/sfx_imports.h"
 #include "game/rock_fall_styles_imports.h"
+#include "game/vehicle_model.h"
 
 int main(void)
 {

@@ -1,4 +1,4 @@
-# input_sha256: d6e30ee97c6c9f64b810cb65815e6d67e94be39e3e4322789fb149e3a11459bd
+# input_sha256: f3b49ccc0b0ecb72614b3ad07a362338d40f527f971131a40d1303319ae84dd0
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2301 mapped functions
+[game-only] 2303 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -714,7 +714,7 @@
 0x00428330 71.50 lego_terrain_command_feedback_dispatch
 0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
-0x004288e0 97.05 lego_level_debug_input_cell_mutator_dispatch
+0x004288e0 97.20 lego_level_debug_input_cell_mutator_dispatch
 0x00429110 49.06 lego_block_visible_callback
 0x00429160 100.00 lego_terrain_cell_palette_resource_at_grid_position
 0x004291a0 96.84 lego_scene_marker_update_and_draw
@@ -751,7 +751,7 @@
 0x0042cb70 96.67 lego_camera_grid_expiry
 0x0042cc90 100.00 lego_load_terrain_map
 0x0042cd50 94.12 lego_upgrade_name_entry_find
-0x0042cda0 92.78 lego_entity_vehicle_type_table_load
+0x0042cda0 93.47 lego_entity_vehicle_type_table_load
 0x0042cf50 92.83 lego_entity_minifigure_type_table_load
 0x0042d100 92.83 lego_entity_rockmonster_type_table_load
 0x0042d2b0 93.47 lego_entity_building_types_load
@@ -929,7 +929,7 @@
 0x00437940 81.51 legoobject_deferred_olist_create_and_link
 0x00437c20 98.04 legoobject_deferred_olist_queue_add
 0x00437cc0 100.00 legoobject_flag40000_threshold_compare
-0x00437d00 99.04 legoobject_create
+0x00437d00 99.28 legoobject_create
 0x004382c0 100.00 legoobject_pool_allocate
 0x00438310 97.22 legoobject_pool_chunk_allocate
 0x00438390 100.00 legoobject_global_animation_state_get
@@ -977,7 +977,7 @@
 0x00439a20 100.00 legoobject_gated_step_command_issue
 0x00439b80 100.00 legoobject_task_target_cell_eligibility_check
 0x00439bd0 100.00 legoobject_accepts_target_for_task_check
-0x00439c80 96.77 legoobject_indexed_flag_set_and_refresh
+0x00439c80 100.00 legoobject_indexed_flag_set_and_refresh
 0x00439cd0 100.00 legoobject_animation_state_set
 0x00439cf0 100.00 legoobject_stats_flag10_test
 0x00439d10 100.00 legoobject_stats_flag20_test
@@ -1017,8 +1017,8 @@
 0x0043baf0 100.00 legoobject_flags_mask107c33de_or_1c00203_any_test
 0x0043bb20 96.08 legoobject_building_deposit_state_monitor
 0x0043bbc0 100.00 legoobject_detach_carried_object_and_reset_state
-0x0043bc40 98.88 legoobject_objective_sidecar_append_gate
-0x0043c200 88.37 legoobject_state_pair_predicate
+0x0043bc40 99.11 legoobject_objective_sidecar_append_gate
+0x0043c200 100.00 legoobject_state_pair_predicate
 0x0043c280 100.00 legoobject_nested_float_add_unless_blocked
 0x0043c2b0 100.00 legoobject_periodic_timer25_advance
 0x0043c2f0 96.86 legoobject_periodic_timer25_callback
@@ -1073,10 +1073,10 @@
 0x004424f0 100.00 legoobject_position_to_terrain_cell
 0x00442540 100.00 legoobject_world_z_callback
 0x00442560 100.00 legoobject_world_z_callback_lake
-0x004425f0 99.52 legoobject_subobject_pose_delta_normalize_and_dispatch
-0x004428a0 98.40 legoobject_world_position_set
-0x00442b10 85.60 legoobject_movement_accumulator_apply
-0x00442f80 73.26 legoobject_pose_orientation_dispatch
+0x004425f0 100.00 legoobject_subobject_pose_delta_normalize_and_dispatch
+0x004428a0 98.94 legoobject_world_position_set
+0x00442b10 85.86 legoobject_movement_accumulator_apply
+0x00442f80 73.47 legoobject_pose_orientation_dispatch
 0x00443510 100.00 legoobject_scene_object_pose_position_sync
 0x00443670 100.00 legoobject_random_activity_attempt
 0x004436f0 100.00 legoobject_type3_flag04000000_test
@@ -1644,30 +1644,32 @@
 0x0046c3d0 100.00 record_field_d8_equals_one
 0x0046c3f0 22.59 scene_activity_paired_channel_update
 0x0046c510 7.92 scene_channel_slots_rebuild
-0x0046ce10 10.17 entity_payload_type1_release
-0x0046ced0 42.67 paired_resource_state_set
+0x0046c6f0 98.80 lego_vehicle_load_adapter
+0x0046ce10 100.00 entity_payload_type1_release
+0x0046ced0 100.00 paired_resource_state_set
 0x0046cf20 100.00 scene_entity_animation_tracks_set_enabled
 0x0046cf40 100.00 record_flag_bit_test
 0x0046cf80 100.00 entity_type_mask_get
-0x0046cf90 52.17 scene_record_indexed_entries_rebuild_and_refresh
-0x0046cfc0 95.24 six_resource_slots_set_state
-0x0046cff0 21.46 scene_record_template_instantiate
-0x0046d140 28.30 scene_assign_owner_from_model
-0x0046d1a0 38.10 scene_object_attached_resource_release
-0x0046d1c0 22.06 animation_duration_for_loop_count
-0x0046d260 15.19 scene_resource_slots_rebuild
-0x0046d2c0 32.79 scene_resource_visibility_set
+0x0046cf90 100.00 scene_record_indexed_entries_rebuild_original
+0x0046cfc0 100.00 six_resource_slots_set_state
+0x0046cff0 97.50 scene_record_template_instantiate
+0x0046d140 100.00 scene_assign_owner_from_model
+0x0046d1a0 100.00 scene_object_attached_resource_release
+0x0046d1c0 100.00 vehicle_move_animation
+0x0046d260 100.00 scene_resource_slots_rebuild
+0x0046d2c0 100.00 scene_resource_visibility_set
 0x0046d330 100.00 entity_type_flag_bit1_get_target
-0x0046d350 25.00 scene_resource_draw_at_origin
+0x0046d350 100.00 scene_resource_draw_at_origin
+0x0046d380 70.36 vehicle_set_position
 0x0046d9e0 100.00 scene_object_resource_get
-0x0046d9f0 31.33 scene_resource_named_entry_resolve_with_fallback
-0x0046da50 35.29 scene_activity_change_dispatch
-0x0046da90 55.00 scene_resource_cached_slot_b4_get
-0x0046dac0 55.00 scene_resource_cached_slot_b8_get
-0x0046daf0 55.00 scene_resource_cached_slot_c0_get
-0x0046db20 31.75 attached_entity_slot_object_get
+0x0046d9f0 100.00 vehicle_find_null
+0x0046da50 100.00 vehicle_get_camera_null
+0x0046da90 100.00 scene_resource_cached_slot_b4_get
+0x0046dac0 100.00 scene_resource_cached_slot_b8_get
+0x0046daf0 100.00 scene_resource_cached_slot_c0_get
+0x0046db20 100.00 attached_entity_slot_object_get
 0x0046db60 100.00 object_record_field11c_get
-0x0046db70 80.00 scene_object_resource_release
+0x0046db70 100.00 vehicle_get_trans_coef
 0x0046db90 11.11 terrain_cell_quad_run_stage_level
 0x0046dd10 18.69 staged_cell_candidate_select
 0x0046e220 11.32 terrain_cell_surface_quad_height_fill_current
@@ -2309,7 +2311,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2537 mapped functions
+[full] 2539 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -3017,7 +3019,7 @@
 0x00428330 71.50 lego_terrain_command_feedback_dispatch
 0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
-0x004288e0 97.05 lego_level_debug_input_cell_mutator_dispatch
+0x004288e0 97.20 lego_level_debug_input_cell_mutator_dispatch
 0x00429110 49.06 lego_block_visible_callback
 0x00429160 100.00 lego_terrain_cell_palette_resource_at_grid_position
 0x004291a0 96.84 lego_scene_marker_update_and_draw
@@ -3054,7 +3056,7 @@
 0x0042cb70 96.67 lego_camera_grid_expiry
 0x0042cc90 100.00 lego_load_terrain_map
 0x0042cd50 94.12 lego_upgrade_name_entry_find
-0x0042cda0 92.78 lego_entity_vehicle_type_table_load
+0x0042cda0 93.47 lego_entity_vehicle_type_table_load
 0x0042cf50 92.83 lego_entity_minifigure_type_table_load
 0x0042d100 92.83 lego_entity_rockmonster_type_table_load
 0x0042d2b0 93.47 lego_entity_building_types_load
@@ -3232,7 +3234,7 @@
 0x00437940 81.51 legoobject_deferred_olist_create_and_link
 0x00437c20 98.04 legoobject_deferred_olist_queue_add
 0x00437cc0 100.00 legoobject_flag40000_threshold_compare
-0x00437d00 99.04 legoobject_create
+0x00437d00 99.28 legoobject_create
 0x004382c0 100.00 legoobject_pool_allocate
 0x00438310 97.22 legoobject_pool_chunk_allocate
 0x00438390 100.00 legoobject_global_animation_state_get
@@ -3280,7 +3282,7 @@
 0x00439a20 100.00 legoobject_gated_step_command_issue
 0x00439b80 100.00 legoobject_task_target_cell_eligibility_check
 0x00439bd0 100.00 legoobject_accepts_target_for_task_check
-0x00439c80 96.77 legoobject_indexed_flag_set_and_refresh
+0x00439c80 100.00 legoobject_indexed_flag_set_and_refresh
 0x00439cd0 100.00 legoobject_animation_state_set
 0x00439cf0 100.00 legoobject_stats_flag10_test
 0x00439d10 100.00 legoobject_stats_flag20_test
@@ -3320,8 +3322,8 @@
 0x0043baf0 100.00 legoobject_flags_mask107c33de_or_1c00203_any_test
 0x0043bb20 96.08 legoobject_building_deposit_state_monitor
 0x0043bbc0 100.00 legoobject_detach_carried_object_and_reset_state
-0x0043bc40 98.88 legoobject_objective_sidecar_append_gate
-0x0043c200 88.37 legoobject_state_pair_predicate
+0x0043bc40 99.11 legoobject_objective_sidecar_append_gate
+0x0043c200 100.00 legoobject_state_pair_predicate
 0x0043c280 100.00 legoobject_nested_float_add_unless_blocked
 0x0043c2b0 100.00 legoobject_periodic_timer25_advance
 0x0043c2f0 96.86 legoobject_periodic_timer25_callback
@@ -3376,10 +3378,10 @@
 0x004424f0 100.00 legoobject_position_to_terrain_cell
 0x00442540 100.00 legoobject_world_z_callback
 0x00442560 100.00 legoobject_world_z_callback_lake
-0x004425f0 99.52 legoobject_subobject_pose_delta_normalize_and_dispatch
-0x004428a0 98.40 legoobject_world_position_set
-0x00442b10 85.60 legoobject_movement_accumulator_apply
-0x00442f80 73.26 legoobject_pose_orientation_dispatch
+0x004425f0 100.00 legoobject_subobject_pose_delta_normalize_and_dispatch
+0x004428a0 98.94 legoobject_world_position_set
+0x00442b10 85.86 legoobject_movement_accumulator_apply
+0x00442f80 73.47 legoobject_pose_orientation_dispatch
 0x00443510 100.00 legoobject_scene_object_pose_position_sync
 0x00443670 100.00 legoobject_random_activity_attempt
 0x004436f0 100.00 legoobject_type3_flag04000000_test
@@ -3947,30 +3949,32 @@
 0x0046c3d0 100.00 record_field_d8_equals_one
 0x0046c3f0 22.59 scene_activity_paired_channel_update
 0x0046c510 7.92 scene_channel_slots_rebuild
-0x0046ce10 10.17 entity_payload_type1_release
-0x0046ced0 42.67 paired_resource_state_set
+0x0046c6f0 98.80 lego_vehicle_load_adapter
+0x0046ce10 100.00 entity_payload_type1_release
+0x0046ced0 100.00 paired_resource_state_set
 0x0046cf20 100.00 scene_entity_animation_tracks_set_enabled
 0x0046cf40 100.00 record_flag_bit_test
 0x0046cf80 100.00 entity_type_mask_get
-0x0046cf90 52.17 scene_record_indexed_entries_rebuild_and_refresh
-0x0046cfc0 95.24 six_resource_slots_set_state
-0x0046cff0 21.46 scene_record_template_instantiate
-0x0046d140 28.30 scene_assign_owner_from_model
-0x0046d1a0 38.10 scene_object_attached_resource_release
-0x0046d1c0 22.06 animation_duration_for_loop_count
-0x0046d260 15.19 scene_resource_slots_rebuild
-0x0046d2c0 32.79 scene_resource_visibility_set
+0x0046cf90 100.00 scene_record_indexed_entries_rebuild_original
+0x0046cfc0 100.00 six_resource_slots_set_state
+0x0046cff0 97.50 scene_record_template_instantiate
+0x0046d140 100.00 scene_assign_owner_from_model
+0x0046d1a0 100.00 scene_object_attached_resource_release
+0x0046d1c0 100.00 vehicle_move_animation
+0x0046d260 100.00 scene_resource_slots_rebuild
+0x0046d2c0 100.00 scene_resource_visibility_set
 0x0046d330 100.00 entity_type_flag_bit1_get_target
-0x0046d350 25.00 scene_resource_draw_at_origin
+0x0046d350 100.00 scene_resource_draw_at_origin
+0x0046d380 70.36 vehicle_set_position
 0x0046d9e0 100.00 scene_object_resource_get
-0x0046d9f0 31.33 scene_resource_named_entry_resolve_with_fallback
-0x0046da50 35.29 scene_activity_change_dispatch
-0x0046da90 55.00 scene_resource_cached_slot_b4_get
-0x0046dac0 55.00 scene_resource_cached_slot_b8_get
-0x0046daf0 55.00 scene_resource_cached_slot_c0_get
-0x0046db20 31.75 attached_entity_slot_object_get
+0x0046d9f0 100.00 vehicle_find_null
+0x0046da50 100.00 vehicle_get_camera_null
+0x0046da90 100.00 scene_resource_cached_slot_b4_get
+0x0046dac0 100.00 scene_resource_cached_slot_b8_get
+0x0046daf0 100.00 scene_resource_cached_slot_c0_get
+0x0046db20 100.00 attached_entity_slot_object_get
 0x0046db60 100.00 object_record_field11c_get
-0x0046db70 80.00 scene_object_resource_release
+0x0046db70 100.00 vehicle_get_trans_coef
 0x0046db90 11.11 terrain_cell_quad_run_stage_level
 0x0046dd10 18.69 staged_cell_candidate_select
 0x0046e220 11.32 terrain_cell_surface_quad_height_fill_current

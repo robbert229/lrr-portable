@@ -5970,7 +5970,7 @@ void legoobject_subobject_pose_delta_normalize_and_dispatch(Lego_Object* obj, fl
         else
             scene_resource_draw_at_origin((struct SceneResourceAnimationRecord*)obj->vehicle,
                 obj->faceDirection[0], obj->faceDirection[1], obj->faceDirection[2]);
-        legoobject_gm_vehicle_set_position_adapter(obj->vehicle, x, y, legoobject_world_z_callback, Lego_GetMap());
+        vehicle_set_position((struct VehicleModel*)obj->vehicle, x, y, legoobject_world_z_callback, Lego_GetMap());
     } else if (obj->type == 2) {
         if (obj->flags1 & 0x2)
             animation_object_transform_set((struct AnimationObject*)obj->miniFigure,
@@ -6011,7 +6011,7 @@ void legoobject_world_position_set(Lego_Object* obj, float x, float y, float the
     if (obj->type == 1) {
         if (assignHeading)
             scene_resource_draw_at_origin((struct SceneResourceAnimationRecord*)obj->vehicle, dir[0], dir[1], dir[2]);
-        legoobject_gm_vehicle_set_position_adapter(obj->vehicle, x, y, legoobject_world_z_callback, Lego_GetMap());
+        vehicle_set_position((struct VehicleModel*)obj->vehicle, x, y, legoobject_world_z_callback, Lego_GetMap());
     } else if (obj->type == 2) {
         if (assignHeading)
             animation_object_transform_set((struct AnimationObject*)obj->miniFigure, dir[0], dir[1]);
@@ -6127,7 +6127,7 @@ int legoobject_movement_accumulator_apply(Lego_Object* obj, float elapsed, float
                 terrain_map_world_edge_point_get(Lego_GetMap(), wPos[0], wPos[1], terrain_cell_flag_2000_current(bx, by),
                                                  0.0f, &wPos[0], &wPos[1]);
             if (obj->type == 1)
-                legoobject_gm_vehicle_set_position_adapter(obj->vehicle, wPos[0], wPos[1], legoobject_world_z_callback, Lego_GetMap());
+                vehicle_set_position((struct VehicleModel*)obj->vehicle, wPos[0], wPos[1], legoobject_world_z_callback, Lego_GetMap());
             else if (obj->type == 2)
                 render_node_position_from_callback((struct AnimationObject*)obj->miniFigure, wPos[0], wPos[1],
                                                    (LegoObjM_HeightFn)legoobject_world_z_callback_lake, Lego_GetMap());
@@ -6165,7 +6165,7 @@ void legoobject_pose_orientation_dispatch(Lego_Object* obj, float elapsed)
         float x;
         float y;
         legoobject_transform_position_get(obj, &x, &y);
-        legoobject_gm_vehicle_set_position_adapter(obj->vehicle, x, y, legoobject_world_z_callback, Lego_GetMap());
+        vehicle_set_position((struct VehicleModel*)obj->vehicle, x, y, legoobject_world_z_callback, Lego_GetMap());
     } else if (obj->type == 4) {
         float x;
         float y;

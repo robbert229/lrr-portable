@@ -413,7 +413,12 @@ src/game/util_for_lighteffects.hpp
 src/game/util_for_placement.hpp
 src/game/util_for_tile_variants.hpp
 src/game/util_shared.hpp
-src/game/vehicle_model.cpp
+src/game/vehicle_model.c
+src/game/vehicle_model.h
+src/game/vehicle_model_imports.h
+src/game/vehicle_model_link_names.h
+src/game/vehicle_model_maths.h
+src/game/vehicle_model_port.cpp
 src/game/video_graph.cpp
 src/game/video_graph.h
 src/game/video_graph.hpp

@@ -956,11 +956,11 @@ void render_node_position_from_callback(struct AnimationObject* object, float x,
 /* GAME-006 Building.c (record.hpp, building_model.cpp): Building_SetPosition. */
 void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
                                            LegoObjM_ProbeFn probe, void* arg); /* 00408710 */
-/* GAME-047 Vehicle.c: Vehicle_SetPosition (0046d380) has no port entry
- * with its contract; PORT-ONLY adapter at the end of legoobject.cpp. */
-void legoobject_gm_vehicle_set_position_adapter(void* vehicle, float x, float y,
-    float (*getWorldZ)(float x, float y, struct TerrainMap* map),
-    struct TerrainMap* map);                                                 /* 0046d380 */
+/* GAME-048 Vehicle.c (vehicle_model.h): Vehicle_SetPosition. */
+struct VehicleModel;
+void vehicle_set_position(struct VehicleModel* vehicle, float xPos, float yPos,
+    float (*zCallback)(float xPos, float yPos, struct TerrainMap* map),
+    struct TerrainMap* surfMap);                                             /* 0046d380 */
 struct SceneResourceAnimationRecord;
 /* GAME-047 Vehicle.c (resource.hpp, vehicle_model.cpp): the 0xc0 null. */
 void* scene_resource_cached_slot_c0_get(struct SceneResourceAnimationRecord* record); /* 0046daf0 */

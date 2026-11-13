@@ -11592,18 +11592,6 @@ extern "C" void legoobject_gj_attached_entity_wake_adapter(EntitySlot* e)
 /* Original-ABI adapters for 004425f0-00442f80. Nothing calls these
  * natively. */
 
-/* Vehicle_SetPosition (0x0046d380) has no port entry with the original's
- * contract (render.cpp's 0046d380 ledger stub is another model). This one
- * places the vehicle's activity container at the height getWorldZ gives,
- * without the original's wheel placement. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046d380 has no port entry)
-extern "C" void legoobject_gm_vehicle_set_position_adapter(void* vehicle, float x, float y,
-    float (*getWorldZ)(float x, float y, struct TerrainMap* map), struct TerrainMap* map)
-{
-    void* cont = (void*)(uintptr_t)scene_object_resource_get(vehicle);
-    (void)ddiscene_object_position_set(cont, NULL, x, y, getWorldZ(x, y, map));
-}
-
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00446610 is a namespaced ledger stub)
 extern "C" void legoobject_gm_movement_speed_get_adapter(void* obj, float elapsed,
                                                          float* outMoveSpeed,

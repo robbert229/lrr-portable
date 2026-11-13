@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-048 GAME-048: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-048.csv. */
+/* GAME-048 Vehicle.c port tail (finding 590): the port's models of the
+ * unit, unannotated. The original-shape unit is vehicle_model.c; these
+ * models keep the port's contracts (ScenePairedAnimationState and
+ * SceneResourceAnimationRecord, the resource hooks and NULL guards) for the
+ * native port, which calls them by these names.
+ *
+ * In the matching build (MSVC 5.0) vehicle_model.c defines most of these
+ * names itself (vehicle_model_link_names.h), so their definitions here are
+ * compiled out there (LRR_VEHICLE_MODEL_PORT_NAMES). The five models whose
+ * only callers are port code (0046cf90's record-list form, 0046d1c0,
+ * 0046d9f0, 0046da50, 0046db70) stay in every build. Relocated from the
+ * verbatim vehicle_model.cpp (body hashes: docs/coverage/relocations/
+ * GAME-048.csv). */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,11 +30,22 @@
 #include <math.h>
 #include <limits.h>
 #include "record_for_vehicle_model.hpp"
+#include "gods98/config.h"
+#include "surface.hpp"
 
+/* The port's definitions of the names the unit takes in the matching build
+ * (vehicle_model_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_VEHICLE_MODEL_PORT_NAMES 0
+#else
+#define LRR_VEHICLE_MODEL_PORT_NAMES 1
+#endif
+
+#if LRR_VEHICLE_MODEL_PORT_NAMES /* the unit serves these names in the matching build */
 /* EntityPayloadType1Release (FUN_0046ce10): clear indexed registrations,
  * free optional owned descriptor buffers, release six paired scene slots,
  * then release the primary/secondary scene resources. */
-// FUNCTION: LEGORR 0x0046CE10
+/* Port model of 0x0046ce10 (Vehicle.c, vehicle_model.c). */
 void entity_payload_type1_release(ScenePairedAnimationState* state)
 {
     uint32_t i;
@@ -62,7 +83,7 @@ void entity_payload_type1_release(ScenePairedAnimationState* state)
     state->primary_resource = NULL;
     state->secondary_resource = NULL;
 }
-// FUNCTION: LEGORR 0x0046CED0
+/* Port model of 0x0046ced0 (Vehicle.c, vehicle_model.c). */
 void paired_resource_state_set(ScenePairedAnimationState* state, int enabled)
 {
     if (state == NULL || s_animation_track_apply_hook == NULL) {
@@ -77,7 +98,7 @@ void paired_resource_state_set(ScenePairedAnimationState* state, int enabled)
     }
 }
 
-// FUNCTION: LEGORR 0x0046CF20
+/* Port model of 0x0046cf20 (Vehicle.c, vehicle_model.c). */
 void scene_entity_animation_tracks_set_enabled(
     ScenePairedAnimationState* state, int enabled)
 {
@@ -85,7 +106,7 @@ void scene_entity_animation_tracks_set_enabled(
 }
 
 /* RecordFlagBitTest (FUN_0046cf40) — see record.hpp. */
-// FUNCTION: LEGORR 0x0046cf40
+/* Port model of 0x0046cf40 (Vehicle.c, vehicle_model.c). */
 uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
                               int reject_masked)
 {
@@ -98,7 +119,7 @@ uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
     __builtin_memcpy(&flags, (const char*)record + 0x130, sizeof(flags));
     return flags & bit;
 }
-// FUNCTION: LEGORR 0x0046cf80
+/* Port model of 0x0046cf80 (Vehicle.c, vehicle_model.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t entity_type_mask_get(const void* record)
 {
@@ -117,10 +138,11 @@ uint32_t entity_type_mask_get(const void* record)
     return *(const uint32_t*)((const char*)record + 300);
 }
 #endif
+#endif /* LRR_VEHICLE_MODEL_PORT_NAMES */
 
 /* RecordIndexedEntriesRebuildAndRefresh (FUN_0046cf90): rebuild the selected
  * value's linked entries, then reset and refresh the associated channels. */
-// FUNCTION: LEGORR 0x0046CF90
+/* Port model of 0x0046cf90 (Vehicle.c, vehicle_model.c). */
 void scene_record_indexed_entries_rebuild_and_refresh(
     SceneIndexedRecordList* list, SceneChannelSlotsState* channels, int value)
 {
@@ -128,10 +150,11 @@ void scene_record_indexed_entries_rebuild_and_refresh(
     scene_channel_slots_rebuild(channels, 0);
 }
 
+#if LRR_VEHICLE_MODEL_PORT_NAMES /* the unit serves these names in the matching build */
 /* SixResourceSlotsSetState (FUN_0046cfc0) — see record.hpp. The corpus
  * walks record+0x10..0x24 with a 6-count dec/jne loop from a lea'd cursor
  * and loads each slot directly; mirror that shape here. */
-// FUNCTION: LEGORR 0x0046cfc0
+/* Port model of 0x0046cfc0 (Vehicle.c, vehicle_model.c). */
 void six_resource_slots_set_state(const void* record, uint32_t flag)
 {
     const void* const* slot =
@@ -147,7 +170,7 @@ void six_resource_slots_set_state(const void* record, uint32_t flag)
 /* SceneRecordTemplateInstantiate (FUN_0046cff0): copy template state,
  * clone the primary/secondary resources and attached scene handles, clear
  * per-instance caches, then enable the new resource graph. */
-// FUNCTION: LEGORR 0x0046CFF0
+/* Port model of 0x0046cff0 (Vehicle.c, vehicle_model.c). */
 int scene_record_template_instantiate(
     const ScenePairedAnimationState* source,
     ScenePairedAnimationState* destination)
@@ -199,7 +222,7 @@ int scene_record_template_instantiate(
     scene_resource_slots_rebuild(destination, destination->slot_base_name);
     return 1;
 }
-// FUNCTION: LEGORR 0x0046D140
+/* Port model of 0x0046d140 (Vehicle.c, vehicle_model.c). */
 void scene_assign_owner_from_model(ScenePairedAnimationState* state,
                                    void* owner)
 {
@@ -224,7 +247,7 @@ void scene_assign_owner_from_model(ScenePairedAnimationState* state,
     }
 }
 
-// FUNCTION: LEGORR 0x0046D1A0
+/* Port model of 0x0046d1a0 (Vehicle.c, vehicle_model.c). */
 void scene_object_attached_resource_release(void* record)
 {
     /* FUN_0046d1a0 reads its scene object from argument +8 and queries the
@@ -235,10 +258,11 @@ void scene_object_attached_resource_release(void* record)
         (void)ddiscene_object_length_get(scene_object);
     }
 }
+#endif /* LRR_VEHICLE_MODEL_PORT_NAMES */
 /* AnimationDurationForLoopCount (FUN_0046d1c0): select the primary duration
  * unless flag 4 suppresses it, let a secondary animation override it, then
  * subtract repeated primary loop frames for multi-loop requests. */
-// FUNCTION: LEGORR 0x0046D1C0
+/* Port model of 0x0046d1c0 (Vehicle.c, vehicle_model.c). */
 float animation_duration_for_loop_count(
     const SceneAnimationDurationState* state, uint32_t primary_mode,
     uint32_t secondary_mode, uint32_t loop_count)
@@ -264,7 +288,8 @@ float animation_duration_for_loop_count(
     return duration;
 }
 
-// FUNCTION: LEGORR 0x0046D260
+#if LRR_VEHICLE_MODEL_PORT_NAMES /* the unit serves these names in the matching build */
+/* Port model of 0x0046d260 (Vehicle.c, vehicle_model.c). */
 void scene_resource_slots_rebuild(ScenePairedAnimationState* state,
                                   const char* slot_base_name)
 {
@@ -303,7 +328,7 @@ void scene_resource_slots_rebuild(ScenePairedAnimationState* state,
  * the count is read once (the visibility helper never touches the record) and NULL
  * records are guarded. The flag rides the leaf raw, unlike the overlay's
  * folded call. */
-// FUNCTION: LEGORR 0x0046d2c0
+/* Port model of 0x0046d2c0 (Vehicle.c, vehicle_model.c). */
 void scene_resource_visibility_set(void* record, uint32_t flag)
 {
     if (record == NULL) {
@@ -328,7 +353,7 @@ void scene_resource_visibility_set(void* record, uint32_t flag)
 }
 /* The mapped EntityTypeFlagBit1Get body follows the corpus's unchecked
  * +0x1e8 load; the public helper retains its null guard. */
-// FUNCTION: LEGORR 0x0046d330
+/* Port model of 0x0046d330 (Vehicle.c, vehicle_model.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t entity_type_flag_bit1_get_target(const void* record)
 {
@@ -350,7 +375,7 @@ uint32_t entity_type_flag_bit1_get_target(const void* record)
 
 /* SceneResourceDrawAtOrigin (FUN_0046d350): forward the record's primary
  * scene handle and caller coordinates through the origin-pose seam. */
-// FUNCTION: LEGORR 0x0046D350
+/* Port model of 0x0046d350 (Vehicle.c, vehicle_model.c). */
 void scene_resource_draw_at_origin(SceneResourceAnimationRecord* record,
                                    float x, float y, float z)
 {
@@ -361,7 +386,7 @@ void scene_resource_draw_at_origin(SceneResourceAnimationRecord* record,
     }
 }
 
-// FUNCTION: LEGORR 0x0046d9e0
+/* Port model of 0x0046d9e0 (Vehicle.c, vehicle_model.c). */
 uint32_t scene_object_resource_get(const void* scene_object)
 {
     uint32_t resource;
@@ -369,10 +394,11 @@ uint32_t scene_object_resource_get(const void* scene_object)
                      sizeof(resource));
     return resource;
 }
+#endif /* LRR_VEHICLE_MODEL_PORT_NAMES */
 
 /* SceneResourceNamedEntryResolveWithFallback (FUN_0046d9f0): query the
  * secondary resource first, then the primary resource if it has no match. */
-// FUNCTION: LEGORR 0x0046D9F0
+/* Port model of 0x0046d9f0 (Vehicle.c, vehicle_model.c). */
 void* scene_resource_named_entry_resolve_with_fallback(
     SceneResourceAnimationRecord* record, const char* name, uint32_t index)
 {
@@ -392,7 +418,7 @@ void* scene_resource_named_entry_resolve_with_fallback(
     return result;
 }
 
-// FUNCTION: LEGORR 0x0046DA50
+/* Port model of 0x0046da50 (Vehicle.c, vehicle_model.c). */
 int scene_activity_change_dispatch(SceneResourceAnimationRecord* record,
                                    int index)
 {
@@ -411,7 +437,8 @@ int scene_activity_change_dispatch(SceneResourceAnimationRecord* record,
     return (int)(size_t)result;
 }
 
-// FUNCTION: LEGORR 0x0046DA90
+#if LRR_VEHICLE_MODEL_PORT_NAMES /* the unit serves these names in the matching build */
+/* Port model of 0x0046da90 (Vehicle.c, vehicle_model.c). */
 void* scene_resource_cached_slot_b4_get(SceneResourceAnimationRecord* record)
 {
     if (record == NULL || record->slot_b4_name == NULL) return NULL;
@@ -422,7 +449,7 @@ void* scene_resource_cached_slot_b4_get(SceneResourceAnimationRecord* record)
     return record->cached_b4;
 }
 
-// FUNCTION: LEGORR 0x0046DAC0
+/* Port model of 0x0046dac0 (Vehicle.c, vehicle_model.c). */
 void* scene_resource_cached_slot_b8_get(SceneResourceAnimationRecord* record)
 {
     if (record == NULL || record->slot_b8_name == NULL) return NULL;
@@ -433,7 +460,7 @@ void* scene_resource_cached_slot_b8_get(SceneResourceAnimationRecord* record)
     return record->cached_b8;
 }
 
-// FUNCTION: LEGORR 0x0046DAF0
+/* Port model of 0x0046daf0 (Vehicle.c, vehicle_model.c). */
 void* scene_resource_cached_slot_c0_get(SceneResourceAnimationRecord* record)
 {
     if (record == NULL || record->slot_c0_name == NULL) return NULL;
@@ -444,7 +471,7 @@ void* scene_resource_cached_slot_c0_get(SceneResourceAnimationRecord* record)
     return record->cached_c0;
 }
 
-// FUNCTION: LEGORR 0x0046DB20
+/* Port model of 0x0046db20 (Vehicle.c, vehicle_model.c). */
 void* attached_entity_slot_object_get(SceneResourceAnimationRecord* record,
                                       int index)
 {
@@ -460,22 +487,24 @@ void* attached_entity_slot_object_get(SceneResourceAnimationRecord* record,
     return result;
 }
 
-// FUNCTION: LEGORR 0x0046db60
+/* Port model of 0x0046db60 (Vehicle.c, vehicle_model.c). */
 uint32_t object_record_field11c_get(const void* record)
 {
     uint32_t value;
     __builtin_memcpy(&value, (const char*)record + 0x11c, sizeof(value));
     return value;
 }
+#endif /* LRR_VEHICLE_MODEL_PORT_NAMES */
 
 /* FUN_0046db70 passes the pointer stored at +8 to the typed-child scalar
  * accessor and discards its result. */
-// FUNCTION: LEGORR 0x0046DB70
+/* Port model of 0x0046db70 (Vehicle.c, vehicle_model.c). */
 void scene_object_resource_release(void* record)
 {
     (void)typed_child_resource_scalar_get(*(void**)((char*)record + 8));
 }
 
+#if LRR_VEHICLE_MODEL_PORT_NAMES /* the unit serves these names in the matching build */
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
  * original FUN_0046cf90 (Vehicle_SetUpgradeLevel) takes the vehicle model
  * and the level; the port's entry above takes the record list and the
@@ -487,4 +516,31 @@ extern "C" void scene_record_indexed_entries_rebuild_original(
 {
     (void)vehicleModel;
     (void)upgradeLevel;
+}
+#endif /* LRR_VEHICLE_MODEL_PORT_NAMES */
+
+/* Original-ABI adapters for vehicle_model.c (ADR 0005 step 6). Natively
+ * nothing calls the unit, so these never run there. */
+
+/* Upgrade_Load (0046c160) parses the vehicle's upgrade levels into its
+ * +0x124 model. The port's 0046c160 is a ledger stub with another contract
+ * (upgrades.cpp: a hook-driven table), so this loads nothing; the upgrade
+ * level stays 0. */
+// PORT-ONLY: original-ABI adapter for GAME-048 vehicle_model.c (0046c160 has no port entry with its contract)
+extern "C" void vehicle_upgrade_load_adapter(void* upgrades, BlockFile* config,
+                                             const char* gameName)
+{
+    (void)upgrades;
+    (void)config;
+    (void)gameName;
+}
+
+/* Container_EnableSoundTriggers (00473ec0). The port's entry applies a
+ * value through a caller-supplied hook table, which the original's two
+ * arguments do not carry; with no table it does nothing, as here. */
+// PORT-ONLY: original-ABI adapter for GAME-048 vehicle_model.c (00473ec0 takes a hook table in the port)
+extern "C" void vehicle_container_enable_sound_triggers_adapter(void* cont,
+                                                                int on)
+{
+    render_object_state_apply_to_entries(cont, (uint32_t)on, NULL);
 }
