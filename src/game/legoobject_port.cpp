@@ -11428,25 +11428,6 @@ extern "C" int legoobject_gb_weapon_target_clear_callback(void* obj, void* data)
 
 /* 0044be30 takes the object; the port's entry takes a hook table. No hooks
  * are installed for the original's contract: does nothing. */
-/* 00409a90 takes (id, position, direction, points, count, notify) and
- * returns the object; the port's entry takes a hook table and returns
- * nothing. Does nothing. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (world_object_create_with_transform, 0x00409a90)
-extern "C" void* legoobject_gb_world_object_create_adapter(int id, void* position,
-                                                           unsigned int direction,
-                                                           void* points,
-                                                           uint32_t count,
-                                                           int notify)
-{
-    (void)id;
-    (void)position;
-    (void)direction;
-    (void)points;
-    (void)count;
-    (void)notify;
-    return NULL;
-}
-
 /* 00454880 is called with the object's type, which it does not read; the
  * port's entry takes no argument. */
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (global_counter_004ff990_increment, 0x00454880)
@@ -11496,28 +11477,6 @@ extern "C" void legoobject_gi_osf_add_adapter(void* obj)
 extern "C" void legoobject_gi_cell_path_effects_apply_adapter(void* obj)
 {
     unported_ledger_stubs::entity_cell_path_effects_apply_current((EntitySlot*)obj);
-}
-
-/* 004093b0 and 00409450 (placement.cpp) are defined in a namespace and
- * declared in no header. */
-namespace unported_ledger_stubs {
-void placement_cell_search_expand(const int cell_xy[2]);
-int ledger_stub_00409450_FindNearbyPlacementCandidate(const int start_xy[2],
-                                                      int resource_amount);
-} // namespace unported_ledger_stubs
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (placement_cell_search_expand, 0x004093b0)
-extern "C" void legoobject_gi_placement_cell_search_expand_adapter(const int cell_xy[2])
-{
-    unported_ledger_stubs::placement_cell_search_expand(cell_xy);
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (FindNearbyPlacementCandidate, 0x00409450)
-extern "C" int legoobject_gi_nearby_placement_candidate_find_adapter(const int start_xy[2],
-                                                                     int resource_amount)
-{
-    return unported_ledger_stubs::ledger_stub_00409450_FindNearbyPlacementCandidate(
-        start_xy, resource_amount);
 }
 
 /* ---- group Q adapters (GAME-023 part 3, legoobject_unit.c) ---- */
@@ -11578,28 +11537,6 @@ extern "C" int* legoobject_gs_placement_footprint_check_adapter(void* surface, i
     (void)surface; (void)blockPos; (void)shape; (void)count; (void)direction; (void)map;
     (void)waterEntrances;
     return NULL;
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00409790 has another contract)
-extern "C" uint32_t legoobject_gs_construction_register_adapter(int objID, int* blockPos, int direction,
-                                                               int* shape, unsigned int count)
-{
-    (void)objID; (void)blockPos; (void)direction; (void)shape; (void)count;
-    return 0;
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00408ec0 has another contract)
-extern "C" void legoobject_gs_construction_path_shape_adapter(int* blockPos, int* shape,
-                                                             unsigned int count)
-{
-    (void)blockPos; (void)shape; (void)count;
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00408e50 has another contract)
-extern "C" void legoobject_gs_construction_resource_add_adapter(int* blockPos, int type, int id,
-                                                               int level, int count)
-{
-    (void)blockPos; (void)type; (void)id; (void)level; (void)count;
 }
 
 /* ---- group T adapters (GAME-023 part 3, legoobject_unit.c) ---- */

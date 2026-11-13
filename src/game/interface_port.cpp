@@ -3632,11 +3632,16 @@ int aitask_list_contains(int code)
                                             code);
 }
 
+/* construction.c serves this name in the matching build
+ * (construction_link_names.h, finding 603): it is Construction.c's
+ * 00409600, with the same contract. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void lego_path_remove(const Point2I* blockPos)
 {
     unported_ledger_stubs::ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
         &blockPos->x);
 }
+#endif
 
 void dependencies_get_requirements(int objType, int objIndex, int level,
                                    InterfaceDependency** list,

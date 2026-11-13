@@ -553,7 +553,7 @@ void simtick_scene_pass_original(float elapsedWorld);      /* 0043b270 */
 void simtick_sfx_bank_original(float elapsedWorld);        /* 0046f550 */
 void view_tick_original(void* camera, Lego_Level* level, float elapsed,
                         float elapsedWorld);                /* 00435f5c */
-void simtick_bobbins_original(float elapsedWorld);         /* 004091e0 */
+void construction_update_all(float elapsedGame);           /* 004091e0 construction.c */
 void simtick_render_step_original(void);                   /* 00449c00 */
 void simtick_post_cluster_original(float elapsedWorld);    /* 0040d450 */
 void simtick_fx_bank_tick_original(Lego_Level* level, float elapsedWorld); /* 0046e390 */
@@ -1457,9 +1457,10 @@ void deferred_olist_entity_queue_add_original(void* objModel, int objType,
                                               float heading, float health,
                                               const char* olName,
                                               const char* drivingName); /* 00437c20 */
-struct EntitySlot* world_object_create_with_transform_original(
-    unsigned int buildingID, const int* blockPos, unsigned int dir,
-    void* shape, unsigned int shapeCount, int teleportDown);   /* 00409a90 */
+void* construction_place_building(int objID, int* blockPos,
+                                  unsigned int direction, int* shapePoints,
+                                  unsigned int shapeCount,
+                                  int teleportDown);           /* 00409a90 construction.c */
 void building_upgrade_state_changed_dispatch(int type, int row, int column,
                                              int state); /* 00418830 helpwindow.c */
 void entity_linked_route_flag_clear_original(struct EntitySlot* object,

@@ -755,8 +755,8 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
                 direction = ((direction & 1) + direction) >> 1;
                 points = rotated_pairs_scratch_fill((const int*)rec, (const int*)shape,
                                                     shapeCount, direction);
-                obj = (Lego_Object*)legoobject_gb_world_object_create_adapter(
-                    rec->id, rec, direction, points, shapeCount, 0);
+                obj = (Lego_Object*)construction_place_building(
+                    rec->id, (int*)rec, direction, (int*)points, shapeCount, 0);
             } else {
                 obj = legoobject_create(rec->model, rec->type, rec->id);
             }
@@ -3300,7 +3300,7 @@ void legoobject_kind_four_post_create_resolve(Lego_Object* obj)
         legoobject_position_to_terrain_cell(obj, &blockPos[0], &blockPos[1]);
         if (!(entity_state_flags_get(LEGOOBJ_SLOT(obj)) & 0x200) &&
             !(entity_state_flags_get(LEGOOBJ_SLOT(obj)) & 0x400) &&
-            !legoobject_gi_nearby_placement_candidate_find_adapter(blockPos, crystals))
+            !construction_find_resource_object(blockPos, crystals))
         {
             obj->flags3 &= ~0x20000000;
             type4_object_registry_insert(LEGOOBJ_SLOT(obj));
@@ -3310,7 +3310,7 @@ void legoobject_kind_four_post_create_resolve(Lego_Object* obj)
         if ((entity_state_flags_get(LEGOOBJ_SLOT(obj)) & 0x200) &&
             legoobject_shared_eligibility_check(obj, 0) && Lego_GetCrystalCount(1))
         {
-            legoobject_gi_placement_cell_search_expand_adapter(blockPos);
+            construction_flood_path_blocks(blockPos);
         }
     }
 }
@@ -9172,17 +9172,21 @@ void cmd_operation_group_append_object(uint32_t key, struct EntitySlot* entity);
 uint32_t entity_indexed_record_word_at_b0_get(int type, int id, int level); /* 00469ac0 */
 uint32_t stats_table_word_at_b8(int type, int id, int level);           /* 00469b20 */
 uint32_t stats_table_word_at_d0(int type, int id, int level);           /* 00469f60 */
-/* PORT-ONLY adapters at the end of legoobject_port.cpp: Building.c's and
- * Construction.c's entries have C++ linkage and other contracts. */
+/* A PORT-ONLY adapter at the end of legoobject_port.cpp: Building.c's
+ * entry has C++ linkage and another contract. */
 int* legoobject_gs_placement_footprint_check_adapter(void* surface, int* blockPos, int* shape,
                                                     unsigned int count, int direction,
                                                     void* map, int waterEntrances); /* 004641c0 */
-uint32_t legoobject_gs_construction_register_adapter(int objID, int* blockPos, int direction,
-                                                    int* shape, unsigned int count); /* 00409790 */
-void legoobject_gs_construction_path_shape_adapter(int* blockPos, int* shape,
-                                                  unsigned int count);  /* 00408ec0 */
-void legoobject_gs_construction_resource_add_adapter(int* blockPos, int type, int id,
-                                                    int level, int count); /* 00408e50 */
+/* Construction.c (construction.c, construction.h). */
+unsigned int construction_zone_start_building(int objID, int* blockPos,
+                                              unsigned int direction,
+                                              int* shapePoints,
+                                              unsigned int shapeCount); /* 00409790 */
+void construction_spawn_barriers(int* blockPos, int* shapePoints,
+                                 unsigned int shapeCount);          /* 00408ec0 */
+void construction_zone_request_resource(int* blockPos, int objType,
+                                        int objID, unsigned int objLevel,
+                                        unsigned int count);        /* 00408e50 */
 
 /* Lego_Level's block grid size. */
 typedef struct LegoObjS_Level {
@@ -9725,18 +9729,18 @@ int legoobject_building_placement_preview_update(int objType, int objID, int cli
                         if (!toolTipOnly) {
                             media_pointer_cursor_select(0x16);
                             if (clicked) {
-                                group = legoobject_gs_construction_register_adapter(objID, &blockPos.x,
+                                group = construction_zone_start_building(objID, &blockPos.x,
                                     (i + legoGlobs_f_556448) & 3, placed, count);
                                 teleport = legoobject_query_center_mask02(NULL, &blockPos.x, 7, 0);
                                 cost = stats_table_word_at_b8(4, objID, 0);
                                 if (!(stats_table_word_at_144(4, objID) & 8))
-                                    legoobject_gs_construction_path_shape_adapter(&blockPos.x, placed, count);
-                                legoobject_gs_construction_resource_add_adapter(&blockPos.x, 6, 0, 0,
+                                    construction_spawn_barriers(&blockPos.x, placed, count);
+                                construction_zone_request_resource(&blockPos.x, 6, 0, 0,
                                     entity_indexed_record_word_at_b4_get(4, objID, 0));
                                 if (teleport != NULL && cost != 0)
-                                    legoobject_gs_construction_resource_add_adapter(&blockPos.x, 7, 1, 0, cost);
+                                    construction_zone_request_resource(&blockPos.x, 7, 1, 0, cost);
                                 else
-                                    legoobject_gs_construction_resource_add_adapter(&blockPos.x, 7, 0, 0,
+                                    construction_zone_request_resource(&blockPos.x, 7, 0, 0,
                                         entity_indexed_record_word_at_b0_get(4, objID, 0));
                                 cmd_operation_group_append_object(group, NULL);
                                 surface_visibility_set(surface, 1);

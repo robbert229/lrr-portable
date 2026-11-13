@@ -8929,13 +8929,6 @@ extern "C" void view_tick_original(void* camera, struct Lego_Level* level,
                   elapsedWorld);
 }
 
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (simtick_bobbins)
-extern "C" void simtick_bobbins_original(float elapsedWorld) /* 0x004091e0 */
-{
-    (void)elapsedWorld;
-    simtick_bobbins(s_callback_registry_context);
-}
-
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (simtick_render_step)
 extern "C" void simtick_render_step_original(void) /* 0x00449c00 */
 {
@@ -9552,23 +9545,6 @@ extern "C" void deferred_olist_entity_queue_add_original(
     deferred_olist_entity_queue_add(entity_pool_callback_context_get(), world,
                                     0, objType, (int)objID, heading_bits,
                                     health_bits, olName, drivingName);
-}
-
-/* Construction_SpawnBuilding (FUN_00409a90) returns the new building; the
- * port's entry takes a hook table and returns nothing, so no port function
- * has the original's contract. Answers no object. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (world_object_create_with_transform 00409a90; the port takes a hook table and returns nothing)
-extern "C" EntitySlot* world_object_create_with_transform_original(
-    unsigned int buildingID, const int* blockPos, unsigned int dir,
-    void* shape, unsigned int shapeCount, int teleportDown)
-{
-    (void)buildingID;
-    (void)blockPos;
-    (void)dir;
-    (void)shape;
-    (void)shapeCount;
-    (void)teleportDown;
-    return NULL;
 }
 
 /* FUN_0043f100 takes (object, driven object) and clears the route bit on

@@ -3672,12 +3672,14 @@ void path_record_release(void* record)
     path_record_remove_and_free(record);
 }
 
-/* FUNCTION: LEGORR 0x00409300
+/* Port model of 0x00409300 (Construction_Zone_StartPath).
  * The original first checks whether the coordinate pair already has a
  * path descriptor, then creates and links a 0xd4-byte path record and
  * sets bit 1 in its final dword. This portable entry point models the
  * creation branch; callers that need duplicate suppression perform that
- * check before calling it. */
+ * check before calling it. construction.c serves this name in the matching
+ * build (construction_link_names.h, finding 603). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void* tutorial_path_descriptor_create(const uint32_t* coord_pair)
 {
     char* record;
@@ -3687,6 +3689,7 @@ void* tutorial_path_descriptor_create(const uint32_t* coord_pair)
     *(uint32_t*)(record + 0xd0) |= 2u;
     return record;
 }
+#endif
 
 #if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t path_record_count_peek(void) { return s_path_record_count; }

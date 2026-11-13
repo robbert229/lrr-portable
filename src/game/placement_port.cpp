@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-007 GAME-007: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-007.csv. */
+/* The port tail of Collision.c (GAME-007) and Construction.c (GAME-052),
+ * finding 603: the port's construction zones ("path records"), with their
+ * native sidecars, hook tables and guards. Relocated from the verbatim
+ * placement.cpp (body hashes: docs/coverage/relocations/GAME-007.csv). It is
+ * a tail entry of src/link_order.cmake and carries no Reccmp annotation;
+ * each original function's model is marked "Port model of 0x...".
+ *
+ * In the matching build (MSVC 5.0) collision.c and construction.c define
+ * the names their link-name headers list (collision_link_names.h,
+ * construction_link_names.h), so this file's definitions of those names are
+ * compiled out there (LRR_PLACEMENT_PORT_NAMES). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -84,13 +92,24 @@ extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* enti
 #include "gods98/simtick_for_placement.hpp"
 #include "gods98/view_for_placement.hpp"
 
+/* 1 where this file serves the names that collision.c and construction.c
+ * take in the matching build (collision_link_names.h,
+ * construction_link_names.h): every build but MSVC 5.0's. Set by an explicit
+ * #if: MSVC 5.0 does not evaluate `defined` inside a macro expansion
+ * (finding 590). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_PLACEMENT_PORT_NAMES 0
+#else
+#define LRR_PLACEMENT_PORT_NAMES 1
+#endif
+
 /* DAT_004b8a20 role */
-// GLOBAL: LEGORR 0x004b8a20
+/* Port model of the original's 0x004b8a20 */
 uint32_t s_path_record_count;
-// GLOBAL: LEGORR 0x004b8a24
+/* Port model of the original's 0x004b8a24 */
 void* s_path_record_last;     /* DAT_004b8a24 role */
 
-// GLOBAL: LEGORR 0x004b8a50
+/* Port model of the original's 0x004b8a50 */
 unsigned int s_string_table_count;
 
 void path_record_remove_and_free(void* record);
@@ -109,7 +128,7 @@ static int bobbin_spawn(SimtickBobbin* node);
 static void descriptor_transition_apply(SimtickBobbin* node);
 static void path_record_storage_release(void* record);
 
-// FUNCTION: LEGORR 0x004089d0
+/* Port model of 0x004089d0 */
 float segment_2d_point_distance(const float* point, const float* start,
                                 const float* end)
 {
@@ -152,7 +171,8 @@ float segment_2d_point_distance(const float* point, const float* start,
     return point_to_end_distance;
 }
 
-// FUNCTION: LEGORR 0x00408b00
+#if LRR_PLACEMENT_PORT_NAMES /* collision.c serves these names in the matching build */
+/* Port model of 0x00408b00 */
 float point_to_polyline_minimum_segment_distance(const float* point,
                                                  const float* first_point,
                                                  const float* last_point,
@@ -180,7 +200,7 @@ float point_to_polyline_minimum_segment_distance(const float* point,
     return minimum;
 }
 
-// FUNCTION: LEGORR 0x00408b60
+/* Port model of 0x00408b60 */
 void point_project_onto_line2d(const float* line_start, const float* line_end,
                                const float* point, float* out)
 {
@@ -195,7 +215,7 @@ void point_project_onto_line2d(const float* line_start, const float* line_end,
     out[1] = projection * unit_y + line_start[1];
 }
 
-// FUNCTION: LEGORR 0x00408bf0
+/* Port model of 0x00408bf0 */
 void point2d_project_onto_direction(const float* origin, const float* direction,
                                     const float* point, float* out)
 {
@@ -211,12 +231,15 @@ void point2d_project_onto_direction(const float* origin, const float* direction,
     out[1] = projection * unit_y + origin[1];
 }
 
+#endif
+
+#if LRR_PLACEMENT_PORT_NAMES /* construction.c serves this name in the matching build */
 /* StringTableIndexLookup (FUN_00408c80): scan the configured name-pointer
  * table in order and return the first exact byte-string match.  The retail
  * comparator loads two bytes per iteration, but still checks both bytes and
  * stops at the same NUL terminator as an ordinary byte walk.  A miss returns
  * the table count. */
-// FUNCTION: LEGORR 0x00408c80
+/* Port model of 0x00408c80 */
 unsigned int string_table_index_lookup(const char* value)
 {
     unsigned int i;
@@ -249,8 +272,10 @@ unsigned int string_table_index_lookup(const char* value)
     }
     return s_string_table_count;
 }
+#endif /* LRR_PLACEMENT_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00408CE0
+#if LRR_PLACEMENT_PORT_NAMES /* construction.c serves this name in the matching build */
+/* Port model of 0x00408ce0 */
 void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity)
 {
     void* descriptor = cmd_path_descriptor_find(key);
@@ -284,8 +309,10 @@ void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity)
         memcpy((char*)descriptor + 0xd0, &flags, sizeof(flags));
     }
 }
+#endif /* LRR_PLACEMENT_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00408d70
+#if LRR_PLACEMENT_PORT_NAMES /* construction.c serves this name in the matching build */
+/* Port model of 0x00408d70 */
 int terrain_descriptor_coordinate_count_limit_check(
     uint32_t descriptor_key, int type, int row)
 {
@@ -336,8 +363,10 @@ int terrain_descriptor_coordinate_count_limit_check(
     }
     return matching_count < limit;
 }
+#endif /* LRR_PLACEMENT_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00408e10
+#if LRR_PLACEMENT_PORT_NAMES /* construction.c serves this name in the matching build */
+/* Port model of 0x00408e10 */
 int count_matching_coordinates_in_list(const void* manager,
                                        int32_t coord_x, int32_t coord_y)
 {
@@ -356,11 +385,12 @@ int count_matching_coordinates_in_list(const void* manager,
     }
     return found;
 }
+#endif /* LRR_PLACEMENT_PORT_NAMES */
 
 /* CreateRepeatedResourceInstances (FUN_00408e50): the parameter is a cell
  * coordinate pair. The descriptor owns the sequence counter and supplies the
  * zone written into each newly linked kind-7 command. */
-// FUNCTION: LEGORR 0x00408E50
+/* Port model of 0x00408e50 */
 void entity_repeated_resource_instances_create(
     const int cell_xy[2], int kind, int variant, uint32_t value, int count)
 {
@@ -387,20 +417,23 @@ void entity_repeated_resource_instances_create(
     }
 }
 
-// FUNCTION: LEGORR 0x00408ec0
+/* Port model of 0x00408ec0 */
 void terrain_kind_nine_neighbor_emit_for_footprint_cells_current(
     const int cell_xy[2], const int* footprint_xy, uint32_t footprint_count)
 {
     (void)terrain_kind_nine_neighbor_emit_for_footprint_cells(
         cell_xy, footprint_xy, footprint_count);
 }
-// FUNCTION: LEGORR 0x004090a0
+#if LRR_PLACEMENT_PORT_NAMES /* construction.c serves this name in the matching build */
+/* Port model of 0x004090a0 */
 int terrain_cell_predicate_check_current(const uint32_t pair_key[2])
 {
     return terrain_descriptor_find_exact_current(pair_key, NULL) != NULL;
 }
+#endif /* LRR_PLACEMENT_PORT_NAMES */
 /* Retail's descriptor chain consists of the raw path-record windows. */
-// FUNCTION: LEGORR 0x004090c0
+#if LRR_PLACEMENT_PORT_NAMES /* construction.c serves this name in the matching build */
+/* Port model of 0x004090c0 */
 void* terrain_descriptor_find_exact_current(const uint32_t* pair_key,
                                             const uint32_t* single_key)
 {
@@ -422,11 +455,13 @@ void* terrain_descriptor_find_exact_current(const uint32_t* pair_key,
     }
     return NULL;
 }
+#endif /* LRR_PLACEMENT_PORT_NAMES */
 
+#if LRR_PLACEMENT_PORT_NAMES /* construction.c serves this name in the matching build */
 /* The two UI group operations resolve the shared DAT_004b8a24 path-record
  * list. Their entity arrays live at +0x2c/+0xcc in the 32-bit record; native
  * builds use level.cpp's widened-pointer sidecar accessors for that window. */
-// FUNCTION: LEGORR 0x00409110
+/* Port model of 0x00409110 */
 void simtick_selection_group_release(const uint32_t key_pair[2])
 {
     void* record;
@@ -452,8 +487,10 @@ void simtick_selection_group_release(const uint32_t key_pair[2])
         path_record_remove_and_free(record);
     }
 }
+#endif /* LRR_PLACEMENT_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00409150
+#if LRR_PLACEMENT_PORT_NAMES /* construction.c serves this name in the matching build */
+/* Port model of 0x00409150 */
 void simtick_selection_group_clear(const uint32_t key_pair[2])
 {
     void* record;
@@ -489,8 +526,9 @@ void simtick_selection_group_clear(const uint32_t key_pair[2])
     cmd_cancel_by_coords((int)group_key, 0, 0, 0);
     path_record_remove_and_free(record);
 }
+#endif /* LRR_PLACEMENT_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x004091e0
+/* Port model of 0x004091e0 */
 void simtick_bobbins(EngineContext* c)
 {
     (void)c;
@@ -518,14 +556,14 @@ void simtick_bobbins(EngineContext* c)
         node = next;
     }
 }
-// FUNCTION: LEGORR 0x00409270
+/* Port model of 0x00409270 */
 static int bobbin_spawn(SimtickBobbin* node)
 {
     return node != NULL && s_bobbin_spawn_hook != NULL
         ? s_bobbin_spawn_hook(node, s_bobbin_action_context) : 0;
 } /* FUN_00409270 */
 
-// FUNCTION: LEGORR 0x00409350
+/* Port model of 0x00409350 */
 void* path_record_allocate_and_link(const uint32_t* coord_pair)
 {
     const size_t bytes =
@@ -553,7 +591,7 @@ void* path_record_allocate_and_link(const uint32_t* coord_pair)
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x004093b0
+/* Port model of 0x004093b0 */
 void placement_cell_search_expand(const int cell_xy[2])
 {
     static const int offset[4][2] = {{0,-1},{1,0},{0,1},{-1,0}};
@@ -576,7 +614,7 @@ void placement_cell_search_expand(const int cell_xy[2])
     }
 }
 
-// FUNCTION: LEGORR 0x00409450
+/* Port model of 0x00409450 */
 int ledger_stub_00409450_FindNearbyPlacementCandidate(
     const int start_xy[2], int resource_amount)
 {
@@ -587,7 +625,7 @@ int ledger_stub_00409450_FindNearbyPlacementCandidate(
 }
 
 // NeighborCellEntitySearchRecurse
-// FUNCTION: LEGORR 0x00409470
+/* Port model of 0x00409470 */
 int ledger_stub_00409470_NeighborCellEntitySearchRecurse(
     const int cell_xy[2], int resource_amount)
 {
@@ -619,7 +657,7 @@ int ledger_stub_00409470_NeighborCellEntitySearchRecurse(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00409550
+/* Port model of 0x00409550 */
 static void descriptor_transition_apply(SimtickBobbin* node)
 {
     int* cell_xy;
@@ -646,7 +684,7 @@ static void descriptor_transition_apply(SimtickBobbin* node)
 } /* FUN_00409550 */
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00409600
+/* Port model of 0x00409600 */
 void ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
     const int cell_xy[2])
 {
@@ -707,7 +745,7 @@ void ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
 }
 
 // CellPathRecordRegisterApply
-// FUNCTION: LEGORR 0x00409790
+/* Port model of 0x00409790 */
 uint32_t ledger_stub_00409790_CellPathRecordRegisterApply(
     uint32_t record_key, const int cell_xy[2], uint32_t direction,
     const int* footprint_xy, uint32_t footprint_count)
@@ -773,7 +811,8 @@ uint32_t ledger_stub_00409790_CellPathRecordRegisterApply(
     return *(uint32_t*)((char*)record + 0x08);
 }
 
-// FUNCTION: LEGORR 0x00409940
+#if LRR_PLACEMENT_PORT_NAMES /* construction.c serves this name in the matching build */
+/* Port model of 0x00409940 */
 void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2])
 {
     /* The retail local_40 table is ordered NW, N, NE, W, E, SW, S, SE.
@@ -797,11 +836,13 @@ void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2])
         terrain_cell_mutation_progress(level, (uint32_t)x, (uint32_t)y);
     }
 }
+#endif /* LRR_PLACEMENT_PORT_NAMES */
 } // namespace unported_ledger_stubs
 
+#if LRR_PLACEMENT_PORT_NAMES /* construction.c serves this name in the matching build */
 /* ReleaseAllGroupRecords (FUN_004099d0) saves each successor before the
  * unlinking/freeing leaf, so the full list can be released head-first. */
-// FUNCTION: LEGORR 0x004099d0
+/* Port model of 0x004099d0 */
 void path_record_release_all(void)
 {
     void* current = s_path_record_last;
@@ -811,9 +852,10 @@ void path_record_release_all(void)
         current = next;
     }
 }
+#endif /* LRR_PLACEMENT_PORT_NAMES */
 /* PathRecordRelease (FUN_004099f0): unlink the selected record from the
  * path-record chain, then release its optional owned payload and record. */
-// FUNCTION: LEGORR 0x004099f0
+/* Port model of 0x004099f0 */
 void path_record_remove_and_free(void* record)
 {
     void* previous = NULL;
@@ -843,7 +885,7 @@ release_record:
     engine_heap_free(record);
 }
 
-// FUNCTION: LEGORR 0x00409a40
+/* Port model of 0x00409a40 */
 static void bobbin_delayed(SimtickBobbin* node)
 {
     if (node == NULL) return;
@@ -862,7 +904,7 @@ static void bobbin_delayed(SimtickBobbin* node)
     }
 }
 
-// FUNCTION: LEGORR 0x00409a90
+/* Port model of 0x00409a90 */
 void world_object_create_with_transform(const WorldObjectCreateHooks* hooks,
                                         uint32_t object_kind,
                                         const int32_t position[2],
@@ -890,7 +932,7 @@ void world_object_create_with_transform(const WorldObjectCreateHooks* hooks,
             (const int*)position);
     world_object_spawn_request_create(hooks, &request, notify);
 }
-// FUNCTION: LEGORR 0x00409b30
+/* Port model of 0x00409b30 */
 EntitySlot* world_object_spawn_request_create(
     const WorldObjectCreateHooks* hooks,
     const WorldObjectSpawnRequest* request,
@@ -955,7 +997,7 @@ EntitySlot* world_object_spawn_request_create(
     return entity;
 }
 
-// FUNCTION: LEGORR 0x00409cd0
+/* Port model of 0x00409cd0 */
 void cell_cardinal_neighbor_apply_current(const int coord_pair[2])
 {
     static const int offsets[8] = { 0,-1, 1,0, 0,1, -1,0 };
