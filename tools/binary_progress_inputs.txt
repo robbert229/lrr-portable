@@ -121,7 +121,11 @@ src/game/construction_imports.h
 src/game/construction_link_names.h
 src/game/creature_scene.cpp
 src/game/creature_scene.hpp
-src/game/dependencies.cpp
+src/game/dependencies.c
+src/game/dependencies.h
+src/game/dependencies_imports.h
+src/game/dependencies_link_names.h
+src/game/dependencies_port.cpp
 src/game/dependency_grid.cpp
 src/game/dependency_grid_for_dependencies.hpp
 src/game/dependency_grid_shared.hpp
@@ -318,8 +322,12 @@ src/game/panel_unit.h
 src/game/placement_footprint.cpp
 src/game/placement_footprint.h
 src/game/placement_port.cpp
-src/game/pointer.cpp
+src/game/pointer.c
+src/game/pointer.h
 src/game/pointer_cursor.hpp
+src/game/pointer_imports.h
+src/game/pointer_link_names.h
+src/game/pointer_port.cpp
 src/game/port_loop_ports.hpp
 src/game/priorities.c
 src/game/priorities.h

@@ -97,7 +97,9 @@
 /* 004a1d60 is the pooled "%s" literal, marked in gods98/files.c (finding 583). */
 const char s_task_copy_format[] = "%s";
 
-// GLOBAL: LEGORR 0x004b8bc8
+/* Dependencies.c's table (004b8bc8) is dependencies.c's dependencyGlobs in
+ * the matching build (finding 612); this is the port's copy. */
+/* Port state of 0x004b8bc8 */
 uint32_t s_grid_rec[GRID_REC_REGION_DWORDS];
 
 static uint32_t s_quad_mesh_render_records[10][8];
@@ -485,13 +487,21 @@ int entity_quad_mesh_render_record_allowed(const EntitySlot* e)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x0040ab10
+/* Dependencies_SetEnabled (0040ab10) and
+ * Dependencies_Reset_ClearAllLevelFlags_10c (0040ab30) are Dependencies.c's
+ * (GAME-010). dependencies.c serves both names in the matching build
+ * (dependencies_link_names.h, finding 612). Reccmp reads annotations
+ * without preprocessing, so these are comments. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+/* Port model of 0x0040ab10 */
+// PORT-ONLY: native Dependencies_SetEnabled; dependencies.c serves the name in the matching build
 void global_mode_zero_input_set(int value)
 {
     s_mode_zero_flag = (value == 0) ? 1u : 0u;
 }
 
-// FUNCTION: LEGORR 0x0040ab30
+/* Port model of 0x0040ab30 */
+// PORT-ONLY: native Dependencies_Reset_ClearAllLevelFlags_10c; dependencies.c serves the name in the matching build
 void grid_record_flag_mask_clear(void)
 {
     size_t k = 33; /* the corpus's field-word origin */
@@ -504,3 +514,4 @@ void grid_record_flag_mask_clear(void)
         }
     } while (k + 33 < GRID_REC_REGION_DWORDS);
 }
+#endif

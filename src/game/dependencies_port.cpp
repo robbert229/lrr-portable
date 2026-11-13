@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-010 Dependencies.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-010.csv. */
+/* GAME-010 Dependencies.c's port tail (finding 612). dependencies.c is the
+ * unit, rebuilt in original shape; this file keeps the port's model of it,
+ * unannotated: the level-owned dependency grid entries (dependency_grid.cpp)
+ * and the fallback table accessors that level.cpp wraps. In the matching
+ * build dependencies.c serves the two C-linkage port names defined here
+ * (dependencies_link_names.h), so they are compiled out there
+ * (LRR_DEPENDENCIES_PORT_NAMES). Relocated from dependencies.cpp
+ * (tools/relocate_unit.py, ADR 0006); body hashes:
+ * docs/coverage/relocations/GAME-010.csv. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
 #include <stdio.h>
@@ -60,7 +66,7 @@
 #define CELL_ENTRY_SLOT_VARIANTS 16
 #define CELL_ENTRY_SLOT_STRIDE 49
 
-// GLOBAL: LEGORR 0x004c7178
+/* Port state of 0x004c7178 */
 uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
 
 namespace unported_ledger_stubs {
@@ -68,7 +74,7 @@ namespace unported_ledger_stubs {
  * block.  Its records are owned by the active LevelState in this port, so
  * the same direct entry is called at level initialization after the active
  * level has been installed in GameContext. */
-// FUNCTION: LEGORR 0x0040ab70
+/* Port model of 0x0040ab70 */
 void dependency_grid_config_load(BlockRec* level_block,
                                  BlockFile* global_config)
 {
@@ -77,7 +83,16 @@ void dependency_grid_config_load(BlockRec* level_block,
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x0040AEA0
+/* dependencies.c serves the port's names of 0040aea0 and 0040af40 in the
+ * matching build (dependencies_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_DEPENDENCIES_PORT_NAMES 0
+#else
+#define LRR_DEPENDENCIES_PORT_NAMES 1
+#endif
+
+#if LRR_DEPENDENCIES_PORT_NAMES /* dependencies.c serves these names in the matching build */
+/* Port model of 0x0040aea0 */
 int ensure_cell_entries_loaded(uint32_t kind, int row, int slot)
 {
     GameContext* game = entity_pool_callback_context_get();
@@ -114,7 +129,7 @@ int ensure_cell_entries_loaded(uint32_t kind, int row, int slot)
  * live task are accepted directly. Otherwise the first two words must
  * match, and a nonzero bounded-mode flag applies the unsigned cell limit
  * from entry word two to the cell record's word index 0xcc (+0x330 bytes). */
-// FUNCTION: LEGORR 0x0040AF40
+/* Port model of 0x0040af40 */
 int terrain_cell_resource_entry_matches(const uint32_t* cell_record,
                                         const uint32_t* resource_entry)
 {
@@ -135,49 +150,10 @@ int terrain_cell_resource_entry_matches(const uint32_t* cell_record,
     return 1;
 }
 
-/* The mapped target walks the retail count/pointer tables directly. */
-// FUNCTION: LEGORR 0x0040af90
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void terrain_cell_record_get_target(
-    int x, int y, int field, uint32_t* value_a, uint32_t* value_b)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        lea eax, dword ptr [eax + eax*2]
-        lea edx, dword ptr [ecx + eax*4]
-        add eax, edx
-        lea ecx, dword ptr [eax + eax*2]
-        shl ecx, 4
-        add ecx, eax
-        shl ecx, 2
-        mov edx, dword ptr [s_grid_rec + ecx + 80h]
-        test edx, edx
-        je terrain_cell_record_get_default
-        mov edx, dword ptr [esp + 0ch]
-        lea ecx, dword ptr [eax + eax*2]
-        shl ecx, 4
-        add edx, ecx
-        add eax, edx
-        mov edx, dword ptr [esp + 10h]
-        shl eax, 2
-        mov ecx, dword ptr [s_grid_rec + eax + 40h]
-        mov dword ptr [edx], ecx
-        mov ecx, dword ptr [esp + 14h]
-        mov eax, dword ptr [s_grid_rec + eax]
-        mov dword ptr [ecx], eax
-        ret
-    terrain_cell_record_get_default:
-        mov eax, dword ptr [esp + 10h]
-        mov edx, dword ptr [s_grid_rec + ecx + 40h]
-        mov dword ptr [eax], edx
-        mov edx, dword ptr [esp + 14h]
-        mov ecx, dword ptr [s_grid_rec + ecx]
-        mov dword ptr [edx], ecx
-        ret
-    }
-}
-#else
+#endif /* LRR_DEPENDENCIES_PORT_NAMES */
+
+/* The port's fallback table accessors (level.cpp's wrappers call them). */
+/* Port model of 0x0040af90 */
 void terrain_cell_record_get_target(int x, int y, int field,
                                            uint32_t* value_a,
                                            uint32_t* value_b)
@@ -189,10 +165,9 @@ void terrain_cell_record_get_target(int x, int y, int field,
     *value_a = s_grid_rec[base + 16u];
     *value_b = s_grid_rec[base];
 }
-#endif
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x0040b000
+/* Port model of 0x0040b000 */
 void dependency_grid_matches_collect(uint32_t first, uint32_t second,
                                      uint32_t selector,
                                      DependencyGridMatches* output)
@@ -240,7 +215,7 @@ void dependency_grid_matches_collect(uint32_t first, uint32_t second,
     }
 }
 
-// FUNCTION: LEGORR 0x0040b1b0
+/* Port model of 0x0040b1b0 */
 void dependency_grid_occupancy_pass(void)
 {
     DependencyGridLevelStorage* storage = dependency_grid_current_storage();
@@ -285,40 +260,7 @@ void dependency_grid_occupancy_pass(void)
 }
 } // namespace unported_ledger_stubs
 
-// CellFlag4IsSet uses the global selector and flag tables directly.
-// FUNCTION: LEGORR 0x0040b250
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t cell_flag4_is_set_target(int x, int y,
-                                                            int field)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        lea eax, dword ptr [eax + eax*2]
-        lea edx, dword ptr [ecx + eax*4]
-        lea ecx, dword ptr [eax + edx]
-        lea eax, dword ptr [ecx + ecx*2]
-        shl eax, 4
-        add eax, ecx
-        shl eax, 2
-        mov edx, dword ptr [s_grid_rec + eax + 80h]
-        test edx, edx
-        je cell_flag4_is_set_default
-        mov edx, dword ptr [esp + 0ch]
-        lea eax, dword ptr [ecx + ecx*2]
-        shl eax, 4
-        add edx, eax
-        add ecx, edx
-        mov eax, dword ptr [s_grid_rec + ecx*4 + 84h]
-        and eax, 4
-        ret
-    cell_flag4_is_set_default:
-        mov eax, dword ptr [s_grid_rec + eax + 84h]
-        and eax, 4
-        ret
-    }
-}
-#else
+/* Port model of 0x0040b250 */
 uint32_t cell_flag4_is_set_target(int x, int y, int field)
 {
     const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
@@ -327,67 +269,19 @@ uint32_t cell_flag4_is_set_target(int x, int y, int field)
         return s_grid_rec[offset + 33u + (uint32_t)field] & 4u;
     return s_grid_rec[offset + 33u] & 4u;
 }
-#endif
 
-// The mapped bodies address the retail flag table directly; public helpers
-// retain the dependency override and portable bounds checks.
-// FUNCTION: LEGORR 0x0040b2a0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void cell_flag100_set_target(int x, int y, int field)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        lea eax, dword ptr [eax + eax*2]
-        lea edx, dword ptr [ecx + eax*4]
-        add eax, edx
-        mov edx, dword ptr [esp + 0ch]
-        lea ecx, dword ptr [eax + eax*2]
-        shl ecx, 4
-        add edx, ecx
-        add eax, edx
-        mov ecx, dword ptr [s_grid_rec + eax*4 + 84h]
-        lea eax, dword ptr [s_grid_rec + eax*4 + 84h]
-        or ch, 1
-        mov dword ptr [eax], ecx
-        ret
-    }
-}
-#else
+/* Port model of 0x0040b2a0 */
 void cell_flag100_set_target(int x, int y, int field)
 {
     const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
     const uint32_t word = cell * GRID_REC_STRIDE + (uint32_t)field + 33u;
     s_grid_rec[word] |= 0x100u;
 }
-#endif
 
-// FUNCTION: LEGORR 0x0040b2e0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t cell_flag100_is_set_target(int x, int y,
-                                                             int field)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        lea eax, dword ptr [eax + eax*2]
-        lea edx, dword ptr [ecx + eax*4]
-        add eax, edx
-        mov edx, dword ptr [esp + 0ch]
-        lea ecx, dword ptr [eax + eax*2]
-        shl ecx, 4
-        add edx, ecx
-        add eax, edx
-        mov eax, dword ptr [s_grid_rec + eax*4 + 84h]
-        and eax, 100h
-        ret
-    }
-}
-#else
+/* Port model of 0x0040b2e0 */
 uint32_t cell_flag100_is_set_target(int x, int y, int field)
 {
     const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
     const uint32_t word = cell * GRID_REC_STRIDE + (uint32_t)field + 33u;
     return s_grid_rec[word] & 0x100u;
 }
-#endif

@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-033 Pointer.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-033.csv. */
+/* GAME-033 Pointer.c's port tail (finding 612). pointer.c is the unit,
+ * rebuilt in original shape; this file keeps the port's model of it,
+ * unannotated: the pointer state that media.cpp, ui_list.cpp and crt.cpp
+ * read, and the port's definitions of the unit's port names. In the matching
+ * build pointer.c serves those names (pointer_link_names.h), so they are
+ * compiled out there (LRR_POINTER_PORT_NAMES). Relocated from pointer.cpp
+ * (tools/relocate_unit.py, ADR 0006); body hashes:
+ * docs/coverage/relocations/GAME-033.csv. */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -57,142 +62,150 @@
 #include "ui_list_for_pointer.hpp"
 #include "gods98/media_for_pointer.hpp"
 
-/* The corpus's override gate compares against this .rdata zero dword
- * (objdump-verified fcomp operand of PointerCursorSelect); a named const
- * static keeps the fcomp operand resolvable by Reccmp. */
-// GLOBAL: LEGORR 0x0049e64c
+/* The corpus's override gate compares against the .rdata zero dword
+ * 0049e64c (the fcomp operand of PointerCursorSelect). */
+/* Port state of 0x0049e64c */
 static const float s_cursor_gate = 0.0f;   /* DAT_0049e64c, verified */
 
-// GLOBAL: LEGORR 0x004a8a14
+/* Port state of 0x004a8a14 */
 static const char s_pointer_name_surface_recharge_seam[] = "Pointer_SurfaceType_RechargeSeam";
-// GLOBAL: LEGORR 0x004a8a38
+/* Port state of 0x004a8a38 */
 static const char s_pointer_name_surface_crystal_seam[] = "Pointer_SurfaceType_CrystalSeam";
-// GLOBAL: LEGORR 0x004a8a58
+/* Port state of 0x004a8a58 */
 static const char s_pointer_name_surface_lake[] = "Pointer_SurfaceType_Lake";
-// GLOBAL: LEGORR 0x004a8a74
+/* Port state of 0x004a8a74 */
 static const char s_pointer_name_surface_ore_seam[] = "Pointer_SurfaceType_OreSeam";
-// GLOBAL: LEGORR 0x004a8a90
+/* Port state of 0x004a8a90 */
 static const char s_pointer_name_surface_water[] = "Pointer_SurfaceType_Water";
-// GLOBAL: LEGORR 0x004a8aac
+/* Port state of 0x004a8aac */
 static const char s_pointer_name_surface_lava[] = "Pointer_SurfaceType_Lava";
-// GLOBAL: LEGORR 0x004a8ac8
+/* Port state of 0x004a8ac8 */
 static const char s_pointer_name_surface_soil[] = "Pointer_SurfaceType_Soil";
-// GLOBAL: LEGORR 0x004a8ae4
+/* Port state of 0x004a8ae4 */
 static const char s_pointer_name_surface_loose[] = "Pointer_SurfaceType_Loose";
-// GLOBAL: LEGORR 0x004a8b00
+/* Port state of 0x004a8b00 */
 static const char s_pointer_name_surface_medium[] = "Pointer_SurfaceType_Medium";
-// GLOBAL: LEGORR 0x004a8b1c
+/* Port state of 0x004a8b1c */
 static const char s_pointer_name_surface_hard[] = "Pointer_SurfaceType_Hard";
-// GLOBAL: LEGORR 0x004a8b38
+/* Port state of 0x004a8b38 */
 static const char s_pointer_name_surface_immovable[] = "Pointer_SurfaceType_Immovable";
-// GLOBAL: LEGORR 0x004a8b58
+/* Port state of 0x004a8b58 */
 static const char s_pointer_name_vehicle_clear[] = "Pointer_VehicleClear";
-// GLOBAL: LEGORR 0x004a8b70
+/* Port state of 0x004a8b70 */
 static const char s_pointer_name_lego_man_clear[] = "Pointer_LegoManClear";
-// GLOBAL: LEGORR 0x004a8b88
+/* Port state of 0x004a8b88 */
 static const char s_pointer_name_vehicle_go[] = "Pointer_VehicleGo";
-// GLOBAL: LEGORR 0x004a8b9c
+/* Port state of 0x004a8b9c */
 static const char s_pointer_name_lego_man_go[] = "Pointer_LegoManGo";
-// GLOBAL: LEGORR 0x004a8bb0
+/* Port state of 0x004a8bb0 */
 static const char s_pointer_name_vehicle_cant_go[] = "Pointer_VehicleCantGo";
-// GLOBAL: LEGORR 0x004a8bc8
+/* Port state of 0x004a8bc8 */
 static const char s_pointer_name_lego_man_cant_go[] = "Pointer_LegoManCantGo";
-// GLOBAL: LEGORR 0x004a8be0
+/* Port state of 0x004a8be0 */
 static const char s_pointer_name_vehicle_pick_up[] = "Pointer_VehiclePickUp";
-// GLOBAL: LEGORR 0x004a8bf8
+/* Port state of 0x004a8bf8 */
 static const char s_pointer_name_lego_man_pick_up[] = "Pointer_LegoManPickUp";
-// GLOBAL: LEGORR 0x004a8c10
+/* Port state of 0x004a8c10 */
 static const char s_pointer_name_vehicle_cant_pick_up[] = "Pointer_VehicleCantPickUp";
-// GLOBAL: LEGORR 0x004a8c2c
+/* Port state of 0x004a8c2c */
 static const char s_pointer_name_lego_man_cant_pick_up[] = "Pointer_LegoManCantPickUp";
-// GLOBAL: LEGORR 0x004a8c48
+/* Port state of 0x004a8c48 */
 static const char s_pointer_name_vehicle_dig[] = "Pointer_VehicleDig";
-// GLOBAL: LEGORR 0x004a8c5c
+/* Port state of 0x004a8c5c */
 static const char s_pointer_name_lego_man_dig[] = "Pointer_LegoManDig";
-// GLOBAL: LEGORR 0x004a8c70
+/* Port state of 0x004a8c70 */
 static const char s_pointer_name_vehicle_cant_dig[] = "Pointer_VehicleCantDig";
-// GLOBAL: LEGORR 0x004a8c88
+/* Port state of 0x004a8c88 */
 static const char s_pointer_name_lego_man_cant_dig[] = "Pointer_LegoManCantDig";
-// GLOBAL: LEGORR 0x004a8ca0
+/* Port state of 0x004a8ca0 */
 static const char s_pointer_name_pick_up_ore[] = "Pointer_PickUpOre";
-// GLOBAL: LEGORR 0x004a8cb4
+/* Port state of 0x004a8cb4 */
 static const char s_pointer_name_cant_pick_up[] = "Pointer_CantPickUp";
-// GLOBAL: LEGORR 0x004a8cc8
+/* Port state of 0x004a8cc8 */
 static const char s_pointer_name_pick_up[] = "Pointer_PickUp";
-// GLOBAL: LEGORR 0x004a8cd8
+/* Port state of 0x004a8cd8 */
 static const char s_pointer_name_cant_dynamite[] = "Pointer_CantDynamite";
-// GLOBAL: LEGORR 0x004a8cf0
+/* Port state of 0x004a8cf0 */
 static const char s_pointer_name_dynamite[] = "Pointer_Dynamite";
-// GLOBAL: LEGORR 0x004a8d04
+/* Port state of 0x004a8d04 */
 static const char s_pointer_name_cannot_build[] = "Pointer_CannotBuild";
-// GLOBAL: LEGORR 0x004a8d18
+/* Port state of 0x004a8d18 */
 static const char s_pointer_name_can_build[] = "Pointer_CanBuild";
-// GLOBAL: LEGORR 0x004a8d2c
+/* Port state of 0x004a8d2c */
 static const char s_pointer_name_not_okay[] = "Pointer_NotOkay";
-// GLOBAL: LEGORR 0x004a8d3c
+/* Port state of 0x004a8d3c */
 static const char s_pointer_name_okay[] = "Pointer_Okay";
-// GLOBAL: LEGORR 0x004a8d4c
+/* Port state of 0x004a8d4c */
 static const char s_pointer_name_tutorial_block_info[] = "Pointer_TutorialBlockInfo";
-// GLOBAL: LEGORR 0x004a8d68
+/* Port state of 0x004a8d68 */
 static const char s_pointer_name_get_out[] = "Pointer_GetOut";
-// GLOBAL: LEGORR 0x004a8d78
+/* Port state of 0x004a8d78 */
 static const char s_pointer_name_get_in[] = "Pointer_GetIn";
-// GLOBAL: LEGORR 0x004a8d88
+/* Port state of 0x004a8d88 */
 static const char s_pointer_name_put_down[] = "Pointer_PutDown";
-// GLOBAL: LEGORR 0x004a8d98
+/* Port state of 0x004a8d98 */
 static const char s_pointer_name_cant_help[] = "Pointer_CantHelp";
-// GLOBAL: LEGORR 0x004a8dac
+/* Port state of 0x004a8dac */
 static const char s_pointer_name_help[] = "Pointer_Help";
-// GLOBAL: LEGORR 0x004a8dbc
+/* Port state of 0x004a8dbc */
 static const char s_pointer_name_zoom[] = "Pointer_Zoom";
-// GLOBAL: LEGORR 0x004a8dcc
+/* Port state of 0x004a8dcc */
 static const char s_pointer_name_cant_zoom[] = "Pointer_CantZoom";
-// GLOBAL: LEGORR 0x004a8de0
+/* Port state of 0x004a8de0 */
 static const char s_pointer_name_track_object[] = "Pointer_TrackObject";
-// GLOBAL: LEGORR 0x004a8df4
+/* Port state of 0x004a8df4 */
 static const char s_pointer_name_radar_pan[] = "Pointer_RadarPan";
-// GLOBAL: LEGORR 0x004a8e08
+/* Port state of 0x004a8e08 */
 static const char s_pointer_name_cant_reinforce[] = "Pointer_CantReinforce";
-// GLOBAL: LEGORR 0x004a8e20
+/* Port state of 0x004a8e20 */
 static const char s_pointer_name_reinforce[] = "Pointer_Reinforce";
-// GLOBAL: LEGORR 0x004a8e34
+/* Port state of 0x004a8e34 */
 static const char s_pointer_name_cant_teleport[] = "Pointer_CantTeleport";
-// GLOBAL: LEGORR 0x004a8e4c
+/* Port state of 0x004a8e4c */
 static const char s_pointer_name_teleport[] = "Pointer_Teleport";
-// GLOBAL: LEGORR 0x004a8e60
+/* Port state of 0x004a8e60 */
 static const char s_pointer_name_cant_go[] = "Pointer_CantGo";
-// GLOBAL: LEGORR 0x004a8e70
+/* Port state of 0x004a8e70 */
 static const char s_pointer_name_go[] = "Pointer_Go";
-// GLOBAL: LEGORR 0x004a8e7c
+/* Port state of 0x004a8e7c */
 static const char s_pointer_name_clear[] = "Pointer_Clear";
-// GLOBAL: LEGORR 0x004a8e8c
+/* Port state of 0x004a8e8c */
 static const char s_pointer_name_cant_drill[] = "Pointer_CantDrill";
-// GLOBAL: LEGORR 0x004a8ea0
+/* Port state of 0x004a8ea0 */
 static const char s_pointer_name_drill[] = "Pointer_Drill";
-// GLOBAL: LEGORR 0x004a8eb0
+/* Port state of 0x004a8eb0 */
 static const char s_pointer_name_selected[] = "Pointer_Selected";
-// GLOBAL: LEGORR 0x004a8ec4
+/* Port state of 0x004a8ec4 */
 static const char s_pointer_name_blank[] = "Pointer_Blank";
-// GLOBAL: LEGORR 0x004a8ed4
+/* Port state of 0x004a8ed4 */
 static const char s_pointer_name_standard[] = "Pointer_Standard";
 
-// GLOBAL: LEGORR 0x00500a98
+/* Port state of 0x00500a98 */
 int          s_cursor_slot;       /* DAT_00500a98 role */
 
-// GLOBAL: LEGORR 0x00500a9c
+/* Port state of 0x00500a9c */
 uint32_t s_font_words[16];   /* DAT_00500a9c window */
 
-// GLOBAL: LEGORR 0x00500e1c
+/* Port state of 0x00500e1c */
 const char* s_pointer_cursor_names[56];
 
-// GLOBAL: LEGORR 0x00500efc
+/* Port state of 0x00500efc */
 float s_cursor_override;   /* _DAT_00500efc role (statics: 0.0) */
 
+/* pointer.c serves the port's names of the unit's functions in the
+ * matching build (pointer_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_POINTER_PORT_NAMES 0
+#else
+#define LRR_POINTER_PORT_NAMES 1
+#endif
+
+#if LRR_POINTER_PORT_NAMES /* pointer.c serves these names in the matching build */
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static void pointer_cursor_slot_release(PointerCursorSlot* slot);
 static int pointer_cursor_value_split(char* value, char** fields, unsigned int capacity);
 
-// FUNCTION: LEGORR 0x0045c830
+/* Port model of 0x0045c830 */
 void ui_pointer_cursor_name_registry_init(void)
 {
     s_pointer_cursor_names[0] = s_pointer_name_standard;
@@ -253,7 +266,7 @@ void ui_pointer_cursor_name_registry_init(void)
     s_pointer_cursor_names[53] = s_pointer_name_surface_recharge_seam;
 }
 
-// FUNCTION: LEGORR 0x0045ca70
+/* Port model of 0x0045ca70 */
 void pointer_cursor_config_load_target(BlockRec* first_entry)
 {
     BlockRec* entry;
@@ -307,7 +320,7 @@ void pointer_cursor_config_load_target(BlockRec* first_entry)
         }
     }
 }
-// FUNCTION: LEGORR 0x0045cbd0
+/* Port model of 0x0045cbd0 */
 int pointer_cursor_config_parse_target(const char* name, int* index_out)
 {
     if (s_pointer_cursor_runtime.names[0] == NULL)
@@ -316,7 +329,7 @@ int pointer_cursor_config_parse_target(const char* name, int* index_out)
                                        index_out);
 }
 
-// FUNCTION: LEGORR 0x0045cc10
+/* Port model of 0x0045cc10 */
 uint32_t indexed_global_value_at_get(int index)
 {
     if (index < 0 || index >= 16) {
@@ -325,7 +338,7 @@ uint32_t indexed_global_value_at_get(int index)
     return s_font_words[index];
 }
 
-// FUNCTION: LEGORR 0x0045cc20
+/* Port model of 0x0045cc20 */
 void media_pointer_cursor_select(int slot)
 {
     if (!(s_cursor_override > s_cursor_gate)) {
@@ -333,20 +346,20 @@ void media_pointer_cursor_select(int slot)
     }
 }
 
-// FUNCTION: LEGORR 0x0045cc40
+/* Port model of 0x0045cc40 */
 void media_pointer_cursor_override_set(int slot, float value)
 {
     s_cursor_slot = slot;
     s_cursor_override = value;
 }
 
-// FUNCTION: LEGORR 0x0045cc60
+/* Port model of 0x0045cc60 */
 uint32_t global_cursor_word_get(void)
 {
     return s_cursor_slot;
 }
 
-// FUNCTION: LEGORR 0x0045cc70
+/* Port model of 0x0045cc70 */
 void pointer_cursor_draw_target(uint32_t x, uint32_t y)
 {
     DisplaySurface* target = surface_active_render_target_get();
@@ -357,7 +370,7 @@ void pointer_cursor_draw_target(uint32_t x, uint32_t y)
     surface_unlock(target, pixels);
 }
 
-// FUNCTION: LEGORR 0x0045cd90
+/* Port model of 0x0045cd90 */
 void media_pointer_cursor_override_tick(float delta)
 {
     if (s_cursor_override > 0.0f)
@@ -393,3 +406,4 @@ static int pointer_cursor_value_split(char* value, char** fields,
     }
     return (int)count;
 }
+#endif /* LRR_POINTER_PORT_NAMES */

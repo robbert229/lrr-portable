@@ -209,6 +209,10 @@ extern "C" int s_cursor_delta_y;
 #include "game/collision.h"
 #include "game/construction.h"
 #include "game/construction_imports.h"
+#include "game/dependencies.h"
+#include "game/dependencies_imports.h"
+#include "game/pointer.h"
+#include "game/pointer_imports.h"
 
 int main(void)
 {
