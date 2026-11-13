@@ -1899,7 +1899,7 @@ int lego_engine_tick(float elapsed)
     view_tick_original(s_zoom_step_context, legoGlobs_currLevel, elapsed, elapsedWorld);
     view_tick_original(legoGlobs_cameraTrack, legoGlobs_currLevel, elapsed, elapsedWorld);
     view_tick_original(legoGlobs_cameraFP, legoGlobs_currLevel, elapsed, elapsedWorld);
-    simtick_bobbins_original(elapsedWorld);
+    construction_update_all(elapsedWorld);
     interface_update_hover_sfx(elapsedAbs);
     lego_scene_marker_update_and_draw(elapsed, 0);
     simtick_render_step_original();
@@ -6216,8 +6216,8 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                     dir = (unsigned int)(heading * 0.15915494f * 8.0f);
                     dir = ((dir & 1) + dir) >> 1;
                     shape = rotated_pairs_scratch_fill(blockPos, (const int*)shape, shapeCount, dir);
-                    obj = world_object_create_with_transform_original(objID, blockPos, dir, shape,
-                        shapeCount, level->disableStartTeleport);
+                    obj = (struct EntitySlot*)construction_place_building(objID, blockPos, dir,
+                        (int*)shape, shapeCount, level->disableStartTeleport);
                     if (obj) entity_kind_record_update_dispatch(obj);
                 } else {
                     obj = object_create_from_container_adapter(objModel, objType, objID);

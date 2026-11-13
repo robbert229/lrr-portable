@@ -204,7 +204,8 @@ void aitask_terrain_cell_refresh_dispatch_current(const int* blockPos, int mode)
 int terrain_cell_predicate_check_current(const uint32_t pair_key[2]);
 void simtick_selection_group_clear(const uint32_t key_pair[2]);
 int ensure_cell_entries_loaded(uint32_t kind, int row, int slot);
-/* FUN_00409300 Construction_PathCreate-style; FUN_0040af40, the object-pool
+/* FUN_00409300 Construction_Zone_StartPath (construction.c's definition in
+ * the matching build, finding 603); FUN_0040af40, the object-pool
  * callback that tests one dependency (the port spells its arguments as two
  * records). */
 void* tutorial_path_descriptor_create(const uint32_t* coord_pair);
@@ -271,7 +272,8 @@ void lego_ai_create_reinforce(const struct Point2I* blockPos);
 void lego_ai_create_dam(const struct Point2I* blockPos);
 /* FUN_004031e0: the port's entry takes a GameContext. */
 int aitask_list_contains(int code);
-/* FUN_00409600: a ledger stub in a namespace. */
+/* FUN_00409600 Construction_Zone_CancelBuilding: construction.c's
+ * definition takes this name in the matching build (finding 603). */
 void lego_path_remove(const struct Point2I* blockPos);
 /* FUN_0040af90 Dependencies_GetRequirements: declared only in frozen
  * per-unit headers. */

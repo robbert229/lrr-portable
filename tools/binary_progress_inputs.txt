@@ -112,7 +112,15 @@ src/game/cmd_from_aitask.hpp
 src/game/cmd_from_message_unit.hpp
 src/game/cmd_from_weapons.hpp
 src/game/cmd_shared.hpp
+src/game/collision.c
+src/game/collision.h
+src/game/collision_link_names.h
+src/game/collision_maths.h
 src/game/combat_ray_ports.hpp
+src/game/construction.c
+src/game/construction.h
+src/game/construction_imports.h
+src/game/construction_link_names.h
 src/game/creature_scene.cpp
 src/game/creature_scene.hpp
 src/game/dependencies.cpp
@@ -309,9 +317,9 @@ src/game/panel.h
 src/game/panel_maths.h
 src/game/panel_unit.c
 src/game/panel_unit.h
-src/game/placement.cpp
 src/game/placement_footprint.cpp
 src/game/placement_footprint.h
+src/game/placement_port.cpp
 src/game/pointer.cpp
 src/game/pointer_cursor.hpp
 src/game/port_loop_ports.hpp

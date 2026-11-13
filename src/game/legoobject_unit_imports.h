@@ -142,10 +142,10 @@ char* string_duplicate(const char* text);                       /* 00477550 */
  * entries take a GameContext or hook table, or there is none. */
 int legoobject_gb_weapon_target_clear_callback(void* obj, void* data); /* 00472060 */
 void legoobject_auxiliary_payload_release(Lego_Object* obj);       /* 0044be30 */
-void* legoobject_gb_world_object_create_adapter(int id, void* position,
-                                                unsigned int direction,
-                                                void* points, uint32_t count,
-                                                int notify);       /* 00409a90 */
+void* construction_place_building(int objID, int* blockPos,
+                                  unsigned int direction, int* shapePoints,
+                                  unsigned int shapeCount,
+                                  int teleportDown);              /* 00409a90 construction.c */
 void legoobject_gb_tutorial_counter_increment_adapter(int type);   /* 00454880 */
 
 /* ---- group C ---- */
@@ -564,11 +564,10 @@ void aitask_entity_command_unlink_by_kind(struct EntitySlot* object, int type,
                                           int unlink);                      /* 00403d10 */
 /* Bubble.c (ai.hpp, bubbles.cpp). */
 void type4_object_registry_insert(struct EntitySlot* record);              /* 00407410 */
-/* Building.c placement (placement.cpp): both port entries are in a
- * namespace; adapters at the end of legoobject_port.cpp. */
-void legoobject_gi_placement_cell_search_expand_adapter(const int cell_xy[2]); /* 004093b0 */
-int legoobject_gi_nearby_placement_candidate_find_adapter(const int start_xy[2],
-                                                          int resource_amount); /* 00409450 */
+/* GAME-052 Construction.c (construction.c, construction.h). */
+void construction_flood_path_blocks(int* blockPos);                 /* 004093b0 */
+int construction_find_resource_object(int* blockPos,
+                                      int resourceAmount);          /* 00409450 */
 /* GAME-019 Info.c (info_unit.c). */
 struct InfoPoint2I;
 void info_send(int type, char* text, void* object,

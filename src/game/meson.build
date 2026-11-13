@@ -53,7 +53,7 @@ game_sources = [
   'rock_fall_styles_port.cpp',
   'dependencies.cpp',
   'entity_cell_effects.cpp',
-  'placement.cpp',
+  'placement_port.cpp',
   'encyclopedia.cpp',
   'lava_erosion_port.cpp',
   'screen_effect_quads.cpp',
@@ -120,6 +120,8 @@ game_c_sources = [
   'fallin.c',
   'text.c',
   'radarmap.c',
+  'collision.c',
+  'construction.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

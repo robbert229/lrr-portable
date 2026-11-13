@@ -1,4 +1,4 @@
-# input_sha256: e656f2862ae988e57fe4ae51702c49aef5141df36be16d5fc1a8aa1b80d22ebc
+# input_sha256: 4fed5ebbbb06e0626e4c7d81379ba53f0f317bd3f4a4eb3bfaab33af9754fb4f
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2333 mapped functions
+[game-only] 2335 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -213,36 +213,38 @@
 0x00408940 100.00 entity_payload_teardown
 0x00408970 100.00 task_flag_bit_query
 0x004089a0 100.00 entity_payload_state_set
-0x004089d0 43.56 segment_2d_point_distance
-0x00408b00 59.26 point_to_polyline_minimum_segment_distance
-0x00408b60 40.43 point_project_onto_line2d
-0x00408bf0 50.53 point2d_project_onto_direction
-0x00408c80 34.29 string_table_index_lookup
-0x00408ce0 11.24 cmd_operation_group_append_object
-0x00408d70 39.52 terrain_descriptor_coordinate_count_limit_check
-0x00408e10 13.79 count_matching_coordinates_in_list
-0x00408e50 33.33 entity_repeated_resource_instances_create
-0x00408ec0 11.11 terrain_kind_nine_neighbor_emit_for_footprint_cells_current
+0x004089d0 91.79 collision_segment_point_distance
+0x00408b00 100.00 point_to_polyline_minimum_segment_distance
+0x00408b60 62.26 point_project_onto_line2d
+0x00408bf0 74.51 point2d_project_onto_direction
+0x00408c80 100.00 string_table_index_lookup
+0x00408ce0 100.00 cmd_operation_group_append_object
+0x00408d70 100.00 terrain_descriptor_coordinate_count_limit_check
+0x00408e10 100.00 count_matching_coordinates_in_list
+0x00408e50 100.00 construction_zone_request_resource
+0x00408ec0 98.68 construction_spawn_barriers
 0x004090a0 100.00 terrain_cell_predicate_check_current
-0x004090c0 44.44 terrain_descriptor_find_exact_current
+0x004090c0 100.00 terrain_descriptor_find_exact_current
 0x00409110 100.00 simtick_selection_group_release
-0x00409150 48.00 simtick_selection_group_clear
-0x004091e0 55.77 simtick_bobbins
-0x00409270 12.90 bobbin_spawn
-0x00409350 55.07 path_record_allocate_and_link
-0x004093b0 24.43 placement_cell_search_expand
-0x00409450 100.00 ledger_stub_00409450_FindNearbyPlacementCandidate
-0x00409470 26.34 ledger_stub_00409470_NeighborCellEntitySearchRecurse
-0x00409550 60.27 descriptor_transition_apply
-0x00409600 15.26 ledger_stub_00409600_TerrainDescriptorTilesResetAndFree
-0x00409790 22.91 ledger_stub_00409790_CellPathRecordRegisterApply
-0x00409940 15.38 terrain_cell_refresh_eight_neighbors_current
+0x00409150 100.00 simtick_selection_group_clear
+0x004091e0 100.00 construction_update_all
+0x00409270 100.00 construction_zone_origin_is_clear
+0x00409290 100.00 construction_zone_origin_object_callback
+0x00409300 100.00 tutorial_path_descriptor_create
+0x00409350 100.00 construction_zone_create
+0x004093b0 100.00 construction_flood_path_blocks
+0x00409450 100.00 construction_find_resource_object
+0x00409470 100.00 construction_find_resource_object_recurse
+0x00409550 100.00 construction_zone_request_path_resources
+0x00409600 67.48 lego_path_remove
+0x00409790 69.50 construction_zone_start_building
+0x00409940 100.00 terrain_cell_refresh_eight_neighbors_current
 0x004099d0 100.00 path_record_release_all
-0x004099f0 42.11 path_record_remove_and_free
-0x00409a40 19.35 bobbin_delayed
-0x00409a90 33.33 world_object_create_with_transform
-0x00409b30 18.34 world_object_spawn_request_create
-0x00409cd0 7.84 cell_cardinal_neighbor_apply_current
+0x004099f0 100.00 construction_zone_free
+0x00409a40 100.00 construction_zone_remove_barriers
+0x00409a90 90.00 construction_place_building
+0x00409b30 90.28 construction_zone_complete_building
+0x00409cd0 100.00 construction_update_cardinal_blocks
 0x00409d40 100.00 level_state_stored_value_set
 0x00409d50 16.00 entity_cell_path_effects_apply_current
 0x00409f20 34.52 entity_placement_commands_build_once
@@ -614,7 +616,7 @@
 0x0041cfe0 100.00 selection_mode5_cancel_at_point
 0x0041d010 100.00 interface_back_to_main_if_selected
 0x0041d040 93.72 interface_is_item_available
-0x0041dca0 84.32 interface_do_action
+0x0041dca0 84.43 interface_do_action
 0x0041e750 100.00 selection_clear_request_and_hud_reset
 0x0041e770 100.00 interface_set_item_flash
 0x0041e7a0 64.86 interface_set_object_item_flash
@@ -681,7 +683,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 95.79 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 97.44 lego_engine_tick
+0x004232e0 97.51 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
@@ -764,7 +766,7 @@
 0x0042de40 92.31 lego_viewport_target_position_clamp
 0x0042dfc0 82.35 lego_object_pointer_registry_clear_match
 0x0042dff0 84.62 lego_object_pointer_registry_get_slot
-0x0042e020 68.59 lego_object_list_load_file
+0x0042e020 68.74 lego_object_list_load_file
 0x0042e8b0 82.43 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
@@ -929,7 +931,7 @@
 0x004377d0 100.00 legoobject_run_through_lists
 0x00437880 100.00 legoobject_rename
 0x004378e0 100.00 legoobject_grid_object_records_release
-0x00437940 81.51 legoobject_deferred_olist_create_and_link
+0x00437940 81.93 legoobject_deferred_olist_create_and_link
 0x00437c20 98.04 legoobject_deferred_olist_queue_add
 0x00437cc0 100.00 legoobject_flag40000_threshold_compare
 0x00437d00 100.00 legoobject_create
@@ -1030,7 +1032,7 @@
 0x0043c490 100.00 legoobject_task_type_and_condition_check
 0x0043c4c0 100.00 legoobject_finish_state_1a
 0x0043c530 100.00 legoobject_mark_and_finish_state_1a
-0x0043c570 97.26 legoobject_kind_four_post_create_resolve
+0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
 0x0043c810 88.99 legoobject_update_callback
@@ -1161,7 +1163,7 @@
 0x0044a5d0 100.00 legoobject_nearest_open_cell_coord_search
 0x0044a7a0 100.00 legoobject_open_cell_coord_search_callback
 0x0044a7d0 100.00 legoobject_poly_variant_section_model_build
-0x0044a910 98.46 legoobject_building_placement_preview_update
+0x0044a910 99.69 legoobject_building_placement_preview_update
 0x0044acc0 100.00 legoobject_sfx_grid_config_load
 0x0044ad80 100.00 legoobject_sfx_at_cell_get
 0x0044adc0 100.00 legoobject_scatter_spawn_gate_set
@@ -2341,7 +2343,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2571 mapped functions
+[full] 2573 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2548,36 +2550,38 @@
 0x00408940 100.00 entity_payload_teardown
 0x00408970 100.00 task_flag_bit_query
 0x004089a0 100.00 entity_payload_state_set
-0x004089d0 43.56 segment_2d_point_distance
-0x00408b00 59.26 point_to_polyline_minimum_segment_distance
-0x00408b60 40.43 point_project_onto_line2d
-0x00408bf0 50.53 point2d_project_onto_direction
-0x00408c80 34.29 string_table_index_lookup
-0x00408ce0 11.24 cmd_operation_group_append_object
-0x00408d70 39.52 terrain_descriptor_coordinate_count_limit_check
-0x00408e10 13.79 count_matching_coordinates_in_list
-0x00408e50 33.33 entity_repeated_resource_instances_create
-0x00408ec0 11.11 terrain_kind_nine_neighbor_emit_for_footprint_cells_current
+0x004089d0 91.79 collision_segment_point_distance
+0x00408b00 100.00 point_to_polyline_minimum_segment_distance
+0x00408b60 62.26 point_project_onto_line2d
+0x00408bf0 74.51 point2d_project_onto_direction
+0x00408c80 100.00 string_table_index_lookup
+0x00408ce0 100.00 cmd_operation_group_append_object
+0x00408d70 100.00 terrain_descriptor_coordinate_count_limit_check
+0x00408e10 100.00 count_matching_coordinates_in_list
+0x00408e50 100.00 construction_zone_request_resource
+0x00408ec0 98.68 construction_spawn_barriers
 0x004090a0 100.00 terrain_cell_predicate_check_current
-0x004090c0 44.44 terrain_descriptor_find_exact_current
+0x004090c0 100.00 terrain_descriptor_find_exact_current
 0x00409110 100.00 simtick_selection_group_release
-0x00409150 48.00 simtick_selection_group_clear
-0x004091e0 55.77 simtick_bobbins
-0x00409270 12.90 bobbin_spawn
-0x00409350 55.07 path_record_allocate_and_link
-0x004093b0 24.43 placement_cell_search_expand
-0x00409450 100.00 ledger_stub_00409450_FindNearbyPlacementCandidate
-0x00409470 26.34 ledger_stub_00409470_NeighborCellEntitySearchRecurse
-0x00409550 60.27 descriptor_transition_apply
-0x00409600 15.26 ledger_stub_00409600_TerrainDescriptorTilesResetAndFree
-0x00409790 22.91 ledger_stub_00409790_CellPathRecordRegisterApply
-0x00409940 15.38 terrain_cell_refresh_eight_neighbors_current
+0x00409150 100.00 simtick_selection_group_clear
+0x004091e0 100.00 construction_update_all
+0x00409270 100.00 construction_zone_origin_is_clear
+0x00409290 100.00 construction_zone_origin_object_callback
+0x00409300 100.00 tutorial_path_descriptor_create
+0x00409350 100.00 construction_zone_create
+0x004093b0 100.00 construction_flood_path_blocks
+0x00409450 100.00 construction_find_resource_object
+0x00409470 100.00 construction_find_resource_object_recurse
+0x00409550 100.00 construction_zone_request_path_resources
+0x00409600 67.48 lego_path_remove
+0x00409790 69.50 construction_zone_start_building
+0x00409940 100.00 terrain_cell_refresh_eight_neighbors_current
 0x004099d0 100.00 path_record_release_all
-0x004099f0 42.11 path_record_remove_and_free
-0x00409a40 19.35 bobbin_delayed
-0x00409a90 33.33 world_object_create_with_transform
-0x00409b30 18.34 world_object_spawn_request_create
-0x00409cd0 7.84 cell_cardinal_neighbor_apply_current
+0x004099f0 100.00 construction_zone_free
+0x00409a40 100.00 construction_zone_remove_barriers
+0x00409a90 90.00 construction_place_building
+0x00409b30 90.28 construction_zone_complete_building
+0x00409cd0 100.00 construction_update_cardinal_blocks
 0x00409d40 100.00 level_state_stored_value_set
 0x00409d50 16.00 entity_cell_path_effects_apply_current
 0x00409f20 34.52 entity_placement_commands_build_once
@@ -2949,7 +2953,7 @@
 0x0041cfe0 100.00 selection_mode5_cancel_at_point
 0x0041d010 100.00 interface_back_to_main_if_selected
 0x0041d040 93.72 interface_is_item_available
-0x0041dca0 84.32 interface_do_action
+0x0041dca0 84.43 interface_do_action
 0x0041e750 100.00 selection_clear_request_and_hud_reset
 0x0041e770 100.00 interface_set_item_flash
 0x0041e7a0 64.86 interface_set_object_item_flash
@@ -3016,7 +3020,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 95.79 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 97.44 lego_engine_tick
+0x004232e0 97.51 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
@@ -3099,7 +3103,7 @@
 0x0042de40 92.31 lego_viewport_target_position_clamp
 0x0042dfc0 82.35 lego_object_pointer_registry_clear_match
 0x0042dff0 84.62 lego_object_pointer_registry_get_slot
-0x0042e020 68.59 lego_object_list_load_file
+0x0042e020 68.74 lego_object_list_load_file
 0x0042e8b0 82.43 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
@@ -3264,7 +3268,7 @@
 0x004377d0 100.00 legoobject_run_through_lists
 0x00437880 100.00 legoobject_rename
 0x004378e0 100.00 legoobject_grid_object_records_release
-0x00437940 81.51 legoobject_deferred_olist_create_and_link
+0x00437940 81.93 legoobject_deferred_olist_create_and_link
 0x00437c20 98.04 legoobject_deferred_olist_queue_add
 0x00437cc0 100.00 legoobject_flag40000_threshold_compare
 0x00437d00 100.00 legoobject_create
@@ -3365,7 +3369,7 @@
 0x0043c490 100.00 legoobject_task_type_and_condition_check
 0x0043c4c0 100.00 legoobject_finish_state_1a
 0x0043c530 100.00 legoobject_mark_and_finish_state_1a
-0x0043c570 97.26 legoobject_kind_four_post_create_resolve
+0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
 0x0043c810 88.99 legoobject_update_callback
@@ -3496,7 +3500,7 @@
 0x0044a5d0 100.00 legoobject_nearest_open_cell_coord_search
 0x0044a7a0 100.00 legoobject_open_cell_coord_search_callback
 0x0044a7d0 100.00 legoobject_poly_variant_section_model_build
-0x0044a910 98.46 legoobject_building_placement_preview_update
+0x0044a910 99.69 legoobject_building_placement_preview_update
 0x0044acc0 100.00 legoobject_sfx_grid_config_load
 0x0044ad80 100.00 legoobject_sfx_at_cell_get
 0x0044adc0 100.00 legoobject_scatter_spawn_gate_set
