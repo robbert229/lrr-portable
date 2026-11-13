@@ -11480,23 +11480,10 @@ extern "C" void legoobject_gi_cell_path_effects_apply_adapter(void* obj)
 }
 
 /* ---- group Q adapters (GAME-023 part 3, legoobject_unit.c) ---- */
-/* Upgrade_MoveAnimation (0x0046c110): legoobject_unit.c calls
- * upgrade_levels.cpp's original-shape upgrade_part_move_animation directly
- * (finding 597). */
-
-/* Vehicle_SetActivity (0x0046c3f0, upgrade_levels.cpp's
- * scene_activity_paired_channel_update in the port), Vehicle_GetCameraNull
- * (0x0046da50, vehicle_model.cpp, C++). Building_SetActivity (0x00408570)
- * is building_model.c's own (finding 592). Nothing calls these natively. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046c3f0 has another contract)
-extern "C" int legoobject_gq_vehicle_set_activity_adapter(void* vehicle, const char* activityName,
-                                                          float time)
-{
-    (void)vehicle;
-    (void)activityName;
-    (void)time;
-    return 0;
-}
+/* Upgrade_MoveAnimation (0x0046c110): legoobject_unit.c calls upgrade.c's
+ * upgrade_part_move_animation directly (findings 597 and 617).
+ * Vehicle_SetActivity (0x0046c3f0): legoobject_unit.c calls
+ * vehicle_model.c's vehicle_set_activity directly (finding 617). */
 
 /* ---- group S adapters (GAME-023 part 3, legoobject_unit.c) ---- */
 void entity_flag_80_set_corpus(void* record, int set); /* container_unit.cpp, 0x00473b20 */
@@ -11518,12 +11505,6 @@ extern "C" int legoobject_gs_container_is_hidden_adapter(void* cont)
 extern "C" int legoobject_gs_object_is_hidden_adapter(void* model)
 {
     return (int)animation_object_visibility_get(model);
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046c3d0 has C++ linkage)
-extern "C" int legoobject_gs_vehicle_camera_flip_adapter(void* vehicle)
-{
-    return record_field_d8_equals_one(vehicle);
 }
 
 /* Building placement (0x004641c0, 0x00409790, 0x00408ec0, 0x00408e50):

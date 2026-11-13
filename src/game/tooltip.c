@@ -10,7 +10,7 @@
  * ToolTip_Update draws it beside the mouse and plays its sound once.
  *
  * The five functions that followed in the unit map (0046c030-0046c130) are
- * Upgrade.c's part functions (GAME-047, upgrade_levels.cpp; finding 597).
+ * Upgrade.c's part functions (GAME-047, upgrade.c; findings 597 and 617).
  *
  * The port's implementation stays in the port tail tooltip_port.cpp,
  * unannotated. In the matching build tooltip_link_names.h gives this unit's

@@ -1,4 +1,4 @@
-# input_sha256: 965bb4ad9c4b165da10ab8251cb8522b96244208ddb8bc37f8b372ba5fa83df9
+# input_sha256: 27f559c607ffafcbc55553a3ce94dec5a4d0274b72e268d374cd7d6a6380040b
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2344 mapped functions
+[game-only] 2345 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -191,11 +191,11 @@
 0x004078c0 100.00 bubble_live_object_update_bubble_image
 0x00407960 96.30 bubble_callback_draw_obj_info
 0x00407a10 100.00 bubble_live_object_get_bubble_image
-0x00407d60 99.35 entity_building_type_config_record_parse
+0x00407d60 99.57 entity_building_type_config_record_parse
 0x004082e0 100.00 scene_object_scalar_adjust_by_direction
 0x00408360 100.00 task_field84_get_and_field88_out
 0x00408380 100.00 scene_assign_entity_owner
-0x004083a0 66.88 building_set_upgrade_activity
+0x004083a0 100.00 building_set_upgrade_activity
 0x00408570 100.00 building_set_activity
 0x004085f0 90.00 scene_activity_change_secondary
 0x00408620 100.00 scene_object_record_clone_retain_handles
@@ -1124,7 +1124,7 @@
 0x00447950 77.46 legoobject_directional_activity_start
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 100.00 legoobject_activity_tick
-0x00447c40 96.28 legoobject_activity_register_bookkeeping
+0x00447c40 96.85 legoobject_activity_register_bookkeeping
 0x00447ea0 67.46 legoobject_type_behavior_update
 0x004487c0 100.00 legoobject_clear_nested_state_8_fields
 0x00448800 100.00 legoobject_move_to_cell_coordinates
@@ -1153,7 +1153,7 @@
 0x00449cf0 85.13 legoobject_hide_check_callback
 0x00449f50 100.00 legoobject_type_operation_dispatch
 0x00449ff0 88.64 legoobject_type_operation_release
-0x0044a070 99.31 legoobject_follow_target_pose_get
+0x0044a070 100.00 legoobject_follow_target_pose_get
 0x0044a200 91.49 legoobject_type_component_get
 0x0044a2a0 100.00 legoobject_work_object_position_get
 0x0044a310 100.00 legoobject_movement_input_accumulate
@@ -1670,11 +1670,12 @@
 0x0046c0f0 100.00 render_resource_binding_release
 0x0046c110 100.00 upgrade_part_move_animation
 0x0046c130 100.00 scene_object_set_animation_with_fallback
-0x0046c340 23.53 scene_indexed_record_list_rebuild_for_value
-0x0046c3d0 100.00 record_field_d8_equals_one
-0x0046c3f0 22.59 scene_activity_paired_channel_update
-0x0046c510 7.92 scene_channel_slots_rebuild
-0x0046c6f0 98.80 lego_vehicle_load_adapter
+0x0046c160 81.25 upgrade_load
+0x0046c340 100.00 scene_indexed_record_list_rebuild_for_value
+0x0046c3d0 100.00 vehicle_is_camera_flip_dir
+0x0046c3f0 100.00 vehicle_set_activity
+0x0046c510 100.00 scene_channel_slots_rebuild
+0x0046c6f0 98.97 lego_vehicle_load_adapter
 0x0046ce10 100.00 entity_payload_type1_release
 0x0046ced0 100.00 paired_resource_state_set
 0x0046cf20 100.00 scene_entity_animation_tracks_set_enabled
@@ -2352,7 +2353,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2589 mapped functions
+[full] 2590 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2537,11 +2538,11 @@
 0x004078c0 100.00 bubble_live_object_update_bubble_image
 0x00407960 96.30 bubble_callback_draw_obj_info
 0x00407a10 100.00 bubble_live_object_get_bubble_image
-0x00407d60 99.35 entity_building_type_config_record_parse
+0x00407d60 99.57 entity_building_type_config_record_parse
 0x004082e0 100.00 scene_object_scalar_adjust_by_direction
 0x00408360 100.00 task_field84_get_and_field88_out
 0x00408380 100.00 scene_assign_entity_owner
-0x004083a0 66.88 building_set_upgrade_activity
+0x004083a0 100.00 building_set_upgrade_activity
 0x00408570 100.00 building_set_activity
 0x004085f0 90.00 scene_activity_change_secondary
 0x00408620 100.00 scene_object_record_clone_retain_handles
@@ -3470,7 +3471,7 @@
 0x00447950 77.46 legoobject_directional_activity_start
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 100.00 legoobject_activity_tick
-0x00447c40 96.28 legoobject_activity_register_bookkeeping
+0x00447c40 96.85 legoobject_activity_register_bookkeeping
 0x00447ea0 67.46 legoobject_type_behavior_update
 0x004487c0 100.00 legoobject_clear_nested_state_8_fields
 0x00448800 100.00 legoobject_move_to_cell_coordinates
@@ -3499,7 +3500,7 @@
 0x00449cf0 85.13 legoobject_hide_check_callback
 0x00449f50 100.00 legoobject_type_operation_dispatch
 0x00449ff0 88.64 legoobject_type_operation_release
-0x0044a070 99.31 legoobject_follow_target_pose_get
+0x0044a070 100.00 legoobject_follow_target_pose_get
 0x0044a200 91.49 legoobject_type_component_get
 0x0044a2a0 100.00 legoobject_work_object_position_get
 0x0044a310 100.00 legoobject_movement_input_accumulate
@@ -4016,11 +4017,12 @@
 0x0046c0f0 100.00 render_resource_binding_release
 0x0046c110 100.00 upgrade_part_move_animation
 0x0046c130 100.00 scene_object_set_animation_with_fallback
-0x0046c340 23.53 scene_indexed_record_list_rebuild_for_value
-0x0046c3d0 100.00 record_field_d8_equals_one
-0x0046c3f0 22.59 scene_activity_paired_channel_update
-0x0046c510 7.92 scene_channel_slots_rebuild
-0x0046c6f0 98.80 lego_vehicle_load_adapter
+0x0046c160 81.25 upgrade_load
+0x0046c340 100.00 scene_indexed_record_list_rebuild_for_value
+0x0046c3d0 100.00 vehicle_is_camera_flip_dir
+0x0046c3f0 100.00 vehicle_set_activity
+0x0046c510 100.00 scene_channel_slots_rebuild
+0x0046c6f0 98.97 lego_vehicle_load_adapter
 0x0046ce10 100.00 entity_payload_type1_release
 0x0046ced0 100.00 paired_resource_state_set
 0x0046cf20 100.00 scene_entity_animation_tracks_set_enabled

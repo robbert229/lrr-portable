@@ -1903,6 +1903,7 @@ uint32_t global_state_field84_get(const LevelState* s)
 }
 #endif /* !LEGORRR_BACKEND_WINAPI */
 
+// PORT-ONLY: current-level convenience for interface_port.cpp over upgrade_resource_check; no original function (finding 617)
 uint32_t upgrade_resource_check_current(int selector)
 {
     return upgrade_resource_check(level_current_owner_get(), selector);

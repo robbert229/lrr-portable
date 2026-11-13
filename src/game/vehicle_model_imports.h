@@ -21,30 +21,27 @@
 #include "gods98/utils.h"
 #include "gods98/view.h"
 #include "entity.h"
+#include "upgrade.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct SceneIndexedRecordList;
-struct SceneChannelSlotsState;
-
 /* GAME-001 Advisor.c: Maths_Vector3DScale, out of line (advisor.c). */
 float* vec_scale(float* dst, const float* src, float s);          /* 00401720 */
 
-/* GAME-047 Upgrade.c (upgrade_levels.cpp). The port's entries take its own
- * record list and channel state; the unit passes the vehicle's (finding
- * 590). */
-void scene_indexed_record_list_rebuild_for_value(
-    struct SceneIndexedRecordList* list, int value);              /* 0046c340 */
-void scene_channel_slots_rebuild(struct SceneChannelSlotsState* state,
-                                 int mode);                       /* 0046c510 */
-/* Upgrade_Load (0046c160) has no annotated port entry with its contract;
- * PORT-ONLY adapter at the end of vehicle_model_port.cpp. */
-void vehicle_upgrade_load_adapter(void* upgrades, BlockFile* config,
-                                  const char* gameName);          /* 0046c160 */
+/* GAME-004 (animation_object.c): Creature_GetActivityContainer, used on an
+ * upgrade part (the container at +4). */
+void* animation_object_handle_get(const void* object);           /* 00406e30 */
 
-/* G98-002 Container.c (container_unit.cpp). */
+/* GAME-023 AI.c's activity names (004decc4); legoobject_port.cpp defines
+ * them. */
+extern const char* s_activity[79];
+
+/* G98-002 Container.c (container_unit.cpp). Container_IsCurrentActivity
+ * (00473340): container_unit.cpp gives the ledger stub C linkage. */
+unsigned int ledger_stub_00473340_SceneActionNamePresent(
+    void* scene_object, void* action_name);                      /* 00473340 */
 void scene_object_owner_set(void* scene_object, uint32_t owner); /* 00473da0 */
 /* Container_EnableSoundTriggers (00473ec0): the port's entry takes a hook
  * table; PORT-ONLY adapter at the end of vehicle_model_port.cpp. */
@@ -62,6 +59,7 @@ void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,
 void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
                                             float x, float y,
                                             float z);             /* 004755e0 */
+void render_object_set_identity_transform(void* object);         /* 00475610 */
 void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* source_pair_record); /* 00475710 */
 

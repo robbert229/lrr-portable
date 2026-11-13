@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-048 Vehicle.c (finding 590): the port's link names of the unit's
+/* GAME-048 Vehicle.c (findings 590 and 617): the port's link names of the unit's
  * functions, for the matching build only (as findings 581 and 585).
  *
  * In the matching build (MSVC 5.0, _MSC_VER 1100) every caller of these
@@ -8,7 +8,7 @@
  * +0x00c, which legoobject_unit.c fills with vehicle_clone. So the unit's
  * definitions take the port's names: the C callers (lego_unit.c,
  * legoobject_unit.c) and the C++ ones (legoobject.cpp, message_unit.cpp,
- * record.cpp, upgrade_levels.cpp) reach them without an alias header or a
+ * record.cpp, upgrade_levels_port.cpp) reach them without an alias header or a
  * caller edit, and the port tail vehicle_model_port.cpp compiles its own
  * definitions of these names out of the matching build. Natively the port
  * tail keeps serving them, over the port's own vehicle records.
@@ -27,6 +27,7 @@
 #define LEGORRR_GAME_VEHICLE_MODEL_LINK_NAMES_H
 
 #if defined(_MSC_VER) && _MSC_VER < 1200
+#define vehicle_set_upgrade_activity scene_channel_slots_rebuild /* 0046c510 */
 #define vehicle_load lego_vehicle_load_adapter /* 0046c6f0 */
 #define vehicle_remove entity_payload_type1_release /* 0046ce10 */
 #define vehicle_swap_poly_medium paired_resource_state_set /* 0046ced0 */

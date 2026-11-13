@@ -219,6 +219,9 @@ extern "C" int s_cursor_delta_y;
 #include "game/screen_effect_quads.h"
 #include "game/screen_effect_quads_imports.h"
 #include "gods98/animclone.h"
+#include "game/upgrade.h"
+#include "game/upgrade_imports.h"
+#include "game/vehicle_model_imports.h"
 
 int main(void)
 {

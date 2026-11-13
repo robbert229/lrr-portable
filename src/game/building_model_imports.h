@@ -25,6 +25,7 @@ extern "C" {
 #endif
 
 struct SceneIndexedRecordList;
+struct Upgrade_Model;
 struct RenderResourceBinding;
 
 /* GAME-023 AI.c's activity names (004decc4); legoobject.cpp defines them. */
@@ -36,11 +37,9 @@ extern const char* s_activity[79];
 void scene_object_set_animation_with_fallback(
     struct RenderResourceBinding* binding, void* name);           /* 0046c130 */
 
-/* GAME-047 Upgrade.c. Upgrade_Load (0046c160) has no annotated port entry
- * with its contract: the PORT-ONLY adapter vehicle_model_port.cpp added for
- * Vehicle.c (finding 590), which loads nothing. */
-void vehicle_upgrade_load_adapter(void* upgrades, BlockFile* config,
-                                  const char* gameName);          /* 0046c160 */
+/* GAME-047 Upgrade.c (upgrade.c; finding 617). */
+void upgrade_load(struct Upgrade_Model* upgrades, BlockFile* config,
+                  const char* gameName);                          /* 0046c160 */
 void scene_indexed_record_list_rebuild_for_value(
     struct SceneIndexedRecordList* list, int value);              /* 0046c340 */
 

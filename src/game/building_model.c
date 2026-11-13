@@ -212,7 +212,7 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
                 building->pivotMinZ = -1.0f;
             }
 
-            vehicle_upgrade_load_adapter(&building->upgrades, config, gameName);
+            upgrade_load((struct Upgrade_Model*)&building->upgrades, config, gameName);
 
             building->shapePoints = (Building_Point2I*)malloc(sizeof(Building_Point2I) * BUILDING_MAXSHAPEPOINTS);
             building->shapeCount = 1;
@@ -311,7 +311,8 @@ void building_set_upgrade_activity(BuildingModel* building, const char* activity
         if (activityName) {
             scene_object_set_animation_with_fallback((struct RenderResourceBinding*)part, (void*)activityName);
         } else {
-            scene_action_name_set(part->cont, s_activity[0]);
+            const char* standName = s_activity[0];
+            scene_action_name_set(part->cont, standName);
         }
 
         if (data->weapon) {

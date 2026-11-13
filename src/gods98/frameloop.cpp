@@ -859,6 +859,7 @@ static void frame_ui_action_cursor_request(void* context, int action,
     (void)interface_spawn_request_enqueue(action, (uint32_t)value);
 }
 
+// PORT-ONLY: the port frame loop's UI action hook for the building-upgrade commit; no original function (finding 617)
 static void frame_ui_action_building_upgrade_commit(void* context,
                                                     void* entity)
 {

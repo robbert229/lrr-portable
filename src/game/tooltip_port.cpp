@@ -6,11 +6,11 @@
  * guards) for the native port, which calls them by these names. It also
  * keeps the port's models of Upgrade.c's part functions (0046c030-0046c130,
  * GAME-047), which the relocation placed here: their original-shape
- * versions are in upgrade_levels.cpp.
+ * versions are in upgrade.c.
  *
- * In the matching build (MSVC 5.0) tooltip.c and upgrade_levels.cpp define
+ * In the matching build (MSVC 5.0) tooltip.c and upgrade.c define
  * most of these names themselves (tooltip_link_names.h and
- * upgrade_levels.cpp's link names), so their definitions here are compiled
+ * upgrade_link_names.h), so their definitions here are compiled
  * out there (LRR_TOOLTIP_PORT_NAMES). The flag and timer setters (0x0046b730,
  * 0x0046b7a0), whose port names have C++ linkage in frozen headers, and the
  * overlay renderer (0x0046b8b0), the record renderer (0x0046bc30) and the
@@ -86,7 +86,7 @@ extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* enti
 #include "view_for_tooltip.hpp"
 
 /* The port's definitions of the names the unit takes in the matching build
- * (tooltip_link_names.h, upgrade_levels.cpp): every build but MSVC 5.0's. */
+ * (tooltip_link_names.h, upgrade_link_names.h): every build but MSVC 5.0's. */
 #if defined(_MSC_VER) && _MSC_VER < 1200
 #define LRR_TOOLTIP_PORT_NAMES 0
 #else
@@ -468,7 +468,7 @@ void timed_effect_slot_render_record(const TimedEffectRecord* record,
     }
 }
 
-#if LRR_TOOLTIP_PORT_NAMES /* upgrade_levels.cpp serves these names in the matching build */
+#if LRR_TOOLTIP_PORT_NAMES /* upgrade.c serves these names in the matching build */
 /* Port model of 0x0046c030 */
 void render_resource_binding_initialize(RenderResourceBinding* binding,
                                         void* key, void* config_a,
@@ -530,7 +530,7 @@ float animation_resource_advance_time(RenderResourceBinding* binding,
     return 0.0f;
 }
 
-#if LRR_TOOLTIP_PORT_NAMES /* upgrade_levels.cpp serves this name in the matching build */
+#if LRR_TOOLTIP_PORT_NAMES /* upgrade.c serves this name in the matching build */
 /* Port model of 0x0046c130 */
 void scene_object_set_animation_with_fallback(
     RenderResourceBinding* binding, void* name)

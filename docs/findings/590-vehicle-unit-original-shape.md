@@ -123,6 +123,12 @@ At the other edge, GAME-047's four low-confidence functions
 not Vehicle.c's: Vehicle_SetUpgradeLevel and Vehicle_Clone call them as
 callees. GAME-047 ends at `0046c6f0`. No function is left out.
 
+**Corrected by [finding 617](617-upgrade-unit-original-shape.md):**
+`0046c3d0`-`0046c510` take the VehicleModel, call Vehicle.c's own
+functions, and match Building.c's SetActivity and SetUpgradeActivity, which
+are in Building.c. Vehicle.c starts at `0046c3d0`, and GAME-047 (Upgrade.c)
+ends there.
+
 ## How the conversion is done
 
 ### The port tail
