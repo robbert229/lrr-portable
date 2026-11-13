@@ -4,6 +4,15 @@
  * reward.h for the state and the port's split. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
+/* Matching build: Lego.c's state and ResetLevelAndExit under their original
+ * names (lego_unit.c, finding 630). Each macro renames a declaration one for
+ * one, so the symbol counter does not change (finding 538). Natively the
+ * port's frontend globals and engine.cpp's adapter stay. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define g_front_end_avi1 legoGlobs_endGameAVI1 /* 00556fb0 */
+#define g_front_end_avi2 legoGlobs_endGameAVI2 /* 00556fb4 */
+#define lego_reset_level_and_exit lego_exit /* 004250a0 */
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -43,6 +52,17 @@
 #include "terrain_grid.h"
 #include "upgrades.h"
 #include "reward_movie.h"
+
+/* Config.c's pooled empty string (004b8a14): the original's literal resolves
+ * to it in every unit (finding 581), so Reward.c reads it by name (finding
+ * 630). */
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern const char s_config_angle_empty[4];
+#ifdef __cplusplus
+}
+#endif
 
 /* Flic.c's current frame (+0x624). The port's Flic has another layout. */
 #define REWARD_FLIC_FRAME(flic) (*(int*)((char*)(flic) + 0x624))
@@ -310,13 +330,13 @@ int reward_load_graphics(BlockFile* config, const char* gameName)
                          // STRING: LEGORR 0x004a93f8
                          "ScrollSpeed",
                          0)) ?
-        block_get_strptr(config, string_path_join(gameName, "Reward", "ScrollSpeed", 0)) : "");
+        block_get_strptr(config, string_path_join(gameName, "Reward", "ScrollSpeed", 0)) : s_config_angle_empty);
     rewardGlobs.vertSpacing = (float)atof(block_get_strptr(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93ec
                          "VertSpacing",
                          0)) ?
-        block_get_strptr(config, string_path_join(gameName, "Reward", "VertSpacing", 0)) : "");
+        block_get_strptr(config, string_path_join(gameName, "Reward", "VertSpacing", 0)) : s_config_angle_empty);
     rewardGlobs.fontName = block_get_str_copy(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93e4
@@ -435,12 +455,11 @@ int reward_prepare_level(void)
                          "Modifier",
                          0)) ?
         block_get_strptr(rewardGlobs.config,
-            string_path_join(rewardGlobs.gameName, level->name, "Reward", "Modifier", 0)) : "");
-    rewardGlobs.timer = (float)atof(block_get_strptr(rewardGlobs.config,
+            string_path_join(rewardGlobs.gameName, level->name, "Reward", "Modifier", 0)) : s_config_angle_empty);
+    if (0.0f == (rewardGlobs.timer = (float)atof(block_get_strptr(rewardGlobs.config,
         string_path_join(rewardGlobs.gameName, "Reward", "Timer", 0)) ?
         block_get_strptr(rewardGlobs.config,
-            string_path_join(rewardGlobs.gameName, "Reward", "Timer", 0)) : "");
-    if (rewardGlobs.timer == 0.0f)
+            string_path_join(rewardGlobs.gameName, "Reward", "Timer", 0)) : s_config_angle_empty)))
         rewardGlobs.timer = 76.9375f;
     if ((rewardGlobs.displayText = block_get_bool_path(rewardGlobs.config,
              string_path_join(rewardGlobs.gameName, "Reward",
@@ -481,16 +500,15 @@ void reward_load_item_importance(RewardLevelItem* item)
 {
     RewardLegoLevel* level = (RewardLegoLevel*)level_current_owner_get();
 
-    if (block_get_strptr(rewardGlobs.config,
+    item->importance = (float)atof(block_get_strptr(rewardGlobs.config,
             string_path_join(rewardGlobs.gameName, level->name, "Reward",
                              // STRING: LEGORR 0x004a9490
                              "Importance",
-                             item->name, 0)))
-        item->importance = (float)atof(block_get_strptr(rewardGlobs.config,
+                             item->name, 0)) ?
+        block_get_strptr(rewardGlobs.config,
             string_path_join(rewardGlobs.gameName, level->name, "Reward",
-                             "Importance", item->name, 0)));
-    else
-        item->importance = (float)atof("");
+                             "Importance", item->name, 0)) :
+        s_config_angle_empty);
 }
 
 // FUNCTION: LEGORR 0x00460140
@@ -498,14 +516,13 @@ void reward_load_item_quota(RewardLevelItem* item)
 {
     RewardLegoLevel* level = (RewardLegoLevel*)level_current_owner_get();
 
-    if (block_get_strptr(rewardGlobs.config,
+    item->quota = atoi(block_get_strptr(rewardGlobs.config,
             string_path_join(rewardGlobs.gameName, level->name, "Reward",
-                             "Quota", item->name, 0)))
-        item->quota = atoi(block_get_strptr(rewardGlobs.config,
+                             "Quota", item->name, 0)) ?
+        block_get_strptr(rewardGlobs.config,
             string_path_join(rewardGlobs.gameName, level->name, "Reward",
-                             "Quota", item->name, 0)));
-    else
-        item->quota = atoi("");
+                             "Quota", item->name, 0)) :
+        s_config_angle_empty);
 }
 
 // FUNCTION: LEGORR 0x004601e0
@@ -907,7 +924,7 @@ int reward_format_values(void)
         (current->itemsArray[REWARD_ITEM_TIMER].actual *
          current->itemsArray[REWARD_ITEM_TIMER].total * 0.04f);
     time %= 359999;
-    sprintf(timeText, "");
+    sprintf(timeText, s_config_angle_empty);
     if (time > 3600) {
         n = (time - 1) / 3600;
         value = n;
@@ -1071,7 +1088,10 @@ void reward_draw_item(RewardLevelItem* item, unsigned int mask, unsigned int cou
         rect.y = (float)item->flicY;
         rect.width = (float)item->flicWidth;
         rect.height = (float)item->flicHeight;
-        flic_animate(item->flic, &rect, (REWARD_FLIC_FRAME(item->flic) < 35) ? 1 : 0, 0);
+        if (REWARD_FLIC_FRAME(item->flic) < 35)
+            flic_animate(item->flic, &rect, 1, 0);
+        else
+            flic_animate(item->flic, &rect, 0, 0);
     }
     if (rewardGlobs.displayText) {
         if ((item->flags & REWARD_ITEM_FLAG_TEXT) && (mask & REWARD_ITEM_FLAG_TEXT)) {
@@ -1134,7 +1154,7 @@ int reward_draw_score(unsigned int count, float time)
     if (level->status == 1) {
         reward_draw_item(&current->items[REWARD_ITEM_SCORE], REWARD_ITEM_FLAG_TEXT, count, time);
         sprintf(name, "%s", current->items[REWARD_ITEM_SCORE].text);
-        for (i = 0; i < (int)strlen(current->items[REWARD_ITEM_SCORE].text) - 1; i++) {
+        for (i = 0; i < (int)strlen(current->items[REWARD_ITEM_SCORE].text); i++) {
             if (current->items[REWARD_ITEM_SCORE].text[i] == ' ') {
                 name[i] = '\0';
                 sprintf(value, "%s", &name[i + 1]);
@@ -1154,11 +1174,12 @@ int reward_draw_score(unsigned int count, float time)
 int reward_do_buttons(int* state, int* saved)
 {
     RewardLegoLevel* level;
+    RewardLevel* current;
     Image* image;
     int clicked = 0;
 
     if ((level = (RewardLegoLevel*)level_current_owner_get()) == NULL) return 0;
-    if (reward_level_get(level->rewardKey) == NULL) return 0;
+    if ((current = reward_level_get(level->rewardKey)) == NULL) return 0;
 
     if (level->status == 1) {
         if ((float)REWARD_MOUSE_X > rewardGlobs.saveButtonPos.x &&
@@ -1577,6 +1598,15 @@ void reward_scroll_flags_set(RewardScroll* scroll, unsigned int flags)
     scroll->flags |= flags;
 }
 
+/* Main.c's fixed frame interval (0050593c, platform/winapi/entry.cpp), which
+ * the original passes to TextWindow_Update. Natively the port's 1.0f stays. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+extern float s_frame_interval_override;
+#define REWARD_TEXT_WINDOW_TIME s_frame_interval_override
+#else
+#define REWARD_TEXT_WINDOW_TIME 1.0f
+#endif
+
 // FUNCTION: LEGORR 0x00462ad0
 int reward_scroll_update(RewardScroll* scroll)
 {
@@ -1606,7 +1636,7 @@ int reward_scroll_update(RewardScroll* scroll)
         switch (label->type) {
         case 1:
             float_pair_at_offset4_set_from_ints(label->textWindow, x, y);
-            text_buffer_draw_wrapped(scroll->labels[i]->textWindow, 0, 1.0f, NULL);
+            text_buffer_draw_wrapped(scroll->labels[i]->textWindow, 0, REWARD_TEXT_WINDOW_TIME, NULL);
             /* fall through */
         case 2:
             {
@@ -1643,7 +1673,7 @@ int reward_scroll_update(RewardScroll* scroll)
         if (s_global_current_keys[0x0c]) scroll->speed = scroll->speed - 0.01f;
         for (k = 0; k < 10; k++) {
             if (s_global_current_keys[0x02 + k])
-                scroll->speed = (float)((scroll->speed < 0.0f) ? -k : k) * 0.1f;
+                scroll->speed = ((scroll->speed < 0.0f) ? (float)-k : (float)k) * 0.1f;
         }
     }
     return 1;

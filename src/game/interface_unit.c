@@ -16,6 +16,51 @@
  * lists. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
+/* Matching build: the adapters and stand-ins of interface_callees.h whose
+ * original is now an original-shape definition with the original's contract
+ * (Lego.c, LegoObject.c, AITask.c, GAME-013; finding 630) take its
+ * name. Each macro renames one declaration and its uses, and none of the
+ * names is otherwise declared in this unit, so the symbol counter does not
+ * change (finding 538). Natively, and in interface_port.cpp, the adapters
+ * and stand-ins stay. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define lego_camera_fp legoGlobs_cameraFP                       /* 005560ec */
+#define lego_object_fp legoGlobs_selectedObject                 /* 00556160 */
+#define lego_vehicle_names legoGlobs_vehicleName                /* 005561e8 */
+#define lego_building_names legoGlobs_buildingName              /* 005561f4 */
+#define lego_teleport_primary_small legoGlobs_f_55644c          /* 0055644c */
+#define lego_teleport_primary_big legoGlobs_f_556450            /* 00556450 */
+#define lego_teleport_primary_laser legoGlobs_f_556454          /* 00556454 */
+#define lego_object_requests legoGlobs_objectRequests           /* 00556474 */
+#define lego_object_request_count legoGlobs_f_556514            /* 00556514 */
+#define lego_upgrade_cost_text legoGlobs_oreRequiredText        /* 00556ebc */
+#define lego_flags1 legoGlobs_flags1                            /* 00556ecc */
+#define s_global_low_word_c s_global_low_word                   /* 00556ed4 */
+#define lego_upgrade_level_names legoGlobs_upgradeNames         /* 00556f58 */
+#define lego_upgrade_cost_ore legoGlobs_BuildingUpgradeCostOre  /* 00556f98 */
+#define lego_upgrade_cost_studs legoGlobs_BuildingUpgradeCostStuds /* 00556f9c */
+#define lego_custom_name_separator legoGlobs_RenameReplace      /* 00556fac */
+#define object_tooltip_sfx s_terrain_sfx_grid                   /* 004de814 */
+#define input_key_map s_global_current_keys                     /* 0076ab80 */
+#define input_prev_key_map s_global_previous_keys               /* 0076aa00 */
+#define lego_ai_create_dig aitask_terrain_cell_command_create   /* 00402510 */
+#define lego_ai_create_dynamite aitask_kind_nine_cell_command_issue /* 00402d50 */
+#define lego_ai_create_dam aitask_cell_command_type11_issue     /* 00402fb0 */
+#define lego_ai_create_reinforce aitask_cell_command_type3_issue /* 00403030 */
+#define aitask_list_contains aitask_active_entity_list_contains_code /* 004031e0 */
+#define lego_block_has_lava_neighbour electric_fence_can_place_at_block /* 0040d240 */
+#define lego_get_resource_count noop_callback                   /* 0041f8e0 */
+#define lego_set_tracked_object lego_render_record_set_from_input /* 00425d50 */
+#define lego_get_min_health engine_float_field260_get_current_target /* 00429880 */
+#define lego_object_type_for_name lego_entity_type_pair_lookup  /* 0042e8b0 */
+#define lego_level_block_update lego_cell_init_pass             /* 0042f6f0 */
+#define lego_get_map level_current_terrain_get                  /* 00431570 */
+#define lego_object_can_enter_block lego_terrain_cell_allows_placement /* 00432a20 */
+#define interface_spawn_request_enqueue lego_interface_spawn_request_enqueue /* 00434e80 */
+#define lego_object_detach_all legoobject_attached_object_list_detach /* 00439e70 */
+#define lego_object_get_block legoobject_position_to_terrain_cell /* 004424f0 */
+#define entity_kind6_tick_down_marker_spawn_obj legoobject_kind6_tick_down_marker_spawn /* 004489a0 */
+#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -246,16 +291,15 @@ void interface_init_menus(void)
 void interface_set_menu_items(int menu, unsigned int count, ...)
 {
     int items[30];
-    int* item;
+    unsigned int i;
     va_list args;
 
     interfaceGlobs.menus[menu].count = count;
     interfaceGlobs.menus[menu].items = (int*)malloc(sizeof(int) * count);
 
     va_start(args, count);
-    item = items;
-    for (; count != 0; count--) {
-        *item++ = va_arg(args, int);
+    for (i = 0; count > 0; count--) {
+        items[i++] = va_arg(args, int);
     }
     va_end(args);
 
@@ -321,7 +365,7 @@ void interface_reset_menu(void)
 // FUNCTION: LEGORR 0x0041a9c0
 int interface_get_menu_item_type(const char* name, int* type)
 {
-    int i;
+    unsigned int i;
 
     for (i = 0; i < INTERFACE_MENUITEM_COUNT; i++) {
         if (_strcmpi(interfaceGlobs.menuItemName[i], name) == 0) {
@@ -360,12 +404,22 @@ void interface_init_object_items(void)
            sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
 }
 
+/* Config.c's pooled ":" (004a1cd4): the original's literal resolves to it in
+ * every unit (finding 581), so Interface.c reads it by name (finding 630). */
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern const char s_config_rgb_separator[];
+#ifdef __cplusplus
+}
+#endif
+
 // FUNCTION: LEGORR 0x0041ab00
 void interface_load_object_items(BlockFile* config, const char* gameName)
 {
     unsigned int i;
     const char* str;
-    char* argv[4];
+    char* argv[20];
     unsigned char key;
 
     interfaceGlobs.vehicleItemIcons =
@@ -379,7 +433,7 @@ void interface_load_object_items(BlockFile* config, const char* gameName)
         // STRING: LEGORR 0x004a34d8
         str = block_get_strptr(config, string_path_join(gameName, "InterfaceBuildImages", LEGO_VEHICLE_NAME(i), NULL));
         if (str != NULL) {
-            sound_variant_split((char*)str, argv, ":");
+            sound_variant_split((char*)str, argv, s_config_rgb_separator);
             interfaceGlobs.vehicleItemIcons[i] =
                 image_load_bmp_scaled(argv[0], 0, 0);
             interfaceGlobs.vehicleItemIconsDisabled[i] =
@@ -406,7 +460,7 @@ void interface_load_object_items(BlockFile* config, const char* gameName)
     for (i = 0; i < LEGO_BUILDING_TYPE_COUNT; i++) {
         str = block_get_strptr(config, string_path_join(gameName, "InterfaceBuildImages", LEGO_BUILDING_NAME(i), NULL));
         if (str != NULL) {
-            sound_variant_split((char*)str, argv, ":");
+            sound_variant_split((char*)str, argv, s_config_rgb_separator);
             interfaceGlobs.buildingItemIcons[i] =
                 image_load_bmp_scaled(argv[0], 0, 0);
             interfaceGlobs.buildingItemIconsDisabled[i] =
@@ -429,8 +483,8 @@ void interface_load_menu_items(BlockFile* config, const char* gameName)
 {
     BlockRec* item;
     int type;
-    char* argv[10];
-    char* parts[2];
+    char* argv[20];
+    char* parts[10];
     unsigned char key;
     char line[1024];
     int count;
@@ -442,7 +496,7 @@ void interface_load_menu_items(BlockFile* config, const char* gameName)
         if (interface_get_menu_item_type(item->key, &type)) {
             useName = 0;
             strcpy(line, item->value);
-            if (sound_variant_split(line, argv, ":") == 7 &&
+            if (sound_variant_split(line, argv, s_config_rgb_separator) == 7 &&
                 block_get_bool(argv[6]) != 2) {
                 useName = (block_get_bool(argv[6]) == 1);
             }
@@ -481,17 +535,17 @@ void interface_load_menu_items(BlockFile* config, const char* gameName)
 // FUNCTION: LEGORR 0x0041afd0
 void interface_load_item_panels(BlockFile* config, const char* gameName)
 {
-    int i;
+    unsigned int i;
     const char* str;
     char num[20];
-    char* argv[10];
+    char* argv[20];
 
     for (i = 0; i < INTERFACE_SURROUND_COUNT; i++) {
         _itoa(i + 1, num, 10);
         // STRING: LEGORR 0x004a3500
         str = block_get_strptr(config, string_path_join(gameName, "InterfaceSurroundImages", num, NULL));
         if (str != NULL) {
-            sound_variant_split((char*)str, argv, ":");
+            sound_variant_split((char*)str, argv, s_config_rgb_separator);
             if (_strcmpi(argv[0], "NULL")) {
                 interfaceGlobs.surroundImages[i] =
                     image_load_bmp_scaled(argv[0], 0, 0);
@@ -526,12 +580,12 @@ void interface_load_item_panels(BlockFile* config, const char* gameName)
 void interface_load_back_button(BlockFile* config, const char* gameName)
 {
     const char* str;
-    char* argv[5];
+    char* argv[20];
 
     // STRING: LEGORR 0x004a3518
     str = block_get_strptr(config, string_path_join(gameName, "InterfaceBackButton", NULL));
     if (str != NULL) {
-        sound_variant_split((char*)str, argv, ":");
+        sound_variant_split((char*)str, argv, s_config_rgb_separator);
         interfaceGlobs.backButtonWidth = atoi(argv[0]);
         interfaceGlobs.backButtonHeight = atoi(argv[1]);
         interfaceGlobs.backButtonImageHighlight =
@@ -716,11 +770,11 @@ void interface_draw(void)
         (INTERFACE_FLAG_HOVER_ITEM | INTERFACE_FLAG_HOVER_DEPENDENCY)) {
         position_tracker_box_draw(&interfaceGlobs.dependencyArea.x);
     }
-    if (interfaceGlobs.flags & (INTERFACE_FLAG_HOVER_DEPENDENCY | 0x2000)) {
+    if (!(interfaceGlobs.flags & (INTERFACE_FLAG_HOVER_DEPENDENCY | 0x2000))) {
+        interface_reset_dependency_timer();
+    } else {
         interface_draw_dependencies(interfaceGlobs.dependencyArea.x,
                                     interfaceGlobs.dependencyArea.y);
-    } else {
-        interface_reset_dependency_timer();
     }
 }
 
@@ -759,7 +813,7 @@ int interface_enumerate_menu_items(int menu,
             }
         }
     } else {
-        for (i = 0; i < interfaceGlobs.menus[menu].count; i++) {
+        for (; i < interfaceGlobs.menus[menu].count; i++) {
             int type = interfaceGlobs.menus[menu].items[i];
             if (type == 34 || type == 35) {
                 type = interface_resolve_teleporter_item(
@@ -828,8 +882,8 @@ void interface_update(float elapsed)
 {
     interfaceGlobs.flashingTimer -= elapsed;
     if (interfaceGlobs.flashingTimer < 0.0f) {
-        interfaceGlobs.flashingState = !interfaceGlobs.flashingState;
         interfaceGlobs.flashingTimer = 15.0f;
+        interfaceGlobs.flashingState = !interfaceGlobs.flashingState;
     }
 
     interface_update_slide(elapsed);
@@ -1235,11 +1289,10 @@ void interface_update_advisor(int type, int objType, int objIndex,
         } else if (type == interfaceGlobs.advisorItemType) {
             if (type == 0) {
                 backButton = 1;
-                found = 1;
             } else {
                 image = interface_get_item_image(type);
-                found = 1;
             }
+            found = 1;
         }
 
         if (found) {
@@ -1316,11 +1369,12 @@ int interface_handle_item_press(int type, int objType, int objIndex,
     }
 
     if (pressed == type) {
-        if (type != INTERFACE_MENUITEM_OBJECT) {
-            return 1;
-        }
-        if (interfaceGlobs.pressedObjType == objType &&
-            interfaceGlobs.pressedObjIndex == objIndex) {
+        if (type == INTERFACE_MENUITEM_OBJECT) {
+            if (interfaceGlobs.pressedObjType == objType &&
+                interfaceGlobs.pressedObjIndex == objIndex) {
+                return 1;
+            }
+        } else {
             return 1;
         }
     }
@@ -1562,8 +1616,8 @@ void interface_set_dependency_area(const Point2F* position,
                                    unsigned int width, unsigned int height)
 {
     interfaceGlobs.dependencyArea.x = position->x;
-    interfaceGlobs.dependencyArea.width = (float)width;
     interfaceGlobs.dependencyArea.y = position->y;
+    interfaceGlobs.dependencyArea.width = (float)width;
     interfaceGlobs.dependencyArea.height = (float)height;
 }
 
@@ -1614,8 +1668,8 @@ void interface_object_menu_check(struct LegoObject* obj)
     if (interfaceGlobs.currMenuType == 12) {
         count = selection_active_count_get();
         list = selection_active_records_get_obj();
-        for (i = count; i != 0; i--) {
-            if (obj == *list) {
+        for (i = 0; i < count; i++) {
+            if (obj == list[i]) {
                 if (count == 1) {
                     if (!(entity_stats_word_get(LEGOOBJ(obj)) & 0x2000000) &&
                         !(obj->flags4 & 0x40)) {
@@ -1627,7 +1681,6 @@ void interface_object_menu_check(struct LegoObject* obj)
                     selection_clear_request_and_hud_reset();
                 }
             }
-            list++;
         }
     }
 }
@@ -1643,15 +1696,14 @@ void interface_driven_object_menu_check(struct LegoObject* obj)
         interfaceGlobs.currMenuType == 11) {
         count = selection_active_count_get();
         list = selection_active_records_get_obj();
-        for (i = count; i != 0; i--) {
-            if (obj->driveObject == *list) {
+        for (i = 0; i < count; i++) {
+            if (obj->driveObject == list[i]) {
                 if (count == 1) {
                     command_context_post_to_hud(12, NULL);
                 } else {
                     selection_clear_request_and_hud_reset();
                 }
             }
-            list++;
         }
     }
 }
@@ -2328,12 +2380,12 @@ int interface_do_action(int type)
         selection_clear_request_and_hud_reset();
         return 1;
     case 16:
-        if (!(LEGO_BLOCK(interfaceGlobs.selBlockPos.x, interfaceGlobs.selBlockPos.y)->flags1 & 0x40000000)) {
-            lego_path_remove(&interfaceGlobs.selBlockPos);
+        if (LEGO_BLOCK(interfaceGlobs.selBlockPos.x, interfaceGlobs.selBlockPos.y)->flags1 & 0x40000000) {
+            simtick_selection_group_clear((const uint32_t*)&interfaceGlobs.selBlockPos);
             selection_clear_request_and_hud_reset();
             return 1;
         }
-        simtick_selection_group_clear((const uint32_t*)&interfaceGlobs.selBlockPos);
+        lego_path_remove(&interfaceGlobs.selBlockPos);
         selection_clear_request_and_hud_reset();
         return 1;
     case 64:
@@ -3213,41 +3265,26 @@ int interface_primary_has_ability(unsigned int mask)
 // FUNCTION: LEGORR 0x0041f740
 int interface_can_lay_path(const Point2I* blockPos)
 {
-    int dirs[8];
-    int* dir;
+    Point2I dirs[4] = { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } };
     unsigned int i;
     unsigned int count;
 
-    dirs[4] = -1;
-    dirs[7] = -1;
-    dirs[0] = 1;
-    dirs[1] = 0;
-    dirs[2] = 0;
-    dirs[3] = 1;
-    dirs[5] = 0;
-    dirs[6] = 0;
-
-    if (!terrain_cell_mask_c0_current(blockPos->x, blockPos->y)) {
-        dir = dirs;
+    if (terrain_cell_mask_c0_current(blockPos->x, blockPos->y)) {
+        count = 0;
         for (i = 0; i < 4; i++) {
-            if (terrain_cell_occupied_or_flag_current(blockPos->x + dir[0], dir[1] + blockPos->y, 1)) {
+            if (terrain_cell_occupied_or_flag_current(blockPos->x + dirs[i].x, dirs[i].y + blockPos->y, 1)) {
+                count++;
+            }
+        }
+        if (count >= 2) {
+            return 0;
+        }
+    } else {
+        for (i = 0; i < 4; i++) {
+            if (terrain_cell_occupied_or_flag_current(blockPos->x + dirs[i].x, dirs[i].y + blockPos->y, 1)) {
                 return 0;
             }
-            dir += 2;
         }
-        return 1;
-    }
-
-    count = 0;
-    dir = dirs;
-    for (i = 0; i < 4; i++) {
-        if (terrain_cell_occupied_or_flag_current(blockPos->x + dir[0], dir[1] + blockPos->y, 1)) {
-            count++;
-        }
-        dir += 2;
-    }
-    if (count > 1) {
-        return 0;
     }
     return 1;
 }
