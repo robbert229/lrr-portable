@@ -1622,7 +1622,7 @@ void active_object_list_count_set(int which, int count);
  * SavClearVisited (FUN_00416e70): walk both root-owned dynamic bands,
  * out-of-game first, clearing every non-null entry record's +0x10 flag
  * word and paired word. The port stores widened host pointers in sidecars. */
-void sav_clear_visited(void); /* FUN_00416e70 */
+extern "C" void sav_clear_visited(void); /* FUN_00416e70 */
 void sav_visited_entry_set(int which, int index, void* record,
                            uint32_t word);             /* port hook */
 void sav_visited_entry_peek(int which, int index, void** out_record,

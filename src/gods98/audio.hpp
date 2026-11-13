@@ -67,8 +67,8 @@ void audio_menu_sfx_volume_set(int index);
 /* VolumeSet (FUN_00414df0): map the menu's 0..9 volume value to the
  * normalized master gain. The port has one output gain in place of the
  * corpus's paired music-mixer channels. */
-void audio_menu_volume_set(int value);
-void music_mixer_volume_set(float music, float sfx);
+extern "C" void audio_menu_volume_set(int value);
+extern "C" void music_mixer_volume_set(float music, float sfx);
 /* Legacy mixer helper: query/apply the compact-disc source through WinMM.
  * The native backend has no such control and reports unavailable. */
 int audio_mixer_control_init(float* music, float* sfx, int apply_volume);

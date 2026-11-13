@@ -15,6 +15,13 @@ extern "C" {
 
 struct FrontEnd;
 void main_menu_text_item(void);                             /* 004103d0 */
+/* Front_RunScreenMenuType (00416c80) takes only the menu type; in the
+ * matching build the C callers pass the original's argument to
+ * frontend_unit.c's definition (finding 628). The macro also rewrites
+ * this declaration, one for one. */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+#define menu_enter(fe, mode) front_run_screen_menu_type(mode)
+#endif
 int menu_enter(struct FrontEnd* fe, int mode);              /* 00416c80 */
 int frontend_enabled(BlockFile* cfg);                       /* 00416d00 */
 int save_slot_open(void);                                   /* 00416d50 */

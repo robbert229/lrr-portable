@@ -155,23 +155,23 @@ extern "C" { void* DAT_00556f54; }
 /* The five flow words land as own storage: the corpus addresses them as
  * individual dwords, and Reccmp only resolves whole-object operands. */
 #if defined(LEGORRR_BACKEND_WINAPI)
-// GLOBAL: LEGORR 0x0055701c
+/* frontGlobs at 0x0055701c: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 int s_fe_flow_quit;
 #endif
 #if defined(LEGORRR_BACKEND_WINAPI)
-// GLOBAL: LEGORR 0x00557020
+/* frontGlobs at 0x00557020: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 int s_fe_flow_save_slot;
 #endif
 #if defined(LEGORRR_BACKEND_WINAPI)
-// GLOBAL: LEGORR 0x00557024
+/* frontGlobs at 0x00557024: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 int s_fe_flow_ingame;
 #endif
 #if defined(LEGORRR_BACKEND_WINAPI)
-// GLOBAL: LEGORR 0x00557048
+/* frontGlobs at 0x00557048: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 int s_fe_flow_level_start;
 #endif
 #if defined(LEGORRR_BACKEND_WINAPI)
-// GLOBAL: LEGORR 0x0055704c
+/* frontGlobs at 0x0055704c: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 int s_fe_flow_menu_options;
 #endif
 #if !defined(LEGORRR_BACKEND_WINAPI)
@@ -2556,7 +2556,7 @@ void frontend_credits_scroll_step(uint32_t now, uint32_t* clock,
 }
 
 /* --- current selection context (see frontend.hpp) -------------------------- */
-// GLOBAL: LEGORR 0x00557500
+/* frontGlobs at 0x00557500: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 void* s_current_selection_context;
 
 uint32_t selection_state_flags_peek(void) { return s_sel_state; }
