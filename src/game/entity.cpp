@@ -1017,7 +1017,13 @@ void* s_entity_route_marker_candidate_context;
 EntityKindRecordUpdateHooks s_entity_kind_record_update_hooks;
 static EntitySpawnSpecialFinalizeHook s_entity_spawn_special_finalize_hook;
 static void* s_entity_spawn_special_finalize_context;
+/* Natively only (#700, finding 627). In the matching build
+ * LegoObject.c's objectGlobs.recordObjs (legoobject_unit.c) is the table:
+ * nothing calls grid_object_record_state_install there, so the count stays
+ * 0 and the release below finds no record. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 GridObjectRecord s_grid_object_records[200];
+#endif
 unsigned int s_grid_object_record_count;
 GridObjectRecordsReleaseHook s_grid_object_records_release_tail;
 void* s_grid_object_records_release_context;
@@ -1184,12 +1190,16 @@ void grid_object_record_state_install(const GridObjectRecord* records,
     unsigned int i;
     if (count > 200u) count = 200u;
     s_grid_object_record_count = 0u;
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     if (records != NULL) {
         for (i = 0; i < count; ++i) {
             s_grid_object_records[i] = records[i];
         }
         s_grid_object_record_count = count;
     }
+#else
+    (void)records; (void)i; /* no port table in the matching build (#700) */
+#endif
     s_grid_object_records_release_tail = tail;
     s_grid_object_records_release_context = context;
 }

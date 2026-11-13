@@ -158,12 +158,19 @@ void terrain_cell_record_get_target(int x, int y, int field,
                                            uint32_t* value_a,
                                            uint32_t* value_b)
 {
+#if defined(_MSC_VER) && _MSC_VER < 1200
+    /* No port table in the matching build (#700): an empty one's words. */
+    (void)x; (void)y; (void)field;
+    *value_a = 0u;
+    *value_b = 0u;
+#else
     const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
     const uint32_t offset = cell * GRID_REC_STRIDE;
     const uint32_t base = offset +
         (s_grid_rec[offset + 32u] != 0u ? (uint32_t)field : 0u);
     *value_a = s_grid_rec[base + 16u];
     *value_b = s_grid_rec[base];
+#endif
 }
 
 namespace unported_ledger_stubs {
@@ -263,25 +270,39 @@ void dependency_grid_occupancy_pass(void)
 /* Port model of 0x0040b250 */
 uint32_t cell_flag4_is_set_target(int x, int y, int field)
 {
+#if defined(_MSC_VER) && _MSC_VER < 1200
+    (void)x; (void)y; (void)field;
+    return 0u; /* no port table in the matching build (#700) */
+#else
     const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
     const uint32_t offset = cell * GRID_REC_STRIDE;
     if (s_grid_rec[offset + 32u] != 0u)
         return s_grid_rec[offset + 33u + (uint32_t)field] & 4u;
     return s_grid_rec[offset + 33u] & 4u;
+#endif
 }
 
 /* Port model of 0x0040b2a0 */
 void cell_flag100_set_target(int x, int y, int field)
 {
+#if defined(_MSC_VER) && _MSC_VER < 1200
+    (void)x; (void)y; (void)field; /* no port table in the matching build (#700) */
+#else
     const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
     const uint32_t word = cell * GRID_REC_STRIDE + (uint32_t)field + 33u;
     s_grid_rec[word] |= 0x100u;
+#endif
 }
 
 /* Port model of 0x0040b2e0 */
 uint32_t cell_flag100_is_set_target(int x, int y, int field)
 {
+#if defined(_MSC_VER) && _MSC_VER < 1200
+    (void)x; (void)y; (void)field;
+    return 0u; /* no port table in the matching build (#700) */
+#else
     const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
     const uint32_t word = cell * GRID_REC_STRIDE + (uint32_t)field + 33u;
     return s_grid_rec[word] & 0x100u;
+#endif
 }

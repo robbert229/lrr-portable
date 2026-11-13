@@ -115,9 +115,14 @@
 const char s_task_copy_format[] = "%s";
 
 /* Dependencies.c's table (004b8bc8) is dependencies.c's dependencyGlobs in
- * the matching build (finding 612); this is the port's copy. */
+ * the matching build (finding 612); this is the port's copy. It is defined
+ * natively only: in the matching build no reachable code reads or writes it,
+ * and its accessors (dependencies_port.cpp, level.cpp) answer as for an
+ * empty table there (#700, finding 627). */
 /* Port state of 0x004b8bc8 */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_grid_rec[GRID_REC_REGION_DWORDS];
+#endif
 
 static uint32_t s_quad_mesh_render_records[10][8];
 static void* s_quad_mesh_render_objects[10];

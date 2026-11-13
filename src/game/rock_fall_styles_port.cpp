@@ -42,9 +42,13 @@ static float s_bird_scarer_period;
 static void* s_scene_resource_slot_instances[10][10];
 
 static void* s_scene_availability_parents[2];
+/* Natively only: in the matching build rock_fall_styles.c's effectGlobs
+ * holds this state and every reader below is compiled out (#700). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 static void* s_scene_act_parents[SCENE_AVAILABILITY_STYLE_CAPACITY][3];
 
 static int s_scene_pose_slot_claimed[SCENE_AVAILABILITY_STYLE_CAPACITY][3][4];
+#endif
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static void scene_light_pool_expire(void** pool, float delta);
@@ -175,6 +179,9 @@ void rockfall_style_table_base_set(uint32_t v)
  * The callback stands in for SceneActSlotLoadAndRegister, whose original
  * DirectDraw scene implementation has not been ported. */
 /* Port model of 0x0040bfd0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+/* Natively only: in the matching build nothing calls it, and its table
+ * (resource.cpp's s_rock_fall_style_names) is not defined there (#700). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void rock_fall_styles_config_load(const RockFallStyleConfigEntry* entries,
                                  uint32_t count,
                                  RockFallStyleRegisterHook register_hook,
@@ -235,11 +242,15 @@ void rock_fall_styles_config_load(const RockFallStyleConfigEntry* entries,
     }
     s_rock_fall_style_name_count = count;
 }
+#endif
 
 /* SceneActSlotLoadAndRegister (FUN_0040c0d0): load an LWS typed resource,
  * retry the corpus's ANIM type fallback, then lock its parent and four
  * children into the configured style/group record. */
 /* Port model of 0x0040c0d0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+/* Natively only: in the matching build nothing calls it, and its table
+ * (resource.cpp's s_scene_availability_styles) is not defined there (#700). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 int scene_act_slot_load_and_register(void* scene, const char* path,
                                      int style, int group,
                                      const char* name)
@@ -282,6 +293,7 @@ int scene_act_slot_load_and_register(void* scene, const char* path,
     }
     return 1;
 }
+#endif
 /* IndexedResourceHandleSetCreate (FUN_0040c1b0): create and lock a parent
  * resource, then populate its fixed 30-child transient group. */
 /* Port model of 0x0040c1b0 (GAME-012); the original-shape function is in rock_fall_styles.c. */

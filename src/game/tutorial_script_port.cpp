@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 #include "gods98/block.hpp"
 #include "gods98/engine.hpp"
 #include "gods98/media.hpp"
@@ -225,7 +226,14 @@ int tutorial_display_resources_release(void)
     s_tutorial_script_size = 0;
     tutorial_script_program_clear();
     memset(s_tutorial_nerp_registers, 0, sizeof(s_tutorial_nerp_registers));
+#if defined(_MSC_VER) && _MSC_VER < 1200
+    /* The matching build's s_nerp_runtime ends at cells (#700,
+     * tutorial_hud_shared.hpp); this file's frozen copy of the struct
+     * still lists them. */
+    memset(&s_nerp_runtime, 0, offsetof(NerpRuntimeState, cells));
+#else
     memset(&s_nerp_runtime, 0, sizeof(s_nerp_runtime));
+#endif
     tutorial_camera_focus_state_reset();
     tutorial_scroll_runtime_state_reset();
     if (s_tutorial_engine_context != NULL &&

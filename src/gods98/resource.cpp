@@ -42,8 +42,15 @@ const unsigned char s_resource_tree_child_iid[16] = {
     0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66
 };
 
+/* The port's rock-fall style tables (s_rock_fall_style_names here and the
+ * four scene tables below, 45,056 bytes) are defined natively only. In the
+ * matching build rock_fall_styles.c's effectGlobs holds this state: every
+ * port function that fills them is compiled out or has no caller there,
+ * and the sweep below skips them (#700, finding 627). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 char s_rock_fall_style_names[ROCK_FALL_STYLE_NAME_CAPACITY]
                                     [ROCK_FALL_STYLE_NAME_LENGTH];
+#endif
 uint32_t s_rock_fall_style_name_count;
 SceneTimeoutEntrySet s_terrain_marker_sets[10];
 void* s_scene_light_primary[4];
@@ -153,12 +160,14 @@ SceneIndexedRecordNodeReleaseHook s_scene_indexed_record_release_hook;
 void* s_scene_indexed_record_context;
 SceneChannelEntryProcessHook s_scene_channel_entry_process_hook;
 void* s_scene_channel_entry_context;
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* natively only (#700; see s_rock_fall_style_names) */
 SceneAvailabilitySlot
     s_scene_availability_styles[SCENE_AVAILABILITY_STYLE_CAPACITY][3][4];
 uint32_t s_scene_cell_table_pairs[SCENE_AVAILABILITY_STYLE_CAPACITY]
                                          [3][4][2];
 SceneResourceNameSlot
     s_scene_resource_name_slots[SCENE_AVAILABILITY_STYLE_CAPACITY][3][4];
+#endif
 SceneResourceNameFormatHook s_resource_name_format_hook;
 SceneResourceNameApplyHook s_resource_name_apply_hook;
 void* s_resource_name_context;
@@ -181,6 +190,8 @@ static SceneAvailabilityEnableHook s_availability_enable_hook;
 static void* s_availability_context;
 int s_scene_availability_selected_style;
 
+/* Natively only: rock_fall_styles_config_load is its only caller (#700). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void rock_fall_style_names_install(const char* const* names, uint32_t count)
 {
     uint32_t i;
@@ -200,6 +211,7 @@ void rock_fall_style_names_install(const char* const* names, uint32_t count)
     }
     s_rock_fall_style_name_count = count;
 }
+#endif
 
 void scene_resource_lifecycle_hooks_install(
     SceneResourceAdvanceHook advance, SceneResourceReleaseHook release,
@@ -958,6 +970,9 @@ void scene_availability_style_select(int style)
     }
 }
 
+/* The three installers below have no caller in any build; they are kept
+ * natively, with their tables (#700). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void scene_availability_style_slot_install(int style, int group, int slot,
                                            void* handle, int configured)
 {
@@ -970,6 +985,7 @@ void scene_availability_style_slot_install(int style, int group, int slot,
     s_scene_availability_styles[style][group][slot].configured = configured;
     s_scene_availability_styles[style][group][slot].enabled = 0;
 }
+#endif
 
 void scene_availability_transient_slot_install(int group, int slot,
                                                void* handle, int configured)
@@ -983,6 +999,7 @@ void scene_availability_transient_slot_install(int group, int slot,
     s_scene_availability_transients[group][slot].pending = 0;
 }
 
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void scene_cell_table_pair_install(int style, int group, int slot,
                                    uint32_t first, uint32_t second)
 {
@@ -993,6 +1010,7 @@ void scene_cell_table_pair_install(int style, int group, int slot,
     s_scene_cell_table_pairs[style][group][slot][0] = first;
     s_scene_cell_table_pairs[style][group][slot][1] = second;
 }
+#endif
 
 void scene_resource_name_hooks_install(SceneResourceNameFormatHook format,
                                        SceneResourceNameApplyHook apply,
@@ -1003,6 +1021,7 @@ void scene_resource_name_hooks_install(SceneResourceNameFormatHook format,
     s_resource_name_context = context;
 }
 
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void scene_resource_name_slot_install(int style, int group, int slot,
                                       uint32_t handle_key,
                                       uint32_t secondary_key, void* handle,
@@ -1020,6 +1039,7 @@ void scene_resource_name_slot_install(int style, int group, int slot,
     entry->name_base = name_base;
     entry->name_count = name_count;
 }
+#endif
 
 void scene_resource_instance_hooks_install(SceneResourceParentLoadHook load,
                                            SceneResourceChildCreateHook clone,
@@ -1095,6 +1115,9 @@ int scene_resource_availability_sweep(float delta, uint32_t** groups_out,
     scene_light_pool_primary_expire(delta);
     scene_light_pool_secondary_expire(delta);
     terrain_marker_sets_clear(delta);
+    /* The matching build has no style table (#700): there every slot would
+     * be empty, and an empty slot never advances. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     for (group = 0; group < 3; ++group) {
         for (slot = 0; slot < 4; ++slot) {
             SceneAvailabilitySlot* entry =
@@ -1107,6 +1130,7 @@ int scene_resource_availability_sweep(float delta, uint32_t** groups_out,
             }
         }
     }
+#endif
     for (group = 0; group < 2; ++group) {
         for (slot = 0; slot < 30; ++slot) {
             scene_availability_advance(&s_scene_availability_transients[group][slot],

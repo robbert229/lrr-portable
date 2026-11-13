@@ -511,7 +511,11 @@ const char* s_string_table_entries[STRING_TABLE_MAX_ENTRIES];
 /* The port's copy of Bubbles.c's bubbleName (0x00557900, bubbles.c). */
 const char* s_bubble_action_strings[BUBBLE_ACTION_STRING_COUNT];
 
+/* Natively only (#700, finding 627): its one writer,
+ * pending_record_table_install, has no caller in any build. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_pending_record_rows[PENDING_RECORD_CAPACITY][5];
+#endif
 unsigned int s_pending_record_count;
 void (*s_pending_record_release_hook)(uint32_t* row);
 
@@ -582,6 +586,7 @@ int case_insensitive_name_table_lookup_at_offset8(const void* const* entries,
     return comparison;
 }
 
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* s_pending_record_rows (#700) */
 void pending_record_table_install(const uint32_t* rows, unsigned int count)
 {
     unsigned int i;
@@ -596,6 +601,7 @@ void pending_record_table_install(const uint32_t* rows, unsigned int count)
         for (j = 0; j < 5; ++j) s_pending_record_rows[i][j] = 0;
     }
 }
+#endif
 
 void pending_record_release_hook_set(void (*hook)(uint32_t* row))
 {

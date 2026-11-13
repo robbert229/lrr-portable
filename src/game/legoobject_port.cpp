@@ -1174,6 +1174,7 @@ int entity_pool_find_by_callback_current(
 // PORT-ONLY: port model of 0x004378e0, retires to the tail in GAME-023 part 3
 void grid_object_records_release(void)
 {
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     unsigned int i;
     for (i = 0; i < s_grid_object_record_count; ++i) {
         if (s_grid_object_records[i].second != NULL)
@@ -1183,6 +1184,7 @@ void grid_object_records_release(void)
         memset(&s_grid_object_records[i], 0,
                sizeof(s_grid_object_records[i]));
     }
+#endif /* no port table in the matching build (#700, entity.cpp) */
     s_grid_object_record_count = 0u;
     memset(s_grid_object_record_words, 0, sizeof(s_grid_object_record_words));
     if (s_grid_object_records_release_tail != NULL) {
@@ -1295,6 +1297,12 @@ void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
                                      int p1, int p2, int p3, int p5, int p6,
                                      const char* name1, const char* name2)
 {
+#if defined(_MSC_VER) && _MSC_VER < 1200
+    /* No port queue in the matching build (#700, cmd.cpp): a full queue. */
+    (void)ctx; (void)record; (void)p1; (void)p2; (void)p3; (void)p5;
+    (void)p6; (void)name1; (void)name2;
+    return;
+#else
     if (s_deferred_olist_next >= DEFERRED_OLIST_SLOTS) return;
     const uint32_t slot = s_deferred_olist_next++;
     if (record == NULL) return;
@@ -1321,6 +1329,7 @@ void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
     if (name2 != NULL) {
         e->names[1] = string_duplicate(name2); /* FUN_00477550 */
     }
+#endif
 }
 
 /* EntityFlag40000ThresholdCompare (see entity.hpp). */

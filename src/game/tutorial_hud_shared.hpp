@@ -48,8 +48,17 @@ typedef struct NerpRuntimeState {
     int32_t pointer_action;
     int32_t pointer_x;
     int32_t pointer_y;
+    /* No code reads or writes cells or cell_count in any build. The
+     * matching build leaves them out of the object tutorial_hud.cpp defines
+     * (49,156 bytes, #700, finding 627). The frozen copies of this struct
+     * (tutorial_hud_for_object_overlays.hpp and
+     * tutorial_hud_for_tutorial_script.hpp) keep them, so code that sees
+     * those copies must not touch them, nor clear past
+     * offsetof(NerpRuntimeState, cells) there (tutorial_script_port.cpp). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     NerpTutorialCellState cells[NERP_TUTORIAL_CELL_CAPACITY];
     uint32_t cell_count;
+#endif
 } NerpRuntimeState;
 
 extern TutorialScriptOps s_tutorial_script_ops;
