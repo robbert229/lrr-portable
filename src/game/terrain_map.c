@@ -283,33 +283,14 @@ int terrain_map_shape_tolerance_check(TerrainMap* map,
                                       unsigned int count, float tolerance,
                                       float maxVariation)
 {
-    TerrainMapPoint2I vertexOffsets[4];
-    unsigned int edges[6][2];
+    TerrainMapPoint2I vertexOffsets[4] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
+    unsigned int edges[6][2] = { { 0, 1 }, { 0, 2 }, { 0, 3 },
+                                 { 1, 2 }, { 1, 3 }, { 2, 3 } };
     TerrainMapVector3 vertices[4];
     float lowest, highest;
     int found;
     unsigned int i, j;
 
-    edges[2][1] = 3;
-    edges[4][1] = 3;
-    edges[5][1] = 3;
-    vertexOffsets[0].x = 0;
-    vertexOffsets[0].y = 0;
-    vertexOffsets[1].x = 1;
-    vertexOffsets[1].y = 0;
-    vertexOffsets[2].x = 1;
-    vertexOffsets[2].y = 1;
-    vertexOffsets[3].x = 0;
-    vertexOffsets[3].y = 1;
-    edges[0][0] = 0;
-    edges[0][1] = 1;
-    edges[1][0] = 0;
-    edges[1][1] = 2;
-    edges[2][0] = 0;
-    edges[3][0] = 1;
-    edges[3][1] = 2;
-    edges[4][0] = 1;
-    edges[5][0] = 2;
     found = 0;
     lowest = 10000.0f;
     highest = -10000.0f;
@@ -330,7 +311,7 @@ int terrain_map_shape_tolerance_check(TerrainMap* map,
                                 vertexOffsets[j].x + shape[i].x]
                         .flags & TERRAIN_MAP_BLOCK_FLATTENED) {
                     if (vertices[j].z < lowest) lowest = vertices[j].z;
-                    if (highest < vertices[j].z) highest = vertices[j].z;
+                    if (vertices[j].z > highest) highest = vertices[j].z;
                     found = 1;
                 }
             }
@@ -1748,10 +1729,9 @@ void resource_list_update_matching_key(void* list, void* library,
     for (record = (ModelEntryRecord*)list; record; record = record->next) {
         if (key == (unsigned int)record->kind) {
             if (!record->instance) {
+                const char* name = xf_texture_name_format(library, record->name, NULL);
                 record->instance = resource_name_register_or_query_target(
-                    (void**)library,
-                    xf_texture_name_format(library, record->name, NULL), 0,
-                    NULL);
+                    (void**)library, name, 0, NULL);
             }
             if (record->instance) {
                 interface_array_forward_sync(record->instance, record->object,

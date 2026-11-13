@@ -245,6 +245,16 @@ static int weapons_callback_update_object(Weapons_Object* obj, float* elapsed);
 static int weapons_callback_ray_candidate(Weapons_Object* obj,
                                           Weapons_RaySearch* search);
 
+/* Config.c's pooled ":" (004a1cd4): the original's literal resolves to it in
+ * every unit (finding 581), so Weapons.c reads it by name (finding 630). */
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern const char s_config_rgb_separator[];
+#ifdef __cplusplus
+}
+#endif
+
 // FUNCTION: LEGORR 0x0046eb80
 int weapons_initialise(struct BlockRec* config, const char* gameName)
 {
@@ -304,7 +314,7 @@ int weapons_initialise(struct BlockRec* config, const char* gameName)
                     while (prop != NULL) {
                         // STRING: LEGORR 0x004aaa94
                         if (_strcmpi(prop->key, "SlowDeath") == 0) {
-                            sound_variant_split(prop->value, parts, ":");
+                            sound_variant_split(prop->value, parts, s_config_rgb_separator);
                             weaponGlobs.weaponStatsList[i].slowDeath = 1;
                             weaponGlobs.weaponStatsList[i].slowDeathDamage = (float)atof(parts[0]);
                             weaponGlobs.weaponStatsList[i].slowDeathDuration = (float)atof(parts[1]);
@@ -346,7 +356,7 @@ int weapons_initialise(struct BlockRec* config, const char* gameName)
                                 if (!lego_entity_type_pair_lookup(prop->key, (int*)&objType,
                                                                   &objIndex, NULL)) continue;
                                 levels = building_upgrade_admission_check(objType, objIndex);
-                                sound_variant_split(prop->value, parts, ":");
+                                sound_variant_split(prop->value, parts, s_config_rgb_separator);
                                 for (objLevel = 0; objLevel < levels; objLevel++) {
                                     weaponGlobs.weaponStatsList[i].objectDamage[objType][objIndex][objLevel] =
                                         (float)atof(parts[objLevel]);
@@ -904,6 +914,7 @@ int weapons_object_center_proximity_check(Weapons_Object* obj, float* fromPos,
     float end[2];
     float objPos[2];
     float proj[2];
+    float dist;
 
     from[0] = fromPos[0];
     from[1] = fromPos[1];
@@ -914,9 +925,9 @@ int weapons_object_center_proximity_check(Weapons_Object* obj, float* fromPos,
         end[1] = to[1] + from[1];
         legoobject_transform_position_get(WEAPONS_LOBJ(obj), &objPos[0], &objPos[1]);
         point_project_onto_line2d(from, end, objPos, proj);
-        if ((float)sqrt((proj[0] - objPos[0]) * (proj[0] - objPos[0]) +
-                        (proj[1] - objPos[1]) * (proj[1] - objPos[1])) <
-            entity_stats_float_at6c(WEAPONS_ENT(obj))) return 1;
+        dist = (float)sqrt((proj[0] - objPos[0]) * (proj[0] - objPos[0]) +
+                          (proj[1] - objPos[1]) * (proj[1] - objPos[1]));
+        if (dist < entity_stats_float_at6c(WEAPONS_ENT(obj))) return 1;
     }
     return 0;
 }
