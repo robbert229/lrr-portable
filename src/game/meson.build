@@ -55,7 +55,7 @@ game_sources = [
   'entity_cell_effects.cpp',
   'placement.cpp',
   'encyclopedia.cpp',
-  'lava_erosion.cpp',
+  'lava_erosion_port.cpp',
   'screen_effect_quads.cpp',
   'building_model_port.cpp',
   'cmd.cpp',
@@ -116,6 +116,8 @@ game_c_sources = [
   'helpwindow.c',
   'tooltip.c',
   'bubbles.c',
+  'erode.c',
+  'fallin.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

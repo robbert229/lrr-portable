@@ -175,6 +175,14 @@ src/game/entity_stats.h
 src/game/entity_stats_link_names.h
 src/game/entity_stats_port.cpp
 src/game/entity_stats_port.hpp
+src/game/erode.c
+src/game/erode.h
+src/game/erode_imports.h
+src/game/erode_link_names.h
+src/game/fallin.c
+src/game/fallin.h
+src/game/fallin_imports.h
+src/game/fallin_link_names.h
 src/game/frontend.cpp
 src/game/frontend.h
 src/game/frontend.hpp
@@ -225,7 +233,7 @@ src/game/interface_callees.h
 src/game/interface_port.cpp
 src/game/interface_unit.c
 src/game/interface_unit.h
-src/game/lava_erosion.cpp
+src/game/lava_erosion_port.cpp
 src/game/lego.h
 src/game/lego_api.h
 src/game/lego_blocks.h
