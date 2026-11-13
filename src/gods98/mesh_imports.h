@@ -12,10 +12,11 @@
  *   and mainGlobs.imDevice (0050591c) mesh_port.cpp's; mainGlobs.flags
  *   (00505f84) is crt.cpp's.
  * - Container.c (G98-002): Container_GetRoot (00472940) is
- *   container_unit.cpp's, with C linkage. Container_Frame_GetContainer
- *   (00475830) has C++ linkage and Container_LoadTextureSurface (00474050)
- *   has no port entry, so thin unannotated adapters at the end of
- *   mesh_port.cpp stand in for them.
+ *   scene_root_object_get, the name container.c takes in the matching
+ *   build. Container_SearchOwner (00475830) and
+ *   Container_LoadTextureSurface (00474050) are container.c's by their own
+ *   names there (finding 624); other builds call thin unannotated adapters
+ *   at the end of mesh_port.cpp.
  * - Files.c, Utils.c, Maths.c and Lwo.c are converted units. */
 #ifndef LEGORRR_GODS98_MESH_IMPORTS_H
 #define LEGORRR_GODS98_MESH_IMPORTS_H
@@ -38,13 +39,23 @@ void d3d_material_state_flush(void);                         /* 00478940 */
 
 /* Container.c. */
 void* scene_root_object_get(void);                           /* 00472940 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* The matching build: container.c (finding 624) defines these two. */
+void* Container_LoadTextureSurface(
+    const char* fname, int managed, unsigned long* width,
+    unsigned long* height, int* trans);                      /* 00474050 */
+void* Container_SearchOwner(void* frame);                    /* 00475830 */
+#define container_load_texture_surface Container_LoadTextureSurface
+#define container_frame_get_container Container_SearchOwner
+#else
 void* mesh_container_load_texture_surface_adapter(
     const char* fname, int managed, unsigned long* width,
     unsigned long* height, int* trans);                      /* 00474050 */
 void* mesh_container_frame_get_container_adapter(void* frame); /* 00475830 */
-#define container_get_root scene_root_object_get
 #define container_load_texture_surface mesh_container_load_texture_surface_adapter
 #define container_frame_get_container mesh_container_frame_get_container_adapter
+#endif
+#define container_get_root scene_root_object_get
 
 /* Utils.c. */
 int whitespace_tokenize(char* text, char** fields);         /* 004774b0 */

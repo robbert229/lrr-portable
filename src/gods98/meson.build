@@ -9,7 +9,7 @@ endif
 
 gods98_sources = [
   'mesh_port.cpp',
-  'container_unit.cpp',
+  'container_port.cpp',
   'directdraw_port.cpp',
   'movie_unit.cpp',
   'video_graph_port.cpp',
@@ -67,6 +67,7 @@ gods98_sources = [
   '../crt/crt_heap.cpp',
 ]
 gods98_c_sources = [
+  'container.c',
   'viewports.c',
   'utils.c',
   'config.c',

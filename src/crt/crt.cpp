@@ -1914,8 +1914,8 @@ void crt_owned_stream_buffer_release(char* record)
 }
 #endif
 
-/* --- the shared texture directory word (see crt.hpp) ------------------------ */
-// GLOBAL: LEGORR 0x0076cd88
+/* --- the shared texture directory word (see crt.hpp) ------------------------ *
+ * The port's word for containerGlobs.sharedDir (0076cd88; finding 624). */
 char* s_shared_texture_dir; /* DAT_0076cd88 role: unowned */
 
 char* shared_texture_directory_peek(void) { return s_shared_texture_dir; }
@@ -1925,16 +1925,13 @@ void shared_texture_directory_clear(void)
     s_shared_texture_dir = NULL;
 }
 
-/* --- the renderer flag word + scene hook pair band (see crt.hpp) ----------- */
-// GLOBAL: LEGORR 0x0076cd94
+/* --- the renderer flag word + scene hook pair band (see crt.hpp) ----------- *
+ * The port's words for containerGlobs' flags and trigger callbacks
+ * (0076cd78-0076cd94), which container.c now defines (finding 624). */
 uint32_t s_renderer_flag_word; /* DAT_0076cd94 role: unowned */
-// GLOBAL: LEGORR 0x0076cd80
 void*    s_scene_end_hook;     /* DAT_0076cd80 role: unowned */
-// GLOBAL: LEGORR 0x0076cd84
 void*    s_scene_end_value;    /* DAT_0076cd84 role: unowned */
-// GLOBAL: LEGORR 0x0076cd78
 void*    s_scene_sample_hook;  /* DAT_0076cd78 role: unowned */
-// GLOBAL: LEGORR 0x0076cd7c
 void*    s_scene_sample_value; /* DAT_0076cd7c role: unowned */
 
 uint32_t renderer_flag_word_peek(void) { return s_renderer_flag_word; }

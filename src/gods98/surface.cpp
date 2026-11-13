@@ -3475,23 +3475,37 @@ int surface_reward_success_capture(uint32_t width, uint32_t height,
  * original terrain map (game/terrain_map.c, finding 556), so the three
  * mesh adapters pass no host operation table and change nothing. */
 
+/* container.c (Container.c, finding 624) serves these port names in the
+ * matching build (container_link_names.h): every build but MSVC 5.0's
+ * compiles the port's definitions. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_CONTAINER_PORT_NAMES 0
+#else
+#define LRR_CONTAINER_PORT_NAMES 1
+#endif
+
 /* Container_MakeMesh2 (FUN_00473560). */
 // PORT-ONLY: adapter or forwarder for the port contract
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves container_make_mesh2 in the matching build */
 extern "C" void* container_make_mesh2(void* parent, int type)
 {
     return ddiscene_object_kind_mode_setup(parent, type);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* Container_Mesh_HideGroup (FUN_00474b30). */
 // PORT-ONLY: adapter or forwarder for the port contract
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves container_mesh_hide_group in the matching build */
 extern "C" void container_mesh_hide_group(void* mesh, unsigned int group,
                                           int hide)
 {
     lwo_layer_enabled_set(mesh, group, !hide, NULL);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* Container_Mesh_SetVertices (FUN_00474d30). */
 // PORT-ONLY: adapter or forwarder for the port contract
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves container_mesh_set_vertices in the matching build */
 extern "C" void container_mesh_set_vertices(void* mesh, unsigned int group,
                                             unsigned int index,
                                             unsigned int count,
@@ -3502,12 +3516,15 @@ extern "C" void container_mesh_set_vertices(void* mesh, unsigned int group,
     (void)vertices;
     (void)terrain_cell_quad_vertex_emit(mesh, group, NULL, NULL);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* Container_Mesh_SetPerspectiveCorrection (FUN_00474e30). */
 // PORT-ONLY: adapter or forwarder for the port contract
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves container_mesh_perspective_correction_set in the matching build */
 extern "C" void container_mesh_perspective_correction_set(void* mesh,
                                                           unsigned int group,
                                                           int on)
 {
     terrain_surface_property_set(mesh, group, on, NULL);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */

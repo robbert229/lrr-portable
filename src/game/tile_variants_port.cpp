@@ -560,7 +560,17 @@ uint32_t ledger_stub_00474e90_RenderObjectHierarchyFloat3Set(
     void* scene_object, float x, float y, float z);
 }
 
+/* container.c (Container.c, finding 624) serves these port names in the
+ * matching build (container_link_names.h): every build but MSVC 5.0's
+ * compiles the port's definitions. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_CONTAINER_PORT_NAMES 0
+#else
+#define LRR_CONTAINER_PORT_NAMES 1
+#endif
+
 // PORT-ONLY: original-ABI adapter for GAME-011 detail.c (Container_LoadTexture2, 0x004744f0, has C++ linkage)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves detail_container_load_texture2_adapter in the matching build */
 extern "C" void* detail_container_load_texture2_adapter(const char* fname,
                                                         int immediate,
                                                         unsigned int* width,
@@ -571,14 +581,18 @@ extern "C" void* detail_container_load_texture2_adapter(const char* fname,
     (void)height;
     return texture_surface_create(fname, (uint32_t)immediate, width, 0u);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-011 detail.c (Container_FreeTexture, 0x00474710, has C++ linkage)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves detail_container_free_texture_adapter in the matching build */
 extern "C" void detail_container_free_texture_adapter(void* texture)
 {
     texture_release_record((TextureReleaseRecord*)texture);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-011 detail.c (Container_Mesh_GetGroup, 0x00474c40, has C++ linkage)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves detail_container_mesh_get_group_adapter in the matching build */
 extern "C" void detail_container_mesh_get_group_adapter(
     void* cont, unsigned int group, unsigned int* vertexCount,
     unsigned int* faceCount, unsigned int* vPerFace,
@@ -588,19 +602,24 @@ extern "C" void detail_container_mesh_get_group_adapter(
                                          (uint32_t)(size_t)faceCount,
                                          vPerFace, faceDataSize, faceData);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-011 detail.c (0x00474e90 is a ledger stub with C++ linkage)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves detail_container_mesh_scale_adapter in the matching build */
 extern "C" void detail_container_mesh_scale_adapter(void* cont, float x,
                                                     float y, float z)
 {
     (void)unported_ledger_stubs::
         ledger_stub_00474e90_RenderObjectHierarchyFloat3Set(cont, x, y, z);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-011 detail.c (Container_InverseTransform, 0x00475090, has C++ linkage)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves detail_container_inverse_transform_adapter in the matching build */
 extern "C" void detail_container_inverse_transform_adapter(void* cont,
                                                            void* dest,
                                                            const void* src)
 {
     scene_object_coordinate_transform_to_output(cont, dest, (void*)src);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
