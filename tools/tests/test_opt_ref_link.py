@@ -176,6 +176,77 @@ class CallerTests(unittest.TestCase):
         # 9 is live (not removed): 3's root is 3 itself.
         self.assertEqual(opt.dead_roots({3}, {3: {9}})[3], {3})
 
+    def test_root_causes(self):
+        # Roots 1 (live caller 8), 4 (unmapped caller 9) and 5 (no caller).
+        callers = {1: {8}, 2: {1}, 3: {2, 4}, 4: {9}}
+        removed, mapped = {1, 2, 3, 4, 5, 6}, {1, 2, 3, 4, 5, 6, 8}
+        roots = opt.dead_roots(removed, callers)
+        self.assertEqual(opt.root_causes(roots[2], callers, removed, mapped), ["live_caller"])
+        self.assertEqual(opt.root_causes(roots[3], callers, removed, mapped),
+                         ["live_caller", "unmapped_caller"])
+        self.assertEqual(opt.root_causes(roots[5], callers, removed, mapped), ["unreferenced"])
+        # 6 is referred to only from a data table.
+        self.assertEqual(opt.root_causes(roots[6], callers, removed, mapped, {6}),
+                         ["data_reference"])
+        self.assertEqual(opt.primary_cause(["live_caller", "unmapped_caller"]), "live_caller")
+        self.assertEqual(opt.primary_cause([]), "unreferenced")
+
+    def test_pointer_references(self):
+        base = 0x400000
+        # push 0x401010 at an odd offset, and a table entry.
+        image = bytes(0x1000) + b"\x90\x68\x10\x10\x40\x00\x90\x90" + bytes(8) \
+            + (0x401010).to_bytes(4, "little") + (0x401020).to_bytes(4, "little")
+        refs = opt.pointer_references(image, base, {0x401010, 0x401030}, 0x401000,
+                                      base + len(image))
+        self.assertEqual(refs, {0x401010: [0x401002, 0x401010]})
+        # A range that excludes the table.
+        self.assertEqual(opt.pointer_references(image, base, {0x401010}, 0x401000, 0x401008),
+                         {0x401010: [0x401002]})
+
+    def test_summary_by_unit_and_cause(self):
+        report = {"a.c.obj": {"functions": [
+            {"address": "0x400", "exact": True, "size": 16, "causes": ["live_caller"]},
+            {"address": "0x410", "exact": False, "size": 32, "causes": ["unreferenced"]}]},
+            "libc:x.obj": {"functions": [
+                {"address": "0x900", "exact": True, "size": 8,
+                 "causes": ["unmapped_caller", "unreferenced"]},
+                {"address": "0x910", "exact": True, "size": 4,
+                 "causes": ["folded", "live_caller"]}]}}
+        summary = opt.summarize(report, {0x400: "GAME-001 A.c", 0x410: "GAME-001 A.c"})
+        unit = summary["by_unit"]["GAME-001 A.c"]
+        self.assertEqual((unit["removed"], unit["exact"], unit["bytes"]), (2, 1, 48))
+        self.assertEqual((unit["live_caller"], unit["live_caller_exact"]), (1, 1))
+        self.assertEqual((unit["unreferenced"], unit["unreferenced_exact"]), (1, 0))
+        self.assertEqual(summary["by_unit"]["unassigned"]["unmapped_caller"], 1)
+        self.assertEqual(summary["by_unit"]["unassigned"]["folded"], 1)
+        self.assertEqual(summary["total"]["removed"], 4)
+        self.assertEqual(list(summary["by_unit"]), ["GAME-001 A.c", "unassigned"])
+        text = opt.format_summary_table(summary)
+        self.assertIn("| GAME-001 A.c | 2 | 1 | 48 | 0 | 1 (1) | 0 | 0 | 1 (0) |", text)
+        self.assertIn("| **total** | 4 | 3 | 60 |", text)
+
+    def test_load_units(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "u.csv"
+            path.write_text("address,function_name,unit_order,unit_id,unit_name,current_source\n"
+                            "00401000,F,0,GAME-001,Advisor.c,src/game/advisor.c\n"
+                            "0046eb80,G,51,GAME-050,,src/game/weapons.c\n"
+                            "00402000,H,1,GAME-002,,\n", encoding="utf-8")
+            self.assertEqual(opt.load_units(path), {0x401000: "GAME-001 Advisor.c",
+                                                    0x46eb80: "GAME-050 [weapons.c]",
+                                                    0x402000: "GAME-002"})
+            self.assertEqual(opt.load_units(Path(d) / "missing.csv"), {})
+            path.with_name("translation-unit-ranges.csv").write_text(
+                "unit_order,unit_id,unit_name,text_start,text_end\n"
+                "51,GAME-050,,0046eb80,004721e0\n52,G98-001,Movie.cpp,004721e0,00472710\n",
+                encoding="utf-8")
+            units = opt.load_units(path)
+            self.assertEqual(units.get(0x46f610), "GAME-050 [weapons.c]")
+            self.assertEqual(units.get(0x472300), "G98-001 Movie.cpp")
+            self.assertEqual(units.get(0x472710, "unassigned"), "unassigned")
+            self.assertEqual(units.get(0x401000), "GAME-001 Advisor.c")
+
     def test_format(self):
         report = {"x.c.obj": {"removed": 1, "exact_removed": 1, "functions": [
             {"address": "0x400", "name": "f", "exact": True, "roots": ["y.c.obj"],
@@ -185,6 +256,9 @@ class CallerTests(unittest.TestCase):
         self.assertIn("x.c.obj: 1 removed, 1 exact", text)
         self.assertIn("0x400 E f  [roots: y.c.obj]", text)
         self.assertIn("<- 0x500 g (live) calls instead: port_f (z.cpp.obj); no call", text)
+        report["x.c.obj"]["functions"][0]["callers"] = [
+            {"address": "0x600", "name": "h", "state": "removed", "kind": "pointer"}]
+        self.assertIn("<& 0x600 h (removed)", opt.format_callers(report))
 
 
 if __name__ == "__main__":

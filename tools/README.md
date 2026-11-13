@@ -829,9 +829,26 @@ each caller's state in the rebuild: `live`, `removed` or `unmapped`. For a
 live caller it names what the rebuilt caller calls at the original's call
 site, which is the port substitute to switch. `roots` names the objects of
 the topmost removed callers, the functions a live caller has to reach first.
-It reads the original's direct calls with `capstone`, so calls through
-tables are not seen. Use it before rewiring callers so that `/OPT:REF` keeps
-a converted unit's functions. Tests:
+It reads the original's direct calls with `capstone`, and also counts as a
+caller any function whose code holds a 32-bit pointer to the callee
+(callbacks), printed as `<&`. Calls through data tables are not followed. Use it before
+rewiring callers so that `/OPT:REF` keeps a converted unit's functions.
+
+`make opt-ref-callers OPT_REF_ARGS=--summary` (finding 637) tabulates every
+removed annotated function, whatever `--min`, by owning unit
+(`translation-units.csv`, else the unit's `.text` range) and by the cause at
+its roots:
+- `folded`: `/OPT:ICF` folded it into an identical function of another
+  object. Relinking with `--flag /OPT:REF --flag /OPT:NOICF` keeps it.
+- `live_caller`: a root's original caller is live, but the rebuilt caller
+  calls a port substitute.
+- `unmapped_caller`: a root's original caller is unannotated or unmapped.
+- `data_reference`: a root is referred to only from a data table.
+- `unreferenced`: nothing in the original refers to a root. This is the
+  original's own floor.
+
+With `--json FILE` it writes the table and the per-function report, which
+names each function's root functions. Tests:
 `tools/tests/test_opt_ref_link.py`, in `make tools-test`.
 
 ## Native code in winapi links (`winapi_link_audit.py`)

@@ -35,7 +35,17 @@ that mode and measures what it removes.
         substitute to switch (#589, finding 579). ``roots`` names the
         objects of the topmost removed callers: the removed functions a
         live caller has to reach first. It needs ``capstone`` and
-        ``reference/LegoRR.exe``.
+        ``reference/LegoRR.exe``. ``--summary`` instead prints every
+        removed annotated function, whatever ``--min``, grouped by owning
+        unit (``docs/coverage/translation-units.csv``) and by cause (#562,
+        finding 637): ``folded`` (``/OPT:ICF`` folded it into an identical
+        function of another object), ``live_caller`` (a root's original
+        caller is live, so the rebuilt caller calls a port substitute),
+        ``unmapped_caller`` (a root's original caller is unannotated or
+        unmapped), ``data_reference`` (a root is referred to only from a data
+        table) or ``unreferenced`` (nothing in the original refers to a
+        root). Callers include functions whose code holds a pointer to the
+        callee (callbacks).
 
 ``binary_progress.py`` records ``measure``'s result as ``opt_ref`` in
 ``binary-progress.json`` when the relink exists; ``make match-progress``
@@ -327,6 +337,138 @@ def _direct_calls(md, image: bytes, base: int, start: int, end: int) -> list[int
             if i.mnemonic == "call" and i.op_str.startswith("0x")]
 
 
+CAUSES = ("folded", "live_caller", "unmapped_caller", "data_reference",
+          "unreferenced")
+
+
+def pointer_references(image: bytes, base: int, targets: set[int],
+                       start: int, end: int) -> dict[int, list[int]]:
+    """32-bit little-endian values in ``image[start:end]`` (virtual addresses)
+    equal to one of ``targets``, at any byte offset: target -> referring
+    addresses. In code these are pushed or stored function pointers."""
+    found = collections.defaultdict(list)
+    lo = start - base
+    data = image[lo:end - base]
+    for k in range(4):
+        n = (len(data) - k) // 4
+        values = memoryview(data[k:k + 4 * n]).cast("I")
+        for i, v in enumerate(values):
+            if v in targets:
+                found[v].append(start + k + 4 * i)
+    return {t: sorted(v) for t, v in found.items()}
+
+
+def root_causes(roots: set[int], callers: dict[int, set[int]], removed: set[int],
+                mapped: set[int], data_referenced: set[int] = frozenset()) -> list[str]:
+    """Why the roots of one removed function have no live caller in the relink.
+
+    A root's original callers (direct calls, or pointers to it in code) are
+    not removed (that is what makes it a root), so each one is either live
+    in the rebuild (and calls a port substitute there) or unmapped. A root
+    without one is reached only through a pointer in data
+    (``data_reference``), or nothing in the original refers to it
+    (``unreferenced``): the original's own floor.
+    """
+    causes = set()
+    for r in roots:
+        up = [c for c in callers.get(r, ()) if c not in removed]
+        if not up:
+            causes.add("data_reference" if r in data_referenced else "unreferenced")
+        if any(c in mapped for c in up):
+            causes.add("live_caller")
+        if any(c not in mapped for c in up):
+            causes.add("unmapped_caller")
+    return [c for c in CAUSES if c in causes]
+
+
+def primary_cause(causes: list[str]) -> str:
+    """One cause per function, for counting: the first in ``CAUSES`` order."""
+    return causes[0] if causes else "unreferenced"
+
+
+def load_units(path: Path = ROOT / "docs/coverage/translation-units.csv") -> dict[int, str]:
+    """Original address -> owning unit (``GAME-021 Lego.c``). A unit whose
+    original file name is unknown is named after its rebuilt source,
+    in brackets (``GAME-050 [weapons.c]``)."""
+    import csv
+    if not path.is_file():
+        return {}
+
+    def name(r):
+        if r.get("unit_name"):
+            return f"{r['unit_id']} {r['unit_name']}"
+        source = Path(r.get("current_source") or "").name
+        return f"{r['unit_id']} [{source}]" if source else r["unit_id"]
+    with path.open(encoding="utf-8", newline="") as f:
+        units = {int(r["address"], 16): name(r) for r in csv.DictReader(f) if r.get("address")}
+    # Addresses the per-function map does not list fall back on the unit
+    # ranges, named as the unit's listed functions are.
+    ranges = path.with_name("translation-unit-ranges.csv")
+    if ranges.is_file():
+        names = {}
+        for label in units.values():
+            names.setdefault(label.split(" ", 1)[0], label)
+        with ranges.open(encoding="utf-8", newline="") as f:
+            spans = sorted((int(r["text_start"], 16), int(r["text_end"], 16),
+                            names.get(r["unit_id"], f"{r['unit_id']} {r['unit_name']}".strip()))
+                           for r in csv.DictReader(f) if r.get("text_start") and r.get("text_end"))
+        return UnitMap(units, spans)
+    return units
+
+
+class UnitMap(dict):
+    """``load_units``'s mapping, which also answers addresses inside a unit's
+    ``.text`` range."""
+
+    def __init__(self, units: dict[int, str], spans: list[tuple[int, int, str]]):
+        super().__init__(units)
+        self.spans = spans
+        self.starts = [s[0] for s in spans]
+
+    def get(self, address, default=None):
+        if address in self:
+            return self[address]
+        i = bisect.bisect_right(self.starts, address) - 1
+        if i >= 0 and address < self.spans[i][1]:
+            return self.spans[i][2]
+        return default
+
+
+def summarize(report: dict, units: dict[int, str]) -> dict:
+    """Removed annotated functions by owning unit and by cause."""
+    def blank():
+        return {"removed": 0, "exact": 0, "bytes": 0,
+                **{c: 0 for c in CAUSES}, **{c + "_exact": 0 for c in CAUSES}}
+    by_unit = collections.defaultdict(blank)
+    total = blank()
+    for obj, data in report.items():
+        for f in data["functions"]:
+            unit = units.get(int(f["address"], 16), "unassigned")
+            cause = primary_cause(f.get("causes", []))
+            for row in (by_unit[unit], total):
+                row["removed"] += 1
+                row["exact"] += f["exact"]
+                row["bytes"] += f.get("size", 0)
+                row[cause] += 1
+                row[cause + "_exact"] += f["exact"]
+    return {"total": total,
+            "by_unit": dict(sorted(by_unit.items(), key=lambda kv: (-kv[1]["removed"], kv[0])))}
+
+
+def format_summary_table(summary: dict) -> str:
+    head = ["unit", "removed", "exact", "bytes", *CAUSES]
+    lines = ["| " + " | ".join(head) + " |", "|" + " --- |" + " ---: |" * (len(head) - 1)]
+
+    def row(name, r):
+        cells = [name, str(r["removed"]), str(r["exact"]), f"{r['bytes']:,}"]
+        cells += [f"{r[c]} ({r[c + '_exact']})" if r[c] else "0" for c in CAUSES]
+        return "| " + " | ".join(cells) + " |"
+    for unit, r in summary["by_unit"].items():
+        lines.append(row(unit, r))
+    lines.append(row("**total**", summary["total"]))
+    return "\n".join(lines)
+
+
 def caller_report(build: Path, out: Path, original: Path, objects=None,
                   min_removed: int = 15) -> dict:
     """Removed annotated functions per object, with their original callers."""
@@ -335,16 +477,25 @@ def caller_report(build: Path, out: Path, original: Path, objects=None,
     rows = load_rows(build / "reccmp-report/results.json") or []
     gate_map = (build / "LegoRR.map").read_text(encoding="latin-1")
     _, ref_symbols = pe_audit.parse_map((out / "LegoRR.map").read_text(encoding="latin-1"))
-    kept = {s["name"] for s in ref_symbols if s["section"] == 1}
+    # Removal is by (name, object), as in ``removed_code``. /OPT:ICF folds an
+    # identical function into another object's: its name stays in the map,
+    # listed under the object whose copy is kept.
+    kept = {(s["name"], s["object"]) for s in ref_symbols if s["section"] == 1}
+    kept_names = {s["name"]: s["object"] for s in ref_symbols if s["section"] == 1}
     annotated = {int(r["recomp"], 16): r for r in rows if r.get("recomp")}
     gate = winapi_link_audit.text_symbols(gate_map, link_order.load(), set(annotated))
     by_object = collections.defaultdict(list)
     removed = {}
+    sizes = {}
+    folded_into = {}
     for s in gate:
         row = annotated.get(s["address"])
-        if row is not None and s["name"] not in kept:
+        if row is not None and (s["name"], s["object"]) not in kept:
             orig = int(row["address"], 16)
             removed[orig] = s["object"]
+            sizes[orig] = s["size"]
+            if s["name"] in kept_names:
+                folded_into[orig] = kept_names[s["name"]]
             by_object[s["object"]].append((orig, row, s["name"]))
     to_rebuilt = {int(r["address"], 16): int(r["recomp"], 16) for r in rows if r.get("recomp")}
     by_original = {int(r["address"], 16): r for r in rows}
@@ -364,13 +515,30 @@ def caller_report(build: Path, out: Path, original: Path, objects=None,
         return starts[i] if i < len(starts) else min(a + 0x1000, t1)
     callers = collections.defaultdict(set)
     o_calls = {}
-    for a in by_original:
+    # Every function start can call; one without a report row is unannotated
+    # and counts as an unmapped caller.
+    for a in starts:
         if not t0 <= a < t1:
             continue
         o_calls[a] = _direct_calls(md, o_img, base, a, o_end(a))
         for t in o_calls[a]:
             if t in by_original and t != a:
                 callers[t].add(a)
+    # Pointers to annotated functions: in code they make the containing
+    # function a caller; elsewhere (tables) they only mark the target.
+    data_referenced = set()
+    targets = set(by_original)
+    for sec in o_pe.sections:
+        s0 = base + sec.VirtualAddress
+        s1 = s0 + max(sec.Misc_VirtualSize, 0)
+        for t, refs in pointer_references(o_img, base, targets, s0, min(s1, s0 + len(o_img))).items():
+            if s0 == t0:
+                for ref in refs:
+                    i = bisect.bisect_right(starts, ref) - 1
+                    if i >= 0 and starts[i] != t and o_end(starts[i]) > ref:
+                        callers[t].add(starts[i])
+            else:
+                data_referenced.add(t)
     r_text = sorted((s["address"], s["name"], s["object"]) for s in gate)
     r_addr = [t[0] for t in r_text]
 
@@ -382,6 +550,8 @@ def caller_report(build: Path, out: Path, original: Path, objects=None,
         i = bisect.bisect_right(r_addr, a)
         return r_addr[i] if i < len(r_addr) else a + 0x1000
     roots = dead_roots(set(removed), callers)
+    mapped = {a for a, r in by_original.items() if r.get("recomp")}
+    removed_set = set(removed)
     report = {}
     for obj, entries in sorted(by_object.items(), key=lambda kv: (-len(kv[1]), kv[0])):
         if objects and obj not in objects:
@@ -392,8 +562,10 @@ def caller_report(build: Path, out: Path, original: Path, objects=None,
         for orig, row, symbol in sorted(entries, key=lambda e: e[0]):
             calls = []
             for c in sorted(callers.get(orig, ())):
-                crow = by_original[c]
+                crow = by_original.get(c, {})
                 entry = {"address": f"{c:#x}", "name": crow.get("name")}
+                if orig not in o_calls.get(c, ()):
+                    entry["kind"] = "pointer"
                 if not crow.get("recomp"):
                     entry["state"] = "unmapped"
                 elif c in removed:
@@ -410,8 +582,12 @@ def caller_report(build: Path, out: Path, original: Path, objects=None,
                 calls.append(entry)
             functions.append({"address": f"{orig:#x}", "name": row.get("name"),
                               "symbol": symbol, "exact": row.get("matching") == 1.0,
-                              "callers": calls,
-                              "roots": sorted({removed[r] for r in roots[orig]})})
+                              "size": sizes[orig], "callers": calls,
+                              "causes": (["folded"] if orig in folded_into else [])
+                              + root_causes(roots[orig], callers, removed_set, mapped, data_referenced),
+                              **({"folded_into": folded_into[orig]} if orig in folded_into else {}),
+                              "roots": sorted({removed[r] for r in roots[orig]}),
+                              "root_functions": [f"{r:#x}" for r in sorted(roots[orig])]})
         report[obj] = {"removed": len(functions),
                        "exact_removed": sum(f["exact"] for f in functions),
                        "functions": functions}
@@ -427,7 +603,8 @@ def format_callers(report: dict) -> str:
             lines.append(f"  {f['address']} {'E' if f['exact'] else ' '} {f['name']}"
                          f"  [roots: {roots}]")
             for c in f["callers"]:
-                text = f"      <- {c['address']} {c['name']} ({c['state']})"
+                arrow = "<& " if c.get("kind") == "pointer" else "<- "
+                text = f"      {arrow}{c['address']} {c['name']} ({c['state']})"
                 if c.get("rebuilt_calls"):
                     text += " calls instead: " + "; ".join(
                         "no call" if x is None else " | ".join(x) if isinstance(x, list) else x
@@ -456,6 +633,8 @@ def main(argv: list[str] | None = None) -> int:
                            help="only this object (map name, e.g. reward.c.obj)")
             p.add_argument("--min", type=int, default=15,
                            help="objects with at least this many removed functions")
+            p.add_argument("--summary", action="store_true",
+                           help="all removed functions, by owning unit and cause")
     args = parser.parse_args(argv)
     out = args.out or args.build / OUT_NAME
     if args.command == "relink":
@@ -465,7 +644,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"missing {path}; run make opt-ref-link first", file=sys.stderr)
             return 2
     if args.command == "callers":
-        report = caller_report(args.build, out, args.original, set(args.object), args.min)
+        report = caller_report(args.build, out, args.original, set(args.object),
+                               1 if args.summary else args.min)
+        if args.summary:
+            summary = summarize(report, load_units())
+            if args.json:
+                args.json.write_text(json.dumps({"summary": summary, "objects": report},
+                                                indent=1) + "\n", encoding="utf-8")
+            print(format_summary_table(summary))
+            return 0
         if args.json:
             args.json.write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
         print(format_callers(report))

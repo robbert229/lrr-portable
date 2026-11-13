@@ -129,7 +129,9 @@ opt-ref:
 
 # Per object, the removed annotated functions with their original callers
 # and the port substitutes live callers call instead (finding 579).
-# OPT_REF_ARGS passes options, e.g. OPT_REF_ARGS="--object reward.c.obj".
+# OPT_REF_ARGS passes options, e.g. OPT_REF_ARGS="--object reward.c.obj";
+# OPT_REF_ARGS=--summary tabulates all of them by owning unit and cause
+# (finding 637).
 opt-ref-callers:
 	python3 tools/opt_ref_link.py callers --build "$(RECCMP_BUILD_DIR)" $(OPT_REF_ARGS)
 
