@@ -46,8 +46,6 @@ src/crt/crt_from_mesh_unit.hpp
 src/crt/crt_from_panel_unit.hpp
 src/crt/crt_heap.cpp
 src/crt/crt_mouse.h
-src/crt/crt_runtime_aliases.cpp
-src/crt/crt_runtime_calls.cpp
 src/crt/crt_shared.hpp
 src/crt/libc_symbols.csv
 src/crt/vc5names.h
@@ -358,8 +356,6 @@ src/game/screen_pick.cpp
 src/game/screen_pick.hpp
 src/game/screen_pick_for_terrain_map.hpp
 src/game/screen_pick_shared.hpp
-src/game/seh_runtime.cpp
-src/game/seh_runtime.hpp
 src/game/select.cpp
 src/game/select.hpp
 src/game/select_from_legoobject.hpp

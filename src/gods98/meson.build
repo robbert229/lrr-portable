@@ -60,8 +60,6 @@ gods98_sources = [
   'sound_wave.cpp',
   'tickers.cpp',
   'winmm_port.cpp',
-  '../crt/crt_runtime_aliases.cpp',
-  '../crt/crt_runtime_calls.cpp',
   '../crt/crt.cpp',
   '../crt/crt_heap.cpp',
 ]

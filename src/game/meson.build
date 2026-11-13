@@ -87,7 +87,6 @@ game_sources = [
   'opgroup.cpp',
   'render.cpp',
   'tutorial_world_arrows.cpp',
-  'seh_runtime.cpp',
 ]
 game_c_sources = [
   'advisor.c',

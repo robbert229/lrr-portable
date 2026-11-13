@@ -250,7 +250,6 @@ else()
   # These game sources register hooks that nothing references, so the
   # program compiles them itself to keep them in the static link.
   set(LRR_SOURCES ${LRR_LINK_SOURCES_program}
-    ${GAME_DIR}/seh_runtime.cpp
     ${GAME_DIR}/dependency_grid.cpp ${GAME_DIR}/screen_pick.cpp)
 endif()
 if(PLATFORM STREQUAL "winapi")

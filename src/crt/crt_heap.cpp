@@ -743,15 +743,18 @@ void crt_new_handler_set(int (*handler)(long))
 }
 #endif
 
-// FUNCTION: LEGORR 0x0048ead0
+/* LIBC.LIB's operator new (new.obj): the matching build takes it from the
+ * library, and gods98/avi_player.cpp's new-expressions call it (finding 608).
+ * engine_calloc is the native port's copy. */
+// LIBRARY: LEGORR 0x0048ead0 SYMBOL
+// ??2@YAPAXI@Z
+#if !defined(_MSC_VER)
+// PORT-ONLY: the native port's operator new; the matching build uses LIBC's
 void* engine_calloc(long size)
 {
-#if defined(_MSC_VER)
-    return _nh_malloc((size_t)size, 1);
-#else
     return engine_heap_alloc_retry(size, 1); /* corpus pushes the retry flag */
-#endif
 }
+#endif
 
 /* VC5 LIBC.LIB's calloc entry uses the runtime allocator and zero-fill path. */
 // LIBRARY: LEGORR 0x004997c0 SYMBOL

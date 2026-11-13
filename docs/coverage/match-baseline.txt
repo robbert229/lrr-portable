@@ -1,4 +1,4 @@
-# input_sha256: 70f9fd5db340bf4e40454e8962683165f0b111b1d13e694cc031f4e0f0024c3c
+# input_sha256: 36b9167b2d166a120dd9d44bd84b6dfc72c8855430938b37c1690ad79d405ef0
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2339 mapped functions
+[game-only] 2338 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2057,7 +2057,7 @@
 0x0047e800 100.00 AviMovie::AviMovie
 0x0047e980 100.00 AviMovie::`scalar deleting destructor'
 0x0047e9a0 100.00 AviMovie::~AviMovie
-0x0047e9e0 59.81 AviMovie::FrameToSurface
+0x0047e9e0 60.75 AviMovie::FrameToSurface
 0x0047eb20 96.49 AviMovie::Update
 0x0047ebe0 100.00 AviMovie::GetLength
 0x0047ebf0 100.00 AviMovie::SetTime
@@ -2318,7 +2318,6 @@
 0x0048d7c0 96.88 lwo_app_obj_load
 0x0048d870 100.00 lwo_app_obj_free
 0x0048e1e0 43.01 formatted_text_buffer_build
-0x0048ead0 100.00 engine_calloc
 0x004907c0 100.00 string_prefix_reserve
 0x004939d0 92.31 _matherr
 0x004973f0 95.31 $CRT_C_Initializer(1)
@@ -4398,7 +4397,7 @@
 0x0047e800 100.00 AviMovie::AviMovie
 0x0047e980 100.00 AviMovie::`scalar deleting destructor'
 0x0047e9a0 100.00 AviMovie::~AviMovie
-0x0047e9e0 59.81 AviMovie::FrameToSurface
+0x0047e9e0 60.75 AviMovie::FrameToSurface
 0x0047eb20 96.49 AviMovie::Update
 0x0047ebe0 100.00 AviMovie::GetLength
 0x0047ebf0 100.00 AviMovie::SetTime
@@ -4691,7 +4690,7 @@
 0x0048e8e0 100.00 _ceil
 0x0048e9e0 100.00 __alldiv
 0x0048ea90 100.00 __allmul
-0x0048ead0 100.00 engine_calloc
+0x0048ead0 100.00 ??2@YAPAXI@Z
 0x0048eae0 100.00 _fclose
 0x0048eb60 100.00 __fsopen
 0x0048eb90 100.00 _fopen
