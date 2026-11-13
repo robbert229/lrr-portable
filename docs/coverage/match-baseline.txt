@@ -1,4 +1,4 @@
-# input_sha256: f44ac38ad9f1eceb3942b15fab068f40d12c1064248ce1c23adef8f8fcd52b94
+# input_sha256: 0d4b2d00ce7ad4f483ee7deab57621aefa54e36a6fd43f4da4f62a39e9357323
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2294 mapped functions
+[game-only] 2300 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2044,24 +2044,24 @@
 0x0047f4f0 100.00 resource_find_cd_key_drive
 0x0047f590 97.56 file_set_base_search_path
 0x0047f600 92.86 resource_debug_output_format
-0x0047f640 87.50 file_load_wad
+0x0047f640 100.00 file_load_wad
 0x0047f660 100.00 resource_cd_file_path_get
 0x0047f6a0 100.00 file_make_dir
 0x0047f6e0 100.00 game_file_open_dispatch
-0x0047f850 95.69 wad_file_seek
-0x0047f980 95.18 wad_file_read
+0x0047f850 100.00 wad_file_seek
+0x0047f980 97.59 wad_file_read
 0x0047fa50 100.00 game_file_write
 0x0047fac0 100.00 game_file_close
 0x0047fb10 100.00 wad_file_cursor_get
-0x0047fb60 98.48 sound_sample_file_open_by_name
-0x0047fc20 96.15 game_file_read_byte
+0x0047fb60 100.00 sound_sample_file_open_by_name
+0x0047fc20 100.00 game_file_read_byte
 0x0047fca0 100.00 file_length
 0x0047fce0 100.00 game_file_read_line
 0x0047fd40 100.00 game_file_read_line_dispatch
 0x0047fdb0 100.00 game_file_print_format
 0x0047fe20 100.00 file_get_system
-0x0047fe30 97.96 game_file_open_route_select
-0x0047fea0 94.44 file_open_wad
+0x0047fe30 100.00 game_file_open_route_select
+0x0047fea0 100.00 file_open_wad
 0x0047fed0 100.00 game_file_handle_allocate
 0x0047ff30 100.00 file_malloc
 0x0047ff40 100.00 engine_heap_free_wrapper
@@ -2252,15 +2252,21 @@
 0x0048b330 100.00 registry_path_split
 0x0048b360 100.00 registry_path_accessor
 0x0048b390 65.56 registry_path_create_keys
-0x0048b4a0 31.88 buffered_char_stream_read_to_string
-0x0048b4e0 27.21 wwad_archive_index_load
-0x0048bcf0 13.33 wad_entry_length_get
-0x0048bda0 43.33 resource_wad_lookup
-0x0048bf70 22.22 ares_open_wad_path
-0x0048bfc0 100.00 fixed_record_slot_resource_release
-0x0048bff0 100.00 fixed_record_slot_resource_get_target
-0x0048c010 60.00 wad_stream_length_get
-0x0048c030 100.00 wad_memory_stream_buffer_get
+0x0048b4a0 100.00 wad_get_file_name
+0x0048b4e0 100.00 wad_load
+0x0048bce0 100.00 wad_get
+0x0048bcf0 100.00 wad_get_file_length
+0x0048bd10 100.00 wad_get_file_compressed_length
+0x0048bd30 90.00 wad_find_free_file_handle
+0x0048bd50 100.00 wad_is_file_in_wad
+0x0048bda0 100.00 wad_get_file_index
+0x0048be00 95.65 wad_get_free_wad
+0x0048be40 100.00 wad_file_open_in_wad
+0x0048bf70 100.00 wad_file_open
+0x0048bfc0 100.00 wad_file_close
+0x0048bff0 100.00 wad_file_get_pointer
+0x0048c010 100.00 wad_file_length
+0x0048c030 100.00 wad_file_data
 0x0048c040 76.71 string_case_substring_find
 0x0048c0c0 89.80 lwo_string_duplicate
 0x0048c120 100.00 lwo_texture_projection_mode_parse
@@ -2302,7 +2308,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2530 mapped functions
+[full] 2536 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -4340,24 +4346,24 @@
 0x0047f4f0 100.00 resource_find_cd_key_drive
 0x0047f590 97.56 file_set_base_search_path
 0x0047f600 92.86 resource_debug_output_format
-0x0047f640 87.50 file_load_wad
+0x0047f640 100.00 file_load_wad
 0x0047f660 100.00 resource_cd_file_path_get
 0x0047f6a0 100.00 file_make_dir
 0x0047f6e0 100.00 game_file_open_dispatch
-0x0047f850 95.69 wad_file_seek
-0x0047f980 95.18 wad_file_read
+0x0047f850 100.00 wad_file_seek
+0x0047f980 97.59 wad_file_read
 0x0047fa50 100.00 game_file_write
 0x0047fac0 100.00 game_file_close
 0x0047fb10 100.00 wad_file_cursor_get
-0x0047fb60 98.48 sound_sample_file_open_by_name
-0x0047fc20 96.15 game_file_read_byte
+0x0047fb60 100.00 sound_sample_file_open_by_name
+0x0047fc20 100.00 game_file_read_byte
 0x0047fca0 100.00 file_length
 0x0047fce0 100.00 game_file_read_line
 0x0047fd40 100.00 game_file_read_line_dispatch
 0x0047fdb0 100.00 game_file_print_format
 0x0047fe20 100.00 file_get_system
-0x0047fe30 97.96 game_file_open_route_select
-0x0047fea0 94.44 file_open_wad
+0x0047fe30 100.00 game_file_open_route_select
+0x0047fea0 100.00 file_open_wad
 0x0047fed0 100.00 game_file_handle_allocate
 0x0047ff30 100.00 file_malloc
 0x0047ff40 100.00 engine_heap_free_wrapper
@@ -4548,15 +4554,21 @@
 0x0048b330 100.00 registry_path_split
 0x0048b360 100.00 registry_path_accessor
 0x0048b390 65.56 registry_path_create_keys
-0x0048b4a0 31.88 buffered_char_stream_read_to_string
-0x0048b4e0 27.21 wwad_archive_index_load
-0x0048bcf0 13.33 wad_entry_length_get
-0x0048bda0 43.33 resource_wad_lookup
-0x0048bf70 22.22 ares_open_wad_path
-0x0048bfc0 100.00 fixed_record_slot_resource_release
-0x0048bff0 100.00 fixed_record_slot_resource_get_target
-0x0048c010 60.00 wad_stream_length_get
-0x0048c030 100.00 wad_memory_stream_buffer_get
+0x0048b4a0 100.00 wad_get_file_name
+0x0048b4e0 100.00 wad_load
+0x0048bce0 100.00 wad_get
+0x0048bcf0 100.00 wad_get_file_length
+0x0048bd10 100.00 wad_get_file_compressed_length
+0x0048bd30 90.00 wad_find_free_file_handle
+0x0048bd50 100.00 wad_is_file_in_wad
+0x0048bda0 100.00 wad_get_file_index
+0x0048be00 95.65 wad_get_free_wad
+0x0048be40 100.00 wad_file_open_in_wad
+0x0048bf70 100.00 wad_file_open
+0x0048bfc0 100.00 wad_file_close
+0x0048bff0 100.00 wad_file_get_pointer
+0x0048c010 100.00 wad_file_length
+0x0048c030 100.00 wad_file_data
 0x0048c040 76.71 string_case_substring_find
 0x0048c0c0 89.80 lwo_string_duplicate
 0x0048c120 100.00 lwo_texture_projection_mode_parse

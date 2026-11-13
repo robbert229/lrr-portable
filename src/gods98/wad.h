@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* C boundary header (ADR 0005) for the Wad.c (G98-030, gods98/wad.cpp and
- * gods98/resource.cpp) entries that gods98/files.c calls, with the
- * original's contracts. Wad.c is not converted yet (finding 583):
+/* Wad.c (original translation unit G98-030, finding 591): the WWAD archive
+ * index and the WAD entry handles that Files.c reads through.
  *
- * - wad_entry_find_across_mounted_archives (Wad_IsFileInWad, 0048bd50) and
- *   fixed_record_slot_resource_release (Wad_FileClose, 0048bfc0) are the
- *   port's own functions, whose contracts match; resource.hpp gives them C
- *   linkage in place.
- * - The other four are unannotated adapters in gods98/files_port.cpp: the
- *   port's functions at those addresses take or return other things
- *   (Resource records, no return value), and wwad_archive_index_load is
- *   declared only in a frozen header with C++ linkage. Wad.c's conversion
- *   replaces them.
+ * C-compatible header (ADR 0005). wad.c is compiled as C in the matching
+ * build and as C++ in the native port. It declares only the six entry
+ * points gods98/files.c calls, in the order #598 (finding 583) declared
+ * them, so files.c's symbol numbering is unchanged; the unit's other
+ * functions and its types are private to wad.c.
  *
- * Shared C++ headers do not include this file; src/game/test_c_boundaries.cpp
- * checks the two direct entries against resource.hpp. */
+ * The native port keeps its own WAD reader (gods98/wad_port.cpp and
+ * gods98/resource.cpp, the port tail) under the port's names. Nothing
+ * native calls these. Shared C++ headers do not include this file. */
 #ifndef LEGORRR_GODS98_WAD_H
 #define LEGORRR_GODS98_WAD_H
 
@@ -22,22 +18,21 @@
 extern "C" {
 #endif
 
-/* Wad_Load (0048b4e0): mount one archive; its number, or -1. Adapter. */
+/* Wad_Load (0048b4e0): mount one archive; its number, or -1. */
 int wad_load(const char* fName);
 
 /* Wad_IsFileInWad (0048bd50): the entry's index in archive wadNo, or in the
- * newest archive that has it when wadNo is -1; -1 if none. */
-int wad_entry_find_across_mounted_archives(const char* name, int wad_idx);
+ * newest active archive that has it when wadNo is -1; -1 if none. */
+int wad_is_file_in_wad(const char* fName, int wadNo);
 
-/* Wad_FileOpen (0048bf70): open an entry into a stream handle; -1 on
- * failure. Adapter. */
+/* Wad_FileOpen (0048bf70): read an entry into a handle; -1 on failure. */
 int wad_file_open(const char* fName, int wadNo);
 
-/* Wad_FileClose (0048bfc0): free a stream handle's data. */
-void fixed_record_slot_resource_release(int slot);
+/* Wad_FileClose (0048bfc0): free a handle's data. */
+void wad_file_close(int handle);
 
-/* Wad_FileLength (0048c010) and Wad_FileData (0048c030): a stream handle's
- * length and data. Adapters. */
+/* Wad_hLength (0048c010) and Wad_hData (0048c030): a handle's
+ * uncompressed length and data. */
 int wad_file_length(int handle);
 void* wad_file_data(int handle);
 

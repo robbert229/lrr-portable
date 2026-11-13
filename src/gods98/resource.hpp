@@ -362,6 +362,9 @@ int wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c840
 
 /* Probe (out_payload NULL) or materialize an expanded payload; answers the
  * decoded size, 0 on any failure. Buffer owned via engine_heap_free. */
+#ifdef __cplusplus
+extern "C"
+#endif
 long wad_expand_payload(const void* header, void** out_payload); /* FUN_0049c7c0 */
 
 /* Zero 16-byte table entries: 0, word 0xffff, 0, word 0. */

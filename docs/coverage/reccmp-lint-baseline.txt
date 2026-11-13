@@ -17,7 +17,6 @@ definition ares_cd_root_path 25f51c41bc2c1ff4
 definition ares_count_names c2bb270d686f96f8
 definition ares_le32 786642b8b7799554
 definition ares_open_std a1dff3517132257b
-definition ares_open_wad 9d7523cf8e200837
 definition ares_parse ab55aed645555408
 definition ares_strdup 58a39a3af9390017
 definition audio_active_play_sound_3d 3e2a1718aca7e7b4

@@ -3117,6 +3117,12 @@ static FeEvent frameloop_main_menu_frame(FrameloopApplicationState* app,
     return event;
 }
 
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* The matching build's second WAD table (gods98/wad_port.cpp, finding 591). */
+void wad_port_mount_startup_archives(const char* prefix);
+void wad_port_mount_unit_archives(void);
+#endif
+
 int frameloop_application_init(void)
 {
     FrameloopApplicationState& app = s_frameloop_application;
@@ -3155,6 +3161,9 @@ int frameloop_application_init(void)
          * prompts/CD policy. */
         resource_set_cd_root(wad_dir);
         mounted = resource_mount(wad_dir, resource_get_wad_prefix());
+#if defined(_MSC_VER) && _MSC_VER < 1200
+        wad_port_mount_unit_archives();
+#endif
     } else {
         /* With no host override, enter the retail-shaped cwd/Data startup
          * flow. Registry values and the WinAPI modal prompt use the platform
@@ -3163,6 +3172,9 @@ int frameloop_application_init(void)
         resource_mount_startup_target(resource_get_wad_prefix(),
             resource_startup_require_cd_get(),
             "SOFTWARE\\LEGO Media\\Games\\Rock Raiders");
+#if defined(_MSC_VER) && _MSC_VER < 1200
+        wad_port_mount_startup_archives(resource_get_wad_prefix());
+#endif
         mounted = resource_mounted_count();
     }
     fprintf(log, "frameloop: mounted %d wad(s) from %s\n", mounted, wad_dir);
