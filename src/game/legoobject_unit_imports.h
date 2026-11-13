@@ -217,10 +217,8 @@ void task_record_kind14_remove_if_head(struct EntitySlot* e); /* 00403f60 */
 /* HelpWindow.c (helpwindow.cpp, upgrades.hpp). */
 void building_upgrade_state_changed_dispatch(int type, int row, int column,
                                              int state);      /* 00418830 */
-/* LegoObject.c parts 2 and 3 (legoobject_port.cpp; entity.hpp, ai.hpp). The
- * port's 0043f560 and 0044b370 take a GameContext and 0044b680 is a
- * namespaced ledger stub with another contract: adapters at the end of
- * legoobject_port.cpp. 00449f50: GAME-021's adapter in lego.cpp. */
+/* LegoObject.c parts 2 and 3: the unit's own functions (part 3, issue
+ * #615). */
 int legoobject_activity_register_bookkeeping(Lego_Object* obj); /* 00447c40 */
 void legoobject_type_operation_dispatch(Lego_Object* obj,
                                         int hide);        /* 00449f50 */
@@ -507,9 +505,9 @@ int terrain_cell_state_equals_one_current(const int cell_xy[2]);           /* 00
 uint32_t terrain_cell_flag_8000_current(const int cell_xy[2]);             /* 00433030 */
 uint32_t level_cell_occupied_at_current(const int cell_xy[2]);             /* 00433090 */
 int terrain_cell_mask_180000_current(const int cell_xy[2]);                /* 004330e0 */
-/* Original-ABI adapters at the end of legoobject_port.cpp (group H): the port's
- * 00435230 takes the cell as two ints, its 0044a4f0 is in a namespace, and
- * the port has no 0044bf00. */
+/* Original-ABI adapter at the end of legoobject_port.cpp (group H): the
+ * port's 00435230 takes the cell as two ints. 0044a4f0 and 0044bf00 are
+ * part 3's own functions (issue #615). */
 void legoobject_gh_random_variant_cell_scatter_adapter(const int* blockPos,
                                                        int radius,
                                                        int mode);           /* 00435230 */
@@ -790,7 +788,7 @@ float* d3drm_vector_random(float* r);                                 /* 0047950
 void flic_opcode27_fallback_noop(void);                               /* 00484c90 */
 extern uint32_t s_panel_highlight_flags;  /* engine.cpp, 00556ed0 */
 extern int legoGlobs_ReinforceHits;       /* lego_unit.c, 00556f08 */
-/* PORT-ONLY adapters in legoobject_port.cpp (group J). */
+/* LegoObject.c part 3 (issue #615): the unit's own functions. */
 void legoobject_linked_proximity_response(Lego_Object* obj); /* 004474f0 */
 int legoobject_progress_negative_delta_handle(Lego_Object* obj); /* 004475c0 */
 int legoobject_route_step_command_issue(Lego_Object* obj); /* 00449700 */
@@ -927,13 +925,10 @@ void render_object_rotate_axis(void* object, uint32_t mode, float x,
                                float y, float z, float angle);               /* 00475580 */
 void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
                                             float x, float y, float z);      /* 004755e0 */
-/* LegoObject.c part 3 (entity.hpp, legoobject_port.cpp): the original returns
- * the object hit and takes the position; the unit calls the port's entry
- * through a cast. */
+/* LegoObject.c part 3 (issue #615): the unit's own functions. */
 Lego_Object* legoobject_flag_gated_callback_dispatch(Lego_Object* obj, float* pos,
                                                    float minRadius, int skipFlag8); /* 00445d70 */
-/* 00446610: the port's entry is in a namespace; PORT-ONLY adapter at the
- * end of legoobject_port.cpp. */
+/* 00446610: part 3's LegoObject_GetSpeedAndElapsed. */
 void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapsed,
                                                   float* outTransSpeed,
                                                   float* outElapsed);        /* 00446610 */
@@ -985,8 +980,7 @@ Lego_Object* legoobject_flag_gated_callback_dispatch(Lego_Object* obj, float* po
 /* GAME-043 Stats.c (entity.hpp, entity_stats.cpp). */
 float entity_stats_float_at8c(const struct EntitySlot* e);                 /* 00469fe0 */
 float entity_stats_float_at90(const struct EntitySlot* e);                 /* 0046a000 */
-/* PORT-ONLY adapters in legoobject_port.cpp (group N): the port's 00446610 and
- * 004477d0 are namespaced ledger stubs. */
+/* LegoObject.c part 3 (issue #615): the unit's own functions. */
 void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapsed,
                                                   float* outTransSpeed,
                                                   float* outElapsed);       /* 00446610 */
@@ -1028,8 +1022,7 @@ float ddiscene_object_length_get(void* scene_object);              /* 00475390 *
 uint32_t ddiscene_object_frame_position_get(void* scene_object);   /* 004753f0 */
 /* LIBC __finite (0048e870; vc5names.h maps it for other compilers). */
 int _finite(double x);
-/* PORT-ONLY adapter in legoobject_port.cpp (group O): 0044b250 has C++
- * linkage. */
+/* LegoObject.c part 3 (issue #615): the unit's own function. */
 void legoobject_pairing_activity_raise_and_mutual_link(Lego_Object* first,
                                                        Lego_Object* second); /* 0044b250 */
 

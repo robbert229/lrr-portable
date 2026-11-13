@@ -11421,12 +11421,6 @@ extern "C" int legoobject_gb_weapon_target_clear_callback(void* obj, void* data)
 
 /* 0044be30 takes the object; the port's entry takes a hook table. No hooks
  * are installed for the original's contract: does nothing. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (entity_auxiliary_payload_release, 0x0044be30)
-extern "C" void legoobject_gb_auxiliary_payload_release_adapter(void* obj)
-{
-    (void)obj;
-}
-
 /* 00409a90 takes (id, position, direction, points, count, notify) and
  * returns the object; the port's entry takes a hook table and returns
  * nothing. Does nothing. */
@@ -11455,37 +11449,6 @@ extern "C" void legoobject_gb_tutorial_counter_increment_adapter(int type)
     global_counter_004ff990_increment();
 }
 
-/* ---- group G adapters (GAME-023 part 1, legoobject_unit.c) ---- */
-
-/* 00447b30 (EntityActivityTick) with C linkage for legoobject_unit.c. */
-// PORT-ONLY: original-ABI adapter for 0x00447b30, called by legoobject_unit.c
-extern "C" float legoobject_activity_tick_adapter(EntitySlot* entity, float delta)
-{
-    return unported_ledger_stubs::ledger_stub_00447b30_EntityActivityTick(entity, delta);
-}
-
-/* ---- group C adapters ---- */
-/* Original-ABI adapters (ADR 0005 step 6) for GAME-023 legoobject_unit.c,
- * group C (LegoObject_Create 0x00437d00 and 0x00438460). The port's
- * 0043f560 and 0044b370 take the GameContext too, and its 0044b680 is a
- * ledger stub with another contract. Nothing calls these natively. */
-
-/* 0044b370 takes the object and the activity value. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0044b370 takes no GameContext)
-extern "C" void legoobject_gc_activity_grant_adapter(EntitySlot* e, int value)
-{
-    ai_activity_grant(e != NULL ? e->owner_ctx : NULL, e, value);
-}
-
-/* 0044b680 attaches the object's scene tree; the port's ledger stub takes
- * the scene objects and a hook instead. No port equivalent: nothing. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (no port equivalent of 0x0044b680)
-extern "C" int legoobject_gc_scene_object_tree_attach_adapter(EntitySlot* e)
-{
-    (void)e;
-    return 0;
-}
-
 /* ---- group H adapters (GAME-023 part 2, legoobject_unit.c) ---- */
 /* Original-ABI adapters for GAME-023 part 2 group H in legoobject_unit.c.
  * Natively nothing calls them: the unit's functions run only in the
@@ -11501,22 +11464,8 @@ extern "C" void legoobject_gh_random_variant_cell_scatter_adapter(const int* blo
 }
 
 /* 0044a4f0's port entry is in a namespace. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (NearestCellCoordinateWorldResolve, 0x0044a4f0)
-extern "C" int legoobject_gh_nearest_cell_coordinate_resolve_adapter(void* obj, int* blockPos)
-{
-    return unported_ledger_stubs::ledger_stub_0044a4f0_NearestCellCoordinateWorldResolve(
-        (const EntitySlot*)obj, blockPos);
-}
-
 /* 0044bf00 runs objectGlobs' timed callback list (004eadd0); the port has
  * no producer for that list (see its model of 0x0043b270). Nothing. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (no port equivalent of 0x0044bf00)
-extern "C" void legoobject_gh_timed_callback_list_update_adapter(float* elapsed)
-{
-    (void)elapsed;
-}
-
-
 /* ---- group I adapters (GAME-023 part 2, legoobject_unit.c) ---- */
 /* Original-ABI adapters for GAME-023 part 2 group I in legoobject_unit.c.
  * Natively nothing calls them: the unit's functions run only in the
@@ -11564,116 +11513,12 @@ extern "C" int legoobject_gi_nearby_placement_candidate_find_adapter(const int s
         start_xy, resource_amount);
 }
 
-/* ---- group J adapters (GAME-023 part 2, legoobject_unit.c) ---- */
-/* Original-ABI adapters for LegoObject_Callback_Update (0x0043c810): the
- * port's entries are ledger stubs in a namespace, or take hooks the
- * original does not. Nothing calls these natively. */
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x004474f0 is a namespaced ledger stub)
-extern "C" void legoobject_gj_linked_proximity_response_adapter(EntitySlot* e)
-{
-    unported_ledger_stubs::ledger_stub_004474f0_LinkedEntityProximityResponse(e);
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x004475c0 is a namespaced ledger stub)
-extern "C" int legoobject_gj_progress_negative_delta_adapter(EntitySlot* e)
-{
-    return unported_ledger_stubs::ledger_stub_004475c0_EntityProgressAndNegativeDeltaHandler(e);
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00449700 is a namespaced ledger stub)
-extern "C" int legoobject_gj_route_step_command_issue_adapter(EntitySlot* e)
-{
-    return unported_ledger_stubs::ledger_stub_00449700_RouteStepCommandIssue(e);
-}
-
-/* 0044bc30 takes the object and the elapsed time; the port's entry also
- * takes a hooks table, which has no installed owner. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0044bc30 takes no hooks table)
-extern "C" void legoobject_gj_motion_scene_sync_adapter(EntitySlot* e, float delta)
-{
-    entity_motion_to_scene_node_sync(e, delta, NULL);
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0044bfd0 is in namespace lego)
-extern "C" int legoobject_gj_monster_spawn_behavior_tick_adapter(EntitySlot* e)
-{
-    return lego::configured_monster_spawn_behavior_tick(e);
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0044c1b0 is a namespaced ledger stub)
-extern "C" void legoobject_gj_heading_step_move_adapter(EntitySlot* e, float delta)
-{
-    unported_ledger_stubs::ledger_stub_0044c1b0_EntityHeadingStepMove(e, delta);
-}
-
-/* ai_attached_entity_wake (0x0044c110) is declared by the frozen
- * ai_from_legoobject.hpp with C++ linkage. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0044c110 has C++ linkage)
-extern "C" void legoobject_gj_attached_entity_wake_adapter(EntitySlot* e)
-{
-    ai_attached_entity_wake(e);
-}
-
-/* ---- group K adapters (GAME-023 part 2, legoobject_unit.c) ---- */
-
-/* ---- group L adapters (GAME-023 part 2, legoobject_unit.c) ---- */
-
-/* ---- group M adapters (GAME-023 part 2, legoobject_unit.c) ---- */
-/* Original-ABI adapters for 004425f0-00442f80. Nothing calls these
- * natively. */
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00446610 is a namespaced ledger stub)
-extern "C" void legoobject_gm_movement_speed_get_adapter(void* obj, float elapsed,
-                                                         float* outMoveSpeed,
-                                                         float* outTransSpeed)
-{
-    unported_ledger_stubs::ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet(
-        obj, elapsed, outMoveSpeed, outTransSpeed);
-}
-
-
-/* ---- group N adapters (GAME-023 part 2, legoobject_unit.c) ---- */
-/* Original-ABI adapters for LegoObject_Route_UpdateMovement (0x004438b0):
- * the port's 00446610 and 004477d0 are ledger stubs in a namespace.
- * Nothing calls these natively. */
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00446610 is a namespaced ledger stub)
-extern "C" void legoobject_gn_movement_speeds_get_adapter(EntitySlot* e, float elapsed,
-                                                          float* outTransSpeed,
-                                                          float* outElapsed)
-{
-    unported_ledger_stubs::ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet(
-        e, elapsed, outTransSpeed, outElapsed);
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x004477d0 is a namespaced ledger stub)
-extern "C" void legoobject_gn_path_step_lookahead_write_adapter(EntitySlot* e)
-{
-    unported_ledger_stubs::ledger_stub_004477d0_PathStepLookaheadEntryWrite(e);
-}
-
-/* ---- group O adapters (GAME-023 part 2, legoobject_unit.c) ---- */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0044b250 has C++ linkage)
-extern "C" void legoobject_go_pairing_activity_adapter(EntitySlot* first,
-                                                       EntitySlot* second)
-{
-    unported_ledger_stubs::ledger_stub_0044b250_PairingActivityRaiseAndMutualLink(first, second);
-}
-
-/* ---- group P adapters (GAME-023 part 3, legoobject_unit.c) ---- */
-/* Vehicle_GetTransCoef (0x0046db70) is vehicle_model.cpp's
- * scene_object_resource_release, a C++ function that discards the
- * coefficient. This one returns it. #617 owns vehicle_model.cpp; once
- * 0x0046db70 has the original's contract there, the unit calls it and this
- * adapter goes. Nothing calls it natively. */
 /* ---- group Q adapters (GAME-023 part 3, legoobject_unit.c) ---- */
 /* Vehicle_MoveAnimation (0x0046d1c0) and Upgrade_MoveAnimation
  * (0x0046c110): the port's entries at those addresses take other
  * arguments (vehicle_model.cpp's animation_duration_for_loop_count and
- * tooltip.cpp's animation_resource_advance_time). #617 owns
- * vehicle_model.cpp. Nothing calls these natively; they report no time
- * left in the animation. */
+ * tooltip.cpp's animation_resource_advance_time). Nothing calls these
+ * natively; they report no time left in the animation. */
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046c110 has another contract)
 extern "C" float legoobject_gq_upgrade_move_animation_adapter(void* upgrade, float elapsed,
                                                               unsigned int repeat)
