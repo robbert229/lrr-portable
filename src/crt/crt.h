@@ -16,10 +16,19 @@
 extern "C" {
 #endif
 
-/* DAT_0076ac8c, a common symbol: the DirectDraw back buffer
- * (DirectDraw_bSurf). The port holds it as a word; the Win32 renderer
- * stores the surface pointer there. */
+/* DAT_0076ac8c, the DirectDraw back buffer (DirectDraw_bSurf()).
+ * Windows builds: directDrawGlobs.bSurf, DirectDraw.c's common symbol at
+ * 0076ac80 (gods98/directdraw.h), which the port renderer publishes
+ * (directdraw_port.cpp). Declared here as the unit's words, in place of the
+ * port word it replaces, so that the units including this header keep
+ * their symbol numbering (Deviation (scoring only): a declaration-only
+ * view; finding 596). The native port keeps the port's word. */
+#if defined(LEGORRR_BACKEND_MINIWIN)
 extern uint32_t s_render_surface_secondary;
+#else
+extern uint32_t directDrawGlobs[];
+#define s_render_surface_secondary (directDrawGlobs[3])
+#endif
 
 /* DAT_00505924 and DAT_00505928: Main.c's window width and height. */
 extern int s_display_w;

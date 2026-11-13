@@ -285,7 +285,9 @@ else()
   # cycle.
   target_link_libraries(program PRIVATE game gods98 game platform_glue)
   if(PLATFORM STREQUAL "winapi")
-    target_link_libraries(program PRIVATE winmm d3drm advapi32)
+    # ddraw: DirectDraw.c (gods98/directdraw.c) imports DirectDrawCreate and
+    # DirectDrawEnumerateA, as the original does (finding 596).
+    target_link_libraries(program PRIVATE winmm d3drm ddraw advapi32)
   endif()
 endif()
 if(WIN32)

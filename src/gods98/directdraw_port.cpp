@@ -1,7 +1,19 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-010 G98-010: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-010.csv. */
+/* Port tail of G98-010 (finding 596): the port's display layer, which the
+ * native and Windows renderers run. DirectDraw.c itself is directdraw.c,
+ * rebuilt in original shape; these functions keep the port's names and
+ * contracts (hook tables, the port's renderer state) and carry no
+ * annotations. #540 relocated them from the unit verbatim
+ * (docs/coverage/relocations/G98-010.csv).
+ *
+ * Two bridges to the unit, both port-only:
+ * - Windows builds: the port renderer publishes the display it commits
+ *   (window, DirectDraw object, buffers, mode and Main.c's device) into
+ *   the unit's directDrawGlobs, so the original-shape readers of that state
+ *   (draw.c, aitask.c and the unit itself) see the same display.
+ * - Native builds have no DirectDraw: the unit is empty there, and the
+ *   entry points that converted units call get native bodies here, with
+ *   the behaviour of the adapters they replace. */
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -59,12 +71,31 @@
 #include "simtick.hpp"
 #include "camera.hpp"
 #include "surface_for_directdraw.hpp"
+#include "directdraw.h"
+#include "directdraw_imports.h"
 
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static int directdraw_renderer_init_winapi(
     const DirectDrawRendererInitParams* params, const void* guid,
     int width, int height, int bits_per_pixel);
 static int winapi_renderer_active(void);
+#endif
+
+#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+/* Publish the committed display into DirectDraw.c's state (see above). */
+static void directdraw_port_publish(void* window, void* direct_draw,
+                                    void* front, void* back, int fullscreen,
+                                    int width, int height, void* device)
+{
+    directDrawGlobs.hWnd = window;
+    directDrawGlobs.lpDirectDraw = (struct DirectDrawIface*)direct_draw;
+    directDrawGlobs.fSurf = (struct DirectDrawSurfaceIface*)front;
+    directDrawGlobs.bSurf = (struct DirectDrawSurfaceIface*)back;
+    directDrawGlobs.fullScreen = fullscreen != 0;
+    directDrawGlobs.width = (unsigned int)width;
+    directDrawGlobs.height = (unsigned int)height;
+    s_main_device = device;
+}
 #endif
 
 #if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
@@ -291,6 +322,8 @@ static int directdraw_renderer_init_winapi(
     s_renderer_surface_width = (uint32_t)width;
     s_renderer_surface_height = (uint32_t)height;
     screen_bounded_surface_device_set(rm, rm_device);
+    directdraw_port_publish(window, device, primary, back_surface,
+                            params->fullscreen, width, height, rm_device);
     if ((params->device_flags & 0x4000u) != 0u)
         s_renderer_window_mode_flags |= 4u;
     s_direct3drm_device_mode =
@@ -326,9 +359,8 @@ cleanup:
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static int directdraw_device_create_internal( const void* guid, const void* adapter, int windowed, void** result_out);
-static void windowed_render_surface_blit_retail(void);
 
-// FUNCTION: LEGORR 0x0047c170
+
 void window_state_initialize_retail(void* window)
 {
     s_renderer_window_state_b0 = 0u;
@@ -343,11 +375,14 @@ void window_state_initialize_retail(void* window)
     s_render_surface_secondary = 0u;
     s_renderer_primary_surface = NULL;
     s_renderer_window_state_94 = 0u;
+#if !defined(LEGORRR_BACKEND_MINIWIN)
+    directdraw_initialise(window);
+#endif
 }
 
 /* DirectDrawEnumerateAndStoreCallbackResult (FUN_0047c1c0): enumerate using
  * the requested adapter identifier and return the callback's stored result. */
-// FUNCTION: LEGORR 0x0047c1c0
+
 int directdraw_enumerate_and_store_result(const void* guid, void** result_out)
 {
     void* result = NULL;
@@ -361,7 +396,7 @@ int directdraw_enumerate_and_store_result(const void* guid, void** result_out)
 
 /* DirectDrawDeviceCreate (FUN_0047c2e0): create a device from its optional
  * GUID, query the required interface and run the display-mode enumeration. */
-// FUNCTION: LEGORR 0x0047c2e0
+
 int directdraw_device_create(const void* guid, void** result_out)
 {
     if (result_out != NULL) *result_out = NULL;
@@ -371,7 +406,7 @@ int directdraw_device_create(const void* guid, void** result_out)
 /* DirectDrawEnumeratedDeviceCreate (FUN_0047c4b0): require the adapter's
  * enumerated flag, choose its GUID only when flag 0x10 is set, and dispatch
  * mode enumeration with the requested windowed/fullscreen policy. */
-// FUNCTION: LEGORR 0x0047c4b0
+
 int directdraw_enumerated_device_create(const void* adapter,
                                         uint32_t adapter_flags,
                                         int windowed, void** result_out)
@@ -387,7 +422,7 @@ int directdraw_enumerated_device_create(const void* adapter,
 /* DirectDrawRendererInit (FUN_0047c610): normalize the adapter and mode
  * selection, configure the window/device, create primary and back surfaces,
  * attach the clipper, initialize Direct3D, and commit the resulting state. */
-// FUNCTION: LEGORR 0x0047c610
+
 int directdraw_renderer_init(const DirectDrawRendererInitParams* params)
 {
     const void* guid = NULL;
@@ -481,22 +516,6 @@ cleanup:
     return success;
 }
 
-#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-/* RenderSurfacePresent (FUN_0047c8d0) chooses fullscreen flip or windowed
- * global-surface blit from the renderer mode word. */
-// FUNCTION: LEGORR 0x0047c8d0
-void render_surface_present(void)
-{
-    if (s_renderer_fullscreen != 0u) {
-        typedef HRESULT (SURFACE_COM_CALL *SurfaceFlipFn)(void*, void*, DWORD);
-        void** vtable = *(void***)s_renderer_primary_surface;
-        SurfaceFlipFn flip = (SurfaceFlipFn)vtable[11];
-        (void)flip(s_renderer_primary_surface, NULL, 1u);
-        return;
-    }
-    windowed_render_surface_blit_retail();
-}
-#endif
 
 /* Saves\<slot>.dat — the `.dat` slot thumbnail (FUN_00413b80's save-confirm
  * dump via FUN_0047e440). FUN_0047c8f0's layout, field for field: `BM`,
@@ -505,7 +524,7 @@ void render_surface_present(void)
  * XPel/YPel 1, palette counts 0; pixels BGR, rows padded to four bytes.
  * The port's surface is B,G,R,A in memory (see fe_blit_glyph), so the
  * component map is a straight byte copy. */
-// FUNCTION: LEGORR 0x0047c8f0
+
 int save_write_thumbnail(GameContext* ctx, int slot, const void* fb,
                          int pitch, int w, int h)
 {
@@ -566,42 +585,10 @@ int save_write_thumbnail(GameContext* ctx, int slot, const void* fb,
     return ok;
 }
 
-#if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-/* WindowedRenderSurfaceBlit (FUN_0047cc50): derive the screen-space target
- * rectangle, then blit the global back surface into the primary surface. */
-// FUNCTION: LEGORR 0x0047cc50
-static void windowed_render_surface_blit_retail(void)
-{
-    struct WindowedRenderSurfaceLocal {
-        POINT origin;
-        RECT destination;
-        RECT source;
-    } local;
-    void** vtable;
-    SurfaceBltFn blt;
-    local.destination.right = (LONG)s_renderer_surface_width;
-    local.origin.y = 0;
-    local.origin.x = 0;
-    local.destination.left = 0;
-    local.destination.top = 0;
-    local.destination.bottom = (LONG)s_renderer_surface_height;
-    ClientToScreen(s_renderer_window_handle, &local.origin);
-    OffsetRect(&local.destination, local.origin.x, local.origin.y);
-    local.source.bottom = (LONG)s_renderer_surface_height;
-    local.source.top = 0;
-    local.source.left = 0;
-    local.source.right = (LONG)s_renderer_surface_width;
-    vtable = *(void***)s_renderer_primary_surface;
-    blt = (SurfaceBltFn)vtable[5];
-    (void)blt(s_renderer_primary_surface, &local.destination,
-              (void*)s_render_surface_secondary, &local.source,
-              0x01000000u, NULL);
-}
-#endif
 /* DirectDrawObjectsRelease (FUN_0047ccf0): release the primary surface and
  * clipper interfaces, restore display mode when the device was exclusive,
  * then release the DirectDraw device itself. */
-// FUNCTION: LEGORR 0x0047ccf0
+
 void directdraw_objects_release(DirectDrawObjectSet* objects,
                                 const DirectDrawObjectReleaseOps* ops)
 {
@@ -630,7 +617,7 @@ void directdraw_objects_release(DirectDrawObjectSet* objects,
 }
 /* QueryTextureMem (FUN_0047cd50): try the preferred texture-memory caps
  * query, then the fallback capability path, and retain the reported amount. */
-// FUNCTION: LEGORR 0x0047cd50
+
 void query_texture_memory(void)
 {
     uint32_t memory = 0u;
@@ -646,7 +633,7 @@ void query_texture_memory(void)
 
 /* SurfaceDescriptionGet (FUN_0047cdd0): pass a 0x1000 description request
  * through slot 0x5c of the renderer's DirectDraw wrapper. */
-// FUNCTION: LEGORR 0x0047cdd0
+
 int surface_description_get(int* width_out, int* height_out)
 {
     typedef long (SURFACE_COM_CALL *SurfaceDescriptionProc)(
@@ -675,7 +662,7 @@ int surface_description_get(int* width_out, int* height_out)
 /* ProjectionOverlayDrawSubmit (FUN_0047ce20): encode the requested fill
  * color for the target surface and submit a color-fill blit, optionally
  * constrained to the supplied rectangle. */
-// FUNCTION: LEGORR 0x0047ce20
+
 int projection_overlay_draw_submit(int has_rectangle,
                                    const int rectangle[4],
                                    const SurfacePixelFormat* format,
@@ -694,7 +681,7 @@ int projection_overlay_draw_submit(int has_rectangle,
 /* DirectDrawClipperSetRegion (FUN_0047cee0): obtain a clipper, serialize a
  * client rectangle into region data, install it, attach it to the surface,
  * and release the temporary references. Callbacks use HRESULT convention. */
-// FUNCTION: LEGORR 0x0047cee0
+
 int directdraw_clipper_set_region(int width, int height)
 {
     void* clipper = NULL;
@@ -734,7 +721,7 @@ int directdraw_clipper_set_region(int width, int height)
 }
 /* SurfacePixelValueEncode (FUN_0047d2d0): resolve an RGB color through an
  * indexed palette at 8 bpp; otherwise scale each byte into its channel mask. */
-// FUNCTION: LEGORR 0x0047d2d0
+
 uint32_t surface_pixel_value_encode(const SurfacePixelFormat* format,
                                     uint32_t color_rgb)
 {
@@ -773,7 +760,7 @@ uint32_t surface_pixel_value_encode(const SurfacePixelFormat* format,
 }
 
 /* FUN_0047d3f0: popcount via the clear-lowest-set-bit loop. */
-// FUNCTION: LEGORR 0x0047d3f0
+
 int bit_count32(uint32_t value)
 {
     int n = 0;
@@ -824,19 +811,33 @@ static int directdraw_device_create_internal(
     return success;
 }
 
-/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
- * original FUN_0047ce20 call in the shutdown passes two zero words; the
- * port's entry takes four arguments. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (projection_overlay_draw_submit, 0x0047ce20)
-extern "C" int projection_overlay_draw_submit_adapter(int a, int b)
+#if defined(LEGORRR_BACKEND_MINIWIN)
+/* Native bodies of the DirectDraw.c entry points that lego_unit.c calls
+ * (the unit is empty natively). Each keeps the behaviour of the port
+ * adapter it replaces. */
+// PORT-ONLY: native body of directdraw_clear (0x0047ce20); the port's colour fill
+extern "C" void directdraw_clear(struct Area2F* window, unsigned int colour)
 {
-    return projection_overlay_draw_submit(a, NULL, NULL, (uint32_t)b);
+    (void)projection_overlay_draw_submit(window != NULL, NULL, NULL,
+                                         (uint32_t)colour);
 }
 
-/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: DirectDraw_AdjustTextureUsage (0047cd50) takes the usage to adjust; the port's entry takes nothing. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (query_texture_memory)
-extern "C" void query_texture_memory_original(unsigned int* textureUsage)
+// PORT-ONLY: native body of directdraw_return_front_buffer (0x0047cc20); the native renderer keeps no front buffer
+extern "C" void directdraw_return_front_buffer(void)
+{
+}
+
+// PORT-ONLY: native body of directdraw_adjust_texture_usage (0x0047cd50)
+extern "C" void directdraw_adjust_texture_usage(unsigned int* textureUsage)
 {
     (void)textureUsage;
     query_texture_memory();
 }
+
+// PORT-ONLY: native body of directdraw_get_avail_texture_mem (0x0047cdd0)
+extern "C" int directdraw_get_avail_texture_mem(unsigned int* total,
+                                                unsigned int* avail)
+{
+    return surface_description_get((int*)total, (int*)avail);
+}
+#endif

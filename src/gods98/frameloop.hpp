@@ -101,7 +101,7 @@ uint32_t window_runtime_flags_get(void);
 const WindowRuntimeState* window_runtime_state_get(void);
 void window_runtime_state_initialize(void* window);
 void window_state_initialize_retail(void* window); /* FUN_0047c170 */
-void window_runtime_display_caps_query(void); /* 0x00477f80 */
+extern "C" int window_runtime_display_caps_query(void); /* 0x00477f80 */
 extern "C" int window_runtime_callback_triplet_set(const size_t* triplet);
 int window_runtime_callback_triplet_get(size_t triplet[3]);
 int window_runtime_message_dispatch_filter(const void* message); /* 0x00478010 */

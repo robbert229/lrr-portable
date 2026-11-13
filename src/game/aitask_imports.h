@@ -302,9 +302,24 @@ void* scene_object_secondary_handle_get_or_create(void* record);     /* 004087e0
 unsigned long main_time_get(void);                                   /* 00478000 */
 /* Bubbles.c (cmd_shared.hpp; bubbles.cpp). */
 void idle_register(struct EntitySlot* object);                       /* 00407450 */
-/* DirectDraw globals (crt.hpp, crt.h; crt.cpp). */
+/* DirectDraw.c's DirectDraw object and back buffer. Windows builds read
+ * directDrawGlobs (0076ac80, gods98/directdraw.h), declared here as a view
+ * of its first words with the symbol count of the two port words it
+ * replaces (Deviation (scoring only): a declaration-only view; finding
+ * 596). The native port keeps the port's words (crt.hpp; crt.cpp). */
+#if defined(LEGORRR_BACKEND_MINIWIN)
 extern unsigned int s_renderer_global_dword;                         /* 0076ac84 */
 extern unsigned int s_render_surface_secondary;                      /* 0076ac8c */
+#else
+extern struct AiTaskDirectDrawView {
+    unsigned int hWnd;
+    unsigned int lpDirectDraw;
+    unsigned int fSurf;
+    unsigned int bSurf;
+} directDrawGlobs;                                                   /* 0076ac80 */
+#define s_renderer_global_dword (directDrawGlobs.lpDirectDraw)       /* 0076ac84 */
+#define s_render_surface_secondary (directDrawGlobs.bSurf)           /* 0076ac8c */
+#endif
 /* Message.c (select.hpp, cmd.hpp, message.h). */
 unsigned int selection_contains_entity_active_target(struct EntitySlot* entity,
                                                      unsigned int* index_out); /* 00452610 */

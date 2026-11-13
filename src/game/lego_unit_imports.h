@@ -216,8 +216,9 @@ void tooltip_overlay_state_initialize(
     float duration_scale, uint32_t display_width, uint32_t display_height,
     uint32_t inset_word, float color_r, float color_g,
     float color_b);                                        /* 0046b1d0 */
-/* G98 DirectDraw.c (directdraw.hpp). */
-int surface_description_get(int* width_out, int* height_out); /* 0047cdd0 */
+/* G98 DirectDraw.c (directdraw.h). */
+int directdraw_get_avail_texture_mem(unsigned int* total,
+                                     unsigned int* avail);   /* 0047cdd0 */
 void low_texture_flag_set(void);                           /* 00477bd0 */
 /* G98 TextWindow.c (heap.hpp, textwindow.h). */
 void* text_buffer_create(uintptr_t font_handle, const uint32_t* header,
@@ -301,9 +302,8 @@ int reward_initialise(void);                               /* reward.c, 0045f030
 void* container_initialise_original(const char* gameName);
 /* LegoObject_TriggerFrameCallback (0043f130): no port entry (lego.cpp). */
 void lego_object_trigger_frame_callback_adapter(void* cont, void* data);
-/* DirectDraw_AdjustTextureUsage (0047cd50): the port's entry takes no
- * argument (directdraw.cpp). */
-void query_texture_memory_original(unsigned int* textureUsage);
+/* DirectDraw_AdjustTextureUsage (0047cd50, directdraw.h). */
+void directdraw_adjust_texture_usage(unsigned int* textureUsage);
 /* TextWindow-backed message panel set-up (0046a950): no port entry
  * (lego.cpp). */
 void text_message_panel_initialise_adapter(const char* imageFile,
@@ -952,9 +952,8 @@ uint32_t object_field_be4_dword_get(const void* record);         /* 0047a540 */
 void font_atlas_record_release(void* record);                    /* 0047a550 */
 void text_buffer_destroy_target(void* record);                   /* 00485190 */
 void text_buffer_append_format(void* record, const char* format, ...); /* 00485230 */
-/* DirectDraw (directdraw.cpp): the original takes two words; the port's
- * entry takes four. Thin adapter at the end of directdraw.cpp. */
-int projection_overlay_draw_submit_adapter(int a, int b);        /* 0047ce20 */
+/* DirectDraw_Clear (0047ce20, directdraw.h). */
+void directdraw_clear(struct Area2F* window, unsigned int colour); /* 0047ce20 */
 const char* string_path_join(const char* root, ...);             /* 00478f50 */
 int block_get_bool_path(struct BlockRec* root, const char* path); /* 004790d0 */
 void block_close(struct BlockRec* root);                         /* 00479240 */
@@ -1462,10 +1461,8 @@ int lego_movie_update_adapter(struct DirectShowGraphState* mov, float speed,
                               const LegoRect2E* destRect);      /* 004726d0 */
 /* G98 Main.c (frameloop.hpp). */
 void main_loop_frame_pump(int draw_projection_overlay);         /* 00477f30 */
-/* G98 DirectDraw.c: 0047cc20 takes no argument; the port's
- * render_surface_restore_from_primary takes the surfaces. Adapter at the
- * end of lego.cpp. */
-void lego_render_surface_restore_adapter(void);                 /* 0047cc20 */
+/* DirectDraw_ReturnFrontBuffer (0047cc20, directdraw.h). */
+void directdraw_return_front_buffer(void);                      /* 0047cc20 */
 
 /* Level_Free's callees. */
 extern uint32_t s_entity_state_flags;          /* legoobject_port.cpp, 004dee14 */

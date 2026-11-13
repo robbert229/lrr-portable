@@ -472,7 +472,10 @@ src/gods98/container_native.hpp
 src/gods98/container_route.cpp
 src/gods98/container_route.h
 src/gods98/container_unit.cpp
-src/gods98/directdraw.cpp
+src/gods98/directdraw.c
+src/gods98/directdraw.h
+src/gods98/directdraw_imports.h
+src/gods98/directdraw_port.cpp
 src/gods98/draw.c
 src/gods98/draw.h
 src/gods98/draw_port.cpp

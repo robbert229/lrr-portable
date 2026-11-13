@@ -9606,13 +9606,6 @@ extern "C" int lego_movie_update_adapter(struct DirectShowGraphState* mov,
     return 0;
 }
 
-/* 0047cc20 takes no argument; the port's render_surface_restore_from_primary
- * takes the surfaces, which the port's renderer owns. Does nothing. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (0047cc20; the port's entry takes the surfaces)
-extern "C" void lego_render_surface_restore_adapter(void)
-{
-}
-
 /* 00435aa0 (Lego.c part 3) takes the flag alone; the port's entry also
  * takes the EngineContext, which it does not read. */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00435aa0; the port's entry takes the EngineContext)
