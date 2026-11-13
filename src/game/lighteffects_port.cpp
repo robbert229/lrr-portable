@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-024 LightEffects.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-024.csv. */
+/* GAME-024 LightEffects.c port tail (finding 594): the port's models of the
+ * unit, unannotated. The original-shape unit is lighteffects.c; these
+ * models keep the port's contracts (the scene-transform, drift, waypoint
+ * and jitter records spread over effects.cpp and util.cpp, the config-load
+ * hook and the NULL guards) for the native port, which calls them by these
+ * names. They are compiled in every build: in the matching build
+ * aitask_port_aliases.h points lego_unit.c, the only original caller, at
+ * the unit instead, and the port's own C++ callers keep these. Relocated
+ * from the verbatim lighteffects.cpp (body hashes:
+ * docs/coverage/relocations/GAME-024.csv). */
 #include "effects.hpp"
 #include "combat_ray_ports.hpp"
 #include "entity.hpp"
@@ -47,58 +54,32 @@
 #include "model.hpp"
 #include "view_for_lighteffects.hpp"
 
-// GLOBAL: LEGORR 0x004EADD8
 void* s_motion_jitter_retail_scene_object;
-// GLOBAL: LEGORR 0x004EADDC
 void* s_motion_jitter_retail_scene_owner;
-// GLOBAL: LEGORR 0x004EADEC
 float s_motion_waypoint_position[3];
-// GLOBAL: LEGORR 0x004EAE18
 float s_motion_waypoint_target[3];
-// GLOBAL: LEGORR 0x004EAE24
 float s_motion_waypoint_bounds_min[3];
-// GLOBAL: LEGORR 0x004EAE30
 float s_motion_waypoint_bounds_max[3];
-// GLOBAL: LEGORR 0x004EAE3C
 float s_motion_waypoint_delay;
-// GLOBAL: LEGORR 0x004EAE40
 float s_motion_waypoint_delay_range[2];
-// GLOBAL: LEGORR 0x004EAE48
 float s_motion_waypoint_velocity[3];
-// GLOBAL: LEGORR 0x004EAE54
 float s_motion_waypoint_scale_range[2];
-// GLOBAL: LEGORR 0x004EAE5C
 float s_motion_waypoint_duration;
-// GLOBAL: LEGORR 0x004EAE60
 float s_motion_waypoint_duration_range[2];
-// GLOBAL: LEGORR 0x004EAE68
 float s_motion_waypoint_progress[3];
 
-// GLOBAL: LEGORR 0x004EAE74
 float s_motion_jitter_center[3];
-// GLOBAL: LEGORR 0x004EAE80
 float s_motion_jitter_tolerance[3];
-// GLOBAL: LEGORR 0x004EAE8C
 float s_motion_jitter_delay;
-// GLOBAL: LEGORR 0x004EAE90
 float s_motion_jitter_delay_min;
-// GLOBAL: LEGORR 0x004EAE94
 float s_motion_jitter_delay_max;
-// GLOBAL: LEGORR 0x004EAE98
 float s_motion_jitter_duration;
-// GLOBAL: LEGORR 0x004EAE9C
 float s_motion_jitter_duration_min;
-// GLOBAL: LEGORR 0x004EAEA0
 float s_motion_jitter_duration_max;
-// GLOBAL: LEGORR 0x004EAEA4
 float s_motion_jitter_direction[3];
-// GLOBAL: LEGORR 0x004EAEB0
 float s_motion_jitter_remaining;
-// GLOBAL: LEGORR 0x004EAEB4
 float s_motion_jitter_magnitude_min;
-// GLOBAL: LEGORR 0x004EAEB8
 float s_motion_jitter_magnitude_max;
-// GLOBAL: LEGORR 0x004EAEC8
 uint32_t s_motion_jitter_flags;
 extern "C" short rng_thunk_draw15(void);
 
@@ -110,7 +91,7 @@ int motion_jitter_candidate_valid_retail(float position[3]);
 static void motion_jitter_position_apply(void*, const float position[3]);
 static int motion_jitter_vector_random(void*, float out[3]);
 
-// FUNCTION: LEGORR 0x0044c710
+/* Port model of 0x0044c710. */
 void scene_transform_state_initialize(void* target, void* owner,
                                       float x, float y, float z)
 {
@@ -129,7 +110,7 @@ void scene_transform_state_initialize(void* target, void* owner,
                                                        1.0f);
 }
 
-// FUNCTION: LEGORR 0x0044c790
+/* Port model of 0x0044c790. */
 void scene_transform_enable_set(int enabled)
 {
     if (enabled != 0) {
@@ -146,7 +127,7 @@ void scene_transform_enable_set(int enabled)
     motion_gameplay_scene_bind(s_scene_transform_state.target,
                                s_scene_transform_state.flags);
 }
-// FUNCTION: LEGORR 0x0044c7c0
+/* Port model of 0x0044c7c0. */
 void light_effect_configuration_load(void* config,
                                     const char* config_root)
 {
@@ -154,7 +135,7 @@ void light_effect_configuration_load(void* config,
     (void)light_effect_fade_config_load(config, (void*)config_root);
     (void)light_effect_move_config_load(config, config_root);
 }
-// FUNCTION: LEGORR 0x0044c7f0
+/* Port model of 0x0044c7f0. */
 uint32_t light_effect_blink_config_load(void* config, void* section)
 {
     return s_light_effect_config_load_hook != NULL
@@ -162,7 +143,7 @@ uint32_t light_effect_blink_config_load(void* config, void* section)
                                           0, config, section) : 0u;
 }
 
-// FUNCTION: LEGORR 0x0044c970
+/* Port model of 0x0044c970. */
 void light_effect_blink_parameters_store(uint32_t a, uint32_t b,
                                          uint32_t c, uint32_t d,
                                          uint32_t e, uint32_t f)
@@ -175,7 +156,7 @@ void light_effect_blink_parameters_store(uint32_t a, uint32_t b,
     s_light_effect_parameters.blink[5] = f;
     s_light_effect_parameters.flags |= 1u;
 }
-// FUNCTION: LEGORR 0x0044c9c0
+/* Port model of 0x0044c9c0. */
 uint32_t light_effect_fade_config_load(void* config, void* section)
 {
     return s_light_effect_config_load_hook != NULL
@@ -183,7 +164,7 @@ uint32_t light_effect_fade_config_load(void* config, void* section)
                                           1, config, section) : 0u;
 }
 
-// FUNCTION: LEGORR 0x0044cc10
+/* Port model of 0x0044cc10. */
 void light_effect_fade_parameters_store(uint32_t a, uint32_t b, uint32_t c,
                                         uint32_t d, uint32_t e, uint32_t f,
                                         uint32_t g, uint32_t h, uint32_t i,
@@ -203,7 +184,7 @@ void light_effect_fade_parameters_store(uint32_t a, uint32_t b, uint32_t c,
     s_light_effect_parameters.fade[11] = l;
     s_light_effect_parameters.flags |= 4u;
 }
-// FUNCTION: LEGORR 0x0044cca0
+/* Port model of 0x0044cca0. */
 uint32_t light_effect_move_config_load(void* config,
                                       const char* config_root)
 {
@@ -247,7 +228,7 @@ uint32_t light_effect_move_config_load(void* config,
     return 1u;
 }
 
-// FUNCTION: LEGORR 0x0044cef0
+/* Port model of 0x0044cef0. */
 void motion_jitter_parameters_store(float delay_min, float delay_max,
                                     float speed_min, float speed_max,
                                     float magnitude_min, float magnitude_max,
@@ -291,14 +272,14 @@ void motion_jitter_parameters_store(float delay_min, float delay_max,
 #endif
 }
 
-// FUNCTION: LEGORR 0x0044cf70
+/* Port model of 0x0044cf70. */
 void simtick_scene_position_reset_and_effect_motion_cancel(void)
 {
     __builtin_memcpy(s_xform_config, s_xform_current, sizeof s_xform_config);
     s_motion_jitter_flags &= 0xffffff7fu;
 }
 
-// FUNCTION: LEGORR 0x0044cff0
+/* Port model of 0x0044cff0. */
 void scene_transform_rgb_clamp_apply(void)
 {
     float color[3];
@@ -315,7 +296,7 @@ void scene_transform_rgb_clamp_apply(void)
 /* DriftOffsetStepApply (FUN_0044d0d0): periodically choose a three-axis
  * offset, reflect it at the horizontal bound, and accumulate it into the
  * module-owned drift position. */
-// FUNCTION: LEGORR 0x0044D0D0
+/* Port model of 0x0044d0d0. */
 void motion_drift_offset_step(float delta)
 {
     MotionDriftState* state = s_motion_drift_state;
@@ -351,7 +332,7 @@ void motion_drift_offset_step(float delta)
 }
 
 /* FloatNegateAbsoluteValue (FUN_0044d250) — see view.hpp. */
-// FUNCTION: LEGORR 0x0044d250
+/* Port model of 0x0044d250. */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void float_negate_absolute_value(float* value)
 {
@@ -386,7 +367,7 @@ void float_negate_absolute_value(float* value)
 }
 #endif
 
-// FUNCTION: LEGORR 0x0044d280
+/* Port model of 0x0044d280. */
 void motion_waypoint_timer_tick(float delta)
 {
 #if defined(_WIN32) && defined(_M_IX86)
@@ -577,7 +558,7 @@ void motion_waypoint_timer_tick(float delta)
     }
 #endif
 }
-// FUNCTION: LEGORR 0x0044d710
+/* Port model of 0x0044d710. */
 void motion_waypoint_vector_random_scale_apply(void)
 {
 #if defined(_WIN32) && defined(_M_IX86)
@@ -602,7 +583,7 @@ void motion_waypoint_vector_random_scale_apply(void)
     state->velocity[2] = state->target[2] / scale;
 #endif
 }
-// FUNCTION: LEGORR 0x0044D760
+/* Port model of 0x0044d760. */
 void motion_jitter_step(float delta)
 {
 #if defined(_WIN32) && defined(_M_IX86)
@@ -674,7 +655,7 @@ void motion_jitter_step(float delta)
         s_motion_waypoint_random_range, &hooks);
 #endif
 }
-// FUNCTION: LEGORR 0x0044D9A0
+/* Port model of 0x0044d9a0. */
 int motion_jitter_candidate_valid_retail(float position[3])
 {
     if (fabs((double)(position[0] - s_motion_jitter_center[0])) >
@@ -690,7 +671,7 @@ int motion_jitter_candidate_valid_retail(float position[3])
 }
 
 /* RoutePositionBlockedStateSet (FUN_0044da20) — see simtick.hpp. */
-// FUNCTION: LEGORR 0x0044da20
+/* Port model of 0x0044da20. */
 void simtick_route_position_blocked_state_set(int blocked)
 {
     if (blocked != 0) {

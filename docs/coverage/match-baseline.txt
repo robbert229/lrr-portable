@@ -1,4 +1,4 @@
-# input_sha256: 0c94fbe8f0de5305cef4e6610a86fc2d0e9cba6dba9fa7da2f4dc908f79fddd0
+# input_sha256: e86618d6e957011ad5d3ee4f24dfa6544c1bf6aadcddca2a6727e4af4fd524f1
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2315 mapped functions
+[game-only] 2318 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -679,7 +679,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 94.74 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 97.02 lego_engine_tick
+0x004232e0 97.09 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
@@ -1193,24 +1193,27 @@
 0x0044c530 100.00 legoobject_ai_can_do
 0x0044c550 100.00 legoobject_scatter_spawn_enable_and_drain
 0x0044c5f0 93.55 legoobject_scatter_spawn_drain_callback
-0x0044c710 15.56 scene_transform_state_initialize
-0x0044c790 20.00 scene_transform_enable_set
-0x0044c7c0 100.00 light_effect_configuration_load
-0x0044c7f0 20.69 light_effect_blink_config_load
-0x0044c970 50.00 light_effect_blink_parameters_store
-0x0044c9c0 13.79 light_effect_fade_config_load
-0x0044cc10 50.00 light_effect_fade_parameters_store
-0x0044cca0 12.42 light_effect_move_config_load
-0x0044cef0 65.52 motion_jitter_parameters_store
-0x0044cf70 27.59 simtick_scene_position_reset_and_effect_motion_cancel
-0x0044cff0 25.00 scene_transform_rgb_clamp_apply
-0x0044d0d0 13.27 motion_drift_offset_step
-0x0044d250 58.82 float_negate_absolute_value
-0x0044d280 15.28 motion_waypoint_timer_tick
-0x0044d710 100.00 motion_waypoint_vector_random_scale_apply
-0x0044d760 35.83 motion_jitter_step
-0x0044d9a0 24.00 motion_jitter_candidate_valid_retail
-0x0044da20 100.00 simtick_route_position_blocked_state_set
+0x0044c710 100.00 light_effects_initialise
+0x0044c760 100.00 light_effects_reset_colour
+0x0044c790 100.00 light_effects_set_disabled
+0x0044c7c0 100.00 light_effects_load
+0x0044c7f0 100.00 light_effects_load_blink
+0x0044c970 100.00 light_effects_set_blink
+0x0044c9c0 100.00 light_effects_load_fade
+0x0044cc10 100.00 light_effects_set_fade
+0x0044cca0 100.00 light_effects_load_move
+0x0044cef0 100.00 light_effects_set_move
+0x0044cf70 100.00 light_effects_invalidate_position
+0x0044cfa0 100.00 light_effects_update
+0x0044cff0 100.00 light_effects_update_colour
+0x0044d0d0 100.00 light_effects_update_blink
+0x0044d250 100.00 light_effects_flip_sign
+0x0044d280 99.28 light_effects_update_fade
+0x0044d710 100.00 light_effects_set_fade_speed
+0x0044d760 86.17 light_effects_update_move
+0x0044d9a0 91.11 light_effects_check_move_limit
+0x0044da20 100.00 light_effects_set_dimmer_mode
+0x0044da50 100.00 light_effects_update_dimmer
 0x0044db50 11.05 ledger_stub_0044db50_KeyValueEqualsFileLoad
 0x0044dd40 9.09 ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease
 0x0044e0c0 51.49 terrain_map_create
@@ -2323,7 +2326,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2551 mapped functions
+[full] 2554 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2996,7 +2999,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 94.74 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 97.02 lego_engine_tick
+0x004232e0 97.09 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
@@ -3510,24 +3513,27 @@
 0x0044c530 100.00 legoobject_ai_can_do
 0x0044c550 100.00 legoobject_scatter_spawn_enable_and_drain
 0x0044c5f0 93.55 legoobject_scatter_spawn_drain_callback
-0x0044c710 15.56 scene_transform_state_initialize
-0x0044c790 20.00 scene_transform_enable_set
-0x0044c7c0 100.00 light_effect_configuration_load
-0x0044c7f0 20.69 light_effect_blink_config_load
-0x0044c970 50.00 light_effect_blink_parameters_store
-0x0044c9c0 13.79 light_effect_fade_config_load
-0x0044cc10 50.00 light_effect_fade_parameters_store
-0x0044cca0 12.42 light_effect_move_config_load
-0x0044cef0 65.52 motion_jitter_parameters_store
-0x0044cf70 27.59 simtick_scene_position_reset_and_effect_motion_cancel
-0x0044cff0 25.00 scene_transform_rgb_clamp_apply
-0x0044d0d0 13.27 motion_drift_offset_step
-0x0044d250 58.82 float_negate_absolute_value
-0x0044d280 15.28 motion_waypoint_timer_tick
-0x0044d710 100.00 motion_waypoint_vector_random_scale_apply
-0x0044d760 35.83 motion_jitter_step
-0x0044d9a0 24.00 motion_jitter_candidate_valid_retail
-0x0044da20 100.00 simtick_route_position_blocked_state_set
+0x0044c710 100.00 light_effects_initialise
+0x0044c760 100.00 light_effects_reset_colour
+0x0044c790 100.00 light_effects_set_disabled
+0x0044c7c0 100.00 light_effects_load
+0x0044c7f0 100.00 light_effects_load_blink
+0x0044c970 100.00 light_effects_set_blink
+0x0044c9c0 100.00 light_effects_load_fade
+0x0044cc10 100.00 light_effects_set_fade
+0x0044cca0 100.00 light_effects_load_move
+0x0044cef0 100.00 light_effects_set_move
+0x0044cf70 100.00 light_effects_invalidate_position
+0x0044cfa0 100.00 light_effects_update
+0x0044cff0 100.00 light_effects_update_colour
+0x0044d0d0 100.00 light_effects_update_blink
+0x0044d250 100.00 light_effects_flip_sign
+0x0044d280 99.28 light_effects_update_fade
+0x0044d710 100.00 light_effects_set_fade_speed
+0x0044d760 86.17 light_effects_update_move
+0x0044d9a0 91.11 light_effects_check_move_limit
+0x0044da20 100.00 light_effects_set_dimmer_mode
+0x0044da50 100.00 light_effects_update_dimmer
 0x0044db50 11.05 ledger_stub_0044db50_KeyValueEqualsFileLoad
 0x0044dd40 9.09 ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease
 0x0044e0c0 51.49 terrain_map_create
