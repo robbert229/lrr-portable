@@ -197,6 +197,10 @@ extern "C" int s_cursor_delta_y;
 #include "game/bubbles.h"
 #include "game/bubbles_imports.h"
 #include "gods98/textwindow_imports.h"
+#include "game/erode.h"
+#include "game/erode_imports.h"
+#include "game/fallin.h"
+#include "game/fallin_imports.h"
 
 int main(void)
 {

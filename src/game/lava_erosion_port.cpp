@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-015 GAME-015: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-015.csv. */
+/* The port tail of Erode.c (GAME-015) and Fallin.c (GAME-051) (ADR 0006
+ * decision 4; finding 599): the port's lava erosion and landslides, with
+ * their own state, bounds and NULL guards, the explicit-level adapters and
+ * the hooks the native renderer installs. Native code (lego_port.cpp,
+ * level.cpp) and the tests use it.
+ *
+ * In the matching build (MSVC 5.0) erode.c and fallin.c define every one of
+ * these functions' names themselves (erode_link_names.h,
+ * fallin_link_names.h), so their definitions here are compiled out there
+ * (LRR_LAVA_EROSION_PORT_NAMES), and the original's state is the units'
+ * erodeGlobs, fallinCaveInLimit and fallinTimer. Relocated from the verbatim
+ * lava_erosion.cpp (body hashes: docs/coverage/relocations/GAME-015.csv). */
 /* Hides level_shared.hpp's extern for s_erosion_delay_scale (see there). */
 #define LRR_LAVA_EROSION_UNIT
 #include <stdio.h>
@@ -57,41 +66,25 @@ extern "C" void idle_register(EntitySlot* e);
 extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
 #include "cmd_for_lava_erosion.hpp"
 
-// GLOBAL: LEGORR 0x0049e124
 static const float s_erosion_ticks_per_second = 25.0f;
-// GLOBAL: LEGORR 0x0049e128
 static const float s_erosion_delay_fraction = 0.2f;
-// GLOBAL: LEGORR 0x0049e130
 static const float s_erosion_stage_quanta = 4.0f;
 
-// GLOBAL: LEGORR 0x004a1ee4
 uint32_t s_config_word = 0u;        /* DAT_004a1ee4 */
 
-// GLOBAL: LEGORR 0x004c7eb0
 LavaErosionPendingCell s_lava_erosion_pending_cells[EROSION_MARK_COUNT];
-// GLOBAL: LEGORR 0x004cbd30
 uint32_t s_lava_erosion_pending_count;
-// GLOBAL: LEGORR 0x004cbd34
 LavaErosionPendingCell s_lava_erosion_stage_coordinates[
     EROSION_MARK_COUNT];
-// GLOBAL: LEGORR 0x004cfbb4
 uint32_t s_erosion_marks[EROSION_MARK_COUNT];
-// GLOBAL: LEGORR 0x004d1af4
 float s_lava_erosion_stage_timers[EROSION_MARK_COUNT];
-// GLOBAL: LEGORR 0x004d3a34
 CellCoordinateTimestamp s_ts_coordinates[LEVEL_TS_COUNT];
-// GLOBAL: LEGORR 0x004d5974
 int32_t  s_ts_stamps[LEVEL_TS_COUNT];
-// GLOBAL: LEGORR 0x004d6914
 uint32_t s_ts_active[LEVEL_TS_COUNT];
 
-// GLOBAL: LEGORR 0x004d78b4
 float s_erosion_trigger_accumulator;
-// GLOBAL: LEGORR 0x004d78b8
 float s_erosion_decay_scale;
-// GLOBAL: LEGORR 0x004d78bc
 float s_erosion_delay_scale;
-// GLOBAL: LEGORR 0x004d78c0
 int32_t  s_ts_now; /* _DAT_004d78c0: ErodeLockTime * 25 float bits */
 
 /* --- the kind-six message sweep timer (2026-10-25) -------------------------
@@ -107,13 +100,22 @@ int32_t  s_ts_now; /* _DAT_004d78c0: ErodeLockTime * 25 float bits */
  * handle blindly and would take a draw modulo zero — the port skips the
  * cell loop without the level (the re-arm draw still runs, the corpus's
  * re-arm is level-independent) and reads the dims through the word model. */
-// GLOBAL: LEGORR 0x004d78c4
 float s_sweep_timer;
 
+/* The port's definitions of the names erode.c and fallin.c take in the
+ * matching build (erode_link_names.h, fallin_link_names.h): every build but
+ * MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_LAVA_EROSION_PORT_NAMES 0
+#else
+#define LRR_LAVA_EROSION_PORT_NAMES 1
+#endif
+
+#if LRR_LAVA_EROSION_PORT_NAMES /* erode.c and fallin.c serve these names in the matching build */
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static LevelState* lava_erosion_current_level_get(void);
 
-// FUNCTION: LEGORR 0x0040e930
+/* Port model of 0x0040e930 */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void erosion_timing_state_init(float value_a,
                                                   float value_b,
@@ -163,7 +165,7 @@ void erosion_timing_state_init(float value_a, float value_b, float value_c)
 
 /* Find the first zero in the 2,000-dword DAT_004cfbb4 stage-active table.
  * Stage registration and the pending-cell ticker share this allocator. */
-// FUNCTION: LEGORR 0x0040e990
+/* Port model of 0x0040e990 */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) int lava_erosion_stage_slot_find_free(int* slot_out)
 {
@@ -203,7 +205,7 @@ int lava_erosion_stage_slot_find_free(int* slot_out)
 }
 #endif
 
-// FUNCTION: LEGORR 0x0040e9c0
+/* Port model of 0x0040e9c0 */
 float lava_erosion_delay_from_cell(const int xy[2])
 {
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -236,7 +238,7 @@ float lava_erosion_delay_from_cell(const int xy[2])
 /* LavaErosionPendingCellTick (FUN_0040eab0): keep the engine-scale trigger
  * gate, walk the pending coordinates in their live insertion/swap order,
  * then advance all active stage timers. */
-// FUNCTION: LEGORR 0x0040eab0
+/* Port model of 0x0040eab0 */
 void lava_erosion_pending_cell_tick(float scale)
 {
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -389,7 +391,7 @@ void lava_erosion_pending_cell_tick(float scale)
         }
     }
 }
-// FUNCTION: LEGORR 0x0040ee00
+/* Port model of 0x0040ee00 */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void cell_coordinate_timestamp_remember(const int xy[2])
 {
@@ -439,7 +441,7 @@ void cell_coordinate_timestamp_remember(const int xy[2])
 /* LavaErosionPendingCellAdd (FUN_0040ee50): maintain the compact 2,000-cell
  * candidate list and mirror membership in voxel flag bit 31. Removal uses
  * swap-with-last and retires the matching stage slot, as in the reference. */
-// FUNCTION: LEGORR 0x0040ee50
+/* Port model of 0x0040ee50 */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void lava_erosion_pending_cell_add(const int xy[2], int add)
 {
@@ -611,7 +613,7 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
     }
 }
 #endif
-// FUNCTION: LEGORR 0x0040efb0
+/* Port model of 0x0040efb0 */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t cell_coordinate_timestamp_exists(const int xy[2])
 {
@@ -669,7 +671,7 @@ uint32_t cell_coordinate_timestamp_exists(const int xy[2])
 /* The retail entry receives seed/output coordinate pairs and reads the
  * active level global. Keep the explicit-level helper above for tests and
  * noncurrent-level queries; the complete target walk lives in this body. */
-// FUNCTION: LEGORR 0x0040f000
+/* Port model of 0x0040f000 */
 int lava_erosion_neighbor_check(const int seed_xy[2], int out_xy[2])
 {
     LevelState* level = lava_erosion_current_level_get();
@@ -703,7 +705,7 @@ int lava_erosion_neighbor_check(const int seed_xy[2], int out_xy[2])
     return 0;
 }
 
-// FUNCTION: LEGORR 0x0040f0e0
+/* Port model of 0x0040f0e0 */
 uint32_t kind_six_random_sweep_dispatch(float delta)
 {
     s_sweep_timer = s_sweep_timer - delta;
@@ -740,7 +742,7 @@ uint32_t kind_six_random_sweep_dispatch(float delta)
 /* FUN_0040f190: gate an erosion candidate, form a four-direction mask from
  * its walkable neighbors, and mutate only when no neighbor carries the
  * protected state/flag and at least one has a clear 0xc0 flag mask. */
-// FUNCTION: LEGORR 0x0040f190
+/* Port model of 0x0040f190 */
 int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint)
 {
     static const int dx[4] = { 0, 1, 0, -1 };
@@ -773,7 +775,7 @@ int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint)
     }
     return 0;
 }
-// FUNCTION: LEGORR 0x0040f2b0
+/* Port model of 0x0040f2b0 */
 int lava_erosion_neighbor_eligible_current(const int xy[2])
 {
     LevelState* level;
@@ -807,7 +809,7 @@ int lava_erosion_neighbor_eligible_current(const int xy[2])
 /* LavaErosionNeighborMutate (FUN_0040f330). The available scene-slot API
  * claims the effect slot; voxel flags, repeat count, recursive propagation,
  * and CellInitPass stay in the level model. */
-// FUNCTION: LEGORR 0x0040f330
+/* Port model of 0x0040f330 */
 void lava_erosion_neighbor_mutate(const int xy[2], unsigned int direction,
                                   int propagate)
 {
@@ -907,13 +909,13 @@ void lava_erosion_neighbor_mutate(const int xy[2], unsigned int direction,
     cell_init_pass(level, (float)xy[0], (uint32_t)xy[1]);
 }
 
-// FUNCTION: LEGORR 0x0040f5e0
+/* Port model of 0x0040f5e0 */
 void global_config_value_set(uint32_t v)
 {
     s_config_word = v;
 }
 
-// FUNCTION: LEGORR 0x0040f5f0
+/* Port model of 0x0040f5f0 */
 void lava_erosion_eight_neighbor_propagate(const int xy[2],
                                            unsigned int direction)
 {
@@ -942,3 +944,4 @@ static LevelState* lava_erosion_current_level_get(void)
     LevelState* level = level_current_owner_get();
     return level != NULL ? level : s_lava_erosion_level_context;
 }
+#endif /* LRR_LAVA_EROSION_PORT_NAMES */

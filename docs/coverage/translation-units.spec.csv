@@ -13,7 +13,8 @@ start,unit_id,name,kind,name_basis,note
 0040bdc0,GAME-012,,game,none,rock-fall styles and misc effect objects ('RockFallStyles' 'UpgradeEffect' 'LavaErosionSmoke*'); .bss 0x4c71e0-0x4c7e5c
 0040cdc0,GAME-013,,game,none,terrain cell object records and fence sparks ('FenceSpark'); .bss 0x4c7df8-0x4c7e84
 0040e490,GAME-014,Encyclopedia.c,game,config-key,'Encyclopedia' config section and 'Object has no encyclopedia file.'; .bss 0x4c7e88-
-0040e930,GAME-015,,game,none,lava erosion timers and pending-cell ticks; .bss 0x4cbd30-0x4d78c4
+0040e930,GAME-015,Erode.c,game,inferred,lava erosion timers and pending-cell ticks; .bss 0x4c7eb0-0x4d78c4 (erodeGlobs); stem from Lego.cfg's ErodeTriggerTime/ErodeErodeTime/ErodeLockTime keys that Erode_Initialise scales; extent confirmed by finding 599: 10 functions 40e930-40f0e0; 40eab0 compares against its own 0.0f at 49e12c while 40f0e0 loads a second 0.0f at 49e138 and MSVC 5.0 pools a literal once an object so 40f0e0-40f5f0 are another object
+0040f0e0,GAME-051,Fallin.c,game,inferred,landslides and cave-ins (finding 599): the sweep timer .bss 0x4d78c4 and the cave-in threshold .data 0x4a1ee4; own 0.0f 49e138 and -750.0f 49e13c after Erode.c's 49e124-49e130; 40f5f0 calls 40f190 40f2b0 40f330 so it ends the object before GAME-016 at 40f6c0; stem from Lego.cfg's FallinMap and the landslide message 6
 0040f6c0,GAME-016,,game,none,steering/heading physics and pointer-stack helpers; initialised data 0x4a1ee8-0x4a1ef8; boundary uncertain
 004102b0,GAME-017,FrontEnd.c,game,config-key,front-end menus and save slots; owns 'FrontEnd' config key and menu/save strings 0x4a1f00-0x4a2790
 00418190,GAME-018,HelpWindow.c,game,config-key,'HelpWindow' config keys; .bss step to 0x4db8e8

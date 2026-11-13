@@ -3819,7 +3819,9 @@ int lava_erosion_neighbor_check_level(const LevelState* s, int seed_x,
 
 /* LavaErosionStageRegister (FUN_0040ea10): claim the first inactive stage
  * slot, seed the cell byte and countdown, then append it to the ordered
- * pending-candidate table. */
+ * pending-candidate table. In the matching build erode.c's
+ * Erode_SetBlockErodeRate serves this name (erode_link_names.h). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 int lava_erosion_stage_register(const int xy[2], int stage)
 {
     int slot;
@@ -3837,6 +3839,7 @@ int lava_erosion_stage_register(const int xy[2], int stage)
     lava_erosion_pending_cell_add(xy, 1);
     return 1;
 }
+#endif
 
 unsigned int lava_erosion_pending_cell_count_get(void)
 {
