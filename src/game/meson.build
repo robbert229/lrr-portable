@@ -14,7 +14,7 @@ endif
 
 game_sources = [
   'aitask_port.cpp',
-  'message_unit.cpp',
+  'message_port.cpp',
   'legoobject_port.cpp',
   'frontend_port.cpp',
   'interface_port.cpp',
@@ -42,7 +42,7 @@ game_sources = [
   'pointer_port.cpp',
   'object_overlays.cpp',
   'object_state_file.cpp',
-  'objective_unit.cpp',
+  'objective_port.cpp',
   'tutorial_script_port.cpp',
   'terrain_map_port.cpp',
   'loading_progress.cpp',
@@ -131,6 +131,8 @@ game_c_sources = [
   'spiderweb.c',
   'roof.c',
   'frontend_unit.c',
+  'message_unit.c',
+  'objective_unit.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

@@ -240,6 +240,10 @@ extern "C" int s_cursor_delta_y;
 #include "game/roof_imports.h"
 #include "game/frontend_unit.h"
 #include "game/frontend_unit_imports.h"
+#include "game/objective_unit.h"
+#include "game/objective_unit_imports.h"
+#include "game/message_unit.h"
+#include "game/message_unit_imports.h"
 
 int main(void)
 {

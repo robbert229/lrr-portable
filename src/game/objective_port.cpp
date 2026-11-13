@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-029 Objective.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-029.csv. */
+/* GAME-029 Objective.c's port models (the port tail, ADR 0006 decision 4).
+ * Relocated verbatim by tools/relocate_unit.py (ADR 0006; body hashes:
+ * docs/coverage/relocations/GAME-029.csv) as objective_unit.cpp, which
+ * finding 631 renamed when it rebuilt the unit in original shape as
+ * objective_unit.c. The models are unannotated: natively they are the live
+ * objective code. In the matching build the unit serves the names its
+ * callers use (objective_unit_link_names.h), and this file compiles its
+ * own definitions of them out (LRR_OBJECTIVE_PORT_NAMES). */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 /* Matching build: Lego.c callers call lego_unit.c (#587). */
 #include "lego_port_aliases.h"
@@ -69,16 +74,22 @@
 #include "scene_render.hpp"
 #include "level_for_objective_unit.hpp"
 
+/* The port's definitions of the names the unit takes in the matching build
+ * (objective_unit_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_OBJECTIVE_PORT_NAMES 0
+#else
+#define LRR_OBJECTIVE_PORT_NAMES 1
+#endif
+
 typedef struct ObjectiveEntityMatchContext {
     LevelState* level;
     uint32_t flags;
 } ObjectiveEntityMatchContext;
 /* DAT_004ffbc0 is the runtime result word. It is separate from the level's
  * configured objective mask in LevelState::objective. */
-// GLOBAL: LEGORR 0x004ffbc0
 uint32_t s_objective_result_word;
 
-// GLOBAL: LEGORR 0x004ffe48
 static uint32_t s_value_004ffe48 = 0u;
 
 static float s_objective_voice_stream_timeout;
@@ -105,7 +116,6 @@ static int obj_typed_int(BlockFile* cfg, const char* level, const char* key, int
 static void objective_voice_alias_format(char* out, size_t out_size, const char* outcome, const char* family, const char* level);
 static int objective_entity_pair_match(EntitySlot* entity, void* payload);
 
-// FUNCTION: LEGORR 0x00457d40
 void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
 {
     if (cfg == NULL || s == NULL) {
@@ -206,7 +216,6 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
     }
 }
 /* Corpus FUN_00458580 — crystal/ore objective record words. */
-// FUNCTION: LEGORR 0x00458580
 static void obj_set_resources_target(uint32_t* level_record, int32_t crystal,
                                      int32_t ore)
 {
@@ -221,7 +230,6 @@ static void obj_set_resources_target(uint32_t* level_record, int32_t crystal,
 }
 
 /* Corpus FUN_004585c0 — block objective record words. */
-// FUNCTION: LEGORR 0x004585c0
 static void obj_set_block_target(uint32_t* level_record,
                                  const int32_t targets[2])
 {
@@ -231,7 +239,6 @@ static void obj_set_block_target(uint32_t* level_record,
 }
 
 /* Corpus FUN_004585f0 — timer objective record word. */
-// FUNCTION: LEGORR 0x004585f0
 static void obj_set_timer_target(uint32_t* level_record, float ticks,
                                  int hit_time_fail)
 {
@@ -243,7 +250,6 @@ static void obj_set_timer_target(uint32_t* level_record, float ticks,
 }
 
 /* Corpus FUN_00458620 — construction objective record words. */
-// FUNCTION: LEGORR 0x00458620
 static void obj_set_construction_target(uint32_t* level_record,
                                         uint32_t a, uint32_t b)
 {
@@ -253,17 +259,19 @@ static void obj_set_construction_target(uint32_t* level_record,
 }
 
 /* GlobalFlagGet_004ffe30 (FUN_00458650): threaded objective-result read. */
-// FUNCTION: LEGORR 0x00458650
+#if LRR_OBJECTIVE_PORT_NAMES /* objective_unit.c's Objective_HasAchieved in the matching build */
 int level_objective_result_get(const LevelState* s)
 {
     return s != NULL ? s->objective_result : 0;
 }
+#endif /* LRR_OBJECTIVE_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00458660
+#if LRR_OBJECTIVE_PORT_NAMES /* objective_unit.c's Objective_SetEndTeleportEnabled in the matching build */
 void global_value_004ffe48_set(uint32_t value)
 {
     s_value_004ffe48 = value;
 }
+#endif /* LRR_OBJECTIVE_PORT_NAMES */
 
 /* Teleporter.c (teleporter.c, finding 621): Teleporter_Start (0046a510) by
  * its original-ABI name. */
@@ -274,7 +282,7 @@ extern "C" void scene_object_state_dispatch_original(uint32_t selector,
 /* The retail function reads the current level from FUN_00431560 and has one
  * stack argument. `objective_load` binds that owner, while mission frame
  * updates rebind the live context before objective processing. */
-// FUNCTION: LEGORR 0x00458670
+#if LRR_OBJECTIVE_PORT_NAMES /* objective_unit.c's Objective_SetStatus in the matching build */
 void objective_announce_current(int who)
 {
     LevelState* s = s_objective_active_level;
@@ -372,9 +380,9 @@ void objective_announce_current(int who)
         s->obj_stream[0] = '\0';
     }
 }
+#endif /* LRR_OBJECTIVE_PORT_NAMES */
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x004588e0
 void input_device_release(void)
 {
     InputDeviceReleaseHooks* hooks = &s_input_device_release_hooks;
@@ -420,7 +428,6 @@ void input_device_release(void)
 
 /* GlobalOptionLowBitsEnabled (FUN_004589a0): faithful gate over the
  * objective word's low three bits. */
-// FUNCTION: LEGORR 0x004589a0
 int global_option_low_bits_enabled(const LevelState* s)
 {
     return s != NULL && (s->objective & 7u) != 0u;
@@ -428,7 +435,7 @@ int global_option_low_bits_enabled(const LevelState* s)
 
 /* ObjectiveTick @ 0x00458be0 has four arguments in the retail caller:
  * (opaque global owner, level block, objective-check dt, frame dt). */
-// FUNCTION: LEGORR 0x00458be0
+#if LRR_OBJECTIVE_PORT_NAMES /* objective_unit.c's Objective_Update in the matching build */
 void objective_tick_target(void* engine, LevelState* s,
                            float checker_dt, float frame_dt)
 {
@@ -527,7 +534,7 @@ void objective_tick_target(void* engine, LevelState* s,
         (result_active_next && (s_objective_result_word & 6u) != 0u)
             ? 0 : 1;
 }
-// FUNCTION: LEGORR 0x00459050
+#endif /* LRR_OBJECTIVE_PORT_NAMES */
 int objective_check(LevelState* s, int* mark, float dt)
 {
     if (s == NULL) {
@@ -690,6 +697,7 @@ static int objective_entity_pair_match(EntitySlot* entity, void* payload)
  * and the screen size; the port's objective_load above takes the config,
  * the level name and the level. */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (objective_load, 0x00457d40)
+#if LRR_OBJECTIVE_PORT_NAMES /* objective_unit.c's Objective_LoadLevel in the matching build */
 extern "C" void objective_load_original(BlockFile* config,
                                         const char* gameName,
                                         const char* levelName,
@@ -701,6 +709,7 @@ extern "C" void objective_load_original(BlockFile* config,
     (void)screenHeight;
     objective_load(config, levelName, (LevelState*)level);
 }
+#endif /* LRR_OBJECTIVE_PORT_NAMES */
 
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
  * original FUN_004589a0 takes no argument and reads the current level; the
@@ -709,4 +718,31 @@ extern "C" void objective_load_original(BlockFile* config,
 extern "C" int lego_level_low_bits_enabled_adapter(void)
 {
     return global_option_low_bits_enabled(g_active_level_retail);
+}
+
+/* Original-ABI adapters (ADR 0005 step 6) for GAME-029's objective_unit.c,
+ * where the callee has no port entry with the original's contract. */
+// PORT-ONLY: original-ABI adapter for GAME-029 objective_unit.c (osf_snapshot, 0x004592e0)
+extern "C" void objective_osf_store_adapter(void)
+{
+    osf_snapshot(entity_pool_callback_context_get());
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-029 objective_unit.c (0x00459360, no port entry)
+extern "C" void objective_osf_restore_adapter(void)
+{
+    /* No port model of the original's restore of the live table from its
+     * snapshot: nothing to do. */
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-029 objective_unit.c (Image_GetScreenshot 0x0047e300, no port entry)
+extern "C" int objective_image_get_screenshot_adapter(void* image,
+                                                      unsigned int xsize,
+                                                      unsigned int ysize)
+{
+    /* The port takes no screenshot for the reward screen. */
+    (void)image;
+    (void)xsize;
+    (void)ysize;
+    return 0;
 }

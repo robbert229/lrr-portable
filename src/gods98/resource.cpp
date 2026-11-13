@@ -547,7 +547,10 @@ const char* string_table_entry_current(void)
         ? s_string_table_names[s_string_table_current] : NULL;
 }
 
-/* FUNCTION: LEGORR 0x00451cd0 */
+/* Message_Initialise (0x00451cd0). In the matching build message_unit.c
+ * serves this name (message_unit_link_names.h, finding 631); every other
+ * build keeps the port's table below. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void message_string_table_initialize(void)
 {
     static const char* names[65] = {
@@ -582,6 +585,7 @@ void message_string_table_initialize(void)
     };
     memcpy(s_message_strings, names, sizeof(s_message_strings));
 }
+#endif
 
 const char* message_string_table_get(uint32_t index)
 {
