@@ -336,6 +336,7 @@ int ledger_stub_00483f60_FlicFileHeaderValidate(const char* path,
  * renderer's, so Flic_Animate only advances the frame. */
 #include "flic.h"
 
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* flic_unit.c takes this name (flic_link_names.h) */
 int flic_setup(const char* name, void** out, int flags)
 {
     Flic* flic;
@@ -344,7 +345,9 @@ int flic_setup(const char* name, void** out, int flags)
     *out = flic;
     return flic != NULL;
 }
+#endif
 
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* flic_unit.c takes this name (flic_link_names.h) */
 int flic_animate(void* flic, const struct Area2F* area, int advance,
                  int trans)
 {
@@ -354,3 +357,4 @@ int flic_animate(void* flic, const struct Area2F* area, int advance,
     if (advance) flic_tick_loop((Flic*)flic, 1);
     return 1;
 }
+#endif

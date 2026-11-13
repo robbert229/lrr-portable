@@ -25,6 +25,13 @@ extern "C" {
 
 struct TextureSurface;
 
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_setup_trans Image_SetupTrans /* 0047dbf0 */
+#define image_get_pixel Image_GetPixel /* 0047dfa0 */
+#define image_set_pen_zero_trans Image_SetPenZeroTrans /* 0047dbc0 */
+#endif
 /* Image_SetupTrans (FUN_0047dbf0): the colour-key range. */
 void image_setup_trans(Image* image, float lowRed, float lowGreen,
                        float lowBlue, float highRed, float highGreen,

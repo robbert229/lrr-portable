@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-011 Images.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-011.csv. */
+/* The port tail of G98-011 Images.c (finding 632): the port's models of the
+ * Images.c entries over its software surfaces, as tools/relocate_unit.py
+ * relocated them (ADR 0006; body hashes: docs/coverage/relocations/
+ * G98-011.csv). Images.c itself is rebuilt in original shape as
+ * images_unit.c; this file is unannotated port-only code. In the matching
+ * build images_unit.c takes two of the names defined here
+ * (images_link_names.h), so their definitions are compiled out there. */
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -36,10 +40,8 @@
 
 typedef uint32_t (VIEW_COM_CALL *SceneRegistryInterfaceReleaseFn)(void*);
 
-// GLOBAL: LEGORR 0x00533908
 RendererRecordTableState s_renderer_record_table;
 
-// GLOBAL: LEGORR 0x00533988
 void* s_small_record_free;
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
@@ -53,15 +55,16 @@ static int font_device_pixel_format_query(void* device, uint32_t* bits_per_pixel
 /* RendererRecordTableInitialize (FUN_0047d410) clears its 32-word table
  * and raises the adjacent initialized word. The two intervening dwords are
  * retained as reserved state because the corpus leaves them untouched. */
-// FUNCTION: LEGORR 0x0047d410
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* images_unit.c takes this name (images_link_names.h) */
 void renderer_record_table_initialize(void)
 {
     memset(s_renderer_record_table.words, 0,
            sizeof(s_renderer_record_table.words));
     s_renderer_record_table.enabled = 1u;
 }
+#endif
 
-// FUNCTION: LEGORR 0x0047d430
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* images_unit.c takes this name (images_link_names.h) */
 void scene_object_registry_teardown(void)
 {
     unsigned int i;
@@ -72,7 +75,7 @@ void scene_object_registry_teardown(void)
     }
     s_scene_registry_block_count = 0u;
 }
-// FUNCTION: LEGORR 0x0047d470
+#endif
 void image_surface_release(void* record)
 {
     uint32_t interface_token = 0u;
@@ -99,7 +102,6 @@ void image_surface_release(void* record)
  * build its pixel record from the 0x7c-byte descriptor, dispatch the 8/24-bit
  * conversion, and unlock on every successful lock. The source buffer and
  * palette remain caller-owned in SurfaceConvertJob. */
-// FUNCTION: LEGORR 0x0047d490
 int surface_pixel_format_query_convert_surface(
     void* surface, const SurfaceConvertJob* job)
 {
@@ -187,7 +189,6 @@ int surface_pixel_format_query_convert_surface(
  * stored word — byte 0 rides the +0x58 mask, byte 1 the +0x5c mask, byte 2
  * the +0x60 mask, the entries four bytes apart. Rows then flip. Deviations:
  * the blind record/job/source strides are guarded. */
-// FUNCTION: LEGORR 0x0047d520
 int surface_palette8_to_16bit_surface_expand(SurfaceRecord* rec,
                                              const SurfaceConvertJob* job)
 {
@@ -234,7 +235,6 @@ int surface_palette8_to_16bit_surface_expand(SurfaceRecord* rec,
 }
 
 /* FUN_0047d700: popcount via the per-position test loop. */
-// FUNCTION: LEGORR 0x0047d700
 int pop_count32(uint32_t value)
 {
     int count = 0;
@@ -253,7 +253,6 @@ int pop_count32(uint32_t value)
  * resetting that mask, it answers 2 for 0x8 rather than the tested 3.
  * Keep the one-hot-per-position semantics; the i&31 is redundant under
  * the i < 32 bound. */
-// FUNCTION: LEGORR 0x0047d720
 uint32_t find_first_set_bit32(uint32_t value)
 {
     for (uint32_t i = 0; i < 32u; ++i) {
@@ -266,7 +265,6 @@ uint32_t find_first_set_bit32(uint32_t value)
 
 /* SurfacePixelRowsFlipWithScratch (FUN_0047D740): reverse row pairs using
  * the original dword loop and its trailing-byte loop. */
-// FUNCTION: LEGORR 0x0047d740
 void surface_pixel_rows_flip_with_scratch(SurfaceRecord* rec)
 {
     uint32_t half_bytes = (uint32_t)(rec->row_bytes / 2);
@@ -330,7 +328,6 @@ void surface_pixel_rows_flip_with_scratch(SurfaceRecord* rec)
  * +0x60 (high) field, byte 1 in +0x5c, byte 2 in +0x58 — and rows advance
  * by the source stride over three-byte pixels. Deviations and the flip tail
  * ride the palette walk's notes. */
-// FUNCTION: LEGORR 0x0047d800
 int surface_bitmap24_bit_surface_convert(SurfaceRecord* rec,
                                          const SurfaceConvertJob* job)
 {
@@ -384,7 +381,6 @@ int surface_bitmap24_bit_surface_convert(SurfaceRecord* rec,
  * two in 8-15, three in 16-23, top byte zero. Callers (the palette scan
  * of finding 23) feed the bytes in memory order, so the word is the
  * 0x00BBGGRR triple as stored. */
-// FUNCTION: LEGORR 0x0047db90
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t rgb_channels_pack(uint8_t red, uint8_t green,
                                              uint8_t blue)
@@ -410,7 +406,6 @@ uint32_t rgb_channels_pack(uint8_t red, uint8_t green, uint8_t blue)
 
 /* ResourceRecordAddRef (FUN_0047dbc0): the wrapped DirectDraw object's
  * SetColorKey(DDCKEY_SRCBLT, range) equivalent, then mark flag bit 1. */
-// FUNCTION: LEGORR 0x0047dbc0
 void resource_record_add_ref(void* record)
 {
     if (record == NULL) return;
@@ -425,7 +420,6 @@ void resource_record_add_ref(void* record)
  * triples through the resource's pixel representation, installs the source
  * color-key range, and marks wrapper flag bit 1. The portable resource is a
  * decoded ARGB TextureSurface, so its equivalent key is stored as RGB24. */
-// FUNCTION: LEGORR 0x0047dbf0
 void image_surface_blit_transformed(TextureSurface* surface,
                                     float low_red, float low_green,
                                     float low_blue, float high_red,
@@ -443,7 +437,6 @@ void image_surface_blit_transformed(TextureSurface* surface,
 }
 /* DirectDrawSurfaceUnlock (FUN_0047ded0): forward a full-surface unlock to
  * the installed platform interface callback. */
-// FUNCTION: LEGORR 0x0047ded0
 void surface_directdraw_unlock(void* surface)
 {
     if (s_surface_writer_unlock_hook != NULL) {
@@ -456,7 +449,6 @@ void surface_directdraw_unlock(void* surface)
 /* DirectDrawSurfacePixelRead (FUN_0047dfa0): read one in-bounds pixel from
  * the port's 32-bit locked display surface. The RGBA byte layout yields the
  * native little-endian packed word consumed by the renderer. */
-// FUNCTION: LEGORR 0x0047dfa0
 int surface_directdraw_pixel_read(DisplaySurface* surface, unsigned int x,
                                   unsigned int y, uint32_t* pixel_out)
 {
@@ -477,7 +469,6 @@ int surface_directdraw_pixel_read(DisplaySurface* surface, unsigned int x,
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0047e130
 void scene_object_registry_release_all(void)
 {
     unsigned int level;
@@ -496,7 +487,6 @@ void scene_object_registry_release_all(void)
     }
 }
 
-// FUNCTION: LEGORR 0x0047e190
 uint32_t font_device_color_convert(void* device, uint32_t color)
 {
     uint32_t bits_per_pixel = 0u;
@@ -543,7 +533,6 @@ uint32_t font_device_color_convert(void* device, uint32_t color)
 
 /* RGBChannelsUnpack (FUN_0047e2d0): optional outputs receive the packed
  * word's first three bytes, preserving the channel order used by the packer. */
-// FUNCTION: LEGORR 0x0047e2d0
 void rgb_channels_unpack(uint32_t color, uint8_t* red, uint8_t* green,
                          uint8_t* blue)
 {
@@ -560,7 +549,6 @@ void rgb_channels_unpack(uint32_t color, uint8_t* red, uint8_t* green,
 
 namespace unported_ledger_stubs {
 // InterfaceMethod18StructApply
-// FUNCTION: LEGORR 0x0047e300
 int ledger_stub_0047e300_InterfaceMethod18StructApply(
     void* destination, const void* source, size_t size,
     void (*apply)(void* destination, const void* source, size_t size,
@@ -573,7 +561,6 @@ int ledger_stub_0047e300_InterfaceMethod18StructApply(
 }
 
 // InterfaceMethodResultRecordInitialize
-// FUNCTION: LEGORR 0x0047e3e0
 void ledger_stub_0047e3e0_InterfaceMethodResultRecordInitialize(
     unsigned int* result, void* device, unsigned int interface_value,
     void* context, unsigned int first_color, unsigned int second_color)

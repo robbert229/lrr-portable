@@ -98,6 +98,14 @@ void tooltip_activate(int toolTipType);                           /* 0046b770 */
 void main_loop_frame_pump(int force);                             /* 00477f30 */
 /* gods98 Sound3D.c (sound3d.c). */
 int sound_stream_stop_and_release(int stream_index);              /* 0047ba20 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_surface_release Image_Remove /* 0047d470 */
+#define resource_record_add_ref Image_SetPenZeroTrans /* 0047dbc0 */
+#define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
+#define objective_image_get_screenshot_adapter Image_GetScreenshot /* 0047e300 */
+#endif
 /* gods98 Images.c (images_unit.cpp, images.h). */
 void image_surface_release(void* record);                         /* 0047d470 */
 void resource_record_add_ref(void* record);                       /* 0047dbc0 */

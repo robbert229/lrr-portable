@@ -15,7 +15,7 @@ gods98_sources = [
   'video_graph_port.cpp',
   'avi_player.cpp',
   'avi_player_port.cpp',
-  'images_unit.cpp',
+  'images_port.cpp',
   'files_port.cpp',
   'lwo_port.cpp',
   'wad_port.cpp',
@@ -24,7 +24,7 @@ gods98_sources = [
   'com_object_tree_port.cpp',
   'file_list_streams.cpp',
   'text_window_port.cpp',
-  'flic_unit.cpp',
+  'flic_port.cpp',
   'input_unit.cpp',
   'bitmap_font_port.cpp',
   'ptrstack.cpp',
@@ -91,6 +91,8 @@ gods98_c_sources = [
   'rnc.c',
   'init.c',
   'mesh_unit.c',
+  'flic_unit.c',
+  'images_unit.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 gods98_c_as_cpp = []

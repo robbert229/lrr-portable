@@ -46,6 +46,12 @@ void panel_resource_position_update(int panel);                    /* 0045c4b0 *
 int sound_alias_lookup(const char* name, int* out_index);          /* 00464c70 */
 int sound_submit_with_global_cooldown(int alias, int* out_handle); /* 00464ef0 */
 
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_surface_release Image_Remove /* 0047d470 */
+#define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
+#endif
 /* Images.c (images_unit.cpp): Image_Remove and Image_SetupTrans.
  * Image_LoadBMPScaled (0047d9d0) and Image_DisplayScaled (0047dcb0) are
  * images.h's adapters. */

@@ -9566,7 +9566,7 @@ void lego_camera_registry_probe(void);
 void lego_panel_selection_highlight_toggle(int on);
 
 /* gods98 Image.c (images_unit.cpp): Image_SetPenZeroTrans (0047dbc0). */
-void resource_record_add_ref(void* record);
+void resource_record_add_ref(struct Image* record);
 /* GAME-030 Panel.c (panel_unit.h). */
 int ui_panel_name_table_lookup(const char* name, int* panel);   /* 0045a370 */
 void legacy_overlay_image_record_load(const char* fileName, int panel,

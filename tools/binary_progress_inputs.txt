@@ -592,8 +592,12 @@ src/gods98/flic.h
 src/gods98/flic.hpp
 src/gods98/flic_api.h
 src/gods98/flic_for_flic_unit.hpp
+src/gods98/flic_imports.h
+src/gods98/flic_link_names.h
+src/gods98/flic_port.cpp
 src/gods98/flic_shared.hpp
-src/gods98/flic_unit.cpp
+src/gods98/flic_unit.c
+src/gods98/flic_unit.h
 src/gods98/font.c
 src/gods98/font.h
 src/gods98/font_api.h
@@ -621,7 +625,11 @@ src/gods98/heap_for_text_window.hpp
 src/gods98/heap_shared.hpp
 src/gods98/image_adapters.h
 src/gods98/images.h
-src/gods98/images_unit.cpp
+src/gods98/images_imports.h
+src/gods98/images_link_names.h
+src/gods98/images_port.cpp
+src/gods98/images_unit.c
+src/gods98/images_unit.h
 src/gods98/init.c
 src/gods98/init.h
 src/gods98/init_imports.h

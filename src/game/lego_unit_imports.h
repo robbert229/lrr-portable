@@ -1756,6 +1756,12 @@ int scene_slot_pose_scale_register(int group, uint32_t first, uint32_t second,
 
 /* ---- part 3 imports, group 3C: end ---- */
 
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): Lego.c's
+ * own declaration of Image_SetPenZeroTrans goes to the unit. */
+#define resource_record_add_ref Image_SetPenZeroTrans /* 0047dbc0 */
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -14,6 +14,15 @@
 extern "C" {
 #endif
 
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Images.c is images_unit.c in the matching build (finding 632): the
+ * C callers' calls go to the unit (images_link_names.h). */
+#define image_set_pen_zero_trans Image_SetPenZeroTrans /* 0047dbc0 */
+#define image_get_pen255 Image_GetPen255 /* 0047def0 */
+#define image_get_pixel_mask Image_GetPixelMask /* 0047df50 */
+#define image_lock_surface Image_LockSurface /* 0047de60 */
+#define image_unlock_surface Image_UnlockSurface /* 0047ded0 */
+#endif
 /* Image_SetPenZeroTrans (0047dbc0), Image_GetPen255 (0047def0),
  * Image_GetPixelMask (0047df50), Image_LockSurface (0047de60) and
  * Image_UnlockSurface (0047ded0) in the original ABI. The port's entries at
