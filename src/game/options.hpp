@@ -176,9 +176,9 @@ void*    options_slot_resource_peek(void); /* FUN_00417f20 */
  * into the options speed word (the corpus writes the same dword that the
  * port models as GameOptions.game_speed). Deviation: the port threads a
  * GameContext argument; a NULL context stores nothing. */
-int  scroll_to_slider_index(void);                    /* FUN_00415030 */
-void options_scroll_index_store(struct GameContext* ctx); /* FUN_00414f90 */
-void scroll_slider_refresh(struct GameContext* ctx);  /* FUN_00415360 */
+extern "C" int  scroll_to_slider_index(void);                    /* FUN_00415030 */
+extern "C" void options_scroll_index_store(struct GameContext* ctx); /* FUN_00414f90 */
+extern "C" void scroll_slider_refresh(struct GameContext* ctx);  /* FUN_00415360 */
 
 
 #endif /* LEGORRR_GAME_OPTIONS_HPP */

@@ -736,8 +736,8 @@ void audio_stream_stop(AudioPlayer* p, int stream_index)
 
 namespace unported_ledger_stubs {
 // FUNCTION: LEGORR 0x004789a0
-void ledger_stub_004789a0_MusicMixerVolumeGet(float* music, float* sfx)
+extern "C" int ledger_stub_004789a0_MusicMixerVolumeGet(float* music, float* sfx)
 {
-    (void)audio_mixer_control_init(music, sfx, 0);
+    return audio_mixer_control_init(music, sfx, 0);
 }
 } // namespace unported_ledger_stubs

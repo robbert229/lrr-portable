@@ -25,6 +25,18 @@
 #ifndef LEGORRR_GAME_SAVEGAME_HPP
 #define LEGORRR_GAME_SAVEGAME_HPP
 
+/* FrontEnd.c part 2 (frontend_unit.c, finding 628). In the matching build
+ * Front_Levels_UpdateAvailable (004173e0) and
+ * Front_Save_WriteCurrentSaveFile (00417fc0) answer these names' callers;
+ * the port's prototypes add a trailing argument the original ignores, so
+ * the callers take the unit's names (frontend_unit.c's own declarations
+ * keep theirs). A macro renames a declaration one for one, so MSVC's
+ * symbol numbering does not change. */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(LEGORRR_FRONTEND_UNIT_C)
+#define sav_tree_load front_levels_update_available /* 004173e0 */
+#define save_commit front_save_write_current_save_file /* 00417fc0 */
+#endif
+
 #include <cstdint>
 
 #include "game.hpp"
@@ -272,13 +284,13 @@ int list_find_name(const SavListWindow* win, const char* name);
 /* Wide-key scan halves: add stores the value into array B on a match;
  * has answers the paired array-B value (NULL on a miss); set/get ride
  * array A. */
-void  list_add_name(SavListWindow* win, const void* wide_key, void* value);
+extern "C" void  list_add_name(SavListWindow* win, const void* wide_key, void* value);
                                                 /* FUN_00416ed0 */
-void* list_has_item(const SavListWindow* win, const void* wide_key);
+extern "C" void* list_has_item(const SavListWindow* win, const void* wide_key);
                                                 /* FUN_00416f40 */
-void  list_set_node(SavListWindow* win, const void* wide_key, void* value);
+extern "C" void  list_set_node(SavListWindow* win, const void* wide_key, void* value);
                                                 /* FUN_00416fb0 */
-void* list_get_node(const SavListWindow* win, const void* wide_key);
+extern "C" void* list_get_node(const SavListWindow* win, const void* wide_key);
                                                 /* FUN_00417020 */
 
 /* LevelNodeGet (FUN_00417090): get or recursively build the LevelLinks node
@@ -306,7 +318,7 @@ typedef struct SavTreeNode {
 
 typedef int (*sav_tree_visit)(void* node, void* user);
 
-int sav_tree_walk(void* node, sav_tree_visit visit, void* user);
+extern "C" int sav_tree_walk(void* node, sav_tree_visit visit, void* user);
                                                 /* FUN_004171c0 */
 
 /* --- the sav-tree state visitor (2026-10-25) --------------------------------
@@ -338,7 +350,7 @@ typedef struct SavTree2State {
 
 struct EngineContext;
 
-void sav_tree_walk2(void* node, SavTree2State* state, int carry,
+extern "C" void sav_tree_walk2(void* node, SavTree2State* state, int carry,
                     const EngineContext* eng);  /* FUN_004172f0 */
 
 /* SavTreeLoad (FUN_004173e0): stack-init the state's five dwords the way
@@ -362,9 +374,9 @@ extern "C" void sav_tree_load(void* node, void* window_base, void** blocks,
  * the found node's leading dword back, or -1.
  * Deviation: the corpus strides the user block's words blindly; the port
  * models the state and guards the found-node read. */
-void* registry_value_lookup(void* root, uint32_t index);
+extern "C" void* registry_value_lookup(void* root, uint32_t index);
                                                 /* FUN_00417280 */
-uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index);
+extern "C" uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index);
                                                 /* FUN_004172d0 */
 
 /* --- the sav-tree menu refresh (2026-10-26) --------------------------------

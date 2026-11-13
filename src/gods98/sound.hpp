@@ -631,8 +631,8 @@ extern "C" int sound_submit_with_global_cooldown(int alias, int* out_handle);
  * stream name, resolve it through the alias lookup, and submit it
  * through the global cooldown when it resolves. Returns the submit
  * result (0 when the name resolves nowhere). */
-int sound_stream_play_level(int level);
-int sound_stream_play_tutorial(int level);
+extern "C" int sound_stream_play_level(int level);
+extern "C" int sound_stream_play_tutorial(int level);
 
 /* SoundBufferAssociationAdd (FUN_0047b020): allocates a four-word record
  * — the association's value words in order, the prior head last — and

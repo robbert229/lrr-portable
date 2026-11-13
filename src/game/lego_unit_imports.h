@@ -90,6 +90,19 @@
  * in the matching build lego_unit.c calls Front_IsIntrosEnabled by the
  * unit's name; it takes nothing and answers the same flag. */
 #define movie_avis_enabled_original front_is_intros_enabled
+/* GAME-017 FrontEnd.c part 2 (finding 628): the original-ABI adapters'
+ * entries, by their matching-build names (frontend_unit_link_names.h). */
+#define frontend_enabled_original frontend_enabled                  /* 00416d00 */
+#define options_scroll_index_store_current options_scroll_index_store /* 00414f90 */
+#define overlay_menu_gate_original front_options_update             /* 00415370 */
+#define frontend_start_level_original front_load_selected_level     /* 00415220 */
+#define options_apply_from_slot_original front_update_options_slider_levels /* 00415150 */
+#define front_play_intro_splash_adapter front_play_intro_splash     /* 004157c0 */
+#define front_play_intro_movie_adapter front_play_intro_movie       /* 00415910 */
+#define movie_play_level_video_adapter front_play_level_movie       /* 00415990 */
+#define front_load_menus_adapter front_load_menus                   /* 004161f0 */
+#define front_run_screen_menu_type_adapter front_run_screen_menu_type /* 00416c80 */
+#define front_get_selected_level_adapter front_get_selected_level   /* 00416d70 */
 #endif
 
 #ifdef __cplusplus

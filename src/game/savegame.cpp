@@ -43,22 +43,22 @@ void save_return_diagnostic_log_set(void* log)
 {
     s_return_diag_log = (FILE*)log;
 }
-// GLOBAL: LEGORR 0x00556fd0
+/* frontGlobs at 0x00556fd0: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 int s_active_object_ingame;
-// GLOBAL: LEGORR 0x00556fe4
+/* frontGlobs at 0x00556fe4: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 int s_active_object_outgame;
-// GLOBAL: LEGORR 0x00556ff0
+/* frontGlobs at 0x00556ff0: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 void** s_sav_visited_outgame_items;
-// GLOBAL: LEGORR 0x00556ff4
+/* frontGlobs at 0x00556ff4: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 uint32_t* s_sav_visited_outgame_words;
-// GLOBAL: LEGORR 0x00556fdc
+/* frontGlobs at 0x00556fdc: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 void** s_sav_visited_ingame_items;
-// GLOBAL: LEGORR 0x00556fe0
+/* frontGlobs at 0x00556fe0: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 uint32_t* s_sav_visited_ingame_words;
-// GLOBAL: LEGORR 0x005574d0
+/* frontGlobs at 0x005574d0: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 int s_save_current_slot = -1;
 /* The six 0xb8-byte per-slot contexts from DAT_00557080..DAT_005574d0. */
-// GLOBAL: LEGORR 0x00557080
+/* frontGlobs at 0x00557080: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 uint8_t s_sav_slot_context_blocks[SAVE_SLOTS * 0xb8];
 /* Wider-host pointers cannot fit the retail context's 32-bit +0x34 slot.
  * Keep each scanned slot's record allocation beside its 0xb8-byte header. */
@@ -520,7 +520,7 @@ void* sav_slot_ctx(GameContext* ctx, int slot)
 
 /* SaveStateEventContextSet (FUN_00418110) — zero-init module static per
  * the unowned-global convention (the corpus's word is DAT_0055781c). */
-// GLOBAL: LEGORR 0x0055781c
+/* frontGlobs at 0x0055781c: frontend_unit.c's stand-in (finding 628); the port keeps its own. */
 uint32_t s_save_state_event_context = 0u;
 
 uint32_t save_state_event_context_peek(void)
