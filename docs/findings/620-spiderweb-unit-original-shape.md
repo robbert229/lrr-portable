@@ -1,6 +1,9 @@
 # Finding 620 — SpiderWeb.c (GAME-042) rebuilt in original shape, with a port tail
 
 Issue #684, part of #388 under [ADR 0005](../adr/0005-original-shape-c-units.md).
+Stacked on #690 (GAME-044, `7c9afb3d`): "before" is #690's committed match
+baseline and `binary-progress.json`; no GAME-042 score differs from `main`
+`9043af89`, where the change was first measured.
 The unit map called GAME-042 "grid cell record buffers" and listed 9
 low-confidence functions (`004661c0`-`00466750`, boundary evidence only).
 **It is the original's `SpiderWeb.c`** (`inferred`): the spider webs. **The
@@ -40,15 +43,15 @@ This change:
 
 ## Result
 
-| | before (`main` `9043af89`) | after |
+| | before (#690, `7c9afb3d`) | after |
 | --- | ---: | ---: |
 | SpiderWeb.c similarity (10 functions, byte-weighted, 1,469 code bytes) | 23.62% | **100.00%** |
 | Exact functions in SpiderWeb.c | 2 | **10** |
 | Mapped functions in SpiderWeb.c | 9 | **10** |
-| Exact-function code bytes (`binary-progress.json`) | 205,613 | **206,679** |
-| Exact functions, full / game-only | 1,731 / 1,522 | **1,739 / 1,530** |
-| `opt_ref` annotated (full, by address): removed / exact removed | 412 / 223 | **402 / 218** |
-| Reccmp lint ledger (entries) | 1,052 | **1,051** |
+| Exact-function code bytes (`binary-progress.json`) | 206,155 | **207,221** |
+| Exact functions, full / game-only | 1,740 / 1,531 | **1,748 / 1,539** |
+| `opt_ref` annotated (full, by address): removed / exact removed | 409 / 221 | **403 / 220** |
+| Reccmp lint ledger (entries) | 1,046 | **1,045** |
 
 Byte weights are the original sizes from the single-function loop. An
 unmapped function counts as 0%. The exact-function code bytes rise by
@@ -82,7 +85,7 @@ unchanged; only an operand now resolves:
 | `0042da20` | `lego_object_the_names_load` (Lego.c) | 86.38 | 86.69 | the same |
 | `0042e8b0` | `lego_entity_type_pair_lookup` (Lego.c) | 82.43 | 82.67 | the same |
 | `004396c0` | `legoobject_item_name_by_kind` (LegoObject.c) | 86.36 | 87.88 | the same |
-| `004232e0` | `lego_engine_tick` (Lego.c) | 97.66 | 97.73 | calls `spiderweb_update` instead of an adapter |
+| `004232e0` | `lego_engine_tick` (Lego.c) | 97.73 | 97.80 | calls `spiderweb_update` instead of an adapter |
 | `004288e0` | `lego_level_debug_input_cell_mutator_dispatch` (Lego.c) | 97.35 | 97.51 | calls `spiderweb_spawn_at` instead of an adapter |
 
 No naked asm, no `Deviation (scoring only)` and no filler declaration.
@@ -203,7 +206,7 @@ functions that use the string rise (table above).
 
 ## Entropy and drops
 
-`make reccmp-check` against `main`'s baseline:
+`make reccmp-check` against #690's baseline:
 
 - 14 improved: 7 unit functions and the 7 functions above;
 - 1 newly mapped: `004665e0`;
@@ -226,10 +229,13 @@ The seven functions that rose outside the unit keep their listings.
 
 ## `opt_ref` (finding 579, `make opt-ref-callers`)
 
-| | before (`main`) | after |
+| | before (#690) | after |
 | --- | ---: | ---: |
-| `opt_ref.annotated.full` (by address): removed / exact removed | 412 / 223 | 402 / 218 |
-| `opt_ref.annotated.game_only` (by address) | 405 / 216 | 395 / 211 |
+| `opt_ref.annotated.full` (by address): removed / exact removed | 409 / 221 | 403 / 220 |
+| `opt_ref.annotated.game_only` (by address) | 402 / 214 | 396 / 213 |
+
+On `main` `9043af89` alone the change took exact-function code bytes from
+205,613 to 206,679 and `opt_ref` (full) from 412 / 223 to 402 / 218.
 
 `make opt-ref-callers OPT_REF_ARGS="--object spiderweb.c.obj --min 1"` lists
 no removed function: Lego.c reaches every unit function, and the update
@@ -238,7 +244,7 @@ callback through its address push. Weapons.c's `00470260` is live too
 
 ## Reccmp lint ratchet
 
-1,052 → 1,051 entries (−1, no growth): the port's
+1,046 → 1,045 entries (−1, no growth): the port's
 `post_step_cell_sight_callback` is in the port tail now. The two deleted
 adapters were already `PORT-ONLY`.
 
