@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-018 HelpWindow.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-018.csv. */
+/* GAME-018 HelpWindow.c: the port tail (finding 595). The port's own model
+ * of the help window (resource-op and overlay hook tables, the selection
+ * band's state words, module-owned text copies), relocated verbatim by
+ * tools/relocate_unit.py (ADR 0006; body hashes:
+ * docs/coverage/relocations/GAME-018.csv) and kept, unannotated, when the
+ * unit was rebuilt in original shape as helpwindow.c. Native code
+ * (frameloop.cpp, frontend.cpp) and test_frontend.cpp use it.
+ *
+ * In the matching build helpwindow.c's definitions take seven of these
+ * names (helpwindow_link_names.h), so this file compiles its own
+ * definitions of them out there (LRR_HELPWINDOW_PORT_NAMES). */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -54,6 +62,14 @@
 #include "frontend_for_helpwindow.hpp"
 #include "upgrades_for_helpwindow.hpp"
 
+/* MSVC 5.0 does not evaluate `defined` inside a macro expansion (finding
+ * 590), so the switch is set by an explicit #if. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_HELPWINDOW_PORT_NAMES 0
+#else
+#define LRR_HELPWINDOW_PORT_NAMES 1
+#endif
+
 #define LAYOUT_POSITION_STRIDE 7    /* corpus advances 0x1c bytes per entry */
 
 typedef union HelpWindowLayoutWord {
@@ -64,39 +80,39 @@ typedef union HelpWindowLayoutWord {
 
 /* SelectionModeStateSet (FUN_00418190) — zero-init module static (the
  * corpus's DAT_004db8e8 word; its corpus readers are unported). */
-// GLOBAL: LEGORR 0x004db8e8
+/* Port model of 0x004db8e8. */
 uint32_t s_sel_mode_state;
-// GLOBAL: LEGORR 0x004db8f8
+/* Port model of 0x004db8f8. */
 static uint32_t s_help_background_handle;
-// GLOBAL: LEGORR 0x004db904
+/* Port model of 0x004db904. */
 static HelpWindowLayoutWord s_layout_position[LAYOUT_POSITION_ENTRIES *
                                               LAYOUT_POSITION_STRIDE];
-// GLOBAL: LEGORR 0x004db914
+/* Port model of 0x004db914. */
 uint32_t s_sel_handles_a[SEL_HANDLE_ENTRIES * SEL_HANDLE_STRIDE];
-// GLOBAL: LEGORR 0x004db918
+/* Port model of 0x004db918. */
 uint32_t s_sel_handles_b[SEL_HANDLE_ENTRIES * SEL_HANDLE_STRIDE];
-// GLOBAL: LEGORR 0x004db934
+/* Port model of 0x004db934. */
 uint32_t s_sel_handle_extra;             /* DAT_004db934 */
 
-// GLOBAL: LEGORR 0x004db974
+/* Port model of 0x004db974. */
 uintptr_t s_help_text_area_handle;
 
 /* HelpWindowInfoConfigStringsLoad fills three adjacent 15-by-16 pointer
  * tables. The catalog loader owns the name tables/counts; module-owned text
  * storage below supplies the mutable copies for these pointer rows. */
-// GLOBAL: LEGORR 0x004db978
+/* Port model of 0x004db978. */
 const char* s_help_info_strings[3][15 * 16];
 
-// GLOBAL: LEGORR 0x004dc640
+/* Port model of 0x004dc640. */
 float s_help_window_feedback_position;
-// GLOBAL: LEGORR 0x004dc644
+/* Port model of 0x004dc644. */
 float s_help_window_feedback_limit;
-// GLOBAL: LEGORR 0x004dc648
+/* Port model of 0x004dc648. */
 int      s_sel_hit_index;                /* DAT_004dc648 */
 
-// GLOBAL: LEGORR 0x004dc64c
+/* Port model of 0x004dc64c. */
 int      s_band_mode;
-// GLOBAL: LEGORR 0x004dc650
+/* Port model of 0x004dc650. */
 uint32_t s_sel_state;                    /* DAT_004dc650 */
 
 static const char* s_layout_position_text[LAYOUT_POSITION_ENTRIES];
@@ -109,9 +125,12 @@ static void* s_help_text_area_native_record;
 static char s_help_window_labels[3][256];
 
 /* ConfigStringCopy in the retail loader gives each HelpWindowInfo line its
- * own mutable string before replacing underscores. Keep those copies in
- * module-owned storage so this loader does not modify BlockFile-owned text. */
-static char s_help_info_string_storage[3][15 * 16][1024];
+ * own mutable heap string before replacing underscores. The port keeps its
+ * own heap copy of each line, so this loader does not modify BlockFile-owned
+ * text. Each copy holds the line's first 1023 characters, as the fixed
+ * 1 KB slots that held them before (finding 595: 737,280 bytes of .bss)
+ * did; the next load frees them. */
+static char* s_help_info_string_copies[3][15 * 16];
 
 static void help_transition_control_noop(int a, int b);
 
@@ -125,18 +144,20 @@ static void help_window_info_config_strings_load_native(BlockFile* cfg);
 static void help_window_label_copy(char* out, size_t out_size, const char* value);
 static int help_window_info_path_build(char* out, size_t out_size, const char* catalog, int line_index);
 
-// FUNCTION: LEGORR 0x418190
+#if LRR_HELPWINDOW_PORT_NAMES /* the unit serves these names in the matching build */
+/* Port model of 0x418190. */
 void selection_mode_state_set(uint32_t value)
 {
     s_sel_mode_state = value;
 }
-// FUNCTION: LEGORR 0x004181a0
+/* Port model of 0x004181a0. */
 void selection_state_flag_clear_bit0(void)
 {
     s_sel_state = s_sel_state & ~1u;
 }
+#endif /* LRR_HELPWINDOW_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x004181b0
+/* Port model of 0x004181b0. */
 void help_window_resources_init(BlockFile* cfg,
                                 const FeHelpWindowResourceOps* ops)
 {
@@ -224,7 +245,7 @@ void help_window_resources_init(BlockFile* cfg,
         ops->refresh(ops->context, 0, 0);
     }
 }
-// FUNCTION: LEGORR 0x00418450
+/* Port model of 0x00418450. */
 void help_window_info_config_strings_load(
     BlockFile* cfg, const char* const* const group_names[3],
     const size_t group_counts[3],
@@ -261,7 +282,7 @@ void help_window_info_config_strings_load(
     }
 }
 
-// FUNCTION: LEGORR 0x004185f0
+/* Port model of 0x004185f0. */
 void help_window_button_layout_load(BlockFile* cfg, BlockFile* config_root)
 {
     /* The root is folded into the port's BlockFile path lookup. Native
@@ -270,35 +291,8 @@ void help_window_button_layout_load(BlockFile* cfg, BlockFile* config_root)
     help_window_button_layout_load_with_ops(cfg, NULL);
 }
 
-/* Corpus shape: one register copy; the true arm ORs bit 1 then masks
- * bit 0, the false arm masks bit 1 then bit 0 as two separate ands; each
- * arm stores and exits on its own. MSVC5 tail-merges the two C stores and
- * folds the false arm's masks into 0xfc, so the body is emitted in naked
- * asm to pin the original's line-for-line sequence. */
-// FUNCTION: LEGORR 0x00418800
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void mode_flag_pair_apply_if_bit2(int value)
-{
-    __asm {
-        mov eax, s_sel_state
-        test al, 4
-        je   done
-        mov ecx, dword ptr [esp + 4]
-        test ecx, ecx
-        je   clear_both
-        or   al, 2
-        and  al, 0xfe
-        mov  s_sel_state, eax
-        ret
-    clear_both:
-        and  al, 0xfd
-        and  al, 0xfe
-        mov  s_sel_state, eax
-    done:
-        ret
-    }
-}
-#else
+#if LRR_HELPWINDOW_PORT_NAMES /* the unit serves this name in the matching build */
+/* Port model of 0x00418800. */
 void mode_flag_pair_apply_if_bit2(int value)
 {
     if ((s_sel_state & 4u) == 0u) return;
@@ -311,10 +305,9 @@ void mode_flag_pair_apply_if_bit2(int value)
         s_sel_state &= ~1u;
     }
 }
-#endif
 
 namespace lego {
-// FUNCTION: LEGORR 0x00418830
+/* Port model of 0x00418830. */
 void building_upgrade_state_changed_dispatch(int type, int row, int column,
                                              int state)
 {
@@ -343,9 +336,10 @@ void building_upgrade_state_changed_dispatch(int type, int row, int column,
     }
 }
 } // namespace lego
+#endif /* LRR_HELPWINDOW_PORT_NAMES */
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00418920
+/* Port model of 0x00418920. */
 void dependency_grid_category_candidates_build(uint32_t category,
                                                uint32_t row,
                                                uint32_t selector)
@@ -385,7 +379,7 @@ void dependency_grid_category_candidates_build(uint32_t category,
  * re-reads the DAT and clears bit 0. ObjectiveScoreTextOriginSet arrives with
  * a null pair and a null context, so it writes nothing and drops no debug bit
  * (the corpus's own push of a single 0 reads the same way). */
-// FUNCTION: LEGORR 0x004189d0
+/* Port model of 0x004189d0. */
 void help_render_transition_cleanup_if_active(void)
 {
     if (((unsigned char)s_sel_state & 0x2u) != 0u) {
@@ -400,7 +394,7 @@ void help_render_transition_cleanup_if_active(void)
 /* OverlayTextBufferRefresh (FUN_00418a00): refresh the help overlay,
  * validate interface/input gates, render its header and scrolled entries,
  * then finish the overlay frame. */
-// FUNCTION: LEGORR 0x00418a00
+/* Port model of 0x00418a00. */
 int overlay_text_buffer_refresh(void)
 {
     OverlayTextBufferOps* ops = &s_overlay_text_buffer_ops;
@@ -492,7 +486,8 @@ int overlay_text_buffer_refresh(void)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00418da0
+#if LRR_HELPWINDOW_PORT_NAMES /* the unit serves this name in the matching build */
+/* Port model of 0x00418da0. */
 int help_window_button_hit_test(uint32_t x, uint32_t y, int mode,
                                 int transition_flags, int active,
                                 float feedback_amount)
@@ -541,7 +536,8 @@ int help_window_button_hit_test(uint32_t x, uint32_t y, int mode,
     (void)ui_mode_transition_request(4, mode, transition_flags);
     return 0;
 }
-// FUNCTION: LEGORR 0x00418f80
+#endif /* LRR_HELPWINDOW_PORT_NAMES */
+/* Port model of 0x00418f80. */
 void selection_mode_set_by_index(int index)
 {
     switch (index) {
@@ -558,7 +554,7 @@ void selection_mode_set_by_index(int index)
         break;
     }
 }
-// FUNCTION: LEGORR 0x00418fc0
+/* Port model of 0x00418fc0. */
 bool ui_mode_transition_request(int index, int p2, int p3)
 {
     const int mode = s_band_mode;
@@ -577,7 +573,7 @@ bool ui_mode_transition_request(int index, int p2, int p3)
     return mode == index;
 }
 
-// FUNCTION: LEGORR 0x00419030
+/* Port model of 0x00419030. */
 void help_window_button_feedback_update(int action, float amount)
 {
     switch (action) {
@@ -610,7 +606,7 @@ void help_window_button_feedback_update(int action, float amount)
         break;
     }
 }
-// FUNCTION: LEGORR 0x00419100
+/* Port model of 0x00419100. */
 void ui_mode_resource_positions_apply(void)
 {
     float* position_ptr = (float*)((char*)s_layout_position + sizeof(uint32_t));
@@ -635,7 +631,7 @@ void ui_mode_resource_positions_apply(void)
              (char*)s_layout_position + sizeof(s_layout_position) +
                  sizeof(uint32_t));
 }
-// FUNCTION: LEGORR 0x00419150
+/* Port model of 0x00419150. */
 uint32_t selection_state_handle_get(int index)
 {
     if (index == 1 && (s_sel_state & 4u) == 0) {
@@ -653,7 +649,8 @@ uint32_t selection_state_handle_get(int index)
 /* MainSimStateAdmissionPredicate (FUN_004191a0) — see frontend.hpp. The
  * corpus reads bits 1/2 of the selection word directly and the 0x40 bit
  * through its own leaf; all three reduce to the same modeled word. */
-// FUNCTION: LEGORR 0x4191a0
+#if LRR_HELPWINDOW_PORT_NAMES /* the unit serves this name in the matching build */
+/* Port model of 0x4191a0. */
 int main_sim_state_admission_predicate(void)
 {
     const uint32_t ui_mode = ui_mode_resource_bit40_get();
@@ -666,13 +663,14 @@ int main_sim_state_admission_predicate(void)
     }
     return 0;
 }
-// FUNCTION: LEGORR 0x004191f0
+#endif /* LRR_HELPWINDOW_PORT_NAMES */
+/* Port model of 0x004191f0. */
 uint32_t ui_mode_resource_bit40_get(void)
 {
     return s_sel_state & 0x40u;
 }
 
-// FUNCTION: LEGORR 0x00419200
+/* Port model of 0x00419200. */
 void ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
 {
     uint32_t v;
@@ -825,6 +823,13 @@ static void help_window_info_config_strings_load_native(BlockFile* cfg)
 {
     static const int catalog_kinds[3] = { 0, 1, 3 };
     int group;
+    for (group = 0; group < 3; ++group) {
+        int slot;
+        for (slot = 0; slot < 15 * 16; ++slot) {
+            free(s_help_info_string_copies[group][slot]);
+            s_help_info_string_copies[group][slot] = NULL;
+        }
+    }
     memset(s_help_info_strings, 0, sizeof(s_help_info_strings));
     for (group = 0; group < 3; ++group) {
         const int kind = catalog_kinds[group];
@@ -845,11 +850,18 @@ static void help_window_info_config_strings_load_native(BlockFile* cfg)
                     value = block_get_strptr(cfg, path);
                 }
                 if (value != NULL) {
-                    char* copy = s_help_info_string_storage[group]
-                        [catalog_index * 16u + (uint32_t)line_index];
-                    help_window_label_copy(copy, 1024u, value);
-                    s_help_info_strings[group][catalog_index * 16u +
-                        (uint32_t)line_index] = copy;
+                    const uint32_t slot =
+                        catalog_index * 16u + (uint32_t)line_index;
+                    const char* terminator =
+                        (const char*)memchr(value, '\0', 1023u);
+                    const size_t length = terminator != NULL
+                        ? (size_t)(terminator - value) : 1023u;
+                    char* copy = (char*)malloc(length + 1u);
+                    if (copy != NULL) {
+                        help_window_label_copy(copy, length + 1u, value);
+                        s_help_info_string_copies[group][slot] = copy;
+                        s_help_info_strings[group][slot] = copy;
+                    }
                 }
             }
         }
@@ -918,6 +930,7 @@ static void help_window_button_layout_load_with_ops(
     }
 }
 
+#if LRR_HELPWINDOW_PORT_NAMES /* helpwindow.c's 004181b0 takes this name in the matching build */
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: HelpWindow_Initialise (004181b0) takes the config and the game name; the port's entry takes a resource-op table. */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (help_window_resources_init)
 extern "C" void help_window_initialise_adapter(struct BlockRec* config,
@@ -925,4 +938,54 @@ extern "C" void help_window_initialise_adapter(struct BlockRec* config,
 {
     (void)gameName;
     help_window_resources_init(config, NULL);
+}
+#endif /* LRR_HELPWINDOW_PORT_NAMES */
+
+/* Original-ABI adapters (ADR 0005 step 6) for helpwindow.c's calls into
+ * Dependencies.c (GAME-010, dependencies.cpp). The port's entries have C++
+ * linkage: the matches collector and the occupancy pass are in namespace
+ * unported_ledger_stubs, and the flag accessors (0040b250, 0040b2a0,
+ * 0040b2e0) are declared without extern "C" in the frozen level_for_*.hpp
+ * headers. The first two adapters forward to the annotated entries; the
+ * flag adapters forward to level.hpp's public wrappers, which add the
+ * dependency grid's override and bounds checks, as the port's own model
+ * of 00418830 does. */
+// PORT-ONLY: original-ABI adapter for helpwindow.c (dependency_grid_matches_collect 0040b000; C++ linkage)
+extern "C" void help_window_dependencies_matches_adapter(int type, int index,
+                                                         int level,
+                                                         void* matches)
+{
+    unported_ledger_stubs::dependency_grid_matches_collect(
+        (uint32_t)type, (uint32_t)index, (uint32_t)level,
+        (unported_ledger_stubs::DependencyGridMatches*)matches);
+}
+
+// PORT-ONLY: original-ABI adapter for helpwindow.c (dependency_grid_occupancy_pass 0040b1b0; C++ linkage)
+extern "C" void help_window_dependencies_pass_adapter(void)
+{
+    unported_ledger_stubs::dependency_grid_occupancy_pass();
+}
+
+// PORT-ONLY: original-ABI adapter for helpwindow.c (cell_flag4_is_set 0040b250; C++ linkage)
+extern "C" unsigned int help_window_dependencies_flag4_adapter(int type,
+                                                               int index,
+                                                               int level)
+{
+    return cell_flag4_is_set(type, index, level);
+}
+
+// PORT-ONLY: original-ABI adapter for helpwindow.c (cell_flag100_set 0040b2a0; C++ linkage)
+extern "C" void help_window_dependencies_flag100_set_adapter(int type,
+                                                             int index,
+                                                             int level)
+{
+    cell_flag100_set(type, index, level);
+}
+
+// PORT-ONLY: original-ABI adapter for helpwindow.c (cell_flag100_is_set 0040b2e0; C++ linkage)
+extern "C" unsigned int help_window_dependencies_flag100_adapter(int type,
+                                                                 int index,
+                                                                 int level)
+{
+    return cell_flag100_is_set(type, index, level);
 }

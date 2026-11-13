@@ -9564,17 +9564,6 @@ extern "C" EntitySlot* world_object_create_with_transform_original(
     return NULL;
 }
 
-/* FUN_00418830: the same contract, but the port's entry is in namespace
- * lego (upgrades.hpp). */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (building_upgrade_state_changed_dispatch 00418830; namespaced C++ entry)
-extern "C" void building_upgrade_state_changed_dispatch_original(int type,
-                                                                 int id,
-                                                                 int level,
-                                                                 int on)
-{
-    lego::building_upgrade_state_changed_dispatch(type, id, level, on);
-}
-
 /* FUN_0043f100 takes (object, driven object) and clears the route bit on
  * the second and its link; the port's entry takes the game context first. */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (entity_linked_route_flag_clear 0043f100; the port takes the GameContext first)
