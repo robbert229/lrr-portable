@@ -15,8 +15,9 @@
  *   shared_object_timed_sound_event_update (Lws_HandleTrigger),
  *   lego::shared_object_float_track_interpolate_apply
  *   (Lws_InterpolateDissolve) and scene_node_transform_matrix_apply
- *   (Lws_SetAbsoluteKey): com_object_tree.cpp's timed hooks and
- *   scene_resources.cpp call them. They guard every pointer and interface
+ *   (Lws_SetAbsoluteKey): com_object_tree_port.cpp's timed hooks
+ *   (natively; in the matching build animclone.c's AnimClone_SetTime
+ *   calls lws_time_set, finding 616) and scene_resources.cpp call them. They guard every pointer and interface
  *   slot, and forward dissolve levels to a hook.
  * - model_resource_resolve_or_load (Lws_LoadMesh) and
  *   lego::scene_resource_string_tables_free (Lws_Shutdown): the port's

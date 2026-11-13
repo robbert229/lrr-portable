@@ -1,4 +1,4 @@
-# input_sha256: 2dddce54607f1992e3be4e2a1d67260d7d8bfe435a567c07aef96321ec49eacb
+# input_sha256: 965bb4ad9c4b165da10ab8251cb8522b96244208ddb8bc37f8b372ba5fa83df9
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2343 mapped functions
+[game-only] 2344 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2271,18 +2271,19 @@
 0x00489410 95.65 level_map_slot_allocate
 0x00489460 100.00 level_map_slot_release
 0x004894a0 100.00 level_map_slot_get
-0x004894c0 15.38 scene_material_create
-0x00489520 73.68 resource_tree_callback_context_create_for_enumerator
-0x004895c0 73.68 resource_tree_callback_context_create_for_resource
-0x00489660 28.57 scene_act_frame_record_clone_or_create
-0x00489750 49.57 scene_object_owner_link_release
-0x004897e0 17.45 ddiscene_timed_hook_dispatch
-0x004898e0 100.00 resource_tree_callback_count_increment
-0x004898f0 100.00 resource_tree_callback_array_append
-0x00489910 56.50 resource_tree_callback_count
-0x004899f0 19.37 object_hierarchy_recursive_clone
-0x00489b30 16.46 object_interface_array_resource_create
-0x00489bc0 16.98 com_child_items_visit
+0x004894c0 100.00 scene_material_create
+0x00489520 100.00 anim_clone_register
+0x004895c0 100.00 anim_clone_register_lws
+0x00489660 100.00 anim_clone_make
+0x00489750 100.00 scene_object_owner_link_release
+0x004897d0 100.00 anim_clone_is_lws
+0x004897e0 100.00 ddiscene_timed_hook_dispatch
+0x004898e0 100.00 anim_clone_frame_count_callback
+0x004898f0 100.00 anim_clone_setup_frame_array_callback
+0x00489910 100.00 anim_clone_walk_tree
+0x004899f0 100.00 anim_clone_create_copy
+0x00489b30 98.15 anim_clone_clone_lwo_meshes
+0x00489bc0 100.00 anim_clone_reference_visuals
 0x00489c30 70.54 indexed_bitmap_palette_data_prepare
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
@@ -2351,7 +2352,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2588 mapped functions
+[full] 2589 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -4616,18 +4617,19 @@
 0x00489410 95.65 level_map_slot_allocate
 0x00489460 100.00 level_map_slot_release
 0x004894a0 100.00 level_map_slot_get
-0x004894c0 15.38 scene_material_create
-0x00489520 73.68 resource_tree_callback_context_create_for_enumerator
-0x004895c0 73.68 resource_tree_callback_context_create_for_resource
-0x00489660 28.57 scene_act_frame_record_clone_or_create
-0x00489750 49.57 scene_object_owner_link_release
-0x004897e0 17.45 ddiscene_timed_hook_dispatch
-0x004898e0 100.00 resource_tree_callback_count_increment
-0x004898f0 100.00 resource_tree_callback_array_append
-0x00489910 56.50 resource_tree_callback_count
-0x004899f0 19.37 object_hierarchy_recursive_clone
-0x00489b30 16.46 object_interface_array_resource_create
-0x00489bc0 16.98 com_child_items_visit
+0x004894c0 100.00 scene_material_create
+0x00489520 100.00 anim_clone_register
+0x004895c0 100.00 anim_clone_register_lws
+0x00489660 100.00 anim_clone_make
+0x00489750 100.00 scene_object_owner_link_release
+0x004897d0 100.00 anim_clone_is_lws
+0x004897e0 100.00 ddiscene_timed_hook_dispatch
+0x004898e0 100.00 anim_clone_frame_count_callback
+0x004898f0 100.00 anim_clone_setup_frame_array_callback
+0x00489910 100.00 anim_clone_walk_tree
+0x004899f0 100.00 anim_clone_create_copy
+0x00489b30 98.15 anim_clone_clone_lwo_meshes
+0x00489bc0 100.00 anim_clone_reference_visuals
 0x00489c30 70.54 indexed_bitmap_palette_data_prepare
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format

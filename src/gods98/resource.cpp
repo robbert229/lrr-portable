@@ -21,7 +21,12 @@
 #include "view.hpp"
 #include "scene_pool.hpp"
 #include "resource_shared.hpp"
+/* C linkage for s_resource_tree_child_iid (IID_IDirect3DRMFrame3,
+ * 0049f988), which animclone.c, compiled as C, also reads (finding 616).
+ * The header itself is frozen. */
+extern "C" {
 #include "resource_for_com_object_tree.hpp"
+}
 #include "resource_for_wad.hpp"
 #include "resource_from_wad.hpp"
 #include "resource_for_lego.hpp"

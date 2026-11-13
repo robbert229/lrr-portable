@@ -218,6 +218,7 @@ extern "C" int s_cursor_delta_y;
 #include "gods98/rnc.h"
 #include "game/screen_effect_quads.h"
 #include "game/screen_effect_quads_imports.h"
+#include "gods98/animclone.h"
 
 int main(void)
 {

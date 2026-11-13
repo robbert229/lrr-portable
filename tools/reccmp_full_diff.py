@@ -11,12 +11,19 @@ from reccmp.compare import Compare
 from reccmp.types import ImageId
 
 import reccmp_plain_immediates
+import reccmp_vtordisp_scope
 
 # Deviation (scoring only): the original's plain immediates outside its image
 # stay plain on the rebuilt side (#604, finding 584). RECCMP_PLAIN_IMMEDIATES=0
 # turns it off, to measure what it changes.
 if os.environ.get("RECCMP_PLAIN_IMMEDIATES", "1") != "0":
     reccmp_plain_immediates.install()
+
+# Deviation (scoring only): the vtordisp byte-pattern scan runs on the original
+# image only, as in match_function.py; on the rebuilt image it matches jump
+# tables (finding 616). RECCMP_VTORDISP_SCOPE=0 turns it off.
+if os.environ.get("RECCMP_VTORDISP_SCOPE", "1") != "0":
+    reccmp_vtordisp_scope.install()
 
 _original_report = Compare.to_report
 def export_entities(self, *args, **kwargs):
