@@ -591,6 +591,10 @@ src/gods98/heap_shared.hpp
 src/gods98/image_adapters.h
 src/gods98/images.h
 src/gods98/images_unit.cpp
+src/gods98/init.c
+src/gods98/init.h
+src/gods98/init_imports.h
+src/gods98/init_port.cpp
 src/gods98/input.cpp
 src/gods98/input.h
 src/gods98/input.hpp

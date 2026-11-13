@@ -1281,15 +1281,19 @@ void directdraw_device_selection_get(DirectDrawDeviceSelection* out)
     if (out != NULL) *out = s_directdraw_device_selection;
 }
 
-/* DirectDrawDeviceInitialize (FUN_0049d030): register standard modes,
- * enumerate adapters, optionally auto-select a supported display mode, then
- * enter the renderer initializer with the selected setup. */
-// FUNCTION: LEGORR 0x0049d030
+// PORT-ONLY: the port start-up model's cancellation flag.
 int directdraw_device_selection_cancelled(void)
 {
     return s_directdraw_device_selection_cancelled;
 }
 
+/* The port's model of Init_Initialise (0049d030, gods98/init.c, LATE-002,
+ * finding 613): register standard modes, enumerate adapters, optionally
+ * auto-select a supported display mode, then enter the renderer
+ * initializer with the selected setup. The WinAPI port runs it through
+ * its ops; the unit's original calls DirectDraw.c, which the port renderer
+ * does not use. */
+// PORT-ONLY: the port renderer's start-up selection, behind its ops table.
 int directdraw_device_initialize(int show_dialog, int register_extra_modes,
                                  int auto_select, int windowed,
                                  const char* error_message)

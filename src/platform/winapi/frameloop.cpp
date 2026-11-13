@@ -1335,3 +1335,12 @@ uint32_t platform_time_milliseconds(void)
 {
     return (uint32_t)timeGetTime();
 }
+
+/* Main.c's module instance (DAT_00505804, after the window at 00505800).
+ * Init.c (gods98/init.c, LATE-002) passes it to DialogBoxParamA. The port
+ * never sets it: NULL selects the executable, the same module. Defined
+ * after every function, so that it does not move this file's symbol
+ * numbering (finding 538). */
+extern "C" void* g_main_instance_handle;
+// GLOBAL: LEGORR 0x00505804
+void* g_main_instance_handle;
