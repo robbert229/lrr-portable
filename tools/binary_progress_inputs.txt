@@ -481,6 +481,8 @@ src/gods98/audio.hpp
 src/gods98/audio_for_sound3d.hpp
 src/gods98/audio_from_sound3d.hpp
 src/gods98/avi_player.cpp
+src/gods98/avi_player.h
+src/gods98/avi_player_port.cpp
 src/gods98/bitmap_font_port.cpp
 src/gods98/block.cpp
 src/gods98/block.hpp

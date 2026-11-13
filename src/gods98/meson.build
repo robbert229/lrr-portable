@@ -12,6 +12,7 @@ gods98_sources = [
   'container_unit.cpp',
   'directdraw_port.cpp',
   'avi_player.cpp',
+  'avi_player_port.cpp',
   'images_unit.cpp',
   'files_port.cpp',
   'lwo_port.cpp',

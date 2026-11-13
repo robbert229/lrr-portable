@@ -286,8 +286,9 @@ else()
   target_link_libraries(program PRIVATE game gods98 game platform_glue)
   if(PLATFORM STREQUAL "winapi")
     # ddraw: DirectDraw.c (gods98/directdraw.c) imports DirectDrawCreate and
-    # DirectDrawEnumerateA, as the original does (finding 596).
-    target_link_libraries(program PRIVATE winmm d3drm ddraw advapi32)
+    # DirectDrawEnumerateA, as the original does (finding 596); vfw32: the
+    # AVI player (gods98/avi_player.cpp) imports AVIFIL32 (finding 604).
+    target_link_libraries(program PRIVATE winmm d3drm ddraw vfw32 advapi32)
   endif()
 endif()
 if(WIN32)
