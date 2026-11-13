@@ -93,6 +93,17 @@
 #define scene_marker_create_at_object_position effect_spawn_boulder_explode /* 0040bde0 */
 #define scene_marker_create_at_position_or_object effect_spawn_smash_path /* 0040beb0 */
 #define scene_resource_availability_sweep effect_update_all /* 0040c3a0 */
+/* GAME-024 LightEffects.c (finding 594), for lego_unit.c, the unit's only
+ * original caller: the port's light-effect entries keep the port's records
+ * (effects.cpp, util.cpp) and stay the port's in the matching build too;
+ * lego_unit.c passes the original's arguments, so in that build it calls
+ * the unit instead. */
+#define scene_transform_state_initialize light_effects_initialise /* 0044c710 */
+#define scene_transform_enable_set light_effects_set_disabled /* 0044c790 */
+#define light_effect_configuration_load light_effects_load /* 0044c7c0 */
+#define simtick_scene_position_reset_and_effect_motion_cancel light_effects_invalidate_position /* 0044cf70 */
+#define motion_gameplay_tick light_effects_update /* 0044cfa0 */
+#define simtick_route_position_blocked_state_set light_effects_set_dimmer_mode /* 0044da20 */
 #endif
 
 #endif /* LEGORRR_GAME_AITASK_PORT_ALIASES_H */

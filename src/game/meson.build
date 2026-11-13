@@ -46,7 +46,7 @@ game_sources = [
   'tutorial_script_port.cpp',
   'terrain_map_port.cpp',
   'loading_progress.cpp',
-  'lighteffects.cpp',
+  'lighteffects_port.cpp',
   'bubbles.cpp',
   'info_port.cpp',
   'terrain_cell_objects_port.cpp',
@@ -112,6 +112,7 @@ game_c_sources = [
   'rock_fall_styles.c',
   'vehicle_model.c',
   'building_model.c',
+  'lighteffects.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

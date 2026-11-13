@@ -417,7 +417,7 @@ void motion_waypoint_parameters_store(float min_x, float min_y, float min_z,
 #endif
 }
 
-/* FUNCTION: LEGORR 0x0044da50 */
+/* Port model of 0x0044da50 (lighteffects.c). */
 void motion_three_channel_tween_step(float delta)
 {
     MotionWaypointTimerState* state = s_motion_waypoint_state;
@@ -450,7 +450,7 @@ void motion_three_channel_tween_step(float delta)
     }
 }
 
-/* FUNCTION: LEGORR 0x0044CFA0 */
+/* Port model of 0x0044cfa0 (lighteffects.c). */
 /* The corpus caller steps drift, waypoint, jitter, tween and then publishes
  * the position-derived color. Only the owned drift/waypoint/tween state has
  * a source-level owner in this build; the engine ticker still drives those

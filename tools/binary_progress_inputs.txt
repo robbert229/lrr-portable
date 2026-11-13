@@ -256,7 +256,10 @@ src/game/level_from_lego.hpp
 src/game/level_from_legoobject.hpp
 src/game/level_id_remap.cpp
 src/game/level_shared.hpp
-src/game/lighteffects.cpp
+src/game/lighteffects.c
+src/game/lighteffects.h
+src/game/lighteffects_imports.h
+src/game/lighteffects_port.cpp
 src/game/loading_progress.cpp
 src/game/map_view.cpp
 src/game/message.h

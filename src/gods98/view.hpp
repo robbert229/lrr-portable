@@ -905,6 +905,9 @@ typedef struct RenderPackedRgbaHooks {
                        void* context);
 } RenderPackedRgbaHooks;
 void render_packed_rgba_hooks_set(const RenderPackedRgbaHooks* hooks);
+#ifdef __cplusplus
+extern "C"
+#endif
 void render_object_set_packed_rgba_from_float_channels(
     void* scene_object, float red, float green, float blue,
     float alpha); /* 0x004750b0 */
