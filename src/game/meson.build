@@ -47,7 +47,7 @@ game_sources = [
   'terrain_map_port.cpp',
   'loading_progress.cpp',
   'lighteffects_port.cpp',
-  'bubbles.cpp',
+  'bubbles_port.cpp',
   'info_port.cpp',
   'terrain_cell_objects_port.cpp',
   'rock_fall_styles_port.cpp',
@@ -115,6 +115,7 @@ game_c_sources = [
   'lighteffects.c',
   'helpwindow.c',
   'tooltip.c',
+  'bubbles.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

@@ -95,7 +95,7 @@ uint32_t ai_activity_resource_slot_get(int id)
 
 char s_bubble_action_names[BUBBLE_ACTION_NAME_COUNT]
                                   [BUBBLE_ACTION_NAME_CAPACITY];
-// GLOBAL: LEGORR 0x00557864
+/* The port's copy of Bubbles.c's bubbleImage (0x00557864, bubbles.c). */
 uint32_t s_bubble_texture_handles[BUBBLE_ACTION_NAME_COUNT];
 BubbleTextureResourceLoadFn s_bubble_texture_load;
 BubbleTextureInitializeFn s_bubble_texture_initialize;

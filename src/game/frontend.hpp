@@ -1498,7 +1498,7 @@ TextureSurface* bitmap_font_resource_load(const char* name); /* FUN_00479ee0 */
  *   pair difference clamps at zero, lands in metrics slot 0 through the
  *   ported pair setter, and refreshes the right-edge cache.
  * All seams ride recorded hooks (the bobbin-drop precedent). */
-void panel_resource_position_apply_if_enabled(void* resource, int x, int y);
+extern "C" void panel_resource_position_apply_if_enabled(void* resource, int x, int y);
                                                 /* FUN_00459fd0 */
 /* IndexedPanelResourcePositionApply (FUN_00459f50): with the panel enable
  * word's bit 0x1 raised, the record's screen float rides the corpus's two

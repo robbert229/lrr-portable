@@ -481,3 +481,13 @@ static uint32_t legacy_rgb_pack(const float rgb[3])
     uint32_t b = (uint32_t)(legacy_clamp_01(rgb[2]) * 255.0f);
     return (r << 16) | (g << 8) | b;
 }
+
+/* ObjInfo_DrawHungerImage (0x00459f50) in the original ABI, for Bubbles.c
+ * (bubbles.c, finding 598): the original reads the object's energy at
+ * +0x344 itself; the port's model takes a pointer to that float. */
+// PORT-ONLY: original-ABI adapter over indexed_panel_resource_position_apply
+extern "C" void objinfo_draw_hunger_image_adapter(void* liveObj, int x, int y)
+{
+    indexed_panel_resource_position_apply(
+        (const float*)((const char*)liveObj + 0x344), x, y);
+}

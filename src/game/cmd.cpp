@@ -1249,7 +1249,7 @@ void cmd_tick_global(void)
  *  Idle queue table (IdleQueueRegister): type-2 entries.
  * ------------------------------------------------------------------ */
 
-// GLOBAL: LEGORR 0x00557a84
+/* The port's copy of Bubbles.c's bubbleTable (0x00557a84, bubbles.c). */
 IdleQueueRecord s_idle[IDLE_TABLE_MAX];
 
 void idle_queue_register(EntitySlot* e)

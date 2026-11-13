@@ -545,7 +545,7 @@ extern "C" void global_value_004ffe48_set(uint32_t value);
  * stores below. */
 extern "C" uint32_t global_flag_bit0_is_set(void); /* FUN_00401c20 */
 extern "C" void     state_flag_toggle_when_zero(void);        /* FUN_00407340 */
-uint32_t global_task_refresh_flag_get(void);       /* FUN_00407360 */
+extern "C" uint32_t global_task_refresh_flag_get(void); /* FUN_00407360 */
 extern "C" void level_state_stored_value_set(uint32_t v); /* FUN_00409d40 */
 extern "C" void     global_mode_zero_input_set(int value);    /* FUN_0040ab10 */
 uint32_t global_mode_zero_input_peek(void);         /* port hook */

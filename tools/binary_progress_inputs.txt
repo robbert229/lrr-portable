@@ -76,7 +76,11 @@ src/game/animation_object.c
 src/game/animation_object.h
 src/game/bezier.c
 src/game/bezier.h
-src/game/bubbles.cpp
+src/game/bubbles.c
+src/game/bubbles.h
+src/game/bubbles_imports.h
+src/game/bubbles_link_names.h
+src/game/bubbles_port.cpp
 src/game/building_model.c
 src/game/building_model.h
 src/game/building_model_imports.h
