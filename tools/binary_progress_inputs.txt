@@ -646,7 +646,12 @@ src/gods98/media_for_lego.hpp
 src/gods98/media_for_pointer.hpp
 src/gods98/media_shared.hpp
 src/gods98/mesh.h
-src/gods98/mesh_unit.cpp
+src/gods98/mesh_api.h
+src/gods98/mesh_imports.h
+src/gods98/mesh_link_names.h
+src/gods98/mesh_maths.h
+src/gods98/mesh_port.cpp
+src/gods98/mesh_unit.c
 src/gods98/mesh_unit.h
 src/gods98/message.cpp
 src/gods98/message.h

@@ -8,7 +8,7 @@ if get_option('platform') == 'winapi'
 endif
 
 gods98_sources = [
-  'mesh_unit.cpp',
+  'mesh_port.cpp',
   'container_unit.cpp',
   'directdraw_port.cpp',
   'movie_unit.cpp',
@@ -89,6 +89,7 @@ gods98_c_sources = [
   'lwo.c',
   'rnc.c',
   'init.c',
+  'mesh_unit.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 gods98_c_as_cpp = []
