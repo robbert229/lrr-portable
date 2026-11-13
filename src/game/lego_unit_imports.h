@@ -469,7 +469,7 @@ void lava_erosion_pending_cell_tick(float scale);          /* 0040eab0 */
 uint32_t kind_six_random_sweep_dispatch(float delta);      /* 0040f0e0 */
 int level_start_flag(void);                                /* 00416de0 frontend_unit.cpp */
 int menu_options_flag(void);                               /* 00416df0 */
-int overlay_text_buffer_refresh(void);                     /* 00418a00 helpwindow.cpp */
+void help_window_update(void);                             /* 00418a00 helpwindow.c */
 void message_dispatch(int id, const char* p2, uint32_t p3,
                       const void* p4);                     /* 00419b80 info.cpp */
 void info_message_queue_tick(float dt);                    /* 00419f30 */
@@ -1439,8 +1439,8 @@ void deferred_olist_entity_queue_add_original(void* objModel, int objType,
 struct EntitySlot* world_object_create_with_transform_original(
     unsigned int buildingID, const int* blockPos, unsigned int dir,
     void* shape, unsigned int shapeCount, int teleportDown);   /* 00409a90 */
-void building_upgrade_state_changed_dispatch_original(int type, int id,
-                                                      int level, int on); /* 00418830 */
+void building_upgrade_state_changed_dispatch(int type, int row, int column,
+                                             int state); /* 00418830 helpwindow.c */
 void entity_linked_route_flag_clear_original(struct EntitySlot* object,
                                              struct EntitySlot* driven); /* 0043f100 */
 

@@ -24,7 +24,7 @@ game_sources = [
   'creature_scene.cpp',
   'reward_port.cpp',
   'camera_control_port.cpp',
-  'helpwindow.cpp',
+  'helpwindow_port.cpp',
   'tile_variants.cpp',
   'cell_flood_passes.cpp',
   'vehicle_model_port.cpp',
@@ -113,6 +113,7 @@ game_c_sources = [
   'vehicle_model.c',
   'building_model.c',
   'lighteffects.c',
+  'helpwindow.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

@@ -186,6 +186,8 @@ extern "C" int s_cursor_delta_y;
 #include "gods98/viewports_imports.h"
 #include "game/lighteffects.h"
 #include "game/lighteffects_imports.h"
+#include "game/helpwindow.h"
+#include "game/helpwindow_imports.h"
 
 int main(void)
 {

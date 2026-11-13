@@ -2039,7 +2039,7 @@ int lego_engine_tick(float elapsed)
         info_message_queue_tick(elapsed);
     }
 
-    overlay_text_buffer_refresh();
+    help_window_update();
     if (objective_is_ended_original()) advisor_transition_worker(elapsedAbs);
     else advisor_transition_worker(elapsed);
     media_cd_audio_watchdog_tick(legoGlobs_flags1 & 0x8);
@@ -6237,8 +6237,8 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                     }
                     LEGO_FIELD(obj, uint32_t, 0x3ec) |= 0x200;
                     LEGO_FIELD(obj, float, 0x340) = health;
-                    building_upgrade_state_changed_dispatch_original(LEGO_FIELD(obj, int, 0x0),
-                                                                     LEGO_FIELD(obj, int, 0x4), 0, 1);
+                    building_upgrade_state_changed_dispatch(LEGO_FIELD(obj, int, 0x0),
+                                                            LEGO_FIELD(obj, int, 0x4), 0, 1);
                     if (s_panel_highlight_flags & 0x40000) entity_state_override_pop(obj);
                     entity_queue_for_rockfall_processing_if_eligible(obj);
                     if (objType == 12) {

@@ -205,7 +205,11 @@ src/game/frontend_unit.cpp
 src/game/game.cpp
 src/game/game.hpp
 src/game/grid_cell_records.cpp
-src/game/helpwindow.cpp
+src/game/helpwindow.c
+src/game/helpwindow.h
+src/game/helpwindow_imports.h
+src/game/helpwindow_link_names.h
+src/game/helpwindow_port.cpp
 src/game/info.h
 src/game/info_api.h
 src/game/info_port.cpp
