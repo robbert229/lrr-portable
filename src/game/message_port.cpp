@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-027 Message.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-027.csv. */
+/* GAME-027 Message.c's port models (the port tail, ADR 0006 decision 4).
+ * Relocated verbatim by tools/relocate_unit.py (ADR 0006; body hashes:
+ * docs/coverage/relocations/GAME-027.csv) as message_unit.cpp, which
+ * finding 631 renamed when it rebuilt the unit in original shape as
+ * message_unit.c. The models are unannotated: natively they are the live
+ * message queue and selection. In the matching build the unit serves the
+ * names its callers use (message_unit_link_names.h), and this file compiles
+ * its own definitions of them, and the state only they use, out
+ * (LRR_MESSAGE_PORT_NAMES). */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 /* Matching build: Lego.c callers call lego_unit.c (#587). */
 #include "lego_port_aliases.h"
@@ -58,6 +64,14 @@
 #include "upgrades.hpp"
 #include "cmd_for_message_unit.hpp"
 
+/* The port's definitions of the names the unit takes in the matching build
+ * (message_unit_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_MESSAGE_PORT_NAMES 0
+#else
+#define LRR_MESSAGE_PORT_NAMES 1
+#endif
+
 #define CMD_QUEUE_CAP 0x800
 
 typedef struct QueueRec {
@@ -68,18 +82,16 @@ typedef struct QueueRec {
     int        a4;
 } QueueRec;
 
-// GLOBAL: LEGORR 0x004eaf20
+#if LRR_MESSAGE_PORT_NAMES /* message_unit.c's messageGlobs in the matching build */
 static QueueRec s_queue[2][CMD_QUEUE_CAP];
-// GLOBAL: LEGORR 0x004fef20
+#endif
 int      s_queued_count[2];
-// GLOBAL: LEGORR 0x004fef28
 int      s_ping; /* active producer block (DAT_004fef28) */
 
-// GLOBAL: LEGORR 0x004fef2c
 EntitySlot* s_selection_active_records[SELECTION_MAX];
-// GLOBAL: LEGORR 0x004ff298
 uint32_t s_selection_active_count;
 
+#if LRR_MESSAGE_PORT_NAMES /* message_unit.c serves these names in the matching build */
 /* --- random-cell producer / entity remove (see cmd.hpp) ----------------------
  * VC5 rand.obj supplies the shared stream in the classic x86 build; other
  * builds keep this subsystem's local LCG model. */
@@ -104,7 +116,6 @@ static const void* cmd_entity_owner_at(const EntitySlot* e);
  * cursor; the loop bound is the running count).
  * The comparison uses the same low 32-bit word as the 32-bit corpus even on
  * the native host, where entity pointers can be wider. */
-// FUNCTION: LEGORR 0x00451f60
 void cmd_queue_cancel_match(int value)
 {
     const int block = s_ping;
@@ -119,7 +130,7 @@ void cmd_queue_cancel_match(int value)
         i = i + 1;
     }
 }
-// FUNCTION: LEGORR 0x00452010
+#endif /* LRR_MESSAGE_PORT_NAMES */
 void cmd_bind_key(int key, int op, int a1, int a2, int a3, int a4)
 {
     if (s_keybind_count >= KEYBIND_MAX) {
@@ -129,7 +140,7 @@ void cmd_bind_key(int key, int op, int a1, int a2, int a3, int a4)
     b->key = key & 0xff;
     b->op = op; b->a1 = a1; b->a2 = a2; b->a3 = a3; b->a4 = a4;
 }
-// FUNCTION: LEGORR 0x00452060
+#if LRR_MESSAGE_PORT_NAMES /* message_unit.c serves these names in the matching build */
 void cmd_produce(int op, const void* a1, int a2, const int* pair)
 {
     int block = s_ping;
@@ -148,7 +159,6 @@ void cmd_produce(int op, const void* a1, int a2, const int* pair)
     q->a4 = (pair != NULL) ? pair[1] : 0;
 }
 
-// FUNCTION: LEGORR 0x004520d0
 void cmd_queue_tick(void)
 {
     int i;
@@ -300,7 +310,6 @@ void cmd_queue_tick(void)
     }
 }
 
-// FUNCTION: LEGORR 0x00452430
 void entity_random_valid_cell_command_create(void* entity)
 {
     const LevelState* lvl = (s_ctx != NULL) ? s_ctx->level : NULL;
@@ -331,7 +340,6 @@ void entity_random_valid_cell_command_create(void* entity)
 /* SelectionObjectDetach (FUN_004524b0): cancel queued commands for the
  * object, remove it from the selected set, and clear the current selection
  * context when it refers to that object. */
-// FUNCTION: LEGORR 0x004524b0
 void selection_object_detach(void* entity)
 {
     if (entity == NULL) {
@@ -343,7 +351,6 @@ void selection_object_detach(void* entity)
         media_min_distance_update_mode(1, NULL, 0);
     }
 }
-// FUNCTION: LEGORR 0x00452520
 int selection_snapshot_create(void** array_out, unsigned* count_out)
 {
     const int count = selection_count(s_ctx);
@@ -367,7 +374,6 @@ int selection_snapshot_create(void** array_out, unsigned* count_out)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00452580
 EntitySlot* const* selection_active_context_record_get(int* count_out)
 {
     if (s_selection_active_count != 0u) {
@@ -380,14 +386,12 @@ EntitySlot* const* selection_active_context_record_get(int* count_out)
     return NULL;
 }
 
-// FUNCTION: LEGORR 0x004525b0
 int selection_active_has_any_get(void)
 {
     return s_selection_active_count != 0u;
 }
 /* The reference reads its active selection globals. The portable runtime
  * keeps those globals inside the currently bound GameContext. */
-// FUNCTION: LEGORR 0x004525c0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
 EntitySlot* selection_active_entity_get(void)
@@ -409,19 +413,16 @@ EntitySlot* selection_active_entity_get(void)
 }
 #endif
 
-// FUNCTION: LEGORR 0x004525e0
 EntitySlot* const* selection_active_records_get(void)
 {
     return s_selection_active_records;
 }
 
-// FUNCTION: LEGORR 0x004525f0
 uint32_t selection_active_count_get(void)
 {
     return s_selection_active_count;
 }
 
-// FUNCTION: LEGORR 0x00452600
 void selection_active_count_reset(void)
 {
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -435,7 +436,6 @@ void selection_active_count_reset(void)
 
 /* The retail entry point takes only the entity and optional index output;
  * its array and count are the active selection globals mirrored above. */
-// FUNCTION: LEGORR 0x00452610
 uint32_t selection_contains_entity_active_target(
     EntitySlot* entity, uint32_t* index_out)
 {
@@ -459,7 +459,6 @@ uint32_t selection_contains_entity_active_target(
     return entity->flags_3e8 & 0x200000u;
 }
 
-// FUNCTION: LEGORR 0x00452650
 int cmd_array_find_value_index(const int* array, unsigned count, int value,
                                unsigned* index_out)
 {
@@ -479,7 +478,6 @@ int cmd_array_find_value_index(const int* array, unsigned count, int value,
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00452690
 int selection_active_candidate_already_selected_or_marked(EntitySlot* entity)
 {
     if (selection_contains_entity_active_target(entity, NULL) == 0
@@ -491,13 +489,11 @@ int selection_active_candidate_already_selected_or_marked(EntitySlot* entity)
 
 /* SelectionCandidateFilterDefault (FUN_004526c0) is the exact mode-1
  * forwarding wrapper around SelectionCandidateFilter. */
-// FUNCTION: LEGORR 0x004526c0
 void selection_candidate_filter_default(void* entity, int mode)
 {
     (void)selection_candidate_filter(entity, mode, 1);
 }
 
-// FUNCTION: LEGORR 0x004526e0
 int selection_candidate_filter_active(void* entity, int mode, int param_3)
 {
     EntitySlot* e = (EntitySlot*)entity;
@@ -561,7 +557,6 @@ int selection_candidate_filter_active(void* entity, int mode, int param_3)
  * corpus order kept — state gate, shared predicate, then the clear-bit
  * band; the byte-read of +0x3e4's low byte (& 10 decimal) maps to the
  * flag-word mask 0xA. */
-// FUNCTION: LEGORR 0x00452870
 int selection_candidate_eligibility_check(const EntitySlot* e)
 {
 #if !defined(_MSC_VER) || !defined(_M_IX86)
@@ -584,7 +579,6 @@ int selection_candidate_eligibility_check(const EntitySlot* e)
 }
 
 /* SelectionStateTick (FUN_004528c0) — see select.hpp. */
-// FUNCTION: LEGORR 0x004528c0
 void selection_state_tick_active(void)
 {
     EntitySlot** sel = s_selection_active_records;
@@ -691,7 +685,6 @@ void selection_state_tick_active(void)
         }
     }
 }
-// FUNCTION: LEGORR 0x00452be0
 void selection_clear_active(void)
 {
     uint32_t index = 0;
@@ -711,7 +704,6 @@ void selection_clear_active(void)
     s_selection_active_count = 0u;
 }
 
-// FUNCTION: LEGORR 0x00452c50
 int selection_entity_remove_active(EntitySlot* entity)
 {
     uint32_t index;
@@ -730,7 +722,6 @@ int selection_entity_remove_active(EntitySlot* entity)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00452cc0
 int selected_entity_state_monitor(void)
 {
     const int count = (s_ctx != NULL) ? s_ctx->selection_count : 0;
@@ -764,7 +755,6 @@ int selected_entity_state_monitor(void)
     }
     return count;
 }
-// FUNCTION: LEGORR 0x00452d60
 int selection_command_dispatch(int param)
 {
     const void* sel = media_min_distance_context();
@@ -848,9 +838,13 @@ static int cmd_rand15(void)
 #endif
 }
 
+#endif /* LRR_MESSAGE_PORT_NAMES */
+
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the debug-key binder (00452010) takes five words; the port's entry takes six. */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (cmd_bind_key)
+#if LRR_MESSAGE_PORT_NAMES /* message_unit.c's Message_AddMessageAction in the matching build */
 extern "C" void lego_key_callback_set_adapter(int key, int op, int a1, int a2, int a3)
 {
     cmd_bind_key(key, op, a1, a2, a3, 0);
 }
+#endif /* LRR_MESSAGE_PORT_NAMES */

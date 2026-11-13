@@ -1,4 +1,4 @@
-# input_sha256: 5a374c54edfb9ce9ba8050cbca5278a0b4c3175672874891ff7b4b6eab438f69
+# input_sha256: 6766ff516c4ceb696406bd1b44c58c187f199f04999003d26f10735fe36b4200
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2380 mapped functions
+[game-only] 2385 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -683,13 +683,13 @@
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 100.00 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
-0x0041fb50 98.18 lego_game_config_init
+0x0041fb50 98.35 lego_game_config_init
 0x00422850 99.84 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 98.95 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 98.15 lego_engine_tick
+0x004232e0 98.37 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 95.45 lego_sine_phase_midpoint_blend_dispatch
@@ -700,7 +700,7 @@
 0x00424cf0 100.00 lego_engine_shutdown_alt
 0x00424d00 90.44 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
-0x004250c0 89.06 lego_main_sim_step
+0x004250c0 89.58 lego_main_sim_step
 0x00425b40 100.00 lego_periodic_callback_dispatch
 0x00425b60 100.00 lego_object_sound_restart_callback
 0x00425c30 100.00 lego_transition_control
@@ -740,7 +740,7 @@
 0x00429850 100.00 active_engine_field_b0_get_current
 0x00429860 100.00 engine_float_field210_get_by_index_current
 0x00429880 100.00 engine_float_field260_get_current_target
-0x00429890 92.56 lego_level_load
+0x00429890 92.60 lego_level_load
 0x0042b2f0 100.00 lego_entity_effect_counters_apply_from_record
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
@@ -1288,13 +1288,15 @@
 0x00451bc0 95.56 resource_list_update_matching_key
 0x00451c30 100.00 linked_record_field4_clear
 0x00451c50 73.68 owned_object_reference_chain_release
-0x00451f60 18.18 cmd_queue_cancel_match
-0x00452010 28.57 cmd_bind_key
-0x00452060 35.48 cmd_produce
-0x004520d0 21.98 cmd_queue_tick
-0x00452430 28.12 entity_random_valid_cell_command_create
-0x004524b0 72.22 selection_object_detach
-0x00452520 15.73 selection_snapshot_create
+0x00451cd0 100.00 message_string_table_initialize
+0x00451f60 76.47 cmd_queue_cancel_match
+0x00451fd0 100.00 message_lookup_physical_name
+0x00452010 100.00 lego_key_callback_set_adapter
+0x00452060 100.00 cmd_produce
+0x004520d0 100.00 cmd_queue_tick
+0x00452430 100.00 entity_random_valid_cell_command_create
+0x004524b0 100.00 selection_object_detach
+0x00452520 100.00 selection_snapshot_create
 0x00452580 100.00 selection_active_context_record_get
 0x004525b0 100.00 selection_active_has_any_get
 0x004525c0 100.00 selection_active_entity_get
@@ -1302,16 +1304,16 @@
 0x004525f0 100.00 selection_active_count_get
 0x00452600 100.00 selection_active_count_reset
 0x00452610 100.00 selection_contains_entity_active_target
-0x00452650 79.31 cmd_array_find_value_index
+0x00452650 100.00 cmd_array_find_value_index
 0x00452690 100.00 selection_active_candidate_already_selected_or_marked
-0x004526c0 87.50 selection_candidate_filter_default
-0x004526e0 73.73 selection_candidate_filter_active
+0x004526c0 100.00 selection_candidate_filter_default
+0x004526e0 97.52 selection_candidate_filter_active
 0x00452870 100.00 selection_candidate_eligibility_check
-0x004528c0 32.77 selection_state_tick_active
-0x00452be0 40.62 selection_clear_active
-0x00452c50 97.06 selection_entity_remove_active
-0x00452cc0 27.35 selected_entity_state_monitor
-0x00452d60 29.20 selection_command_dispatch
+0x004528c0 100.00 selection_state_tick_active
+0x00452be0 100.00 selection_clear_active
+0x00452c50 100.00 selection_entity_remove_active
+0x00452cc0 97.92 selected_entity_state_monitor
+0x00452d60 86.44 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
 0x00452e70 78.61 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
@@ -1343,18 +1345,21 @@
 0x00456c30 100.00 nerps_get_block_pointer
 0x00456c60 100.00 nerps_free_block_pointers
 0x00456cb0 100.00 nerps_block_pointer_enumerate
-0x00457d40 9.21 objective_load
-0x00458580 100.00 obj_set_resources_target
-0x004585c0 100.00 obj_set_block_target
-0x004585f0 100.00 obj_set_timer_target
-0x00458620 100.00 obj_set_construction_target
-0x00458650 10.53 level_objective_result_get
+0x004574e0 96.23 objective_load_objective_text
+0x00457d40 60.88 objective_load_original
+0x00458580 100.00 objective_set_cry_ore_objectives
+0x004585c0 100.00 objective_set_block_objective
+0x004585f0 100.00 objective_set_timer_objective
+0x00458620 100.00 objective_set_construction_objective
+0x00458650 100.00 level_objective_result_get
 0x00458660 100.00 global_value_004ffe48_set
-0x00458670 30.99 objective_announce_current
-0x004588e0 31.43 input_device_release
-0x004589a0 17.39 global_option_low_bits_enabled
-0x00458be0 15.03 objective_tick_target
-0x00459050 36.13 objective_check
+0x00458670 99.43 objective_announce_current
+0x004588e0 100.00 objective_stop_showing_objective
+0x004589a0 100.00 objective_is_ended_original
+0x004589c0 97.50 lego_quit_poll_adapter
+0x00458be0 56.52 objective_tick_target
+0x00459050 100.00 objective_check_completed
+0x00459100 100.00 objective_callback_check_completed_object
 0x00459190 35.05 osf_add
 0x00459240 21.05 entity_state_override_pop
 0x004592a0 100.00 osf_read_state_reset
@@ -2388,7 +2393,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2625 mapped functions
+[full] 2630 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -3065,13 +3070,13 @@
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 100.00 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
-0x0041fb50 98.18 lego_game_config_init
+0x0041fb50 98.35 lego_game_config_init
 0x00422850 99.84 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 98.95 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 98.15 lego_engine_tick
+0x004232e0 98.37 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 95.45 lego_sine_phase_midpoint_blend_dispatch
@@ -3082,7 +3087,7 @@
 0x00424cf0 100.00 lego_engine_shutdown_alt
 0x00424d00 90.44 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
-0x004250c0 89.06 lego_main_sim_step
+0x004250c0 89.58 lego_main_sim_step
 0x00425b40 100.00 lego_periodic_callback_dispatch
 0x00425b60 100.00 lego_object_sound_restart_callback
 0x00425c30 100.00 lego_transition_control
@@ -3122,7 +3127,7 @@
 0x00429850 100.00 active_engine_field_b0_get_current
 0x00429860 100.00 engine_float_field210_get_by_index_current
 0x00429880 100.00 engine_float_field260_get_current_target
-0x00429890 92.56 lego_level_load
+0x00429890 92.60 lego_level_load
 0x0042b2f0 100.00 lego_entity_effect_counters_apply_from_record
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
@@ -3670,13 +3675,15 @@
 0x00451bc0 95.56 resource_list_update_matching_key
 0x00451c30 100.00 linked_record_field4_clear
 0x00451c50 73.68 owned_object_reference_chain_release
-0x00451f60 18.18 cmd_queue_cancel_match
-0x00452010 28.57 cmd_bind_key
-0x00452060 35.48 cmd_produce
-0x004520d0 21.98 cmd_queue_tick
-0x00452430 28.12 entity_random_valid_cell_command_create
-0x004524b0 72.22 selection_object_detach
-0x00452520 15.73 selection_snapshot_create
+0x00451cd0 100.00 message_string_table_initialize
+0x00451f60 76.47 cmd_queue_cancel_match
+0x00451fd0 100.00 message_lookup_physical_name
+0x00452010 100.00 lego_key_callback_set_adapter
+0x00452060 100.00 cmd_produce
+0x004520d0 100.00 cmd_queue_tick
+0x00452430 100.00 entity_random_valid_cell_command_create
+0x004524b0 100.00 selection_object_detach
+0x00452520 100.00 selection_snapshot_create
 0x00452580 100.00 selection_active_context_record_get
 0x004525b0 100.00 selection_active_has_any_get
 0x004525c0 100.00 selection_active_entity_get
@@ -3684,16 +3691,16 @@
 0x004525f0 100.00 selection_active_count_get
 0x00452600 100.00 selection_active_count_reset
 0x00452610 100.00 selection_contains_entity_active_target
-0x00452650 79.31 cmd_array_find_value_index
+0x00452650 100.00 cmd_array_find_value_index
 0x00452690 100.00 selection_active_candidate_already_selected_or_marked
-0x004526c0 87.50 selection_candidate_filter_default
-0x004526e0 73.73 selection_candidate_filter_active
+0x004526c0 100.00 selection_candidate_filter_default
+0x004526e0 97.52 selection_candidate_filter_active
 0x00452870 100.00 selection_candidate_eligibility_check
-0x004528c0 32.77 selection_state_tick_active
-0x00452be0 40.62 selection_clear_active
-0x00452c50 97.06 selection_entity_remove_active
-0x00452cc0 27.35 selected_entity_state_monitor
-0x00452d60 29.20 selection_command_dispatch
+0x004528c0 100.00 selection_state_tick_active
+0x00452be0 100.00 selection_clear_active
+0x00452c50 100.00 selection_entity_remove_active
+0x00452cc0 97.92 selected_entity_state_monitor
+0x00452d60 86.44 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
 0x00452e70 78.61 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
@@ -3725,18 +3732,21 @@
 0x00456c30 100.00 nerps_get_block_pointer
 0x00456c60 100.00 nerps_free_block_pointers
 0x00456cb0 100.00 nerps_block_pointer_enumerate
-0x00457d40 9.21 objective_load
-0x00458580 100.00 obj_set_resources_target
-0x004585c0 100.00 obj_set_block_target
-0x004585f0 100.00 obj_set_timer_target
-0x00458620 100.00 obj_set_construction_target
-0x00458650 10.53 level_objective_result_get
+0x004574e0 96.23 objective_load_objective_text
+0x00457d40 60.88 objective_load_original
+0x00458580 100.00 objective_set_cry_ore_objectives
+0x004585c0 100.00 objective_set_block_objective
+0x004585f0 100.00 objective_set_timer_objective
+0x00458620 100.00 objective_set_construction_objective
+0x00458650 100.00 level_objective_result_get
 0x00458660 100.00 global_value_004ffe48_set
-0x00458670 30.99 objective_announce_current
-0x004588e0 31.43 input_device_release
-0x004589a0 17.39 global_option_low_bits_enabled
-0x00458be0 15.03 objective_tick_target
-0x00459050 36.13 objective_check
+0x00458670 99.43 objective_announce_current
+0x004588e0 100.00 objective_stop_showing_objective
+0x004589a0 100.00 objective_is_ended_original
+0x004589c0 97.50 lego_quit_poll_adapter
+0x00458be0 56.52 objective_tick_target
+0x00459050 100.00 objective_check_completed
+0x00459100 100.00 objective_callback_check_completed_object
 0x00459190 35.05 osf_add
 0x00459240 21.05 entity_state_override_pop
 0x004592a0 100.00 osf_read_state_reset

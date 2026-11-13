@@ -9026,12 +9026,24 @@ extern "C" void panel_crystals_draw_original(unsigned int crystals,
     panel_crystals_draw(crystals, usedCrystals);
 }
 
+/* objective_unit.c serves objective_is_ended_original and
+ * lego_quit_poll_adapter in the matching build
+ * (objective_unit_link_names.h, finding 631): every build but MSVC 5.0's
+ * keeps the adapters below. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_OBJECTIVE_PORT_NAMES 0
+#else
+#define LRR_OBJECTIVE_PORT_NAMES 1
+#endif
+
 /* 0x004589a0 Objective_IsEnded reads the current level. */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (global_option_low_bits_enabled)
+#if LRR_OBJECTIVE_PORT_NAMES /* objective_unit.c's Objective_IsEnded in the matching build */
 extern "C" int objective_is_ended_original(void)
 {
     return global_option_low_bits_enabled(g_active_level_retail);
 }
+#endif /* LRR_OBJECTIVE_PORT_NAMES */
 
 /* 0x00415370 runs the in-game menu with the original's globals; the port's
  * gate takes its state and callbacks from the frame loop. */
@@ -9290,6 +9302,7 @@ extern "C" int lego_keep_running_adapter(void)
 }
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (QuitPoll 0x004589c0, no port entry)
+#if LRR_OBJECTIVE_PORT_NAMES /* objective_unit.c's Objective_HandleKeys in the matching build */
 extern "C" int lego_quit_poll_adapter(int a, int b, int* quit)
 {
     /* No port entry: never quits. */
@@ -9298,6 +9311,7 @@ extern "C" int lego_quit_poll_adapter(int a, int b, int* quit)
     (void)quit;
     return 0;
 }
+#endif /* LRR_OBJECTIVE_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (renderer_fog_enable_and_color_apply, 0x00473dc0)
 #if LRR_CONTAINER_PORT_NAMES /* container.c serves lego_fog_enable_adapter in the matching build */

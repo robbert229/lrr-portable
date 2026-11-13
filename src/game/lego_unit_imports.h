@@ -956,6 +956,11 @@ float terrain_map_world_z_get(struct TerrainMap* map, float x, float y); /* 0044
 int lego_keep_running_adapter(void);                            /* 00435940 */
 int lego_quit_poll_adapter(int a, int b, int* quit);            /* 004589c0 */
 int lego_level_low_bits_enabled_adapter(void);                  /* 004589a0 */
+/* Matching build: Objective.c's Objective_IsEnded (objective_unit.c,
+ * finding 631), which takes the name objective_is_ended_original there. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define lego_level_low_bits_enabled_adapter objective_is_ended_original
+#endif
 void lego_fog_enable_adapter(int on);                           /* 00473dc0 */
 void lego_fog_colour_set_adapter(float r, float g, float b);    /* 00473e10 */
 void lego_light_penumbra_set_adapter(void* light, float value); /* 00473460 */
