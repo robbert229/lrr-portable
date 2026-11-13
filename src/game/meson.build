@@ -25,7 +25,7 @@ game_sources = [
   'reward_port.cpp',
   'camera_control_port.cpp',
   'helpwindow_port.cpp',
-  'tile_variants.cpp',
+  'tile_variants_port.cpp',
   'cell_flood_passes.cpp',
   'vehicle_model_port.cpp',
   'upgrade_levels_port.cpp',
@@ -126,6 +126,7 @@ game_c_sources = [
   'scrollinfo.c',
   'screen_effect_quads.c',
   'upgrade.c',
+  'detail.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

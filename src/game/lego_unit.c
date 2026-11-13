@@ -8937,7 +8937,7 @@ int entity_flags_mask107c33de_or_1c00203_any_test(const struct EntitySlot* e); /
 int aitask_route_step_adapter(struct EntitySlot* object);         /* 00449700 */
 /* Roof.c (record.hpp): 004634f0. */
 void indexed_surface_entry_hide_and_record(int x, int y);         /* 004634f0 */
-/* Detail.c (tile_variants.cpp, view.hpp). */
+/* Detail.c (detail.c in the matching build, view.hpp). */
 void scene_cell_visual_channels_apply(struct SceneCellVisualRelayRecord* record,
                                       const float corner_points[12],
                                       uint32_t lookup_selector,

@@ -807,8 +807,8 @@ int entity_pool_find_by_callback_filtered_current_original(
     int (*callback)(struct EntitySlot*, void*), void* payload); /* lego.cpp, 004377b0 */
 void* tile_model_entity_register_original(void* manager, const char* nameA,
                                           const char* nameB, float blockSize,
-                                          void* textureSet); /* tile_variants.cpp, 0040b5f0 */
-void cell_visual_channel_table_dispose_original(void* table); /* tile_variants.cpp, 0040b7d0 */
+                                          void* textureSet); /* detail.c (matching build), 0040b5f0 */
+void cell_visual_channel_table_dispose_original(void* table); /* detail.c (matching build), 0040b7d0 */
 void options_apply_from_slot_original(void);           /* options.cpp, 00415150 */
 void movie_play_level_video_adapter(const char* levelName, int flag); /* frontend_unit.cpp, 00415990 */
 void* lego_object_create_adapter(void* objectData, int type, void* extra); /* lego.cpp, 00437d00 */
@@ -1333,7 +1333,7 @@ struct UiRenderRecord* ui_render_record_create(void* source,
 /* Roof (resource.hpp). */
 int indexed_surface_resource_allocate(void* owner, int width, int height); /* 00462da0 */
 int animated_texture_replace(const char* name);               /* 00462e60 */
-/* Detail_LoadTextureSet (tile_variants.cpp, terrain_grid.hpp). */
+/* Detail_LoadTextureSet (detail.c in the matching build, terrain_grid.hpp). */
 struct TerrainCellResourceGrid* terrain_cell_resource_grid_load(
     const char* bitmap_prefix, uint32_t width, uint32_t height); /* 0040b310 */
 /* GAME-005 erosion (level.hpp). */

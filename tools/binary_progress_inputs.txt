@@ -129,6 +129,11 @@ src/game/dependencies_port.cpp
 src/game/dependency_grid.cpp
 src/game/dependency_grid_for_dependencies.hpp
 src/game/dependency_grid_shared.hpp
+src/game/detail.c
+src/game/detail.h
+src/game/detail_imports.h
+src/game/detail_link_names.h
+src/game/detail_maths.h
 src/game/effects.cpp
 src/game/effects.h
 src/game/effects.hpp
@@ -422,8 +427,8 @@ src/game/text.h
 src/game/text_imports.h
 src/game/text_link_names.h
 src/game/text_port.cpp
-src/game/tile_variants.cpp
 src/game/tile_variants.h
+src/game/tile_variants_port.cpp
 src/game/tooltip.c
 src/game/tooltip.h
 src/game/tooltip_imports.h

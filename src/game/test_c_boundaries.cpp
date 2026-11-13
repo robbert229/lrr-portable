@@ -222,6 +222,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/upgrade.h"
 #include "game/upgrade_imports.h"
 #include "game/vehicle_model_imports.h"
+#include "game/detail.h"
+#include "game/detail_imports.h"
 
 int main(void)
 {
