@@ -340,7 +340,7 @@ src/game/radarmap.c
 src/game/radarmap.h
 src/game/radarmap_imports.h
 src/game/radarmap_link_names.h
-src/game/record_chains.cpp
+src/game/record_chains_port.cpp
 src/game/render.cpp
 src/game/render.hpp
 src/game/reward.c
@@ -402,6 +402,11 @@ src/game/stats.h
 src/game/steering.c
 src/game/steering.h
 src/game/steering_maths.h
+src/game/teleporter.c
+src/game/teleporter.h
+src/game/teleporter_imports.h
+src/game/teleporter_link_names.h
+src/game/teleporter_maths.h
 src/game/terrain_cell_objects.c
 src/game/terrain_cell_objects.h
 src/game/terrain_cell_objects_port.cpp

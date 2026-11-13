@@ -265,6 +265,12 @@ void global_value_004ffe48_set(uint32_t value)
     s_value_004ffe48 = value;
 }
 
+/* Teleporter.c (teleporter.c, finding 621): Teleporter_Start (0046a510) by
+ * its original-ABI name. */
+extern "C" void scene_object_state_dispatch_original(uint32_t selector,
+                                                     uint32_t mode,
+                                                     uint32_t flags);
+
 /* The retail function reads the current level from FUN_00431560 and has one
  * stack argument. `objective_load` binds that owner, while mission frame
  * updates rebind the live context before objective processing. */
@@ -278,6 +284,7 @@ void objective_announce_current(int who)
     const char* outcome = "";
     const char* family = "_Levels::";
     const char* level;
+    uint32_t teleportFlags;
     if (s == NULL) return;
     s_objective_active_level = s;
     if ((s_objective_result_word & 7u) != 0 ||
@@ -334,17 +341,16 @@ void objective_announce_current(int who)
     s_objective_result_word |= 8u;
     s->objective |= LVL_OBJECTIVE_ANNOUNCED;
     if (result != 0) {
-        GameContext* ctx = entity_pool_callback_context_get();
-        /* The original creates four linked scene-state records and raises
-         * the level/scatter gates for terminal objectives. DAT_004ffe48 is
-         * initialized to zero in the portable CRT window and currently has
-         * no production writer, so its observed false branch supplies the
-         * record flags value 4 here. The per-entity LAB_0046a3c0 callback
-         * remains renderer-owned and is not represented by this dispatch. */
-        scene_object_state_dispatch(ctx, 1u, 2u, 4u, NULL, NULL);
-        scene_object_state_dispatch(ctx, 2u, 2u, 4u, NULL, NULL);
-        scene_object_state_dispatch(ctx, 8u, 2u, 4u, NULL, NULL);
-        scene_object_state_dispatch(ctx, 0x400u, 2u, 4u, NULL, NULL);
+        /* Teleporter_Start (0046a510, teleporter.c): teleport the pilots,
+         * the minifigures, the buildings and the electric fences out
+         * through a service, at random (flags 2) when DAT_004ffe48 is set,
+         * else removed (flags 4). Natively the name is the port tail's
+         * adapter (record_chains_port.cpp). */
+        teleportFlags = s_value_004ffe48 ? 2u : 4u;
+        scene_object_state_dispatch_original(1u, 2u, teleportFlags);
+        scene_object_state_dispatch_original(2u, 2u, teleportFlags);
+        scene_object_state_dispatch_original(8u, 2u, teleportFlags);
+        scene_object_state_dispatch_original(0x400u, 2u, teleportFlags);
         level_state_stored_value_set(1u);
         lego::scatter_spawn_gate_set(1);
     }
