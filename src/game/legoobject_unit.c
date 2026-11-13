@@ -7401,9 +7401,9 @@ float point_to_polyline_minimum_segment_distance(const float* point,
                                                  const float* first_point,
                                                  const float* last_point,
                                                  unsigned int segment_count); /* 00408b00 */
-/* Vehicle.c: Vehicle_GetTransCoef (0046db70); adapter at the end of
- * legoobject_port.cpp (the port's 0046db70 returns nothing). */
-float legoobject_gp_vehicle_trans_coef_adapter(void* vehicle);             /* 0046db70 */
+/* Vehicle.c (vehicle_model.h, vehicle_model.c). */
+struct VehicleModel;
+float vehicle_get_trans_coef(struct VehicleModel* vehicle);                /* 0046db70 */
 /* Creature.c: Creature_GetTransCoef (animation_object.c). */
 float animation_object_value_get(void* object);                            /* 00407090 */
 /* Building.c: Building_GetTransCoef returns 0.0 (building_model.cpp's
@@ -7616,7 +7616,7 @@ void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapse
     float speed;
 
     if (obj->type == 1) {
-        transCoef = legoobject_gp_vehicle_trans_coef_adapter(obj->vehicle);
+        transCoef = vehicle_get_trans_coef((struct VehicleModel*)obj->vehicle);
     } else if (obj->type == 2) {
         transCoef = animation_object_value_get(obj->miniFigure);
     } else if (obj->type == 3) {
@@ -7971,11 +7971,9 @@ int legoobject_route_to_cell_command_issue(Lego_Object* obj, int bx, int by, Leg
 extern float legoGlobs_DrainTime;                                          /* 00556f04 */
 /* Stats.c (entity.hpp, entity_stats.c). */
 float entity_stats_float_at88(const struct EntitySlot* e);                 /* 00469f20 */
-/* Vehicle.c: Vehicle_MoveAnimation (0046d1c0); vehicle_model.cpp's
- * 0046d1c0 has another contract, so an adapter at the end of
- * legoobject_port.cpp stands in. */
-float legoobject_gq_vehicle_move_animation_adapter(void* vehicle, float elapsed,
-                                                   float elapsedFull, unsigned int repeat); /* 0046d1c0 */
+/* Vehicle.c (vehicle_model.h, vehicle_model.c). */
+float vehicle_move_animation(struct VehicleModel* vehicle, float elapsed1, float elapsed2,
+                             unsigned int repeats);                        /* 0046d1c0 */
 /* Creature.c (animation_object.c) and Building.c (view.hpp, building_model.cpp). */
 float renderer_object_timing_value_adjust_by_count(void* record, float time,
                                                    unsigned int count);    /* 00406d30 */
@@ -7990,7 +7988,7 @@ float legoobject_gq_upgrade_move_animation_adapter(void* upgrade, float elapsed,
  * in. Building_GetCameraNull (004085f0) is building_model.cpp's. */
 int legoobject_gq_vehicle_set_activity_adapter(void* vehicle, const char* activityName,
                                                float time);                /* 0046c3f0 */
-void* legoobject_gq_vehicle_camera_null_adapter(void* vehicle, int cameraNo); /* 0046da50 */
+void* vehicle_get_camera_null(struct VehicleModel* vehicle, unsigned int frameNo); /* 0046da50 */
 int legoobject_gq_building_set_activity_adapter(void* building, const char* activityName,
                                                 float time);               /* 00408570 */
 void* scene_activity_change_secondary(void* activity, int index);          /* 004085f0 */
@@ -8008,9 +8006,8 @@ void terrain_cell_secondary_flag_8_set_current(int bx, int by, int on);    /* 00
 void terrain_cell_flag_80000_clear_or_set_current(const int blockPos[2], int on); /* 00432710 */
 /* Map3D.c (terrain_map.c). */
 void terrain_map_block_highlight_clear(struct TerrainMap* map, int bx, int by); /* 0044f570 */
-/* Effects: 0040c750 (rock_fall_styles.cpp, C++ linkage, #616's file):
- * an adapter at the end of legoobject_port.cpp stands in. */
-void legoobject_gq_smoke_create_adapter(void* obj, const float* xy);      /* 0040c750 */
+/* Effects.c (rock_fall_styles.c): Effect_Spawn_Explosion. */
+void effect_spawn_explosion(void* obj, float* pos);                         /* 0040c750 */
 
 /* ---- functions, group Q (004474f0-00447ea0; part 3, issue #615) ---- */
 
@@ -8232,7 +8229,7 @@ float legoobject_activity_tick(Lego_Object* obj, float elapsed)
     legoobject_movement_tick_scale_and_delta_get(obj, elapsed, &transSpeed, &moveElapsed);
     if (!(obj->flags1 & 0x4000)) {
         if (obj->type == 1) {
-            obj->animTime = legoobject_gq_vehicle_move_animation_adapter(obj->vehicle, moveElapsed, elapsed, obj->animRepeat);
+            obj->animTime = vehicle_move_animation((struct VehicleModel*)obj->vehicle, moveElapsed, elapsed, obj->animRepeat);
         } else if (obj->type == 2) {
             obj->animTime = renderer_object_timing_value_adjust_by_count(obj->miniFigure, moveElapsed, obj->animRepeat);
         } else if (obj->type == 3) {
@@ -8270,7 +8267,7 @@ int legoobject_activity_register_bookkeeping(Lego_Object* obj)
         switch (obj->type) {
         case 1:
             result = legoobject_gq_vehicle_set_activity_adapter(obj->vehicle, obj->activityName1, obj->animTime);
-            obj->field_2dc = legoobject_gq_vehicle_camera_null_adapter(obj->vehicle, obj->field_2e0);
+            obj->field_2dc = vehicle_get_camera_null((struct VehicleModel*)obj->vehicle, obj->field_2e0);
             break;
         case 2:
             result = activity_runner_update((struct AnimationObject*)obj->miniFigure, obj->activityName1, obj->animTime);
@@ -8393,7 +8390,7 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
                     legoobject_spatial_callback_query(obj, legoGlobs_DynamiteDamageRadius, legoGlobs_DynamiteMaxDamage,
                                                       legoGlobs_DynamiteWakeRadius);
                     sound_alias_play(0x2b, 0);
-                    legoobject_gq_smoke_create_adapter(obj, NULL);
+                    effect_spawn_explosion(obj, NULL);
                     camera_shake(s_zoom_step_context, 5.0f, 50.0f);
                 } else if (obj->type == 13) {
                     legoobject_transform_position_get(obj, &pos.x, &pos.y);
@@ -9147,14 +9144,14 @@ int scene_object_mode_is_one(const void* scene_object);                 /* 00406
 void animation_object_visibility_set(const void* object, unsigned int hide); /* 00406c90 */
 void scene_object_pair_apply_mode(const void* record, uint32_t flag);   /* 00408670 */
 void scene_resource_visibility_set(void* record, uint32_t flag);       /* 0046d2c0 */
-/* PORT-ONLY adapters at the end of legoobject.cpp: the port's entries
+/* PORT-ONLY adapters at the end of legoobject_port.cpp: the port's entries
  * have C++ linkage. */
 void legoobject_gs_container_hidden_set_adapter(void* cont, int hide);  /* 00473b20 */
 int legoobject_gs_container_is_hidden_adapter(void* cont);              /* 00473ba0 */
-int legoobject_gs_vehicle_is_hidden_adapter(void* vehicle);             /* 0046d330 */
+unsigned int vehicle_is_hidden(struct VehicleModel* vehicle);             /* 0046d330 */
 int legoobject_gs_object_is_hidden_adapter(void* model);                /* 004086a0 */
 int legoobject_gs_vehicle_camera_flip_adapter(void* vehicle);           /* 0046c3d0 */
-void* legoobject_gs_vehicle_drill_null_adapter(void* vehicle);          /* 0046da90 */
+void* vehicle_get_drill_null(struct VehicleModel* vehicle);          /* 0046da90 */
 /* MeshLOD.c (terrain_map.c, C). */
 void* model_entry_record_load(void* previous, const char* partName, const char* dir,
                               const char* meshName, unsigned int setID); /* 004519b0 */
@@ -9168,7 +9165,7 @@ void cmd_operation_group_append_object(uint32_t key, struct EntitySlot* entity);
 uint32_t entity_indexed_record_word_at_b0_get(int type, int id, int level); /* 00469ac0 */
 uint32_t stats_table_word_at_b8(int type, int id, int level);           /* 00469b20 */
 uint32_t stats_table_word_at_d0(int type, int id, int level);           /* 00469f60 */
-/* PORT-ONLY adapters at the end of legoobject.cpp: Building.c's and
+/* PORT-ONLY adapters at the end of legoobject_port.cpp: Building.c's and
  * Construction.c's entries have C++ linkage and other contracts. */
 int* legoobject_gs_placement_footprint_check_adapter(void* surface, int* blockPos, int* shape,
                                                     unsigned int count, int direction,
@@ -9348,7 +9345,7 @@ void legoobject_type_operation_dispatch(Lego_Object* obj, int hide)
 int legoobject_type_operation_release(Lego_Object* obj)
 {
     if (obj->type == 1)
-        return legoobject_gs_vehicle_is_hidden_adapter(obj->vehicle);
+        return vehicle_is_hidden((struct VehicleModel*)obj->vehicle);
     if (obj->type == 2)
         return legoobject_gs_object_is_hidden_adapter(obj->miniFigure);
     if (obj->type == 3)
@@ -9369,7 +9366,7 @@ void legoobject_follow_target_pose_get(Lego_Object* obj, int cameraNo, float* po
 
     if (obj->field_2dc == NULL || obj->field_2e0 != cameraNo) {
         if (obj->type == 1) {
-            if ((obj->field_2dc = legoobject_gq_vehicle_camera_null_adapter(obj->vehicle, cameraNo)) != NULL)
+            if ((obj->field_2dc = vehicle_get_camera_null((struct VehicleModel*)obj->vehicle, cameraNo)) != NULL)
                 obj->field_2e0 = cameraNo;
         } else if (obj->type == 2) {
             if ((obj->field_2dc = activity_runner_state_read(obj->miniFigure, cameraNo)) != NULL)
@@ -9421,7 +9418,7 @@ int legoobject_work_object_position_get(Lego_Object* obj, float* outX, float* ou
     float wPos[3];
 
     if (obj->type == 1)
-        null = legoobject_gs_vehicle_drill_null_adapter(obj->vehicle);
+        null = vehicle_get_drill_null((struct VehicleModel*)obj->vehicle);
     else if (obj->type == 2)
         null = renderer_cached_handle_40_get_or_create(obj->miniFigure);
     else if (obj->type == 3)

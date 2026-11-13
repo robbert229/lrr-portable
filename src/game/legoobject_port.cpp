@@ -11667,12 +11667,6 @@ extern "C" void legoobject_go_pairing_activity_adapter(EntitySlot* first,
  * coefficient. This one returns it. #617 owns vehicle_model.cpp; once
  * 0x0046db70 has the original's contract there, the unit calls it and this
  * adapter goes. Nothing calls it natively. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046db70 returns nothing in the port)
-extern "C" float legoobject_gp_vehicle_trans_coef_adapter(void* vehicle)
-{
-    return typed_child_resource_scalar_get(*(void**)((char*)vehicle + 8));
-}
-
 /* ---- group Q adapters (GAME-023 part 3, legoobject_unit.c) ---- */
 /* Vehicle_MoveAnimation (0x0046d1c0) and Upgrade_MoveAnimation
  * (0x0046c110): the port's entries at those addresses take other
@@ -11680,17 +11674,6 @@ extern "C" float legoobject_gp_vehicle_trans_coef_adapter(void* vehicle)
  * tooltip.cpp's animation_resource_advance_time). #617 owns
  * vehicle_model.cpp. Nothing calls these natively; they report no time
  * left in the animation. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046d1c0 has another contract)
-extern "C" float legoobject_gq_vehicle_move_animation_adapter(void* vehicle, float elapsed,
-                                                              float elapsedFull, unsigned int repeat)
-{
-    (void)vehicle;
-    (void)elapsed;
-    (void)elapsedFull;
-    (void)repeat;
-    return 0.0f;
-}
-
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046c110 has another contract)
 extern "C" float legoobject_gq_upgrade_move_animation_adapter(void* upgrade, float elapsed,
                                                               unsigned int repeat)
@@ -11715,14 +11698,6 @@ extern "C" int legoobject_gq_vehicle_set_activity_adapter(void* vehicle, const c
     return 0;
 }
 
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046da50 has C++ linkage)
-extern "C" void* legoobject_gq_vehicle_camera_null_adapter(void* vehicle, int cameraNo)
-{
-    (void)vehicle;
-    (void)cameraNo;
-    return NULL;
-}
-
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00408570 has no port entry)
 extern "C" int legoobject_gq_building_set_activity_adapter(void* building, const char* activityName,
                                                            float time)
@@ -11731,14 +11706,6 @@ extern "C" int legoobject_gq_building_set_activity_adapter(void* building, const
     (void)activityName;
     (void)time;
     return 0;
-}
-
-/* 0x0040c750 is rock_fall_styles.cpp's terrain_point_object_create, a C++
- * function; #616 owns that file. Nothing calls this natively. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0040c750 has C++ linkage)
-extern "C" void legoobject_gq_smoke_create_adapter(void* obj, const float* xy)
-{
-    terrain_point_object_create(obj, xy);
 }
 
 /* ---- group S adapters (GAME-023 part 3, legoobject_unit.c) ---- */
@@ -11757,12 +11724,6 @@ extern "C" int legoobject_gs_container_is_hidden_adapter(void* cont)
     return (int)scene_object_flag_bit3_get_target(cont);
 }
 
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046d330 has C++ linkage)
-extern "C" int legoobject_gs_vehicle_is_hidden_adapter(void* vehicle)
-{
-    return (int)entity_type_flag_bit1_get_target(vehicle);
-}
-
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x004086a0 has C++ linkage)
 extern "C" int legoobject_gs_object_is_hidden_adapter(void* model)
 {
@@ -11773,12 +11734,6 @@ extern "C" int legoobject_gs_object_is_hidden_adapter(void* model)
 extern "C" int legoobject_gs_vehicle_camera_flip_adapter(void* vehicle)
 {
     return record_field_d8_equals_one(vehicle);
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046da90 has C++ linkage)
-extern "C" void* legoobject_gs_vehicle_drill_null_adapter(void* vehicle)
-{
-    return scene_resource_cached_slot_b4_get((SceneResourceAnimationRecord*)vehicle);
 }
 
 /* Building placement (0x004641c0, 0x00409790, 0x00408ec0, 0x00408e50):
