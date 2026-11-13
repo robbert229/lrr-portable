@@ -168,7 +168,7 @@ uint32_t model_digest(const Model* m);
  * recovers the big-endian float the corpus's PNTS/SURF readers wanted. The
  * port's model path parses through the rrlwo converter (finding 11), so the
  * reader ships as a standalone primitive. */
-int lwo_read_big_endian_float(const uint8_t** cursor, uint8_t out[4]);
+extern "C" int lwo_read_big_endian_float(const uint8_t** cursor, uint8_t out[4]);
 void mesh_vertex_coordinate_remap(int vertex_count, const float* positions_xyz,
                                  float* coordinates_xy, float scale_x,
                                  float scale_y, float scale_z, float offset_x,
@@ -178,14 +178,14 @@ void mesh_vertex_coordinate_remap(int vertex_count, const float* positions_xyz,
 /* LwoStringDuplicate (FUN_0048c0c0): the corpus's dup allocates strlen + 1
  * rounded UP TO THE NEXT EVEN size through the engine heap, zeroes the
  * whole block (dwords then bytes), then copies strlen + 1 bytes — the
- * corpus's own loop bounds, assembly-pinned. Deviations: the null string
- * is guarded, and the copy rides the rounded size so the block stays a
- * valid C string. LwoTextureProjectionModeParse (FUN_0048c120): a fold
+ * corpus's own loop bounds, assembly-pinned. The string is read unguarded.
+ * Both are defined by gods98/lwo.c (G98-031), the original's shape.
+ * LwoTextureProjectionModeParse (FUN_0048c120): a fold
  * compare (direct strnicmp_lite carrier call, as the corpus) against
  * the binary's PLANAR / CYLINDRICAL / SPHERICAL table; the first prefix
  * match answers the table index, anything else answers 0 — PLANAR. */
-char* lwo_string_duplicate(const char* text);        /* FUN_0048c0c0 */
-int   lwo_texture_projection_mode_parse(const char* name);
+extern "C" char* lwo_string_duplicate(const char* text);        /* FUN_0048c0c0 */
+extern "C" int   lwo_texture_projection_mode_parse(const char* name);
                                                       /* FUN_0048c120 */
 
 #endif /* LEGORRR_MODEL_HPP */

@@ -890,8 +890,11 @@ uint32_t selection_marker_count_peek(void);           /* port hook */
 /* OwnedResourceTreeRelease (FUN_0048c180, findings 386/438): releases the
  * owned resource tree — the +0 payload, the +8 payload, the recursive
  * right child at +4 (owning its node), and the node itself when owned.
- * Deviation: the corpus strides dwords (x86 handles); the port reads the
- * slots widened and guards the NULL node. */
+ * Defined by gods98/lwo.c (G98-031) over its LWSURFACE (name, texture
+ * layer, path); it reads the node unguarded, as the original does. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void owned_resource_tree_release(void** node, int own_node); /* FUN_0048c180 */
 
 /* --- string + stream allocation leaves (2026-10-24; findings 375/93) ------

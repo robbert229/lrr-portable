@@ -545,7 +545,9 @@ src/gods98/input_shared.hpp
 src/gods98/input_unit.cpp
 src/gods98/keys.c
 src/gods98/keys.h
-src/gods98/lwo.cpp
+src/gods98/lwo.c
+src/gods98/lwo.h
+src/gods98/lwo_port.cpp
 src/gods98/lws.c
 src/gods98/lws.h
 src/gods98/lws_port.cpp

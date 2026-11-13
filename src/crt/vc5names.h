@@ -30,6 +30,9 @@ int strcasecmp_lite(const char* a, const char* b);
 int strnicmp_lite(const char* a, const char* b, int count);
 /* __finite (FUN_0048e870). */
 int double_is_finite(double value);
+/* __splitpath (FUN_00490090): the port's model, in gods98/lwo_port.cpp. */
+void crt_path_split(const char* path, char* drive, char* dir, char* fname,
+                    char* ext);
 #ifdef __cplusplus
 }
 #endif
@@ -50,6 +53,7 @@ void* ledger_stub_0048dc80_GrowHeapArray(void* allocation,
 #define _strcmpi strcasecmp_lite
 #define _strnicmp(a, b, count) strnicmp_lite((a), (b), (int)(count))
 #define _finite double_is_finite
+#define _splitpath crt_path_split
 #endif
 
 #endif /* LEGORRR_CRT_VC5NAMES_H */

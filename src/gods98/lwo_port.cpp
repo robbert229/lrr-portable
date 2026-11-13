@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-031 G98-031: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-031.csv. */
+/* The port tail for G98-031 (gods98/lwo.c, ADR 0005 and 0006 decision 4):
+ * the port's own LightWave object reader, unannotated. It parses a whole
+ * .lwo image into the port's Model (model.hpp), which Mesh.c's port
+ * (gods98/mesh_unit.cpp, lwo_model_entry_load) and the native renderer
+ * use. Its contract differs from the original's LoadAppObj/FreeLWOB, which
+ * fill an APPOBJ through File_Read: model_parse, model_open and model_free
+ * keep their port names here. The helpers whose contracts match
+ * (lwo_texture_projection_mode_parse among them) are the unit's, in lwo.c.
+ * Body hashes of the relocation: docs/coverage/relocations/G98-031.csv. */
 #include "model.hpp"
 #include "crt/crt.hpp"
 #include "heap.hpp"
@@ -74,13 +80,6 @@ typedef struct Parse {
     size_t   nrecs, rcap;
 } Parse;
 
-// GLOBAL: LEGORR 0x004af9f4
-static const char s_lwo_projection_spherical[] = "SPHERICAL";
-// GLOBAL: LEGORR 0x004afa00
-static const char s_lwo_projection_cylindrical[] = "CYLINDRICAL";
-// GLOBAL: LEGORR 0x004afa0c
-static const char s_lwo_projection_planar[] = "PLANAR";
-
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static float bef32(const uint8_t* p);
 static uint16_t be16(const uint8_t* p);
@@ -93,136 +92,9 @@ static int parse_curves_payload(const uint8_t* data, size_t size);
 static void parse_free(Parse* P);
 static int tag_equal_ci(const uint8_t* tag, const char* expected);
 
-// FUNCTION: LEGORR 0x0048c040
-char* string_case_substring_find(char* haystack, const char* needle,
-                                 uint32_t* out_index, size_t* out_length)
-{
-    if (haystack == NULL || needle == NULL) {
-        return NULL; /* pinned deviation: test_string.cpp:145-147 */
-    }
-    /* Corpus walk: two intrinsic strlens into registers, three entry gates,
-     * then a walking haystack pointer beside an inc counter with an unsigned
-     * bound and test/jbe gate (the needle is re-read from its stack slot
-     * every pass). */
-    char* hay = haystack;
-    unsigned int hlen = (unsigned int)strlen(haystack);
-    unsigned int nlen = (unsigned int)strlen(needle);
-    if (hlen == 0u) {
-        return NULL; /* pinned: the corpus's strlen-shaped gate */
-    }
-    if (nlen == 0u) {
-        return NULL; /* pinned: the corpus's strlen-shaped gate */
-    }
-    if (hlen <= 0u) {
-        return NULL; /* the corpus's unsigned test/jbe bound before the walk */
-    }
-    for (unsigned index = 0; index < hlen; ++index) {
-        if (strnicmp_lite(hay, needle, (int)nlen) == 0) {
-            if (out_index != NULL) {
-                *out_index = (uint32_t)index;
-            }
-            if (out_length != NULL) {
-                *out_length = (size_t)nlen;
-            }
-            return hay;
-        }
-        ++hay;
-    }
-    return NULL;
-}
-
-/* LwoStringDuplicate (FUN_0048c0c0): the corpus's dup allocates strlen + 1
- * rounded UP TO THE NEXT EVEN size through the engine heap, zeroes the
- * whole block (dwords then bytes), then copies strlen + 1 bytes (the
- * corpus's own loop bounds, assembly-pinned — Ghidra's "tail copy" was the
- * even-size padding). On the corpus heap the allocator's even-grained
- * blocks absorb the padding. LwoTextureProjectionModeParse (FUN_0048c120):
- * a fold compare against the table PLANAR / CYLINDRICAL / SPHERICAL (the
- * corpus calls the strnicmp_lite carrier directly); the first
- * prefix match answers the table index, anything else answers 0 — the
- * PLANAR default. */
-// FUNCTION: LEGORR 0x0048c0c0
-char* lwo_string_duplicate(const char* text)
-{
-    if (text == NULL) {
-        return NULL; /* deviation: the corpus dereferences blindly */
-    }
-    /* Keep the corpus's length, terminator, and even-rounding steps separate
-     * (0x48c0d2-0x48c0db: dec, inc, then add the low bit). */
-    size_t size = strlen(text);
-    ++size;
-    size += size & 1u;
-    char* copy = (char*)engine_heap_alloc((long)size);
-    /* Corpus parity: the copy is filled unchecked — sole-caller audit found
-     * no test or caller that survives a NULL allocator answer anyway. */
-    memset(copy, 0, size);
-    strcpy(copy, text);
-    return copy;
-}
-
-// FUNCTION: LEGORR 0x0048c120
-int lwo_texture_projection_mode_parse(const char* name)
-{
-    /* Corpus entry 0x48c12b-0x48c13b copies these literal addresses into
-     * the stack table. */
-    const char* modes[3];
-    modes[0] = s_lwo_projection_planar;
-    modes[1] = s_lwo_projection_cylindrical;
-    modes[2] = s_lwo_projection_spherical;
-
-    uint32_t i = 0;
-    for (; i < 3u; ++i) {
-        const size_t len = strlen(modes[i]); /* the corpus inlines this as
-                                              * repnz scas at 0x48c152 */
-        if (strnicmp_lite(name, modes[i], (int)len) == 0) break;
-    }
-    if (i == 3u) i = 0u; /* corpus 0x48c16f-0x48c174 resets exhausted scan */
-    return (int)i;
-}
-
-/* OwnedResourceTreeRelease (FUN_0048c180) — see crt.hpp. */
-// FUNCTION: LEGORR 0x0048c180
-void owned_resource_tree_release(void** node, int own_node)
-{
-    if (node == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    if (node[0] != NULL) {
-        engine_heap_free(node[0]);
-    }
-    if (node[2] != NULL) {
-        engine_heap_free(node[2]);
-    }
-    if (node[1] != NULL) {
-        owned_resource_tree_release((void**)node[1], 1);
-    }
-    if (own_node != 0) {
-        engine_heap_free((void*)node);
-    }
-}
-
-/* LwoReadBigEndianFloat (corpus FUN_0048c1d0): consume four stream bytes
- * at the cursor, byte-reverse them into `out`, advance the cursor, answer
- * 1. The corpus's LwoPoints/LwoSurfaceSettings readers call it for every
- * big-endian float field; byte-reversal is exactly be32 + host store. */
-// FUNCTION: LEGORR 0x0048c1d0
-int lwo_read_big_endian_float(const uint8_t** cursor, uint8_t out[4])
-{
-    out[3] = **cursor;
-    ++*cursor;
-    out[2] = **cursor;
-    ++*cursor;
-    out[1] = **cursor;
-    ++*cursor;
-    out[0] = **cursor;
-    ++*cursor;
-    return 1;
-}
-
 /* LwoPoints: replace the current coordinate table with host-order triples.
  * Keeping the handler's output as one allocation mirrors the retail record
  * and avoids building a second copy when the public Model is assembled. */
-// FUNCTION: LEGORR 0x0048c210
 static int parse_points(Parse* P, const Chunk* c)
 {
     if (c->size % 12u != 0u)
@@ -246,49 +118,6 @@ static int parse_points(Parse* P, const Chunk* c)
     return 1;
 }
 
-namespace unported_ledger_stubs {
-// LwoCurves
-// FUNCTION: LEGORR 0x0048c360
-uint32_t ledger_stub_0048c360_LwoCurves(GameFileHandle* stream,
-                                         int byte_count)
-{
-    uint8_t* data;
-    const uint8_t* cursor;
-    size_t remaining;
-    if (stream == NULL || byte_count < 0 || byte_count > 0x7ffffff0) return 0u;
-    data = (uint8_t*)engine_heap_alloc((long)byte_count + 16L);
-    if (data == NULL) return 0u;
-    memset(data, 0, (size_t)byte_count + 16u);
-    if (byte_count != 0) {
-        /* FUN_0048c360 ignores WadFileRead's element count. The allocation
-         * is pre-zeroed with a 16-byte tail, so a short/truncated read still
-         * proceeds through the bounded record walk and returns success. */
-        (void)wad_file_read(data, byte_count, 1, stream);
-    }
-    /* The retail walk consumes {u16 point count, point-count u16 values,
-     * then two opaque u16 words}. It neither builds a curve table nor reads
-     * the trailing words; they are only skipped before the next record. */
-    cursor = data;
-    remaining = (size_t)byte_count;
-    while (remaining != 0u) {
-        size_t point_count;
-        size_t point_bytes;
-        if (remaining < 2u) break;
-        point_count = (size_t)be16(cursor);
-        cursor += 2u;
-        remaining -= 2u;
-        if (point_count > remaining / 2u) break;
-        point_bytes = point_count * 2u;
-        cursor += point_bytes;
-        remaining -= point_bytes;
-        if (remaining < 4u) break;
-        cursor += 4u;
-        remaining -= 4u;
-    }
-    engine_heap_free(data);
-    return 1u;
-}
-} // namespace unported_ledger_stubs
 
 /* LwoPolygons (FUN_0048c3e0) stores one 3-word record per polygon:
  * {u32 vertex count, u32 surface index, pointer word}. The table is expanded
@@ -296,7 +125,6 @@ uint32_t ledger_stub_0048c360_LwoCurves(GameFileHandle* stream,
  * records, then freeing the old block. Host ring pointers live in a sidecar.
  * The on-disk ring and surface words are
  * big-endian; surface is decremented with 16-bit wrap. */
-// FUNCTION: LEGORR 0x0048c3e0
 static int parse_pols(Parse* P, const uint8_t* d, size_t size)
 {
     size_t p = 0;
@@ -365,7 +193,6 @@ static int parse_pols(Parse* P, const uint8_t* d, size_t size)
     }
     return 1;
 }
-// FUNCTION: LEGORR 0x0048c690
 static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
 {
     size_t p = 0;
@@ -411,7 +238,6 @@ static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
 /* LwoSurfaceSettings is called once for each SURF chunk. Its payload starts
  * with one NUL-terminated surface name, even-padded, then subchunks of the
  * form {4-byte tag, u16 size, payload, even pad}. */
-// FUNCTION: LEGORR 0x0048c820
 static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
 {
     const uint8_t* terminator;
@@ -469,7 +295,6 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0048d2c0
 Model* model_parse(const uint8_t* data, size_t len)
 {
     if (data == NULL || len < 12 || !tag_equal_ci(data, "FORM") ||
@@ -541,7 +366,6 @@ Model* model_parse(const uint8_t* data, size_t len)
     return m;
 }
 
-// FUNCTION: LEGORR 0x0048d7c0
 Model* model_open(const char* path)
 {
     size_t path_length;
@@ -598,7 +422,6 @@ Model* model_open(const char* path)
     return m;
 }
 
-// FUNCTION: LEGORR 0x0048d870
 void model_free(Model* m)
 {
     if (!m)
@@ -1040,3 +863,58 @@ static void parse_free(Parse* P)
     }
     free(P->recs);
 }
+
+#if !defined(_MSC_VER)
+/* PORT-ONLY: _splitpath for non-MSVC hosts (crt/vc5names.h maps the LIBC
+ * name here; the MSVC builds link VC5's splitpat.obj). Splits `path` into
+ * its drive ("X:"), directory (with its trailing separator), base name and
+ * extension (with its dot), as VC5's does; each output may be NULL. */
+extern "C" void crt_path_split(const char* path, char* drive, char* dir,
+                               char* fname, char* ext)
+{
+    const char* start = path;
+    const char* sep = NULL;
+    const char* dot = NULL;
+    const char* p;
+    size_t n;
+
+    if (path[0] != '\0' && path[1] == ':') {
+        if (drive != NULL) {
+            drive[0] = path[0];
+            drive[1] = ':';
+            drive[2] = '\0';
+        }
+        start = path + 2;
+    } else if (drive != NULL) {
+        drive[0] = '\0';
+    }
+    for (p = start; *p != '\0'; ++p) {
+        if (*p == '/' || *p == '\\') {
+            sep = p;
+            dot = NULL;
+        } else if (*p == '.') {
+            dot = p;
+        }
+    }
+    if (dir != NULL) {
+        n = sep != NULL ? (size_t)(sep + 1 - start) : 0u;
+        if (n > 255u) n = 255u;
+        memcpy(dir, start, n);
+        dir[n] = '\0';
+    }
+    if (sep != NULL) start = sep + 1;
+    if (dot == NULL) dot = p;
+    if (fname != NULL) {
+        n = (size_t)(dot - start);
+        if (n > 255u) n = 255u;
+        memcpy(fname, start, n);
+        fname[n] = '\0';
+    }
+    if (ext != NULL) {
+        n = (size_t)(p - dot);
+        if (n > 255u) n = 255u;
+        memcpy(ext, dot, n);
+        ext[n] = '\0';
+    }
+}
+#endif
