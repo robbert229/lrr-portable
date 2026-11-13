@@ -92,7 +92,7 @@ src/game/camera_control.h
 src/game/camera_control_imports.h
 src/game/camera_control_port.cpp
 src/game/camera_drag.hpp
-src/game/cell_flood_passes.cpp
+src/game/cell_flood_passes_port.cpp
 src/game/cmd.cpp
 src/game/cmd.h
 src/game/cmd.hpp
@@ -487,6 +487,11 @@ src/game/vehicle_model_port.cpp
 src/game/video_graph.cpp
 src/game/video_graph.h
 src/game/video_graph.hpp
+src/game/water.c
+src/game/water.h
+src/game/water_imports.h
+src/game/water_link_names.h
+src/game/water_maths.h
 src/game/weapon.cpp
 src/game/weapon.hpp
 src/game/weapon_for_weapons.hpp

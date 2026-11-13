@@ -2219,23 +2219,6 @@ const char* scene_property_secondary_name_get(void* property)
     return name;
 }
 
-unsigned char s_map_row_span_records[MAP_ROW_SPAN_RECORDS_MAX]
-                                           [MAP_ROW_SPAN_RECORD_SIZE];
-uint32_t s_map_row_span_records_count;
-
-uint32_t map_row_span_record_count(void)
-{
-    return s_map_row_span_records_count;
-}
-
-const void* map_row_span_record_get(uint32_t index)
-{
-    if (index >= s_map_row_span_records_count) {
-        return NULL;
-    }
-    return s_map_row_span_records[index];
-}
-
 RendererSubobjectResolveFn s_renderer_subobject_resolver;
 
 void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver)

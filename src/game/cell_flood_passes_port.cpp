@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-049 GAME-049: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-049.csv. */
+/* GAME-049 Water.c's port tail (finding 614): the port's model of the
+ * level's water pools, which it keeps as staged cell runs on the level
+ * (TerrainWorldSpatialRecords), unannotated (ADR 0006 decision 4). The
+ * original-shape unit is water.c.
+ *
+ * In the matching build (MSVC 5.0) water.c defines the port's names of
+ * Water_Initialise and Water_DestroyWallComplete itself
+ * (water_link_names.h), so their definitions here are compiled out there
+ * (LRR_WATER_PORT_NAMES). The rest stays in every build: the native port
+ * calls it. Relocated from the verbatim cell_flood_passes.cpp (body hashes:
+ * docs/coverage/relocations/GAME-049.csv). The row-span buffer writers
+ * (0046ead0, 0046eb30) had no native caller and are gone with view.cpp's
+ * s_map_row_span_records (finding 614). */
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
@@ -48,9 +58,6 @@ typedef struct TerrainWorldSpatialStageContext {
     int failed;
 } TerrainWorldSpatialStageContext;
 
-#define MAP_ROW_SPAN_POINTS_MAX 96
-#define MAP_ROW_SPAN_COUNT_OFFSET 0x320
-
 static void terrain_world_spatial_candidates_select(
     TerrainWorldSpatialRecord* record, LevelState* level);
 
@@ -59,7 +66,11 @@ static int terrain_world_spatial_records_merge( TerrainWorldSpatialRecords* owne
 static void terrain_world_spatial_records_sort( TerrainWorldSpatialRecords* owner);
 static void terrain_world_spatial_run_flush(void* context, uint32_t row, uint32_t first_cell, uint32_t end_cell);
 
-// FUNCTION: LEGORR 0x0046db90
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+#define LRR_WATER_PORT_NAMES 1
+#endif
+
+#ifdef LRR_WATER_PORT_NAMES
 void terrain_cell_quad_run_stage_level(void* scene, LevelState* level)
 {
     TerrainWorldSpatialRecords* owner;
@@ -103,9 +114,10 @@ void terrain_cell_quad_run_stage_level(void* scene, LevelState* level)
         }
     }
 }
+#endif /* LRR_WATER_PORT_NAMES */
+
 /* StagedCellCandidateSelect (FUN_0046dd10): filter each staged item to its
  * first candidate whose cell is in bounds and is neither type 7 nor type 1. */
-// FUNCTION: LEGORR 0x0046dd10
 void staged_cell_candidate_select(void* unused, LevelState* level)
 {
     uint32_t record_index;
@@ -159,11 +171,11 @@ void staged_cell_candidate_select(void* unused, LevelState* level)
     }
 }
 
+#ifdef LRR_WATER_PORT_NAMES
 /* CellSurfaceQuadHeightFill (FUN_0046e220): find the staged per-level item,
  * activate its CPU slot, reset its offsets, and sample the selected edge.
  * The original scene object's visibility/lock operation remains renderer
  * owned; the record and selector now have a LevelState owner. */
-// FUNCTION: LEGORR 0x0046e220
 void terrain_cell_surface_quad_height_fill_current(LevelState* level,
                                                     int x, int y)
 {
@@ -218,8 +230,8 @@ void terrain_cell_surface_quad_height_fill_current(LevelState* level,
     scene_render_terrain_cell_overlay_height_fill(
         NULL, level, (uint32_t)x, (uint32_t)y);
 }
+#endif /* LRR_WATER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x0046e330
 void grid_surface_entry_reset(void* surface, int key)
 {
     if (surface == NULL || s_grid_surface_lookup == NULL) return;
@@ -241,7 +253,6 @@ void grid_surface_entry_reset(void* surface, int key)
                      &zero, sizeof(zero));
 }
 
-// FUNCTION: LEGORR 0x0046e390
 void simtick_fx_bank_tick(EngineContext* c, float dt)
 {
     uint32_t active_count = 0u;
@@ -305,7 +316,6 @@ void simtick_fx_bank_tick(EngineContext* c, float dt)
  * distinct later match, and return the first matching record. This matches
  * the retail accumulator: after its first match, later matches preserve that
  * first record as the merge destination. */
-// FUNCTION: LEGORR 0x0046E9D0
 void* staged_cell_candidate_collect(uint32_t row, uint32_t first_cell,
                                     uint32_t end_cell)
 {
@@ -342,47 +352,6 @@ void* staged_cell_candidate_collect(uint32_t row, uint32_t first_cell,
         }
     }
     return first_record;
-}
-
-/* AppendMapRowSpanToBuffer (FUN_0046ead0): append each x in the half-open
- * interval [x_begin, x_end), pairing it with y. */
-// FUNCTION: LEGORR 0x0046ead0
-void map_row_span_append(void* buffer, uint32_t y, uint32_t x_begin,
-                         uint32_t x_end)
-{
-    if (buffer == NULL) {
-        return;
-    }
-    uint32_t count = 0u;
-    __builtin_memcpy(&count, (char*)buffer + MAP_ROW_SPAN_COUNT_OFFSET,
-                     sizeof(count));
-    while (x_begin < x_end && count < MAP_ROW_SPAN_POINTS_MAX) {
-        const float x = (float)x_begin;
-        const float fy = (float)y;
-        __builtin_memcpy((char*)buffer + (size_t)count * 8u, &x, sizeof(x));
-        __builtin_memcpy((char*)buffer + (size_t)count * 8u + 4u,
-                         &fy, sizeof(fy));
-        ++x_begin;
-        ++count;
-    }
-    __builtin_memcpy((char*)buffer + MAP_ROW_SPAN_COUNT_OFFSET, &count,
-                     sizeof(count));
-}
-
-/* StartMapRowSpanBufferRecord (FUN_0046eb30): clear a new row record,
- * append the supplied span, then advance the port-owned staging count. */
-// FUNCTION: LEGORR 0x0046eb30
-void map_row_span_record_start(uint32_t y, uint32_t x_begin,
-                               uint32_t x_end)
-{
-    if (s_map_row_span_records_count >= MAP_ROW_SPAN_RECORDS_MAX) {
-        return;
-    }
-    unsigned char* record =
-        s_map_row_span_records[s_map_row_span_records_count];
-    memset(record, 0, MAP_ROW_SPAN_RECORD_SIZE);
-    map_row_span_append(record, y, x_begin, x_end);
-    ++s_map_row_span_records_count;
 }
 
 static void terrain_world_spatial_candidates_select(
