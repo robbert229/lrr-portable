@@ -550,7 +550,7 @@ void legoobject_transform_position_get(Lego_Object* obj, float* outX, float* out
 void legoobject_surface_vector_normalize(Lego_Object* obj, float* outDir); /* 004422a0 */
 void legoobject_velocity_vector_dispatch(Lego_Object* obj, float heading, float* dir); /* 00442300 */
 float legoobject_vector_direction_angle_radians_get(Lego_Object* obj); /* 00442480 */
-void legoobject_position_to_terrain_cell(Lego_Object* obj, int* outX, int* outY); /* 004424f0 */
+int legoobject_position_to_terrain_cell(Lego_Object* obj, int* outX, int* outY); /* 004424f0 */
 float legoobject_world_z_callback(float x, float y, struct TerrainMap* map); /* 00442540 */
 float legoobject_world_z_callback_lake(float x, float y, struct TerrainMap* map); /* 00442560 */
 

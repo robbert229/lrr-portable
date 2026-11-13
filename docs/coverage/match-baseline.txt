@@ -1,4 +1,4 @@
-# input_sha256: edf2d603b56cbc29afce167ad5b4c5b21e1dc33dbe9fcb01f31eacae6c78aaf2
+# input_sha256: 10577f1a67abbee6d2a3ce21eda96b60abef593bff57ab3b0b9e981858efc297
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2354 mapped functions
+[game-only] 2352 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -676,10 +676,10 @@
 0x0041f9a0 100.00 lego_level_resource_balance_add_and_sound
 0x0041f9e0 100.00 lego_upgrade_resource_debit
 0x0041fa20 100.00 lego_game_config_callback_registry_init
-0x0041fa80 96.08 lego_start_level_pilots
+0x0041fa80 88.24 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
 0x0041fb50 93.87 lego_game_config_init
-0x00422850 94.60 lego_misc_object_resources_load
+0x00422850 94.76 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 95.79 lego_debug_panel_text_draw_update
@@ -720,7 +720,7 @@
 0x00428330 72.03 lego_terrain_command_feedback_dispatch
 0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
-0x004288e0 97.35 lego_level_debug_input_cell_mutator_dispatch
+0x004288e0 97.51 lego_level_debug_input_cell_mutator_dispatch
 0x00429110 49.06 lego_block_visible_callback
 0x00429160 100.00 lego_terrain_cell_palette_resource_at_grid_position
 0x004291a0 96.84 lego_scene_marker_update_and_draw
@@ -762,13 +762,13 @@
 0x0042d100 92.83 lego_entity_rockmonster_type_table_load
 0x0042d2b0 93.47 lego_entity_building_types_load
 0x0042d460 93.14 lego_upgrade_types_load
-0x0042d600 86.38 lego_object_names_load
-0x0042da20 86.38 lego_object_the_names_load
+0x0042d600 86.69 lego_object_names_load
+0x0042da20 86.69 lego_object_the_names_load
 0x0042de40 92.31 lego_viewport_target_position_clamp
 0x0042dfc0 82.35 lego_object_pointer_registry_clear_match
 0x0042dff0 84.62 lego_object_pointer_registry_get_slot
 0x0042e020 68.74 lego_object_list_load_file
-0x0042e8b0 82.43 lego_entity_type_pair_lookup
+0x0042e8b0 82.67 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
 0x0042efc0 96.25 lego_play_movie
@@ -973,7 +973,7 @@
 0x00439370 100.00 legoobject_build_placement_command_setup
 0x004394b0 100.00 legoobject_build_placement_alternate_command_setup
 0x004395e0 100.00 legoobject_display_name_lookup
-0x004396c0 86.36 legoobject_item_name_by_kind
+0x004396c0 87.88 legoobject_item_name_by_kind
 0x00439790 100.00 legoobject_the_name_get
 0x00439860 100.00 legoobject_name_get
 0x00439930 100.00 legoobject_copy_two_dword_pair
@@ -1345,7 +1345,7 @@
 0x00458620 100.00 obj_set_construction_target
 0x00458650 10.53 level_objective_result_get
 0x00458660 100.00 global_value_004ffe48_set
-0x00458670 30.99 objective_announce_current
+0x00458670 27.95 objective_announce_current
 0x004588e0 31.43 input_device_release
 0x004589a0 17.39 global_option_low_bits_enabled
 0x00458be0 15.03 objective_tick_target
@@ -1563,15 +1563,16 @@
 0x00465e00 87.67 transient_effect_segment_advance
 0x00465ee0 100.00 smoke_mesh_render_callback
 0x00465f40 33.15 transient_effect_instance_quad_vertices_build
-0x004661c0 25.93 grid_cell_record_buffer_allocate
-0x00466210 100.00 entity_field_grid_buffer_release
-0x00466230 100.00 grid_cell_record_buffer_replace
-0x00466250 19.12 ledger_stub_00466250_ExpandCellEntitySpawn
-0x00466380 63.89 set_expansion_entity_at_grid_cell
-0x004663f0 64.96 can_spawn_expansion_entity_at_grid_cell
-0x00466490 12.00 ledger_stub_00466490_CellSightRayCheckAndFlag
-0x004665c0 14.63 simtick_post_step
-0x00466750 16.67 grid_cell_invalidate_and_clear_flags
+0x004661c0 100.00 spiderweb_initialise
+0x00466210 100.00 spiderweb_shutdown
+0x00466230 100.00 spiderweb_restart
+0x00466250 100.00 spiderweb_spawn_at
+0x00466380 100.00 spiderweb_add
+0x004663f0 100.00 spiderweb_get_angle
+0x00466490 100.00 spiderweb_check_collision
+0x004665c0 100.00 spiderweb_update
+0x004665e0 100.00 spiderweb_callback_update
+0x00466750 100.00 spiderweb_remove_at
 0x004667e0 100.00 stats_initialise
 0x00469a90 100.00 entity_indexed_value_append
 0x00469ac0 100.00 entity_indexed_record_word_at_b0_get
@@ -1635,18 +1636,15 @@
 0x0046a2f0 100.00 entity_stats_float_at110
 0x0046a310 100.00 entity_stats_float_at10c
 0x0046a330 100.00 entity_record_flag400_toggle_and_refresh
-0x0046a370 100.00 teleporter_remove_all
+0x0046a370 100.00 linked_record_chain_free
 0x0046a390 100.00 global_linked_record_chain_clear
-0x0046a3c0 100.00 teleporter_callback_start
-0x0046a420 100.00 teleporter_get_camera_position
-0x0046a470 100.00 teleporter_add_service
-0x0046a490 100.00 teleporter_callback_check_type
-0x0046a4c0 100.00 entity_flag_mask_callbacks_all_pass
-0x0046a510 100.00 scene_object_state_dispatch_original
-0x0046a5c0 100.00 teleporter_callback_update
-0x0046a700 100.00 teleporter_update_services
-0x0046a730 100.00 teleporter_update
-0x0046a760 100.00 teleporter_get_service_object_type
+0x0046a420 10.53 selected_global_point_transform_and_return_x
+0x0046a470 100.00 linked_list_push_at_global_head
+0x0046a4c0 96.88 entity_flag_mask_callbacks_all_pass
+0x0046a510 19.67 scene_object_state_dispatch
+0x0046a700 27.27 linked_list_conditional_float_advance
+0x0046a730 23.53 camera_move_pipeline
+0x0046a760 25.00 first_set_flag_ordinal
 0x0046a7f0 100.00 ui_message_strings_initialize
 0x0046a950 100.00 text_message_panel_initialise_adapter
 0x0046a9e0 100.00 text_clear
@@ -2362,7 +2360,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2599 mapped functions
+[full] 2597 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -3032,10 +3030,10 @@
 0x0041f9a0 100.00 lego_level_resource_balance_add_and_sound
 0x0041f9e0 100.00 lego_upgrade_resource_debit
 0x0041fa20 100.00 lego_game_config_callback_registry_init
-0x0041fa80 96.08 lego_start_level_pilots
+0x0041fa80 88.24 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
 0x0041fb50 93.87 lego_game_config_init
-0x00422850 94.60 lego_misc_object_resources_load
+0x00422850 94.76 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 95.79 lego_debug_panel_text_draw_update
@@ -3076,7 +3074,7 @@
 0x00428330 72.03 lego_terrain_command_feedback_dispatch
 0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
-0x004288e0 97.35 lego_level_debug_input_cell_mutator_dispatch
+0x004288e0 97.51 lego_level_debug_input_cell_mutator_dispatch
 0x00429110 49.06 lego_block_visible_callback
 0x00429160 100.00 lego_terrain_cell_palette_resource_at_grid_position
 0x004291a0 96.84 lego_scene_marker_update_and_draw
@@ -3118,13 +3116,13 @@
 0x0042d100 92.83 lego_entity_rockmonster_type_table_load
 0x0042d2b0 93.47 lego_entity_building_types_load
 0x0042d460 93.14 lego_upgrade_types_load
-0x0042d600 86.38 lego_object_names_load
-0x0042da20 86.38 lego_object_the_names_load
+0x0042d600 86.69 lego_object_names_load
+0x0042da20 86.69 lego_object_the_names_load
 0x0042de40 92.31 lego_viewport_target_position_clamp
 0x0042dfc0 82.35 lego_object_pointer_registry_clear_match
 0x0042dff0 84.62 lego_object_pointer_registry_get_slot
 0x0042e020 68.74 lego_object_list_load_file
-0x0042e8b0 82.43 lego_entity_type_pair_lookup
+0x0042e8b0 82.67 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
 0x0042efc0 96.25 lego_play_movie
@@ -3329,7 +3327,7 @@
 0x00439370 100.00 legoobject_build_placement_command_setup
 0x004394b0 100.00 legoobject_build_placement_alternate_command_setup
 0x004395e0 100.00 legoobject_display_name_lookup
-0x004396c0 86.36 legoobject_item_name_by_kind
+0x004396c0 87.88 legoobject_item_name_by_kind
 0x00439790 100.00 legoobject_the_name_get
 0x00439860 100.00 legoobject_name_get
 0x00439930 100.00 legoobject_copy_two_dword_pair
@@ -3701,7 +3699,7 @@
 0x00458620 100.00 obj_set_construction_target
 0x00458650 10.53 level_objective_result_get
 0x00458660 100.00 global_value_004ffe48_set
-0x00458670 30.99 objective_announce_current
+0x00458670 27.95 objective_announce_current
 0x004588e0 31.43 input_device_release
 0x004589a0 17.39 global_option_low_bits_enabled
 0x00458be0 15.03 objective_tick_target
@@ -3919,15 +3917,16 @@
 0x00465e00 87.67 transient_effect_segment_advance
 0x00465ee0 100.00 smoke_mesh_render_callback
 0x00465f40 33.15 transient_effect_instance_quad_vertices_build
-0x004661c0 25.93 grid_cell_record_buffer_allocate
-0x00466210 100.00 entity_field_grid_buffer_release
-0x00466230 100.00 grid_cell_record_buffer_replace
-0x00466250 19.12 ledger_stub_00466250_ExpandCellEntitySpawn
-0x00466380 63.89 set_expansion_entity_at_grid_cell
-0x004663f0 64.96 can_spawn_expansion_entity_at_grid_cell
-0x00466490 12.00 ledger_stub_00466490_CellSightRayCheckAndFlag
-0x004665c0 14.63 simtick_post_step
-0x00466750 16.67 grid_cell_invalidate_and_clear_flags
+0x004661c0 100.00 spiderweb_initialise
+0x00466210 100.00 spiderweb_shutdown
+0x00466230 100.00 spiderweb_restart
+0x00466250 100.00 spiderweb_spawn_at
+0x00466380 100.00 spiderweb_add
+0x004663f0 100.00 spiderweb_get_angle
+0x00466490 100.00 spiderweb_check_collision
+0x004665c0 100.00 spiderweb_update
+0x004665e0 100.00 spiderweb_callback_update
+0x00466750 100.00 spiderweb_remove_at
 0x004667e0 100.00 stats_initialise
 0x00469a90 100.00 entity_indexed_value_append
 0x00469ac0 100.00 entity_indexed_record_word_at_b0_get
@@ -3991,18 +3990,15 @@
 0x0046a2f0 100.00 entity_stats_float_at110
 0x0046a310 100.00 entity_stats_float_at10c
 0x0046a330 100.00 entity_record_flag400_toggle_and_refresh
-0x0046a370 100.00 teleporter_remove_all
+0x0046a370 100.00 linked_record_chain_free
 0x0046a390 100.00 global_linked_record_chain_clear
-0x0046a3c0 100.00 teleporter_callback_start
-0x0046a420 100.00 teleporter_get_camera_position
-0x0046a470 100.00 teleporter_add_service
-0x0046a490 100.00 teleporter_callback_check_type
-0x0046a4c0 100.00 entity_flag_mask_callbacks_all_pass
-0x0046a510 100.00 scene_object_state_dispatch_original
-0x0046a5c0 100.00 teleporter_callback_update
-0x0046a700 100.00 teleporter_update_services
-0x0046a730 100.00 teleporter_update
-0x0046a760 100.00 teleporter_get_service_object_type
+0x0046a420 10.53 selected_global_point_transform_and_return_x
+0x0046a470 100.00 linked_list_push_at_global_head
+0x0046a4c0 96.88 entity_flag_mask_callbacks_all_pass
+0x0046a510 19.67 scene_object_state_dispatch
+0x0046a700 27.27 linked_list_conditional_float_advance
+0x0046a730 23.53 camera_move_pipeline
+0x0046a760 25.00 first_set_flag_ordinal
 0x0046a7f0 100.00 ui_message_strings_initialize
 0x0046a950 100.00 text_message_panel_initialise_adapter
 0x0046a9e0 100.00 text_clear

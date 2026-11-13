@@ -212,7 +212,8 @@ typedef struct MiscResourceSpec {
  * the original-shape functions in lego_unit.c reach as a literal. */
 static const volatile float s_panel_highlight_zero = 0.0f;
 
-// GLOBAL: LEGORR 0x004a3f40
+/* Not annotated: 004a3f40 is Lego.c's "SpiderWeb" literal, which
+ * lego_unit.c marks and SpiderWeb.c (spiderweb.c) reuses (finding 620). */
 const char s_item_name_spider_web[] = "SpiderWeb";
 // GLOBAL: LEGORR 0x004a3f90
 const char s_item_name_electric_fence[] = "ElectricFence";
@@ -8959,13 +8960,6 @@ extern "C" void simtick_fx_bank_tick_original(struct Lego_Level* level,
 extern "C" void simtick_sound_keepalive_original(void) /* 0x0047aba0 */
 {
     simtick_sound_keepalive(s_callback_registry_context);
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (simtick_post_step)
-extern "C" void simtick_post_step_original(float elapsedWorld) /* 0x004665c0 */
-{
-    (void)elapsedWorld;
-    simtick_post_step(s_callback_registry_context);
 }
 
 /* 0x00463230 walks global dirty-quad state; the port's entry takes a pass

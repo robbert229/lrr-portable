@@ -5896,14 +5896,14 @@ float legoobject_vector_direction_angle_radians_get(Lego_Object* obj)
 
 /* LegoObject_GetBlockPos: the block under the object. */
 // FUNCTION: LEGORR 0x004424f0
-void legoobject_position_to_terrain_cell(Lego_Object* obj, int* outX, int* outY)
+int legoobject_position_to_terrain_cell(Lego_Object* obj, int* outX, int* outY)
 {
     void* cont;
     float wPos[3];
 
     cont = legoobject_type_component_get(obj);
     ddiscene_object_position_get(cont, NULL, wPos);
-    terrain_map_world_to_block(Lego_GetMap(), wPos[0], wPos[1], outX, outY);
+    return terrain_map_world_to_block(Lego_GetMap(), wPos[0], wPos[1], outX, outY);
 }
 
 /* LegoObject_GetWorldZCallback: the terrain height, for the container
