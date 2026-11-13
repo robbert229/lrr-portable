@@ -133,6 +133,9 @@ void text_buffer_destroy_target(void* record); /* unchecked retail body */
  * +0x82c flag-word bit 2 set or clear. The corpus strides the record's
  * dword word blindly; the port guards the record and folds through the
  * widened model's dword window. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void text_output_field82c_bit2_set_clear(void* record, int set_bit);
                                                 /* FUN_00485160 */
 
@@ -183,6 +186,9 @@ void text_buffer_append_vformat(void* record, int skip_bells,
 extern "C"
 #endif
 void text_buffer_append_format(void* record, const char* format, ...);
+#ifdef __cplusplus
+extern "C"
+#endif
 void formatted_text_append_to_ring_buffer(void* record, int skip_bells,
                                           const char* format, ...);
 
@@ -208,6 +214,9 @@ extern "C"
 #endif
 int text_buffer_draw_wrapped(void* record, uint32_t start_line,
                              float line_scale, int* height_out);
+#ifdef __cplusplus
+extern "C"
+#endif
 int text_wrap_measure_and_draw_lines(void* record, float elapsed,
                                      int* height_out);
 

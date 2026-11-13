@@ -33,6 +33,9 @@ uint32_t formatted_text_buffer_build(char* out, size_t capacity,
 
 /* ObjectiveAdvisorTextCopy (FUN_00485300): format advisor text into the
  * record's inline buffer and update its mode/dirty fields. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void objective_advisor_text_copy(void* record, int mode,
                                  const char* format, ...);
 

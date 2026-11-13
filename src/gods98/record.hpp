@@ -444,6 +444,9 @@ void object_vector3_set(void* object_block, float x, float y, float z);
 extern "C"
 #endif
 void float_pair_at_offset4_set_from_ints(void* record, int x, int y);
+#ifdef __cplusplus
+extern "C"
+#endif
 void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
                                           uint32_t y);
 void object_state_pair_get(const void* record, uint32_t* out_a,
