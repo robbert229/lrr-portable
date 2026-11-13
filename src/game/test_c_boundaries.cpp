@@ -194,6 +194,8 @@ extern "C" int s_cursor_delta_y;
 #include "gods98/directdraw_imports.h"
 #include "gods98/model.hpp"
 #include "gods98/lwo.h"
+#include "game/bubbles.h"
+#include "game/bubbles_imports.h"
 
 int main(void)
 {

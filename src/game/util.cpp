@@ -508,7 +508,7 @@ void motion_gameplay_tick(float delta)
 
 const char* s_string_table_entries[STRING_TABLE_MAX_ENTRIES];
 
-// GLOBAL: LEGORR 0x00557900
+/* The port's copy of Bubbles.c's bubbleName (0x00557900, bubbles.c). */
 const char* s_bubble_action_strings[BUBBLE_ACTION_STRING_COUNT];
 
 uint32_t s_pending_record_rows[PENDING_RECORD_CAPACITY][5];

@@ -97,7 +97,9 @@ typedef struct Lego_Object {
     struct Lego_Object* driveObject;  /* +0x36c */
     int carriedTools[5];              /* +0x370 */
     unsigned int numCarriedTools;     /* +0x384 */
-    unsigned char pad_388[0x39c - 0x388];
+    float bubbleTimer;                /* +0x388 Bubbles.c's image timer */
+    void* bubbleImage;                /* +0x38c Image*: the current bubble */
+    unsigned char pad_390[0x39c - 0x390];
     float weaponDirection[3];         /* +0x39c fire direction */
     float weaponTarget[3];            /* +0x3a8 fire target position */
     float field_3b4;                  /* +0x3b4 */

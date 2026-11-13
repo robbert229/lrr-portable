@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-005 Bubbles.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-005.csv. */
+/* The port tail of GAME-005 Bubbles.c (ADR 0006 decision 4; finding 598):
+ * the port's bubble names, registries and screen-effect tick, unannotated.
+ * Bubbles.c itself is rebuilt in original shape in bubbles.c.
+ *
+ * In the matching build (MSVC 5.0) bubbles.c defines most of these names
+ * itself (bubbles_link_names.h), so their definitions here are compiled out
+ * there (LRR_BUBBLES_PORT_NAMES). bubble_action_name_to_index and
+ * pending_type_value_slot_select, whose port names have C++ linkage and the
+ * port's contracts, stay in every build.
+ * Relocated from the verbatim bubbles.cpp (body hashes:
+ * docs/coverage/relocations/GAME-005.csv). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,86 +78,56 @@ extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* enti
 #define AI_REG_FLAGGED_SEED  0x42160000u
 #define AI_REG_TYPE2_SEED    0x4a095440u
 
-// GLOBAL: LEGORR 0x004a19cc
+/* The port's definitions of the names the unit takes in the matching build
+ * (bubbles_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_BUBBLES_PORT_NAMES 0
+#else
+#define LRR_BUBBLES_PORT_NAMES 1
+#endif
+
+#if LRR_BUBBLES_PORT_NAMES /* bubbles.c serves these names in the matching build */
 static const char s_bubble_request[] = "Bubble_Request";
-// GLOBAL: LEGORR 0x004a19dc
 static const char s_bubble_recharge[] = "Bubble_Recharge";
-// GLOBAL: LEGORR 0x004a19ec
 static const char s_bubble_train[] = "Bubble_Train";
-// GLOBAL: LEGORR 0x004a19fc
 static const char s_bubble_build_path[] = "Bubble_BuildPath";
-// GLOBAL: LEGORR 0x004a1a10
 static const char s_bubble_upgrade[] = "Bubble_Upgrade";
-// GLOBAL: LEGORR 0x004a1a20
 static const char s_bubble_drive[] = "Bubble_Drive";
-// GLOBAL: LEGORR 0x004a1a30
 static const char s_bubble_eat[] = "Bubble_Eat";
-// GLOBAL: LEGORR 0x004a1a3c
 static const char s_bubble_elec_fence[] = "Bubble_ElecFence";
-// GLOBAL: LEGORR 0x004a1a50
 static const char s_bubble_call_to_arms[] = "Bubble_CallToArms";
-// GLOBAL: LEGORR 0x004a1a64
 static const char s_bubble_power_off[] = "Bubble_PowerOff";
-// GLOBAL: LEGORR 0x004a1a74
 static const char s_bubble_flee[] = "Bubble_Flee";
-// GLOBAL: LEGORR 0x004a1a80
 static const char s_bubble_dig[] = "Bubble_Dig";
-// GLOBAL: LEGORR 0x004a1a8c
 static const char s_bubble_repair[] = "Bubble_Repair";
-// GLOBAL: LEGORR 0x004a1a9c
 static const char s_bubble_drill[] = "Bubble_Drill";
-// GLOBAL: LEGORR 0x004a1aac
 static const char s_bubble_reinforce[] = "Bubble_Reinforce";
-// GLOBAL: LEGORR 0x004a1ac0
 static const char s_bubble_dynamite[] = "Bubble_Dynamite";
-// GLOBAL: LEGORR 0x004a1ad0
 static const char s_bubble_goto[] = "Bubble_Goto";
-// GLOBAL: LEGORR 0x004a1adc
 static const char s_bubble_carry_elec_fence[] = "Bubble_CarryElecFence";
-// GLOBAL: LEGORR 0x004a1af4
 static const char s_bubble_carry_barrier[] = "Bubble_CarryBarrier";
-// GLOBAL: LEGORR 0x004a1b08
 static const char s_bubble_carry_dynamite[] = "Bubble_CarryDynamite";
-// GLOBAL: LEGORR 0x004a1b20
 static const char s_bubble_carry_stud[] = "Bubble_CarryStud";
-// GLOBAL: LEGORR 0x004a1b34
 static const char s_bubble_carry_ore[] = "Bubble_CarryOre";
-// GLOBAL: LEGORR 0x004a1b44
 static const char s_bubble_carry_crystal[] = "Bubble_CarryCrystal";
-// GLOBAL: LEGORR 0x004a1b58
 static const char s_bubble_collect_bird_scarer[] = "Bubble_CollectBirdScarer";
-// GLOBAL: LEGORR 0x004a1b74
 static const char s_bubble_collect_freezer[] = "Bubble_CollectFreezer";
-// GLOBAL: LEGORR 0x004a1b8c
 static const char s_bubble_collect_pusher[] = "Bubble_CollectPusher";
-// GLOBAL: LEGORR 0x004a1ba4
 static const char s_bubble_collect_laser[] = "Bubble_CollectLaser";
-// GLOBAL: LEGORR 0x004a1bb8
 static const char s_bubble_collect_spanner[] = "Bubble_CollectSpanner";
-// GLOBAL: LEGORR 0x004a1bd0
 static const char s_bubble_collect_hammer[] = "Bubble_CollectHammer";
-// GLOBAL: LEGORR 0x004a1be8
 static const char s_bubble_collect_spade[] = "Bubble_CollectSpade";
-// GLOBAL: LEGORR 0x004a1bfc
 static const char s_bubble_collect_drill[] = "Bubble_CollectDrill";
-// GLOBAL: LEGORR 0x004a1c10
 static const char s_bubble_collect_barrier[] = "Bubble_CollectBarrier";
-// GLOBAL: LEGORR 0x004a1c28
 static const char s_bubble_collect_elec_fence[] = "Bubble_CollectElecFence";
-// GLOBAL: LEGORR 0x004a1c40
 static const char s_bubble_collect_dynamite[] = "Bubble_CollectDynamite";
-// GLOBAL: LEGORR 0x004a1c58
 static const char s_bubble_collect_stud[] = "Bubble_CollectStud";
-// GLOBAL: LEGORR 0x004a1c6c
 static const char s_bubble_collect_ore[] = "Bubble_CollectOre";
-// GLOBAL: LEGORR 0x004a1c80
 static const char s_bubble_collect_crystal[] = "Bubble_CollectCrystal";
-// GLOBAL: LEGORR 0x004a1c98
 static const char s_bubble_idle[] = "Bubble_Idle";
-/* The initialized bubble-name pointers reference distinct original .rdata
- * strings; keep same-spelling labels distinct where retail did. */
-// GLOBAL: LEGORR 0x004a1ca4
+/* The bubble names (.rdata 0x004a19cc-0x004a1ca4) are bubbles.c's now. */
 static const char s_bubble_cant_do[] = "Bubble_CantDo";
+#endif /* LRR_BUBBLES_PORT_NAMES */
 
 static int s_bubble_action_names_initialized;
 
@@ -160,7 +138,8 @@ void idle_register(EntitySlot* e);
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static void bubble_action_names_ensure_initialized(void);
 
-// FUNCTION: LEGORR 0x004070b0
+#if LRR_BUBBLES_PORT_NAMES /* bubbles.c serves these names in the matching build */
+/* Port model of 0x004070b0 */
 void bubble_action_strings_initialize(void)
 {
     s_bubble_action_strings[0] = s_bubble_cant_do;
@@ -207,7 +186,7 @@ void bubble_action_strings_initialize(void)
 /* BubbleConfigTextureLoad (FUN_00407240): walk Bubbles entries, filter
  * names with the global 0x02000000 gate, map the action to its fixed slot,
  * and retain the loaded resource handle before initializing it. */
-// FUNCTION: LEGORR 0x00407240
+/* Port model of 0x00407240 */
 void bubble_config_texture_load(BlockFile* cfg)
 {
     BlockRec* group = block_subgroup(cfg,
@@ -244,7 +223,9 @@ void bubble_config_texture_load(BlockFile* cfg)
 /* BubbleActionNameToIndex (FUN_00407300): the source compares the input with
  * all 39 initialized names and returns the matching slot. On a miss it leaves
  * the final _strcmpi result in EAX rather than returning a -1 sentinel. */
-// FUNCTION: LEGORR 0x00407300
+#endif /* LRR_BUBBLES_PORT_NAMES */
+/* Kept in every build: the unit keeps its own name (bubbles_link_names.h). */
+/* Port model of 0x00407300 */
 int bubble_action_name_to_index(const char* name)
 {
     int last_comparison = 0;
@@ -260,13 +241,14 @@ int bubble_action_name_to_index(const char* name)
     return last_comparison;
 }
 
-// FUNCTION: LEGORR 0x00407340
+#if LRR_BUBBLES_PORT_NAMES /* bubbles.c serves these names in the matching build */
+/* Port model of 0x00407340 */
 void state_flag_toggle_when_zero(void)
 {
     s_task_refresh_flag = (s_task_refresh_flag == 0u) ? 1u : 0u;
 }
 
-// FUNCTION: LEGORR 0x00407360
+/* Port model of 0x00407360 */
 uint32_t global_task_refresh_flag_get(void)
 {
     return s_task_refresh_flag;
@@ -274,7 +256,7 @@ uint32_t global_task_refresh_flag_get(void)
 
 /* ResetObjectAuxiliaryState (FUN_00407370): the global refresh gate clears
  * the auxiliary word then refreshes its selected per-entity value slot. */
-// FUNCTION: LEGORR 0x00407370
+/* Port model of 0x00407370 */
 void entity_reset_auxiliary_state(EntitySlot* e)
 {
     if (e == NULL || global_task_refresh_flag_get() == 0u) {
@@ -284,7 +266,7 @@ void entity_reset_auxiliary_state(EntitySlot* e)
     pending_type_value_slot_select(e, &e->auxiliary_slot_38c);
 }
 
-// FUNCTION: LEGORR 0x004073a0
+/* Port model of 0x004073a0 */
 void entity_pointer_registries_remove(EntitySlot* record)
 {
     int i;
@@ -306,7 +288,7 @@ void entity_pointer_registries_remove(EntitySlot* record)
     }
 }
 
-// FUNCTION: LEGORR 0x00407410
+/* Port model of 0x00407410 */
 void type4_object_registry_insert(EntitySlot* record)
 {
     if (record == NULL || record->type != 4) {
@@ -328,7 +310,7 @@ void type4_object_registry_insert(EntitySlot* record)
      * a full table; the port's scan drops it too. */
 }
 
-// FUNCTION: LEGORR 0x00407450
+/* Port model of 0x00407450 */
 void idle_register(EntitySlot* e)
 {
     if (e == NULL || e->type != 2) {
@@ -351,7 +333,7 @@ void idle_register(EntitySlot* e)
     }
 }
 
-// FUNCTION: LEGORR 0x004074b0
+/* Port model of 0x004074b0 */
 void type2_timed_registry_insert(EntitySlot* record)
 {
     if (record == NULL || record->type != 2) {
@@ -374,7 +356,7 @@ void type2_timed_registry_insert(EntitySlot* record)
     /* the corpus drops the record on the full table */
 }
 
-// FUNCTION: LEGORR 0x00407510
+/* Port model of 0x00407510 */
 void set_type2_object_record_value(EntitySlot* record, uint32_t value)
 {
     if (record == NULL || record->type != 2) {
@@ -387,7 +369,7 @@ void set_type2_object_record_value(EntitySlot* record, uint32_t value)
     }
 }
 
-// FUNCTION: LEGORR 0x00407540
+/* Port model of 0x00407540 */
 void flagged_object_timer_registry_insert(EntitySlot* record)
 {
     if (record == NULL) {
@@ -413,7 +395,7 @@ void flagged_object_timer_registry_insert(EntitySlot* record)
     /* the corpus drops the record on the full table */
 }
 
-// FUNCTION: LEGORR 0x004075a0
+/* Port model of 0x004075a0 */
 void screen_effects_tick(float delta)
 {
     static const int capacities[3] = { 20, 20, 50 };
@@ -482,33 +464,12 @@ void screen_effects_tick(float delta)
     }
 }
 
-namespace unported_ledger_stubs {
-// RendererRecordClone
-// FUNCTION: LEGORR 0x004078c0
-void ledger_stub_004078c0_EntityCursorTargetStepResolveAndTimerAdvance(
-    EntitySlot* entity, float delta, uint32_t* value_out, float out_xy[2])
-{
-    if (entity == NULL) return;
-    if (out_xy != NULL)
-        (void)entity_cursor_target_screen_position_get(entity, out_xy);
-
-    entity->auxiliary_state_388 -= delta;
-    if (entity->auxiliary_state_388 <= 0.0f) {
-        if (value_out != NULL)
-            pending_type_value_slot_select(entity, value_out);
-    }
-    else if (value_out != NULL) {
-        *value_out = entity->auxiliary_slot_38c;
-    }
-    if (value_out != NULL && *value_out == 0u)
-        *value_out = pending_type_value_get(0x00557868u);
-}
-} // namespace unported_ledger_stubs
-
 /* PendingTypeValueSlotSelect (FUN_00407a10): the config-fed DAT words are
  * zero-init model slots; this selection retains the exact flag precedence
  * and the command/activity families that choose among them. */
-// FUNCTION: LEGORR 0x00407a10
+#endif /* LRR_BUBBLES_PORT_NAMES */
+/* Kept in every build: the unit keeps its own name (bubbles_link_names.h). */
+/* Port model of 0x00407a10 */
 void pending_type_value_slot_select(const EntitySlot* e, uint32_t* out)
 {
 #if defined(_WIN32) && defined(_M_IX86)

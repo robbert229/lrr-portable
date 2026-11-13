@@ -1,4 +1,4 @@
-# input_sha256: c1d155d6693ee5ac145ccc07d1c3373e4ebc2e6e52335b6453584b8352408d19
+# input_sha256: 4042cea508d98b9917a64f29d8f1a69ea82e02fe81fe78fc3c76c9fd200612c3
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2324 mapped functions
+[game-only] 2325 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -176,20 +176,21 @@
 0x00407040 100.00 renderer_cached_handle_4c_is_not_one
 0x00407090 100.00 animation_object_value_get
 0x004070b0 100.00 bubble_action_strings_initialize
-0x00407240 26.19 bubble_config_texture_load
-0x00407300 56.34 bubble_action_name_to_index
+0x00407240 98.61 bubble_config_texture_load
+0x00407300 100.00 bubble_get_bubble_type
 0x00407340 100.00 state_flag_toggle_when_zero
 0x00407360 100.00 global_task_refresh_flag_get
-0x00407370 31.25 entity_reset_auxiliary_state
-0x004073a0 33.96 entity_pointer_registries_remove
-0x00407410 33.33 type4_object_registry_insert
-0x00407450 42.42 idle_register
-0x004074b0 21.43 type2_timed_registry_insert
-0x00407510 43.75 set_type2_object_record_value
-0x00407540 40.00 flagged_object_timer_registry_insert
-0x004075a0 9.32 screen_effects_tick
-0x004078c0 10.26 ledger_stub_004078c0_EntityCursorTargetStepResolveAndTimerAdvance
-0x00407a10 51.95 pending_type_value_slot_select
+0x00407370 100.00 entity_reset_auxiliary_state
+0x004073a0 96.67 entity_pointer_registries_remove
+0x00407410 100.00 type4_object_registry_insert
+0x00407450 100.00 idle_register
+0x004074b0 94.29 type2_timed_registry_insert
+0x00407510 92.31 set_type2_object_record_value
+0x00407540 100.00 flagged_object_timer_registry_insert
+0x004075a0 97.90 screen_effects_tick
+0x004078c0 100.00 bubble_live_object_update_bubble_image
+0x00407960 96.30 bubble_callback_draw_obj_info
+0x00407a10 100.00 bubble_live_object_get_bubble_image
 0x00407d60 99.35 entity_building_type_config_record_parse
 0x004082e0 100.00 scene_object_scalar_adjust_by_direction
 0x00408360 100.00 task_field84_get_and_field88_out
@@ -2332,7 +2333,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2562 mapped functions
+[full] 2563 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2502,20 +2503,21 @@
 0x00407040 100.00 renderer_cached_handle_4c_is_not_one
 0x00407090 100.00 animation_object_value_get
 0x004070b0 100.00 bubble_action_strings_initialize
-0x00407240 26.19 bubble_config_texture_load
-0x00407300 56.34 bubble_action_name_to_index
+0x00407240 98.61 bubble_config_texture_load
+0x00407300 100.00 bubble_get_bubble_type
 0x00407340 100.00 state_flag_toggle_when_zero
 0x00407360 100.00 global_task_refresh_flag_get
-0x00407370 31.25 entity_reset_auxiliary_state
-0x004073a0 33.96 entity_pointer_registries_remove
-0x00407410 33.33 type4_object_registry_insert
-0x00407450 42.42 idle_register
-0x004074b0 21.43 type2_timed_registry_insert
-0x00407510 43.75 set_type2_object_record_value
-0x00407540 40.00 flagged_object_timer_registry_insert
-0x004075a0 9.32 screen_effects_tick
-0x004078c0 10.26 ledger_stub_004078c0_EntityCursorTargetStepResolveAndTimerAdvance
-0x00407a10 51.95 pending_type_value_slot_select
+0x00407370 100.00 entity_reset_auxiliary_state
+0x004073a0 96.67 entity_pointer_registries_remove
+0x00407410 100.00 type4_object_registry_insert
+0x00407450 100.00 idle_register
+0x004074b0 94.29 type2_timed_registry_insert
+0x00407510 92.31 set_type2_object_record_value
+0x00407540 100.00 flagged_object_timer_registry_insert
+0x004075a0 97.90 screen_effects_tick
+0x004078c0 100.00 bubble_live_object_update_bubble_image
+0x00407960 96.30 bubble_callback_draw_obj_info
+0x00407a10 100.00 bubble_live_object_get_bubble_image
 0x00407d60 99.35 entity_building_type_config_record_parse
 0x004082e0 100.00 scene_object_scalar_adjust_by_direction
 0x00408360 100.00 task_field84_get_and_field88_out

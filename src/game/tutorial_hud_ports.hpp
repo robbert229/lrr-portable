@@ -155,7 +155,7 @@ void legacy_hunger_images_load(BlockFile* values, const char* config_root);
 int legacy_bubble_images_position_config_load(BlockFile* values,
                                                BlockFile* names);
 void legacy_health_bar_config_peek(LegacyHealthBarState* state);
-void legacy_entity_screen_ring_render(void* entity, int x, int y);
+extern "C" void legacy_entity_screen_ring_render(void* entity, int x, int y);
 void legacy_entity_screen_ring_render_with_ops(
     void* entity, int x, int y, const LegacyHudOps* ops);
 extern "C" void legacy_scroll_panel_controls_initialize(void);

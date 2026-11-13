@@ -1591,7 +1591,7 @@ int display_mode_matches_filter_tuple(int mode_index)
     return 0;
 }
 
-// GLOBAL: LEGORR 0x00557860
+/* The port's copy of Bubbles.c's alwaysVisible (0x00557860, bubbles.c). */
 uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
 
 uint32_t global_mode_zero_input_peek(void)
