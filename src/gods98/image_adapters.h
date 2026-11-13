@@ -3,8 +3,10 @@
  * in their original ABI, for units rebuilt as C. The port's entries at these
  * addresses have other contracts (a TextureSurface rather than the Image
  * record; a software render target), so these are thin unannotated adapters
- * (ADR 0005 step 6) in gods98/texture.cpp and gods98/bitmap_font.cpp.
- * Converting Images.c and Font.c retires them.
+ * (ADR 0005 step 6) in gods98/texture.cpp and gods98/bitmap_font_port.cpp.
+ * Font.c is converted (font.c, finding 605): in the matching build it
+ * defines the two Font.c names, and the port tail defines them natively.
+ * Converting Images.c retires the Images.c adapters.
  *
  * C boundary header (ADR 0005). Shared C++ headers do not include this file
  * (finding 506). It is separate from images.h and font.h because other

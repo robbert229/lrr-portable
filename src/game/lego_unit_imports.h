@@ -441,8 +441,9 @@ uint32_t input_key_context_check(int key);                 /* 00411f00 */
 uint32_t formatted_text_printf_width(const struct TextureSurface* font,
                                      const char* text, ...); /* 00401c50 */
 void advisor_transition_worker(float elapsed);             /* 00401990 */
-/* Font_PrintF (0047a180): the port's entry draws to a software target.
- * Thin adapter at the end of bitmap_font.cpp. */
+/* Font_PrintF (0047a180): font.c in the matching build; natively a thin
+ * adapter in bitmap_font_port.cpp, whose renderer draws to a software
+ * target. */
 void font_print_f(const struct TextureSurface* font, int x, int y,
                   const char* msg, ...);
 /* Message.c (select.hpp, message_unit.cpp). */

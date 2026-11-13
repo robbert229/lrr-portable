@@ -469,7 +469,7 @@ src/gods98/audio.hpp
 src/gods98/audio_for_sound3d.hpp
 src/gods98/audio_from_sound3d.hpp
 src/gods98/avi_player.cpp
-src/gods98/bitmap_font.cpp
+src/gods98/bitmap_font_port.cpp
 src/gods98/block.cpp
 src/gods98/block.hpp
 src/gods98/camera.cpp
@@ -524,8 +524,11 @@ src/gods98/flic_api.h
 src/gods98/flic_for_flic_unit.hpp
 src/gods98/flic_shared.hpp
 src/gods98/flic_unit.cpp
+src/gods98/font.c
 src/gods98/font.h
 src/gods98/font_api.h
+src/gods98/font_imports.h
+src/gods98/font_link_names.h
 src/gods98/frameloop.cpp
 src/gods98/frameloop.h
 src/gods98/frameloop.hpp

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-008 G98-008: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-008.csv. */
+/* The port's bitmap-font text renderer: the port tail of Font.c (G98-008,
+ * finding 605), which is rebuilt in original shape in font.c. These fonts
+ * are software TextureSurfaces drawn into a render target, so the entries
+ * here have the port's contract. Unannotated. Natively they serve every
+ * caller. In the matching build font.c takes the names whose callers pass
+ * the original's arguments (font_link_names.h), so this file compiles its
+ * definitions of those out there (LRR_FONT_PORT_NAMES). */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -57,12 +61,23 @@
 #include "record_for_bitmap_font.hpp"
 #include "surface_for_bitmap_font.hpp"
 
+/* The port's definitions of the names font.c takes in the matching build
+ * (font_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_FONT_PORT_NAMES 0
+#else
+#define LRR_FONT_PORT_NAMES 1
+#endif
+
+#if LRR_FONT_PORT_NAMES /* font.c serves these names in the matching build */
 static FontAtlasRecord* s_font_atlas_record_free_list;
+#endif
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static void fe_blit_glyph(void* px, int pitch, int w, int h, int dx, int dy, const TextureSurface* f, int cw, int ch, int g, const uint32_t keys[2]);
 
-// FUNCTION: LEGORR 0x00479ee0
+#if LRR_FONT_PORT_NAMES /* font.c serves this name in the matching build */
+/* Port model of 0x00479ee0. */
 void* font_atlas_record_create(const char* name)
 {
     TextureSurface* surface;
@@ -128,12 +143,13 @@ void* font_atlas_record_create(const char* name)
     }
     return record;
 }
+#endif /* LRR_FONT_PORT_NAMES */
 
 /* FormattedTextFormatDraw (FUN_0047a150): expand the engine's `%b` inline
  * texture token, format into bounded storage, then delegate drawing and
  * measurement to the decoded-text path. `%b` values are 32-bit handles
  * resolved by the software renderer hook. */
-// FUNCTION: LEGORR 0x0047A150
+/* Port model of 0x0047a150. */
 void formatted_text_format_draw(const TextureSurface* font,
                                 uint32_t* width_out, int* line_count,
                                 void* px, int pitch, int w, int h,
@@ -170,7 +186,7 @@ void formatted_text_format_draw(const TextureSurface* font,
 /* RewardTextDraw (FUN_0047a180): positioned variadic convenience wrapper for
  * formatted UI text. The legacy routine forwards its format and argument
  * list to FormattedTextFormatDraw; the port supplies its software target. */
-// FUNCTION: LEGORR 0x0047A180
+/* Port model of 0x0047a180. */
 void reward_text_draw(const TextureSurface* font, void* px, int pitch,
                       int w, int h, int x, int y, const char* format, ...)
 {
@@ -183,7 +199,7 @@ void reward_text_draw(const TextureSurface* font, void* px, int pitch,
 /* FormattedTextDraw (FUN_0047a1b0): software-framebuffer draw of an already
  * resolved text value using the selected bitmap face. Format expansion is
  * performed at the caller boundary in this port. */
-// FUNCTION: LEGORR 0x0047A1B0
+/* Port model of 0x0047a1b0. */
 void formatted_text_draw(const TextureSurface* font, void* px, int pitch,
                          int w, int h, int x, int y, const char* text)
 {
@@ -198,7 +214,7 @@ void formatted_text_draw(const TextureSurface* font, void* px, int pitch,
  * reset the pen and advance one glyph cell; tabs advance to the next eight-
  * cell stop. Inline @[0x........] handles are resolved through the port-side
  * hook, then blitted through the software surface path. */
-// FUNCTION: LEGORR 0x0047A1E0
+/* Port model of 0x0047a1e0. */
 uint32_t formatted_text_draw_and_measure(const TextureSurface* font,
                                          void* px, int pitch, int w, int h,
                                          int x, int y, const char* text,
@@ -283,7 +299,7 @@ uint32_t formatted_text_draw_and_measure(const TextureSurface* font,
  * software glyph blit with the glyph advance calculation. The corpus uses
  * its DirectDraw surface and stored float advances; this path clips RGBA
  * pixels and derives the advance from the glyph's ink bounds. */
-// FUNCTION: LEGORR 0x0047a470
+/* Port model of 0x0047a470. */
 int fe_font_glyph_draw_and_measure(void* px, int pitch, int w, int h,
                                           int x, int y,
                                           const TextureSurface* f,
@@ -297,8 +313,9 @@ int fe_font_glyph_draw_and_measure(void* px, int pitch, int w, int h,
     return advance;
 }
 
+#if LRR_FONT_PORT_NAMES /* font.c serves this name in the matching build */
 /* BitmapFontGlyphMeasureWidth (FUN_0047a520) — see frontend.hpp. */
-// FUNCTION: LEGORR 0x47a520
+/* Port model of 0x0047a520. */
 int bitmap_font_glyph_measure_width(void* font, unsigned char glyph)
 {
     const TextureSurface* surface = (const TextureSurface*)font;
@@ -315,30 +332,23 @@ int bitmap_font_glyph_measure_width(void* font, unsigned char glyph)
     return fe_font_advance(surface, cell_width, cell_height,
                            glyph_index, keys);
 }
+#endif /* LRR_FONT_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x0047a540
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t object_field_be4_dword_get(const void* record)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 0be4h]
-        ret
-    }
-}
-#else
+#if LRR_FONT_PORT_NAMES /* font.c serves this name in the matching build */
+/* Port model of 0x0047a540 (Font_GetHeight). */
 uint32_t object_field_be4_dword_get(const void* record)
 {
     uint32_t value;
     if (record == NULL) {
         return 0u;
     }
-    __builtin_memcpy(&value, (const char*)record + 0xbe4, sizeof(value));
+    memcpy(&value, (const char*)record + 0xbe4, sizeof(value));
     return value;
 }
-#endif
+#endif /* LRR_FONT_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x0047A550
+#if LRR_FONT_PORT_NAMES /* font.c serves this name in the matching build */
+/* Port model of 0x0047a550. */
 void font_atlas_record_release(void* opaque_record)
 {
     FontAtlasRecord* record = (FontAtlasRecord*)opaque_record;
@@ -348,6 +358,7 @@ void font_atlas_record_release(void* opaque_record)
     record->free_next = s_font_atlas_record_free_list;
     s_font_atlas_record_free_list = record;
 }
+#endif /* LRR_FONT_PORT_NAMES */
 
 static int fe_font_key_hit(uint32_t p, const uint32_t keys[2])
 {
@@ -416,12 +427,17 @@ static void fe_blit_glyph(void* px, int pitch, int w, int h,
     }
 }
 
-/* --- Font.c entry points in the original ABI (gods98/image_adapters.h) ----
- * Thin unannotated adapters (ADR 0005 step 6) for Panel.c (GAME-032,
- * finding 554). The original draws to the back buffer, which the port's
- * renderer owns, so the print measures only. */
+/* --- Font.c entry points in the original ABI ------------------------------
+ * Thin unannotated adapters (ADR 0005 step 6) over the port's renderer, for
+ * the converted C units: Panel.c (font_v_get_string_info, font_v_print_f;
+ * finding 554), Reward.c and the other C units (font_print_f; finding 560)
+ * and TextWindow.c (font_output_char; finding 600). The original draws to
+ * the back buffer, which the port's renderer owns, so these measure only.
+ * In the matching build font.c defines these four names. */
 #include "image_adapters.h"
+#include "font_api.h"
 
+#if LRR_FONT_PORT_NAMES /* font.c serves these names in the matching build */
 // PORT-ONLY: adapter or forwarder for the port contract
 void font_v_get_string_info(const TextureSurface* font, uint32_t* width,
                             uint32_t* lineCount, const char* msg,
@@ -439,11 +455,6 @@ void font_v_print_f(const TextureSurface* font, int x, int y,
                                args);
 }
 
-/* Font_PrintF (0047a180) in the original ABI, for Reward.c (GAME-037,
- * finding 560). A thin unannotated adapter (ADR 0005 step 6) over
- * font_v_print_f: the port's entry at that address takes a render target. */
-#include "font_api.h"
-
 // PORT-ONLY: adapter or forwarder for the port contract
 void font_print_f(const TextureSurface* font, int x, int y, const char* msg, ...)
 {
@@ -453,29 +464,6 @@ void font_print_f(const TextureSurface* font, int x, int y, const char* msg, ...
     va_end(args);
 }
 
-/* Font_GetStringInfo (the Font.h inline, 00401c80 in Advisor.c's copy) in
- * the original ABI, for ToolTip.c (GAME-046, finding 597). A thin
- * unannotated adapter over font_v_get_string_info: advisor.c's entry at that
- * address keeps the port's render-target contract. Declared in
- * game/tooltip_imports.h. */
-// PORT-ONLY: adapter or forwarder for the port contract
-extern "C" void font_get_string_info(const TextureSurface* font,
-                                     unsigned int* width,
-                                     unsigned int* lineCount,
-                                     const char* msg, ...)
-{
-    va_list args;
-    va_start(args, msg);
-    font_v_get_string_info(font, (uint32_t*)width, (uint32_t*)lineCount,
-                           msg, args);
-    va_end(args);
-}
-
-/* Font_OutputChar (0047a470) in the original ABI, for TextWindow.c (G98-017,
- * finding 600). A thin unannotated adapter: the port's entry at that address
- * takes a render target, and the port's renderer owns the back buffer, so
- * this one measures only and returns the glyph's advance. Declared in
- * gods98/textwindow_imports.h. */
 // PORT-ONLY: adapter or forwarder for the port contract
 extern "C" int font_output_char(void* font, int x, int y, unsigned char c,
                                 int render)
@@ -485,3 +473,4 @@ extern "C" int font_output_char(void* font, int x, int y, unsigned char c,
     (void)render;
     return bitmap_font_glyph_measure_width(font, c);
 }
+#endif /* LRR_FONT_PORT_NAMES */

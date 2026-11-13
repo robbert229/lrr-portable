@@ -247,8 +247,8 @@ void tooltip_set_content(int toolTipType, const char* msg, ...)
             else *t = *s;
         }
         *t = '\0';
-        font_get_string_info(toolTipGlobs.font, &toolTip->textWidth,
-                             &toolTip->textLineCount, toolTip->textBuffer);
+        formatted_text_printf(toolTipGlobs.font, &toolTip->textWidth,
+                              &toolTip->textLineCount, toolTip->textBuffer);
         toolTip->flags &= ~TOOLTIP_FLAG_IMAGE;
     }
 
