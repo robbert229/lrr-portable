@@ -222,6 +222,9 @@ string block). Neither unit has commons.
   `void*`, so it agrees with `image_adapters.h` once both are renamed to
   Image_SetPenZeroTrans (MSVC's C4028 otherwise fails the build). Same
   symbol count.
+- On the stack, Objective.c (`objective_unit.c`, #710) is a C unit too;
+  `objective_unit_imports.h` gets the same block, which also points its
+  Image_GetScreenshot adapter at the unit.
 
 Natively nothing changes: the port serves every name.
 
@@ -292,3 +295,24 @@ Natively nothing changes: the port serves every name.
   (Image_GetScreenshot, whose caller `00458670` calls the port's
   `mission_reward_success_snapshot_prepare`; Image_InitFromSurface; and
   Image_SaveBMP, whose FrontEnd.c caller is removed).
+
+## Stacked on #716
+
+Rebased as the top layer over #716 (`26c2af74`, over #715, #714 and #713).
+Without the `objective_unit_imports.h` block, `00457d40`
+(objective_load_original) fell from 60.88% to 60.11% (its Images.c calls
+went to the port's names); with it, nothing falls and no exact function of
+#713-#716 is lost. 116 functions rise, 65 of them to 100%. Lego.c's
+`0041fb50` (lego_game_config_init, five calls to `0047d9d0`) rises from
+98.96% to 99.29%.
+
+| | #716 | this change |
+| --- | ---: | ---: |
+| Exact-function code bytes | 262,810 | **279,887** |
+| Accuracy, full / game-only | 94.46 / 93.96 | 95.38 / 94.98 |
+| `opt_ref` annotated (full): removed / exact removed | 191 / 127 | 164 / 127 |
+| `opt_ref` annotated (game-only) | 185 / 121 | 158 / 121 |
+| Gate image end (`make pe-audit`) | `0x871000` | `0x873000` |
+| Relink `.bss` | 1,115,552 | 1,115,696 |
+
+On the stack no Flic.c or Images.c function is removed by `/OPT:REF`.
