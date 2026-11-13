@@ -16,7 +16,7 @@ game_sources = [
   'aitask_port.cpp',
   'message_unit.cpp',
   'legoobject_port.cpp',
-  'frontend_unit.cpp',
+  'frontend_port.cpp',
   'interface_port.cpp',
   'weapons_port.cpp',
   'lego_port.cpp',
@@ -130,6 +130,7 @@ game_c_sources = [
   'teleporter.c',
   'spiderweb.c',
   'roof.c',
+  'frontend_unit.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

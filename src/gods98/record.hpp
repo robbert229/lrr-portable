@@ -24,6 +24,9 @@ extern "C"
 uint32_t record_field14_get(const void* record);
 
 /* ObjectField10Get (FUN_004850e0, findings 04/378): the dword at +0x10. */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t object_field10_get(const void* object);
 
 /* RecordFieldD8EqualsOne (FUN_0046c3d0, findings 367/432): true when the

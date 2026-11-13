@@ -85,6 +85,11 @@
  * of this name is the port tail gods98/mesh_port.cpp's, so in the matching
  * build lego_unit.c calls Mesh_Initialise by the unit's name. */
 #define shared_texture_root_register mesh_initialise
+/* GAME-017 FrontEnd.c part 1 (game/frontend_unit.c, finding 623). The
+ * port's definition of this name is an adapter in frontend_port.cpp, so
+ * in the matching build lego_unit.c calls Front_IsIntrosEnabled by the
+ * unit's name; it takes nothing and answers the same flag. */
+#define movie_avis_enabled_original front_is_intros_enabled
 #endif
 
 #ifdef __cplusplus
