@@ -2021,9 +2021,11 @@ uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
 void view_point_to_screen_geometry_transform(const void* view,
                                              float p[4]);     /* FUN_0045e940 */
 
-/* Map row-span staging (FUN_0046ead0 / 0x0046eb30): append x/y pairs to
- * a row buffer and begin a new buffer record. The port exposes staged
- * records for the renderer's unported consumer. */
+/* Superseded: the map row-span staging (0046ead0, 0046eb30) is Water.c's
+ * (game/water.c, finding 614) and the port's buffer is gone, so nothing
+ * defines or calls these. Deviation (scoring only): the declarations are
+ * kept because removing them moves the symbol numbering of the units that
+ * include this header (osf_read, 00459470, falls; finding 538). */
 void map_row_span_append(void* buffer, uint32_t y, uint32_t x_begin,
                          uint32_t x_end);
 void map_row_span_record_start(uint32_t y, uint32_t x_begin,

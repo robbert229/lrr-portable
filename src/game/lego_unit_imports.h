@@ -53,6 +53,15 @@
 #define lego_viewport_size_get_adapter viewport_get_size
 #define lego_viewport_field_get_adapter viewport_get_field
 #define camera_project_point_to_screen viewport_world_to_screen
+/* GAME-049 Water.c (game/water.c, finding 614). The port's definitions of
+ * these four names are outside the unit's port tail (gods98/view.cpp,
+ * game/terrain_grid.cpp and game/lego_port.cpp), so in the matching build
+ * lego_unit.c calls the unit's names; water_link_names.h gives the unit the
+ * port's names of the other two. */
+#define global_entity_render_parameter_mode_set water_change_view_mode
+#define terrain_cell_surface_quad_reset_current water_seal_block
+#define simtick_fx_bank_tick_original water_update
+#define world_spatial_record_find_at_grid_coordinate water_find_pool
 #endif
 
 #ifdef __cplusplus
