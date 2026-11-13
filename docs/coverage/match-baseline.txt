@@ -1,4 +1,4 @@
-# input_sha256: 904f821d13699f861735bc9d1b61fe5eed8fb046c6dde97336a1c9643e849df8
+# input_sha256: e656f2862ae988e57fe4ae51702c49aef5141df36be16d5fc1a8aa1b80d22ebc
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2330 mapped functions
+[game-only] 2333 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -700,10 +700,10 @@
 0x00425ce0 96.30 lego_game_speed_set
 0x00425d50 100.00 lego_render_record_set_from_input
 0x00425d80 100.00 current_engine_mode_is_zero
-0x00425d90 88.26 lego_terrain_pointer_command_update
+0x00425d90 89.26 lego_terrain_pointer_command_update
 0x004261c0 96.15 lego_spawn_coordinate_pool_tick
 0x00426230 100.00 lego_global_triple_copy_out
-0x00426250 94.74 lego_update_render_viewport_state
+0x00426250 97.37 lego_update_render_viewport_state
 0x004262e0 100.00 objective_score_text_origin_set
 0x00426320 100.00 lego_objective_task_text_origin_set
 0x00426360 100.00 engine_global_state_flags_bits6_and_9_set_target
@@ -1440,16 +1440,19 @@
 0x0045d7e0 18.18 ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad
 0x0045d870 70.83 command_entity_reference_remap
 0x0045d8a0 100.00 object_field14_set
-0x0045d8b0 8.51 screen_coord_normalize_init
-0x0045da90 25.40 ui_render_record_create
+0x0045d8b0 100.00 screen_coord_normalize_init
+0x0045da90 100.00 ui_render_record_create
 0x0045daf0 100.00 ui_render_record_free
-0x0045db00 18.29 textured_scene_object_draw_at_position
-0x0045e400 91.67 entity_type_and_state_flag_predicate
-0x0045e660 92.31 rect_contains_point_half_open
-0x0045e6d0 33.49 terrain_point_pick_resolve
-0x0045e820 26.58 viewport_point_callback_dispatch
-0x0045e940 22.05 view_point_to_screen_geometry_transform
-0x0045e9e0 22.48 terrain_tile_style_resolve
+0x0045db00 100.00 textured_scene_object_draw_at_position
+0x0045dbc0 94.05 radar_map_tv_position_set_adapter
+0x0045e400 100.00 radarmap_can_show_object
+0x0045e460 98.20 radarmap_callback_draw_object
+0x0045e660 100.00 rect_contains_point_half_open
+0x0045e6d0 46.49 terrain_point_pick_resolve_original
+0x0045e820 67.65 viewport_point_callback_dispatch
+0x0045e8e0 100.00 radarmap_callback_try_select_object
+0x0045e940 84.11 radarmap_transform_rect
+0x0045e9e0 95.46 radarmap_get_block_colour
 0x0045f030 98.11 reward_initialise
 0x0045f1f0 100.00 reward_load_item_sound
 0x0045f230 100.00 reward_load_item_font
@@ -2338,7 +2341,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2568 mapped functions
+[full] 2571 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -3032,10 +3035,10 @@
 0x00425ce0 96.30 lego_game_speed_set
 0x00425d50 100.00 lego_render_record_set_from_input
 0x00425d80 100.00 current_engine_mode_is_zero
-0x00425d90 88.26 lego_terrain_pointer_command_update
+0x00425d90 89.26 lego_terrain_pointer_command_update
 0x004261c0 96.15 lego_spawn_coordinate_pool_tick
 0x00426230 100.00 lego_global_triple_copy_out
-0x00426250 94.74 lego_update_render_viewport_state
+0x00426250 97.37 lego_update_render_viewport_state
 0x004262e0 100.00 objective_score_text_origin_set
 0x00426320 100.00 lego_objective_task_text_origin_set
 0x00426360 100.00 engine_global_state_flags_bits6_and_9_set_target
@@ -3772,16 +3775,19 @@
 0x0045d7e0 18.18 ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad
 0x0045d870 70.83 command_entity_reference_remap
 0x0045d8a0 100.00 object_field14_set
-0x0045d8b0 8.51 screen_coord_normalize_init
-0x0045da90 25.40 ui_render_record_create
+0x0045d8b0 100.00 screen_coord_normalize_init
+0x0045da90 100.00 ui_render_record_create
 0x0045daf0 100.00 ui_render_record_free
-0x0045db00 18.29 textured_scene_object_draw_at_position
-0x0045e400 91.67 entity_type_and_state_flag_predicate
-0x0045e660 92.31 rect_contains_point_half_open
-0x0045e6d0 33.49 terrain_point_pick_resolve
-0x0045e820 26.58 viewport_point_callback_dispatch
-0x0045e940 22.05 view_point_to_screen_geometry_transform
-0x0045e9e0 22.48 terrain_tile_style_resolve
+0x0045db00 100.00 textured_scene_object_draw_at_position
+0x0045dbc0 94.05 radar_map_tv_position_set_adapter
+0x0045e400 100.00 radarmap_can_show_object
+0x0045e460 98.20 radarmap_callback_draw_object
+0x0045e660 100.00 rect_contains_point_half_open
+0x0045e6d0 46.49 terrain_point_pick_resolve_original
+0x0045e820 67.65 viewport_point_callback_dispatch
+0x0045e8e0 100.00 radarmap_callback_try_select_object
+0x0045e940 84.11 radarmap_transform_rect
+0x0045e9e0 95.46 radarmap_get_block_colour
 0x0045f030 98.11 reward_initialise
 0x0045f1f0 100.00 reward_load_item_sound
 0x0045f230 100.00 reward_load_item_font

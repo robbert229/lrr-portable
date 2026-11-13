@@ -8842,14 +8842,17 @@ extern "C" void terrain_projected_cell_state_refresh_original(void* container,
 
 /* Original-ABI adapters (ADR 0005 step 6) for GAME-021's lego_unit.c. */
 
-/* RadarMap_SetTVPosition (FUN_0045dbc0): the port has no function for it.
- * Natively nothing calls this. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (RadarMap_SetTVPosition 0045dbc0, no port function)
+/* RadarMap_Draw (FUN_0045dbc0): the port has no function for it.
+ * Natively nothing calls this. In the matching build radarmap.c's
+ * RadarMap_Draw takes this name (radarmap_link_names.h; finding 606). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (RadarMap_Draw 0045dbc0, no port function)
 extern "C" void radar_map_tv_position_set_adapter(void* radarMap, const float* pos)
 {
     (void)radarMap;
     (void)pos;
 }
+#endif
 
 /* The building placement update (FUN_0044a910): the port's entry takes a
  * hook table. Natively nothing calls this; it reports no placement. */

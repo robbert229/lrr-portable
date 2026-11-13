@@ -583,7 +583,7 @@ void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
 int legoobject_activity_scan(Lego_Object* obj, int activity);            /* 0044b480 */
 /* Map3D.c (terrain_map.c). */
 float terrain_context_scale_get(const void* context);                      /* 00450890 */
-/* MapShared draw (view.hpp, map_view.cpp). */
+/* RadarMap_DrawSurveyDotCircle (radarmap.c; map_view_port.cpp natively). */
 void textured_scene_object_draw_at_position(const void* view,
                                             const float position_xy[2],
                                             float z, float size);           /* 0045db00 */

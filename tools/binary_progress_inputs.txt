@@ -277,7 +277,7 @@ src/game/lighteffects.h
 src/game/lighteffects_imports.h
 src/game/lighteffects_port.cpp
 src/game/loading_progress.cpp
-src/game/map_view.cpp
+src/game/map_view_port.cpp
 src/game/message.h
 src/game/message_unit.cpp
 src/game/mission.cpp
@@ -318,6 +318,10 @@ src/game/port_loop_ports.hpp
 src/game/priorities.c
 src/game/priorities.h
 src/game/priority_config_ports.hpp
+src/game/radarmap.c
+src/game/radarmap.h
+src/game/radarmap_imports.h
+src/game/radarmap_link_names.h
 src/game/record_chains.cpp
 src/game/render.cpp
 src/game/render.hpp
