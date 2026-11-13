@@ -235,9 +235,13 @@ void pair_table_append(LwsMeshPath* list, unsigned int* count,
 #endif
 
 /* IID_IDirect3DRMUserVisual. The two units that use it, this one and
- * G98-025, share the copy at 0049fb48. */
+ * G98-025 (animclone.c), share the copy at 0049fb48, so it has external
+ * linkage. */
+#ifdef __cplusplus
+extern "C" const LwsIID s_iid_user_visual;
+#endif
 // GLOBAL: LEGORR 0x0049fb48
-static const LwsIID s_iid_user_visual = {
+const LwsIID s_iid_user_visual = {
     0x59163de0, 0x6d43, 0x11cf,
     { 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1 }
 };

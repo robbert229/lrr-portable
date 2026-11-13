@@ -488,6 +488,9 @@ src/game/weapons_imports.h
 src/game/weapons_maths.h
 src/game/weapons_port.cpp
 src/game/weapons_port_aliases.h
+src/gods98/animclone.c
+src/gods98/animclone.h
+src/gods98/animclone_link_names.h
 src/gods98/audio.cpp
 src/gods98/audio.h
 src/gods98/audio.hpp
@@ -505,7 +508,7 @@ src/gods98/camera_for_lego.hpp
 src/gods98/camera_for_legoobject.hpp
 src/gods98/camera_for_record_chains.hpp
 src/gods98/camera_shared.hpp
-src/gods98/com_object_tree.cpp
+src/gods98/com_object_tree_port.cpp
 src/gods98/config.c
 src/gods98/config.h
 src/gods98/container.h

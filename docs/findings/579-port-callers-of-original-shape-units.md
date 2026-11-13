@@ -86,7 +86,7 @@ These are the live callers outside Lego.c and LegoObject.c whose original calls 
 | `building_model.cpp` `0x004083a0`; `vehicle_model.cpp` `0x0046d260`, `0x0046d9f0` | `resource_name_register_or_query_target` `0x00473bc0`, `xf_texture_name_format` `0x00473c60` (`container_unit.cpp`) | port scene-resource hooks; no call at the site |
 | `container_unit.cpp` `0x00473690`, `0x00475c80` † | `0x00489660`, `0x00480900` | the port frees the payload with `free` and keeps its own record pool |
 | `mesh_unit.cpp` `0x004809e0`; `sfx.cpp` `0x00465430` | `engine_task_callback_record_allocate_and_initialize` `0x00480870` | `calloc` of the port's parsed-model records; `0x00480870` itself works through port hooks |
-| `com_object_tree.cpp` `0x004897e0` | `lws_time_set` `0x00487ba0` | `lws_port.cpp`'s ledger stub: hook tables, guarded pointers, and repeat mode without the `fmod` |
+| `com_object_tree.cpp` `0x004897e0` | `lws_time_set` `0x00487ba0` | `lws_port.cpp`'s ledger stub: hook tables, guarded pointers, and repeat mode without the `fmod`. **Resolved by finding 616:** AnimClone.c's AnimClone_SetTime (`animclone.c`) calls `lws_time_set` |
 | `object_overlays.cpp` `0x00459b00`; `tooltip.cpp` `0x0046b8b0` | `surface_draw_polyline` `0x00485ff0`, `surface_fill_pixel_spans` `0x00486090` (`draw.c`) | `LegacyHudOps` hooks with a packed colour, used by the native HUD. It would revive 12 functions (11 exact). |
 | `panel_unit.c` `0x0045a730` | `object_field10_get` `0x004850e0` (Flic_GetWidth) | `flic_width`/`flic_height` on the port's opaque `Flic`, whose width is not the original's `+0x10` |
 | `message_unit.cpp` `0x00452cc0` | `electric_fence_remove` `0x0040d0a0` | `terrain_entity_cell_record_remove`: the port tail's own grid state, not `electricFenceGlobs` |

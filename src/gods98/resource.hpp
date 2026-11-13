@@ -236,6 +236,10 @@ typedef struct ResourceTreeCallbackContext {
     uint32_t handle_count;
     void* owner;
 } ResourceTreeCallbackContext;
+/* Deviation (scoring only): the next three are superseded by
+ * gods98/animclone.c (G98-025, finding 616): AnimClone_WalkTree,
+ * AnimClone_Register and AnimClone_RegisterLws. Kept declared, with no
+ * definition, for the symbol counter (finding 538, rule B). */
 uint32_t resource_tree_callback_count(void* object, int depth,
                                       ResourceTreeCallback callback,
                                       void* context); /* FUN_00489910 */

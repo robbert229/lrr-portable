@@ -970,6 +970,10 @@ typedef struct SceneActFrameRecordCloneHooks {
 } SceneActFrameRecordCloneHooks;
 void scene_act_frame_record_clone_hooks_set(
     const SceneActFrameRecordCloneHooks* hooks);
+/* Deviation (scoring only): superseded by gods98/animclone.c (G98-025,
+ * finding 616), which defines AnimClone_Make at 0x489660; kept declared,
+ * with no definition, because removing it moves the symbol counter of every
+ * unit that includes this header (finding 538, rule B). */
 SceneActFrameRecord* scene_act_frame_record_clone_or_create(
     const SceneActFrameRecord* source, uint32_t clone_argument,
     uintptr_t* output_value);
@@ -991,6 +995,10 @@ typedef struct ObjectHierarchyResourceHooks {
 } ObjectHierarchyResourceHooks;
 void object_hierarchy_resource_hooks_set(
     const ObjectHierarchyResourceHooks* hooks);
+/* Deviation (scoring only): the next three are superseded by
+ * gods98/animclone.c (G98-025, finding 616): AnimClone_ReferenceVisuals,
+ * AnimClone_CloneLwoMeshes and AnimClone_CreateCopy. Kept declared, with no
+ * definition, for the symbol counter (finding 538, rule B). */
 void com_child_items_visit(void* parent); /* 0x00489bc0 */
 void object_interface_array_resource_create(void* object, uint32_t mode);
 void object_hierarchy_recursive_clone(void* source, void* clone,
@@ -1072,6 +1080,9 @@ void ddiscene_animation_hook_create(void* scene_object, int callback,
                                     const uint32_t* value_20); /* 0x475f70 */
 /* The third argument is the interface-value slot used by the nested +0x5c /
  * +0x74 dispatch; it is not a float output buffer. */
+#ifdef __cplusplus
+extern "C"
+#endif
 void ddiscene_timed_hook_dispatch(void* hook_record, float time,
                                   void* interface_value); /* 0x4897e0 */
 #ifdef __cplusplus
@@ -1506,6 +1517,9 @@ typedef struct SceneObjectOwnerLinkRecord {
 void scene_object_owner_link_release_hooks_set(
     SceneOwnerLinkReleaseFn interface_release,
     SceneOwnerLinkReleaseFn child_chain_release);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_owner_link_release(SceneObjectOwnerLinkRecord* record);
 
 /* Advisor companion transforms (FUN_004734c0) cross two scene interfaces
