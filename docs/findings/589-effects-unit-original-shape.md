@@ -18,9 +18,13 @@ the matching-build link names
 The port's implementation moves, unannotated, to the port tail
 [`rock_fall_styles_port.cpp`](../../src/game/rock_fall_styles_port.cpp).
 
-The change is built on `main` `984a1213` (#614). "Before" is that commit, from
-a full matching build (`make reccmp-check`). "After" is this change, from the
-same build.
+The change was first made and measured on `main` `984a1213` (#614). It is now
+stacked on #619 (G98-030 Wad.c, `c42205d9`, on `984a1213`). Whole-binary
+"before" figures are #619's head (its match baseline, `binary-progress.json`
+and `opt_ref` as reported for it); "after" is this change rebased onto it, from
+the full matching build (`make reccmp-check`). No GAME-012 score differs
+between `984a1213` and #619's head, so the per-function "before" column is
+unchanged.
 
 ## Result
 
@@ -29,12 +33,12 @@ same build.
 | Unit similarity (byte-weighted, 27 functions, 3,894 original code bytes) | 21.13% | **92.74%** |
 | Exact functions in the unit | 1 | **21 of 27** |
 | Mapped functions in the unit | 26 | 27 |
-| Exact-function code bytes (`binary-progress.json`) | 148,281 (23.08%) | **151,279** (23.54%) |
-| Accuracy, full / game-only (`reccmp-check` means) | 77.67% / 75.46% | 78.37% / 76.22% |
-| `opt_ref` annotated (full): removed / exact removed | 585 / 275 | **574 / 269** |
-| `opt_ref` annotated (game only): removed / exact removed | 568 / 264 | 557 / 258 |
+| Exact-function code bytes (`binary-progress.json`) | 151,806 | **154,804** |
+| Mean score, full / game-only (`reccmp-check`) | | 78.58% / 76.47% |
+| `opt_ref` annotated (full): removed / exact removed | 582 / 278 | **577 / 278** |
+| `opt_ref` annotated (game only): removed / exact removed | | 560 / 267 |
 | GAME-012 functions removed under `/OPT:REF` | 5 (0 exact) | 1 (1 exact) |
-| Reccmp lint ledger | 1,314 | 1,312 |
+| Reccmp lint ledger | 1,313 | 1,311 |
 
 Byte weights use the original sizes the single-function loop reports; `0040c3a0` was unmapped before and counts
 as 0%. The names are OpenLRR-style `effect_*` names in snake case; where the
@@ -207,8 +211,9 @@ unprototyped type in C, as `sfx_imports.h`), two LegoObject.c functions,
 
 ## Entropy and drops
 
-`make reccmp-check` against `main`'s baseline (`984a1213`): **none below
-baseline, no exact match lost**, so no dropped function's instruction count
+`make reccmp-check` against #619's baseline (`c42205d9`), and earlier against
+`main`'s (`984a1213`), with the same result: **none below baseline, no exact
+match lost**, so no dropped function's instruction count
 changed. Outside the unit four Lego.c functions rose, from call operands that
 now map:
 
@@ -226,10 +231,15 @@ check OK).
 
 ## `opt_ref` (finding 579, `make opt-ref-callers`)
 
-| | `main` `984a1213` | This change |
-| --- | ---: | ---: |
-| `opt_ref.annotated.full`: removed / exact removed | 585 / 275 | **574 / 269** |
-| `opt_ref.annotated.game_only`: removed / exact removed | 568 / 264 | 557 / 258 |
+| | `main` `984a1213` | This change on `main` | #619 `c42205d9` | This change on #619 |
+| --- | ---: | ---: | ---: | ---: |
+| `opt_ref.annotated.full`: removed / exact removed | 585 / 275 | 574 / 269 | 582 / 278 | **577 / 278** |
+| `opt_ref.annotated.game_only`: removed / exact removed | 568 / 264 | 557 / 258 | | 560 / 267 |
+
+On `main` the change revives five annotated functions net and six exact ones
+(their callees reached through the unit's calls). On #619 the removed count
+falls by five but the exact-removed count is the same as the figure reported
+for #619's head; #619's own `opt_ref` was not re-measured here.
 | GAME-012's object | `rock_fall_styles.cpp.obj`: 5 removed (0 exact) | `rock_fall_styles.c.obj`: 1 removed (1 exact) |
 
 Before, `/OPT:REF` removed `0040bfd0`, `0040c0d0`, `0040c920` and `0040c990`
@@ -264,13 +274,13 @@ native gap, so no `port` issue is filed.
 
 ## Validation
 
-On `main` `984a1213`:
+On #619's head `c42205d9` (and first on `main` `984a1213`):
 
 - `make reccmp-check`: OK, none below baseline, no exact match lost;
   plain-immediate check, `winapi-link-check` and the link-order map check OK.
 - `make match-progress` (baseline, listing digests, `binary-progress.json`),
   `make unit-data-offsets`, `python3 tools/translation_units.py build`,
-  `make reccmp-lint-update` (ledger 1,314 to 1,312: the port tail's two
+  `make reccmp-lint-update` (ledger 1,313 to 1,311: the port tail's two
   static helpers) and `tools/binary_progress_hash.py --write-manifest`, then
   `make match-progress` again so all three files carry the final input hash.
 - `make tools-test` (no `--allow-growth`), native build and `ctest` (37/37,
