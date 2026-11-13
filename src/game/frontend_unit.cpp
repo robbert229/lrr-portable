@@ -4990,7 +4990,7 @@ static void menu_resource_entry_release(MenuResourceEntry* entry)
  * stand in for FrontEnd.c state the port does not model; nothing sets
  * them yet. */
 #include "frontend_api.h"
-#include "video_graph.h"
+#include "reward_movie.h"
 
 char* g_front_end_avi1;
 char* g_front_end_avi2;
@@ -5017,7 +5017,7 @@ int front_campaign_snapshot_create(void* snapshot)
 }
 
 // PORT-ONLY: adapter or forwarder for the port contract
-void movie_play_wait(struct DirectShowGraphState* movie, int skippable)
+void movie_play_wait(struct G98CMovie* movie, int skippable)
 {
     (void)movie;
     (void)skippable;

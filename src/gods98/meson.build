@@ -11,6 +11,8 @@ gods98_sources = [
   'mesh_unit.cpp',
   'container_unit.cpp',
   'directdraw_port.cpp',
+  'movie_unit.cpp',
+  'video_graph_port.cpp',
   'avi_player.cpp',
   'avi_player_port.cpp',
   'images_unit.cpp',

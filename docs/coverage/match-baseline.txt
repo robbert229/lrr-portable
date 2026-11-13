@@ -1,4 +1,4 @@
-# input_sha256: ad77faf0229dc7ba13fd0bc5796895a5120047731638974b788be0a37283c312
+# input_sha256: 16b37a22ebe02b6fe01690f885494d7dc573559530b1a94592e4a6c7e62eac33
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -771,7 +771,7 @@
 0x0042e8b0 82.67 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
-0x0042efc0 96.25 lego_play_movie
+0x0042efc0 100.00 lego_play_movie
 0x0042f0c0 84.62 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
@@ -1765,17 +1765,17 @@
 0x00471fc0 100.00 weapons_object_update_weapons
 0x00472080 90.16 weapons_object_in_range
 0x00472130 90.16 weapons_object_in_touch_range
-0x004721e0 8.26 lego::directshow_sample_setup
-0x004722b0 8.33 lego::configured_video_graph_setup
-0x00472390 10.53 lego::configured_video_com_route_init
-0x00472430 13.51 lego::directshow_interface_release
-0x004724a0 6.45 lego::configured_video_sample_update
-0x00472530 10.26 lego::video_duration_frame_bound_update
-0x00472560 13.33 directshow_render_surface_create
-0x00472670 12.50 lego::directdraw_surface_description_get
-0x004726c0 0.00 lego::video_frame_bound_refresh
-0x004726d0 58.82 lego::directshow_sample_update_and_blit
-0x004726f0 64.00 directshow_wrapper_destroy
+0x004721e0 100.00 G98CMovie::InitSample
+0x004722b0 100.00 G98CMovie::OpenStream
+0x00472390 100.00 G98CMovie::G98CMovie
+0x00472430 100.00 G98CMovie::~G98CMovie
+0x004724a0 97.01 G98CMovie::Update
+0x00472530 100.00 G98CMovie::GetDuration
+0x00472560 100.00 movie_load
+0x00472670 100.00 movie_get_size
+0x004726c0 100.00 movie_get_duration
+0x004726d0 100.00 movie_update
+0x004726f0 100.00 movie_free
 0x00472800 30.06 ddiscene_object_pool_shutdown
 0x004728c0 100.00 shared_texture_directory_set
 0x004728e0 100.00 renderer_flag_bit6_set
@@ -3128,7 +3128,7 @@
 0x0042e8b0 82.67 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
-0x0042efc0 96.25 lego_play_movie
+0x0042efc0 100.00 lego_play_movie
 0x0042f0c0 84.62 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
@@ -4122,17 +4122,17 @@
 0x00471fc0 100.00 weapons_object_update_weapons
 0x00472080 90.16 weapons_object_in_range
 0x00472130 90.16 weapons_object_in_touch_range
-0x004721e0 8.26 lego::directshow_sample_setup
-0x004722b0 8.33 lego::configured_video_graph_setup
-0x00472390 10.53 lego::configured_video_com_route_init
-0x00472430 13.51 lego::directshow_interface_release
-0x004724a0 6.45 lego::configured_video_sample_update
-0x00472530 10.26 lego::video_duration_frame_bound_update
-0x00472560 13.33 directshow_render_surface_create
-0x00472670 12.50 lego::directdraw_surface_description_get
-0x004726c0 0.00 lego::video_frame_bound_refresh
-0x004726d0 58.82 lego::directshow_sample_update_and_blit
-0x004726f0 64.00 directshow_wrapper_destroy
+0x004721e0 100.00 G98CMovie::InitSample
+0x004722b0 100.00 G98CMovie::OpenStream
+0x00472390 100.00 G98CMovie::G98CMovie
+0x00472430 100.00 G98CMovie::~G98CMovie
+0x004724a0 97.01 G98CMovie::Update
+0x00472530 100.00 G98CMovie::GetDuration
+0x00472560 100.00 movie_load
+0x00472670 100.00 movie_get_size
+0x004726c0 100.00 movie_get_duration
+0x004726d0 100.00 movie_update
+0x004726f0 100.00 movie_free
 0x00472800 30.06 ddiscene_object_pool_shutdown
 0x004728c0 100.00 shared_texture_directory_set
 0x004728e0 100.00 renderer_flag_bit6_set

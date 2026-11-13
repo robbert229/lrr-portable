@@ -481,9 +481,6 @@ definition legacy_config_rgb_from_root 35cf31a909c132bf
 definition legacy_hud_config_path c788bfaad47b0723
 definition legacy_hud_resource_name 3a9a02604ba012e3
 definition legacy_rgb_pack 91794e4c89e73446
-definition lego::copy_string 667dc15702ec1f98
-definition lego::directshow_graph_hooks_set c2b3761767b2783b
-definition lego::directshow_partial_release 2032eba740f85169
 definition lego::interface_array_forward_sync_slot ac1647c56de72da0
 definition lego::interface_array_forward_sync_slot80 14047f5420ea54d6
 definition lego::interface_forward_sync_items_reserve c6405e56076278bd

@@ -1485,17 +1485,18 @@ void entity_linked_route_flag_clear_original(struct EntitySlot* object,
 
 /* ---- part 2 imports, group 2E (0042efc0-0042f6f0): begin ---- */
 
-/* G98 Movie.c (video_graph.hpp, video_graph.h). Movie_GetSize (00472670)
- * and Movie_Update (004726d0) have other contracts in the port (a surface
- * description, a source surface); adapters at the end of lego.cpp. */
-struct DirectShowGraphState;
-struct DirectShowGraphState* directshow_render_surface_create(const char* path); /* 00472560 */
-void directshow_wrapper_destroy(struct DirectShowGraphState* state);  /* 004726f0 */
-void lego_movie_get_size_adapter(struct DirectShowGraphState* mov,
-                                 unsigned int* width,
-                                 unsigned int* height);         /* 00472670 */
-int lego_movie_update_adapter(struct DirectShowGraphState* mov, float speed,
-                              const LegoRect2E* destRect);      /* 004726d0 */
+/* G98 Movie.c (gods98/movie_unit.h, G98-001). movie_load's return type
+ * declares the G98CMovie tag; struct tagRECT is Movie_Update's RECT.
+ * Deviation (scoring only): movie_load's parameter is unnamed. Named, it
+ * moves MSVC 5.0's symbol counter so that 0x00431450 falls from 100% to
+ * 83.78% and 0x004311d0 from 70.80% to 67.15% (finding 538 rule B). */
+struct tagRECT;
+struct G98CMovie* movie_load(const char*);               /* 00472560 */
+void movie_free(struct G98CMovie* mov);                         /* 004726f0 */
+void movie_get_size(struct G98CMovie* mov, unsigned int* width,
+                    unsigned int* height);                      /* 00472670 */
+int movie_update(struct G98CMovie* mov, float speed,
+                 struct tagRECT* destRect);                     /* 004726d0 */
 /* G98 Main.c (frameloop.hpp). */
 void main_loop_frame_pump(int draw_projection_overlay);         /* 00477f30 */
 /* DirectDraw_ReturnFrontBuffer (0047cc20, directdraw.h). */

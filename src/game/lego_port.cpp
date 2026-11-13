@@ -9563,34 +9563,6 @@ extern "C" void entity_linked_route_flag_clear_original(EntitySlot* object,
 
 /* ---- part 2 adapters, group 2E (0042efc0-0042f6f0): begin ---- */
 
-#include "video_graph.hpp"
-
-/* Movie_GetSize (00472670): the port's entry fills a surface description. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Movie_GetSize 00472670; the port's entry fills a surface description)
-extern "C" void lego_movie_get_size_adapter(struct DirectShowGraphState* mov,
-                                            unsigned int* width,
-                                            unsigned int* height)
-{
-    lego::DirectShowSurfaceDescription desc;
-    lego::directdraw_surface_description_get(
-        (lego::DirectShowGraphState*)mov, &desc);
-    *width = desc.width;
-    *height = desc.height;
-}
-
-/* Movie_Update (004726d0): the port's entry blits between surfaces it is
- * given; no port entry draws to a screen rectangle. Ends the movie. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Movie_Update 004726d0; the port's entry takes surfaces)
-extern "C" int lego_movie_update_adapter(struct DirectShowGraphState* mov,
-                                         float speed,
-                                         const LegoRect2E* destRect)
-{
-    (void)mov;
-    (void)speed;
-    (void)destRect;
-    return 0;
-}
-
 /* 00435aa0 (Lego.c part 3) takes the flag alone; the port's entry also
  * takes the EngineContext, which it does not read. */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00435aa0; the port's entry takes the EngineContext)

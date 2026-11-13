@@ -42,7 +42,7 @@
 #include "savegame.h"
 #include "terrain_grid.h"
 #include "upgrades.h"
-#include "video_graph.h"
+#include "reward_movie.h"
 
 /* Flic.c's current frame (+0x624). The port's Flic has another layout. */
 #define REWARD_FLIC_FRAME(flic) (*(int*)((char*)(flic) + 0x624))
@@ -973,7 +973,7 @@ int reward_loop(void)
     float last;
     float elapsed;
     const char* movieName;
-    struct DirectShowGraphState* movie;
+    struct G98CMovie* movie;
 
     count = 0;
     last = (float)main_time_get();
@@ -1028,9 +1028,9 @@ int reward_loop(void)
         if (!upgrade_average_is_above_99() || (movieName = g_front_end_avi2) == NULL)
             movieName = g_front_end_avi1;
         if (sound_sample_file_open_by_name(movieName)) {
-            movie = directshow_render_surface_create(movieName);
+            movie = movie_load(movieName);
             movie_play_wait(movie, 0);
-            directshow_wrapper_destroy(movie);
+            movie_free(movie);
         }
         sound_request_queue_submit(0x2c, 1);
         main_menu_text_item();

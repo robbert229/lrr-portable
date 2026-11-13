@@ -7,7 +7,7 @@
  * a screen position, a world position, the zoom or the radar map's window.
  * So the unit's definitions take the port's names, and the C callers
  * (lego_unit.c, legoobject_unit.c) and the C++ ones (avi_player.cpp and
- * video_graph.cpp, which reach 0045daf0 as the shared operator-delete
+ * movie_unit.cpp, which reach 0045daf0 as the shared operator-delete
  * body) reach them with no caller edit. The port tail map_view_port.cpp
  * compiles its own definitions of these names out of the matching build
  * (LRR_MAP_VIEW_PORT_NAMES), and lego_port.cpp does the same for its

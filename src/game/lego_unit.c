@@ -6524,17 +6524,17 @@ unsigned int lego_stats_level_record_count_for_stat_type(int objType)
 // FUNCTION: LEGORR 0x0042efc0
 void lego_play_movie(const char* fName, const float* screenPt)
 {
-    struct DirectShowGraphState* mov;
+    struct G98CMovie* mov;
     int noScreenPt;
     LegoRect2E rect;
 
     if (fName) {
-        mov = directshow_render_surface_create(fName);
+        mov = movie_load(fName);
         if (mov) {
             if (screenPt) {
                 unsigned int width, height;
 
-                lego_movie_get_size_adapter(mov, &width, &height);
+                movie_get_size(mov, &width, &height);
                 rect.left = (long)screenPt[0];
                 rect.top = (long)screenPt[1];
                 rect.right = (long)(width + screenPt[0]);
@@ -6542,10 +6542,11 @@ void lego_play_movie(const char* fName, const float* screenPt)
                 noScreenPt = 0;
             } else noScreenPt = 1;
             if (!noScreenPt) directdraw_return_front_buffer();
-            while (lego_movie_update_adapter(mov, 1.0f, noScreenPt ? NULL : &rect)) {
+            while (movie_update(mov, 1.0f,
+                                noScreenPt ? NULL : (struct tagRECT*)&rect)) {
                 main_loop_frame_pump(noScreenPt);
             }
-            directshow_wrapper_destroy(mov);
+            movie_free(mov);
         }
     }
 }
