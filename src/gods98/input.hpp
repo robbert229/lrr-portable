@@ -181,7 +181,7 @@ void input_mirror_and_clear(InputState* s);
 
 int  input_key_down(const InputState* s, int key);
 int  input_keyboard_key_held(int key); /* current 256-byte backend snapshot */
-int  input_keyboard_down_key_count(void); /* FUN_0047efb0 */
+extern "C" int input_keyboard_down_key_count(void); /* FUN_0047efb0; C linkage for screen_effect_quads.c */
 typedef int (*InputClientToScreenHook)(int* x, int* y, void* context);
 typedef void (*InputSetCursorPositionHook)(int x, int y, void* context);
 void input_cursor_position_hooks_install(InputClientToScreenHook convert,

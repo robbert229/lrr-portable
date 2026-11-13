@@ -28,7 +28,7 @@ typedef void (*AnimatedTextureFrameApplyHook)(void* interface_object,
                                                void* context);
 void animated_texture_frame_apply_hook_set(AnimatedTextureFrameApplyHook hook,
                                            void* context);
-void animated_texture_frame_surface_set(void* texture, int frame_index,
+extern "C" void animated_texture_frame_surface_set(void* texture, int frame_index,
                                         const void* frame_state);
 /* InterfaceArrayForwardSync @ 0x474760 uses owner-link fields plus renderer
  * slots +0x80/+0x48/+0xa0. The field reader keeps host records separate from

@@ -358,7 +358,12 @@ src/game/savegame_from_reward.hpp
 src/game/savegame_shared.hpp
 src/game/scene_render.cpp
 src/game/scene_render.hpp
-src/game/screen_effect_quads.cpp
+src/game/screen_effect_quads.c
+src/game/screen_effect_quads.h
+src/game/screen_effect_quads_imports.h
+src/game/screen_effect_quads_link_names.h
+src/game/screen_effect_quads_maths.h
+src/game/screen_effect_quads_port.cpp
 src/game/screen_pick.cpp
 src/game/screen_pick.hpp
 src/game/screen_pick_for_terrain_map.hpp

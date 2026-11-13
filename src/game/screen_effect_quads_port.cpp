@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-009 GAME-009: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-009.csv. */
+/* Port tail of GAME-009 (finding 609): the port's credits loop and screen
+ * effect quads, unannotated. The original-shape unit is
+ * screen_effect_quads.c. In the matching build that unit's definitions take
+ * five of the port names below (screen_effect_quads_link_names.h), so this
+ * file compiles its own definitions of them out there (LRR_SEQ_PORT_NAMES);
+ * natively it serves every port name.
+ *
+ * The last block is Dependencies.c's (GAME-010), not GAME-009's: the
+ * native models of 0040ab10/0040ab30 over the port's dependency table
+ * s_grid_rec (0x004b8bc8). dependencies.c owns all three in the matching
+ * build (finding 612). */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -94,6 +102,15 @@
 
 #define GRID_REC_FIELD_WORDS   16    /* cleared by the mask sweep */
 
+/* In the matching build (MSVC 5.0) the unit screen_effect_quads.c defines
+ * five of the port names (screen_effect_quads_link_names.h); this file
+ * defines them everywhere else (finding 590's explicit #if). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_SEQ_PORT_NAMES 0
+#else
+#define LRR_SEQ_PORT_NAMES 1
+#endif
+
 /* 004a1d60 is the pooled "%s" literal, marked in gods98/files.c (finding 583). */
 const char s_task_copy_format[] = "%s";
 
@@ -111,7 +128,7 @@ static int effect_helper(SimtickEffect* e, float dt);
 
 /* CreditsTextFile + CreditsBackAVI: scroll centered text over the configured
  * AVI until the player presses a key or clicks. */
-// FUNCTION: LEGORR 0x0040a0c0
+/* Port model of 0x0040a0c0. */
 void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
                               BlockFile* cfg, const char* wad_dir,
                               AudioPlayer* ap, int audio_status, int* quit,
@@ -255,7 +272,8 @@ void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
     frontend_credits_lines_free(lines, line_count);
 }
 
-// FUNCTION: LEGORR 0x0040a3d0
+#if LRR_SEQ_PORT_NAMES
+/* Port model of 0x0040a3d0. */
 void screen_effect_flags_clear_and_release(void)
 {
     for (int i = 0; i < SCREEN_EFFECT_COUNT; ++i) {
@@ -267,12 +285,14 @@ void screen_effect_flags_clear_and_release(void)
         }
     }
 }
+#endif /* LRR_SEQ_PORT_NAMES */
 
 /* PreloadNumberedBitmaps (FUN_0040a400): format <directory>\\ followed by
  * either <index>.bmp or <prefix><index>.bmp, then get-or-create each of the
  * eleven textures. The retail function overwrites its slots without a
  * release; the texture cache owns the loaded surfaces. */
-// FUNCTION: LEGORR 0x0040A400
+#if LRR_SEQ_PORT_NAMES
+/* Port model of 0x0040a400. */
 void preload_numbered_bitmaps(const char* directory, const char* prefix)
 {
     unsigned int index;
@@ -304,8 +324,10 @@ void preload_numbered_bitmaps(const char* directory, const char* prefix)
         }
     }
 }
+#endif /* LRR_SEQ_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x0040a4b0
+#if LRR_SEQ_PORT_NAMES
+/* Port model of 0x0040a4b0. */
 void quad_mesh_render_record_create(void* entity, uint32_t count)
 {
     static const int offsets[6] = { 0, 2, 1, 0, 3, 2 };
@@ -375,7 +397,8 @@ void quad_mesh_render_record_create(void* entity, uint32_t count)
             s_quad_mesh_render_hooks.context, slot, count);
     }
 }
-// FUNCTION: LEGORR 0x0040a5c0
+#endif /* LRR_SEQ_PORT_NAMES */
+/* Port model of 0x0040a5c0. */
 void* quad_mesh_render_record_pool_slot_allocate(void)
 {
     unsigned int i;
@@ -388,7 +411,7 @@ void* quad_mesh_render_record_pool_slot_allocate(void)
     return NULL;
 }
 
-// FUNCTION: LEGORR 0x0040a5e0
+/* Port model of 0x0040a5e0. */
 void record_count_digits_fill(const RecordCountRenderHooks* hooks, uint32_t value)
 {
     unsigned int slot;
@@ -428,7 +451,7 @@ void record_count_digits_fill(const RecordCountRenderHooks* hooks, uint32_t valu
     }
 }
 
-// FUNCTION: LEGORR 0x0040aa10
+/* Port model of 0x0040aa10. */
 void simtick_table_dispatch(EngineContext* c, float dt, float scale)
 {
     (void)c; (void)scale;
@@ -440,7 +463,7 @@ void simtick_table_dispatch(EngineContext* c, float dt, float scale)
         }
     }
 }
-// FUNCTION: LEGORR 0x0040aa40
+/* Port model of 0x0040aa40. */
 static int effect_helper(SimtickEffect* e, float dt)
 {
     float elapsed;
@@ -477,7 +500,8 @@ static int effect_helper(SimtickEffect* e, float dt)
 }
 
 /* EntityQuadMeshRenderRecordAllowed (FUN_0040aae0) — see entity.hpp. */
-// FUNCTION: LEGORR 0x0040aae0
+#if LRR_SEQ_PORT_NAMES
+/* Port model of 0x0040aae0. */
 int entity_quad_mesh_render_record_allowed(const EntitySlot* e)
 {
     if ((entity_state_flags_get(e) & 0x08000000u) == 0u && e->type != 8
@@ -486,6 +510,7 @@ int entity_quad_mesh_render_record_allowed(const EntitySlot* e)
     }
     return 0;
 }
+#endif /* LRR_SEQ_PORT_NAMES */
 
 /* Dependencies_SetEnabled (0040ab10) and
  * Dependencies_Reset_ClearAllLevelFlags_10c (0040ab30) are Dependencies.c's
