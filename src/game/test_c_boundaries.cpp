@@ -215,6 +215,7 @@ extern "C" int s_cursor_delta_y;
 #include "game/pointer_imports.h"
 #include "game/scrollinfo.h"
 #include "game/scrollinfo_imports.h"
+#include "gods98/rnc.h"
 
 int main(void)
 {

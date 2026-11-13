@@ -83,6 +83,7 @@ gods98_c_sources = [
   'files.c',
   'wad.c',
   'lwo.c',
+  'rnc.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 gods98_c_as_cpp = []

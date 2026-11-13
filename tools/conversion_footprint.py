@@ -52,8 +52,10 @@ UNIT_RANGES = "docs/coverage/translation-unit-ranges.csv"
 UNIT_FUNCTIONS = "docs/coverage/translation-units.csv"
 EDGES = "docs/coverage/call-graph/edges.csv"
 SOURCE_SUFFIXES = (".c", ".cpp", ".h", ".hpp")
-CONVERTIBLE_KINDS = ("game", "gods98")
-SOURCE_DIRS = {"game": "src/game", "gods98": "src/gods98"}
+# "late" units are C objects linked after the import libraries (LATE-001, the
+# RNC expander that Wad.c calls); they convert into src/gods98 (finding 610).
+CONVERTIBLE_KINDS = ("game", "gods98", "late")
+SOURCE_DIRS = {"game": "src/game", "gods98": "src/gods98", "late": "src/gods98"}
 
 # Files that every conversion touches (the link-order list, boundary test).
 # They conflict only mechanically, so they are left out of the header overlap.

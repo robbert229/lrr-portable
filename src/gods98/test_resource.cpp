@@ -17,6 +17,7 @@
 #include <sys/stat.h> /* mkdir */
 
 #include "resource.hpp"
+#include "rnc.h"
 #include "heap.hpp"
 
 static int s_failures = 0;
@@ -323,57 +324,80 @@ int main(int argc, char** argv)
               "the slot guard runs clear");
     }
 
-    /* --- wad payload band (2026-10-25) --------------------------------- */
+    /* --- RNC expander (gods98/rnc.c, LATE-001, finding 610) ------------ */
     {
-        /* Dispatch: type 0 is the raw pass-through — the big-endian size
-         * dword at +4, payload from +0x12, copied in dwords plus tail. */
+        /* Dispatch: method 0 is stored: the big-endian size dword at +4,
+         * the payload from +0x12. */
         static unsigned char hdr[0x12 + 11];
         unsigned char dst[16];
         memset(hdr, 0, sizeof hdr);
         memcpy(hdr, "RNC", 3);
-        hdr[3] = 0;             /* type 0 */
+        hdr[3] = 0;             /* method 0 */
         hdr[4] = 0; hdr[5] = 0; hdr[6] = 0; hdr[7] = 11; /* BE size 11 */
         memcpy(hdr + 0x12, "payload!123", 11);
         memset(dst, 0xEE, sizeof dst);
         CHECK(wad_payload_decode_dispatch(hdr, dst) == 0,
-              "the raw pass-through answers 0");
+              "the stored method answers 0");
         CHECK(memcmp(dst, "payload!123", 11) == 0, "the payload lands");
         CHECK(dst[11] == 0xEE && dst[15] == 0xEE,
-              "the copy stops at the size (dword+tail stages)");
+              "the copy stops at the size");
 
-        /* The verdicts: magic, types 1/2 (ported codecs), unknown. The
-         * codecs answer the corpus's xor ax,ax = 0 on every path; with a
-         * zero size dword the output cursor starts at the end, so the
-         * codec exits before touching the stream or the buffer. */
+        /* The verdicts: magic, methods 1/2 with a zero size (the output
+         * starts at its end, so neither touches the buffer), unknown. */
         hdr[0] = 'X';
-        CHECK(wad_payload_decode_dispatch(hdr, dst) == WAD_DECODE_MAGIC_FAIL,
+        CHECK((unsigned short)wad_payload_decode_dispatch(hdr, dst) == WAD_DECODE_MAGIC_FAIL,
               "the bad magic answers 0xffff");
         hdr[0] = 'R';
-        hdr[7] = 0;             /* size 0: the codecs gate out immediately */
+        hdr[7] = 0;
         hdr[3] = 1;
         memset(dst, 0xEE, sizeof dst);
-        /* The codecs now return the output-end pointer masked with
-         * 0xffff0000 (faithful to the corpus); callers test only AX, so the
-         * verdict is the low word == 0, not the whole int. */
-        CHECK(((unsigned)wad_payload_decode_dispatch(hdr, dst) & 0xffffu) == 0,
-              "the type-1 codec answers the corpus verdict 0");
+        CHECK(wad_payload_decode_dispatch(hdr, dst) == 0,
+              "method 1 answers 0");
         CHECK(dst[0] == 0xEE && dst[15] == 0xEE,
-              "the zero-size type-1 stream writes nothing");
+              "the zero-size method-1 stream writes nothing");
         hdr[3] = 2;
-        memset(dst, 0xEE, sizeof dst);
-        CHECK(((unsigned)wad_payload_decode_dispatch(hdr, dst) & 0xffffu) == 0,
-              "the type-2 codec answers the corpus verdict 0");
+        CHECK(wad_payload_decode_dispatch(hdr, dst) == 0,
+              "method 2 answers 0");
         CHECK(dst[0] == 0xEE && dst[15] == 0xEE,
-              "the zero-size type-2 stream writes nothing");
+              "the zero-size method-2 stream writes nothing");
         hdr[3] = 9;
-        CHECK(wad_payload_decode_dispatch(hdr, dst) == WAD_DECODE_TYPE_FAIL,
-              "the odd type answers 0xfffe");
-        CHECK(wad_payload_decode_dispatch(NULL, dst) == WAD_DECODE_MAGIC_FAIL,
-              "the null payload answers the magic verdict (deviation)");
+        CHECK((unsigned short)wad_payload_decode_dispatch(hdr, dst) == WAD_DECODE_TYPE_FAIL,
+              "the unknown method answers 0xfffe");
     }
 
     {
-        /* Expand: probe answers the size, decode answers the buffer. */
+        /* Method 2, read MSB-first. Literals A and B, a short match (offset
+         * byte 1, so 2 back, two bytes), then the end marker (a long match
+         * whose length byte is 0). The bit bytes are 0x0d and 0xe0. */
+        static const unsigned char stream[] = {
+            'R', 'N', 'C', 2, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0x0d, 'A', 'B', 0x01, 0xe0, 0x00, 0, 0, 0, 0
+        };
+        unsigned char dst[8];
+        memset(dst, 0xEE, sizeof dst);
+        CHECK(wad_payload_decode_dispatch(stream, dst) == 0
+                  && memcmp(dst, "ABAB", 4) == 0 && dst[4] == 0xEE,
+              "method 2 copies literals and a back reference");
+    }
+
+    {
+        /* Method 1, read LSB-first in 16-bit words. One block: a literal
+         * table whose only code (entry 2, one bit) gives a count of 3, and
+         * empty distance and length tables. The literals follow the three
+         * bit words. */
+        static const unsigned char stream[] = {
+            'R', 'N', 'C', 1, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0x0c, 0x80, 0x00, 0x20, 0x00, 0x40, 'A', 'B', 'C', 0, 0, 0, 0
+        };
+        unsigned char dst[8];
+        memset(dst, 0xEE, sizeof dst);
+        CHECK(wad_payload_decode_dispatch(stream, dst) == 0
+                  && memcmp(dst, "ABC", 3) == 0 && dst[3] == 0xEE,
+              "method 1 copies a Huffman-coded literal run");
+    }
+
+    {
+        /* Expand: probe answers the size, decode answers a malloc'd buffer. */
         static unsigned char hdr[0x12 + 11];
         memset(hdr, 0, sizeof hdr);
         memcpy(hdr, "RNC", 3);
@@ -386,54 +410,46 @@ int main(int argc, char** argv)
         CHECK(wad_expand_payload(hdr, &buf) == 11 && buf != NULL
                   && memcmp(buf, "payload!123", 11) == 0,
               "the decode hands over the buffer and size");
-        engine_heap_free(buf);
+        free(buf);
 
         hdr[0] = 'X';
         buf = NULL;
         CHECK(wad_expand_payload(hdr, &buf) == 0 && buf == NULL,
               "the failed dispatch releases the buffer and answers 0");
-        CHECK(wad_expand_payload(NULL, &buf) == 0,
-              "the null payload answers 0 (deviation)");
     }
 
     {
-        /* Huffman table clear: 16-byte entries ride 0 / word 0xffff / 0 /
-         * word 0; the entry past the count rides untouched. */
-        unsigned char table[4 * 16];
+        /* Huffman table clear: entries become 0 / word 0xffff / 0 / word 0;
+         * the entry past the count is untouched. */
+        RNC_HuffEntry table[4];
         memset(table, 0x5A, sizeof table);
         wad_huffman_table_clear(table, 3);
         int ok = 1;
         for (int i = 0; i != 3; ++i) {
-            const unsigned char* e = table + (size_t)i * 16u;
-            uint32_t d0, d8;
-            uint16_t w4, w12;
-            memcpy(&d0, e + 0, 4);
-            memcpy(&w4, e + 4, 2);
-            memcpy(&d8, e + 8, 4);
-            memcpy(&w12, e + 12, 2);
-            if (d0 != 0u || w4 != 0xffffu || d8 != 0u || w12 != 0u) {
+            if (table[i].unused0 != 0u || table[i].unused4 != 0xffffu
+                || table[i].code != 0u || table[i].bitDepth != 0u) {
                 ok = 0;
             }
         }
         CHECK(ok, "the cleared entries land zero/0xffff/zero/zero");
+        const unsigned char* tail = (const unsigned char*)&table[3];
         int untouched = 1;
-        for (int i = 0; i != 16; ++i) {
-            if (table[3 * 16 + i] != 0x5Au) {
+        for (size_t i = 0; i != sizeof table[3]; ++i) {
+            if (tail[i] != 0x5Au) {
                 untouched = 0;
             }
         }
         CHECK(untouched, "the count leaves the tail entry alone");
-        wad_huffman_table_clear(table, 0);
         memset(table, 0x5A, sizeof table);
         wad_huffman_table_clear(table, 0);
+        const unsigned char* all = (const unsigned char*)table;
         int all_ride = 1;
-        for (unsigned char b : table) {
-            if (b != 0x5Au) {
+        for (size_t i = 0; i != sizeof table; ++i) {
+            if (all[i] != 0x5Au) {
                 all_ride = 0;
             }
         }
         CHECK(all_ride, "the zero count clears nothing");
-        wad_huffman_table_clear(NULL, 3); /* guarded */
     }
 
     {
