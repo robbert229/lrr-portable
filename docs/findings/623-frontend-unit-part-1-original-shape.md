@@ -10,7 +10,12 @@ converted. This change rebuilds its first range, `004102b0`-`00414de0`
 unit [`src/game/frontend_unit.c`](../../src/game/frontend_unit.c). Part 2
 (`00414df0`-`00418190`, 66 functions) is still the relocated port code.
 
-"Before" is the *match baseline* of `main` `d4c4cf5c`. "After" is this
+Stacked on #704 (`convert/697-g98-002-container`, `035d0017`), on #703,
+#702 and #701. "Before" is #704's committed *match baseline* and
+`binary-progress.json`; no part-1 score differs from `main` `d4c4cf5c`,
+where the change was first measured (exact bytes 208,965 to 210,467,
+`opt_ref` 398/220 to 422/238, relink `.bss` 1,304,096 to 1,319,984, image
+end `0x892000` to `0x89b000`, lint ledger 1,042 to 1,023). "After" is this
 change, from the full matching build (`make reccmp-check`).
 
 ## Result
@@ -20,13 +25,13 @@ change, from the full matching build (`make reccmp-check`).
 | Part 1 similarity (66 functions, weighted by span, 19,264 bytes) | 23.46% | **71.70%** |
 | Exact functions in part 1 | 26 | **38** |
 | Mapped functions in part 1 | 61 | **66** |
-| Exact-function code bytes (`binary-progress.json`) | 208,965 | **210,467** |
-| Accuracy, full / game-only | 89.03% / 87.97% | **89.77% / 88.78%** |
-| `opt_ref` annotated (full): removed / exact removed | 398 / 220 | 422 / 238 |
-| `opt_ref` annotated (game-only) | 391 / 213 | 415 / 231 |
-| `/OPT:REF` relink `.bss` (`opt_ref.image.bss_bytes`) | 1,304,096 | 1,319,984 |
-| Gate image end (`make pe-audit`) | `0x892000` | `0x89b000` |
-| Reccmp lint ledger (entries) | 1,042 | **1,023** |
+| Exact-function code bytes (`binary-progress.json`) | 242,555 | **244,057** |
+| Accuracy, full / game-only | 91.98% / 91.22% | **92.71% / 92.02%** |
+| `opt_ref` annotated (full): removed / exact removed | 305 / 182 | 327 / 198 |
+| `opt_ref` annotated (game-only) | 299 / 176 | 321 / 192 |
+| `/OPT:REF` relink `.bss` (`opt_ref.image.bss_bytes`) | 1,095,872 | 1,111,760 |
+| Gate image end (`make pe-audit`) | `0x864000` | `0x86d000` |
+| Reccmp lint ledger (entries) | 1,002 | **983** |
 
 Spans run to the next function, padding included; an unmapped function
 counts as 0%. Four functions are naked asm (below); everything else is C.
@@ -282,12 +287,12 @@ port's prototype.
 
 | Caller | Before | After |
 | --- | --- | --- |
-| Lego.c `0041fb50` | `movie_avis_enabled_original` (adapter in `frontend_port.cpp`) | `front_is_intros_enabled` (`lego_unit_imports.h`, matching build only): 97.18% to 97.21% |
+| Lego.c `0041fb50` | `movie_avis_enabled_original` (adapter in `frontend_port.cpp`) | `front_is_intros_enabled` (`lego_unit_imports.h`, matching build only): 94.84% to 98.18% on the stack |
 | Reward.c `00461410`, Lego.c `0041fb50`/`004231f0`, GAME-050 `00471d20` | the port's definitions | the unit's definitions under the same names (no source change) |
 
 ## Entropy and drops
 
-`make reccmp-check` against `main`'s baseline: 53 improved, 5 newly mapped
+`make reccmp-check` against #704's baseline: 53 improved, 5 newly mapped
 (`00411a00`, `00413970`, `00413a60`, `00413b80`, `00414d30`), no exact
 match lost, and **one drop, flagged for review**:
 
@@ -302,7 +307,7 @@ outside the unit changed instruction count.
 
 ## `opt_ref` (finding 579, `make opt-ref-callers`)
 
-`opt_ref` rises (398/220 to 422/238) because most of part 1 is reached only
+`opt_ref` rises (305/182 to 327/198) because most of part 1 is reached only
 from part 2, whose functions are still the port's: Front_RunScreenMenu,
 Front_LoadMenuSet and their callees are roots only through `00416c80`,
 `004161f0`, `004161a0` and `004150b0`, which call the port's models.
@@ -313,7 +318,7 @@ lists them. The one caller with the original's contract, Lego.c's
 ## `.bss` and the image
 
 The relink `.bss` grows by 15,888 bytes and the gate image end moves from
-`0x892000` to `0x89b000`: the unit adds FrontEnd.c's own `.bss` (16,416
+`0x864000` to `0x86d000`: the unit adds FrontEnd.c's own `.bss` (16,416
 bytes, mostly the 15 × 1,024-byte print queue), while the port's models in
 `frontend_port.cpp` keep their copies (its string queue, 15,540 bytes)
 until part 2 retires them.
@@ -331,7 +336,7 @@ message ("guarded") expects.
 
 ## Reccmp lint ratchet
 
-The ledger goes from 1,042 to 1,023 entries (−19): the nineteen port
+The ledger goes from 1,002 to 983 entries (−19): the nineteen port
 helpers that only part 1's models use are now `PORT-ONLY`. The unit's one
 native-only helper (`front_float_bits`) is `PORT-ONLY`.
 
