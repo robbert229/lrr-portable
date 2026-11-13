@@ -886,6 +886,9 @@ typedef struct SceneObjectBoundsHooks {
     SceneBoundsChildGetHook child_get;
 } SceneObjectBoundsHooks;
 void scene_object_bounds_hooks_set(const SceneObjectBoundsHooks* hooks);
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t scene_object_bounds_union(void* scene_object, float bounds_min_max[6]);
 typedef struct RenderPackedRgbaHooks {
     void* context;

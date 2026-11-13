@@ -27,7 +27,7 @@ game_sources = [
   'helpwindow.cpp',
   'tile_variants.cpp',
   'cell_flood_passes.cpp',
-  'vehicle_model.cpp',
+  'vehicle_model_port.cpp',
   'upgrade_levels.cpp',
   'tooltip.cpp',
   'text.cpp',
@@ -110,6 +110,7 @@ game_c_sources = [
   'weapons.c',
   'sfx.c',
   'rock_fall_styles.c',
+  'vehicle_model.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

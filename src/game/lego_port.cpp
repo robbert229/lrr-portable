@@ -9488,7 +9488,10 @@ extern "C" void lego_noop_block_adapter(const int* blockPos)
     (void)blockPos;
 }
 
+/* In the matching build vehicle_model.c's Vehicle_Load takes this name
+ * (vehicle_model_link_names.h; finding 590). */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Vehicle_Load 0046c6f0; no port entry has its contract, natively nothing calls this)
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" int lego_vehicle_load_adapter(void* vehicle, unsigned int objID,
                                          void* root, const char* filename,
                                          const char* gameName)
@@ -9500,6 +9503,7 @@ extern "C" int lego_vehicle_load_adapter(void* vehicle, unsigned int objID,
     (void)gameName;
     return 0;
 }
+#endif
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Creature_Load 00406990; animation_object.c's entry adds a row kind, which it ignores)
 extern "C" int lego_creature_load_adapter(void* creature, unsigned int objID,

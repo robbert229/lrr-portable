@@ -149,6 +149,9 @@ int model_child_render_eligibility_check(const void* object);
  * flag dword at +0x1e8; the flag's meaning stays with the callers per
  * finding 357. NULL answers 0. */
 uint32_t entity_type_flag_bit1_get(const void* record);
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t entity_type_flag_bit1_get_target(const void* record);
 
 /* ------------------------------------------------------------------ *

@@ -721,6 +721,9 @@ void* scene_resource_named_entry_resolve_with_fallback(
     SceneResourceAnimationRecord* record, const char* name, uint32_t index);
 int scene_activity_change_dispatch(SceneResourceAnimationRecord* record,
                                    int index); /* FUN_0046da50 */
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_resource_cached_slot_b4_get(
     SceneResourceAnimationRecord* record); /* FUN_0046da90 */
 #ifdef __cplusplus
@@ -819,6 +822,9 @@ void scene_animation_channel_hooks_install(
     SceneAnimationVisibilityHook visibility, void* context);
 uint32_t scene_activity_paired_channel_update(
     ScenePairedAnimationState* state, uint32_t channel, int visible);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_resource_slots_rebuild(ScenePairedAnimationState* state,
                                   const char* slot_base_name); /* FUN_0046d260 */
 typedef struct SceneChannelEntry {
@@ -836,6 +842,9 @@ typedef uint32_t (*SceneChannelEntryProcessHook)(
     void* context);
 void scene_channel_entry_process_hook_install(
     SceneChannelEntryProcessHook hook, void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_channel_slots_rebuild(SceneChannelSlotsState* state,
                                  int mode); /* FUN_0046c510 */
 typedef struct SceneIndexedRecord {
@@ -860,6 +869,9 @@ typedef void (*SceneIndexedRecordNodeReleaseHook)(SceneIndexedRecordNode* node,
                                                   void* context);
 void scene_indexed_record_release_hook_install(
     SceneIndexedRecordNodeReleaseHook release, void* context);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_indexed_record_list_rebuild_for_value(
     SceneIndexedRecordList* list, int value); /* FUN_0046c340 */
 typedef int (*SceneEffectPoseHook)(void* handle, float px, float py, float pz,
