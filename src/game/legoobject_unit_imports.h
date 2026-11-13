@@ -752,11 +752,10 @@ int legoobject_progress_advance_by_25(Lego_Object* obj);              /* 0044773
 void legoobject_clear_linked_object_state(Lego_Object* obj);          /* 00447780 */
 int legoobject_activity_terrain_eligibility_transition(Lego_Object* obj, float elapsed,
                                                       int* out);      /* 00449980 */
-/* Deviation (scoring only): the third parameter is unnamed so the
- * declaration keeps the two names the port's prototype had (finding 538:
- * parameter names count). */
-int legoobject_work_object_position_get(Lego_Object* obj, float* outX,
-                                        float*);                      /* 0044a2a0 */
+/* Deviation (scoring only): the two output parameters are unnamed.
+ * Parameter names count towards MSVC's symbol counter (finding 538 rule
+ * B), and with them named 0043c200 loses its exact match. */
+int legoobject_work_object_position_get(Lego_Object* obj, float*, float*); /* 0044a2a0 */
 int legoobject_ai_can_do(Lego_Object* obj);                           /* 0044c530 */
 float terrain_map_world_z_get(struct TerrainMap* map, float x, float y); /* 0044f940 */
 int sound_alias_play(int alias, int loop);                            /* 00464fa0 */

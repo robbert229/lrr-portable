@@ -70,6 +70,8 @@ int terrain_cell_drill_work_add_current(int x, int y, float divisor,
 #if defined(_MSC_VER) && _MSC_VER < 1200
 #define entity_type_component_get legoobject_type_component_get
 #define entity_directional_activity_start legoobject_directional_activity_start
+#define entity_one_shot_attached_effect_start legoobject_one_shot_attached_effect_start
+#define entity_pair_scalar_fields_set legoobject_pair_scalar_fields_set
 #endif
 void* entity_type_component_get(const void* entity_record);       /* 0044a200 */
 void entity_transform_position_get_outputs(const struct EntitySlot* entity,
