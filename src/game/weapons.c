@@ -607,9 +607,6 @@ void weapons_projectile_update(Weapons_Projectile* projectile, float elapsed)
 {
     void* cont;
     Point2F curvePos;
-    float dirX;
-    float dirY;
-    float dirZ;
 
     cont = entity_type_component_get(projectile->object);
     ddiscene_object_position_get(cont, NULL, (float*)&projectile->lastPosition);
@@ -619,9 +616,10 @@ void weapons_projectile_update(Weapons_Projectile* projectile, float elapsed)
                               &projectile->direction, elapsed);
         ddiscene_object_position_set(cont, NULL, projectile->position.x,
                                      projectile->position.y, projectile->position.z);
-        dirX = projectile->direction.x;
-        dirY = projectile->direction.y;
-        dirZ = projectile->direction.z;
+        ddiscene_object_pose_method_dispatch(cont, NULL, projectile->direction.x,
+                                             projectile->direction.y,
+                                             projectile->direction.z,
+                                             0.0f, 0.0f, -1.0f);
     }
     else {
         elapsed += projectile->curveDistance;
@@ -632,11 +630,12 @@ void weapons_projectile_update(Weapons_Projectile* projectile, float elapsed)
         projectile->position.z = projectile->startPos.z + curvePos.y;
         ddiscene_object_position_set(cont, NULL, projectile->position.x,
                                      projectile->position.y, projectile->position.z);
-        dirX = projectile->position.x - projectile->lastPosition.x;
-        dirY = projectile->position.y - projectile->lastPosition.y;
-        dirZ = (projectile->position.z - projectile->lastPosition.z) * 0.25f;
+        ddiscene_object_pose_method_dispatch(
+            cont, NULL, projectile->position.x - projectile->lastPosition.x,
+            projectile->position.y - projectile->lastPosition.y,
+            (projectile->position.z - projectile->lastPosition.z) * 0.25f,
+            0.0f, 0.0f, -1.0f);
     }
-    ddiscene_object_pose_method_dispatch(cont, NULL, dirX, dirY, dirZ, 0.0f, 0.0f, -1.0f);
 }
 
 // FUNCTION: LEGORR 0x0046faf0
@@ -689,6 +688,7 @@ int weapons_projectile_create_curved(Weapons_Object* owner, Weapons_Vector3F* po
     Point2F p1;
     Point2F p2;
     Point2F p3;
+    float dist;
 
     p0.x = 0.0f;
     p0.y = 0.0f;
@@ -710,9 +710,9 @@ int weapons_projectile_create_curved(Weapons_Object* owner, Weapons_Vector3F* po
             weapons_vector3d_normalise(&projectile->direction);
             projectile->speed = 4.0f;
             p2.y = target->z - pos->z;
-            p2.x = weapons_vector3d_distance(pos, target);
-            vector2_set_length(&p1, p2.x * 0.2f);
-            vector2_set_length(&p3, p2.x * 0.33333334f);
+            p2.x = dist = weapons_vector3d_distance(pos, target);
+            vector2_set_length(&p1, dist * 0.2f);
+            vector2_set_length(&p3, dist * 0.33333334f);
             bezier_curve_samples_build(&projectile->curve, &p0, &p1, &p2, &p3, 50);
             projectile->curveLength = polyline_segment_lengths_total(&projectile->curve);
             projectile->curveDistance = 0.0f;
