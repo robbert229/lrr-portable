@@ -219,8 +219,8 @@ extern char** environ;
 #pragma comment(linker, "/include:___CxxFrameHandler")
 /* The executable's command-line parser is VC5 stdargv.obj's __setargv. */
 #pragma comment(linker, "/include:__setargv")
-/* Pull asin.obj, which contains both __CIasin and the public _asin entry. */
-#pragma comment(linker, "/include:_asin")
+/* Pull acos.obj, which contains both __CIacos and the public _acos entry. */
+#pragma comment(linker, "/include:_acos")
 /* Pull ldexp.obj's shared private double decomposition helper. */
 #pragma comment(linker, "/include:__decomp")
 /* Use VC5's complete math entries for the target's floor/ceil/fabs bodies. */
@@ -566,18 +566,21 @@ extern "C" void __cdecl __multtenpow12(uint16_t*, uint32_t, int);
 // LIBRARY: LEGORR 0x004913f0 SYMBOL
 // _write_string
 
-/* VC5 LIBC.LIB's asin.obj supplies __CIasin and its internal _asin entry.
- * The reference's _asin body starts at 0x48e0a4; Ghidra also labels its
- * internal entry at 0x48e0ad as a separate function because __CIasin calls
- * there after doing its own __checkTOS_withFB handling. */
+/* VC5 LIBC.LIB's acos.obj supplies __CIacos and its internal _acos entry.
+ * The reference's _acos body starts at 0x48e0a4; Ghidra also labels its
+ * internal entry at 0x48e0ad as a separate function because __CIacos calls
+ * there after doing its own __checkTOS_withFB handling. It is acos, not
+ * asin (finding 626): the body swaps the fpatan operands (fxch st(1)),
+ * answers pi and 0 at -1 and +1 (fldpi, fldz), and reports error 13, and
+ * LegoObject.c's two callers (00442480, 00444fb0) compute an acos. */
 #if !defined(_MSC_VER)
 // LIBRARY: LEGORR 0x0048e090 SYMBOL
-// __CIasin
+// __CIacos
 // LIBRARY: LEGORR 0x0048e0ad SYMBOL
-// _asin
-double crt_asin(double value)
+// _acos
+double crt_acos(double value)
 {
-    return asin(value);
+    return acos(value);
 }
 #endif
 

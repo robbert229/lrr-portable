@@ -243,6 +243,12 @@ void lego_upgrade_resource_debit(int ore, int amount); /* 0041f9e0 */
 /* 00431570 takes no argument; the port's entry takes two ignored cells
  * (adapter at the end of lego.cpp). */
 void* level_current_terrain_get_original(void);     /* 00431570 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: Lego_GetMap itself (lego_unit.c), called without the
+ * port's two ignored cells, as Lego_GetMap() below. Finding 626. */
+#define level_current_terrain_get_original() \
+    (((void* (*)())level_current_terrain_get)())
+#endif
 /* Info.c (info_unit.c). */
 void info_send(int type, char* text, void* object,
                struct InfoPoint2I* blockPos);       /* 00419b80 */
@@ -259,6 +265,11 @@ uint32_t entity_state_flags_get(const struct EntitySlot* e); /* 00469e80 */
  * linkage; C entry at the end of entity_stats.cpp. */
 int legoobject_gd_building_index_set_adapter(struct EntitySlot* entity,
                                              uint32_t state); /* 00469c10 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: entity_stats.c's 00469c10 (declared above), whose
+ * contract is the original's (entity_stats_link_names.h). Finding 626. */
+#define legoobject_gd_building_index_set_adapter entity_building_index_set
+#endif
 uint32_t building_upgrade_admission_check(int type, int row); /* 00469f40 */
 uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
                                                      int slot); /* 0046a0c0 */
@@ -508,6 +519,10 @@ int terrain_cell_mask_180000_current(const int cell_xy[2]);                /* 00
 /* Original-ABI adapter at the end of legoobject_port.cpp (group H): the
  * port's 00435230 takes the cell as two ints. 0044a4f0 and 0044bf00 are
  * part 3's own functions (issue #615). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: lego_unit.c's 00435230 itself (finding 626). */
+#define legoobject_gh_random_variant_cell_scatter_adapter lego_random_variant_cell_scatter
+#endif
 void legoobject_gh_random_variant_cell_scatter_adapter(const int* blockPos,
                                                        int radius,
                                                        int mode);           /* 00435230 */
@@ -644,6 +659,10 @@ void aitask_entity_threshold_progress_event_queue(struct EntitySlot* object,
 void flagged_object_timer_registry_insert(struct EntitySlot* record);      /* 00407540 */
 /* 00435aa0 (Lego.c part 3): the port's entry also takes the engine
  * context; GAME-021's adapter at the end of lego.cpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: lego_unit.c's 00435aa0 itself (finding 626). */
+#define lego_panel_selection_highlight_toggle_adapter lego_panel_selection_highlight_toggle
+#endif
 void lego_panel_selection_highlight_toggle_adapter(int on);                /* 00435aa0 */
 void global_float_accumulator_00555330_add(float value);                   /* 004628a0 */
 void global_float_accumulate_00555120(float value);                        /* 004628c0 */
@@ -738,6 +757,13 @@ int terrain_cell_walkable_flag_current(uint32_t cx, uint32_t cy);     /* 00432bd
 int terrain_cell_speed_class_current(const int cell_xy[2]);           /* 00432c50 */
 uint32_t terrain_cell_flag_20_bounded_current(uint32_t cx, uint32_t cy); /* 00432d90 */
 void level_tile_mark_current_target(const int cell_xy[2], int set);   /* 00432e00 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: lego_unit.c's 00433be0 and 00433c10 themselves; the one
+ * caller of 00433be0 already casts away the port's context argument
+ * (finding 626). */
+#define current_level_terrain_grid_pick lego_current_level_terrain_grid_pick
+#define entity_neighbor_blocked_cell_step_probe lego_entity_neighbor_blocked_cell_step_probe
+#endif
 void current_level_terrain_grid_pick(struct EngineContext* ctx, float x, float y,
                                      int* gx, int* gy);               /* 00433be0 */
 int entity_neighbor_blocked_cell_step_probe(struct EntitySlot* entity,
@@ -886,6 +912,12 @@ void scene_resource_draw_at_origin(struct SceneResourceAnimationRecord* record,
 /* Weapons.c (weapon.hpp, weapons.cpp, effects.hpp). */
 uint32_t object_type_name_index_find(const char* name);             /* 0046f0d0 */
 float weapon_type_recharge_time_get_target(int type);                /* 0046f110 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: weapons.c's 0046faf0 and 0046fc70 themselves, whose
+ * contract is the original's (finding 626). */
+#define entity_spawn_record_slot_init weapons_projectile_create
+#define object_flight_curve_record_init weapons_projectile_create_curved
+#endif
 int entity_spawn_record_slot_init(void* owner, const float position[3],
                                   const float direction[3],
                                   uint32_t auxiliary, uint32_t mode); /* 0046faf0 */

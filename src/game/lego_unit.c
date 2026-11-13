@@ -849,6 +849,7 @@ void lego_start_level_pilots(void)
     level_current_owner_get();
     if (!(legoGlobs_flags1 & 0x8000000)) {
         s_start_level_pilot_grid_count =
+            // STRING: LEGORR 0x004a356c
             entity_type_grid_record_count_get("Pilot", 0);
         legoGlobs_flags1 |= 0x8000000;
         level_state_stored_value_set(1);
@@ -1599,6 +1600,7 @@ void lego_misc_object_resources_load(struct BlockRec* config)
     fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "Boulder", NULL));
     legoGlobs_contBoulder = container_load(legoGlobs_rootCont, fileName, "LWO", 1);
     if (legoGlobs_contBoulder == NULL)
+        // STRING: LEGORR 0x004a4014
         legoGlobs_contBoulder = container_load(legoGlobs_rootCont, fileName, "MESH", 1);
     scene_render_lock_toggle(legoGlobs_contBoulder, 1);
 
@@ -1772,11 +1774,12 @@ void lego_debug_panel_text_draw_update(float elapsed)
         if (x + width > (unsigned int)s_display_w - 40) x -= width;
         font_print_f(s_lego_crystal_count_font,
                      x + (s_lego_renameCursorOn ? 0 : quoteWidth), y,
+                     // STRING: LEGORR 0x004a4024
                      "%s%s%s",
                      // STRING: LEGORR 0x004a402c
-                     s_lego_renameCursorOn ? "\"" : "",
+                     s_lego_renameCursorOn ? "\"" : s_config_angle_empty,
                      text,
-                     s_lego_renameCursorOn ? "\"" : "");
+                     s_lego_renameCursorOn ? "\"" : s_config_angle_empty);
     }
 }
 
@@ -4627,7 +4630,7 @@ float engine_float_field260_get_current_target(void)
  * value twice (once to test it). */
 #define LEGO_D_ID(key) string_path_join(s_engine_config_root, levelName, key, 0)
 #define LEGO_D_TEMP(key) block_get_strptr(config, LEGO_D_ID(key))
-#define LEGO_D_STR(key) (LEGO_D_TEMP(key) ? LEGO_D_TEMP(key) : "")
+#define LEGO_D_STR(key) (LEGO_D_TEMP(key) ? LEGO_D_TEMP(key) : s_config_angle_empty)
 #define LEGO_D_INT(key) atoi(LEGO_D_STR(key))
 #define LEGO_D_FLOAT(key) (float)atof(LEGO_D_STR(key))
 #define LEGO_D_BOOL(key) block_get_bool_path(config, LEGO_D_ID(key))
@@ -4821,7 +4824,7 @@ int lego_level_load(const char* levelName)
         // STRING: LEGORR 0x004a4338
         if ((copy = LEGO_D_COPY("DragBoxRGB")) != NULL) {
             char* argv[10];
-            if (sound_variant_split(copy, argv, ":") == 3) {
+            if (sound_variant_split(copy, argv, s_config_rgb_separator) == 3) {
                 for (i = 0; i < 3; i++) {
                     legoGlobs_dragBoxRGB[i] = (float)atoi(argv[i]) * (1.0f / 255.0f);
                 }
@@ -4934,15 +4937,15 @@ int lego_level_load(const char* levelName)
             int surfaceParam, predugParam = 0, terrainParam = 0, blockPointersParam = 0;
             int cryOreParam = 0, pathParam = 0, fallinParam;
 
-            if (surfaceMap && sound_variant_split(surfaceMap, parts, ":") == 2) surfaceParam = atoi(parts[1]);
-            if (predugMap && sound_variant_split(predugMap, parts, ":") == 2) predugParam = atoi(parts[1]);
-            if (terrainMap && sound_variant_split(terrainMap, parts, ":") == 2) terrainParam = atoi(parts[1]);
-            if (blockPointersMap && sound_variant_split(blockPointersMap, parts, ":") == 2)
+            if (surfaceMap && sound_variant_split(surfaceMap, parts, s_config_rgb_separator) == 2) surfaceParam = atoi(parts[1]);
+            if (predugMap && sound_variant_split(predugMap, parts, s_config_rgb_separator) == 2) predugParam = atoi(parts[1]);
+            if (terrainMap && sound_variant_split(terrainMap, parts, s_config_rgb_separator) == 2) terrainParam = atoi(parts[1]);
+            if (blockPointersMap && sound_variant_split(blockPointersMap, parts, s_config_rgb_separator) == 2)
                 blockPointersParam = atoi(parts[1]);
-            if (cryOreMap && sound_variant_split(cryOreMap, parts, ":") == 2) cryOreParam = atoi(parts[1]);
-            if (pathMap && sound_variant_split(pathMap, parts, ":") == 2) pathParam = atoi(parts[1]);
-            if (fallinMap && sound_variant_split(fallinMap, parts, ":") == 2) fallinParam = atoi(parts[1]);
-            if (emergeMap && sound_variant_split(emergeMap, parts, ":") == 2) pathParam = atoi(parts[1]);
+            if (cryOreMap && sound_variant_split(cryOreMap, parts, s_config_rgb_separator) == 2) cryOreParam = atoi(parts[1]);
+            if (pathMap && sound_variant_split(pathMap, parts, s_config_rgb_separator) == 2) pathParam = atoi(parts[1]);
+            if (fallinMap && sound_variant_split(fallinMap, parts, s_config_rgb_separator) == 2) fallinParam = atoi(parts[1]);
+            if (emergeMap && sound_variant_split(emergeMap, parts, s_config_rgb_separator) == 2) pathParam = atoi(parts[1]);
 
             if (lego_map_load_pipeline(level, surfaceMap, predugMap, predugParam, terrainMap, terrainParam,
                                            blockPointersMap, blockPointersParam, cryOreMap, cryOreParam,
@@ -6302,10 +6305,10 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
  * first, then the special objects, then the vehicles, mini-figures and
  * buildings. "SpiderWeb" is marked at its first use (004a3f40, finding
  * 620). "tvcamera", "ProcessedOre", "Dynamite", "ElectricFence",
- * "Barrier" and "OohScary" carry no STRING marker: lego.cpp
- * annotates their addresses as the port's s_item_name_* GLOBALs (C++
- * linkage, used by entity.cpp and legoobject_port.cpp), and "PowerCrystal",
- * "Ore" and "Path" belong to other units. */
+ * "Barrier" and "OohScary" are Lego.c's own literals and are marked here
+ * (finding 626); the port's s_item_name_* copies in lego_port.cpp are no
+ * longer annotated. "PowerCrystal", "Ore" and "Path" belong to other
+ * units. */
 // FUNCTION: LEGORR 0x0042e8b0
 int lego_entity_type_pair_lookup(const char* objName, int* outType,
                                  unsigned int* outID, void** outModel)
@@ -6322,6 +6325,7 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
         }
     }
 
+    // STRING: LEGORR 0x004a46dc
     if (!_strcmpi("tvcamera", objName)) {
         *outType = -1;
         if (outModel) *outModel = NULL;
@@ -6332,7 +6336,9 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
         *outType = 7;
         *outID = 0;
         if (outModel) *outModel = legoGlobs_contOresTable;
-    } else if (!_strcmpi("ProcessedOre", objName)) {
+    } else if (!_strcmpi(
+                   // STRING: LEGORR 0x004a3fa0
+                   "ProcessedOre", objName)) {
         *outType = 7;
         *outID = 1;
         if (outModel) *outModel = legoGlobs_contProcessedOre;
@@ -6354,19 +6360,27 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
                    "Freezer", objName)) {
         *outType = 17;
         if (outModel) *outModel = legoGlobs_contFreezer;
-    } else if (!_strcmpi("Dynamite", objName)) {
+    } else if (!_strcmpi(
+                   // STRING: LEGORR 0x004a3fc4
+                   "Dynamite", objName)) {
         *outType = 8;
         if (outModel) *outModel = legoGlobs_contDynamite;
-    } else if (!_strcmpi("ElectricFence", objName)) {
+    } else if (!_strcmpi(
+                   // STRING: LEGORR 0x004a3f90
+                   "ElectricFence", objName)) {
         *outType = 11;
         if (outModel) *outModel = legoGlobs_contElectricFence;
     } else if (!_strcmpi("SpiderWeb", objName)) {
         *outType = 12;
         if (outModel) *outModel = legoGlobs_contSpiderWeb;
-    } else if (!_strcmpi("Barrier", objName)) {
+    } else if (!_strcmpi(
+                   // STRING: LEGORR 0x004a3fb0
+                   "Barrier", objName)) {
         *outType = 9;
         if (outModel) *outModel = legoGlobs_contBarrier;
-    } else if (!_strcmpi("OohScary", objName)) {
+    } else if (!_strcmpi(
+                   // STRING: LEGORR 0x004a3fb8
+                   "OohScary", objName)) {
         *outType = 13;
         if (outModel) *outModel = legoGlobs_contOohScary;
     } else if (!_strcmpi("Path", objName)) {
@@ -7509,6 +7523,7 @@ void lego_block_activity_update_all(Lego_Level* level, float elapsedWorld)
         if (!activity->build) {
             if (!(activity->flags & 1) && 0.0f != t) {
                 activity->flags |= 1;
+                // STRING: LEGORR 0x004a46f8
                 scene_action_name_set(activity->cont, "Activity_Stand");
             } else if (activity->flags & 2) {
                 lego_block_activity_remove(activity);
@@ -8747,7 +8762,10 @@ __declspec(naked) int terrain_cell_mask_180000_current(
         test dword ptr [ecx + eax*8 + 8], 180000h
         jne terrain_cell_mask_180000_true
         xor eax, eax
+        pop esi
+        ret
     terrain_cell_mask_180000_true:
+        mov eax, 1
         pop esi
         ret
     }
@@ -9775,7 +9793,7 @@ void lego_text_messages_config_load(struct BlockRec* config)
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (ui_message_label_index_find(arrayItem->key, &textType)) {
             strcpy(buff, arrayItem->value);
-            sound_variant_split(buff, argv, ":");
+            sound_variant_split(buff, argv, s_config_rgb_separator);
             ui_message_text_slot_assign_with_image(textType, argv[0], argv[1], argv[2]);
         }
     }
@@ -9797,7 +9815,7 @@ void lego_message_load_infomessages(struct BlockRec* config)
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (info_get_type(arrayItem->key, &infoType)) {
             strcpy(buff, arrayItem->value);
-            argc = sound_variant_split(buff, argv, ":");
+            argc = sound_variant_split(buff, argv, s_config_rgb_separator);
             info_set_text(infoType, argv[0]);
             info_set_image_file(infoType, argv[1]);
             if (sound_alias_lookup(argv[2], &sfxType)) info_set_sfx(infoType, sfxType);

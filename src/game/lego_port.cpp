@@ -215,20 +215,18 @@ static const volatile float s_panel_highlight_zero = 0.0f;
 /* Not annotated: 004a3f40 is Lego.c's "SpiderWeb" literal, which
  * lego_unit.c marks and SpiderWeb.c (spiderweb.c) reuses (finding 620). */
 const char s_item_name_spider_web[] = "SpiderWeb";
-// GLOBAL: LEGORR 0x004a3f90
+/* Not annotated: 004a3f90, 004a3fa0, 004a3fb0, 004a3fb8, 004a3fc4,
+ * 004a46dc and 004a46f8 are Lego.c's own literals ("ElectricFence",
+ * "ProcessedOre", "Barrier", "OohScary", "Dynamite", "tvcamera",
+ * "Activity_Stand"). lego_unit.c marks them, so every unit's use of them
+ * is labelled as the literal (finding 626). */
 const char s_item_name_electric_fence[] = "ElectricFence";
-// GLOBAL: LEGORR 0x004a3fa0
 const char s_item_name_processed_ore[] = "ProcessedOre";
-// GLOBAL: LEGORR 0x004a3fb0
 const char s_item_name_barrier[] = "Barrier";
-// GLOBAL: LEGORR 0x004a3fb8
 const char s_item_name_ooh_scary[] = "OohScary";
-// GLOBAL: LEGORR 0x004a3fc4
 const char s_item_name_dynamite[] = "Dynamite";
-// GLOBAL: LEGORR 0x004a46dc
 const char s_item_name_tv_camera[] = "tvcamera";
 
-// GLOBAL: LEGORR 0x004a46f8
 const char s_activity_name_activity_stand[] = "Activity_Stand";
 
 /* 004de424 (the last left-button state) is lego_unit.c's s_lego_mslbLast. */
