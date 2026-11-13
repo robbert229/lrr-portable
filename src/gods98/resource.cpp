@@ -643,7 +643,8 @@ void indexed_surface_resource_hooks_set(IndexedSurfaceCreateFn create,
     s_indexed_surface_user = user;
 }
 
-/* FUNCTION: LEGORR 0x00462da0 */
+/* The port's model of Roof_Initialise (0x00462da0); the original is
+ * game/roof.c (finding 619). */
 int indexed_surface_resource_allocate(void* owner, int width, int height)
 {
     if (width <= 0 || height <= 0 || width > 4096 || height > 4096)
@@ -699,7 +700,8 @@ int indexed_surface_resource_allocate(void* owner, int width, int height)
     return 1;
 }
 
-/* FUNCTION: LEGORR 0x00462e60 */
+/* The port's model of Roof_SetTexture (0x00462e60); the original is
+ * game/roof.c (finding 619). */
 int animated_texture_replace(const char* name)
 {
     if (s_indexed_surface_texture != NULL && s_indexed_surface_release != NULL) {
@@ -722,7 +724,8 @@ int animated_texture_replace(const char* name)
     return 1;
 }
 
-/* FUNCTION: LEGORR 0x00462ed0 */
+/* The port's model of Roof_Shutdown (0x00462ed0); the original is
+ * game/roof.c (finding 619). */
 void graphics_overlay_resources_release(void)
 {
     free(s_indexed_surface_entries);

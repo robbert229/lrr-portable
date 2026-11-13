@@ -232,6 +232,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/teleporter_imports.h"
 #include "game/spiderweb.h"
 #include "game/spiderweb_imports.h"
+#include "game/roof.h"
+#include "game/roof_imports.h"
 
 int main(void)
 {

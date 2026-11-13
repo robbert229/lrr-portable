@@ -352,6 +352,10 @@ src/game/rock_fall_styles.h
 src/game/rock_fall_styles_imports.h
 src/game/rock_fall_styles_link_names.h
 src/game/rock_fall_styles_port.cpp
+src/game/roof.c
+src/game/roof.h
+src/game/roof_imports.h
+src/game/roof_maths.h
 src/game/savegame.cpp
 src/game/savegame.h
 src/game/savegame.hpp
@@ -430,7 +434,7 @@ src/game/terrain_map.c
 src/game/terrain_map.h
 src/game/terrain_map_maths.h
 src/game/terrain_map_port.cpp
-src/game/terrain_overlay_quads.cpp
+src/game/terrain_overlay_quads_port.cpp
 src/game/text.c
 src/game/text.h
 src/game/text_imports.h

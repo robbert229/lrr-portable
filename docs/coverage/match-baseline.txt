@@ -1,4 +1,4 @@
-# input_sha256: 16b37a22ebe02b6fe01690f885494d7dc573559530b1a94592e4a6c7e62eac33
+# input_sha256: ba8c7bc7a7c8d9acd35690410d098ca9f2b9d6b8dcfa8ecc0ea50c035e4d0659
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2355 mapped functions
+[game-only] 2360 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -684,7 +684,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 95.79 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 97.80 lego_engine_tick
+0x004232e0 97.87 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
@@ -740,9 +740,9 @@
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
 0x0042b500 100.00 global_state_field84_get_current_target
-0x0042b510 97.84 lego_map_load_pipeline
+0x0042b510 98.20 lego_map_load_pipeline
 0x0042b850 100.00 lego_surface_text_character_map_initialize
-0x0042bb60 98.08 lego_texture_set_config_load
+0x0042bb60 98.72 lego_texture_set_config_load
 0x0042bd20 100.00 lego_load_predug_layer
 0x0042bf40 89.72 lego_load_emerge_layer
 0x0042c060 100.00 lego_load_layer_m
@@ -772,7 +772,7 @@
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
 0x0042efc0 100.00 lego_play_movie
-0x0042f0c0 84.62 lego_level_free
+0x0042f0c0 85.31 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
 0x0042f6f0 77.84 lego_cell_init_pass
@@ -851,7 +851,7 @@
 0x004332c0 100.00 terrain_cell_record_byte3_current
 0x004332f0 100.00 terrain_cell_work_flag_set_current
 0x00433330 100.00 terrain_cell_type_get_at_current
-0x00433380 99.09 terrain_cell_mutation_progress
+0x00433380 100.00 terrain_cell_mutation_progress
 0x004334c0 100.00 level_map_dimensions_get
 0x004334f0 94.09 lego_render_quality_config_apply
 0x00433770 96.35 lego_scene_lights_build_from_config
@@ -1508,10 +1508,15 @@
 0x00462ab0 100.00 reward_scroll_length_set
 0x00462ac0 100.00 reward_scroll_flags_set
 0x00462ad0 85.16 reward_scroll_update
-0x004634b0 89.47 graphics_overlay_visibility_set
-0x004634f0 16.95 indexed_surface_entry_hide_and_record
-0x00463540 47.62 indexed_surface_entries_restore
-0x00463590 36.60 terrain_cell_surface_normal_get
+0x00462da0 98.15 roof_initialise
+0x00462e60 95.45 roof_set_texture
+0x00462ed0 94.74 roof_shutdown
+0x00462f20 98.51 roof_set_block_roof_vertices
+0x00463230 72.43 roof_update
+0x004634b0 100.00 roof_hide
+0x004634f0 95.24 roof_hide_block
+0x00463540 95.83 roof_show_hidden_blocks
+0x00463590 98.90 roof_get_block_plane_normal
 0x004636b0 97.92 info_panel_initialise
 0x00463730 100.00 indexed_float_pair_set
 0x00463770 96.15 scroll_rect_resource_record_create
@@ -2363,7 +2368,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2600 mapped functions
+[full] 2605 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -3041,7 +3046,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 95.79 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 97.80 lego_engine_tick
+0x004232e0 97.87 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
@@ -3097,9 +3102,9 @@
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
 0x0042b500 100.00 global_state_field84_get_current_target
-0x0042b510 97.84 lego_map_load_pipeline
+0x0042b510 98.20 lego_map_load_pipeline
 0x0042b850 100.00 lego_surface_text_character_map_initialize
-0x0042bb60 98.08 lego_texture_set_config_load
+0x0042bb60 98.72 lego_texture_set_config_load
 0x0042bd20 100.00 lego_load_predug_layer
 0x0042bf40 89.72 lego_load_emerge_layer
 0x0042c060 100.00 lego_load_layer_m
@@ -3129,7 +3134,7 @@
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
 0x0042efc0 100.00 lego_play_movie
-0x0042f0c0 84.62 lego_level_free
+0x0042f0c0 85.31 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
 0x0042f6f0 77.84 lego_cell_init_pass
@@ -3208,7 +3213,7 @@
 0x004332c0 100.00 terrain_cell_record_byte3_current
 0x004332f0 100.00 terrain_cell_work_flag_set_current
 0x00433330 100.00 terrain_cell_type_get_at_current
-0x00433380 99.09 terrain_cell_mutation_progress
+0x00433380 100.00 terrain_cell_mutation_progress
 0x004334c0 100.00 level_map_dimensions_get
 0x004334f0 94.09 lego_render_quality_config_apply
 0x00433770 96.35 lego_scene_lights_build_from_config
@@ -3865,10 +3870,15 @@
 0x00462ab0 100.00 reward_scroll_length_set
 0x00462ac0 100.00 reward_scroll_flags_set
 0x00462ad0 85.16 reward_scroll_update
-0x004634b0 89.47 graphics_overlay_visibility_set
-0x004634f0 16.95 indexed_surface_entry_hide_and_record
-0x00463540 47.62 indexed_surface_entries_restore
-0x00463590 36.60 terrain_cell_surface_normal_get
+0x00462da0 98.15 roof_initialise
+0x00462e60 95.45 roof_set_texture
+0x00462ed0 94.74 roof_shutdown
+0x00462f20 98.51 roof_set_block_roof_vertices
+0x00463230 72.43 roof_update
+0x004634b0 100.00 roof_hide
+0x004634f0 95.24 roof_hide_block
+0x00463540 95.83 roof_show_hidden_blocks
+0x00463590 98.90 roof_get_block_plane_normal
 0x004636b0 97.92 info_panel_initialise
 0x00463730 100.00 indexed_float_pair_set
 0x00463770 96.15 scroll_rect_resource_record_create
