@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-011 (tile_variants.cpp): the texture-set lookup for units rebuilt as
- * C.
+/* GAME-011 Detail.c: the texture-set lookup for units rebuilt as C
+ * (terrain_map.c). In the matching build detail.c defines it under this
+ * name (detail_link_names.h, finding 615); natively the port tail
+ * tile_variants_port.cpp does.
  *
  * C boundary header (ADR 0005). Shared C++ headers do not include this file
  * (finding 506); test_c_boundaries.cpp checks it against gods98/record.hpp,

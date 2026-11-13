@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-011 GAME-011: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-011.csv. */
+/* GAME-011 Detail.c port tail (finding 615): the port's models of the
+ * unit's functions, unannotated. The original-shape unit is game/detail.c.
+ * In the matching build detail.c serves the C-linkage port names of
+ * 0040b310, 0040b410, 0040b850 and 0040b880, and of the PORT-ONLY adapters
+ * of 0040b5f0 and 0040b7d0 (detail_link_names.h), so they are compiled out
+ * there (LRR_DETAIL_PORT_NAMES). The C++ models of 0040b470, 0040b5f0,
+ * 0040b7d0, 0040b810, 0040ba00, 0040bb90 and 0040bd60 stay in every build
+ * for their port callers. Relocated from tile_variants.cpp
+ * (tools/relocate_unit.py, ADR 0006); body hashes:
+ * docs/coverage/relocations/GAME-011.csv. */
 #include <math.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -54,16 +61,26 @@
 #include "gods98/view_for_tile_variants.hpp"
 #include "util_for_tile_variants.hpp"
 
+/* detail.c serves the port's C-linkage names of 0040b310, 0040b410,
+ * 0040b5f0, 0040b7d0, 0040b850 and 0040b880 in the matching build
+ * (detail_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_DETAIL_PORT_NAMES 0
+#else
+#define LRR_DETAIL_PORT_NAMES 1
+#endif
+
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static uint32_t cells_dword(const void* cells, size_t off);
 void scene_rotation_flags_apply(void* object, float projection_scale, const float first[3], const float second[3], const float third[3], float scale, float uniform_scale, float child_value, uint8_t flags);
 static float scene_frame_vector_length(const float vector[3]);
 
+#if LRR_DETAIL_PORT_NAMES /* detail.c serves these names in the matching build */
 /* LoadTileVariants (FUN_0040b310): allocate a 12-byte width/height/handle
  * owner, then call TextureSurfaceCreate(mode 1, null output, mode data 0)
  * with `%s%0.1x%0.1x.bmp` for every row-major cell. The result is the
  * two-interface TextureRelease record (or its portable host-record form). */
-// FUNCTION: LEGORR 0x0040B310
+/* Port model of 0x0040B310 (GAME-011 Detail.c, now game/detail.c). */
 TerrainCellResourceGrid* terrain_cell_resource_grid_load(
     const char* bitmap_prefix, uint32_t width, uint32_t height)
 {
@@ -115,7 +132,7 @@ TerrainCellResourceGrid* terrain_cell_resource_grid_load(
 
 /* TerrainCellResourceGridDispose (FUN_0040b410): release each cell's
  * resource handle, then release the handle table and grid owner. */
-// FUNCTION: LEGORR 0x0040B410
+/* Port model of 0x0040B410 (GAME-011 Detail.c, now game/detail.c). */
 void terrain_cell_resource_grid_dispose(TerrainCellResourceGrid* grid)
 {
     size_t i, count;
@@ -139,7 +156,9 @@ void terrain_cell_resource_grid_dispose(TerrainCellResourceGrid* grid)
     engine_heap_free(grid);
 }
 
-// FUNCTION: LEGORR 0x0040b470
+#endif /* LRR_DETAIL_PORT_NAMES */
+
+/* Port model of 0x0040b470 (GAME-011 Detail.c, now game/detail.c). */
 float projected_quad_screen_area_calculate(
     const ViewProjectionAdapter* adapter, const float* quad_xyz,
     const float bounds_xy[2], int disable_visibility_clip)
@@ -177,7 +196,7 @@ float projected_quad_screen_area_calculate(
 /* TileModelEntityRegister (FUN_0040b5f0): allocate two model slots plus two
  * 100-word interface arrays, load the no-texture models, scale and configure
  * them, then copy/reverse the second model's UVs. */
-// FUNCTION: LEGORR 0x0040B5F0
+/* Port model of 0x0040B5F0 (GAME-011 Detail.c, now game/detail.c). */
 TileModelEntityRegistration* tile_model_entity_register(
     void* manager, const char* first_entry, const char* second_entry,
     float scale_percent, int parameter,
@@ -238,7 +257,7 @@ TileModelEntityRegistration* tile_model_entity_register(
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x0040b7d0
+/* Port model of 0x0040b7d0 (GAME-011 Detail.c, now game/detail.c). */
 void cell_visual_channel_table_dispose(CellVisualChannelTable* table)
 {
     int index;
@@ -255,7 +274,7 @@ void cell_visual_channel_table_dispose(CellVisualChannelTable* table)
     }
     engine_heap_free(table);
 }
-// FUNCTION: LEGORR 0x0040b810
+/* Port model of 0x0040b810 (GAME-011 Detail.c, now game/detail.c). */
 void cell_visual_channel_table_resources_clear(CellVisualChannelTable* table)
 {
     uint32_t channel;
@@ -278,10 +297,11 @@ void cell_visual_channel_table_resources_clear(CellVisualChannelTable* table)
 }
 } // namespace unported_ledger_stubs
 
+#if LRR_DETAIL_PORT_NAMES /* detail.c serves these names in the matching build */
 /* PackedGridCellValueGet (FUN_0040b850, findings 373/451): low nibble
  * * width + high nibble indexes the cell dwords; the corpus's own NULL
  * grid guard answers 0, reproduced. */
-// FUNCTION: LEGORR 0x0040b850
+/* Port model of 0x0040b850 (GAME-011 Detail.c, now game/detail.c). */
 uint32_t packed_grid_cell_value_get(const void* grid, unsigned char packed_cell)
 {
     void* cells = rec_ptr(grid, 0x08);
@@ -298,7 +318,7 @@ uint32_t packed_grid_cell_value_get(const void* grid, unsigned char packed_cell)
  * the current channel slot, then apply the selected and opposite corner
  * frames. The record follows the recovered dword layout on x86 while its
  * pointer-bearing banks widen naturally in the portable build. */
-// FUNCTION: LEGORR 0x0040b880
+/* Port model of 0x0040b880 (GAME-011 Detail.c, now game/detail.c). */
 void scene_cell_visual_channels_apply(SceneCellVisualRelayRecord* record,
                                       const float corner_points[12],
                                       uint32_t lookup_selector,
@@ -344,10 +364,12 @@ void scene_cell_visual_channels_apply(SceneCellVisualRelayRecord* record,
     record->channel_cursor = index + 1u;
 }
 
+#endif /* LRR_DETAIL_PORT_NAMES */
+
 /* SceneRotationFlagsApply (FUN_0040ba00): argument 2 is passed through to
  * SceneFrameFromTripletApply as its projection scale; the remaining scalar
  * and bit arguments retain their original stack order. */
-// FUNCTION: LEGORR 0x0040BA00
+/* Port model of 0x0040BA00 (GAME-011 Detail.c, now game/detail.c). */
 void scene_rotation_flags_apply(void* object, float projection_scale,
                                 const float first[3],
                                 const float second[3], const float third[3],
@@ -401,7 +423,7 @@ void scene_rotation_flags_apply(void* object, float projection_scale,
     if (flags & 0x40u) hooks->apply(hooks->context, object, 0x4755e0u, 2,
                                    0, 10, 0, 0);
 }
-// FUNCTION: LEGORR 0x0040bb90
+/* Port model of 0x0040bb90 (GAME-011 Detail.c, now game/detail.c). */
 void scene_frame_from_triplet_apply(void* object, float projection_scale,
                                    const float first[3],
                                    const float second[3],
@@ -458,7 +480,7 @@ void scene_frame_from_triplet_apply(void* object, float projection_scale,
 /* BuildPerspectiveProjectionMatrix (FUN_0040bd60): zero the matrix, raise
  * m[10]/m[15], then the three quotients — the corpus's m[1] multiplies
  * p5/p4 by p4/p1, not p5/p1. */
-// FUNCTION: LEGORR 0x0040bd60
+/* Port model of 0x0040bd60 (GAME-011 Detail.c, now game/detail.c). */
 void perspective_projection_matrix_set(float* out, float p1, float p2,
                                        float p3, float p4, float p5)
 {
@@ -505,6 +527,7 @@ static uint32_t cells_dword(const void* cells, size_t off)
  * returns NULL. FUN_0040b7d0 has the original's contract but lives in a
  * namespace. */
 struct Lego_Level;
+#if LRR_DETAIL_PORT_NAMES /* detail.c serves these names in the matching build */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (no port equivalent of 0x0040b5f0)
 extern "C" void* tile_model_entity_register_original(void* manager,
                                                      const char* nameA,
@@ -525,4 +548,59 @@ extern "C" void cell_visual_channel_table_dispose_original(void* table)
 {
     unported_ledger_stubs::cell_visual_channel_table_dispose(
         (unported_ledger_stubs::CellVisualChannelTable*)table);
+}
+#endif /* LRR_DETAIL_PORT_NAMES */
+
+/* Original-ABI callee adapters for detail.c (ADR 0005 step 6; finding 615).
+ * These Container functions have C++ linkage in the port (container_unit.cpp
+ * and the ledger namespace), so the C unit calls them through these
+ * forwarders, in every build. Each forwards its arguments unchanged. */
+namespace unported_ledger_stubs {
+uint32_t ledger_stub_00474e90_RenderObjectHierarchyFloat3Set(
+    void* scene_object, float x, float y, float z);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-011 detail.c (Container_LoadTexture2, 0x004744f0, has C++ linkage)
+extern "C" void* detail_container_load_texture2_adapter(const char* fname,
+                                                        int immediate,
+                                                        unsigned int* width,
+                                                        unsigned int* height)
+{
+    /* The port's fourth argument is a mode word, not the height output.
+     * detail.c passes no outputs. */
+    (void)height;
+    return texture_surface_create(fname, (uint32_t)immediate, width, 0u);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-011 detail.c (Container_FreeTexture, 0x00474710, has C++ linkage)
+extern "C" void detail_container_free_texture_adapter(void* texture)
+{
+    texture_release_record((TextureReleaseRecord*)texture);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-011 detail.c (Container_Mesh_GetGroup, 0x00474c40, has C++ linkage)
+extern "C" void detail_container_mesh_get_group_adapter(
+    void* cont, unsigned int group, unsigned int* vertexCount,
+    unsigned int* faceCount, unsigned int* vPerFace,
+    unsigned int* faceDataSize, unsigned int* faceData)
+{
+    (void)lwo_layer_polygon_vertex_count(cont, (int)group, vertexCount,
+                                         (uint32_t)(size_t)faceCount,
+                                         vPerFace, faceDataSize, faceData);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-011 detail.c (0x00474e90 is a ledger stub with C++ linkage)
+extern "C" void detail_container_mesh_scale_adapter(void* cont, float x,
+                                                    float y, float z)
+{
+    (void)unported_ledger_stubs::
+        ledger_stub_00474e90_RenderObjectHierarchyFloat3Set(cont, x, y, z);
+}
+
+// PORT-ONLY: original-ABI adapter for GAME-011 detail.c (Container_InverseTransform, 0x00475090, has C++ linkage)
+extern "C" void detail_container_inverse_transform_adapter(void* cont,
+                                                           void* dest,
+                                                           const void* src)
+{
+    scene_object_coordinate_transform_to_output(cont, dest, (void*)src);
 }

@@ -9749,7 +9749,9 @@ extern "C" void lego_viewport_size_get_adapter(void* view, unsigned int* width,
 
 /* FUN_0040b470 (Detail's projected block area) takes the corners, the
  * viewport, the screen size and the no-clip switch; the port's entry takes a
- * projection adapter first. This returns 0 (no area). */
+ * projection adapter first. This returns 0 (no area). In the matching build
+ * detail.c defines this name (detail_link_names.h, finding 615). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (0040b470; the port's entry takes a projection adapter)
 extern "C" float lego_projected_quad_area_adapter(struct TerrainMapVector3* vertices,
                                                   void* view,
@@ -9759,6 +9761,7 @@ extern "C" float lego_projected_quad_area_adapter(struct TerrainMapVector3* vert
     (void)vertices; (void)view; (void)screen; (void)noClip;
     return 0.0f;
 }
+#endif
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00444260; C++ linkage in legoobject_port.cpp's ledger namespace)
 extern "C" int lego_entity_random_cell_step_route_adapter(struct EntitySlot* object)
@@ -9767,12 +9770,16 @@ extern "C" int lego_entity_random_cell_step_route_adapter(struct EntitySlot* obj
         object);
 }
 
+/* In the matching build detail.c defines this name (detail_link_names.h,
+ * finding 615). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (0040b810; the port's entry takes the ledger namespace's channel table)
 extern "C" void lego_detail_mesh_resources_clear_adapter(void* mesh)
 {
     unported_ledger_stubs::cell_visual_channel_table_resources_clear(
         (unported_ledger_stubs::CellVisualChannelTable*)mesh);
 }
+#endif
 
 /* ---- part 3 adapters, group 3B: end ---- */
 
