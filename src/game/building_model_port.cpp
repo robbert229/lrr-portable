@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-006 GAME-006: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-006.csv. */
+/* GAME-006 Building.c port tail (finding 592): the port's models of the
+ * unit, unannotated. The original-shape unit is building_model.c; these
+ * models keep the port's contracts (EntitySlot scene-slot sidecars, the
+ * resolver and release hooks, NULL guards) for the native port, which calls
+ * them by these names.
+ *
+ * In the matching build (MSVC 5.0) building_model.c defines most of these
+ * names itself (building_model_link_names.h), so their definitions here are
+ * compiled out there (LRR_BUILDING_MODEL_PORT_NAMES). Only the slot-table
+ * rebuild (0x004083a0), whose callers are all port code with another
+ * contract, stays in every build.
+ * Relocated from the verbatim building_model.cpp (body hashes:
+ * docs/coverage/relocations/GAME-006.csv). */
 #include "record.hpp"
 #include "heap.hpp"
 #include "sound.hpp"
@@ -63,17 +73,23 @@
 #include "entity_config_for_building_model.hpp"
 #include "gods98/view_for_building_model.hpp"
 
-/* The corpus's .rdata +0.0f (file bytes verified 00 00 00 00): the
- * leaf flds a DWORD data operand (the s_global_float_00556f00 fld
- * width), so the zero rides a file-scope float carrier — the
- * float-to-double widening is free on the x87 return stack. */
-// GLOBAL: LEGORR 0x0049e084
-static const float  s_zero_float     = 0.0f; /* DAT_0049e084 */
+/* The port's +0.0f carrier for constant_zero_float_get. Building.c's
+ * .rdata 0x0049e084 is building_model.c's literal now. */
+static const float  s_zero_float     = 0.0f;
 
+/* The port's definitions of the names the unit takes in the matching build
+ * (building_model_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_BUILDING_MODEL_PORT_NAMES 0
+#else
+#define LRR_BUILDING_MODEL_PORT_NAMES 1
+#endif
+
+#if LRR_BUILDING_MODEL_PORT_NAMES /* the unit serves these names in the matching build */
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static void pair_handle_set_pose(void* h, float x, float y);
 
-// FUNCTION: LEGORR 0x00407d60
+/* Port model of 0x00407d60 (Building.c, building_model.c). */
 int entity_building_type_config_record_parse(void* destination,
                                              uint32_t row_index,
                                              void* scene_context,
@@ -90,7 +106,7 @@ int entity_building_type_config_record_parse(void* destination,
  * corpus callers are the config-record parse loop and the simulation flush;
  * the fold itself is a pure record-slot scale (the corpus's x87 double fold
  * lands as the same double arithmetic here). */
-// FUNCTION: LEGORR 0x004082e0
+/* Port model of 0x004082e0 (Building.c, building_model.c). */
 void scene_object_scalar_adjust_by_direction(void* record, int direction)
 {
     if (record == NULL) {
@@ -116,7 +132,7 @@ void scene_object_scalar_adjust_by_direction(void* record, int direction)
 /* TaskField84GetAndField88Out (FUN_00408360): after the pinned NULL-task
  * guard, mirror `test eax,eax; je`, the optional +0x88 load/store, then the
  * +0x84 answer load. The corpus itself does not guard the task pointer. */
-// FUNCTION: LEGORR 0x00408360
+/* Port model of 0x00408360 (Building.c, building_model.c). */
 uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
 {
     if (task == NULL) {
@@ -130,11 +146,13 @@ uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
 
 /* SceneAssignEntityOwner (FUN_00408380) — owner store on the +4 object
  * through the ported owner set. */
-// FUNCTION: LEGORR 0x00408380
+/* Port model of 0x00408380 (Building.c, building_model.c). */
 void scene_assign_entity_owner(const void* scene, uint32_t owner)
 {
     scene_object_owner_set(*(void* const*)((const char*)scene + 0x04), owner);
 }
+
+#endif /* LRR_BUILDING_MODEL_PORT_NAMES */
 
 /* SceneEntitySlotTableRebuild (FUN_004083a0): clear the owner windows, walk
  * its +0x9c scene-node chain, prepare each node's renderer, select its
@@ -142,7 +160,7 @@ void scene_assign_entity_owner(const void* scene, uint32_t owner)
  * +0x20 handles for payload nodes. Host pointers live in native-width
  * sidecars; renderer preparation, state, animation and resource lookup cross
  * the DDiScene seam. */
-// FUNCTION: LEGORR 0x004083a0
+/* Port model of 0x004083a0 (Building.c, building_model.c). */
 void entity_scene_slot_table_rebuild(EntitySlot* e, int mode)
 {
     EntitySceneSlotNode* node;
@@ -238,9 +256,10 @@ void entity_scene_slot_table_rebuild(EntitySlot* e, int mode)
     e->scene_slot_cache_count = cached;
 }
 
+#if LRR_BUILDING_MODEL_PORT_NAMES /* the unit serves these names in the matching build */
 /* SceneActivityChangeSecondary (FUN_004085f0): resolve the requested indexed
  * child from +0x0c and cache it in the +0x40 handle table. */
-// FUNCTION: LEGORR 0x004085f0
+/* Port model of 0x004085f0 (Building.c, building_model.c). */
 void* scene_activity_change_secondary(void* activity, int index)
 {
     void** cached;
@@ -256,7 +275,8 @@ void* scene_activity_change_secondary(void* activity, int index)
     }
     return result;
 }
-// FUNCTION: LEGORR 0x00408620
+
+/* Port model of 0x00408620 (Building.c, building_model.c). */
 void scene_object_record_clone_retain_handles(
     const SceneObjectRecord* source, SceneObjectRecord* destination)
 {
@@ -280,7 +300,7 @@ void scene_object_record_clone_retain_handles(
  * avoid rec_ptr calls; the port retains its widened-slot layout (the corpus
  * tests a dword at +0x7c). NULL record behavior therefore follows the corpus
  * and is no longer guarded. */
-// FUNCTION: LEGORR 0x00408670
+/* Port model of 0x00408670 (Building.c, building_model.c). */
 void scene_object_pair_apply_mode(const void* record, uint32_t flag)
 {
     void* object;
@@ -295,7 +315,7 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag)
 
 /* AnimationObjectVisibilityGet (FUN_004086a0) — the +4 object's flag bit 3
  * through the ported getter. */
-// FUNCTION: LEGORR 0x004086a0
+/* Port model of 0x004086a0 (Building.c, building_model.c). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t animation_object_visibility_get(const void* anim)
 {
@@ -319,7 +339,7 @@ uint32_t animation_object_visibility_get(const void* anim)
  * those loads without rec_ptr calls. The pose dispatch's argument block
  * (x, y, 0 / 0, 0, -1) reads as position + constant facing; the partner is
  * used only when the +0x7c slot is non-NULL. */
-// FUNCTION: LEGORR 0x004086c0
+/* Port model of 0x004086c0 (Building.c, building_model.c). */
 void scene_object_pair_set_render_parameters(void* pair, float x, float y)
 {
     void* object;
@@ -336,7 +356,7 @@ void scene_object_pair_set_render_parameters(void* pair, float x, float y)
  * the (x, y) pair with its third argument — the corpus consumes the probe's
  * undefined float return as the camera z; the port pins it to zero (the
  * sole call-site probe, the ported height adapter, answers void). */
-// FUNCTION: LEGORR 0x00408710
+/* Port model of 0x00408710 (Building.c, building_model.c). */
 void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
                                            SceneScalarProbe probe, void* arg)
 {
@@ -353,7 +373,7 @@ void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
 /* SceneObjectIndexedHandleGetOrCreate (FUN_00408770): resolve the indexed
  * child from +8 and cache it in the corresponding +0x28 slot. The installed
  * resolver models the retail resource-tree lookup/apply sequence. */
-// FUNCTION: LEGORR 0x00408770
+/* Port model of 0x00408770 (Building.c, building_model.c). */
 void* scene_object_indexed_handle_get_or_create(void* record, int index)
 {
     void** source;
@@ -368,7 +388,7 @@ void* scene_object_indexed_handle_get_or_create(void* record, int index)
 }
 
 /* SceneObjectPrimaryHandleGetOrCreate (FUN_004087b0). */
-// FUNCTION: LEGORR 0x004087b0
+/* Port model of 0x004087b0 (Building.c, building_model.c). */
 void* scene_object_primary_handle_get_or_create(void* record)
 {
     void** source;
@@ -385,7 +405,7 @@ void* scene_object_primary_handle_get_or_create(void* record)
 }
 
 /* SceneObjectSecondaryHandleGetOrCreate (FUN_004087e0). */
-// FUNCTION: LEGORR 0x004087e0
+/* Port model of 0x004087e0 (Building.c, building_model.c). */
 void* scene_object_secondary_handle_get_or_create(void* record)
 {
     void** source;
@@ -402,7 +422,7 @@ void* scene_object_secondary_handle_get_or_create(void* record)
 }
 
 /* SceneObjectIndexedSecondaryHandleGetOrCreate (FUN_00408810). */
-// FUNCTION: LEGORR 0x00408810
+/* Port model of 0x00408810 (Building.c, building_model.c). */
 void* scene_object_indexed_secondary_handle_get_or_create(void* record,
                                                            int index)
 {
@@ -417,7 +437,7 @@ void* scene_object_indexed_secondary_handle_get_or_create(void* record,
     return *cached;
 }
 
-// FUNCTION: LEGORR 0x00408850
+/* Port model of 0x00408850 (Building.c, building_model.c). */
 uint32_t scene_object_flags_get(const void* scene_object)
 {
     uint32_t flags;
@@ -428,7 +448,7 @@ uint32_t scene_object_flags_get(const void* scene_object)
 
 // AnimationLoopTimeAdjust (FUN_00408860) shares the counted scene-time
 // adjustment, then refreshes and clears the optional loop-time latch.
-// FUNCTION: LEGORR 0x00408860
+/* Port model of 0x00408860 (Building.c, building_model.c). */
 float animation_loop_time_adjust(void* record, float argument,
                                  uint32_t count)
 {
@@ -455,7 +475,7 @@ float animation_loop_time_adjust(void* record, float argument,
     return value;
 }
 
-// FUNCTION: LEGORR 0x00408930
+/* Port model of 0x00408930 (Building.c, building_model.c). */
 double constant_zero_float_get(void)
 {
     return (double)s_zero_float; /* corpus: fld DWORD ds:0049e084 / ret */
@@ -463,7 +483,7 @@ double constant_zero_float_get(void)
 
 /* EntityPayloadTeardown (FUN_00408940): set state to -1, then release the
  * optional secondary and primary scene handles through the owner hook. */
-// FUNCTION: LEGORR 0x00408940
+/* Port model of 0x00408940 (Building.c, building_model.c). */
 void entity_payload_teardown(EntitySlot* e)
 {
     if (e == NULL) {
@@ -479,7 +499,7 @@ void entity_payload_teardown(EntitySlot* e)
 }
 
 /* TaskFlagBitQuery (FUN_00408970, findings 366/465). */
-// FUNCTION: LEGORR 0x00408970
+/* Port model of 0x00408970 (Building.c, building_model.c). */
 uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
 {
     const uint32_t mask = 1u << (bit & 0x1fu);
@@ -496,7 +516,7 @@ uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
 
 /* EntityPayloadStateSet (FUN_004089a0): store the payload state and rebuild
  * its scene slot cache. */
-// FUNCTION: LEGORR 0x004089a0
+/* Port model of 0x004089a0 (Building.c, building_model.c). */
 void entity_payload_state_set(EntitySlot* e, int state)
 {
     if (e == NULL) {
@@ -514,3 +534,4 @@ static void pair_handle_set_pose(void* h, float x, float y)
     const float up[3] = { 0.0f, 0.0f, -1.0f };
     cam_set_facing((CameraHandle*)h, up);
 }
+#endif /* LRR_BUILDING_MODEL_PORT_NAMES */

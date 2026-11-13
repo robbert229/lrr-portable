@@ -4,7 +4,7 @@ start,unit_id,name,kind,name_basis,note
 004065f0,GAME-003,,game,none,cubic Bezier evaluation and arc-length helpers; no data of its own except .rdata floats; boundary set by call locality
 00406990,GAME-004,,game,none,model null-name table parsing (DepositNullName/ThrowNullName/CarryNullName) and animation-object wrappers; precedes Bubble strings in .data
 004070b0,GAME-005,Bubbles.c,game,string-prefix,Bubble_* identifiers (39) and the 'Bubbles' config section; Bubble commons 0x557860-0x557d58
-00407d60,GAME-006,,game,none,building-model parsing ('PowerLevelScene'); boundary to the next unit has no data step on the left
+00407d60,GAME-006,,game,none,building-model parsing ('PowerLevelScene'); boundary to the next unit has no data step on the left; extent confirmed by finding 592: the 22 functions read and write the 0x14c-byte building model that 407d60 fills (+0x04 contAct; null names +0x08-+0x24 and caches +0x28-+0x6c; +0x7c/+0x80 power-level scene; +0x84/+0x88 shape; +0x8c upgrades; +0xa0 weapon nulls; +0x148 flags) and are called only by each other and by LegoObject.c (30 call sites) Lego.c (5) AITask.c (1) and GAME-008's 409d50 (Building_GetShapePoints); .rdata 49e070-49e084 is theirs alone (Bubble.c's 49e060-49e06c and 4089d0's 49e088 bracket it); strings 4a1cbc-4a1d4c follow Bubbles' 4a1cb4 and are used only by 407d60 (six pooled with Vehicle.c); 4089d0 is GAME-007's (geometry on its own .rdata)
 004089d0,GAME-007,,game,none,2D point/segment distance and placement-search helpers; .bss 0x4b8a20-0x4b8a50
 00409d40,GAME-008,,game,none,small unit with .bss 0x4b8a54 only; boundary uncertain
 0040a0c0,GAME-009,,game,none,numbered digit bitmaps ('%i.bmp') and per-entity screen-effect quads; .bss 0x4b8a58-0x4b8be0

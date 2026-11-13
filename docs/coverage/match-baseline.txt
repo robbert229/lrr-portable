@@ -1,4 +1,4 @@
-# input_sha256: 995bf73fe0996af7e61d73617b7a268a3042a38b1d3f9c287ea6e627c2830784
+# input_sha256: 42c888fd1976f3ebf71f8a4213a675f38750f839111c2f1429ab171c2a22b1bb
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2314 mapped functions
+[game-only] 2315 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -190,27 +190,28 @@
 0x004075a0 9.32 screen_effects_tick
 0x004078c0 10.26 ledger_stub_004078c0_EntityCursorTargetStepResolveAndTimerAdvance
 0x00407a10 51.95 pending_type_value_slot_select
-0x00407d60 20.51 entity_building_type_config_record_parse
-0x004082e0 26.67 scene_object_scalar_adjust_by_direction
-0x00408360 56.00 task_field84_get_and_field88_out
+0x00407d60 99.35 entity_building_type_config_record_parse
+0x004082e0 100.00 scene_object_scalar_adjust_by_direction
+0x00408360 100.00 task_field84_get_and_field88_out
 0x00408380 100.00 scene_assign_entity_owner
-0x004083a0 7.41 entity_scene_slot_table_rebuild
-0x004085f0 56.52 scene_activity_change_secondary
-0x00408620 20.00 scene_object_record_clone_retain_handles
+0x004083a0 66.88 building_set_upgrade_activity
+0x00408570 100.00 building_set_activity
+0x004085f0 90.00 scene_activity_change_secondary
+0x00408620 100.00 scene_object_record_clone_retain_handles
 0x00408670 100.00 scene_object_pair_apply_mode
 0x004086a0 100.00 animation_object_visibility_get
-0x004086c0 54.55 scene_object_pair_set_render_parameters
-0x00408710 35.96 scene_object_pair_set_callback_scalar
-0x00408770 35.48 scene_object_indexed_handle_get_or_create
-0x004087b0 50.98 scene_object_primary_handle_get_or_create
-0x004087e0 50.98 scene_object_secondary_handle_get_or_create
-0x00408810 35.48 scene_object_indexed_secondary_handle_get_or_create
+0x004086c0 100.00 scene_object_pair_set_render_parameters
+0x00408710 100.00 scene_object_pair_set_callback_scalar
+0x00408770 100.00 scene_object_indexed_handle_get_or_create
+0x004087b0 100.00 scene_object_primary_handle_get_or_create
+0x004087e0 100.00 scene_object_secondary_handle_get_or_create
+0x00408810 100.00 scene_object_indexed_secondary_handle_get_or_create
 0x00408850 100.00 scene_object_flags_get
-0x00408860 12.24 animation_loop_time_adjust
+0x00408860 100.00 animation_loop_time_adjust
 0x00408930 100.00 constant_zero_float_get
-0x00408940 55.81 entity_payload_teardown
-0x00408970 50.00 task_flag_bit_query
-0x004089a0 20.00 entity_payload_state_set
+0x00408940 100.00 entity_payload_teardown
+0x00408970 100.00 task_flag_bit_query
+0x004089a0 100.00 entity_payload_state_set
 0x004089d0 43.56 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
@@ -1118,7 +1119,7 @@
 0x00447950 77.46 legoobject_directional_activity_start
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 98.86 legoobject_activity_tick
-0x00447c40 95.70 legoobject_activity_register_bookkeeping
+0x00447c40 96.28 legoobject_activity_register_bookkeeping
 0x00447ea0 67.46 legoobject_type_behavior_update
 0x004487c0 100.00 legoobject_clear_nested_state_8_fields
 0x00448800 100.00 legoobject_move_to_cell_coordinates
@@ -2322,7 +2323,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2550 mapped functions
+[full] 2551 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2506,27 +2507,28 @@
 0x004075a0 9.32 screen_effects_tick
 0x004078c0 10.26 ledger_stub_004078c0_EntityCursorTargetStepResolveAndTimerAdvance
 0x00407a10 51.95 pending_type_value_slot_select
-0x00407d60 20.51 entity_building_type_config_record_parse
-0x004082e0 26.67 scene_object_scalar_adjust_by_direction
-0x00408360 56.00 task_field84_get_and_field88_out
+0x00407d60 99.35 entity_building_type_config_record_parse
+0x004082e0 100.00 scene_object_scalar_adjust_by_direction
+0x00408360 100.00 task_field84_get_and_field88_out
 0x00408380 100.00 scene_assign_entity_owner
-0x004083a0 7.41 entity_scene_slot_table_rebuild
-0x004085f0 56.52 scene_activity_change_secondary
-0x00408620 20.00 scene_object_record_clone_retain_handles
+0x004083a0 66.88 building_set_upgrade_activity
+0x00408570 100.00 building_set_activity
+0x004085f0 90.00 scene_activity_change_secondary
+0x00408620 100.00 scene_object_record_clone_retain_handles
 0x00408670 100.00 scene_object_pair_apply_mode
 0x004086a0 100.00 animation_object_visibility_get
-0x004086c0 54.55 scene_object_pair_set_render_parameters
-0x00408710 35.96 scene_object_pair_set_callback_scalar
-0x00408770 35.48 scene_object_indexed_handle_get_or_create
-0x004087b0 50.98 scene_object_primary_handle_get_or_create
-0x004087e0 50.98 scene_object_secondary_handle_get_or_create
-0x00408810 35.48 scene_object_indexed_secondary_handle_get_or_create
+0x004086c0 100.00 scene_object_pair_set_render_parameters
+0x00408710 100.00 scene_object_pair_set_callback_scalar
+0x00408770 100.00 scene_object_indexed_handle_get_or_create
+0x004087b0 100.00 scene_object_primary_handle_get_or_create
+0x004087e0 100.00 scene_object_secondary_handle_get_or_create
+0x00408810 100.00 scene_object_indexed_secondary_handle_get_or_create
 0x00408850 100.00 scene_object_flags_get
-0x00408860 12.24 animation_loop_time_adjust
+0x00408860 100.00 animation_loop_time_adjust
 0x00408930 100.00 constant_zero_float_get
-0x00408940 55.81 entity_payload_teardown
-0x00408970 50.00 task_flag_bit_query
-0x004089a0 20.00 entity_payload_state_set
+0x00408940 100.00 entity_payload_teardown
+0x00408970 100.00 task_flag_bit_query
+0x004089a0 100.00 entity_payload_state_set
 0x004089d0 43.56 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
@@ -3434,7 +3436,7 @@
 0x00447950 77.46 legoobject_directional_activity_start
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 98.86 legoobject_activity_tick
-0x00447c40 95.70 legoobject_activity_register_bookkeeping
+0x00447c40 96.28 legoobject_activity_register_bookkeeping
 0x00447ea0 67.46 legoobject_type_behavior_update
 0x004487c0 100.00 legoobject_clear_nested_state_8_fields
 0x00448800 100.00 legoobject_move_to_cell_coordinates

@@ -163,6 +163,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/weapon.hpp"
 #include "game/terrain_cell_objects.h"
 #include "game/building_model.h"
+#include "game/building_model_ports.h"
+#include "game/building_model_imports.h"
 #include "game/lego_blocks.h"
 #include "game/legoobject.h"
 #include "game/legoobject_unit.h"
