@@ -365,3 +365,35 @@ from 398 / 220 to 393 / 231 (full) and from 391 / 213 to 386 / 224
 - 11 more removed functions are exact: the sfx.c, weapons.c and damage-font
   callers that became exact are still unreachable from a live root
   (Lego.c's, finding 579).
+
+## Stacked on #702
+
+Rebased as the top layer over #702 (`00fa4b6e`, over #701). The unit's
+scores, the callers' gains and the one flagged drop (`004807a0`) are the
+same as on `main`; no other function changed.
+
+| | #702 | this change |
+| --- | ---: | ---: |
+| Exact-function code bytes | 216,621 | **225,345** |
+| Accuracy, full / game-only | 89.07 / 88.01 | 90.20 / 89.25 |
+| `opt_ref` annotated (full): removed / exact removed | 368 / 204 | 363 / 215 |
+| `opt_ref` annotated (game-only) | 361 / 197 | 356 / 208 |
+| Gate image end (`make pe-audit`) | `0x850000` | `0x85f000` |
+| Relink `.bss` | 1,037,952 | 1,087,648 |
+
+### What the added storage is
+
+The 49,696 bytes of `.bss` (49,688 and alignment) are `meshGlobs`, the
+original Mesh.c's own state at `005343c4`-`005405dc`, not a port duplicate.
+49,152 of them are the two 2048-entry texture name lists (`0053455c`,
+`0053a55c`, 12 bytes an entry); the rest is the 50 texture-stage states,
+the saved device states, the material and the 20 pool-block pointers.
+
+It cannot be shared with a port buffer. The port has no storage for these
+lists: its texture cache is texture.cpp's heap containers, and the port's
+`texture_cache_name_slot_*` helpers only ever ran on caller tables (the
+tests'). The port's own statics for the same state left in `mesh_port.cpp`
+(`s_model_render_list_head`, `s_model_material_handle`, the pool head,
+count and 20 block pointers) total about 120 bytes and are used by native
+code (crt.cpp's render list and the port's resource pool), so they stay.
+The image end grows by 15 pages: the `.bss` block plus 1.4 KB of `.text`.
