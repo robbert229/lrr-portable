@@ -1188,7 +1188,25 @@ struct TerrainMap;
 struct ViewProjectionAdapter;
 
 /* Globals the port models in other files. */
-extern uint32_t s_overlay_word_03610;         /* text.cpp, 00503610 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Text.c's textGlobs (text.c, 00503190; finding 607), as far as Lego.c
+ * writes it: the NERPs message counter (00503610) and the message timer
+ * (00503618). Natively the port's text_port.cpp word and lego_unit.c's own
+ * word stand in for them. One struct and one extern replace the two
+ * declarations of those words, so the unit's symbol numbering (finding 538)
+ * does not change. */
+struct Text_Globs {
+    unsigned char reserved[0x480];
+    uint32_t counter;                         /* +0x480 */
+    char* currText;                           /* +0x484 */
+    float timer;                              /* +0x488 */
+};
+extern struct Text_Globs textGlobs;
+#define s_overlay_word_03610 textGlobs.counter
+#define textGlobs_f_503618 textGlobs.timer
+#else
+extern uint32_t s_overlay_word_03610;         /* text_port.cpp, 00503610 */
+#endif
 /* spawn.cpp, 00555118 (namespace unported_ledger_stubs, C linkage). */
 extern uint32_t s_start_level_pilot_grid_count;
 /* GAME-032 Panel.c (panel_unit.h), 005000e0; panelTable[0].flags is at

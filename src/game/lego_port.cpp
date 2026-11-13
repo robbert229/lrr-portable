@@ -9344,7 +9344,10 @@ extern "C" void lego_object_trigger_frame_callback_adapter(void* cont, void* dat
     (void)data;
 }
 
+/* Text_Initialise (0046a950): in the matching build text.c defines this
+ * name itself (text_link_names.h, finding 607). */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (message panel set-up 0046a950, no port entry)
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" void text_message_panel_initialise_adapter(const char* imageFile,
                                                       unsigned int x, unsigned int y,
                                                       unsigned int openY,
@@ -9355,6 +9358,7 @@ extern "C" void text_message_panel_initialise_adapter(const char* imageFile,
     (void)imageFile; (void)x; (void)y; (void)openY;
     (void)messageWindow; (void)imageWindow; (void)timer;
 }
+#endif
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Front_PlayIntroMovie 00415910, no port entry with this contract)
 extern "C" void front_play_intro_movie_adapter(const char* movieKey, int skippable)

@@ -392,7 +392,11 @@ src/game/terrain_map.h
 src/game/terrain_map_maths.h
 src/game/terrain_map_port.cpp
 src/game/terrain_overlay_quads.cpp
-src/game/text.cpp
+src/game/text.c
+src/game/text.h
+src/game/text_imports.h
+src/game/text_link_names.h
+src/game/text_port.cpp
 src/game/tile_variants.cpp
 src/game/tile_variants.h
 src/game/tooltip.c

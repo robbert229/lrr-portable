@@ -1,4 +1,4 @@
-# input_sha256: 20cf94daca5367058fa74dcad873683c4b45ca98459c853247ad46127c932d65
+# input_sha256: f5cf5a77bce3d33878dcd09b5768f65af9c9d6a158acb7e117cf33c55d83e347
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2326 mapped functions
+[game-only] 2328 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -675,7 +675,7 @@
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 88.24 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
-0x0041fb50 93.80 lego_game_config_init
+0x0041fb50 93.84 lego_game_config_init
 0x00422850 94.60 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
@@ -1634,14 +1634,16 @@
 0x0046a700 27.27 linked_list_conditional_float_advance
 0x0046a730 23.53 camera_move_pipeline
 0x0046a760 25.00 first_set_flag_ordinal
-0x0046a7f0 37.84 ui_message_strings_initialize
-0x0046aa90 25.00 ui_message_overlay_state_initialize
-0x0046aad0 73.53 ui_message_label_index_find
-0x0046ab10 39.39 ui_message_text_slot_assign
-0x0046abb0 36.96 ui_message_text_slot_assign_with_image
-0x0046ac20 40.91 advisor_text_request_setup
-0x0046ac60 35.09 advisor_text_animation_update
-0x0046ad00 13.25 advisor_text_display_worker
+0x0046a7f0 100.00 ui_message_strings_initialize
+0x0046a950 100.00 text_message_panel_initialise_adapter
+0x0046a9e0 100.00 text_clear
+0x0046aa90 100.00 ui_message_overlay_state_initialize
+0x0046aad0 100.00 ui_message_label_index_find
+0x0046ab10 100.00 ui_message_text_slot_assign
+0x0046abb0 97.22 ui_message_text_slot_assign_with_image
+0x0046ac20 100.00 advisor_text_request_setup
+0x0046ac60 100.00 advisor_text_animation_update
+0x0046ad00 99.70 advisor_text_display_worker
 0x0046b1d0 100.00 tooltip_overlay_state_initialize
 0x0046b4d0 100.00 case_insensitive_name_table_lookup
 0x0046b520 96.74 tooltip_set_content
@@ -2334,7 +2336,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2564 mapped functions
+[full] 2566 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -3003,7 +3005,7 @@
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 88.24 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
-0x0041fb50 93.80 lego_game_config_init
+0x0041fb50 93.84 lego_game_config_init
 0x00422850 94.60 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
@@ -3962,14 +3964,16 @@
 0x0046a700 27.27 linked_list_conditional_float_advance
 0x0046a730 23.53 camera_move_pipeline
 0x0046a760 25.00 first_set_flag_ordinal
-0x0046a7f0 37.84 ui_message_strings_initialize
-0x0046aa90 25.00 ui_message_overlay_state_initialize
-0x0046aad0 73.53 ui_message_label_index_find
-0x0046ab10 39.39 ui_message_text_slot_assign
-0x0046abb0 36.96 ui_message_text_slot_assign_with_image
-0x0046ac20 40.91 advisor_text_request_setup
-0x0046ac60 35.09 advisor_text_animation_update
-0x0046ad00 13.25 advisor_text_display_worker
+0x0046a7f0 100.00 ui_message_strings_initialize
+0x0046a950 100.00 text_message_panel_initialise_adapter
+0x0046a9e0 100.00 text_clear
+0x0046aa90 100.00 ui_message_overlay_state_initialize
+0x0046aad0 100.00 ui_message_label_index_find
+0x0046ab10 100.00 ui_message_text_slot_assign
+0x0046abb0 97.22 ui_message_text_slot_assign_with_image
+0x0046ac20 100.00 advisor_text_request_setup
+0x0046ac60 100.00 advisor_text_animation_update
+0x0046ad00 99.70 advisor_text_display_worker
 0x0046b1d0 100.00 tooltip_overlay_state_initialize
 0x0046b4d0 100.00 case_insensitive_name_table_lookup
 0x0046b520 96.74 tooltip_set_content

@@ -33,7 +33,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
-extern "C" uint32_t s_overlay_word_03610, s_overlay_word_03614; /* text.cpp; lego_unit.c and tutorial_script.c */
+extern "C" uint32_t s_overlay_word_03610, s_overlay_word_03614; /* text_port.cpp; natively also lego_unit.c and tutorial_script.c */
 #include "engine_shared.hpp"
 /* C linkage for the legoGlobs fields that GAME-021's lego_unit.c reads
  * (issue #544). The frozen header below redeclares them and inherits it. */

@@ -632,10 +632,12 @@ char* legoGlobs_oreRequiredText;
 // GLOBAL: LEGORR 0x00556f58
 char* legoGlobs_upgradeNames[16];
 
-/* Text.c's word after the two the port's text.cpp models (00503610,
- * 00503614); the port has no owner for it. */
-// GLOBAL: LEGORR 0x00503618
+/* Text.c's message timer (00503618). In the matching build it is text.c's
+ * textGlobs.timer (lego_unit_imports.h, finding 607); natively the port has
+ * no owner for it. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t textGlobs_f_503618;
+#endif
 
 
 /* ---- GAME-021 part 2 (issue #574) state ---- */
@@ -9551,7 +9553,7 @@ int case_insensitive_name_table_lookup(const char* name, int* out_index);
 /* SFX.c (sound.hpp, sfx.cpp): 00464c50, 00464d00. */
 void sound_alias_registration_set(int enable);
 int sound_sample_marker_parse(const char* spec, int alias_index);
-/* Text.c (message.hpp, text.cpp): 0046aad0, 0046ab10, 0046abb0. */
+/* Text.c (text.c in the matching build; message.hpp, text_port.cpp): 0046aad0, 0046ab10, 0046abb0. */
 int ui_message_label_index_find(const char* label, int* out_index);
 void ui_message_text_slot_assign(int index, const char* text);
 void ui_message_text_slot_assign_with_image(int index, const char* text,

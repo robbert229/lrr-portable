@@ -201,6 +201,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/erode_imports.h"
 #include "game/fallin.h"
 #include "game/fallin_imports.h"
+#include "game/text.h"
+#include "game/text_imports.h"
 
 int main(void)
 {
