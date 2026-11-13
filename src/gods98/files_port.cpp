@@ -17,9 +17,9 @@
  *   engine_heap_allocate, wad_entry_read_into_stream_slot,
  *   game_file_system_type_get, resource_directory_token_list_contains),
  *   stay in every build.
- * - At the end: the four Wad.c adapters gods98/wad.h describes, the no-op
- *   files.c calls natively for its debug messages, and the native stand-ins
- *   files_native.h declares. */
+ * - At the end: the no-op files.c calls natively for its debug messages,
+ *   and the native stand-ins files_native.h declares. files.c calls Wad.c
+ *   itself (gods98/wad.c, finding 591). */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,8 +80,6 @@
 #include <ctype.h>
 #include "resource_for_files.hpp"
 #include "game/level_for_files.hpp"
-
-#include "wad.h"
 
 /* The matching build, where files.h gives files.c the port's names. This
  * file cannot include files.h: its File declarations would then clash with
@@ -1219,68 +1217,6 @@ extern "C" int resource_cd_file_path_get(char* out, const char* name)
     return ares_cd_fallback_path(name, out, 260);
 }
 #endif
-
-/* --- Wad.c adapters (gods98/wad.h) -----------------------------------------
- * The original-contract Wad.c entries files.c calls where the port's
- * function at that address has another contract. Wad.c's conversion
- * replaces them. A stream handle is a slot of the port's fixed-record table
- * (resource.cpp) holding the entry's data, allocated with the C library
- * heap, so that fixed_record_slot_resource_release (Wad_FileClose, 0048bfc0)
- * frees it as the original does. */
-static int s_files_wad_file_lengths[FIXED_RECORD_SLOTS];
-
-/* Wad_Load (0048b4e0): the port's wwad_archive_index_load has the contract,
- * but its only declaration (resource_from_wad.hpp, frozen) has C++
- * linkage. */
-extern "C" int wad_load(const char* fName)
-{
-    return wwad_archive_index_load(fName);
-}
-
-/* Wad_FileOpen (0048bf70): the port's ares_open_wad_path returns a Resource
- * record. Archive selection follows wad_entry_find_across_mounted_archives;
- * files.c always passes -1 (every archive, newest first). */
-extern "C" int wad_file_open(const char* fName, int wadNo)
-{
-    Resource* resource;
-    int32_t length;
-    void* data;
-    int slot;
-    (void)wadNo;
-    resource = ares_open_wad_path(fName, RESOURCE_WAD_ONLY);
-    if (resource == NULL) return -1;
-    length = resource_read(resource);
-    slot = wad_entry_slot_allocate();
-    if (length < 0 || slot < 0) {
-        resource_free(resource);
-        return -1;
-    }
-    data = engine_heap_alloc(length > 0 ? (long)length : 1L);
-    if (data == NULL) {
-        resource_free(resource);
-        return -1;
-    }
-    if (length > 0) memcpy(data, resource->data, (size_t)length);
-    resource_free(resource);
-    fixed_record_slot_install(slot, data);
-    s_files_wad_file_lengths[slot] = (int)length;
-    return slot;
-}
-
-/* Wad_FileLength (0048c010): the port's wad_stream_length_get returns
- * nothing. */
-extern "C" int wad_file_length(int handle)
-{
-    if ((unsigned int)handle >= FIXED_RECORD_SLOTS) return 0;
-    return s_files_wad_file_lengths[handle];
-}
-
-/* Wad_FileData (0048c030): the port's wad_memory_stream_buffer_get returns
- * nothing. */
-extern "C" void* wad_file_data(int handle)
-{
-    return fixed_record_slot_resource_get(handle);
-}
 
 /* The original's debug-message calls go to an empty variadic function
  * (00484c90). files.c calls this one when it is compiled as C++. */

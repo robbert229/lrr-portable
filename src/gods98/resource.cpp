@@ -1695,7 +1695,8 @@ const char* resource_wad_entry_name(int wad_idx, int entry_idx)
     return w->names + w->entries[entry_idx].name_off;
 }
 
-/* FUNCTION: LEGORR 0x0048bce0 */
+/* Port model of GetWad (0048bce0); gods98/wad.c owns the address
+ * (finding 591). */
 void* wad_archive_record_at_index(int index)
 {
     if (index < 0 || index >= s_wad_count) {
@@ -1704,7 +1705,8 @@ void* wad_archive_record_at_index(int index)
     return &s_wads[index];
 }
 
-/* FUNCTION: LEGORR 0x0048bd10 */
+/* Port model of Wad_FileCompressedLength (0048bd10); gods98/wad.c owns the address
+ * (finding 591). */
 uint32_t wad_entry_field4_get(int wad_idx, int entry_idx)
 {
     if (wad_idx < 0 || wad_idx >= s_wad_count || entry_idx < 0
@@ -1714,7 +1716,8 @@ uint32_t wad_entry_field4_get(int wad_idx, int entry_idx)
     return s_wads[wad_idx].entries[entry_idx].orig;
 }
 
-/* FUNCTION: LEGORR 0x0048bd50 */
+/* Port model of Wad_IsFileInWad (0048bd50); gods98/wad.c owns the address
+ * (finding 591). */
 int wad_entry_find_across_mounted_archives(const char* name, int wad_idx)
 {
     int i;
@@ -2371,7 +2374,8 @@ int file_resource_record_slot_allocate(void)
 
 typedef char fixed_record_slot_stride_check[sizeof(FixedRecordSlot) == 16u ? 1 : -1];
 
-// GLOBAL: LEGORR 0x005756a0
+/* The port's stream slots. Wad.c's handle table at 005756a0 is wadFiles in
+ * gods98/wad.c (finding 591). */
 FixedRecordSlot s_fixed_slots[FIXED_RECORD_SLOTS];
 #if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
 /* The retail record stores a 32-bit pointer. Keep its 16-byte layout and
@@ -2379,7 +2383,8 @@ FixedRecordSlot s_fixed_slots[FIXED_RECORD_SLOTS];
 void* s_fixed_slot_resources[FIXED_RECORD_SLOTS];
 #endif
 
-/* FUNCTION: LEGORR 0x0048bd30 */
+/* Port model of Wad_FindFreeFileHandle (0048bd30); gods98/wad.c owns the address
+ * (finding 591). */
 int wad_entry_slot_allocate(void)
 {
     int i;

@@ -697,8 +697,10 @@ src/gods98/view_for_tooltip.hpp
 src/gods98/view_for_viewports.hpp
 src/gods98/view_shared.hpp
 src/gods98/viewports.cpp
-src/gods98/wad.cpp
+src/gods98/wad.c
 src/gods98/wad.h
+src/gods98/wad_payload.h
+src/gods98/wad_port.cpp
 src/gods98/winmm.h
 src/gods98/winmm_port.cpp
 src/link_order.cmake

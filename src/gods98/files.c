@@ -473,7 +473,7 @@ int file_exists(const char* fName)
             }
         }
     } else if (fs == FileSystem_Wad) {
-        return wad_entry_find_across_mounted_archives(fullName, currWadHandle);
+        return wad_is_file_in_wad(fullName, currWadHandle);
     }
     return 0;
 }
@@ -591,7 +591,7 @@ FileSys file_check_system(const char* fName, const char* mode)
 {
     if (fName && mode && strlen(fName) && strlen(mode)) {
         if (mode[0] == 'w' || mode[0] == 'W') return FileSystem_Std;
-        return (FileSys)(wad_entry_find_across_mounted_archives(
+        return (FileSys)(wad_is_file_in_wad(
                              file_get_wad_name((char*)fName),
                              currWadHandle) == -1);
     }
@@ -649,7 +649,7 @@ void file_dealloc(File* file)
             }
         } else if (file_get_system(file) == FileSystem_Wad) {
             if (file->stream.wad) {
-                fixed_record_slot_resource_release(file->stream.wad->hFile);
+                wad_file_close(file->stream.wad->hFile);
                 file_free(file->stream.wad);
             }
         } else {
