@@ -1,4 +1,4 @@
-# input_sha256: f4ade8ae4f089b018d62aa13b3efbb68bf053c1cd81d8f01e902215c74a2c7ee
+# input_sha256: 6023301ccebe4a331bd27564f28e8b3570c6aad8253ae45edb7f2d9867d19c94
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2318 mapped functions
+[game-only] 2319 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -505,7 +505,7 @@
 0x004181a0 100.00 selection_state_flag_clear_bit0
 0x004181b0 98.17 help_window_initialise_adapter
 0x00418450 96.08 help_window_load_infos
-0x004185f0 96.03 help_window_load_buttons
+0x004185f0 97.35 help_window_load_buttons
 0x00418800 100.00 mode_flag_pair_apply_if_bit2
 0x00418830 95.71 building_upgrade_state_changed_dispatch
 0x00418920 96.00 help_window_list_dependencies
@@ -559,7 +559,7 @@
 0x0041a290 100.00 screen_right_edge_cache_refresh
 0x0041a2c0 100.00 info_update_timers
 0x0041a2f0 100.00 info_get_font
-0x0041a300 99.08 interface_initialise
+0x0041a300 100.00 interface_initialise
 0x0041a660 100.00 interface_init_menus
 0x0041a7d0 97.37 interface_set_menu_items
 0x0041a850 70.31 interface_shutdown
@@ -570,7 +570,7 @@
 0x0041ab00 87.17 interface_load_object_items
 0x0041ada0 84.80 interface_load_menu_items
 0x0041afd0 78.52 interface_load_item_panels
-0x0041b1b0 87.27 interface_load_back_button
+0x0041b1b0 89.09 interface_load_back_button
 0x0041b270 89.19 interface_load_dependency_images
 0x0041b2d0 100.00 command_context_post_to_hud
 0x0041b300 95.16 interface_set_block_highlight
@@ -584,7 +584,7 @@
 0x0041b9c0 100.00 interface_resolve_teleporter_item
 0x0041ba10 100.00 interface_update_hover_sfx
 0x0041ba90 100.00 simulation_global_word_set
-0x0041baa0 73.30 interface_do_mouse
+0x0041baa0 74.21 interface_do_mouse
 0x0041c1c0 49.28 interface_get_item_at_point
 0x0041c310 100.00 interface_callback_hit_item
 0x0041c440 93.33 advisor_callback_schedule_gate
@@ -698,7 +698,7 @@
 0x00425ce0 96.30 lego_game_speed_set
 0x00425d50 100.00 lego_render_record_set_from_input
 0x00425d80 100.00 current_engine_mode_is_zero
-0x00425d90 87.92 lego_terrain_pointer_command_update
+0x00425d90 88.26 lego_terrain_pointer_command_update
 0x004261c0 96.15 lego_spawn_coordinate_pool_tick
 0x00426230 100.00 lego_global_triple_copy_out
 0x00426250 94.74 lego_update_render_viewport_state
@@ -711,8 +711,8 @@
 0x00426520 70.50 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 94.74 lego_level_upgrade_name_strings_load
-0x00428020 98.52 lego_entity_command_status_feedback_dispatch
-0x00428330 71.50 lego_terrain_command_feedback_dispatch
+0x00428020 98.89 lego_entity_command_status_feedback_dispatch
+0x00428330 72.03 lego_terrain_command_feedback_dispatch
 0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
 0x004288e0 97.35 lego_level_debug_input_cell_mutator_dispatch
@@ -864,7 +864,7 @@
 0x00434a50 100.00 lego_sound_samples_config_load
 0x00434af0 99.02 lego_text_messages_config_load
 0x00434c10 99.29 lego_message_load_infomessages
-0x00434da0 98.78 lego_advisor_tooltip_and_sound_config_load
+0x00434da0 100.00 lego_advisor_tooltip_and_sound_config_load
 0x00434e80 100.00 lego_interface_spawn_request_enqueue
 0x00435010 99.16 terrain_cell_work_flag_circle_set_current
 0x004350a0 98.55 lego_surface_type_descriptions_config_load
@@ -1118,7 +1118,7 @@
 0x00447920 100.00 legoobject_type_four_callback
 0x00447950 77.46 legoobject_directional_activity_start
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
-0x00447b30 98.86 legoobject_activity_tick
+0x00447b30 100.00 legoobject_activity_tick
 0x00447c40 96.28 legoobject_activity_register_bookkeeping
 0x00447ea0 67.46 legoobject_type_behavior_update
 0x004487c0 100.00 legoobject_clear_nested_state_8_fields
@@ -1425,7 +1425,7 @@
 0x0045cf00 51.61 priorities_reset
 0x0045cf50 57.69 priorities_load
 0x0045d060 98.28 priorities_load_positions
-0x0045d110 50.16 priorities_handle_cursor
+0x0045d110 50.81 priorities_handle_cursor
 0x0045d300 100.00 priorities_select
 0x0045d370 100.00 priorities_set_hover_area
 0x0045d3c0 100.00 priorities_change_priority
@@ -1475,7 +1475,7 @@
 0x00460f00 100.00 reward_create_scroll
 0x00461070 99.64 reward_format_values
 0x00461410 98.28 reward_loop
-0x00461790 92.46 reward_draw_item
+0x00461790 93.03 reward_draw_item
 0x00461c90 92.73 reward_draw_score
 0x00461dd0 96.12 reward_do_buttons
 0x00462030 61.54 reward_save_menu
@@ -1640,21 +1640,22 @@
 0x0046ac20 40.91 advisor_text_request_setup
 0x0046ac60 35.09 advisor_text_animation_update
 0x0046ad00 13.25 advisor_text_display_worker
-0x0046b1d0 9.52 tooltip_overlay_state_initialize
-0x0046b4d0 55.42 case_insensitive_name_table_lookup
-0x0046b660 10.00 command_sample_stats_accumulate
-0x0046b700 10.00 timed_effect_cue_request_set_corpus
-0x0046b730 37.04 timed_effect_persistence_set_corpus
-0x0046b770 75.00 timed_effect_update_request_set_corpus
-0x0046b7a0 100.00 timed_effect_timestamp_reset_corpus
-0x0046b7c0 21.05 timed_effect_runtime_update
-0x0046b8b0 7.97 rectangular_grid_overlay_geometry_draw
-0x0046bc30 11.59 timed_effect_slot_render_record
-0x0046c030 14.49 render_resource_binding_initialize
-0x0046c0b0 57.14 render_resource_binding_copy_and_convert
-0x0046c0f0 11.76 render_resource_binding_release
-0x0046c110 20.69 animation_resource_advance_time
-0x0046c130 80.00 scene_object_set_animation_with_fallback
+0x0046b1d0 100.00 tooltip_overlay_state_initialize
+0x0046b4d0 100.00 case_insensitive_name_table_lookup
+0x0046b520 96.74 tooltip_set_content
+0x0046b660 100.00 command_sample_stats_accumulate
+0x0046b700 100.00 timed_effect_cue_request_set_corpus
+0x0046b730 100.00 tooltip_set_flag10
+0x0046b770 100.00 timed_effect_update_request_set_corpus
+0x0046b7a0 100.00 tooltip_reset_timer
+0x0046b7c0 57.14 timed_effect_runtime_update
+0x0046b8b0 34.47 tooltip_draw_box
+0x0046bc30 86.16 tooltip_draw
+0x0046c030 91.11 render_resource_binding_initialize
+0x0046c0b0 100.00 render_resource_binding_copy_and_convert
+0x0046c0f0 100.00 render_resource_binding_release
+0x0046c110 100.00 upgrade_part_move_animation
+0x0046c130 100.00 scene_object_set_animation_with_fallback
 0x0046c340 23.53 scene_indexed_record_list_rebuild_for_value
 0x0046c3d0 100.00 record_field_d8_equals_one
 0x0046c3f0 22.59 scene_activity_paired_channel_update
@@ -2326,7 +2327,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2554 mapped functions
+[full] 2555 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2825,7 +2826,7 @@
 0x004181a0 100.00 selection_state_flag_clear_bit0
 0x004181b0 98.17 help_window_initialise_adapter
 0x00418450 96.08 help_window_load_infos
-0x004185f0 96.03 help_window_load_buttons
+0x004185f0 97.35 help_window_load_buttons
 0x00418800 100.00 mode_flag_pair_apply_if_bit2
 0x00418830 95.71 building_upgrade_state_changed_dispatch
 0x00418920 96.00 help_window_list_dependencies
@@ -2879,7 +2880,7 @@
 0x0041a290 100.00 screen_right_edge_cache_refresh
 0x0041a2c0 100.00 info_update_timers
 0x0041a2f0 100.00 info_get_font
-0x0041a300 99.08 interface_initialise
+0x0041a300 100.00 interface_initialise
 0x0041a660 100.00 interface_init_menus
 0x0041a7d0 97.37 interface_set_menu_items
 0x0041a850 70.31 interface_shutdown
@@ -2890,7 +2891,7 @@
 0x0041ab00 87.17 interface_load_object_items
 0x0041ada0 84.80 interface_load_menu_items
 0x0041afd0 78.52 interface_load_item_panels
-0x0041b1b0 87.27 interface_load_back_button
+0x0041b1b0 89.09 interface_load_back_button
 0x0041b270 89.19 interface_load_dependency_images
 0x0041b2d0 100.00 command_context_post_to_hud
 0x0041b300 95.16 interface_set_block_highlight
@@ -2904,7 +2905,7 @@
 0x0041b9c0 100.00 interface_resolve_teleporter_item
 0x0041ba10 100.00 interface_update_hover_sfx
 0x0041ba90 100.00 simulation_global_word_set
-0x0041baa0 73.30 interface_do_mouse
+0x0041baa0 74.21 interface_do_mouse
 0x0041c1c0 49.28 interface_get_item_at_point
 0x0041c310 100.00 interface_callback_hit_item
 0x0041c440 93.33 advisor_callback_schedule_gate
@@ -3018,7 +3019,7 @@
 0x00425ce0 96.30 lego_game_speed_set
 0x00425d50 100.00 lego_render_record_set_from_input
 0x00425d80 100.00 current_engine_mode_is_zero
-0x00425d90 87.92 lego_terrain_pointer_command_update
+0x00425d90 88.26 lego_terrain_pointer_command_update
 0x004261c0 96.15 lego_spawn_coordinate_pool_tick
 0x00426230 100.00 lego_global_triple_copy_out
 0x00426250 94.74 lego_update_render_viewport_state
@@ -3031,8 +3032,8 @@
 0x00426520 70.50 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 94.74 lego_level_upgrade_name_strings_load
-0x00428020 98.52 lego_entity_command_status_feedback_dispatch
-0x00428330 71.50 lego_terrain_command_feedback_dispatch
+0x00428020 98.89 lego_entity_command_status_feedback_dispatch
+0x00428330 72.03 lego_terrain_command_feedback_dispatch
 0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
 0x004288e0 97.35 lego_level_debug_input_cell_mutator_dispatch
@@ -3184,7 +3185,7 @@
 0x00434a50 100.00 lego_sound_samples_config_load
 0x00434af0 99.02 lego_text_messages_config_load
 0x00434c10 99.29 lego_message_load_infomessages
-0x00434da0 98.78 lego_advisor_tooltip_and_sound_config_load
+0x00434da0 100.00 lego_advisor_tooltip_and_sound_config_load
 0x00434e80 100.00 lego_interface_spawn_request_enqueue
 0x00435010 99.16 terrain_cell_work_flag_circle_set_current
 0x004350a0 98.55 lego_surface_type_descriptions_config_load
@@ -3438,7 +3439,7 @@
 0x00447920 100.00 legoobject_type_four_callback
 0x00447950 77.46 legoobject_directional_activity_start
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
-0x00447b30 98.86 legoobject_activity_tick
+0x00447b30 100.00 legoobject_activity_tick
 0x00447c40 96.28 legoobject_activity_register_bookkeeping
 0x00447ea0 67.46 legoobject_type_behavior_update
 0x004487c0 100.00 legoobject_clear_nested_state_8_fields
@@ -3745,7 +3746,7 @@
 0x0045cf00 51.61 priorities_reset
 0x0045cf50 57.69 priorities_load
 0x0045d060 98.28 priorities_load_positions
-0x0045d110 50.16 priorities_handle_cursor
+0x0045d110 50.81 priorities_handle_cursor
 0x0045d300 100.00 priorities_select
 0x0045d370 100.00 priorities_set_hover_area
 0x0045d3c0 100.00 priorities_change_priority
@@ -3795,7 +3796,7 @@
 0x00460f00 100.00 reward_create_scroll
 0x00461070 99.64 reward_format_values
 0x00461410 98.28 reward_loop
-0x00461790 92.46 reward_draw_item
+0x00461790 93.03 reward_draw_item
 0x00461c90 92.73 reward_draw_score
 0x00461dd0 96.12 reward_do_buttons
 0x00462030 61.54 reward_save_menu
@@ -3960,21 +3961,22 @@
 0x0046ac20 40.91 advisor_text_request_setup
 0x0046ac60 35.09 advisor_text_animation_update
 0x0046ad00 13.25 advisor_text_display_worker
-0x0046b1d0 9.52 tooltip_overlay_state_initialize
-0x0046b4d0 55.42 case_insensitive_name_table_lookup
-0x0046b660 10.00 command_sample_stats_accumulate
-0x0046b700 10.00 timed_effect_cue_request_set_corpus
-0x0046b730 37.04 timed_effect_persistence_set_corpus
-0x0046b770 75.00 timed_effect_update_request_set_corpus
-0x0046b7a0 100.00 timed_effect_timestamp_reset_corpus
-0x0046b7c0 21.05 timed_effect_runtime_update
-0x0046b8b0 7.97 rectangular_grid_overlay_geometry_draw
-0x0046bc30 11.59 timed_effect_slot_render_record
-0x0046c030 14.49 render_resource_binding_initialize
-0x0046c0b0 57.14 render_resource_binding_copy_and_convert
-0x0046c0f0 11.76 render_resource_binding_release
-0x0046c110 20.69 animation_resource_advance_time
-0x0046c130 80.00 scene_object_set_animation_with_fallback
+0x0046b1d0 100.00 tooltip_overlay_state_initialize
+0x0046b4d0 100.00 case_insensitive_name_table_lookup
+0x0046b520 96.74 tooltip_set_content
+0x0046b660 100.00 command_sample_stats_accumulate
+0x0046b700 100.00 timed_effect_cue_request_set_corpus
+0x0046b730 100.00 tooltip_set_flag10
+0x0046b770 100.00 timed_effect_update_request_set_corpus
+0x0046b7a0 100.00 tooltip_reset_timer
+0x0046b7c0 57.14 timed_effect_runtime_update
+0x0046b8b0 34.47 tooltip_draw_box
+0x0046bc30 86.16 tooltip_draw
+0x0046c030 91.11 render_resource_binding_initialize
+0x0046c0b0 100.00 render_resource_binding_copy_and_convert
+0x0046c0f0 100.00 render_resource_binding_release
+0x0046c110 100.00 upgrade_part_move_animation
+0x0046c130 100.00 scene_object_set_animation_with_fallback
 0x0046c340 23.53 scene_indexed_record_list_rebuild_for_value
 0x0046c3d0 100.00 record_field_d8_equals_one
 0x0046c3f0 22.59 scene_activity_paired_channel_update

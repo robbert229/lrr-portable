@@ -320,9 +320,9 @@ void entity_kind6_tick_down_marker_spawn_obj(LegoObject* obj);
  * backend region. */
 void container_get_position(void* container, void* reference,
                             Point2F* position);
-/* FUN_0046b730 and FUN_0046b7a0: declared only in frozen per-unit
- * headers. */
-void tooltip_set_persistent(int index, int set);
+/* ToolTip_SetFlag10 (0046b730) and ToolTip_ResetTimer (0046b7a0):
+ * tooltip.c's own names (finding 597). */
+void tooltip_set_flag10(int index, int set);
 void tooltip_reset_timer(int index);
 
 /* ---- the port's implementations of the shared entries ------------------

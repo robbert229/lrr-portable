@@ -383,7 +383,11 @@ src/game/terrain_overlay_quads.cpp
 src/game/text.cpp
 src/game/tile_variants.cpp
 src/game/tile_variants.h
-src/game/tooltip.cpp
+src/game/tooltip.c
+src/game/tooltip.h
+src/game/tooltip_imports.h
+src/game/tooltip_link_names.h
+src/game/tooltip_port.cpp
 src/game/tutorial_hud.cpp
 src/game/tutorial_hud_for_object_overlays.hpp
 src/game/tutorial_hud_for_panel_unit.hpp

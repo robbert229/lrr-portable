@@ -11514,20 +11514,9 @@ extern "C" int legoobject_gi_nearby_placement_candidate_find_adapter(const int s
 }
 
 /* ---- group Q adapters (GAME-023 part 3, legoobject_unit.c) ---- */
-/* Vehicle_MoveAnimation (0x0046d1c0) and Upgrade_MoveAnimation
- * (0x0046c110): the port's entries at those addresses take other
- * arguments (vehicle_model.cpp's animation_duration_for_loop_count and
- * tooltip.cpp's animation_resource_advance_time). Nothing calls these
- * natively; they report no time left in the animation. */
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046c110 has another contract)
-extern "C" float legoobject_gq_upgrade_move_animation_adapter(void* upgrade, float elapsed,
-                                                              unsigned int repeat)
-{
-    (void)upgrade;
-    (void)elapsed;
-    (void)repeat;
-    return 0.0f;
-}
+/* Upgrade_MoveAnimation (0x0046c110): legoobject_unit.c calls
+ * upgrade_levels.cpp's original-shape upgrade_part_move_animation directly
+ * (finding 597). */
 
 /* Vehicle_SetActivity (0x0046c3f0, upgrade_levels.cpp's
  * scene_activity_paired_channel_update in the port), Vehicle_GetCameraNull

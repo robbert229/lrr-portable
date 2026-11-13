@@ -452,3 +452,21 @@ void font_print_f(const TextureSurface* font, int x, int y, const char* msg, ...
     font_v_print_f(font, x, y, msg, args);
     va_end(args);
 }
+
+/* Font_GetStringInfo (the Font.h inline, 00401c80 in Advisor.c's copy) in
+ * the original ABI, for ToolTip.c (GAME-046, finding 597). A thin
+ * unannotated adapter over font_v_get_string_info: advisor.c's entry at that
+ * address keeps the port's render-target contract. Declared in
+ * game/tooltip_imports.h. */
+// PORT-ONLY: adapter or forwarder for the port contract
+extern "C" void font_get_string_info(const TextureSurface* font,
+                                     unsigned int* width,
+                                     unsigned int* lineCount,
+                                     const char* msg, ...)
+{
+    va_list args;
+    va_start(args, msg);
+    font_v_get_string_info(font, (uint32_t*)width, (uint32_t*)lineCount,
+                           msg, args);
+    va_end(args);
+}

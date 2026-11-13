@@ -1050,6 +1050,7 @@ typedef struct FrameTooltipDrawContext {
     int height;
 } FrameTooltipDrawContext;
 
+// PORT-ONLY: native software renderer for the port tail's tool-tip overlay hooks (finding 597)
 static void frame_tooltip_pixel(FrameTooltipDrawContext* ctx, int x, int y,
                                 const uint32_t color[3])
 {
@@ -1062,6 +1063,7 @@ static void frame_tooltip_pixel(FrameTooltipDrawContext* ctx, int x, int y,
     pixel[3] = 255;
 }
 
+// PORT-ONLY: native software renderer for the port tail's tool-tip overlay hooks (finding 597)
 static void frame_tooltip_fill(void* context,
                                const RectangularGridOverlayState* state, int mode)
 {
@@ -1073,6 +1075,7 @@ static void frame_tooltip_fill(void* context,
             frame_tooltip_pixel(ctx, x, y, state->fill_color);
 }
 
+// PORT-ONLY: native software renderer for the port tail's tool-tip overlay hooks (finding 597)
 static void frame_tooltip_lines(void* context, const float points[10],
                                 unsigned int count, const uint32_t color[3],
                                 int mode)
@@ -1093,6 +1096,7 @@ static void frame_tooltip_lines(void* context, const float points[10],
     }
 }
 
+// PORT-ONLY: native software renderer for the port tail's tool-tip overlay hooks (finding 597)
 static void frame_tooltip_text(void* context, void* font, const char* text,
                                float x, float y)
 {
