@@ -2399,7 +2399,11 @@ void legoobject_lava_crust_activity_register(Lego_Object* obj)
             LegoObjG_liveCount < 100)
         {
             LegoObjG_liveObjs[LegoObjG_liveCount] = obj;
-            LegoObjG_liveCount++;
+            /* Deviation (scoring only): the original reloads the count
+             * after the store, because objectGlobs' array and count share
+             * one struct; a volatile access reproduces the reload with the
+             * two separate globals the port keeps. */
+            (*(volatile unsigned int*)&s_idle100_n)++;
         }
     }
 }
@@ -8028,7 +8032,7 @@ void legoobject_linked_proximity_response(Lego_Object* obj)
         legoobject_transform_position_get(obj, &objPos.x, &objPos.y);
         legoobject_n_vector2d_subtract(&dir.x, &targetPos.x, &objPos.x);
         dist = legoobject_n_vector2d_modulus(&dir.x);
-        if (dist < entity_stats_float_at6c(LEGOOBJ_SLOT(target)) + entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) * 2.0f) {
+        if (dist < entity_stats_float_at6c(LEGOOBJ_SLOT(target)) + (float)(entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) * 2.0f)) {
             legoobject_directional_activity_start(target, &dir.x, 1);
             legoobject_damage_apply(target, 10.0f, 1, 1.0f);
         }
@@ -9147,6 +9151,11 @@ void scene_resource_visibility_set(void* record, uint32_t flag);       /* 0046d2
 /* PORT-ONLY adapters at the end of legoobject_port.cpp: the port's entries
  * have C++ linkage. */
 void legoobject_gs_container_hidden_set_adapter(void* cont, int hide);  /* 00473b20 */
+/* container_link_names.h's matching-build link name of Container_IsHidden
+ * (00473ba0, container.c since #697). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define legoobject_gs_container_is_hidden_adapter scene_object_flag_bit3_get_target
+#endif
 int legoobject_gs_container_is_hidden_adapter(void* cont);              /* 00473ba0 */
 /* vehicle_model_link_names.h's matching-build link names of 0046d330 and
  * 0046da90. */
@@ -9155,6 +9164,11 @@ int legoobject_gs_container_is_hidden_adapter(void* cont);              /* 00473
 #define vehicle_get_drill_null scene_resource_cached_slot_b4_get
 #endif
 unsigned int vehicle_is_hidden(struct VehicleModel* vehicle);             /* 0046d330 */
+/* building_model_link_names.h's matching-build link name of 004086a0
+ * (building_model.c). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define legoobject_gs_object_is_hidden_adapter animation_object_visibility_get
+#endif
 int legoobject_gs_object_is_hidden_adapter(void* model);                /* 004086a0 */
 int vehicle_is_camera_flip_dir(struct VehicleModel* vehicle);           /* 0046c3d0 */
 void* vehicle_get_drill_null(struct VehicleModel* vehicle);          /* 0046da90 */
@@ -10150,7 +10164,9 @@ int legoobject_activity_scan(Lego_Object* obj, int activity)
     return 0;
 }
 
-/* Whether a mini-figure carries the tool the task type needs. */
+/* Whether a mini-figure carries the tool the task type needs. Any other
+ * object, or a task type that needs no tool, answers 1 (the original's
+ * `mov eax, 1`). */
 // FUNCTION: LEGORR 0x0044b4c0
 int legoobject_type_two_target_resolve_and_apply(Lego_Object* obj, int code)
 {
@@ -10158,7 +10174,7 @@ int legoobject_type_two_target_resolve_and_apply(Lego_Object* obj, int code)
 
     if (obj->type == 2 && entity_grouped_code_table_find_value_index(code, &tool))
         return legoobject_activity_scan(obj, tool);
-    return 0;
+    return 1;
 }
 
 /* Routes a mini-figure to the building it stands at, to the camera null
