@@ -32,9 +32,11 @@ This change:
   file is `upgrade_levels.cpp` under `git mv`, without the five part
   functions, which were already in original shape (finding 597).
 
-"Before" is `main` `8abe8b6b` (the committed match baseline, and a full
-matching build of it in this worktree). "After" is this change, from the
-full matching build (`make reccmp-check`).
+Stacked on #676 (G98-025, `3888bf19`). "Before" is #676's committed
+match baseline and `binary-progress.json`; no GAME-047 or GAME-048 score
+differs from `main` `8abe8b6b`, where the change was first measured. "After"
+is this change rebased onto #676, from the full matching build
+(`make reccmp-check`).
 
 ## Result
 
@@ -44,10 +46,10 @@ full matching build (`make reccmp-check`).
 | Exact functions in Upgrade.c | 4 | **5** |
 | Mapped functions in Upgrade.c | 6 | **7** |
 | Vehicle.c's three new functions: exact | 1 | **3** |
-| Exact-function code bytes (`binary-progress.json`) | 196,138 | **197,873** |
-| Exact functions, full / game-only | 1,686 / 1,477 | **1,691 / 1,482** |
-| `opt_ref` annotated (full, by address): removed / exact removed | 428 / 207 | **425 / 207** |
-| Reccmp lint ledger (entries) | 1,080 | **1,078** |
+| Exact-function code bytes (`binary-progress.json`) | 197,765 | **199,500** |
+| Exact functions, full / game-only | 1,696 / 1,487 | **1,701 / 1,492** |
+| `opt_ref` annotated (full, by address): removed / exact removed | 423 / 214 | **419 / 213** |
+| Reccmp lint ledger (entries) | 1,075 | **1,073** |
 
 Byte weights are the original sizes from the single-function loop. An
 unmapped function counts as 0%.
@@ -273,7 +275,7 @@ part functions by their link names. `legoobject_unit.c`,
 
 ## Entropy and drops
 
-`make reccmp-check` against the baseline at `8abe8b6b`:
+`make reccmp-check` against #676's baseline:
 
 - 8 improved: `0046c340`, `0046c3f0`, `0046c510`, and the five callers above;
 - 1 newly mapped: `0046c160`;
@@ -296,10 +298,13 @@ their listings.
 
 ## `opt_ref` (finding 579, `make opt-ref-callers`)
 
-| | before (`8abe8b6b`, rebuilt here) | after |
+| | before (#676, committed) | after |
 | --- | ---: | ---: |
-| `opt_ref.annotated.full` (by address): removed / exact removed | 428 / 207 | 425 / 207 |
-| `opt_ref.annotated.game_only` (by address) | 421 / 200 | 418 / 200 |
+| `opt_ref.annotated.full` (by address): removed / exact removed | 423 / 214 | 419 / 213 |
+| `opt_ref.annotated.game_only` (by address) | 416 / 207 | 412 / 206 |
+
+On `main` `8abe8b6b` alone the change took `opt_ref` from 428 / 207 to
+425 / 207.
 
 Before, `/OPT:REF` removed `upgrade_levels.cpp.obj`'s `0046c3f0`: its only
 original caller, `00447c40`, called `legoobject_gq_vehicle_set_activity_adapter`
@@ -309,7 +314,7 @@ removed function in any of the three objects.
 
 ## Reccmp lint ratchet
 
-1,080 → 1,078 entries (−2, no growth). The relocated port models were
+1,075 → 1,073 entries (−2, no growth). The relocated port models were
 already annotated, and their tail is exempt. Two upgrade-related port
 helpers with no original function are now marked `PORT-ONLY`:
 `level.cpp`'s `upgrade_resource_check_current` and `frameloop.cpp`'s
