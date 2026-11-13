@@ -223,8 +223,8 @@ src/game/lego_port_aliases.h
 src/game/lego_unit.c
 src/game/lego_unit.h
 src/game/lego_unit_imports.h
-src/game/legoobject.cpp
 src/game/legoobject.h
+src/game/legoobject_port.cpp
 src/game/legoobject_port_aliases.h
 src/game/legoobject_unit.c
 src/game/legoobject_unit.h

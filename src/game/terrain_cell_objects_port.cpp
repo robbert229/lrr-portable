@@ -1242,7 +1242,7 @@ static int post_cluster_entity_second(EntitySlot* entity, void* payload)
 
 /* Adapters with the original signatures for terrain_cell_objects.c's
  * callees whose port entries take a different contract (ADR 0005 step 6).
- * Their owners (lego.cpp, legoobject.cpp) are converted separately. */
+ * Their owners (lego.cpp, legoobject_port.cpp) are converted separately. */
 // PORT-ONLY: Level_BlockUpdateSurface; the port's entry takes a float column.
 extern "C" void level_block_surface_update(LevelState* level, int bx, int by,
                                            int reserved)

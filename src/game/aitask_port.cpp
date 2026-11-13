@@ -5046,7 +5046,7 @@ extern "C" void* aitask_object_container_get_adapter(struct EntitySlot* object)
 }
 
 /* FUN_0044b4c0: the port's definition has C++ linkage, in a namespace, and
- * no header declaration that legoobject.cpp sees. */
+ * no header declaration that legoobject_port.cpp sees. */
 // PORT-ONLY: original-ABI adapter for GAME-002 aitask.c (0044b4c0 -> ledger_stub_0044b4c0_TypeTwoEntityTargetResolveAndApply)
 extern "C" int aitask_object_command_gate_adapter(struct EntitySlot* object, int type)
 {
@@ -5097,7 +5097,7 @@ extern "C" struct EntitySlot* aitask_object_find_trainer_adapter(
  * Original-ABI entries for aitask.c's 0x00404280 (the per-entity command
  * chain tick), 0x00404e00 and 0x00404ed0. Natively nothing calls them: the
  * port tail keeps its own chain tick above. Most of the callees' port
- * definitions are namespaced ledger stubs in legoobject.cpp. */
+ * definitions are namespaced ledger stubs in legoobject_port.cpp. */
 
 /* FUN_0043a120: namespaced port entry; the original passes the command's
  * +0x30 position pair untyped. */

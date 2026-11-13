@@ -20,6 +20,11 @@ extern uint32_t s_entity_state_flags;
 extern int s_lego_object_tool_tip_gate;
 
 /* FUN_0044c550 (GAME-023). */
+/* In the matching build 0044c550 is legoobject_unit.c's (GAME-023 part 3,
+ * issue #615); one declaration either way. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define global_scatter_spawn_enable_and_drain legoobject_scatter_spawn_enable_and_drain
+#endif
 void global_scatter_spawn_enable_and_drain(void);
 
 #ifdef __cplusplus

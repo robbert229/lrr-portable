@@ -30,7 +30,7 @@ int creature_scene_entity_create(struct EntitySlot* entity);
 void creature_scene_entity_release(struct EntitySlot* entity);
 struct AnimationObject* creature_scene_model(const struct EntitySlot* entity);
 
-/* The call sites' native arms (legoobject.cpp, entity.cpp), beside the
+/* The call sites' native arms (legoobject_port.cpp, entity.cpp), beside the
  * WinAPI actor_scene ones. */
 /* EntityWorldPositionSet's creature branch: Creature_SetPosition at the
  * terrain height, then Creature_SetOrientation along the heading. */

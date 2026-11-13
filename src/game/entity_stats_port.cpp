@@ -362,7 +362,7 @@ void entity_record_flag400_toggle_and_refresh(EntitySlot* e)
 /* ---- GAME-023 group D adapters ---- */
 /* entity_building_index_set is declared only in the frozen
  * entity_from_entity_stats.hpp. An extern "C" pre-declaration before that
- * include in legoobject.cpp and entity.cpp shifts both units' symbol
+ * include in legoobject_port.cpp and entity.cpp shifts both units' symbol
  * counters (finding 538, rule B), so legoobject_unit.c calls this C entry
  * instead. */
 // PORT-ONLY: C-linkage entry to 0x00469c10 for legoobject_unit.c (GAME-023)

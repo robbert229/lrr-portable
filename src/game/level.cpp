@@ -70,7 +70,7 @@ extern "C" int level_cell_flag8_check_target(const LevelState* unused, int cx, i
 #include "level_for_files.hpp"
 #include "level_for_legoobject.hpp"
 /* C linkage for LegoObject.c state that legoobject_unit.c also reads
- * (defined in legoobject.cpp; the frozen header below redeclares it). */
+ * (defined in legoobject_port.cpp; the frozen header below redeclares it). */
 extern "C" uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
 extern "C" uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
 extern "C" int s_terrain_sfx_grid[TERRAIN_SFX_GRID_CELLS];

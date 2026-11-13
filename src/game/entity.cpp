@@ -557,7 +557,7 @@ float periodic_timer25_peek(void)
 #include "entity_for_weapons.hpp"
 #include "entity_for_interface.hpp"
 /* C linkage for LegoObject.c state that legoobject_unit.c also reads
- * (defined in legoobject.cpp; the frozen header below redeclares it). */
+ * (defined in legoobject_port.cpp; the frozen header below redeclares it). */
 extern "C" EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records;
 extern "C" uint32_t s_global_animation_state;
 extern "C" uint32_t s_pool_chunk_count;

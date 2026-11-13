@@ -440,7 +440,7 @@ void font_print_f(const struct TextureSurface* font, int x, int y,
 struct EntitySlot* selection_active_entity_get(void);      /* 004525c0 */
 struct EntitySlot* const* selection_active_context_record_get(int* count_out); /* 00452580 */
 void cmd_queue_tick(void);                                 /* 004520d0 */
-/* LegoObject.c (entity.hpp, legoobject.cpp). */
+/* LegoObject.c (entity.hpp, legoobject_port.cpp). */
 const char* entity_display_name_lookup(const struct EntitySlot* entity); /* 004395e0 */
 int grid_record_count_difference_get(int row, int column, int slot,
                                      int subtract_first_table); /* 00437460 */
@@ -607,7 +607,7 @@ int camera_topdown_position_get_adapter(void* camera, void* map,
                                         float out[3]);        /* 00436b33 */
 void camera_pointer_pan_update(struct ViewContext* v, float vec[3],
                                float amount);                 /* 00436b87 */
-/* legoobject.cpp (entity.hpp): LegoObject_GetPosition (00442260). */
+/* legoobject_port.cpp (entity.hpp): LegoObject_GetPosition (00442260). */
 void entity_transform_position_get_outputs(const struct EntitySlot* entity,
                                            float* out_x, float* out_y);
 /* RadarMap_SetZoom (0045d8a0; the port's entry takes the float as a word)
@@ -986,7 +986,7 @@ void loader_profile_entries_release_adapter(const char* profile); /* 0044dd40 */
 uint32_t system_state_flags_get_original(const int* parameters); /* 00456240 */
 /* GAME-021 part 3 (lego.cpp): Lego_GetLevel. */
 struct LevelState* level_current_owner_get(void);         /* 00431560 */
-/* LegoObject.c (legoobject.cpp, declared in camera.hpp). */
+/* LegoObject.c (legoobject_port.cpp, declared in camera.hpp). */
 void* predug_spawn_coordinate_select_and_create(int source_object,
                                                 int type); /* 0043ad50 */
 /* LegoObject.c FUN_00438960: no port entry; the port's spawn probe hook.
@@ -1014,7 +1014,7 @@ int global_resource_handle_load_and_enable_original(void* root,
 void misc_objects_effect_slots_bind_original(struct BlockRec* config,
                                              const char* gameName,
                                              void* root);   /* 0040c990 */
-/* LegoObject.c (legoobject.cpp, entity.hpp): LegoObject_GetLangName and
+/* LegoObject.c (legoobject_port.cpp, entity.hpp): LegoObject_GetLangName and
  * Object_GetLangName. */
 const char* entity_display_name_lookup(const struct EntitySlot* entity); /* 004395e0 */
 const char* localized_object_name_get(uint32_t kind, int index); /* 00439860 */
@@ -1023,7 +1023,7 @@ void entity_custom_name_set_adapter(struct EntitySlot* object,
                                     const char* name);     /* 00437880 */
 /* GAME-006 (screen_effect_quads.cpp, entity.hpp). */
 int entity_quad_mesh_render_record_allowed(const struct EntitySlot* e); /* 0040aae0 */
-/* LegoObject.c (legoobject.cpp, level.hpp): the object's tool tip SFX. */
+/* LegoObject.c (legoobject_port.cpp, level.hpp): the object's tool tip SFX. */
 int terrain_object_type_sfx_at_cell_get(const void* position_record); /* 0044ad80 */
 /* Stats.c (entity_stats.cpp, ai.hpp): StatsObject_GetCapacity. */
 int ai_activity_cap(const struct EntitySlot* e);          /* 0046a060 */
@@ -1085,7 +1085,7 @@ struct LevelState;
 /* GAME-005 (lava_erosion.cpp, level.hpp). */
 void lava_erosion_neighbor_mutate(const int xy[2], unsigned int direction,
                                   int propagate);           /* 0040f330 */
-/* LegoObject.c (legoobject.cpp, entity.hpp, spawn.hpp). */
+/* LegoObject.c (legoobject_port.cpp, entity.hpp, spawn.hpp). */
 void entity_enter_event21_state_once(struct EntitySlot* entity); /* 00444620 */
 struct EntitySlot* creature_spawn_from_emergence(void* base_entity, int mode_token,
                                                  int owner_index, int cell_x,
@@ -1308,7 +1308,7 @@ struct TerrainCellResourceGrid* terrain_cell_resource_grid_load(
     const char* bitmap_prefix, uint32_t width, uint32_t height); /* 0040b310 */
 /* GAME-005 erosion (level.hpp). */
 int lava_erosion_stage_register(const int xy[2], int stage); /* 0040ea10 */
-/* SpiderWeb/predug coordinate pool (legoobject.cpp, level.hpp). */
+/* SpiderWeb/predug coordinate pool (legoobject_port.cpp, level.hpp). */
 void predug_coordinate_pool_append(const int cell_xy[2]);   /* 0044a4b0 */
 /* Smoke/cell passes (cell_flood_passes.cpp, terrain_grid.hpp). */
 void terrain_cell_quad_run_stage_level(void* scene,
@@ -1459,7 +1459,7 @@ void main_loop_frame_pump(int draw_projection_overlay);         /* 00477f30 */
 void lego_render_surface_restore_adapter(void);                 /* 0047cc20 */
 
 /* Level_Free's callees. */
-extern uint32_t s_entity_state_flags;          /* legoobject.cpp, 004dee14 */
+extern uint32_t s_entity_state_flags;          /* legoobject_port.cpp, 004dee14 */
 extern int s_cell_refresh_track_count;         /* level.cpp, 00556e8c */
 extern int s_cell_previous_track_count;        /* level.cpp, 00556e90 */
 /* 00435aa0 (Lego.c part 3): the port's entry also takes the
@@ -1539,12 +1539,12 @@ struct WorldSpatialRecordModel;
 void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2]); /* 00409940 */
 /* GAME-021 part 3 (lego.cpp, level.hpp): the same contract as the
  * original's, with the port's level view. */
-/* LegoObject.c (legoobject.cpp: ai.hpp, entity.hpp, level.hpp,
+/* LegoObject.c (legoobject_port.cpp: ai.hpp, entity.hpp, level.hpp,
  * port_loop_ports.hpp). */
 void deferred_olist_entity_create_and_link(const int cell_xy[2]);     /* 00437940 */
 void ledger_stub_0044b140_SmallSpiderCellSwarmSpawn(int cell_x, int cell_y,
                                                     uint32_t variation); /* 0044b140 */
-/* 00439370 and 004394b0 are declared only in legoobject.cpp's ledger
+/* 00439370 and 004394b0 are declared only in legoobject_port.cpp's ledger
  * namespace. Adapters at the end of lego.cpp. */
 void entity_build_placement_setup_original(const int cell_xy[2], int entity_id,
                                            const float world_xy[2],

@@ -52,6 +52,11 @@ void legoobject_spatial_callback_query_at_optional_coordinate(
     struct Lego_Object* obj, float* position, float radius);     /* 004408c0 */
 void legoobject_transform_position_get(struct Lego_Object* obj, float* outX,
                                        float* outY);             /* 00442260 */
+/* In the matching build 0044a200 is legoobject_unit.c's (GAME-023 part 3,
+ * issue #615); one declaration either way. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define entity_type_component_get legoobject_type_component_get
+#endif
 void* entity_type_component_get(const void* entity_record);      /* 0044a200 */
 
 /* gods98 Container.c (view.hpp). */
