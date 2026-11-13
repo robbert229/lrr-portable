@@ -145,7 +145,11 @@ src/game/effects_for_sfx.hpp
 src/game/effects_for_tooltip.hpp
 src/game/effects_for_weapons.hpp
 src/game/effects_shared.hpp
-src/game/encyclopedia.cpp
+src/game/encyclopedia.c
+src/game/encyclopedia.h
+src/game/encyclopedia_imports.h
+src/game/encyclopedia_link_names.h
+src/game/encyclopedia_port.cpp
 src/game/entity.cpp
 src/game/entity.h
 src/game/entity.hpp
@@ -293,7 +297,10 @@ src/game/lighteffects.c
 src/game/lighteffects.h
 src/game/lighteffects_imports.h
 src/game/lighteffects_port.cpp
-src/game/loading_progress.cpp
+src/game/loader.c
+src/game/loader.h
+src/game/loader_imports.h
+src/game/loader_port.cpp
 src/game/map_view_port.cpp
 src/game/message.h
 src/game/message_port.cpp
@@ -309,7 +316,6 @@ src/game/mission_for_screen_effect_quads.hpp
 src/game/mission_from_panel_unit.hpp
 src/game/mission_from_reward.hpp
 src/game/mission_shared.hpp
-src/game/object_overlays.cpp
 src/game/object_state_file.cpp
 src/game/objective.cpp
 src/game/objective.hpp
@@ -324,6 +330,11 @@ src/game/objective_unit.c
 src/game/objective_unit.h
 src/game/objective_unit_imports.h
 src/game/objective_unit_link_names.h
+src/game/objinfo.c
+src/game/objinfo.h
+src/game/objinfo_imports.h
+src/game/objinfo_link_names.h
+src/game/objinfo_port.cpp
 src/game/opgroup.cpp
 src/game/opgroup.hpp
 src/game/options.cpp
@@ -334,7 +345,6 @@ src/game/panel.h
 src/game/panel_maths.h
 src/game/panel_unit.c
 src/game/panel_unit.h
-src/game/placement_footprint.cpp
 src/game/placement_footprint.h
 src/game/placement_port.cpp
 src/game/pointer.c
@@ -398,6 +408,11 @@ src/game/select.cpp
 src/game/select.hpp
 src/game/select_from_legoobject.hpp
 src/game/select_from_message_unit.hpp
+src/game/selectplace.c
+src/game/selectplace.h
+src/game/selectplace_imports.h
+src/game/selectplace_link_names.h
+src/game/selectplace_port.cpp
 src/game/sfx.c
 src/game/sfx.h
 src/game/sfx_imports.h

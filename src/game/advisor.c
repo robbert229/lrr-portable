@@ -56,6 +56,8 @@
 
 /* Main.c's flags (DAT_00505f84): reduced animation. */
 #define ADVISOR_MAIN_FLAG_REDUCEANIMATION 0x400000
+/* Main.c's flags: a start level was given on the command line. */
+#define ADVISOR_MAIN_FLAG_STARTLEVEL 0x200
 
 /* The prefix of the game camera (LegoCamera) that Advisor_Initialise
  * reads: its camera container is the word at +0x24. */
@@ -570,9 +572,26 @@ int engine_app_mode_get(void)
     return s_application_mode;
 }
 
-/* 0x00401c00 (Main_GetStartLevel, a Main.h inline) is not written: it
- * returns Main.c's start-level buffer (0x00505f8c), which the port keeps
- * only in the Win32 entry point (platform/winapi/entry.cpp). */
+/* Main_GetStartLevel, a Main.h inline: the level named on the command line
+ * (-startlevel), kept in Main.c's buffer (00505f8c), which the port defines
+ * in the Win32 entry point (platform/winapi/entry.cpp). The native port has
+ * no such buffer and no start level (finding 633). */
+#if !defined(LEGORRR_BACKEND_MINIWIN)
+#ifdef __cplusplus
+extern "C"
+#endif
+char s_start_level_name[];
+#endif
+
+// FUNCTION: LEGORR 0x00401c00
+const char* main_get_start_level(void)
+{
+#if !defined(LEGORRR_BACKEND_MINIWIN)
+    return (s_engine_feature_word & ADVISOR_MAIN_FLAG_STARTLEVEL) ? s_start_level_name : NULL;
+#else
+    return NULL;
+#endif
+}
 
 // FUNCTION: LEGORR 0x00401c20
 uint32_t global_flag_bit0_is_set(void)

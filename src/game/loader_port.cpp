@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-025 GAME-025: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-025.csv. */
+/* GAME-025 Loader.c's port tail (finding 633): the port's models of
+ * Loader_Initialise and Loader_Shutdown and the original-ABI adapter that
+ * lego_unit.c calls natively. Unannotated: the original-shape unit is
+ * loader.c (ADR 0005). Relocated by tools/relocate_unit.py (ADR 0006); body
+ * hashes: docs/coverage/relocations/GAME-025.csv. */
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
@@ -47,8 +49,7 @@
 #include "gods98/media.hpp"
 
 namespace unported_ledger_stubs {
-// KeyValueEqualsFileLoad
-// FUNCTION: LEGORR 0x0044db50
+// The port model of Loader_Initialise (0x0044db50; loader.c).
 int ledger_stub_0044db50_KeyValueEqualsFileLoad(
     const MotionKeyValueLoadRequest* request, MotionKeyValueTable* table,
     const MotionKeyValueLoadHooks* hooks)
@@ -107,8 +108,7 @@ int ledger_stub_0044db50_KeyValueEqualsFileLoad(
     return 1;
 }
 
-// EngineLoaderProfileEntriesRelease
-// FUNCTION: LEGORR 0x0044dd40
+// The port model of Loader_Shutdown (0x0044dd40; loader.c).
 uint32_t ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease(
     void* config, MotionConfigProfileEntry* entries, uint32_t count,
     const MotionConfigProfileReleaseHooks* hooks)
@@ -119,9 +119,10 @@ uint32_t ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease(
 } // namespace unported_ledger_stubs
 
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
- * original EngineLoaderProfileEntriesRelease (FUN_0044dd40) takes the
- * profile file name; the port's entry takes the parsed entries. No port
- * path with the original's contract: does nothing. */
+ * original Loader_Shutdown (FUN_0044dd40) takes the profile file name; the
+ * port's entry takes the parsed entries. No port path with the original's
+ * contract: does nothing. In the matching build lego_unit.c calls loader.c
+ * instead (lego_unit_imports.h). */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease, 0x0044dd40)
 extern "C" void loader_profile_entries_release_adapter(const char* profile)
 {

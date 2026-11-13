@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-014 Encyclopedia.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-014.csv. */
+/* GAME-014 Encyclopedia.c's port tail (finding 633): the port's models of
+ * the unit's functions and the state the port's other files read.
+ * Unannotated: the original-shape unit is encyclopedia.c (ADR 0005). In the
+ * matching build the unit defines the four port names its callers use
+ * (encyclopedia_link_names.h), so this file compiles its own out there.
+ * Relocated by tools/relocate_unit.py (ADR 0006); body hashes:
+ * docs/coverage/relocations/GAME-014.csv. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
 #include <math.h>
@@ -79,25 +83,24 @@
 #include "frontend_for_encyclopedia.hpp"
 #include "level_for_encyclopedia.hpp"
 
-/* ItemNameByKindLookup's fixed labels reside at the literal DAT addresses
- * used by its original switch. Keep separate named arrays so Reccmp can map
- * each string reference without relying on literal pooling. */
-// GLOBAL: LEGORR 0x004a1e98
+/* ItemNameByKindLookup's fixed labels: Encyclopedia.c's literals "Ore"
+ * (004a1e98) and "PowerCrystal" (004a1e9c), which encyclopedia.c marks. */
 const char s_item_name_ore[] = "Ore";
-// GLOBAL: LEGORR 0x004a1e9c
 const char s_item_name_power_crystal[] = "PowerCrystal";
 
-/* GlobalValueClearIfEqual (FUN_0040e910) — the screen-effect handle word
- * (the corpus's DAT_004c7ea4, unowned) clears only on a matching release. */
-// GLOBAL: LEGORR 0x004c7ea4
+/* The port's models of encyclopediaGlobs.currObject (004c7ea4) and
+ * .flags (004c7ea8); encyclopedia.c owns the original's. */
 int s_global_value_word;
-// GLOBAL: LEGORR 0x004c7ea8
-uint32_t s_ui_flag_word = 0u;       /* DAT_004c7ea8 */
+uint32_t s_ui_flag_word = 0u;
 
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static void encyclopedia_value_open(BlockFile* cfg, const char* root_path, const char* name, void** slot);
+#endif
 
-// FUNCTION: LEGORR 0x0040e490
+/* The port's model of 0x0040e490; encyclopedia.c serves this name in the
+ * matching build (finding 633). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void encyclopedia_config_files_open(BlockFile* cfg, const char* root_path)
 {
     static const int count_slot[4] = { 0, 2, 3, 1 }; /* 0x27c/80/84/88 */
@@ -124,8 +127,11 @@ void encyclopedia_config_files_open(BlockFile* cfg, const char* root_path)
     encyclopedia_value_open(cfg, root_path, "PowerCrystal", &s_ency_crystal);
     encyclopedia_value_open(cfg, root_path, "Ore", &s_ency_ore);
 }
+#endif
 
-// FUNCTION: LEGORR 0x0040e700
+/* The port's model of 0x0040e700; encyclopedia.c serves this name in the
+ * matching build (finding 633). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void terrain_choice_resource_select(const void* record)
 {
     uint32_t kind = 0u, index = 0u;
@@ -148,8 +154,11 @@ void terrain_choice_resource_select(const void* record)
     s_choice_record = (uintptr_t)record;
     ui_text_output_object_release((void* const*)panel_text_slot_peek());
 }
+#endif
 
-// FUNCTION: LEGORR 0x0040e7e0
+/* The port's model of 0x0040e7e0; encyclopedia.c serves this name in the
+ * matching build (finding 633). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void global_flag_bit0_clear(void)
 {
     /* corpus: mov eax,ds:004c7ea8 / and al,0FEh / mov ds:004c7ea8,eax.
@@ -158,19 +167,24 @@ void global_flag_bit0_clear(void)
      * corpus's byte-sized and is MSVC's own narrowing of the mask. */
     s_ui_flag_word = s_ui_flag_word & ~1u;
 }
+#endif
 
-// FUNCTION: LEGORR 0x0040e910
+/* The port's model of 0x0040e910; encyclopedia.c serves this name in the
+ * matching build (finding 633). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void global_value_clear_if_equal(int value)
 {
     if (s_global_value_word == value) {
         s_global_value_word = 0;
     }
 }
+#endif
 
 /* The corpus joins `<root>::Encyclopedia::<name>` through the path builder
  * (FUN_00478f50), reads the record's +8 value token (FUN_004790b0's
  * record+8), and dispatches the file open (FUN_0047f6e0 in "r" mode — the
  * port's AUTO open). NULL answers ride where the corpus strides. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 static void encyclopedia_value_open(BlockFile* cfg, const char* root_path,
                                     const char* name, void** slot)
 {
@@ -181,3 +195,4 @@ static void encyclopedia_value_open(BlockFile* cfg, const char* root_path,
         *slot = resource_open(value, RESOURCE_AUTO);
     }
 }
+#endif

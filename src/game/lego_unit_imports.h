@@ -15,6 +15,23 @@
 
 #include <stdint.h>
 
+/* GAME-025 Loader.c (loader.c, finding 633), two GAME-014 Encyclopedia.c
+ * functions (encyclopedia.c) and Advisor.c's Main_GetStartLevel
+ * (advisor.c). The declarations below keep the port's names, which the
+ * port defines for native callers (loader_port.cpp, resource.cpp,
+ * lego_port.cpp). In the matching build they name the
+ * original functions instead; a #define adds no declaration, so
+ * lego_unit.c's symbol numbering does not move (finding 538). */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+#define loader_initialise_adapter loader_initialise           /* 0044db50 */
+#define loader_profile_entries_release_adapter loader_shutdown /* 0044dd40 */
+#define string_table_entry_set_current loader_display_loading_bar /* 0044dde0 */
+#define global_resource_handle_release loader_display_shutdown /* 0044e0a0 */
+#define main_get_start_level_adapter main_get_start_level     /* 00401c00 */
+#define effects_update_original encyclopedia_update             /* 0040e7f0 */
+#define screen_space_effect_dispatch_original encyclopedia_draw_select_box /* 0040e8d0 */
+#endif
+
 /* GAME-022 Camera (camera_control.c, finding 587). The declarations below
  * keep the port's names, which the port tail (camera_control_port.cpp)
  * defines for native callers. In the matching build they name the unit's

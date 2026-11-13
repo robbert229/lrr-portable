@@ -11530,7 +11530,9 @@ extern "C" int legoobject_gs_object_is_hidden_adapter(void* model)
 /* Building placement (0x004641c0, 0x00409790, 0x00408ec0, 0x00408e50):
  * the port's entries take other arguments. Nothing calls these natively;
  * they place nothing. */
+/* In the matching build selectplace.c serves this name (finding 633). */
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x004641c0 has another contract)
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" int* legoobject_gs_placement_footprint_check_adapter(void* surface, int* blockPos, int* shape,
                                                                unsigned int count, int direction,
                                                                void* map, int waterEntrances)
@@ -11539,6 +11541,7 @@ extern "C" int* legoobject_gs_placement_footprint_check_adapter(void* surface, i
     (void)waterEntrances;
     return NULL;
 }
+#endif
 
 /* ---- group T adapters (GAME-023 part 3, legoobject_unit.c) ---- */
 /* 0x004897d0 is a one-line getter the linker folded with Flic_GetWidth;
