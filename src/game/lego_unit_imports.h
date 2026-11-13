@@ -68,6 +68,19 @@
  * teleporter_link_names.h gives the unit the port's names of the other
  * three Lego.c callees. */
 #define camera_move_pipeline_original teleporter_update
+/* GAME-038 Roof.c (game/roof.c, finding 619). The port's definitions of
+ * these names are in gods98/resource.cpp, the port tail
+ * terrain_overlay_quads_port.cpp and game/lego_port.cpp (the two no-op
+ * adapters), so in the matching build lego_unit.c calls the unit's names.
+ * Every call passes the original's arguments. */
+#define indexed_surface_resource_allocate roof_initialise
+#define animated_texture_replace roof_set_texture
+#define graphics_overlay_resources_release roof_shutdown
+#define lego_roof_block_vertices_set_adapter roof_set_block_roof_vertices
+#define terrain_dirty_quad_normal_emit_pass_original roof_update
+#define graphics_overlay_visibility_set roof_hide
+#define indexed_surface_entry_hide_and_record roof_hide_block
+#define indexed_surface_entries_restore roof_show_hidden_blocks
 #endif
 
 #ifdef __cplusplus

@@ -243,9 +243,7 @@ void scene_visibility_last_call(void** out_object, int* out_flag)
 /* GraphicsOverlayVisibilitySet (FUN_004634b0) — the overlay words
  * DAT_00552180/DAT_0055218c (handle, cache) have no ported owner; they land
  * here as zero-init statics (deviation: corpus strides them blindly). */
-// GLOBAL: LEGORR 0x00552180
 uint32_t s_overlay_word;  /* DAT_00552180 role */
-// GLOBAL: LEGORR 0x0055218c
 uint32_t s_overlay_cache; /* DAT_0055218c role */
 
 void graphics_overlay_word_set(uint32_t handle_word)

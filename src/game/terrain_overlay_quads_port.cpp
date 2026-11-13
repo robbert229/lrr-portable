@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-038 GAME-038: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-038.csv. */
+/* GAME-038 Roof.c's port tail (finding 619): the port's model of the roof
+ * hide stack, the overlay visibility cache and the plane-normal reader,
+ * unannotated (ADR 0006 decision 4). The original-shape unit is roof.c.
+ *
+ * Every build keeps these definitions: the native port calls them. In the
+ * matching build lego_unit_imports.h points Lego.c at roof.c's names
+ * instead, so nothing there calls these. Relocated from the verbatim
+ * terrain_overlay_quads.cpp (body hashes:
+ * docs/coverage/relocations/GAME-038.csv). The port's models of
+ * Roof_Initialise, Roof_SetTexture and Roof_Shutdown are in
+ * gods98/resource.cpp. */
 #include "record.hpp"
 #include "heap.hpp"
 #include "sound.hpp"
@@ -51,7 +59,6 @@
 
 static const void* s_indexed_surface_hidden[INDEXED_SURFACE_ENTRY_LIMIT];
 
-// FUNCTION: LEGORR 0x004634b0
 void graphics_overlay_visibility_set(uint32_t flag)
 {
     if (s_overlay_cache != flag) {
@@ -66,9 +73,8 @@ void graphics_overlay_visibility_set(uint32_t flag)
     }
 }
 
-/* IndexedSurfaceEntryHideAndRecord (FUN_004634f0): compute y*width+x,
+/* IndexedSurfaceEntryHideAndRecord (Roof_HideBlock, 0x004634f0): compute y*width+x,
  * hide the selected surface and save its handle for a later restore. */
-// FUNCTION: LEGORR 0x004634f0
 void indexed_surface_entry_hide_and_record(int x, int y)
 {
     if (s_indexed_surface_width == 0u || s_indexed_surface_entries == NULL
@@ -86,9 +92,8 @@ void indexed_surface_entry_hide_and_record(int x, int y)
     s_indexed_surface_hidden[s_indexed_surface_hidden_count++] = handle;
 }
 
-/* IndexedSurfaceEntriesRestore (FUN_00463540): show each handle saved by
+/* IndexedSurfaceEntriesRestore (Roof_ShowHiddenBlocks, 0x00463540): show each handle saved by
  * the hide pass and reset the temporary list. */
-// FUNCTION: LEGORR 0x00463540
 void indexed_surface_entries_restore(void)
 {
     for (uint32_t i = 0; i < s_indexed_surface_hidden_count; ++i) {
@@ -97,7 +102,6 @@ void indexed_surface_entries_restore(void)
     s_indexed_surface_hidden_count = 0u;
 }
 
-// FUNCTION: LEGORR 0x00463590
 int terrain_cell_surface_normal_get(uint32_t x, uint32_t y, float out[3])
 {
     float vertices[4][3];

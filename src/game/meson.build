@@ -36,7 +36,7 @@ game_sources = [
   'sfx_port.cpp',
   'placement_footprint.cpp',
   'scrollinfo_port.cpp',
-  'terrain_overlay_quads.cpp',
+  'terrain_overlay_quads_port.cpp',
   'map_view_port.cpp',
   'level_id_remap.cpp',
   'pointer_port.cpp',
@@ -129,6 +129,7 @@ game_c_sources = [
   'water.c',
   'teleporter.c',
   'spiderweb.c',
+  'roof.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []
