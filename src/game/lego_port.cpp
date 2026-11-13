@@ -9419,12 +9419,16 @@ extern "C" void lego_noop_load_adapter(void* root, const char* name)
     (void)name;
 }
 
+/* The matching build links GAME-012's Effect load (rock_fall_styles.c)
+ * under this name (rock_fall_styles_link_names.h, finding 589). */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (RockFall_Initialise 0040bfd0; the port's entry takes a style table)
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" void rock_fall_initialise_adapter(struct BlockRec* config,
                                              const char* gameName, void* root)
 {
     (void)config; (void)gameName; (void)root;
 }
+#endif
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Lego_LoadPanels 004345f0, frontend_config::panels_config_entry_apply)
 extern "C" void panels_config_entry_apply_original(struct BlockRec* config, int width,

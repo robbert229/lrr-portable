@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-012 GAME-012: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-012.csv. */
+/* The port tail of GAME-012, the effects unit (finding 589): the port's
+ * rock-fall styles, boulder and smash-path markers, fence beams, explosions
+ * and MiscObjects effects, on its own records and hook tables. It was
+ * relocated verbatim into rock_fall_styles.cpp by tools/relocate_unit.py
+ * (ADR 0006; body hashes in docs/coverage/relocations/GAME-012.csv) and is
+ * now unannotated: the original-shape unit is rock_fall_styles.c.
+ *
+ * Natively these definitions serve every caller. In the matching build
+ * rock_fall_styles.c defines 15 of these names itself
+ * (rock_fall_styles_link_names.h), so their definitions here are compiled
+ * out under _MSC_VER < 1200. */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +32,7 @@
 #include "gods98/resource_for_rock_fall_styles.hpp"
 #include "crt/crt_for_rock_fall_styles.hpp"
 
-// GLOBAL: LEGORR 0x004c79a4
+/* The port's copy of effectGlobs.rockFallStyleIndex (004c79a4, rock_fall_styles.c). */
 uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
 
 static SceneResourceSlotModel s_scene_resource_slots[10];
@@ -44,24 +52,27 @@ static Resource* resource_load_complete(const char* path);
 
 namespace unported_ledger_stubs {
 // SetTimeoutTo10000
-// FUNCTION: LEGORR 0x0040bdc0
+/* Port model of 0x0040bdc0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 extern "C" void ledger_stub_0040bdc0_SetTimeoutTo10000(void)
 {
     uint32_t* ignored_output;
     (void)scene_resource_availability_sweep(10000.0f, &ignored_output,
                                              &ignored_output);
 }
+#endif
 } // namespace unported_ledger_stubs
 
 /* SceneMarkerCreateAtObjectPosition (FUN_0040bde0). */
-// FUNCTION: LEGORR 0x0040BDE0
+/* Port model of 0x0040bde0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 void scene_marker_create_at_object_position(void* object)
 {
     scene_marker_create_at_position_or_object(object, NULL);
 }
 /* SceneLightCreateAtPosition (FUN_0040be10): clone the scene-selected light
  * template into the first free four-entry pool slot and place it. */
-// FUNCTION: LEGORR 0x0040BE10
+/* Port model of 0x0040be10 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 void scene_light_create_at_position(const float position[3])
 {
     int slot;
@@ -87,10 +98,11 @@ void scene_light_create_at_position(const float position[3])
         }
     }
 }
+#endif
 
 /* SceneMarkerCreateAtPositionOrObject (FUN_0040beb0): use explicit
  * coordinates for a null object, otherwise ask the object-position seam. */
-// FUNCTION: LEGORR 0x0040BEB0
+/* Port model of 0x0040beb0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 void scene_marker_create_at_position_or_object(void* object,
                                                const float position[3])
 {
@@ -131,7 +143,8 @@ void scene_marker_create_at_position_or_object(void* object,
 /* RockFallStyleNameLookup (FUN_0040bf70): case-insensitive name scan over
  * the installed RockFallStyles names. The port caps the owner table and
  * guards null input/output instead of following the DAT table blindly. */
-// FUNCTION: LEGORR 0x0040BF70
+/* Port model of 0x0040bf70 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 int rock_fall_style_name_lookup(const char* name, uint32_t* index)
 {
     uint32_t i;
@@ -147,18 +160,21 @@ int rock_fall_style_name_lookup(const char* name, uint32_t* index)
     }
     return 0;
 }
+#endif
 
-// FUNCTION: LEGORR 0x0040bfc0
+/* Port model of 0x0040bfc0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 void rockfall_style_table_base_set(uint32_t v)
 {
     s_rockfall_base = v;
 }
+#endif
 
 /* RockFallStylesConfigLoad (FUN_0040bfd0): owns a bounded native copy of
  * each configured name and registers comma-delimited scene resource tokens.
  * The callback stands in for SceneActSlotLoadAndRegister, whose original
  * DirectDraw scene implementation has not been ported. */
-// FUNCTION: LEGORR 0x0040BFD0
+/* Port model of 0x0040bfd0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 void rock_fall_styles_config_load(const RockFallStyleConfigEntry* entries,
                                  uint32_t count,
                                  RockFallStyleRegisterHook register_hook,
@@ -223,7 +239,7 @@ void rock_fall_styles_config_load(const RockFallStyleConfigEntry* entries,
 /* SceneActSlotLoadAndRegister (FUN_0040c0d0): load an LWS typed resource,
  * retry the corpus's ANIM type fallback, then lock its parent and four
  * children into the configured style/group record. */
-// FUNCTION: LEGORR 0x0040C0D0
+/* Port model of 0x0040c0d0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 int scene_act_slot_load_and_register(void* scene, const char* path,
                                      int style, int group,
                                      const char* name)
@@ -268,7 +284,8 @@ int scene_act_slot_load_and_register(void* scene, const char* path,
 }
 /* IndexedResourceHandleSetCreate (FUN_0040c1b0): create and lock a parent
  * resource, then populate its fixed 30-child transient group. */
-// FUNCTION: LEGORR 0x0040C1B0
+/* Port model of 0x0040c1b0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 int indexed_resource_handle_set_create(void* scene, const char* path,
                                        int group)
 {
@@ -302,11 +319,13 @@ int indexed_resource_handle_set_create(void* scene, const char* path,
     }
     return 1;
 }
+#endif
 
 /* SceneSlotPoseScaleRegister (FUN_0040c230): claim the first vacant pose
  * slot in a style group, initialize its scene transform through the hook,
  * and retain the paired values used by ReadCellTablePair. */
-// FUNCTION: LEGORR 0x0040C230
+/* Port model of 0x0040c230 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 int scene_slot_pose_scale_register(int group, uint32_t first,
                                    uint32_t second, float x, float y,
                                    float z, float heading, float pitch)
@@ -339,10 +358,12 @@ int scene_slot_pose_scale_register(int group, uint32_t first,
     }
     return 0;
 }
+#endif
 
 /* TransientEffectRenderSlotConfigure (FUN_0040c2f0): configure the first
  * available child in one of the two 30-slot transient groups. */
-// FUNCTION: LEGORR 0x0040C2F0
+/* Port model of 0x0040c2f0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 int transient_effect_render_slot_configure(int group, float x, float y,
                                            float size, float heading,
                                            float dx, float dy)
@@ -384,15 +405,16 @@ int transient_effect_render_slot_configure(int group, float x, float y,
     }
     return 0;
 }
+#endif
 /* SceneLightPoolExpireSweep (FUN_0040c4d0). */
-// FUNCTION: LEGORR 0x0040C4D0
+/* Port model of 0x0040c4d0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 void scene_light_pool_primary_expire(float delta)
 {
     scene_light_pool_expire(s_scene_light_primary, delta);
 }
 
 /* SceneLightSecondaryPoolExpireSweep (FUN_0040c520). */
-// FUNCTION: LEGORR 0x0040C520
+/* Port model of 0x0040c520 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 void scene_light_pool_secondary_expire(float delta)
 {
     scene_light_pool_expire(s_scene_light_secondary, delta);
@@ -400,7 +422,8 @@ void scene_light_pool_secondary_expire(float delta)
 
 /* ReadCellTablePair (FUN_0040c570): reads the two words in the selected
  * style's group slot. Invalid native indices return zero values. */
-// FUNCTION: LEGORR 0x0040C570
+/* Port model of 0x0040c570 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 void scene_cell_table_pair_read(int group, int slot, uint32_t* first,
                                 uint32_t* second)
 {
@@ -419,11 +442,13 @@ void scene_cell_table_pair_read(int group, int slot, uint32_t* first,
         *second = b;
     }
 }
+#endif
 
 /* ResourceSlotRegisterName (FUN_0040c5b0): find the matching handle pair,
  * claim its next available registration bit, and delegate name formatting
  * and application through the engine-facing hooks. */
-// FUNCTION: LEGORR 0x0040C5B0
+/* Port model of 0x0040c5b0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 int scene_resource_slot_register_name(uint32_t handle_key,
                                       uint32_t secondary_key)
 {
@@ -464,9 +489,11 @@ int scene_resource_slot_register_name(uint32_t handle_key,
     }
     return 0;
 }
+#endif
 /* SceneResourceSingletonPoolRelease (FUN_0040c690): release and clear the
  * four primary singleton handles. */
-// FUNCTION: LEGORR 0x0040C690
+/* Port model of 0x0040c690 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 void scene_resource_singleton_pool_release(void)
 {
     for (int i = 0; i < 4; ++i) {
@@ -479,10 +506,12 @@ void scene_resource_singleton_pool_release(void)
         }
     }
 }
+#endif
 
 /* RockFallStyleSceneResourcesRelease (FUN_0040c6c0): release the four
  * resource handles in each of three groups for the selected style. */
-// FUNCTION: LEGORR 0x0040C6C0
+/* Port model of 0x0040c6c0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 void rock_fall_style_scene_resources_release(void)
 {
     int group;
@@ -504,9 +533,10 @@ void rock_fall_style_scene_resources_release(void)
         }
     }
 }
+#endif
 /* GlobalResourceHandleLoadAndEnable (FUN_0040c720): load and retain the
  * resource, with enable represented by the stored non-null global handle. */
-// FUNCTION: LEGORR 0x0040C720
+/* Port model of 0x0040c720 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 int global_resource_handle_load_and_enable(const char* path)
 {
     Resource* resource = resource_load_complete(path);
@@ -522,7 +552,7 @@ int global_resource_handle_load_and_enable(const char* path)
 /* TerrainPointObjectCreate (FUN_0040c750): resolve the point, place it one
  * scene unit below the terrain surface, and retain it in the four-object
  * expiry pool. */
-// FUNCTION: LEGORR 0x0040C750
+/* Port model of 0x0040c750 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 void terrain_point_object_create(void* object, const float* xy)
 {
     float position[3];
@@ -565,7 +595,7 @@ void terrain_point_object_create(void* object, const float* xy)
 
 /* TerrainPointObjectsRemoveMatching (FUN_0040c830): advance each live
  * point object and remove completed objects with swap-with-last compaction. */
-// FUNCTION: LEGORR 0x0040C830
+/* Port model of 0x0040c830 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 void terrain_point_objects_remove_matching(float delta)
 {
     uint32_t index = 0u;
@@ -591,7 +621,7 @@ void terrain_point_objects_remove_matching(float delta)
 }
 /* GetResourceSlotAddressByIndex (FUN_0040c8a0): return the selected slot
  * record from the ten-entry global band; invalid indices answer NULL. */
-// FUNCTION: LEGORR 0x0040C8A0
+/* Port model of 0x0040c8a0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 SceneResourceSlotModel* resource_slot_address_by_index(int index)
 {
     if (index < 0 || index >= 10) {
@@ -602,7 +632,7 @@ SceneResourceSlotModel* resource_slot_address_by_index(int index)
 
 /* ResourceHandleLoadWithFallback (FUN_0040c920): load the primary resource,
  * retry the fallback when absent, and mark the selected port slot enabled. */
-// FUNCTION: LEGORR 0x0040C920
+/* Port model of 0x0040c920 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 int resource_handle_load_with_fallback(int index, const char* primary,
                                        const char* fallback)
 {
@@ -628,7 +658,7 @@ int resource_handle_load_with_fallback(int index, const char* primary,
 
 /* MiscObjectsEffectSlotBind (FUN_0040c990): bind the fixed ten misc-effect
  * resource slots using primary/fallback resource descriptors. */
-// FUNCTION: LEGORR 0x0040C990
+/* Port model of 0x0040c990 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 int misc_objects_effect_slots_bind(const MiscEffectResourceEntry* entries,
                                    uint32_t count)
 {
@@ -651,7 +681,7 @@ int misc_objects_effect_slots_bind(const MiscEffectResourceEntry* entries,
 /* SceneTimeoutEntrySweep (FUN_0040cb70): advance each handle and remove
  * completed entries by swapping in the last live handle. The bird-scarer
  * slot periodically invokes the original camera/effect path through a hook. */
-// FUNCTION: LEGORR 0x0040CB70
+/* Port model of 0x0040cb70 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 void scene_timeout_entry_sweep(SceneTimeoutEntrySet* set, float delta)
 {
     uint32_t index = 0u;
@@ -699,7 +729,7 @@ void scene_timeout_entry_sweep(SceneTimeoutEntrySet* set, float delta)
 
 /* TerrainMarkerSetsClear (FUN_0040cc40): sweep all ten marker sets in table
  * order using the same timeout contract. */
-// FUNCTION: LEGORR 0x0040CC40
+/* Port model of 0x0040cc40 (GAME-012); the original-shape function is in rock_fall_styles.c. */
 void terrain_marker_sets_clear(float delta)
 {
     for (int i = 0; i < 10; ++i) {
@@ -709,7 +739,8 @@ void terrain_marker_sets_clear(float delta)
 
 /* LavaEffectSelectAndPlace (FUN_0040cce0): clone a configured effect resource
  * into its per-slot ten-instance pool and place it at the requested pose. */
-// FUNCTION: LEGORR 0x0040CCE0
+/* Port model of 0x0040cce0 (GAME-012); the original-shape function is in rock_fall_styles.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 int lava_effect_select_and_place(int index, const float* position,
                                  const float* rotation)
 {
@@ -763,6 +794,7 @@ int lava_effect_select_and_place(int index, const float* position,
     ++slot->count;
     return 1;
 }
+#endif
 static void scene_light_pool_expire(void** pool, float delta)
 {
     for (int i = 0; i < 4; ++i) {
@@ -799,18 +831,21 @@ static Resource* resource_load_complete(const char* path)
  * original FUN_0040c720 takes the root container and the path; the port's
  * entry above takes the path only. */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (global_resource_handle_load_and_enable 0040c720)
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 extern "C" int global_resource_handle_load_and_enable_original(void* root,
                                                                const char* path)
 {
     (void)root;
     return global_resource_handle_load_and_enable(path);
 }
+#endif
 
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
  * original FUN_0040c990 reads the MiscObjects entries from the config
  * itself; the port's entry above takes them parsed (lego.cpp's loader
  * does the parsing). Nothing calls this natively, so it does nothing. */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (misc_objects_effect_slots_bind 0040c990)
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* rock_fall_styles_link_names.h */
 extern "C" void misc_objects_effect_slots_bind_original(BlockFile* config,
                                                         const char* gameName,
                                                         void* root)
@@ -819,3 +854,4 @@ extern "C" void misc_objects_effect_slots_bind_original(BlockFile* config,
     (void)gameName;
     (void)root;
 }
+#endif

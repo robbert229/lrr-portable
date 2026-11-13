@@ -302,8 +302,11 @@ src/game/reward.c
 src/game/reward.h
 src/game/reward_maths.h
 src/game/reward_port.cpp
-src/game/rock_fall_styles.cpp
+src/game/rock_fall_styles.c
 src/game/rock_fall_styles.h
+src/game/rock_fall_styles_imports.h
+src/game/rock_fall_styles_link_names.h
+src/game/rock_fall_styles_port.cpp
 src/game/savegame.cpp
 src/game/savegame.h
 src/game/savegame.hpp
