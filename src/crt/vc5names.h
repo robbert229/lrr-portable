@@ -49,6 +49,9 @@ void* ledger_stub_0048dc80_GrowHeapArray(void* allocation,
 #define realloc(ptr, size) \
     unported_ledger_stubs::ledger_stub_0048dc80_GrowHeapArray( \
         (ptr), (unsigned int)(size))
+/* __strlwr (FUN_0049dc10): the port's model in crt.cpp (crt.hpp). */
+char* crt_string_to_lower(char* text);
+#define _strlwr crt_string_to_lower
 #endif
 #define _strcmpi strcasecmp_lite
 #define _strnicmp(a, b, count) strnicmp_lite((a), (b), (int)(count))

@@ -11496,13 +11496,24 @@ extern "C" void legoobject_gi_cell_path_effects_apply_adapter(void* obj)
 
 /* ---- group S adapters (GAME-023 part 3, legoobject_unit.c) ---- */
 void entity_flag_80_set_corpus(void* record, int set); /* container_unit.cpp, 0x00473b20 */
+/* container.c (Container.c, finding 624) serves these port names in the
+ * matching build (container_link_names.h): every build but MSVC 5.0's
+ * compiles the port's definitions. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_CONTAINER_PORT_NAMES 0
+#else
+#define LRR_CONTAINER_PORT_NAMES 1
+#endif
+
 /* The port's entries at these addresses have C++ linkage; these give the
  * unit C-linkage names. Nothing calls them natively. */
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00473b20 has C++ linkage)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves legoobject_gs_container_hidden_set_adapter in the matching build */
 extern "C" void legoobject_gs_container_hidden_set_adapter(void* cont, int hide)
 {
     entity_flag_80_set_corpus(cont, hide);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00473ba0 has C++ linkage)
 extern "C" int legoobject_gs_container_is_hidden_adapter(void* cont)
@@ -11541,8 +11552,10 @@ extern "C" int legoobject_gt_flock_has_position_adapter(void* flock)
 }
 
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x004756b0 has C++ linkage)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves legoobject_gt_container_matrix_set_adapter in the matching build */
 extern "C" void legoobject_gt_container_matrix_set_adapter(void* cont, uint32_t mode,
                                                            const float* matrix)
 {
     scene_object_transform_matrix_set(cont, mode, matrix);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */

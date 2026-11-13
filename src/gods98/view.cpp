@@ -31,6 +31,10 @@
 #include "view_for_lego.hpp"
 #include "view_for_images_unit.hpp"
 #include "view_for_legoobject.hpp"
+/* Main.c's fog method word (00505920) has C linkage, so that
+ * container.c, compiled as C, reads it (finding 624). The frozen
+ * header's later declaration keeps this linkage. */
+extern "C" uint32_t s_scene_fog_mode;
 #include "view_for_container_unit.hpp"
 #include "view_for_mesh_unit.hpp"
 #if defined(LEGORRR_BACKEND_MINIWIN)
@@ -440,9 +444,19 @@ void ddiscene_light_create_hooks_set(const DDiSceneLightCreateHooks* hooks)
     }
 }
 
+/* container.c (Container.c, finding 624) serves these port names in the
+ * matching build (container_link_names.h): every build but MSVC 5.0's
+ * compiles the port's definitions. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_CONTAINER_PORT_NAMES 0
+#else
+#define LRR_CONTAINER_PORT_NAMES 1
+#endif
+
 /* DDiSceneLightCreate (FUN_004734f0): create the scene wrapper as kind 5,
  * ask the renderer to create/configure the light, and attach its animation
  * hook only after the renderer accepted the light. */
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_light_create in the matching build */
 void* ddiscene_light_create(void* owner, uint32_t value_a,
                             uint32_t value_b, uint32_t value_c,
                             uint32_t value_d)
@@ -465,6 +479,7 @@ void* ddiscene_light_create(void* owner, uint32_t value_a,
     }
     return record;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 void ddiscene_kind_mode_setup_hooks_set(
     const DDiSceneKindModeSetupHooks* hooks)
@@ -1776,8 +1791,8 @@ void camera_zoom_step_context_set(void* context)
 
 /* ---- scene-root hook band (2026-10-24) ----------------------------------- *
  * SceneRootObjectGet / DDiSceneObjectArgumentsNormalize — see view.hpp. The
- * corpus's root global (DAT_0076add4) belongs to the application scene arena. */
-// GLOBAL: LEGORR 0x0076add4
+ * corpus's root global (DAT_0076add4) is containerGlobs.rootContainer, which
+ * container.c defines (finding 624); this is the port's word. */
 void* s_scene_root;
 
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
@@ -2011,7 +2026,7 @@ int scene_runtime_light_parameter_set(void* light, unsigned int offset,
     return ((LightParameterFn)vtable[offset / 4])(object, value) == 0;
 }
 #endif
-// GLOBAL: LEGORR 0x0076cd8c
+/* The port's word for containerGlobs.fogColour (0076cd8c; finding 624). */
 uint32_t s_scene_fog_color;
 // GLOBAL: LEGORR 0x00505920
 uint32_t s_scene_fog_mode;

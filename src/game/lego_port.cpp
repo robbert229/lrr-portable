@@ -9121,13 +9121,25 @@ extern "C" void renderer_fog_color_set_original(float r, float g, float b)
     renderer_fog_color_set(r, g, b);
 }
 
+/* container.c (Container.c, finding 624) serves these port names in the
+ * matching build (container_link_names.h): every build but MSVC 5.0's
+ * compiles the port's definitions. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_CONTAINER_PORT_NAMES 0
+#else
+#define LRR_CONTAINER_PORT_NAMES 1
+#endif
+
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (renderer_fog_mode_set, 0x00473e70)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves renderer_fog_mode_set_original in the matching build */
 extern "C" void renderer_fog_mode_set_original(unsigned int mode)
 {
     renderer_fog_mode_set(mode);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (renderer_fog_parameters_set, 0x00473ea0)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves renderer_fog_parameters_set_original in the matching build */
 extern "C" void renderer_fog_parameters_set_original(float start, float end,
                                                      float density)
 {
@@ -9135,6 +9147,7 @@ extern "C" void renderer_fog_parameters_set_original(float start, float end,
                                 media_float_bits(end),
                                 media_float_bits(density));
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* ---- GAME-021 part 1 adapters, group F ---- */
 
@@ -9287,16 +9300,20 @@ extern "C" int lego_quit_poll_adapter(int a, int b, int* quit)
 }
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (renderer_fog_enable_and_color_apply, 0x00473dc0)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves lego_fog_enable_adapter in the matching build */
 extern "C" void lego_fog_enable_adapter(int on)
 {
     renderer_fog_enable_and_color_apply(on);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (renderer_fog_color_set, 0x00473e10)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves lego_fog_colour_set_adapter in the matching build */
 extern "C" void lego_fog_colour_set_adapter(float r, float g, float b)
 {
     renderer_fog_color_set(r, g, b);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (light_interface_call_slot_40, 0x00473460)
 extern "C" void lego_light_penumbra_set_adapter(void* light, float value)
@@ -9323,11 +9340,13 @@ extern "C" void lego_light_umbra_set_adapter(void* light, float value)
 #include "gods98/images.h" /* Area2F; not lego_unit_imports.h, whose Win32 Sound3D declaration clashes with simtick.hpp here */
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (Container_Initialise 00472710, no port entry)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves container_initialise_original in the matching build */
 extern "C" void* container_initialise_original(const char* gameName)
 {
     (void)gameName;
     return NULL;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (LegoObject_TriggerFrameCallback 0043f130, no port entry)
 extern "C" void lego_object_trigger_frame_callback_adapter(void* cont, void* data)

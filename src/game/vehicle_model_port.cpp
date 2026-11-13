@@ -522,12 +522,23 @@ extern "C" void scene_record_indexed_entries_rebuild_original(
 /* Original-ABI adapters for vehicle_model.c (ADR 0005 step 6). Natively
  * nothing calls the unit, so these never run there. */
 
+/* container.c (Container.c, finding 624) serves these port names in the
+ * matching build (container_link_names.h): every build but MSVC 5.0's
+ * compiles the port's definitions. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_CONTAINER_PORT_NAMES 0
+#else
+#define LRR_CONTAINER_PORT_NAMES 1
+#endif
+
 /* Container_EnableSoundTriggers (00473ec0). The port's entry applies a
  * value through a caller-supplied hook table, which the original's two
  * arguments do not carry; with no table it does nothing, as here. */
 // PORT-ONLY: original-ABI adapter for GAME-048 vehicle_model.c (00473ec0 takes a hook table in the port)
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves vehicle_container_enable_sound_triggers_adapter in the matching build */
 extern "C" void vehicle_container_enable_sound_triggers_adapter(void* cont,
                                                                 int on)
 {
     render_object_state_apply_to_entries(cont, (uint32_t)on, NULL);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */

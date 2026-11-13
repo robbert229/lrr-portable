@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-002 G98-002: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-002.csv. */
+/* The port's model of G98-002, Container.c (finding 624): the port tail.
+ *
+ * gods98/container.c rebuilds the unit in the original's shape. This file
+ * is what tools/relocate_unit.py relocated from the port (ADR 0006; body
+ * hashes: docs/coverage/relocations/G98-002.csv), moved to the port tail
+ * unannotated. Native code keeps calling it. In the matching build
+ * container.c serves the port's C names that container_link_names.h lists,
+ * so this file compiles its own definitions of them out there
+ * (LRR_CONTAINER_PORT_NAMES); its other definitions stay, unreferenced. */
 #include <math.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -54,6 +60,10 @@ extern "C" {
 #include "surface_for_images_unit.hpp"
 #include "images.h"
 #include "image_adapters.h"
+/* Main.c's fog method word (00505920) has C linkage, so that
+ * container.c, compiled as C, reads it (finding 624). The frozen
+ * header's later declaration keeps this linkage. */
+extern "C" uint32_t s_scene_fog_mode;
 #include "view_for_container_unit.hpp"
 #include "crt/crt_for_container_unit.hpp"
 #include "scene_pool_for_container_unit.hpp"
@@ -293,7 +303,16 @@ static void* scene_property_value_record_get(void* property);
 static int resource_name_compare_bytes(const char* left, const char* right, int case_sensitive);
 
 namespace lego {
-// FUNCTION: LEGORR 0x00472800
+/* container.c (Container.c, finding 624) serves these port names in the
+ * matching build (container_link_names.h): every build but MSVC 5.0's
+ * compiles the port's definitions. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_CONTAINER_PORT_NAMES 0
+#else
+#define LRR_CONTAINER_PORT_NAMES 1
+#endif
+
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_object_pool_shutdown in the matching build */
 void ddiscene_object_pool_shutdown(void)
 {
     unsigned char bank = 0;
@@ -340,45 +359,51 @@ void ddiscene_object_pool_shutdown(void)
     s_auxiliary_count = 0;
     s_shared_directory = 0;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 } // namespace lego
 
-// FUNCTION: LEGORR 0x004728c0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves shared_texture_directory_set in the matching build */
 void shared_texture_directory_set(const char* path)
 {
     s_shared_texture_dir = string_duplicate(path);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x004728e0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves renderer_flag_bit6_set in the matching build */
 void renderer_flag_bit6_set(int value)
 {
     s_renderer_flag_word = (value != 0) ? (s_renderer_flag_word | 0x40u)
                                         : (s_renderer_flag_word & ~0x40u);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00472900
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_end_hook_register in the matching build */
 void scene_end_hook_register(void* hook, void* value)
 {
     s_scene_end_hook = hook;
     s_scene_end_value = value;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00472920
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_sample_hook_register in the matching build */
 void scene_sample_hook_register(void* hook, void* value)
 {
     s_scene_sample_hook = hook;
     s_scene_sample_value = value;
     s_renderer_flag_word |= 0x40u;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* SceneRootObjectGet (FUN_00472940) — the corpus's root-object read. */
-// FUNCTION: LEGORR 0x00472940
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_root_object_get in the matching build */
 void* scene_root_object_get(void)
 {
     return s_scene_root;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 namespace lego {
-// FUNCTION: LEGORR 0x00472950
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_object_allocate in the matching build */
 void* ddiscene_object_allocate(const DDiSceneObjectDescriptor* descriptor)
 {
     DDiSceneObjectRecord* record;
@@ -424,20 +449,21 @@ void* ddiscene_object_allocate(const DDiSceneObjectDescriptor* descriptor)
     }
     return record;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 } // namespace lego
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00472a40
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ledger_stub_00472a40_DDiSceneObjectDestroy in the matching build */
 extern "C" void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object)
 {
     ddiscene_object_destroy_with_mode(scene_object, 0);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 } // namespace unported_ledger_stubs
 
 /* DDiSceneObjectDestroy (FUN_00472a50): use the renderer's full destructor
  * when installed; the local fallback handles the recovered state and owned
  * payload releases that do not need renderer traversal. */
-// FUNCTION: LEGORR 0x00472a50
 void ddiscene_object_destroy_with_mode(void* scene_object, int mode)
 {
     uint32_t kind;
@@ -504,7 +530,6 @@ void ddiscene_object_destroy_with_mode(void* scene_object, int mode)
     s_ddiscene_destroyed_list = scene_object;
 }
 
-// FUNCTION: LEGORR 0x00472cd0
 EntityAssembly* entity_assembly_parse(BlockFile* bf, const char* root,
                                      uint32_t feature)
 {
@@ -593,18 +618,19 @@ EntityAssembly* entity_assembly_parse(BlockFile* bf, const char* root,
 namespace unported_ledger_stubs {
 // SceneActionNamePresent. C linkage: Vehicle.c (vehicle_model.c) calls it
 // as Container_IsCurrentActivity (finding 617).
-// FUNCTION: LEGORR 0x00473340
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ledger_stub_00473340_SceneActionNamePresent in the matching build */
 extern "C" uint32_t ledger_stub_00473340_SceneActionNamePresent(
     void* scene_object, void* action_name)
 {
     return scene_action_name_present(scene_object, action_name);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 } // namespace unported_ledger_stubs
 
 /* SceneActionNameSet @ 0x473370. Action lookup is provided by the renderer's
  * action-record adapters; action-channel application and the scene-owned
  * name/flag/callback writes use the retail record layout directly. */
-// FUNCTION: LEGORR 0x00473370
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_action_name_set in the matching build */
 uint32_t scene_action_name_set(void* scene_object,
                                const char* action_name)
 {
@@ -663,26 +689,30 @@ uint32_t scene_action_name_set(void* scene_object,
     }
     return result;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00473460
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves light_interface_call_slot_40 in the matching build */
 int light_interface_call_slot_40(void* record, uint32_t value)
 {
     return scene_light_interface(record)->slot_40(value) == 0;
 }
-// FUNCTION: LEGORR 0x00473480
+#endif /* LRR_CONTAINER_PORT_NAMES */
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves light_interface_call_slot_3c in the matching build */
 int light_interface_call_slot_3c(void* record, uint32_t value)
 {
     return scene_light_interface(record)->slot_3c(value) == 0;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* Light interface forwarding leaves (Finding 430). The reference treats
  * zero from each vtable call as success. */
-// FUNCTION: LEGORR 0x004734a0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves light_interface_call_slot_38 in the matching build */
 int light_interface_call_slot_38(void* record, uint32_t value)
 {
     return scene_light_interface(record)->slot_38(value) == 0;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x004734c0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves advisor_companion_transform_apply in the matching build */
 void advisor_companion_transform_apply(void* unused, void** object_reference)
 {
     void* object;
@@ -700,10 +730,10 @@ void advisor_companion_transform_apply(void* unused, void** object_reference)
                               &object_reference);
     }
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 namespace unported_ledger_stubs {
 // DDiSceneLightCreate
-// FUNCTION: LEGORR 0x004734f0
 void* ledger_stub_004734f0_DDiSceneLightCreate(
     void* owner, uint32_t value_a, uint32_t value_b,
     uint32_t value_c, uint32_t value_d)
@@ -712,25 +742,25 @@ void* ledger_stub_004734f0_DDiSceneLightCreate(
 }
 
 // DDiSceneObjectKindModeSetup
-// FUNCTION: LEGORR 0x00473560
 void* ledger_stub_00473560_DDiSceneObjectKindModeSetup(void* owner, int mode)
 {
     return ddiscene_object_kind_mode_setup(owner, mode);
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00473680
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_object_wrapped_pointer_get in the matching build */
 uint32_t scene_object_wrapped_pointer_get(const void* wrapped)
 {
     uint32_t value;
     __builtin_memcpy(&value, wrapped, sizeof(value));
     return value;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00473690
 /* EntityVisualResourceLoad (FUN_00473690): resolve the resource key, reuse
  * an existing cache entry where available, otherwise create one, then run
  * common preparation and the kind-four act-frame build before attachment. */
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves entity_visual_resource_load in the matching build */
 void* entity_visual_resource_load(void* scene_object)
 {
     EntityVisualResourceLoadHooks* hooks =
@@ -755,9 +785,9 @@ void* entity_visual_resource_load(void* scene_object)
         hooks->resource_attach(scene_object, resource, hooks->context);
     return resource;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* EntityFlag80Set (FUN_00473b20) — see record.hpp. */
-// FUNCTION: LEGORR 0x00473b20
 void entity_flag_80_set_corpus(void* record, int set)
 {
     uint32_t* word = (uint32_t*)((char*)record + 0x14);
@@ -773,7 +803,7 @@ void entity_flag_80_set_corpus(void* record, int set)
  * on the transition into or out of lock mode, then toggle flag bit 3. The
  * channel slots use the corpus offsets; rec_ptr preserves this port's
  * native-width pointer-slot convention. */
-// FUNCTION: LEGORR 0x00473B40
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_render_lock_toggle in the matching build */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void scene_render_lock_toggle(void* scene_object,
                                                 int enabled)
@@ -840,9 +870,10 @@ void scene_render_lock_toggle(void* scene_object, int enabled)
     }
 }
 #endif
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* The mapped SceneObjectFlagBit3Get body follows the corpus's unchecked
  * +0x14 load; animation_object_visibility_get retains its null-safe path. */
-// FUNCTION: LEGORR 0x00473ba0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_object_flag_bit3_get_target in the matching build */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t scene_object_flag_bit3_get_target(
     const void* scene_object)
@@ -863,12 +894,13 @@ uint32_t scene_object_flag_bit3_get_target(const void* scene_object)
            >> 3 & 1u;
 }
 #endif
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* ResourceNameRegisterOrQuery (FUN_00473bc0) builds the seven-word callback
  * record, walks the interface root, and resolves the selected object through
  * SceneObjectOwnerLinkEnsure. The portable ResourceTreeNode helper below is
  * kept for host-side callers; this is the retail pointer-to-root ABI. */
-// FUNCTION: LEGORR 0x00473bc0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves resource_name_register_or_query_target in the matching build */
 void* resource_name_register_or_query_target(
     void** root, const char* name, int mode,
     uint32_t* match_count_or_index)
@@ -910,8 +942,9 @@ void* resource_name_register_or_query_target(
     }
     return NULL;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00473c60
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves xf_texture_name_format in the matching build */
 const char* xf_texture_name_format(void* texture_record,
                                    const char* name_base,
                                    const int* frame_index)
@@ -1013,8 +1046,9 @@ const char* xf_texture_name_format(void* texture_record,
     output[sizeof(output) - 1u] = '\0';
     return output;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00473da0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_object_owner_set in the matching build */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void scene_object_owner_set(void* scene_object,
                                               uint32_t owner)
@@ -1035,7 +1069,8 @@ void scene_object_owner_set(void* scene_object, uint32_t owner)
     __builtin_memcpy((char*)scene_object + 0x20, &owner, sizeof(owner));
 }
 #endif
-// FUNCTION: LEGORR 0x00473db0
+#endif /* LRR_CONTAINER_PORT_NAMES */
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_object_owner_get in the matching build */
 uint32_t scene_object_owner_get(const void* scene_object)
 {
     uint32_t owner;
@@ -1043,8 +1078,8 @@ uint32_t scene_object_owner_get(const void* scene_object)
                      sizeof(owner));
     return owner;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00473dc0
 void renderer_fog_enable_and_color_apply(int enabled)
 {
     SceneRootInterface* const scene =
@@ -1053,7 +1088,6 @@ void renderer_fog_enable_and_color_apply(int enabled)
     scene->fog_color_enable(enabled != 0 ? s_scene_fog_color : 0u);
 }
 
-// FUNCTION: LEGORR 0x00473e10
 void renderer_fog_color_set(float red, float green, float blue)
 {
     (void)green; /* reference code converts the first argument twice */
@@ -1067,7 +1101,6 @@ void renderer_fog_color_set(float red, float green, float blue)
     s_scene_fog_color = packed;
     scene->fog_color_set(packed);
 }
-// FUNCTION: LEGORR 0x00473e70
 void renderer_fog_mode_set(unsigned int mode)
 {
     SceneRootInterface* const scene =
@@ -1076,7 +1109,6 @@ void renderer_fog_mode_set(unsigned int mode)
     scene->fog_render_mode_set(s_scene_fog_mode);
 }
 
-// FUNCTION: LEGORR 0x00473ea0
 void renderer_fog_parameters_set(unsigned int start, unsigned int end,
                                  unsigned int density)
 {
@@ -1088,7 +1120,6 @@ void renderer_fog_parameters_set(unsigned int start, unsigned int end,
 /* RenderObjectStateApplyToEntries (FUN_00473ec0): state kind 4 snapshots
  * the child set and applies each child callback; kind 1 applies the surface
  * property to each layer in order. */
-// FUNCTION: LEGORR 0x00473ec0
 void render_object_state_apply_to_entries(void* object, uint32_t value,
                                           const RenderObjectStateOps* ops)
 {
@@ -1120,7 +1151,6 @@ void render_object_state_apply_to_entries(void* object, uint32_t value,
     }
 }
 
-// FUNCTION: LEGORR 0x00474410
 int parse_indexed_surface_name(const char* path, uint32_t* index_out)
 {
     const char* component;
@@ -1150,7 +1180,6 @@ int parse_indexed_surface_name(const char* path, uint32_t* index_out)
  * configured database and its COM object tree are renderer-owned, so the
  * hook handles that route. Mode one can use the portable BMP decoder and its
  * release-tracked host record. */
-// FUNCTION: LEGORR 0x004744f0
 void* texture_surface_create(const char* name, uint32_t mode,
                              uint32_t* value_out, uint32_t mode_data)
 {
@@ -1169,7 +1198,6 @@ void* texture_surface_create(const char* name, uint32_t mode,
  * Release method reports that its count reached zero. This record is not a
  * TextureSurface: that port type owns CPU pixels and has a separate cache
  * reference policy above. */
-// FUNCTION: LEGORR 0x00474710
 void texture_release_record(TextureReleaseRecord* record)
 {
     void* interface_object;
@@ -1208,7 +1236,7 @@ void texture_release_record(TextureReleaseRecord* record)
 }
 
 namespace lego {
-// FUNCTION: LEGORR 0x00474760
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves interface_array_forward_sync in the matching build */
 void interface_array_forward_sync(void* owner_link, void* source_record,
                                   void* state_value)
 {
@@ -1337,11 +1365,12 @@ void interface_array_forward_sync(void* owner_link, void* source_record,
             memcpy(record + 0x14, &flags, sizeof(flags));
     }
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 } // namespace lego
 
 /* MeshRecordAllocateOrAppend (FUN_004748f0): use the in-memory mesh pool
  * when present; otherwise route through the legacy Direct3DRM record path. */
-// FUNCTION: LEGORR 0x004748f0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves mesh_record_allocate_or_append in the matching build */
 int mesh_record_allocate_or_append(void* object, uint32_t vertex_count,
                                    uint32_t index_rows,
                                    uint32_t index_columns,
@@ -1364,9 +1393,10 @@ int mesh_record_allocate_or_append(void* object, uint32_t vertex_count,
     }
     return -1;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 namespace lego {
-// FUNCTION: LEGORR 0x00474a20
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves animated_texture_frame_count in the matching build */
 int animated_texture_frame_count(const void* texture)
 {
     const unsigned char* record = static_cast<const unsigned char*>(texture);
@@ -1410,8 +1440,9 @@ int animated_texture_frame_count(const void* texture)
     }
     return 0;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00474a60
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves animated_texture_frame_bind in the matching build */
 void animated_texture_frame_bind(void* texture, uint32_t frame_index, int mode)
 {
     unsigned char* record = static_cast<unsigned char*>(texture);
@@ -1448,13 +1479,14 @@ void animated_texture_frame_bind(void* texture, uint32_t frame_index, int mode)
         bind(interface_object, resolved_interface, selector);
     }
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 } // namespace lego
 
 /* TerrainDetailEntryGetAtIndex (FUN_00474ae0): mesh paths delegate directly;
  * layer paths query child flags, with index zero reading the collection's
  * base enabled value. If no child array is available, the original returns
  * the requested index. */
-// FUNCTION: LEGORR 0x00474ae0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves terrain_detail_entry_get_at_index in the matching build */
 uint32_t terrain_detail_entry_get_at_index(void* object,
                                            unsigned int index)
 {
@@ -1485,10 +1517,10 @@ uint32_t terrain_detail_entry_get_at_index(void* object,
         return index;
     }
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* LwoLayerEnabledSet (FUN_00474b30): route mesh-backed entries to their
  * mesh setter; otherwise attach/detach the selected layer and maintain its
  * disabled high bit. Index zero uses the collection's base enabled field. */
-// FUNCTION: LEGORR 0x00474b30
 void lwo_layer_enabled_set(void* object, unsigned int index, int enabled,
                            const LwoLayerEnabledOps* ops)
 {
@@ -1538,7 +1570,6 @@ void lwo_layer_enabled_set(void* object, unsigned int index, int enabled,
 }
 
 namespace lego {
-// FUNCTION: LEGORR 0x00474c00
 int animated_texture_frame_resolve(void** interface_io,
                                    int* frame_index_io)
 {
@@ -1577,7 +1608,6 @@ int animated_texture_frame_resolve(void** interface_io,
 }
 } // namespace lego
 
-// FUNCTION: LEGORR 0x00474c40
 uint32_t lwo_layer_polygon_vertex_count(
     void* object, int block, uint32_t* field_out, uint32_t reserved,
     uint32_t* kind_out, uint32_t* count_out, uint32_t* indices_out)
@@ -1606,7 +1636,7 @@ uint32_t lwo_layer_polygon_vertex_count(
     }
 }
 
-// FUNCTION: LEGORR 0x00474cc0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves lwo_layer_polygon_vertex_data_read in the matching build */
 uint32_t lwo_layer_polygon_vertex_data_read(
     void* object, int block, int first_vertex, int count, void* output)
 {
@@ -1634,8 +1664,8 @@ uint32_t lwo_layer_polygon_vertex_data_read(
         return 0u;
     }
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00474d30
 uint32_t terrain_cell_quad_vertex_emit(
     void* object, unsigned int layer_index, const void* request,
     const LwoLayerDispatchOps* ops)
@@ -1658,7 +1688,7 @@ uint32_t terrain_cell_quad_vertex_emit(
 }
 
 namespace lego {
-// FUNCTION: LEGORR 0x00474da0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves animated_texture_frame_set in the matching build */
 void animated_texture_frame_set(void* texture, uint32_t frame_index,
                                 const void* frame_state)
 {
@@ -1724,12 +1754,12 @@ void animated_texture_frame_set(void* texture, uint32_t frame_index,
         }
     }
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 } // namespace lego
 
 /* TerrainSurfacePropertySet (FUN_00474e30): mesh-backed objects already
  * receive material state through their mesh; regular layers get property
  * bit 4 set or cleared on the resolved animated layer frame. */
-// FUNCTION: LEGORR 0x00474e30
 void terrain_surface_property_set(void* object, unsigned int layer_index,
                                   int enabled,
                                   const TerrainSurfacePropertyOps* ops)
@@ -1750,7 +1780,6 @@ void terrain_surface_property_set(void* object, unsigned int layer_index,
 
 namespace unported_ledger_stubs {
 // RenderObjectHierarchyFloat3Set
-// FUNCTION: LEGORR 0x00474e90
 uint32_t ledger_stub_00474e90_RenderObjectHierarchyFloat3Set(
     void* scene_object, float x, float y, float z)
 {
@@ -1766,7 +1795,7 @@ uint32_t ledger_stub_00474e90_RenderObjectHierarchyFloat3Set(
  * output, then each child contributes a componentwise min/max. The original
  * obtains both the root and child collection through scene-interface calls;
  * those accessors stay replaceable while the union behavior is local. */
-// FUNCTION: LEGORR 0x00474f10
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_object_bounds_union in the matching build */
 uint32_t scene_object_bounds_union(void* scene_object,
                                   float bounds_min_max[6])
 {
@@ -1804,11 +1833,12 @@ uint32_t scene_object_bounds_union(void* scene_object,
     }
     return 0;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* SceneMeshColorSet (FUN_00474ff0) — see view.hpp. Same inner-record ride
  * as the alpha sibling; mode three lands the triple in the block's +0x34
  * slot through the ported color-vector setter. */
-// FUNCTION: LEGORR 0x00474ff0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_mesh_color_set in the matching build */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void scene_mesh_color_set(void* object, int block, float red,
                                              float green, float blue)
@@ -1860,8 +1890,9 @@ void scene_mesh_color_set(void* object, int block, float red, float green,
     render_object_color_vector_set(record, block, red, green, blue, 3);
 }
 #endif
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* SceneMeshColorAndAlphaSet (FUN_00475020) — see view.hpp. */
-// FUNCTION: LEGORR 0x00475020
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_mesh_color_and_alpha_set in the matching build */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void scene_mesh_color_and_alpha_set(void* object, int block,
                                                        float red, float green,
@@ -1927,9 +1958,10 @@ void scene_mesh_color_and_alpha_set(void* object, int block, float red,
     screen_effect_item_opacity_set(record, block, alpha, 4);
 }
 #endif
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* SceneObjectCoordinateTransformInPlace (FUN_00475070), interface slot
  * +0x108 as recovered in Finding 337. */
-// FUNCTION: LEGORR 0x00475070
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_object_coordinate_transform_in_place in the matching build */
 void scene_object_coordinate_transform_in_place(void* object,
                                                 void* coordinates,
                                                 void* transform)
@@ -1946,9 +1978,9 @@ void scene_object_coordinate_transform_in_place(void* object,
     scene->coordinate_transform_in_place(coordinates, transform);
 #endif
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* SceneObjectCoordinateTransformToOutput (FUN_00475090), interface slot
  * +0x84 as recovered in Finding 337. */
-// FUNCTION: LEGORR 0x00475090
 void scene_object_coordinate_transform_to_output(void* object,
                                                   void* input, void* output)
 {
@@ -1966,7 +1998,7 @@ void scene_object_coordinate_transform_to_output(void* object,
 /* RenderObjectSetPackedRgbaFromFloatChannels (FUN_004750b0): convert the
  * four caller-supplied float channels in reference order, then update the
  * render interface stored in the kind-five mesh record. */
-// FUNCTION: LEGORR 0x004750b0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves render_object_set_packed_rgba_from_float_channels in the matching build */
 void render_object_set_packed_rgba_from_float_channels(
     void* scene_object, float red, float green, float blue, float alpha)
 {
@@ -2008,20 +2040,22 @@ void render_object_set_packed_rgba_from_float_channels(
     hooks->packed_set(render_object, packed, hooks->context);
 #endif
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* DDiSceneAdvanceByTime target: the retail body assumes a valid scene object
  * and returns the x87 result left by its frame-update call. */
-// FUNCTION: LEGORR 0x00475120
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_advance_by_time_target in the matching build */
 float ddiscene_advance_by_time_target(void* scene_object, float delta)
 {
     const float current = ddiscene_object_length_get(scene_object);
     const float next = current + delta;
     return ddiscene_frame_update_and_callbacks(scene_object, next);
 }
-// FUNCTION: LEGORR 0x00475140
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* DDiSceneFrameUpdateAndCallbacks (FUN_00475140): select the kind-specific
  * frame, consume the action-entry sample bit, update its timing record, run
  * timed dispatch, and signal the registered end callback on frame overflow. */
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_frame_update_and_callbacks in the matching build */
 float ddiscene_frame_update_and_callbacks(void* scene_object, float time)
 {
     void* frame_interface = NULL;
@@ -2102,10 +2136,11 @@ float ddiscene_frame_update_and_callbacks(void* scene_object, float time)
     }
     return remainder;
 }
-// FUNCTION: LEGORR 0x00475300
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* DDiSceneApplyActFrameTiming (FUN_00475300): only records with the pending
  * timing bit dispatch their current action frame's timed hook. Kind 4 finds
  * the selected frame through channel 0; kind 3 stores that channel directly. */
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_apply_act_frame_timing in the matching build */
 void ddiscene_apply_act_frame_timing(void* scene_object)
 {
     void* selected = scene_object;
@@ -2133,10 +2168,11 @@ void ddiscene_apply_act_frame_timing(void* scene_object)
         }
     }
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* DDiSceneObjectLengthGet (FUN_00475390): kind 4 resolves its selected
  * ActFrame record through channel 0; kind 3 already carries the channel. */
-// FUNCTION: LEGORR 0x00475390
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_object_length_get in the matching build */
 float ddiscene_object_length_get(void* scene_object)
 {
     const uint32_t kind = *(uint32_t*)((char*)scene_object + 0x10);
@@ -2153,10 +2189,11 @@ float ddiscene_object_length_get(void* scene_object)
     }
     return 0.0f;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* DDiSceneObjectFramePositionGet (FUN_004753f0): follow the same kind
  * dispatch, then read the selected frame record's +0x0c field. */
-// FUNCTION: LEGORR 0x004753f0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_object_frame_position_get in the matching build */
 uint32_t ddiscene_object_frame_position_get(void* scene_object)
 {
     void* interface_object = NULL;
@@ -2172,8 +2209,9 @@ uint32_t ddiscene_object_frame_position_get(void* scene_object)
     return interface_object != NULL
         ? ddiscene_action_record_field_0c_get(interface_object) : 0u;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00475430
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_object_position_set in the matching build */
 int ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z)
 {
@@ -2199,8 +2237,9 @@ int ddiscene_object_position_set(void* object, void* alternate_frame,
     return 1;
 #endif
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00475470
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_object_pose_method_dispatch in the matching build */
 int ddiscene_object_pose_method_dispatch(void* object,
                                          void* alternate_frame,
                                          float parameter_3,
@@ -2234,7 +2273,8 @@ int ddiscene_object_pose_method_dispatch(void* object,
     return 1;
 #endif
 }
-// FUNCTION: LEGORR 0x004754c0
+#endif /* LRR_CONTAINER_PORT_NAMES */
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_object_position_get in the matching build */
 #if !defined(LEGORRR_BACKEND_MINIWIN)
 int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3])
@@ -2296,8 +2336,9 @@ int ddiscene_object_position_get(void* object, void* alternate_frame,
 #endif
 }
 #endif
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
-// FUNCTION: LEGORR 0x00475500
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_object_facing_pair_get in the matching build */
 int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3])
 {
@@ -2314,8 +2355,9 @@ int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
     return ((DdiSceneOrientationGetFn)vtable[0x7c / 4u])(
         scene, normalized_frame, first, second) == 0;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* RenderObjectRotateAxis (FUN_00475580), vtable slot +0x44. */
-// FUNCTION: LEGORR 0x00475580
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves render_object_rotate_axis in the matching build */
 void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,
                                float z, float angle)
 {
@@ -2331,9 +2373,10 @@ void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,
     scene->rotate_axis(mode, x, y, z, angle);
 #endif
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* SceneFrameScaleSet (FUN_004755b0), vtable slot +0x40. */
-// FUNCTION: LEGORR 0x004755b0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_frame_scale_set in the matching build */
 void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
                            float z)
 {
@@ -2349,9 +2392,10 @@ void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
     scene->frame_scale_set(mode, x, y, z);
 #endif
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* CameraTeleportOrOffset (FUN_004755e0), vtable slot +0x3c. */
-// FUNCTION: LEGORR 0x004755e0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves scene_object_camera_teleport_or_offset in the matching build */
 void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
                                             float x, float y, float z)
 {
@@ -2369,8 +2413,9 @@ void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
     scene->slot_3c(mode, x, y, z);
 #endif
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* RenderObjectSetIdentityTransform (FUN_00475610). */
-// FUNCTION: LEGORR 0x00475610
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves render_object_set_identity_transform in the matching build */
 void render_object_set_identity_transform(void* object)
 {
 #if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
@@ -2398,10 +2443,10 @@ void render_object_set_identity_transform(void* object)
     scene_object_transform_matrix_set(object, 0u, matrix);
 #endif
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 /* SceneObjectTransformMatrixSet (FUN_004756b0). The wrapper stores the
  * renderer interface pointer in its first word; the corpus dispatches slot
  * 0x38 with the caller's mode and matrix. */
-// FUNCTION: LEGORR 0x004756b0
 void scene_object_transform_matrix_set(void* object, uint32_t mode,
                                        const float* matrix)
 {
@@ -2419,16 +2464,17 @@ void scene_object_transform_matrix_set(void* object, uint32_t mode,
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x004756d0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ledger_stub_004756d0_VideoObjectAspectRatioGet in the matching build */
 extern "C" float ledger_stub_004756d0_VideoObjectAspectRatioGet(void* video_object)
 {
     return video_object_aspect_ratio_get(video_object);
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 } // namespace unported_ledger_stubs
 
 /* DDiSceneObjectAttachOrUnlink (FUN_00475710): pairs both stored interfaces
  * against a source pair, or asks the backend to unlink each current one. */
-// FUNCTION: LEGORR 0x00475710
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_scene_object_attach_or_unlink in the matching build */
 void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* source_pair_record)
 {
@@ -2461,7 +2507,7 @@ void ddiscene_scene_object_attach_or_unlink(void* pair_record,
         render_interface_pair_update(source_second, second);
     }
 }
-// FUNCTION: LEGORR 0x004757a0
+#endif /* LRR_CONTAINER_PORT_NAMES */
 void* ddiscene_context_get(void* scene_object)
 {
     void* owner_interface = NULL;
@@ -2506,7 +2552,7 @@ void* ddiscene_context_get(void* scene_object)
 
 /* TypedChildResourceScalarGet (FUN_004757f0): only type-4 scene objects with
  * a non-null resource name can resolve a child property. */
-// FUNCTION: LEGORR 0x004757f0
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves typed_child_resource_scalar_get in the matching build */
 float typed_child_resource_scalar_get(void* scene_object)
 {
     if (*(uint32_t*)((char*)scene_object + 0x10) == 4u) {
@@ -2524,10 +2570,10 @@ float typed_child_resource_scalar_get(void* scene_object)
     }
     return 0.0f;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* SceneObjectFirstNonKind6ChildGet (FUN_00475830): walk the child-interface
  * chain until its owner property has a kind other than six. */
-// FUNCTION: LEGORR 0x00475830
 void* scene_object_first_non_kind6_child_get(void* child_interface)
 {
 #if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
@@ -2580,7 +2626,6 @@ void* scene_object_first_non_kind6_child_get(void* child_interface)
 /* DDiSceneObjectArgumentsNormalize (FUN_00475900) — resolve the dispatch
  * pair: the object slot rides through, and the second slot falls back to
  * the root object's first slot when the caller passes NULL. */
-// FUNCTION: LEGORR 0x00475900
 void scene_object_arguments_normalize(const void** obj, const void** alt,
                                       void** out_obj, const void** out_alt)
 {
@@ -2612,7 +2657,6 @@ void scene_object_arguments_normalize(const void** obj, const void** alt,
 #endif
 }
 
-// FUNCTION: LEGORR 0x00475930
 int entity_kind_lookup(const char* kind, int* notexture)
 {
     if (notexture != NULL) {
@@ -2651,7 +2695,6 @@ namespace lego {
 /* The reference's DDiSceneObjectArrayGrow allocates 1<<level records at
  * stride 0x2c and links them through the word at +0x28. The reserved words
  * keep that x86 record layout while pointers widen in the portable build. */
-// FUNCTION: LEGORR 0x004759f0
 void ddiscene_object_array_grow(void)
 {
     uint32_t count;
@@ -2679,7 +2722,6 @@ void ddiscene_object_array_grow(void)
 /* SceneActionRecordActFrameScan (FUN_00475a70): enumerate both type-four
  * animation channels and fill the caller's optional record, frame-index, and
  * owned-name arrays in the same order. */
-// FUNCTION: LEGORR 0x00475a70
 unsigned int scene_action_record_act_frame_scan(void* scene_object,
                                                 void** records,
                                                 int* frame_indices,
@@ -2769,7 +2811,6 @@ unsigned int scene_action_record_act_frame_scan(void* scene_object,
     return found;
 }
 
-// FUNCTION: LEGORR 0x00475c00
 /* DDiSceneAnimationCallbacksSet (FUN_00475c00): allocate the four-callback
  * record once, then replace only non-null callback arguments. Native pointer
  * width keeps the record usable in the 64-bit reconstruction. */
@@ -2799,7 +2840,6 @@ void ddiscene_animation_callbacks_set(void* scene_object,
 
 /* DDiScenePayloadRelease (FUN_00475c80): release kind-specific resources,
  * free the payload, and clear the scene's +0x0c slot. */
-// FUNCTION: LEGORR 0x00475c80
 void ddiscene_payload_release(void* scene_object)
 {
     void* payload;
@@ -2856,7 +2896,6 @@ void ddiscene_payload_release(void* scene_object)
 
 /* CallbackRecordSetFlag10AndRefresh (FUN_00475e10): treat the primary value
  * as a record pointer, set its flag, then invalidate the property payload. */
-// FUNCTION: LEGORR 0x00475e10
 void callback_record_set_flag10_and_refresh(void* property)
 {
     if (property == NULL) return;
@@ -2868,7 +2907,6 @@ void callback_record_set_flag10_and_refresh(void* property)
 }
 /* DDiSceneFrameRecordFind (FUN_00475e40): search the selected action-frame
  * collection for the case-insensitive `ActFrame_<name>` record. */
-// FUNCTION: LEGORR 0x00475e40
 void* ddiscene_frame_record_find(void* action_interface,
                                  const char* action_name, int selector)
 {
@@ -2902,9 +2940,9 @@ void* ddiscene_frame_record_find(void* action_interface,
     }
     return NULL;
 }
-// FUNCTION: LEGORR 0x00475f70
 /* DDiSceneAnimationHookCreate (FUN_00475f70): allocate the ten-word record
  * once, update only nonzero/non-null arguments, and replace its owned name. */
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves ddiscene_animation_hook_create in the matching build */
 void ddiscene_animation_hook_create(void* scene_object, int callback,
                                     const char* name,
                                     const uint32_t* value_0c, int value_08,
@@ -2967,10 +3005,10 @@ void ddiscene_animation_hook_create(void* scene_object, int callback,
         if (record->name != NULL) memcpy(record->name, name, length + 1u);
     }
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */
 
 /* AttachedObjectDataReleaseAndClear (FUN_004760e0): release the optional
  * record-owned buffer and record, then clear the interface's value slot. */
-// FUNCTION: LEGORR 0x004760e0
 void attached_object_data_release_and_clear(void* property)
 {
     void* record = scene_property_value_record_get(property);
@@ -2987,7 +3025,6 @@ void attached_object_data_release_and_clear(void* property)
 
 /* ScenePropertyPrimaryValueGet (FUN_00476120): first dword in the value
  * record returned by the object's virtual callback. */
-// FUNCTION: LEGORR 0x00476120
 uint32_t scene_property_primary_value_get(void* property)
 {
     void** vtable = *(void***)property;
@@ -3001,7 +3038,6 @@ uint32_t scene_property_primary_value_get(void* property)
 
 /* ScenePropertySecondaryValueGet (FUN_00476140): second dword in the same
  * callback result. */
-// FUNCTION: LEGORR 0x00476140
 uint32_t scene_property_secondary_value_get(void* property)
 {
     void** vtable = *(void***)property;
@@ -3013,7 +3049,6 @@ uint32_t scene_property_secondary_value_get(void* property)
     return 0;
 }
 /* DDiSceneActionRecordField1CGet (FUN_00476160). */
-// FUNCTION: LEGORR 0x00476160
 uint32_t ddiscene_action_record_field_1c_get(void* scene_interface)
 {
     void** vtable = *(void***)scene_interface;
@@ -3023,7 +3058,6 @@ uint32_t ddiscene_action_record_field_1c_get(void* scene_interface)
 }
 
 /* DDiSceneActionRecordField0CGet (FUN_00476180). */
-// FUNCTION: LEGORR 0x00476180
 uint32_t ddiscene_action_record_field_0c_get(void* scene_interface)
 {
     void** vtable = *(void***)scene_interface;
@@ -3032,7 +3066,6 @@ uint32_t ddiscene_action_record_field_0c_get(void* scene_interface)
     return record != NULL ? *(uint32_t*)((char*)record + 0x0c) : 0u;
 }
 /* DDiSceneAnimationDurationGet (FUN_004761a0). */
-// FUNCTION: LEGORR 0x004761a0
 float ddiscene_animation_duration_get(void* scene_interface)
 {
     void** vtable = *(void***)scene_interface;
@@ -3043,7 +3076,6 @@ float ddiscene_animation_duration_get(void* scene_interface)
 
 /* ScenePropertyFloatAt14Get (FUN_004761c0): read the float at +0x14 in the
  * property record returned by the interface's slot +0x1c. */
-// FUNCTION: LEGORR 0x004761c0
 float scene_property_float_at14_get(void* property)
 {
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -3068,7 +3100,6 @@ float scene_property_float_at14_get(void* property)
 #endif
 }
 /* DDiSceneAnimationStateGet (FUN_004761e0). */
-// FUNCTION: LEGORR 0x004761e0
 uint32_t ddiscene_animation_state_get(void* scene_interface)
 {
     void** vtable = *(void***)scene_interface;
@@ -3078,7 +3109,6 @@ uint32_t ddiscene_animation_state_get(void* scene_interface)
 }
 
 /* DDiSceneAnimationLastFrameGet (FUN_00476200). */
-// FUNCTION: LEGORR 0x00476200
 uint32_t ddiscene_animation_last_frame_get(void* scene_interface)
 {
     void** vtable = *(void***)scene_interface;
@@ -3090,7 +3120,6 @@ uint32_t ddiscene_animation_last_frame_get(void* scene_interface)
  * the interface methods directly. Other hosts retain the callback override
  * and the checked vtable helper. */
 #if defined(_MSC_VER) && defined(_M_IX86)
-// FUNCTION: LEGORR 0x00476220
 __declspec(naked) void render_interface_pair_update(void* first, void* second)
 {
     __asm {
@@ -3144,7 +3173,6 @@ void render_interface_pair_update(void* first, void* second)
     }
 }
 #endif
-// FUNCTION: LEGORR 0x00476270
 /* SceneObjectSetFormattedString (FUN_00476270): format twice using the same
  * arguments, allocate an exact-size owned string, set the scene interface
  * string, then bind it to the animation path in the recovered order. */
@@ -3191,7 +3219,6 @@ void scene_object_set_formatted_string(void* scene_object,
     }
 }
 
-// FUNCTION: LEGORR 0x004762f0
 void scene_property_owned_buffer_release(void* property)
 {
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -3217,7 +3244,6 @@ void scene_property_owned_buffer_release(void* property)
 }
 
 /* ScenePropertyValueAt08Get (FUN_00476310). */
-// FUNCTION: LEGORR 0x00476310
 uint32_t scene_property_value_at08_get(void* scene_interface)
 {
     void** vtable = *(void***)scene_interface;
@@ -3230,7 +3256,6 @@ uint32_t scene_property_value_at08_get(void* scene_interface)
  * interfaces, not ResourceTreeNode. Keep this target entry separate from the
  * portable test/runtime tree API above. Its traversal mirrors the COM slots
  * and reference ownership visible in the retail body. */
-// FUNCTION: LEGORR 0x00476330
 int resource_tree_callback_walk_target(void* object, int depth,
                                        ResourceTreeCallback callback,
                                        void* context)
@@ -3306,7 +3331,6 @@ int resource_tree_callback_walk_target(void* object, int depth,
  * Direct3DRM object and the seven-word query record built by
  * ResourceNameRegisterOrQuery. Name retrieval uses the object's +0x24 slot;
  * the portable ResourceTreeNode predicate above remains for portable callers. */
-// FUNCTION: LEGORR 0x00476410
 int resource_name_match_callback_target(void* object, void* context)
 {
     ResourceNameMatchCallbackContext* query =
@@ -3353,7 +3377,6 @@ int resource_name_match_callback_target(void* object, void* context)
     return query->matched_object != NULL;
 }
 
-// FUNCTION: LEGORR 0x00476770
 int ddiscene_resource_name_resolve(const char* name)
 {
     static const char prefix[] = "DDiScene_";
@@ -3373,7 +3396,6 @@ int ddiscene_resource_name_resolve(const char* name)
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x004767e0
 int ledger_stub_004767e0_DDiSceneResourceExists(const char* name,
                                                  void* scene)
 {
@@ -3402,7 +3424,6 @@ int ledger_stub_004767e0_DDiSceneResourceExists(const char* name,
 }
 
 // DDiSceneResourceOpen
-// FUNCTION: LEGORR 0x00476850
 void* ddiscene_resource_open(void* resource_handle, const void* file_data,
                              const char* path, void* scene_interface,
                              uint32_t optional_flag)
@@ -3425,7 +3446,6 @@ void* ddiscene_resource_open(void* resource_handle, const void* file_data,
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00476bf0
 void surface_pixel_rows_flip_in_place(void* surface)
 {
     SurfacePixelInfo* info =
@@ -3451,7 +3471,6 @@ void surface_pixel_rows_flip_in_place(void* surface)
     }
 }
 
-// FUNCTION: LEGORR 0x00476d10
 void render_resource_pair_release_and_clear(void** pair)
 {
     void* property;
@@ -3773,3 +3792,59 @@ static void interface_array_forward_sync_slot(void* object,
     ((Method)vtable[byte_offset / 4])(object, value);
 }
 } // namespace lego
+
+/* ---- Mesh.c adapters for container.c (finding 624) ----------------------
+ * container.c calls five Mesh.c functions whose port entries
+ * (mesh_unit.cpp, record.hpp) have C++ linkage, so it calls these thin
+ * adapters with the original signatures instead. */
+
+// PORT-ONLY: Mesh_GetGroup (FUN_004821a0) with C linkage for container.c.
+extern "C" int container_mesh_get_group_adapter(
+    void* mesh, unsigned long groupID, unsigned long* vertexCount,
+    unsigned long* faceCount, unsigned long* vPerFace,
+    unsigned long* faceDataSize, unsigned long* faceData)
+{
+    indexed_record_entry_read(mesh, (int)groupID, (uint32_t*)vertexCount,
+                              (uint32_t)(uintptr_t)faceCount,
+                              (uint32_t*)vPerFace, (uint32_t*)faceDataSize,
+                              (uint32_t*)faceData);
+    return 1;
+}
+
+// PORT-ONLY: Mesh_Scale (FUN_00482370) with C linkage for container.c.
+extern "C" void container_mesh_scale_adapter(void* mesh, float x, float y,
+                                             float z)
+{
+    mesh_vertices_scale_apply(mesh, x, y, z);
+}
+
+// PORT-ONLY: Mesh_SetVertices (FUN_004823e0) with C linkage for container.c.
+extern "C" int container_mesh_set_vertices_adapter(void* mesh,
+                                                   unsigned long groupID,
+                                                   unsigned long index,
+                                                   unsigned long count,
+                                                   void* values)
+{
+    terrain_cell_quad_vertices_write(mesh, (int)groupID, (int)index,
+                                     (int)count, values);
+    return 0;
+}
+
+// PORT-ONLY: Mesh_GetVertices (FUN_00482470) with C linkage for container.c.
+extern "C" int container_mesh_get_vertices_adapter(void* mesh,
+                                                   unsigned long groupID,
+                                                   unsigned long index,
+                                                   unsigned long count,
+                                                   void* retArray)
+{
+    indexed_geometry_data_copy_to_output(mesh, (int)groupID, (int)index,
+                                         (int)count, retArray);
+    return 0;
+}
+
+// PORT-ONLY: Mesh_IsGroupHidden (FUN_00482780) with C linkage for container.c.
+extern "C" int container_mesh_is_group_hidden_adapter(void* mesh,
+                                                      unsigned long groupID)
+{
+    return (int)indexed_record_flag6c_bit0_get(mesh, (int)groupID);
+}

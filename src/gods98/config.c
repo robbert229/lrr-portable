@@ -55,7 +55,8 @@ static const float s_config_rgb_scale = 1.0f / 255.0f;
  * missing angle resolves to a zero byte in another object's .bss.
  * The original pools ":" and "" for every unit, so the two have external C
  * linkage: entity_stats.c (GAME-043) reads them where the original's
- * literals resolve to these addresses (finding 581). A macro, not a
+ * literals resolve to these addresses (finding 581), and container.c
+ * (G98-002) reads "::" and "" the same way (finding 624). A macro, not a
  * declaration, gives the C++ build its extern "C", so the symbol numbering
  * (finding 538) does not change. */
 #ifdef __cplusplus
@@ -66,7 +67,7 @@ static const float s_config_rgb_scale = 1.0f / 255.0f;
 // GLOBAL: LEGORR 0x004a1cd4
 CONFIG_POOLED_LITERAL const char s_config_rgb_separator[] = ":";
 // GLOBAL: LEGORR 0x004aab18
-static const char s_config_separator[] = "::";
+CONFIG_POOLED_LITERAL const char s_config_separator[] = "::";
 // GLOBAL: LEGORR 0x004b8a14
 CONFIG_POOLED_LITERAL const char s_config_angle_empty[4] = { 0, 0, 0, 0 };
 

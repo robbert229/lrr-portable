@@ -59,10 +59,20 @@ void entity_assembly_free(EntityAssembly* ea)
     free(ea);
 }
 
+/* container.c (Container.c, finding 624) serves these port names in the
+ * matching build (container_link_names.h): every build but MSVC 5.0's
+ * compiles the port's definitions. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_CONTAINER_PORT_NAMES 0
+#else
+#define LRR_CONTAINER_PORT_NAMES 1
+#endif
+
 /* Container_Load's signature (ADR 0005 step 6) for units rebuilt as C,
  * declared in gods98/entity.h. The port's 0x00472cd0 is the .ae assembly
  * parser above, with a different contract, and the port has no container
  * loader yet: this adapter loads nothing. */
+#if LRR_CONTAINER_PORT_NAMES /* container.c serves container_load in the matching build */
 extern "C" void* container_load(void* parent, const char* filename,
                                 const char* typeString, int looseLoad)
 {
@@ -72,3 +82,4 @@ extern "C" void* container_load(void* parent, const char* filename,
     (void)looseLoad;
     return NULL;
 }
+#endif /* LRR_CONTAINER_PORT_NAMES */

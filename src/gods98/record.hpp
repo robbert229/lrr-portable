@@ -700,7 +700,7 @@ int nested_record_list_remove_by_key_recursive(int key, void* node);
  * x times the first component, y the second, z the third. Outer (block)
  * count at record +0x0 and inner vertex count re-read every round; a
  * zero-count block is skipped before its do-while ever runs. */
-void mesh_vertices_scale_apply(void* record, float scale_x, float scale_y,
+extern "C" void mesh_vertices_scale_apply(void* record, float scale_x, float scale_y,
                                float scale_z);                     /* FUN_00482370 */
 
 /* IndexedGeometryDataCopyToOutput (FUN_00482470): pack `count` rounds of
@@ -737,7 +737,7 @@ extern "C" void indexed_record_entry_read(void* record, int block, uint32_t* fie
  * record stride, starting at the first_vertex quad. The ninth source
  * dword of each slot stays home. Deviations: guarded buffer and source,
  * and the zero-count round gate lands early. */
-void terrain_cell_quad_vertices_write(void* record, int block,
+extern "C" void terrain_cell_quad_vertices_write(void* record, int block,
                                       int first_vertex, int count,
                                       const void* source);
 
