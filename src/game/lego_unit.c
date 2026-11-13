@@ -1746,9 +1746,9 @@ float global_float_field_00556f00_get(void)
 // FUNCTION: LEGORR 0x004230c0
 void lego_debug_panel_text_draw_update(float elapsed)
 {
+    unsigned int width;
     int x;
     int y;
-    unsigned int width;
     unsigned int quoteWidth;
     const char* text;
 
@@ -8959,11 +8959,19 @@ int entity_flags_mask107c33de_or_1c00203_any_test(const struct EntitySlot* e); /
 int aitask_route_step_adapter(struct EntitySlot* object);         /* 00449700 */
 /* Roof.c (record.hpp): 004634f0. */
 void indexed_surface_entry_hide_and_record(int x, int y);         /* 004634f0 */
-/* Detail.c (detail.c in the matching build, view.hpp). */
+/* Detail.c (detail.c in the matching build, view.hpp). In the matching
+ * build the callee is detail.c's Detail_AddBlock, whose texture and
+ * direction are bytes (the caller pushes them unextended); the port's
+ * view.cpp entry takes words. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LEGO_DETAIL_BYTE unsigned char
+#else
+#define LEGO_DETAIL_BYTE uint32_t
+#endif
 void scene_cell_visual_channels_apply(struct SceneCellVisualRelayRecord* record,
                                       const float corner_points[12],
-                                      uint32_t lookup_selector,
-                                      uint32_t corner_index, float scale,
+                                      LEGO_DETAIL_BYTE lookup_selector,
+                                      LEGO_DETAIL_BYTE corner_index, float scale,
                                       float uniform_scale);       /* 0040b880 */
 /* No port entry with the original's contract: adapters at the end of
  * lego.cpp (group 3B). */
@@ -8975,6 +8983,11 @@ void lego_roof_block_vertices_set_adapter(unsigned int bx, unsigned int by,
 void lego_main_setup3d_adapter(int quality, int dither, int filter,
                                int mipmap, int linearMipMap, int blend,
                                int sort);                         /* 00478330 */
+/* container_link_names.h's matching-build link name of Container_Create
+ * (container.c since #697). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define lego_container_create_adapter ddiscene_object_allocate
+#endif
 void* lego_container_create_adapter(void* parent);                /* 00472950 */
 float lego_viewport_field_get_adapter(void* view);                /* 00477270 */
 void lego_viewport_size_get_adapter(void* view, unsigned int* width,
@@ -9937,7 +9950,13 @@ __declspec(naked) void terrain_cell_work_flag_circle_set_current(
         sub esp, 0ch
         mov eax, dword ptr [g_active_level_retail]
         mov edx, dword ptr [esp + 14h]
-        mov dword ptr [esp], eax
+        /* mov dword ptr [esp + 0], eax, in the original's encoding (a zero
+         * 8-bit displacement); the inline assembler emits the short form,
+         * which left the function a byte short of the original. */
+        _emit 0x89
+        _emit 0x44
+        _emit 0x24
+        _emit 0x00
         mov eax, edx
         imul eax, edx
         push esi
