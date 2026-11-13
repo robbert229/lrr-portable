@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* gods98 TextWindow (original unit G98-017) entry points that units rebuilt
- * as C call, with the port's contracts (gods98/heap.hpp, gods98/record.hpp).
+ * as C call, by the port's names (gods98/heap.hpp, gods98/record.hpp). In the
+ * matching build textwindow.c defines them (textwindow_link_names.h,
+ * finding 600); natively the port tail text_window_port.cpp does.
  *
  * C boundary header (ADR 0005). The C++ declarations carry extern "C";
  * src/game/test_c_boundaries.cpp includes them with this header. Shared C++

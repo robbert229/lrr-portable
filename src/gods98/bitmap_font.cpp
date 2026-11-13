@@ -470,3 +470,18 @@ extern "C" void font_get_string_info(const TextureSurface* font,
                            msg, args);
     va_end(args);
 }
+
+/* Font_OutputChar (0047a470) in the original ABI, for TextWindow.c (G98-017,
+ * finding 600). A thin unannotated adapter: the port's entry at that address
+ * takes a render target, and the port's renderer owns the back buffer, so
+ * this one measures only and returns the glyph's advance. Declared in
+ * gods98/textwindow_imports.h. */
+// PORT-ONLY: adapter or forwarder for the port contract
+extern "C" int font_output_char(void* font, int x, int y, unsigned char c,
+                                int render)
+{
+    (void)x;
+    (void)y;
+    (void)render;
+    return bitmap_font_glyph_measure_width(font, c);
+}

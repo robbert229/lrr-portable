@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-017 G98-017: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-017.csv. */
+/* Port tail (ADR 0006 decision 4) of G98-017 TextWindow.c, which is rebuilt
+ * in original shape in textwindow.c (finding 600). These are the port's text
+ * windows: the same 0x830-byte record, with a host-width font sidecar, NULL
+ * guards and drawing through the TextBufferDrawOps hooks (heap.hpp).
+ * Unannotated. Natively they serve every caller. In the matching build
+ * textwindow.c takes these names (textwindow_link_names.h), so this file
+ * compiles them out there (LRR_TEXT_WINDOW_PORT_NAMES). */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +27,15 @@
 #include "heap_for_text_window.hpp"
 #include "record_for_text_window.hpp"
 
+/* The port's definitions of the names the unit takes in the matching build
+ * (textwindow_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_TEXT_WINDOW_PORT_NAMES 0
+#else
+#define LRR_TEXT_WINDOW_PORT_NAMES 1
+#endif
+
+#if LRR_TEXT_WINDOW_PORT_NAMES /* textwindow.c serves these names in the matching build */
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static int text_buffer_font_binding_add(void* record, uintptr_t font_handle);
 static int text_buffer_draw_glyph(void* font, int x, int y, unsigned char glyph);
@@ -33,7 +46,7 @@ static int text_buffer_line_height(void* font);
 static uint32_t text_buffer_read_u32(const void* record, size_t offset);
 
 /* TextBufferCreate (FUN_004850f0) — see heap.hpp. */
-// FUNCTION: LEGORR 0x004850f0
+/* Port model of 0x004850f0. */
 void* text_buffer_create(uintptr_t font_handle, const uint32_t* header,
                          long size)
 {
@@ -68,7 +81,7 @@ void* text_buffer_create(uintptr_t font_handle, const uint32_t* header,
     return record;
 }
 /* TextOutputField82CBit2SetClear (FUN_00485160) — see heap.hpp. */
-// FUNCTION: LEGORR 0x00485160
+/* Port model of 0x00485160. */
 void text_output_field82c_bit2_set_clear(void* record, int set_bit)
 {
     if (record == NULL) {
@@ -84,7 +97,7 @@ void text_output_field82c_bit2_set_clear(void* record, int set_bit)
 }
 /* The mapped TextBufferDestroy body follows the retail unchecked record
  * access. Keep the portable font-binding sidecar out of this target body. */
-// FUNCTION: LEGORR 0x00485190
+/* Port model of 0x00485190. */
 void text_buffer_destroy_target(void* record)
 {
     void* buffer = *(void**)((char*)record + 0x14);
@@ -92,7 +105,7 @@ void text_buffer_destroy_target(void* record)
     engine_heap_free(record);
 }
 
-// FUNCTION: LEGORR 0x004851b0
+/* Port model of 0x004851b0. */
 void float_pair_at_offset4_set_from_ints(void* record, int x, int y)
 {
     if (record == NULL) {
@@ -104,7 +117,7 @@ void float_pair_at_offset4_set_from_ints(void* record, int x, int y)
     __builtin_memcpy((char*)record + 0x08, &fy, sizeof(fy));
 }
 
-// FUNCTION: LEGORR 0x004851d0
+/* Port model of 0x004851d0. */
 void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
                                           uint32_t y)
 {
@@ -119,7 +132,7 @@ void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
 
 /* FormattedTextAppendToRingBuffer (FUN_00485210): variadic face of the
  * text-buffer append path, forwarding its argument list to the VFormat body. */
-// FUNCTION: LEGORR 0x00485210
+/* Port model of 0x00485210. */
 void formatted_text_append_to_ring_buffer(void* record, int skip_bells,
                                           const char* format, ...)
 {
@@ -130,7 +143,7 @@ void formatted_text_append_to_ring_buffer(void* record, int skip_bells,
 }
 /* TextBufferAppendFormat (FUN_00485230): variadic wrapper with bell-skip
  * count fixed at zero, matching the decompiled call to TextBufferAppendVFormat. */
-// FUNCTION: LEGORR 0x00485230
+/* Port model of 0x00485230. */
 void text_buffer_append_format(void* record, const char* format, ...)
 {
     va_list args;
@@ -141,7 +154,7 @@ void text_buffer_append_format(void* record, const char* format, ...)
 /* TextBufferAppendVFormat (FUN_00485250): append formatted bytes to the
  * text-output circular buffer, optionally starting after `skip_bells` BEL
  * markers. The record layout follows TextBufferCreate/Reset. */
-// FUNCTION: LEGORR 0x00485250
+/* Port model of 0x00485250. */
 void text_buffer_append_vformat(void* record, int skip_bells,
                                 const char* format, va_list args)
 {
@@ -178,7 +191,7 @@ void text_buffer_append_vformat(void* record, int skip_bells,
     memcpy((char*)record + 0x82c, &flags, sizeof(flags));
 }
 
-// FUNCTION: LEGORR 0x00485300
+/* Port model of 0x00485300. */
 void objective_advisor_text_copy(void* record, int mode,
                                  const char* format, ...)
 {
@@ -197,7 +210,7 @@ void objective_advisor_text_copy(void* record, int mode,
     *(uint32_t*)((char*)record + 0x82c) |= 2u;
 }
 
-// FUNCTION: LEGORR 0x00485390
+/* Port model of 0x00485390. */
 int text_buffer_draw_wrapped(void* record, uint32_t start_line,
                              float line_scale, int* height_out)
 {
@@ -325,7 +338,7 @@ int text_buffer_draw_wrapped(void* record, uint32_t start_line,
     if (height_out != NULL) *height_out = max_y + line_height;
     return 0;
 }
-// FUNCTION: LEGORR 0x00485710
+/* Port model of 0x00485710. */
 int text_wrap_measure_and_draw_lines(void* record, float elapsed,
                                      int* height_out)
 {
@@ -427,40 +440,7 @@ int text_wrap_measure_and_draw_lines(void* record, float elapsed,
 }
 /* TextBufferReset target (FUN_004859b0) — see heap.hpp. The mapped body
  * follows the retail unchecked record and buffer accesses. */
-#if defined(_MSC_VER) && defined(_M_IX86)
-// FUNCTION: LEGORR 0x004859b0
-__declspec(naked) void text_buffer_reset_target(void* record)
-{
-    __asm {
-        mov edx, dword ptr [esp + 4]
-        push esi
-        push edi
-        xor eax, eax
-        mov ecx, dword ptr [edx + 0x418]
-        mov edi, dword ptr [edx + 0x14]
-        mov esi, ecx
-        shr ecx, 2
-        rep stosd
-        mov ecx, esi
-        and ecx, 3
-        rep stosb
-    text_buffer_reset_record_window:
-        mov ecx, 0x100
-        xor eax, eax
-        lea edi, dword ptr [edx + 0x18]
-        rep stosd
-        mov dword ptr [edx + 0x820], eax
-        mov dword ptr [edx + 0x41c], eax
-        mov eax, dword ptr [edx + 0x82c]
-        pop edi
-        and al, 0xfe
-        pop esi
-        mov dword ptr [edx + 0x82c], eax
-        ret
-    }
-}
-#else
-/* Host-width fallback for callers outside the retail x86 ABI. */
+/* Port model of 0x004859b0. */
 void text_buffer_reset_target(void* record)
 {
     uint32_t count = *(uint32_t const*)((char*)record + 0x418);
@@ -484,11 +464,10 @@ void text_buffer_reset_target(void* record)
     word &= ~1u;
     *(uint32_t*)((char*)record + 0x82c) = word;
 }
-#endif
 
 /* The mapped body follows the corpus's blind record and output-pointer
  * accesses. */
-// FUNCTION: LEGORR 0x00485a00
+/* Port model of 0x00485a00. */
 void object_state_pair_get_target(const void* record, uint32_t* out_a,
                                   uint32_t* out_b)
 {
@@ -578,3 +557,5 @@ static int text_buffer_draw_glyph(void* font, int x, int y,
     }
     return width;
 }
+
+#endif /* LRR_TEXT_WINDOW_PORT_NAMES */

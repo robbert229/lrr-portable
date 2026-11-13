@@ -691,11 +691,14 @@ src/gods98/surface_for_viewports.hpp
 src/gods98/surface_from_images_unit.hpp
 src/gods98/surface_from_mesh_unit.hpp
 src/gods98/surface_shared.hpp
-src/gods98/text_window.cpp
+src/gods98/text_window_port.cpp
 src/gods98/texture.cpp
 src/gods98/texture.h
 src/gods98/texture.hpp
+src/gods98/textwindow.c
 src/gods98/textwindow.h
+src/gods98/textwindow_imports.h
+src/gods98/textwindow_link_names.h
 src/gods98/tickers.cpp
 src/gods98/tickers.hpp
 src/gods98/utils.c

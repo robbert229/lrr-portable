@@ -1,4 +1,4 @@
-# input_sha256: 4042cea508d98b9917a64f29d8f1a69ea82e02fe81fe78fc3c76c9fd200612c3
+# input_sha256: a504fa781430ddd85ebbd2c369181a8d4ff75f0e70fce5f5511d9e6fd5c176d5
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2176,17 +2176,17 @@
 0x00485030 64.79 flic_opcode27_decode_dispatch
 0x004850c0 29.63 indexed_word_table_lookup
 0x004850e0 100.00 object_field10_get
-0x004850f0 50.00 text_buffer_create
-0x00485160 64.29 text_output_field82c_bit2_set_clear
+0x004850f0 100.00 text_buffer_create
+0x00485160 100.00 text_output_field82c_bit2_set_clear
 0x00485190 100.00 text_buffer_destroy_target
-0x004851b0 19.35 float_pair_at_offset4_set_from_ints
-0x004851d0 32.65 float_pair_at_offsetc_set_from_uints
+0x004851b0 100.00 float_pair_at_offset4_set_from_ints
+0x004851d0 100.00 float_pair_at_offsetc_set_from_uints
 0x00485210 100.00 formatted_text_append_to_ring_buffer
 0x00485230 100.00 text_buffer_append_format
-0x00485250 25.00 text_buffer_append_vformat
-0x00485300 82.22 objective_advisor_text_copy
-0x00485390 5.96 text_buffer_draw_wrapped
-0x00485710 24.94 text_wrap_measure_and_draw_lines
+0x00485250 98.21 text_buffer_append_vformat
+0x00485300 97.62 objective_advisor_text_copy
+0x00485390 87.80 text_buffer_draw_wrapped
+0x00485710 99.01 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 100.00 keyboard_key_names_init
@@ -4503,17 +4503,17 @@
 0x00485030 64.79 flic_opcode27_decode_dispatch
 0x004850c0 29.63 indexed_word_table_lookup
 0x004850e0 100.00 object_field10_get
-0x004850f0 50.00 text_buffer_create
-0x00485160 64.29 text_output_field82c_bit2_set_clear
+0x004850f0 100.00 text_buffer_create
+0x00485160 100.00 text_output_field82c_bit2_set_clear
 0x00485190 100.00 text_buffer_destroy_target
-0x004851b0 19.35 float_pair_at_offset4_set_from_ints
-0x004851d0 32.65 float_pair_at_offsetc_set_from_uints
+0x004851b0 100.00 float_pair_at_offset4_set_from_ints
+0x004851d0 100.00 float_pair_at_offsetc_set_from_uints
 0x00485210 100.00 formatted_text_append_to_ring_buffer
 0x00485230 100.00 text_buffer_append_format
-0x00485250 25.00 text_buffer_append_vformat
-0x00485300 82.22 objective_advisor_text_copy
-0x00485390 5.96 text_buffer_draw_wrapped
-0x00485710 24.94 text_wrap_measure_and_draw_lines
+0x00485250 98.21 text_buffer_append_vformat
+0x00485300 97.62 objective_advisor_text_copy
+0x00485390 87.80 text_buffer_draw_wrapped
+0x00485710 99.01 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 100.00 keyboard_key_names_init
