@@ -217,9 +217,16 @@ struct AviDirectDraw4 {
 
 /* Callees declared by their own headers: aitask.h gives the back buffer
  * (render_surface_secondary_get, 0x004065e0, AITask.c's out-of-line copy of
- * the DirectDraw_bSurf accessor); heap.hpp gives the project's operator new
- * (engine_calloc, 0x0048ead0, LIBC's new.cpp) and operator delete
- * (ui_render_record_free, 0x0045daf0); files.h gives File_VerifyFilename. */
+ * the DirectDraw_bSurf accessor); heap.hpp gives the native port's operator
+ * new (engine_calloc; the matching build calls LIBC's, 0x0048ead0) and
+ * operator delete (ui_render_record_free, 0x0045daf0); files.h gives
+ * File_VerifyFilename. */
+
+#if defined(_MSC_VER)
+#define AVI_OPERATOR_NEW(size) ::operator new(size)
+#else
+#define AVI_OPERATOR_NEW(size) engine_calloc((long)(size))
+#endif
 
 /* Read by every AviMovie method; nothing in the image writes it. */
 // GLOBAL: LEGORR 0x00533998
@@ -239,12 +246,14 @@ public:
     bool Unlock();
 
     /* Deviation (scoring only): the original's new-expressions and
-     * destructors call the project's global operator new (0x0048ead0) and
-     * delete (0x0045daf0). The port defines neither under those names, so
-     * class-scope operators forward to the functions that carry their
-     * annotations. Inline, they compile to the original's direct calls. */
+     * destructors call the global operator new (LIBC's, 0x0048ead0) and
+     * delete (0x0045daf0). The port defines no global operator delete under
+     * that name, so class-scope operators forward to the functions that
+     * carry the annotations; the matching build takes operator new from
+     * LIBC, the native port from engine_calloc. Inline, they compile to the
+     * original's direct calls. */
     // PORT-ONLY: routes new to the original's operator new (0x0048ead0)
-    static void* operator new(size_t size) { return engine_calloc((long)size); }
+    static void* operator new(size_t size) { return AVI_OPERATOR_NEW(size); }
     // PORT-ONLY: routes delete to the original's operator delete (0x0045daf0)
     static void operator delete(void* p) { ui_render_record_free(p); }
 
@@ -279,7 +288,7 @@ public:
 
     /* Deviation (scoring only): see AviSurface. */
     // PORT-ONLY: routes new to the original's operator new (0x0048ead0)
-    static void* operator new(size_t size) { return engine_calloc((long)size); }
+    static void* operator new(size_t size) { return AVI_OPERATOR_NEW(size); }
     // PORT-ONLY: routes delete to the original's operator delete (0x0045daf0)
     static void operator delete(void* p) { ui_render_record_free(p); }
 

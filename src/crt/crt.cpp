@@ -266,11 +266,6 @@ extern char** environ;
 #pragma comment(linker, "/include:___tzset")
 #pragma comment(linker, "/include:__tzset")
 #pragma comment(linker, "/include:__finite")
-/* The VC5 linker does not implement the compiler's /alternatename directive
- * for these helper spellings. Keep the stdcall bridge definitions live. */
-#pragma comment(linker, "/include:__allmul@16")
-#pragma comment(linker, "/include:__alldiv@16")
-#pragma comment(linker, "/include:__aulldiv@16")
 // LIBRARY: LEGORR 0x00495ee0 SYMBOL
 // __setargv
 // LIBRARY: LEGORR 0x0048fed0 SYMBOL
@@ -445,6 +440,21 @@ extern "C" void __cdecl __multtenpow12(uint16_t*, uint32_t, int);
 // ?_JumpToContinuation@@YGXPAXPAUEHRegistrationNode@@@Z
 // LIBRARY: LEGORR 0x0048ebf0 SYMBOL
 // ?_CallMemberFunction0@@YGXPAX0@Z
+/* The rest of trnsctrl.obj (CRT-029), formerly annotated in
+ * game/seh_runtime.cpp (finding 608). CatchGuardHandler and
+ * TranslatorGuardHandler are statics with no public symbol (finding 540). */
+// LIBRARY: LEGORR 0x0048ec00 SYMBOL
+// ?_UnwindNestedFrames@@YGXPAUEHRegistrationNode@@PAUEHExceptionRecord@@@Z
+// LIBRARY: LEGORR 0x0048eca0 SYMBOL
+// ?_CallCatchBlock2@@YAPAXPAUEHRegistrationNode@@PBU_s_FuncInfo@@PAXHK@Z
+// LIBRARY: LEGORR 0x0048ed00 SYMBOL
+// ?CatchGuardHandler (static in LIBC.LIB trnsctrl.obj; no public symbol, finding 540)
+// LIBRARY: LEGORR 0x0048ed30 SYMBOL
+// ?_CallSETranslator@@YAHPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAX2PBU_s_FuncInfo@@H1@Z
+// LIBRARY: LEGORR 0x0048ee00 SYMBOL
+// ?TranslatorGuardHandler (static in LIBC.LIB trnsctrl.obj; no public symbol, finding 540)
+// LIBRARY: LEGORR 0x0048ee90 SYMBOL
+// ?_GetRangeOfTrysToCheck@@YAPBU_s_TryBlockMapEntry@@PBU_s_FuncInfo@@HHPAI1@Z
 // LIBRARY: LEGORR 0x0048ef10 SYMBOL
 // __global_unwind2
 // LIBRARY: LEGORR 0x0048ef52 SYMBOL
