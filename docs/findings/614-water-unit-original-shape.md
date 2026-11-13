@@ -39,8 +39,11 @@ The port's model moves, unannotated, to the port tail
 [`cell_flood_passes_port.cpp`](../../src/game/cell_flood_passes_port.cpp),
 which is `cell_flood_passes.cpp` under `git mv`.
 
-"Before" is the *match baseline* on `main` (`8abe8b6b`). "After" is this
-change, from the full matching build (`make reccmp-check`).
+"Before" is the *match baseline* at #679's head (`0195530b`, LATE-002), the
+top of the stack #676-#679 over `main` `8abe8b6b`. "After" is this change,
+rebased onto it as the stack's top layer, from the full matching build
+(`make reccmp-check`). The per-function scores are the same on `main` and
+on the stack.
 
 ## Result
 
@@ -49,12 +52,12 @@ change, from the full matching build (`make reccmp-check`).
 | Unit similarity (13 functions, weighted by span, 4,080 bytes) | 10.56% | **98.94%** |
 | Exact functions in the unit | 0 | **11** (no asm) |
 | Mapped functions in the unit | 8 | **13** |
-| Exact-function code bytes (`binary-progress.json`) | 196,138 | **198,558** |
-| `opt_ref` annotated (full): removed / exact removed | 428 / 207 | **423 / 206** |
-| `opt_ref` annotated (game-only) | 421 / 200 | 416 / 199 |
-| Gate image end (`make pe-audit`) | `0x8ea000` | **`0x8df000`** |
-| `/OPT:REF` relink `.bss` (`binary-progress.json`) | 1,668,960 | **1,628,256** |
-| Reccmp lint ledger (entries) | 1,080 | **1,072** |
+| Exact-function code bytes (`binary-progress.json`) | 203,193 | **205,613** |
+| `opt_ref` annotated (full): removed / exact removed | 415 / 222 | **412 / 223** |
+| `opt_ref` annotated (game-only) | 408 / 215 | 405 / 216 |
+| Gate image end (`make pe-audit`) | `0x8c7000` | **`0x8bd000`** |
+| `/OPT:REF` relink `.bss` (`binary-progress.json`) | 1,527,600 | **1,486,864** |
+| Reccmp lint ledger (entries) | 1,060 | **1,052** |
 
 The weights are each function's span up to the next function, padding
 included. An unmapped function counts as 0%. The full run scores the
@@ -224,11 +227,12 @@ instructions), finding 538's drift. They declare nothing that exists.
 
 `.bss`:
 
-- **The gate build**: the image end moves from `0x8ea000` to `0x8df000`
-  (45,056 bytes lower). `make pe-audit` still reports the image over
-  `0x800000` (margin -913,408), and the plain-immediate check passes.
-- **The `/OPT:REF` relink**: `.bss` falls from 1,668,960 to 1,628,256
-  bytes (-40,704: the 51,460-byte buffer and count, less `waterGlobs`).
+- **The gate build**: the image end moves from `0x8c7000` to `0x8bd000`
+  (40,960 bytes lower). `make pe-audit` still reports the image over
+  `0x800000` (margin -774,144), and the plain-immediate check passes.
+- **The `/OPT:REF` relink**: `.bss` falls from 1,527,600 to 1,486,864
+  bytes (-40,736: the 51,460-byte buffer and count, less `waterGlobs`
+  and alignment).
 
 ### The port tail
 
@@ -241,7 +245,7 @@ As in findings 597-612, `cell_flood_passes.cpp` becomes
   `#if`, finding 590);
 - the row-span writers are deleted (above).
 
-Its eight static helpers leave the lint ledger (1,080 to 1,072 entries).
+Its eight static helpers leave the lint ledger (1,060 to 1,052 entries).
 
 ### Link names
 
@@ -287,7 +291,7 @@ port serves every name and nothing calls the unit.
   above is fixed by the deviation, not accepted.
 - The plain-immediate check, `winapi-link-check` and `check-map`: OK.
 - `make match-progress`: baseline, listing digests and `binary-progress.json`
-  regenerated. Accuracy 87.16% to 87.43% (full), 85.90% to 86.20%
+  regenerated. Accuracy 87.97% to 88.24% (full), 86.79% to 87.09%
   (game-only).
 - `make unit-data-offsets`: the row above.
 - `make tools-test` (no `--allow-growth`), the native build and `ctest`
@@ -301,6 +305,7 @@ change `cell_flood_passes.cpp.obj` lost none either. The per-object caller
 lists are unchanged except one line: the live caller of the removed
 Container_MakeMesh2 (`00473560`) is now `0046de80`, which calls the
 `container_make_mesh2` adapter instead (see [What is left](#what-is-left)).
-The totals fall from 428 / 207 to 423 / 206 (full) as the unit's 13
+The totals move from 415 / 222 to 412 / 223 (full) as the unit's 13
 functions are mapped and kept; the lists do not attribute that change to an
-object.
+object. Exact removed rises by one (222 to 223). It is not a `water.c.obj`
+function, and this change does not trace which one it is.
