@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-003 Viewports.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-003.csv. */
+/* Port tail of G98-003 Viewports.c (finding 593): the port's viewport
+ * models, unannotated. The original-shape unit is gods98/viewports.c.
+ *
+ * In the matching build (MSVC 5.0) viewports.c defines fifteen of these
+ * names itself (viewports_link_names.h), so their definitions here are
+ * compiled out of it (VIEWPORTS_UNIT_DEFINES_PORT_NAMES). Natively every
+ * definition here is the one the port calls: it works on the port's own
+ * pool (view.cpp) and the port's renderer (surface.cpp). */
 #include <math.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -32,6 +37,17 @@
 #include "view_for_viewports.hpp"
 #include "scene_resources_for_viewports.hpp"
 #include "surface_for_viewports.hpp"
+
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define VIEWPORTS_UNIT_DEFINES_PORT_NAMES 1
+#endif
+
+/* Stand-in for Main.c's lpDevice() (DAT_00505918; viewports_imports.h).
+ * Like s_main_d3drm (lws_port.cpp) it stays NULL: the port's renderer keeps
+ * its own device (surface.cpp). */
+// GLOBAL: LEGORR 0x00505918
+extern "C" void* s_main_device;
+void* s_main_device;
 
 typedef struct DDiSceneDrawEndRecord {
     uint32_t prefix[4];
@@ -120,7 +136,8 @@ namespace lego { static void resource_interface_call_noargs(void* wrapper, unsig
 static size_t render_surface_pool_stride(void);
 
 namespace lego {
-// FUNCTION: LEGORR 0x00476d50
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00476d50 (Viewports.c, finding 593). */
 void scene_resource_slots_initialize()
 {
     memset(s_render_surface_pool_blocks, 0,
@@ -129,7 +146,8 @@ void scene_resource_slots_initialize()
     s_render_surface_pool_level_count = 0;
     s_slots_live = 1;
 }
-// FUNCTION: LEGORR 0x00476d80
+#endif
+/* Port model of 0x00476d80 (Viewports.c, finding 593). */
 void scene_resource_slots_release_all()
 {
     unsigned int i;
@@ -150,7 +168,8 @@ void scene_resource_slots_release_all()
  * normalized origin/size floats followed by a camera pointer. GameConfigInit
  * passes (0, 0, 1, 1, camera); convert x/width against device width and
  * y/height against device height before allocating the viewport. */
-// FUNCTION: LEGORR 0x00476dc0
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00476dc0 (Viewports.c, finding 593). */
 ScreenBoundedSurfaceRecord* render_target_viewport_scale_set(
     float x, float y, float width_scale, float height_scale, void* camera)
 {
@@ -181,18 +200,9 @@ ScreenBoundedSurfaceRecord* render_target_viewport_scale_set(
         (uint32_t)crt_float_to_long(pixel_height), camera,
         crt_float_to_long(pixel_x), crt_float_to_long(pixel_y));
 }
+#endif
 
-namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00476e50
-ScreenBoundedSurfaceRecord*
-ledger_stub_00476e50_ScreenBoundedSurfaceResourceAllocate(
-    uint32_t width, uint32_t height, void* camera, int x, int y)
-{
-    return screen_bounded_surface_allocate(width, height, camera, x, y);
-}
-} // namespace unported_ledger_stubs
-
-// FUNCTION: LEGORR 0x00476f10
+/* Port model of 0x00476f10 (Viewports.c, finding 593). */
 void render_surface_get_value_pair_80_and_84(void* surface,
                                              uint32_t* out_80,
                                              uint32_t* out_84)
@@ -210,7 +220,8 @@ void render_surface_get_value_pair_80_and_84(void* surface,
 }
 
 namespace lego {
-// FUNCTION: LEGORR 0x00476f50
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00476f50 (Viewports.c, finding 593). */
 void resource_interface_call_slot48(void* wrapper, void* value)
 {
     void* interface_object;
@@ -225,9 +236,11 @@ void resource_interface_call_slot48(void* wrapper, void* value)
         method(interface_object, value);
     }
 }
+#endif
 } // namespace lego
 
-// FUNCTION: LEGORR 0x00476f70
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00476f70 (Viewports.c, finding 593). */
 uint32_t scene_object_query_value_if_ready(void* object)
 {
     void* ready_interface;
@@ -256,17 +269,21 @@ uint32_t scene_object_query_value_if_ready(void* object)
     }
     return value;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00476fb0
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00476fb0 (Viewports.c, finding 593). */
 void renderer_object_set_clip_distance(void* object, float distance)
 {
     SceneRootInterface* const scene =
         (SceneRootInterface*)*(void**)((char*)object + 0x10);
     scene->clip_distance_set(distance);
 }
+#endif
 
 namespace lego {
-// FUNCTION: LEGORR 0x00476fd0
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00476fd0 (Viewports.c, finding 593). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) float resource_interface_call_slot8c(void* wrapper)
 {
@@ -287,7 +304,9 @@ float resource_interface_call_slot8c(void* wrapper)
     return 0.0f;
 }
 #endif
-// FUNCTION: LEGORR 0x00476ff0
+#endif
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00476ff0 (Viewports.c, finding 593). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) float resource_interface_call_slot90(void* wrapper)
 {
@@ -308,15 +327,18 @@ float resource_interface_call_slot90(void* wrapper)
     return 0.0f;
 }
 #endif
+#endif
 } // namespace lego
 
 namespace unported_ledger_stubs {
 // DDiSceneDrawBegin
-// FUNCTION: LEGORR 0x00477010
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00477010 (Viewports.c, finding 593). */
 extern "C" void ledger_stub_00477010_DDiSceneDrawBegin(void* render_object, int begin)
 {
     ddiscene_draw_begin(render_object, begin);
 }
+#endif
 } // namespace unported_ledger_stubs
 
 /* DDiSceneDrawEnd (FUN_00477150): guard the draw record while it eases a
@@ -325,7 +347,8 @@ extern "C" void ledger_stub_00477010_DDiSceneDrawBegin(void* render_object, int 
  * recovered call sites pass a 32-bit-record pointer, its commit-source
  * address, and a frame delta; the record layout below widens the interface
  * pointer on 64-bit portable builds while keeping the target's field order. */
-// FUNCTION: LEGORR 0x00477150
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00477150 (Viewports.c, finding 593). */
 void ddiscene_draw_end(void* render_object, const void* commit_source,
                        float frame_delta)
 {
@@ -374,8 +397,10 @@ void ddiscene_draw_end(void* render_object, const void* commit_source,
     }
     record->busy = 0u;
 }
+#endif
 
-// FUNCTION: LEGORR 0x00477220
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00477220 (Viewports.c, finding 593). */
 void render_resource_track_and_retain(void* resource)
 {
     void** next;
@@ -389,11 +414,12 @@ void render_resource_track_and_retain(void* resource)
     interface_object = *(ResourceRetainInterface**)((unsigned char*)resource + 0x10);
     interface_object->retain();
 }
+#endif
 
 /* SceneCurrentObjectSet (FUN_00477240) — see record.hpp. The store lands
  * on the record's +0x14 slot; Deviation: the corpus strides a dword, the
  * port writes the module's widened pointer slot. */
-// FUNCTION: LEGORR 0x00477240
+/* Port model of 0x00477240 (Viewports.c, finding 593). */
 void scene_current_object_set(void* record, void* object)
 {
     if (record != NULL) {
@@ -401,7 +427,8 @@ void scene_current_object_set(void* record, void* object)
     }
 }
 
-// FUNCTION: LEGORR 0x00477250
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00477250 (Viewports.c, finding 593). */
 void resource_interface_call_slot40_and_clear_field14(
     ResourceInterfaceWrapper* wrapper, uint32_t value)
 {
@@ -413,7 +440,8 @@ void resource_interface_call_slot40_and_clear_field14(
     }
     wrapper->field14 = 0;
 }
-// FUNCTION: LEGORR 0x00477270
+#endif
+/* Port model of 0x00477270 (Viewports.c, finding 593). */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void resource_interface_call_slot88(void* wrapper)
 {
@@ -435,7 +463,8 @@ void resource_interface_call_slot88(void* wrapper)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00477290
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x00477290 (Viewports.c, finding 593). */
 void camera_screen_coordinate_project(const ViewProjectionAdapter* adapter,
                                       float* output, const float* input)
 {
@@ -443,8 +472,10 @@ void camera_screen_coordinate_project(const ViewProjectionAdapter* adapter,
         input == NULL) return;
     adapter->screen_project(adapter->context, output, input);
 }
+#endif
 
-// FUNCTION: LEGORR 0x004772b0
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
+/* Port model of 0x004772b0 (Viewports.c, finding 593). */
 void render_interface_transform_point(void* object, void* output,
                                       const void* input)
 {
@@ -452,7 +483,8 @@ void render_interface_transform_point(void* object, void* output,
         (SceneRootInterface*)*(void**)((char*)object + 0x10);
     scene->transform_point(output, input);
 }
-// FUNCTION: LEGORR 0x004772d0
+#endif
+/* Port model of 0x004772d0 (Viewports.c, finding 593). */
 void camera_project_point_to_screen(const ViewProjectionAdapter* adapter,
                                    float* output_xy, const float* input_xyz)
 {
@@ -468,7 +500,7 @@ void camera_project_point_to_screen(const ViewProjectionAdapter* adapter,
  * interface through the record's +0x08 callback. The retail body returns the
  * address of that local result; callers consume it synchronously in the draw
  * path. */
-// FUNCTION: LEGORR 0x00477310
+/* Port model of 0x00477310 (Viewports.c, finding 593). */
 void* com_property_result_get(void* resource_owner)
 {
 #if defined(_MSC_VER)
@@ -512,7 +544,7 @@ void* com_property_result_get(void* resource_owner)
     return result;
 }
 
-// FUNCTION: LEGORR 0x00477370
+/* Port model of 0x00477370 (Viewports.c, finding 593). */
 void ddiscene_render_surface_pool_grow(void)
 {
     unsigned int count;
@@ -543,7 +575,7 @@ void ddiscene_render_surface_pool_grow(void)
 }
 
 namespace lego {
-// FUNCTION: LEGORR 0x004773e0
+/* Port model of 0x004773e0 (Viewports.c, finding 593). */
 void scene_resource_tracked_references_release_all()
 {
     unsigned int pool;
@@ -600,6 +632,7 @@ static void resource_interface_call_noargs(void* wrapper, unsigned int byte_offs
 #endif
 } // namespace lego
 
+#if !defined(VIEWPORTS_UNIT_DEFINES_PORT_NAMES)
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
  * original FUN_00477240 stores a float (the field of view) at +0x14; the
  * port's entry above types the slot as a pointer. */
@@ -611,11 +644,14 @@ extern "C" void scene_current_object_set_original(void* view, float field)
     }
 }
 
-/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: Viewport_Create (00476e50) takes the position first; the port's ledger stub takes the size first. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (unported_ledger_stubs::ledger_stub_00476e50_ScreenBoundedSurfaceResourceAllocate)
+/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c:
+ * Viewport_CreatePixel (00476e50) takes the position first; the port's
+ * allocator takes the size first. */
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (screen_bounded_surface_allocate)
 extern "C" void* render_target_viewport_create_original(int x, int y, int width,
                                                         int height, void* camera)
 {
-    return unported_ledger_stubs::ledger_stub_00476e50_ScreenBoundedSurfaceResourceAllocate(
-        (uint32_t)width, (uint32_t)height, camera, x, y);
+    return screen_bounded_surface_allocate((uint32_t)width, (uint32_t)height,
+                                           camera, x, y);
 }
+#endif

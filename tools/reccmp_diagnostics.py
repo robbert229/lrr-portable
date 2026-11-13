@@ -6,9 +6,11 @@ import sys
 
 # The original returns a pointer to a stack result; preserve its shape until
 # its unit is reconstructed (finding 379). MSVC 5 warns about that ABI. The
-# function, com_property_result_get (0x00477310), was relocated with G98-003
-# (Viewports.c) from view.cpp into viewports.cpp.
-ALLOW = [re.compile(r'[/\\]src[/\\]gods98[/\\]viewports\.cpp\(\d+\) : warning C4172: returning address of local variable or temporary$', re.I),
+# function, com_property_result_get (the port's model of 0x00477310), was
+# relocated with G98-003 (Viewports.c) from view.cpp into viewports.cpp, and
+# moved unannotated to the port tail viewports_port.cpp when the unit was
+# rebuilt as viewports.c (finding 593).
+ALLOW = [re.compile(r'[/\\]src[/\\]gods98[/\\]viewports_port\.cpp\(\d+\) : warning C4172: returning address of local variable or temporary$', re.I),
          # Lego_MainLoop (0x004232e0, GAME-021 lego_unit.c) passes two locals
          # it never sets to the crystal panel when there is no level: the
          # original reads the same uninitialised stack slots (issue #544).

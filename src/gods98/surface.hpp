@@ -159,7 +159,7 @@ void model_render_dispatch_queue_clear(void);
  * through ModelRenderPassDispatchOps. Missing callbacks use the in-project
  * record-state setup, child-pass, viewport, state-snapshot, list-clear, and
  * render-state restore helpers where their inputs are available. */
-void model_render_pass_dispatch(void* device);
+extern "C" void model_render_pass_dispatch(void* device);
 typedef struct MeshRecordAppendOps {
     void* context;
     MeshRecordPool* (*pool_get)(void* context, void* object);
