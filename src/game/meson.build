@@ -30,7 +30,7 @@ game_sources = [
   'vehicle_model_port.cpp',
   'upgrade_levels.cpp',
   'tooltip_port.cpp',
-  'text.cpp',
+  'text_port.cpp',
   'record_chains.cpp',
   'grid_cell_records.cpp',
   'sfx_port.cpp',
@@ -118,6 +118,7 @@ game_c_sources = [
   'bubbles.c',
   'erode.c',
   'fallin.c',
+  'text.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

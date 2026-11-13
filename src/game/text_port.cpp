@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-045 Text.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-045.csv. */
+/* The port tail of GAME-045 Text.c (ADR 0006 decision 4; finding 607): the
+ * port's message strings, message slots and advisor text display,
+ * unannotated. Text.c itself is rebuilt in original shape in text.c.
+ *
+ * In the matching build (MSVC 5.0) text.c defines the port's names of the
+ * unit's functions itself (text_link_names.h), so their definitions here
+ * are compiled out there (LRR_TEXT_PORT_NAMES). The port's state stays in
+ * every build: message.cpp, engine.cpp and frontend.cpp read it.
+ * Relocated from the verbatim text.cpp (body hashes:
+ * docs/coverage/relocations/GAME-045.csv). */
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -61,7 +68,7 @@
 extern "C" uint32_t s_overlay_word_03610, s_overlay_word_03614;
 #include "engine_for_text.hpp"
 
-// GLOBAL: LEGORR 0x00503190
+/* Port state of 0x00503190 (Text.c's textGlobs.typeName). */
 const char* s_ui_message_labels[26] = {
     "Text_Walk", "Text_Drill", "Text_NoDrill", "Text_CantDrill",
     "Text_Reinforce", "Text_NoReinforce", "Text_CantReinforce",
@@ -74,14 +81,14 @@ const char* s_ui_message_labels[26] = {
     "Text_UnitUpgraded"
 };
 
-// GLOBAL: LEGORR 0x005031f8
+/* Port state of 0x005031f8 (textGlobs.messages). */
 char* s_ui_message_text_slots[26];
 
 /* EngineModeSet (FUN_004565f0) clears the two advisor-text request globals;
  * their normal writers/readers are in the advisor text band. */
-// GLOBAL: LEGORR 0x00503610
+/* Port state of 0x00503610 (textGlobs.counter). */
 uint32_t s_overlay_word_03610; /* DAT_00503610 role */
-// GLOBAL: LEGORR 0x00503614
+/* Port state of 0x00503614 (textGlobs.currText). */
 uint32_t s_overlay_word_03614; /* DAT_00503614 role */
 
 static float s_ui_message_line_delay = 100.0f;
@@ -92,11 +99,20 @@ static uint32_t s_ui_message_flags;
 
 static char s_ui_message_image_names[26][32];
 
+/* text.c serves the port's names of the unit's functions in the matching
+ * build (text_link_names.h): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_TEXT_PORT_NAMES 0
+#else
+#define LRR_TEXT_PORT_NAMES 1
+#endif
+
+#if LRR_TEXT_PORT_NAMES /* text.c serves these names in the matching build */
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static void advisor_text_output_copy(void* output, const char* text, int mode);
 static int advisor_text_output_draw(void* output, float delta);
 
-// FUNCTION: LEGORR 0x0046a7f0
+/* Port model of 0x0046a7f0 */
 void ui_message_strings_initialize(void* primary_font, void* secondary_font,
                                    void* message_resource, void* subtitle_font,
                                    float line_delay)
@@ -110,7 +126,7 @@ void ui_message_strings_initialize(void* primary_font, void* secondary_font,
     s_ui_message_line_delay = (line_delay == 0.0f) ? 100.0f : line_delay;
 }
 
-// FUNCTION: LEGORR 0x0046aa90
+/* Port model of 0x0046aa90 */
 void ui_message_overlay_state_initialize(void)
 {
     s_ui_message_count = 26u;
@@ -120,7 +136,7 @@ void ui_message_overlay_state_initialize(void)
     text_buffer_reset(s_ui_message_secondary_font);
 }
 
-// FUNCTION: LEGORR 0x0046aad0
+/* Port model of 0x0046aad0 */
 int ui_message_label_index_find(const char* label, int* out_index)
 {
     int i;
@@ -134,7 +150,7 @@ int ui_message_label_index_find(const char* label, int* out_index)
     }
     return 0;
 }
-// FUNCTION: LEGORR 0x0046ab10
+/* Port model of 0x0046ab10 */
 void ui_message_text_slot_assign(int index, const char* text)
 {
     size_t length;
@@ -166,7 +182,7 @@ void ui_message_text_slot_assign(int index, const char* text)
     s_ui_message_image_slots[index] = NULL;
 }
 
-// FUNCTION: LEGORR 0x0046abb0
+/* Port model of 0x0046abb0 */
 void ui_message_text_slot_assign_with_image(int index, const char* text,
                                             const char* image_path,
                                             const char* display_path)
@@ -185,7 +201,7 @@ void ui_message_text_slot_assign_with_image(int index, const char* text,
 
 /* AdvisorTextRequestSetup (FUN_0046ac20): normalize the request mask,
  * publish the two overlay globals, notify the actor, and set pending bit 0. */
-// FUNCTION: LEGORR 0x0046ac20
+/* Port model of 0x0046ac20 */
 void advisor_text_request_setup(uint32_t request, uint32_t flags)
 {
     if (flags == 0u) flags = 0x8000u;
@@ -199,7 +215,7 @@ void advisor_text_request_setup(uint32_t request, uint32_t flags)
 /* AdvisorTextAnimationUpdate (FUN_0046ac60): update the active text slot,
  * optionally restart its timeout, advance an available animation, and
  * maintain the slot-selected flag. */
-// FUNCTION: LEGORR 0x0046ac60
+/* Port model of 0x0046ac60 */
 void advisor_text_animation_update(int slot, int force, int selected)
 {
     if (force == 0) {
@@ -234,7 +250,7 @@ void advisor_text_animation_update(int slot, int force, int selected)
 /* AdvisorTextDisplayWorker (FUN_0046ad00): update the active advisor slot
  * or message timer, render the selected text path, then close or finish the
  * interface overlay according to the global display state. */
-// FUNCTION: LEGORR 0x0046ad00
+/* Port model of 0x0046ad00 */
 void advisor_text_display_worker(float delta)
 {
     AdvisorTextDisplayOps* ops = &s_advisor_text_display_ops;
@@ -411,3 +427,4 @@ static int advisor_text_output_draw(void* output, float delta)
     advisor_message_layout_result(output, overflow, bottom);
     return overflow;
 }
+#endif /* LRR_TEXT_PORT_NAMES */

@@ -79,11 +79,27 @@ int sound_subsystem_enabled(void);                          /* 00465370 */
 void sound_deferred_play_expire(void);                      /* 00464e80 */
 int sound_deferred_timer_set_if_idle(float seconds);        /* 00464ec0 */
 
-/* GAME-045 Text.c (text.cpp, message.hpp, frontend.hpp). The original's
- * Text_SetMessage (0046ac20) takes the message line; the port's request
- * word is that pointer on Win32. */
+/* GAME-045 Text.c (text.c; text_port.cpp, message.hpp, frontend.hpp
+ * natively). The original's Text_SetNERPsMessage (0046ac20) takes the
+ * message line; the port's request word is that pointer on Win32. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Text.c's textGlobs (text.c, 00503190; finding 607), as far as NERPs
+ * writes it: the message counter (00503610) and the message line
+ * (00503614). One struct and one extern replace the two word declarations
+ * that native builds use, so the unit's symbol numbering (finding 538) does
+ * not change. */
+struct Text_Globs {
+    unsigned char reserved[0x480];
+    uint32_t counter;                                       /* +0x480 */
+    char* currText;                                         /* +0x484 */
+};
+extern struct Text_Globs textGlobs;
+#define s_overlay_word_03610 textGlobs.counter
+#define s_overlay_word_03614 textGlobs.currText
+#else
 extern uint32_t s_overlay_word_03610;                       /* 00503610 */
 extern uint32_t s_overlay_word_03614;                       /* 00503614 */
+#endif
 void ui_message_overlay_state_initialize(void);             /* 0046aa90 */
 void advisor_text_request_setup(uint32_t request, uint32_t flags); /* 0046ac20 */
 
