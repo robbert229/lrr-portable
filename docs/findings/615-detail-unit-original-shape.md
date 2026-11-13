@@ -336,6 +336,34 @@ returned NULL (Detail_LoadMeshes) and 0 (the screen area). They now reach
 the unit, whose Container calls go to the port's Container functions,
 directly or through the adapters above.
 
+## Rebased onto #677 (`aeaae5b4`)
+
+The stack puts this change on #677 (GAME-047 Upgrade.c, finding 617), which
+sits on #676 (G98-025 AnimClone.c, finding 616). The rebase had conflicts
+only in the shared lists (`link_order.cmake`, `meson.build`,
+`test_c_boundaries.cpp`, the findings README), each resolved by keeping both
+sides. The generated files were regenerated with `make match-progress`.
+Against #677's head:
+
+| | #677 head | this change |
+| --- | ---: | ---: |
+| Exact-function code bytes | 199,500 | **201,327** |
+| Accuracy, full / game-only | 87.52% / 86.29% | 87.75% / 86.54% |
+| Annotated exact functions (full) | 1,701 | 1,710 |
+| `opt_ref` annotated full: removed / exact removed | 419 / 213 | 414 / 215 |
+| `opt_ref` annotated game-only | 412 / 206 | 407 / 208 |
+| Reccmp lint ledger (entries) | 1,073 | 1,071 |
+
+`make reccmp-check` reports the same 14 improvements (the unit's ten
+addresses below 100% and the four Lego.c callers), none below baseline and
+no exact match lost. Instruction counts change only at the unit's addresses.
+`detail.c.obj` again loses five functions, four of them exact, through the
+same dropped Lego.c callers. Exact-removed rises by two because three of
+those five are now exact, and on #677 only `0040bd60` among them was.
+`make unit-data-offsets` gives the same GAME-011 row (unit summary: full 0,
+gaps-only 12, partial 22, n/a 193). `make tools-test`,
+`make winapi-link-check` and native ctest (37 of 37) pass.
+
 ## Validation
 
 - `make reccmp-check` (MSVC 5.0, developer distrobox): OK. None below

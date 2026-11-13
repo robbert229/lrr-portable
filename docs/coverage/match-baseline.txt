@@ -1,4 +1,4 @@
-# input_sha256: 27f559c607ffafcbc55553a3ce94dec5a4d0274b72e268d374cd7d6a6380040b
+# input_sha256: 99d35e32954928c7d14a5063b3d541e5f982e0fea38404f18b4f89b2e1cb48bb
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -269,17 +269,17 @@
 0x0040b250 100.00 help_window_dependencies_flag4_adapter
 0x0040b2a0 100.00 help_window_dependencies_flag100_set_adapter
 0x0040b2e0 100.00 help_window_dependencies_flag100_adapter
-0x0040b310 15.56 terrain_cell_resource_grid_load
-0x0040b410 35.79 terrain_cell_resource_grid_dispose
-0x0040b470 51.88 projected_quad_screen_area_calculate
-0x0040b5f0 17.46 tile_model_entity_register
-0x0040b7d0 65.67 cell_visual_channel_table_dispose
-0x0040b810 51.72 cell_visual_channel_table_resources_clear
-0x0040b850 18.52 packed_grid_cell_value_get
-0x0040b880 16.59 scene_cell_visual_channels_apply
-0x0040ba00 49.19 scene_rotation_flags_apply(void *, float, float const *const, float const *const, float const *const, float, float, float, unsigned char)
-0x0040bb90 20.28 scene_frame_from_triplet_apply
-0x0040bd60 100.00 perspective_projection_matrix_set
+0x0040b310 98.81 terrain_cell_resource_grid_load
+0x0040b410 97.44 terrain_cell_resource_grid_dispose
+0x0040b470 100.00 lego_projected_quad_area_adapter
+0x0040b5f0 89.29 tile_model_entity_register_original
+0x0040b7d0 100.00 cell_visual_channel_table_dispose_original
+0x0040b810 100.00 lego_detail_mesh_resources_clear_adapter
+0x0040b850 100.00 packed_grid_cell_value_get
+0x0040b880 100.00 scene_cell_visual_channels_apply
+0x0040ba00 100.00 detail_place_mesh
+0x0040bb90 41.98 detail_set_mesh_frame
+0x0040bd60 100.00 detail_matrix_setup
 0x0040bdc0 100.00 ledger_stub_0040bdc0_SetTimeoutTo10000
 0x0040bde0 100.00 effect_spawn_boulder_explode
 0x0040be10 75.00 scene_light_create_at_position
@@ -737,8 +737,8 @@
 0x00429880 100.00 engine_float_field260_get_current_target
 0x00429890 90.82 lego_level_load
 0x0042b2f0 91.30 lego_entity_effect_counters_apply_from_record
-0x0042b330 99.08 lego_load_tile_meshes
-0x0042b480 97.73 lego_rectangular_resource_table_destroy
+0x0042b330 100.00 lego_load_tile_meshes
+0x0042b480 100.00 lego_rectangular_resource_table_destroy
 0x0042b500 100.00 global_state_field84_get_current_target
 0x0042b510 97.84 lego_map_load_pipeline
 0x0042b850 100.00 lego_surface_text_character_map_initialize
@@ -858,10 +858,10 @@
 0x00433be0 100.00 lego_current_level_terrain_grid_pick
 0x00433c10 66.06 lego_entity_neighbor_blocked_cell_step_probe
 0x00433e30 96.00 lego_grid_cell_entity_eligibility_check
-0x00433e80 94.29 lego_terrain_projected_cell_state_refresh
+0x00433e80 94.51 lego_terrain_projected_cell_state_refresh
 0x00434450 100.00 lego_projected_cell_area_compare
 0x00434480 88.73 lego_terrain_cell_surface_update_dispatch_level
-0x00434530 95.65 terrain_grid_entry_resources_release_all_current
+0x00434530 100.00 terrain_grid_entry_resources_release_all_current
 0x00434570 100.00 terrain_cell_drill_work_add_current
 0x004345f0 100.00 lego_panels_config_entry_apply
 0x00434710 39.47 lego_panel_button_layout_config_load
@@ -2616,17 +2616,17 @@
 0x0040b250 100.00 help_window_dependencies_flag4_adapter
 0x0040b2a0 100.00 help_window_dependencies_flag100_set_adapter
 0x0040b2e0 100.00 help_window_dependencies_flag100_adapter
-0x0040b310 15.56 terrain_cell_resource_grid_load
-0x0040b410 35.79 terrain_cell_resource_grid_dispose
-0x0040b470 51.88 projected_quad_screen_area_calculate
-0x0040b5f0 17.46 tile_model_entity_register
-0x0040b7d0 65.67 cell_visual_channel_table_dispose
-0x0040b810 51.72 cell_visual_channel_table_resources_clear
-0x0040b850 18.52 packed_grid_cell_value_get
-0x0040b880 16.59 scene_cell_visual_channels_apply
-0x0040ba00 49.19 scene_rotation_flags_apply(void *, float, float const *const, float const *const, float const *const, float, float, float, unsigned char)
-0x0040bb90 20.28 scene_frame_from_triplet_apply
-0x0040bd60 100.00 perspective_projection_matrix_set
+0x0040b310 98.81 terrain_cell_resource_grid_load
+0x0040b410 97.44 terrain_cell_resource_grid_dispose
+0x0040b470 100.00 lego_projected_quad_area_adapter
+0x0040b5f0 89.29 tile_model_entity_register_original
+0x0040b7d0 100.00 cell_visual_channel_table_dispose_original
+0x0040b810 100.00 lego_detail_mesh_resources_clear_adapter
+0x0040b850 100.00 packed_grid_cell_value_get
+0x0040b880 100.00 scene_cell_visual_channels_apply
+0x0040ba00 100.00 detail_place_mesh
+0x0040bb90 41.98 detail_set_mesh_frame
+0x0040bd60 100.00 detail_matrix_setup
 0x0040bdc0 100.00 ledger_stub_0040bdc0_SetTimeoutTo10000
 0x0040bde0 100.00 effect_spawn_boulder_explode
 0x0040be10 75.00 scene_light_create_at_position
@@ -3084,8 +3084,8 @@
 0x00429880 100.00 engine_float_field260_get_current_target
 0x00429890 90.82 lego_level_load
 0x0042b2f0 91.30 lego_entity_effect_counters_apply_from_record
-0x0042b330 99.08 lego_load_tile_meshes
-0x0042b480 97.73 lego_rectangular_resource_table_destroy
+0x0042b330 100.00 lego_load_tile_meshes
+0x0042b480 100.00 lego_rectangular_resource_table_destroy
 0x0042b500 100.00 global_state_field84_get_current_target
 0x0042b510 97.84 lego_map_load_pipeline
 0x0042b850 100.00 lego_surface_text_character_map_initialize
@@ -3205,10 +3205,10 @@
 0x00433be0 100.00 lego_current_level_terrain_grid_pick
 0x00433c10 66.06 lego_entity_neighbor_blocked_cell_step_probe
 0x00433e30 96.00 lego_grid_cell_entity_eligibility_check
-0x00433e80 94.29 lego_terrain_projected_cell_state_refresh
+0x00433e80 94.51 lego_terrain_projected_cell_state_refresh
 0x00434450 100.00 lego_projected_cell_area_compare
 0x00434480 88.73 lego_terrain_cell_surface_update_dispatch_level
-0x00434530 95.65 terrain_grid_entry_resources_release_all_current
+0x00434530 100.00 terrain_grid_entry_resources_release_all_current
 0x00434570 100.00 terrain_cell_drill_work_add_current
 0x004345f0 100.00 lego_panels_config_entry_apply
 0x00434710 39.47 lego_panel_button_layout_config_load
