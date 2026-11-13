@@ -27,8 +27,10 @@ The binary has no RTTI and attests none of the names. The unit name
 `Movie.cpp` and the class name `G98CMovie` are `inferred`, from gods98's
 movie module as OpenLRR reconstructs it. The method names are descriptive.
 
-"Before" is `main` `9043af89`. "After" is this change, from the full
-matching build (`make reccmp-check`).
+First measured on `main` `9043af89`, the figures below. Stacked on #691
+(`91877982`, which sits on #690 and #689): see [Rebased onto
+#691](#rebased-onto-691). No unit score differs between the two bases.
+"After" is from the full matching build (`make reccmp-check`).
 
 ## Result
 
@@ -230,3 +232,19 @@ Native movie playback through `movie.cpp`'s FFmpeg reader is a port gap
 - `make tools-test` (no `--allow-growth`): the lint ledger loses the three
   old port definitions (`lego::copy_string`,
   `lego::directshow_graph_hooks_set`, `lego::directshow_partial_release`).
+
+## Rebased onto #691
+
+Stacked on #691 (`convert/684-game-042-grid-cell-records`, `91877982`).
+"Before" is #691's committed `binary-progress.json`; "after" is this change
+on top of it, from `make reccmp-check` and `make match-progress`. The gate
+shows the same 12 improvements and no drop.
+
+| | #691 | This change on #691 |
+| --- | ---: | ---: |
+| Exact-function code bytes | 207,221 | **208,597** |
+| Exact functions, full / game-only | 1,748 / 1,539 | **1,759 / 1,550** |
+| `opt_ref` full: removed / exact removed | 403 / 220 | **399 / 220** |
+| `opt_ref` game-only: removed / exact removed | 396 / 213 | **392 / 213** |
+| Reccmp lint ledger | 1,045 | **1,042** |
+| Import DLLs (`make pe-audit`) | 10 | **11**, order equal |
