@@ -226,6 +226,15 @@
 #define aitask_type11_nearest_resolve_adapter legoobject_type11_cell_coordinate_nearest_resolve /* 0044a3d0 */
 #define aitask_position_step_link_adapter legoobject_position_step_command_issue_and_link /* 0044b500 */
 #define simtick_render_step_original legoobject_simtick_render_step /* 00449c00 */
+/* #699 (finding 626): lego_port.cpp's remaining original-ABI adapters for
+ * lego_unit.c, whose contract is the original's. */
+#define spawn_registry_probe_adapter legoobject_unknown_00438960 /* 00438960 */
+#define nearest_open_cell_search_adapter legoobject_nearest_open_cell_coord_search /* 0044a5d0 */
+#define entity_try_create_linked_at_position_original legoobject_try_create_linked_at_position /* 004471b0 */
+#define entity_pair_scalar_fields_set_original legoobject_pair_scalar_fields_set /* 0044c150 */
+#define entity_damage_apply_original legoobject_damage_apply /* 0043f6a0 */
+#define simulation_update_counter_add_original legoobject_simulation_update_counter_add /* 0043a8f0 */
+#define simulation_mode_counter_add_original legoobject_simulation_mode_counter_add /* 0043a910 */
 #define entity_type_operation_dispatch_adapter legoobject_type_operation_dispatch /* 00449f50 */
 #define ledger_stub_0044b140_SmallSpiderCellSwarmSpawn legoobject_small_spider_cell_swarm_spawn /* 0044b140 */
 #endif

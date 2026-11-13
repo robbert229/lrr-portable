@@ -168,9 +168,10 @@ int lego_entity_matches_current_selection_or_owner(const void* object);
 
 /* Config.h's value macros, as the original expands them: the lookup and
  * the path are evaluated twice when the item exists, and a missing item
- * reads as "". */
+ * reads as "" (config.c's pooled s_config_angle_empty, declared in
+ * lego_unit_imports.h). */
 #define LEGO_A_CFG_STR(config, id) \
-    (block_get_strptr((config), (id)) ? block_get_strptr((config), (id)) : "")
+    (block_get_strptr((config), (id)) ? block_get_strptr((config), (id)) : s_config_angle_empty)
 #define LEGO_A_CFG_INT(config, id) atoi(LEGO_A_CFG_STR((config), (id)))
 #define LEGO_A_CFG_FLOAT(config, id) atof(LEGO_A_CFG_STR((config), (id)))
 

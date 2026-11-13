@@ -782,6 +782,10 @@ struct Lego_Level;
 extern float g_camera_countdown;              /* camera.cpp, 00556ed8 */
 
 /* G98-006 Config.c (gods98/config.h; BlockFile is struct BlockRec). */
+/* Config.c's pooled "" and ":" (config.c, C linkage): the original's
+ * literals resolve to these two addresses (findings 581, 626). */
+extern const char s_config_rgb_separator[];                             /* 004a1cd4 ":" */
+extern const char s_config_angle_empty[4];                              /* 004b8a14 "" */
 const char* string_path_join(const char* root, ...);                    /* 00478f50 */
 char* block_get_str_copy(struct BlockRec* root, const char* path);      /* 00479050 */
 const char* block_get_strptr(struct BlockRec* root, const char* path);  /* 004790b0 */
@@ -1142,6 +1146,12 @@ int nearest_open_cell_search_adapter(struct EntitySlot* entity, int* x, int* y,
                                      int allowFlag20);      /* 0044a5d0 */
 struct EntitySlot* object_create_from_container_adapter(void* container,
                                                         int type, int id); /* 00437d00 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: LegoObject_Create itself, by way of the alias of
+ * lego_object_create_adapter (declared above). */
+#define object_create_from_container_adapter(container, type, id) \
+    ((struct EntitySlot*)lego_object_create_adapter((container), (type), (void*)(id)))
+#endif
 void entity_type_operation_dispatch_adapter(struct EntitySlot* entity,
                                             int operation); /* 00449f50 */
 int entity_try_create_linked_at_position_original(struct EntitySlot* entity,
@@ -1238,8 +1248,19 @@ extern struct Text_Globs textGlobs;
 #else
 extern uint32_t s_overlay_word_03610;         /* text_port.cpp, 00503610 */
 #endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Reward.c's rewardGlobs (reward.c, 00552980): the level-start pilot count
+ * Lego.c stores is rewardGlobs.level.itemsArray[5].startCount (00555118).
+ * Natively spawn.cpp's word stands in for it. One extern replaces the
+ * other (finding 626). Deviation (scoring only): the extern views the
+ * struct as words, because naming its tag would add one to the unit's
+ * symbol numbering (finding 538). */
+extern uint32_t rewardGlobs[];
+#define s_start_level_pilot_grid_count (rewardGlobs[0x2798 / 4])
+#else
 /* spawn.cpp, 00555118 (namespace unported_ledger_stubs, C linkage). */
 extern uint32_t s_start_level_pilot_grid_count;
+#endif
 /* GAME-032 Panel.c (panel_unit.h), 005000e0; panelTable[0].flags is at
  * +0x5c. */
 
@@ -1253,8 +1274,18 @@ uint32_t entity_type_grid_record_count_get(const char* type_name,
 /* 00431570 takes no argument; the port's entry takes two ignored cells.
  * Adapter at the end of lego.cpp. */
 void* level_current_terrain_get_original(void);                 /* 00431570 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: Lego_GetMap itself. lego_unit.c's definition keeps the
+ * port's two ignored cells, so a call without them is the original's. */
+#define level_current_terrain_get_original() \
+    (((void* (*)())level_current_terrain_get)())
+#endif
 /* 00433e80 (Lego.c part 3) has no port entry with the original's
- * contract. Adapter at the end of lego.cpp. */
+ * contract. Adapter at the end of lego.cpp; in the matching build, the
+ * unit's own function (part 3, below in lego_unit.c). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define terrain_projected_cell_state_refresh_original lego_terrain_projected_cell_state_refresh
+#endif
 void terrain_projected_cell_state_refresh_original(void* container,
     void* view, float distance, unsigned int count);            /* 00433e80 */
 /* GAME AITask.c (crt.hpp). */
@@ -1396,6 +1427,12 @@ int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint); /* 0040f19
 struct InfoPoint2I;
 void info_send(int type, char* text, void* object,
                struct InfoPoint2I* blockPos);                   /* 00419b80 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the port's message_dispatch (declared above) is Info_Send
+ * itself, with the original's arguments. */
+#define message_dispatch(type, text, object, blockPos) \
+    info_send((type), (char*)(text), (void*)(object), (struct InfoPoint2I*)(blockPos))
+#endif
 /* Vehicle.c, Creature.c, Building.c and Upgrade.c (record.hpp, view.hpp,
  * type_config_ports.hpp; extern "C" in place). */
 void scene_resource_visibility_set(void* record, uint32_t flag);   /* 0046d2c0 */
@@ -1411,6 +1448,11 @@ void render_resource_binding_initialize(struct RenderResourceBinding* binding,
                                         void* config_b);        /* 0046c030 */
 /* Original-ABI adapter at the end of lego.cpp (group 2B). */
 void lego_noop_block_adapter(const int* blockPos);              /* 00484c90 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original passes the block to the shared no-op. */
+#define lego_noop_block_adapter(blockPos) \
+    (((void (*)())flic_opcode27_fallback_noop)(blockPos))
+#endif
 int lego_vehicle_load_adapter(void* vehicle, unsigned int objID, void* root,
                               const char* filename,
                               const char* gameName);            /* 0046c6f0 */
@@ -1657,6 +1699,15 @@ uint32_t entity_state_flags_get(const struct EntitySlot* e);
  * map; the port's entry returns nothing. Adapter at the end of lego.cpp. */
 int entity_block_pos_get_adapter(const struct EntitySlot* entity,
                                  int* bx, int* by);
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: LegoObject_GetBlockPos itself (legoobject_unit.c), which
+ * returns the on-map flag. entity_position_to_terrain_cell_adapter's
+ * declaration (above) names it in the matching build
+ * (legoobject_port_aliases.h) with the port's void result, hence the cast.
+ * Defined after the declaration, which keeps its own name. */
+#define entity_block_pos_get_adapter(entity, bx, by) \
+    (((int (*)())entity_position_to_terrain_cell_adapter)((entity), (bx), (by)))
+#endif
 /* GAME-026 Map3D.c (terrain_map.h): 0044f640, 004507d0. */
 /* GAME-008 Effects (rock_fall_styles.cpp, resource.hpp): the rock fall,
  * 0040c230. */

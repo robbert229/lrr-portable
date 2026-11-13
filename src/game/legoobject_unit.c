@@ -2957,7 +2957,7 @@ void legoobject_building_deposit_state_monitor(Lego_Object* obj)
 
     if (obj->type == 4) {
         if (entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 2) {
-            capacity = (obj->carryNullFrames < stats_instance_word_at_ec(obj))
+            capacity = (stats_instance_word_at_ec(obj) > obj->carryNullFrames)
                 ? obj->carryNullFrames : stats_instance_word_at_ec(obj);
         } else {
             capacity = obj->numCarriedObjects;
@@ -9978,6 +9978,13 @@ extern Lego_Object* objectGlobs_f_4ea7c4[256];   /* 004ea7c4 */
  * one-line getter (return ((int*)p)[3]) the linker folded with
  * Flic_GetWidth; 0044bc30 calls it on the flock (SteeringGroup.hasPosition).
  * 004756b0 (Container_SetMatrix) has C++ linkage in the port. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Deviation (scoring only): the linker folded the original's flock getter
+ * into 004897d0, which this tree annotates as animclone.c's
+ * anim_clone_is_lws (the same one-line getter). The matching build calls
+ * that name, so the operand names the folded address (finding 626). */
+#define legoobject_gt_flock_has_position_adapter anim_clone_is_lws
+#endif
 int legoobject_gt_flock_has_position_adapter(void* flock);              /* 004897d0 */
 void legoobject_gt_container_matrix_set_adapter(void* cont, uint32_t mode,
                                                 const float* matrix);   /* 004756b0 */
