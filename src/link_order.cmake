@@ -131,6 +131,7 @@ lrr_link(tail   -        game          game/game.cpp)
 lrr_link(tail   -        game          game/opgroup.cpp)
 lrr_link(tail   -        game          game/render.cpp)
 lrr_link(tail   -        game          game/tutorial_world_arrows.cpp)
+lrr_link(tail   -        gods98        gods98/avi_player_port.cpp)
 lrr_link(tail   -        gods98        gods98/block.cpp)
 lrr_link(tail   -        gods98        gods98/container_native.cpp native)
 lrr_link(tail   -        gods98        gods98/container_route.cpp native)
@@ -227,7 +228,7 @@ lrr_link(legacy 0048e1e0 gods98        gods98/string.cpp)
 # Legacy files whose functions lie in the CRT range, just before LIBC
 lrr_link(legacy 0048ed00 game          game/seh_runtime.cpp)
 lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp)
-lrr_link(legacy 00494c70 gods98        crt/crt.cpp)
+lrr_link(legacy 00494d10 gods98        crt/crt.cpp)
 lrr_link(legacy 0049cd30 gods98        gods98/resource.cpp)
 
 # Libraries of the matching build, after the objects, in the order of the

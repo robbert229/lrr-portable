@@ -1,4 +1,4 @@
-# input_sha256: 4fed5ebbbb06e0626e4c7d81379ba53f0f317bd3f4a4eb3bfaab33af9754fb4f
+# input_sha256: 70f9fd5db340bf4e40454e8962683165f0b111b1d13e694cc031f4e0f0024c3c
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2335 mapped functions
+[game-only] 2339 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2044,31 +2044,33 @@
 0x0047e2d0 11.11 rgb_channels_unpack
 0x0047e300 10.53 ledger_stub_0047e300_InterfaceMethod18StructApply
 0x0047e3e0 76.47 ledger_stub_0047e3e0_InterfaceMethodResultRecordInitialize
-0x0047e460 50.00 ledger_stub_0047e460_ComObjectDestroyAndOptionallyFree
-0x0047e480 38.10 ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset
-0x0047e4c0 14.81 ledger_stub_0047e4c0_AviPlaybackStateInitialize
-0x0047e510 7.69 AviPlaybackState::display_mode_setup
-0x0047e710 31.82 surface_descriptor_initialize
-0x0047e760 23.26 AviPlaybackState::surface_lock
-0x0047e7b0 25.40 AviPlaybackState::surface_unlock
-0x0047e7e0 100.00 bit_count32_by_position
-0x0047e800 15.19 AviPlaybackState::frame_retriever_open
-0x0047e980 51.61 AviPlaybackState::player_destroy
-0x0047e9a0 11.76 AviPlaybackState::frame_retriever_destroy
-0x0047e9e0 17.24 AviPlaybackState::frame_decode_and_copy
-0x0047eb20 22.22 AviPlaybackState::frame_update_and_blit
-0x0047ebe0 70.00 AviPlaybackState::stream_frame_count_get
-0x0047ebf0 40.62 AviPlaybackState::frame_seek_and_clock_rebase
-0x0047ec60 23.53 AviPlaybackState::playback_frame_index_get
-0x0047ec80 36.36 avi_file_initialize
-0x0047ec90 8.51 avi_player_create
-0x0047ecf0 50.00 ledger_stub_0047ecf0_AviFrameUpdate
-0x0047ed00 20.34 avi_playback_frame_loop
-0x0047ed40 80.00 ledger_stub_0047ed40_AviFrameIndexAndClockReset
-0x0047ed50 100.00 ledger_stub_0047ed50_AviCurrentFrameIndexGet
-0x0047ed60 100.00 ledger_stub_0047ed60_AviStreamFrameCountGet
-0x0047ed70 75.00 lego::interface_invoke_one_if_nonnull
-0x0047ed80 100.00 avi_player_ready_get
+0x0047e460 100.00 AviSurface::`scalar deleting destructor'
+0x0047e480 94.74 AviSurface::~AviSurface
+0x0047e4c0 100.00 AviSurface::AviSurface
+0x0047e510 100.00 AviSurface::Init
+0x0047e710 100.00 AviSurface::InitDesc
+0x0047e740 100.00 AviSurface::Width
+0x0047e750 100.00 AviSurface::Height
+0x0047e760 100.00 AviSurface::Lock
+0x0047e7b0 100.00 AviSurface::Unlock
+0x0047e7e0 100.00 AviSurface::CountMaskBits
+0x0047e800 100.00 AviMovie::AviMovie
+0x0047e980 100.00 AviMovie::`scalar deleting destructor'
+0x0047e9a0 100.00 AviMovie::~AviMovie
+0x0047e9e0 59.81 AviMovie::FrameToSurface
+0x0047eb20 96.49 AviMovie::Update
+0x0047ebe0 100.00 AviMovie::GetLength
+0x0047ebf0 100.00 AviMovie::SetTime
+0x0047ec60 100.00 AviMovie::GetTime
+0x0047ec80 100.00 avi_initialise
+0x0047ec90 100.00 avi_load
+0x0047ecf0 100.00 avi_update
+0x0047ed00 100.00 avi_blit_to_back_buffer
+0x0047ed40 100.00 avi_set_time
+0x0047ed50 100.00 avi_get_time
+0x0047ed60 100.00 avi_get_length
+0x0047ed70 100.00 avi_remove
+0x0047ed80 100.00 avi_is_ok
 0x0047ed90 9.70 input_direct_initialize
 0x0047eef0 31.45 input_state_poll_retail
 0x0047efb0 45.45 input_keyboard_down_key_count
@@ -2342,8 +2344,10 @@
 0x0049d8d0 29.27 display_mode_matches_filter_tuple
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
+0x0049e9a0 100.00 AviSurface::`vftable'
+0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2573 mapped functions
+[full] 2583 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -4381,31 +4385,33 @@
 0x0047e2d0 11.11 rgb_channels_unpack
 0x0047e300 10.53 ledger_stub_0047e300_InterfaceMethod18StructApply
 0x0047e3e0 76.47 ledger_stub_0047e3e0_InterfaceMethodResultRecordInitialize
-0x0047e460 50.00 ledger_stub_0047e460_ComObjectDestroyAndOptionallyFree
-0x0047e480 38.10 ledger_stub_0047e480_TwoInterfaceFieldsReleaseAndReset
-0x0047e4c0 14.81 ledger_stub_0047e4c0_AviPlaybackStateInitialize
-0x0047e510 7.69 AviPlaybackState::display_mode_setup
-0x0047e710 31.82 surface_descriptor_initialize
-0x0047e760 23.26 AviPlaybackState::surface_lock
-0x0047e7b0 25.40 AviPlaybackState::surface_unlock
-0x0047e7e0 100.00 bit_count32_by_position
-0x0047e800 15.19 AviPlaybackState::frame_retriever_open
-0x0047e980 51.61 AviPlaybackState::player_destroy
-0x0047e9a0 11.76 AviPlaybackState::frame_retriever_destroy
-0x0047e9e0 17.24 AviPlaybackState::frame_decode_and_copy
-0x0047eb20 22.22 AviPlaybackState::frame_update_and_blit
-0x0047ebe0 70.00 AviPlaybackState::stream_frame_count_get
-0x0047ebf0 40.62 AviPlaybackState::frame_seek_and_clock_rebase
-0x0047ec60 23.53 AviPlaybackState::playback_frame_index_get
-0x0047ec80 36.36 avi_file_initialize
-0x0047ec90 8.51 avi_player_create
-0x0047ecf0 50.00 ledger_stub_0047ecf0_AviFrameUpdate
-0x0047ed00 20.34 avi_playback_frame_loop
-0x0047ed40 80.00 ledger_stub_0047ed40_AviFrameIndexAndClockReset
-0x0047ed50 100.00 ledger_stub_0047ed50_AviCurrentFrameIndexGet
-0x0047ed60 100.00 ledger_stub_0047ed60_AviStreamFrameCountGet
-0x0047ed70 75.00 lego::interface_invoke_one_if_nonnull
-0x0047ed80 100.00 avi_player_ready_get
+0x0047e460 100.00 AviSurface::`scalar deleting destructor'
+0x0047e480 94.74 AviSurface::~AviSurface
+0x0047e4c0 100.00 AviSurface::AviSurface
+0x0047e510 100.00 AviSurface::Init
+0x0047e710 100.00 AviSurface::InitDesc
+0x0047e740 100.00 AviSurface::Width
+0x0047e750 100.00 AviSurface::Height
+0x0047e760 100.00 AviSurface::Lock
+0x0047e7b0 100.00 AviSurface::Unlock
+0x0047e7e0 100.00 AviSurface::CountMaskBits
+0x0047e800 100.00 AviMovie::AviMovie
+0x0047e980 100.00 AviMovie::`scalar deleting destructor'
+0x0047e9a0 100.00 AviMovie::~AviMovie
+0x0047e9e0 59.81 AviMovie::FrameToSurface
+0x0047eb20 96.49 AviMovie::Update
+0x0047ebe0 100.00 AviMovie::GetLength
+0x0047ebf0 100.00 AviMovie::SetTime
+0x0047ec60 100.00 AviMovie::GetTime
+0x0047ec80 100.00 avi_initialise
+0x0047ec90 100.00 avi_load
+0x0047ecf0 100.00 avi_update
+0x0047ed00 100.00 avi_blit_to_back_buffer
+0x0047ed40 100.00 avi_set_time
+0x0047ed50 100.00 avi_get_time
+0x0047ed60 100.00 avi_get_length
+0x0047ed70 100.00 avi_remove
+0x0047ed80 100.00 avi_is_ok
 0x0047ed90 9.70 input_direct_initialize
 0x0047eef0 31.45 input_state_poll_retail
 0x0047efb0 45.45 input_keyboard_down_key_count
@@ -4891,6 +4897,12 @@
 0x0049b660 100.00 __strdup
 0x0049b6c2 100.00 _DirectDrawEnumerateA@8
 0x0049b6c8 100.00 _DirectDrawCreate@12
+0x0049b6ce 100.00 _AVIStreamInfoA@12
+0x0049b6d4 100.00 _AVIStreamGetFrameOpen@8
+0x0049b6da 100.00 _AVIStreamOpenFromFileA@24
+0x0049b6e0 100.00 _AVIStreamRelease@4
+0x0049b6e6 100.00 _AVIStreamGetFrame@8
+0x0049b6ec 100.00 _AVIFileInit@0
 0x0049c7c0 58.27 wad_expand_payload
 0x0049c840 25.71 wad_payload_decode_dispatch
 0x0049c8e0 52.13 wad_payload_decode_type1
@@ -4917,3 +4929,5 @@
 0x0049db60 100.00 __itoa
 0x0049dc10 100.00 __strlwr
 0x0049dcd0 100.00 __strupr
+0x0049e9a0 100.00 AviSurface::`vftable'
+0x0049e9b0 100.00 AviMovie::`vftable'

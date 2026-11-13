@@ -463,6 +463,21 @@ extern "C" void __cdecl __multtenpow12(uint16_t*, uint32_t, int);
 // LIBRARY: LEGORR 0x0049b6c8 SYMBOL
 // _DirectDrawCreate@12
 
+/* VFW32.LIB's AVIFIL32 import thunks, which the AVI player calls directly
+ * (gods98/avi_player.cpp, finding 604). */
+// LIBRARY: LEGORR 0x0049b6ce SYMBOL
+// _AVIStreamInfoA@12
+// LIBRARY: LEGORR 0x0049b6d4 SYMBOL
+// _AVIStreamGetFrameOpen@8
+// LIBRARY: LEGORR 0x0049b6da SYMBOL
+// _AVIStreamOpenFromFileA@24
+// LIBRARY: LEGORR 0x0049b6e0 SYMBOL
+// _AVIStreamRelease@4
+// LIBRARY: LEGORR 0x0049b6e6 SYMBOL
+// _AVIStreamGetFrame@8
+// LIBRARY: LEGORR 0x0049b6ec SYMBOL
+// _AVIFileInit@0
+
 /* LIBC.LIB exsup3.obj's __seh_longjmp_unwind@4 (finding 540). */
 // LIBRARY: LEGORR 0x00496895 SYMBOL
 // __seh_longjmp_unwind@4
