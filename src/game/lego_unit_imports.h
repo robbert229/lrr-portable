@@ -62,6 +62,12 @@
 #define terrain_cell_surface_quad_reset_current water_seal_block
 #define simtick_fx_bank_tick_original water_update
 #define world_spatial_record_find_at_grid_coordinate water_find_pool
+/* GAME-044 Teleporter.c (game/teleporter.c, finding 621). The port's
+ * definition of this name is an adapter in game/lego_port.cpp, so in the
+ * matching build lego_unit.c calls Teleporter_Update by the unit's name;
+ * teleporter_link_names.h gives the unit the port's names of the other
+ * three Lego.c callees. */
+#define camera_move_pipeline_original teleporter_update
 #endif
 
 #ifdef __cplusplus

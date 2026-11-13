@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-044 GAME-044: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-044.csv. */
+/* GAME-044 Teleporter.c's port tail (finding 621): the port's model of the
+ * teleporter services, unannotated (ADR 0006 decision 4). The
+ * original-shape unit is teleporter.c.
+ *
+ * In the matching build (MSVC 5.0) teleporter.c defines the port's names of
+ * Teleporter_Restart, Teleporter_ServiceAll and Teleporter_Start itself
+ * (teleporter_link_names.h), so their definitions here are compiled out
+ * there (LRR_TELEPORTER_PORT_NAMES). The rest stays in every build: the
+ * native port and its tests call it. Relocated from the verbatim
+ * record_chains.cpp (body hashes: docs/coverage/relocations/GAME-044.csv). */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
 #include <math.h>
@@ -66,8 +73,12 @@ struct SceneStateDispatchContext {
     void* user;
 };
 
-/* LinkedRecordChainFree / GlobalLinkedRecordChainClear — see crt.hpp. */
-// GLOBAL: LEGORR 0x004aa450
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+#define LRR_TELEPORTER_PORT_NAMES 1
+#endif
+
+/* LinkedRecordChainFree / GlobalLinkedRecordChainClear — see crt.hpp.
+ * The port's stand-ins for teleporterGlobs (teleporter.c). */
 void* s_linked_list_aux = NULL; /* DAT_004aa450 role: unowned, zero-init */
 /* The global-list push (FUN_0046a470) — the corpus's head word has no
  * ported owner, so the head lands here; the link field
@@ -77,12 +88,9 @@ void* s_linked_list_aux = NULL; /* DAT_004aa450 role: unowned, zero-init */
  * zeros while the port's zero-init statics land in the exe's zero-fill
  * tail; reccmp-datacmp reads only file bytes per side and flags the pair
  * (uninitialized) — both sides are genuinely zero (image-verified). */
-// GLOBAL: LEGORR 0x004aa458
 void* s_linked_list_head = NULL;  /* DAT_004aa458 role */
 
-/* The original's .bss word at 0x503188, directly after Stats.c's statsGlobs
- * (finding 581): Stats_FindToolFromTaskType's loop ends at its address. */
-// GLOBAL: LEGORR 0x00503188
+/* The port's stand-in for teleporter.c's s_teleporter_none_teleporting. */
 static uint32_t s_entity_flag_mask_all_pass;
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
@@ -92,7 +100,6 @@ static int scene_state_dispatch_callback(EntitySlot* entity, void* payload);
 static void move_pipeline_hook(float delta);
 static void move_post_hook(void);
 
-// FUNCTION: LEGORR 0x0046a370
 void linked_record_chain_free(void* record)
 {
     if (record == NULL) {
@@ -104,7 +111,7 @@ void linked_record_chain_free(void* record)
     engine_heap_free(record);
 }
 
-// FUNCTION: LEGORR 0x0046a390
+#ifdef LRR_TELEPORTER_PORT_NAMES
 void global_linked_record_chain_clear(void)
 {
     void* head = s_linked_list_head; /* the corpus reads the head first */
@@ -112,9 +119,9 @@ void global_linked_record_chain_clear(void)
     linked_record_chain_free(head);
     s_linked_list_head = NULL;
 }
+#endif /* LRR_TELEPORTER_PORT_NAMES */
 
 /* SelectedGlobalPointTransformAndReturnX (FUN_0046a420) — see view.hpp. */
-// FUNCTION: LEGORR 0x0046a420
 float selected_global_point_transform_and_return_x(EngineContext* ctx)
 {
     if (ctx == NULL) {
@@ -126,29 +133,15 @@ float selected_global_point_transform_and_return_x(EngineContext* ctx)
     return frame[0];
 }
 
-// FUNCTION: LEGORR 0x0046a470
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void linked_list_push_at_global_head(void* record)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [s_linked_list_head]
-        mov dword ptr [eax + 1ch], ecx
-        mov dword ptr [s_linked_list_head], eax
-        ret
-    }
-}
-#else
 void linked_list_push_at_global_head(void* record)
 {
     record_list_push(&s_linked_list_head, record);
 }
-#endif
 
 /* FlagMaskCallbacksAllPass (FUN_0046a4c0): for each set bit 0..30, visit
  * filtered entities and fail if LAB_0046a490 finds a matching type with a
  * nonzero +0x390 word. */
-// FUNCTION: LEGORR 0x0046A4C0
+#ifdef LRR_TELEPORTER_PORT_NAMES
 int entity_flag_mask_callbacks_all_pass(uint32_t mask)
 {
     for (uint32_t index = 0; index < 31u; ++index) {
@@ -162,12 +155,13 @@ int entity_flag_mask_callbacks_all_pass(uint32_t mask)
     }
     return 1;
 }
+#endif /* LRR_TELEPORTER_PORT_NAMES */
+
 /* SceneObjectStateDispatch (FUN_0046a510): compute the selector ordinal,
  * optionally allocate/link its 0x20-byte record, then visit filtered entities
  * with the state tuple. The per-caller LAB_0046a3c0 effect and four global
  * words are represented by explicit install/callback hooks. Native records
  * reserve four extra bytes so the widened pointer at +0x1c fits. */
-// FUNCTION: LEGORR 0x0046A510
 void scene_object_state_dispatch(GameContext* ctx, uint32_t selector,
                                  uint32_t mode, uint32_t flags,
                                  SceneObjectStateCallback callback,
@@ -207,7 +201,6 @@ void scene_object_state_dispatch(GameContext* ctx, uint32_t selector,
  * +0x1c chain and advance +8 by (+0xc * delta) only when +0x10 is nonzero
  * and +0x18 equals 2. The native chain pointer is widened in the port; the
  * observed record offsets and branch conditions are unchanged. */
-// FUNCTION: LEGORR 0x0046A700
 void linked_list_conditional_float_advance(float delta)
 {
     void* record = s_linked_list_head;
@@ -233,7 +226,6 @@ void linked_list_conditional_float_advance(float delta)
 /* CameraMoveCommandRoute preserves the corpus's move-list call followed by
  * the conditional filtered entity walk. The callback body remains an
  * injectable, unresolved runtime input. */
-// FUNCTION: LEGORR 0x0046a730
 void camera_move_pipeline(EngineContext* ctx, float delta)
 {
     /* The reference routine operates on global state and does not consume an
@@ -248,7 +240,6 @@ void camera_move_pipeline(EngineContext* ctx, float delta)
 
 /* FirstSetFlagOrdinal (FUN_0046a760): return the one-based index of the
  * lowest selected bit in the 13-bit state selector, or zero when empty. */
-// FUNCTION: LEGORR 0x0046A760
 uint32_t first_set_flag_ordinal(uint32_t mask)
 {
     for (uint32_t bit = 0u; bit < 13u; ++bit) {
@@ -321,6 +312,7 @@ static void move_post_hook(void)
  * original FUN_0046a510 takes (selector, mode, flags) and reaches the
  * per-object effect (LAB_0046a3c0) itself; the port's entry above adds the
  * game context and the callback. */
+#ifdef LRR_TELEPORTER_PORT_NAMES
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (scene_object_state_dispatch)
 extern "C" void scene_object_state_dispatch_original(uint32_t selector,
                                                      uint32_t mode,
@@ -329,3 +321,4 @@ extern "C" void scene_object_state_dispatch_original(uint32_t selector,
     scene_object_state_dispatch(entity_pool_callback_context_get(), selector,
                                 mode, flags, NULL, NULL);
 }
+#endif /* LRR_TELEPORTER_PORT_NAMES */

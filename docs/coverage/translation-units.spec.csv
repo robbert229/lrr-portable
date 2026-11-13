@@ -44,7 +44,7 @@ start,unit_id,name,kind,name_basis,note
 00464740,GAME-041,SFX.c,game,string-prefix,SFX_* identifiers (45); .bss 0x502a20
 004661c0,GAME-042,,game,none,grid cell record buffers; own commons 0x5520e8-0x5520ec; boundary uncertain
 004667e0,GAME-043,,game,none,object stats configuration (129 keys incl. Flocks_*); .bss 0x502c28-0x503188; includes stats getters
-0046a370,GAME-044,,game,none,linked record chains with initialised data 0x4aa450-0x4aa45c; boundary uncertain
+0046a370,GAME-044,Teleporter.c,game,inferred,teleporter services (finding 621): 12 functions 46a370-46a7f0 incl. the three callbacks 46a3c0 46a490 46a5c0 Ghidra left as labels; owns .data 4aa450-4aa460 (between Stats.c's 'Stats' string and Text.c's first string) and the .bss word 503188; no .rdata; every reference to the five globals is inside the unit (503188 also ends Stats.c's 46a120 loop)
 0046a7f0,GAME-045,Text.c,game,string-prefix,Text_* identifiers (26); .bss 0x503190-0x503668
 0046b1d0,GAME-046,ToolTip.c,game,string-prefix,ToolTip_* identifiers (38); commons 0x54bf20-0x5520e4; extent confirmed by finding 597: 11 functions 46b1d0-46c030; ToolTip_Initialise compares against its own 0.0f at 49e7cc while 46c110 loads a second 0.0f at 49e7dc and MSVC 5.0 pools a literal once an object so 46c030-46c130 are another object
 0046c030,GAME-047,Upgrade.c,game,inferred,upgrade parts and levels (finding 617): 7 functions 46c030-46c3d0; the part functions 46c030-46c130 (finding 597; 46c110 loads its own 0.0f 49e7dc) then Upgrade_Load 46c160 (its strings 'Upgrades' 4aa9dc and 'Level%i%i%i%i' 4aa9e8 used nowhere else) and Upgrade_SetUpgradeLevel 46c340 on the 0x14-byte upgrades model; no .data or .bss

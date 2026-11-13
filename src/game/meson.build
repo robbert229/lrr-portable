@@ -31,7 +31,7 @@ game_sources = [
   'upgrade_levels_port.cpp',
   'tooltip_port.cpp',
   'text_port.cpp',
-  'record_chains.cpp',
+  'record_chains_port.cpp',
   'grid_cell_records.cpp',
   'sfx_port.cpp',
   'placement_footprint.cpp',
@@ -128,6 +128,7 @@ game_c_sources = [
   'upgrade.c',
   'detail.c',
   'water.c',
+  'teleporter.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []
