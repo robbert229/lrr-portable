@@ -50,7 +50,7 @@ game_sources = [
   'bubbles.cpp',
   'info_port.cpp',
   'terrain_cell_objects_port.cpp',
-  'rock_fall_styles.cpp',
+  'rock_fall_styles_port.cpp',
   'dependencies.cpp',
   'entity_cell_effects.cpp',
   'placement.cpp',
@@ -109,6 +109,7 @@ game_c_sources = [
   'tutorial_script.c',
   'weapons.c',
   'sfx.c',
+  'rock_fall_styles.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

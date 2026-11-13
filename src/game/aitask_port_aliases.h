@@ -83,6 +83,16 @@
 #define engine_mode_set_target nerpfunc_set_message_permit /* 004565f0 */
 #define tutorial_path_coordinate_index nerps_init_block_pointers_table /* 00456b80 */
 #define lego_object_pool_lists_free_all_adapter nerps_free_block_pointers /* 00456c60 */
+/* GAME-012, the effects unit (finding 589): for legoobject_unit.c the
+ * boulder explosion (0040bde0) and the smash path (0040beb0), and for
+ * lego_unit.c the update (0040c3a0). Their port names stay the port's in
+ * the matching build too: a C++ port model passes the first two a scene
+ * object, not a LegoObject, and simtick.cpp runs the port's sweep on the
+ * port's state. rock_fall_styles_link_names.h gives the unit's other
+ * entries the port's names instead. */
+#define scene_marker_create_at_object_position effect_spawn_boulder_explode /* 0040bde0 */
+#define scene_marker_create_at_position_or_object effect_spawn_smash_path /* 0040beb0 */
+#define scene_resource_availability_sweep effect_update_all /* 0040c3a0 */
 #endif
 
 #endif /* LEGORRR_GAME_AITASK_PORT_ALIASES_H */

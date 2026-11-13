@@ -178,6 +178,7 @@ extern "C" int s_cursor_delta_y;
 #include "game/camera_control_imports.h"
 #include "game/sfx.h"
 #include "game/sfx_imports.h"
+#include "game/rock_fall_styles_imports.h"
 
 int main(void)
 {
