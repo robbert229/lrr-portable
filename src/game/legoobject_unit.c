@@ -7982,15 +7982,16 @@ float animation_loop_time_adjust(void* record, float argument, unsigned int coun
  * two arguments, so an adapter at the end of legoobject_port.cpp stands in. */
 float legoobject_gq_upgrade_move_animation_adapter(void* upgrade, float elapsed,
                                                    unsigned int repeat);   /* 0046c110 */
-/* Vehicle.c (Vehicle_SetActivity 0046c3f0, Vehicle_GetCameraNull 0046da50)
- * and Building.c (Building_SetActivity 00408570): the port's entries have
- * other contracts (or none), so adapters at the end of legoobject_port.cpp stand
- * in. Building_GetCameraNull (004085f0) is building_model.cpp's. */
+/* Vehicle.c (Vehicle_SetActivity 0046c3f0, Vehicle_GetCameraNull 0046da50):
+ * the port's entries have other contracts, so an adapter at the end of
+ * legoobject_port.cpp stands in. Building.c's Building_SetActivity
+ * (00408570) and Building_GetCameraNull (004085f0) are building_model.c's
+ * (finding 592). */
 int legoobject_gq_vehicle_set_activity_adapter(void* vehicle, const char* activityName,
                                                float time);                /* 0046c3f0 */
 void* vehicle_get_camera_null(struct VehicleModel* vehicle, unsigned int frameNo); /* 0046da50 */
-int legoobject_gq_building_set_activity_adapter(void* building, const char* activityName,
-                                                float time);               /* 00408570 */
+unsigned int building_set_activity(void* building, const char* activityName,
+                                   float time);                            /* 00408570 */
 void* scene_activity_change_secondary(void* activity, int index);          /* 004085f0 */
 void* activity_runner_state_read(void* object, int cameraNo);              /* 00406f80 */
 /* Weapons.c (weapons.c). */
@@ -8278,7 +8279,7 @@ int legoobject_activity_register_bookkeeping(Lego_Object* obj)
             obj->field_2dc = activity_runner_state_read(obj->rockMonster, obj->field_2e0);
             break;
         case 4:
-            result = legoobject_gq_building_set_activity_adapter(obj->building, obj->activityName1, obj->animTime);
+            result = building_set_activity(obj->building, obj->activityName1, obj->animTime);
             obj->field_2dc = scene_activity_change_secondary(obj->building, obj->field_2e0);
             break;
         }

@@ -57,7 +57,7 @@ game_sources = [
   'encyclopedia.cpp',
   'lava_erosion.cpp',
   'screen_effect_quads.cpp',
-  'building_model.cpp',
+  'building_model_port.cpp',
   'cmd.cpp',
   'dependency_grid.cpp',
   'options.cpp',
@@ -111,6 +111,7 @@ game_c_sources = [
   'sfx.c',
   'rock_fall_styles.c',
   'vehicle_model.c',
+  'building_model.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

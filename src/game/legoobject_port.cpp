@@ -11531,23 +11531,13 @@ extern "C" float legoobject_gq_upgrade_move_animation_adapter(void* upgrade, flo
 
 /* Vehicle_SetActivity (0x0046c3f0, upgrade_levels.cpp's
  * scene_activity_paired_channel_update in the port), Vehicle_GetCameraNull
- * (0x0046da50, vehicle_model.cpp, C++) and Building_SetActivity
- * (0x00408570, no port entry). Nothing calls these natively. */
+ * (0x0046da50, vehicle_model.cpp, C++). Building_SetActivity (0x00408570)
+ * is building_model.c's own (finding 592). Nothing calls these natively. */
 // PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x0046c3f0 has another contract)
 extern "C" int legoobject_gq_vehicle_set_activity_adapter(void* vehicle, const char* activityName,
                                                           float time)
 {
     (void)vehicle;
-    (void)activityName;
-    (void)time;
-    return 0;
-}
-
-// PORT-ONLY: original-ABI adapter for GAME-023 legoobject_unit.c (0x00408570 has no port entry)
-extern "C" int legoobject_gq_building_set_activity_adapter(void* building, const char* activityName,
-                                                           float time)
-{
-    (void)building;
     (void)activityName;
     (void)time;
     return 0;

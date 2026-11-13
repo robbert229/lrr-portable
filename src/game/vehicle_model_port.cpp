@@ -523,9 +523,10 @@ extern "C" void scene_record_indexed_entries_rebuild_original(
  * nothing calls the unit, so these never run there. */
 
 /* Upgrade_Load (0046c160) parses the vehicle's upgrade levels into its
- * +0x124 model. The port's 0046c160 is a ledger stub with another contract
- * (upgrades.cpp: a hook-driven table), so this loads nothing; the upgrade
- * level stays 0. */
+ * +0x124 model (and, for Building.c's building_model.c, finding 592, the
+ * building's into its +0x8c model). The port's 0046c160 is a ledger stub
+ * with another contract (upgrades.cpp: a hook-driven table), so this loads
+ * nothing; the upgrade level stays 0. */
 // PORT-ONLY: original-ABI adapter for GAME-048 vehicle_model.c (0046c160 has no port entry with its contract)
 extern "C" void vehicle_upgrade_load_adapter(void* upgrades, BlockFile* config,
                                              const char* gameName)

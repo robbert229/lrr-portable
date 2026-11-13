@@ -11,7 +11,7 @@
 #include <string.h>
 
 #include "terrain_cell_objects.h"
-#include "building_model.h"
+#include "building_model_ports.h"
 #include "entity_api.h"
 #include "lego_blocks.h"
 #include "legoobject.h"

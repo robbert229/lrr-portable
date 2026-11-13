@@ -217,6 +217,9 @@ extern "C" uint32_t scene_object_wrapped_pointer_get(const void* wrapped);
 /* SceneObjectFlagBit3Get (FUN_00473ba0, findings 305/430): bit 3 of the
  * flag byte at +0x14. */
 uint32_t scene_object_flag_bit3_get(const void* scene_object);
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t scene_object_flag_bit3_get_target(const void* scene_object);
 
 /* SceneObjectModeIsOne (FUN_00406980, findings 373/435): the +0x28 mode
@@ -549,6 +552,9 @@ extern "C"
 void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
                                            SceneScalarProbe probe,
                                            void* arg); /* FUN_00408710 */
+#ifdef __cplusplus
+extern "C"
+#endif
 uint32_t animation_object_visibility_get(const void* anim);
                                                 /* FUN_004086a0 */
 #ifdef __cplusplus

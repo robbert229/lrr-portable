@@ -501,6 +501,9 @@ extern "C"
 void render_resource_binding_release(RenderResourceBinding* binding);
 float animation_resource_advance_time(RenderResourceBinding* binding,
                                      void* argument);
+#ifdef __cplusplus
+extern "C"
+#endif
 void scene_object_set_animation_with_fallback(
     RenderResourceBinding* binding, void* name);
 typedef struct SceneObjectChainRecord {
@@ -865,6 +868,9 @@ extern "C"
 #endif
 void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
                                             float x, float y, float z);
+#ifdef __cplusplus
+extern "C"
+#endif
 void render_object_set_identity_transform(void* object);
 #ifdef __cplusplus
 extern "C"
