@@ -29,8 +29,10 @@ This change:
   (`record_chains.cpp` under `git mv`). The tail drops its naked-asm
   `linked_list_push_at_global_head`, which no longer carries an annotation.
 
-"Before" is `main` `9043af89`'s committed match baseline and
-`binary-progress.json`. "After" is the full matching build
+Stacked on #689 (`fix/686-retire-sound-bank`, `75d6b613`). "Before" is
+#689's committed match baseline and `binary-progress.json`; no GAME-044
+score differs from `main` `9043af89`, where the change was first measured
+(`opt_ref` there: 412 / 223). "After" is the full matching build
 (`make reccmp-check`) of this change.
 
 ## Result
@@ -42,7 +44,7 @@ This change:
 | Mapped functions in Teleporter.c | 9 | **12** |
 | Exact-function code bytes (`binary-progress.json`) | 205,613 | **206,155** |
 | Exact functions, full / game-only | 1,731 / 1,522 | **1,740 / 1,531** |
-| `opt_ref` annotated (full, by address): removed / exact removed | 412 / 223 | **409 / 221** |
+| `opt_ref` annotated (full, by address): removed / exact removed | 411 / 222 | **409 / 221** |
 | Reccmp lint ledger (entries) | 1,052 | **1,046** |
 
 Byte weights are the original sizes from the single-function loop. An
@@ -200,7 +202,7 @@ the file changed score.
 
 ## Entropy and drops
 
-`make reccmp-check` against `main`'s baseline:
+`make reccmp-check` against #689's baseline:
 
 - 9 improved: the unit's six and the three callers above;
 - 3 newly mapped: `0046a3c0`, `0046a490` and `0046a5c0`;
@@ -225,10 +227,10 @@ listings are unchanged.
 
 ## `opt_ref` (finding 579, `make opt-ref-callers`)
 
-| | before (`main`, committed) | after |
+| | before (#689, committed) | after |
 | --- | ---: | ---: |
-| `opt_ref.annotated.full` (by address): removed / exact removed | 412 / 223 | 409 / 221 |
-| `opt_ref.annotated.game_only` (by address) | 405 / 216 | 402 / 214 |
+| `opt_ref.annotated.full` (by address): removed / exact removed | 411 / 222 | 409 / 221 |
+| `opt_ref.annotated.game_only` (by address) | 404 / 215 | 402 / 214 |
 
 `make opt-ref-callers OPT_REF_ARGS="--object teleporter.c.obj --object
 record_chains_port.cpp.obj --min 1"` lists no removed annotated function in
