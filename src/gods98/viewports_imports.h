@@ -16,8 +16,13 @@ extern "C" {
  * renderer keeps its own device (surface.cpp). */
 extern void* s_main_device;
 
-/* FUN_00482d60 (Mesh_PostRenderAll), mesh_unit.cpp; surface.hpp declares
- * it with C linkage. */
+/* FUN_00482d60 (Mesh_PostRenderAll). Natively the port tail
+ * gods98/mesh_port.cpp's model, which surface.hpp declares with C linkage;
+ * in the matching build the original-shape unit gods98/mesh_unit.c's
+ * (finding 625), which takes the same argument. */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+#define model_render_pass_dispatch mesh_post_render_all
+#endif
 void model_render_pass_dispatch(void* device);
 
 #ifdef __cplusplus

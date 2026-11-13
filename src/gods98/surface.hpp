@@ -489,9 +489,9 @@ void render_state_flags_apply(uint32_t flags, const float* transform,
                               int alternate_mode); /* FUN_00482b50 */
 void d3d_material_state_cache_snapshot_store(uint32_t state,
                                             uint32_t value);
-void direct3d_render_state_set_cached(uint32_t state,
+extern "C" void direct3d_render_state_set_cached(uint32_t state,
                                       uint32_t value); /* FUN_004788d0 */
-void d3d_material_state_flush(void); /* FUN_00478940 */
+extern "C" void d3d_material_state_flush(void); /* FUN_00478940 */
 typedef struct RendererWindowModeOps {
     void* context;
     void (*window_mode_set)(void* context, int fullscreen);

@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-015 G98-015: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-015.csv. */
+/* Port tail (ADR 0006) for G98-015 Mesh.c. The original-shape unit is
+ * gods98/mesh_unit.c (finding 625); this file keeps the port's earlier
+ * models of its functions, which port code still calls with the port's
+ * contracts (hook tables, the port's Model records and texture bindings),
+ * and the state they use. None of it is annotated: the addresses belong to
+ * mesh_unit.c. In the matching build the C units call mesh_unit.c instead
+ * (gods98/mesh_unit.h and the callers' imports headers); the C++ callers
+ * still call these.
+ *
+ * The end of the file holds the stand-in for mainGlobs.imDevice and the two
+ * Container.c adapters mesh_imports.h describes. */
 #include "record.hpp"
 #include "heap.hpp"
 #include "sound.hpp"
@@ -62,17 +70,12 @@
 #define RENDER_RESOURCE_INSTANCE_LINK_OFFSET 0x30
 
 /* ModelRenderListClear (FUN_00482d30) — see crt.hpp. */
-// GLOBAL: LEGORR 0x005343c4
 void* s_model_render_list_head; /* DAT_005343c4 role: unowned */
 
-// GLOBAL: LEGORR 0x0054057c
 uint32_t s_model_material_handle;
 
-// GLOBAL: LEGORR 0x00540584
 void* s_render_resource_instance_pool_blocks[20];
-// GLOBAL: LEGORR 0x005405d4
 void* s_render_resource_instance_pool_head;
-// GLOBAL: LEGORR 0x005405d8
 uint32_t s_render_resource_instance_pool_count;
 
 namespace unported_ledger_stubs {
@@ -137,7 +140,6 @@ int ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
 } // namespace unported_ledger_stubs
 
 namespace lego {
-// FUNCTION: LEGORR 0x004805b0
 int shared_texture_root_register(const char* root)
 {
     /* SharedTextureRootRegister drops the shared-pool link and releases the
@@ -172,14 +174,12 @@ int shared_texture_root_register(const char* root)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00480780
 int zero_result_is_success(void* value)
 {
     return s_result_check_hook != 0 && s_result_check_hook(s_result_check_context, value) == 0;
 }
 } // namespace lego
 
-// FUNCTION: LEGORR 0x004807a0
 void* render_resource_instance_record_acquire(void)
 {
     if (s_render_resource_instance_pool_head == NULL) {
@@ -198,7 +198,6 @@ void* render_resource_instance_record_acquire(void)
     return record;
 }
 
-// FUNCTION: LEGORR 0x004807d0
 void render_resource_instance_record_release(void* record)
 {
     __builtin_memcpy((char*)record + RENDER_RESOURCE_INSTANCE_LINK_OFFSET,
@@ -207,7 +206,6 @@ void render_resource_instance_record_release(void* record)
     s_render_resource_instance_pool_head = record;
 }
 
-// FUNCTION: LEGORR 0x004807f0
 void render_resource_instance_pool_grow(void)
 {
     const uint32_t count = 1u <<
@@ -232,7 +230,6 @@ void render_resource_instance_pool_grow(void)
     s_render_resource_instance_pool_head = base;
 }
 
-// FUNCTION: LEGORR 0x00480870
 EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
     void* owner, void* callback, uint32_t mode, void* context,
     uint32_t flag_value)
@@ -270,7 +267,6 @@ EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
 }
 
 namespace lego {
-// FUNCTION: LEGORR 0x00480900
 CachedRenderResourceInstanceRecord* cached_render_resource_instance_create(
     CachedRenderResourceTemplateRecord* source)
 {
@@ -363,7 +359,6 @@ CachedRenderResourceInstanceRecord* cached_render_resource_instance_create(
  * existing host resource/cache path. The task-record and renderer-object
  * inputs still have no portable owner. The bounded copy preserves the valid
  * path prefix behavior without reproducing the retail stack overwrite. */
-// FUNCTION: LEGORR 0x004809e0
 Model* lwo_model_entry_load(const char* path, void* flags, void* context)
 {
     char directory[260];
@@ -416,7 +411,6 @@ Model* lwo_model_entry_load(const char* path, void* flags, void* context)
     return model;
 }
 
-// FUNCTION: LEGORR 0x00480ac0
 int material_pass_execute(const char* path_prefix, void* render_object,
                           const Model* model, uint32_t flags)
 {
@@ -428,7 +422,6 @@ int material_pass_execute(const char* path_prefix, void* render_object,
     material_pass_prepared_release(&prepared);
     return result;
 }
-// FUNCTION: LEGORR 0x00481820
 void bind_model_textures_for_model(const char* path_prefix,
                                    const Model* model,
                                    ModelTextureBinding* bindings,
@@ -552,7 +545,6 @@ void bind_model_textures_for_model(const char* path_prefix,
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00482040
 int ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
     void* animation_owner, int frame_offset)
 {
@@ -597,7 +589,7 @@ int ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
 } // namespace unported_ledger_stubs
 
 /* IndexedRecordEntryRead (FUN_004821a0) — see record.hpp. */
-// FUNCTION: LEGORR 0x004821a0
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* mesh_unit.c takes this name (mesh_link_names.h) */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void indexed_record_entry_read(
     void* record, int block, uint32_t* field_out, uint32_t reserved,
@@ -687,7 +679,7 @@ void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
     }
 }
 #endif
-// FUNCTION: LEGORR 0x00482210
+#endif
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t pointer_value_get(const void* pointed)
 {
@@ -709,7 +701,7 @@ uint32_t pointer_value_get(const void* pointed)
 
 /* FUN_00482220: append a zeroed render record, copy every other source
  * index word, allocate its vertex payload, then publish the new slot. */
-// FUNCTION: LEGORR 0x00482220
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* mesh_unit.c takes this name (mesh_link_names.h) */
 int mesh_record_allocate_and_fill(MeshRecordPool* pool,
                                   uint32_t vertex_count,
                                   uint32_t index_rows,
@@ -814,9 +806,9 @@ int mesh_record_allocate_and_fill(MeshRecordPool* pool,
         pool->record_registered(pool->context, index);
     return (int)index;
 }
+#endif
 
 /* --- the record primitive band (see record.hpp) ----------------------------- */
-// FUNCTION: LEGORR 0x00482350
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void indexed_record_field64_set_target(
     void* record, int index, uint32_t value)
@@ -843,7 +835,6 @@ void indexed_record_field64_set_target(void* record, int index,
 }
 #endif
 
-// FUNCTION: LEGORR 0x00482370
 void mesh_vertices_scale_apply(void* record, float scale_x, float scale_y,
                                float scale_z)
 {
@@ -866,7 +857,6 @@ void mesh_vertices_scale_apply(void* record, float scale_x, float scale_y,
 }
 
 /* TerrainCellQuadVerticesWrite (FUN_004823e0) — see record.hpp. */
-// FUNCTION: LEGORR 0x004823e0
 void terrain_cell_quad_vertices_write(void* record, int block,
                                       int first_vertex, int count,
                                       const void* source)
@@ -889,7 +879,7 @@ void terrain_cell_quad_vertices_write(void* record, int block,
         src += 36;
     } while (--n != 0);
 }
-// FUNCTION: LEGORR 0x00482470
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* mesh_unit.c takes this name (mesh_link_names.h) */
 void indexed_geometry_data_copy_to_output(void* record, int block,
                                           int first_vertex, int count,
                                           void* output)
@@ -912,8 +902,8 @@ void indexed_geometry_data_copy_to_output(void* record, int block,
         dst += 36;
     } while (--n != 0);
 }
+#endif
 
-// FUNCTION: LEGORR 0x00482500
 void instance_quad_vertex_data_fill(void* record, int block,
                                     int first_vertex, int count,
                                     const float* positions,
@@ -954,7 +944,6 @@ void instance_quad_vertex_data_fill(void* record, int block,
  * its bottom-test loop. The disassembly reloads the vertex-buffer slot for
  * each position/pair group, advances positions by 12 and pairs by 8, and
  * reloads the same triple pointer at `[esp+0x28]` on every round. */
-// FUNCTION: LEGORR 0x00482620
 void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
                               int count, const float* positions,
                               const uint32_t triple[3],
@@ -993,7 +982,6 @@ void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
     } while (--remaining != 0u);
 }
 
-// FUNCTION: LEGORR 0x004826c0
 void mesh_vertex_record_fill(void* record, int block, int first_vertex,
                              int count, const float* positions,
                              const void* const* triples,
@@ -1026,7 +1014,7 @@ void mesh_vertex_record_fill(void* record, int block, int first_vertex,
         off += 0x20;
     } while (--n != 0);
 }
-// FUNCTION: LEGORR 0x00482780
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* mesh_unit.c takes this name (mesh_link_names.h) */
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t indexed_record_flag6c_bit0_get(
     const void* record, int index)
@@ -1055,8 +1043,8 @@ uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
     return rec_dword(base + off, 0) & 1u;
 }
 #endif
+#endif
 
-// FUNCTION: LEGORR 0x004827a0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void indexed_record_flag6c_bit0_set(
     void* record, int index, int set)
@@ -1097,7 +1085,6 @@ void indexed_record_flag6c_bit0_set(void* record, int index, int set)
 }
 #endif
 
-// FUNCTION: LEGORR 0x004827d0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void record_flag2c_bit0_set(void* record, int set)
 {
@@ -1132,7 +1119,6 @@ void record_flag2c_bit0_set(void* record, int set)
 #endif
 
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-// FUNCTION: LEGORR 0x004827f0
 int __cdecl scene_runtime_user_visual_manager(
     IDirect3DRMUserVisual* visual, void* cookie, SceneUserVisualReason reason,
     IDirect3DRMDevice* device, IDirect3DRMViewport* viewport)
@@ -1147,7 +1133,6 @@ int __cdecl scene_runtime_user_visual_manager(
 /* ModelRenderRecordStateSetup (FUN_00482ac0): invoke the record callback,
  * establish the baseline render states and texture-stage defaults, then
  * apply the record's material flags. */
-// FUNCTION: LEGORR 0x00482ac0
 void model_render_record_state_setup(void* record, void* parameter,
                                      const float* transform,
                                      int alternate_mode)
@@ -1183,7 +1168,6 @@ void model_render_record_state_setup(void* record, void* parameter,
 /* RenderStateFlagsApply (FUN_00482b50) translates the material flags into
  * the D3D state sequence. Device-specific state and matrix operations are
  * supplied by the renderer seam. */
-// FUNCTION: LEGORR 0x00482b50
 void render_state_flags_apply(uint32_t flags, const float* transform,
                               int alternate_mode)
 {
@@ -1253,7 +1237,6 @@ void render_state_flags_apply(uint32_t flags, const float* transform,
 }
 /* RendererCommandModeAndPairSend (FUN_00482cb0) changes the mode state and
  * the two packed render-state values as one logical command. */
-// FUNCTION: LEGORR 0x00482cb0
 void renderer_command_mode_and_pair_send(uint32_t first, uint32_t second)
 {
     RenderStateSetHook set_state = s_render_state_apply_ops.set_state;
@@ -1264,7 +1247,6 @@ void renderer_command_mode_and_pair_send(uint32_t first, uint32_t second)
 }
 
 /* RendererCommandNodePrepend (FUN_00482ce0) — see crt.hpp. */
-// FUNCTION: LEGORR 0x00482ce0
 void renderer_command_node_prepend(uint32_t kind, const uint32_t* payload)
 {
     /* Deviation: the port lays the corpus's dword node window out with
@@ -1286,7 +1268,6 @@ void renderer_command_node_prepend(uint32_t kind, const uint32_t* payload)
     __builtin_memcpy(node + 0x44, &head, sizeof head);
     model_render_list_head_set(node);
 }
-// FUNCTION: LEGORR 0x00482d30
 void model_render_list_clear(void)
 {
     void* node = s_model_render_list_head;
@@ -1302,7 +1283,6 @@ void model_render_list_clear(void)
 /* ModelRenderPassDispatch (FUN_00482d60): preserve the retail list order,
  * two child-material passes, alternate-model branch, and renderer cleanup.
  * The record access and draw calls remain supplied by the renderer owner. */
-// FUNCTION: LEGORR 0x00482d60
 void model_render_pass_dispatch(void* device)
 {
     ModelRenderPassDispatchOps* ops = &s_model_render_pass_dispatch_ops;
@@ -1416,7 +1396,6 @@ void model_render_pass_dispatch(void* device)
 /* --- the cache-window name pair (see texture.hpp) ------------------------- */
 /* Both corpus halves work over a caller-supplied entry window; entries
  * ride as widened slots {word, name, word}. */
-// FUNCTION: LEGORR 0x00483030
 void* texture_cache_name_slot_find(const void* table, uint32_t count,
                                    const char* name)
 {
@@ -1433,7 +1412,6 @@ void* texture_cache_name_slot_find(const void* table, uint32_t count,
     return NULL;
 }
 
-// FUNCTION: LEGORR 0x00483080
 void texture_cache_name_slot_append(void* table, int* count,
                                     const char* name, void* slot_a,
                                     void* slot_b)
@@ -1454,7 +1432,7 @@ namespace lego {
  * routes that call through the installed apply hook.  The state's third
  * dword then raises or clears the 0x00400000 shared-surface bit in the
  * frame record's flag word at +0x0c. */
-// FUNCTION: LEGORR 0x004830c0
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* mesh_unit.c takes this name (mesh_link_names.h) */
 void animated_texture_frame_surface_set(void* texture, int frame_index,
                                         const void* frame_state)
 {
@@ -1478,11 +1456,11 @@ void animated_texture_frame_surface_set(void* texture, int frame_index,
     else flags &= ~0x00400000u;
     memcpy(frame_record + 0x0c, &flags, sizeof(flags));
 }
+#endif
 } // namespace lego
 
 namespace unported_ledger_stubs {
 // IndexedRecordInterfaceRelease
-// FUNCTION: LEGORR 0x00483140
 void ledger_stub_00483140_IndexedRecordInterfaceRelease(void* owner, int index)
 {
     unsigned char* bytes = (unsigned char*)owner;
@@ -1505,7 +1483,6 @@ void ledger_stub_00483140_IndexedRecordInterfaceRelease(void* owner, int index)
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00483170
 uint32_t indexed_record_transform_initialize(void* record, int index)
 {
     uint32_t block[20];
@@ -1526,7 +1503,6 @@ uint32_t indexed_record_transform_initialize(void* record, int index)
  * inline-block copy into the indexed record's data slot. Deviation: the
  * corpus strides both links and the copy blindly; the three null answers
  * are pinned by test_record.cpp, and the helper route scored best. */
-// FUNCTION: LEGORR 0x00483240
 uint32_t indexed_record_transform_copy_in(void* record, int index,
                                           const void* source)
 {
@@ -1537,7 +1513,7 @@ uint32_t indexed_record_transform_copy_in(void* record, int index,
     return 1u;
 }
 
-// FUNCTION: LEGORR 0x00483270
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* mesh_unit.c takes this name (mesh_link_names.h) */
 uint32_t render_object_color_vector_set(void* record, int block, float red,
                                         float green, float blue, int slot)
 {
@@ -1572,9 +1548,9 @@ uint32_t render_object_color_vector_set(void* record, int block, float red,
     }
     return 1u; /* the corpus leaves every other slot untouched */
 }
+#endif
 /* IndexedRecordDataAddressGet (FUN_00483400) is the retail unchecked
  * address calculation. Keep null handling in the portable accessor below. */
-// FUNCTION: LEGORR 0x00483400
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void* indexed_record_data_address_get_target(
     const void* record, int index)
@@ -1600,7 +1576,6 @@ void* indexed_record_data_address_get_target(const void* record,
 }
 #endif
 
-// FUNCTION: LEGORR 0x00483420
 uint32_t screen_effect_item_opacity_set_target(void* record, int block,
                                                       float opacity, int mode)
 {
@@ -1652,7 +1627,6 @@ screen_opacity_flags_done:
  * dword stores so MSVC 5 /Od uses the corpus's shared zero/one registers.
  * Preserve its non-monotonic order: the twelve off-diagonal words are zeroed
  * high-to-low, then the diagonal words receive 1.0f's IEEE-754 pattern. */
-// FUNCTION: LEGORR 0x00483540
 void matrix4_identity_initialize(float* out)
 {
     uint32_t* words = (uint32_t*)out;
@@ -1678,7 +1652,6 @@ void matrix4_identity_initialize(float* out)
 
 /* RenderInterfaceCapabilityCheck (FUN_00483580): query device capabilities,
  * obtain the required interface and attach it to the renderer. */
-// FUNCTION: LEGORR 0x00483580
 int render_interface_capability_check(void* device)
 {
     return direct3d_interface_create_from_device(device);
@@ -1686,7 +1659,6 @@ int render_interface_capability_check(void* device)
 
 /* Direct3DViewportSetup (FUN_00483600): get the viewport's device and run
  * the common renderer-interface setup path. */
-// FUNCTION: LEGORR 0x00483600
 int direct3d_viewport_setup(void* viewport)
 {
     void* device;
@@ -1698,7 +1670,6 @@ int direct3d_viewport_setup(void* viewport)
 }
 /* MatrixMethodPairApply (FUN_00483690): compare the requested 4x4 transform
  * against the device's current transform and issue the update only on change. */
-// FUNCTION: LEGORR 0x00483690
 int matrix_method_pair_apply(uint32_t method, const float matrix[16])
 {
     float current[16];
@@ -1729,7 +1700,6 @@ int matrix_method_pair_apply(uint32_t method, const float matrix[16])
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00483810
 int ledger_stub_00483810_InputActionStateToggle(unsigned int action,
                                                  const void* data)
 {
@@ -1742,7 +1712,6 @@ int ledger_stub_00483810_InputActionStateToggle(unsigned int action,
  * outside the alternate renderer mode, texture-stage state 0. Seed the draw
  * caches from these live values before deciding which setters may be skipped.
  * Temporarily clear render state 1 when it was set. */
-// FUNCTION: LEGORR 0x004838b0
 void d3d_render_state_sync(void)
 {
     uint32_t value = 0u;
@@ -1783,7 +1752,6 @@ void d3d_render_state_sync(void)
 
 /* Direct3DRenderStateRestore (FUN_00483940): restore the captured device
  * states only where the current values differ, respecting alternate mode. */
-// FUNCTION: LEGORR 0x00483940
 void direct3d_render_state_restore(void)
 {
     uint32_t current = 0u;
@@ -1823,7 +1791,6 @@ void direct3d_render_state_restore(void)
 /* ModelRenderChildPassDispatch (FUN_004839c0): render eligible children in
  * two ordered passes, first those without a material record, then those with
  * one. A failed child marks the aggregate false while the walk continues. */
-// FUNCTION: LEGORR 0x004839c0
 int model_render_child_pass_dispatch(void* model, const void* parameter,
                                      int material_pass)
 {
@@ -1865,7 +1832,6 @@ int model_render_child_pass_dispatch(void* model, const void* parameter,
 /* ModelChildRenderEligibilityCheck (FUN_00483a70): the two-bit render
  * gate (finding 431). NULL answers "not eligible" — the corpus would
  * crash on it (documented deviation). */
-// FUNCTION: LEGORR 0x00483a70
 int model_child_render_eligibility_check(const void* object)
 {
     if (object == NULL) {
@@ -1880,7 +1846,6 @@ int model_child_render_eligibility_check(const void* object)
 
 /* ModelRenderChildMaterialPass (FUN_00483a90): apply world/material state,
  * update the material record, then submit the child's primitive. */
-// FUNCTION: LEGORR 0x00483a90
 int model_render_child_material_pass(void* model, void* child,
                                      const float* transform,
                                      int alternate_mode)
@@ -1917,7 +1882,6 @@ int model_render_child_material_pass(void* model, void* child,
 /* WorldObjectRenderStateApply (FUN_00483b00): select the texture-stage
  * operation from the child flags, set the material's boolean state, then
  * apply the child material flags when present. */
-// FUNCTION: LEGORR 0x00483b00
 int world_object_render_state_apply(void* child, const float* transform,
                                     int alternate_mode)
 {
@@ -1950,7 +1914,6 @@ int world_object_render_state_apply(void* child, const float* transform,
 }
 /* Direct3DDeviceStateApply (FUN_00483b70): bind the selected texture path,
  * update D3DLIGHTSTATE_MATERIAL(1) when its handle changes, then submit. */
-// FUNCTION: LEGORR 0x00483b70
 int direct3d_device_state_apply(uint32_t material_handle, void* texture,
                                 uint32_t a, uint32_t b, uint32_t c,
                                 uint32_t d, uint32_t e)
@@ -2238,4 +2201,35 @@ static int direct3d_interface_create_from_device(void* device)
             s_direct3d_interface_ops.context, interface_pointer);
     }
     return success;
+}
+
+/* mainGlobs.imDevice (G98-005), the IDirect3DDevice3 that mesh_unit.c
+ * draws with. A stand-in, like lws_port.cpp's s_main_d3drm: the port does
+ * not own Main.c's renderer, and natively nothing calls mesh_unit.c. */
+// GLOBAL: LEGORR 0x0050591c
+extern "C" void* s_main_im_device;
+void* s_main_im_device;
+
+/* Container_LoadTextureSurface (FUN_00474050) with the original's
+ * arguments, for mesh_unit.c's Mesh_LoadTexture. The port has no entry at
+ * that address (its texture loads go through texture.cpp's own cache), and
+ * natively nothing calls mesh_unit.c, so the adapter loads nothing. */
+extern "C" void* mesh_container_load_texture_surface_adapter(
+    const char* fname, int managed, unsigned long* width,
+    unsigned long* height, int* trans)
+{
+    (void)fname;
+    (void)managed;
+    (void)width;
+    (void)height;
+    (void)trans;
+    return NULL;
+}
+
+/* Container_Frame_GetContainer (FUN_00475830) for mesh_unit.c's render
+ * callback. The port's entry, container_unit.cpp's
+ * scene_object_first_non_kind6_child_get, has C++ linkage. */
+extern "C" void* mesh_container_frame_get_container_adapter(void* frame)
+{
+    return scene_object_first_non_kind6_child_get(frame);
 }

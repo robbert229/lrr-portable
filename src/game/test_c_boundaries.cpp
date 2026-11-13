@@ -127,6 +127,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/lego_api.h"
 #include "gods98/lws.h"
 #include "gods98/mesh_unit.h"
+#include "gods98/mesh_api.h"
+#include "gods98/mesh_imports.h"
 #include "gods98/files_open.h"
 #include "gods98/main.h"
 /* GAME-020 (finding 564). game/entity.hpp, which declares the LegoObject.c

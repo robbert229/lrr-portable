@@ -26,8 +26,9 @@
  * Lws_FindPrevDissolve, Lws_KeyPassed, Lws_GetFrameCount and the mesh path
  * list), whose contracts match.
  *
- * The file also holds the four adapters gods98/mesh_unit.h describes, for Mesh.c
- * entries the port has no original-ABI version of. */
+ * The file also holds the two adapters gods98/mesh_unit.h describes, for
+ * Mesh.c entries the port has no original-ABI version of; natively lws.c
+ * calls them (in the matching build it calls mesh_unit.c). */
 #include <math.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -713,15 +714,6 @@ static void model_resource_path_join(char* output, size_t output_size,
     output[position] = '\0';
 }
 
-/* Mesh_Clone (FUN_00480900) with the original's arguments, for lws.c. The
- * port's entry at that address takes the mesh only. */
-void* mesh_clone(void* mesh, void* frame)
-{
-    (void)frame;
-    return lego::cached_render_resource_instance_create(
-        (lego::CachedRenderResourceTemplateRecord*)mesh);
-}
-
 /* Mesh_SetGroupMaterialValues (FUN_00483420) for lws.c. The port's entry
  * in mesh_unit.cpp has C++ linkage; its only header is record.cpp's frozen
  * record_from_mesh_unit.hpp, so it is declared here. */
@@ -740,13 +732,4 @@ int mesh_texture_time_set(void* mesh, float time)
     return unported_ledger_stubs::
         ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
             mesh, (int)time);
-}
-
-/* Mesh_Remove (FUN_004820d0) for lws.c. The port has no model of Mesh.c's
- * frame attachments, and nothing in the port reaches the caller
- * (Lws_FreeNode), so there is nothing to detach. */
-void mesh_remove(void* mesh, void* frame)
-{
-    (void)mesh;
-    (void)frame;
 }

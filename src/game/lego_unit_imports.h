@@ -81,6 +81,10 @@
 #define graphics_overlay_visibility_set roof_hide
 #define indexed_surface_entry_hide_and_record roof_hide_block
 #define indexed_surface_entries_restore roof_show_hidden_blocks
+/* G98-015 Mesh.c (gods98/mesh_unit.c, finding 625). The port's definition
+ * of this name is the port tail gods98/mesh_port.cpp's, so in the matching
+ * build lego_unit.c calls Mesh_Initialise by the unit's name. */
+#define shared_texture_root_register mesh_initialise
 #endif
 
 #ifdef __cplusplus

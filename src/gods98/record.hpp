@@ -263,7 +263,7 @@ uint32_t indexed_word_table_lookup(uint32_t index, const void* table);
 /* IndexedRecordFlag6CBit0Get (FUN_00482780, findings 373/431): bit 0 of
  * the indexed record's +0x6c word — base table from the record's +0x8
  * pointer slot, stride 0x70. */
-uint32_t indexed_record_flag6c_bit0_get(const void* record, int index);
+extern "C" uint32_t indexed_record_flag6c_bit0_get(const void* record, int index);
 
 /* IndexedRecordFlag6CBit0Set (FUN_004827a0): update bit zero in the
  * indexed +0x6c word, using the table pointer at record +0x08 (stride
@@ -708,7 +708,7 @@ void mesh_vertices_scale_apply(void* record, float scale_x, float scale_y,
  * block's vertex base (starting at first_vertex) into 36-byte output
  * slots — the corpus's stride, with the fourth dword of each slot left
  * untouched. */
-void indexed_geometry_data_copy_to_output(void* record, int block,
+extern "C" void indexed_geometry_data_copy_to_output(void* record, int block,
                                           int first_vertex, int count,
                                           void* output);            /* FUN_00482470 */
 
@@ -727,7 +727,7 @@ void indexed_geometry_data_copy_to_output(void* record, int block,
  * fourth argument present in the target; x86 matches the unchecked table
  * and index-pointer accesses, while the portable path guards them. Each
  * requested output honors the corpus's own null checks. */
-void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
+extern "C" void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
                                uint32_t reserved, uint32_t* kind_out,
                                uint32_t* count_out, uint32_t* indices_out);
 
