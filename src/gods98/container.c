@@ -657,7 +657,6 @@ Container* Container_Initialise(const char* gameName)
     containerGlobs.extensionName[Container_Anim] = "x";
 
     containerGlobs.typeName[Container_Null] = "NULL";
-    // STRING: LEGORR 0x004a4014
     containerGlobs.typeName[Container_Mesh] = "MESH";
     // STRING: LEGORR 0x004aaabc
     containerGlobs.typeName[Container_Frame] = "FRAME";
@@ -928,7 +927,6 @@ Container* Container_Load(Container* parent, const char* filename,
             float scale;
 
             sprintf(path,
-                    // STRING: LEGORR 0x004a4024
                     "%s%s%s",
                     containerGlobs.gameName, s_config_separator,
                     // STRING: LEGORR 0x004aab1c

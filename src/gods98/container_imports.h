@@ -54,16 +54,16 @@ uint32_t render_object_color_vector_set(void* record, int block, float red,
                                         float green, float blue,
                                         int slot);                /* 00483270 */
 
-/* Five more Mesh.c entries, whose port definitions (record.hpp) return
- * nothing where the original returns a result. The matching build (C)
- * declares them with the original's results; other builds compile the
+/* Five more Mesh.c entries. The matching build (C) calls mesh_unit.c by
+ * its names there (mesh_link_names.h for three of them, finding 625),
+ * declared with the original's results; other builds compile the
  * unit as C++ beside record.hpp, so they call PORT-ONLY adapters with the
  * same signatures at the end of container_port.cpp instead (the unit is
  * not linked natively). */
 #if !defined(__cplusplus)
 #define container_mesh_get_group_adapter indexed_record_entry_read
-#define container_mesh_scale_adapter mesh_vertices_scale_apply
-#define container_mesh_set_vertices_adapter terrain_cell_quad_vertices_write
+#define container_mesh_scale_adapter mesh_scale
+#define container_mesh_set_vertices_adapter mesh_set_vertices
 #define container_mesh_get_vertices_adapter indexed_geometry_data_copy_to_output
 #define container_mesh_is_group_hidden_adapter indexed_record_flag6c_bit0_get
 #endif

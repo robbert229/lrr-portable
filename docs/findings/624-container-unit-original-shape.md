@@ -48,27 +48,28 @@ already uses several snake-case spellings of those names
 (`container_load`, `container_make_mesh2`) for adapters with the original
 contracts.
 
-"Before" is the *match baseline* at `main` `d4c4cf5c`. "After" is this
-change, from the full matching build (`make reccmp-check`).
+"Before" is the *match baseline* of #703 (`a30f398f`, Mesh.c, over #702
+and #701), on which this change is stacked. "After" is this change, from the
+full matching build (`make reccmp-check`).
 
 ## Result
 
 | | before | after |
 | --- | ---: | ---: |
-| Unit similarity (110 functions, weighted by span, 17,984 bytes) | 25.32% | **96.61%** |
-| Exact functions in the unit | 33 | **93** (one naked, `00473ba0`) |
+| Unit similarity (110 functions, weighted by span, 17,984 bytes) | 25.32% | **96.67%** |
+| Exact functions in the unit | 33 | **96** (one naked, `00473ba0`) |
 | Mapped functions in the unit | 102 | **110** |
-| Exact functions, full | 1,761 | **1,851** |
-| Exact-function code bytes (`binary-progress.json`) | 208,965 | **225,348** |
-| `opt_ref` annotated (full): removed / exact removed | 398 / 220 | **359 / 205** |
-| `opt_ref` annotated (game-only) | 391 / 213 | 353 / 199 |
-| Gate image end (`make pe-audit`) | `0x892000` | `0x897000` |
-| `/OPT:REF` relink `.bss` (`binary-progress.json`) | 1,304,096 | 1,312,320 |
-| Reccmp lint ledger (entries) | 1,042 | **1,020** |
+| Exact functions, full | 1,833 | **1,927** |
+| Exact-function code bytes (`binary-progress.json`) | 225,345 | **242,555** |
+| `opt_ref` annotated (full): removed / exact removed | 363 / 215 | **305 / 182** |
+| `opt_ref` annotated (game-only) | 356 / 208 | 299 / 176 |
+| Gate image end (`make pe-audit`) | `0x85f000` | `0x864000` |
+| `/OPT:REF` relink `.bss` (`binary-progress.json`) | 1,087,648 | 1,095,872 |
+| Reccmp lint ledger (entries) | 1,024 | **1,002** |
 
 Each weight is the function's span up to the next function, padding
-included. An unmapped function counts as 0%. Outside the unit, **46
-functions rose and none fell**; 30 of them became exact (see
+included. An unmapped function counts as 0%. Outside the unit, **47
+functions rose and none fell**; 31 of them became exact (see
 [Callers](#callers)).
 
 | Address | gods98 name | Name in the matching build | Bytes | Before | After |
@@ -82,7 +83,7 @@ functions rose and none fell**; 30 of them became exact (see
 | `00472940` | Container_GetRoot | `scene_root_object_get` | 16 | 100.00 | **100.00** |
 | `00472950` | Container_Create | `ddiscene_object_allocate` | 240 | 28.28 | **100.00** |
 | `00472a40` | Container_Remove | `ledger_stub_00472a40_DDiSceneObjectDestroy` | 16 | 100.00 | **100.00** |
-| `00472a50` | Container_Remove2 | (same) | 640 | 24.54 | 99.59 |
+| `00472a50` | Container_Remove2 | (same) | 640 | 24.54 | **100.00** |
 | `00472cd0` | Container_Load | `container_load` | 1648 | 10.10 | 85.36 |
 | `00473340` | Container_IsCurrentActivity | `ledger_stub_00473340_SceneActionNamePresent` | 48 | 14.29 | **100.00** |
 | `00473370` | Container_SetActivity | `scene_action_name_set` | 240 | 52.17 | 80.39 |
@@ -93,7 +94,7 @@ functions rose and none fell**; 30 of them became exact (see
 | `004734f0` | Container_MakeLight | `ddiscene_light_create` | 112 | 16.67 | **100.00** |
 | `00473560` | Container_MakeMesh2 | `container_make_mesh2` | 288 | 13.33 | **100.00** |
 | `00473680` | Container_GetMasterFrame | `scene_object_wrapped_pointer_get` | 16 | 100.00 | **100.00** |
-| `00473690` | Container_Clone | `entity_visual_resource_load` | 1168 | 7.82 | 82.99 |
+| `00473690` | Container_Clone | `entity_visual_resource_load` | 1168 | 7.82 | 83.22 |
 | `00473b20` | Container_Hide2 | `legoobject_gs_container_hidden_set_adapter` | 32 | 81.82 | **100.00** |
 | `00473b40` | Container_Hide | `scene_render_lock_toggle` | 96 | 100.00 | **100.00** |
 | `00473ba0` | Container_IsHidden | `scene_object_flag_bit3_get_target` | 32 | 100.00 | **100.00** |
@@ -126,7 +127,7 @@ functions rose and none fell**; 30 of them became exact (see
 | `00474e90` | Container_Mesh_Scale | `detail_container_mesh_scale_adapter` | 128 | 20.51 | **100.00** |
 | `00474f10` | Container_Mesh_GetBox | `scene_object_bounds_union` | 224 | 17.02 | **100.00** |
 | `00474ff0` | Container_Mesh_SetEmissive | `scene_mesh_color_set` | 48 | 85.71 | **100.00** |
-| `00475020` | Container_Mesh_SetColourAlpha | `scene_mesh_color_and_alpha_set` | 80 | 72.97 | 96.55 |
+| `00475020` | Container_Mesh_SetColourAlpha | `scene_mesh_color_and_alpha_set` | 80 | 72.97 | **100.00** |
 | `00475070` | Container_Transform | `scene_object_coordinate_transform_in_place` | 32 | 100.00 | **100.00** |
 | `00475090` | Container_InverseTransform | `detail_container_inverse_transform_adapter` | 32 | 100.00 | **100.00** |
 | `004750b0` | Container_SetColourAlpha | `render_object_set_packed_rgba_from_float_channels` | 112 | 87.10 | 90.32 |
@@ -155,7 +156,7 @@ functions rose and none fell**; 30 of them became exact (see
 | `004759f0` | Container_AddList | (same) | 128 | 10.75 | **100.00** |
 | `00475a70` | Container_GetActivities | (same) | 400 | 12.17 | 99.30 |
 | `00475c00` | Container_SetTypeData | (same) | 128 | 17.98 | **100.00** |
-| `00475c80` | Container_FreeTypeData | (same) | 144 | 16.19 | 98.11 |
+| `00475c80` | Container_FreeTypeData | (same) | 144 | 16.19 | **100.00** |
 | `00475d10` | Container_AddActivity2 | (same) | 256 | unmapped | 97.56 |
 | `00475e10` | Container_Frame_ReferenceDestroyCallback | (same) | 48 | 83.33 | **100.00** |
 | `00475e40` | Container_Frame_Find | (same) | 304 | 15.38 | 98.18 |
@@ -192,11 +193,8 @@ when that name is different.
 
 - **Call names the original listing gives differently.** No instruction
   differs in these functions:
-  - `00472a50` (Mesh_Remove);
   - `00473c60`;
-  - `00475020`: Mesh_SetGroupMaterialValues has C++ linkage in the frozen
-    `record_from_mesh_unit.hpp`, so the unit calls `lws_port.cpp`'s adapter;
-  - `00475a70`, `00475c80`, `00475d10`, `00475e40`;
+  - `00475a70`, `00475d10`, `00475e40`;
   - `00476270` (vsprintf);
   - `00476410` and `00476770` (string and `_pctype` operands the original
     listing leaves unlabelled).
@@ -208,6 +206,7 @@ when that name is different.
     including explicit `0xff` shifts and reordered terms.
   - Moving the unit's five static forward declarations changes nothing
     here.
+  - Both still differ on #703's base.
 
   The cause is the symbol counter's phase.
 - **`00472710` Container_Initialise** (80.43%). The original loads `""`
@@ -221,7 +220,7 @@ when that name is different.
   - All 120 orders of the five local declarations score the same.
   - One variable for both names scores 76.84%.
 - **`00472cd0` Container_Load** (85.36%) and **`00473690`
-  Container_Clone** (82.99%): register and stack-slot assignment.
+  Container_Clone** (83.22%): register and stack-slot assignment.
   - Block-scoped locals reproduce the original's slot sharing; they raised
     Load from 70.33% to 82.27%.
   - What remains is that the original keeps 0 in `ebx`.
@@ -331,14 +330,18 @@ stay where they are, because native code uses them:
   linkage. `view.cpp` and `container_port.cpp` declare it `extern "C"`
   before they include the frozen `view_for_container_unit.hpp`, and the
   header's later declaration keeps that linkage.
-- Five Mesh.c entries get `extern "C"` in place in `record.hpp`:
-  `004821a0`, `00482370`, `004823e0`, `00482470` and `00482780`.
-  - Their port definitions return nothing where the original returns a
-    result.
-  - So in the matching build, `container_imports.h` declares them for the
-    unit with the original's return types (C only).
-  - Other builds call PORT-ONLY adapters at the end of `container_port.cpp`
-    instead.
+- Mesh.c is mesh_unit.c (#703, finding 625). In the matching build
+  container.c calls it by the names it has there: `mesh_unit.h`'s macros
+  and `mesh_link_names.h`'s port names for most entries, and `mesh_scale`
+  and `mesh_set_vertices` for Mesh_Scale and Mesh_SetVertices
+  (`container_imports.h`, C only). Five port entries (`004821a0`,
+  `00482370`, `004823e0`, `00482470`, `00482780`) get `extern "C"` in place
+  in `record.hpp`, for the PORT-ONLY adapters at the end of
+  `container_port.cpp` that other builds call instead.
+- In the other direction, Mesh.c's `mesh_imports.h` now names
+  Container_LoadTextureSurface (`00474050`) and Container_SearchOwner
+  (`00475830`) directly in the matching build, in place of
+  `mesh_port.cpp`'s adapters, which stay for other builds.
 - AnimClone.c's `anim_clone_remove` and `anim_clone_set_time` are called by
   their matching-build names (`container_link_names.h`).
 - Native builds map `_strlwr` to `crt_string_to_lower` (`crt/vc5names.h`).
@@ -389,7 +392,8 @@ function each one stands for already takes another name:
 Interface.c's `container_get_position` adapter returns a 2D point, not the
 original's vector, so it is not switched.
 
-Callers outside the unit that rose (`make reccmp-check` against `d4c4cf5c`):
+Callers outside the unit that rose (`make reccmp-check` against #703's
+baseline):
 
 | Address | Function | Before | After |
 | --- | --- | ---: | ---: |
@@ -405,11 +409,10 @@ Callers outside the unit that rose (`make reccmp-check` against `d4c4cf5c`):
 | `0040c1b0` | `indexed_resource_handle_set_create` | 98.04 | **100.00** |
 | `0040c720` | `global_resource_handle_load_and_enable_original` | 92.86 | **100.00** |
 | `0040c920` | `effect_load_misc_effect` | 95.56 | **100.00** |
-| `0041fb50` | `lego_game_config_init` | 93.87 | 93.90 |
-| `00422850` | `lego_misc_object_resources_load` | 94.76 | 99.05 |
-| `004230c0` | `lego_debug_panel_text_draw_update` | 95.79 | 96.84 |
+| `0041fb50` | `lego_game_config_init` | 94.81 | 94.84 |
+| `00422850` | `lego_misc_object_resources_load` | 96.19 | 99.84 |
 | `00424730` | `lego_sine_phase_midpoint_blend_dispatch` | 90.91 | 95.45 |
-| `00429890` | `lego_level_load` | 90.82 | 90.92 |
+| `00429890` | `lego_level_load` | 92.42 | 92.51 |
 | `00433770` | `lego_scene_lights_build_from_config` | 96.35 | 98.31 |
 | `00449cd0` | `legoobject_scene_object_state_handle_apply` | 91.67 | **100.00** |
 | `0044b7a0` | `legoobject_matrix_rotate_z_with_offset` | 97.83 | **100.00** |
@@ -423,7 +426,7 @@ Callers outside the unit that rose (`make reccmp-check` against `d4c4cf5c`):
 | `00450700` | `terrain_map_block_hide` | 92.31 | **100.00** |
 | `00451230` | `terrain_map_block_vertex_normal_set` | 98.25 | **100.00** |
 | `00451450` | `terrain_map_block_vertex_offset` | 98.33 | **100.00** |
-| `004519b0` | `model_entry_record_load` | 96.43 | **100.00** |
+| `004519b0` | `model_entry_record_load` | 97.62 | **100.00** |
 | `00462da0` | `roof_initialise` | 98.15 | **100.00** |
 | `00462e60` | `roof_set_texture` | 95.45 | **100.00** |
 | `00462ed0` | `roof_shutdown` | 94.74 | **100.00** |
@@ -431,13 +434,15 @@ Callers outside the unit that rose (`make reccmp-check` against `d4c4cf5c`):
 | `00463230` | `roof_update` | 72.43 | 72.97 |
 | `004634f0` | `roof_hide_block` | 95.24 | **100.00** |
 | `00463540` | `roof_show_hidden_blocks` | 95.83 | **100.00** |
-| `0046c030` | `render_resource_binding_initialize` | 91.11 | **100.00** |
+| `0046c030` | `render_resource_binding_initialize` | 93.33 | **100.00** |
 | `0046c6f0` | `lego_vehicle_load_adapter` | 98.97 | 99.48 |
 | `0046cff0` | `scene_record_template_instantiate` | 97.50 | **100.00** |
 | `0046de80` | `water_init_vertices` | 99.08 | **100.00** |
 | `0046e390` | `water_update` | 98.99 | 99.50 |
 | `0046ff70` | `weapons_projectile_find_free` | 90.00 | **100.00** |
 | `0047b1a0` | `sound_instance_track_register` | 94.23 | **100.00** |
+| `004827f0` | `mesh_render_callback` | 99.60 | **100.00** |
+| `00482e70` | `mesh_load_texture` | 90.26 | 91.56 |
 | `004869f0` | `lws_parse` | 94.43 | 94.80 |
 
 ### Source shapes worth noting
@@ -478,7 +483,7 @@ No `Deviation (scoring only)`.
 - `make unit-data-offsets`: the row above.
 - These pass:
   - `make tools-test` (no `--allow-growth`; the lint ledger shrinks from
-    1,042 to 1,020 entries);
+    1,024 to 1,002 entries);
   - the native build and `ctest` (37 of 37);
   - `gcc -std=gnu89 -Werror=declaration-after-statement` on the unit.
 
@@ -488,7 +493,19 @@ No `Deviation (scoring only)`.
 exact). Each is reached only from removed Lego.c, Detail.c or Mesh.c
 functions (`00433770`, `0040bb90`, `004827f0`). Before this change,
 `container_unit.cpp` had 53 removed (finding 579). The totals move from
-398 / 220 to 359 / 205 (full).
+363 / 215 to 305 / 182 (full).
+
+## Stacked on #703
+
+First measured on `main` `d4c4cf5c`: unit 25.32% to 96.61%, 33 to 93
+exact, exact-function bytes 208,965 to 225,348, `opt_ref` 398 / 220 to
+359 / 205, relink `.bss` 1,304,096 to 1,312,320, image end `0x892000` to
+`0x897000`. Rebased onto #703 (`a30f398f`, Mesh.c), three more unit
+functions became exact (`00472a50`, `00475020` and `00475c80`), whose calls
+now reach mesh_unit.c by its annotated names. #699 marks the strings
+`004a4014` and `004a4024` in lego_unit.c, so container.c no longer marks
+them. `containerGlobs` is unchanged at `0076ad80`: #700 retired port
+`.bss` only, and Mesh.c's `meshGlobs` is in its own range.
 
 ## Reproduce
 
