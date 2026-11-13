@@ -573,7 +573,7 @@ void simtick_render_step_original(void);                   /* 00449c00 */
 void simtick_post_cluster_original(float elapsedWorld);    /* 0040d450 */
 void simtick_fx_bank_tick_original(Lego_Level* level, float elapsedWorld); /* 0046e390 */
 void simtick_sound_keepalive_original(void);               /* 0047aba0 */
-void simtick_post_step_original(float elapsedWorld);       /* 004665c0 */
+void spiderweb_update(float elapsedGame);                  /* 004665c0 spiderweb.c */
 void terrain_dirty_quad_normal_emit_pass_original(void);   /* 00463230 */
 void screen_space_effect_dispatch_original(void* view);    /* 0040e8d0 */
 void world_render_pass_a_original(Lego_Level* level, void* view,
@@ -761,7 +761,7 @@ extern "C" {
 #endif
 
 struct BlockRec;
-struct EngineState;
+struct Lego_Object;
 struct EntitySlot;
 struct Lego_Level;
 
@@ -811,7 +811,7 @@ void global_value_004ffe48_set(uint32_t value);        /* crt.hpp, 00458660 */
 void objective_announce_current(int who);              /* objective.hpp, 00458670 */
 void objective_tick_target(void* engine, struct LevelState* s,
                            float checker_dt, float frame_dt); /* objective.hpp, 00458be0 */
-void grid_cell_record_buffer_replace(struct EngineState* block); /* engine.hpp, 00466230 */
+void spiderweb_restart(Lego_Level* level);                /* spiderweb.c, 00466230 */
 void global_linked_record_chain_clear(void);           /* crt.hpp, 0046a390 */
 uint32_t entity_stats_word_get(const struct EntitySlot* e); /* entity.hpp, 00469e60 */
 
@@ -1185,9 +1185,8 @@ int electric_fence_spark_from(struct ElectricFenceObject* object, int bx, int by
 int electric_fence_debug_place(int bx, int by);           /* 0040d170 */
 int electric_fence_debug_remove(int bx, int by);          /* 0040d1f0 */
 int electric_fence_block_is_fence(int bx, int by);        /* 0040e460 */
-/* GAME-040 (grid_cell_records.cpp): a namespaced ledger stub; adapter at
- * the end of grid_cell_records.cpp. */
-int expand_cell_entity_spawn_adapter(int x, int y);       /* 00466250 */
+/* GAME-042 SpiderWeb.c (spiderweb.c). */
+int spiderweb_spawn_at(int bx, int by);                   /* 00466250 */
 /* Info.c (info.cpp, message.hpp). */
 void message_dispatch(int id, const char* p2, uint32_t p3, const void* p4); /* 00419b80 */
 /* Advisor.c and Panel.c (C units). */
@@ -1460,8 +1459,8 @@ int entity_state_override_pop(struct EntitySlot* entity);       /* 00459240 */
  * Container_SetAnimationTime. */
 uint32_t scene_action_name_set(void* scene_object, const char* action_name); /* 00473370 */
 float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 00475140 */
-/* GAME SpiderWeb.c (engine.hpp): SpiderWeb_Add. */
-void set_expansion_entity_at_grid_cell(int x, int y, void* entity); /* 00466380 */
+/* GAME-042 SpiderWeb.c (spiderweb.c): SpiderWeb_Add. */
+void spiderweb_add(int bx, int by, struct Lego_Object* webObj); /* 00466380 */
 /* GAME-013 ElectricFence.c (terrain_cell_objects.h): ElectricFence_Add. */
 void electric_fence_add(struct ElectricFenceObject* object);   /* 0040cf50 */
 /* Original-ABI adapters at the end of lego.cpp (group 2D), where the

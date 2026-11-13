@@ -678,9 +678,9 @@ void engine_app_mode_global_set(int32_t mode)
 #endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* --- the grid-cell record buffer (see engine.hpp) ---------------------------- */
-// GLOBAL: LEGORR 0x005520e8
+/* The port's model of SpiderWeb.c's spiderWebGlobs (005520e8, annotated in
+ * game/spiderweb.c; finding 620). */
 void*        s_field_grid_buf;   /* DAT_005520e8 role */
-// GLOBAL: LEGORR 0x005520ec
 EngineState* s_field_grid_desc;  /* DAT_005520ec role */
 
 void* entity_field_grid_buffer_peek(void) { return s_field_grid_buf; }

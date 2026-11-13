@@ -1677,7 +1677,9 @@ void lego_misc_object_resources_load(struct BlockRec* config)
         "LongElectricFenceBeam", NULL));
     indexed_resource_handle_set_create(legoGlobs_rootCont, fileName, 1);
 
-    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects", "SpiderWeb", NULL));
+    fileName = block_get_strptr(config, string_path_join(s_engine_config_root, "MiscObjects",
+        // STRING: LEGORR 0x004a3f40
+        "SpiderWeb", NULL));
     legoGlobs_contSpiderWeb = container_load(legoGlobs_rootCont, fileName, "ACT", 1);
     scene_render_lock_toggle(legoGlobs_contSpiderWeb, 1);
 
@@ -1909,7 +1911,7 @@ int lego_engine_tick(float elapsed)
     simtick_fx_bank_tick_original(legoGlobs_currLevel, elapsedWorld);
     simtick_sound_keepalive_original();
     transient_effect_instances_tick(elapsedWorld);
-    simtick_post_step_original(elapsedWorld);
+    spiderweb_update(elapsedWorld);
     motion_gameplay_tick(elapsedWorld);
     message_cooldown_tick(elapsedAbs);
 
@@ -4261,7 +4263,7 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct EntityS
         if (liveObj != NULL) entity_pair_scalar_fields_set_original(liveObj, direction, 40.0f);
     }
     if (LEGO_KEY_PRESSED(0x23))
-        expand_cell_entity_spawn_adapter(bx, by);
+        spiderweb_spawn_at(bx, by);
     if (LEGO_KEY_PRESSED(0x21) && selection_active_has_any_get()) {
         unsigned int count = selection_active_count_get();
         unsigned int i;
@@ -4958,7 +4960,7 @@ int lego_level_load(const char* levelName)
                 if (pathMap) free(pathMap);
 
                 electric_fence_restart((struct ElectricFenceLevel*)level);
-                grid_cell_record_buffer_replace((struct EngineState*)level);
+                spiderweb_restart(level);
                 objective_announce_current(0);
                 objective_tick_target(legoGlobs_textOnlyWindow, (struct LevelState*)legoGlobs_currLevel, 1.0f, 1.0f);
 
@@ -5137,7 +5139,7 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
         level->height = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), uint32_t, 0xc);
 
         electric_fence_restart((struct ElectricFenceLevel*)level);
-        grid_cell_record_buffer_replace((struct EngineState*)level);
+        spiderweb_restart(level);
 
         if (level->useRoof) {
             indexed_surface_resource_allocate(legoGlobs_rootCont, level->width, level->height);
@@ -6249,7 +6251,7 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                             // STRING: LEGORR 0x004a46a0
                             "FlapInWind");
                         ddiscene_frame_update_and_callbacks(LEGO_FIELD(obj, void*, 0x1c), 0.0f);
-                        set_expansion_entity_at_grid_cell(bx, by, obj);
+                        spiderweb_add(bx, by, (struct Lego_Object*)obj);
                     } else if (objType == 11) {
                         electric_fence_add((struct ElectricFenceObject*)obj);
                     }
@@ -6298,8 +6300,9 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
  * type's index and its model (the type data record or the MiscObjects
  * container) of an object list's type name. The rock monsters are matched
  * first, then the special objects, then the vehicles, mini-figures and
- * buildings. "tvcamera", "ProcessedOre", "Dynamite", "ElectricFence",
- * "SpiderWeb", "Barrier" and "OohScary" carry no STRING marker: lego.cpp
+ * buildings. "SpiderWeb" is marked at its first use (004a3f40, finding
+ * 620). "tvcamera", "ProcessedOre", "Dynamite", "ElectricFence",
+ * "Barrier" and "OohScary" carry no STRING marker: lego.cpp
  * annotates their addresses as the port's s_item_name_* GLOBALs (C++
  * linkage, used by entity.cpp and legoobject_port.cpp), and "PowerCrystal",
  * "Ore" and "Path" belong to other units. */

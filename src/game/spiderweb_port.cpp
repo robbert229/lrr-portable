@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-042 GAME-042: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-042.csv. */
+/* GAME-042 SpiderWeb.c: the port tail (ADR 0006 decision 4; finding 620).
+ * The original-shape unit is spiderweb.c. These are the port's models of
+ * its functions, unannotated, under the port's names: they read the port's
+ * EngineState, EntitySlot and the grid buffer s_field_grid_buf
+ * (gods98/engine.cpp), not the original's Lego_Level and LegoObject, so
+ * native callers (the simulation ticker and the tests) keep calling them. Lego.c (lego_unit.c) calls spiderweb.c. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
 #include "camera.hpp"
@@ -78,7 +81,6 @@ int ledger_stub_00466490_CellSightRayCheckAndFlag(const EntitySlot* observer);
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static int post_step_cell_sight_callback(EntitySlot* entity, void* payload);
 
-// FUNCTION: LEGORR 0x004661c0
 void grid_cell_record_buffer_allocate(EngineState* block)
 {
     if (block == NULL) {
@@ -102,7 +104,6 @@ void grid_cell_record_buffer_allocate(EngineState* block)
     s_field_grid_desc = block;
 }
 
-// FUNCTION: LEGORR 0x00466210
 void entity_field_grid_buffer_release(void)
 {
     if (s_field_grid_buf != NULL) {
@@ -111,7 +112,6 @@ void entity_field_grid_buffer_release(void)
     }
 }
 
-// FUNCTION: LEGORR 0x00466230
 void grid_cell_record_buffer_replace(EngineState* block)
 {
     entity_field_grid_buffer_release();
@@ -124,7 +124,6 @@ namespace unported_ledger_stubs {
  * its orientation. The scene action setter itself remains renderer-owned;
  * entity creation, cell state, and the cell object's live sidecar are
  * handled here. */
-// FUNCTION: LEGORR 0x00466250
 int ledger_stub_00466250_ExpandCellEntitySpawn(int x, int y)
 {
     static const float half_pi = 1.57079632679f;
@@ -182,7 +181,6 @@ int ledger_stub_00466250_ExpandCellEntitySpawn(int x, int y)
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x00466380
 void set_expansion_entity_at_grid_cell(int x, int y, void* entity)
 {
     if (s_field_grid_buf != NULL && s_field_grid_desc != NULL) {
@@ -203,7 +201,6 @@ void set_expansion_entity_at_grid_cell(int x, int y, void* entity)
     }
 }
 
-// FUNCTION: LEGORR 0x004663f0
 int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out)
 {
     const EngineState* desc = s_field_grid_desc;
@@ -234,7 +231,6 @@ int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out)
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00466490
 int ledger_stub_00466490_CellSightRayCheckAndFlag(
     const EntitySlot* observer)
 {
@@ -288,7 +284,6 @@ int ledger_stub_00466490_CellSightRayCheckAndFlag(
 }
 } // namespace unported_ledger_stubs
 
-// FUNCTION: LEGORR 0x004665c0
 void simtick_post_step(EngineContext* c)
 {
     (void)c;
@@ -301,7 +296,6 @@ void simtick_post_step(EngineContext* c)
     ++s_post_n;
 }
 
-// FUNCTION: LEGORR 0x00466750
 void grid_cell_invalidate_and_clear_flags(int x, int y)
 {
     const EngineState* desc = s_field_grid_desc;
@@ -342,14 +336,4 @@ static int post_step_cell_sight_callback(EntitySlot* entity, void* payload)
         ledger_stub_00466490_CellSightRayCheckAndFlag(entity);
     /* LAB_004665e0's result does not terminate the entity-pool walk. */
     return 0;
-}
-
-/* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the
- * port's FUN_00466250 is a namespaced ledger stub, which cannot take C
- * linkage. */
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (ledger stub 00466250)
-extern "C" int expand_cell_entity_spawn_adapter(int x, int y)
-{
-    return unported_ledger_stubs::ledger_stub_00466250_ExpandCellEntitySpawn(
-        x, y);
 }

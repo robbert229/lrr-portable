@@ -114,8 +114,8 @@ Weapons_Object* weapons_fire_lazer(Weapons_Vector3F* fromPos, Weapons_Vector3F* 
                                    Weapons_Object* liveObj, float elapsed,
                                    float coef, int weaponType,
                                    float discharge);          /* 0046ffb0 */
-void weapons_object_collision_check(Weapons_Object* obj, float* fromPos,
-                                    float* toPos, int checkSide); /* 00470260 */
+int weapons_object_collision_check(Weapons_Object* obj, float* fromPos,
+                                   float* toPos, int checkSide); /* 00470260 */
 int weapons_object_quad_intersect(Weapons_Object* obj, float* fromPos,
                                   float* toPos, float* intersection,
                                   int checkSide);             /* 004702b0 */
@@ -825,14 +825,12 @@ done:
 }
 
 // FUNCTION: LEGORR 0x00470260
-void weapons_object_collision_check(Weapons_Object* obj, float* fromPos,
-                                    float* toPos, int checkSide)
+int weapons_object_collision_check(Weapons_Object* obj, float* fromPos,
+                                   float* toPos, int checkSide)
 {
-    if (entity_stats_word_get(WEAPONS_ENT(obj)) & 0x100) {
-        weapons_object_quad_intersect(obj, fromPos, toPos, NULL, checkSide);
-        return;
-    }
-    weapons_object_center_proximity_check(obj, fromPos, toPos, checkSide);
+    if (entity_stats_word_get(WEAPONS_ENT(obj)) & 0x100)
+        return weapons_object_quad_intersect(obj, fromPos, toPos, NULL, checkSide);
+    return weapons_object_center_proximity_check(obj, fromPos, toPos, checkSide);
 }
 
 // FUNCTION: LEGORR 0x004702b0

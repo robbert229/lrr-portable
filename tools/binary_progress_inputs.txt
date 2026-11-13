@@ -231,7 +231,6 @@ src/game/frontend_shared.hpp
 src/game/frontend_unit.cpp
 src/game/game.cpp
 src/game/game.hpp
-src/game/grid_cell_records.cpp
 src/game/helpwindow.c
 src/game/helpwindow.h
 src/game/helpwindow_imports.h
@@ -394,6 +393,10 @@ src/game/spawn.hpp
 src/game/spawn_for_lego.hpp
 src/game/spawn_for_legoobject.hpp
 src/game/spawn_for_mesh_unit.hpp
+src/game/spiderweb.c
+src/game/spiderweb.h
+src/game/spiderweb_imports.h
+src/game/spiderweb_port.cpp
 src/game/startup_config.cpp
 src/game/startup_config_for_file_list_streams.hpp
 src/game/startup_config_for_wad.hpp

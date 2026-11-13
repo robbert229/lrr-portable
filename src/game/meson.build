@@ -32,7 +32,7 @@ game_sources = [
   'tooltip_port.cpp',
   'text_port.cpp',
   'record_chains_port.cpp',
-  'grid_cell_records.cpp',
+  'spiderweb_port.cpp',
   'sfx_port.cpp',
   'placement_footprint.cpp',
   'scrollinfo_port.cpp',
@@ -129,6 +129,7 @@ game_c_sources = [
   'detail.c',
   'water.c',
   'teleporter.c',
+  'spiderweb.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []
