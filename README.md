@@ -12,28 +12,29 @@ in a playable state before the end of November 2026.
      with `python3 tools/readme_status.py` (no build needed); recount the
      source ledger with `python3 tools/coverage_ledger.py`. -->
 
-Verified **2026-11-12** on `main` at `18cc9483`, with MSVC 5.0 and Reccmp:
+Verified **2026-11-13** on `main` at `8abe8b6b`, with MSVC 5.0 and Reccmp:
 
 | Measure | Value |
 | --- | ---: |
-| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **183,830 / 642,549 bytes (28.61%)** |
-| Accuracy: mean Reccmp score of mapped functions, game-only / full | 82.73% / 84.26% |
-| Mapped functions, game-only / full | 2,326 / 2,564 |
-| Exact (100%) functions, game-only / full | 1,380 / 1,582 |
-| Functions byte-identical at their original address | 11 (462 bytes) |
+| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **196,138 / 642,549 bytes (30.52%)** |
+| Accuracy: mean Reccmp score of mapped functions, game-only / full | 85.90% / 87.16% |
+| Mapped functions, game-only / full | 2,343 / 2,588 |
+| Exact (100%) functions, game-only / full | 1,477 / 1,686 |
+| Functions byte-identical at their original address | 8 (384 bytes) |
 
 The old headline, Reccmp's game-only "progress" (47.77% on 2026-11-04), is no
 longer tracked; exact-function code bytes replaced it, and accuracy is the same
 Reccmp measure as before (then 48.27%).
 [Report details and reproduction](docs/coverage/reccmp.md).
 
-`LegoObject.c` and `Lego.c` are now fully
-converted to their original shape. The leaner `/OPT:REF` link of the matching
-build now ends below the original's image end
-([finding 602](docs/findings/602-port-only-bss-rightsize.md)).
+`LegoObject.c` and `Lego.c` are now fully converted to their original shape.
+The leaner `/OPT:REF` link of the matching build now ends below the original's
+image end ([finding 602](docs/findings/602-port-only-bss-rightsize.md)), and
+drops 428 annotated functions (207 exact), down from 1,303 at `3791f0dd`
+([finding 576](docs/findings/576-link-mode-and-unreferenced-code.md)).
 
-The [source ledger](docs/coverage/README.md) records **2,283 / 2,564 functions
-(89.0%) with source citations**, plus 279 runtime/import functions and 2 named
+The [source ledger](docs/coverage/README.md) records **2,282 / 2,564 functions
+(89.0%) with source citations**, plus 280 runtime/import functions and 2 named
 functions not yet cited. Source coverage and binary similarity measure
 different things; neither guarantees correct gameplay.
 
