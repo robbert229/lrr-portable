@@ -46,7 +46,7 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
                                  unsigned int* outID,
                                  void** outModel);          /* 0042e8b0 */
 
-/* GAME-023 LegoObject.c (legoobject_unit.c, legoobject.cpp, lego.cpp).
+/* GAME-023 LegoObject.c (legoobject_unit.c, legoobject_port.cpp, lego.cpp).
  * LegoObject_GetBlockPos (004424f0): the port's entry takes the level as
  * well, so natively the unit calls lego.cpp's original-ABI adapter. In the
  * C matching build both entries are legoobject_unit.c's (#610, as

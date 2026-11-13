@@ -95,7 +95,7 @@ void terrain_cell_secondary_flag_8_set_current(int cx, int cy, int set); /* 0043
 extern struct LevelState* g_active_level_retail;            /* 005560d4 */
 /* Bubbles.c (cmd_shared.hpp; bubbles.cpp). */
 void idle_register(struct EntitySlot* e);                   /* 00407450 */
-/* GAME-022 LegoObject.c (entity.hpp; legoobject.cpp). */
+/* GAME-022 LegoObject.c (entity.hpp; legoobject_port.cpp). */
 void* ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(
     const struct EntitySlot* entity);                       /* 00438bf0 */
 struct EntitySlot* entity_lookup_at_world_position(
@@ -116,7 +116,7 @@ int entity_grouped_code_table_find_value_index(unsigned int value,
 
 /* --- group F (00403750-00403f80) --- */
 
-/* GAME-022 LegoObject.c (entity.hpp, port_loop_ports.hpp; legoobject.cpp). */
+/* GAME-022 LegoObject.c (entity.hpp, port_loop_ports.hpp; legoobject_port.cpp). */
 void* ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
     const int* cell_xy, unsigned int filter_a, unsigned int filter_b,
     unsigned int filter_c);                                          /* 00438a60 */
@@ -316,7 +316,7 @@ void cmd_produce(int op, const void* a1, int a2, const int* pair);   /* 00452060
 /* LegoObject.c (legoobject.h). */
 void entity_surface_vector_normalize(void* surface, float out_xy[2]); /* 004422a0 */
 /* 00440c30 (route search) and 00438e50 (nearest object by type mask): the
- * port's entries are namespaced ledger stubs in legoobject.cpp. Adapters at
+ * port's entries are namespaced ledger stubs in legoobject_port.cpp. Adapters at
  * the end of aitask_port.cpp. */
 int aitask_grid_route_search_adapter(struct EntitySlot* object,
                                      unsigned int startX, unsigned int startY,

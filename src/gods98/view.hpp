@@ -607,6 +607,9 @@ float vec2_dist_alt(const float* a, const float* b);
 /* Minimum 2D distance from point to the closed segment start→end. */
 float segment_2d_point_distance(const float* point, const float* start,
                                 const float* end); /* FUN_004089d0 */
+#ifdef __cplusplus
+extern "C"
+#endif
 float point_to_polyline_minimum_segment_distance(const float* point,
                                                  const float* first_point,
                                                  const float* last_point,
@@ -1385,6 +1388,9 @@ extern "C"
 #endif
 void* scene_object_indexed_secondary_handle_get_or_create(void* record,
                                                            int index);
+#ifdef __cplusplus
+extern "C"
+#endif
 float animation_loop_time_adjust(void* record, float argument,
                                  uint32_t count); /* FUN_00408860 */
 extern "C" void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
@@ -2014,6 +2020,9 @@ void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver);
  * uncalled so that the symbol count of every includer is unchanged (ADR 0005
  * entropy rule 1). */
 void* activity_runner_state_read(void* runner, int index);
+#ifdef __cplusplus
+extern "C"
+#endif
 void* scene_activity_change_secondary(void* activity, int index);
 #ifdef __cplusplus
 extern "C"

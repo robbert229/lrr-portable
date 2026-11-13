@@ -6299,7 +6299,7 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
  * buildings. "tvcamera", "ProcessedOre", "Dynamite", "ElectricFence",
  * "SpiderWeb", "Barrier" and "OohScary" carry no STRING marker: lego.cpp
  * annotates their addresses as the port's s_item_name_* GLOBALs (C++
- * linkage, used by entity.cpp and legoobject.cpp), and "PowerCrystal",
+ * linkage, used by entity.cpp and legoobject_port.cpp), and "PowerCrystal",
  * "Ore" and "Path" belong to other units. */
 // FUNCTION: LEGORR 0x0042e8b0
 int lego_entity_type_pair_lookup(const char* objName, int* outType,
@@ -8242,7 +8242,7 @@ void terrain_cell_flag_80000_clear_or_set_current(const int blockPos[2], int on)
 }
 
 /* Shared in the matching build only: the port's callers in ai.cpp and
- * legoobject.cpp pass the port's EntitySlot, which this build reads at the
+ * legoobject_port.cpp pass the port's EntitySlot, which this build reads at the
  * original's offsets (the port's own MSVC body already did). */
 // FUNCTION: LEGORR 0x00432770
 int terrain_cell_walkability_query_current(const struct EntitySlot* liveObj,
@@ -9566,7 +9566,7 @@ void info_set_image_file(int type, const char* filename);       /* 00419650 */
 void info_set_sfx(int type, int sfxType);                       /* 00419680 */
 /* Stats.c (entity.hpp): 00469ee0. */
 uint32_t stats_table_word_at_148(int type, int row);
-/* LegoObject.c (entity.hpp, legoobject.cpp): 0043f150. The original's first
+/* LegoObject.c (entity.hpp, legoobject_port.cpp): 0043f150. The original's first
  * argument is the teleporter; the port's entry does not read it. */
 struct GameContext;
 int entity_spawn_request_queue_add(struct GameContext* ctx, int type,

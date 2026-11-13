@@ -3,7 +3,7 @@
  * from the port's LegoObject.c entry points to the original-shape functions
  * in legoobject_unit.c.
  *
- * The port's implementations stay in legoobject.cpp, unannotated, and native
+ * The port's implementations stay in legoobject_port.cpp, unannotated, and native
  * callers keep calling them: they read the port's EntitySlot, not the
  * original's 0x40c-byte record, so the unit's functions cannot replace them
  * natively. In the matching build (MSVC 5.0, _MSC_VER 1100) the callers
@@ -13,7 +13,7 @@
  * Include it first in a caller's file, before any declaration of these
  * names. Each macro renames a declaration or a call one for one, so MSVC's
  * symbol numbering (finding 538) does not change. Every aliased entry has
- * C linkage. Not for legoobject.cpp, which defines the port models. */
+ * C linkage. Not for legoobject_port.cpp, which defines the port models. */
 #ifndef LEGORRR_GAME_LEGOOBJECT_PORT_ALIASES_H
 #define LEGORRR_GAME_LEGOOBJECT_PORT_ALIASES_H
 
@@ -154,6 +154,33 @@
 #define linked_entity_flag_and_command_update legoobject_linked_flag_and_command_update /* 004440a0 */
 #define entity_enter_event21_state_once legoobject_enter_event21_state_once /* 00444620 */
 #define entity_step_movement_vector_resolve legoobject_step_movement_vector_resolve /* 00444680 */
+/* GAME-023 part 3 (issue #615): 00445d70-0044c710. The port's entries in
+ * namespaces (lego::, unported_ledger_stubs::), the overloaded
+ * selection_clear_marker_and_reset_hud and the entries with other
+ * contracts are not aliased. */
+#define entity_route_adjacent_step_append legoobject_route_adjacent_step_append /* 004468c0 */
+#define entity_progress_advance_by_25 legoobject_progress_advance_by_25 /* 00447730 */
+#define entity_clear_linked_object_state legoobject_clear_linked_object_state /* 00447780 */
+#define entity_type_four_callback_dispatch legoobject_type_four_callback_dispatch /* 00447900 */
+#define entity_directional_activity_start legoobject_directional_activity_start /* 00447950 */
+#define entity_dispatch_event5_and_set_flag legoobject_dispatch_event5_and_set_flag /* 00447b00 */
+#define activity_register_bookkeeping legoobject_activity_register_bookkeeping /* 00447c40 */
+#define entity_clear_nested_state_8_fields legoobject_clear_nested_state_8_fields /* 004487c0 */
+#define entity_set_activity_place legoobject_set_activity_place /* 00448c50 */
+#define scene_object_has_task_type_4_5_7 legoobject_has_task_type_4_5_7 /* 004493e0 */
+#define entity_activity23_state_transition legoobject_activity23_state_transition /* 00449a70 */
+#define entity_type_operation_release legoobject_type_operation_release /* 00449ff0 */
+#define entity_follow_target_pose_get legoobject_follow_target_pose_get /* 0044a070 */
+#define entity_type_component_get legoobject_type_component_get /* 0044a200 */
+#define type11_cell_coordinate_append legoobject_type11_cell_coordinate_append /* 0044a390 */
+#define predug_coordinate_pool_append legoobject_predug_coordinate_pool_append /* 0044a4b0 */
+#define terrain_object_sfx_grid_config_load legoobject_sfx_grid_config_load /* 0044acc0 */
+#define terrain_object_type_sfx_at_cell_get legoobject_sfx_at_cell_get /* 0044ad80 */
+#define scatter_spawn_gate_set legoobject_scatter_spawn_gate_set /* 0044adc0 */
+#define entity_kind_one_random_spawn_trigger legoobject_kind_one_random_spawn_trigger /* 0044ade0 */
+#define ai_activity_scan legoobject_activity_scan /* 0044b480 */
+#define ai_can_do legoobject_ai_can_do /* 0044c530 */
+#define global_scatter_spawn_enable_and_drain legoobject_scatter_spawn_enable_and_drain /* 0044c550 */
 /* Port entries in entity.cpp (no FUNCTION annotation there). */
 #define entity_action_target_cell_is_valid legoobject_action_target_cell_is_valid /* 0043fdc0 */
 #define entity_route_to_explicit_target legoobject_route_to_explicit_target /* 0043fe70 */
@@ -178,6 +205,29 @@
 #define aitask_grid_route_search_adapter legoobject_grid_route_search_adapter /* 00440c30 */
 #define entity_position_to_terrain_cell_adapter legoobject_position_to_terrain_cell /* 004424f0 */
 #define aitask_cell_step_command_issue_adapter legoobject_cell_step_command_issue_with_jitter /* 0043a120 */
+/* Part 3 (#615): aitask_port.cpp's and lego_port.cpp's original-ABI
+ * adapters, whose contract is the original's. */
+#define aitask_nearest_cell_route_commit_adapter legoobject_nearest_cell_route_commit /* 00446e40 */
+#define aitask_type_five_spawn_adapter legoobject_conditional_type_five_spawn /* 004470d0 */
+#define aitask_move_to_cell_adapter legoobject_move_to_cell_coordinates /* 00448800 */
+#define aitask_gated_step_record_adapter legoobject_record_gated_step_command_issue /* 00448880 */
+#define aitask_neighbor_cell_move_adapter legoobject_neighbor_cell_move_command_handle /* 00448a60 */
+#define aitask_cardinal_step_link_adapter legoobject_cardinal_step_command_issue_and_link /* 00448c90 */
+#define aitask_proximity_step_jitter_adapter legoobject_proximity_step_command_issue_with_jitter /* 00448eb0 */
+#define aitask_kind6_approach_route_adapter legoobject_kind6_record_approach_route_issue /* 00449010 */
+#define aitask_proximity_step_link_adapter legoobject_proximity_step_command_issue_with_link /* 004490a0 */
+#define aitask_walkable_cell_route_adapter legoobject_walkable_target_cell_route_issue /* 00449240 */
+#define aitask_cell_step_mark_adapter legoobject_cell_step_command_issue_with_target_mark /* 004492b0 */
+#define aitask_target_cell_route_associate_adapter legoobject_target_cell_route_and_associate /* 00449430 */
+#define aitask_target_cell_route_marker14_adapter legoobject_target_cell_route_marker14 /* 00449520 */
+#define aitask_coordinate_route_mark_adapter legoobject_coordinate_route_and_mark /* 00449610 */
+#define aitask_route_step_adapter legoobject_route_step_command_issue /* 00449700 */
+#define aitask_proximity_step_clearing_adapter legoobject_proximity_step_command_issue_clearing_gate /* 00449ac0 */
+#define aitask_type11_nearest_resolve_adapter legoobject_type11_cell_coordinate_nearest_resolve /* 0044a3d0 */
+#define aitask_position_step_link_adapter legoobject_position_step_command_issue_and_link /* 0044b500 */
+#define simtick_render_step_original legoobject_simtick_render_step /* 00449c00 */
+#define entity_type_operation_dispatch_adapter legoobject_type_operation_dispatch /* 00449f50 */
+#define ledger_stub_0044b140_SmallSpiderCellSwarmSpawn legoobject_small_spider_cell_swarm_spawn /* 0044b140 */
 #endif
 #endif
 

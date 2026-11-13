@@ -32,7 +32,7 @@
 extern "C" const char* s_tool_type_names[AI_TOOL_TYPE_COUNT];
 #include "ai_for_legoobject.hpp"
 /* C linkage for LegoObject.c state that legoobject_unit.c also reads
- * (defined in legoobject.cpp; the frozen header below redeclares it). */
+ * (defined in legoobject_port.cpp; the frozen header below redeclares it). */
 extern "C" const char* s_activity[AI_ACTIVITY_COUNT];
 extern "C" const char* s_ability_type_names[AI_ABILITY_TYPE_COUNT];
 extern "C" uint32_t s_activity_resource_slots[AI_ACTIVITY_RESOURCE_SLOT_COUNT];

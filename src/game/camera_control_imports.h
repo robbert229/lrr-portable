@@ -51,6 +51,12 @@ void* level_current_terrain_get_original(void);
 #endif
 
 /* GAME-023 LegoObject.c (entity.hpp). */
+/* In the matching build these name legoobject_unit.c's functions at the
+ * same addresses (GAME-023 part 3, issue #615); one declaration each. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define entity_follow_target_pose_get legoobject_follow_target_pose_get
+#define entity_type_component_get legoobject_type_component_get
+#endif
 void entity_follow_target_pose_get(struct EntitySlot* entity, int index,
                                    float position[3],
                                    float facing[3]);              /* 0044a070 */

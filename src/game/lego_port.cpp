@@ -9169,7 +9169,7 @@ extern "C" void entity_custom_name_set_adapter(EntitySlot* object,
 
 /* Original-ABI adapters (ADR 0005 step 6) for GAME-021's lego_unit.c debug
  * keys (0x004288e0). LegoObject.c's 0044a5d0, 00449f50 and 004403d0 are
- * namespaced ledger stubs in legoobject.cpp; 004471b0, 0044c150 and
+ * namespaced ledger stubs in legoobject_port.cpp; 004471b0, 0044c150 and
  * 0043f6a0 take other parameter types or fewer parameters there; 00437d00
  * has no port entry. Nothing calls these natively. */
 namespace unported_ledger_stubs {
@@ -9652,7 +9652,7 @@ extern "C" void lego_noop_point_adapter(const int* blockPos)
 
 /* ---- part 2 adapters, group 2F (004302b0-00431570): begin ---- */
 
-/* 00439370 and 004394b0 are declared only in legoobject.cpp's ledger
+/* 00439370 and 004394b0 are declared only in legoobject_port.cpp's ledger
  * namespace, with C++ linkage; these forward the original's arguments. */
 namespace unported_ledger_stubs {
 void ledger_stub_00439370_EntityBuildPlacementCommandSetup(
@@ -9663,7 +9663,7 @@ void ledger_stub_004394b0_EntityBuildPlacementAlternateCommandSetup(
     int update_state);
 } // namespace unported_ledger_stubs
 
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (EntityBuildPlacementCommandSetup 00439370; C++ linkage in legoobject.cpp's ledger namespace)
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (EntityBuildPlacementCommandSetup 00439370; C++ linkage in legoobject_port.cpp's ledger namespace)
 extern "C" void entity_build_placement_setup_original(
     const int cell_xy[2], int entity_id, const float world_xy[2],
     int update_state)
@@ -9672,7 +9672,7 @@ extern "C" void entity_build_placement_setup_original(
         cell_xy, entity_id, world_xy, update_state);
 }
 
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (EntityBuildPlacementAlternateCommandSetup 004394b0; C++ linkage in legoobject.cpp's ledger namespace)
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (EntityBuildPlacementAlternateCommandSetup 004394b0; C++ linkage in legoobject_port.cpp's ledger namespace)
 extern "C" void entity_build_placement_alt_setup_original(
     const int cell_xy[2], int entity_id, const float world_xy[2],
     int update_state)
@@ -9720,7 +9720,7 @@ struct DDiSceneObjectDescriptor;
 void* ddiscene_object_allocate(const DDiSceneObjectDescriptor* descriptor); /* container_unit.cpp, 00472950 */
 }
 namespace unported_ledger_stubs {
-int ledger_stub_00444260_EntityRandomCellStepRouteIssue(EntitySlot* entity); /* legoobject.cpp */
+int ledger_stub_00444260_EntityRandomCellStepRouteIssue(EntitySlot* entity); /* legoobject_port.cpp */
 }
 
 /* FUN_00462f20 (Roof_SetBlockRoofVertices) takes the block and its four
@@ -9787,7 +9787,7 @@ extern "C" float lego_projected_quad_area_adapter(struct TerrainMapVector3* vert
     return 0.0f;
 }
 
-// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00444260; C++ linkage in legoobject.cpp's ledger namespace)
+// PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (00444260; C++ linkage in legoobject_port.cpp's ledger namespace)
 extern "C" int lego_entity_random_cell_step_route_adapter(struct EntitySlot* object)
 {
     return unported_ledger_stubs::ledger_stub_00444260_EntityRandomCellStepRouteIssue(

@@ -63,8 +63,14 @@ uint32_t level_cell_occupied_at_current(const int cell_xy[2]);    /* 00433090 */
 int terrain_cell_drill_work_add_current(int x, int y, float divisor,
                                         float elapsed);           /* 00434570 */
 
-/* GAME-023 LegoObject.c (legoobject.cpp, entity.hpp, ai.hpp; lego.cpp's
+/* GAME-023 LegoObject.c (legoobject_port.cpp, entity.hpp, ai.hpp; lego.cpp's
  * original-ABI adapters). */
+/* In the matching build these name legoobject_unit.c's functions at the
+ * same addresses (GAME-023 part 3, issue #615); one declaration each. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define entity_type_component_get legoobject_type_component_get
+#define entity_directional_activity_start legoobject_directional_activity_start
+#endif
 void* entity_type_component_get(const void* entity_record);       /* 0044a200 */
 void entity_transform_position_get_outputs(const struct EntitySlot* entity,
                                            float* out_x,

@@ -15,7 +15,7 @@ endif
 game_sources = [
   'aitask_port.cpp',
   'message_unit.cpp',
-  'legoobject.cpp',
+  'legoobject_port.cpp',
   'frontend_unit.cpp',
   'interface_port.cpp',
   'weapons_port.cpp',
