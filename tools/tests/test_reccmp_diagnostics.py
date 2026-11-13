@@ -12,7 +12,7 @@ class DiagnosticsTest(unittest.TestCase):
         lines = ['[ERROR] Failed to find function symbol\n',
                  '[WARNING] new Reccmp diagnostic\n',
                  'file.cpp(12) : warning C4091: bad typedef\n',
-                 'z:/src/gods98/viewports.cpp(508) : warning C4172: returning address of local variable or temporary\n',
+                 'z:/src/gods98/viewports_port.cpp(544) : warning C4172: returning address of local variable or temporary\n',
                  'WARNING:  missing cvtres.err; displaying error numbers without messages.\n',
                  'ordinary output\n']
         self.assertEqual(unexpected(lines), [x.rstrip() for x in lines[:3]])

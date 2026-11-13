@@ -44,6 +44,15 @@
 #define selection_record_point_set camera_set_topdown_position
 #define camera_topdown_position_get_adapter camera_get_topdown_world_pos
 #define camera_pointer_pan_update camera_move
+/* G98-003 Viewports.c (gods98/viewports.c, finding 593). These four keep
+ * the unit's names in the matching build, because C++ port code calls the
+ * port's names with the port's contract (viewports_link_names.h). The
+ * unit's other functions take the port's names there, so lego_unit.c
+ * reaches them unchanged. */
+#define scene_resource_slots_release_all viewport_shutdown
+#define lego_viewport_size_get_adapter viewport_get_size
+#define lego_viewport_field_get_adapter viewport_get_field
+#define camera_project_point_to_screen viewport_world_to_screen
 #endif
 
 #ifdef __cplusplus

@@ -17,7 +17,7 @@ gods98_sources = [
   'lwo.cpp',
   'wad_port.cpp',
   'lws_port.cpp',
-  'viewports.cpp',
+  'viewports_port.cpp',
   'com_object_tree.cpp',
   'file_list_streams.cpp',
   'text_window.cpp',
@@ -65,6 +65,7 @@ gods98_sources = [
   '../crt/crt_heap.cpp',
 ]
 gods98_c_sources = [
+  'viewports.c',
   'utils.c',
   'config.c',
   'maths.c',

@@ -2016,12 +2016,10 @@ uint32_t s_scene_fog_color;
 // GLOBAL: LEGORR 0x00505920
 uint32_t s_scene_fog_mode;
 
-/* Reconstruction owner for the corpus DDiScene render-surface record pool. */
-// GLOBAL: LEGORR 0x0076ace0
+/* The port's model of Viewports.c's viewport pool (viewportGlobs,
+ * 0076ace0-0076ad6c), which gods98/viewports.c now defines (finding 593). */
 void* s_render_surface_pool_blocks[32];
-// GLOBAL: LEGORR 0x0076ad64
 unsigned int s_render_surface_pool_level_count;
-// GLOBAL: LEGORR 0x0076ad60
 void* s_render_surface_pool_free_head;
 
 static void* render_surface_pool_link_get(void* record)

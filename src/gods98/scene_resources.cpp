@@ -14,7 +14,7 @@
 #include "scene_resources_for_container_unit.hpp"
 #include "scene_resources_for_mesh_unit.hpp"
 namespace lego {
-// GLOBAL: LEGORR 0x0076ad68
+/* Port model of viewportGlobs.flags (0076ad68; gods98/viewports.c, finding 593). */
 int s_slots_live = 0;
 SceneResourceReleaseHook s_release_hook = 0;
 void* s_release_context = 0;

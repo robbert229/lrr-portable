@@ -18,6 +18,14 @@
 #include "camera_control.h"
 #include "terrain_map.h"
 
+/* G98-003 Viewports.c (finding 593): Viewport_WorldToScreen keeps the
+ * unit's name in the matching build, because C++ port code calls the port's
+ * name with the port's projection adapter (viewports_link_names.h). A
+ * #define adds no declaration, so the symbol numbering does not move. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define camera_project_point_to_screen viewport_world_to_screen
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
