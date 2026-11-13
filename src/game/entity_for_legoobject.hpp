@@ -99,7 +99,7 @@ extern EntityActionConsumeCounterSidecar* s_entity_action_counter_sidecars;
 extern EntityClippedRectangleHooks s_entity_clipped_rectangle_hooks;
 extern void* s_entity_health_threshold_context;
 uint32_t* entity_action_consume_counter_sidecar_get(EntitySlot* owner, int create);
-extern EntityPathMotionRuntime s_entity_path_motion_runtime[ ENTITY_TYPES * ENTITY_CAP];
+extern EntityPathMotionRuntime* s_entity_path_motion_runtime; /* ENTITY_TYPES * ENTITY_CAP slots, or NULL */
 void entity_path_motion_runtime_clear(EntitySlot* entity);
 extern EntityPeriodicTickHook s_entity_periodic_tick_hook;
 extern void* s_entity_periodic_tick_context;

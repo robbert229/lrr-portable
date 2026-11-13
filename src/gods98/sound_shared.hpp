@@ -36,7 +36,7 @@ extern float s_cooldown_timer;
 extern int s_cooldown_handle;
 extern int s_variant_slot[SOUND_ALIAS_MAX];
 extern int s_variant_next[SOUND_ALIAS_MAX];
-extern VariantNode s_variant_pool[SOUND_VARIANT_POOL_NODES];
+extern VariantNode* s_variant_pool; /* SOUND_VARIANT_POOL_NODES nodes, or NULL */
 extern BatchEntry s_batch_entry[SOUND_BATCH_QUEUE_CAPACITY];
 extern int s_batch_count;
 extern int s_active_alias[SOUND_REQUEST_QUEUE_CAPACITY];

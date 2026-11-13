@@ -43,8 +43,10 @@
 #endif
 
 /* Stand-in for Main.c's lpDevice() (DAT_00505918; viewports_imports.h).
- * Like s_main_d3drm (lws_port.cpp) it stays NULL: the port's renderer keeps
- * its own device (surface.cpp). */
+ * The Windows (winapi) builds publish the port renderer's IDirect3DRMDevice3
+ * into it when the display is committed (directdraw_port_publish,
+ * directdraw_port.cpp; #635). Native builds leave it NULL: the port's
+ * renderer keeps its own device there (surface.cpp). */
 // GLOBAL: LEGORR 0x00505918
 extern "C" void* s_main_device;
 void* s_main_device;

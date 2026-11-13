@@ -141,7 +141,12 @@ static const char s_game_file_write_name[] = "File_Write";
 static const char s_game_file_write_wad_error[] =
     "Cannot write to a file stored in a WAD";
 
+#if FILES_PORT_DEFINES_UNIT_NAMES
+/* Only the directory-tree scans below use it. The matching build leaves
+ * them out, and MSVC 5.0 still reserved this unreferenced 131,076-byte
+ * static in .bss (#641). */
 static ResourceFileTokenList s_resource_file_tokens;
+#endif
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static int resource_cd_key_path_exists(const char* path);

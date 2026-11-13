@@ -20,10 +20,21 @@ typedef struct CacheEntry {
     TextureSurface*  surf;
 } CacheEntry;
 
-static CacheEntry s_cache[TEX_CACHE_MAX];
-static int        s_cache_count = 0;
-static CacheEntry s_shared_cache[TEX_CACHE_MAX];
-static int        s_shared_cache_count = 0;
+/* TEX_CACHE_MAX entries each, allocated when the first texture is cached
+ * (#641): the two static tables put 65,536 bytes in the matching build's
+ * .bss. A table that could not be allocated caches nothing, like a full one. */
+static CacheEntry* s_cache = NULL;
+static int         s_cache_count = 0;
+static CacheEntry* s_shared_cache = NULL;
+static int         s_shared_cache_count = 0;
+
+static int texture_cache_table_ready(CacheEntry** table)
+{
+    if (*table == NULL) {
+        *table = (CacheEntry*)calloc(TEX_CACHE_MAX, sizeof(CacheEntry));
+    }
+    return *table != NULL;
+}
 
 typedef struct TextureSurfaceCreateHostRecord {
     TextureSurface* surface;
@@ -428,8 +439,10 @@ TextureSurface* texture_get_or_load(const char* base, const char* file)
     if (t == NULL) {
         return NULL;
     }
-    if ((!shared_load && s_cache_count < TEX_CACHE_MAX) ||
-        (shared_load && s_shared_cache_count < TEX_CACHE_MAX)) {
+    if ((!shared_load && s_cache_count < TEX_CACHE_MAX &&
+         texture_cache_table_ready(&s_cache)) ||
+        (shared_load && s_shared_cache_count < TEX_CACHE_MAX &&
+         texture_cache_table_ready(&s_shared_cache))) {
 #if defined(_MSC_VER)
         t->name = _strdup(name);
 #else

@@ -173,8 +173,10 @@ uint32_t* entity_action_consume_counter_sidecar_get(EntitySlot* owner,
     return entry->values;
 }
 
-EntityPathMotionRuntime s_entity_path_motion_runtime[
-    ENTITY_TYPES * ENTITY_CAP];
+/* One path-motion slot per possible entity (ENTITY_TYPES * ENTITY_CAP),
+ * allocated whole on the first request that creates a slot (#641): a static
+ * table put 824,320 bytes in the matching build's .bss. NULL until then. */
+EntityPathMotionRuntime* s_entity_path_motion_runtime;
 void entity_path_motion_runtime_clear(EntitySlot* entity);
 namespace unported_ledger_stubs {
 void entity_path_motion_runtime_clear_impl(EntitySlot* entity);
@@ -3930,7 +3932,7 @@ int ledger_stub_004410f0_TerrainNeighborPathCheck(
 void entity_path_motion_runtime_clear_impl(EntitySlot* entity)
 {
     unsigned int i;
-    if (entity == NULL) return;
+    if (entity == NULL || s_entity_path_motion_runtime == NULL) return;
     for (i = 0u; i < ENTITY_TYPES * ENTITY_CAP; ++i) {
         if (s_entity_path_motion_runtime[i].owner == entity) {
             memset(&s_entity_path_motion_runtime[i], 0,
