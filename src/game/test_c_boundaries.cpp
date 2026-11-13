@@ -224,6 +224,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/vehicle_model_imports.h"
 #include "game/detail.h"
 #include "game/detail_imports.h"
+#include "gods98/init.h"
+#include "gods98/init_imports.h"
 
 int main(void)
 {

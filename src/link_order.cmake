@@ -94,7 +94,7 @@ lrr_link(unit   G98-003  gods98        gods98/viewports.c)
 lrr_link(unit   G98-004  gods98        gods98/utils.c)
 lrr_link(legacy 004777a0 program       platform/winapi/entry.cpp winapi)
 lrr_link(legacy 00478010 gods98        gods98/frameloop.cpp)
-lrr_link(legacy 00478330 gods98        gods98/surface.cpp)
+lrr_link(legacy 004781d0 gods98        gods98/surface.cpp)
 lrr_link(legacy 004783f0 platform_glue platform/winapi/frameloop.cpp winapi)
 lrr_link(legacy 004789a0 gods98        gods98/audio.cpp)
 lrr_link(unit   G98-006  gods98        gods98/config.c)
@@ -228,13 +228,15 @@ lrr_link(tail   -        gods98        gods98/view.cpp)
 lrr_link(tail   -        game          game/lego_port.cpp)
 lrr_link(tail   -        game          game/legoobject_port.cpp)
 lrr_link(tail   -        gods98        gods98/resource.cpp)
+lrr_link(tail   -        gods98        gods98/init_port.cpp)
 lrr_link(legacy 0048e160 game          game/level.cpp)
 lrr_link(legacy 0048e1e0 gods98        gods98/string.cpp)
 
 # Legacy files whose functions lie in the CRT range, just before LIBC
 lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp)
-lrr_link(legacy 00494c70 gods98        crt/crt.cpp)
+lrr_link(legacy 00493ec0 gods98        crt/crt.cpp)
 lrr_link(unit   LATE-001 gods98        gods98/rnc.c)
+lrr_link(unit   LATE-002 gods98        gods98/init.c)
 
 # Libraries of the matching build, after the objects, in the order of the
 # original's import directory, with LIBC placed so that its code precedes the

@@ -40,6 +40,7 @@ gods98_sources = [
   'view.cpp',
   'texture.cpp',
   'resource.cpp',
+  'init_port.cpp',
   'scene_resources.cpp',
   'frameloop.cpp',
   'audio.cpp',
@@ -85,6 +86,7 @@ gods98_c_sources = [
   'wad.c',
   'lwo.c',
   'rnc.c',
+  'init.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 gods98_c_as_cpp = []

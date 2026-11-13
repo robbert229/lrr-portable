@@ -352,7 +352,8 @@ int main(void)
     test_constant_band();
     test_static_globals();
     /* The display-resolution filter tuples (2026-10-24): the seeded shape,
-     * the guarded window, and the overflow count. */
+     * the guarded window, and the overflow count. They are Init.c's
+     * initGlobs.validModes (gods98/init_port.cpp, finding 613). */
     {
         CHECK(display_resolution_filter_tuple_count() == 0,
               "the table starts empty (no seeding seam)");

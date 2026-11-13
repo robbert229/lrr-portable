@@ -460,10 +460,12 @@ float    crt_float_00555120_peek(void);
 }
 #endif
 
-/* Display-mode list and resolution-filter rows (findings 425/282). The
- * entry layout keeps the corpus's 0x110-byte stride: width, height, bpp,
- * then the mode name at +0x0c. Enumeration remains a platform seam; the
- * caller supplies rows to the port-side registry. */
+/* Display-mode list and resolution-filter rows (findings 425/282).
+ * Deviation (scoring only): the display-mode dialog is gods98/init.c
+ * (LATE-002, finding 613), and these superseded types and declarations
+ * have no definition. They stay so that the symbol numbering of the files
+ * that include this header does not move (finding 538). Only the four
+ * filter-tuple helpers below are defined (gods98/init_port.cpp). */
 #define CRT_DISPLAY_MODE_NAME_MAX 260
 #define CRT_DISPLAY_MODE_ENTRIES 256
 typedef struct CrtDisplayModeEntry {
@@ -518,9 +520,9 @@ int  display_resolution_entry_get(int index,
                                   CrtDisplayResolutionEntry* out);
 void display_resolution_combo_populate(CrtDisplayResolutionList* out);
 
-/* The filter table mirrors DAT_00568060/64/68. The port retains the
- * 0x110-byte tuple stride and grows its backing store so every appended
- * wildcard tuple remains available to the mode matcher. */
+/* The filter table is Init.c's initGlobs.validModes (00568060) and
+ * validModeCount (005754e0); gods98/init_port.cpp defines these four.
+ * display_mode_matches_filter_tuple has no definition (above). */
 void display_resolution_filter_tuples_reset(void);
 void display_resolution_filter_tuple_append(int width, int height, int bpp);
 int  display_resolution_filter_tuple_count(void);
