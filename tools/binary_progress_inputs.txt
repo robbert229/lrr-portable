@@ -450,7 +450,11 @@ src/game/ui_list.hpp
 src/game/ui_list_for_info_track_overlay.hpp
 src/game/ui_list_for_pointer.hpp
 src/game/ui_list_shared.hpp
-src/game/upgrade_levels.cpp
+src/game/upgrade.c
+src/game/upgrade.h
+src/game/upgrade_imports.h
+src/game/upgrade_levels_port.cpp
+src/game/upgrade_link_names.h
 src/game/upgrades.cpp
 src/game/upgrades.h
 src/game/upgrades.hpp

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* Vehicle.c, original translation unit GAME-048 (finding 505), rebuilt in
- * original shape (ADR 0005; finding 590): text 0046c6f0-0046db90, .rdata
- * 0049e7e4-0049e7f0, literals 004aa9f8-004aaa2c. The unit has no .bss.
+ * original shape (ADR 0005; findings 590 and 617): text 0046c3d0-0046db90,
+ * .rdata 0049e7e4-0049e7f0, literals 004aa9f8-004aaa2c. The unit has no
+ * .bss. Its first three functions (0046c3d0-0046c510), which set a
+ * vehicle's activity and hang its upgrade parts on their nulls, were in the
+ * unit map's GAME-047 until finding 617.
  *
  * Each vehicle type's model is loaded once from its `.ae` config: one or
  * two activity containers, the wheel mesh and its nulls, the named nulls
@@ -14,8 +17,10 @@
  * The port's implementation stays in the port tail vehicle_model_port.cpp,
  * unannotated. In the matching build vehicle_model_link_names.h gives this
  * unit's functions the port's names, so every caller reaches them; natively
- * the port tail serves those names. */
+ * the port tail serves those names. upgrade_link_names.h does the same for
+ * the Upgrade.c functions the unit calls. */
 #include "vehicle_model_link_names.h"
+#include "upgrade_link_names.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -40,6 +45,8 @@ typedef struct Vehicle_Vector3F {
 #define VEHICLE_MAXWHEELS 6
 #define VEHICLE_MAXCARRYNULLS 10
 #define VEHICLE_MAXCAMERANULLS 4
+#define VEHICLE_MAXWEAPONS 3
+#define VEHICLE_MAXFIRES 2
 
 #define VEHICLE_FLAG_SOURCE 0x1      /* owns the null names (Vehicle_Load) */
 #define VEHICLE_FLAG_HIDDEN 0x2
@@ -55,12 +62,37 @@ typedef struct Vehicle_Container {
     int type;                                     /* +0x10 */
 } Vehicle_Container;
 
+/* One part of an upgrade level (Upgrade.c, GAME-047; 0x14 bytes). */
+typedef struct Vehicle_UpgradePartInfo {
+    unsigned int level;                           /* +0x00 */
+    unsigned int nullFrameNo;                     /* +0x04 */
+    char* nullName;                               /* +0x08 */
+    char* weaponName;                             /* +0x0c */
+    void* upgradeData;                            /* +0x10 */
+} Vehicle_UpgradePartInfo;
+
+/* An upgrade part's model (Upgrade.c; 0x10 bytes), each upgrade-part
+ * LegoObject's clone. */
+typedef struct Vehicle_UpgradePart {
+    unsigned int objID;                           /* +0x00 */
+    void* cont;                                   /* +0x04 */
+    struct Vehicle_PartObject* nextObject;        /* +0x08 */
+    Vehicle_UpgradePartInfo* partInfo;            /* +0x0c */
+} Vehicle_UpgradePart;
+
+/* The part of a LegoObject the unit reads: its upgrade part (+0x20). */
+typedef struct Vehicle_PartObject {
+    unsigned char pad_00[0x20];
+    Vehicle_UpgradePart* upgradePart;             /* +0x20 */
+} Vehicle_PartObject;
+
 /* Upgrade.c's model (GAME-047), embedded in the vehicle model at +0x124. */
 typedef struct Vehicle_Upgrades {
-    unsigned char pad_00[0x08];
+    Vehicle_UpgradePartInfo* parts;               /* +0x00 */
+    unsigned int count;                           /* +0x04 */
     unsigned int currentLevel;                    /* +0x08 */
     unsigned int levels;                          /* +0x0c a bit per type */
-    unsigned char pad_10[0x04];
+    Vehicle_PartObject* objectList;               /* +0x10 the shown parts */
 } Vehicle_Upgrades;
 
 /* The original's VehicleModel, 0x1ec bytes. */
@@ -93,14 +125,118 @@ typedef struct VehicleModel {
     unsigned int carryNullFrames;                 /* +0x11c */
     unsigned int cameraNullFrames;                /* +0x120 */
     Vehicle_Upgrades upgrades;                    /* +0x124 */
-    unsigned char weapons_138[0x30];              /* +0x138 weapons (weapons.c) */
+    /* +0x138-+0x1e0 is weapons.c's Weapons_Model, of which the unit
+     * writes the nulls. */
+    void* fireNullPairs[VEHICLE_MAXWEAPONS][VEHICLE_MAXFIRES]; /* +0x138 */
+    void* xPivotNulls[VEHICLE_MAXWEAPONS];        /* +0x150 */
+    void* yPivotNulls[VEHICLE_MAXWEAPONS];        /* +0x15c */
     float pivotMaxZ;                              /* +0x168 */
     float pivotMinZ;                              /* +0x16c */
-    unsigned char weapons_170[0x70];              /* +0x170 */
+    unsigned int fireNullPairFrames[VEHICLE_MAXWEAPONS]; /* +0x170 */
+    unsigned char weapons_17c[0x48];              /* +0x17c */
+    Vehicle_UpgradePartInfo* weaponParts[VEHICLE_MAXWEAPONS]; /* +0x1c4 */
+    unsigned char weapons_1d0[0x0c];              /* +0x1d0 */
+    unsigned int weaponCount;                     /* +0x1dc */
     ModelEntryRecord* polyMedium1;                /* +0x1e0 */
     ModelEntryRecord* polyMedium2;                /* +0x1e4 */
     unsigned int flags;                           /* +0x1e8 */
 } VehicleModel;
+
+// FUNCTION: LEGORR 0x0046c3d0
+int vehicle_is_camera_flip_dir(VehicleModel* vehicle)
+{
+    return vehicle->cameraFlipDir == 1;
+}
+
+// FUNCTION: LEGORR 0x0046c3f0
+int vehicle_set_activity(VehicleModel* vehicle, const char* activityName,
+                         float elapsed)
+{
+    int result;
+    unsigned int loop;
+
+    linked_record_field4_clear(vehicle->polyMedium1);
+
+    vehicle->drillNull = NULL;
+    vehicle->depositNull = NULL;
+    vehicle->driverNull = NULL;
+    for (loop = 0; loop < vehicle->cameraNullFrames; loop++) vehicle->cameraNulls[loop] = NULL;
+    for (loop = 0; loop < vehicle->carryNullFrames; loop++) vehicle->carryNulls[loop] = NULL;
+
+    result = scene_action_name_set(vehicle->contAct1, activityName);
+    vehicle->flags &= ~VEHICLE_FLAG_NOACTIVITY1;
+    if (!result && (vehicle->flags & VEHICLE_FLAG_HOLDMISSING)) {
+        if (!ledger_stub_00473340_SceneActionNamePresent(vehicle->contAct1, (void*)activityName))
+            vehicle->flags |= VEHICLE_FLAG_NOACTIVITY1;
+    }
+    if (vehicle->contAct2) result |= scene_action_name_set(vehicle->contAct2, activityName);
+
+    if (!(vehicle->flags & VEHICLE_FLAG_NOACTIVITY1)) ddiscene_frame_update_and_callbacks(vehicle->contAct1, elapsed);
+    if (vehicle->contAct2) ddiscene_frame_update_and_callbacks(vehicle->contAct2, elapsed);
+
+    vehicle_populate_wheel_nulls(vehicle);
+    vehicle_set_upgrade_activity(vehicle, activityName);
+
+    return result;
+}
+
+/* Hang each shown upgrade part on its null and set its activity, and record
+ * the weapon parts' fire and pivot nulls. Building.c's
+ * Building_SetUpgradeActivity (004083a0) is the same code. */
+// FUNCTION: LEGORR 0x0046c510
+void vehicle_set_upgrade_activity(VehicleModel* vehicle, const char* activityName)
+{
+    Vehicle_PartObject* obj = vehicle->upgrades.objectList;
+    Vehicle_UpgradePart* upgradePart;
+    Vehicle_UpgradePartInfo* partInfo;
+    void* null;
+    void* cont;
+    const char* name;
+    unsigned int loop, sub, weapon, frame;
+
+    for (loop = 0; loop < VEHICLE_MAXWEAPONS; loop++) {
+        vehicle->weaponParts[loop] = NULL;
+        vehicle->yPivotNulls[loop] = NULL;
+        vehicle->xPivotNulls[loop] = NULL;
+        for (sub = 0; sub < VEHICLE_MAXFIRES; sub++) vehicle->fireNullPairs[loop][sub] = NULL;
+    }
+    vehicle->weaponCount = 0;
+
+    while (obj) {
+        upgradePart = obj->upgradePart;
+        partInfo = upgradePart->partInfo;
+        null = vehicle_find_null(vehicle, partInfo->nullName, partInfo->nullFrameNo);
+        cont = animation_object_handle_get(upgradePart);
+        ddiscene_scene_object_attach_or_unlink(cont, null);
+        render_object_set_identity_transform(cont);
+        if (activityName) {
+            upgrade_part_set_activity((struct Upgrade_PartModel*)upgradePart, activityName);
+        } else {
+            const char* standName = s_activity[0];
+            scene_action_name_set(upgradePart->cont, standName);
+        }
+
+        if (partInfo->weaponName) {
+            weapon = vehicle->weaponCount;
+            frame = 0;
+            vehicle->fireNullPairFrames[weapon] = 0;
+            for (sub = 0; sub < VEHICLE_MAXFIRES; sub++) {
+                vehicle->fireNullPairs[weapon][sub] = NULL;
+                name = xf_texture_name_format(vehicle->contAct1, vehicle->fireNullName, (const int*)&vehicle->fireNullPairFrames[weapon]);
+                vehicle->fireNullPairs[weapon][vehicle->fireNullPairFrames[weapon]] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
+                if (vehicle->fireNullPairs[weapon][vehicle->fireNullPairFrames[weapon]++] == NULL) break;
+            }
+            name = xf_texture_name_format(vehicle->contAct1, vehicle->xPivotNullName, (const int*)&frame);
+            vehicle->xPivotNulls[weapon] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
+            name = xf_texture_name_format(vehicle->contAct1, vehicle->yPivotNullName, (const int*)&frame);
+            vehicle->yPivotNulls[weapon] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
+            vehicle->weaponParts[weapon] = partInfo;
+            vehicle->weaponCount++;
+        }
+
+        obj = upgradePart->nextObject;
+    }
+}
 
 // FUNCTION: LEGORR 0x0046c6f0
 int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
@@ -207,7 +343,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                 vehicle->pivotMinZ = -1.0f;
             }
 
-            vehicle_upgrade_load_adapter(&vehicle->upgrades, config, gameName);
+            upgrade_load((struct Upgrade_Model*)&vehicle->upgrades, config, gameName);
 
             if ((wheelMesh = block_get_str_copy(config,
                     string_path_join(gameName,
@@ -338,9 +474,8 @@ unsigned int vehicle_get_upgrade_level(VehicleModel* vehicle)
 // FUNCTION: LEGORR 0x0046cf90
 void vehicle_set_upgrade_level(VehicleModel* vehicle, unsigned int objLevel)
 {
-    scene_indexed_record_list_rebuild_for_value(
-        (struct SceneIndexedRecordList*)&vehicle->upgrades, (int)objLevel);
-    scene_channel_slots_rebuild((struct SceneChannelSlotsState*)vehicle, 0);
+    upgrade_set_upgrade_level((struct Upgrade_Model*)&vehicle->upgrades, objLevel);
+    vehicle_set_upgrade_activity(vehicle, NULL);
 }
 
 // FUNCTION: LEGORR 0x0046cfc0

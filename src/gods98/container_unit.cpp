@@ -591,9 +591,10 @@ EntityAssembly* entity_assembly_parse(BlockFile* bf, const char* root,
 }
 
 namespace unported_ledger_stubs {
-// SceneActionNamePresent
+// SceneActionNamePresent. C linkage: Vehicle.c (vehicle_model.c) calls it
+// as Container_IsCurrentActivity (finding 617).
 // FUNCTION: LEGORR 0x00473340
-uint32_t ledger_stub_00473340_SceneActionNamePresent(
+extern "C" uint32_t ledger_stub_00473340_SceneActionNamePresent(
     void* scene_object, void* action_name)
 {
     return scene_action_name_present(scene_object, action_name);

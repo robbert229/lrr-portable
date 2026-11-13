@@ -32,6 +32,12 @@ struct TerrainMap;
 typedef float (*VehicleModel_GetWorldZCallback)(float xPos, float yPos,
                                                 struct TerrainMap* map);
 
+int vehicle_is_camera_flip_dir(struct VehicleModel* vehicle);   /* 0046c3d0 */
+int vehicle_set_activity(struct VehicleModel* vehicle,
+                         const char* activityName,
+                         float elapsed);                          /* 0046c3f0 */
+void vehicle_set_upgrade_activity(struct VehicleModel* vehicle,
+                                  const char* activityName);      /* 0046c510 */
 int vehicle_load(struct VehicleModel* vehicle, unsigned int objID,
                  void* root, const char* filename,
                  const char* gameName);                           /* 0046c6f0 */

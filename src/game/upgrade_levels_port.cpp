@@ -1,7 +1,22 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-047 GAME-047: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-047.csv. */
+/* GAME-047 Upgrade.c port tail (finding 617): the port's model of
+ * Upgrade_SetUpgradeLevel (0046c340), unannotated. It also keeps the port's
+ * models of Vehicle.c's first three functions (0046c3d0-0046c510, GAME-048),
+ * which the relocation placed here: their original-shape versions are in
+ * vehicle_model.c. The original-shape Upgrade.c is upgrade.c; the port's
+ * models of its part functions (0046c030-0046c130) are in tooltip_port.cpp.
+ * These models keep the port's contracts (its own record list, channel
+ * state and paired animation state, with hooks, bounds and NULL guards)
+ * for the native port, which calls them by these names.
+ *
+ * In the matching build (MSVC 5.0) upgrade.c and vehicle_model.c define two
+ * of these names themselves (upgrade_link_names.h,
+ * vehicle_model_link_names.h), so their definitions here are compiled out
+ * there (LRR_UPGRADE_PORT_NAMES). The other two have C++ linkage, and their
+ * callers are port code with other contracts (record_field_d8_equals_one is
+ * also test_record.cpp's), so they stay in every build.
+ * Relocated from the verbatim upgrade_levels.cpp (body hashes:
+ * docs/coverage/relocations/GAME-047.csv). */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,92 +35,19 @@
 #include <math.h>
 #include <limits.h>
 #include "record_for_upgrade_levels.hpp"
-#include "gods98/entity.h"
 
-/* Upgrade.c's part functions (0046c030-0046c130), in original shape
- * (finding 597). The unit map gave them to ToolTip.c (GAME-046), but
- * 0046c110 loads its own 0.0f (.rdata 0049e7dc) where ToolTip_Initialise
- * reads another (0049e7cc). MSVC 5.0 pools a literal once an object, so they
- * are a separate object: Upgrade.c, which this file holds. A part
- * (Upgrade_PartModel, 0x10 bytes) is the port's RenderResourceBinding:
- * +0x00 the object type, +0x04 the container.
- *
- * The port's models with the hook tables stay in the port tail
- * tooltip_port.cpp. In the matching build (MSVC 5.0) these definitions take
- * four of the port's names, whose callers (lego_unit.c, legoobject_unit.c,
- * building_model.c) pass a part of the original's layout; the port tail
- * compiles its own definitions of them out there. Natively the port tail
- * serves those names. Upgrade_Part_MoveAnimation keeps the unit's name:
- * legoobject_unit.c calls it directly. A macro renames a definition one for
- * one, so MSVC's symbol numbering (finding 538) does not change. */
+/* The port's definitions of the names upgrade.c and vehicle_model.c take in
+ * the matching build: every build but MSVC 5.0's. */
 #if defined(_MSC_VER) && _MSC_VER < 1200
-#define upgrade_part_load render_resource_binding_initialize /* 0046c030 */
-#define upgrade_part_clone render_resource_binding_copy_and_convert /* 0046c0b0 */
-#define upgrade_part_remove render_resource_binding_release /* 0046c0f0 */
-#define upgrade_part_set_activity scene_object_set_animation_with_fallback /* 0046c130 */
+#define LRR_UPGRADE_PORT_NAMES 0
+#else
+#define LRR_UPGRADE_PORT_NAMES 1
 #endif
 
-extern "C" {
-
-/* GAME-023 AI.c's activity names (004decc4); legoobject_port.cpp defines
- * them. */
-extern const char* s_activity[79];
-/* Container_Remove (00472a40), with C linkage in container_unit.cpp. */
-void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object);
-
-// FUNCTION: LEGORR 0x0046c030
-void upgrade_part_load(RenderResourceBinding* upgradeModel, void* objID,
-                       void* root, void* filename)
-{
-    memset(upgradeModel, 0, sizeof(*upgradeModel));
-
-    upgradeModel->resource = container_load(root, (const char*)filename, "LWO", 1);
-    if (upgradeModel->resource == NULL)
-        upgradeModel->resource = container_load(root, (const char*)filename, "ACT", 1);
-    if (upgradeModel->resource == NULL)
-        upgradeModel->resource = container_load(root, (const char*)filename, "MESH", 1);
-
-    upgradeModel->state = 0;
-    upgradeModel->key = objID;
-}
-
-// FUNCTION: LEGORR 0x0046c0b0
-void upgrade_part_clone(const RenderResourceBinding* srcUpgradeModel,
-                        RenderResourceBinding* destUpgradeModel)
-{
-    *destUpgradeModel = *srcUpgradeModel;
-    destUpgradeModel->resource = entity_visual_resource_load(srcUpgradeModel->resource);
-}
-
-// FUNCTION: LEGORR 0x0046c0f0
-void upgrade_part_remove(RenderResourceBinding* upgradeModel)
-{
-    ledger_stub_00472a40_DDiSceneObjectDestroy(upgradeModel->resource);
-}
-
-// FUNCTION: LEGORR 0x0046c110
-float upgrade_part_move_animation(RenderResourceBinding* upgradeModel,
-                                  float elapsed, unsigned int repeat)
-{
-    ddiscene_advance_by_time_target(upgradeModel->resource, elapsed);
-    return 0.0f;
-}
-
-// FUNCTION: LEGORR 0x0046c130
-void upgrade_part_set_activity(RenderResourceBinding* upgradeModel,
-                               void* activityName)
-{
-    if (!scene_action_name_set(upgradeModel->resource, (const char*)activityName)) {
-        const char* standName = s_activity[0];
-        scene_action_name_set(upgradeModel->resource, standName);
-    }
-}
-
-} /* extern "C" */
-
-/* IndexedRecordListRebuildForValue (FUN_0046c340): dispose the prior index
- * chain, then construct a linked node for each source record matching value. */
-// FUNCTION: LEGORR 0x0046C340
+#if LRR_UPGRADE_PORT_NAMES /* upgrade.c serves this name in the matching build */
+/* Port model of 0x0046c340 (Upgrade_SetUpgradeLevel): dispose the prior
+ * index chain, then construct a linked node for each source record matching
+ * value. */
 void scene_indexed_record_list_rebuild_for_value(SceneIndexedRecordList* list,
                                                  int value)
 {
@@ -150,8 +92,10 @@ void scene_indexed_record_list_rebuild_for_value(SceneIndexedRecordList* list,
     }
 }
 
-/* RecordFieldD8EqualsOne (FUN_0046c3d0): int == 1, not "nonzero". */
-// FUNCTION: LEGORR 0x0046c3d0
+#endif /* LRR_UPGRADE_PORT_NAMES */
+
+/* Port model of 0x0046c3d0 (Vehicle_IsCameraFlipDir): int == 1, not
+ * "nonzero". */
 int record_field_d8_equals_one(const void* record)
 {
     int32_t v;
@@ -159,7 +103,7 @@ int record_field_d8_equals_one(const void* record)
     return v == 1;
 }
 
-// FUNCTION: LEGORR 0x0046C3F0
+/* Port model of 0x0046c3f0 (Vehicle_SetActivity). */
 uint32_t scene_activity_paired_channel_update(
     ScenePairedAnimationState* state, uint32_t channel, int visible)
 {
@@ -209,9 +153,10 @@ uint32_t scene_activity_paired_channel_update(
     return changed;
 }
 
-/* SceneChannelSlotsRebuild (FUN_0046c510): clear the fixed three-by-five
- * registration window and rebuild it by walking the scene's channel list. */
-// FUNCTION: LEGORR 0x0046C510
+#if LRR_UPGRADE_PORT_NAMES /* vehicle_model.c serves this name in the matching build */
+/* Port model of 0x0046c510 (Vehicle_SetUpgradeActivity): clear the fixed
+ * three-by-five registration window and rebuild it by walking the scene's
+ * channel list. */
 void scene_channel_slots_rebuild(SceneChannelSlotsState* state, int mode)
 {
     SceneChannelEntry* entry;
@@ -245,3 +190,4 @@ void scene_channel_slots_rebuild(SceneChannelSlotsState* state, int mode)
     }
     state->registered_count = count;
 }
+#endif /* LRR_UPGRADE_PORT_NAMES */

@@ -7978,17 +7978,16 @@ float vehicle_move_animation(struct VehicleModel* vehicle, float elapsed1, float
 float renderer_object_timing_value_adjust_by_count(void* record, float time,
                                                    unsigned int count);    /* 00406d30 */
 float animation_loop_time_adjust(void* record, float argument, unsigned int count); /* 00408860 */
-/* Upgrade.c: Upgrade_Part_MoveAnimation (0046c110), upgrade_levels.cpp's
- * original-shape function (finding 597). */
+/* Upgrade.c: Upgrade_Part_MoveAnimation (0046c110), upgrade.c's (findings
+ * 597 and 617). */
 float upgrade_part_move_animation(struct RenderResourceBinding* upgradeModel, float elapsed,
                                   unsigned int repeat);                    /* 0046c110 */
-/* Vehicle.c (Vehicle_SetActivity 0046c3f0, Vehicle_GetCameraNull 0046da50):
- * the port's entries have other contracts, so an adapter at the end of
- * legoobject_port.cpp stands in. Building.c's Building_SetActivity
- * (00408570) and Building_GetCameraNull (004085f0) are building_model.c's
- * (finding 592). */
-int legoobject_gq_vehicle_set_activity_adapter(void* vehicle, const char* activityName,
-                                               float time);                /* 0046c3f0 */
+/* Vehicle.c (Vehicle_SetActivity 0046c3f0, Vehicle_GetCameraNull 0046da50)
+ * is vehicle_model.c's (findings 590 and 617). Building.c's
+ * Building_SetActivity (00408570) and Building_GetCameraNull (004085f0) are
+ * building_model.c's (finding 592). */
+int vehicle_set_activity(struct VehicleModel* vehicle, const char* activityName,
+                         float elapsed);                                   /* 0046c3f0 */
 void* vehicle_get_camera_null(struct VehicleModel* vehicle, unsigned int frameNo); /* 0046da50 */
 unsigned int building_set_activity(void* building, const char* activityName,
                                    float time);                            /* 00408570 */
@@ -8267,7 +8266,7 @@ int legoobject_activity_register_bookkeeping(Lego_Object* obj)
 
         switch (obj->type) {
         case 1:
-            result = legoobject_gq_vehicle_set_activity_adapter(obj->vehicle, obj->activityName1, obj->animTime);
+            result = vehicle_set_activity((struct VehicleModel*)obj->vehicle, obj->activityName1, obj->animTime);
             obj->field_2dc = vehicle_get_camera_null((struct VehicleModel*)obj->vehicle, obj->field_2e0);
             break;
         case 2:
@@ -9157,7 +9156,7 @@ int legoobject_gs_container_is_hidden_adapter(void* cont);              /* 00473
 #endif
 unsigned int vehicle_is_hidden(struct VehicleModel* vehicle);             /* 0046d330 */
 int legoobject_gs_object_is_hidden_adapter(void* model);                /* 004086a0 */
-int legoobject_gs_vehicle_camera_flip_adapter(void* vehicle);           /* 0046c3d0 */
+int vehicle_is_camera_flip_dir(struct VehicleModel* vehicle);           /* 0046c3d0 */
 void* vehicle_get_drill_null(struct VehicleModel* vehicle);          /* 0046da90 */
 /* MeshLOD.c (terrain_map.c, C). */
 void* model_entry_record_load(void* previous, const char* partName, const char* dir,
@@ -9388,7 +9387,7 @@ void legoobject_follow_target_pose_get(Lego_Object* obj, int cameraNo, float* po
         }
     }
     if (obj->type == 1)
-        flip = legoobject_gs_vehicle_camera_flip_adapter(obj->vehicle);
+        flip = vehicle_is_camera_flip_dir((struct VehicleModel*)obj->vehicle);
     else if (obj->type == 2)
         flip = scene_object_mode_is_one(obj->miniFigure);
     else if (obj->type == 3)
