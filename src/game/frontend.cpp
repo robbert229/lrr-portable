@@ -2588,12 +2588,12 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value)
  * +0x278 field), so the timestamp band has 40 records. Tooltip overlay
  * initialization clears 0x1839 dwords: 39 full records plus the first
  * three words of record 39, leaving its update-bound flag intact. */
-// GLOBAL: LEGORR 0x0054c000
+/* The port's copy: ToolTip.c's records (0x0054c000) are in tooltip.c's
+ * toolTipGlobs (finding 597). */
 TimedEffectRecord s_timed_effect_records[TIMED_EFFECT_RECORD_COUNT];
 /* DAT_0054bf3c is the tooltip duration threshold (scale * 25). Timed-effect
  * timestamp reset uses these same float bits as its fallback time value. */
-// GLOBAL: LEGORR 0x0054bf3c
-float s_timed_effect_tick;
+float s_timed_effect_tick; /* the port's; 0x0054bf3c is toolTipGlobs.hoverTime */
 static int32_t s_layout_position_debug[LAYOUT_POSITION_ENTRIES][2];
 float s_help_window_button_rects[LAYOUT_POSITION_ENTRIES][4];
 UiModeResourceBlitRectHook s_ui_resource_reposition_hook;
@@ -2637,6 +2637,9 @@ void timed_effect_update_request_set(int index)
         timed_effect_update_request_set_corpus(index);
 }
 
+/* In the matching build tooltip.c's ToolTip_SetContent (0046b520) serves
+ * this name (tooltip_link_names.h, finding 597). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 /* ToolTip_SetContent adapter (frontend.h). The original (FUN_0046b520)
  * formats into a 512-byte buffer and either loads an image ('@' prefix) or
  * copies the text into the record, turning "\n" into a newline and '_'
@@ -2672,6 +2675,7 @@ void tooltip_set_content(int index, const char* format, ...)
     memset(record->payload + 0x258, 0, 0x14);
     record->flags = (record->flags & ~8u) | 3u;
 }
+#endif
 
 void timed_effect_cue_request_set(int index, uint32_t value)
 {

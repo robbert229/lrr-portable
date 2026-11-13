@@ -59,7 +59,7 @@ InterfaceGlobs interfaceGlobs = { 0 };
 void interface_initialise(unsigned int x, unsigned int y,
                           struct TextureSurface* font)
 {
-    tooltip_set_persistent(4, 1);
+    tooltip_set_flag10(4, 1);
 
     interfaceGlobs.currMenuPosition.x = (float)x;
     interfaceGlobs.currMenuPosition.y = (float)y;

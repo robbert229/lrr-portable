@@ -188,6 +188,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/lighteffects_imports.h"
 #include "game/helpwindow.h"
 #include "game/helpwindow_imports.h"
+#include "game/tooltip.h"
+#include "game/tooltip_imports.h"
 
 int main(void)
 {

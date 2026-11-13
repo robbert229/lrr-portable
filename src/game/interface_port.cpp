@@ -3779,15 +3779,8 @@ void container_get_position(void* container, void* reference,
     position->y = 0.0f;
 }
 
-void tooltip_set_persistent(int index, int set)
-{
-    timed_effect_persistence_set_corpus(index, set);
-}
-
-void tooltip_reset_timer(int index)
-{
-    timed_effect_timestamp_reset_corpus(index);
-}
+/* ToolTip_SetFlag10 and ToolTip_ResetTimer are tooltip.c's own functions
+ * now (finding 597). */
 
 } /* extern "C" */
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: the

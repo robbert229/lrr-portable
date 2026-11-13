@@ -1,7 +1,23 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-046 ToolTip.c: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-046.csv. */
+/* GAME-046 ToolTip.c port tail (finding 597): the port's models of the
+ * unit, unannotated. The original-shape unit is tooltip.c; these models keep
+ * the port's contracts (the timed-effect records and the overlay snapshot
+ * that frontend.cpp owns, the runtime and render hooks, bounds and NULL
+ * guards) for the native port, which calls them by these names. It also
+ * keeps the port's models of Upgrade.c's part functions (0046c030-0046c130,
+ * GAME-047), which the relocation placed here: their original-shape
+ * versions are in upgrade_levels.cpp.
+ *
+ * In the matching build (MSVC 5.0) tooltip.c and upgrade_levels.cpp define
+ * most of these names themselves (tooltip_link_names.h and
+ * upgrade_levels.cpp's link names), so their definitions here are compiled
+ * out there (LRR_TOOLTIP_PORT_NAMES). The flag and timer setters (0x0046b730,
+ * 0x0046b7a0), whose port names have C++ linkage in frozen headers, and the
+ * overlay renderer (0x0046b8b0), the record renderer (0x0046bc30) and the
+ * animation-time model (0x0046c110), whose callers are port code with other
+ * contracts, stay in every build.
+ * Relocated from the verbatim tooltip.cpp (body hashes:
+ * docs/coverage/relocations/GAME-046.csv). */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -69,7 +85,15 @@ extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* enti
 #include "model.hpp"
 #include "view_for_tooltip.hpp"
 
-// GLOBAL: LEGORR 0x004aa64c
+/* The port's definitions of the names the unit takes in the matching build
+ * (tooltip_link_names.h, upgrade_levels.cpp): every build but MSVC 5.0's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_TOOLTIP_PORT_NAMES 0
+#else
+#define LRR_TOOLTIP_PORT_NAMES 1
+#endif
+
+/* ToolTip.c's sound gate (.data 0x004aa64c) is tooltip.c's now. */
 static uint32_t s_timed_effect_cue_gate = 1u;
 
 static const char* s_tooltip_name_table[38];
@@ -78,12 +102,13 @@ static const char* s_tooltip_name_table[38];
  * snapshot to keep the mapped slot renderer's frame-local record small. */
 static TooltipOverlayState s_timed_effect_overlay_state;
 
+#if LRR_TOOLTIP_PORT_NAMES /* tooltip.c serves these names in the matching build */
 /* TooltipOverlayStateInitialize @ 0x46b1d0: the target's ten stack-word entry
  * publishes its fixed labels and geometry/color globals, sets the timed
  * tooltip duration in 25-unit ticks, and clears 0x1839 dwords at the start
  * of the 0x27c-byte overlay-record table. This includes the first 12 bytes
  * of record 39 but leaves its +0x278 traversal-bound flag intact. */
-// FUNCTION: LEGORR 0x0046b1d0
+/* Port model of 0x0046b1d0 */
 void tooltip_overlay_state_initialize(
     void* font, uint32_t value2, uint32_t value3, float scale,
     uint32_t value5, uint32_t value6, uint32_t value7,
@@ -105,7 +130,7 @@ void tooltip_overlay_state_initialize(
  * by TooltipOverlayStateInitialize. Results are one-based. The fallback to
  * canonical labels keeps config-only callers usable before GameConfigInit's
  * renderer setup path has initialized the global table in this port. */
-// FUNCTION: LEGORR 0x0046b4d0
+/* Port model of 0x0046b4d0 */
 int case_insensitive_name_table_lookup(const char* name, int* out_index)
 {
     /* Corpus shape: the walk strides the name slots by four with a
@@ -129,7 +154,7 @@ int case_insensitive_name_table_lookup(const char* name, int* out_index)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x0046b660
+/* Port model of 0x0046b660 */
 void command_sample_stats_accumulate(int kind, const void* sample)
 {
     if (kind < 0 || (unsigned)kind >= CMD_STATS_KINDS) {
@@ -168,20 +193,24 @@ void command_sample_stats_accumulate(int kind, const void* sample)
     slot[CMD_STATS_COUNT_DWORD] = idx + 1u;
 }
 
-// FUNCTION: LEGORR 0x0046b700
+/* Port model of 0x0046b700 */
 void timed_effect_cue_request_set_corpus(int index, uint32_t value)
 {
     s_timed_effect_records[index].cue = value;
     s_timed_effect_records[index].flags |= 3u;
 }
 
-// FUNCTION: LEGORR 0x0046b730
+#endif /* LRR_TOOLTIP_PORT_NAMES */
+/* Kept in every build: the port name has C++ linkage (frozen headers),
+ * and the unit keeps its own name (tooltip_link_names.h). */
+/* Port model of 0x0046b730 */
 void timed_effect_persistence_set_corpus(int index, int set)
 {
     uint32_t* flags = &s_timed_effect_records[index].flags;
     *flags = (set != 0) ? (*flags | 0x10u) : (*flags & ~0x10u);
 }
-// FUNCTION: LEGORR 0x0046b770
+#if LRR_TOOLTIP_PORT_NAMES /* tooltip.c serves these names in the matching build */
+/* Port model of 0x0046b770 */
 void timed_effect_update_request_set_corpus(int index)
 {
     s_timed_effect_records[index].flags |= 4u;
@@ -189,13 +218,17 @@ void timed_effect_update_request_set_corpus(int index)
 
 /* Keep the address-mapped leaf blind like the corpus; the public wrapper
  * retains the bounds check exercised by the portable API tests. */
-// FUNCTION: LEGORR 0x0046b7a0
+#endif /* LRR_TOOLTIP_PORT_NAMES */
+/* Kept in every build: the port name has C++ linkage (frozen headers),
+ * and the unit keeps its own name (tooltip_link_names.h). */
+/* Port model of 0x0046b7a0 */
 void timed_effect_timestamp_reset_corpus(int index)
 {
     s_timed_effect_records[index].timestamp = s_timed_effect_tick;
 }
 
-// FUNCTION: LEGORR 0x0046b7c0
+#if LRR_TOOLTIP_PORT_NAMES /* tooltip.c serves these names in the matching build */
+/* Port model of 0x0046b7c0 */
 void timed_effect_runtime_update(uint32_t render_x, uint32_t render_y,
                                  float delta)
 {
@@ -262,7 +295,8 @@ void timed_effect_runtime_update(uint32_t render_x, uint32_t render_y,
         record->flags &= ~4u;
     }
 }
-// FUNCTION: LEGORR 0x0046b8b0
+#endif /* LRR_TOOLTIP_PORT_NAMES */
+/* Port model of 0x0046b8b0 */
 void rectangular_grid_overlay_geometry_draw(
     const RectangularGridOverlayState* state,
     const RectangularGridOverlayHooks* hooks)
@@ -298,7 +332,7 @@ void rectangular_grid_overlay_geometry_draw(
     }
 }
 
-// FUNCTION: LEGORR 0x0046bc30
+/* Port model of 0x0046bc30 */
 void timed_effect_slot_render_record(const TimedEffectRecord* record,
                                      uint32_t render_x, uint32_t render_y)
 {
@@ -434,7 +468,8 @@ void timed_effect_slot_render_record(const TimedEffectRecord* record,
     }
 }
 
-// FUNCTION: LEGORR 0x0046c030
+#if LRR_TOOLTIP_PORT_NAMES /* upgrade_levels.cpp serves these names in the matching build */
+/* Port model of 0x0046c030 */
 void render_resource_binding_initialize(RenderResourceBinding* binding,
                                         void* key, void* config_a,
                                         void* config_b)
@@ -457,7 +492,7 @@ void render_resource_binding_initialize(RenderResourceBinding* binding,
     binding->key = key;
 }
 
-// FUNCTION: LEGORR 0x0046c0b0
+/* Port model of 0x0046c0b0 */
 void render_resource_binding_copy_and_convert(
     const RenderResourceBinding* source,
     RenderResourceBinding* destination)
@@ -471,7 +506,7 @@ void render_resource_binding_copy_and_convert(
     }
 }
 
-// FUNCTION: LEGORR 0x0046c0f0
+/* Port model of 0x0046c0f0 */
 void render_resource_binding_release(RenderResourceBinding* binding)
 {
     if (binding == NULL) return;
@@ -481,7 +516,8 @@ void render_resource_binding_release(RenderResourceBinding* binding)
     }
 }
 
-// FUNCTION: LEGORR 0x0046c110
+#endif /* LRR_TOOLTIP_PORT_NAMES */
+/* Port model of 0x0046c110 */
 float animation_resource_advance_time(RenderResourceBinding* binding,
                                      void* argument)
 {
@@ -494,7 +530,8 @@ float animation_resource_advance_time(RenderResourceBinding* binding,
     return 0.0f;
 }
 
-// FUNCTION: LEGORR 0x0046c130
+#if LRR_TOOLTIP_PORT_NAMES /* upgrade_levels.cpp serves this name in the matching build */
+/* Port model of 0x0046c130 */
 void scene_object_set_animation_with_fallback(
     RenderResourceBinding* binding, void* name)
 {
@@ -503,6 +540,8 @@ void scene_object_set_animation_with_fallback(
                                     ai_activity_name(AI_ACT_STAND));
 }
 
+#endif /* LRR_TOOLTIP_PORT_NAMES */
+#if LRR_TOOLTIP_PORT_NAMES /* tooltip.c serves this name in the matching build */
 /* ToolTip_DrawBox (0046b8b0) in the original ABI, for Reward.c (GAME-037,
  * finding 560). A thin unannotated adapter (ADR 0005 step 6): the original
  * takes the box and its three colours by value; the port's entry takes its
@@ -526,3 +565,4 @@ void tooltip_draw_box(Area2F rect, ColourRGBF fill, ColourRGBF highlight,
     state.overlay_mode = dark;
     rectangular_grid_overlay_geometry_draw(&state, NULL);
 }
+#endif /* LRR_TOOLTIP_PORT_NAMES */

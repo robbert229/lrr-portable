@@ -7978,10 +7978,10 @@ float vehicle_move_animation(struct VehicleModel* vehicle, float elapsed1, float
 float renderer_object_timing_value_adjust_by_count(void* record, float time,
                                                    unsigned int count);    /* 00406d30 */
 float animation_loop_time_adjust(void* record, float argument, unsigned int count); /* 00408860 */
-/* Upgrade.c: Upgrade_MoveAnimation (0046c110); tooltip.cpp's 0046c110 takes
- * two arguments, so an adapter at the end of legoobject_port.cpp stands in. */
-float legoobject_gq_upgrade_move_animation_adapter(void* upgrade, float elapsed,
-                                                   unsigned int repeat);   /* 0046c110 */
+/* Upgrade.c: Upgrade_Part_MoveAnimation (0046c110), upgrade_levels.cpp's
+ * original-shape function (finding 597). */
+float upgrade_part_move_animation(struct RenderResourceBinding* upgradeModel, float elapsed,
+                                  unsigned int repeat);                    /* 0046c110 */
 /* Vehicle.c (Vehicle_SetActivity 0046c3f0, Vehicle_GetCameraNull 0046da50):
  * the port's entries have other contracts, so an adapter at the end of
  * legoobject_port.cpp stands in. Building.c's Building_SetActivity
@@ -8240,7 +8240,7 @@ float legoobject_activity_tick(Lego_Object* obj, float elapsed)
         } else if (obj->flags3 & 0x20000) {
             legoobject_type_behavior_update(obj, elapsed);
         } else if (obj->type == 10) {
-            obj->animTime = legoobject_gq_upgrade_move_animation_adapter(obj->upgradePart, moveElapsed, obj->animRepeat);
+            obj->animTime = upgrade_part_move_animation((struct RenderResourceBinding*)obj->upgradePart, moveElapsed, obj->animRepeat);
         }
     }
     if (obj->animTime > legoobject_zero) task_record_kind14_remove_if_head(LEGOOBJ_SLOT(obj));

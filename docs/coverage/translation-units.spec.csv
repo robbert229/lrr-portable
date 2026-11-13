@@ -44,8 +44,8 @@ start,unit_id,name,kind,name_basis,note
 004667e0,GAME-043,,game,none,object stats configuration (129 keys incl. Flocks_*); .bss 0x502c28-0x503188; includes stats getters
 0046a370,GAME-044,,game,none,linked record chains with initialised data 0x4aa450-0x4aa45c; boundary uncertain
 0046a7f0,GAME-045,Text.c,game,string-prefix,Text_* identifiers (26); .bss 0x503190-0x503668
-0046b1d0,GAME-046,ToolTip.c,game,string-prefix,ToolTip_* identifiers (38); commons 0x54bf20-0x54c000
-0046c160,GAME-047,,game,none,upgrade level table ('Upgrades' 'Level%i%i%i%i')
+0046b1d0,GAME-046,ToolTip.c,game,string-prefix,ToolTip_* identifiers (38); commons 0x54bf20-0x5520e4; extent confirmed by finding 597: 11 functions 46b1d0-46c030; ToolTip_Initialise compares against its own 0.0f at 49e7cc while 46c110 loads a second 0.0f at 49e7dc and MSVC 5.0 pools a literal once an object so 46c030-46c130 are another object
+0046c030,GAME-047,,game,none,upgrade level table ('Upgrades' 'Level%i%i%i%i'); starts with the part functions 46c030-46c130 (Upgrade_Part_Load/Clone/Remove/MoveAnimation/SetActivity on the 0x10-byte part model; finding 597): 46c110 has its own 0.0f at 49e7dc after ToolTip.c's 49e7c0-49e7d8
 0046c6f0,GAME-048,,game,none,vehicle model parsing ('WheelNullName' 'WheelMesh' 'HoldMissing')
 0046db90,GAME-049,,game,none,staged cell flood/run passes; own commons 0x549520-0x54bf08; boundary uncertain
 0046eb80,GAME-050,,game,none,weapon configuration ('WeaponRange' 'DischargeRate' 'SeeThroughWalls'); .bss 0x503870-
