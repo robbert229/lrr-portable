@@ -47,7 +47,7 @@ import conversion_footprint as cf  # noqa: E402
 import link_order  # noqa: E402
 
 ROOT = cf.ROOT
-LIBRARIES = {"game": "game", "gods98": "gods98"}     # unit kind -> library
+LIBRARIES = {"game": "game", "gods98": "gods98", "late": "gods98"}  # unit kind -> library
 LINK_ORDER = link_order.LIST
 BOUNDARY_TEST = "src/game/test_c_boundaries.cpp"
 STUB_PREFIX = "scaffold_"
@@ -297,7 +297,7 @@ def build_scaffold(unit: str, root: Path = ROOT, stem: str | None = None,
     units = cf.load_units(root)
     u = cf.find_unit(units, unit)
     if u.unit_kind not in cf.CONVERTIBLE_KINDS:
-        raise SystemExit(f"{u.unit_id} is a {u.unit_kind} unit; only game and gods98 units are converted")
+        raise SystemExit(f"{u.unit_id} is a {u.unit_kind} unit; only game, gods98 and late units are converted")
     index = index or cf.SourceIndex(root)
     rows = cf.load_function_rows(root)
     fp = cf.compute_footprint(u.unit_id, root, stem=stem, index=index, units=units,
@@ -647,20 +647,25 @@ class Wiring:
     includes: list[str]       # for test_c_boundaries.cpp, relative to src/
 
 
-def apply_wiring(wiring: Wiring, root: Path, starts: dict[str, int] | None = None) -> dict[str, str]:
+def apply_wiring(wiring: Wiring, root: Path, starts: dict[str, int] | None = None,
+                 crt: int | None = None) -> dict[str, str]:
     """The patched text of the link-order list and the boundary test under ``root``.
 
-    ``starts`` are the unit start addresses (default: ``root``'s unit map)."""
+    ``starts`` are the unit start addresses and ``crt`` the CRT segment's
+    start (default: both from ``root``'s unit map and spec)."""
     if starts is None:
         starts = link_order.unit_starts(root)
-    listing = wire_link_order((root / LINK_ORDER).read_text(encoding="utf-8"), wiring, starts)
+    if crt is None:
+        crt = link_order.crt_start(root)
+    listing = wire_link_order((root / LINK_ORDER).read_text(encoding="utf-8"), wiring, starts, crt)
     test = wire_boundary_test((root / BOUNDARY_TEST).read_text(encoding="utf-8"), wiring.includes)
     return {LINK_ORDER: listing, BOUNDARY_TEST: test}
 
 
-def wire_link_order(text: str, wiring: Wiring, starts: dict[str, int]) -> str:
+def wire_link_order(text: str, wiring: Wiring, starts: dict[str, int],
+                    crt: int | None = None) -> str:
     """Add the unit's entry to the link-order list at its original position."""
-    return link_order.insert_unit(text, wiring.unit_id, wiring.library, wiring.source, starts)
+    return link_order.insert_unit(text, wiring.unit_id, wiring.library, wiring.source, starts, crt)
 
 
 def wire_boundary_test(text: str, includes: list[str]) -> str:
@@ -1027,7 +1032,8 @@ def main(argv: list[str] | None = None) -> int:
                 if not dst.exists():
                     dst.parent.mkdir(parents=True, exist_ok=True)
                     dst.write_text((root / rel).read_text(encoding="utf-8"), encoding="utf-8")
-            sc.patches = apply_wiring(sc.wiring, target, link_order.unit_starts(root))
+            sc.patches = apply_wiring(sc.wiring, target, link_order.unit_starts(root),
+                                      link_order.crt_start(root))
         written = write_files(sc, target, args.force)
     if args.report:
         args.report.write_text(report, encoding="utf-8")

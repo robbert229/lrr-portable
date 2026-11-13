@@ -223,13 +223,14 @@ lrr_link(tail   -        gods98        gods98/texture.cpp)
 lrr_link(tail   -        gods98        gods98/view.cpp)
 lrr_link(tail   -        game          game/lego_port.cpp)
 lrr_link(tail   -        game          game/legoobject_port.cpp)
+lrr_link(tail   -        gods98        gods98/resource.cpp)
 lrr_link(legacy 0048e160 game          game/level.cpp)
 lrr_link(legacy 0048e1e0 gods98        gods98/string.cpp)
 
 # Legacy files whose functions lie in the CRT range, just before LIBC
 lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp)
 lrr_link(legacy 00494c70 gods98        crt/crt.cpp)
-lrr_link(legacy 0049cd30 gods98        gods98/resource.cpp)
+lrr_link(unit   LATE-001 gods98        gods98/rnc.c)
 
 # Libraries of the matching build, after the objects, in the order of the
 # original's import directory, with LIBC placed so that its code precedes the

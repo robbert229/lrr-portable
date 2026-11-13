@@ -113,12 +113,14 @@ def format_entry(kind: str, key: str, library: str, source: str,
 
 
 def insert_unit(text: str, unit_id: str, library: str, source: str,
-                starts: dict[str, int]) -> str:
+                starts: dict[str, int], crt: int | None = None) -> str:
     """Add a unit's entry in its original position; no-op if it is listed.
 
     The entry goes after the last unit or legacy entry before the port tail
     whose address is not above the unit's start, so it lands among the game
     and gods98 segments, never in the tail or the CRT-range legacy files.
+    Given ``crt`` (the CRT segment's start), a unit that starts at or above
+    it is a late unit and goes among the CRT-range entries after the tail.
     """
     entries = parse(text)
     for e in entries:
@@ -132,12 +134,25 @@ def insert_unit(text: str, unit_id: str, library: str, source: str,
         raise ValueError(f"{unit_id} is not in {RANGES}")
     start = starts[unit_id]
     after = None
-    for e in entries:
-        if e.kind == "tail":
-            break
-        address = entry_address(e, starts)
-        if address is not None and address <= start:
-            after = e
+    if crt is not None and start >= crt:
+        # A late unit (after the CRT segment's start) sits among the
+        # CRT-range entries that follow the port tail.
+        tails = [e for e in entries if e.kind == "tail"]
+        for e in entries:
+            if tails and e.line <= tails[-1].line:
+                continue
+            address = entry_address(e, starts)
+            if address is not None and address <= start:
+                after = e
+        if after is None:
+            after = tails[-1] if tails else None
+    else:
+        for e in entries:
+            if e.kind == "tail":
+                break
+            address = entry_address(e, starts)
+            if address is not None and address <= start:
+                after = e
     lines = text.splitlines(keepends=True)
     new = format_entry("unit", unit_id, library, source) + "\n"
     if after is None:
@@ -179,8 +194,8 @@ def check(root: Path = ROOT) -> list[str]:
             if e.key in seen_units:
                 errors.append(f"{where}: unit {e.key} is listed twice; remove the duplicate")
             seen_units.add(e.key)
-            if e.key not in spec or spec[e.key]["kind"] not in ("game", "gods98") or e.key not in ranges:
-                errors.append(f"{where}: {e.key} is not a game or gods98 unit in the spec and ranges")
+            if e.key not in spec or spec[e.key]["kind"] not in ("game", "gods98", "late") or e.key not in ranges:
+                errors.append(f"{where}: {e.key} is not a game, gods98 or late unit in the spec and ranges")
             else:
                 lo, hi = ranges[e.key]
                 address = lo

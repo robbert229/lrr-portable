@@ -121,10 +121,21 @@ class CheckTest(unittest.TestCase):
         self.assertIn("missing", self.errors(self.lines[:2]))
 
     def test_invalid_duplicate_and_wrong_unit_marker(self):
-        self.assertIn("not a game or gods98 unit", self.errors([self.lines[0].replace("GAME-001", "BAD"), *self.lines[1:]]))
+        self.assertIn("not a game, gods98 or late unit", self.errors([self.lines[0].replace("GAME-001", "BAD"), *self.lines[1:]]))
         self.assertIn("unit GAME-001 is listed twice", self.errors([self.lines[0], self.lines[0].replace("game/a.c", "gods98/b.cpp"), self.lines[2]]))
         (self.root / "src/game/a.c").write_text("// FUNCTION: LEGORR 0x00402010\n")
         self.assertIn("outside GAME-001 range", self.errors())
+
+    def test_late_unit_sits_in_the_crt_range(self):
+        # Finding 610: a late unit is a unit entry after the port tail.
+        spec = self.root / "docs/coverage/translation-units.spec.csv"
+        spec.write_text(spec.read_text() + "00404000,LATE-001,late\n")
+        ranges = self.root / lo.RANGES
+        ranges.write_text(ranges.read_text() + "LATE-001,00404000,00405000\n")
+        (self.root / "src/gods98/late.c").write_text("// FUNCTION: LEGORR 0x00404010\n")
+        late = "lrr_link(unit LATE-001 gods98 gods98/late.c)"
+        self.assertEqual(self.errors(self.lines + [late]), "")
+        self.assertIn("wrong segment", self.errors([self.lines[0], self.lines[1], late, self.lines[2]]))
 
     def test_stale_median_order_and_segments(self):
         self.assertIn("set it to 00402010", self.errors([self.lines[0], self.lines[1].replace("00402010", "00402011"), self.lines[2]]))

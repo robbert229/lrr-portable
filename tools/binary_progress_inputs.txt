@@ -672,6 +672,8 @@ src/gods98/resource_from_interface.hpp
 src/gods98/resource_from_sound3d.hpp
 src/gods98/resource_from_wad.hpp
 src/gods98/resource_shared.hpp
+src/gods98/rnc.c
+src/gods98/rnc.h
 src/gods98/scene_pool.cpp
 src/gods98/scene_pool.hpp
 src/gods98/scene_pool_for_container_unit.hpp

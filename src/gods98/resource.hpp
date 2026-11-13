@@ -347,28 +347,32 @@ void render_resource_track_and_retain(void* resource);
  * 0x88 on the object held by the wrapper at +0x10. */
 void resource_interface_call_slot88(void* wrapper);
 
-/* --- wad payload band (2026-10-25; finding 01 codec story) ----------------
- * RNC-header decode dispatch, both compressed codecs, its expand wrapper,
- * the type-1 Huffman table clear, the file-layer handle pair, and the
- * wad-entry stream-slot opener. */
-#define WAD_DECODE_MAGIC_FAIL 0xffff /* corpus's not-RNC verdict */
-#define WAD_DECODE_TYPE_FAIL  0xfffe /* corpus's unknown-type verdict */
+/* --- wad payload band -----------------------------------------------------
+ * The RNC expander is gods98/rnc.c (LATE-001, finding 610); rnc.h is its C
+ * boundary header. These declarations keep their places and count, so the
+ * symbol numbering of the files that include this header does not move. */
+#define WAD_DECODE_MAGIC_FAIL 0xffff /* the dispatch's missing-magic verdict */
+#define WAD_DECODE_TYPE_FAIL  0xfffe /* its unknown-method verdict */
 
-/* Verify the "RNC" magic + type gate and copy/delegate the payload. The raw
- * type-0 path returns zero; type-1/2 return the output pointer's high word,
- * whose low 16 bits are zero (the retail caller tests AX). Invalid magic and
- * unknown types return the two 0xffxx failure values above. */
-int wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c840 */
+/* RNC dispatch (0049c840): 0 when unpacked, else one of the two verdicts
+ * above as a 16-bit value. The port's packed-entry readers call it. */
+#ifdef __cplusplus
+extern "C"
+#endif
+short wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c840 */
 
 /* Probe (out_payload NULL) or materialize an expanded payload; answers the
- * decoded size, 0 on any failure. Buffer owned via engine_heap_free. */
+ * decoded size, 0 on any failure. The buffer comes from malloc. */
 #ifdef __cplusplus
 extern "C"
 #endif
 long wad_expand_payload(const void* header, void** out_payload); /* FUN_0049c7c0 */
 
-/* Zero 16-byte table entries: 0, word 0xffff, 0, word 0. */
-void wad_huffman_table_clear(void* table, uint8_t count);         /* FUN_0049cf50 */
+/* Deviation (scoring only): never defined. rnc.c's table clear (0049cf50)
+ * takes an RNC_HuffEntry table and is declared in rnc.h. This C++
+ * declaration is kept so that the symbol numbering of the files that
+ * include this header does not move (finding 610). */
+void wad_huffman_table_clear(void* table, uint8_t count);
 
 /* Kind 1: flagged handle record, no stream buffer. Kind 0: carries the
  * 12-byte stream buffer behind; releases the record if it fails. */

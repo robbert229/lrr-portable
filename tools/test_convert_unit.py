@@ -270,6 +270,21 @@ class WiringTest(unittest.TestCase):
         self.assertIn("gods98/mixed.cpp)\nlrr_link(unit   G98-D    gods98        gods98/delta.c)\n"
                       "\n# Port tail", late)             # before the tail, not by crt.cpp's key
 
+    def test_late_unit_goes_among_the_crt_range_entries(self):
+        # A late unit (LATE-001, finding 610) starts past the CRT segment, so
+        # it goes after the port tail, in address order among the CRT-range
+        # legacy entries.
+        text = self.LIST + "lrr_link(legacy 00406800 gods98        gods98/after.cpp)\n"
+        starts = dict(self.STARTS, **{"LATE-E": 0x405000})
+        wired = cu.wire_link_order(text, cu.Wiring("LATE-E", "gods98", "gods98/epsilon.c", []),
+                                   starts, 0x404000)
+        self.assertIn("crt/crt.cpp)\nlrr_link(unit   LATE-E   gods98        gods98/epsilon.c)\n"
+                      "lrr_link(legacy 00406800", wired)
+        # Without the CRT start, the old rule (before the tail) still holds.
+        self.assertIn("gods98/mixed.cpp)\nlrr_link(unit   LATE-E",
+                      cu.wire_link_order(text, cu.Wiring("LATE-E", "gods98", "gods98/epsilon.c", []),
+                                         starts))
+
     def test_wiring_is_idempotent_and_refuses_duplicates(self):
         once = self.wire(self.LIST, "G98-C", "gods98", "gods98/gamma.c")
         self.assertEqual(self.wire(once, "G98-C", "gods98", "gods98/gamma.c"), once)

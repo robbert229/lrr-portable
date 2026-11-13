@@ -220,7 +220,7 @@ start,unit_id,name,kind,name_basis,note
 0049c7a8,IMP-004,dinput.lib,import,library-symbol,thunk DirectInputCreateA; its library also contributes the c_dfDI* data objects at 0x49b700-0x49c7a7 immediately before it; each member is its own object
 0049c7ae,IMP-005,dsound.lib,import,library-symbol,thunk DirectSoundCreate (DSOUND ordinal 1); its own library member
 0049c7b4,IMP-006,kernel32.lib,import,library-symbol,thunk RtlUnwind (used by CRT SEH code); int3 fill to 0x49c7c0; its own library member
-0049c7c0,LATE-001,,late,none,RNC (Rob Northen) ProPack-style WAD payload decompressor (string 'RNC' at 0x4b2d08; commons 0x557d68-0x55808c); C object linked after the import libraries; file name unknown
+0049c7c0,LATE-001,,late,none,RNC (Rob Northen) ProPack-style WAD payload decompressor (string 'RNC' at 0x4b2d08; commons 0x557d68-0x55808c); C object linked after the import libraries; file name unknown; stem rnc from the RNC magic; extent confirmed by finding 610: the 14 functions form a closed call graph entered only from Wad.c's 48be40; only they touch 557d68 and 557d80-558093; 'RNC' is read only by 49c840; 49d030 is LATE-002's (its .bss 5580a0+ and strings follow)
 0049d030,LATE-002,,late,none,DirectDraw device / display-mode selection dialog (strings 'Please install DirectX versi..' 'Window Size' 'Screen Mode' at 0x4b2d0c-0x4b2d90 follow the RNC string; commons 0x5580a0+); boundary at 0x49d030 from string order and disjoint commons; file name unknown
 0049dab0,LATE-003,strnicmp.c,crt,library-symbol,symbol _strnicmp (pulled late via oldnames.lib strnicmp alias); int3 fill (inline-asm path or .asm member - name uncertain like CRT-047)
 0049db60,LATE-004,xtoa.c,crt,library-symbol,symbols _itoa and static xtoa (pulled late via oldnames.lib itoa alias)
