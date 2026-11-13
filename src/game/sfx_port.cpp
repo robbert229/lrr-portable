@@ -1277,6 +1277,13 @@ static int s_variant_pool_alloc(void)
     if (s_variant_pool_next >= SOUND_VARIANT_POOL_NODES) {
         return 0; /* port bound; the corpus scribbles past the pool */
     }
+    if (s_variant_pool == NULL) {
+        s_variant_pool = (VariantNode*)calloc(SOUND_VARIANT_POOL_NODES,
+                                              sizeof(VariantNode));
+        if (s_variant_pool == NULL) {
+            return 0; /* dropped like a link past the bound */
+        }
+    }
     ++s_variant_pool_next;
     s_variant_pool[s_variant_pool_next].next = 0; /* DAT_005023e4 write */
     /* The slot field keeps its previous content: unwritten links read as

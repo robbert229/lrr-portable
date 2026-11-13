@@ -10819,6 +10819,13 @@ static EntityPathMotionRuntime* entity_path_motion_runtime_get(
     EntityPathMotionRuntime* free_slot = NULL;
     unsigned int i;
     if (entity == NULL) return NULL;
+    if (s_entity_path_motion_runtime == NULL) {
+        /* No slot exists before the table does. */
+        if (!create) return NULL;
+        s_entity_path_motion_runtime = (EntityPathMotionRuntime*)calloc(
+            ENTITY_TYPES * ENTITY_CAP, sizeof(EntityPathMotionRuntime));
+        if (s_entity_path_motion_runtime == NULL) return NULL;
+    }
     for (i = 0u; i < ENTITY_TYPES * ENTITY_CAP; ++i) {
         EntityPathMotionRuntime* state = &s_entity_path_motion_runtime[i];
         if (state->owner == entity) return state;

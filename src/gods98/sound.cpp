@@ -594,7 +594,10 @@ int sound_deferred_handle(void)
 int s_variant_slot[SOUND_ALIAS_MAX]; /* DAT_00501468 head slot words */
 int s_variant_next[SOUND_ALIAS_MAX]; /* DAT_0050146c head next words */
 
-VariantNode s_variant_pool[SOUND_VARIANT_POOL_NODES];
+/* SOUND_VARIANT_POOL_NODES nodes, allocated by the first link that needs one
+ * (sfx_port.cpp, #641): a static pool put 131,072 bytes in the matching
+ * build's .bss. Node 0 is never a link, so no chain reaches it before then. */
+VariantNode* s_variant_pool;
 
 #if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int sound_variant_chain(int alias_index, int* out_slots, int max)

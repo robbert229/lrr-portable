@@ -1367,24 +1367,41 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     return event;
 }
 
+/* The zeroed menu that out-of-range lookups return, allocated on first use
+ * (#641). As two static sentinels, it and the empty submenu took 431,660
+ * bytes of the matching build's .bss. Its first submenu is the empty
+ * submenu: all zero, like the menu. */
+static const FeMenu* frontend_empty_menu(void)
+{
+    static FeMenu* s_empty = NULL;
+    if (s_empty == NULL) {
+        s_empty = (FeMenu*)calloc(1, sizeof(*s_empty));
+    }
+    return s_empty;
+}
+
+static const FeSubmenu* frontend_empty_submenu(void)
+{
+    const FeMenu* empty = frontend_empty_menu();
+    return empty != NULL ? &empty->submenus[0] : NULL;
+}
+
 const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
 {
-    static FeMenu s_empty = { 0 };
     if (fe == NULL || menu < 0 || menu >= FE_MENU_COUNT) {
-        return &s_empty;
+        return frontend_empty_menu();
     }
     return &fe->menus[menu];
 }
 
 const FeSubmenu* frontend_active_submenu(const FrontEnd* fe)
 {
-    static FeSubmenu s_empty = { 0 };
     if (fe == NULL || !fe->open || fe->menu < 0 || fe->menu >= FE_MENU_COUNT) {
-        return &s_empty;
+        return frontend_empty_submenu();
     }
     const FeMenu* m = &fe->menus[fe->menu];
     if (fe->sub < 0 || fe->sub >= m->submenu_count) {
-        return &s_empty;
+        return frontend_empty_submenu();
     }
     return &m->submenus[fe->sub];
 }
