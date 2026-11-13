@@ -9148,6 +9148,12 @@ void scene_resource_visibility_set(void* record, uint32_t flag);       /* 0046d2
  * have C++ linkage. */
 void legoobject_gs_container_hidden_set_adapter(void* cont, int hide);  /* 00473b20 */
 int legoobject_gs_container_is_hidden_adapter(void* cont);              /* 00473ba0 */
+/* vehicle_model_link_names.h's matching-build link names of 0046d330 and
+ * 0046da90. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define vehicle_is_hidden entity_type_flag_bit1_get_target
+#define vehicle_get_drill_null scene_resource_cached_slot_b4_get
+#endif
 unsigned int vehicle_is_hidden(struct VehicleModel* vehicle);             /* 0046d330 */
 int legoobject_gs_object_is_hidden_adapter(void* model);                /* 004086a0 */
 int legoobject_gs_vehicle_camera_flip_adapter(void* vehicle);           /* 0046c3d0 */
