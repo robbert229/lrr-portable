@@ -28,7 +28,14 @@ void sound_wave_data_reader_init(SoundWaveDataReader* reader,
     reader->remaining = size;
 }
 
+/* The port's sample bank (native backend and tests only, #686). In the
+ * Windows builds G98-009 (sound3d.c) loads samples into the original's own
+ * table, Sound3DGlobs.soundTable at 0x506798 (finding 14 section 1), and
+ * nothing writes this one, so it is not defined there; the readers below
+ * return what an empty bank returned (finding 622). */
+#if !defined(LEGORRR_BACKEND_WINAPI)
 BankSlot s_bank[SOUND_BANK_SLOTS];
+#endif
 
 /* ------------------------------------------------------------------ *
  *  RIFF/WAVE parse (finding 14 §2).
@@ -249,12 +256,14 @@ Sound* sound_bank_find(const char* fullname)
         snprintf(full, sizeof(full), "%s.wav", fullname);
         fullname = full;
     }
+#if !defined(LEGORRR_BACKEND_WINAPI)
     for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
         if ((s_bank[i].flags & SOUND_SLOT_BUSY) != 0
             && strcasecmp_lite(s_bank[i].name, fullname) == 0) {
             return s_bank[i].sound;
         }
     }
+#endif
     return NULL;
 }
 
@@ -419,6 +428,11 @@ int sound_bank_entry_play(int slot, int loop)
 
 int sound_bank_entry_play_mode(int slot, int loop, int mode)
 {
+#if defined(LEGORRR_BACKEND_WINAPI)
+    /* No port bank in the Windows builds (#686): every slot is free. */
+    (void)slot; (void)loop; (void)mode;
+    return -1;
+#else
     AudioPlayer* player;
     int index = 0;
     int count;
@@ -458,6 +472,7 @@ int sound_bank_entry_play_mode(int slot, int loop, int mode)
                                                mode == 2 ? -800 : 0);
     }
     return frames;
+#endif
 }
 
 void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
