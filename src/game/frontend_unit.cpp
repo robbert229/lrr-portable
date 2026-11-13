@@ -286,7 +286,13 @@ void menu_save_image_config_rect_blit(FrontEnd* fe,
                                              int pitch, int width, int height);
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
+/* In the matching build ScrollingTextDisplay is GAME-009's Credits_Play
+ * (screen_effect_quads.c, finding 609), which takes this name. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+extern "C" void scrolling_text_display(void* text, void* font, void* background);
+#else
 static void scrolling_text_display(void* text, void* font, void* background);
+#endif
 static void menu_resource_entry_release(MenuResourceEntry* entry);
 static void record_window_put(void* rec, int field, const void* src);
 static void fe_menu_record_put_word(void* record, int field, uint32_t value);
@@ -4824,6 +4830,7 @@ static int frontend_open_prepare(FrontEnd* fe, int menu, int submenu_index)
  * and exits on keyboard input or mouse release. Those operations are split
  * across frontend_credits_lines_load/render_credits and frameloop_credits
  * because this module does not own the platform window or render surface. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 static void scrolling_text_display(void* text, void* font, void* background)
 {
     /* The retail arguments are renderer handles. In the portable boot path,
@@ -4835,6 +4842,7 @@ static void scrolling_text_display(void* text, void* font, void* background)
     (void)background;
     s_main_menu_text_item_pending = 1;
 }
+#endif
 
 static void fe_menu_record_put_word(void* record, int field, uint32_t value)
 {

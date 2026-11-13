@@ -8900,11 +8900,15 @@ extern "C" void camera_registry_probe_original(void) /* 0x00435a50 */
     camera_registry_probe(s_callback_registry_context);
 }
 
+/* In the matching build GAME-009's DamageFont_UpdateAll takes this name
+ * itself (screen_effect_quads_link_names.h, finding 609). */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (simtick_table_dispatch)
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" void simtick_table_dispatch_original(float elapsed) /* 0x0040aa10 */
 {
     simtick_table_dispatch(s_callback_registry_context, elapsed, elapsed);
 }
+#endif
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (simtick_scene_pass)
 extern "C" void simtick_scene_pass_original(float elapsedWorld) /* 0x0043b270 */

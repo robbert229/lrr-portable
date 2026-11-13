@@ -216,6 +216,8 @@ extern "C" int s_cursor_delta_y;
 #include "game/scrollinfo.h"
 #include "game/scrollinfo_imports.h"
 #include "gods98/rnc.h"
+#include "game/screen_effect_quads.h"
+#include "game/screen_effect_quads_imports.h"
 
 int main(void)
 {

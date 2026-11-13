@@ -56,7 +56,7 @@ game_sources = [
   'placement_port.cpp',
   'encyclopedia.cpp',
   'lava_erosion_port.cpp',
-  'screen_effect_quads.cpp',
+  'screen_effect_quads_port.cpp',
   'building_model_port.cpp',
   'cmd.cpp',
   'dependency_grid.cpp',
@@ -124,6 +124,7 @@ game_c_sources = [
   'collision.c',
   'construction.c',
   'scrollinfo.c',
+  'screen_effect_quads.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

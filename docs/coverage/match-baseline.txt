@@ -1,4 +1,4 @@
-# input_sha256: 8087a638b96a7ea1550e723a0a59dea0ce416f1264dbaef0b0cd41bb2bdfa8e9
+# input_sha256: 2dddce54607f1992e3be4e2a1d67260d7d8bfe435a567c07aef96321ec49eacb
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2342 mapped functions
+[game-only] 2343 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -248,14 +248,15 @@
 0x00409d40 100.00 level_state_stored_value_set
 0x00409d50 16.00 entity_cell_path_effects_apply_current
 0x00409f20 34.52 entity_placement_commands_build_once
-0x0040a0c0 11.76 frameloop_credits
-0x0040a3d0 9.76 screen_effect_flags_clear_and_release
-0x0040a400 19.18 preload_numbered_bitmaps
-0x0040a4b0 15.32 quad_mesh_render_record_create
-0x0040a5c0 29.63 quad_mesh_render_record_pool_slot_allocate
-0x0040a5e0 21.89 record_count_digits_fill
-0x0040aa10 33.33 simtick_table_dispatch
-0x0040aa40 14.71 effect_helper
+0x0040a0c0 100.00 scrolling_text_display
+0x0040a3d0 100.00 screen_effect_flags_clear_and_release
+0x0040a400 96.36 preload_numbered_bitmaps
+0x0040a4b0 100.00 quad_mesh_render_record_create
+0x0040a5c0 90.91 damage_font_get_next_free
+0x0040a5e0 99.25 damage_font_set_damage_number
+0x0040a740 62.56 damage_font_mesh_render_callback
+0x0040aa10 94.74 simtick_table_dispatch_original
+0x0040aa40 98.33 damage_font_update
 0x0040aae0 100.00 entity_quad_mesh_render_record_allowed
 0x0040ab10 100.00 global_mode_zero_input_set
 0x0040ab30 100.00 grid_record_flag_mask_clear
@@ -384,7 +385,7 @@
 0x00410280 100.00 callback_operation_run_and_return_status
 0x004102b0 100.00 ui_text_underscores_to_spaces_target
 0x00410320 29.03 string_queue_record_or_flush
-0x004103d0 88.89 main_menu_text_item
+0x004103d0 100.00 main_menu_text_item
 0x004103f0 84.21 menu_wipe_start
 0x00410440 100.00 menu_wipe_end
 0x00410450 100.00 string_keyed_cache_entry_find
@@ -683,7 +684,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 95.79 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 97.51 lego_engine_tick
+0x004232e0 97.59 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
@@ -2150,7 +2151,7 @@
 0x00482d60 9.54 model_render_pass_dispatch
 0x00483030 100.00 texture_cache_name_slot_find
 0x00483080 32.43 texture_cache_name_slot_append
-0x004830c0 17.98 lego::animated_texture_frame_surface_set
+0x004830c0 17.98 animated_texture_frame_surface_set
 0x00483140 24.00 ledger_stub_00483140_IndexedRecordInterfaceRelease
 0x00483170 15.69 indexed_record_transform_initialize
 0x00483240 51.28 indexed_record_transform_copy_in
@@ -2350,7 +2351,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2587 mapped functions
+[full] 2588 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2592,14 +2593,15 @@
 0x00409d40 100.00 level_state_stored_value_set
 0x00409d50 16.00 entity_cell_path_effects_apply_current
 0x00409f20 34.52 entity_placement_commands_build_once
-0x0040a0c0 11.76 frameloop_credits
-0x0040a3d0 9.76 screen_effect_flags_clear_and_release
-0x0040a400 19.18 preload_numbered_bitmaps
-0x0040a4b0 15.32 quad_mesh_render_record_create
-0x0040a5c0 29.63 quad_mesh_render_record_pool_slot_allocate
-0x0040a5e0 21.89 record_count_digits_fill
-0x0040aa10 33.33 simtick_table_dispatch
-0x0040aa40 14.71 effect_helper
+0x0040a0c0 100.00 scrolling_text_display
+0x0040a3d0 100.00 screen_effect_flags_clear_and_release
+0x0040a400 96.36 preload_numbered_bitmaps
+0x0040a4b0 100.00 quad_mesh_render_record_create
+0x0040a5c0 90.91 damage_font_get_next_free
+0x0040a5e0 99.25 damage_font_set_damage_number
+0x0040a740 62.56 damage_font_mesh_render_callback
+0x0040aa10 94.74 simtick_table_dispatch_original
+0x0040aa40 98.33 damage_font_update
 0x0040aae0 100.00 entity_quad_mesh_render_record_allowed
 0x0040ab10 100.00 global_mode_zero_input_set
 0x0040ab30 100.00 grid_record_flag_mask_clear
@@ -2728,7 +2730,7 @@
 0x00410280 100.00 callback_operation_run_and_return_status
 0x004102b0 100.00 ui_text_underscores_to_spaces_target
 0x00410320 29.03 string_queue_record_or_flush
-0x004103d0 88.89 main_menu_text_item
+0x004103d0 100.00 main_menu_text_item
 0x004103f0 84.21 menu_wipe_start
 0x00410440 100.00 menu_wipe_end
 0x00410450 100.00 string_keyed_cache_entry_find
@@ -3027,7 +3029,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 95.79 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 97.51 lego_engine_tick
+0x004232e0 97.59 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 90.91 lego_sine_phase_midpoint_blend_dispatch
@@ -4494,7 +4496,7 @@
 0x00482d60 9.54 model_render_pass_dispatch
 0x00483030 100.00 texture_cache_name_slot_find
 0x00483080 32.43 texture_cache_name_slot_append
-0x004830c0 17.98 lego::animated_texture_frame_surface_set
+0x004830c0 17.98 animated_texture_frame_surface_set
 0x00483140 24.00 ledger_stub_00483140_IndexedRecordInterfaceRelease
 0x00483170 15.69 indexed_record_transform_initialize
 0x00483240 51.28 indexed_record_transform_copy_in
