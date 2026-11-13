@@ -1,4 +1,4 @@
-# input_sha256: 6023301ccebe4a331bd27564f28e8b3570c6aad8253ae45edb7f2d9867d19c94
+# input_sha256: f4f3bf8c3478fe6a3f6d6577e7b30f60b41b66f05005db880ec5edc99e83b7b7
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2319 mapped functions
+[game-only] 2324 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -673,7 +673,7 @@
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 88.24 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
-0x0041fb50 93.77 lego_game_config_init
+0x0041fb50 93.80 lego_game_config_init
 0x00422850 94.60 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
@@ -688,7 +688,7 @@
 0x00424830 100.00 lego_selected_object_outlines_draw
 0x004248b0 99.36 lego_selected_entity_ground_marker_render
 0x00424cf0 100.00 lego_engine_shutdown_alt
-0x00424d00 90.07 lego_engine_shutdown
+0x00424d00 90.44 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
 0x004250c0 88.80 lego_main_sim_step
 0x00425b40 100.00 lego_periodic_callback_dispatch
@@ -766,7 +766,7 @@
 0x0042e8b0 82.43 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
-0x0042efc0 95.00 lego_play_movie
+0x0042efc0 96.25 lego_play_movie
 0x0042f0c0 84.62 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
@@ -1994,21 +1994,26 @@
 0x0047c0c0 100.00 vec_exact_equal
 0x0047c100 100.00 ledger_stub_0047c100_DirectSoundListenerRolloffSet
 0x0047c160 100.00 constant_negative_10000_get
-0x0047c170 100.00 window_state_initialize_retail
-0x0047c1c0 9.30 directdraw_enumerate_and_store_result
-0x0047c2e0 8.33 directdraw_device_create
-0x0047c4b0 29.79 directdraw_enumerated_device_create
-0x0047c610 10.27 directdraw_renderer_init
-0x0047c8d0 100.00 render_surface_present
-0x0047c8f0 11.70 save_write_thumbnail
-0x0047cc50 88.64 windowed_render_surface_blit_retail
-0x0047ccf0 8.62 directdraw_objects_release
-0x0047cd50 10.91 query_texture_memory
-0x0047cdd0 27.27 surface_description_get
-0x0047ce20 21.43 projection_overlay_draw_submit
-0x0047cee0 12.56 directdraw_clipper_set_region
-0x0047d2d0 9.23 surface_pixel_value_encode
-0x0047d3f0 100.00 bit_count32
+0x0047c170 100.00 directdraw_initialise
+0x0047c1c0 100.00 directdraw_enum_drivers
+0x0047c1f0 100.00 directdraw_enum_driver_callback
+0x0047c2e0 100.00 directdraw_enum_devices
+0x0047c380 100.00 directdraw_enum_device_callback
+0x0047c4b0 100.00 directdraw_enum_modes
+0x0047c550 100.00 directdraw_enum_mode_callback
+0x0047c610 100.00 directdraw_setup
+0x0047c8d0 100.00 directdraw_flip
+0x0047c8f0 71.49 directdraw_save_bmp
+0x0047cc20 100.00 directdraw_return_front_buffer
+0x0047cc50 100.00 directdraw_blit_buffers
+0x0047ccf0 100.00 directdraw_shutdown
+0x0047cd50 100.00 directdraw_adjust_texture_usage
+0x0047cdd0 100.00 directdraw_get_avail_texture_mem
+0x0047ce20 100.00 directdraw_clear
+0x0047cee0 100.00 directdraw_create_clipper
+0x0047d000 66.82 directdraw_blt_8_to_16
+0x0047d2d0 100.00 directdraw_get_colour
+0x0047d3f0 100.00 directdraw_count_mask_bits
 0x0047d410 87.50 renderer_record_table_initialize
 0x0047d430 8.33 scene_object_registry_teardown
 0x0047d470 37.21 image_surface_release
@@ -2327,7 +2332,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2555 mapped functions
+[full] 2562 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2994,7 +2999,7 @@
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 88.24 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
-0x0041fb50 93.77 lego_game_config_init
+0x0041fb50 93.80 lego_game_config_init
 0x00422850 94.60 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
@@ -3009,7 +3014,7 @@
 0x00424830 100.00 lego_selected_object_outlines_draw
 0x004248b0 99.36 lego_selected_entity_ground_marker_render
 0x00424cf0 100.00 lego_engine_shutdown_alt
-0x00424d00 90.07 lego_engine_shutdown
+0x00424d00 90.44 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
 0x004250c0 88.80 lego_main_sim_step
 0x00425b40 100.00 lego_periodic_callback_dispatch
@@ -3087,7 +3092,7 @@
 0x0042e8b0 82.43 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 90.57 lego_stats_level_record_count_for_stat_type
-0x0042efc0 95.00 lego_play_movie
+0x0042efc0 96.25 lego_play_movie
 0x0042f0c0 84.62 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
@@ -4315,21 +4320,26 @@
 0x0047c0c0 100.00 vec_exact_equal
 0x0047c100 100.00 ledger_stub_0047c100_DirectSoundListenerRolloffSet
 0x0047c160 100.00 constant_negative_10000_get
-0x0047c170 100.00 window_state_initialize_retail
-0x0047c1c0 9.30 directdraw_enumerate_and_store_result
-0x0047c2e0 8.33 directdraw_device_create
-0x0047c4b0 29.79 directdraw_enumerated_device_create
-0x0047c610 10.27 directdraw_renderer_init
-0x0047c8d0 100.00 render_surface_present
-0x0047c8f0 11.70 save_write_thumbnail
-0x0047cc50 88.64 windowed_render_surface_blit_retail
-0x0047ccf0 8.62 directdraw_objects_release
-0x0047cd50 10.91 query_texture_memory
-0x0047cdd0 27.27 surface_description_get
-0x0047ce20 21.43 projection_overlay_draw_submit
-0x0047cee0 12.56 directdraw_clipper_set_region
-0x0047d2d0 9.23 surface_pixel_value_encode
-0x0047d3f0 100.00 bit_count32
+0x0047c170 100.00 directdraw_initialise
+0x0047c1c0 100.00 directdraw_enum_drivers
+0x0047c1f0 100.00 directdraw_enum_driver_callback
+0x0047c2e0 100.00 directdraw_enum_devices
+0x0047c380 100.00 directdraw_enum_device_callback
+0x0047c4b0 100.00 directdraw_enum_modes
+0x0047c550 100.00 directdraw_enum_mode_callback
+0x0047c610 100.00 directdraw_setup
+0x0047c8d0 100.00 directdraw_flip
+0x0047c8f0 71.49 directdraw_save_bmp
+0x0047cc20 100.00 directdraw_return_front_buffer
+0x0047cc50 100.00 directdraw_blit_buffers
+0x0047ccf0 100.00 directdraw_shutdown
+0x0047cd50 100.00 directdraw_adjust_texture_usage
+0x0047cdd0 100.00 directdraw_get_avail_texture_mem
+0x0047ce20 100.00 directdraw_clear
+0x0047cee0 100.00 directdraw_create_clipper
+0x0047d000 66.82 directdraw_blt_8_to_16
+0x0047d2d0 100.00 directdraw_get_colour
+0x0047d3f0 100.00 directdraw_count_mask_bits
 0x0047d410 87.50 renderer_record_table_initialize
 0x0047d430 8.33 scene_object_registry_teardown
 0x0047d470 37.21 image_surface_release
@@ -4857,6 +4867,8 @@
 0x0049b2b0 100.00 ___crtsetenv
 0x0049b5b0 100.00 __mbschr
 0x0049b660 100.00 __strdup
+0x0049b6c2 100.00 _DirectDrawEnumerateA@8
+0x0049b6c8 100.00 _DirectDrawCreate@12
 0x0049c7c0 58.27 wad_expand_payload
 0x0049c840 25.71 wad_payload_decode_dispatch
 0x0049c8e0 52.13 wad_payload_decode_type1

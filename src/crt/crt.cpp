@@ -456,6 +456,13 @@ extern "C" void __cdecl __multtenpow12(uint16_t*, uint32_t, int);
 // LIBRARY: LEGORR 0x0048efe6 SYMBOL
 // __NLG_Notify
 
+/* DDRAW.LIB's import thunks, which DirectDraw.c calls directly
+ * (gods98/directdraw.c, finding 596). */
+// LIBRARY: LEGORR 0x0049b6c2 SYMBOL
+// _DirectDrawEnumerateA@8
+// LIBRARY: LEGORR 0x0049b6c8 SYMBOL
+// _DirectDrawCreate@12
+
 /* LIBC.LIB exsup3.obj's __seh_longjmp_unwind@4 (finding 540). */
 // LIBRARY: LEGORR 0x00496895 SYMBOL
 // __seh_longjmp_unwind@4
@@ -2773,27 +2780,16 @@ uint32_t s_window_mouse_word_50; /* DAT_0076ab50 */
 uint32_t s_window_mouse_word_54; /* DAT_0076ab54 */
 // GLOBAL: LEGORR 0x0076ab58
 uint32_t s_window_mouse_word_58; /* DAT_0076ab58 */
-// GLOBAL: LEGORR 0x0076ac84
 uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
-// GLOBAL: LEGORR 0x0076ac88
 void* s_renderer_primary_surface; /* DAT_0076ac88 */
-// GLOBAL: LEGORR 0x0076ac8c
 uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
-// GLOBAL: LEGORR 0x0076ac90
 uint32_t s_renderer_window_state_90; /* DAT_0076ac90 */
-// GLOBAL: LEGORR 0x0076ac94
 uint32_t s_renderer_window_state_94; /* DAT_0076ac94 */
-// GLOBAL: LEGORR 0x0076ac9c
 uint32_t s_renderer_window_state_9c; /* DAT_0076ac9c */
-// GLOBAL: LEGORR 0x0076aca4
 uint32_t s_renderer_window_state_a4; /* DAT_0076aca4 */
-// GLOBAL: LEGORR 0x0076acac
 uint32_t s_renderer_window_state_ac; /* DAT_0076acac */
-// GLOBAL: LEGORR 0x0076acb0
 uint32_t s_renderer_window_state_b0; /* DAT_0076acb0 */
-// GLOBAL: LEGORR 0x0076acb4
 uint32_t s_renderer_window_state_b4; /* DAT_0076acb4 */
-// GLOBAL: LEGORR 0x0076acb8
 uint32_t s_renderer_window_state_b8; /* DAT_0076acb8 */
 // GLOBAL: LEGORR 0x0050608c
 uint32_t s_render_feature_flags; /* DAT_0050608c */

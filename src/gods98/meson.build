@@ -10,7 +10,7 @@ endif
 gods98_sources = [
   'mesh_unit.cpp',
   'container_unit.cpp',
-  'directdraw.cpp',
+  'directdraw_port.cpp',
   'avi_player.cpp',
   'images_unit.cpp',
   'files_port.cpp',
@@ -73,6 +73,7 @@ gods98_c_sources = [
   'draw.c',
   'soundsys.c',
   'sound3d.c',
+  'directdraw.c',
   'g98_024.c',
   'g98_026.c',
   'dxerror.c',

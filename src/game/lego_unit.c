@@ -1045,11 +1045,11 @@ int lego_game_config_init(void)
                 }
             }
 
-            if (surface_description_get((int*)&totalMemValue, (int*)&availMemF)) {
+            if (directdraw_get_avail_texture_mem(&totalMemValue, &availMemF)) {
                 if ((textureUsageE = LEGO_A_CFG_INT(cfgStr, string_path_join(s_engine_config_root, "Main",
                     // STRING: LEGORR 0x004a3bb8
                     "TextureUsage", 0))) != 0) {
-                    query_texture_memory_original(&textureUsageE);
+                    directdraw_adjust_texture_usage(&textureUsageE);
                     if (textureUsageE <= availMemF) low_texture_flag_set();
                 }
             }
@@ -2578,7 +2578,7 @@ void lego_engine_shutdown(void)
     scene_object_registry_teardown();
     lws_shutdown();
     audio_active_shutdown();
-    projection_overlay_draw_submit_adapter(0, 0);
+    directdraw_clear(NULL, 0);
 }
 
 /* ResetLevelAndExit [group E]: music off, then exit(0). */
@@ -6536,7 +6536,7 @@ void lego_play_movie(const char* fName, const float* screenPt)
                 rect.bottom = (long)(height + screenPt[1]);
                 noScreenPt = 0;
             } else noScreenPt = 1;
-            if (!noScreenPt) lego_render_surface_restore_adapter();
+            if (!noScreenPt) directdraw_return_front_buffer();
             while (lego_movie_update_adapter(mov, 1.0f, noScreenPt ? NULL : &rect)) {
                 main_loop_frame_pump(noScreenPt);
             }

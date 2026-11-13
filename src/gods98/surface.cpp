@@ -865,7 +865,6 @@ static RendererWindowModeOps s_renderer_window_mode_ops;
 static int s_renderer_window_width;
 static int s_renderer_window_height;
 uint32_t s_renderer_window_mode_flags;
-// GLOBAL: LEGORR 0x0076ac80
 void* s_renderer_window_handle;
 DirectDrawEnumerationHook s_directdraw_enumeration_hook;
 void* s_directdraw_enumeration_context;
@@ -2151,15 +2150,12 @@ void* surface_winapi_immediate_device_peek(void)
 #endif
 
 #if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-// GLOBAL: LEGORR 0x0076acbc
 uint32_t s_renderer_fullscreen;
 #endif
 #if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-// GLOBAL: LEGORR 0x0076acc0
 uint32_t s_renderer_surface_width;
 #endif
 #if !defined(LEGORRR_BACKEND_MINIWIN) && defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-// GLOBAL: LEGORR 0x0076acc4
 uint32_t s_renderer_surface_height;
 #endif
 
@@ -2222,7 +2218,7 @@ int surface_winapi_present_rgba(const void* pixels, int pitch, int width, int he
         desc.pixel_format.rgb_bits, desc.pixel_format.red_mask,
         desc.pixel_format.green_mask, desc.pixel_format.blue_mask);
     (void)unlock(state->back_surface, NULL);
-    if (copied) render_surface_present();
+    if (copied) directdraw_flip();
     return 1;
 }
 

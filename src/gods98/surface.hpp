@@ -504,7 +504,7 @@ typedef struct RendererWindowModeOps {
     void (*window_show_activate)(void* context, int show_command);
 } RendererWindowModeOps;
 void renderer_window_mode_ops_set(const RendererWindowModeOps* ops);
-void renderer_window_mode_apply(int fullscreen, int x, int y,
+extern "C" void renderer_window_mode_apply(int fullscreen, int x, int y,
                                 int width, int height); /* FUN_004780b0 */
 uint32_t renderer_window_mode_flags_peek(void);
 void renderer_window_dimensions_get(int* width_out, int* height_out);
@@ -748,7 +748,7 @@ typedef struct Direct3DRMDeviceInitOps {
     void (*release)(void* context, void* object);
 } Direct3DRMDeviceInitOps;
 void direct3drm_device_init_ops_set(const Direct3DRMDeviceInitOps* ops);
-int direct3drm_device_initialize(void* adapter, uint32_t adapter_flags,
+extern "C" int direct3drm_device_initialize(void* adapter, uint32_t adapter_flags,
                                  void* surface, int force_single_mode); /* FUN_004781d0 */
 int direct3drm_device_mode_get(void);
 uint32_t surface_render_flags_peek(void);
@@ -761,7 +761,9 @@ int renderer_begin_frame_once(void);
 extern "C" void renderer_begin_frame_once_retail(void); /* FUN_00477fa0 */
 void renderer_begin_frame_once_reset(void);
 #if defined(LEGORRR_BACKEND_WINAPI)
-void render_surface_present(void); /* FUN_0047c8d0 */
+/* DirectDraw_Flip (directdraw.c, directdraw.h): flips or blits the display
+ * that the port renderer publishes into directDrawGlobs. */
+extern "C" void directdraw_flip(void); /* FUN_0047c8d0 */
 #endif
 void surface_descriptor_initialize(void* record); /* FUN_0047e710 */
 /* The 2D drawing functions below are G98-019's, defined in draw.c

@@ -1439,7 +1439,7 @@ void main_loop_frame_pump(int draw_projection_overlay)
     input_cursor_position_update();
     renderer_begin_frame_once_retail();
 #if defined(LEGORRR_BACKEND_WINAPI)
-    render_surface_present();
+    directdraw_flip();
 #else
     if (hooks->renderer_present != NULL)
         hooks->renderer_present(hooks->context);
@@ -1522,10 +1522,10 @@ void window_runtime_state_initialize(void* window)
 }
 
 // FUNCTION: LEGORR 0x00477f80
-void window_runtime_display_caps_query(void)
+int window_runtime_display_caps_query(void)
 {
     HDC dc = GetDC((HWND)g_platform_cursor_window_handle);
-    (void)GetDeviceCaps(dc, 12);
+    return GetDeviceCaps(dc, 12);
 }
 
 // FUNCTION: LEGORR 0x00477fd0
