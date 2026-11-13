@@ -1,4 +1,4 @@
-# input_sha256: 99d35e32954928c7d14a5063b3d541e5f982e0fea38404f18b4f89b2e1cb48bb
+# input_sha256: 43b952046b4e615dc591740e9190332a7474286ea2a56ef09fd367ede287d92c
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2345 mapped functions
+[game-only] 2346 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2342,18 +2342,19 @@
 0x0049cf50 100.00 wad_huffman_table_clear
 0x0049cf90 100.00 wad_huffman_canonical_codes_build
 0x0049d000 100.00 wad_reverse_low_bits
-0x0049d030 0.00 directdraw_device_selection_cancelled
-0x0049d5e0 5.56 display_mode_dialog_set_mode_and_refresh_choices
-0x0049d630 11.01 display_mode_list_populate
-0x0049d780 5.88 display_resolution_combo_populate
-0x0049d870 84.00 display_resolution_filter_tuple_append
-0x0049d8d0 29.27 display_mode_matches_filter_tuple
-0x0049d950 76.34 display_mode_name_index_find
-0x0049d9d0 17.65 display_refresh_rate_controls_sync
+0x0049d030 100.00 init_initialise
+0x0049d2f0 100.00 init_dialog_handler
+0x0049d5e0 100.00 init_set_full_screen
+0x0049d630 100.00 init_set_mode_list
+0x0049d780 100.00 init_set_device_list
+0x0049d870 100.00 init_add_valid_mode
+0x0049d8d0 100.00 init_is_valid_mode
+0x0049d950 100.00 init_get_mode
+0x0049d9d0 100.00 init_handle_window_button
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2590 mapped functions
+[full] 2591 mapped functions
 0x00401000 98.48 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -4930,14 +4931,15 @@
 0x0049cf50 100.00 wad_huffman_table_clear
 0x0049cf90 100.00 wad_huffman_canonical_codes_build
 0x0049d000 100.00 wad_reverse_low_bits
-0x0049d030 0.00 directdraw_device_selection_cancelled
-0x0049d5e0 5.56 display_mode_dialog_set_mode_and_refresh_choices
-0x0049d630 11.01 display_mode_list_populate
-0x0049d780 5.88 display_resolution_combo_populate
-0x0049d870 84.00 display_resolution_filter_tuple_append
-0x0049d8d0 29.27 display_mode_matches_filter_tuple
-0x0049d950 76.34 display_mode_name_index_find
-0x0049d9d0 17.65 display_refresh_rate_controls_sync
+0x0049d030 100.00 init_initialise
+0x0049d2f0 100.00 init_dialog_handler
+0x0049d5e0 100.00 init_set_full_screen
+0x0049d630 100.00 init_set_mode_list
+0x0049d780 100.00 init_set_device_list
+0x0049d870 100.00 init_add_valid_mode
+0x0049d8d0 100.00 init_is_valid_mode
+0x0049d950 100.00 init_get_mode
+0x0049d9d0 100.00 init_handle_window_button
 0x0049dab0 100.00 __strnicmp
 0x0049db60 100.00 __itoa
 0x0049dc10 100.00 __strlwr

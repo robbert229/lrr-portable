@@ -337,6 +337,36 @@ leave the ledger, and `directdraw_device_initialize` is now `PORT-ONLY`.
 - Native: `cmake -S . -B build -DTEST_WADS_DIR=<shipped WADs> && cmake
   --build build && ctest --test-dir build`: 39/39, real-data tests included.
 
+## Rebased onto #678 (stack #676 → #677 → #678)
+
+The figures above were measured on `main` at `8abe8b6b`. On #678's head
+(`4a5e3a19`, GAME-011 on #677 and #676), built in the same worktree, before
+and after this change:
+
+| | #678 | #678 + this change |
+| --- | ---: | ---: |
+| Exact-function code bytes | 201,327 | **203,193** |
+| Accuracy, full / game-only | 87.75% / 86.54% | 87.97% / 86.79% |
+| `opt_ref.annotated.full`: removed / exact removed | 414 / 215 | 415 / 222 |
+| `opt_ref.annotated.game_only`: removed / exact removed | 407 / 208 | 408 / 215 |
+| Gate `.bss` (map group) | 3,717,008 | **3,575,616** (−141,392) |
+| Gate `.data` virtual size | 3,822,224 | 3,680,976 |
+| Gate image end | `0x8e9000` | **`0x8c7000`** |
+| `/OPT:REF` relink `.bss` | 1,668,976 | 1,527,600 |
+| Lint ledger | 1,071 | 1,060 |
+
+- **The unit** is unchanged: 9 of 9 exact, and `0x0049d2f0` newly mapped.
+- **Drops:** `make reccmp-check` passes; no function fell, and no score
+  outside the unit changed.
+- **`opt_ref`:** the unit accounts for +2 removed and +8 exact removed, as on
+  `main`. The remaining −1 / −1 is identical-code-folding or layout noise
+  outside the unit (finding 591). It was not identified by address on this
+  base. The three twin swaps listed above were measured on `main`.
+- **Late members:** the order is unchanged.
+- **The rebase** conflicted only in the shared bookkeeping, and both sides
+  were kept: `test_c_boundaries.cpp`, the findings README, and the three
+  generated files, which were regenerated.
+
 ## Reproducing
 
     python3 tools/convert_unit.py LATE-002 --stem init
