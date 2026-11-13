@@ -72,8 +72,15 @@ static const float s_erosion_stage_quanta = 4.0f;
 
 uint32_t s_config_word = 0u;        /* DAT_004a1ee4 */
 
+/* The port's erosion tables (64,000 bytes) are defined natively only. In
+ * the matching build erode.c's erodeGlobs holds this state, every function
+ * below that fills the tables is compiled out, and level.cpp's accessors
+ * answer as for empty tables (#700, finding 627). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 LavaErosionPendingCell s_lava_erosion_pending_cells[EROSION_MARK_COUNT];
+#endif
 uint32_t s_lava_erosion_pending_count;
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 LavaErosionPendingCell s_lava_erosion_stage_coordinates[
     EROSION_MARK_COUNT];
 uint32_t s_erosion_marks[EROSION_MARK_COUNT];
@@ -81,6 +88,7 @@ float s_lava_erosion_stage_timers[EROSION_MARK_COUNT];
 CellCoordinateTimestamp s_ts_coordinates[LEVEL_TS_COUNT];
 int32_t  s_ts_stamps[LEVEL_TS_COUNT];
 uint32_t s_ts_active[LEVEL_TS_COUNT];
+#endif
 
 float s_erosion_trigger_accumulator;
 float s_erosion_decay_scale;

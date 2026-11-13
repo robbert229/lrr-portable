@@ -2927,9 +2927,14 @@ uint32_t cell_flag4_is_set(int x, int y, int field)
     if (block < 0) {
         return 0;
     }
+#if defined(_MSC_VER) && _MSC_VER < 1200
+    /* No port s_grid_rec in the matching build (#700): an empty block. */
+    const int64_t word = grid_rec_field_index(x, y, 0);
+#else
     const int64_t word = (s_grid_rec[(size_t)block] != 0u)
         ? grid_rec_field_index(x, y, field)
         : grid_rec_field_index(x, y, 0);
+#endif
     if (word < 0) {
         return 0;
     }
@@ -3753,8 +3758,19 @@ LavaErosionSoundHook s_lava_erosion_sound;
 LavaErosionEventHook s_lava_erosion_event;
 void* s_lava_erosion_hook_context;
 
+/* In the matching build erode.c's erodeGlobs is the erosion state, and the
+ * port's tables (lava_erosion_port.cpp) are not defined there: only their
+ * counters are cleared, and the accessors below answer as for empty tables
+ * (#700, finding 627). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define LRR_LAVA_EROSION_PORT_TABLES 0
+#else
+#define LRR_LAVA_EROSION_PORT_TABLES 1
+#endif
+
 static void lava_erosion_runtime_tables_clear(void)
 {
+#if LRR_LAVA_EROSION_PORT_TABLES
     memset(s_erosion_marks, 0, sizeof(s_erosion_marks));
     memset(s_lava_erosion_pending_cells, 0,
            sizeof(s_lava_erosion_pending_cells));
@@ -3765,6 +3781,7 @@ static void lava_erosion_runtime_tables_clear(void)
     memset(s_ts_active, 0, sizeof(s_ts_active));
     memset(s_ts_coordinates, 0, sizeof(s_ts_coordinates));
     memset(s_ts_stamps, 0, sizeof(s_ts_stamps));
+#endif
     s_lava_erosion_pending_count = 0u;
     s_erosion_trigger_accumulator = 0.0f;
     s_ts_now = 0;
@@ -3853,14 +3870,22 @@ unsigned int lava_erosion_pending_cell_count_get(void)
 int lava_erosion_pending_cell_get(unsigned int index, int xy_out[2])
 {
     if (xy_out == NULL || index >= s_lava_erosion_pending_count) return 0;
+#if LRR_LAVA_EROSION_PORT_TABLES
     xy_out[0] = s_lava_erosion_pending_cells[index].x;
     xy_out[1] = s_lava_erosion_pending_cells[index].y;
     return 1;
+#else
+    return 0;
+#endif
 }
 
 int lava_erosion_stage_get(unsigned int slot, int xy_out[2],
                            float* timer_out, uint8_t* cell_stage_out)
 {
+#if !LRR_LAVA_EROSION_PORT_TABLES
+    (void)slot; (void)xy_out; (void)timer_out; (void)cell_stage_out;
+    return 0; /* every slot is free */
+#else
     const uint8_t* cell;
     if (slot >= EROSION_MARK_COUNT || s_erosion_marks[slot] == 0u) return 0;
     if (xy_out != NULL) {
@@ -3873,6 +3898,7 @@ int lava_erosion_stage_get(unsigned int slot, int xy_out[2],
         s_lava_erosion_stage_coordinates[slot].y);
     if (cell_stage_out != NULL) *cell_stage_out = cell != NULL ? cell[7] : 0u;
     return 1;
+#endif
 }
 
 void lava_erosion_level_context_set(LevelState* s)

@@ -1594,7 +1594,13 @@ void cmd_rec_target_set(void* rec, int target)
 
 /* --- the cell-command type-3 issue + task batch append band (2026-10-25) -- */
 
+/* The queue is defined natively only (#700, finding 627). In the matching
+ * build legoobject_unit.c holds LegoObject.c's deferred list, nothing
+ * reachable adds an entry (deferred_olist_entity_queue_add,
+ * legoobject_port.cpp, has no live caller there), so the count stays 0. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 DeferredOListEntry s_deferred_olist[DEFERRED_OLIST_SLOTS];
+#endif
 uint32_t           s_deferred_olist_next; /* DAT_004ea7a4 */
 
 #if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
@@ -1622,12 +1628,14 @@ uint32_t deferred_olist_counter_peek(void)
 
 void deferred_olist_reset(void)
 {
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     for (unsigned int i = 0u;
          i < s_deferred_olist_next && i < DEFERRED_OLIST_SLOTS; ++i) {
         engine_heap_free(s_deferred_olist[i].names[0]);
         engine_heap_free(s_deferred_olist[i].names[1]);
     }
     __builtin_memset(s_deferred_olist, 0, sizeof(s_deferred_olist));
+#endif
     s_deferred_olist_next = 0u;
 }
 
@@ -1636,6 +1644,9 @@ unsigned int deferred_olist_entity_queue_take_cell(const int cell_xy[2],
 {
     unsigned int count = 0u, i = 0u;
     if (cell_xy == NULL || records == NULL) return 0u;
+#if defined(_MSC_VER) && _MSC_VER < 1200
+    (void)capacity; (void)i; /* no queue in the matching build (#700) */
+#else
     while (i < s_deferred_olist_next && i < DEFERRED_OLIST_SLOTS &&
            count < capacity) {
         DeferredOListEntry* entry = &s_deferred_olist[i];
@@ -1657,6 +1668,7 @@ unsigned int deferred_olist_entity_queue_take_cell(const int cell_xy[2],
         *entry = s_deferred_olist[s_deferred_olist_next];
         memset(&s_deferred_olist[s_deferred_olist_next], 0, sizeof(*entry));
     }
+#endif
     return count;
 }
 

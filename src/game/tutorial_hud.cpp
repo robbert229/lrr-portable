@@ -56,7 +56,12 @@ float s_tutorial_nerp_timers[4];
 NerpRuntimeState s_nerp_runtime;
 /* The port's copy of nerpsGlobs (00555d40), which is tutorial_script.c's. */
 uint32_t s_tutorial_555d40_state[45];
+/* The token table is defined natively only (#700, finding 627): nothing
+ * adds a token in any build (tutorial_token_add has no caller), so in the
+ * matching build its readers answer as for the empty table. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 static TutorialTokenEntry s_tutorial_tokens[512];
+#endif
 static uint32_t s_tutorial_token_count;
 static uint32_t s_tutorial_literal_token_count;
 static TutorialScriptOps s_advisor_token_ops;
@@ -181,6 +186,7 @@ static int tutorial_text_equal(const char* a, const char* b)
 
 void tutorial_tokens_clear(void)
 {
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     uint32_t i;
     for (i = 0; i < s_tutorial_token_count; ++i) {
         if (s_tutorial_tokens[i].kind == 2 &&
@@ -193,10 +199,12 @@ void tutorial_tokens_clear(void)
         s_tutorial_tokens[i].value = 0;
         s_tutorial_tokens[i].kind = 0;
     }
+#endif
     s_tutorial_token_count = 0;
     s_tutorial_literal_token_count = 0;
 }
 
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 static int tutorial_token_add(const char* start, uint32_t length, int kind)
 {
     char* copy;
@@ -219,6 +227,7 @@ static int tutorial_token_add(const char* start, uint32_t length, int kind)
     ++s_tutorial_token_count;
     return 1;
 }
+#endif
 
 void tutorial_script_ops_set(const TutorialScriptOps* ops)
 {
@@ -1844,6 +1853,7 @@ void tutorial_inline_token_render(char* source, char* output, int draw)
     int has_named_tokens = 0;
     if (source == NULL) return;
     if (output != NULL) output[0] = '\0';
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     for (n = 0; n < s_tutorial_token_count; ++n) {
         if (s_tutorial_tokens[n].kind == 1 ||
             s_tutorial_tokens[n].kind == 2) {
@@ -1851,6 +1861,9 @@ void tutorial_inline_token_render(char* source, char* output, int draw)
             break;
         }
     }
+#else
+    (void)n;
+#endif
     if (!has_named_tokens && output != NULL) {
         /* With no parsed named tokens, the corpus copies the source as-is;
          * markup is only interpreted once one of its token tables exists. */
@@ -1872,6 +1885,7 @@ void tutorial_inline_token_render(char* source, char* output, int draw)
                 len = end - start;
                 memcpy(name, source + start, len);
                 name[len] = '\0';
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
                 {
                     int matched = 0;
                     for (n = 0; n < s_tutorial_token_count; ++n) {
@@ -1897,6 +1911,7 @@ void tutorial_inline_token_render(char* source, char* output, int draw)
                         }
                     }
                 }
+#endif
                 i = end + 1;
                 continue;
             }
@@ -1924,11 +1939,21 @@ uint32_t tutorial_literal_token_count(void)
 }
 const char* tutorial_token_name_get(uint32_t index)
 {
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     return index < s_tutorial_token_count ? s_tutorial_tokens[index].name : NULL;
+#else
+    (void)index;
+    return NULL; /* no token table in the matching build (#700) */
+#endif
 }
 uint32_t tutorial_token_value_get(uint32_t index)
 {
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     return index < s_tutorial_token_count ? s_tutorial_tokens[index].value : 0;
+#else
+    (void)index;
+    return 0; /* no token table in the matching build (#700) */
+#endif
 }
 
 typedef struct LegacyPanelImagePortEntry {
@@ -1943,7 +1968,12 @@ typedef struct LegacyPanelImagePortEntry {
 
 LegacyHudOps s_legacy_hud_ops;
 LegacyHealthBarState s_legacy_health_bar;
+/* Natively only (#700, finding 627): Panel.c's panelGlobs (panel_unit.c)
+ * holds the panels in the matching build, and the four functions that use
+ * this table below have no caller in any build. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 LegacyPanelPortRecord s_legacy_panels[18];
+#endif
 static float s_legacy_bubble_position[2];
 static float s_legacy_entity_ring_radius;
 static float s_legacy_entity_ring_height;
@@ -2050,6 +2080,7 @@ void legacy_scrolling_advisor_text_append_v(void* record, const char* format,
     text_buffer_append_vformat(record, 0, format, args);
 }
 
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* s_legacy_panels (#700) */
 void legacy_ui_text_output_position_and_draw(void* record, const char* text,
                                              const char* fallback)
 {
@@ -2099,6 +2130,7 @@ void legacy_panel_category_record_install(int panel, const float rect[4],
         record->selection_values[i] = 0;
     }
 }
+#endif /* s_legacy_panels */
 
 TextureSurface* legacy_panel_texture_get(int panel)
 {

@@ -1616,8 +1616,13 @@ static int      s_call_n;
 /* Optional rect witnesses: rect1 is the corpus's source rect (4 floats)
  * and rect3 the size pair (2 floats); the plain record leaves both
  * absent. */
+/* The rect witnesses are kept natively only (#700, finding 627): in the
+ * matching build nothing reachable records a call, and there no witness
+ * is ever set. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 static float    s_call_rect1[CRT_SURFACE_CALLS][4];
 static float    s_call_rect3[CRT_SURFACE_CALLS][2];
+#endif
 static uint8_t  s_call_rect1_set[CRT_SURFACE_CALLS];
 static uint8_t  s_call_rect3_set[CRT_SURFACE_CALLS];
 
@@ -1632,6 +1637,7 @@ static void surface_call_store(uint32_t handle, float x, float y,
     s_call_y[s_call_n] = y;
     s_call_rect1_set[s_call_n] = 0u;
     s_call_rect3_set[s_call_n] = 0u;
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     if (rect1 != NULL) {
         __builtin_memcpy(s_call_rect1[s_call_n], rect1,
                          sizeof s_call_rect1[s_call_n]);
@@ -1642,6 +1648,9 @@ static void surface_call_store(uint32_t handle, float x, float y,
                          sizeof s_call_rect3[s_call_n]);
         s_call_rect3_set[s_call_n] = 1u;
     }
+#else
+    (void)rect1; (void)rect3;
+#endif
     ++s_call_n;
 }
 
@@ -1694,6 +1703,7 @@ int crt_surface_call_get_rect(int index, float* rect1, int* rect1_set,
     if (rect3_set != NULL) {
         *rect3_set = s_call_rect3_set[index] != 0u;
     }
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
     if (s_call_rect1_set[index] != 0u && rect1 != NULL) {
         __builtin_memcpy(rect1, s_call_rect1[index],
                          4 * sizeof(float));
@@ -1701,6 +1711,7 @@ int crt_surface_call_get_rect(int index, float* rect1, int* rect1_set,
     if (s_call_rect3_set[index] != 0u && rect3 != NULL) {
         __builtin_memcpy(rect3, s_call_rect3[index], 2 * sizeof(float));
     }
+#endif
     return 1;
 }
 
