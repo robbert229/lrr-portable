@@ -247,6 +247,10 @@ int sound_alias_lookup(const char* name, int* out_index);  /* 00464c70 */
 int sound_positional_sound_submit(int position, int alias, int loop,
                                   int positional, const float* xyz); /* 00465090 */
 int sound_subsystem_enabled(void);                         /* 00465370 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434a50) (finding 634). */
+#define sound_samples_config_load lego_sound_samples_config_load
+#endif
 void sound_samples_config_load(struct BlockRec* config, int allow_marked); /* 00434a50 */
 /* GAME pointer.cpp (ui_list.hpp, frontend.hpp, media.hpp). */
 void ui_pointer_cursor_name_registry_init(void);           /* 0045c830 */
@@ -258,7 +262,15 @@ void bubble_config_texture_load(struct BlockRec* cfg);     /* 00407240 */
 /* G98 Font.c (surface.hpp): Font_Load. */
 void* font_atlas_record_create(const char* name);          /* 00479ee0 */
 /* GAME Info.c (message.hpp, frontend.hpp). The original passes the font. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in Info.c (info_unit.c) (finding 634). */
+#define incident_message_catalog_init info_initialise
+#endif
 void incident_message_catalog_init(uint32_t owner);        /* 00419230 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in Info.c (info_unit.c) (finding 634). */
+#define interface_message_tab_info_text_load info_set_overflow_image_file
+#endif
 void interface_message_tab_info_text_load(const char* path); /* 00419430 */
 /* GAME Interface.c (frontend.hpp, entity.hpp). */
 /* G98 Container.c (crt.hpp, scene_pool.hpp). */
@@ -316,6 +328,10 @@ void camera_view_context_set(float cap, float follow_scale,
 void camera_distance_bounds_set(void* camera, float lo, float hi); /* 00436a18 */
 void camera_tilt_bounds_set(void* camera, float lo, float hi); /* 00436831 */
 /* GAME level.hpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (004350a0) (finding 634). */
+#define surface_type_descriptions_config_load lego_surface_type_descriptions_config_load
+#endif
 void surface_type_descriptions_config_load(struct BlockRec* config,
                                            const char* config_root); /* 004350a0 */
 /* GAME Priorities.c (priorities.h). */
@@ -325,12 +341,24 @@ void priorities_load_images(struct BlockRec* config, const char* game_name);    
 int shared_texture_root_register(const char* root);        /* 004805b0 */
 /* GAME message.hpp. */
 void deferred_callback_set(uint32_t value);                /* 00453900 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434c10) (finding 634). */
+#define message_load_infomessages lego_message_load_infomessages
+#endif
 void message_load_infomessages(struct BlockRec* cfg);      /* 00434c10 */
 /* GAME-021 parts 2-3, still in lego.cpp (entity_config_from_lego.hpp,
  * frontend.hpp). */
 void lego_object_names_load(struct BlockRec* config);      /* 0042d600, called by 0041fb50 */
 void lego_object_the_names_load(struct BlockRec* config);  /* 0042da20, called by 0041fb50 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434da0) (finding 634). */
+#define advisor_tooltip_and_sound_config_load lego_advisor_tooltip_and_sound_config_load
+#endif
 void advisor_tooltip_and_sound_config_load(struct BlockRec* config); /* 00434da0 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434a00) (finding 634). */
+#define advisor_tutorial_icon_image_load lego_advisor_tutorial_icon_image_load
+#endif
 void advisor_tutorial_icon_image_load(struct BlockRec* cfg); /* 00434a00 */
 /* G98 Sound3D.c (sound3d.c, simtick.hpp, sound3d.h). The native port's
  * entries take a frame handle and the distance as an integer word. */
@@ -368,6 +396,10 @@ int reward_initialise(void);                               /* reward.c, 0045f030
 /* Container_Initialise (00472710): no port entry (lego.cpp). */
 void* container_initialise_original(const char* gameName);
 /* LegoObject_TriggerFrameCallback (0043f130): no port entry (lego.cpp). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in LegoObject.c (legoobject_unit.c) (finding 634). */
+#define lego_object_trigger_frame_callback_adapter legoobject_trigger_frame_callback
+#endif
 void lego_object_trigger_frame_callback_adapter(void* cont, void* data);
 /* DirectDraw_AdjustTextureUsage (0047cd50, directdraw.h). */
 void directdraw_adjust_texture_usage(unsigned int* textureUsage);
@@ -434,6 +466,11 @@ void lego_key_callback_set_adapter(int key, int op, int a1, int a2, int a3);
 /* An empty function the linker folded to 00484c90, called with the root
  * container and "animtex_dirt" (lego.cpp). */
 void lego_noop_load_adapter(void* root, const char* name);
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original calls the shared no-op (finding 634). */
+#define lego_noop_load_adapter(root, name) \
+    (((void (*)())flic_opcode27_fallback_noop)(root, name))
+#endif
 /* RockFall_Initialise (0040bfd0): the port's entry takes a style table
  * (rock_fall_styles.cpp). */
 void rock_fall_initialise_adapter(struct BlockRec* config,
@@ -441,10 +478,36 @@ void rock_fall_initialise_adapter(struct BlockRec* config,
 /* Lego_LoadPanels (004345f0), Lego_LoadPanelButtons (00434710),
  * Lego_LoadTextMessages (00434af0): the port's entries are in a namespace
  * (lego.cpp). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (004345f0) (finding 634). */
+#define panels_config_entry_apply_original lego_panels_config_entry_apply
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* The unit's own declaration takes unsigned sizes. */
+void panels_config_entry_apply_original(struct BlockRec* config,
+                                        unsigned int width,
+                                        unsigned int height);
+#else
 void panels_config_entry_apply_original(struct BlockRec* config, int width,
                                         int height);
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434710) (finding 634). */
+#define panel_button_layout_config_load_original lego_panel_button_layout_config_load
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* The unit's own declaration takes unsigned sizes. */
+void panel_button_layout_config_load_original(struct BlockRec* config,
+                                              unsigned int width,
+                                              unsigned int height);
+#else
 void panel_button_layout_config_load_original(struct BlockRec* config,
                                               int width, int height);
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434af0) (finding 634). */
+#define text_messages_config_load_original lego_text_messages_config_load
+#endif
 void text_messages_config_load_original(struct BlockRec* config);
 /* Interface_LoadImages (0041ada0), Interface_LoadSurroundImages
  * (0041afd0): the port's entries take the config only (interface.cpp). */
@@ -691,6 +754,11 @@ void entity_transform_position_get_outputs(const struct EntitySlot* entity,
  * adapter in level_id_remap.cpp. RadarMap_Draw (0045dbc0): radarmap.c's
  * definition takes this name in the matching build (radarmap_link_names.h,
  * finding 606); natively a no-op adapter at the end of lego_port.cpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, level_id_remap.cpp's 0045d8a0
+ * (C linkage since finding 634), which stores the float. */
+#define radar_map_zoom_set_adapter object_field14_set
+#endif
 void radar_map_zoom_set_adapter(void* radarMap, float zoom);
 void radar_map_tv_position_set_adapter(void* radarMap, const float* pos);
 /* NERPs' tutorial flags (00456240): the original passes the NERPs stack
@@ -732,11 +800,19 @@ int priorities_handle_cursor(unsigned int x, unsigned int y, int pressed,
                              int released, int apply);
 /* Interface_HandleInput (0041baa0): the port's entry has another arity, in
  * a namespace; adapter at the end of interface.cpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in Interface.c (interface_unit.c) (finding 634). */
+#define interface_handle_mouse_adapter interface_do_mouse
+#endif
 int interface_handle_mouse_adapter(int x, int y, int leftButton,
                                    int leftButtonLast, int leftReleased,
                                    float elapsed);
 /* Info_CheckCollision-style click (0041a1a0): the port's entry has another
  * arity, in a namespace; adapter at the end of info.cpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in Info.c (info_unit.c) (finding 634). */
+#define info_check_click_adapter ui_entry_hit_test_and_dispatch
+#endif
 int info_check_click_adapter(int x, int y, int leftReleased,
                              int rightReleased);
 /* RadarMap.c (radarmap.c; map_view_port.cpp natively): RadarMap_InsideRadar (0045e660). */
@@ -750,6 +826,10 @@ void objective_deferred_callback_invoke_if_set(void);
 void tutorial_advisor_scroll_step_advance(void);
 /* BuildingPlacement update (0044a910): the port's entry takes a hook
  * table; adapter at the end of lego.cpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in LegoObject.c (legoobject_unit.c) (finding 634). */
+#define building_placement_update_adapter legoobject_building_placement_preview_update
+#endif
 int building_placement_update_adapter(int type, int index, int leftReleased,
                                       int rightReleased,
                                       const float* pos,
@@ -976,6 +1056,18 @@ void handle_array_release_and_reset(void);                      /* 004020c0 */
  * lego.cpp (no port entry with C linkage). */
 void lego_object_custom_name_set_adapter(struct EntitySlot* liveObj,
                                          const char* name);     /* 00437880 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself (LegoObject.c's legoobject_rename),
+ * through entity_custom_name_set_adapter's alias below. A function-like
+ * macro keeps both declarations, so the symbol counter does not move
+ * (finding 634). */
+#define lego_object_custom_name_set_adapter(liveObj, name) \
+    entity_custom_name_set_adapter(liveObj, name)
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in LegoObject.c (legoobject_unit.c) (finding 634). */
+#define lego_object_movement_input_adapter legoobject_movement_input_accumulate
+#endif
 void lego_object_movement_input_adapter(struct EntitySlot* liveObj,
                                         int forward, int strafe,
                                         float rotate);          /* 0044a310 */
@@ -983,6 +1075,10 @@ void lego_object_movement_input_adapter(struct EntitySlot* liveObj,
 float terrain_map_world_z_get(struct TerrainMap* map, float x, float y); /* 0044f940 */
 /* Lego.c parts 2-3 and others with no port equivalent of the original's
  * contract: adapters at the end of lego.cpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (finding 634). */
+#define lego_keep_running_adapter lego_keep_running
+#endif
 int lego_keep_running_adapter(void);                            /* 00435940 */
 int lego_quit_poll_adapter(int a, int b, int* quit);            /* 004589c0 */
 int lego_level_low_bits_enabled_adapter(void);                  /* 004589a0 */
@@ -1500,6 +1596,10 @@ void lego_noop_block_adapter(const int* blockPos);              /* 00484c90 */
 int lego_vehicle_load_adapter(void* vehicle, unsigned int objID, void* root,
                               const char* filename,
                               const char* gameName);            /* 0046c6f0 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in animation_object.c; its sixth parameter is unused (finding 634). */
+#define lego_creature_load_adapter entity_type_config_resource_row_load
+#endif
 int lego_creature_load_adapter(void* creature, unsigned int objID, void* root,
                                const char* filename,
                                const char* gameName);           /* 00406990 */
@@ -1548,6 +1648,10 @@ void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
 /* GAME-022 LegoObject.c (entity.hpp, ai.hpp, cmd.hpp). */
 void entity_kind_record_update_dispatch(struct EntitySlot* entity); /* 00438460 */
 void entity_queue_for_rockfall_processing_if_eligible(struct EntitySlot* e); /* 0043a9e0 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in LegoObject.c (legoobject_unit.c) (finding 634). */
+#define entity_linked_activity_event_dispatch legoobject_linked_activity_event_dispatch
+#endif
 void entity_linked_activity_event_dispatch(struct EntitySlot* entity,
                                            uint32_t events);    /* 0043f5b0 */
 void entity_world_position_set(struct EntitySlot* entity, float x, float y,
@@ -1564,6 +1668,10 @@ void spiderweb_add(int bx, int by, struct Lego_Object* webObj); /* 00466380 */
 void electric_fence_add(struct ElectricFenceObject* object);   /* 0040cf50 */
 /* Original-ABI adapters at the end of lego.cpp (group 2D), where the
  * port's entry takes another contract. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in LegoObject.c (legoobject_unit.c) (finding 634). */
+#define deferred_olist_entity_queue_add_original legoobject_deferred_olist_queue_add
+#endif
 void deferred_olist_entity_queue_add_original(void* objModel, int objType,
                                               unsigned int objID,
                                               const float* position,
@@ -1576,6 +1684,10 @@ void* construction_place_building(int objID, int* blockPos,
                                   int teleportDown);           /* 00409a90 construction.c */
 void building_upgrade_state_changed_dispatch(int type, int row, int column,
                                              int state); /* 00418830 helpwindow.c */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in LegoObject.c (legoobject_unit.c) (finding 634). */
+#define entity_linked_route_flag_clear_original legoobject_linked_route_flag_clear
+#endif
 void entity_linked_route_flag_clear_original(struct EntitySlot* object,
                                              struct EntitySlot* driven); /* 0043f100 */
 
@@ -1607,6 +1719,10 @@ extern int s_cell_refresh_track_count;         /* level.cpp, 00556e8c */
 extern int s_cell_previous_track_count;        /* level.cpp, 00556e90 */
 /* 00435aa0 (Lego.c part 3): the port's entry also takes the
  * EngineContext, which it does not read. Adapter at the end of lego.cpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (finding 634). */
+#define lego_panel_selection_highlight_toggle_adapter lego_panel_selection_highlight_toggle
+#endif
 void lego_panel_selection_highlight_toggle_adapter(int on);     /* 00435aa0 */
 void camera_distance_set(void* camera, float value);            /* view.hpp, 00436a4a */
 void transient_effect_registry_release_all(void);               /* effects.hpp, 00465970 */
@@ -1640,6 +1756,12 @@ void entity_task_counter_increment_by_branch(int nonzero);      /* entity.hpp, 0
 void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode); /* level.hpp, 00402ae0 */
 /* The empty function at 00484c90, called with the block position. */
 void lego_noop_point_adapter(const int* blockPos);              /* 00484c90 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original passes the block to the shared no-op
+ * (finding 634). */
+#define lego_noop_point_adapter(blockPos) \
+    (((void (*)())flic_opcode27_fallback_noop)(blockPos))
+#endif
 void selection_mode7_cancel_at_point(const uint32_t coordinate[2]); /* interface_unit.h, 0041cf80 */
 int electric_fence_stud_fits(struct ElectricFenceLevel* level, int bx, int by); /* terrain_cell_objects.h, 0040e1e0 */
 void electric_fence_stud_set(struct ElectricFenceLevel* level, int bx, int by,
@@ -1689,9 +1811,17 @@ void ledger_stub_0044b140_SmallSpiderCellSwarmSpawn(int cell_x, int cell_y,
                                                     uint32_t variation); /* 0044b140 */
 /* 00439370 and 004394b0 are declared only in legoobject_port.cpp's ledger
  * namespace. Adapters at the end of lego.cpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in LegoObject.c (legoobject_unit.c) (finding 634). */
+#define entity_build_placement_setup_original legoobject_build_placement_command_setup
+#endif
 void entity_build_placement_setup_original(const int cell_xy[2], int entity_id,
                                            const float world_xy[2],
                                            int update_state);   /* 00439370 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in LegoObject.c (legoobject_unit.c) (finding 634). */
+#define entity_build_placement_alt_setup_original legoobject_build_placement_alternate_command_setup
+#endif
 void entity_build_placement_alt_setup_original(const int cell_xy[2], int entity_id,
                                                const float world_xy[2],
                                                int update_state); /* 004394b0 */

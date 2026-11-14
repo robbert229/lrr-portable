@@ -406,6 +406,11 @@ void entity_b8_bit3_set_or_clear(void* record, int set);
  *   chain walk with an entry NULL guard (documented). */
 void record_field18_set(void* record, uint32_t value);
 void record_flags_24_or(void* record, uint32_t flags);
+/* C linkage: GAME-021 lego_unit.c calls it as RadarMap_SetZoom in the
+ * matching build (finding 634). */
+#ifdef __cplusplus
+extern "C"
+#endif
 void object_field14_set(void* record, uint32_t value);
 #ifdef __cplusplus
 extern "C"
