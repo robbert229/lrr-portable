@@ -40,7 +40,12 @@ this change:
 | Gate link / image end | `/DEBUG /OPT:REF /OPT:NOICF`, `0x7f5000` | the same |
 
 No exact match was lost and no function fell below the baseline, so there
-are no drops to label. `make match-progress`, `make unit-data-offsets`
+are no drops to label.
+
+Stacked on #753 (`tools/748-retire-plain-immediates`, `e699736f`, on #752),
+which changes no score: its figures equal `main`'s above. Measured again
+there with plain Reccmp, the same 13 functions rise, none fall, and every
+figure in the table is unchanged. `make match-progress`, `make unit-data-offsets`
 (no change), `make opt-ref-callers OPT_REF_ARGS=--summary` (0 removed) and
 `make pe-audit` were run on the final tree, and the three generated files
 are committed.
@@ -304,7 +309,8 @@ Five LegoObject.c functions remain effective matches: `00436c20`,
 ## Gate
 
 - `make reccmp-check`: OK. 13 functions rise, one is newly mapped, none
-  falls. The plain-immediate, winapi link and link-order checks pass.
+  falls, on plain Reccmp (#753 retired the plain-immediate wrapper).
+  The image-end guard, winapi link and link-order checks pass.
 - `make match-progress`, `make unit-data-offsets`,
   `make opt-ref-callers OPT_REF_ARGS=--summary` and `make pe-audit` were
   run. The three generated files are committed (`unit-data-offsets`
