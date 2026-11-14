@@ -33,6 +33,24 @@ pass. The native build starts and runs with the shipped WADs.
 Every edit is in `src/game/lego_unit.c`, inside the three functions and
 Lego.c's pointer-state globals. No other thread's file is touched.
 
+### Rebased onto the #777–#780 stack
+
+Measured again on #780 (`79f83f77`: #777, #778's one `objectGlobs` struct,
+#779, #780) with a full `make reccmp-check`. The three functions rise by the
+same amounts, and nothing else moves. The single-function loop over all 223
+Lego.c functions differs from #780 only in the three targets, so the
+counter balance holds on top of #778.
+
+| Measure | #780 `79f83f77` | This change on it |
+| --- | ---: | ---: |
+| Functions that rose / fell | | 3 / 0 |
+| Exact / mapped, full | 2,415 / 2,833 | 2,415 / 2,833 |
+| Exact-function code bytes | 336,831 (52.42%) | 336,831 (52.42%) |
+| Accuracy, full / game-only | 97.07% / 96.73% | 97.07% / **96.74%** |
+| Image end | `0x7f5000` | `0x7f5000` |
+
+On the stack, `binary-progress.json` shows no `opt_ref` category move.
+
 ## Method and tools
 
 The single-function loop (`make match-function`) scores these functions
