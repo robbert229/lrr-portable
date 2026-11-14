@@ -1,4 +1,4 @@
-# input_sha256: f096f24847643daf764e60ac5bbd10a1957fbe90458b38b393cefdc1f6e15f33
+# input_sha256: e2194202152cdcb763a92f178c9dd0e86256d60b238727754fdac2434ce52b13
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -721,7 +721,7 @@
 0x00424cf0 100.00 lego_engine_shutdown_alt
 0x00424d00 100.00 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
-0x004250c0 91.51 lego_main_sim_step
+0x004250c0 99.61 lego_main_sim_step
 0x00425b40 100.00 lego_periodic_callback_dispatch
 0x00425b60 100.00 lego_object_sound_restart_callback
 0x00425c30 100.00 lego_transition_control
@@ -739,7 +739,7 @@
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 100.00 lego_global_subsystem_state_reset
 0x00426420 95.77 lego_cursor_ray_to_camera_route
-0x00426520 71.21 lego_main_sim_interaction_and_cell_update
+0x00426520 73.90 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 100.00 lego_level_upgrade_name_strings_load
 0x00428020 99.26 lego_entity_command_status_feedback_dispatch
@@ -793,7 +793,7 @@
 0x0042de40 92.31 lego_viewport_target_position_clamp
 0x0042dfc0 100.00 lego_object_pointer_registry_clear_match
 0x0042dff0 100.00 lego_object_pointer_registry_get_slot
-0x0042e020 74.24 lego_object_list_load_file
+0x0042e020 74.85 lego_object_list_load_file
 0x0042e8b0 86.88 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 100.00 lego_stats_level_record_count_for_stat_type
@@ -3261,7 +3261,7 @@
 0x00424cf0 100.00 lego_engine_shutdown_alt
 0x00424d00 100.00 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
-0x004250c0 91.51 lego_main_sim_step
+0x004250c0 99.61 lego_main_sim_step
 0x00425b40 100.00 lego_periodic_callback_dispatch
 0x00425b60 100.00 lego_object_sound_restart_callback
 0x00425c30 100.00 lego_transition_control
@@ -3279,7 +3279,7 @@
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 100.00 lego_global_subsystem_state_reset
 0x00426420 95.77 lego_cursor_ray_to_camera_route
-0x00426520 71.21 lego_main_sim_interaction_and_cell_update
+0x00426520 73.90 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 100.00 lego_level_upgrade_name_strings_load
 0x00428020 99.26 lego_entity_command_status_feedback_dispatch
@@ -3333,7 +3333,7 @@
 0x0042de40 92.31 lego_viewport_target_position_clamp
 0x0042dfc0 100.00 lego_object_pointer_registry_clear_match
 0x0042dff0 100.00 lego_object_pointer_registry_get_slot
-0x0042e020 74.24 lego_object_list_load_file
+0x0042e020 74.85 lego_object_list_load_file
 0x0042e8b0 86.88 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 100.00 lego_stats_level_record_count_for_stat_type

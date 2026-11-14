@@ -32,6 +32,31 @@ ctest (37 of 37) pass, and the native build starts with the shipped WADs.
 
 Every edit is in `src/game/lego_unit.c`. No other thread's file is touched.
 
+### Rebased onto the #798–#800 stack
+
+Measured again on #800 (`7e2df417`) with a full `make reccmp-check`. The
+same three functions rise by the same amounts, and nothing falls. The
+counter balance holds on the new base.
+
+| Measure | #800 `7e2df417` | This change on it |
+| --- | ---: | ---: |
+| Exact-function code bytes | 340,131 (52.93%) | 340,131 (52.93%) |
+| Correct-size functions, full | 2,598 (440,777 B) | **2,600 (445,640 B)** |
+| Correct-size functions, game-only | 2,307 (389,950 B) | **2,309 (394,813 B)** |
+| Identical prefix | 11 B (`0x40100b`) | 11 B (`0x40100b`) |
+| Unit size agreement | 166 of 227 | 166 of 227 |
+| Unit-relative identity | 50.11% | **50.59%** |
+| Accuracy, full / game-only | 97.17% / 96.85% | 97.17% / 96.85% (the means rise below the second decimal) |
+| `.text` identical at original addresses | 4.07% | 4.05% |
+| Image end | `0x7f5000` | `0x7f5000` |
+| Rose / fell | | 3 / 0 |
+
+`.text` at original addresses falls by 120 bytes. The object list ends 6
+bytes longer and the sim interaction 7 bytes shorter, so the later code
+moves 16 bytes in all (`.text` 841,349 to 841,365). In
+`binary-progress.json` the `/OPT:NOREF` relink flip goes the other way on
+this base: `port_unit` 13 to 12 functions.
+
 ## The constraint: Lego.c's symbol counter
 
 Nine functions after the object list are counter-phase sensitive:
