@@ -932,7 +932,9 @@ It needs the matching-build requirements plus Python packages `pefile` and
 Python with those packages. The matching build links with `/INCREMENTAL:NO`
 and writes `LegoRR.map`; the linker emits a separate PDB for Reccmp, and
 `tools/reccmp.sh` (`strip_pe_debug.py`) removes the PE debug directory and
-file-only debug overlay before Reccmp and this comparison read the executable.
+file-only debug overlay, and `pe_stamps.py stamp` writes the original's header
+timestamps and `LINE_NUMS_STRIPPED` bit (finding 651), before Reccmp and this
+comparison read the executable.
 `make reccmp-check` is the match baseline gate on the same build.
 
 Schema 3 layout measures attribute mapped functions to original unit ranges.

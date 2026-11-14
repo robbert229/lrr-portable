@@ -22,7 +22,7 @@ FIXED = ('CMakeLists.txt', 'cross/msvc5-toolchain.cmake', 'tools/reccmp.sh',
          'docs/coverage/translation-units.csv', 'docs/coverage/translation-units.spec.csv',
          'tools/binary_progress_hash.py', 'tools/translation_units.py',
          'tools/link_order.py', link_order.LIST,
-         'tools/strip_pe_debug.py', 'docs/decompiles/full/manifest.csv',
+         'tools/strip_pe_debug.py', 'tools/pe_stamps.py', 'docs/decompiles/full/manifest.csv',
          'docs/coverage/ledger.csv', 'docs/coverage/function-areas.csv',
          'reccmp-project.yml', 'src/crt/libc_symbols.csv', MANIFEST)
 

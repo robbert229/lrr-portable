@@ -883,6 +883,7 @@ tools/match_baseline.py
 tools/match_listings.py
 tools/opt_ref_link.py
 tools/pe_audit.py
+tools/pe_stamps.py
 tools/pr_match_progress.py
 tools/reccmp.sh
 tools/reccmp_diagnostics.py

@@ -165,6 +165,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_unit_data_offsets.py'
 	python3 -m unittest discover -s tools/tests -p 'test_pe_audit.py'
+	python3 -m unittest discover -s tools/tests -p 'test_pe_stamps.py'
 	python3 -m unittest discover -s tools/tests -p 'test_reccmp_plain_immediates.py'
 	python3 -m unittest discover -s tools/tests -p 'test_reccmp_vtordisp_scope.py'
 	python3 -m unittest discover -s tools/tests -p 'test_reccmp_map_statics.py'

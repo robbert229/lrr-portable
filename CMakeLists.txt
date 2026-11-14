@@ -257,6 +257,30 @@ endif()
 if(PLATFORM STREQUAL "winapi")
   list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
 endif()
+if(LRR_RECCMP)
+  # The original's resources (#560, finding 651): its icon and group icon,
+  # and no VERSIONINFO. The icon is licensed art and never committed, so the
+  # build extracts it from the original executable, as the tools read it.
+  set(LRR_ORIGINAL_EXE "${CMAKE_CURRENT_SOURCE_DIR}/reference/LegoRR.exe" CACHE FILEPATH
+    "The original LegoRR.exe the matching build takes its icon from")
+  if(NOT EXISTS "${LRR_ORIGINAL_EXE}")
+    message(FATAL_ERROR "The matching build extracts the original's icon from "
+      "${LRR_ORIGINAL_EXE}, which is missing. Place the original executable "
+      "there (or set LRR_ORIGINAL_EXE); it is licensed and never committed.")
+  endif()
+  find_program(LRR_PYTHON3 NAMES python3 REQUIRED)
+  set(LRR_ICON "${CMAKE_BINARY_DIR}/LegoRR.ico")
+  add_custom_command(OUTPUT "${LRR_ICON}"
+    COMMAND "${LRR_PYTHON3}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/pe_stamps.py" icon
+      "${LRR_ORIGINAL_EXE}" "${LRR_ICON}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/pe_stamps.py" "${LRR_ORIGINAL_EXE}"
+    COMMENT "Extracting the original's icon from ${LRR_ORIGINAL_EXE}"
+    VERBATIM)
+  # RC runs in the build directory and finds LegoRR.ico there.
+  set_source_files_properties(${SRC_ROOT}/version.rc PROPERTIES
+    COMPILE_DEFINITIONS LRR_ORIGINAL_RESOURCES
+    OBJECT_DEPENDS "${LRR_ICON}")
+endif()
 add_executable(program ${LRR_SOURCES})
 # Keep the shipped executable name while using ReproBit's lowercase target ID.
 set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")

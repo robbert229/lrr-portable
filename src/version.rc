@@ -9,6 +9,9 @@
 #define VFT_APP         0x00000001L
 #define VFT2_UNKNOWN    0x00000000L
 
+/* The matching build (LRR_RECCMP) defines LRR_ORIGINAL_RESOURCES: it carries
+ * the original's resources only, with no VERSIONINFO (#560, finding 651). */
+#ifndef LRR_ORIGINAL_RESOURCES
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION     0,1,0,0
  PRODUCTVERSION  0,1,0,0
@@ -36,6 +39,7 @@ BEGIN
         VALUE "Translation", 0x0409, 1200
     END
 END
+#endif
 
 /* Retail resource 101 (Mode Selection), recovered from the shipped
  * executable. The controls and their IDs match the DirectDraw dialog code. */
@@ -55,3 +59,12 @@ BEGIN
     AUTORADIOBUTTON "Full Screen", 1004, 5, 115, 51, 10, 0x50000009
     AUTORADIOBUTTON "Window", 1005, 5, 125, 42, 10, 0x50000009
 END
+
+#ifdef LRR_ORIGINAL_RESOURCES
+/* The original's icon group 113 and its icon 1, in English (UK), after the
+ * dialog as in the original's resource data. The build extracts LegoRR.ico
+ * from the original executable into the build directory (tools/pe_stamps.py);
+ * it is licensed art and never committed. */
+LANGUAGE 0x09, 0x02 /* LANG_ENGLISH, SUBLANG_ENGLISH_UK */
+113 ICON "LegoRR.ico"
+#endif

@@ -78,6 +78,9 @@ run_checked cmake --build "${build_dir}" --target program --clean-first
 # The original has no debug directory. Remove the linker's, keeping the PDB,
 # so that Reccmp and binary_progress.py both see the executable as shipped.
 python3 "${project_root}/tools/strip_pe_debug.py" "${build_dir}/LegoRR.exe"
+# Then write the original's header stamps (#560, finding 651): the COFF and
+# resource-directory timestamps, and LINE_NUMS_STRIPPED, which /DEBUG clears.
+python3 "${project_root}/tools/pe_stamps.py" stamp "${build_dir}/LegoRR.exe"
 
 cat > "${project_root}/reccmp-build.yml" <<EOF
 project: .
