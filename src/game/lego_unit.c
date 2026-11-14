@@ -90,8 +90,9 @@ static float s_lego_rollOffTextTimer;
 /* ---- state, group C ---- */
 
 /* Lego_HandleWorld's pointer state (Lego.c .bss): the accumulated drag
- * distance, the drag flag, the previous button states, the time the
- * buttons have been up, and the request to forget the previous states. */
+ * distance, the drag flag, the previous button states and the request to
+ * forget the previous states. The time the buttons have been up is a
+ * static of lego_main_sim_interaction_and_cell_update. */
 // GLOBAL: LEGORR 0x004de418
 float s_lego_drag_x;
 
@@ -107,8 +108,6 @@ int s_lego_prev_left_button;
 // GLOBAL: LEGORR 0x004de568
 int s_lego_prev_right_button;
 
-// GLOBAL: LEGORR 0x004de56c
-float s_lego_hold_time;
 
 // GLOBAL: LEGORR 0x004de570
 int s_lego_reset_buttons;
@@ -2798,6 +2797,10 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                int keyDownT, int keyDownR,
                                                int keyDownShift)
 {
+    /* A function static, as in the original: finding 538's rule A puts
+     * it before the parameter in `s_lego_hold_time += elapsedGame`. */
+    // GLOBAL: LEGORR 0x004de56c
+    static float s_lego_hold_time;
     Lego_Level* level = legoGlobs_currLevel;
     int leftReleased;
     struct EntitySlot* liveObj;
@@ -2812,8 +2815,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
     int picked;
     Lego_Block* block;
     uint32_t pointer;
-    int handled;
-    int done;
+    int handled; /* also the overlay buttons' "clicked" flag */
 
     s_panel_highlight_flags &= ~0x400;
     liveObj = NULL;
@@ -3370,7 +3372,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                              s_lego_hold_time);
         }
     } else {
-        done = 0;
+        handled = 0;
         if (legoGlobs_NextButtonImage != NULL && (s_panel_highlight_flags & 0x40)) {
             if ((float)legoInput_mouseX > legoGlobs_NextButtonPos[0] &&
                 (float)legoInput_mouseY > legoGlobs_NextButtonPos[1] &&
@@ -3379,7 +3381,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                 timed_effect_update_request_set_corpus(0x20);
                 if (leftReleased) {
                     tutorial_advisor_scroll_step_advance();
-                    done = 1;
+                    handled = 1;
                 }
             }
         }
@@ -3391,11 +3393,11 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                 timed_effect_update_request_set_corpus(0x1f);
                 if (leftReleased) {
                     objective_deferred_callback_invoke_if_set();
-                    done = 1;
+                    handled = 1;
                 }
             }
         }
-        if (leftReleased && !done) media_action_feedback_sound_dispatch(1);
+        if (leftReleased && !handled) media_action_feedback_sound_dispatch(1);
     }
 
 end:
