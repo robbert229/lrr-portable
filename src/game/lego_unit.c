@@ -6366,11 +6366,14 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
     if (by >= level->height - 1) return;
 
     {
-    int dirs[4][2] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
+    int dirs[4][2];
 
     map = LEGO_LEVEL_PTR(struct TerrainMap, level->map);
     wallCount = 0;
     block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+    /* Assigned after the block lookup, as the original schedules them. */
+    dirs[0][0] = 0; dirs[0][1] = 0; dirs[1][0] = 1; dirs[1][1] = 0;
+    dirs[2][0] = 1; dirs[2][1] = 1; dirs[3][0] = 0; dirs[3][1] = 1;
     fade = 1;
 
     if ((block->flags1 & 0x20000000) && !(block->flags2 & 0x400)) {
