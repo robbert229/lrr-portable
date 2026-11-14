@@ -2418,7 +2418,7 @@ Front_MenuOverlay* front_menu_create_overlay(const char* filename,
 
     overlay = (Front_MenuOverlay*)malloc(sizeof(Front_MenuOverlay));
     memset(overlay, 0, sizeof(Front_MenuOverlay));
-    if (_strnicmp(filename, s_overlayNullName, 4) != 0) {
+    if (strnicmp(filename, s_overlayNullName, 4) != 0) {
         if (filename != NULL) {
             overlay->filename = front_util_string_copy(filename);
         }
@@ -3746,7 +3746,7 @@ void front_load_menus(struct BlockRec* config)
                                                                                               // STRING: LEGORR 0x004a26d0
                                                                                               "MenuWipe", NULL));
     if (str != NULL) {
-        if (_strnicmp(str, s_overlayNullName, 4) != 0) {
+        if (strnicmp(str, s_overlayNullName, 4) != 0) {
             frontGlobs_rockWipeAnim = container_load(NULL, str, "LWS", 1);
         }
         free(str);
@@ -3755,7 +3755,7 @@ void front_load_menus(struct BlockRec* config)
                                                                                                   // STRING: LEGORR 0x004a26c4
                                                                                                   "!MenuWipe", NULL));
         if (str != NULL) {
-            if (!(s_engine_feature_word & 0x400000) && _strnicmp(str, s_overlayNullName, 4) != 0) {
+            if (!(s_engine_feature_word & 0x400000) && strnicmp(str, s_overlayNullName, 4) != 0) {
                 frontGlobs_rockWipeAnim = container_load(NULL, str, "LWS", 1);
             }
             free(str);

@@ -1,17 +1,28 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Reccmp data source (reccmp-project.yml): original addresses of LIBC.LIB
 # symbols that the matching build links from the library and that no source
-# file annotates. Reccmp matches each row by its decorated public symbol in
-# the rebuild's PDB. Static LIBC symbols have no public name and cannot be
-# listed. Finding 540.
+# file annotates. Reccmp matches each row by its decorated symbol: a public
+# symbol from the rebuild's PDB, or a static function from the link map
+# (tools/reccmp_map_statics.py, finding 643). A static data row names the
+# COFF symbol of the toolchain's LIBC.LIB member (function-local statics carry
+# its $S counter); the module places it through the member's relocations.
+# Finding 540.
 address,type,symbol
+0x0048ef30,library,__unwind_handler
+0x0048fda0,library,_flsall
 0x00490310,library,__cropzeros
 0x00490380,library,__positive
 0x004903a0,library,__fassign
 0x00490750,library,__cfltcvt
+0x004907c0,library,__shift
 0x004907f0,library,__fltin
+0x004939d0,library,__get_fname
+0x004955a0,library,?FrameUnwindFilter@@YAHPAU_EXCEPTION_POINTERS@@@Z
+0x004957a0,library,?ExFilterRethrow@@YAHPAU_EXCEPTION_POINTERS@@@Z
 0x00495c00,library,__XcptFilter
+0x00495d40,library,_xcptlookup
 0x004967d8,library,__except_handler3
+0x0049c7b4,library,_RtlUnwind@16
 0x0049eb38,string,??_C@_0BK@JEGK@IsProcessorFeaturePresent?$AA@
 0x0049eb54,string,??_C@_08OBID@KERNEL32?$AA@
 0x0049eb68,string,??_C@_05OFLO@e?$CL000?$AA@
@@ -49,14 +60,24 @@ address,type,symbol
 0x004affa0,global,___wnullstring
 0x004affb8,global,___small_block_heap
 0x004b1fdc,global,___sbh_threshold
+0x004b202c,global,fprem_risc_table
+0x004b2170,global,_?_names@?1??_get_fname@@9@9$S7922
 0x004b2248,global,__d_inf
 0x004b2258,global,__d_max
+0x004b228c,global,_sbrackset$S608
+0x004b2294,global,_cbrackset$S609
 0x004b22a4,global,?__pInconsistency@@3P6AXXZA
 0x004b2320,global,__First_FPE_Indx
 0x004b2324,global,__Num_FPE
 0x004b232c,global,__fpecode
+0x004b2330,global,___rgctypeflag$S7829
+0x004b2338,global,___rgcode_page_info$S7830
 0x004b2428,global,___badioinfo
+0x004b2430,global,_rterrs$S7893
+0x004b24c0,global,_errtable$S7771
 0x004b2628,global,__iob
+0x004b28a8,global,_DoubleFormat$S201
+0x004b28c0,global,_FloatFormat$S202
 0x004b28e0,global,__matherr_flag
 0x004b28f0,global,__timezone
 0x004b28f4,global,__daylight
@@ -87,6 +108,7 @@ address,type,symbol
 0x00549190,global,___lc_codepage
 0x005491a0,global,?__pTerminate@@3P6AXXZA
 0x005491a4,global,__pxcptinfoptrs
+0x005491a8,global,_?_pgmname@?1??_setargv@@9@9$S7877
 0x005492b8,global,__mbctype
 0x005493bc,global,___mbcodepage
 0x005493c0,global,___mblcid
@@ -94,8 +116,15 @@ address,type,symbol
 0x005493d8,global,__adbgmsg
 0x005493e4,global,__cflush
 0x005493e8,global,__stdbuf
+0x005493f0,global,_fos$S280
+0x00549410,global,_ret$S279
 0x00549420,global,__commode
+0x00549440,global,_tzinfo$S7797
 0x005494f4,global,__fmode
+0x005494f8,global,_ctrlc_action$S7707
+0x005494fc,global,_ctrlbreak_action$S7708
+0x00549500,global,_abort_action$S7709
+0x00549504,global,_term_action$S7710
 0x0076cd98,global,___piob
 0x0076dda0,global,__nstream
 0x0076ddc0,global,___pioinfo

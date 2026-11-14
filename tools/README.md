@@ -803,10 +803,10 @@ The original was linked without `/DEBUG`, so LINK 5.0 applied `/OPT:REF`, and
 it folded no identical functions (findings 563, 576 and 637). Since finding
 642 the gate links the same way, stated explicitly as `/DEBUG /OPT:REF
 /OPT:NOICF` because `/DEBUG` (kept for Reccmp's PDB) would otherwise select
-`/OPT:NOREF`. Two `/INCLUDE` options keep the annotated functions nothing
-references (`CMakeLists.txt`): the original's own unreferenced `00438390`,
-and crt.cpp's stand-in `004907c0` for LIBC's static `__shift` (`Deviation
-(scoring only)`, owner #447). An annotated function that loses its last live
+`/OPT:NOREF`. One `/INCLUDE` option keeps the annotated function nothing
+references (`CMakeLists.txt`): the original's own unreferenced `00438390`.
+LIBC's static `__shift` (`004907c0`) needs none: LIBC links and calls it,
+and `reccmp_map_statics.py` names it (finding 643). An annotated function that loses its last live
 caller now leaves the image and the report, and `make reccmp-compare` fails
 on it as on a score drop.
 

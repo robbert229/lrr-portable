@@ -167,6 +167,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_pe_audit.py'
 	python3 -m unittest discover -s tools/tests -p 'test_reccmp_plain_immediates.py'
 	python3 -m unittest discover -s tools/tests -p 'test_reccmp_vtordisp_scope.py'
+	python3 -m unittest discover -s tools/tests -p 'test_reccmp_map_statics.py'
 	python3 -m unittest discover -s tools/tests -p 'test_pr_match_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_match_listings.py'
 	python3 -m unittest discover -s tools/tests -p 'test_link_order.py'

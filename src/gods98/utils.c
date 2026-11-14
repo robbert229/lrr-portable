@@ -106,7 +106,7 @@ const char* case_insensitive_substring_find(const char* haystack,
 
     if (haystack_length && needle_length) {
         for (loop = 0; loop < haystack_length; loop++, s++) {
-            if (_strnicmp(s, needle, needle_length) == 0) return s;
+            if (strnicmp(s, needle, needle_length) == 0) return s;
         }
     }
 

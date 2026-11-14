@@ -151,7 +151,7 @@ void priorities_load_positions(BlockFile* config, const char* game_name)
     char* parts[16];
 
     for (i = 0; i < PRIORITY_TYPE_COUNT; i++) {
-        _itoa(i + 1, number, 10);
+        itoa(i + 1, number, 10);
         value = block_get_strptr(config, string_path_join(game_name,
             "PrioritiesImagePositions", number, NULL));
         if (value != NULL) {

@@ -176,7 +176,7 @@ def object_kinds(entries) -> dict[str, str]:
     """
     kinds: dict[str, str] = {}
     for e in entries:
-        if e.platform not in (None, "winapi"):
+        if not e.applies_to("winapi"):
             continue
         name = Path(e.source).name.lower() + ".obj"
         kinds[name] = e.kind if kinds.get(name, e.kind) == e.kind else "ambiguous"

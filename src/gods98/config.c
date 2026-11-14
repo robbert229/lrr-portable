@@ -321,7 +321,7 @@ BlockRec* block_find(BlockFile* conf, const char* path)
             wildcard = 0;
             if (count == 1) {
                 for (s = conf->key, length = 0; *s != '\0' && *s != '*'; s++) length++;
-                if (*s == '*') wildcard = (_strnicmp(argv[0], conf->key, length) == 0);
+                if (*s == '*') wildcard = (strnicmp(argv[0], conf->key, length) == 0);
             }
             if (wildcard || _strcmpi(argv[count - 1], conf->key) == 0) {
                 wildcard = 0;
@@ -330,7 +330,7 @@ BlockRec* block_find(BlockFile* conf, const char* path)
                     if (back->depth == level - 1) {
                         if (level == 1) {
                             for (s = back->key, length = 0; *s != '\0' && *s != '*'; s++) length++;
-                            if (*s == '*') wildcard = (_strnicmp(argv[0], back->key, length) == 0);
+                            if (*s == '*') wildcard = (strnicmp(argv[0], back->key, length) == 0);
                         }
                         if (!wildcard && _strcmpi(argv[level - 1], back->key) != 0) break;
                         level--;

@@ -38,6 +38,15 @@ class ParseTest(unittest.TestCase):
         self.assertEqual(len(lo.sources(entries, platform=None)), 5)
         self.assertEqual(lo.libraries(LIST), ["libc.lib", "oldnames.lib", "d3drm.lib", "kernel32.lib"])
 
+    def test_portable_entries_leave_only_the_matching_build(self):
+        # src/crt/'s stand-ins (#447): built natively and by the MinGW
+        # reference build, never by the MSVC 5.0 matching build.
+        entries = lo.parse("lrr_link(legacy 00493ef0 gods98        crt/crt.cpp portable)\n")
+        self.assertEqual(entries[0].platform, "portable")
+        self.assertEqual(lo.sources(entries), [])
+        self.assertEqual(lo.sources(entries, platform="native"), ["src/crt/crt.cpp"])
+        self.assertEqual(lo.sources(entries, platform=None), ["src/crt/crt.cpp"])
+
     def test_malformed_entries_are_errors(self):
         for bad in ("lrr_link(unit GAME-B game)\n", "lrr_link(odd - game game/a.c)\n",
                     "lrr_link(tail - nowhere a.c)\n", "lrr_link(tail - game a.c dos)\n",
@@ -82,6 +91,11 @@ class CommittedListTest(unittest.TestCase):
             self.assertEqual(addresses, sorted(addresses))
         units = [e.key for e in self.entries if e.kind == "unit"]
         self.assertEqual(units, sorted(units, key=starts.__getitem__))
+
+    def test_matching_build_links_nothing_from_src_crt(self):
+        # Issue #447: the matching build takes the C runtime from LIBC.LIB.
+        crt = [p for p in lo.sources(self.entries) if p.startswith("src/crt/")]
+        self.assertEqual(crt, [])
 
     def test_matching_libraries_put_libc_after_kernel32(self):
         # Finding 574: kernel32's descriptor comes first, and LIBC follows it

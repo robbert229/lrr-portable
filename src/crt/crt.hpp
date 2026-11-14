@@ -1307,7 +1307,7 @@ char* crt_dbcs_aware_bounded_string_copy(char* dest, const char* src,
 /* SignedDecimalToStringConvert (FUN_0049db60): the VC5 build links _itoa
  * from LIBC.LIB; other backends use its lowercase-digit behavior. */
 #if defined(_MSC_VER)
-#define crt_signed_to_string _itoa
+#define crt_signed_to_string itoa
 #else
 char* crt_signed_to_string(int value, char* out, int radix);
 #endif
@@ -1320,8 +1320,8 @@ char* crt_signed_to_string(int value, char* out, int radix);
  * the buffer. The portable implementation guards null; VC5 retains the
  * CRT routine's behavior. */
 #if defined(_MSC_VER)
-#define crt_string_to_upper _strupr
-#define crt_string_to_lower _strlwr
+#define crt_string_to_upper strupr
+#define crt_string_to_lower strlwr
 #else
 char* crt_string_to_upper(char* text);   /* FUN_0049dcd0 */
 char* crt_string_to_lower(char* text);   /* FUN_0049dc10 */

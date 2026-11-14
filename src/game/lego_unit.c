@@ -3853,7 +3853,7 @@ void lego_level_upgrade_name_strings_load(struct BlockRec* config)
              // STRING: LEGORR 0x004a41b4
              "UpgradeNames", NULL));
          item != NULL; item = block_next_equal_key(item)) {
-        if (_strnicmp(prefix, LEGO_FIELD(item, char*, 0x04),
+        if (strnicmp(prefix, LEGO_FIELD(item, char*, 0x04),
                       strlen(prefix)) == 0) {
             level = atoi(LEGO_FIELD(item, char*, 0x04) + strlen(prefix));
             if (level < 16) {

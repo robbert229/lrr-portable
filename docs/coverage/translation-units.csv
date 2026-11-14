@@ -224,7 +224,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00409d40,LevelStateStoredValueSet,8,GAME-008,,game,high,bss,src/game/entity_cell_effects.cpp
 00409d50,EntityCellPathEffectsApply,8,GAME-008,,game,high,rdata,src/game/entity_cell_effects.cpp
 00409f20,EntityPlacementCommandsBuildOnce,8,GAME-008,,game,high,bss,src/game/entity_cell_effects.cpp
-00409ff0,EntityDestroyTrackedPointerCleanup,8,GAME-008,,game,medium,boundary:GAME-009,
+00409ff0,EntityDestroyTrackedPointerCleanup,8,GAME-008,,game,medium,boundary:GAME-009,src/game/entity_cell_effects.cpp
 0040a0c0,ScrollingTextDisplay,9,GAME-009,,game,high,string,src/game/screen_effect_quads.c
 0040a3d0,ScreenEffectFlagsClearAndRelease,9,GAME-009,,game,high,bss,src/game/screen_effect_quads.c
 0040a400,PreloadNumberedBitmaps,9,GAME-009,,game,high,bss;string,src/game/screen_effect_quads.c
@@ -2345,7 +2345,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00490640,CrtFloatDecimalFormatPrepare,133,CRT-053,cvt.c,crt,high,bss,src/crt/crt.cpp
 004906f0,CrtScientificFloatFormatGuarded,133,CRT-053,cvt.c,crt,high,bss,src/crt/crt.cpp
 00490720,CrtFixedDecimalFormatGuarded,133,CRT-053,cvt.c,crt,high,bss,src/crt/crt.cpp
-004907c0,StringPrefixReserve,133,CRT-053,cvt.c,crt,medium,boundary:CRT-054,src/crt/crt.cpp
+004907c0,StringPrefixReserve,133,CRT-053,cvt.c,crt,medium,boundary:CRT-054,
 004907f0,ParseEntityHealthValue,134,CRT-054,cfin.c,crt,medium,boundary:CRT-054,
 004908a0,CrtFileStreamClose,135,CRT-055,_flsbuf.c,crt,medium,boundary:CRT-055,src/crt/crt.cpp
 004909d0,EngineFormatStringToStream,136,CRT-056,output.c,crt,high,data;rdata,src/crt/crt.cpp
@@ -2390,7 +2390,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 004935c0,CrtDoubleToIntegerRound,146,CRT-066,fpexcept.c,crt,high,data;rdata,src/crt/crt.cpp
 004938f0,CrtMathExceptionDispatch,146,CRT-066,fpexcept.c,crt,high,bracketed,src/crt/crt.cpp
 004939a0,CrtMathErrorCodeSet,146,CRT-066,fpexcept.c,crt,high,bracketed,src/crt/crt.cpp
-004939d0,CrtMathExceptionHandlerGet,146,CRT-066,fpexcept.c,crt,high,data,src/crt/crt.cpp
+004939d0,CrtMathExceptionHandlerGet,146,CRT-066,fpexcept.c,crt,high,data,
 00493a00,CrtMathExceptionCodeFromStatus,146,CRT-066,fpexcept.c,crt,medium,boundary:CRT-067,src/crt/crt.cpp
 00493a40,DoubleBuildWithExponent,147,CRT-067,util.c,crt,medium,boundary:CRT-067,src/crt/crt.cpp
 00493a80,DoubleClassify,147,CRT-067,util.c,crt,medium,boundary:CRT-067,src/crt/crt.cpp

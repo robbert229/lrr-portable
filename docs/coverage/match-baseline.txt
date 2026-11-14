@@ -1,4 +1,4 @@
-# input_sha256: c9700981234968ea711d554acc27cd83d3da4ed7c9fadf17ab413e1897768336
+# input_sha256: 7ed89867e078f9f5626399f426ff5117c710b770645483850742d79a3d23b79b
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2538 mapped functions
+[game-only] 2536 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2517,8 +2517,6 @@
 0x0048d2c0 99.29 lwo_load
 0x0048d7c0 96.88 lwo_app_obj_load
 0x0048d870 100.00 lwo_app_obj_free
-0x004907c0 100.00 string_prefix_reserve
-0x004939d0 92.31 _matherr
 0x004973f0 95.31 $CRT_C_Initializer(1)
 0x0049c7c0 100.00 wad_expand_payload
 0x0049c840 100.00 wad_payload_decode_dispatch
@@ -2546,7 +2544,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2784 mapped functions
+[full] 2827 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -5070,6 +5068,8 @@
 0x0048dc40 100.00 __heap_alloc
 0x0048dc80 100.00 _realloc
 0x0048de20 100.00 _qsort
+0x0048dfd0 100.00 _shortsort
+0x0048e030 100.00 _swap
 0x0048e060 100.00 __ftol
 0x0048e090 83.33 __CIacos
 0x0048e0ad 88.46 _acos
@@ -5083,6 +5083,8 @@
 0x0048e480 100.00 __cinit
 0x0048e4b0 100.00 _exit
 0x0048e4d0 100.00 __exit
+0x0048e4f0 81.97 _doexit
+0x0048e5a0 100.00 __initterm
 0x0048e680 100.00 _fabs
 0x0048e770 100.00 _strncpy
 0x0048e870 100.00 __finite
@@ -5096,14 +5098,17 @@
 0x0048eb90 100.00 _fopen
 0x0048ebb0 100.00 ?_JumpToContinuation@@YGXPAXPAUEHRegistrationNode@@@Z
 0x0048ebf0 100.00 ?_CallMemberFunction0@@YGXPAX0@Z
-0x0048ec00 96.88 ?_UnwindNestedFrames@@YGXPAUEHRegistrationNode@@PAUEHExceptionRecord@@@Z
+0x0048ec00 100.00 ?_UnwindNestedFrames@@YGXPAUEHRegistrationNode@@PAUEHExceptionRecord@@@Z
 0x0048ec60 100.00 ___CxxFrameHandler
-0x0048eca0 97.06 ?_CallCatchBlock2@@YAPAXPAUEHRegistrationNode@@PBU_s_FuncInfo@@PAXHK@Z
-0x0048ed30 94.74 ?_CallSETranslator@@YAHPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAX2PBU_s_FuncInfo@@H1@Z
+0x0048eca0 100.00 ?_CallCatchBlock2@@YAPAXPAUEHRegistrationNode@@PBU_s_FuncInfo@@PAXHK@Z
+0x0048ed00 100.00 ?CatchGuardHandler@@YA?AW4_EXCEPTION_DISPOSITION@@PAUEHExceptionRecord@@PAUCatchGuardRN@@PAX2@Z
+0x0048ed30 100.00 ?_CallSETranslator@@YAHPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAX2PBU_s_FuncInfo@@H1@Z
+0x0048ee00 100.00 ?TranslatorGuardHandler@@YA?AW4_EXCEPTION_DISPOSITION@@PAUEHExceptionRecord@@PAUTranslatorGuardRN@@PAX2@Z
 0x0048ee90 100.00 ?_GetRangeOfTrysToCheck@@YAPBU_s_TryBlockMapEntry@@PBU_s_FuncInfo@@HHPAI1@Z
-0x0048ef10 96.30 __global_unwind2
+0x0048ef10 100.00 __global_unwind2
+0x0048ef30 100.00 __unwind_handler
 0x0048ef52 100.00 __local_unwind2
-0x0048efba 90.00 __abnormal_termination
+0x0048efba 100.00 __abnormal_termination
 0x0048efdd 100.00 __NLG_Notify1
 0x0048efe6 100.00 __NLG_Notify
 0x0048f000 99.29 _WinMainCRTStartup
@@ -5125,6 +5130,7 @@
 0x0048fb50 100.00 __validdrive
 0x0048fb90 100.00 _fread
 0x0048fd20 100.00 __flush
+0x0048fda0 96.88 _flsall
 0x0048fe20 100.00 _fgetc
 0x0048fe50 100.00 _fgets
 0x0048fed0 100.00 _vfprintf
@@ -5139,14 +5145,22 @@
 0x00490310 100.00 __cropzeros
 0x00490380 100.00 __positive
 0x004903a0 100.00 __fassign
-0x00490400 99.22 __cftoe
-0x00490540 97.20 __cftof
+0x00490400 100.00 __cftoe
+0x00490540 100.00 __cftof
 0x00490640 100.00 __cftog
+0x004906f0 100.00 __cftoe_g
+0x00490720 100.00 __cftof_g
 0x00490750 100.00 __cfltcvt
-0x004907c0 100.00 string_prefix_reserve
+0x004907c0 100.00 __shift
 0x004907f0 100.00 __fltin
 0x004908a0 98.33 __flsbuf
-0x004909d0 96.59 __output
+0x004909d0 99.03 __output
+0x00491360 100.00 _write_char
+0x004913b0 100.00 _write_multi_char
+0x004913f0 100.00 _write_string
+0x00491430 100.00 _get_int_arg
+0x00491450 100.00 _get_int64_arg
+0x00491470 100.00 _get_short_arg
 0x004914a0 100.00 _strchr
 0x00491560 100.00 __heap_init
 0x004915a0 100.00 ___sbh_new_region
@@ -5176,16 +5190,16 @@
 0x004921e4 100.00 __ctrandisp2
 0x00492355 100.00 __ctrandisp1
 0x00492381 100.00 __fload
-0x00492bc6 99.30 __fprem_common
+0x00492bc6 100.00 __fprem_common
 0x00492dcc 100.00 __adj_fprem
 0x00493150 100.00 __frnd
 0x00493170 100.00 __handle_qnan1
 0x004931c0 100.00 __except1
 0x00493280 98.98 __raise_exc
 0x004935c0 100.00 __handle_exc
-0x004938f0 96.43 __umatherr
+0x004938f0 98.21 __umatherr
 0x004939a0 100.00 __set_errno
-0x004939d0 92.31 _matherr
+0x004939d0 100.00 __get_fname
 0x00493a00 100.00 __errcode
 0x00493a40 100.00 __set_exp
 0x00493a80 100.00 __sptype
@@ -5195,33 +5209,51 @@
 0x00493c10 100.00 __ctrlfp
 0x00493c40 100.00 __set_statfp
 0x00493ca0 100.00 ___crtLCMapStringA
-0x00493ef0 99.83 __input
+0x00493ef0 100.00 __input
+0x00494c30 100.00 __hextodec
+0x00494c70 100.00 __inc
+0x00494ca0 100.00 __un_inc
+0x00494cc0 100.00 __whiteout
 0x00494d10 100.00 __close
 0x00494df0 100.00 __freebuf
 0x00494e30 100.00 __openfile
 0x00495000 100.00 __getstream
 0x00495090 100.00 ___InternalCxxFrameHandler
+0x00495160 99.16 ?FindHandler@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@EH1@Z
+0x00495410 98.85 ?FindHandlerForForeignException@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@HH1@Z
 0x004954e0 98.61 ___FrameUnwindToState
+0x004955a0 100.00 ?FrameUnwindFilter@@YAHPAU_EXCEPTION_POINTERS@@@Z
+0x004955c0 100.00 ?CatchIt@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@PBU_s_HandlerType@@PBU_s_CatchableType@@PBU_s_TryBlockMapEntry@@H1@Z
+0x00495650 74.11 ?CallCatchBlock@@YAPAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PBU_s_FuncInfo@@PAXHK@Z
+0x004957a0 100.00 ?ExFilterRethrow@@YAHPAU_EXCEPTION_POINTERS@@@Z
+0x004957d0 98.43 ?BuildCatchObject@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PBU_s_HandlerType@@PBU_s_CatchableType@@@Z
 0x004959e0 98.11 ?_DestructExceptionObject@@YAXPAUEHExceptionRecord@@E@Z
+0x00495a60 100.00 ?AdjustPointer@@YAPAXPAXABUPMD@@@Z
 0x00495a90 100.00 __CallSettingFrame@12
 0x00495ae0 98.18 ?terminate@@YAXXZ
 0x00495b70 74.16 ?_inconsistency@@YAXXZ
 0x00495c00 99.06 __XcptFilter
+0x00495d40 85.29 _xcptlookup
 0x00495d90 100.00 __ismbblead
+0x00495db0 96.00 _x_ismbbtype
 0x00495df0 100.00 __setenvp
-0x00495ee0 94.44 __setargv
+0x00495ee0 100.00 __setargv
+0x00495f80 100.00 _parse_cmdline
 0x00496190 100.00 ___crtGetEnvironmentStringsA
-0x004962f0 96.63 __setmbcp
+0x004962f0 100.00 __setmbcp
+0x004964e0 100.00 _getSystemCP
+0x00496530 100.00 _CPtoLCID
+0x00496590 100.00 _setSBCS
 0x004965c0 100.00 ___initmbctable
 0x004965d0 100.00 __ioinit
 0x004967d8 100.00 __except_handler3
 0x00496895 100.00 __seh_longjmp_unwind@4
 0x004968b0 100.00 __FF_MSGBANNER
-0x004968f0 97.08 __NMSG_WRITE
+0x004968f0 99.42 __NMSG_WRITE
 0x00496ad0 100.00 ___crtGetStringTypeA
 0x00496c00 100.00 __lseek
 0x00496cc0 100.00 __write
-0x00496ee0 91.43 __dosmaperr
+0x00496ee0 97.14 __dosmaperr
 0x00496f50 98.91 ___loctotime_t
 0x00497040 100.00 __filbuf
 0x00497130 100.00 __read
@@ -5232,6 +5264,8 @@
 0x004976d0 100.00 __mbsnbcpy
 0x00497770 100.00 __control87
 0x004977b0 100.00 __controlfp
+0x004977d0 100.00 __abstract_cw
+0x00497870 100.00 __hw_cw
 0x00497900 100.00 __ZeroTail
 0x00497970 100.00 __IncMan
 0x004979e0 100.00 __RoundMan
@@ -5240,12 +5274,12 @@
 0x00497ab0 100.00 __IsZeroMan
 0x00497ad0 100.00 __ShrMan
 0x00497b90 100.00 __ld12cvt
-0x00497d60 93.75 __ld12tod
-0x00497d80 93.75 __ld12tof
+0x00497d60 100.00 __ld12tod
+0x00497d80 100.00 __ld12tof
 0x00497da0 100.00 __atodbl
 0x00497de0 100.00 __atoflt
 0x00497e20 100.00 __fptostr
-0x00497ec0 92.86 __fltout
+0x00497ec0 100.00 __fltout
 0x00497f40 100.00 ___dtold
 0x00498000 100.00 _memmove
 0x00498340 100.00 __fptrap
@@ -5273,8 +5307,9 @@
 0x00499730 100.00 ___crtMessageBoxA
 0x004997c0 100.00 _calloc
 0x00499860 100.00 ___tzset
-0x00499880 98.69 __tzset
+0x00499880 100.00 __tzset
 0x00499b30 100.00 __isindst
+0x00499da0 89.05 _cvtdate
 0x00499fb0 100.00 ___addl
 0x00499fe0 100.00 ___add_12
 0x0049a050 100.00 ___shl_12
@@ -5284,14 +5319,18 @@
 0x0049a540 100.00 ___ld12mul
 0x0049a800 100.00 ___multtenpow12
 0x0049a890 100.00 __chsize
-0x0049aa10 96.58 _raise
+0x0049aa10 99.32 _raise
+0x0049ab90 87.50 _siglookup
 0x0049abe0 100.00 _wcstombs
+0x0049add0 100.00 _wcsncnt
 0x0049ae10 100.00 _getenv
 0x0049aea0 100.00 __setmode
 0x0049af20 100.00 __mbsnbicoll
 0x0049af60 100.00 ___wtomb_environ
 0x0049afe0 100.00 ___crtCompareStringA
 0x0049b2b0 100.00 ___crtsetenv
+0x0049b4c0 100.00 _findenv
+0x0049b540 100.00 _copy_environ
 0x0049b5b0 100.00 __mbschr
 0x0049b660 100.00 __strdup
 0x0049b6c2 100.00 _DirectDrawEnumerateA@8
@@ -5302,6 +5341,7 @@
 0x0049b6e0 100.00 _AVIStreamRelease@4
 0x0049b6e6 100.00 _AVIStreamGetFrame@8
 0x0049b6ec 100.00 _AVIFileInit@0
+0x0049c7b4 100.00 _RtlUnwind@16
 0x0049c7c0 100.00 wad_expand_payload
 0x0049c840 100.00 wad_payload_decode_dispatch
 0x0049c8e0 100.00 wad_payload_decode_type1
@@ -5327,6 +5367,7 @@
 0x0049d9d0 100.00 init_handle_window_button
 0x0049dab0 100.00 __strnicmp
 0x0049db60 100.00 __itoa
+0x0049dba0 100.00 _xtoa
 0x0049dc10 100.00 __strlwr
 0x0049dcd0 100.00 __strupr
 0x0049e9a0 100.00 AviSurface::`vftable'

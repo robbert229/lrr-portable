@@ -2337,7 +2337,7 @@ __declspec(naked) void* menu_item_record_alloc(const char* name,
         push 4
         push offset s_menu_null_label
         push edi
-        call _strnicmp
+        call strnicmp
         add esp, 0x0c
         test eax, eax
         je item_record_done

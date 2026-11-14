@@ -43,6 +43,7 @@ gods98_sources = [
   'texture.cpp',
   'resource.cpp',
   'init_port.cpp',
+  'port_state.cpp',
   'scene_resources.cpp',
   'frameloop.cpp',
   'audio.cpp',
