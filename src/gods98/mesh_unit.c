@@ -471,8 +471,13 @@ static const Mesh_IID IID_IDirect3DRMViewport2 = {
     { 0x8e, 0xd8, 0x00, 0xa0, 0xc9, 0x67, 0xa4, 0x82 }
 };
 
+/* External, as the original's: with a static struct MSVC 5.0 keeps the
+ * tested free-list head in a register across mesh_add_list, where the
+ * original reloads it (Mesh_ObtainFromList; findings 669 and 677). The zero
+ * initialiser keeps it in this object's .bss rather than the common region
+ * (finding 554). */
 // GLOBAL: LEGORR 0x005343c4
-static Mesh_Globs meshGlobs;
+Mesh_Globs meshGlobs = { 0 };
 
 static int mesh_render_callback(Mesh_UserVisual* lpD3DRMUV, void* lpArg,
                                 int lpD3DRMUVreason,
@@ -1022,13 +1027,13 @@ void mesh_get_surf_info(const char* basePath, APPOBJ* lightWaveObject,
 int mesh_get_texture_seq_info(const char* tname, char* tfname,
                               unsigned long* tstart, unsigned long* tnumlen)
 {
-    unsigned long tnamelen = strlen(tname);
-    unsigned long n = 1, k, num = 0;
     unsigned char c;
+    unsigned long n = 1, k, num = 0;
+    unsigned long tnamelen = strlen(tname);
 
     c = tname[tnamelen - 1];
     if (c >= '0' && c <= '9') {
-        for (k = tnamelen - 1; k; k--) {
+        for (k = tnamelen - 1; k > 0; k--) {
             c = tname[k];
             if (c < '0' || c > '9') break;
             num += (c - '0') * n;
@@ -1041,6 +1046,9 @@ int mesh_get_texture_seq_info(const char* tname, char* tfname,
             *tstart = num;
         } else return 0;
     } else return 0;
+
+    /* The original's success path has no return statement: it ends with
+     * the tnumlen pointer in eax (finding 677). */
 }
 
 // FUNCTION: LEGORR 0x00481b80
@@ -1186,11 +1194,11 @@ int mesh_set_texture_time2(Mesh* mesh, float frame)
 
     if (mesh->flags & MESH_FLAG_TRANSFORM_PARENTPOS) {
         for (groupID = 0; groupID < mesh->groupCount; groupID++) {
-            Mesh_LightWave_Surface* surf = mesh->groupList[groupID].lightWaveSurfaceInfo;
-            if ((surf->texFlags & MESH_TFLAG_SEQUENCE) && surf->numInTexSeq) {
-                long texNum = (surf->texSeqOffset + addFrame) % (long)surf->numInTexSeq;
+            Mesh_Group* group = &mesh->groupList[groupID];
+            if ((group->lightWaveSurfaceInfo->texFlags & MESH_TFLAG_SEQUENCE) && group->lightWaveSurfaceInfo->numInTexSeq) {
+                long texNum = (group->lightWaveSurfaceInfo->texSeqOffset + addFrame) % (long)group->lightWaveSurfaceInfo->numInTexSeq;
                 if (texNum < 0) texNum = 0;
-                mesh_set_group_texture(mesh, groupID, surf->textureSeq[texNum]);
+                mesh_set_group_texture(mesh, groupID, group->lightWaveSurfaceInfo->textureSeq[texNum]);
             }
         }
         return 1;
