@@ -1,32 +1,32 @@
 {
   "accuracy_percent": {
-    "full": 97.43,
-    "game_only": 97.16
+    "full": 97.53,
+    "game_only": 97.26
   },
-  "baseline_sha256": "659fee727a7340ae30416198b9f6fbca30fe6c3f2907d1079ff0f58999f3da78",
+  "baseline_sha256": "4aba6327a30d8b745371d66637196c03a1ee8f70852b0e37b20b1c4dee5b23cf",
   "correct_size_functions": {
     "full": {
-      "bytes": 454789,
+      "bytes": 457127,
       "compared": 3016,
-      "count": 2789,
-      "exact_functions": 2627,
+      "count": 2793,
+      "exact_functions": 2629,
       "mapped": 3018,
       "uncompared": 2
     },
     "game_only": {
-      "bytes": 403962,
+      "bytes": 406300,
       "compared": 2721,
-      "count": 2498,
-      "exact_functions": 2339,
+      "count": 2502,
+      "exact_functions": 2341,
       "mapped": 2723,
       "uncompared": 2
     },
     "method": "code_extent on both images (reachable code plus in-function tables, up to the next known function start, without trailing padding); bytes are original bytes"
   },
   "exact_function_code_bytes": {
-    "bytes": 343425,
+    "bytes": 343761,
     "original_text_bytes": 642549,
-    "percent": 53.45
+    "percent": 53.5
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 384,
@@ -60,7 +60,7 @@
     "original_text_bytes": 642549,
     "percent": 0.0
   },
-  "input_sha256": "3865488e74190000976a16baf208100b8ea84fd29e5fa64342441207a844e000",
+  "input_sha256": "fe929bd8693da7b69e0e954091677c1e087f2bafbfb16548cc8394177a81cd49",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 20,
@@ -190,1023 +190,1023 @@
           "object": "terrain_map.c.obj"
         },
         {
-          "first_public_address": "0x451860",
+          "first_public_address": "0x451900",
           "object": "message_unit.c.obj"
         },
         {
-          "first_public_address": "0x452990",
+          "first_public_address": "0x452a30",
           "object": "tutorial_script.c.obj"
         },
         {
-          "first_public_address": "0x457070",
+          "first_public_address": "0x457110",
           "object": "objective_unit.c.obj"
         },
         {
-          "first_public_address": "0x458d00",
+          "first_public_address": "0x458da0",
           "object": "objectrecall.c.obj"
         },
         {
-          "first_public_address": "0x4590a0",
+          "first_public_address": "0x459140",
           "object": "objinfo.c.obj"
         },
         {
-          "first_public_address": "0x459b00",
+          "first_public_address": "0x459ba0",
           "object": "panel_unit.c.obj"
         },
         {
-          "first_public_address": "0x45c2f0",
+          "first_public_address": "0x45c390",
           "object": "pointer.c.obj"
         },
         {
-          "first_public_address": "0x45c880",
+          "first_public_address": "0x45c920",
           "object": "priorities.c.obj"
         },
         {
-          "first_public_address": "0x45d280",
+          "first_public_address": "0x45d320",
           "object": "ptl.c.obj"
         },
         {
-          "first_public_address": "0x45d350",
+          "first_public_address": "0x45d3f0",
           "object": "radarmap.c.obj"
         },
         {
-          "first_public_address": "0x45eac0",
+          "first_public_address": "0x45eb60",
           "object": "reward.c.obj"
         },
         {
-          "first_public_address": "0x4627f0",
+          "first_public_address": "0x462890",
           "object": "roof.c.obj"
         },
         {
-          "first_public_address": "0x463110",
+          "first_public_address": "0x4631b0",
           "object": "scrollinfo.c.obj"
         },
         {
-          "first_public_address": "0x463950",
+          "first_public_address": "0x4639f0",
           "object": "selectplace.c.obj"
         },
         {
-          "first_public_address": "0x464190",
+          "first_public_address": "0x464230",
           "object": "sfx.c.obj"
         },
         {
-          "first_public_address": "0x465c10",
+          "first_public_address": "0x465cb0",
           "object": "spiderweb.c.obj"
         },
         {
-          "first_public_address": "0x466230",
+          "first_public_address": "0x4662d0",
           "object": "entity_stats.c.obj"
         },
         {
-          "first_public_address": "0x469dd0",
+          "first_public_address": "0x469e70",
           "object": "teleporter.c.obj"
         },
         {
-          "first_public_address": "0x46a250",
+          "first_public_address": "0x46a2f0",
           "object": "text.c.obj"
         },
         {
-          "first_public_address": "0x46ac30",
+          "first_public_address": "0x46acd0",
           "object": "tooltip.c.obj"
         },
         {
-          "first_public_address": "0x46ba60",
+          "first_public_address": "0x46bb00",
           "object": "upgrade.c.obj"
         },
         {
-          "first_public_address": "0x46be00",
+          "first_public_address": "0x46bea0",
           "object": "vehicle_model.c.obj"
         },
         {
-          "first_public_address": "0x46d5b0",
+          "first_public_address": "0x46d650",
           "object": "water.c.obj"
         },
         {
-          "first_public_address": "0x46e5a0",
+          "first_public_address": "0x46e640",
           "object": "weapons.c.obj"
         },
         {
-          "first_public_address": "0x471c20",
+          "first_public_address": "0x471cc0",
           "object": "movie_unit.cpp.obj"
         },
         {
-          "first_public_address": "0x472160",
+          "first_public_address": "0x472200",
           "object": "unit_container:container.c.obj"
         },
         {
-          "first_public_address": "0x4767a0",
+          "first_public_address": "0x476840",
           "object": "unit_viewports:viewports.c.obj"
         },
         {
-          "first_public_address": "0x476e90",
+          "first_public_address": "0x476f30",
           "object": "unit_utils:utils.c.obj"
         },
         {
-          "first_public_address": "0x4771f0",
+          "first_public_address": "0x477290",
           "object": "unit_main:main.c.obj"
         },
         {
-          "first_public_address": "0x478830",
+          "first_public_address": "0x4788d0",
           "object": "unit_config:config.c.obj"
         },
         {
-          "first_public_address": "0x478f40",
+          "first_public_address": "0x478fe0",
           "object": "unit_maths:maths.c.obj"
         },
         {
-          "first_public_address": "0x479950",
+          "first_public_address": "0x4799f0",
           "object": "unit_font:font.c.obj"
         },
         {
-          "first_public_address": "0x47a0c0",
+          "first_public_address": "0x47a160",
           "object": "unit_sound3d:sound3d.c.obj"
         },
         {
-          "first_public_address": "0x47bbd0",
+          "first_public_address": "0x47bc70",
           "object": "unit_directdraw:directdraw.c.obj"
         },
         {
-          "first_public_address": "0x47ce80",
+          "first_public_address": "0x47cf20",
           "object": "unit_images_unit:images_unit.c.obj"
         },
         {
-          "first_public_address": "0x47dec0",
+          "first_public_address": "0x47df60",
           "object": "unit_avi_player:avi_player.cpp.obj"
         },
         {
-          "first_public_address": "0x47e810",
+          "first_public_address": "0x47e8b0",
           "object": "unit_input_unit:input_unit.cpp.obj"
         },
         {
-          "first_public_address": "0x47ec30",
+          "first_public_address": "0x47ecd0",
           "object": "unit_files:files.c.obj"
         },
         {
-          "first_public_address": "0x4800b0",
+          "first_public_address": "0x480150",
           "object": "unit_mesh_unit:mesh_unit.c.obj"
         },
         {
-          "first_public_address": "0x483750",
+          "first_public_address": "0x4837f0",
           "object": "unit_flic_unit:flic_unit.c.obj"
         },
         {
-          "first_public_address": "0x484b70",
+          "first_public_address": "0x484c10",
           "object": "unit_textwindow:textwindow.c.obj"
         },
         {
-          "first_public_address": "0x4854a0",
+          "first_public_address": "0x485540",
           "object": "unit_keys:keys.c.obj"
         },
         {
-          "first_public_address": "0x485900",
+          "first_public_address": "0x4859a0",
           "object": "unit_draw:draw.c.obj"
         },
         {
-          "first_public_address": "0x486460",
+          "first_public_address": "0x486500",
           "object": "unit_lws:lws.c.obj"
         },
         {
-          "first_public_address": "0x4885c0",
+          "first_public_address": "0x488660",
           "object": "unit_soundsys:soundsys.c.obj"
         },
         {
-          "first_public_address": "0x488e60",
+          "first_public_address": "0x488f00",
           "object": "unit_g98_024:g98_024.c.obj"
         },
         {
-          "first_public_address": "0x488f30",
+          "first_public_address": "0x488fd0",
           "object": "unit_animclone:animclone.c.obj"
         },
         {
-          "first_public_address": "0x4896a0",
+          "first_public_address": "0x489740",
           "object": "unit_g98_026:g98_026.c.obj"
         },
         {
-          "first_public_address": "0x489800",
+          "first_public_address": "0x4898a0",
           "object": "unit_dxerror:dxerror.c.obj"
         },
         {
-          "first_public_address": "0x48acd0",
+          "first_public_address": "0x48ad70",
           "object": "unit_file_list_streams:file_list_streams.cpp.obj"
         },
         {
-          "first_public_address": "0x48adc0",
+          "first_public_address": "0x48ae60",
           "object": "unit_g98_029:g98_029.c.obj"
         },
         {
-          "first_public_address": "0x48af30",
+          "first_public_address": "0x48afd0",
           "object": "unit_wad:wad.c.obj"
         },
         {
-          "first_public_address": "0x48bad0",
+          "first_public_address": "0x48bb70",
           "object": "unit_lwo:lwo.c.obj"
         },
         {
-          "first_public_address": "0x48d3b0",
+          "first_public_address": "0x48d450",
           "object": "libc:fpinit.obj"
         },
         {
-          "first_public_address": "0x48d420",
+          "first_public_address": "0x48d4c0",
           "object": "libc:atof.obj"
         },
         {
-          "first_public_address": "0x48d480",
+          "first_public_address": "0x48d520",
           "object": "libc:sprintf.obj"
         },
         {
-          "first_public_address": "0x48d4f0",
+          "first_public_address": "0x48d590",
           "object": "libc:free.obj"
         },
         {
-          "first_public_address": "0x48d540",
+          "first_public_address": "0x48d5e0",
           "object": "libc:malloc.obj"
         },
         {
-          "first_public_address": "0x48d5f0",
+          "first_public_address": "0x48d690",
           "object": "libc:qsort.obj"
         },
         {
-          "first_public_address": "0x48d830",
+          "first_public_address": "0x48d8d0",
           "object": "libc:atox.obj"
         },
         {
-          "first_public_address": "0x48d8e0",
+          "first_public_address": "0x48d980",
           "object": "libc:ftol.obj"
         },
         {
-          "first_public_address": "0x48d910",
+          "first_public_address": "0x48d9b0",
           "object": "libc:strstr.obj"
         },
         {
-          "first_public_address": "0x48d990",
+          "first_public_address": "0x48da30",
           "object": "libc:acos.obj"
         },
         {
-          "first_public_address": "0x48da60",
+          "first_public_address": "0x48db00",
           "object": "libc:realloc.obj"
         },
         {
-          "first_public_address": "0x48dc00",
+          "first_public_address": "0x48dca0",
           "object": "libc:vsprintf.obj"
         },
         {
-          "first_public_address": "0x48dc70",
+          "first_public_address": "0x48dd10",
           "object": "libc:rand.obj"
         },
         {
-          "first_public_address": "0x48dce0",
+          "first_public_address": "0x48dd80",
           "object": "libc:floor.obj"
         },
         {
-          "first_public_address": "0x48dde0",
+          "first_public_address": "0x48de80",
           "object": "libc:toupper.obj"
         },
         {
-          "first_public_address": "0x48dee0",
+          "first_public_address": "0x48df80",
           "object": "libc:crt0dat.obj"
         },
         {
-          "first_public_address": "0x48e020",
+          "first_public_address": "0x48e0c0",
           "object": "libc:fabs.obj"
         },
         {
-          "first_public_address": "0x48e110",
+          "first_public_address": "0x48e1b0",
           "object": "libc:strncpy.obj"
         },
         {
-          "first_public_address": "0x48e210",
+          "first_public_address": "0x48e2b0",
           "object": "libc:ieeemisc.obj"
         },
         {
-          "first_public_address": "0x48e2d0",
+          "first_public_address": "0x48e370",
           "object": "libc:87fmod.obj"
         },
         {
-          "first_public_address": "0x48e310",
+          "first_public_address": "0x48e3b0",
           "object": "libc:sscanf.obj"
         },
         {
-          "first_public_address": "0x48e360",
+          "first_public_address": "0x48e400",
           "object": "libc:ceil.obj"
         },
         {
-          "first_public_address": "0x48e460",
+          "first_public_address": "0x48e500",
           "object": "libc:lldiv.obj"
         },
         {
-          "first_public_address": "0x48e510",
+          "first_public_address": "0x48e5b0",
           "object": "libc:llmul.obj"
         },
         {
-          "first_public_address": "0x48e550",
+          "first_public_address": "0x48e5f0",
           "object": "libc:new.obj"
         },
         {
-          "first_public_address": "0x48e560",
+          "first_public_address": "0x48e600",
           "object": "libc:fclose.obj"
         },
         {
-          "first_public_address": "0x48e5e0",
+          "first_public_address": "0x48e680",
           "object": "libc:fopen.obj"
         },
         {
-          "first_public_address": "0x48e630",
+          "first_public_address": "0x48e6d0",
           "object": "libc:trnsctrl.obj"
         },
         {
-          "first_public_address": "0x48e9b0",
+          "first_public_address": "0x48ea50",
           "object": "libc:exsup.obj"
         },
         {
-          "first_public_address": "0x48eaa0",
+          "first_public_address": "0x48eb40",
           "object": "libc:wincrt0.obj"
         },
         {
-          "first_public_address": "0x48ec70",
+          "first_public_address": "0x48ed10",
           "object": "libc:isctype.obj"
         },
         {
-          "first_public_address": "0x48ed10",
+          "first_public_address": "0x48edb0",
           "object": "libc:strncmp.obj"
         },
         {
-          "first_public_address": "0x48ed50",
+          "first_public_address": "0x48edf0",
           "object": "libc:ftell.obj"
         },
         {
-          "first_public_address": "0x48ef00",
+          "first_public_address": "0x48efa0",
           "object": "libc:fseek.obj"
         },
         {
-          "first_public_address": "0x48efa0",
+          "first_public_address": "0x48f040",
           "object": "libc:unlink.obj"
         },
         {
-          "first_public_address": "0x48efd0",
+          "first_public_address": "0x48f070",
           "object": "libc:chmod.obj"
         },
         {
-          "first_public_address": "0x48f020",
+          "first_public_address": "0x48f0c0",
           "object": "libc:mkdir.obj"
         },
         {
-          "first_public_address": "0x48f050",
+          "first_public_address": "0x48f0f0",
           "object": "libc:findfile.obj"
         },
         {
-          "first_public_address": "0x48f350",
+          "first_public_address": "0x48f3f0",
           "object": "libc:getcwd.obj"
         },
         {
-          "first_public_address": "0x48f4e0",
+          "first_public_address": "0x48f580",
           "object": "libc:fread.obj"
         },
         {
-          "first_public_address": "0x48f620",
+          "first_public_address": "0x48f6c0",
           "object": "libc:fwrite.obj"
         },
         {
-          "first_public_address": "0x48f770",
+          "first_public_address": "0x48f810",
           "object": "libc:fflush.obj"
         },
         {
-          "first_public_address": "0x48f8c0",
+          "first_public_address": "0x48f960",
           "object": "libc:fgetc.obj"
         },
         {
-          "first_public_address": "0x48f8f0",
+          "first_public_address": "0x48f990",
           "object": "libc:fgets.obj"
         },
         {
-          "first_public_address": "0x48f970",
+          "first_public_address": "0x48fa10",
           "object": "libc:vfprintf.obj"
         },
         {
-          "first_public_address": "0x48f9b0",
+          "first_public_address": "0x48fa50",
           "object": "libc:stricmp.obj"
         },
         {
-          "first_public_address": "0x48fa40",
+          "first_public_address": "0x48fae0",
           "object": "libc:fullpath.obj"
         },
         {
-          "first_public_address": "0x48fb10",
+          "first_public_address": "0x48fbb0",
           "object": "libc:fscanf.obj"
         },
         {
-          "first_public_address": "0x48fb30",
+          "first_public_address": "0x48fbd0",
           "object": "libc:splitpat.obj"
         },
         {
-          "first_public_address": "0x48fcb0",
+          "first_public_address": "0x48fd50",
           "object": "libc:fp8.obj"
         },
         {
-          "first_public_address": "0x48fcd0",
+          "first_public_address": "0x48fd70",
           "object": "libc:testfdiv.obj"
         },
         {
-          "first_public_address": "0x48fd50",
+          "first_public_address": "0x48fdf0",
           "object": "libc:cvt.obj"
         },
         {
-          "first_public_address": "0x490290",
+          "first_public_address": "0x490330",
           "object": "libc:cfin.obj"
         },
         {
-          "first_public_address": "0x490340",
+          "first_public_address": "0x4903e0",
           "object": "libc:_flsbuf.obj"
         },
         {
-          "first_public_address": "0x490470",
+          "first_public_address": "0x490510",
           "object": "libc:output.obj"
         },
         {
-          "first_public_address": "0x490f30",
+          "first_public_address": "0x490fd0",
           "object": "libc:heapinit.obj"
         },
         {
-          "first_public_address": "0x490f70",
+          "first_public_address": "0x491010",
           "object": "libc:sbheap.obj"
         },
         {
-          "first_public_address": "0x491760",
+          "first_public_address": "0x491800",
           "object": "libc:handler.obj"
         },
         {
-          "first_public_address": "0x491790",
+          "first_public_address": "0x491830",
           "object": "libc:strchr.obj"
         },
         {
-          "first_public_address": "0x491850",
+          "first_public_address": "0x4918f0",
           "object": "libc:87disp.obj"
         },
         {
-          "first_public_address": "0x491a20",
+          "first_public_address": "0x491ac0",
           "object": "libc:genexcep.obj"
         },
         {
-          "first_public_address": "0x491a80",
+          "first_public_address": "0x491b20",
           "object": "libc:common.obj"
         },
         {
-          "first_public_address": "0x491c10",
+          "first_public_address": "0x491cb0",
           "object": "libc:frnd.obj"
         },
         {
-          "first_public_address": "0x491c30",
+          "first_public_address": "0x491cd0",
           "object": "libc:fpexcept.obj"
         },
         {
-          "first_public_address": "0x492500",
+          "first_public_address": "0x4925a0",
           "object": "libc:util.obj"
         },
         {
-          "first_public_address": "0x4926a0",
+          "first_public_address": "0x492740",
           "object": "libc:fpctrl.obj"
         },
         {
-          "first_public_address": "0x492760",
+          "first_public_address": "0x492800",
           "object": "libc:aw_map.obj"
         },
         {
-          "first_public_address": "0x4929b0",
+          "first_public_address": "0x492a50",
           "object": "libc:87cdisp.obj"
         },
         {
-          "first_public_address": "0x492c00",
+          "first_public_address": "0x492ca0",
           "object": "libc:adj_fdiv.obj"
         },
         {
-          "first_public_address": "0x493990",
+          "first_public_address": "0x493a30",
           "object": "libc:input.obj"
         },
         {
-          "first_public_address": "0x4947b0",
+          "first_public_address": "0x494850",
           "object": "libc:close.obj"
         },
         {
-          "first_public_address": "0x494890",
+          "first_public_address": "0x494930",
           "object": "libc:_freebuf.obj"
         },
         {
-          "first_public_address": "0x4948d0",
+          "first_public_address": "0x494970",
           "object": "libc:_open.obj"
         },
         {
-          "first_public_address": "0x494aa0",
+          "first_public_address": "0x494b40",
           "object": "libc:stream.obj"
         },
         {
-          "first_public_address": "0x494b30",
+          "first_public_address": "0x494bd0",
           "object": "libc:frame.obj"
         },
         {
-          "first_public_address": "0x495530",
+          "first_public_address": "0x4955d0",
           "object": "libc:lowhelpr.obj"
         },
         {
-          "first_public_address": "0x495580",
+          "first_public_address": "0x495620",
           "object": "libc:hooks.obj"
         },
         {
-          "first_public_address": "0x4956a0",
+          "first_public_address": "0x495740",
           "object": "libc:winxfltr.obj"
         },
         {
-          "first_public_address": "0x495830",
+          "first_public_address": "0x4958d0",
           "object": "libc:ismbbyte.obj"
         },
         {
-          "first_public_address": "0x495890",
+          "first_public_address": "0x495930",
           "object": "libc:stdenvp.obj"
         },
         {
-          "first_public_address": "0x495980",
+          "first_public_address": "0x495a20",
           "object": "libc:stdargv.obj"
         },
         {
-          "first_public_address": "0x495c30",
+          "first_public_address": "0x495cd0",
           "object": "libc:aw_env.obj"
         },
         {
-          "first_public_address": "0x495d90",
+          "first_public_address": "0x495e30",
           "object": "libc:mbctype.obj"
         },
         {
-          "first_public_address": "0x496070",
+          "first_public_address": "0x496110",
           "object": "libc:ioinit.obj"
         },
         {
-          "first_public_address": "0x496278",
+          "first_public_address": "0x496318",
           "object": "libc:exsup3.obj"
         },
         {
-          "first_public_address": "0x496350",
+          "first_public_address": "0x4963f0",
           "object": "libc:crt0msg.obj"
         },
         {
-          "first_public_address": "0x496570",
+          "first_public_address": "0x496610",
           "object": "libc:aw_str.obj"
         },
         {
-          "first_public_address": "0x4966a0",
+          "first_public_address": "0x496740",
           "object": "libc:lseek.obj"
         },
         {
-          "first_public_address": "0x496760",
+          "first_public_address": "0x496800",
           "object": "libc:dosmap.obj"
         },
         {
-          "first_public_address": "0x4967d0",
+          "first_public_address": "0x496870",
           "object": "libc:dtoxtime.obj"
         },
         {
-          "first_public_address": "0x4968c0",
+          "first_public_address": "0x496960",
           "object": "libc:_filbuf.obj"
         },
         {
-          "first_public_address": "0x4969b0",
+          "first_public_address": "0x496a50",
           "object": "libc:read.obj"
         },
         {
-          "first_public_address": "0x496c10",
+          "first_public_address": "0x496cb0",
           "object": "libc:write.obj"
         },
         {
-          "first_public_address": "0x496e30",
+          "first_public_address": "0x496ed0",
           "object": "libc:commit.obj"
         },
         {
-          "first_public_address": "0x496e90",
+          "first_public_address": "0x496f30",
           "object": "libc:_file.obj"
         },
         {
-          "first_public_address": "0x496f70",
+          "first_public_address": "0x497010",
           "object": "libc:_sftbuf.obj"
         },
         {
-          "first_public_address": "0x497070",
+          "first_public_address": "0x497110",
           "object": "libc:tolower.obj"
         },
         {
-          "first_public_address": "0x497170",
+          "first_public_address": "0x497210",
           "object": "libc:mbsnbcpy.obj"
         },
         {
-          "first_public_address": "0x497210",
+          "first_public_address": "0x4972b0",
           "object": "libc:ieee87.obj"
         },
         {
-          "first_public_address": "0x4973a0",
+          "first_public_address": "0x497440",
           "object": "libc:intrncvt.obj"
         },
         {
-          "first_public_address": "0x4978c0",
+          "first_public_address": "0x497960",
           "object": "libc:_fptostr.obj"
         },
         {
-          "first_public_address": "0x497960",
+          "first_public_address": "0x497a00",
           "object": "libc:cfout.obj"
         },
         {
-          "first_public_address": "0x497aa0",
+          "first_public_address": "0x497b40",
           "object": "libc:memmove.obj"
         },
         {
-          "first_public_address": "0x497de0",
+          "first_public_address": "0x497e80",
           "object": "libc:crt0fp.obj"
         },
         {
-          "first_public_address": "0x497df0",
+          "first_public_address": "0x497e90",
           "object": "libc:strgtold.obj"
         },
         {
-          "first_public_address": "0x498580",
+          "first_public_address": "0x498620",
           "object": "libc:_getbuf.obj"
         },
         {
-          "first_public_address": "0x4985e0",
+          "first_public_address": "0x498680",
           "object": "libc:isatty.obj"
         },
         {
-          "first_public_address": "0x498610",
+          "first_public_address": "0x4986b0",
           "object": "libc:wctomb.obj"
         },
         {
-          "first_public_address": "0x498690",
+          "first_public_address": "0x498730",
           "object": "libc:ulldiv.obj"
         },
         {
-          "first_public_address": "0x498700",
+          "first_public_address": "0x4987a0",
           "object": "libc:ullrem.obj"
         },
         {
-          "first_public_address": "0x498780",
+          "first_public_address": "0x498820",
           "object": "libc:87except.obj"
         },
         {
-          "first_public_address": "0x4988a0",
+          "first_public_address": "0x498940",
           "object": "libc:matherr.obj"
         },
         {
-          "first_public_address": "0x4988b0",
+          "first_public_address": "0x498950",
           "object": "libc:mbtowc.obj"
         },
         {
-          "first_public_address": "0x4989b0",
+          "first_public_address": "0x498a50",
           "object": "libc:_ctype.obj"
         },
         {
-          "first_public_address": "0x498a10",
+          "first_public_address": "0x498ab0",
           "object": "libc:llshl.obj"
         },
         {
-          "first_public_address": "0x498a30",
+          "first_public_address": "0x498ad0",
           "object": "libc:ungetc.obj"
         },
         {
-          "first_public_address": "0x498ac0",
+          "first_public_address": "0x498b60",
           "object": "libc:osfinfo.obj"
         },
         {
-          "first_public_address": "0x498d20",
+          "first_public_address": "0x498dc0",
           "object": "libc:open.obj"
         },
         {
-          "first_public_address": "0x4990e0",
+          "first_public_address": "0x499180",
           "object": "libc:unhandld.obj"
         },
         {
-          "first_public_address": "0x499170",
+          "first_public_address": "0x499210",
           "object": "libc:validate.obj"
         },
         {
-          "first_public_address": "0x4991d0",
+          "first_public_address": "0x499270",
           "object": "libc:abort.obj"
         },
         {
-          "first_public_address": "0x4991f0",
+          "first_public_address": "0x499290",
           "object": "libc:wcslen.obj"
         },
         {
-          "first_public_address": "0x499210",
+          "first_public_address": "0x4992b0",
           "object": "libc:crtmbox.obj"
         },
         {
-          "first_public_address": "0x4992a0",
+          "first_public_address": "0x499340",
           "object": "libc:calloc.obj"
         },
         {
-          "first_public_address": "0x499340",
+          "first_public_address": "0x4993e0",
           "object": "libc:tzset.obj"
         },
         {
-          "first_public_address": "0x499a20",
+          "first_public_address": "0x499ac0",
           "object": "libc:closeall.obj"
         },
         {
-          "first_public_address": "0x499a90",
+          "first_public_address": "0x499b30",
           "object": "libc:mantold.obj"
         },
         {
-          "first_public_address": "0x499c90",
+          "first_public_address": "0x499d30",
           "object": "libc:x10fout.obj"
         },
         {
-          "first_public_address": "0x49a020",
+          "first_public_address": "0x49a0c0",
           "object": "libc:tenpow.obj"
         },
         {
-          "first_public_address": "0x49a370",
+          "first_public_address": "0x49a410",
           "object": "libc:chsize.obj"
         },
         {
-          "first_public_address": "0x49a4f0",
+          "first_public_address": "0x49a590",
           "object": "libc:winsig.obj"
         },
         {
-          "first_public_address": "0x49a6c0",
+          "first_public_address": "0x49a760",
           "object": "libc:wcstombs.obj"
         },
         {
-          "first_public_address": "0x49a8f0",
+          "first_public_address": "0x49a990",
           "object": "libc:getenv.obj"
         },
         {
-          "first_public_address": "0x49a980",
+          "first_public_address": "0x49aa20",
           "object": "libc:setmode.obj"
         },
         {
-          "first_public_address": "0x49aa00",
+          "first_public_address": "0x49aaa0",
           "object": "libc:mbsnbico.obj"
         },
         {
-          "first_public_address": "0x49aa40",
+          "first_public_address": "0x49aae0",
           "object": "libc:wtombenv.obj"
         },
         {
-          "first_public_address": "0x49aac0",
+          "first_public_address": "0x49ab60",
           "object": "libc:aw_cmp.obj"
         },
         {
-          "first_public_address": "0x49adc0",
+          "first_public_address": "0x49ae60",
           "object": "libc:setenv.obj"
         },
         {
-          "first_public_address": "0x49b0c0",
+          "first_public_address": "0x49b160",
           "object": "libc:mbschr.obj"
         },
         {
-          "first_public_address": "0x49b170",
+          "first_public_address": "0x49b210",
           "object": "libc:strdup.obj"
         },
         {
-          "first_public_address": "0x49b1c0",
+          "first_public_address": "0x49b260",
           "object": "d3drm:d3drm.dll"
         },
         {
-          "first_public_address": "0x49b1d2",
+          "first_public_address": "0x49b272",
           "object": "ddraw:DDRAW.dll"
         },
         {
-          "first_public_address": "0x49b1de",
+          "first_public_address": "0x49b27e",
           "object": "vfw32:AVIFIL32.dll"
         },
         {
-          "first_public_address": "0x49c2b8",
+          "first_public_address": "0x49c358",
           "object": "dinput:DINPUT.dll"
         },
         {
-          "first_public_address": "0x49c2be",
+          "first_public_address": "0x49c35e",
           "object": "dsound:DSOUND.dll"
         },
         {
-          "first_public_address": "0x49c2d0",
+          "first_public_address": "0x49c370",
           "object": "late_rnc:rnc.c.obj"
         },
         {
-          "first_public_address": "0x49cb40",
+          "first_public_address": "0x49cbe0",
           "object": "late_init:init.c.obj"
         },
         {
-          "first_public_address": "0x49d5c0",
+          "first_public_address": "0x49d660",
           "object": "lrr_tail:engine.cpp.obj"
         },
         {
-          "first_public_address": "0x49d5f0",
+          "first_public_address": "0x49d690",
           "object": "lrr_tail:aitask_port.cpp.obj"
         },
         {
-          "first_public_address": "0x49e960",
+          "first_public_address": "0x49ea00",
           "object": "lrr_tail:input.cpp.obj"
         },
         {
-          "first_public_address": "0x49ea70",
+          "first_public_address": "0x49eb10",
           "object": "lrr_tail:lego_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4a0080",
+          "first_public_address": "0x4a0120",
           "object": "lrr_tail:view.cpp.obj"
         },
         {
-          "first_public_address": "0x4a00a0",
+          "first_public_address": "0x4a0140",
           "object": "lrr_tail:frameloop.cpp.obj"
         },
         {
-          "first_public_address": "0x4a0320",
+          "first_public_address": "0x4a03c0",
           "object": "lrr_tail:mesh_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4a0b10",
+          "first_public_address": "0x4a0bb0",
           "object": "lrr_tail:startup_config.cpp.obj"
         },
         {
-          "first_public_address": "0x4a0b40",
+          "first_public_address": "0x4a0be0",
           "object": "lrr_tail:rock_fall_styles_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4a0c60",
+          "first_public_address": "0x4a0d00",
           "object": "lrr_tail:texture.cpp.obj"
         },
         {
-          "first_public_address": "0x4a1a40",
+          "first_public_address": "0x4a1ae0",
           "object": "lrr_tail:terrain_cell_objects_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4a1c60",
+          "first_public_address": "0x4a1d00",
           "object": "lrr_tail:resource.cpp.obj"
         },
         {
-          "first_public_address": "0x4a2640",
+          "first_public_address": "0x4a26e0",
           "object": "lrr_tail:building_scene.cpp.obj"
         },
         {
-          "first_public_address": "0x4a2b30",
+          "first_public_address": "0x4a2bd0",
           "object": "lrr_tail:actor_scene.cpp.obj"
         },
         {
-          "first_public_address": "0x4a3340",
+          "first_public_address": "0x4a33e0",
           "object": "lrr_tail:scene_render.cpp.obj"
         },
         {
-          "first_public_address": "0x4a3710",
+          "first_public_address": "0x4a37b0",
           "object": "lrr_tail:legoobject_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4a5980",
+          "first_public_address": "0x4a5a20",
           "object": "lrr_tail:entity.cpp.obj"
         },
         {
-          "first_public_address": "0x4a6870",
+          "first_public_address": "0x4a6910",
           "object": "lrr_tail:cmd.cpp.obj"
         },
         {
-          "first_public_address": "0x4a6ba0",
+          "first_public_address": "0x4a6c40",
           "object": "lrr_tail:level.cpp.obj"
         },
         {
-          "first_public_address": "0x4a7c60",
+          "first_public_address": "0x4a7d00",
           "object": "lrr_tail:terrain_map_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4a8c50",
+          "first_public_address": "0x4a8cf0",
           "object": "lrr_tail:terrain_grid.cpp.obj"
         },
         {
-          "first_public_address": "0x4a9070",
+          "first_public_address": "0x4a9110",
           "object": "lrr_tail:ai.cpp.obj"
         },
         {
-          "first_public_address": "0x4a9210",
+          "first_public_address": "0x4a92b0",
           "object": "lrr_tail:block.cpp.obj"
         },
         {
-          "first_public_address": "0x4a9320",
+          "first_public_address": "0x4a93c0",
           "object": "lrr_tail:entity_motion_owner.cpp.obj"
         },
         {
-          "first_public_address": "0x4a9370",
+          "first_public_address": "0x4a9410",
           "object": "lrr_tail:info_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4a9c20",
+          "first_public_address": "0x4a9cc0",
           "object": "lrr_tail:entity_config.cpp.obj"
         },
         {
-          "first_public_address": "0x4a9d60",
+          "first_public_address": "0x4a9e00",
           "object": "lrr_tail:building_model_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4aa030",
+          "first_public_address": "0x4aa0d0",
           "object": "lrr_tail:surface.cpp.obj"
         },
         {
-          "first_public_address": "0x4ab2c0",
+          "first_public_address": "0x4ab360",
           "object": "lrr_tail:container_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4ab600",
+          "first_public_address": "0x4ab6a0",
           "object": "lrr_tail:files_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4ab630",
+          "first_public_address": "0x4ab6d0",
           "object": "lrr_tail:scene_resources.cpp.obj"
         },
         {
-          "first_public_address": "0x4ab640",
+          "first_public_address": "0x4ab6e0",
           "object": "lrr_tail:model.cpp.obj"
         },
         {
-          "first_public_address": "0x4abeb0",
+          "first_public_address": "0x4abf50",
           "object": "lrr_tail:scene_pool.cpp.obj"
         },
         {
-          "first_public_address": "0x4ac2b0",
+          "first_public_address": "0x4ac350",
           "object": "lrr_tail:lwsc_winapi.cpp.obj"
         },
         {
-          "first_public_address": "0x4ac2f0",
+          "first_public_address": "0x4ac390",
           "object": "lrr_tail:lwo_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4adca0",
+          "first_public_address": "0x4add40",
           "object": "lrr_tail:wad_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4adde0",
+          "first_public_address": "0x4ade80",
           "object": "lrr_tail:lwsc_scene.cpp.obj"
         },
         {
-          "first_public_address": "0x4b14b0",
+          "first_public_address": "0x4b1550",
           "object": "lrr_tail:entity_stats_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4b1530",
+          "first_public_address": "0x4b15d0",
           "object": "kernel32:KERNEL32.dll"
         },
         {
-          "first_public_address": "0x4b1540",
+          "first_public_address": "0x4b15e0",
           "object": "libc:strnicmp.obj"
         },
         {
-          "first_public_address": "0x4b15f0",
+          "first_public_address": "0x4b1690",
           "object": "libc:xtoa.obj"
         },
         {
-          "first_public_address": "0x4b16a0",
+          "first_public_address": "0x4b1740",
           "object": "libc:strlwr.obj"
         },
         {
-          "first_public_address": "0x4b1760",
+          "first_public_address": "0x4b1800",
           "object": "libc:strupr.obj"
         },
         {
-          "first_public_address": "0x4b1820",
+          "first_public_address": "0x4b18c0",
           "object": "libc:fprintf.obj"
         },
         {
-          "first_public_address": "0x4b1860",
+          "first_public_address": "0x4b1900",
           "object": "libc:snprintf.obj"
         },
         {
-          "first_public_address": "0x4b18d0",
+          "first_public_address": "0x4b1970",
           "object": "libc:strcspn.obj"
         },
         {
-          "first_public_address": "0x4b1910",
+          "first_public_address": "0x4b19b0",
           "object": "libc:strspn.obj"
         },
         {
-          "first_public_address": "0x4b1950",
+          "first_public_address": "0x4b19f0",
           "object": "libc:ullshr.obj"
         },
         {
-          "first_public_address": "0x4b1970",
+          "first_public_address": "0x4b1a10",
           "object": "libc:memchr.obj"
         },
         {
-          "first_public_address": "0x4b1a20",
+          "first_public_address": "0x4b1ac0",
           "object": "libc:strtod.obj"
         },
         {
-          "first_public_address": "0x4b1ae0",
+          "first_public_address": "0x4b1b80",
           "object": "libc:strrchr.obj"
         },
         {
-          "first_public_address": "0x4b1b10",
+          "first_public_address": "0x4b1bb0",
           "object": "libc:strtol.obj"
         },
         {
-          "first_public_address": "0x4b1de0",
+          "first_public_address": "0x4b1e80",
           "object": "libc:pow.obj"
         },
         {
-          "first_public_address": "0x4b2000",
+          "first_public_address": "0x4b20a0",
           "object": "libc:asin.obj"
         },
         {
-          "first_public_address": "0x4b22e0",
+          "first_public_address": "0x4b2380",
           "object": "libc:powhlp.obj"
         }
       ]
@@ -1232,10 +1232,10 @@
       "units": 225
     },
     "unit_relative_identity": {
-      "identical_bytes": 281589,
+      "identical_bytes": 281925,
       "method": "whole function byte identity; image-address operands and external relative branches masked; missing functions count against original bytes",
       "original_bytes": 553892,
-      "percent": 50.84
+      "percent": 50.9
     },
     "units": [
       {
@@ -1507,8 +1507,8 @@
         "data_offset_agreement": false,
         "data_offset_comparisons": 345,
         "functions": 216,
-        "identical_function_bytes": 31404,
-        "identity_percent": 38.0,
+        "identical_function_bytes": 31626,
+        "identity_percent": 38.27,
         "mapped": 216,
         "original_function_bytes": 82635,
         "size_exact": false,
@@ -1567,8 +1567,8 @@
         "data_offset_agreement": false,
         "data_offset_comparisons": 1,
         "functions": 62,
-        "identical_function_bytes": 6304,
-        "identity_percent": 42.49,
+        "identical_function_bytes": 6418,
+        "identity_percent": 43.25,
         "mapped": 62,
         "original_function_bytes": 14838,
         "size_exact": false,
@@ -3966,18 +3966,18 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 12
   },
-  "listing_digests_sha256": "d29fb7b3da59c8dd8ae3da49394c1fde3f00f1736139c402fdcaa0b79a48c0de",
+  "listing_digests_sha256": "6f6d5f3cd8fb29be8d293f9f44dcbb9e07628b99484a089e12d7ba577feb18a2",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 2627,
+        "exact": 2629,
         "mapped": 3018,
         "removed": 0,
         "removed_exact": null
       },
       "game_only": {
-        "exact": 2339,
+        "exact": 2341,
         "mapped": 2723,
         "removed": 0,
         "removed_exact": null
@@ -3985,8 +3985,8 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 579152,
-        "functions": 2719,
+        "bytes": 579248,
+        "functions": 2717,
         "removed_bytes": 0,
         "removed_functions": 0
       }
@@ -4005,8 +4005,8 @@
         "removed_functions": 76
       },
       "original_annotated": {
-        "bytes": 579152,
-        "functions": 2719,
+        "bytes": 579248,
+        "functions": 2717,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4029,8 +4029,8 @@
         "removed_functions": 3923
       },
       "port_unit": {
-        "bytes": 256,
-        "functions": 11,
+        "bytes": 320,
+        "functions": 13,
         "removed_bytes": 176,
         "removed_functions": 6
       }
@@ -4045,7 +4045,7 @@
         0,
         0
       ],
-      "entry_point_rva": 584352,
+      "entry_point_rva": 584512,
       "import_dlls": [
         "kernel32.dll",
         "ole32.dll",
@@ -4063,8 +4063,8 @@
       "imported_names": 147,
       "section_bytes": {
         ".data": {
-          "differing": 76877,
-          "equal": 17843,
+          "differing": 76880,
+          "equal": 17840,
           "original": 73216,
           "rebuilt": 94720
         },
@@ -4081,10 +4081,10 @@
           "rebuilt": 22248
         },
         ".text": {
-          "differing": 696959,
-          "equal": 29574,
+          "differing": 696858,
+          "equal": 29835,
           "original": 642549,
-          "rebuilt": 726533
+          "rebuilt": 726693
         }
       },
       "sections": {
@@ -4106,7 +4106,7 @@
         },
         ".text": {
           "raw_size": 727040,
-          "virtual_size": 726533
+          "virtual_size": 726693
         }
       },
       "thunk_order": [
@@ -4136,7 +4136,7 @@
   "pe_header_differences": {
     "entry_point_rva": {
       "original": 585728,
-      "rebuilt": 584352
+      "rebuilt": 584512
     },
     "image_size": {
       "original": 3608576,
@@ -4147,8 +4147,8 @@
   "sections": {
     ".data": {
       "chance_percent": 10.47,
-      "excess_percent_points": 13.9,
-      "identical_bytes": 17843,
+      "excess_percent_points": 13.89,
+      "identical_bytes": 17840,
       "identical_percent": 24.37,
       "original_bytes": 73216,
       "rebuilt_bytes": 94720,
@@ -4171,15 +4171,15 @@
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 1.77,
-      "identical_bytes": 29574,
-      "identical_percent": 4.6,
+      "excess_percent_points": 1.82,
+      "identical_bytes": 29832,
+      "identical_percent": 4.64,
       "original_bytes": 642549,
-      "rebuilt_bytes": 726533,
+      "rebuilt_bytes": 726693,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 0.73,
-      "run_identical_bytes": 4689,
-      "run_identical_percent": 0.73
+      "run_excess_percent_points": 0.74,
+      "run_identical_bytes": 4738,
+      "run_identical_percent": 0.74
     },
     "imports": {
       "chance_percent": 34.58,
@@ -4208,15 +4208,15 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 1.77,
-    "identical_bytes": 29574,
-    "identical_percent": 4.6,
+    "excess_percent_points": 1.82,
+    "identical_bytes": 29832,
+    "identical_percent": 4.64,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
-    "run_excess_percent_points": 0.73,
-    "run_identical_bytes": 4689,
-    "run_identical_percent": 0.73
+    "run_excess_percent_points": 0.74,
+    "run_identical_bytes": 4738,
+    "run_identical_percent": 0.74
   },
   "unit_size_agreement": {
     "agreeing_unit_ids": [],
