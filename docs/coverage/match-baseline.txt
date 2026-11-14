@@ -1,4 +1,4 @@
-# input_sha256: cdf1beacbefed1d94725c979614e336bc75b5187cb9108836e1b65b5e27a35bb
+# input_sha256: f5a689ad89d5b88fd7e74e89edbc9a579e2dce4078afc7f2a4574a7bd72fd581
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -398,7 +398,7 @@
 0x004105a0 100.00 front_util_string_copy
 0x004105f0 100.00 front_menu_item_create_select
 0x00410690 100.00 front_menu_item_free_select
-0x00410740 80.74 front_menu_item_add_select_item
+0x00410740 100.00 front_menu_item_add_select_item
 0x00410a10 100.00 front_menu_item_create_cycle
 0x00410aa0 100.00 front_menu_item_add_cycle_item
 0x00410ae0 100.00 front_menu_item_free_cycle
@@ -410,9 +410,9 @@
 0x00410bf0 100.00 front_menu_item_create_slider
 0x00410c70 82.61 front_menu_item_free_menu_item
 0x00410d50 100.00 front_menu_item_create_banner_item
-0x00410e20 92.00 front_menu_item_create_image_item
+0x00410e20 100.00 front_menu_item_create_image_item
 0x00410f30 100.00 front_menu_free_menu
-0x00410fb0 98.32 front_menu_load_menu_image
+0x00410fb0 100.00 front_menu_load_menu_image
 0x00411100 73.53 front_menu_create_menu
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
@@ -422,7 +422,7 @@
 0x00411530 59.50 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
 0x00411840 100.00 front_menu_was_mouse_released
-0x00411870 46.49 front_menu_item_slider_handle_input
+0x00411870 89.92 front_menu_item_slider_handle_input
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
 0x00411a00 77.40 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
@@ -430,14 +430,14 @@
 0x00412170 100.00 front_menu_get_overlay_count
 0x00412190 100.00 front_menu_should_random_play
 0x004121b0 75.93 front_menu_update_overlays
-0x00412450 69.81 front_menu_item_draw_select_item
-0x004124f0 45.73 front_menu_item_draw_save_image
-0x00412750 60.62 front_menu_item_draw_select_text_window
+0x00412450 100.00 front_menu_item_draw_select_item
+0x004124f0 79.43 front_menu_item_draw_save_image
+0x00412750 62.32 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
 0x00412af0 70.91 front_menu_draw_menu_image
 0x00412c00 46.06 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
-0x00413a60 72.19 front_menu_load_slot_images
+0x00413a60 97.59 front_menu_load_slot_images
 0x00413b50 92.31 front_menu_free_slot_images
 0x00413b80 77.72 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
@@ -446,10 +446,10 @@
 0x00413f30 100.00 front_menu_overlay_get_type
 0x00413f90 100.00 front_menu_create_overlay
 0x00414010 100.00 front_menu_item_load_slider_images
-0x00414070 84.06 front_menu_set_create
+0x00414070 100.00 front_menu_set_create
 0x004140c0 69.79 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
-0x00414ce0 95.00 front_is_intros_enabled
+0x00414ce0 100.00 front_is_intros_enabled
 0x00414d30 77.11 front_callback_slider_brightness
 0x00414de0 100.00 front_callback_slider_sound_volume
 0x00414df0 100.00 audio_menu_volume_set
@@ -477,7 +477,7 @@
 0x00415990 100.00 front_play_level_movie
 0x00415a10 100.00 front_load_levels
 0x00415cf0 100.00 save_slot_selection_clear_target
-0x00415d00 97.73 front_load_menu_text_window
+0x00415d00 100.00 front_load_menu_text_window
 0x00416150 100.00 sound_stream_play_level
 0x004161a0 100.00 sound_stream_play_tutorial
 0x004161f0 100.00 front_load_menus
@@ -2818,7 +2818,7 @@
 0x004105a0 100.00 front_util_string_copy
 0x004105f0 100.00 front_menu_item_create_select
 0x00410690 100.00 front_menu_item_free_select
-0x00410740 80.74 front_menu_item_add_select_item
+0x00410740 100.00 front_menu_item_add_select_item
 0x00410a10 100.00 front_menu_item_create_cycle
 0x00410aa0 100.00 front_menu_item_add_cycle_item
 0x00410ae0 100.00 front_menu_item_free_cycle
@@ -2830,9 +2830,9 @@
 0x00410bf0 100.00 front_menu_item_create_slider
 0x00410c70 82.61 front_menu_item_free_menu_item
 0x00410d50 100.00 front_menu_item_create_banner_item
-0x00410e20 92.00 front_menu_item_create_image_item
+0x00410e20 100.00 front_menu_item_create_image_item
 0x00410f30 100.00 front_menu_free_menu
-0x00410fb0 98.32 front_menu_load_menu_image
+0x00410fb0 100.00 front_menu_load_menu_image
 0x00411100 73.53 front_menu_create_menu
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
@@ -2842,7 +2842,7 @@
 0x00411530 59.50 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
 0x00411840 100.00 front_menu_was_mouse_released
-0x00411870 46.49 front_menu_item_slider_handle_input
+0x00411870 89.92 front_menu_item_slider_handle_input
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
 0x00411a00 77.40 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
@@ -2850,14 +2850,14 @@
 0x00412170 100.00 front_menu_get_overlay_count
 0x00412190 100.00 front_menu_should_random_play
 0x004121b0 75.93 front_menu_update_overlays
-0x00412450 69.81 front_menu_item_draw_select_item
-0x004124f0 45.73 front_menu_item_draw_save_image
-0x00412750 60.62 front_menu_item_draw_select_text_window
+0x00412450 100.00 front_menu_item_draw_select_item
+0x004124f0 79.43 front_menu_item_draw_save_image
+0x00412750 62.32 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
 0x00412af0 70.91 front_menu_draw_menu_image
 0x00412c00 46.06 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
-0x00413a60 72.19 front_menu_load_slot_images
+0x00413a60 97.59 front_menu_load_slot_images
 0x00413b50 92.31 front_menu_free_slot_images
 0x00413b80 77.72 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
@@ -2866,10 +2866,10 @@
 0x00413f30 100.00 front_menu_overlay_get_type
 0x00413f90 100.00 front_menu_create_overlay
 0x00414010 100.00 front_menu_item_load_slider_images
-0x00414070 84.06 front_menu_set_create
+0x00414070 100.00 front_menu_set_create
 0x004140c0 69.79 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
-0x00414ce0 95.00 front_is_intros_enabled
+0x00414ce0 100.00 front_is_intros_enabled
 0x00414d30 77.11 front_callback_slider_brightness
 0x00414de0 100.00 front_callback_slider_sound_volume
 0x00414df0 100.00 audio_menu_volume_set
@@ -2897,7 +2897,7 @@
 0x00415990 100.00 front_play_level_movie
 0x00415a10 100.00 front_load_levels
 0x00415cf0 100.00 save_slot_selection_clear_target
-0x00415d00 97.73 front_load_menu_text_window
+0x00415d00 100.00 front_load_menu_text_window
 0x00416150 100.00 sound_stream_play_level
 0x004161a0 100.00 sound_stream_play_tutorial
 0x004161f0 100.00 front_load_menus
