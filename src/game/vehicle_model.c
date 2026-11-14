@@ -180,6 +180,16 @@ int vehicle_set_activity(VehicleModel* vehicle, const char* activityName,
     return result;
 }
 
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: activityName is an objectGlobs field (004de790 +0x534,
+ * legoobject_globs.h, finding 662). objectGlobs is declared here, without
+ * its struct, just before the one function that reads it, so the symbol
+ * counter of the functions above does not move; it costs two symbols, and
+ * the header would cost three. Deviation (scoring only). */
+extern struct LegoObject_Globs objectGlobs;
+#undef s_activity
+#define s_activity ((const char**)((char*)&objectGlobs + 0x534))
+#endif
 /* Hang each shown upgrade part on its null and set its activity, and record
  * the weapon parts' fire and pivot nulls. Building.c's
  * Building_SetUpgradeActivity (004083a0) is the same code. */

@@ -297,9 +297,13 @@ static const char s_activity_name_activity_runpanic[] = "Activity_RunPanic";
 static const char s_activity_name_activity_routerubble[] = "Activity_RouteRubble";
 static const char s_activity_name_activity_route[] = "Activity_Route";
 
-/* LegoObject.c's objectGlobs fields (004de790-004eadd0) are defined, and
- * annotated, at the end of legoobject_unit.c (GAME-023 part 3, issue #615).
- * This file and the other port files read them with C linkage. */
+/* LegoObject.c's objectGlobs fields (004de790-004eadcc) and 004eadd0 are
+ * defined at the end of legoobject_unit.c (GAME-023 part 3, issue #615).
+ * In the matching build they are one struct, objectGlobs, annotated once
+ * (legoobject_globs.h, issue #775, finding 662), and the names below are
+ * macros over its fields (included after this block). Natively they are
+ * separate globals. This file and the other port files read them with C
+ * linkage. */
 extern "C" {
 extern void* s_pool_chunks[POOL_CHUNK_COUNT_SLOTS];       /* 004de790 */
 extern void* s_pool_record_head;                          /* 004de810 */
@@ -324,10 +328,14 @@ extern int s_idle100_n;                                   /* 004ead5c */
 extern uint32_t s_global_animation_state;                 /* 004eadc4 */
 extern EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records; /* 004eadd0 */
 } /* extern "C" */
-/* activityName and abilityName (004decc4, 004ead60) stay here: they point
- * at the name strings above, and Activity_Stand is lego_port.cpp's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "legoobject_globs.h"
+#else
+/* activityName and abilityName (004decc4, 004ead60) stay here natively:
+ * they point at the name strings above, and Activity_Stand is
+ * lego_port.cpp's. In the matching build they are objectGlobs fields,
+ * zero as in the original, which LegoObject_Initialise fills. */
 extern "C" {
-// GLOBAL: LEGORR 0x004decc4
 const char* s_activity[AI_ACTIVITY_COUNT] = {
     s_activity_name_activity_stand, s_activity_name_activity_route, s_activity_name_activity_routerubble,
     s_activity_name_activity_runpanic, s_activity_name_activity_drill, s_activity_name_activity_teleport,
@@ -357,13 +365,13 @@ const char* s_activity[AI_ACTIVITY_COUNT] = {
     s_activity_name_activity_crumble, s_activity_name_activity_teleportin
 };
 
-// GLOBAL: LEGORR 0x004ead60
 const char* s_ability_type_names[AI_ABILITY_TYPE_COUNT] = {
     s_ability_name_pilot, s_ability_name_sailor,
     s_ability_name_driver, s_ability_name_dynamite,
     s_ability_name_repair, s_ability_name_scanner
 };
 } /* extern "C" */
+#endif
 static EntitySlot* s_entity_teardown_free_head;
 
 static uint32_t s_grid_object_record_words[200];

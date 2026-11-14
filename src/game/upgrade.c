@@ -110,6 +110,16 @@ float upgrade_part_move_animation(Upgrade_PartModel* upgradeModel,
     return 0.0f;
 }
 
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: activityName is an objectGlobs field (004de790 +0x534,
+ * legoobject_globs.h, finding 662). objectGlobs is declared here, without
+ * its struct, just before the one function that reads it, so the symbol
+ * counter of the functions above does not move; it costs two symbols, and
+ * the header would cost three. Deviation (scoring only). */
+extern struct LegoObject_Globs objectGlobs;
+#undef s_activity
+#define s_activity ((const char**)((char*)&objectGlobs + 0x534))
+#endif
 // FUNCTION: LEGORR 0x0046c130
 void upgrade_part_set_activity(Upgrade_PartModel* upgradeModel,
                                const char* activityName)

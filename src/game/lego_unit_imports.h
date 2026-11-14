@@ -1778,7 +1778,7 @@ void main_loop_frame_pump(int draw_projection_overlay);         /* 00477f30 */
 void directdraw_return_front_buffer(void);                      /* 0047cc20 */
 
 /* Level_Free's callees. */
-extern uint32_t s_entity_state_flags;          /* legoobject_port.cpp, 004dee14 */
+extern uint32_t s_entity_state_flags;          /* objectGlobs.flags, 004dee14 */
 extern int s_cell_refresh_track_count;         /* level.cpp, 00556e8c */
 extern int s_cell_previous_track_count;        /* level.cpp, 00556e90 */
 /* 00435aa0 (Lego.c part 3): the port's entry also takes the

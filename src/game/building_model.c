@@ -277,6 +277,16 @@ void building_set_owner_object(BuildingModel* building, void* liveObj)
     scene_object_owner_set(building->contAct, (uint32_t)(size_t)liveObj);
 }
 
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: activityName is an objectGlobs field (004de790 +0x534,
+ * legoobject_globs.h, finding 662). objectGlobs is declared here, without
+ * its struct, just before the one function that reads it, so the symbol
+ * counter of the functions above does not move; it costs two symbols, and
+ * the header would cost three. Deviation (scoring only). */
+extern struct LegoObject_Globs objectGlobs;
+#undef s_activity
+#define s_activity ((const char**)((char*)&objectGlobs + 0x534))
+#endif
 // FUNCTION: LEGORR 0x004083a0
 void building_set_upgrade_activity(BuildingModel* building, const char* activityName)
 {

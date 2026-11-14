@@ -613,6 +613,12 @@ extern "C" void* s_pool_chunks[POOL_CHUNK_COUNT_SLOTS];
 extern "C" void* s_pool_record_head;
 #include "entity_from_legoobject.hpp"
 #include "entity_stats_port.hpp"
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: LegoObject.c's state is objectGlobs, the original's one
+ * struct (legoobject_unit.c, legoobject_globs.h; finding 662). Included
+ * after every declaration of the fields' old names. */
+#include "legoobject_globs.h"
+#endif
 
 uint32_t s_entity_finalize_mode_flags;
 EntityFinalizeHook s_entity_type5_timeout_hook;

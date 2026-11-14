@@ -17,10 +17,8 @@
  * whose callers already use the original's contract.
  *
  * The original keeps its state in one LegoObject_Globs struct (objectGlobs,
- * 004de790-004eadd0). The port models its fields as separate globals in
- * legoobject_port.cpp, which this unit reads with C linkage
- * (legoobject_unit_imports.h). Fields the port does not model are defined
- * here, one annotated global each. */
+ * 004de790, 0xc63c bytes). This unit defines it (legoobject_globs.h,
+ * finding 662); the old names of its fields are macros over them. */
 #include "aitask_port_aliases.h"
 #include <math.h>
 #include <stdio.h>
@@ -39,27 +37,25 @@
 
 /* ---- state, group A ---- */
 
-/* objectGlobs.queuedAnimationFraction (004ea7a8): the whole units of queued
- * grid animation work (legoobject_process_queued_grid_animations). */
-// GLOBAL: LEGORR 0x004ea7a8
-static float objectGlobs_queuedAnimationFraction;
-/* objectGlobs.ToolTipIcon_Ore (004eadc0). The other tool tip icons
- * (004ead78-004eadbc) are lego_unit.c's. */
-// GLOBAL: LEGORR 0x004eadc0
-static struct Image* objectGlobs_toolTipIconOre;
+/* objectGlobs (004de790): the original's one LegoObject_Globs struct
+ * (legoobject_globs.h, issue #775, finding 662), defined at the end of
+ * this file. The unit's old stand-in names are macros over its fields.
+ * The include costs three symbols; it takes the place of the two
+ * stand-in definitions that were here (queuedAnimationFraction, 004ea7a8,
+ * and ToolTipIcon_Ore, 004eadc0), and one kept declaration below (group
+ * B) pays for the third. */
+#include "legoobject_globs.h"
 
 
 /* ---- state, group B ---- */
 
-/* objectGlobs.recordObjs (004e8544): the level's deferred object records,
- * 0x2c bytes each, that LegoObject_CreateAndLinkDeferred realises when
- * their block is uncovered. The port keeps its own queue. */
-// GLOBAL: LEGORR 0x004e8544
-LegoObjGB_DeferredRecord objectGlobs_recordObjs[200];
-
-/* objectGlobs.recordObjsCount (004ea7a4). */
-// GLOBAL: LEGORR 0x004ea7a4
-unsigned int objectGlobs_recordObjsCount;
+/* objectGlobs.recordObjs (004e8544) and recordObjsCount (004ea7a4) are
+ * fields now. Kept, unreferenced: one declaration in their place, so the
+ * symbol counter below does not move (finding 653). Deviation (scoring
+ * only). */
+#undef objectGlobs_recordObjsCount
+extern unsigned int objectGlobs_recordObjsCount;
+#define objectGlobs_recordObjsCount objectGlobs.recordObjsCount
 
 
 /* ---- state, group C ---- */
@@ -102,22 +98,27 @@ static const float legoobject_zero = 0.0f;
 /* ---- state, group H (part 2) ---- */
 
 /* objectGlobs (004eadc8): the 125-second timer of the level's periodic
- * pass (legoobject_update_all). The port keeps its own (s_scene_timer). */
-// GLOBAL: LEGORR 0x004eadc8
-float objectGlobs_f_4eadc8;
+ * pass (legoobject_update_all), a field now. The port keeps its own
+ * (s_scene_timer). Kept, unreferenced, so the symbol counter below does
+ * not move. Deviation (scoring only). */
+#undef objectGlobs_f_4eadc8
+extern float objectGlobs_f_4eadc8;
+#define objectGlobs_f_4eadc8 objectGlobs.field_c638
 
 
 /* ---- state, group I (part 2) ---- */
 
 /* objectGlobs (004dee0c): the 25-second cycle 0043c2b0 advances and
  * 0043c2f0 reads. The port keeps it unannotated (entity.cpp's
- * s_periodic_timer25). */
-// GLOBAL: LEGORR 0x004dee0c
-float objectGlobs_f_4dee0c;
-
-/* objectGlobs (004e8444): every event mask 0043f5b0 has recorded. */
-// GLOBAL: LEGORR 0x004e8444
-unsigned int objectGlobs_f_4e8444;
+ * s_periodic_timer25). objectGlobs (004e8444): every event mask 0043f5b0
+ * has recorded. Both are fields now; kept, unreferenced, so the symbol
+ * counter below does not move. Deviation (scoring only). */
+#undef objectGlobs_f_4dee0c
+extern float objectGlobs_f_4dee0c;
+#define objectGlobs_f_4dee0c objectGlobs.field_67c
+#undef objectGlobs_f_4e8444
+extern unsigned int objectGlobs_f_4e8444;
+#define objectGlobs_f_4e8444 objectGlobs.field_9cb4
 
 
 /* ---- state, group J (part 2) ---- */
@@ -159,13 +160,12 @@ static float s_legoobject_spark_fraction = 1.0f;
 
 /* ---- functions, group A (00436c20-00437510) ---- */
 
-/* LegoObject_Initialise: clear objectGlobs (004de790, 0xc63c bytes, the
- * port's separate globals in legoobject_port.cpp, at their original addresses in
- * the matching build), then install the activity, ability and tool names. */
+/* LegoObject_Initialise: clear objectGlobs (004de790, 0xc63c bytes), then
+ * install the activity, ability and tool names. */
 // FUNCTION: LEGORR 0x00436c20
 void legoobject_initialise(void)
 {
-    memset(s_pool_chunks, 0, 0xc63c);
+    memset(&objectGlobs, 0, sizeof(objectGlobs));
     s_activity[0] = "Activity_Stand";
     // STRING: LEGORR 0x004a5038
     s_activity[1] = "Activity_Route";
@@ -1003,13 +1003,6 @@ Lego_Object* legoobject_pool_allocate(void)
     return newObj;
 }
 
-/* objectGlobs.listCount, re-read after the listSet store. In the original
- * both are fields of objectGlobs, so MSVC must assume the indexed store
- * may alias the count and loads it again. The port keeps them as separate
- * globals; a volatile read restores the reloads (finding: effective match,
- * the count load is scheduled one instruction earlier). */
-#define LEGOOBJ_GC_LIST_COUNT (*(volatile uint32_t*)&s_pool_chunk_count)
-
 // FUNCTION: LEGORR 0x00438310
 void legoobject_pool_chunk_allocate(void)
 {
@@ -1018,8 +1011,8 @@ void legoobject_pool_chunk_allocate(void)
 
     count = 1 << s_pool_chunk_count;
     s_pool_chunks[s_pool_chunk_count] = malloc(sizeof(Lego_Object) * count);
-    if ((list = (Lego_Object*)s_pool_chunks[LEGOOBJ_GC_LIST_COUNT]) != NULL) {
-        LEGOOBJ_GC_LIST_COUNT++;
+    if ((list = (Lego_Object*)s_pool_chunks[s_pool_chunk_count]) != NULL) {
+        s_pool_chunk_count++;
         for (loop = 1; loop < count; loop++) list[loop - 1].nextFree = &list[loop];
         list[count - 1].nextFree = (Lego_Object*)s_pool_record_head;
         s_pool_record_head = list;
@@ -2073,6 +2066,76 @@ void legoobject_attached_object_list_detach(Lego_Object* obj, int resetMode)
     }
 }
 
+// FUNCTION: LEGORR 0x0043a120
+int legoobject_cell_step_command_issue_with_jitter(Lego_Object* obj, int* target, float* input, int mode, int markPending)
+{
+    int result;
+    int* routeX;
+    int* routeY;
+    int blockX;
+    int blockY;
+    unsigned int count;
+    float offset[2];
+    float jitter;
+    int side;
+
+    result = 0;
+    if (obj->flags1 & 0x400) {
+        legoobject_position_to_terrain_cell(obj, &blockX, &blockY);
+        if (blockX == target[0] && blockY == target[1]) {
+            result = legoobject_route_setup_and_marker_associate(obj, 1,
+                (unsigned int*)&target[0], (unsigned int*)&target[1], NULL);
+        } else if (legoobject_terrain_neighbor_path_check(obj, blockX, blockY,
+                       target[0], target[1], (unsigned int**)&routeX, (unsigned int**)&routeY, (unsigned int*)&count, NULL, NULL)) {
+            result = legoobject_route_setup_and_marker_associate(obj, count,
+                (unsigned int*)routeX, (unsigned int*)routeY, NULL);
+            free(routeX);
+            free(routeY);
+        }
+
+        if (result) {
+            if (obj->type == 1) {
+                jitter = random_float_range(0.55f, 0.75f);
+                side = rng_thunk_draw15() % 4;
+                markPending = 1;
+                switch (side) {
+                case 0:
+                    offset[0] = 0.5f;
+                    offset[1] = jitter;
+                    break;
+                case 1:
+                    offset[1] = 0.5f;
+                    offset[0] = jitter;
+                    break;
+                case 2:
+                    offset[0] = 0.5f;
+                    offset[1] = 1.0f - jitter;
+                    break;
+                case 3:
+                    offset[1] = 0.5f;
+                    offset[0] = 1.0f - jitter;
+                    break;
+                }
+            } else {
+                offset[0] = input[0];
+                offset[1] = input[1];
+            }
+
+            if (mode)
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 9;
+            else
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 8;
+            if (input != NULL) {
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].blockOffset[0] = offset[0];
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].blockOffset[1] = offset[1];
+            }
+            if (markPending)
+                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].flags |= 8;
+        }
+    }
+    return result;
+}
+
 // FUNCTION: LEGORR 0x0043a300
 int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
 {
@@ -2172,76 +2235,6 @@ void legoobject_visual_resource_get_or_create(Lego_Object* obj)
         handle = scene_resource_cached_slot_b8_get((struct SceneResourceAnimationRecord*)obj->vehicle);
     if (handle == NULL)
         legoobject_type_component_get(obj);
-}
-
-// FUNCTION: LEGORR 0x0043a120
-int legoobject_cell_step_command_issue_with_jitter(Lego_Object* obj, int* target, float* input, int mode, int markPending)
-{
-    int result;
-    int* routeX;
-    int* routeY;
-    int blockX;
-    int blockY;
-    unsigned int count;
-    float offset[2];
-    float jitter;
-    int side;
-
-    result = 0;
-    if (obj->flags1 & 0x400) {
-        legoobject_position_to_terrain_cell(obj, &blockX, &blockY);
-        if (blockX == target[0] && blockY == target[1]) {
-            result = legoobject_route_setup_and_marker_associate(obj, 1,
-                (unsigned int*)&target[0], (unsigned int*)&target[1], NULL);
-        } else if (legoobject_terrain_neighbor_path_check(obj, blockX, blockY,
-                       target[0], target[1], (unsigned int**)&routeX, (unsigned int**)&routeY, (unsigned int*)&count, NULL, NULL)) {
-            result = legoobject_route_setup_and_marker_associate(obj, count,
-                (unsigned int*)routeX, (unsigned int*)routeY, NULL);
-            free(routeX);
-            free(routeY);
-        }
-
-        if (result) {
-            if (obj->type == 1) {
-                jitter = random_float_range(0.55f, 0.75f);
-                side = rng_thunk_draw15() % 4;
-                markPending = 1;
-                switch (side) {
-                case 0:
-                    offset[0] = 0.5f;
-                    offset[1] = jitter;
-                    break;
-                case 1:
-                    offset[1] = 0.5f;
-                    offset[0] = jitter;
-                    break;
-                case 2:
-                    offset[0] = 0.5f;
-                    offset[1] = 1.0f - jitter;
-                    break;
-                case 3:
-                    offset[1] = 0.5f;
-                    offset[0] = 1.0f - jitter;
-                    break;
-                }
-            } else {
-                offset[0] = input[0];
-                offset[1] = input[1];
-            }
-
-            if (mode)
-                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 9;
-            else
-                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 8;
-            if (input != NULL) {
-                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].blockOffset[0] = offset[0];
-                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].blockOffset[1] = offset[1];
-            }
-            if (markPending)
-                ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].flags |= 8;
-        }
-    }
-    return result;
 }
 
 // FUNCTION: LEGORR 0x0043a650
@@ -2387,11 +2380,7 @@ void legoobject_lava_crust_activity_register(Lego_Object* obj)
             LegoObjG_liveCount < 100)
         {
             LegoObjG_liveObjs[LegoObjG_liveCount] = obj;
-            /* Deviation (scoring only): the original reloads the count
-             * after the store, because objectGlobs' array and count share
-             * one struct; a volatile access reproduces the reload with the
-             * two separate globals the port keeps. */
-            (*(volatile unsigned int*)&s_idle100_n)++;
+            LegoObjG_liveCount++;
         }
     }
 }
@@ -9498,33 +9487,11 @@ void legoobject_movement_input_accumulate(Lego_Object* obj, int forward, int tur
     obj->field_2c4 += elapsed;
 }
 
-/* Deviation: naked asm. The original reloads the count after each store
- * (objectGlobs' array and count share one struct, so MSVC assumes the
- * indexed store may alias the count); with the two separate globals the
- * port keeps, MSVC 5.0 caches the count. C forms tried: [count][0..1]
- * indexing and a Point2I cast of the array; both cache the count. */
+/* The count is reloaded after each store: the array and the count are
+ * fields of objectGlobs, so MSVC assumes the indexed store may alias the
+ * count (finding 662 retired the naked asm this needed while they were
+ * separate globals). */
 // FUNCTION: LEGORR 0x0044a390
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void legoobject_type11_cell_coordinate_append(int* blockPos)
-{
-    __asm {
-        mov ecx, dword ptr [s_type11_cell_coordinate_count]
-        cmp ecx, 0ah
-        jae type11_append_return
-        mov eax, dword ptr [esp + 4]
-        mov edx, dword ptr [eax]
-        mov dword ptr [ecx*8 + s_type11_cell_coordinates], edx
-        mov ecx, dword ptr [s_type11_cell_coordinate_count]
-        mov eax, dword ptr [eax + 4]
-        mov dword ptr [ecx*8 + s_type11_cell_coordinates + 4], eax
-        mov eax, dword ptr [s_type11_cell_coordinate_count]
-        inc eax
-        mov dword ptr [s_type11_cell_coordinate_count], eax
-    type11_append_return:
-        ret
-    }
-}
-#else
 void legoobject_type11_cell_coordinate_append(int* blockPos)
 {
     if (s_type11_cell_coordinate_count < 10) {
@@ -9533,7 +9500,6 @@ void legoobject_type11_cell_coordinate_append(int* blockPos)
         s_type11_cell_coordinate_count++;
     }
 }
-#endif
 
 // FUNCTION: LEGORR 0x0044a3d0
 int legoobject_type11_cell_coordinate_nearest_resolve(Lego_Object* obj, int* outBlockPos)
@@ -10010,17 +9976,24 @@ extern void* legoGlobs_contIceCube;               /* 005563a8 */
 #undef legoGlobs_f_556108
 extern void* legoGlobs_f_556108;                  /* 00556108 */
 #define legoGlobs_f_556108 legoGlobs.field_48
+#undef s_object_f_4eabc4
 extern int s_object_f_4eabc4;                     /* 004eabc4 objectGlobs list count */
+#define s_object_f_4eabc4 objectGlobs.field_c434
+#undef s_object_f_4eabc8
 extern int s_object_f_4eabc8;                     /* 004eabc8 its buildings */
+#define s_object_f_4eabc8 objectGlobs.field_c438
 /* Mouse position (crt_mouse.h, crt.cpp). */
 extern uint32_t s_renderer_word_a;                /* 0076ab24 mouse x */
 extern uint32_t s_renderer_word_b;                /* 0076ab28 mouse y */
 /* Reward.c (reward.h, reward.c). */
 void global_counter_at_00555328_increment(void);                        /* 00462880 */
 /* objectGlobs' list of the objects 0044c5f0 has visited (004ea7c4); its
- * count is 004eabc4. Its definition belongs with the unit's other state at
- * the end of this file (not yet added). */
+ * count is 004eabc4. Both are fields now (legoobject_globs.h); the old
+ * names stay declared, unreferenced, so the symbol counter does not move.
+ * Deviation (scoring only). */
+#undef objectGlobs_f_4ea7c4
 extern Lego_Object* objectGlobs_f_4ea7c4[256];   /* 004ea7c4 */
+#define objectGlobs_f_4ea7c4 ((Lego_Object**)objectGlobs.field_c034)
 /* PORT-ONLY adapters, original ABI (legoobject_port.cpp). 004897d0 is a
  * one-line getter (return ((int*)p)[3]) the linker folded with
  * Flic_GetWidth; 0044bc30 calls it on the flock (SteeringGroup.hasPosition).
@@ -10704,9 +10677,8 @@ void legoobject_scatter_spawn_enable_and_drain(void)
 
 /* The first building (data NULL) or vehicle (*data) not in the visited
  * list: add it, move the view to it and put the pointer's container at
- * the mouse's terrain point. Not matched: the original's list and count
- * are fields of one struct (objectGlobs), so after the store to the list
- * it reloads the count; two separate globals let it reuse the register. */
+ * the mouse's terrain point. The list and count are fields of objectGlobs,
+ * so after the store to the list the count is reloaded (finding 662). */
 // FUNCTION: LEGORR 0x0044c5f0
 int legoobject_scatter_spawn_drain_callback(Lego_Object* obj, void* data)
 {
@@ -10745,95 +10717,56 @@ int legoobject_scatter_spawn_drain_callback(Lego_Object* obj, void* data)
 
 
 /* ================================================================== */
-/* LegoObject.c's state (objectGlobs, 004de790-004eadd0), moved from   */
-/* legoobject_port.cpp when that file retired to the port tail (issue #615).*/
-/* Defined after every function, so no function's symbol counter      */
-/* moves (finding 538 rule B, finding 577). The port reads these with  */
-/* C linkage. The activityName and abilityName tables (004decc4,      */
-/* 004ead60) stay in legoobject_port.cpp: they point at the port's     */
-/* name strings, one of them lego_port.cpp's C++ object.               */
+/* LegoObject.c's state: objectGlobs, the original's one struct        */
+/* (004de790, 0xc63c bytes; legoobject_globs.h, issue #775, finding    */
+/* 662), and the two globals after it. Defined after every function,  */
+/* so no function's symbol counter moves (finding 538 rule B, finding */
+/* 577). The port reads the fields with C linkage.                    */
 /* ================================================================== */
 #ifdef __cplusplus
 extern "C" {
 #endif
 // GLOBAL: LEGORR 0x004de790
+struct LegoObject_Globs objectGlobs;
+
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+/* Native build: the fields a C++ port file reads stay separate globals,
+ * as before (legoobject_globs.h); the struct's copies of them are unused.
+ * activityName and abilityName (004decc4, 004ead60) are
+ * legoobject_port.cpp's. */
 void* s_pool_chunks[32];
-// GLOBAL: LEGORR 0x004de810
 void* s_pool_record_head;
-
-// GLOBAL: LEGORR 0x004de814
-int s_terrain_sfx_grid[300]; /* DAT_004de814 role */
-
-
-
-// GLOBAL: LEGORR 0x004dee00
+int s_terrain_sfx_grid[300];
 float* s_terrain_neighbor_path_cost;
-/* DAT_004dee04 / DAT_004dee08: the retail path-search functions share and
- * reuse one zeroed dword per map cell. */
-// GLOBAL: LEGORR 0x004dee04
+/* The retail path-search functions share and reuse one zeroed dword per
+ * map cell. */
 uint32_t* s_terrain_path_depth;
-// GLOBAL: LEGORR 0x004dee08
 uint32_t s_terrain_path_depth_count;
-
-// GLOBAL: LEGORR 0x004dee10
 uint32_t s_pool_chunk_count;
-
-/* --- the entity activity scene-state leaf (see ai.hpp) ---------------------
- * This shared zero-init word owns the ported DAT_004dee14 bits. The corpus
- * reads its level pointer through the threaded GameContext. */
-// GLOBAL: LEGORR 0x004dee14
+/* The entity activity scene-state leaf (see ai.hpp): this shared word owns
+ * the ported DAT_004dee14 bits. */
 uint32_t s_entity_state_flags;
-// GLOBAL: LEGORR 0x004dee18
 uint32_t s_activity_resource_slots[11] = {
     0, 0, 1, 1, 4, 4, 4, 4, 3, 2, 4
 };
-
-// GLOBAL: LEGORR 0x004dee44
 uint32_t s_grid_count_second[0x12c0];
-
-// GLOBAL: LEGORR 0x004e2684
 uint32_t s_task_counter_nonzero;
-
-// GLOBAL: LEGORR 0x004e3944
 uint32_t s_grid_count_first[0x12c0];
-
-// GLOBAL: LEGORR 0x004e7184
 uint32_t s_task_counter_zero;
-
-/* The corpus keeps a bounded twenty-entry pool of the predug coordinates
- * encountered while loading the layer. */
-// GLOBAL: LEGORR 0x004e844c
+/* A bounded twenty-entry pool of the predug coordinates encountered while
+ * loading the layer. */
 int s_predug_coordinates[20][2];
-
-// GLOBAL: LEGORR 0x004e84ec
 int s_type11_cell_coordinates[10][2];
-
-// GLOBAL: LEGORR 0x004e853c
 unsigned int s_predug_coordinate_count;
-
-// GLOBAL: LEGORR 0x004e8540
 unsigned int s_type11_cell_coordinate_count;
-
-/* The six-dword render snapshot is a separate zero-filled global block in
- * the corpus (DAT_004ea7ac). Its individual values are unresolved; keep the
- * storage opaque and expose only the exact copy/clear operations. */
-// GLOBAL: LEGORR 0x004ea7ac
+/* The six-dword render snapshot; its individual values are unresolved. */
 uint32_t s_render_config_snapshot[6];
-
-// GLOBAL: LEGORR 0x004eabcc
 struct EntitySlot* s_idle100[100];
-// GLOBAL: LEGORR 0x004ead5c
 int s_idle100_n;
+uint32_t s_global_animation_state;
+#endif
 
-/* GlobalAnimationStateSet (FUN_004383a0) — see entity.hpp. */
-/* objectGlobs (004ea7c4): the objects 0044c5f0 has already visited when
- * cycling the camera; its count and stage are lego_unit.c's 004eabc4 and
- * 004eabc8. */
-// GLOBAL: LEGORR 0x004ea7c4
-Lego_Object* objectGlobs_f_4ea7c4[256];
-
-// GLOBAL: LEGORR 0x004eadc4
-uint32_t s_global_animation_state; /* DAT_004eadc4 */
+/* The released-flock list (004eadd0), after objectGlobs. */
 // GLOBAL: LEGORR 0x004eadd0
 struct EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records;
 #ifdef __cplusplus

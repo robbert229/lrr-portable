@@ -631,8 +631,13 @@ typedef struct LegoRect2E {
 
 /* Stand-ins (lego_unit.c). */
 extern unsigned int legoGlobs_f_556514;         /* 00556514 */
+/* objectGlobs fields (legoobject_globs.h); not declared again where that
+ * header has made the names fields (a C++ port file that includes it
+ * first). */
+#ifndef s_object_f_4eabc4
 extern int s_object_f_4eabc4;                   /* 004eabc4 */
 extern int s_object_f_4eabc8;                   /* 004eabc8 */
+#endif
 
 void lego_play_movie(const char* fName, const float* screenPt);
 const char* lego_level_free(void);
