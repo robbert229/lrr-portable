@@ -33,6 +33,9 @@
  * use takes the one whose code matches (see finding 601). */
 #define LWO_SWAPWORD(x) ((((x) & 0xff) << 8) + ((x) >> 8))
 #define LWO_SWAPSHORT(x) ((unsigned short)(((x) << 8) | ((x) >> 8)))
+/* Lwt.h's own spellings of the 16-bit swap. */
+#define LWSVALUE(n) ((((n) >> 8) & 0xff) + (((n) << 8) & 0xff00))
+#define LWSPVALUE(n) ((((*(n)) >> 8) & 0xff) + (((*(n)) << 8) & 0xff00))
 #define LWO_SWAPLONG(x) ((((x) & 0xff) << 24) + (((x) & 0xff00) << 8) + \
                          (((x) >> 8) & 0xff00) + (((x) >> 24) & 0xff))
 
@@ -141,36 +144,42 @@ int lwo_points_read(File* file, LWSIZE* size, int csize, float** verts,
                     int verbose)
 {
     /* Unused; the original zeroes it (shared with the chunk readers'
-     * locals), so its stores are kept. */
+     * locals), so its stores are kept. Lwt.c's PNTSprc shape (OpenLRR):
+     * the early return when verts is NULL, and the loop counting csize
+     * down (finding 677). */
     char id[10] = {0};
-    float point[3];
-    unsigned char* ptr;
-    unsigned char* buff;
-    int i;
-    int count = 0;
-    float* v;
     char str[256];
+    float point[3];
+    unsigned char* sp;
+    unsigned char* cp;
+    float* vptr;
+    int i = 0;
 
-    buff = ptr = (unsigned char*)malloc(csize + 16);
-    file_read(buff, csize, 1, file);
+    sp = (unsigned char*)malloc(csize + 16);
+    cp = sp;
+    file_read(sp, csize, 1, file);
     size->lwVertCount = csize / 12;
-    if (verts) {
-        v = *verts = (float*)malloc(csize + 4);
-        for (i = 0; i < csize; i += 12) {
-            lwo_read_big_endian_float(&ptr, &point[0]);
-            lwo_read_big_endian_float(&ptr, &point[1]);
-            lwo_read_big_endian_float(&ptr, &point[2]);
-            *v++ = point[0];
-            *v++ = point[1];
-            *v++ = point[2];
-            if (verbose) {
-                // STRING: LEGORR 0x004afa14
-                sprintf(str, "Point %d > %f %f %f\n", count, point[0], point[1], point[2]);
-            }
-            count++;
-        }
+    if (!verts) {
+        free(sp);
+        return 1;
     }
-    free(buff);
+    *verts = (float*)malloc(csize + 4);
+    vptr = *verts;
+    while (csize > 0) {
+        lwo_read_big_endian_float(&cp, &point[0]);
+        lwo_read_big_endian_float(&cp, &point[1]);
+        lwo_read_big_endian_float(&cp, &point[2]);
+        *vptr++ = point[0];
+        *vptr++ = point[1];
+        *vptr++ = point[2];
+        if (verbose) {
+            // STRING: LEGORR 0x004afa14
+            sprintf(str, "Point %d > %f %f %f\n", i, point[0], point[1], point[2]);
+        }
+        i++;
+        csize -= 12;
+    }
+    free(sp);
     return 1;
 }
 
@@ -201,72 +210,78 @@ int lwo_curves_read(File* file, int csize, int verbose)
     return 1;
 }
 
-/* POLS: the polygon list (FUN_0048c3e0). */
+/* POLS: the polygon list (FUN_0048c3e0), in Lwt.c's POLSprc shape as
+ * OpenLRR records it: `ply += pc` into the grown array and a counted-down
+ * `while (vcount)` (finding 677). `cp` is unused, as in the original. */
 // FUNCTION: LEGORR 0x0048c3e0
 int lwo_polygons_read(File* file, LWSIZE* size, LWPOLY** polys, int csize,
                       int verbose)
 {
-    unsigned short* buff;
-    unsigned short* ptr;
-    unsigned short count;
-    unsigned short vertCount;
-    unsigned short i;
-    unsigned short vert;
-    unsigned short* data;
-    LWPOLY* poly;
-    LWPOLY* newPolys;
-    char tmp[64];
-    char str[256];
+    unsigned short vcount, vcur, vsurf;
+    LWPOLY* ply;
+    unsigned short* plyd;
+    char buff[256], buff2[64];
+    unsigned char* sp;
+    unsigned char* cp;
+    unsigned short* swp;
+    unsigned short pc;
 
-    buff = (unsigned short*)malloc(csize + 16);
-    file_read(buff, csize, 1, file);
-    ptr = buff;
-    count = 0;
+    sp = (unsigned char*)malloc(csize + 16);
+    cp = sp;
+    swp = (unsigned short*)sp;
+    file_read(sp, csize, 1, file);
+    pc = 0;
     while (csize > 0) {
-        vertCount = LWO_SWAPSHORT(*ptr);
-        ptr++;
+        vcount = LWO_SWAPWORD(*swp);
+        swp++;
         csize -= 2;
+
         if (polys) {
-            if (count == 0) {
-                poly = *polys = (LWPOLY*)malloc(sizeof(LWPOLY));
+            if (!pc) {
+                ply = (LWPOLY*)malloc(sizeof(LWPOLY));
+                *polys = ply;
             } else {
-                newPolys = (LWPOLY*)malloc(sizeof(LWPOLY) * (count + 1));
-                memcpy(newPolys, *polys, sizeof(LWPOLY) * count);
+                ply = (LWPOLY*)malloc((pc + 1) * sizeof(LWPOLY));
+                memcpy(ply, *polys, (pc * sizeof(LWPOLY)));
                 free(*polys);
-                *polys = newPolys;
-                poly = &newPolys[count];
+                *polys = ply;
+                ply += pc;
             }
-            data = (unsigned short*)malloc(vertCount * 2);
+            plyd = (unsigned short*)malloc(vcount * sizeof(unsigned short));
             if (verbose) {
                 // STRING: LEGORR 0x004afa40
-                sprintf(str, "Poly %d, Vertex Count %d > ", count, vertCount);
+                sprintf(buff, "Poly %d, Vertex Count %d > ", pc, vcount);
             }
-            poly->plyCount = vertCount;
-            poly->plyData = data;
-            for (i = 0; i != vertCount; i++) {
-                vert = LWO_SWAPSHORT(*ptr);
+            ply->plyCount = vcount;
+            ply->plyData = plyd;
+            while (vcount) {
+                vcur = LWO_SWAPWORD(*swp);
                 if (verbose) {
                     // STRING: LEGORR 0x004afa3c
-                    sprintf(tmp, "%d ", vert);
-                    strcat(str, tmp);
+                    sprintf(buff2, "%d ", vcur);
+                    strcat(buff, buff2);
                 }
-                *data++ = vert;
-                ptr++;
+                *plyd++ = vcur;
+                swp++;
                 csize -= 2;
+                vcount--;
             }
-            poly->srfIndex = (unsigned short)(LWO_SWAPSHORT(*ptr) - 1);
+            vsurf = LWO_SWAPWORD(*swp);
+            vsurf--;
+            ply->srfIndex = vsurf;
             if (verbose) {
                 // STRING: LEGORR 0x004afa2c
-                sprintf(tmp, "Surface :- %d\n", poly->srfIndex);
-                strcat(str, tmp);
+                sprintf(buff2, "Surface :- %d\n", vsurf);
+                strcat(buff, buff2);
             }
         }
-        ptr++;
+        swp++;
         csize -= 2;
-        count++;
+        pc++;
     }
-    size->lwPolyCount = count;
-    free(buff);
+    size->lwPolyCount = pc;
+    free(sp);
+
     return 1;
 }
 
@@ -323,232 +338,279 @@ int lwo_surface_names_read(File* file, LWSIZE* size, LWSURFLIST** list,
     return 1;
 }
 
-/* SURF: one surface's settings (FUN_0048c820). */
+/* SURF: one surface's settings (FUN_0048c820), in Lwt.c's SURFprc shape
+ * as OpenLRR records it: the block-scoped locals of each chunk branch, the
+ * flag-name tables as initialised arrays, `setVal` then `surf` tested
+ * separately, and Lwt.h's LWSVALUE/LWSPVALUE swaps (finding 677). */
 // FUNCTION: LEGORR 0x0048c820
 int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                               int csize, int verbose)
 {
-    char id[10] = {0};
-    char* buff;
-    char* ptr;
+    char *sp, *cp;
+    char buff[512];
+    char buff2[512];
+    char cbuff[10] = {0};
     unsigned int len;
-    unsigned int surfCount;
-    LWSURFACE* cur;
-    LWSURFACE* newSurf;
-    unsigned int subSize;
-    unsigned short flags;
-    unsigned int i;
-    unsigned short printed;
-    int type;
-    float value;
-    unsigned char* fptr;
-    unsigned int seqIndex;
-    size_t seqLength;
-    float tsiz[3];
-    float tctr[3];
-    const char* texFlagNames[7];
-    const char* surfFlagNames[10];
-    char tmp[512];
-    char texName[128];
-    char str[512];
+    LWSURFACE* srfb;
+    int sc;
+    unsigned int setVal;
 
-    buff = (char*)malloc(csize + 16);
-    file_read(buff, csize, 1, file);
-    surfCount = size->lwSurfaceCount;
+    sp = (char*)malloc(csize + 16);
+    cp = sp;
+    file_read(sp, csize, 1, file);
+
+    sc = size->lwSurfaceCount;
+
     if (surf) {
-        if (surfCount == 0) {
-            cur = *surf = (LWSURFACE*)malloc(sizeof(LWSURFACE));
-            memset(cur, 0, sizeof(LWSURFACE));
-            cur->srfName = lwo_string_duplicate(buff);
+        if (!sc) {
+            srfb = (LWSURFACE*)malloc(sizeof(LWSURFACE));
+            *surf = srfb;
+            memset(srfb, 0, sizeof(LWSURFACE));
+            srfb->srfName = lwo_string_duplicate(cp);
         } else {
-            newSurf = (LWSURFACE*)malloc(sizeof(LWSURFACE) * (surfCount + 1));
-            memcpy(newSurf, *surf, sizeof(LWSURFACE) * surfCount);
+            srfb = (LWSURFACE*)malloc(sizeof(LWSURFACE) * (sc + 1));
+            memcpy(srfb, *surf, sc * sizeof(LWSURFACE));
             free(*surf);
-            *surf = newSurf;
-            cur = &newSurf[surfCount];
-            memset(cur, 0, sizeof(LWSURFACE));
-            cur->srfName = lwo_string_duplicate(buff);
+            *surf = srfb;
+            srfb += sc;
+            memset(srfb, 0, sizeof(LWSURFACE));
+            srfb->srfName = lwo_string_duplicate(cp);
         }
     }
+
     if (verbose) {
         // STRING: LEGORR 0x004afc0c
-        sprintf(str, "Surface %d :- %s", surfCount, buff);
+        sprintf(buff, "Surface %d :- %s", sc, cp);
     }
-    ptr = buff;
-    len = strlen(ptr) + 1;
-    if (len & 1) len++;
+    len = strlen(cp) + 1;
+    if (len & 1)
+        len++;
+    cp += len;
     csize -= len;
-    ptr += len;
     while (csize > 0) {
-        strncpy(id, ptr, 4);
-        ptr += 4;
-        subSize = LWO_SWAPWORD(*(unsigned short*)ptr);
+        strncpy(cbuff, cp, 4);
+        cp += 4;
+        len = LWSVALUE(*(unsigned short*)cp);
         // STRING: LEGORR 0x004afc00
-        sprintf(str, " %s (%d)", id, subSize);
-        ptr += 2;
+        sprintf(buff, " %s (%d)", cbuff, len);
+        cp += 2;
         // STRING: LEGORR 0x004afbf8
-        if (0 == strnicmp(id, "TIMG", 4)) {
-            strcat(str, ptr);
+        if (!strnicmp(cbuff, "TIMG", 4)) {
+            strcat(buff, cp);
             if (surf) {
-                strcpy(texName, ptr);
-                // STRING: LEGORR 0x004afbec
-                if (string_case_substring_find(texName, "(sequence)", &seqIndex, &seqLength)) {
-                    cur->srfTexFlags |= 0x80;
-                    texName[seqIndex - 1] = '\0';
-                }
-                cur->srfPath = lwo_string_duplicate(texName);
-            }
-        // STRING: LEGORR 0x004afbe4
-        } else if (0 == strnicmp(id, "COLR", 4)) {
-            // STRING: LEGORR 0x004afbd0
-            sprintf(tmp, " RGBA %d,%d,%d,%d", (unsigned char)ptr[0], (unsigned char)ptr[1], (unsigned char)ptr[2], (unsigned char)ptr[3]);
-            strcat(str, tmp);
-            if (surf) {
-                cur->srfCol[0] = ptr[0];
-                cur->srfCol[1] = ptr[1];
-                cur->srfCol[2] = ptr[2];
-                cur->srfCol[3] = ptr[3];
-            }
-        // STRING: LEGORR 0x004afbc8
-        } else if (0 == strnicmp(id, "CTEX", 4)) {
-            strcat(str, ptr);
-            if (surf) cur->srfTexMode = lwo_texture_projection_mode_parse(ptr);
-        // STRING: LEGORR 0x004afbc0
-        } else if (0 == strnicmp(id, "TTEX", 4)) {
-            strcat(str, ptr);
-            if (surf) {
-                cur = cur->srfNextTex = (LWSURFACE*)malloc(sizeof(LWSURFACE));
-                memset(cur, 0, sizeof(LWSURFACE));
-                cur->srfTexMode = lwo_texture_projection_mode_parse(ptr);
-            }
-        // STRING: LEGORR 0x004afbb8
-        } else if (0 == strnicmp(id, "TFLG", 4)) {
-            printed = 0;
-            if (surf) {
-                flags = LWO_SWAPWORD(*(unsigned short*)ptr);
-                // STRING: LEGORR 0x004afbb0
-                texFlagNames[0] = "Axis_x";
-                cur->srfTexFlags |= flags;
-                // STRING: LEGORR 0x004afba0
-                texFlagNames[1] = "Axis_y";
-                // STRING: LEGORR 0x004afb98
-                texFlagNames[2] = "Axis_z";
-                // STRING: LEGORR 0x004afb8c
-                texFlagNames[3] = "World Coord";
-                // STRING: LEGORR 0x004afb7c
-                texFlagNames[4] = "Negative Image";
-                // STRING: LEGORR 0x004afb6c
-                texFlagNames[5] = "Pixel Blending";
-                // STRING: LEGORR 0x004afb5c
-                texFlagNames[6] = "Anti Aliasing";
-                // STRING: LEGORR 0x004afba8
-                sprintf(tmp, "%xH - ", flags);
-                for (i = 0; i < 8; i++) {
-                    if (flags & (1 << i)) {
-                        if ((short)printed) strcat(tmp, ",");
-                        printed++;
-                        strcat(tmp, texFlagNames[i]);
-                    }
-                }
-                strcat(str, tmp);
-            }
-        // STRING: LEGORR 0x004afb54
-        } else if (0 == strnicmp(id, "FLAG", 4)) {
-            printed = 0;
-            if (surf) {
-                flags = LWO_SWAPWORD(*(unsigned short*)ptr);
-                // STRING: LEGORR 0x004afb48
-                surfFlagNames[0] = "Luminous";
-                // STRING: LEGORR 0x004afb40
-                surfFlagNames[1] = "Outline";
-                // STRING: LEGORR 0x004afb34
-                surfFlagNames[2] = "Smoothing";
-                // STRING: LEGORR 0x004afb20
-                surfFlagNames[3] = "Color Highlights";
-                // STRING: LEGORR 0x004afb10
-                surfFlagNames[4] = "Color Filter";
-                // STRING: LEGORR 0x004afb04
-                surfFlagNames[5] = "Opaque Edge";
-                // STRING: LEGORR 0x004afaf0
-                surfFlagNames[6] = "Transparent Edge";
-                // STRING: LEGORR 0x004afadc
-                surfFlagNames[7] = "Sharp Terminator";
-                // STRING: LEGORR 0x004afacc
-                surfFlagNames[8] = "Double Sided";
-                // STRING: LEGORR 0x004afac0
-                surfFlagNames[9] = "Additive";
-                cur->srfFlags = flags;
-                sprintf(tmp, "%xH - ", flags);
-                for (i = 0; i < 10; i++) {
-                    if (flags & (1 << i)) {
-                        if ((short)printed) strcat(tmp, ",");
-                        printed++;
-                        strcat(tmp, surfFlagNames[i]);
-                    }
-                }
-                strcat(str, tmp);
-            }
-        // STRING: LEGORR 0x004afab8
-        } else if (0 == strnicmp(id, "TSIZ", 4)) {
-            if (surf) {
-                fptr = (unsigned char*)ptr;
-                lwo_read_big_endian_float(&fptr, &tsiz[0]);
-                lwo_read_big_endian_float(&fptr, &tsiz[1]);
-                lwo_read_big_endian_float(&fptr, &tsiz[2]);
-                // STRING: LEGORR 0x004afaac
-                sprintf(tmp, " (%f,%f,%f)", tsiz[0], tsiz[1], tsiz[2]);
-                cur->srfTSIZ[0] = tsiz[0];
-                cur->srfTSIZ[1] = tsiz[1];
-                cur->srfTSIZ[2] = tsiz[2];
-                strcat(str, tmp);
-            }
-        // STRING: LEGORR 0x004afaa4
-        } else if (0 == strnicmp(id, "TCTR", 4)) {
-            if (surf) {
-                fptr = (unsigned char*)ptr;
-                lwo_read_big_endian_float(&fptr, &tctr[0]);
-                lwo_read_big_endian_float(&fptr, &tctr[1]);
-                lwo_read_big_endian_float(&fptr, &tctr[2]);
-                sprintf(tmp, " (%f,%f,%f)", tctr[0], tctr[1], tctr[2]);
-                cur->srfTCTR[0] = tctr[0];
-                cur->srfTCTR[1] = tctr[1];
-                cur->srfTCTR[2] = tctr[2];
-                strcat(str, tmp);
-            }
-        }
+                unsigned int pos;
+                size_t len;
+                char cps[128];
 
-        type = 0;
-        // STRING: LEGORR 0x004afa9c
-        if (0 == strnicmp(id, "TRAN", 4)) type = 1;
-        // STRING: LEGORR 0x004afa94
-        else if (0 == strnicmp(id, "DIFF", 4)) type = 2;
-        // STRING: LEGORR 0x004afa8c
-        else if (0 == strnicmp(id, "LUMI", 4)) type = 3;
-        // STRING: LEGORR 0x004afa84
-        else if (0 == strnicmp(id, "REFL", 4)) type = 4;
-        // STRING: LEGORR 0x004afa7c
-        else if (0 == strnicmp(id, "SPEC", 4)) type = 5;
-        // STRING: LEGORR 0x004afa74
-        else if (0 == strnicmp(id, "GLOS", 4)) type = 6;
-        if (type && surf) {
-            value = (float)(int)LWO_SWAPSHORT(*(unsigned short*)ptr) / 256.0f;
-            switch (type) {
-            case 1: cur->srfTransparent = value; break;
-            case 2: cur->srfDiffuse = value; break;
-            case 3: cur->srfLuminous = value; break;
-            case 4: cur->srfReflect = value; break;
-            case 5: cur->srfSpecular = value; break;
-            case 6: cur->srfGlossy = value; break;
+                strcpy(cps, cp);
+                // STRING: LEGORR 0x004afbec
+                if (string_case_substring_find(cps, "(sequence)", &pos, &len)) {
+                    *(cps + pos - 1) = 0;
+                    srfb->srfTexFlags |= 0x80;
+                }
+                srfb->srfPath = lwo_string_duplicate(cps);
             }
-            // STRING: LEGORR 0x004afa70
-            sprintf(tmp, "%f", value);
-            strcat(str, tmp);
         }
-        ptr += subSize;
-        csize -= 6 + subSize;
+        // STRING: LEGORR 0x004afbe4
+        else if (!strnicmp(cbuff, "COLR", 4)) {
+            // STRING: LEGORR 0x004afbd0
+            sprintf(buff2, " RGBA %d,%d,%d,%d", (unsigned char)cp[0], (unsigned char)cp[1], (unsigned char)cp[2], (unsigned char)cp[3]);
+            strcat(buff, buff2);
+            if (surf) {
+                srfb->srfCol[0] = cp[0];
+                srfb->srfCol[1] = cp[1];
+                srfb->srfCol[2] = cp[2];
+                srfb->srfCol[3] = cp[3];
+            }
+        }
+        // STRING: LEGORR 0x004afbc8
+        else if (!strnicmp(cbuff, "CTEX", 4)) {
+            strcat(buff, cp);
+            if (surf) {
+                srfb->srfTexMode = lwo_texture_projection_mode_parse(cp);
+            }
+        }
+        // STRING: LEGORR 0x004afbc0
+        else if (!strnicmp(cbuff, "TTEX", 4)) {
+            strcat(buff, cp);
+            if (surf) {
+                LWSURFACE* srfbN;
+
+                srfbN = (LWSURFACE*)malloc(sizeof(LWSURFACE));
+                srfb->srfNextTex = srfbN;
+                srfb = srfbN;
+                memset(srfb, 0, sizeof(LWSURFACE));
+
+                srfb->srfTexMode = lwo_texture_projection_mode_parse(cp);
+            }
+        }
+        // STRING: LEGORR 0x004afbb8
+        else if (!strnicmp(cbuff, "TFLG", 4)) {
+            unsigned short sval, i, f = 0;
+            if (surf) {
+                const char* ttexName[] = {
+                    // STRING: LEGORR 0x004afbb0
+                    "Axis_x",
+                    // STRING: LEGORR 0x004afba0
+                    "Axis_y",
+                    // STRING: LEGORR 0x004afb98
+                    "Axis_z",
+                    // STRING: LEGORR 0x004afb8c
+                    "World Coord",
+                    // STRING: LEGORR 0x004afb7c
+                    "Negative Image",
+                    // STRING: LEGORR 0x004afb6c
+                    "Pixel Blending",
+                    // STRING: LEGORR 0x004afb5c
+                    "Anti Aliasing",
+                };
+
+                sval = LWSPVALUE((unsigned short*)cp);
+                srfb->srfTexFlags |= sval;
+                // STRING: LEGORR 0x004afba8
+                sprintf(buff2, "%xH - ", sval);
+                for (i = 0; i < 8; i++) {
+                    if (sval & (1 << i)) {
+                        if (f)
+                            strcat(buff2, ",");
+                        f++;
+                        strcat(buff2, ttexName[i]);
+                    }
+                }
+
+                strcat(buff, buff2);
+            }
+        }
+        // STRING: LEGORR 0x004afb54
+        else if (!strnicmp(cbuff, "FLAG", 4)) {
+            unsigned short sval, i, f = 0;
+            if (surf) {
+                const char* tName[] = {
+                    // STRING: LEGORR 0x004afb48
+                    "Luminous",
+                    // STRING: LEGORR 0x004afb40
+                    "Outline",
+                    // STRING: LEGORR 0x004afb34
+                    "Smoothing",
+                    // STRING: LEGORR 0x004afb20
+                    "Color Highlights",
+                    // STRING: LEGORR 0x004afb10
+                    "Color Filter",
+                    // STRING: LEGORR 0x004afb04
+                    "Opaque Edge",
+                    // STRING: LEGORR 0x004afaf0
+                    "Transparent Edge",
+                    // STRING: LEGORR 0x004afadc
+                    "Sharp Terminator",
+                    // STRING: LEGORR 0x004afacc
+                    "Double Sided",
+                    // STRING: LEGORR 0x004afac0
+                    "Additive"
+                };
+
+                sval = LWSPVALUE((unsigned short*)cp);
+                srfb->srfFlags = sval;
+                sprintf(buff2, "%xH - ", sval);
+                for (i = 0; i < 10; i++) {
+                    if (sval & (1 << i)) {
+                        if (f)
+                            strcat(buff2, ",");
+                        f++;
+                        strcat(buff2, tName[i]);
+                    }
+                }
+
+                strcat(buff, buff2);
+            }
+        }
+        // STRING: LEGORR 0x004afab8
+        else if (!strnicmp(cbuff, "TSIZ", 4)) {
+            float td[3];
+            if (surf) {
+                unsigned char* ccp = (unsigned char*)cp;
+                lwo_read_big_endian_float(&ccp, &td[0]);
+                lwo_read_big_endian_float(&ccp, &td[1]);
+                lwo_read_big_endian_float(&ccp, &td[2]);
+                // STRING: LEGORR 0x004afaac
+                sprintf(buff2, " (%f,%f,%f)", td[0], td[1], td[2]);
+                srfb->srfTSIZ[0] = td[0];
+                srfb->srfTSIZ[1] = td[1];
+                srfb->srfTSIZ[2] = td[2];
+                strcat(buff, buff2);
+            }
+        }
+        // STRING: LEGORR 0x004afaa4
+        else if (!strnicmp(cbuff, "TCTR", 4)) {
+            float td[3];
+            if (surf) {
+                unsigned char* ccp = (unsigned char*)cp;
+                lwo_read_big_endian_float(&ccp, &td[0]);
+                lwo_read_big_endian_float(&ccp, &td[1]);
+                lwo_read_big_endian_float(&ccp, &td[2]);
+                sprintf(buff2, " (%f,%f,%f)", td[0], td[1], td[2]);
+                srfb->srfTCTR[0] = td[0];
+                srfb->srfTCTR[1] = td[1];
+                srfb->srfTCTR[2] = td[2];
+                strcat(buff, buff2);
+            }
+        }
+        setVal = 0;
+        // STRING: LEGORR 0x004afa9c
+        if (!strnicmp(cbuff, "TRAN", 4))
+            setVal = 1;
+        // STRING: LEGORR 0x004afa94
+        else if (!strnicmp(cbuff, "DIFF", 4))
+            setVal = 2;
+        // STRING: LEGORR 0x004afa8c
+        else if (!strnicmp(cbuff, "LUMI", 4))
+            setVal = 3;
+        // STRING: LEGORR 0x004afa84
+        else if (!strnicmp(cbuff, "REFL", 4))
+            setVal = 4;
+        // STRING: LEGORR 0x004afa7c
+        else if (!strnicmp(cbuff, "SPEC", 4))
+            setVal = 5;
+        // STRING: LEGORR 0x004afa74
+        else if (!strnicmp(cbuff, "GLOS", 4))
+            setVal = 6;
+
+        if (setVal) {
+            unsigned short sval;
+            float fval;
+            if (surf) {
+                sval = LWSPVALUE((unsigned short*)cp);
+                fval = (float)sval / 256;
+                switch (setVal) {
+                case 1:
+                    srfb->srfTransparent = fval;
+                    break;
+                case 2:
+                    srfb->srfDiffuse = fval;
+                    break;
+                case 3:
+                    srfb->srfLuminous = fval;
+                    break;
+                case 4:
+                    srfb->srfReflect = fval;
+                    break;
+                case 5:
+                    srfb->srfSpecular = fval;
+                    break;
+                case 6:
+                    srfb->srfGlossy = fval;
+                    break;
+                }
+                // STRING: LEGORR 0x004afa70
+                sprintf(buff2, "%f", fval);
+                strcat(buff, buff2);
+            }
+        }
+        cp += len;
+
+        csize -= (len + 6);
     }
     size->lwSurfaceCount++;
-    free(buff);
+    free(sp);
     return 1;
 }
 
