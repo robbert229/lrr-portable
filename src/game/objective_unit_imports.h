@@ -41,8 +41,11 @@ extern const char* s_engine_config_root;    /* 005560c4 gameName */
 extern uint32_t s_panel_highlight_flags;    /* 00556ed0 flags2 */
 
 /* GAME-017 FrontEnd.c's frontGlobs stand-ins (frontend_unit.c). */
-extern unsigned int frontGlobs_saveImageBigWidth;   /* 0055750c */
-extern unsigned int frontGlobs_saveImageBigHeight;  /* 00557510 */
+extern struct Front_Globs frontGlobs;
+#define frontGlobs_saveImageBigWidth \
+    (*(unsigned int*)((char*)&frontGlobs + 0x54c))  /* 0055750c */
+#define frontGlobs_saveImageBigHeight \
+    (*(unsigned int*)((char*)&frontGlobs + 0x550))  /* 00557510 */
 
 /* Config's "" (004b8a14), which config.c defines (finding 581). */
 extern const char s_config_angle_empty[4];

@@ -5087,7 +5087,8 @@ static void menu_resource_entry_release(MenuResourceEntry* entry)
 char* g_front_end_avi1;
 char* g_front_end_avi2;
 /* g_front_main_menu_set (00556fc4), g_front_save_menu_result (00557504)
- * and g_front_save_menu_open (00557508) are defined in frontend_unit.c. */
+ * and g_front_save_menu_open (00557508) are fields of frontend_unit.c's
+ * frontGlobs, which frontend_api.h names. */
 #if !(defined(_MSC_VER) && _MSC_VER < 1200)
 /* frontend_unit.c's frontGlobs.startMissionLink (00556ff8) in the
  * matching build (finding 628). */
