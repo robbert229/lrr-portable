@@ -427,7 +427,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
         sound_variant_split(s, argv, ":");
         timer = (float)atoi(argv[0]) * 25.0f;
         // STRING: LEGORR 0x004a8144
-        if (!_strcmpi(argv[1], "HitTimeFailObjective")) hitTimeFail = 1;
+        if (!stricmp(argv[1], "HitTimeFailObjective")) hitTimeFail = 1;
         objective_set_timer_objective(level, timer, hitTimeFail);
         free(s);
     }

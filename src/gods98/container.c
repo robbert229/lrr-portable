@@ -2595,7 +2595,7 @@ int Container_ParseTypeString(const char* str, int* noTexture)
         strcpy(string, str);
         if ((unsigned long)sound_variant_split(string, argv, s_config_rgb_separator) > 1 &&
             // STRING: LEGORR 0x004aab78
-            _strcmpi(argv[1], "NOTEXTURE") == 0) {
+            stricmp(argv[1], "NOTEXTURE") == 0) {
             *noTexture = 1;
         } else {
             *noTexture = 0;
@@ -2603,7 +2603,7 @@ int Container_ParseTypeString(const char* str, int* noTexture)
 
         for (loop = 0; loop < Container_TypeCount; loop++) {
             if (containerGlobs.typeName[loop]) {
-                if (_strcmpi(containerGlobs.typeName[loop], string) == 0) return (int)loop;
+                if (stricmp(containerGlobs.typeName[loop], string) == 0) return (int)loop;
             }
         }
     }
@@ -2819,7 +2819,7 @@ struct CntFrame* Container_Frame_Find(Container* cont, const char* findName,
                 frame->lpVtbl->GetName(frame, &len, name);
                 sprintf(buffer, "%s_%s", CONTAINER_ACTIVITYFRAMEPREFIX,
                         findName);
-                if (_strcmpi(name, buffer) == 0) foundFrame = frame;
+                if (stricmp(name, buffer) == 0) foundFrame = frame;
                 free(name);
             }
             frame->lpVtbl->Release(frame);
@@ -3064,20 +3064,20 @@ int Container_Frame_SearchCallback(struct CntFrame* frame, void* data)
             if (search->caseSensitive) {
                 if (strcmp(name, search->string) == 0) search->resultFrame = frame;
             } else {
-                if (_strcmpi(name, search->string) == 0) search->resultFrame = frame;
+                if (stricmp(name, search->string) == 0) search->resultFrame = frame;
             }
         } else if (search->mode == Container_SearchMode_MatchCount) {
             if (search->caseSensitive) {
                 if (strcmp(name, search->string) == 0) search->count++;
             } else {
-                if (_strcmpi(name, search->string) == 0) search->count++;
+                if (stricmp(name, search->string) == 0) search->count++;
             }
         } else if (search->mode == Container_SearchMode_NthMatch) {
             search->resultFrame = NULL;
             if (search->caseSensitive) {
                 if (strcmp(name, search->string) == 0) search->count++;
             } else {
-                if (_strcmpi(name, search->string) == 0) search->count++;
+                if (stricmp(name, search->string) == 0) search->count++;
             }
             if (search->count == search->matchNumber + 1) {
                 search->resultFrame = frame;

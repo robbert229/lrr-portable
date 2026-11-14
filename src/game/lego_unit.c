@@ -3922,9 +3922,11 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct EntityS
 }
 
 /* The block-visibility callback of the top view's radius pass: switch off
- * the transient effect of a block that has one. */
+ * the transient effect of a block that has one. Both callbacks here have
+ * external linkage, as in the original: MSVC 5.0 emits a static function
+ * after its first user, not where it is defined (findings 658 and 667). */
 // FUNCTION: LEGORR 0x00429110
-static void lego_block_visible_callback(int bx, int by)
+void lego_block_visible_callback(int bx, int by)
 {
     Lego_Level* level = legoGlobs_currLevel;
     uint32_t flags1 = LEGO_LEVEL_PTR(Lego_Block, level->blocks)
@@ -4183,7 +4185,7 @@ void lego_sound_minimum_distance_update_mode(int viewMode, void* liveObj,
 
 /* The CD track's end callback: play another track. */
 // FUNCTION: LEGORR 0x004297a0
-static void lego_cd_track_play_next_callback(void)
+void lego_cd_track_play_next_callback(void)
 {
     media_cd_audio_stop_and_close_if_active();
     lego_cd_audio_watchdog_mode_update(1);
@@ -4315,11 +4317,11 @@ int lego_level_load(const char* levelName)
         // STRING: LEGORR 0x004a45a8
         if ((str = LEGO_D_TEMP("BoulderAnimation")) != NULL) {
             // STRING: LEGORR 0x004a45a0
-            if (!_strcmpi(str, "Rock")) level->f_274 = 0;
+            if (!stricmp(str, "Rock")) level->f_274 = 0;
             // STRING: LEGORR 0x004a4598
-            else if (!_strcmpi(str, "Lava")) level->f_274 = 1;
+            else if (!stricmp(str, "Lava")) level->f_274 = 1;
             // STRING: LEGORR 0x004a4594
-            else if (!_strcmpi(str, "Ice")) level->f_274 = 2;
+            else if (!stricmp(str, "Ice")) level->f_274 = 2;
             else level->f_274 = 0;
         } else level->f_274 = 0;
 
@@ -5367,7 +5369,7 @@ void* lego_upgrade_name_entry_find(const char* name)
     unsigned int loop;
 
     for (loop = 0; loop < legoGlobs_catalogCounts[4]; loop++) {
-        if (_strcmpi(name, legoGlobs_upgradeName[loop]) == 0) {
+        if (stricmp(name, legoGlobs_upgradeName[loop]) == 0) {
             return (char*)s_upgrade_records + loop * 16;
         }
     }
@@ -5900,7 +5902,7 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
     for (result = 0; result < count; result++) {
         if ((obj = objList[result]) != NULL && (drivingName = drivingNames[result]) != NULL) {
             for (j = 0; j < count; j++) {
-                if (!_strcmpi(drivingName, olNames[j])) {
+                if (!stricmp(drivingName, olNames[j])) {
                     if ((target = objList[j]) != NULL) {
                         LEGO_FIELD(obj, struct EntitySlot*, 0x2fc) = target;
                         LEGO_FIELD(obj, uint32_t, 0x3e4) |= 4;
@@ -5944,7 +5946,7 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
 
     *outID = 0;
     for (i = 0; i < legoGlobs_catalogCounts[2]; i++) {
-        if (!_strcmpi(legoGlobs_rockMonsterName[i], objName)) {
+        if (!stricmp(legoGlobs_rockMonsterName[i], objName)) {
             *outType = 3;
             *outID = i;
             if (outModel) *outModel = &legoGlobs_rockMonsterData[i];
@@ -5953,69 +5955,69 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
     }
 
     // STRING: LEGORR 0x004a46dc
-    if (!_strcmpi("tvcamera", objName)) {
+    if (!stricmp("tvcamera", objName)) {
         *outType = -1;
         if (outModel) *outModel = NULL;
-    } else if (!_strcmpi("PowerCrystal", objName)) {
+    } else if (!stricmp("PowerCrystal", objName)) {
         *outType = 6;
         if (outModel) *outModel = legoGlobs_contCrystal;
-    } else if (!_strcmpi("Ore", objName)) {
+    } else if (!stricmp("Ore", objName)) {
         *outType = 7;
         *outID = 0;
         if (outModel) *outModel = legoGlobs_contOresTable;
-    } else if (!_strcmpi(
+    } else if (!stricmp(
                    // STRING: LEGORR 0x004a3fa0
                    "ProcessedOre", objName)) {
         *outType = 7;
         *outID = 1;
         if (outModel) *outModel = legoGlobs_contProcessedOre;
-    } else if (!_strcmpi(
+    } else if (!stricmp(
                    // STRING: LEGORR 0x004a401c
                    "Boulder", objName)) {
         *outType = 5;
         if (outModel) *outModel = legoGlobs_contBoulder;
-    } else if (!_strcmpi(
+    } else if (!stricmp(
                    // STRING: LEGORR 0x004a3f10
                    "Pusher", objName)) {
         *outType = 16;
         if (outModel) *outModel = legoGlobs_contPusher;
-    } else if (!_strcmpi("LaserShot", objName)) {
+    } else if (!stricmp("LaserShot", objName)) {
         *outType = 19;
         if (outModel) *outModel = legoGlobs_contLaserShot;
-    } else if (!_strcmpi(
+    } else if (!stricmp(
                    // STRING: LEGORR 0x004a3f08
                    "Freezer", objName)) {
         *outType = 17;
         if (outModel) *outModel = legoGlobs_contFreezer;
-    } else if (!_strcmpi(
+    } else if (!stricmp(
                    // STRING: LEGORR 0x004a3fc4
                    "Dynamite", objName)) {
         *outType = 8;
         if (outModel) *outModel = legoGlobs_contDynamite;
-    } else if (!_strcmpi(
+    } else if (!stricmp(
                    // STRING: LEGORR 0x004a3f90
                    "ElectricFence", objName)) {
         *outType = 11;
         if (outModel) *outModel = legoGlobs_contElectricFence;
-    } else if (!_strcmpi("SpiderWeb", objName)) {
+    } else if (!stricmp("SpiderWeb", objName)) {
         *outType = 12;
         if (outModel) *outModel = legoGlobs_contSpiderWeb;
-    } else if (!_strcmpi(
+    } else if (!stricmp(
                    // STRING: LEGORR 0x004a3fb0
                    "Barrier", objName)) {
         *outType = 9;
         if (outModel) *outModel = legoGlobs_contBarrier;
-    } else if (!_strcmpi(
+    } else if (!stricmp(
                    // STRING: LEGORR 0x004a3fb8
                    "OohScary", objName)) {
         *outType = 13;
         if (outModel) *outModel = legoGlobs_contOohScary;
-    } else if (!_strcmpi("Path", objName)) {
+    } else if (!stricmp("Path", objName)) {
         *outType = 15;
         if (outModel) *outModel = NULL;
     } else {
         for (i = 0; i < legoGlobs_catalogCounts[0]; i++) {
-            if (!_strcmpi(legoGlobs_vehicleName[i], objName)) {
+            if (!stricmp(legoGlobs_vehicleName[i], objName)) {
                 *outType = 1;
                 *outID = i;
                 if (outModel) *outModel = &legoGlobs_vehicleData[i];
@@ -6023,7 +6025,7 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
             }
         }
         for (i = 0; i < legoGlobs_catalogCounts[1]; i++) {
-            if (!_strcmpi(legoGlobs_miniFigureName[i], objName)) {
+            if (!stricmp(legoGlobs_miniFigureName[i], objName)) {
                 *outType = 2;
                 *outID = i;
                 if (outModel) *outModel = &legoGlobs_miniFigureData[i];
@@ -6031,7 +6033,7 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
             }
         }
         for (i = 0; i < legoGlobs_catalogCounts[3]; i++) {
-            if (!_strcmpi(legoGlobs_buildingName[i], objName)) {
+            if (!stricmp(legoGlobs_buildingName[i], objName)) {
                 *outType = 4;
                 *outID = i;
                 if (outModel) *outModel = &legoGlobs_buildingData[i];
@@ -8729,11 +8731,11 @@ int lego_render_quality_config_apply(void)
                 "quality", 0));
         if (str != NULL) {
             // STRING: LEGORR 0x004a4774
-            if (_strcmpi("gouraud", str) == 0) quality = 3;
+            if (stricmp("gouraud", str) == 0) quality = 3;
             // STRING: LEGORR 0x004a476c
-            else if (_strcmpi("flat", str) == 0) quality = 2;
+            else if (stricmp("flat", str) == 0) quality = 2;
             // STRING: LEGORR 0x004a4760
-            else if (_strcmpi("wireframe", str) == 0) quality = 0;
+            else if (stricmp("wireframe", str) == 0) quality = 0;
             else return 0;
             legoGlobs_quality = quality;
 
@@ -9360,7 +9362,7 @@ void lego_panel_button_layout_config_load(struct BlockRec* config,
                     buttonTypes[panelType][buttonCount[panelType]] = buttonType;
                     for (i = 0; i < 3; i++) {
                         char** names = (i == 0) ? normalNames[panelType] : (i == 1) ? highlightNames[panelType] : pressedNames[panelType];
-                        if (_strcmpi("NULL", argv[1 + i]) == 0) names[buttonCount[panelType]] = NULL;
+                        if (stricmp("NULL", argv[1 + i]) == 0) names[buttonCount[panelType]] = NULL;
                         else names[buttonCount[panelType]] = argv[1 + i];
                     }
                     areas[panelType][buttonCount[panelType]][0] = (float)atoi(argv[4]);
@@ -9478,11 +9480,11 @@ void lego_message_load_infomessages(struct BlockRec* config)
             if (sound_alias_lookup(argv[2], &sfxType)) info_set_sfx(infoType, sfxType);
             if (argc > 3) {
                 // STRING: LEGORR 0x004a4844
-                if (!_strcmpi(argv[3], "SLOW")) info_set_type_auto_game_speed(infoType, 1);
+                if (!stricmp(argv[3], "SLOW")) info_set_type_auto_game_speed(infoType, 1);
                 else info_set_type_auto_game_speed(infoType, 0);
                 // STRING: LEGORR 0x004a4834
-                if (!_strcmpi(argv[3], "ALWAYSPLAYSFX")) info_set_type_play_always(infoType, 1);
-                else if (argc > 4 && !_strcmpi(argv[4], "ALWAYSPLAYSFX")) info_set_type_play_always(infoType, 1);
+                if (!stricmp(argv[3], "ALWAYSPLAYSFX")) info_set_type_play_always(infoType, 1);
+                else if (argc > 4 && !stricmp(argv[4], "ALWAYSPLAYSFX")) info_set_type_play_always(infoType, 1);
                 else info_set_type_play_always(infoType, 0);
             } else {
                 info_set_type_auto_game_speed(infoType, 1);

@@ -149,7 +149,7 @@ void loader_display_loading_bar(const char* section)
         emptySection = NULL;
         for (loop = 0; loop < LOADER_MAXSECTIONS; loop++) {
             if (loaderGlobs.sectionList[loop].name) {
-                if (_strcmpi(loaderGlobs.sectionList[loop].name, section) == 0) {
+                if (stricmp(loaderGlobs.sectionList[loop].name, section) == 0) {
                     loaderGlobs.currentSection = &loaderGlobs.sectionList[loop];
                     loaderGlobs.currentSection->currentSize = 0;
                     break;

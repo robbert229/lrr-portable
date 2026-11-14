@@ -59,6 +59,10 @@ char* crt_string_to_lower(char* text);
 #define strlwr crt_string_to_lower
 #endif
 #define _strcmpi strcasecmp_lite
+/* The original's callers spell __strcmpi by its old name too, except
+ * Files.c's direct calls, so LIBC pulls stricmp.obj among Files.c's
+ * references (finding 667). */
+#define stricmp strcasecmp_lite
 #define _strnicmp(a, b, count) strnicmp_lite((a), (b), (int)(count))
 #define strnicmp(a, b, count) strnicmp_lite((a), (b), (int)(count))
 #define _finite double_is_finite

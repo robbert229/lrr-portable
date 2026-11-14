@@ -131,7 +131,7 @@ int info_get_type(const char* name, int* type)
     unsigned int i;
 
     for (i = 0; i < INFO_TYPE_COUNT; i++) {
-        if (_strcmpi(infoGlobs.infoName[i], name) == 0) {
+        if (stricmp(infoGlobs.infoName[i], name) == 0) {
             *type = i;
             return 1;
         }
