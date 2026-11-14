@@ -145,6 +145,10 @@ void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object); /* 00472a40
 char* string_duplicate(const char* text);                       /* 00477550 */
 /* Original-ABI adapters at the end of legoobject_port.cpp (group B): the port
  * entries take a GameContext or hook table, or there is none. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Weapons.c's original callback is weapons.c's (finding 645). */
+#define legoobject_gb_weapon_target_clear_callback weapons_callback_remove_lazer_hit_reference /* 00472060 */
+#endif
 int legoobject_gb_weapon_target_clear_callback(void* obj, void* data); /* 00472060 */
 void legoobject_auxiliary_payload_release(Lego_Object* obj);       /* 0044be30 */
 void* construction_place_building(int objID, int* blockPos,

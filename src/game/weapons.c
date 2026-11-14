@@ -1447,6 +1447,16 @@ int weapons_object_update_weapons(Weapons_Object* obj, float elapsed)
     return 1;
 }
 
+/* 0x00472060: the RunThroughLists callback LegoObject_Remove (00437540)
+ * passes, which Ghidra merged into the preceding function. It clears an
+ * object's laser hit reference to the object being removed. */
+// FUNCTION: LEGORR 0x00472060
+int weapons_callback_remove_lazer_hit_reference(Weapons_Object* obj, Weapons_Object* removed)
+{
+    if (obj->lazerHitObject == removed) obj->lazerHitObject = NULL;
+    return 0;
+}
+
 // FUNCTION: LEGORR 0x00472080
 int weapons_object_in_range(Weapons_Object* obj, Weapons_Object* target)
 {
