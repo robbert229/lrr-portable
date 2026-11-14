@@ -238,6 +238,10 @@ class ProgressTests(unittest.TestCase):
             self.assertEqual(result['accuracy_percent']['full'], 75.0)
             self.assertEqual(result['exact_function_code_bytes']['bytes'], 16)
             self.assertEqual(result['function_order_inversions']['game_only'], {'adjacent': 0, 'pairs': 0})
+            self.assertEqual(result['schema_version'], 5)
+            self.assertEqual(result['identical_prefix']['first_difference'], None)
+            self.assertEqual(result['correct_size_functions']['full']['mapped'], 2)
+            self.assertEqual(result['unit_size_agreement']['eligible_units'], 0)
 
 if __name__ == '__main__':
     unittest.main()

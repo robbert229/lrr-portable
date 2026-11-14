@@ -16,7 +16,7 @@ IMPORTLIB_DIR = 'cross/msvc5-importlibs/'
 FIXED = ('CMakeLists.txt', 'cross/msvc5-toolchain.cmake', 'tools/reccmp.sh',
          'tools/clean_reccmp_report_names.py', 'tools/reccmp_full_diff.py', 'tools/reccmp_diagnostics.py', 'tools/match_listings.py',
          'tools/reccmp_map_statics.py',
-         'tools/match_baseline.py', 'tools/binary_progress.py', 'tools/layout_progress.py',
+         'tools/match_baseline.py', 'tools/binary_progress.py', 'tools/layout_progress.py', 'tools/identity_metrics.py',
          'tools/opt_ref_link.py', 'tools/pe_audit.py', 'tools/winapi_link_audit.py',
          'tools/pr_match_progress.py', 'docs/coverage/translation-unit-ranges.csv',
          'docs/coverage/translation-units.csv', 'docs/coverage/translation-units.spec.csv',

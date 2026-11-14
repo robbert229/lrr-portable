@@ -3,7 +3,26 @@
     "full": 97.12,
     "game_only": 96.79
   },
-  "baseline_sha256": "0364db931c4923a494d7bd43f25b3fa03c85d4b3059a1cb6a0695c71c7c529ad",
+  "baseline_sha256": "38a609f3de552c85d155df1d5e565b1a43e0611e95384a4105e7a142756e5aab",
+  "correct_size_functions": {
+    "full": {
+      "bytes": 439362,
+      "compared": 2831,
+      "count": 2596,
+      "exact_functions": 2427,
+      "mapped": 2833,
+      "uncompared": 2
+    },
+    "game_only": {
+      "bytes": 388535,
+      "compared": 2536,
+      "count": 2305,
+      "exact_functions": 2139,
+      "mapped": 2538,
+      "uncompared": 2
+    },
+    "method": "code_extent on both images (reachable code plus in-function tables, up to the next known function start, without trailing padding); bytes are original bytes"
+  },
   "exact_function_code_bytes": {
     "bytes": 338909,
     "original_text_bytes": 642549,
@@ -23,7 +42,25 @@
       "pairs": 1
     }
   },
-  "input_sha256": "02b7ad67efa49578a1f6fce3b617a3ac965f3d80b333b59e1cb0cab9d075ac92",
+  "identical_prefix": {
+    "address_operands_masked": {
+      "bytes": 528,
+      "first_difference": "0x401210",
+      "function": "AdvisorSceneVisualStateInitialize",
+      "function_address": "0x401210",
+      "offset_in_function": 0,
+      "original_text_bytes": 642549,
+      "percent": 0.08
+    },
+    "bytes": 11,
+    "first_difference": "0x40100b",
+    "function": "AdvisorSceneControllerInit",
+    "function_address": "0x401000",
+    "offset_in_function": 11,
+    "original_text_bytes": 642549,
+    "percent": 0.0
+  },
+  "input_sha256": "3f259de9b4b43ef666cb9408f8ad1f5e8926804aafd419ae33fe6fb8f4e010f9",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 20,
@@ -4033,7 +4070,7 @@
     "unlisted_mapped_functions": 281,
     "unmapped_original_functions": 12
   },
-  "listing_digests_sha256": "cfb553cbf2d0997f5e360b437135d5f2dab4c0e4c45106c16598f007a770c89d",
+  "listing_digests_sha256": "ee6d3c0331ecf633df8b1ebc01619db7545049ba784885d86c1423ffa0f9089b",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4052,8 +4089,8 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 572528,
-        "functions": 2534,
+        "bytes": 572464,
+        "functions": 2532,
         "removed_bytes": 0,
         "removed_functions": 0
       }
@@ -4072,8 +4109,8 @@
         "removed_functions": 76
       },
       "original_annotated": {
-        "bytes": 572528,
-        "functions": 2534,
+        "bytes": 572464,
+        "functions": 2532,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4096,8 +4133,8 @@
         "removed_functions": 3572
       },
       "port_unit": {
-        "bytes": 256,
-        "functions": 11,
+        "bytes": 320,
+        "functions": 13,
         "removed_bytes": 144,
         "removed_functions": 4
       }
@@ -4210,7 +4247,7 @@
       "rebuilt": 4149248
     }
   },
-  "schema_version": 4,
+  "schema_version": 5,
   "sections": {
     ".data": {
       "chance_percent": 10.47,
@@ -4284,5 +4321,1832 @@
     "run_excess_percent_points": 0.68,
     "run_identical_bytes": 4379,
     "run_identical_percent": 0.68
+  },
+  "unit_size_agreement": {
+    "agreeing_unit_ids": [],
+    "correct_size_units": 166,
+    "eligible_units": 227,
+    "end_agreeing_units": 1,
+    "method": "listed original functions in each unit range: all mapped with correct size, first function at its original address, last function code ending at its original end; trailing padding not compared",
+    "per_unit": [
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": true,
+        "functions": 32,
+        "start_agrees": true,
+        "unit_id": "GAME-001"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 94,
+        "start_agrees": true,
+        "unit_id": "GAME-002"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 7,
+        "start_agrees": false,
+        "unit_id": "GAME-003"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 21,
+        "start_agrees": false,
+        "unit_id": "GAME-004"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 15,
+        "start_agrees": false,
+        "unit_id": "GAME-005"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 22,
+        "start_agrees": false,
+        "unit_id": "GAME-006"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "GAME-007"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 27,
+        "start_agrees": false,
+        "unit_id": "GAME-052"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "GAME-008"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 9,
+        "start_agrees": false,
+        "unit_id": "GAME-009"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 11,
+        "start_agrees": false,
+        "unit_id": "GAME-010"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 11,
+        "start_agrees": false,
+        "unit_id": "GAME-011"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 27,
+        "start_agrees": false,
+        "unit_id": "GAME-012"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 24,
+        "start_agrees": false,
+        "unit_id": "GAME-013"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 6,
+        "start_agrees": false,
+        "unit_id": "GAME-014"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 9,
+        "start_agrees": false,
+        "unit_id": "GAME-015"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 6,
+        "start_agrees": false,
+        "unit_id": "GAME-051"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 23,
+        "start_agrees": false,
+        "unit_id": "GAME-016"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 132,
+        "start_agrees": false,
+        "unit_id": "GAME-017"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 19,
+        "start_agrees": false,
+        "unit_id": "GAME-018"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 36,
+        "start_agrees": false,
+        "unit_id": "GAME-019"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 73,
+        "start_agrees": false,
+        "unit_id": "GAME-020"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 216,
+        "start_agrees": false,
+        "unit_id": "GAME-021"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 27,
+        "start_agrees": false,
+        "unit_id": "GAME-022"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 258,
+        "start_agrees": false,
+        "unit_id": "GAME-023"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 20,
+        "start_agrees": false,
+        "unit_id": "GAME-024"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 5,
+        "start_agrees": false,
+        "unit_id": "GAME-025"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 62,
+        "start_agrees": false,
+        "unit_id": "GAME-026"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 26,
+        "start_agrees": false,
+        "unit_id": "GAME-027"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 30,
+        "start_agrees": false,
+        "unit_id": "GAME-028"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 14,
+        "start_agrees": false,
+        "unit_id": "GAME-029"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 8,
+        "start_agrees": false,
+        "unit_id": "GAME-030"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 8,
+        "start_agrees": false,
+        "unit_id": "GAME-031"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 52,
+        "start_agrees": false,
+        "unit_id": "GAME-032"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 9,
+        "start_agrees": false,
+        "unit_id": "GAME-033"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 14,
+        "start_agrees": false,
+        "unit_id": "GAME-034"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 3,
+        "start_agrees": false,
+        "unit_id": "GAME-035"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 11,
+        "start_agrees": false,
+        "unit_id": "GAME-036"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 52,
+        "start_agrees": false,
+        "unit_id": "GAME-037"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 9,
+        "start_agrees": false,
+        "unit_id": "GAME-038"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 11,
+        "start_agrees": false,
+        "unit_id": "GAME-039"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "GAME-040"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 35,
+        "start_agrees": false,
+        "unit_id": "GAME-041"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 9,
+        "start_agrees": false,
+        "unit_id": "GAME-042"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 63,
+        "start_agrees": false,
+        "unit_id": "GAME-043"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 9,
+        "start_agrees": false,
+        "unit_id": "GAME-044"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 10,
+        "start_agrees": false,
+        "unit_id": "GAME-045"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 11,
+        "start_agrees": false,
+        "unit_id": "GAME-046"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 7,
+        "start_agrees": false,
+        "unit_id": "GAME-047"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 29,
+        "start_agrees": false,
+        "unit_id": "GAME-048"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 12,
+        "start_agrees": false,
+        "unit_id": "GAME-049"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 45,
+        "start_agrees": false,
+        "unit_id": "GAME-050"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 11,
+        "start_agrees": false,
+        "unit_id": "G98-001"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 107,
+        "start_agrees": false,
+        "unit_id": "G98-002"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 22,
+        "start_agrees": false,
+        "unit_id": "G98-003"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 7,
+        "start_agrees": false,
+        "unit_id": "G98-004"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 24,
+        "start_agrees": false,
+        "unit_id": "G98-005"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 16,
+        "start_agrees": false,
+        "unit_id": "G98-006"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 20,
+        "start_agrees": false,
+        "unit_id": "G98-007"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 11,
+        "start_agrees": false,
+        "unit_id": "G98-008"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 42,
+        "start_agrees": false,
+        "unit_id": "G98-009"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 17,
+        "start_agrees": false,
+        "unit_id": "G98-010"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 27,
+        "start_agrees": false,
+        "unit_id": "G98-011"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 25,
+        "start_agrees": false,
+        "unit_id": "G98-012"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 6,
+        "start_agrees": false,
+        "unit_id": "G98-013"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 36,
+        "start_agrees": false,
+        "unit_id": "G98-014"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 58,
+        "start_agrees": false,
+        "unit_id": "G98-015"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 24,
+        "start_agrees": false,
+        "unit_id": "G98-016"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 13,
+        "start_agrees": false,
+        "unit_id": "G98-017"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "G98-018"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 12,
+        "start_agrees": false,
+        "unit_id": "G98-019"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 25,
+        "start_agrees": false,
+        "unit_id": "G98-020"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 16,
+        "start_agrees": false,
+        "unit_id": "G98-021"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "G98-024"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 11,
+        "start_agrees": false,
+        "unit_id": "G98-025"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "G98-026"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "G98-027"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "G98-028"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 3,
+        "start_agrees": false,
+        "unit_id": "G98-029"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 15,
+        "start_agrees": false,
+        "unit_id": "G98-030"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 13,
+        "start_agrees": false,
+        "unit_id": "G98-031"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-001"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-002"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-003"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-004"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-005"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-006"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 3,
+        "start_agrees": false,
+        "unit_id": "CRT-007"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-008"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 3,
+        "start_agrees": false,
+        "unit_id": "CRT-009"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-010"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-011"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-012"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-013"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-014"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-015"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-016"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-017"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 5,
+        "start_agrees": false,
+        "unit_id": "CRT-018"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-019"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-020"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-021"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-022"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-023"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-024"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-025"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-026"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-027"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-028"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 9,
+        "start_agrees": false,
+        "unit_id": "CRT-029"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 5,
+        "start_agrees": false,
+        "unit_id": "CRT-030"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-031"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-032"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-033"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-034"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-035"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-036"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-037"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-038"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-039"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "CRT-040"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 3,
+        "start_agrees": false,
+        "unit_id": "CRT-041"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-042"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-043"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-044"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-045"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-046"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-047"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-048"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-049"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-050"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-051"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-052"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 7,
+        "start_agrees": false,
+        "unit_id": "CRT-053"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-054"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-055"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 7,
+        "start_agrees": false,
+        "unit_id": "CRT-056"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-057"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-058"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 8,
+        "start_agrees": false,
+        "unit_id": "CRT-059"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-060"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-061"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 6,
+        "start_agrees": false,
+        "unit_id": "CRT-062"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 7,
+        "start_agrees": false,
+        "unit_id": "CRT-063"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-064"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-065"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 8,
+        "start_agrees": false,
+        "unit_id": "CRT-066"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 3,
+        "start_agrees": false,
+        "unit_id": "CRT-067"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "CRT-068"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-069"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 5,
+        "start_agrees": false,
+        "unit_id": "CRT-070"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-071"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-072"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-073"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-074"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 10,
+        "start_agrees": false,
+        "unit_id": "CRT-075"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-076"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "CRT-077"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-078"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-079"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-080"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-081"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 5,
+        "start_agrees": false,
+        "unit_id": "CRT-082"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-083"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-084"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-085"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-086"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-087"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-088"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-089"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-090"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-091"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-092"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-093"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-094"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-095"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "CRT-096"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 12,
+        "start_agrees": false,
+        "unit_id": "CRT-097"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-098"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-099"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-100"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-101"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-102"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-103"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-104"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-105"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-106"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-107"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-108"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-109"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-110"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-111"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-112"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "CRT-113"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-114"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 3,
+        "start_agrees": false,
+        "unit_id": "CRT-115"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-116"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-117"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-118"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-119"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 4,
+        "start_agrees": false,
+        "unit_id": "CRT-120"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 5,
+        "start_agrees": false,
+        "unit_id": "CRT-121"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-122"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-123"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-124"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-125"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "CRT-126"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-127"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-128"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-129"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-130"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-131"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 3,
+        "start_agrees": false,
+        "unit_id": "CRT-132"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-133"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "CRT-134"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 3,
+        "start_agrees": false,
+        "unit_id": "IMP-001"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "IMP-002"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 6,
+        "start_agrees": false,
+        "unit_id": "IMP-003"
+      },
+      {
+        "agrees": false,
+        "correct_size": false,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "IMP-004"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "IMP-005"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "IMP-006"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 14,
+        "start_agrees": false,
+        "unit_id": "LATE-001"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 8,
+        "start_agrees": false,
+        "unit_id": "LATE-002"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "LATE-003"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 2,
+        "start_agrees": false,
+        "unit_id": "LATE-004"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "LATE-005"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 1,
+        "start_agrees": false,
+        "unit_id": "LATE-006"
+      }
+    ],
+    "start_agreeing_units": 2,
+    "units": 0
   }
 }
