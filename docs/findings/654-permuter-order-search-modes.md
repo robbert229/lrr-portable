@@ -11,7 +11,7 @@ and applies it to finding 650's gods98 cause-C/D list and AITask.c's
 95–99% band.
 
 Measured on `main` `1e84f9da`, with one full `make reccmp-check` after the
-change.
+change; rebased onto `main` `f0be860e` (#763–#769) and measured again, below.
 
 | Measure | `main` `1e84f9da` | This change |
 | --- | ---: | ---: |
@@ -22,14 +22,28 @@ change.
 | `opt_ref` annotated removed | 0 | 0 |
 | Image end (gate) | `0x7f5000` | `0x7f5000` |
 
+**Rebased onto `f0be860e`** (the stacked #758, #759, #761, #762, #766 and
+#767 work), with a full `make reccmp-check`: the same four functions rise by
+the same amounts, and nothing else moves.
+
+| Measure | `main` `f0be860e` | This change on it |
+| --- | ---: | ---: |
+| Exact-function code bytes | 335,096 (52.15%) | 335,096 (52.15%) |
+| Accuracy, full / game-only | 97.02% / 96.68% | 97.02% / 96.68% (means rise below the second decimal) |
+| Functions that rose / fell, full | | 4 / 0 |
+| Image end | `0x7f5000` | `0x7f5000` |
+
 No exact match was lost and no function fell below the baseline. `make
 match-progress`, `make unit-data-offsets`, `make opt-ref-callers
 OPT_REF_ARGS=--summary` and `make pe-audit` were run and the generated files
 committed (`unit-data-offsets` changed no tracked file). In
 `binary-progress.json` one 32-byte function moves from the `opt_ref`
 `port_unit` category to `original_annotated` (2,532 to 2,533 annotated
-functions); no annotation changed here, so this is the regenerated
-classification of the current tree, not an effect of the four reorders.
+functions), on both bases. No annotation changed here, and the four reorders
+change no function's size, so the cause was not identified. The figure comes
+from the `/OPT:NOREF` relink's translation of the report's rows (it is not
+in the gate link's categories, which `make winapi-link-check` prints
+unchanged).
 `make tools-test` (no `--allow-growth`), `make winapi-link-check` and
 native ctest pass.
 
