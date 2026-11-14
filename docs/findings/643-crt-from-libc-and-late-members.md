@@ -304,6 +304,48 @@ runtime work.
 - **`make tools-test`:** runs `test_reccmp_map_statics.py`.
 - **`docs/repository-layout.md`:** says what `crt/` is now.
 
+## Stacked on #745 (the original's link mode)
+
+Rebased onto #745 (`link/562-gate-original-link-mode`, `ccec7acd`), which
+links the gate with `/DEBUG /OPT:REF /OPT:NOICF` (finding 642). Reconciled:
+- #745's link mode and caller switches are kept.
+- Its `/INCLUDE:?string_prefix_reserve@@YAXPADH@Z` (a `Deviation (scoring
+  only)` keeping `crt.cpp`'s `__shift` stand-in alive) is dropped. `crt.cpp`
+  is no longer linked, and LIBC's own `__shift` is live and named here. The
+  `/INCLUDE` for the original's unreferenced `00438390` stays. `CMakeLists.txt`
+  and `tools/README.md` say so.
+- #745 annotates `0048e1e0` as LIBC's `_vsprintf` in `string.cpp`. It does
+  not touch `libc_symbols.csv` or `crt.cpp`, so nothing conflicts. It
+  scores 100.
+- `translation-units.csv` is regenerated with `translation_units.py build`;
+  it also fills #745's stale `00409ff0` `current_source`.
+- The generated files are regenerated, not merged.
+
+**#745's gate.** It fails on game-only removals. Both entries it reports
+leave the game-only report because they are now LIBC library functions:
+- `string_prefix_reserve` `004907c0` is LIBC's `__shift`;
+- `_matherr` `004939d0` is LIBC's `__get_fname`.
+
+Both score 100 in the full report, and `make match-progress` records them.
+
+| Measure | #745 (`ccec7acd`) | This change on #745 |
+| --- | ---: | ---: |
+| Exact-function code bytes | 310,994 (48.40%) | **319,635 (49.74%)** |
+| Accuracy, full / game-only | 96.68% / 96.42% | 96.72% / 96.42% |
+| Mapped / exact, full | 2,784 / 2,299 | 2,827 / 2,348 |
+| Mapped / exact, game-only | 2,538 / 2,089 | 2,536 / 2,088 (the two stand-ins are LIBC functions) |
+| Functions below the baseline | | 0 (21 up, 43 newly mapped) |
+| `opt_ref` annotated removed | 0 | 0 |
+| Image end | `0x7f5000` | `0x7f5000` (45,056 bytes below `0x800000`) |
+| `.text` virtual size | 842,293 | 842,053 |
+| Function-order inversions, full: adjacent / pairs | 64 / 13,523 | 44 / 12,029 |
+| CRT units: exact / unmapped bytes | | 46,862 / 977 |
+| LIBC member order: in-order run / inversions | | 83 of 130 / 881 |
+
+`__shift`, `__get_fname` and `__strupr` score 100 under `/OPT:REF`, as do
+`__strnicmp`, `__itoa` and `__strlwr`. All four late members follow the
+`RtlUnwind` thunk in the original's order.
+
 ## Reproducing
 
 ```sh

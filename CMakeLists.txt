@@ -285,15 +285,12 @@ if(LRR_CLASSIC_MSVC5)
   # no identical functions. The matching build states both, because /DEBUG
   # (kept for Reccmp's PDB) would otherwise select /OPT:NOREF. The original
   # kept every function of its objects, which had no /Gy; the matching
-  # build's objects do, so /INCLUDE keeps the original's annotated functions
-  # that nothing references:
-  # - LegoObject.c's 00438390, unreferenced in the original as well;
-  # - Deviation (scoring only): crt.cpp's 004907c0 string_prefix_reserve, a
-  #   stand-in for LIBC cvt.obj's static __shift, which the linked LIBC
-  #   provides and calls but Reccmp cannot name (no PDB symbol). Owner #447.
+  # build's objects do, so /INCLUDE keeps the original's annotated function
+  # that nothing references: LegoObject.c's 00438390, unreferenced in the
+  # original as well. (004907c0 is LIBC cvt.obj's static __shift, which LIBC
+  # links and calls; tools/reccmp_map_statics.py names it, finding 643.)
   target_link_options(program PRIVATE "/OPT:REF" "/OPT:NOICF"
-    "/INCLUDE:_legoobject_global_animation_state_get"
-    "/INCLUDE:?string_prefix_reserve@@YAXPADH@Z")
+    "/INCLUDE:_legoobject_global_animation_state_get")
 else()
   # The frame-loop object in gods98 calls into game, while game itself uses
   # gods98 APIs. Repeat the archive so GNU ld resolves this static-library
