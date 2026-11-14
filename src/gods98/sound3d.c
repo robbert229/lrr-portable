@@ -2230,9 +2230,9 @@ void sound_stream_ring_buffer_tick(int loop)
                 }
                 SOUND3D_STREAM_BUFFER(loop)->lpVtbl->Unlock(SOUND3D_STREAM_BUFFER(loop),
                                                             lpvAudio1, dwBytes1, NULL, 0);
-                stream->writeOffset += dwBytes1;
                 stream->writeProgress += dwBytes1;
-                if (stream->writeOffset >= stream->bufferSize) {
+                stream->writeOffset += dwBytes1;
+                if (stream->bufferSize <= stream->writeOffset) {
                     stream->writeOffset -= stream->bufferSize;
                 }
             } else {

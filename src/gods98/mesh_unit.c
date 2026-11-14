@@ -1015,9 +1015,9 @@ void mesh_uview_mesh(APPOBJ* lightWaveObject, Mesh_Point2F* textCoords)
     char line[1024], lineSplit[1024];
     char* argv[5];
     unsigned long* vertexUsed;
-    struct GameFileHandle* uvFile = (struct GameFileHandle*)lightWaveObject->aoFileUV;
     long poly = -2;
     long lineCount = 0;
+    struct GameFileHandle* uvFile = (struct GameFileHandle*)lightWaveObject->aoFileUV;
     long surface = -1;
     long polyIndex;
     long polyVert = -1;
@@ -1084,8 +1084,8 @@ void mesh_uview_mesh(APPOBJ* lightWaveObject, Mesh_Point2F* textCoords)
                                 lightWaveObject->aoPoly[polyIndex].plyData[polyVert] = (unsigned short)lightWaveObject->aoSize.lwVertCount;
                                 textCoords[lightWaveObject->aoPoly[polyIndex].plyData[polyVert]].x = u;
                                 textCoords[lightWaveObject->aoPoly[polyIndex].plyData[polyVert]].y = v;
-                                newVertCount++;
                                 lightWaveObject->aoSize.lwVertCount++;
+                                newVertCount++;
                                 if (newVertCount > 9) newVertCount = 0;
                             }
                             polyVert++;

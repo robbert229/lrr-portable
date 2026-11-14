@@ -263,6 +263,10 @@ def score(address, deadline, candidate=None):
 
 
 def main():
+    # The order searches live in permuter_search.py; `--mode` hands over.
+    if '--mode' in sys.argv[1:] or any(a.startswith('--mode=') for a in sys.argv[1:]):
+        import permuter_search
+        return permuter_search.main(sys.argv[1:])
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('address', type=lambda x: int(x, 16))
     parser.add_argument('--seconds', type=float, required=True, help='total time budget, including initial score')

@@ -1010,7 +1010,7 @@ Container* Container_Load(Container* parent, const char* filename,
             scale = (float)atof(block_get_strptr(config, path)
                                     ? block_get_strptr(config, path)
                                     : s_config_angle_empty);
-            if (scale != 0.0f) {
+            if (0.0f != scale) {
                 cont->activityFrame->lpVtbl->AddScale(cont->activityFrame, CNT_COMBINE_REPLACE,
                                                       scale, scale, scale);
             }
@@ -1257,9 +1257,9 @@ Container* Container_Clone(Container* orig)
             orig->cloneData->cloneTable = (Container**)malloc(sizeof(Container*));
             count = 0;
             orig->cloneData->cloneTable[0] = cont;
+            orig->cloneData->used = 1;
             orig->cloneData->clonedFrom = NULL;
             orig->cloneData->cloneNumber = 0;
-            orig->cloneData->used = 1;
         }
     } else {
         cont = Container_Create(Container_GetParent(orig));
