@@ -1005,168 +1005,173 @@ int interface_do_mouse(int x, int y, int leftButton, int leftButtonLast,
     char tipCopy[512];
     char costText[1024];
 
-    tooltip = NULL;
+    /* `tooltip` is cleared only on the menu-item path below: the original
+     * keeps it in `ebx` and does not reuse it as a known zero before then
+     * (finding 672). */
     text = NULL;
     result = 0;
     iconCount = 0;
 
     interfaceGlobs.flags &= ~0x7600;
-    if (!(interfaceGlobs.flags & INTERFACE_FLAG_OPEN) ||
-        !(interfaceGlobs.flags & INTERFACE_FLAG_IN)) {
-        return 0;
-    }
-
-    if (interface_get_dependency_at_point(x, y, interfaceGlobs.dependencyArea.x,
-                                          interfaceGlobs.dependencyArea.y,
-                                          &depType, &depIndex, &depLevel)) {
-        interfaceGlobs.flags |= INTERFACE_FLAG_HOVER_DEPENDENCY;
-        if (!leftButton && !leftReleased && depType != 20) {
-            if (lego_upgrade_level_names[depLevel] != NULL) {
-                // STRING: LEGORR 0x004a3544
-                sprintf(nameSep, "%s (%s)", localized_object_name_get(depType, depIndex), lego_upgrade_level_names[depLevel]);
-            } else {
-                sprintf(nameSep, "%s", localized_object_name_get(depType, depIndex));
-            }
-            tooltip_set_content(4, nameSep);
-            timed_effect_update_request_set_corpus(4);
-            tooltip_reset_timer(4);
-            if (!(s_panel_highlight_flags & 0x100000)) {
-                simulation_global_word_set(
-                    object_tooltip_sfx[depType * 15 + depIndex]);
-            }
-        }
-        interface_handle_item_press(0, 0, 0, leftButton, leftButtonLast);
-        result = 1;
-    } else if (interface_get_item_at_point(x, y, &type, &objType, &objIndex)) {
-        if (type == 0) {
-            interfaceGlobs.flags |= INTERFACE_FLAG_HOVER_BACK;
-            timed_effect_update_request_set_corpus(5);
-        } else {
-            interfaceGlobs.flags |= INTERFACE_FLAG_HOVER_ITEM;
-            if (type == INTERFACE_MENUITEM_OBJECT) {
-                interfaceGlobs.flags |= INTERFACE_FLAG_HOVER_OBJECT;
-                interfaceGlobs.flags |= 0x2000;
-                sprintf(buff, "%s", localized_object_name_get(objType, objIndex));
-                if (!(s_panel_highlight_flags & 0x100000)) {
-                    simulation_global_word_set(
-                        object_tooltip_sfx[objType * 15 + objIndex]);
-                }
-                text = buff;
-            } else {
-                if (type == 5 || type == 14) {
-                    interfaceGlobs.flags |= 0x2000;
-                }
-
-                if (interface_is_item_disabled(type, 0)) {
-                    if (interfaceGlobs.menuItemTooltipsDisabled[type] != NULL) {
-                        obj = selection_active_entity_get_obj();
-                        if (obj != NULL && type == 65 &&
-                            obj->objLevel + 1 < building_upgrade_admission_check(obj->type, obj->id) &&
-                            lego_get_resource(0) < lego_upgrade_cost_ore &&
-                            lego_get_resource(1) < lego_upgrade_cost_studs &&
-                            lego_tooltip_ore_icon != NULL) {
-                            if (lego_upgrade_cost_text != NULL) {
-                                sprintf(costText, "%s", lego_upgrade_cost_text);
-                                tooltip = costText;
-                            }
-                            iconCount = lego_upgrade_cost_ore - lego_get_resource(0);
-                        } else {
-                            tooltip = interfaceGlobs.menuItemTooltipsDisabled[type];
-                        }
-                        if (!(s_panel_highlight_flags & 0x100000)) {
-                            simulation_global_word_set(
-                                interfaceGlobs.menuItemSFXDisabled[type]);
-                        }
-                    }
-                } else if (interfaceGlobs.menuItemTooltips[type] != NULL) {
-                    tooltip = interfaceGlobs.menuItemTooltips[type];
-                    if (!(s_panel_highlight_flags & 0x100000)) {
-                        simulation_global_word_set(interfaceGlobs.menuItemSFX[type]);
-                    }
-                }
-
-                if (tooltip != NULL) {
-                    if (interfaceGlobs.menuItemTooltipsUseName[type] &&
-                        selection_active_count_get() == 1 &&
-                        selection_active_entity_get() != NULL &&
-                        selection_active_entity_get_obj()->customName != NULL &&
-                        *selection_active_entity_get_obj()->customName != '\0') {
-                        strcpy(nameSep, lego_custom_name_separator);
-                        strcpy(tipCopy, tooltip);
-                        for (p = nameSep; *p != '\0'; p++) {
-                            if (*p == ' ') {
-                                *p = '_';
-                            }
-                        }
-                        argc = sound_variant_split(tipCopy, argv, nameSep);
-                        buff[0] = '\0';
-                        for (i = 0; i < argc; i++) {
-                            strcat(buff, argv[i]);
-                            if (i < argc - 1) {
-                                strcat(buff, selection_active_entity_get_obj()->customName);
-                            }
-                        }
-                        text = buff;
-                    } else {
-                        text = tooltip;
-                    }
-                }
-            }
-
-            if (!leftButton && !leftReleased) {
-                if (text != NULL) {
-                    tooltip_set_content(4, text);
-                    for (i = iconCount; i != 0; i--) {
-                        command_sample_stats_accumulate(4, lego_tooltip_ore_icon);
-                    }
+    if ((interfaceGlobs.flags & INTERFACE_FLAG_OPEN) &&
+        (interfaceGlobs.flags & INTERFACE_FLAG_IN)) {
+        if (interface_get_dependency_at_point(x, y, interfaceGlobs.dependencyArea.x,
+                                              interfaceGlobs.dependencyArea.y,
+                                              &depType, &depIndex, &depLevel)) {
+            interfaceGlobs.flags |= INTERFACE_FLAG_HOVER_DEPENDENCY;
+            if (!leftButton && !leftReleased && depType != 20) {
+                if (lego_upgrade_level_names[depLevel] != NULL) {
+                    // STRING: LEGORR 0x004a3544
+                    sprintf(nameSep, "%s (%s)", localized_object_name_get(depType, depIndex), lego_upgrade_level_names[depLevel]);
                 } else {
-                    // STRING: LEGORR 0x004a352c
-                    sprintf(buff, "Missing config for\n'%s'", interfaceGlobs.menuItemName[type]);
-                    tooltip_set_content(4, buff);
+                    sprintf(nameSep, "%s", localized_object_name_get(depType, depIndex));
                 }
+                tooltip_set_content(4, nameSep);
                 timed_effect_update_request_set_corpus(4);
                 tooltip_reset_timer(4);
-            } else {
-                simulation_global_word_set(0);
-            }
-        }
-
-        if (interface_handle_item_press(type, objType, objIndex, leftButton,
-                                        leftButtonLast) &&
-            leftReleased) {
-            if (type == INTERFACE_MENUITEM_OBJECT) {
-                if (interfaceGlobs.currMenuType == INTERFACE_MENU_SMALL_VEHICLES ||
-                    interfaceGlobs.currMenuType == INTERFACE_MENU_LARGE_VEHICLES) {
-                    interfaceGlobs.vehicleItemClicks[objIndex]++;
-                } else if (interfaceGlobs.currMenuType == INTERFACE_MENU_BUILDINGS) {
-                    interfaceGlobs.buildingItemClicks[objIndex]++;
+                if (!(s_panel_highlight_flags & 0x100000)) {
+                    simulation_global_word_set(
+                        object_tooltip_sfx[depType * 15 + depIndex]);
                 }
+            }
+            interface_handle_item_press(0, 0, 0, leftButton, leftButtonLast);
+            result = 1;
+        } else if (interface_get_item_at_point(x, y, &type, &objType, &objIndex)) {
+            if (type == 0) {
+                interfaceGlobs.flags |= INTERFACE_FLAG_HOVER_BACK;
+                timed_effect_update_request_set_corpus(5);
             } else {
-                interfaceGlobs.menuItemClicks[type]++;
+                interfaceGlobs.flags |= INTERFACE_FLAG_HOVER_ITEM;
+                if (type == INTERFACE_MENUITEM_OBJECT) {
+                    interfaceGlobs.flags |= INTERFACE_FLAG_HOVER_OBJECT;
+                    interfaceGlobs.flags |= 0x2000;
+                    sprintf(buff, "%s", localized_object_name_get(objType, objIndex));
+                    if (!(s_panel_highlight_flags & 0x100000)) {
+                        simulation_global_word_set(
+                            object_tooltip_sfx[objType * 15 + objIndex]);
+                    }
+                    text = buff;
+                } else {
+                    tooltip = NULL;
+                    if (type == 5 || type == 14) {
+                        interfaceGlobs.flags |= 0x2000;
+                    }
+
+                    if (interface_is_item_disabled(type, 0)) {
+                        if (interfaceGlobs.menuItemTooltipsDisabled[type] != NULL) {
+                            obj = selection_active_entity_get_obj();
+                            if (obj != NULL && type == 65 &&
+                                obj->objLevel + 1 < building_upgrade_admission_check(obj->type, obj->id) &&
+                                lego_get_resource(0) < lego_upgrade_cost_ore &&
+                                lego_get_resource(1) < lego_upgrade_cost_studs &&
+                                lego_tooltip_ore_icon != NULL) {
+                                if (lego_upgrade_cost_text != NULL) {
+                                    sprintf(costText, "%s", lego_upgrade_cost_text);
+                                    tooltip = costText;
+                                }
+                                iconCount = lego_upgrade_cost_ore - lego_get_resource(0);
+                            } else {
+                                tooltip = interfaceGlobs.menuItemTooltipsDisabled[type];
+                            }
+                            if (!(s_panel_highlight_flags & 0x100000)) {
+                                simulation_global_word_set(
+                                    interfaceGlobs.menuItemSFXDisabled[type]);
+                            }
+                        }
+                    } else if (interfaceGlobs.menuItemTooltips[type] != NULL) {
+                        tooltip = interfaceGlobs.menuItemTooltips[type];
+                        if (!(s_panel_highlight_flags & 0x100000)) {
+                            simulation_global_word_set(interfaceGlobs.menuItemSFX[type]);
+                        }
+                    }
+
+                    if (tooltip != NULL) {
+                        if (interfaceGlobs.menuItemTooltipsUseName[type] &&
+                            selection_active_count_get() == 1 &&
+                            selection_active_entity_get() != NULL &&
+                            selection_active_entity_get_obj()->customName != NULL &&
+                            *selection_active_entity_get_obj()->customName != '\0') {
+                            strcpy(nameSep, lego_custom_name_separator);
+                            strcpy(tipCopy, tooltip);
+                            for (p = nameSep; *p != '\0'; p++) {
+                                if (*p == ' ') {
+                                    *p = '_';
+                                }
+                            }
+                            argc = sound_variant_split(tipCopy, argv, nameSep);
+                            buff[0] = '\0';
+                            for (i = 0; i < argc; i++) {
+                                strcat(buff, argv[i]);
+                                if (i < argc - 1) {
+                                    strcat(buff, selection_active_entity_get_obj()->customName);
+                                }
+                            }
+                            text = buff;
+                        } else {
+                            text = tooltip;
+                        }
+                    }
+                }
+
+                if (!leftButton && !leftReleased) {
+                    if (text != NULL) {
+                        tooltip_set_content(4, text);
+                        for (i = 0; i < iconCount; i++) {
+                            command_sample_stats_accumulate(4, lego_tooltip_ore_icon);
+                        }
+                    } else {
+                        // STRING: LEGORR 0x004a352c
+                        sprintf(buff, "Missing config for\n'%s'", interfaceGlobs.menuItemName[type]);
+                        tooltip_set_content(4, buff);
+                    }
+                    timed_effect_update_request_set_corpus(4);
+                    tooltip_reset_timer(4);
+                } else {
+                    simulation_global_word_set(0);
+                }
             }
-            media_action_feedback_sound_dispatch(interface_do_action(type) == 0);
-        }
-        result = 1;
-    } else {
-        count = interface_get_menu_item_count(interfaceGlobs.currMenuType);
-        if (interface_menu_has_back_button(interfaceGlobs.currMenuType)) {
-            image = interfaceGlobs.surroundImages[count - 1];
-            x -= (int)(interfaceGlobs.surroundOffsets[count - 1].x +
-                       interfaceGlobs.currMenuPosition.x);
-            y -= (int)(interfaceGlobs.surroundOffsets[count - 1].y +
-                       interfaceGlobs.currMenuPosition.y);
+
+            if (interface_handle_item_press(type, objType, objIndex, leftButton,
+                                            leftButtonLast) &&
+                leftReleased) {
+                if (type == INTERFACE_MENUITEM_OBJECT) {
+                    if (interfaceGlobs.currMenuType == INTERFACE_MENU_SMALL_VEHICLES ||
+                        interfaceGlobs.currMenuType == INTERFACE_MENU_LARGE_VEHICLES) {
+                        interfaceGlobs.vehicleItemClicks[objIndex]++;
+                    } else if (interfaceGlobs.currMenuType == INTERFACE_MENU_BUILDINGS) {
+                        interfaceGlobs.buildingItemClicks[objIndex]++;
+                    }
+                } else {
+                    interfaceGlobs.menuItemClicks[type]++;
+                }
+                if (interface_do_action(type)) {
+                    media_action_feedback_sound_dispatch(0);
+                } else {
+                    media_action_feedback_sound_dispatch(1);
+                }
+            }
+            result = 1;
         } else {
-            image = interfaceGlobs.objectSurroundImages[count - 1];
-            x -= (int)(interfaceGlobs.objectSurroundOffsets[count - 1].x +
-                       interfaceGlobs.currMenuPosition.x);
-            y -= (int)(interfaceGlobs.objectSurroundOffsets[count - 1].y +
-                       interfaceGlobs.currMenuPosition.y);
-        }
-        if (image != NULL && image_get_pixel(image, x, y, &pixel) && pixel != 0) {
-            if (leftReleased) {
-                media_action_feedback_sound_dispatch(1);
+            count = interface_get_menu_item_count(interfaceGlobs.currMenuType);
+            if (interface_menu_has_back_button(interfaceGlobs.currMenuType)) {
+                image = interfaceGlobs.surroundImages[count - 1];
+                x -= (int)(interfaceGlobs.surroundOffsets[count - 1].x +
+                           interfaceGlobs.currMenuPosition.x);
+                y -= (int)(interfaceGlobs.surroundOffsets[count - 1].y +
+                           interfaceGlobs.currMenuPosition.y);
+            } else {
+                image = interfaceGlobs.objectSurroundImages[count - 1];
+                x -= (int)(interfaceGlobs.objectSurroundOffsets[count - 1].x +
+                           interfaceGlobs.currMenuPosition.x);
+                y -= (int)(interfaceGlobs.objectSurroundOffsets[count - 1].y +
+                           interfaceGlobs.currMenuPosition.y);
             }
-            return 1;
+            if (image != NULL && image_get_pixel(image, x, y, &pixel) && pixel != 0) {
+                if (leftReleased) {
+                    media_action_feedback_sound_dispatch(1);
+                }
+                return 1;
+            }
         }
     }
     return result;

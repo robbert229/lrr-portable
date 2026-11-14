@@ -1167,7 +1167,6 @@ int front_menu_get_item_bounds(Front_Menu* menu, int index, int* rcX, int* rcY,
     int sx;
     int sy;
     int capRight;
-    int plusLo;
 
     if (index >= menu->itemCount) {
         return 0;
@@ -1184,11 +1183,12 @@ int front_menu_get_item_bounds(Front_Menu* menu, int index, int* rcX, int* rcY,
                                                                        : menu->items[index]->fontLo);
         sx = slider->x2 + item->x1 + menu->xPos;
         sy = slider->y2 + item->y1 + menu->yPos;
-        capRight = (slider->imageCapRight != NULL) ? slider->imageCapRight->width : 0;
-        plusLo = (slider->imagePlusLo != NULL) ? slider->imagePlusLo->width : 0;
+        /* One sum of both image widths, taken before the bounds (finding 672). */
+        capRight = ((slider->imageCapRight != NULL) ? slider->imageCapRight->width : 0) +
+                   ((slider->imagePlusLo != NULL) ? slider->imagePlusLo->width : 0) + 104;
         *rcX = (x < sx) ? x : sx;
         *rcY = (y < sy) ? y : sy;
-        sx += plusLo + capRight + 104;
+        sx += capRight;
         *rcWidth = (x + width > sx) ? x + width : sx;
         *rcHeight = (height + y > sy + 20) ? height + y : sy + 20;
         *rcWidth -= *rcX;
@@ -1202,20 +1202,14 @@ int front_menu_get_item_bounds(Front_Menu* menu, int index, int* rcX, int* rcY,
         item = menu->items[index];
         if (item->isImageItem) {
             *rcWidth = ((menu->itemFocus == index) ? item->imageHi : item->imageLo)->width;
-            if (menu->itemFocus == index) {
-                *rcHeight = menu->items[index]->imageHi->height;
-            } else {
-                *rcHeight = menu->items[index]->imageLo->height;
-            }
+            *rcHeight = (menu->itemFocus == index) ? menu->items[index]->imageHi->height
+                                                   : menu->items[index]->imageLo->height;
             return 1;
         }
         *rcWidth = formatted_text_printf_width((menu->itemFocus == index) ? item->fontHi : item->fontLo,
                                                item->banner);
-        if (menu->itemFocus == index) {
-            *rcHeight = object_field_be4_dword_get(menu->items[index]->fontHi);
-        } else {
-            *rcHeight = object_field_be4_dword_get(menu->items[index]->fontLo);
-        }
+        *rcHeight = (menu->itemFocus == index) ? object_field_be4_dword_get(menu->items[index]->fontHi)
+                                               : object_field_be4_dword_get(menu->items[index]->fontLo);
         return 1;
     }
 }
@@ -1926,9 +1920,9 @@ void front_menu_draw_menu_image(Front_Menu* menu, int light)
 // FUNCTION: LEGORR 0x00412c00
 Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransition)
 {
+    Front_MenuItem* item;
     Front_Menu* nextMenu;
     Front_Menu* origMenu;
-    Front_MenuItem* focusItem;
     void* oldCamera;
     void* view;
     int i;
@@ -1956,7 +1950,7 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
     Front_SliderData* slider;
     Front_RealSliderData* realSlider;
     Front_SelectData* select;
-    Front_MenuItem* item;
+    struct Image* image;
     int x;
     int centerOff;
     int y;
@@ -2005,8 +1999,11 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
 
     if (menu->displayTitle) {
         width = formatted_text_printf_width(menu->menuFont, front_util_replace_text_spaces(menu->fullName));
-        font_print_f(menu->menuFont, s_display_w / 2 - ((unsigned int)width >> 1), menu->anchoredY + y,
-                     front_util_replace_text_spaces(menu->fullName));
+        /* The original computes both positions before the second
+         * ReplaceTextSpaces call, so they are statements (finding 672). */
+        itemX = s_display_w / 2 - ((unsigned int)width >> 1);
+        itemY = menu->anchoredY + y;
+        font_print_f(menu->menuFont, itemX, itemY, front_util_replace_text_spaces(menu->fullName));
     }
 
     s_selectHoverIndex = -1;
@@ -2021,30 +2018,29 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
                 font_print_f(item->fontHi, centerOff + itemX + x, itemY + y, "%s",
                              front_util_replace_text_spaces(item->banner));
             }
-            focusItem = menu->items[menu->itemFocus];
-            switch (focusItem->itemType) {
+            switch (menu->items[menu->itemFocus]->itemType) {
             case Front_MenuItem_Cycle:
-                cycle = (Front_CycleData*)focusItem->itemData;
+                cycle = (Front_CycleData*)menu->items[menu->itemFocus]->itemData;
                 if (item->fontHi != NULL) {
                     font_print_f(item->fontHi, cycle->x2 + centerOff + itemX + x, cycle->y2 + itemY + y,
                                  front_util_replace_text_spaces(cycle->nameList[*cycle->valuePtr]));
                 }
                 break;
             case Front_MenuItem_Slider:
-                slider = (Front_SliderData*)focusItem->itemData;
+                slider = (Front_SliderData*)menu->items[menu->itemFocus]->itemData;
                 front_menu_item_draw_slider(slider, slider->x2 + itemX + x, slider->y2 + itemY + y,
                                             *slider->valuePtr - slider->valueMin,
                                             slider->valueMax - slider->valueMin, 1.0f);
                 break;
             case Front_MenuItem_RealSlider:
-                realSlider = (Front_RealSliderData*)focusItem->itemData;
+                realSlider = (Front_RealSliderData*)menu->items[menu->itemFocus]->itemData;
                 if (item->fontHi != NULL) {
                     font_print_f(item->fontHi, realSlider->x2 + centerOff + itemX + x,
                                  realSlider->y2 + itemY + y, "%.2f", (double)*realSlider->valuePtr);
                 }
                 break;
             case Front_MenuItem_TextInput:
-                input = (Front_TextInputData*)focusItem->itemData;
+                input = (Front_TextInputData*)menu->items[menu->itemFocus]->itemData;
                 savedChar = input->text[input->caretPos];
                 s_textInputBlink++;
                 if (s_textInputBlink != 0 && (s_textInputBlink / 2) % 2) {
@@ -2190,19 +2186,19 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
             if (menu->itemFocus == i) {
                 itemX = item->x1 + menu->xPos;
                 itemY = item->y1 + menu->yPos;
-                if (item->imageHi != NULL) {
+                if ((image = item->imageHi) != NULL) {
                     dest.x = (float)itemX;
                     dest.y = (float)itemY;
-                    image_display_scaled(item->imageHi, NULL, &dest, NULL);
+                    image_display_scaled(image, NULL, &dest, NULL);
                 }
                 tooltip_activate(item->toolTipType);
             } else {
                 itemX = item->x1 + menu->xPos;
                 itemY = item->y1 + menu->yPos;
-                if (item->imageLo != NULL) {
+                if ((image = item->imageLo) != NULL) {
                     dest.x = (float)itemX;
                     dest.y = (float)itemY;
-                    image_display_scaled(item->imageLo, NULL, &dest, NULL);
+                    image_display_scaled(image, NULL, &dest, NULL);
                 }
             }
         }
@@ -2751,15 +2747,20 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                 Front_IntCallback callback = va_arg(args, Front_IntCallback);
 
                 front_menu_item_load_slider_images(numParts, stringParts, sliderImages);
-                itemData = front_menu_item_create_slider(
-                    valuePtr, atoi(stringParts[6]), atoi(stringParts[7]), atoi(stringParts[3]),
-                    atoi(stringParts[4]), callback, sliderImages[0], sliderImages[1], sliderImages[2],
-                    sliderImages[3], sliderImages[4], sliderImages[5], sliderImages[6], sliderImages[7]);
+                /* The item data is created inside the banner call: the
+                 * original pushes the trailing 0 first (finding 672). */
                 front_menu_add_menu_item(menuSet->menus[i],
                                          front_menu_item_create_banner_item(
                                              mission_replace_char(stringParts[5], '_', ' '), loFont, hiFont,
                                              atoi(stringParts[1]), atoi(stringParts[2]), Front_MenuItem_Slider,
-                                             autoCenter, itemData, 0));
+                                             autoCenter,
+                                             front_menu_item_create_slider(
+                                                 valuePtr, atoi(stringParts[6]), atoi(stringParts[7]),
+                                                 atoi(stringParts[3]), atoi(stringParts[4]), callback,
+                                                 sliderImages[0], sliderImages[1], sliderImages[2],
+                                                 sliderImages[3], sliderImages[4], sliderImages[5],
+                                                 sliderImages[6], sliderImages[7]),
+                                             0));
                 break;
             }
             case Front_MenuItem_Trigger:
@@ -2777,12 +2778,14 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                     int* valuePtr = va_arg(args, int*);
                     Front_TriggerCallback callback = va_arg(args, Front_TriggerCallback);
 
-                    itemData = front_menu_item_create_trigger(valuePtr, atoi(stringParts[4]) == 1, callback);
                     front_menu_add_menu_item(menuSet->menus[i],
                                              front_menu_item_create_banner_item(
                                                  mission_replace_char(stringParts[3], '_', ' '), loFont, hiFont,
                                                  atoi(stringParts[1]), atoi(stringParts[2]),
-                                                 Front_MenuItem_Trigger, autoCenter, itemData, 0));
+                                                 Front_MenuItem_Trigger, autoCenter,
+                                                 front_menu_item_create_trigger(
+                                                     valuePtr, atoi(stringParts[4]) == 1, callback),
+                                                 0));
                 }
                 break;
             case Front_MenuItem_Next:
@@ -2826,14 +2829,16 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                 float* valuePtr = va_arg(args, float*);
                 Front_RealCallback callback = va_arg(args, Front_RealCallback);
 
-                itemData = front_menu_item_create_real_slider(
-                    valuePtr, (float)atof(stringParts[6]), (float)atof(stringParts[7]),
-                    (float)atof(stringParts[8]), atoi(stringParts[3]), atoi(stringParts[4]), callback);
                 front_menu_add_menu_item(menuSet->menus[i],
                                          front_menu_item_create_banner_item(
                                              mission_replace_char(stringParts[5], '_', ' '), loFont, hiFont,
                                              atoi(stringParts[1]), atoi(stringParts[2]),
-                                             Front_MenuItem_RealSlider, autoCenter, itemData, 0));
+                                             Front_MenuItem_RealSlider, autoCenter,
+                                             front_menu_item_create_real_slider(
+                                                 valuePtr, (float)atof(stringParts[6]),
+                                                 (float)atof(stringParts[7]), (float)atof(stringParts[8]),
+                                                 atoi(stringParts[3]), atoi(stringParts[4]), callback),
+                                             0));
                 break;
             }
             }
