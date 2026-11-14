@@ -1058,6 +1058,63 @@ cause other functions to drop through translation-unit symbol numbering
 (finding 506); review every drop under ADR 0005. For a source change that is
 accepted, run `make match-progress` and include both refreshed coverage files.
 
+## `permuter_search.py` — exhaustive order searches
+
+```sh
+make match-search ADDR=0x00410a10 MODE=stores SECONDS=600
+python3 tools/permuter_search.py 0x00410a10 --mode cases --seconds 600 --output build-match/search/410a10-cases
+python3 tools/permuter_search.py 0x00410a10 --mode cases --seconds 600 --output build-match/search/410a10-cases --resume
+python3 tools/permuter_search.py 0x00410a10 --mode operands --seconds 1 --output /tmp/x --list   # groups only, no compile
+```
+
+The four modes turn the ad-hoc searches of findings 635 and 649 into one
+tool (`msvc_permuter.py ADDR --mode ...` hands over to it too). Each mode
+splits the function into groups and searches each group's orders:
+
+| Mode | Group | Kept together or in order |
+| --- | --- | --- |
+| `stores` | a run of one-line assignments or increments, at one depth | a statement that reads or writes what another writes keeps its order; a call or a declaration ends the run, and so does a line that continues a statement or is an unbraced `if`/`else`/loop body |
+| `cases` | one `switch`'s case blocks (adjacent labels are one block) | a block that does not end in `break`, `continue`, `return` or `goto` travels with the block it falls into; a last block that falls out of the switch stays last |
+| `decls` | the declaration lines at the start of a block; the declarators of one line | an initializer that names an earlier declaration, or two initializers that call; in C++ only builtin scalars and pointers without initializers |
+| `operands` | one commutative (`+ * & \| ^ == !=`) or mirrored (`< > <= >=`, C only) operator | operands with `++`, `--` or an assignment; a call against anything but literals; a cast's `*`/`&`; a declaration's `*` |
+
+Aliasing is judged by name. Two writes of the same member through any
+pointers conflict; a write through `*p` or `p[i]` conflicts with every
+member and dereference; a write of a global, or of a local whose address
+is taken, conflicts with every member and dereference too. Moved operands
+that hold a same-precedence operator, or a likely macro (an upper-case name
+other than `NULL`, `TRUE`, `FALSE`), get parentheses.
+
+A round visits each group once. It scores every order of a group with up to
+`--exhaustive` items (default 6, so 720 orders) or, for larger groups, every
+single insertion move. The other groups stay at their best, and the group's
+best order is kept. Rounds repeat (`--max-rounds`, default 8) until one
+improves nothing. The operand mode then tries every pair of non-overlapping
+sites (`--no-pairs` skips this); a gain there starts a new single round. The
+search stops at an exact score. `--lines N-M` restricts it to groups that
+overlap those source lines.
+
+Each candidate is written over the real source file, compiled with the
+matching flags and the original written back before the object is analysed;
+the project context is built once, so a candidate costs about 0.3–0.5 s.
+Candidates keep the line count, so the annotations and COFF line records
+stay valid. While a candidate is in place, `OUTPUT/in-place.lock` and
+`OUTPUT/original.c` exist; a search killed at that moment restores the file
+on its next start in the same directory (or `git checkout` it). **Never run
+a search while a build compiles the same tree** (or another search edits the
+same file).
+
+`OUTPUT` holds `state.json`, the round's `base.c`, `best.c`, `best.patch` and
+`result.json` (before and best scores, attempts, failures, the improvements,
+the ten best candidates and the groups visited). They are rewritten after
+every improvement and every ten attempts. A spent budget exits with status 3
+and a resumable state; `--resume` continues from the same group and
+candidate, and refuses if the source changed. Exit status 0 means the search
+finished (exact, or no group improves). The scores are the single-function
+loop's, which can differ from the full report; review the semantics of a
+result, apply `best.patch`, and confirm with `make reccmp-check`. Finding 654
+records the first application pass and each mode's hit rate.
+
 ## Native CMake/Meson source parity
 
 `python3 tools/meson_source_parity.py` checks the native game, gods98,

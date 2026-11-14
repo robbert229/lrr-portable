@@ -19,7 +19,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: opt-ref-link opt-ref opt-ref-callers unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
+.PHONY: opt-ref-link opt-ref opt-ref-callers unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-search match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -99,6 +99,18 @@ match-function:
 	  python3 ./tools/match_function.py $(ADDR) $(if $(SOURCE),--source "$(SOURCE)") \
 	  $(if $(JSON),--json) $(MATCH_ARGS)
 
+# Time-capped, resumable order search of one function (tools/README.md):
+# ADDR=0x... MODE=stores|cases|decls|operands [SECONDS=600] [OUT=dir]
+# [SEARCH_ARGS="--resume --lines 120-140"]. Never run during a build.
+match-search:
+	@if [ -z "$(ADDR)" ] || [ -z "$(MODE)" ]; then \
+	  echo "usage: make match-search ADDR=0x00478e60 MODE=stores|cases|decls|operands [SECONDS=600] [OUT=dir] [SEARCH_ARGS=...]" >&2; \
+	  exit 2; \
+	fi
+	@REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
+	  python3 ./tools/permuter_search.py $(ADDR) --mode $(MODE) --seconds $(or $(SECONDS),600) \
+	  --output $(or $(OUT),build-match/search/$(ADDR)-$(MODE)) $(SEARCH_ARGS)
+
 # Scaffold an original-shape conversion of one unit (ADR 0005, step 0).
 # UNIT=G98-029 [CONVERT_ARGS="--stem registry --dry-run"]; see tools/README.md.
 convert-unit:
@@ -160,6 +172,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_meson_source_parity.py'
 	python3 -m unittest discover -s tools -p 'test_convert_unit.py'
 	python3 -m unittest discover -s tools/tests -p 'test_msvc_permuter.py'
+	python3 -m unittest discover -s tools/tests -p 'test_permuter_search.py'
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_cohort.py'
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_unit_data_offsets.py'
