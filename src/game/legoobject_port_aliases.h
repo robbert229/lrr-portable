@@ -237,6 +237,11 @@
 #define simulation_mode_counter_add_original legoobject_simulation_mode_counter_add /* 0043a910 */
 #define entity_type_operation_dispatch_adapter legoobject_type_operation_dispatch /* 00449f50 */
 #define ledger_stub_0044b140_SmallSpiderCellSwarmSpawn legoobject_small_spider_cell_swarm_spawn /* 0044b140 */
+/* #730 (finding 638): aitask_port.cpp's last two LegoObject.c adapters.
+ * aitask.c passes 00443710 a fourth argument, which the original pushes
+ * and the unit's function does not read. */
+#define aitask_adjacent_position_find_adapter legoobject_adjacent_position_candidate_find /* 00443710 */
+#define aitask_object_command_gate_adapter legoobject_type_two_target_resolve_and_apply /* 0044b4c0 */
 #endif
 #endif
 

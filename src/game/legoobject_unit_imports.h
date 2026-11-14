@@ -151,6 +151,11 @@ void* construction_place_building(int objID, int* blockPos,
                                   unsigned int direction, int* shapePoints,
                                   unsigned int shapeCount,
                                   int teleportDown);              /* 00409a90 construction.c */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: NERPs.c's 00454880 itself (tutorial_script.c), which the
+ * original calls with the object's type it does not read (issue #730). */
+#define legoobject_gb_tutorial_counter_increment_adapter nerps_monster_destroyed
+#endif
 void legoobject_gb_tutorial_counter_increment_adapter(int type);   /* 00454880 */
 
 /* ---- group C ---- */
@@ -709,6 +714,16 @@ float entity_energy_decay_rate_get(const struct EntitySlot* e);            /* 00
 void legoobject_gi_osf_add_adapter(void* obj);                             /* 00459190 */
 void legoobject_gi_cell_path_effects_apply_adapter(void* obj);             /* 00409d50 */
 /* Weapons.c (entity.hpp, weapons.cpp). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: weapons.c's originals themselves (issue #730, finding
+ * 638). Each port model has the original's contract; natively the unit
+ * keeps the port's names. Object-like aliases, before the first
+ * declaration of each name, so the symbol counter does not move. */
+#define object_pair_ray_hit_check weapons_object_pair_ray_hit /* 004718d0 */
+#define entity_flag100_and_shared_eligibility_check weapons_object_can_be_hit /* 00471ce0 */
+#define entity_velocity_slot_dispatch weapons_object_update_weapons /* 00471fc0 */
+#define entity_centers_within_configured_radius weapons_object_in_range /* 00472080 */
+#endif
 int object_pair_ray_hit_check(void* first, void* second);                  /* 004718d0 */
 int entity_centers_within_configured_radius(const struct EntitySlot* first,
                                             const struct EntitySlot* second); /* 00472080 */

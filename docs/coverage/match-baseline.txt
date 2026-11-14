@@ -1,4 +1,4 @@
-# input_sha256: f5a689ad89d5b88fd7e74e89edbc9a579e2dce4078afc7f2a4574a7bd72fd581
+# input_sha256: 3c89ea7e7a9f42db33d814d8ee9e03e1f48a45998ded608553928fbce1cfbcd7
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -131,12 +131,12 @@
 0x004041b0 93.33 aitask_entity_task_chain_contains_kind
 0x004041e0 100.00 aitask_entity_command_chain_head_remove
 0x00404250 100.00 aitask_cmd_pool_timer_delta_apply
-0x00404280 82.96 aitask_cmd_entity_command_chain_tick
+0x00404280 83.07 aitask_cmd_entity_command_chain_tick
 0x00404e00 98.65 aitask_object_path_submit_to_grid_target
 0x00404ed0 100.00 aitask_check_object_candidate
 0x00404f10 100.00 aitask_object_task_target_filter_find
 0x00404f50 100.00 aitask_object_filter_matches_action_target
-0x00404fc0 99.21 aitask_place_command_eligibility_check
+0x00404fc0 99.43 aitask_place_command_eligibility_check
 0x00405950 98.62 aitask_pending_command_timer_fire_scan
 0x00405c10 62.29 aitask_pending_command_entity_assignment_tick
 0x00406360 100.00 aitask_entity_record_attach_and_relink
@@ -155,7 +155,7 @@
 0x00406820 98.08 bezier_curve_samples_build
 0x004068c0 75.76 path_arc_length_interpolate
 0x00406980 100.00 scene_object_mode_is_one
-0x00406990 98.08 entity_type_config_resource_row_load
+0x00406990 99.52 entity_type_config_resource_row_load
 0x00406c00 100.00 renderer_object_update_from_record_field64
 0x00406c30 100.00 renderer_object_update_from_record_field68
 0x00406c60 100.00 renderer_object_update_from_record_field6c
@@ -957,7 +957,7 @@
 0x004377d0 100.00 legoobject_run_through_lists
 0x00437880 100.00 legoobject_rename
 0x004378e0 100.00 legoobject_grid_object_records_release
-0x00437940 81.93 legoobject_deferred_olist_create_and_link
+0x00437940 82.35 legoobject_deferred_olist_create_and_link
 0x00437c20 100.00 legoobject_deferred_olist_queue_add
 0x00437cc0 100.00 legoobject_flag40000_threshold_compare
 0x00437d00 100.00 legoobject_create
@@ -1053,7 +1053,7 @@
 0x0043c280 100.00 legoobject_nested_float_add_unless_blocked
 0x0043c2b0 100.00 legoobject_periodic_timer25_advance
 0x0043c2f0 96.86 legoobject_periodic_timer25_callback
-0x0043c3e0 78.79 legoobject_type26_command_completion_gate
+0x0043c3e0 84.85 legoobject_type26_command_completion_gate
 0x0043c440 100.00 legoobject_can_do_activity_classify
 0x0043c490 100.00 legoobject_task_type_and_condition_check
 0x0043c4c0 100.00 legoobject_finish_state_1a
@@ -1061,7 +1061,7 @@
 0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
-0x0043c810 89.06 legoobject_update_callback
+0x0043c810 89.21 legoobject_update_callback
 0x0043eea0 89.26 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
@@ -1718,7 +1718,7 @@
 0x0046c3d0 100.00 vehicle_is_camera_flip_dir
 0x0046c3f0 100.00 vehicle_set_activity
 0x0046c510 100.00 scene_channel_slots_rebuild
-0x0046c6f0 99.48 lego_vehicle_load_adapter
+0x0046c6f0 99.83 lego_vehicle_load_adapter
 0x0046ce10 100.00 entity_payload_type1_release
 0x0046ced0 100.00 paired_resource_state_set
 0x0046cf20 100.00 scene_entity_animation_tracks_set_enabled
@@ -2551,12 +2551,12 @@
 0x004041b0 93.33 aitask_entity_task_chain_contains_kind
 0x004041e0 100.00 aitask_entity_command_chain_head_remove
 0x00404250 100.00 aitask_cmd_pool_timer_delta_apply
-0x00404280 82.96 aitask_cmd_entity_command_chain_tick
+0x00404280 83.07 aitask_cmd_entity_command_chain_tick
 0x00404e00 98.65 aitask_object_path_submit_to_grid_target
 0x00404ed0 100.00 aitask_check_object_candidate
 0x00404f10 100.00 aitask_object_task_target_filter_find
 0x00404f50 100.00 aitask_object_filter_matches_action_target
-0x00404fc0 99.21 aitask_place_command_eligibility_check
+0x00404fc0 99.43 aitask_place_command_eligibility_check
 0x00405950 98.62 aitask_pending_command_timer_fire_scan
 0x00405c10 62.29 aitask_pending_command_entity_assignment_tick
 0x00406360 100.00 aitask_entity_record_attach_and_relink
@@ -2575,7 +2575,7 @@
 0x00406820 98.08 bezier_curve_samples_build
 0x004068c0 75.76 path_arc_length_interpolate
 0x00406980 100.00 scene_object_mode_is_one
-0x00406990 98.08 entity_type_config_resource_row_load
+0x00406990 99.52 entity_type_config_resource_row_load
 0x00406c00 100.00 renderer_object_update_from_record_field64
 0x00406c30 100.00 renderer_object_update_from_record_field68
 0x00406c60 100.00 renderer_object_update_from_record_field6c
@@ -3377,7 +3377,7 @@
 0x004377d0 100.00 legoobject_run_through_lists
 0x00437880 100.00 legoobject_rename
 0x004378e0 100.00 legoobject_grid_object_records_release
-0x00437940 81.93 legoobject_deferred_olist_create_and_link
+0x00437940 82.35 legoobject_deferred_olist_create_and_link
 0x00437c20 100.00 legoobject_deferred_olist_queue_add
 0x00437cc0 100.00 legoobject_flag40000_threshold_compare
 0x00437d00 100.00 legoobject_create
@@ -3473,7 +3473,7 @@
 0x0043c280 100.00 legoobject_nested_float_add_unless_blocked
 0x0043c2b0 100.00 legoobject_periodic_timer25_advance
 0x0043c2f0 96.86 legoobject_periodic_timer25_callback
-0x0043c3e0 78.79 legoobject_type26_command_completion_gate
+0x0043c3e0 84.85 legoobject_type26_command_completion_gate
 0x0043c440 100.00 legoobject_can_do_activity_classify
 0x0043c490 100.00 legoobject_task_type_and_condition_check
 0x0043c4c0 100.00 legoobject_finish_state_1a
@@ -3481,7 +3481,7 @@
 0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
-0x0043c810 89.06 legoobject_update_callback
+0x0043c810 89.21 legoobject_update_callback
 0x0043eea0 89.26 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
@@ -4138,7 +4138,7 @@
 0x0046c3d0 100.00 vehicle_is_camera_flip_dir
 0x0046c3f0 100.00 vehicle_set_activity
 0x0046c510 100.00 scene_channel_slots_rebuild
-0x0046c6f0 99.48 lego_vehicle_load_adapter
+0x0046c6f0 99.83 lego_vehicle_load_adapter
 0x0046ce10 100.00 entity_payload_type1_release
 0x0046ced0 100.00 paired_resource_state_set
 0x0046cf20 100.00 scene_entity_animation_tracks_set_enabled
