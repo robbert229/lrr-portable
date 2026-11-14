@@ -1,4 +1,4 @@
-# input_sha256: 4254455dd570d4539b25ee12fd702301756a950dd9d9a1b0955b92be825b554b
+# input_sha256: 7bc85a56ee375959357d5f6184ddb1a21199d9dbf2dca775a7b815f2bd926135
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2314,7 +2314,7 @@
 0x00480870 100.00 mesh_create_on_frame
 0x00480900 100.00 mesh_clone
 0x004809e0 100.00 mesh_load
-0x00480ac0 38.57 mesh_parse_lwo
+0x00480ac0 78.43 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 31.11 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
@@ -4854,7 +4854,7 @@
 0x00480870 100.00 mesh_create_on_frame
 0x00480900 100.00 mesh_clone
 0x004809e0 100.00 mesh_load
-0x00480ac0 38.57 mesh_parse_lwo
+0x00480ac0 78.43 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 31.11 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence

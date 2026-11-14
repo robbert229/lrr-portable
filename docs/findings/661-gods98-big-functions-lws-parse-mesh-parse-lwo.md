@@ -5,32 +5,41 @@ largest non-exact functions, rather than a sweep's short budget per function:
 `00480ac0` Mesh_ParseLWO (`mesh_parse_lwo`, 3,424 bytes, 38.57%) and
 `004869f0` Lws_Parse (`lws_parse`, 3,280 bytes, 94.80%).
 
-Measured on `main` `bf6335e3` with one full matching build and `make
-reccmp-check` of this change.
+Measured with one full matching build and `make reccmp-check` of this change,
+stacked on #778 (`2b491078`, finding 662: objectGlobs as one struct), which
+sits on #777 (finding 663, research only) on `main` `bf6335e3`. The first
+measurement, on `main` `bf6335e3` itself, gave the same rise and nothing
+else.
 
-| Measure | `main` `bf6335e3` | This change |
+| Measure | #778 `2b491078` | This change |
 | --- | ---: | ---: |
 | `00480ac0` mesh_parse_lwo | 38.57% | **78.43%** |
 | `004869f0` lws_parse | 94.80% | 94.80% |
 | Functions that rose / fell, full | | 1 / **0** |
-| Exact / mapped, full | 2,408 / 2,833 | 2,408 / 2,833 |
-| Exact-function code bytes | 335,096 (52.15%) | 335,096 (52.15%) |
-| Accuracy, full / game-only | 97.02% / 96.68% | **97.04% / 96.70%** |
+| Exact / mapped, full | 2,415 / 2,833 | 2,415 / 2,833 |
+| Exact-function code bytes | 336,831 (52.42%) | 336,831 (52.42%) |
+| Accuracy, full / game-only | 97.05% / 96.72% | **97.07% / 96.73%** |
 | Image end (`make pe-audit`) | `0x7f5000` | `0x7f5000` |
 | `opt_ref` annotated removed | 0 | 0 |
 
-No function fell below the baseline. `make match-progress`, `make
-unit-data-offsets` (no tracked file changed) and `make pe-audit` were run on
-the final tree and the generated files are committed. `make tools-test` (no
-`--allow-growth`), `make winapi-link-check` and native ctest (37 of 37) pass,
-and the native build starts.
+On `main` `bf6335e3` alone: exact-function bytes 335,096 (52.15%)
+unchanged, accuracy 97.02/96.68 to 97.04/96.70.
+
+No function fell below the baseline. On the stack, that includes
+`00482620` and `00483420` (section 1's counter balance) and #778's new exact
+LegoObject.c functions. `make match-progress`, `make unit-data-offsets` (no
+tracked file changed) and `make pe-audit` were run on the final tree and the
+generated files are committed. `make tools-test` (no `--allow-growth`),
+`make winapi-link-check` and native ctest (37 of 37) pass, and the native
+build starts.
 
 In `binary-progress.json` the `/OPT:REF` relink's categories move two
-functions (128 bytes) from `original_annotated` to `port_unit`. No annotation
-changed and no function is removed (`make opt-ref-callers
-OPT_REF_ARGS=--summary`: 0 removed). As in finding 654, the figure comes from
-translating the gate's report rows into the relink after a code-size change,
-here mesh_parse_lwo's; the cause was not identified further.
+functions between `original_annotated` and `port_unit`: on `main` 2,534 to
+2,532 annotated, on #778 2,532 to 2,534. No annotation changed and no
+function is removed (`make opt-ref-callers OPT_REF_ARGS=--summary`: 0
+removed). As in finding 654, the figure comes from translating the gate's
+report rows into the relink after a code-size change, here mesh_parse_lwo's,
+and its direction depends on the base; the cause was not identified further.
 
 Only `src/gods98/mesh_unit.c` and `src/gods98/mesh_maths.h` change. No other
 thread's file is touched.
