@@ -672,6 +672,7 @@ int lwo_load(const char* fname, LWSIZE* size, float** verts, LWPOLY** polys,
 int lwo_app_obj_load(const char* fname, APPOBJ** ao, int verbose)
 {
     char path[128];
+    APPOBJ* obj;
 
     *ao = (APPOBJ*)malloc(sizeof(APPOBJ));
     memset(*ao, 0, sizeof(APPOBJ));
@@ -682,7 +683,8 @@ int lwo_app_obj_load(const char* fname, APPOBJ** ao, int verbose)
         return 1;
     }
     free((*ao)->aoPath);
-    free(*ao);
+    obj = *ao;
+    free(obj);
     return 0;
 }
 

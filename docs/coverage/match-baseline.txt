@@ -1,4 +1,4 @@
-# input_sha256: 7b803929325a15ce387cc8a806a0af210d7487981bbeefae37fb20f8011c707a
+# input_sha256: e5be64c973846b8b3cf25f96a017b26ba2fa6255ad1ce1cb4097cfdc99c0fa69
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -107,7 +107,7 @@
 0x00403810 76.83 aitask_terrain_cell_record_count_update
 0x004038c0 100.00 aitask_timed_task_record_initialize_and_link
 0x00403910 100.00 aitask_terrain_cell_record_counts_prune
-0x004039a0 94.12 aitask_task_record_create_and_scan_grid
+0x004039a0 100.00 aitask_task_record_create_and_scan_grid
 0x004039d0 100.00 aitask_task_record_kind11_timed_queue
 0x00403a10 100.00 aitask_task_callback_dispatch
 0x00403a30 100.00 aitask_callback_00403a30
@@ -126,9 +126,9 @@
 0x00404030 100.00 aitask_cmd_link_head
 0x00404070 100.00 aitask_cmd_link_tail
 0x004040a0 100.00 aitask_entity_task_queue_flush
-0x00404100 58.82 aitask_command_queue_sweep_relink
+0x00404100 100.00 aitask_command_queue_sweep_relink
 0x00404190 100.00 aitask_cmd_chain_walk
-0x004041b0 93.33 aitask_entity_task_chain_contains_kind
+0x004041b0 100.00 aitask_entity_task_chain_contains_kind
 0x004041e0 100.00 aitask_entity_command_chain_head_remove
 0x00404250 100.00 aitask_cmd_pool_timer_delta_apply
 0x00404280 83.07 aitask_cmd_entity_command_chain_tick
@@ -2364,7 +2364,7 @@
 0x00483a90 100.00 mesh_render_group
 0x00483b00 100.00 mesh_set_group_render_desc
 0x00483b70 100.00 mesh_render_triangle_list
-0x00483c80 89.24 flic_setup
+0x00483c80 100.00 flic_setup
 0x00483f00 100.00 Flic_Close
 0x00483f60 100.00 Flic_LoadHeader
 0x00484070 100.00 flic_animate
@@ -2376,7 +2376,7 @@
 0x00484720 100.00 Flic_LoadPointers
 0x004847d0 100.00 Flic_LoadPalette64
 0x00484880 61.11 Flic_Copy
-0x004848d0 96.39 Flic_BrunDepack
+0x004848d0 100.00 Flic_BrunDepack
 0x004849d0 100.00 Flic_BrunDepack16
 0x00484b20 100.00 Flic_Brun
 0x00484b90 100.00 flic_opcode25_success_stub
@@ -2516,7 +2516,7 @@
 0x0048c690 100.00 lwo_surface_names_read
 0x0048c820 80.66 lwo_surface_settings_read
 0x0048d2c0 99.29 lwo_load
-0x0048d7c0 96.88 lwo_app_obj_load
+0x0048d7c0 100.00 lwo_app_obj_load
 0x0048d870 100.00 lwo_app_obj_free
 0x004973f0 98.44 $CRT_C_Initializer(1)
 0x004974b0 100.00 $CRT_C_Pre-Terminator
@@ -2647,7 +2647,7 @@
 0x00403810 76.83 aitask_terrain_cell_record_count_update
 0x004038c0 100.00 aitask_timed_task_record_initialize_and_link
 0x00403910 100.00 aitask_terrain_cell_record_counts_prune
-0x004039a0 94.12 aitask_task_record_create_and_scan_grid
+0x004039a0 100.00 aitask_task_record_create_and_scan_grid
 0x004039d0 100.00 aitask_task_record_kind11_timed_queue
 0x00403a10 100.00 aitask_task_callback_dispatch
 0x00403a30 100.00 aitask_callback_00403a30
@@ -2666,9 +2666,9 @@
 0x00404030 100.00 aitask_cmd_link_head
 0x00404070 100.00 aitask_cmd_link_tail
 0x004040a0 100.00 aitask_entity_task_queue_flush
-0x00404100 58.82 aitask_command_queue_sweep_relink
+0x00404100 100.00 aitask_command_queue_sweep_relink
 0x00404190 100.00 aitask_cmd_chain_walk
-0x004041b0 93.33 aitask_entity_task_chain_contains_kind
+0x004041b0 100.00 aitask_entity_task_chain_contains_kind
 0x004041e0 100.00 aitask_entity_command_chain_head_remove
 0x00404250 100.00 aitask_cmd_pool_timer_delta_apply
 0x00404280 83.07 aitask_cmd_entity_command_chain_tick
@@ -4904,7 +4904,7 @@
 0x00483a90 100.00 mesh_render_group
 0x00483b00 100.00 mesh_set_group_render_desc
 0x00483b70 100.00 mesh_render_triangle_list
-0x00483c80 89.24 flic_setup
+0x00483c80 100.00 flic_setup
 0x00483f00 100.00 Flic_Close
 0x00483f60 100.00 Flic_LoadHeader
 0x00484070 100.00 flic_animate
@@ -4916,7 +4916,7 @@
 0x00484720 100.00 Flic_LoadPointers
 0x004847d0 100.00 Flic_LoadPalette64
 0x00484880 61.11 Flic_Copy
-0x004848d0 96.39 Flic_BrunDepack
+0x004848d0 100.00 Flic_BrunDepack
 0x004849d0 100.00 Flic_BrunDepack16
 0x00484b20 100.00 Flic_Brun
 0x00484b90 100.00 flic_opcode25_success_stub
@@ -5056,7 +5056,7 @@
 0x0048c690 100.00 lwo_surface_names_read
 0x0048c820 80.66 lwo_surface_settings_read
 0x0048d2c0 99.29 lwo_load
-0x0048d7c0 96.88 lwo_app_obj_load
+0x0048d7c0 100.00 lwo_app_obj_load
 0x0048d870 100.00 lwo_app_obj_free
 0x0048d920 100.00 __fpmath
 0x0048d940 100.00 __cfltcvt_init
