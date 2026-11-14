@@ -2253,7 +2253,7 @@ int interface_do_action(int type)
 
     obj = selection_active_entity_get_obj();
     if (interface_is_item_disabled(type, 1)) {
-        return 0;
+        goto fail;
     }
 
     switch (type) {
@@ -2490,7 +2490,7 @@ int interface_do_action(int type)
         }
         found = lego_object_find_trainer(obj, NULL, mask);
         if (found == NULL) {
-            return 0;
+            goto fail;
         }
         aitask_task_type23_create_for_category_mask(LEGOOBJ(found), mask, 1);
         selection_clear_request_and_hud_reset();
@@ -2506,7 +2506,7 @@ int interface_do_action(int type)
         return 1;
     case 73:
         if (interface_is_object_item_disabled(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex, 1)) {
-            return 0;
+            goto fail;
         }
         interface_spawn_request_enqueue(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex);
         if (interfaceGlobs.dependencyObjType == 4) {
@@ -2644,6 +2644,12 @@ int interface_do_action(int type)
 
     selection_clear_request_and_hud_reset();
     return 1;
+    /* The original sends its three failure returns to one shared
+     * `xor eax, eax` block. With a shared label MSVC 5.0 jumps there too
+     * (it places the block at case 73, the original at the end); three
+     * plain returns each get their own epilogue (finding 660). */
+fail:
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x0041e750

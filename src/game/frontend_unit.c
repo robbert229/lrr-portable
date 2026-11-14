@@ -2156,8 +2156,8 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
                     if (index >= select->selItemCount) {
                         break;
                     }
-                    selCenterOff = -(select->widths[0][index] / 2);
                     selItem = &select->selItemList[index];
+                    selCenterOff = -(select->widths[0][index] / 2);
                     imageIndex = (selItem->flags & 4) ? 0 : 2;
                     if (!menu->autoCenter) {
                         selCenterOff = 0;
@@ -2223,8 +2223,8 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
         if (s_overwriteAnswer == 0) {
             g_front_save_menu_open = 1;
             menu->closed = 1;
-            s_saveMenuOverwriteShowing = 0;
             s_saveSlotToWrite = -1;
+            s_saveMenuOverwriteShowing = 0;
         } else if (s_overwriteAnswer == 1) {
             g_front_save_menu_open = 0;
             menu->closed = 1;
@@ -2786,25 +2786,31 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                 }
                 break;
             case Front_MenuItem_Next:
+                /* The original computes the menu index (`dec eax`) before
+                 * pushing the item's last arguments, so it is a statement of
+                 * its own here; `k` is free in this case (finding 660). */
                 if (numParts == 8) {
+                    k = atoi(stringParts[7] + 4) - 1;
                     front_menu_add_menu_item(menuSet->menus[i],
                                              front_menu_item_create_image_item(
                                                  s_config_angle_empty, loFont, hiFont, stringParts[3],
                                                  stringParts[4], atoi(stringParts[1]), atoi(stringParts[2]),
                                                  Front_MenuItem_Next, autoCenter, stringParts[5],
-                                                 menuSet->menus[atoi(stringParts[7] + 4) - 1]));
+                                                 menuSet->menus[k]));
                 } else if (numParts == 6) {
+                    k = atoi(stringParts[4] + 4) - 1;
                     front_menu_add_menu_item(menuSet->menus[i],
                                              front_menu_item_create_banner_item(
                                                  mission_replace_char(stringParts[3], '_', ' '), loFont, hiFont,
                                                  atoi(stringParts[1]), atoi(stringParts[2]), Front_MenuItem_Next,
-                                                 autoCenter, menuSet->menus[atoi(stringParts[4] + 4) - 1], 1));
+                                                 autoCenter, menuSet->menus[k], 1));
                 } else if (*stringParts[4] != '\0') {
+                    k = atoi(stringParts[4] + 4) - 1;
                     front_menu_add_menu_item(menuSet->menus[i],
                                              front_menu_item_create_banner_item(
                                                  mission_replace_char(stringParts[3], '_', ' '), loFont, hiFont,
                                                  atoi(stringParts[1]), atoi(stringParts[2]), Front_MenuItem_Next,
-                                                 autoCenter, menuSet->menus[atoi(stringParts[4] + 4) - 1], 0));
+                                                 autoCenter, menuSet->menus[k], 0));
                 } else {
                     /* The original passes the item type and the centring
                      * flag the other way round here. */
