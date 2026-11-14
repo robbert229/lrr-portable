@@ -67,7 +67,10 @@ int legoobject_adjacent_placement_cell_search(Lego_Object* obj,
                                               Lego_Object* target); /* 00447210 */
 void legoobject_selection_clear_marker_and_reset_hud(Lego_Object* obj); /* 0044c4a0 */
 int legoobject_selection_clear_callback(Lego_Object* obj, void* data); /* 0044c500 */
-/* GAME-035 (level_id_remap.cpp). */
+/* GAME-035 PTL.c (ptl.c): PTL_TranslateEvent. */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+#define command_entity_reference_remap ptl_translate_event
+#endif
 void command_entity_reference_remap(uint32_t* entity_reference);  /* 0045d870 */
 /* GAME-041 SFX.c (sfx.c). */
 int sfx_random_play_sound_normal(int sfxID, int loop);            /* 00464fa0 */

@@ -692,7 +692,7 @@ int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,
                                unsigned int by, float* xOut,
                                float* yOut);                                /* 0044f640 */
 #if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
-/* Matching build: object_state_file.cpp's original-shape
+/* Matching build: objectrecall.c's
  * ObjectRecall_RecallMiniFigure (#749, finding 648). An object-like alias
  * before the name's only declaration, so the symbol counter does not move. */
 #define entity_state_override_pop object_recall_recall_minifigure
@@ -721,8 +721,8 @@ float entity_energy_decay_rate_get(const struct EntitySlot* e);            /* 00
 /* Original-ABI adapters at the end of legoobject_port.cpp (group I): 00459190
  * takes the object (the port's osf_add a context and its fields), and the
  * port's 00409d50 is in a namespace. In the matching build both are the
- * originals (#749, finding 648): object_state_file.cpp's original-shape
- * ObjectRecall_StoreMiniFigure, and entity_cell_effects.cpp's original-shape
+ * originals (#749, finding 648): objectrecall.c's
+ * ObjectRecall_StoreMiniFigure, and entity_cell_effects.c's
  * 00409d50, which has C linkage there. Object-like aliases before each
  * name's only declaration, so the symbol counter does not move. */
 #if defined(_MSC_VER) && _MSC_VER < 1200

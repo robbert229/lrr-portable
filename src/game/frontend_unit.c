@@ -2944,7 +2944,7 @@ const char* lego_level_free(void);                                /* 0042f0c0 */
  * original-ABI adapter). */
 void objective_announce_current(int who);                         /* 00458670 */
 int objective_is_ended_original(void);                            /* 004589a0 */
-/* GAME-030 ObjectRecall.c: 00459360 has no port entry (an unannotated
+/* GAME-030 ObjectRecall.c: 00459360 has no port entry (natively an
  * adapter in frontend_port.cpp). */
 void front_object_recall_restore_adapter(void);                   /* 00459360 */
 /* gods98 Main.c (audio.cpp): Main_SetCDVolume, Main_GetCDVolume. */

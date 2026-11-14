@@ -58,7 +58,7 @@ uint32_t formatted_text_printf_width(const struct TextureSurface* font,
 /* GAME-005 Bubbles.c (bubbles.c). */
 void bubble_toggle_object_uis_always_visible(void);               /* 00407340 */
 int bubble_get_object_uis_always_visible(void);                   /* 00407360 */
-/* GAME-008 (entity_cell_effects.cpp). */
+/* GAME-008 (entity_cell_effects.c). */
 void level_state_stored_value_set(uint32_t v);                    /* 00409d40 */
 /* GAME-021 Lego.c (lego_unit.c). */
 struct LevelState* level_current_owner_get(void);                 /* 00431560 */
@@ -75,7 +75,7 @@ int nerpfunc_get_tutorial_flags(unsigned int* stack);             /* 00456240 */
 int nerpfunc_set_objective_switch(unsigned int* stack);           /* 004567c0 */
 /* GAME-030 (object_state_file.cpp): original-ABI adapters in
  * objective_port.cpp. In the matching build 004592e0 and 00459360 are
- * object_state_file.cpp's original-shape functions (#749, finding 648):
+ * objectrecall.c's functions (#749, finding 648):
  * object-like aliases before each name's only declaration, so the symbol
  * counter does not move. 00459360 returns an int that this unit ignores. */
 #if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
