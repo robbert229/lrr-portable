@@ -12,14 +12,14 @@ in a playable state before the end of November 2026.
      with `python3 tools/readme_status.py` (no build needed); recount the
      source ledger with `python3 tools/coverage_ledger.py`. -->
 
-Verified **2026-11-14** on `main` `b928af37` with issue 786's change, with MSVC 5.0 and Reccmp:
+Verified **2026-11-14** on the #786 stack (`7ece767f` plus #788), with MSVC 5.0 and Reccmp:
 
 | Measure | Value |
 | --- | ---: |
-| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **336,934 / 642,549 bytes (52.44%)** |
-| Accuracy: mean Reccmp score of mapped functions, game-only / full | 96.74% / 97.07% |
+| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **338,194 / 642,549 bytes (52.63%)** |
+| Accuracy: mean Reccmp score of mapped functions, game-only / full | 96.76% / 97.10% |
 | Mapped functions, game-only / full | 2,538 / 2,833 |
-| Exact (100%) functions, game-only / full | 2,129 / 2,417 |
+| Exact (100%) functions, game-only / full | 2,135 / 2,423 |
 | Functions byte-identical at their original address | 14 (631 bytes) |
 
 The old headline, Reccmp's game-only "progress" (47.77% on 2026-11-04), is no

@@ -1,8 +1,9 @@
 # 667. Lego.c's callbacks, and how the original referenced `fflush`, `stricmp` and `__allmul`
 
 Issue #786, part of #388. Follows finding 658, section 3. Measured with full
-matching builds under the gate's link mode on `main` `b928af37` and on this
-change.
+matching builds under the gate's link mode. The first measurement was on
+`main` `b928af37`. After the rebase onto the stack (#790, #787, #789, top
+`7ece767f`), it was measured again on that base and on this change.
 
 ## Summary
 
@@ -35,23 +36,25 @@ change.
 
 ## Before and after
 
-| Measure (`binary-progress.json`) | `main` `b928af37` | This change |
+| Measure (`binary-progress.json`) | stack base `7ece767f` | This change |
 | --- | ---: | ---: |
 | Function-order inversions, full: pairs / adjacent | 799 / 18 | **222 / 10** |
 | Function-order inversions, game-only: pairs / adjacent | 4 / 3 | **1 / 1** |
 | Unit-order inversions (unit medians): pairs / adjacent | 187 / 13 | **45 / 9** |
 | Unit contiguity | 221 of 225 | **223 of 225 (99.11%)** |
 | Data-offset agreement | 20 of 57 units | 20 of 57 |
-| Exact-function code bytes | 336,831 (52.42%) | **336,934 (52.44%)** |
-| Accuracy, full / game-only | 97.07% / 96.74% | same |
+| Exact-function code bytes | 338,091 (52.62%) | **338,194 (52.63%)** |
+| Accuracy, full / game-only | 97.09% / 96.76% | 97.10% / 96.76% |
 | Functions below the baseline | | **0** (2 up) |
 | Image end (gate) | `0x7f5000` | same |
 
-The brief quoted 801 and 6 pairs for `main`. Those are finding 658's figures.
-The committed `binary-progress.json` on `b928af37` records 799 and 4, and
-this table uses those figures.
+On `main` `b928af37` alone, exact-function code bytes went from 336,831 to
+336,934, with the same layout figures. The brief quoted 801 and 6 pairs for
+`main`; those are finding 658's figures. The committed `binary-progress.json`
+on `b928af37` and on `7ece767f` records 799 and 4, and this table uses
+those figures.
 
-| Inversions by segment | `b928af37` | Lego.c only | This change | Cause |
+| Inversions by segment | `7ece767f` | Lego.c only | This change | Cause |
 | --- | ---: | ---: | ---: | --- |
 | CRT before CRT | 772 | 772 | **198** | LIBC member pull order |
 | Import thunks before LATE | 23 | 23 | 23 | RtlUnwind's thunk (finding 657); unchanged |
@@ -60,7 +63,7 @@ this table uses those figures.
 | **Total** | **799** | **796** | **222** | |
 
 The "This change" column is counted per segment from the gate's Reccmp
-results. The `main` column is the committed totals split the same way:
+results. The base column is the committed totals split the same way:
 game-only 4 = Lego.c 3 + G98-012 1, and the thunks' 23 do not change.
 
 ## 1. Lego.c's callbacks
