@@ -254,7 +254,7 @@ lrr_link(legacy 0048e1e0 gods98        gods98/string.cpp)
 # whole C runtime from LIBC.LIB (issue #447, finding 643); their markers name
 # LIBC's members by symbol.
 lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp portable)
-lrr_link(legacy 00494c30 gods98        crt/crt.cpp portable)
+lrr_link(legacy 00493ef0 gods98        crt/crt.cpp portable)
 lrr_link(unit   LATE-001 gods98        gods98/rnc.c)
 lrr_link(unit   LATE-002 gods98        gods98/init.c)
 

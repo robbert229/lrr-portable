@@ -61,6 +61,7 @@
 #define CONTAINER_MAXLISTS 20
 #define CONTAINER_MAXTEXTURES 1000
 #define CONTAINER_MAXVISUALS 4
+// STRING: LEGORR 0x004aab84
 #define CONTAINER_ACTIVITYFRAMEPREFIX "ActFrame"
 #define CONTAINER_ULONG_MAX 0xffffffff
 
@@ -2540,15 +2541,14 @@ Container* Container_SearchOwner(CntFrame* frame)
     Container* cont;
     CntFrame* parent;
 
-    do {
-        if (frame == NULL) break;
+    while (owner == NULL && frame != NULL) {
         if ((cont = Container_Frame_GetOwner(frame)) && cont->type != Container_Reference) {
             owner = cont;
         }
         frame->lpVtbl->GetParent(frame, &parent);
         if (frame = parent) frame->lpVtbl->Release(frame);
         else frame = NULL;
-    } while (owner == NULL);
+    }
 
     return owner;
 }
@@ -2757,7 +2757,9 @@ int Container_AddActivity2(Container* cont, const char* filename,
             containerGlobs.extensionName[Container_Anim]);
     if (lpD3DRM()->lpVtbl->CreateFrame(lpD3DRM(), cont->hiddenFrame,
                                        &frame) == 0) {
-        Container_Frame_FormatName(frame, "%s_%s",
+        Container_Frame_FormatName(frame,
+                                   // STRING: LEGORR 0x004aab90
+                                   "%s_%s",
                                    CONTAINER_ACTIVITYFRAMEPREFIX, actname);
         if (origClone == NULL) {
             animClone = Container_LoadAnimSet(xFile, frame, &frameCount, lws,
@@ -3146,7 +3148,9 @@ struct AnimClone* Container_LoadAnimSet(const char* fname,
 unsigned long Container_GetAnimFileFrameCount(const char* fileData)
 {
     unsigned long animCount = 0;
-    const char* s = strstr(fileData, "DDiScene");
+    const char* s = strstr(fileData,
+                           // STRING: LEGORR 0x004aab98
+                           "DDiScene");
 
     if (s) {
         while (!isdigit((unsigned char)*s)) s++;

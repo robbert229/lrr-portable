@@ -147,10 +147,12 @@ extern char** environ;
 // ___FrameUnwindToState
 // LIBRARY: LEGORR 0x004955c0 SYMBOL
 // ?CatchIt@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@PBU_s_HandlerType@@PBU_s_CatchableType@@PBU_s_TryBlockMapEntry@@H1@Z
+/* CallCatchBlock's __finally funclet ($L12725, 0x0049573a) and
+ * _inconsistency's ($L12243, 0x00495bde) are code labels inside their
+ * functions, not map symbols; a marker on them cut the functions short
+ * (finding 650). */
 // LIBRARY: LEGORR 0x00495650 SYMBOL
 // ?CallCatchBlock@@YAPAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PBU_s_FuncInfo@@PAXHK@Z
-// LIBRARY: LEGORR 0x0049573a SYMBOL
-// $L12725
 // LIBRARY: LEGORR 0x004957d0 SYMBOL
 // ?BuildCatchObject@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PBU_s_HandlerType@@PBU_s_CatchableType@@@Z
 // LIBRARY: LEGORR 0x004959e0 SYMBOL
@@ -161,8 +163,6 @@ extern char** environ;
 // ?terminate@@YAXXZ
 // LIBRARY: LEGORR 0x00495b70 SYMBOL
 // ?_inconsistency@@YAXXZ
-// LIBRARY: LEGORR 0x00495bde SYMBOL
-// $L12243
 // LIBRARY: LEGORR 0x00499690 SYMBOL
 // ?_ValidateRead@@YAHPBXI@Z
 // LIBRARY: LEGORR 0x004996b0 SYMBOL
@@ -439,7 +439,7 @@ extern "C" void __cdecl __multtenpow12(uint16_t*, uint32_t, int);
 #if !defined(_MSC_VER)
 // LIBRARY: LEGORR 0x0048e090 SYMBOL
 // __CIacos
-// LIBRARY: LEGORR 0x0048e0ad SYMBOL
+// LIBRARY: LEGORR 0x0048e0a4 SYMBOL
 // _acos
 double crt_acos(double value)
 {
@@ -2576,7 +2576,8 @@ uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
 // _pctype
 #define s_ctype_pointer _pctype
 #else
-// GLOBAL: LEGORR 0x004afd72
+/* Native model of LIBC.LIB's __ctype table: the original's 0x004afd72 is
+ * __ctype+2 (row __ctype 0x004afd70 in src/crt/libc_symbols.csv). */
 static uint16_t s_ctype_character_flags[256] = {
     0x0020u, 0x0020u, 0x0020u, 0x0020u, 0x0020u, 0x0020u, 0x0020u, 0x0020u,
     0x0020u, 0x0028u, 0x0028u, 0x0028u, 0x0028u, 0x0028u, 0x0020u, 0x0020u,
@@ -2757,7 +2758,8 @@ static CrtTimeZoneInformation s_timezone_information;
 static char* s_timezone_environment_copy;
 /* LIBC.LIB static data at 0x005494f0: not annotated (finding 540). */
 static int32_t s_timezone_initialized;
-// GLOBAL: LEGORR 0x004b29a4
+/* Native model of LIBC.LIB's __lpdays (0x004b29a8, libc_symbols.csv);
+ * the original's 0x004b29a4 is __lpdays-4. */
 static const int32_t s_leap_month_day_offsets[14] = {
     0, -1, 30, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365
 };
@@ -7049,7 +7051,8 @@ struct crt_signal_record {
     int32_t   id;
     uintptr_t handler;
 };
-// GLOBAL: LEGORR 0x004b22a8
+/* Native models of LIBC.LIB's __XcptActTab (0x004b22a8) and
+ * __XcptActTabCount (0x004b2328): rows in src/crt/libc_symbols.csv. */
 static struct crt_signal_record s_signal_records[CRT_SIGNAL_RECORDS] = {
     { 0xc0000005u, 11, 0u },
     { 0xc000001du, 4, 0u },
@@ -7062,7 +7065,6 @@ static struct crt_signal_record s_signal_records[CRT_SIGNAL_RECORDS] = {
     { 0xc0000092u, 8, 0u },
     { 0xc0000093u, 8, 0u }
 };
-// GLOBAL: LEGORR 0x004b2328
 static int s_signal_record_count = CRT_SIGNAL_RECORDS;
 
 /* LIBC static, named from the link map (finding 643): private winsig.obj
