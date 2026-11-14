@@ -50,6 +50,7 @@
 #define aitask_list_contains aitask_active_entity_list_contains_code /* 004031e0 */
 #define lego_block_has_lava_neighbour electric_fence_can_place_at_block /* 0040d240 */
 #define lego_get_resource_count noop_callback                   /* 0041f8e0 */
+#define lego_get_resource lego_upgrade_resource_check           /* 0041f900 */
 #define lego_set_tracked_object lego_render_record_set_from_input /* 00425d50 */
 #define lego_get_min_health engine_float_field260_get_current_target /* 00429880 */
 #define lego_object_type_for_name lego_entity_type_pair_lookup  /* 0042e8b0 */
