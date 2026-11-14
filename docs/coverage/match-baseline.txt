@@ -1,4 +1,4 @@
-# input_sha256: 9d960b06219b39ada6d9e6e99c06f1b986b99ea6289d53e5340e0040cc0c7626
+# input_sha256: 02b7ad67efa49578a1f6fce3b617a3ac965f3d80b333b59e1cb0cab9d075ac92
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -11,7 +11,7 @@
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
 0x00401240 100.00 vec2_dist
-0x00401270 97.98 advisor_config_slots_load_target
+0x00401270 100.00 advisor_config_slots_load_target
 0x004013a0 100.00 vec_len
 0x004013e0 100.00 advisor_position_name_to_index
 0x00401420 100.00 vec_dist
@@ -28,7 +28,7 @@
 0x00401890 100.00 advisor_action_position_get
 0x004018c0 100.00 advisor_request_admit
 0x00401930 100.00 advisor_request_reset_and_submit_sound
-0x00401990 86.36 advisor_transition_worker
+0x00401990 100.00 advisor_transition_worker
 0x00401a70 100.00 advisor_scene_advance_completion_check
 0x00401b20 100.00 advisor_clear_active_state
 0x00401b30 100.00 advisor_apply_slot_transform
@@ -142,7 +142,7 @@
 0x00406360 100.00 aitask_entity_record_attach_and_relink
 0x004063e0 100.00 aitask_pending_record_entity_reference_clear
 0x00406400 100.00 aitask_cmd_pending_record_copy
-0x00406440 65.22 aitask_cmd_alloc
+0x00406440 100.00 aitask_cmd_alloc
 0x00406480 100.00 aitask_cmd_free
 0x004064c0 100.00 aitask_cmd_pool_grow
 0x00406540 100.00 aitask_entity_pool_callback_search
@@ -243,7 +243,7 @@
 0x004099d0 100.00 path_record_release_all
 0x004099f0 100.00 construction_zone_free
 0x00409a40 100.00 construction_zone_remove_barriers
-0x00409a90 90.00 construction_place_building
+0x00409a90 100.00 construction_place_building
 0x00409b30 90.28 construction_zone_complete_building
 0x00409cd0 100.00 construction_update_cardinal_blocks
 0x00409d40 100.00 level_state_stored_value_set
@@ -2551,7 +2551,7 @@
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
 0x00401240 100.00 vec2_dist
-0x00401270 97.98 advisor_config_slots_load_target
+0x00401270 100.00 advisor_config_slots_load_target
 0x004013a0 100.00 vec_len
 0x004013e0 100.00 advisor_position_name_to_index
 0x00401420 100.00 vec_dist
@@ -2568,7 +2568,7 @@
 0x00401890 100.00 advisor_action_position_get
 0x004018c0 100.00 advisor_request_admit
 0x00401930 100.00 advisor_request_reset_and_submit_sound
-0x00401990 86.36 advisor_transition_worker
+0x00401990 100.00 advisor_transition_worker
 0x00401a70 100.00 advisor_scene_advance_completion_check
 0x00401b20 100.00 advisor_clear_active_state
 0x00401b30 100.00 advisor_apply_slot_transform
@@ -2682,7 +2682,7 @@
 0x00406360 100.00 aitask_entity_record_attach_and_relink
 0x004063e0 100.00 aitask_pending_record_entity_reference_clear
 0x00406400 100.00 aitask_cmd_pending_record_copy
-0x00406440 65.22 aitask_cmd_alloc
+0x00406440 100.00 aitask_cmd_alloc
 0x00406480 100.00 aitask_cmd_free
 0x004064c0 100.00 aitask_cmd_pool_grow
 0x00406540 100.00 aitask_entity_pool_callback_search
@@ -2783,7 +2783,7 @@
 0x004099d0 100.00 path_record_release_all
 0x004099f0 100.00 construction_zone_free
 0x00409a40 100.00 construction_zone_remove_barriers
-0x00409a90 90.00 construction_place_building
+0x00409a90 100.00 construction_place_building
 0x00409b30 90.28 construction_zone_complete_building
 0x00409cd0 100.00 construction_update_cardinal_blocks
 0x00409d40 100.00 level_state_stored_value_set

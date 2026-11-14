@@ -69,8 +69,13 @@ static const float s_rdata_0049e028 = 250.0f;
 // GLOBAL: LEGORR 0x0049e02c
 static const float s_rdata_0049e02c = 0.00999999978f;
 
+/* External, as the original's: with a static struct MSVC 5.0 reuses the
+ * free-list head it tested in aitask_cmd_alloc instead of reloading it
+ * after the pool-grow call, two bytes longer (finding 669). The zero
+ * initialiser keeps it in this object's .bss rather than the common region
+ * (finding 554). */
 // GLOBAL: LEGORR 0x004b31c8
-static AITask_Globs aiTaskGlobs;
+AITask_Globs aiTaskGlobs = { 0 };
 
 /* String literals. Annotate each where the code uses it, as
  * `// STRING: LEGORR 0x...` on the line before the literal (utils.c),

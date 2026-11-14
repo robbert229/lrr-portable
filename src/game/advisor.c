@@ -105,8 +105,12 @@ typedef struct AdvisorGlobs {
 // GLOBAL: LEGORR 0x0049e004
 static const float s_advisor_frames_per_second = 25.0f;
 
+/* External, as the original's: MSVC 5.0 compiles reads of a static struct
+ * differently (advisor_transition_worker keeps the current type in another
+ * register; finding 669). The zero initialiser keeps it in this object's
+ * .bss rather than the common region (finding 554). */
 // GLOBAL: LEGORR 0x004b2db0
-static AdvisorGlobs advisorGlobs;
+AdvisorGlobs advisorGlobs = { 0 };
 
 // FUNCTION: LEGORR 0x00401000
 void advisor_scene_controller_initialize(const char* gameName,
@@ -247,8 +251,8 @@ void advisor_config_slots_load_target(BlockFile* config, const char* gameName)
                                                      0.0f, 1.0f, 0.0f);
                 scene_render_lock_toggle(advisorGlobs.anims[loop].cont, 1);
             }
-            advisorGlobs.anims[loop].loopStartTime = (float)(atof(argv[1]) * s_advisor_frames_per_second);
-            advisorGlobs.anims[loop].loopEndTime = (float)(atof(argv[2]) * s_advisor_frames_per_second);
+            advisorGlobs.anims[loop].loopStartTime = atof(argv[1]) * s_advisor_frames_per_second;
+            advisorGlobs.anims[loop].loopEndTime = atof(argv[2]) * s_advisor_frames_per_second;
         }
     }
 }
