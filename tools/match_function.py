@@ -227,11 +227,23 @@ def compiled_sources(build_dir: str | None = None) -> list[Path]:
     return sorted({c.source for c in load_compile_commands(env, {})})
 
 
+def with_extra_flags(argv: list[str], extra_flags: list[str] | None) -> list[str]:
+    """argv with extra_flags appended. cl applies an option wherever it sits on
+    the command line and a later option overrides an earlier one (warning
+    D4025), so they override the configured options, as the matching build's
+    per-unit /Od does."""
+    return list(argv) + list(extra_flags or [])
+
+
 def compile_source(
     env: Environment, command: CompileCommand, workdir: Path, index: int = 0,
-    candidate: Path | None = None,
+    candidate: Path | None = None, extra_flags: list[str] | None = None,
 ) -> tuple[Path, str]:
-    """Compile one source file into workdir with the configured flags."""
+    """Compile one source file into workdir with the configured flags.
+
+    extra_flags go after the configured flags (and so override them, as the
+    matching build's per-unit /Od does); empty by default.
+    """
     obj = workdir / f"{index:02d}-{command.source.stem}.obj"
     argv: list[str] = []
     for arg in command.argv:
@@ -244,6 +256,7 @@ def compile_source(
         argv.append(arg)
     if candidate is not None:
         argv.insert(1, "/I" + str(command.source.parent))
+    argv = with_extra_flags(argv, extra_flags)
     log_path = obj.with_suffix(".log")
     rc = env.run(argv, cwd=workdir, log_path=log_path, timeout=600)
     output = log_path.read_bytes().decode("latin1").replace("\r", "")
@@ -806,6 +819,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("addresses", nargs="*", type=parse_address, help="original function address(es), e.g. 0x478e60")
     parser.add_argument("--source", type=Path, help="source file to compile (default: the file whose annotation names the address); with no address, compare every annotated function in it")
     parser.add_argument("--candidate", type=Path, help="compile this replacement for the addressed translation unit")
+    parser.add_argument("--cflags", default=os.environ.get("MATCH_FN_EXTRA_CFLAGS", ""), help="extra cl options after the configured ones, e.g. '/Oa' or '/Od' (default: $MATCH_FN_EXTRA_CFLAGS); for per-unit option experiments")
     parser.add_argument("--json", action="store_true", help="print one JSON document instead of text")
     parser.add_argument("--side-by-side", action="store_true", help="print the diff as aligned orig | recomp columns")
     parser.add_argument("--no-diff", action="store_true", help="print scores only")
@@ -932,7 +946,7 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], list[FunctionResult]]
                 continue
             plan.setdefault(marker.path.resolve(), []).append(addr)
     timings["locate"] = time.monotonic() - t0
-    if args.candidate is not None and (len(plan) != 1 or len(args.addresses) != 1):
+    if args.candidate is not None and len(plan) != 1:
         raise MatchError("--candidate requires exactly one addressed translation unit")
 
     libc_symbols, libc_data, libc_index = load_libc_index(env)
@@ -956,7 +970,7 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], list[FunctionResult]]
             for index, source in enumerate(plan):
                 command = by_source.get(source)
                 if command is not None:
-                    jobs[source] = pool.submit(compile_source, env, command, workdir, index, args.candidate.resolve() if args.candidate else None)
+                    jobs[source] = pool.submit(compile_source, env, command, workdir, index, args.candidate.resolve() if args.candidate else None, shlex.split(args.cflags or ""))
         timings["compile"] = time.monotonic() - t
 
         for source, addrs in plan.items():
