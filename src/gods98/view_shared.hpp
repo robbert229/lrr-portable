@@ -27,11 +27,6 @@ void* scene_object_subobject_resolve(void* owner, void* source, int index);
 
 extern QuadMeshRenderHooks s_quad_mesh_render_hooks;
 
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-extern SceneObjectListApplyHook s_scene_object_list_apply_hook;
-extern void* s_scene_object_list_apply_context;
-
 int engine_context_grid_pick(EngineContext* ctx, const float* pos, int* gx, int* gy);
 float terrain_height(EngineContext* ctx, float x, float y);
 

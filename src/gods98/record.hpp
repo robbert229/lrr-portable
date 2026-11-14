@@ -225,32 +225,11 @@ extern "C"
 #endif
 uint32_t scene_object_flag_bit3_get_target(const void* scene_object);
 
-/* SceneObjectModeIsOne (FUN_00406980, findings 373/435): the +0x28 mode
- * word equals 1. Deviation (scoring only): defined in game/bezier.c (GAME-003, finding 514); kept
- * here, with C linkage, to preserve the declaration count of the units that
- * include this header (finding 506). */
-#ifdef __cplusplus
-extern "C"
-#endif
-int scene_object_mode_is_one(const void* scene_object);
-
 /* AnimationObjectHandleGet (FUN_00406e30, findings 356/435): +0x04. */
 #ifdef __cplusplus
 extern "C"
 #endif
 void* animation_object_handle_get(const void* animation_object);
-/* Renderer-record adapters for the resource-list updater (FUN_00406c00,
- * FUN_00406c30, FUN_00406c60). `enabled` is forwarded as the corpus's
- * boolean update value (`enabled == 0`), while `update_value` is the third
- * wrapper's opaque value. */
-/* Deviation (scoring only): superseded by game/animation_object.c (GAME-004, finding 549); kept
- * uncalled so that the symbol count of every includer is unchanged (ADR 0005
- * entropy rule 1). */
-void renderer_object_update_from_record_field64(void* record, int enabled);
-void renderer_object_update_from_record_field68(void* record, int enabled);
-void renderer_object_update_from_record_field6c(void* record, int enabled,
-                                                void* update_value);
-
 /* ResourceEntryIdGet (FUN_004877d0, findings 381/416): the 16-bit entry
  * id word at +2 (zero-extended, as the corpus returns it). */
 #ifdef __cplusplus
@@ -275,13 +254,6 @@ extern "C" void indexed_record_flag6c_bit0_set(void* record, int index, int set)
 
 /* RecordFlag2CBit0Set (FUN_004827d0): set or clear bit zero at +0x2c. */
 extern "C" void record_flag2c_bit0_set(void* record, int set);
-
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-/* ThreeValueRecordCopyAndMarkReady (FUN_0040fdb0): copy three dwords to
- * the record's pointed-to vector and raise the ready word at +0x10. */
-void three_value_record_copy_and_mark_ready(void* record,
-                                            const uint32_t values[3]);
 
 /* IndexedRecordDataAddressGet (FUN_00483400, findings 372/431): the
  * INDEXED RECORD's data address, base + 0x10 + index*0x70 — the address
@@ -445,9 +417,6 @@ void scene_object_owner_set(void* scene_object, uint32_t owner);
  * Entry NULL guards stand in for the corpus's blind dereferences
  * (documented deviations). */
 void indexed_record_field64_set(void* record, int index, uint32_t value);
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-void object_vector3_set(void* object_block, float x, float y, float z);
 #ifdef __cplusplus
 extern "C"
 #endif

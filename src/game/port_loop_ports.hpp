@@ -335,11 +335,6 @@ extern "C" void startup_config_stream_load(void);
 typedef int (*BufferedCharReadHook)(void* context, void* stream);
 void buffered_char_stream_read_hook_set(BufferedCharReadHook read_char,
                                         void* context);
-/* Deviation (scoring only): superseded by Wad.c's GetFileName (0048b4a0,
- * gods98/wad.c) and no longer defined; the declaration stays so that the
- * symbol numbering of the files that include this header does not move
- * (finding 591). */
-int buffered_char_stream_read_to_string(void* stream, char* output);
 typedef void* (*RegistryCreateKeyHook)(void* parent, const char* component,
                                        void* context);
 typedef int (*RegistryQueryValueHook)(void* key, const char* value_name,

@@ -14,7 +14,10 @@
 
 /* The unit's .rdata, in original order. Like Maths.c, the unit does not
  * reproduce the 16-byte {1, 2, 4, -1} table at 0049e034 that opens its block
- * (finding 505), nor the unreferenced 1.0 after it at 0049e044. */
+ * (finding 505), nor the unreferenced 1.0 after it at 0049e044. The table
+ * is d3drmdef.h's (finding 524), but the toolchain's DirectX 3 d3drm.h
+ * shifts the symbol counter so that cubic_bezier_point_evaluate falls
+ * (finding 646). */
 // GLOBAL: LEGORR 0x0049e048
 static const float s_bezier_three = 3.0f;
 // GLOBAL: LEGORR 0x0049e04c

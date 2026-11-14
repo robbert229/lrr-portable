@@ -343,10 +343,6 @@ typedef struct EntityPairPoseHooks {
 } EntityPairPoseHooks;
 void entity_pair_pose_hooks_set(const EntityPairPoseHooks* hooks);
 int entity_record_pair_pose_copy_and_activity_raise(EntitySlot* entity);
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-void set_vector_and_notify_listeners(float* state,
-                                     const float* delta); /* FUN_0040fde0 */
 int entity_face_target_action_start(EntitySlot* entity, EntitySlot* target,
                                     int mode); /* FUN_00441ed0 */
 void entity_finish_state_1a(EntitySlot* entity); /* FUN_0043c4c0 */
@@ -628,10 +624,6 @@ typedef int (*ActivityRunnerChangeFn)(void* scene_owner, void* state,
                                       void* value, void* user);
 void activity_runner_hooks_set(ActivityRecordClearFn clear_records,
                                ActivityRunnerChangeFn change, void* user);
-/* Deviation (scoring only): superseded by game/animation_object.c (GAME-004, finding 549); kept
- * renamed and uncalled so that the symbol count of every includer is
- * unchanged (ADR 0005 entropy rule 1). */
-int activity_runner_update_superseded(void* runner, void* state, void* value);
 typedef struct EntityActivityRunnerResourceOps {
     void* context;
     void* (*scene_clone)(void* context, uint32_t scene_token);
@@ -700,11 +692,6 @@ void entity_linked_event_submit_hook_set(EntityLinkedEventSubmitFn hook,
                                          void* user);
 extern "C" void entity_linked_activity_event_dispatch(EntitySlot* entity,
                                            uint32_t events); /* 0x0043f5b0 */
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-void direction_driven_heading_angle_step(void* state, const float* direction);
-void kind_two_steering_torque_apply(void* state, float direction[3]);
-void steering_physics_step(void* unused, float* state, const float* delta);
 int entity_flag_mask_callbacks_all_pass(uint32_t mask); /* FUN_0046a4c0 */
 typedef int (*EntityFlagMaskPredicate)(EntitySlot*, uint32_t, void*);
 int entity_flag_mask_callbacks_predicate_all_pass(

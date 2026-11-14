@@ -97,20 +97,10 @@ int view_primary_projection_get(const ViewContext* view, const void* level,
 
 /* Per-frame camera update: delta/scale are reference 25-Hz frame units. */
 void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale);
-/* viewport_rectangle_set, ViewportDimensionsQueryFn and
- * viewport_dimensions_query_hook_set have no definition since the 2D unit
- * (G98-019) was rebuilt in draw.c. Deviation (scoring only): they stay declared only to hold the
- * declaration count (finding 506): removing them moves
- * lava_erosion_delay_from_cell (0040e9c0) from 100% to 84.21%. */
-void viewport_rectangle_set(float left, float top, float right, float bottom);
 #ifdef __cplusplus
 extern "C"
 #endif
 void viewport_rectangle_get(struct Area2F* window); /* FUN_00485fb0, draw.h */
-typedef int (*ViewportDimensionsQueryFn)(void* context, float* width,
-                                         float* height);
-void viewport_dimensions_query_hook_set(ViewportDimensionsQueryFn query,
-                                        void* context);
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -138,10 +128,6 @@ typedef void (*RenderNodePositionApplyHook)(void* context,
 void animation_transform_hooks_set(AnimationObjectTransformApplyHook orient,
                                    RenderNodePositionApplyHook position,
                                    void* context);
-/* Deviation (scoring only): superseded by game/animation_object.c (GAME-004, finding 549); kept
- * uncalled so that the symbol count of every includer is unchanged (ADR 0005
- * entropy rule 1). */
-void animation_object_transform_set(void* record, float first, float second);
 void render_node_position_from_callback(void* record, float x, float y,
                                         RenderNodePositionValueFn value_fn,
                                         void* context);
@@ -400,11 +386,6 @@ typedef struct RendererRecordCloneHooks {
     void* (*visual_resource_load)(void* context, void* source);
 } RendererRecordCloneHooks;
 void renderer_record_clone_hooks_set(const RendererRecordCloneHooks* hooks);
-/* Deviation (scoring only): superseded by game/animation_object.c (GAME-004, finding 549); kept
- * uncalled so that the symbol count of every includer is unchanged (ADR 0005
- * entropy rule 1). */
-void renderer_record_clone(const RendererRecord* source,
-                           RendererRecord* destination); /* FUN_00406cb0 */
 typedef struct SceneObjectRecord {
     void* words[0x53];
 } SceneObjectRecord;
@@ -416,19 +397,6 @@ extern "C"
 #endif
 void scene_object_record_clone_retain_handles(
     const SceneObjectRecord* source, SceneObjectRecord* destination);
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-typedef void (*SceneObjectListApplyHook)(void* context, void* list,
-                                         void* object, uint32_t operation,
-                                         void* payload);
-void scene_object_list_apply_hook_set(SceneObjectListApplyHook hook,
-                                      void* context);
-void scene_object_list_update_transforms(void* list, void* payload);
-void scene_object_list_apply_float_callback(void* list, float value);
-void scene_object_list_apply_position_callback(void* list,
-                                              const float position[3]);
-void scene_object_list_apply_second_position_callback(
-    void* list, const float position[3]);
 void* quad_mesh_render_record_pool_slot_allocate(void); /* FUN_0040a5c0 */
 typedef struct QuadMeshRenderHooks {
     void* context;
@@ -603,10 +571,6 @@ float vec_len(const float* a);
 extern "C"
 #endif
 float vec2_dist(const float* a, const float* b);   /* 2D */
-/* Deviation (scoring only): unused, kept only to preserve the declaration count of every unit that
- * includes this header (finding 506) until the #388 relocation. The
- * function is game/bezier.c's (GAME-003, finding 514). */
-float vec2_dist_alt(const float* a, const float* b);
 /* Minimum 2D distance from point to the closed segment start→end. */
 float segment_2d_point_distance(const float* point, const float* start,
                                 const float* end); /* FUN_004089d0 */
@@ -617,9 +581,6 @@ float point_to_polyline_minimum_segment_distance(const float* point,
                                                  const float* first_point,
                                                  const float* last_point,
                                                  unsigned int segment_count);
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-void matrix_rotation_compose_xyz(float* record); /* FUN_0040fb00 */
 /* D3DRMVectorRandom takes one D3DVECTOR* (three adjacent floats). */
 #ifdef __cplusplus
 extern "C"
@@ -633,10 +594,6 @@ extern "C"
 #endif
 float* d3drm_vector_rotate(float* r, float* v, float* axis,
                                       float theta);
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-void vector_scale_components_in_place(float* vector, float sx, float sy,
-                                      float sz); /* FUN_0040fcc0 */
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -970,13 +927,6 @@ typedef struct SceneActFrameRecordCloneHooks {
 } SceneActFrameRecordCloneHooks;
 void scene_act_frame_record_clone_hooks_set(
     const SceneActFrameRecordCloneHooks* hooks);
-/* Deviation (scoring only): superseded by gods98/animclone.c (G98-025,
- * finding 616), which defines AnimClone_Make at 0x489660; kept declared,
- * with no definition, because removing it moves the symbol counter of every
- * unit that includes this header (finding 538, rule B). */
-SceneActFrameRecord* scene_act_frame_record_clone_or_create(
-    const SceneActFrameRecord* source, uint32_t clone_argument,
-    uintptr_t* output_value);
 
 /* The retail hierarchy exposes its child count/borrowed item-array through
  * vtable +0x80. QueryInterface and child-array traversal use those raw slots;
@@ -995,14 +945,6 @@ typedef struct ObjectHierarchyResourceHooks {
 } ObjectHierarchyResourceHooks;
 void object_hierarchy_resource_hooks_set(
     const ObjectHierarchyResourceHooks* hooks);
-/* Deviation (scoring only): the next three are superseded by
- * gods98/animclone.c (G98-025, finding 616): AnimClone_ReferenceVisuals,
- * AnimClone_CloneLwoMeshes and AnimClone_CreateCopy. Kept declared, with no
- * definition, for the symbol counter (finding 538, rule B). */
-void com_child_items_visit(void* parent); /* 0x00489bc0 */
-void object_interface_array_resource_create(void* object, uint32_t mode);
-void object_hierarchy_recursive_clone(void* source, void* clone,
-                                      uint32_t mode); /* 0x004899f0 */
 typedef struct EntityVisualResourceLoadHooks {
     void* context;
     int (*kind_get)(void* scene_object, void* context);
@@ -1353,12 +1295,6 @@ void animation_object_hooks_install(AnimationObjectTimeUpdateHook update,
                                     AnimationObjectActionHook time_get,
                                     AnimationObjectActionHook value_get,
                                     void* context);
-/* Deviation (scoring only): superseded by game/animation_object.c (GAME-004, finding 549); kept
- * uncalled so that the symbol count of every includer is unchanged (ADR 0005
- * entropy rule 1). */
-void animation_object_time_update(void* record, float time); /* FUN_00406d10 */
-void animation_object_time_get(void* record); /* FUN_00406da0 */
-void animation_object_value_get(void* record); /* FUN_00407090 */
 typedef void* (*RendererSubobjectFindHook)(void* frame, void* key,
                                            void** details, void* context);
 typedef void (*RendererSubobjectApplyHook)(void* frame, void* subobject,
@@ -1367,30 +1303,14 @@ typedef void (*RendererSubobjectApplyHook)(void* frame, void* subobject,
 void renderer_subobject_hooks_install(RendererSubobjectFindHook find,
                                       RendererSubobjectApplyHook apply,
                                       void* context);
-/* Deviation (scoring only): superseded by game/animation_object.c (GAME-004, finding 549); kept
- * uncalled so that the symbol count of every includer is unchanged (ADR 0005
- * entropy rule 1). */
-void* renderer_object_subobject_find_apply(void* record, void* key);
-/* Deviation (scoring only): superseded, like the line above; FUN_00406f50 is now
- * animation_object_null_find in game/animation_object.c. */
-void renderer_object_subobject_dispatch(void* record, void* key);
 #ifdef __cplusplus
 extern "C"
 #endif
 void* renderer_cached_handle_48_get_or_create(void* record);
                                                 /* FUN_00406fe0 */
-/* Deviation (scoring only): superseded by game/animation_object.c (GAME-004, finding 549); kept
- * uncalled so that the symbol count of every includer is unchanged (ADR 0005
- * entropy rule 1). */
-void* renderer_cached_handle_50_get_or_create(void* record);
-                                                /* FUN_00407010 */
 typedef float (*RendererHandleScalarGetHook)(void* handle, void* context);
 void renderer_handle_scalar_hook_install(RendererHandleScalarGetHook hook,
                                          void* context);
-/* Deviation (scoring only): superseded by game/animation_object.c (GAME-004, finding 549); kept
- * uncalled so that the symbol count of every includer is unchanged (ADR 0005
- * entropy rule 1). */
-int renderer_cached_handle_4c_is_not_one(void* record); /* FUN_00407040 */
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -1794,13 +1714,6 @@ void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
  * NULL contexts skip (deviation). */
 void grid_operation_argument_adapter(float x, float y, EngineContext* ctx);
 
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-/* SetGlobalScalarToOne (FUN_0040fec0): the corpus draws the 0…1 ramp and
- * drops it; the port models that ramp as 1.0, so the call's observable
- * effect is nothing — faithful. */
-void set_global_scalar_to_one(void);
-
 /* --- the view math band (2026-10-24; findings 280/256) -----------------------
  * FloatNegateAbsoluteValue (FUN_0044d250): both corpus branches flip the
  * sign — the port keeps the single in-place negate.
@@ -1808,8 +1721,6 @@ void set_global_scalar_to_one(void);
  * step, 1 by +3x, anything else is inert; the target is the primary
  * view/camera context at DAT_005560e4. */
 void float_negate_absolute_value(float* value);
-/* Unused: kept for the declaration count (see vec2_dist_alt above). */
-void vector2_set_length(float v[2], float length);
 void camera_zoom_step_context_set(void* context);
 #ifdef __cplusplus
 extern "C"
@@ -1917,17 +1828,6 @@ void render_interface_transform_point(void* object, void* output,
 uint32_t scene_property_primary_value_get(void* property); /* FUN_00476120 */
 uint32_t scene_property_secondary_value_get(void* property); /* FUN_00476140 */
 
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-/* SceneNodePositionSet (FUN_00410020): the scene node's position store —
- * the node's position-valid flag at +0xc goes to 1, and the three floats
- * land on the inner object's +0xc/+0x10/+0x14. Deviation: the corpus
- * strides the node's dword handle slot blindly; the port reads the inner
- * through the module's widened pointer slot (stride native) and guards a
- * missing handle. */
-void scene_node_position_set(void* node, const float pos[3]);
-                                                /* FUN_00410020 */
-
 /* DDiSceneObjectArgumentsNormalize (FUN_00475900): resolves the dispatch
  * pair — the first slot rides out of the first argument's slot, and the
  * second resolves to its own slot when the argument is non-NULL, else to
@@ -1998,21 +1898,6 @@ extern "C" void* rotated_pairs_scratch_fill(const int* offset_pair, const int* s
 /* Observer hook answering the scratch base (test pin). */
 void* rotated_pairs_scratch_peek(void);
 
-/* --- curve band (2026-10-25) -------------------------------------------------
- * The Bezier helpers (FUN_004065f0-FUN_004068c0) are game/bezier.c (GAME-003,
- * issue #417, finding 514), with the original's types. Deviation (scoring only): the four
- * declarations below are unused and have no definition: they are kept only to preserve
- * the declaration count of every unit that includes this header (finding
- * 506) until the #388 relocation. Use game/bezier.h. */
-void cubic_bezier_point_evaluate(float out[2], const float* p0, const float* p1,
-                                 const float* p2, const float* p3, float t);
-void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
-                                const uint32_t* p3, const uint32_t* p4,
-                                const uint32_t* p5, uint32_t count);
-float polyline_segment_lengths_total(uint32_t* curve);
-uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
-                                     float* out);
-
 /* ViewPointToScreenGeometryTransform (FUN_0045e940): projects four floats
  * in place through the projection window — screen offsets at +1c/+20 come
  * off first, the scale ratio (+14 / +18) scales x, y, and depth, x lands
@@ -2021,17 +1906,6 @@ uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
 void view_point_to_screen_geometry_transform(const void* view,
                                              float p[4]);     /* FUN_0045e940 */
 
-/* Superseded: the map row-span staging (0046ead0, 0046eb30) is Water.c's
- * (game/water.c, finding 614) and the port's buffer is gone, so nothing
- * defines or calls these. Deviation (scoring only): the declarations are
- * kept because removing them moves the symbol numbering of the units that
- * include this header (osf_read, 00459470, falls; finding 538). */
-void map_row_span_append(void* buffer, uint32_t y, uint32_t x_begin,
-                         uint32_t x_end);
-void map_row_span_record_start(uint32_t y, uint32_t x_begin,
-                               uint32_t x_end);
-uint32_t map_row_span_record_count(void);
-const void* map_row_span_record_get(uint32_t index);
 int float_round_to_nearest_int(float value); /* FUN_00463e40 */
 
 /* ActivityRunnerStateRead is mapped at 0x00406f80. Scene activity handle
@@ -2041,10 +1915,6 @@ int float_round_to_nearest_int(float value); /* FUN_00463e40 */
 typedef void* (*RendererSubobjectResolveFn)(void* owner, void* source,
                                             int index);
 void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver);
-/* Deviation (scoring only): superseded by game/animation_object.c (GAME-004, finding 549); kept
- * uncalled so that the symbol count of every includer is unchanged (ADR 0005
- * entropy rule 1). */
-void* activity_runner_state_read(void* runner, int index);
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -2057,12 +1927,6 @@ typedef int (*SceneActivityChangeFn)(void* activity, void* state,
                                      void* value);
 void scene_activity_change_callback_set(SceneActivityChangeFn callback);
 int scene_activity_change(void* activity, void* state, void* value);
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
-typedef void (*GlobalVectorNotifyFn)(void* context, const uint32_t values[4]);
-void global_vector_notify_callback_set(GlobalVectorNotifyFn callback);
-void global_vector_set_and_notify(void* context, const uint32_t values[4]);
-void global_vector_get(uint32_t values[4]); /* FUN_0040ffe0 state snapshot */
 typedef void (*GlobalEntityRenderParamFn)(void* entity, float first,
                                           float second, void* user);
 void global_entity_render_parameters_install(void** entities, uint32_t count,
