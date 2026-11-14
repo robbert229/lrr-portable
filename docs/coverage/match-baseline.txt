@@ -1,4 +1,4 @@
-# input_sha256: 574bf9040682650dfb9a3f904a4be81ff2233e2597dbcb99d0009fd1c7abb4a9
+# input_sha256: be3d0af68aa388e834169878a42f92c9706706eda7242a4769e1776e0438bc08
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -710,7 +710,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 100.00 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 99.93 lego_engine_tick
+0x004232e0 100.00 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 95.45 lego_sine_phase_midpoint_blend_dispatch
@@ -766,7 +766,7 @@
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
 0x0042b500 100.00 global_state_field84_get_current_target
-0x0042b510 98.20 lego_map_load_pipeline
+0x0042b510 100.00 lego_map_load_pipeline
 0x0042b850 100.00 lego_surface_text_character_map_initialize
 0x0042bb60 100.00 lego_texture_set_config_load
 0x0042bd20 100.00 lego_load_predug_layer
@@ -3250,7 +3250,7 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 100.00 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 99.93 lego_engine_tick
+0x004232e0 100.00 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 95.45 lego_sine_phase_midpoint_blend_dispatch
@@ -3306,7 +3306,7 @@
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
 0x0042b500 100.00 global_state_field84_get_current_target
-0x0042b510 98.20 lego_map_load_pipeline
+0x0042b510 100.00 lego_map_load_pipeline
 0x0042b850 100.00 lego_surface_text_character_map_initialize
 0x0042bb60 100.00 lego_texture_set_config_load
 0x0042bd20 100.00 lego_load_predug_layer
