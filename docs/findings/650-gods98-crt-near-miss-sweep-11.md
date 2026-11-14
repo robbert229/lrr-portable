@@ -23,6 +23,23 @@ change and one after.
 | Function-order inversions, full / game-only pairs | 12,029 / 44 | 12,329 / 67 (newly mapped LIBC functions and the `DirectSoundCreate` thunk sort after the port tail's mapped functions) |
 | Lint ledger | 465 | 466 (`lws_maths_interpolate`, an inline helper, below) |
 
+**Stacked on #754** (`match/749-lego-sweep9`, `115b5a1d`, on #753 and
+#752: the plain-immediate wrapper retired, the original's resources, and
+the Lego.c/LegoObject.c sweep 9). Rebased and re-measured with a full
+`make reccmp-check`: the same 33 functions rise, the same 6 are newly
+mapped, `0x0048e0ad` is the only entry the gate flags, and none of #754's
+functions moves.
+
+| Measure | #754 (`115b5a1d`) | This change on #754 |
+| --- | ---: | ---: |
+| Exact-function code bytes | 321,904 (50.10%) | **327,678 (51.00%)** |
+| Accuracy, full / game-only | 96.86% / 96.57% | **96.94% / 96.59%** |
+| Mapped / exact, full | 2,828 / 2,356 | 2,833 / 2,390 |
+| Mapped / exact, game-only | 2,537 / 2,096 | 2,538 / 2,105 |
+| Function-order inversions, full / game-only pairs | 12,027 / 42 | 12,327 / 65 |
+| `opt_ref` annotated removed | 0 | 0 |
+| Image end | `0x7f5000` | `0x7f5000` |
+
 **One flagged change of address, not a drop.** `make reccmp-check` reports
 `0x0048e0ad _acos` as newly unmapped. The marker was on the wrong
 address: `0x0048e0ad` is an internal label of LIBC's acos.obj (where

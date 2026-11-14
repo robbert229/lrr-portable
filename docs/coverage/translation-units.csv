@@ -1273,7 +1273,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00459240,PopEntityStateOverride,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
 004592a0,OsfReadStateReset,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
 004592e0,OsfSnapshot,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
-00459360,OsfSnapshotTableBuild,31,GAME-030,,game,high,bss,
+00459360,OsfSnapshotTableBuild,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
 004593d0,OsfReadDirtyFlagGet,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
 004593e0,OsfWrite,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
 00459470,OsfRead,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
