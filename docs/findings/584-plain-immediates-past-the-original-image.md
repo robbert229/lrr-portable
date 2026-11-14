@@ -1,5 +1,9 @@
 # 584. Plain immediates past the original image (`0x800000`)
 
+> The wrapper this finding added was retired by
+> [finding 647](647-retire-plain-immediate-wrapper.md), once the gate's image
+> ended at `0x7f5000` (finding 642). A hard image-end guard replaces it.
+
 Issue #604. This is the follow-up to finding 580's "Cause A" and finding 581's
 "Rebased onto stack #600". Measured on `main` `05cd8938` (stack #600 squashed,
 Weapons.c included). The matching build's code and data are unchanged. Only

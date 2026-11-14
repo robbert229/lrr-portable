@@ -13,9 +13,13 @@ measures the rest of the image (issue #554, finding 563):
 - import thunks in `.text`, and which of them any object references;
 - the import directory: DLL order, imported names, IAT size;
 - resources, base relocations, the debug directory;
-- repeated string literals in the data sections (cross-reference #553).
+- repeated string literals in the data sections (cross-reference #553);
+- the image end against the original's plain constants (findings 584, 647).
 
-`make pe-audit` prints a summary; `--json` writes every measurement.
+`make pe-audit` prints a summary; `--json` writes every measurement. It exits
+1 when the rebuilt image covers one of the original's plain constants.
+`--image-end-only` reads the two PE headers and runs only that check, which
+`make reccmp-compare` does.
 """
 from __future__ import annotations
 
@@ -25,6 +29,7 @@ import csv
 import hashlib
 import json
 import re
+import struct
 import sys
 from pathlib import Path
 
@@ -317,8 +322,10 @@ def function_fill(funcs) -> dict:
 # end (0x771000) and below 0x2000000, measured on main 05cd8938 (finding 584):
 # the flag bit 0x800000 (21 functions, Stats_Initialise among them), the
 # colour mask 0xff0000 (2) and the flag bit 0x1000000 (18). Once the rebuilt
-# image covers one, Reccmp names it on the rebuilt side unless
-# reccmp_plain_immediates.py keeps it plain; `reccmp-compare` checks that.
+# image covers one, Reccmp can name it on the rebuilt side after whatever
+# global covers it, and every later <OFFSETn> placeholder shifts. The
+# scoring wrapper that kept them plain is retired (finding 647), so a rebuilt
+# image that covers one is an error: `pe-audit` and `reccmp-compare` fail.
 FLAG_CONSTANTS = (0x800000, 0xff0000, 0x1000000)
 
 
@@ -330,6 +337,44 @@ def image_end_report(orig_base: int, orig_size: int, rebuilt_base: int, rebuilt_
             "covered_constants": covered,
             "margin_below_first_constant": min((c for c in constants if c >= orig_end),
                                                default=rebuilt_end) - rebuilt_end}
+
+
+def image_end_errors(end: dict) -> list[str]:
+    """The hard image-end guard (finding 647): a message per covered constant."""
+    if not end["covered_constants"]:
+        return []
+    covered = ", ".join(f"{c:#x}" for c in end["covered_constants"])
+    return [f"ERROR: the rebuilt image ends at {end['rebuilt']:#x} and so covers the "
+            f"original's plain constant(s) {covered}. Reccmp would name them on the "
+            "rebuilt side and shift every later <OFFSETn>, lowering byte-identical "
+            "functions (finding 584). Shrink .data/.bss below 0x800000 before "
+            "accepting any score (finding 647)."]
+
+
+def pe_image_range(path: Path) -> tuple[int, int]:
+    """(ImageBase, SizeOfImage) from a PE32 header, without pefile."""
+    data = Path(path).read_bytes()[:4096]
+    pe = struct.unpack_from("<I", data, 0x3C)[0]
+    if data[pe:pe + 4] != b"PE\0\0":
+        raise ValueError(f"{path} is not a PE image")
+    optional = pe + 24
+    return (struct.unpack_from("<I", data, optional + 28)[0],
+            struct.unpack_from("<I", data, optional + 56)[0])
+
+
+def image_end_line(end: dict) -> str:
+    return (f"image end: original {end['original']:#x}, rebuilt {end['rebuilt']:#x}, "
+            f"margin below the first flag constant {end['margin_below_first_constant']:,}")
+
+
+def image_end_check(original_path: Path, rebuilt_path: Path) -> int:
+    """Print the image end and fail (1) when it covers a plain constant."""
+    end = image_end_report(*pe_image_range(original_path), *pe_image_range(rebuilt_path))
+    print(image_end_line(end))
+    errors = image_end_errors(end)
+    for line in errors:
+        print(line, file=sys.stderr)
+    return 1 if errors else 0
 
 
 def audit(original_path: Path, rebuilt_path: Path, map_path: Path | None,
@@ -392,13 +437,8 @@ def summary(result: dict) -> str:
         lines.append(f"  {k}: {fmt(v['original'])} -> {fmt(v['rebuilt'])}")
     end = result.get("image_end")
     if end:
-        lines.append(f"image end: original {end['original']:#x}, rebuilt {end['rebuilt']:#x}, "
-                     f"margin below the first flag constant {end['margin_below_first_constant']:,}")
-        if end["covered_constants"]:
-            lines.append("WARNING: the rebuilt image covers the original's plain constant(s) " +
-                         ", ".join(f"{c:#x}" for c in end["covered_constants"]) +
-                         "; Reccmp names them on the rebuilt side unless "
-                         "tools/reccmp_plain_immediates.py keeps them plain (finding 584)")
+        lines.append(image_end_line(end))
+        lines.extend(image_end_errors(end))
     lines.append("section  orig_vsize  rebuilt_vsize  orig_raw  rebuilt_raw  equal  differing")
     for n, b in result["section_bytes"].items():
         v = result["section_virtual_sizes"][n]
@@ -430,16 +470,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", type=Path, help="write every measurement as JSON")
     parser.add_argument("--no-functions", action="store_true",
                         help="skip the original's per-function fill (needs capstone)")
+    parser.add_argument("--image-end-only", action="store_true",
+                        help="only fail when the rebuilt image covers one of the original's "
+                             "plain constants (findings 584, 647)")
     args = parser.parse_args(argv)
+    if args.image_end_only and not args.original.exists():
+        print(f"{args.original} does not exist; skipping the image-end check")
+        return 0
     for p in (args.original, args.rebuilt):
         if not p.exists():
             print(f"{p} does not exist", file=sys.stderr)
             return 2
+    if args.image_end_only:
+        return image_end_check(args.original, args.rebuilt)
     result = audit(args.original, args.rebuilt, args.map, with_functions=not args.no_functions)
     if args.json:
         args.json.write_text(json.dumps(result, indent=2, sort_keys=True, default=list) + "\n")
     print(summary(result))
-    return 0
+    return 1 if image_end_errors(result["image_end"]) else 0
 
 
 if __name__ == "__main__":

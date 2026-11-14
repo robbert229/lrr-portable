@@ -889,7 +889,6 @@ tools/reccmp.sh
 tools/reccmp_diagnostics.py
 tools/reccmp_full_diff.py
 tools/reccmp_map_statics.py
-tools/reccmp_plain_immediates.py
 tools/strip_pe_debug.py
 tools/translation_units.py
 tools/winapi_link_audit.py
