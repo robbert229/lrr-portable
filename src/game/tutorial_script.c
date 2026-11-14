@@ -10,13 +10,12 @@
  * camera tracking, zoom and rotation, message history and timers, the
  * tutorial icon and the per-level block pointer lists.
  *
- * 132 functions are rebuilt here: the interpreter and its support, 102 NERP
- * functions of the table, and the icon and block-pointer helpers they call
- * (finding 640: the menu icons' click, flash and selection rows reach
- * Interface.c as the original does). The other 184 functions of the table
- * (tutorial_script_port_functions.h) are not yet rebuilt: the table names
- * port-tail adapters for them (tutorial_script_port.cpp), which run the
- * port's NERP implementation for the same row.
+ * All 333 functions are rebuilt here: the interpreter and its support, the
+ * table's 285 distinct functions in the unit (finding 640 rebuilt the icons'
+ * click, flash and selection rows; finding 673 the other 172), and the
+ * object-list and block-pointer helpers and callbacks they use. The table
+ * names only this unit's functions and the two shared zero-returning
+ * entries.
  *
  * The port's tutorial script stays in the port tail tutorial_script_port.cpp,
  * unannotated: it runs through hook tables and its own state, which native
@@ -96,11 +95,19 @@ typedef struct NERPs_Level {
     unsigned char pad_008[0x014 - 0x008];
     unsigned int width;               /* +0x014 */
     unsigned int height;              /* +0x018 */
-    unsigned char pad_01c[0x0b8 - 0x01c];
+    unsigned char pad_01c[0x094 - 0x01c];
+    int crystals;                     /* +0x094 */
+    unsigned char pad_098[0x0a0 - 0x098];
+    int ore;                          /* +0x0a0 */
+    unsigned char pad_0a4[0x0a8 - 0x0a4];
+    int orePickedUp;                  /* +0x0a8 */
+    unsigned char pad_0ac[0x0b8 - 0x0ac];
     NERPs_Block* blocks;              /* +0x0b8 */
     unsigned char pad_0bc[0x114 - 0x0bc];
     NERPs_BlockPointer* blockPointers[0x37]; /* +0x114 */
-    unsigned char pad_1f0[0x27c - 0x1f0];
+    unsigned char pad_1f0[0x1fc - 0x1f0];
+    float oxygenLevel;                /* +0x1fc */
+    unsigned char pad_200[0x27c - 0x200];
     int status;                       /* +0x27c */
 } NERPs_Level;
 
@@ -110,7 +117,13 @@ typedef struct NERPs_Object {
     int id;                           /* +0x004 */
     unsigned char pad_008[0x334 - 0x008];
     unsigned char* stats;             /* +0x334 ObjectStats */
-    unsigned char pad_338[0x3f8 - 0x338];
+    unsigned char pad_338[0x340 - 0x338];
+    float health;                     /* +0x340 */
+    unsigned char pad_344[0x36c - 0x344];
+    struct NERPs_Object* driver;      /* +0x36c */
+    unsigned char pad_370[0x3e8 - 0x370];
+    unsigned int flags3;              /* +0x3e8 */
+    unsigned char pad_3ec[0x3f8 - 0x3ec];
     int tutorialIcon;                 /* +0x3f8 */
 } NERPs_Object;
 
@@ -121,6 +134,46 @@ typedef struct NERPs_Vector3F {
 typedef struct NERPs_Point2I {
     int x, y;
 } NERPs_Point2I;
+
+typedef struct NERPs_Point2F {
+    float x, y;
+} NERPs_Point2F;
+
+/* The object-list searches of the table's rows (LegoObject.c's
+ * object-list walk passes each to its callback). */
+typedef struct NERPs_ObjectSearch {
+    int type;                         /* +0x0 */
+    unsigned int id;                  /* +0x4 */
+    int count;                        /* +0x8 the row's result */
+} NERPs_ObjectSearch;
+
+/* SetMonsterAttackPowerstation and SetMonsterAttackNowt (0xc bytes). */
+typedef struct NERPs_MonsterAttackSearch {
+    unsigned int flags;               /* +0x0 stats flags2 the object lacks */
+    unsigned int flagsNot;            /* +0x4 or has, when flags is -1 */
+    int attack;                       /* +0x8 */
+} NERPs_MonsterAttackSearch;
+
+/* The Set*Level rows (0x8c bytes). */
+typedef struct NERPs_ObjectLevelSearch {
+    char name[128];                   /* +0x00 */
+    unsigned int level;               /* +0x80 */
+    int type;                         /* +0x84 */
+    unsigned int id;                  /* +0x88 */
+} NERPs_ObjectLevelSearch;
+
+/* The rock monster rows (0xc bytes). */
+typedef struct NERPs_RockMonsterSearch {
+    int mode;                         /* +0x0 0 running away, 1 pain, 2 health */
+    int count;                        /* +0x4 */
+    float value;                      /* +0x8 */
+} NERPs_RockMonsterSearch;
+
+/* GetRecordObjectAtTutorial's block-pointer search (8 bytes). */
+typedef struct NERPs_RecordObjectSearch {
+    int count;                        /* +0x0 */
+    struct NERPs_Object* object;      /* +0x4 */
+} NERPs_RecordObjectSearch;
 
 /* The tutorial-block search (0x2c bytes): the tutorial rows pass one to the
  * action callback 00456d00, which passes another to LegoObject.c's
@@ -168,7 +221,7 @@ typedef struct NERPs_RuntimeGlobs {
     unsigned int messageWait;         /* 004ff988 */
     float messageTimer;               /* 004ff98c */
     unsigned int monstersDestroyed;   /* 004ff990 */
-    unsigned int f_994;               /* 004ff994 */
+    unsigned int messageWaitForKey;   /* 004ff994 SetMessageWait */
     unsigned int debug;               /* 004ff998 */
     unsigned int f_99c;               /* 004ff99c */
     float timers[4];                  /* 004ff9a0 */
@@ -221,21 +274,78 @@ int nerpfunc_set_game_speed(unsigned int* stack);
 void nerps_set_has_next_button(int hasNext);
 void nerps_replay_message_sound(void);
 void nerps_message_previous(void);
+int nerpfunc_flash_call_to_arms_icon(unsigned int* stack);
+int nerpfunc_disallow_all(unsigned int* stack);
+int nerpfunc_click_only_calltoarms(unsigned int* stack);
+int nerpfunc_click_only_icon(unsigned int* stack);
+int nerpfunc_click_only_map(unsigned int* stack);
+int nerpfunc_click_only_objects(unsigned int* stack);
+int nerpfunc_allow_camera_movement(unsigned int* stack);
+int nerpfunc_advance_message(unsigned int* stack);
+int nerpfunc_supress_arrow(unsigned int* stack);
+int nerpfunc_get_messages_are_up_to_date(unsigned int* stack);
 void nerps_runtime_update_timers(float elapsed);
+int nerpfunc_set_timer3(unsigned int* stack);
+int nerpfunc_set_timer2(unsigned int* stack);
+int nerpfunc_set_timer1(unsigned int* stack);
+int nerpfunc_set_timer0(unsigned int* stack);
+int nerpfunc_get_timer3(unsigned int* stack);
+int nerpfunc_get_timer2(unsigned int* stack);
+int nerpfunc_get_timer1(unsigned int* stack);
+int nerpfunc_get_timer0(unsigned int* stack);
 void nerps_runtime_update_camera(float elapsed);
+int nerpfunc_get_record_object_amount_at_tutorial(unsigned int* stack);
+int nerpfunc_get_record_object_at_tutorial(unsigned int* stack);
+int nerps_record_object_at_tutorial_callback(NERPs_BlockPointer* blockPointer,
+                                               unsigned int x, unsigned int y,
+                                               void* data);
+int nerps_set_objects_level_callback(NERPs_Object* obj, void* data);
+void nerps_set_objects_level(const char* name, unsigned int level);
+int nerpfunc_set_monster_attack_nowt(unsigned int* stack);
+int nerps_set_monster_attack_callback(NERPs_Object* obj, void* data);
+int nerpfunc_set_monster_attack_powerstation(unsigned int* stack);
+int nerpfunc_set_crystal_priority(unsigned int* stack);
+int nerpfunc_get_selected_record_object(unsigned int* stack);
+int nerpfunc_camera_rotate(unsigned int* stack);
+int nerpfunc_camera_zoom_out(unsigned int* stack);
+int nerpfunc_camera_zoom_in(unsigned int* stack);
+int nerpfunc_camera_unlock(unsigned int* stack);
+int nerpfunc_camera_lock_on_object(unsigned int* stack);
+int nerps_camera_lock_on_monster_callback(NERPs_Object* obj, void* data);
+int nerpfunc_camera_lock_on_monster(unsigned int* stack);
 void nerps_draw_tutorial_icon(NERPs_Level* level, void* viewport,
                               int unused, float elapsed);
+int nerpfunc_set_record_object_pointer(unsigned int* stack);
 int nerps_get_icon_clicks(unsigned int* stack);
+int nerpfunc_get_rock_monsters_destroyed(unsigned int* stack);
+int nerpfunc_set_rock_monster(unsigned int* stack);
+int nerpfunc_get_call_to_arms_button_clicked(unsigned int* stack);
+int nerpfunc_set_call_to_arms(unsigned int* stack);
+int nerpfunc_set_attack_defer(unsigned int* stack);
+int nerpfunc_generate_slug(unsigned int* stack);
+int nerpfunc_get_oxygen_level(unsigned int* stack);
 void nerps_monster_destroyed(void);
 void nerps_monsters_destroyed_reset(void);
+int nerpfunc_set_hidden_objects_found(unsigned int* stack);
+int nerpfunc_get_hidden_objects_found(unsigned int* stack);
 int nerpfunc_set_upgrade_building_icon_clicked(unsigned int* stack);
 int nerpfunc_get_upgrade_building_icon_clicked(unsigned int* stack);
 int nerpfunc_flash_upgrade_building_icon(unsigned int* stack);
 int nerpfunc_set_go_back_icon_clicked(unsigned int* stack);
 int nerpfunc_get_go_back_icon_clicked(unsigned int* stack);
 int nerpfunc_flash_go_back_icon(unsigned int* stack);
+int nerpfunc_set_icon_width(unsigned int* stack);
+int nerpfunc_set_icon_space(unsigned int* stack);
+int nerpfunc_set_icon_pos(unsigned int* stack);
+int nerpfunc_get_any_key_pressed(unsigned int* stack);
+int nerpfunc_set_pause_game(unsigned int* stack);
+int nerpfunc_set_rock_monster_health(unsigned int* stack);
+int nerpfunc_set_rock_monster_pain_threshold(unsigned int* stack);
+int nerps_rock_monster_callback(NERPs_Object* obj, void* data);
+int nerpfunc_get_rock_monster_running_away(unsigned int* stack);
 int nerpfunc_set_level_completed(unsigned int* stack);
 int nerpfunc_set_level_fail(unsigned int* stack);
+int nerpfunc_set_game_fail(unsigned int* stack);
 int nerpfunc_set_tutorial_pointer(unsigned int* stack);
 unsigned int nerps_set_object_icon_clicks(const char* name,
                                           unsigned int clicks);
@@ -252,12 +362,18 @@ int nerps_set_ore_at_icon_positions_callback(NERPs_BlockPointer* blockPointer,
                                              unsigned int x, unsigned int y,
                                              void* data);
 int nerpfunc_set_ore_at_icon_positions(unsigned int* stack);
+int nerpfunc_get_mini_figure_selected(unsigned int* stack);
+int nerps_get_selected_count(const char* name);
 int nerpfunc_get_small_truck_selected(unsigned int* stack);
 int nerpfunc_get_small_digger_selected(unsigned int* stack);
 int nerpfunc_get_rapid_rider_selected(unsigned int* stack);
 int nerpfunc_get_small_helicopter_selected(unsigned int* stack);
 int nerpfunc_get_granite_grinder_selected(unsigned int* stack);
 int nerpfunc_get_chrome_crusher_selected(unsigned int* stack);
+int nerpfunc_add_stored_ore(unsigned int* stack);
+int nerpfunc_add_powered_crystals(unsigned int* stack);
+int nerps_driven_count_callback(NERPs_Object* obj, void* data);
+int nerps_get_driven_count(const char* name);
 int nerps_add_tutorial_crystals_callback(NERPs_BlockPointer* blockPointer,
                                          unsigned int x, unsigned int y,
                                          void* data);
@@ -266,9 +382,71 @@ int nerps_add_tutorial_block_clicks_callback(NERPs_BlockPointer* blockPointer,
                                              unsigned int x, unsigned int y,
                                              void* data);
 int nerpfunc_get_tutorial_block_clicks(unsigned int* stack);
+int nerps_powered_count_callback(NERPs_Object* obj, void* data);
+int nerps_get_objects_built(const char* name, int level);
 unsigned int nerps_object_count(const char* name, int level);
 unsigned int nerps_get_object_icon_clicks(const char* name);
 int nerps_flash_icon(int item, int on);
+int nerpfunc_get_level2_upgrade_stations_built(unsigned int* stack);
+int nerpfunc_get_level2_vehicle_teleports_built(unsigned int* stack);
+int nerpfunc_get_level2_teleports_built(unsigned int* stack);
+int nerpfunc_get_level2_gunstations_built(unsigned int* stack);
+int nerpfunc_get_level2_tool_stores_built(unsigned int* stack);
+int nerpfunc_get_level2_powerstations_built(unsigned int* stack);
+int nerpfunc_get_level2_geodome_built(unsigned int* stack);
+int nerpfunc_get_level2_docks_built(unsigned int* stack);
+int nerpfunc_get_level2_barracks_built(unsigned int* stack);
+int nerpfunc_get_level1_upgrade_stations_built(unsigned int* stack);
+int nerpfunc_get_level1_vehicle_teleports_built(unsigned int* stack);
+int nerpfunc_get_level1_teleports_built(unsigned int* stack);
+int nerpfunc_get_level1_gunstations_built(unsigned int* stack);
+int nerpfunc_get_level1_tool_stores_built(unsigned int* stack);
+int nerpfunc_get_level1_powerstations_built(unsigned int* stack);
+int nerpfunc_get_level1_geodome_built(unsigned int* stack);
+int nerpfunc_get_level1_docks_built(unsigned int* stack);
+int nerpfunc_get_level1_barracks_built(unsigned int* stack);
+int nerpfunc_get_upgrade_stations_built(unsigned int* stack);
+int nerpfunc_get_vehicle_teleports_built(unsigned int* stack);
+int nerpfunc_get_teleports_built(unsigned int* stack);
+int nerpfunc_get_gunstations_built(unsigned int* stack);
+int nerpfunc_get_tool_stores_built(unsigned int* stack);
+int nerpfunc_get_powerstations_built(unsigned int* stack);
+int nerpfunc_get_geodome_built(unsigned int* stack);
+int nerpfunc_get_docks_built(unsigned int* stack);
+int nerpfunc_get_barracks_built(unsigned int* stack);
+int nerpfunc_get_powered_upgrade_stations_built(unsigned int* stack);
+int nerpfunc_get_powered_vehicle_teleports_built(unsigned int* stack);
+int nerpfunc_get_powered_teleports_built(unsigned int* stack);
+int nerpfunc_get_powered_gunstations_built(unsigned int* stack);
+int nerpfunc_get_powered_tool_stores_built(unsigned int* stack);
+int nerpfunc_get_powered_powerstations_built(unsigned int* stack);
+int nerpfunc_get_powered_geodome_built(unsigned int* stack);
+int nerpfunc_get_powered_docks_built(unsigned int* stack);
+int nerpfunc_get_powered_barracks_built(unsigned int* stack);
+int nerpfunc_get_upgrade_station_selected(unsigned int* stack);
+int nerpfunc_get_super_teleport_selected(unsigned int* stack);
+int nerpfunc_get_teleport_pad_selected(unsigned int* stack);
+int nerpfunc_get_gunstation_selected(unsigned int* stack);
+int nerpfunc_get_tool_store_selected(unsigned int* stack);
+int nerpfunc_get_powerstation_selected(unsigned int* stack);
+int nerpfunc_get_geo_dome_selected(unsigned int* stack);
+int nerpfunc_get_docks_selected(unsigned int* stack);
+int nerpfunc_get_barracks_selected(unsigned int* stack);
+int nerpfunc_set_upgrade_station_level(unsigned int* stack);
+int nerpfunc_set_super_teleport_level(unsigned int* stack);
+int nerpfunc_set_teleport_pad_level(unsigned int* stack);
+int nerpfunc_set_gunstation_level(unsigned int* stack);
+int nerpfunc_set_tool_store_level(unsigned int* stack);
+int nerpfunc_set_powerstation_level(unsigned int* stack);
+int nerpfunc_set_geo_dome_level(unsigned int* stack);
+int nerpfunc_set_docks_level(unsigned int* stack);
+int nerpfunc_set_barracks_level(unsigned int* stack);
+int nerpfunc_get_mini_figurein_small_helicopter(unsigned int* stack);
+int nerpfunc_get_mini_figurein_small_truck(unsigned int* stack);
+int nerpfunc_get_mini_figurein_rapid_rider(unsigned int* stack);
+int nerpfunc_get_mini_figurein_small_digger(unsigned int* stack);
+int nerpfunc_get_mini_figurein_chrome_crusher(unsigned int* stack);
+int nerpfunc_get_mini_figurein_granite_grinder(unsigned int* stack);
 int nerpfunc_get_barracks_icon_clicked(unsigned int* stack);
 int nerpfunc_get_geodome_icon_clicked(unsigned int* stack);
 int nerpfunc_get_powerstation_icon_clicked(unsigned int* stack);
@@ -293,6 +471,16 @@ int nerpfunc_flash_gunstation_icon(unsigned int* stack);
 int nerpfunc_flash_teleport_pad_icon(unsigned int* stack);
 int nerpfunc_flash_vehicle_transport_icon(unsigned int* stack);
 int nerpfunc_flash_upgrade_station_icon(unsigned int* stack);
+int nerpfunc_get_crystal_refineries_built(unsigned int* stack);
+int nerpfunc_get_ore_refineries_built(unsigned int* stack);
+int nerpfunc_get_mini_figures_on_level(unsigned int* stack);
+int nerpfunc_get_slugs_on_level(unsigned int* stack);
+int nerpfunc_get_small_diggers_on_level(unsigned int* stack);
+int nerpfunc_get_rapid_riders_on_level(unsigned int* stack);
+int nerpfunc_get_granite_grinders_on_level(unsigned int* stack);
+int nerpfunc_get_small_helicopters_on_level(unsigned int* stack);
+int nerpfunc_get_stud_count(unsigned int* stack);
+int nerpfunc_get_paths_built(unsigned int* stack);
 int nerpfunc_get_teleport_icon_clicked(unsigned int* stack);
 int nerpfunc_get_dynamite_clicked(unsigned int* stack);
 int nerpfunc_get_mount_icon_clicked(unsigned int* stack);
@@ -344,13 +532,64 @@ int nerpfunc_flash_dig_icon(unsigned int* stack);
 int nerpfunc_flash_build_icon(unsigned int* stack);
 int nerpfunc_flash_lay_path_icon(unsigned int* stack);
 int nerpfunc_flash_place_fence_icon(unsigned int* stack);
+int nerpfunc_get_crystals_currently_stored(unsigned int* stack);
+int nerpfunc_get_crystals_picked_up(unsigned int* stack);
+int nerpfunc_get_random100(unsigned int* stack);
+int nerpfunc_get_random10(unsigned int* stack);
+int nerpfunc_get_random_true_false(unsigned int* stack);
+int nerpfunc_get_random(unsigned int* stack);
 uint32_t flh_magic_uu_noop(void);
+int nerpfunc_get_ore_currently_stored(unsigned int* stack);
+int nerpfunc_get_ore_picked_up(unsigned int* stack);
 int nerpfunc_get_tutorial_flags(unsigned int* stack);
+int nerpfunc_set_r7(unsigned int* stack);
+int nerpfunc_set_r6(unsigned int* stack);
+int nerpfunc_set_r5(unsigned int* stack);
+int nerpfunc_set_r4(unsigned int* stack);
+int nerpfunc_set_r3(unsigned int* stack);
+int nerpfunc_set_r2(unsigned int* stack);
+int nerpfunc_set_r1(unsigned int* stack);
+int nerpfunc_set_r0(unsigned int* stack);
+int nerpfunc_sub_r7(unsigned int* stack);
+int nerpfunc_sub_r6(unsigned int* stack);
+int nerpfunc_sub_r5(unsigned int* stack);
+int nerpfunc_sub_r4(unsigned int* stack);
+int nerpfunc_sub_r3(unsigned int* stack);
+int nerpfunc_sub_r2(unsigned int* stack);
+int nerpfunc_sub_r1(unsigned int* stack);
+int nerpfunc_sub_r0(unsigned int* stack);
+int nerpfunc_add_r7(unsigned int* stack);
+int nerpfunc_add_r6(unsigned int* stack);
+int nerpfunc_add_r5(unsigned int* stack);
+int nerpfunc_add_r4(unsigned int* stack);
+int nerpfunc_add_r3(unsigned int* stack);
+int nerpfunc_add_r2(unsigned int* stack);
+int nerpfunc_add_r1(unsigned int* stack);
+int nerpfunc_add_r0(unsigned int* stack);
+int nerpfunc_get_r7(unsigned int* stack);
+int nerpfunc_get_r6(unsigned int* stack);
+int nerpfunc_get_r5(unsigned int* stack);
+int nerpfunc_get_r4(unsigned int* stack);
+int nerpfunc_get_r3(unsigned int* stack);
+int nerpfunc_get_r2(unsigned int* stack);
+int nerpfunc_get_r1(unsigned int* stack);
+int nerpfunc_get_r0(unsigned int* stack);
 int nerpfunc_set_tutorial_flags(unsigned int* stack);
+int nerpfunc_set_buildings_teleported(unsigned int* stack);
+int nerpfunc_get_buildings_teleported(unsigned int* stack);
+int nerpfunc_get_monsters_on_level(unsigned int* stack);
+int nerpfunc_set_train_flags(unsigned int* stack);
+int nerpfunc_get_train_flags(unsigned int* stack);
 int nerpfunc_set_message_permit(unsigned int* stack);
 int nerps_get_message_permit(void);
+int nerpfunc_set_message(unsigned int* stack);
+int nerpfunc_get_message_timer(unsigned int* stack);
+int nerpfunc_set_message_timer_values(unsigned int* stack);
+int nerpfunc_set_message_wait(unsigned int* stack);
+int nerpfunc_get_message_wait(unsigned int* stack);
 int nerpfunc_set_objective_switch(unsigned int* stack);
 int nerpfunc_get_objective_switch(unsigned int* stack);
+int nerpfunc_get_objective_showing(unsigned int* stack);
 void nerps_play_message_sound(void);
 void nerps_parse_message(char* text, char* output, int setTimer);
 void nerps_init_block_pointers_table(NERPs_Level* level);
@@ -377,12 +616,11 @@ int nerpfunc_set_tutorial_block_is_path(unsigned int* stack);
 int nerpfunc_get_unit_at_block(unsigned int* stack);
 int nerpfunc_get_monster_at_tutorial(unsigned int* stack);
 
-/* The table's functions that are not rebuilt yet: port-tail adapters. */
-#define NERPS_PORT_FUNCTION(name, row) int nerps_port_##name(unsigned int* stack);
-#include "tutorial_script_port_functions.h"
-#undef NERPS_PORT_FUNCTION
-
 #define NERPS_LEVEL() ((NERPs_Level*)level_current_owner_get())
+
+/* A key pressed this frame (Input.c's Input_KeyPressed). */
+#define NERPS_KEY_PRESSED(k) \
+    (s_global_current_keys[k] && (s_global_previous_keys[k] ^ s_global_current_keys[k]))
 
 // GLOBAL: LEGORR 0x004a5948
 NERPsFunctionSignature nerpsFunctions[] = {
@@ -395,13 +633,13 @@ NERPsFunctionSignature nerpsFunctions[] = {
     /* "Null" is pooled with frontend_unit.cpp's 004a23f4. */
     { "Null", (NERPsFunction)flh_magic_uu_noop, 0 },
     // STRING: LEGORR 0x004a7f58
-    { "GetRandom", nerps_port_GetRandom, 0 },
+    { "GetRandom", nerpfunc_get_random, 0 },
     // STRING: LEGORR 0x004a7f4c
-    { "GetRandom10", nerps_port_GetRandom10, 0 },
+    { "GetRandom10", nerpfunc_get_random10, 0 },
     // STRING: LEGORR 0x004a7f3c
-    { "GetRandom100", nerps_port_GetRandom100, 0 },
+    { "GetRandom100", nerpfunc_get_random100, 0 },
     // STRING: LEGORR 0x004a7f28
-    { "GetRandomTrueFalse", nerps_port_GetRandomTrueFalse, 0 },
+    { "GetRandomTrueFalse", nerpfunc_get_random_true_false, 0 },
     // STRING: LEGORR 0x004a7f14
     { "SetLevelCompleted", nerpfunc_set_level_completed, 3 },
     // STRING: LEGORR 0x004a7f04
@@ -409,89 +647,89 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7ef0
     { "SetGameCompleted", nerpfunc_set_level_completed, 3 },
     // STRING: LEGORR 0x004a7ee4
-    { "SetGameFail", nerps_port_SetGameFail, 3 },
+    { "SetGameFail", nerpfunc_set_game_fail, 3 },
     // STRING: LEGORR 0x004a7ed0
-    { "GetCrystalsPickedUp", nerps_port_GetCrystalsPickedUp, 0 },
+    { "GetCrystalsPickedUp", nerpfunc_get_crystals_picked_up, 0 },
     // STRING: LEGORR 0x004a7eb4
-    { "GetCrystalsCurrentlyStored", nerps_port_GetCrystalsCurrentlyStored, 0 },
+    { "GetCrystalsCurrentlyStored", nerpfunc_get_crystals_currently_stored, 0 },
     // STRING: LEGORR 0x004a7ea4
     { "GetCrystalsUsed", (NERPsFunction)flh_magic_uu_noop, 0 },
     // STRING: LEGORR 0x004a7e90
     { "GetCrystalsStolen", (NERPsFunction)flh_magic_uu_noop, 0 },
     // STRING: LEGORR 0x004a7e84
-    { "SetMessage", nerps_port_SetMessage, 5 },
+    { "SetMessage", nerpfunc_set_message, 5 },
     // STRING: LEGORR 0x004a7e7c
-    { "GetR0", nerps_port_GetR0, 0 },
+    { "GetR0", nerpfunc_get_r0, 0 },
     // STRING: LEGORR 0x004a7e74
-    { "GetR1", nerps_port_GetR1, 0 },
+    { "GetR1", nerpfunc_get_r1, 0 },
     // STRING: LEGORR 0x004a7e6c
-    { "GetR2", nerps_port_GetR2, 0 },
+    { "GetR2", nerpfunc_get_r2, 0 },
     // STRING: LEGORR 0x004a7e64
-    { "GetR3", nerps_port_GetR3, 0 },
+    { "GetR3", nerpfunc_get_r3, 0 },
     // STRING: LEGORR 0x004a7e5c
-    { "GetR4", nerps_port_GetR4, 0 },
+    { "GetR4", nerpfunc_get_r4, 0 },
     // STRING: LEGORR 0x004a7e54
-    { "GetR5", nerps_port_GetR5, 0 },
+    { "GetR5", nerpfunc_get_r5, 0 },
     // STRING: LEGORR 0x004a7e4c
-    { "GetR6", nerps_port_GetR6, 0 },
+    { "GetR6", nerpfunc_get_r6, 0 },
     // STRING: LEGORR 0x004a7e44
-    { "GetR7", nerps_port_GetR7, 0 },
+    { "GetR7", nerpfunc_get_r7, 0 },
     // STRING: LEGORR 0x004a7e3c
-    { "SetR0", nerps_port_SetR0, 4 },
+    { "SetR0", nerpfunc_set_r0, 4 },
     // STRING: LEGORR 0x004a7e34
-    { "SetR1", nerps_port_SetR1, 4 },
+    { "SetR1", nerpfunc_set_r1, 4 },
     // STRING: LEGORR 0x004a7e2c
-    { "SetR2", nerps_port_SetR2, 4 },
+    { "SetR2", nerpfunc_set_r2, 4 },
     // STRING: LEGORR 0x004a7e24
-    { "SetR3", nerps_port_SetR3, 4 },
+    { "SetR3", nerpfunc_set_r3, 4 },
     // STRING: LEGORR 0x004a7e1c
-    { "SetR4", nerps_port_SetR4, 4 },
+    { "SetR4", nerpfunc_set_r4, 4 },
     // STRING: LEGORR 0x004a7e14
-    { "SetR5", nerps_port_SetR5, 4 },
+    { "SetR5", nerpfunc_set_r5, 4 },
     // STRING: LEGORR 0x004a7e0c
-    { "SetR6", nerps_port_SetR6, 4 },
+    { "SetR6", nerpfunc_set_r6, 4 },
     // STRING: LEGORR 0x004a7e04
-    { "SetR7", nerps_port_SetR7, 4 },
+    { "SetR7", nerpfunc_set_r7, 4 },
     // STRING: LEGORR 0x004a7dfc
-    { "AddR0", nerps_port_AddR0, 4 },
+    { "AddR0", nerpfunc_add_r0, 4 },
     // STRING: LEGORR 0x004a7df4
-    { "AddR1", nerps_port_AddR1, 4 },
+    { "AddR1", nerpfunc_add_r1, 4 },
     // STRING: LEGORR 0x004a7dec
-    { "AddR2", nerps_port_AddR2, 4 },
+    { "AddR2", nerpfunc_add_r2, 4 },
     // STRING: LEGORR 0x004a7de4
-    { "AddR3", nerps_port_AddR3, 4 },
+    { "AddR3", nerpfunc_add_r3, 4 },
     // STRING: LEGORR 0x004a7ddc
-    { "AddR4", nerps_port_AddR4, 4 },
+    { "AddR4", nerpfunc_add_r4, 4 },
     // STRING: LEGORR 0x004a7dd4
-    { "AddR5", nerps_port_AddR5, 4 },
+    { "AddR5", nerpfunc_add_r5, 4 },
     // STRING: LEGORR 0x004a7dcc
-    { "AddR6", nerps_port_AddR6, 4 },
+    { "AddR6", nerpfunc_add_r6, 4 },
     // STRING: LEGORR 0x004a7dc4
-    { "AddR7", nerps_port_AddR7, 4 },
+    { "AddR7", nerpfunc_add_r7, 4 },
     // STRING: LEGORR 0x004a7dbc
-    { "SubR0", nerps_port_SubR0, 4 },
+    { "SubR0", nerpfunc_sub_r0, 4 },
     // STRING: LEGORR 0x004a7db4
-    { "SubR1", nerps_port_SubR1, 4 },
+    { "SubR1", nerpfunc_sub_r1, 4 },
     // STRING: LEGORR 0x004a7dac
-    { "SubR2", nerps_port_SubR2, 4 },
+    { "SubR2", nerpfunc_sub_r2, 4 },
     // STRING: LEGORR 0x004a7da4
-    { "SubR3", nerps_port_SubR3, 4 },
+    { "SubR3", nerpfunc_sub_r3, 4 },
     // STRING: LEGORR 0x004a7d9c
-    { "SubR4", nerps_port_SubR4, 4 },
+    { "SubR4", nerpfunc_sub_r4, 4 },
     // STRING: LEGORR 0x004a7d94
-    { "SubR5", nerps_port_SubR5, 4 },
+    { "SubR5", nerpfunc_sub_r5, 4 },
     // STRING: LEGORR 0x004a7d8c
-    { "SubR6", nerps_port_SubR6, 4 },
+    { "SubR6", nerpfunc_sub_r6, 4 },
     // STRING: LEGORR 0x004a7d84
-    { "SubR7", nerps_port_SubR7, 4 },
+    { "SubR7", nerpfunc_sub_r7, 4 },
     // STRING: LEGORR 0x004a7d70
     { "SetMessagePermit", nerpfunc_set_message_permit, 4 },
     // STRING: LEGORR 0x004a7d5c
-    { "GetObjectiveShowing", nerps_port_GetObjectiveShowing, 0 },
+    { "GetObjectiveShowing", nerpfunc_get_objective_showing, 0 },
     // STRING: LEGORR 0x004a7d44
     { "GetTeleportIconClicked", nerpfunc_get_teleport_icon_clicked, 0 },
     // STRING: LEGORR 0x004a7d2c
-    { "GetMiniFiguresOnLevel", nerps_port_GetMiniFiguresOnLevel, 0 },
+    { "GetMiniFiguresOnLevel", nerpfunc_get_mini_figures_on_level, 0 },
     // STRING: LEGORR 0x004a7d18
     { "GetBuildIconClicked", nerpfunc_get_build_icon_clicked, 0 },
     // STRING: LEGORR 0x004a7d04
@@ -521,49 +759,49 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7c0c
     { "FlashDigIcon", nerpfunc_flash_dig_icon, 4 },
     // STRING: LEGORR 0x004a7c00
-    { "GetTimer0", nerps_port_GetTimer0, 0 },
+    { "GetTimer0", nerpfunc_get_timer0, 0 },
     // STRING: LEGORR 0x004a7bf4
-    { "GetTimer1", nerps_port_GetTimer1, 0 },
+    { "GetTimer1", nerpfunc_get_timer1, 0 },
     // STRING: LEGORR 0x004a7be8
-    { "GetTimer2", nerps_port_GetTimer2, 0 },
+    { "GetTimer2", nerpfunc_get_timer2, 0 },
     // STRING: LEGORR 0x004a7bdc
-    { "GetTimer3", nerps_port_GetTimer3, 0 },
+    { "GetTimer3", nerpfunc_get_timer3, 0 },
     // STRING: LEGORR 0x004a7bd0
-    { "SetTimer0", nerps_port_SetTimer0, 4 },
+    { "SetTimer0", nerpfunc_set_timer0, 4 },
     // STRING: LEGORR 0x004a7bc4
-    { "SetTimer1", nerps_port_SetTimer1, 4 },
+    { "SetTimer1", nerpfunc_set_timer1, 4 },
     // STRING: LEGORR 0x004a7bb8
-    { "SetTimer2", nerps_port_SetTimer2, 4 },
+    { "SetTimer2", nerpfunc_set_timer2, 4 },
     // STRING: LEGORR 0x004a7bac
-    { "SetTimer3", nerps_port_SetTimer3, 4 },
+    { "SetTimer3", nerpfunc_set_timer3, 4 },
     // STRING: LEGORR 0x004a7b98
-    { "GetBarracksBuilt", nerps_port_GetBarracksBuilt, 0 },
+    { "GetBarracksBuilt", nerpfunc_get_barracks_built, 0 },
     // STRING: LEGORR 0x004a7b80
-    { "GetOreRefineriesBuilt", nerps_port_GetOreRefineriesBuilt, 0 },
+    { "GetOreRefineriesBuilt", nerpfunc_get_ore_refineries_built, 0 },
     // STRING: LEGORR 0x004a7b6c
-    { "GetToolStoresBuilt", nerps_port_GetToolStoresBuilt, 0 },
+    { "GetToolStoresBuilt", nerpfunc_get_tool_stores_built, 0 },
     // STRING: LEGORR 0x004a7b5c
-    { "GetStudCount", nerps_port_GetStudCount, 0 },
+    { "GetStudCount", nerpfunc_get_stud_count, 0 },
     // STRING: LEGORR 0x004a7b48
-    { "GetTeleportsBuilt", nerps_port_GetTeleportsBuilt, 0 },
+    { "GetTeleportsBuilt", nerpfunc_get_teleports_built, 0 },
     // STRING: LEGORR 0x004a7b30
-    { "GetMiniFigureSelected", nerps_port_GetMiniFigureSelected, 0 },
+    { "GetMiniFigureSelected", nerpfunc_get_mini_figure_selected, 0 },
     // STRING: LEGORR 0x004a7b18
     { "GetSmallDiggerSelected", nerpfunc_get_small_digger_selected, 0 },
     // STRING: LEGORR 0x004a7afc
-    { "GetMiniFigureinSmallDigger", nerps_port_GetMiniFigureinSmallDigger, 0 },
+    { "GetMiniFigureinSmallDigger", nerpfunc_get_mini_figurein_small_digger, 0 },
     // STRING: LEGORR 0x004a7aec
-    { "GetTrainFlags", nerps_port_GetTrainFlags, 0 },
+    { "GetTrainFlags", nerpfunc_get_train_flags, 0 },
     // STRING: LEGORR 0x004a7adc
-    { "SetTrainFlags", nerps_port_SetTrainFlags, 4 },
+    { "SetTrainFlags", nerpfunc_set_train_flags, 4 },
     // STRING: LEGORR 0x004a7ad0
-    { "SetIconPos", nerps_port_SetIconPos, 5 },
+    { "SetIconPos", nerpfunc_set_icon_pos, 5 },
     // STRING: LEGORR 0x004a7ac0
-    { "SetIconSpace", nerps_port_SetIconSpace, 4 },
+    { "SetIconSpace", nerpfunc_set_icon_space, 4 },
     // STRING: LEGORR 0x004a7ab0
-    { "SetIconWidth", nerps_port_SetIconWidth, 4 },
+    { "SetIconWidth", nerpfunc_set_icon_width, 4 },
     // STRING: LEGORR 0x004a7aa0
-    { "SetMessageWait", nerps_port_SetMessageWait, 4 },
+    { "SetMessageWait", nerpfunc_set_message_wait, 4 },
     // STRING: LEGORR 0x004a7a8c
     { "GetMountIconClicked", nerpfunc_get_mount_icon_clicked, 0 },
     // STRING: LEGORR 0x004a7a78
@@ -577,17 +815,17 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7a2c
     { "SetTutorialFlags", nerpfunc_set_tutorial_flags, 4 },
     // STRING: LEGORR 0x004a7a1c
-    { "SetRockMonster", nerps_port_SetRockMonster, 5 },
+    { "SetRockMonster", nerpfunc_set_rock_monster, 5 },
     // STRING: LEGORR 0x004a7a0c
-    { "GetOrePickedUp", nerps_port_GetOrePickedUp, 0 },
+    { "GetOrePickedUp", nerpfunc_get_ore_picked_up, 0 },
     // STRING: LEGORR 0x004a79f4
-    { "GetOreCurrentlyStored", nerps_port_GetOreCurrentlyStored, 0 },
+    { "GetOreCurrentlyStored", nerpfunc_get_ore_currently_stored, 0 },
     // STRING: LEGORR 0x004a79e8
     { "GetOreUsed", (NERPsFunction)flh_magic_uu_noop, 0 },
     // STRING: LEGORR 0x004a79d8
     { "GetOreStolen", (NERPsFunction)flh_magic_uu_noop, 0 },
     // STRING: LEGORR 0x004a79bc
-    { "GetCrystalRefineriesBuilt", nerps_port_GetCrystalRefineriesBuilt, 0 },
+    { "GetCrystalRefineriesBuilt", nerpfunc_get_crystal_refineries_built, 0 },
     // STRING: LEGORR 0x004a79a8
     { "FlashLayPathIcon", nerpfunc_flash_lay_path_icon, 4 },
     // STRING: LEGORR 0x004a7990
@@ -601,9 +839,9 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7928
     { "FlashTeleportPadIcon", nerpfunc_flash_teleport_pad_icon, 4 },
     // STRING: LEGORR 0x004a7918
-    { "GetMessageTimer", nerps_port_GetMessageTimer, 0 },
+    { "GetMessageTimer", nerpfunc_get_message_timer, 0 },
     // STRING: LEGORR 0x004a7900
-    { "SetMessageTimerValues", nerps_port_SetMessageTimerValues, 6 },
+    { "SetMessageTimerValues", nerpfunc_set_message_timer_values, 6 },
     // STRING: LEGORR 0x004a78e8
     { "GetTutorialBlockClicks", nerpfunc_get_tutorial_block_clicks, 1 },
     // STRING: LEGORR 0x004a78d0
@@ -613,7 +851,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a78a8
     { "SetTutorialCrystals", nerpfunc_set_tutorial_crystals, 5 },
     // STRING: LEGORR 0x004a7898
-    { "GetPathsBuilt", nerps_port_GetPathsBuilt, 0 },
+    { "GetPathsBuilt", nerpfunc_get_paths_built, 0 },
     // STRING: LEGORR 0x004a787c
     { "GetTutorialBlockIsGround", nerpfunc_get_tutorial_block_is_ground, 1 },
     // STRING: LEGORR 0x004a7864
@@ -625,7 +863,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7828
     { "SetDynamiteClicked", nerpfunc_set_dynamite_clicked, 4 },
     // STRING: LEGORR 0x004a7814
-    { "AddPoweredCrystals", nerps_port_AddPoweredCrystals, 4 },
+    { "AddPoweredCrystals", nerpfunc_add_powered_crystals, 4 },
     // STRING: LEGORR 0x004a77f8
     { "GetGraniteGrinderSelected", nerpfunc_get_granite_grinder_selected, 0 },
     // STRING: LEGORR 0x004a77dc
@@ -639,11 +877,11 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7778
     { "FlashGunstationIcon", nerpfunc_flash_gunstation_icon, 4 },
     // STRING: LEGORR 0x004a7764
-    { "GetGunstationsBuilt", nerps_port_GetGunstationsBuilt, 0 },
+    { "GetGunstationsBuilt", nerpfunc_get_gunstations_built, 0 },
     // STRING: LEGORR 0x004a774c
     { "SetOreAtIconPositions", nerpfunc_set_ore_at_icon_positions, 5 },
     // STRING: LEGORR 0x004a7730
-    { "GetVehicleTeleportsBuilt", nerps_port_GetVehicleTeleportsBuilt, 0 },
+    { "GetVehicleTeleportsBuilt", nerpfunc_get_vehicle_teleports_built, 0 },
     // STRING: LEGORR 0x004a7710
     { "GetVehicleTransportIconClicked", nerpfunc_get_vehicle_transport_icon_clicked, 0 },
     // STRING: LEGORR 0x004a76f0
@@ -657,31 +895,31 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a767c
     { "FlashUpgradeStationIcon", nerpfunc_flash_upgrade_station_icon, 4 },
     // STRING: LEGORR 0x004a7664
-    { "GetUpgradeStationsBuilt", nerps_port_GetUpgradeStationsBuilt, 0 },
+    { "GetUpgradeStationsBuilt", nerpfunc_get_upgrade_stations_built, 0 },
     // STRING: LEGORR 0x004a7648
     { "SetTutorialBlockIsGround", nerpfunc_set_tutorial_block_is_ground, 5 },
     // STRING: LEGORR 0x004a7630
     { "SetTutorialBlockIsPath", nerpfunc_set_tutorial_block_is_path, 5 },
     // STRING: LEGORR 0x004a761c
-    { "CameraLockOnObject", nerps_port_CameraLockOnObject, 4 },
+    { "CameraLockOnObject", nerpfunc_camera_lock_on_object, 4 },
     // STRING: LEGORR 0x004a760c
-    { "CameraUnlock", nerps_port_CameraUnlock, 3 },
+    { "CameraUnlock", nerpfunc_camera_unlock, 3 },
     // STRING: LEGORR 0x004a75fc
-    { "CameraZoomIn", nerps_port_CameraZoomIn, 4 },
+    { "CameraZoomIn", nerpfunc_camera_zoom_in, 4 },
     // STRING: LEGORR 0x004a75ec
-    { "CameraZoomOut", nerps_port_CameraZoomOut, 4 },
+    { "CameraZoomOut", nerpfunc_camera_zoom_out, 4 },
     // STRING: LEGORR 0x004a75dc
-    { "CameraRotate", nerps_port_CameraRotate, 4 },
+    { "CameraRotate", nerpfunc_camera_rotate, 4 },
     // STRING: LEGORR 0x004a75c8
     { "GetCameraAtTutorial", nerpfunc_get_camera_at_tutorial, 1 },
     // STRING: LEGORR 0x004a75b0
-    { "GetSelectedRecordObject", nerps_port_GetSelectedRecordObject, 0 },
+    { "GetSelectedRecordObject", nerpfunc_get_selected_record_object, 0 },
     // STRING: LEGORR 0x004a7594
     { "GetSmallHelicopterSelected", nerpfunc_get_small_helicopter_selected, 0 },
     // STRING: LEGORR 0x004a757c
     { "GetRapidRiderSelected", nerpfunc_get_rapid_rider_selected, 0 },
     // STRING: LEGORR 0x004a7560
-    { "GetMiniFigureinRapidRider", nerps_port_GetMiniFigureinRapidRider, 0 },
+    { "GetMiniFigureinRapidRider", nerpfunc_get_mini_figurein_rapid_rider, 0 },
     // STRING: LEGORR 0x004a7548
     { "GetDismountIconClicked", nerpfunc_get_dismount_icon_clicked, 0 },
     // STRING: LEGORR 0x004a7530
@@ -695,9 +933,9 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a74d8
     { "FlashGetToolIcon", nerpfunc_flash_get_tool_icon, 4 },
     // STRING: LEGORR 0x004a74c4
-    { "GetAnyKeyPressed", nerps_port_GetAnyKeyPressed, 0 },
+    { "GetAnyKeyPressed", nerpfunc_get_any_key_pressed, 0 },
     // STRING: LEGORR 0x004a74b4
-    { "SetPauseGame", nerps_port_SetPauseGame, 4 },
+    { "SetPauseGame", nerpfunc_set_pause_game, 4 },
     // STRING: LEGORR 0x004a749c
     { "GetGetLaserIconClicked", nerpfunc_get_get_laser_icon_clicked, 0 },
     // STRING: LEGORR 0x004a7484
@@ -707,9 +945,9 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7454
     { "SetRockMonsterAtTutorial", nerpfunc_set_rock_monster_at_tutorial, 4 },
     // STRING: LEGORR 0x004a7438
-    { "GetCallToArmsButtonClicked", nerps_port_GetCallToArmsButtonClicked, 0 },
+    { "GetCallToArmsButtonClicked", nerpfunc_get_call_to_arms_button_clicked, 0 },
     // STRING: LEGORR 0x004a741c
-    { "GetRockMonstersDestroyed", nerps_port_GetRockMonstersDestroyed, 0 },
+    { "GetRockMonstersDestroyed", nerpfunc_get_rock_monsters_destroyed, 0 },
     // STRING: LEGORR 0x004a7404
     { "SetGetPusherIconClicked", nerpfunc_set_get_pusher_icon_clicked, 4 },
     // STRING: LEGORR 0x004a73ec
@@ -717,9 +955,9 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a73d8
     { "FlashGetPusherIcon", nerpfunc_flash_get_pusher_icon, 4 },
     // STRING: LEGORR 0x004a73bc
-    { "GetRockMonsterRunningAway", nerps_port_GetRockMonsterRunningAway, 0 },
+    { "GetRockMonsterRunningAway", nerpfunc_get_rock_monster_running_away, 0 },
     // STRING: LEGORR 0x004a73ac
-    { "SetCallToArms", nerps_port_SetCallToArms, 4 },
+    { "SetCallToArms", nerpfunc_set_call_to_arms, 4 },
     // STRING: LEGORR 0x004a7394
     { "FlashPowerStationIcon", nerpfunc_flash_power_station_icon, 4 },
     // STRING: LEGORR 0x004a7378
@@ -727,13 +965,13 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a735c
     { "GetPowerstationIconClicked", nerpfunc_get_powerstation_icon_clicked, 0 },
     // STRING: LEGORR 0x004a7344
-    { "GetPowerstationsBuilt", nerps_port_GetPowerstationsBuilt, 0 },
+    { "GetPowerstationsBuilt", nerpfunc_get_powerstations_built, 0 },
     // STRING: LEGORR 0x004a7334
-    { "SetAttackDefer", nerps_port_SetAttackDefer, 4 },
+    { "SetAttackDefer", nerpfunc_set_attack_defer, 4 },
     // STRING: LEGORR 0x004a7318
-    { "SetRockMonsterPainThreshold", nerps_port_SetRockMonsterPainThreshold, 4 },
+    { "SetRockMonsterPainThreshold", nerpfunc_set_rock_monster_pain_threshold, 4 },
     // STRING: LEGORR 0x004a7300
-    { "SetRockMonsterHealth", nerps_port_SetRockMonsterHealth, 4 },
+    { "SetRockMonsterHealth", nerpfunc_set_rock_monster_health, 4 },
     // STRING: LEGORR 0x004a72f0
     { "SetGameSpeed", nerpfunc_set_game_speed, 5 },
     // STRING: LEGORR 0x004a72dc
@@ -743,13 +981,13 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a72ac
     { "GetBarracksIconClicked", nerpfunc_get_barracks_icon_clicked, 0 },
     // STRING: LEGORR 0x004a7290
-    { "GetRecordObjectAtTutorial", nerps_port_GetRecordObjectAtTutorial, 1 },
+    { "GetRecordObjectAtTutorial", nerpfunc_get_record_object_at_tutorial, 1 },
     // STRING: LEGORR 0x004a7278
-    { "GetHiddenObjectsFound", nerps_port_GetHiddenObjectsFound, 0 },
+    { "GetHiddenObjectsFound", nerpfunc_get_hidden_objects_found, 0 },
     // STRING: LEGORR 0x004a7260
-    { "SetHiddenObjectsFound", nerps_port_SetHiddenObjectsFound, 4 },
+    { "SetHiddenObjectsFound", nerpfunc_set_hidden_objects_found, 4 },
     // STRING: LEGORR 0x004a7250
-    { "GetOxygenLevel", nerps_port_GetOxygenLevel, 0 },
+    { "GetOxygenLevel", nerpfunc_get_oxygen_level, 0 },
     // STRING: LEGORR 0x004a723c
     { "FlashGeodomeIcon", nerpfunc_flash_geodome_icon, 4 },
     // STRING: LEGORR 0x004a7224
@@ -757,15 +995,15 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a720c
     { "SetGeodomeIconClicked", nerpfunc_set_geodome_icon_clicked, 4 },
     // STRING: LEGORR 0x004a71fc
-    { "GetGeodomeBuilt", nerps_port_GetGeodomeBuilt, 0 },
+    { "GetGeodomeBuilt", nerpfunc_get_geodome_built, 0 },
     // STRING: LEGORR 0x004a71ec
-    { "AddStoredOre", nerps_port_AddStoredOre, 4 },
+    { "AddStoredOre", nerpfunc_add_stored_ore, 4 },
     // STRING: LEGORR 0x004a71dc
-    { "GenerateSlug", nerps_port_GenerateSlug, 3 },
+    { "GenerateSlug", nerpfunc_generate_slug, 3 },
     // STRING: LEGORR 0x004a71cc
-    { "GetSlugsOnLevel", nerps_port_GetSlugsOnLevel, 0 },
+    { "GetSlugsOnLevel", nerpfunc_get_slugs_on_level, 0 },
     // STRING: LEGORR 0x004a71b8
-    { "GetMonstersOnLevel", nerps_port_GetMonstersOnLevel, 0 },
+    { "GetMonstersOnLevel", nerpfunc_get_monsters_on_level, 0 },
     // STRING: LEGORR 0x004a719c
     { "SetCongregationAtTutorial", nerpfunc_set_congregation_at_tutorial, 5 },
     // STRING: LEGORR 0x004a7188
@@ -773,41 +1011,41 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7174
     { "GetObjectiveSwitch", nerpfunc_get_objective_switch, 0 },
     // STRING: LEGORR 0x004a7158
-    { "GetGraniteGrindersOnLevel", nerps_port_GetGraniteGrindersOnLevel, 0 },
+    { "GetGraniteGrindersOnLevel", nerpfunc_get_granite_grinders_on_level, 0 },
     // STRING: LEGORR 0x004a7140
-    { "GetSmallDiggersOnLevel", nerps_port_GetSmallDiggersOnLevel, 0 },
+    { "GetSmallDiggersOnLevel", nerpfunc_get_small_diggers_on_level, 0 },
     // STRING: LEGORR 0x004a7130
-    { "GetDocksBuilt", nerps_port_GetDocksBuilt, 0 },
+    { "GetDocksBuilt", nerpfunc_get_docks_built, 0 },
     // STRING: LEGORR 0x004a7118
-    { "GetRapidRidersOnLevel", nerps_port_GetRapidRidersOnLevel, 0 },
+    { "GetRapidRidersOnLevel", nerpfunc_get_rapid_riders_on_level, 0 },
     // STRING: LEGORR 0x004a7108
     { "GetUnitAtBlock", nerpfunc_get_unit_at_block, 1 },
     // STRING: LEGORR 0x004a70ec
-    { "GetSmallHelicoptersOnLevel", nerps_port_GetSmallHelicoptersOnLevel, 0 },
+    { "GetSmallHelicoptersOnLevel", nerpfunc_get_small_helicopters_on_level, 0 },
     // STRING: LEGORR 0x004a70cc
-    { "GetRecordObjectAmountAtTutorial", nerps_port_GetRecordObjectAmountAtTutorial, 1 },
+    { "GetRecordObjectAmountAtTutorial", nerpfunc_get_record_object_amount_at_tutorial, 1 },
     // STRING: LEGORR 0x004a70bc
-    { "AdvanceMessage", nerps_port_AdvanceMessage, 3 },
+    { "AdvanceMessage", nerpfunc_advance_message, 3 },
     // STRING: LEGORR 0x004a70a8
-    { "AllowCameraMovement", nerps_port_AllowCameraMovement, 4 },
+    { "AllowCameraMovement", nerpfunc_allow_camera_movement, 4 },
     // STRING: LEGORR 0x004a7094
-    { "ClickOnlyObjects", nerps_port_ClickOnlyObjects, 3 },
+    { "ClickOnlyObjects", nerpfunc_click_only_objects, 3 },
     // STRING: LEGORR 0x004a7084
-    { "ClickOnlyMap", nerps_port_ClickOnlyMap, 3 },
+    { "ClickOnlyMap", nerpfunc_click_only_map, 3 },
     // STRING: LEGORR 0x004a7074
-    { "ClickOnlyIcon", nerps_port_ClickOnlyIcon, 3 },
+    { "ClickOnlyIcon", nerpfunc_click_only_icon, 3 },
     // STRING: LEGORR 0x004a7068
-    { "DisallowAll", nerps_port_DisallowAll, 3 },
+    { "DisallowAll", nerpfunc_disallow_all, 3 },
     // STRING: LEGORR 0x004a7058
-    { "SupressArrow", nerps_port_SupressArrow, 4 },
+    { "SupressArrow", nerpfunc_supress_arrow, 4 },
     // STRING: LEGORR 0x004a7038
-    { "GetMiniFigureinGraniteGrinder", nerps_port_GetMiniFigureinGraniteGrinder, 0 },
+    { "GetMiniFigureinGraniteGrinder", nerpfunc_get_mini_figurein_granite_grinder, 0 },
     // STRING: LEGORR 0x004a7018
-    { "GetMiniFigureinChromeCrusher", nerps_port_GetMiniFigureinChromeCrusher, 0 },
+    { "GetMiniFigureinChromeCrusher", nerpfunc_get_mini_figurein_chrome_crusher, 0 },
     // STRING: LEGORR 0x004a7000
-    { "GetMessagesAreUpToDate", nerps_port_GetMessagesAreUpToDate, 0 },
+    { "GetMessagesAreUpToDate", nerpfunc_get_messages_are_up_to_date, 0 },
     // STRING: LEGORR 0x004a6fec
-    { "SetCrystalPriority", nerps_port_SetCrystalPriority, 4 },
+    { "SetCrystalPriority", nerpfunc_set_crystal_priority, 4 },
     // STRING: LEGORR 0x004a6fb8
     { "MakeSomeoneOnThisBlockPickUpSomethingOnThisBlock", nerpfunc_make_someone_on_this_block_pick_up_something_on_this_block, 4 },
     // STRING: LEGORR 0x004a6fa4
@@ -837,45 +1075,45 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a6e7c
     { "GetSmallTruckSelected", nerpfunc_get_small_truck_selected, 0 },
     // STRING: LEGORR 0x004a6e60
-    { "GetMiniFigureinSmallTruck", nerps_port_GetMiniFigureinSmallTruck, 0 },
+    { "GetMiniFigureinSmallTruck", nerpfunc_get_mini_figurein_small_truck, 0 },
     // STRING: LEGORR 0x004a6e40
-    { "GetMiniFigureinSmallHelicopter", nerps_port_GetMiniFigureinSmallHelicopter, 0 },
+    { "GetMiniFigureinSmallHelicopter", nerpfunc_get_mini_figurein_small_helicopter, 0 },
     // STRING: LEGORR 0x004a6e2c
-    { "SetBarracksLevel", nerps_port_SetBarracksLevel, 4 },
+    { "SetBarracksLevel", nerpfunc_set_barracks_level, 4 },
     // STRING: LEGORR 0x004a6e1c
-    { "SetDocksLevel", nerps_port_SetDocksLevel, 4 },
+    { "SetDocksLevel", nerpfunc_set_docks_level, 4 },
     // STRING: LEGORR 0x004a6e0c
-    { "SetGeoDomeLevel", nerps_port_SetGeoDomeLevel, 4 },
+    { "SetGeoDomeLevel", nerpfunc_set_geo_dome_level, 4 },
     // STRING: LEGORR 0x004a6df4
-    { "SetPowerstationLevel", nerps_port_SetPowerstationLevel, 4 },
+    { "SetPowerstationLevel", nerpfunc_set_powerstation_level, 4 },
     // STRING: LEGORR 0x004a6de0
-    { "SetToolStoreLevel", nerps_port_SetToolStoreLevel, 4 },
+    { "SetToolStoreLevel", nerpfunc_set_tool_store_level, 4 },
     // STRING: LEGORR 0x004a6dcc
-    { "SetGunstationLevel", nerps_port_SetGunstationLevel, 4 },
+    { "SetGunstationLevel", nerpfunc_set_gunstation_level, 4 },
     // STRING: LEGORR 0x004a6db8
-    { "SetTeleportPadLevel", nerps_port_SetTeleportPadLevel, 4 },
+    { "SetTeleportPadLevel", nerpfunc_set_teleport_pad_level, 4 },
     // STRING: LEGORR 0x004a6da0
-    { "SetSuperTeleportLevel", nerps_port_SetSuperTeleportLevel, 4 },
+    { "SetSuperTeleportLevel", nerpfunc_set_super_teleport_level, 4 },
     // STRING: LEGORR 0x004a6d88
-    { "SetUpgradeStationLevel", nerps_port_SetUpgradeStationLevel, 4 },
+    { "SetUpgradeStationLevel", nerpfunc_set_upgrade_station_level, 4 },
     // STRING: LEGORR 0x004a6d74
-    { "GetBarracksSelected", nerps_port_GetBarracksSelected, 0 },
+    { "GetBarracksSelected", nerpfunc_get_barracks_selected, 0 },
     // STRING: LEGORR 0x004a6d60
-    { "GetDocksSelected", nerps_port_GetDocksSelected, 0 },
+    { "GetDocksSelected", nerpfunc_get_docks_selected, 0 },
     // STRING: LEGORR 0x004a6d4c
-    { "GetGeoDomeSelected", nerps_port_GetGeoDomeSelected, 0 },
+    { "GetGeoDomeSelected", nerpfunc_get_geo_dome_selected, 0 },
     // STRING: LEGORR 0x004a6d34
-    { "GetPowerstationSelected", nerps_port_GetPowerstationSelected, 0 },
+    { "GetPowerstationSelected", nerpfunc_get_powerstation_selected, 0 },
     // STRING: LEGORR 0x004a6d1c
-    { "GetToolStoreSelected", nerps_port_GetToolStoreSelected, 0 },
+    { "GetToolStoreSelected", nerpfunc_get_tool_store_selected, 0 },
     // STRING: LEGORR 0x004a6d04
-    { "GetGunstationSelected", nerps_port_GetGunstationSelected, 0 },
+    { "GetGunstationSelected", nerpfunc_get_gunstation_selected, 0 },
     // STRING: LEGORR 0x004a6cec
-    { "GetTeleportPadSelected", nerps_port_GetTeleportPadSelected, 0 },
+    { "GetTeleportPadSelected", nerpfunc_get_teleport_pad_selected, 0 },
     // STRING: LEGORR 0x004a6cd0
-    { "GetSuperTeleportSelected", nerps_port_GetSuperTeleportSelected, 0 },
+    { "GetSuperTeleportSelected", nerpfunc_get_super_teleport_selected, 0 },
     // STRING: LEGORR 0x004a6cb4
-    { "GetUpgradeStationSelected", nerps_port_GetUpgradeStationSelected, 0 },
+    { "GetUpgradeStationSelected", nerpfunc_get_upgrade_station_selected, 0 },
     // STRING: LEGORR 0x004a6c94
     { "SetUpgradeBuildingIconClicked", nerpfunc_set_upgrade_building_icon_clicked, 4 },
     // STRING: LEGORR 0x004a6c74
@@ -883,19 +1121,19 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a6c58
     { "FlashUpgradeBuildingIcon", nerpfunc_flash_upgrade_building_icon, 4 },
     // STRING: LEGORR 0x004a6c40
-    { "GetBuildingsTeleported", nerps_port_GetBuildingsTeleported, 0 },
+    { "GetBuildingsTeleported", nerpfunc_get_buildings_teleported, 0 },
     // STRING: LEGORR 0x004a6c28
-    { "SetBuildingsTeleported", nerps_port_SetBuildingsTeleported, 4 },
+    { "SetBuildingsTeleported", nerpfunc_set_buildings_teleported, 4 },
     // STRING: LEGORR 0x004a6c14
-    { "CameraLockOnMonster", nerps_port_CameraLockOnMonster, 4 },
+    { "CameraLockOnMonster", nerpfunc_camera_lock_on_monster, 4 },
     // STRING: LEGORR 0x004a6bf4
-    { "SetMonsterAttackPowerstation", nerps_port_SetMonsterAttackPowerstation, 4 },
+    { "SetMonsterAttackPowerstation", nerpfunc_set_monster_attack_powerstation, 4 },
     // STRING: LEGORR 0x004a6be0
-    { "ClickOnlyCalltoarms", nerps_port_ClickOnlyCalltoarms, 3 },
+    { "ClickOnlyCalltoarms", nerpfunc_click_only_calltoarms, 3 },
     // STRING: LEGORR 0x004a6bcc
-    { "FlashCallToArmsIcon", nerps_port_FlashCallToArmsIcon, 4 },
+    { "FlashCallToArmsIcon", nerpfunc_flash_call_to_arms_icon, 4 },
     // STRING: LEGORR 0x004a6bb4
-    { "SetRecordObjectPointer", nerps_port_SetRecordObjectPointer, 4 },
+    { "SetRecordObjectPointer", nerpfunc_set_record_object_pointer, 4 },
     // STRING: LEGORR 0x004a6b94
     { "GetGetSonicBlasterIconClicked", nerpfunc_get_get_sonic_blaster_icon_clicked, 0 },
     // STRING: LEGORR 0x004a6b74
@@ -911,7 +1149,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a6ae4
     { "GetMonsterAtTutorial", nerpfunc_get_monster_at_tutorial, 1 },
     // STRING: LEGORR 0x004a6acc
-    { "SetMonsterAttackNowt", nerps_port_SetMonsterAttackNowt, 4 },
+    { "SetMonsterAttackNowt", nerpfunc_set_monster_attack_nowt, 4 },
     // STRING: LEGORR 0x004a6ab0
     { "GetPlaceFenceIconClicked", nerpfunc_get_place_fence_icon_clicked, 0 },
     // STRING: LEGORR 0x004a6a94
@@ -919,59 +1157,59 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a6a80
     { "FlashPlaceFenceIcon", nerpfunc_flash_place_fence_icon, 4 },
     // STRING: LEGORR 0x004a6a68
-    { "GetLevel1BarracksBuilt", nerps_port_GetLevel1BarracksBuilt, 0 },
+    { "GetLevel1BarracksBuilt", nerpfunc_get_level1_barracks_built, 0 },
     // STRING: LEGORR 0x004a6a54
-    { "GetLevel1DocksBuilt", nerps_port_GetLevel1DocksBuilt, 0 },
+    { "GetLevel1DocksBuilt", nerpfunc_get_level1_docks_built, 0 },
     // STRING: LEGORR 0x004a6a3c
-    { "GetLevel1GeodomeBuilt", nerps_port_GetLevel1GeodomeBuilt, 0 },
+    { "GetLevel1GeodomeBuilt", nerpfunc_get_level1_geodome_built, 0 },
     // STRING: LEGORR 0x004a6a20
-    { "GetLevel1PowerstationsBuilt", nerps_port_GetLevel1PowerstationsBuilt, 0 },
+    { "GetLevel1PowerstationsBuilt", nerpfunc_get_level1_powerstations_built, 0 },
     // STRING: LEGORR 0x004a6a04
-    { "GetLevel1ToolStoresBuilt", nerps_port_GetLevel1ToolStoresBuilt, 0 },
+    { "GetLevel1ToolStoresBuilt", nerpfunc_get_level1_tool_stores_built, 0 },
     // STRING: LEGORR 0x004a69e8
-    { "GetLevel1GunstationsBuilt", nerps_port_GetLevel1GunstationsBuilt, 0 },
+    { "GetLevel1GunstationsBuilt", nerpfunc_get_level1_gunstations_built, 0 },
     // STRING: LEGORR 0x004a69d0
-    { "GetLevel1TeleportsBuilt", nerps_port_GetLevel1TeleportsBuilt, 0 },
+    { "GetLevel1TeleportsBuilt", nerpfunc_get_level1_teleports_built, 0 },
     // STRING: LEGORR 0x004a69b0
-    { "GetLevel1VehicleTeleportsBuilt", nerps_port_GetLevel1VehicleTeleportsBuilt, 0 },
+    { "GetLevel1VehicleTeleportsBuilt", nerpfunc_get_level1_vehicle_teleports_built, 0 },
     // STRING: LEGORR 0x004a6990
-    { "GetLevel1UpgradeStationsBuilt", nerps_port_GetLevel1UpgradeStationsBuilt, 0 },
+    { "GetLevel1UpgradeStationsBuilt", nerpfunc_get_level1_upgrade_stations_built, 0 },
     // STRING: LEGORR 0x004a6978
-    { "GetLevel2BarracksBuilt", nerps_port_GetLevel2BarracksBuilt, 0 },
+    { "GetLevel2BarracksBuilt", nerpfunc_get_level2_barracks_built, 0 },
     // STRING: LEGORR 0x004a6964
-    { "GetLevel2DocksBuilt", nerps_port_GetLevel2DocksBuilt, 0 },
+    { "GetLevel2DocksBuilt", nerpfunc_get_level2_docks_built, 0 },
     // STRING: LEGORR 0x004a694c
-    { "GetLevel2GeodomeBuilt", nerps_port_GetLevel2GeodomeBuilt, 0 },
+    { "GetLevel2GeodomeBuilt", nerpfunc_get_level2_geodome_built, 0 },
     // STRING: LEGORR 0x004a6930
-    { "GetLevel2PowerstationsBuilt", nerps_port_GetLevel2PowerstationsBuilt, 0 },
+    { "GetLevel2PowerstationsBuilt", nerpfunc_get_level2_powerstations_built, 0 },
     // STRING: LEGORR 0x004a6914
-    { "GetLevel2ToolStoresBuilt", nerps_port_GetLevel2ToolStoresBuilt, 0 },
+    { "GetLevel2ToolStoresBuilt", nerpfunc_get_level2_tool_stores_built, 0 },
     // STRING: LEGORR 0x004a68f8
-    { "GetLevel2GunstationsBuilt", nerps_port_GetLevel2GunstationsBuilt, 0 },
+    { "GetLevel2GunstationsBuilt", nerpfunc_get_level2_gunstations_built, 0 },
     // STRING: LEGORR 0x004a68e0
-    { "GetLevel2TeleportsBuilt", nerps_port_GetLevel2TeleportsBuilt, 0 },
+    { "GetLevel2TeleportsBuilt", nerpfunc_get_level2_teleports_built, 0 },
     // STRING: LEGORR 0x004a68c0
-    { "GetLevel2VehicleTeleportsBuilt", nerps_port_GetLevel2VehicleTeleportsBuilt, 0 },
+    { "GetLevel2VehicleTeleportsBuilt", nerpfunc_get_level2_vehicle_teleports_built, 0 },
     // STRING: LEGORR 0x004a68a0
-    { "GetLevel2UpgradeStationsBuilt", nerps_port_GetLevel2UpgradeStationsBuilt, 0 },
+    { "GetLevel2UpgradeStationsBuilt", nerpfunc_get_level2_upgrade_stations_built, 0 },
     // STRING: LEGORR 0x004a6888
-    { "GetPoweredBarracksBuilt", nerps_port_GetPoweredBarracksBuilt, 0 },
+    { "GetPoweredBarracksBuilt", nerpfunc_get_powered_barracks_built, 0 },
     // STRING: LEGORR 0x004a6870
-    { "GetPoweredDocksBuilt", nerps_port_GetPoweredDocksBuilt, 0 },
+    { "GetPoweredDocksBuilt", nerpfunc_get_powered_docks_built, 0 },
     // STRING: LEGORR 0x004a6858
-    { "GetPoweredGeodomeBuilt", nerps_port_GetPoweredGeodomeBuilt, 0 },
+    { "GetPoweredGeodomeBuilt", nerpfunc_get_powered_geodome_built, 0 },
     // STRING: LEGORR 0x004a6838
-    { "GetPoweredPowerstationsBuilt", nerps_port_GetPoweredPowerstationsBuilt, 0 },
+    { "GetPoweredPowerstationsBuilt", nerpfunc_get_powered_powerstations_built, 0 },
     // STRING: LEGORR 0x004a681c
-    { "GetPoweredToolStoresBuilt", nerps_port_GetPoweredToolStoresBuilt, 0 },
+    { "GetPoweredToolStoresBuilt", nerpfunc_get_powered_tool_stores_built, 0 },
     // STRING: LEGORR 0x004a6800
-    { "GetPoweredGunstationsBuilt", nerps_port_GetPoweredGunstationsBuilt, 0 },
+    { "GetPoweredGunstationsBuilt", nerpfunc_get_powered_gunstations_built, 0 },
     // STRING: LEGORR 0x004a67e4
-    { "GetPoweredTeleportsBuilt", nerps_port_GetPoweredTeleportsBuilt, 0 },
+    { "GetPoweredTeleportsBuilt", nerpfunc_get_powered_teleports_built, 0 },
     // STRING: LEGORR 0x004a67c4
-    { "GetPoweredVehicleTeleportsBuilt", nerps_port_GetPoweredVehicleTeleportsBuilt, 0 },
+    { "GetPoweredVehicleTeleportsBuilt", nerpfunc_get_powered_vehicle_teleports_built, 0 },
     // STRING: LEGORR 0x004a67a4
-    { "GetPoweredUpgradeStationsBuilt", nerps_port_GetPoweredUpgradeStationsBuilt, 0 },
+    { "GetPoweredUpgradeStationsBuilt", nerpfunc_get_powered_upgrade_stations_built, 0 },
     // STRING: LEGORR 0x004a6794
     { "**End Of List**", (NERPsFunction)flh_magic_uu_noop, 7 },
 };
@@ -1388,6 +1626,94 @@ void nerps_message_previous(void)
     }
 }
 
+// FUNCTION: LEGORR 0x004539f0
+int nerpfunc_get_messages_are_up_to_date(unsigned int* stack)
+{
+    return nerpsGlobs.messageAcknowledged >= nerpsGlobs.messageCount;
+}
+
+// FUNCTION: LEGORR 0x00453a10
+int nerpfunc_supress_arrow(unsigned int* stack)
+{
+    nerpsruntimeGlobs.supressArrow = stack[0];
+    if (nerpsGlobs.messageOffset == 0)
+        engine_global_state_flags_bits6_and_9_set_target(!nerpsruntimeGlobs.supressArrow, 1);
+    else
+        engine_global_state_flags_bits6_and_9_set_target(1, 1);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00453a50
+int nerpfunc_advance_message(unsigned int* stack)
+{
+    if (nerpsGlobs.messageOffset > 1) nerpsGlobs.messageOffset = 1;
+    nerps_message_previous();
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00453a70
+int nerpfunc_allow_camera_movement(unsigned int* stack)
+{
+    nerpsruntimeGlobs.clickOnly = stack[0] << 12;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00453a90
+int nerpfunc_click_only_objects(unsigned int* stack)
+{
+    unsigned int flags = 0x1ff3 - nerpsruntimeGlobs.clickOnly;
+
+    nerpfunc_set_tutorial_flags(&flags);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00453ac0
+int nerpfunc_click_only_map(unsigned int* stack)
+{
+    unsigned int flags = 0x1ffb - nerpsruntimeGlobs.clickOnly;
+
+    nerpfunc_set_tutorial_flags(&flags);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00453af0
+int nerpfunc_click_only_icon(unsigned int* stack)
+{
+    unsigned int flags = 0x1ffe - nerpsruntimeGlobs.clickOnly;
+
+    nerpfunc_set_tutorial_flags(&flags);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00453b20
+int nerpfunc_click_only_calltoarms(unsigned int* stack)
+{
+    unsigned int flags = 0x1f7f - nerpsruntimeGlobs.clickOnly;
+
+    nerpfunc_set_tutorial_flags(&flags);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00453b50
+int nerpfunc_disallow_all(unsigned int* stack)
+{
+    unsigned int flags = 0x1fff - nerpsruntimeGlobs.clickOnly;
+
+    nerpfunc_set_tutorial_flags(&flags);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00453b80
+int nerpfunc_flash_call_to_arms_icon(unsigned int* stack)
+{
+    if (stack[0]) {
+        panel_advisor_animation_play(6, 2, 1);
+        return 0;
+    }
+    advisor_clear_active_state();
+    return 0;
+}
+
 // FUNCTION: LEGORR 0x00453bb0
 void nerps_runtime_update_timers(float elapsed)
 {
@@ -1416,6 +1742,58 @@ void nerps_runtime_update_timers(float elapsed)
  * first use so that the functions above keep their symbol counter
  * (finding 538). */
 #include "lego_globs.h"
+
+// FUNCTION: LEGORR 0x00453ca0
+int nerpfunc_get_timer0(unsigned int* stack)
+{
+    return (int)nerpsruntimeGlobs.timers[0];
+}
+
+// FUNCTION: LEGORR 0x00453cb0
+int nerpfunc_get_timer1(unsigned int* stack)
+{
+    return (int)nerpsruntimeGlobs.timers[1];
+}
+
+// FUNCTION: LEGORR 0x00453cc0
+int nerpfunc_get_timer2(unsigned int* stack)
+{
+    return (int)nerpsruntimeGlobs.timers[2];
+}
+
+// FUNCTION: LEGORR 0x00453cd0
+int nerpfunc_get_timer3(unsigned int* stack)
+{
+    return (int)nerpsruntimeGlobs.timers[3];
+}
+
+// FUNCTION: LEGORR 0x00453ce0
+int nerpfunc_set_timer0(unsigned int* stack)
+{
+    nerpsruntimeGlobs.timers[0] = (float)stack[0];
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00453d10
+int nerpfunc_set_timer1(unsigned int* stack)
+{
+    nerpsruntimeGlobs.timers[1] = (float)stack[0];
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00453d40
+int nerpfunc_set_timer2(unsigned int* stack)
+{
+    nerpsruntimeGlobs.timers[2] = (float)stack[0];
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00453d70
+int nerpfunc_set_timer3(unsigned int* stack)
+{
+    nerpsruntimeGlobs.timers[3] = (float)stack[0];
+    return 1;
+}
 
 // FUNCTION: LEGORR 0x00453da0
 void nerps_runtime_update_camera(float elapsed)
@@ -1473,6 +1851,252 @@ void nerps_runtime_update_camera(float elapsed)
     }
 }
 
+// FUNCTION: LEGORR 0x00453fe0
+int nerpfunc_camera_lock_on_monster(unsigned int* stack)
+{
+    if (stack[0]) {
+        legoobject_run_through_lists_skip_upgrade_parts(
+            (int (*)(struct Lego_Object*, void*))nerps_camera_lock_on_monster_callback,
+            &nerpsGlobs.cameraTrackObject);
+        nerpsGlobs.cameraTrack = 1;
+        return 0;
+    }
+    nerpsGlobs.cameraTrackObject = NULL;
+    nerpsGlobs.cameraTrack = 0;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454020
+int nerps_camera_lock_on_monster_callback(NERPs_Object* obj, void* data)
+{
+    if (obj != NULL && entity_type3_flag04000000_test((struct EntitySlot*)obj)) {
+        *(NERPs_Object**)data = obj;
+        return 1;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454050
+int nerpfunc_camera_lock_on_object(unsigned int* stack)
+{
+    if (stack[0]) {
+        nerpsGlobs.cameraTrackIndex = stack[0] - 1;
+        nerpsGlobs.cameraTrack = 1;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454070
+int nerpfunc_camera_unlock(unsigned int* stack)
+{
+    nerpsGlobs.cameraTrackIndex = (unsigned int)-1;
+    nerpsGlobs.cameraTrack = 0;
+    nerpsGlobs.cameraTrackObject = NULL;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454090
+int nerpfunc_camera_zoom_in(unsigned int* stack)
+{
+    if (nerpsGlobs.cameraZoomCurrent != 0.0f) {
+        camera_zoom_update(s_zoom_step_context, nerpsGlobs.cameraZoomAmount - nerpsGlobs.cameraZoomCurrent);
+        nerpsGlobs.cameraZoomCurrent = 0.0f;
+    }
+    nerpsGlobs.cameraZoomAmount = -(float)stack[0];
+    if (nerpsGlobs.cameraZoomAmount != 0.0f) nerpsGlobs.cameraZoom = 1;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454110
+int nerpfunc_camera_zoom_out(unsigned int* stack)
+{
+    if (nerpsGlobs.cameraZoomCurrent != 0.0f)
+        camera_zoom_update(s_zoom_step_context, nerpsGlobs.cameraZoomAmount - nerpsGlobs.cameraZoomCurrent);
+    nerpsGlobs.cameraZoomAmount = (float)stack[0];
+    if (nerpsGlobs.cameraZoomAmount != 0.0f) nerpsGlobs.cameraZoom = 1;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454180
+int nerpfunc_camera_rotate(unsigned int* stack)
+{
+    if (nerpsGlobs.cameraRotateCurrent != 0.0f) {
+        camera_tilt_axis_update(s_zoom_step_context,
+            (nerpsGlobs.cameraRotateAmount - nerpsGlobs.cameraRotateCurrent) * 0.017453292f);
+        nerpsGlobs.cameraRotateCurrent = 0.0f;
+    }
+    nerpsGlobs.cameraRotateAmount = (float)stack[0];
+    if (nerpsGlobs.cameraRotateAmount > 180.0f) nerpsGlobs.cameraRotateAmount -= 360.0f;
+    if (nerpsGlobs.cameraRotateAmount != 0.0f) nerpsGlobs.cameraRotate = 1;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454220
+int nerpfunc_get_selected_record_object(unsigned int* stack)
+{
+    unsigned int i;
+    void* object;
+
+    for (i = 0; i < 10; i++) {
+        object = NULL;
+        if (lego_object_pointer_registry_get_slot(i, &object) &&
+            selection_contains_entity_active_target((struct EntitySlot*)object, NULL))
+            return i + 1;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454270
+int nerpfunc_set_crystal_priority(unsigned int* stack)
+{
+    priority_entry_state_set(0, !stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454290
+int nerpfunc_set_monster_attack_powerstation(unsigned int* stack)
+{
+    NERPs_MonsterAttackSearch search;
+
+    if (stack[0] == 1) {
+        search.flags = 0x200;
+        search.flagsNot = (unsigned int)-1;
+        search.attack = 1;
+        legoobject_run_through_lists_skip_upgrade_parts(
+            (int (*)(struct Lego_Object*, void*))nerps_set_monster_attack_callback, &search);
+        return 0;
+    }
+    search.flags = 0;
+    search.flagsNot = (unsigned int)-1;
+    search.attack = 0;
+    legoobject_run_through_lists_skip_upgrade_parts(
+        (int (*)(struct Lego_Object*, void*))nerps_set_monster_attack_callback, &search);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454300
+int nerps_set_monster_attack_callback(NERPs_Object* obj, void* data)
+{
+    NERPs_MonsterAttackSearch* search = (NERPs_MonsterAttackSearch*)data;
+    NERPs_Point2I blockPos;
+
+    if (obj != NULL) {
+        entity_position_to_terrain_cell_adapter((struct EntitySlot*)obj, &blockPos.x, &blockPos.y);
+        if (terrain_cell_occupied_or_flag_current(blockPos.x, blockPos.y, 1)) {
+            if ((!(entity_state_flags_get((struct EntitySlot*)obj) & search->flags) &&
+                 search->flagsNot == (unsigned int)-1) ||
+                ((entity_state_flags_get((struct EntitySlot*)obj) & search->flagsNot) &&
+                 search->flags == (unsigned int)-1)) {
+                switch (search->attack) {
+                case 0:
+                    task_record_kind10_queue(obj);
+                    break;
+                case 1:
+                    aitask_task_registry_remove_type10_entries_for_entity((struct EntitySlot*)obj);
+                    return 0;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004543a0
+int nerpfunc_set_monster_attack_nowt(unsigned int* stack)
+{
+    NERPs_MonsterAttackSearch search;
+
+    if (stack[0] == 1) {
+        search.flags = 0;
+        search.flagsNot = (unsigned int)-1;
+        search.attack = 1;
+        legoobject_run_through_lists_skip_upgrade_parts(
+            (int (*)(struct Lego_Object*, void*))nerps_set_monster_attack_callback, &search);
+        return 0;
+    }
+    search.flags = 0;
+    search.flagsNot = (unsigned int)-1;
+    search.attack = 0;
+    legoobject_run_through_lists_skip_upgrade_parts(
+        (int (*)(struct Lego_Object*, void*))nerps_set_monster_attack_callback, &search);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454410
+void nerps_set_objects_level(const char* name, unsigned int level)
+{
+    NERPs_ObjectLevelSearch search;
+
+    sprintf(search.name, "%s", name);
+    search.level = level;
+    lego_entity_type_pair_lookup(name, &search.type, &search.id, NULL);
+    legoobject_run_through_lists_skip_upgrade_parts(
+        (int (*)(struct Lego_Object*, void*))nerps_set_objects_level_callback, &search);
+}
+
+// FUNCTION: LEGORR 0x00454480
+int nerps_set_objects_level_callback(NERPs_Object* obj, void* data)
+{
+    NERPs_ObjectLevelSearch* search = (NERPs_ObjectLevelSearch*)data;
+
+    if (obj != NULL && obj->type == search->type && obj->id == search->id)
+        legoobject_gd_building_index_set_adapter((struct EntitySlot*)obj, search->level);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004544c0
+int nerps_record_object_at_tutorial_callback(NERPs_BlockPointer* blockPointer,
+                                               unsigned int x, unsigned int y,
+                                               void* data)
+{
+    NERPs_RecordObjectSearch* search = (NERPs_RecordObjectSearch*)data;
+    NERPs_Level* level = NERPS_LEVEL();
+    NERPs_Point2I blockPos;
+    NERPs_Vector3F wPos;
+
+    entity_transform_position_get_outputs((struct EntitySlot*)search->object, &wPos.x, &wPos.y);
+    terrain_map_world_to_block(level->map, wPos.x, wPos.y, &blockPos.x, &blockPos.y);
+    if (x == (unsigned int)blockPos.x && y == (unsigned int)blockPos.y) search->count++;
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00454530
+int nerpfunc_get_record_object_at_tutorial(unsigned int* stack)
+{
+    unsigned int i;
+    void* object;
+    NERPs_RecordObjectSearch search;
+
+    for (i = 0; i < 10; i++) {
+        object = NULL;
+        if (lego_object_pointer_registry_get_slot(i, &object)) {
+            search.object = (NERPs_Object*)object;
+            search.count = 0;
+            nerps_block_pointer_enumerate(stack[0], nerps_record_object_at_tutorial_callback, &search);
+            if (search.count) return i + 1;
+        }
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004545a0
+int nerpfunc_get_record_object_amount_at_tutorial(unsigned int* stack)
+{
+    unsigned int i;
+    void* object;
+    NERPs_RecordObjectSearch search;
+
+    search.count = 0;
+    for (i = 0; i < 10; i++) {
+        object = NULL;
+        if (lego_object_pointer_registry_get_slot(i, &object)) {
+            search.object = (NERPs_Object*)object;
+            nerps_block_pointer_enumerate(stack[0], nerps_record_object_at_tutorial_callback, &search);
+        }
+    }
+    return search.count;
+}
+
 // FUNCTION: LEGORR 0x00454600
 void nerps_draw_tutorial_icon(NERPs_Level* level, void* viewport, int unused, float elapsed)
 {
@@ -1496,10 +2120,80 @@ void nerps_draw_tutorial_icon(NERPs_Level* level, void* viewport, int unused, fl
     }
 }
 
+// FUNCTION: LEGORR 0x00454700
+int nerpfunc_set_record_object_pointer(unsigned int* stack)
+{
+    return nerpsGlobs.tutorialIconObject = stack[0];
+}
+
 // FUNCTION: LEGORR 0x00454710
 int nerps_get_icon_clicks(unsigned int* stack)
 {
     return interface_get_item_clicks(stack[0]);
+}
+
+// FUNCTION: LEGORR 0x00454720
+int nerpfunc_get_oxygen_level(unsigned int* stack)
+{
+    float oxygen = ((NERPs_Level*)g_active_level_retail)->oxygenLevel;
+
+    if (oxygen < 1.0f) oxygen = 0.0f;
+    if (oxygen == 0.0f && !entity_flag_mask_callbacks_all_pass(0x40b)) oxygen = 1.0f;
+    if (oxygen < 1.0f) oxygen = 1.0f;
+    return (int)oxygen;
+}
+
+// FUNCTION: LEGORR 0x004547a0
+int nerpfunc_generate_slug(unsigned int* stack)
+{
+    int type;
+    unsigned int id;
+    void* model;
+
+    lego_entity_type_pair_lookup("Slug", &type, &id, &model);
+    predug_spawn_coordinate_select_and_create(0, id);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004547e0
+int nerpfunc_set_attack_defer(unsigned int* stack)
+{
+    lego_set_attack_defer(stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454800
+int nerpfunc_set_call_to_arms(unsigned int* stack)
+{
+    lego_panel_selection_highlight_toggle_adapter(stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454820
+int nerpfunc_get_call_to_arms_button_clicked(unsigned int* stack)
+{
+    return s_panel_highlight_flags & 0x1;
+}
+
+// FUNCTION: LEGORR 0x00454830
+int nerpfunc_set_rock_monster(unsigned int* stack)
+{
+    unsigned int type = active_engine_field_b0_get_current();
+
+    legoobject_creature_spawn_from_emergence((char*)legoGlobs_rockMonsterData + type * 0x74,
+                                             3, type, stack[0] - 1, stack[1] - 1);
+    return 1;
+}
+
+/* Reward.c's rewardGlobs (reward.h), and LegoObject.c's objectGlobs
+ * (legoobject_globs.h) below, are included before their first use, as
+ * lego_globs.h is above (finding 538). */
+#include "reward.h"
+
+// FUNCTION: LEGORR 0x00454870
+int nerpfunc_get_rock_monsters_destroyed(unsigned int* stack)
+{
+    return rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].startCount;
 }
 
 // FUNCTION: LEGORR 0x00454880
@@ -1512,6 +2206,19 @@ void nerps_monster_destroyed(void)
 void nerps_monsters_destroyed_reset(void)
 {
     nerpsruntimeGlobs.monstersDestroyed = 0;
+}
+
+// FUNCTION: LEGORR 0x004548a0
+int nerpfunc_get_hidden_objects_found(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.monstersDestroyed;
+}
+
+// FUNCTION: LEGORR 0x004548b0
+int nerpfunc_set_hidden_objects_found(unsigned int* stack)
+{
+    nerpsruntimeGlobs.monstersDestroyed = stack[0];
+    return stack[0];
 }
 
 // FUNCTION: LEGORR 0x004548c0
@@ -1552,6 +2259,103 @@ int nerpfunc_flash_go_back_icon(unsigned int* stack)
     return nerps_flash_icon(0, stack[0]);
 }
 
+// FUNCTION: LEGORR 0x00454980
+int nerpfunc_get_rock_monster_running_away(unsigned int* stack)
+{
+    NERPs_RockMonsterSearch search;
+
+    search.mode = 0;
+    search.count = 0;
+    legoobject_run_through_lists_skip_upgrade_parts(
+        (int (*)(struct Lego_Object*, void*))nerps_rock_monster_callback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x004549b0
+int nerps_rock_monster_callback(NERPs_Object* obj, void* data)
+{
+    NERPs_RockMonsterSearch* search = (NERPs_RockMonsterSearch*)data;
+
+    if ((search->mode == 0 || search->mode == 1 || search->mode == 2) && obj->type == 3) {
+        switch (search->mode) {
+        case 0:
+            if (obj->health > 0.0f &&
+                obj->health < *(float*)(obj->stats + 0xe8) -
+                              20.0f * (*(float*)(obj->stats + 0xe8) * 0.01f)) {
+                entity_action_sequence_reset((struct EntitySlot*)obj, 0);
+                search->count++;
+            }
+            break;
+        case 1:
+            *(float*)(obj->stats + 0xe8) = search->value;
+            break;
+        case 2:
+            obj->health = search->value;
+            break;
+        }
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454a60
+int nerpfunc_set_rock_monster_pain_threshold(unsigned int* stack)
+{
+    NERPs_RockMonsterSearch search;
+
+    search.mode = 1;
+    search.value = (float)stack[0];
+    legoobject_run_through_lists_skip_upgrade_parts(
+        (int (*)(struct Lego_Object*, void*))nerps_rock_monster_callback, &search);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454aa0
+int nerpfunc_set_rock_monster_health(unsigned int* stack)
+{
+    NERPs_RockMonsterSearch search;
+
+    search.mode = 2;
+    search.value = (float)stack[0];
+    legoobject_run_through_lists_skip_upgrade_parts(
+        (int (*)(struct Lego_Object*, void*))nerps_rock_monster_callback, &search);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454ae0
+int nerpfunc_set_pause_game(unsigned int* stack)
+{
+    lego_transition_control(0, stack[0]);
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00454b00
+int nerpfunc_get_any_key_pressed(unsigned int* stack)
+{
+    return input_keyboard_down_key_count();
+}
+
+// FUNCTION: LEGORR 0x00454b10
+int nerpfunc_set_icon_pos(unsigned int* stack)
+{
+    nerpsIconX = (float)stack[0];
+    nerpsIconY = (float)stack[1];
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454b50
+int nerpfunc_set_icon_space(unsigned int* stack)
+{
+    nerpsIconSpace = stack[0];
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00454b60
+int nerpfunc_set_icon_width(unsigned int* stack)
+{
+    nerpsIconWidth = stack[0];
+    return 0;
+}
+
 // FUNCTION: LEGORR 0x00454b70
 int nerpfunc_set_level_completed(unsigned int* stack)
 {
@@ -1563,6 +2367,13 @@ int nerpfunc_set_level_completed(unsigned int* stack)
 int nerpfunc_set_level_fail(unsigned int* stack)
 {
     if (!(legoGlobs_flags1 & 0x8000000)) objective_announce_current(2);
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00454ba0
+int nerpfunc_set_game_fail(unsigned int* stack)
+{
+    objective_announce_current(2);
     return 1;
 }
 
@@ -1657,6 +2468,30 @@ int nerpfunc_set_ore_at_icon_positions(unsigned int* stack)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x00454db0
+int nerps_get_selected_count(const char* name)
+{
+    int type;
+    unsigned int id;
+    struct EntitySlot* const* units;
+    unsigned int i;
+    int count = 0;
+
+    lego_entity_type_pair_lookup(name, &type, &id, NULL);
+    units = selection_active_records_get();
+    for (i = 0; i < selection_active_count_get(); i++) {
+        if (((NERPs_Object*)units[i])->type == type && ((NERPs_Object*)units[i])->id == (int)id)
+            count++;
+    }
+    return count;
+}
+
+// FUNCTION: LEGORR 0x00454e10
+int nerpfunc_get_mini_figure_selected(unsigned int* stack)
+{
+    return nerps_get_selected_count("Pilot");
+}
+
 // FUNCTION: LEGORR 0x00454e20
 int nerpfunc_get_small_truck_selected(unsigned int* stack)
 {
@@ -1747,6 +2582,47 @@ int nerpfunc_get_chrome_crusher_selected(unsigned int* stack)
     return object->type == type;
 }
 
+// FUNCTION: LEGORR 0x00455060
+int nerps_get_driven_count(const char* name)
+{
+    NERPs_ObjectSearch search;
+
+    lego_entity_type_pair_lookup(name, &search.type, &search.id, NULL);
+    search.count = 0;
+    legoobject_run_through_lists_skip_upgrade_parts(
+        (int (*)(struct Lego_Object*, void*))nerps_driven_count_callback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x004550a0
+int nerps_driven_count_callback(NERPs_Object* obj, void* data)
+{
+    NERPs_ObjectSearch* search = (NERPs_ObjectSearch*)data;
+
+    if (obj->type == search->type && obj->id == (int)search->id && obj->driver != NULL)
+        search->count++;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004550d0
+int nerpfunc_add_powered_crystals(unsigned int* stack)
+{
+    unsigned int i;
+
+    for (i = 0; i < stack[0]; i++) global_object_field8c_increment();
+    entity_activity_scene_state_update_retail();
+    return stack[0];
+}
+
+// FUNCTION: LEGORR 0x00455100
+int nerpfunc_add_stored_ore(unsigned int* stack)
+{
+    unsigned int i;
+
+    for (i = 0; i < stack[0]; i++) lego_level_resource_balance_add_and_sound(0);
+    return stack[0];
+}
+
 // FUNCTION: LEGORR 0x00455130
 int nerps_add_tutorial_crystals_callback(NERPs_BlockPointer* blockPointer,
                                          unsigned int x, unsigned int y,
@@ -1783,6 +2659,46 @@ int nerpfunc_get_tutorial_block_clicks(unsigned int* stack)
     return count;
 }
 
+// FUNCTION: LEGORR 0x004551f0
+int nerps_get_objects_built(const char* name, int level)
+{
+    int type;
+    unsigned int id;
+    unsigned int i;
+    int count;
+    NERPs_ObjectSearch search;
+
+    lego_entity_type_pair_lookup(name, &type, &id, NULL);
+    if (level < 0) {
+        count = 0;
+        for (i = 0; i < building_upgrade_admission_check(type, id); i++) {
+            if (level == -1) count += grid_record_count_difference_get(type, id, i, 1);
+            if (level == -2) {
+                search.type = type;
+                search.id = id;
+                search.count = 0;
+                legoobject_run_through_lists_skip_upgrade_parts(
+                    (int (*)(struct Lego_Object*, void*))nerps_powered_count_callback, &search);
+                count += search.count;
+            }
+        }
+        return count;
+    }
+    return grid_record_count_difference_get(type, id, level, 1);
+}
+
+// FUNCTION: LEGORR 0x004552c0
+int nerps_powered_count_callback(NERPs_Object* obj, void* data)
+{
+    NERPs_ObjectSearch* search = (NERPs_ObjectSearch*)data;
+
+    if (obj->type == search->type && obj->id == (int)search->id) {
+        if (obj->flags3 & 0x20000000) search->count++;
+        else search->count = 0;
+    }
+    return 0;
+}
+
 // FUNCTION: LEGORR 0x00455300
 unsigned int nerps_object_count(const char* name, int level)
 {
@@ -1816,6 +2732,378 @@ int nerps_flash_icon(int item, int on)
         interface_set_item_flash(item, 0);
     }
     return 0;
+}
+
+// FUNCTION: LEGORR 0x004553c0
+int nerpfunc_get_mini_figurein_granite_grinder(unsigned int* stack)
+{
+    // STRING: LEGORR 0x004a7fd8
+    return nerps_get_driven_count("Walkerdigger");
+}
+
+// FUNCTION: LEGORR 0x004553d0
+int nerpfunc_get_mini_figurein_chrome_crusher(unsigned int* stack)
+{
+    return nerps_get_driven_count("LargeDigger");
+}
+
+// FUNCTION: LEGORR 0x004553e0
+int nerpfunc_get_mini_figurein_small_digger(unsigned int* stack)
+{
+    return nerps_get_driven_count("SmallDigger");
+}
+
+// FUNCTION: LEGORR 0x004553f0
+int nerpfunc_get_mini_figurein_rapid_rider(unsigned int* stack)
+{
+    return nerps_get_driven_count("SmallCat");
+}
+
+// FUNCTION: LEGORR 0x00455400
+int nerpfunc_get_mini_figurein_small_truck(unsigned int* stack)
+{
+    return nerps_get_driven_count("SmallTruck");
+}
+
+// FUNCTION: LEGORR 0x00455410
+int nerpfunc_get_mini_figurein_small_helicopter(unsigned int* stack)
+{
+    return nerps_get_driven_count("SmallHeli");
+}
+
+// FUNCTION: LEGORR 0x00455420
+int nerpfunc_set_barracks_level(unsigned int* stack)
+{
+    nerps_set_objects_level("Barracks", stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00455440
+int nerpfunc_set_docks_level(unsigned int* stack)
+{
+    nerps_set_objects_level("Docks", stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00455460
+int nerpfunc_set_geo_dome_level(unsigned int* stack)
+{
+    nerps_set_objects_level("Geo-dome", stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00455480
+int nerpfunc_set_powerstation_level(unsigned int* stack)
+{
+    nerps_set_objects_level("Powerstation", stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004554a0
+int nerpfunc_set_tool_store_level(unsigned int* stack)
+{
+    nerps_set_objects_level("Toolstation", stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004554c0
+int nerpfunc_set_gunstation_level(unsigned int* stack)
+{
+    nerps_set_objects_level("Gunstation", stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004554e0
+int nerpfunc_set_teleport_pad_level(unsigned int* stack)
+{
+    nerps_set_objects_level("TeleportPad", stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00455500
+int nerpfunc_set_super_teleport_level(unsigned int* stack)
+{
+    nerps_set_objects_level("TeleportBIG", stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00455520
+int nerpfunc_set_upgrade_station_level(unsigned int* stack)
+{
+    nerps_set_objects_level("Upgrade", stack[0]);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00455540
+int nerpfunc_get_barracks_selected(unsigned int* stack)
+{
+    return nerps_get_selected_count("Barracks");
+}
+
+// FUNCTION: LEGORR 0x00455550
+int nerpfunc_get_docks_selected(unsigned int* stack)
+{
+    return nerps_get_selected_count("Docks");
+}
+
+// FUNCTION: LEGORR 0x00455560
+int nerpfunc_get_geo_dome_selected(unsigned int* stack)
+{
+    // STRING: LEGORR 0x004a803c
+    return nerps_get_selected_count("Geo-Dome");
+}
+
+// FUNCTION: LEGORR 0x00455570
+int nerpfunc_get_powerstation_selected(unsigned int* stack)
+{
+    return nerps_get_selected_count("Powerstation");
+}
+
+// FUNCTION: LEGORR 0x00455580
+int nerpfunc_get_tool_store_selected(unsigned int* stack)
+{
+    return nerps_get_selected_count("Toolstation");
+}
+
+// FUNCTION: LEGORR 0x00455590
+int nerpfunc_get_gunstation_selected(unsigned int* stack)
+{
+    return nerps_get_selected_count("Gunstation");
+}
+
+// FUNCTION: LEGORR 0x004555a0
+int nerpfunc_get_teleport_pad_selected(unsigned int* stack)
+{
+    return nerps_get_selected_count("TeleportPad");
+}
+
+// FUNCTION: LEGORR 0x004555b0
+int nerpfunc_get_super_teleport_selected(unsigned int* stack)
+{
+    return nerps_get_selected_count("TeleportBIG");
+}
+
+// FUNCTION: LEGORR 0x004555c0
+int nerpfunc_get_upgrade_station_selected(unsigned int* stack)
+{
+    return nerps_get_selected_count("Upgrade");
+}
+
+// FUNCTION: LEGORR 0x004555d0
+int nerpfunc_get_powered_barracks_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Barracks", -2);
+}
+
+// FUNCTION: LEGORR 0x004555e0
+int nerpfunc_get_powered_docks_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Docks", -2);
+}
+
+// FUNCTION: LEGORR 0x004555f0
+int nerpfunc_get_powered_geodome_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Geo-dome", -2);
+}
+
+// FUNCTION: LEGORR 0x00455600
+int nerpfunc_get_powered_powerstations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Powerstation", -2);
+}
+
+// FUNCTION: LEGORR 0x00455610
+int nerpfunc_get_powered_tool_stores_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Toolstation", -2);
+}
+
+// FUNCTION: LEGORR 0x00455620
+int nerpfunc_get_powered_gunstations_built(unsigned int* stack)
+{
+    // STRING: LEGORR 0x004a8048
+    return nerps_get_objects_built("GunStation", -2);
+}
+
+// FUNCTION: LEGORR 0x00455630
+int nerpfunc_get_powered_teleports_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("TeleportPad", -2);
+}
+
+// FUNCTION: LEGORR 0x00455640
+int nerpfunc_get_powered_vehicle_teleports_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("TeleportBIG", -2);
+}
+
+// FUNCTION: LEGORR 0x00455650
+int nerpfunc_get_powered_upgrade_stations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Upgrade", -2);
+}
+
+// FUNCTION: LEGORR 0x00455660
+int nerpfunc_get_barracks_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Barracks", -1);
+}
+
+// FUNCTION: LEGORR 0x00455670
+int nerpfunc_get_docks_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Docks", -1);
+}
+
+// FUNCTION: LEGORR 0x00455680
+int nerpfunc_get_geodome_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Geo-dome", -1);
+}
+
+// FUNCTION: LEGORR 0x00455690
+int nerpfunc_get_powerstations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Powerstation", -1);
+}
+
+// FUNCTION: LEGORR 0x004556a0
+int nerpfunc_get_tool_stores_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Toolstation", -1);
+}
+
+// FUNCTION: LEGORR 0x004556b0
+int nerpfunc_get_gunstations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("GunStation", -1);
+}
+
+// FUNCTION: LEGORR 0x004556c0
+int nerpfunc_get_teleports_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("TeleportPad", -1);
+}
+
+// FUNCTION: LEGORR 0x004556d0
+int nerpfunc_get_vehicle_teleports_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("TeleportBIG", -1);
+}
+
+// FUNCTION: LEGORR 0x004556e0
+int nerpfunc_get_upgrade_stations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Upgrade", -1);
+}
+
+// FUNCTION: LEGORR 0x004556f0
+int nerpfunc_get_level1_barracks_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Barracks", 1);
+}
+
+// FUNCTION: LEGORR 0x00455700
+int nerpfunc_get_level1_docks_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Docks", 1);
+}
+
+// FUNCTION: LEGORR 0x00455710
+int nerpfunc_get_level1_geodome_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Geo-dome", 1);
+}
+
+// FUNCTION: LEGORR 0x00455720
+int nerpfunc_get_level1_powerstations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Powerstation", 1);
+}
+
+// FUNCTION: LEGORR 0x00455730
+int nerpfunc_get_level1_tool_stores_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Toolstation", 1);
+}
+
+// FUNCTION: LEGORR 0x00455740
+int nerpfunc_get_level1_gunstations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("GunStation", 1);
+}
+
+// FUNCTION: LEGORR 0x00455750
+int nerpfunc_get_level1_teleports_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("TeleportPad", 1);
+}
+
+// FUNCTION: LEGORR 0x00455760
+int nerpfunc_get_level1_vehicle_teleports_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("TeleportBIG", 1);
+}
+
+// FUNCTION: LEGORR 0x00455770
+int nerpfunc_get_level1_upgrade_stations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Upgrade", 1);
+}
+
+// FUNCTION: LEGORR 0x00455780
+int nerpfunc_get_level2_barracks_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Barracks", 2);
+}
+
+// FUNCTION: LEGORR 0x00455790
+int nerpfunc_get_level2_docks_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Docks", 2);
+}
+
+// FUNCTION: LEGORR 0x004557a0
+int nerpfunc_get_level2_geodome_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Geo-dome", 2);
+}
+
+// FUNCTION: LEGORR 0x004557b0
+int nerpfunc_get_level2_powerstations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Powerstation", 2);
+}
+
+// FUNCTION: LEGORR 0x004557c0
+int nerpfunc_get_level2_tool_stores_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Toolstation", 2);
+}
+
+// FUNCTION: LEGORR 0x004557d0
+int nerpfunc_get_level2_gunstations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("GunStation", 2);
+}
+
+// FUNCTION: LEGORR 0x004557e0
+int nerpfunc_get_level2_teleports_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("TeleportPad", 2);
+}
+
+// FUNCTION: LEGORR 0x004557f0
+int nerpfunc_get_level2_vehicle_teleports_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("TeleportBIG", 2);
+}
+
+// FUNCTION: LEGORR 0x00455800
+int nerpfunc_get_level2_upgrade_stations_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Upgrade", 2);
 }
 
 // FUNCTION: LEGORR 0x00455810
@@ -1967,6 +3255,68 @@ int nerpfunc_flash_vehicle_transport_icon(unsigned int* stack)
 int nerpfunc_flash_upgrade_station_icon(unsigned int* stack)
 {
     return nerps_flash_object_icon("Upgrade", stack[0]);
+}
+
+// FUNCTION: LEGORR 0x00455a90
+int nerpfunc_get_paths_built(unsigned int* stack)
+{
+    return nerps_get_objects_built("Path", -1);
+}
+
+// FUNCTION: LEGORR 0x00455aa0
+int nerpfunc_get_stud_count(unsigned int* stack)
+{
+    return nerps_get_objects_built("ProcessedOre", -1);
+}
+
+// FUNCTION: LEGORR 0x00455ab0
+int nerpfunc_get_small_helicopters_on_level(unsigned int* stack)
+{
+    return nerps_get_objects_built("SmallHeli", -1);
+}
+
+// FUNCTION: LEGORR 0x00455ac0
+int nerpfunc_get_granite_grinders_on_level(unsigned int* stack)
+{
+    return nerps_get_objects_built("WalkerDigger", -1);
+}
+
+// FUNCTION: LEGORR 0x00455ad0
+int nerpfunc_get_rapid_riders_on_level(unsigned int* stack)
+{
+    return nerps_get_objects_built("SmallCat", -1);
+}
+
+// FUNCTION: LEGORR 0x00455ae0
+int nerpfunc_get_small_diggers_on_level(unsigned int* stack)
+{
+    return nerps_get_objects_built("SmallDigger", -1);
+}
+
+// FUNCTION: LEGORR 0x00455af0
+int nerpfunc_get_slugs_on_level(unsigned int* stack)
+{
+    return nerps_get_objects_built("Slug", -1);
+}
+
+// FUNCTION: LEGORR 0x00455b00
+int nerpfunc_get_mini_figures_on_level(unsigned int* stack)
+{
+    return nerps_get_objects_built("Pilot", -1);
+}
+
+// FUNCTION: LEGORR 0x00455b10
+int nerpfunc_get_ore_refineries_built(unsigned int* stack)
+{
+    // STRING: LEGORR 0x004a8054
+    return nerps_get_objects_built("Refinery", -1);
+}
+
+// FUNCTION: LEGORR 0x00455b20
+int nerpfunc_get_crystal_refineries_built(unsigned int* stack)
+{
+    // STRING: LEGORR 0x004a8060
+    return nerps_get_objects_built("CrystalRefinery", -1);
 }
 
 // FUNCTION: LEGORR 0x00455b30
@@ -2292,6 +3642,42 @@ int nerpfunc_flash_place_fence_icon(unsigned int* stack)
     return nerps_flash_icon(14, stack[0]);
 }
 
+// FUNCTION: LEGORR 0x00456190
+int nerpfunc_get_random(unsigned int* stack)
+{
+    return rng_thunk_draw15() & 0xfff;
+}
+
+// FUNCTION: LEGORR 0x004561a0
+int nerpfunc_get_random_true_false(unsigned int* stack)
+{
+    return rng_thunk_draw15() & 0x1;
+}
+
+// FUNCTION: LEGORR 0x004561b0
+int nerpfunc_get_random10(unsigned int* stack)
+{
+    return rng_thunk_draw15() % 10;
+}
+
+// FUNCTION: LEGORR 0x004561d0
+int nerpfunc_get_random100(unsigned int* stack)
+{
+    return rng_thunk_draw15() % 100;
+}
+
+// FUNCTION: LEGORR 0x004561f0
+int nerpfunc_get_crystals_picked_up(unsigned int* stack)
+{
+    return ((NERPs_Level*)g_active_level_retail)->crystals;
+}
+
+// FUNCTION: LEGORR 0x00456200
+int nerpfunc_get_crystals_currently_stored(unsigned int* stack)
+{
+    return ((int (*)(int))noop_callback)(1);
+}
+
 /* NERPFunc__Stop, False, Null, GetCrystalsUsed, GetCrystalsStolen,
  * GetOreUsed and GetOreStolen. The port's name: flic_unit.cpp and crt.cpp
  * call the same zero-returning body (the original's callers there reach
@@ -2306,10 +3692,222 @@ uint32_t flh_magic_uu_noop(void)
 }
 #endif
 
+// FUNCTION: LEGORR 0x00456220
+int nerpfunc_get_ore_picked_up(unsigned int* stack)
+{
+    return ((NERPs_Level*)g_active_level_retail)->orePickedUp;
+}
+
+// FUNCTION: LEGORR 0x00456230
+int nerpfunc_get_ore_currently_stored(unsigned int* stack)
+{
+    return ((NERPs_Level*)g_active_level_retail)->ore;
+}
+
 // FUNCTION: LEGORR 0x00456240
 int nerpfunc_get_tutorial_flags(unsigned int* stack)
 {
     return nerpsruntimeGlobs.state.tutorialFlags;
+}
+
+// FUNCTION: LEGORR 0x00456250
+int nerpfunc_get_r0(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[0];
+}
+
+// FUNCTION: LEGORR 0x00456260
+int nerpfunc_get_r1(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[1];
+}
+
+// FUNCTION: LEGORR 0x00456270
+int nerpfunc_get_r2(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[2];
+}
+
+// FUNCTION: LEGORR 0x00456280
+int nerpfunc_get_r3(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[3];
+}
+
+// FUNCTION: LEGORR 0x00456290
+int nerpfunc_get_r4(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[4];
+}
+
+// FUNCTION: LEGORR 0x004562a0
+int nerpfunc_get_r5(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[5];
+}
+
+// FUNCTION: LEGORR 0x004562b0
+int nerpfunc_get_r6(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[6];
+}
+
+// FUNCTION: LEGORR 0x004562c0
+int nerpfunc_get_r7(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[7];
+}
+
+// FUNCTION: LEGORR 0x004562d0
+int nerpfunc_add_r0(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[0] += stack[0];
+}
+
+// FUNCTION: LEGORR 0x004562f0
+int nerpfunc_add_r1(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[1] += stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456310
+int nerpfunc_add_r2(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[2] += stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456330
+int nerpfunc_add_r3(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[3] += stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456350
+int nerpfunc_add_r4(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[4] += stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456370
+int nerpfunc_add_r5(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[5] += stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456390
+int nerpfunc_add_r6(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[6] += stack[0];
+}
+
+// FUNCTION: LEGORR 0x004563b0
+int nerpfunc_add_r7(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[7] += stack[0];
+}
+
+// FUNCTION: LEGORR 0x004563d0
+int nerpfunc_sub_r0(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[0] -= stack[0];
+}
+
+// FUNCTION: LEGORR 0x004563f0
+int nerpfunc_sub_r1(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[1] -= stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456410
+int nerpfunc_sub_r2(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[2] -= stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456430
+int nerpfunc_sub_r3(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[3] -= stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456450
+int nerpfunc_sub_r4(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[4] -= stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456470
+int nerpfunc_sub_r5(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[5] -= stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456490
+int nerpfunc_sub_r6(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[6] -= stack[0];
+}
+
+// FUNCTION: LEGORR 0x004564b0
+int nerpfunc_sub_r7(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.state.registers[7] -= stack[0];
+}
+
+// FUNCTION: LEGORR 0x004564d0
+int nerpfunc_set_r0(unsigned int* stack)
+{
+    nerpsruntimeGlobs.state.registers[0] = stack[0];
+    return stack[0];
+}
+
+// FUNCTION: LEGORR 0x004564e0
+int nerpfunc_set_r1(unsigned int* stack)
+{
+    nerpsruntimeGlobs.state.registers[1] = stack[0];
+    return stack[0];
+}
+
+// FUNCTION: LEGORR 0x004564f0
+int nerpfunc_set_r2(unsigned int* stack)
+{
+    nerpsruntimeGlobs.state.registers[2] = stack[0];
+    return stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456500
+int nerpfunc_set_r3(unsigned int* stack)
+{
+    nerpsruntimeGlobs.state.registers[3] = stack[0];
+    return stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456510
+int nerpfunc_set_r4(unsigned int* stack)
+{
+    nerpsruntimeGlobs.state.registers[4] = stack[0];
+    return stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456520
+int nerpfunc_set_r5(unsigned int* stack)
+{
+    nerpsruntimeGlobs.state.registers[5] = stack[0];
+    return stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456530
+int nerpfunc_set_r6(unsigned int* stack)
+{
+    nerpsruntimeGlobs.state.registers[6] = stack[0];
+    return stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456540
+int nerpfunc_set_r7(unsigned int* stack)
+{
+    nerpsruntimeGlobs.state.registers[7] = stack[0];
+    return stack[0];
 }
 
 // FUNCTION: LEGORR 0x00456550
@@ -2317,6 +3915,43 @@ int nerpfunc_set_tutorial_flags(unsigned int* stack)
 {
     nerpsruntimeGlobs.state.tutorialFlags = stack[0];
     return stack[0];
+}
+
+#include "legoobject_globs.h"
+
+// FUNCTION: LEGORR 0x00456560
+int nerpfunc_get_train_flags(unsigned int* stack)
+{
+    return objectGlobs_f_4e8444;
+}
+
+// FUNCTION: LEGORR 0x00456570
+int nerpfunc_set_train_flags(unsigned int* stack)
+{
+    return objectGlobs_f_4e8444 = stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456580
+int nerpfunc_get_monsters_on_level(unsigned int* stack)
+{
+    // STRING: LEGORR 0x004a807c
+    return nerps_get_objects_built("LavaMonster", 0) +
+           nerps_get_objects_built("RockMonster", 0) +
+           // STRING: LEGORR 0x004a8070
+           nerps_get_objects_built("IceMonster", 0);
+}
+
+// FUNCTION: LEGORR 0x004565c0
+int nerpfunc_get_buildings_teleported(unsigned int* stack)
+{
+    return legoobject_global_animation_state_get();
+}
+
+// FUNCTION: LEGORR 0x004565d0
+int nerpfunc_set_buildings_teleported(unsigned int* stack)
+{
+    legoobject_global_animation_state_set(stack[0]);
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x004565f0
@@ -2338,6 +3973,70 @@ int nerps_get_message_permit(void)
     return nerpsruntimeGlobs.state.messagePermit;
 }
 
+/* Not in the function table; SetMessage calls it. */
+// FUNCTION: LEGORR 0x00456650
+int nerpfunc_get_message_wait(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.messageWaitForKey;
+}
+
+// FUNCTION: LEGORR 0x00456660
+int nerpfunc_set_message_wait(unsigned int* stack)
+{
+    return nerpsruntimeGlobs.messageWaitForKey = stack[0];
+}
+
+// FUNCTION: LEGORR 0x00456670
+int nerpfunc_set_message_timer_values(unsigned int* stack)
+{
+    nerpsMessageTime.scale = (float)stack[0];
+    nerpsMessageTime.add = (float)stack[1];
+    nerpsMessageTime.defaultTime = (float)stack[2];
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x004566c0
+int nerpfunc_get_message_timer(unsigned int* stack)
+{
+    return (int)nerpsruntimeGlobs.messageTimer;
+}
+
+// FUNCTION: LEGORR 0x004566d0
+int nerpfunc_set_message(unsigned int* stack)
+{
+    unsigned int line;
+    char* text;
+
+    if (nerps_get_message_permit()) return 0;
+    line = stack[0];
+    if (line) line--;
+    text = nerps_file_get_message_line(line);
+    if (line != nerpsGlobs.messageHistory[nerpsGlobs.messageHistoryCount - 1]) {
+        if (nerpsGlobs.messageHistoryCount == 8) {
+            nerpsGlobs.messageHistory[0] = nerpsGlobs.messageHistory[4];
+            nerpsGlobs.messageHistory[1] = nerpsGlobs.messageHistory[5];
+            nerpsGlobs.messageHistory[2] = nerpsGlobs.messageHistory[6];
+            nerpsGlobs.messageHistory[3] = nerpsGlobs.messageHistory[7];
+            nerpsGlobs.messageHistoryCount = 4;
+        }
+        nerpsGlobs.messageHistory[nerpsGlobs.messageHistoryCount++] = line;
+        if (nerpsGlobs.messageHistoryCount) engine_global_state_flags_bit7_set_target(1);
+        if (nerpsGlobs.messageOffset) nerpsGlobs.messageOffset++;
+    }
+    advisor_text_request_setup((uint32_t)(uintptr_t)text, stack[1]);
+    nerpsruntimeGlobs.messageWait = stack[1];
+    nerpsNext.pressed = 1;
+    if (nerpfunc_get_message_wait(NULL)) {
+        /* The native port has no DirectDraw.c (finding 596); its frame
+         * loop presents the frame. */
+#if !defined(LEGORRR_BACKEND_MINIWIN)
+        directdraw_flip();
+#endif
+        while (!NERPS_KEY_PRESSED(0x1c)) input_state_poll_retail();
+    }
+    return stack[0];
+}
+
 // FUNCTION: LEGORR 0x004567c0
 int nerpfunc_set_objective_switch(unsigned int* stack)
 {
@@ -2353,6 +4052,15 @@ int nerpfunc_get_objective_switch(unsigned int* stack)
         return 1;
     }
     return 0;
+}
+
+// FUNCTION: LEGORR 0x004567f0
+int nerpfunc_get_objective_showing(unsigned int* stack)
+{
+    int showing = 0;
+
+    if (objective_is_ended_original()) showing = 1;
+    return showing;
 }
 
 // FUNCTION: LEGORR 0x00456810

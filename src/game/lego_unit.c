@@ -10035,6 +10035,14 @@ void lego_camera_registry_probe(void)
     }
 }
 
+/* Lego_SetAttackDefer: NERPs.c's SetAttackDefer row (finding 673). */
+// FUNCTION: LEGORR 0x00435a80
+void lego_set_attack_defer(int defer)
+{
+    if (defer) s_panel_highlight_flags |= 0x4;
+    else s_panel_highlight_flags &= ~0x4;
+}
+
 /* PanelSelectionHighlightToggle [group 3C]: Lego_SetCallToArmsOn. */
 // FUNCTION: LEGORR 0x00435aa0
 void lego_panel_selection_highlight_toggle(int on)
