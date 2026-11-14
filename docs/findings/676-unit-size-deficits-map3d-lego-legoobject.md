@@ -76,6 +76,34 @@ The change is confined to `src/game/terrain_map.c`,
 `#pragma`, no pad, no `Deviation (scoring only)` and no header shared with
 another unit.
 
+### Rebased onto the #809–#811 stack
+
+Measured again on #811 (`match/808-weapons-mesh-lwo`, `2ed680d3`). The base's
+unit spans come from a full build of the base sources, and the branch's
+from a full `make reccmp-check` and `make match-progress`. The same nine
+functions rise by the same amounts, and nothing falls. Map3D.c again gains
+exactly 160 bytes, and so does the entry point.
+
+| Measure | #811 `2ed680d3` | This change on it |
+| --- | ---: | ---: |
+| **Exact-function code bytes** | 343,425 (53.45%) | **343,761 (53.50%)** |
+| Accuracy, full / game-only | 97.43% / 97.16% | **97.53% / 97.26%** |
+| Correct-size functions, full | 2,789 (454,789 B) | **2,793 (457,127 B)** |
+| Correct-size functions, game-only | 2,498 (403,962 B) | **2,502 (406,300 B)** |
+| Identical prefix (raw / masked) | 11 / 528 B | 11 / 528 B |
+| Unit size agreement (whole / correct sizes / start / end) | 0 / 167 / 2 / 1 | unchanged |
+| `.text` identical at original addresses | 29,574 (4.60%) | **29,832 (4.64%)** |
+| GAME-026 Map3D.c | −288 | **−128** |
+| GAME-021 Lego.c | −224 | −224 |
+| GAME-023 LegoObject.c | −160 | −160 |
+| Entry point (original `0048f000`) | `0048eaa0` (−1,376) | **`0048eb40` (−1,216)** |
+| Image end; inversions full / game-only | `0x7d8000`; 222 / 1 | unchanged |
+
+On this base, `.text` at original addresses rises: the later units are now
+close enough to their original addresses that the 160-byte move gains
+runs. The `/OPT:NOREF` relink flip goes the other way here, with
+`original_annotated` falling from 2,719 to 2,717 functions.
+
 ## 1. Per-function results
 
 Sizes are `code_extent` (finding 668): the original's, then the rebuilt one
