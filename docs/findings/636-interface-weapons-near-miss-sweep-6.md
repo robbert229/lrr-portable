@@ -19,6 +19,12 @@ Measured on `main` `7835ce86` with `make reccmp-check`.
 | `/OPT:REF` relink `.bss` (`opt_ref.image.bss_bytes`) | 1,115,696 | 1,115,696 |
 
 No exact match was lost and no function fell below the baseline.
+
+**Stacked on #725** (`11621ba2`, on #726 and #723): the same 14 functions rise
+by the same amounts and none falls. Exact-function code bytes go from
+286,230 (44.55%) to 286,819 (44.64%); `opt_ref` from 125 / 101 to 125 / 103;
+relink `.bss` stays 1,116,672; gate image end is `0x875000`. No function of
+either unit moved with #726's newly annotated callees.
 `make match-progress` and `make unit-data-offsets` were run, and the three
 progress files are committed (`unit-data-offsets` changed no tracked file).
 The gate image end (`make pe-audit`) stays `0x873000`. `make tools-test`,
