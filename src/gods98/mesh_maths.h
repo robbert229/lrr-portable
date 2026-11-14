@@ -30,9 +30,12 @@ static __inline Mesh_Vector3F* mesh_vector3d_subtract(Mesh_Vector3F* r,
     return r;
 }
 
+/* The parentheses matter: MSVC 5.0 keeps a parenthesised float product as
+ * written, and with them each inlined Mesh_ParseLWO normalise copies y and
+ * z to stack temporaries as the original does (finding 661). */
 static __inline float mesh_vector3d_dot(Mesh_Vector3F* a, Mesh_Vector3F* b)
 {
-    return a->x * b->x + a->y * b->y + a->z * b->z;
+    return (a->x * b->x) + (a->y * b->y) + (a->z * b->z);
 }
 
 static __inline float mesh_vector3d_modulus(Mesh_Vector3F* v)
