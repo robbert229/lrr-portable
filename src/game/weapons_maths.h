@@ -53,14 +53,17 @@ static __inline Weapons_Vector3F* weapons_vector3d_normalise(Weapons_Vector3F* r
     return weapons_vector3d_scale(r, r, 1.0f / weapons_vector3d_modulus(r));
 }
 
+/* gods98's Maths_RayEndPoint scales the ray into a local vector, then adds
+ * the origin. The local is what gives the callers their larger frame and
+ * x87 order (finding 636); r may be p. */
 static __inline Weapons_Vector3F* weapons_ray_end_point(
     Weapons_Vector3F* r, const Weapons_Vector3F* p, const Weapons_Vector3F* v,
     float t)
 {
-    r->x = p->x + v->x * t;
-    r->y = p->y + v->y * t;
-    r->z = p->z + v->z * t;
-    return r;
+    Weapons_Vector3F scaled;
+
+    weapons_vector3d_scale(&scaled, v, t);
+    return weapons_vector3d_add(r, p, &scaled);
 }
 
 static __inline float weapons_vector3d_distance(const Weapons_Vector3F* a,

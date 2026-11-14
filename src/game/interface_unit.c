@@ -1385,9 +1385,12 @@ int interface_handle_item_press(int type, int objType, int objIndex,
 void interface_update_item_enabled(int type)
 {
     if (!(interfaceGlobs.menuItemFlags[type] & INTERFACE_ITEM_FORCE_ENABLED) &&
-        (interfaceGlobs.flags & INTERFACE_FLAG_IN) &&
-        interface_is_item_available(type)) {
-        interfaceGlobs.menuItemFlags[type] &= ~INTERFACE_ITEM_DISABLED;
+        (interfaceGlobs.flags & INTERFACE_FLAG_IN)) {
+        if (interface_is_item_available(type)) {
+            interfaceGlobs.menuItemFlags[type] &= ~INTERFACE_ITEM_DISABLED;
+        } else {
+            interfaceGlobs.menuItemFlags[type] |= INTERFACE_ITEM_DISABLED;
+        }
     } else {
         interfaceGlobs.menuItemFlags[type] |= INTERFACE_ITEM_DISABLED;
     }
@@ -1485,19 +1488,18 @@ void interface_set_item_pressed(int type, int on)
 // FUNCTION: LEGORR 0x0041ca20
 void interface_set_object_item_pressed(int objType, int objIndex, int on)
 {
-    unsigned int* flags;
-
     if (objType == 1) {
-        flags = interfaceGlobs.vehicleItemFlags;
+        if (on) {
+            interfaceGlobs.vehicleItemFlags[objIndex] |= INTERFACE_ITEM_PRESSED;
+        } else {
+            interfaceGlobs.vehicleItemFlags[objIndex] &= ~INTERFACE_ITEM_PRESSED;
+        }
     } else if (objType == 4) {
-        flags = interfaceGlobs.buildingItemFlags;
-    } else {
-        return;
-    }
-    if (on) {
-        flags[objIndex] |= INTERFACE_ITEM_PRESSED;
-    } else {
-        flags[objIndex] &= ~INTERFACE_ITEM_PRESSED;
+        if (on) {
+            interfaceGlobs.buildingItemFlags[objIndex] |= INTERFACE_ITEM_PRESSED;
+        } else {
+            interfaceGlobs.buildingItemFlags[objIndex] &= ~INTERFACE_ITEM_PRESSED;
+        }
     }
 }
 
@@ -2646,19 +2648,18 @@ void interface_set_item_flash(int type, int on)
 // FUNCTION: LEGORR 0x0041e7a0
 void interface_set_object_item_flash(int objType, int objIndex, int on)
 {
-    unsigned int* flags;
-
     if (objType == 1) {
-        flags = interfaceGlobs.vehicleItemFlags;
+        if (on) {
+            interfaceGlobs.vehicleItemFlags[objIndex] |= INTERFACE_ITEM_FLASH;
+        } else {
+            interfaceGlobs.vehicleItemFlags[objIndex] &= ~INTERFACE_ITEM_FLASH;
+        }
     } else if (objType == 4) {
-        flags = interfaceGlobs.buildingItemFlags;
-    } else {
-        return;
-    }
-    if (on) {
-        flags[objIndex] |= INTERFACE_ITEM_FLASH;
-    } else {
-        flags[objIndex] &= ~INTERFACE_ITEM_FLASH;
+        if (on) {
+            interfaceGlobs.buildingItemFlags[objIndex] |= INTERFACE_ITEM_FLASH;
+        } else {
+            interfaceGlobs.buildingItemFlags[objIndex] &= ~INTERFACE_ITEM_FLASH;
+        }
     }
 }
 
@@ -2722,17 +2723,57 @@ int interface_set_advisor_item(int type, int loop)
     return 1;
 }
 
+/* The advisor's pointer for a menu item: 4 for the back button, 5 for the
+ * items below, 3 for every other item. The original keeps each group of
+ * cases as its own body (a 17-entry jump table behind a byte index table),
+ * and MSVC merges the identical bodies afterwards. */
 // FUNCTION: LEGORR 0x0041e8d0
 int interface_get_advisor_type(int type)
 {
     switch (type) {
     case 0:
+        return 4;
     case 1:
     case 2:
-    case 3:
-    case 4:
-        return 4;
+        return 5;
     case 5:
+    case 6:
+        return 5;
+    case 9:
+        return 5;
+    case 11:
+    case 12:
+        return 5;
+    case 14:
+        return 5;
+    case 20:
+        return 5;
+    case 22:
+    case 23:
+    case 24:
+        return 5;
+    case 31:
+        return 5;
+    case 34:
+        return 5;
+    case 36:
+        return 5;
+    case 41:
+    case 42:
+    case 43:
+    case 44:
+        return 5;
+    case 46:
+    case 47:
+        return 5;
+    case 49:
+    case 50:
+        return 5;
+    case 58:
+    case 59:
+        return 5;
+    case 67:
+    case 68:
         return 5;
     }
     return 3;
@@ -2790,14 +2831,14 @@ void interface_update_slide(float elapsed)
     if (!(interfaceGlobs.flags & INTERFACE_FLAG_IN)) {
         if (interfaceGlobs.flags & INTERFACE_FLAG_OUT) {
             interfaceGlobs.currMenuPosition.x += elapsed * interfaceGlobs.slideSpeed;
-            if (interfaceGlobs.currMenuType == 22 && (panelGlobs.flags & 2)) {
+            if (interfaceGlobs.currMenuType == 22 && (panelGlobs.panelTable[8].flags & PANEL_FLAG_OUT)) {
                 panel_state_flags_toggle(8);
                 panel_item_flag8_set_if_enabled(6, 1, 0);
                 interfaceGlobs.currMenuPosition.x = interfaceGlobs.slideOutPosition.x;
             }
             if (interfaceGlobs.currMenuPosition.x >= interfaceGlobs.slideOutPosition.x) {
-                interfaceGlobs.flags &= ~INTERFACE_FLAG_OUT;
                 interfaceGlobs.currMenuPosition.x = interfaceGlobs.slideOutPosition.x;
+                interfaceGlobs.flags &= ~INTERFACE_FLAG_OUT;
                 sound_alias_play(21, 0);
                 if (interfaceGlobs.nextMenuType == 22) {
                     interfaceGlobs.flags = (interfaceGlobs.flags & ~INTERFACE_FLAG_OPEN) | INTERFACE_FLAG_IN;
@@ -2815,13 +2856,12 @@ void interface_update_slide(float elapsed)
                 interfaceGlobs.currMenuType = interfaceGlobs.nextMenuType;
                 interfaceGlobs.selBlockPos = interfaceGlobs.nextBlockPos;
             }
-        }
-    } else if (!(interfaceGlobs.flags & INTERFACE_FLAG_OUT) &&
-               (interfaceGlobs.flags & INTERFACE_FLAG_OPEN)) {
-        interfaceGlobs.currMenuPosition.x -= elapsed * interfaceGlobs.slideSpeed;
-        if (interfaceGlobs.currMenuPosition.x <= interfaceGlobs.slideInPosition.x) {
-            interfaceGlobs.flags |= INTERFACE_FLAG_IN;
-            interfaceGlobs.currMenuPosition.x = interfaceGlobs.slideInPosition.x;
+        } else if (interfaceGlobs.flags & INTERFACE_FLAG_OPEN) {
+            interfaceGlobs.currMenuPosition.x -= elapsed * interfaceGlobs.slideSpeed;
+            if (interfaceGlobs.currMenuPosition.x <= interfaceGlobs.slideInPosition.x) {
+                interfaceGlobs.currMenuPosition.x = interfaceGlobs.slideInPosition.x;
+                interfaceGlobs.flags |= INTERFACE_FLAG_IN;
+            }
         }
     }
 }
@@ -2976,15 +3016,8 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
 // FUNCTION: LEGORR 0x0041f100
 int interface_object_type_present(int objType, int objIndex)
 {
-    InterfaceObjectSearch search;
+    InterfaceObjectSearch search = { 0 };
     unsigned int flags;
-
-    search.objIndex = 0;
-    search.statsMask = 0;
-    search.objType = 0;
-    search.stateMask = 0;
-    search.abilityMask = 0;
-    search.flags = 0;
 
     flags = stats_table_word_at_148(objType, objIndex);
     if (flags & 0x1000) {
@@ -3030,13 +3063,8 @@ int interface_callback_object_search(struct LegoObject* obj, void* data)
 // FUNCTION: LEGORR 0x0041f230
 int interface_any_object_of_type2(void)
 {
-    InterfaceObjectSearch search;
+    InterfaceObjectSearch search = { 0 };
 
-    search.objIndex = 0;
-    search.statsMask = 0;
-    search.objType = 0;
-    search.abilityMask = 0;
-    search.flags = 0;
     search.stateMask = 2;
     return entity_pool_find_by_callback_filtered_current(INTERFACE_OBJECT_CALLBACK(interface_callback_object_search), &search);
 }
@@ -3044,13 +3072,8 @@ int interface_any_object_of_type2(void)
 // FUNCTION: LEGORR 0x0041f270
 int interface_any_object_with_flags3(unsigned int mask)
 {
-    InterfaceObjectSearch search;
+    InterfaceObjectSearch search = { 0 };
 
-    search.objIndex = 0;
-    search.statsMask = 0;
-    search.abilityMask = 0;
-    search.objType = 0;
-    search.flags = 0;
     search.stateMask = mask;
     return entity_pool_find_by_callback_filtered_current(INTERFACE_OBJECT_CALLBACK(interface_callback_object_search), &search);
 }
@@ -3058,26 +3081,18 @@ int interface_any_object_with_flags3(unsigned int mask)
 // FUNCTION: LEGORR 0x0041f2b0
 int interface_any_object_with_flags2_100000(void)
 {
-    InterfaceObjectSearch search;
+    InterfaceObjectSearch search = { 0 };
 
-    search.objIndex = 0;
-    search.stateMask = 0;
-    search.objType = 0;
-    search.abilityMask = 0;
     search.statsMask = 0x100000;
-    search.flags = 0;
     return entity_pool_find_by_callback_filtered_current(INTERFACE_OBJECT_CALLBACK(interface_callback_object_search), &search);
 }
 
 // FUNCTION: LEGORR 0x0041f2f0
 int interface_any_object_of_type(int objType, int objIndex)
 {
-    InterfaceObjectSearch search;
+    InterfaceObjectSearch search = { 0 };
 
-    search.statsMask = 0;
-    search.stateMask = 0;
-    search.abilityMask = 0;
-    search.flags = 1;
+    search.flags |= 1;
     search.objType = objType;
     search.objIndex = objIndex;
     return entity_pool_find_by_callback_filtered_current(INTERFACE_OBJECT_CALLBACK(interface_callback_object_search), &search);
@@ -3086,13 +3101,9 @@ int interface_any_object_of_type(int objType, int objIndex)
 // FUNCTION: LEGORR 0x0041f340
 int interface_any_object_with_ability(unsigned int mask)
 {
-    InterfaceObjectSearch search;
+    InterfaceObjectSearch search = { 0 };
 
-    search.objIndex = 0;
-    search.statsMask = 0;
-    search.stateMask = 0;
-    search.flags = 2;
-    search.objType = 0;
+    search.flags |= 2;
     search.abilityMask = mask;
     return entity_pool_find_by_callback_filtered_current(INTERFACE_OBJECT_CALLBACK(interface_callback_object_search), &search);
 }
