@@ -12,7 +12,7 @@ in a playable state before the end of November 2026.
      with `python3 tools/readme_status.py` (no build needed); recount the
      source ledger with `python3 tools/coverage_ledger.py`. -->
 
-Verified **2026-11-13** on `main` at `5f251885`, with MSVC 5.0 and Reccmp:
+Verified **2026-11-13** on `f1a9cb16` (#752, stacked on `main` `5f251885`), with MSVC 5.0 and Reccmp:
 
 | Measure | Value |
 | --- | ---: |

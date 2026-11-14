@@ -5,7 +5,9 @@ Issue #748. Follows findings
 existed) and [642](642-gate-takes-the-original-link-mode.md) (the gate links
 in the original's mode, and the image ends at `0x7f5000`). Measured with
 `make reccmp-check`, `make match-progress`, `make pe-audit` and
-`make match-function` on `main` `5f251885` and on this change. No source
+`make match-function` on `main` `5f251885` and on this change. Rebased onto
+#752 (`f1a9cb16`, the original's resources and header stamps): every score is
+the same as #752's baseline, and the image still ends at `0x7f5000`. No source
 file changed. The matching build is the same.
 
 ## Summary
@@ -69,14 +71,16 @@ fixture PEs.
 
 ## Generated files
 
-`make match-progress` changes only the input hashes, plus one `opt_ref`
-classification: one 32-byte function counts as `original_annotated` (2,533
-functions, 573,008 bytes) instead of `port_unit` (13, 416 bytes). No source
-changed and both Reccmp reports are the same as `main`'s, so `main`'s
-committed `binary-progress.json` was already stale on that row.
-`make winapi-link-check` gives the same 2,533 / 573,008 on this build.
-`make unit-data-offsets`, `make opt-ref-callers` and `make pe-audit` write
-no committed file.
+`make match-progress` changes only the input hashes, plus the `opt_ref`
+`original_annotated` / `port_unit` split, which moves by one 32-byte function
+between builds of the same source. `main` committed 2,532 / 14, the first
+build of this change gave 2,533 / 13, #752 committed 2,531 / 15, and this
+change rebased onto #752 gives 2,532 / 14. Every Reccmp score and listing is
+unchanged, and `make winapi-link-check` reports 2,533 annotated functions
+(573,008 bytes) on every one of these builds. So the row is noise in the
+relink's classification, not a change. (#748 first said `main`'s row was
+stale. That was wrong.) `make unit-data-offsets`, `make opt-ref-callers` and
+`make pe-audit` write no committed file.
 
 | Measure | `main` `5f251885` | This change |
 | --- | ---: | ---: |
