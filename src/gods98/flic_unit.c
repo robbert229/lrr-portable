@@ -224,6 +224,8 @@ int Flic_Setup(const char* filename, LPFLICSTRUCT* fsp, unsigned int flags)
     char dir[_MAX_DIR];
     char fname[_MAX_FNAME];
     char ext[_MAX_EXT];
+    unsigned int width;
+    unsigned int height;
 
     *fsp = (LPFLICSTRUCT)malloc(sizeof(FLICSTRUCT));
     memset(*fsp, 0, sizeof(FLICSTRUCT));
@@ -236,8 +238,12 @@ int Flic_Setup(const char* filename, LPFLICSTRUCT* fsp, unsigned int flags)
     ddsd.dwSize = sizeof(ddsd);
     ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
     ddsd.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
-    (*fsp)->fsXsize = ddsd.dwWidth = (*fsp)->fsHeader.width;
-    (*fsp)->fsYsize = ddsd.dwHeight = (*fsp)->fsHeader.height;
+    width = (*fsp)->fsHeader.width;
+    height = (*fsp)->fsHeader.height;
+    ddsd.dwWidth = width;
+    ddsd.dwHeight = height;
+    (*fsp)->fsXsize = width;
+    (*fsp)->fsYsize = height;
     dd->lpVtbl->CreateSurface(dd, &ddsd, &(*fsp)->fsSurface, NULL);
 
     colourKey.low = 0;
@@ -692,7 +698,7 @@ int Flic_BrunDepack(LPFLICSTRUCT fsp)
     unsigned short height;
 
     height = (unsigned short)fsp->fsYsize;
-    for (line = 0; line < height; line++) {
+    for (line = 0; line < height; line++, src++) {
         width = (unsigned short)fsp->fsXsize;
         dst = (unsigned short*)fsp->fsSPtr + (fsp->fsPitch >> 1) * line;
         while (width > 0) {
@@ -714,7 +720,6 @@ int Flic_BrunDepack(LPFLICSTRUCT fsp)
                 }
             }
         }
-        src++;
     }
 
     return 1;
