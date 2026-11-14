@@ -218,6 +218,7 @@ struct G98CMovie {
                     MovieUnknown* ddraw);
     bool Update(float speed, LPRECT destRect);
     unsigned int GetDuration();
+    void SetPosition(unsigned int ms);
 
     /* Deviation (scoring only): the original's new-expression and
      * destructor call the global operator new (LIBC's, 0x0048ead0) and
@@ -371,6 +372,16 @@ unsigned int G98CMovie::GetDuration()
     m_amStream->GetDuration(&duration);
 
     return (unsigned int)(duration / 10000);
+}
+
+/* Nothing calls this method, so the original's /OPT:REF removed it, but its
+ * 64-bit multiply had already pulled LIBC's __allmul right after GetDuration's
+ * __alldiv (finding 667). Its shape is inferred; only the reference
+ * matters. */
+// PORT-ONLY: the original's unreferenced position setter, which /OPT:REF removed; kept for its __allmul reference (finding 667)
+void G98CMovie::SetPosition(unsigned int ms)
+{
+    m_amStream->Seek((LONGLONG)ms * 10000);
 }
 
 extern "C" {

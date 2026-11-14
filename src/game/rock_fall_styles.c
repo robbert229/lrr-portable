@@ -226,7 +226,7 @@ int effect_get_rock_fall_style(const char* name, unsigned int* style)
     unsigned int i;
 
     for (i = 0; i < effectGlobs.rockFallStyleCount; i++) {
-        if (_strcmpi(effectGlobs.rockFallStyleNames[i], name) == 0) {
+        if (stricmp(effectGlobs.rockFallStyleNames[i], name) == 0) {
             *style = i;
             return 1;
         }

@@ -316,26 +316,26 @@ int weapons_initialise(struct BlockRec* config, const char* gameName)
                                          arrayItem->key, NULL));
                     while (prop != NULL) {
                         // STRING: LEGORR 0x004aaa94
-                        if (_strcmpi(prop->key, "SlowDeath") == 0) {
+                        if (stricmp(prop->key, "SlowDeath") == 0) {
                             sound_variant_split(prop->value, parts, s_config_rgb_separator);
                             weaponGlobs.weaponStatsList[i].slowDeath = 1;
                             weaponGlobs.weaponStatsList[i].slowDeathDamage = (float)atof(parts[0]);
                             weaponGlobs.weaponStatsList[i].slowDeathDuration = (float)atof(parts[1]);
                         }
                         // STRING: LEGORR 0x004aaa84
-                        else if (_strcmpi(prop->key, "RechargeTime") == 0) {
+                        else if (stricmp(prop->key, "RechargeTime") == 0) {
                             weaponGlobs.weaponStatsList[i].rechargeTime = (float)atof(prop->value);
                         }
                         // STRING: LEGORR 0x004aaa74
-                        else if (_strcmpi(prop->key, "DefaultDamage") == 0) {
+                        else if (stricmp(prop->key, "DefaultDamage") == 0) {
                             weaponGlobs.weaponStatsList[i].defaultDamage = (float)atof(prop->value);
                         }
                         // STRING: LEGORR 0x004aaa64
-                        else if (_strcmpi(prop->key, "DischargeRate") == 0) {
+                        else if (stricmp(prop->key, "DischargeRate") == 0) {
                             weaponGlobs.weaponStatsList[i].dischargeRate = (float)atof(prop->value);
                         }
                         // STRING: LEGORR 0x004aaa58
-                        else if (_strcmpi(prop->key, "WeaponRange") == 0) {
+                        else if (stricmp(prop->key, "WeaponRange") == 0) {
                             weaponGlobs.weaponStatsList[i].weaponRange = (float)atof(prop->value);
                         }
                         else {
@@ -343,7 +343,7 @@ int weapons_initialise(struct BlockRec* config, const char* gameName)
                                 // STRING: LEGORR 0x004aaa44
                                 sprintf(buff, "WallDestroyTime_%s",
                                         legoGlobs_langSurface_name[j] + 17);
-                                if (_strcmpi(prop->key, buff) == 0) {
+                                if (stricmp(prop->key, buff) == 0) {
                                     weaponGlobs.weaponStatsList[i].wallDestroyTimes[j] = (float)atof(prop->value);
                                     prop = block_next_equal_key(prop);
                                     break;
@@ -351,7 +351,7 @@ int weapons_initialise(struct BlockRec* config, const char* gameName)
                             }
                             if (j != 18) continue;
                             // STRING: LEGORR 0x004aaa3c
-                            if (_strcmpi(prop->key, "Ammo") == 0) {
+                            if (stricmp(prop->key, "Ammo") == 0) {
                                 weaponGlobs.weaponStatsList[i].ammo = atoi(prop->value);
                             }
                             else {
@@ -387,7 +387,7 @@ uint32_t object_type_name_index_find(const char* name)
 {
     unsigned int i;
     for (i = 0; i < weaponGlobs.weaponCount; i++) {
-        if (_strcmpi(weaponGlobs.weaponNameList[i], name) == 0) return i;
+        if (stricmp(weaponGlobs.weaponNameList[i], name) == 0) return i;
     }
     return weaponGlobs.weaponCount + 1;
 }

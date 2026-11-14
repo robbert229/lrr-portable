@@ -235,7 +235,7 @@ int text_get_type_from_name(const char* name, int* type)
     unsigned int loop;
 
     for (loop = 0; loop < Text_Type_Count; loop++) {
-        if (!_strcmpi(textGlobs.typeName[loop], name)) {
+        if (!stricmp(textGlobs.typeName[loop], name)) {
             *type = loop;
             return 1;
         }

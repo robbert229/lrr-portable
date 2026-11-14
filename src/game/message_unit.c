@@ -201,7 +201,7 @@ int message_lookup_physical_name(const char* name)
     unsigned int i;
 
     for (i = 0; i < MESSAGE_TYPE_COUNT; i++) {
-        if (!_strcmpi(messageGlobs.messageName[i] + 8, name)) return i;
+        if (!stricmp(messageGlobs.messageName[i] + 8, name)) return i;
     }
 #if !(defined(_MSC_VER) && _MSC_VER < 1200)
     /* The original falls off the end and returns the last comparison's

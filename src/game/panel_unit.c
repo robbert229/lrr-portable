@@ -214,7 +214,7 @@ int ui_panel_name_table_lookup(const char* name, int* panelType)
     unsigned int i;
 
     for (i = 0; i < PANEL_TYPE_COUNT; i++) {
-        if (_strcmpi(name, panelGlobs.panelName[i]) == 0) {
+        if (stricmp(name, panelGlobs.panelName[i]) == 0) {
             *panelType = i;
             return 1;
         }
@@ -245,7 +245,7 @@ int ui_panel_indexed_name_lookup(int panelType, const char* name,
     const char** names = panelGlobs.buttonName[panelType];
 
     for (i = 0; i < PANEL_MAX_BUTTONS; i++) {
-        if (names[i] != NULL && _strcmpi(name, names[i]) == 0) {
+        if (names[i] != NULL && stricmp(name, names[i]) == 0) {
             *button = i;
             return 1;
         }

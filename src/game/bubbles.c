@@ -277,7 +277,7 @@ int bubble_get_bubble_type(const char* name)
     int result;
 
     for (i = 0; i < Bubble_Type_Count; i++) {
-        if ((result = _strcmpi(bubbleGlobs.bubbleName[i], name)) == 0) return i;
+        if ((result = stricmp(bubbleGlobs.bubbleName[i], name)) == 0) return i;
     }
     return result;
 }
