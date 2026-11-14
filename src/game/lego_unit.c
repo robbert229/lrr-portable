@@ -2250,7 +2250,7 @@ int lego_engine_tick(float elapsed)
                 &sfx))
             sound_alias_play(sfx, 1);
         if (sound_alias_lookup("SND_AirBeat", &sfx)) {
-            volume = (int)(constant_negative_10000_get() / 10.0f * (legoGlobs_currLevel->oxygenLevel / 10.0f));
+            volume = (int)((float)(constant_negative_10000_get() / 10.0f) * (legoGlobs_currLevel->oxygenLevel / 10.0f));
             if (volume != sound_variant_property_read_original(sfx))
                 sound_variant_property_set(sfx, volume);
         }
@@ -5122,11 +5122,10 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
                            const char* fallinMap)
 {
     unsigned int x, y;
-    int result;
 
     LEGO_LEVEL_PTR_SET(level->map, terrain_map_create(legoGlobs_rootCont, surfaceMap, level->blockSize,
                                                       level->roughLevel));
-    if ((result = (int)(uintptr_t)LEGO_LEVEL_PTR(void, level->map))) {
+    if (LEGO_LEVEL_PTR(void, level->map)) {
         level->f_084 = (uint32_t)(uintptr_t)ui_render_record_create(
             LEGO_LEVEL_PTR(void, level->map), (const uint32_t*)legoGlobs_f_5563e4,
             LEGO_FIELD(&s_lego_radar_zoom, uint32_t, 0));
@@ -5149,9 +5148,9 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
             graphics_overlay_visibility_set(1);
         }
 
-        if ((result = lego_texture_set_config_load(level, textureSet))) {
+        if (lego_texture_set_config_load(level, textureSet)) {
             LEGO_LEVEL_PTR_SET(level->blocks, (Lego_Block*)malloc(sizeof(Lego_Block) * level->width * level->height));
-            if ((result = (int)(uintptr_t)LEGO_LEVEL_PTR(void, level->blocks))) {
+            if (LEGO_LEVEL_PTR(void, level->blocks)) {
                 memset(LEGO_LEVEL_PTR(Lego_Block, level->blocks), 0, sizeof(Lego_Block) * level->width * level->height);
                 for (y = 0; y < level->height; y++) {
                     for (x = 0; x < level->width; x++) {
@@ -5166,8 +5165,8 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
                     }
                 }
 
-                if ((result = lego_load_predug_layer(level, predugMap, predugParam))) {
-                    if ((result = lego_load_erode_cryore(level, terrainMap, terrainParam))) {
+                if (lego_load_predug_layer(level, predugMap, predugParam)) {
+                    if (lego_load_erode_cryore(level, terrainMap, terrainParam)) {
                         lego_load_path_ai(level, cryOreMap, (char)cryOreParam);
                         lego_load_emerge_layer(level, erodeMap);
                         lego_load_fallin(level, pathMap, pathParam);
@@ -5186,13 +5185,17 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
 
                         terrain_map_vertex_normals_update_all(LEGO_LEVEL_PTR(struct TerrainMap, level->map));
                         terrain_cell_quad_run_stage_level(legoGlobs_rootCont, (struct LevelState*)level);
-                        result = 1;
+                        return 1;
                     }
                 }
             }
         }
     }
-    return result;
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+    /* The original falls off the end on failure, with the failed test's
+     * zero in eax; the port needs a return. */
+    return 0;
+#endif
 }
 
 /* SurfaceTextCharacterMapInitialize [group 2A]: Lego_InitTextureMappings.
@@ -5687,13 +5690,15 @@ void lego_camera_grid_expiry(float elapsed)
     Lego_Level* level = (Lego_Level*)level_current_owner_get();
     unsigned int width, height, x, y;
     int blockPos[2];
+    Lego_Block* block;
 
     if (legoGlobs_f_556f18 && (width = level->width) != 0 && (height = level->height) != 0) {
         for (y = 0; y < height; y++) {
             for (x = 0; x < width; x++) {
                 blockPos[0] = x;
                 blockPos[1] = y;
-                if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10[11] != 0) {
+                block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x];
+                if (block->f_10[11] != 0) {
                     ((float*)LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10)[12] += elapsed;
                     if ((float)(LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10[11] * legoGlobs_f_556f14 * 25) < ((float*)LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10)[12]) {
                         ((float*)LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10)[12] = 0.0f;
