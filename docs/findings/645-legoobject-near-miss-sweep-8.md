@@ -18,6 +18,12 @@ change and one after.
 | `opt_ref` removed / removed exact | 27 / 23 | 28 / 24 (one `/OPT:ICF` twin swap, below) |
 | Image end | `0x875000` | `0x875000` |
 
+Stacked on #742 (`match/740-lego-sweep7`, `938d4cce`), the same six
+functions rise and none falls: exact-function code bytes 306,123 (47.64%)
+to **308,143 (47.96%)**, exact functions 2,267 to 2,271, Reccmp mean
+96.51 / 96.24 to 96.52 / 96.24, `opt_ref` 26 / 22 to 27 / 23 (the same
+`/OPT:ICF` twin swap), image end `0x875000`.
+
 No exact match was lost and no function fell below the baseline. `make
 match-progress`, `make unit-data-offsets` and `make opt-ref-callers
 OPT_REF_ARGS=--summary` were run, and the three generated files are
