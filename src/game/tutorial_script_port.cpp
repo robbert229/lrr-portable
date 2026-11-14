@@ -5,9 +5,9 @@
  * (s_tutorial_script_ops, s_advisor_inline_token_ops) and its own state, and
  * native callers and tests use it under the port's names. Nothing here is
  * annotated: each former FUNCTION marker is a "Port model of" comment, and
- * the original's storage is tutorial_script.c's. At the end, the adapters
- * that tutorial_script.c's NERP function table names for the functions not
- * yet rebuilt in original shape. */
+ * the original's storage is tutorial_script.c's. The NERP function table
+ * names only tutorial_script.c's own functions (finding 673), so nothing in
+ * a unit references this file. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#588). */
 #include "legoobject_port_aliases.h"
 #include <stdio.h>
@@ -1075,32 +1075,3 @@ extern "C" uint32_t system_state_flags_get_original(const int* parameters)
     (void)parameters;
     return system_state_flags_get();
 }
-
-/* ------------------------------------------------------------------ */
-/* The NERP function table's port rows (tutorial_script.c, 004a5948).   */
-/* ------------------------------------------------------------------ */
-
-/* Runs the port's NERP implementation for one table row with the
- * original's argument words, as the port's dispatcher does: the row's kind
- * gives the argument count (1 and 2 for functions, 4-6 for statements). */
-static int nerps_port_call(uint32_t row, unsigned int* stack)
-{
-    const uint32_t kind = tutorial_command_kind_default(row);
-    uint32_t argc = 0u;
-    uint32_t result = 0u;
-    if (kind == 1u || kind == 2u) argc = kind;
-    else if (kind >= 4u && kind <= 6u) argc = kind - 3u;
-    (void)tutorial_command_invoke(row, argc == 0u ? NULL : stack, argc,
-                                  &result);
-    return (int)result;
-}
-
-/* One adapter per function of tutorial_script_port_functions.h, with the
- * original's NERP function signature and C linkage. */
-#define NERPS_PORT_FUNCTION(name, row)                                  \
-    extern "C" int nerps_port_##name(unsigned int* stack)                \
-    {                                                                    \
-        return nerps_port_call((uint32_t)(row), stack);                  \
-    }
-#include "tutorial_script_port_functions.h"
-#undef NERPS_PORT_FUNCTION
