@@ -19,7 +19,24 @@ after.
 | Rows of `tutorial_script_port_functions.h` | 276 | 184 |
 
 No function fell below the match baseline, and the baseline diff is exactly
-the 102 new functions plus `00453da0`. `make match-progress`,
+the 102 new functions plus `00453da0`.
+
+**Stacked on #736** (`switch/731-lego-callers` `3333b66e`, itself on #735 and
+`main` `c9cff262`), measured again with full runs:
+
+| Measure | #736 | This change on #736 |
+| --- | ---: | ---: |
+| Exact-function code bytes | 300,991 (46.84%) | **301,560 (46.93%)** |
+| `opt_ref` removed / removed exact | 73 / 64 | **64 / 54** |
+| Annotated mapped / exact (full) | 2,663 / 2,147 | 2,765 / 2,250 |
+| Relink `.bss` | 1,116,688 | 1,116,688 |
+
+The baseline diff against #736 is again the 102 new functions plus
+`00453da0`. No function of #735 or #736 falls, and `0041fb50`
+`lego_game_config_init` stays at 100%. #736 points `lego_engine_tick`'s
+`world_render_pass_b_original` at this unit's `nerps_draw_tutorial_icon`,
+which this change does not touch. On the stack NERPs has no removed function:
+#736 revives `00454600` and #735 revives `00454880`. `make match-progress`,
 `make unit-data-offsets`, `make opt-ref-callers OPT_REF_ARGS=--summary`,
 `make tools-test`, `make winapi-link-check`, `make reccmp-lint` (931, unchanged)
 and native ctest (37 of 37) pass.
@@ -129,8 +146,8 @@ All 9 Interface.c functions are now live, and so are NERPs's
 | Removed | Hangs below | Owner |
 | --- | --- | --- |
 | `004033f0` aitask_coordinate_pair_task_record_queue, `00403430` aitask_task_registry_remove_type0_entry_by_pair (AITask.c, exact) | NERPs's ~1 KB block-pointer callback `00456d00`. It is not rebuilt, and the original reaches it only through the `.data` pointer `004a676c` that the `MakeSomeoneOnThisBlockPickUpSomethingOnThisBlock` / `SetCongregationAtTutorial` / `...AtTutorial` rows (`00457130`-`004574a0`) pass to `nerps_block_pointer_enumerate` | NERPs (this unit), follow-up: rebuild `00456d00`, its pointer and those rows |
-| `00454600` nerps_draw_tutorial_icon | `lego_engine_tick` `004232e0` calls `lego_port.cpp`'s `world_render_pass_b_original` | #731 (`lego_unit.c`, `lego_port.cpp`) |
-| `00454880` nerps_monster_destroyed (exact) | `legoobject_deferred_olist_create_and_link` `00437940` calls `legoobject_port.cpp`'s `legoobject_gb_tutorial_counter_increment_adapter` | #730 (`legoobject_unit.c`) |
+| `00454600` nerps_draw_tutorial_icon | `lego_engine_tick` `004232e0` calls `lego_port.cpp`'s `world_render_pass_b_original` | #731 (`lego_unit.c`, `lego_port.cpp`): resolved by #736 on the stack |
+| `00454880` nerps_monster_destroyed (exact) | `legoobject_deferred_olist_create_and_link` `00437940` calls `legoobject_port.cpp`'s `legoobject_gb_tutorial_counter_increment_adapter` | #730 (`legoobject_unit.c`): resolved by #735 on the stack |
 | `004021e0`, `00402210` (AITask.c) | folded by `/OPT:ICF` (finding 637) | `/OPT:NOICF` in the eventual gate link |
 
 **Literal range.** `make unit-data-offsets` lists the 13 new `STRING`
