@@ -886,6 +886,7 @@ tools/binary_progress.py
 tools/binary_progress_hash.py
 tools/binary_progress_inputs.txt
 tools/clean_reccmp_report_names.py
+tools/identity_metrics.py
 tools/layout_progress.py
 tools/link_order.py
 tools/match_baseline.py

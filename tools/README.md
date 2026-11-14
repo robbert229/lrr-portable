@@ -964,6 +964,39 @@ without publics; the link-order list comparison uses unit starts and legacy
 median keys and excludes the port tail. None of these is a claim of exact
 object or data boundaries.
 
+Schema 5 adds three identity measures (`tools/identity_metrics.py`, finding
+668), all from the same build, Reccmp report and map:
+
+- `correct_size_functions` (full and game-only scopes): mapped functions whose
+  rebuilt code size equals the original's, with their original bytes. Both
+  sides are measured by one rule, `code_extent`: the instructions reachable
+  from the function's start (stopping at `ret`, `jmp`, `int3`, `hlt` and the
+  next known function start), plus in-function data after the code that the
+  code addresses (switch jump and index tables), without trailing `nop` or
+  `int3` padding. Original starts are the listed functions and every
+  Reccmp-mapped address; rebuilt starts are the map's `.text` symbols and the
+  matched entities. Reccmp's PDB sizes are not used: LIBC members' PDB sizes
+  include alignment, and switch tables are outside the disassembled extent.
+  On the 100% matches the two extents agree for 2,418 of 2,421 functions
+  (the three are MASM routines with secondary entry points). `exact_functions`
+  counts Reccmp's 100% scores in the same scope, for comparison. Equal size is
+  not equal code.
+- `identical_prefix`: the bytes of the original `.text`, from its start,
+  that the rebuilt image holds at the same addresses before the first
+  difference, and that address with the original function containing it.
+  Raw bytes. `address_operands_masked` repeats the walk with image-address
+  operands and external branch targets masked inside each listed function
+  (`layout_progress.mask_operands`); padding compares raw. It shows how far
+  the code agrees apart from where data and callees landed.
+- `unit_size_agreement`: for each unit range with listed functions, whether
+  every function has the correct size (as above), the first function sits at
+  its original address, and the last function's code ends at its original
+  end. Trailing padding is not compared. `per_unit` lists each unit's three
+  answers; `agreeing_unit_ids` the units with all three.
+
+`tools/readme_status.py` prints the three. `pr_match_progress.py render`
+compares their counts.
+
 Section comparisons align each named section at its start and use the
 original's virtual size as denominator (missing candidate bytes count as
 unequal); raw-file alignment padding is excluded. Imports and resources use
@@ -1164,6 +1197,33 @@ checkout` the file). Never run a probe while a build compiles the same tree.
 **The pads are a diagnostic only.** ADR 0005 entropy rules 3 and 4 forbid
 committing them or any filler declaration; fix the original's real
 declarations instead.
+
+## `port_tail_inventory.py` — the port tail in the matching link (finding 668)
+
+`python3 tools/port_tail_inventory.py [--build build-reccmp] [--json OUT]`
+reads an existing matching build (executable, map, Reccmp report and the
+objects of `link-members.txt` and `CMakeFiles/link_*`/`late_*`) and prints:
+
+- the rebuilt `.text` as runs of one link-order kind, and the entry point's
+  offset split into the unit segment's end against the original's first CRT
+  address and the LIBC bytes before `WinMainCRTStartup`;
+- each unit object's span against its original range (`unit_spans`);
+- for each object of `lrr_tail.lib`: `.text` bytes from the map, data bytes
+  from its COFF sections (non-COMDAT sections, plus the string-literal
+  COMDATs the map attributes to it), who references it, which units it
+  references, and positional "stands in for" pairs (the references of each
+  mapped function, paired in order when both sides hold the same count);
+- `removal`: a model of the link built from COFF relocations. LINK pulls
+  archive members before `/OPT:REF`, so a member referenced only by a
+  function `/OPT:REF` later discards is still pulled, and its non-COMDAT
+  sections (function tables, hook tables) keep what they point at. The model
+  reproduces the linked tail code exactly (203,168 bytes on `1f5d8a1e`). It
+  reports each root object's "alone keeps", the anchor sections, and a
+  greedy order of root objects to retarget, with and without the anchors.
+
+The greedy steps take about 30 s. It writes nothing unless `--json` is given
+and does not change `binary-progress.json`. Tests: `test_port_tail_inventory.py`
+in `make tools-test`.
 
 ## Native CMake/Meson source parity
 

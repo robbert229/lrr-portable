@@ -36,3 +36,16 @@ print(f"/OPT:REF link removes {o['removed_bytes']:,} bytes in {o['removed_functi
       f".text then {o['image']['section_bytes']['.text']['rebuilt']:,}")
 u = p["layout"]["unit_contiguity"]
 print(f"Contiguous units: {u['units']} / {u['eligible_units']} ({u['percent']}%)")
+c = p.get("correct_size_functions")
+if c:
+    print(f"Correct-size functions: {c['full']['count']:,} full ({c['full']['bytes']:,} bytes), "
+          f"{c['game_only']['count']:,} game-only ({c['game_only']['bytes']:,} bytes)")
+x = p.get("identical_prefix")
+if x:
+    m = x["address_operands_masked"]
+    print(f"Identical prefix: {x['bytes']:,} bytes to {x['first_difference']} ({x['function']}); "
+          f"address operands masked {m['bytes']:,} bytes to {m['first_difference']} ({m['function']})")
+agree = p.get("unit_size_agreement")
+if agree:
+    print(f"Units with size agreement: {agree['units']} / {agree['eligible_units']} "
+          f"(correct sizes {agree['correct_size_units']}, start {agree['start_agreeing_units']}, end {agree['end_agreeing_units']})")

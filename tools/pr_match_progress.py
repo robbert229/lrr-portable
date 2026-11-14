@@ -18,7 +18,7 @@ MARKER = '<!-- matching-progress-report -->'
 
 def read_progress(root):
     data = json.loads((root / PROGRESS).read_text(encoding='utf-8'))
-    if data['schema_version'] not in (2, 3, 4):
+    if data['schema_version'] not in (2, 3, 4, 5):
         raise ValueError('unsupported binary progress schema')
     return data
 
@@ -57,6 +57,11 @@ def render(base, head):
         ('Exact-function code coverage (%)', ('exact_function_code_bytes', 'percent'), 1),
         ('Adjacent inversions, full', ('function_order_inversions', 'full', 'adjacent'), -1),
         ('Adjacent inversions, game-only', ('function_order_inversions', 'game_only', 'adjacent'), -1),
+        ('Correct-size functions, full', ('correct_size_functions', 'full', 'count'), 1),
+        ('Correct-size functions, game-only', ('correct_size_functions', 'game_only', 'count'), 1),
+        ('Identical prefix (bytes)', ('identical_prefix', 'bytes'), 1),
+        ('Identical prefix, address operands masked (bytes)', ('identical_prefix', 'address_operands_masked', 'bytes'), 1),
+        ('Units with size agreement', ('unit_size_agreement', 'units'), 1),
         ('Accuracy, game-only (%)', ('accuracy_percent', 'game_only'), 1),
         ('Accuracy, full (%)', ('accuracy_percent', 'full'), 1),
         ('.text bytes /OPT:REF removes', ('opt_ref', 'removed_bytes'), -1),
