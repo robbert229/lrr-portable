@@ -751,7 +751,7 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
             if (rec->type == 4) {
                 shape = (void*)task_field84_get_and_field88_out(
                     (char*)legoGlobs_buildingData + rec->id * 0x14c, &shapeCount);
-                direction = (unsigned int)(rec->heading * 0.15915494f * 8.0f);
+                direction = (unsigned int)((float)(rec->heading * 0.15915494f) * 8.0f);
                 direction = ((direction & 1) + direction) >> 1;
                 points = rotated_pairs_scratch_fill((const int*)rec, (const int*)shape,
                                                     shapeCount, direction);
@@ -2637,7 +2637,16 @@ Lego_Object* legoobject_creature_spawn_from_emergence(void* model, int type, int
             legoobject_set_activity(obj, 0xc, 0);
             legoobject_activity_register_bookkeeping(obj);
             aitask_ai_idle_chain_record_attach(LEGOOBJ_SLOT(obj));
+#if defined(_MSC_VER) && _MSC_VER < 1200
+            /* The original takes the container before pushing the other
+             * arguments, as from a temporary. `found` (dead here) holds it
+             * in the 32-bit matching build: a new local costs a symbol
+             * (rule B, finding 645). */
+            found = (int)legoobject_type_component_get(obj);
+            sound_submission_route_wrapper((void*)found, 10, 0, 1, NULL);
+#else
             sound_submission_route_wrapper(legoobject_type_component_get(obj), 10, 0, 1, NULL);
+#endif
             level_tile_mark_current_target(blockPos, 1);
             obj->targetBlockPos[0] = (float)blockPos[0];
             obj->targetBlockPos[1] = (float)blockPos[1];
@@ -4395,9 +4404,17 @@ void legoobject_spawn_request_queue_process(Lego_Object* obj)
             created = obj->field_3cc;
             if (created->type == 1)
                 six_resource_slots_set_state(created->vehicle, 1);
-            for (legoGlobs_f_556514--; i < legoGlobs_f_556514; i++) {
-                queue->type[i] = queue->type[i + 1];
-                queue->id[i] = queue->id[i + 1];
+            /* Deviation (scoring only): in the original the queue and its
+             * count are fields of legoGlobs, so MSVC reloads the count after
+             * the stores on every pass but the first. The port keeps them as
+             * separate globals; the rotated loop and a volatile read of the
+             * count restore the reloads (finding 645). */
+            if (i < --legoGlobs_f_556514) {
+                do {
+                    queue->type[i] = queue->type[i + 1];
+                    queue->id[i] = queue->id[i + 1];
+                    i++;
+                } while (i < *(volatile unsigned int*)&legoGlobs_f_556514);
             }
         }
     }
@@ -7712,6 +7729,9 @@ int legoobject_route_adjacent_step_append(Lego_Object* obj, int bx, int by)
 // FUNCTION: LEGORR 0x004469c0
 int legoobject_nearest_connected_cell_route_select(Lego_Object* obj, unsigned int bx, unsigned int by, int diagonals, unsigned int* outIndex, int strict)
 {
+    unsigned int best = (unsigned int)-1;
+    unsigned int bestCount = (unsigned int)-1;
+    unsigned int found = (unsigned int)-1;
     unsigned int j;
     unsigned int i;
     unsigned int count;
@@ -7726,19 +7746,13 @@ int legoobject_nearest_connected_cell_route_select(Lego_Object* obj, unsigned in
     float px;
     float wy;
     float wx;
-    unsigned int found;
-    unsigned int bestCount;
     float dist;
-    unsigned int best;
     int objBy;
     int objBx;
     int result;
     LegoObjP_Point2F* dirs;
     int canReach;
 
-    best = (unsigned int)-1;
-    bestCount = (unsigned int)-1;
-    found = (unsigned int)-1;
     result = 0;
     canReach = 1;
     if (diagonals) {
@@ -8300,9 +8314,8 @@ int legoobject_activity_register_bookkeeping(Lego_Object* obj)
         obj->animTime = 0.0f;
         obj->activityName2 = obj->activityName1;
         obj->flags2 &= ~0x20000;
-        return result;
     }
-    return 0;
+    return result;
 }
 
 /* LegoObject_UpdateMiscObject: the per-frame behaviour of the miscellaneous
