@@ -125,10 +125,18 @@ extern LegoObject* lego_object_fp;
  * DAT_0055627c/DAT_00556288 their counts. */
 extern char** lego_vehicle_names;
 extern char** lego_building_names;
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the counts are legoGlobs' words, which entity.cpp keeps
+ * as s_catalog_counts (C linkage since #740), [0] and [3]. */
+extern unsigned int s_catalog_counts[5];
+#define LEGO_VEHICLE_TYPE_COUNT s_catalog_counts[0]
+#define LEGO_BUILDING_TYPE_COUNT s_catalog_counts[3]
+#else
 extern unsigned int lego_vehicle_type_count;
 extern unsigned int lego_building_type_count;
 #define LEGO_VEHICLE_TYPE_COUNT lego_vehicle_type_count
 #define LEGO_BUILDING_TYPE_COUNT lego_building_type_count
+#endif
 #define LEGO_VEHICLE_NAME(i) (lego_vehicle_names[i])
 #define LEGO_BUILDING_NAME(i) (lego_building_names[i])
 /* DAT_0055644c..DAT_00556454 the primary teleporters. */

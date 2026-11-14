@@ -124,66 +124,212 @@ static const unsigned int s_keyCharacters[256] = {
     0x32, 0x33, 0x30, 0x00
 };
 
-/* frontGlobs (00556fc0), in the common region. Fields the port does not
- * model are stand-ins, one annotated global per field; the reward screen
- * (reward.c) reads three of them by their frontend_api.h names. */
-// GLOBAL: LEGORR 0x00556fc4
-void* g_front_main_menu_set;
-// GLOBAL: LEGORR 0x00556fcc
-Front_MenuSet* frontGlobs_saveMenuSet;
-// GLOBAL: LEGORR 0x00557028
-int frontGlobs_f_557028;
-// GLOBAL: LEGORR 0x00557064
-int frontGlobs_overlayY;
-// GLOBAL: LEGORR 0x00557068
-int frontGlobs_overlayX;
-// GLOBAL: LEGORR 0x0055706c
-struct Flic* frontGlobs_overlayImage;
-// GLOBAL: LEGORR 0x00557070
-unsigned int frontGlobs_overlayStartTime;
-// GLOBAL: LEGORR 0x00557074
-unsigned int frontGlobs_overlayCurrTime;
-// GLOBAL: LEGORR 0x00557078
-Front_Font* frontGlobs_versionFont;
-// GLOBAL: LEGORR 0x0055707c
-char* frontGlobs_versionString;
-// GLOBAL: LEGORR 0x005574dc
-int frontGlobs_scrollOffsetX;
-// GLOBAL: LEGORR 0x005574e0
-int frontGlobs_scrollOffsetY;
-// GLOBAL: LEGORR 0x005574ec
-void* frontGlobs_rockWipeAnim;
-// GLOBAL: LEGORR 0x005574f0
-unsigned int frontGlobs_rockWipeFlags;
-// GLOBAL: LEGORR 0x005574f4
-float frontGlobs_rockWipeTimer;
-// GLOBAL: LEGORR 0x005574f8
-float frontGlobs_rockWipeLastUpdateTime;
-// GLOBAL: LEGORR 0x005574fc
-void* frontGlobs_rockWipeLight;
-// GLOBAL: LEGORR 0x00557504
-int g_front_save_menu_result;
-// GLOBAL: LEGORR 0x00557508
-int g_front_save_menu_open;
-/* Unsigned: 004124f0 converts them with a zero high word (fild qword). */
-// GLOBAL: LEGORR 0x0055750c
-unsigned int frontGlobs_saveImageBigWidth;
-// GLOBAL: LEGORR 0x00557510
-unsigned int frontGlobs_saveImageBigHeight;
-// GLOBAL: LEGORR 0x00557514
-char frontGlobs_saveSlotFormat[64];
-// GLOBAL: LEGORR 0x00557594
-Front_SaveTextWindow* frontGlobs_saveTextWnd;
-// GLOBAL: LEGORR 0x00557598
-Front_LevelTextWindow* frontGlobs_saveLevelWnd;
-// GLOBAL: LEGORR 0x0055759c
-char frontGlobs_overwriteTitle[128];
-// GLOBAL: LEGORR 0x0055761c
-char frontGlobs_overwriteText[256];
-// GLOBAL: LEGORR 0x0055771c
-char frontGlobs_overwriteOK[128];
-// GLOBAL: LEGORR 0x0055779c
-char frontGlobs_overwriteCancel[128];
+/* 0x14 bytes (00417090): one level of a level set's link graph. */
+typedef struct Front_LevelLink {
+    int setIndex;                           /* +0x00 index in the set */
+    struct Front_LevelLink** linkLevels;    /* +0x04 */
+    unsigned int linkCount;                 /* +0x08 */
+    int field_c;                            /* +0x0c */
+    int visited;                            /* +0x10 */
+} Front_LevelLink;
+
+/* 0x14 bytes (004154b0): the missions or the tutorials. */
+typedef struct Front_LevelSet {
+    int count;                      /* +0x00 */
+    char** idNames;                 /* +0x04 */
+    char** langNames;               /* +0x08 */
+    Front_LevelLink** levels;       /* +0x0c */
+    int* visitedList;               /* +0x10 */
+} Front_LevelSet;
+
+/* One level's saved reward record, 0x3190 bytes (00417a90): a flag word
+ * and Reward.c's 0x318c-byte level record. */
+typedef struct Front_RewardLevel {
+    unsigned char field_0[0x2fb4];  /* +0x0000 */
+    float score;                    /* +0x2fb4 */
+    unsigned char field_2fb8[0x1d4]; /* +0x2fb8 */
+} Front_RewardLevel;
+
+typedef struct Front_SaveReward {
+    unsigned int flags;             /* +0x0000 1 completed, 2 a tutorial */
+    Front_RewardLevel reward;       /* +0x0004 Reward.c's record */
+} Front_SaveReward;
+
+/* The six values a save keeps for Reward.c (00417f20). */
+typedef struct Front_SaveStruct18 {
+    int values[6];
+} Front_SaveStruct18;
+
+/* A save slot, 0xb8 bytes in frontGlobs (00417e50); the file holds the
+ * first 0xb0 (read) or 0xb4 (written) bytes. */
+typedef struct Front_SaveData {
+    int field_0;                    /* +0x00 */
+    int musicVolume;                /* +0x04 */
+    int sfxVolume;                  /* +0x08 */
+    int gameSpeed;                  /* +0x0c */
+    int brightness;                 /* +0x10 */
+    int field_14;                   /* +0x14 */
+    unsigned int missionsCount;     /* +0x18 */
+    Front_SaveStruct18 saveStruct18; /* +0x1c */
+    Front_SaveReward* missionsTable; /* +0x34 */
+    unsigned char field_38[0x80];   /* +0x38 */
+} Front_SaveData;
+
+/* frontGlobs (00556fc0, 0x890 bytes), as the original's one struct: a
+ * store into one field then orders the stores around it as the original
+ * does (finding 635). Fields the port does not model keep their offsets
+ * as field_<offset>; the unit's code names the fields through the
+ * frontGlobs_* macros below. */
+typedef struct Front_Globs {
+    Front_MenuSet* pausedMenuSet;                 /* +0x000 */
+    void* mainMenuSet;                            /* +0x004 Front_MenuSet* */
+    Front_MenuSet* optionsMenuSet;                /* +0x008 */
+    Front_MenuSet* saveMenuSet;                   /* +0x00c */
+    Front_LevelSet tutorialLevels;                /* +0x010 */
+    Front_LevelSet missionLevels;                 /* +0x024 */
+    Front_LevelLink* startMissionLink;            /* +0x038 */
+    Front_LevelLink* startTutorialLink;           /* +0x03c */
+    int field_40[4];                              /* +0x040 */
+    /* The main menu's item values, by menu (Front_RunScreenMenuType
+     * indexes them): [0] the credits trigger, [3] quit, [4] the mission
+     * select, [5] the tutorial select. */
+    int mainMenuValues[6];                        /* +0x050 */
+    int field_68;                                 /* +0x068 */
+    int triggerContinueMission;                   /* +0x06c */
+    int sliderGameSpeed;                          /* +0x070 */
+    int sliderSFXVolume;                          /* +0x074 */
+    int sliderMusicVolume;                        /* +0x078 */
+    int sliderBrightness;                         /* +0x07c */
+    int cycleHelpWindow;                          /* +0x080 */
+    int triggerReplayObjective;                   /* +0x084 */
+    int triggerQuitMission;                       /* +0x088 */
+    int triggerRestartMission;                    /* +0x08c */
+    int cycleWallDetail;                          /* +0x090 */
+    int cycleMusicOn;                             /* +0x094 */
+    int cycleSFXOn;                               /* +0x098 */
+    int cycleAutoGameSpeed;                       /* +0x09c */
+    int saveMenuSelect;                           /* +0x0a0 */
+    int overlayY;                                 /* +0x0a4 */
+    int overlayX;                                 /* +0x0a8 */
+    struct Flic* overlayImage;                    /* +0x0ac */
+    unsigned int overlayStartTime;                /* +0x0b0 */
+    unsigned int overlayCurrTime;                 /* +0x0b4 */
+    Front_Font* versionFont;                      /* +0x0b8 */
+    char* versionString;                          /* +0x0bc */
+    /* Five save slots and the current game's (slot 5). */
+    Front_SaveData saveData[6];                   /* +0x0c0 */
+    int saveNumber;                               /* +0x510 */
+    char* defaultLevelBMPS;                       /* +0x514 */
+    int field_518;                                /* +0x518 */
+    int scrollOffsetX;                            /* +0x51c */
+    int scrollOffsetY;                            /* +0x520 */
+    int field_524[2];                             /* +0x524 */
+    void* rockWipeAnim;                           /* +0x52c */
+    unsigned int rockWipeFlags;                   /* +0x530 */
+    float rockWipeTimer;                          /* +0x534 */
+    float rockWipeLastUpdateTime;                 /* +0x538 */
+    void* rockWipeLight;                          /* +0x53c */
+    int isLoadSaveMenu;                           /* +0x540 */
+    int saveMenuResult;                           /* +0x544 */
+    int saveMenuOpen;                             /* +0x548 */
+    /* Unsigned: 004124f0 converts them with a zero high word (fild qword). */
+    unsigned int saveImageBigWidth;               /* +0x54c */
+    unsigned int saveImageBigHeight;              /* +0x550 */
+    char saveSlotFormat[64];                      /* +0x554 */
+    char langSaveGame[64];                        /* +0x594 */
+    Front_SaveTextWindow* saveTextWnd;            /* +0x5d4 */
+    Front_LevelTextWindow* saveLevelWnd;          /* +0x5d8 */
+    char overwriteTitle[128];                     /* +0x5dc */
+    char overwriteText[256];                      /* +0x65c */
+    char overwriteOK[128];                        /* +0x75c */
+    char overwriteCancel[128];                    /* +0x7dc */
+    int levelSelectUpdate;                        /* +0x85c */
+    int field_860;                                /* +0x860 */
+    int levelSelectHoverNumber;                   /* +0x864 */
+    int maxLevelScreens;                          /* +0x868 */
+    int field_86c[2];                             /* +0x86c */
+    int currLevelNumber;                          /* +0x874 */
+    int prevLevelNumber;                          /* +0x878 */
+    int playLevelStream;                          /* +0x87c */
+    float levelStreamTimer;                       /* +0x880 */
+    int field_884[3];                             /* +0x884 */
+} Front_Globs;
+
+/* frontend_api.h and objective_unit_imports.h name the fields that
+ * Reward.c, Objective.c and the port read, by offset. */
+#ifdef __cplusplus
+extern "C" {
+#endif
+// GLOBAL: LEGORR 0x00556fc0
+Front_Globs frontGlobs;
+#ifdef __cplusplus
+}
+#endif
+#define g_front_main_menu_set frontGlobs.mainMenuSet
+#define frontGlobs_saveMenuSet frontGlobs.saveMenuSet
+#define frontGlobs_f_557028 frontGlobs.field_68
+#define frontGlobs_overlayY frontGlobs.overlayY
+#define frontGlobs_overlayX frontGlobs.overlayX
+#define frontGlobs_overlayImage frontGlobs.overlayImage
+#define frontGlobs_overlayStartTime frontGlobs.overlayStartTime
+#define frontGlobs_overlayCurrTime frontGlobs.overlayCurrTime
+#define frontGlobs_versionFont frontGlobs.versionFont
+#define frontGlobs_versionString frontGlobs.versionString
+#define frontGlobs_scrollOffsetX frontGlobs.scrollOffsetX
+#define frontGlobs_scrollOffsetY frontGlobs.scrollOffsetY
+#define frontGlobs_rockWipeAnim frontGlobs.rockWipeAnim
+#define frontGlobs_rockWipeFlags frontGlobs.rockWipeFlags
+#define frontGlobs_rockWipeTimer frontGlobs.rockWipeTimer
+#define frontGlobs_rockWipeLastUpdateTime frontGlobs.rockWipeLastUpdateTime
+#define frontGlobs_rockWipeLight frontGlobs.rockWipeLight
+#define g_front_save_menu_result frontGlobs.saveMenuResult
+#define g_front_save_menu_open frontGlobs.saveMenuOpen
+#define frontGlobs_saveImageBigWidth frontGlobs.saveImageBigWidth
+#define frontGlobs_saveImageBigHeight frontGlobs.saveImageBigHeight
+#define frontGlobs_saveSlotFormat frontGlobs.saveSlotFormat
+#define frontGlobs_saveTextWnd frontGlobs.saveTextWnd
+#define frontGlobs_saveLevelWnd frontGlobs.saveLevelWnd
+#define frontGlobs_overwriteTitle frontGlobs.overwriteTitle
+#define frontGlobs_overwriteText frontGlobs.overwriteText
+#define frontGlobs_overwriteOK frontGlobs.overwriteOK
+#define frontGlobs_overwriteCancel frontGlobs.overwriteCancel
+#define frontGlobs_pausedMenuSet frontGlobs.pausedMenuSet
+#define frontGlobs_optionsMenuSet frontGlobs.optionsMenuSet
+#define frontGlobs_tutorialLevels frontGlobs.tutorialLevels
+#define frontGlobs_missionLevels frontGlobs.missionLevels
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define g_front_save_tree frontGlobs.startMissionLink
+#else
+#define frontGlobs_startMissionLink frontGlobs.startMissionLink
+#endif
+#define frontGlobs_startTutorialLink frontGlobs.startTutorialLink
+#define frontGlobs_mainMenuValues frontGlobs.mainMenuValues
+#define frontGlobs_triggerContinueMission frontGlobs.triggerContinueMission
+#define frontGlobs_sliderGameSpeed frontGlobs.sliderGameSpeed
+#define frontGlobs_sliderSFXVolume frontGlobs.sliderSFXVolume
+#define frontGlobs_sliderMusicVolume frontGlobs.sliderMusicVolume
+#define frontGlobs_sliderBrightness frontGlobs.sliderBrightness
+#define frontGlobs_cycleHelpWindow frontGlobs.cycleHelpWindow
+#define frontGlobs_triggerReplayObjective frontGlobs.triggerReplayObjective
+#define frontGlobs_triggerQuitMission frontGlobs.triggerQuitMission
+#define frontGlobs_triggerRestartMission frontGlobs.triggerRestartMission
+#define frontGlobs_cycleWallDetail frontGlobs.cycleWallDetail
+#define frontGlobs_cycleMusicOn frontGlobs.cycleMusicOn
+#define frontGlobs_cycleSFXOn frontGlobs.cycleSFXOn
+#define frontGlobs_cycleAutoGameSpeed frontGlobs.cycleAutoGameSpeed
+#define frontGlobs_saveMenuSelect frontGlobs.saveMenuSelect
+#define frontGlobs_saveData frontGlobs.saveData
+#define frontGlobs_saveNumber frontGlobs.saveNumber
+#define frontGlobs_defaultLevelBMPS frontGlobs.defaultLevelBMPS
+#define frontGlobs_isLoadSaveMenu frontGlobs.isLoadSaveMenu
+#define frontGlobs_langSaveGame frontGlobs.langSaveGame
+#define frontGlobs_levelSelectUpdate frontGlobs.levelSelectUpdate
+#define frontGlobs_levelSelectHoverNumber frontGlobs.levelSelectHoverNumber
+#define frontGlobs_maxLevelScreens frontGlobs.maxLevelScreens
+#define frontGlobs_currLevelNumber frontGlobs.currLevelNumber
+#define frontGlobs_prevLevelNumber frontGlobs.prevLevelNumber
+#define frontGlobs_playLevelStream frontGlobs.playLevelStream
+#define frontGlobs_levelStreamTimer frontGlobs.levelStreamTimer
 
 #define frontGlobs_mainMenuSet ((Front_MenuSet*)g_front_main_menu_set)
 
@@ -282,41 +428,6 @@ void front_callback_trigger_play_credits(void)
 }
 
 // FUNCTION: LEGORR 0x004103f0
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* No C form matched (finding 623): MSVC folds the two flag ORs into one
- * (or al, 3); the original keeps or al, 1 and or al, 2. Tried: the two
- * |= statements in every order around the timer store, one combined
- * expression, and an enum flag type. With frontGlobs as one struct the
- * C version below compiles to the original's code (finding 635), so this
- * waits for that layout. Naked asm, as the port had it; the C version is
- * the native one. */
-__declspec(naked) void front_rock_wipe_play(void)
-{
-    __asm {
-        mov eax, frontGlobs_rockWipeAnim
-        sub esp, 8
-        test eax, eax
-        je rock_wipe_play_done
-        mov eax, frontGlobs_rockWipeFlags
-        mov dword ptr frontGlobs_rockWipeTimer, 0
-        or al, 1
-        or al, 2
-        mov frontGlobs_rockWipeFlags, eax
-        call main_time_get
-        mov dword ptr [esp], eax
-        mov dword ptr [esp + 4], 0
-        fild qword ptr [esp]
-        push 0
-        push 0x27
-        fstp dword ptr frontGlobs_rockWipeLastUpdateTime
-        call sfx_add_to_queue
-        add esp, 8
-    rock_wipe_play_done:
-        add esp, 8
-        ret
-    }
-}
-#else
 void front_rock_wipe_play(void)
 {
     if (frontGlobs_rockWipeAnim != NULL) {
@@ -327,7 +438,6 @@ void front_rock_wipe_play(void)
         sfx_add_to_queue(0x27, 0);
     }
 }
-#endif
 
 // FUNCTION: LEGORR 0x00410440
 void front_rock_wipe_stop(void)
@@ -1255,14 +1365,6 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
         mouseOver) {
         sfx_random_play_sound_normal(0x13, 0);
         switch (item->itemType) {
-        case Front_MenuItem_Cycle:
-            cycle = (Front_CycleData*)item->itemData;
-            handled = mouseOver;
-            *cycle->valuePtr = (*cycle->valuePtr + 1) % cycle->nameCount;
-            if (cycle->callback != NULL) {
-                cycle->callback(*cycle->valuePtr);
-            }
-            break;
         case Front_MenuItem_TextInput:
             input = (Front_TextInputData*)item->itemData;
             input->caretPos++;
@@ -1298,6 +1400,14 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
             handled = mouseOver;
             if (realSlider->callback != NULL) {
                 realSlider->callback(*realSlider->valuePtr);
+            }
+            break;
+        case Front_MenuItem_Cycle:
+            cycle = (Front_CycleData*)item->itemData;
+            handled = mouseOver;
+            *cycle->valuePtr = (*cycle->valuePtr + 1) % cycle->nameCount;
+            if (cycle->callback != NULL) {
+                cycle->callback(*cycle->valuePtr);
             }
             break;
         case Front_MenuItem_Select:
@@ -1343,20 +1453,6 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
 
     if (s_global_current_keys[0xcb] && (s_global_previous_keys[0xcb] ^ s_global_current_keys[0xcb])) {
         switch (item->itemType) {
-        case Front_MenuItem_Cycle:
-            cycle = (Front_CycleData*)item->itemData;
-            (*cycle->valuePtr)--;
-            if (*cycle->valuePtr < 0) {
-                *cycle->valuePtr = cycle->nameCount - 1;
-            }
-            break;
-        case Front_MenuItem_TextInput:
-            input = (Front_TextInputData*)item->itemData;
-            input->caretPos--;
-            if (input->caretPos < 0) {
-                input->caretPos = 0;
-            }
-            break;
         case Front_MenuItem_Slider:
             slider = (Front_SliderData*)item->itemData;
             (*slider->valuePtr)--;
@@ -1367,6 +1463,13 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
                 slider->callback(*slider->valuePtr);
             }
             break;
+        case Front_MenuItem_TextInput:
+            input = (Front_TextInputData*)item->itemData;
+            input->caretPos--;
+            if (input->caretPos < 0) {
+                input->caretPos = 0;
+            }
+            break;
         case Front_MenuItem_RealSlider:
             realSlider = (Front_RealSliderData*)item->itemData;
             *realSlider->valuePtr -= realSlider->step;
@@ -1375,6 +1478,13 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
             }
             if (realSlider->callback != NULL) {
                 realSlider->callback(*realSlider->valuePtr);
+            }
+            break;
+        case Front_MenuItem_Cycle:
+            cycle = (Front_CycleData*)item->itemData;
+            (*cycle->valuePtr)--;
+            if (*cycle->valuePtr < 0) {
+                *cycle->valuePtr = cycle->nameCount - 1;
             }
             break;
         }
@@ -1915,6 +2025,19 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
                                  front_util_replace_text_spaces(cycle->nameList[*cycle->valuePtr]));
                 }
                 break;
+            case Front_MenuItem_Slider:
+                slider = (Front_SliderData*)focusItem->itemData;
+                front_menu_item_draw_slider(slider, slider->x2 + itemX + x, slider->y2 + itemY + y,
+                                            *slider->valuePtr - slider->valueMin,
+                                            slider->valueMax - slider->valueMin, 1.0f);
+                break;
+            case Front_MenuItem_RealSlider:
+                realSlider = (Front_RealSliderData*)focusItem->itemData;
+                if (item->fontHi != NULL) {
+                    font_print_f(item->fontHi, realSlider->x2 + centerOff + itemX + x,
+                                 realSlider->y2 + itemY + y, "%.2f", (double)*realSlider->valuePtr);
+                }
+                break;
             case Front_MenuItem_TextInput:
                 input = (Front_TextInputData*)focusItem->itemData;
                 savedChar = input->text[input->caretPos];
@@ -1928,19 +2051,6 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
                 }
                 if (s_textInputBlink != 0 && (s_textInputBlink / 2) % 2) {
                     input->text[input->caretPos] = savedChar;
-                }
-                break;
-            case Front_MenuItem_Slider:
-                slider = (Front_SliderData*)focusItem->itemData;
-                front_menu_item_draw_slider(slider, slider->x2 + itemX + x, slider->y2 + itemY + y,
-                                            *slider->valuePtr - slider->valueMin,
-                                            slider->valueMax - slider->valueMin, 1.0f);
-                break;
-            case Front_MenuItem_RealSlider:
-                realSlider = (Front_RealSliderData*)focusItem->itemData;
-                if (item->fontHi != NULL) {
-                    font_print_f(item->fontHi, realSlider->x2 + centerOff + itemX + x,
-                                 realSlider->y2 + itemY + y, "%.2f", (double)*realSlider->valuePtr);
                 }
                 break;
             case Front_MenuItem_Select:
@@ -2014,13 +2124,6 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
                                  front_util_replace_text_spaces(cycle->nameList[*cycle->valuePtr]));
                 }
                 break;
-            case Front_MenuItem_TextInput:
-                input = (Front_TextInputData*)item->itemData;
-                if (item->fontLo != NULL) {
-                    font_print_f(item->fontLo, input->x2 + centerOff + itemX + x, input->y2 + itemY + y, "%s",
-                                 front_util_replace_text_spaces(input->text));
-                }
-                break;
             case Front_MenuItem_Slider:
                 slider = (Front_SliderData*)item->itemData;
                 front_menu_item_draw_slider(slider, slider->x2 + itemX + x, slider->y2 + itemY + y,
@@ -2032,6 +2135,13 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
                 if (item->fontLo != NULL) {
                     font_print_f(item->fontLo, realSlider->x2 + centerOff + itemX + x,
                                  realSlider->y2 + itemY + y, "%.2f", (double)*realSlider->valuePtr);
+                }
+                break;
+            case Front_MenuItem_TextInput:
+                input = (Front_TextInputData*)item->itemData;
+                if (item->fontLo != NULL) {
+                    font_print_f(item->fontLo, input->x2 + centerOff + itemX + x, input->y2 + itemY + y, "%s",
+                                 front_util_replace_text_spaces(input->text));
                 }
                 break;
             case Front_MenuItem_Select:
@@ -2630,6 +2740,23 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                 }
                 break;
             }
+            case Front_MenuItem_Slider:
+            {
+                int* valuePtr = va_arg(args, int*);
+                Front_IntCallback callback = va_arg(args, Front_IntCallback);
+
+                front_menu_item_load_slider_images(numParts, stringParts, sliderImages);
+                itemData = front_menu_item_create_slider(
+                    valuePtr, atoi(stringParts[6]), atoi(stringParts[7]), atoi(stringParts[3]),
+                    atoi(stringParts[4]), callback, sliderImages[0], sliderImages[1], sliderImages[2],
+                    sliderImages[3], sliderImages[4], sliderImages[5], sliderImages[6], sliderImages[7]);
+                front_menu_add_menu_item(menuSet->menus[i],
+                                         front_menu_item_create_banner_item(
+                                             mission_replace_char(stringParts[5], '_', ' '), loFont, hiFont,
+                                             atoi(stringParts[1]), atoi(stringParts[2]), Front_MenuItem_Slider,
+                                             autoCenter, itemData, 0));
+                break;
+            }
             case Front_MenuItem_Trigger:
                 if (numParts == 8) {
                     int* valuePtr = va_arg(args, int*);
@@ -2653,38 +2780,6 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                                                  Front_MenuItem_Trigger, autoCenter, itemData, 0));
                 }
                 break;
-            case Front_MenuItem_Slider:
-            {
-                int* valuePtr = va_arg(args, int*);
-                Front_IntCallback callback = va_arg(args, Front_IntCallback);
-
-                front_menu_item_load_slider_images(numParts, stringParts, sliderImages);
-                itemData = front_menu_item_create_slider(
-                    valuePtr, atoi(stringParts[6]), atoi(stringParts[7]), atoi(stringParts[3]),
-                    atoi(stringParts[4]), callback, sliderImages[0], sliderImages[1], sliderImages[2],
-                    sliderImages[3], sliderImages[4], sliderImages[5], sliderImages[6], sliderImages[7]);
-                front_menu_add_menu_item(menuSet->menus[i],
-                                         front_menu_item_create_banner_item(
-                                             mission_replace_char(stringParts[5], '_', ' '), loFont, hiFont,
-                                             atoi(stringParts[1]), atoi(stringParts[2]), Front_MenuItem_Slider,
-                                             autoCenter, itemData, 0));
-                break;
-            }
-            case Front_MenuItem_RealSlider:
-            {
-                float* valuePtr = va_arg(args, float*);
-                Front_RealCallback callback = va_arg(args, Front_RealCallback);
-
-                itemData = front_menu_item_create_real_slider(
-                    valuePtr, (float)atof(stringParts[6]), (float)atof(stringParts[7]),
-                    (float)atof(stringParts[8]), atoi(stringParts[3]), atoi(stringParts[4]), callback);
-                front_menu_add_menu_item(menuSet->menus[i],
-                                         front_menu_item_create_banner_item(
-                                             mission_replace_char(stringParts[5], '_', ' '), loFont, hiFont,
-                                             atoi(stringParts[1]), atoi(stringParts[2]),
-                                             Front_MenuItem_RealSlider, autoCenter, itemData, 0));
-                break;
-            }
             case Front_MenuItem_Next:
                 if (numParts == 8) {
                     front_menu_add_menu_item(menuSet->menus[i],
@@ -2715,6 +2810,21 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                                                  Front_MenuItem_Next, NULL, 0));
                 }
                 break;
+            case Front_MenuItem_RealSlider:
+            {
+                float* valuePtr = va_arg(args, float*);
+                Front_RealCallback callback = va_arg(args, Front_RealCallback);
+
+                itemData = front_menu_item_create_real_slider(
+                    valuePtr, (float)atof(stringParts[6]), (float)atof(stringParts[7]),
+                    (float)atof(stringParts[8]), atoi(stringParts[3]), atoi(stringParts[4]), callback);
+                front_menu_add_menu_item(menuSet->menus[i],
+                                         front_menu_item_create_banner_item(
+                                             mission_replace_char(stringParts[5], '_', ' '), loFont, hiFont,
+                                             atoi(stringParts[1]), atoi(stringParts[2]),
+                                             Front_MenuItem_RealSlider, autoCenter, itemData, 0));
+                break;
+            }
             }
         }
         if (itemString != NULL) {
@@ -2784,57 +2894,6 @@ void front_callback_slider_sound_volume(int volume)
  * includes, declares them returning void*; so they return void* here too,
  * and their users cast. The code is the same. */
 #define FRONT_CURRENT_SAVE() ((Front_SaveData*)front_save_get_current_save_data())
-
-/* 0x14 bytes (00417090): one level of a level set's link graph. */
-typedef struct Front_LevelLink {
-    int setIndex;                           /* +0x00 index in the set */
-    struct Front_LevelLink** linkLevels;    /* +0x04 */
-    unsigned int linkCount;                 /* +0x08 */
-    int field_c;                            /* +0x0c */
-    int visited;                            /* +0x10 */
-} Front_LevelLink;
-
-/* 0x14 bytes (004154b0): the missions or the tutorials. */
-typedef struct Front_LevelSet {
-    int count;                      /* +0x00 */
-    char** idNames;                 /* +0x04 */
-    char** langNames;               /* +0x08 */
-    Front_LevelLink** levels;       /* +0x0c */
-    int* visitedList;               /* +0x10 */
-} Front_LevelSet;
-
-/* One level's saved reward record, 0x3190 bytes (00417a90): a flag word
- * and Reward.c's 0x318c-byte level record. */
-typedef struct Front_RewardLevel {
-    unsigned char field_0[0x2fb4];  /* +0x0000 */
-    float score;                    /* +0x2fb4 */
-    unsigned char field_2fb8[0x1d4]; /* +0x2fb8 */
-} Front_RewardLevel;
-
-typedef struct Front_SaveReward {
-    unsigned int flags;             /* +0x0000 1 completed, 2 a tutorial */
-    Front_RewardLevel reward;       /* +0x0004 Reward.c's record */
-} Front_SaveReward;
-
-/* The six values a save keeps for Reward.c (00417f20). */
-typedef struct Front_SaveStruct18 {
-    int values[6];
-} Front_SaveStruct18;
-
-/* A save slot, 0xb8 bytes in frontGlobs (00417e50); the file holds the
- * first 0xb0 (read) or 0xb4 (written) bytes. */
-typedef struct Front_SaveData {
-    int field_0;                    /* +0x00 */
-    int musicVolume;                /* +0x04 */
-    int sfxVolume;                  /* +0x08 */
-    int gameSpeed;                  /* +0x0c */
-    int brightness;                 /* +0x10 */
-    int field_14;                   /* +0x14 */
-    unsigned int missionsCount;     /* +0x18 */
-    Front_SaveStruct18 saveStruct18; /* +0x1c */
-    Front_SaveReward* missionsTable; /* +0x34 */
-    unsigned char field_38[0x80];   /* +0x38 */
-} Front_SaveData;
 
 /* Front_LevelLink_RunThroughLinks's callback (004171c0). */
 typedef int (*Front_LevelLinkCallback)(Front_LevelLink* link, void* data);
@@ -2922,76 +2981,6 @@ void front_object_recall_save_adapter(const char* fname);           /* 004593e0 
 static Front_Menu* s_optionsMenu;
 // GLOBAL: LEGORR 0x004db8e4
 static Front_MenuSet* s_optionsMenuSet;
-// GLOBAL: LEGORR 0x00556fc0
-Front_MenuSet* frontGlobs_pausedMenuSet;
-// GLOBAL: LEGORR 0x00556fc8
-Front_MenuSet* frontGlobs_optionsMenuSet;
-// GLOBAL: LEGORR 0x00556fd0
-Front_LevelSet frontGlobs_tutorialLevels;
-// GLOBAL: LEGORR 0x00556fe4
-Front_LevelSet frontGlobs_missionLevels;
-// GLOBAL: LEGORR 0x00556ff8
-Front_LevelLink* g_front_save_tree;
-// GLOBAL: LEGORR 0x00556ffc
-Front_LevelLink* frontGlobs_startTutorialLink;
-/* The main menu's item values, by menu (Front_RunScreenMenuType indexes
- * them): [0] the credits trigger, [3] quit, [4] the mission select, [5]
- * the tutorial select. */
-// GLOBAL: LEGORR 0x00557010
-int frontGlobs_mainMenuValues[6];
-// GLOBAL: LEGORR 0x0055702c
-int frontGlobs_triggerContinueMission;
-// GLOBAL: LEGORR 0x00557030
-int frontGlobs_sliderGameSpeed;
-// GLOBAL: LEGORR 0x00557034
-int frontGlobs_sliderSFXVolume;
-// GLOBAL: LEGORR 0x00557038
-int frontGlobs_sliderMusicVolume;
-// GLOBAL: LEGORR 0x0055703c
-int frontGlobs_sliderBrightness;
-// GLOBAL: LEGORR 0x00557040
-int frontGlobs_cycleHelpWindow;
-// GLOBAL: LEGORR 0x00557044
-int frontGlobs_triggerReplayObjective;
-// GLOBAL: LEGORR 0x00557048
-int frontGlobs_triggerQuitMission;
-// GLOBAL: LEGORR 0x0055704c
-int frontGlobs_triggerRestartMission;
-// GLOBAL: LEGORR 0x00557050
-int frontGlobs_cycleWallDetail;
-// GLOBAL: LEGORR 0x00557054
-int frontGlobs_cycleMusicOn;
-// GLOBAL: LEGORR 0x00557058
-int frontGlobs_cycleSFXOn;
-// GLOBAL: LEGORR 0x0055705c
-int frontGlobs_cycleAutoGameSpeed;
-// GLOBAL: LEGORR 0x00557060
-int frontGlobs_saveMenuSelect;
-/* Five save slots and the current game's (slot 5). */
-// GLOBAL: LEGORR 0x00557080
-Front_SaveData frontGlobs_saveData[6];
-// GLOBAL: LEGORR 0x005574d0
-int frontGlobs_saveNumber;
-// GLOBAL: LEGORR 0x005574d4
-char* frontGlobs_defaultLevelBMPS;
-// GLOBAL: LEGORR 0x00557500
-int frontGlobs_isLoadSaveMenu;
-// GLOBAL: LEGORR 0x00557554
-char frontGlobs_langSaveGame[64];
-// GLOBAL: LEGORR 0x0055781c
-int frontGlobs_levelSelectUpdate;
-// GLOBAL: LEGORR 0x00557824
-int frontGlobs_levelSelectHoverNumber;
-// GLOBAL: LEGORR 0x00557828
-int frontGlobs_maxLevelScreens;
-// GLOBAL: LEGORR 0x00557834
-int frontGlobs_currLevelNumber;
-// GLOBAL: LEGORR 0x00557838
-int frontGlobs_prevLevelNumber;
-// GLOBAL: LEGORR 0x0055783c
-int frontGlobs_playLevelStream;
-// GLOBAL: LEGORR 0x00557840
-float frontGlobs_levelStreamTimer;
 
 /* Part 2's functions. */
 void front_callback_slider_music_volume(int volume); /* 00414df0 */

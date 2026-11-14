@@ -42,11 +42,21 @@ int front_campaign_snapshot_create(void* snapshot);
  * frontend_unit.cpp); nothing in the port sets them yet. */
 extern char* g_front_end_avi1;            /* DAT_00556fb0 */
 extern char* g_front_end_avi2;            /* DAT_00556fb4 */
-extern void* g_front_main_menu_set;       /* DAT_00556fc4 */
-extern void* g_front_save_tree;           /* DAT_00556ff8 */
 extern uint8_t g_front_save_slot_buffer[0xec]; /* DAT_00557418 */
-extern int g_front_save_menu_result;      /* DAT_00557504 */
-extern int g_front_save_menu_open;        /* DAT_00557508 */
+/* frontGlobs (00556fc0) is one struct, defined by frontend_unit.c with its
+ * fields' types; these name the fields this header's users read, by their
+ * offsets (finding 649). */
+extern struct Front_Globs frontGlobs;
+#define FRONT_GLOBS_FIELD(type, offset) (*(type*)((char*)&frontGlobs + (offset)))
+#define g_front_main_menu_set FRONT_GLOBS_FIELD(void*, 0x004)  /* 00556fc4 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define g_front_save_tree FRONT_GLOBS_FIELD(void*, 0x038)      /* 00556ff8 */
+#else
+/* Natively the port keeps its own (frontend_port.cpp). */
+extern void* g_front_save_tree;           /* DAT_00556ff8 */
+#endif
+#define g_front_save_menu_result FRONT_GLOBS_FIELD(int, 0x544) /* 00557504 */
+#define g_front_save_menu_open FRONT_GLOBS_FIELD(int, 0x548)   /* 00557508 */
 
 #ifdef __cplusplus
 }
