@@ -11,7 +11,7 @@ same search to the other single-code near misses in AITask.c, Building.c
 fewer statements than the port, or put a value through a variable the
 port's expression skipped, and MSVC did the rest.
 
-| Measure | `main` `b928af37` | This change |
+| Measure | Base `38c1639b` (#787 on #790; same figures as `main` `b928af37`) | This change |
 | --- | ---: | ---: |
 | Exact-function code bytes | 336,831 (52.42%) | **338,091 (52.62%)** |
 | Accuracy, full / game-only | 97.07% / 96.74% | **97.09% / 96.76%** |
