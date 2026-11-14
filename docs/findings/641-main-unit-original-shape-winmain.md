@@ -270,6 +270,61 @@ Animation_Initialise calls it, and the rebuilt `avi_initialise` is now live.
   is unchanged. It builds, its 37 tests pass, and the game starts headless
   with the shipped WADs.
 
+## Stacked on #737 (#735, #736, #737)
+
+Rebased onto `switch/732-nerps-callers` (`97ffec03`) and measured again
+with the same commands:
+
+| Measure | #737 | This change on #737 |
+| --- | ---: | ---: |
+| Exact-function code bytes | 301,560 (46.93%) | **303,156 (47.18%)** |
+| Exact / mapped (full) | 2,250 / 2,765 | 2,259 / 2,766 |
+| Reccmp mean, full / game-only | 96.18 / 95.87 | 96.48 / 96.20 |
+| Functions that rise / fall | | 17 / 0 |
+| `opt_ref` removed / removed exact | 64 / 54 | **27 / 23** |
+| Image end | `0x875000` | `0x875000` |
+
+No exact function from #735 to #737 regresses. `lego_game_config_init`
+(`0041fb50`) stays at 100%. The native build still builds, passes its tests
+and starts.
+
+### The 27 left after the whole stack
+
+| Cause | Functions (exact) | Which, and who owns them |
+| --- | ---: | --- |
+| `/OPT:ICF` folds (gone with `/OPT:NOICF`, finding 637) | 13 (12) | `engine_memory_allocate`/`free`, `file_get_system`, `engine_heap_free_wrapper`, `flic_opcode25_success_stub`, `flic_opcode27_fallback_noop`, `mesh_get_group_count`, `flh_magic_uu_noop`, `noop_callback`, `lego_terrain_cell_palette_resource_at_grid_position`, `lego_terrain_cell_previous_state_track`, `legoobject_flags_contain_requested_single_bit`, `legoobject_animation_state_set` |
+| Floor: unreferenced in the original | 1 (1) | `legoobject_global_animation_state_get` (`00438390`) |
+| Live caller calls a port model | 13 (10) | see below |
+
+The 13 under live callers:
+
+- Three LegoObject.c centre-mask queries (`00438cd0`, `00438d30`,
+  `00438d90`): `entity_placement_commands_build_once` (`00409f20`) calls
+  `entity.cpp`'s placement set-up. Owner: that caller's unit (finding 579,
+  class (c)).
+- Two Lego.c cell clears (`00432360`, `004323c0`):
+  `entity_cell_path_effects_apply_current` (`00409d50`) calls
+  `entity.cpp`/`level.cpp` models. Same owner.
+- Two AITask.c task records (`004033f0`, `00403430`):
+  `nerps_block_pointer_enumerate` (`00456cb0`) has no call at the site.
+  Owner: NERPs (#732's file).
+- Main.c's `direct3d_render_preferences_apply` (`00478330`): Lego.c's
+  `004334f0` calls `lego_main_setup3d_adapter` (`lego_port.cpp`). Owner:
+  `lego_unit.c`.
+- `0045d7e0` and Message.c's `message_lookup_physical_name` (`00451fd0`):
+  `lego_level_load` calls `level_identifier_remap_table_load_original`.
+  Owner: `lego_unit.c` and `level_id_remap.cpp`'s conversion.
+- `osf_write` (`004593e0`): `front_save_write_save_file` calls
+  `front_object_recall_save_adapter`. Owner: FrontEnd.c and Object State
+  File's conversion.
+- `crt.cpp`'s `string_prefix_reserve` (`004907c0`) and `string.cpp`'s
+  `formatted_text_buffer_build` (`0048e1e0`): their callers already call
+  LIBC's `__shift` and `_vsprintf`. Owner: #447.
+
+The floor (#562) is therefore one unreferenced function plus the
+13 folds that `/OPT:NOICF` removes. 13 live-caller drops (10 exact) remain
+in six callers.
+
 ## Reproducing
 
 ```sh

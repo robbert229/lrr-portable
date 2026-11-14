@@ -1,4 +1,4 @@
-# input_sha256: a4e87c737fe2e262161bab5e4054324f1eb91290ce7b53f19c590479aa9737b2
+# input_sha256: 221b6b949ba8385eb9beaf3b95e8eedd196475e62da1430b3fea61456817b0b1
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2520 mapped functions
+[game-only] 2521 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2056,30 +2056,31 @@
 0x00477610 100.00 case_insensitive_substring_find
 0x00477670 96.72 game_string_hash_compute
 0x00477710 100.00 block_get_bool
-0x004777a0 31.83 WinMain
+0x004777a0 100.00 WinMain
 0x00477bd0 100.00 low_texture_flag_set
-0x00477bf0 80.35 winmain_parse_options
-0x00477f30 60.47 main_loop_frame_pump
+0x00477bf0 99.57 winmain_parse_options
+0x00477f30 100.00 main_loop_frame_pump
 0x00477f70 100.00 render_feature_flags_get
 0x00477f80 85.71 window_runtime_display_caps_query
-0x00477fa0 90.00 renderer_begin_frame_once_retail
-0x00477fd0 71.43 window_runtime_callback_triplet_set
+0x00477fa0 100.00 renderer_begin_frame_once_retail
+0x00477fd0 100.00 window_runtime_callback_triplet_set
 0x00478000 100.00 main_time_get
-0x00478010 92.86 window_runtime_message_dispatch_filter
-0x00478040 62.96 window_message_dispatch_pump
-0x004780b0 25.00 renderer_window_mode_apply
-0x004781d0 12.54 direct3drm_device_initialize
+0x00478010 100.00 window_runtime_message_dispatch_filter
+0x00478040 100.00 window_message_dispatch_pump
+0x004780b0 97.78 renderer_window_mode_apply
+0x004781d0 98.00 direct3drm_device_initialize
 0x00478310 100.00 window_runtime_adjust_rect
-0x00478330 15.91 direct3d_render_preferences_apply
+0x00478330 100.00 direct3d_render_preferences_apply
 0x004783d0 100.00 window_title_set
-0x004783f0 12.50 platform_create_window
-0x004784c0 23.71 window_game_window_procedure_retail
-0x004786c0 24.31 window_activation_close_retail
-0x004788d0 10.00 direct3d_render_state_set_cached
-0x00478940 13.11 d3d_material_state_flush
+0x004783f0 96.88 main_init_app
+0x004784c0 51.43 window_game_window_procedure_retail
+0x004786c0 45.71 window_activation_close_retail
+0x00478880 100.00 main_window_procedure
+0x004788d0 100.00 direct3d_render_state_set_cached
+0x00478940 95.24 d3d_material_state_flush
 0x00478980 100.00 music_mixer_volume_set
 0x004789a0 100.00 ledger_stub_004789a0_MusicMixerVolumeGet
-0x004789c0 38.20 audio_mixer_control_init
+0x004789c0 91.29 audio_mixer_control_init
 0x00478df0 100.00 block_text_token_pool_init
 0x00478e20 100.00 block_text_token_pool_destroy
 0x00478e60 92.16 block_open
@@ -2528,7 +2529,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2765 mapped functions
+[full] 2766 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -4578,30 +4579,31 @@
 0x00477610 100.00 case_insensitive_substring_find
 0x00477670 96.72 game_string_hash_compute
 0x00477710 100.00 block_get_bool
-0x004777a0 31.83 WinMain
+0x004777a0 100.00 WinMain
 0x00477bd0 100.00 low_texture_flag_set
-0x00477bf0 80.35 winmain_parse_options
-0x00477f30 60.47 main_loop_frame_pump
+0x00477bf0 99.57 winmain_parse_options
+0x00477f30 100.00 main_loop_frame_pump
 0x00477f70 100.00 render_feature_flags_get
 0x00477f80 85.71 window_runtime_display_caps_query
-0x00477fa0 90.00 renderer_begin_frame_once_retail
-0x00477fd0 71.43 window_runtime_callback_triplet_set
+0x00477fa0 100.00 renderer_begin_frame_once_retail
+0x00477fd0 100.00 window_runtime_callback_triplet_set
 0x00478000 100.00 main_time_get
-0x00478010 92.86 window_runtime_message_dispatch_filter
-0x00478040 62.96 window_message_dispatch_pump
-0x004780b0 25.00 renderer_window_mode_apply
-0x004781d0 12.54 direct3drm_device_initialize
+0x00478010 100.00 window_runtime_message_dispatch_filter
+0x00478040 100.00 window_message_dispatch_pump
+0x004780b0 97.78 renderer_window_mode_apply
+0x004781d0 98.00 direct3drm_device_initialize
 0x00478310 100.00 window_runtime_adjust_rect
-0x00478330 15.91 direct3d_render_preferences_apply
+0x00478330 100.00 direct3d_render_preferences_apply
 0x004783d0 100.00 window_title_set
-0x004783f0 12.50 platform_create_window
-0x004784c0 23.71 window_game_window_procedure_retail
-0x004786c0 24.31 window_activation_close_retail
-0x004788d0 10.00 direct3d_render_state_set_cached
-0x00478940 13.11 d3d_material_state_flush
+0x004783f0 96.88 main_init_app
+0x004784c0 51.43 window_game_window_procedure_retail
+0x004786c0 45.71 window_activation_close_retail
+0x00478880 100.00 main_window_procedure
+0x004788d0 100.00 direct3d_render_state_set_cached
+0x00478940 95.24 d3d_material_state_flush
 0x00478980 100.00 music_mixer_volume_set
 0x004789a0 100.00 ledger_stub_004789a0_MusicMixerVolumeGet
-0x004789c0 38.20 audio_mixer_control_init
+0x004789c0 91.29 audio_mixer_control_init
 0x00478df0 100.00 block_text_token_pool_init
 0x00478e20 100.00 block_text_token_pool_destroy
 0x00478e60 92.16 block_open
