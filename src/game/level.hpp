@@ -1698,7 +1698,7 @@ void terrain_kind_nine_neighbor_emit_for_footprint_cells_current(
     uint32_t footprint_count);
 extern "C" void path_record_release_all(void); /* FUN_004099d0 */
 /* EntityCellPathEffectsApply (FUN_00409d50): retail one-entity ABI. */
-void entity_cell_path_effects_apply_current(struct EntitySlot* entity);
+extern "C" void entity_cell_path_effects_apply_current(struct EntitySlot* entity);
 
 /* --- the cell route + neighbour pick band (2026-10-25) ----------------------
  * TerrainCellRouteAndOccupancyCheck (FUN_00431da0): may the entity move

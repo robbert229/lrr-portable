@@ -317,7 +317,7 @@ int ledger_stub_004403d0_LevelDebugCellRetargetDispatch(
 int ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(
     struct EntitySlot* entity, struct EntitySlot* target, int marker);
 extern "C" void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2]);
-void entity_cell_path_effects_apply_current(struct EntitySlot* entity);
+extern "C" void entity_cell_path_effects_apply_current(struct EntitySlot* entity);
 /* StartupStreamsClose/StartupStreamStateReset (FUN_0048b290/260): the
  * four file handles and window-mode word that the startup stream routines
  * own. `slot` follows the reference dword order at 0x575ce0..0x575cec. */

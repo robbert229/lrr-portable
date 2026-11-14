@@ -6217,7 +6217,7 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                 } else if (objType == 4) {
                     blockPos[0] = bx;
                     blockPos[1] = by;
-                    dir = (unsigned int)(heading * 0.15915494f * 8.0f);
+                    dir = (unsigned int)((float)(heading * 0.15915494f) * 8.0f);
                     shape = (void*)(uintptr_t)task_field84_get_and_field88_out(&legoGlobs_buildingData[objID], (uint32_t*)&shapeCount);
                     dir = ((dir & 1) + dir) >> 1;
                     shape = rotated_pairs_scratch_fill(blockPos, (const int*)shape, shapeCount, dir);

@@ -691,6 +691,12 @@ int terrain_map_world_to_block(struct TerrainMap* map, float x, float y,
 int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,
                                unsigned int by, float* xOut,
                                float* yOut);                                /* 0044f640 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: object_state_file.cpp's original-shape
+ * ObjectRecall_RecallMiniFigure (#749, finding 648). An object-like alias
+ * before the name's only declaration, so the symbol counter does not move. */
+#define entity_state_override_pop object_recall_recall_minifigure
+#endif
 int entity_state_override_pop(struct EntitySlot* entity);                  /* 00459240 */
 uint32_t entity_indexed_record_word_at_b4_get(int group, int index,
                                               int slot);                    /* 00469af0 */
@@ -714,7 +720,15 @@ int entity_cell_type_speed_multiplier_resolve_current(
 float entity_energy_decay_rate_get(const struct EntitySlot* e);            /* 00469de0 */
 /* Original-ABI adapters at the end of legoobject_port.cpp (group I): 00459190
  * takes the object (the port's osf_add a context and its fields), and the
- * port's 00409d50 is in a namespace. */
+ * port's 00409d50 is in a namespace. In the matching build both are the
+ * originals (#749, finding 648): object_state_file.cpp's original-shape
+ * ObjectRecall_StoreMiniFigure, and entity_cell_effects.cpp's original-shape
+ * 00409d50, which has C linkage there. Object-like aliases before each
+ * name's only declaration, so the symbol counter does not move. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define legoobject_gi_osf_add_adapter object_recall_store_minifigure
+#define legoobject_gi_cell_path_effects_apply_adapter entity_cell_path_effects_apply_current
+#endif
 void legoobject_gi_osf_add_adapter(void* obj);                             /* 00459190 */
 void legoobject_gi_cell_path_effects_apply_adapter(void* obj);             /* 00409d50 */
 /* Weapons.c (entity.hpp, weapons.cpp). */

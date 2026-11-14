@@ -1004,6 +1004,14 @@ void simulation_mode_counter_add_original(struct EntitySlot* object,
 void objective_load_original(struct BlockRec* config, const char* gameName,
                              const char* levelName, struct Lego_Level* level,
                              int screenWidth, int screenHeight); /* objective_unit.cpp, 00457d40 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: object_state_file.cpp's original-shape ObjectRecall_IsLoaded
+ * and ObjectRecall_LoadRROSFile (#749, finding 648). Object-like aliases
+ * before each name's only declaration, so the symbol counter does not
+ * move. */
+#define osf_read_dirty_flag_get_original object_recall_is_loaded
+#define osf_read_original object_recall_load_rrosfile
+#endif
 int osf_read_dirty_flag_get_original(void);            /* object_state_file.cpp, 004593d0 */
 int osf_read_original(const char* path);               /* object_state_file.cpp, 00459470 */
 #if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
@@ -1713,6 +1721,12 @@ void entity_linked_activity_event_dispatch(struct EntitySlot* entity,
 void entity_world_position_set(struct EntitySlot* entity, float x, float y,
                                float heading, int update_heading); /* 004428a0 */
 void cmd_create_task(struct EntitySlot* e, int32_t parameter);  /* 00402720 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: object_state_file.cpp's original-shape
+ * ObjectRecall_RecallMiniFigure (#749, finding 648). An object-like alias
+ * before the name's only declaration, so the symbol counter does not move. */
+#define entity_state_override_pop object_recall_recall_minifigure
+#endif
 int entity_state_override_pop(struct EntitySlot* entity);       /* 00459240 */
 /* G98 Container.c (view.hpp): Container_SetActivity and
  * Container_SetAnimationTime. */

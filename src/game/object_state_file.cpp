@@ -61,7 +61,7 @@ static int s_osf_live_count;
 // GLOBAL: LEGORR 0x004ffe58
 static int s_osf_live_capacity;
 
-// FUNCTION: LEGORR 0x00459190
+// PORT-ONLY: the port's context-based ObjectRecall_StoreMiniFigure; the matching build has the original-shape 0x00459190 at the end of this file.
 void osf_add(GameContext* ctx, int32_t id, int32_t ref, const char* name)
 {
     if (ctx == NULL) {
@@ -92,7 +92,7 @@ void osf_add(GameContext* ctx, int32_t id, int32_t ref, const char* name)
 
 /* PopEntityStateOverride (FUN_00459240): only type-2 entities consume the
  * global LIFO; restore +0x3f0 and the saved name, then apply +0x330. */
-// FUNCTION: LEGORR 0x00459240
+// PORT-ONLY: the port's ObjectRecall_RecallMiniFigure on its own LIFO; the matching build has the original-shape 0x00459240 at the end of this file.
 int entity_state_override_pop(EntitySlot* entity)
 {
     EntityStateOverrideEntry entry;
@@ -132,7 +132,7 @@ static void osf_read_state_reset(void)
     if (s_osf_live_table != NULL) engine_heap_free(s_osf_live_table);
     s_osf_live_table = NULL;
 }
-// FUNCTION: LEGORR 0x004592e0
+// PORT-ONLY: the port's context-based ObjectRecall_Snapshot; the matching build has the original-shape 0x004592e0 at the end of this file.
 void osf_snapshot(GameContext* ctx)
 {
     if (ctx == NULL || ctx->osf_count == 0) {
@@ -150,14 +150,14 @@ void osf_snapshot(GameContext* ctx)
 }
 
 /* --- the save-side DAT accessor band (see savegame.hpp) --------------------- */
-// FUNCTION: LEGORR 0x004593d0
+// PORT-ONLY: the port's context-based osf_read_dirty_flag_get; the matching build has the original-shape 0x004593d0 at the end of this file.
 int osf_read_dirty_flag_get(const GameContext* ctx)
 {
     return ctx != NULL ? ctx->osf_dirty : 0;
 }
 
 /* The port's .osf writer, on the game context. */
-// PORT-ONLY: the port's context-based ObjectRecall_Save; the matching build has the original-shape 0x004593e0 above.
+// PORT-ONLY: the port's context-based ObjectRecall_Save; the matching build has the original-shape 0x004593e0 at the end of this file.
 int osf_write(GameContext* ctx, const char* path)
 {
     if (ctx == NULL || path == NULL) {
@@ -195,7 +195,7 @@ int osf_write(GameContext* ctx, const char* path)
  * file opened (valid or not), 0 when it was absent; the *installed state*
  * (osf_count == 0 on a bad sidecar) is what distinguishes them. `count`
  * count is bounded by the exact file length and allocation-size limits. */
-// FUNCTION: LEGORR 0x00459470
+// PORT-ONLY: the port's context-based osf_read; the matching build has the original-shape 0x00459470 at the end of this file.
 int osf_read(GameContext* ctx, const char* path)
 {
     if (ctx == NULL || path == NULL) {
@@ -264,38 +264,169 @@ extern "C" int osf_read_original(const char* path)
 }
 
 #if defined(_MSC_VER) && _MSC_VER < 1200
-/* ObjectRecall_Save (FUN_004593e0) in the original's shape: write the live
- * recall table as `fname` ('RRSO', the count, then 0x14-byte entries), copy
- * it to the shadow table (004592e0) and clear the shadow's dirty flag.
- * FrontEnd.c's Front_Save_WriteSaveFile calls it through
- * frontend_unit_link_names.h (#562, finding 642). 004592e0 takes the game
- * context in the port, so the call goes through Objective.c's no-argument
- * adapter. It follows the port's osf_read here, not before it: placed
- * at 004593e0's address order it moves MSVC's symbol counter for osf_read
- * (rule B, finding 558). */
-extern "C" void objective_osf_store_adapter(void);
+/* The matching build: ObjectRecall.c's functions in the original's shape
+ * and address order, on the live recall table above (004ffe50-004ffe58)
+ * and the shadow table below (#562, finding 642; #749, finding 648). The
+ * port's context-based models above stay the native ones. Callers reach
+ * them by link-name aliases: FrontEnd.c's Front_Save_WriteSaveFile
+ * (004593e0, frontend_unit_link_names.h), Lego.c's lego_level_load and
+ * 0042e020 (004593d0, 00459470, 00459240, lego_unit_imports.h),
+ * LegoObject.c (00459190, 00459240, legoobject_unit_imports.h) and
+ * Objective.c's 00458be0 (004592e0, 00459360, objective_unit_imports.h).
+ * FrontEnd.c's call of 00459360 still goes to its adapter.
+ *
+ * The block follows the port's osf_read, not 00459190's address order:
+ * placed earlier, it moves MSVC's symbol counter for osf_read (rule B,
+ * finding 558). The object's fields are read at their original offsets:
+ * the port's EntitySlot keeps an inline name at +0x8, where LegoObject has
+ * a char*. Stats.c's 00469c10 has its link name from
+ * entity_stats_link_names.h and File_Length (0047fca0) its gods98/files.h
+ * name; File_Open, File_Read, File_Write and File_Close (0047f6e0,
+ * 0047f980, 0047fa50, 0047fac0) have their resource.hpp names. */
+#define OSF_OBJ_WORD(obj, off) (*(int*)((char*)(obj) + (off)))
+#define OSF_OBJ_NAME(obj) (*(char**)((char*)(obj) + 0x8))
+extern "C" int entity_building_index_set(void* obj, unsigned int newLevel);
+extern "C" void legoobject_rename(void* obj, const char* name);
+extern "C" int file_length(GameFileHandle* f);
 
+// GLOBAL: LEGORR 0x004ffe5c
+static GameOsfEntry* s_osf_shadow_table;
+// GLOBAL: LEGORR 0x004ffe60
+static int s_osf_shadow_count;
 // GLOBAL: LEGORR 0x004ffe64
 static int s_osf_shadow_dirty;
 
+/* ObjectRecall_StoreMiniFigure: append a minifigure's ability flags
+ * (+0x3f0), level (+0x330) and custom name to the live recall table,
+ * growing it by ten 0x14-byte entries. */
+// FUNCTION: LEGORR 0x00459190
+extern "C" void object_recall_store_minifigure(void* liveObj)
+{
+    GameOsfEntry* recallObj;
+
+    if (OSF_OBJ_WORD(liveObj, 0x0) == 2 &&
+        (OSF_OBJ_WORD(liveObj, 0x3f0) || OSF_OBJ_WORD(liveObj, 0x330) ||
+         OSF_OBJ_NAME(liveObj))) {
+        if (s_osf_live_count == s_osf_live_capacity) {
+            s_osf_live_capacity += 10;
+            s_osf_live_table = (GameOsfEntry*)realloc(
+                s_osf_live_table, s_osf_live_capacity * sizeof(GameOsfEntry));
+        }
+        recallObj = &s_osf_live_table[s_osf_live_count++];
+        recallObj->id = OSF_OBJ_WORD(liveObj, 0x3f0);
+        recallObj->ref = OSF_OBJ_WORD(liveObj, 0x330);
+        memset(recallObj->name, 0, sizeof(recallObj->name));
+        if (OSF_OBJ_NAME(liveObj))
+            strncpy(recallObj->name, OSF_OBJ_NAME(liveObj), 11);
+    }
+}
+
+/* ObjectRecall_RecallMiniFigure: a minifigure takes the last live entry's
+ * ability flags, level and custom name. */
+// FUNCTION: LEGORR 0x00459240
+extern "C" int object_recall_recall_minifigure(void* liveObj)
+{
+    GameOsfEntry* recallObj;
+
+    if (OSF_OBJ_WORD(liveObj, 0x0) == 2 && s_osf_live_count) {
+        recallObj = &s_osf_live_table[--s_osf_live_count];
+        OSF_OBJ_WORD(liveObj, 0x3f0) = recallObj->id;
+        entity_building_index_set(liveObj, recallObj->ref);
+        legoobject_rename(liveObj, recallObj->name);
+        return 1;
+    }
+    return 0;
+}
+
+/* Copy the live recall table to the shadow table and set the shadow's
+ * dirty flag. */
+// FUNCTION: LEGORR 0x004592e0
+extern "C" void object_recall_snapshot(void)
+{
+    if (s_osf_live_count && s_osf_live_table) {
+        if (s_osf_shadow_table)
+            free(s_osf_shadow_table);
+        s_osf_shadow_table = (GameOsfEntry*)malloc(
+            s_osf_live_count * sizeof(GameOsfEntry));
+        memcpy(s_osf_shadow_table, s_osf_live_table,
+               s_osf_live_count * sizeof(GameOsfEntry));
+        s_osf_shadow_count = s_osf_live_count;
+        s_osf_shadow_dirty = 1;
+    }
+}
+
+/* Reset the live recall table and rebuild it from the shadow table. */
+// FUNCTION: LEGORR 0x00459360
+extern "C" int object_recall_restore(void)
+{
+    osf_read_state_reset();
+    if (s_osf_shadow_table && s_osf_shadow_count) {
+        s_osf_live_table = (GameOsfEntry*)malloc(
+            s_osf_shadow_count * sizeof(GameOsfEntry));
+        memcpy(s_osf_live_table, s_osf_shadow_table,
+               s_osf_shadow_count * sizeof(GameOsfEntry));
+        s_osf_live_count = s_osf_shadow_count;
+        s_osf_live_capacity = s_osf_shadow_count;
+        return 1;
+    }
+    return 0;
+}
+
+/* ObjectRecall_IsLoaded. */
+// FUNCTION: LEGORR 0x004593d0
+extern "C" int object_recall_is_loaded(void)
+{
+    return s_osf_shadow_dirty;
+}
+
+/* ObjectRecall_Save: write the live recall table as `fname` ('RRSO', the
+ * count, then 0x14-byte entries), copy it to the shadow table and clear
+ * the shadow's dirty flag. */
 // FUNCTION: LEGORR 0x004593e0
 extern "C" int object_recall_save(const char* fname)
 {
     GameFileHandle* file;
     uint32_t header[2];
 
-    /* File_Open, File_Write and File_Close (0047f6e0, 0047fa50, 0047fac0)
-     * under their resource.hpp names (gods98/files.h). */
     if ((file = game_file_open_dispatch(fname, "wb")) != NULL) {
         header[0] = 0x534f5252; /* 'RRSO' */
         header[1] = s_osf_live_count;
         game_file_write(header, 4, 2, file);
         game_file_write(s_osf_live_table, 0x14, s_osf_live_count, file);
         game_file_close(file);
-        objective_osf_store_adapter();
+        object_recall_snapshot();
         s_osf_shadow_dirty = 0;
         return 1;
     }
     return 0;
+}
+
+/* ObjectRecall_LoadRROSFile: reset the live table, read the 'RRSO' header
+ * and, when the file's length matches the count, the entries, then copy
+ * them to the shadow table and clear the dirty flag. */
+// FUNCTION: LEGORR 0x00459470
+extern "C" int object_recall_load_rrosfile(const char* fname)
+{
+    GameFileHandle* file;
+    uint32_t header[2];
+    int length;
+    int result = 0;
+
+    osf_read_state_reset();
+    if ((file = game_file_open_dispatch(fname, "rb")) != NULL) {
+        length = file_length(file) - 8;
+        wad_file_read(header, 4, 2, file);
+        if (header[0] == 0x534f5252 && length == (int)(header[1] * 0x14)) {
+            s_osf_live_count = header[1];
+            s_osf_live_capacity = header[1];
+            s_osf_live_table = (GameOsfEntry*)malloc(header[1] * 0x14);
+            wad_file_read(s_osf_live_table, 0x14, s_osf_live_count, file);
+            object_recall_snapshot();
+            s_osf_shadow_dirty = 0;
+        }
+        game_file_close(file);
+        result = 1;
+    }
+    return result;
 }
 #endif
