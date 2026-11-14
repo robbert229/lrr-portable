@@ -4272,17 +4272,14 @@ int lego_level_load(const char* levelName)
     const char* introAVI;
     const char* str;
     char* copy;
+    char* fullName;
     char buff[260];
     char* parts[10];
     float upgradeTime;
     float value;
-    float triggerTime;
-    float erodeTime;
-    float lockTime;
-    int seed;
+    float slugValue;
     int number;
     unsigned int i;
-    int objType;
     unsigned int rockFallStyle;
 
     movie_play_level_video_adapter(levelName, 1);
@@ -4307,7 +4304,7 @@ int lego_level_load(const char* levelName)
         priorities_load(config, s_engine_config_root, levelName);
 
         // STRING: LEGORR 0x004a45bc
-        if ((seed = LEGO_D_INT("Seed")) != 0) srand(seed);
+        if ((number = LEGO_D_INT("Seed")) != 0) srand(number);
 
         // STRING: LEGORR 0x004a45a8
         if ((str = LEGO_D_TEMP("BoulderAnimation")) != NULL) {
@@ -4434,15 +4431,18 @@ int lego_level_load(const char* levelName)
         if (LEGO_D_BOOL("DisableEndTeleport") == 1) global_value_004ffe48_set(0);
         else global_value_004ffe48_set(1);
 
-        // STRING: LEGORR 0x004a4338
-        if ((copy = LEGO_D_COPY("DragBoxRGB")) != NULL) {
+        {
+            char* dragCopy;
             char* argv[10];
-            if (sound_variant_split(copy, argv, s_config_rgb_separator) == 3) {
-                for (i = 0; i < 3; i++) {
-                    legoGlobs_dragBoxRGB[i] = (float)atoi(argv[i]) * (1.0f / 255.0f);
+            // STRING: LEGORR 0x004a4338
+            if ((dragCopy = LEGO_D_COPY("DragBoxRGB")) != NULL) {
+                if (sound_variant_split(dragCopy, argv, s_config_rgb_separator) == 3) {
+                    for (i = 0; i < 3; i++) {
+                        legoGlobs_dragBoxRGB[i] = (float)atoi(argv[i]) * (1.0f / 255.0f);
+                    }
                 }
+                free(dragCopy);
             }
-            free(copy);
         }
 
         // STRING: LEGORR 0x004a4324
@@ -4457,16 +4457,17 @@ int lego_level_load(const char* levelName)
 
         // STRING: LEGORR 0x004a42f8
         if ((str = LEGO_D_TEMP("Slug")) != NULL) {
-            if (lego_entity_type_pair_lookup(str, &objType, &level->f_26c, NULL)) {
+            int slugType;
+            if (lego_entity_type_pair_lookup(str, &slugType, &level->f_26c, NULL)) {
                 // STRING: LEGORR 0x004a42ec
-                value = LEGO_D_FLOAT("SlugTime");
-                level->f_268 = value;
-                if (0.0f == value) level->f_268 = 60.0f;
+                slugValue = LEGO_D_FLOAT("SlugTime");
+                level->f_268 = slugValue;
+                if (0.0f == slugValue) level->f_268 = 60.0f;
                 level->f_268 *= 25.0f;
                 // STRING: LEGORR 0x004a42dc
-                value = LEGO_D_FLOAT("InitialSlugTime");
-                if (0.0f == value) value = 60.0f;
-                g_camera_countdown = value * 25.0f;
+                slugValue = LEGO_D_FLOAT("InitialSlugTime");
+                if (0.0f == slugValue) slugValue = 60.0f;
+                g_camera_countdown = slugValue * 25.0f;
             }
         } else level->f_26c = 20;
 
@@ -4478,7 +4479,10 @@ int lego_level_load(const char* levelName)
         legoGlobs_f_556ec0 = (LEGO_D_BOOL("noFallins") != 1);
 
         mission_crystal_quota_setup(config, s_engine_config_root, levelName);
-        lego_entity_type_pair_lookup(emergeCreature, &objType, &level->f_0b0, NULL);
+        {
+            int emergeType;
+            lego_entity_type_pair_lookup(emergeCreature, &emergeType, &level->f_0b0, NULL);
+        }
 
         if (config_rgb_vector_read(legoGlobs_config,
                                    // STRING: LEGORR 0x004a42b0
@@ -4493,8 +4497,8 @@ int lego_level_load(const char* levelName)
                 legoGlobs_flags1 |= 0x10000;
                 legoGlobs_f_556424 = 1.0f;
                 // STRING: LEGORR 0x004a4294
-                if (0.0f == (value = LEGO_D_FLOAT("FogRate"))) value = 60.0f;
-                legoGlobs_f_556ef8 = value * 25.0f;
+                if (0.0f == (slugValue = LEGO_D_FLOAT("FogRate"))) slugValue = 60.0f;
+                legoGlobs_f_556ef8 = slugValue * 25.0f;
             } else legoGlobs_flags1 &= ~0x10000;
             renderer_fog_color_set_original(legoGlobs_fogColourRGB[0], legoGlobs_fogColourRGB[1],
                                             legoGlobs_fogColourRGB[2]);
@@ -4506,9 +4510,9 @@ int lego_level_load(const char* levelName)
 
         // STRING: LEGORR 0x004a4288
         LEGO_LEVEL_PTR_SET(level->nextLevel, LEGO_D_COPY("nextlevel"));
-        copy = LEGO_D_COPY("FullName");
-        LEGO_LEVEL_PTR_SET(level->fullName, copy);
-        if (copy) {
+        fullName = LEGO_D_COPY("FullName");
+        LEGO_LEVEL_PTR_SET(level->fullName, fullName);
+        if (fullName) {
             for (i = 0; i < strlen(LEGO_LEVEL_PTR(char, level->fullName)); i++) {
                 LEGO_LEVEL_PTR(char, level->fullName)[i] =
                     (LEGO_LEVEL_PTR(char, level->fullName)[i] == '_') ? ' ' : (unsigned char)LEGO_LEVEL_PTR(char, level->fullName)[i];
@@ -4518,12 +4522,12 @@ int lego_level_load(const char* levelName)
         objective_load_original(config, s_engine_config_root, levelName, level, s_display_w, s_display_h);
 
         // STRING: LEGORR 0x004a4274
-        if (0.0f == (triggerTime = LEGO_D_FLOAT("ErodeTriggerTime"))) triggerTime = 10.0f;
+        if (0.0f == (upgradeTime = LEGO_D_FLOAT("ErodeTriggerTime"))) upgradeTime = 10.0f;
         // STRING: LEGORR 0x004a4264
-        if (0.0f == (erodeTime = LEGO_D_FLOAT("ErodeErodeTime"))) erodeTime = 5.0f;
+        if (0.0f == (slugValue = LEGO_D_FLOAT("ErodeErodeTime"))) slugValue = 5.0f;
         // STRING: LEGORR 0x004a4254
-        if (0.0f == (lockTime = LEGO_D_FLOAT("ErodeLockTime"))) lockTime = 60.0f;
-        erosion_timing_state_init(triggerTime, erodeTime, lockTime);
+        if (0.0f == (value = LEGO_D_FLOAT("ErodeLockTime"))) value = 60.0f;
+        erosion_timing_state_init(upgradeTime, slugValue, value);
         // STRING: LEGORR 0x004a4234
         number = LEGO_D_INT("NumberOfLandSlidesTillCaveIn");
         if (number == 0) global_config_value_set(3);
@@ -4547,16 +4551,15 @@ int lego_level_load(const char* levelName)
         objective_advisor_token_file_load(nerpMessageFile);
 
         if (level_identifier_remap_table_load_original(ptlName, s_engine_config_root)) {
-            int surfaceParam, predugParam = 0, terrainParam = 0, blockPointersParam = 0;
-            int cryOreParam = 0, pathParam = 0, fallinParam;
+            int surfaceParam, pathParam = 0, blockPointersParam = 0, cryOreParam = 0, terrainParam = 0, predugParam = 0, fallinParam;
 
             if (surfaceMap && sound_variant_split(surfaceMap, parts, s_config_rgb_separator) == 2) surfaceParam = atoi(parts[1]);
             if (predugMap && sound_variant_split(predugMap, parts, s_config_rgb_separator) == 2) predugParam = atoi(parts[1]);
             if (terrainMap && sound_variant_split(terrainMap, parts, s_config_rgb_separator) == 2) terrainParam = atoi(parts[1]);
             if (blockPointersMap && sound_variant_split(blockPointersMap, parts, s_config_rgb_separator) == 2)
                 blockPointersParam = atoi(parts[1]);
-            if (pathMap && sound_variant_split(pathMap, parts, s_config_rgb_separator) == 2) pathParam = atoi(parts[1]);
             if (cryOreMap && sound_variant_split(cryOreMap, parts, s_config_rgb_separator) == 2) cryOreParam = atoi(parts[1]);
+            if (pathMap && sound_variant_split(pathMap, parts, s_config_rgb_separator) == 2) pathParam = atoi(parts[1]);
             if (fallinMap && sound_variant_split(fallinMap, parts, s_config_rgb_separator) == 2) fallinParam = atoi(parts[1]);
             if (emergeMap && sound_variant_split(emergeMap, parts, s_config_rgb_separator) == 2) pathParam = atoi(parts[1]);
 
