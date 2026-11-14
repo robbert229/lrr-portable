@@ -1,4 +1,4 @@
-# input_sha256: 3c89ea7e7a9f42db33d814d8ee9e03e1f48a45998ded608553928fbce1cfbcd7
+# input_sha256: 35bee224288667d755122ae236aae0ee2507488b64c7123a1d94e39e79f0933a
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -703,13 +703,13 @@
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 100.00 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
-0x0041fb50 99.94 lego_game_config_init
+0x0041fb50 100.00 lego_game_config_init
 0x00422850 100.00 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 100.00 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 99.15 lego_engine_tick
+0x004232e0 99.93 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 95.45 lego_sine_phase_midpoint_blend_dispatch
@@ -3123,13 +3123,13 @@
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 100.00 lego_start_level_pilots
 0x0041fb40 100.00 EngineTimeScale(1)
-0x0041fb50 99.94 lego_game_config_init
+0x0041fb50 100.00 lego_game_config_init
 0x00422850 100.00 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 100.00 lego_debug_panel_text_draw_update
 0x004231f0 100.00 lego_engine_pre_tick
-0x004232e0 99.15 lego_engine_tick
+0x004232e0 99.93 lego_engine_tick
 0x00424560 100.00 lego_air_supply_amount_update
 0x00424600 100.00 lego_terrain_cell_flag_cleanup
 0x00424730 95.45 lego_sine_phase_midpoint_blend_dispatch

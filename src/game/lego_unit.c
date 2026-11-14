@@ -8921,6 +8921,14 @@ typedef struct LegoPoint2U3B {
  * only) are declared in lego_unit_imports.h. */
 int lego_render_quality_config_apply(void);                          /* 004334f0 */
 int lego_scene_lights_build_from_config(void);                       /* 00433770 */
+/* Deviation (scoring only): two of group 3C's entries are declared here
+ * rather than with group 3C's state. In the matching build
+ * lego_game_config_init calls the two loaders above by these names
+ * (lego_unit_imports.h), so their declarations here add no symbol; these
+ * two keep MSVC's symbol counter at 00433380 and 00434530 where it was
+ * (finding 538 rule B, finding 639). */
+int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void);      /* 00435550 */
+int lego_global_handle_position_apply_if_present(void);              /* 00435580 */
 void lego_current_level_terrain_grid_pick(float x, float y, int* bx,
                                           int* by);                  /* 00433be0 */
 int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
@@ -9540,8 +9548,8 @@ int terrain_cell_drill_work_add_current(int bx, int by, float destroyTime,
                                         float elapsed);
 void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
                                                int radius);
-/* Shared. */
-int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void);
+/* Shared: ledger_stub_00435550_GlobalStateZeroTransitionDetect is declared
+ * with group 3B's entries above. */
 
 /* The unit's own entries (the port keeps its models in lego.cpp). */
 void lego_panels_config_entry_apply(struct BlockRec* config,
@@ -9565,7 +9573,6 @@ void lego_random_variant_cell_scatter(const int* blockPos, int radius,
                                       int stopAtFirst);
 void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
                                       float elapsedWorld, float elapsed);
-int lego_global_handle_position_apply_if_present(void);
 int lego_menu_option_panel_texture_update(const char* title, const char* msg,
                                           const char* ok, const char* cancel);
 int lego_keep_running(void);

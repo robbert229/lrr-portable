@@ -445,6 +445,12 @@ extern "C" {
 /* Lego_LoadLighting (00433770), Lego_LoadGraphicsSettings (004334f0),
  * Lego_LoadUpgradeTypes (0042d460): the port's entries take hook tables
  * or the config, or sit in a namespace (lego.cpp). */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: the unit's own Lego_LoadLighting and
+ * Lego_LoadGraphicsSettings (finding 639). */
+#define scene_lights_build_from_config_original lego_scene_lights_build_from_config
+#define render_quality_config_apply_original lego_render_quality_config_apply
+#endif
 int scene_lights_build_from_config_original(void);
 int render_quality_config_apply_original(void);
 /* SelectPlace_Create (00463f00): the port's entry takes a hook table
@@ -603,6 +609,14 @@ int menu_options_flag(void);                               /* 00416df0 */
 void help_window_update(void);                             /* 00418a00 helpwindow.c */
 void message_dispatch(int id, const char* p2, uint32_t p3,
                       const void* p4);                     /* 00419b80 info.cpp */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: Info.c's originals (info_unit.c), which take the same
+ * frame time; natively the port's message queue keeps these names
+ * (finding 639). */
+#define info_message_queue_tick info_draw                   /* 00419f30 */
+#define incident_message_text_consumer info_draw_panel      /* 0041a080 */
+#define message_cooldown_tick info_update_timers            /* 0041a2c0 */
+#endif
 void info_message_queue_tick(float dt);                    /* 00419f30 */
 void incident_message_text_consumer(float frame_delta);    /* 0041a080 */
 void message_cooldown_tick(float dt);                      /* 0041a2c0 */
@@ -676,7 +690,32 @@ void media_cd_audio_watchdog_tick(int cdtrack);            /* 00488c00 */
  * engine or game context, other arguments, or do not exist; the adapters
  * are at the end of lego.cpp unless noted. */
 int keep_running_original(void);                           /* 00435940 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: Lego_KeepRunning itself. lego_keep_running is already
+ * declared through lego_keep_running_adapter's alias, so a function-like
+ * macro after this declaration keeps every declaration, and with it the
+ * symbol counter (finding 634, finding 639). */
+#define keep_running_original() lego_keep_running()
+#endif
 void camera_move_pipeline_original(float elapsedWorld);    /* 0046a730 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: the originals themselves (finding 639): Lego.c's
+ * Lego_CameraRegistryProbe and the tutorial icon pass in this unit,
+ * Weapons_Update (weapons.c), ElectricFence_Update
+ * (terrain_cell_objects.c) and NERPs' tutorial icon (tutorial_script.c,
+ * whose third parameter is unused). */
+#define camera_registry_probe_original lego_camera_registry_probe
+#define simtick_sfx_bank_original weapons_update
+#define simtick_post_cluster_original electric_fence_update
+#define world_render_pass_a_original lego_tutorial_block_icons_update
+#define world_render_pass_b_original nerps_draw_tutorial_icon
+/* Sound3D_Update (sound3d.c); the matching build's DirectSound body does
+ * not read the port's context parameter. */
+#define simtick_sound_keepalive_original simtick_sound_keepalive
+/* Panel_Crystals_Draw (panel_unit.c); like the original, it ignores the
+ * frame time the caller passes. */
+#define panel_crystals_draw_original panel_crystals_draw
+#endif
 void camera_registry_probe_original(void);                 /* 00435a50 */
 void simtick_table_dispatch_original(float elapsed);       /* 0040aa10 */
 void simtick_scene_pass_original(float elapsedWorld);      /* 0043b270 */
