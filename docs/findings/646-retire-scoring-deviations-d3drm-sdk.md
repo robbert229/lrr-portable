@@ -203,6 +203,39 @@ Native: `cmake --build build` succeeds and `ctest` passes 37 of 37.
 winapi-link-check` passes. `make pe-audit` matches `main`, including its
 existing warning that the image covers `0x800000` (finding 584).
 
+## Stacked on #743 (#742, #743)
+
+Rebased onto `match/741-legoobject-sweep8` (`8d3c5ac0`) and measured again
+with `make reccmp-check`, the `match-progress` steps, `make
+unit-data-offsets` and `make opt-ref-callers OPT_REF_ARGS=--summary`:
+
+| Measure | #743 | This change on #743 |
+| --- | ---: | ---: |
+| Exact-function code bytes | 308,143 (47.96%) | 308,143 (47.96%) |
+| Exact / mapped (full) | 2,271 / 2,767 | 2,271 / 2,767 |
+| Reccmp mean, full / game-only | 96.52 / 96.24 | 96.52 / 96.24 |
+| Functions whose score changed | | **0 of 2,767** |
+| `opt_ref` removed / removed exact | 27 / 23 | **24 / 20** |
+| Image end | `0x875000` | `0x875000` |
+| `Deviation (scoring only)` tags in `src/` | 57 | **20** |
+
+No exact function from #742 or #743 regresses: the regenerated match
+baseline is identical to #743's in every score. #742 and #743 add three tags
+in their own files:
+- the `legoGlobs` table declarations in `lego_unit_imports.h`;
+- `legoGlobs_recordObjectCountReloaded` (`0042dfc0`);
+- `0043f190`'s volatile queue count in `legoobject_unit.c`.
+
+None of the three uses a declaration this change retires, so they are kept
+as they are. The 20 remaining tags are this finding's 17 plus those three.
+The `.rdata` offsets of GAME-003, G98-006, G98-007 and G98-019 are unchanged.
+
+The live-caller (12, 9 exact) and unreferenced (1) entries match #743's.
+The `/OPT:ICF` folds go from 14 (13) to 11 (10). The header edits change code
+in port files with no annotations, so three exact originals no longer have a
+twin to fold into. As on `main`, `rng_thunk_draw15` stays folded into
+`level.cpp`'s copy.
+
 ## Reproducing
 
 - Includers and scoring: see the method above. The phase case is
