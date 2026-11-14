@@ -332,11 +332,12 @@ void terrain_map_shape_flatten(TerrainMap* map,
     TerrainMapPoint2I vertexOffsets[4];
     TerrainMapVector3 vertices[10][4];
     float average, lowest, highest, diff;
+    float half;
     unsigned int averageCount, foundCount, blockCount;
     unsigned int i, j;
     TerrainMapPoint2I* point;
 
-    tolerance *= 0.5f;
+    half = tolerance * 0.5f;
     vertexOffsets[1].x = 1;
     vertexOffsets[2].x = 1;
     vertexOffsets[2].y = 1;
@@ -384,8 +385,8 @@ void terrain_map_shape_flatten(TerrainMap* map,
     }
     average /= (float)averageCount;
     if (foundCount) {
-        if (highest < tolerance + average) average = highest - tolerance;
-        if (average - tolerance < lowest) average = tolerance + lowest;
+        if (highest < half + average) average = highest - half;
+        if (average - half < lowest) average = half + lowest;
     }
     for (i = 0; i < blockCount; i++) {
         point = &s_terrain_map_flatten_blocks[i];
@@ -395,11 +396,11 @@ void terrain_map_shape_flatten(TerrainMap* map,
                               point->x + vertexOffsets[j].x]
                       .flags & TERRAIN_MAP_BLOCK_FLATTENED)) {
                 diff = vertices[i][j].z - average;
-                if (tolerance < fabs(diff)) {
+                if (half < fabs(diff)) {
                     terrain_map_vertex_move(
                         map, point->x + vertexOffsets[j].x,
                         point->y + vertexOffsets[j].y,
-                        ((diff / (float)fabs(diff)) * tolerance + average) -
+                        ((diff / (float)fabs(diff)) * half + average) -
                             vertices[i][j].z);
                 }
                 map->blocks[(point->y + vertexOffsets[j].y) *
@@ -1282,9 +1283,10 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
     TerrainMapPoint2 uvOffsets[4];
     TerrainMapPoint2I blockOffsets[4];
     TerrainMapVertex vertices[4];
-    TerrainMapPoint2* wobble;
-    float speed, scale, dist, r1, r2, len, wx, wy;
-    float ux, uy, tx, ty, cx, cy;
+    TerrainMapPoint2 wobble;
+    TerrainMapPoint2 cur;
+    TerrainMapPoint2 target;
+    float speed, scale, dist, r1, r2, len;
     unsigned int i, j, k, x, y, group;
     int rotated;
     int index;
@@ -1321,32 +1323,28 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
                 if (rotated) k = (j + 1) & 3;
                 index = (y + blockOffsets[j].y) * map->blockWidth + x +
                         blockOffsets[j].x;
-                ux = vertices[k].tu;
-                tx = map->blocks[index].uvWobble.x + uvOffsets[j].x;
-                uy = vertices[k].tv;
-                ty = map->blocks[index].uvWobble.y + uvOffsets[j].y;
-                dist = (float)sqrt((uy - ty) * (uy - ty) +
-                                   (ux - tx) * (ux - tx));
-                cx = tx;
-                cy = ty;
-                if (dist <= 0.36f) {
-                    cx = ux;
-                    cy = uy;
-                    if (dist < 0.05f) {
-                        r1 = random_float_range(0.0f, 1.0f);
-                        r2 = random_float_range(0.0f, 1.0f);
-                        wobble = &map->blocks[index].uvWobble;
-                        len = 1.0f / (float)sqrt(r2 * r2 + r1 * r1);
-                        wx = (wobble->x + len * r1) * 0.3f;
-                        wy = (wobble->y + len * r2) * 0.3f;
-                        ty = wy + uvOffsets[j].y;
-                        tx = wx + uvOffsets[j].x;
-                        wobble->x = wx;
-                        wobble->y = wy;
-                    }
+                wobble = map->blocks[index].uvWobble;
+                cur.x = vertices[k].tu;
+                cur.y = vertices[k].tv;
+                target.x = wobble.x + uvOffsets[j].x;
+                target.y = wobble.y + uvOffsets[j].y;
+                dist = (float)sqrt((cur.y - target.y) * (cur.y - target.y) +
+                                   (cur.x - target.x) * (cur.x - target.x));
+                if (dist > 0.36f) {
+                    cur = target;
                 }
-                vertices[k].tu = scale * (speed * cx + tx);
-                vertices[k].tv = scale * (speed * cy + ty);
+                else if (dist < 0.05f) {
+                    r1 = random_float_range(0.0f, 1.0f);
+                    r2 = random_float_range(0.0f, 1.0f);
+                    len = 1.0f / (float)sqrt(r2 * r2 + r1 * r1);
+                    wobble.x = (map->blocks[index].uvWobble.x + len * r1) * 0.3f;
+                    wobble.y = (map->blocks[index].uvWobble.y + len * r2) * 0.3f;
+                    target.x = wobble.x + uvOffsets[j].x;
+                    target.y = wobble.y + uvOffsets[j].y;
+                    map->blocks[index].uvWobble = wobble;
+                }
+                vertices[k].tu = scale * (speed * cur.x + target.x);
+                vertices[k].tv = scale * (speed * cur.y + target.y);
             }
             container_mesh_set_vertices(map->mesh, group, 0, 4, vertices);
         }

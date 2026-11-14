@@ -607,13 +607,15 @@ void weapons_projectile_update(Weapons_Projectile* projectile, float elapsed)
 {
     void* cont;
     Point2F curvePos;
+    float dist;
 
     cont = entity_type_component_get(projectile->object);
     ddiscene_object_position_get(cont, NULL, (float*)&projectile->lastPosition);
-    elapsed = projectile->speed * elapsed;
+    dist = projectile->speed * elapsed;
     if (!projectile->curved) {
-        weapons_ray_end_point(&projectile->position, &projectile->position,
-                              &projectile->direction, elapsed);
+        projectile->position.x += projectile->direction.x * dist;
+        projectile->position.y += projectile->direction.y * dist;
+        projectile->position.z += projectile->direction.z * dist;
         ddiscene_object_position_set(cont, NULL, projectile->position.x,
                                      projectile->position.y, projectile->position.z);
         ddiscene_object_pose_method_dispatch(cont, NULL, projectile->direction.x,
@@ -622,9 +624,9 @@ void weapons_projectile_update(Weapons_Projectile* projectile, float elapsed)
                                              0.0f, 0.0f, -1.0f);
     }
     else {
-        elapsed += projectile->curveDistance;
-        projectile->curveDistance = elapsed;
-        path_arc_length_interpolate(&projectile->curve, elapsed, &curvePos);
+        dist += projectile->curveDistance;
+        projectile->curveDistance = dist;
+        path_arc_length_interpolate(&projectile->curve, dist, &curvePos);
         projectile->position.x = projectile->direction.x * curvePos.x + projectile->startPos.x;
         projectile->position.y = projectile->startPos.y + projectile->direction.y * curvePos.x;
         projectile->position.z = projectile->startPos.z + curvePos.y;
@@ -960,6 +962,11 @@ void weapons_lazer_create(void* cont, Weapons_Vector3F* fromPos,
     }
 }
 
+/* tan(22.5 deg) = sin 45 / (1 + cos 45). The original computes it from the
+ * local root2 wherever it is used, and MSVC 5.0 keeps one copy; a local
+ * holding it gives another frame (finding 655). */
+#define WEAPONS_OCTAGON_K (root2 / ((1.0f + root2 * 0.5f) * 2.0f))
+
 // FUNCTION: LEGORR 0x00470760
 void weapons_mesh_build_segment(void* mesh, float radius,
                                 Weapons_Vector3F* fromPos, Weapons_Vector3F* toPos,
@@ -987,58 +994,65 @@ void weapons_mesh_build_segment(void* mesh, float radius,
         6, 7, 0, 8, 8, 15, 7
     };
     Weapons_Vector3F dir;
-    float px;
-    float py;
-    float ux;
-    float uy;
-    float vx;
-    float vy;
-    float vz;
-    float dx;
-    float dy;
-    float dz;
-    float ex;
-    float ez;
-    float len;
+    Weapons_Vector3F perp;
+    Weapons_Vector3F cross;
+    float root2;
     unsigned int i;
     unsigned int group;
 
     weapons_vector3d_subtract(&dir, toPos, fromPos);
-    len = 1.0f / weapons_vector3d_modulus(&dir);
-    dir.y = len * dir.y;
-    dir.z = len * dir.z;
+    weapons_vector3d_normalise(&dir);
     if (dir.y == 0.0f && dir.z == 0.0f) {
-        py = 1.0f;
-        px = 0.0f;
+        perp.z = 1.0f;
+        perp.y = 0.0f;
     }
     else if (dir.y == 0.0f) {
-        px = 1.0f;
-        py = 0.0f;
+        perp.y = 1.0f;
+        perp.z = 0.0f;
     }
     else {
-        py = (float)sqrt(1.0f / ((dir.z * dir.z) / (dir.y * dir.y) - -1.0f));
-        px = -((dir.z / dir.y) * py);
+        perp.z = (float)sqrt(1.0f / ((dir.z * dir.z) / (dir.y * dir.y) + 1.0f));
+        perp.y = -((dir.z / dir.y) * perp.z);
     }
-    ux = px * radius;
-    uy = py * radius;
-    vx = (py * dir.y - px * dir.z) * radius;
-    vy = -(py * len * dir.x) * radius;
-    vz = px * len * dir.x * radius;
-    ex = ux * 0.41421354f;
-    dx = vx * 0.41421354f;
-    dy = vy * 0.41421354f;
-    dz = vz * 0.41421354f;
-    ez = uy * 0.41421354f;
-    vertices[0].x = dx + 0.0f;  vertices[0].y = ux + dy;  vertices[0].z = uy + dz;
-    vertices[1].x = vx + 0.0f;  vertices[1].y = vy + ex;  vertices[1].z = vz + ez;
-    vertices[2].x = vx + -0.0f; vertices[2].y = vy + -ex; vertices[2].z = vz + -ez;
-    vertices[3].x = dx - 0.0f;  vertices[3].y = dy - ux;  vertices[3].z = dz - uy;
-    vertices[4].x = -0.0f - dx; vertices[4].y = -ux - dy; vertices[4].z = -uy - dz;
-    vertices[5].x = -0.0f - vx; vertices[5].y = -ex - vy; vertices[5].z = -ez - vz;
-    vertices[6].x = 0.0f - vx;  vertices[6].y = ex - vy;  vertices[6].z = ez - vz;
-    vertices[7].x = 0.0f - dx;  vertices[7].y = ux - dy;  vertices[7].z = uy - dz;
+    perp.x = 0.0f;
+    /* The half side of the octagon over its inner radius, tan(22.5 deg),
+     * computed at run time from sqrt(2) as the original does
+     * (WEAPONS_OCTAGON_K). */
+    root2 = (float)sqrt(2.0);
+    cross.x = (perp.z * dir.y) - (perp.y * dir.z);
+    cross.y = (perp.x * dir.z) - (perp.z * dir.x);
+    cross.z = (perp.y * dir.x) - (perp.x * dir.y);
+    dir = cross;
+    weapons_vector3d_scale(&dir, &dir, radius);
+    weapons_vector3d_scale(&perp, &perp, radius);
+    vertices[0].x = perp.x + WEAPONS_OCTAGON_K * dir.x;
+    vertices[0].y = perp.y + WEAPONS_OCTAGON_K * dir.y;
+    vertices[0].z = perp.z + WEAPONS_OCTAGON_K * dir.z;
+    vertices[1].x = dir.x + WEAPONS_OCTAGON_K * perp.x;
+    vertices[1].y = dir.y + WEAPONS_OCTAGON_K * perp.y;
+    vertices[1].z = dir.z + WEAPONS_OCTAGON_K * perp.z;
+    vertices[2].x = dir.x + -(WEAPONS_OCTAGON_K * perp.x);
+    vertices[2].y = dir.y + -(WEAPONS_OCTAGON_K * perp.y);
+    vertices[2].z = dir.z + -(WEAPONS_OCTAGON_K * perp.z);
+    vertices[3].x = WEAPONS_OCTAGON_K * dir.x - perp.x;
+    vertices[3].y = WEAPONS_OCTAGON_K * dir.y - perp.y;
+    vertices[3].z = WEAPONS_OCTAGON_K * dir.z - perp.z;
+    vertices[4].x = -perp.x - WEAPONS_OCTAGON_K * dir.x;
+    vertices[4].y = -perp.y - WEAPONS_OCTAGON_K * dir.y;
+    vertices[4].z = -perp.z - WEAPONS_OCTAGON_K * dir.z;
+    vertices[5].x = -(WEAPONS_OCTAGON_K * perp.x) - dir.x;
+    vertices[5].y = -(WEAPONS_OCTAGON_K * perp.y) - dir.y;
+    vertices[5].z = -(WEAPONS_OCTAGON_K * perp.z) - dir.z;
+    vertices[6].x = WEAPONS_OCTAGON_K * perp.x - dir.x;
+    vertices[6].y = WEAPONS_OCTAGON_K * perp.y - dir.y;
+    vertices[6].z = WEAPONS_OCTAGON_K * perp.z - dir.z;
+    vertices[7].x = perp.x - WEAPONS_OCTAGON_K * dir.x;
+    vertices[7].y = perp.y - WEAPONS_OCTAGON_K * dir.y;
+    vertices[7].z = perp.z - WEAPONS_OCTAGON_K * dir.z;
     for (i = 0; i < 8; i++) {
-        normals[i] = vertices[i];
+        normals[i].x = vertices[i].x;
+        normals[i].y = vertices[i].y;
+        normals[i].z = vertices[i].z;
         weapons_vector3d_add(&vertices[i + 8], toPos, &vertices[i]);
         weapons_vector3d_normalise(&normals[i]);
         weapons_vector3d_add(&vertices[i], fromPos, &vertices[i]);
@@ -1050,6 +1064,8 @@ void weapons_mesh_build_segment(void* mesh, float radius,
     mesh_segment_vertex_fill(mesh, group, 0, 16, (const float*)vertices,
                              (const uint32_t*)normals, (const uint32_t*)textCoords);
 }
+
+#undef WEAPONS_OCTAGON_K
 
 // FUNCTION: LEGORR 0x004712c0
 Weapons_Model* weapons_get_weapons_model(Weapons_Object* obj)
