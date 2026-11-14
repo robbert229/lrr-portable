@@ -1,4 +1,4 @@
-# input_sha256: e2194202152cdcb763a92f178c9dd0e86256d60b238727754fdac2434ce52b13
+# input_sha256: 1047d0e6d0ae00b4dfe06265958fe03a4f08b063740fbe3bac231fd69273294d
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -420,10 +420,10 @@
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
 0x00411360 92.45 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
-0x00411530 59.92 front_menu_get_item_bounds
+0x00411530 86.85 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
 0x00411840 100.00 front_menu_was_mouse_released
-0x00411870 90.70 front_menu_item_slider_handle_input
+0x00411870 96.90 front_menu_item_slider_handle_input
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
 0x00411a00 84.59 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
@@ -436,7 +436,7 @@
 0x00412750 62.32 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
 0x00412af0 70.91 front_menu_draw_menu_image
-0x00412c00 49.24 front_menu_update
+0x00412c00 59.59 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 97.59 front_menu_load_slot_images
 0x00413b50 92.31 front_menu_free_slot_images
@@ -448,7 +448,7 @@
 0x00413f90 100.00 front_menu_create_overlay
 0x00414010 100.00 front_menu_item_load_slider_images
 0x00414070 100.00 front_menu_set_create
-0x004140c0 88.14 front_load_menu_set
+0x004140c0 94.07 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
 0x00414ce0 100.00 front_is_intros_enabled
 0x00414d30 77.11 front_callback_slider_brightness
@@ -615,7 +615,7 @@
 0x0041b9c0 100.00 interface_resolve_teleporter_item
 0x0041ba10 100.00 interface_update_hover_sfx
 0x0041ba90 100.00 simulation_global_word_set
-0x0041baa0 76.56 interface_do_mouse
+0x0041baa0 94.76 interface_do_mouse
 0x0041c1c0 49.28 interface_get_item_at_point
 0x0041c310 100.00 interface_callback_hit_item
 0x0041c440 100.00 advisor_callback_schedule_gate
@@ -2960,10 +2960,10 @@
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
 0x00411360 92.45 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
-0x00411530 59.92 front_menu_get_item_bounds
+0x00411530 86.85 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
 0x00411840 100.00 front_menu_was_mouse_released
-0x00411870 90.70 front_menu_item_slider_handle_input
+0x00411870 96.90 front_menu_item_slider_handle_input
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
 0x00411a00 84.59 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
@@ -2976,7 +2976,7 @@
 0x00412750 62.32 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
 0x00412af0 70.91 front_menu_draw_menu_image
-0x00412c00 49.24 front_menu_update
+0x00412c00 59.59 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 97.59 front_menu_load_slot_images
 0x00413b50 92.31 front_menu_free_slot_images
@@ -2988,7 +2988,7 @@
 0x00413f90 100.00 front_menu_create_overlay
 0x00414010 100.00 front_menu_item_load_slider_images
 0x00414070 100.00 front_menu_set_create
-0x004140c0 88.14 front_load_menu_set
+0x004140c0 94.07 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
 0x00414ce0 100.00 front_is_intros_enabled
 0x00414d30 77.11 front_callback_slider_brightness
@@ -3155,7 +3155,7 @@
 0x0041b9c0 100.00 interface_resolve_teleporter_item
 0x0041ba10 100.00 interface_update_hover_sfx
 0x0041ba90 100.00 simulation_global_word_set
-0x0041baa0 76.56 interface_do_mouse
+0x0041baa0 94.76 interface_do_mouse
 0x0041c1c0 49.28 interface_get_item_at_point
 0x0041c310 100.00 interface_callback_hit_item
 0x0041c440 100.00 advisor_callback_schedule_gate

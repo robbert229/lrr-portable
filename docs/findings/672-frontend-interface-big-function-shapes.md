@@ -55,6 +55,27 @@ unchanged. The symbol-counter effect on later functions was checked
 function by function in the single-function loop for both units before
 the full build (below).
 
+**Stacked on #801** (`match/796-lego-big`, `10aaff64`, on #800, #799 and
+#798), with a full `make reccmp-check`: the same five functions rise by the
+same amounts, and no function falls.
+
+| Measure | #801 | This change on #801 |
+| --- | ---: | ---: |
+| Exact-function code bytes | 340,131 (52.93%) | 340,131 (52.93%) |
+| Reccmp accuracy, full / game-only | 97.17% / 96.85% | 97.20% / 96.88% |
+| Correct-size functions, full / game-only | 2,600 / 2,309 | 2,600 / 2,309 |
+| Identical prefix | 11 bytes (`0x40100b`) | 11 bytes (`0x40100b`) |
+| Units whose size agrees (correct size / start / end) | 166 / 2 / 1 of 227 | 166 / 2 / 1 of 227 |
+| `.text` identical at original addresses | 26,021 (4.05%) | 25,975 (4.04%) |
+| Image end | `0x7f5000` | `0x7f5000` |
+| Function-order inversions, full / game-only | 222 / 1 pairs | 222 / 1 pairs |
+
+The correct-size count does not change. Its code-extent measure stops at
+the next known function start and leaves out trailing padding, so the
+two functions whose size now agrees (`0041baa0`, `00411530`) probably counted as correct-size already; this was not checked function by function.
+`.text` identical at original addresses falls by 46 bytes because later
+objects start 0x30 bytes earlier, not because any function's code changed.
+
 ## `0041baa0` interface_do_mouse
 
 Three differences, all visible in the original's code:
