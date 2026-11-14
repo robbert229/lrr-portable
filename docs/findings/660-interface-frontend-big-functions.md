@@ -22,6 +22,18 @@ change and one after.
 | Reccmp accuracy, full / game-only | 97.02% / 96.68% | 97.02% / 96.68% (the rise is below the second decimal) |
 | Image end (`make pe-audit`) | `0x7f5000` | `0x7f5000` |
 
+**Stacked on #779** (`match/774-big-gods98`, `d82b96fa`, on #778 and
+#777), with a full `make reccmp-check`: the same three functions rise by
+the same amounts, and nothing else moves. #777–#779's functions keep their
+scores.
+
+| Measure | #779 | This change on #779 |
+| --- | ---: | ---: |
+| Exact-function code bytes | 336,831 (52.42%) | 336,831 (52.42%) |
+| Exact / mapped, full | 2,415 / 2,833 | 2,415 / 2,833 |
+| Reccmp accuracy, full / game-only | 97.07% / 96.73% | 97.07% / 96.73% |
+| Image end | `0x7f5000` | `0x7f5000` |
+
 None of the four became exact, so exact-function bytes do not move.
 `004140c0` and `0041dca0` are 80 and 4 bytes shorter, so every later
 object starts 0x60 bytes earlier in the gate link; no function changes
