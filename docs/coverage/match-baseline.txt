@@ -1,4 +1,4 @@
-# input_sha256: 7bc85a56ee375959357d5f6184ddb1a21199d9dbf2dca775a7b815f2bd926135
+# input_sha256: 0f1514e873eaee683486a64ccb687ddef10fe3fa8dc34aad8ea0abae8d3f15b4
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -436,7 +436,7 @@
 0x00412750 62.32 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
 0x00412af0 70.91 front_menu_draw_menu_image
-0x00412c00 49.10 front_menu_update
+0x00412c00 49.24 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 97.59 front_menu_load_slot_images
 0x00413b50 92.31 front_menu_free_slot_images
@@ -448,7 +448,7 @@
 0x00413f90 100.00 front_menu_create_overlay
 0x00414010 100.00 front_menu_item_load_slider_images
 0x00414070 100.00 front_menu_set_create
-0x004140c0 83.84 front_load_menu_set
+0x004140c0 88.14 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
 0x00414ce0 100.00 front_is_intros_enabled
 0x00414d30 77.11 front_callback_slider_brightness
@@ -643,7 +643,7 @@
 0x0041cfe0 100.00 selection_mode5_cancel_at_point
 0x0041d010 100.00 interface_back_to_main_if_selected
 0x0041d040 94.92 interface_is_item_available
-0x0041dca0 86.90 interface_do_action
+0x0041dca0 87.34 interface_do_action
 0x0041e750 100.00 selection_clear_request_and_hud_reset
 0x0041e770 100.00 interface_set_item_flash
 0x0041e7a0 100.00 interface_set_object_item_flash
@@ -2976,7 +2976,7 @@
 0x00412750 62.32 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
 0x00412af0 70.91 front_menu_draw_menu_image
-0x00412c00 49.10 front_menu_update
+0x00412c00 49.24 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 97.59 front_menu_load_slot_images
 0x00413b50 92.31 front_menu_free_slot_images
@@ -2988,7 +2988,7 @@
 0x00413f90 100.00 front_menu_create_overlay
 0x00414010 100.00 front_menu_item_load_slider_images
 0x00414070 100.00 front_menu_set_create
-0x004140c0 83.84 front_load_menu_set
+0x004140c0 88.14 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
 0x00414ce0 100.00 front_is_intros_enabled
 0x00414d30 77.11 front_callback_slider_brightness
@@ -3183,7 +3183,7 @@
 0x0041cfe0 100.00 selection_mode5_cancel_at_point
 0x0041d010 100.00 interface_back_to_main_if_selected
 0x0041d040 94.92 interface_is_item_available
-0x0041dca0 86.90 interface_do_action
+0x0041dca0 87.34 interface_do_action
 0x0041e750 100.00 selection_clear_request_and_hud_reset
 0x0041e770 100.00 interface_set_item_flash
 0x0041e7a0 100.00 interface_set_object_item_flash
