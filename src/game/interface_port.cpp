@@ -78,6 +78,7 @@
 #include "entity_quad_collision.hpp"
 #include "gods98/model.hpp"
 #include "upgrades.hpp"
+extern "C" uint32_t s_catalog_counts[5]; /* entity.cpp; C linkage for lego_unit.c */
 #include "entity_for_lego.hpp"
 #include <limits.h>
 #include "game.hpp"

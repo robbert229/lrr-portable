@@ -6097,7 +6097,7 @@ void lego_object_pointer_registry_clear_match(void* object)
 {
     unsigned int i;
 
-    for (i = 0; i < legoGlobs_recordObjectCount; i++) {
+    for (i = 0; i < legoGlobs_recordObjectCountReloaded; i++) {
         if (object == legoGlobs_recordObjects[i])
             legoGlobs_recordObjects[i] = NULL;
     }
@@ -8991,6 +8991,12 @@ void lego_roof_block_vertices_set_adapter(unsigned int bx, unsigned int by,
                                           struct TerrainMapVector3* v1,
                                           struct TerrainMapVector3* v2,
                                           struct TerrainMapVector3* v3); /* 00462f20 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: Main.c's Main_Setup3D itself (gods98/main.c since #738,
+ * which reads the first five of the seven arguments). A rename of the
+ * declaration below, one for one. */
+#define lego_main_setup3d_adapter direct3d_render_preferences_apply
+#endif
 void lego_main_setup3d_adapter(int quality, int dither, int filter,
                                int mipmap, int linearMipMap, int blend,
                                int sort);                         /* 00478330 */

@@ -116,6 +116,11 @@ extern "C" float s_global_float_00556f00;
 #include "crt/crt_for_lego.hpp"
 extern "C" void* s_upgrade_records; /* lego_unit.c (C) reads it */
 #include "cmd_for_lego.hpp"
+/* entity.cpp's legoGlobs counts and object registry: C linkage for
+ * lego_unit.c (the frozen header below redeclares them). */
+extern "C" uint32_t s_catalog_counts[5];
+extern "C" uint32_t s_object_pointer_registry_words[10];
+extern "C" uint32_t s_object_pointer_registry_count;
 #include "entity_for_lego.hpp"
 #include "entity_config_for_lego.hpp"
 #include "frontend_for_lego.hpp"
