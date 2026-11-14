@@ -126,7 +126,7 @@ namespace unported_ledger_stubs {
  * the building's rotated shape, spawn a rubble effect on it unless the
  * building is flagged +0x3ec & 8, then drop the building's cost. */
 // FUNCTION: LEGORR 0x00409d50
-void entity_cell_path_effects_apply_current(EntitySlot* entity)
+extern "C" void entity_cell_path_effects_apply_current(EntitySlot* entity)
 {
     unsigned int count;
     float dir[2];

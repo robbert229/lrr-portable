@@ -71,7 +71,14 @@ void legoobject_scatter_spawn_gate_set(int on);                   /* 0044adc0 */
 int nerpfunc_get_tutorial_flags(unsigned int* stack);             /* 00456240 */
 int nerpfunc_set_objective_switch(unsigned int* stack);           /* 004567c0 */
 /* GAME-030 (object_state_file.cpp): original-ABI adapters in
- * objective_port.cpp. */
+ * objective_port.cpp. In the matching build 004592e0 and 00459360 are
+ * object_state_file.cpp's original-shape functions (#749, finding 648):
+ * object-like aliases before each name's only declaration, so the symbol
+ * counter does not move. 00459360 returns an int that this unit ignores. */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+#define objective_osf_store_adapter object_recall_snapshot
+#define objective_osf_restore_adapter object_recall_restore
+#endif
 void objective_osf_store_adapter(void);                           /* 004592e0 */
 void objective_osf_restore_adapter(void);                         /* 00459360 */
 /* GAME-037 Reward.c (reward.c). */

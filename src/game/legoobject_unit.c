@@ -2127,9 +2127,9 @@ int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
                 targetPos[0] = contPos[0];
                 targetPos[1] = contPos[1];
                 if (fabs(facing[0]) > fabs(facing[1]))
-                    dir = (facing[0] > 0.0f) ? 3 : 1;
+                    dir = (facing[0] > legoobject_zero) ? 3 : 1;
                 else
-                    dir = (facing[1] > 0.0f) ? 2 : 0;
+                    dir = (facing[1] > legoobject_zero) ? 2 : 0;
             } else {
                 legoobject_transform_position_get(target, &targetPos[0], &targetPos[1]);
             }
@@ -8395,7 +8395,7 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
             render_object_rotate_axis(obj->other, 1, 0.0f, 1.0f, 0.0f, elapsed * 0.01f);
     } else if (obj->type == 8 || obj->type == 13) {
         if (obj->flags3 & 0x10000) {
-            if (obj->health <= legoobject_zero || ddiscene_advance_by_time_target(obj->other, elapsed) != 0.0f) {
+            if (obj->health <= legoobject_zero || ddiscene_advance_by_time_target(obj->other, elapsed) != legoobject_zero) {
 
                 blockPos[0] = (int)obj->targetBlockPos[0];
                 blockPos[1] = (int)obj->targetBlockPos[1];
@@ -8445,7 +8445,7 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
             terrain_cell_secondary_flag_8_set_current(blockPos2[0], blockPos2[1], 0);
         }
     } else if (obj->type == 9) {
-        if (ddiscene_advance_by_time_target(obj->other, elapsed) != 0.0f) {
+        if (ddiscene_advance_by_time_target(obj->other, elapsed) != legoobject_zero) {
             if (obj->flags1 & 0x80000) {
                 obj->flags1 = (obj->flags1 & ~0x80000) | 0x100;
                 // STRING: LEGORR 0x004a5120
@@ -8472,7 +8472,7 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
         }
     } else if (obj->type == 12) {
         if (ddiscene_advance_by_time_target(obj->other,
-                                            ((obj->flags1 & 0x2000000) && !(obj->flags1 & 0x100)) ? 0.0f : elapsed) != 0.0f)
+                                            ((obj->flags1 & 0x2000000) && !(obj->flags1 & 0x100)) ? 0.0f : elapsed) != legoobject_zero)
         {
             if (obj->flags1 & 0x100) {
                 obj->flags1 &= ~0x100;
@@ -8493,7 +8493,7 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
             }
         }
     } else if (obj->type == 18) {
-        if (ddiscene_advance_by_time_target(obj->other, elapsed) != 0.0f) {
+        if (ddiscene_advance_by_time_target(obj->other, elapsed) != legoobject_zero) {
             if (obj->flags1 & 0x100) {
                 obj->flags1 &= ~0x100;
                 obj->flags3 |= 0x10000;
