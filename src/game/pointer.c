@@ -268,7 +268,7 @@ int pointer_get_type(const char* name, int* pointerType)
     unsigned int i;
 
     for (i = 0; i < Pointer_Type_Count; i++) {
-        if (!_strcmpi(pointerGlobs.names[i], name)) {
+        if (!stricmp(pointerGlobs.names[i], name)) {
             *pointerType = i;
             return 1;
         }

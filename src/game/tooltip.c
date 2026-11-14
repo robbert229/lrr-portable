@@ -208,7 +208,7 @@ int tooltip_get_type(const char* toolTipName, int* toolTipType)
     unsigned int i;
 
     for (i = 1; i < TOOLTIP_TYPE_COUNT; i++) {
-        if (_strcmpi(toolTipName, toolTipGlobs.toolTipName[i]) == 0) {
+        if (stricmp(toolTipName, toolTipGlobs.toolTipName[i]) == 0) {
             *toolTipType = i;
             return 1;
         }

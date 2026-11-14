@@ -491,7 +491,7 @@ int reward_prepare_level(void)
         reward_load_item_quota(&rewardGlobs.current->items[i]);
 
     // STRING: LEGORR 0x004a9440
-    if (_strcmpi(level->name, "Levels::Level03") == 0)
+    if (stricmp(level->name, "Levels::Level03") == 0)
         rewardGlobs.current->items[REWARD_ITEM_CAVERNS].quota = 1;
     return 1;
 }

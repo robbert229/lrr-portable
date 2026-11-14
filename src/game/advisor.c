@@ -265,7 +265,7 @@ int advisor_position_name_to_index(const char* name, int* index)
     unsigned int loop;
 
     for (loop = 0; loop < ADVISOR_TYPE_COUNT; loop++) {
-        if (_strcmpi(advisorGlobs.positionName[loop], name) == 0) {
+        if (stricmp(advisorGlobs.positionName[loop], name) == 0) {
             *index = loop;
             return 1;
         }
@@ -332,7 +332,7 @@ int advisor_animation_name_to_index(const char* name, int* index)
     unsigned int loop;
 
     for (loop = 0; loop < ADVISOR_ANIM_COUNT; loop++) {
-        if (_strcmpi(advisorGlobs.animName[loop], name) == 0) {
+        if (stricmp(advisorGlobs.animName[loop], name) == 0) {
             *index = loop;
             return 1;
         }
@@ -374,11 +374,11 @@ void advisor_position_config_load(BlockFile* config, const char* gameName,
                 /* "NULL" is pooled with four other units' uses; this unit owns
                  * it (finding 569). */
                 // STRING: LEGORR 0x004a13f4
-                if (_strcmpi("NULL", argv[1]) == 0 || ui_message_label_index_find(argv[1], &textType)) {
+                if (stricmp("NULL", argv[1]) == 0 || ui_message_label_index_find(argv[1], &textType)) {
                     if (sound_alias_lookup(argv[2], &sfxType)) {
                         pos[0] = (float)atof(argv[3]);
                         pos[1] = (float)atof(argv[4]);
-                        if (_strcmpi("NULL", argv[5]) == 0 || ui_panel_name_table_lookup(argv[5], &panelType)) {
+                        if (stricmp("NULL", argv[5]) == 0 || ui_panel_name_table_lookup(argv[5], &panelType)) {
                             advisor_position_record_initialize(advisorType, animType, textType, sfxType, panelType, pos[0], pos[1]);
                         }
                     }

@@ -124,7 +124,7 @@ void dependencies_initialise(BlockRec* config, const char* gameName)
         numParts = sound_variant_split(arrayItem->key, stringParts, s_config_rgb_separator);
         if (lego_entity_type_pair_lookup(stringParts[1], &objType, &objID, NULL)) {
             // STRING: LEGORR 0x004a1d8c
-            hitOnceStay = !_strcmpi(stringParts[0], "HitOnceStay");
+            hitOnceStay = !stricmp(stringParts[0], "HitOnceStay");
             if (numParts == 3) {
                 objLevel = atoi(stringParts[2]);
                 building_upgrade_admission_check(objType, objID);
