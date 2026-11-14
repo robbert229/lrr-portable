@@ -65,6 +65,10 @@
 extern "C" void idle_register(EntitySlot* e);
 extern "C" void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
 #include "cmd_for_lava_erosion.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego_globs.h"
+#endif
 
 static const float s_erosion_ticks_per_second = 25.0f;
 static const float s_erosion_delay_fraction = 0.2f;

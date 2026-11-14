@@ -93,6 +93,11 @@ static int teleporter_callback_start(Lego_Object* liveObj, void* data)
     return 0;
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x0046a420
 Teleporter_Point2F teleporter_get_camera_position(void)
 {

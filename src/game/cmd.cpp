@@ -43,6 +43,10 @@ extern "C" void* s_upgrade_records; /* lego_unit.c (C) reads it */
 #include "cmd_for_aitask.hpp"
 extern "C" void cmd_registry_init_target(void);
 #include "cmd_from_aitask.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego_globs.h"
+#endif
 /* AITask.c's priority tables live in the unit's state (aitask.c); the
  * frozen headers' s_behaviour/s_priority_state declarations are not
  * defined anywhere since finding 570. */
@@ -1693,8 +1697,11 @@ uint32_t menu_surface_track_peek(void)
 #endif /* !LEGORRR_BACKEND_WINAPI */
 
 const char* s_upgrade_names[UPGRADE_NAME_TABLE_MAX];
-// GLOBAL: LEGORR 0x005561e4
+/* legoGlobs +0x124 (005561e4): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void* s_upgrade_records;
+#endif
 unsigned s_upgrade_count;
 
 void upgrade_name_table_install(void* records, const char* const* names,

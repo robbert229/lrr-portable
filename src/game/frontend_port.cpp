@@ -108,6 +108,8 @@ extern "C" void* DAT_00556f54;
 #include "upgrades_for_frontend_unit.hpp"
 #include "util_for_frontend_unit.hpp"
 #include "gods98/frameloop_for_frontend_unit.hpp"
+/* legoGlobs' fields under the units' names (finding 653). */
+#include "lego_globs.h"
 
 typedef struct FeSavMenuListBuild {
     FrontEnd* fe;
@@ -5144,7 +5146,6 @@ extern "C" void movie_play_level_video_adapter(const char* levelName,
 }
 
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: Front_IsFrontEndEnabled (00416d00) takes nothing; the port's entry reads the config. */
-extern "C" struct BlockRec* legoGlobs_config;
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (frontend_enabled)
 extern "C" int frontend_enabled_original(void)
 {

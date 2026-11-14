@@ -57,10 +57,6 @@ void terrain_cell_work_flag_clear_current(EntityCell_Point2I* blockPos,
 void* level_current_terrain_get(void);                              /* 00431570 */
 void lego_terrain_cell_primary_flags_mask_clear_and_refresh(EntityCell_Point2I* blockPos); /* 00432360 */
 void lego_terrain_cell_secondary_bit0_clear(EntityCell_Point2I* blockPos); /* 004323c0 */
-extern char* legoGlobs_buildingData;                                /* 005561e0 */
-extern Lego_Object* legoGlobs_f_55644c;                             /* 0055644c */
-extern Lego_Object* legoGlobs_f_556450;                             /* 00556450 */
-extern Lego_Object* legoGlobs_f_556454;                             /* 00556454 */
 /* GAME-026 Map3D.c. */
 int terrain_map_block_to_world(void* map, unsigned int bx, unsigned int by,
                                float* xOut, float* yOut);            /* 0044f640 */
@@ -92,6 +88,21 @@ void building_set_cost_drop_disabled(int disabled)
 {
     entityCell_costDropDisabled = disabled;
 }
+
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+/* legoGlobs is one struct (lego_globs.h, finding 653); this unit reads the
+ * building data as bytes and the three tracked objects as objects. */
+#undef legoGlobs_buildingData
+#define legoGlobs_buildingData (*(char**)&legoGlobs.buildingData)       /* 005561e0 */
+#undef legoGlobs_f_55644c
+#define legoGlobs_f_55644c (*(Lego_Object**)&legoGlobs.field_38c)       /* 0055644c */
+#undef legoGlobs_f_556450
+#define legoGlobs_f_556450 (*(Lego_Object**)&legoGlobs.field_390)       /* 00556450 */
+#undef legoGlobs_f_556454
+#define legoGlobs_f_556454 (*(Lego_Object**)&legoGlobs.field_394)       /* 00556454 */
 
 /* Clear each cell of the building's rotated shape, spawn a rubble effect on
  * it unless the building is flagged +0x3ec & 8, then drop the building's

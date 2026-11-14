@@ -158,6 +158,13 @@ extern float s_panel_highlight_timer;
 #include "gods98/view_for_lego.hpp"
 #include "ai_from_lego.hpp"
 #include "entity_from_lego.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653),
+ * after the two C headers below that declare the old names. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego.h"
+#include "lego_unit.h"
+#include "lego_globs.h"
+#endif
 
 #define LVL_OXYGEN_SCALE  0.001f      /* LevelLoad converts OxygenRate to a per-tick rate. */
 
@@ -5483,7 +5490,7 @@ __declspec(naked) void terrain_cell_update_queue_flush_current(void)
         jbe terrain_cell_update_queue_flush_done
         push edi
         push ebp
-        mov edi, offset s_cell_previous_track
+        mov edi, offset legoGlobs + 0aach /* previousBlocks */
     terrain_cell_update_queue_flush_loop:
         mov ecx, dword ptr [edi + 4]
         mov eax, dword ptr [esi + 14h]
@@ -5551,7 +5558,7 @@ __declspec(naked) void terrain_cell_previous_state_track_current(void)
         test eax, eax
         jbe terrain_cell_previous_state_track_done
         push edi
-        mov ecx, offset s_cell_refresh_track
+        mov ecx, offset legoGlobs + 78ch /* updateBlocks */
     terrain_cell_previous_state_track_loop:
         mov eax, dword ptr [ecx]
         mov dword ptr [ecx + 320h], eax

@@ -310,6 +310,11 @@ void text_display_message(int textType, int changeTiming, int setFlag4)
     else textGlobs.flags &= ~TEXT_FLAG_FLASH;
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x0046ad00
 void text_update(float elapsed)
 {

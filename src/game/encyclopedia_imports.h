@@ -18,14 +18,6 @@ struct Lego_Object;
 struct ViewProjectionAdapter;
 struct EntitySlot;
 
-/* GAME-021 Lego.c's legoGlobs (lego_unit.c's stand-ins). The type counts
- * (0055627c-00556288) are read at their offset in legoGlobs, as lego_unit.c
- * does (lego_unit_imports.h). */
-extern struct BlockRec* legoGlobs_config;                     /* 005560c0 */
-extern char** legoGlobs_vehicleName;                          /* 005561e8 */
-extern char** legoGlobs_miniFigureName;                       /* 005561ec */
-extern char** legoGlobs_rockMonsterName;                      /* 005561f0 */
-extern char** legoGlobs_buildingName;                         /* 005561f4 */
 #define encyclopedia_typeCounts ((unsigned int*)((char*)&legoGlobs_config + 0x1bc))
 
 /* GAME-021 Lego.c (lego_unit.c): Lego_DrawObjectSelectionBox. */

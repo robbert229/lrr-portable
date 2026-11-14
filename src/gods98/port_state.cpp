@@ -42,8 +42,11 @@ void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y)
 /* The two DAT globals, static-backed until the corpus's writers (all
  * still unported) land — message.cpp's s_system_state precedent. The
  * float width is the corpus's own: 0x4230b0 flds a DWORD. */
-// GLOBAL: LEGORR 0x00556f00
+/* legoGlobs +0xe40 (00556f00): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 float    s_global_float_00556f00;
+#endif
 
 /* Keep the portable API's null behavior pinned by test_static_globals. */
 uint32_t global_value_004ff9bc_store_and_return(const void* value)

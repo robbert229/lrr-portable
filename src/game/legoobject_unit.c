@@ -30,6 +30,7 @@
 #include "crt/vc5names.h"
 #include "legoobject_unit.h"
 #include "legoobject_unit_imports.h"
+#include "lego_globs.h"
 
 /* ------------------------------------------------------------------ */
 /* State: objectGlobs fields the port does not model, and legoGlobs     */
@@ -62,11 +63,6 @@ unsigned int objectGlobs_recordObjsCount;
 
 
 /* ---- state, group C ---- */
-
-/* The third primary teleporter (legoGlobs, DAT_00556454); lego_unit.c
- * defines the first two (0055644c, 00556450). */
-// GLOBAL: LEGORR 0x00556454
-Lego_Object* legoGlobs_f_556454;
 
 /* Stats.c's static ObjectStats records (0x150 bytes each, first word 0x30)
  * that LegoObject_Create points objects without a stats row at: upgrade
@@ -122,14 +118,6 @@ float objectGlobs_f_4dee0c;
 /* objectGlobs (004e8444): every event mask 0043f5b0 has recorded. */
 // GLOBAL: LEGORR 0x004e8444
 unsigned int objectGlobs_f_4e8444;
-
-/* legoGlobs.objTeleportQueue (00556474-00556517): the object requests
- * (type, id) a teleporting building serves in order, and their count. The
- * port keeps them unannotated (interface_port.cpp's lego_object_requests,
- * which interface_unit.c reads). The count is lego_unit.c's stand-in
- * legoGlobs_f_556514. */
-// GLOBAL: LEGORR 0x00556474
-LegoObjI_Requests legoGlobs_objectRequests;
 
 
 /* ---- state, group J (part 2) ---- */
@@ -7435,8 +7423,12 @@ float entity_stats_float_at20(const struct EntitySlot* e);                 /* 00
 float entity_stats_float_atd4(const struct EntitySlot* e);                 /* 00469ce0 */
 float entity_stats_float_atd8(const struct EntitySlot* e);                 /* 00469d20 */
 void* entity_stats_field_at_a0_corpus(const struct EntitySlot* e);         /* 00469da0 */
-/* Lego.c (lego_unit.h, lego_unit.c). */
+/* Kept, unreferenced: the old names of legoGlobs fields (lego_globs.h,
+ * finding 653), so that the symbol counter below does not move.
+ * Deviation (scoring only). */
+#undef legoGlobs_contBoulder
 extern void* legoGlobs_contBoulder;                                        /* 00556368 */
+#define legoGlobs_contBoulder legoGlobs.contBoulder
 void* lego_terrain_cell_palette_resource_at_grid_position(const int* xy); /* 00429160 */
 
 /* ---- functions, group P (00445d70-004473b0; part 3, issue #615) ---- */
@@ -7984,9 +7976,13 @@ int legoobject_route_to_cell_command_issue(Lego_Object* obj, int bx, int by, Leg
 }
 
 /* ---- state and imports, group Q (004474f0-00447ea0; part 3, issue #615) ---- */
-
-/* Lego.c (lego_unit.h). */
+/* Kept, unreferenced: the old names of legoGlobs fields (lego_globs.h,
+ * finding 653), so that the symbol counter below does not move.
+ * Deviation (scoring only). */
+#undef legoGlobs_DrainTime
 extern float legoGlobs_DrainTime;                                          /* 00556f04 */
+#define legoGlobs_DrainTime legoGlobs.DrainTime
+
 /* Stats.c (entity.hpp, entity_stats.c). */
 float entity_stats_float_at88(const struct EntitySlot* e);                 /* 00469f20 */
 /* Vehicle.c (vehicle_model.h, vehicle_model.c). */
@@ -8016,10 +8012,22 @@ void weapons_generic_damage_object(void* obj, int weaponType, int knownWeapon,
                                    float elapsed, const float* dir);       /* 0046f270 */
 /* Camera.c (camera_control.c); legoGlobs.cameraMain is view.cpp's. */
 void camera_shake(void* cam, float intensity, float duration);             /* 00435f32 */
+/* Kept, unreferenced: the old names of legoGlobs fields (lego_globs.h,
+ * finding 653), so that the symbol counter below does not move.
+ * Deviation (scoring only). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#undef s_zoom_step_context
+#endif
 extern void* s_zoom_step_context;                                          /* 005560e4 */
-/* Lego.c (lego_unit.h, lego_unit.c). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define s_zoom_step_context legoGlobs.cameraMain
+#endif
+#undef legoGlobs_DynamiteMaxDamage
 extern float legoGlobs_DynamiteMaxDamage;                                  /* 00556468 */
+#define legoGlobs_DynamiteMaxDamage legoGlobs.DynamiteMaxDamage
+#undef legoGlobs_DynamiteWakeRadius
 extern float legoGlobs_DynamiteWakeRadius;                                 /* 0055646c */
+#define legoGlobs_DynamiteWakeRadius legoGlobs.DynamiteWakeRadius
 void terrain_cell_secondary_flag_8_set_current(int bx, int by, int on);    /* 004324d0 */
 void terrain_cell_flag_80000_clear_or_set_current(const int blockPos[2], int on); /* 00432710 */
 /* Map3D.c (terrain_map.c). */
@@ -9152,7 +9160,12 @@ int legoobject_proximity_step_command_issue_clearing_gate(Lego_Object* obj, Lego
 int lego_grid_cell_entity_eligibility_check(int bx, int by);           /* 00433e30 */
 int terrain_cell_mask18_clear_current(unsigned int bx, unsigned int by); /* 00432f40 */
 void media_action_feedback_sound_dispatch(int event);                  /* 00428800 */
+/* Kept, unreferenced: the old names of legoGlobs fields (lego_globs.h,
+ * finding 653), so that the symbol counter below does not move.
+ * Deviation (scoring only). */
+#undef legoGlobs_f_556448
 extern int legoGlobs_f_556448;                    /* 00556448 placement direction */
+#define legoGlobs_f_556448 legoGlobs.field_388
 /* Steering (steering.c, C): the follower stack of a flock. */
 void ptrstack_for_each(void* group, void (*callback)(void* group, void* item, void* data),
                        void* data);                                     /* 0040fe90 */
@@ -9988,8 +10001,15 @@ int terrain_map_screen_pick(struct TerrainMap* map, void* viewport, unsigned int
 /* Lego.c (lego_unit.h, lego_unit.c). */
 void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* blockPos,
                                          int smooth);                   /* 0042de40 */
+/* Kept, unreferenced: the old names of legoGlobs fields (lego_globs.h,
+ * finding 653), so that the symbol counter below does not move.
+ * Deviation (scoring only). */
+#undef legoGlobs_contIceCube
 extern void* legoGlobs_contIceCube;               /* 005563a8 */
+#define legoGlobs_contIceCube legoGlobs.contIceCube
+#undef legoGlobs_f_556108
 extern void* legoGlobs_f_556108;                  /* 00556108 */
+#define legoGlobs_f_556108 legoGlobs.field_48
 extern int s_object_f_4eabc4;                     /* 004eabc4 objectGlobs list count */
 extern int s_object_f_4eabc8;                     /* 004eabc8 its buildings */
 /* Mouse position (crt_mouse.h, crt.cpp). */

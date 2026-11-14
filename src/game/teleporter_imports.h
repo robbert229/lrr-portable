@@ -23,7 +23,6 @@ extern "C" {
  * legoGlobs.cameraFP (005560ec, lego_unit.c) and legoGlobs.viewMode
  * (00556ec8, gods98/engine.cpp). */
 extern void* s_zoom_step_context;             /* 005560e4 */
-extern void* legoGlobs_cameraFP;              /* 005560ec */
 extern int32_t s_context_mode;                /* 00556ec8 */
 
 /* Camera.c: Camera_GetTopdownWorldPos (00436b33). The port's entry takes

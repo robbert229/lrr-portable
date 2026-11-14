@@ -415,6 +415,11 @@ void front_util_print_f(Front_Font* font, int x, int y, const char* msg, ...)
     }
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x004103d0
 void front_callback_trigger_play_credits(void)
 {
@@ -2927,9 +2932,10 @@ typedef struct Front_LevelMenuBuild {
 extern "C" {
 #endif
 /* Part 2's callees (finding 628). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: lego_globs.h */
 extern float s_scroll_scale;                /* 0055615c legoGlobs.gameSpeed */
-extern uint32_t legoGlobs_flags1;           /* 00556ecc (lego_unit.c) */
 extern struct LevelState* g_active_level_retail; /* 005560d4 currLevel */
+#endif
 /* GAME-018 HelpWindow.c (helpwindow.c), GAME-019 Info.c (info_unit.c). */
 void help_window_toggle(int toggle, int disable);                 /* 00419200 */
 void info_set_auto_game_speed(int on);                            /* 00419450 */
@@ -2969,8 +2975,6 @@ void* container_load(void* parent, const char* filename, const char* typeString,
                      int looseLoad);                                  /* 00472cd0 */
 int sfx_random_set_and_play_global_sample(int sfxID, int* handle);   /* 00464ef0 */
 void* text_buffer_create(void* font, float* area, unsigned int bufferSize); /* 004850f0 */
-extern struct TextureSurface* s_lego_text_window_font;              /* 00556124 */
-extern void* legoGlobs_fontBriefingLo;                              /* 00556138 */
 void front_object_recall_save_adapter(const char* fname);           /* 004593e0 */
 #ifdef __cplusplus
 }

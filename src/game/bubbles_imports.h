@@ -25,7 +25,6 @@ struct TextureSurface;
 /* Lego.c (lego_unit.c). legoGlobs.gameName (005560c4) and
  * legoGlobs.viewMain (005560dc), and the check at 00425d80. */
 extern const char* s_engine_config_root;   /* 005560c4 */
-extern void* legoGlobs_viewMain;           /* 005560dc */
 int current_engine_mode_is_zero(void);     /* 00425d80 */
 
 /* Main.c's flags (00505f84). */

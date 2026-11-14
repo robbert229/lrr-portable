@@ -50,6 +50,11 @@ typedef struct Encyclopedia_Globs {
 // GLOBAL: LEGORR 0x004c7e88
 static Encyclopedia_Globs encyclopediaGlobs;
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x0040e490
 void encyclopedia_initialise(struct BlockRec* config, const char* gameName)
 {

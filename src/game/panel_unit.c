@@ -38,6 +38,7 @@
 #include "camera_control.h"
 #include "info.h"
 #include "ai.h"
+#include "lego_globs.h"
 
 #if !(defined(_MSC_VER) && _MSC_VER == 1100)
 #define PANEL_PORT 1

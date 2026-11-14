@@ -146,12 +146,21 @@ const char* const s_interface_menu_action_labels[] = {
  * dedicated annotated statics carry them (whole-object resolution, the same
  * precedent as the s_fe_flow_* carve-outs). Own storage, zero-init like the
  * corpus's tail. */
-// GLOBAL: LEGORR 0x0055613c
+/* legoGlobs +0x07c (0055613c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" { void* DAT_0055613c; }
-// GLOBAL: LEGORR 0x00556f50
+#endif
+/* legoGlobs +0xe90 (00556f50): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" { void* DAT_00556f50; }
-// GLOBAL: LEGORR 0x00556f54
+#endif
+/* legoGlobs +0xe94 (00556f54): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" { void* DAT_00556f54; }
+#endif
 /* The five flow words land as own storage: the corpus addresses them as
  * individual dwords, and Reccmp only resolves whole-object operands. */
 #if defined(LEGORRR_BACKEND_WINAPI)

@@ -25,12 +25,6 @@ extern "C" {
 struct LevelState;
 struct Lego_Object;
 
-/* GAME-021 Lego.c (lego_unit.h, lego.h). The three containers and the
- * radius are legoGlobs fields, commons in the original. */
-extern void* legoGlobs_contBoulderExplode;        /* 0055636c */
-extern void* legoGlobs_contBoulderExplodeIce;     /* 00556370 */
-extern void* legoGlobs_contSmashPath;             /* 005563ac */
-extern float legoGlobs_BirdScarerRadius;          /* 00556470 */
 struct LevelState* level_current_owner_get(void); /* 00431560 Lego_GetLevel */
 /* 00431570 Lego_GetMap takes no arguments. lego_unit.c defines it with the
  * port's two ignored cell arguments, so the C matching build calls it

@@ -62,11 +62,6 @@ void* input_binding_default_value_get(int objType, int objIndex,
 void lego_transition_control(int on, unsigned int flags);     /* 00425c30 */
 void objective_score_text_origin_set(const float* pair);      /* 004262e0 */
 void media_action_feedback_sound_dispatch(int event);         /* 00428800 */
-extern struct BlockRec* legoGlobs_config;                     /* 005560c0 */
-extern char** legoGlobs_vehicleName;                          /* 005561e8 */
-extern char** legoGlobs_miniFigureName;                       /* 005561ec */
-extern char** legoGlobs_buildingName;                         /* 005561f4 */
-extern struct Image* legoGlobs_NextButtonImage;               /* 00556eec */
 /* legoGlobs' type counts (0055627c-0055628c). The port's copies are
  * entity.cpp's C++ s_catalog_counts, so the unit reads them at their
  * offset in legoGlobs, as lego_unit.c does (lego_unit_imports.h). */

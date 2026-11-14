@@ -87,6 +87,28 @@
 #include "gods98/keys.h"
 #include "gods98/sound.h"
 #include "gods98/utils.h"
+#include "lego_globs.h"
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: legoGlobs is one struct (lego_globs.h, finding 653). The
+ * names above now reach its fields, with the types interface_callees.h
+ * gives them (its declarations of the old names are not referenced). */
+#undef lego_camera_fp
+#define lego_camera_fp (*(LegoCamera**)&legoGlobs.cameraFP)
+#undef lego_object_fp
+#define lego_object_fp (*(LegoObject**)&legoGlobs.objectFP)
+#undef lego_teleport_primary_small
+#define lego_teleport_primary_small (*(LegoObject**)&legoGlobs.field_38c)
+#undef lego_teleport_primary_big
+#define lego_teleport_primary_big (*(LegoObject**)&legoGlobs.field_390)
+#undef lego_teleport_primary_laser
+#define lego_teleport_primary_laser (*(LegoObject**)&legoGlobs.field_394)
+#undef lego_object_requests
+#define lego_object_requests (*(LegoObjectRequests*)legoGlobs.objectRequests)
+#undef lego_upgrade_cost_ore
+#define lego_upgrade_cost_ore (*(unsigned int*)&legoGlobs.BuildingUpgradeCostOre)
+#undef lego_upgrade_cost_studs
+#define lego_upgrade_cost_studs (*(unsigned int*)&legoGlobs.BuildingUpgradeCostStuds)
+#endif
 
 /* Port-only code: the entries that keep the port's names delegate to the
  * port's model in the native build (finding 564). The matching build

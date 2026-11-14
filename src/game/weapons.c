@@ -26,6 +26,9 @@
 #define LEGORRR_GAME_WEAPONS_UNIT
 #include "weapons.h"
 #include "weapons_imports.h"
+/* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
+ * above, pays for its symbols (finding 538). */
+#include "lego_globs.h"
 
 /* The unit's functions have C linkage in the native C++ compile too: the
  * port's callers of the shared entries and the port-only accessors expect

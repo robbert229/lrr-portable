@@ -34,6 +34,10 @@
  * so before the frozen header gives it C linkage. */
 extern "C" float* s_terrain_neighbor_path_cost;
 #include "terrain_grid_from_legoobject.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego_globs.h"
+#endif
 
 static BlockFile* s_texture_set_config_context;
 TerrainCellInBoundsHook s_terrain_cell_in_bounds_hook;
@@ -42,8 +46,11 @@ void* s_terrain_cell_neighbor_context;
 LevelCellKindGrid s_empty_cell_kind_grid;
 LevelCellKindGrid* s_active_cell_kind_grid =
     &s_empty_cell_kind_grid;
-// GLOBAL: LEGORR 0x005560d4
+/* legoGlobs +0x014 (005560d4): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 struct LevelState* g_active_level_retail;
+#endif
 GridCellObjectCoordinatesHook s_grid_object_coordinates_hook;
 GridCellObjectFlagHook s_grid_object_flag_hook;
 void* s_grid_cell_object_context;

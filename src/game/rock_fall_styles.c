@@ -170,6 +170,11 @@ void effect_spawn_boulder_explode(Effect_Object* obj)
     effect_spawn_boulder_explode_at(&wPos);
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x0040be10
 void effect_spawn_boulder_explode_at(Effect_Vector3F* wPos)
 {

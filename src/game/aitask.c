@@ -24,6 +24,9 @@
 #include "lego_unit.h"
 #include "aitask.h"
 #include "aitask_imports.h"
+/* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
+ * above, pays for its symbols (finding 538). */
+#include "lego_globs.h"
 
 /* AITask.c's .bss, 004b31c8-004b8064: one struct, laid out as the
  * original. Its priority values (004b32e8) and states (004b7ff4) are shared

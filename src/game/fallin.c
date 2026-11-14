@@ -21,6 +21,9 @@
 #include "fallin_imports.h"
 
 #include <stddef.h>
+/* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
+ * above, pays for its symbols (finding 538). */
+#include "lego_globs.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus

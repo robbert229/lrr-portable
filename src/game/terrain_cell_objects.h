@@ -79,12 +79,6 @@ typedef struct ElectricFenceBlock {
 typedef void (*ElectricFenceNodeCallback)(ElectricFenceNode* node,
                                           void* data);
 
-/* legoGlobs.contElectricFence and contElectricFenceStud (Lego.c,
- * 0055638c and 0055639c): the templates the unit clones, defined and
- * annotated in lego_unit.c (finding 568). */
-extern void* legoGlobs_contElectricFence;
-extern void* legoGlobs_contElectricFenceStud;
-
 /* FUN_0040cdc0 ElectricFence_Initialise. */
 void electric_fence_initialise(ElectricFenceLevel* level);
 /* FUN_0040ce30 ElectricFence_Shutdown. */

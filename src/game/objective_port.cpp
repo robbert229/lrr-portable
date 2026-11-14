@@ -73,6 +73,10 @@
 #include "upgrades.hpp"
 #include "scene_render.hpp"
 #include "level_for_objective_unit.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego_globs.h"
+#endif
 
 /* The port's definitions of the names the unit takes in the matching build
  * (objective_unit_link_names.h): every build but MSVC 5.0's. */

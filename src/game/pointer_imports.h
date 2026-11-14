@@ -22,7 +22,6 @@ struct TextureSurface;
 
 /* Main.c's flags (00505f84) and Lego.c's legoGlobs.flags1 (00556ecc). */
 extern uint32_t s_engine_feature_word;
-extern uint32_t legoGlobs_flags1;
 
 /* Utils.c (utils.c): Util_Tokenise. */
 int sound_variant_split(char* text, char** out, const char* separators); /* 00477440 */

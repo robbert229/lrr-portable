@@ -460,6 +460,11 @@ void advisor_action_position_get(int advisorType, float* x, float* y)
     *y = advisorGlobs.positions[advisorType].origY;
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x004018c0
 int advisor_request_admit(int advisorType, int loop)
 {

@@ -55,17 +55,30 @@ extern float s_panel_highlight_timer; /* group B */
 #include "engine_for_lego.hpp"
 extern "C" int s_scroll_guard; /* lego_unit.c reads it (issue #544) */
 #include "engine_from_lego.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "game/lego_globs.h"
+#endif
 
 /* PanelSelectionHighlightToggle/EngineTick DAT globals (see the function
  * comments at their use sites): bit-0 flag word and the 250-ms cooldown in
  * the zero-filled .data virtual tail. Declared here because EngineTick owns
  * the corpus's scaled countdown of DAT_00556efc. */
-// GLOBAL: LEGORR 0x00556ed0
+/* legoGlobs +0xe10 (00556ed0): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_panel_highlight_flags; /* DAT_00556ed0 bit 0 */
-// GLOBAL: LEGORR 0x00556efc
+#endif
+/* legoGlobs +0xe3c (00556efc): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 float s_panel_highlight_timer;    /* DAT_00556efc 250-ms cooldown */
-// GLOBAL: LEGORR 0x00556ec8
+#endif
+/* legoGlobs +0xe08 (00556ec8): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" { int32_t s_context_mode; } /* gods98/engine.h: Advisor.c reads it */
+#endif
 
 /* GlobalField505f88Get and CommandLineOptionParse share this app-mode word. */
 // GLOBAL: LEGORR 0x00505f88
@@ -355,8 +368,11 @@ ViewContext* engine_current_primary_view_get(void)
  * the executable basename at DAT_005560c4. The portable modules do not share
  * a byte-identical 0x3be-dword global block, so reset of their owned state is
  * supplied by an explicit hook instead of clearing unrelated module globals. */
-// GLOBAL: LEGORR 0x005560c4
+/* legoGlobs +0x004 (005560c4): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char* s_engine_config_root;
+#endif
 EngineContext* s_callback_registry_context;
 EngineConfigRegistryResetHook s_callback_registry_reset_hook;
 EngineGameConfigInitHook s_game_config_init_hook;
@@ -563,16 +579,31 @@ void EngineShutdown(EngineContext* ctx)
     lego::scene_resource_string_tables_free();
 }
 
-// GLOBAL: LEGORR 0x0055651c
+/* legoGlobs +0x45c (0055651c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_triple_first;  /* DAT_0055651c role: unowned */
-// GLOBAL: LEGORR 0x00556520
+#endif
+/* legoGlobs +0x460 (00556520): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_triple_second; /* DAT_00556520 role: unowned */
-// GLOBAL: LEGORR 0x00556524
+#endif
+/* legoGlobs +0x464 (00556524): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_triple_third;  /* DAT_00556524 role: unowned */
-// GLOBAL: LEGORR 0x00556f24
+#endif
+/* legoGlobs +0xe64 (00556f24): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 float s_task_text_origin_x;
-// GLOBAL: LEGORR 0x00556f28
+#endif
+/* legoGlobs +0xe68 (00556f28): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 float s_task_text_origin_y;
+#endif
 
 void engine_context_mode_global_set(int32_t mode)
 {
@@ -607,10 +638,16 @@ void engine_overlay_words_set(uint32_t flags, uint32_t request)
 /* ObjectiveScoreTextOriginSet (FUN_004262e0) — see engine.hpp. The pair
  * rides unowned-global module storage (the corpus's writer side is this
  * setter; the reader is the unported score-text draw band — deviation). */
-// GLOBAL: LEGORR 0x00556f1c
+/* legoGlobs +0xe5c (00556f1c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 float s_score_text_origin_x;
-// GLOBAL: LEGORR 0x00556f20
+#endif
+/* legoGlobs +0xe60 (00556f20): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 float s_score_text_origin_y;
+#endif
 
 uint32_t engine_debug_word_peek(void)
 {
@@ -690,10 +727,16 @@ EngineState* entity_field_grid_descriptor_peek(void) { return s_field_grid_desc;
 /* --- the global-state refresh leaf (see engine.hpp) ------------------------
  * FUN_00435a20's two corpus words (state word, refresh record pointer) have
  * no ported owner; they land here as zero-init statics with hooks. */
-// GLOBAL: LEGORR 0x00556ed4
+/* legoGlobs +0xe14 (00556ed4): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_global_low_word; /* DAT_00556ed4 role */
-// GLOBAL: LEGORR 0x005563b4
+#endif
+/* legoGlobs +0x2f4 (005563b4): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void* s_refresh_record;     /* DAT_005563b4 role */
+#endif
 
 uint32_t global_state_low_word_get(void) { return s_global_low_word; }
 void global_state_low_word_set(uint32_t value) { s_global_low_word = value; }
@@ -703,8 +746,11 @@ void* global_refresh_record_peek(void) { return s_refresh_record; }
 /* --- the global position handle leaf (see engine.hpp) ----------------------
  * DAT_00556f3c has no ported owner; the reposition seam (FUN_0047dcb0) is
  * a hook boundary, so the call rides a recorded seam here. */
-// GLOBAL: LEGORR 0x00556f3c
+/* legoGlobs +0xe7c (00556f3c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void* s_position_handle;   /* DAT_00556f3c role */
+#endif
 int    s_position_seam_calls;
 void*  s_position_seam_last_handle;
 int    s_position_seam_last_x;
@@ -740,8 +786,11 @@ void global_position_seam_last(void** out_handle, int* out_x, int* out_y)
 /* ScrollScaleSetAndClamp (FUN_00425ce0) — see engine.hpp. The corpus reads
  * its speed word through the overlapping _DAT_0055615c alias; the port keeps
  * one float in this module's storage. */
-// GLOBAL: LEGORR 0x0055615c
+/* legoGlobs +0x09c (0055615c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 float s_scroll_scale = 1.0f; /* DAT_0055615c; port default (ref is zero-filled) */
+#endif
 
 float scroll_scale_peek(void) { return s_scroll_scale; }
 #if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */

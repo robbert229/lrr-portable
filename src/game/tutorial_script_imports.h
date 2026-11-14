@@ -54,9 +54,6 @@ unsigned int interface_get_object_item_clicks(int objType,
                                               int objIndex); /* 0041e860 */
 int interface_set_advisor_item(int type, int loop);          /* 0041e890 */
 
-/* GAME-021 Lego.c (lego_unit.c, lego.cpp). */
-extern uint32_t legoGlobs_flags1;                  /* 00556ecc flags1 */
-extern struct Image* legoGlobs_TutorialIcon;       /* 0055645c TutorialIcon */
 struct LevelState* level_current_owner_get(void);  /* 00431560 Lego_GetLevel */
 float global_float_field_00556f00_get(void);       /* 004230b0 Lego_GetGameSpeed */
 void global_scroll_guard_set(int value);           /* 00425cd0 */
@@ -78,7 +75,6 @@ int lego_terrain_cell_mutate(struct Lego_Level* level, unsigned int bx,
 int terrain_cell_variant_flag_propagate_current(const int* blockPos); /* 00432600 */
 int terrain_cell_state_update_current(const int* blockPos);           /* 00432c90 */
 uint32_t level_cell_occupied_at_current(const int* blockPos);         /* 00433090 */
-extern struct LegoCreatureModelE* legoGlobs_rockMonsterData; /* 005561dc */
 int lego_entity_type_pair_lookup(const char* objName, int* outType,
                                  unsigned int* outID,
                                  void** outModel);          /* 0042e8b0 */
