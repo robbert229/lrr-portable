@@ -854,12 +854,8 @@ int interface_handle_mouse_adapter(int x, int y, int leftButton,
 #endif
 int info_check_click_adapter(int x, int y, int leftReleased,
                              int rightReleased);
-/* RadarMap.c (radarmap.c; map_view_port.cpp natively): RadarMap_InsideRadar (0045e660). */
-int rect_contains_point_half_open(const float* rect_record, int x, int y);
-/* frontend.h: tooltip activation (0046b770) and the advisor animation
- * (0046ac60). */
+/* frontend.h: tooltip activation (0046b770). */
 void timed_effect_update_request_set_corpus(int index);
-void advisor_text_animation_update(int slot, int force, int selected);
 /* objective.hpp (00453910) and tutorial_hud_ports.hpp (00453920). */
 void objective_deferred_callback_invoke_if_set(void);
 void tutorial_advisor_scroll_step_advance(void);
@@ -988,7 +984,6 @@ void objective_tick_target(void* engine, struct LevelState* s,
                            float checker_dt, float frame_dt); /* objective.hpp, 00458be0 */
 void spiderweb_restart(Lego_Level* level);                /* spiderweb.c, 00466230 */
 void global_linked_record_chain_clear(void);           /* crt.hpp, 0046a390 */
-uint32_t entity_stats_word_get(const struct EntitySlot* e); /* entity.hpp, 00469e60 */
 
 /* Original-ABI adapters (unannotated, ADR 0005 step 6) where the port's
  * contract differs, or where frozen headers declare the port's entry with
@@ -1033,21 +1028,27 @@ struct RenderResourceBinding;
 /* legoGlobs fields and other modules' globals the port models. */
 extern void* s_upgrade_records;               /* cmd.cpp, 005561e4 upgradeData */
 extern uint32_t s_window_application_active;  /* frameloop.cpp, 00505808 */
-/* legoGlobs' object-name tables and catalogue counts. The port's copies
- * are entity.cpp globals with C++ linkage (00556254-00556264, 0055618c,
- * 0055627c), and entity.cpp is outside this change. Declaring them
- * extern "C" in entity.hpp shifts the symbol counter of every unit that
- * includes it (finding 538, rule B; it cost 0x0040e9c0 its match), and
- * LINK 5.0 has no /alternatename. So the unit reads them at their offsets
- * in legoGlobs, from the base stand-in legoGlobs_config (005560c0): the
- * same instructions, with only the operand names differing. */
-#define legoGlobs_objectNamesSpecial ((const char**)((char*)&legoGlobs_config + 0xcc))
-#define legoGlobs_objectNamesKind1 LEGO_FIELD(&legoGlobs_config, const char**, 0x194)
-#define legoGlobs_objectNamesKind2 LEGO_FIELD(&legoGlobs_config, const char**, 0x198)
-#define legoGlobs_objectNamesKind3 LEGO_FIELD(&legoGlobs_config, const char**, 0x19c)
-#define legoGlobs_objectNamesKind4 LEGO_FIELD(&legoGlobs_config, const char**, 0x1a0)
-#define legoGlobs_objectNamesKind10 LEGO_FIELD(&legoGlobs_config, const char**, 0x1a4)
-#define legoGlobs_catalogCounts ((uint32_t*)((char*)&legoGlobs_config + 0x1bc))
+/* legoGlobs' object-name tables and catalogue counts (0055618c,
+ * 00556254-00556264, 0055627c): entity.cpp's globals, with C linkage (the
+ * tables from the pre-declarations before entity_for_legoobject.hpp, the
+ * counts from those before entity_for_lego.hpp). Deviation (scoring only):
+ * the 15 declarations here and in group 2C cost the symbol counter 15
+ * (finding 538, rule B); nine duplicate prototypes with 15 named
+ * parameters were removed from this header to keep it unchanged. */
+extern const char* s_object_name_special[9];
+#define legoGlobs_objectNamesSpecial s_object_name_special
+extern const char** s_object_name_kind1;
+#define legoGlobs_objectNamesKind1 s_object_name_kind1
+extern const char** s_object_name_kind2;
+#define legoGlobs_objectNamesKind2 s_object_name_kind2
+extern const char** s_object_name_kind3;
+#define legoGlobs_objectNamesKind3 s_object_name_kind3
+extern const char** s_object_name_kind4;
+#define legoGlobs_objectNamesKind4 s_object_name_kind4
+extern const char** s_object_name_kind10;
+#define legoGlobs_objectNamesKind10 s_object_name_kind10
+extern uint32_t s_catalog_counts[5];
+#define legoGlobs_catalogCounts s_catalog_counts
 
 /* GAME-030 Objective.c / stats (entity.hpp, objective.hpp). */
 float entity_stats_float_atdc(const struct EntitySlot* e);      /* 00469e20 */
@@ -1056,7 +1057,6 @@ float entity_stats_float_at78(const struct EntitySlot* e);      /* 00469d60 */
 uint32_t entity_stats_word_at_c0_or_c4(const struct EntitySlot* e,
                                        int selector);           /* 00469f90 */
 uint32_t entity_stats_word_atc8(const struct EntitySlot* e);    /* 00469fc0 */
-void objective_announce_current(int who);                       /* 00458670 */
 int objective_voice_alias_raise_commit(struct LevelState* s);   /* 00454b70 */
 int objective_voice_alias_raise_gate_bit27(struct LevelState* s); /* 00454b80 */
 void reward_shutdown(void);                                     /* reward.c, 0045f750 */
@@ -1128,6 +1128,13 @@ int lego_level_low_bits_enabled_adapter(void);                  /* 004589a0 */
 #endif
 void lego_fog_enable_adapter(int on);                           /* 00473dc0 */
 void lego_fog_colour_set_adapter(float r, float g, float b);    /* 00473e10 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: lego_level_load's fog colour goes to Container.c's
+ * Container_SetFogColour, which container.c serves under this name
+ * (container_link_names.h). Function-like, after both declarations, so the
+ * symbol counter does not move (finding 634). */
+#define renderer_fog_color_set_original(r, g, b) lego_fog_colour_set_adapter(r, g, b)
+#endif
 void lego_light_penumbra_set_adapter(void* light, float value); /* 00473460 */
 void lego_light_umbra_set_adapter(void* light, float value);    /* 00473480 */
 /* GAME-002 / helpwindow (frontend.hpp). */
@@ -1183,7 +1190,6 @@ void vec_normalize(float* v);                                    /* 00401750 */
 int display_width_get(void);                                     /* 00401c30 */
 int display_height_get(void);                                    /* 00401c40 */
 /* Sound (sound.hpp, sound3d.h, soundsys.h). */
-void sound_handle_stop_forward(int buffer_handle);               /* 00465190 */
 int sound_submission_route_wrapper(const void* wrapped_position, int alias,
                                    int loop, int positional,
                                    const float* xyz);            /* 00465050 */
@@ -1300,8 +1306,6 @@ void selection_record_point_set(struct ViewContext* v, float x, float y); /* 004
 void screen_effect_record_set_original(void* camera, struct EntitySlot* object,
                                        float speed, float distance,
                                        float tilt, float rotation); /* 00435ebb */
-/* Stats.c (entity_stats.cpp, entity.hpp). */
-float entity_stats_float_at7c(const struct EntitySlot* e); /* 00469db0 */
 
 /* The debug keys' callees (004288e0). */
 struct LevelState;
@@ -1467,10 +1471,6 @@ void* level_current_terrain_get_original(void);                 /* 00431570 */
 #endif
 void terrain_projected_cell_state_refresh_original(void* container,
     void* view, float distance, unsigned int count);            /* 00433e80 */
-/* GAME AITask.c (crt.hpp). */
-void level_state_stored_value_set(uint32_t v);                  /* 00409d40 */
-/* GAME LegoObject.c (spawn.hpp, namespace lego, C linkage). */
-void scatter_spawn_gate_set(int enabled);                       /* 0044adc0 */
 /* (entity.hpp, namespace unported_ledger_stubs, C linkage). */
 void entity_attached_object_list_detach(struct EntitySlot* entity,
                                         int reset_mode);        /* 00439e70 */
@@ -1496,7 +1496,6 @@ const char* string_path_join(const char* root, ...);            /* 00478f50 */
 struct BlockRec* block_subgroup(struct BlockRec* root,
                                 const char* path);              /* 00478ff0 */
 struct BlockRec* block_next_equal_key(const struct BlockRec* start); /* 00479020 */
-char* block_get_str_copy(struct BlockRec* root, const char* path); /* 00479050 */
 char* string_duplicate(const char* text);                       /* 00477550 */
 /* G98 Container.c (view.hpp). */
 int ddiscene_object_position_get(void* object, void* alternate_frame,
@@ -1532,7 +1531,6 @@ void surface_draw_polyline(struct Point2F* fromList, struct Point2F* toList,
 void media_cd_audio_track_start(int track, int mode,
                                 void (*callback)(void));        /* 00488bb0 */
 void media_cd_audio_stop_and_close_if_active(void);             /* 00488bf0 */
-void media_cd_audio_watchdog_tick(int cdtrack);                 /* 00488c00 */
 /* GAME-024 camera (record.hpp). The original takes the tracked object as
  * a pointer; the port's entry types it as a word. */
 void record_fields_4_and_14_set(void* record, uint32_t value_a,
@@ -1649,19 +1647,33 @@ int lego_creature_load_adapter(void* creature, unsigned int objID, void* root,
 
 /* gods98 Util_StrCpy (00477590; utils.c). */
 char* formatted_text_escape_decode_and_emit(const char* format, ...);
-/* legoGlobs' "the" object-name tables, read at their offsets as part 1
- * reads the object-name tables (entity.cpp owns them with C++ linkage). */
-#define legoGlobs_objectTheNamesSpecial ((const char**)((char*)&legoGlobs_config + 0xf0))
-#define legoGlobs_objectTheNamesKind1 LEGO_FIELD(&legoGlobs_config, const char**, 0x1a8)
-#define legoGlobs_objectTheNamesKind2 LEGO_FIELD(&legoGlobs_config, const char**, 0x1ac)
-#define legoGlobs_objectTheNamesKind3 LEGO_FIELD(&legoGlobs_config, const char**, 0x1b0)
-#define legoGlobs_objectTheNamesKind4 LEGO_FIELD(&legoGlobs_config, const char**, 0x1b4)
-#define legoGlobs_objectTheNamesKind10 LEGO_FIELD(&legoGlobs_config, const char**, 0x1b8)
+/* legoGlobs' "the" object-name tables (005561b0, 00556268-00556278):
+ * entity.cpp's globals, with C linkage like the tables in group E. */
+extern const char* s_object_the_name_special[9];
+#define legoGlobs_objectTheNamesSpecial s_object_the_name_special
+extern const char** s_object_the_name_kind1;
+#define legoGlobs_objectTheNamesKind1 s_object_the_name_kind1
+extern const char** s_object_the_name_kind2;
+#define legoGlobs_objectTheNamesKind2 s_object_the_name_kind2
+extern const char** s_object_the_name_kind3;
+#define legoGlobs_objectTheNamesKind3 s_object_the_name_kind3
+extern const char** s_object_the_name_kind4;
+#define legoGlobs_objectTheNamesKind4 s_object_the_name_kind4
+extern const char** s_object_the_name_kind10;
+#define legoGlobs_objectTheNamesKind10 s_object_the_name_kind10
 /* legoGlobs.recordObjects (005563b8, 10 entries) and recordObjectCount
  * (005563e0): entity.cpp's s_object_pointer_registry_words/_count, with
- * C++ linkage, so read at their offsets too. */
-#define legoGlobs_recordObjects ((void**)((char*)&legoGlobs_config + 0x2f8))
-#define legoGlobs_recordObjectCount LEGO_FIELD(&legoGlobs_config, unsigned int, 0x320)
+ * C linkage (the pre-declarations before entity_for_lego.hpp). */
+extern uint32_t s_object_pointer_registry_words[10];
+#define legoGlobs_recordObjects ((void**)s_object_pointer_registry_words)
+extern uint32_t s_object_pointer_registry_count;
+#define legoGlobs_recordObjectCount s_object_pointer_registry_count
+/* Deviation (scoring only): in the original the count and the array are
+ * members of one struct (legoGlobs), so a store into the array may alias
+ * the count and MSVC reloads it after each store (0042dfc0). As separate
+ * globals they cannot alias; a volatile read gives the same reload. */
+#define legoGlobs_recordObjectCountReloaded \
+    (*(volatile uint32_t*)&s_object_pointer_registry_count)
 
 /* Map3D_BlockToWorldPos (0044f640; terrain_map.c). */
 int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,
@@ -1788,6 +1800,11 @@ void interface_reset(void);                                     /* interface_uni
 void legacy_panel_category_interaction_state_reset(void);       /* panel_unit.h, 0045a270 */
 void advisor_animation_end_cleanup(void);                       /* advisor.h, 004011c0 */
 void info_enable(int on);                                       /* info_unit.h, 00419ae0 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: Info_Enable itself (lego_level_load), after both
+ * declarations so the symbol counter does not move. */
+#define incident_message_flag_set(value) info_enable(value)
+#endif
 void screen_effect_flags_clear_and_release(void);               /* frontend.hpp, 0040a3d0 */
 
 /* Level_BlockUpdateSurface's callees. */

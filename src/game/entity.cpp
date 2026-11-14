@@ -67,6 +67,12 @@ extern "C" const char** s_object_the_name_kind2;
 extern "C" const char** s_object_the_name_kind3;
 extern "C" const char** s_object_the_name_kind4;
 extern "C" const char** s_object_the_name_kind10;
+/* The same for legoGlobs' type counts and object registry, which
+ * lego_unit.c reads (declared again by entity_for_lego.hpp, through the
+ * header below). */
+extern "C" uint32_t s_catalog_counts[5];
+extern "C" uint32_t s_object_pointer_registry_words[10];
+extern "C" uint32_t s_object_pointer_registry_count;
 #include "entity_for_legoobject.hpp"
 
 static uint32_t s_next_ddiscene_owner_token = 1u;
