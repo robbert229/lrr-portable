@@ -21,6 +21,17 @@ change and one after.
 | Image end (`make pe-audit`) | `0x7f5000` | `0x7f5000` |
 | `opt_ref` annotated removed (exact) | 0 (0) | 0 (0) |
 
+**Stacked on #755** (`match/751-gods98-crt-sweep`, `3d6247e2`, on #754, #753
+and #752), the same 14 functions rise by the same amounts, and no other
+function moves. #754's and #755's functions keep their scores.
+
+| Measure | #755 | This change on #755 |
+| --- | ---: | ---: |
+| Exact-function code bytes | 327,678 (51.00%) | **329,171 (51.23%)** |
+| Reccmp accuracy, full / game-only | 96.94 / 96.59 | **96.98 / 96.64** |
+| `opt_ref` annotated removed | 0 | 0 |
+| Image end | `0x7f5000` | `0x7f5000` |
+
 No exact match was lost, and no function fell below the baseline. `make
 match-progress`, `make unit-data-offsets`, `make opt-ref-callers
 OPT_REF_ARGS=--summary` and `make pe-audit` were run, and the generated
