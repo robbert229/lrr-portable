@@ -1,4 +1,4 @@
-# input_sha256: 5cb1497c53df8bcba5990803e79f5d3e51905c29ff58ad4e0a64261b9b85db39
+# input_sha256: c9700981234968ea711d554acc27cd83d3da4ed7c9fadf17ab413e1897768336
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2522 mapped functions
+[game-only] 2538 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -247,8 +247,9 @@
 0x00409b30 90.28 construction_zone_complete_building
 0x00409cd0 100.00 construction_update_cardinal_blocks
 0x00409d40 100.00 level_state_stored_value_set
-0x00409d50 16.00 entity_cell_path_effects_apply_current
-0x00409f20 34.52 entity_placement_commands_build_once
+0x00409d50 100.00 entity_cell_path_effects_apply_current
+0x00409f20 100.00 entity_placement_commands_build_once
+0x00409ff0 100.00 entity_destroy_tracked_pointer_cleanup
 0x0040a0c0 100.00 scrolling_text_display
 0x0040a3d0 100.00 screen_effect_flags_clear_and_release
 0x0040a400 100.00 preload_numbered_bitmaps
@@ -387,7 +388,7 @@
 0x00410230 100.00 steering_item_arrived
 0x00410280 100.00 callback_operation_run_and_return_status
 0x004102b0 100.00 front_util_replace_text_spaces
-0x00410320 98.21 front_util_print_f
+0x00410320 100.00 front_util_print_f
 0x004103d0 100.00 main_menu_text_item
 0x004103f0 89.47 front_rock_wipe_play
 0x00410440 100.00 front_rock_wipe_stop
@@ -513,7 +514,7 @@
 0x004177e0 69.33 front_level_link_callback_load_menu_item
 0x004179b0 100.00 front_levels_load_menu_items
 0x00417a90 100.00 save_read_slot_target
-0x00417bd0 99.38 front_save_write_save_file
+0x00417bd0 100.00 front_save_write_save_file
 0x00417df0 96.97 sav_refresh_slots_target
 0x00417e50 100.00 sav_slot_ctx_target
 0x00417e70 100.00 sav_build_ctx_target
@@ -702,7 +703,7 @@
 0x0041f9e0 100.00 lego_upgrade_resource_debit
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 100.00 lego_start_level_pilots
-0x0041fb40 100.00 EngineTimeScale(1)
+0x0041fb40 100.00 EngineTimeScale
 0x0041fb50 100.00 lego_game_config_init
 0x00422850 100.00 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
@@ -760,7 +761,7 @@
 0x00429850 100.00 active_engine_field_b0_get_current
 0x00429860 100.00 engine_float_field210_get_by_index_current
 0x00429880 100.00 engine_float_field260_get_current_target
-0x00429890 94.90 lego_level_load
+0x00429890 94.94 lego_level_load
 0x0042b2f0 100.00 lego_entity_effect_counters_apply_from_record
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
@@ -1048,7 +1049,7 @@
 0x0043baf0 100.00 legoobject_flags_mask107c33de_or_1c00203_any_test
 0x0043bb20 100.00 legoobject_building_deposit_state_monitor
 0x0043bbc0 100.00 legoobject_detach_carried_object_and_reset_state
-0x0043bc40 99.11 legoobject_objective_sidecar_append_gate
+0x0043bc40 99.33 legoobject_objective_sidecar_append_gate
 0x0043c200 100.00 legoobject_state_pair_predicate
 0x0043c280 100.00 legoobject_nested_float_add_unless_blocked
 0x0043c2b0 100.00 legoobject_periodic_timer25_advance
@@ -1335,7 +1336,7 @@
 0x004528c0 100.00 selection_state_tick_active
 0x00452be0 100.00 selection_clear_active
 0x00452c50 100.00 selection_entity_remove_active
-0x00452cc0 97.92 selected_entity_state_monitor
+0x00452cc0 100.00 selected_entity_state_monitor
 0x00452d60 86.44 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
 0x00452e70 78.96 nerps_file_load_message_file
@@ -1361,6 +1362,7 @@
 0x00454960 100.00 nerpfunc_flash_go_back_icon
 0x00454b70 100.00 nerpfunc_set_level_completed
 0x00454b80 100.00 nerpfunc_set_level_fail
+0x00454bb0 100.00 nerpfunc_set_tutorial_pointer
 0x00454bd0 100.00 nerps_set_object_icon_clicks
 0x00454c10 100.00 nerps_flash_object_icon
 0x00454c50 100.00 nerps_set_tutorial_block_clicks_callback
@@ -1470,6 +1472,21 @@
 0x00456c30 100.00 nerps_get_block_pointer
 0x00456c60 100.00 nerps_free_block_pointers
 0x00456cb0 100.00 nerps_block_pointer_enumerate
+0x00456d00 99.30 nerps_tutorial_action_callback
+0x00457060 100.00 nerps_object_at_tutorial_block_callback
+0x004570d0 100.00 nerps_tutorial_icon_object_callback
+0x00457130 100.00 nerpfunc_make_someone_on_this_block_pick_up_something_on_this_block
+0x00457170 95.12 nerps_set_tutorial_pointer
+0x00457260 100.00 nerpfunc_set_congregation_at_tutorial
+0x004572a0 100.00 nerpfunc_set_rock_monster_at_tutorial
+0x004572e0 100.00 nerpfunc_set_camera_goto_tutorial
+0x00457320 100.00 nerpfunc_get_camera_at_tutorial
+0x00457360 100.00 nerpfunc_get_tutorial_block_is_ground
+0x004573a0 100.00 nerpfunc_get_tutorial_block_is_path
+0x004573e0 100.00 nerpfunc_set_tutorial_block_is_ground
+0x00457420 100.00 nerpfunc_set_tutorial_block_is_path
+0x00457460 100.00 nerpfunc_get_unit_at_block
+0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
 0x004574e0 96.23 objective_load_objective_text
 0x00457d40 61.34 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
@@ -1490,7 +1507,7 @@
 0x004592a0 100.00 osf_read_state_reset
 0x004592e0 40.96 osf_snapshot
 0x004593d0 10.53 osf_read_dirty_flag_get
-0x004593e0 26.09 osf_write
+0x004593e0 97.56 object_recall_save
 0x00459470 20.28 osf_read
 0x00459530 100.00 frontend_render_three_pass_update
 0x00459560 99.27 objinfo_load_health_bar
@@ -1575,8 +1592,8 @@
 0x0045d550 85.29 priorities_move_cursor_to_up_button
 0x0045d640 62.50 priorities_move_cursor_to_image
 0x0045d6d0 63.23 priorities_draw
-0x0045d7e0 18.18 ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad
-0x0045d870 70.83 command_entity_reference_remap
+0x0045d7e0 100.00 level_remap_table_load
+0x0045d870 75.00 command_entity_reference_remap
 0x0045d8a0 100.00 object_field14_set
 0x0045d8b0 100.00 screen_coord_normalize_init
 0x0045da90 100.00 ui_render_record_create
@@ -1801,7 +1818,7 @@
 0x0046ad00 100.00 advisor_text_display_worker
 0x0046b1d0 100.00 tooltip_overlay_state_initialize
 0x0046b4d0 100.00 case_insensitive_name_table_lookup
-0x0046b520 98.91 tooltip_set_content
+0x0046b520 100.00 tooltip_set_content
 0x0046b660 100.00 command_sample_stats_accumulate
 0x0046b700 100.00 timed_effect_cue_request_set_corpus
 0x0046b730 100.00 tooltip_set_flag10
@@ -2015,7 +2032,7 @@
 0x004761e0 100.00 Container_Frame_GetSample
 0x00476200 100.00 Container_Frame_GetTrigger
 0x00476220 100.00 Container_Frame_SafeAddChild
-0x00476270 95.56 Container_Frame_FormatName
+0x00476270 100.00 Container_Frame_FormatName
 0x004762f0 100.00 Container_Frame_FreeName
 0x00476310 100.00 Container_Frame_GetName
 0x00476330 100.00 Container_Frame_WalkTree
@@ -2053,7 +2070,7 @@
 0x00477440 100.00 sound_variant_split
 0x004774b0 100.00 whitespace_tokenize
 0x00477550 100.00 string_duplicate
-0x00477590 97.62 formatted_text_escape_decode_and_emit
+0x00477590 100.00 formatted_text_escape_decode_and_emit
 0x00477610 100.00 case_insensitive_substring_find
 0x00477670 96.72 game_string_hash_compute
 0x00477710 100.00 block_get_bool
@@ -2122,7 +2139,7 @@
 0x0047a150 100.00 font_v_get_string_info
 0x0047a180 100.00 font_print_f
 0x0047a1b0 100.00 font_v_print_f
-0x0047a1e0 97.76 font_v_print_f2
+0x0047a1e0 98.25 font_v_print_f2
 0x0047a470 100.00 font_output_char
 0x0047a520 100.00 bitmap_font_glyph_measure_width
 0x0047a540 100.00 object_field_be4_dword_get
@@ -2254,7 +2271,7 @@
 0x0047f130 100.00 resource_mount_startup_target
 0x0047f4f0 100.00 resource_find_cd_key_drive
 0x0047f590 97.56 file_set_base_search_path
-0x0047f600 92.86 resource_debug_output_format
+0x0047f600 100.00 resource_debug_output_format
 0x0047f640 100.00 file_load_wad
 0x0047f660 100.00 resource_cd_file_path_get
 0x0047f6a0 100.00 file_make_dir
@@ -2377,8 +2394,8 @@
 0x004851d0 100.00 float_pair_at_offsetc_set_from_uints
 0x00485210 100.00 formatted_text_append_to_ring_buffer
 0x00485230 100.00 text_buffer_append_format
-0x00485250 98.21 text_buffer_append_vformat
-0x00485300 97.62 objective_advisor_text_copy
+0x00485250 100.00 text_buffer_append_vformat
+0x00485300 100.00 objective_advisor_text_copy
 0x00485390 88.18 text_buffer_draw_wrapped
 0x00485710 99.50 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
@@ -2500,7 +2517,6 @@
 0x0048d2c0 99.29 lwo_load
 0x0048d7c0 96.88 lwo_app_obj_load
 0x0048d870 100.00 lwo_app_obj_free
-0x0048e1e0 43.01 formatted_text_buffer_build
 0x004907c0 100.00 string_prefix_reserve
 0x004939d0 92.31 _matherr
 0x004973f0 95.31 $CRT_C_Initializer(1)
@@ -2530,7 +2546,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2767 mapped functions
+[full] 2784 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2771,8 +2787,9 @@
 0x00409b30 90.28 construction_zone_complete_building
 0x00409cd0 100.00 construction_update_cardinal_blocks
 0x00409d40 100.00 level_state_stored_value_set
-0x00409d50 16.00 entity_cell_path_effects_apply_current
-0x00409f20 34.52 entity_placement_commands_build_once
+0x00409d50 100.00 entity_cell_path_effects_apply_current
+0x00409f20 100.00 entity_placement_commands_build_once
+0x00409ff0 100.00 entity_destroy_tracked_pointer_cleanup
 0x0040a0c0 100.00 scrolling_text_display
 0x0040a3d0 100.00 screen_effect_flags_clear_and_release
 0x0040a400 100.00 preload_numbered_bitmaps
@@ -2911,7 +2928,7 @@
 0x00410230 100.00 steering_item_arrived
 0x00410280 100.00 callback_operation_run_and_return_status
 0x004102b0 100.00 front_util_replace_text_spaces
-0x00410320 98.21 front_util_print_f
+0x00410320 100.00 front_util_print_f
 0x004103d0 100.00 main_menu_text_item
 0x004103f0 89.47 front_rock_wipe_play
 0x00410440 100.00 front_rock_wipe_stop
@@ -3037,7 +3054,7 @@
 0x004177e0 69.33 front_level_link_callback_load_menu_item
 0x004179b0 100.00 front_levels_load_menu_items
 0x00417a90 100.00 save_read_slot_target
-0x00417bd0 99.38 front_save_write_save_file
+0x00417bd0 100.00 front_save_write_save_file
 0x00417df0 96.97 sav_refresh_slots_target
 0x00417e50 100.00 sav_slot_ctx_target
 0x00417e70 100.00 sav_build_ctx_target
@@ -3226,7 +3243,7 @@
 0x0041f9e0 100.00 lego_upgrade_resource_debit
 0x0041fa20 100.00 lego_game_config_callback_registry_init
 0x0041fa80 100.00 lego_start_level_pilots
-0x0041fb40 100.00 EngineTimeScale(1)
+0x0041fb40 100.00 EngineTimeScale
 0x0041fb50 100.00 lego_game_config_init
 0x00422850 100.00 lego_misc_object_resources_load
 0x00423080 100.00 lego_mode_dependent_field24_get
@@ -3284,7 +3301,7 @@
 0x00429850 100.00 active_engine_field_b0_get_current
 0x00429860 100.00 engine_float_field210_get_by_index_current
 0x00429880 100.00 engine_float_field260_get_current_target
-0x00429890 94.90 lego_level_load
+0x00429890 94.94 lego_level_load
 0x0042b2f0 100.00 lego_entity_effect_counters_apply_from_record
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
@@ -3572,7 +3589,7 @@
 0x0043baf0 100.00 legoobject_flags_mask107c33de_or_1c00203_any_test
 0x0043bb20 100.00 legoobject_building_deposit_state_monitor
 0x0043bbc0 100.00 legoobject_detach_carried_object_and_reset_state
-0x0043bc40 99.11 legoobject_objective_sidecar_append_gate
+0x0043bc40 99.33 legoobject_objective_sidecar_append_gate
 0x0043c200 100.00 legoobject_state_pair_predicate
 0x0043c280 100.00 legoobject_nested_float_add_unless_blocked
 0x0043c2b0 100.00 legoobject_periodic_timer25_advance
@@ -3859,7 +3876,7 @@
 0x004528c0 100.00 selection_state_tick_active
 0x00452be0 100.00 selection_clear_active
 0x00452c50 100.00 selection_entity_remove_active
-0x00452cc0 97.92 selected_entity_state_monitor
+0x00452cc0 100.00 selected_entity_state_monitor
 0x00452d60 86.44 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
 0x00452e70 78.96 nerps_file_load_message_file
@@ -3885,6 +3902,7 @@
 0x00454960 100.00 nerpfunc_flash_go_back_icon
 0x00454b70 100.00 nerpfunc_set_level_completed
 0x00454b80 100.00 nerpfunc_set_level_fail
+0x00454bb0 100.00 nerpfunc_set_tutorial_pointer
 0x00454bd0 100.00 nerps_set_object_icon_clicks
 0x00454c10 100.00 nerps_flash_object_icon
 0x00454c50 100.00 nerps_set_tutorial_block_clicks_callback
@@ -3994,6 +4012,21 @@
 0x00456c30 100.00 nerps_get_block_pointer
 0x00456c60 100.00 nerps_free_block_pointers
 0x00456cb0 100.00 nerps_block_pointer_enumerate
+0x00456d00 99.30 nerps_tutorial_action_callback
+0x00457060 100.00 nerps_object_at_tutorial_block_callback
+0x004570d0 100.00 nerps_tutorial_icon_object_callback
+0x00457130 100.00 nerpfunc_make_someone_on_this_block_pick_up_something_on_this_block
+0x00457170 95.12 nerps_set_tutorial_pointer
+0x00457260 100.00 nerpfunc_set_congregation_at_tutorial
+0x004572a0 100.00 nerpfunc_set_rock_monster_at_tutorial
+0x004572e0 100.00 nerpfunc_set_camera_goto_tutorial
+0x00457320 100.00 nerpfunc_get_camera_at_tutorial
+0x00457360 100.00 nerpfunc_get_tutorial_block_is_ground
+0x004573a0 100.00 nerpfunc_get_tutorial_block_is_path
+0x004573e0 100.00 nerpfunc_set_tutorial_block_is_ground
+0x00457420 100.00 nerpfunc_set_tutorial_block_is_path
+0x00457460 100.00 nerpfunc_get_unit_at_block
+0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
 0x004574e0 96.23 objective_load_objective_text
 0x00457d40 61.34 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
@@ -4014,7 +4047,7 @@
 0x004592a0 100.00 osf_read_state_reset
 0x004592e0 40.96 osf_snapshot
 0x004593d0 10.53 osf_read_dirty_flag_get
-0x004593e0 26.09 osf_write
+0x004593e0 97.56 object_recall_save
 0x00459470 20.28 osf_read
 0x00459530 100.00 frontend_render_three_pass_update
 0x00459560 99.27 objinfo_load_health_bar
@@ -4099,8 +4132,8 @@
 0x0045d550 85.29 priorities_move_cursor_to_up_button
 0x0045d640 62.50 priorities_move_cursor_to_image
 0x0045d6d0 63.23 priorities_draw
-0x0045d7e0 18.18 ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad
-0x0045d870 70.83 command_entity_reference_remap
+0x0045d7e0 100.00 level_remap_table_load
+0x0045d870 75.00 command_entity_reference_remap
 0x0045d8a0 100.00 object_field14_set
 0x0045d8b0 100.00 screen_coord_normalize_init
 0x0045da90 100.00 ui_render_record_create
@@ -4325,7 +4358,7 @@
 0x0046ad00 100.00 advisor_text_display_worker
 0x0046b1d0 100.00 tooltip_overlay_state_initialize
 0x0046b4d0 100.00 case_insensitive_name_table_lookup
-0x0046b520 98.91 tooltip_set_content
+0x0046b520 100.00 tooltip_set_content
 0x0046b660 100.00 command_sample_stats_accumulate
 0x0046b700 100.00 timed_effect_cue_request_set_corpus
 0x0046b730 100.00 tooltip_set_flag10
@@ -4539,7 +4572,7 @@
 0x004761e0 100.00 Container_Frame_GetSample
 0x00476200 100.00 Container_Frame_GetTrigger
 0x00476220 100.00 Container_Frame_SafeAddChild
-0x00476270 95.56 Container_Frame_FormatName
+0x00476270 100.00 Container_Frame_FormatName
 0x004762f0 100.00 Container_Frame_FreeName
 0x00476310 100.00 Container_Frame_GetName
 0x00476330 100.00 Container_Frame_WalkTree
@@ -4577,7 +4610,7 @@
 0x00477440 100.00 sound_variant_split
 0x004774b0 100.00 whitespace_tokenize
 0x00477550 100.00 string_duplicate
-0x00477590 97.62 formatted_text_escape_decode_and_emit
+0x00477590 100.00 formatted_text_escape_decode_and_emit
 0x00477610 100.00 case_insensitive_substring_find
 0x00477670 96.72 game_string_hash_compute
 0x00477710 100.00 block_get_bool
@@ -4646,7 +4679,7 @@
 0x0047a150 100.00 font_v_get_string_info
 0x0047a180 100.00 font_print_f
 0x0047a1b0 100.00 font_v_print_f
-0x0047a1e0 97.76 font_v_print_f2
+0x0047a1e0 98.25 font_v_print_f2
 0x0047a470 100.00 font_output_char
 0x0047a520 100.00 bitmap_font_glyph_measure_width
 0x0047a540 100.00 object_field_be4_dword_get
@@ -4778,7 +4811,7 @@
 0x0047f130 100.00 resource_mount_startup_target
 0x0047f4f0 100.00 resource_find_cd_key_drive
 0x0047f590 97.56 file_set_base_search_path
-0x0047f600 92.86 resource_debug_output_format
+0x0047f600 100.00 resource_debug_output_format
 0x0047f640 100.00 file_load_wad
 0x0047f660 100.00 resource_cd_file_path_get
 0x0047f6a0 100.00 file_make_dir
@@ -4901,8 +4934,8 @@
 0x004851d0 100.00 float_pair_at_offsetc_set_from_uints
 0x00485210 100.00 formatted_text_append_to_ring_buffer
 0x00485230 100.00 text_buffer_append_format
-0x00485250 98.21 text_buffer_append_vformat
-0x00485300 97.62 objective_advisor_text_copy
+0x00485250 100.00 text_buffer_append_vformat
+0x00485300 100.00 objective_advisor_text_copy
 0x00485390 88.18 text_buffer_draw_wrapped
 0x00485710 99.50 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
@@ -5043,7 +5076,7 @@
 0x0048e160 100.00 _srand
 0x0048e170 100.00 _rand
 0x0048e1aa 100.00 __CIfmod
-0x0048e1e0 43.01 formatted_text_buffer_build
+0x0048e1e0 100.00 _vsprintf
 0x0048e250 100.00 __chkstk
 0x0048e280 100.00 _floor
 0x0048e380 100.00 _toupper

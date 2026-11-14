@@ -45,7 +45,8 @@ binary-progress: reccmp-report
 	$(MAKE) binary-progress-compare
 
 # Compare the existing matching build with the original, without rebuilding.
-# It relinks the build's objects without /DEBUG first (opt-ref-link, ~2 s).
+# It relinks the build's objects first (opt-ref-link: without /DEBUG, and
+# with /OPT:NOREF; ~4 s).
 binary-progress-compare: opt-ref-link
 	$(BINARY_PROGRESS_PYTHON) tools/binary_progress.py --rebuilt "$(RECCMP_BUILD_DIR)/LegoRR.exe" \
 	  --report-dir "$(RECCMP_BUILD_DIR)/reccmp-report"
@@ -118,11 +119,14 @@ relocate-unit:
 	fi
 	@python3 ./tools/relocate_unit.py $(UNIT) $(RELOCATE_ARGS)
 
-# The original's link mode (no /DEBUG, so /OPT:REF; #562, finding 576):
-# relink the existing matching build's objects into $(RECCMP_BUILD_DIR)/opt-ref.
-# The gate keeps /DEBUG for Reccmp's PDB. opt-ref prints what /OPT:REF removes.
+# The original's link mode (no /DEBUG; #562, findings 576 and 642): relink the
+# existing matching build's objects into $(RECCMP_BUILD_DIR)/opt-ref. The gate
+# links with /DEBUG /OPT:REF /OPT:NOICF, so that relink differs from it only by
+# the debug directory. The --noref relink ($(RECCMP_BUILD_DIR)/opt-noref) keeps
+# every COMDAT, and opt-ref prints what the gate's /OPT:REF removes from it.
 opt-ref-link:
 	python3 tools/opt_ref_link.py relink --build "$(RECCMP_BUILD_DIR)"
+	python3 tools/opt_ref_link.py relink --noref --build "$(RECCMP_BUILD_DIR)"
 
 opt-ref:
 	python3 tools/opt_ref_link.py measure --build "$(RECCMP_BUILD_DIR)"

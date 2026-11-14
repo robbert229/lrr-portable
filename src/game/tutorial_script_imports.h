@@ -34,6 +34,10 @@ struct EntitySlot;
 struct LevelState;
 struct ViewProjectionAdapter;
 
+/* GAME-002 AITask.c (aitask.c): the tutorial congregation's records. */
+void aitask_coordinate_pair_task_record_queue(const int* blockPos);       /* 004033f0 */
+void aitask_task_registry_remove_type0_entry_by_pair(const int* blockPos); /* 00403430 */
+
 /* GAME-020 Interface.c (interface_unit.c): the menu icons' click counts,
  * flashing and the advisor. */
 struct LegoObject;
@@ -66,6 +70,15 @@ void lego_viewport_target_position_clamp(struct EntitySlot* liveObj,
                                          int smooth);       /* 0042de40 */
 int lego_object_pointer_registry_get_slot(unsigned int index,
                                           void** objOut);   /* 0042dff0 */
+uint32_t active_engine_field_b0_get_current(void);  /* 00429850 Lego_GetRockMonsterType */
+struct Lego_Level;
+int lego_terrain_cell_mutate(struct Lego_Level* level, unsigned int bx,
+                             unsigned int by,
+                             int isHiddenCavern);   /* 00430530 Level_DestroyWall */
+int terrain_cell_variant_flag_propagate_current(const int* blockPos); /* 00432600 */
+int terrain_cell_state_update_current(const int* blockPos);           /* 00432c90 */
+uint32_t level_cell_occupied_at_current(const int* blockPos);         /* 00433090 */
+extern struct LegoCreatureModelE* legoGlobs_rockMonsterData; /* 005561dc */
 int lego_entity_type_pair_lookup(const char* objName, int* outType,
                                  unsigned int* outID,
                                  void** outModel);          /* 0042e8b0 */
@@ -86,6 +99,14 @@ void legoobject_build_placement_command_setup(int* cell, int id,
 void legoobject_build_placement_alternate_command_setup(
     int* cell, int id, struct LegoObjGE_Point2F* world,
     int update);                                            /* 004394b0 */
+struct Lego_Object;
+int legoobject_run_through_lists_skip_upgrade_parts(
+    int (*callback)(struct Lego_Object* obj, void* data),
+    void* data);                                            /* 004377b0 */
+int legoobject_gated_step_command_issue(struct Lego_Object* obj,
+                                        struct Lego_Object* target); /* 00439a20 */
+struct Lego_Object* legoobject_creature_spawn_from_emergence(
+    void* model, int type, int id, int bx, int by);         /* 0043af30 */
 unsigned int legoobject_grid_record_count_get(int row, int column,
                                               int slot);    /* 004374a0 */
 void entity_transform_position_get_outputs(const struct EntitySlot* entity,
@@ -130,6 +151,11 @@ void advisor_text_request_setup(uint32_t request, uint32_t flags); /* 0046ac20 *
 void camera_project_point_to_screen(
     const struct ViewProjectionAdapter* adapter, float* output_xy,
     const float* input_xyz);                                /* 004772d0 */
+
+/* G98-002 Container.c: Container_GetPosition by its matching-build link
+ * name (container_link_names.h); natively the port's view.cpp serves it. */
+int ddiscene_object_position_get(void* object, void* reference,
+                                 float* position);          /* 004754c0 */
 
 /* G98 Flic.c (flic_unit.cpp): the NERPs function table's "True" row. */
 uint32_t flic_opcode25_success_stub(void);                  /* 00484b90 */

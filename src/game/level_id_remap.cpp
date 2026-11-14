@@ -25,15 +25,48 @@
 #include <limits.h>
 #include "record_for_level_id_remap.hpp"
 
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/config.h"
+#include "message_unit.h"
+
+/* LevelIdentifierRemapTableLoad (FUN_0045d7e0) in the original's shape:
+ * each item of the game's block in `fileName` maps one physical object name
+ * to another, both looked up with Message_LookupPhysicalName. Lego.c's
+ * Lego_LoadLevel calls it through lego_unit_imports.h's link name (#562,
+ * finding 642). The original's table and count are 0x555be0 and 0x555d20;
+ * the port keeps them in util.cpp. */
+// FUNCTION: LEGORR 0x0045d7e0
+extern "C" int level_remap_table_load(const char* fileName,
+                                      const char* gameName)
+{
+    BlockFile* config;
+    BlockRec* item;
+    uint32_t* pair;
+
+    s_level_remap_count = 0;
+    if ((config = block_open(fileName)) != NULL) {
+        for (item = block_subgroup(config, gameName); item != NULL;
+             item = block_next_equal_key(item)) {
+            pair = s_level_remap_pairs[s_level_remap_count++];
+            pair[0] = message_lookup_physical_name(item->key);
+            pair[1] = message_lookup_physical_name(item->value);
+        }
+        block_close(config);
+        return 1;
+    }
+    return 0;
+}
+#else
 namespace unported_ledger_stubs {
 // LevelIdentifierRemapTableLoad
-// FUNCTION: LEGORR 0x0045d7e0
+// PORT-ONLY: the native table installer; the matching build has the original-shape 0x0045d7e0 above.
 void ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad(
     const uint32_t* identifier_pairs, uint32_t pair_count)
 {
     level_identifier_remap_table_install(identifier_pairs, pair_count);
 }
 } // namespace unported_ledger_stubs
+#endif
 
 // FUNCTION: LEGORR 0x0045d870
 void command_entity_reference_remap(uint32_t* entity_reference)

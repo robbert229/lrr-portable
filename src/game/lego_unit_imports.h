@@ -1006,6 +1006,11 @@ void objective_load_original(struct BlockRec* config, const char* gameName,
                              int screenWidth, int screenHeight); /* objective_unit.cpp, 00457d40 */
 int osf_read_dirty_flag_get_original(void);            /* object_state_file.cpp, 004593d0 */
 int osf_read_original(const char* path);               /* object_state_file.cpp, 00459470 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: level_id_remap.cpp's original-shape 0045d7e0 (#562,
+ * finding 642). */
+#define level_identifier_remap_table_load_original level_remap_table_load
+#endif
 int level_identifier_remap_table_load_original(const char* fileName,
                                                const char* gameName); /* level_id_remap.cpp, 0045d7e0 */
 void renderer_fog_color_set_original(float r, float g, float b); /* lego.cpp, 00473e10 */

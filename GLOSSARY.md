@@ -88,7 +88,7 @@ The 32-bit build of the *reconstruction* compiled with the MSVC 5.0 RTM toolchai
 _Avoid_: "reccmp build", "the MSVC build"
 
 **match baseline**:
-The committed per-function Reccmp similarity scores from the last accepted *matching build*. A function's score may not fall below its baseline without the change explicitly refreshing the baseline.
+The committed per-function Reccmp similarity scores from the last accepted *matching build*. A function's score may not fall below its baseline, and a function may not leave the report (the gate links with `/OPT:REF`, finding 642), without the change explicitly refreshing the baseline.
 _Avoid_: "snapshot", "the report"
 
 **single-function match**:

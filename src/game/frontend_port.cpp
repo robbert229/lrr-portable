@@ -5177,8 +5177,12 @@ extern "C" void front_object_recall_restore_adapter(void)
 {
 }
 
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+/* The matching build calls object_state_file.cpp's original-shape
+ * ObjectRecall_Save instead (frontend_unit_link_names.h). */
 // PORT-ONLY: original-ABI adapter for GAME-017 frontend_unit.c (osf_write takes the game context)
 extern "C" void front_object_recall_save_adapter(const char* fname)
 {
     (void)fname;
 }
+#endif

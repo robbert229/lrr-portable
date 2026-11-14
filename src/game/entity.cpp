@@ -1677,9 +1677,11 @@ void entity_tracked_cleanup_context_set(void** tracked_entities,
     s_tracked_cleanup_user = user;
 }
 
-/* FUNCTION: LEGORR 0x00409ff0. The three global pointer replacements and
- * teardown pair are exposed as operations because their owning registries
- * are not reconstructed in the entity module. */
+/* The port's model of 0x00409ff0. The three global pointer replacements
+ * and teardown pair are exposed as operations because their owning
+ * registries are not reconstructed in the entity module. The matching build
+ * has the original's shape in entity_cell_effects.cpp (#562, finding 642). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void entity_destroy_tracked_pointer_cleanup(void* entity)
 {
     EntitySlot* slot;
@@ -1712,6 +1714,7 @@ void entity_destroy_tracked_pointer_cleanup(void* entity)
     (void)entity_teardown(slot);
     entity_activity_scene_state_update(context);
 }
+#endif
 
 static EntityPairRecord* s_entity_pair_records;
 static uint32_t s_entity_pair_record_count;

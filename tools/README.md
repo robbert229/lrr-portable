@@ -799,16 +799,35 @@ known constants.
 
 ## The original's link mode (`opt_ref_link.py`)
 
-The gate links with `/DEBUG` for Reccmp's PDB, which makes LINK 5.0 keep every
-unreferenced COMDAT (`/OPT:NOREF`). The original was linked without `/DEBUG`,
-so with `/OPT:REF` (findings 563 and 576). `make opt-ref-link` reruns the
-gate's `link.txt` without `/DEBUG` and `/pdb:`, writing
-`$(RECCMP_BUILD_DIR)/opt-ref/LegoRR.exe` and its map (about 2 s, toolchain
-needed, no recompile). `make opt-ref` compares the two maps:
+The original was linked without `/DEBUG`, so LINK 5.0 applied `/OPT:REF`, and
+it folded no identical functions (findings 563, 576 and 637). Since finding
+642 the gate links the same way, stated explicitly as `/DEBUG /OPT:REF
+/OPT:NOICF` because `/DEBUG` (kept for Reccmp's PDB) would otherwise select
+`/OPT:NOREF`. Two `/INCLUDE` options keep the annotated functions nothing
+references (`CMakeLists.txt`): the original's own unreferenced `00438390`,
+and crt.cpp's stand-in `004907c0` for LIBC's static `__shift` (`Deviation
+(scoring only)`, owner #447). An annotated function that loses its last live
+caller now leaves the image and the report, and `make reccmp-compare` fails
+on it as on a score drop.
+
+`make opt-ref-link` makes two relinks of the gate's `link.txt` (about 4 s,
+toolchain needed, no recompile):
+- `$(RECCMP_BUILD_DIR)/opt-ref`: without `/DEBUG` and `/pdb:`, the original's
+  mode, for whole-binary identity. It differs from the gate only by the debug
+  directory.
+- `$(RECCMP_BUILD_DIR)/opt-noref` (`relink --noref`): `/DEBUG` kept and every
+  `/OPT` option replaced with `/OPT:NOREF`, so every COMDAT stays: the gate
+  as it linked before finding 642.
+
+`make opt-ref` compares the `--noref` relink with the gate, and before the
+switch compared the gate with the no-`/DEBUG` relink:
 - the `.text` bytes and symbols `/OPT:REF` removes, by `winapi_link_audit.py`'s
   categories, and the annotated code by link-order kind;
 - the Reccmp-mapped functions it removes and how many are exact, for the full
-  and game-only reports;
+  and game-only reports. Under the switched gate the removed ones are the
+  `FUNCTION` annotations Reccmp cannot map (`entities.json` entries with an
+  original address and no rebuilt one; `LIBRARY` statics are left out), and
+  their exactness is unknown (`removed_exact` is null);
 - the relinked image: sections, `.data` and `.bss`, thunks and their order,
   the entry point, the import order and `Characteristics`.
 
@@ -833,6 +852,10 @@ It reads the original's direct calls with `capstone`, and also counts as a
 caller any function whose code holds a 32-bit pointer to the callee
 (callbacks), printed as `<&`. Calls through data tables are not followed. Use it before
 rewiring callers so that `/OPT:REF` keeps a converted unit's functions.
+
+Under the switched gate `callers` takes the same unmapped annotations as the
+removed set, listed under `(not linked)` with no size or exactness, and still
+traces their original callers and causes.
 
 `make opt-ref-callers OPT_REF_ARGS=--summary` (finding 637) tabulates every
 removed annotated function, whatever `--min`, by owning unit

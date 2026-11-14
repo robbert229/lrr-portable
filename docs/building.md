@@ -102,8 +102,13 @@ make reccmp-report RECCMP_WINE_BIN=/path/to/wine \
 
 There is one matching build. It links with `/INCREMENTAL:NO` (ADR 0006
 decision 2), so the executable has no incremental-link thunks and, like the
-original, no `.reloc` section. `tools/reccmp.sh` then removes the PE debug
-directory, which the original also lacks; the linker PDB stays next to the
+original, no `.reloc` section. It also links in the original's mode,
+`/OPT:REF /OPT:NOICF` (finding 642): code that nothing live references is
+removed, as the original's link removed it, and identical functions are not
+folded. `/DEBUG` stays for Reccmp's PDB. An annotated function that loses its
+last live caller therefore leaves the report, and the gate treats that as a
+drop; `make opt-ref-callers` names its original callers. `tools/reccmp.sh`
+then removes the PE debug directory, which the original also lacks; the linker PDB stays next to the
 executable for Reccmp. The link also writes a map to `build-reccmp/LegoRR.map`
 (gitignored with the rest of `build-reccmp/`): the section layout, then every
 public symbol with its address and contributing `library:object`, sorted by

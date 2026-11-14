@@ -375,6 +375,8 @@ At equal `/OPT` setting the two links differ only in `.rdata`: the 84-byte debug
 - The switch is a link-only PR (decision 7 rule 1).
 - The whole-binary measures of `binary-progress.json` can then move to the original-mode link.
 
+**Taken (2026-11-13, [finding 642](../findings/642-gate-takes-the-original-link-mode.md)).** The gate links with `/DEBUG /OPT:REF /OPT:NOICF`. `/OPT:NOICF` because the original folded no identical functions (finding 637). The floor is one function, LegoObject.c's unreferenced `00438390`, kept with `/INCLUDE` as the original's objects (no `/Gy`) kept it; a second `/INCLUDE` keeps crt.cpp's stand-in for LIBC's static `__shift` (`004907c0`), which Reccmp cannot name (`Deviation (scoring only)`, #447). No score fell. The caller switches that reached the floor landed in the same PR, so it is not link-only. The no-`/DEBUG` relink stays as the whole-binary link, and a `/DEBUG /OPT:NOREF` relink now measures what the gate's `/OPT:REF` removes.
+
 **Rejected:**
 - Stripping or relocating the debug directory after a `/DEBUG` link: the image has no `.reloc`, the shift is not uniform, and the PDB would no longer describe the patched executable.
 - Pairing a PDB from one link with another link's executable: it loses 45 exact matches through the `.rdata` shift.
