@@ -633,12 +633,6 @@ def compare_function(analysis: Analysis, ctx: ProjectContext, address: int) -> F
     comparator = rf.FunctionComparator(
         db, analysis.lines_db, ctx.orig_bin, analysis.image, _null_report, CvdumpTypesParser()
     )
-    # Same rebuilt-side treatment of the original's plain immediates as the
-    # full run (reccmp_full_diff.py). Deviation (scoring only), finding 584.
-    import reccmp_plain_immediates
-
-    if os.environ.get("RECCMP_PLAIN_IMMEDIATES", "1") != "0":
-        reccmp_plain_immediates.attach(comparator)
     result = comparator.compare_function(match)
 
     res.matching = result.match_ratio
@@ -849,11 +843,12 @@ def load_baseline_scores(path: Path) -> dict[int, str]:
         return {}
 
 
-# End of the matching build's linked address span: 0x400000..0x9c1000 at the
-# time of writing, since its .bss is far larger than the original's. Taken
-# from an existing matching-build LegoRR.exe when there is one; otherwise this
-# default. MATCH_FN_LINK_END overrides both.
-DEFAULT_LINK_END = 0xA00000
+# End of the matching build's linked address span: 0x400000..0x7f5000 since
+# finding 642. Taken from an existing matching-build LegoRR.exe when there is
+# one; otherwise this default. MATCH_FN_LINK_END overrides both. The default
+# stops at 0x800000, the original's flag constant: `make pe-audit` and
+# `make reccmp-compare` fail once the real image covers it (findings 584, 647).
+DEFAULT_LINK_END = 0x800000
 
 
 def link_end(orig_bin, root: Path) -> int:

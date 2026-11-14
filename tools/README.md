@@ -559,10 +559,11 @@ same 14 differed before #436. `make match-function-parity`
   annotation by name; other files' line-referenced annotations are named on
   the original side, as the full run would have matched them.
 * A constant inside the linked program's address span is treated as an
-  address, because the full run finds some entity there (e.g. the flag
-  `0x800000` lands in a large `.bss` array). The span ends where an existing
-  `build-reccmp/LegoRR.exe` (or `$RECCMP_BUILD_DIR`) ends, else at
-  `0xA00000`; `MATCH_FN_LINK_END` overrides.
+  address, because the full run may find some entity there. The span ends
+  where an existing `build-reccmp/LegoRR.exe` (or `$RECCMP_BUILD_DIR`) ends
+  (`0x7f5000` since finding 642), else at `0x800000`, the original's flag
+  constant, which the real image may not cover (finding 647);
+  `MATCH_FN_LINK_END` overrides.
 
 Known differences: variables have no CodeView type sizes, so offsets render
 as `var+4` rather than `var[1]` (text only), and a `GLOBAL` annotation that the
@@ -774,28 +775,31 @@ beyond function code (finding 563). It reports:
   (unit, legacy, tail, LIBC, import, common), and the import thunks in `.text`.
 
 It reads an existing build in `$(RECCMP_BUILD_DIR)` and does not rebuild.
-`PE_AUDIT_JSON=out.json` writes every measurement. `--no-functions` skips the
+`PE_AUDIT_JSON=out.json` writes every measurement. It exits 1 when the
+rebuilt image covers one of the original's plain constants (see the
+image-end guard below). `--no-functions` skips the
 per-function fill, which needs capstone. Map attribution gives each symbol the
 bytes up to the next symbol, so a large static without a map symbol is counted
 to the symbol before it. Read sizes from the COFF objects when that matters.
 The tool does not change `binary-progress.json`.
 
-## Plain immediates past the original image (`reccmp_plain_immediates.py`)
+## Image-end guard (`pe_audit.py --image-end-only`)
 
-The original image ends at `0x771000`, but the rebuilt image is larger. When
-rebuilt `.bss` covers a value that the original uses as a plain constant
-(the flag `0x800000`), Reccmp names the rebuilt operand and shifts every later
-`<OFFSETn>` (finding 584). `reccmp_full_diff.py` and `match_function.py`
-attach this module to Reccmp's `FunctionComparator` at run time. For each
-function, the rebuilt side doesn't treat as an address any value that the
-original's listing keeps plain at or past the original image's end. It is a
-`Deviation (scoring only)`. `RECCMP_PLAIN_IMMEDIATES=0` turns it off in the
-full run.
+The original image ends at `0x771000`, and its mapped functions use
+`0x800000`, `0xff0000` and `0x1000000` as plain constants (finding 584). If
+the rebuilt image covers one, Reccmp names the rebuilt operand after the
+global that covers it and shifts every later `<OFFSETn>`, so byte-identical
+functions score below 100%. Since finding 642 the gate's image ends at
+`0x7f5000`, and scores come from plain Reccmp: the run-time wrapper
+`reccmp_plain_immediates.py` is retired (finding 647).
 
-`python3 tools/reccmp_plain_immediates.py check [--report-dir DIR]` fails when
-a report still names such an operand. `make reccmp-compare` runs it, and
-`make pe-audit` warns when the rebuilt image covers one of the original's
-known constants.
+Instead, `make pe-audit` and `make reccmp-compare` (and so `make
+reccmp-check`) fail once the rebuilt image ends past `0x800000`, with a
+message naming finding 584. `python3 tools/pe_audit.py --image-end-only
+[--rebuilt EXE] [--original EXE]` runs only that check from the two PE
+headers; it skips, passing, when `reference/LegoRR.exe` is absent. A layout
+change that trips it must shrink `.data`/`.bss` back below `0x800000`, not
+restore the wrapper.
 
 ## The original's link mode (`opt_ref_link.py`)
 

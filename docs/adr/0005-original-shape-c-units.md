@@ -83,11 +83,10 @@ and down. The restructuring cannot avoid this. While it lasts:
    data_seg`, `__declspec(allocate(...))`) is rejected by `make
    reccmp-lint` (finding 580). Where storage would help a score, use an
    annotation instead, or accept the lower score. The rule covers the
-   comparison tooling too: `tools/reccmp_plain_immediates.py` carries the
-   phrase. It keeps a rebuilt operand plain where the original's same
-   function has that value as a constant past the original image (finding
-   584). It changes Reccmp's inputs at run time, not its package or its
-   scoring.
+   comparison tooling too: a run-time wrapper of Reccmp's inputs carries the
+   phrase (`tools/reccmp_vtordisp_scope.py`). The plain-immediate wrapper
+   (finding 584) was retired by finding 647, once the rebuilt image ended
+   below the original's plain constant `0x800000`.
 
 As units become C with original-shaped headers, the symbol numbering
 converges on the original's, and the drift becomes convergence.

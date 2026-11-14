@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
+import contextlib
+import io
 import json
 import sys
 import tempfile
@@ -157,13 +159,55 @@ class ImageEndTests(unittest.TestCase):
                                                 "dll_order_equal": True,
                                                 "common_dll_order_equal": True},
                                     "resources": {"identical": 0, "count": 0, "leaves": []}})
-        self.assertIn("WARNING", summary)
+        self.assertIn("ERROR", summary)
         self.assertIn("0x800000", summary)
+        self.assertIn("finding 584", summary)
+        self.assertEqual(len(pe_audit.image_end_errors(end)), 1)
 
     def test_no_constant_covered_below_it(self):
         end = pe_audit.image_end_report(0x400000, 0x371000, 0x400000, 0x3f0000)
         self.assertEqual(end["covered_constants"], [])
         self.assertEqual(end["margin_below_first_constant"], 0x800000 - 0x7f0000)
+        self.assertEqual(pe_audit.image_end_errors(end), [])
+
+    def test_image_ending_at_the_constant_does_not_cover_it(self):
+        end = pe_audit.image_end_report(0x400000, 0x371000, 0x400000, 0x400000)
+        self.assertEqual(end["covered_constants"], [])
+        end = pe_audit.image_end_report(0x400000, 0x371000, 0x400000, 0x401000)
+        self.assertEqual(end["covered_constants"], [0x800000])
+
+    def _pe(self, path: Path, size_of_image: int) -> Path:
+        fixture_pe(path)
+        data = bytearray(path.read_bytes())
+        data[0x98 + 56:0x98 + 60] = size_of_image.to_bytes(4, "little")
+        path.write_bytes(data)
+        return path
+
+    def test_image_end_only_fails_past_0x800000(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            orig = self._pe(Path(tmp) / "orig.exe", 0x371000)
+            low = self._pe(Path(tmp) / "low.exe", 0x3f5000)
+            high = self._pe(Path(tmp) / "high.exe", 0x401000)
+            self.assertEqual(pe_audit.pe_image_range(high), (0x400000, 0x401000))
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(pe_audit.main(["--image-end-only", "--original", str(orig),
+                                                "--rebuilt", str(low)]), 0)
+            err = io.StringIO()
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+                self.assertEqual(pe_audit.main(["--image-end-only", "--original", str(orig),
+                                                "--rebuilt", str(high)]), 1)
+            self.assertIn("0x800000", err.getvalue())
+            self.assertIn("finding 584", err.getvalue())
+
+    def test_full_audit_fails_past_0x800000(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            orig = self._pe(Path(tmp) / "orig.exe", 0x371000)
+            high = self._pe(Path(tmp) / "high.exe", 0x401000)
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                status = pe_audit.main(["--original", str(orig), "--rebuilt", str(high),
+                                        "--map", str(Path(tmp) / "none.map"), "--no-functions"])
+            self.assertEqual(status, 1)
+            self.assertIn("ERROR", out.getvalue())
 
 
 class AuditTests(unittest.TestCase):

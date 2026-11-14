@@ -199,9 +199,10 @@ only to help the score. There are three kinds:
 - **Comparison deviations** change neither code nor storage. A larger
   rebuilt image can cover a value that the original uses as a plain
   constant past its own end (`0x800000`, finding 584). Reccmp then names
-  the rebuilt operand. `tools/reccmp_plain_immediates.py` keeps that operand
-  plain, and `make reccmp-compare` checks it. It is retired once `.data`
-  ends where the original's does (decision 5, item 3).
+  the rebuilt operand. `tools/reccmp_plain_immediates.py` kept that operand
+  plain until the gate's image ended at `0x7f5000` (finding 642); it was
+  retired then (finding 647), and `make reccmp-compare` and `make pe-audit`
+  now fail if the image covers `0x800000` again. None remain.
 - **Declaration-only deviations** change no storage. They keep a symbol
   count. `view.hpp` keeps six superseded C++ declarations that nothing
   defines or calls, and `record.hpp` keeps `scene_object_mode_is_one`

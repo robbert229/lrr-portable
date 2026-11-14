@@ -3,7 +3,7 @@
     "full": 96.72,
     "game_only": 96.42
   },
-  "baseline_sha256": "d5aa5c08dd2a88f7961b2f6b02ade48feba7cd601f7a74d17ca0a937f0925b6e",
+  "baseline_sha256": "8af25cf7785fac057392ba88949ecda35271fa97b7d186fd0455140b3ed30a44",
   "exact_function_code_bytes": {
     "bytes": 319635,
     "original_text_bytes": 642549,
@@ -23,7 +23,7 @@
       "pairs": 44
     }
   },
-  "input_sha256": "4ff8a1277a450c82e21dafdfcea11917b213b2da96131aec00761133964372c4",
+  "input_sha256": "3b4592b8fc0102c9dcdd7fc3a80e476f00971eeafd9479dbcd32fbf8a733d473",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 19,
@@ -4032,7 +4032,7 @@
     ],
     "unmapped_original_functions": 13
   },
-  "listing_digests_sha256": "1f2d6c6c278bf591490c3a65d196a9f0efabe5972eaa29c5c42e03a4a14ef592",
+  "listing_digests_sha256": "8067a83459ff1d1b1a253aaec11438323a955c3f01c8b0a86075494a7f088301",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4051,8 +4051,8 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 572944,
-        "functions": 2531,
+        "bytes": 572976,
+        "functions": 2532,
         "removed_bytes": 0,
         "removed_functions": 0
       }
@@ -4071,8 +4071,8 @@
         "removed_functions": 76
       },
       "original_annotated": {
-        "bytes": 572944,
-        "functions": 2531,
+        "bytes": 572976,
+        "functions": 2532,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4095,8 +4095,8 @@
         "removed_functions": 3576
       },
       "port_unit": {
-        "bytes": 480,
-        "functions": 15,
+        "bytes": 448,
+        "functions": 14,
         "removed_bytes": 256,
         "removed_functions": 4
       }
