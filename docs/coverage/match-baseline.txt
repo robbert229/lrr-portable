@@ -1,4 +1,4 @@
-# input_sha256: f67d011e8deb34e38f36356734fcfed24fda22f4435926f6413b2a17c2a5f342
+# input_sha256: 3865488e74190000976a16baf208100b8ea84fd29e5fa64342441207a844e000
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2493,7 +2493,7 @@
 0x004805b0 100.00 mesh_initialise
 0x00480650 100.00 mesh_create_global_material
 0x00480780 100.00 mesh_set_material
-0x004807a0 44.44 mesh_obtain_from_list
+0x004807a0 100.00 mesh_obtain_from_list
 0x004807d0 100.00 mesh_return_to_list
 0x004807f0 100.00 mesh_add_list
 0x00480870 100.00 mesh_create_on_frame
@@ -2501,11 +2501,11 @@
 0x004809e0 100.00 mesh_load
 0x00480ac0 78.43 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
-0x00481ac0 31.11 mesh_get_texture_seq_info
+0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
 0x00481c50 86.97 mesh_uview_mesh
 0x00481fa0 100.00 mesh_get_texture_uvs_wrap
-0x00482040 85.19 mesh_set_texture_time2
+0x00482040 100.00 mesh_set_texture_time2
 0x004820d0 100.00 mesh_remove
 0x004821a0 100.00 indexed_record_entry_read
 0x00482210 100.00 mesh_get_group_count
@@ -2695,11 +2695,11 @@
 0x0048c120 100.00 lwo_texture_projection_mode_parse
 0x0048c180 100.00 owned_resource_tree_release
 0x0048c1d0 100.00 lwo_read_big_endian_float
-0x0048c210 72.97 lwo_points_read
+0x0048c210 100.00 lwo_points_read
 0x0048c360 100.00 lwo_curves_read
-0x0048c3e0 58.35 lwo_polygons_read
+0x0048c3e0 100.00 lwo_polygons_read
 0x0048c690 100.00 lwo_surface_names_read
-0x0048c820 80.66 lwo_surface_settings_read
+0x0048c820 97.65 lwo_surface_settings_read
 0x0048d2c0 99.29 lwo_load
 0x0048d7c0 100.00 lwo_app_obj_load
 0x0048d870 100.00 lwo_app_obj_free
@@ -5218,7 +5218,7 @@
 0x004805b0 100.00 mesh_initialise
 0x00480650 100.00 mesh_create_global_material
 0x00480780 100.00 mesh_set_material
-0x004807a0 44.44 mesh_obtain_from_list
+0x004807a0 100.00 mesh_obtain_from_list
 0x004807d0 100.00 mesh_return_to_list
 0x004807f0 100.00 mesh_add_list
 0x00480870 100.00 mesh_create_on_frame
@@ -5226,11 +5226,11 @@
 0x004809e0 100.00 mesh_load
 0x00480ac0 78.43 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
-0x00481ac0 31.11 mesh_get_texture_seq_info
+0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
 0x00481c50 86.97 mesh_uview_mesh
 0x00481fa0 100.00 mesh_get_texture_uvs_wrap
-0x00482040 85.19 mesh_set_texture_time2
+0x00482040 100.00 mesh_set_texture_time2
 0x004820d0 100.00 mesh_remove
 0x004821a0 100.00 indexed_record_entry_read
 0x00482210 100.00 mesh_get_group_count
@@ -5420,11 +5420,11 @@
 0x0048c120 100.00 lwo_texture_projection_mode_parse
 0x0048c180 100.00 owned_resource_tree_release
 0x0048c1d0 100.00 lwo_read_big_endian_float
-0x0048c210 72.97 lwo_points_read
+0x0048c210 100.00 lwo_points_read
 0x0048c360 100.00 lwo_curves_read
-0x0048c3e0 58.35 lwo_polygons_read
+0x0048c3e0 100.00 lwo_polygons_read
 0x0048c690 100.00 lwo_surface_names_read
-0x0048c820 80.66 lwo_surface_settings_read
+0x0048c820 97.65 lwo_surface_settings_read
 0x0048d2c0 99.29 lwo_load
 0x0048d7c0 100.00 lwo_app_obj_load
 0x0048d870 100.00 lwo_app_obj_free

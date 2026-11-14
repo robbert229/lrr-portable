@@ -1,7 +1,8 @@
 # Finding 677 — Weapons.c, Mesh.c and Lwt.c: source shapes for the big functions and their neighbours
 
-Issue #808, part of #388 and ADR 0005. Base: `main` `316b70f6`. Measured
-with one full `make reccmp-check` of the final tree; the single-function loop
+Issue #808, part of #388 and ADR 0005. Base: #810 (`78cb0e32`, stacked on
+#809); first measured on `main` `316b70f6`. Measured with one full `make
+reccmp-check` of the final tree; the single-function loop
 (`tools/match_function.py`) was used for each experiment.
 
 ## Summary
@@ -12,7 +13,7 @@ four Lwt.c functions that changed now has the original's size, so the whole
 of Lwt.c is size-correct for the first time. Weapons.c is unchanged: nothing
 tried there is a committable original form (below).
 
-| Address | Function | Size | `main` | After | Size agrees |
+| Address | Function | Size | Before | After | Size agrees |
 | --- | --- | ---: | ---: | ---: | --- |
 | `004807a0` | mesh_obtain_from_list | 47 | 44.44 | **100** | yes (was longer) |
 | `00481ac0` | mesh_get_texture_seq_info | 184 | 31.11 | **100** | yes (was 18 bytes short) |
@@ -25,19 +26,26 @@ tried there is a committable original form (below).
 
 No function is lower than the baseline.
 
-| Measure | `main` `316b70f6` | This change |
+| Measure | #810 `78cb0e32` | This change |
 | --- | ---: | ---: |
-| Exact-function code bytes | 340,131 (52.93%) | **341,491 (53.15%)** |
+| Exact-function code bytes | 342,065 (53.24%) | **343,425 (53.45%)** |
 | Functions that rose / fell, full | | 6 / **0** |
-| Reccmp accuracy, full / game-only | 97.20% / 96.88% | 97.28% / 96.97% |
-| Correct-size functions, full / game-only | 2,600 / 2,309 | **2,605 / 2,314** |
+| Reccmp accuracy, full / game-only | 97.36% / 97.08% | 97.43% / 97.16% |
+| Correct-size functions, full / game-only | 2,784 / 2,493 | **2,789 / 2,498** |
 | Units with every function the correct size | 166 of 227 | **167** (G98-031) |
 | Identical prefix, raw / masked | 11 B / 528 B | 11 B / 528 B |
-| `.text` identical at original addresses | 25,975 B (4.04%) | 25,978 B (4.04%) |
+| `.text` identical at original addresses | 29,428 B (4.58%) | 29,574 B (4.60%) |
 | Unit-relative identical bytes | 280,229 (50.59%) | 281,589 (50.84%) |
-| Entry point (original `0048f000`) | `0048d0e0` | `0048d130` |
+| Entry point (original `0048f000`) | `0048ea40` | `0048eaa0` |
 | Function-order inversions, full / game-only | 222 / 1 pairs | 222 / 1 pairs |
-| Image end (`make pe-audit`) | `0x7f5000` | `0x7f5000` |
+| Image end (`make pe-audit`) | `0x7d8000` | `0x7d8000` |
+
+First measured on `main` `316b70f6`, with the same six rises and no fall:
+exact-function code bytes 340,131 (52.93%) to 341,491 (53.15%),
+correct-size functions 2,600 to 2,605, accuracy 97.20/96.88 to 97.28/96.97,
+`.text` identical at original addresses 25,975 to 25,978 B, entry point
+`0048d0e0` to `0048d130`, image end `0x7f5000`. The figures above are for the
+stack on #810 (`identity/805-tail-out`, `78cb0e32`, on #809).
 
 Every size change moves toward the original: Mesh.c and Lwt.c together grow
 by 96 bytes after alignment, so the entry point is 96 bytes nearer the original's. No unit
