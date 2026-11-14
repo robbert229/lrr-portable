@@ -29,27 +29,9 @@
 #include "lego_globs.h"
 
 /* AITask.c's .bss, 004b31c8-004b8064: one struct, laid out as the
- * original. Its priority values (004b32e8) and states (004b7ff4) are shared
- * live with the port tail, which reads them through the port-only accessors
- * at the end of this file (finding 570): priorities.c (GAME-034) sets them
- * through this unit's accessors, and the port's scheduler reads them. */
-typedef struct AITask_Globs {
-    AITask* poolBlocks[12];             /* 004b31c8 CmdPoolGrow block table */
-    AITask* freeList;                   /* 004b31f8 */
-    unsigned int poolBlockCount;        /* 004b31fc */
-    const char* taskNames[31];          /* 004b3200 AITask_Type_* */
-    const char* priorityNames[27];      /* 004b327c AI_Priority_* */
-    int priorityValues[27];             /* 004b32e8 */
-    AITask* globalHead;                 /* 004b3354 the head (pending) list */
-    AITask* globalTail;                 /* 004b3358 the second (timer) list */
-    struct EntitySlot* assignCandidates[50]; /* 004b335c */
-    unsigned int assignCandidateCount;  /* 004b3424 */
-    struct EntitySlot* timerCandidates[50];  /* 004b3428 */
-    unsigned int timerCandidateCount;   /* 004b34f0 */
-    unsigned int commandCounts[4800];   /* 004b34f4 */
-    int priorityState[27];              /* 004b7ff4 */
-    unsigned int flags;                 /* 004b8060 */
-} AITask_Globs;  /* 0x4e9c bytes */
+ * original (aitask_globs.h). The port tail reads its priority tables
+ * through it (finding 570). */
+#include "aitask_globs.h"
 
 /* x87 constants. MSVC pools float literals itself, so a literal in the code
  * may replace an item (priorities.c does); an annotated static (config.c)
@@ -1739,9 +1721,14 @@ int aitask_callback_00402bb0(AITask* task, void* data)
 int aitask_callback_00402c20(AITask* task, void* data)
 {
     AITask_BlockSearch* search = (AITask_BlockSearch*)data;
+    int* taskPos;
 
-    if (task->type == 0xb && search->blockPos[0] == task->blockX &&
-        search->blockPos[1] == task->blockY) {
+    /* The comparison reads the task's block through its own pointer, so
+     * MSVC does not reuse the compared values for the call and reloads
+     * both after the flags store, as the original does (finding 675). */
+    taskPos = &task->blockX;
+    if (task->type == 0xb && search->blockPos[0] == taskPos[0] &&
+        search->blockPos[1] == taskPos[1]) {
         task->flags |= 0x20;
         terrain_map_block_highlight_clear(
             AITASK_LEGO_GET_MAP(),
@@ -3949,6 +3936,7 @@ typedef struct AITaskPoint2I {
 typedef struct AITaskPoint2F {
     float x, y;
 } AITaskPoint2F;
+#include "aitask_maths.h"
 
 /* Map3D's vertex position (Vector3F; terrain_map.h's TerrainMapVector3). */
 struct TerrainMapVector3 {
@@ -4253,13 +4241,10 @@ int aitask_cmd_entity_command_chain_tick(struct EntitySlot* object, void* data)
                             AITASK_OBJ(task->object)->stats->field_e8) {
                             AITaskPoint2F wPos;
                             AITaskPoint2F targetWPos;
-                            float dx, dy;
                             entity_transform_position_get_outputs(object, &wPos.x, &wPos.y);
                             entity_transform_position_get_outputs(task->object, &targetWPos.x,
                                                                   &targetWPos.y);
-                            dx = wPos.x - targetWPos.x;
-                            dy = wPos.y - targetWPos.y;
-                            if (sqrt(dx * dx + dy * dy) > s_rdata_0049e01c) {
+                            if (aitask_vector2d_distance(&wPos, &targetWPos) > s_rdata_0049e01c) {
                                 AITaskPoint2I pos;
                                 AITaskPoint2I targetPos;
                                 entity_position_to_terrain_cell_adapter(object, &pos.x,
@@ -4384,18 +4369,28 @@ int aitask_cmd_entity_command_chain_tick(struct EntitySlot* object, void* data)
                         break;
                     case 0: {
                         AITaskPoint2I pos;
+                        int* bp = &task->blockX;
                         entity_position_to_terrain_cell_adapter(object, &pos.x, &pos.y);
-                        if (pos.x != task->blockX || pos.y != task->blockY) {
+                        /* The test goes through result: MSVC then lays the
+                         * route arm first and the at-target arm last, before
+                         * the join, so the other cases keep their own
+                         * `mov edi, eax` instead of cross-jumping into this
+                         * arm, as the original does (finding 675). */
+                        if (pos.x != task->blockX || pos.y != bp[1])
+                            result = 0;
+                        else
+                            result = 1;
+                        if (!result) {
                             struct TerrainMapVector3 vertices[4];
                             AITaskPoint2F wPos;
-                            terrain_map_block_vertices_get(AITASK_LEGO_GET_MAP(), task->blockX,
+                            terrain_map_block_vertices_get(AITASK_LEGO_GET_MAP(), bp[0],
                                                            task->blockY, vertices);
                             wPos.x = random_float_range(vertices[0].x - s_rdata_0049e024,
                                                          vertices[2].x - s_rdata_0049e020);
                             wPos.y = random_float_range(vertices[2].y - s_rdata_0049e024,
                                                          vertices[0].y - s_rdata_0049e020);
                             result = aitask_object_path_submit_to_grid_target(
-                                object, &task->blockX,
+                                object, bp,
                                 (entity_stats_word_get(object) & 0x20000000) ? &wPos.x : NULL);
                             break;
                         }
@@ -6355,18 +6350,4 @@ unsigned int renderer_global_dword_get(void)
 unsigned int render_surface_secondary_get(void)
 {
     return s_render_surface_secondary;
-}
-
-/* Port-only accessors (finding 570): the port tail (aitask_port.cpp,
- * cmd.cpp) reads and writes the shared priority tables through these. */
-// PORT-ONLY: the port tail's view of the shared priority values (004b32e8)
-int* aitask_port_priority_values(void)
-{
-    return aiTaskGlobs.priorityValues;
-}
-
-// PORT-ONLY: the port tail's view of the shared priority states (004b7ff4)
-int* aitask_port_priority_states(void)
-{
-    return aiTaskGlobs.priorityState;
 }

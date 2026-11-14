@@ -1,4 +1,4 @@
-# input_sha256: fe929bd8693da7b69e0e954091677c1e087f2bafbfb16548cc8394177a81cd49
+# input_sha256: 05e989c083acf6cadf38911ad30d7bebcb3cc75a75b4509f582bd5463a389f85
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -9,7 +9,7 @@
 [game-only] 2723 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
-0x00401210 78.26 advisor_scene_visual_state_initialize
+0x00401210 100.00 advisor_scene_visual_state_initialize
 0x00401240 100.00 vec2_dist
 0x00401270 100.00 advisor_config_slots_load_target
 0x004013a0 100.00 vec_len
@@ -73,7 +73,7 @@
 0x00402b30 100.00 aitask_coordinate_callback_dispatch_current
 0x00402b60 100.00 aitask_coordinate_callback_dispatch_by_mode
 0x00402bb0 100.00 aitask_callback_00402bb0
-0x00402c20 31.37 aitask_callback_00402c20
+0x00402c20 100.00 aitask_callback_00402c20
 0x00402c70 100.00 aitask_callback_00402c70
 0x00402ca0 100.00 aitask_callback_00402ca0
 0x00402cd0 100.00 aitask_cmd_cancel_ref
@@ -131,14 +131,14 @@
 0x004041b0 100.00 aitask_entity_task_chain_contains_kind
 0x004041e0 100.00 aitask_entity_command_chain_head_remove
 0x00404250 100.00 aitask_cmd_pool_timer_delta_apply
-0x00404280 83.07 aitask_cmd_entity_command_chain_tick
-0x00404e00 98.65 aitask_object_path_submit_to_grid_target
+0x00404280 92.18 aitask_cmd_entity_command_chain_tick
+0x00404e00 100.00 aitask_object_path_submit_to_grid_target
 0x00404ed0 100.00 aitask_check_object_candidate
 0x00404f10 100.00 aitask_object_task_target_filter_find
 0x00404f50 100.00 aitask_object_filter_matches_action_target
-0x00404fc0 99.43 aitask_place_command_eligibility_check
+0x00404fc0 99.55 aitask_place_command_eligibility_check
 0x00405950 98.62 aitask_pending_command_timer_fire_scan
-0x00405c10 62.29 aitask_pending_command_entity_assignment_tick
+0x00405c10 62.45 aitask_pending_command_entity_assignment_tick
 0x00406360 100.00 aitask_entity_record_attach_and_relink
 0x004063e0 100.00 aitask_pending_record_entity_reference_clear
 0x00406400 100.00 aitask_cmd_pending_record_copy
@@ -2734,7 +2734,7 @@
 [full] 3018 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
-0x00401210 78.26 advisor_scene_visual_state_initialize
+0x00401210 100.00 advisor_scene_visual_state_initialize
 0x00401240 100.00 vec2_dist
 0x00401270 100.00 advisor_config_slots_load_target
 0x004013a0 100.00 vec_len
@@ -2798,7 +2798,7 @@
 0x00402b30 100.00 aitask_coordinate_callback_dispatch_current
 0x00402b60 100.00 aitask_coordinate_callback_dispatch_by_mode
 0x00402bb0 100.00 aitask_callback_00402bb0
-0x00402c20 31.37 aitask_callback_00402c20
+0x00402c20 100.00 aitask_callback_00402c20
 0x00402c70 100.00 aitask_callback_00402c70
 0x00402ca0 100.00 aitask_callback_00402ca0
 0x00402cd0 100.00 aitask_cmd_cancel_ref
@@ -2856,14 +2856,14 @@
 0x004041b0 100.00 aitask_entity_task_chain_contains_kind
 0x004041e0 100.00 aitask_entity_command_chain_head_remove
 0x00404250 100.00 aitask_cmd_pool_timer_delta_apply
-0x00404280 83.07 aitask_cmd_entity_command_chain_tick
-0x00404e00 98.65 aitask_object_path_submit_to_grid_target
+0x00404280 92.18 aitask_cmd_entity_command_chain_tick
+0x00404e00 100.00 aitask_object_path_submit_to_grid_target
 0x00404ed0 100.00 aitask_check_object_candidate
 0x00404f10 100.00 aitask_object_task_target_filter_find
 0x00404f50 100.00 aitask_object_filter_matches_action_target
-0x00404fc0 99.43 aitask_place_command_eligibility_check
+0x00404fc0 99.55 aitask_place_command_eligibility_check
 0x00405950 98.62 aitask_pending_command_timer_fire_scan
-0x00405c10 62.29 aitask_pending_command_entity_assignment_tick
+0x00405c10 62.45 aitask_pending_command_entity_assignment_tick
 0x00406360 100.00 aitask_entity_record_attach_and_relink
 0x004063e0 100.00 aitask_pending_record_entity_reference_clear
 0x00406400 100.00 aitask_cmd_pending_record_copy

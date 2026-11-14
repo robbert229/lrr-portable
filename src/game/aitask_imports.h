@@ -21,6 +21,14 @@ struct EntitySlot;
 #define ledger_stub_00438a60_SpatialObjectQueryCenterMask01 legoobject_query_center_mask01
 #define ledger_stub_00438ae0_SpatialObjectQueryCenterMask02 legoobject_query_center_mask02
 #define ledger_stub_00438bf0_SpatialObjectQueryCenterMask80 legoobject_query_center_mask80
+/* The four port-tail adapters whose callees are now original-shape
+ * functions (finding 668 section 4; finding 675). 0043a5f0 returns the
+ * object's container, which legoobject_unit.c's definition leaves in eax;
+ * 00432550 is pushed the block position and reads none of it. */
+#define aitask_object_container_get_adapter legoobject_visual_resource_get_or_create /* 0043a5f0 */
+#define aitask_route_setup_adapter legoobject_route_setup_and_marker_associate /* 00441700 */
+#define aitask_object_find_trainer_adapter legoobject_query_center_mask100 /* 00438e50 */
+#define aitask_place_command_cell_accept_adapter always_accept_place_command_cell /* 00432550 */
 #endif
 
 /* --- group A (00401cb0-00402d30) --- */

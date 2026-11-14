@@ -77,9 +77,24 @@
 #include "gods98/simtick_for_aitask.hpp"
 /* AITask.c's priority tables live in the unit's state (aitask.c); the
  * frozen headers' s_behaviour/s_priority_state declarations are not
- * defined anywhere since finding 570. */
+ * defined anywhere since finding 570. The tail reads them through these
+ * two accessors, which live here rather than in the unit so that GAME-002
+ * ends at its last original function (finding 675). */
+#include "aitask_globs.h"
 extern "C" int* aitask_port_priority_values(void);
 extern "C" int* aitask_port_priority_states(void);
+
+// PORT-ONLY: the port tail's view of the shared priority values (004b32e8)
+extern "C" int* aitask_port_priority_values(void)
+{
+    return aiTaskGlobs.priorityValues;
+}
+
+// PORT-ONLY: the port tail's view of the shared priority states (004b7ff4)
+extern "C" int* aitask_port_priority_states(void)
+{
+    return aiTaskGlobs.priorityState;
+}
 #define s_behaviour (aitask_port_priority_values())
 #define s_priority_state (aitask_port_priority_states())
 #if defined(_MSC_VER) && defined(_M_IX86)
