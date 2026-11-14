@@ -1,4 +1,4 @@
-# input_sha256: 0f1514e873eaee683486a64ccb687ddef10fe3fa8dc34aad8ea0abae8d3f15b4
+# input_sha256: 7b803929325a15ce387cc8a806a0af210d7487981bbeefae37fb20f8011c707a
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -739,7 +739,7 @@
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 100.00 lego_global_subsystem_state_reset
 0x00426420 95.77 lego_cursor_ray_to_camera_route
-0x00426520 71.10 lego_main_sim_interaction_and_cell_update
+0x00426520 71.21 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 100.00 lego_level_upgrade_name_strings_load
 0x00428020 99.26 lego_entity_command_status_feedback_dispatch
@@ -761,7 +761,7 @@
 0x00429850 100.00 active_engine_field_b0_get_current
 0x00429860 100.00 engine_float_field210_get_by_index_current
 0x00429880 100.00 engine_float_field260_get_current_target
-0x00429890 95.08 lego_level_load
+0x00429890 95.46 lego_level_load
 0x0042b2f0 100.00 lego_entity_effect_counters_apply_from_record
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
@@ -801,7 +801,7 @@
 0x0042f0c0 90.03 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
-0x0042f6f0 80.99 lego_cell_init_pass
+0x0042f6f0 83.85 lego_cell_init_pass
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 100.00 lego_terrain_neighbor_flag_set
@@ -3279,7 +3279,7 @@
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 100.00 lego_global_subsystem_state_reset
 0x00426420 95.77 lego_cursor_ray_to_camera_route
-0x00426520 71.10 lego_main_sim_interaction_and_cell_update
+0x00426520 71.21 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 100.00 lego_level_upgrade_name_strings_load
 0x00428020 99.26 lego_entity_command_status_feedback_dispatch
@@ -3301,7 +3301,7 @@
 0x00429850 100.00 active_engine_field_b0_get_current
 0x00429860 100.00 engine_float_field210_get_by_index_current
 0x00429880 100.00 engine_float_field260_get_current_target
-0x00429890 95.08 lego_level_load
+0x00429890 95.46 lego_level_load
 0x0042b2f0 100.00 lego_entity_effect_counters_apply_from_record
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
@@ -3341,7 +3341,7 @@
 0x0042f0c0 90.03 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
-0x0042f6f0 80.99 lego_cell_init_pass
+0x0042f6f0 83.85 lego_cell_init_pass
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 100.00 lego_terrain_neighbor_flag_set
