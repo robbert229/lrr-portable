@@ -1,4 +1,4 @@
-# input_sha256: be3d0af68aa388e834169878a42f92c9706706eda7242a4769e1776e0438bc08
+# input_sha256: 869bda7366e075d36c40dcc0e64f6181c3cdd9fccbe8dbac168a93de6002a0f8
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -248,7 +248,7 @@
 0x00409cd0 100.00 construction_update_cardinal_blocks
 0x00409d40 100.00 level_state_stored_value_set
 0x00409d50 100.00 entity_cell_path_effects_apply_current
-0x00409f20 100.00 entity_placement_commands_build_once
+0x00409f20 100.00 building_drop_cost
 0x00409ff0 100.00 entity_destroy_tracked_pointer_cleanup
 0x0040a0c0 100.00 scrolling_text_display
 0x0040a3d0 100.00 screen_effect_flags_clear_and_release
@@ -467,7 +467,7 @@
 0x004150b0 100.00 save_menu_refresh_target
 0x00415150 100.00 front_update_options_slider_levels
 0x00415190 100.00 front_callback_trigger_back_save
-0x00415220 97.83 front_load_selected_level
+0x00415220 100.00 front_load_selected_level
 0x004152c0 100.00 front_save_get_save_summary
 0x00415360 100.00 scroll_slider_refresh
 0x00415370 100.00 front_options_update
@@ -1504,7 +1504,7 @@
 0x00459100 100.00 objective_callback_check_completed_object
 0x00459190 100.00 object_recall_store_minifigure
 0x00459240 100.00 object_recall_recall_minifigure
-0x004592a0 100.00 osf_read_state_reset
+0x004592a0 100.00 object_recall_reset
 0x004592e0 100.00 object_recall_snapshot
 0x00459360 100.00 object_recall_restore
 0x004593d0 100.00 object_recall_is_loaded
@@ -1593,9 +1593,9 @@
 0x0045d550 85.29 priorities_move_cursor_to_up_button
 0x0045d640 62.50 priorities_move_cursor_to_image
 0x0045d6d0 63.23 priorities_draw
-0x0045d7e0 100.00 level_remap_table_load
-0x0045d870 75.00 command_entity_reference_remap
-0x0045d8a0 100.00 object_field14_set
+0x0045d7e0 100.00 ptl_initialise
+0x0045d870 100.00 ptl_translate_event
+0x0045d8a0 100.00 radarmap_set_zoom
 0x0045d8b0 100.00 screen_coord_normalize_init
 0x0045da90 100.00 ui_render_record_create
 0x0045daf0 100.00 ui_render_record_free
@@ -2788,7 +2788,7 @@
 0x00409cd0 100.00 construction_update_cardinal_blocks
 0x00409d40 100.00 level_state_stored_value_set
 0x00409d50 100.00 entity_cell_path_effects_apply_current
-0x00409f20 100.00 entity_placement_commands_build_once
+0x00409f20 100.00 building_drop_cost
 0x00409ff0 100.00 entity_destroy_tracked_pointer_cleanup
 0x0040a0c0 100.00 scrolling_text_display
 0x0040a3d0 100.00 screen_effect_flags_clear_and_release
@@ -3007,7 +3007,7 @@
 0x004150b0 100.00 save_menu_refresh_target
 0x00415150 100.00 front_update_options_slider_levels
 0x00415190 100.00 front_callback_trigger_back_save
-0x00415220 97.83 front_load_selected_level
+0x00415220 100.00 front_load_selected_level
 0x004152c0 100.00 front_save_get_save_summary
 0x00415360 100.00 scroll_slider_refresh
 0x00415370 100.00 front_options_update
@@ -4044,7 +4044,7 @@
 0x00459100 100.00 objective_callback_check_completed_object
 0x00459190 100.00 object_recall_store_minifigure
 0x00459240 100.00 object_recall_recall_minifigure
-0x004592a0 100.00 osf_read_state_reset
+0x004592a0 100.00 object_recall_reset
 0x004592e0 100.00 object_recall_snapshot
 0x00459360 100.00 object_recall_restore
 0x004593d0 100.00 object_recall_is_loaded
@@ -4133,9 +4133,9 @@
 0x0045d550 85.29 priorities_move_cursor_to_up_button
 0x0045d640 62.50 priorities_move_cursor_to_image
 0x0045d6d0 63.23 priorities_draw
-0x0045d7e0 100.00 level_remap_table_load
-0x0045d870 75.00 command_entity_reference_remap
-0x0045d8a0 100.00 object_field14_set
+0x0045d7e0 100.00 ptl_initialise
+0x0045d870 100.00 ptl_translate_event
+0x0045d8a0 100.00 radarmap_set_zoom
 0x0045d8b0 100.00 screen_coord_normalize_init
 0x0045da90 100.00 ui_render_record_create
 0x0045daf0 100.00 ui_render_record_free

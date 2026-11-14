@@ -70,8 +70,9 @@
 #define front_save_restore_save_data options_context_copy_and_replace_resource_target /* 004180c0 */
 #define front_levels_set_update save_state_event_context_set            /* 00418110 */
 #define front_save_is_game_100_percented upgrade_average_is_above_99    /* 00418120 */
-/* ObjectRecall_Save (004593e0): object_state_file.cpp's original-shape
- * definition (#562, finding 642). */
+/* ObjectRecall.c's originals (objectrecall.c, findings 642 and 652):
+ * ObjectRecall_Restore (00459360) and ObjectRecall_Save (004593e0). */
+#define front_object_recall_restore_adapter object_recall_restore        /* 00459360 */
 #define front_object_recall_save_adapter object_recall_save              /* 004593e0 */
 /* Front_Levels_UpdateAvailable (004173e0) and Front_Save_WriteCurrentSaveFile
  * (00417fc0) keep the unit's names: savegame.h's prototypes of the port's

@@ -5171,16 +5171,19 @@ extern "C" int front_image_save_bmp_adapter(void* image, const char* fname)
 
 /* ObjectRecall.c (GAME-030): 00459360 restores the level's object recall
  * list and 004593e0 saves it as a save slot's .osf. The port's entries
- * take the game context (object_state_file.cpp); frontend_unit.c's
+ * take the game context (object_state_file_port.cpp); frontend_unit.c's
  * Front_Levels_* and Front_Save_WriteSaveFile call these, so nothing. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+/* The matching build calls objectrecall.c's ObjectRecall_Restore instead
+ * (frontend_unit_link_names.h). */
 // PORT-ONLY: original-ABI adapter for GAME-017 frontend_unit.c (no port equivalent of 0x00459360)
 extern "C" void front_object_recall_restore_adapter(void)
 {
 }
+#endif
 
 #if !(defined(_MSC_VER) && _MSC_VER < 1200)
-/* The matching build calls object_state_file.cpp's original-shape
- * ObjectRecall_Save instead (frontend_unit_link_names.h). */
+/* The matching build calls objectrecall.c's ObjectRecall_Save instead (frontend_unit_link_names.h). */
 // PORT-ONLY: original-ABI adapter for GAME-017 frontend_unit.c (osf_write takes the game context)
 extern "C" void front_object_recall_save_adapter(const char* fname)
 {

@@ -38,10 +38,10 @@ game_sources = [
   'scrollinfo_port.cpp',
   'terrain_overlay_quads_port.cpp',
   'map_view_port.cpp',
-  'level_id_remap.cpp',
+  'level_id_remap_port.cpp',
   'pointer_port.cpp',
   'objinfo_port.cpp',
-  'object_state_file.cpp',
+  'object_state_file_port.cpp',
   'objective_port.cpp',
   'tutorial_script_port.cpp',
   'terrain_map_port.cpp',
@@ -52,7 +52,7 @@ game_sources = [
   'terrain_cell_objects_port.cpp',
   'rock_fall_styles_port.cpp',
   'dependencies_port.cpp',
-  'entity_cell_effects.cpp',
+  'entity_cell_effects_port.cpp',
   'placement_port.cpp',
   'encyclopedia_port.cpp',
   'lava_erosion_port.cpp',
@@ -137,6 +137,9 @@ game_c_sources = [
   'encyclopedia.c',
   'objinfo.c',
   'selectplace.c',
+  'entity_cell_effects.c',
+  'objectrecall.c',
+  'ptl.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []

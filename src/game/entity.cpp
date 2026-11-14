@@ -1680,7 +1680,7 @@ void entity_tracked_cleanup_context_set(void** tracked_entities,
 /* The port's model of 0x00409ff0. The three global pointer replacements
  * and teardown pair are exposed as operations because their owning
  * registries are not reconstructed in the entity module. The matching build
- * has the original's shape in entity_cell_effects.cpp (#562, finding 642). */
+ * has the original's shape in entity_cell_effects.c (findings 642 and 652). */
 #if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void entity_destroy_tracked_pointer_cleanup(void* entity)
 {

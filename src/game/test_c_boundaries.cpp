@@ -257,6 +257,10 @@ extern "C" int s_cursor_delta_y;
 #include "gods98/images_unit.h"
 #include "gods98/flic_imports.h"
 #include "gods98/images_imports.h"
+#include "game/ptl.h"
+#include "game/objectrecall.h"
+#include "game/entity.hpp"
+#include "game/entity_cell_effects.h"
 
 int main(void)
 {

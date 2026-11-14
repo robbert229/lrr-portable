@@ -790,13 +790,13 @@ void camera_pointer_pan_update(struct ViewContext* v, float vec[3],
 void entity_transform_position_get_outputs(const struct EntitySlot* entity,
                                            float* out_x, float* out_y);
 /* RadarMap_SetZoom (0045d8a0; the port's entry takes the float as a word):
- * adapter in level_id_remap.cpp. RadarMap_Draw (0045dbc0): radarmap.c's
+ * adapter in level_id_remap_port.cpp. RadarMap_Draw (0045dbc0): radarmap.c's
  * definition takes this name in the matching build (radarmap_link_names.h,
  * finding 606); natively a no-op adapter at the end of lego_port.cpp. */
 #if defined(_MSC_VER) && _MSC_VER < 1200
-/* Matching build: the original itself, level_id_remap.cpp's 0045d8a0
- * (C linkage since finding 634), which stores the float. */
-#define radar_map_zoom_set_adapter object_field14_set
+/* Matching build: the original itself, ptl.c's 0045d8a0 (finding 652),
+ * which stores the float. */
+#define radar_map_zoom_set_adapter radarmap_set_zoom
 #endif
 void radar_map_zoom_set_adapter(void* radarMap, float zoom);
 void radar_map_tv_position_set_adapter(void* radarMap, const float* pos);
@@ -1005,22 +1005,22 @@ void objective_load_original(struct BlockRec* config, const char* gameName,
                              const char* levelName, struct Lego_Level* level,
                              int screenWidth, int screenHeight); /* objective_unit.cpp, 00457d40 */
 #if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
-/* Matching build: object_state_file.cpp's original-shape ObjectRecall_IsLoaded
+/* Matching build: objectrecall.c's ObjectRecall_IsLoaded
  * and ObjectRecall_LoadRROSFile (#749, finding 648). Object-like aliases
  * before each name's only declaration, so the symbol counter does not
  * move. */
 #define osf_read_dirty_flag_get_original object_recall_is_loaded
 #define osf_read_original object_recall_load_rrosfile
 #endif
-int osf_read_dirty_flag_get_original(void);            /* object_state_file.cpp, 004593d0 */
-int osf_read_original(const char* path);               /* object_state_file.cpp, 00459470 */
+int osf_read_dirty_flag_get_original(void);            /* objectrecall.c, 004593d0 */
+int osf_read_original(const char* path);               /* objectrecall.c, 00459470 */
 #if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
-/* Matching build: level_id_remap.cpp's original-shape 0045d7e0 (#562,
- * finding 642). */
-#define level_identifier_remap_table_load_original level_remap_table_load
+/* Matching build: PTL.c's PTL_Initialise (ptl.c, findings 642 and
+ * 652). */
+#define level_identifier_remap_table_load_original ptl_initialise
 #endif
 int level_identifier_remap_table_load_original(const char* fileName,
-                                               const char* gameName); /* level_id_remap.cpp, 0045d7e0 */
+                                               const char* gameName); /* ptl.c, 0045d7e0 */
 void renderer_fog_color_set_original(float r, float g, float b); /* lego.cpp, 00473e10 */
 void renderer_fog_mode_set_original(unsigned int mode);          /* lego.cpp, 00473e70 */
 void renderer_fog_parameters_set_original(float start, float end,
@@ -1722,7 +1722,7 @@ void entity_world_position_set(struct EntitySlot* entity, float x, float y,
                                float heading, int update_heading); /* 004428a0 */
 void cmd_create_task(struct EntitySlot* e, int32_t parameter);  /* 00402720 */
 #if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
-/* Matching build: object_state_file.cpp's original-shape
+/* Matching build: objectrecall.c's
  * ObjectRecall_RecallMiniFigure (#749, finding 648). An object-like alias
  * before the name's only declaration, so the symbol counter does not move. */
 #define entity_state_override_pop object_recall_recall_minifigure

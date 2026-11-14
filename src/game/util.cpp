@@ -519,11 +519,10 @@ uint32_t s_pending_record_rows[PENDING_RECORD_CAPACITY][5];
 unsigned int s_pending_record_count;
 void (*s_pending_record_release_hook)(uint32_t* row);
 
-/* LevelIdentifierRemapTableLoad's table and count (0045d7e0, #562, finding
- * 642). The original's table holds 40 pairs; the port's holds 128. */
-// GLOBAL: LEGORR 0x00555be0
+/* The port's table and count of PTL.c's translations (PTL_Initialise,
+ * 0045d7e0). The original's ptlGlobs (00555be0) is ptl.c's and holds 40
+ * pairs; the port's holds 128. */
 uint32_t s_level_remap_pairs[LEVEL_REMAP_CAPACITY][2];
-// GLOBAL: LEGORR 0x00555d20
 unsigned int s_level_remap_count;
 
 EntityLinkList** s_entity_link_lists;
