@@ -391,7 +391,7 @@ void platform_render_surface_ops_set(const PlatformRenderSurfaceOps* ops)
                 sizeof(s_platform_render_surface_ops));
 }
 
-// FUNCTION: LEGORR 0x004783f0
+// PORT-ONLY: the port's Windows window; Main.c's Main_InitApp (004783f0) is in gods98/main.c (G98-005).
 PlatformWindow* platform_create_window(const char* title, int width, int height)
 {
     WNDCLASSA wc;

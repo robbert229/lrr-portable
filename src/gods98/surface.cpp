@@ -925,7 +925,8 @@ void d3d_material_state_cache_snapshot_store(uint32_t state, uint32_t value)
 /* Direct3DRenderStateSetCached (FUN_004788d0): read the current state,
  * remember its entry value once, and apply a changed value. Returning to the
  * saved value ends the cache interval. */
-// FUNCTION: LEGORR 0x004788d0
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_ChangeRenderState; gods98/main.c (G98-005) has the original.
 void direct3d_render_state_set_cached(uint32_t state, uint32_t value)
 {
     uint32_t current = 0u;
@@ -954,10 +955,12 @@ void direct3d_render_state_set_cached(uint32_t state, uint32_t value)
             s_render_state_apply_ops.context, state, value);
     }
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 /* D3DMaterialStateFlush (FUN_00478940): restore every saved render-state
  * value in the 200-entry cache and clear its dirty bit. */
-// FUNCTION: LEGORR 0x00478940
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_RestoreStates; gods98/main.c (G98-005) has the original.
 void d3d_material_state_flush(void)
 {
     uint32_t state;
@@ -971,6 +974,7 @@ void d3d_material_state_flush(void)
         }
     }
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 void renderer_window_mode_ops_set(const RendererWindowModeOps* ops)
 {
@@ -995,7 +999,8 @@ void direct3d_render_preference_hook_set(
 
 /* Direct3DRenderPreferencesApply (FUN_00478330): map the requested mode and
  * three enable flags to the device's preference and render-mode values. */
-// FUNCTION: LEGORR 0x00478330
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_SetRenderQuality; gods98/main.c (G98-005) has the original.
 void direct3d_render_preferences_apply(uint32_t mode, uint32_t parameter,
                                        int enabled, int secondary,
                                        int high_quality)
@@ -1016,6 +1021,7 @@ void direct3d_render_preferences_apply(uint32_t mode, uint32_t parameter,
                                        parameter, preference, render_mode);
     }
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 void direct3d_matrix_ops_set(const Direct3DMatrixOps* ops)
 {
@@ -1197,7 +1203,8 @@ void direct3drm_device_init_ops_set(const Direct3DRMDeviceInitOps* ops)
 /* Direct3DRMDeviceInit (FUN_004781d0): choose the renderer device mode from
  * adapter capabilities, create the RM/Direct3D chain, initialize its device,
  * query the renderer interface, and commit the successful device. */
-// FUNCTION: LEGORR 0x004781d0
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_SetupDirect3D; gods98/main.c (G98-005) has the original.
 int direct3drm_device_initialize(void* adapter, uint32_t adapter_flags,
                                  void* surface, int force_single_mode)
 {
@@ -1262,6 +1269,7 @@ cleanup:
     }
     return success;
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 int direct3drm_device_mode_get(void)
 {
@@ -1421,7 +1429,8 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
 
 /* RendererWindowModeApply (FUN_004780b0): retain the requested dimensions,
  * switch the platform mode, then size/place and activate the main window. */
-// FUNCTION: LEGORR 0x004780b0
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_SetupDisplay; gods98/main.c (G98-005) has the original.
 void renderer_window_mode_apply(int fullscreen, int x, int y,
                                 int width, int height)
 {
@@ -1523,6 +1532,7 @@ void renderer_window_mode_apply(int fullscreen, int x, int y,
     }
 #endif
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 uint32_t renderer_window_mode_flags_peek(void)
 {
@@ -1594,7 +1604,8 @@ void renderer_begin_frame_once_reset(void)
 /* Retail RendererBeginFrameOnce uses the initialized Direct3DRM device at
  * DAT_00505918 directly. The target calls vtable slot +0x38 after the device
  * setup path has installed the corresponding sidecar pointer. */
-// FUNCTION: LEGORR 0x00477fa0
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_Finalise3D; gods98/main.c (G98-005) has the original.
 void renderer_begin_frame_once_retail(void)
 {
     if ((s_engine_feature_word & 1u) != 0u) return;
@@ -1608,6 +1619,7 @@ void renderer_begin_frame_once_retail(void)
 #endif
     s_engine_feature_word |= 1u;
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 uint32_t lwo_layer_polygon_vertex_count_dispatch(
     void* object, unsigned int layer_index, const void* request,

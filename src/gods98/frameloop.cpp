@@ -82,7 +82,7 @@ WindowRuntimeState s_window_runtime_state;
 uint32_t s_window_application_active;
 // GLOBAL: LEGORR 0x0050580c
 uint32_t s_window_close_requested;
-// GLOBAL: LEGORR 0x00505f80
+/* The port's copy of Main.c's window style (gods98/main.c owns 00505f80). */
 static int32_t s_window_runtime_style;
 static WindowDefaultProc s_window_default_proc;
 static void* s_window_default_proc_context;
@@ -1408,30 +1408,18 @@ void main_loop_frame_pump_hooks_set(const MainLoopFramePumpHooks* hooks)
 
 /* Win32MessagePumpDispatch (FUN_00478040): remove and dispatch every pending
  * message accepted by the fullscreen/windowed filter. */
-// FUNCTION: LEGORR 0x00478040
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_HandleIO; gods98/main.c (G98-005) has the original.
 static void window_message_dispatch_pump(void)
 {
-#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-    MSG message;
-    while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
-        /* WM_QUIT is a thread message: DispatchMessage cannot latch it. */
-        if (message.message == 0x12u) {
-            s_window_close_requested = 1u;
-            continue;
-        }
-        if (window_runtime_message_dispatch_filter(&message)) {
-            TranslateMessage(&message);
-            DispatchMessageA(&message);
-        }
-    }
-#endif /* native backends pump messages in src/platform */
+    /* The native backend pumps its messages in src/platform. */
     (void)frameloop_application_quit_ingest(&s_frameloop_application, NULL, 0);
 }
 
 /* MainLoopFramePump (FUN_00477f30): drain Win32 messages, poll the active
  * input state, update the cursor, begin/present one renderer frame, submit
  * the optional projection overlay, then clear the once-per-frame feature bit. */
-// FUNCTION: LEGORR 0x00477f30
+// PORT-ONLY: the native body of Main.c's Main_LoopUpdate; gods98/main.c (G98-005) has the original.
 void main_loop_frame_pump(int draw_projection_overlay)
 {
     MainLoopFramePumpHooks* const hooks = &s_main_loop_frame_pump_hooks;
@@ -1439,16 +1427,13 @@ void main_loop_frame_pump(int draw_projection_overlay)
     input_state_poll_retail();
     input_cursor_position_update();
     renderer_begin_frame_once_retail();
-#if defined(LEGORRR_BACKEND_WINAPI)
-    directdraw_flip();
-#else
     if (hooks->renderer_present != NULL)
         hooks->renderer_present(hooks->context);
-#endif
     if (draw_projection_overlay != 0 && hooks->projection_overlay != NULL)
         hooks->projection_overlay(hooks->context, 0, 0);
     s_engine_feature_word &= ~1u;
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 void window_runtime_ops_set(const WindowRuntimeOps* ops)
 {
@@ -1522,14 +1507,15 @@ void window_runtime_state_initialize(void* window)
     window_state_initialize_retail(window);
 }
 
-// FUNCTION: LEGORR 0x00477f80
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_GetWindowsBitDepth; gods98/main.c (G98-005) has the original.
 int window_runtime_display_caps_query(void)
 {
     HDC dc = GetDC((HWND)g_platform_cursor_window_handle);
     return GetDeviceCaps(dc, 12);
 }
 
-// FUNCTION: LEGORR 0x00477fd0
+// PORT-ONLY: the native body of Main.c's Main_SetState; gods98/main.c (G98-005) has the original.
 int window_runtime_callback_triplet_set(const size_t* triplet)
 {
     if (triplet != NULL) {
@@ -1541,6 +1527,7 @@ int window_runtime_callback_triplet_set(const size_t* triplet)
     }
     return 0;
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 int window_runtime_callback_triplet_get(size_t triplet[3])
 {
@@ -1552,15 +1539,14 @@ int window_runtime_callback_triplet_get(size_t triplet[3])
     return 1;
 }
 
-/* Main.c's millisecond clock. The original compiles it to a bare
- * `jmp [__imp__timeGetTime]`, and Reward.c calls it directly (finding 574). */
-// FUNCTION: LEGORR 0x00478000
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_GetTime; gods98/main.c (G98-005) has the original.
 extern "C" unsigned long main_time_get(void)
 {
     return timeGetTime();
 }
 
-// FUNCTION: LEGORR 0x00478010
+// PORT-ONLY: the native body of Main.c's Main_DispatchMessage; gods98/main.c (G98-005) has the original.
 int window_runtime_message_dispatch_filter(const void* message)
 {
     const uint32_t* message_words = (const uint32_t*)message;
@@ -1572,21 +1558,17 @@ int window_runtime_message_dispatch_filter(const void* message)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00478310
+// PORT-ONLY: the native body of Main.c's Main_AdjustWindowRect; gods98/main.c (G98-005) has the original.
 void window_runtime_adjust_rect(WindowPortRect* rect)
 {
-    if ((s_engine_feature_word & 2u) == 0u) {
-#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-        (void)AdjustWindowRect((LPRECT)rect, (DWORD)s_window_runtime_style, 0);
-#else
-        if (s_window_runtime_ops.adjust_window_rect != NULL) {
-            (void)s_window_runtime_ops.adjust_window_rect(
-                s_window_runtime_ops.context, rect,
-                (int32_t)s_window_runtime_style, 0);
-        }
-#endif
+    if ((s_engine_feature_word & 2u) == 0u &&
+        s_window_runtime_ops.adjust_window_rect != NULL) {
+        (void)s_window_runtime_ops.adjust_window_rect(
+            s_window_runtime_ops.context, rect,
+            (int32_t)s_window_runtime_style, 0);
     }
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 static ptrdiff_t window_runtime_default(void* window, uint32_t message,
                                         size_t wparam, ptrdiff_t lparam)
@@ -1617,8 +1599,8 @@ static void window_runtime_release_capture(void)
 
 /* GameWindowProcedure (FUN_004784c0): fullscreen message filtering and
  * mouse-event globals follow the decompiled WNDPROC path. */
-// FUNCTION: LEGORR 0x004784c0
-static ptrdiff_t LEGORRR_WINDOW_PROC_CALL window_game_window_procedure_retail(
+// PORT-ONLY: the port's model of Main.c's Main_WndProc_FullScreen; gods98/main.c (G98-005) has the original.
+static ptrdiff_t LEGORRR_WINDOW_PROC_CALL window_game_window_procedure_port(
     void* window, uint32_t message, size_t wparam, ptrdiff_t lparam)
 {
     if (message <= 0x10u) {
@@ -1731,8 +1713,8 @@ default_proc:
 
 /* MainWindowActivationAndCloseHandler (FUN_004786c0): windowed message
  * handling adds capture on the primary-button press and release. */
-// FUNCTION: LEGORR 0x004786c0
-static ptrdiff_t LEGORRR_WINDOW_PROC_CALL window_activation_close_retail(
+// PORT-ONLY: the port's model of Main.c's Main_WndProc_Windowed; gods98/main.c (G98-005) has the original.
+static ptrdiff_t LEGORRR_WINDOW_PROC_CALL window_activation_close_port(
     void* window, uint32_t message, size_t wparam, ptrdiff_t lparam)
 {
     uint32_t button;
@@ -1891,7 +1873,7 @@ static void window_runtime_state_sync_from_globals(uint32_t message,
 ptrdiff_t window_runtime_game_window_proc(void* window, uint32_t message,
                                           size_t wparam, ptrdiff_t lparam)
 {
-    ptrdiff_t result = window_game_window_procedure_retail(
+    ptrdiff_t result = window_game_window_procedure_port(
         window, message, wparam, lparam);
     window_runtime_state_sync_from_globals(message, 0);
     return result;
@@ -1901,7 +1883,7 @@ ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,
                                                size_t wparam,
                                                ptrdiff_t lparam)
 {
-    ptrdiff_t result = window_activation_close_retail(
+    ptrdiff_t result = window_activation_close_port(
         window, message, wparam, lparam);
     window_runtime_state_sync_from_globals(message, 1);
     return result;
@@ -1909,15 +1891,13 @@ ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,
 
 /* WindowTitleSet (FUN_004783d0): forwards the title to the active platform
  * window; the native and WinAPI adapters both update their owned window. */
-// FUNCTION: LEGORR 0x004783d0
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_SetTitle; gods98/main.c (G98-005) has the original.
 void window_title_set(const char* title)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    SetWindowTextA((HWND)g_platform_cursor_window_handle, title);
-#else
     platform_set_window_title(title);
-#endif
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 static void* frame_camera_target_indexed_scene_resolve(
     void* source, uint32_t target_id, uint32_t* component_present)
 {

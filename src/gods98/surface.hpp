@@ -519,7 +519,7 @@ typedef void (*Direct3DRenderPreferenceApplyHook)(
     uint32_t render_mode);
 void direct3d_render_preference_hook_set(
     Direct3DRenderPreferenceApplyHook hook, void* context);
-void direct3d_render_preferences_apply(uint32_t mode, uint32_t parameter,
+extern "C" void direct3d_render_preferences_apply(uint32_t mode, uint32_t parameter,
                                        int enabled, int secondary,
                                        int high_quality); /* FUN_00478330 */
 typedef struct Direct3DMatrixOps {

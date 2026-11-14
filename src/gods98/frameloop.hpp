@@ -69,7 +69,7 @@ typedef struct WindowRuntimeState {
 } WindowRuntimeState;
 extern WindowRuntimeState s_window_runtime_state;
 extern "C" uint32_t s_window_application_active; /* DAT_00505808 */
-extern uint32_t s_window_close_requested; /* DAT_0050580c */
+extern "C" uint32_t s_window_close_requested; /* DAT_0050580c */
 
 typedef struct WindowRuntimeOps {
     void* context;
@@ -104,8 +104,8 @@ void window_state_initialize_retail(void* window); /* FUN_0047c170 */
 extern "C" int window_runtime_display_caps_query(void); /* 0x00477f80 */
 extern "C" int window_runtime_callback_triplet_set(const size_t* triplet);
 int window_runtime_callback_triplet_get(size_t triplet[3]);
-int window_runtime_message_dispatch_filter(const void* message); /* 0x00478010 */
-void window_runtime_adjust_rect(WindowPortRect* rect);
+extern "C" int window_runtime_message_dispatch_filter(const void* message); /* 0x00478010 */
+extern "C" void window_runtime_adjust_rect(WindowPortRect* rect);
 ptrdiff_t window_runtime_game_window_proc(void* window, uint32_t message,
     size_t wparam, ptrdiff_t lparam);
 ptrdiff_t window_runtime_activation_close_proc(void* window,

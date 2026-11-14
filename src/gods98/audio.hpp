@@ -71,7 +71,7 @@ extern "C" void audio_menu_volume_set(int value);
 extern "C" void music_mixer_volume_set(float music, float sfx);
 /* Legacy mixer helper: query/apply the compact-disc source through WinMM.
  * The native backend has no such control and reports unavailable. */
-int audio_mixer_control_init(float* music, float* sfx, int apply_volume);
+extern "C" int audio_mixer_control_init(float* music, float* sfx, int apply_volume);
 void audio_music_mixer_volume_get(float* music, float* sfx);
 /* Read the legacy compact-disc mixer source. Returns 1 when WinMM finds a
  * control matching the reference's type masks on a

@@ -331,7 +331,7 @@ extern "C"
 #endif
 int current_engine_mode_is_zero(void);
 void   engine_context_mode_global_set(int32_t mode);
-void   window_mode_flag_set(uint32_t mode);
+extern "C" void window_mode_flag_set(uint32_t mode);
 
 /* ObjectiveScoreTextOriginSet (FUN_004262e0): the objective/score text
  * origin pair, ONE cdecl argument (b60: the corpus callee reads only

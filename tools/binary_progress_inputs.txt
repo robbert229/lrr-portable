@@ -673,7 +673,9 @@ src/gods98/lwsc_scene.cpp
 src/gods98/lwsc_scene.hpp
 src/gods98/lwsc_winapi.cpp
 src/gods98/lwsc_winapi.hpp
+src/gods98/main.c
 src/gods98/main.h
+src/gods98/main_imports.h
 src/gods98/mainsim.cpp
 src/gods98/mainsim.hpp
 src/gods98/maths.c
@@ -867,7 +869,6 @@ src/gods98/winmm_port.cpp
 src/link_order.cmake
 src/main.cpp
 src/platform/platform.h
-src/platform/winapi/entry.cpp
 src/platform/winapi/frameloop.cpp
 src/platform/window.h
 src/version.rc

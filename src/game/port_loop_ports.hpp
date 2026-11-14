@@ -331,7 +331,7 @@ void startup_streams_close(void);
  * outside the recovered routine, so the host supplies them here. */
 void startup_config_stream_paths_set(const char* output_path,
                                      const char* token_list_path);
-void startup_config_stream_load(void);
+extern "C" void startup_config_stream_load(void);
 typedef int (*BufferedCharReadHook)(void* context, void* stream);
 void buffered_char_stream_read_hook_set(BufferedCharReadHook read_char,
                                         void* context);

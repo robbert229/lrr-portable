@@ -19,12 +19,11 @@ int window_runtime_display_caps_query(void);                         /* 00477f80
 void renderer_window_mode_apply(int fullscreen, int x, int y,
                                 int width, int height);              /* 004780b0 */
 
-/* Main_SetupDirect3D (FUN_004781d0, surface.hpp). The original takes the
- * selected device, the IDirectDraw object, the back buffer and the full
- * screen flag. The port's model takes an adapter record, its flags, a
- * surface and a single-mode flag; directdraw_setup passes the original's
- * arguments in those slots (ADR 0005 step 6: the callee's own conversion
- * recovers the contract). The port renderer never runs directdraw_setup. */
+/* Main_SetupDirect3D (FUN_004781d0): main.c (finding 641) takes the
+ * original's selected device, IDirectDraw object, back buffer and full
+ * screen flag. The declaration keeps the native model's parameter types
+ * (surface.hpp), which the C boundary test checks; directdraw_setup passes
+ * the original's arguments in those slots. */
 int direct3drm_device_initialize(void* adapter, unsigned int adapter_flags,
                                  void* surface, int force_single_mode); /* 004781d0 */
 

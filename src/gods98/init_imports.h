@@ -18,9 +18,8 @@ int window_runtime_display_caps_query(void);                         /* 00477f80
 extern void* g_platform_cursor_window_handle;
 
 /* DAT_00505804: Main.c's module instance, the dialog template's module
- * (platform/winapi/frameloop.cpp). The port never sets it: NULL makes
- * DialogBoxParamA load the template from the executable, the same
- * module. */
+ * (platform/winapi/frameloop.cpp). main.c's WinMain sets it (finding
+ * 641). */
 extern void* g_main_instance_handle;
 
 #ifdef __cplusplus

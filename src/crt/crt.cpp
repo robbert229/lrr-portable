@@ -2575,8 +2575,10 @@ void renderer_global_dword_set(uint32_t value) { s_renderer_global_dword = value
 
 void render_surface_secondary_set(uint32_t value) { s_render_surface_secondary = value; }
 
-// FUNCTION: LEGORR 0x00477f70
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_GetCLFlags; gods98/main.c (G98-005) has the original.
 uint32_t render_feature_flags_get(void) { return s_render_feature_flags; }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 void render_feature_flags_set(uint32_t value) { s_render_feature_flags = value; }
 
 /* SetLowTextureFlag (2026-10-25): the corpus's DAT_00505f84 engine word has
@@ -2597,13 +2599,15 @@ void engine_feature_word_install(uint32_t value) /* port hook */
     s_engine_feature_word = value;
 }
 
-// FUNCTION: LEGORR 0x00477bd0
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_DisableTextureManagement; gods98/main.c (G98-005) has the original.
 void low_texture_flag_set(void) /* FUN_00477bd0 */
 {
     if ((s_engine_feature_word & 0x40000u) == 0u) {
         s_engine_feature_word |= 0x20u;
     }
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 /* --- integer/string helper band (2026-10-25) -------------------------------- */
 

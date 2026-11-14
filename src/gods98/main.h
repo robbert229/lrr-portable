@@ -10,10 +10,10 @@
 extern "C" {
 #endif
 
-/* DAT_00505914: Main.c's IDirect3DRM3 (lpD3DRM()). The port does not own
- * it: the Windows renderer keeps its own (platform/winapi/frameloop.cpp).
- * The stand-in in crt.cpp stays NULL; only lws.c's original code, which the
- * port never calls, reads it. */
+/* DAT_00505914: Main.c's IDirect3DRM3 (lpD3DRM()), defined in
+ * lws_port.cpp. On Windows, main.c's Main_SetupDirect3D sets it during
+ * start-up (finding 641); natively it stays NULL, and only lws.c's
+ * original code, which the native port never calls, reads it. */
 extern void* s_main_d3drm;
 
 #ifdef __cplusplus

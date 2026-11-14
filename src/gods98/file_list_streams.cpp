@@ -43,7 +43,7 @@ extern "C" uint32_t s_overlay_word_03610;
 
 namespace unported_ledger_stubs {
 // FUNCTION: LEGORR 0x0048b260
-void ledger_stub_0048b260_StartupStreamStateReset()
+extern "C" void ledger_stub_0048b260_StartupStreamStateReset()
 {
     s_startup_streams[0] = NULL;
     s_startup_streams[1] = NULL;
@@ -62,7 +62,7 @@ void window_mode_flag_set(uint32_t mode)
 
 namespace unported_ledger_stubs {
 // FUNCTION: LEGORR 0x0048b290
-void ledger_stub_0048b290_StartupStreamsClose()
+extern "C" void ledger_stub_0048b290_StartupStreamsClose()
 {
     if (s_startup_streams[0] != NULL)
         game_file_close(s_startup_streams[0]);
@@ -75,7 +75,7 @@ void ledger_stub_0048b290_StartupStreamsClose()
     s_startup_streams[0] = NULL;
 }
 // FUNCTION: LEGORR 0x0048b2f0
-void startup_config_stream_load(void)
+extern "C" void startup_config_stream_load(void)
 {
     GameFileHandle* stream;
     startup_streams_close();

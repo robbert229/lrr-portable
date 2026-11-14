@@ -149,15 +149,15 @@ typedef struct DirectInputHooks {
     void (*keyboard_unacquire)(void* context);
 } DirectInputHooks;
 void input_direct_hooks_set(const DirectInputHooks* hooks);
-int input_direct_initialize(void); /* FUN_0047ed90 */
-void input_direct_shutdown(void);
+extern "C" int input_direct_initialize(void); /* FUN_0047ed90 */
+extern "C" void input_direct_shutdown(void);
 InputState* input_direct_state_get(void);
 void input_direct_state_bind(InputState* state);
 /* Port adapter for InputStatePoll. Retail takes no arguments and reads
  * DirectInput plus two global polling gates; this helper receives those
  * state inputs explicitly. */
 void input_state_poll(InputState* state, int poll_active);
-void input_state_poll_retail(void); /* FUN_0047eef0 */
+extern "C" void input_state_poll_retail(void); /* FUN_0047eef0 */
 
 void input_reset(InputState* s);
 
@@ -187,7 +187,7 @@ typedef void (*InputSetCursorPositionHook)(int x, int y, void* context);
 void input_cursor_position_hooks_install(InputClientToScreenHook convert,
                                         InputSetCursorPositionHook set_cursor,
                                         void* context);
-void input_cursor_position_update(void); /* FUN_0047f010 */
+extern "C" void input_cursor_position_update(void); /* FUN_0047f010 */
 void input_cursor_position_sync(InputState* state);
 #ifdef __cplusplus
 extern "C"
