@@ -1,9 +1,9 @@
 {
   "accuracy_percent": {
     "full": 96.03,
-    "game_only": 95.69
+    "game_only": 95.7
   },
-  "baseline_sha256": "ac7c2fbce12bbceb91bd5184a9d33cc7cc12ba8a6eeeda637a11de31cb8deda9",
+  "baseline_sha256": "223c8accc8038100bd5bb42ded2b3e6473c4d69d118419b729074ac6b0f244af",
   "exact_function_code_bytes": {
     "bytes": 289516,
     "original_text_bytes": 642549,
@@ -23,7 +23,7 @@
       "pairs": 969
     }
   },
-  "input_sha256": "f5a689ad89d5b88fd7e74e89edbc9a579e2dce4078afc7f2a4574a7bd72fd581",
+  "input_sha256": "3c89ea7e7a9f42db33d814d8ee9e03e1f48a45998ded608553928fbce1cfbcd7",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 19,
@@ -4224,21 +4224,21 @@
     ],
     "unmapped_original_functions": 52
   },
-  "listing_digests_sha256": "55b340a0be897b8ed843a63df0fa8982e69779b364e82e2bfc2ed5e0268c3b1d",
+  "listing_digests_sha256": "17016d6fa7de8de628f04dd9870f374ccb2da0cf9250027b5da8cd92312a76b9",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
         "exact": 2146,
         "mapped": 2663,
-        "removed": 124,
-        "removed_exact": 102
+        "removed": 92,
+        "removed_exact": 78
       },
       "game_only": {
         "exact": 1937,
         "mapped": 2418,
-        "removed": 119,
-        "removed_exact": 97
+        "removed": 87,
+        "removed_exact": 73
       }
     },
     "annotated_by_kind": {
@@ -4251,8 +4251,8 @@
       "unit": {
         "bytes": 560752,
         "functions": 2388,
-        "removed_bytes": 21760,
-        "removed_functions": 114
+        "removed_bytes": 13648,
+        "removed_functions": 82
       }
     },
     "by_category": {
@@ -4271,8 +4271,8 @@
       "original_annotated": {
         "bytes": 566192,
         "functions": 2415,
-        "removed_bytes": 22592,
-        "removed_functions": 119
+        "removed_bytes": 14480,
+        "removed_functions": 87
       },
       "other": {
         "bytes": 4152,
@@ -4289,8 +4289,8 @@
       "port_tail": {
         "bytes": 623680,
         "functions": 4316,
-        "removed_bytes": 200976,
-        "removed_functions": 1947
+        "removed_bytes": 202272,
+        "removed_functions": 1957
       },
       "port_unit": {
         "bytes": 240,
@@ -4309,7 +4309,7 @@
         0,
         0
       ],
-      "entry_point_rva": 1043248,
+      "entry_point_rva": 1050064,
       "import_dlls": [
         "kernel32.dll",
         "ole32.dll",
@@ -4326,8 +4326,8 @@
       "imported_names": 156,
       "section_bytes": {
         ".data": {
-          "differing": 95157,
-          "equal": 10315,
+          "differing": 95160,
+          "equal": 10312,
           "original": 73216,
           "rebuilt": 105472
         },
@@ -4338,16 +4338,16 @@
           "rebuilt": 4392
         },
         ".rdata": {
-          "differing": 21201,
-          "equal": 1455,
+          "differing": 21202,
+          "equal": 1454,
           "original": 11232,
           "rebuilt": 22656
         },
         ".text": {
-          "differing": 1082153,
-          "equal": 22156,
+          "differing": 1088681,
+          "equal": 22444,
           "original": 642549,
-          "rebuilt": 1104309
+          "rebuilt": 1111125
         }
       },
       "sections": {
@@ -4368,8 +4368,8 @@
           "virtual_size": 1348
         },
         ".text": {
-          "raw_size": 1104384,
-          "virtual_size": 1104309
+          "raw_size": 1111552,
+          "virtual_size": 1111125
         }
       },
       "thunk_order": [
@@ -4387,8 +4387,8 @@
         "kernel32.dll:_RtlUnwind@16"
       ]
     },
-    "removed_bytes": 252201,
-    "removed_functions": 2570
+    "removed_bytes": 245385,
+    "removed_functions": 2548
   },
   "pe_header_differences": {
     "entry_point_rva": {
@@ -4429,7 +4429,7 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 2.4,
-      "identical_bytes": 33571,
+      "identical_bytes": 33569,
       "identical_percent": 5.22,
       "original_bytes": 642549,
       "rebuilt_bytes": 1356421,
@@ -4466,7 +4466,7 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 2.4,
-    "identical_bytes": 33571,
+    "identical_bytes": 33569,
     "identical_percent": 5.22,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,

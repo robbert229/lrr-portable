@@ -14,7 +14,12 @@ extern "C" {
 /* MeshLOD_Load (FUN_0044a7d0) with the original's arguments: the meshes
  * of level `lod` for `gameName` from the `.ae` config. The port maps
  * 0x0044a7d0 to a ledger stub with another contract, so this is a port
- * adapter: it loads nothing and returns NULL (finding 549). */
+ * adapter: it loads nothing and returns NULL (finding 549). In the matching
+ * build the callers call legoobject_unit.c's original, whose contract this
+ * is (issue #730, finding 638). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define mesh_lod_load legoobject_poly_variant_section_model_build /* 0044a7d0 */
+#endif
 ModelEntryRecord* mesh_lod_load(BlockFile* config, const char* gameName,
                                 const char* filename, int lod,
                                 unsigned int count);
