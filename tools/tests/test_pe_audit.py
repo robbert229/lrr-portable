@@ -121,9 +121,10 @@ class MapTests(unittest.TestCase):
         self.assertEqual(kinds["level.cpp.obj"], "legacy")
 
     def test_classify_object(self):
-        kinds = {"advisor.c.obj": "unit", "rnc.c.obj": "unit"}
+        kinds = {"advisor.c.obj": "unit", "rnc.c.obj": "unit", "util.cpp.obj": "tail"}
         cases = {"advisor.c.obj": "unit", "libc:malloc.obj": "libc",
                  "late_rnc:rnc.c.obj": "unit", "late_x:other.obj": "library:late_x",
+                 "lrr_tail:util.cpp.obj": "tail", "lrr_tail:other.obj": "library:lrr_tail",
                  "kernel32:KERNEL32.dll": "import", "<common>": "common",
                  "<linker-defined>": "linker", "uuid:guid.obj": "library:uuid",
                  "unknown.cpp.obj": "other"}

@@ -33,6 +33,9 @@ import struct
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import link_order  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 RANGES = ROOT / "docs/coverage/translation-unit-ranges.csv"
 
@@ -169,9 +172,11 @@ def classify_object(obj: str, kinds: dict[str, str]) -> str:
         return "import"
     if ":" in obj:
         lib, member = obj.lower().split(":", 1)
-        if lib.startswith("late_") and member in kinds:
-            # A list entry linked from its own library after the others
-            # (late_<stem>.lib, link_order.late_library; finding 657).
+        if (lib.startswith(("late_", link_order.MEMBER_PREFIX)) or lib == link_order.TAIL_LIBRARY) \
+                and member in kinds:
+            # A list entry linked from a library: a late unit (late_<stem>.lib,
+            # link_order.late_library; finding 657), a gods98 member unit
+            # (unit_<stem>.lib) or a port-tail object (lrr_tail.lib; finding 658).
             return kinds[member]
         return "libc" if lib == "libc" else "library:" + lib
     return kinds.get(obj.lower(), "other")

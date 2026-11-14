@@ -31,6 +31,18 @@
 # LRR_LINK_LIBRARIES. Fields are separated by blanks; one entry per line, so
 # tools read this file without CMake (tools/link_order.py).
 #
+# How the matching build links the entries, in this order (finding 658):
+#   1. explicit objects: the entries up to LRR_LINK_EXPLICIT_LAST;
+#   2. one library per later gods98 unit, unit_<stem>.lib, in list order;
+#   3. LRR_LINK_LIBRARIES;
+#   4. one library per late unit (LRR_LINK_LATE_MEMBERS);
+#   5. LRR_LINK_TAIL_LIBRARY, holding every entry from the first port-tail
+#      entry on, except the late units.
+# LINK keeps the order of explicit objects and pulls library members as they
+# are referenced, so steps 2, 4 and 5 keep list order only while each member
+# is referenced before its library is searched; the map check
+# (tools/link_order.py check-map) fails otherwise.
+#
 # tools/convert_unit.py inserts a converted unit's entry here. A converted
 # unit's .c file is compiled as C in the matching build and as C++ elsewhere.
 
@@ -260,6 +272,16 @@ lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp portable)
 lrr_link(legacy 00493ef0 gods98        crt/crt.cpp portable)
 lrr_link(unit   LATE-001 gods98        gods98/rnc.c)
 lrr_link(unit   LATE-002 gods98        gods98/init.c)
+
+# The last explicit object of the matching build: gods98's first unit,
+# Movie.cpp. The original's game units and Movie.cpp were objects, and the
+# rest of gods98 came from a library: LINK pulled the inferred entry
+# point's wincrt0.obj between Movie.cpp's LIBC references and Container.c's,
+# which it does only at the end of the explicit objects (finding 658).
+set(LRR_LINK_EXPLICIT_LAST gods98/movie_unit.cpp)
+
+# The library the matching build archives the port tail in (step 5 above).
+set(LRR_LINK_TAIL_LIBRARY lrr_tail)
 
 # Libraries of the matching build, after the objects, in the order of the
 # original's import directory, with LIBC placed so that its code precedes the

@@ -156,6 +156,36 @@ class CheckTest(unittest.TestCase):
         self.assertIn("late member game/a.c (GAME-001) is not a late unit", out)
         self.assertIn("late member gods98/none.c is not a unit entry", out)
 
+    def test_explicit_last_and_member_units(self):
+        # Finding 658: the entries after LRR_LINK_EXPLICIT_LAST, up to the
+        # tail, are gods98 units linked from their own libraries.
+        spec = self.root / "docs/coverage/translation-units.spec.csv"
+        spec.write_text(spec.read_text().replace("00403000,CRT", "00402800,G98-002,gods98\n00403000,CRT"))
+        ranges = self.root / lo.RANGES
+        ranges.write_text(ranges.read_text().replace("G98-001,00402000,00403000", "G98-001,00402000,00402800\nG98-002,00402800,00403000"))
+        (self.root / "src/gods98/c.c").write_text("// FUNCTION: LEGORR 0x00402810\n")
+        unit_b = "lrr_link(unit G98-001 gods98 gods98/b.cpp)"
+        unit_c = "lrr_link(unit G98-002 gods98 gods98/c.c)"
+        lines = [self.lines[0], unit_b, unit_c, self.lines[2], "set(LRR_LINK_TAIL_LIBRARY lrr_tail)"]
+        self.assertEqual(self.errors(lines + ["set(LRR_LINK_EXPLICIT_LAST gods98/b.cpp)"]), "")
+        self.assertIn("must name a gods98 unit", self.errors(lines + ["set(LRR_LINK_EXPLICIT_LAST game/a.c)"]))
+        self.assertIn("must be lrr_tail", self.errors(lines[:4] + ["set(LRR_LINK_TAIL_LIBRARY other)"]))
+        text = "\n".join(lines + ["set(LRR_LINK_EXPLICIT_LAST gods98/b.cpp)"])
+        self.assertEqual(lo.placements(lo.parse(text), text),
+                         {"game/a.c": "explicit", "gods98/b.cpp": "explicit", "gods98/c.c": "member",
+                          "game/tail.cpp": "tail"})
+        self.assertEqual(lo.library_object("member", "gods98/c.c"), "unit_c:c.c.obj")
+        self.assertEqual(lo.library_object("tail", "game/tail.cpp"), "lrr_tail:tail.cpp.obj")
+        self.assertIsNone(lo.library_object("explicit", "game/a.c"))
+
+    def test_member_objects_file(self):
+        build = self.root / "build"
+        self.assertEqual(lo.member_objects(build), {})
+        build.mkdir()
+        (build / lo.MEMBERS_FILE).write_text("unit_b gods98/b.cpp /x/b.cpp.obj\nlrr_tail game/tail.cpp /x/tail.cpp.obj\n")
+        self.assertEqual(lo.member_objects(build), {"gods98/b.cpp": Path("/x/b.cpp.obj"),
+                                                    "game/tail.cpp": Path("/x/tail.cpp.obj")})
+
     def test_late_unit_sits_in_the_crt_range(self):
         # Finding 610: a late unit is a unit entry after the port tail.
         spec = self.root / "docs/coverage/translation-units.spec.csv"
@@ -188,6 +218,22 @@ class CheckTest(unittest.TestCase):
         self.assertIn("out-of-order", " ".join(lo.check_map(entries, header + symbol(0, "b.cpp.obj") + symbol(16, "a.c.obj"))))
         self.assertIn("after a library", " ".join(lo.check_map(entries, header + symbol(0, "libc:mem.obj") + symbol(16, "a.c.obj"))))
         self.assertIn("no .text", " ".join(lo.check_map(entries, "")))
+
+    def test_map_takes_the_port_tail_from_its_library(self):
+        # Finding 658: the matching build links the tail from lrr_tail.lib.
+        entries = lo.parse("\n".join(self.lines))
+        header = " 0001:00000000 00000100H .text CODE\n"
+        def symbol(offset, obj):
+            return f" 0001:{offset:08x} _name 00401000 f {obj}\n"
+        units = symbol(0, "a.c.obj") + symbol(16, "b.cpp.obj")
+        self.assertEqual(lo.check_map(entries, header + units + symbol(32, "libc:mem.obj")
+                                      + symbol(48, "lrr_tail:tail.cpp.obj")), [])
+        self.assertIn("linked explicitly", " ".join(lo.check_map(entries, header + units + symbol(32, "tail.cpp.obj"))))
+        # A unit from its own library keeps list order (finding 658).
+        member = symbol(0, "a.c.obj") + symbol(16, "unit_b:b.cpp.obj")
+        self.assertEqual(lo.check_map(entries, header + member + symbol(32, "libc:mem.obj")), [])
+        self.assertIn("out-of-order", " ".join(lo.check_map(
+            entries, header + symbol(0, "unit_b:b.cpp.obj") + symbol(16, "a.c.obj"))))
 
 
 if __name__ == "__main__":
