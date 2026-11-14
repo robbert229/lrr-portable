@@ -494,6 +494,11 @@ python3 tools/match_function.py --warm              # pre-start Wine and cache t
 `MATCH_ARGS=` (any other option). Other options: `--no-diff` (scores only),
 `--keep` (keep the object and compiler log), `--timings`, `--orig FILE`.
 
+`--cflags '/Oa /G6'` (or `MATCH_FN_EXTRA_CFLAGS`) appends cl options after the
+configured ones, which they override, for per-unit option experiments
+(finding 663). `--candidate FILE` may score several addresses, or `--source`,
+as long as they are all in one translation unit.
+
 **Output.** Text mode prints the similarity, the bytes compared, the committed
 score from the *match baseline* with the delta, and a Reccmp-style unified
 diff. Original addresses are real; recomp addresses are offsets from the
