@@ -19,7 +19,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: opt-ref-link opt-ref opt-ref-callers unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-search match-function-parity convert-unit relocate-unit tools-test
+.PHONY: opt-ref-link opt-ref opt-ref-callers unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-search phase-probe match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -111,6 +111,18 @@ match-search:
 	  python3 ./tools/permuter_search.py $(ADDR) --mode $(MODE) --seconds $(or $(SECONDS),600) \
 	  --output $(or $(OUT),build-match/search/$(ADDR)-$(MODE)) $(SEARCH_ARGS)
 
+# Symbol-counter phase probe (tools/phase_probe.py, finding 664): is a near
+# miss a rule B phase case? ADDR=0x... (several, one unit) [PROBE_ARGS="--range
+# 0 256 1 --at LINE"]; or PADS_AT='LINE:N,...' [UNIT=src/...] to score a whole
+# unit with pads at chosen lines. Diagnostic only; never run during a build.
+phase-probe:
+	@if [ -z "$(ADDR)$(PADS_AT)" ]; then \
+	  echo "usage: make phase-probe ADDR=0x00479a30 [PROBE_ARGS=...] | PADS_AT='16:52,901:3' UNIT=src/game/terrain_map.c" >&2; \
+	  exit 2; \
+	fi
+	@REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
+	  python3 ./tools/phase_probe.py $(if $(PADS_AT),pads-at "$(UNIT)" $(PADS_AT),probe $(ADDR) $(PROBE_ARGS))
+
 # Scaffold an original-shape conversion of one unit (ADR 0005, step 0).
 # UNIT=G98-029 [CONVERT_ARGS="--stem registry --dry-run"]; see tools/README.md.
 convert-unit:
@@ -173,6 +185,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools -p 'test_convert_unit.py'
 	python3 -m unittest discover -s tools/tests -p 'test_msvc_permuter.py'
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_search.py'
+	python3 -m unittest discover -s tools/tests -p 'test_phase_probe.py'
 	python3 -m unittest discover -s tools/tests -p 'test_match_function_flags.py'
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_cohort.py'
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'

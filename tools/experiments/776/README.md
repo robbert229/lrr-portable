@@ -11,14 +11,14 @@ in-place search (`make match-search`) is running: they read the real sources.
 | --- | --- |
 | `classify.py` | reads `match_function.py --json` (with diffs) on stdin; per function: `NAME` (only symbol names differ, an unlinked-compile artefact), `REG` (the diff vanishes once register names are normalised), `REGOP` (also once memory-operand terms and instruction order are normalised: register choice or scheduling), `OTHER` |
 | `flags.py UNIT[,UNIT…] [--sets '/Oa\|/G6']` | scores every function of each unit under alternative cl options; prints rises and falls per option set |
-| `phase_probe.py UNIT ADDR:name… [--range A B STEP]` | finding 538's `sweep.py` over N inert externs, then scores each distinct code: is the function a rule B phase case? |
-| `pads_at.py UNIT 'LINE:N,…' …` | pads before chosen lines, whole-unit scores: which functions a counter shift at that point moves |
 
 ```sh
 python3 tools/match_function.py $(cat addrs.txt) --json | python3 tools/experiments/776/classify.py
 python3 tools/experiments/776/flags.py src/gods98/lwo.c,src/game/aitask.c
-python3 tools/experiments/776/phase_probe.py src/game/terrain_map.c 0x44fab0:terrain_map_world_normal_get
-python3 tools/experiments/776/pads_at.py src/game/terrain_map.c '16:52' '16:52,901:3'
+python3 tools/phase_probe.py probe 0x44fab0
+python3 tools/phase_probe.py pads-at src/game/terrain_map.c '16:52' '16:52,901:3'
 ```
 
-Pads are a diagnostic only. ADR 0005 entropy rule 3 forbids committing them.
+The phase probe (`phase_probe.py`) and `pads_at.py` were promoted to
+[`tools/phase_probe.py`](../../README.md#phase_probepy--symbol-counter-phase-probe-findings-538-663-664)
+(`make phase-probe`, finding 664). Pads are a diagnostic only. ADR 0005 entropy rule 3 forbids committing them.
