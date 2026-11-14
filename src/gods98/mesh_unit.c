@@ -681,141 +681,193 @@ Mesh* mesh_load(const char* fname, Mesh_Frame* frame, int noTextures)
     return NULL;
 }
 
+/* Mesh_ParseLWO follows Gods98's own shape (as OpenLRR's Mesh.cpp records
+ * it): one surfArraySize/surfFDArraySize offset per face, aoVerts read as
+ * floats at index * 3, and post-increments inside the face-data subscripts
+ * (finding 661). Which loop counters are shared is part of the original's
+ * register allocation: the vertex loop and the group loop share one, the
+ * face-normal loop has its own. The group loop walks its arrays by pointer;
+ * the original's indexed form (&surfVertices[loop * size]) compiles to the
+ * same strength-reduced code but needs five fewer locals, which moves the
+ * symbol counter for every later function in the unit (finding 538). */
 // FUNCTION: LEGORR 0x00480ac0
 int mesh_parse_lwo(const char* basePath, Mesh* mesh,
                    APPOBJ* lightWaveObject, int noTextures)
 {
-    unsigned long loop, loopSurf, loopVert;
-    unsigned long maxVertices, maxFaces, surfCount;
-    unsigned long triangleFan[6];
-    unsigned long* surfVertexCount;
-    unsigned long* surfFaceCount;
-    unsigned long* vertexIndexList;
-    unsigned long* surfFaceData;
+    const unsigned long faceDataQuad[] = { 0, 1, 2, 0, 2, 3 };
+    /* Unused in the original too (OpenLRR keeps it as "UNUSED"); it emits
+     * no code and counts one symbol (finding 661). */
+    float textCoords[][2] = { { 0, 1 }, { 0, 0 }, { 1, 0 }, { 1, 1 } };
     Mesh_Vector3F* surfVertices;
-    Mesh_Vector3F** surfNormals;
-    Mesh_Vector3F* faceNormals;
-    Mesh_Vector3F* vertexNormals;
-    Mesh_Point2F* textCoords;
-    Mesh_Point2F* textCoordsUV = NULL;
-    Mesh_Vector3F polyVerts[3];
+    Mesh_Vector3F** surfVerticesNorm;
+    unsigned long* surfVertexCount;
+    unsigned long* surfVertexRef;
+    unsigned long* surfFaceData;
+    unsigned long* surfFaceDataCount;
+    Mesh_Vector3F* faceNorm;
+    Mesh_Vector3F* vertexNorm;
+    Mesh_Point2F* vertexUVs = NULL;
+    Mesh_Point2F* surfTextCoords;
+    unsigned long size = (lightWaveObject->aoSize.lwVertCount * 2);
+    unsigned long fDSize = (lightWaveObject->aoSize.lwPolyCount * 6);
+    unsigned long surfArraySize, surfFDArraySize;
+    unsigned long face, vertex, loop;
+    unsigned long groupID, renderFlags;
     unsigned long* faceDataPtr;
     Mesh_Vector3F* surfVerticesPtr;
     Mesh_Vector3F** surfNormalsPtr;
     Mesh_Point2F* textCoordsPtr;
     unsigned long* surfVertexCountPtr;
-    unsigned long groupID, renderFlags;
+    unsigned long vertexIndex;
 
-    maxVertices = lightWaveObject->aoSize.lwVertCount * 2;
-    maxFaces = lightWaveObject->aoSize.lwPolyCount * 6;
-    triangleFan[0] = 0;
-    triangleFan[1] = 1;
-    triangleFan[2] = 2;
-    triangleFan[3] = 0;
-    triangleFan[4] = 2;
-    triangleFan[5] = 3;
-
+    /* GET TEXTURE AND TEXTURE COORDINATES FOR VERTICES IF UVIEW FILE
+     * EXISTS. Called first because it may alter the LightWave object. */
     if (lightWaveObject->aoFileUV) {
-        textCoordsUV = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * maxVertices * 20);
-        mesh_uview_mesh(lightWaveObject, textCoordsUV);
-        maxVertices = lightWaveObject->aoSize.lwVertCount * 2;
-        textCoords = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * maxVertices * lightWaveObject->aoSize.lwSurfaceCount);
+        vertexUVs = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * size * 20);
+        mesh_uview_mesh(lightWaveObject, vertexUVs);
+        size = (lightWaveObject->aoSize.lwVertCount * 2);
+        surfTextCoords = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * lightWaveObject->aoSize.lwSurfaceCount * size);
     } else {
-        textCoords = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * maxVertices);
+        surfTextCoords = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * size);
     }
 
-    surfCount = lightWaveObject->aoSize.lwSurfaceCount;
-    surfVertices = (Mesh_Vector3F*)malloc(sizeof(Mesh_Vector3F) * maxVertices * surfCount);
-    surfNormals = (Mesh_Vector3F**)malloc(sizeof(Mesh_Vector3F*) * maxVertices * surfCount);
+    /* ALLOCATE MEMORY FOR OBJECT */
+    surfArraySize = (lightWaveObject->aoSize.lwSurfaceCount * size);
+
+    surfVertices = (Mesh_Vector3F*)malloc(sizeof(Mesh_Vector3F) * surfArraySize);
+    surfVerticesNorm = (Mesh_Vector3F**)malloc(sizeof(Mesh_Vector3F*) * surfArraySize);
     surfVertexCount = (unsigned long*)malloc(sizeof(unsigned long) * lightWaveObject->aoSize.lwSurfaceCount);
-    vertexIndexList = (unsigned long*)malloc(sizeof(unsigned long) * maxVertices * surfCount);
-    surfFaceData = (unsigned long*)malloc(sizeof(unsigned long) * maxFaces * lightWaveObject->aoSize.lwSurfaceCount);
-    surfFaceCount = (unsigned long*)malloc(sizeof(unsigned long) * lightWaveObject->aoSize.lwSurfaceCount);
-    faceNormals = (Mesh_Vector3F*)malloc(sizeof(Mesh_Vector3F) * lightWaveObject->aoSize.lwPolyCount);
-    vertexNormals = (Mesh_Vector3F*)malloc(sizeof(Mesh_Vector3F) * maxVertices);
+    surfVertexRef = (unsigned long*)malloc(sizeof(unsigned long) * surfArraySize);
+    surfFaceData = (unsigned long*)malloc(sizeof(unsigned long) * (lightWaveObject->aoSize.lwSurfaceCount * fDSize));
+    surfFaceDataCount = (unsigned long*)malloc(sizeof(unsigned long) * lightWaveObject->aoSize.lwSurfaceCount);
+    faceNorm = (Mesh_Vector3F*)malloc(sizeof(Mesh_Vector3F) * lightWaveObject->aoSize.lwPolyCount);
+    vertexNorm = (Mesh_Vector3F*)malloc(sizeof(Mesh_Vector3F) * size);
 
     memset(surfVertexCount, 0, sizeof(unsigned long) * lightWaveObject->aoSize.lwSurfaceCount);
-    memset(vertexIndexList, -1, sizeof(unsigned long) * maxVertices * lightWaveObject->aoSize.lwSurfaceCount);
-    memset(surfFaceCount, 0, sizeof(unsigned long) * lightWaveObject->aoSize.lwSurfaceCount);
-    memset(vertexNormals, 0, sizeof(Mesh_Vector3F) * maxVertices);
+    memset(surfVertexRef, -1, sizeof(unsigned long) * surfArraySize);
+    memset(surfFaceDataCount, 0, sizeof(unsigned long) * lightWaveObject->aoSize.lwSurfaceCount);
+    memset(vertexNorm, 0, sizeof(Mesh_Vector3F) * size);
 
     mesh->lightWaveSurf = (Mesh_LightWave_Surface*)malloc(sizeof(Mesh_LightWave_Surface) * lightWaveObject->aoSize.lwSurfaceCount);
     memset(mesh->lightWaveSurf, 0, sizeof(Mesh_LightWave_Surface) * lightWaveObject->aoSize.lwSurfaceCount);
 
-    for (loop = 0; loop < lightWaveObject->aoSize.lwPolyCount; loop++) {
-        for (loopVert = 0; loopVert < 3; loopVert++) {
-            unsigned short index = lightWaveObject->aoPoly[loop].plyData[loopVert];
-            polyVerts[loopVert] = ((Mesh_Vector3F*)lightWaveObject->aoVerts)[index];
+    /* STORE FACE NORMALS FOR GOURAUD SHADING - ASSUMES ALL POLYS ARE
+     * PLANAR */
+    for (face = 0; face < lightWaveObject->aoSize.lwPolyCount; face++) {
+        Mesh_Vector3F pos[3];
+        for (vertex = 0; vertex < 3; vertex++) {
+            vertexIndex = lightWaveObject->aoPoly[face].plyData[vertex] * 3;
+
+            pos[vertex].x = lightWaveObject->aoVerts[vertexIndex];
+            pos[vertex].y = lightWaveObject->aoVerts[vertexIndex + 1];
+            pos[vertex].z = lightWaveObject->aoVerts[vertexIndex + 2];
         }
-        surface_triangle_normal_calculate((float*)&faceNormals[loop], (float*)&polyVerts[0],
-                                          (float*)&polyVerts[1], (float*)&polyVerts[2]);
+        surface_triangle_normal_calculate((float*)&faceNorm[face], (float*)&pos[0],
+                                          (float*)&pos[1], (float*)&pos[2]);
     }
 
+    /* READ SURFACE INFORMATION */
     mesh_get_surf_info(basePath, lightWaveObject, mesh->lightWaveSurf, noTextures);
 
+    /* READ VERTEX INFORMATION */
     for (loop = 0; loop < lightWaveObject->aoSize.lwPolyCount; loop++) {
-        unsigned long surf = lightWaveObject->aoPoly[loop].srfIndex;
-        unsigned long faceOffset = maxFaces * surf;
-        unsigned long vertOffset = maxVertices * surf;
+
+        surfArraySize = lightWaveObject->aoPoly[loop].srfIndex * size;
+        surfFDArraySize = lightWaveObject->aoPoly[loop].srfIndex * fDSize;
 
         if (lightWaveObject->aoPoly[loop].plyCount == 3) {
-            for (loopVert = 0; loopVert < 3; loopVert++) {
-                unsigned short index = lightWaveObject->aoPoly[loop].plyData[loopVert];
-                if (vertexIndexList[index + vertOffset] == -1) {
-                    surfVertices[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset].x = ((Mesh_Vector3F*)lightWaveObject->aoVerts)[index].x;
-                    surfVertices[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset].y = ((Mesh_Vector3F*)lightWaveObject->aoVerts)[index].y;
-                    surfVertices[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset].z = ((Mesh_Vector3F*)lightWaveObject->aoVerts)[index].z;
+            for (vertex = 0; vertex < 3; vertex++) {
+                vertexIndex = lightWaveObject->aoPoly[loop].plyData[vertex] * 3;
+
+                if (surfVertexRef[surfArraySize + lightWaveObject->aoPoly[loop].plyData[vertex]] == -1) {
+
+                    /* STORE NEW VERTEX IN SURFACE LIST */
+                    surfVertices[surfArraySize + surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]].x =
+                        lightWaveObject->aoVerts[vertexIndex];
+                    surfVertices[surfArraySize + surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]].y =
+                        lightWaveObject->aoVerts[vertexIndex + 1];
+                    surfVertices[surfArraySize + surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]].z =
+                        lightWaveObject->aoVerts[vertexIndex + 2];
+
                     if (lightWaveObject->aoFileUV) {
-                        textCoords[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset].x = textCoordsUV[lightWaveObject->aoPoly[loop].plyData[loopVert]].x;
-                        textCoords[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset].y = textCoordsUV[lightWaveObject->aoPoly[loop].plyData[loopVert]].y;
+                        surfTextCoords[surfArraySize + surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]] =
+                            vertexUVs[lightWaveObject->aoPoly[loop].plyData[vertex]];
                     }
-                    index = lightWaveObject->aoPoly[loop].plyData[loopVert];
-                    mesh_vector3d_add(&vertexNormals[index], &faceNormals[loop], &vertexNormals[index]);
-                    mesh_vector3d_normalise(&vertexNormals[lightWaveObject->aoPoly[loop].plyData[loopVert]]);
-                    surfNormals[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset] =
-                        &vertexNormals[lightWaveObject->aoPoly[loop].plyData[loopVert]];
-                    surfFaceData[surfFaceCount[lightWaveObject->aoPoly[loop].srfIndex] + faceOffset] =
+
+                    /* ADD VERTEX FACE NORMAL TO CURRENT VERTEX NORMAL */
+                    mesh_vector3d_add(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[vertex]],
+                                      &vertexNorm[lightWaveObject->aoPoly[loop].plyData[vertex]],
+                                      &faceNorm[loop]);
+                    mesh_vector3d_normalise(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[vertex]]);
+                    surfVerticesNorm[surfArraySize + surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]] =
+                        &vertexNorm[lightWaveObject->aoPoly[loop].plyData[vertex]];
+
+                    /* STORE NEW VERTEX IN FACE DATA */
+                    surfFaceData[surfFDArraySize + surfFaceDataCount[lightWaveObject->aoPoly[loop].srfIndex]++] =
                         surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex];
-                    surfFaceCount[lightWaveObject->aoPoly[loop].srfIndex]++;
-                    vertexIndexList[lightWaveObject->aoPoly[loop].plyData[loopVert] + vertOffset] =
-                        surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex];
-                    surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]++;
+
+                    /* STORE NEW VERTEX REFERENCE IN VERTEX LIST */
+                    surfVertexRef[surfArraySize + lightWaveObject->aoPoly[loop].plyData[vertex]] =
+                        surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]++;
                 } else {
-                    mesh_vector3d_add(&vertexNormals[index], &faceNormals[loop], &vertexNormals[index]);
-                    mesh_vector3d_normalise(&vertexNormals[lightWaveObject->aoPoly[loop].plyData[loopVert]]);
-                    surfFaceData[surfFaceCount[lightWaveObject->aoPoly[loop].srfIndex] + faceOffset] =
-                        vertexIndexList[lightWaveObject->aoPoly[loop].plyData[loopVert] + vertOffset];
-                    surfFaceCount[lightWaveObject->aoPoly[loop].srfIndex]++;
+                    /* ADD VERTEX FACE NORMAL TO CURRENT VERTEX NORMAL */
+                    mesh_vector3d_add(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[vertex]],
+                                      &vertexNorm[lightWaveObject->aoPoly[loop].plyData[vertex]],
+                                      &faceNorm[loop]);
+                    mesh_vector3d_normalise(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[vertex]]);
+
+                    /* GET VERTEX REFERENCE AND COPY TO FACE DATA */
+                    surfFaceData[surfFDArraySize + surfFaceDataCount[lightWaveObject->aoPoly[loop].srfIndex]++] =
+                        surfVertexRef[surfArraySize + lightWaveObject->aoPoly[loop].plyData[vertex]];
                 }
             }
         } else {
-            for (loopVert = 0; loopVert < 6; loopVert++) {
-                unsigned short index = lightWaveObject->aoPoly[loop].plyData[triangleFan[loopVert]];
-                if (vertexIndexList[vertOffset + index] == -1) {
-                    surfVertices[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset].x = ((Mesh_Vector3F*)lightWaveObject->aoVerts)[index].x;
-                    surfVertices[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset].y = ((Mesh_Vector3F*)lightWaveObject->aoVerts)[index].y;
-                    surfVertices[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset].z = ((Mesh_Vector3F*)lightWaveObject->aoVerts)[index].z;
+            surfArraySize = lightWaveObject->aoPoly[loop].srfIndex * size;
+
+            for (vertex = 0; vertex < 6; vertex++) {
+
+                if (surfVertexRef[surfArraySize + lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]] == -1) {
+
+                    vertexIndex = lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]] * 3;
+
+                    /* STORE NEW VERTEX IN SURFACE LIST */
+                    surfVertices[surfArraySize + surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]].x =
+                        lightWaveObject->aoVerts[vertexIndex];
+                    surfVertices[surfArraySize + surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]].y =
+                        lightWaveObject->aoVerts[vertexIndex + 1];
+                    surfVertices[surfArraySize + surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]].z =
+                        lightWaveObject->aoVerts[vertexIndex + 2];
+
                     if (lightWaveObject->aoFileUV) {
-                        textCoords[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset].x = textCoordsUV[lightWaveObject->aoPoly[loop].plyData[triangleFan[loopVert]]].x;
-                        textCoords[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset].y = textCoordsUV[lightWaveObject->aoPoly[loop].plyData[triangleFan[loopVert]]].y;
+                        surfTextCoords[surfArraySize + surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]] =
+                            vertexUVs[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]];
                     }
-                    index = lightWaveObject->aoPoly[loop].plyData[triangleFan[loopVert]];
-                    mesh_vector3d_add(&vertexNormals[index], &faceNormals[loop], &vertexNormals[index]);
-                    mesh_vector3d_normalise(&vertexNormals[lightWaveObject->aoPoly[loop].plyData[triangleFan[loopVert]]]);
-                    surfNormals[surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex] + vertOffset] =
-                        &vertexNormals[lightWaveObject->aoPoly[loop].plyData[triangleFan[loopVert]]];
-                    surfFaceData[surfFaceCount[lightWaveObject->aoPoly[loop].srfIndex] + faceOffset] =
+
+                    /* ADD VERTEX FACE NORMAL TO CURRENT VERTEX NORMAL */
+                    mesh_vector3d_add(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]],
+                                      &vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]],
+                                      &faceNorm[loop]);
+                    mesh_vector3d_normalise(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]]);
+                    surfVerticesNorm[surfArraySize + surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]] =
+                        &vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]];
+
+                    /* STORE NEW VERTEX IN FACE DATA */
+                    surfFaceData[surfFDArraySize + surfFaceDataCount[lightWaveObject->aoPoly[loop].srfIndex]++] =
                         surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex];
-                    surfFaceCount[lightWaveObject->aoPoly[loop].srfIndex]++;
-                    vertexIndexList[lightWaveObject->aoPoly[loop].plyData[triangleFan[loopVert]] + vertOffset] =
-                        surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex];
-                    surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]++;
+
+                    /* STORE NEW VERTEX REFERENCE IN VERTEX LIST */
+                    surfVertexRef[surfArraySize + lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]] =
+                        surfVertexCount[lightWaveObject->aoPoly[loop].srfIndex]++;
                 } else {
-                    mesh_vector3d_add(&vertexNormals[index], &faceNormals[loop], &vertexNormals[index]);
-                    mesh_vector3d_normalise(&vertexNormals[lightWaveObject->aoPoly[loop].plyData[triangleFan[loopVert]]]);
-                    surfFaceData[surfFaceCount[lightWaveObject->aoPoly[loop].srfIndex] + faceOffset] =
-                        vertexIndexList[lightWaveObject->aoPoly[loop].plyData[triangleFan[loopVert]] + vertOffset];
-                    surfFaceCount[lightWaveObject->aoPoly[loop].srfIndex]++;
+                    /* ADD VERTEX FACE NORMAL TO CURRENT VERTEX NORMAL */
+                    mesh_vector3d_add(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]],
+                                      &vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]],
+                                      &faceNorm[loop]);
+                    mesh_vector3d_normalise(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]]);
+
+                    /* GET VERTEX REFERENCE AND COPY TO FACE DATA */
+                    surfFaceData[surfFDArraySize + surfFaceDataCount[lightWaveObject->aoPoly[loop].srfIndex]++] =
+                        surfVertexRef[surfArraySize + lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]];
                 }
             }
         }
@@ -823,87 +875,85 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
 
     faceDataPtr = surfFaceData;
     surfVerticesPtr = surfVertices;
-    surfNormalsPtr = surfNormals;
-    textCoordsPtr = textCoords;
+    surfNormalsPtr = surfVerticesNorm;
+    textCoordsPtr = surfTextCoords;
     surfVertexCountPtr = surfVertexCount;
-    for (loopSurf = 0; loopSurf < lightWaveObject->aoSize.lwSurfaceCount; loopSurf++) {
+    for (loop = 0; loop < lightWaveObject->aoSize.lwSurfaceCount; loop++) {
         Mesh_LightWave_Surface* lwSurf;
 
-        groupID = mesh_add_group(mesh, surfFaceCount[loopSurf], surfFaceCount[loopSurf] / 3, 3, faceDataPtr);
+        groupID = mesh_add_group(mesh, surfFaceDataCount[loop], surfFaceDataCount[loop] / 3, 3, faceDataPtr);
 
         if (lightWaveObject->aoFileUV) {
             mesh_set_vertices_vnt(mesh, groupID, 0, *surfVertexCountPtr, surfVerticesPtr, surfNormalsPtr, textCoordsPtr);
         } else {
-            LWSURFACE* lwo = &lightWaveObject->aoSurface[loopSurf];
-            mesh_get_texture_uvs_wrap(*surfVertexCountPtr, surfVerticesPtr, textCoords,
+            LWSURFACE* lwo = &lightWaveObject->aoSurface[loop];
+            mesh_get_texture_uvs_wrap(*surfVertexCountPtr, surfVerticesPtr, surfTextCoords,
                                       lwo->srfTSIZ[0], lwo->srfTSIZ[1], lwo->srfTSIZ[2],
                                       lwo->srfTCTR[0], lwo->srfTCTR[1], lwo->srfTCTR[2],
                                       lwo->srfTexFlags);
-            mesh_set_vertices_vnt(mesh, groupID, 0, *surfVertexCountPtr, surfVerticesPtr, surfNormalsPtr, textCoords);
+            mesh_set_vertices_vnt(mesh, groupID, 0, *surfVertexCountPtr, surfVerticesPtr, surfNormalsPtr, surfTextCoords);
         }
 
-        lwSurf = &mesh->lightWaveSurf[loopSurf];
+        lwSurf = &mesh->lightWaveSurf[loop];
         if (lwSurf->flags & MESH_SFLAG_ADDITIVE) {
-            mesh_alter_group_render_flags(mesh, groupID, MESH_RENDERFLAGS_ADDITIVE);
             renderFlags = MESH_RENDERFLAGS_ADDITIVE;
+            mesh_alter_group_render_flags(mesh, groupID, renderFlags);
         } else {
             renderFlags = MESH_RENDERFLAGS_LWONORM;
         }
-        if (mesh->lightWaveSurf[loopSurf].flags & MESH_SFLAG_DOUBLESIDED) {
+        if (mesh->lightWaveSurf[loop].flags & MESH_SFLAG_DOUBLESIDED) {
             renderFlags |= 0x04000000;
             mesh_alter_group_render_flags(mesh, groupID, renderFlags);
         }
-        if (!(mesh->lightWaveSurf[loopSurf].texFlags & MESH_TFLAG_PIXELBLENDING)) {
-            mesh_alter_group_render_flags(mesh, groupID, renderFlags | 0x00800000);
+        if (!(mesh->lightWaveSurf[loop].texFlags & MESH_TFLAG_PIXELBLENDING)) {
+            renderFlags |= 0x00800000;
+            mesh_alter_group_render_flags(mesh, groupID, renderFlags);
         }
 
-        if (lightWaveObject->aoSurface[loopSurf].srfTexFlags & MESH_TFLAG_SEQUENCE) {
-            if (mesh->lightWaveSurf[loopSurf].textureSeq) {
-                mesh_set_group_texture(mesh, groupID, mesh->lightWaveSurf[loopSurf].textureSeq[0]);
+        if (lightWaveObject->aoSurface[loop].srfTexFlags & MESH_TFLAG_SEQUENCE) {
+            if (mesh->lightWaveSurf[loop].textureSeq) {
+                mesh_set_group_texture(mesh, groupID, mesh->lightWaveSurf[loop].textureSeq[0]);
             }
-        } else if (mesh->lightWaveSurf[loopSurf].texture) {
-            mesh_set_group_texture(mesh, groupID, mesh->lightWaveSurf[loopSurf].texture);
+        } else if (mesh->lightWaveSurf[loop].texture) {
+            mesh_set_group_texture(mesh, groupID, mesh->lightWaveSurf[loop].texture);
         }
 
-        lwSurf = &mesh->lightWaveSurf[loopSurf];
-        mesh_set_group_colour(mesh, groupID, lwSurf->colour.r * lwSurf->diffuse,
-                              lwSurf->colour.g * lwSurf->diffuse,
-                              lwSurf->colour.b * lwSurf->diffuse, Mesh_Colour_Diffuse);
-        lwSurf = &mesh->lightWaveSurf[loopSurf];
-        mesh_set_group_colour(mesh, groupID, lwSurf->colour.r * lwSurf->emissive,
-                              lwSurf->colour.g * lwSurf->emissive,
-                              lwSurf->colour.b * lwSurf->emissive, Mesh_Colour_Emissive);
-        lwSurf = &mesh->lightWaveSurf[loopSurf];
-        if (lwSurf->flags & MESH_SFLAG_COLOURHIGHLIGHT) {
-            mesh_set_group_colour(mesh, groupID, lwSurf->colour.r * lwSurf->specular,
-                                  lwSurf->colour.g * lwSurf->specular,
-                                  lwSurf->colour.b * lwSurf->specular, Mesh_Colour_Specular);
+        mesh_set_group_colour(mesh, groupID, mesh->lightWaveSurf[loop].colour.r * mesh->lightWaveSurf[loop].diffuse,
+                              mesh->lightWaveSurf[loop].colour.g * mesh->lightWaveSurf[loop].diffuse,
+                              mesh->lightWaveSurf[loop].colour.b * mesh->lightWaveSurf[loop].diffuse, Mesh_Colour_Diffuse);
+        mesh_set_group_colour(mesh, groupID, mesh->lightWaveSurf[loop].colour.r * mesh->lightWaveSurf[loop].emissive,
+                              mesh->lightWaveSurf[loop].colour.g * mesh->lightWaveSurf[loop].emissive,
+                              mesh->lightWaveSurf[loop].colour.b * mesh->lightWaveSurf[loop].emissive, Mesh_Colour_Emissive);
+        if (mesh->lightWaveSurf[loop].flags & MESH_SFLAG_COLOURHIGHLIGHT) {
+            mesh_set_group_colour(mesh, groupID, mesh->lightWaveSurf[loop].colour.r * mesh->lightWaveSurf[loop].specular,
+                                  mesh->lightWaveSurf[loop].colour.g * mesh->lightWaveSurf[loop].specular,
+                                  mesh->lightWaveSurf[loop].colour.b * mesh->lightWaveSurf[loop].specular, Mesh_Colour_Specular);
         } else {
-            mesh_set_group_colour(mesh, groupID, lwSurf->specular, lwSurf->specular,
-                                  lwSurf->specular, Mesh_Colour_Specular);
+            mesh_set_group_colour(mesh, groupID, mesh->lightWaveSurf[loop].specular, mesh->lightWaveSurf[loop].specular,
+                                  mesh->lightWaveSurf[loop].specular, Mesh_Colour_Specular);
         }
-        mesh_set_group_material_values(mesh, groupID, mesh->lightWaveSurf[loopSurf].power * 10.0f, Mesh_Colour_Power);
-        mesh_set_group_material_values(mesh, groupID, 1.0f - mesh->lightWaveSurf[loopSurf].transparency, Mesh_Colour_Alpha);
+        mesh_set_group_material_values(mesh, groupID, mesh->lightWaveSurf[loop].power * 10.0f, Mesh_Colour_Power);
+        mesh_set_group_material_values(mesh, groupID, 1.0f - mesh->lightWaveSurf[loop].transparency, Mesh_Colour_Alpha);
 
-        mesh->groupList[groupID].lightWaveSurfaceInfo = &mesh->lightWaveSurf[loopSurf];
+        mesh->groupList[groupID].lightWaveSurfaceInfo = &mesh->lightWaveSurf[loop];
 
-        textCoordsPtr += maxVertices;
-        surfNormalsPtr += maxVertices;
-        surfVerticesPtr += maxVertices;
-        faceDataPtr += maxFaces;
+        textCoordsPtr += size;
+        surfNormalsPtr += size;
+        surfVerticesPtr += size;
+        faceDataPtr += fDSize;
         surfVertexCountPtr++;
     }
 
     free(surfVertices);
-    free(surfNormals);
-    free(textCoords);
+    free(surfVerticesNorm);
+    free(surfTextCoords);
     free(surfVertexCount);
-    free(vertexIndexList);
+    free(surfVertexRef);
     free(surfFaceData);
-    free(surfFaceCount);
-    free(faceNormals);
-    free(vertexNormals);
-    if (textCoordsUV) free(textCoordsUV);
+    free(surfFaceDataCount);
+    free(faceNorm);
+    free(vertexNorm);
+    if (vertexUVs) free(vertexUVs);
 
     return 1;
 }
@@ -924,6 +974,10 @@ void mesh_get_surf_info(const char* basePath, APPOBJ* lightWaveObject,
 
             if (lightWaveObject->aoSurface[loop].srfTexFlags & MESH_TFLAG_SEQUENCE) {
                 if (mesh_get_texture_seq_info(fname, baseName, &texNum, &tnumlen)) {
+                    /* Gods98's tempNum: only its commented-out search used
+                     * it. It emits no code and counts one symbol (finding
+                     * 661). */
+                    unsigned long tempNum = texNum;
                     lightWaveSurf[loop].textureSeq = (Mesh_Texture**)malloc(sizeof(Mesh_Texture*) * MESH_MAXTEXTURESEQUENCE);
                     for (count = 0; count < MESH_MAXTEXTURESEQUENCE; count++) {
                         mesh_get_next_in_sequence(baseName, textName, &texNum, tnumlen);
