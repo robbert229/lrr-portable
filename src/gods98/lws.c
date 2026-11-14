@@ -331,8 +331,8 @@ LwsInfo* lws_parse(const char* fname, int looping)
                                     node->flags |= LWSNODE_FLAG_NULL;
                                     node->name = string_duplicate(&line[14]);
                                     // STRING: LEGORR 0x004ab670
-                                    if (0 == _strnicmp(node->name, "SFX", 3) &&
-                                        0 == _strnicmp(&node->name[3], ",", 1)) {
+                                    if (0 == strnicmp(node->name, "SFX", 3) &&
+                                        0 == strnicmp(&node->name[3], ",", 1)) {
                                         node->flags |= LWSNODE_FLAG_SOUNDTRIGGER;
                                         scene->triggerCount++;
                                     }

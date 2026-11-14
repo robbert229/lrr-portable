@@ -15,6 +15,10 @@
 #if !defined(_MSC_VER)
 char* crt_signed_to_string(int value, char* out, int radix);
 #define _itoa crt_signed_to_string
+/* The original's callers use the old names of the late LIBC members
+ * (strnicmp, itoa, strlwr, strupr), which oldnames.lib resolves; that is why
+ * those members follow the import thunks (issue #447, finding 643). */
+#define itoa crt_signed_to_string
 /* _rand (FUN_0048e170): the port's VC5 LCG. */
 int level_random_draw15(void);
 #define rand level_random_draw15
@@ -52,9 +56,11 @@ void* ledger_stub_0048dc80_GrowHeapArray(void* allocation,
 /* __strlwr (FUN_0049dc10): the port's model in crt.cpp (crt.hpp). */
 char* crt_string_to_lower(char* text);
 #define _strlwr crt_string_to_lower
+#define strlwr crt_string_to_lower
 #endif
 #define _strcmpi strcasecmp_lite
 #define _strnicmp(a, b, count) strnicmp_lite((a), (b), (int)(count))
+#define strnicmp(a, b, count) strnicmp_lite((a), (b), (int)(count))
 #define _finite double_is_finite
 #define _splitpath crt_path_split
 #endif

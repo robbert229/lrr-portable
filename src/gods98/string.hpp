@@ -60,7 +60,7 @@ int strcasecmp_lite(const char* a, const char* b);
 #endif
 /* __strnicmp FUN_0049dab0: CRT bounded case-insensitive string compare. */
 #if defined(_MSC_VER) && defined(_M_IX86)
-#define strnicmp_lite(a, b, count) _strnicmp((a), (b), (size_t)(count))
+#define strnicmp_lite(a, b, count) strnicmp((a), (b), (size_t)(count))
 #else
 int strnicmp_lite(const char* a, const char* b, int count);
 #endif
@@ -80,7 +80,7 @@ const char* case_insensitive_substring_find(const char* haystack,
  * outputs. Defined by gods98/lwo.c (G98-031); neither string may be
  * NULL. */
 #if defined(_MSC_VER) && defined(_M_IX86)
-#define string_folded_compare(a, b, n) _strnicmp((a), (b), (n))
+#define string_folded_compare(a, b, n) strnicmp((a), (b), (n))
 #else
 int string_folded_compare(const char* a, const char* b, size_t n);
 #endif

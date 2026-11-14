@@ -164,13 +164,13 @@ void objective_load_objective_text(struct BlockRec* config,
                     type = OBJECTIVE_TYPE_COUNT;
                     line[strlen(line) - 1] = '\0';
                     // STRING: LEGORR 0x004a80f8
-                    if (!_strnicmp(line, "Objective:", n = 10)) type = 0;
+                    if (!strnicmp(line, "Objective:", n = 10)) type = 0;
                     // STRING: LEGORR 0x004a80ec
-                    else if (!_strnicmp(line, "Completion:", n = 11)) type = 1;
+                    else if (!strnicmp(line, "Completion:", n = 11)) type = 1;
                     // STRING: LEGORR 0x004a80e0
-                    else if (!_strnicmp(line, "Failure:", n = 8)) type = 2;
+                    else if (!strnicmp(line, "Failure:", n = 8)) type = 2;
                     // STRING: LEGORR 0x004a80d0
-                    else if (!_strnicmp(line, "CrystalFailure:", n = 15)) type = 3;
+                    else if (!strnicmp(line, "CrystalFailure:", n = 15)) type = 3;
 
                     if (type != OBJECTIVE_TYPE_COUNT) {
                         while (n < strlen(line)) {
@@ -208,9 +208,9 @@ void objective_load_objective_text(struct BlockRec* config,
                     objectiveGlobs.beginTextShown = 1;
                 }
 
-                if (!_strnicmp(sectionName, line, len)) inLevelSection = 1;
+                if (!strnicmp(sectionName, line, len)) inLevelSection = 1;
                 // STRING: LEGORR 0x004a80c8
-                if (!_strnicmp(line, "[BEGIN]", 7)) beginNext = 1;
+                if (!strnicmp(line, "[BEGIN]", 7)) beginNext = 1;
             }
         }
         file_close(objectiveGlobs.file);

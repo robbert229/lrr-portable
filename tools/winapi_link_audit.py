@@ -75,7 +75,7 @@ def symbol_base(name: str) -> str:
 
 
 def winapi_entries(entries) -> list:
-    return [e for e in entries if e.platform in (None, "winapi")]
+    return [e for e in entries if e.applies_to("winapi")]
 
 
 def check_list(entries, libraries: list[str]) -> list[str]:

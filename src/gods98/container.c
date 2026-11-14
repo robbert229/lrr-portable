@@ -1440,7 +1440,7 @@ char* Container_FormatPartName(Container* cont, const char* partname,
         }
     } else {
         sprintf(name, "%s", Container_Frame_GetAnimSetFileName(frame));
-        _strlwr(name);
+        strlwr(name);
         for (s = t = name; *s != '\0'; s++) {
             if (*s == '\\') t = s + 1;
         }
@@ -2679,7 +2679,7 @@ unsigned long Container_GetActivities(Container* cont,
                     if (len) {
                         char* name = (char*)malloc(len);
                         frame->lpVtbl->GetName(frame, &len, name);
-                        if (_strnicmp(name, CONTAINER_ACTIVITYFRAMEPREFIX,
+                        if (strnicmp(name, CONTAINER_ACTIVITYFRAMEPREFIX,
                                       strlen(CONTAINER_ACTIVITYFRAMEPREFIX)) == 0) {
                             if (frameList) frameList[count] = frame;
                             if (acList) acList[count] = Container_Frame_GetAnimClone(frame);

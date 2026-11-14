@@ -541,7 +541,7 @@ void interface_load_item_panels(BlockFile* config, const char* gameName)
     char* argv[20];
 
     for (i = 0; i < INTERFACE_SURROUND_COUNT; i++) {
-        _itoa(i + 1, num, 10);
+        itoa(i + 1, num, 10);
         // STRING: LEGORR 0x004a3500
         str = block_get_strptr(config, string_path_join(gameName, "InterfaceSurroundImages", num, NULL));
         if (str != NULL) {

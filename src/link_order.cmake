@@ -22,10 +22,12 @@
 #   library   game, gods98, platform_glue or program (the executable's own
 #             sources)
 #   source    path under SRC_ROOT
-#   platform  native or winapi when the object belongs to one backend only
+#   platform  native or winapi when the object belongs to one backend only;
+#             portable when it belongs to every build but the MSVC 5.0
+#             matching build (native and the MinGW reference build)
 #
 # Order: the game segment, then the gods98 segment, then the port tail, then
-# the legacy files whose functions lie in the CRT range. Libraries follow, in
+# the portable-only runtime stand-ins and the late units. Libraries follow, in
 # LRR_LINK_LIBRARIES. Fields are separated by blanks; one entry per line, so
 # tools read this file without CMake (tools/link_order.py).
 #
@@ -244,12 +246,15 @@ lrr_link(tail   -        game          game/lego_port.cpp)
 lrr_link(tail   -        game          game/legoobject_port.cpp)
 lrr_link(tail   -        gods98        gods98/resource.cpp)
 lrr_link(tail   -        gods98        gods98/init_port.cpp)
+lrr_link(tail   -        gods98        gods98/port_state.cpp)
 lrr_link(legacy 0048e160 game          game/level.cpp)
 lrr_link(legacy 0048e1e0 gods98        gods98/string.cpp)
 
-# Legacy files whose functions lie in the CRT range, just before LIBC
-lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp)
-lrr_link(legacy 00493ef0 gods98        crt/crt.cpp)
+# The runtime stand-ins: portable builds only. The matching build takes the
+# whole C runtime from LIBC.LIB (issue #447, finding 643); their markers name
+# LIBC's members by symbol.
+lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp portable)
+lrr_link(legacy 00494c30 gods98        crt/crt.cpp portable)
 lrr_link(unit   LATE-001 gods98        gods98/rnc.c)
 lrr_link(unit   LATE-002 gods98        gods98/init.c)
 

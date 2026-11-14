@@ -127,7 +127,9 @@ foreach(_lib IN ITEMS game gods98 platform_glue program)
   set(LRR_LINK_SOURCES_${_lib} "")
 endforeach()
 macro(lrr_link kind key library source)
-  if("${ARGN}" STREQUAL "" OR "${ARGN}" STREQUAL "${PLATFORM}")
+  # "portable": every build but the MSVC 5.0 matching build (link_order.cmake).
+  if("${ARGN}" STREQUAL "" OR "${ARGN}" STREQUAL "${PLATFORM}"
+      OR ("${ARGN}" STREQUAL "portable" AND NOT LRR_CLASSIC_MSVC5))
     list(APPEND LRR_LINK_SOURCES "${SRC_ROOT}/${source}")
     list(APPEND LRR_LINK_TARGETS "${library}")
     list(APPEND LRR_LINK_SOURCES_${library} "${SRC_ROOT}/${source}")

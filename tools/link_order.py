@@ -30,6 +30,8 @@ RANGES = "docs/coverage/translation-unit-ranges.csv"
 KINDS = ("unit", "legacy", "tail")
 LIBRARIES = ("game", "gods98", "platform_glue", "program")
 PLATFORMS = ("native", "winapi")
+# Every build but the MSVC 5.0 matching build (src/crt/'s stand-ins, #447).
+PORTABLE = "portable"
 MATCHING_PLATFORM = "winapi"
 
 _ENTRY = re.compile(r"^\s*lrr_link\(([^)#]*)\)\s*(?:#.*)?$")
@@ -51,7 +53,15 @@ class Entry:
         return f"src/{self.source}"
 
     def applies_to(self, platform: str | None) -> bool:
-        return platform is None or self.platform in (None, platform)
+        """Whether the entry is built for ``platform`` (None: any build).
+
+        "winapi" stands for the matching build here; a "portable" entry is
+        built natively and by the MinGW reference build, never by it."""
+        if platform is None or self.platform is None:
+            return True
+        if self.platform == PORTABLE:
+            return platform != MATCHING_PLATFORM
+        return self.platform == platform
 
 
 def parse(text: str) -> list[Entry]:
@@ -71,7 +81,7 @@ def parse(text: str) -> list[Entry]:
             raise ValueError(f"{LIST}:{number + 1}: unknown kind {kind!r}")
         if library not in LIBRARIES:
             raise ValueError(f"{LIST}:{number + 1}: unknown library {library!r}")
-        if platform is not None and platform not in PLATFORMS:
+        if platform is not None and platform not in PLATFORMS + (PORTABLE,):
             raise ValueError(f"{LIST}:{number + 1}: unknown platform {platform!r}")
         entries.append(Entry(kind, key, library, source, platform, number))
     return entries

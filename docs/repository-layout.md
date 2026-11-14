@@ -27,7 +27,8 @@ src/                Reconstruction source tree: game/ and gods98/ (original
                     units: one <stem>.c or <stem>.cpp per unit, plus legacy
                     mixed files and their private <file>_shared.hpp headers
                     from relocation), platform/ (backend entry points), crt/
-                    (runtime stand-ins), main.cpp
+                    (runtime stand-ins for the portable builds; the matching
+                    build takes the C runtime from LIBC.LIB), main.cpp
 subprojects/        miniwin CMake bridge (sparse isle-portable submodule)
 3rdparty/           Dependency submodules (isle-portable, sparse → miniwin/)
 ```

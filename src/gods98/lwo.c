@@ -64,7 +64,7 @@ char* string_case_substring_find(char* str, const char* substr,
 
     if (len && sublen) {
         for (i = 0; i < len; i++, str++) {
-            if (0 == _strnicmp(str, substr, sublen)) {
+            if (0 == strnicmp(str, substr, sublen)) {
                 if (index) *index = i;
                 if (length) *length = sublen;
                 return str;
@@ -104,7 +104,7 @@ int lwo_texture_projection_mode_parse(const char* name)
     // STRING: LEGORR 0x004af9f4
     names[2] = "SPHERICAL";
     for (i = 0; i < 3; i++) {
-        if (0 == _strnicmp(name, names[i], strlen(names[i]))) break;
+        if (0 == strnicmp(name, names[i], strlen(names[i]))) break;
     }
     if (i == 3) i = 0;
     return i;
@@ -387,7 +387,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
         sprintf(str, " %s (%d)", id, subSize);
         ptr += 2;
         // STRING: LEGORR 0x004afbf8
-        if (0 == _strnicmp(id, "TIMG", 4)) {
+        if (0 == strnicmp(id, "TIMG", 4)) {
             strcat(str, ptr);
             if (surf) {
                 strcpy(texName, ptr);
@@ -399,7 +399,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                 cur->srfPath = lwo_string_duplicate(texName);
             }
         // STRING: LEGORR 0x004afbe4
-        } else if (0 == _strnicmp(id, "COLR", 4)) {
+        } else if (0 == strnicmp(id, "COLR", 4)) {
             // STRING: LEGORR 0x004afbd0
             sprintf(tmp, " RGBA %d,%d,%d,%d", (unsigned char)ptr[0], (unsigned char)ptr[1], (unsigned char)ptr[2], (unsigned char)ptr[3]);
             strcat(str, tmp);
@@ -410,11 +410,11 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                 cur->srfCol[3] = ptr[3];
             }
         // STRING: LEGORR 0x004afbc8
-        } else if (0 == _strnicmp(id, "CTEX", 4)) {
+        } else if (0 == strnicmp(id, "CTEX", 4)) {
             strcat(str, ptr);
             if (surf) cur->srfTexMode = lwo_texture_projection_mode_parse(ptr);
         // STRING: LEGORR 0x004afbc0
-        } else if (0 == _strnicmp(id, "TTEX", 4)) {
+        } else if (0 == strnicmp(id, "TTEX", 4)) {
             strcat(str, ptr);
             if (surf) {
                 cur = cur->srfNextTex = (LWSURFACE*)malloc(sizeof(LWSURFACE));
@@ -422,7 +422,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                 cur->srfTexMode = lwo_texture_projection_mode_parse(ptr);
             }
         // STRING: LEGORR 0x004afbb8
-        } else if (0 == _strnicmp(id, "TFLG", 4)) {
+        } else if (0 == strnicmp(id, "TFLG", 4)) {
             printed = 0;
             if (surf) {
                 flags = LWO_SWAPWORD(*(unsigned short*)ptr);
@@ -453,7 +453,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                 strcat(str, tmp);
             }
         // STRING: LEGORR 0x004afb54
-        } else if (0 == _strnicmp(id, "FLAG", 4)) {
+        } else if (0 == strnicmp(id, "FLAG", 4)) {
             printed = 0;
             if (surf) {
                 flags = LWO_SWAPWORD(*(unsigned short*)ptr);
@@ -489,7 +489,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                 strcat(str, tmp);
             }
         // STRING: LEGORR 0x004afab8
-        } else if (0 == _strnicmp(id, "TSIZ", 4)) {
+        } else if (0 == strnicmp(id, "TSIZ", 4)) {
             if (surf) {
                 fptr = (unsigned char*)ptr;
                 lwo_read_big_endian_float(&fptr, &tsiz[0]);
@@ -503,7 +503,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                 strcat(str, tmp);
             }
         // STRING: LEGORR 0x004afaa4
-        } else if (0 == _strnicmp(id, "TCTR", 4)) {
+        } else if (0 == strnicmp(id, "TCTR", 4)) {
             if (surf) {
                 fptr = (unsigned char*)ptr;
                 lwo_read_big_endian_float(&fptr, &tctr[0]);
@@ -519,17 +519,17 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
 
         type = 0;
         // STRING: LEGORR 0x004afa9c
-        if (0 == _strnicmp(id, "TRAN", 4)) type = 1;
+        if (0 == strnicmp(id, "TRAN", 4)) type = 1;
         // STRING: LEGORR 0x004afa94
-        else if (0 == _strnicmp(id, "DIFF", 4)) type = 2;
+        else if (0 == strnicmp(id, "DIFF", 4)) type = 2;
         // STRING: LEGORR 0x004afa8c
-        else if (0 == _strnicmp(id, "LUMI", 4)) type = 3;
+        else if (0 == strnicmp(id, "LUMI", 4)) type = 3;
         // STRING: LEGORR 0x004afa84
-        else if (0 == _strnicmp(id, "REFL", 4)) type = 4;
+        else if (0 == strnicmp(id, "REFL", 4)) type = 4;
         // STRING: LEGORR 0x004afa7c
-        else if (0 == _strnicmp(id, "SPEC", 4)) type = 5;
+        else if (0 == strnicmp(id, "SPEC", 4)) type = 5;
         // STRING: LEGORR 0x004afa74
-        else if (0 == _strnicmp(id, "GLOS", 4)) type = 6;
+        else if (0 == strnicmp(id, "GLOS", 4)) type = 6;
         if (type && surf) {
             value = (float)(int)LWO_SWAPSHORT(*(unsigned short*)ptr) / 256.0f;
             switch (type) {

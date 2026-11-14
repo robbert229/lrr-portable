@@ -714,6 +714,7 @@ src/gods98/movie_for_avi_player.hpp
 src/gods98/movie_from_avi_player.hpp
 src/gods98/movie_unit.cpp
 src/gods98/movie_unit.h
+src/gods98/port_state.cpp
 src/gods98/ptrstack.cpp
 src/gods98/ptrstack.hpp
 src/gods98/record.cpp
@@ -886,6 +887,7 @@ tools/pr_match_progress.py
 tools/reccmp.sh
 tools/reccmp_diagnostics.py
 tools/reccmp_full_diff.py
+tools/reccmp_map_statics.py
 tools/reccmp_plain_immediates.py
 tools/strip_pe_debug.py
 tools/translation_units.py

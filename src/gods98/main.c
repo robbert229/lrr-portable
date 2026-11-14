@@ -296,7 +296,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             if (*s == '.') ext = s + 1;
         }
         if (ext != s_main_program_name) {
-            _strupr(ext);
+            strupr(ext);
             // STRING: LEGORR 0x004aac70
             if ((s = strstr(s_main_program_name, ".EXE")) != NULL) *s = '\0';
         }

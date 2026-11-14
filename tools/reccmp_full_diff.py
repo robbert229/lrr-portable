@@ -10,6 +10,7 @@ from reccmp.compare.diff import raw_diff_to_udiff
 from reccmp.compare import Compare
 from reccmp.types import ImageId
 
+import reccmp_map_statics
 import reccmp_plain_immediates
 import reccmp_vtordisp_scope
 
@@ -24,6 +25,11 @@ if os.environ.get("RECCMP_PLAIN_IMMEDIATES", "1") != "0":
 # tables (finding 616). RECCMP_VTORDISP_SCOPE=0 turns it off.
 if os.environ.get("RECCMP_VTORDISP_SCOPE", "1") != "0":
     reccmp_vtordisp_scope.install()
+
+# LIBC's static functions get their rebuilt-side names from the link map, so
+# markers and data-source rows that name them map (#447, finding 643).
+# RECCMP_MAP_STATICS=0 turns it off.
+reccmp_map_statics.install()
 
 _original_report = Compare.to_report
 def export_entities(self, *args, **kwargs):
