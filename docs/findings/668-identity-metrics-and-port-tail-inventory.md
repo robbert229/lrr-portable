@@ -1,30 +1,34 @@
 # 668. Identity metrics, and what the port tail holds in the matching link
 
 Issue #793, toward a byte-identical image. Measured with a full matching build
-under the gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`, finding 642) on
-`main` `1f5d8a1e`. This change edits tools and docs only, so the build is the
-same on both sides.
+under the gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`, finding 642). The
+base is `match/794-identity-prefix` `d6f98b83` (#798, finding 669, on `main`
+`1f5d8a1e`); first measured on `main` `1f5d8a1e` itself, and the figures
+below are the rebased ones. This change edits tools and docs only, so the
+build is the same on both sides.
 
 ## Summary
 
 1. **Three identity metrics are added to `binary-progress.json` (schema 5).**
    `tools/identity_metrics.py` computes them and `tools/readme_status.py`
    prints them. `make tools-test` covers them.
-   - **Correct-size functions:** 2,594 of 2,833 mapped functions (439,088
-     original bytes) in the full scope, and 2,303 of 2,538 (388,261 bytes)
-     game-only. Reccmp scores 2,423 and 2,135 of them 100%.
+   - **Correct-size functions:** 2,596 of 2,833 mapped functions (439,362
+     original bytes) in the full scope, and 2,305 of 2,538 (388,535 bytes)
+     game-only. Reccmp scores 2,427 and 2,139 of them 100%.
    - **Identical prefix:** 11 bytes. The first difference is at `0040100b`
      in AdvisorSceneControllerInit (`00401000`). It is the address of
      `advisorGlobs`, because data does not yet sit at the original
      addresses. With address operands masked, the prefix is 528 bytes, up to
-     `00401210` (AdvisorSceneVisualStateInitialize).
-   - **Per-unit size agreement:** 2 of 227 units, GAME-005 and GAME-006,
-     have every function at the correct size and start and end at the
-     original addresses. 166 have all sizes correct, 6 start at the original
-     address and 4 end there.
+     `00401210` (AdvisorSceneVisualStateInitialize). #798's four new exact
+     functions do not move either prefix (finding 669 says the same).
+   - **Per-unit size agreement:** 0 of 227 units. 166 have all sizes
+     correct, 2 start at the original address and 1 ends there. On `main`
+     `1f5d8a1e` it was 2 (GAME-005 and GAME-006), with 6 and 4; #798 leaves
+     AITask.c 48 bytes short instead of 32, which shifts every later unit by
+     another 16 bytes.
 2. **The port tail does not move the entry point.** The entry point is
-   `0048d0f0` against the original's `0048f000`, 7,952 bytes early. The unit
-   segment ends 7,968 bytes early (`0048ba00` against `0048d920`), and the
+   `0048d0e0` against the original's `0048f000`, 7,968 bytes early. The unit
+   segment ends 7,984 bytes early (`0048b9f0` against `0048d920`), and the
    LIBC bytes before `WinMainCRTStartup` are 16 bytes longer. The tail is
    linked after the late units and does not affect either figure.
    **GAME-028 (NERPs.c) accounts for 6,528 of those bytes.** Its NERP
@@ -52,23 +56,28 @@ same on both sides.
 
 No function or layout measure changes. Only the new fields are added.
 
-| Measure (`binary-progress.json`) | `main` `1f5d8a1e` | This change |
+| Measure (`binary-progress.json`) | base `d6f98b83` (#798) | This change |
 | --- | ---: | ---: |
-| Exact-function code bytes | 338,194 (52.63%) | 338,194 (52.63%) |
-| Accuracy, full / game-only | 97.10% / 96.76% | same |
-| `.text` identical at original addresses | 5.34% | same |
+| Exact-function code bytes | 338,909 (52.74%) | 338,909 (52.74%) |
+| Accuracy, full / game-only | 97.12% / 96.79% | same |
+| `.text` identical at original addresses | 4.08% | same |
 | Image end (gate) | `0x7f5000` | same |
 | Function-order inversions, pairs: full / game-only | 222 / 1 | same |
-| Correct-size functions, full: count / original bytes | — | **2,594 / 439,088** |
-| Correct-size functions, game-only: count / original bytes | — | **2,303 / 388,261** |
+| Correct-size functions, full: count / original bytes | — | **2,596 / 439,362** |
+| Correct-size functions, game-only: count / original bytes | — | **2,305 / 388,535** |
 | Identical prefix (raw / address operands masked) | — | **11 / 528 bytes** |
-| Units with size agreement (correct sizes, start, end) | — | **2 of 227** (166, 6, 4) |
+| Units with size agreement (correct sizes, start, end) | — | **0 of 227** (166, 2, 1) |
+
+On `main` `1f5d8a1e` the same metrics read 2,594 / 439,088 and 2,303 /
+388,261 correct-size functions, the same prefixes, and 2 of 227 units (166,
+6, 4).
 
 `make reccmp-check` reports no function lower. The match baseline and the
 listing digests change only in their input fingerprint, because the metric
 code is a hashed input. One existing field moved with the same source:
-`opt_ref.by_category` counts one 32-byte function as `port_unit` instead of
-`original_annotated` (2,533 to 2,532 annotated functions). The gate map's
+`opt_ref.by_category` counts two functions (64 bytes) as `port_unit` instead
+of `original_annotated` (2,534 to 2,532 annotated functions against
+`d6f98b83`; one function, 32 bytes, against `main` `1f5d8a1e`). The gate map's
 categories are unchanged. Neither the cause nor the function was traced.
 The relink's measure has shown layout noise of this size before (finding
 591).
@@ -85,7 +94,7 @@ leaves out trailing `nop` and `int3` padding. Original starts are the listed
 functions plus every Reccmp-mapped address. Rebuilt starts are the map's
 `.text` symbols plus the matched entities.
 
-Two other size sources were tried and rejected:
+Two other size sources were tried on `main` `1f5d8a1e` and rejected:
 
 - Reccmp's PDB size against `translation_units.py`'s reachable extent
   disagrees on 248 of the exact functions. The PDB size includes switch
@@ -96,7 +105,8 @@ Two other size sources were tried and rejected:
   their 16-byte alignment (`_atoi`: 14 against 16). Original functions that
   the list misses stretch the span (NERPs.c's table entries).
 
-With one rule on both sides, 2,418 of the 2,421 exact functions agree. The
+With one rule on both sides, 2,422 of the 2,425 compared exact functions
+agree (2,418 of 2,421 on `main`). The
 other three are MASM routines with secondary entry points: `__local_unwind2`,
 `__NLG_Notify` and `__CallSettingFrame@12`. Two mapped entries have no
 matched function entity and are not compared.
@@ -124,24 +134,26 @@ A unit's functions are the listed original functions in its `text_start` to
 - the last function's rebuilt code ends at its original end.
 
 Padding after the last function is not compared. GAME-001 starts and ends in
-place, but some of its functions differ in size. GAME-005 and GAME-006 agree
-on all three. A unit starts in place only while the size differences before
-it cancel out. GAME-002 is 32 bytes short, so GAME-003 starts at `004065d0`
-instead of `004065f0`. GAME-005 to GAME-052 are back in place only because
-GAME-003 and GAME-004 are each 16 bytes long. So start and end agreement follow
+place, but some of its functions differ in size. A unit starts in place only
+while the size differences before it cancel out. GAME-002 is 48 bytes short,
+so GAME-003 starts at `004065c0` instead of `004065f0`. GAME-003 and
+GAME-004 are each 16 bytes long, which leaves GAME-005 to GAME-007 16 bytes
+early. On `main`, where GAME-002 was 32 short, the same two units brought
+GAME-005 to GAME-052 back in place, and GAME-005 and GAME-006 agreed on all
+three. So start and end agreement follow
 from the 166 units with all sizes correct, not the other way round.
 
 ## 2. The entry point
 
 | | Original | Rebuilt | Delta |
 | --- | ---: | ---: | ---: |
-| Unit segment end (first CRT address) | `0048d920` | `0048ba00` | −7,968 |
+| Unit segment end (first CRT address) | `0048d920` | `0048b9f0` | −7,984 |
 | LIBC before `WinMainCRTStartup` | 5,856 | 5,872 | +16 |
-| Entry point | `0048f000` | `0048d0f0` | **−7,952** |
+| Entry point | `0048f000` | `0048d0e0` | **−7,968** |
 
 The rebuilt `.text` runs in this order:
 
-1. units, 567,808 bytes;
+1. units, 567,792 bytes;
 2. LIBC's first pass, 56,848;
 3. import thunks and dinput's data formats, 4,368;
 4. the late units, 4,848;
@@ -157,7 +169,7 @@ The second pass holds the members only the tail needs (finding 658):
 `strupr`, `ullshr` and `xtoa`.
 
 The unit segment's deficit is the sum of 83 unit objects' span deltas: 27
-units are 8,432 bytes short, 16 are 464 bytes long, and 40 are exact.
+units are 8,448 bytes short, 16 are 464 bytes long, and 40 are exact.
 
 | Unit | Original bytes | Rebuilt | Delta |
 | --- | ---: | ---: | ---: |
@@ -169,7 +181,8 @@ units are 8,432 bytes short, 16 are 464 bytes long, and 40 are exact.
 | GAME-017 FrontEnd.c, GAME-020 Interface.c | | | −144 each |
 | G98-031 Lwo.c | 6,368 | 6,272 | −96 |
 | G98-016 Flic.c | 5,232 | 5,152 | −80 |
-| 18 more units | | | −16 to −64 each |
+| GAME-002 AITask.c | 18,752 | 18,704 | −48 |
+| 17 more units | | | −16 to −64 each |
 | G98-013 Input.c | 928 | 1,056 | +128 |
 | 15 more units | | | +16 to +48 each |
 
@@ -177,7 +190,7 @@ GAME-028's NERP function table (`.data` `004a5948` onward) names 172
 `nerps_port_*` adapters in `tutorial_script_port.cpp`. The original has
 those functions in NERPs.c itself (`00453920` onward; the function list
 misses most of them, see section 1). Rebuilding them in `tutorial_script.c`
-would close 82% of the entry-point gap and remove the largest root of the
+would close 82% of the entry-point gap (6,528 of 7,968) and remove the largest root of the
 tail.
 
 ## 3. The image size
@@ -351,7 +364,7 @@ soonest. They are proposed here and not filed.
 
 1. **Rebuild NERPs.c's table functions in `tutorial_script.c` (GAME-028).**
    The NERP table should name the unit's own functions. This closes 6,528 of
-   the 7,952-byte entry-point gap, removes the 172-entry root, and frees
+   the 7,968-byte entry-point gap, removes the 172-entry root, and frees
    26–34 KB of tail code. It needs the missing functions listed first:
    `00453920` onward is mostly absent from the function list.
 2. **Keep `tickers.cpp` out of the matching link.** Mark it native-only, and
@@ -380,7 +393,7 @@ soonest. They are proposed here and not filed.
    That removes 203 KB of `.text`, 291 KB of `.bss`, 21 KB of `.data`, 16 KB
    of `.rdata`, and LIBC's 29 second-pass functions.
 5. **Close the remaining unit-size deficits for the entry point.** After 1,
-   the units are 1,440 bytes short net: 1,904 bytes short across 26 units and
+   the units are 1,456 bytes short net: 1,920 bytes short across 26 units and
    464 bytes long across 16. GAME-026 (−288), GAME-021 (−272) and GAME-023
    (−176) are the largest. #794 to #797 already own the first range and
    Lego.c, LegoObject.c, FrontEnd.c and Interface.c. The per-unit figures are
