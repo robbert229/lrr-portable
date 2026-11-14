@@ -426,14 +426,14 @@ void legoobject_tool_tip_icons_load(void* config)
     for (item = block_subgroup((struct BlockRec*)config, string_path_join(s_engine_config_root, "ToolTipIcons", NULL));
          item != NULL; item = block_next_equal_key(item)) {
         for (i = 0; i < 11; i++) {
-            if (s_tool_type_names[i] != NULL && _strcmpi(item->key, s_tool_type_names[i]) == 0) {
+            if (s_tool_type_names[i] != NULL && stricmp(item->key, s_tool_type_names[i]) == 0) {
                 s_object_toolTipIcons[i] = image_load_bmp_scaled(item->value, 0, 0);
                 break;
             }
         }
         if (i == 11) {
             for (i = 0; i < 6; i++) {
-                if (s_ability_type_names[i] != NULL && _strcmpi(item->key, s_ability_type_names[i]) == 0) {
+                if (s_ability_type_names[i] != NULL && stricmp(item->key, s_ability_type_names[i]) == 0) {
                     s_object_toolTipIconAbilities[i] = image_load_bmp_scaled(item->value, 0, 0);
                     break;
                 }
@@ -441,9 +441,9 @@ void legoobject_tool_tip_icons_load(void* config)
         }
         if (i == 6) {
             // STRING: LEGORR 0x004a5048
-            if (_strcmpi(item->key, "Blank") == 0) {
+            if (stricmp(item->key, "Blank") == 0) {
                 s_object_toolTipIconBlank = image_load_bmp_scaled(item->value, 0, 0);
-            } else if (_strcmpi(item->key, "Ore") == 0) {
+            } else if (stricmp(item->key, "Ore") == 0) {
                 objectGlobs_toolTipIconOre = image_load_bmp_scaled(item->value, 0, 0);
             }
         }
@@ -783,7 +783,7 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
     for (i = 0; i < count; i++) {
         if (linkNames[i] != NULL) {
             for (j = 0; j < count; j++) {
-                if (i != j && _strcmpi(names[j], linkNames[i]) == 0) {
+                if (i != j && stricmp(names[j], linkNames[i]) == 0) {
                     obj = objs[i];
                     target = objs[j];
                     obj->routeToObject = target;
@@ -8299,7 +8299,7 @@ int legoobject_activity_register_bookkeeping(Lego_Object* obj)
         }
 
         if ((entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x20000) && obj->driveObject && obj->driveObject->type == 2) {
-            isRoute = !_strcmpi(s_activity[1], obj->activityName1);
+            isRoute = !stricmp(s_activity[1], obj->activityName1);
             // STRING: LEGORR 0x004a50dc
             activity = isRoute ? "Activity_" : obj->activityName1;
             // STRING: LEGORR 0x004a50d4
@@ -9680,7 +9680,7 @@ void* legoobject_poly_variant_section_model_build(void* config, const char* game
             if (*name != '!' || !(s_engine_feature_word & 0x800000)) {
                 if (*name == '!')
                     name++;
-                if (_strcmpi("NULL", item->value) == 0)
+                if (stricmp("NULL", item->value) == 0)
                     model = model_primitive_record_create(model, name, i);
                 else
                     model = model_entry_record_load(model, name, dir, item->value, i);

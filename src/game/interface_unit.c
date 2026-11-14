@@ -390,7 +390,7 @@ int interface_get_menu_item_type(const char* name, int* type)
     unsigned int i;
 
     for (i = 0; i < INTERFACE_MENUITEM_COUNT; i++) {
-        if (_strcmpi(interfaceGlobs.menuItemName[i], name) == 0) {
+        if (stricmp(interfaceGlobs.menuItemName[i], name) == 0) {
             *type = i;
             return 1;
         }
@@ -568,7 +568,7 @@ void interface_load_item_panels(BlockFile* config, const char* gameName)
         str = block_get_strptr(config, string_path_join(gameName, "InterfaceSurroundImages", num, NULL));
         if (str != NULL) {
             sound_variant_split((char*)str, argv, s_config_rgb_separator);
-            if (_strcmpi(argv[0], "NULL")) {
+            if (stricmp(argv[0], "NULL")) {
                 interfaceGlobs.surroundImages[i] =
                     image_load_bmp_scaled(argv[0], 0, 0);
                 if (interfaceGlobs.surroundImages[i] != NULL) {
@@ -580,7 +580,7 @@ void interface_load_item_panels(BlockFile* config, const char* gameName)
                 interfaceGlobs.backButtonOffsets[i].x = (float)atoi(argv[3]);
                 interfaceGlobs.backButtonOffsets[i].y = (float)atoi(argv[4]);
             }
-            if (_strcmpi(argv[5], "NULL")) {
+            if (stricmp(argv[5], "NULL")) {
                 interfaceGlobs.objectSurroundImages[i] =
                     image_load_bmp_scaled(argv[5], 0, 0);
                 if (interfaceGlobs.objectSurroundImages[i] != NULL) {

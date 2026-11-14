@@ -131,7 +131,7 @@ void file_initialise(const char* programName, int insistOnCD,
         if ((hFile = _findfirst("*.*", &c_file)) != -1) {
             do {
                 if ((c_file.attrib & _A_SUBDIR) &&
-                    _strcmpi(c_file.name, "Data") == 0) {
+                    stricmp(c_file.name, "Data") == 0) {
                     failed = 0;
                     break;
                 }
@@ -427,6 +427,18 @@ int file_close(File* f)
                         431, "File_Close");
         break;
     }
+    return 0;
+}
+
+/* File_Flush. Nothing calls it, so the original's /OPT:REF removed it, but
+ * its fflush reference had already pulled LIBC's fflush.obj between fread
+ * and fgetc (finding 667). The original's line numbers leave room for it:
+ * File_Close's error is line 431 and File_Tell's 469. Its shape is
+ * inferred; only the reference matters. */
+// PORT-ONLY: the original's unreferenced File_Flush, which /OPT:REF removed; kept for its fflush reference (finding 667)
+int file_flush(File* f)
+{
+    if (file_get_system(f) == FileSystem_Std) return fflush(f->stream.std);
     return 0;
 }
 

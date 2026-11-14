@@ -456,7 +456,7 @@ Front_Cache* front_cache_find_by_name(const char* name)
     Front_Cache* cache;
 
     for (cache = s_cacheList; cache != NULL; cache = cache->next) {
-        if (_strcmpi(name, cache->path) == 0) {
+        if (stricmp(name, cache->path) == 0) {
             return cache;
         }
     }
@@ -2466,27 +2466,27 @@ void front_screen_menu_loop(Front_MenuSet* menuSet, int menuIndex)
 int front_menu_item_parse_type_string(const char* itemTypeName)
 {
     // STRING: LEGORR 0x004a23dc
-    if (_strcmpi(itemTypeName, "cycle") == 0) {
+    if (stricmp(itemTypeName, "cycle") == 0) {
         return Front_MenuItem_Cycle;
     }
     // STRING: LEGORR 0x004a23d4
-    if (_strcmpi(itemTypeName, "trigger") == 0) {
+    if (stricmp(itemTypeName, "trigger") == 0) {
         return Front_MenuItem_Trigger;
     }
     // STRING: LEGORR 0x004a23c8
-    if (_strcmpi(itemTypeName, "textinput") == 0) {
+    if (stricmp(itemTypeName, "textinput") == 0) {
         return Front_MenuItem_TextInput;
     }
     // STRING: LEGORR 0x004a23c0
-    if (_strcmpi(itemTypeName, "slider") == 0) {
+    if (stricmp(itemTypeName, "slider") == 0) {
         return Front_MenuItem_Slider;
     }
     // STRING: LEGORR 0x004a23b4
-    if (_strcmpi(itemTypeName, "realslider") == 0) {
+    if (stricmp(itemTypeName, "realslider") == 0) {
         return Front_MenuItem_RealSlider;
     }
     // STRING: LEGORR 0x004a23ac
-    return (_strcmpi(itemTypeName, "next") == 0) ? Front_MenuItem_Next : -1;
+    return (stricmp(itemTypeName, "next") == 0) ? Front_MenuItem_Next : -1;
 }
 
 // FUNCTION: LEGORR 0x00413f00
@@ -2514,14 +2514,14 @@ int front_menu_overlay_get_type(Front_MenuOverlay* overlay)
         s++;
     }
     // STRING: LEGORR 0x004a23ec
-    if (_strcmpi(".avi", s) == 0) {
+    if (stricmp(".avi", s) == 0) {
         return 1;
     }
-    if (_strcmpi(".bmp", s) == 0) {
+    if (stricmp(".bmp", s) == 0) {
         return 2;
     }
     // STRING: LEGORR 0x004a23e4
-    return (_strcmpi(".lws", s) == 0) ? 3 : 0;
+    return (stricmp(".lws", s) == 0) ? 3 : 0;
 }
 
 // FUNCTION: LEGORR 0x00413f90
@@ -2851,7 +2851,7 @@ int front_get_menu_id_by_name(Front_MenuSet* menuSet, const char* name)
     int i;
 
     for (i = 0; i < menuSet->menuCount; i++) {
-        if (menuSet->menus[i] != NULL && _strcmpi(menuSet->menus[i]->title, name) == 0) {
+        if (menuSet->menus[i] != NULL && stricmp(menuSet->menus[i]->title, name) == 0) {
             return i;
         }
     }
@@ -4108,7 +4108,7 @@ int front_level_set_index_of(Front_LevelSet* levelSet, const char* levelName)
     int i;
 
     for (i = 0; i < levelSet->count; i++) {
-        if (_strcmpi(levelName, levelSet->idNames[i]) == 0) {
+        if (stricmp(levelName, levelSet->idNames[i]) == 0) {
             return i;
         }
     }

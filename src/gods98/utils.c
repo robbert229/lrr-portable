@@ -140,16 +140,16 @@ int game_string_hash_compute(const unsigned char* text,
 int block_get_bool(const char* value)
 {
     // STRING: LEGORR 0x004aabec
-    if (_strcmpi(value, "YES") == 0) return 1;
+    if (stricmp(value, "YES") == 0) return 1;
     // STRING: LEGORR 0x004aabe4
-    if (_strcmpi(value, "TRUE") == 0) return 1;
+    if (stricmp(value, "TRUE") == 0) return 1;
     // STRING: LEGORR 0x004a4124
-    if (_strcmpi(value, "ON") == 0) return 1;
+    if (stricmp(value, "ON") == 0) return 1;
     // STRING: LEGORR 0x004aabe0
-    if (_strcmpi(value, "NO") == 0) return 0;
+    if (stricmp(value, "NO") == 0) return 0;
     // STRING: LEGORR 0x004aabd8
-    if (_strcmpi(value, "FALSE") == 0) return 0;
+    if (stricmp(value, "FALSE") == 0) return 0;
     // STRING: LEGORR 0x004a4120
-    if (_strcmpi(value, "OFF") == 0) return 0;
+    if (stricmp(value, "OFF") == 0) return 0;
     return 2;
 }

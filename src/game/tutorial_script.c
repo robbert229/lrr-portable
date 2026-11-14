@@ -2389,7 +2389,7 @@ void nerps_parse_message(char* text, char* output, int setTimer)
                         *p++ = '\0';
                         text++;
                         for (i = 0; i < nerpsGlobs.imageCount; i++) {
-                            if (!_strcmpi(nerpsGlobs.imageList[i].key, name)) {
+                            if (!stricmp(nerpsGlobs.imageList[i].key, name)) {
                                 images[imageCount++] = nerpsGlobs.imageList[i].image;
                                 found = 1;
                                 break;
@@ -2408,7 +2408,7 @@ void nerps_parse_message(char* text, char* output, int setTimer)
                         *p++ = '\0';
                         text++;
                         for (i = 0; i < nerpsGlobs.soundCount; i++) {
-                            if (!_strcmpi(nerpsGlobs.soundList[i].key, name)) {
+                            if (!stricmp(nerpsGlobs.soundList[i].key, name)) {
                                 int sound = nerpsGlobs.soundList[i].sound;
                                 if (nerpsGlobs.currentSound != i) {
                                     nerpsGlobs.currentSound = i;

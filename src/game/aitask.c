@@ -155,7 +155,7 @@ int aitask_cmd_kind_by_name(const char* name, int* priority)
     i = 0;
     for (entry = aiTaskGlobs.priorityNames;
          entry < aiTaskGlobs.priorityNames + 27; entry++, i++) {
-        if (_strcmpi(name, *entry) == 0) {
+        if (stricmp(name, *entry) == 0) {
             *priority = i;
             return 1;
         }
