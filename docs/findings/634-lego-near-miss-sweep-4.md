@@ -8,21 +8,27 @@ Issue #720, part of #388 and ADR 0005. Follows findings
 95–99% and 21 (19,616 bytes) at 80–94%. Two reach 100%, and 16 functions of the
 unit rise in all, 10 of them below 80%. None falls.
 
-Measured on `main` `7835ce86` with `make reccmp-check`.
+Measured with `make reccmp-check`, first on `main` `7835ce86` and again
+after rebasing onto #726 (`d5c0d522`, which annotates `0044dde0` and
+`00401c00`). On #726, the pass over `lego_game_config_init` in section 4
+adds 0.49 points. The results on each base:
 
-| Measure | `main` | This change |
-| --- | ---: | ---: |
-| New exact functions | | **2** (`00426250`, `00431580`) |
-| Functions that rise / fall | | 16 / **0** (all in GAME-021) |
-| Exact-function code bytes | 279,887 (43.56%) | **280,529 (43.66%)** |
-| Reccmp mean, full / game-only | 95.38 / 94.98 | 95.40 / 94.99 |
-| `opt_ref` removed / removed exact | 164 / 127 | 152 / 121 |
-| Port `.bss`, image end | 1,115,696, `0x873000` | 1,115,680, `0x873000` |
+| Measure | `main` | This change on `main` | #726 | This change on #726 |
+| --- | ---: | ---: | ---: | ---: |
+| New exact functions | | 2 | | **2** (`00426250`, `00431580`) |
+| Functions that rise / fall | | 16 / 0 | | **17 / 0** (all in GAME-021) |
+| `0041fb50` lego_game_config_init | 99.29 | 99.29 | 99.45 | **99.94** |
+| Exact-function code bytes | 279,887 (43.56%) | 280,529 (43.66%) | 285,588 (44.45%) | **286,230 (44.55%)** |
+| Reccmp mean, full / game-only | 95.38 / 94.98 | 95.40 / 94.99 | 95.77 / 95.40 | 95.78 / 95.42 |
+| `opt_ref` removed / removed exact | 164 / 127 | 152 / 121 | 157 / 123 | 125 / 101 |
+| Port `.bss` | 1,115,696 | 1,115,680 | 1,116,688 | 1,116,672 |
+| Image end | `0x873000` | `0x873000` | `0x875000` | `0x875000` |
 
-No exact match was lost and no function fell below the baseline. The
-`opt_ref` counts fall because the aliased callees below are now reached from
-Lego.c, so `/OPT:REF` keeps them. `make match-progress` and
-`make unit-data-offsets` were run and the generated files are committed.
+No exact match was lost and no function fell below the baseline on either
+base. The `opt_ref` counts fall because the aliased callees below are now
+reached from Lego.c, so `/OPT:REF` keeps them. `make match-progress` and
+`make unit-data-offsets` were run on the final tree, and the generated files
+are committed.
 
 ## What closed the gaps
 
@@ -123,6 +129,41 @@ takes the lower slot. Folding `dist` into its only use to pay for the third
 variable changes the mode-0 branch (67%). Not applied. It would fit a later
 change that removes a symbol between `004293b0` and `00431450`.
 
+### 4. `lego_game_config_init` after #726 (99.45% to 99.94%)
+
+With `0044dde0` and `00401c00` annotated by #726, every remaining diff in
+`0041fb50` was a call or push under a port name, plus one literal:
+
+- **The separator is `","`, not `":|"`.** `ProgressWindow`,
+  `NextButtonPos%ix%i` and `BackButtonPos%ix%i` are split at `0x4a13e4`,
+  which holds `","` in the shipped binary. The code relies on this:
+  `atoi(argvVal[0] + 2)` skips a `"D:"` prefix that a `':'` separator would
+  have removed. This is a real correction. All three uses in the unit
+  change.
+- **Three other-unit originals with the same contract**, aliased in the
+  matching build like section 1:
+  - `incident_message_catalog_init` → `info_initialise` (`00419230`, info_unit.c);
+  - `interface_message_tab_info_text_load` → `info_set_overflow_image_file` (`00419430`, info_unit.c);
+  - `lego_object_trigger_frame_callback_adapter` → `legoobject_trigger_frame_callback` (`0043f130`, legoobject_unit.c);
+  - and `lego_noop_load_adapter` → the shared no-op `00484c90` (function-like, like `lego_noop_point_adapter`).
+- **Eight of the unit's own config loaders** (`00434a50`, `004350a0`,
+  `00434da0`, `00434c10`, `00434af0`, `004345f0`, `00434710`, `00434a00`)
+  were called under port names; they are now aliased to the unit's
+  functions. The two panel adapters are declared with the unit's `unsigned
+  int` sizes in the matching build: the build rejects C4028 against the
+  unit's forward declarations. Their forward declarations sit before
+  `00434570`, so the counter falls by 8 to 9 from there on.
+  `counter_probe.py` and `match-function` over the whole unit show no code
+  change in that range.
+- **Left (0.06 points):** `lego_scene_lights_build_from_config` (`00433770`)
+  and `lego_render_quality_config_apply` (`004334f0`) are still called as
+  `scene_lights_build_from_config_original` and
+  `render_quality_config_apply_original`. Aliasing them is correct, but their
+  forward declarations precede `00433380`, so the counter falls by 2 from
+  there, and `00433380` (exact) drops to 90.91% and `00434530` to 78.26%.
+  Not applied. They can be aliased when a later change adds two symbols
+  before `00433380`, or moves those forward declarations past `00434530`.
+
 ## Per-function results
 
 Sizes are the ledger's address gaps. Scores are full `make reccmp-check`
@@ -132,7 +173,7 @@ runs. The letters are the causes tallied below.
 
 | Address | Function | Size | `main` | After | Change, or what is left |
 | --- | --- | ---: | ---: | ---: | --- |
-| `0041fb50` | lego_game_config_init | 11520 | 99.29 | 99.29 | A: skipped (re-checked after #719's stack rebase). Left: `0044db50` and `0044dde0` (#719's `loading_progress.cpp`); `info_initialise` and `info_set_overflow_image_file` (`00419430`, info_unit.c) under port names; `legoobject_trigger_frame_callback` (legoobject_unit.c) pushed as `lego_object_trigger_frame_callback_adapter`; ten of Lego.c's own config loaders still under port names (`sound_samples_config_load` → `00434a50`, `surface_type_descriptions_config_load` → `004350a0`, `scene_lights_build_from_config_original` → `00433770`, `render_quality_config_apply_original` → `004334f0`, `advisor_tooltip_and_sound_config_load` → `00434da0`, `message_load_infomessages`, `text_messages_config_load_original` → `00434af0`, `panels_config_entry_apply_original`, `panel_button_layout_config_load_original` → `00434710`, `advisor_tutorial_icon_image_load` → `00434a00`); `select_place_create_adapter`; `lego_noop_load_adapter` → `00484c90`; `":|"` against `","` (another unit's literal) |
+| `0041fb50` | lego_game_config_init | 11520 | 99.29 (#726: 99.45) | **99.94** (on #726) | section 4. A/rule B: the two calls to `00433770` and `004334f0` stay under port names; aliasing them drifts `00433380` |
 | `00430530` | lego_terrain_cell_mutate | 2240 | 95.45 | 95.45 | D: the inlined work-flag clear's tests merged (finding 629's `00430320`); `imul` operands for `by + 1` (local macro order tried); a read-modify-write `or` |
 | `004288e0` | lego_level_debug_input_cell_mutator_dispatch | 2176 | 98.41 | 98.41 | C: previous-key load hoisted before `test al, al` and a `cl`→`dl` copy around `LEGO_KEY_PRESSED(0x2e)` |
 | `00422850` | lego_misc_object_resources_load | 2096 | 99.84 | 99.84 | A: Encyclopedia's `s_item_name_ore` (`encyclopedia.cpp`, #719's file, C++ linkage) |
@@ -191,7 +232,7 @@ runs. The letters are the causes tallied below.
 
 | Cause | Functions | Ledger bytes | What would close it |
 | --- | ---: | ---: | --- |
-| **A. Callee or literal outside the unit**: `0044db50`/`0044dde0` and Encyclopedia's literals (#719's files); `00459470`/`004593d0` (OSF, C++ with another contract); `00478330` (surface.cpp, C++); `0045d7e0` unannotated; Lego.c's own config loaders called under port names from `0041fb50` | 8 | 27,024 | #719's annotations, then aliases like section 1; for `0041fb50`, the same aliasing of the unit's own loaders after the rebase |
+| **A. Callee or literal outside the unit**: Encyclopedia's literals (C++ linkage in `encyclopedia.cpp`); `00459470`/`004593d0` (OSF, C++ with another contract); `00478330` (surface.cpp, C++); `0045d7e0` unannotated; `0041fb50`'s two remaining calls (blocked by the counter, section 4) | 8 | 27,024 | C linkage for those entries, then aliases like section 1 |
 | **B. Data layout**: `s_catalog_counts` and the object registry with C++ linkage (frozen headers), end-of-array pointers, legoGlobs flag words as separate globals | 14 | 5,216 | legoGlobs as one struct; C linkage for `s_catalog_counts` once its `_for_` header can change |
 | **C. Integer register choice** | 3 | 3,344 | not found |
 | **D. Scheduling, stack slots or statement shape** | 8 | 5,152 | `004291a0`: the block-scoped form, if a symbol is removed before `00431450` |
@@ -203,4 +244,5 @@ runs. The letters are the causes tallied below.
   aliases (section 1) and the statement orders (section 2). Only Lego.c's own
   declarations change.
 - `src/gods98/record.hpp`: `object_field14_set` gets C linkage.
+- Section 4 (on #726): ten more aliases, the panel adapters' matching-build declarations, and the `","` separator in `lego_game_config_init`.
 - `docs/coverage/`: match baseline, listing digests and binary progress.

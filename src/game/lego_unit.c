@@ -1148,7 +1148,7 @@ int lego_game_config_init(void)
                 case 'L': barDirA = 3; break;
                 default: barDirA = 4; break;
                 }
-                if (sound_variant_split((char*)progressWindowStr, argvVal, ":|") == 4 && progressWindowStr[1] == ':' && barDirA != 4) {
+                if (sound_variant_split((char*)progressWindowStr, argvVal, ",") == 4 && progressWindowStr[1] == ':' && barDirA != 4) {
                     barRect.x = (float)atoi(argvVal[0] + 2);
                     barRect.y = (float)atoi(argvVal[1]);
                     barRect.width = (float)atoi(argvVal[2]);
@@ -1224,7 +1224,7 @@ int lego_game_config_init(void)
                     // STRING: LEGORR 0x004a39f4
                     sprintf(buff, "NextButtonPos%ix%i", display_width_get(), display_height_get());
                     if ((posString = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0))) != NULL) {
-                        if (sound_variant_split(posString, posArgvStr, ":|") == 2) {
+                        if (sound_variant_split(posString, posArgvStr, ",") == 2) {
                             legoGlobs_NextButtonPos[0] = (float)atof(posArgvStr[0]);
                             legoGlobs_NextButtonPos[1] = (float)atof(posArgvStr[1]);
                         }
@@ -1239,7 +1239,7 @@ int lego_game_config_init(void)
                     // STRING: LEGORR 0x004a39d0
                     sprintf(buff, "BackButtonPos%ix%i", display_width_get(), display_height_get());
                     if ((posString = block_get_str_copy(cfgStr, string_path_join(s_engine_config_root, "Main", buff, 0))) != NULL) {
-                        if (sound_variant_split(posString, posArgvStr, ":|") == 2) {
+                        if (sound_variant_split(posString, posArgvStr, ",") == 2) {
                             legoGlobs_BackButtonPos[0] = (float)atof(posArgvStr[0]);
                             legoGlobs_BackButtonPos[1] = (float)atof(posArgvStr[1]);
                         }

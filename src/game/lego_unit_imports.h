@@ -247,6 +247,10 @@ int sound_alias_lookup(const char* name, int* out_index);  /* 00464c70 */
 int sound_positional_sound_submit(int position, int alias, int loop,
                                   int positional, const float* xyz); /* 00465090 */
 int sound_subsystem_enabled(void);                         /* 00465370 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434a50) (finding 634). */
+#define sound_samples_config_load lego_sound_samples_config_load
+#endif
 void sound_samples_config_load(struct BlockRec* config, int allow_marked); /* 00434a50 */
 /* GAME pointer.cpp (ui_list.hpp, frontend.hpp, media.hpp). */
 void ui_pointer_cursor_name_registry_init(void);           /* 0045c830 */
@@ -258,7 +262,15 @@ void bubble_config_texture_load(struct BlockRec* cfg);     /* 00407240 */
 /* G98 Font.c (surface.hpp): Font_Load. */
 void* font_atlas_record_create(const char* name);          /* 00479ee0 */
 /* GAME Info.c (message.hpp, frontend.hpp). The original passes the font. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in Info.c (info_unit.c) (finding 634). */
+#define incident_message_catalog_init info_initialise
+#endif
 void incident_message_catalog_init(uint32_t owner);        /* 00419230 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in Info.c (info_unit.c) (finding 634). */
+#define interface_message_tab_info_text_load info_set_overflow_image_file
+#endif
 void interface_message_tab_info_text_load(const char* path); /* 00419430 */
 /* GAME Interface.c (frontend.hpp, entity.hpp). */
 /* G98 Container.c (crt.hpp, scene_pool.hpp). */
@@ -316,6 +328,10 @@ void camera_view_context_set(float cap, float follow_scale,
 void camera_distance_bounds_set(void* camera, float lo, float hi); /* 00436a18 */
 void camera_tilt_bounds_set(void* camera, float lo, float hi); /* 00436831 */
 /* GAME level.hpp. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (004350a0) (finding 634). */
+#define surface_type_descriptions_config_load lego_surface_type_descriptions_config_load
+#endif
 void surface_type_descriptions_config_load(struct BlockRec* config,
                                            const char* config_root); /* 004350a0 */
 /* GAME Priorities.c (priorities.h). */
@@ -325,12 +341,24 @@ void priorities_load_images(struct BlockRec* config, const char* game_name);    
 int shared_texture_root_register(const char* root);        /* 004805b0 */
 /* GAME message.hpp. */
 void deferred_callback_set(uint32_t value);                /* 00453900 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434c10) (finding 634). */
+#define message_load_infomessages lego_message_load_infomessages
+#endif
 void message_load_infomessages(struct BlockRec* cfg);      /* 00434c10 */
 /* GAME-021 parts 2-3, still in lego.cpp (entity_config_from_lego.hpp,
  * frontend.hpp). */
 void lego_object_names_load(struct BlockRec* config);      /* 0042d600, called by 0041fb50 */
 void lego_object_the_names_load(struct BlockRec* config);  /* 0042da20, called by 0041fb50 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434da0) (finding 634). */
+#define advisor_tooltip_and_sound_config_load lego_advisor_tooltip_and_sound_config_load
+#endif
 void advisor_tooltip_and_sound_config_load(struct BlockRec* config); /* 00434da0 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434a00) (finding 634). */
+#define advisor_tutorial_icon_image_load lego_advisor_tutorial_icon_image_load
+#endif
 void advisor_tutorial_icon_image_load(struct BlockRec* cfg); /* 00434a00 */
 /* G98 Sound3D.c (sound3d.c, simtick.hpp, sound3d.h). The native port's
  * entries take a frame handle and the distance as an integer word. */
@@ -368,6 +396,10 @@ int reward_initialise(void);                               /* reward.c, 0045f030
 /* Container_Initialise (00472710): no port entry (lego.cpp). */
 void* container_initialise_original(const char* gameName);
 /* LegoObject_TriggerFrameCallback (0043f130): no port entry (lego.cpp). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in LegoObject.c (legoobject_unit.c) (finding 634). */
+#define lego_object_trigger_frame_callback_adapter legoobject_trigger_frame_callback
+#endif
 void lego_object_trigger_frame_callback_adapter(void* cont, void* data);
 /* DirectDraw_AdjustTextureUsage (0047cd50, directdraw.h). */
 void directdraw_adjust_texture_usage(unsigned int* textureUsage);
@@ -434,6 +466,11 @@ void lego_key_callback_set_adapter(int key, int op, int a1, int a2, int a3);
 /* An empty function the linker folded to 00484c90, called with the root
  * container and "animtex_dirt" (lego.cpp). */
 void lego_noop_load_adapter(void* root, const char* name);
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original calls the shared no-op (finding 634). */
+#define lego_noop_load_adapter(root, name) \
+    (((void (*)())flic_opcode27_fallback_noop)(root, name))
+#endif
 /* RockFall_Initialise (0040bfd0): the port's entry takes a style table
  * (rock_fall_styles.cpp). */
 void rock_fall_initialise_adapter(struct BlockRec* config,
@@ -441,10 +478,36 @@ void rock_fall_initialise_adapter(struct BlockRec* config,
 /* Lego_LoadPanels (004345f0), Lego_LoadPanelButtons (00434710),
  * Lego_LoadTextMessages (00434af0): the port's entries are in a namespace
  * (lego.cpp). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (004345f0) (finding 634). */
+#define panels_config_entry_apply_original lego_panels_config_entry_apply
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* The unit's own declaration takes unsigned sizes. */
+void panels_config_entry_apply_original(struct BlockRec* config,
+                                        unsigned int width,
+                                        unsigned int height);
+#else
 void panels_config_entry_apply_original(struct BlockRec* config, int width,
                                         int height);
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434710) (finding 634). */
+#define panel_button_layout_config_load_original lego_panel_button_layout_config_load
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* The unit's own declaration takes unsigned sizes. */
+void panel_button_layout_config_load_original(struct BlockRec* config,
+                                              unsigned int width,
+                                              unsigned int height);
+#else
 void panel_button_layout_config_load_original(struct BlockRec* config,
                                               int width, int height);
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the original itself, in this unit (00434af0) (finding 634). */
+#define text_messages_config_load_original lego_text_messages_config_load
+#endif
 void text_messages_config_load_original(struct BlockRec* config);
 /* Interface_LoadImages (0041ada0), Interface_LoadSurroundImages
  * (0041afd0): the port's entries take the config only (interface.cpp). */
