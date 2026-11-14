@@ -388,10 +388,12 @@ void engine_global_state_flags_bits6_and_9_set_target(
     int value, int set_bit9);
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend only (#805) */
 static int engine_game_config_init_callback(void);
 static void engine_registered_shutdown_loader_callback(void);
 static void engine_registered_shutdown_normal_callback(void);
 static int engine_registered_tick_callback(float dt);
+#endif /* !LEGORRR_BACKEND_WINAPI */
 static int m_edge(EngineContext* ctx, int key);
 static int m_held(EngineContext* ctx, int key);
 static void m_toggle_hud(EngineContext* ctx, uint32_t* flag, uint32_t bit, const char* label);
@@ -525,6 +527,7 @@ void upgrade_resource_debit(int selector, int amount)
     ui_overlay_animation_advance(0, selector != 0 ? 5 : amount);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend only (#805) */
 /* GameConfigCallbackRegistryInit (FUN_0041fa20) clears the reference's
  * 0x3be-dword state block, stores the root name, sets the window title, and
  * installs init/tick/shutdown callbacks. The reset and game-config callbacks
@@ -553,6 +556,7 @@ void engine_game_config_callback_registry_init(const char* root)
         &engine_registered_shutdown_normal_callback);
     (void)window_runtime_callback_triplet_set(callbacks);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 namespace unported_ledger_stubs {
 /* Port model of 0x0041fa80 (GAME-021); the original-shape function is in lego_unit.c. */
@@ -793,6 +797,7 @@ void EnginePreTick(void)
      * intentional no-op in the checked-in decompile. */
     input_mirror_and_clear(input);
 }
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend only (#805) */
 /* Frame tick — corpus EngineTick @ 0x4232e0. The numbered structure below
  * mirrors finding 03 §"Tick structure" and the first 130 lines of the corpus.
  * Every subsystem ticker is a registered stub in tickers.cpp whose function
@@ -902,6 +907,7 @@ int EngineTick(EngineContext* ctx, float dt)
 
     return 1;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* AirSupplyAmountUpdate (FUN_00424560, finding 317): see level.hpp. The
  * stats read lands before the gate (corpus order); the corpus's float10
@@ -8727,6 +8733,7 @@ static int control_probe(uint32_t mask)
         game, mask, control_registry_predicate_dispatch, NULL);
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend only (#805) */
 static int engine_game_config_init_callback(void)
 {
     if (s_game_config_init_hook == NULL) return 0;
@@ -8751,6 +8758,7 @@ static void engine_registered_shutdown_loader_callback(void)
     if (s_callback_registry_context != NULL)
         EngineShutdown(s_callback_registry_context);
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static int m_edge(EngineContext* ctx, int key)
 {
