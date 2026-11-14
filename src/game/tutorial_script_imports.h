@@ -34,6 +34,22 @@ struct EntitySlot;
 struct LevelState;
 struct ViewProjectionAdapter;
 
+/* GAME-020 Interface.c (interface_unit.c): the menu icons' click counts,
+ * flashing and the advisor. */
+struct LegoObject;
+void interface_set_item_flash(int type, int on);             /* 0041e770 */
+void interface_set_object_item_flash(int objType, int objIndex,
+                                     int on);                /* 0041e7a0 */
+struct LegoObject* interface_get_primary_selected(void);     /* 0041e7e0 */
+unsigned int interface_set_item_clicks(int type,
+                                       unsigned int clicks); /* 0041e7f0 */
+unsigned int interface_get_item_clicks(int type);            /* 0041e810 */
+unsigned int interface_set_object_item_clicks(int objType, int objIndex,
+                                              unsigned int clicks); /* 0041e820 */
+unsigned int interface_get_object_item_clicks(int objType,
+                                              int objIndex); /* 0041e860 */
+int interface_set_advisor_item(int type, int loop);          /* 0041e890 */
+
 /* GAME-021 Lego.c (lego_unit.c, lego.cpp). */
 extern uint32_t legoGlobs_flags1;                  /* 00556ecc flags1 */
 extern struct Image* legoGlobs_TutorialIcon;       /* 0055645c TutorialIcon */
@@ -63,6 +79,13 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
 #define entity_transform_position_get_outputs legoobject_transform_position_get /* 00442260 */
 #define entity_position_to_terrain_cell_adapter legoobject_position_to_terrain_cell /* 004424f0 */
 #endif
+struct LegoObjGE_Point2F;
+void legoobject_build_placement_command_setup(int* cell, int id,
+                                              struct LegoObjGE_Point2F* world,
+                                              int update);  /* 00439370 */
+void legoobject_build_placement_alternate_command_setup(
+    int* cell, int id, struct LegoObjGE_Point2F* world,
+    int update);                                            /* 004394b0 */
 unsigned int legoobject_grid_record_count_get(int row, int column,
                                               int slot);    /* 004374a0 */
 void entity_transform_position_get_outputs(const struct EntitySlot* entity,
