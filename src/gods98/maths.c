@@ -43,8 +43,9 @@ float* MATHS_D3DRMAPI D3DRMVectorRotate(float* r, float* v, float* axis,
 
 /* The unit's .rdata, in original order. It opens with the 16-byte
  * {1, 2, 4, -1} table at 0049e910 that 19 gods98 objects share (finding
- * 505); like Config.c, the unit does not reproduce that table, because its
- * header of origin is not known. Zero and -1.0 stores are immediates in the
+ * 505). The table is d3drmdef.h's (finding 524), but the unit does not
+ * include the toolchain's DirectX 3 d3drm.h: it moves the symbol counter so
+ * that two exact functions fall (finding 646). Zero and -1.0 stores are immediates in the
  * original, so they use literals. */
 // GLOBAL: LEGORR 0x0049e920
 static const float s_maths_one = 1.0f;

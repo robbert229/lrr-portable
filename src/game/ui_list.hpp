@@ -28,12 +28,6 @@ struct UiOverlayInitSink {
                             int flags);
     void (*handle_store)(void* context, int which, void* handle);
 };
-/* Deviation (scoring only): superseded by game/panel_unit.h (GAME-032, finding 554), where
- * FUN_0045b740 and FUN_0045b850 take no arguments. Kept uncalled, renamed,
- * so the symbol count of every includer is unchanged (ADR 0005 entropy
- * rule 1). */
-void ui_scroll_info_panel_initialize_superseded(const UiOverlayInitSink* sink);
-void ui_overlay_create_configured_element_superseded(const UiOverlayInitSink* sink);
 typedef struct UiInfoPanelStringInit {
     int text_id;
     uint32_t slot;

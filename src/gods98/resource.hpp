@@ -226,28 +226,6 @@ void* resource_name_register_or_query_target(
     uint32_t* match_count_or_index); /* retail 0x00473bc0 ABI */
 int nested_record_list_remove_matching_key(void* owner, void* key,
                                            void* record); /* 0x0047b330 */
-typedef struct ResourceTreeCallbackContext {
-    int kind;
-    void* child_chain;
-    void* first_handle;
-    int shared_mode;
-    void* second_handle;
-    void** handles;
-    uint32_t handle_count;
-    void* owner;
-} ResourceTreeCallbackContext;
-/* Deviation (scoring only): the next three are superseded by
- * gods98/animclone.c (G98-025, finding 616): AnimClone_WalkTree,
- * AnimClone_Register and AnimClone_RegisterLws. Kept declared, with no
- * definition, for the symbol counter (finding 538, rule B). */
-uint32_t resource_tree_callback_count(void* object, int depth,
-                                      ResourceTreeCallback callback,
-                                      void* context); /* FUN_00489910 */
-ResourceTreeCallbackContext* resource_tree_callback_context_create_for_enumerator(
-    void* unused, void* owner, void* enumerator); /* FUN_00489520 */
-ResourceTreeCallbackContext* resource_tree_callback_context_create_for_resource(
-    void* unused, void* owner, void* resource); /* FUN_004895c0 */
-
 typedef struct ResourceFileTokenListOps {
     void* context;
     void (*directory_tree_scan)(void* context, const char* root,
@@ -371,12 +349,6 @@ short wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c8
 extern "C"
 #endif
 long wad_expand_payload(const void* header, void** out_payload); /* FUN_0049c7c0 */
-
-/* Deviation (scoring only): never defined. rnc.c's table clear (0049cf50)
- * takes an RNC_HuffEntry table and is declared in rnc.h. This C++
- * declaration is kept so that the symbol numbering of the files that
- * include this header does not move (finding 610). */
-void wad_huffman_table_clear(void* table, uint8_t count);
 
 /* Kind 1: flagged handle record, no stream buffer. Kind 0: carries the
  * 12-byte stream buffer behind; releases the record if it fails. */
@@ -601,10 +573,6 @@ void owned_object_release_hooks_set(OwnedObjectReleaseFn object_release,
                                     OwnedObjectReleaseFn scene_destroy,
                                     OwnedObjectReleaseFn node_free,
                                     void* user);
-#ifdef __cplusplus
-extern "C"
-#endif
-void owned_object_reference_chain_release_superseded(void* head); /* 0x00451c50 */
 int string_table_entry_install(const char* name);
 #ifdef __cplusplus
 extern "C"

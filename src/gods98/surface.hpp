@@ -751,7 +751,6 @@ void direct3drm_device_init_ops_set(const Direct3DRMDeviceInitOps* ops);
 extern "C" int direct3drm_device_initialize(void* adapter, uint32_t adapter_flags,
                                  void* surface, int force_single_mode); /* FUN_004781d0 */
 int direct3drm_device_mode_get(void);
-uint32_t surface_render_flags_peek(void);
 extern "C" void renderer_record_table_initialize(void); /* FUN_0047d410 */
 uint32_t renderer_record_table_word_peek(int index);
 void renderer_record_table_word_set(int index, uint32_t value);
@@ -767,22 +766,7 @@ extern "C" void directdraw_flip(void); /* FUN_0047c8d0 */
 #endif
 void surface_descriptor_initialize(void* record); /* FUN_0047e710 */
 /* The 2D drawing functions below are G98-019's, defined in draw.c
- * with the original signatures; draw.h is their C header. The port's old
- * drawing types (SurfacePixelWriteFn, SurfacePixelWriterTable,
- * SurfaceRasterContext, SurfacePixelSpan, SurfacePoint) and the undefined
- * surface_render_flags_peek and surface_pixel_writer_peek are no longer
- * used. Deviation (scoring only): they stay declared only to hold the declaration count (finding 506)
- * until the #388 relocation splits this header. */
-typedef void (*SurfacePixelWriteFn)(void* context, int x, int y,
-                                    uint32_t pixel);
-typedef struct SurfacePixelWriterTable {
-    SurfacePixelWriteFn writer8;
-    SurfacePixelWriteFn writer16_default;
-    SurfacePixelWriteFn writer16_mode1;
-    SurfacePixelWriteFn writer16_mode2;
-    SurfacePixelWriteFn writer24;
-    SurfacePixelWriteFn writer32;
-} SurfacePixelWriterTable;
+ * with the original signatures; draw.h is their C header. */
 extern "C" int surface_pixel_writer_select_by_format(
     int effect); /* FUN_00486690, draw.h */
 /* Draw_LockSurface (FUN_00486550): on success the surface stays locked
@@ -793,34 +777,15 @@ typedef void (*SurfaceWriterUnlockHook)(void* surface, int flags);
 void surface_writer_unlock_hook_set(SurfaceWriterUnlockHook hook);
 void surface_directdraw_unlock(void* surface); /* FUN_0047ded0 */
 extern "C" void surface_unlock_reset_pixel_writer(void* surf); /* FUN_00486650, draw.h */
-SurfacePixelWriteFn surface_pixel_writer_peek(void);
-typedef struct SurfaceRasterContext {
-    float left;
-    float top;
-    float right;
-    float bottom;
-    SurfacePixelWriteFn write_pixel;
-    void* context;
-} SurfaceRasterContext;
 extern "C" void surface_bresenham_line_walk_clipped(
     int32_t x1, int32_t y1, int32_t x2, int32_t y2,
     uint32_t colour); /* FUN_00486720, draw.h */
-typedef struct SurfacePixelSpan {
-    int x0;
-    int y0;
-    int x1;
-    int y1;
-} SurfacePixelSpan;
 extern "C" void surface_fill_pixel_spans(struct Area2F* rectList,
                               uint32_t count, float r, float g, float b,
                               int effect); /* FUN_00486090, draw.h */
 extern "C" void surface_fill_pixel_span_records(struct DrawRect* rectList,
                                      uint32_t count,
                                      int effect); /* FUN_00486210, draw.h */
-typedef struct SurfacePoint {
-    int x;
-    int y;
-} SurfacePoint;
 extern "C" void surface_draw_polyline(struct Point2F* fromList,
                            struct Point2F* toList, uint32_t count, float r,
                            float g, float b,

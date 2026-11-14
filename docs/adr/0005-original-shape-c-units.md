@@ -75,7 +75,8 @@ and down. The restructuring cannot avoid this. While it lasts:
 4. Every change made only to help the score carries the comment phrase
    `Deviation (scoring only)`, so that `git grep "Deviation (scoring only)"`
    lists them all. This covers declaration-only deviations (kept superseded
-   declarations, like those in `view.hpp` and `record.hpp`) and anything
+   declarations, like those #453 retired from `view.hpp` and `record.hpp`,
+   finding 646) and anything
    else that is not the original's. A scoring-only deviation must not change
    storage: no variable's size, alignment, order or section may differ from
    the original's (ADR 0006 decision 5). Named-section storage (`#pragma

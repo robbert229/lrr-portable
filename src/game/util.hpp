@@ -201,20 +201,6 @@ unsigned int string_queue_count_get(void);
 void string_queue_record_or_flush(uint32_t first, uint32_t second,
                                   uint32_t third, const char* text,
                                   int record); /* FUN_00410320 */
-/* Deviation (scoring only): superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
- * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1).
- * Renamed from callback_operation_run_and_return_status, which this extern "C"
- * block would otherwise clash with; a name costs no symbol. */
-struct CallbackOperationNode {
-    CallbackOperationNode* next;
-    void* payload;
-};
-typedef void (*CallbackOperationVisit)(void* stack_owner,
-                                       CallbackOperationNode* node,
-                                       int* status);
-int callback_operation_run_superseded(void* stack_owner,
-                                      CallbackOperationNode* first,
-                                      CallbackOperationVisit visit);
 typedef struct RecordCountRenderHooks {
     void* context;
     void (*style_set)(void* context, unsigned int slot, float first,

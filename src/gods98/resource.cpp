@@ -463,43 +463,6 @@ void owned_object_release_hooks_set(OwnedObjectReleaseFn object_release,
     s_owned_release_user = user;
 }
 
-/* Deviation (scoring only): superseded by GAME-026 (terrain_map.c) and uncalled; kept, renamed
- * (finding 556). The port's model of 0x00451c50. The reference chain is represented with
- * host-sized links; ownership bits keep the original two release gates. */
-void owned_object_reference_chain_release_superseded(void* head)
-{
-    struct OwnedObjectNodeModel {
-        void* primary;
-        void* field1;
-        void* secondary;
-        void* field3;
-        uint32_t flags;
-        uint32_t padding;
-        OwnedObjectNodeModel* next;
-    };
-    OwnedObjectNodeModel* node = (OwnedObjectNodeModel*)head;
-    unsigned int count = 0;
-    while (node != NULL && count++ < 4096u) {
-        OwnedObjectNodeModel* next = node->next;
-        if ((node->flags & 1u) == 0u) {
-            if (node->secondary != NULL && s_owned_object_release != NULL) {
-                s_owned_object_release(node->secondary, s_owned_release_user);
-            }
-            if (node->primary != NULL && s_owned_scene_destroy != NULL) {
-                s_owned_scene_destroy(node->primary, s_owned_release_user);
-            }
-        }
-        if ((node->flags & 2u) == 0u) {
-            if (s_owned_node_free != NULL) {
-                s_owned_node_free(node, s_owned_release_user);
-            } else {
-                engine_heap_free(node);
-            }
-        }
-        node = next;
-    }
-}
-
 int string_table_entry_install(const char* name)
 {
     if (name == NULL) return -1;

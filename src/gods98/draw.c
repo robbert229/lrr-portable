@@ -54,9 +54,11 @@ typedef struct DrawGlobs {
     uint32_t flags;               /* +0x48 00540830 */
 } DrawGlobs;
 
-/* The .rdata block opens with the {1, 2, 4, -1} header table at 0049ea10,
- * which is not reproduced, as in the other converted units. 0049ea2c is
- * the double's alignment. */
+/* The .rdata block opens with the {1, 2, 4, -1} header table at 0049ea10
+ * (d3drmdef.h, finding 524), which is not reproduced: the toolchain's
+ * DirectX 3 d3drm.h moves the symbol counter so that Draw_Pixel24 and
+ * viewport_subrectangle_set fall (finding 646). 0049ea2c is the double's
+ * alignment. */
 // GLOBAL: LEGORR 0x0049ea20
 static const float s_draw_zero = 0.0f;
 // GLOBAL: LEGORR 0x0049ea24

@@ -27,9 +27,6 @@ void* scene_object_subobject_resolve(void* owner, void* source, int index);
 
 extern QuadMeshRenderHooks s_quad_mesh_render_hooks;
 
-extern SceneObjectListApplyHook s_scene_object_list_apply_hook;
-extern void* s_scene_object_list_apply_context;
-
 int engine_context_grid_pick(EngineContext* ctx, const float* pos, int* gx, int* gy);
 float terrain_height(EngineContext* ctx, float x, float y);
 
