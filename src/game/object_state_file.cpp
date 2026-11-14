@@ -155,7 +155,9 @@ int osf_read_dirty_flag_get(const GameContext* ctx)
 {
     return ctx != NULL ? ctx->osf_dirty : 0;
 }
-// FUNCTION: LEGORR 0x004593e0
+
+/* The port's .osf writer, on the game context. */
+// PORT-ONLY: the port's context-based ObjectRecall_Save; the matching build has the original-shape 0x004593e0 above.
 int osf_write(GameContext* ctx, const char* path)
 {
     if (ctx == NULL || path == NULL) {
@@ -260,3 +262,40 @@ extern "C" int osf_read_original(const char* path)
 {
     return osf_read(entity_pool_callback_context_get(), path);
 }
+
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* ObjectRecall_Save (FUN_004593e0) in the original's shape: write the live
+ * recall table as `fname` ('RRSO', the count, then 0x14-byte entries), copy
+ * it to the shadow table (004592e0) and clear the shadow's dirty flag.
+ * FrontEnd.c's Front_Save_WriteSaveFile calls it through
+ * frontend_unit_link_names.h (#562, finding 642). 004592e0 takes the game
+ * context in the port, so the call goes through Objective.c's no-argument
+ * adapter. It follows the port's osf_read here, not before it: placed
+ * at 004593e0's address order it moves MSVC's symbol counter for osf_read
+ * (rule B, finding 558). */
+extern "C" void objective_osf_store_adapter(void);
+
+// GLOBAL: LEGORR 0x004ffe64
+static int s_osf_shadow_dirty;
+
+// FUNCTION: LEGORR 0x004593e0
+extern "C" int object_recall_save(const char* fname)
+{
+    GameFileHandle* file;
+    uint32_t header[2];
+
+    /* File_Open, File_Write and File_Close (0047f6e0, 0047fa50, 0047fac0)
+     * under their resource.hpp names (gods98/files.h). */
+    if ((file = game_file_open_dispatch(fname, "wb")) != NULL) {
+        header[0] = 0x534f5252; /* 'RRSO' */
+        header[1] = s_osf_live_count;
+        game_file_write(header, 4, 2, file);
+        game_file_write(s_osf_live_table, 0x14, s_osf_live_count, file);
+        game_file_close(file);
+        objective_osf_store_adapter();
+        s_osf_shadow_dirty = 0;
+        return 1;
+    }
+    return 0;
+}
+#endif

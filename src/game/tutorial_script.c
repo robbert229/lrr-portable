@@ -80,7 +80,9 @@ typedef int (*NERPsBlockPointerCallback)(NERPs_BlockPointer* blockPointer,
 typedef struct NERPs_Block {
     unsigned char pad_00[0x04];
     unsigned char blockPointer;       /* +0x04 */
-    unsigned char pad_05[0x28 - 0x05];
+    unsigned char pad_05[0x08 - 0x05];
+    unsigned int flags1;              /* +0x08 */
+    unsigned char pad_0c[0x28 - 0x0c];
     int tutorialBlockClicks;          /* +0x28 */
     int tutorialCrystals;             /* +0x2c */
     int tutorialOre;                  /* +0x30 */
@@ -106,7 +108,9 @@ typedef struct NERPs_Level {
 typedef struct NERPs_Object {
     int type;                         /* +0x000 */
     int id;                           /* +0x004 */
-    unsigned char pad_008[0x3f8 - 0x008];
+    unsigned char pad_008[0x334 - 0x008];
+    unsigned char* stats;             /* +0x334 ObjectStats */
+    unsigned char pad_338[0x3f8 - 0x338];
     int tutorialIcon;                 /* +0x3f8 */
 } NERPs_Object;
 
@@ -117,6 +121,23 @@ typedef struct NERPs_Vector3F {
 typedef struct NERPs_Point2I {
     int x, y;
 } NERPs_Point2I;
+
+/* The tutorial-block search (0x2c bytes): the tutorial rows pass one to the
+ * action callback 00456d00, which passes another to LegoObject.c's
+ * object-list walk for the object searches. */
+typedef struct NERPs_TutorialSearch {
+    int action;                       /* +0x00: 00456d00's case */
+    unsigned int index;               /* +0x04: the block-pointer list */
+    int count;                        /* +0x08: the row's result */
+    int f_0c;                         /* +0x0c */
+    int f_10;                         /* +0x10 */
+    int x;                            /* +0x14 */
+    int y;                            /* +0x18 */
+    int f_1c;                         /* +0x1c */
+    int checkType;                    /* +0x20 */
+    struct NERPs_Object* found;       /* +0x24 */
+    int objType;                      /* +0x28 */
+} NERPs_TutorialSearch;
 
 /* The "next" button acknowledgement (004a6740). */
 typedef struct NERPs_Next {
@@ -215,6 +236,7 @@ int nerpfunc_get_go_back_icon_clicked(unsigned int* stack);
 int nerpfunc_flash_go_back_icon(unsigned int* stack);
 int nerpfunc_set_level_completed(unsigned int* stack);
 int nerpfunc_set_level_fail(unsigned int* stack);
+int nerpfunc_set_tutorial_pointer(unsigned int* stack);
 unsigned int nerps_set_object_icon_clicks(const char* name,
                                           unsigned int clicks);
 int nerps_flash_object_icon(const char* name, int on);
@@ -337,6 +359,23 @@ void nerps_free_block_pointers(void);
 void nerps_block_pointer_enumerate(int index,
                                    NERPsBlockPointerCallback callback,
                                    void* data);
+int nerps_tutorial_action_callback(NERPs_BlockPointer* blockPointer,
+                                   unsigned int x, unsigned int y,
+                                   void* data);
+int nerps_object_at_tutorial_block_callback(NERPs_Object* obj, void* data);
+int nerps_tutorial_icon_object_callback(NERPs_Object* obj, void* data);
+int nerpfunc_make_someone_on_this_block_pick_up_something_on_this_block(unsigned int* stack);
+void nerps_set_tutorial_pointer(unsigned int index, int on);
+int nerpfunc_set_congregation_at_tutorial(unsigned int* stack);
+int nerpfunc_set_rock_monster_at_tutorial(unsigned int* stack);
+int nerpfunc_set_camera_goto_tutorial(unsigned int* stack);
+int nerpfunc_get_camera_at_tutorial(unsigned int* stack);
+int nerpfunc_get_tutorial_block_is_ground(unsigned int* stack);
+int nerpfunc_get_tutorial_block_is_path(unsigned int* stack);
+int nerpfunc_set_tutorial_block_is_ground(unsigned int* stack);
+int nerpfunc_set_tutorial_block_is_path(unsigned int* stack);
+int nerpfunc_get_unit_at_block(unsigned int* stack);
+int nerpfunc_get_monster_at_tutorial(unsigned int* stack);
 
 /* The table's functions that are not rebuilt yet: port-tail adapters. */
 #define NERPS_PORT_FUNCTION(name, row) int nerps_port_##name(unsigned int* stack);
@@ -532,7 +571,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7a68
     { "FlashMountIcon", nerpfunc_flash_mount_icon, 4 },
     // STRING: LEGORR 0x004a7a54
-    { "SetTutorialPointer", nerps_port_SetTutorialPointer, 5 },
+    { "SetTutorialPointer", nerpfunc_set_tutorial_pointer, 5 },
     // STRING: LEGORR 0x004a7a40
     { "GetTutorialFlags", nerpfunc_get_tutorial_flags, 0 },
     // STRING: LEGORR 0x004a7a2c
@@ -576,9 +615,9 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7898
     { "GetPathsBuilt", nerps_port_GetPathsBuilt, 0 },
     // STRING: LEGORR 0x004a787c
-    { "GetTutorialBlockIsGround", nerps_port_GetTutorialBlockIsGround, 1 },
+    { "GetTutorialBlockIsGround", nerpfunc_get_tutorial_block_is_ground, 1 },
     // STRING: LEGORR 0x004a7864
-    { "SetCameraGotoTutorial", nerps_port_SetCameraGotoTutorial, 4 },
+    { "SetCameraGotoTutorial", nerpfunc_set_camera_goto_tutorial, 4 },
     // STRING: LEGORR 0x004a7850
     { "FlashDynamiteIcon", nerpfunc_flash_dynamite_icon, 4 },
     // STRING: LEGORR 0x004a783c
@@ -592,7 +631,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a77dc
     { "GetChromeCrusherSelected", nerpfunc_get_chrome_crusher_selected, 0 },
     // STRING: LEGORR 0x004a77c4
-    { "GetTutorialBlockIsPath", nerps_port_GetTutorialBlockIsPath, 1 },
+    { "GetTutorialBlockIsPath", nerpfunc_get_tutorial_block_is_path, 1 },
     // STRING: LEGORR 0x004a77a8
     { "GetGunstationIconClicked", nerpfunc_get_gunstation_icon_clicked, 0 },
     // STRING: LEGORR 0x004a778c
@@ -620,9 +659,9 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7664
     { "GetUpgradeStationsBuilt", nerps_port_GetUpgradeStationsBuilt, 0 },
     // STRING: LEGORR 0x004a7648
-    { "SetTutorialBlockIsGround", nerps_port_SetTutorialBlockIsGround, 5 },
+    { "SetTutorialBlockIsGround", nerpfunc_set_tutorial_block_is_ground, 5 },
     // STRING: LEGORR 0x004a7630
-    { "SetTutorialBlockIsPath", nerps_port_SetTutorialBlockIsPath, 5 },
+    { "SetTutorialBlockIsPath", nerpfunc_set_tutorial_block_is_path, 5 },
     // STRING: LEGORR 0x004a761c
     { "CameraLockOnObject", nerps_port_CameraLockOnObject, 4 },
     // STRING: LEGORR 0x004a760c
@@ -634,7 +673,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a75dc
     { "CameraRotate", nerps_port_CameraRotate, 4 },
     // STRING: LEGORR 0x004a75c8
-    { "GetCameraAtTutorial", nerps_port_GetCameraAtTutorial, 1 },
+    { "GetCameraAtTutorial", nerpfunc_get_camera_at_tutorial, 1 },
     // STRING: LEGORR 0x004a75b0
     { "GetSelectedRecordObject", nerps_port_GetSelectedRecordObject, 0 },
     // STRING: LEGORR 0x004a7594
@@ -666,7 +705,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7470
     { "FlashGetLaserIcon", nerpfunc_flash_get_laser_icon, 4 },
     // STRING: LEGORR 0x004a7454
-    { "SetRockMonsterAtTutorial", nerps_port_SetRockMonsterAtTutorial, 4 },
+    { "SetRockMonsterAtTutorial", nerpfunc_set_rock_monster_at_tutorial, 4 },
     // STRING: LEGORR 0x004a7438
     { "GetCallToArmsButtonClicked", nerps_port_GetCallToArmsButtonClicked, 0 },
     // STRING: LEGORR 0x004a741c
@@ -728,7 +767,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a71b8
     { "GetMonstersOnLevel", nerps_port_GetMonstersOnLevel, 0 },
     // STRING: LEGORR 0x004a719c
-    { "SetCongregationAtTutorial", nerps_port_SetCongregationAtTutorial, 5 },
+    { "SetCongregationAtTutorial", nerpfunc_set_congregation_at_tutorial, 5 },
     // STRING: LEGORR 0x004a7188
     { "SetObjectiveSwitch", nerpfunc_set_objective_switch, 4 },
     // STRING: LEGORR 0x004a7174
@@ -742,7 +781,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a7118
     { "GetRapidRidersOnLevel", nerps_port_GetRapidRidersOnLevel, 0 },
     // STRING: LEGORR 0x004a7108
-    { "GetUnitAtBlock", nerps_port_GetUnitAtBlock, 1 },
+    { "GetUnitAtBlock", nerpfunc_get_unit_at_block, 1 },
     // STRING: LEGORR 0x004a70ec
     { "GetSmallHelicoptersOnLevel", nerps_port_GetSmallHelicoptersOnLevel, 0 },
     // STRING: LEGORR 0x004a70cc
@@ -770,7 +809,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a6fec
     { "SetCrystalPriority", nerps_port_SetCrystalPriority, 4 },
     // STRING: LEGORR 0x004a6fb8
-    { "MakeSomeoneOnThisBlockPickUpSomethingOnThisBlock", nerps_port_MakeSomeoneOnThisBlockPickUpSomethingOnThisBlock, 4 },
+    { "MakeSomeoneOnThisBlockPickUpSomethingOnThisBlock", nerpfunc_make_someone_on_this_block_pick_up_something_on_this_block, 4 },
     // STRING: LEGORR 0x004a6fa4
     { "SetTrainIconClicked", nerpfunc_set_train_icon_clicked, 4 },
     // STRING: LEGORR 0x004a6f90
@@ -870,7 +909,7 @@ NERPsFunctionSignature nerpsFunctions[] = {
     // STRING: LEGORR 0x004a6afc
     { "FlashDropSonicBlasterIcon", nerpfunc_flash_drop_sonic_blaster_icon, 4 },
     // STRING: LEGORR 0x004a6ae4
-    { "GetMonsterAtTutorial", nerps_port_GetMonsterAtTutorial, 1 },
+    { "GetMonsterAtTutorial", nerpfunc_get_monster_at_tutorial, 1 },
     // STRING: LEGORR 0x004a6acc
     { "SetMonsterAttackNowt", nerps_port_SetMonsterAttackNowt, 4 },
     // STRING: LEGORR 0x004a6ab0
@@ -980,6 +1019,9 @@ static unsigned int nerpsIconWidth = 20;
 static unsigned int nerpsIconSpace = 40;
 // GLOBAL: LEGORR 0x004a6768
 static int nerpsCurrentSound = -1;
+/* The tutorial rows' block-pointer callback, read through this pointer. */
+// GLOBAL: LEGORR 0x004a676c
+static NERPsBlockPointerCallback nerpsTutorialActionCallback = nerps_tutorial_action_callback;
 
 // GLOBAL: LEGORR 0x004ff958
 static NERPs_RuntimeGlobs nerpsruntimeGlobs;
@@ -1516,6 +1558,13 @@ int nerpfunc_set_level_completed(unsigned int* stack)
 int nerpfunc_set_level_fail(unsigned int* stack)
 {
     if (!(legoGlobs_flags1 & 0x8000000)) objective_announce_current(2);
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00454bb0
+int nerpfunc_set_tutorial_pointer(unsigned int* stack)
+{
+    nerps_set_tutorial_pointer(stack[0], stack[1]);
     return 1;
 }
 
@@ -2451,6 +2500,348 @@ void nerps_block_pointer_enumerate(int index, NERPsBlockPointerCallback callback
 
     while (blockPointer != NULL && callback(blockPointer, blockPointer->x, blockPointer->y, data))
         blockPointer = blockPointer->next;
+}
+
+/* NERPs_TutorialActionCallback: the tutorial rows' block-pointer callback
+ * (00456d00, through 004a676c). It acts on one tutorial block for the
+ * search's action and always continues the walk. */
+// FUNCTION: LEGORR 0x00456d00
+int nerps_tutorial_action_callback(NERPs_BlockPointer* blockPointer,
+                                   unsigned int x, unsigned int y,
+                                   void* data)
+{
+    NERPs_TutorialSearch* search = (NERPs_TutorialSearch*)data;
+    NERPs_Level* level = NERPS_LEVEL();
+    NERPs_Point2I blockPos;
+    NERPs_Point2I cameraBlockPos;
+    NERPs_Vector3F cameraPos;
+    NERPs_Object* object;
+
+    blockPos.x = x;
+    blockPos.y = y;
+    switch (search->action) {
+    case 1: /* GetTutorialBlockIsGround */
+        search->count += level->blocks[y * level->width + x].flags1 & 8;
+        return 1;
+    case 2: /* SetTutorialBlockIsGround: Level_DestroyWall */
+        lego_terrain_cell_mutate((struct Lego_Level*)level_current_owner_get(), x, y, 0);
+        return 1;
+    case 3: /* GetTutorialBlockIsPath */
+        search->count += level_cell_occupied_at_current(&blockPos.x);
+        return 1;
+    case 4: /* SetTutorialBlockIsPath */
+        level->blocks[y * level->width + x].flags1 &= ~3;
+        terrain_cell_state_update_current(&blockPos.x);
+        terrain_cell_variant_flag_propagate_current(&blockPos.x);
+        return 1;
+    case 5: /* SetCameraGotoTutorial */
+        lego_viewport_target_position_clamp(NULL, &blockPos.x, 1);
+        return 1;
+    case 6: /* GetCameraAtTutorial */
+        ddiscene_object_position_get(*(void**)((char*)s_zoom_step_context + 0x2c),
+                                     NULL, &cameraPos.x);
+        terrain_map_world_to_block(level->map, cameraPos.x, cameraPos.y,
+                                   &cameraBlockPos.x, &cameraBlockPos.y);
+        if (blockPos.x == cameraBlockPos.x && blockPos.y == cameraBlockPos.y) {
+            search->count = 1;
+            return 1;
+        }
+        break;
+    case 7: /* SetRockMonsterAtTutorial */
+    {
+        unsigned int type = active_engine_field_b0_get_current();
+        object = (NERPs_Object*)legoobject_creature_spawn_from_emergence(
+            (char*)legoGlobs_rockMonsterData + type * 0x74, 3, type,
+            blockPos.x, blockPos.y);
+        if (object != NULL) {
+            *(float*)(object->stats + 0xe8) = 60.0f;
+            return 1;
+        }
+        break;
+    }
+    case 8: /* SetCongregationAtTutorial(on) */
+        aitask_coordinate_pair_task_record_queue(&blockPos.x);
+        return 1;
+    case 9: /* SetCongregationAtTutorial(off) */
+        aitask_task_registry_remove_type0_entry_by_pair(&blockPos.x);
+        return 1;
+    case 10: /* GetUnitAtBlock */
+    {
+        NERPs_TutorialSearch objectSearch;
+
+            memset(&objectSearch, 0, sizeof(objectSearch));
+            objectSearch.x = x;
+            objectSearch.y = y;
+            legoobject_run_through_lists_skip_upgrade_parts(
+                (int (*)(struct Lego_Object*, void*))nerps_object_at_tutorial_block_callback,
+                &objectSearch);
+            search->count += objectSearch.count;
+            return 1;
+    }
+    case 11: /* SetTutorialPointer: the icon object's flag */
+    {
+        NERPs_TutorialSearch objectSearch;
+
+            memset(&objectSearch, 0, sizeof(objectSearch));
+            objectSearch.x = x;
+            objectSearch.y = y;
+            objectSearch.f_1c = 1;
+            legoobject_run_through_lists_skip_upgrade_parts(
+                (int (*)(struct Lego_Object*, void*))nerps_tutorial_icon_object_callback,
+                &objectSearch);
+            return 1;
+    }
+    case 12: /* MakeSomeoneOnThisBlockPickUpSomethingOnThisBlock */
+    {
+        NERPs_TutorialSearch objectSearch;
+
+            memset(&objectSearch, 0, sizeof(objectSearch));
+            objectSearch.x = x;
+            objectSearch.y = y;
+            objectSearch.checkType = 1;
+            objectSearch.objType = 2;
+            legoobject_run_through_lists_skip_upgrade_parts(
+                (int (*)(struct Lego_Object*, void*))nerps_object_at_tutorial_block_callback,
+                &objectSearch);
+            if (objectSearch.count != 0) {
+                object = objectSearch.found;
+                objectSearch.objType = 6;
+                legoobject_run_through_lists_skip_upgrade_parts(
+                    (int (*)(struct Lego_Object*, void*))nerps_object_at_tutorial_block_callback,
+                    &objectSearch);
+                if (objectSearch.count != 0) {
+                    legoobject_gated_step_command_issue((struct Lego_Object*)object,
+                        (struct Lego_Object*)objectSearch.found);
+                    return 1;
+                }
+            }
+            break;
+    }
+    case 13: /* GetMonsterAtTutorial */
+    {
+        NERPs_TutorialSearch monsterSearch;
+
+        memset(&monsterSearch, 0, sizeof(monsterSearch));
+        monsterSearch.x = x;
+        monsterSearch.y = y;
+        legoobject_run_through_lists_skip_upgrade_parts(
+            (int (*)(struct Lego_Object*, void*))nerps_object_at_tutorial_block_callback,
+            &monsterSearch);
+        search->count += monsterSearch.count;
+        break;
+    }
+    }
+    return 1;
+}
+
+/* The object search: count the objects on the search's block, or, when it
+ * checks the type, stop at the first of the search's type. */
+// FUNCTION: LEGORR 0x00457060
+int nerps_object_at_tutorial_block_callback(NERPs_Object* obj, void* data)
+{
+    NERPs_Point2I blockPos;
+
+    if (obj != NULL) {
+        entity_position_to_terrain_cell_adapter((struct EntitySlot*)obj, &blockPos.x, &blockPos.y);
+        if (blockPos.x == ((NERPs_TutorialSearch*)data)->x && blockPos.y == ((NERPs_TutorialSearch*)data)->y) {
+            if (((NERPs_TutorialSearch*)data)->checkType && obj->type == ((NERPs_TutorialSearch*)data)->objType) {
+                ((NERPs_TutorialSearch*)data)->found = obj;
+                ((NERPs_TutorialSearch*)data)->count = 1;
+                return 1;
+            }
+            ((NERPs_TutorialSearch*)data)->count++;
+        }
+    }
+    return 0;
+}
+
+/* Flag the object on the search's block as the tutorial icon's, clear the
+ * flag on the others. */
+// FUNCTION: LEGORR 0x004570d0
+int nerps_tutorial_icon_object_callback(NERPs_Object* obj, void* data)
+{
+    NERPs_Point2I blockPos;
+
+    if (obj != NULL) {
+        entity_position_to_terrain_cell_adapter((struct EntitySlot*)obj, &blockPos.x, &blockPos.y);
+        if (blockPos.x == ((NERPs_TutorialSearch*)data)->x && blockPos.y == ((NERPs_TutorialSearch*)data)->y) {
+            obj->tutorialIcon = 1;
+            return 0;
+        }
+        obj->tutorialIcon = 0;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00457130
+int nerpfunc_make_someone_on_this_block_pick_up_something_on_this_block(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.count = 0;
+    search.index = stack[0];
+    search.action = 0xc;
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
+}
+
+/* NERPs_SetTutorialPointer: mark the list's blocks with the pointer (or
+ * clear them), run action 11 over them, then flag the tutorial icon's
+ * object if it stands on one. */
+// FUNCTION: LEGORR 0x00457170
+void nerps_set_tutorial_pointer(unsigned int index, int on)
+{
+    NERPs_Level* level = NERPS_LEVEL();
+    NERPs_BlockPointer* blockPointer = nerps_get_block_pointer(level, index);
+    NERPs_Point2I blockPos;
+    NERPs_TutorialSearch search;
+
+    while (blockPointer != NULL) {
+        if (on == 1) {
+            level->blocks[level->width * blockPointer->y + blockPointer->x].blockPointer =
+                (unsigned char)index;
+            search.index = index;
+            search.count = 0;
+            search.action = 0xb;
+            nerps_block_pointer_enumerate(index, nerpsTutorialActionCallback, &search);
+        }
+        if (on == 0)
+            level->blocks[level->width * blockPointer->y + blockPointer->x].blockPointer = 0;
+        blockPointer = blockPointer->next;
+    }
+
+    if (nerpsGlobs.tutorialIconObject != 0) {
+        void* object;
+
+        if (lego_object_pointer_registry_get_slot(nerpsGlobs.tutorialIconObject - 1,
+                                                  &object)) {
+            entity_position_to_terrain_cell_adapter((struct EntitySlot*)object,
+                                                    &blockPos.x, &blockPos.y);
+            search.x = blockPos.x;
+            search.y = blockPos.y;
+            nerps_tutorial_icon_object_callback((NERPs_Object*)object, &search);
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x00457260
+int nerpfunc_set_congregation_at_tutorial(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.count = 0;
+    search.index = stack[0];
+    search.action = stack[1] ? 8 : 9;
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x004572a0
+int nerpfunc_set_rock_monster_at_tutorial(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.action = 7;
+    search.count = 0;
+    search.index = stack[0];
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x004572e0
+int nerpfunc_set_camera_goto_tutorial(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.action = 5;
+    search.count = 0;
+    search.index = stack[0];
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x00457320
+int nerpfunc_get_camera_at_tutorial(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.action = 6;
+    search.count = 0;
+    search.index = stack[0];
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x00457360
+int nerpfunc_get_tutorial_block_is_ground(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.action = 1;
+    search.count = 0;
+    search.index = stack[0];
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x004573a0
+int nerpfunc_get_tutorial_block_is_path(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.action = 3;
+    search.count = 0;
+    search.index = stack[0];
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x004573e0
+int nerpfunc_set_tutorial_block_is_ground(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.action = 2;
+    search.count = 0;
+    search.index = stack[0];
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x00457420
+int nerpfunc_set_tutorial_block_is_path(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.action = 4;
+    search.count = 0;
+    search.index = stack[0];
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x00457460
+int nerpfunc_get_unit_at_block(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.action = 0xa;
+    search.count = 0;
+    search.index = stack[0];
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
+}
+
+// FUNCTION: LEGORR 0x004574a0
+int nerpfunc_get_monster_at_tutorial(unsigned int* stack)
+{
+    NERPs_TutorialSearch search;
+
+    search.action = 0xd;
+    search.count = 0;
+    search.index = stack[0];
+    nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
+    return search.count;
 }
 
 #ifdef __cplusplus

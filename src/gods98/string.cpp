@@ -17,8 +17,11 @@ extern "C" int __cdecl _flsbuf(int value, FILE* stream);
 #endif
 
 /* FormattedTextBufferBuild (FUN_0048e1e0): VC5 builds use output.obj's
- * __output with a string-backed FILE; other builds use bounded vsnprintf. */
-// FUNCTION: LEGORR 0x0048E1E0
+ * __output with a string-backed FILE; other builds use bounded vsnprintf.
+ * The original's 0048e1e0 is VC5 LIBC.LIB's _vsprintf, which the matching
+ * build links and the original's callers call (#562, finding 642). */
+// LIBRARY: LEGORR 0x0048e1e0 SYMBOL
+// _vsprintf
 uint32_t formatted_text_buffer_build(char* out, size_t capacity,
                                      const char* format, va_list args)
 {

@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -88,6 +90,60 @@ class RelinkCommandTests(unittest.TestCase):
     def test_needs_one_link_command(self):
         with self.assertRaises(ValueError):
             opt.relink_command("echo nothing\n", Path("/s"))
+
+    def test_noref_keeps_debug_and_replaces_opt(self):
+        link = self.LINK.replace("/DEBUG", "/OPT:REF /OPT:NOICF /DEBUG")
+        cmd = opt.relink_command(link, Path("/s"), noref=True)
+        self.assertIn("/DEBUG", cmd)
+        self.assertIn("/pdb:/s/LegoRR.pdb", cmd)
+        self.assertNotIn("/OPT:REF", cmd)
+        self.assertNotIn("/OPT:NOICF", cmd)
+        self.assertEqual(cmd[-1], "/OPT:NOREF")
+
+
+class SwitchedGateTests(unittest.TestCase):
+    """After the gate links with /OPT:REF (finding 642)."""
+
+    def test_unmapped_annotations(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "src").mkdir()
+            (root / "src/a.c").write_text(
+                "// FUNCTION: LEGORR 0x00401000\nint f(void) { return 0; }\n"
+                "// FUNCTION: LEGORR 0x00401100\nint g(void) { return 0; }\n"
+                "// LIBRARY: LEGORR 0x00490000 SYMBOL\n// __static\n", encoding="utf-8")
+            report = root / "report"
+            report.mkdir()
+            (report / "entities.json").write_text(json.dumps([
+                {"orig": 0x401000, "recomp": 0x401000, "type": 1},   # mapped
+                {"orig": 0x401100, "recomp": None, "type": 1},       # removed
+                {"orig": 0x490000, "recomp": None, "type": 1},       # LIBC static
+                {"orig": 0x499660, "recomp": None, "type": 1},       # not annotated
+                {"orig": 0x401100, "recomp": None, "type": 2},       # not a function
+            ]), encoding="utf-8")
+            self.assertEqual(opt.unmapped_annotations(report, root), [0x401100])
+            self.assertEqual(opt.unmapped_annotations(root / "missing", root), [])
+
+    def test_translate_rows(self):
+        entries = link_order.parse(LIST)
+        rows = [{"address": "0x401000", "recomp": "0x401000"},   # advisor_init
+                {"address": "0x401200", "recomp": "0x401020"},   # WinMain in REF
+                {"address": "0x401300"}]
+        moved = opt.translate_rows(rows, REF, GATE, entries)
+        self.assertEqual([r["recomp"] for r in moved], ["0x401000", "0x401060"])
+        self.assertIsNone(opt.translate_rows(None, REF, GATE, entries))
+
+    def test_gate_link_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            build = Path(tmp)
+            self.assertFalse(opt.gate_removes_unreferenced(build))
+            link = build / "CMakeFiles/program.dir/link.txt"
+            link.parent.mkdir(parents=True)
+            link.write_text(RelinkCommandTests.LINK, encoding="utf-8")
+            self.assertFalse(opt.gate_removes_unreferenced(build))
+            link.write_text(RelinkCommandTests.LINK.replace("/DEBUG", "/OPT:REF /DEBUG"),
+                            encoding="utf-8")
+            self.assertTrue(opt.gate_removes_unreferenced(build))
 
 
 class RemovedCodeTests(unittest.TestCase):

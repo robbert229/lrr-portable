@@ -47,9 +47,27 @@ that mode and measures what it removes.
         root). Callers include functions whose code holds a pointer to the
         callee (callbacks).
 
+    python3 tools/opt_ref_link.py relink --noref [--build build-reccmp]
+        [--out build-reccmp/opt-noref]
+        The gate's link with ``/DEBUG`` kept and every ``/OPT`` option
+        replaced by ``/OPT:NOREF``: what the gate would hold if LINK kept
+        every COMDAT. Since the gate itself links with ``/OPT:REF
+        /OPT:NOICF`` (#562, finding 642), ``measure`` and ``callers`` compare
+        this link with the gate.
+
+**After the switch (finding 642).** The gate's link already removes what
+nothing references, so the no-``/DEBUG`` relink differs from it only by the
+debug directory. ``measure`` then reports what the gate's ``/OPT:REF``
+removes against the ``--noref`` relink, and counts as removed the annotated
+functions Reccmp cannot map (the gate report's annotations without a rebuilt
+address, apart from ``LIBRARY`` symbols). Their exactness is unknown
+(``removed_exact`` is null). ``callers`` takes the same removed set, so its
+causes still name the live original callers that call a port substitute.
+The ``image`` record stays the no-``/DEBUG`` relink: the original's mode.
+
 ``binary_progress.py`` records ``measure``'s result as ``opt_ref`` in
 ``binary-progress.json`` when the relink exists; ``make match-progress``
-runs ``relink`` first.
+runs ``relink`` (and ``relink --noref``) first.
 """
 
 from __future__ import annotations
@@ -59,6 +77,7 @@ import bisect
 import collections
 import difflib
 import json
+import re
 import shlex
 import subprocess
 import sys
@@ -72,6 +91,8 @@ import winapi_link_audit  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BUILD = ROOT / "build-reccmp"
 OUT_NAME = "opt-ref"
+NOREF_NAME = "opt-noref"
+FUNCTION_RE = re.compile(r"//\s*(?:FUNCTION|STUB):\s+LEGORR\s+0x([0-9a-fA-F]+)")
 CATEGORIES = ("original_annotated", "port_unit", "port_legacy", "port_tail", "libc",
               "import_thunks", "other")
 
@@ -81,12 +102,16 @@ CATEGORIES = ("original_annotated", "port_unit", "port_legacy", "port_tail", "li
 
 
 def relink_command(link_text: str, out: Path, keep_debug: bool = False,
-                   flags: tuple[str, ...] = ()) -> list[str]:
+                   flags: tuple[str, ...] = (), noref: bool = False) -> list[str]:
     """The gate's link command, with outputs in ``out`` and the link mode changed.
 
     ``link_text`` is CMake's ``link.txt``. Without ``keep_debug`` the command
     loses ``/DEBUG`` and ``/pdb:``, so LINK 5.0 applies ``/OPT:REF``.
+    ``noref`` keeps ``/DEBUG`` and replaces every ``/OPT`` option with
+    ``/OPT:NOREF``: every COMDAT stays.
     """
+    if noref:
+        keep_debug = True
     lines = [l for l in link_text.splitlines() if "/out:" in l.lower()]
     if len(lines) != 1:
         raise ValueError("link.txt must hold exactly one link command with /out:")
@@ -98,13 +123,47 @@ def relink_command(link_text: str, out: Path, keep_debug: bool = False,
         low = token.lower()
         if not keep_debug and (low == "/debug" or low.startswith("/pdb:")):
             continue
+        if noref and low.startswith("/opt:"):
+            continue
         prefix = next((p for p in replace if low.startswith(p)), None)
         command.append(token[:len(prefix)] + str(replace[prefix]) if prefix else token)
-    return command + list(flags)
+    return command + (["/OPT:NOREF"] if noref else []) + list(flags)
+
+
+def gate_removes_unreferenced(build: Path) -> bool:
+    """Whether the gate's own link applies ``/OPT:REF`` (finding 642)."""
+    link = build / "CMakeFiles/program.dir/link.txt"
+    if not link.is_file():
+        return False
+    return any(t.lower() == "/opt:ref" for t in link.read_text(encoding="utf-8").split())
+
+
+def unmapped_annotations(report_dir: Path, root: Path = ROOT) -> list[int]:
+    """Original addresses of the annotated functions Reccmp could not map.
+
+    They are the function entities of the report's ``entities.json`` with an
+    original address and no rebuilt one, at an address that a ``FUNCTION``
+    (or ``STUB``) annotation under ``src/`` names: an annotated function that
+    is not in the linked image. ``LIBRARY`` annotations of LIBC statics, which
+    have no PDB symbol to map, and Reccmp's other original-only entities are
+    left out.
+    """
+    path = report_dir / "entities.json"
+    if not path.is_file():
+        return []
+    annotated = set()
+    for source in (root / "src").rglob("*"):
+        if source.suffix.lower() in (".c", ".cpp", ".h", ".hpp") and source.is_file():
+            for m in FUNCTION_RE.finditer(source.read_text(encoding="utf-8", errors="replace")):
+                annotated.add(int(m.group(1), 16))
+    entities = json.loads(path.read_text(encoding="utf-8"))
+    return sorted({e["orig"] for e in entities
+                   if e.get("type") == 1 and e.get("recomp") is None
+                   and e.get("orig") in annotated})
 
 
 def relink(build: Path, out: Path, keep_debug: bool = False,
-           flags: tuple[str, ...] = ()) -> int:
+           flags: tuple[str, ...] = (), noref: bool = False) -> int:
     link = build / "CMakeFiles/program.dir/link.txt"
     if not link.is_file():
         print(f"missing {link}; build the matching build first (make reccmp-report)",
@@ -113,7 +172,8 @@ def relink(build: Path, out: Path, keep_debug: bool = False,
     out.mkdir(parents=True, exist_ok=True)
     for name in ("LegoRR.exe", "LegoRR.map", "LegoRR.pdb", "LegoRR.lib", "LegoRR.exp"):
         (out / name).unlink(missing_ok=True)
-    command = relink_command(link.read_text(encoding="utf-8"), out.resolve(), keep_debug, flags)
+    command = relink_command(link.read_text(encoding="utf-8"), out.resolve(), keep_debug,
+                             flags, noref)
     result = subprocess.run(command, cwd=build)
     if result.returncode or not (out / "LegoRR.map").is_file():
         print(f"relink failed ({result.returncode})", file=sys.stderr)
@@ -237,15 +297,56 @@ def load_rows(path: Path) -> list[dict] | None:
     return data["data"] if isinstance(data, dict) else data
 
 
+def translate_rows(rows: list[dict] | None, from_map: str, to_map: str,
+                   entries) -> list[dict] | None:
+    """Report rows with their rebuilt addresses moved from one link's map to
+    another's, by (name, object); rows without a counterpart are dropped."""
+    if rows is None:
+        return None
+    src = {s["address"]: key for key, s in text_symbols(from_map, entries, None).items()}
+    dst = {key: s["address"] for key, s in text_symbols(to_map, entries, None).items()}
+    out = []
+    for r in rows:
+        if not r.get("recomp"):
+            continue
+        key = src.get(int(r["recomp"], 16))
+        if key in dst:
+            out.append({**r, "recomp": f"{dst[key]:#x}"})
+    return out
+
+
 def measure(build: Path, out: Path, original: Path | None = None,
-            report_dir: Path | None = None) -> dict:
-    """The ``opt_ref`` record of ``binary-progress.json``."""
+            report_dir: Path | None = None, noref: Path | None = None) -> dict:
+    """The ``opt_ref`` record of ``binary-progress.json``.
+
+    Before the switch (finding 642) it compares the gate with ``out``, the
+    no-``/DEBUG`` relink. Once the gate links with ``/OPT:REF`` and the
+    ``--noref`` relink exists, it compares that relink with the gate instead.
+    """
     report_dir = report_dir or build / "reccmp-report"
+    noref = noref or build / NOREF_NAME
     gate_map = (build / "LegoRR.map").read_text(encoding="latin-1")
     ref_map = (out / "LegoRR.map").read_text(encoding="latin-1")
     entries = link_order.load()
-    result = removed_code(gate_map, ref_map, entries, load_rows(report_dir / "results.json"),
-                          load_rows(report_dir / "game-only.json"))
+    rows = load_rows(report_dir / "results.json")
+    game_rows = load_rows(report_dir / "game-only.json")
+    if gate_removes_unreferenced(build) and (noref / "LegoRR.map").is_file():
+        noref_map = (noref / "LegoRR.map").read_text(encoding="latin-1")
+        result = removed_code(noref_map, gate_map, entries,
+                              translate_rows(rows, gate_map, noref_map, entries),
+                              translate_rows(game_rows, gate_map, noref_map, entries))
+        lost = unmapped_annotations(report_dir)
+        for view, report_rows in (("full", rows), ("game_only", game_rows)):
+            if report_rows is not None:
+                mapped = [r for r in report_rows if r.get("recomp")]
+                result.setdefault("annotated", {})[view] = {
+                    "mapped": len(mapped),
+                    "exact": sum(r.get("matching") == 1.0 for r in mapped),
+                    "removed": len(lost), "removed_exact": None}
+        result["reference"] = "gate against its /DEBUG /OPT:NOREF relink"
+        result["unmapped_annotations"] = [f"{a:#x}" for a in lost]
+    else:
+        result = removed_code(gate_map, ref_map, entries, rows, game_rows)
     result["image"] = image_summary(out / "LegoRR.exe", ref_map, original)
     return result
 
@@ -261,8 +362,10 @@ def format_summary(result: dict) -> str:
         lines.append(f"    annotated in {kind:8} {row['removed_bytes']:>9,} of {row['bytes']:>9,} bytes "
                      f"{row['removed_functions']:>6,} of {row['functions']:>6,} functions")
     for view, row in result.get("annotated", {}).items():
+        exact = ("exactness unknown" if row["removed_exact"] is None
+                 else f"{row['removed_exact']:,} of {row['exact']:,} exact")
         lines.append(f"annotated ({view}): {row['removed']:,} of {row['mapped']:,} removed, "
-                     f"{row['removed_exact']:,} of {row['exact']:,} exact")
+                     f"{exact}")
     img = result.get("image")
     if img:
         sizes = ", ".join(f"{k} {v['virtual_size']:,}" for k, v in img["sections"].items())
@@ -471,32 +574,44 @@ def format_summary_table(summary: dict) -> str:
 
 def caller_report(build: Path, out: Path, original: Path, objects=None,
                   min_removed: int = 15) -> dict:
-    """Removed annotated functions per object, with their original callers."""
+    """Removed annotated functions per object, with their original callers.
+
+    Once the gate itself links with ``/OPT:REF`` (finding 642), the removed
+    functions are the annotations Reccmp cannot map (``unmapped_annotations``),
+    listed under the object ``(not linked)``: their names and sizes are not
+    in the gate's map or report.
+    """
     import capstone
     import pefile
     rows = load_rows(build / "reccmp-report/results.json") or []
     gate_map = (build / "LegoRR.map").read_text(encoding="latin-1")
-    _, ref_symbols = pe_audit.parse_map((out / "LegoRR.map").read_text(encoding="latin-1"))
-    # Removal is by (name, object), as in ``removed_code``. /OPT:ICF folds an
-    # identical function into another object's: its name stays in the map,
-    # listed under the object whose copy is kept.
-    kept = {(s["name"], s["object"]) for s in ref_symbols if s["section"] == 1}
-    kept_names = {s["name"]: s["object"] for s in ref_symbols if s["section"] == 1}
     annotated = {int(r["recomp"], 16): r for r in rows if r.get("recomp")}
     gate = winapi_link_audit.text_symbols(gate_map, link_order.load(), set(annotated))
     by_object = collections.defaultdict(list)
     removed = {}
     sizes = {}
     folded_into = {}
-    for s in gate:
-        row = annotated.get(s["address"])
-        if row is not None and (s["name"], s["object"]) not in kept:
-            orig = int(row["address"], 16)
-            removed[orig] = s["object"]
-            sizes[orig] = s["size"]
-            if s["name"] in kept_names:
-                folded_into[orig] = kept_names[s["name"]]
-            by_object[s["object"]].append((orig, row, s["name"]))
+    if gate_removes_unreferenced(build):
+        for orig in unmapped_annotations(build / "reccmp-report"):
+            removed[orig] = "(not linked)"
+            sizes[orig] = 0
+            by_object["(not linked)"].append((orig, {"address": f"{orig:#x}"}, None))
+    else:
+        _, ref_symbols = pe_audit.parse_map((out / "LegoRR.map").read_text(encoding="latin-1"))
+        # Removal is by (name, object), as in ``removed_code``. /OPT:ICF folds
+        # an identical function into another object's: its name stays in the
+        # map, listed under the object whose copy is kept.
+        kept = {(s["name"], s["object"]) for s in ref_symbols if s["section"] == 1}
+        kept_names = {s["name"]: s["object"] for s in ref_symbols if s["section"] == 1}
+        for s in gate:
+            row = annotated.get(s["address"])
+            if row is not None and (s["name"], s["object"]) not in kept:
+                orig = int(row["address"], 16)
+                removed[orig] = s["object"]
+                sizes[orig] = s["size"]
+                if s["name"] in kept_names:
+                    folded_into[orig] = kept_names[s["name"]]
+                by_object[s["object"]].append((orig, row, s["name"]))
     to_rebuilt = {int(r["address"], 16): int(r["recomp"], 16) for r in rows if r.get("recomp")}
     by_original = {int(r["address"], 16): r for r in rows}
     md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
@@ -507,7 +622,8 @@ def caller_report(build: Path, out: Path, original: Path, objects=None,
     t0 = base + o_text.VirtualAddress
     t1 = t0 + o_text.Misc_VirtualSize
     # Function starts: the annotated ones and every direct call target.
-    starts = set(by_original) | {t for t in _direct_calls(md, o_img, base, t0, t1) if t0 <= t < t1}
+    known = set(by_original) | set(removed)
+    starts = known | {t for t in _direct_calls(md, o_img, base, t0, t1) if t0 <= t < t1}
     starts = sorted(starts)
 
     def o_end(a):
@@ -522,12 +638,12 @@ def caller_report(build: Path, out: Path, original: Path, objects=None,
             continue
         o_calls[a] = _direct_calls(md, o_img, base, a, o_end(a))
         for t in o_calls[a]:
-            if t in by_original and t != a:
+            if t in known and t != a:
                 callers[t].add(a)
     # Pointers to annotated functions: in code they make the containing
     # function a caller; elsewhere (tables) they only mark the target.
     data_referenced = set()
-    targets = set(by_original)
+    targets = known
     for sec in o_pe.sections:
         s0 = base + sec.VirtualAddress
         s1 = s0 + max(sec.Misc_VirtualSize, 0)
@@ -623,6 +739,9 @@ def main(argv: list[str] | None = None) -> int:
         if name == "relink":
             p.add_argument("--keep-debug", action="store_true",
                            help="keep /DEBUG and the PDB (LINK then defaults to /OPT:NOREF)")
+            p.add_argument("--noref", action="store_true",
+                           help="keep /DEBUG and replace the /OPT options with /OPT:NOREF "
+                                "(default --out: <build>/opt-noref)")
             p.add_argument("--flag", action="append", default=[],
                            help="append a link option, e.g. /OPT:REF")
         else:
@@ -636,6 +755,9 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--summary", action="store_true",
                            help="all removed functions, by owning unit and cause")
     args = parser.parse_args(argv)
+    if args.command == "relink" and args.noref:
+        return relink(args.build, args.out or args.build / NOREF_NAME, flags=tuple(args.flag),
+                      noref=True)
     out = args.out or args.build / OUT_NAME
     if args.command == "relink":
         return relink(args.build, out, args.keep_debug, tuple(args.flag))

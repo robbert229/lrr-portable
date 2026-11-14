@@ -210,12 +210,17 @@ def command_check(args) -> int:
                         else:
                             line += '  [classification unavailable; instruction delta unknown]'
                     print(line)
-        if results[0]:
+        # The gate links with /OPT:REF (#562, finding 642): an annotated
+        # function that loses its last live caller leaves the image and the
+        # report, so a newly unmapped function counts as a drop too.
+        if results[0] or results[3]:
             failed = True
 
     if failed:
-        print("\nFAIL: functions fell below the match baseline. Review the "
-              "drops; if a drop is intended, refresh the baseline with "
+        print("\nFAIL: functions fell below the match baseline or left the "
+              "report (unmapped: under the gate's /OPT:REF, nothing live calls "
+              "them; `make opt-ref-callers` names their original callers). "
+              "Review them; if a drop is intended, refresh the baseline with "
               "`make reccmp-baseline-update` in the same change.",
               file=sys.stderr)
         return 1
