@@ -339,7 +339,7 @@ lists along with CMake's.
 
 ## Addendum (2026-11-12): library order
 
-**Status: proposed by #563** ([finding 574](../findings/574-import-directory-and-library-order.md)). It amends the library part of decision 1.
+**Status: accepted by the owner (2026-11-14).** It was proposed by #563 ([finding 574](../findings/574-import-directory-and-library-order.md)) and implemented in #579. It amends the library part of decision 1.
 
 The matching build links its libraries in this order:
 
@@ -360,7 +360,7 @@ Of six orders tested, only the one above reproduces all three properties of the 
 
 ## Addendum (2026-11-12): link mode
 
-**Status: proposed by #562** ([finding 576](../findings/576-link-mode-and-unreferenced-code.md)). It amends decision 2's `/OPT:REF` paragraph.
+**Status: accepted by the owner (2026-11-14).** It was proposed by #562 ([finding 576](../findings/576-link-mode-and-unreferenced-code.md)) and taken in #745 (finding 642). It amends decision 2's `/OPT:REF` paragraph.
 
 The original was linked without `/DEBUG`, so `/OPT:REF` was in effect (finding 563). Reccmp needs the linker's PDB, which LINK 5.0 writes only with `/DEBUG`, and it reads no map file. The matching build therefore keeps **two links of one set of objects**:
 
@@ -384,7 +384,7 @@ At equal `/OPT` setting the two links differ only in `.rdata`: the 84-byte debug
 
 ## Addendum (2026-11-13): library members and the port tail
 
-**Status: proposed by #767** ([finding 658](../findings/658-libc-member-order-gods98-members-and-tail-library.md)). It amends decision 1 (every unit an explicit object) and decision 4 (the tail before LIBC). The owner decides whether it stands.
+**Status: accepted by the owner (2026-11-14).** It was proposed and implemented by #767 ([finding 658](../findings/658-libc-member-order-gods98-members-and-tail-library.md); PR #769). It amends decision 1 (every unit an explicit object) and decision 4 (the tail before LIBC).
 
 The matching build links, in this order:
 1. the game units and gods98's first unit, Movie.cpp, as explicit objects (`LRR_LINK_EXPLICIT_LAST`);

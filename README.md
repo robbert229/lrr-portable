@@ -12,14 +12,14 @@ in a playable state before the end of November 2026.
      with `python3 tools/readme_status.py` (no build needed); recount the
      source ledger with `python3 tools/coverage_ledger.py`. -->
 
-Verified **2026-11-13** on `f1a9cb16` (#752, stacked on `main` `5f251885`), with MSVC 5.0 and Reccmp:
+Verified **2026-11-14** on `main` `65b0ff44`, with MSVC 5.0 and Reccmp:
 
 | Measure | Value |
 | --- | ---: |
-| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **319,635 / 642,549 bytes (49.74%)** |
-| Accuracy: mean Reccmp score of mapped functions, game-only / full | 96.42% / 96.72% |
-| Mapped functions, game-only / full | 2,536 / 2,827 |
-| Exact (100%) functions, game-only / full | 2,088 / 2,348 |
+| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **335,096 / 642,549 bytes (52.15%)** |
+| Accuracy: mean Reccmp score of mapped functions, game-only / full | 96.68% / 97.02% |
+| Mapped functions, game-only / full | 2,538 / 2,833 |
+| Exact (100%) functions, game-only / full | 2,121 / 2,408 |
 | Functions byte-identical at their original address | 14 (631 bytes) |
 
 The old headline, Reccmp's game-only "progress" (47.77% on 2026-11-04), is no
@@ -37,6 +37,15 @@ image now ends at `0x7f5000`, below the original's flag constant `0x800000`,
 so scores come from plain Reccmp with no plain-immediate wrapper; `make
 pe-audit` and the gate fail if the image grows past it again
 ([finding 647](docs/findings/647-retire-plain-immediate-wrapper.md)).
+The link also follows the original's object and library layout: the game units
+and Movie.cpp as explicit objects, the other gods98 units and the port tail
+from libraries, and the late units after the import libraries. Function-order
+inversions fell from 12,261 pairs to 801 (6 in game code), 220 of 225 units
+are contiguous, and the entry point is `0x8d1e0` against the original's
+`0x8f000` ([finding 657](docs/findings/657-function-order-and-unit-contiguity-breakdown.md),
+[finding 658](docs/findings/658-libc-member-order-gods98-members-and-tail-library.md)).
+The resources and PE header stamps match the original's
+([finding 651](docs/findings/651-original-resources-and-header-stamps.md)).
 
 The [source ledger](docs/coverage/README.md) records **2,282 / 2,564 functions
 (89.0%) with source citations**, plus 280 runtime/import functions and 2 named
