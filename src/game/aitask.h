@@ -53,7 +53,8 @@ struct AITask {
 };
 
 /* Port-only accessors of the priority tables shared with the port tail
- * (finding 570); defined last in aitask.c. */
+ * (finding 570); defined in aitask_port.cpp, outside the unit (finding
+ * 675). */
 int* aitask_port_priority_values(void);  /* 004b32e8 */
 int* aitask_port_priority_states(void);  /* 004b7ff4 */
 

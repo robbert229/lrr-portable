@@ -204,10 +204,14 @@ void advisor_animation_end_cleanup(void)
     scene_render_lock_toggle(advisorGlobs.lightCont, 1);
 }
 
+/* The original stores the front clip to a stack local and never reads it.
+ * MSVC 5.0 removes that store for every other form tried (finding 669);
+ * a volatile local keeps it (finding 675). Deviation (scoring only): the
+ * original's declaration is unknown, and volatile changes no storage. */
 // FUNCTION: LEGORR 0x00401210
 void advisor_scene_visual_state_initialize(float distance)
 {
-    float frontClip;
+    volatile float frontClip;
 
     resource_interface_call_slot8c(advisorGlobs.viewMain);
     frontClip = resource_interface_call_slot90(advisorGlobs.viewMain);
