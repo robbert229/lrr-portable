@@ -28,6 +28,28 @@ to 7,187 bytes.
 | Function-order inversions, full / game-only | 222 / 1 pairs | 222 / 1 pairs |
 | Image end (gate) | `0x7f5000` | `0x7f5000` |
 
+**On the stack.** Rebased onto #812 (`match/807-unit-size-deficits`
+`057557e6`, the top of #809 → #810 → #811 → #812), the same six functions
+rise and none falls:
+
+| Measure | #812 `057557e6` | This change |
+| --- | ---: | ---: |
+| Exact-function code bytes | 343,761 (53.50%) | **344,002 (53.54%)** |
+| Accuracy, full / game-only | 97.53% / 97.26% | 97.56% / 97.30% |
+| Correct-size functions, full | 2,793 (457,127 B) | 2,796 (460,177 B) |
+| Correct-size functions, game-only | 2,502 (406,300 B) | 2,505 (409,350 B) |
+| Identical prefix, raw / masked | 11 / 528 B | 11 / 7,187 B |
+| Units with size agreement | 0 of 227 | 2 (GAME-001, GAME-008) |
+| Units with all sizes correct / start / end in place | 167 / 2 / 1 | 168 / 5 / 4 |
+| `.text` identical at original addresses | 29,832 B (4.64%) | 43,833 B (6.82%) |
+| Fully identical functions at original address | 8 (384 B) | 42 (2,307 B) |
+| Entry point (original `0048f000`) | `0048eb40` | `0048eb80` |
+| SizeOfImage (original 3,608,576) | 4,030,464 | 4,026,368 |
+| Function-order inversions, full / game-only | 222 / 1 | 222 / 1 |
+
+#805's alias for GAME-002's `entity.cpp` call (`0043f5b0`) and this
+change's four adapter aliases sit side by side in `aitask_imports.h`.
+
 No measure moved away from the original. GAME-002 itself does not yet
 count as agreeing. Two of its functions are still the wrong size, but both
 differences stay inside their alignment padding: `00403810` (+4) and
