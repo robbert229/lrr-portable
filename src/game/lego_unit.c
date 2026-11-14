@@ -2224,7 +2224,11 @@ int lego_main_sim_step(float elapsedGame, float elapsed, int* keyDownT,
         (liveObj = selection_active_entity_get()) != NULL &&
         LEGO_FIELD(liveObj, int, 0x0) == 2 &&
         (LEGO_FIELD(liveObj, int, 0x3f0) || LEGO_FIELD(liveObj, int, 0x330))) {
-        ddiscene_object_position_get(entity_type_component_get(liveObj), NULL, wPos);
+        /* The original gets the container before it pushes the position
+         * arguments, so it is a local (finding 671). */
+        void* cont = entity_type_component_get(liveObj);
+
+        ddiscene_object_position_get(cont, NULL, wPos);
         wPos[2] -= entity_stats_float_at74(liveObj) * 0.5f;
         camera_project_point_to_screen((struct ViewProjectionAdapter*)legoGlobs_viewMain, sPos, wPos);
         if (sPos[0] >= 40.0f && sPos[1] >= 40.0f &&
@@ -2236,9 +2240,9 @@ int lego_main_sim_step(float elapsedGame, float elapsed, int* keyDownT,
                     "Object");
                 LEGO_FIELD(liveObj, char*, 0x8)[0] = '\0';
             }
-            legoGlobs_renamePosition[1] = sPos[1];
             legoGlobs_renameInput = LEGO_FIELD(liveObj, char*, 0x8);
             legoGlobs_renamePosition[0] = sPos[0];
+            legoGlobs_renamePosition[1] = sPos[1];
         }
     }
 
@@ -3174,6 +3178,12 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                 lego_terrain_command_feedback_dispatch(legoGlobs_f_556fb8, 1, 1, 0);
                             if (leftReleased) media_action_feedback_sound_dispatch(2);
                         } else {
+                            /* Two flags, as in the original (finding 671):
+                             * `handled` (a command was found, kept in memory)
+                             * and a per-test flag in a register, for which the
+                             * dead `picked` is reused. In the last tests
+                             * `handled` is also the "no command" sound's flag. */
+                            picked = 0;
                             handled = 0;
                             if (!(block->flags1 & 8))
                                 media_action_code_to_sound_alias(block->f_02);
@@ -3187,6 +3197,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                     } else {
                                         legoGlobs_f_556180 = bx;
                                         legoGlobs_f_556184 = by;
+                                        picked = 1;
                                         handled = 1;
                                         legoGlobs_f_556188 = 1;
                                         if (leftReleased &&
@@ -3203,6 +3214,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                     advisor_text_animation_update(2, 0, 0);
                                     if (block->f_02 != 1 && block->f_02 != 9 &&
                                         block->f_02 != 0xb && !(block->flags1 & 0x40)) {
+                                        picked = 1;
                                         handled = 1;
                                         if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x1f);
                                         else media_pointer_cursor_select(0x20);
@@ -3216,13 +3228,15 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                         }
                                     }
                                 }
-                                if (!handled && (block->flags1 & 8)) {
+                                if (!picked && (block->flags1 & 8)) {
                                     if (!lego_C_block_is_reinforced(bx, by) &&
                                         !(block->flags2 & 0x20)) {
+                                        picked = 0;
                                         if (!(block->flags1 & 0x200000) &&
                                             (entity_stats_word_get(selection_active_entity_get()) & 0x10000) &&
                                             lego_terrain_cell_route_and_occupancy_check(
                                                 selection_active_entity_get(), bx, by, bx, by, 0)) {
+                                            picked = 1;
                                             handled = 1;
                                             if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x29);
                                             else media_pointer_cursor_select(0x2a);
@@ -3234,9 +3248,11 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 selection_clear_request_and_hud_reset();
                                             }
                                         }
-                                        if (handled) goto tracking;
+                                        if (picked) goto tracking;
+                                        picked = 0;
                                         if (lego_terrain_cell_route_and_occupancy_check(
                                                 selection_active_entity_get(), bx, by, bx, by, 0)) {
+                                            picked = 1;
                                             handled = 1;
                                             if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x27);
                                             else media_pointer_cursor_select(0x28);
@@ -3251,12 +3267,15 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                     }
                                 }
                             }
-                            if (!handled) {
+                            if (!picked) {
+                                handled = 0;
                                 if (!lego_C_block_is_reinforced(bx, by) &&
                                     block->f_02 != 6 && block->f_02 != 9 &&
                                     !(block->flags2 & 0x20)) {
                                     if (block->flags1 & 8) {
+                                        picked = 0;
                                         if (lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x80000000) {
+                                            picked = 1;
                                             handled = 1;
                                             if (leftReleased &&
                                                 !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
@@ -3265,7 +3284,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 command_context_post_to_hud(2, (const uint32_t*)legoGlobs_f_556fb8);
                                             }
                                         }
-                                        if (!handled && (block->flags1 & 0x8000)) {
+                                        if (!picked && (block->flags1 & 0x8000)) {
                                             handled = 1;
                                             if (leftReleased) media_action_feedback_sound_dispatch(1);
                                         }
@@ -3280,10 +3299,23 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 command_context_post_to_hud(4, (const uint32_t*)legoGlobs_f_556fb8);
                                             }
                                         }
-                                        if (!handled) {
-                                            if ((lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x40000000) ||
-                                                lego_C_block_flag20000000(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])) {
-                                                handled = 1;
+                                        if (handled) goto tracking;
+                                        picked = 0;
+                                        if ((lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x40000000) ||
+                                            lego_C_block_flag20000000(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])) {
+                                            picked = 1;
+                                            if (leftReleased &&
+                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                cmd_produce(3, NULL, 0, NULL);
+                                                media_action_feedback_sound_dispatch(5);
+                                                command_context_post_to_hud(1, (const uint32_t*)legoGlobs_f_556fb8);
+                                            }
+                                        }
+
+                                        if (!picked) {
+                                            picked = 0;
+                                            if (block->flags1 & 0x200000) {
+                                                picked = 1;
                                                 if (leftReleased &&
                                                     !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
                                                     cmd_produce(3, NULL, 0, NULL);
@@ -3291,17 +3323,9 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                     command_context_post_to_hud(1, (const uint32_t*)legoGlobs_f_556fb8);
                                                 }
                                             }
-                                            if (!handled) {
-                                                if (block->flags1 & 0x200000) {
-                                                    handled = 1;
-                                                    if (leftReleased &&
-                                                        !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                                        cmd_produce(3, NULL, 0, NULL);
-                                                        media_action_feedback_sound_dispatch(5);
-                                                        command_context_post_to_hud(1, (const uint32_t*)legoGlobs_f_556fb8);
-                                                    }
-                                                }
-                                                if (!handled && !(block->flags1 & 0x200000)) {
+                                            if (!picked) {
+                                                handled = 0;
+                                                if (!(block->flags1 & 0x200000)) {
                                                     handled = 1;
                                                     if (leftReleased &&
                                                         !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
@@ -3310,8 +3334,11 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                         command_context_post_to_hud(5, (const uint32_t*)legoGlobs_f_556fb8);
                                                     }
                                                 }
+                                                if (!handled && leftReleased)
+                                                    media_action_feedback_sound_dispatch(1);
                                             }
                                         }
+                                        goto tracking;
                                     } else if (block->f_02 != 1 && !(block->flags1 & 0x40)) {
                                         handled = 1;
                                         if (leftReleased &&
@@ -5775,13 +5802,10 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
     struct EntitySlot* obj;
     struct EntitySlot* target;
     int blockPos[2];
-    void* shape;
     unsigned int shapeCount;
-    unsigned int dir;
-    unsigned int i;
     unsigned int j;
-    int first = 1;
     unsigned int result = 0;
+    int first = 1;
     unsigned int count = 0;
     struct EntitySlot* objList[200];
     char* olNames[200];
@@ -5809,9 +5833,9 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                 xPos = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "xpos", NULL));
                 yPos = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "ypos", NULL));
                 heading = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key, "heading", NULL));
-                if ((health = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key,
+                if (0.0f == (health = (float)LEGO_A_CFG_FLOAT(ol, string_path_join(s_engine_config_root, item->key,
                         // STRING: LEGORR 0x004a46b4
-                        "health", NULL))) == 0.0f) health = 100.0f;
+                        "health", NULL)))) health = 100.0f;
                 drivingNames[count] = drivingName = block_get_str_copy(ol, string_path_join(s_engine_config_root, item->key,
                         // STRING: LEGORR 0x004a46ac
                         "driving", NULL));
@@ -5819,8 +5843,8 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
 
                 xPos -= 1.0f;
                 yPos -= 1.0f;
-                by = (unsigned int)yPos;
                 bx = (unsigned int)xPos;
+                by = (unsigned int)yPos;
                 terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by, &wPos.x, &wPos.y);
                 wPos.x += (xPos - (bx + 0.5f)) * level->blockSize;
                 yPos = (yPos - (by + 0.5f)) * level->blockSize;
@@ -5846,12 +5870,15 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                 } else if (objType == 4) {
                     blockPos[0] = bx;
                     blockPos[1] = by;
-                    dir = (unsigned int)((float)(heading * 0.15915494f) * 8.0f);
-                    shape = (void*)(uintptr_t)task_field84_get_and_field88_out(&legoGlobs_buildingData[objID], (uint32_t*)&shapeCount);
-                    dir = ((dir & 1) + dir) >> 1;
-                    shape = rotated_pairs_scratch_fill(blockPos, (const int*)shape, shapeCount, dir);
-                    obj = (struct EntitySlot*)construction_place_building(objID, blockPos, dir,
-                        (int*)shape, shapeCount, level->disableStartTeleport);
+                    /* The direction reuses `j` and the shape reuses
+                     * `olName`, as the original's register and stack slot
+                     * do (finding 671). */
+                    j = (unsigned int)((float)(heading * 0.15915494f) * 8.0f);
+                    olName = (char*)(uintptr_t)task_field84_get_and_field88_out(&legoGlobs_buildingData[objID], (uint32_t*)&shapeCount);
+                    j = ((j & 1) + j) >> 1;
+                    olName = (char*)rotated_pairs_scratch_fill(blockPos, (const int*)olName, shapeCount, j);
+                    obj = (struct EntitySlot*)construction_place_building(objID, blockPos, j,
+                        (int*)olName, shapeCount, level->disableStartTeleport);
                     if (obj) entity_kind_record_update_dispatch(obj);
                 } else {
                     obj = object_create_from_container_adapter(objModel, objType, objID);
@@ -5918,9 +5945,9 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
         }
     }
 
-    for (i = 0; i < count; i++) {
-        if (olNames[i]) lego_e_mem_free(olNames[i]);
-        if (drivingNames[i]) lego_e_mem_free(drivingNames[i]);
+    for (j = 0; j < count; j++) {
+        if (olNames[j]) lego_e_mem_free(olNames[j]);
+        if (drivingNames[j]) lego_e_mem_free(drivingNames[j]);
     }
 
     return 1;
