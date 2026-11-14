@@ -29,6 +29,9 @@
 
 #define FRONT_PRINT_MAX 15
 
+/* mainGlobs.programmerLevel, compared unsigned. */
+#define FRONT_PROGRAMMER_LEVEL ((unsigned int)s_application_mode)
+
 /* frontGlobs.rockWipeFlags. */
 #define FRONT_ROCKWIPE_ANIMATING 0x1
 #define FRONT_ROCKWIPE_NOINPUT 0x2
@@ -162,10 +165,11 @@ void* frontGlobs_rockWipeLight;
 int g_front_save_menu_result;
 // GLOBAL: LEGORR 0x00557508
 int g_front_save_menu_open;
+/* Unsigned: 004124f0 converts them with a zero high word (fild qword). */
 // GLOBAL: LEGORR 0x0055750c
-int frontGlobs_saveImageBigWidth;
+unsigned int frontGlobs_saveImageBigWidth;
 // GLOBAL: LEGORR 0x00557510
-int frontGlobs_saveImageBigHeight;
+unsigned int frontGlobs_saveImageBigHeight;
 // GLOBAL: LEGORR 0x00557514
 char frontGlobs_saveSlotFormat[64];
 // GLOBAL: LEGORR 0x00557594
@@ -183,8 +187,8 @@ char frontGlobs_overwriteCancel[128];
 
 #define frontGlobs_mainMenuSet ((Front_MenuSet*)g_front_main_menu_set)
 
-/* Front_Menu_CreateOverlay's "Null" (004a23f4), as a named array: the
- * naked asm of 00413f90 pushes its address. */
+/* Front_Menu_CreateOverlay's "Null" (004a23f4), as a named array that
+ * 00413f90 and the menu loader compare against. */
 // GLOBAL: LEGORR 0x004a23f4
 static const char s_overlayNullName[5] = "Null";
 
@@ -282,8 +286,10 @@ void front_callback_trigger_play_credits(void)
 /* No C form matched (finding 623): MSVC folds the two flag ORs into one
  * (or al, 3); the original keeps or al, 1 and or al, 2. Tried: the two
  * |= statements in every order around the timer store, one combined
- * expression, and an enum flag type. Naked asm, as the port had it; the
- * C version is the native one. */
+ * expression, and an enum flag type. With frontGlobs as one struct the
+ * C version below compiles to the original's code (finding 635), so this
+ * waits for that layout. Naked asm, as the port had it; the C version is
+ * the native one. */
 __declspec(naked) void front_rock_wipe_play(void)
 {
     __asm {
@@ -478,20 +484,21 @@ void front_menu_item_add_select_item(Front_SelectData* select, char* banner,
     int* newHeights[3];
     int i;
 
-    if (select->selItemList == NULL) {
-        newList = (Front_SelectItem*)malloc((select->selItemCount + 1) * sizeof(Front_SelectItem));
-        for (i = 0; i < 3; i++) {
-            newWidths[i] = (int*)malloc((select->selItemCount + 1) * sizeof(int));
-            newHeights[i] = (int*)malloc((select->selItemCount + 1) * sizeof(int));
-        }
-    } else {
+    if (select->selItemList != NULL) {
         newList = (Front_SelectItem*)realloc(select->selItemList,
                                              (select->selItemCount + 1) * sizeof(Front_SelectItem));
         for (i = 0; i < 3; i++) {
             newWidths[i] = (int*)realloc(select->widths[i], (select->selItemCount + 1) * sizeof(int));
             newHeights[i] = (int*)realloc(select->heights[i], (select->selItemCount + 1) * sizeof(int));
         }
+    } else {
+        newList = (Front_SelectItem*)malloc((select->selItemCount + 1) * sizeof(Front_SelectItem));
+        for (i = 0; i < 3; i++) {
+            newWidths[i] = (int*)malloc((select->selItemCount + 1) * sizeof(int));
+            newHeights[i] = (int*)malloc((select->selItemCount + 1) * sizeof(int));
+        }
     }
+
 
     if (newList != NULL) {
         select->selItemList = newList;
@@ -541,77 +548,6 @@ void front_menu_item_add_select_item(Front_SelectData* select, char* banner,
 }
 
 // FUNCTION: LEGORR 0x00410a10
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* No C form matched (finding 623): the stores and their loads are
- * the original's, but MSVC picks other registers; naked asm, as the port
- * had it. The C version is the native one. */
-__declspec(naked) Front_CycleData* front_menu_item_create_cycle(int count, int* valuePtr,
-                                                                int x2, int y2,
-                                                                Front_IntCallback callback)
-{
-    __asm {
-        push ebx
-        push ebp
-        push esi
-        push edi
-        push 0x1c
-        call malloc
-        mov esi, eax
-        add esp, 4
-        test esi, esi
-        jne have_record
-        pop edi
-        pop esi
-        pop ebp
-        pop ebx
-        ret
-    have_record:
-        mov ebp, dword ptr [esp + 0x14]
-        lea ebx, [ebp * 4]
-        push ebx
-        call malloc
-        mov edi, eax
-        add esp, 4
-        test edi, edi
-        mov dword ptr [esi], edi
-        jne have_strings
-        push esi
-        call front_menu_item_free_cycle
-        add esp, 4
-        xor eax, eax
-        pop edi
-        pop esi
-        pop ebp
-        pop ebx
-        ret
-    have_strings:
-        mov ecx, ebx
-        xor eax, eax
-        mov edx, ecx
-        shr ecx, 2
-        rep stosd
-        mov ecx, edx
-        mov edx, dword ptr [esp + 0x20]
-        and ecx, 3
-        rep stosb
-        mov eax, dword ptr [esp + 0x18]
-        mov ecx, dword ptr [esp + 0x1c]
-        mov dword ptr [esi + 0x0c], eax
-        mov eax, dword ptr [esp + 0x24]
-        mov dword ptr [esi + 0x18], eax
-        mov dword ptr [esi + 4], ebp
-        mov dword ptr [esi + 8], 0
-        mov dword ptr [esi + 0x10], ecx
-        mov dword ptr [esi + 0x14], edx
-        mov eax, esi
-        pop edi
-        pop esi
-        pop ebp
-        pop ebx
-        ret
-    }
-}
-#else
 Front_CycleData* front_menu_item_create_cycle(int count, int* valuePtr,
                                               int x2, int y2,
                                               Front_IntCallback callback)
@@ -629,14 +565,13 @@ Front_CycleData* front_menu_item_create_cycle(int count, int* valuePtr,
     }
     memset(cycle->nameList, 0, count * sizeof(char*));
     cycle->valuePtr = valuePtr;
-    cycle->callback = callback;
     cycle->nameCapacity = count;
     cycle->nameCount = 0;
-    cycle->y2 = y2;
     cycle->x2 = x2;
+    cycle->y2 = y2;
+    cycle->callback = callback;
     return cycle;
 }
-#endif
 
 // FUNCTION: LEGORR 0x00410aa0
 void front_menu_item_add_cycle_item(Front_CycleData* cycle, const char* name)
@@ -791,104 +726,6 @@ void front_menu_item_free_menu_item(Front_MenuItem* item)
 }
 
 // FUNCTION: LEGORR 0x00410d50
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* No C form matched (finding 623): the stores and their loads are
- * the original's, but MSVC picks other registers; naked asm, as the port
- * had it. The C version is the native one. */
-__declspec(naked) Front_MenuItem* front_menu_item_create_banner_item(
-    const char* banner, Front_Font* fontLo, Front_Font* fontHi,
-    int x1, int y1, int itemType, int centered, void* itemData,
-    int notInTuto)
-{
-    __asm {
-        push ebx
-        mov ebx, dword ptr [esp + 8]
-        push esi
-        push edi
-        test ebx, ebx
-        jne text_record_allocate
-        xor eax, eax
-        pop edi
-        pop esi
-        pop ebx
-        ret
-    text_record_allocate:
-        push 0x3c
-        call malloc
-        mov esi, eax
-        add esp, 4
-        test esi, esi
-        jne text_record_initialize
-        pop edi
-        pop esi
-        pop ebx
-        ret
-    text_record_initialize:
-        mov ecx, 0x0f
-        xor eax, eax
-        mov edi, esi
-        push ebx
-        rep stosd
-        mov edi, ebx
-        or ecx, 0xffffffff
-        repnz scasb
-        not ecx
-        dec ecx
-        mov dword ptr [esi + 4], ecx
-        call front_util_string_copy
-        mov ecx, dword ptr [esp + 0x28]
-        mov edx, dword ptr [esp + 0x30]
-        mov edi, dword ptr [esp + 0x1c]
-        mov dword ptr [esi + 0x14], ecx
-        mov ecx, dword ptr [esp + 0x20]
-        mov dword ptr [esi], eax
-        mov eax, dword ptr [esp + 0x18]
-        mov dword ptr [esi + 0x18], ecx
-        mov ecx, dword ptr [esp + 0x34]
-        mov dword ptr [esi + 0x10], edx
-        mov edx, dword ptr [esp + 0x24]
-        mov dword ptr [esi + 0x38], ecx
-        mov ecx, dword ptr [esp + 0x2c]
-        add esp, 4
-        test ecx, ecx
-        mov dword ptr [esi + 0x0c], eax
-        mov dword ptr [esi + 8], edi
-        mov dword ptr [esi + 0x1c], edx
-        je text_record_zero_offsets
-        test eax, eax
-        je text_record_zero_offsets
-        test edi, edi
-        je text_record_zero_offsets
-        push ebx
-        push eax
-        call formatted_text_printf_width
-        add esp, 8
-        shr eax, 1
-        neg eax
-        push ebx
-        push edi
-        mov dword ptr [esi + 0x20], eax
-        call formatted_text_printf_width
-        shr eax, 1
-        add esp, 8
-        neg eax
-        mov dword ptr [esi + 0x24], eax
-        mov eax, esi
-        pop edi
-        pop esi
-        pop ebx
-        ret
-    text_record_zero_offsets:
-        mov dword ptr [esi + 0x20], 0
-        mov dword ptr [esi + 0x24], 0
-        mov eax, esi
-        pop edi
-        pop esi
-        pop ebx
-        ret
-    }
-}
-#else
 Front_MenuItem* front_menu_item_create_banner_item(
     const char* banner, Front_Font* fontLo, Front_Font* fontHi,
     int x1, int y1, int itemType, int centered, void* itemData,
@@ -905,14 +742,14 @@ Front_MenuItem* front_menu_item_create_banner_item(
     }
     memset(item, 0, sizeof(Front_MenuItem));
     item->length = strlen(banner);
-    item->x1 = x1;
     item->banner = front_util_string_copy(banner);
+    item->fontLo = fontLo;
+    item->fontHi = fontHi;
     item->itemType = itemType;
     item->itemData = itemData;
-    item->fontLo = fontLo;
-    item->notInTuto = notInTuto;
-    item->fontHi = fontHi;
+    item->x1 = x1;
     item->y1 = y1;
+    item->notInTuto = notInTuto;
     if (centered && fontLo != NULL && fontHi != NULL) {
         item->centerOffLo = -(int)(formatted_text_printf_width(fontLo, banner) / 2);
         item->centerOffHi = -(int)(formatted_text_printf_width(fontHi, banner) / 2);
@@ -922,7 +759,6 @@ Front_MenuItem* front_menu_item_create_banner_item(
     }
     return item;
 }
-#endif
 
 // FUNCTION: LEGORR 0x00410e20
 Front_MenuItem* front_menu_item_create_image_item(
@@ -938,16 +774,16 @@ Front_MenuItem* front_menu_item_create_image_item(
             memset(item, 0, sizeof(Front_MenuItem));
             item->length = strlen(banner);
             item->banner = front_util_string_copy(banner);
-            item->fontHi = fontHi;
             item->fontLo = fontLo;
+            item->fontHi = fontHi;
             item->imageLo = image_load_bmp_scaled(loImageName, 0, 0);
             if (item->imageLo != NULL) {
                 item->imageHi = image_load_bmp_scaled(hiImageName, 0, 0);
                 if (item->imageHi != NULL) {
                     item->isImageItem = 1;
                 }
-                item->itemData = itemData;
                 item->itemType = itemType;
+                item->itemData = itemData;
                 item->x1 = x1;
                 item->y1 = y1;
                 if (!tooltip_get_type(toolTipName, &item->toolTipType)) {
@@ -1010,7 +846,7 @@ int front_menu_load_menu_image(Front_Menu* menu, const char* filename, int light
     }
     strcpy(buff, filename);
     numParts = sound_variant_split(buff, stringParts, s_config_rgb_separator);
-    if (numParts > 2) {
+    if (numParts >= 3) {
         menu->flags |= 1;
         menu->imagePos[0] = (float)atof(stringParts[1]);
         menu->imagePos[1] = (float)atof(stringParts[2]);
@@ -1319,13 +1155,21 @@ int front_menu_item_slider_handle_input(Front_Menu* menu, Front_MenuItem* item,
 {
     int x;
     int y;
+    float value;
 
     x = menu->xPos + slider->x2 + item->x1;
     y = menu->yPos + item->y1 + slider->y2;
     if (front_maths_is_point_inside_rect(FRONT_MSX, FRONT_MSY, x, y, 100, 20)) {
-        *slider->valuePtr = (int)((float)(FRONT_MSX - x) * 0.01f *
-                                  (float)(slider->valueMax - slider->valueMin) +
-                                  (float)slider->valueMin);
+        /* The original clamps the fraction to [0, 1] and scales it by the
+         * range without adding valueMin (fild/fisub, fcom 1.0f, fcom 0.0f). */
+        value = ((float)FRONT_MSX - x) * 0.01f;
+        if (value > 1.0f) {
+            value = 1.0f;
+        }
+        if (value < 0.0f) {
+            value = 0.0f;
+        }
+        *slider->valuePtr = (int)((slider->valueMax - slider->valueMin) * value);
         return 1;
     }
     if (slider->imageMinusLo != NULL && slider->imagePlusLo != NULL) {
@@ -1721,7 +1565,7 @@ void front_menu_update_overlays(Front_Menu* menu)
             if (menu->playRandom == 1) {
                 count = front_menu_should_random_play() ? front_menu_get_overlay_count(menu) : 0;
                 if (count != 0) {
-                    for (index = (unsigned int)rand() % count; index != 0; index--) {
+                    for (index = (unsigned int)rand() % count; index > 0; index--) {
                         overlay = overlay->next;
                     }
                     if (flic_setup(overlay->filename, (void**)&frontGlobs_overlayImage, 0)) {
@@ -1759,17 +1603,18 @@ void front_menu_item_draw_select_item(int x, int y, Front_Font* font,
                                       Front_SelectData* select, int selIndex,
                                       int imageIndex)
 {
-    Front_SelectItem* selItem;
     struct Image* image;
     Point2F dest;
 
-    selItem = &select->selItemList[selIndex];
-    if (selItem->flags & 1) {
-        font_print_f(font, x, y, selItem->banner);
+
+    if (select->selItemList[selIndex].flags & 1) {
+        font_print_f(font, x, y, select->selItemList[selIndex].banner);
+
         return;
     }
-    dest.y = (float)y;
     dest.x = (float)x;
+    dest.y = (float)y;
+
     image = select->selItemList[selIndex].images[imageIndex];
     if (image != NULL && x < 640 && x > -(int)image->width && y > -(int)image->height && y < 480) {
         image_display_scaled(image, NULL, &dest, NULL);
@@ -1783,6 +1628,7 @@ void front_menu_item_draw_save_image(Front_Menu* menu, int selIndex,
     struct Image* image;
     char* stringParts[2];
     char buff[8];
+    char* str;
     Point2F dest;
     Point2F size;
 
@@ -1791,12 +1637,12 @@ void front_menu_item_draw_save_image(Front_Menu* menu, int selIndex,
         if (image != NULL) {
             // STRING: LEGORR 0x004a237c
             sprintf(buff, "pos%d", selIndex + 1);
-            sound_variant_split(block_get_str_copy(legoGlobs_config,
-                                                   string_path_join(s_engine_config_root,
-                                                                    // STRING: LEGORR 0x004a1f00
-                                                                    "Menu::SaveImage", buff, NULL)),
-                                // STRING: LEGORR 0x004a2378
-                                stringParts, "|");
+            str = block_get_str_copy(legoGlobs_config,
+                                     string_path_join(s_engine_config_root,
+                                                      // STRING: LEGORR 0x004a1f00
+                                                      "Menu::SaveImage", buff, NULL));
+            // STRING: LEGORR 0x004a2378
+            sound_variant_split(str, stringParts, "|");
             dest.x = (float)atoi(stringParts[0]);
             dest.y = (float)atoi(stringParts[1]);
             size.x = (float)FRONT_CONFIG_INT(string_path_join(s_engine_config_root, "Menu::SaveImage",
@@ -1828,11 +1674,11 @@ void front_menu_item_draw_select_text_window(Front_Menu** menu,
 
     if (*menu == frontGlobs_mainMenuSet->menus[3] || *menu == frontGlobs_saveMenuSet->menus[0]) {
         if (*menu == frontGlobs_saveMenuSet->menus[0] && s_selectClickIndex >= 0) {
-            if (s_saveSlotCompletion[s_selectClickIndex] == 0) {
+            if (s_saveSlotCompletion[s_selectClickIndex] != 0) {
+                s_saveMenuOverwriteShowing = 1;
+            } else {
                 g_front_save_menu_open = 0;
                 (*menu)->closed = 1;
-            } else {
-                s_saveMenuOverwriteShowing = 1;
             }
         }
         text_buffer_reset_target(frontGlobs_saveTextWnd->textWindow);
@@ -2350,13 +2196,14 @@ void front_menu_load_slot_images(void)
     int i;
     struct Image** image;
     int* completion;
-    char buff[128];
     unsigned int k;
-    unsigned char saveData[0xb8];
-    float* rewards;
 
+    /* buff and saveData are block-scoped: the original's 0xb8-byte frame
+     * holds either one. */
     i = 0;
     for (image = s_saveSlotImages; image < s_saveSlotImages + 5; image++) {
+        char buff[128];
+
         // STRING: LEGORR 0x004a2398
         sprintf(buff, "%s\\%d.dat",
                 block_get_str_copy(legoGlobs_config,
@@ -2369,17 +2216,17 @@ void front_menu_load_slot_images(void)
     }
     i = 0;
     for (completion = s_saveSlotCompletion; completion < s_saveSlotCompletion + 5; completion++) {
-        memset(saveData, 0, sizeof(saveData));
+        /* A Front_SaveData (0xb8 bytes, defined with part 2): [6] is
+         * missionsCount, [13] missionsTable. Each mission record is 0x3190
+         * bytes, its reward score at +0x2fb8. */
+        int saveData[0xb8 / 4] = { 0 };
+
         save_read_slot_target(i, saveData, 1);
         *completion = 0;
-        if (*(unsigned int*)(saveData + 0x18) > 8) {
-            rewards = (float*)(*(char**)(saveData + 0x34) + 0x1bc38);
-            for (k = *(unsigned int*)(saveData + 0x18) - 8; k != 0; k--) {
-                *completion += (*rewards != 0.0f) ? 4 : 0;
-                rewards += 0xc64;
-            }
+        for (k = 8; k < (unsigned int)saveData[6]; k++) {
+            *completion += (*(float*)((char*)saveData[13] + k * 0x3190 + 0x2fb8) != 0.0f) ? 4 : 0;
         }
-        free(*(void**)(saveData + 0x34));
+        free((void*)saveData[13]);
         i++;
     }
 }
@@ -2563,63 +2410,6 @@ int front_menu_overlay_get_type(Front_MenuOverlay* overlay)
 }
 
 // FUNCTION: LEGORR 0x00413f90
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* No C form matched (finding 623): the stores and their loads are
- * the original's, but MSVC picks other registers; naked asm, as the port
- * had it. The C version is the native one. */
-__declspec(naked) Front_MenuOverlay* front_menu_create_overlay(const char* filename,
-                                                               Front_MenuOverlay** list,
-                                                               int x, int y, int sfxType)
-{
-    __asm {
-        push esi
-        push edi
-        push 0x20
-        call malloc
-        mov esi, eax
-        mov ecx, 8
-        xor eax, eax
-        mov edi, esi
-        add esp, 4
-        rep stosd
-        mov edi, dword ptr [esp + 0x0c]
-        push 4
-        push offset s_overlayNullName
-        push edi
-        call _strnicmp
-        add esp, 0x0c
-        test eax, eax
-        je item_record_done
-        test edi, edi
-        je item_record_link
-        push edi
-        call front_util_string_copy
-        add esp, 4
-        mov dword ptr [esi], eax
-    item_record_link:
-        push esi
-        call front_menu_overlay_get_type
-        mov edx, dword ptr [esp + 0x18]
-        mov dword ptr [esi + 4], eax
-        mov eax, dword ptr [esp + 0x14]
-        mov dword ptr [esi + 0x1c], 0
-        add esp, 4
-        mov ecx, dword ptr [eax]
-        mov dword ptr [esi + 0x0c], edx
-        mov edx, dword ptr [esp + 0x1c]
-        mov dword ptr [esi + 0x18], ecx
-        mov ecx, dword ptr [esp + 0x18]
-        mov dword ptr [esi + 0x14], edx
-        mov dword ptr [esi + 0x10], ecx
-        mov dword ptr [eax], esi
-    item_record_done:
-        mov eax, esi
-        pop edi
-        pop esi
-        ret
-    }
-}
-#else
 Front_MenuOverlay* front_menu_create_overlay(const char* filename,
                                              Front_MenuOverlay** list,
                                              int x, int y, int sfxType)
@@ -2634,15 +2424,14 @@ Front_MenuOverlay* front_menu_create_overlay(const char* filename,
         }
         overlay->overlayType = front_menu_overlay_get_type(overlay);
         overlay->field_1c = 0;
-        overlay->x = x;
         overlay->next = *list;
-        overlay->sfxType = sfxType;
+        overlay->x = x;
         overlay->y = y;
+        overlay->sfxType = sfxType;
         *list = overlay;
     }
     return overlay;
 }
-#endif
 
 // FUNCTION: LEGORR 0x00414010
 void front_menu_item_load_slider_images(int arrayLength, char** stringParts,
@@ -2670,8 +2459,7 @@ Front_MenuSet* front_menu_set_create(int menuCount)
     Front_MenuSet* menuSet;
 
     menuSet = (Front_MenuSet*)malloc(sizeof(Front_MenuSet));
-    menuSet->menus = NULL;
-    menuSet->menuCount = 0;
+    memset(menuSet, 0, sizeof(Front_MenuSet));
     menuSet->menus = (Front_Menu**)malloc(menuCount * sizeof(Front_Menu*));
     memset(menuSet->menus, 0, menuCount * sizeof(Front_Menu*));
     menuSet->menuCount = menuCount;
@@ -2957,7 +2745,7 @@ int front_is_intros_enabled(void)
                             string_path_join(s_engine_config_root, "Main",
                                              // STRING: LEGORR 0x004a24ec
                                              "DontPlayAvis", NULL)) != 1 &&
-        s_application_mode < 3) {
+        FRONT_PROGRAMMER_LEVEL < 3) {
         return 1;
     }
     return 0;
@@ -2989,9 +2777,6 @@ void front_callback_slider_sound_volume(int volume)
  * (finding 538, rule B). The original declared them all in FrontEnd.h. */
 #include "gods98/files.h"
 #include "gods98/movie_unit.h"
-
-/* mainGlobs.programmerLevel, compared unsigned. */
-#define FRONT_PROGRAMMER_LEVEL ((unsigned int)s_application_mode)
 
 /* Front_Save_GetSaveDataAtIndex, Front_Save_GetCurrentSaveData and
  * Front_Save_GetRewardLevel take savegame.h's names in the matching build
@@ -3857,12 +3642,7 @@ void front_load_menu_text_window(struct BlockRec* config, const char* blockPath,
 {
     char* str;
     char* stringParts[5];
-    float area[4];
-
-    area[1] = 0.0f;
-    area[2] = 0.0f;
-    area[0] = 0.0f;
-    area[3] = 0.0f;
+    float area[4] = { 0 };
 
     // STRING: LEGORR 0x004a25c0
     str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, blockPath, "Load", NULL));
