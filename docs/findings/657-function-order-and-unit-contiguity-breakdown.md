@@ -229,6 +229,21 @@ Still broken, nine units:
   unchanged; the late objects are attributed to units.
 - `make tools-test`, `make winapi-link-check` and native ctest pass.
 
+## Rebased onto `main` `a1bc9039` (#765)
+
+The generated files were taken from `main` and regenerated, not merged. On
+`a1bc9039` the inversion and contiguity figures are the same as on
+`c42dc2cf`:
+- full pairs 12,261 to 5,568 (adjacent 39);
+- game-only 63 to 17;
+- unit-order 1,274 to 1,000;
+- contiguity 195 to 216 of 225.
+
+Exact-function bytes (330,196), accuracy (97.01% / 96.67%) and data-offset
+agreement (19 of 57) are unchanged. The entry point RVA moves from `0xbe710`
+to `0xbd420`. `make reccmp-check`: no function below the baseline; only the
+input hash of the baseline and the listing digests changed.
+
 ## Reproducing
 
 ```sh
