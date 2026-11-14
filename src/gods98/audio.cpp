@@ -150,11 +150,13 @@ void audio_active_sound_volume_set(int millibels)
     audio_sound_volume_set(millibels);
 }
 
-// FUNCTION: LEGORR 0x00478980
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_SetCDVolume; gods98/main.c (G98-005) has the original.
 void music_mixer_volume_set(float music, float sfx)
 {
     (void)audio_mixer_control_init(&music, &sfx, 1);
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 void audio_music_mixer_volume_get(float* music, float* sfx)
 {
@@ -164,7 +166,8 @@ void audio_music_mixer_volume_get(float* music, float* sfx)
     if (sfx != NULL) *sfx = volume;
 }
 
-// FUNCTION: LEGORR 0x004789c0
+#if defined(LEGORRR_BACKEND_MINIWIN)
+// PORT-ONLY: the native body of Main.c's Main_CDVolume; gods98/main.c (G98-005) has the original.
 int audio_mixer_control_init(float* music, float* sfx, int apply_volume)
 {
     if (music == NULL || sfx == NULL) return 0;
@@ -188,6 +191,7 @@ int audio_mixer_control_init(float* music, float* sfx, int apply_volume)
     return 0;
 #endif
 }
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 int audio_cd_mixer_volume_get(float* music, float* sfx)
 {
@@ -734,10 +738,12 @@ void audio_stream_stop(AudioPlayer* p, int stream_index)
     memset(&p->stream_format[stream_index], 0, sizeof(WavSample));
 }
 
+#if defined(LEGORRR_BACKEND_MINIWIN)
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x004789a0
+// PORT-ONLY: the native body of Main.c's Main_GetCDVolume; gods98/main.c (G98-005) has the original.
 extern "C" int ledger_stub_004789a0_MusicMixerVolumeGet(float* music, float* sfx)
 {
     return audio_mixer_control_init(music, sfx, 0);
 }
 } // namespace unported_ledger_stubs
+#endif /* LEGORRR_BACKEND_MINIWIN */

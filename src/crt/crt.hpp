@@ -990,9 +990,9 @@ extern "C" uint32_t s_renderer_word_b; /* DAT_0076ab28 */
 extern "C" uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
 extern "C" uint32_t s_window_mouse_word_40; /* DAT_0076ab40 */
 extern "C" uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c */
-extern uint32_t s_window_mouse_word_50; /* DAT_0076ab50 */
-extern uint32_t s_window_mouse_word_54; /* DAT_0076ab54 */
-extern uint32_t s_window_mouse_word_58; /* DAT_0076ab58 */
+extern "C" uint32_t s_window_mouse_word_50; /* DAT_0076ab50 */
+extern "C" uint32_t s_window_mouse_word_54; /* DAT_0076ab54 */
+extern "C" uint32_t s_window_mouse_word_58; /* DAT_0076ab58 */
 void     renderer_words_set(uint32_t a, uint32_t b, uint32_t c); /* install */
 
 /* GlobalDwordGet (FUN_004065d0): the DAT_0076ac84 global dword. */
@@ -1017,7 +1017,7 @@ void     render_surface_secondary_set(uint32_t value); /* install */
 /* RenderFeatureFlagsGet (FUN_00477f70): the DAT_0050608c feature word. */
 extern "C" uint32_t render_feature_flags_get(void);
 void     render_feature_flags_set(uint32_t value); /* install */
-extern uint32_t s_render_feature_flags; /* DAT_0050608c */
+extern "C" uint32_t s_render_feature_flags; /* DAT_0050608c */
 
 /* Engine feature word band (2026-10-25): the DAT_00505f84 half-model lives
  * here with install/peek hooks (see crt.cpp; the EngineContext::feature

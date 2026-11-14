@@ -70,6 +70,7 @@ gods98_c_sources = [
   'container.c',
   'viewports.c',
   'utils.c',
+  'main.c',
   'config.c',
   'maths.c',
   'font.c',

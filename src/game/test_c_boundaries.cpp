@@ -230,6 +230,7 @@ extern "C" int s_cursor_delta_y;
 #include "game/detail_imports.h"
 #include "gods98/init.h"
 #include "gods98/init_imports.h"
+#include "gods98/main_imports.h"
 #include "game/water.h"
 #include "game/water_imports.h"
 #include "game/teleporter.h"
