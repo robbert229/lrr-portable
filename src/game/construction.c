@@ -599,10 +599,10 @@ void* construction_place_building(int objID, int* blockPos,
     Lego_ConstructionZone zone;
 
     memset(&zone, 0, sizeof(zone));
-    zone.direction = direction;
+    zone.objID = objID;
     zone.origin.x = blockPos[0];
     zone.origin.y = blockPos[1];
-    zone.objID = objID;
+    zone.direction = direction;
     zone.shapePoints = (ConstructionPoint2I*)shapePoints;
     zone.shapeCount = shapeCount;
     terrain_map_shape_flatten(CONSTRUCTION_LEGO_GET_MAP(),
