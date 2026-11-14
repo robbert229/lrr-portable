@@ -3,11 +3,11 @@
     "full": 96.03,
     "game_only": 95.7
   },
-  "baseline_sha256": "223c8accc8038100bd5bb42ded2b3e6473c4d69d118419b729074ac6b0f244af",
+  "baseline_sha256": "56b6dd008c19f5c26d9cd7bf2e79139f5e2fad1abce24a5b601feec001d3e829",
   "exact_function_code_bytes": {
-    "bytes": 289516,
+    "bytes": 300991,
     "original_text_bytes": 642549,
-    "percent": 45.06
+    "percent": 46.84
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 631,
@@ -23,7 +23,7 @@
       "pairs": 969
     }
   },
-  "input_sha256": "3c89ea7e7a9f42db33d814d8ee9e03e1f48a45998ded608553928fbce1cfbcd7",
+  "input_sha256": "35bee224288667d755122ae236aae0ee2507488b64c7123a1d94e39e79f0933a",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 19,
@@ -4224,21 +4224,21 @@
     ],
     "unmapped_original_functions": 52
   },
-  "listing_digests_sha256": "17016d6fa7de8de628f04dd9870f374ccb2da0cf9250027b5da8cd92312a76b9",
+  "listing_digests_sha256": "81e5f0558121ba1d1dedc6b610821b47f426178214b31f7668c8144e1d965f5d",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 2146,
+        "exact": 2147,
         "mapped": 2663,
-        "removed": 92,
-        "removed_exact": 78
+        "removed": 73,
+        "removed_exact": 64
       },
       "game_only": {
-        "exact": 1937,
+        "exact": 1938,
         "mapped": 2418,
-        "removed": 87,
-        "removed_exact": 73
+        "removed": 68,
+        "removed_exact": 59
       }
     },
     "annotated_by_kind": {
@@ -4251,8 +4251,8 @@
       "unit": {
         "bytes": 560752,
         "functions": 2388,
-        "removed_bytes": 13648,
-        "removed_functions": 82
+        "removed_bytes": 8144,
+        "removed_functions": 63
       }
     },
     "by_category": {
@@ -4271,8 +4271,8 @@
       "original_annotated": {
         "bytes": 566192,
         "functions": 2415,
-        "removed_bytes": 14480,
-        "removed_functions": 87
+        "removed_bytes": 8976,
+        "removed_functions": 68
       },
       "other": {
         "bytes": 4152,
@@ -4289,27 +4289,27 @@
       "port_tail": {
         "bytes": 623680,
         "functions": 4316,
-        "removed_bytes": 202272,
-        "removed_functions": 1957
+        "removed_bytes": 203984,
+        "removed_functions": 1976
       },
       "port_unit": {
         "bytes": 240,
         "functions": 12,
-        "removed_bytes": 96,
-        "removed_functions": 4
+        "removed_bytes": 112,
+        "removed_functions": 5
       }
     },
     "gate_text_symbols": 8033,
     "image": {
-      "bss_bytes": 1116672,
+      "bss_bytes": 1116688,
       "characteristics": 271,
       "common_dll_order_equal": true,
-      "data_initialised_bytes": 105404,
+      "data_initialised_bytes": 105516,
       "debug_directory": [
         0,
         0
       ],
-      "entry_point_rva": 1050064,
+      "entry_point_rva": 1053840,
       "import_dlls": [
         "kernel32.dll",
         "ole32.dll",
@@ -4326,10 +4326,10 @@
       "imported_names": 156,
       "section_bytes": {
         ".data": {
-          "differing": 95160,
-          "equal": 10312,
+          "differing": 96378,
+          "equal": 9606,
           "original": 73216,
-          "rebuilt": 105472
+          "rebuilt": 105984
         },
         ".idata": {
           "differing": 3802,
@@ -4338,22 +4338,22 @@
           "rebuilt": 4392
         },
         ".rdata": {
-          "differing": 21202,
-          "equal": 1454,
+          "differing": 21201,
+          "equal": 1455,
           "original": 11232,
           "rebuilt": 22656
         },
         ".text": {
-          "differing": 1088681,
-          "equal": 22444,
+          "differing": 1092143,
+          "equal": 22758,
           "original": 642549,
-          "rebuilt": 1111125
+          "rebuilt": 1114901
         }
       },
       "sections": {
         ".data": {
-          "raw_size": 105472,
-          "virtual_size": 1222128
+          "raw_size": 105984,
+          "virtual_size": 1222256
         },
         ".idata": {
           "raw_size": 4608,
@@ -4368,8 +4368,8 @@
           "virtual_size": 1348
         },
         ".text": {
-          "raw_size": 1111552,
-          "virtual_size": 1111125
+          "raw_size": 1115136,
+          "virtual_size": 1114901
         }
       },
       "thunk_order": [
@@ -4387,8 +4387,8 @@
         "kernel32.dll:_RtlUnwind@16"
       ]
     },
-    "removed_bytes": 245385,
-    "removed_functions": 2548
+    "removed_bytes": 241609,
+    "removed_functions": 2549
   },
   "pe_header_differences": {
     "entry_point_rva": {
@@ -4429,7 +4429,7 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 2.4,
-      "identical_bytes": 33569,
+      "identical_bytes": 33570,
       "identical_percent": 5.22,
       "original_bytes": 642549,
       "rebuilt_bytes": 1356421,
@@ -4466,7 +4466,7 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 2.4,
-    "identical_bytes": 33569,
+    "identical_bytes": 33570,
     "identical_percent": 5.22,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,

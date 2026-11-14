@@ -6,7 +6,10 @@ drops to a few live original callers whose rebuilds call port substitutes,
 and finding [634](634-lego-near-miss-sweep-4.md), which aliased most of
 `lego_game_config_init`'s calls and left two because of the symbol counter.
 
-Measured with `make reccmp-check` on `main` `db760978` and on this change.
+Measured with `make reccmp-check`, first on `main` `db760978` and again
+after rebasing onto #735 (`4b50f313`, LegoObject.c's callers switched to
+Weapons.c's originals). The scores and exact bytes are the same on both
+bases. The `opt_ref` rows give both.
 
 | Measure | `main` `db760978` | This change |
 | --- | ---: | ---: |
@@ -17,6 +20,8 @@ Measured with `make reccmp-check` on `main` `db760978` and on this change.
 | Exact-function code bytes | 289,516 (45.06%) | **300,991 (46.84%)** |
 | `opt_ref` removed / removed exact | 124 / 102 | **99 / 84** |
 | `opt_ref` under `/OPT:NOICF` (folded excluded) | 119 / 97 | 94 / 79 |
+| `opt_ref` on #735 (`4b50f313`) | 92 / 78 | **73 / 64** |
+| `opt_ref` under `/OPT:NOICF` on #735 | 87 / 73 | 68 / 59 |
 | Image end | `0x875000` | `0x875000` |
 
 No function fell below the baseline and no exact match was lost, so there
@@ -107,8 +112,11 @@ edited.
 
 ## Functions `/OPT:REF` keeps now
 
-25 annotated functions (18 exact) are no longer removed, and none is newly
-removed.
+On `main`, 25 annotated functions (18 exact) are no longer removed, and
+none is newly removed. On #735, which already keeps part of Weapons.c's
+chain, 19 are kept (14 exact). The aliases of the two changes coexist:
+#735's are in LegoObject.c's headers, and `weapons_update` is aliased only
+here.
 
 | Unit | Functions (exact) | Functions |
 | --- | ---: | --- |
@@ -130,7 +138,7 @@ left in `make opt-ref-callers`.
 | Caller | Callee | Blocker | Owner |
 | --- | --- | --- | --- |
 | `lego_level_load` (`00429890`) | `0045d7e0` LevelIdentifierRemapTableLoad | the annotated function is `level_id_remap.cpp`'s C++ ledger stub in `unported_ledger_stubs`, taking an installed pair table, not the original's `(fileName, gameName)`. It needs GAME-035's conversion before the call can switch | GAME-035 (`level_id_remap.cpp`) conversion |
-| `legoobject_update_callback` and its sibling | `weapons_object_*` (17 Weapons.c functions still removed) | calls in `legoobject_unit.c` | #730 |
+| `legoobject_update_callback` and its sibling | `weapons_object_*` | calls in `legoobject_unit.c` | #730 (#735, below this change) |
 | NERPs (`tutorial_script.c`) | Interface.c's item setters | hook tables | #732 |
 | `WinMain` | Init.c, DirectDraw.c, Files.c and the start-up chain | `entry.cpp` | #733 |
 
