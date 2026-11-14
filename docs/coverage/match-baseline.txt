@@ -1,4 +1,4 @@
-# input_sha256: 3f259de9b4b43ef666cb9408f8ad1f5e8926804aafd419ae33fe6fb8f4e010f9
+# input_sha256: f096f24847643daf764e60ac5bbd10a1957fbe90458b38b393cefdc1f6e15f33
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1018,7 +1018,7 @@
 0x00439e10 100.00 legoobject_vehicle_unload_cell_find_if_eligible
 0x00439e40 100.00 legoobject_record_flag20_query
 0x00439e70 100.00 legoobject_attached_object_list_detach
-0x0043a120 81.00 legoobject_cell_step_command_issue_with_jitter
+0x0043a120 100.00 legoobject_cell_step_command_issue_with_jitter
 0x0043a300 71.14 legoobject_deposit_activity_gate
 0x0043a5f0 100.00 legoobject_visual_resource_get_or_create
 0x0043a650 100.00 legoobject_action_kind_create_and_command_issue
@@ -1062,7 +1062,7 @@
 0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
-0x0043c810 89.21 legoobject_update_callback
+0x0043c810 89.35 legoobject_update_callback
 0x0043eea0 89.26 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
@@ -1134,12 +1134,12 @@
 0x004460f0 89.69 legoobject_flag_gated_callback_a
 0x00446610 71.66 legoobject_movement_tick_scale_and_delta_get
 0x004468c0 100.00 legoobject_route_adjacent_step_append
-0x004469c0 82.72 legoobject_nearest_connected_cell_route_select
-0x00446e40 45.95 legoobject_nearest_cell_route_commit
+0x004469c0 87.84 legoobject_nearest_connected_cell_route_select
+0x00446e40 100.00 legoobject_nearest_cell_route_commit
 0x004470d0 100.00 legoobject_conditional_type_five_spawn
 0x004471b0 100.00 legoobject_try_create_linked_at_position
 0x00447210 85.07 legoobject_adjacent_placement_cell_search
-0x004473b0 60.91 legoobject_route_to_cell_command_issue
+0x004473b0 88.79 legoobject_route_to_cell_command_issue
 0x004474f0 100.00 legoobject_linked_proximity_response
 0x004475c0 100.00 legoobject_progress_negative_delta_handle
 0x00447730 100.00 legoobject_progress_advance_by_25
@@ -1151,7 +1151,7 @@
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 100.00 legoobject_activity_tick
 0x00447c40 100.00 legoobject_activity_register_bookkeeping
-0x00447ea0 68.05 legoobject_type_behavior_update
+0x00447ea0 69.53 legoobject_type_behavior_update
 0x004487c0 100.00 legoobject_clear_nested_state_8_fields
 0x00448800 100.00 legoobject_move_to_cell_coordinates
 0x00448880 100.00 legoobject_record_gated_step_command_issue
@@ -1170,7 +1170,7 @@
 0x00449610 100.00 legoobject_coordinate_route_and_mark
 0x00449700 100.00 legoobject_route_step_command_issue
 0x00449880 100.00 legoobject_blocked_cell_approach_weight_write
-0x00449980 75.52 legoobject_activity_terrain_eligibility_transition
+0x00449980 77.42 legoobject_activity_terrain_eligibility_transition
 0x00449a70 100.00 legoobject_activity23_state_transition
 0x00449ac0 100.00 legoobject_proximity_step_command_issue_clearing_gate
 0x00449c00 100.00 legoobject_simtick_render_step
@@ -1198,7 +1198,7 @@
 0x0044ae50 100.00 legoobject_random_kind_six_scatter_spawn
 0x0044af90 100.00 legoobject_attached_spawn_record_process
 0x0044afb0 85.71 legoobject_tiny_monster_spawn_and_teardown
-0x0044b140 62.82 legoobject_small_spider_cell_swarm_spawn
+0x0044b140 100.00 legoobject_small_spider_cell_swarm_spawn
 0x0044b250 100.00 legoobject_pairing_activity_raise_and_mutual_link
 0x0044b350 100.00 legoobject_activity_is_special
 0x0044b370 100.00 legoobject_activity_grant
@@ -3558,7 +3558,7 @@
 0x00439e10 100.00 legoobject_vehicle_unload_cell_find_if_eligible
 0x00439e40 100.00 legoobject_record_flag20_query
 0x00439e70 100.00 legoobject_attached_object_list_detach
-0x0043a120 81.00 legoobject_cell_step_command_issue_with_jitter
+0x0043a120 100.00 legoobject_cell_step_command_issue_with_jitter
 0x0043a300 71.14 legoobject_deposit_activity_gate
 0x0043a5f0 100.00 legoobject_visual_resource_get_or_create
 0x0043a650 100.00 legoobject_action_kind_create_and_command_issue
@@ -3602,7 +3602,7 @@
 0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
-0x0043c810 89.21 legoobject_update_callback
+0x0043c810 89.35 legoobject_update_callback
 0x0043eea0 89.26 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
@@ -3674,12 +3674,12 @@
 0x004460f0 89.69 legoobject_flag_gated_callback_a
 0x00446610 71.66 legoobject_movement_tick_scale_and_delta_get
 0x004468c0 100.00 legoobject_route_adjacent_step_append
-0x004469c0 82.72 legoobject_nearest_connected_cell_route_select
-0x00446e40 45.95 legoobject_nearest_cell_route_commit
+0x004469c0 87.84 legoobject_nearest_connected_cell_route_select
+0x00446e40 100.00 legoobject_nearest_cell_route_commit
 0x004470d0 100.00 legoobject_conditional_type_five_spawn
 0x004471b0 100.00 legoobject_try_create_linked_at_position
 0x00447210 85.07 legoobject_adjacent_placement_cell_search
-0x004473b0 60.91 legoobject_route_to_cell_command_issue
+0x004473b0 88.79 legoobject_route_to_cell_command_issue
 0x004474f0 100.00 legoobject_linked_proximity_response
 0x004475c0 100.00 legoobject_progress_negative_delta_handle
 0x00447730 100.00 legoobject_progress_advance_by_25
@@ -3691,7 +3691,7 @@
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 100.00 legoobject_activity_tick
 0x00447c40 100.00 legoobject_activity_register_bookkeeping
-0x00447ea0 68.05 legoobject_type_behavior_update
+0x00447ea0 69.53 legoobject_type_behavior_update
 0x004487c0 100.00 legoobject_clear_nested_state_8_fields
 0x00448800 100.00 legoobject_move_to_cell_coordinates
 0x00448880 100.00 legoobject_record_gated_step_command_issue
@@ -3710,7 +3710,7 @@
 0x00449610 100.00 legoobject_coordinate_route_and_mark
 0x00449700 100.00 legoobject_route_step_command_issue
 0x00449880 100.00 legoobject_blocked_cell_approach_weight_write
-0x00449980 75.52 legoobject_activity_terrain_eligibility_transition
+0x00449980 77.42 legoobject_activity_terrain_eligibility_transition
 0x00449a70 100.00 legoobject_activity23_state_transition
 0x00449ac0 100.00 legoobject_proximity_step_command_issue_clearing_gate
 0x00449c00 100.00 legoobject_simtick_render_step
@@ -3738,7 +3738,7 @@
 0x0044ae50 100.00 legoobject_random_kind_six_scatter_spawn
 0x0044af90 100.00 legoobject_attached_spawn_record_process
 0x0044afb0 85.71 legoobject_tiny_monster_spawn_and_teardown
-0x0044b140 62.82 legoobject_small_spider_cell_swarm_spawn
+0x0044b140 100.00 legoobject_small_spider_cell_swarm_spawn
 0x0044b250 100.00 legoobject_pairing_activity_raise_and_mutual_link
 0x0044b350 100.00 legoobject_activity_is_special
 0x0044b370 100.00 legoobject_activity_grant

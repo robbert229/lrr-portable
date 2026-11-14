@@ -25,6 +25,25 @@ winapi-link-check` and native ctest (37 of 37) pass, and the native build
 starts. Only `src/game/legoobject_unit.c` changes; no header changes. There
 is no `#pragma`, no pad and no `Deviation (scoring only)` in the change.
 
+**Stacked on #799** (`identity/793-metrics-tail`, `1187aa38`, on #798),
+with a full `make reccmp-check` and `make match-progress`: the same eight
+functions rise by the same amounts, and nothing falls.
+
+| Measure | #799 | This change on #799 |
+| --- | ---: | ---: |
+| Exact-function code bytes | 338,909 (52.74%) | **340,131 (52.93%)** |
+| Correct-size functions, full / game-only | 2,596 / 2,305 | **2,598 / 2,307** |
+| Correct-size function bytes, full / game-only | 439,362 / 388,535 | **440,777 / 389,950** |
+| Exact functions (correct-size metric), full / game-only | 2,427 / 2,139 | **2,430 / 2,142** |
+| Reccmp accuracy, full / game-only | 97.12% / 96.79% | **97.17% / 96.85%** |
+| `.text` identical at original addresses | 4.08% (26,223) | 4.07% (26,141) |
+| Identical prefix (raw / address-masked) | 11 / 528 bytes | 11 / 528 bytes |
+| Unit size agreement (correct-size / start / end / whole units) | 166 / 2 / 1 / 0 of 227 | unchanged |
+| Image end; function-order inversions | `0x7f5000`; 222 / 1 | unchanged |
+
+The `.text`-at-original-addresses dip comes from LegoObject.c's object
+being 16 bytes longer, which moves every later object.
+
 LegoObject.c's object is 16 bytes longer, so every later object starts
 0x10 later in the gate link. No function changed score from that.
 
