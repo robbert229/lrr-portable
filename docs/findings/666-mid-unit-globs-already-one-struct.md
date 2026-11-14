@@ -35,8 +35,9 @@ reccmp-check`:
 `make reccmp-check` passes with no function lower. `make match-progress`,
 `make unit-data-offsets` and `make pe-audit` were run. The baseline and
 listing digests are unchanged. `binary-progress.json` changes in one
-place: one 32-byte function moves from `original_annotated` (2,533 to
-2,532) to `port_unit`. That is the `/OPT:NOREF` relink flip of findings
+place: one 32-byte function moves between `port_unit` and
+`original_annotated`. On the stacked base (#790) it moves into
+`original_annotated` (2,533 to 2,534). That is the `/OPT:NOREF` relink flip of findings
 654 and 663, with no source change. `make tools-test` (no
 `--allow-growth`), `make winapi-link-check` and native ctest (37 of 37)
 pass.
