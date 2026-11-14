@@ -9360,56 +9360,55 @@ void lego_panel_button_layout_config_load(struct BlockRec* config,
                                           unsigned int screenWidth,
                                           unsigned int screenHeight)
 {
-    char buff[256];
-    char* argv[9];
-    unsigned int buttonCount[12];
+    char buff[128];
+    char* argv[10];
+    unsigned int buttonCount[12] = { 0 };
     unsigned int buttonTypes[12][24];
-    char* normalNames[12][24];
-    char* highlightNames[12][24];
-    char* pressedNames[12][24];
+    char* names[3][12][24];
     float areas[12][24][4];
     int toolTips[12][24];
-    char* copies[100];
+    char* copies[12 * 24];
     unsigned int copyCount;
     struct BlockRec* arrayItem;
-    int panelType;
+    unsigned int panelType;
     unsigned int buttonType;
+    int toolTip;
     unsigned int i;
 
     copyCount = 0;
-    memset(buttonCount, 0, sizeof(buttonCount));
     // STRING: LEGORR 0x004a47e4
     sprintf(buff, "Buttons%ix%i", screenWidth, screenHeight);
     if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0))) != NULL) {
         do {
-            if (ui_panel_name_table_lookup(arrayItem->key, &panelType)) {
+            if (ui_panel_name_table_lookup(arrayItem->key, (int*)&panelType)) {
                 copies[copyCount] = string_duplicate(arrayItem->value);
                 sound_variant_split(copies[copyCount], argv, ",");
                 if (ui_panel_indexed_name_lookup(panelType, argv[0], &buttonType)) {
                     buttonTypes[panelType][buttonCount[panelType]] = buttonType;
                     for (i = 0; i < 3; i++) {
-                        char** names = (i == 0) ? normalNames[panelType] : (i == 1) ? highlightNames[panelType] : pressedNames[panelType];
-                        if (stricmp("NULL", argv[1 + i]) == 0) names[buttonCount[panelType]] = NULL;
-                        else names[buttonCount[panelType]] = argv[1 + i];
+                        if (stricmp("NULL", argv[1 + i]) == 0) names[i][panelType][buttonCount[panelType]] = NULL;
+                        else names[i][panelType][buttonCount[panelType]] = argv[1 + i];
                     }
                     areas[panelType][buttonCount[panelType]][0] = (float)atoi(argv[4]);
                     areas[panelType][buttonCount[panelType]][1] = (float)atoi(argv[5]);
                     areas[panelType][buttonCount[panelType]][2] = (float)atoi(argv[6]);
                     areas[panelType][buttonCount[panelType]][3] = (float)atoi(argv[7]);
-                    if (case_insensitive_name_table_lookup(argv[8], &toolTips[panelType][buttonCount[panelType]]) == 0)
-                        toolTips[panelType][buttonCount[panelType]] = 0;
+                    if (case_insensitive_name_table_lookup(argv[8], &toolTip))
+                        toolTips[panelType][buttonCount[panelType]] = toolTip;
+                    else toolTips[panelType][buttonCount[panelType]] = 0;
                     buttonCount[panelType]++;
                     copyCount++;
                 }
             }
         } while ((arrayItem = block_next_equal_key(arrayItem)) != NULL);
 
-        for (i = 0; i < 12; i++) {
-            panel_texture_slots_allocate(i, buttonCount[i], buttonTypes[i], &areas[i][0][0],
-                                         normalNames[i], highlightNames[i], pressedNames[i],
-                                         toolTips[i]);
+        for (panelType = 0; panelType < 12; panelType++) {
+            panel_texture_slots_allocate(panelType, buttonCount[panelType], buttonTypes[panelType],
+                                         &areas[panelType][0][0], names[0][panelType],
+                                         names[1][panelType], names[2][panelType],
+                                         toolTips[panelType]);
         }
-        for (; copyCount != 0; copyCount--) free(copies[copyCount - 1]);
+        for (i = 0; i < copyCount; i++) free(copies[i]);
     }
 }
 
@@ -9819,12 +9818,12 @@ void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
                                       float elapsedWorld, float elapsed)
 {
     float bob = (float)sin(s_lego_tutorialIconPhase);
-    unsigned int bx, by;
+    unsigned int by, bx;
     Lego_Block* block;
     float wPos[3];
     float sPos[2];
 
-    s_lego_tutorialIconPhase -= elapsed * 25.0f * -0.013333334f;
+    s_lego_tutorialIconPhase -= -0.013333334f * (elapsed * 25.0f);
     if (system_state_flags_get_original(NULL)) {
         for (by = 0; by < ((unsigned int*)LEGO_LEVEL_PTR(void, level->map))[1]; by++) {
             for (bx = 0; bx < ((unsigned int*)LEGO_LEVEL_PTR(void, level->map))[0]; bx++) {
@@ -9836,15 +9835,16 @@ void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
                         wPos[2] = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
                                                           wPos[0], wPos[1]);
                         camera_project_point_to_screen((const struct ViewProjectionAdapter*)view, sPos, wPos);
-                        sPos[0] -= (float)(legoGlobs_TutorialIcon->width / 2);
-                        sPos[1] -= bob * 20.0f + (float)(legoGlobs_TutorialIcon->height * 2);
+                        sPos[0] -= (float)((int)legoGlobs_TutorialIcon->width / 2);
+                        sPos[1] -= bob * 20.0f + (int)legoGlobs_TutorialIcon->height * 2;
                         image_display_scaled(legoGlobs_TutorialIcon, NULL, (const struct Point2F*)sPos, NULL);
                         if (LEGO_FIELD(&interfaceGlobs, int, 0xfc4)) {
                             terrain_map_block_highlight_set(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by, 5);
+                            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_10[13] = 1;
                         } else {
                             terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by);
+                            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_10[13] = 1;
                         }
-                        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_10[13] = 1;
                     } else if (block->f_10[13] == 1) {
                         block->f_10[13] = 0;
                         if (!(system_state_flags_get_original(NULL) & 2) &&
@@ -9998,11 +9998,10 @@ int lego_keep_running(void)
         }
     }
     options_load_or_default_target(1, 0);
-    if (levelName && lego_level_load(levelName)) {
-        free((void*)levelName);
-        return 1;
-    }
-    return 0;
+    if (levelName == NULL) return 0;
+    if (!lego_level_load(levelName)) return 0;
+    free((void*)levelName);
+    return 1;
 }
 
 /* GlobalStateLowByteClearAndRefresh [group 3C]: clears the low byte of

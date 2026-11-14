@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* GAME-026's copy of gods98 Maths.h's inline vector helpers (dot, modulus,
- * add, subtract, scale, normalise, distance, and the 2D modulus and
- * normalise), over TerrainMapVector3 and TerrainMapPoint2. The original
+ * add, subtract, scale, normalise, distance, and the 2D modulus, normalise
+ * and distance), over TerrainMapVector3 and TerrainMapPoint2. The original
  * unit expands them in place, so they have no address of their own. Only
  * terrain_map.c includes this file.
  *
@@ -80,6 +80,16 @@ static __inline TerrainMapPoint2* terrain_map_vector2d_normalise(
     r->x = r->x * f;
     r->y = r->y * f;
     return r;
+}
+
+static __inline float terrain_map_vector2d_distance(const TerrainMapPoint2* a,
+                                                    const TerrainMapPoint2* b)
+{
+    TerrainMapPoint2 c;
+
+    c.x = a->x - b->x;
+    c.y = a->y - b->y;
+    return terrain_map_vector2d_modulus(&c);
 }
 
 #endif /* LEGORRR_GAME_TERRAIN_MAP_MATHS_H */
