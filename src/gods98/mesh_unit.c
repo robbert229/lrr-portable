@@ -1673,12 +1673,11 @@ Mesh_Texture* mesh_load_texture(const char* baseDir, const char* name,
         texture->texture = NULL;
         texture->surface = surface;
         texture->colourKey = trans;
-        return texture;
+    } else {
+        free(texture);
+        texture = NULL;
     }
-
-    free(texture);
-
-    return NULL;
+    return texture;
 }
 
 // FUNCTION: LEGORR 0x00483030

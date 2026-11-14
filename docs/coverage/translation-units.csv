@@ -1273,7 +1273,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00459240,PopEntityStateOverride,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
 004592a0,OsfReadStateReset,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
 004592e0,OsfSnapshot,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
-00459360,OsfSnapshotTableBuild,31,GAME-030,,game,high,bss,
+00459360,OsfSnapshotTableBuild,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
 004593d0,OsfReadDirtyFlagGet,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
 004593e0,OsfWrite,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
 00459470,OsfRead,31,GAME-030,,game,high,bss,src/game/object_state_file.cpp
@@ -2272,7 +2272,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 0048e030,ByteRangeSwap,89,CRT-009,qsort.c,crt,medium,boundary:CRT-009,src/crt/crt.cpp
 0048e060,X87FloatToLongLongRound,90,CRT-010,ftol.asm,crt,medium,boundary:CRT-010,src/crt/crt.cpp
 0048e090,CrtAsin,91,CRT-011,,crt,high,boundary:CRT-011,src/crt/crt.cpp
-0048e0ad,CrtAcosCore,91,CRT-011,,crt,high,string,src/crt/crt.cpp
+0048e0ad,CrtAcosCore,91,CRT-011,,crt,high,string,
 0048e160,RandomSeedSet,92,CRT-012,rand.c,crt,high,data,src/game/level.cpp
 0048e170,RandomNext,92,CRT-012,rand.c,crt,high,data,src/game/level.cpp
 0048e1aa,CrtMathIntrinsicDispatch,93,CRT-013,,crt,high,data,src/crt/crt.cpp
@@ -2416,7 +2416,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 004954e0,CrtSehLocalUnwindToScope,155,CRT-075,frame.cpp,crt,high,rdata,src/crt/crt.cpp
 004955c0,CrtSehUnwindAndInvokeHandler,155,CRT-075,frame.cpp,crt,high,bracketed,src/crt/crt.cpp
 00495650,CrtSehHandlerCallWithFrame,155,CRT-075,frame.cpp,crt,high,bss;rdata,src/crt/crt.cpp
-0049573a,CrtSehAbnormalTerminationCleanup,155,CRT-075,frame.cpp,crt,high,bss,src/crt/crt.cpp
+0049573a,CrtSehAbnormalTerminationCleanup,155,CRT-075,frame.cpp,crt,high,bss,
 004957d0,CxxCatchObjectBindOrCopy,155,CRT-075,frame.cpp,crt,high,rdata,src/crt/crt.cpp
 004959e0,CrtSehDestructorInvoke,155,CRT-075,frame.cpp,crt,high,rdata,src/crt/crt.cpp
 00495a60,CrtUnwindAddressResolve,155,CRT-075,frame.cpp,crt,high,boundary:CRT-076,src/crt/crt.cpp
@@ -2424,7 +2424,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00495ae0,CrtTerminateHandlerInvokeAndAbort,157,CRT-077,hooks.cpp,crt,high,bss;rdata,src/crt/crt.cpp
 00495b4e,_abort,157,CRT-077,hooks.cpp,crt,high,bracketed,
 00495b70,CrtUnexpectedHandlerInvokeAndTerminate,157,CRT-077,hooks.cpp,crt,high,data;rdata,src/crt/crt.cpp
-00495bde,CrtAbortAfterCallback,157,CRT-077,hooks.cpp,crt,high,boundary:CRT-078,src/crt/crt.cpp
+00495bde,CrtAbortAfterCallback,157,CRT-077,hooks.cpp,crt,high,boundary:CRT-078,
 00495d90,IsDbcsLeadByte,158,CRT-078,ismbbyte.c,crt,medium,boundary:CRT-078,src/crt/crt.cpp
 00495db0,CrtCharacterClassFlagTest,158,CRT-078,ismbbyte.c,crt,medium,boundary:CRT-078,src/crt/crt.cpp
 00495df0,CrtEnvironmentPointerArrayBuild,159,CRT-079,stdenvp.c,crt,medium,boundary:CRT-079,src/crt/crt.cpp

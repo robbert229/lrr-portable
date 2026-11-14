@@ -760,6 +760,13 @@ float keyframe_time_segment_fraction(LwsNode* node, float time,
     return 0.0f;
 }
 
+/* Gods98's Maths_Interpolate, an inline helper: the original loads the
+ * first key once and reuses it from the x87 stack (finding 650). */
+static __inline float lws_maths_interpolate(float a, float b, float t)
+{
+    return a + ((b - a) * t);
+}
+
 // FUNCTION: LEGORR 0x00488070
 void lws_dissolve_interpolate(LwsInfo* scene, LwsNode* node,
                               unsigned short prev, float delta)
@@ -767,7 +774,7 @@ void lws_dissolve_interpolate(LwsInfo* scene, LwsNode* node,
     float level;
 
     if (prev == node->dissolveCount - 1) level = node->dissolveLevel[prev];
-    else level = node->dissolveLevel[prev] + ((node->dissolveLevel[prev + 1] - node->dissolveLevel[prev]) * delta);
+    else level = lws_maths_interpolate(node->dissolveLevel[prev], node->dissolveLevel[prev + 1], delta);
     lws_dissolve_level_set(scene, node, level);
 }
 

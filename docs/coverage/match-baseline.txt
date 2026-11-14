@@ -1,4 +1,4 @@
-# input_sha256: d83dea89014bf58c7de594b9fe28dd1fac9aaff7fc4253ea97b4629d49feb44c
+# input_sha256: fc9fcf2eec28c4f98f0a4f70a1e21d8e152ff935ab29617a1abbb59a24675628
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2537 mapped functions
+[game-only] 2538 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -2011,17 +2011,17 @@
 0x00475710 100.00 ddiscene_scene_object_attach_or_unlink
 0x004757a0 100.00 Container_GetParent
 0x004757f0 100.00 typed_child_resource_scalar_get
-0x00475830 85.71 Container_SearchOwner
+0x00475830 100.00 Container_SearchOwner
 0x00475880 100.00 Container_Frame_GetContainer
 0x00475900 100.00 Container_GetFrames
 0x00475930 100.00 Container_ParseTypeString
 0x004759f0 100.00 Container_AddList
-0x00475a70 99.30 Container_GetActivities
+0x00475a70 100.00 Container_GetActivities
 0x00475c00 100.00 Container_SetTypeData
 0x00475c80 100.00 Container_FreeTypeData
-0x00475d10 97.56 Container_AddActivity2
+0x00475d10 100.00 Container_AddActivity2
 0x00475e10 100.00 Container_Frame_ReferenceDestroyCallback
-0x00475e40 98.18 Container_Frame_Find
+0x00475e40 100.00 Container_Frame_Find
 0x00475f70 100.00 ddiscene_animation_hook_create
 0x004760e0 100.00 Container_Frame_RemoveAppData
 0x00476120 100.00 Container_Frame_GetOwner
@@ -2039,7 +2039,7 @@
 0x00476330 100.00 Container_Frame_WalkTree
 0x00476410 99.44 Container_Frame_SearchCallback
 0x004765c0 100.00 Container_LoadAnimSet
-0x00476770 97.67 Container_GetAnimFileFrameCount
+0x00476770 100.00 Container_GetAnimFileFrameCount
 0x004767e0 100.00 Container_FrameLoad
 0x00476850 100.00 Container_MeshLoad
 0x00476900 100.00 Container_TextureLoadCallback
@@ -2147,7 +2147,7 @@
 0x0047a550 100.00 font_atlas_record_release
 0x0047a580 61.11 font_create
 0x0047a5c0 100.00 font_add_list
-0x0047a640 99.25 audio_system_init
+0x0047a640 100.00 audio_system_init
 0x0047a800 100.00 audio_active_shutdown
 0x0047a850 100.00 sound_volume_value_valid
 0x0047a870 100.00 sound_bank_entry_load
@@ -2342,7 +2342,7 @@
 0x00482ce0 100.00 mesh_add_to_post_render_list
 0x00482d30 100.00 mesh_clear_post_render_list
 0x00482d60 100.00 mesh_post_render_all
-0x00482e70 91.56 mesh_load_texture
+0x00482e70 100.00 mesh_load_texture
 0x00483030 100.00 mesh_search_texture_list
 0x00483080 100.00 mesh_add_texture_reference
 0x004830c0 100.00 animated_texture_frame_surface_set
@@ -2434,10 +2434,10 @@
 0x00487de0 100.00 lws_trigger_handle
 0x00487ed0 100.00 shared_object_sample_time_matches
 0x00487fc0 100.00 keyframe_time_segment_fraction
-0x00488070 75.00 lws_dissolve_interpolate
+0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
 0x00488170 34.17 lws_interpolate
-0x004882e0 23.88 lws_absolute_key_set
+0x004882e0 26.92 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
 0x00488790 100.00 pair_table_append
@@ -2518,7 +2518,8 @@
 0x0048d2c0 99.29 lwo_load
 0x0048d7c0 96.88 lwo_app_obj_load
 0x0048d870 100.00 lwo_app_obj_free
-0x004973f0 95.31 $CRT_C_Initializer(1)
+0x004973f0 98.44 $CRT_C_Initializer(1)
+0x004974b0 100.00 $CRT_C_Pre-Terminator
 0x0049c7c0 100.00 wad_expand_payload
 0x0049c840 100.00 wad_payload_decode_dispatch
 0x0049c8e0 100.00 wad_payload_decode_type1
@@ -2545,7 +2546,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 2828 mapped functions
+[full] 2833 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 78.26 advisor_scene_visual_state_initialize
@@ -4550,17 +4551,17 @@
 0x00475710 100.00 ddiscene_scene_object_attach_or_unlink
 0x004757a0 100.00 Container_GetParent
 0x004757f0 100.00 typed_child_resource_scalar_get
-0x00475830 85.71 Container_SearchOwner
+0x00475830 100.00 Container_SearchOwner
 0x00475880 100.00 Container_Frame_GetContainer
 0x00475900 100.00 Container_GetFrames
 0x00475930 100.00 Container_ParseTypeString
 0x004759f0 100.00 Container_AddList
-0x00475a70 99.30 Container_GetActivities
+0x00475a70 100.00 Container_GetActivities
 0x00475c00 100.00 Container_SetTypeData
 0x00475c80 100.00 Container_FreeTypeData
-0x00475d10 97.56 Container_AddActivity2
+0x00475d10 100.00 Container_AddActivity2
 0x00475e10 100.00 Container_Frame_ReferenceDestroyCallback
-0x00475e40 98.18 Container_Frame_Find
+0x00475e40 100.00 Container_Frame_Find
 0x00475f70 100.00 ddiscene_animation_hook_create
 0x004760e0 100.00 Container_Frame_RemoveAppData
 0x00476120 100.00 Container_Frame_GetOwner
@@ -4578,7 +4579,7 @@
 0x00476330 100.00 Container_Frame_WalkTree
 0x00476410 99.44 Container_Frame_SearchCallback
 0x004765c0 100.00 Container_LoadAnimSet
-0x00476770 97.67 Container_GetAnimFileFrameCount
+0x00476770 100.00 Container_GetAnimFileFrameCount
 0x004767e0 100.00 Container_FrameLoad
 0x00476850 100.00 Container_MeshLoad
 0x00476900 100.00 Container_TextureLoadCallback
@@ -4686,7 +4687,7 @@
 0x0047a550 100.00 font_atlas_record_release
 0x0047a580 61.11 font_create
 0x0047a5c0 100.00 font_add_list
-0x0047a640 99.25 audio_system_init
+0x0047a640 100.00 audio_system_init
 0x0047a800 100.00 audio_active_shutdown
 0x0047a850 100.00 sound_volume_value_valid
 0x0047a870 100.00 sound_bank_entry_load
@@ -4881,7 +4882,7 @@
 0x00482ce0 100.00 mesh_add_to_post_render_list
 0x00482d30 100.00 mesh_clear_post_render_list
 0x00482d60 100.00 mesh_post_render_all
-0x00482e70 91.56 mesh_load_texture
+0x00482e70 100.00 mesh_load_texture
 0x00483030 100.00 mesh_search_texture_list
 0x00483080 100.00 mesh_add_texture_reference
 0x004830c0 100.00 animated_texture_frame_surface_set
@@ -4973,10 +4974,10 @@
 0x00487de0 100.00 lws_trigger_handle
 0x00487ed0 100.00 shared_object_sample_time_matches
 0x00487fc0 100.00 keyframe_time_segment_fraction
-0x00488070 75.00 lws_dissolve_interpolate
+0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
 0x00488170 34.17 lws_interpolate
-0x004882e0 23.88 lws_absolute_key_set
+0x004882e0 26.92 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
 0x00488790 100.00 pair_table_append
@@ -5061,7 +5062,7 @@
 0x0048d940 100.00 __cfltcvt_init
 0x0048d980 100.00 _atof
 0x0048d9e0 100.00 _sprintf
-0x0048da50 98.48 _strstr
+0x0048da50 100.00 _strstr
 0x0048dad0 100.00 _atol
 0x0048db70 100.00 _atoi
 0x0048db80 100.00 _free
@@ -5073,8 +5074,8 @@
 0x0048dfd0 100.00 _shortsort
 0x0048e030 100.00 _swap
 0x0048e060 100.00 __ftol
-0x0048e090 83.33 __CIacos
-0x0048e0ad 88.46 _acos
+0x0048e090 100.00 __CIacos
+0x0048e0a4 96.23 _acos
 0x0048e160 100.00 _srand
 0x0048e170 100.00 _rand
 0x0048e1aa 100.00 __CIfmod
@@ -5085,7 +5086,7 @@
 0x0048e480 100.00 __cinit
 0x0048e4b0 100.00 _exit
 0x0048e4d0 100.00 __exit
-0x0048e4f0 81.97 _doexit
+0x0048e4f0 100.00 _doexit
 0x0048e5a0 100.00 __initterm
 0x0048e680 100.00 _fabs
 0x0048e770 100.00 _strncpy
@@ -5113,7 +5114,7 @@
 0x0048efba 100.00 __abnormal_termination
 0x0048efdd 100.00 __NLG_Notify1
 0x0048efe6 100.00 __NLG_Notify
-0x0048f000 99.29 _WinMainCRTStartup
+0x0048f000 100.00 _WinMainCRTStartup
 0x0048f1a0 100.00 __amsg_exit
 0x0048f1d0 100.00 __isctype
 0x0048f270 100.00 _strncmp
@@ -5132,6 +5133,7 @@
 0x0048fb50 100.00 __validdrive
 0x0048fb90 100.00 _fread
 0x0048fd20 100.00 __flush
+0x0048fd90 100.00 __flushall
 0x0048fda0 96.88 _flsall
 0x0048fe20 100.00 _fgetc
 0x0048fe50 100.00 _fgets
@@ -5155,7 +5157,7 @@
 0x00490750 100.00 __cfltcvt
 0x004907c0 100.00 __shift
 0x004907f0 100.00 __fltin
-0x004908a0 98.33 __flsbuf
+0x004908a0 100.00 __flsbuf
 0x004909d0 99.03 __output
 0x00491360 100.00 _write_char
 0x004913b0 100.00 _write_multi_char
@@ -5164,6 +5166,7 @@
 0x00491450 100.00 _get_int64_arg
 0x00491470 100.00 _get_short_arg
 0x004914a0 100.00 _strchr
+0x004914a6 100.00 ___from_strstr_to_strchr
 0x00491560 100.00 __heap_init
 0x004915a0 100.00 ___sbh_new_region
 0x00491710 100.00 ___sbh_release_region
@@ -5174,8 +5177,8 @@
 0x00491b40 100.00 ___sbh_alloc_block_from_page
 0x00491cc0 100.00 ___sbh_resize_block
 0x00491d90 100.00 __callnewh
-0x00491db0 96.67 __trandisp1
-0x00491e17 97.78 __trandisp2
+0x00491db0 100.00 __trandisp1
+0x00491e17 100.00 __trandisp2
 0x00491f80 100.00 __startTwoArgErrorHandling
 0x00491f97 100.00 __startOneArgErrorHandling
 0x00491fe0 100.00 __twoToTOS
@@ -5221,23 +5224,23 @@
 0x00494e30 100.00 __openfile
 0x00495000 100.00 __getstream
 0x00495090 100.00 ___InternalCxxFrameHandler
-0x00495160 99.16 ?FindHandler@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@EH1@Z
-0x00495410 98.85 ?FindHandlerForForeignException@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@HH1@Z
-0x004954e0 98.61 ___FrameUnwindToState
+0x00495160 100.00 ?FindHandler@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@EH1@Z
+0x00495410 100.00 ?FindHandlerForForeignException@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@HH1@Z
+0x004954e0 100.00 ___FrameUnwindToState
 0x004955a0 100.00 ?FrameUnwindFilter@@YAHPAU_EXCEPTION_POINTERS@@@Z
 0x004955c0 100.00 ?CatchIt@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PAXPBU_s_FuncInfo@@PBU_s_HandlerType@@PBU_s_CatchableType@@PBU_s_TryBlockMapEntry@@H1@Z
-0x00495650 74.11 ?CallCatchBlock@@YAPAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PBU_s_FuncInfo@@PAXHK@Z
+0x00495650 100.00 ?CallCatchBlock@@YAPAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAU_CONTEXT@@PBU_s_FuncInfo@@PAXHK@Z
 0x004957a0 100.00 ?ExFilterRethrow@@YAHPAU_EXCEPTION_POINTERS@@@Z
-0x004957d0 98.43 ?BuildCatchObject@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PBU_s_HandlerType@@PBU_s_CatchableType@@@Z
-0x004959e0 98.11 ?_DestructExceptionObject@@YAXPAUEHExceptionRecord@@E@Z
+0x004957d0 98.95 ?BuildCatchObject@@YAXPAUEHExceptionRecord@@PAUEHRegistrationNode@@PBU_s_HandlerType@@PBU_s_CatchableType@@@Z
+0x004959e0 100.00 ?_DestructExceptionObject@@YAXPAUEHExceptionRecord@@E@Z
 0x00495a60 100.00 ?AdjustPointer@@YAPAXPAXABUPMD@@@Z
 0x00495a90 100.00 __CallSettingFrame@12
-0x00495ae0 98.18 ?terminate@@YAXXZ
-0x00495b70 74.16 ?_inconsistency@@YAXXZ
-0x00495c00 99.06 __XcptFilter
-0x00495d40 85.29 _xcptlookup
+0x00495ae0 100.00 ?terminate@@YAXXZ
+0x00495b70 100.00 ?_inconsistency@@YAXXZ
+0x00495c00 100.00 __XcptFilter
+0x00495d40 100.00 _xcptlookup
 0x00495d90 100.00 __ismbblead
-0x00495db0 96.00 _x_ismbbtype
+0x00495db0 100.00 _x_ismbbtype
 0x00495df0 100.00 __setenvp
 0x00495ee0 100.00 __setargv
 0x00495f80 100.00 _parse_cmdline
@@ -5256,11 +5259,12 @@
 0x00496c00 100.00 __lseek
 0x00496cc0 100.00 __write
 0x00496ee0 97.14 __dosmaperr
-0x00496f50 98.91 ___loctotime_t
+0x00496f50 100.00 ___loctotime_t
 0x00497040 100.00 __filbuf
 0x00497130 100.00 __read
-0x004973f0 95.31 $CRT_C_Initializer(1)
-0x004974d0 95.83 __stbuf
+0x004973f0 98.44 $CRT_C_Initializer(1)
+0x004974b0 100.00 $CRT_C_Pre-Terminator
+0x004974d0 100.00 __stbuf
 0x00497570 100.00 __ftbuf
 0x004975d0 100.00 _tolower
 0x004976d0 100.00 __mbsnbcpy
@@ -5311,7 +5315,8 @@
 0x00499860 100.00 ___tzset
 0x00499880 100.00 __tzset
 0x00499b30 100.00 __isindst
-0x00499da0 89.05 _cvtdate
+0x00499da0 98.54 _cvtdate
+0x00499f40 100.00 __fcloseall
 0x00499fb0 100.00 ___addl
 0x00499fe0 100.00 ___add_12
 0x0049a050 100.00 ___shl_12
@@ -5321,8 +5326,8 @@
 0x0049a540 100.00 ___ld12mul
 0x0049a800 100.00 ___multtenpow12
 0x0049a890 100.00 __chsize
-0x0049aa10 99.32 _raise
-0x0049ab90 87.50 _siglookup
+0x0049aa10 100.00 _raise
+0x0049ab90 100.00 _siglookup
 0x0049abe0 100.00 _wcstombs
 0x0049add0 100.00 _wcsncnt
 0x0049ae10 100.00 _getenv
@@ -5343,6 +5348,7 @@
 0x0049b6e0 100.00 _AVIStreamRelease@4
 0x0049b6e6 100.00 _AVIStreamGetFrame@8
 0x0049b6ec 100.00 _AVIFileInit@0
+0x0049c7ae 100.00 _DirectSoundCreate@12
 0x0049c7b4 100.00 _RtlUnwind@16
 0x0049c7c0 100.00 wad_expand_payload
 0x0049c840 100.00 wad_payload_decode_dispatch
