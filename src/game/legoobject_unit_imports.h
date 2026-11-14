@@ -59,7 +59,13 @@ struct TextureSurface;
 
 /* legoGlobs fields the port keeps as port globals. */
 extern const char* s_engine_config_root;  /* engine.cpp, 005560c4 gameName */
+/* Matching build: legoGlobs.toolName (lego_globs.h, finding 653). Not
+ * declared there, which pays for one of lego_globs.h's symbols (finding
+ * 538); the unit's other declarations of legoGlobs fields' old names stay,
+ * unreferenced. Deviation (scoring only). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern const char* s_tool_type_names[];   /* ai.cpp, 005561fc toolName[11] */
+#endif
 /* objectGlobs fields defined elsewhere. */
 extern float* s_terrain_neighbor_path_cost;      /* legoobject_port.cpp, 004dee00 */
 extern void* s_object_toolTipIconAbilities[6];   /* lego_unit.c, 004ead78 */

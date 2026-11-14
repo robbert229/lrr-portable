@@ -316,6 +316,11 @@ void tooltip_reset_timer(int toolTipType)
     toolTip->timer = toolTipGlobs.hoverTime;
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x0046b7c0
 void tooltip_update(unsigned int mouseX, unsigned int mouseY,
                     float elapsedAbs)

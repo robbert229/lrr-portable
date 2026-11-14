@@ -17,10 +17,10 @@
  * whose callers already use the original's contract.
  *
  * The original keeps its state in one Lego_Globs struct (legoGlobs,
- * 005560c0-00556fb8). The port has no such struct: some fields are port
- * globals annotated in other files, which this unit reads directly. The
- * fields the port does not model are defined here, one annotated global
- * each, as stand-ins until the port's owners are converted. */
+ * 005560c0-00556fb8), defined here as that struct (lego_globs.h, finding
+ * 653). In the matching build every field is the struct's; natively the
+ * fields a C++ port module owns stay that module's globals, and the unit
+ * reads them by the port's names. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
 #include "aitask_port_aliases.h"
@@ -33,161 +33,22 @@
 #include "crt/vc5names.h"
 #include "lego_unit.h"
 #include "lego_unit_imports.h"
+#include "lego_globs.h"
 
 /* ------------------------------------------------------------------ */
-/* State: the unit's .bss and the legoGlobs stand-ins.                 */
+/* State: the unit's .bss and legoGlobs.                               */
 /* ------------------------------------------------------------------ */
 
 /* ---- state, group M ---- */
 
-/* legoGlobs.cameraFP (005560ec). */
-// GLOBAL: LEGORR 0x005560ec
-void* legoGlobs_cameraFP;
+/* legoGlobs (005560c0, 0xef8 bytes): the original's one Lego_Globs struct
+ * (lego_globs.h, finding 653). */
+// GLOBAL: LEGORR 0x005560c0
+struct Lego_Globs legoGlobs;
 
-// GLOBAL: LEGORR 0x005560f8
-uint32_t legoGlobs_f_5560f8;
-
-// GLOBAL: LEGORR 0x00556104
-uint32_t legoGlobs_f_556104;
-
-/* legoGlobs.selectedObject? The object the first-person view follows. */
-// GLOBAL: LEGORR 0x00556160
-void* legoGlobs_selectedObject;
-
-/* legoGlobs.flags1 (00556ecc). The port keeps its copy of this word in the
- * EngineContext (engine_shared_state_word). */
-// GLOBAL: LEGORR 0x00556ecc
-uint32_t legoGlobs_flags1;
 /* ---- state, group A ---- */
 
-/* legoGlobs fields Lego_Initialise sets (005560c0 + offset). */
-// GLOBAL: LEGORR 0x005560c0
-struct BlockRec* legoGlobs_config;
-
-// GLOBAL: LEGORR 0x005560d8
-void* legoGlobs_rootCont;
-
-// GLOBAL: LEGORR 0x005560dc
-void* legoGlobs_viewMain;
-
-// GLOBAL: LEGORR 0x005560e0
-void* legoGlobs_viewTrack;
-
-// GLOBAL: LEGORR 0x005560e8
-void* legoGlobs_cameraTrack;
-
-// GLOBAL: LEGORR 0x00556114
-float legoGlobs_TVClipDist;
-
-// GLOBAL: LEGORR 0x0055612c
-void* legoGlobs_fontDesktop;
-
-// GLOBAL: LEGORR 0x00556130
-void* legoGlobs_fontTextWindow;
-
-// GLOBAL: LEGORR 0x00556134
-void* legoGlobs_fontBriefingHi;
-
-// GLOBAL: LEGORR 0x00556138
-void* legoGlobs_fontBriefingLo;
-
-// GLOBAL: LEGORR 0x00556140
-void* legoGlobs_textOnlyWindow;
-
-// GLOBAL: LEGORR 0x00556144
-void* legoGlobs_textImageWindow;
-
-/* The surface types' language keys. */
-// GLOBAL: LEGORR 0x00556290
-const char* legoGlobs_langSurface_name[18];
-
-/* The radar view's area (16, 13, 151, 151); its zoom (005563f4) is
- * lego.cpp's s_lego_radar_zoom. */
-// GLOBAL: LEGORR 0x005563e4
-float legoGlobs_f_5563e4[4];
-
-// GLOBAL: LEGORR 0x00556400
-float legoGlobs_MedPolyRange;
-
-// GLOBAL: LEGORR 0x00556404
-float legoGlobs_HighPolyRange;
-
-// GLOBAL: LEGORR 0x00556408
-int legoGlobs_HPBlocks;
-
-// GLOBAL: LEGORR 0x00556428
-float legoGlobs_PowerCrystalRGB[3];
-
-// GLOBAL: LEGORR 0x00556434
-float legoGlobs_UnpoweredCrystalRGB[3];
-
-// GLOBAL: LEGORR 0x00556458
-float legoGlobs_MinEnergyForEat;
-
-// GLOBAL: LEGORR 0x00556464
-float legoGlobs_DynamiteDamageRadius;
-
-// GLOBAL: LEGORR 0x00556468
-float legoGlobs_DynamiteMaxDamage;
-
-// GLOBAL: LEGORR 0x0055646c
-float legoGlobs_DynamiteWakeRadius;
-
-// GLOBAL: LEGORR 0x00556470
-float legoGlobs_BirdScarerRadius;
-
-// GLOBAL: LEGORR 0x00556518
-float legoGlobs_MiniFigureRunAway;
-
-// GLOBAL: LEGORR 0x00556e94
-int legoGlobs_MaxReturnedCrystals;
-
-// GLOBAL: LEGORR 0x00556e98
-int legoGlobs_MouseScrollBorder;
-
-// GLOBAL: LEGORR 0x00556ec4
-float legoGlobs_MinDistFor3DSoundsOnTopView;
-
-// GLOBAL: LEGORR 0x00556ef4
-struct Image* legoGlobs_BackArrowImage;
-
-// GLOBAL: LEGORR 0x00556f04
-float legoGlobs_DrainTime;
-
-// GLOBAL: LEGORR 0x00556f08
-int legoGlobs_ReinforceHits;
-
-// GLOBAL: LEGORR 0x00556f0c
-int legoGlobs_CDStartTrack;
-
-// GLOBAL: LEGORR 0x00556f10
-uint32_t legoGlobs_CDTracks;
-
 /* Three factors set to 0.2, 0.7 and 1.0 at start-up. */
-
-// GLOBAL: LEGORR 0x00556f38
-struct Image* legoGlobs_DialogImage;
-
-// GLOBAL: LEGORR 0x00556f40
-void* legoGlobs_DialogTextWndTitle;
-
-// GLOBAL: LEGORR 0x00556f44
-void* legoGlobs_DialogTextWndMessage;
-
-// GLOBAL: LEGORR 0x00556f48
-void* legoGlobs_DialogTextWndOK;
-
-// GLOBAL: LEGORR 0x00556f4c
-void* legoGlobs_DialogTextWndCancel;
-
-// GLOBAL: LEGORR 0x00556f98
-int legoGlobs_BuildingUpgradeCostOre;
-
-// GLOBAL: LEGORR 0x00556f9c
-int legoGlobs_BuildingUpgradeCostStuds;
-
-// GLOBAL: LEGORR 0x00556fac
-char* legoGlobs_RenameReplace;
 
 
 /* ---- state, group B ---- */
@@ -225,67 +86,6 @@ static float s_lego_rollOffTextTimer;
 
 /* legoGlobs fields. */
 
-// GLOBAL: LEGORR 0x005560f0
-void* legoGlobs_spotlightTop;
-
-// GLOBAL: LEGORR 0x005560f4
-void* legoGlobs_spotlightTrack;
-
-// GLOBAL: LEGORR 0x005560fc
-void* legoGlobs_dirLightFP;
-
-// GLOBAL: LEGORR 0x00556100
-void* legoGlobs_ambientLight;
-
-// GLOBAL: LEGORR 0x0055610c
-void* legoGlobs_dirLightCallToArms;
-
-// GLOBAL: LEGORR 0x00556148
-float legoGlobs_f_556148;
-
-// GLOBAL: LEGORR 0x0055614c
-float legoGlobs_f_55614c;
-
-// GLOBAL: LEGORR 0x00556150
-float legoGlobs_f_556150;
-
-// GLOBAL: LEGORR 0x00556154
-float legoGlobs_f_556154;
-
-// GLOBAL: LEGORR 0x00556158
-int legoGlobs_f_556158;
-
-// GLOBAL: LEGORR 0x00556180
-int legoGlobs_f_556180;
-
-// GLOBAL: LEGORR 0x00556184
-int legoGlobs_f_556184;
-
-// GLOBAL: LEGORR 0x00556188
-int legoGlobs_f_556188;
-
-// GLOBAL: LEGORR 0x00556ec0
-int legoGlobs_f_556ec0;
-
-// GLOBAL: LEGORR 0x00556edc
-float legoGlobs_NextButtonPos[2];
-
-// GLOBAL: LEGORR 0x00556ee4
-float legoGlobs_BackButtonPos[2];
-
-// GLOBAL: LEGORR 0x00556eec
-struct Image* legoGlobs_NextButtonImage;
-
-// GLOBAL: LEGORR 0x00556ef0
-struct Image* legoGlobs_BackButtonImage;
-
-/* legoGlobs.renameInput: the name being typed, or NULL. */
-// GLOBAL: LEGORR 0x00556fa0
-char* legoGlobs_renameInput;
-
-// GLOBAL: LEGORR 0x00556fa4
-float legoGlobs_renamePosition[2];
-
 /* gods98 Input's key maps (Input.c; the port's are not annotated). */
 /* ---- state, group C ---- */
 
@@ -317,40 +117,14 @@ int s_lego_reset_buttons;
 
 /* legoGlobs.cameraTrack (005560e8). */
 
-/* The container that follows the pointer's world position. */
-// GLOBAL: LEGORR 0x00556108
-void* legoGlobs_f_556108;
-
-/* The pointer's world position when a selection drag starts. */
-// GLOBAL: LEGORR 0x00556164
-float legoGlobs_f_556164[3];
-
-/* The block under the pointer, and the block under it during a drag, as
- * floats. */
-// GLOBAL: LEGORR 0x00556170
-float legoGlobs_f_556170[2];
-
-// GLOBAL: LEGORR 0x00556178
-float legoGlobs_f_556178[2];
-
 /* The block a vehicle placement points at, and whether it is valid. */
-
-/* The radar view's centre when it does not follow an object. */
-// GLOBAL: LEGORR 0x005563f8
-LegoPoint2FC legoGlobs_f_5563f8;
-
-/* The object type and index a building placement places. */
-// GLOBAL: LEGORR 0x00556440
-int legoGlobs_f_556440;
-
-// GLOBAL: LEGORR 0x00556444
-int legoGlobs_f_556444;
 
 /* The screen border (pixels) that scrolls the top-down view. */
 
 /* The two objective-panel images and their positions. */
 
-/* legoGlobs.mouseBlockPos: the block under the pointer. */
+/* The block under the pointer (mouseBlockPos). It follows legoGlobs, outside
+ * its 0xef8 bytes, so it keeps its own definition. */
 // GLOBAL: LEGORR 0x00556fb8
 int legoGlobs_f_556fb8[2];
 /* ---- state, group D ---- */
@@ -359,54 +133,11 @@ int legoGlobs_f_556fb8[2];
 
 /* The object manager LoadTileMeshes registers the tile meshes with. */
 
-/* A float factor of the fog distance (with the level's block size). */
-// GLOBAL: LEGORR 0x00556110
-float legoGlobs_FPClipBlocks;
-
 /* The objective tick's first argument. */
-
-/* The type data the Precreate key creates its ten mini-figures from. */
-// GLOBAL: LEGORR 0x005561d8
-LegoCreatureModelE* legoGlobs_miniFigureData;
-
-/* FogColourRGB and HighFogColourRGB. */
-// GLOBAL: LEGORR 0x0055640c
-float legoGlobs_fogColourRGB[3];
-
-// GLOBAL: LEGORR 0x00556418
-float legoGlobs_highFogColourRGB[3];
-
-// GLOBAL: LEGORR 0x00556424
-float legoGlobs_f_556424;
-
-// GLOBAL: LEGORR 0x0055644c
-uint32_t legoGlobs_f_55644c;
-
-// GLOBAL: LEGORR 0x00556450
-uint32_t legoGlobs_f_556450;
 
 /* Not noFallins. */
 
-/* FogRate * 25. */
-// GLOBAL: LEGORR 0x00556ef8
-float legoGlobs_f_556ef8;
-
-/* FallinMultiplier (1 when unset). The port keeps a copy in camera.cpp
- * (g_camera_scale_14, unannotated). */
-// GLOBAL: LEGORR 0x00556f14
-int legoGlobs_f_556f14;
-
-/* DragBoxRGB, 0-1 each. */
-// GLOBAL: LEGORR 0x00556f2c
-float legoGlobs_dragBoxRGB[3];
-
 /* Gates the AllowRename key. */
-
-// GLOBAL: LEGORR 0x00556fb0
-char* legoGlobs_endGameAVI1;
-
-// GLOBAL: LEGORR 0x00556fb4
-char* legoGlobs_endGameAVI2;
 
 /* The first mini-figure the object list loads (OListEntityRecordParse sets
  * it); the StartFP view follows it. Outside legoGlobs. */
@@ -428,39 +159,7 @@ void* s_lego_f_4e8448;
 
 /* legoGlobs.textOnlyWindow (00556140). */
 
-/* legoGlobs.vehicleData (005561d4): 0x1ec-byte records. */
-// GLOBAL: LEGORR 0x005561d4
-LegoVehicleModelE* legoGlobs_vehicleData;
-
 /* legoGlobs.miniFigureData (005561d8): 0x74-byte records. */
-
-/* legoGlobs.rockMonsterData (005561dc): 0x74-byte records. */
-// GLOBAL: LEGORR 0x005561dc
-LegoCreatureModelE* legoGlobs_rockMonsterData;
-
-/* legoGlobs.buildingData (005561e0): 0x14c-byte records. */
-// GLOBAL: LEGORR 0x005561e0
-LegoBuildingModelE* legoGlobs_buildingData;
-
-/* legoGlobs.vehicleName (005561e8). */
-// GLOBAL: LEGORR 0x005561e8
-char** legoGlobs_vehicleName;
-
-/* legoGlobs.miniFigureName (005561ec). */
-// GLOBAL: LEGORR 0x005561ec
-char** legoGlobs_miniFigureName;
-
-/* legoGlobs.rockMonsterName (005561f0). */
-// GLOBAL: LEGORR 0x005561f0
-char** legoGlobs_rockMonsterName;
-
-/* legoGlobs.buildingName (005561f4). */
-// GLOBAL: LEGORR 0x005561f4
-char** legoGlobs_buildingName;
-
-/* legoGlobs.upgradeName (005561f8). */
-// GLOBAL: LEGORR 0x005561f8
-char** legoGlobs_upgradeName;
 
 /* legoGlobs.FogColourRGB (0055640c). */
 
@@ -495,46 +194,6 @@ float s_lego_spotUmbra;
 /* ---- state, group F ---- */
 
 /* legoGlobs.rootCont (005560d8): the scene root container. */
-
-/* legoGlobs' MiscObjects containers (00556368-005563b0). */
-// GLOBAL: LEGORR 0x00556368
-void* legoGlobs_contBoulder;
-// GLOBAL: LEGORR 0x0055636c
-void* legoGlobs_contBoulderExplode;
-// GLOBAL: LEGORR 0x00556370
-void* legoGlobs_contBoulderExplodeIce;
-// GLOBAL: LEGORR 0x00556374
-void* legoGlobs_contCrystal;
-// GLOBAL: LEGORR 0x00556378
-void* legoGlobs_contDynamite;
-// GLOBAL: LEGORR 0x0055637c
-void* legoGlobs_contOresTable;
-// GLOBAL: LEGORR 0x00556380
-void* legoGlobs_contProcessedOre;
-// GLOBAL: LEGORR 0x00556384
-void* legoGlobs_contOohScary;
-// GLOBAL: LEGORR 0x00556388
-void* legoGlobs_contBarrier;
-// GLOBAL: LEGORR 0x0055638c
-void* legoGlobs_contElectricFence;
-// GLOBAL: LEGORR 0x00556390
-void* legoGlobs_contSpiderWeb;
-// GLOBAL: LEGORR 0x00556394
-void* legoGlobs_contRechargeSparkle;
-// GLOBAL: LEGORR 0x00556398
-void* legoGlobs_contMiniTeleportUp;
-// GLOBAL: LEGORR 0x0055639c
-void* legoGlobs_contElectricFenceStud;
-// GLOBAL: LEGORR 0x005563a0
-void* legoGlobs_contPusher;
-// GLOBAL: LEGORR 0x005563a4
-void* legoGlobs_contFreezer;
-// GLOBAL: LEGORR 0x005563a8
-void* legoGlobs_contIceCube;
-// GLOBAL: LEGORR 0x005563ac
-void* legoGlobs_contSmashPath;
-// GLOBAL: LEGORR 0x005563b0
-void* legoGlobs_contLaserShot;
 
 /* legoGlobs' ToolTipInfo texts (loaded by 00427e00). */
 
@@ -601,37 +260,6 @@ void* s_object_toolTipIconBlank;
 
 /* The world position the drag box started at. */
 
-/* The ToolTipInfo strings. */
-// GLOBAL: LEGORR 0x00556e9c
-char* legoGlobs_healthText;
-
-// GLOBAL: LEGORR 0x00556ea0
-char* legoGlobs_energyText;
-
-// GLOBAL: LEGORR 0x00556ea4
-char* legoGlobs_crystalsText;
-
-// GLOBAL: LEGORR 0x00556ea8
-char* legoGlobs_oreText;
-
-// GLOBAL: LEGORR 0x00556eac
-char* legoGlobs_studsText;
-
-// GLOBAL: LEGORR 0x00556eb0
-char* legoGlobs_toolsText;
-
-// GLOBAL: LEGORR 0x00556eb4
-char* legoGlobs_carryObjectText;
-
-// GLOBAL: LEGORR 0x00556eb8
-char* legoGlobs_drivenByText;
-
-// GLOBAL: LEGORR 0x00556ebc
-char* legoGlobs_oreRequiredText;
-
-// GLOBAL: LEGORR 0x00556f58
-char* legoGlobs_upgradeNames[16];
-
 /* Text.c's message timer (00503618). In the matching build it is text.c's
  * textGlobs.timer (lego_unit_imports.h, finding 607); natively the port has
  * no owner for it. */
@@ -648,12 +276,6 @@ uint32_t textGlobs_f_503618;
 
 /* ---- part 2 state, group 2B (0042c480-0042d460): begin ---- */
 
-/* legoGlobs+0xe58 (00556f18): set once the fall-in map has loaded; gates
- * the fall-in timers. The port keeps a copy in camera.cpp
- * (g_camera_grid_enabled, unannotated). */
-// GLOBAL: LEGORR 0x00556f18
-int legoGlobs_f_556f18;
-
 /* ---- part 2 state, group 2B: end ---- */
 
 /* ---- part 2 state, group 2C (0042d600-0042dff0): begin ---- */
@@ -665,12 +287,6 @@ int legoGlobs_f_556f18;
 /* ---- part 2 state, group 2D: end ---- */
 
 /* ---- part 2 state, group 2E (0042efc0-0042f6f0): begin ---- */
-
-/* legoGlobs.objectRequestListCount? (00556514): the count of queued object
- * requests. The port's interface_port.cpp keeps an unannotated copy
- * (lego_object_request_count). */
-// GLOBAL: LEGORR 0x00556514
-unsigned int legoGlobs_f_556514;
 
 /* LegoObject.c's .bss (004eabc4, 004eabc8): two words Level_Free clears.
  * The port's ai.cpp keeps an unannotated copy of the second
@@ -6102,7 +5718,7 @@ void lego_object_pointer_registry_clear_match(void* object)
 {
     unsigned int i;
 
-    for (i = 0; i < legoGlobs_recordObjectCountReloaded; i++) {
+    for (i = 0; i < legoGlobs_recordObjectCount; i++) {
         if (object == legoGlobs_recordObjects[i])
             legoGlobs_recordObjects[i] = NULL;
     }
@@ -7974,12 +7590,12 @@ void lego_terrain_cell_update_queue_flush(void)
 }
 
 /* The original's lists are adjacent legoGlobs fields, so it walks one
- * pointer over the current list and writes the previous one at +0x320. The
- * port keeps them as separate globals (level.cpp), from which no C form
- * reproduces that addressing (the separate-array form scores 23.88%; a
- * one-struct model of the lists gives the original's loop). So the
- * matching build keeps the original's code, as the port did; the C form is
- * for other compilers. */
+ * pointer over the current list and writes the previous one at +0x320.
+ * With legoGlobs one struct (finding 653), a C form with a Point2I copy
+ * gives that loop except the order of the imul's operands (93.75%, an
+ * effective match, at every counter phase tried); the separate-array form
+ * scored 23.88%. So the matching build keeps the original's code, its
+ * operands now legoGlobs' fields; the C form is for other compilers. */
 // FUNCTION: LEGORR 0x00432200
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void lego_terrain_cell_previous_state_track(void)
@@ -7992,7 +7608,7 @@ __declspec(naked) void lego_terrain_cell_previous_state_track(void)
         test eax, eax
         jbe lego_previous_state_track_done
         push edi
-        mov ecx, offset s_cell_refresh_track
+        mov ecx, offset legoGlobs + 78ch
     lego_previous_state_track_loop:
         mov eax, dword ptr [ecx]
         mov dword ptr [ecx + 320h], eax
@@ -8900,13 +8516,12 @@ int terrain_cell_type_get_at_current(uint32_t bx, uint32_t by, uint32_t* outType
 /* Group 3B's state, declarations and imports sit here, before its
  * functions and after every earlier one, so MSVC's symbol counter
  * (finding 538, rule B) does not move for parts 1, 2 and earlier groups. */
-/* legoGlobs.quality: the render quality Lego_LoadGraphicsSettings reads
- * (0 wireframe, 2 flat, 3 gouraud). */
-// GLOBAL: LEGORR 0x005560d0
-int legoGlobs_quality;
-
-/* legoGlobs.quality (005560d0), stand-in (lego_unit.c). */
+/* legoGlobs.quality is a legoGlobs field (lego_globs.h, finding 653). Its
+ * old stand-in name is declared once more, unreferenced, so that group 3B's
+ * symbol counter does not move. Deviation (scoring only). */
+#undef legoGlobs_quality
 extern int legoGlobs_quality;                   /* 005560d0 */
+#define legoGlobs_quality legoGlobs.quality
 
 /* Lego_LoadGraphicsSettings's projected-cell list (00433e80): the block
  * and its distance and projected area, sorted by area (00434450). */
@@ -9523,15 +9138,6 @@ void terrain_grid_entry_resources_release_all_current(void)
 /* Group 3C's state, declarations and imports sit here, before its
  * functions and after every earlier one, so MSVC's symbol counter
  * (finding 538, rule B) does not move for parts 1, 2 and earlier groups. */
-/* legoGlobs.placeDirection? The building placement direction (00556448),
- * from the camera's facing. */
-// GLOBAL: LEGORR 0x00556448
-int legoGlobs_f_556448;
-
-/* legoGlobs.TutorialIcon (0055645c). The port keeps its own copy
- * (s_tutorial_icon, lego.cpp). */
-// GLOBAL: LEGORR 0x0055645c
-struct Image* legoGlobs_TutorialIcon;
 
 /* Input's left mouse button (0076ab3c) at the last release check. */
 // GLOBAL: LEGORR 0x004de424
@@ -9547,10 +9153,6 @@ typedef struct LegoVector3F3C { float x, y, z; } LegoVector3F3C;
 /* Lego_Block +0x14: the drill damage (0 to 1). */
 #define LEGO_BLOCK_DAMAGE(block) (*(float*)&(block)->f_10[1])
 
-/* legoGlobs fields and Lego.c .bss the port does not model (stand-ins in
- * lego_unit.c). */
-extern int legoGlobs_f_556448;                  /* 00556448 placement direction */
-extern struct Image* legoGlobs_TutorialIcon;    /* 0055645c */
 extern uint32_t s_lego_mslbLast;                /* 004de424 */
 extern float s_lego_tutorialIconPhase;          /* 004de58c */
 
@@ -9644,15 +9246,16 @@ int grid_cell_entity_eligibility_check(int x, int y);
     lego_grid_cell_entity_eligibility_check(x, y)
 #endif
 /* level.cpp (level_for_lego.hpp): legoGlobs.langSurface_desc (005562d8)
- * and langSurface_sound (00556320). */
+ * and langSurface_sound (00556320). In the matching build they are
+ * legoGlobs' fields (lego_globs.h). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern const char* s_surface_type_names[18];
 extern uint32_t s_surface_type_values[18];
+#endif
 /* GAME-026 Map3D.c (terrain_map.h): 0044f4e0, 0044f540. */
 int terrain_map_block_highlight_set(struct TerrainMap* map, int bx, int by,
                                     int highlight);
 int terrain_map_block_highlight_get(struct TerrainMap* map, int bx, int by);
-/* GAME-023 LegoObject.c (legoobject_unit.c): the third teleporter. */
-extern struct Lego_Object* legoGlobs_f_556454;                  /* 00556454 */
 /* GAME-020 Interface.c (interface_unit.h), read by offset. */
 extern struct InterfaceGlobs interfaceGlobs;                    /* 004dcd58 */
 /* gods98 TextWindow.c (heap.hpp): TextWindow_Update (00485390). */
@@ -10423,15 +10026,6 @@ void lego_panel_selection_highlight_toggle(int on)
 int s_scroll_guard;
 // GLOBAL: LEGORR 0x004de588
 uint32_t s_neighbor_pick_rotation;
-
-/* legoGlobs fields (stand-ins, as in part 1): the text-window font, the
- * crystal-count font and the radar zoom. */
-// GLOBAL: LEGORR 0x00556124
-struct TextureSurface* s_lego_text_window_font;
-// GLOBAL: LEGORR 0x00556128
-struct TextureSurface* s_lego_crystal_count_font;
-// GLOBAL: LEGORR 0x005563f4
-float s_lego_radar_zoom;
 
 #ifdef __cplusplus
 }

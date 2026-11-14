@@ -129,6 +129,10 @@ extern "C" int s_idle100_n;
 #if defined(LEGORRR_BACKEND_MINIWIN)
 #include "creature_scene.hpp"
 #endif
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego_globs.h"
+#endif
 
 struct EntityGridFindQuery {
     int x;

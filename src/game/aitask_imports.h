@@ -281,7 +281,6 @@ int terrain_cell_walkability_query_current(const struct EntitySlot* entity,
                                            int require_stat_bit,
                                            int gated_mode);          /* 00432770 */
 float engine_float_field260_get_current_target(void);                /* 00429880 */
-extern float legoGlobs_MinEnergyForEat;                              /* 00556458 */
 extern unsigned int s_panel_highlight_flags;                         /* 00556ed0 */
 /* Map3D.c (terrain_map.h). */
 int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,

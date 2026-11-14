@@ -1412,6 +1412,11 @@ void nerps_runtime_update_timers(float elapsed)
         advisor_clear_active_state();
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x00453da0
 void nerps_runtime_update_camera(float elapsed)
 {

@@ -52,6 +52,7 @@
 #include "terrain_grid.h"
 #include "upgrades.h"
 #include "reward_movie.h"
+#include "lego_globs.h"
 
 /* Config.c's pooled empty string (004b8a14): the original's literal resolves
  * to it in every unit (finding 581), so Reward.c reads it by name (finding

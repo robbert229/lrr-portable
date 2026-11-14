@@ -40,6 +40,10 @@ extern "C" uint32_t s_scene_fog_mode;
 #if defined(LEGORRR_BACKEND_MINIWIN)
 #include "container_native.hpp"
 #endif
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "game/lego_globs.h"
+#endif
 
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* port copy of cameraGlobs.cameraDropOff (005560a4, camera_control.c) */
@@ -61,8 +65,11 @@ void view_follow_target_hooks_set(ViewObjectLookupHook lookup,
 
 /* CameraZoomStepAdjust reads the primary view/camera context directly from
  * the corpus's active-view global. Its owner is the unported config setup. */
-// GLOBAL: LEGORR 0x005560e4
+/* legoGlobs +0x024 (005560e4): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void* s_zoom_step_context;
+#endif
 TerrainPointPickCellCheckHook s_terrain_point_pick_hook;
 void* s_terrain_point_pick_user;
 ViewportPointDispatchHooks s_viewport_point_dispatch_hooks;

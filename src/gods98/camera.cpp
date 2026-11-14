@@ -13,8 +13,11 @@
 /* Reconstruction symbols for corpus globals. */
 int   g_camera_scale_14   = 1;      /* DAT_00556f14, integer multiplier */
 int   g_camera_grid_enabled = 1;    /* DAT_00556f18 */
-// GLOBAL: LEGORR 0x00556ed8
+/* legoGlobs +0xe18 (00556ed8): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 float g_camera_countdown  = 0.0f;    /* DAT_00556ed8 */
+#endif
 int s_predug_spawn_cells[256][2];
 uint32_t s_predug_spawn_count;
 int s_predug_spawn_enabled;

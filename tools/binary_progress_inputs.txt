@@ -261,6 +261,7 @@ src/game/lava_erosion_port.cpp
 src/game/lego.h
 src/game/lego_api.h
 src/game/lego_blocks.h
+src/game/lego_globs.h
 src/game/lego_maths.h
 src/game/lego_port.cpp
 src/game/lego_port_aliases.h

@@ -117,11 +117,13 @@ struct Lego_Block {
  * 005560d4) through the original's view. */
 #define legoGlobs_currLevel ((Lego_Level*)g_active_level_retail)
 
-/* legoGlobs fields the port does not model: stand-ins defined in
- * lego_unit.c. */
-extern uint32_t legoGlobs_flags1;               /* 00556ecc */
-extern void* legoGlobs_cameraFP;                /* 005560ec */
-extern uint32_t legoGlobs_f_5560f8;             /* 005560f8 */
+/* legoGlobs is one struct (lego_globs.h, finding 653), and the names below
+ * are macros over its fields once lego_globs.h is included. This header's
+ * declarations of those names, here and in the groups below, are kept,
+ * unreferenced, so that the symbol counter of every unit that includes it
+ * does not move (finding 538). Three of them (flags1, cameraFP and the
+ * field at 005560f8) are dropped instead, which pays for lego_globs.h's
+ * three symbols in the units that include both. Deviation (scoring only). */
 extern uint32_t legoGlobs_f_556104;             /* 00556104 */
 extern void* legoGlobs_selectedObject;          /* 00556160 */
 
@@ -474,9 +476,8 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct EntityS
 struct BlockRec;
 
 /* legoGlobs.config (005560c0): the first field, so &legoGlobs_config is
- * the address of legoGlobs itself. The port has no Lego_Globs object
- * (several fields are port globals annotated in other files), so Lego_Gods_Go
- * zeroes the original's 0xef8 bytes from this field's address. */
+ * the address of legoGlobs itself, and Lego_Gods_Go zeroes the original's
+ * 0xef8 bytes from it: sizeof(struct Lego_Globs) (lego_globs.h). */
 #define LEGO_GLOBS_SIZE 0xef8
 extern char* legoGlobs_healthText;              /* 00556e9c ToolTipInfo */
 extern char* legoGlobs_toolsText;               /* 00556eb0 */

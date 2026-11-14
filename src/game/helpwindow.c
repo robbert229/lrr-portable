@@ -188,6 +188,11 @@ void help_window_initialise(BlockFile* config, const char* gameName)
     help_window_toggle(0, 0);
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x00418450
 void help_window_load_infos(BlockFile* config, const char* gameName)
 {

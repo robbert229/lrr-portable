@@ -163,6 +163,11 @@ void electric_fence_remove_node(ElectricFenceNode* node, int bx, int by)
     electric_fence_block_surfaces_update(bx, by);
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x0040d170
 int electric_fence_debug_place(int bx, int by)
 {

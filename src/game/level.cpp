@@ -76,6 +76,10 @@ extern "C" uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
 extern "C" int s_terrain_sfx_grid[TERRAIN_SFX_GRID_CELLS];
 #include "level_from_legoobject.hpp"
 #include "level_for_aitask.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego_globs.h"
+#endif
 
 /* Cell mutation's cheat branch calls the existing entity-side implementation
  * of SmallSpiderCellSwarmSpawn. Its runtime prerequisites are checked by that
@@ -1915,18 +1919,36 @@ uint32_t upgrade_resource_check_current(int selector)
  * then 0x4321a0 consumes that snapshot after the entity walk. The separate
  * visited list at 0x00556528 is also 100 coordinate pairs. */
 
-// GLOBAL: LEGORR 0x0055684c
+/* legoGlobs +0x78c (0055684c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 int32_t s_cell_refresh_track[LEVEL_CELL_REFRESH_TRACK_CAP][2];
-// GLOBAL: LEGORR 0x00556e8c
+#endif
+/* legoGlobs +0xdcc (00556e8c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 int     s_cell_refresh_track_count;
-// GLOBAL: LEGORR 0x00556b6c
+#endif
+/* legoGlobs +0xaac (00556b6c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 int32_t s_cell_previous_track[LEVEL_CELL_REFRESH_TRACK_CAP][2];
-// GLOBAL: LEGORR 0x00556e90
+#endif
+/* legoGlobs +0xdd0 (00556e90): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 int     s_cell_previous_track_count;
-// GLOBAL: LEGORR 0x00556528
+#endif
+/* legoGlobs +0x468 (00556528): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 int32_t s_cell_visited_track[LEVEL_CELL_VISITED_TRACK_CAP][2];
-// GLOBAL: LEGORR 0x00556848
+#endif
+/* legoGlobs +0x788 (00556848): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 int     s_cell_visited_track_count;
+#endif
 static TerrainNeighborPresenceHook s_terrain_neighbor_presence_hook;
 TerrainNeighborRenderUpdateHook s_terrain_neighbor_render_hook;
 void* s_terrain_neighbor_hook_context;
@@ -2056,10 +2078,16 @@ int terrain_stamp_impact_handle(uint32_t x, uint32_t y, int direction,
     return 1;
 }
 
-// GLOBAL: LEGORR 0x005562d8
+/* legoGlobs +0x218 (005562d8): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char* s_surface_type_names[SURFACE_TYPE_SLOTS];
-// GLOBAL: LEGORR 0x00556320
+#endif
+/* legoGlobs +0x260 (00556320): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_surface_type_values[SURFACE_TYPE_SLOTS];
+#endif
 
 void surface_type_descriptions_load(SurfaceTypeDescriptionEntry entries[18],
                                     const SurfaceTypeDescriptionHooks* hooks)

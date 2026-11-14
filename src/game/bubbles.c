@@ -238,6 +238,11 @@ void bubble_initialise(void)
     bubbleGlobs.bubbleName[Bubble_Request] = "Bubble_Request";
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x00407240
 void bubble_load_bubbles(BlockRec* config)
 {

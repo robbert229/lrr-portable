@@ -41,6 +41,10 @@ extern "C" int s_idle100_n;
 #include "ai_from_legoobject.hpp"
 #include "ai_for_aitask.hpp"
 #include "ai_from_aitask.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego_globs.h"
+#endif
 
 /* The command record's mutable `now` doubles as the task countdown for
  * task commands (the link primitives seed it with the 1500.0 "now"
@@ -63,13 +67,16 @@ static const void* rec_payload(const void* rec) { return cmd_rec_payload(rec); }
 // GLOBAL: LEGORR 0x004a48b3
 const char s_tool_name_freezergun[] = "_LegoObject_ToolType_FreezerGun";
 
-// GLOBAL: LEGORR 0x005561fc
+/* legoGlobs +0x13c (005561fc): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char* s_tool_type_names[AI_TOOL_TYPE_COUNT] = {
     s_tool_name_drill, s_tool_name_spade,
     s_tool_name_hammer, s_tool_name_spanner,
     s_tool_name_laser, s_tool_name_pushergun,
     s_tool_name_birdscarer, s_tool_name_freezergun + 1
 };
+#endif
 
 const char* ai_activity_name(int id)
 {

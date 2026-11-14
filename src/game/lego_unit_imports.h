@@ -1681,12 +1681,6 @@ extern uint32_t s_object_pointer_registry_words[10];
 #define legoGlobs_recordObjects ((void**)s_object_pointer_registry_words)
 extern uint32_t s_object_pointer_registry_count;
 #define legoGlobs_recordObjectCount s_object_pointer_registry_count
-/* Deviation (scoring only): in the original the count and the array are
- * members of one struct (legoGlobs), so a store into the array may alias
- * the count and MSVC reloads it after each store (0042dfc0). As separate
- * globals they cannot alias; a volatile read gives the same reload. */
-#define legoGlobs_recordObjectCountReloaded \
-    (*(volatile uint32_t*)&s_object_pointer_registry_count)
 
 /* Map3D_BlockToWorldPos (0044f640; terrain_map.c). */
 int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,

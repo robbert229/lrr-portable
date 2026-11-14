@@ -107,6 +107,10 @@ extern "C" uint32_t s_catalog_counts[5]; /* entity.cpp; C linkage for lego_unit.
 #include "gods98/message_for_interface.hpp"
 #include "gods98/resource_for_interface.hpp"
 #include "gods98/simtick_for_interface.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego_globs.h"
+#endif
 
 typedef struct EntityActionRequest {
     uint32_t type;

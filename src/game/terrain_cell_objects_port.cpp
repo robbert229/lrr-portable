@@ -73,6 +73,10 @@
 #include "entity_for_terrain_cell_objects.hpp"
 #include "level_for_terrain_cell_objects.hpp"
 #include "gods98/simtick_for_terrain_cell_objects.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego_globs.h"
+#endif
 
 #define s_grid_cell_object_chunks (s_active_cell_kind_grid->chunks)
 #define s_grid_cell_object_free (s_active_cell_kind_grid->free_nodes)

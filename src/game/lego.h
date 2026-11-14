@@ -28,13 +28,6 @@ uint32_t* engine_shared_state_word(void);
 /* DAT_00556ed0: the debug and panel-highlight flag word. */
 extern uint32_t s_panel_highlight_flags;
 
-/* The two fonts Panel.c draws with (DAT_00556124, DAT_00556128), and the
- * radar zoom (DAT_005563f4). The port has no owner of the original
- * legoGlobs fields yet, so these port globals stand in for them. */
-extern struct TextureSurface* s_lego_text_window_font;
-extern struct TextureSurface* s_lego_crystal_count_font;
-extern float s_lego_radar_zoom;
-
 /* FUN_00425c30 Lego_SetPaused-style transition control. */
 void ledger_stub_00425c30_TransitionControl(int enabled, uint32_t parameter);
 /* FUN_00428800: the interface click sound (0 accepted, 1 refused). */

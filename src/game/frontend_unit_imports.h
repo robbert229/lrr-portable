@@ -40,14 +40,7 @@ extern uint32_t s_window_mouse_word_40;     /* 0076ab40 msrb */
 extern uint8_t s_global_current_keys[256];  /* 0076ab80 Input_KeyMap */
 extern uint8_t s_global_previous_keys[256]; /* 0076aa00 Input_PrevKeyMap */
 
-/* GAME-021 Lego.c's legoGlobs fields (lego_unit.c stand-ins and the
- * port's globals). */
-extern struct BlockRec* legoGlobs_config;   /* 005560c0 */
 extern const char* s_engine_config_root;    /* 005560c4 gameName */
-extern void* legoGlobs_rootCont;            /* 005560d8 */
-extern void* legoGlobs_viewMain;            /* 005560dc */
-extern void* legoGlobs_spotlightTop;        /* 005560f0 */
-extern uint32_t legoGlobs_f_5560f8;         /* 005560f8 */
 extern void* DAT_0055613c;                  /* 0055613c the credits font */
 extern void* DAT_00556f50;                  /* 00556f50 CreditsTextFile */
 extern void* DAT_00556f54;                  /* 00556f54 CreditsBackAVI */

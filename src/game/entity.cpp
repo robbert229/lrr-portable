@@ -74,6 +74,10 @@ extern "C" uint32_t s_catalog_counts[5];
 extern "C" uint32_t s_object_pointer_registry_words[10];
 extern "C" uint32_t s_object_pointer_registry_count;
 #include "entity_for_legoobject.hpp"
+/* Matching build: legoGlobs' fields under the port's names (finding 653). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "lego_globs.h"
+#endif
 
 static uint32_t s_next_ddiscene_owner_token = 1u;
 EntityActorActivityAdvanceHook s_actor_activity_advance_hook;
@@ -93,30 +97,66 @@ void entity_slot_type_component_set(EntitySlot* entity, void* component)
     if (entity != NULL) entity->type_component_handle = component;
 }
 
-// GLOBAL: LEGORR 0x00556254
+/* legoGlobs +0x194 (00556254): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char** s_object_name_kind1;
-// GLOBAL: LEGORR 0x00556258
+#endif
+/* legoGlobs +0x198 (00556258): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char** s_object_name_kind2;
-// GLOBAL: LEGORR 0x0055625c
+#endif
+/* legoGlobs +0x19c (0055625c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char** s_object_name_kind3;
-// GLOBAL: LEGORR 0x00556260
+#endif
+/* legoGlobs +0x1a0 (00556260): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char** s_object_name_kind4;
-// GLOBAL: LEGORR 0x00556264
+#endif
+/* legoGlobs +0x1a4 (00556264): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char** s_object_name_kind10;
-// GLOBAL: LEGORR 0x00556268
+#endif
+/* legoGlobs +0x1a8 (00556268): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char** s_object_the_name_kind1;
-// GLOBAL: LEGORR 0x0055626c
+#endif
+/* legoGlobs +0x1ac (0055626c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char** s_object_the_name_kind2;
-// GLOBAL: LEGORR 0x00556270
+#endif
+/* legoGlobs +0x1b0 (00556270): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char** s_object_the_name_kind3;
-// GLOBAL: LEGORR 0x00556274
+#endif
+/* legoGlobs +0x1b4 (00556274): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char** s_object_the_name_kind4;
-// GLOBAL: LEGORR 0x00556278
+#endif
+/* legoGlobs +0x1b8 (00556278): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char** s_object_the_name_kind10;
-// GLOBAL: LEGORR 0x0055618c
+#endif
+/* legoGlobs +0x0cc (0055618c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char* s_object_name_special[9];
-// GLOBAL: LEGORR 0x005561b0
+#endif
+/* legoGlobs +0x0f0 (005561b0): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const char* s_object_the_name_special[9];
+#endif
 EntityHealthThresholdReadHook s_entity_health_threshold_read_hook;
 int s_entity_pair_activity_sentinel;
 EntityVisualResourcePresentHook s_entity_visual_resource_present_hook;
@@ -918,11 +958,17 @@ int entity_count(GameContext* ctx, int type)
  * optionally filters the +0x3e8 0x80000 bit, and returns on the first
  * callback match. pool_link_408 is the native-width mirror of that dword. */
 GameContext* s_entity_pool_callback_context;
-// GLOBAL: LEGORR 0x005563b8
+/* legoGlobs +0x2f8 (005563b8): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_object_pointer_registry_words[
     OBJECT_POINTER_REGISTRY_CAPACITY];
-// GLOBAL: LEGORR 0x005563e0
+#endif
+/* legoGlobs +0x320 (005563e0): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_object_pointer_registry_count;
+#endif
 /* Native pointer sidecar follows the retail-shaped slots and count. */
 EntitySlot* s_object_pointer_registry_entities[
     OBJECT_POINTER_REGISTRY_CAPACITY];
@@ -3694,8 +3740,11 @@ uint32_t stats_table_word_at_b0(int type, int row, int stride_index)
 /* The catalog window band: the five count words and four name tables the
  * encyclopedia loader indexes. Counts and names are installed from the
  * current config load; the five slots map DAT_0055627c/80/84/88/8c. */
-// GLOBAL: LEGORR 0x0055627c
+/* legoGlobs +0x1bc (0055627c): in the matching build the field of
+ * legoGlobs (lego_unit.c, lego_globs.h; finding 653). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_catalog_counts[5]; /* DAT_0055627c/80/84/88/8c roles */
+#endif
 static const void* s_catalog_name_tables[4]; /* DAT_005561e8/ec/f0/f4 roles */
 
 void catalog_count_install(int which, uint32_t value)

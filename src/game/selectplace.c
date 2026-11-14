@@ -24,6 +24,9 @@
 #include "crt/vc5names.h"
 #include "selectplace.h"
 #include "selectplace_imports.h"
+/* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
+ * above, pays for its symbols (finding 538). */
+#include "lego_globs.h"
 
 /* The most blocks a building covers: one mesh group each. */
 #define SELECTPLACE_MAXGROUPS 10

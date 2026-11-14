@@ -301,6 +301,11 @@ int pointer_get_current_type(void)
     return pointerGlobs.currType;
 }
 
+/* legoGlobs' fields (lego_globs.h, finding 653), included before their
+ * first use so that the functions above keep their symbol counter
+ * (finding 538). */
+#include "lego_globs.h"
+
 // FUNCTION: LEGORR 0x0045cc70
 void pointer_draw_pointer(unsigned int mouseX, unsigned int mouseY)
 {
