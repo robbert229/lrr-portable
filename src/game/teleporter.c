@@ -75,8 +75,11 @@ void teleporter_restart(void)
     teleporterGlobs.serviceList = NULL;
 }
 
+/* The callbacks have external linkage, as in the original: MSVC 5.0 emits a
+ * static function after its first user, not where it is defined
+ * (finding 658). */
 // FUNCTION: LEGORR 0x0046a3c0
-static int teleporter_callback_start(Lego_Object* liveObj, void* data)
+int teleporter_callback_start(Lego_Object* liveObj, void* data)
 {
     Teleporter_Search* search = (Teleporter_Search*)data;
 
@@ -120,7 +123,7 @@ void teleporter_add_service(Teleporter_Service* service)
 }
 
 // FUNCTION: LEGORR 0x0046a490
-static int teleporter_callback_check_type(Lego_Object* liveObj, void* data)
+int teleporter_callback_check_type(Lego_Object* liveObj, void* data)
 {
     if ((unsigned int)liveObj->type ==
             (unsigned int)teleporter_get_service_object_type((unsigned int)(size_t)data) &&
@@ -175,7 +178,7 @@ void teleporter_start(unsigned int objTypes, unsigned int modeFlags,
 }
 
 // FUNCTION: LEGORR 0x0046a5c0
-static int teleporter_callback_update(Lego_Object* liveObj, void* data)
+int teleporter_callback_update(Lego_Object* liveObj, void* data)
 {
     Teleporter_Point2F position;
     Teleporter_Service* service;
