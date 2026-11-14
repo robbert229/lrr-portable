@@ -100,12 +100,21 @@ def measure(original, rebuilt, funcs, entries, entities, ranges, annotations, ma
             equal = identical(original.read(f.address, size), b, f.address, ent['recomp'], orig_image, recomp_image)
         groups[i].append((f.address, size, rebuilt_addr, ent['size'] if size_known else None, equal))
     known = {f.address for f in funcs}
-    foreign = [(int(e['recomp'], 16), None) for e in entries if e.get('recomp') and int(e['address'], 16) not in known]
-    all_mapped = sorted([(x[2], i) for i, g in enumerate(groups) for x in g if x[2] is not None] + foreign, key=lambda x: x[0])
+    # Mapped annotations that start no function of the original's function
+    # list: secondary entry points (__NLG_Notify1) and functions the list
+    # misses (NERPs' table entries). They belong to the unit whose range holds
+    # them, so they extend its run instead of splitting it (finding 657).
+    # Only an address outside every unit is a foreign symbol.
+    foreign = [(int(e['recomp'], 16), owner(int(e['address'], 16)), int(e['address'], 16))
+               for e in entries if e.get('recomp') and int(e['address'], 16) not in known]
+    all_mapped = sorted([(x[2], i, x[0]) for i, g in enumerate(groups) for x in g if x[2] is not None] + foreign, key=lambda x: x[0])
+    order = collections.defaultdict(list)
+    for _, i, a in all_mapped:
+        if i is not None: order[i].append(a)
     medians = [(i, statistics.median(x[2] for x in g if x[2] is not None)) for i, g in enumerate(groups) if any(x[2] is not None for x in g)]
     inv = pair_counts([v for _, v in medians])
     runs = collections.defaultdict(int); prev = None
-    for _, i in all_mapped:
+    for _, i, _ in all_mapped:
         if i is not None and i != prev: runs[i] += 1
         prev = i
     contiguous = 0; units = []; prefix_units = prefix_bytes = 0; prefix = True
@@ -127,8 +136,7 @@ def measure(original, rebuilt, funcs, entries, entities, ranges, annotations, ma
         data_groups[next(iter(candidates))][sec].append((addr, e['recomp'], newsec))
     for i, (row, g) in enumerate(zip(rows, groups)):
         mapped = [x for x in g if x[2] is not None]
-        ordered = [x[0] for x in sorted(mapped, key=lambda x:x[2])]
-        contig = bool(mapped) and runs[i] == 1 and ordered == sorted(ordered)
+        contig = bool(mapped) and runs[i] == 1 and order[i] == sorted(order[i])
         contiguous += contig
         size_exact = bool(g) and len(mapped) == len(g) and all(x[1] == x[3] for x in g)
         if prefix and size_exact:
@@ -147,11 +155,12 @@ def measure(original, rebuilt, funcs, entries, entities, ranges, annotations, ma
     total = sum(u['original_function_bytes'] for u in units); exact = sum(u['identical_function_bytes'] for u in units)
     mapped_units = len(medians)
     return {'unit_order_inversions': {'method': 'median mapped function address per unit; ties are not inversions', **inv, 'units': mapped_units},
-            'unit_contiguity': {'method': 'one run of mapped functions in original function order; unmapped functions omitted', 'units': contiguous, 'eligible_units': mapped_units, 'percent': round(100 * contiguous / mapped_units, 2) if mapped_units else 0.0},
+            'unit_contiguity': {'method': 'one run of mapped functions in original function order; unmapped functions omitted; mapped annotations inside a unit range that start no listed function count with that unit', 'units': contiguous, 'eligible_units': mapped_units, 'percent': round(100 * contiguous / mapped_units, 2) if mapped_units else 0.0},
             'unit_relative_identity': {'method': 'whole function byte identity; image-address operands and external relative branches masked; missing functions count against original bytes', 'identical_bytes': exact, 'original_bytes': total, 'percent': round(100 * exact / total, 2) if total else 0.0},
             'size_exact_prefix': {'method': 'all original functions mapped with equal code sizes; bytes use original unit spans', 'units': prefix_units, 'bytes': prefix_bytes, 'size_exact_units': sum(u['size_exact'] for u in units)},
             'data_offset_agreement': {'method': 'anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted', 'agreeing_units': sum(u['data_offset_agreement'] is True for u in units), 'eligible_units': sum(u['data_offset_agreement'] is not None for u in units), 'unattributed_or_unmapped_annotations': unknown_data},
-            'unattributed_mapped_functions': len(foreign), 'unattributed_original_functions': unattributed, 'unmapped_original_functions': sum(len(g) - sum(x[2] is not None for x in g) for g in groups),
+            'unattributed_mapped_functions': sum(i is None for _, i, _ in foreign),
+            'unlisted_mapped_functions': len(foreign), 'unattributed_original_functions': unattributed, 'unmapped_original_functions': sum(len(g) - sum(x[2] is not None for x in g) for g in groups),
             'units': units, 'object_map': object_summary(map_path),
             'link_order_list': list_summary(rows, list_entries if list_entries is not None else link_order.load())}
 

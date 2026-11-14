@@ -104,6 +104,16 @@ class CommittedListTest(unittest.TestCase):
         self.assertEqual(libs[:3], ["kernel32.lib", "libc.lib", "oldnames.lib"])
 
 
+    def test_late_members_link_after_the_libraries(self):
+        # Finding 657: rnc.c and init.c come after the import thunks, as
+        # library members in this order; the map names them by library.
+        text = (lo.ROOT / lo.LIST).read_text(encoding="utf-8")
+        self.assertEqual(lo.late_members(text), ["gods98/rnc.c", "gods98/init.c"])
+        self.assertEqual(lo.late_library("gods98/rnc.c"), "late_rnc")
+        self.assertEqual(lo.late_object("gods98/init.c"), "late_init:init.c.obj")
+        self.assertEqual(lo.late_members(LIST), [])
+
+
 class CheckTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -139,6 +149,12 @@ class CheckTest(unittest.TestCase):
         self.assertIn("unit GAME-001 is listed twice", self.errors([self.lines[0], self.lines[0].replace("game/a.c", "gods98/b.cpp"), self.lines[2]]))
         (self.root / "src/game/a.c").write_text("// FUNCTION: LEGORR 0x00402010\n")
         self.assertIn("outside GAME-001 range", self.errors())
+
+    def test_late_members_must_be_late_units(self):
+        lines = self.lines + ["set(LRR_LINK_LATE_MEMBERS game/a.c gods98/none.c)"]
+        out = self.errors(lines)
+        self.assertIn("late member game/a.c (GAME-001) is not a late unit", out)
+        self.assertIn("late member gods98/none.c is not a unit entry", out)
 
     def test_late_unit_sits_in_the_crt_range(self):
         # Finding 610: a late unit is a unit entry after the port tail.

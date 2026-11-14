@@ -270,6 +270,16 @@ set(LRR_LINK_LIBRARIES kernel32.lib libc.lib oldnames.lib
   ole32.lib d3drm.lib ddraw.lib winmm.lib vfw32.lib dinput.lib dsound.lib
   user32.lib gdi32.lib advapi32.lib dxguid.lib)
 
+# Units the original pulled from a library after the import libraries
+# (finding 657): LATE-001 (rnc.c) and LATE-002 (init.c) follow the import
+# thunks. The matching build archives each of these entries' objects into
+# its own library (late_<stem>.lib), linked after LRR_LINK_LIBRARIES in this
+# order, so LINK places their code and data after LIBC's first-pass members
+# and the DirectX thunks. The original also has RtlUnwind's thunk before
+# them; here it still follows them. Every other build compiles them as
+# ordinary entries, and their list entries keep their place.
+set(LRR_LINK_LATE_MEMBERS gods98/rnc.c gods98/init.c)
+
 # Symbols the matching link pulls in by name, in this order. Input.c's
 # references to dinput.lib's data members and DirectInputCreateA are still in
 # port code that does not reference them, so they are named here until it is

@@ -31,7 +31,8 @@ distinguish identical file-local signatures in the same scope, but counts them.
 
 `src/link_order.cmake` is CMake code with one `lrr_link(...)` entry per line,
 so `link_order.py` reads it with the standard library only (`parse`, `load`,
-`sources`, `libraries`). `insert_unit` places a unit's entry in its original
+`sources`, `libraries`, and `late_members` for the units linked from their
+own libraries after the others, finding 657). `insert_unit` places a unit's entry in its original
 position; `convert_unit.py` uses it. `python3 tools/link_order.py
 [--platform winapi] [--sources]` prints the entries. Its tests run in `make
 tools-test`. The field layout is described at the top of the list and in

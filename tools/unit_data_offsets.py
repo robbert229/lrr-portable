@@ -163,6 +163,7 @@ def measure(root, build):
     units = {r['unit_id']: r for r in rows}
     groups = {u: collections.defaultdict(list) for u in units}
     listed = {e.key: e for e in link_order.load(root) if e.kind == 'unit' and e.applies_to('winapi')}
+    late = set(link_order.late_members((root / link_order.LIST).read_text(encoding='utf-8')))
     path_units = {e.path: u for u, e in listed.items()}
     unknown_owner = []
     for addr, declarations in sorted(annotations.items()):
@@ -200,6 +201,11 @@ def measure(root, build):
         entry = listed.get(unit)
         object_name = Path(entry.source).name + '.obj' if entry else None
         candidates = [build / p for p in linked_paths if p.endswith('/src/' + entry.source + '.obj')] if entry else []
+        if entry and entry.source in late:
+            # A late member is linked from its own library (finding 657).
+            object_name = link_order.late_object(entry.source)
+            path = build / f'CMakeFiles/{link_order.late_library(entry.source)}.dir/src/{entry.source}.obj'
+            candidates = [path] if path.is_file() else []
         reason = None
         if not entry:
             reason = 'unit has no dedicated link-order object'

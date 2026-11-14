@@ -133,6 +133,14 @@ place that adds a game, gods98, platform or program source to the build:
   `platform_glue` from the entries' `library` column; order does not matter
   there (ADR 0003).
 
+Two late units are the exception (finding 657). The original has LATE-001
+(`gods98/rnc.c`) and LATE-002 (`gods98/init.c`) after the import thunks, so
+`LRR_LINK_LATE_MEMBERS` names them. The matching build archives each into its
+own `late_<stem>.lib`, linked after `LRR_LINK_LIBRARIES` in list order. The
+map shows them as `late_rnc:rnc.c.obj` and `late_init:init.c.obj`. Their
+list entries stay where they are, and every other build compiles them as
+usual.
+
 Order is the game segment (converted units at their unit's position, each
 mixed legacy file at the median original address of its functions), the
 gods98 segment, the port tail (port-only files), then the legacy files whose
