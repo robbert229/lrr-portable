@@ -124,11 +124,24 @@ place that adds a game, gods98, platform or program source to the build:
 
 - **The matching build** compiles each entry as its own object (a CMake object
   library `link_<position>_<stem>`, with the include path of the entry's
-  library) and links the objects explicitly, in list order. Then come the
-  libraries in `LRR_LINK_LIBRARIES`: LIBC, `oldnames.lib` and the import
-  libraries in the original's order. LINK 5.0 keeps command-line object order
-  in every section, so the map shows the objects' `.text`, `.data` and `.bss`
-  in list order, followed by the LIBC members.
+  library). It links them as the original did (finding 658):
+  1. the game units and gods98's first unit, Movie.cpp
+     (`LRR_LINK_EXPLICIT_LAST`), as explicit objects in list order;
+  2. each later gods98 unit from its own library, `unit_<stem>.lib`, in list
+     order (the map shows `unit_container:container.c.obj`);
+  3. the libraries in `LRR_LINK_LIBRARIES`: LIBC, `oldnames.lib` and the
+     import libraries in the original's order;
+  4. the late units (below);
+  5. the port tail and the CRT-range legacy files from one library,
+     `lrr_tail.lib`.
+
+  LINK 5.0 keeps command-line object order in every section and pulls
+  library members when they are first referenced, so the map shows the units'
+  `.text`, `.data` and `.bss` in list order, then the LIBC members, the
+  import thunks, the late units and the tail. A unit pulled out of list
+  order fails `tools/link_order.py check-map`. The link names no `/ENTRY`:
+  LINK infers `WinMainCRTStartup` after the explicit objects, which puts
+  `wincrt0.obj` where the original has it.
 - **The native and reference builds** build `game`, `gods98` and
   `platform_glue` from the entries' `library` column; order does not matter
   there (ADR 0003).

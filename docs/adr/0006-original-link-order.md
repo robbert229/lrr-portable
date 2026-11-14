@@ -382,6 +382,31 @@ At equal `/OPT` setting the two links differ only in `.rdata`: the 84-byte debug
 - Stripping or relocating the debug directory after a `/DEBUG` link: the image has no `.reloc`, the shift is not uniform, and the PDB would no longer describe the patched executable.
 - Pairing a PDB from one link with another link's executable: it loses 45 exact matches through the `.rdata` shift.
 
+## Addendum (2026-11-13): library members and the port tail
+
+**Status: proposed by #767** ([finding 658](../findings/658-libc-member-order-gods98-members-and-tail-library.md)). It amends decision 1 (every unit an explicit object) and decision 4 (the tail before LIBC). The owner decides whether it stands.
+
+The matching build links, in this order:
+1. the game units and gods98's first unit, Movie.cpp, as explicit objects (`LRR_LINK_EXPLICIT_LAST`);
+2. each later gods98 unit from its own library, `unit_<stem>.lib`, in list order;
+3. the libraries of the 2026-11-12 addendum (LIBC, `oldnames`, the import libraries);
+4. the late units (finding 657);
+5. the port tail and the CRT-range legacy files from one library, `lrr_tail.lib`.
+
+The link names no `/ENTRY`.
+
+**Why.**
+- LINK 5.0 pulls a LIBC member when the first unresolved reference to it comes up. The original's LIBC order is therefore its referencers' order. When the entry point is not named, LINK infers it after the explicit objects. The original's `wincrt0.obj` follows Movie.cpp's LIBC references and precedes Container.c's, so the original's explicit objects ended with Movie.cpp, and the other gods98 units came from a library.
+- With one library per unit, each searched before LIBC, the units keep list order in every section, as explicit objects do. The map check fails if one is pulled out of order.
+- The port tail's references to LIBC came before LIBC's own references, and that pulled members early. From a library after LIBC, the tail is pulled in the first pass. The members only it needs are pulled in the second pass, after the import thunks, where the original has nothing of its own.
+- `/ENTRY` made `wincrt0.obj` LIBC's first member.
+
+Together these take the full function-order inversions from 5,568 to 801 pairs, and game-only from 17 to 6. LIBC's `__output` and `__NMSG_WRITE` reach 100%, and no function falls.
+
+**What decision 1's reasons still say.** Explicit objects remain the rule for the game segment and Movie.cpp. Member libraries reproduce list order only while every member is referenced before its library is searched. Today they all are. A conversion that breaks this fails `make reccmp-check` through the map check. The link-order list is still the only authority on order.
+
+**What decision 4 loses.** Tail objects that nothing references are not linked. Under `/OPT:REF` they contributed nothing but one `.bss` block (`sfx_port.cpp`'s, which nothing reads). The tail's code and data now follow LIBC's and the late units', so they no longer shift LIBC.
+
 ## Consequences
 
 - The issue's acceptance criteria become reachable in stages:
