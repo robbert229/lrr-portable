@@ -1120,6 +1120,51 @@ loop's, which can differ from the full report; review the semantics of a
 result, apply `best.patch`, and confirm with `make reccmp-check`. Finding 654
 records the first application pass and each mode's hit rate.
 
+## `phase_probe.py` — symbol-counter phase probe (findings 538, 663, 664)
+
+```sh
+make phase-probe ADDR=0x00479a30                       # one function
+make phase-probe ADDR="0x0044fab0 0x0044fe70" PROBE_ARGS="--range 0 128 1 --at 820"
+make phase-probe PADS_AT="16:52 16:52,901:3" UNIT=src/game/terrain_map.c
+python3 tools/phase_probe.py probe 0x00479a30 --json --output /tmp/maths.json
+```
+
+Is a near miss a rule B phase case (finding 538), whose code depends only on
+how many symbols the compiler numbered before it? `probe` puts N inert
+`extern int phase_pad_k;` declarations on one file-scope line (by default
+the first blank line after the unit's first `#include`; `--at LINE` puts them
+in front of that line instead) for every N in `--range` (default 0–255). It
+compiles each from a scratch copy with `/FAs` (`--jobs` at once), and
+fingerprints each function's listing with the counter's numbers removed.
+Then it compiles the first N of each distinct code in place and scores it
+with Reccmp. Per function it prints:
+
+| Field | Meaning |
+| --- | --- |
+| `kind` | `single-code` (one code over the range: the source fixes it), `phase-sensitive` (a shift scores higher than N = 0) or `current-best` |
+| `now`, `best` | the score at N = 0 and the best code's score (`*` effective) |
+| `shifts` | the first 12 values of N that give the best score |
+| `period` | the smallest period of the code row, if the range holds two |
+| row | one letter per N and distinct code (`!` = no code) |
+
+`pads-at UNIT SPEC...` scores every annotated function of the unit with
+`SPEC` = `LINE:N[,LINE:N...]` pads in front of those lines and prints rises
+and falls against the unpadded unit. Pads before a function move only that
+function and later ones, so comparing specs finds the gap where the
+original's declarations differ from the port's (finding 663). Finding 538's
+cost table then says what a gap of 1, 2 or 3 can be: a local, a named
+parameter, a function static or a first-time `#include` (finding 653).
+
+Pads share a line with existing text, so the line count, the COFF line
+records and the annotations hold. Each in-place compile takes an exclusive
+lock on `build-match/phase/<unit>/probe.flock`, records the candidate in
+`in-place.lock` and keeps `original.c` beside it. A probe killed with a
+candidate in place is undone on the next probe of the same unit (or `git
+checkout` the file). Never run a probe while a build compiles the same tree.
+**The pads are a diagnostic only.** ADR 0005 entropy rules 3 and 4 forbid
+committing them or any filler declaration; fix the original's real
+declarations instead.
+
 ## Native CMake/Meson source parity
 
 `python3 tools/meson_source_parity.py` checks the native game, gods98,
