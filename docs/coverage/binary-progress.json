@@ -3,7 +3,7 @@
     "full": 96.72,
     "game_only": 96.42
   },
-  "baseline_sha256": "e717f515d9886625e14e6da3cf861f708688fc3c4783d380a2952d67a235b431",
+  "baseline_sha256": "d5aa5c08dd2a88f7961b2f6b02ade48feba7cd601f7a74d17ca0a937f0925b6e",
   "exact_function_code_bytes": {
     "bytes": 319635,
     "original_text_bytes": 642549,
@@ -23,7 +23,7 @@
       "pairs": 44
     }
   },
-  "input_sha256": "7ed89867e078f9f5626399f426ff5117c710b770645483850742d79a3d23b79b",
+  "input_sha256": "4ff8a1277a450c82e21dafdfcea11917b213b2da96131aec00761133964372c4",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 19,
@@ -4032,7 +4032,7 @@
     ],
     "unmapped_original_functions": 13
   },
-  "listing_digests_sha256": "afe534ff30904bb8042771984f9dd9f65860aedfbdb689061a7d699082cecaa0",
+  "listing_digests_sha256": "1f2d6c6c278bf591490c3a65d196a9f0efabe5972eaa29c5c42e03a4a14ef592",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4051,8 +4051,8 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 572976,
-        "functions": 2532,
+        "bytes": 572944,
+        "functions": 2531,
         "removed_bytes": 0,
         "removed_functions": 0
       }
@@ -4071,8 +4071,8 @@
         "removed_functions": 76
       },
       "original_annotated": {
-        "bytes": 572976,
-        "functions": 2532,
+        "bytes": 572944,
+        "functions": 2531,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4095,8 +4095,8 @@
         "removed_functions": 3576
       },
       "port_unit": {
-        "bytes": 448,
-        "functions": 14,
+        "bytes": 480,
+        "functions": 15,
         "removed_bytes": 256,
         "removed_functions": 4
       }
@@ -4167,8 +4167,8 @@
           "virtual_size": 22696
         },
         ".rsrc": {
-          "raw_size": 1536,
-          "virtual_size": 1348
+          "raw_size": 3072,
+          "virtual_size": 2936
         },
         ".text": {
           "raw_size": 842240,
@@ -4261,15 +4261,15 @@
     },
     "resources": {
       "chance_percent": 16.31,
-      "excess_percent_points": 0.0,
-      "identical_bytes": 479,
-      "identical_percent": 16.31,
+      "excess_percent_points": 83.48,
+      "identical_bytes": 2930,
+      "identical_percent": 99.8,
       "original_bytes": 2936,
-      "rebuilt_bytes": 1348,
+      "rebuilt_bytes": 2936,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 0.0,
-      "run_identical_bytes": 0,
-      "run_identical_percent": 0.0
+      "run_excess_percent_points": 98.84,
+      "run_identical_bytes": 2902,
+      "run_identical_percent": 98.84
     }
   },
   "text_at_original_addresses": {
