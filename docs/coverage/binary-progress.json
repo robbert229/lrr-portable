@@ -4052,8 +4052,8 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 572512,
-        "functions": 2533,
+        "bytes": 572480,
+        "functions": 2532,
         "removed_bytes": 0,
         "removed_functions": 0
       }
@@ -4072,8 +4072,8 @@
         "removed_functions": 76
       },
       "original_annotated": {
-        "bytes": 572512,
-        "functions": 2533,
+        "bytes": 572480,
+        "functions": 2532,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4096,8 +4096,8 @@
         "removed_functions": 3572
       },
       "port_unit": {
-        "bytes": 192,
-        "functions": 10,
+        "bytes": 224,
+        "functions": 11,
         "removed_bytes": 48,
         "removed_functions": 2
       }
