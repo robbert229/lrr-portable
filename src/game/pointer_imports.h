@@ -11,6 +11,17 @@
 #include <stdint.h>
 
 #include "gods98/config.h"
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: the flic's width and height through the original's
+ * getters (#805, finding 674): 004850e0 is Flic_GetHeight under its link
+ * name (flic_link_names.h); Flic_GetWidth was folded into 004897d0, which
+ * this tree names animclone.c's anim_clone_is_lws (finding 632).
+ * Deviation (scoring only): the folded getter's name. Each renames
+ * flic.h's declaration and its uses; neither name is otherwise declared
+ * here (finding 538). */
+#define flic_width anim_clone_is_lws   /* 004897d0 */
+#define flic_height object_field10_get /* 004850e0 */
+#endif
 #include "gods98/flic.h"
 #include "gods98/images.h"
 

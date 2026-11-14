@@ -12,6 +12,7 @@
 #define g_front_end_avi1 legoGlobs_endGameAVI1 /* 00556fb0 */
 #define g_front_end_avi2 legoGlobs_endGameAVI2 /* 00556fb4 */
 #define lego_reset_level_and_exit lego_exit /* 004250a0 */
+#define movie_play_wait front_play_movie /* 00415700 Front_PlayMovie (#805) */
 #endif
 #include <stdlib.h>
 #include <string.h>

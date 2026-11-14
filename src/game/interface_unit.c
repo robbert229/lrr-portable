@@ -57,9 +57,11 @@
 #define lego_get_map level_current_terrain_get                  /* 00431570 */
 #define lego_object_can_enter_block lego_terrain_cell_allows_placement /* 00432a20 */
 #define interface_spawn_request_enqueue lego_interface_spawn_request_enqueue /* 00434e80 */
+#define lego_object_get_container legoobject_visual_resource_get_or_create /* 0043a5f0 */
 #define lego_object_detach_all legoobject_attached_object_list_detach /* 00439e70 */
 #define lego_object_get_block legoobject_position_to_terrain_cell /* 004424f0 */
 #define entity_kind6_tick_down_marker_spawn_obj legoobject_kind6_tick_down_marker_spawn /* 004489a0 */
+#define container_get_position ddiscene_object_position_get     /* 004754c0 */
 #endif
 #include <stdarg.h>
 #include <stdio.h>

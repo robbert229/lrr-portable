@@ -13,6 +13,13 @@
  * native HUD, and the few guards the native port needs because it reaches
  * these functions before the original's state exists) is compiled out of
  * the matching build (ADR 0006). */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: Lego.c's TransitionControl (lego_unit.c) itself, instead
+ * of lego_port.cpp's model (#805, finding 674). It renames lego.h's
+ * declaration and its use; the new name is not otherwise declared here
+ * (finding 538). */
+#define ledger_stub_00425c30_TransitionControl lego_transition_control /* 00425c30 */
+#endif
 #include <math.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -33,6 +40,17 @@
 #include "gods98/input.h"
 #include "gods98/utils.h"
 #include "gods98/textwindow.h"
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: the flic's width and height through the original's
+ * getters (#805, finding 674): 004850e0 is Flic_GetHeight under its link
+ * name (flic_link_names.h); Flic_GetWidth was folded into 004897d0, which
+ * this tree names animclone.c's anim_clone_is_lws (finding 632).
+ * Deviation (scoring only): the folded getter's name. Each renames
+ * flic.h's declaration and its uses; neither name is otherwise declared
+ * here (finding 538). */
+#define flic_width anim_clone_is_lws   /* 004897d0 */
+#define flic_height object_field10_get /* 004850e0 */
+#endif
 #include "gods98/flic.h"
 #include "gods98/engine.h"
 #include "camera_control.h"

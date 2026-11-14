@@ -1,4 +1,4 @@
-# input_sha256: 589a8892f9a791a0cebbb000c23fddb101d256405a282fb3026d9e0ed857f285
+# input_sha256: f67d011e8deb34e38f36356734fcfed24fda22f4435926f6413b2a17c2a5f342
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -117,7 +117,7 @@
 0x00403b40 100.00 aitask_entity_pending_task_flag_clear
 0x00403b60 100.00 aitask_entity_activity_records_refresh
 0x00403c00 100.00 aitask_entity_activity_record_remove_by_type
-0x00403d10 99.39 aitask_entity_command_unlink_by_kind
+0x00403d10 100.00 aitask_entity_command_unlink_by_kind
 0x00403ef0 100.00 aitask_pending_record_callback_dispatch
 0x00403f10 100.00 aitask_callback_00403f10
 0x00403f30 100.00 aitask_ai_idle_chain_record_attach
@@ -312,11 +312,11 @@
 0x0040cdc0 100.00 electric_fence_initialise
 0x0040ce30 100.00 electric_fence_shutdown
 0x0040ce80 100.00 electric_fence_restart
-0x0040cea0 96.67 electric_fence_block_surfaces_update
-0x0040cf50 95.00 electric_fence_add
+0x0040cea0 100.00 electric_fence_block_surfaces_update
+0x0040cf50 100.00 electric_fence_add
 0x0040cf80 70.48 electric_fence_create
 0x0040d030 100.00 electric_fence_add_list
-0x0040d0a0 96.77 electric_fence_remove
+0x0040d0a0 100.00 electric_fence_remove
 0x0040d100 100.00 electric_fence_remove_node
 0x0040d170 100.00 electric_fence_debug_place
 0x0040d1f0 100.00 electric_fence_debug_remove
@@ -325,8 +325,8 @@
 0x0040d450 100.00 electric_fence_update
 0x0040d490 100.00 electric_fence_run_through_lists
 0x0040d4f0 100.00 electric_fence_spark_from
-0x0040d5e0 92.24 electric_fence_building_spark_callback
-0x0040d720 95.45 electric_fence_building_clear_callback
+0x0040d5e0 93.10 electric_fence_building_spark_callback
+0x0040d720 100.00 electric_fence_building_clear_callback
 0x0040d770 100.00 electric_fence_node_update_callback
 0x0040d850 59.62 electric_fence_spark
 0x0040dc20 100.00 electric_fence_beam_create
@@ -677,7 +677,7 @@
 0x0041f470 100.00 interface_callback_can_unload
 0x0041f490 100.00 interface_callback_hungry
 0x0041f4b0 100.00 interface_callback_damaged
-0x0041f4d0 86.87 interface_callback_can_pick_up
+0x0041f4d0 88.89 interface_callback_can_pick_up
 0x0041f5f0 100.00 interface_callback_delete
 0x0041f610 100.00 interface_callback_go_feed
 0x0041f640 100.00 interface_callback_repair
@@ -1063,7 +1063,7 @@
 0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
-0x0043c810 89.35 legoobject_update_callback
+0x0043c810 89.38 legoobject_update_callback
 0x0043eea0 89.26 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
@@ -1719,7 +1719,7 @@
 0x0045a650 39.44 panel_category_bounds_set
 0x0045a6e0 100.00 indexed_pair_set
 0x0045a700 100.00 indexed_pair_get
-0x0045a730 93.91 simtick_manager_tick
+0x0045a730 94.92 simtick_manager_tick
 0x0045a9c0 100.00 panel_texture_slots_blit_to
 0x0045aac0 100.00 panel_item_flag16_set
 0x0045ab00 100.00 panel_state_flags_toggle
@@ -1729,7 +1729,7 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
-0x0045adb0 82.48 panel_cursor_interaction_update
+0x0045adb0 82.69 panel_cursor_interaction_update
 0x0045b310 57.76 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
@@ -1762,7 +1762,7 @@
 0x0045cc20 100.00 media_pointer_cursor_select
 0x0045cc40 100.00 media_pointer_cursor_override_set
 0x0045cc60 100.00 global_cursor_word_get
-0x0045cc70 97.62 pointer_cursor_draw_target
+0x0045cc70 100.00 pointer_cursor_draw_target
 0x0045cd90 100.00 media_pointer_cursor_override_tick
 0x0045cdc0 97.96 priorities_load_images
 0x0045cf00 51.61 priorities_reset
@@ -1820,7 +1820,7 @@
 0x00460950 90.86 reward_calculate_score
 0x00460f00 100.00 reward_create_scroll
 0x00461070 100.00 reward_format_values
-0x00461410 99.66 reward_loop
+0x00461410 100.00 reward_loop
 0x00461790 100.00 reward_draw_item
 0x00461c90 100.00 reward_draw_score
 0x00461dd0 100.00 reward_do_buttons
@@ -1897,7 +1897,7 @@
 0x00465370 100.00 sound_subsystem_enabled
 0x00465380 100.00 scene_effect_registry_reset
 0x004653a0 100.00 transient_effect_textures_preload
-0x00465430 94.38 transient_effect_emitter_create
+0x00465430 94.64 transient_effect_emitter_create
 0x00465970 100.00 transient_effect_registry_release_all
 0x004659b0 100.00 transient_effect_instance_release
 0x00465a90 100.00 transient_effect_registry_enable_set
@@ -2842,7 +2842,7 @@
 0x00403b40 100.00 aitask_entity_pending_task_flag_clear
 0x00403b60 100.00 aitask_entity_activity_records_refresh
 0x00403c00 100.00 aitask_entity_activity_record_remove_by_type
-0x00403d10 99.39 aitask_entity_command_unlink_by_kind
+0x00403d10 100.00 aitask_entity_command_unlink_by_kind
 0x00403ef0 100.00 aitask_pending_record_callback_dispatch
 0x00403f10 100.00 aitask_callback_00403f10
 0x00403f30 100.00 aitask_ai_idle_chain_record_attach
@@ -3037,11 +3037,11 @@
 0x0040cdc0 100.00 electric_fence_initialise
 0x0040ce30 100.00 electric_fence_shutdown
 0x0040ce80 100.00 electric_fence_restart
-0x0040cea0 96.67 electric_fence_block_surfaces_update
-0x0040cf50 95.00 electric_fence_add
+0x0040cea0 100.00 electric_fence_block_surfaces_update
+0x0040cf50 100.00 electric_fence_add
 0x0040cf80 70.48 electric_fence_create
 0x0040d030 100.00 electric_fence_add_list
-0x0040d0a0 96.77 electric_fence_remove
+0x0040d0a0 100.00 electric_fence_remove
 0x0040d100 100.00 electric_fence_remove_node
 0x0040d170 100.00 electric_fence_debug_place
 0x0040d1f0 100.00 electric_fence_debug_remove
@@ -3050,8 +3050,8 @@
 0x0040d450 100.00 electric_fence_update
 0x0040d490 100.00 electric_fence_run_through_lists
 0x0040d4f0 100.00 electric_fence_spark_from
-0x0040d5e0 92.24 electric_fence_building_spark_callback
-0x0040d720 95.45 electric_fence_building_clear_callback
+0x0040d5e0 93.10 electric_fence_building_spark_callback
+0x0040d720 100.00 electric_fence_building_clear_callback
 0x0040d770 100.00 electric_fence_node_update_callback
 0x0040d850 59.62 electric_fence_spark
 0x0040dc20 100.00 electric_fence_beam_create
@@ -3402,7 +3402,7 @@
 0x0041f470 100.00 interface_callback_can_unload
 0x0041f490 100.00 interface_callback_hungry
 0x0041f4b0 100.00 interface_callback_damaged
-0x0041f4d0 86.87 interface_callback_can_pick_up
+0x0041f4d0 88.89 interface_callback_can_pick_up
 0x0041f5f0 100.00 interface_callback_delete
 0x0041f610 100.00 interface_callback_go_feed
 0x0041f640 100.00 interface_callback_repair
@@ -3788,7 +3788,7 @@
 0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
-0x0043c810 89.35 legoobject_update_callback
+0x0043c810 89.38 legoobject_update_callback
 0x0043eea0 89.26 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
@@ -4444,7 +4444,7 @@
 0x0045a650 39.44 panel_category_bounds_set
 0x0045a6e0 100.00 indexed_pair_set
 0x0045a700 100.00 indexed_pair_get
-0x0045a730 93.91 simtick_manager_tick
+0x0045a730 94.92 simtick_manager_tick
 0x0045a9c0 100.00 panel_texture_slots_blit_to
 0x0045aac0 100.00 panel_item_flag16_set
 0x0045ab00 100.00 panel_state_flags_toggle
@@ -4454,7 +4454,7 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
-0x0045adb0 82.48 panel_cursor_interaction_update
+0x0045adb0 82.69 panel_cursor_interaction_update
 0x0045b310 57.76 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
@@ -4487,7 +4487,7 @@
 0x0045cc20 100.00 media_pointer_cursor_select
 0x0045cc40 100.00 media_pointer_cursor_override_set
 0x0045cc60 100.00 global_cursor_word_get
-0x0045cc70 97.62 pointer_cursor_draw_target
+0x0045cc70 100.00 pointer_cursor_draw_target
 0x0045cd90 100.00 media_pointer_cursor_override_tick
 0x0045cdc0 97.96 priorities_load_images
 0x0045cf00 51.61 priorities_reset
@@ -4545,7 +4545,7 @@
 0x00460950 90.86 reward_calculate_score
 0x00460f00 100.00 reward_create_scroll
 0x00461070 100.00 reward_format_values
-0x00461410 99.66 reward_loop
+0x00461410 100.00 reward_loop
 0x00461790 100.00 reward_draw_item
 0x00461c90 100.00 reward_draw_score
 0x00461dd0 100.00 reward_do_buttons
@@ -4622,7 +4622,7 @@
 0x00465370 100.00 sound_subsystem_enabled
 0x00465380 100.00 scene_effect_registry_reset
 0x004653a0 100.00 transient_effect_textures_preload
-0x00465430 94.38 transient_effect_emitter_create
+0x00465430 94.64 transient_effect_emitter_create
 0x00465970 100.00 transient_effect_registry_release_all
 0x004659b0 100.00 transient_effect_instance_release
 0x00465a90 100.00 transient_effect_registry_enable_set

@@ -596,8 +596,10 @@ static const long cntGroupAllGroups = -1;
 
 /* The interface IDs the unit asks for: library data in the GUID block
  * (finding 618). The unit's own copies, as movie_unit.cpp and
- * directdraw.c keep theirs; IID_IDirect3DRMFrame3 (0049f988) is
- * resource.cpp's s_resource_tree_child_iid, which animclone.c reads too. */
+ * directdraw.c keep theirs. IID_IDirect3DRMFrame3 (0049f988), which
+ * animclone.c reads too, is defined here in the matching build, in the
+ * block's order, under the name the port gives it; natively it is
+ * resource.cpp's s_resource_tree_child_iid (#805, finding 674). */
 // GLOBAL: LEGORR 0x0049f338
 static const CntIID IID_CntDirectDrawSurface = {
     0x6c14db81, 0xa733, 0x11ce,
@@ -606,6 +608,13 @@ static const CntIID IID_CntDirectDrawSurface = {
 static const CntIID IID_CntFrame = {
     0xeb16cb03, 0xd271, 0x11ce,
     {0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1}};
+#if defined(_MSC_VER) && _MSC_VER < 1200
+// GLOBAL: LEGORR 0x0049f988
+const CntIID s_resource_tree_child_iid = {
+    0xff6b7f70, 0xa40e, 0x11d1,
+    {0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66}};
+#define IID_CntFrame3 s_resource_tree_child_iid
+#endif
 // GLOBAL: LEGORR 0x0049f9a8
 static const CntIID IID_CntMesh = {
     0xa3a80d01, 0x6e12, 0x11cf,
@@ -618,8 +627,10 @@ static const CntIID IID_CntMeshBuilder3 = {
 static const CntIID IID_CntTexture = {
     0xeb16cb09, 0xd271, 0x11ce,
     {0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1}};
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern const unsigned char s_resource_tree_child_iid[16];          /* 0049f988 */
 #define IID_CntFrame3 (*(const CntIID*)s_resource_tree_child_iid)
+#endif
 
 /* Config.c's ":" (004a1cd4), "::" (004aab18) and "" (004b8a14): the
  * original pools these literals across units (findings 569 and 581). */

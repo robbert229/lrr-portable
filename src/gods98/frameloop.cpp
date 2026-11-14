@@ -2761,6 +2761,7 @@ static int frameloop_briefing_prepare(FrameloopApplicationState* app)
     return 1;
 }
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend only (#805) */
 /* ObjectivePoll's terminal acknowledgment and pause Quit share KeepRunning's
  * reward/return lane. Keep the level and blob alive until the reward/save
  * owner releases them. The frame-driven frontend retains the actual picker
@@ -3101,7 +3102,9 @@ static FeEvent frameloop_main_menu_frame(FrameloopApplicationState* app,
     menu_sound_tick_clock_advance(&app->menu_sound_clock);
     return event;
 }
+#endif /* !LEGORRR_BACKEND_WINAPI */
 
+#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576, #805) */
 #if defined(_MSC_VER) && _MSC_VER < 1200
 /* The matching build's second WAD table (gods98/wad_port.cpp, finding 591). */
 void wad_port_mount_startup_archives(const char* prefix);
@@ -4826,7 +4829,6 @@ void frameloop_application_shutdown(void)
     memset(&app, 0, sizeof(app));
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int LegorrrRun(void)
 {
     FrameloopApplicationState& app = s_frameloop_application;

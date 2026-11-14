@@ -36,11 +36,15 @@ extern "C" {
 #include "resource_for_interface.hpp"
 #include "resource_from_interface.hpp"
 
-// GLOBAL: LEGORR 0x0049f988
+/* IID_IDirect3DRMFrame3 (0049f988). The matching build defines it in
+ * container.c, in the original's GUID block (#805, finding 674), so no
+ * unit reaches this object for it. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 const unsigned char s_resource_tree_child_iid[16] = {
     0x70, 0x7f, 0x6b, 0xff, 0x0e, 0xa4, 0xd1, 0x11,
     0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66
 };
+#endif
 
 /* The port's rock-fall style tables (s_rock_fall_style_names here and the
  * four scene tables below, 45,056 bytes) are defined natively only. In the

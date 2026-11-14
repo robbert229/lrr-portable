@@ -818,6 +818,13 @@ int entity_neighbor_blocked_cell_step_probe(struct EntitySlot* entity,
 int terrain_cell_drill_work_add_current(int x, int y, float divisor,
                                         float elapsed);               /* 00434570 */
 void panel_selection_highlight_toggle(struct EngineContext* ctx, int on);             /* 00435aa0 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: lego_unit.c's 00435aa0 itself, already declared above
+ * (lego_panel_selection_highlight_toggle_adapter). After the declaration,
+ * so only the use changes and the symbol counter does not move (#805,
+ * finding 674). */
+#define panel_selection_highlight_toggle lego_panel_selection_highlight_toggle
+#endif
 int legoobject_progress_advance_by_25(Lego_Object* obj);              /* 00447730 */
 void legoobject_clear_linked_object_state(Lego_Object* obj);          /* 00447780 */
 int legoobject_activity_terrain_eligibility_transition(Lego_Object* obj, float elapsed,

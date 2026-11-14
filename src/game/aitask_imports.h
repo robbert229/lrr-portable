@@ -125,6 +125,11 @@ void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
     unsigned int filter_a, unsigned int filter_b);                   /* 00438ae0 */
 struct EntitySlot* entity_action_kind_entity_create_and_command_issue(
     struct EntitySlot* source, int kind, int selector, int argument); /* 0043a650 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: the original itself, in LegoObject.c (legoobject_unit.c),
+ * as lego_unit_imports.h has it (#805, finding 674). */
+#define entity_linked_activity_event_dispatch legoobject_linked_activity_event_dispatch
+#endif
 void entity_linked_activity_event_dispatch(struct EntitySlot* entity,
                                            unsigned int events);     /* 0043f5b0 */
 /* Stats.c (entity.hpp). */
