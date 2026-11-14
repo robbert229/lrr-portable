@@ -143,6 +143,36 @@ class ProgressTests(unittest.TestCase):
             self.assertEqual(result['size_exact_prefix']['size_exact_units'], 1)
             self.assertEqual(result['unit_relative_identity']['percent'], 50)
 
+    def test_unlisted_annotation_counts_with_its_unit(self):
+        # A mapped annotation that starts no listed function (a secondary
+        # entry point) belongs to the unit whose range holds it: between its
+        # unit's functions it keeps the run whole; elsewhere it breaks it.
+        try:
+            import pefile
+            import capstone
+        except ImportError:
+            self.skipTest('pefile and capstone required')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); path = root / 'x.exe'; fixture_pe(path)
+            pe = pefile.PE(str(path))
+            original = SimpleNamespace(pe=pe, read=lambda a, n: pe.get_data(a - 0x400000, n))
+            funcs = [SimpleNamespace(address=a, end=a + 16) for a in (0x401000, 0x401020, 0x401040)]
+            rows = [dict(unit_id='A', text_start='00401000', text_end='00401040', rdata_range='', data_range='', string_range='', bss_range=''),
+                    dict(unit_id='B', text_start='00401040', text_end='00401060', rdata_range='', data_range='', string_range='', bss_range='')]
+            def run(pairs):
+                entries = [dict(address=hex(a), recomp=hex(b)) for a, b in pairs]
+                entities = [dict(orig=a, recomp=b, type=1, size=16) for a, b in pairs]
+                mapfile = root / 'x.map'; mapfile.write_text(' 0001:00000000 _one 00401000 f one.obj\n')
+                return layout_progress.measure(original, pe, funcs, entries, entities, rows, set(), mapfile, [])
+            inside = run([(0x401000, 0x401000), (0x401010, 0x401010), (0x401020, 0x401020), (0x401040, 0x401040)])
+            self.assertEqual(inside['unit_contiguity']['units'], 2)
+            self.assertEqual(inside['unlisted_mapped_functions'], 1)
+            self.assertEqual(inside['unattributed_mapped_functions'], 0)
+            after = run([(0x401000, 0x401000), (0x401010, 0x401048), (0x401020, 0x401020), (0x401040, 0x401040)])
+            self.assertEqual(after['unit_contiguity']['units'], 1)
+            reversed_ = run([(0x401000, 0x401010), (0x401010, 0x401000), (0x401020, 0x401020), (0x401040, 0x401040)])
+            self.assertEqual(reversed_['unit_contiguity']['units'], 1)
+
     def test_anchored_data_offsets(self):
         try:
             import pefile

@@ -87,6 +87,38 @@ class CoffTests(unittest.TestCase):
             self.assertEqual(result['sections']['.rdata']['status'], 'gaps-only')
             self.assertEqual(result['sections']['.rdata']['count'], 2)
 
+    def test_measure_finds_a_late_member_in_its_library(self):
+        # Finding 657: a late member is linked from late_<stem>.lib, not
+        # from the response file, and the map qualifies it by library.
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            build = root / 'build'
+            (root / 'src/gods98').mkdir(parents=True)
+            (root / 'docs/coverage').mkdir(parents=True)
+            (root / 'src/link_order.cmake').write_text(
+                'lrr_link(unit LATE-999 gods98 gods98/probe.c)\n'
+                'set(LRR_LINK_LATE_MEMBERS gods98/probe.c)\n')
+            (root / 'src/gods98/probe.c').write_text(
+                '// GLOBAL: LEGORR 0x1004\nstatic int long_static_name;\n'
+                '// STRING: LEGORR 0x100a\nsecond;\n')
+            (root / 'docs/coverage/translation-unit-ranges.csv').write_text(
+                'unit_id,rdata_range,data_range,string_range,bss_range\n'
+                'LATE-999,00001004-0000100a,,,,\n')
+            obj = build / 'CMakeFiles/late_probe.dir/src/gods98/probe.c.obj'
+            obj.parent.mkdir(parents=True)
+            obj.write_bytes(fixture())
+            response = build / 'CMakeFiles/program.dir/objects1.rsp'
+            response.parent.mkdir(parents=True)
+            response.write_text('')
+            (build / 'LegoRR.map').write_text(
+                ' 0001:00000000 _probe 00401000 f late_probe:probe.c.obj\n'
+                ' 0002:0000000a _second 0040200a late_probe:probe.c.obj\n')
+            (build / 'reccmp-report').mkdir()
+            (build / 'reccmp-report/entities.json').write_text(json.dumps(
+                [{'orig': 0x100a, 'recomp': 0x40200a, 'type': 4}]))
+            result = offsets.measure(root, build)['units'][0]
+            self.assertEqual(result['sections']['.rdata']['status'], 'gaps-only')
+
     def test_bad_coff_fails(self):
         with self.assertRaises(ValueError):
             offsets.coff(fixture()[:-3])

@@ -36,6 +36,7 @@ MATCHING_PLATFORM = "winapi"
 
 _ENTRY = re.compile(r"^\s*lrr_link\(([^)#]*)\)\s*(?:#.*)?$")
 _LIBS = re.compile(r"^\s*set\(LRR_LINK_LIBRARIES\b([^)]*)\)", re.M)
+_LATE = re.compile(r"^\s*set\(LRR_LINK_LATE_MEMBERS\b([^)]*)\)", re.M)
 
 
 @dataclass(frozen=True)
@@ -95,6 +96,24 @@ def libraries(text: str) -> list[str]:
     """The matching build's link libraries, in order."""
     m = _LIBS.search(text)
     return m.group(1).split() if m else []
+
+
+def late_members(text: str) -> list[str]:
+    """Sources the matching build links from their own libraries, after
+    the libraries (``LRR_LINK_LATE_MEMBERS``; finding 657), in order."""
+    m = _LATE.search(text)
+    return m.group(1).split() if m else []
+
+
+def late_library(source: str) -> str:
+    """The library a late member is archived in: ``late_<stem>``, as
+    CMakeLists.txt names it (the stem drops every extension)."""
+    return "late_" + Path(source).name.split(".")[0]
+
+
+def late_object(source: str) -> str:
+    """A late member's object name as the link map writes it."""
+    return f"{late_library(source)}:{Path(source).name}.obj"
 
 
 def sources(entries: list[Entry], platform: str | None = MATCHING_PLATFORM) -> list[str]:
@@ -180,7 +199,8 @@ MARKER = re.compile(r"^\s*//\s*(?:FUNCTION|LIBRARY):\s*LEGORR\s+0x([0-9a-f]+)", 
 def check(root: Path = ROOT) -> list[str]:
     """Validate the list against source annotations and the unit specification."""
     root = Path(root)
-    entries = load(root)
+    text = (root / LIST).read_text(encoding="utf-8")
+    entries = parse(text)
     with (root / "docs/coverage/translation-units.spec.csv").open(newline="", encoding="utf-8") as f:
         spec = {r["unit_id"]: r for r in csv.DictReader(f)}
     with (root / RANGES).open(newline="", encoding="utf-8") as f:
@@ -235,6 +255,13 @@ def check(root: Path = ROOT) -> list[str]:
             if address < previous:
                 errors.append(f"{where}: address {address:08x} is out of order; move entry after the correct predecessor")
             previous = address
+    by_source = {e.source: e for e in entries}
+    for source in late_members(text):
+        e = by_source.get(source)
+        if e is None or e.kind != "unit" or not e.applies_to(MATCHING_PLATFORM):
+            errors.append(f"{LIST}: late member {source} is not a unit entry of the matching build")
+        elif spec.get(e.key, {}).get("kind") != "late":
+            errors.append(f"{LIST}: late member {source} ({e.key}) is not a late unit in the spec")
     for directory in ("game", "gods98"):
         for path in (root / "src" / directory).rglob("*"):
             if path.suffix.lower() in (".c", ".cpp") and not path.name.startswith("test_"):

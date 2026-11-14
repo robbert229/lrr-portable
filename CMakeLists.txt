@@ -166,8 +166,18 @@ if(LRR_CLASSIC_MSVC5)
   # configuration's /O2.
   set(LRR_UNOPTIMISED_UNITS "${SRC_ROOT}/game/camera_control.c")
   set(LRR_LINK_OBJECTS "")
+  set(LRR_LINK_LATE_SOURCES "")
+  set(LRR_LINK_LATE_TARGETS "")
   set(_lrr_index 0)
   foreach(_src _lib IN ZIP_LISTS LRR_LINK_SOURCES LRR_LINK_TARGETS)
+    # The list's late members go to their own libraries, after the others
+    # (LRR_LINK_LATE_MEMBERS, link_order.cmake; finding 657).
+    string(REPLACE "${SRC_ROOT}/" "" _rel "${_src}")
+    if(_rel IN_LIST LRR_LINK_LATE_MEMBERS)
+      list(APPEND LRR_LINK_LATE_SOURCES "${_src}")
+      list(APPEND LRR_LINK_LATE_TARGETS "${_lib}")
+      continue()
+    endif()
     math(EXPR _lrr_index "${_lrr_index} + 1")
     get_filename_component(_stem "${_src}" NAME_WE)
     string(LENGTH "00${_lrr_index}" _len)
@@ -180,6 +190,23 @@ if(LRR_CLASSIC_MSVC5)
       target_compile_options(${_target} PRIVATE /Od)
     endif()
     list(APPEND LRR_LINK_OBJECTS "$<TARGET_OBJECTS:${_target}>")
+  endforeach()
+  list(LENGTH LRR_LINK_LATE_MEMBERS _lrr_late_wanted)
+  list(LENGTH LRR_LINK_LATE_SOURCES _lrr_late_found)
+  if(NOT _lrr_late_wanted EQUAL _lrr_late_found)
+    message(FATAL_ERROR "LRR_LINK_LATE_MEMBERS names a source the list lacks: "
+      "${LRR_LINK_LATE_MEMBERS}")
+  endif()
+  # One library per late member, in list order: LINK searches each library
+  # in turn, so the members come out in list order. In one library, init.c
+  # came out before rnc.c (finding 657). tools/link_order.py's late_library()
+  # mirrors the late_<stem> name.
+  set(LRR_LINK_LATE_LIBRARIES "")
+  foreach(_src _lib IN ZIP_LISTS LRR_LINK_LATE_SOURCES LRR_LINK_LATE_TARGETS)
+    get_filename_component(_stem "${_src}" NAME_WE)
+    add_library(late_${_stem} STATIC ${_src})
+    target_include_directories(late_${_stem} PRIVATE ${LRR_LINK_INCLUDES_${_lib}})
+    list(APPEND LRR_LINK_LATE_LIBRARIES late_${_stem})
   endforeach()
 else()
   # The native and reference builds group the list's sources into libraries
@@ -300,6 +327,7 @@ if(LRR_CLASSIC_MSVC5)
   target_link_options(program PRIVATE "/LIBPATH:${LRR_IMPORTLIB_DIR}"
     ${LRR_LINK_SYMBOLS})
   target_link_libraries(program PRIVATE ${LRR_LINK_LIBRARIES})
+  target_link_libraries(program PRIVATE ${LRR_LINK_LATE_LIBRARIES})
   # Name the entry point up front. LIBC is searched before the linker would
   # infer it, and LIBC.LIB's symbol index resolves the startup data shared by
   # both entry objects to the console one (crt0.obj) first.

@@ -168,7 +168,11 @@ def classify_object(obj: str, kinds: dict[str, str]) -> str:
     if IMPORT_OBJECT.match(obj):
         return "import"
     if ":" in obj:
-        lib = obj.split(":", 1)[0].lower()
+        lib, member = obj.lower().split(":", 1)
+        if lib.startswith("late_") and member in kinds:
+            # A list entry linked from its own library after the others
+            # (late_<stem>.lib, link_order.late_library; finding 657).
+            return kinds[member]
         return "libc" if lib == "libc" else "library:" + lib
     return kinds.get(obj.lower(), "other")
 
