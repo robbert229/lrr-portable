@@ -1,27 +1,32 @@
 # 674. Port tail out of the matching link: tickers.cpp, code roots, resource IID
 
 Issue #805 implements finding 668's follow-ups 2, 4 and 6. Follow-up 4
-excludes AITask's adapters (#806) and NERPs' table (#804). The base is
-`main` `316b70f6`. Every figure comes from a matching build under the
-gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`), measured with
-`tools/port_tail_inventory.py` and the image's PE headers after each step.
+excludes AITask's adapters (#806) and NERPs' table (#804). The change
+was measured step by step on `main` `316b70f6`, then rebased onto #809
+(`identity/804-nerps-table` `0376419f`, finding 673) and measured again.
+The summary and the first table give the figures against `0376419f`; the
+per-step table is the `316b70f6` run. Every figure comes from a matching
+build under the gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`), measured
+with `tools/port_tail_inventory.py` and the image's PE headers.
 
 ## Summary
 
 1. **`tickers.cpp` is native-only.** Its `_TICKERS` table kept 86,576
    bytes of tail code linked. Only two functions pulled it, and the link
    discards both: `lego_port.cpp`'s `EngineTick` and `gods98/frameloop.cpp`'s
-   application loop. They are now compiled out of the winapi build. Tail
-   `.text` falls from 203,168 to 116,592 bytes, exactly the anchor's
-   figure. The image ends 22 pages earlier: `0x7df000` instead of
-   `0x7f5000`, and SizeOfImage falls from 4,149,248 to 4,059,136 bytes.
+   application loop. They are now compiled out of the winapi build. On
+   `316b70f6`, tail `.text` falls from 203,168 to 116,592 bytes, exactly
+   the anchor's figure. On `0376419f` the whole change takes tail `.text`
+   from 177,056 to 81,776 bytes, and the image ends 24 pages earlier:
+   `0x7d8000` instead of `0x7f0000`. SizeOfImage falls from 4,128,768 to
+   4,030,464 bytes.
 2. **Eleven unit references now name the original functions**, not the
    tail's adapters. Five tail objects stop being roots:
    `terrain_cell_objects_port`, `interface_port`, `entity.cpp`, `flic.cpp`,
    and `frontend_port`'s `movie_play_wait`. 13 functions rise and none
-   falls. Seven of them become exact. Tail `.text` falls by another 480
-   bytes, because the remaining roots still pull the rest (finding 668,
-   section 5).
+   falls. Seven of them become exact. On `316b70f6`, tail `.text` falls
+   by another 480 bytes, because the remaining roots still pull the rest
+   (finding 668, section 5).
 3. **IID_IDirect3DRMFrame3 (`0049f988`) is defined in `container.c`**, in
    the original's GUID block between IID_CntFrame (`0049f968`) and
    IID_CntMesh (`0049f9a8`). No unit references `resource.cpp` any more.
@@ -37,22 +42,24 @@ gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`), measured with
 
 ## Before and after
 
-| Measure | `main` `316b70f6` | This change |
+| Measure | #809 `0376419f` | This change |
 | --- | ---: | ---: |
 | **Exact-function code bytes** | **340,131 (52.93%)** | **342,065 (53.24%)** |
-| Exact functions, full / game-only | 2,430 / 2,142 | 2,437 / 2,149 |
-| Accuracy, full / game-only | 97.20% / 96.88% | 97.21% / 96.89% |
-| `.text` identical at original addresses | 4.04% | 4.11% |
-| Correct-size functions, full | 2,600 (445,640 B) | 2,600 (445,640 B) |
+| Exact functions, full / game-only | 2,615 / 2,327 | 2,622 / 2,334 |
+| Accuracy, full / game-only | 97.35% / 97.07% | 97.36% / 97.08% |
+| `.text` identical at original addresses | 4.49% | 4.58% |
+| Correct-size functions, full | 2,784 (451,034 B) | 2,784 (451,034 B) |
 | Identical prefix, raw / masked | 11 / 528 B | 11 / 528 B |
 | Units with size agreement (sizes, start, end) | 0 of 227 (166, 2, 1) | same |
 | Function-order inversions, full / game-only | 222 / 1 pairs | same |
-| Entry point (original `0048f000`) | `0048d0d0` (−7,984) | `0048d0b0` (−8,016) |
-| SizeOfImage | 4,149,248 | 4,059,136 |
-| Image end (gate) | `0x7f5000` | `0x7df000` |
-| `.text` / `.rdata` / `.data` raw | 841,728 / 23,040 / 96,256 | 754,688 / 22,528 / 95,232 |
+| Entry point (original `0048f000`) | `0048ea60` (−1,440) | `0048ea40` (−1,472) |
+| SizeOfImage | 4,128,768 | 4,030,464 |
+| Image end (gate) | `0x7f0000` | `0x7d8000` |
+| `.text` / `.rdata` / `.data` raw | 821,760 / 23,040 / 96,256 | 726,528 / 22,528 / 94,720 |
+| Tail `.text` / `.bss` / `.data` / `.rdata` | 177,056 / 285,817 / 20,943 / 15,209 | 81,776 / 285,785 / 19,629 / 14,777 |
+| Tail objects referenced from units | 17 | 12 |
 
-### The tail after each step
+### The tail after each step (on `main` `316b70f6`)
 
 These are `port_tail_inventory.py` totals for the objects linked from
 `lrr_tail.lib`. The last column counts tail objects that units reference.
@@ -64,9 +71,9 @@ These are `port_tail_inventory.py` totals for the objects linked from
 | 2. code roots retargeted | 116,112 | 285,789 | 19,900 | 14,853 | `0x7df000` | 4,059,136 | 14 |
 | 3. IID to `container.c` | 116,112 | 285,789 | 19,900 | 14,837 | `0x7df000` | 4,059,136 | 13 |
 
-The image only shrinks, and `make pe-audit` passes at every step. The
-margin below the flag constant `0x800000` grows from 45,056 to 135,168
-bytes.
+The image only shrinks, and `make pe-audit` passes at every step. On
+`0376419f`, the margin below the flag constant `0x800000` grows from
+65,536 to 163,840 bytes.
 
 ## 1. `tickers.cpp`
 
@@ -193,7 +200,8 @@ The unit spans move as follows:
 - AITask.c goes from 48 to 64 bytes short of the original. This one moves
   away from it.
 - GAME-050 goes from 48 to 32 bytes long, closer to the original.
-- The entry point goes from 7,984 to 8,016 bytes early.
+- The entry point goes from 7,984 to 8,016 bytes early on `316b70f6`,
+  and from 1,440 to 1,472 on `0376419f`.
 
 The spans had counted port code as if it were original. ADR 0006
 decision 4 compiles port-only code in a unit file out of the matching
@@ -201,10 +209,10 @@ build anyway.
 
 ## 5. What still references the tail
 
-13 tail objects remain referenced from units. All but one are another
-issue's:
+12 tail objects remain referenced from units on `0376419f` (#809 removed
+`tutorial_script_port`'s 172 NERP-table references). All of them are
+another issue's:
 
-- `tutorial_script_port` (GAME-028's NERP table, #804);
 - `aitask_port` (GAME-002's adapters, #806);
 - `lego_port` (GAME-021's light setters, section 3);
 - `frontend_port` (the save buffer `00557418`);
@@ -213,7 +221,7 @@ issue's:
   `port_state`, `input`, `engine`, `mesh_port`, `view`, `lws_port`,
   `viewports_port` and `platform/winapi/frameloop.cpp`.
 
-As finding 668 section 5 predicts, the tail's remaining 116,112 bytes of
+As finding 668 section 5 predicts, the tail's remaining 81,776 bytes of
 code and its `.bss` stay linked until the last of these roots goes.
 
 ## Checks
