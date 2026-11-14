@@ -3207,7 +3207,10 @@ void aitask_terrain_cell_record_counts_prune(struct EntitySlot* object)
 // FUNCTION: LEGORR 0x004039a0
 void aitask_task_record_create_and_scan_grid(struct EntitySlot* object)
 {
-    aitask_cmd_set_kind(aitask_timed_task_record_initialize_and_link(object, 0, -1, 0), 9);
+    AITask* task;
+
+    task = aitask_timed_task_record_initialize_and_link(object, 0, -1, 0);
+    aitask_cmd_set_kind(task, 9);
     aitask_terrain_cell_record_counts_prune(object);
 }
 
@@ -4033,25 +4036,24 @@ void aitask_command_queue_sweep_relink(struct EntitySlot* object)
     AITask* task;
     AITask* next;
     AITask* kept;
-    unsigned int flags;
 
     kept = NULL;
     task = AITASK_OBJ(object)->aiTask;
     while (task != NULL) {
-        flags = task->flags;
         next = task->next;
-        if (!(flags & 4)) {
-            if ((flags & 0x10) && !(flags & 0x20)) {
+        if (!(task->flags & 4)) {
+            if ((task->flags & 0x10) && !(task->flags & 0x20)) {
                 task->next = aiTaskGlobs.globalHead;
                 aiTaskGlobs.globalHead = task;
-            } else if ((flags & 0x2000) && !(flags & 0x20)) {
+            } else if ((task->flags & 0x2000) && !(task->flags & 0x20)) {
                 task->next = aiTaskGlobs.globalTail;
                 aiTaskGlobs.globalTail = task;
-            } else if (kept != NULL) {
-                kept->next = task;
-                task->next = NULL;
             } else {
-                kept = task;
+                if (kept != NULL) {
+                    kept->next = task;
+                } else {
+                    kept = task;
+                }
                 task->next = NULL;
             }
         } else {
@@ -4149,7 +4151,7 @@ int aitask_entity_task_chain_contains_kind(struct EntitySlot* object, int type)
     AITask* task;
 
     for (task = AITASK_OBJ(object)->aiTask; task != NULL; task = task->next) {
-        if (task->type == type)
+        if (type == task->type)
             return 1;
     }
     return 0;
