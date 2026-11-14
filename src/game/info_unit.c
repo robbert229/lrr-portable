@@ -315,8 +315,11 @@ InfoMessageInstance* info_message_remove_instance(unsigned int index, int instIn
     return instance;
 }
 
+/* The callbacks have external linkage, as in the original: MSVC 5.0 emits a
+ * static function after its first user, not where it is defined
+ * (finding 658). */
 // FUNCTION: LEGORR 0x00419810
-static int info_callback_find_object(InfoMessageInstance* instance, void* data)
+int info_callback_find_object(InfoMessageInstance* instance, void* data)
 {
     InfoSearchObject* search = (InfoSearchObject*)data;
 
@@ -345,7 +348,7 @@ void info_remove_object_references(void* object)
 }
 
 // FUNCTION: LEGORR 0x004198c0
-static int info_callback_find_block(InfoMessageInstance* instance, void* data)
+int info_callback_find_block(InfoMessageInstance* instance, void* data)
 {
     InfoSearchBlock* search = (InfoSearchBlock*)data;
 
@@ -377,7 +380,7 @@ void info_remove_block_references(InfoPoint2I* blockPos)
 }
 
 // FUNCTION: LEGORR 0x004199a0
-static int info_callback_find_duplicate(InfoMessageInstance* instance, void* data)
+int info_callback_find_duplicate(InfoMessageInstance* instance, void* data)
 {
     InfoSearchDuplicate* search = (InfoSearchDuplicate*)data;
 

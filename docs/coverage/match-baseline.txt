@@ -1,4 +1,4 @@
-# input_sha256: 790c2b93599613bcb91e78ea4eba5d378a77ba5641e3c43e996a9acdf861a677
+# input_sha256: bd6133f7198f623a9a76f106c8dd8a3fe020b0713268f08a43072d8cfe24ea7a
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -5158,7 +5158,7 @@
 0x004907c0 100.00 __shift
 0x004907f0 100.00 __fltin
 0x004908a0 100.00 __flsbuf
-0x004909d0 99.03 __output
+0x004909d0 100.00 __output
 0x00491360 100.00 _write_char
 0x004913b0 100.00 _write_multi_char
 0x004913f0 100.00 _write_string
@@ -5254,7 +5254,7 @@
 0x004967d8 100.00 __except_handler3
 0x00496895 100.00 __seh_longjmp_unwind@4
 0x004968b0 100.00 __FF_MSGBANNER
-0x004968f0 99.42 __NMSG_WRITE
+0x004968f0 100.00 __NMSG_WRITE
 0x00496ad0 100.00 ___crtGetStringTypeA
 0x00496c00 100.00 __lseek
 0x00496cc0 100.00 __write

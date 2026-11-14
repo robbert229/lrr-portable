@@ -163,7 +163,10 @@ def measure(root, build):
     units = {r['unit_id']: r for r in rows}
     groups = {u: collections.defaultdict(list) for u in units}
     listed = {e.key: e for e in link_order.load(root) if e.kind == 'unit' and e.applies_to('winapi')}
-    late = set(link_order.late_members((root / link_order.LIST).read_text(encoding='utf-8')))
+    list_text = (root / link_order.LIST).read_text(encoding='utf-8')
+    late = set(link_order.late_members(list_text))
+    placements = link_order.placements(link_order.parse(list_text), list_text)
+    archived = link_order.member_objects(build)
     path_units = {e.path: u for u, e in listed.items()}
     unknown_owner = []
     for addr, declarations in sorted(annotations.items()):
@@ -206,6 +209,11 @@ def measure(root, build):
             object_name = link_order.late_object(entry.source)
             path = build / f'CMakeFiles/{link_order.late_library(entry.source)}.dir/src/{entry.source}.obj'
             candidates = [path] if path.is_file() else []
+        elif entry and placements.get(entry.source) == 'member':
+            # A gods98 unit linked from its own library (finding 658).
+            object_name = link_order.library_object('member', entry.source)
+            path = archived.get(entry.source)
+            candidates = [path if path.is_absolute() else build / path] if path and path.is_file() else []
         reason = None
         if not entry:
             reason = 'unit has no dedicated link-order object'

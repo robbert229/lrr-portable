@@ -33,10 +33,21 @@ PLATFORMS = ("native", "winapi")
 # Every build but the MSVC 5.0 matching build (src/crt/'s stand-ins, #447).
 PORTABLE = "portable"
 MATCHING_PLATFORM = "winapi"
+# The library the matching build archives the port tail's objects in, linked
+# after the late libraries (LRR_LINK_TAIL_LIBRARY; finding 658). The map names
+# its objects lrr_tail:<file>.obj; check() requires the list to agree.
+TAIL_LIBRARY = "lrr_tail"
+# Prefix of the libraries that hold one gods98 unit each (finding 658).
+MEMBER_PREFIX = "unit_"
+# What CMakeLists.txt writes into the matching build directory: one line per
+# archived object, "<library> <source> <object path>".
+MEMBERS_FILE = "link-members.txt"
 
 _ENTRY = re.compile(r"^\s*lrr_link\(([^)#]*)\)\s*(?:#.*)?$")
 _LIBS = re.compile(r"^\s*set\(LRR_LINK_LIBRARIES\b([^)]*)\)", re.M)
 _LATE = re.compile(r"^\s*set\(LRR_LINK_LATE_MEMBERS\b([^)]*)\)", re.M)
+_EXPLICIT_LAST = re.compile(r"^\s*set\(LRR_LINK_EXPLICIT_LAST\b([^)]*)\)", re.M)
+_TAIL_LIBRARY = re.compile(r"^\s*set\(LRR_LINK_TAIL_LIBRARY\b([^)]*)\)", re.M)
 
 
 @dataclass(frozen=True)
@@ -103,6 +114,68 @@ def late_members(text: str) -> list[str]:
     the libraries (``LRR_LINK_LATE_MEMBERS``; finding 657), in order."""
     m = _LATE.search(text)
     return m.group(1).split() if m else []
+
+
+def explicit_last(text: str) -> str | None:
+    """The matching build's last explicit object (``LRR_LINK_EXPLICIT_LAST``)."""
+    m = _EXPLICIT_LAST.search(text)
+    return m.group(1).strip() if m else None
+
+
+def placements(entries: list[Entry], text: str) -> dict[str, str]:
+    """How the matching build links each of its entries (finding 658).
+
+    ``explicit`` up to ``LRR_LINK_EXPLICIT_LAST``; ``member`` for the unit
+    entries after it, each in its own library; ``tail`` from the first
+    port-tail entry on; ``late`` for ``LRR_LINK_LATE_MEMBERS``. Mirrors
+    CMakeLists.txt. Keyed by source.
+    """
+    last, late = explicit_last(text), set(late_members(text))
+    place, out = "explicit", {}
+    for e in entries:
+        if not e.applies_to(MATCHING_PLATFORM):
+            continue
+        if e.source in late:
+            out[e.source] = "late"
+            continue
+        if e.kind == "tail":
+            place = "tail"
+        out[e.source] = place
+        if e.source == last and place == "explicit":
+            place = "member"
+    return out
+
+
+def member_library(source: str) -> str:
+    """The library a gods98 member unit is archived in: ``unit_<stem>``."""
+    return MEMBER_PREFIX + Path(source).name.split(".")[0]
+
+
+def library_object(placement: str, source: str) -> str | None:
+    """An archived entry's object name as the link map writes it, or None
+    for an explicit object."""
+    name = Path(source).name + ".obj"
+    if placement == "member":
+        return f"{member_library(source)}:{name}"
+    if placement == "tail":
+        return f"{TAIL_LIBRARY}:{name}"
+    if placement == "late":
+        return late_object(source)
+    return None
+
+
+def member_objects(build: Path) -> dict[str, Path]:
+    """Source -> object path of every object the matching build archives in
+    a member or tail library (``MEMBERS_FILE``); empty without the file."""
+    path = Path(build) / MEMBERS_FILE
+    if not path.is_file():
+        return {}
+    out = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        fields = line.split(None, 2)
+        if len(fields) == 3:
+            out[fields[1]] = Path(fields[2])
+    return out
 
 
 def late_library(source: str) -> str:
@@ -256,6 +329,22 @@ def check(root: Path = ROOT) -> list[str]:
                 errors.append(f"{where}: address {address:08x} is out of order; move entry after the correct predecessor")
             previous = address
     by_source = {e.source: e for e in entries}
+    # CMakeLists.txt requires both settings; a list without them (a test
+    # fixture) links every entry explicitly.
+    last = explicit_last(text)
+    e = by_source.get(last) if last else None
+    if last is None:
+        pass
+    elif e is None or e.kind != "unit" or spec.get(e.key, {}).get("kind") != "gods98":
+        errors.append(f"{LIST}: LRR_LINK_EXPLICIT_LAST must name a gods98 unit entry, not {last!r}")
+    else:
+        place = placements(entries, text)
+        for m in entries:
+            if place.get(m.source) == "member" and (m.kind != "unit" or spec.get(m.key, {}).get("kind") != "gods98"):
+                errors.append(f"{LIST}:{m.line + 1} ({m.source}): only gods98 unit entries may sit between LRR_LINK_EXPLICIT_LAST and the port tail")
+    m = _TAIL_LIBRARY.search(text)
+    if m and m.group(1).strip() != TAIL_LIBRARY:
+        errors.append(f"{LIST}: LRR_LINK_TAIL_LIBRARY must be {TAIL_LIBRARY} (tools/link_order.py's TAIL_LIBRARY)")
     for source in late_members(text):
         e = by_source.get(source)
         if e is None or e.kind != "unit" or not e.applies_to(MATCHING_PLATFORM):
@@ -272,10 +361,13 @@ def check(root: Path = ROOT) -> list[str]:
 
 
 def check_map(entries: list[Entry], text: str) -> list[str]:
-    """Compare .text symbol contribution runs to explicit objects in list order.
+    """Compare .text symbol contribution runs with the list order.
 
-    Maps omit empty objects and identify objects by basename only. The
-    subsequence comparison handles both omissions and adjacent name collisions.
+    Explicit objects come first, then the gods98 member libraries' objects,
+    both in list order (finding 658); port-tail objects only from
+    ``TAIL_LIBRARY``. Maps omit empty objects and identify objects by
+    basename only. The subsequence comparison handles both omissions and
+    adjacent name collisions.
     """
     sections = set(re.findall(r"^\s*([0-9a-fA-F]{4}):[0-9a-fA-F]+\s+[0-9a-fA-F]+H\s+\.text\s", text, re.M))
     if not sections:
@@ -291,19 +383,43 @@ def check_map(entries: list[Entry], text: str) -> list[str]:
     for _, obj in sorted(symbols):
         if not runs or runs[-1] != obj:
             runs.append(obj)
-    expected = [Path(e.source).name.lower() + ".obj" for e in entries if e.applies_to(MATCHING_PLATFORM)]
+    matching = [e for e in entries if e.applies_to(MATCHING_PLATFORM)]
+    def name(e: Entry) -> str:
+        return Path(e.source).name.lower() + ".obj"
+    # Entries before the first port-tail entry link in list order, as
+    # explicit objects or from their own libraries; the rest from libraries.
+    in_order, tail = [], set()
+    seen_tail = False
+    for e in matching:
+        seen_tail = seen_tail or e.kind == "tail"
+        if seen_tail:
+            tail.add(name(e))
+        else:
+            in_order.append(e)
+    expected = [name(e) for e in in_order]
+    members = {member_library(e.source) + ":" + name(e) for e in in_order}
+    tail -= set(expected)
     index, library_seen, errors = 0, False, []
     for obj in runs:
+        key = obj
         if ":" in obj:
-            library_seen = True
+            if obj in members:
+                key = obj.split(":", 1)[1]
+            else:
+                library_seen = True
+                continue
+        elif obj in tail:
+            errors.append(f"map: port-tail object {obj} is linked explicitly; the matching build links it from {TAIL_LIBRARY}.lib")
             continue
-        if library_seen:
+        elif library_seen:
             errors.append(f"map: explicit object {obj} contributes after a library; check link order")
         try:
-            index = expected.index(obj, index) + 1
+            index = expected.index(key, index) + 1
         except ValueError:
             errors.append(f"map: unexpected or out-of-order .text contribution {obj}; compare with {LIST}")
     return errors
+
+
 def lower_median(text: str) -> int | None:
     """The key ``check`` expects for a legacy file: the lower median of its
     FUNCTION and LIBRARY marker addresses, or None when it has none."""

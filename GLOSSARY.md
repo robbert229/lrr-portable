@@ -125,5 +125,5 @@ The single ordered list of original units and their source files from which the 
 _Avoid_: "object order" when you mean the list rather than a measured layout
 
 **port tail**:
-The port-only objects (hook tables, adapters, platform entry points, drained legacy files) that the *matching build* links after the last gods98 unit and before LIBC. It shrinks to nothing as port-only code is compiled out of the matching build.
+The port-only objects (hook tables, adapters, platform entry points, drained legacy files) listed after the last gods98 unit. The *matching build* links them from one library, `lrr_tail.lib`, after LIBC and the late units, so their references to LIBC do not change LIBC's member order (finding 658); only the objects something references are linked. It shrinks to nothing as port-only code is compiled out of the matching build.
 _Avoid_: "extras", "glue" (glue names `platform_glue`)

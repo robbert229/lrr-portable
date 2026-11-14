@@ -132,6 +132,7 @@ macro(lrr_link kind key library source)
       OR ("${ARGN}" STREQUAL "portable" AND NOT LRR_CLASSIC_MSVC5))
     list(APPEND LRR_LINK_SOURCES "${SRC_ROOT}/${source}")
     list(APPEND LRR_LINK_TARGETS "${library}")
+    list(APPEND LRR_LINK_KINDS "${kind}")
     list(APPEND LRR_LINK_SOURCES_${library} "${SRC_ROOT}/${source}")
     # Units rebuilt in original shape (ADR 0005) are the list's .c files.
     if("${source}" MATCHES "\\.c$")
@@ -168,8 +169,12 @@ if(LRR_CLASSIC_MSVC5)
   set(LRR_LINK_OBJECTS "")
   set(LRR_LINK_LATE_SOURCES "")
   set(LRR_LINK_LATE_TARGETS "")
+  set(LRR_LINK_TAIL_OBJECTS "")
+  set(LRR_LINK_MEMBER_LIBRARIES "")
+  set(LRR_LINK_MEMBER_RECORDS "")
+  set(_lrr_place explicit)
   set(_lrr_index 0)
-  foreach(_src _lib IN ZIP_LISTS LRR_LINK_SOURCES LRR_LINK_TARGETS)
+  foreach(_src _lib _kind IN ZIP_LISTS LRR_LINK_SOURCES LRR_LINK_TARGETS LRR_LINK_KINDS)
     # The list's late members go to their own libraries, after the others
     # (LRR_LINK_LATE_MEMBERS, link_order.cmake; finding 657).
     string(REPLACE "${SRC_ROOT}/" "" _rel "${_src}")
@@ -189,8 +194,38 @@ if(LRR_CLASSIC_MSVC5)
     if(_src IN_LIST LRR_UNOPTIMISED_UNITS)
       target_compile_options(${_target} PRIVATE /Od)
     endif()
-    list(APPEND LRR_LINK_OBJECTS "$<TARGET_OBJECTS:${_target}>")
+    # Where the object goes (finding 658). Each keeps its own target, so it
+    # compiles the same wherever it is linked from:
+    # - explicit: the game units and gods98's first, up to
+    #   LRR_LINK_EXPLICIT_LAST (link_order.cmake);
+    # - member: each later gods98 unit, archived into its own library,
+    #   unit_<stem>.lib, searched before LRR_LINK_LIBRARIES in list order;
+    # - tail: from the first port-tail entry on, every entry (the tail and
+    #   the CRT-range legacy files) goes to lrr_tail.lib, below.
+    if(_kind STREQUAL "tail")
+      set(_lrr_place tail)
+    endif()
+    if(_lrr_place STREQUAL "tail")
+      list(APPEND LRR_LINK_TAIL_OBJECTS "$<TARGET_OBJECTS:${_target}>")
+      string(APPEND LRR_LINK_MEMBER_RECORDS "${LRR_LINK_TAIL_LIBRARY} ${_rel} $<TARGET_OBJECTS:${_target}>\n")
+    elseif(_lrr_place STREQUAL "member")
+      if(NOT _kind STREQUAL "unit")
+        message(FATAL_ERROR "${_rel}: only unit entries may follow LRR_LINK_EXPLICIT_LAST before the tail")
+      endif()
+      add_library(unit_${_stem} STATIC $<TARGET_OBJECTS:${_target}>)
+      list(APPEND LRR_LINK_MEMBER_LIBRARIES unit_${_stem})
+      string(APPEND LRR_LINK_MEMBER_RECORDS "unit_${_stem} ${_rel} $<TARGET_OBJECTS:${_target}>\n")
+    else()
+      list(APPEND LRR_LINK_OBJECTS "$<TARGET_OBJECTS:${_target}>")
+    endif()
+    if(_rel STREQUAL LRR_LINK_EXPLICIT_LAST)
+      set(_lrr_place member)
+    endif()
   endforeach()
+  if(_lrr_place STREQUAL "explicit")
+    message(FATAL_ERROR "LRR_LINK_EXPLICIT_LAST names a source the list lacks: "
+      "${LRR_LINK_EXPLICIT_LAST}")
+  endif()
   list(LENGTH LRR_LINK_LATE_MEMBERS _lrr_late_wanted)
   list(LENGTH LRR_LINK_LATE_SOURCES _lrr_late_found)
   if(NOT _lrr_late_wanted EQUAL _lrr_late_found)
@@ -208,6 +243,23 @@ if(LRR_CLASSIC_MSVC5)
     target_include_directories(late_${_stem} PRIVATE ${LRR_LINK_INCLUDES_${_lib}})
     list(APPEND LRR_LINK_LATE_LIBRARIES late_${_stem})
   endforeach()
+  # The port tail as one library (ADR 0006 addendum of 2026-11-13, finding
+  # 658). LINK pulls a LIBC member when the first unresolved reference to it
+  # comes up, so explicit tail objects pulled members before LIBC's own
+  # references to them, out of the original's order. From a library searched
+  # after LIBC, the tail is pulled in LINK's first pass and the LIBC members
+  # only it needs in the second, after the import thunks, where the original
+  # has nothing of its own. Tail objects that nothing references are not
+  # linked; under /OPT:REF they contributed nothing anyway.
+  add_library(${LRR_LINK_TAIL_LIBRARY} STATIC ${LRR_LINK_TAIL_OBJECTS})
+  set_target_properties(${LRR_LINK_TAIL_LIBRARY} PROPERTIES LINKER_LANGUAGE CXX)
+  foreach(_member IN LISTS LRR_LINK_MEMBER_LIBRARIES)
+    set_target_properties(${_member} PROPERTIES LINKER_LANGUAGE CXX)
+  endforeach()
+  # Which library each archived object is in, for the tools that read the
+  # objects (tools/link_order.py's member_objects()).
+  file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/link-members.txt"
+    CONTENT "${LRR_LINK_MEMBER_RECORDS}")
 else()
   # The native and reference builds group the list's sources into libraries
   # (ADR 0003); their order does not matter there.
@@ -326,12 +378,17 @@ if(LRR_CLASSIC_MSVC5)
   set_property(TARGET program APPEND PROPERTY LINK_DEPENDS ${LRR_IMPORTLIB_FILES})
   target_link_options(program PRIVATE "/LIBPATH:${LRR_IMPORTLIB_DIR}"
     ${LRR_LINK_SYMBOLS})
+  # The gods98 member libraries come first: LINK infers the entry point
+  # after the explicit objects, and the original's wincrt0.obj follows
+  # Movie.cpp's LIBC references but precedes Container.c's (finding 658).
+  target_link_libraries(program PRIVATE ${LRR_LINK_MEMBER_LIBRARIES})
   target_link_libraries(program PRIVATE ${LRR_LINK_LIBRARIES})
-  target_link_libraries(program PRIVATE ${LRR_LINK_LATE_LIBRARIES})
-  # Name the entry point up front. LIBC is searched before the linker would
-  # infer it, and LIBC.LIB's symbol index resolves the startup data shared by
-  # both entry objects to the console one (crt0.obj) first.
-  target_link_options(program PRIVATE "/ENTRY:WinMainCRTStartup")
+  target_link_libraries(program PRIVATE ${LRR_LINK_LATE_LIBRARIES}
+    ${LRR_LINK_TAIL_LIBRARY})
+  # No /ENTRY: LINK infers WinMainCRTStartup from WinMain and pulls
+  # wincrt0.obj where the original has it, after exsup.obj. /ENTRY made it
+  # LIBC's first member, so its own LIBC references came before the units'
+  # (finding 658).
   # The original's link mode (#562, finding 642): it was linked without
   # /DEBUG, so LINK 5.0 removed unreferenced COMDATs (/OPT:REF), and it folded
   # no identical functions. The matching build states both, because /DEBUG
