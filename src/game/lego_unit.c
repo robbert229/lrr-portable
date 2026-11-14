@@ -4277,6 +4277,10 @@ int lego_level_load(const char* levelName)
     char* fullName;
     char buff[260];
     char* parts[10];
+    /* The original reuses its locals (finding 659): the three floats also
+     * hold the erosion times, `number` also holds the seed, and the
+     * address-taken lookups and copies live in inner blocks. That gives
+     * the original's stack slots. */
     float upgradeTime;
     float value;
     float slugValue;
