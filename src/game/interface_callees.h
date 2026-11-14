@@ -162,10 +162,23 @@ extern unsigned int lego_flags1;
 extern unsigned int s_global_low_word_c;
 /* DAT_00556f58: the upgrade level names. */
 extern char* lego_upgrade_level_names[16];
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: LegoObject.c's tool-tip sounds (004de814) and the ore
+ * icon of the cost tool tip (004eadc0) are objectGlobs fields (004de790,
+ * legoobject_globs.h, finding 662), at +0x84 and +0xc630. objectGlobs is
+ * declared here without its struct: the declaration and its new tag cost
+ * the two symbols of the two declarations it replaces, so
+ * interface_unit.c's symbol counter does not move (the header itself would
+ * cost three). Deviation (scoring only). */
+extern struct LegoObject_Globs objectGlobs;
+#define object_tooltip_sfx ((int*)((char*)&objectGlobs + 0x84))
+#define lego_tooltip_ore_icon (*(void**)((char*)&objectGlobs + 0xc630))
+#else
 /* DAT_004de814: LegoObject.c's tool-tip sounds, [type * 15 + index]. */
 extern int object_tooltip_sfx[];
 /* DAT_004eadc0: the ore icon of the cost tool tip. */
 extern void* lego_tooltip_ore_icon;
+#endif
 /* DAT_0076ab80/DAT_0076aa00: Input.c's key map and the previous frame's. */
 extern unsigned char input_key_map[256];
 extern unsigned char input_prev_key_map[256];

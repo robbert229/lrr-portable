@@ -164,6 +164,11 @@ extern float s_panel_highlight_timer;
 #include "lego.h"
 #include "lego_unit.h"
 #include "lego_globs.h"
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: LegoObject.c's state is objectGlobs (legoobject_globs.h;
+ * finding 662). */
+#include "legoobject_globs.h"
+#endif
 #endif
 
 #define LVL_OXYGEN_SCALE  0.001f      /* LevelLoad converts OxygenRate to a per-tick rate. */

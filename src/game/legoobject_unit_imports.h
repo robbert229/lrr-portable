@@ -24,10 +24,12 @@ extern "C" {
 struct EntitySlot;
 struct EntityAuxiliaryReleaseRecord;
 
-/* ---- LegoObject.c's own state (objectGlobs, 004de790-004eadd0) --------
- * The port defines these in legoobject_port.cpp, each annotated at the field's
- * address, with C linkage. Parts 2 and 3 of the conversion still read
- * them there. */
+/* ---- LegoObject.c's own state (objectGlobs, 004de790-004eadcc) --------
+ * The port's names of objectGlobs fields. In the matching build they are
+ * fields of the one struct that legoobject_unit.c defines
+ * (legoobject_globs.h, finding 662), and these declarations, parsed before
+ * that header's macros, are not referenced; they stay so that the symbol
+ * counter does not move. Natively they are separate globals. */
 extern void* s_pool_chunks[32];                     /* 004de790 listSet */
 extern void* s_pool_record_head;                    /* 004de810 freeList */
 extern int s_terrain_sfx_grid[300];                 /* 004de814 */
@@ -66,11 +68,12 @@ extern const char* s_engine_config_root;  /* engine.cpp, 005560c4 gameName */
 #if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern const char* s_tool_type_names[];   /* ai.cpp, 005561fc toolName[11] */
 #endif
-/* objectGlobs fields defined elsewhere. */
-extern float* s_terrain_neighbor_path_cost;      /* legoobject_port.cpp, 004dee00 */
-extern void* s_object_toolTipIconAbilities[6];   /* lego_unit.c, 004ead78 */
-extern void* s_object_toolTipIcons[11];          /* lego_unit.c, 004ead90 */
-extern void* s_object_toolTipIconBlank;          /* lego_unit.c, 004eadbc */
+/* More objectGlobs fields' old names (legoobject_globs.h; not referenced
+ * where the header makes them fields). */
+extern float* s_terrain_neighbor_path_cost;      /* 004dee00 */
+extern void* s_object_toolTipIconAbilities[6];   /* 004ead78 */
+extern void* s_object_toolTipIcons[11];          /* 004ead90 */
+extern void* s_object_toolTipIconBlank;          /* 004eadbc */
 
 /* LegoObject.c part 3 (legoobject_port.cpp, ai.hpp). */
 int legoobject_activity_register_bookkeeping(Lego_Object* obj); /* 00447c40 */
@@ -883,7 +886,7 @@ struct SceneResourceAnimationRecord;
 #define legoobject_vector3d_modulus(v) \
     ((float)sqrt((v)[0] * (v)[0] + (v)[1] * (v)[1] + (v)[2] * (v)[2]))
 
-/* objectGlobs' path-search step map (004dee04; legoobject_port.cpp). */
+/* objectGlobs' path-search step map (004dee04; legoobject_globs.h). */
 extern uint32_t* s_terrain_path_depth;
 
 /* GAME-002 AITask.c (aitask.c). */
@@ -919,7 +922,7 @@ struct SceneResourceAnimationRecord;
 struct TerrainMap;
 struct TerrainMapPoint2;
 
-/* objectGlobs' path-search cost map count (004dee08; legoobject_port.cpp). The
+/* objectGlobs' path-search cost map count (004dee08; legoobject_globs.h). The
  * map itself, 004dee00, is s_terrain_neighbor_path_cost (group A). */
 extern uint32_t s_terrain_path_depth_count;
 /* legoGlobs.flags2 (00556ed0): engine.cpp's flag word. */

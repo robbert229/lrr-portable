@@ -40,7 +40,6 @@
 #define lego_upgrade_cost_ore legoGlobs_BuildingUpgradeCostOre  /* 00556f98 */
 #define lego_upgrade_cost_studs legoGlobs_BuildingUpgradeCostStuds /* 00556f9c */
 #define lego_custom_name_separator legoGlobs_RenameReplace      /* 00556fac */
-#define object_tooltip_sfx s_terrain_sfx_grid                   /* 004de814 */
 #define input_key_map s_global_current_keys                     /* 0076ab80 */
 #define input_prev_key_map s_global_previous_keys               /* 0076aa00 */
 #define lego_ai_create_dig aitask_terrain_cell_command_create   /* 00402510 */

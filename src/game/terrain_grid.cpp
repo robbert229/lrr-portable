@@ -37,6 +37,12 @@ extern "C" float* s_terrain_neighbor_path_cost;
 /* Matching build: legoGlobs' fields under the port's names (finding 653). */
 #if defined(_MSC_VER) && _MSC_VER < 1200
 #include "lego_globs.h"
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: LegoObject.c's state is objectGlobs, the original's one
+ * struct (legoobject_unit.c, legoobject_globs.h; finding 662). Included
+ * after every declaration of the fields' old names. */
+#include "legoobject_globs.h"
+#endif
 #endif
 
 static BlockFile* s_texture_set_config_context;

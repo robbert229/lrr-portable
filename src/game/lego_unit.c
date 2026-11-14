@@ -140,9 +140,10 @@ int legoGlobs_f_556fb8[2];
 /* Gates the AllowRename key. */
 
 /* The first mini-figure the object list loads (OListEntityRecordParse sets
- * it); the StartFP view follows it. Outside legoGlobs. */
-// GLOBAL: LEGORR 0x004e8448
-void* s_lego_f_4e8448;
+ * it); the StartFP view follows it. It is objectGlobs +0x9cb8
+ * (legoobject_globs.h, finding 662). Kept, unreferenced, so the symbol
+ * counter does not move. Deviation (scoring only). */
+extern void* s_lego_f_4e8448;
 /* ---- state, group E ---- */
 
 /* legoGlobs.config (005560c0): the game's Lego.cfg block root. */
@@ -243,14 +244,14 @@ int s_lego_debugTransformToggle;
 // GLOBAL: LEGORR 0x004de584
 struct EntitySlot* s_lego_debugRetargetObject;
 
-/* LegoObject.c's tool tip icons (004ead78-004eadbc): one per ability, one
- * per carried object type, and the blank icon. No port owner yet. */
-// GLOBAL: LEGORR 0x004ead78
-void* s_object_toolTipIconAbilities[6];
-// GLOBAL: LEGORR 0x004ead90
-void* s_object_toolTipIcons[11];
-// GLOBAL: LEGORR 0x004eadbc
-void* s_object_toolTipIconBlank;
+/* LegoObject.c's state: objectGlobs (004de790), the original's one
+ * struct, which legoobject_unit.c defines (legoobject_globs.h, finding
+ * 662). Its tool tip icons (004ead78-004eadbc), 004e8448 and the two
+ * words Level_Free clears (004eabc4, 004eabc8) are its fields. The
+ * include costs three symbols, the three icon definitions that were here;
+ * the two words' definitions were redeclarations (lego_unit.h) and cost
+ * none. */
+#include "legoobject_globs.h"
 /* ---- state, group G ---- */
 
 /* legoGlobs.config (005560c0), the struct's first field: see
@@ -288,13 +289,9 @@ uint32_t textGlobs_f_503618;
 
 /* ---- part 2 state, group 2E (0042efc0-0042f6f0): begin ---- */
 
-/* LegoObject.c's .bss (004eabc4, 004eabc8): two words Level_Free clears.
- * The port's ai.cpp keeps an unannotated copy of the second
- * (s_lego_object_tool_tip_gate). No port owner of the first. */
-// GLOBAL: LEGORR 0x004eabc4
-int s_object_f_4eabc4;
-// GLOBAL: LEGORR 0x004eabc8
-int s_object_f_4eabc8;
+/* LegoObject.c's 004eabc4 and 004eabc8, two words Level_Free clears, are
+ * objectGlobs fields (legoobject_globs.h). The port's ai.cpp keeps an
+ * unannotated copy of the second (s_lego_object_tool_tip_gate). */
 
 /* ---- part 2 state, group 2E: end ---- */
 
