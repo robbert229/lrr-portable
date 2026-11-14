@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-040 GAME-040: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-040.csv. */
+/* GAME-040 SelectPlace.c's port tail (finding 633): the port's models of
+ * the unit's functions and the state the port's other files read.
+ * Unannotated: the original-shape unit is selectplace.c (ADR 0005). In the
+ * matching build the unit defines the port names its callers use
+ * (selectplace_link_names.h), so this file compiles its own out there.
+ * Relocated by tools/relocate_unit.py (ADR 0006); body hashes:
+ * docs/coverage/relocations/GAME-040.csv. */
 #include "record.hpp"
 #include "heap.hpp"
 #include "sound.hpp"
@@ -34,8 +38,7 @@
  * 004641c0's. Moved here from info_track_overlay.cpp. */
 static void scene_quad_grid_vertices_build(uint32_t quad, float vertices[4][9]);
 
-// SceneQuadGridEmit
-// FUNCTION: LEGORR 0x00463f00
+/* The port's model of SelectPlace_Create (0x00463f00; selectplace.c). */
 SceneQuadGridRecord* scene_quad_grid_emit(
     void* scene, uint32_t parameter, const SceneQuadGridEmitHooks* hooks)
 {
@@ -145,18 +148,24 @@ static void scene_quad_grid_vertices_build(uint32_t quad,
 }
 
 /* Original-ABI adapter (ADR 0005 step 6) for GAME-021's lego_unit.c: SelectPlace_Create (00463f00) takes the root and a size; the port's entry takes a hook table. */
+/* In the matching build selectplace.c serves this name (finding 633). */
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (scene_quad_grid_emit)
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" void* select_place_create_adapter(void* root, float size)
 {
     uint32_t bits;
     memcpy(&bits, &size, sizeof(bits));
     return scene_quad_grid_emit(root, bits, NULL);
 }
+#endif
 
-// GLOBAL: LEGORR 0x005013c8
+/* The port's model of selectPlaceShape (005013c8); selectplace.c owns the
+ * original's. */
 int s_rot_pairs[ROT_PAIR_SLOTS * 2];
 
-// FUNCTION: LEGORR 0x00464110
+/* The port's model of SelectPlace_TransformShape (0x00464110); selectplace.c
+ * serves this name in the matching build (finding 633). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
                                  int count, int rotation)
 {
@@ -180,8 +189,11 @@ void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
     }
     return s_rot_pairs;
 }
+#endif
 
-#if defined(_MSC_VER) && defined(_M_IX86)
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* selectplace.c serves surface_visibility_set (finding 633). */
+#elif defined(_MSC_VER) && defined(_M_IX86)
 static __declspec(naked) void surface_visibility_set_target(
     const void* record, uint32_t flag)
 {
@@ -204,8 +216,10 @@ static void surface_visibility_set_target(const void* record, uint32_t flag)
 #endif
 
 /* SurfaceVisibilitySet: owned software meshes use their real visibility;
- * other records retain the target's record +0 handle/scene operation. */
-// FUNCTION: LEGORR 0x00464720
+ * other records retain the target's record +0 handle/scene operation. The
+ * port's model of SelectPlace_Hide (0x00464720); selectplace.c serves this
+ * name in the matching build (finding 633). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void surface_visibility_set(const void* record, uint32_t flag)
 {
     SurfaceVisibilityAdapter adapter = s_surface_visibility_adapter;
@@ -213,3 +227,4 @@ void surface_visibility_set(const void* record, uint32_t flag)
     if (adapter != NULL && adapter(context, record, flag) != 0) return;
     surface_visibility_set_target(record, flag);
 }
+#endif

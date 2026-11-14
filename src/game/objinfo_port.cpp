@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-031 GAME-031: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/GAME-031.csv. */
+/* GAME-031 ObjInfo.c's port tail (finding 633): the port's models of the
+ * unit's functions and the state the port's other files read. Unannotated:
+ * the original-shape unit is objinfo.c (ADR 0005). In the matching build
+ * the unit defines the four port names its callers use
+ * (objinfo_link_names.h), so this file compiles its own out there.
+ * Relocated by tools/relocate_unit.py (ADR 0006); body hashes:
+ * docs/coverage/relocations/GAME-031.csv. */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -61,14 +65,12 @@ extern "C" int tutorial_script_file_load_target(const char* path);
  * blit FUN_0047dcb0, surface load FUN_0047d9d0) are hook boundaries with
  * no ported body — the seam calls record and the load answers NULL (the
  * view object-layer precedent). */
-// GLOBAL: LEGORR 0x004ffe68
+/* The port's models of objInfoGlobs' flags (004ffe68), hunger offset
+ * (004ffebc) and hunger images (004ffec4); objinfo.c owns the original's. */
 uint32_t s_panel_enable_word;
 
-// GLOBAL: LEGORR 0x004ffebc
 float    s_panel_position_offset_x;
-// GLOBAL: LEGORR 0x004ffec0
 float    s_panel_position_offset_y;
-// GLOBAL: LEGORR 0x004ffec4
 void*    s_panel_position_slots[5];
 
 static void* s_legacy_hunger_images[5];
@@ -84,7 +86,9 @@ static void legacy_hud_resource_name(BlockFile* cfg, const char* config_root, co
 static uint32_t legacy_rgb_pack(const float rgb[3]);
 static void panel_texture_draw_at_active_target(void* resource, float x, float y);
 
-// FUNCTION: LEGORR 0x00459530
+/* The port's model of 0x00459530; objinfo.c serves this name in the
+ * matching build (finding 633). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void frontend_render_three_pass_update(BlockFile* values,
                                         const char* config_root)
 {
@@ -92,8 +96,9 @@ void frontend_render_three_pass_update(BlockFile* values,
     legacy_hunger_images_position_config_load(values, config_root);
     (void)frontend_bubble_images_position_config_load(values, config_root);
 }
+#endif
 
-// FUNCTION: LEGORR 0x00459560
+/* The port's model of 0x00459560 (objinfo.c). */
 int legacy_health_bar_config_load(BlockFile* values, const char* config_root)
 {
     int x, y;
@@ -142,7 +147,7 @@ int legacy_health_bar_config_load(BlockFile* values, const char* config_root)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00459900
+/* The port's model of 0x00459900 (objinfo.c). */
 int legacy_hunger_images_position_config_load(BlockFile* values,
                                                const char* config_root)
 {
@@ -157,7 +162,7 @@ int legacy_hunger_images_position_config_load(BlockFile* values,
     s_panel_enable_word |= 1u;
     return 1;
 }
-// FUNCTION: LEGORR 0x004599c0
+/* The port's model of 0x004599c0 (objinfo.c). */
 void legacy_hunger_images_load(BlockFile* values, const char* config_root)
 {
     int i;
@@ -188,7 +193,7 @@ void legacy_hunger_images_load(BlockFile* values, const char* config_root)
     }
 }
 
-// FUNCTION: LEGORR 0x00459a50
+/* The port's model of 0x00459a50 (objinfo.c). */
 int frontend_bubble_images_position_config_load(BlockFile* values,
                                                 const char* config_root)
 {
@@ -209,7 +214,9 @@ int frontend_bubble_images_position_config_load(BlockFile* values,
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00459b00
+/* The port's model of 0x00459b00; objinfo.c serves this name in the
+ * matching build (finding 633). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void legacy_entity_screen_ring_render(void* entity, int x, int y)
 {
     EntitySlot* slot = (EntitySlot*)entity;
@@ -312,6 +319,7 @@ void legacy_entity_screen_ring_render(void* entity, int x, int y)
         }
     }
 }
+#endif
 
 /* IndexedPanelResourcePositionApply (FUN_00459f50) — see frontend.hpp.
  * The corpus reads the slot selector off the record's screen-position
@@ -323,7 +331,7 @@ void legacy_entity_screen_ring_render(void* entity, int x, int y)
  * seams), and the position rides the surface blit seam. Deviations: the
  * port takes the record float's address instead of the corpus's blind
  * record+0x344 read, and a NULL float reads zero. */
-// FUNCTION: LEGORR 0x00459f50
+/* The port's model of 0x00459f50 (objinfo.c). */
 void indexed_panel_resource_position_apply(const float* record_position,
                                            int x, int y)
 {
@@ -344,7 +352,9 @@ void indexed_panel_resource_position_apply(const float* record_position,
     panel_blit_seam_call(res, (float)x + s_panel_position_offset_x,
                          (float)y + s_panel_position_offset_y);
 }
-// FUNCTION: LEGORR 0x00459fd0
+/* The port's model of 0x00459fd0; objinfo.c serves this name in the
+ * matching build (finding 633). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 void panel_resource_position_apply_if_enabled(void* resource, int x, int y)
 {
     /* The corpus tests the enable byte, then FILD/FADD-stores x before y
@@ -360,6 +370,7 @@ void panel_resource_position_apply_if_enabled(void* resource, int x, int y)
                                              position[1]);
     }
 }
+#endif
 /* FUN_0047dcb0's native device path is renderer-owned. The portable HUD
  * loader supplies TextureSurface records, so use the active software render
  * target when one is bound and retain the seam state for callers without a
@@ -484,10 +495,13 @@ static uint32_t legacy_rgb_pack(const float rgb[3])
 
 /* ObjInfo_DrawHungerImage (0x00459f50) in the original ABI, for Bubbles.c
  * (bubbles.c, finding 598): the original reads the object's energy at
- * +0x344 itself; the port's model takes a pointer to that float. */
+ * +0x344 itself; the port's model takes a pointer to that float. In the
+ * matching build objinfo.c serves this name (finding 633). */
 // PORT-ONLY: original-ABI adapter over indexed_panel_resource_position_apply
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern "C" void objinfo_draw_hunger_image_adapter(void* liveObj, int x, int y)
 {
     indexed_panel_resource_position_apply(
         (const float*)((const char*)liveObj + 0x344), x, y);
 }
+#endif

@@ -291,7 +291,8 @@ void global_resource_cleanup_callback_set(GlobalResourceCleanupFn callback,
     s_global_resource_cleanup_user = user;
 }
 
-/* FUNCTION: LEGORR 0x0044e0a0 */
+/* The port's model of Loader_display_shutdown (0x0044e0a0); the original is
+ * game/loader.c (finding 633). */
 void global_resource_handle_release(void)
 {
     if (s_global_resource_handle != NULL) {
@@ -515,7 +516,8 @@ int string_table_entry_install(const char* name)
     return -1;
 }
 
-/* FUNCTION: LEGORR 0x0044dde0 */
+/* The port's model of Loader_display_loading_bar (0x0044dde0); the original is
+ * game/loader.c (finding 633). */
 void string_table_entry_set_current(const char* name)
 {
     if (name == NULL) {
@@ -608,7 +610,8 @@ void file_loading_progress_state_install(int enabled, int total, int mode,
                              sizeof(s_loading_progress_rect));
 }
 
-/* FUNCTION: LEGORR 0x0044dec0 */
+/* The port's model of Loader_FileLoadCallback (0x0044dec0); the original is
+ * game/loader.c (finding 633). */
 void file_loading_progress_update(uint32_t unused, float amount)
 {
     (void)unused;

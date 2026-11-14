@@ -23,8 +23,10 @@ static DWORD s_startup_no_sound;
 static DWORD s_startup_insist_on_cd;
 /* Port-side duplicate of the application mode, not the annotated global. */
 static DWORD s_programmer_mode;
+/* Main.c's start level. External with C linkage because Advisor.c's
+ * Main_GetStartLevel inline returns it (finding 633). */
 // GLOBAL: LEGORR 0x00505f8c
-static char s_start_level_name[256];
+extern "C" { char s_start_level_name[256]; }
 /* Main.c's fixed frame interval. External with C linkage because Reward.c's
  * scroll update reads it in the matching build (finding 630). */
 // GLOBAL: LEGORR 0x0050593c
