@@ -9,7 +9,9 @@ the fixes as finding 668 did for `.text`. It also adds data metrics to
 and G98-028's streams (finding 674, section 5).
 
 The analysis was measured on `main` `160f5efc` (one full matching build)
-and checked again on this change's build. Every figure comes from a matching
+and checked again on this change's build. The change is stacked on #820
+(`match/818-aitask-weapons-size` `46d95afa`, finding 681), and the before
+and after figures below are measured against it. Every figure comes from a matching
 build under the gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`). The
 original-mode relink (`make opt-ref-link`, no `/DEBUG`) is used where
 `.rdata` is compared, for the reason in section 2.
@@ -65,24 +67,25 @@ original-mode relink (`make opt-ref-link`, no `/DEBUG`) is used where
    **Identity cost:** SizeOfImage grows by one page (4,096 bytes). G98-028
    now holds the original's 2,064-byte block (two 1,024-byte paths, against
    the port's 260), and the rest of the tail is still linked. The entry point
-   moves 16 bytes further from the original's, because G98-028 shrinks
+   moves 16 bytes further from the original's (`0048eb70` to `0048eb60`),
+   because G98-028 shrinks
    toward its original span while the units before it stay short.
 
 ## Before and after
 
-| Measure (`binary-progress.json`) | `main` `160f5efc` | This change |
+| Measure (`binary-progress.json`) | #820 `46d95afa` | This change |
 | --- | ---: | ---: |
 | **Exact-function code bytes** | **344,002 (53.54%)** | **344,002 (53.54%)** |
-| Accuracy, full / game-only | 97.56% / 97.30% | 97.56% / 97.31% |
+| Accuracy, full / game-only | 97.56% / 97.31% | 97.57% / 97.31% |
 | Functions that rose / fell | | **3 / 0** |
-| `.text` identical at original addresses | 6.82% | 6.83% |
-| `.data` identical (section-relative) | 24.31% | 24.31% |
+| `.text` identical at original addresses | 6.78% | 6.79% |
+| `.data` identical (section-relative) | 24.31% | 24.32% |
 | Identical prefix, raw / masked | 11 B / 7,187 B (to `00402c13`) | same |
-| Correct-size functions, full | 2,796 | 2,796 |
+| Correct-size functions, full | 2,797 | 2,797 |
 | Units with size agreement | 2 | 2 |
 | Data-offset agreement (`layout`) | 20 of 57 units | 20 of 57 |
 | Function-order inversions, full / game-only | 222 / 1 pairs | same |
-| Entry point (original `0048f000`) | `0048eb80` | `0048eb70` (16 bytes further) |
+| Entry point (original `0048f000`) | `0048eb70` | `0048eb60` (16 bytes further) |
 | SizeOfImage (original 3,608,576) | 4,026,368 | 4,030,464 (one page further) |
 | Image end (gate) | `0x7d7000` | `0x7d8000` |
 | Tail `.text` | 76,128 | 76,080 |
@@ -92,7 +95,7 @@ original-mode relink (`make opt-ref-link`, no `/DEBUG`) is used where
 | `data_identity`: commons at original offset | (new) 2 of 62 | 2 of 62 |
 | `data_identity`: `.rdata` prefix (original-mode link) | (new) 0 B | 0 B |
 
-The "(new)" column is `tools/data_identity.py` run on `main`'s build.
+The "(new)" figures are `tools/data_identity.py` run on `main`'s build; #820 does not change them.
 
 Scores (Reccmp, full report):
 
@@ -354,8 +357,9 @@ bytes, because the rest of the tail stays linked. The image grows by one
 page (SizeOfImage 4,026,368 to 4,030,464), away from the original's. G98-028
 was 32 bytes longer than its original span and is now 16 bytes longer: the
 dropped store takes `0048b260` back to its original 32-byte slot. The unit
-segment still ends 1,184 bytes early, so the entry point moves from
-`0048eb80` to `0048eb70`, 16 bytes further from `0048f000`.
+segment still ends 1,184 bytes early (on `main`), so the entry point moves
+16 bytes further from `0048f000`: from `0048eb80` to `0048eb70` on `main`,
+and from `0048eb70` to `0048eb60` on #820.
 
 ## 7. Proposed follow-ups (not filed)
 

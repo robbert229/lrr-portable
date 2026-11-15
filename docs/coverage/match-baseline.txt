@@ -1,4 +1,4 @@
-# input_sha256: f1f2a25c2021286fe2635e665c5b438ac244ed1e6d3ae6bbb19447d4ebc3f114
+# input_sha256: eb628a48b83259de960079f5ab5bc7897b4863b6772d9c2a5f20411f58aa4811
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1825,7 +1825,7 @@
 0x00461c90 100.00 reward_draw_score
 0x00461dd0 100.00 reward_do_buttons
 0x00462030 63.75 reward_save_menu
-0x00462270 90.82 reward_advance
+0x00462270 91.84 reward_advance
 0x00462390 100.00 reward_debug_keys
 0x00462460 100.00 reward_restart_flic
 0x004624a0 79.23 reward_update_state
@@ -2668,10 +2668,10 @@
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
-0x0048b260 57.14 ledger_stub_0048b260_StartupStreamStateReset
+0x0048b260 60.00 ledger_stub_0048b260_StartupStreamStateReset
 0x0048b280 100.00 window_mode_flag_set
 0x0048b290 100.00 ledger_stub_0048b290_StartupStreamsClose
-0x0048b2f0 36.36 startup_config_stream_load
+0x0048b2f0 50.00 startup_config_stream_load
 0x0048b330 100.00 registry_path_split
 0x0048b360 100.00 registry_path_accessor
 0x0048b390 65.56 registry_path_create_keys
@@ -4550,7 +4550,7 @@
 0x00461c90 100.00 reward_draw_score
 0x00461dd0 100.00 reward_do_buttons
 0x00462030 63.75 reward_save_menu
-0x00462270 90.82 reward_advance
+0x00462270 91.84 reward_advance
 0x00462390 100.00 reward_debug_keys
 0x00462460 100.00 reward_restart_flic
 0x004624a0 79.23 reward_update_state
@@ -5393,10 +5393,10 @@
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
-0x0048b260 57.14 ledger_stub_0048b260_StartupStreamStateReset
+0x0048b260 60.00 ledger_stub_0048b260_StartupStreamStateReset
 0x0048b280 100.00 window_mode_flag_set
 0x0048b290 100.00 ledger_stub_0048b290_StartupStreamsClose
-0x0048b2f0 36.36 startup_config_stream_load
+0x0048b2f0 50.00 startup_config_stream_load
 0x0048b330 100.00 registry_path_split
 0x0048b360 100.00 registry_path_accessor
 0x0048b390 65.56 registry_path_create_keys
