@@ -1023,7 +1023,10 @@ Front_Menu* front_menu_create_menu(const char* title, const char* fullName,
     memset(menu, 0, sizeof(Front_Menu));
     menu->title = front_util_string_copy(title);
     menu->fullName = front_util_string_copy(fullName);
-    if (menu->title == NULL || menu->fullName == NULL) {
+    if (menu->title == NULL) {
+        return NULL;
+    }
+    if (menu->fullName == NULL) {
         return NULL;
     }
     menu->titleLength = strlen(title);
