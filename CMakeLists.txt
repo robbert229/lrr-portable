@@ -164,7 +164,8 @@ if(LRR_CLASSIC_MSVC5)
   # Units the original compiled without optimisation: their code keeps the
   # frame pointer and reloads every operand, and the functions are packed
   # with int3 fill (finding 505 rule 5; finding 587). They take /Od after the
-  # configuration's /O2.
+  # configuration's /O2, and /Ob0 after its /Ob1, as plain /Od gives: no
+  # inline expansion, so Maths.h's inline functions are called (finding 692).
   set(LRR_UNOPTIMISED_UNITS "${SRC_ROOT}/game/camera_control.c")
   set(LRR_LINK_OBJECTS "")
   set(LRR_LINK_LATE_SOURCES "")
@@ -192,7 +193,7 @@ if(LRR_CLASSIC_MSVC5)
     add_library(${_target} OBJECT ${_src})
     target_include_directories(${_target} PRIVATE ${LRR_LINK_INCLUDES_${_lib}})
     if(_src IN_LIST LRR_UNOPTIMISED_UNITS)
-      target_compile_options(${_target} PRIVATE /Od)
+      target_compile_options(${_target} PRIVATE /Od /Ob0)
     endif()
     # Where the object goes (finding 658). Each keeps its own target, so it
     # compiles the same wherever it is linked from:

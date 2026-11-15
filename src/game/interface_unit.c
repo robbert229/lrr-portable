@@ -1279,7 +1279,7 @@ int interface_callback_hotkey(int type, int objType, int objIndex, void* data)
         key = interfaceGlobs.menuItemF2keys[type];
     }
 
-    if (input_key_map[key] && (input_key_map[key] != input_prev_key_map[key])) {
+    if (input_key_map[key] && (input_prev_key_map[key] ^ input_key_map[key])) {
         interface_set_dependency_item(type, objType, objIndex);
         interface_do_action(type);
     }

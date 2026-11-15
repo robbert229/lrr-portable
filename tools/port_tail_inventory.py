@@ -201,6 +201,20 @@ def text_runs(symbols):
     return runs
 
 
+def second_pass_libc(runs, symbols):
+    """LIBC `.text` symbols after the last tail run, as (name, member, bytes).
+
+    Empty when the link has no tail run (finding 692): with no tail object
+    linked, no LIBC member is pulled only for the tail.
+    """
+    tails = [r for r in runs if r[0] in TAIL_KINDS]
+    if not tails:
+        return []
+    end = tails[-1][2]
+    return [(s[3], member(s[2]), s[1] - s[0]) for s in symbols
+            if s[5] == '.text' and s[4] == 'libc' and s[0] >= end]
+
+
 def unit_spans(symbols, units, rows):
     """Rebuilt `.text` span of each unit object against its original range."""
     firsts = {}
@@ -491,11 +505,10 @@ def inventory(original, rebuilt, map_text, entries, entities, rows, link_entries
     oentry = obase + original.pe.OPTIONAL_HEADER.AddressOfEntryPoint
     crt_start = min(int(r['text_start'], 16) for r in rows if r['unit_kind'] == 'crt')
     first_libc = next(r for r in runs if r[0] == 'libc')
-    last_tail = max(i for i, r in enumerate(runs) if r[0] in TAIL_KINDS)
-    second_pass = [(s[3], member(s[2]), s[1] - s[0]) for s in symbols
-                   if s[5] == '.text' and s[4] == 'libc' and s[0] >= runs[last_tail][2]]
+    second_pass = second_pass_libc(runs, symbols)
     result = {
         'mapped_functions': len(sizes), 'paired_functions': paired,
+        'tail_linked': any(r[0] in TAIL_KINDS for r in runs),
         'layout': [{'kind': k, 'start': hex(a), 'end': hex(b), 'bytes': b - a, 'symbols': n} for k, a, b, n in runs],
         'entry_point': {'original': hex(oentry), 'rebuilt': hex(entry), 'delta': entry - oentry,
                         'unit_segment_end': {'original': hex(crt_start), 'rebuilt': hex(first_libc[1]),
@@ -553,21 +566,24 @@ def main():
           f"{e['unit_segment_end']['delta']:+}, LIBC before the entry {e['libc_before_entry']['delta']:+}")
     for r in result['layout']:
         print(f"  {r['kind']:16} {r['start']}-{r['end']} {r['bytes']:8,} bytes {r['symbols']:5} symbols")
-    r = result['removal']
-    print(f"tail code kept (COFF /OPT:REF model): {r['kept_code_bytes']:,} of {r['compiled_code_bytes']:,} compiled")
-    print(f"  without any of the {r['anchor_sections']} anchor sections: {r['code_bytes_without_anchors']:,}")
-    for a in r['anchors'][:25]:
-        print(f"  anchor {a['object']:32} {a['section']:8} {','.join(a['symbols'])[:60]:60} {a['code_bytes_only_through']:7,}")
-    for name, v in sorted(r['root_objects'].items(), key=lambda x: -x[1]['code_bytes_kept_alone']):
-        print(f"  {name:32} alone keeps {v['code_bytes_kept_alone']:7,} ({v['referenced_sections']} refs from {','.join(v['referrers'][:6])})")
-    print('  with the anchors gone:')
-    for v in r['greedy_order_without_anchors']:
-        print(f"  retarget {v['object']:32} {v['referenced_sections']:4} refs: -{v['code_bytes_dropped']:7,} -> "
-              f"{v['code_bytes_left']:7,} left  ({','.join(v['referrers'][:5])})")
-    print('  as linked:')
-    for v in r['greedy_order']:
-        print(f"  retarget {v['object']:32} {v['referenced_sections']:4} refs: -{v['code_bytes_dropped']:7,} -> "
-              f"{v['code_bytes_left']:7,} left  ({','.join(v['referrers'][:5])})")
+    if not result['tail_linked']:
+        print('no port tail in the link: no tail object, tail code or second-pass LIBC member')
+    r = result.get('removal')
+    if r is not None:
+        print(f"tail code kept (COFF /OPT:REF model): {r['kept_code_bytes']:,} of {r['compiled_code_bytes']:,} compiled")
+        print(f"  without any of the {r['anchor_sections']} anchor sections: {r['code_bytes_without_anchors']:,}")
+        for a in r['anchors'][:25]:
+            print(f"  anchor {a['object']:32} {a['section']:8} {','.join(a['symbols'])[:60]:60} {a['code_bytes_only_through']:7,}")
+        for name, v in sorted(r['root_objects'].items(), key=lambda x: -x[1]['code_bytes_kept_alone']):
+            print(f"  {name:32} alone keeps {v['code_bytes_kept_alone']:7,} ({v['referenced_sections']} refs from {','.join(v['referrers'][:6])})")
+        print('  with the anchors gone:')
+        for v in r['greedy_order_without_anchors']:
+            print(f"  retarget {v['object']:32} {v['referenced_sections']:4} refs: -{v['code_bytes_dropped']:7,} -> "
+                  f"{v['code_bytes_left']:7,} left  ({','.join(v['referrers'][:5])})")
+        print('  as linked:')
+        for v in r['greedy_order']:
+            print(f"  retarget {v['object']:32} {v['referenced_sections']:4} refs: -{v['code_bytes_dropped']:7,} -> "
+                  f"{v['code_bytes_left']:7,} left  ({','.join(v['referrers'][:5])})")
     s = result['second_pass_libc']
     print(f"LIBC after the tail: {s['functions']} functions, {s['bytes']:,} bytes")
     print(f"{'object':36} {'.text':>7} {'.rdata':>6} {'.data':>6} {'.bss':>7}  referenced by / references units")

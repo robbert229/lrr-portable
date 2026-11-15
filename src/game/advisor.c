@@ -59,6 +59,18 @@
 /* Main.c's flags: a start level was given on the command line. */
 #define ADVISOR_MAIN_FLAG_STARTLEVEL 0x200
 
+/* Maths.h's inline vector functions (vec_len to vec_normalize). The original
+ * emits them in every object that includes Maths.h as pick-any COMDATs, and
+ * LINK keeps the first, this unit's. MSVC 5.0's `extern __inline` gives that
+ * COMDAT, with the same code as a plain definition, so the unoptimised
+ * camera unit's copies (camera_maths.h) are discarded rather than
+ * multiply defined (finding 692). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define MATHS_INLINE extern __inline
+#else
+#define MATHS_INLINE
+#endif
+
 /* The prefix of the game camera (LegoCamera) that Advisor_Initialise
  * reads: its camera container is the word at +0x24. */
 typedef struct AdvisorCamera {
@@ -267,7 +279,7 @@ void advisor_config_slots_load_target(BlockFile* config, const char* gameName)
 }
 
 // FUNCTION: LEGORR 0x004013a0
-float vec_len(const float* a)
+MATHS_INLINE float vec_len(const float* a)
 {
     return (float)sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
 }
@@ -287,7 +299,7 @@ int advisor_position_name_to_index(const char* name, int* index)
 }
 
 // FUNCTION: LEGORR 0x00401420
-float vec_dist(const float* a, const float* b)
+MATHS_INLINE float vec_dist(const float* a, const float* b)
 {
     return (float)sqrt((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]));
 }
@@ -354,7 +366,7 @@ int advisor_animation_name_to_index(const char* name, int* index)
 }
 
 // FUNCTION: LEGORR 0x00401500
-float* vec_add(float* dst, const float* a, const float* b)
+MATHS_INLINE float* vec_add(float* dst, const float* a, const float* b)
 {
     dst[0] = a[0] + b[0];
     dst[1] = a[1] + b[1];
@@ -402,7 +414,7 @@ void advisor_position_config_load(BlockFile* config, const char* gameName,
 }
 
 // FUNCTION: LEGORR 0x004016c0
-float* vec_sub(float* dst, const float* a, const float* b)
+MATHS_INLINE float* vec_sub(float* dst, const float* a, const float* b)
 {
     dst[0] = a[0] - b[0];
     dst[1] = a[1] - b[1];
@@ -411,13 +423,13 @@ float* vec_sub(float* dst, const float* a, const float* b)
 }
 
 // FUNCTION: LEGORR 0x004016f0
-float vec_dot(const float* a, const float* b)
+MATHS_INLINE float vec_dot(const float* a, const float* b)
 {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
 // FUNCTION: LEGORR 0x00401720
-float* vec_scale(float* dst, const float* src, float s)
+MATHS_INLINE float* vec_scale(float* dst, const float* src, float s)
 {
     dst[0] = src[0] * s;
     dst[1] = src[1] * s;
@@ -428,7 +440,7 @@ float* vec_scale(float* dst, const float* src, float s)
 #include "advisor_maths.h"
 
 // FUNCTION: LEGORR 0x00401750
-void vec_normalize(float* v)
+MATHS_INLINE void vec_normalize(float* v)
 {
     advisor_vector3d_scale(v, v, 1.0f / advisor_vector3d_modulus(v));
 }

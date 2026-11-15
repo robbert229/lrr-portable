@@ -60,6 +60,13 @@ class ReachabilityTests(unittest.TestCase):
         self.assertEqual(r['root_objects']['a.obj']['code_bytes_kept_alone'], 32 + 80 + 96)
         self.assertEqual(r['greedy_order'][-1]['code_bytes_left'], 0)
 
+    def test_no_tail_objects(self):
+        # A link with no tail (finding 692): nothing kept, nothing to retarget.
+        self.libraries = {p: None for p in self.libraries}
+        r = self.run_model()
+        self.assertEqual((r['kept_code_bytes'], r['compiled_code_bytes']), (0, 0))
+        self.assertEqual((r['anchors'], r['greedy_order'], r['root_objects']), ([], [], {}))
+
 
 class HelperTests(unittest.TestCase):
     def test_data_references_are_aligned_image_dwords(self):
@@ -71,6 +78,16 @@ class HelperTests(unittest.TestCase):
         symbols = [(0, 4, 'a', 'x', 'unit', '.text'), (4, 8, 'b', 'y', 'unit', '.text'),
                    (8, 12, 'c', 'z', 'tail', '.text'), (12, 16, 'd', 'w', 'tail', '.data')]
         self.assertEqual(inv.text_runs(symbols), [['unit', 0, 8, 2], ['tail', 8, 12, 1]])
+
+    def test_second_pass_libc(self):
+        symbols = [(0, 4, 'u.obj', 'f', 'unit', '.text'), (4, 8, 'LIBC:a.obj', 'g', 'libc', '.text'),
+                   (8, 12, 'lrr_tail:t.obj', 'h', 'tail', '.text'), (12, 16, 'LIBC:b.obj', 'k', 'libc', '.text')]
+        self.assertEqual(inv.second_pass_libc(inv.text_runs(symbols), symbols), [('k', 'b.obj', 4)])
+
+    def test_second_pass_libc_without_a_tail(self):
+        # No tail run: empty, not `max() iterable argument is empty`.
+        symbols = [(0, 4, 'u.obj', 'f', 'unit', '.text'), (4, 8, 'LIBC:a.obj', 'g', 'libc', '.text')]
+        self.assertEqual(inv.second_pass_libc(inv.text_runs(symbols), symbols), [])
 
     def test_unit_spans(self):
         symbols = [(0x401000, 0x401010, 'u.c.obj', 'f', 'unit', '.text'),

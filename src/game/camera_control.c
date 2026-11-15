@@ -7,7 +7,7 @@
  * reloads each operand from memory, and calls Maths.h's inline vector
  * functions out of line (the copies at 004013a0-00401750). The functions
  * are packed with int3 fill (finding 505 rule 5). The matching build
- * compiles this file with /Od (CMakeLists.txt, LRR_UNOPTIMISED_UNITS).
+ * compiles this file with /Od /Ob0 (CMakeLists.txt, LRR_UNOPTIMISED_UNITS).
  *
  * The port's camera (ViewContext, the engine's camera controller buffer and
  * their hooks) stays in the port tail, camera_control_port.cpp, under the
@@ -22,6 +22,12 @@
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Maths.h's inline copies; their `_sqrt` reference places LIBC's sqrt.obj
+ * (finding 692). The other compilers use camera_control_imports.h alone. */
+#include "camera_maths.h"
 #endif
 
 typedef struct Camera_Vector3F {

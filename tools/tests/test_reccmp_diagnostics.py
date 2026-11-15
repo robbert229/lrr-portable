@@ -37,6 +37,8 @@ class DiagnosticsTest(unittest.TestCase):
         # LRR_UNOPTIMISED_UNITS take /Od after /O2 (finding 587); other
         # command-line overrides still fail.
         self.assertEqual(unexpected(["Command line warning D4025 : overriding '/O2' with '/Od'"]), [])
+        self.assertEqual(unexpected(["Command line warning D4025 : overriding '/Ob1' with '/Ob0'"]), [])
+        self.assertEqual(len(unexpected(["Command line warning D4025 : overriding '/Ob0' with '/Ob1'"])), 1)
         self.assertEqual(len(unexpected(["Command line warning D4025 : overriding '/Od' with '/O2'"])), 1)
 
 if __name__ == '__main__':
