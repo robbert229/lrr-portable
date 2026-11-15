@@ -1,7 +1,8 @@
 # 688. The GUID block: amstrmid.lib and dxguid.lib as single members
 
-Issue #837: finding 680's follow-up 4. Measured on `main` `77022c16` with
-full matching builds before and after.
+Issue #837: finding 680's follow-up 4. Stacked on #842 (`data/838-rdata-start`
+`429c6314`, finding 689, on `main` `77022c16`); measured with full matching
+builds before and after.
 
 ## Summary
 
@@ -162,15 +163,15 @@ references the `1.0f` after the block. Its object is unknown: it follows
 
 ## Before and after
 
-`main` `77022c16` against this change. Both are full matching builds.
+#842 `429c6314` against this change. Both are full matching builds.
 
-| Measure (`binary-progress.json`) | `main` `77022c16` | This change |
+| Measure (`binary-progress.json`) | #842 `429c6314` | This change |
 | --- | ---: | ---: |
 | **Exact-function code bytes** | **351,876 (54.76%)** | **351,876 (54.76%)** |
 | Accuracy, full / game-only | 97.78% / 97.55% | 97.78% / 97.55% |
 | Functions that rose / fell | | 1 / 0 (`004781d0` 98% → 99%) |
 | `.text` identical at original addresses | 6.93% (44,553 B) | 6.98% (44,845 B) |
-| `.data` / `.rdata` identical (section-relative) | 28.48% / 9.56% | 28.48% / **22.96%** |
+| `.data` / `.rdata` identical (section-relative) | 28.48% / 9.6% | 28.48% / **23.0%** |
 | Identical prefix, raw / masked | 11 B / 7,187 B | 11 B / 7,187 B |
 | Correct-size functions, full | 2,811 | 2,811 |
 | Units with size agreement | 2 | 2 |
@@ -190,7 +191,7 @@ gate-to-relink address translation, not from a lost mapping.
 
 | Region | Rebuilt start before → after (original) | Items at original offset | At original address before → after | First item not at its offset (after) |
 | --- | --- | ---: | ---: | --- |
-| `.rdata` | `0049e000` → `0049e000` (`0049e000`) | 0 of 95 → 0 of 95 | 0 → 0 | `0049e014` (AITask.c), −4 |
+| `.rdata` | `0049e000` → `0049e000` (`0049e000`) | 8 of 96 (32 B) → same | 8 → 8 | `0049e048`, −20 |
 | `.data` | `004a0000` → **`004a1000`** (`004a1000`) | 192 (3,401 B) → same | **0 → 192 (3,401 B)** | `004a1d5c` (`rock_fall_styles.c`), +132 |
 | `.bss` | `004b1d30` → `004b2d30` (`004b2db0`) | 1 (1,040 B) → same | 0 → 0 | `004b31c8` `aiTaskGlobs`, −8 |
 | commons | `00546c00` → `00547c00` (`00549520`) | 16 (59,256 B) → same | 0 → 0 | `00556fb8`, −3,848 |
