@@ -43,7 +43,8 @@ if c:
 x = p.get("identical_prefix")
 if x:
     m = x["address_operands_masked"]
-    print(f"Identical prefix: {x['bytes']:,} bytes to {x['first_difference']} ({x['function']}); "
+    image = f" ({x['image']})" if x.get("image") else ""
+    print(f"Identical prefix{image}: {x['bytes']:,} bytes to {x['first_difference']} ({x['function']}); "
           f"address operands masked {m['bytes']:,} bytes to {m['first_difference']} ({m['function']})")
 agree = p.get("unit_size_agreement")
 if agree:
@@ -56,4 +57,5 @@ if d:
         i = r["items"]
         prefix = f"prefix {r['identical_prefix']['bytes']:,} B, " if "identical_prefix" in r else ""
         parts.append(f"{name} {prefix}{i['at_original_offset']:,} of {i['paired']:,} items at original offset")
-    print("Data at original offsets: " + "; ".join(parts))
+    image = f" ({d['image']})" if d.get("image") else ""
+    print(f"Data at original offsets{image}: " + "; ".join(parts))

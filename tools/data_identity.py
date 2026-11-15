@@ -21,20 +21,26 @@ its commons at the first `<common>` symbol. The original has no map: its
 GAME-001's `advisorGlobs`, `004b2db0`), and its commons at `00549520`
 (finding 516, ADR 0006 decision 5).
 
+The image measured. With the original-mode link (`opt_ref`, no `/DEBUG`)
+and its map, every region is measured on that link (`image`; finding 687),
+because the gate's `.rdata` starts with the 84-byte debug directory, so no
+`.rdata` item of the gate can sit at its original offset. Reccmp pairs items
+with the gate's addresses; `translator` moves each one to the relink by the
+nearest map symbol both links define (same name and object), since both
+links lay out the same objects. `gate` keeps the gate's per-region figures.
+Without the relink's map, everything is the gate's, and only the `.rdata`
+prefix reads the relink.
+
 Per region:
 
 - `identical_prefix`: raw bytes identical from the region start, comparing
   each image's own region (section-relative offsets, not absolute
-  addresses). For `.rdata` it compares the original-mode link
-  (`opt_ref`, no `/DEBUG`) when one is given, because the gate's `.rdata`
-  starts with the 84-byte debug directory. Not measured for the zero-filled
-  regions.
+  addresses). Not measured for the zero-filled regions.
 - `items`: Reccmp's paired data entities (`entities.json`: globals, strings,
   floats, vtables) whose original address lies in the region. An item is at
   its original offset when its rebuilt offset from the rebuilt region start
   equals its original offset; at its original address when the two addresses
-  are equal. The `.rdata` item offsets use the gate's addresses, so they
-  include the debug directory.
+  are equal.
 - `objects`: the rebuilt objects that define those items (the link map
   symbol at or below each rebuilt address). An object agrees when every one
   of its paired items in the region is at its original offset.
@@ -162,20 +168,124 @@ def region_items(paired, region, original_start, rebuilt_start):
     return result
 
 
-def measure(original_pe, rebuilt_pe, map_text, entities, rows, rdata_pe=None):
+def translator(from_symbols, to_symbols, from_secs, to_secs, lead=None):
+    """A function moving an item of one link to the other link of the same objects.
+
+    Anchors are the map symbols whose (name, object) occurs once in each map.
+    An item moves with the nearest anchor at or below it in its section;
+    before the section's first anchor, by the bytes `lead` names (section
+    name -> bytes that only the first link puts at that section's start,
+    such as the gate's debug directory), then with the first anchor, then
+    with the section's start. When both links hold the section's bytes, the
+    first candidate whose bytes equal the item's is taken: a lead absorbed by
+    a later contribution's alignment moves the items after it by less.
+    Addresses outside every section are returned unchanged.
+    """
+    def unique(symbols):
+        count = collections.Counter((n, o) for _, n, o in symbols)
+        return {(n, o): a for a, n, o in symbols if count[(n, o)] == 1}
+    src, dst = unique(from_symbols), unique(to_symbols)
+    anchors = sorted((a, dst[k] - a) for k, a in src.items() if k in dst)
+    keys = [a for a, _ in anchors]
+    bounds = [(lo, hi, name) for name, (lo, hi, _) in from_secs.items() if name in to_secs]
+    lead = lead or {}
+
+    def read(secs, name, address, size):
+        lo, hi, data = secs[name]
+        return data[address - lo:address - lo + size] if lo <= address and address + size <= lo + len(data) else None
+
+    def translate(address, size=0):
+        sec = next(((lo, hi, name) for lo, hi, name in bounds if lo <= address < hi), None)
+        if sec is None:
+            return address
+        lo, hi, name = sec
+        i = bisect.bisect_right(keys, address) - 1
+        if i >= 0 and keys[i] >= lo:
+            shifts = [anchors[i][1]]
+        else:
+            shifts = [to_secs[name][0] - lo - lead[name]] if name in lead else []
+            if i + 1 < len(keys) and keys[i + 1] < hi:
+                shifts.append(anchors[i + 1][1])
+        shifts.append(to_secs[name][0] - lo)
+        want = read(from_secs, name, address, size) if size else None
+        if want:
+            for shift in shifts:
+                if read(to_secs, name, address + shift, size) == want:
+                    return address + shift
+        return address + shifts[0]
+    return translate
+
+
+def debug_lead(from_secs, to_secs, name='.rdata'):
+    """{name: n} when the first link's section opens with n zero bytes more
+    than the second's: the gate's debug directory, which `tools/reccmp.sh`
+    zeroes (`strip_pe_debug.py`) but leaves in place."""
+    def zeros(data):
+        return len(data) - len(data.lstrip(b'\0'))
+    if name not in from_secs or name not in to_secs:
+        return {}
+    n = zeros(from_secs[name][2]) - zeros(to_secs[name][2])
+    return {name: n} if n > 0 else {}
+
+
+def _compact(regions_out):
+    """The gate's per-region figures kept alongside the relink's."""
+    out = {}
+    for name, r in regions_out.items():
+        entry = {'rebuilt_start': r['rebuilt_start'], 'start_delta': r['start_delta'],
+                 'at_original_offset': r['items']['at_original_offset'],
+                 'at_original_offset_bytes': r['items']['at_original_offset_bytes'],
+                 'at_original_address': r['items']['at_original_address']}
+        if 'identical_prefix' in r and 'prefix_image' not in r:
+            entry['identical_prefix_bytes'] = r['identical_prefix']['bytes']
+        out[name] = entry
+    return out
+
+
+def measure(original_pe, rebuilt_pe, map_text, entities, rows, relink_pe=None, relink_map=None):
     """The `data_identity` field of `binary-progress.json`.
 
-    `original_pe` and `rebuilt_pe` are `pefile.PE` objects (the gate's image);
-    `rdata_pe` optionally the original-mode relink, for the `.rdata` prefix.
+    `original_pe` and `rebuilt_pe` are `pefile.PE` objects (the gate's image)
+    and `map_text` the gate's map. `relink_pe` and `relink_map` are the
+    original-mode link's; with both, every region is measured on that link
+    and the gate's figures are kept as `gate`. With `relink_pe` alone, only
+    the `.rdata` prefix reads it.
     """
+    if relink_pe is None or not relink_map:
+        out = _measure(original_pe, rebuilt_pe, map_text, entities, rows, relink_pe)
+        out['image'] = 'gate'
+        return out
+    gate = _measure(original_pe, rebuilt_pe, map_text, entities, rows)
+    gate_secs, relink_secs = sections(rebuilt_pe), sections(relink_pe)
+    translate = translator(parse_map(map_text)[1], parse_map(relink_map)[1], gate_secs, relink_secs,
+                           debug_lead(gate_secs, relink_secs))
+    moved = [{**e, 'recomp': translate(e['recomp'], e.get('size') or 0)}
+             if e.get('type') in DATA_TYPES and e.get('recomp') is not None else e for e in entities]
+    out = _measure(original_pe, relink_pe, relink_map, moved, rows)
+    out['image'] = 'original-mode link'
+    out['method'] += ("; measured on the original-mode link (no /DEBUG), Reccmp's gate addresses "
+                      "moved to it by the nearest map symbol both links define")
+    out['gate'] = _compact(gate['regions'])
+    return out
+
+
+def _measure(original_pe, rebuilt_pe, map_text, entities, rows, rdata_pe=None):
+    """The regions of one rebuilt image; `rdata_pe` optionally the image whose
+    `.rdata` the `.rdata` prefix reads."""
     groups, symbols = parse_map(map_text)
     addresses = [s[0] for s in symbols]
 
-    def owner(address):
-        i = bisect.bisect_right(addresses, address) - 1
-        return symbols[i][2] if i >= 0 else None
-
     osecs, rsecs = sections(original_pe), sections(rebuilt_pe)
+
+    def owner(address):
+        # The map symbol at or below, in the same section: an item before its
+        # section's first symbol has no known owner.
+        i = bisect.bisect_right(addresses, address) - 1
+        if i < 0:
+            return None
+        sec = next(((lo, hi) for lo, hi, _ in rsecs.values() if lo <= address < hi), None)
+        return symbols[i][2] if sec is None or symbols[i][0] >= sec[0] else None
+
     rebuilt_bss = None
     if '.bss' in groups and '.data' in groups and '.data' in rsecs and groups['.bss'][0] == groups['.data'][0]:
         rebuilt_bss = rsecs['.data'][0] + groups['.bss'][1]
@@ -224,11 +334,12 @@ def main():
     args = parser.parse_args()
     with (root / 'docs/coverage/translation-unit-ranges.csv').open(newline='', encoding='utf-8') as f:
         rows = list(csv.DictReader(f))
-    relink = args.build / 'opt-ref/LegoRR.exe'
+    relink, relink_map = args.build / 'opt-ref/LegoRR.exe', args.build / 'opt-ref/LegoRR.map'
     result = measure(pefile.PE(str(args.original)), pefile.PE(str(args.build / 'LegoRR.exe')),
                      (args.build / 'LegoRR.map').read_text(errors='replace'),
                      json.loads((args.build / 'reccmp-report/entities.json').read_text()), rows,
-                     pefile.PE(str(relink)) if relink.is_file() else None)
+                     pefile.PE(str(relink)) if relink.is_file() else None,
+                     relink_map.read_text(errors='replace') if relink_map.is_file() else None)
     print(json.dumps(result, indent=2))
 
 

@@ -142,14 +142,18 @@ def report(orig_path, rebuilt_path, report_dir, opt_ref_dir=None):
             'fully_identical_functions_at_original_address': {'count': len(positioned), 'bytes': sum(f.end - f.address for f in positioned)},
             'exact_function_code_bytes': {'bytes': covered, 'original_text_bytes': len(text), 'percent': percent(covered, len(text))},
             'accuracy_percent': {'game_only': mean(game), 'full': mean(full)}, 'pe_header_differences': headers}
-    result.update(identity_metrics.measure(original, rebuilt, rebuilt_path.parent / 'LegoRR.map', funcs, full, game,
-                                           entities, layout_progress.read_rows(layout_progress.RANGES)))
-    map_path = rebuilt_path.parent / 'LegoRR.map'
+    # The identical prefixes and data_identity read the original-mode link
+    # when it exists (finding 687); the gate's figures stay alongside.
     relink = opt_ref_dir / 'LegoRR.exe' if opt_ref_dir is not None else None
+    relink_pe = pefile.PE(str(relink)) if relink is not None and relink.is_file() else None
+    relink_map = opt_ref_dir / 'LegoRR.map' if opt_ref_dir is not None else None
+    result.update(identity_metrics.measure(original, rebuilt, rebuilt_path.parent / 'LegoRR.map', funcs, full, game,
+                                           entities, layout_progress.read_rows(layout_progress.RANGES), relink_pe))
+    map_path = rebuilt_path.parent / 'LegoRR.map'
     result['data_identity'] = data_identity.measure(
         orig, rebuilt, map_path.read_text(errors='replace') if map_path.is_file() else '', entities,
-        layout_progress.read_rows(layout_progress.RANGES),
-        pefile.PE(str(relink)) if relink is not None and relink.is_file() else None)
+        layout_progress.read_rows(layout_progress.RANGES), relink_pe,
+        relink_map.read_text(errors='replace') if relink_map is not None and relink_map.is_file() else None)
     if opt_ref_dir is not None:
         result['opt_ref'] = opt_ref(orig_path, rebuilt_path, report_dir, opt_ref_dir)
     return result
