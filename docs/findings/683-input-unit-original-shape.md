@@ -91,6 +91,60 @@ original has. `.bss` and the commons start 48 and 64 bytes later.
 No region has an item at its original address. The `.data` identical
 prefix stays at 12 bytes (to `004a100c`).
 
+### On the stack (#834, `identity/830-original-mode-measures` `20cd502a`)
+
+The change was rebased onto #831 to #834 and measured again. #831 removed
+`engine.cpp`, the last other root, so **no unit references any tail object
+now, and `lrr_tail.lib` contributes nothing to the link**: the map names no
+`lrr_tail` member, and the gate's `.text` has no port-tail or port-legacy
+category. These are the stack's final figures.
+
+| Measure | #834 `20cd502a` | This change |
+| --- | ---: | ---: |
+| **Exact-function code bytes** | **350,987 (54.62%)** | **351,876 (54.76%)** |
+| Exact functions, full / game-only | 2,644 / 2,356 | 2,651 / 2,362 |
+| Accuracy, full / game-only | 97.63% / 97.38% | 97.78% / 97.55% |
+| `.text` identical at original addresses | 6.82% (43,846 B) | 6.93% (44,553 B) |
+| `.data` / `.rdata` identical | 28.50% / 12.46% | 28.48% / 9.56% |
+| Identical prefix, raw / masked (original-mode link) | 11 B / 7,187 B | same |
+| Identical prefix, raw / masked (gate link) | 11 B / 7,187 B | same |
+| `.data` / `.rdata` identical prefix | 12 B / 18 B | same |
+| Correct-size functions, full / game-only | 2,804 / 2,513 | 2,811 / 2,519 |
+| Units with size agreement (sizes, start, end) | 2 of 227 (169, 5, 4) | 2 of 227 (171, 5, 4) |
+| Unit-relative identity | 51.32% | 51.48% |
+| Entry point (original `0048f000`) | `0048eb90` | `0048ea60` |
+| SizeOfImage (original 3,608,576) | 4,030,464 | **3,596,288** |
+| Image end (original `0x771000`) | `0x7d8000` | **`0x76e000`** |
+| Data-offset agreement | 22 of 57 units | same |
+| Import bytes identical | 62.08% | 81.67% |
+| Tail objects referenced from units | 1 (`engine.cpp`) | **0** |
+| Tail linked `.text` / `.bss` / `.data` / `.rdata` | 78,512 / 284,421 / 19,629 / 14,777 (before #831) | **0 / 0 / 0 / 0** |
+
+| Region | Original start | Rebuilt start (#834 → this) | Items at original offset | Paired items (#834 → this) |
+| --- | --- | --- | ---: | ---: |
+| `.rdata` | `0049e000` | `004b2000` → **`0049e000`** | 0 | 94 → 95 |
+| `.data` | `004a1000` | `004b8000` → `004a0000` | 192 (3,401 B) | 2,455 → 2,454 |
+| `.bss` | `004b2db0` | `004cf590` → `004b1d30` | 1 (1,040 B) | 149 |
+| commons | `00549520` | `005b0600` → `00546c00` | 16 (59,256 B) | 58 → 61 |
+
+The same seven functions rise and none falls. With the tail gone, the
+image is 12,288 bytes smaller than the original's, and `.rdata` starts at
+its original address. `.data`, `.bss` and the commons now start early
+rather than late: `.rdata` is 4,584 bytes against the original's 11,232
+(it lacks most of the GUID block, finding 680), and `.data` is 128 bytes
+short. No item is at its original address yet.
+
+`.rdata` identical falls from 12.46% to 9.56%. The tail's `.rdata` leaving
+moves the bytes that followed it. The entry point moves 304 bytes earlier:
+128 of that is Input.c's lost excess. Most of the rest is probably LIBC
+members that only the tail pulled in (LIBC `.text` 68,992 to 65,536 bytes
+in the `/OPT:REF` relink). The 304 bytes were not traced one by one.
+
+`tools/port_tail_inventory.py` now stops with `max() iterable argument is
+empty`, because the link has no tail run left (`tools/` is #830's; not
+changed here). The map is the evidence instead: no `lrr_tail` member
+contributes.
+
 ## 1. The functions
 
 They follow the disassembly, with no hooks or guards:

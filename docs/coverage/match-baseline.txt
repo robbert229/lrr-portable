@@ -1,4 +1,4 @@
-# input_sha256: 0c629fb2783128d85a016080c9e507949901ff659182c4b1abb63a77baf9406c
+# input_sha256: 834887eba8b1409c9d1a5038c83b7f88df140ad82e0f5498376ebd569a6b2430
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2299,7 +2299,7 @@
 0x00479240 100.00 block_close
 0x00479270 70.18 block_record_create
 0x004792c0 100.00 block_record_remove
-0x004792e0 98.12 block_find(1)
+0x004792e0 98.12 block_find
 0x00479490 100.00 block_text_token_pool_grow
 0x00479500 75.00 d3drm_vector_random
 0x00479510 90.00 d3drm_vector_rotate
@@ -2448,12 +2448,12 @@
 0x0047ed60 100.00 avi_get_length
 0x0047ed70 100.00 avi_remove
 0x0047ed80 100.00 avi_is_ok
-0x0047ed90 9.70 input_direct_initialize
-0x0047eef0 31.45 input_state_poll_retail
-0x0047efb0 45.45 input_keyboard_down_key_count
-0x0047efd0 21.43 input_direct_shutdown
-0x0047f010 19.72 input_cursor_position_update
-0x0047f0d0 12.73 input_cursor_client_position_set
+0x0047ed90 100.00 input_direct_initialize
+0x0047eef0 100.00 input_state_poll_retail
+0x0047efb0 100.00 input_keyboard_down_key_count
+0x0047efd0 100.00 input_direct_shutdown
+0x0047f010 100.00 input_cursor_position_update
+0x0047f0d0 100.00 input_cursor_client_position_set
 0x0047f130 100.00 resource_mount_startup_target
 0x0047f4f0 100.00 resource_find_cd_key_drive
 0x0047f590 97.56 file_set_base_search_path
@@ -2731,7 +2731,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 3018 mapped functions
+[full] 3019 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 100.00 advisor_scene_visual_state_initialize
@@ -5024,7 +5024,7 @@
 0x00479240 100.00 block_close
 0x00479270 70.18 block_record_create
 0x004792c0 100.00 block_record_remove
-0x004792e0 98.12 block_find(1)
+0x004792e0 98.12 block_find
 0x00479490 100.00 block_text_token_pool_grow
 0x00479500 75.00 d3drm_vector_random
 0x00479510 90.00 d3drm_vector_rotate
@@ -5173,12 +5173,12 @@
 0x0047ed60 100.00 avi_get_length
 0x0047ed70 100.00 avi_remove
 0x0047ed80 100.00 avi_is_ok
-0x0047ed90 9.70 input_direct_initialize
-0x0047eef0 31.45 input_state_poll_retail
-0x0047efb0 45.45 input_keyboard_down_key_count
-0x0047efd0 21.43 input_direct_shutdown
-0x0047f010 19.72 input_cursor_position_update
-0x0047f0d0 12.73 input_cursor_client_position_set
+0x0047ed90 100.00 input_direct_initialize
+0x0047eef0 100.00 input_state_poll_retail
+0x0047efb0 100.00 input_keyboard_down_key_count
+0x0047efd0 100.00 input_direct_shutdown
+0x0047f010 100.00 input_cursor_position_update
+0x0047f0d0 100.00 input_cursor_client_position_set
 0x0047f130 100.00 resource_mount_startup_target
 0x0047f4f0 100.00 resource_find_cd_key_drive
 0x0047f590 97.56 file_set_base_search_path
@@ -5718,6 +5718,7 @@
 0x0049b6e0 100.00 _AVIStreamRelease@4
 0x0049b6e6 100.00 _AVIStreamGetFrame@8
 0x0049b6ec 100.00 _AVIFileInit@0
+0x0049c7a8 100.00 _DirectInputCreateA@16
 0x0049c7ae 100.00 _DirectSoundCreate@12
 0x0049c7b4 100.00 _RtlUnwind@16
 0x0049c7c0 100.00 wad_expand_payload
