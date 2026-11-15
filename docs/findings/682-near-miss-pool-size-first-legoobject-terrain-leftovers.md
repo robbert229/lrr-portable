@@ -62,6 +62,30 @@ run on the final tree. The three generated files are committed;
 `--allow-growth`), `make winapi-link-check` and native ctest (37 of 37)
 pass. The native build starts with the shipped WADs.
 
+### Rebased onto #821
+
+I measured again on #821 (`identity/817-data-prefix`, `042f0a3d`) with a
+full `make reccmp-check` and `make match-progress`. The same six functions
+rise by the same amounts, and nothing falls.
+
+| Measure | #821 `042f0a3d` | This change on it |
+| --- | ---: | ---: |
+| **Exact-function code bytes** | 344,002 (53.54%) | 344,002 (53.54%) |
+| Accuracy, full / game-only | 97.57% / 97.31% | **97.58% / 97.32%** |
+| Correct-size functions, full | 2,797 (460,879 B) | **2,798 (463,008 B)** |
+| Correct-size functions, game-only | 2,506 (410,052 B) | **2,507 (412,181 B)** |
+| Identical prefix (raw / masked) | 11 B / 7,187 B | unchanged |
+| `.text` identical at original addresses | 43,615 B (6.79%) | 43,072 B (6.70%) |
+| `.data` identical | 17,804 B (24.32%) | 17,801 B (24.31%) |
+| `data_identity` (#821) | | unchanged |
+| Entry point (original `0048f000`) | `0048eb60` | **`0048eb80`** |
+| Units with size agreement; data-offset agreement | 2; 20 of 57 | unchanged |
+| Inversions full / game-only; `opt_ref` categories | 222 / 1 | unchanged |
+
+On this base, `.data` loses 3 identical bytes. Every `data_identity`
+measure of #821 is unchanged, which fits code addresses stored in `.data`
+moving with the code after Objective.c.
+
 ## 1. Per-function results
 
 Sizes are `code_extent` (finding 668): the original's, then the rebuilt
