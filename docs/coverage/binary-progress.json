@@ -1,15 +1,15 @@
 {
   "accuracy_percent": {
     "full": 97.84,
-    "game_only": 97.6
+    "game_only": 97.61
   },
-  "baseline_sha256": "bbb9c8455d5f365e6e8452d9d38211786d4d645c5309fdcf47b32a18d3042324",
+  "baseline_sha256": "cc8e44e7679787c4710d4e17cfe6439ed0ec82e1853c04e9210c9db693c7a84a",
   "correct_size_functions": {
     "full": {
       "bytes": 467093,
       "compared": 3017,
       "count": 2815,
-      "exact_functions": 2665,
+      "exact_functions": 2670,
       "mapped": 3019,
       "uncompared": 2
     },
@@ -17,7 +17,7 @@
       "bytes": 416260,
       "compared": 2721,
       "count": 2523,
-      "exact_functions": 2376,
+      "exact_functions": 2381,
       "mapped": 2723,
       "uncompared": 2
     },
@@ -49,9 +49,9 @@
         "start_delta": 0
       },
       "commons": {
-        "at_original_address": 42,
-        "at_original_offset": 42,
-        "at_original_offset_bytes": 194002,
+        "at_original_address": 33,
+        "at_original_offset": 33,
+        "at_original_offset_bytes": 2233262,
         "rebuilt_start": "0x549520",
         "start_delta": 0
       }
@@ -232,16 +232,16 @@
       "commons": {
         "first_difference": {
           "object": "<common>",
-          "offset_delta": 32,
-          "original": "0x5769e0",
-          "rebuilt": "0x576a00",
+          "offset_delta": 288,
+          "original": "0x76aa00",
+          "rebuilt": "0x76ab20",
           "rebuilt_region": "commons"
         },
         "items": {
-          "at_original_address": 42,
-          "at_original_address_bytes": 194002,
-          "at_original_offset": 42,
-          "at_original_offset_bytes": 194002,
+          "at_original_address": 33,
+          "at_original_address_bytes": 2233262,
+          "at_original_offset": 33,
+          "at_original_offset_bytes": 2233262,
           "paired": 60,
           "paired_bytes": 2242574
         },
@@ -252,20 +252,20 @@
         },
         "original_bytes": 2247092,
         "original_start": "0x549520",
-        "rebuilt_bytes": 2247092,
+        "rebuilt_bytes": 2247060,
         "rebuilt_start": "0x549520",
         "start_delta": 0
       }
     }
   },
   "exact_function_code_bytes": {
-    "bytes": 352931,
+    "bytes": 354054,
     "original_text_bytes": 642549,
-    "percent": 54.93
+    "percent": 55.1
   },
   "fully_identical_functions_at_original_address": {
-    "bytes": 7525,
-    "count": 105
+    "bytes": 7513,
+    "count": 103
   },
   "function_order_inversions": {
     "full": {
@@ -308,7 +308,7 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "3f18875a74af4898d1a095b3b6c73fda0cb8461118fb604f357e42ad8094daca",
+  "input_sha256": "ff0aa92c6c58f134cc04302e4504619e5c44a1ce6dea36319c522a7a7829c4fc",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 54,
@@ -4018,18 +4018,18 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 11
   },
-  "listing_digests_sha256": "a1fe5d71e43e742b52104337191feb827fbc3787baa560c8cf54f9e9675cefd0",
+  "listing_digests_sha256": "e05ee49ba398d3027740439661ccf03bb76b85574ad4943d12cbea51fb6e0daa",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 2665,
+        "exact": 2670,
         "mapped": 3019,
         "removed": 0,
         "removed_exact": null
       },
       "game_only": {
-        "exact": 2376,
+        "exact": 2381,
         "mapped": 2723,
         "removed": 0,
         "removed_exact": null
@@ -4037,8 +4037,8 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 579328,
-        "functions": 2719,
+        "bytes": 579296,
+        "functions": 2718,
         "removed_bytes": 0,
         "removed_functions": 0
       }
@@ -4057,8 +4057,8 @@
         "removed_functions": 78
       },
       "original_annotated": {
-        "bytes": 579328,
-        "functions": 2719,
+        "bytes": 579296,
+        "functions": 2718,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4069,15 +4069,15 @@
         "removed_functions": 0
       },
       "port_unit": {
-        "bytes": 224,
-        "functions": 9,
+        "bytes": 256,
+        "functions": 10,
         "removed_bytes": 176,
         "removed_functions": 6
       }
     },
     "gate_text_symbols": 3295,
     "image": {
-      "bss_bytes": 2863396,
+      "bss_bytes": 2863364,
       "characteristics": 271,
       "common_dll_order_equal": true,
       "data_initialised_bytes": 73088,
@@ -4121,8 +4121,8 @@
           "rebuilt": 10744
         },
         ".text": {
-          "differing": 588971,
-          "equal": 53578,
+          "differing": 588980,
+          "equal": 53569,
           "original": 642549,
           "rebuilt": 641429
         }
@@ -4130,7 +4130,7 @@
       "sections": {
         ".data": {
           "raw_size": 73216,
-          "virtual_size": 2936532
+          "virtual_size": 2936500
         },
         ".idata": {
           "raw_size": 4608,
@@ -4208,14 +4208,14 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 5.51,
-      "identical_bytes": 53566,
+      "identical_bytes": 53557,
       "identical_percent": 8.34,
       "original_bytes": 642549,
       "rebuilt_bytes": 641429,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 4.32,
-      "run_identical_bytes": 27756,
-      "run_identical_percent": 4.32
+      "run_excess_percent_points": 4.31,
+      "run_identical_bytes": 27721,
+      "run_identical_percent": 4.31
     },
     "imports": {
       "chance_percent": 34.58,
@@ -4245,14 +4245,14 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 5.52,
-    "identical_bytes": 53664,
+    "identical_bytes": 53655,
     "identical_percent": 8.35,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
-    "run_excess_percent_points": 4.32,
-    "run_identical_bytes": 27756,
-    "run_identical_percent": 4.32
+    "run_excess_percent_points": 4.31,
+    "run_identical_bytes": 27721,
+    "run_identical_percent": 4.31
   },
   "unit_size_agreement": {
     "agreeing_unit_ids": [
