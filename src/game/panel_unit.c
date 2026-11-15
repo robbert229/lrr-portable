@@ -203,9 +203,9 @@ void legacy_panel_category_interaction_state_reset(void)
 
     for (panelType = 0; panelType < PANEL_TYPE_COUNT; panelType++) {
         flags = panelGlobs.panelTable[panelType].flags;
-        panelGlobs.panelTable[panelType].xCurr = panelGlobs.panelTable[panelType].xIn;
+        panelGlobs.panelTable[panelType].currPos.x = panelGlobs.panelTable[panelType].inPos.x;
         panelGlobs.panelTable[panelType].flags = (flags & ~(PANEL_FLAG_OUT | PANEL_FLAG_MOVING)) | PANEL_FLAG_IN;
-        panelGlobs.panelTable[panelType].yCurr = panelGlobs.panelTable[panelType].yIn;
+        panelGlobs.panelTable[panelType].currPos.y = panelGlobs.panelTable[panelType].inPos.y;
         for (i = 0; i < panelGlobs.panelTable[panelType].buttonCount; i++) {
             button = &panelGlobs.panelTable[panelType].buttonList[i];
             button->clickCount = 0;
@@ -254,8 +254,8 @@ int legacy_panel_slot_coordinate_hit_test(int panelType, int x, int y)
     unsigned int pixel;
 
     if (!panel->isFlic) {
-        if (image_get_pixel((Image*)panel->image, x - (int)panel->xCurr,
-                            y - (int)panel->yCurr, &pixel)) {
+        if (image_get_pixel((Image*)panel->image, x - (int)panel->currPos.x,
+                            y - (int)panel->currPos.y, &pixel)) {
             return pixel == 0;
         }
     }
@@ -291,8 +291,8 @@ void panel_print_f(int panelType, const struct TextureSurface* font, int x,
         font_v_get_string_info(font, &width, NULL, msg, args);
         x -= width >> 1;
     }
-    font_v_print_f(font, (int)floor(x + panel->xCurr),
-                   (int)floor(y + panel->yCurr), msg, args);
+    font_v_print_f(font, (int)floor(x + panel->currPos.x),
+                   (int)floor(y + panel->currPos.y), msg, args);
     va_end(args);
 }
 
@@ -337,8 +337,8 @@ void ui_text_output_position_and_draw(void* window, unsigned int posFromEnd,
     if (textWindow == NULL) return; /* port: the native HUD may have no window */
 #endif
     float_pair_at_offset4_set_from_ints(textWindow->textWindow,
-        (int)floor(textWindow->x + textWindow->panel->xCurr),
-        (int)floor(textWindow->y + textWindow->panel->yCurr));
+        (int)floor(textWindow->x + textWindow->panel->currPos.x),
+        (int)floor(textWindow->y + textWindow->panel->currPos.y));
     text_buffer_draw_wrapped(textWindow->textWindow, posFromEnd, elapsed, NULL);
 }
 
@@ -370,25 +370,23 @@ void panel_category_bounds_set(int panelType, int xOut, int yOut, int xIn,
     out.y = (float)yOut;
     in.x = (float)xIn;
     in.y = (float)yIn;
-    panel->xOut = out.x;
-    panel->yOut = out.y;
-    panel->xIn = in.x;
-    panel->yIn = in.y;
+    panel->outPos = out;
+    panel->inPos = in;
     panel->reserved20 = 0;
     if (panel->flags & PANEL_FLAG_OUT) {
-        panel->xCurr = out.x;
-        panel->yCurr = out.y;
+        panel->currPos.x = (float)xOut;
+        panel->currPos.y = (float)yOut;
     } else {
-        panel->xCurr = in.x;
-        panel->yCurr = in.y;
+        panel->currPos.x = (float)xIn;
+        panel->currPos.y = (float)yIn;
     }
 }
 
 // FUNCTION: LEGORR 0x0045a6e0
 void indexed_pair_set(int panelType, float x, float y)
 {
-    panelGlobs.panelTable[panelType].xCurr = x;
-    panelGlobs.panelTable[panelType].yCurr = y;
+    panelGlobs.panelTable[panelType].currPos.x = x;
+    panelGlobs.panelTable[panelType].currPos.y = y;
 }
 
 // FUNCTION: LEGORR 0x0045a700
@@ -396,8 +394,8 @@ void indexed_pair_get(int panelType, float* x, float* y)
 {
     PanelData* panel = &panelGlobs.panelTable[panelType];
 
-    *x = panel->xCurr;
-    *y = panel->yCurr;
+    *x = panel->currPos.x;
+    *y = panel->currPos.y;
 }
 
 // FUNCTION: LEGORR 0x0045a730
@@ -409,28 +407,28 @@ void simtick_manager_tick(int panelType, float elapsed)
     Area2F flicArea;
 
     if (panel->flags & PANEL_FLAG_IN) {
-        target.x = panel->xIn;
-        target.y = panel->yIn;
+        target.x = panel->inPos.x;
+        target.y = panel->inPos.y;
     } else {
-        target.x = panel->xOut;
-        target.y = panel->yOut;
+        target.x = panel->outPos.x;
+        target.y = panel->outPos.y;
     }
 
     if (elapsed != 0.0f) {
-        if (fabs(panel->xCurr - target.x) > 1.0) {
-            panel->xCurr = ((4.0f / elapsed) * panel->xCurr + target.x) / ((4.0f / elapsed) + 1.0f);
+        if (fabs(panel->currPos.x - target.x) > 1.0) {
+            panel->currPos.x = ((4.0f / elapsed) * panel->currPos.x + target.x) / ((4.0f / elapsed) + 1.0f);
         } else {
-            panel->xCurr = target.x;
+            panel->currPos.x = target.x;
         }
-        if (fabs(panel->yCurr - target.y) > 1.0) {
-            panel->yCurr = ((4.0f / elapsed) * panel->yCurr + target.y) / ((4.0f / elapsed) + 1.0f);
+        if (fabs(panel->currPos.y - target.y) > 1.0) {
+            panel->currPos.y = ((4.0f / elapsed) * panel->currPos.y + target.y) / ((4.0f / elapsed) + 1.0f);
         } else {
-            panel->yCurr = target.y;
+            panel->currPos.y = target.y;
         }
     }
 
-    flicArea.x = position.x = (float)floor(panel->xCurr);
-    flicArea.y = position.y = (float)floor(panel->yCurr);
+    flicArea.x = position.x = (float)floor(panel->currPos.x);
+    flicArea.y = position.y = (float)floor(panel->currPos.y);
 
     if (panel->isFlic == 0) {
         image_display_scaled((Image*)panel->image, NULL, &position, NULL);
@@ -459,8 +457,8 @@ void simtick_manager_tick(int panelType, float elapsed)
         }
     }
 
-    if (abs((int)(panel->xCurr - target.x)) <= 1 &&
-        abs((int)(panel->yCurr - target.y)) <= 1) {
+    if (abs((int)(panel->currPos.x - target.x)) <= 1 &&
+        abs((int)(panel->currPos.y - target.y)) <= 1) {
         panel->flags &= ~PANEL_FLAG_MOVING;
     }
 
@@ -479,8 +477,8 @@ void panel_texture_slots_blit_to(int panelType)
 
     for (i = 0; i < panel->buttonCount; i++) {
         button = &panel->buttonList[i];
-        position.x = button->x1 + panel->xCurr;
-        position.y = button->y1 + panel->yCurr;
+        position.x = button->x1 + panel->currPos.x;
+        position.y = button->y1 + panel->currPos.y;
         if (!(button->flags & PANEL_BUTTON_FLAG_HIDDEN)) {
             flash = button->flags & PANEL_BUTTON_FLAG_BANNER;
             toggled = button->flags & PANEL_BUTTON_FLAG_TOGGLED;
@@ -875,8 +873,8 @@ int panel_button_collision_check(int* outPanel, int* outButton, int mouseX,
 int panel_button_point_inside(const PanelData* panel,
                               const PanelButton* button, int x, int y)
 {
-    x -= (int)panel->xCurr;
-    y -= (int)panel->yCurr;
+    x -= (int)panel->currPos.x;
+    y -= (int)panel->currPos.y;
     if ((float)x >= button->x1 && (float)y < button->y2 &&
         (float)y >= button->y1 && (float)x < button->x2) {
         return 1;
@@ -1350,8 +1348,8 @@ void advisor_progress_bar_fill_draw(int panelType, float air)
         size.y = (float)(int)panelGlobs.airMeterJuiceImage->height;
         if (air > 100.0f) air = 100.0f;
         size.x = air * ((float)panelGlobs.airMeterJuiceLength * 0.01f);
-        position.x = panelGlobs.panelTable[panelType].xCurr + panelGlobs.airMeterJuiceOffset.x;
-        position.y = panelGlobs.panelTable[panelType].yCurr + panelGlobs.airMeterJuiceOffset.y;
+        position.x = panelGlobs.panelTable[panelType].currPos.x + panelGlobs.airMeterJuiceOffset.x;
+        position.y = panelGlobs.panelTable[panelType].currPos.y + panelGlobs.airMeterJuiceOffset.y;
         image_display_scaled(panelGlobs.airMeterJuiceImage, NULL, &position, &size);
     }
 }
@@ -1369,8 +1367,8 @@ void panel_resource_position_update(int panelType)
     Point2F position;
 
     if (image != NULL) {
-        position.x = panelGlobs.panelTable[panelType].xCurr + panelGlobs.airMeterNoAirOffset.x;
-        position.y = panelGlobs.panelTable[panelType].yCurr + panelGlobs.airMeterNoAirOffset.y;
+        position.x = panelGlobs.panelTable[panelType].currPos.x + panelGlobs.airMeterNoAirOffset.x;
+        position.y = panelGlobs.panelTable[panelType].currPos.y + panelGlobs.airMeterNoAirOffset.y;
         if (panelGlobs.airMeterOxygenLow && sim_status_banner_word_get()) {
             image_display_scaled(image, NULL, &position, NULL);
         }

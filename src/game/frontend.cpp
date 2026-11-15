@@ -3781,8 +3781,8 @@ void panel_texture_slots_render(int panel, void* pixels, int pitch,
         if (image != NULL && image->surface != NULL)
             surface_blit_texture(pixels, pitch, width, height,
                 (const TextureSurface*)image->surface,
-                (int)floor((double)(button->x1 + data->xCurr)),
-                (int)floor((double)(button->y1 + data->yCurr)));
+                (int)floor((double)(button->x1 + data->currPos.x)),
+                (int)floor((double)(button->y1 + data->currPos.y)));
     }
 }
 

@@ -1,4 +1,4 @@
-# input_sha256: f3c24bc2c8e0c2d0650b66e16b9d5223ec6c34065cf707aaa554e50f9833a15a
+# input_sha256: ef56ffb054faebf8b7ec6030a05a330ce365929d948ea7d2bbda95e9d9ac5da9
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1716,7 +1716,7 @@
 0x0045a5b0 100.00 ui_text_output_position_and_draw
 0x0045a620 100.00 ui_text_output_object_release_target
 0x0045a630 100.00 ui_record_callback_forward
-0x0045a650 39.44 panel_category_bounds_set
+0x0045a650 100.00 panel_category_bounds_set
 0x0045a6e0 100.00 indexed_pair_set
 0x0045a700 100.00 indexed_pair_get
 0x0045a730 100.00 simtick_manager_tick
@@ -4441,7 +4441,7 @@
 0x0045a5b0 100.00 ui_text_output_position_and_draw
 0x0045a620 100.00 ui_text_output_object_release_target
 0x0045a630 100.00 ui_record_callback_forward
-0x0045a650 39.44 panel_category_bounds_set
+0x0045a650 100.00 panel_category_bounds_set
 0x0045a6e0 100.00 indexed_pair_set
 0x0045a700 100.00 indexed_pair_get
 0x0045a730 100.00 simtick_manager_tick

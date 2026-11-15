@@ -69,9 +69,9 @@ typedef struct PanelButton {
 typedef struct PanelData {
     void* image;                  /* +0x00: Image*, or the Flic* when isFlic */
     int isFlic;                   /* +0x04 */
-    float xOut, yOut;             /* +0x08 */
-    float xIn, yIn;               /* +0x10 */
-    float xCurr, yCurr;           /* +0x18 */
+    Point2F outPos;               /* +0x08 */
+    Point2F inPos;                /* +0x10 */
+    Point2F currPos;              /* +0x18 */
     int reserved20;               /* +0x20 */
     PanelButton* buttonList;      /* +0x24 */
     unsigned int buttonCount;     /* +0x28 */

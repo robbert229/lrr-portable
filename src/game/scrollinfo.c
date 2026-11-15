@@ -190,12 +190,12 @@ int scroll_info_update(unsigned int* index, unsigned int mouseX,
                         if (scrollInfo->flags & SCROLLINFO_FLAG_VERTICAL) {
                             slider = scrollInfo->slider;
                             step = (slider->y2 - slider->y1) / (float)slider->range;
-                            offset = (float)mouseY - panel->yCurr - scrollInfo->yOffset - slider->y1;
+                            offset = (float)mouseY - panel->currPos.y - scrollInfo->yOffset - slider->y1;
                             position = scroll_info_round(offset / step);
                         } else {
                             slider = scrollInfo->slider;
                             step = (slider->x2 - slider->x1) / (float)slider->range;
-                            offset = (float)mouseX - panel->xCurr - scrollInfo->xOffset - slider->x1;
+                            offset = (float)mouseX - panel->currPos.x - scrollInfo->xOffset - slider->x1;
                             position = scroll_info_round(offset / step);
                         }
                         scrollInfo->slider->position = position;
@@ -246,8 +246,8 @@ int scroll_info_mouse_over_structure(ScrollInfo_Struct* scrollInfo,
                                      ScrollInfo_Button* button, int mouseX,
                                      int mouseY)
 {
-    float x = panelGlobs.panelTable[scrollInfo->panel].xCurr + scrollInfo->xOffset;
-    float y = panelGlobs.panelTable[scrollInfo->panel].yCurr + scrollInfo->yOffset;
+    float x = panelGlobs.panelTable[scrollInfo->panel].currPos.x + scrollInfo->xOffset;
+    float y = panelGlobs.panelTable[scrollInfo->panel].currPos.y + scrollInfo->yOffset;
 
     mouseX -= (int)x;
     mouseY -= (int)y;
@@ -264,8 +264,8 @@ int scroll_info_mouse_over_create_structure(ScrollInfo_Struct* scrollInfo,
 {
     PanelData* panel = &panelGlobs.panelTable[scrollInfo->panel];
 
-    mouseX -= (int)(panel->xCurr + scrollInfo->xOffset);
-    mouseY -= (int)(panel->yCurr + scrollInfo->yOffset);
+    mouseX -= (int)(panel->currPos.x + scrollInfo->xOffset);
+    mouseY -= (int)(panel->currPos.y + scrollInfo->yOffset);
     if ((float)mouseX >= scrollInfo->slider->x1 && (float)mouseY < scrollInfo->slider->y2 &&
         (float)mouseY >= scrollInfo->slider->y1 && (float)mouseX < scrollInfo->slider->x2) {
         return 1;
@@ -285,8 +285,8 @@ void scroll_info_draw(unsigned int index)
     unsigned int i;
 
     panel = &panelGlobs.panelTable[scrollInfo->panel];
-    origin.x = panel->xCurr + scrollInfo->xOffset;
-    origin.y = panel->yCurr + scrollInfo->yOffset;
+    origin.x = panel->currPos.x + scrollInfo->xOffset;
+    origin.y = panel->currPos.y + scrollInfo->yOffset;
     image_display_scaled(scrollInfo->image, NULL, &origin, NULL);
 
     for (i = 0; i < 2; i++) {

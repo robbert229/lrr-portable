@@ -130,31 +130,31 @@ int main(void)
     {
         PanelData* panel = &panelGlobs.panelTable[0];
         memset(panel, 0, sizeof(*panel));
-        panel->xIn = 100.0f;
-        panel->yIn = 50.0f;
+        panel->inPos.x = 100.0f;
+        panel->inPos.y = 50.0f;
         panel->flags = PANEL_FLAG_IN | PANEL_FLAG_MOVING;
         panel->isFlic = 2; /* nothing to draw */
         for (int i = 0; i < 200; ++i) {
             simtick_manager_tick(0, 0.1f);
         }
-        CHECK(panel->xCurr == 100.0f && panel->yCurr == 50.0f,
+        CHECK(panel->currPos.x == 100.0f && panel->currPos.y == 50.0f,
               "panel: smoothing converges and snaps");
         CHECK((panel->flags & PANEL_FLAG_MOVING) == 0u,
               "panel: the settled panel stops moving");
 
         /* the "out" target when the in flag is clear */
-        panel->xOut = 10.0f;
+        panel->outPos.x = 10.0f;
         panel->flags = PANEL_FLAG_MOVING;
         simtick_manager_tick(0, 0.1f);
-        CHECK(panel->xCurr < 100.0f && panel->xCurr > 10.0f,
+        CHECK(panel->currPos.x < 100.0f && panel->currPos.x > 10.0f,
               "panel: a cleared in flag heads out");
         CHECK((panel->flags & PANEL_FLAG_MOVING) != 0u,
               "panel: a distant panel keeps moving");
 
         /* elapsed zero leaves the position alone */
-        const float x = panel->xCurr;
+        const float x = panel->currPos.x;
         simtick_manager_tick(0, 0.0f);
-        CHECK(panel->xCurr == x, "panel: zero elapsed holds the position");
+        CHECK(panel->currPos.x == x, "panel: zero elapsed holds the position");
         memset(panel, 0, sizeof(*panel));
     }
 
