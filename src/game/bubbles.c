@@ -243,6 +243,9 @@ void bubble_initialise(void)
  * (finding 538). */
 #include "lego_globs.h"
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x00407240
 void bubble_load_bubbles(BlockRec* config)
 {

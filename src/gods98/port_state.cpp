@@ -94,9 +94,9 @@ uint32_t ui_flag_word_peek(void)        { return s_ui_flag_word; }
 uint32_t global_config_word_peek(void)  { return s_config_word; }
 
 /* --- display dimensions + request-record predicates (see crt.hpp) ---------- */
-// GLOBAL: LEGORR 0x00505924
+/* The port's mainGlobs.appWidth (00505924); main.c defines the original's (finding 679). */
 int s_display_w;           /* DAT_00505924 */
-// GLOBAL: LEGORR 0x00505928
+/* The port's mainGlobs.appHeight (00505928); main.c defines the original's (finding 679). */
 int s_display_h;           /* DAT_00505928 */
 
 void display_dimensions_set(int w, int h)
@@ -623,22 +623,18 @@ uint32_t selection_marker_count_peek(void) { return s_marker_count; }
  * has no ported writer; each word lands as a zero-init static and the six
  * getters answer their installed half (the unowned-global deviation, per the
  * DAT-window convention). The install hooks are port-side. */
-// GLOBAL: LEGORR 0x0076ab24
+/* Input.c's mouse words (0076ab24-0076ab58, commons): main.c defines them
+ * in the Windows builds (finding 679), the port natively. */
+#if !defined(LEGORRR_BACKEND_WINAPI)
 uint32_t s_renderer_word_a;              /* DAT_0076ab24 */
-// GLOBAL: LEGORR 0x0076ab28
 uint32_t s_renderer_word_b;              /* DAT_0076ab28 */
-// GLOBAL: LEGORR 0x0076ab3c
 uint32_t g_renderer_word_c;             /* DAT_0076ab3c */
-// GLOBAL: LEGORR 0x0076ab40
 uint32_t s_window_mouse_word_40; /* DAT_0076ab40 */
-// GLOBAL: LEGORR 0x0076ab4c
 uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c */
-// GLOBAL: LEGORR 0x0076ab50
 uint32_t s_window_mouse_word_50; /* DAT_0076ab50 */
-// GLOBAL: LEGORR 0x0076ab54
 uint32_t s_window_mouse_word_54; /* DAT_0076ab54 */
-// GLOBAL: LEGORR 0x0076ab58
 uint32_t s_window_mouse_word_58; /* DAT_0076ab58 */
+#endif
 uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
 void* s_renderer_primary_surface; /* DAT_0076ac88 */
 uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
@@ -650,7 +646,7 @@ uint32_t s_renderer_window_state_ac; /* DAT_0076acac */
 uint32_t s_renderer_window_state_b0; /* DAT_0076acb0 */
 uint32_t s_renderer_window_state_b4; /* DAT_0076acb4 */
 uint32_t s_renderer_window_state_b8; /* DAT_0076acb8 */
-// GLOBAL: LEGORR 0x0050608c
+/* The port's mainGlobs.clFlags (0050608c); main.c defines the original's (finding 679). */
 uint32_t s_render_feature_flags; /* DAT_0050608c */
 
 void renderer_word_c_set(uint32_t value) { g_renderer_word_c = value; }
@@ -676,7 +672,7 @@ void render_feature_flags_set(uint32_t value) { s_render_feature_flags = value; 
  * store carries no context, so the port models it as a module static with
  * install/peek hooks — the two half-models do not interoperate
  * (unowned-global deviation). */
-// GLOBAL: LEGORR 0x00505f84
+/* The port's mainGlobs.flags (00505f84); main.c defines the original's (finding 679). */
 uint32_t s_engine_feature_word; /* DAT_00505f84 */
 
 uint32_t engine_feature_word_peek(void)

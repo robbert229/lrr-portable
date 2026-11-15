@@ -47,7 +47,7 @@
  * into it when the display is committed (directdraw_port_publish,
  * directdraw_port.cpp; #635). Native builds leave it NULL: the port's
  * renderer keeps its own device there (surface.cpp). */
-// GLOBAL: LEGORR 0x00505918
+/* The port's mainGlobs.device (00505918); main.c defines the original's (finding 679). */
 extern "C" void* s_main_device;
 void* s_main_device;
 

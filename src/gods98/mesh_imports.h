@@ -28,9 +28,11 @@ extern "C" {
 struct GameFileHandle;
 
 /* Main.c. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: mainGlobs, main_globs.h */
 extern void* s_main_d3drm;                                   /* 00505914 */
 extern void* s_main_im_device;                               /* 0050591c */
 extern unsigned int s_engine_feature_word;                   /* 00505f84 */
+#endif
 void direct3d_render_state_set_cached(unsigned int state,
                                       unsigned int value);   /* 004788d0 */
 void d3d_material_state_flush(void);                         /* 00478940 */
@@ -74,5 +76,9 @@ char* game_file_read_crlf_line(char* buffer, int capacity,
 #ifdef __cplusplus
 }
 #endif
+
+/* Main.c's mainGlobs and, in the matching build, the port's names as its
+ * fields (finding 679). */
+#include "gods98/main_globs.h"
 
 #endif /* LEGORRR_GODS98_MESH_IMPORTS_H */

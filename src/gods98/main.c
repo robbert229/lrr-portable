@@ -15,10 +15,13 @@
  * port's native bodies of the functions other modules call stay in
  * frameloop.cpp, surface.cpp, audio.cpp and crt.cpp (PORT-ONLY).
  *
- * The unit's .bss is the original's mainGlobs. Most of its fields are
- * shared with the port, which reads and writes them under its own names in
- * other files (main_imports.h lists them); this file defines the fields
- * only Main.c uses, each at its original address, in address order.
+ * The unit's .bss is the original's mainGlobs, one external struct
+ * (finding 679). Thirteen of its fields are shared with the port, which
+ * defines them under its own names in other files (main_imports.h lists
+ * them); in the matching build those names are mainGlobs fields
+ * (main_globs.h), here and in every unit that reads them. The file also
+ * holds the commons of Input.c that the converted units share, after the
+ * last function.
  *
  * C-compatible (ADR 0005): C in the matching build, C++ in the MinGW
  * reference build. */
@@ -45,6 +48,10 @@
 #include "soundsys.h"
 #include "utils.h"
 #include "main_imports.h"
+#define LEGORRR_MAIN_GLOBS_OWNER
+#include "gods98/main_globs.h"
+
+#define MAIN_MAXRENDERSTATES        200
 
 #define MAIN_FLAG_UPDATED           0x00000001
 #define MAIN_FLAG_FULLSCREEN        0x00000002
@@ -70,8 +77,6 @@
 #define MAIN_FLAG_REDUCEPROMESHES   0x00800000
 #define MAIN_FLAG_REDUCEFLICS       0x01000000
 #define MAIN_FLAG_REDUCEIMAGES      0x02000000
-
-#define MAIN_MAXRENDERSTATES        200
 
 /* The COM interfaces the unit calls, with only the methods it uses. */
 typedef struct Main_Guid {
@@ -179,36 +184,39 @@ static const Main_Guid s_iid_direct3drm3 = {
     { 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3 }
 };
 
-/* mainGlobs fields only Main.c uses (the others: main_imports.h). */
-// GLOBAL: LEGORR 0x00505810
-static char* s_main_class_name;
-// GLOBAL: LEGORR 0x00505814
-static char s_main_program_name[256];
-// GLOBAL: LEGORR 0x0050592c
-static Main_State s_main_curr_state;
-// GLOBAL: LEGORR 0x00505938
-static int s_main_state_set;
-/* Main_GetFixedFrameTiming's value. External with C linkage because
- * Reward.c's scroll update reads it in the matching build (finding 630). */
+/* The unit's .bss, mainGlobs (main_globs.h): one external definition with
+ * `= { 0 }`, so it stays in the object's .bss (finding 669). Reward.c and
+ * Advisor.c read fixedFrameTiming and startLevel, and in the matching build
+ * every unit that reads a field the port shares reads it here. */
+typedef struct Main_Globs {
+    void* hWnd;
+    void* hInst;
+    unsigned int active;
+    unsigned int exit;
+    char* className;
+    char programName[256];
+    void* lpD3DRM;
+    void* device;
+    void* imDevice;
+    unsigned int fogMethod;
+    int appWidth;
+    int appHeight;
+    Main_State currState;
+    int stateSet;
+    float fixedFrameTiming;
+    Main_StateChangeData renderStates[MAIN_MAXRENDERSTATES];
+    unsigned int style;
+    unsigned int flags;
+    int programmerLevel;
+    char startLevel[256];
+    unsigned int clFlags;
+} Main_Globs;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-// GLOBAL: LEGORR 0x0050593c
-float s_frame_interval_override;
-#ifdef __cplusplus
-}
-#endif
-// GLOBAL: LEGORR 0x00505940
-static Main_StateChangeData s_main_render_states[MAIN_MAXRENDERSTATES];
-// GLOBAL: LEGORR 0x00505f80
-static unsigned int s_main_style;
-/* Main_GetStartLevel's value. External with C linkage because Advisor.c's
- * inline reads it (finding 633). */
-#ifdef __cplusplus
-extern "C" {
-#endif
-// GLOBAL: LEGORR 0x00505f8c
-char s_start_level_name[256];
+// GLOBAL: LEGORR 0x00505800
+Main_Globs mainGlobs = { 0 };
 #ifdef __cplusplus
 }
 #endif
@@ -288,26 +296,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         for (argv0 = s = GetCommandLineA(); *s != '\0'; s++) {
             if (*s == '\\') argv0 = s + 1;
         }
-        strcpy(s_main_program_name, argv0);
-        for (s = s_main_program_name; *s != '\0'; s++) {
+        strcpy(mainGlobs.programName, argv0);
+        for (s = mainGlobs.programName; *s != '\0'; s++) {
             if (*s == '"') *s = '\0';
         }
-        for (ext = s = s_main_program_name; *s != '\0'; s++) {
+        for (ext = s = mainGlobs.programName; *s != '\0'; s++) {
             if (*s == '.') ext = s + 1;
         }
-        if (ext != s_main_program_name) {
+        if (ext != mainGlobs.programName) {
             strupr(ext);
             // STRING: LEGORR 0x004aac70
-            if ((s = strstr(s_main_program_name, ".EXE")) != NULL) *s = '\0';
+            if ((s = strstr(mainGlobs.programName, ".EXE")) != NULL) *s = '\0';
         }
     }
 
-    s_main_class_name = s_main_program_name;
+    mainGlobs.className = mainGlobs.programName;
     s_window_application_active = FALSE;
     s_window_close_requested = FALSE;
-    s_main_state_set = FALSE;
+    mainGlobs.stateSet = FALSE;
     g_main_instance_handle = hInstance;
-    s_frame_interval_override = 0.0f;
+    mainGlobs.fixedFrameTiming = 0.0f;
     s_engine_feature_word = 0;
 
     // STRING: LEGORR 0x004aac5c
@@ -330,7 +338,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
     ledger_stub_0048b260_StartupStreamStateReset();
     level_map_slots_reset();
-    file_initialise(s_main_program_name, insistOnCD, MAIN_REGISTRY_KEY);
+    file_initialise(mainGlobs.programName, insistOnCD, MAIN_REGISTRY_KEY);
     block_text_token_pool_init();
     input_direct_initialize();
 
@@ -343,18 +351,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                             noHALMsg)) {
             avi_initialise(directDrawGlobs.lpDirectDraw);
             surface_render_setup(NULL);
-            lego_game_config_callback_registry_init(s_main_program_name);
+            lego_game_config_callback_registry_init(mainGlobs.programName);
 
-            if (s_main_state_set) {
-                if (s_main_curr_state.Initialise != NULL) {
-                    if (!s_main_curr_state.Initialise()) {
-                        s_main_curr_state.Initialise = NULL;
-                        s_main_curr_state.MainLoop = NULL;
-                        s_main_curr_state.Shutdown = NULL;
+            if (mainGlobs.stateSet) {
+                if (mainGlobs.currState.Initialise != NULL) {
+                    if (!mainGlobs.currState.Initialise()) {
+                        mainGlobs.currState.Initialise = NULL;
+                        mainGlobs.currState.MainLoop = NULL;
+                        mainGlobs.currState.Shutdown = NULL;
                     }
                 }
 
-                if (s_main_curr_state.MainLoop != NULL) {
+                if (mainGlobs.currState.MainLoop != NULL) {
                     float time = 1.0f;
                     unsigned long lastTime, currTime;
 
@@ -373,7 +381,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                         input_state_poll_retail();
                         input_cursor_position_update();
 
-                        if (!s_main_curr_state.MainLoop(time))
+                        if (!mainGlobs.currState.MainLoop(time))
                             s_window_close_requested = TRUE;
 
                         renderer_begin_frame_once_retail();
@@ -386,20 +394,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                         } else if (s_engine_feature_word & MAIN_FLAG_PAUSED) {
                             time = 0.0f;
                             lastTime = timeGetTime();
-                        } else if (0.0f == s_frame_interval_override) {
+                        } else if (0.0f == mainGlobs.fixedFrameTiming) {
                             currTime = timeGetTime();
                             time = (float)(currTime - lastTime) * 0.025f;
                             lastTime = currTime;
                             if (time > 3.0f) time = 3.0f;
                         } else {
-                            time = s_frame_interval_override;
+                            time = mainGlobs.fixedFrameTiming;
                             lastTime = timeGetTime();
                         }
                     }
                 }
 
-                if (s_main_curr_state.Shutdown != NULL)
-                    s_main_curr_state.Shutdown();
+                if (mainGlobs.currState.Shutdown != NULL)
+                    mainGlobs.currState.Shutdown();
             }
         }
 
@@ -474,8 +482,8 @@ void winmain_parse_options(const char* lpCmdLine, int* nosound,
         const char* level = s + 11;
         int i = 0;
         while (*level != '\0' && *level == ' ') level++;
-        while (*level != '\0' && *level != ' ') s_start_level_name[i++] = *level++;
-        s_start_level_name[i] = '\0';
+        while (*level != '\0' && *level != ' ') mainGlobs.startLevel[i++] = *level++;
+        mainGlobs.startLevel[i] = '\0';
         s_engine_feature_word |= MAIN_FLAG_STARTLEVEL;
     }
 
@@ -487,7 +495,7 @@ void winmain_parse_options(const char* lpCmdLine, int* nosound,
     // STRING: LEGORR 0x004aacb0
     if ((s = case_insensitive_substring_find(lpCmdLine, "-fpslock")) != NULL) {
         unsigned int fps = atoi(s + 8);
-        if (fps) s_frame_interval_override = 25.0f / fps;
+        if (fps) mainGlobs.fixedFrameTiming = 25.0f / fps;
     }
 
     // STRING: LEGORR 0x004aaca4
@@ -540,8 +548,8 @@ void renderer_begin_frame_once_retail(void)
 int window_runtime_callback_triplet_set(const Main_State* state)
 {
     if (state) {
-        s_main_curr_state = *state;
-        s_main_state_set = TRUE;
+        mainGlobs.currState = *state;
+        mainGlobs.stateSet = TRUE;
         return TRUE;
     }
     return FALSE;
@@ -595,9 +603,9 @@ void renderer_window_mode_apply(int fullScreen, int xPos, int yPos,
         rect.top = yPos;
         rect.right = xPos + width;
         rect.bottom = yPos + height;
-        s_main_style = WS_POPUP | WS_SYSMENU | WS_CAPTION;
+        mainGlobs.style = WS_POPUP | WS_SYSMENU | WS_CAPTION;
         window_runtime_adjust_rect(&rect);
-        SetWindowLongA((HWND)g_platform_cursor_window_handle, GWL_STYLE, s_main_style);
+        SetWindowLongA((HWND)g_platform_cursor_window_handle, GWL_STYLE, mainGlobs.style);
         SetWindowPos((HWND)g_platform_cursor_window_handle, NULL, rect.left, rect.top,
                      rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER);
         ShowCursor(FALSE);
@@ -669,7 +677,7 @@ int direct3drm_device_initialize(DirectDraw_Device* dev, void* ddraw1,
 void window_runtime_adjust_rect(LPRECT rect)
 {
     if (!(s_engine_feature_word & MAIN_FLAG_FULLSCREEN))
-        AdjustWindowRect(rect, s_main_style, FALSE);
+        AdjustWindowRect(rect, mainGlobs.style, FALSE);
 }
 
 // FUNCTION: LEGORR 0x00478330
@@ -729,11 +737,11 @@ int main_init_app(HINSTANCE hInstance)
     wc.hCursor = NULL;
     wc.hbrBackground = NULL;
     wc.lpszMenuName = NULL;
-    wc.lpszClassName = s_main_class_name;
+    wc.lpszClassName = mainGlobs.className;
 
     if (RegisterClassA(&wc)) {
         g_platform_cursor_window_handle = CreateWindowExA(
-            WS_EX_APPWINDOW, s_main_class_name, s_config_angle_empty, WS_POPUP | WS_SYSMENU,
+            WS_EX_APPWINDOW, mainGlobs.className, s_config_angle_empty, WS_POPUP | WS_SYSMENU,
             0, 0, 100, 100, NULL, NULL, hInstance, NULL);
         if (g_platform_cursor_window_handle) {
             SetFocus((HWND)g_platform_cursor_window_handle);
@@ -931,7 +939,7 @@ void direct3d_render_state_set_cached(DWORD dwRenderStateType,
     lpIMDevice()->lpVtbl->GetRenderState(lpIMDevice(), dwRenderStateType, &currValue);
     if (currValue != dwRenderState) {
         lpIMDevice()->lpVtbl->SetRenderState(lpIMDevice(), dwRenderStateType, dwRenderState);
-        data = &s_main_render_states[dwRenderStateType];
+        data = &mainGlobs.renderStates[dwRenderStateType];
         if (data->changed) {
             if (data->origValue == currValue) data->changed = FALSE;
         } else {
@@ -947,10 +955,10 @@ void d3d_material_state_flush(void)
     unsigned int loop;
 
     for (loop = 0; loop < MAIN_MAXRENDERSTATES; loop++) {
-        if (s_main_render_states[loop].changed) {
+        if (mainGlobs.renderStates[loop].changed) {
             lpIMDevice()->lpVtbl->SetRenderState(lpIMDevice(), loop,
-                                                 s_main_render_states[loop].origValue);
-            s_main_render_states[loop].changed = FALSE;
+                                                 mainGlobs.renderStates[loop].origValue);
+            mainGlobs.renderStates[loop].changed = FALSE;
         }
     }
 }
@@ -1078,5 +1086,44 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
 
     return result;
 }
+
+
+/* Input.c's state that the port's own Input.c (input.cpp, input_unit.cpp)
+ * and the converted units share: the two key maps and the mouse words. The
+ * original keeps them in the commons (0076aa00-0076ac80), outside every
+ * unit's .bss, so these are tentative definitions, as objective_unit.c's
+ * lClicked (0076ab48). Input.c is not converted, so they are here, after
+ * every function, where they move no symbol counter (finding 538). Natively
+ * input.cpp and port_state.cpp define them (finding 679). */
+#ifdef __cplusplus
+extern "C" {
+#endif
+// GLOBAL: LEGORR 0x0076aa00
+unsigned char s_global_previous_keys[256];
+// GLOBAL: LEGORR 0x0076ab24
+unsigned int s_renderer_word_a;
+// GLOBAL: LEGORR 0x0076ab28
+unsigned int s_renderer_word_b;
+// GLOBAL: LEGORR 0x0076ab34
+int s_cursor_delta_x;
+// GLOBAL: LEGORR 0x0076ab38
+int s_cursor_delta_y;
+// GLOBAL: LEGORR 0x0076ab3c
+unsigned int g_renderer_word_c;
+// GLOBAL: LEGORR 0x0076ab40
+unsigned int s_window_mouse_word_40;
+// GLOBAL: LEGORR 0x0076ab4c
+unsigned int s_window_mouse_word_4c;
+// GLOBAL: LEGORR 0x0076ab50
+unsigned int s_window_mouse_word_50;
+// GLOBAL: LEGORR 0x0076ab54
+unsigned int s_window_mouse_word_54;
+// GLOBAL: LEGORR 0x0076ab58
+unsigned int s_window_mouse_word_58;
+// GLOBAL: LEGORR 0x0076ab80
+unsigned char s_global_current_keys[256];
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !LEGORRR_BACKEND_MINIWIN */

@@ -63,7 +63,7 @@
 
 /* mainGlobs.lpD3DRM (G98-005), which lws.c's Lws_CreateFrames reads. A
  * stand-in: the port does not own Main.c's renderer (gods98/main.h). */
-// GLOBAL: LEGORR 0x00505914
+/* The port's mainGlobs.lpD3DRM (00505914); main.c defines the original's (finding 679). */
 void* s_main_d3drm;
 
 namespace unported_ledger_stubs {

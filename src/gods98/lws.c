@@ -517,6 +517,9 @@ unsigned long resource_entry_id_get(LwsInfo* scene)
     return scene->lastFrame;
 }
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x004877e0
 void lws_sound_triggers_setup(LwsInfo* scene)
 {

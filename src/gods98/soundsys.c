@@ -69,6 +69,9 @@ static SoundGlobs soundGlobs;
 // GLOBAL: LEGORR 0x00576500
 char sound_mci_return[SOUND_MCI_RETURN_SIZE];
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 /* Sound_Initialise: with sound on, start 3D sound on the main window. */
 // FUNCTION: LEGORR 0x00488b50
 int media_cd_audio_device_state_update(int nosound)

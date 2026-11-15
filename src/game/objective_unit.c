@@ -643,6 +643,9 @@ int objective_is_ended(void)
     return 0;
 }
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x004589c0
 int objective_handle_keys(int nextKeyPressed, int leftButtonReleased,
                           int* outKeyPressed)

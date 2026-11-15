@@ -46,6 +46,9 @@ void init_set_mode_list(HWND hWndDlg);
 void init_set_device_list(HWND hWndDlg);
 void init_handle_window_button(HWND hWndDlg);
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x0049d030
 int init_initialise(int setup, int debug, int best, int window,
                     const char* noHALMsg)

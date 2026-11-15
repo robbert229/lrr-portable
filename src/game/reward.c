@@ -155,6 +155,9 @@ void reward_load_item_font(RewardLevelItem* item)
     item->font = rewardGlobs.font;
 }
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x0045f290
 void reward_load_item_box_image(RewardLevelItem* item)
 {
@@ -1600,11 +1603,11 @@ void reward_scroll_flags_set(RewardScroll* scroll, unsigned int flags)
     scroll->flags |= flags;
 }
 
-/* Main.c's fixed frame interval (0050593c, platform/winapi/entry.cpp), which
- * the original passes to TextWindow_Update. Natively the port's 1.0f stays. */
+/* Main.c's fixed frame interval (mainGlobs.fixedFrameTiming, 0050593c),
+ * which the original passes to TextWindow_Update. Natively the port's 1.0f
+ * stays. */
 #if defined(_MSC_VER) && _MSC_VER < 1200
-extern float s_frame_interval_override;
-#define REWARD_TEXT_WINDOW_TIME s_frame_interval_override
+#define REWARD_TEXT_WINDOW_TIME mainGlobs.fixedFrameTiming
 #else
 #define REWARD_TEXT_WINDOW_TIME 1.0f
 #endif

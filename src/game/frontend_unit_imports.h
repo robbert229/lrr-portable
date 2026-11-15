@@ -30,9 +30,11 @@ struct TextureSurface;
 struct Flic;
 
 /* gods98 Main.c and Input.c state (crt.cpp, input). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: mainGlobs, main_globs.h */
 extern int s_display_w;                     /* 00505924 appWidth */
 extern uint32_t s_engine_feature_word;      /* 00505f84 mainGlobs.flags */
 extern int32_t s_application_mode;          /* 00505f88 programmerLevel */
+#endif
 extern uint32_t s_renderer_word_a;          /* 0076ab24 msx */
 extern uint32_t s_renderer_word_b;          /* 0076ab28 msy */
 extern uint32_t g_renderer_word_c;          /* 0076ab3c mslb */
@@ -153,5 +155,9 @@ void text_buffer_reset_target(void* record);                      /* 004859b0 */
 #ifdef __cplusplus
 }
 #endif
+
+/* Main.c's mainGlobs and, in the matching build, the port's names as its
+ * fields (finding 679). */
+#include "gods98/main_globs.h"
 
 #endif /* LEGORRR_GAME_FRONTEND_UNIT_IMPORTS_H */

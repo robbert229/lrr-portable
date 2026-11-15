@@ -81,7 +81,7 @@ extern "C" { int32_t s_context_mode; } /* gods98/engine.h: Advisor.c reads it */
 #endif
 
 /* GlobalField505f88Get and CommandLineOptionParse share this app-mode word. */
-// GLOBAL: LEGORR 0x00505f88
+/* The port's mainGlobs.programmerLevel (00505f88); main.c defines the original's (finding 679). */
 int32_t s_application_mode;
 static EngineContext* s_engine_current_context;
 static uint32_t s_engine_bootstrap_state;

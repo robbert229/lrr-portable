@@ -33,7 +33,11 @@ void lego_game_config_callback_registry_init(const char* gameName); /* 0041fa20 
  * image (config.c; finding 624). */
 extern const char s_config_angle_empty[4];
 
-/* DAT_00505800 and DAT_00505804: Main.c's window and module instance
+/* The port's names of thirteen mainGlobs fields. In the matching build
+ * main_globs.h makes each the field (finding 679); in the reference build
+ * they are the port's variables.
+ *
+ * DAT_00505800 and DAT_00505804: Main.c's window and module instance
  * (platform/window.h, platform/winapi/frameloop.cpp). */
 extern void* g_platform_cursor_window_handle;
 extern void* g_main_instance_handle;
@@ -57,7 +61,8 @@ extern unsigned int s_engine_feature_word;
 extern int s_application_mode;
 extern unsigned int s_render_feature_flags;
 /* DAT_0076ab3c to DAT_0076ab58: Input.c's mouse button state, which the
- * window procedures write (crt.hpp). */
+ * window procedures write: commons that main.c defines after its last
+ * function (finding 679), port_state.cpp natively. */
 extern unsigned int g_renderer_word_c;
 extern unsigned int s_window_mouse_word_40;
 extern unsigned int s_window_mouse_word_4c;

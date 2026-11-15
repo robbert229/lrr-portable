@@ -224,6 +224,9 @@ float vec2_dist(const float* a, const float* b)
     return (float)sqrt((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]));
 }
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x00401270
 void advisor_config_slots_load_target(BlockFile* config, const char* gameName)
 {
@@ -586,21 +589,14 @@ int engine_app_mode_get(void)
 }
 
 /* Main_GetStartLevel, a Main.h inline: the level named on the command line
- * (-startlevel), kept in Main.c's buffer (00505f8c), which the port defines
- * in the Win32 entry point (platform/winapi/entry.cpp). The native port has
- * no such buffer and no start level (finding 633). */
-#if !defined(LEGORRR_BACKEND_MINIWIN)
-#ifdef __cplusplus
-extern "C"
-#endif
-char s_start_level_name[];
-#endif
+ * (-startlevel), kept in mainGlobs.startLevel (00505f8c, main.c). The
+ * native port has no such buffer and no start level (finding 633). */
 
 // FUNCTION: LEGORR 0x00401c00
 const char* main_get_start_level(void)
 {
 #if !defined(LEGORRR_BACKEND_MINIWIN)
-    return (s_engine_feature_word & ADVISOR_MAIN_FLAG_STARTLEVEL) ? s_start_level_name : NULL;
+    return (s_engine_feature_word & ADVISOR_MAIN_FLAG_STARTLEVEL) ? mainGlobs.startLevel : NULL;
 #else
     return NULL;
 #endif

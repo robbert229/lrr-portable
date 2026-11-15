@@ -71,6 +71,9 @@ static DamageFont_Globs damageFontGlobs;
 static void damage_font_mesh_render_callback(void* mesh, DamageFont_Data* data,
                                              void* view);
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x0040a0c0
 void credits_play(const char* textFile, struct TextureSurface* font,
                   const char* aviFile)
