@@ -418,9 +418,9 @@ void electric_fence_spark(int bx, int by, int force, float elapsed)
             (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * y + x].fence != NULL ||
              (electric_fence_block_is_building(electricFenceGlobs.level, x, y, 1) &&
               !electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0)))) {
+            tx = x;
             found = 1;
             adjacent = 1;
-            tx = x;
             ty = y;
         }
         if (!found) {

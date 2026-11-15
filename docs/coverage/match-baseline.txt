@@ -1,4 +1,4 @@
-# input_sha256: 7e9356d3d41be31ff1ff4887349c8caec4cff3d2a5a45fe6e0a0dba412ae850d
+# input_sha256: a467274daab4fb5b1ea89dd6f1a250551110c3d5fff5baf41b49514cce1cee74
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -328,7 +328,7 @@
 0x0040d5e0 93.10 electric_fence_building_spark_callback
 0x0040d720 100.00 electric_fence_building_clear_callback
 0x0040d770 100.00 electric_fence_node_update_callback
-0x0040d850 59.62 electric_fence_spark
+0x0040d850 59.97 electric_fence_spark
 0x0040dc20 100.00 electric_fence_beam_create
 0x0040dd90 100.00 electric_fence_block_vector_get
 0x0040de40 99.51 electric_fence_object_strike
@@ -357,7 +357,7 @@
 0x0040f330 100.00 lava_erosion_neighbor_mutate
 0x0040f5e0 100.00 global_config_value_set
 0x0040f5f0 100.00 lava_erosion_eight_neighbor_propagate
-0x0040f6c0 82.93 scene_node_record_create
+0x0040f6c0 100.00 scene_node_record_create
 0x0040f7b0 100.00 optional_resource_destroy
 0x0040f7d0 100.00 callback_state_record_create
 0x0040f850 100.00 callback_state_list_dispose
@@ -427,7 +427,7 @@
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
 0x00411a00 84.59 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
-0x00411f10 47.67 front_menu_item_draw_slider
+0x00411f10 63.01 front_menu_item_draw_slider
 0x00412170 100.00 front_menu_get_overlay_count
 0x00412190 100.00 front_menu_should_random_play
 0x004121b0 75.93 front_menu_update_overlays
@@ -435,7 +435,7 @@
 0x004124f0 79.43 front_menu_item_draw_save_image
 0x00412750 62.32 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
-0x00412af0 70.91 front_menu_draw_menu_image
+0x00412af0 96.10 front_menu_draw_menu_image
 0x00412c00 59.59 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 97.59 front_menu_load_slot_images
@@ -3053,7 +3053,7 @@
 0x0040d5e0 93.10 electric_fence_building_spark_callback
 0x0040d720 100.00 electric_fence_building_clear_callback
 0x0040d770 100.00 electric_fence_node_update_callback
-0x0040d850 59.62 electric_fence_spark
+0x0040d850 59.97 electric_fence_spark
 0x0040dc20 100.00 electric_fence_beam_create
 0x0040dd90 100.00 electric_fence_block_vector_get
 0x0040de40 99.51 electric_fence_object_strike
@@ -3082,7 +3082,7 @@
 0x0040f330 100.00 lava_erosion_neighbor_mutate
 0x0040f5e0 100.00 global_config_value_set
 0x0040f5f0 100.00 lava_erosion_eight_neighbor_propagate
-0x0040f6c0 82.93 scene_node_record_create
+0x0040f6c0 100.00 scene_node_record_create
 0x0040f7b0 100.00 optional_resource_destroy
 0x0040f7d0 100.00 callback_state_record_create
 0x0040f850 100.00 callback_state_list_dispose
@@ -3152,7 +3152,7 @@
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
 0x00411a00 84.59 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
-0x00411f10 47.67 front_menu_item_draw_slider
+0x00411f10 63.01 front_menu_item_draw_slider
 0x00412170 100.00 front_menu_get_overlay_count
 0x00412190 100.00 front_menu_should_random_play
 0x004121b0 75.93 front_menu_update_overlays
@@ -3160,7 +3160,7 @@
 0x004124f0 79.43 front_menu_item_draw_save_image
 0x00412750 62.32 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
-0x00412af0 70.91 front_menu_draw_menu_image
+0x00412af0 96.10 front_menu_draw_menu_image
 0x00412c00 59.59 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 97.59 front_menu_load_slot_images

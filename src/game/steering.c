@@ -89,11 +89,11 @@ SteeringItem* scene_node_record_create(const SteeringVector3* position,
     if (position != NULL) item->position = *position;
     else item->position = origin;
 
-    item->wanderTime = 0.0f;
     item->turnStep = item->baseTurnStep = turnStep;
     item->speed = item->baseSpeed = speed;
     item->wanderRadius = item->baseWanderRadius = wanderRadius;
     item->wanderPeriod = item->baseWanderPeriod = wanderPeriod;
+    item->wanderTime = 0.0f;
     item->container = container;
     return item;
 }

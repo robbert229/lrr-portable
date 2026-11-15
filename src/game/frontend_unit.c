@@ -1566,11 +1566,11 @@ void front_menu_item_draw_slider(Front_SliderData* slider, unsigned int x, unsig
 
     src.x = 0.0f;
     src.y = 0.0f;
+    dest.x = (float)x;
+    dest.y = (float)y;
     pct = (float)((value * 100) / range);
     src.width = pct;
     src.height = 20.0f;
-    dest.x = (float)x;
-    dest.y = (float)y;
     image_display_scaled(slider->imageBarOn, &src, &dest, NULL);
 
     src.x = pct;
@@ -1902,8 +1902,8 @@ void front_menu_draw_menu_image(Front_Menu* menu, int light)
                 image_display_scaled(menu->menuImage, NULL, (Point2F*)menu->imagePos, NULL);
                 return;
             }
-            src.x = -(float)frontGlobs_scrollOffsetX;
             src.y = -(float)frontGlobs_scrollOffsetY;
+            src.x = -(float)frontGlobs_scrollOffsetX;
             src.width = 640.0f;
             src.height = 480.0f;
             dest.x = 0.0f;
