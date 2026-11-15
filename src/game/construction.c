@@ -496,6 +496,7 @@ unsigned int construction_zone_start_building(int objID, int* blockPos,
     ConstructionPoint2I* shape = (ConstructionPoint2I*)shapePoints;
     unsigned int i;
     int entrance;
+    ConstructionPoint2I* next;
 
     zone->objID = objID;
     zone->direction = direction;
@@ -508,8 +509,9 @@ unsigned int construction_zone_start_building(int objID, int* blockPos,
                               shapeCount, 4.0f);
 
     for (i = 0; i < shapeCount; i++) {
-        if (i != shapeCount - 1 && shape[i].x == shape[i + 1].x &&
-            shape[i].y == shape[i + 1].y) {
+        next = &shape[i + 1];
+        if (i != shapeCount - 1 && shape[i].x == next->x &&
+            shape[i].y == next->y) {
             entrance = 1;
             CONSTRUCTION_BLOCK(level, shape[i].x, shape[i].y).flags1 |=
                 CONSTRUCTION_BLOCK1_ENTRANCE;

@@ -1,4 +1,4 @@
-# input_sha256: 462e30bc310c26727d8ef7984886a5662a0b8687baaa24c912f5323922e47bc9
+# input_sha256: d9bf6100b3a5aadee2d9bd42057722b230eaa4248f0222c6f5d31532603d0f10
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -238,7 +238,7 @@
 0x00409470 100.00 construction_find_resource_object_recurse
 0x00409550 100.00 construction_zone_request_path_resources
 0x00409600 67.48 lego_path_remove
-0x00409790 69.50 construction_zone_start_building
+0x00409790 93.13 construction_zone_start_building
 0x00409940 100.00 terrain_cell_refresh_eight_neighbors_current
 0x004099d0 100.00 path_record_release_all
 0x004099f0 100.00 construction_zone_free
@@ -256,7 +256,7 @@
 0x0040a4b0 100.00 quad_mesh_render_record_create
 0x0040a5c0 90.91 damage_font_get_next_free
 0x0040a5e0 99.25 damage_font_set_damage_number
-0x0040a740 62.56 damage_font_mesh_render_callback
+0x0040a740 71.57 damage_font_mesh_render_callback
 0x0040aa10 94.74 simtick_table_dispatch_original
 0x0040aa40 100.00 damage_font_update
 0x0040aae0 100.00 entity_quad_mesh_render_record_allowed
@@ -2963,7 +2963,7 @@
 0x00409470 100.00 construction_find_resource_object_recurse
 0x00409550 100.00 construction_zone_request_path_resources
 0x00409600 67.48 lego_path_remove
-0x00409790 69.50 construction_zone_start_building
+0x00409790 93.13 construction_zone_start_building
 0x00409940 100.00 terrain_cell_refresh_eight_neighbors_current
 0x004099d0 100.00 path_record_release_all
 0x004099f0 100.00 construction_zone_free
@@ -2981,7 +2981,7 @@
 0x0040a4b0 100.00 quad_mesh_render_record_create
 0x0040a5c0 90.91 damage_font_get_next_free
 0x0040a5e0 99.25 damage_font_set_damage_number
-0x0040a740 62.56 damage_font_mesh_render_callback
+0x0040a740 71.57 damage_font_mesh_render_callback
 0x0040aa10 94.74 simtick_table_dispatch_original
 0x0040aa40 100.00 damage_font_update
 0x0040aae0 100.00 entity_quad_mesh_render_record_allowed
