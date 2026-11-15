@@ -255,7 +255,7 @@ void sound_samples_config_load(struct BlockRec* config, int allow_marked); /* 00
 /* GAME pointer.cpp (ui_list.hpp, frontend.hpp, media.hpp). */
 void ui_pointer_cursor_name_registry_init(void);           /* 0045c830 */
 void pointer_cursor_config_load_target(struct BlockRec* first_entry); /* 0045ca70 */
-void media_pointer_cursor_select(int slot);                /* 0045cc20 */
+void media_pointer_cursor_select(int);                /* 0045cc20 */
 /* GAME-004 Bubbles.c (util.hpp, ai.hpp). */
 void bubble_action_strings_initialize(void);               /* 004070b0 */
 void bubble_config_texture_load(struct BlockRec* cfg);     /* 00407240 */
@@ -636,7 +636,7 @@ void tutorial_frame_timer_array_advance(float delta);      /* 00453bb0 */
 void objective_announce_current(int who);                  /* 00458670 objective_unit.cpp */
 void objective_tick_target(void* engine, struct LevelState* s,
                            float checker_dt, float frame_dt); /* 00458be0 */
-void media_pointer_cursor_select(int slot);                /* 0045cc20 pointer.cpp */
+void media_pointer_cursor_select(int);                /* 0045cc20 pointer.cpp */
 void pointer_cursor_draw_target(uint32_t x, uint32_t y);   /* 0045cc70 */
 void media_pointer_cursor_override_tick(float delta);      /* 0045cd90 */
 void graphics_overlay_visibility_set(uint32_t flag);       /* 004634b0 */

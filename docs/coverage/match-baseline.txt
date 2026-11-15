@@ -1,4 +1,4 @@
-# input_sha256: d86a8086c83ebb4e4f3d7f3d9cbb3f71bb963c7460ae48a650cbeba82258b3c1
+# input_sha256: 9f346ee8de4094c0f582353b1afec1b8c02341657971e4f446285bbade2ef69f
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -773,7 +773,7 @@
 0x0042bf40 89.72 lego_load_emerge_layer
 0x0042c060 100.00 lego_load_layer_m
 0x0042c120 100.00 lego_load_layer_l
-0x0042c330 55.79 lego_emerge_map_trigger_spawn
+0x0042c330 100.00 lego_emerge_map_trigger_spawn
 0x0042c440 100.00 lego_level_record_timer_countdown
 0x0042c480 100.00 lego_load_erode_cryore
 0x0042c5b0 100.00 lego_terrain_cell_byte_state_classify_current
@@ -3498,7 +3498,7 @@
 0x0042bf40 89.72 lego_load_emerge_layer
 0x0042c060 100.00 lego_load_layer_m
 0x0042c120 100.00 lego_load_layer_l
-0x0042c330 55.79 lego_emerge_map_trigger_spawn
+0x0042c330 100.00 lego_emerge_map_trigger_spawn
 0x0042c440 100.00 lego_level_record_timer_countdown
 0x0042c480 100.00 lego_load_erode_cryore
 0x0042c5b0 100.00 lego_terrain_cell_byte_state_classify_current
