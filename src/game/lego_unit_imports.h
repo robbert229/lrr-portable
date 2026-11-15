@@ -402,7 +402,7 @@ void* container_initialise_original(const char* gameName);
 #endif
 void lego_object_trigger_frame_callback_adapter(void* cont, void* data);
 /* DirectDraw_AdjustTextureUsage (0047cd50, directdraw.h). */
-void directdraw_adjust_texture_usage(unsigned int* textureUsage);
+void directdraw_adjust_texture_usage(unsigned int*);
 /* TextWindow-backed message panel set-up (0046a950): no port entry
  * (lego.cpp). */
 void text_message_panel_initialise_adapter(const char* imageFile,

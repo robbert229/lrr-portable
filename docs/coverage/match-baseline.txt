@@ -1,4 +1,4 @@
-# input_sha256: 6eb5ee68dee25bd5a326cce439af2900a8091307a9b3cabd31705262774fb58e
+# input_sha256: 92e5d46e8ea370038190c0a0308d151fb6853efa66e8478c5a6b02852da3b349
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -810,9 +810,9 @@
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
 0x00431140 100.00 lego_terrain_cell_queued_work_transition
-0x004311d0 67.15 lego_block_activity_create
+0x004311d0 70.80 lego_block_activity_create
 0x004313b0 100.00 lego_block_activity_update_all
-0x00431450 83.78 lego_terrain_neighbor_flag_refresh
+0x00431450 100.00 lego_terrain_neighbor_flag_refresh
 0x004314c0 100.00 lego_block_activity_remove
 0x00431530 100.00 lego_block_activity_remove_all
 0x00431560 100.00 level_current_owner_get
@@ -3535,9 +3535,9 @@
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
 0x00431140 100.00 lego_terrain_cell_queued_work_transition
-0x004311d0 67.15 lego_block_activity_create
+0x004311d0 70.80 lego_block_activity_create
 0x004313b0 100.00 lego_block_activity_update_all
-0x00431450 83.78 lego_terrain_neighbor_flag_refresh
+0x00431450 100.00 lego_terrain_neighbor_flag_refresh
 0x004314c0 100.00 lego_block_activity_remove
 0x00431530 100.00 lego_block_activity_remove_all
 0x00431560 100.00 level_current_owner_get
