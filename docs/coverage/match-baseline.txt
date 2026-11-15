@@ -1,4 +1,4 @@
-# input_sha256: 9d2cb7b02b058f264d8f4ce5dea2c374bd3045fa53e99af728633bf8724cd966
+# input_sha256: 7b6299f1bfb84041bb3f98d8093c776701f654872a8e17bbc5bfcde0ed87635b
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2407,7 +2407,7 @@
 0x0047db90 100.00 Image_RGB2CR
 0x0047dbc0 100.00 Image_SetPenZeroTrans
 0x0047dbf0 100.00 Image_SetupTrans
-0x0047dcb0 68.16 Image_DisplayScaled
+0x0047dcb0 98.48 Image_DisplayScaled
 0x0047de60 100.00 Image_LockSurface
 0x0047ded0 100.00 Image_UnlockSurface
 0x0047def0 100.00 Image_GetPen255
@@ -5132,7 +5132,7 @@
 0x0047db90 100.00 Image_RGB2CR
 0x0047dbc0 100.00 Image_SetPenZeroTrans
 0x0047dbf0 100.00 Image_SetupTrans
-0x0047dcb0 68.16 Image_DisplayScaled
+0x0047dcb0 98.48 Image_DisplayScaled
 0x0047de60 100.00 Image_LockSurface
 0x0047ded0 100.00 Image_UnlockSurface
 0x0047def0 100.00 Image_GetPen255

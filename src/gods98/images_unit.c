@@ -528,7 +528,6 @@ void Image_DisplayScaled(Image* image, const Area2F* src,
 {
     Image_Rect r_src;
     Image_Rect r_dst;
-    Image_SurfaceIface* bSurf = DirectDraw_bSurf();
 
     if (src) {
         r_src.left = (int)floor(src->x);
@@ -552,10 +551,12 @@ void Image_DisplayScaled(Image* image, const Area2F* src,
         }
     }
 
-    bSurf->lpVtbl->Blt(bSurf, destPos ? &r_dst : NULL, Image_Surface(image),
-                       src ? &r_src : NULL,
-                       (image->flags & IMAGE_FLAG_TRANS) ? DDBLT_KEYSRC | DDBLT_WAIT : DDBLT_WAIT,
-                       NULL);
+    if (image->flags & IMAGE_FLAG_TRANS)
+        DirectDraw_bSurf()->lpVtbl->Blt(DirectDraw_bSurf(), destPos ? &r_dst : NULL, Image_Surface(image),
+                                        src ? &r_src : NULL, DDBLT_KEYSRC | DDBLT_WAIT, NULL);
+    else
+        DirectDraw_bSurf()->lpVtbl->Blt(DirectDraw_bSurf(), destPos ? &r_dst : NULL, Image_Surface(image),
+                                        src ? &r_src : NULL, DDBLT_WAIT, NULL);
 }
 
 // FUNCTION: LEGORR 0x0047de60
