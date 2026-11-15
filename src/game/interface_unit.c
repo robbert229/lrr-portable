@@ -124,6 +124,9 @@
 // GLOBAL: LEGORR 0x004dcd58
 InterfaceGlobs interfaceGlobs = { 0 };
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x0041a300
 void interface_initialise(unsigned int x, unsigned int y,
                           struct TextureSurface* font)

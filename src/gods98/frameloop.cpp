@@ -78,9 +78,9 @@ static void menu_sound_tick_clock_advance(MenuSoundTickClock* clock)
 static MainLoopFramePumpHooks s_main_loop_frame_pump_hooks;
 static WindowRuntimeOps s_window_runtime_ops;
 WindowRuntimeState s_window_runtime_state;
-// GLOBAL: LEGORR 0x00505808
+/* The port's mainGlobs.active (00505808); main.c defines the original's (finding 679). */
 uint32_t s_window_application_active;
-// GLOBAL: LEGORR 0x0050580c
+/* The port's mainGlobs.exit (0050580c); main.c defines the original's (finding 679). */
 uint32_t s_window_close_requested;
 /* The port's copy of Main.c's window style (gods98/main.c owns 00505f80). */
 static int32_t s_window_runtime_style;

@@ -30,12 +30,21 @@ extern uint32_t directDrawGlobs[];
 #define s_render_surface_secondary (directDrawGlobs[3])
 #endif
 
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Main.c's mainGlobs (finding 679), in place of the port's three names
+ * below: the units that use them include gods98/main_globs.h again, after
+ * their last declarations, for the names. */
+#define LEGORRR_MAIN_GLOBS_NO_NAMES
+#include "gods98/main_globs.h"
+#undef LEGORRR_MAIN_GLOBS_NO_NAMES
+#else
 /* DAT_00505924 and DAT_00505928: Main.c's window width and height. */
 extern int s_display_w;
 extern int s_display_h;
 
 /* DAT_00505f84: Main.c's flags. */
 extern uint32_t s_engine_feature_word;
+#endif
 
 #ifdef __cplusplus
 }

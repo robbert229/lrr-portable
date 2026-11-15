@@ -227,6 +227,9 @@ void pointer_initialise(void)
     // STRING: LEGORR 0x004a8a14
     pointerGlobs.names[Pointer_SurfaceType_RechargeSeam] = "Pointer_SurfaceType_RechargeSeam";}
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x0045ca70
 void pointer_load_pointers(BlockRec* config)
 {

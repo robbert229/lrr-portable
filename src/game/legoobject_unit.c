@@ -9189,6 +9189,8 @@ void* model_entry_record_load(void* previous, const char* partName, const char* 
                               const char* meshName, unsigned int setID); /* 004519b0 */
 void* model_primitive_record_create(void* previous, const char* name, unsigned int setID); /* 00451ab0 */
 extern uint32_t s_engine_feature_word;            /* 00505f84 mainGlobs.flags */
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
 /* Building placement: Pointer.c, Interface.c, Advisor.c, Stats.c (C). */
 void media_pointer_cursor_select(int slot);                             /* 0045cc20 */
 void selection_clear_request_and_hud_reset(void);                       /* 0041e750 */

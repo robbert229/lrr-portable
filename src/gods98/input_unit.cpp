@@ -14,6 +14,8 @@ extern "C" int s_cursor_delta_x;
 extern "C" int s_cursor_delta_y;
 #include "input_shared.hpp"
 #include "input_for_input_unit.hpp"
+/* Main.c's mainGlobs fields in the matching build (finding 679). */
+#include "gods98/main_globs.h"
 
 // FUNCTION: LEGORR 0x0047ed90
 int input_direct_initialize(void)

@@ -237,6 +237,9 @@ void viewport_shutdown(void)
     viewportGlobs.flags = 0;
 }
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x00476dc0
 Viewport* viewport_create(float xPos, float yPos, float width, float height,
                           Container* camera)

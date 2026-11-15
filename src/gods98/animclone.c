@@ -211,6 +211,9 @@ static int anim_clone_frame_count_callback(AnimCloneFrame* frame,
 static int anim_clone_setup_frame_array_callback(AnimCloneFrame* frame,
                                                  void* data);
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x004894c0
 void* material_create(float emissiveRed, float emissiveGreen,
                       float emissiveBlue, float specularRed,

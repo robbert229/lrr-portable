@@ -2035,7 +2035,7 @@ int scene_runtime_light_parameter_set(void* light, unsigned int offset,
 #endif
 /* The port's word for containerGlobs.fogColour (0076cd8c; finding 624). */
 uint32_t s_scene_fog_color;
-// GLOBAL: LEGORR 0x00505920
+/* The port's mainGlobs.fogMethod (00505920); main.c defines the original's (finding 679). */
 uint32_t s_scene_fog_mode;
 
 /* The port's model of Viewports.c's viewport pool (viewportGlobs,

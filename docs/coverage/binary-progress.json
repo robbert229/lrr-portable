@@ -1,15 +1,15 @@
 {
   "accuracy_percent": {
     "full": 97.59,
-    "game_only": 97.33
+    "game_only": 97.34
   },
-  "baseline_sha256": "3ce55c1d8ced44a6cbe7df7c3ccfef1c49fb6e2d945ca650460c415d0b9b36b8",
+  "baseline_sha256": "fdc7802bbd84240bcfeac781398774cecb5c216f165aefd1dd360d3f01fcc917",
   "correct_size_functions": {
     "full": {
       "bytes": 464811,
       "compared": 3016,
       "count": 2801,
-      "exact_functions": 2634,
+      "exact_functions": 2636,
       "mapped": 3018,
       "uncompared": 2
     },
@@ -17,7 +17,7 @@
       "bytes": 413984,
       "compared": 2721,
       "count": 2510,
-      "exact_functions": 2346,
+      "exact_functions": 2348,
       "mapped": 2723,
       "uncompared": 2
     },
@@ -39,19 +39,19 @@
           "at_original_address_bytes": 0,
           "at_original_offset": 1,
           "at_original_offset_bytes": 1040,
-          "paired": 169,
-          "paired_bytes": 607665
+          "paired": 149,
+          "paired_bytes": 607673
         },
         "objects": {
           "agreeing": [
             "advisor.c.obj"
           ],
           "at_original_offset": 1,
-          "with_paired_items": 31
+          "with_paired_items": 25
         },
         "original_bytes": 616304,
         "original_start": "0x4b2db0",
-        "rebuilt_bytes": 869744,
+        "rebuilt_bytes": 869488,
         "rebuilt_start": "0x4cf190",
         "start_delta": 115680
       },
@@ -122,7 +122,7 @@
         "original_bytes": 11232,
         "original_start": "0x49e000",
         "prefix_image": "original-mode link",
-        "rebuilt_bytes": 22336,
+        "rebuilt_bytes": 22352,
         "rebuilt_start": "0x4b2000",
         "start_delta": 81920
       },
@@ -131,7 +131,7 @@
           "object": "<common>",
           "offset_delta": 1272,
           "original": "0x5520e8",
-          "rebuilt": "0x5ac7c0",
+          "rebuilt": "0x5ac6c0",
           "rebuilt_region": "commons"
         },
         "items": {
@@ -145,20 +145,20 @@
         "objects": {
           "agreeing": [],
           "at_original_offset": 0,
-          "with_paired_items": 5
+          "with_paired_items": 3
         },
         "original_bytes": 2247092,
         "original_start": "0x549520",
-        "rebuilt_bytes": 2296932,
-        "rebuilt_start": "0x5a3700",
-        "start_delta": 369120
+        "rebuilt_bytes": 2297252,
+        "rebuilt_start": "0x5a3600",
+        "start_delta": 368864
       }
     }
   },
   "exact_function_code_bytes": {
-    "bytes": 347430,
+    "bytes": 348304,
     "original_text_bytes": 642549,
-    "percent": 54.07
+    "percent": 54.21
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 2307,
@@ -192,7 +192,7 @@
     "original_text_bytes": 642549,
     "percent": 0.0
   },
-  "input_sha256": "19c5b0d4682dcd43e66a19c5f2ee66da75f1d74a34d554b9bb421dfa5e2ef9a5",
+  "input_sha256": "1ecf702bbf7c3faa83e0462554d73f319e1458b9b6b61812a1335b38f7020328",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 20,
@@ -1131,143 +1131,143 @@
         },
         {
           "first_public_address": "0x49d810",
-          "object": "lrr_tail:view.cpp.obj"
-        },
-        {
-          "first_public_address": "0x49d830",
           "object": "lrr_tail:frameloop.cpp.obj"
         },
         {
+          "first_public_address": "0x49da90",
+          "object": "lrr_tail:view.cpp.obj"
+        },
+        {
           "first_public_address": "0x49dab0",
-          "object": "lrr_tail:mesh_port.cpp.obj"
-        },
-        {
-          "first_public_address": "0x49e2a0",
-          "object": "lrr_tail:rock_fall_styles_port.cpp.obj"
-        },
-        {
-          "first_public_address": "0x49e3c0",
-          "object": "lrr_tail:texture.cpp.obj"
-        },
-        {
-          "first_public_address": "0x49f1a0",
-          "object": "lrr_tail:terrain_cell_objects_port.cpp.obj"
-        },
-        {
-          "first_public_address": "0x49f3c0",
           "object": "lrr_tail:resource.cpp.obj"
         },
         {
-          "first_public_address": "0x49fda0",
+          "first_public_address": "0x49e490",
           "object": "lrr_tail:building_scene.cpp.obj"
         },
         {
-          "first_public_address": "0x4a0290",
+          "first_public_address": "0x49e980",
           "object": "lrr_tail:actor_scene.cpp.obj"
         },
         {
-          "first_public_address": "0x4a0aa0",
+          "first_public_address": "0x49f190",
           "object": "lrr_tail:scene_render.cpp.obj"
         },
         {
-          "first_public_address": "0x4a0e70",
+          "first_public_address": "0x49f560",
           "object": "lrr_tail:lego_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4a2440",
+          "first_public_address": "0x4a0b30",
           "object": "lrr_tail:legoobject_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4a4240",
+          "first_public_address": "0x4a2930",
           "object": "lrr_tail:entity.cpp.obj"
         },
         {
-          "first_public_address": "0x4a5130",
-          "object": "lrr_tail:scene_resources.cpp.obj"
+          "first_public_address": "0x4a3820",
+          "object": "lrr_tail:mesh_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4a5140",
-          "object": "lrr_tail:model.cpp.obj"
-        },
-        {
-          "first_public_address": "0x4a59b0",
-          "object": "lrr_tail:container_port.cpp.obj"
-        },
-        {
-          "first_public_address": "0x4a5cf0",
-          "object": "lrr_tail:level.cpp.obj"
-        },
-        {
-          "first_public_address": "0x4a6a30",
-          "object": "lrr_tail:terrain_map_port.cpp.obj"
-        },
-        {
-          "first_public_address": "0x4a7a20",
-          "object": "lrr_tail:scene_pool.cpp.obj"
-        },
-        {
-          "first_public_address": "0x4a7e20",
-          "object": "lrr_tail:lwsc_winapi.cpp.obj"
-        },
-        {
-          "first_public_address": "0x4a7e60",
+          "first_public_address": "0x4a4010",
           "object": "lrr_tail:surface.cpp.obj"
         },
         {
-          "first_public_address": "0x4a90f0",
-          "object": "lrr_tail:lwo_port.cpp.obj"
+          "first_public_address": "0x4a52a0",
+          "object": "lrr_tail:container_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4aaaa0",
-          "object": "lrr_tail:files_port.cpp.obj"
+          "first_public_address": "0x4a55e0",
+          "object": "lrr_tail:model.cpp.obj"
         },
         {
-          "first_public_address": "0x4aaad0",
-          "object": "lrr_tail:terrain_grid.cpp.obj"
+          "first_public_address": "0x4a5e50",
+          "object": "lrr_tail:level.cpp.obj"
         },
         {
-          "first_public_address": "0x4aaef0",
+          "first_public_address": "0x4a6b90",
+          "object": "lrr_tail:terrain_map_port.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4a7b80",
+          "object": "lrr_tail:scene_pool.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4a7f80",
+          "object": "lrr_tail:lwsc_winapi.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4a7fc0",
           "object": "lrr_tail:block.cpp.obj"
         },
         {
-          "first_public_address": "0x4ab000",
+          "first_public_address": "0x4a80d0",
+          "object": "lrr_tail:rock_fall_styles_port.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4a81f0",
+          "object": "lrr_tail:files_port.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4a8220",
           "object": "lrr_tail:wad_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4ab140",
+          "first_public_address": "0x4a8360",
           "object": "lrr_tail:lwsc_scene.cpp.obj"
         },
         {
-          "first_public_address": "0x4ae810",
+          "first_public_address": "0x4aba30",
           "object": "lrr_tail:cmd.cpp.obj"
         },
         {
-          "first_public_address": "0x4aeb40",
+          "first_public_address": "0x4abd60",
           "object": "lrr_tail:ai.cpp.obj"
         },
         {
-          "first_public_address": "0x4aece0",
+          "first_public_address": "0x4abf00",
+          "object": "lrr_tail:terrain_grid.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4ac320",
+          "object": "lrr_tail:texture.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4ad100",
           "object": "lrr_tail:entity_motion_owner.cpp.obj"
         },
         {
-          "first_public_address": "0x4aed30",
+          "first_public_address": "0x4ad150",
+          "object": "lrr_tail:terrain_cell_objects_port.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4ad370",
           "object": "lrr_tail:info_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4af5e0",
+          "first_public_address": "0x4adc20",
           "object": "lrr_tail:entity_config.cpp.obj"
         },
         {
-          "first_public_address": "0x4af720",
+          "first_public_address": "0x4add60",
           "object": "lrr_tail:aitask_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4b09b0",
+          "first_public_address": "0x4aeff0",
           "object": "lrr_tail:building_model_port.cpp.obj"
         },
         {
-          "first_public_address": "0x4b0c80",
+          "first_public_address": "0x4af2c0",
+          "object": "lrr_tail:scene_resources.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4af2d0",
           "object": "lrr_tail:entity_stats_port.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4af330",
+          "object": "lrr_tail:lwo_port.cpp.obj"
         },
         {
           "first_public_address": "0x4b0d00",
@@ -1295,43 +1295,43 @@
         },
         {
           "first_public_address": "0x4b1030",
-          "object": "libc:ullshr.obj"
-        },
-        {
-          "first_public_address": "0x4b1050",
           "object": "libc:snprintf.obj"
         },
         {
-          "first_public_address": "0x4b10c0",
+          "first_public_address": "0x4b10a0",
           "object": "libc:strcspn.obj"
         },
         {
-          "first_public_address": "0x4b1100",
+          "first_public_address": "0x4b10e0",
           "object": "libc:strspn.obj"
         },
         {
-          "first_public_address": "0x4b1140",
+          "first_public_address": "0x4b1120",
           "object": "libc:memchr.obj"
         },
         {
-          "first_public_address": "0x4b11f0",
+          "first_public_address": "0x4b11d0",
           "object": "libc:strtod.obj"
         },
         {
-          "first_public_address": "0x4b12b0",
+          "first_public_address": "0x4b1290",
           "object": "libc:strrchr.obj"
         },
         {
-          "first_public_address": "0x4b12e0",
+          "first_public_address": "0x4b12c0",
           "object": "libc:strtol.obj"
         },
         {
-          "first_public_address": "0x4b15b0",
-          "object": "libc:pow.obj"
+          "first_public_address": "0x4b1590",
+          "object": "libc:asin.obj"
         },
         {
-          "first_public_address": "0x4b17d0",
-          "object": "libc:asin.obj"
+          "first_public_address": "0x4b1660",
+          "object": "libc:ullshr.obj"
+        },
+        {
+          "first_public_address": "0x4b1680",
+          "object": "libc:pow.obj"
         },
         {
           "first_public_address": "0x4b1ab0",
@@ -1360,10 +1360,10 @@
       "units": 225
     },
     "unit_relative_identity": {
-      "identical_bytes": 282715,
+      "identical_bytes": 283538,
       "method": "whole function byte identity; image-address operands and external relative branches masked; missing functions count against original bytes",
       "original_bytes": 553892,
-      "percent": 51.04
+      "percent": 51.19
     },
     "units": [
       {
@@ -2041,10 +2041,10 @@
       {
         "contiguous": true,
         "data_offset_agreement": false,
-        "data_offset_comparisons": 54,
+        "data_offset_comparisons": 34,
         "functions": 24,
-        "identical_function_bytes": 2279,
-        "identity_percent": 43.39,
+        "identical_function_bytes": 3102,
+        "identity_percent": 59.06,
         "mapped": 24,
         "original_function_bytes": 5252,
         "size_exact": false,
@@ -4094,18 +4094,18 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 12
   },
-  "listing_digests_sha256": "5bf8aed66e0260ef90b37e0fc2e057c6a31d9baae057b330b7e27b77604553df",
+  "listing_digests_sha256": "ad5e855e369bb349679c1ad6763f5221c7a0fcce2940257993f31446d4a092d7",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 2634,
+        "exact": 2636,
         "mapped": 3018,
         "removed": 0,
         "removed_exact": null
       },
       "game_only": {
-        "exact": 2346,
+        "exact": 2348,
         "mapped": 2723,
         "removed": 0,
         "removed_exact": null
@@ -4113,8 +4113,8 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 579408,
-        "functions": 2718,
+        "bytes": 579440,
+        "functions": 2719,
         "removed_bytes": 0,
         "removed_functions": 0
       }
@@ -4133,8 +4133,8 @@
         "removed_functions": 76
       },
       "original_annotated": {
-        "bytes": 579408,
-        "functions": 2718,
+        "bytes": 579440,
+        "functions": 2719,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4157,15 +4157,15 @@
         "removed_functions": 3924
       },
       "port_unit": {
-        "bytes": 256,
-        "functions": 10,
+        "bytes": 224,
+        "functions": 9,
         "removed_bytes": 160,
         "removed_functions": 5
       }
     },
     "gate_text_symbols": 7866,
     "image": {
-      "bss_bytes": 3166676,
+      "bss_bytes": 3166740,
       "characteristics": 271,
       "common_dll_order_equal": true,
       "data_initialised_bytes": 94548,
@@ -4191,8 +4191,8 @@
       "imported_names": 147,
       "section_bytes": {
         ".data": {
-          "differing": 76846,
-          "equal": 17874,
+          "differing": 76618,
+          "equal": 18102,
           "original": 73216,
           "rebuilt": 94720
         },
@@ -4203,14 +4203,14 @@
           "rebuilt": 4158
         },
         ".rdata": {
-          "differing": 20985,
-          "equal": 1271,
+          "differing": 20961,
+          "equal": 1311,
           "original": 11232,
-          "rebuilt": 22256
+          "rebuilt": 22272
         },
         ".text": {
-          "differing": 681004,
-          "equal": 43433,
+          "differing": 681007,
+          "equal": 43430,
           "original": 642549,
           "rebuilt": 724437
         }
@@ -4218,7 +4218,7 @@
       "sections": {
         ".data": {
           "raw_size": 94720,
-          "virtual_size": 3261284
+          "virtual_size": 3261348
         },
         ".idata": {
           "raw_size": 4608,
@@ -4226,7 +4226,7 @@
         },
         ".rdata": {
           "raw_size": 22528,
-          "virtual_size": 22256
+          "virtual_size": 22272
         },
         ".rsrc": {
           "raw_size": 3072,
@@ -4275,23 +4275,23 @@
   "sections": {
     ".data": {
       "chance_percent": 10.47,
-      "excess_percent_points": 13.94,
-      "identical_bytes": 17874,
-      "identical_percent": 24.41,
+      "excess_percent_points": 14.25,
+      "identical_bytes": 18102,
+      "identical_percent": 24.72,
       "original_bytes": 73216,
       "rebuilt_bytes": 94720,
       "run_chance_percent": 1.76,
-      "run_excess_percent_points": 13.59,
-      "run_identical_bytes": 11241,
-      "run_identical_percent": 15.35
+      "run_excess_percent_points": 13.84,
+      "run_identical_bytes": 11419,
+      "run_identical_percent": 15.6
     },
     ".rdata": {
       "chance_percent": 4.12,
-      "excess_percent_points": 6.99,
-      "identical_bytes": 1248,
-      "identical_percent": 11.11,
+      "excess_percent_points": 7.55,
+      "identical_bytes": 1311,
+      "identical_percent": 11.67,
       "original_bytes": 11232,
-      "rebuilt_bytes": 22336,
+      "rebuilt_bytes": 22352,
       "run_chance_percent": 0.0,
       "run_excess_percent_points": 0.0,
       "run_identical_bytes": 0,
@@ -4300,7 +4300,7 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 3.93,
-      "identical_bytes": 43437,
+      "identical_bytes": 43434,
       "identical_percent": 6.76,
       "original_bytes": 642549,
       "rebuilt_bytes": 724437,
@@ -4337,7 +4337,7 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 3.93,
-    "identical_bytes": 43437,
+    "identical_bytes": 43434,
     "identical_percent": 6.76,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,

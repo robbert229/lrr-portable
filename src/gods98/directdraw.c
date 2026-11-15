@@ -728,6 +728,9 @@ void directdraw_shutdown(void)
     }
 }
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x0047cd50
 void directdraw_adjust_texture_usage(unsigned int* textureUsage)
 {

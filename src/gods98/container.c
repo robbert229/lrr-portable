@@ -768,6 +768,9 @@ Container* Container_GetRoot(void)
     return containerGlobs.rootContainer;
 }
 
+/* Main.c's mainGlobs fields under the port's names (finding 679). */
+#include "gods98/main_globs.h"
+
 // FUNCTION: LEGORR 0x00472950
 Container* Container_Create(Container* parent)
 {

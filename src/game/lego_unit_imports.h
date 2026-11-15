@@ -559,8 +559,10 @@ struct PanelGlobs;
 
 /* Port globals at legoGlobs fields and gods98 globals (annotated in their
  * files). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: mainGlobs, main_globs.h */
 extern int32_t s_application_mode;            /* engine.cpp, 00505f88 mainGlobs.programmerLevel */
 extern int s_display_w;                       /* crt.cpp, 00505924 appWidth */
+#endif
 extern uint32_t s_renderer_word_a;            /* crt.cpp, 0076ab24 mouse x */
 extern uint32_t s_renderer_word_b;            /* crt.cpp, 0076ab28 mouse y */
 extern float s_panel_highlight_timer;         /* engine.cpp, 00556efc */
@@ -762,7 +764,9 @@ extern int s_cursor_delta_y;                  /* input.cpp, 0076ab38 diffY */
 #define legoInput_mouseY ((int)s_renderer_word_b)
 #define legoInput_mslb g_renderer_word_c
 #define legoInput_msrb s_window_mouse_word_40
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: mainGlobs, main_globs.h */
 extern int s_display_h;                       /* crt.cpp, 00505928 appHeight */
+#endif
 /* lego.cpp's stand-in for legoGlobs.radarZoom (005563f4, game/lego.h). */
 
 struct EntitySlot;
@@ -1992,5 +1996,9 @@ int scene_slot_pose_scale_register(int group, uint32_t first, uint32_t second,
 #ifdef __cplusplus
 }
 #endif
+
+/* Main.c's mainGlobs and, in the matching build, the port's names as its
+ * fields (finding 679). */
+#include "gods98/main_globs.h"
 
 #endif /* LEGORRR_GAME_LEGO_UNIT_IMPORTS_H */

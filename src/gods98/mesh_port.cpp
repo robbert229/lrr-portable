@@ -2206,7 +2206,7 @@ static int direct3d_interface_create_from_device(void* device)
 /* mainGlobs.imDevice (G98-005), the IDirect3DDevice3 that mesh_unit.c
  * draws with. A stand-in, like lws_port.cpp's s_main_d3drm: the port does
  * not own Main.c's renderer, and natively nothing calls mesh_unit.c. */
-// GLOBAL: LEGORR 0x0050591c
+/* The port's mainGlobs.imDevice (0050591c); main.c defines the original's (finding 679). */
 extern "C" void* s_main_im_device;
 void* s_main_im_device;
 

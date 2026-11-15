@@ -238,7 +238,7 @@ struct PlatformWindow {
 
 static const char s_platform_window_class[] = "LegoRRPortableWindow";
 static PlatformWindow* s_active_window;
-// GLOBAL: LEGORR 0x00505800
+/* The port's mainGlobs.hWnd (00505800); main.c defines the original's (finding 679). */
 void* g_platform_cursor_window_handle;
 int g_platform_cursor_width;
 int g_platform_cursor_height;
@@ -1342,5 +1342,5 @@ uint32_t platform_time_milliseconds(void)
  * after every function, so that it does not move this file's symbol
  * numbering (finding 538). */
 extern "C" void* g_main_instance_handle;
-// GLOBAL: LEGORR 0x00505804
+/* The port's mainGlobs.hInst (00505804); main.c defines the original's (finding 679). */
 void* g_main_instance_handle;

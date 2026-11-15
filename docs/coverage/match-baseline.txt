@@ -1,4 +1,4 @@
-# input_sha256: 19c5b0d4682dcd43e66a19c5f2ee66da75f1d74a34d554b9bb421dfa5e2ef9a5
+# input_sha256: 1ecf702bbf7c3faa83e0462554d73f319e1458b9b6b61812a1335b38f7020328
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1845,7 +1845,7 @@
 0x004629d0 93.67 reward_scroll_add_label
 0x00462ab0 100.00 reward_scroll_length_set
 0x00462ac0 100.00 reward_scroll_flags_set
-0x00462ad0 96.44 reward_scroll_update
+0x00462ad0 97.27 reward_scroll_update
 0x00462da0 100.00 roof_initialise
 0x00462e60 100.00 roof_set_texture
 0x00462ed0 100.00 roof_shutdown
@@ -2262,7 +2262,7 @@
 0x00477710 100.00 block_get_bool
 0x004777a0 100.00 WinMain
 0x00477bd0 100.00 low_texture_flag_set
-0x00477bf0 99.57 winmain_parse_options
+0x00477bf0 100.00 winmain_parse_options
 0x00477f30 100.00 main_loop_frame_pump
 0x00477f70 100.00 render_feature_flags_get
 0x00477f80 85.71 window_runtime_display_caps_query
@@ -2281,7 +2281,7 @@
 0x004786c0 45.71 window_activation_close_retail
 0x00478880 100.00 main_window_procedure
 0x004788d0 100.00 direct3d_render_state_set_cached
-0x00478940 95.24 d3d_material_state_flush
+0x00478940 100.00 d3d_material_state_flush
 0x00478980 100.00 music_mixer_volume_set
 0x004789a0 100.00 ledger_stub_004789a0_MusicMixerVolumeGet
 0x004789c0 91.29 audio_mixer_control_init
@@ -4570,7 +4570,7 @@
 0x004629d0 93.67 reward_scroll_add_label
 0x00462ab0 100.00 reward_scroll_length_set
 0x00462ac0 100.00 reward_scroll_flags_set
-0x00462ad0 96.44 reward_scroll_update
+0x00462ad0 97.27 reward_scroll_update
 0x00462da0 100.00 roof_initialise
 0x00462e60 100.00 roof_set_texture
 0x00462ed0 100.00 roof_shutdown
@@ -4987,7 +4987,7 @@
 0x00477710 100.00 block_get_bool
 0x004777a0 100.00 WinMain
 0x00477bd0 100.00 low_texture_flag_set
-0x00477bf0 99.57 winmain_parse_options
+0x00477bf0 100.00 winmain_parse_options
 0x00477f30 100.00 main_loop_frame_pump
 0x00477f70 100.00 render_feature_flags_get
 0x00477f80 85.71 window_runtime_display_caps_query
@@ -5006,7 +5006,7 @@
 0x004786c0 45.71 window_activation_close_retail
 0x00478880 100.00 main_window_procedure
 0x004788d0 100.00 direct3d_render_state_set_cached
-0x00478940 95.24 d3d_material_state_flush
+0x00478940 100.00 d3d_material_state_flush
 0x00478980 100.00 music_mixer_volume_set
 0x004789a0 100.00 ledger_stub_004789a0_MusicMixerVolumeGet
 0x004789c0 91.29 audio_mixer_control_init

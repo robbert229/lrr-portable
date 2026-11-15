@@ -685,6 +685,7 @@ src/gods98/lwsc_winapi.cpp
 src/gods98/lwsc_winapi.hpp
 src/gods98/main.c
 src/gods98/main.h
+src/gods98/main_globs.h
 src/gods98/main_imports.h
 src/gods98/mainsim.cpp
 src/gods98/mainsim.hpp
