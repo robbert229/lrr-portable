@@ -563,8 +563,12 @@ struct PanelGlobs;
 extern int32_t s_application_mode;            /* engine.cpp, 00505f88 mainGlobs.programmerLevel */
 extern int s_display_w;                       /* crt.cpp, 00505924 appWidth */
 #endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_globs.h"
+#else
 extern uint32_t s_renderer_word_a;            /* crt.cpp, 0076ab24 mouse x */
 extern uint32_t s_renderer_word_b;            /* crt.cpp, 0076ab28 mouse y */
+#endif
 extern float s_panel_highlight_timer;         /* engine.cpp, 00556efc */
 extern struct PanelGlobs panelGlobs;          /* panel_unit.c, 005000e0 */
 /* The two interface fonts, legoGlobs 00556124 and 00556128 (lego.cpp,
@@ -756,10 +760,12 @@ int sound_variant_property_read_original(int alias_index); /* 00465030 */
 /* gods98 Input's mouse state (crt.cpp, input.cpp). The port types the
  * position and button words unsigned; the original reads them as
  * signed ints. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern uint32_t g_renderer_word_c;            /* crt.cpp, 0076ab3c mslb */
 extern uint32_t s_window_mouse_word_40;       /* crt.cpp, 0076ab40 msrb */
 extern int s_cursor_delta_x;                  /* input.cpp, 0076ab34 diffX */
 extern int s_cursor_delta_y;                  /* input.cpp, 0076ab38 diffY */
+#endif
 #define legoInput_mouseX ((int)s_renderer_word_a)
 #define legoInput_mouseY ((int)s_renderer_word_b)
 #define legoInput_mslb g_renderer_word_c

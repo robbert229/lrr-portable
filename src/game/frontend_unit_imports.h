@@ -35,10 +35,15 @@ extern int s_display_w;                     /* 00505924 appWidth */
 extern uint32_t s_engine_feature_word;      /* 00505f84 mainGlobs.flags */
 extern int32_t s_application_mode;          /* 00505f88 programmerLevel */
 #endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_globs.h"
+#include "gods98/input_key_names.h"
+#else
 extern uint32_t s_renderer_word_a;          /* 0076ab24 msx */
 extern uint32_t s_renderer_word_b;          /* 0076ab28 msy */
 extern uint32_t g_renderer_word_c;          /* 0076ab3c mslb */
 extern uint32_t s_window_mouse_word_40;     /* 0076ab40 msrb */
+#endif
 extern uint8_t s_global_current_keys[256];  /* 0076ab80 Input_KeyMap */
 extern uint8_t s_global_previous_keys[256]; /* 0076aa00 Input_PrevKeyMap */
 

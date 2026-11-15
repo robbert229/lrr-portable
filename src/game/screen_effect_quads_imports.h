@@ -31,7 +31,11 @@ struct TextureSurface;
  * Main_LoopUpdate. */
 extern int s_display_w;
 extern int s_display_h;
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_globs.h"
+#else
 extern uint32_t g_renderer_word_c;
+#endif
 void main_loop_frame_pump(int draw_projection_overlay);           /* 00477f30 */
 
 /* gods98 Utils.c (utils.c): Util_Tokenise. */

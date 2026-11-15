@@ -12,10 +12,14 @@
 extern "C" {
 #endif
 
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_globs.h"
+#else
 extern uint32_t s_renderer_word_a;      /* DAT_0076ab24 mouse x */
 extern uint32_t s_renderer_word_b;      /* DAT_0076ab28 mouse y */
 extern uint32_t g_renderer_word_c;      /* DAT_0076ab3c left button held */
 extern uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c left button clicked */
+#endif
 
 #ifdef __cplusplus
 }

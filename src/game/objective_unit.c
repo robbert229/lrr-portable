@@ -53,10 +53,12 @@ typedef struct Objective_Globs {
 /* Defined at the end of the file, after the storage before it. */
 extern Objective_Globs objectiveGlobs;
 
-/* Input.c's INPUT.lClicked (0076ab48), which no converted unit defines
- * yet: a common definition, as the original's. */
-// GLOBAL: LEGORR 0x0076ab48
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Input.c's INPUT.lClicked (0076ab48): a field of inputGlobs. */
+#include "gods98/input_globs.h"
+#else
 uint32_t s_window_mouse_word_48;
+#endif
 
 // FUNCTION: LEGORR 0x004574e0
 void objective_load_objective_text(struct BlockRec* config,
@@ -707,7 +709,7 @@ next_page_sound:
         }
 
         if (objectiveGlobs.currentPage[type] > 0 &&
-            (int)s_renderer_word_a > 129 &&
+            (int)s_renderer_word_a >= 130 &&
             (int)s_renderer_word_a < (int)legoGlobs_BackButtonImage->width + 130 &&
             (int)s_renderer_word_b >= 315 &&
             (int)s_renderer_word_b < (int)legoGlobs_BackButtonImage->height + 315) {

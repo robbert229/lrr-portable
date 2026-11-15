@@ -31,6 +31,11 @@
 #include <string.h>
 
 #include "crt/vc5names.h"
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Input.c's key maps under their matching-build names (lego_unit.h
+ * declares them). */
+#include "gods98/input_key_names.h"
+#endif
 #include "lego_unit.h"
 #include "lego_unit_imports.h"
 #include "lego_globs.h"

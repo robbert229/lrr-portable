@@ -24,6 +24,9 @@ struct Container;
 struct StatsObject;
 
 /* gods98 Input.c's key map (input). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_key_names.h"
+#endif
 extern uint8_t s_global_current_keys[256];  /* 0076ab80 Input_KeyMap */
 
 /* GAME-021 Lego.c's legoGlobs fields (lego_unit.c stand-ins and the

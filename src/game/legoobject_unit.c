@@ -9984,8 +9984,12 @@ extern int s_object_f_4eabc4;                     /* 004eabc4 objectGlobs list c
 extern int s_object_f_4eabc8;                     /* 004eabc8 its buildings */
 #define s_object_f_4eabc8 objectGlobs.field_c438
 /* Mouse position (crt_mouse.h, crt.cpp). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_globs.h"
+#else
 extern uint32_t s_renderer_word_a;                /* 0076ab24 mouse x */
 extern uint32_t s_renderer_word_b;                /* 0076ab28 mouse y */
+#endif
 /* Reward.c (reward.h, reward.c). */
 void global_counter_at_00555328_increment(void);                        /* 00462880 */
 /* objectGlobs' list of the objects 0044c5f0 has visited (004ea7c4); its

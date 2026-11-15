@@ -228,6 +228,9 @@ void directdraw_flip(void);                                 /* 0047c8d0 */
 void input_state_poll_retail(void);                         /* 0047eef0 */
 int input_keyboard_down_key_count(void);                    /* 0047efb0 */
 short rng_thunk_draw15(void);                               /* 004798a0 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_key_names.h"
+#endif
 extern uint8_t s_global_current_keys[256];                  /* 0076ab80 Input_KeyMap */
 extern uint8_t s_global_previous_keys[256];                 /* 0076aa00 Input_PrevKeyMap */
 

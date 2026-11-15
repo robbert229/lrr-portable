@@ -114,36 +114,34 @@ extern unsigned int s_engine_feature_word;
 #endif
 
 /* The unit's state, in the commons (tentative definitions). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "input_globs.h"
+#include "input_key_names.h"
+
+/* Tentative definitions: commons, as in the original. */
 // GLOBAL: LEGORR 0x0076aa00
-unsigned char s_global_previous_keys[256];
+unsigned char inputPrevKeyMap[256];
 // GLOBAL: LEGORR 0x0076ab00
-DirectInputIface* s_input_lpdi;
-// GLOBAL: LEGORR 0x0076ab04
-DirectInputDeviceIface* s_input_lpdi_keyboard;
-// GLOBAL: LEGORR 0x0076ab0c
-int s_input_keyboard_acquired;
-// GLOBAL: LEGORR 0x0076ab24
-unsigned int s_renderer_word_a;
-// GLOBAL: LEGORR 0x0076ab28
-unsigned int s_renderer_word_b;
-// GLOBAL: LEGORR 0x0076ab34
-int s_cursor_delta_x;
-// GLOBAL: LEGORR 0x0076ab38
-int s_cursor_delta_y;
-// GLOBAL: LEGORR 0x0076ab3c
-unsigned int g_renderer_word_c;
-// GLOBAL: LEGORR 0x0076ab40
-unsigned int s_window_mouse_word_40;
-// GLOBAL: LEGORR 0x0076ab4c
-unsigned int s_window_mouse_word_4c;
-// GLOBAL: LEGORR 0x0076ab50
-unsigned int s_window_mouse_word_50;
-// GLOBAL: LEGORR 0x0076ab54
-unsigned int s_window_mouse_word_54;
-// GLOBAL: LEGORR 0x0076ab58
-unsigned int s_window_mouse_word_58;
+struct Input_Globs inputGlobs;
 // GLOBAL: LEGORR 0x0076ab80
+unsigned char inputKeyMap[256];
+#else
+unsigned char s_global_previous_keys[256];
+DirectInputIface* s_input_lpdi;
+DirectInputDeviceIface* s_input_lpdi_keyboard;
+int s_input_keyboard_acquired;
+unsigned int s_renderer_word_a;
+unsigned int s_renderer_word_b;
+int s_cursor_delta_x;
+int s_cursor_delta_y;
+unsigned int g_renderer_word_c;
+unsigned int s_window_mouse_word_40;
+unsigned int s_window_mouse_word_4c;
+unsigned int s_window_mouse_word_50;
+unsigned int s_window_mouse_word_54;
+unsigned int s_window_mouse_word_58;
 unsigned char s_global_current_keys[256];
+#endif
 
 // FUNCTION: LEGORR 0x0047ed90
 int input_direct_initialize(void)

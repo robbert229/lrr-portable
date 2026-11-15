@@ -1,4 +1,4 @@
-# input_sha256: ff0aa92c6c58f134cc04302e4504619e5c44a1ce6dea36319c522a7a7829c4fc
+# input_sha256: f28d41a63957af25e711ddc0ed4ee22fc020dbb439eca40c84762c3e58453a1d
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -418,7 +418,7 @@
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
-0x00411360 84.94 front_menu_item_select_test_string_collision
+0x00411360 91.24 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
 0x00411530 86.85 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
@@ -511,7 +511,7 @@
 0x00417430 90.91 float_to_long_x87
 0x00417460 94.61 front_callback_select_mission_item
 0x00417700 100.00 front_callback_select_tutorial_item
-0x004177e0 100.00 front_level_link_callback_load_menu_item
+0x004177e0 69.33 front_level_link_callback_load_menu_item
 0x004179b0 100.00 front_levels_load_menu_items
 0x00417a90 100.00 save_read_slot_target
 0x00417bd0 100.00 front_save_write_save_file
@@ -1638,7 +1638,7 @@
 0x00456550 100.00 nerpfunc_set_tutorial_flags
 0x00456560 100.00 nerpfunc_get_train_flags
 0x00456570 100.00 nerpfunc_set_train_flags
-0x00456580 100.00 nerpfunc_get_monsters_on_level
+0x00456580 88.89 nerpfunc_get_monsters_on_level
 0x004565c0 100.00 nerpfunc_get_buildings_teleported
 0x004565d0 100.00 nerpfunc_set_buildings_teleported
 0x004565f0 100.00 nerpfunc_set_message_permit
@@ -1683,7 +1683,7 @@
 0x00458670 100.00 objective_announce_current
 0x004588e0 100.00 objective_stop_showing_objective
 0x004589a0 100.00 objective_is_ended_original
-0x004589c0 98.75 lego_quit_poll_adapter
+0x004589c0 90.57 lego_quit_poll_adapter
 0x00458be0 60.56 objective_tick_target
 0x00459050 100.00 objective_check_completed
 0x00459100 100.00 objective_callback_check_completed_object
@@ -1845,7 +1845,7 @@
 0x004629d0 93.67 reward_scroll_add_label
 0x00462ab0 100.00 reward_scroll_length_set
 0x00462ac0 100.00 reward_scroll_flags_set
-0x00462ad0 97.27 reward_scroll_update
+0x00462ad0 96.44 reward_scroll_update
 0x00462da0 100.00 roof_initialise
 0x00462e60 100.00 roof_set_texture
 0x00462ed0 100.00 roof_shutdown
@@ -3143,7 +3143,7 @@
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
-0x00411360 84.94 front_menu_item_select_test_string_collision
+0x00411360 91.24 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
 0x00411530 86.85 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
@@ -3236,7 +3236,7 @@
 0x00417430 90.91 float_to_long_x87
 0x00417460 94.61 front_callback_select_mission_item
 0x00417700 100.00 front_callback_select_tutorial_item
-0x004177e0 100.00 front_level_link_callback_load_menu_item
+0x004177e0 69.33 front_level_link_callback_load_menu_item
 0x004179b0 100.00 front_levels_load_menu_items
 0x00417a90 100.00 save_read_slot_target
 0x00417bd0 100.00 front_save_write_save_file
@@ -4363,7 +4363,7 @@
 0x00456550 100.00 nerpfunc_set_tutorial_flags
 0x00456560 100.00 nerpfunc_get_train_flags
 0x00456570 100.00 nerpfunc_set_train_flags
-0x00456580 100.00 nerpfunc_get_monsters_on_level
+0x00456580 88.89 nerpfunc_get_monsters_on_level
 0x004565c0 100.00 nerpfunc_get_buildings_teleported
 0x004565d0 100.00 nerpfunc_set_buildings_teleported
 0x004565f0 100.00 nerpfunc_set_message_permit
@@ -4408,7 +4408,7 @@
 0x00458670 100.00 objective_announce_current
 0x004588e0 100.00 objective_stop_showing_objective
 0x004589a0 100.00 objective_is_ended_original
-0x004589c0 98.75 lego_quit_poll_adapter
+0x004589c0 90.57 lego_quit_poll_adapter
 0x00458be0 60.56 objective_tick_target
 0x00459050 100.00 objective_check_completed
 0x00459100 100.00 objective_callback_check_completed_object
@@ -4570,7 +4570,7 @@
 0x004629d0 93.67 reward_scroll_add_label
 0x00462ab0 100.00 reward_scroll_length_set
 0x00462ac0 100.00 reward_scroll_flags_set
-0x00462ad0 97.27 reward_scroll_update
+0x00462ad0 96.44 reward_scroll_update
 0x00462da0 100.00 roof_initialise
 0x00462e60 100.00 roof_set_texture
 0x00462ed0 100.00 roof_shutdown
