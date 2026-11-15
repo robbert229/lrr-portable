@@ -83,8 +83,11 @@ void objective_load_objective_text(struct BlockRec* config,
     int beginNext;
     int escape;
     char* s;
+    float left;
 
-    textArea.x = OBJECTIVE_DATA(level)->imagePos[0] - -60.0f;
+    left = OBJECTIVE_DATA(level)->imagePos[0] - -60.0f;
+    beginArea.x = left;
+    textArea.x = left;
     beginArea.y = OBJECTIVE_DATA(level)->imagePos[1] - -220.0f;
     textArea.y = OBJECTIVE_DATA(level)->imagePos[1] - -60.0f;
     msgArea.x = OBJECTIVE_DATA(level)->imagePos[0] - -40.0f;
@@ -99,7 +102,6 @@ void objective_load_objective_text(struct BlockRec* config,
     beginNext = 0;
     colons = 0;
     levelFound = 0;
-    beginArea.x = textArea.x;
 
     sprintf(objectiveGlobs.filename, "%s", filename);
 
@@ -700,7 +702,7 @@ next_page_sound:
         if (objectiveGlobs.currentPage[type] > 0 &&
             (int)s_renderer_word_a > 129 &&
             (int)s_renderer_word_a < (int)legoGlobs_BackButtonImage->width + 130 &&
-            (int)s_renderer_word_b > 314 &&
+            (int)s_renderer_word_b >= 315 &&
             (int)s_renderer_word_b < (int)legoGlobs_BackButtonImage->height + 315) {
             tooltip_activate(0x22);
             if (leftButtonReleased) {

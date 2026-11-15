@@ -220,8 +220,9 @@ void info_compile_text(char* text, char** outText)
             }
             if (image) {
                 *d++ = '%';
-                images[count++] = (char)image;
+                images[count] = (char)image;
                 *d = 'b';
+                count++;
             }
         } else if (*text == '\\' && text[1] == 'n') {
             *d = '\n';
@@ -229,8 +230,8 @@ void info_compile_text(char* text, char** outText)
         } else {
             *d = *text;
         }
-        text++;
         d++;
+        text++;
     }
 
     *d++ = '\0';

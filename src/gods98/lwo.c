@@ -341,7 +341,8 @@ int lwo_surface_names_read(File* file, LWSIZE* size, LWSURFLIST** list,
 /* SURF: one surface's settings (FUN_0048c820), in Lwt.c's SURFprc shape
  * as OpenLRR records it: the block-scoped locals of each chunk branch, the
  * flag-name tables as initialised arrays, `setVal` then `surf` tested
- * separately, and Lwt.h's LWSVALUE/LWSPVALUE swaps (finding 677). */
+ * separately, and Lwt.h's LWSVALUE/LWSPVALUE swaps (finding 677); the
+ * sub-chunk length is swapped as an unsigned short sum (finding 682). */
 // FUNCTION: LEGORR 0x0048c820
 int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
                               int csize, int verbose)
@@ -390,7 +391,7 @@ int lwo_surface_settings_read(File* file, LWSIZE* size, LWSURFACE** surf,
     while (csize > 0) {
         strncpy(cbuff, cp, 4);
         cp += 4;
-        len = LWSVALUE(*(unsigned short*)cp);
+        len = (unsigned short)((*(unsigned short*)cp << 8) + (*(unsigned short*)cp >> 8));
         // STRING: LEGORR 0x004afc00
         sprintf(buff, " %s (%d)", cbuff, len);
         cp += 2;

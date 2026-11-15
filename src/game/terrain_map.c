@@ -1294,7 +1294,7 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
     float speed, scale, dist;
     unsigned int i, j, k, x, y, group;
     int rotated;
-    int index;
+    TerrainMapPoint2* uvw;
 
     if (elapsed > 0.001f) {
         blockOffsets[1].x = 1;
@@ -1326,9 +1326,7 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
             for (j = 0; j < 4; j++) {
                 k = j;
                 if (rotated) k = (j + 1) & 3;
-                index = (y + blockOffsets[j].y) * map->blockWidth + x +
-                        blockOffsets[j].x;
-                wobble = map->blocks[index].uvWobble;
+                wobble = map->blocks[(y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x].uvWobble;
                 cur.x = vertices[k].tu;
                 cur.y = vertices[k].tv;
                 target.x = wobble.x + uvOffsets[j].x;
@@ -1341,11 +1339,12 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
                     wobble.x = random_float_range(0.0f, 1.0f);
                     wobble.y = random_float_range(0.0f, 1.0f);
                     terrain_map_vector2d_normalise(&wobble);
-                    wobble.x = (map->blocks[index].uvWobble.x + wobble.x) * 0.3f;
-                    wobble.y = (map->blocks[index].uvWobble.y + wobble.y) * 0.3f;
+                    uvw = &map->blocks[(y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x].uvWobble;
+                    wobble.x = (uvw->x + wobble.x) * 0.3f;
+                    wobble.y = (uvw->y + wobble.y) * 0.3f;
                     target.x = wobble.x + uvOffsets[j].x;
                     target.y = wobble.y + uvOffsets[j].y;
-                    map->blocks[index].uvWobble = wobble;
+                    *uvw = wobble;
                 }
                 cur.x = speed * cur.x + target.x;
                 cur.y = speed * cur.y + target.y;
