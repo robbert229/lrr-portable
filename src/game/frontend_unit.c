@@ -63,37 +63,47 @@ typedef struct Front_LevelTextWindow {
     char tutorialText[256];         /* +0x628 "Tutorial" */
 } Front_LevelTextWindow;
 
-/* The original's FrontEnd.c .bss (004d78c8-004db8e8). */
+/* The original's FrontEnd.c .bss (004d78c8-004db8e8), in the original's
+ * order. Zero-initialised externals, as MSVC 5.0 emits those in definition
+ * order (finding 686) while it reorders uninitialised statics. The three
+ * front_unknown_* items stand for storage nothing in the image reads: 512
+ * bytes at 004d7908, 8 at 004db848 and 4 at 004db8d8. */
 // GLOBAL: LEGORR 0x004d78c8
-static int s_printXList[FRONT_PRINT_MAX];
+int s_printXList[FRONT_PRINT_MAX] = { 0 };
+// GLOBAL: LEGORR 0x004d7908
+int front_unknown_4d7908[128] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x004d7b08
-static Front_Font* s_printFontList[FRONT_PRINT_MAX];
+Front_Font* s_printFontList[FRONT_PRINT_MAX] = { 0 };
 // GLOBAL: LEGORR 0x004d7b48
-static char s_printTextList[FRONT_PRINT_MAX][1024];
+char s_printTextList[FRONT_PRINT_MAX][1024] = { 0 };
 // GLOBAL: LEGORR 0x004db748
-static char s_replaceSpacesBuffer[256];
+char s_replaceSpacesBuffer[256] = { 0 };
+// GLOBAL: LEGORR 0x004db848
+int front_unknown_4db848[2] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x004db850
-static int s_printYList[FRONT_PRINT_MAX];
+int s_printYList[FRONT_PRINT_MAX] = { 0 };
 // GLOBAL: LEGORR 0x004db890
-static struct Image* s_saveSlotImages[5];
+struct Image* s_saveSlotImages[5] = { 0 };
 // GLOBAL: LEGORR 0x004db8a8
-static int s_saveSlotCompletion[5];
+int s_saveSlotCompletion[5] = { 0 };
 // GLOBAL: LEGORR 0x004db8bc
-static int s_saveMenuOverwriteShowing;
+int s_saveMenuOverwriteShowing = 0;
 // GLOBAL: LEGORR 0x004db8c0
-static int s_overlayTriggered;
+int s_overlayTriggered = 0;
 // GLOBAL: LEGORR 0x004db8c4
-static int s_loadSaveTextShown;
+int s_loadSaveTextShown = 0;
 // GLOBAL: LEGORR 0x004db8c8
-static Front_Menu* s_savedNextMenu;
+Front_Menu* s_savedNextMenu = 0;
 // GLOBAL: LEGORR 0x004db8cc
-static Front_Cache* s_cacheList;
+Front_Cache* s_cacheList = 0;
 // GLOBAL: LEGORR 0x004db8d0
-static unsigned int s_printCount;
+unsigned int s_printCount = 0;
 // GLOBAL: LEGORR 0x004db8d4
-static int s_mouseLeftPrevious;
+int s_mouseLeftPrevious = 0;
+// GLOBAL: LEGORR 0x004db8d8
+int front_unknown_4db8d8 = 0; /* never read */
 // GLOBAL: LEGORR 0x004db8dc
-static int s_textInputBlink;
+int s_textInputBlink = 0;
 
 /* FrontEnd.c's initialised .data (004a1f00-004a1f60). The four menu block
  * names are initialised arrays, not literals: the original has them first in
@@ -3005,9 +3015,9 @@ void front_object_recall_save_adapter(const char* fname);           /* 004593e0 
 
 /* FrontEnd.c .bss: Front_Options_Update's menu and menu set. */
 // GLOBAL: LEGORR 0x004db8e0
-static Front_Menu* s_optionsMenu;
+Front_Menu* s_optionsMenu = 0;
 // GLOBAL: LEGORR 0x004db8e4
-static Front_MenuSet* s_optionsMenuSet;
+Front_MenuSet* s_optionsMenuSet = 0;
 
 /* Part 2's functions. */
 void front_callback_slider_music_volume(int volume); /* 00414df0 */
