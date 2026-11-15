@@ -35,7 +35,16 @@
 
 /* x87 constants. MSVC pools float literals itself, so a literal in the code
  * may replace an item (priorities.c does); an annotated static (config.c)
- * binds the address explicitly. Keep whichever matches. */
+ * binds the address explicitly. Keep whichever matches.
+ *
+ * The unit's .rdata is 0049e010-0049e034: these eight named constants in
+ * definition order, then the one literal, 99999.0f (0049e030, the
+ * immediate store in 00405c10). MSVC 5.0 emits named constants before
+ * literals. The 1.0 is unreferenced, as in the original. Every 0.0 compare
+ * reads the named 0.0: a literal 0.0 would be pooled again after the
+ * named constants (finding 689). */
+// GLOBAL: LEGORR 0x0049e010
+static const float s_rdata_0049e010 = 1.0f;
 // GLOBAL: LEGORR 0x0049e014
 static const float s_rdata_0049e014 = 0.0f;
 // GLOBAL: LEGORR 0x0049e018
@@ -5071,7 +5080,7 @@ int aitask_place_command_eligibility_check(AITask* task, struct EntitySlot* obje
 
     if (outFlag != NULL) *outFlag = 0;
 
-    if ((task->type != 3 || AITASK_OBJ(task->object)->type != 8) && task->timeIn > 0.0f)
+    if ((task->type != 3 || AITASK_OBJ(task->object)->type != 8) && task->timeIn > s_rdata_0049e014)
         return 0;
     if ((entity_stats_word_get(object) & 0x20000) && AITASK_OBJ(object)->driveObject == NULL)
         return 0;
@@ -5433,7 +5442,7 @@ void aitask_pending_command_timer_fire_scan(void)
     AITask* task;
 
     for (task = aiTaskGlobs.globalTail; task != NULL; task = task->next) {
-        if (task->timeIn <= 0.0f) {
+        if (task->timeIn <= s_rdata_0049e014) {
             int fire = 0;
             unsigned int i;
             for (i = 0; i < aiTaskGlobs.timerCandidateCount; i++) {
@@ -5816,7 +5825,7 @@ void aitask_pending_command_entity_assignment_tick(void)
     float bestDist = 99999.0f;
 
     for (task = aiTaskGlobs.globalHead; task != NULL; task = task->next) {
-        if (task->timeIn <= 0.0f && !(task->flags & 0x80400)) {
+        if (task->timeIn <= s_rdata_0049e014 && !(task->flags & 0x80400)) {
             struct EntitySlot* best = NULL;
             struct EntitySlot* object;
             unsigned int bestIndex;
