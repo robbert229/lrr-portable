@@ -6236,18 +6236,18 @@ const char* lego_level_free(void)
         free(LEGO_LEVEL_PTR(char, level->fullName));
 
         legoGlobs_flags1 &= ~0x00200000;
-        legoGlobs_flags1 &= ~0x08000000;
         s_entity_state_flags &= ~0x40;
-        s_panel_highlight_flags &= ~0x2;
-        s_panel_highlight_flags &= ~0x2000;
+        legoGlobs_flags1 &= ~0x08000000;
         legoGlobs_f_556158 = 0;
         legoGlobs_f_556514 = 0;
         s_lego_f_4e8448 = NULL;
         s_object_f_4eabc4 = 0;
         s_object_f_4eabc8 = 0;
+        s_panel_highlight_flags &= ~0x2;
+        s_panel_highlight_flags &= ~0x2000;
         lego_panel_selection_highlight_toggle_adapter(0);
-        legoGlobs_flags1 &= ~0x10000000;
         s_panel_highlight_flags &= ~0x4;
+        legoGlobs_flags1 &= ~0x10000000;
         s_panel_highlight_flags &= ~0x40;
         s_panel_highlight_flags &= ~0x80;
         s_panel_highlight_flags &= ~0x4000;
@@ -8617,8 +8617,17 @@ void terrain_map_visible_add(struct TerrainMap* map, int bx, int by);     /* 004
 void* ddiscene_light_create(void* owner, uint32_t value_a, uint32_t value_b,
                             uint32_t value_c, uint32_t value_d);  /* 004734f0 */
 int light_interface_call_slot_38(void* record, uint32_t value);   /* 004734a0 */
-int light_interface_call_slot_3c(void* record, uint32_t value);   /* 00473480 */
-int light_interface_call_slot_40(void* record, uint32_t value);   /* 00473460 */
+/* Container.c's spot setters (lego_unit_imports.h), again for the lights
+ * set-up below, with the original's float angle. */
+int lego_light_umbra_set_adapter(void* spotlight, float angle);    /* 00473480 */
+int lego_light_penumbra_set_adapter(void* spotlight, float angle); /* 00473460 */
+/* Group 3C's message loaders (Lego.h, which the original declares in full
+ * before the unit's first function). Deviation (scoring only): declared here
+ * rather than with group 3C's entries, so that MSVC's symbol counter
+ * (finding 538, rule B) reaches 00433380 and 00434530 in their phase after
+ * the spot setters' port-contract declarations went (finding 678). */
+void lego_text_messages_config_load(struct BlockRec* config);
+void lego_message_load_infomessages(struct BlockRec* config);
 void* scene_root_object_get(void);                                /* 00472940 */
 /* LightEffects.c (effects.hpp). */
 void scene_transform_state_initialize(void* target, void* owner,
@@ -8814,8 +8823,8 @@ int lego_scene_lights_build_from_config(void)
     if ((legoGlobs_spotlightTop = ddiscene_light_create(
              LEGO_FIELD(s_zoom_step_context, void*, 0x2c), 2,
              *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == NULL) return 0;
-    light_interface_call_slot_40(legoGlobs_spotlightTop, 0x3f59999a); /* 0.85f */
-    light_interface_call_slot_3c(legoGlobs_spotlightTop, 0x3ecccccd); /* 0.4f */
+    lego_light_penumbra_set_adapter(legoGlobs_spotlightTop, 0.85f);
+    lego_light_umbra_set_adapter(legoGlobs_spotlightTop, 0.4f);
     ddiscene_object_position_set(legoGlobs_spotlightTop,
                                  LEGO_FIELD(s_zoom_step_context, void*, 0x2c),
                                  200.0f, 140.0f, -130.0f);
@@ -8877,8 +8886,8 @@ int lego_scene_lights_build_from_config(void)
                                      legoGlobs_f_556108, 0.8f, 0.8f, 0.8f);
     ddiscene_object_pose_method_dispatch((void*)(uintptr_t)legoGlobs_f_556104, NULL,
                                          0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f);
-    light_interface_call_slot_40((void*)(uintptr_t)legoGlobs_f_556104, 0x3f59999a); /* 0.85f */
-    light_interface_call_slot_3c((void*)(uintptr_t)legoGlobs_f_556104, 0);
+    lego_light_penumbra_set_adapter((void*)(uintptr_t)legoGlobs_f_556104, 0.85f);
+    lego_light_umbra_set_adapter((void*)(uintptr_t)legoGlobs_f_556104, 0.0f);
 
     scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_5560f8, 1);
     if (legoGlobs_dirLightFP != NULL) scene_render_lock_toggle(legoGlobs_dirLightFP, 1);
@@ -8902,14 +8911,6 @@ void lego_current_level_terrain_grid_pick(float x, float y, int* bx, int* by)
     terrain_map_world_to_block(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
                                x, y, bx, by);
 }
-
-/* 00432bd0's test, which the original inlines here. A macro, not a static
- * helper: the lint takes every unannotated definition for port code. */
-#define LEGO_3B_BLOCK_OPEN(x, y) \
-    ((unsigned int)(x) < legoGlobs_currLevel->width - 1 && \
-     (unsigned int)(y) < legoGlobs_currLevel->height - 1 && \
-     (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[(unsigned int)(y) * legoGlobs_currLevel->width + (unsigned int)(x)].flags1 & 0x10) && \
-     !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[(unsigned int)(y) * legoGlobs_currLevel->width + (unsigned int)(x)].flags1 & 0x8))
 
 /* [group 3B] Slug/object scare step: at a random interval (the elapsed
  * time against 300, or against the object's stats value +0x140), an
@@ -8942,7 +8943,8 @@ int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
             for (i = 0; i < 4; i++) {
                 unsigned int y = by + offsets[i][1];
                 unsigned int x = bx + offsets[i][0];
-                if (LEGO_3B_BLOCK_OPEN(x, y)) {
+                /* 00432bd0's test, inline as in the original (lego_maths.h). */
+                if (lego_C_block_is_wall(x, y)) {
                     LEGO_FIELD(object, float, 0x340) = -1.0f;
                     aitask_route_step_adapter(object);
                     return 1;
@@ -8953,14 +8955,15 @@ int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
 
     if ((force || (entity_stats_word_get(object) & 0x400)) &&
         !(LEGO_FIELD(object, uint32_t, 0x3e0) & 1) &&
-        !entity_flags_mask107c33de_or_1c00203_any_test(object) &&
-        elapsed != 0.0f) {
-        maxRate = LEGO_FIELD(LEGO_FIELD(object, void*, 0x334), float, 0x140);
-        rate = elapsed;
-        if (elapsed > maxRate) rate = maxRate;
-        if (force || (unsigned int)(int)rng_thunk_draw15() % (unsigned int)(maxRate / rate) == 0) {
-            lego_entity_random_cell_step_route_adapter(object);
-            return 1;
+        !entity_flags_mask107c33de_or_1c00203_any_test(object)) {
+        maxRate = *(float*)(LEGO_FIELD(object, char*, 0x334) + 0x140);
+        if (elapsed != 0.0f) {
+            rate = elapsed;
+            if (elapsed > maxRate) rate = maxRate;
+            if (force || (unsigned int)(int)rng_thunk_draw15() % (unsigned int)(maxRate / rate) == 0) {
+                lego_entity_random_cell_step_route_adapter(object);
+                return 1;
+            }
         }
     }
     return 0;
@@ -9212,8 +9215,6 @@ void lego_panel_button_layout_config_load(struct BlockRec* config,
 void lego_advisor_tutorial_icon_image_load(struct BlockRec* config);
 void lego_sound_samples_config_load(struct BlockRec* config,
                                     int noReduceSamples);
-void lego_text_messages_config_load(struct BlockRec* config);
-void lego_message_load_infomessages(struct BlockRec* config);
 void lego_advisor_tooltip_and_sound_config_load(struct BlockRec* config);
 int lego_interface_spawn_request_enqueue(int objType, int objIndex);
 void lego_surface_type_descriptions_config_load(struct BlockRec* config,
@@ -9362,20 +9363,19 @@ void lego_panel_button_layout_config_load(struct BlockRec* config,
 {
     char buff[128];
     char* argv[10];
+    unsigned int copyCount = 0;
     unsigned int buttonCount[12] = { 0 };
     unsigned int buttonTypes[12][24];
     char* names[3][12][24];
     float areas[12][24][4];
     int toolTips[12][24];
     char* copies[12 * 24];
-    unsigned int copyCount;
     struct BlockRec* arrayItem;
     unsigned int panelType;
     unsigned int buttonType;
     int toolTip;
     unsigned int i;
 
-    copyCount = 0;
     // STRING: LEGORR 0x004a47e4
     sprintf(buff, "Buttons%ix%i", screenWidth, screenHeight);
     if ((arrayItem = block_subgroup(config, string_path_join(s_engine_config_root, buff, 0))) != NULL) {
