@@ -836,7 +836,7 @@ void directdraw_blt_8_to_16(DirectDrawSurfaceIface* target, DirectDrawSurfaceIfa
         if (descSource.ddpfPixelFormat.dwRGBBitCount == 8 &&
             target->lpVtbl->Lock(target, NULL, &descTarget, DDLOCK_WAIT, NULL) == DD_OK) {
             if (descTarget.ddpfPixelFormat.dwRGBBitCount == 16 &&
-                descTarget.dwWidth == descSource.dwWidth &&
+                descSource.dwWidth == descTarget.dwWidth &&
                 descTarget.dwHeight == descSource.dwHeight) {
                 for (i = 0, rBits = 0; i < 32; i++) if ((descTarget.ddpfPixelFormat.dwRBitMask >> i) & 1) rBits++;
                 for (i = 0, gBits = 0; i < 32; i++) if ((descTarget.ddpfPixelFormat.dwGBitMask >> i) & 1) gBits++;

@@ -115,7 +115,7 @@ float* surface_triangle_normal_calculate(float* n, const float* p1,
     y = v1.z * v2.x - v1.x * v2.z;
     z = v1.x * v2.y - v1.y * v2.x;
 
-    len = s_maths_one / (float)sqrt(x * x + y * y + z * z);
+    len = s_maths_one / (float)sqrt(y * y + x * x + z * z);
     n[0] = len * x;
     n[1] = len * y;
     n[2] = len * z;
@@ -309,8 +309,8 @@ int sphere_ray_intersection_discriminant_positive(const float* center,
     lx = camera[0] - center[0];
     ly = camera[1] - center[1];
     lz = camera[2] - center[2];
-    b = 2.0f * d.x * lx + 2.0f * d.y * ly + 2.0f * d.z * lz;
-    c = (lx * lx + ly * ly + lz * lz) * s_maths_four - radius * radius;
+    b = 2.0f * d.x * lx + ly * (2.0f * d.y) + 2.0f * d.z * lz;
+    c = (lz * lz + (lx * lx + ly * ly)) * s_maths_four - radius * radius;
     if (b * b - c > s_maths_zero) return 1;
     return 0;
 }

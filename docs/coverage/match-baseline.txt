@@ -1,4 +1,4 @@
-# input_sha256: 343362c50741622e416459eb75a8918aaa22b9f39add519bc1e86b4885f474be
+# input_sha256: 367d7b0698624f1a42b8a735c1602a1af5f2e6dfc90b359fe805160e4b61050a
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2083,11 +2083,11 @@
 0x0046ff90 100.00 weapons_lazer_find_free
 0x0046ffb0 57.40 weapons_fire_lazer
 0x00470260 100.00 weapons_object_collision_check
-0x004702b0 59.40 weapons_object_quad_intersect
+0x004702b0 61.25 weapons_object_quad_intersect
 0x00470540 100.00 weapons_object_center_proximity_check
 0x00470630 100.00 weapons_object_line_side_check
 0x00470690 100.00 weapons_lazer_create
-0x00470760 54.67 weapons_mesh_build_segment
+0x00470760 56.38 weapons_mesh_build_segment
 0x004712c0 100.00 weapons_get_weapons_model
 0x004712f0 100.00 weapons_model_timer_get
 0x00471310 100.00 weapons_model_timer_set
@@ -2303,7 +2303,7 @@
 0x00479490 100.00 block_text_token_pool_grow
 0x00479500 75.00 d3drm_vector_random
 0x00479510 90.00 d3drm_vector_rotate
-0x00479530 64.29 surface_triangle_normal_calculate
+0x00479530 66.67 surface_triangle_normal_calculate
 0x00479630 42.82 surface_triangle_area_calculate
 0x004798a0 100.00 rng_thunk_draw15
 0x004798b0 100.00 random_float_range
@@ -2312,7 +2312,7 @@
 0x00479ab0 100.00 point_along_ray
 0x00479af0 86.67 line_intersection_2d_compute
 0x00479b80 100.00 point_in_polygon_2d
-0x00479c10 49.35 sphere_ray_intersection_discriminant_positive
+0x00479c10 52.90 sphere_ray_intersection_discriminant_positive
 0x00479ce0 100.00 matrix4_multiply
 0x00479d50 100.00 matrix4_set_rotation_x
 0x00479da0 100.00 matrix4_set_rotation_y
@@ -2391,7 +2391,7 @@
 0x0047cdd0 100.00 directdraw_get_avail_texture_mem
 0x0047ce20 100.00 directdraw_clear
 0x0047cee0 100.00 directdraw_create_clipper
-0x0047d000 68.72 directdraw_blt_8_to_16
+0x0047d000 69.67 directdraw_blt_8_to_16
 0x0047d2d0 100.00 directdraw_get_colour
 0x0047d3f0 100.00 directdraw_count_mask_bits
 0x0047d410 100.00 renderer_record_table_initialize
@@ -2622,7 +2622,7 @@
 0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
 0x00488170 62.45 lws_interpolate
-0x004882e0 27.66 lws_absolute_key_set
+0x004882e0 30.04 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
 0x00488790 100.00 pair_table_append
@@ -4808,11 +4808,11 @@
 0x0046ff90 100.00 weapons_lazer_find_free
 0x0046ffb0 57.40 weapons_fire_lazer
 0x00470260 100.00 weapons_object_collision_check
-0x004702b0 59.40 weapons_object_quad_intersect
+0x004702b0 61.25 weapons_object_quad_intersect
 0x00470540 100.00 weapons_object_center_proximity_check
 0x00470630 100.00 weapons_object_line_side_check
 0x00470690 100.00 weapons_lazer_create
-0x00470760 54.67 weapons_mesh_build_segment
+0x00470760 56.38 weapons_mesh_build_segment
 0x004712c0 100.00 weapons_get_weapons_model
 0x004712f0 100.00 weapons_model_timer_get
 0x00471310 100.00 weapons_model_timer_set
@@ -5028,7 +5028,7 @@
 0x00479490 100.00 block_text_token_pool_grow
 0x00479500 75.00 d3drm_vector_random
 0x00479510 90.00 d3drm_vector_rotate
-0x00479530 64.29 surface_triangle_normal_calculate
+0x00479530 66.67 surface_triangle_normal_calculate
 0x00479630 42.82 surface_triangle_area_calculate
 0x004798a0 100.00 rng_thunk_draw15
 0x004798b0 100.00 random_float_range
@@ -5037,7 +5037,7 @@
 0x00479ab0 100.00 point_along_ray
 0x00479af0 86.67 line_intersection_2d_compute
 0x00479b80 100.00 point_in_polygon_2d
-0x00479c10 49.35 sphere_ray_intersection_discriminant_positive
+0x00479c10 52.90 sphere_ray_intersection_discriminant_positive
 0x00479ce0 100.00 matrix4_multiply
 0x00479d50 100.00 matrix4_set_rotation_x
 0x00479da0 100.00 matrix4_set_rotation_y
@@ -5116,7 +5116,7 @@
 0x0047cdd0 100.00 directdraw_get_avail_texture_mem
 0x0047ce20 100.00 directdraw_clear
 0x0047cee0 100.00 directdraw_create_clipper
-0x0047d000 68.72 directdraw_blt_8_to_16
+0x0047d000 69.67 directdraw_blt_8_to_16
 0x0047d2d0 100.00 directdraw_get_colour
 0x0047d3f0 100.00 directdraw_count_mask_bits
 0x0047d410 100.00 renderer_record_table_initialize
@@ -5347,7 +5347,7 @@
 0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
 0x00488170 62.45 lws_interpolate
-0x004882e0 27.66 lws_absolute_key_set
+0x004882e0 30.04 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
 0x00488790 100.00 pair_table_append

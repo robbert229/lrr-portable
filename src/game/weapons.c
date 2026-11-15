@@ -885,7 +885,7 @@ int weapons_object_quad_intersect(Weapons_Object* obj, float* fromPos,
         if (line_intersection_2d_compute(hit, from, to, pt, edge)) {
             if ((float)fabs(pt[0] - pt[2]) <= (float)fabs(pt[1] - pt[3])) {
                 if ((hit[1] > pt[1] && hit[1] < pt[3]) ||
-                    (hit[1] < pt[1] && hit[1] > pt[3])) goto found;
+                    (pt[1] > hit[1] && pt[3] < hit[1])) goto found;
             }
             else if ((hit[0] > pt[0] && hit[0] < pt[2]) ||
                      (hit[0] < pt[0] && hit[0] > pt[2])) {
@@ -1020,7 +1020,7 @@ void weapons_mesh_build_segment(void* mesh, float radius,
     weapons_vector3d_scale(&dir, &dir, radius);
     weapons_vector3d_scale(&perp, &perp, radius);
     vertices[0].x = perp.x + WEAPONS_OCTAGON_K * dir.x;
-    vertices[0].y = perp.y + WEAPONS_OCTAGON_K * dir.y;
+    vertices[0].y = perp.y + dir.y * (WEAPONS_OCTAGON_K);
     vertices[0].z = perp.z + WEAPONS_OCTAGON_K * dir.z;
     vertices[1].x = dir.x + WEAPONS_OCTAGON_K * perp.x;
     vertices[1].y = dir.y + WEAPONS_OCTAGON_K * perp.y;
