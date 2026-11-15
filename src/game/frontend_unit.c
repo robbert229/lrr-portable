@@ -2447,9 +2447,9 @@ void front_run_screen_menu(Front_Menu* menu)
             }
             frontGlobs_scrollOffsetY = 0;
             frontGlobs_scrollOffsetX = 0;
+            menu = nextMenu;
             transition = 0;
             menuTransition = 0;
-            menu = nextMenu;
         }
     }
     front_menu_free_slot_images();
@@ -4306,8 +4306,8 @@ int front_level_link_callback_find_by_link_index(Front_LevelLink* link, void* da
 
     search = (Front_LevelLinkSearch*)data;
     if (search->linkIndex == search->currentIndex) {
-        search->resultIndex = search->currentIndex;
         search->resultLink = link;
+        search->resultIndex = search->currentIndex;
         return 1;
     }
     search->currentIndex++;

@@ -1,4 +1,4 @@
-# input_sha256: 5547d06769673ad2874b1e88e628e27ec4b89cc58b40b8b3dfc25f3a4d7171a2
+# input_sha256: 5fba62fcb9f48284d43ffa3bcdc05ad67046bea3b08a2148b9bcc482fde2079b
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -440,7 +440,7 @@
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
-0x00413b80 83.85 front_run_screen_menu
+0x00413b80 84.38 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
 0x00413e60 100.00 front_menu_item_parse_type_string
 0x00413f00 100.00 mission_replace_char
@@ -503,7 +503,7 @@
 0x00417090 90.32 front_level_set_load_level_links
 0x004171c0 100.00 sav_tree_walk
 0x00417240 100.00 front_level_link_callback_inc_count
-0x00417250 85.71 front_level_link_callback_find_by_link_index
+0x00417250 100.00 front_level_link_callback_find_by_link_index
 0x00417280 100.00 registry_value_lookup
 0x004172d0 100.00 registry_value_index_lookup_or_not_found
 0x004172f0 100.00 sav_tree_walk2
@@ -541,7 +541,7 @@
 0x00418830 100.00 building_upgrade_state_changed_dispatch
 0x00418920 100.00 help_window_list_dependencies
 0x004189d0 100.00 help_window_close
-0x00418a00 92.99 help_window_update
+0x00418a00 93.36 help_window_update
 0x00418da0 100.00 help_window_button_hit_test
 0x00418f80 100.00 help_window_button_tooltip
 0x00418fc0 100.00 help_window_press_button
@@ -729,7 +729,7 @@
 0x00425ce0 100.00 lego_game_speed_set
 0x00425d50 100.00 lego_render_record_set_from_input
 0x00425d80 100.00 current_engine_mode_is_zero
-0x00425d90 89.26 lego_terrain_pointer_command_update
+0x00425d90 89.93 lego_terrain_pointer_command_update
 0x004261c0 100.00 lego_spawn_coordinate_pool_tick
 0x00426230 100.00 lego_global_triple_copy_out
 0x00426250 100.00 lego_update_render_viewport_state
@@ -793,7 +793,7 @@
 0x0042de40 92.31 lego_viewport_target_position_clamp
 0x0042dfc0 100.00 lego_object_pointer_registry_clear_match
 0x0042dff0 100.00 lego_object_pointer_registry_get_slot
-0x0042e020 74.85 lego_object_list_load_file
+0x0042e020 75.15 lego_object_list_load_file
 0x0042e8b0 86.88 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 100.00 lego_stats_level_record_count_for_stat_type
@@ -978,7 +978,7 @@
 0x00438770 100.00 legoobject_building_upgrade_resource_admission_check
 0x004387f0 100.00 legoobject_building_upgrade_commit
 0x004388b0 100.00 legoobject_action_kind_prerequisite_check
-0x00438960 42.42 legoobject_unknown_00438960
+0x00438960 46.38 legoobject_unknown_00438960
 0x004389e0 100.00 legoobject_route_marker_candidate_find
 0x00438a60 100.00 legoobject_query_center_mask01
 0x00438ae0 100.00 legoobject_query_center_mask02
@@ -3165,7 +3165,7 @@
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
-0x00413b80 83.85 front_run_screen_menu
+0x00413b80 84.38 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
 0x00413e60 100.00 front_menu_item_parse_type_string
 0x00413f00 100.00 mission_replace_char
@@ -3228,7 +3228,7 @@
 0x00417090 90.32 front_level_set_load_level_links
 0x004171c0 100.00 sav_tree_walk
 0x00417240 100.00 front_level_link_callback_inc_count
-0x00417250 85.71 front_level_link_callback_find_by_link_index
+0x00417250 100.00 front_level_link_callback_find_by_link_index
 0x00417280 100.00 registry_value_lookup
 0x004172d0 100.00 registry_value_index_lookup_or_not_found
 0x004172f0 100.00 sav_tree_walk2
@@ -3266,7 +3266,7 @@
 0x00418830 100.00 building_upgrade_state_changed_dispatch
 0x00418920 100.00 help_window_list_dependencies
 0x004189d0 100.00 help_window_close
-0x00418a00 92.99 help_window_update
+0x00418a00 93.36 help_window_update
 0x00418da0 100.00 help_window_button_hit_test
 0x00418f80 100.00 help_window_button_tooltip
 0x00418fc0 100.00 help_window_press_button
@@ -3454,7 +3454,7 @@
 0x00425ce0 100.00 lego_game_speed_set
 0x00425d50 100.00 lego_render_record_set_from_input
 0x00425d80 100.00 current_engine_mode_is_zero
-0x00425d90 89.26 lego_terrain_pointer_command_update
+0x00425d90 89.93 lego_terrain_pointer_command_update
 0x004261c0 100.00 lego_spawn_coordinate_pool_tick
 0x00426230 100.00 lego_global_triple_copy_out
 0x00426250 100.00 lego_update_render_viewport_state
@@ -3518,7 +3518,7 @@
 0x0042de40 92.31 lego_viewport_target_position_clamp
 0x0042dfc0 100.00 lego_object_pointer_registry_clear_match
 0x0042dff0 100.00 lego_object_pointer_registry_get_slot
-0x0042e020 74.85 lego_object_list_load_file
+0x0042e020 75.15 lego_object_list_load_file
 0x0042e8b0 86.88 lego_entity_type_pair_lookup
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 100.00 lego_stats_level_record_count_for_stat_type
@@ -3703,7 +3703,7 @@
 0x00438770 100.00 legoobject_building_upgrade_resource_admission_check
 0x004387f0 100.00 legoobject_building_upgrade_commit
 0x004388b0 100.00 legoobject_action_kind_prerequisite_check
-0x00438960 42.42 legoobject_unknown_00438960
+0x00438960 46.38 legoobject_unknown_00438960
 0x004389e0 100.00 legoobject_route_marker_candidate_find
 0x00438a60 100.00 legoobject_query_center_mask01
 0x00438ae0 100.00 legoobject_query_center_mask02

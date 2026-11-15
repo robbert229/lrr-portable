@@ -1226,8 +1226,8 @@ Lego_Object* legoobject_unknown_00438960(Lego_Object* obj, int alt)
 {
     LegoObjGD_SearchData search;
 
-    search.result = NULL;
     search.x = 0.0f;
+    search.result = NULL;
     search.y = 0.0f;
     search.bestDistance = 10000.0f;
     search.mask = 0x2000;

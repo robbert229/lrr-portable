@@ -378,8 +378,8 @@ void help_window_update(void)
             pos.x = helpwindowGlobs.textX;
             pos.y = (float)linesUsed + 10.0f;
 
-            vehicleCount = 0;
             buildingCount = 0;
+            vehicleCount = 0;
             for (i = 0; i < helpwindowGlobs.depCount; i++) {
                 switch (helpwindowGlobs.depTypes[i]) {
                 case HELPWINDOW_OBJECT_VEHICLE:

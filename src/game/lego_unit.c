@@ -2691,9 +2691,9 @@ void lego_terrain_pointer_command_update(void)
             s_lego_radarDragDistance = 0.0f;
             s_lego_radarDragging = 0;
         }
-        s_lego_radarPrevButton = g_renderer_word_c;
         s_lego_mouseLastX = s_renderer_word_a;
         s_lego_mouseLastY = s_renderer_word_b;
+        s_lego_radarPrevButton = g_renderer_word_c;
     }
 }
 
@@ -5883,10 +5883,10 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                         "driving", NULL));
                 olNames[count] = olName = string_duplicate(item->key);
 
-                xPos -= 1.0f;
                 yPos -= 1.0f;
-                bx = (unsigned int)xPos;
+                xPos -= 1.0f;
                 by = (unsigned int)yPos;
+                bx = (unsigned int)xPos;
                 terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by, &wPos.x, &wPos.y);
                 wPos.x += (xPos - (bx + 0.5f)) * level->blockSize;
                 yPos = (yPos - (by + 0.5f)) * level->blockSize;
