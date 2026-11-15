@@ -513,14 +513,17 @@ unsigned int construction_zone_start_building(int objID, int* blockPos,
 
     for (i = 0; i < shapeCount; i++) {
         next = &shape[i + 1];
-        if (i != shapeCount - 1 && shape[i].x == next->x &&
-            shape[i].y == next->y) {
+        if (i == shapeCount - 1)
+            entrance = 0;
+        else if (shape[i].x != next->x)
+            entrance = 0;
+        else if (shape[i].y != next->y)
+            entrance = 0;
+        else {
             entrance = 1;
             CONSTRUCTION_BLOCK(level, shape[i].x, shape[i].y).flags1 |=
                 CONSTRUCTION_BLOCK1_ENTRANCE;
             CONSTRUCTION_BLOCK_ZONE(level, shape[i].x, shape[i].y) = zone;
-        } else {
-            entrance = 0;
         }
         CONSTRUCTION_BLOCK(level, shape[i].x, shape[i].y).flags1 |=
             CONSTRUCTION_BLOCK1_ZONE;

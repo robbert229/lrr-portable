@@ -1,4 +1,4 @@
-# input_sha256: c722a13037a03292bd1d625fa815421a9c7af90022a95e89b42bb9760177b27d
+# input_sha256: 1d6a33b6d68c83342a1605b026a70f879dbabccdab887a65723ea81790c2f167
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -238,7 +238,7 @@
 0x00409470 100.00 construction_find_resource_object_recurse
 0x00409550 100.00 construction_zone_request_path_resources
 0x00409600 67.48 lego_path_remove
-0x00409790 93.13 construction_zone_start_building
+0x00409790 95.59 construction_zone_start_building
 0x00409940 100.00 terrain_cell_refresh_eight_neighbors_current
 0x004099d0 100.00 path_record_release_all
 0x004099f0 100.00 construction_zone_free
@@ -2963,7 +2963,7 @@
 0x00409470 100.00 construction_find_resource_object_recurse
 0x00409550 100.00 construction_zone_request_path_resources
 0x00409600 67.48 lego_path_remove
-0x00409790 93.13 construction_zone_start_building
+0x00409790 95.59 construction_zone_start_building
 0x00409940 100.00 terrain_cell_refresh_eight_neighbors_current
 0x004099d0 100.00 path_record_release_all
 0x004099f0 100.00 construction_zone_free
