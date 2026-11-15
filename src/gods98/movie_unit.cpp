@@ -32,49 +32,56 @@
 #include "heap.hpp"
 #include "../crt/vc5names.h"
 
-/* The original links its GUIDs from the DirectShow and DirectX GUID
- * libraries; as in directdraw.c, the unit defines its own copies. */
+/* The GUIDs: the matching build links the first five from amstrmid.lib and
+ * the last two from dxguid.lib, as the original does (finding 688). The
+ * portable builds keep the unit's own copies. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+extern "C" {
 // GLOBAL: LEGORR 0x0049f168
-static const GUID s_iid_am_multi_media_stream = {
+extern const GUID IID_IAMMultiMediaStream;
+// GLOBAL: LEGORR 0x0049f1e8
+extern const GUID CLSID_AMMultiMediaStream;
+// GLOBAL: LEGORR 0x0049f228
+extern const GUID IID_IDirectDrawMediaStream;
+// GLOBAL: LEGORR 0x0049f288
+extern const GUID MSPID_PrimaryVideo;
+// GLOBAL: LEGORR 0x0049f298
+extern const GUID MSPID_PrimaryAudio;
+// GLOBAL: LEGORR 0x0049f318
+extern const GUID IID_IDirectDraw2;
+// GLOBAL: LEGORR 0x0049f358
+extern const GUID IID_IDirectDrawSurface3;
+}
+#else
+static const GUID IID_IAMMultiMediaStream = {
     0xbebe595c, 0x9a6f, 0x11d0,
     { 0x8f, 0xde, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d }
 };
-
-// GLOBAL: LEGORR 0x0049f1e8
-static const GUID s_clsid_am_multi_media_stream = {
+static const GUID CLSID_AMMultiMediaStream = {
     0x49c47ce5, 0x9ba4, 0x11d0,
     { 0x82, 0x12, 0x00, 0xc0, 0x4f, 0xc3, 0x2c, 0x45 }
 };
-
-// GLOBAL: LEGORR 0x0049f228
-static const GUID s_iid_direct_draw_media_stream = {
+static const GUID IID_IDirectDrawMediaStream = {
     0xf4104fce, 0x9a70, 0x11d0,
     { 0x8f, 0xde, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d }
 };
-
-// GLOBAL: LEGORR 0x0049f288
-static const GUID s_mspid_primary_video = {
+static const GUID MSPID_PrimaryVideo = {
     0xa35ff56a, 0x9fda, 0x11d0,
     { 0x8f, 0xdf, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d }
 };
-
-// GLOBAL: LEGORR 0x0049f298
-static const GUID s_mspid_primary_audio = {
+static const GUID MSPID_PrimaryAudio = {
     0xa35ff56b, 0x9fda, 0x11d0,
     { 0x8f, 0xdf, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d }
 };
-
-// GLOBAL: LEGORR 0x0049f318
-static const GUID s_iid_direct_draw2 = {
+static const GUID IID_IDirectDraw2 = {
     0xb3a6f3e0, 0x2b43, 0x11cf,
     { 0xa2, 0xde, 0x00, 0xaa, 0x00, 0xb9, 0x33, 0x56 }
 };
-
-// GLOBAL: LEGORR 0x0049f358
-static const GUID s_iid_direct_draw_surface3 = {
+static const GUID IID_IDirectDrawSurface3 = {
     0xda044e00, 0x69b2, 0x11d0,
     { 0xa1, 0xd5, 0x00, 0xaa, 0x00, 0xb8, 0xdf, 0xbb }
 };
+#endif
 
 /* MSVC 5.0 has no amstream.h, and its ddraw.h is DirectX 3's. The unit
  * declares the interfaces it calls, each up to the last slot it uses, as
@@ -244,16 +251,16 @@ struct G98CMovie {
 // FUNCTION: LEGORR 0x004721e0
 bool G98CMovie::InitSample(MovieAMStream* stream)
 {
-    m_err = stream->GetMediaStream(s_mspid_primary_video, &m_primaryVidStream);
+    m_err = stream->GetMediaStream(MSPID_PrimaryVideo, &m_primaryVidStream);
     if (FAILED(m_err)) goto fail;
-    m_err = m_primaryVidStream->QueryInterface(s_iid_direct_draw_media_stream,
+    m_err = m_primaryVidStream->QueryInterface(IID_IDirectDrawMediaStream,
                                                (void**)&m_ddStream);
     if (FAILED(m_err)) goto fail;
     m_err = m_ddStream->CreateSample(NULL, NULL, 0, &m_sample);
     if (FAILED(m_err)) goto fail;
     m_err = m_sample->GetSurface(&m_surface, &m_rect);
     if (FAILED(m_err)) goto fail;
-    m_err = m_surface->QueryInterface(s_iid_direct_draw_surface3,
+    m_err = m_surface->QueryInterface(IID_IDirectDrawSurface3,
                                       (void**)&m_baseSurf);
     if (FAILED(m_err)) goto fail;
     m_err = stream->SetState(MOVIE_STREAMSTATE_RUN);
@@ -278,16 +285,16 @@ bool G98CMovie::OpenStream(const char* fName, MovieAMStream** streamOut,
     WCHAR wPath[MAX_PATH];
     HRESULT hr;
 
-    hr = CoCreateInstance(s_clsid_am_multi_media_stream, NULL,
-                          CLSCTX_INPROC_SERVER, s_iid_am_multi_media_stream,
+    hr = CoCreateInstance(CLSID_AMMultiMediaStream, NULL,
+                          CLSCTX_INPROC_SERVER, IID_IAMMultiMediaStream,
                           (void**)&stream);
     if (SUCCEEDED(hr)) {
         hr = stream->Initialize(MOVIE_STREAMTYPE_READ, 0, NULL);
         if (SUCCEEDED(hr)) {
-            hr = stream->AddMediaStream(ddraw, &s_mspid_primary_video, 0,
+            hr = stream->AddMediaStream(ddraw, &MSPID_PrimaryVideo, 0,
                                         NULL);
             if (SUCCEEDED(hr)) {
-                hr = stream->AddMediaStream(NULL, &s_mspid_primary_audio,
+                hr = stream->AddMediaStream(NULL, &MSPID_PrimaryAudio,
                                             MOVIE_AMMSF_ADDDEFAULTRENDERER,
                                             NULL);
                 if (FAILED(hr)) hr = S_OK;
@@ -397,9 +404,9 @@ G98CMovie* movie_load(const char* fName)
     FILE* fp;
 
     ((MovieUnknown*)renderer_global_dword_get())
-        ->QueryInterface(s_iid_direct_draw2, (void**)&ddraw);
+        ->QueryInterface(IID_IDirectDraw2, (void**)&ddraw);
     ((MovieUnknown*)render_surface_secondary_get())
-        ->QueryInterface(s_iid_direct_draw_surface3, (void**)&surf);
+        ->QueryInterface(IID_IDirectDrawSurface3, (void**)&surf);
 
     if ((fp = fopen(fullName, "r")) != NULL) {
         fclose(fp);

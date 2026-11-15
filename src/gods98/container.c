@@ -594,42 +594,42 @@ static const unsigned long cntMapPerspCorrect = 4;
 // GLOBAL: LEGORR 0x0049e888
 static const long cntGroupAllGroups = -1;
 
-/* The interface IDs the unit asks for: library data in the GUID block
- * (finding 618). The unit's own copies, as movie_unit.cpp and
- * directdraw.c keep theirs. IID_IDirect3DRMFrame3 (0049f988), which
- * animclone.c reads too, is defined here in the matching build, in the
- * block's order, under the name the port gives it; natively it is
+/* The interface IDs the unit asks for: library data in the GUID block.
+ * The matching build links them from dxguid.lib, as the original does
+ * (finding 688); animclone.c reads IID_IDirect3DRMFrame3 too. The portable
+ * builds keep the unit's own copies, and take IID_IDirect3DRMFrame3 from
  * resource.cpp's s_resource_tree_child_iid (#805, finding 674). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
 // GLOBAL: LEGORR 0x0049f338
-static const CntIID IID_CntDirectDrawSurface = {
+extern const CntIID IID_IDirectDrawSurface;
+// GLOBAL: LEGORR 0x0049f968
+extern const CntIID IID_IDirect3DRMFrame;
+// GLOBAL: LEGORR 0x0049f988
+extern const CntIID IID_IDirect3DRMFrame3;
+// GLOBAL: LEGORR 0x0049f9a8
+extern const CntIID IID_IDirect3DRMMesh;
+// GLOBAL: LEGORR 0x0049f9c8
+extern const CntIID IID_IDirect3DRMMeshBuilder2;
+// GLOBAL: LEGORR 0x0049fa18
+extern const CntIID IID_IDirect3DRMTexture;
+#else
+static const CntIID IID_IDirectDrawSurface = {
     0x6c14db81, 0xa733, 0x11ce,
     {0xa5, 0x21, 0x00, 0x20, 0xaf, 0x0b, 0xe5, 0x60}};
-// GLOBAL: LEGORR 0x0049f968
-static const CntIID IID_CntFrame = {
+static const CntIID IID_IDirect3DRMFrame = {
     0xeb16cb03, 0xd271, 0x11ce,
     {0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1}};
-#if defined(_MSC_VER) && _MSC_VER < 1200
-// GLOBAL: LEGORR 0x0049f988
-const CntIID s_resource_tree_child_iid = {
-    0xff6b7f70, 0xa40e, 0x11d1,
-    {0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66}};
-#define IID_CntFrame3 s_resource_tree_child_iid
-#endif
-// GLOBAL: LEGORR 0x0049f9a8
-static const CntIID IID_CntMesh = {
+static const CntIID IID_IDirect3DRMMesh = {
     0xa3a80d01, 0x6e12, 0x11cf,
     {0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1}};
-// GLOBAL: LEGORR 0x0049f9c8
-static const CntIID IID_CntMeshBuilder3 = {
+static const CntIID IID_IDirect3DRMMeshBuilder2 = {
     0x4516ec77, 0x8f20, 0x11d0,
     {0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3}};
-// GLOBAL: LEGORR 0x0049fa18
-static const CntIID IID_CntTexture = {
+static const CntIID IID_IDirect3DRMTexture = {
     0xeb16cb09, 0xd271, 0x11ce,
     {0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1}};
-#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern const unsigned char s_resource_tree_child_iid[16];          /* 0049f988 */
-#define IID_CntFrame3 (*(const CntIID*)s_resource_tree_child_iid)
+#define IID_IDirect3DRMFrame3 (*(const CntIID*)s_resource_tree_child_iid)
 #endif
 
 // GLOBAL: LEGORR 0x0076ad80
@@ -1151,7 +1151,7 @@ void Container_Light_SetEnableContainer(Container* light, Container* enable)
 {
     CntFrame1* frame1;
 
-    enable->masterFrame->lpVtbl->QueryInterface(enable->masterFrame, &IID_CntFrame,
+    enable->masterFrame->lpVtbl->QueryInterface(enable->masterFrame, &IID_IDirect3DRMFrame,
                                                 (void**)&frame1);
     light->typeData->light->lpVtbl->SetEnableFrame(light->typeData->light, frame1);
 }
@@ -1626,10 +1626,10 @@ static int Container_SetPerspectiveCorrectionCallback(CntFrame* frame,
             CntObject* visual = containerGlobs.visualArray[loop];
             CntMeshBuilder* mb;
             CntMesh* mesh;
-            if (visual->lpVtbl->QueryInterface(visual, &IID_CntMeshBuilder3,
+            if (visual->lpVtbl->QueryInterface(visual, &IID_IDirect3DRMMeshBuilder2,
                                                (void**)&mb) == 0) {
                 mb->lpVtbl->SetPerspective(mb, on);
-            } else if (visual->lpVtbl->QueryInterface(visual, &IID_CntMesh,
+            } else if (visual->lpVtbl->QueryInterface(visual, &IID_IDirect3DRMMesh,
                                                       (void**)&mesh) == 0) {
                 unsigned long groupCount = mesh->lpVtbl->GetGroupCount(mesh);
                 unsigned long group;
@@ -1815,7 +1815,7 @@ Container_Texture* Container_LoadTexture2(const char* fname, int immediate,
             if (surface) {
                 CntSurface* surf1;
                 if (surface->lpVtbl->QueryInterface(
-                        surface, &IID_CntDirectDrawSurface,
+                        surface, &IID_IDirectDrawSurface,
                         (void**)&surf1) == 0) {
                     if (lpD3DRM()->lpVtbl->CreateTextureFromSurface(
                             lpD3DRM(), surf1, &texture) == 0) {
@@ -2153,7 +2153,7 @@ void Container_Mesh_SetTexture(Container* cont, unsigned long groupID,
         CntMesh* mesh = cont->typeData->mesh;
         Container_Mesh_HandleSeparateMeshGroups(&mesh, &groupID);
         if (texture) {
-            texture->lpVtbl->QueryInterface(texture, &IID_CntTexture, (void**)&texture1);
+            texture->lpVtbl->QueryInterface(texture, &IID_IDirect3DRMTexture, (void**)&texture1);
         } else {
             texture1 = NULL;
         }
@@ -2682,7 +2682,7 @@ unsigned long Container_GetActivities(Container* cont,
                 for (sub = 0; sub < childCount; sub++) {
                     CntFrame1* frame1;
                     children->lpVtbl->GetElement(children, sub, &frame1);
-                    frame1->lpVtbl->QueryInterface(frame1, &IID_CntFrame3,
+                    frame1->lpVtbl->QueryInterface(frame1, &IID_IDirect3DRMFrame3,
                                                    (void**)&frame);
                     frame1->lpVtbl->Release(frame1);
                     frame->lpVtbl->GetName(frame, &len, NULL);
@@ -2820,7 +2820,7 @@ struct CntFrame* Container_Frame_Find(Container* cont, const char* findName,
         count = children->lpVtbl->GetSize(children);
         for (loop = 0; loop < count; loop++) {
             children->lpVtbl->GetElement(children, loop, &frame1);
-            frame1->lpVtbl->QueryInterface(frame1, &IID_CntFrame3,
+            frame1->lpVtbl->QueryInterface(frame1, &IID_IDirect3DRMFrame3,
                                            (void**)&frame);
             frame1->lpVtbl->Release(frame1);
             frame->lpVtbl->GetName(frame, &len, NULL);
@@ -3039,7 +3039,7 @@ int Container_Frame_WalkTree(struct CntFrame* frame, unsigned long level,
     count = children->lpVtbl->GetSize(children);
     for (loop = 0; loop < count; loop++) {
         children->lpVtbl->GetElement(children, loop, &frame1);
-        frame1->lpVtbl->QueryInterface(frame1, &IID_CntFrame3, (void**)&child);
+        frame1->lpVtbl->QueryInterface(frame1, &IID_IDirect3DRMFrame3, (void**)&child);
         frame1->lpVtbl->Release(frame1);
         if (Container_Frame_WalkTree(child, level + 1, callback, data)) {
             finished = 1;

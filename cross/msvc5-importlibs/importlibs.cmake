@@ -8,8 +8,9 @@
 #               dilib2.obj (c_dfDIKeyboard), whose data lives in .text
 #   dsound.lib  DSOUND.dll's DirectSoundCreate, imported by ordinal 1
 #               (the toolchain's dsound.lib imports it by name)
-#   dxguid.lib  the DirectInput GUIDs the data members reference, one per
-#               member as in the SDK
+#   amstrmid.lib  the DirectShow multimedia-stream GUIDs, one member
+#   dxguid.lib  every DirectX 6.1 GUID, one member, so that the data
+#               members' references pull the whole block (finding 688)
 #
 # The libraries are written to LRR_IMPORTLIB_DIR, which the matching link
 # searches before the toolchain's lib directory. The target
@@ -25,18 +26,11 @@ set(_lrr_il_cl "${CMAKE_C_COMPILER}" /nologo /c /Zl /W3)
 set(_lrr_il_lib "${CMAKE_AR}" /nologo)
 
 # One object per SDK member. /Zl keeps default-library names out of them.
-foreach(_member IN ITEMS sdk_exports dilib1 dilib2)
+foreach(_member IN ITEMS sdk_exports dilib1 dilib2 amstrmid dxguid)
   add_custom_command(OUTPUT "${_lrr_il_out}/${_member}.obj"
     COMMAND ${_lrr_il_cl} "${_lrr_il_src}/${_member}.c" "/Fo${_member}.obj"
     DEPENDS "${_lrr_il_src}/${_member}.c" "${_lrr_il_src}/dinput_formats.h"
-    WORKING_DIRECTORY "${_lrr_il_out}" VERBATIM)
-endforeach()
-foreach(_guid IN ITEMS GUID_XAxis GUID_YAxis GUID_ZAxis GUID_Key
-    GUID_SysKeyboard)
-  add_custom_command(OUTPUT "${_lrr_il_out}/${_guid}.obj"
-    COMMAND ${_lrr_il_cl} "/DDXGUID_${_guid}" "${_lrr_il_src}/dxguid.c"
-      "/Fo${_guid}.obj"
-    DEPENDS "${_lrr_il_src}/dxguid.c" "${_lrr_il_src}/dinput_formats.h"
+      "${_lrr_il_src}/sdk_guid.h"
     WORKING_DIRECTORY "${_lrr_il_out}" VERBATIM)
 endforeach()
 
@@ -54,14 +48,15 @@ add_custom_command(OUTPUT "${_lrr_il_out}/dsound.lib"
     /out:dsound.lib sdk_exports.obj
   DEPENDS "${_lrr_il_src}/dsound.def" "${_lrr_il_out}/sdk_exports.obj"
   WORKING_DIRECTORY "${_lrr_il_out}" VERBATIM)
+add_custom_command(OUTPUT "${_lrr_il_out}/amstrmid.lib"
+  COMMAND ${_lrr_il_lib} /out:amstrmid.lib amstrmid.obj
+  DEPENDS "${_lrr_il_out}/amstrmid.obj"
+  WORKING_DIRECTORY "${_lrr_il_out}" VERBATIM)
 add_custom_command(OUTPUT "${_lrr_il_out}/dxguid.lib"
-  COMMAND ${_lrr_il_lib} /out:dxguid.lib GUID_XAxis.obj GUID_YAxis.obj
-    GUID_ZAxis.obj GUID_Key.obj GUID_SysKeyboard.obj
-  DEPENDS "${_lrr_il_out}/GUID_XAxis.obj" "${_lrr_il_out}/GUID_YAxis.obj"
-    "${_lrr_il_out}/GUID_ZAxis.obj" "${_lrr_il_out}/GUID_Key.obj"
-    "${_lrr_il_out}/GUID_SysKeyboard.obj"
+  COMMAND ${_lrr_il_lib} /out:dxguid.lib dxguid.obj
+  DEPENDS "${_lrr_il_out}/dxguid.obj"
   WORKING_DIRECTORY "${_lrr_il_out}" VERBATIM)
 
 set(LRR_IMPORTLIB_FILES "${_lrr_il_out}/dinput.lib" "${_lrr_il_out}/dsound.lib"
-  "${_lrr_il_out}/dxguid.lib")
+  "${_lrr_il_out}/amstrmid.lib" "${_lrr_il_out}/dxguid.lib")
 add_custom_target(lrr_msvc5_importlibs DEPENDS ${LRR_IMPORTLIB_FILES})

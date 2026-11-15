@@ -234,17 +234,21 @@ void pair_table_append(LwsMeshPath* list, unsigned int* count,
 }
 #endif
 
-/* IID_IDirect3DRMUserVisual. The two units that use it, this one and
- * G98-025 (animclone.c), share the copy at 0049fb48, so it has external
- * linkage. */
+/* IID_IDirect3DRMUserVisual, which G98-025 (animclone.c) uses too. The
+ * matching build links it from dxguid.lib, as the original does (finding
+ * 688); the portable builds define it here, with external linkage. */
 #ifdef __cplusplus
-extern "C" const LwsIID s_iid_user_visual;
+extern "C" const LwsIID IID_IDirect3DRMUserVisual;
 #endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
 // GLOBAL: LEGORR 0x0049fb48
-const LwsIID s_iid_user_visual = {
+extern const LwsIID IID_IDirect3DRMUserVisual;
+#else
+const LwsIID IID_IDirect3DRMUserVisual = {
     0x59163de0, 0x6d43, 0x11cf,
     { 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1 }
 };
+#endif
 
 /* The degree-to-radian factors. Lws_Parse multiplies by each in turn; as
  * literals MSVC folds them into one constant. */
@@ -610,7 +614,7 @@ LwsInfo* lws_clone(LwsInfo* scene, LwsFrame* parent)
 
             frame->lpVtbl->GetVisuals(frame, &count, NULL);
             frame->lpVtbl->GetVisuals(frame, &count, &iunknown);
-            iunknown->lpVtbl->QueryInterface(iunknown, &s_iid_user_visual, (void**)&userVisual);
+            iunknown->lpVtbl->QueryInterface(iunknown, &IID_IDirect3DRMUserVisual, (void**)&userVisual);
             iunknown->lpVtbl->Release(iunknown);
             mesh = (void*)userVisual->lpVtbl->GetAppData(userVisual);
             userVisual->lpVtbl->Release(userVisual);
@@ -690,7 +694,7 @@ void lws_textures_animate(LwsInfo* scene, LwsNode* node)
 
         frame->lpVtbl->GetVisuals(frame, &count, NULL);
         frame->lpVtbl->GetVisuals(frame, &count, &iunknown);
-        iunknown->lpVtbl->QueryInterface(iunknown, &s_iid_user_visual, (void**)&userVisual);
+        iunknown->lpVtbl->QueryInterface(iunknown, &IID_IDirect3DRMUserVisual, (void**)&userVisual);
         iunknown->lpVtbl->Release(iunknown);
         mesh = (void*)userVisual->lpVtbl->GetAppData(userVisual);
         userVisual->lpVtbl->Release(userVisual);
@@ -794,7 +798,7 @@ void lws_dissolve_level_set(LwsInfo* scene, LwsNode* node, float level)
 
     frame->lpVtbl->GetVisuals(frame, &count, NULL);
     frame->lpVtbl->GetVisuals(frame, &count, &iunknown);
-    iunknown->lpVtbl->QueryInterface(iunknown, &s_iid_user_visual, (void**)&userVisual);
+    iunknown->lpVtbl->QueryInterface(iunknown, &IID_IDirect3DRMUserVisual, (void**)&userVisual);
     iunknown->lpVtbl->Release(iunknown);
     mesh = (void*)userVisual->lpVtbl->GetAppData(userVisual);
     userVisual->lpVtbl->Release(userVisual);
@@ -1069,7 +1073,7 @@ void lws_node_free(LwsInfo* scene, LwsNode* node)
 
         frame->lpVtbl->GetVisuals(frame, &count, NULL);
         frame->lpVtbl->GetVisuals(frame, &count, &iunknown);
-        iunknown->lpVtbl->QueryInterface(iunknown, &s_iid_user_visual, (void**)&userVisual);
+        iunknown->lpVtbl->QueryInterface(iunknown, &IID_IDirect3DRMUserVisual, (void**)&userVisual);
         iunknown->lpVtbl->Release(iunknown);
         mesh = (void*)userVisual->lpVtbl->GetAppData(userVisual);
         userVisual->lpVtbl->Release(userVisual);
