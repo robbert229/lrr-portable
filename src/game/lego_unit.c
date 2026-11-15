@@ -94,23 +94,23 @@ static float s_lego_rollOffTextTimer;
  * forget the previous states. The time the buttons have been up is a
  * static of lego_main_sim_interaction_and_cell_update. */
 // GLOBAL: LEGORR 0x004de418
-float s_lego_drag_x;
+float s_lego_drag_x = 0;
 
 // GLOBAL: LEGORR 0x004de41c
-float s_lego_drag_y;
+float s_lego_drag_y = 0;
 
 // GLOBAL: LEGORR 0x004de560
-int s_lego_dragging;
+int s_lego_dragging = 0;
 
 // GLOBAL: LEGORR 0x004de564
-int s_lego_prev_left_button;
+int s_lego_prev_left_button = 0;
 
 // GLOBAL: LEGORR 0x004de568
-int s_lego_prev_right_button;
+int s_lego_prev_right_button = 0;
 
 
 // GLOBAL: LEGORR 0x004de570
-int s_lego_reset_buttons;
+int s_lego_reset_buttons = 0;
 
 /* legoGlobs.viewMain (005560dc). */
 
@@ -181,15 +181,15 @@ float s_lego_spotPenumbra = 0.7f;
 
 /* The high-fog colour cycle's phase. */
 // GLOBAL: LEGORR 0x004de53c
-float s_lego_highFogPhase;
+float s_lego_highFogPhase = 0;
 
 /* Input's mouse-button word (0076ab3c) as it was last frame. */
 // GLOBAL: LEGORR 0x004de540
-uint32_t s_lego_prevMouseWord;
+uint32_t s_lego_prevMouseWord = 0;
 
 /* The spotlight's umbra, stepped by the debug keys. */
 // GLOBAL: LEGORR 0x004de544
-float s_lego_spotUmbra;
+float s_lego_spotUmbra = 0;
 
 /* ---- state, group F ---- */
 
@@ -213,35 +213,35 @@ float s_lego_spotUmbra;
 
 /* Lego.c .bss: the radar map's mouse state. */
 // GLOBAL: LEGORR 0x004de410
-uint32_t s_lego_mouseLastY;
+uint32_t s_lego_mouseLastY = 0;
 // GLOBAL: LEGORR 0x004de414
-uint32_t s_lego_mouseLastX;
+uint32_t s_lego_mouseLastX = 0;
 // GLOBAL: LEGORR 0x004de54c
-float s_lego_radarDragDistance;
+float s_lego_radarDragDistance = 0;
 // GLOBAL: LEGORR 0x004de550
-uint32_t s_lego_radarPrevButton;
+uint32_t s_lego_radarPrevButton = 0;
 // GLOBAL: LEGORR 0x004de554
-unsigned int s_lego_radarBlockX;
+unsigned int s_lego_radarBlockX = 0;
 // GLOBAL: LEGORR 0x004de558
-unsigned int s_lego_radarBlockY;
+unsigned int s_lego_radarBlockY = 0;
 // GLOBAL: LEGORR 0x004de55c
-int s_lego_radarDragging;
+int s_lego_radarDragging = 0;
 
 /* Lego.c .bss: the object and the block the tool tips last hovered. */
 // GLOBAL: LEGORR 0x004de208
-int s_lego_toolTipBlockX;
+int s_lego_toolTipBlockX = 0;
 // GLOBAL: LEGORR 0x004de20c
-int s_lego_toolTipBlockY;
+int s_lego_toolTipBlockY = 0;
 // GLOBAL: LEGORR 0x004de574
-struct EntitySlot* s_lego_toolTipObject;
+struct EntitySlot* s_lego_toolTipObject = 0;
 
 /* Lego.c .bss: the debug keys' toggles and the unit the K key picked. */
 // GLOBAL: LEGORR 0x004de578
-int s_lego_debugLightToggle;
+int s_lego_debugLightToggle = 0;
 // GLOBAL: LEGORR 0x004de57c
-int s_lego_debugTransformToggle;
+int s_lego_debugTransformToggle = 0;
 // GLOBAL: LEGORR 0x004de584
-struct EntitySlot* s_lego_debugRetargetObject;
+struct EntitySlot* s_lego_debugRetargetObject = 0;
 
 /* LegoObject.c's state: objectGlobs (004de790), the original's one
  * struct, which legoobject_unit.c defines (legoobject_globs.h, finding
@@ -9182,11 +9182,11 @@ void terrain_grid_entry_resources_release_all_current(void)
 
 /* Input's left mouse button (0076ab3c) at the last release check. */
 // GLOBAL: LEGORR 0x004de424
-uint32_t s_lego_mslbLast;
+uint32_t s_lego_mslbLast = 0;
 
 /* The tutorial icon's bob phase. */
 // GLOBAL: LEGORR 0x004de58c
-float s_lego_tutorialIconPhase;
+float s_lego_tutorialIconPhase = 0;
 
 /* Maths.h's Vector3F. */
 typedef struct LegoVector3F3C { float x, y, z; } LegoVector3F3C;
@@ -10068,9 +10068,9 @@ void lego_panel_selection_highlight_toggle(int on)
 
 /* Lego.c .bss: the scroll guard and the neighbour-pick rotation. */
 // GLOBAL: LEGORR 0x004de548
-int s_scroll_guard;
+int s_scroll_guard = 0;
 // GLOBAL: LEGORR 0x004de588
-uint32_t s_neighbor_pick_rotation;
+uint32_t s_neighbor_pick_rotation = 0;
 
 #ifdef __cplusplus
 }

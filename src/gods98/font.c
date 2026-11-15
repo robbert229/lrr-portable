@@ -71,7 +71,7 @@ typedef struct FontGlobs {
 } FontGlobs;
 
 // GLOBAL: LEGORR 0x00506528
-FontGlobs fontGlobs;
+FontGlobs fontGlobs = { 0 };
 
 // FUNCTION: LEGORR 0x00479ee0
 Font* font_load(const char* fname)
