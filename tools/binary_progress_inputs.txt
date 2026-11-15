@@ -259,6 +259,7 @@ src/game/info_unit.c
 src/game/info_unit.h
 src/game/interface.h
 src/game/interface_callees.h
+src/game/interface_mem.h
 src/game/interface_port.cpp
 src/game/interface_unit.c
 src/game/interface_unit.h

@@ -70,6 +70,7 @@
 
 #include "interface_unit.h"
 #include "interface_callees.h"
+#include "interface_mem.h"
 #include "advisor.h"
 #include "frontend.h"
 #include "lego.h"
@@ -342,22 +343,22 @@ void interface_shutdown(void)
     for (menu = interfaceGlobs.menus;
          menu < interfaceGlobs.menus + INTERFACE_MENU_COUNT; menu++) {
         if (menu->items != NULL) {
-            free(menu->items);
+            interface_mem_free(menu->items);
         }
     }
 
-    free(interfaceGlobs.vehicleItemIcons);
-    free(interfaceGlobs.vehicleItemIconsDisabled);
-    free(interfaceGlobs.vehicleItemIconsPressed);
-    free(interfaceGlobs.vehicleItemClicks);
-    free(interfaceGlobs.vehicleItemF2keys);
-    free(interfaceGlobs.vehicleItemFlags);
-    free(interfaceGlobs.buildingItemIcons);
-    free(interfaceGlobs.buildingItemIconsDisabled);
-    free(interfaceGlobs.buildingItemIconsPressed);
-    free(interfaceGlobs.buildingItemClicks);
-    free(interfaceGlobs.buildingItemF2keys);
-    free(interfaceGlobs.buildingItemFlags);
+    interface_mem_free(interfaceGlobs.vehicleItemIcons);
+    interface_mem_free(interfaceGlobs.vehicleItemIconsDisabled);
+    interface_mem_free(interfaceGlobs.vehicleItemIconsPressed);
+    interface_mem_free(interfaceGlobs.vehicleItemClicks);
+    interface_mem_free(interfaceGlobs.vehicleItemF2keys);
+    interface_mem_free(interfaceGlobs.vehicleItemFlags);
+    interface_mem_free(interfaceGlobs.buildingItemIcons);
+    interface_mem_free(interfaceGlobs.buildingItemIconsDisabled);
+    interface_mem_free(interfaceGlobs.buildingItemIconsPressed);
+    interface_mem_free(interfaceGlobs.buildingItemClicks);
+    interface_mem_free(interfaceGlobs.buildingItemF2keys);
+    interface_mem_free(interfaceGlobs.buildingItemFlags);
 }
 
 // FUNCTION: LEGORR 0x0041a920
@@ -862,9 +863,14 @@ int interface_callback_draw_item(int type, int objType, int objIndex,
         } else if (objType == 4) {
             flash = interfaceGlobs.buildingItemFlags[objIndex] &
                     INTERFACE_ITEM_FLASH;
-        } else {
+        }
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+        /* The original leaves `flash` unset for other object types; its
+         * register then still holds objType, which the port keeps. */
+        else {
             flash = objType;
         }
+#endif
         interface_set_object_item_pressed(objType, objIndex, 0);
     } else {
         interface_update_item_enabled(type);
@@ -2857,12 +2863,14 @@ void interface_update_slide(float elapsed)
                 interfaceGlobs.flags &= ~INTERFACE_FLAG_OUT;
                 sound_alias_play(21, 0);
                 if (interfaceGlobs.nextMenuType == 22) {
-                    interfaceGlobs.flags = (interfaceGlobs.flags & ~INTERFACE_FLAG_OPEN) | INTERFACE_FLAG_IN;
+                    interfaceGlobs.flags &= ~INTERFACE_FLAG_OPEN;
+                    interfaceGlobs.flags |= INTERFACE_FLAG_IN;
                     panel_state_flags_toggle(8);
                     simtick_global_ui_flags_clear_bits12();
                     panelGlobs.flags |= 2;
                 } else if (interfaceGlobs.nextMenuType == 23) {
-                    interfaceGlobs.flags = (interfaceGlobs.flags & ~INTERFACE_FLAG_OPEN) | INTERFACE_FLAG_IN;
+                    interfaceGlobs.flags &= ~INTERFACE_FLAG_OPEN;
+                    interfaceGlobs.flags |= INTERFACE_FLAG_IN;
                     panel_state_flags_toggle(11);
                     s_global_low_word_c |= 1;
                     global_flag_bit0_clear();
