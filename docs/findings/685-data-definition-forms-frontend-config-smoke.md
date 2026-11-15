@@ -1,9 +1,11 @@
 # 685. `.data` and `.rdata` definition forms: FrontEnd.c, Config.c's literals, GAME-004's `""` and Smoke.c
 
 Issue #828: finding 680's follow-ups 1 and 3, without Stats.c's records
-(those are in `legoobject_unit.c`, #829's file). Measured on `main`
-`ebc07595` with one full matching build on each side, under the gate's link
-mode.
+(those are in `legoobject_unit.c`, #829's file). Stacked on #831
+(`identity/827-engine-root` `fbbe53a7`, finding 684), and measured against
+it with one full matching build on each side, under the gate's link mode.
+The per-item offset table below was measured on the same change on
+`main` `ebc07595`, before the rebase.
 
 ## Summary
 
@@ -34,8 +36,8 @@ mode.
    `listHead`, `listTail` and `textureCount`, in the original's order. It is
    a single 52-byte common at `00552100`. The rebuild had four commons in
    another order (`count, head, tail, textures`).
-4. **Exact-function code bytes go from 348,304 to 350,202** (54.21% to
-   54.50%). Eight functions rise, four of them to 100%. One function falls
+4. **Exact-function code bytes go from 349,089 to 350,987** (54.33% to
+   54.62%). Eight functions rise, four of them to 100%. One function falls
    by 1.21 points, by register drift only. Its source is unchanged (ADR 0005
    rule 2, below).
 5. **`.data` items at their original offset go from 158 to 192** (3,037 to
@@ -47,21 +49,21 @@ mode.
 
 ## Before and after
 
-| Measure (`binary-progress.json`) | `main` `ebc07595` | This change |
+| Measure (`binary-progress.json`) | #831 `fbbe53a7` | This change |
 | --- | ---: | ---: |
-| **Exact-function code bytes** | **348,304 (54.21%)** | **350,202 (54.50%)** |
-| Exact functions, full / game-only | 2,636 / 2,348 | 2,640 / 2,352 |
+| **Exact-function code bytes** | **349,089 (54.33%)** | **350,987 (54.62%)** |
+| Exact functions, full / game-only | 2,640 / 2,352 | 2,644 / 2,356 |
 | Functions that rose / fell | | 8 / 1 (drift) |
-| Accuracy, full / game-only | 97.59% / 97.34% | 97.59% / 97.34% |
-| `.text` identical at original addresses | 6.76% | 6.76% |
-| `.data` / `.rdata` identical (section-relative) | 24.72% / 11.67% | **26.27% / 12.22%** |
+| Accuracy, full / game-only | 97.63% / 97.37% | 97.63% / 97.38% |
+| `.text` identical at original addresses | 6.83% | 6.83% |
+| `.data` / `.rdata` identical (section-relative) | 24.43% / 11.52% | **26.20% / 12.48%** |
 | Identical prefix, raw / masked | 11 B / 7,187 B (to `00402c13`) | same |
-| Correct-size functions, full | 2,801 | 2,801 |
+| Correct-size functions, full | 2,804 | 2,804 |
 | Units with size agreement | 2 | 2 |
 | Data-offset agreement (`layout`) | 20 of 57 units | **22 of 57** |
-| Entry point (original `0048f000`) | `0048ebb0` | `0048ebb0` |
+| Entry point (original `0048f000`) | `0048eb90` | `0048eb90` |
 | SizeOfImage (original 3,608,576) | 4,030,464 | 4,030,464 |
-| Tail roots | 3 | 3 |
+| Tail roots | 2 | 2 |
 
 `data_identity`, region by region (items at original offset / paired; none
 is at its original address yet, because no region starts in place):
@@ -71,12 +73,12 @@ is at its original address yet, because no region starts in place):
 | `.rdata` | `0049e000` | `004b2000` → `004b2000` | 0 of 95 → 0 of 95 | (unchanged) |
 | `.data` | `004a1000` | `004b8000` → `004b8000` | **158 (3,037 B) → 192 (3,401 B)** of 2,455; objects 5 → 7 | `004a1d5c` GAME-012, +132 (was `004a1cd4`, Config.c's `":"` in `.rdata`) |
 | `.bss` | `004b2db0` | `004cf190` → `004cf590` | 1 of 149 → 1 of 149 | (unchanged: `aiTaskGlobs`, 8 early) |
-| commons | `00549520` | `005a3600` → `005a3a00` | 2 of 62 → 2 of 59 | (unchanged: `textGlobs`) |
+| commons | `00549520` | `005a35e0` → `005a39e0` | 2 of 61 → 2 of 58 | (unchanged: `005520e8`, +1,272) |
 
 - `.data`'s raw prefix stays at 12 bytes (the CRT's code pointer).
 - The commons' paired count falls by three because Smoke.c's four items
   are now one.
-- `.rdata` loses 1,040 bytes (22,352 to 21,312). `.data` gains 1,024 (94,608
+- `.rdata` loses 1,040 bytes (22,344 to 21,304). `.data` gains 1,024 (94,608
   to 95,632).
 
 **Identity cost.** The gain costs no identity measure: the prefix, the
