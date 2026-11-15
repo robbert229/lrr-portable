@@ -181,7 +181,7 @@ int priorities_handle_cursor(unsigned int x, unsigned int y, int pressed,
             if (image != NULL) {
                 position.x = priorities.offsets[i].x + panel_x;
                 position.y = priorities.offsets[i].y + panel_y;
-                if (position.x <= (float)x &&
+                if ((float)x >= position.x &&
                     (float)x <= position.x + (float)image->width &&
                     position.y <= (float)y &&
                     (float)y <= position.y + (float)image->height) {
@@ -338,10 +338,10 @@ void priorities_move_cursor_to_image(unsigned int index)
         indexed_pair_get(PRIORITIES_PANEL, &panel_x, &panel_y);
         image = priorities.images[type];
         input_cursor_client_position_set(
-            (int)(priorities.offsets[index].x + panel_x +
-                  (float)(image->width >> 1)),
-            (int)(priorities.offsets[index].y + panel_y +
-                  (float)(image->height >> 1)));
+            (int)((float)(image->width >> 1) +
+                  (priorities.offsets[index].x + panel_x)),
+            (int)((float)(image->height >> 1) +
+                  (priorities.offsets[index].y + panel_y)));
     }
 }
 

@@ -634,7 +634,7 @@ Smoke* smoke_create_smoke_area(void* cont, int bx, int by, SFX_Vector3F* dir,
         ddiscene_object_position_set(smoke->cont, NULL, wPos.x, wPos.y, wPos.z);
         smoke->flags = SMOKE_FLAG_OWNCONTAINER;
         smoke->worldPos = wPos;
-        if ((seed & 3) == 0) smoke->sfxID = sfxID;
+        if (0 == (seed & 3)) smoke->sfxID = sfxID;
     }
     else if (type == 1) {
         smoke->flags = SMOKE_FLAG_GROUPS;

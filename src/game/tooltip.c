@@ -460,7 +460,7 @@ void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
         x = 0;
         rowHeight = 0;
         font_print_f(toolTipGlobs.font,
-                     (int)(box.x + toolTipGlobs.borderSize + toolTipGlobs.offset),
+                     (int)(toolTipGlobs.offset + (box.x + toolTipGlobs.borderSize)),
                      (int)(box.y + toolTipGlobs.borderSize + toolTipGlobs.offset),
                      "%s", toolTip->textBuffer);
         for (i = 0; i < toolTip->iconCount; i++) {

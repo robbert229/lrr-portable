@@ -679,7 +679,7 @@ int reward_prepare_results(void)
     current->buildingCount = current->buildingCounts.count;
     current->buildingGridCount = current->buildingCounts.gridCount;
     current->itemsArray[REWARD_ITEM_ORE].total = current->itemsArray[REWARD_ITEM_ORE].total -
-        current->itemsArray[REWARD_ITEM_DIGGABLE].total * -4.0f;
+        -4.0f * (current->itemsArray[REWARD_ITEM_DIGGABLE].total);
     for (i = 0; i < current->buildingCount; i++)
         sprintf(current->buildingNames[i], "%s", current->buildingCounts.names[i]);
 
@@ -699,7 +699,7 @@ int reward_prepare_results(void)
         (float)((current->buildingCount - current->buildingGridCount) + 1);
 
     if ((timeLimit = current->itemsArray[REWARD_ITEM_TIMER].quota) != 0) {
-        if ((float)timeLimit > current->itemsArray[REWARD_ITEM_TIMER].actual * 0.04f) {
+        if ((current->itemsArray[REWARD_ITEM_TIMER].actual * 0.04f) < (float)timeLimit) {
             current->itemsArray[REWARD_ITEM_TIMER].percent =
                 (float)(unsigned int)((100.0f / (float)timeLimit) *
                                       (current->itemsArray[REWARD_ITEM_TIMER].actual * 0.04f));

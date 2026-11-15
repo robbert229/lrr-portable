@@ -196,7 +196,7 @@ SelectPlace_Point2I* selectplace_check_and_update(SelectPlace* selectPlace,
                     pathHere = 1;
                 }
             }
-            if (loop < shapeCount - 1 && shape[loop].x == shape[loop + 1].x && shape[loop].y == shape[loop + 1].y) {
+            if (loop < shapeCount - 1 && shape[loop].x == shape[loop + 1].x && shape[loop + 1].y == shape[loop].y) {
                 if (pathHere) doublePathFound = 1;
                 loop++;
                 doubleFound = 1;

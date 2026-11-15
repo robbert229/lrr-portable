@@ -1,4 +1,4 @@
-# input_sha256: a46f37374c0af1a2211a047907d21fae560553175bfd761a980bc487683d93d6
+# input_sha256: 343362c50741622e416459eb75a8918aaa22b9f39add519bc1e86b4885f474be
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1768,7 +1768,7 @@
 0x0045cf00 51.61 priorities_reset
 0x0045cf50 57.69 priorities_load
 0x0045d060 98.28 priorities_load_positions
-0x0045d110 50.81 priorities_handle_cursor
+0x0045d110 52.09 priorities_handle_cursor
 0x0045d300 100.00 priorities_select
 0x0045d370 100.00 priorities_set_hover_area
 0x0045d3c0 100.00 priorities_change_priority
@@ -1776,7 +1776,7 @@
 0x0045d470 75.00 priorities_move_up
 0x0045d4f0 100.00 priorities_toggle
 0x0045d550 85.29 priorities_move_cursor_to_up_button
-0x0045d640 62.50 priorities_move_cursor_to_image
+0x0045d640 72.50 priorities_move_cursor_to_image
 0x0045d6d0 63.23 priorities_draw
 0x0045d7e0 100.00 ptl_initialise
 0x0045d870 100.00 ptl_translate_event
@@ -1815,7 +1815,7 @@
 0x00460220 100.00 reward_level_start
 0x00460290 100.00 reward_building_counts_get
 0x00460310 100.00 reward_building_counts_callback
-0x00460360 76.17 reward_prepare_results
+0x00460360 76.92 reward_prepare_results
 0x00460910 100.00 reward_object_count_get
 0x00460950 90.86 reward_calculate_score
 0x00460f00 100.00 reward_create_scroll
@@ -1868,7 +1868,7 @@
 0x00463ed0 100.00 indexed_text_metrics_pair_set
 0x00463f00 100.00 select_place_create_adapter
 0x00464110 81.89 rotated_pairs_scratch_fill
-0x004641c0 51.14 legoobject_gs_placement_footprint_check_adapter
+0x004641c0 51.39 legoobject_gs_placement_footprint_check_adapter
 0x00464720 100.00 surface_visibility_set
 0x00464740 100.00 sound_alias_registry_init
 0x00464c20 100.00 sfx_container_sound_trigger_callback
@@ -1897,7 +1897,7 @@
 0x00465370 100.00 sound_subsystem_enabled
 0x00465380 100.00 scene_effect_registry_reset
 0x004653a0 100.00 transient_effect_textures_preload
-0x00465430 94.64 transient_effect_emitter_create
+0x00465430 96.49 transient_effect_emitter_create
 0x00465970 100.00 transient_effect_registry_release_all
 0x004659b0 100.00 transient_effect_instance_release
 0x00465a90 100.00 transient_effect_registry_enable_set
@@ -2012,7 +2012,7 @@
 0x0046b7a0 100.00 tooltip_reset_timer
 0x0046b7c0 57.14 timed_effect_runtime_update
 0x0046b8b0 34.47 tooltip_draw_box
-0x0046bc30 87.22 tooltip_draw
+0x0046bc30 89.24 tooltip_draw
 0x0046c030 100.00 render_resource_binding_initialize
 0x0046c0b0 100.00 render_resource_binding_copy_and_convert
 0x0046c0f0 100.00 render_resource_binding_release
@@ -4493,7 +4493,7 @@
 0x0045cf00 51.61 priorities_reset
 0x0045cf50 57.69 priorities_load
 0x0045d060 98.28 priorities_load_positions
-0x0045d110 50.81 priorities_handle_cursor
+0x0045d110 52.09 priorities_handle_cursor
 0x0045d300 100.00 priorities_select
 0x0045d370 100.00 priorities_set_hover_area
 0x0045d3c0 100.00 priorities_change_priority
@@ -4501,7 +4501,7 @@
 0x0045d470 75.00 priorities_move_up
 0x0045d4f0 100.00 priorities_toggle
 0x0045d550 85.29 priorities_move_cursor_to_up_button
-0x0045d640 62.50 priorities_move_cursor_to_image
+0x0045d640 72.50 priorities_move_cursor_to_image
 0x0045d6d0 63.23 priorities_draw
 0x0045d7e0 100.00 ptl_initialise
 0x0045d870 100.00 ptl_translate_event
@@ -4540,7 +4540,7 @@
 0x00460220 100.00 reward_level_start
 0x00460290 100.00 reward_building_counts_get
 0x00460310 100.00 reward_building_counts_callback
-0x00460360 76.17 reward_prepare_results
+0x00460360 76.92 reward_prepare_results
 0x00460910 100.00 reward_object_count_get
 0x00460950 90.86 reward_calculate_score
 0x00460f00 100.00 reward_create_scroll
@@ -4593,7 +4593,7 @@
 0x00463ed0 100.00 indexed_text_metrics_pair_set
 0x00463f00 100.00 select_place_create_adapter
 0x00464110 81.89 rotated_pairs_scratch_fill
-0x004641c0 51.14 legoobject_gs_placement_footprint_check_adapter
+0x004641c0 51.39 legoobject_gs_placement_footprint_check_adapter
 0x00464720 100.00 surface_visibility_set
 0x00464740 100.00 sound_alias_registry_init
 0x00464c20 100.00 sfx_container_sound_trigger_callback
@@ -4622,7 +4622,7 @@
 0x00465370 100.00 sound_subsystem_enabled
 0x00465380 100.00 scene_effect_registry_reset
 0x004653a0 100.00 transient_effect_textures_preload
-0x00465430 94.64 transient_effect_emitter_create
+0x00465430 96.49 transient_effect_emitter_create
 0x00465970 100.00 transient_effect_registry_release_all
 0x004659b0 100.00 transient_effect_instance_release
 0x00465a90 100.00 transient_effect_registry_enable_set
@@ -4737,7 +4737,7 @@
 0x0046b7a0 100.00 tooltip_reset_timer
 0x0046b7c0 57.14 timed_effect_runtime_update
 0x0046b8b0 34.47 tooltip_draw_box
-0x0046bc30 87.22 tooltip_draw
+0x0046bc30 89.24 tooltip_draw
 0x0046c030 100.00 render_resource_binding_initialize
 0x0046c0b0 100.00 render_resource_binding_copy_and_convert
 0x0046c0f0 100.00 render_resource_binding_release
