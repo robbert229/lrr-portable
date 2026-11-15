@@ -1,4 +1,4 @@
-# input_sha256: 032291a12d11c3f91f17471ecef97aab8560ea9ea4f8539d4e95856fc0fa9899
+# input_sha256: 19bb36d6572162d3edbb4fa19dcc79fbf5794fb7529fb945e895664b18ca5b85
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -440,7 +440,7 @@
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
-0x00413b80 84.38 front_run_screen_menu
+0x00413b80 90.77 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
 0x00413e60 100.00 front_menu_item_parse_type_string
 0x00413f00 100.00 mission_replace_char
@@ -3165,7 +3165,7 @@
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
-0x00413b80 84.38 front_run_screen_menu
+0x00413b80 90.77 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
 0x00413e60 100.00 front_menu_item_parse_type_string
 0x00413f00 100.00 mission_replace_char

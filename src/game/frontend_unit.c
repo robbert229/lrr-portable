@@ -2413,10 +2413,10 @@ void front_run_screen_menu(Front_Menu* menu)
     frontGlobs_overlayImage = NULL;
     lastTime = timeGetTime();
     while (!menu->closed) {
-        if (transition) {
-            front_menu_update(elapsed, menu, &menuTransition);
-        } else {
+        if (!transition) {
             nextMenu = front_menu_update(elapsed, menu, NULL);
+        } else {
+            front_menu_update(elapsed, menu, &menuTransition);
         }
         if (menu == frontGlobs_mainMenuSet->menus[0] && nextMenu != menu) {
             frontGlobs_f_557028 = -1;
@@ -2454,9 +2454,8 @@ void front_run_screen_menu(Front_Menu* menu)
     }
     front_menu_free_slot_images();
     if (nextMenu == frontGlobs_saveMenuSet->menus[0] && s_saveSlotToWrite >= 0) {
-        level = reward_current_level_get();
-        if (level != NULL && *(void**)((char*)reward_current_level_get() + 4) != NULL) {
-            level = reward_current_level_get();
+        if (reward_current_level_get() != NULL &&
+            *(void**)((char*)(level = reward_current_level_get()) + 4) != NULL) {
             sprintf(buff, "%s\\%d.dat",
                     block_get_str_copy(legoGlobs_config,
                                        string_path_join(s_engine_config_root, s_menuSaveImage,
