@@ -382,11 +382,23 @@ void global_object_field98_clear_current(void)
     if (legoGlobs_currLevel != NULL) legoGlobs_currLevel->f_098 = 0;
 }
 
-/* NoOpCallback [group M] */
+/* Lego_GetCrystalCount: the level's crystals, less those used unless
+ * onlyUsable is set. Like the original, no value without a level. Natively
+ * the port keeps an empty callback under this name. */
 // FUNCTION: LEGORR 0x0041f8e0
+#if defined(_MSC_VER) && _MSC_VER < 1200
+int noop_callback(int onlyUsable)
+{
+    if (legoGlobs_currLevel != NULL) {
+        if (onlyUsable) return legoGlobs_currLevel->f_08c;
+        return legoGlobs_currLevel->f_08c - legoGlobs_currLevel->f_098;
+    }
+}
+#else
 void noop_callback(void)
 {
 }
+#endif
 
 /* UpgradeResourceCheck [group M] */
 // FUNCTION: LEGORR 0x0041f900

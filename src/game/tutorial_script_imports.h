@@ -182,7 +182,11 @@ void aitask_task_registry_remove_type10_entries_for_entity(
 extern struct LevelState* g_active_level_retail;            /* 005560d4 currLevel */
 extern uint32_t s_panel_highlight_flags;                    /* 00556ed0 flags2 */
 void global_object_field8c_increment(void);                 /* 0041f870 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+int noop_callback(int);   /* 0041f8e0 Lego_GetCrystalCount */
+#else
 void noop_callback(void);                                   /* 0041f8e0 */
+#endif
 void lego_level_resource_balance_add_and_sound(int ore);    /* 0041f9a0 */
 void lego_transition_control(int on, unsigned int flags);   /* 00425c30 */
 uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy,

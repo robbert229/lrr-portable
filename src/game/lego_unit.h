@@ -132,7 +132,11 @@ void global_object_field8c_increment(void);
 void global_object_field8c_subtract(int amount);
 void global_object_field98_add(int amount);
 void global_object_field98_clear_current(void);
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+int noop_callback(int);   /* 0041f8e0 Lego_GetCrystalCount */
+#else
 void noop_callback(void);
+#endif
 void level_state_field9c_add(int amount);
 void global_object_field94_increment(void);
 void global_object_fielda8_increment(void);

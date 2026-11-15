@@ -1656,28 +1656,16 @@ void position_tracker_box_draw(const float bounds[4])
     return;
 #endif
     if (!(lego_flags1 & 0x100000)) {
-        list[0].x = area->x - 1.0f;
-        list[0].y = area->y - 1.0f;
-        list[2].y = (area->height + area->y) - -1.0f;
-        list[1].x = (area->x + area->width) - -1.0f;
-        list[1].y = list[0].y;
-        list[2].x = list[1].x;
-        list[3].x = list[0].x;
-        list[3].y = list[2].y;
-        list[4].x = list[0].x;
-        list[4].y = list[0].y;
+        list[0].x = list[3].x = list[4].x = area->x - 1.0f;
+        list[0].y = list[1].y = list[4].y = area->y - 1.0f;
+        list[2].y = list[3].y = (area->height + area->y) - -1.0f;
+        list[1].x = list[2].x = (area->x + area->width) - -1.0f;
         surface_draw_polyline(list, list + 1, 4, 0.0f, 1.0f, 0.0f, 0);
 
-        list[0].x = area->x - 2.0f;
-        list[0].y = area->y - 2.0f;
-        list[1].x = (area->x + area->width) - -2.0f;
-        list[2].y = (area->height + area->y) - -2.0f;
-        list[1].y = list[0].y;
-        list[2].x = list[1].x;
-        list[3].x = list[0].x;
-        list[3].y = list[2].y;
-        list[4].x = list[0].x;
-        list[4].y = list[0].y;
+        list[0].x = list[3].x = list[4].x = area->x - 2.0f;
+        list[0].y = list[1].y = list[4].y = area->y - 2.0f;
+        list[2].y = list[3].y = (area->height + area->y) - -2.0f;
+        list[1].x = list[2].x = (area->x + area->width) - -2.0f;
         surface_draw_polyline(list, list + 1, 4, 0.0f, 1.0f, 0.0f, 0);
     }
 }

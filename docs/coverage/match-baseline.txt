@@ -1,4 +1,4 @@
-# input_sha256: c19c8987e28b5bc86db44d0e234d4c60b651d07ef3baf4167118fb6c691a7c77
+# input_sha256: d86a8086c83ebb4e4f3d7f3d9cbb3f71bb963c7460ae48a650cbeba82258b3c1
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -635,7 +635,7 @@
 0x0041cb90 100.00 input_binding_default_value_get
 0x0041cc80 100.00 interface_set_dependency_item
 0x0041cce0 100.00 interface_set_dependency_area
-0x0041cd30 26.60 position_tracker_box_draw
+0x0041cd30 32.98 position_tracker_box_draw
 0x0041cea0 100.00 interface_object_menu_check
 0x0041cf20 100.00 interface_driven_object_menu_check
 0x0041cf80 100.00 selection_mode7_cancel_at_point
@@ -692,7 +692,7 @@
 0x0041f880 100.00 global_object_field8c_subtract
 0x0041f8a0 100.00 global_object_field98_add
 0x0041f8c0 100.00 global_object_field98_clear_current
-0x0041f8e0 0.00 noop_callback
+0x0041f8e0 100.00 noop_callback
 0x0041f900 100.00 lego_upgrade_resource_check
 0x0041f920 100.00 level_state_field9c_add
 0x0041f940 100.00 lego_flags1_bit17_set
@@ -773,7 +773,7 @@
 0x0042bf40 89.72 lego_load_emerge_layer
 0x0042c060 100.00 lego_load_layer_m
 0x0042c120 100.00 lego_load_layer_l
-0x0042c330 100.00 lego_emerge_map_trigger_spawn
+0x0042c330 55.79 lego_emerge_map_trigger_spawn
 0x0042c440 100.00 lego_level_record_timer_countdown
 0x0042c480 100.00 lego_load_erode_cryore
 0x0042c5b0 100.00 lego_terrain_cell_byte_state_classify_current
@@ -810,9 +810,9 @@
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
 0x00431140 100.00 lego_terrain_cell_queued_work_transition
-0x004311d0 70.80 lego_block_activity_create
+0x004311d0 67.15 lego_block_activity_create
 0x004313b0 100.00 lego_block_activity_update_all
-0x00431450 100.00 lego_terrain_neighbor_flag_refresh
+0x00431450 83.78 lego_terrain_neighbor_flag_refresh
 0x004314c0 100.00 lego_block_activity_remove
 0x00431530 100.00 lego_block_activity_remove_all
 0x00431560 100.00 level_current_owner_get
@@ -3360,7 +3360,7 @@
 0x0041cb90 100.00 input_binding_default_value_get
 0x0041cc80 100.00 interface_set_dependency_item
 0x0041cce0 100.00 interface_set_dependency_area
-0x0041cd30 26.60 position_tracker_box_draw
+0x0041cd30 32.98 position_tracker_box_draw
 0x0041cea0 100.00 interface_object_menu_check
 0x0041cf20 100.00 interface_driven_object_menu_check
 0x0041cf80 100.00 selection_mode7_cancel_at_point
@@ -3417,7 +3417,7 @@
 0x0041f880 100.00 global_object_field8c_subtract
 0x0041f8a0 100.00 global_object_field98_add
 0x0041f8c0 100.00 global_object_field98_clear_current
-0x0041f8e0 0.00 noop_callback
+0x0041f8e0 100.00 noop_callback
 0x0041f900 100.00 lego_upgrade_resource_check
 0x0041f920 100.00 level_state_field9c_add
 0x0041f940 100.00 lego_flags1_bit17_set
@@ -3498,7 +3498,7 @@
 0x0042bf40 89.72 lego_load_emerge_layer
 0x0042c060 100.00 lego_load_layer_m
 0x0042c120 100.00 lego_load_layer_l
-0x0042c330 100.00 lego_emerge_map_trigger_spawn
+0x0042c330 55.79 lego_emerge_map_trigger_spawn
 0x0042c440 100.00 lego_level_record_timer_countdown
 0x0042c480 100.00 lego_load_erode_cryore
 0x0042c5b0 100.00 lego_terrain_cell_byte_state_classify_current
@@ -3535,9 +3535,9 @@
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
 0x00431140 100.00 lego_terrain_cell_queued_work_transition
-0x004311d0 70.80 lego_block_activity_create
+0x004311d0 67.15 lego_block_activity_create
 0x004313b0 100.00 lego_block_activity_update_all
-0x00431450 100.00 lego_terrain_neighbor_flag_refresh
+0x00431450 83.78 lego_terrain_neighbor_flag_refresh
 0x004314c0 100.00 lego_block_activity_remove
 0x00431530 100.00 lego_block_activity_remove_all
 0x00431560 100.00 level_current_owner_get
