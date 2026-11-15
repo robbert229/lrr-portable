@@ -2992,8 +2992,10 @@ int ledger_stub_004789a0_MusicMixerVolumeGet(float* music,
                                              float* sfx);         /* 004789a0 */
 /* gods98 Utils.c (utils.c). */
 char* string_duplicate(const char* text);                         /* 00477550 */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: frontend_unit_imports.h */
 /* gods98 Input.c (input_unit.cpp): Input_AnyKeyPressed. */
 int input_keyboard_down_key_count(void);                          /* 0047efb0 */
+#endif
 /* Container_MakeLight (004734f0): view.h types the colours as their
  * bits; the matching build passes the floats. Image_SaveBMP-style
  * adapters for ObjectRecall.c's save (004593e0), whose port entry takes
