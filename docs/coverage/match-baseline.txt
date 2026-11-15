@@ -1,4 +1,4 @@
-# input_sha256: 67f607c6c6162f43c2a80024c9a710c2aa5008a12a7bb25f98f61883c99e7788
+# input_sha256: 81f94b88994412ca89b11d252e90a3872837a1fa511b8524fe408c7c39057e3f
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1091,7 +1091,7 @@
 0x00440bf0 100.00 legoobject_object_list_field_assign_all
 0x00440c30 100.00 legoobject_grid_route_search_adapter
 0x00440c70 51.91 legoobject_terrain_grid_path_search
-0x004410f0 62.94 legoobject_terrain_neighbor_path_check
+0x004410f0 64.04 legoobject_terrain_neighbor_path_check
 0x00441700 100.00 legoobject_route_setup_and_marker_associate
 0x00441940 100.00 legoobject_action_sequence_reset
 0x00441b30 100.00 legoobject_state_reset
@@ -1129,7 +1129,7 @@
 0x004455a0 75.83 legoobject_move_vector_surface_probe
 0x004456e0 100.00 legoobject_behavior_callback_tick
 0x00445770 92.68 legoobject_behavior_callback_a
-0x00445830 75.77 legoobject_behavior_callback_b
+0x00445830 76.30 legoobject_behavior_callback_b
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
 0x00445df0 99.55 legoobject_flag_gated_callback_b
 0x004460f0 90.21 legoobject_flag_gated_callback_a
@@ -1148,7 +1148,7 @@
 0x004477d0 97.70 legoobject_path_step_lookahead_write
 0x00447900 100.00 legoobject_type_four_callback_dispatch
 0x00447920 100.00 legoobject_type_four_callback
-0x00447950 77.46 legoobject_directional_activity_start
+0x00447950 85.61 legoobject_directional_activity_start
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 100.00 legoobject_activity_tick
 0x00447c40 100.00 legoobject_activity_register_bookkeeping
@@ -3816,7 +3816,7 @@
 0x00440bf0 100.00 legoobject_object_list_field_assign_all
 0x00440c30 100.00 legoobject_grid_route_search_adapter
 0x00440c70 51.91 legoobject_terrain_grid_path_search
-0x004410f0 62.94 legoobject_terrain_neighbor_path_check
+0x004410f0 64.04 legoobject_terrain_neighbor_path_check
 0x00441700 100.00 legoobject_route_setup_and_marker_associate
 0x00441940 100.00 legoobject_action_sequence_reset
 0x00441b30 100.00 legoobject_state_reset
@@ -3854,7 +3854,7 @@
 0x004455a0 75.83 legoobject_move_vector_surface_probe
 0x004456e0 100.00 legoobject_behavior_callback_tick
 0x00445770 92.68 legoobject_behavior_callback_a
-0x00445830 75.77 legoobject_behavior_callback_b
+0x00445830 76.30 legoobject_behavior_callback_b
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
 0x00445df0 99.55 legoobject_flag_gated_callback_b
 0x004460f0 90.21 legoobject_flag_gated_callback_a
@@ -3873,7 +3873,7 @@
 0x004477d0 97.70 legoobject_path_step_lookahead_write
 0x00447900 100.00 legoobject_type_four_callback_dispatch
 0x00447920 100.00 legoobject_type_four_callback
-0x00447950 77.46 legoobject_directional_activity_start
+0x00447950 85.61 legoobject_directional_activity_start
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 100.00 legoobject_activity_tick
 0x00447c40 100.00 legoobject_activity_register_bookkeeping

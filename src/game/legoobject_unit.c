@@ -5264,6 +5264,7 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
 // FUNCTION: LEGORR 0x004410f0
 int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount, LegoObjL_RouteCallback callback, void* data)
 {
+    unsigned int y;
     int i;
     unsigned int* countPtr;
     unsigned int width;
@@ -5282,7 +5283,6 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
     int DIRECTIONS[4][2];
     LegoObjG_RouteBlock lists[2][100];
     unsigned int x;
-    unsigned int y;
     int tx;
     int ty;
     unsigned int* map;
@@ -7148,7 +7148,6 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
     float dist;
     Lego_Object* monster = (Lego_Object*)data;
     float radius;
-    float x;
     float y;
     int type;
     int id;
@@ -7157,6 +7156,7 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
     Point2F mpos;
     int blockPos[2];
     float dir[3];
+    float x;
 
     legoobject_transform_position_get(monster, &mpos.x, &mpos.y);
     legoobject_transform_position_get(obj, &pos.x, &pos.y);
@@ -8190,8 +8190,8 @@ int legoobject_type_four_callback(Lego_Object* obj, void* data)
 // FUNCTION: LEGORR 0x00447950
 void legoobject_directional_activity_start(Lego_Object* obj, float* dir, int mode)
 {
-    LegoObjP_Point2F face;
     LegoObjP_Point2F d;
+    LegoObjP_Point2F face;
     float c;
     float inv;
     float dot;
