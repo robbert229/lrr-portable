@@ -758,12 +758,13 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
             return 1;
         }
     } else {
-        if (!info_panel_check_collision(&infoReleased, mouseX, mouseY,
-                                        leftButton, leftButtonLast)) {
-            return 0;
+        if (info_panel_check_collision(&infoReleased, mouseX, mouseY,
+                                       leftButton, leftButtonLast)) {
+            if (!infoReleased) screen_right_edge_cache_refresh();
+            if (clicked) media_action_feedback_sound_dispatch(1);
+            return 1;
         }
-        if (!infoReleased) screen_right_edge_cache_refresh();
-        if (!clicked) return 1;
+        return 0;
     }
 
     media_action_feedback_sound_dispatch(1);

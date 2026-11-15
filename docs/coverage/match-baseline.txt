@@ -1,4 +1,4 @@
-# input_sha256: 130401617624572e700dc3f9660e3cd5fb2c5d928f83af9c59cbd5c2601bbf77
+# input_sha256: c467a9096328f52314e3a61ba2a56ba977633974d4cd2a55b1fee54ff893f8b1
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1729,7 +1729,7 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
-0x0045adb0 87.04 panel_cursor_interaction_update
+0x0045adb0 91.36 panel_cursor_interaction_update
 0x0045b310 59.52 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
@@ -4454,7 +4454,7 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
-0x0045adb0 87.04 panel_cursor_interaction_update
+0x0045adb0 91.36 panel_cursor_interaction_update
 0x0045b310 59.52 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
