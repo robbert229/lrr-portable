@@ -1,4 +1,4 @@
-# input_sha256: 20ab56425df9f8064efab74d91a7ea86410f50092e42f5f1aa27158d0607f402
+# input_sha256: c722a13037a03292bd1d625fa815421a9c7af90022a95e89b42bb9760177b27d
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -223,7 +223,7 @@
 0x00408d70 100.00 terrain_descriptor_coordinate_count_limit_check
 0x00408e10 100.00 count_matching_coordinates_in_list
 0x00408e50 100.00 construction_zone_request_resource
-0x00408ec0 98.68 construction_spawn_barriers
+0x00408ec0 100.00 construction_spawn_barriers
 0x004090a0 100.00 terrain_cell_predicate_check_current
 0x004090c0 100.00 terrain_descriptor_find_exact_current
 0x00409110 100.00 simtick_selection_group_release
@@ -2948,7 +2948,7 @@
 0x00408d70 100.00 terrain_descriptor_coordinate_count_limit_check
 0x00408e10 100.00 count_matching_coordinates_in_list
 0x00408e50 100.00 construction_zone_request_resource
-0x00408ec0 98.68 construction_spawn_barriers
+0x00408ec0 100.00 construction_spawn_barriers
 0x004090a0 100.00 terrain_cell_predicate_check_current
 0x004090c0 100.00 terrain_descriptor_find_exact_current
 0x00409110 100.00 simtick_selection_group_release

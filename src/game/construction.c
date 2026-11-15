@@ -180,6 +180,7 @@ void construction_spawn_barriers(int* blockPos, int* shapePoints,
     unsigned int j;
     unsigned int k;
     int found;
+    ConstructionPoint2I* next;
 
     BARRIERS[0][0] = 0.5f;
     BARRIERS[0][1] = 1.0f - offset;
@@ -191,8 +192,9 @@ void construction_spawn_barriers(int* blockPos, int* shapePoints,
     BARRIERS[3][1] = 0.5f;
 
     for (i = 0; i < shapeCount; i++) {
-        if (i != shapeCount - 1 && shape[i].x == shape[i + 1].x &&
-            shape[i].y == shape[i + 1].y) {
+        next = &shape[i + 1];
+        if (i != shapeCount - 1 && shape[i].x == next->x &&
+            shape[i].y == next->y) {
             i++;
         } else {
             for (j = 0; j < 4; j++) {
@@ -200,8 +202,9 @@ void construction_spawn_barriers(int* blockPos, int* shapePoints,
                 pos.x = DIRECTIONS[j].x + shape[i].x;
                 pos.y = shape[i].y + DIRECTIONS[j].y;
                 for (k = 0; k < shapeCount; k++) {
-                    if (k != shapeCount - 1 && shape[k].x == shape[k + 1].x &&
-                        shape[k].y == shape[k + 1].y) {
+                    next = &shape[k + 1];
+                    if (k != shapeCount - 1 && shape[k].x == next->x &&
+                        shape[k].y == next->y) {
                         k++;
                     } else if (shape[k].x == pos.x && shape[k].y == pos.y) {
                         found = 1;
