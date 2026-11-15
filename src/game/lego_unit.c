@@ -67,22 +67,49 @@ static float s_lego_ambientSoundTimer6 = 250.0f;
 // GLOBAL: LEGORR 0x004a3564
 static float s_lego_soundRollOff = 1.0f;
 
-/* Lego.c .bss. */
-// GLOBAL: LEGORR 0x004de428
-static int s_lego_renameCursorOn;
+/* The native build compiles this file as C++ (ADR 0006), and the end of
+ * the file, where Lego.c's external .bss is defined, is inside its extern
+ * "C" block. These names get C linkage before their first plain
+ * declaration. The matching build does not see this block. */
+#ifdef __cplusplus
+extern "C" {
+extern int s_lego_renameCursorOn;
+extern unsigned char s_lego_renamePrevKeyMap[256];
+extern float s_lego_upgradeTextTimer;
+extern float s_lego_gameSpeedTextTimer;
+extern float s_lego_rollOffTextTimer;
+extern float s_lego_highFogPhase;
+extern uint32_t s_lego_prevMouseWord;
+extern float s_lego_spotUmbra;
+extern float s_lego_radarDragDistance;
+extern uint32_t s_lego_radarPrevButton;
+extern unsigned int s_lego_radarBlockX;
+extern unsigned int s_lego_radarBlockY;
+extern int s_lego_radarDragging;
+extern int s_lego_dragging;
+extern int s_lego_prev_left_button;
+extern int s_lego_prev_right_button;
+extern float s_lego_hold_time;
+extern int s_lego_reset_buttons;
+extern struct EntitySlot* s_lego_toolTipObject;
+extern int s_lego_debugLightToggle;
+extern int s_lego_debugTransformToggle;
+extern struct EntitySlot* s_lego_debugRetargetObject;
+}
+#endif
+
+/* Lego.c .bss: externals, defined at the end of the file in the
+ * original's order (finding 691). */
+extern int s_lego_renameCursorOn;
 
 /* The previous frame's key map, for the rename input. */
-// GLOBAL: LEGORR 0x004de430
-static unsigned char s_lego_renamePrevKeyMap[256];
+extern unsigned char s_lego_renamePrevKeyMap[256];
 
-// GLOBAL: LEGORR 0x004de530
-static float s_lego_upgradeTextTimer;
+extern float s_lego_upgradeTextTimer;
 
-// GLOBAL: LEGORR 0x004de534
-static float s_lego_gameSpeedTextTimer;
+extern float s_lego_gameSpeedTextTimer;
 
-// GLOBAL: LEGORR 0x004de538
-static float s_lego_rollOffTextTimer;
+extern float s_lego_rollOffTextTimer;
 
 /* legoGlobs fields. */
 
@@ -90,27 +117,23 @@ static float s_lego_rollOffTextTimer;
 /* ---- state, group C ---- */
 
 /* Lego_HandleWorld's pointer state (Lego.c .bss): the accumulated drag
- * distance, the drag flag, the previous button states and the request to
- * forget the previous states. The time the buttons have been up is a
- * static of lego_main_sim_interaction_and_cell_update. */
+ * distance (a static, as in the original), the drag flag, the previous
+ * button states and the request to forget the previous states (externals,
+ * defined at the end of the file; finding 691). */
 // GLOBAL: LEGORR 0x004de418
-float s_lego_drag_x = 0;
+static float s_lego_drag_x;
 
 // GLOBAL: LEGORR 0x004de41c
-float s_lego_drag_y = 0;
+static float s_lego_drag_y;
 
-// GLOBAL: LEGORR 0x004de560
-int s_lego_dragging = 0;
+extern int s_lego_dragging;
 
-// GLOBAL: LEGORR 0x004de564
-int s_lego_prev_left_button = 0;
+extern int s_lego_prev_left_button;
 
-// GLOBAL: LEGORR 0x004de568
-int s_lego_prev_right_button = 0;
+extern int s_lego_prev_right_button;
 
 
-// GLOBAL: LEGORR 0x004de570
-int s_lego_reset_buttons = 0;
+extern int s_lego_reset_buttons;
 
 /* legoGlobs.viewMain (005560dc). */
 
@@ -180,16 +203,13 @@ extern void* s_lego_f_4e8448;
 float s_lego_spotPenumbra = 0.7f;
 
 /* The high-fog colour cycle's phase. */
-// GLOBAL: LEGORR 0x004de53c
-float s_lego_highFogPhase = 0;
+extern float s_lego_highFogPhase;
 
 /* Input's mouse-button word (0076ab3c) as it was last frame. */
-// GLOBAL: LEGORR 0x004de540
-uint32_t s_lego_prevMouseWord = 0;
+extern uint32_t s_lego_prevMouseWord;
 
 /* The spotlight's umbra, stepped by the debug keys. */
-// GLOBAL: LEGORR 0x004de544
-float s_lego_spotUmbra = 0;
+extern float s_lego_spotUmbra;
 
 /* ---- state, group F ---- */
 
@@ -211,37 +231,31 @@ float s_lego_spotUmbra = 0;
 
 /* legoGlobs 005563f8: the world point the radar was last clicked at. */
 
-/* Lego.c .bss: the radar map's mouse state. */
+/* Lego.c .bss: the radar map's mouse state. The last mouse position is
+ * static, the rest external (defined at the end of the file; finding 691). */
 // GLOBAL: LEGORR 0x004de410
-uint32_t s_lego_mouseLastY = 0;
+static uint32_t s_lego_mouseLastY;
 // GLOBAL: LEGORR 0x004de414
-uint32_t s_lego_mouseLastX = 0;
-// GLOBAL: LEGORR 0x004de54c
-float s_lego_radarDragDistance = 0;
-// GLOBAL: LEGORR 0x004de550
-uint32_t s_lego_radarPrevButton = 0;
-// GLOBAL: LEGORR 0x004de554
-unsigned int s_lego_radarBlockX = 0;
-// GLOBAL: LEGORR 0x004de558
-unsigned int s_lego_radarBlockY = 0;
-// GLOBAL: LEGORR 0x004de55c
-int s_lego_radarDragging = 0;
+static uint32_t s_lego_mouseLastX;
+extern float s_lego_radarDragDistance;
+extern uint32_t s_lego_radarPrevButton;
+extern unsigned int s_lego_radarBlockX;
+extern unsigned int s_lego_radarBlockY;
+extern int s_lego_radarDragging;
 
-/* Lego.c .bss: the object and the block the tool tips last hovered. */
+/* Lego.c .bss: the block (static) and the object (external) the tool tips
+ * last hovered (finding 691). */
 // GLOBAL: LEGORR 0x004de208
-int s_lego_toolTipBlockX = 0;
+static int s_lego_toolTipBlockX;
 // GLOBAL: LEGORR 0x004de20c
-int s_lego_toolTipBlockY = 0;
-// GLOBAL: LEGORR 0x004de574
-struct EntitySlot* s_lego_toolTipObject = 0;
+static int s_lego_toolTipBlockY;
+extern struct EntitySlot* s_lego_toolTipObject;
 
-/* Lego.c .bss: the debug keys' toggles and the unit the K key picked. */
-// GLOBAL: LEGORR 0x004de578
-int s_lego_debugLightToggle = 0;
-// GLOBAL: LEGORR 0x004de57c
-int s_lego_debugTransformToggle = 0;
-// GLOBAL: LEGORR 0x004de584
-struct EntitySlot* s_lego_debugRetargetObject = 0;
+/* Lego.c .bss: the debug keys' toggles and the unit the K key picked
+ * (defined at the end of the file). */
+extern int s_lego_debugLightToggle;
+extern int s_lego_debugTransformToggle;
+extern struct EntitySlot* s_lego_debugRetargetObject;
 
 /* LegoObject.c's state: objectGlobs (004de790), the original's one
  * struct, which legoobject_unit.c defines (legoobject_globs.h, finding
@@ -2801,10 +2815,10 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                int keyDownT, int keyDownR,
                                                int keyDownShift)
 {
-    /* A function static, as in the original: finding 538's rule A puts
-     * it before the parameter in `s_lego_hold_time += elapsedGame`. */
-    // GLOBAL: LEGORR 0x004de56c
-    static float s_lego_hold_time;
+    /* An external of Lego.c's .bss (004de56c, defined at the end of the
+     * file), declared here: finding 538's rule A puts it before the
+     * parameter in `s_lego_hold_time += elapsedGame`. */
+    extern float s_lego_hold_time;
     Lego_Level* level = legoGlobs_currLevel;
     int leftReleased;
     struct EntitySlot* liveObj;
@@ -3437,6 +3451,13 @@ end:
     s_lego_prev_left_button = legoInput_mslb;
     s_lego_prev_right_button = legoInput_msrb;
 }
+
+/* The time the buttons have been up (004de56c), declared at file scope
+ * after its one reader. As a function static it cost one symbol more than
+ * the block-scope extern above; this declaration restores the count for
+ * every later function (finding 538, finding 691). Deviation (scoring
+ * only). */
+extern float s_lego_hold_time;
 
 /* ToolTipInfoStringsLoad [group G] */
 // FUNCTION: LEGORR 0x00427e00
@@ -9180,13 +9201,13 @@ void terrain_grid_entry_resources_release_all_current(void)
  * functions and after every earlier one, so MSVC's symbol counter
  * (finding 538, rule B) does not move for parts 1, 2 and earlier groups. */
 
-/* Input's left mouse button (0076ab3c) at the last release check. */
+/* Input's left mouse button (0076ab3c) at the last release check. A
+ * static, as in the original (finding 691). */
 // GLOBAL: LEGORR 0x004de424
-uint32_t s_lego_mslbLast = 0;
+static uint32_t s_lego_mslbLast;
 
 /* The tutorial icon's bob phase. */
-// GLOBAL: LEGORR 0x004de58c
-float s_lego_tutorialIconPhase = 0;
+extern float s_lego_tutorialIconPhase;
 
 /* Maths.h's Vector3F. */
 typedef struct LegoVector3F3C { float x, y, z; } LegoVector3F3C;
@@ -10066,11 +10087,77 @@ void lego_panel_selection_highlight_toggle(int on)
  * retired it to the port tail (lego_port.cpp). Defined last, so no
  * function's symbol counter changes (finding 538). */
 
-/* Lego.c .bss: the scroll guard and the neighbour-pick rotation. */
+/* Lego.c's external .bss (004de428-004de590), defined last in the
+ * original's order (finding 691). MSVC 5.0 lays out an object's
+ * uninitialised statics first and its zero-initialised externals after
+ * them, in definition order (finding 687). The original's Lego.c .bss is
+ * its statics (004de208-004de428) followed by these. Each name keeps a
+ * declaration at its old place, so no function's symbol counter moves
+ * (finding 538). Nothing in the original refers to 004de580; it is left
+ * undefined (ADR 0005 rule 4). */
+// GLOBAL: LEGORR 0x004de428
+int s_lego_renameCursorOn = 0;
+/* The previous frame's key map, for the rename input. */
+// GLOBAL: LEGORR 0x004de430
+unsigned char s_lego_renamePrevKeyMap[256] = { 0 };
+// GLOBAL: LEGORR 0x004de530
+float s_lego_upgradeTextTimer = 0;
+// GLOBAL: LEGORR 0x004de534
+float s_lego_gameSpeedTextTimer = 0;
+// GLOBAL: LEGORR 0x004de538
+float s_lego_rollOffTextTimer = 0;
+/* The high-fog colour cycle's phase. */
+// GLOBAL: LEGORR 0x004de53c
+float s_lego_highFogPhase = 0;
+/* Input's mouse-button word (0076ab3c) as it was last frame. */
+// GLOBAL: LEGORR 0x004de540
+uint32_t s_lego_prevMouseWord = 0;
+/* The spotlight's umbra, stepped by the debug keys. */
+// GLOBAL: LEGORR 0x004de544
+float s_lego_spotUmbra = 0;
+/* The scroll guard. */
 // GLOBAL: LEGORR 0x004de548
 int s_scroll_guard = 0;
+/* The radar map's mouse state. */
+// GLOBAL: LEGORR 0x004de54c
+float s_lego_radarDragDistance = 0;
+// GLOBAL: LEGORR 0x004de550
+uint32_t s_lego_radarPrevButton = 0;
+// GLOBAL: LEGORR 0x004de554
+unsigned int s_lego_radarBlockX = 0;
+// GLOBAL: LEGORR 0x004de558
+unsigned int s_lego_radarBlockY = 0;
+// GLOBAL: LEGORR 0x004de55c
+int s_lego_radarDragging = 0;
+/* Lego_HandleWorld's pointer state: the drag flag, the previous button
+ * states, the time the buttons have been up and the request to forget the
+ * previous states. */
+// GLOBAL: LEGORR 0x004de560
+int s_lego_dragging = 0;
+// GLOBAL: LEGORR 0x004de564
+int s_lego_prev_left_button = 0;
+// GLOBAL: LEGORR 0x004de568
+int s_lego_prev_right_button = 0;
+// GLOBAL: LEGORR 0x004de56c
+float s_lego_hold_time = 0;
+// GLOBAL: LEGORR 0x004de570
+int s_lego_reset_buttons = 0;
+/* The object the tool tips last hovered. */
+// GLOBAL: LEGORR 0x004de574
+struct EntitySlot* s_lego_toolTipObject = 0;
+/* The debug keys' toggles and the unit the K key picked. */
+// GLOBAL: LEGORR 0x004de578
+int s_lego_debugLightToggle = 0;
+// GLOBAL: LEGORR 0x004de57c
+int s_lego_debugTransformToggle = 0;
+// GLOBAL: LEGORR 0x004de584
+struct EntitySlot* s_lego_debugRetargetObject = 0;
+/* The neighbour-pick rotation. */
 // GLOBAL: LEGORR 0x004de588
 uint32_t s_neighbor_pick_rotation = 0;
+/* The tutorial icon's bob phase. */
+// GLOBAL: LEGORR 0x004de58c
+float s_lego_tutorialIconPhase = 0;
 
 #ifdef __cplusplus
 }
