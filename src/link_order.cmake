@@ -31,17 +31,21 @@
 # LRR_LINK_LIBRARIES. Fields are separated by blanks; one entry per line, so
 # tools read this file without CMake (tools/link_order.py).
 #
-# How the matching build links the entries, in this order (finding 658):
+# How the matching build links the entries, in this order (findings 658
+# and 690):
 #   1. explicit objects: the entries up to LRR_LINK_EXPLICIT_LAST;
-#   2. one library per later gods98 unit, unit_<stem>.lib, in list order;
-#   3. LRR_LINK_LIBRARIES;
-#   4. one library per late unit (LRR_LINK_LATE_MEMBERS);
+#   2. one library per late unit (LRR_LINK_LATE_MEMBERS), in list order;
+#   3. one library, unit_gods98.lib, holding every later gods98 unit in list
+#      order, with LRR_LINK_MEMBER_ORDER naming one symbol of each;
+#   4. LRR_LINK_LIBRARIES;
 #   5. LRR_LINK_TAIL_LIBRARY, holding every entry from the first port-tail
 #      entry on, except the late units.
 # LINK keeps the order of explicit objects and pulls library members as they
-# are referenced, so steps 2, 4 and 5 keep list order only while each member
-# is referenced before its library is searched; the map check
-# (tools/link_order.py check-map) fails otherwise.
+# are referenced, so steps 2, 3 and 5 keep list order only while each member
+# is referenced in that order; the map check (tools/link_order.py
+# check-map) fails otherwise. Nothing in steps 1 and 3's first pass
+# references the late units, so LINK pulls them in its second pass, after
+# the import thunks, as the original has them (finding 657).
 #
 # tools/convert_unit.py inserts a converted unit's entry here. A converted
 # unit's .c file is compiled as C in the matching build and as C++ elsewhere.
@@ -294,15 +298,61 @@ set(LRR_LINK_LIBRARIES kernel32.lib libc.lib oldnames.lib
   ole32.lib d3drm.lib ddraw.lib winmm.lib vfw32.lib dinput.lib dsound.lib
   user32.lib gdi32.lib advapi32.lib amstrmid.lib dxguid.lib)
 
-# Units the original pulled from a library after the import libraries
-# (finding 657): LATE-001 (rnc.c) and LATE-002 (init.c) follow the import
-# thunks. The matching build archives each of these entries' objects into
-# its own library (late_<stem>.lib), linked after LRR_LINK_LIBRARIES in this
-# order, so LINK places their code and data after LIBC's first-pass members
-# and the DirectX thunks. The original also has RtlUnwind's thunk before
-# them; here it still follows them. Every other build compiles them as
-# ordinary entries, and their list entries keep their place.
+# Units the original pulled in LINK's second pass (finding 657): LATE-001
+# (rnc.c) and LATE-002 (init.c) follow the import thunks. The matching build
+# archives each of these entries' objects into its own library
+# (late_<stem>.lib), searched in this order before unit_gods98.lib. Only
+# gods98 units reference them (Wad.c and Main.c), so LINK pulls them in its
+# second pass and places their code and data after LIBC's first-pass members
+# and the DirectX thunks. Their commons come before gods98's, as in the
+# original: LINK allocates the commons library by library in command-line
+# order, whatever the pass (finding 690). The original also has RtlUnwind's
+# thunk before them; here it still follows them. Every other build compiles
+# them as ordinary entries, and their list entries keep their place.
 set(LRR_LINK_LATE_MEMBERS gods98/rnc.c gods98/init.c)
+
+# One symbol of each gods98 unit in unit_gods98.lib, in list order, that the
+# image keeps anyway. The original pulled gods98 from one library, so its
+# commons come in reverse unit order: LINK allocates commons library by
+# library, and within a library in reverse order of the members it pulled
+# (finding 690). Within one library LINK pulls members in the order their
+# symbols first became unresolved, which follows each object's COFF symbol
+# table, and MSVC 5.0 orders that by name. The rebuilt names are not the
+# original's, so the rebuilt references alone would pull Font.c before
+# Maths.c, and Sound3D.c and AnimClone.c late. Naming one symbol per unit
+# here, in list order, makes them unresolved first and in list order.
+# Deviation (scoring only): a link directive the original did not need; it
+# changes no code or storage of its own (.text is identical with it). When a
+# unit loses or renames its symbol, name another that the gate's map lists.
+set(LRR_LINK_MEMBER_ORDER
+  /INCLUDE:_container_initialise_original
+  /INCLUDE:_scene_resource_slots_initialize
+  /INCLUDE:_sound_variant_split
+  /INCLUDE:_WinMain@16
+  /INCLUDE:_block_text_token_pool_init
+  /INCLUDE:_d3drm_vector_random
+  /INCLUDE:_font_atlas_record_create
+  /INCLUDE:_audio_system_init
+  /INCLUDE:_directdraw_initialise
+  /INCLUDE:_renderer_record_table_initialize
+  /INCLUDE:_avi_initialise
+  /INCLUDE:_input_direct_initialize
+  /INCLUDE:_resource_mount_startup_target
+  /INCLUDE:_mesh_initialise
+  /INCLUDE:_flic_setup
+  /INCLUDE:_text_buffer_create
+  /INCLUDE:_keyboard_key_names_init
+  /INCLUDE:_surface_render_setup
+  /INCLUDE:_lws_parse
+  /INCLUDE:_media_cd_audio_device_state_update
+  /INCLUDE:_level_map_slots_reset
+  /INCLUDE:_scene_material_create
+  /INCLUDE:_indexed_bitmap_palette_data_prepare
+  /INCLUDE:_directx_error_message_format
+  /INCLUDE:_ledger_stub_0048b260_StartupStreamStateReset
+  /INCLUDE:_registry_path_split
+  /INCLUDE:_wad_get_file_name
+  /INCLUDE:_string_case_substring_find)
 
 # Symbols the matching link pulls in by name, in this order. Input.c
 # (input_unit.c, finding 683) references c_dfDIKeyboard and

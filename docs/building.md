@@ -124,16 +124,23 @@ place that adds a game, gods98, platform or program source to the build:
 
 - **The matching build** compiles each entry as its own object (a CMake object
   library `link_<position>_<stem>`, with the include path of the entry's
-  library). It links them as the original did (finding 658):
+  library). It links them as the original did (findings 658 and 690):
   1. the game units and gods98's first unit, Movie.cpp
      (`LRR_LINK_EXPLICIT_LAST`), as explicit objects in list order;
-  2. each later gods98 unit from its own library, `unit_<stem>.lib`, in list
-     order (the map shows `unit_container:container.c.obj`);
-  3. the libraries in `LRR_LINK_LIBRARIES`: LIBC, `oldnames.lib` and the
+  2. the late units' libraries (below);
+  3. every later gods98 unit from one library, `unit_gods98.lib`, in list
+     order (the map shows `unit_gods98:container.c.obj`). `LRR_LINK_MEMBER_ORDER`
+     names one symbol per unit, in list order, so LINK pulls them in that
+     order;
+  4. the libraries in `LRR_LINK_LIBRARIES`: LIBC, `oldnames.lib` and the
      import libraries in the original's order;
-  4. the late units (below);
   5. the port tail and the CRT-range legacy files from one library,
      `lrr_tail.lib`.
+
+  LINK allocates the commons library by library, in command-line order, and
+  within the explicit objects or one library in reverse order of the objects
+  it took (finding 690). So the commons come as the original's: the game
+  units in reverse, the late units, gods98 in reverse, LIBC.
 
   LINK 5.0 keeps command-line object order in every section and pulls
   library members when they are first referenced, so the map shows the units'
@@ -149,7 +156,9 @@ place that adds a game, gods98, platform or program source to the build:
 Two late units are the exception (finding 657). The original has LATE-001
 (`gods98/rnc.c`) and LATE-002 (`gods98/init.c`) after the import thunks, so
 `LRR_LINK_LATE_MEMBERS` names them. The matching build archives each into its
-own `late_<stem>.lib`, linked after `LRR_LINK_LIBRARIES` in list order. The
+own `late_<stem>.lib`, searched in list order before `unit_gods98.lib`. Only
+gods98 units reference them, so LINK pulls them in its second pass, after the
+import thunks, and their commons come before gods98's (finding 690). The
 map shows them as `late_rnc:rnc.c.obj` and `late_init:init.c.obj`. Their
 list entries stay where they are, and every other build compiles them as
 usual.

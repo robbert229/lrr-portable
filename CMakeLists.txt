@@ -170,7 +170,7 @@ if(LRR_CLASSIC_MSVC5)
   set(LRR_LINK_LATE_SOURCES "")
   set(LRR_LINK_LATE_TARGETS "")
   set(LRR_LINK_TAIL_OBJECTS "")
-  set(LRR_LINK_MEMBER_LIBRARIES "")
+  set(LRR_LINK_MEMBER_OBJECTS "")
   set(LRR_LINK_MEMBER_RECORDS "")
   set(_lrr_place explicit)
   set(_lrr_index 0)
@@ -198,8 +198,9 @@ if(LRR_CLASSIC_MSVC5)
     # compiles the same wherever it is linked from:
     # - explicit: the game units and gods98's first, up to
     #   LRR_LINK_EXPLICIT_LAST (link_order.cmake);
-    # - member: each later gods98 unit, archived into its own library,
-    #   unit_<stem>.lib, searched before LRR_LINK_LIBRARIES in list order;
+    # - member: each later gods98 unit, archived in list order into one
+    #   library, unit_gods98.lib, searched before LRR_LINK_LIBRARIES
+    #   (finding 690);
     # - tail: from the first port-tail entry on, every entry (the tail and
     #   the CRT-range legacy files) goes to lrr_tail.lib, below.
     if(_kind STREQUAL "tail")
@@ -212,9 +213,8 @@ if(LRR_CLASSIC_MSVC5)
       if(NOT _kind STREQUAL "unit")
         message(FATAL_ERROR "${_rel}: only unit entries may follow LRR_LINK_EXPLICIT_LAST before the tail")
       endif()
-      add_library(unit_${_stem} STATIC $<TARGET_OBJECTS:${_target}>)
-      list(APPEND LRR_LINK_MEMBER_LIBRARIES unit_${_stem})
-      string(APPEND LRR_LINK_MEMBER_RECORDS "unit_${_stem} ${_rel} $<TARGET_OBJECTS:${_target}>\n")
+      list(APPEND LRR_LINK_MEMBER_OBJECTS "$<TARGET_OBJECTS:${_target}>")
+      string(APPEND LRR_LINK_MEMBER_RECORDS "unit_gods98 ${_rel} $<TARGET_OBJECTS:${_target}>\n")
     else()
       list(APPEND LRR_LINK_OBJECTS "$<TARGET_OBJECTS:${_target}>")
     endif()
@@ -253,9 +253,21 @@ if(LRR_CLASSIC_MSVC5)
   # linked; under /OPT:REF they contributed nothing anyway.
   add_library(${LRR_LINK_TAIL_LIBRARY} STATIC ${LRR_LINK_TAIL_OBJECTS})
   set_target_properties(${LRR_LINK_TAIL_LIBRARY} PROPERTIES LINKER_LANGUAGE CXX)
-  foreach(_member IN LISTS LRR_LINK_MEMBER_LIBRARIES)
-    set_target_properties(${_member} PROPERTIES LINKER_LANGUAGE CXX)
-  endforeach()
+  # gods98's later units as one library, as the original linked them
+  # (finding 690). LINK allocates the commons library by library in
+  # command-line order, and within a library in reverse order of the members
+  # it pulled, so one library gives gods98's commons the original's reverse
+  # unit order; a library per unit gave list order. LRR_LINK_MEMBER_ORDER
+  # (link_order.cmake) keeps the members' pull order, and so their code, in
+  # list order.
+  add_library(unit_gods98 STATIC ${LRR_LINK_MEMBER_OBJECTS})
+  set_target_properties(unit_gods98 PROPERTIES LINKER_LANGUAGE CXX)
+  list(LENGTH LRR_LINK_MEMBER_OBJECTS _lrr_members)
+  list(LENGTH LRR_LINK_MEMBER_ORDER _lrr_member_symbols)
+  if(NOT _lrr_members EQUAL _lrr_member_symbols)
+    message(FATAL_ERROR "LRR_LINK_MEMBER_ORDER names ${_lrr_member_symbols} "
+      "symbols for ${_lrr_members} gods98 member units; name one per unit")
+  endif()
   # Which library each archived object is in, for the tools that read the
   # objects (tools/link_order.py's member_objects()).
   file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/link-members.txt"
@@ -377,14 +389,17 @@ if(LRR_CLASSIC_MSVC5)
   add_dependencies(program lrr_msvc5_importlibs)
   set_property(TARGET program APPEND PROPERTY LINK_DEPENDS ${LRR_IMPORTLIB_FILES})
   target_link_options(program PRIVATE "/LIBPATH:${LRR_IMPORTLIB_DIR}"
-    ${LRR_LINK_SYMBOLS})
-  # The gods98 member libraries come first: LINK infers the entry point
-  # after the explicit objects, and the original's wincrt0.obj follows
-  # Movie.cpp's LIBC references but precedes Container.c's (finding 658).
-  target_link_libraries(program PRIVATE ${LRR_LINK_MEMBER_LIBRARIES})
+    ${LRR_LINK_MEMBER_ORDER} ${LRR_LINK_SYMBOLS})
+  # The late units' libraries, then the gods98 member library, come first:
+  # LINK infers the entry point after the explicit objects, and the
+  # original's wincrt0.obj follows Movie.cpp's LIBC references but precedes
+  # Container.c's (finding 658). Nothing references the late units before
+  # gods98's members do, so LINK pulls them in its second pass; listed
+  # first, their commons come before gods98's, as in the original (finding
+  # 690).
+  target_link_libraries(program PRIVATE ${LRR_LINK_LATE_LIBRARIES} unit_gods98)
   target_link_libraries(program PRIVATE ${LRR_LINK_LIBRARIES})
-  target_link_libraries(program PRIVATE ${LRR_LINK_LATE_LIBRARIES}
-    ${LRR_LINK_TAIL_LIBRARY})
+  target_link_libraries(program PRIVATE ${LRR_LINK_TAIL_LIBRARY})
   # No /ENTRY: LINK infers WinMainCRTStartup from WinMain and pulls
   # wincrt0.obj where the original has it, after exsup.obj. /ENTRY made it
   # LIBC's first member, so its own LIBC references came before the units'

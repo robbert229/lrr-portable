@@ -95,7 +95,18 @@ static int s_mouseLeftPrevious;
 // GLOBAL: LEGORR 0x004db8dc
 static int s_textInputBlink;
 
-/* FrontEnd.c's initialised .data (004a1f48-004a1f60). */
+/* FrontEnd.c's initialised .data (004a1f00-004a1f60). The four menu block
+ * names are initialised arrays, not literals: the original has them first in
+ * the unit's .data, before the -1 words, where MSVC puts plain data, and not
+ * among the literals that follow (finding 690). */
+// GLOBAL: LEGORR 0x004a1f00
+static char s_menuSaveImage[] = "Menu::SaveImage";
+// GLOBAL: LEGORR 0x004a1f10
+static char s_menuSaveText[] = "Menu::SaveText";
+// GLOBAL: LEGORR 0x004a1f20
+static char s_menuLevelText[] = "Menu::LevelText";
+// GLOBAL: LEGORR 0x004a1f30
+static char s_menuOverwrite[] = "Menu::Overwrite";
 // GLOBAL: LEGORR 0x004a1f48
 static int s_selectHoverIndex = -1;
 // GLOBAL: LEGORR 0x004a1f4c
@@ -1744,16 +1755,15 @@ void front_menu_item_draw_save_image(Front_Menu* menu, int selIndex,
             sprintf(buff, "pos%d", selIndex + 1);
             str = block_get_str_copy(legoGlobs_config,
                                      string_path_join(s_engine_config_root,
-                                                      // STRING: LEGORR 0x004a1f00
-                                                      "Menu::SaveImage", buff, NULL));
+                                                      s_menuSaveImage, buff, NULL));
             // STRING: LEGORR 0x004a2378
             sound_variant_split(str, stringParts, "|");
             dest.x = (float)atoi(stringParts[0]);
             dest.y = (float)atoi(stringParts[1]);
-            size.x = (float)FRONT_CONFIG_INT(string_path_join(s_engine_config_root, "Menu::SaveImage",
+            size.x = (float)FRONT_CONFIG_INT(string_path_join(s_engine_config_root, s_menuSaveImage,
                                                               // STRING: LEGORR 0x004a2370
                                                               "Width", NULL));
-            size.y = (float)FRONT_CONFIG_INT(string_path_join(s_engine_config_root, "Menu::SaveImage",
+            size.y = (float)FRONT_CONFIG_INT(string_path_join(s_engine_config_root, s_menuSaveImage,
                                                               // STRING: LEGORR 0x004a2368
                                                               "Height", NULL));
             if (bigSize) {
@@ -2314,7 +2324,7 @@ void front_menu_load_slot_images(void)
         // STRING: LEGORR 0x004a2398
         sprintf(buff, "%s\\%d.dat",
                 block_get_str_copy(legoGlobs_config,
-                                   string_path_join(s_engine_config_root, "Menu::SaveImage",
+                                   string_path_join(s_engine_config_root, s_menuSaveImage,
                                                     // STRING: LEGORR 0x004a23a4
                                                     "Path", NULL)),
                 i);
@@ -2426,7 +2436,7 @@ void front_run_screen_menu(Front_Menu* menu)
             level = reward_current_level_get();
             sprintf(buff, "%s\\%d.dat",
                     block_get_str_copy(legoGlobs_config,
-                                       string_path_join(s_engine_config_root, "Menu::SaveImage",
+                                       string_path_join(s_engine_config_root, s_menuSaveImage,
                                                         "Path", NULL)),
                     s_saveSlotToWrite);
             front_image_save_bmp_adapter((char*)level + 8, buff);
@@ -3766,12 +3776,10 @@ void front_load_menus(struct BlockRec* config)
 
     frontGlobs_saveTextWnd = (Front_SaveTextWindow*)malloc(sizeof(Front_LevelTextWindow));
     memset(frontGlobs_saveTextWnd, 0, sizeof(Front_LevelTextWindow));
-    // STRING: LEGORR 0x004a1f10
-    front_load_menu_text_window(config, "Menu::SaveText", (Front_LevelTextWindow*)frontGlobs_saveTextWnd);
+    front_load_menu_text_window(config, s_menuSaveText, (Front_LevelTextWindow*)frontGlobs_saveTextWnd);
     frontGlobs_saveLevelWnd = (Front_LevelTextWindow*)malloc(sizeof(Front_LevelTextWindow));
     memset(frontGlobs_saveLevelWnd, 0, sizeof(Front_LevelTextWindow));
-    // STRING: LEGORR 0x004a1f20
-    front_load_menu_text_window(config, "Menu::LevelText", frontGlobs_saveLevelWnd);
+    front_load_menu_text_window(config, s_menuLevelText, frontGlobs_saveLevelWnd);
 
     str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, "Menu", "Save_Game", NULL));
     if (str != NULL) {
@@ -3785,26 +3793,25 @@ void front_load_menus(struct BlockRec* config)
         strcpy(frontGlobs_saveSlotFormat, front_util_replace_text_spaces(str));
         free(str);
     }
-    // STRING: LEGORR 0x004a1f30
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, "Menu::Overwrite", "Title", NULL));
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, s_menuOverwrite, "Title", NULL));
     if (str != NULL) {
         strcpy(frontGlobs_overwriteTitle, front_util_replace_text_spaces(str));
         free(str);
     }
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, "Menu::Overwrite",
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, s_menuOverwrite,
                                                                                                          // STRING: LEGORR 0x004a26b0
                                                                                                          "Text", NULL));
     if (str != NULL) {
         strcpy(frontGlobs_overwriteText, front_util_replace_text_spaces(str));
         free(str);
     }
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, "Menu::Overwrite",
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, s_menuOverwrite,
                                                                                                          // STRING: LEGORR 0x004a26ac
                                                                                                          "Ok", NULL));
     if (str != NULL) {
         strcpy(frontGlobs_overwriteOK, front_util_replace_text_spaces(str));
     }
-    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, "Menu::Overwrite",
+    str = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, s_menuOverwrite,
                                                                                                          // STRING: LEGORR 0x004a26a4
                                                                                                          "Cancel", NULL));
     if (str != NULL) {
