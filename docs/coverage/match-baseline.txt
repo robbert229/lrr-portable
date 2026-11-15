@@ -1,4 +1,4 @@
-# input_sha256: 9645025737c1eff8ab2076d123278cf13967956ae0b9c63ef3c373db38ea0e85
+# input_sha256: 9bd6f96dbd6d28d1713f959ab5a648a5016da8a0e87a1a092f857048c3a6da4a
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -148,7 +148,7 @@
 0x00406540 100.00 aitask_entity_pool_callback_search
 0x004065d0 100.00 renderer_global_dword_get
 0x004065e0 100.00 render_surface_secondary_get
-0x004065f0 56.88 cubic_bezier_point_evaluate
+0x004065f0 25.23 cubic_bezier_point_evaluate
 0x00406730 100.00 vec2_dist_alt
 0x00406760 100.00 vector2_set_length
 0x004067b0 97.22 polyline_segment_lengths_total
@@ -170,7 +170,7 @@
 0x00406e40 100.00 activity_runner_update
 0x00406ec0 100.00 entity_payload_release_subslots
 0x00406f50 100.00 animation_object_null_find
-0x00406f80 81.82 activity_runner_state_read
+0x00406f80 90.00 activity_runner_state_read
 0x00406fb0 100.00 renderer_cached_handle_40_get_or_create
 0x00406fe0 100.00 renderer_cached_handle_48_get_or_create
 0x00407010 100.00 renderer_cached_handle_50_get_or_create
@@ -2873,7 +2873,7 @@
 0x00406540 100.00 aitask_entity_pool_callback_search
 0x004065d0 100.00 renderer_global_dword_get
 0x004065e0 100.00 render_surface_secondary_get
-0x004065f0 56.88 cubic_bezier_point_evaluate
+0x004065f0 25.23 cubic_bezier_point_evaluate
 0x00406730 100.00 vec2_dist_alt
 0x00406760 100.00 vector2_set_length
 0x004067b0 97.22 polyline_segment_lengths_total
@@ -2895,7 +2895,7 @@
 0x00406e40 100.00 activity_runner_update
 0x00406ec0 100.00 entity_payload_release_subslots
 0x00406f50 100.00 animation_object_null_find
-0x00406f80 81.82 activity_runner_state_read
+0x00406f80 90.00 activity_runner_state_read
 0x00406fb0 100.00 renderer_cached_handle_40_get_or_create
 0x00406fe0 100.00 renderer_cached_handle_48_get_or_create
 0x00407010 100.00 renderer_cached_handle_50_get_or_create
