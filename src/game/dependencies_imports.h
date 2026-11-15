@@ -18,9 +18,6 @@ extern "C" {
 
 struct Lego_Object;
 
-/* Config's ":" (004a1cd4), which config.c defines (finding 581). */
-extern const char s_config_rgb_separator[];
-
 /* Utils.c (utils.c): Util_Tokenise. */
 int sound_variant_split(char* text, char** out, const char* separators); /* 00477440 */
 

@@ -121,7 +121,7 @@ void dependencies_initialise(BlockRec* config, const char* gameName)
     // STRING: LEGORR 0x004a1d98
     for (arrayItem = block_subgroup(config, string_path_join(gameName, "Dependencies", 0));
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
-        numParts = sound_variant_split(arrayItem->key, stringParts, s_config_rgb_separator);
+        numParts = sound_variant_split(arrayItem->key, stringParts, ":");
         if (lego_entity_type_pair_lookup(stringParts[1], &objType, &objID, NULL)) {
             // STRING: LEGORR 0x004a1d8c
             hitOnceStay = !stricmp(stringParts[0], "HitOnceStay");
@@ -147,7 +147,7 @@ void dependencies_initialise(BlockRec* config, const char* gameName)
                 (Dependencies_Requirement*)malloc(numRequirements * sizeof(Dependencies_Requirement));
             dependencyGlobs.objects[objType][objID].requirementsCount[objLevel] = numRequirements;
             for (i = 0; i < numRequirements; i++) {
-                numReqParts = sound_variant_split(requirements[i], reqParts, s_config_rgb_separator);
+                numReqParts = sound_variant_split(requirements[i], reqParts, ":");
                 if (lego_entity_type_pair_lookup(reqParts[0], &reqType, &reqID, NULL)) {
                     dependencyGlobs.objects[objType][objID].requirementsList[objLevel][numRequirements - i - 1].objType = reqType;
                     dependencyGlobs.objects[objType][objID].requirementsList[objLevel][numRequirements - i - 1].objID = reqID;

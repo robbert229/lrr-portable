@@ -29,10 +29,6 @@ void flic_opcode27_fallback_noop(void);                             /* 00484c90 
 /* Lego.c's Gods_Go (GAME-021, lego_unit.h). */
 void lego_game_config_callback_registry_init(const char* gameName); /* 0041fa20 */
 
-/* 004b8a14: Config.c's "", the literal the linker pooled for the whole
- * image (config.c; finding 624). */
-extern const char s_config_angle_empty[4];
-
 /* The port's names of thirteen mainGlobs fields. In the matching build
  * main_globs.h makes each the field (finding 679); in the reference build
  * they are the port's variables.

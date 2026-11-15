@@ -50,9 +50,6 @@ extern struct LegoObject_Globs objectGlobs;
 extern unsigned int s_grid_count_second[0x12c0];            /* 004dee44 */
 extern unsigned int s_grid_count_first[0x12c0];             /* 004e3944 */
 #endif
-/* Config.c (G98-006): the original's pooled ":" and "" resolve to these. */
-extern const char s_config_rgb_separator[];                 /* 004a1cd4 ":" */
-extern const char s_config_angle_empty[4];                  /* 004b8a14 "" */
 #ifdef __cplusplus
 }
 #endif
@@ -66,7 +63,7 @@ static Stats_Globs statsGlobs;
     string_path_join(gameName, STATS_KEY, item->key, (name), NULL)
 #define STATS_STR(name) \
     (block_get_strptr(config, STATS_ID(name)) ? \
-     block_get_strptr(config, STATS_ID(name)) : s_config_angle_empty)
+     block_get_strptr(config, STATS_ID(name)) : "")
 #define STATS_INT(name) atoi(STATS_STR(name))
 #define STATS_REAL(name) atof(STATS_STR(name))
 #define STATS_BOOL(name) block_get_bool_path(config, STATS_ID(name))
@@ -154,7 +151,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
             // STRING: LEGORR 0x004aa43c
             if ((str = block_get_str_copy(config, STATS_ID("RouteSpeed"))) != NULL) {
-                sound_variant_split(str, stringParts, s_config_rgb_separator);
+                sound_variant_split(str, stringParts, ":");
                 for (loop = 0; loop < levels; loop++) {
                     STATS_RECORD(loop).RouteSpeed = (float)atof(stringParts[loop]);
                 }
@@ -176,7 +173,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
             for (surface = 0; surface < STATS_SURFACE_TYPES; surface++) {
                 if (drillTimes[surface] != NULL) {
-                    sound_variant_split(drillTimes[surface], stringParts, s_config_rgb_separator);
+                    sound_variant_split(drillTimes[surface], stringParts, ":");
                     for (loop = 0; loop < levels; loop++) {
                         STATS_RECORD(loop).DrillTimes[surface] = (float)atof(stringParts[loop]) * 25.0f;
                     }
@@ -283,7 +280,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004aa2a4
                 if ((values = block_get_str_copy(config, STATS_ID("SingleWidthDig"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < levels; loop++) {
                         if (block_get_bool(stringParts[loop]) == 1) STATS_RECORD(loop).flags1 |= 0x1;
                     }
@@ -295,7 +292,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004aa298
                 if ((values = block_get_str_copy(config, STATS_ID("RepairValue"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < levels; loop++) {
                         STATS_RECORD(loop).RepairValue = (float)atof(stringParts[loop]);
                     }
@@ -307,7 +304,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004aa288
                 if ((values = block_get_str_copy(config, STATS_ID("SurveyRadius"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < levels; loop++) {
                         STATS_RECORD(loop).SurveyRadius = atoi(stringParts[loop]);
                     }
@@ -319,7 +316,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004aa27c
                 if ((values = block_get_str_copy(config, STATS_ID("MaxCarry"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < levels; loop++) {
                         STATS_RECORD(loop).MaxCarry = atoi(stringParts[loop]);
                     }
@@ -331,7 +328,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004aa270
                 if ((values = block_get_str_copy(config, STATS_ID("CarryStart"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < levels; loop++) {
                         STATS_RECORD(loop).CarryStart = atoi(stringParts[loop]);
                     }
@@ -343,7 +340,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004aa260
                 if ((values = block_get_str_copy(config, STATS_ID("CrystalDrain"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < levels; loop++) {
                         STATS_RECORD(loop).CrystalDrain = atoi(stringParts[loop]);
                     }
@@ -355,7 +352,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004aa24c
                 if ((values = block_get_str_copy(config, STATS_ID("NumOfToolsCanCarry"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < levels; loop++) {
                         STATS_RECORD(loop).NumOfToolsCanCarry = atoi(stringParts[loop]);
                     }
@@ -367,7 +364,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004a4418
                 if ((values = block_get_str_copy(config, STATS_ID("UpgradeTime"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < levels; loop++) {
                         STATS_RECORD(loop).UpgradeTime = (float)atof(stringParts[loop]) * 25.0f;
                     }
@@ -379,7 +376,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004aa23c
                 if ((values = block_get_str_copy(config, STATS_ID("FunctionCoef"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < levels; loop++) {
                         STATS_RECORD(loop).FunctionCoef = (float)atof(stringParts[loop]);
                     }
@@ -391,7 +388,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004aa22c
                 if ((values = block_get_str_copy(config, STATS_ID("UpgradeCostOre"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < 4; loop++) {
                         STATS_RECORD(loop).UpgradeCostOre = atoi(stringParts[3 - loop]);
                     }
@@ -403,7 +400,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
                 // STRING: LEGORR 0x004aa218
                 if ((values = block_get_str_copy(config, STATS_ID("UpgradeCostStuds"))) != NULL) {
-                    sound_variant_split(values, stringParts, s_config_rgb_separator);
+                    sound_variant_split(values, stringParts, ":");
                     for (loop = 0; loop < 4; loop++) {
                         STATS_RECORD(loop).UpgradeCostStuds = atoi(stringParts[3 - loop]);
                     }
@@ -487,7 +484,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
 
             // STRING: LEGORR 0x004a9fdc
             if ((str = block_get_str_copy(config, STATS_ID("TrainPilot"))) != NULL) {
-                sound_variant_split(str, stringParts, s_config_rgb_separator);
+                sound_variant_split(str, stringParts, ":");
                 for (loop = 0; loop < levels; loop++) {
                     if (block_get_bool(stringParts[loop]) == 1) STATS_RECORD(loop).flags2 |= 0x4;
                 }
@@ -495,7 +492,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
             }
             // STRING: LEGORR 0x004a9fd0
             if ((str = block_get_str_copy(config, STATS_ID("TrainSailor"))) != NULL) {
-                sound_variant_split(str, stringParts, s_config_rgb_separator);
+                sound_variant_split(str, stringParts, ":");
                 for (loop = 0; loop < levels; loop++) {
                     if (block_get_bool(stringParts[loop]) == 1) STATS_RECORD(loop).flags2 |= 0x8;
                 }
@@ -503,7 +500,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
             }
             // STRING: LEGORR 0x004a9fc4
             if ((str = block_get_str_copy(config, STATS_ID("TrainDriver"))) != NULL) {
-                sound_variant_split(str, stringParts, s_config_rgb_separator);
+                sound_variant_split(str, stringParts, ":");
                 for (loop = 0; loop < levels; loop++) {
                     if (block_get_bool(stringParts[loop]) == 1) STATS_RECORD(loop).flags2 |= 0x10;
                 }
@@ -511,7 +508,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
             }
             // STRING: LEGORR 0x004a9fb4
             if ((str = block_get_str_copy(config, STATS_ID("TrainDynamite"))) != NULL) {
-                sound_variant_split(str, stringParts, s_config_rgb_separator);
+                sound_variant_split(str, stringParts, ":");
                 for (loop = 0; loop < levels; loop++) {
                     if (block_get_bool(stringParts[loop]) == 1) STATS_RECORD(loop).flags2 |= 0x20;
                 }
@@ -519,7 +516,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
             }
             // STRING: LEGORR 0x004a9fa8
             if ((str = block_get_str_copy(config, STATS_ID("TrainRepair"))) != NULL) {
-                sound_variant_split(str, stringParts, s_config_rgb_separator);
+                sound_variant_split(str, stringParts, ":");
                 for (loop = 0; loop < levels; loop++) {
                     if (block_get_bool(stringParts[loop]) == 1) STATS_RECORD(loop).flags2 |= 0x40;
                 }
@@ -527,7 +524,7 @@ int stats_initialise(BlockRec* config, const char* gameName)
             }
             // STRING: LEGORR 0x004a9f98
             if ((str = block_get_str_copy(config, STATS_ID("TrainScanner"))) != NULL) {
-                sound_variant_split(str, stringParts, s_config_rgb_separator);
+                sound_variant_split(str, stringParts, ":");
                 for (loop = 0; loop < levels; loop++) {
                     if (block_get_bool(stringParts[loop]) == 1) STATS_RECORD(loop).flags2 |= 0x80;
                 }

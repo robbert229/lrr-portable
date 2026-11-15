@@ -940,10 +940,6 @@ struct Lego_Level;
 extern float g_camera_countdown;              /* camera.cpp, 00556ed8 */
 
 /* G98-006 Config.c (gods98/config.h; BlockFile is struct BlockRec). */
-/* Config.c's pooled "" and ":" (config.c, C linkage): the original's
- * literals resolve to these two addresses (findings 581, 626). */
-extern const char s_config_rgb_separator[];                             /* 004a1cd4 ":" */
-extern const char s_config_angle_empty[4];                              /* 004b8a14 "" */
 const char* string_path_join(const char* root, ...);                    /* 00478f50 */
 char* block_get_str_copy(struct BlockRec* root, const char* path);      /* 00479050 */
 const char* block_get_strptr(struct BlockRec* root, const char* path);  /* 004790b0 */

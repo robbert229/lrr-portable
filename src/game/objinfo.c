@@ -99,7 +99,7 @@ int objinfo_load_health_bar(struct BlockRec* config, const char* gameName)
                             // STRING: LEGORR 0x004a82e0
                             "HealthBarBorderSize", NULL)) ?
                                                             block_get_strptr(config, string_path_join(gameName, "ObjInfo", "HealthBarBorderSize", NULL)) :
-                                                            s_config_angle_empty);
+                                                            "");
 
                     if (!config_rgb_vector_read(config, string_path_join(gameName, "ObjInfo",
                             // STRING: LEGORR 0x004a82cc

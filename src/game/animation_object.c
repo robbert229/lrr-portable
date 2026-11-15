@@ -80,6 +80,9 @@ int entity_type_config_resource_row_load(void* destination,
                                          NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "CameraNullFrames", NULL))
+                    /* The original pools every unit's "" here, in the
+                     * object's .bss (an all-zero literal). */
+                    // STRING: LEGORR 0x004b8a14
                     : "");
                 object->cameraFlipDir = block_get_bool_path(config,
                     string_path_join(gameName,

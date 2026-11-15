@@ -25,7 +25,7 @@
 #define FRONT_CONFIG_INT(path) \
     atoi(block_get_strptr(legoGlobs_config, (path)) \
              ? block_get_strptr(legoGlobs_config, (path)) \
-             : s_config_angle_empty)
+             : "")
 
 #define FRONT_PRINT_MAX 15
 
@@ -108,9 +108,10 @@ static int s_overlayShownIndex = -1;
 static int s_overwriteAnswer = -1;
 // GLOBAL: LEGORR 0x004a1f5c
 static int s_saveSlotToWrite = -1;
-/* Input_GetKeyCharacter's table: each DirectInput key's character. */
+/* Input_GetKeyCharacter's table: each DirectInput key's character. Not
+ * const: the original has it in .data, after the -1 words. */
 // GLOBAL: LEGORR 0x004a1f60
-static const unsigned int s_keyCharacters[256] = {
+static unsigned int s_keyCharacters[256] = {
     0x00, 0x00, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36,
     0x37, 0x38, 0x39, 0x30, 0x00, 0x00, 0x00, 0x00,
     0x71, 0x77, 0x65, 0x72, 0x74, 0x79, 0x75, 0x69,
@@ -332,11 +333,6 @@ Front_Globs frontGlobs;
 #define frontGlobs_levelStreamTimer frontGlobs.levelStreamTimer
 
 #define frontGlobs_mainMenuSet ((Front_MenuSet*)g_front_main_menu_set)
-
-/* Front_Menu_CreateOverlay's "Null" (004a23f4), as a named array that
- * 00413f90 and the menu loader compare against. */
-// GLOBAL: LEGORR 0x004a23f4
-static const char s_overlayNullName[5] = "Null";
 
 /* Callees whose port declarations type a float argument as its bits
  * (view.hpp: 00473460, 00473480) or name it unused (savegame.hpp:
@@ -960,7 +956,7 @@ int front_menu_load_menu_image(Front_Menu* menu, const char* filename, int light
         return 0;
     }
     strcpy(buff, filename);
-    numParts = sound_variant_split(buff, stringParts, s_config_rgb_separator);
+    numParts = sound_variant_split(buff, stringParts, ":");
     if (numParts >= 3) {
         menu->flags |= 1;
         menu->imagePos[0] = (float)atof(stringParts[1]);
@@ -1024,7 +1020,7 @@ Front_Menu* front_menu_create_menu(const char* title, const char* fullName,
     menu->flags = canScroll ? 2 : 0;
     if (anchored != NULL) {
         menu->anchored = 1;
-        sound_variant_split((char*)anchored, stringParts, s_config_rgb_separator);
+        sound_variant_split((char*)anchored, stringParts, ":");
         menu->anchoredX = atoi(stringParts[0]);
         menu->anchoredY = atoi(stringParts[1]);
     }
@@ -2529,7 +2525,9 @@ Front_MenuOverlay* front_menu_create_overlay(const char* filename,
 
     overlay = (Front_MenuOverlay*)malloc(sizeof(Front_MenuOverlay));
     memset(overlay, 0, sizeof(Front_MenuOverlay));
-    if (strnicmp(filename, s_overlayNullName, 4) != 0) {
+    if (strnicmp(filename,
+                 // STRING: LEGORR 0x004a23f4
+                 "Null", 4) != 0) {
         if (filename != NULL) {
             overlay->filename = front_util_string_copy(filename);
         }
@@ -2629,7 +2627,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
         positionStr = block_get_str_copy(legoGlobs_config,
                                          // STRING: LEGORR 0x004a24a0
                                          string_path_join(s_engine_config_root, itemPath, "Position", NULL));
-        sound_variant_split(positionStr, stringParts, s_config_rgb_separator);
+        sound_variant_split(positionStr, stringParts, ":");
         xPos = atoi(stringParts[0]);
         yPos = atoi(stringParts[1]);
         if (positionStr != NULL) {
@@ -2703,7 +2701,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                     break;
                 }
             }
-            sound_variant_split(itemString, stringParts, s_config_rgb_separator);
+            sound_variant_split(itemString, stringParts, ":");
             if (!sfx_get_type(stringParts[1], &sfxType)) {
                 sfxType = 0;
             }
@@ -2721,7 +2719,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                 free(itemString);
             }
             itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, NULL));
-            numParts = sound_variant_split(itemString, stringParts, s_config_rgb_separator);
+            numParts = sound_variant_split(itemString, stringParts, ":");
             switch (front_menu_item_parse_type_string(stringParts[0])) {
             case Front_MenuItem_Cycle:
             {
@@ -2771,7 +2769,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                     itemData = front_menu_item_create_trigger(valuePtr, atoi(stringParts[7]) == 1, callback);
                     front_menu_add_menu_item(menuSet->menus[i],
                                              front_menu_item_create_image_item(
-                                                 s_config_angle_empty, loFont, hiFont, stringParts[3],
+                                                 "", loFont, hiFont, stringParts[3],
                                                  stringParts[4], atoi(stringParts[1]), atoi(stringParts[2]),
                                                  Front_MenuItem_Trigger, autoCenter, stringParts[6], itemData));
                 } else if (numParts == 5) {
@@ -2796,7 +2794,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                     k = atoi(stringParts[7] + 4) - 1;
                     front_menu_add_menu_item(menuSet->menus[i],
                                              front_menu_item_create_image_item(
-                                                 s_config_angle_empty, loFont, hiFont, stringParts[3],
+                                                 "", loFont, hiFont, stringParts[3],
                                                  stringParts[4], atoi(stringParts[1]), atoi(stringParts[2]),
                                                  Front_MenuItem_Next, autoCenter, stringParts[5],
                                                  menuSet->menus[k]));
@@ -3494,7 +3492,7 @@ void front_play_intro_splash(const char* imageKey, int skippable, const char* ti
                                            string_path_join(s_engine_config_root, "Main", timeKey, NULL))
                               ? block_get_strptr(legoGlobs_config,
                                                  string_path_join(s_engine_config_root, "Main", timeKey, NULL))
-                              : s_config_angle_empty);
+                              : "");
     if (0.0f == seconds) {
         seconds = 3.0f;
     }
@@ -3585,21 +3583,21 @@ void front_load_levels(Front_MenuSet* menuSet)
     // STRING: LEGORR 0x004a2558
     loadSaveIndex = front_get_menu_id_by_name(frontGlobs_mainMenuSet, "Load Level Save");
 
-    loadSelect = front_menu_item_create_select(&frontGlobs_f_557028, s_config_angle_empty,
-                                               s_config_angle_empty, -200, -100, 60, 5, -20, 200,
+    loadSelect = front_menu_item_create_select(&frontGlobs_f_557028, "",
+                                               "", -200, -100, 60, 5, -20, 200,
                                                -20, -40, 0, front_callback_select_load_save,
                                                frontGlobs_mainMenuSet->menus[levelsIndex]);
     front_menu_add_menu_item(frontGlobs_mainMenuSet->menus[loadSaveIndex],
-        front_menu_item_create_banner_item(s_config_angle_empty,
+        front_menu_item_create_banner_item("",
             frontGlobs_mainMenuSet->menus[loadSaveIndex]->items[0]->fontLo,
             frontGlobs_mainMenuSet->menus[loadSaveIndex]->items[0]->fontHi,
             0, 0, Front_MenuItem_Select, 1, loadSelect, 0));
 
-    saveSelect = front_menu_item_create_select(&frontGlobs_f_557028, s_config_angle_empty,
-                                               s_config_angle_empty, -200, -100, 60, 5, -20, 200,
+    saveSelect = front_menu_item_create_select(&frontGlobs_f_557028, "",
+                                               "", -200, -100, 60, 5, -20, 200,
                                                -20, -40, 0, front_callback_select_load_save, NULL);
     front_menu_add_menu_item(frontGlobs_saveMenuSet->menus[0],
-        front_menu_item_create_banner_item(s_config_angle_empty,
+        front_menu_item_create_banner_item("",
             frontGlobs_mainMenuSet->menus[loadSaveIndex]->items[0]->fontLo,
             frontGlobs_mainMenuSet->menus[loadSaveIndex]->items[0]->fontHi,
             0, 0, Front_MenuItem_Select, 1, saveSelect, 0));
@@ -3750,7 +3748,7 @@ void front_load_menus(struct BlockRec* config)
                                                                                               // STRING: LEGORR 0x004a26d0
                                                                                               "MenuWipe", NULL));
     if (str != NULL) {
-        if (strnicmp(str, s_overlayNullName, 4) != 0) {
+        if (strnicmp(str, "Null", 4) != 0) {
             frontGlobs_rockWipeAnim = container_load(NULL, str, "LWS", 1);
         }
         free(str);
@@ -3759,7 +3757,7 @@ void front_load_menus(struct BlockRec* config)
                                                                                                   // STRING: LEGORR 0x004a26c4
                                                                                                   "!MenuWipe", NULL));
         if (str != NULL) {
-            if (!(s_engine_feature_word & 0x400000) && strnicmp(str, s_overlayNullName, 4) != 0) {
+            if (!(s_engine_feature_word & 0x400000) && strnicmp(str, "Null", 4) != 0) {
                 frontGlobs_rockWipeAnim = container_load(NULL, str, "LWS", 1);
             }
             free(str);
@@ -3881,7 +3879,7 @@ void front_load_menus(struct BlockRec* config)
                                                                                 // STRING: LEGORR 0x004a2624
                                                                                 "MaxLevelScreens", NULL))
             ? block_get_strptr(config, string_path_join(s_engine_config_root, "Menu", "MaxLevelScreens", NULL))
-            : s_config_angle_empty);
+            : "");
     if (frontGlobs_maxLevelScreens == 0) {
         frontGlobs_maxLevelScreens = 1;
     }
@@ -3894,7 +3892,7 @@ void front_load_menus(struct BlockRec* config)
                                                   // STRING: LEGORR 0x004a2618
                                                   "BigWidth", NULL))
             ? block_get_strptr(config, string_path_join(s_engine_config_root, "Menu", "SaveImage", "BigWidth", NULL))
-            : s_config_angle_empty);
+            : "");
     if (frontGlobs_saveImageBigWidth == 0) {
         frontGlobs_saveImageBigWidth = 80;
     }
@@ -3903,7 +3901,7 @@ void front_load_menus(struct BlockRec* config)
                                                                                              // STRING: LEGORR 0x004a2600
                                                                                              "BigHeight", NULL))
             ? block_get_strptr(config, string_path_join(s_engine_config_root, "Menu", "SaveImage", "BigHeight", NULL))
-            : s_config_angle_empty);
+            : "");
     if (frontGlobs_saveImageBigHeight == 0) {
         frontGlobs_saveImageBigHeight = 60;
     }
@@ -4512,8 +4510,8 @@ void front_levels_load_menu_items(int menuType, Front_LevelLink* startLink, Fron
     count = 0;
     front_level_link_run_through_links(startLink, front_level_link_callback_inc_count, &count);
     front_levels_reset_visited();
-    select = front_menu_item_create_select(&frontGlobs_mainMenuValues[menuType], s_config_angle_empty,
-                                           s_config_angle_empty, 0, 0, 0, count, 0, 0, 0, 0, 0,
+    select = front_menu_item_create_select(&frontGlobs_mainMenuValues[menuType], "",
+                                           "", 0, 0, 0, count, 0, 0, 0, 0, 0,
                                            callback, nextMenu);
     front_menu_add_menu_item(menu,
         // STRING: LEGORR 0x004a2764

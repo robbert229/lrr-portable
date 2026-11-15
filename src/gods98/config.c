@@ -51,26 +51,6 @@ static const float s_config_angle_turn_radians = 6.2831855f;
 // GLOBAL: LEGORR 0x0049e904
 static const float s_config_rgb_scale = 1.0f / 255.0f;
 
-/* Literals the unit shares with earlier objects. The original's "" for a
- * missing angle resolves to a zero byte in another object's .bss.
- * The original pools ":" and "" for every unit, so the two have external C
- * linkage: entity_stats.c (GAME-043) reads them where the original's
- * literals resolve to these addresses (finding 581), and container.c
- * (G98-002) reads "::" and "" the same way (finding 624). A macro, not a
- * declaration, gives the C++ build its extern "C", so the symbol numbering
- * (finding 538) does not change. */
-#ifdef __cplusplus
-#define CONFIG_POOLED_LITERAL extern "C"
-#else
-#define CONFIG_POOLED_LITERAL
-#endif
-// GLOBAL: LEGORR 0x004a1cd4
-CONFIG_POOLED_LITERAL const char s_config_rgb_separator[] = ":";
-// GLOBAL: LEGORR 0x004aab18
-CONFIG_POOLED_LITERAL const char s_config_separator[] = "::";
-// GLOBAL: LEGORR 0x004b8a14
-CONFIG_POOLED_LITERAL const char s_config_angle_empty[4] = { 0, 0, 0, 0 };
-
 // FUNCTION: LEGORR 0x00478df0
 void block_text_token_pool_init(void)
 {
@@ -142,7 +122,7 @@ const char* string_path_join(const char* root, ...)
     strcpy(configGlobs.join_path, root);
     va_start(args, root);
     while ((part = va_arg(args, const char*)) != NULL) {
-        strcat(configGlobs.join_path, s_config_separator);
+        strcat(configGlobs.join_path, "::");
         strcat(configGlobs.join_path, part);
     }
     va_end(args);
@@ -220,7 +200,7 @@ float config_angle_radians_get(BlockFile* root, const char* path)
 {
     float deg = (float)atof(block_get_strptr(root, path)
                             ? block_get_strptr(root, path)
-                            : s_config_angle_empty);
+                            : "");
 
     if (deg != s_config_angle_zero) {
         return (deg * s_config_angle_degrees_to_turn) * s_config_angle_turn_radians;
@@ -238,7 +218,7 @@ int config_rgb_vector_read(BlockFile* root, const char* path,
     int res = 0;
 
     if ((str = block_get_str_copy(root, path)) != NULL) {
-        if (sound_variant_split(str, argv, s_config_rgb_separator) == 3) {
+        if (sound_variant_split(str, argv, ":") == 3) {
             *r = (float)atoi(argv[0]) * s_config_rgb_scale;
             *g = (float)atoi(argv[1]) * s_config_rgb_scale;
             *b = (float)atoi(argv[2]) * s_config_rgb_scale;
@@ -314,7 +294,7 @@ BlockRec* block_find(BlockFile* conf, const char* path)
 
     temp = (char*)malloc(strlen(path) + 1);
     strcpy(temp, path);
-    count = sound_variant_split(temp, argv, s_config_separator);
+    count = sound_variant_split(temp, argv, "::");
 
     while (conf) {
         if (conf->depth == count - 1) {

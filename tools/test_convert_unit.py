@@ -373,8 +373,9 @@ class HandConversionValidationTest(unittest.TestCase):
         self.assertEqual(res["struct"]["split_inside_hand_fields"], [])
         self.assertEqual(res["struct"]["tool_end"], "00506524")
         self.assertEqual({d["kind"] for d in res["differences"]}, {"globals-order", "strings-only-in-tool"})
-        # The hand version's shared literals and the empty string are all reported by the tool.
-        self.assertEqual(res["globals"]["covered_by_tool_as_shared"], ["004a1cd4", "004aab18", "004b8a14"])
+        # The shared ":", "::" and "" are literals in their first users now
+        # (GAME-006, G98-002, GAME-004; finding 685), so the hand version defines none.
+        self.assertEqual(res["globals"]["covered_by_tool_as_shared"], [])
 
     def test_utils_stateless_unit_with_string_markers(self):
         sc, res = self.results["G98-004"]
