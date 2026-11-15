@@ -60,21 +60,16 @@ extern unsigned int objectGlobs_recordObjsCount;
 
 /* ---- state, group C ---- */
 
-/* Stats.c's static ObjectStats records (0x150 bytes each, first word 0x30)
+/* Stats.c's ObjectStats records (0x150 bytes each, first word 0x30)
  * that LegoObject_Create points objects without a stats row at: upgrade
- * parts, dynamite, barriers and the small object types. Only this unit
- * reads them; they stay here until Stats.c is converted. */
-// GLOBAL: LEGORR 0x004a97a0
-static uint32_t s_stats_upgrade_part[0x54] = { 0x30 };
-
-// GLOBAL: LEGORR 0x004a98f0
-static uint32_t s_stats_dynamite[0x54] = { 0x30 };
-
-// GLOBAL: LEGORR 0x004a9a40
-static uint32_t s_stats_barrier[0x54] = { 0x30 };
-
-// GLOBAL: LEGORR 0x004a9b90
-static uint32_t s_stats_small_object[0x54] = { 0x30 };
+ * parts, dynamite, barriers and the small object types. Stats.c
+ * (entity_stats.c) defines them in its .data (004a97a0-004a9ce0,
+ * finding 686); these four declarations take the place of the four
+ * definitions, so the symbol counter does not move. */
+extern uint32_t s_stats_upgrade_part[0x54];   /* 004a97a0 */
+extern uint32_t s_stats_dynamite[0x54];       /* 004a98f0 */
+extern uint32_t s_stats_barrier[0x54];        /* 004a9a40 */
+extern uint32_t s_stats_small_object[0x54];   /* 004a9b90 */
 
 
 /* ---- state, group D ---- */
@@ -129,9 +124,16 @@ extern unsigned int objectGlobs_f_4e8444;
 Lego_Object* legoGlobs_f_556090;
 
 /* objectGlobs (004eadcc): counts the drill frames of minifigures without a
- * drill route; every fourth plays sample 8. */
-// GLOBAL: LEGORR 0x004eadcc
-unsigned int objectGlobs_f_eadcc;
+ * drill route; every fourth plays sample 8. Defined after objectGlobs, at
+ * the end of the file, so it follows the struct in the unit's .bss as in
+ * the original (finding 686); this declaration keeps its symbol number. */
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern unsigned int objectGlobs_f_eadcc;
+#ifdef __cplusplus
+}
+#endif
 
 /* LegoObject.c's .data (004a48b0, 1.0f): the fraction left of the spark
  * effect (flags2 0x40000000) that 0043c810 runs down. */
@@ -10729,7 +10731,11 @@ int legoobject_scatter_spawn_drain_callback(Lego_Object* obj, void* data)
 extern "C" {
 #endif
 // GLOBAL: LEGORR 0x004de790
-struct LegoObject_Globs objectGlobs;
+struct LegoObject_Globs objectGlobs = { 0 };
+
+/* The word after objectGlobs (004eadcc), declared in group J. */
+// GLOBAL: LEGORR 0x004eadcc
+unsigned int objectGlobs_f_eadcc = 0;
 
 #if !(defined(_MSC_VER) && _MSC_VER < 1200)
 /* Native build: the fields a C++ port file reads stay separate globals,
@@ -10770,7 +10776,7 @@ uint32_t s_global_animation_state;
 
 /* The released-flock list (004eadd0), after objectGlobs. */
 // GLOBAL: LEGORR 0x004eadd0
-struct EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records;
+struct EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records = 0;
 #ifdef __cplusplus
 }
 #endif

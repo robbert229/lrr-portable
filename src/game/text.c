@@ -116,7 +116,7 @@ typedef struct Text_Globs {
 } Text_Globs; /* 0x4dc */
 
 // GLOBAL: LEGORR 0x00503190
-Text_Globs textGlobs;
+Text_Globs textGlobs = { 0 };
 
 // FUNCTION: LEGORR 0x0046a7f0
 void text_load(TextWindow* textOnlyWindow, TextWindow* textImageWindow,

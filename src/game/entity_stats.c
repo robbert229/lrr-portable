@@ -54,6 +54,22 @@ extern unsigned int s_grid_count_first[0x12c0];             /* 004e3944 */
 }
 #endif
 
+/* The ObjectStats records LegoObject_Create (LegoObject.c) points
+ * objects without a stats row at: upgrade parts, dynamite, barriers and
+ * the small object types. 0x150 bytes each, first word 0x30; the first
+ * of Stats.c's .data (finding 686). */
+// GLOBAL: LEGORR 0x004a97a0
+unsigned int s_stats_upgrade_part[0x54] = { 0x30 };
+
+// GLOBAL: LEGORR 0x004a98f0
+unsigned int s_stats_dynamite[0x54] = { 0x30 };
+
+// GLOBAL: LEGORR 0x004a9a40
+unsigned int s_stats_barrier[0x54] = { 0x30 };
+
+// GLOBAL: LEGORR 0x004a9b90
+unsigned int s_stats_small_object[0x54] = { 0x30 };
+
 // GLOBAL: LEGORR 0x00502bd8
 static Stats_Globs statsGlobs;
 

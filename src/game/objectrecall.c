@@ -41,7 +41,7 @@ typedef struct ObjectRecall_Globs {
 } ObjectRecall_Globs;
 
 // GLOBAL: LEGORR 0x004ffe50
-ObjectRecall_Globs objectRecallGlobs;
+ObjectRecall_Globs objectRecallGlobs = { 0 };
 
 /* ObjectRecall_StoreMiniFigure: append a minifigure with ability flags, a
  * level or a custom name to the live table, growing it by ten entries. */
