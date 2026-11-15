@@ -5,8 +5,10 @@ items sit in their own units' `.bss`. In the rebuild they were commons.
 This change gives them the original's definition form. It also moves
 Stats.c's four ObjectStats records out of LegoObject.c's file and into
 Stats.c's own (`entity_stats.c`). Every figure comes from full matching
-builds under the gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`) on `main`
-`ebc07595`.
+builds under the gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`). The
+change is stacked on #832 (`data/828-definition-forms` `38adb38a`, finding
+685, itself on #831), and the figures are measured against it. It was
+first measured on `main` `ebc07595`; where that differs, the text says so.
 
 ## Summary
 
@@ -50,65 +52,74 @@ builds under the gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`) on `main`
    range (`004a97a0-004a9b90`). `make unit-data-offsets` attributes
    Stats.c's 133 `.data` items (129 before), and the unattributed
    annotations fall from 73 to 69.
-5. **The commons agree up to Smoke.c, as finding 680 predicted.** With
-   `textGlobs` out of the commons, 16 commons are at their original offset
-   (2 before), 59,244 bytes (35,760 before). The first difference moves
-   from `spiderWebGlobs` (`005520e8`, +1,272) to Smoke.c's
-   `smokeListHead` (`00552128`, −52). The original's four Smoke.c words
-   are one 52-byte block (finding 680, follow-up 3).
+5. **More commons at their original offset.** With `textGlobs` out of the
+   commons, 16 commons are at their original offset (2 before), 59,256
+   bytes (35,760 before). The first difference moves from `spiderWebGlobs`
+   (`005520e8`, +1,272) to `legoGlobs_f_556fb8` (`00556fb8`, −3,848).
+   Before the rebase onto #832, it stopped at Smoke.c's words
+   (`00552128`); #832 makes them one struct.
 
 ## Before and after
 
-| Measure (`binary-progress.json`) | `main` `ebc07595` | This change |
+| Measure (`binary-progress.json`) | #832 `38adb38a` | This change |
 | --- | ---: | ---: |
-| **Exact-function code bytes** | **348,304 (54.21%)** | **348,304 (54.21%)** |
+| **Exact-function code bytes** | **350,987 (54.62%)** | **350,987 (54.62%)** |
 | Functions that rose / fell | | 0 / 0 |
-| Accuracy, full / game-only | 97.59% / 97.34% | 97.59% / 97.34% |
-| `.text` identical at original addresses | 6.76% (43,434 B) | 6.76% (43,445 B) |
-| `.data` identical (section-relative) | 24.72% (18,102 B) | **23.80% (17,426 B)** |
-| `.rdata` identical | 11.67% | 11.67% |
+| Accuracy, full / game-only | 97.63% / 97.38% | 97.63% / 97.38% |
+| `.text` identical at original addresses | 6.83% (43,909 B) | 6.82% (43,846 B) |
+| `.data` identical (section-relative) | 26.20% (19,182 B) | **28.50% (20,867 B)** |
+| `.rdata` identical | 12.48% (1,402 B) | 12.46% (1,400 B) |
 | Identical prefix, raw / masked | 11 B / 7,187 B (to `00402c13`) | same |
-| Correct-size functions, full | 2,801 | 2,801 |
+| Correct-size functions, full | 2,804 | 2,804 |
 | Units with size agreement | 2 | 2 |
-| Entry point (original `0048f000`) | `0048ebb0` | `0048ebb0` |
+| Entry point (original `0048f000`) | `0048eb90` | `0048eb90` |
 | SizeOfImage (original 3,608,576) | 4,030,464 | 4,030,464 |
-| Data-offset agreement (`layout`) | 20 of 57 units | 20 of 57 |
-| `layout` unattributed or unmapped annotations | 129 | 125 |
-| Tail roots | 3 | 3 |
+| Data-offset agreement (`layout`) | 22 of 57 units | 22 of 57 |
+| `layout` unattributed or unmapped annotations | 125 | 121 |
+| Tail roots | 2 | 2 |
 | `data_identity` `.bss`: items at original offset | 1 of 149 (1,040 B) | 1 of 149 (1,040 B) |
-| `data_identity` `.bss`: rebuilt bytes, objects with paired items | 869,488, 25 | 921,744, 29 |
-| `data_identity` commons: items at original offset | **2 of 62 (35,760 B)** | **16 of 62 (59,244 B)** |
-| `data_identity` commons: rebuilt bytes, start | 2,297,252 at `005a3600` | 2,244,900 at `005b0220` |
-| `data_identity` commons: first difference | `005520e8` (+1,272) | `00552128` (−52) |
-| `data_identity` `.data`: prefix / items at original offset | 12 B / 158 of 2,455 | same |
+| `data_identity` `.bss`: rebuilt bytes, objects with paired items | 869,456, 24 | 921,712, 28 |
+| `data_identity` commons: items at original offset | **2 of 58 (35,760 B)** | **16 of 58 (59,256 B)** |
+| `data_identity` commons: rebuilt bytes, start | 2,297,252 at `005a39e0` | 2,244,900 at `005b0600` |
+| `data_identity` commons: first difference | `005520e8` (+1,272) | `00556fb8` (−3,848) |
+| `data_identity` `.data`: prefix / items at original offset | 12 B / 192 of 2,455 (3,401 B) | same |
 | `data_identity` `.rdata`: items at original offset | 0 of 95 | same |
 | `data_identity`: items at original address, every region | 0 | 0 |
 
 Region starts (original / rebuilt): `.rdata` `0049e000` / `004b2000`;
-`.data` `004a1000` / `004b8000`; `.bss` `004b2db0` / `004cf190`; commons
-`00549520` / `005a3600` before and `005b0220` after. The commons now start
+`.data` `004a1000` / `004b8000`; `.bss` `004b2db0` / `004cf590`; commons
+`00549520` / `005a39e0` before and `005b0600` after. The commons now start
 52,256 bytes later because the 35 items' bytes moved into the units'
 `.bss`, ahead of them. No item is at its original address in any region
 until the tail leaves the link (finding 680, rank 1).
 
-**Identity cost: `.data` identical falls from 24.72% to 23.80%** (676
-bytes). The measure compares raw bytes at equal section offsets, and
-neither side's `.data` starts at the same address. Moving the records takes
-1,344 bytes out of LegoObject.c and puts them back at Stats.c's start, so
-every byte between the two units sits 1,344 bytes earlier. The bytes that
-matched there by coincidence before do not match now. Item offsets are what
-place data once the regions start in place (finding 680, section 5), and
-there the change helps: GAME-023 to GAME-043 now share one delta with the
-units before them. The raw prefix and the masked prefix do not change.
+**Identity.** `.data` identical rises from 26.20% to 28.50% (+1,685
+bytes). The measure compares raw bytes at equal section offsets. Moving the
+records shifts every byte between LegoObject.c and Stats.c by 1,344 bytes,
+and on #832's base (FrontEnd.c's key table back in `.data`) that brings
+more of them into line. On `main` alone the same move cost 676 bytes
+(24.72% to 23.80%). It is coincidence-driven either way. The figure that
+matters once the regions start in place is item offsets (finding 680,
+section 5), and there the move helps on both bases: GAME-023 to GAME-043
+now share one delta with the units before them. `.text` identical at
+original addresses falls by 63 bytes (6.83% to 6.82%), and `.rdata` by
+2 bytes. The 35 items and every common after them change address, so code
+operands that named them now hold other values. That is the same kind of
+coincidence. The raw and masked prefixes do not change, and no unit's size
+moves.
 
-`opt_ref` (the `/OPT:NOREF` relink) counts fewer annotated functions:
-2,718 against 2,719, with one more port-unit function (32 bytes). The
-missing ones are AviPlayer's deleting destructors (`??_GAviSurface`,
-`??_EAviMovie`). Each shares its address with its `??_E`/`??_G` twin, and
-the relink's map can list either name at that address. Two builds of this
-same source gave 2,717 and 2,718. `avi_player.cpp` is unchanged, no
-function is removed (`removed: 0`), and the gate's own count is still
-2,719.
+`opt_ref` (the `/OPT:NOREF` relink) counts 2,719 annotated functions
+against #832's 2,717 (two fewer port-unit functions, 64 bytes). These are
+AviPlayer's deleting destructors (`??_GAviSurface`, `??_EAviMovie`). Each
+shares its address with its `??_E`/`??_G` twin, and the relink's map can
+list either name at that address. Builds of this source gave 2,717, 2,718
+and 2,719. `avi_player.cpp` is unchanged, no function is removed
+(`removed: 0`), and the gate's own count is 2,719.
+
+**Counter.** On #832's base, Lego.c's counter at `004311d0`
+(lego_block_activity_create) is 6,041 with and without this change (25
+modulo 64), the value finding 671 requires. Read from the lowest `$L` in
+the function's `/FAs` listing.
 
 ## What remains of follow-up 2
 
@@ -132,9 +143,10 @@ function is removed (`removed: 0`), and the gate's own count is still
 
 - `make reccmp-check` passes: no function rises or falls. `make
   match-progress` rewrote the baseline (input hash only), the listing
-  digests and `binary-progress.json`.
-- `make unit-data-offsets` passes (statuses unchanged; GAME-043 `.data`
-  gaps-only with 133 items). `make pe-audit` passes: the image ends at
+  digests and `binary-progress.json`; `tools/binary_progress_inputs.txt`
+  is unchanged.
+- `make unit-data-offsets` passes (GAME-043 `.data` gaps-only with 133
+  items; 68 unattributed annotations). `make pe-audit` passes: the image ends at
   `0x7d8000`, 163,840 bytes below `0x800000`.
 - `make tools-test` passes without `--allow-growth`, and so does
   `make winapi-link-check`.
