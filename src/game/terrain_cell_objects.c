@@ -331,6 +331,7 @@ int electric_fence_building_spark_callback(ElectricFenceObject* object,
     TerrainMapPoint2I blockPos;
     unsigned int direction, count, i;
     TerrainMapPoint2I* shape;
+    TerrainMapPoint2I* next;
 
     if (object->type == 4) {
         legoobject_block_position_get((struct EntitySlot*)object, &blockPos.x, &blockPos.y);
@@ -352,8 +353,9 @@ int electric_fence_building_spark_callback(ElectricFenceObject* object,
             shape = (TerrainMapPoint2I*)rotated_pairs_scratch_fill(
                 &blockPos.x, (const int*)shape, count, direction);
             for (i = 0; i < count; i++) {
-                if (i != count - 1 && shape[i].x == shape[i + 1].x &&
-                    shape[i].y == shape[i + 1].y)
+                next = &shape[i + 1];
+                if (i != count - 1 && shape[i].x == next->x &&
+                    shape[i].y == next->y)
                     i++;
                 else
                     electric_fence_spark(shape[i].x, shape[i].y, 0, elapsedGame);

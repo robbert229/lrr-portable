@@ -9293,6 +9293,7 @@ int legoobject_hide_check_callback(Lego_Object* obj, void* data)
     LegoObjF_Point2I shapePos;
     float faceDir[2];
     float wPos[2];
+    LegoObjF_Point2I* next;
 
     hide = 0;
     if (entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x200000) {
@@ -9335,8 +9336,9 @@ int legoobject_hide_check_callback(Lego_Object* obj, void* data)
             shape = (LegoObjF_Point2I*)task_field84_get_and_field88_out((char*)legoGlobs_buildingData + obj->id * 0x14c, &count);
             shape = (LegoObjF_Point2I*)rotated_pairs_scratch_fill(&shapePos.x, (int*)shape, count, dir);
             for (i = 0; i < count; i++) {
-                if (i != count - 1 && shape[i].x == shape[i + 1].x &&
-                    shape[i].y == shape[i + 1].y) {
+                next = &shape[i + 1];
+                if (i != count - 1 && shape[i].x == next->x &&
+                    shape[i].y == next->y) {
                     skip = 1;
                 } else {
                     skip = 0;
