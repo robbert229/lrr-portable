@@ -3,7 +3,7 @@
     "full": 97.63,
     "game_only": 97.38
   },
-  "baseline_sha256": "492cdf1a534fbcf97fea09b8bd3ccfd3b3e15c9371944be93e74c5169d32fc48",
+  "baseline_sha256": "71f9703957e8280bb0f37bf75b6171f2d088dee3147b3215525ff175f39134f2",
   "correct_size_functions": {
     "full": {
       "bytes": 465541,
@@ -24,7 +24,40 @@
     "method": "code_extent on both images (reachable code plus in-function tables, up to the next known function start, without trailing padding); bytes are original bytes"
   },
   "data_identity": {
-    "method": "regions measured from their own starts; items are Reccmp-paired data entities, objects the rebuilt definers of those items (link map)",
+    "gate": {
+      ".bss": {
+        "at_original_address": 0,
+        "at_original_offset": 1,
+        "at_original_offset_bytes": 1040,
+        "rebuilt_start": "0x4cf590",
+        "start_delta": 116704
+      },
+      ".data": {
+        "at_original_address": 0,
+        "at_original_offset": 192,
+        "at_original_offset_bytes": 3401,
+        "identical_prefix_bytes": 12,
+        "rebuilt_start": "0x4b8000",
+        "start_delta": 94208
+      },
+      ".rdata": {
+        "at_original_address": 0,
+        "at_original_offset": 0,
+        "at_original_offset_bytes": 0,
+        "identical_prefix_bytes": 0,
+        "rebuilt_start": "0x4b2000",
+        "start_delta": 81920
+      },
+      "commons": {
+        "at_original_address": 0,
+        "at_original_offset": 16,
+        "at_original_offset_bytes": 59256,
+        "rebuilt_start": "0x5b0600",
+        "start_delta": 422112
+      }
+    },
+    "image": "original-mode link",
+    "method": "regions measured from their own starts; items are Reccmp-paired data entities, objects the rebuilt definers of those items (link map); measured on the original-mode link (no /DEBUG), Reccmp's gate addresses moved to it by the nearest map symbol both links define",
     "regions": {
       ".bss": {
         "first_difference": {
@@ -97,15 +130,15 @@
       },
       ".rdata": {
         "first_difference": {
-          "object": "libc:powhlp.obj",
-          "offset_delta": 80,
-          "original": "0x49e004",
-          "rebuilt": "0x4b2054",
+          "object": null,
+          "offset_delta": -4,
+          "original": "0x49e014",
+          "rebuilt": "0x4b2010",
           "rebuilt_region": ".rdata"
         },
         "identical_prefix": {
-          "bytes": 0,
-          "first_difference": "0x49e000",
+          "bytes": 18,
+          "first_difference": "0x49e012",
           "rebuilt_object": null
         },
         "items": {
@@ -113,8 +146,8 @@
           "at_original_address_bytes": 0,
           "at_original_offset": 0,
           "at_original_offset_bytes": 0,
-          "paired": 95,
-          "paired_bytes": 1012
+          "paired": 94,
+          "paired_bytes": 1008
         },
         "objects": {
           "agreeing": [],
@@ -123,8 +156,7 @@
         },
         "original_bytes": 11232,
         "original_start": "0x49e000",
-        "prefix_image": "original-mode link",
-        "rebuilt_bytes": 21304,
+        "rebuilt_bytes": 21224,
         "rebuilt_start": "0x4b2000",
         "start_delta": 81920
       },
@@ -190,11 +222,24 @@
     "first_difference": "0x40100b",
     "function": "AdvisorSceneControllerInit",
     "function_address": "0x401000",
+    "gate": {
+      "address_operands_masked": {
+        "bytes": 7187,
+        "first_difference": "0x402c13",
+        "function": "CoordinateCallbackDispatchByMode",
+        "offset_in_function": 179
+      },
+      "bytes": 11,
+      "first_difference": "0x40100b",
+      "function": "AdvisorSceneControllerInit",
+      "offset_in_function": 11
+    },
+    "image": "original-mode link",
     "offset_in_function": 11,
     "original_text_bytes": 642549,
     "percent": 0.0
   },
-  "input_sha256": "98d01352f75ce34040c632eecd1e728ff2a221244adafbd0ca6f437f3269f9ee",
+  "input_sha256": "0c629fb2783128d85a016080c9e507949901ff659182c4b1abb63a77baf9406c",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 22,
@@ -4092,7 +4137,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 12
   },
-  "listing_digests_sha256": "2c5c12b2f677c8a8e2269204d31ccdb2badd67fb331e2596f2fa12d814e3309d",
+  "listing_digests_sha256": "fcb27e2b085fc76d72f7184928de9288b5835df7fd42297be7612c94885db618",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4111,8 +4156,8 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 579408,
-        "functions": 2719,
+        "bytes": 579344,
+        "functions": 2717,
         "removed_bytes": 0,
         "removed_functions": 0
       }
@@ -4131,8 +4176,8 @@
         "removed_functions": 76
       },
       "original_annotated": {
-        "bytes": 579408,
-        "functions": 2719,
+        "bytes": 579344,
+        "functions": 2717,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4155,8 +4200,8 @@
         "removed_functions": 3926
       },
       "port_unit": {
-        "bytes": 224,
-        "functions": 9,
+        "bytes": 288,
+        "functions": 11,
         "removed_bytes": 160,
         "removed_functions": 5
       }
@@ -4201,14 +4246,14 @@
           "rebuilt": 4158
         },
         ".rdata": {
-          "differing": 19935,
-          "equal": 1289,
+          "differing": 19927,
+          "equal": 1297,
           "original": 11232,
           "rebuilt": 21224
         },
         ".text": {
-          "differing": 680502,
-          "equal": 43855,
+          "differing": 680500,
+          "equal": 43857,
           "original": 642549,
           "rebuilt": 724357
         }
@@ -4285,8 +4330,8 @@
     },
     ".rdata": {
       "chance_percent": 4.12,
-      "excess_percent_points": 8.34,
-      "identical_bytes": 1400,
+      "excess_percent_points": 8.33,
+      "identical_bytes": 1399,
       "identical_percent": 12.46,
       "original_bytes": 11232,
       "rebuilt_bytes": 21304,

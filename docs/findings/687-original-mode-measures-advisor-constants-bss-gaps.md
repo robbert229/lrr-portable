@@ -1,7 +1,7 @@
 # 687. Identity measures on the original-mode link, Advisor.c's constant order, and the `.bss` gaps
 
-Issue #830: finding 680's follow-ups 6, 7 and 8. Measured on `main`
-`ebc07595` with full matching builds before and after.
+Issue #830: finding 680's follow-ups 6, 7 and 8. Measured on #833
+(`d25df227`) with full matching builds before and after.
 
 ## Summary
 
@@ -30,39 +30,47 @@ Issue #830: finding 680's follow-ups 6, 7 and 8. Measured on `main`
 
 ## Before and after
 
-| Measure (`binary-progress.json`) | `main` `ebc07595` | This change |
+The change is stacked on #833 (`data/829-per-object-bss` `d25df227`, finding
+686; chain #831, #832, #833 on `main` `ebc07595`). Before is #833's
+matching build, after is this change's; both are full builds.
+
+| Measure (`binary-progress.json`) | #833 `d25df227` | This change |
 | --- | ---: | ---: |
-| **Exact-function code bytes** | **348,304 (54.21%)** | **348,304 (54.21%)** |
-| Accuracy, full / game-only | 97.59% / 97.34% | 97.59% / 97.34% |
+| **Exact-function code bytes** | **350,987 (54.62%)** | **350,987 (54.62%)** |
+| Accuracy, full / game-only | 97.63% / 97.38% | 97.63% / 97.38% |
 | Functions that rose / fell | | 0 / 0 |
-| `.text` identical at original addresses | 6.76% | 6.76% |
-| `.data` / `.rdata` identical (section-relative, gate) | 24.72% / 11.67% | 24.72% / 11.66% |
+| `.text` identical at original addresses | 6.82% | 6.82% |
+| `.data` / `.rdata` identical (section-relative, gate) | 28.50% / 12.46% | 28.50% / 12.46% |
 | Identical prefix, raw / masked | 11 B / 7,187 B (gate) | 11 B / 7,187 B (original-mode link; gate the same) |
-| Correct-size functions, full | 2,801 | 2,801 |
+| Correct-size functions, full | 2,804 | 2,804 |
 | Units with size agreement | 2 | 2 |
 | Fully identical functions at their original address | 42 (2,307 B) | 42 (2,307 B) |
-| Entry point (original `0048f000`) | `0048ebb0` | `0048ebb0` |
+| Entry point (original `0048f000`) | `0048eb90` | `0048eb90` |
 | SizeOfImage (original 3,608,576) | 4,030,464 | 4,030,464 |
-| Data-offset agreement (`layout`) | 20 of 57 units | 20 of 57 |
-| Tail roots | 3 | 3 |
+| Data-offset agreement (`layout`) | 22 of 57 units | 22 of 57 |
 
-`data_identity`, per region. Before is the gate (as on `main`); after is the
+`data_identity`, per region. Before is the gate (as on #833); after is the
 original-mode link. The gate's own figures after this change are the same as
 before, apart from `.rdata`, which now has 94 paired items (below):
 
 | Region | Start, original / rebuilt | Prefix before → after | Items at original offset before → after | At original address | First item not at its offset (after) |
 | --- | --- | ---: | ---: | ---: | --- |
 | `.rdata` | `0049e000` / `004b2000` | 0 B → **18 B** | 0 of 95 → 0 of 94 | 0 | `0049e014` (AITask.c), −4 |
-| `.data` | `004a1000` / `004b8000` | 12 B → 12 B | 158 of 2,455 (3,037 B) → same | 0 | `004a1cd4` (Config.c's `":"`, in `.rdata`) |
-| `.bss` | `004b2db0` / `004cf190` | — | 1 of 149 (1,040 B) → same | 0 | `004b31c8` `aiTaskGlobs`, −8 |
-| commons | `00549520` / `005a3600` | — | 2 of 62 (35,760 B) → same | 0 | `005520e8`, +1,272 |
+| `.data` | `004a1000` / `004b8000` | 12 B → 12 B | 192 of 2,455 (3,401 B) → same | 0 | `004a1d5c` (`rock_fall_styles.c`), +132 |
+| `.bss` | `004b2db0` / `004cf590` | — | 1 of 149 (1,040 B) → same | 0 | `004b31c8` `aiTaskGlobs`, −8 |
+| commons | `00549520` / `005b0600` | — | 16 of 58 (59,256 B) → same | 0 | `00556fb8`, −3,848 |
+
+On `main` `ebc07595`, before the stack, the change measured the same way:
+the `.rdata` prefix went from 0 to 18 bytes on the original-mode link,
+everything else unchanged.
 
 `.rdata` has one paired item fewer because the 25.0 is no longer an
 annotated static, so Reccmp does not pair it any more. The `.rdata` prefix
 stops at `0049e012`, inside the 1.0 at `0049e010`, which the rebuild does not
 have (section 2). The section-relative `.rdata` comparison of the gate falls
-by 0.01 points (11.67% to 11.66%). That comparison aligns the gate's
-`.rdata`, debug directory included, with the original's.
+by 0.01 points on `main` (11.67% to 11.66%) and not at all on #833
+(12.46%). That comparison aligns the gate's `.rdata`, debug directory
+included, with the original's.
 
 ## 1. Measuring on the original-mode link
 
