@@ -7080,8 +7080,8 @@ int legoobject_move_vector_surface_probe(Lego_Object* obj)
     int bx2;
     int by;
     int bx;
-    Point2F dir;
     Point2F pos;
+    Point2F dir;
 
     legoobject_position_to_terrain_cell(obj, &bx, &by);
     if (!terrain_cell_walkable_flag_current(bx, by)) {

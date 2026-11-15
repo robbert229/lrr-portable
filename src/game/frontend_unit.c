@@ -4397,8 +4397,8 @@ int front_save_get_level_score(unsigned int index, Front_SaveData* saveData)
 // FUNCTION: LEGORR 0x00417460
 void front_callback_select_mission_item(float elapsed, int selectIndex)
 {
-    Front_Font* font = frontGlobs_mainMenuSet->menus[1]->menuFont;
     Front_LevelTextWindow* wnd = frontGlobs_saveLevelWnd;
+    Front_Font* font = frontGlobs_mainMenuSet->menus[1]->menuFont;
     Front_LevelLink* link = front_level_link_find_by_link_index(g_front_save_tree, selectIndex);
     const char* levelName = frontGlobs_missionLevels.langNames[link->setIndex];
     char levelNumber[64] = { 0 };

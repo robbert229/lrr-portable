@@ -40,7 +40,7 @@ void cubic_bezier_point_evaluate(Point2F* r, const Point2F* p0,
                                  const Point2F* p3, float t)
 {
     Point2F c1, c2;
-    float tCubed, ax, cx, tSquared, cy, bx, by, ay;
+    float ax, cx, tCubed, tSquared, cy, bx, by, ay;
 
     tSquared = t * t;
     tCubed = tSquared * t;
