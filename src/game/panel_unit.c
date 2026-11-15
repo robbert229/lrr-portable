@@ -1031,8 +1031,8 @@ void integer_pair_divide_to_float_pair(int x, int y, int divisor,
 void float_pair_to_integer_pair_x87(int* x, int* y, int centerX,
                                     int centerY, int radius)
 {
-    Point2F vector;
     Point2F centre;
+    Point2F vector;
 
     centre.x = (float)centerX;
     centre.y = (float)centerY;

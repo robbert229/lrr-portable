@@ -7515,8 +7515,8 @@ int legoobject_flag_gated_callback_b(Lego_Object* liveObj, void* data)
 int legoobject_flag_gated_callback_a(Lego_Object* liveObj, void* data)
 {
     LegoObjP_CollisionSearch* search = (LegoObjP_CollisionSearch*)data;
-    Lego_Object* obj = search->obj;
     LegoObjP_Point2F objPos;
+    Lego_Object* obj = search->obj;
     LegoObjP_Point2F livePos;
     void* liveCont;
     void* objCont;
@@ -10200,8 +10200,8 @@ int legoobject_type_two_target_resolve_and_apply(Lego_Object* obj, int code)
 // FUNCTION: LEGORR 0x0044b500
 int legoobject_position_step_command_issue_and_link(Lego_Object* obj, int selector)
 {
-    int result = 0;
     int ok = 0;
+    int result = 0;
     float pos[2];
     Lego_Object* building;
     float nullPos[3];

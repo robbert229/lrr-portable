@@ -1,4 +1,4 @@
-# input_sha256: 64d4ad2b7a209ee0b641a131bd969a0398147eaf7d53ae49664eaf373e91d4a7
+# input_sha256: efd60006756f2eaf81fa3d2f8d5c5810893b7b3750cfdc18853d1fc580c0ff9c
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1132,7 +1132,7 @@
 0x00445830 80.00 legoobject_behavior_callback_b
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
 0x00445df0 99.55 legoobject_flag_gated_callback_b
-0x004460f0 90.21 legoobject_flag_gated_callback_a
+0x004460f0 91.49 legoobject_flag_gated_callback_a
 0x00446610 89.66 legoobject_movement_tick_scale_and_delta_get
 0x004468c0 100.00 legoobject_route_adjacent_step_append
 0x004469c0 87.84 legoobject_nearest_connected_cell_route_select
@@ -1205,7 +1205,7 @@
 0x0044b370 100.00 legoobject_activity_grant
 0x0044b480 100.00 legoobject_activity_scan
 0x0044b4c0 100.00 legoobject_type_two_target_resolve_and_apply
-0x0044b500 41.70 legoobject_position_step_command_issue_and_link
+0x0044b500 42.29 legoobject_position_step_command_issue_and_link
 0x0044b680 100.00 legoobject_scene_object_tree_attach
 0x0044b7a0 100.00 legoobject_matrix_rotate_z_with_offset
 0x0044b850 100.00 legoobject_scene_node_sync_callback
@@ -1700,7 +1700,7 @@
 0x00459900 100.00 objinfo_load_hunger
 0x004599c0 100.00 objinfo_load_hunger_images
 0x00459a50 100.00 objinfo_load_bubble
-0x00459b00 26.72 legacy_entity_screen_ring_render
+0x00459b00 28.46 legacy_entity_screen_ring_render
 0x00459f50 88.57 objinfo_draw_hunger_image_adapter
 0x00459fd0 88.00 panel_resource_position_apply_if_enabled
 0x0045a030 100.00 ui_panel_name_tables_init
@@ -1738,7 +1738,7 @@
 0x0045b850 100.00 ui_overlay_create_configured_element
 0x0045b8a0 100.00 point_distance_within_radius
 0x0045b900 100.00 integer_pair_divide_to_float_pair
-0x0045b930 75.93 float_pair_to_integer_pair_x87
+0x0045b930 100.00 float_pair_to_integer_pair_x87
 0x0045b9d0 100.00 frontend_panel_rotation_control_config_load
 0x0045bcd0 100.00 panel_rotation_control_drag
 0x0045bf20 100.00 camera_zoom_step_adjust
@@ -3857,7 +3857,7 @@
 0x00445830 80.00 legoobject_behavior_callback_b
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
 0x00445df0 99.55 legoobject_flag_gated_callback_b
-0x004460f0 90.21 legoobject_flag_gated_callback_a
+0x004460f0 91.49 legoobject_flag_gated_callback_a
 0x00446610 89.66 legoobject_movement_tick_scale_and_delta_get
 0x004468c0 100.00 legoobject_route_adjacent_step_append
 0x004469c0 87.84 legoobject_nearest_connected_cell_route_select
@@ -3930,7 +3930,7 @@
 0x0044b370 100.00 legoobject_activity_grant
 0x0044b480 100.00 legoobject_activity_scan
 0x0044b4c0 100.00 legoobject_type_two_target_resolve_and_apply
-0x0044b500 41.70 legoobject_position_step_command_issue_and_link
+0x0044b500 42.29 legoobject_position_step_command_issue_and_link
 0x0044b680 100.00 legoobject_scene_object_tree_attach
 0x0044b7a0 100.00 legoobject_matrix_rotate_z_with_offset
 0x0044b850 100.00 legoobject_scene_node_sync_callback
@@ -4425,7 +4425,7 @@
 0x00459900 100.00 objinfo_load_hunger
 0x004599c0 100.00 objinfo_load_hunger_images
 0x00459a50 100.00 objinfo_load_bubble
-0x00459b00 26.72 legacy_entity_screen_ring_render
+0x00459b00 28.46 legacy_entity_screen_ring_render
 0x00459f50 88.57 objinfo_draw_hunger_image_adapter
 0x00459fd0 88.00 panel_resource_position_apply_if_enabled
 0x0045a030 100.00 ui_panel_name_tables_init
@@ -4463,7 +4463,7 @@
 0x0045b850 100.00 ui_overlay_create_configured_element
 0x0045b8a0 100.00 point_distance_within_radius
 0x0045b900 100.00 integer_pair_divide_to_float_pair
-0x0045b930 75.93 float_pair_to_integer_pair_x87
+0x0045b930 100.00 float_pair_to_integer_pair_x87
 0x0045b9d0 100.00 frontend_panel_rotation_control_config_load
 0x0045bcd0 100.00 panel_rotation_control_drag
 0x0045bf20 100.00 camera_zoom_step_adjust
