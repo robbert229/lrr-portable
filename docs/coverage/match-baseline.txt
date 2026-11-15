@@ -1,4 +1,4 @@
-# input_sha256: eb628a48b83259de960079f5ab5bc7897b4863b6772d9c2a5f20411f58aa4811
+# input_sha256: 1be88084ccac4c29547d979dd5b2687053de9616bbc27549aefe9ba73a34583f
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -559,7 +559,7 @@
 0x00419470 100.00 info_set_type_auto_game_speed
 0x004194b0 100.00 info_set_text
 0x004194f0 100.00 info_set_type_play_always
-0x00419530 95.02 info_compile_text
+0x00419530 96.83 info_compile_text
 0x00419650 100.00 info_set_image_file
 0x00419680 100.00 info_set_sfx
 0x004196a0 100.00 info_message_enumerate
@@ -1064,7 +1064,7 @@
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
 0x0043c810 89.38 legoobject_update_callback
-0x0043eea0 89.26 legoobject_simulation_queue_flush
+0x0043eea0 90.96 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
 0x0043f150 100.00 legoobject_spawn_request_queue_add
@@ -1297,7 +1297,7 @@
 0x004508a0 100.00 cell_neighbor_direction_code
 0x00450960 100.00 terrain_map_block_uv_wobble_set
 0x00450a80 100.00 terrain_map_wobble_emissive_set
-0x00450b60 36.48 terrain_map_uv_wobble_update
+0x00450b60 45.08 terrain_map_uv_wobble_update
 0x00450f30 98.86 terrain_map_block_vertex_normals_update
 0x00451180 67.61 terrain_map_block_pair_fades
 0x00451230 100.00 terrain_map_block_vertex_normal_set
@@ -1672,7 +1672,7 @@
 0x00457420 100.00 nerpfunc_set_tutorial_block_is_path
 0x00457460 100.00 nerpfunc_get_unit_at_block
 0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
-0x004574e0 96.23 objective_load_objective_text
+0x004574e0 99.69 objective_load_objective_text
 0x00457d40 61.34 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
 0x004585c0 100.00 objective_set_block_objective
@@ -1683,7 +1683,7 @@
 0x00458670 100.00 objective_announce_current
 0x004588e0 100.00 objective_stop_showing_objective
 0x004589a0 100.00 objective_is_ended_original
-0x004589c0 97.50 lego_quit_poll_adapter
+0x004589c0 98.75 lego_quit_poll_adapter
 0x00458be0 60.56 objective_tick_target
 0x00459050 100.00 objective_check_completed
 0x00459100 100.00 objective_callback_check_completed_object
@@ -2699,7 +2699,7 @@
 0x0048c360 100.00 lwo_curves_read
 0x0048c3e0 100.00 lwo_polygons_read
 0x0048c690 100.00 lwo_surface_names_read
-0x0048c820 97.65 lwo_surface_settings_read
+0x0048c820 98.38 lwo_surface_settings_read
 0x0048d2c0 99.29 lwo_load
 0x0048d7c0 100.00 lwo_app_obj_load
 0x0048d870 100.00 lwo_app_obj_free
@@ -3284,7 +3284,7 @@
 0x00419470 100.00 info_set_type_auto_game_speed
 0x004194b0 100.00 info_set_text
 0x004194f0 100.00 info_set_type_play_always
-0x00419530 95.02 info_compile_text
+0x00419530 96.83 info_compile_text
 0x00419650 100.00 info_set_image_file
 0x00419680 100.00 info_set_sfx
 0x004196a0 100.00 info_message_enumerate
@@ -3789,7 +3789,7 @@
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
 0x0043c810 89.38 legoobject_update_callback
-0x0043eea0 89.26 legoobject_simulation_queue_flush
+0x0043eea0 90.96 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
 0x0043f150 100.00 legoobject_spawn_request_queue_add
@@ -4022,7 +4022,7 @@
 0x004508a0 100.00 cell_neighbor_direction_code
 0x00450960 100.00 terrain_map_block_uv_wobble_set
 0x00450a80 100.00 terrain_map_wobble_emissive_set
-0x00450b60 36.48 terrain_map_uv_wobble_update
+0x00450b60 45.08 terrain_map_uv_wobble_update
 0x00450f30 98.86 terrain_map_block_vertex_normals_update
 0x00451180 67.61 terrain_map_block_pair_fades
 0x00451230 100.00 terrain_map_block_vertex_normal_set
@@ -4397,7 +4397,7 @@
 0x00457420 100.00 nerpfunc_set_tutorial_block_is_path
 0x00457460 100.00 nerpfunc_get_unit_at_block
 0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
-0x004574e0 96.23 objective_load_objective_text
+0x004574e0 99.69 objective_load_objective_text
 0x00457d40 61.34 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
 0x004585c0 100.00 objective_set_block_objective
@@ -4408,7 +4408,7 @@
 0x00458670 100.00 objective_announce_current
 0x004588e0 100.00 objective_stop_showing_objective
 0x004589a0 100.00 objective_is_ended_original
-0x004589c0 97.50 lego_quit_poll_adapter
+0x004589c0 98.75 lego_quit_poll_adapter
 0x00458be0 60.56 objective_tick_target
 0x00459050 100.00 objective_check_completed
 0x00459100 100.00 objective_callback_check_completed_object
@@ -5424,7 +5424,7 @@
 0x0048c360 100.00 lwo_curves_read
 0x0048c3e0 100.00 lwo_polygons_read
 0x0048c690 100.00 lwo_surface_names_read
-0x0048c820 97.65 lwo_surface_settings_read
+0x0048c820 98.38 lwo_surface_settings_read
 0x0048d2c0 99.29 lwo_load
 0x0048d7c0 100.00 lwo_app_obj_load
 0x0048d870 100.00 lwo_app_obj_free

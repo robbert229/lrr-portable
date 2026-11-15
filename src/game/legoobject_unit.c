@@ -4198,7 +4198,7 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
     unsigned int i;
     unsigned int j;
     Lego_Object* carried;
-    Lego_Object** slot;
+    int first;
     void* cont;
     float position[3];
 
@@ -4207,8 +4207,8 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
         deposit = 1;
     else
         deposit = 0;
-    for (i = 0, slot = obj->carriedObjects; i < obj->numCarriedObjects; i++, slot++) {
-        carried = *slot;
+    for (i = 0; i < obj->numCarriedObjects; i++) {
+        carried = obj->carriedObjects[i];
         carried->routeToObject = NULL;
         if (deposit) {
             carried->carryingThisObject = NULL;
@@ -4216,7 +4216,8 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
             if (carried->type == 7) {
                 if (i == 0 || i >= stats_instance_word_at_ec(obj)) {
                     cont = scene_object_primary_handle_get_or_create(obj->building);
-                    if ((i == 0) == 1) {
+                    first = (i == 0);
+                    if (first == 1) {
                         ddiscene_object_position_get(cont, NULL, position);
                         cmd_produce(0x1c, legoobject_create_in_world(legoGlobs_contProcessedOre, 7, 1, 0,
                                                                      position[0], position[1], 0.0f),
@@ -4250,7 +4251,7 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
                 info_send(0x1d, NULL, target, NULL);
         }
     next:
-        *slot = NULL;
+        obj->carriedObjects[i] = NULL;
     }
     obj->numCarriedObjects = 0;
     obj->routeToObject = NULL;
