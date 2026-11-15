@@ -3,7 +3,7 @@
     "full": 97.79,
     "game_only": 97.56
   },
-  "baseline_sha256": "7db7143873bef4a09c5f1ba0c211510a1cca549c2cbf47cc74d50d442e67bde7",
+  "baseline_sha256": "3af596da34e10c858cf4812a97920b99a46a1ee680f8a9e1f1e422c1b0adbc81",
   "correct_size_functions": {
     "full": {
       "bytes": 466551,
@@ -26,11 +26,11 @@
   "data_identity": {
     "gate": {
       ".bss": {
-        "at_original_address": 0,
+        "at_original_address": 1,
         "at_original_offset": 1,
         "at_original_offset_bytes": 1040,
-        "rebuilt_start": "0x4b2d70",
-        "start_delta": -64
+        "rebuilt_start": "0x4b2db0",
+        "start_delta": 0
       },
       ".data": {
         "at_original_address": 2401,
@@ -52,8 +52,8 @@
         "at_original_address": 0,
         "at_original_offset": 17,
         "at_original_offset_bytes": 179132,
-        "rebuilt_start": "0x547c40",
-        "start_delta": -6368
+        "rebuilt_start": "0x547c80",
+        "start_delta": -6304
       }
     },
     "image": "original-mode link",
@@ -64,12 +64,12 @@
           "object": "aitask.c.obj",
           "offset_delta": -8,
           "original": "0x4b31c8",
-          "rebuilt": "0x4b3180",
+          "rebuilt": "0x4b31c0",
           "rebuilt_region": ".bss"
         },
         "items": {
-          "at_original_address": 0,
-          "at_original_address_bytes": 0,
+          "at_original_address": 1,
+          "at_original_address_bytes": 1040,
           "at_original_offset": 1,
           "at_original_offset_bytes": 1040,
           "paired": 149,
@@ -85,8 +85,8 @@
         "original_bytes": 616304,
         "original_start": "0x4b2db0",
         "rebuilt_bytes": 610000,
-        "rebuilt_start": "0x4b2d70",
-        "start_delta": -64
+        "rebuilt_start": "0x4b2db0",
+        "start_delta": 0
       },
       ".data": {
         "first_difference": {
@@ -106,8 +106,8 @@
           "at_original_address_bytes": 57219,
           "at_original_offset": 2401,
           "at_original_offset_bytes": 57219,
-          "paired": 2457,
-          "paired_bytes": 68687
+          "paired": 2458,
+          "paired_bytes": 68743
         },
         "objects": {
           "agreeing": [
@@ -173,7 +173,7 @@
         },
         "original_bytes": 73136,
         "original_start": "0x4a1000",
-        "rebuilt_bytes": 73072,
+        "rebuilt_bytes": 73136,
         "rebuilt_start": "0x4a1000",
         "start_delta": 0
       },
@@ -214,7 +214,7 @@
           "object": "<common>",
           "offset_delta": -3848,
           "original": "0x556fb8",
-          "rebuilt": "0x5547d0",
+          "rebuilt": "0x554810",
           "rebuilt_region": "commons"
         },
         "items": {
@@ -233,8 +233,8 @@
         "original_bytes": 2247092,
         "original_start": "0x549520",
         "rebuilt_bytes": 2244980,
-        "rebuilt_start": "0x547c40",
-        "start_delta": -6368
+        "rebuilt_start": "0x547c80",
+        "start_delta": -6304
       }
     }
   },
@@ -244,8 +244,8 @@
     "percent": 54.77
   },
   "fully_identical_functions_at_original_address": {
-    "bytes": 2307,
-    "count": 42
+    "bytes": 2572,
+    "count": 47
   },
   "function_order_inversions": {
     "full": {
@@ -267,8 +267,8 @@
       "original_text_bytes": 642549,
       "percent": 1.12
     },
-    "bytes": 11,
-    "first_difference": "0x40100b",
+    "bytes": 365,
+    "first_difference": "0x40116d",
     "function": "AdvisorSceneControllerInit",
     "function_address": "0x401000",
     "gate": {
@@ -278,23 +278,23 @@
         "function": "CoordinateCallbackDispatchByMode",
         "offset_in_function": 179
       },
-      "bytes": 11,
-      "first_difference": "0x40100b",
+      "bytes": 365,
+      "first_difference": "0x40116d",
       "function": "AdvisorSceneControllerInit",
-      "offset_in_function": 11
+      "offset_in_function": 365
     },
     "image": "original-mode link",
-    "offset_in_function": 11,
+    "offset_in_function": 365,
     "original_text_bytes": 642549,
-    "percent": 0.0
+    "percent": 0.06
   },
-  "input_sha256": "e0d3b7ec4cca0b08ec93f5fa1611807c7af2ef1dae563385065d29682198dd7b",
+  "input_sha256": "7e9356d3d41be31ff1ff4887349c8caec4cff3d2a5a45fe6e0a0dba412ae850d",
   "layout": {
     "data_offset_agreement": {
-      "agreeing_units": 22,
+      "agreeing_units": 23,
       "eligible_units": 57,
       "method": "anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted",
-      "unattributed_or_unmapped_annotations": 129
+      "unattributed_or_unmapped_annotations": 130
     },
     "link_order_list": {
       "adjacent": 0,
@@ -1272,7 +1272,7 @@
     "units": [
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 38,
         "functions": 32,
         "identical_function_bytes": 2992,
@@ -3998,7 +3998,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 11
   },
-  "listing_digests_sha256": "29c5cebf4d9c69de9cf23b325a8a1ad2ee4fbdbba2c2c5f3453c10f9e4ec8835",
+  "listing_digests_sha256": "bc379b6e0e4d28293837908e18de6b84e0b53ccb2f5e519a8940380509091c03",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4060,7 +4060,7 @@
       "bss_bytes": 2854980,
       "characteristics": 271,
       "common_dll_order_equal": true,
-      "data_initialised_bytes": 73024,
+      "data_initialised_bytes": 73088,
       "debug_directory": [
         0,
         0
@@ -4083,8 +4083,8 @@
       "imported_names": 145,
       "section_bytes": {
         ".data": {
-          "differing": 2828,
-          "equal": 70388,
+          "differing": 2827,
+          "equal": 70389,
           "original": 73216,
           "rebuilt": 73216
         },
@@ -4101,8 +4101,8 @@
           "rebuilt": 10744
         },
         ".text": {
-          "differing": 597117,
-          "equal": 45432,
+          "differing": 596939,
+          "equal": 45610,
           "original": 642549,
           "rebuilt": 641381
         }
@@ -4110,7 +4110,7 @@
       "sections": {
         ".data": {
           "raw_size": 73216,
-          "virtual_size": 2928052
+          "virtual_size": 2928116
         },
         ".idata": {
           "raw_size": 4608,
@@ -4167,8 +4167,8 @@
   "sections": {
     ".data": {
       "chance_percent": 10.47,
-      "excess_percent_points": 85.66,
-      "identical_bytes": 70387,
+      "excess_percent_points": 85.67,
+      "identical_bytes": 70388,
       "identical_percent": 96.14,
       "original_bytes": 73216,
       "rebuilt_bytes": 73216,
@@ -4191,15 +4191,15 @@
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 4.24,
-      "identical_bytes": 45418,
-      "identical_percent": 7.07,
+      "excess_percent_points": 4.27,
+      "identical_bytes": 45596,
+      "identical_percent": 7.1,
       "original_bytes": 642549,
       "rebuilt_bytes": 641381,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 2.84,
-      "run_identical_bytes": 18246,
-      "run_identical_percent": 2.84
+      "run_excess_percent_points": 3.01,
+      "run_identical_bytes": 19345,
+      "run_identical_percent": 3.01
     },
     "imports": {
       "chance_percent": 34.58,
@@ -4228,15 +4228,15 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 4.26,
-    "identical_bytes": 45516,
-    "identical_percent": 7.08,
+    "excess_percent_points": 4.28,
+    "identical_bytes": 45694,
+    "identical_percent": 7.11,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
-    "run_excess_percent_points": 2.84,
-    "run_identical_bytes": 18246,
-    "run_identical_percent": 2.84
+    "run_excess_percent_points": 3.01,
+    "run_identical_bytes": 19345,
+    "run_identical_percent": 3.01
   },
   "unit_size_agreement": {
     "agreeing_unit_ids": [
