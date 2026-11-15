@@ -105,6 +105,33 @@ no source it covers changed.
 **Identity.** Nothing moves away from the original: no unit's size moves
 away from the original's, and the identical prefix holds.
 
+### Rebased onto #843
+
+Measured again on #843 (`data/837-guid-block` `60d7e869`, on #842) with a
+full `make reccmp-check` and `make match-progress`. The base's figures are
+its committed `binary-progress.json`. No function rises or falls, and the
+counter at `004311d0` is still 6,041 (25 modulo 64).
+
+| Measure | #843 `60d7e869` | This change on it |
+| --- | ---: | ---: |
+| **Exact-function code bytes** | **351,876 (54.76%)** | **351,876 (54.76%)** |
+| Accuracy, full / game-only | 97.78% / 97.55% | same |
+| Correct-size functions, full | 2,811 | 2,811 |
+| Identical prefix, raw / masked | 11 B / 7,187 B (to `0x402c13`) | same |
+| Units with size agreement | 2 | 2 |
+| GAME-021 Lego.c | −176 | −176 |
+| `.text` identical at original addresses | 44,731 B (6.96%) | 44,732 B |
+| `.data` / `.rdata` identical | 28.48% / 23.00% | same |
+| Entry point; SizeOfImage | `0048ea60`; 3,600,384 | same |
+| GAME-021 `.bss`: agreeing consecutive gaps | 14 of 31 | **22 of 31** |
+| `opt_ref` `original_annotated` | 2,718 | 2,717 (the AviPlayer relink flip) |
+
+`data_identity` is the same on both sides. `.rdata` starts in place, with
+8 of 96 items at their original offset (first difference `0x49e048`).
+`.data` starts in place, with 192 of 2,454 (first break `0x4a1d5c`).
+`.bss` is 128 bytes early, with 1 of 149 (first break `0x4b31c8`). The
+commons are 6,432 bytes early, with 16 of 61 (first break `0x556fb8`).
+
 ## 1. Evidence from the original
 
 Every reference to `004de200`–`004de590` in the original's code, with the

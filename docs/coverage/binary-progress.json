@@ -3,7 +3,7 @@
     "full": 97.78,
     "game_only": 97.55
   },
-  "baseline_sha256": "ea8b22693ee75fc2c8ce0826fb75affe84d40e894880eee07bdb5a16fddbb8a8",
+  "baseline_sha256": "b13c26b9baa01a382046e71653a0f8045d0d441051d1cc9d3550ba78d6ee8ff0",
   "correct_size_functions": {
     "full": {
       "bytes": 466430,
@@ -239,7 +239,7 @@
     "original_text_bytes": 642549,
     "percent": 0.0
   },
-  "input_sha256": "e0365c8ca4234cb8ca214fd6485ffef5f6117f30a8833a7bc9bc7a97cd569dad",
+  "input_sha256": "88bd8ec28cfb4e8be8d7b4ba95911d8a96a95a1e664256696bcbbcf010932bcc",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 22,
@@ -3945,7 +3945,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 11
   },
-  "listing_digests_sha256": "7eecb5461abbb23daca6ea684631c267931778c806bd3db542b5c36be3a99edd",
+  "listing_digests_sha256": "01783a04fda8791a17f1fe0a746769a909cca6b25717b81acac519bea79e22f1",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -3964,8 +3964,8 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 579248,
-        "functions": 2718,
+        "bytes": 579216,
+        "functions": 2717,
         "removed_bytes": 0,
         "removed_functions": 0
       }
@@ -3984,8 +3984,8 @@
         "removed_functions": 78
       },
       "original_annotated": {
-        "bytes": 579248,
-        "functions": 2718,
+        "bytes": 579216,
+        "functions": 2717,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -3996,8 +3996,8 @@
         "removed_functions": 0
       },
       "port_unit": {
-        "bytes": 256,
-        "functions": 10,
+        "bytes": 288,
+        "functions": 11,
         "removed_bytes": 176,
         "removed_functions": 6
       }
@@ -4048,8 +4048,8 @@
           "rebuilt": 10744
         },
         ".text": {
-          "differing": 597803,
-          "equal": 44746,
+          "differing": 597802,
+          "equal": 44747,
           "original": 642549,
           "rebuilt": 641189
         }
@@ -4139,7 +4139,7 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 4.13,
-      "identical_bytes": 44731,
+      "identical_bytes": 44732,
       "identical_percent": 6.96,
       "original_bytes": 642549,
       "rebuilt_bytes": 641189,
@@ -4176,7 +4176,7 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 4.15,
-    "identical_bytes": 44845,
+    "identical_bytes": 44846,
     "identical_percent": 6.98,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
