@@ -447,8 +447,12 @@ int help_window_check_buttons(unsigned int mouseX, unsigned int mouseY, int left
         helpwindowGlobs.flags &= ~HELPWINDOW_FLAG_HILIGHT;
         msx = (float)mouseX;
         helpwindowGlobs.flags &= ~HELPWINDOW_FLAG_PRESSED;
-        if (msx >= 345.0f && msx <= (float)(int)legoGlobs_NextButtonImage->width + 345.0f &&
-            (float)mouseY >= 350.0f && (float)mouseY <= (float)(int)legoGlobs_NextButtonImage->height + 350.0f) {
+        area.x = 345.0f;
+        area.y = 350.0f;
+        area.width = (float)(int)legoGlobs_NextButtonImage->width;
+        area.height = (float)(int)legoGlobs_NextButtonImage->height;
+        if (msx >= area.x && msx <= (area.x + area.width) &&
+            (float)mouseY >= area.y && (float)mouseY <= (area.y + area.height)) {
             timed_effect_update_request_set_corpus(HELPWINDOW_TOOLTIP_WINDOW);
             if (leftReleased) {
                 help_window_button_action(3, 5.0f);

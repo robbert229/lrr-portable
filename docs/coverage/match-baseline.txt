@@ -1,4 +1,4 @@
-# input_sha256: 895fbcc1ef783ec863bd4f980d905570046bc0c3afb524dcac9a36ba462c4734
+# input_sha256: 304b4290c1b745a952f49f361c9114e449672345e25654b233f07414ea471878
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -542,7 +542,7 @@
 0x00418920 100.00 help_window_list_dependencies
 0x004189d0 100.00 help_window_close
 0x00418a00 92.99 help_window_update
-0x00418da0 88.75 help_window_button_hit_test
+0x00418da0 100.00 help_window_button_hit_test
 0x00418f80 100.00 help_window_button_tooltip
 0x00418fc0 100.00 help_window_press_button
 0x00419030 100.00 help_window_button_action
@@ -3267,7 +3267,7 @@
 0x00418920 100.00 help_window_list_dependencies
 0x004189d0 100.00 help_window_close
 0x00418a00 92.99 help_window_update
-0x00418da0 88.75 help_window_button_hit_test
+0x00418da0 100.00 help_window_button_hit_test
 0x00418f80 100.00 help_window_button_tooltip
 0x00418fc0 100.00 help_window_press_button
 0x00419030 100.00 help_window_button_action
