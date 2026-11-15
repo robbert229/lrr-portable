@@ -61,6 +61,11 @@ extern struct Front_Globs frontGlobs;
 extern void* g_front_save_tree;           /* DAT_00556ff8 */
 #endif
 #if defined(_MSC_VER) && _MSC_VER < 1200
+/* frontGlobs.missionLevels (00556fe4), the mission level set, which
+ * Reward.c passes Front_Levels_UpdateAvailable by address. */
+#define g_front_mission_levels (&FRONT_GLOBS_FIELD(uint8_t, 0x024))
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
 /* frontGlobs.saveData[5] (00557418), the current game's save slot, which
  * Reward.c reads the save file into (finding 680). */
 #define g_front_save_slot_buffer (&FRONT_GLOBS_FIELD(uint8_t, 0x458))

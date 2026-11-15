@@ -66,6 +66,14 @@
 #define REWARD_LEVEL_INDEX(name) \
     front_level_set_index_of((const struct SavListWindow*)active_object_list_word(), (name))
 
+/* FrontEnd.c's mission level set: the original passes its address
+ * (00556fe4); the port asks Front_GetCurrentLevelSet. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#define REWARD_MISSION_LEVELS g_front_mission_levels
+#else
+#define REWARD_MISSION_LEVELS active_object_list_word()
+#endif
+
 /* The state, in the common region. */
 // GLOBAL: LEGORR 0x00552980
 RewardGlobs rewardGlobs;
@@ -1304,7 +1312,6 @@ void reward_advance(void)
     int index;
     int created;
     RewardSaveData* data;
-    void**** menuSet;
 
     index = REWARD_LEVEL_INDEX(((RewardLegoLevel*)level_current_owner_get())->name);
     created = 0;
@@ -1325,11 +1332,10 @@ void reward_advance(void)
         save_commit(NULL);
         save_read_slot_target(5, g_front_save_slot_buffer, 0);
     }
-    menuSet = (void****)g_front_main_menu_set;
     sav_tree_load(g_front_save_tree,
                   ((RewardSaveData*)sav_build_ctx_target())->rewards,
-                  (void**)active_object_list_word(),
-                  *(uint32_t*)((char*)((void**)(*(void***)((*menuSet)[1]))[6])[1] + 0x10), 0, NULL);
+                  (void**)REWARD_MISSION_LEVELS,
+                  *(uint32_t*)((char*)((void**)((void**)(*(void****)g_front_main_menu_set)[1])[6])[1] + 0x10), 0, NULL);
     save_state_event_context_set(0);
 }
 
