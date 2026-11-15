@@ -53,9 +53,6 @@ typedef struct Vehicle_Vector3F {
 #define VEHICLE_FLAG_NOACTIVITY1 0x4 /* contAct1's animation is not moved */
 #define VEHICLE_FLAG_HOLDMISSING 0x8
 
-/* Config's "" (004b8a14), which config.c defines (finding 581). */
-extern const char s_config_angle_empty[4];
-
 /* The part of a Container the unit reads: its type (+0x10; 1 is a mesh). */
 typedef struct Vehicle_Container {
     unsigned char pad_00[0x10];
@@ -288,7 +285,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                         string_path_join(gameName, "CameraNullFrames", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "CameraNullFrames", NULL))
-                    : s_config_angle_empty);
+                    : "");
                 vehicle->cameraFlipDir = block_get_bool_path(config,
                     string_path_join(gameName, "CameraFlipDir", NULL));
             } else {
@@ -303,7 +300,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                             "CarryNullFrames", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "CarryNullFrames", NULL))
-                    : s_config_angle_empty);
+                    : "");
             } else {
                 vehicle->carryNullFrames = 0;
             }
@@ -337,7 +334,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                         string_path_join(gameName, "PivotMaxZ", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "PivotMaxZ", NULL))
-                    : s_config_angle_empty);
+                    : "");
             } else {
                 vehicle->pivotMaxZ = 1.0f;
             }
@@ -348,7 +345,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                         string_path_join(gameName, "PivotMinZ", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "PivotMinZ", NULL))
-                    : s_config_angle_empty);
+                    : "");
             } else {
                 vehicle->pivotMinZ = -1.0f;
             }
@@ -380,7 +377,7 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
                                                  NULL))
                             ? block_get_strptr(config,
                                   string_path_join(gameName, "WheelRadius", NULL))
-                            : s_config_angle_empty))) {
+                            : ""))) {
                             if (((Vehicle_Container*)vehicle->contWheels[0])->type == 1) {
                                 scene_object_bounds_union(vehicle->contWheels[0], box);
                                 vehicle->wheelRadius = (box[4] - box[1]) * 0.5f;

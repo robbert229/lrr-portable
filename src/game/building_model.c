@@ -37,11 +37,6 @@ extern "C" {
 #define BUILDING_FLAG_SOURCE 0x1        /* the loaded model, not a clone */
 #define BUILDING_FLAG_POWERLEVELCHANGED 0x2
 
-/* Config's "" (004b8a14) and ":" (004a1cd4), which config.c defines
- * (finding 581). */
-extern const char s_config_angle_empty[4];
-extern const char s_config_rgb_separator[];
-
 typedef struct Building_Point2I {
     int x, y;
 } Building_Point2I;
@@ -146,7 +141,7 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
                         string_path_join(gameName, "CarryNullFrames", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "CarryNullFrames", NULL))
-                    : s_config_angle_empty);
+                    : "");
             } else {
                 building->carryNullFrames = 0;
             }
@@ -157,7 +152,7 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
                         string_path_join(gameName, "CameraNullFrames", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "CameraNullFrames", NULL))
-                    : s_config_angle_empty);
+                    : "");
             } else {
                 building->cameraNullFrames = 0;
             }
@@ -174,7 +169,7 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
                                          NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "ToolNullFrames", NULL))
-                    : s_config_angle_empty);
+                    : "");
             } else {
                 building->toolNullFrames = 0;
             }
@@ -198,7 +193,7 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
                         string_path_join(gameName, "PivotMaxZ", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "PivotMaxZ", NULL))
-                    : s_config_angle_empty);
+                    : "");
             } else {
                 building->pivotMaxZ = 1.0f;
             }
@@ -207,7 +202,7 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
                         string_path_join(gameName, "PivotMinZ", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "PivotMinZ", NULL))
-                    : s_config_angle_empty);
+                    : "");
             } else {
                 building->pivotMinZ = -1.0f;
             }
@@ -222,7 +217,9 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
                                      // STRING: LEGORR 0x004a1cd8
                                      "Shape",
                                      NULL)))) {
-                numPoints = sound_variant_split(shape, argv, s_config_rgb_separator);
+                numPoints = sound_variant_split(shape, argv,
+                                                // STRING: LEGORR 0x004a1cd4
+                                                ":");
                 for (loop = 0; loop < numPoints; loop++) {
                     str = argv[loop];
                     point = &building->shapePoints[building->shapeCount++];

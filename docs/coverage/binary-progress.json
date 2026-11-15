@@ -1,15 +1,15 @@
 {
   "accuracy_percent": {
     "full": 97.63,
-    "game_only": 97.37
+    "game_only": 97.38
   },
-  "baseline_sha256": "0b78d3d117c3b7e08a273a74493e57bf200d13f6db4981b7a1254a9310f0dd8d",
+  "baseline_sha256": "b88fe4bd46ee53c38187f69fe033bfe7db451f318139e4c08cf60c85411d7b17",
   "correct_size_functions": {
     "full": {
       "bytes": 465541,
       "compared": 3016,
       "count": 2804,
-      "exact_functions": 2640,
+      "exact_functions": 2644,
       "mapped": 3018,
       "uncompared": 2
     },
@@ -17,7 +17,7 @@
       "bytes": 414714,
       "compared": 2721,
       "count": 2513,
-      "exact_functions": 2352,
+      "exact_functions": 2356,
       "mapped": 2723,
       "uncompared": 2
     },
@@ -31,7 +31,7 @@
           "object": "aitask.c.obj",
           "offset_delta": -8,
           "original": "0x4b31c8",
-          "rebuilt": "0x4cf5a0",
+          "rebuilt": "0x4cf9a0",
           "rebuilt_region": ".bss"
         },
         "items": {
@@ -40,28 +40,28 @@
           "at_original_offset": 1,
           "at_original_offset_bytes": 1040,
           "paired": 149,
-          "paired_bytes": 607665
+          "paired_bytes": 607662
         },
         "objects": {
           "agreeing": [
             "advisor.c.obj"
           ],
           "at_original_offset": 1,
-          "with_paired_items": 25
+          "with_paired_items": 24
         },
         "original_bytes": 616304,
         "original_start": "0x4b2db0",
         "rebuilt_bytes": 869456,
-        "rebuilt_start": "0x4cf190",
-        "start_delta": 115680
+        "rebuilt_start": "0x4cf590",
+        "start_delta": 116704
       },
       ".data": {
         "first_difference": {
-          "object": "unit_config:config.c.obj",
-          "offset_delta": null,
-          "original": "0x4a1cd4",
-          "rebuilt": "0x4b2de0",
-          "rebuilt_region": ".rdata"
+          "object": "rock_fall_styles.c.obj",
+          "offset_delta": 132,
+          "original": "0x4a1d5c",
+          "rebuilt": "0x4b8de0",
+          "rebuilt_region": ".data"
         },
         "identical_prefix": {
           "bytes": 12,
@@ -71,8 +71,8 @@
         "items": {
           "at_original_address": 0,
           "at_original_address_bytes": 0,
-          "at_original_offset": 158,
-          "at_original_offset_bytes": 3037,
+          "at_original_offset": 192,
+          "at_original_offset_bytes": 3401,
           "paired": 2455,
           "paired_bytes": 68004
         },
@@ -82,14 +82,16 @@
             "advisor.c.obj",
             "aitask.c.obj",
             "animation_object.c.obj",
-            "bubbles.c.obj"
+            "bubbles.c.obj",
+            "building_model.c.obj",
+            "terrain_cell_objects.c.obj"
           ],
-          "at_original_offset": 5,
-          "with_paired_items": 77
+          "at_original_offset": 7,
+          "with_paired_items": 75
         },
         "original_bytes": 73136,
         "original_start": "0x4a1000",
-        "rebuilt_bytes": 94608,
+        "rebuilt_bytes": 95632,
         "rebuilt_start": "0x4b8000",
         "start_delta": 94208
       },
@@ -117,12 +119,12 @@
         "objects": {
           "agreeing": [],
           "at_original_offset": 0,
-          "with_paired_items": 14
+          "with_paired_items": 13
         },
         "original_bytes": 11232,
         "original_start": "0x49e000",
         "prefix_image": "original-mode link",
-        "rebuilt_bytes": 22344,
+        "rebuilt_bytes": 21304,
         "rebuilt_start": "0x4b2000",
         "start_delta": 81920
       },
@@ -131,7 +133,7 @@
           "object": "<common>",
           "offset_delta": 1272,
           "original": "0x5520e8",
-          "rebuilt": "0x5ac6a0",
+          "rebuilt": "0x5acaa0",
           "rebuilt_region": "commons"
         },
         "items": {
@@ -139,7 +141,7 @@
           "at_original_address_bytes": 0,
           "at_original_offset": 2,
           "at_original_offset_bytes": 35760,
-          "paired": 61,
+          "paired": 58,
           "paired_bytes": 2242502
         },
         "objects": {
@@ -150,15 +152,15 @@
         "original_bytes": 2247092,
         "original_start": "0x549520",
         "rebuilt_bytes": 2297252,
-        "rebuilt_start": "0x5a35e0",
-        "start_delta": 368832
+        "rebuilt_start": "0x5a39e0",
+        "start_delta": 369856
       }
     }
   },
   "exact_function_code_bytes": {
-    "bytes": 349089,
+    "bytes": 350987,
     "original_text_bytes": 642549,
-    "percent": 54.33
+    "percent": 54.62
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 2307,
@@ -192,13 +194,13 @@
     "original_text_bytes": 642549,
     "percent": 0.0
   },
-  "input_sha256": "0bb84257e8caff56413386b41027dcdb826d82598264a121a835188504e6d9ef",
+  "input_sha256": "0a9978b6590ca87479064b2da7f8eea58fd0cea784d297be6f511055aebe0bb2",
   "layout": {
     "data_offset_agreement": {
-      "agreeing_units": 20,
+      "agreeing_units": 22,
       "eligible_units": 57,
       "method": "anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted",
-      "unattributed_or_unmapped_annotations": 128
+      "unattributed_or_unmapped_annotations": 125
     },
     "link_order_list": {
       "adjacent": 0,
@@ -1424,7 +1426,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 12,
         "functions": 22,
         "identical_function_bytes": 2958,
@@ -2000,7 +2002,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 21,
         "functions": 107,
         "identical_function_bytes": 11927,
@@ -4090,18 +4092,18 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 12
   },
-  "listing_digests_sha256": "cfb838bf2fdf88306d45bb5f6a27ddb8fc24d67bec9b2b8ecd8ee234f43e3862",
+  "listing_digests_sha256": "c2bfd99358130528a4fb0b81cf2cbefe9d2a38dc3fbdd24e7406dcbb0097b5b2",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 2640,
+        "exact": 2644,
         "mapped": 3018,
         "removed": 0,
         "removed_exact": null
       },
       "game_only": {
-        "exact": 2352,
+        "exact": 2356,
         "mapped": 2723,
         "removed": 0,
         "removed_exact": null
@@ -4164,7 +4166,7 @@
       "bss_bytes": 3166708,
       "characteristics": 271,
       "common_dll_order_equal": true,
-      "data_initialised_bytes": 94548,
+      "data_initialised_bytes": 95572,
       "debug_directory": [
         0,
         0
@@ -4187,10 +4189,10 @@
       "imported_names": 147,
       "section_bytes": {
         ".data": {
-          "differing": 76835,
-          "equal": 17885,
+          "differing": 76563,
+          "equal": 19181,
           "original": 73216,
-          "rebuilt": 94720
+          "rebuilt": 95744
         },
         ".idata": {
           "differing": 3524,
@@ -4199,30 +4201,30 @@
           "rebuilt": 4158
         },
         ".rdata": {
-          "differing": 20947,
-          "equal": 1317,
+          "differing": 19934,
+          "equal": 1290,
           "original": 11232,
-          "rebuilt": 22264
+          "rebuilt": 21224
         },
         ".text": {
-          "differing": 680462,
-          "equal": 43895,
+          "differing": 680439,
+          "equal": 43918,
           "original": 642549,
           "rebuilt": 724357
         }
       },
       "sections": {
         ".data": {
-          "raw_size": 94720,
-          "virtual_size": 3261316
+          "raw_size": 95744,
+          "virtual_size": 3262340
         },
         ".idata": {
           "raw_size": 4608,
           "virtual_size": 4158
         },
         ".rdata": {
-          "raw_size": 22528,
-          "virtual_size": 22264
+          "raw_size": 21504,
+          "virtual_size": 21224
         },
         ".rsrc": {
           "raw_size": 3072,
@@ -4271,32 +4273,32 @@
   "sections": {
     ".data": {
       "chance_percent": 10.47,
-      "excess_percent_points": 13.96,
-      "identical_bytes": 17885,
-      "identical_percent": 24.43,
+      "excess_percent_points": 15.73,
+      "identical_bytes": 19182,
+      "identical_percent": 26.2,
       "original_bytes": 73216,
-      "rebuilt_bytes": 94720,
+      "rebuilt_bytes": 95744,
       "run_chance_percent": 1.76,
-      "run_excess_percent_points": 13.67,
-      "run_identical_bytes": 11299,
-      "run_identical_percent": 15.43
+      "run_excess_percent_points": 16.42,
+      "run_identical_bytes": 13311,
+      "run_identical_percent": 18.18
     },
     ".rdata": {
       "chance_percent": 4.12,
-      "excess_percent_points": 7.4,
-      "identical_bytes": 1294,
-      "identical_percent": 11.52,
+      "excess_percent_points": 8.36,
+      "identical_bytes": 1402,
+      "identical_percent": 12.48,
       "original_bytes": 11232,
-      "rebuilt_bytes": 22344,
+      "rebuilt_bytes": 21304,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 0.0,
-      "run_identical_bytes": 0,
-      "run_identical_percent": 0.0
+      "run_excess_percent_points": 0.32,
+      "run_identical_bytes": 36,
+      "run_identical_percent": 0.32
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 4.0,
-      "identical_bytes": 43899,
+      "excess_percent_points": 4.01,
+      "identical_bytes": 43909,
       "identical_percent": 6.83,
       "original_bytes": 642549,
       "rebuilt_bytes": 724357,
@@ -4332,8 +4334,8 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 4.0,
-    "identical_bytes": 43899,
+    "excess_percent_points": 4.01,
+    "identical_bytes": 43909,
     "identical_percent": 6.83,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,

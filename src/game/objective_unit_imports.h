@@ -47,9 +47,6 @@ extern struct Front_Globs frontGlobs;
 #define frontGlobs_saveImageBigHeight \
     (*(unsigned int*)((char*)&frontGlobs + 0x550))  /* 00557510 */
 
-/* Config's "" (004b8a14), which config.c defines (finding 581). */
-extern const char s_config_angle_empty[4];
-
 /* GAME-001 Advisor.c (advisor.c). */
 int advisor_request_admit(int advisorType, int loop);             /* 004018c0 */
 void advisor_clear_active_state(void);                            /* 00401b20 */

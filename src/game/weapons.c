@@ -248,16 +248,6 @@ static int weapons_callback_update_object(Weapons_Object* obj, float* elapsed);
 static int weapons_callback_ray_candidate(Weapons_Object* obj,
                                           Weapons_RaySearch* search);
 
-/* Config.c's pooled ":" (004a1cd4): the original's literal resolves to it in
- * every unit (finding 581), so Weapons.c reads it by name (finding 630). */
-#ifdef __cplusplus
-extern "C" {
-#endif
-extern const char s_config_rgb_separator[];
-#ifdef __cplusplus
-}
-#endif
-
 // FUNCTION: LEGORR 0x0046eb80
 int weapons_initialise(struct BlockRec* config, const char* gameName)
 {
@@ -317,7 +307,7 @@ int weapons_initialise(struct BlockRec* config, const char* gameName)
                     while (prop != NULL) {
                         // STRING: LEGORR 0x004aaa94
                         if (stricmp(prop->key, "SlowDeath") == 0) {
-                            sound_variant_split(prop->value, parts, s_config_rgb_separator);
+                            sound_variant_split(prop->value, parts, ":");
                             weaponGlobs.weaponStatsList[i].slowDeath = 1;
                             weaponGlobs.weaponStatsList[i].slowDeathDamage = (float)atof(parts[0]);
                             weaponGlobs.weaponStatsList[i].slowDeathDuration = (float)atof(parts[1]);
@@ -359,7 +349,7 @@ int weapons_initialise(struct BlockRec* config, const char* gameName)
                                 if (!lego_entity_type_pair_lookup(prop->key, (int*)&objType,
                                                                   &objIndex, NULL)) continue;
                                 levels = building_upgrade_admission_check(objType, objIndex);
-                                sound_variant_split(prop->value, parts, s_config_rgb_separator);
+                                sound_variant_split(prop->value, parts, ":");
                                 for (objLevel = 0; objLevel < levels; objLevel++) {
                                     weaponGlobs.weaponStatsList[i].objectDamage[objType][objIndex][objLevel] =
                                         (float)atof(parts[objLevel]);

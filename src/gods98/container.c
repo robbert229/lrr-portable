@@ -632,12 +632,6 @@ extern const unsigned char s_resource_tree_child_iid[16];          /* 0049f988 *
 #define IID_CntFrame3 (*(const CntIID*)s_resource_tree_child_iid)
 #endif
 
-/* Config.c's ":" (004a1cd4), "::" (004aab18) and "" (004b8a14): the
- * original pools these literals across units (findings 569 and 581). */
-extern const char s_config_rgb_separator[];
-extern const char s_config_separator[];
-extern const char s_config_angle_empty[4];
-
 // GLOBAL: LEGORR 0x0076ad80
 Container_Globs containerGlobs;
 
@@ -677,9 +671,9 @@ Container* Container_Initialise(const char* gameName)
     containerGlobs.typeName[Container_LWO] = "LWO";
     containerGlobs.typeName[Container_FromActivity] = "ACT";
     containerGlobs.typeName[Container_Light] = NULL;
-    containerGlobs.extensionName[Container_Null] = s_config_angle_empty;
+    containerGlobs.extensionName[Container_Null] = "";
     containerGlobs.extensionName[Container_FromActivity] = "ae";
-    containerGlobs.extensionName[Container_Light] = s_config_angle_empty;
+    containerGlobs.extensionName[Container_Light] = "";
 
     containerGlobs.gameName = gameName;
     containerGlobs.freeList = NULL;
@@ -943,7 +937,9 @@ Container* Container_Load(Container* parent, const char* filename,
 
             sprintf(path,
                     "%s%s%s",
-                    containerGlobs.gameName, s_config_separator,
+                    containerGlobs.gameName,
+                    // STRING: LEGORR 0x004aab18
+                    "::",
                     // STRING: LEGORR 0x004aab1c
                     "Activities");
             if (arrayItem = block_subgroup(config, path)) {
@@ -962,8 +958,8 @@ Container* Container_Load(Container* parent, const char* filename,
                     sprintf(tempString,
                             // STRING: LEGORR 0x004aab04
                             "%s%s%s%s%s",
-                            containerGlobs.gameName, s_config_separator, arrayItem->value,
-                            s_config_separator,
+                            containerGlobs.gameName, "::", arrayItem->value,
+                            "::",
                             // STRING: LEGORR 0x004aab10
                             "FILE");
                     if (fileName = block_get_strptr(config, tempString)) {
@@ -975,35 +971,35 @@ Container* Container_Load(Container* parent, const char* filename,
                         sprintf(path, "%s\\%s", baseName, fileName);
 
                         sprintf(tempString, "%s%s%s%s%s", containerGlobs.gameName,
-                                s_config_separator, arrayItem->value, s_config_separator,
+                                "::", arrayItem->value, "::",
                                 // STRING: LEGORR 0x004aaaf8
                                 "TRANSCOEF");
                         transCo = (float)atof(block_get_strptr(config, tempString)
                                                   ? block_get_strptr(config, tempString)
-                                                  : s_config_angle_empty);
+                                                  : "");
 
                         sprintf(tempString, "%s%s%s%s%s", containerGlobs.gameName,
-                                s_config_separator, arrayItem->value, s_config_separator,
+                                "::", arrayItem->value, "::",
                                 // STRING: LEGORR 0x004aaaf0
                                 "TRIGGER");
                         trigger = atoi(block_get_strptr(config, tempString)
                                            ? block_get_strptr(config, tempString)
-                                           : s_config_angle_empty);
+                                           : "");
 
                         sprintf(tempString, "%s%s%s%s%s", containerGlobs.gameName,
-                                s_config_separator, arrayItem->value, s_config_separator,
+                                "::", arrayItem->value, "::",
                                 // STRING: LEGORR 0x004aaae8
                                 "LWSFILE");
                         lws = (block_get_bool_path(config, tempString) == 1);
 
                         sprintf(tempString, "%s%s%s%s%s", containerGlobs.gameName,
-                                s_config_separator, arrayItem->value, s_config_separator,
+                                "::", arrayItem->value, "::",
                                 // STRING: LEGORR 0x004aaae0
                                 "LOOPING");
                         loop = (block_get_bool_path(config, tempString) != 0);
 
                         sprintf(tempString, "%s%s%s%s%s", containerGlobs.gameName,
-                                s_config_separator, arrayItem->value, s_config_separator,
+                                "::", arrayItem->value, "::",
                                 // STRING: LEGORR 0x004aaad8
                                 "SAMPLE");
                         sample = block_get_str_copy(config, tempString);
@@ -1018,12 +1014,12 @@ Container* Container_Load(Container* parent, const char* filename,
                 } while (arrayItem = block_next_equal_key(arrayItem));
             }
 
-            sprintf(path, "%s%s%s", containerGlobs.gameName, s_config_separator,
+            sprintf(path, "%s%s%s", containerGlobs.gameName, "::",
                     // STRING: LEGORR 0x004aaad0
                     "SCALE");
             scale = (float)atof(block_get_strptr(config, path)
                                     ? block_get_strptr(config, path)
-                                    : s_config_angle_empty);
+                                    : "");
             if (0.0f != scale) {
                 cont->activityFrame->lpVtbl->AddScale(cont->activityFrame, CNT_COMBINE_REPLACE,
                                                       scale, scale, scale);
@@ -2607,7 +2603,7 @@ int Container_ParseTypeString(const char* str, int* noTexture)
 
     if (str) {
         strcpy(string, str);
-        if ((unsigned long)sound_variant_split(string, argv, s_config_rgb_separator) > 1 &&
+        if ((unsigned long)sound_variant_split(string, argv, ":") > 1 &&
             // STRING: LEGORR 0x004aab78
             stricmp(argv[1], "NOTEXTURE") == 0) {
             *noTexture = 1;

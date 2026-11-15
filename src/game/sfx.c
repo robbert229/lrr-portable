@@ -128,15 +128,17 @@ typedef struct Smoke {
 // GLOBAL: LEGORR 0x00501468
 static SFX_Globs sfxGlobs;
 
-/* Smoke's state: commons (the original defines them as common symbols). */
+/* Smoke's state: one common (0x34 bytes, 32-aligned), in the original's
+ * field order. */
+typedef struct Smoke_Globs {
+    void* textures[10];        /* +0x00 */
+    Smoke* listHead;           /* +0x28 */
+    Smoke* listTail;           /* +0x2c */
+    unsigned int textureCount; /* +0x30 */
+} Smoke_Globs;
+
 // GLOBAL: LEGORR 0x00552100
-void* smokeTextures[10];
-// GLOBAL: LEGORR 0x00552128
-Smoke* smokeListHead;
-// GLOBAL: LEGORR 0x0055212c
-Smoke* smokeListTail;
-// GLOBAL: LEGORR 0x00552130
-unsigned int smokeTextureCount;
+Smoke_Globs smokeGlobs;
 
 /* Util_HashString(name, FALSE, TRUE). */
 #define SFX_HASH(name) game_string_hash_compute((const unsigned char*)(name), 0, 1)
@@ -580,9 +582,9 @@ int sfx_is_sound_on(void)
 // FUNCTION: LEGORR 0x00465380
 int smoke_initialise(void)
 {
-    smokeListHead = NULL;
-    smokeListTail = NULL;
-    smokeTextureCount = 0;
+    smokeGlobs.listHead = NULL;
+    smokeGlobs.listTail = NULL;
+    smokeGlobs.textureCount = 0;
     return 1;
 }
 
@@ -594,13 +596,13 @@ void smoke_load_textures(const char* dirName, const char* baseName,
     char path[260];
     unsigned int i;
 
-    smokeTextureCount = textureCount;
+    smokeGlobs.textureCount = textureCount;
     for (i = 0; i < textureCount; i++) {
         // STRING: LEGORR 0x004a1d88
         sprintf(path, "%s\\", dirName);
         // STRING: LEGORR 0x004a1d7c
         sprintf(name, "%s%i.bmp", baseName, i);
-        smokeTextures[i] = sfx_mesh_load_texture_adapter(path, name, NULL, NULL);
+        smokeGlobs.textures[i] = sfx_mesh_load_texture_adapter(path, name, NULL, NULL);
     }
 }
 
@@ -670,7 +672,7 @@ Smoke* smoke_create_smoke_area(void* cont, int bx, int by, SFX_Vector3F* dir,
         Smoke_Group* group = &smoke->groups[groupID];
 
         sfx_mesh_set_group_texture_adapter(smoke->mesh, groupID,
-                                           smokeTextures[i % smokeTextureCount]);
+                                           smokeGlobs.textures[i % smokeGlobs.textureCount]);
         render_object_color_vector_set(smoke->mesh, groupID, r, g, b, 0);
         render_object_color_vector_set(smoke->mesh, groupID, r * 0.2f, g * 0.2f,
                                        b * 0.2f, 3);
@@ -700,28 +702,28 @@ Smoke* smoke_create_smoke_area(void* cont, int bx, int by, SFX_Vector3F* dir,
         }
     }
 
-    smoke->prev = smokeListTail;
-    if (smokeListHead == NULL) {
-        smokeListHead = smoke;
-        smokeListTail = smoke;
+    smoke->prev = smokeGlobs.listTail;
+    if (smokeGlobs.listHead == NULL) {
+        smokeGlobs.listHead = smoke;
+        smokeGlobs.listTail = smoke;
         return smoke;
     }
-    smokeListTail->next = smoke;
-    smokeListTail = smoke;
+    smokeGlobs.listTail->next = smoke;
+    smokeGlobs.listTail = smoke;
     return smoke;
 }
 
 // FUNCTION: LEGORR 0x00465970
 void smoke_remove_all(void)
 {
-    Smoke* smoke = smokeListHead;
+    Smoke* smoke = smokeGlobs.listHead;
 
     while (smoke != NULL) {
         Smoke* next = smoke->next;
         smoke_remove(smoke, smoke->cont);
         smoke = next;
     }
-    smokeListHead = NULL;
+    smokeGlobs.listHead = NULL;
 }
 
 // FUNCTION: LEGORR 0x004659b0
@@ -733,16 +735,16 @@ void smoke_remove(Smoke* smoke, void* cont)
     }
     else mesh_remove(smoke->mesh, SFX_CONTAINER_FRAME(cont));
 
-    if (smokeListTail == smoke) {
-        if ((smokeListTail = smoke->prev) == NULL) {
-            smokeListHead = NULL;
+    if (smokeGlobs.listTail == smoke) {
+        if ((smokeGlobs.listTail = smoke->prev) == NULL) {
+            smokeGlobs.listHead = NULL;
             free(smoke);
             return;
         }
     }
     if (smoke->next != NULL) {
         smoke->next->prev = smoke->prev;
-        if (smoke->next->prev == NULL) smokeListHead = smoke->next;
+        if (smoke->next->prev == NULL) smokeGlobs.listHead = smoke->next;
     }
     if (smoke->prev != NULL) smoke->prev->next = smoke->next;
     if (smoke->soundHandle != 0) sfx_sound3d_stop_sound(smoke->soundHandle);
@@ -754,7 +756,7 @@ void smoke_hide_all(int hide)
 {
     Smoke* smoke;
 
-    for (smoke = smokeListHead; smoke != NULL; smoke = smoke->next) {
+    for (smoke = smokeGlobs.listHead; smoke != NULL; smoke = smoke->next) {
         smoke_hide(smoke, hide);
     }
 }
@@ -775,7 +777,7 @@ void smoke_update(float elapsed)
     unsigned int i;
     int finished;
 
-    for (smoke = smokeListHead; smoke != NULL; smoke = next) {
+    for (smoke = smokeGlobs.listHead; smoke != NULL; smoke = next) {
         next = smoke->next;
         finished = 1;
 

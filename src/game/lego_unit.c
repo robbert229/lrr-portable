@@ -1389,9 +1389,9 @@ void lego_debug_panel_text_draw_update(float elapsed)
                      // STRING: LEGORR 0x004a4024
                      "%s%s%s",
                      // STRING: LEGORR 0x004a402c
-                     s_lego_renameCursorOn ? "\"" : s_config_angle_empty,
+                     s_lego_renameCursorOn ? "\"" : "",
                      text,
-                     s_lego_renameCursorOn ? "\"" : s_config_angle_empty);
+                     s_lego_renameCursorOn ? "\"" : "");
     }
 }
 
@@ -4274,7 +4274,7 @@ float engine_float_field260_get_current_target(void)
  * value twice (once to test it). */
 #define LEGO_D_ID(key) string_path_join(s_engine_config_root, levelName, key, 0)
 #define LEGO_D_TEMP(key) block_get_strptr(config, LEGO_D_ID(key))
-#define LEGO_D_STR(key) (LEGO_D_TEMP(key) ? LEGO_D_TEMP(key) : s_config_angle_empty)
+#define LEGO_D_STR(key) (LEGO_D_TEMP(key) ? LEGO_D_TEMP(key) : "")
 #define LEGO_D_INT(key) atoi(LEGO_D_STR(key))
 #define LEGO_D_FLOAT(key) (float)atof(LEGO_D_STR(key))
 #define LEGO_D_BOOL(key) block_get_bool_path(config, LEGO_D_ID(key))
@@ -4471,7 +4471,7 @@ int lego_level_load(const char* levelName)
             char* argv[10];
             // STRING: LEGORR 0x004a4338
             if ((dragCopy = LEGO_D_COPY("DragBoxRGB")) != NULL) {
-                if (sound_variant_split(dragCopy, argv, s_config_rgb_separator) == 3) {
+                if (sound_variant_split(dragCopy, argv, ":") == 3) {
                     for (i = 0; i < 3; i++) {
                         legoGlobs_dragBoxRGB[i] = (float)atoi(argv[i]) * (1.0f / 255.0f);
                     }
@@ -4588,15 +4588,15 @@ int lego_level_load(const char* levelName)
         if (level_identifier_remap_table_load_original(ptlName, s_engine_config_root)) {
             int surfaceParam, pathParam = 0, blockPointersParam = 0, cryOreParam = 0, terrainParam = 0, predugParam = 0, fallinParam;
 
-            if (surfaceMap && sound_variant_split(surfaceMap, parts, s_config_rgb_separator) == 2) surfaceParam = atoi(parts[1]);
-            if (predugMap && sound_variant_split(predugMap, parts, s_config_rgb_separator) == 2) predugParam = atoi(parts[1]);
-            if (terrainMap && sound_variant_split(terrainMap, parts, s_config_rgb_separator) == 2) terrainParam = atoi(parts[1]);
-            if (blockPointersMap && sound_variant_split(blockPointersMap, parts, s_config_rgb_separator) == 2)
+            if (surfaceMap && sound_variant_split(surfaceMap, parts, ":") == 2) surfaceParam = atoi(parts[1]);
+            if (predugMap && sound_variant_split(predugMap, parts, ":") == 2) predugParam = atoi(parts[1]);
+            if (terrainMap && sound_variant_split(terrainMap, parts, ":") == 2) terrainParam = atoi(parts[1]);
+            if (blockPointersMap && sound_variant_split(blockPointersMap, parts, ":") == 2)
                 blockPointersParam = atoi(parts[1]);
-            if (cryOreMap && sound_variant_split(cryOreMap, parts, s_config_rgb_separator) == 2) cryOreParam = atoi(parts[1]);
-            if (pathMap && sound_variant_split(pathMap, parts, s_config_rgb_separator) == 2) pathParam = atoi(parts[1]);
-            if (fallinMap && sound_variant_split(fallinMap, parts, s_config_rgb_separator) == 2) fallinParam = atoi(parts[1]);
-            if (emergeMap && sound_variant_split(emergeMap, parts, s_config_rgb_separator) == 2) pathParam = atoi(parts[1]);
+            if (cryOreMap && sound_variant_split(cryOreMap, parts, ":") == 2) cryOreParam = atoi(parts[1]);
+            if (pathMap && sound_variant_split(pathMap, parts, ":") == 2) pathParam = atoi(parts[1]);
+            if (fallinMap && sound_variant_split(fallinMap, parts, ":") == 2) fallinParam = atoi(parts[1]);
+            if (emergeMap && sound_variant_split(emergeMap, parts, ":") == 2) pathParam = atoi(parts[1]);
 
             if (lego_map_load_pipeline(level, surfaceMap, predugMap, predugParam, terrainMap, terrainParam,
                                            blockPointersMap, blockPointersParam, cryOreMap, cryOreParam,
@@ -9478,7 +9478,7 @@ void lego_text_messages_config_load(struct BlockRec* config)
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (ui_message_label_index_find(arrayItem->key, &textType)) {
             strcpy(buff, arrayItem->value);
-            sound_variant_split(buff, argv, s_config_rgb_separator);
+            sound_variant_split(buff, argv, ":");
             ui_message_text_slot_assign_with_image(textType, argv[0], argv[1], argv[2]);
         }
     }
@@ -9500,7 +9500,7 @@ void lego_message_load_infomessages(struct BlockRec* config)
          arrayItem != NULL; arrayItem = block_next_equal_key(arrayItem)) {
         if (info_get_type(arrayItem->key, &infoType)) {
             strcpy(buff, arrayItem->value);
-            argc = sound_variant_split(buff, argv, s_config_rgb_separator);
+            argc = sound_variant_split(buff, argv, ":");
             info_set_text(infoType, argv[0]);
             info_set_image_file(infoType, argv[1]);
             if (sound_alias_lookup(argv[2], &sfxType)) info_set_sfx(infoType, sfxType);

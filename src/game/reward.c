@@ -55,17 +55,6 @@
 #include "reward_movie.h"
 #include "lego_globs.h"
 
-/* Config.c's pooled empty string (004b8a14): the original's literal resolves
- * to it in every unit (finding 581), so Reward.c reads it by name (finding
- * 630). */
-#ifdef __cplusplus
-extern "C" {
-#endif
-extern const char s_config_angle_empty[4];
-#ifdef __cplusplus
-}
-#endif
-
 /* Flic.c's current frame (+0x624). The port's Flic has another layout. */
 #define REWARD_FLIC_FRAME(flic) (*(int*)((char*)(flic) + 0x624))
 
@@ -335,13 +324,13 @@ int reward_load_graphics(BlockFile* config, const char* gameName)
                          // STRING: LEGORR 0x004a93f8
                          "ScrollSpeed",
                          0)) ?
-        block_get_strptr(config, string_path_join(gameName, "Reward", "ScrollSpeed", 0)) : s_config_angle_empty);
+        block_get_strptr(config, string_path_join(gameName, "Reward", "ScrollSpeed", 0)) : "");
     rewardGlobs.vertSpacing = (float)atof(block_get_strptr(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93ec
                          "VertSpacing",
                          0)) ?
-        block_get_strptr(config, string_path_join(gameName, "Reward", "VertSpacing", 0)) : s_config_angle_empty);
+        block_get_strptr(config, string_path_join(gameName, "Reward", "VertSpacing", 0)) : "");
     rewardGlobs.fontName = block_get_str_copy(config,
         string_path_join(gameName, "Reward",
                          // STRING: LEGORR 0x004a93e4
@@ -460,11 +449,11 @@ int reward_prepare_level(void)
                          "Modifier",
                          0)) ?
         block_get_strptr(rewardGlobs.config,
-            string_path_join(rewardGlobs.gameName, level->name, "Reward", "Modifier", 0)) : s_config_angle_empty);
+            string_path_join(rewardGlobs.gameName, level->name, "Reward", "Modifier", 0)) : "");
     if (0.0f == (rewardGlobs.timer = (float)atof(block_get_strptr(rewardGlobs.config,
         string_path_join(rewardGlobs.gameName, "Reward", "Timer", 0)) ?
         block_get_strptr(rewardGlobs.config,
-            string_path_join(rewardGlobs.gameName, "Reward", "Timer", 0)) : s_config_angle_empty)))
+            string_path_join(rewardGlobs.gameName, "Reward", "Timer", 0)) : "")))
         rewardGlobs.timer = 76.9375f;
     if ((rewardGlobs.displayText = block_get_bool_path(rewardGlobs.config,
              string_path_join(rewardGlobs.gameName, "Reward",
@@ -513,7 +502,7 @@ void reward_load_item_importance(RewardLevelItem* item)
         block_get_strptr(rewardGlobs.config,
             string_path_join(rewardGlobs.gameName, level->name, "Reward",
                              "Importance", item->name, 0)) :
-        s_config_angle_empty);
+        "");
 }
 
 // FUNCTION: LEGORR 0x00460140
@@ -527,7 +516,7 @@ void reward_load_item_quota(RewardLevelItem* item)
         block_get_strptr(rewardGlobs.config,
             string_path_join(rewardGlobs.gameName, level->name, "Reward",
                              "Quota", item->name, 0)) :
-        s_config_angle_empty);
+        "");
 }
 
 // FUNCTION: LEGORR 0x004601e0
@@ -929,7 +918,7 @@ int reward_format_values(void)
         (current->itemsArray[REWARD_ITEM_TIMER].actual *
          current->itemsArray[REWARD_ITEM_TIMER].total * 0.04f);
     time %= 359999;
-    sprintf(timeText, s_config_angle_empty);
+    sprintf(timeText, "");
     if (time > 3600) {
         n = (time - 1) / 3600;
         value = n;

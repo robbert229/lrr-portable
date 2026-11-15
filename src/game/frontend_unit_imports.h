@@ -47,11 +47,6 @@ extern void* DAT_0055613c;                  /* 0055613c the credits font */
 extern void* DAT_00556f50;                  /* 00556f50 CreditsTextFile */
 extern void* DAT_00556f54;                  /* 00556f54 CreditsBackAVI */
 
-/* Config's "" (004b8a14) and ":" (004a1cd4), which config.c defines
- * (finding 581). */
-extern const char s_config_angle_empty[4];
-extern const char s_config_rgb_separator[];
-
 /* GAME-001 Advisor.c (advisor.c): Font.h's inline Font_GetStringWidth. */
 uint32_t formatted_text_printf_width(const struct TextureSurface* font,
                                      const char* text, ...);      /* 00401c50 */

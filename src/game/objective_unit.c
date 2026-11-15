@@ -413,13 +413,13 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
                         "CrystalObjective", NULL))
                     ? block_get_strptr(config, string_path_join(gameName, levelName,
                           "CrystalObjective", NULL))
-                    : s_config_angle_empty),
+                    : ""),
                atoi(block_get_strptr(config, string_path_join(gameName, levelName,
                    // STRING: LEGORR 0x004a816c
                    "OreObjective", NULL))
                ? block_get_strptr(config, string_path_join(gameName, levelName,
                      "OreObjective", NULL))
-               : s_config_angle_empty));
+               : ""));
 
     if ((str = block_get_strptr(config, string_path_join(gameName, levelName,
                                                          // STRING: LEGORR 0x004a815c
@@ -543,7 +543,7 @@ void objective_set_status(int status)
     }
 
     if (status == 0) {
-        statusName = s_config_angle_empty;
+        statusName = "";
         objectiveGlobs.flags |= OBJECTIVE_FLAG_BRIEFING;
         teleport = 0;
         level->status = 0;
@@ -596,8 +596,8 @@ status_read:
                 // STRING: LEGORR 0x004a8250
                 "Stream_Objective%s%s%s", statusName,
                 // STRING: LEGORR 0x004a8268
-                useLevelName ? "_" : s_config_angle_empty,
-                useLevelName ? LEGO_LEVEL_PTR(char, level->name) : s_config_angle_empty);
+                useLevelName ? "_" : "",
+                useLevelName ? LEGO_LEVEL_PTR(char, level->name) : "");
         if (objectiveGlobs.soundName) free(objectiveGlobs.soundName);
         objectiveGlobs.soundName = string_duplicate(buff);
         objectiveGlobs.soundHandle = -1;

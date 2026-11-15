@@ -741,7 +741,7 @@ int main_init_app(HINSTANCE hInstance)
 
     if (RegisterClassA(&wc)) {
         g_platform_cursor_window_handle = CreateWindowExA(
-            WS_EX_APPWINDOW, mainGlobs.className, s_config_angle_empty, WS_POPUP | WS_SYSMENU,
+            WS_EX_APPWINDOW, mainGlobs.className, "", WS_POPUP | WS_SYSMENU,
             0, 0, 100, 100, NULL, NULL, hInstance, NULL);
         if (g_platform_cursor_window_handle) {
             SetFocus((HWND)g_platform_cursor_window_handle);

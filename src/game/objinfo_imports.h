@@ -26,9 +26,6 @@ struct TextureSurface;
  * DamageFont_LiveObject_CheckCanShowDamage. */
 int damage_font_live_object_check_can_show_damage(struct EntitySlot* liveObj); /* 0040aae0 */
 
-/* Config's "" (004b8a14), which config.c defines (finding 581). */
-extern const char s_config_angle_empty[4];
-
 /* gods98 Utils.c (utils.c): Util_Tokenise. */
 int sound_variant_split(char* text, char** out, const char* separators); /* 00477440 */
 

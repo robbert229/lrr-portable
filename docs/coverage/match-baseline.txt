@@ -1,4 +1,4 @@
-# input_sha256: 0bb84257e8caff56413386b41027dcdb826d82598264a121a835188504e6d9ef
+# input_sha256: 0a9978b6590ca87479064b2da7f8eea58fd0cea784d297be6f511055aebe0bb2
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -155,7 +155,7 @@
 0x00406820 98.08 bezier_curve_samples_build
 0x004068c0 75.76 path_arc_length_interpolate
 0x00406980 100.00 scene_object_mode_is_one
-0x00406990 99.52 entity_type_config_resource_row_load
+0x00406990 100.00 entity_type_config_resource_row_load
 0x00406c00 100.00 renderer_object_update_from_record_field64
 0x00406c30 100.00 renderer_object_update_from_record_field68
 0x00406c60 100.00 renderer_object_update_from_record_field6c
@@ -418,7 +418,7 @@
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
-0x00411360 92.45 front_menu_item_select_test_string_collision
+0x00411360 91.24 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
 0x00411530 86.85 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
@@ -1673,7 +1673,7 @@
 0x00457460 100.00 nerpfunc_get_unit_at_block
 0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
 0x004574e0 99.69 objective_load_objective_text
-0x00457d40 61.34 objective_load_original
+0x00457d40 61.49 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
 0x004585c0 100.00 objective_set_block_objective
 0x004585f0 100.00 objective_set_timer_objective
@@ -1696,10 +1696,10 @@
 0x004593e0 100.00 object_recall_save
 0x00459470 100.00 object_recall_load_rrosfile
 0x00459530 100.00 frontend_render_three_pass_update
-0x00459560 99.27 objinfo_load_health_bar
-0x00459900 98.41 objinfo_load_hunger
+0x00459560 100.00 objinfo_load_health_bar
+0x00459900 100.00 objinfo_load_hunger
 0x004599c0 100.00 objinfo_load_hunger_images
-0x00459a50 98.21 objinfo_load_bubble
+0x00459a50 100.00 objinfo_load_bubble
 0x00459b00 26.72 legacy_entity_screen_ring_render
 0x00459f50 88.57 objinfo_draw_hunger_image_adapter
 0x00459fd0 88.00 panel_resource_position_apply_if_enabled
@@ -1744,7 +1744,7 @@
 0x0045bf20 100.00 camera_zoom_step_adjust
 0x0045bf70 100.00 ui_entry_bounds_get
 0x0045bfb0 100.00 three_surface_resources_load
-0x0045c040 93.75 mission_crystal_quota_setup
+0x0045c040 95.83 mission_crystal_quota_setup
 0x0045c0d0 94.12 panel_crystals_draw
 0x0045c340 100.00 panel_resource_layout_store
 0x0045c3f0 100.00 advisor_progress_bar_fill_draw
@@ -1764,7 +1764,7 @@
 0x0045cc60 100.00 global_cursor_word_get
 0x0045cc70 100.00 pointer_cursor_draw_target
 0x0045cd90 100.00 media_pointer_cursor_override_tick
-0x0045cdc0 97.96 priorities_load_images
+0x0045cdc0 98.98 priorities_load_images
 0x0045cf00 51.61 priorities_reset
 0x0045cf50 57.69 priorities_load
 0x0045d060 98.28 priorities_load_positions
@@ -2463,7 +2463,7 @@
 0x0047f6a0 100.00 file_make_dir
 0x0047f6e0 100.00 game_file_open_dispatch
 0x0047f850 100.00 wad_file_seek
-0x0047f980 97.59 wad_file_read
+0x0047f980 98.80 wad_file_read
 0x0047fa50 100.00 game_file_write
 0x0047fac0 100.00 game_file_close
 0x0047fb10 100.00 wad_file_cursor_get
@@ -2880,7 +2880,7 @@
 0x00406820 98.08 bezier_curve_samples_build
 0x004068c0 75.76 path_arc_length_interpolate
 0x00406980 100.00 scene_object_mode_is_one
-0x00406990 99.52 entity_type_config_resource_row_load
+0x00406990 100.00 entity_type_config_resource_row_load
 0x00406c00 100.00 renderer_object_update_from_record_field64
 0x00406c30 100.00 renderer_object_update_from_record_field68
 0x00406c60 100.00 renderer_object_update_from_record_field6c
@@ -3143,7 +3143,7 @@
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
-0x00411360 92.45 front_menu_item_select_test_string_collision
+0x00411360 91.24 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
 0x00411530 86.85 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
@@ -4398,7 +4398,7 @@
 0x00457460 100.00 nerpfunc_get_unit_at_block
 0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
 0x004574e0 99.69 objective_load_objective_text
-0x00457d40 61.34 objective_load_original
+0x00457d40 61.49 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
 0x004585c0 100.00 objective_set_block_objective
 0x004585f0 100.00 objective_set_timer_objective
@@ -4421,10 +4421,10 @@
 0x004593e0 100.00 object_recall_save
 0x00459470 100.00 object_recall_load_rrosfile
 0x00459530 100.00 frontend_render_three_pass_update
-0x00459560 99.27 objinfo_load_health_bar
-0x00459900 98.41 objinfo_load_hunger
+0x00459560 100.00 objinfo_load_health_bar
+0x00459900 100.00 objinfo_load_hunger
 0x004599c0 100.00 objinfo_load_hunger_images
-0x00459a50 98.21 objinfo_load_bubble
+0x00459a50 100.00 objinfo_load_bubble
 0x00459b00 26.72 legacy_entity_screen_ring_render
 0x00459f50 88.57 objinfo_draw_hunger_image_adapter
 0x00459fd0 88.00 panel_resource_position_apply_if_enabled
@@ -4469,7 +4469,7 @@
 0x0045bf20 100.00 camera_zoom_step_adjust
 0x0045bf70 100.00 ui_entry_bounds_get
 0x0045bfb0 100.00 three_surface_resources_load
-0x0045c040 93.75 mission_crystal_quota_setup
+0x0045c040 95.83 mission_crystal_quota_setup
 0x0045c0d0 94.12 panel_crystals_draw
 0x0045c340 100.00 panel_resource_layout_store
 0x0045c3f0 100.00 advisor_progress_bar_fill_draw
@@ -4489,7 +4489,7 @@
 0x0045cc60 100.00 global_cursor_word_get
 0x0045cc70 100.00 pointer_cursor_draw_target
 0x0045cd90 100.00 media_pointer_cursor_override_tick
-0x0045cdc0 97.96 priorities_load_images
+0x0045cdc0 98.98 priorities_load_images
 0x0045cf00 51.61 priorities_reset
 0x0045cf50 57.69 priorities_load
 0x0045d060 98.28 priorities_load_positions
@@ -5188,7 +5188,7 @@
 0x0047f6a0 100.00 file_make_dir
 0x0047f6e0 100.00 game_file_open_dispatch
 0x0047f850 100.00 wad_file_seek
-0x0047f980 97.59 wad_file_read
+0x0047f980 98.80 wad_file_read
 0x0047fa50 100.00 game_file_write
 0x0047fac0 100.00 game_file_close
 0x0047fb10 100.00 wad_file_cursor_get
