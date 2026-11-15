@@ -735,7 +735,6 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
     int playMusic = 0;
     int showTextWindows = 0;
     int showing = 0;
-    void* textWindow;
 
     setQueueMode = 0;
 
@@ -865,11 +864,19 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
                                  NULL);
 
         switch (level->status) {
-        case 1: textWindow = objectiveGlobs.completedTextWindow; break;
-        case 2: textWindow = objectiveGlobs.failedTextWindow; break;
-        default: textWindow = objectiveGlobs.briefingTextWindow; break;
+        case 1:
+            if (objectiveGlobs.completedTextWindow)
+                text_buffer_draw_wrapped(objectiveGlobs.completedTextWindow, 0, elapsedGame, NULL);
+            break;
+        case 2:
+            if (objectiveGlobs.failedTextWindow)
+                text_buffer_draw_wrapped(objectiveGlobs.failedTextWindow, 0, elapsedGame, NULL);
+            break;
+        default:
+            if (objectiveGlobs.briefingTextWindow)
+                text_buffer_draw_wrapped(objectiveGlobs.briefingTextWindow, 0, elapsedGame, NULL);
+            break;
         }
-        if (textWindow) text_buffer_draw_wrapped(textWindow, 0, elapsedGame, NULL);
 
         if (objectiveGlobs.textWindows[type])
             text_buffer_draw_wrapped(objectiveGlobs.textWindows[type], 0,

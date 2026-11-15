@@ -1,4 +1,4 @@
-# input_sha256: 18db3c7cff5d6053af48ecaa78b7091d4d30504c80394e2babc2f9c149b62bc3
+# input_sha256: 032291a12d11c3f91f17471ecef97aab8560ea9ea4f8539d4e95856fc0fa9899
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1684,7 +1684,7 @@
 0x004588e0 100.00 objective_stop_showing_objective
 0x004589a0 100.00 objective_is_ended_original
 0x004589c0 90.57 lego_quit_poll_adapter
-0x00458be0 67.70 objective_tick_target
+0x00458be0 73.72 objective_tick_target
 0x00459050 100.00 objective_check_completed
 0x00459100 100.00 objective_callback_check_completed_object
 0x00459190 100.00 object_recall_store_minifigure
@@ -4409,7 +4409,7 @@
 0x004588e0 100.00 objective_stop_showing_objective
 0x004589a0 100.00 objective_is_ended_original
 0x004589c0 90.57 lego_quit_poll_adapter
-0x00458be0 67.70 objective_tick_target
+0x00458be0 73.72 objective_tick_target
 0x00459050 100.00 objective_check_completed
 0x00459100 100.00 objective_callback_check_completed_object
 0x00459190 100.00 object_recall_store_minifigure
