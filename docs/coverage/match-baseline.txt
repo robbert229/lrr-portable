@@ -1,4 +1,4 @@
-# input_sha256: e34fdc7d0aa3ef5acd87e349db227fa9b4d36e9d2f826a868f3eca5c92b1bbb4
+# input_sha256: 9645025737c1eff8ab2076d123278cf13967956ae0b9c63ef3c373db38ea0e85
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1859,7 +1859,7 @@
 0x00463730 100.00 indexed_float_pair_set
 0x00463770 100.00 scroll_rect_resource_record_create
 0x00463810 100.00 scroll_info_add_create_structure
-0x004638a0 94.76 info_panel_check_collision
+0x004638a0 95.13 info_panel_check_collision
 0x00463c00 94.85 scroll_info_mouse_over_structure
 0x00463c90 100.00 scroll_info_mouse_over_create_structure
 0x00463d20 86.46 view_blit_rect_positions_apply
@@ -4584,7 +4584,7 @@
 0x00463730 100.00 indexed_float_pair_set
 0x00463770 100.00 scroll_rect_resource_record_create
 0x00463810 100.00 scroll_info_add_create_structure
-0x004638a0 94.76 info_panel_check_collision
+0x004638a0 95.13 info_panel_check_collision
 0x00463c00 94.85 scroll_info_mouse_over_structure
 0x00463c90 100.00 scroll_info_mouse_over_create_structure
 0x00463d20 86.46 view_blit_rect_positions_apply

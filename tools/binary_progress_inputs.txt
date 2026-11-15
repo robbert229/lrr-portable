@@ -608,7 +608,7 @@ src/gods98/engine_shared.hpp
 src/gods98/entity.cpp
 src/gods98/entity.h
 src/gods98/entity.hpp
-src/gods98/file_list_streams.cpp
+src/gods98/file_list_streams.c
 src/gods98/files.c
 src/gods98/files.h
 src/gods98/files_native.h
