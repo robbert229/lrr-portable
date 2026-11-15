@@ -6099,7 +6099,7 @@ int legoobject_movement_accumulator_apply(Lego_Object* obj, float elapsed, float
         trans[1] = 0.0f;
         inv = 1.0f / (float)sqrt((float)obj->field_2bc * (float)obj->field_2bc +
                                  (float)obj->field_2c0 * (float)obj->field_2c0);
-        trans[2] = inv * (float)obj->field_2c0 * moveSpeed;
+        trans[2] = moveSpeed * (inv * (float)obj->field_2c0);
         trans[0] = inv * (float)obj->field_2bc * moveSpeed;
         scene_object_camera_teleport_or_offset(cont, 1, trans[0], trans[1], trans[2]);
         result = 1;
@@ -6250,7 +6250,7 @@ void legoobject_pose_orientation_dispatch(Lego_Object* obj, float elapsed)
             }
             if (pos[2] > wz - -0.5f) {
                 pos[2] -= elapsed;
-                if (pos[2] < wz)
+                if (wz > pos[2])
                     pos[2] = wz;
                 ddiscene_object_position_set(obj->other, NULL, pos[0], pos[1], pos[2]);
             }

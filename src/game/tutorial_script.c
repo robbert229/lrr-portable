@@ -2693,7 +2693,7 @@ int nerps_powered_count_callback(NERPs_Object* obj, void* data)
 {
     NERPs_ObjectSearch* search = (NERPs_ObjectSearch*)data;
 
-    if (obj->type == search->type && obj->id == (int)search->id) {
+    if (search->type == obj->type && (int)search->id == obj->id) {
         if (obj->flags3 & 0x20000000) search->count++;
         else search->count = 0;
     }

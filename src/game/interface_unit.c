@@ -2992,8 +2992,8 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
         (dependencies_get_requirements(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex, 0, &list, &count), count != 0)) {
         areaX -= 15.0f;
         fx = (float)(unsigned int)x;
-        if (areaX <= fx && fx <= areaX - -15.0f &&
-            areaY <= (float)(unsigned int)y &&
+        if (fx >= areaX && fx <= areaX - -15.0f &&
+            (float)(unsigned int)y >= areaY &&
             (float)(unsigned int)y <= areaY - -40.0f) {
             *type = 20;
             return 1;
@@ -3013,8 +3013,8 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
                 height = 40;
             }
             left = areaX - (float)width;
-            if (left <= fx && fx <= left + (float)width &&
-                areaY <= (float)(unsigned int)y &&
+            if (fx >= left && fx <= left + (float)width &&
+                (float)(unsigned int)y >= areaY &&
                 (float)(unsigned int)y <= (float)height + areaY) {
                 *type = 20;
                 return 1;
@@ -3029,7 +3029,7 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
                 height = 40;
             }
             areaX = left - (float)width;
-            if (areaX <= fx && fx <= areaX + (float)width &&
+            if (fx >= areaX && fx <= areaX + (float)width &&
                 areaY <= (float)(unsigned int)y &&
                 (float)(unsigned int)y <= (float)height + areaY) {
                 *type = list[i].objType;
