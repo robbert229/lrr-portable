@@ -6494,18 +6494,24 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
                 cmd_produce(0xe, NULL, LEGO_2E_CURR_BLOCK(bx, by).f_03, pos);
         }
         if (!(block->flags1 & 0x400000)) {
-            if (!(LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 & 0x400) &&
-                !(LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags2 & 0x4))
-            if (!(LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 & 0x8000) &&
-                !terrain_cell_predicate_check_current((const uint32_t*)blockPos)) {
-                LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x200000;
-                LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x20000000;
-                LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x40000000;
-                entity_activity_scene_state_update_retail();
-                coordinate_pair_callback_dispatch(blockPos);
-                lego_noop_point_adapter(blockPos);
-                for (i = 0; i < 4; i++) coordinate_pair_event_queue(blockPos, (void*)0x28);
-                LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 |= 0x3;
+            /* 00430320's body, inline: the level copy keeps the third test
+             * from reusing the block address, as in the original. */
+            {
+                Lego_Level* currLevel = legoGlobs_currLevel;
+
+                if (!(LEGO_2F_BLOCK(currLevel, blockPos[0], blockPos[1]).flags1 & 0x400) &&
+                    !(LEGO_2F_BLOCK(currLevel, blockPos[0], blockPos[1]).flags2 & 0x4) &&
+                    !(LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 & 0x8000) &&
+                    !terrain_cell_predicate_check_current((const uint32_t*)blockPos)) {
+                    LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x200000;
+                    LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x20000000;
+                    LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x40000000;
+                    entity_activity_scene_state_update_retail();
+                    coordinate_pair_callback_dispatch(blockPos);
+                    lego_noop_point_adapter(blockPos);
+                    for (i = 0; i < 4; i++) coordinate_pair_event_queue(blockPos, (void*)0x28);
+                    LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 |= 0x3;
+                }
             }
             LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 |= 0x400000;
             selection_mode7_cancel_at_point((const uint32_t*)blockPos);
@@ -6760,116 +6766,27 @@ extern __inline void map_cell_tracking_flags_clear_and_refresh_current(const int
 }
 
 /* Clears a block's pending work once nothing occupies or reserves it, and
- * queues four of the given event for it. The original computes the block
- * address once for its first two tests (flags1 & 0x400, flags2 & 4) and
- * again, re-reading the level's width and blocks, for flags1 & 0x8000;
- * MSVC 5.0 merges the three tests of every C form tried (one && chain, an
- * if-return, nested ifs, a block pointer, inline helpers taking the level,
- * the block coordinates or the pair, operand orders, value copies and a
- * second index form), giving 70.66-74.42%. As for 00429160, the matching
- * build keeps the port's instruction-for-instruction body. 00430530 inlines
- * the same code. */
+ * queues four of the given event for it. Inline in the original as well:
+ * 00430530 expands it. The original computes the block address once for its
+ * first two tests (flags1 & 0x400, flags2 & 4) and again, re-reading the
+ * level's width and blocks, for flags1 & 0x8000: the first two read the
+ * level through a local copy, the third through the global, so MSVC 5.0
+ * cannot merge the three tests (as 0042c760's expansion does). */
 // FUNCTION: LEGORR 0x00430320
-__declspec(naked) void terrain_cell_work_flag_clear_current(
-    const int coord[2], uint32_t selector)
+extern __inline void terrain_cell_work_flag_clear_current(const int coord[2], uint32_t selector)
 {
-    __asm {
-        mov ecx, dword ptr [g_active_level_retail]
-        push ebx
-        push esi
-        mov esi, dword ptr [esp + 0ch]
-        mov eax, dword ptr [ecx + 14h]
-        mov ebx, dword ptr [ecx + 0b8h]
-        mov edx, dword ptr [esi + 4]
-        push edi
-        imul eax, edx
-        mov edi, dword ptr [esi]
-        add eax, edi
-        lea eax, dword ptr [eax + eax*8]
-        lea eax, dword ptr [ebx + eax*8]
-        mov ebx, dword ptr [eax + 8]
-        test bh, 4
-        jne terrain_cell_work_flag_clear_done
-        test byte ptr [eax + 0ch], 4
-        jne terrain_cell_work_flag_clear_done
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, edx
-        add eax, edi
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        test ch, 80h
-        jne terrain_cell_work_flag_clear_done
-        push esi
-        call terrain_cell_predicate_check_current
-        add esp, 4
-        test eax, eax
-        jne terrain_cell_work_flag_clear_done
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, edx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and ecx, 0ffdfffffh
-        mov dword ptr [eax], ecx
-        mov ecx, dword ptr [g_active_level_retail]
-        mov ebx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, ebx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov edi, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and edi, 0dfffffffh
-        mov dword ptr [eax], edi
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, edx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ebx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and ebx, 0bfffffffh
-        mov dword ptr [eax], ebx
-        call entity_activity_scene_state_update_retail
-        push esi
-        call coordinate_pair_callback_dispatch
-        add esp, 4
-        push esi
-        call flic_opcode27_fallback_noop
-        mov ebx, dword ptr [esp + 18h]
-        add esp, 4
-        mov edi, 4
-    terrain_cell_work_flag_clear_queue_loop:
-        push ebx
-        push esi
-        call coordinate_pair_event_queue
-        add esp, 8
-        dec edi
-        jne terrain_cell_work_flag_clear_queue_loop
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, edx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        or ecx, 3
-        mov dword ptr [eax], ecx
-    terrain_cell_work_flag_clear_done:
-        pop edi
-        pop esi
-        pop ebx
-        ret
+    Lego_Level* currLevel = legoGlobs_currLevel;
+    int i;
+
+    if (!(LEGO_2F_BLOCK(currLevel, coord[0], coord[1]).flags1 & 0x400) &&
+        !(LEGO_2F_BLOCK(currLevel, coord[0], coord[1]).flags2 & 0x4) &&
+        !(LEGO_2F_BLOCK(legoGlobs_currLevel, coord[0], coord[1]).flags1 & 0x8000) &&
+        !terrain_cell_predicate_check_current((const uint32_t*)coord)) {
+        LEGO_2F_BLOCK(legoGlobs_currLevel, coord[0], coord[1]).flags1 &= ~0x200000;
+        map_cell_tracking_flags_clear_and_refresh_current(coord);
+        for (i = 0; i < 4; i++)
+            coordinate_pair_event_queue(coord, (void*)selector);
+        LEGO_2F_BLOCK(legoGlobs_currLevel, coord[0], coord[1]).flags1 |= 0x3;
     }
 }
 
@@ -6975,17 +6892,7 @@ int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                 terrain_cell_surface_quad_height_fill_current((struct LevelState*)level, bx, by);
                 pos2[0] = bx;
                 pos2[1] = by;
-                /* TerrainCellWorkFlagClear (00430320), inline. */
-                if (!(LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 & 0x400) &&
-                    !(LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags2 & 0x4) &&
-                    !(LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 & 0x8000) &&
-                    !terrain_cell_predicate_check_current((const uint32_t*)pos2)) {
-                    LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 &= ~0x200000;
-                    map_cell_tracking_flags_clear_and_refresh_current(pos2);
-                    for (i = 0; i < 4; i++)
-                        coordinate_pair_event_queue(pos2, (void*)0x28);
-                    LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 |= 0x3;
-                }
+                terrain_cell_work_flag_clear_current(pos2, 0x28);
                 selection_mode7_cancel_at_point((const uint32_t*)pos2);
             }
 
