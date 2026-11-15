@@ -38,6 +38,10 @@ extern int32_t s_application_mode;          /* 00505f88 programmerLevel */
 #if defined(_MSC_VER) && _MSC_VER < 1200
 #include "gods98/input_globs.h"
 #include "gods98/input_key_names.h"
+/* Input.h's entry points beside its state, as the original unit saw
+ * them (0047ed90, 0047eef0). */
+int input_direct_initialize(void);
+void input_state_poll_retail(void);
 #else
 extern uint32_t s_renderer_word_a;          /* 0076ab24 msx */
 extern uint32_t s_renderer_word_b;          /* 0076ab28 msy */

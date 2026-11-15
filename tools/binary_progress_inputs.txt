@@ -668,6 +668,8 @@ src/gods98/input.hpp
 src/gods98/input_for_interface.hpp
 src/gods98/input_for_terrain_map.hpp
 src/gods98/input_from_interface.hpp
+src/gods98/input_globs.h
+src/gods98/input_key_names.h
 src/gods98/input_keys.h
 src/gods98/input_shared.hpp
 src/gods98/input_unit.c
