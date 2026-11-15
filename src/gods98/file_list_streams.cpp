@@ -41,6 +41,26 @@ extern "C" uint32_t s_overlay_word_03610;
 #include "game/startup_config_for_file_list_streams.hpp"
 #include "engine_for_file_list_streams.hpp"
 
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* The unit's stream state, at the original's addresses (finding 680): the
+ * four stream handles (00575ce0-00575cec), the token-list path that
+ * 0048b2f0 scans (00575cf0) and the output path it opens (005760f0), each
+ * 1024 bytes. The original's block goes on with an unreferenced word
+ * (005764f0) and the window-mode flag (005764f4), which engine.cpp still
+ * defines as s_window_mode_flag. Natively startup_config.cpp keeps the
+ * port's globals under the old names. */
+struct FileListStreams_Globs {
+    GameFileHandle* streams[4];     /* +0x000 */
+    char tokenListPath[1024];       /* +0x010 */
+    char outputPath[1024];          /* +0x410 */
+};
+// GLOBAL: LEGORR 0x00575ce0
+FileListStreams_Globs fileListStreamsGlobs;
+#define s_startup_streams fileListStreamsGlobs.streams
+#define s_startup_token_list_path fileListStreamsGlobs.tokenListPath
+#define s_startup_output_path fileListStreamsGlobs.outputPath
+#endif
+
 namespace unported_ledger_stubs {
 // FUNCTION: LEGORR 0x0048b260
 extern "C" void ledger_stub_0048b260_StartupStreamStateReset()
@@ -49,7 +69,11 @@ extern "C" void ledger_stub_0048b260_StartupStreamStateReset()
     s_startup_streams[1] = NULL;
     s_startup_streams[2] = NULL;
     s_startup_streams[3] = NULL;
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+    /* The port's own word; the original stores only the four handles and
+     * the window-mode flag (finding 680). */
     s_startup_window_mode = 0u;
+#endif
     window_mode_flag_set(0u);
 }
 } // namespace unported_ledger_stubs
@@ -74,6 +98,11 @@ extern "C" void ledger_stub_0048b290_StartupStreamsClose()
     s_startup_streams[1] = NULL;
     s_startup_streams[0] = NULL;
 }
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* The original calls 0048b290 here, not startup_config.cpp's copy
+ * (finding 680). */
+#define startup_streams_close ledger_stub_0048b290_StartupStreamsClose
+#endif
 // FUNCTION: LEGORR 0x0048b2f0
 extern "C" void startup_config_stream_load(void)
 {

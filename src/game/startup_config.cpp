@@ -12,11 +12,15 @@
 
 namespace unported_ledger_stubs {
 
-// GLOBAL: LEGORR 0x00575ce0
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+/* In the matching build G98-028 (file_list_streams.cpp) defines the
+ * streams and the two paths at the original's address, 00575ce0
+ * (finding 680). */
 GameFileHandle* s_startup_streams[4];
-uint32_t s_startup_window_mode;
 char s_startup_output_path[260];
 char s_startup_token_list_path[260];
+#endif
+uint32_t s_startup_window_mode;
 BufferedCharReadHook s_buffered_char_read_hook;
 void* s_buffered_char_read_context;
 static DependencyConfigEntryHook s_dependency_config_hook;

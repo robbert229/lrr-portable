@@ -238,10 +238,13 @@ class ProgressTests(unittest.TestCase):
             self.assertEqual(result['accuracy_percent']['full'], 75.0)
             self.assertEqual(result['exact_function_code_bytes']['bytes'], 16)
             self.assertEqual(result['function_order_inversions']['game_only'], {'adjacent': 0, 'pairs': 0})
-            self.assertEqual(result['schema_version'], 5)
+            self.assertEqual(result['schema_version'], 6)
             self.assertEqual(result['identical_prefix']['first_difference'], None)
             self.assertEqual(result['correct_size_functions']['full']['mapped'], 2)
             self.assertEqual(result['unit_size_agreement']['eligible_units'], 0)
+            # Without a link map only .rdata has known bounds on the rebuilt side.
+            self.assertEqual(list(result['data_identity']['regions']), ['.rdata'])
+            self.assertEqual(result['data_identity']['regions']['.rdata']['identical_prefix']['first_difference'], None)
 
 if __name__ == '__main__':
     unittest.main()

@@ -49,3 +49,11 @@ agree = p.get("unit_size_agreement")
 if agree:
     print(f"Units with size agreement: {agree['units']} / {agree['eligible_units']} "
           f"(correct sizes {agree['correct_size_units']}, start {agree['start_agreeing_units']}, end {agree['end_agreeing_units']})")
+d = p.get("data_identity")
+if d:
+    parts = []
+    for name, r in d["regions"].items():
+        i = r["items"]
+        prefix = f"prefix {r['identical_prefix']['bytes']:,} B, " if "identical_prefix" in r else ""
+        parts.append(f"{name} {prefix}{i['at_original_offset']:,} of {i['paired']:,} items at original offset")
+    print("Data at original offsets: " + "; ".join(parts))

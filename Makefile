@@ -190,6 +190,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_cohort.py'
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_identity_metrics.py'
+	python3 -m unittest discover -s tools/tests -p 'test_data_identity.py'
 	python3 -m unittest discover -s tools/tests -p 'test_port_tail_inventory.py'
 	python3 -m unittest discover -s tools/tests -p 'test_unit_data_offsets.py'
 	python3 -m unittest discover -s tools/tests -p 'test_pe_audit.py'

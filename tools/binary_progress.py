@@ -8,6 +8,7 @@ import statistics
 from pathlib import Path
 
 from binary_progress_hash import input_hash
+import data_identity
 import identity_metrics
 import layout_progress
 from translation_units import Binary, load_functions, ROOT
@@ -18,7 +19,7 @@ def percent(n, d):
 
 
 RUN_LENGTH = 16
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 def run_bytes(original, rebuilt):
@@ -143,6 +144,12 @@ def report(orig_path, rebuilt_path, report_dir, opt_ref_dir=None):
             'accuracy_percent': {'game_only': mean(game), 'full': mean(full)}, 'pe_header_differences': headers}
     result.update(identity_metrics.measure(original, rebuilt, rebuilt_path.parent / 'LegoRR.map', funcs, full, game,
                                            entities, layout_progress.read_rows(layout_progress.RANGES)))
+    map_path = rebuilt_path.parent / 'LegoRR.map'
+    relink = opt_ref_dir / 'LegoRR.exe' if opt_ref_dir is not None else None
+    result['data_identity'] = data_identity.measure(
+        orig, rebuilt, map_path.read_text(errors='replace') if map_path.is_file() else '', entities,
+        layout_progress.read_rows(layout_progress.RANGES),
+        pefile.PE(str(relink)) if relink is not None and relink.is_file() else None)
     if opt_ref_dir is not None:
         result['opt_ref'] = opt_ref(orig_path, rebuilt_path, report_dir, opt_ref_dir)
     return result
