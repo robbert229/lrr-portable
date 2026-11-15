@@ -1805,6 +1805,7 @@ void front_menu_item_draw_select_text_window(Front_Menu** menu,
     int j;
     Front_MenuItem* item;
     Front_SelectData* select;
+    float pct;
 
     if (*menu == frontGlobs_mainMenuSet->menus[3] || *menu == frontGlobs_saveMenuSet->menus[0]) {
         if (*menu == frontGlobs_saveMenuSet->menus[0] && s_selectClickIndex >= 0) {
@@ -1818,47 +1819,50 @@ void front_menu_item_draw_select_text_window(Front_Menu** menu,
         text_buffer_reset_target(frontGlobs_saveTextWnd->textWindow);
         // STRING: LEGORR 0x004a238c
         text_buffer_append_format(frontGlobs_saveTextWnd->textWindow, "\n");
-        if (s_overlayIndex == -2) {
+        switch (s_overlayIndex) {
+        case -2:
             if (s_savedNextMenu != NULL) {
                 *nextMenu = s_savedNextMenu;
             }
             s_savedNextMenu = NULL;
             s_selectHoverIndex = -1;
             s_overlayShownIndex = -1;
-            goto reset;
-        } else if (s_overlayIndex == -1) {
-reset:
+            /* fall through */
+        case -1:
             *origMenu = NULL;
             s_selectClickIndex = -1;
             text_buffer_append_format(frontGlobs_saveTextWnd->textWindow,
                                       (*menu == frontGlobs_mainMenuSet->menus[3])
                                           ? frontGlobs_saveTextWnd->loadText
                                           : frontGlobs_saveTextWnd->saveText);
-        } else {
+            break;
+        default:
             s_savedNextMenu = *nextMenu;
             *nextMenu = *origMenu;
             s_overlayShownIndex = s_overlayIndex;
+            break;
         }
-        if (s_overlayShownIndex < 0) {
-            if (s_selectHoverIndex >= 0) {
-                text_buffer_append_format(frontGlobs_saveTextWnd->textWindow, "\n");
-                text_buffer_append_format(frontGlobs_saveTextWnd->textWindow,
-                                          frontGlobs_saveTextWnd->slotText,
-                                          (int)((float)s_saveSlotCompletion[s_selectHoverIndex] * 100.0f));
-            }
-        } else {
+        if (s_overlayShownIndex >= 0) {
             text_buffer_reset_target(frontGlobs_saveTextWnd->textWindow);
             if (*menu == frontGlobs_mainMenuSet->menus[3]) {
                 text_buffer_append_format(frontGlobs_saveTextWnd->textWindow,
                                           frontGlobs_saveTextWnd->slotNumberText,
                                           s_overlayShownIndex + 1, 0);
             }
+        } else if (s_selectHoverIndex >= 0) {
+            pct = (float)(unsigned int)s_saveSlotCompletion[s_selectHoverIndex];
+            if (pct > 100.0f) {
+                pct = 100.0f;
+            }
+            text_buffer_append_format(frontGlobs_saveTextWnd->textWindow, "\n");
+            text_buffer_append_format(frontGlobs_saveTextWnd->textWindow,
+                                      frontGlobs_saveTextWnd->slotText, (int)pct);
         }
         if (frontGlobs_saveTextWnd->textWindow != NULL) {
             text_buffer_draw_wrapped(frontGlobs_saveTextWnd->textWindow, 0, 1.0f, NULL);
         }
     }
-    if (*menu == frontGlobs_mainMenuSet->menus[3]) {
+    if (*menu == frontGlobs_mainMenuSet->menus[3] && frontGlobs_saveSlotFormat != NULL) {
         for (i = 0; i < (*menu)->itemCount; i++) {
             item = (*menu)->items[i];
             if (item->itemType == Front_MenuItem_Select) {

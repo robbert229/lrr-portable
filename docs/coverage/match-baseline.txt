@@ -1,4 +1,4 @@
-# input_sha256: ee39220f185cf07619e3ad82bbe7157e85becc0100b3acc1570d1257d5b04c53
+# input_sha256: 9c453be7207eaa9e51e0c4ea38882432edb5e2a31be75afeef62bcf57a34aa3b
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -433,7 +433,7 @@
 0x004121b0 96.28 front_menu_update_overlays
 0x00412450 100.00 front_menu_item_draw_select_item
 0x004124f0 79.43 front_menu_item_draw_save_image
-0x00412750 62.32 front_menu_item_draw_select_text_window
+0x00412750 90.39 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
 0x00412af0 96.10 front_menu_draw_menu_image
 0x00412c00 59.59 front_menu_update
@@ -3158,7 +3158,7 @@
 0x004121b0 96.28 front_menu_update_overlays
 0x00412450 100.00 front_menu_item_draw_select_item
 0x004124f0 79.43 front_menu_item_draw_save_image
-0x00412750 62.32 front_menu_item_draw_select_text_window
+0x00412750 90.39 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
 0x00412af0 96.10 front_menu_draw_menu_image
 0x00412c00 59.59 front_menu_update
