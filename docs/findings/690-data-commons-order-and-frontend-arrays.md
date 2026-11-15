@@ -2,8 +2,10 @@
 
 Issue #839: `.data` and the commons from their first breaks (finding 680
 follow-up 5, ADR 0006 decision 5.4). Measured with full matching builds under
-the gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`) on `main` `77022c16` and
-on this change. `data_identity` reads the original-mode relink (finding 687).
+the gate's link mode (`/DEBUG /OPT:REF /OPT:NOICF`), first on `main`
+`77022c16`, then rebased onto #844 (`identity/840-lego-state-size`
+`6da62c64`, stacked on #842 and #843). The tables give the figures against
+#844. `data_identity` reads the original-mode relink (finding 687).
 The commons mechanism comes from scratch links of small C objects with the
 MSVC 5.0 toolchain.
 
@@ -59,18 +61,18 @@ MSVC 5.0 toolchain.
 
 ## Before and after
 
-| Measure (`binary-progress.json`) | `main` `77022c16` | This change |
+| Measure (`binary-progress.json`) | #844 `6da62c64` | This change |
 | --- | ---: | ---: |
 | **Exact-function code bytes** | **351,876 (54.76%)** | **351,876 (54.76%)** |
 | Functions that rose / fell | | **2 / 0** |
 | Accuracy, full / game-only | 97.78% / 97.55% | 97.79% / 97.55% |
-| `.text` identical at original addresses | 6.92% (44,439 B) | 6.88% (44,198 B) |
-| `.data` / `.rdata` identical | 28.48% / 9.56% | 28.70% / 9.56% |
+| `.text` identical at original addresses | 6.98% (44,846 B) | 6.94% (44,616 B) |
+| `.data` / `.rdata` identical | 28.48% / 23.00% | 28.70% / 23.00% |
 | Identical prefix, raw / masked | 11 B / 7,187 B | same |
 | Correct-size functions, full | 2,811 | 2,811 |
 | Units with size agreement | 2 | 2 |
 | Entry point (original `0048f000`) | `0048ea60` | `0048ea50` (16 bytes further) |
-| SizeOfImage (original 3,608,576) | 3,596,288 | 3,596,288 |
+| SizeOfImage (original 3,608,576) | 3,600,384 | 3,600,384 |
 | Function-order inversions, full / game-only | 222 / 1 | 222 / 1 |
 | Data-offset agreement (`layout`) | 22 of 57 units | 22 of 57 |
 
@@ -85,12 +87,14 @@ Scores (Reccmp, full report):
 
 | Region | Rebuilt start (delta) | At original offset, before → after | First difference, after |
 | --- | --- | --- | --- |
-| `.rdata` | `0049e000` (0) | 0 of 95 → same | `0049e014`, −4 (unchanged) |
-| `.data` | `004a0000` (−4,096) | 192 (3,401 B) → **196 (3,464 B)** of 2,454 | `004a1d5c` `"LWO"`, +132 (unchanged) |
-| `.bss` | `004b1d30` (−4,224) | 1 (1,040 B) → same | `004b31c8` AITask.c, −8 (unchanged) |
-| commons | `00546c00` (−10,528) | 16 (59,256 B) → **17 (179,132 B)** of 61 | `00556fb8`, −3,848 (unchanged) |
+| `.rdata` | `0049e000` (0) | 8 (32 B) of 96 → same | `0049e048`, −20 (unchanged) |
+| `.data` | `004a1000` (0) | 192 (3,401 B) → **196 (3,464 B)** of 2,454 | `004a1d5c` `"LWO"`, +132 (unchanged) |
+| `.bss` | `004b2d30` (−128) | 1 (1,040 B) → same | `004b31c8` AITask.c, −8 (unchanged) |
+| commons | `00547c00` (−6,432) | 16 (59,256 B) → **17 (179,132 B)** of 61 | `00556fb8`, −3,848 (unchanged) |
 
-No item is at its original address in any region yet.
+No item is at its original address in any region yet. On `main` the
+figures were the same item counts, with `.data`, `.bss` and the commons
+starting 4,096, 4,224 and 10,528 bytes early.
 
 Neither rising function reaches 100%, so exact-function code bytes do not
 move.
@@ -103,8 +107,8 @@ SizeOfImage does not move. Two measures move away from the original:
   Objective.c's `00457d40` shrinks from 2,136 to 2,123 bytes, toward its
   original 2,112, but the unit segment as a whole is still short, so every
   function after it moves 16 bytes further from its original address.
-- **`.text` identical at original addresses falls by 241 bytes** (6.92% to
-  6.88%). The commons moved, so code operands that named them now hold
+- **`.text` identical at original addresses falls by 230 bytes** (6.98% to
+  6.94%; 241 bytes on `main`). The commons moved, so code operands that named them now hold
   other values, and the 16-byte shift moves the code after Objective.c.
   These are coincidence-driven bytes (finding 686 measured the same
   effect).
