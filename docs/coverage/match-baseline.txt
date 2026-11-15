@@ -1,4 +1,4 @@
-# input_sha256: d9778129185d9e65cc90247da0fb307f2fb5e2ec7c1440253daf5074c052238f
+# input_sha256: ee39220f185cf07619e3ad82bbe7157e85becc0100b3acc1570d1257d5b04c53
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -430,7 +430,7 @@
 0x00411f10 63.01 front_menu_item_draw_slider
 0x00412170 100.00 front_menu_get_overlay_count
 0x00412190 100.00 front_menu_should_random_play
-0x004121b0 75.93 front_menu_update_overlays
+0x004121b0 96.28 front_menu_update_overlays
 0x00412450 100.00 front_menu_item_draw_select_item
 0x004124f0 79.43 front_menu_item_draw_save_image
 0x00412750 62.32 front_menu_item_draw_select_text_window
@@ -440,7 +440,7 @@
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
-0x00413b80 77.72 front_run_screen_menu
+0x00413b80 83.85 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
 0x00413e60 100.00 front_menu_item_parse_type_string
 0x00413f00 100.00 mission_replace_char
@@ -783,11 +783,11 @@
 0x0042cb70 96.67 lego_camera_grid_expiry
 0x0042cc90 100.00 lego_load_terrain_map
 0x0042cd50 100.00 lego_upgrade_name_entry_find
-0x0042cda0 96.91 lego_entity_vehicle_type_table_load
-0x0042cf50 96.93 lego_entity_minifigure_type_table_load
-0x0042d100 96.93 lego_entity_rockmonster_type_table_load
-0x0042d2b0 96.91 lego_entity_building_types_load
-0x0042d460 96.75 lego_upgrade_types_load
+0x0042cda0 100.00 lego_entity_vehicle_type_table_load
+0x0042cf50 100.00 lego_entity_minifigure_type_table_load
+0x0042d100 100.00 lego_entity_rockmonster_type_table_load
+0x0042d2b0 100.00 lego_entity_building_types_load
+0x0042d460 100.00 lego_upgrade_types_load
 0x0042d600 100.00 lego_object_names_load
 0x0042da20 100.00 lego_object_the_names_load
 0x0042de40 92.31 lego_viewport_target_position_clamp
@@ -1281,7 +1281,7 @@
 0x0044f940 100.00 terrain_map_world_z_get
 0x0044fab0 91.78 terrain_map_world_normal_get
 0x0044fb90 77.33 terrain_map_world_edge_point_get
-0x0044fe70 97.99 terrain_map_world_z_unmodified_get
+0x0044fe70 100.00 terrain_map_world_z_unmodified_get
 0x00450060 45.07 terrain_map_block_first_vertex_get
 0x004500d0 100.00 terrain_map_block_vertices_get
 0x00450220 100.00 terrain_map_block_vertices_raw_get
@@ -1340,9 +1340,9 @@
 0x00452cc0 100.00 selected_entity_state_monitor
 0x00452d60 86.44 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
-0x00452e70 78.96 nerps_file_load_message_file
+0x00452e70 96.15 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
-0x00453220 90.60 nerps_shutdown
+0x00453220 100.00 nerps_shutdown
 0x004532e0 100.00 nerps_runtime_resolve_argument
 0x00453320 69.53 nerps_runtime_execute
 0x004538a0 100.00 nerpfunc_set_game_speed
@@ -1684,7 +1684,7 @@
 0x004588e0 100.00 objective_stop_showing_objective
 0x004589a0 100.00 objective_is_ended_original
 0x004589c0 90.57 lego_quit_poll_adapter
-0x00458be0 60.56 objective_tick_target
+0x00458be0 67.70 objective_tick_target
 0x00459050 100.00 objective_check_completed
 0x00459100 100.00 objective_callback_check_completed_object
 0x00459190 100.00 object_recall_store_minifigure
@@ -2018,7 +2018,7 @@
 0x0046c0f0 100.00 render_resource_binding_release
 0x0046c110 100.00 upgrade_part_move_animation
 0x0046c130 100.00 scene_object_set_animation_with_fallback
-0x0046c160 81.25 upgrade_load
+0x0046c160 100.00 upgrade_load
 0x0046c340 100.00 scene_indexed_record_list_rebuild_for_value
 0x0046c3d0 100.00 vehicle_is_camera_flip_dir
 0x0046c3f0 100.00 vehicle_set_activity
@@ -3155,7 +3155,7 @@
 0x00411f10 63.01 front_menu_item_draw_slider
 0x00412170 100.00 front_menu_get_overlay_count
 0x00412190 100.00 front_menu_should_random_play
-0x004121b0 75.93 front_menu_update_overlays
+0x004121b0 96.28 front_menu_update_overlays
 0x00412450 100.00 front_menu_item_draw_select_item
 0x004124f0 79.43 front_menu_item_draw_save_image
 0x00412750 62.32 front_menu_item_draw_select_text_window
@@ -3165,7 +3165,7 @@
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
-0x00413b80 77.72 front_run_screen_menu
+0x00413b80 83.85 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
 0x00413e60 100.00 front_menu_item_parse_type_string
 0x00413f00 100.00 mission_replace_char
@@ -3508,11 +3508,11 @@
 0x0042cb70 96.67 lego_camera_grid_expiry
 0x0042cc90 100.00 lego_load_terrain_map
 0x0042cd50 100.00 lego_upgrade_name_entry_find
-0x0042cda0 96.91 lego_entity_vehicle_type_table_load
-0x0042cf50 96.93 lego_entity_minifigure_type_table_load
-0x0042d100 96.93 lego_entity_rockmonster_type_table_load
-0x0042d2b0 96.91 lego_entity_building_types_load
-0x0042d460 96.75 lego_upgrade_types_load
+0x0042cda0 100.00 lego_entity_vehicle_type_table_load
+0x0042cf50 100.00 lego_entity_minifigure_type_table_load
+0x0042d100 100.00 lego_entity_rockmonster_type_table_load
+0x0042d2b0 100.00 lego_entity_building_types_load
+0x0042d460 100.00 lego_upgrade_types_load
 0x0042d600 100.00 lego_object_names_load
 0x0042da20 100.00 lego_object_the_names_load
 0x0042de40 92.31 lego_viewport_target_position_clamp
@@ -4006,7 +4006,7 @@
 0x0044f940 100.00 terrain_map_world_z_get
 0x0044fab0 91.78 terrain_map_world_normal_get
 0x0044fb90 77.33 terrain_map_world_edge_point_get
-0x0044fe70 97.99 terrain_map_world_z_unmodified_get
+0x0044fe70 100.00 terrain_map_world_z_unmodified_get
 0x00450060 45.07 terrain_map_block_first_vertex_get
 0x004500d0 100.00 terrain_map_block_vertices_get
 0x00450220 100.00 terrain_map_block_vertices_raw_get
@@ -4065,9 +4065,9 @@
 0x00452cc0 100.00 selected_entity_state_monitor
 0x00452d60 86.44 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
-0x00452e70 78.96 nerps_file_load_message_file
+0x00452e70 96.15 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
-0x00453220 90.60 nerps_shutdown
+0x00453220 100.00 nerps_shutdown
 0x004532e0 100.00 nerps_runtime_resolve_argument
 0x00453320 69.53 nerps_runtime_execute
 0x004538a0 100.00 nerpfunc_set_game_speed
@@ -4409,7 +4409,7 @@
 0x004588e0 100.00 objective_stop_showing_objective
 0x004589a0 100.00 objective_is_ended_original
 0x004589c0 90.57 lego_quit_poll_adapter
-0x00458be0 60.56 objective_tick_target
+0x00458be0 67.70 objective_tick_target
 0x00459050 100.00 objective_check_completed
 0x00459100 100.00 objective_callback_check_completed_object
 0x00459190 100.00 object_recall_store_minifigure
@@ -4743,7 +4743,7 @@
 0x0046c0f0 100.00 render_resource_binding_release
 0x0046c110 100.00 upgrade_part_move_animation
 0x0046c130 100.00 scene_object_set_animation_with_fallback
-0x0046c160 81.25 upgrade_load
+0x0046c160 100.00 upgrade_load
 0x0046c340 100.00 scene_indexed_record_list_rebuild_for_value
 0x0046c3d0 100.00 vehicle_is_camera_flip_dir
 0x0046c3f0 100.00 vehicle_set_activity

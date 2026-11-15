@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "gods98/mem_free.h"
 #include <string.h>
 
 #include "terrain_map.h"
@@ -137,14 +138,14 @@ TerrainMap* terrain_map_create(void* root, const char* filename,
                             }
                         }
                     }
-                    free(file);
+                    Mem_Free(file);
                     return map;
                 }
                 ledger_stub_00472a40_DDiSceneObjectDestroy(map->mesh);
             }
-            free(map);
+            Mem_Free(map);
         }
-        free(file);
+        Mem_Free(file);
     }
     return NULL;
 }

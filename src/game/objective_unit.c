@@ -11,6 +11,7 @@
  * are the live ones and nothing calls the unit. See objective_unit.h for
  * the records. */
 #include <stdlib.h>
+#include "gods98/mem_free.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -824,7 +825,7 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
                 (sfx_random_get_sample_play_time(sfxID) - 1.5f) * 25.0f;
             sfx_set_queue_mode_and_flush(1);
         }
-        free(objectiveGlobs.soundName);
+        Mem_Free(objectiveGlobs.soundName);
         objectiveGlobs.soundName = NULL;
     }
     objectiveGlobs.showing = showing;

@@ -1625,6 +1625,11 @@ void front_menu_item_draw_slider(Front_SliderData* slider, unsigned int x, unsig
     }
 }
 
+/* gods98 Memory.h's Mem_Free. Declared here, not with the includes, so
+ * that the symbol counter at 0x00411360 and the functions before it stays
+ * the one they were matched with (finding 538, rule B). */
+#include "gods98/mem_free.h"
+
 // FUNCTION: LEGORR 0x00412170
 int front_menu_get_overlay_count(Front_Menu* menu)
 {
@@ -1679,7 +1684,7 @@ void front_menu_update_overlays(Front_Menu* menu)
         }
         if (!flic_animate(frontGlobs_overlayImage, &area, endFrame != startFrame, 0)) {
             flic_close(frontGlobs_overlayImage);
-            free(frontGlobs_overlayImage);
+            Mem_Free(frontGlobs_overlayImage);
             frontGlobs_overlayImage = NULL;
             frontGlobs_overlayStartTime = 0;
             frontGlobs_overlayCurrTime = 0;
@@ -2430,7 +2435,7 @@ void front_run_screen_menu(Front_Menu* menu)
         if (transition && menuTransition) {
             if (menu->menuImage != nextMenu->menuImage && frontGlobs_overlayImage != NULL) {
                 flic_close(frontGlobs_overlayImage);
-                free(frontGlobs_overlayImage);
+                Mem_Free(frontGlobs_overlayImage);
                 sound_stream_stop_and_release(0);
                 frontGlobs_overlayImage = NULL;
                 frontGlobs_overlayStartTime = 0;
@@ -2458,7 +2463,7 @@ void front_run_screen_menu(Front_Menu* menu)
     }
     if (frontGlobs_overlayImage != NULL) {
         flic_close(frontGlobs_overlayImage);
-        free(frontGlobs_overlayImage);
+        Mem_Free(frontGlobs_overlayImage);
         sound_stream_stop_and_release(0);
         frontGlobs_overlayImage = NULL;
         frontGlobs_overlayStartTime = 0;

@@ -29,6 +29,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "gods98/mem_free.h"
 #include <string.h>
 
 #include "crt/vc5names.h"
@@ -1324,7 +1325,7 @@ int nerps_file_load_message_file(const char* filename)
                                         sizeof(NERPs_MessageImage) * (nerpsGlobs.imageCount + 1));
                                     unsigned int i;
                                     for (i = 0; i < nerpsGlobs.imageCount; i++) list[i] = nerpsGlobs.imageList[i];
-                                    if (nerpsGlobs.imageCount) free(nerpsGlobs.imageList);
+                                    if (nerpsGlobs.imageCount) Mem_Free(nerpsGlobs.imageList);
                                     list[nerpsGlobs.imageCount].key = key;
                                     list[nerpsGlobs.imageCount].image = image;
                                     nerpsGlobs.imageList = list;
@@ -1351,7 +1352,7 @@ int nerps_file_load_message_file(const char* filename)
                                         sizeof(NERPs_MessageSound) * (nerpsGlobs.soundCount + 1));
                                     unsigned int i;
                                     for (i = 0; i < nerpsGlobs.soundCount; i++) list[i] = nerpsGlobs.soundList[i];
-                                    if (nerpsGlobs.soundCount) free(nerpsGlobs.soundList);
+                                    if (nerpsGlobs.soundCount) Mem_Free(nerpsGlobs.soundList);
                                     list[nerpsGlobs.soundCount].key = key;
                                     list[nerpsGlobs.soundCount].sound = sound;
                                     nerpsGlobs.soundList = list;
@@ -1363,7 +1364,7 @@ int nerps_file_load_message_file(const char* filename)
                         char** list = (char**)malloc(sizeof(char*) * (lineCount + 1));
                         unsigned int i;
                         for (i = 0; i < lineCount; i++) list[i] = lines[i];
-                        if (lineCount) free(lines);
+                        if (lineCount) Mem_Free(lines);
                         list[lineCount] = (char*)s;
                         lineCount++;
                         lines = list;
@@ -1392,10 +1393,10 @@ int nerps_shutdown(void)
 {
     unsigned int i;
 
-    if (nerpsGlobs.scriptSize) free(nerpsGlobs.scriptBuffer);
+    if (nerpsGlobs.scriptSize) Mem_Free(nerpsGlobs.scriptBuffer);
     if (nerpsGlobs.messageBuffer) {
-        free(nerpsGlobs.messageBuffer);
-        if (nerpsGlobs.messageLines) free(nerpsGlobs.messageLines);
+        Mem_Free(nerpsGlobs.messageBuffer);
+        if (nerpsGlobs.messageLines) Mem_Free(nerpsGlobs.messageLines);
     }
     nerpsGlobs.messageBuffer = NULL;
     nerpsGlobs.messageLines = NULL;
@@ -1404,7 +1405,7 @@ int nerps_shutdown(void)
     for (i = 0; i < nerpsGlobs.soundCount; i++) sound_bank_entry_release(nerpsGlobs.soundList[i].sound);
     if (nerpsGlobs.soundCount > 0) {
         if (nerpsGlobs.soundList) {
-            free(nerpsGlobs.soundList);
+            Mem_Free(nerpsGlobs.soundList);
             nerpsGlobs.soundList = NULL;
         }
         nerpsGlobs.soundCount = 0;

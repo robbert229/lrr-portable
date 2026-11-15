@@ -5476,9 +5476,9 @@ int lego_entity_vehicle_type_table_load(void)
                     arrayItem = block_next_equal_key(arrayItem);
                 }
                 if (arrayItem == NULL) return 1;
-                free(legoGlobs_vehicleName);
+                lego_e_mem_free(legoGlobs_vehicleName);
             }
-            free(legoGlobs_vehicleData);
+            lego_e_mem_free(legoGlobs_vehicleData);
         }
     }
     return 0;
@@ -5513,9 +5513,9 @@ int lego_entity_minifigure_type_table_load(void)
                     arrayItem = block_next_equal_key(arrayItem);
                 }
                 if (arrayItem == NULL) return 1;
-                free(legoGlobs_miniFigureName);
+                lego_e_mem_free(legoGlobs_miniFigureName);
             }
-            free(legoGlobs_miniFigureData);
+            lego_e_mem_free(legoGlobs_miniFigureData);
         }
     }
     return 0;
@@ -5550,9 +5550,9 @@ int lego_entity_rockmonster_type_table_load(void)
                     arrayItem = block_next_equal_key(arrayItem);
                 }
                 if (arrayItem == NULL) return 1;
-                free(legoGlobs_rockMonsterName);
+                lego_e_mem_free(legoGlobs_rockMonsterName);
             }
-            free(legoGlobs_rockMonsterData);
+            lego_e_mem_free(legoGlobs_rockMonsterData);
         }
     }
     return 0;
@@ -5587,9 +5587,9 @@ int lego_entity_building_types_load(void)
                     arrayItem = block_next_equal_key(arrayItem);
                 }
                 if (arrayItem == NULL) return 1;
-                free(legoGlobs_buildingName);
+                lego_e_mem_free(legoGlobs_buildingName);
             }
-            free(legoGlobs_buildingData);
+            lego_e_mem_free(legoGlobs_buildingData);
         }
     }
     return 0;
@@ -5624,9 +5624,9 @@ int lego_upgrade_types_load(void)
                     arrayItem = block_next_equal_key(arrayItem);
                 }
                 if (arrayItem == NULL) return 1;
-                free(legoGlobs_upgradeName);
+                lego_e_mem_free(legoGlobs_upgradeName);
             }
-            free(s_upgrade_records);
+            lego_e_mem_free(s_upgrade_records);
         }
     }
     return 0;
