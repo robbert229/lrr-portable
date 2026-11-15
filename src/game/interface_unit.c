@@ -2953,7 +2953,10 @@ void interface_draw_dependencies(float x, float y)
                     }
                 }
 
-                image = (Image*)input_binding_default_value_get(list[i].objType, list[i].objIndex, entity_pool_find_by_callback_filtered_current(INTERFACE_OBJECT_CALLBACK(terrain_cell_resource_entry_matches), &list[i]) != 0);
+                if (entity_pool_find_by_callback_filtered_current(INTERFACE_OBJECT_CALLBACK(terrain_cell_resource_entry_matches), &list[i]))
+                    image = (Image*)input_binding_default_value_get(list[i].objType, list[i].objIndex, 1);
+                else
+                    image = (Image*)input_binding_default_value_get(list[i].objType, list[i].objIndex, 0);
                 if (image != NULL) {
                     pos.x -= (float)(int)image->width;
                     image_display_scaled(image, NULL, &pos, NULL);
