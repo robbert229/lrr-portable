@@ -1,4 +1,4 @@
-# input_sha256: d76ebe9caef6aecaf422d7d1278f8c29192c32dcdf26b63e88d17e694e8a0423
+# input_sha256: 05033bbd0238686fdb36795c3e6fa67d4b0fc8c1ff918fc098bd0d0a4ef9ac17
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1140,7 +1140,7 @@
 0x004470d0 100.00 legoobject_conditional_type_five_spawn
 0x004471b0 100.00 legoobject_try_create_linked_at_position
 0x00447210 85.07 legoobject_adjacent_placement_cell_search
-0x004473b0 88.79 legoobject_route_to_cell_command_issue
+0x004473b0 100.00 legoobject_route_to_cell_command_issue
 0x004474f0 100.00 legoobject_linked_proximity_response
 0x004475c0 100.00 legoobject_progress_negative_delta_handle
 0x00447730 100.00 legoobject_progress_advance_by_25
@@ -3865,7 +3865,7 @@
 0x004470d0 100.00 legoobject_conditional_type_five_spawn
 0x004471b0 100.00 legoobject_try_create_linked_at_position
 0x00447210 85.07 legoobject_adjacent_placement_cell_search
-0x004473b0 88.79 legoobject_route_to_cell_command_issue
+0x004473b0 100.00 legoobject_route_to_cell_command_issue
 0x004474f0 100.00 legoobject_linked_proximity_response
 0x004475c0 100.00 legoobject_progress_negative_delta_handle
 0x00447730 100.00 legoobject_progress_advance_by_25

@@ -7952,12 +7952,12 @@ int legoobject_route_to_cell_command_issue(Lego_Object* obj, int bx, int by, Leg
             legoobject_position_to_terrain_cell(obj, &objX, &objY);
             if (objX == bx && objY == by) {
                 result = legoobject_route_setup_and_marker_associate(obj, 1, (unsigned int*)&objX, (unsigned int*)&objY, NULL);
-            } else {
-                if (!legoobject_terrain_neighbor_path_check(obj, objX, objY, bx, by, &xs, &ys, &count, NULL, NULL))
-                    return 0;
+            } else if (legoobject_terrain_neighbor_path_check(obj, objX, objY, bx, by, &xs, &ys, &count, NULL, NULL)) {
                 result = legoobject_route_setup_and_marker_associate(obj, count, xs, ys, NULL);
                 free(xs);
                 free(ys);
+            } else {
+                return 0;
             }
             if (result) {
                 ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 5;
