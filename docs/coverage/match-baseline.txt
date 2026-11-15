@@ -1,4 +1,4 @@
-# input_sha256: 9c453be7207eaa9e51e0c4ea38882432edb5e2a31be75afeef62bcf57a34aa3b
+# input_sha256: e542320161e9160f68fa8df5637a37a70511ceddec1dca101e0c45d7f4bc548c
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -597,7 +597,7 @@
 0x0041a920 100.00 interface_reset
 0x0041a990 100.00 interface_reset_menu
 0x0041a9c0 100.00 interface_get_menu_item_type
-0x0041aa00 91.67 interface_init_object_items
+0x0041aa00 100.00 interface_init_object_items
 0x0041ab00 100.00 interface_load_object_items
 0x0041ada0 100.00 interface_load_menu_items
 0x0041afd0 100.00 interface_load_item_panels
@@ -1131,7 +1131,7 @@
 0x00445770 92.68 legoobject_behavior_callback_a
 0x00445830 75.77 legoobject_behavior_callback_b
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
-0x00445df0 92.34 legoobject_flag_gated_callback_b
+0x00445df0 99.55 legoobject_flag_gated_callback_b
 0x004460f0 90.21 legoobject_flag_gated_callback_a
 0x00446610 71.66 legoobject_movement_tick_scale_and_delta_get
 0x004468c0 100.00 legoobject_route_adjacent_step_append
@@ -2299,7 +2299,7 @@
 0x00479240 100.00 block_close
 0x00479270 70.18 block_record_create
 0x004792c0 100.00 block_record_remove
-0x004792e0 98.12 block_find
+0x004792e0 100.00 block_find
 0x00479490 100.00 block_text_token_pool_grow
 0x00479500 75.00 d3drm_vector_random
 0x00479510 90.00 d3drm_vector_rotate
@@ -3322,7 +3322,7 @@
 0x0041a920 100.00 interface_reset
 0x0041a990 100.00 interface_reset_menu
 0x0041a9c0 100.00 interface_get_menu_item_type
-0x0041aa00 91.67 interface_init_object_items
+0x0041aa00 100.00 interface_init_object_items
 0x0041ab00 100.00 interface_load_object_items
 0x0041ada0 100.00 interface_load_menu_items
 0x0041afd0 100.00 interface_load_item_panels
@@ -3856,7 +3856,7 @@
 0x00445770 92.68 legoobject_behavior_callback_a
 0x00445830 75.77 legoobject_behavior_callback_b
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
-0x00445df0 92.34 legoobject_flag_gated_callback_b
+0x00445df0 99.55 legoobject_flag_gated_callback_b
 0x004460f0 90.21 legoobject_flag_gated_callback_a
 0x00446610 71.66 legoobject_movement_tick_scale_and_delta_get
 0x004468c0 100.00 legoobject_route_adjacent_step_append
@@ -5024,7 +5024,7 @@
 0x00479240 100.00 block_close
 0x00479270 70.18 block_record_create
 0x004792c0 100.00 block_record_remove
-0x004792e0 98.12 block_find
+0x004792e0 100.00 block_find
 0x00479490 100.00 block_text_token_pool_grow
 0x00479500 75.00 d3drm_vector_random
 0x00479510 90.00 d3drm_vector_rotate

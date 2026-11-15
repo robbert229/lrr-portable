@@ -23,6 +23,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "gods98/mem_alloc.h"
 #include <string.h>
 
 #include "crt/vc5names.h"
@@ -5155,7 +5156,7 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
         if (s_terrain_path_depth != NULL)
             free(s_terrain_path_depth);
         s_terrain_path_depth_count = width * height;
-        s_terrain_path_depth = (unsigned int*)malloc(s_terrain_path_depth_count * sizeof(unsigned int));
+        s_terrain_path_depth = (unsigned int*)Mem_Alloc(s_terrain_path_depth_count * sizeof(unsigned int));
     }
     if (s_terrain_path_depth != NULL) {
         memset(s_terrain_path_depth, 0, width * height * sizeof(unsigned int));
@@ -5214,8 +5215,8 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
         if (found == -1)
             return 0;
 
-        xs = (unsigned int*)malloc(step * sizeof(unsigned int));
-        if (xs != NULL && (ys = (unsigned int*)malloc(step * sizeof(unsigned int))) != NULL) {
+        xs = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int));
+        if (xs != NULL && (ys = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int))) != NULL) {
             k = step - 1;
             cx = endX;
             cy = endY;
@@ -5312,7 +5313,7 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
         if (s_terrain_neighbor_path_cost != NULL)
             free(s_terrain_neighbor_path_cost);
         s_terrain_path_depth_count = width * height;
-        s_terrain_neighbor_path_cost = (float*)malloc(s_terrain_path_depth_count * sizeof(float));
+        s_terrain_neighbor_path_cost = (float*)Mem_Alloc(s_terrain_path_depth_count * sizeof(float));
     }
     if (s_terrain_neighbor_path_cost != NULL) {
         memset(s_terrain_neighbor_path_cost, 0, width * height * sizeof(float));
@@ -5397,8 +5398,8 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
             unsigned int bestPos[2];
 
             count = step;
-            xs = (unsigned int*)malloc(step * sizeof(unsigned int));
-            if (xs != NULL && (ys = (unsigned int*)malloc(step * sizeof(unsigned int))) != NULL) {
+            xs = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int));
+            if (xs != NULL && (ys = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int))) != NULL) {
                 last = step - 1;
                 xs[last] = endX;
                 ys[last] = endY;

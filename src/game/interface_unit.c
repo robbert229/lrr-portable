@@ -66,6 +66,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "gods98/mem_alloc.h"
 #include <string.h>
 
 #include "interface_unit.h"
@@ -407,26 +408,26 @@ int interface_get_menu_item_type(const char* name, int* type)
 // FUNCTION: LEGORR 0x0041aa00
 void interface_init_object_items(void)
 {
-    interfaceGlobs.vehicleItemClicks = (unsigned int*)malloc(
+    interfaceGlobs.vehicleItemClicks = (unsigned int*)Mem_Alloc(
         sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
     memset(interfaceGlobs.vehicleItemClicks, 0,
            sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
     interfaceGlobs.vehicleItemF2keys =
-        (unsigned char*)malloc(LEGO_VEHICLE_TYPE_COUNT);
+        (unsigned char*)Mem_Alloc(LEGO_VEHICLE_TYPE_COUNT);
     memset(interfaceGlobs.vehicleItemF2keys, 0, LEGO_VEHICLE_TYPE_COUNT);
-    interfaceGlobs.vehicleItemFlags = (unsigned int*)malloc(
+    interfaceGlobs.vehicleItemFlags = (unsigned int*)Mem_Alloc(
         sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
     memset(interfaceGlobs.vehicleItemFlags, 0,
            sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
 
-    interfaceGlobs.buildingItemClicks = (unsigned int*)malloc(
+    interfaceGlobs.buildingItemClicks = (unsigned int*)Mem_Alloc(
         sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
     memset(interfaceGlobs.buildingItemClicks, 0,
            sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
     interfaceGlobs.buildingItemF2keys =
-        (unsigned char*)malloc(LEGO_BUILDING_TYPE_COUNT);
+        (unsigned char*)Mem_Alloc(LEGO_BUILDING_TYPE_COUNT);
     memset(interfaceGlobs.buildingItemF2keys, 0, LEGO_BUILDING_TYPE_COUNT);
-    interfaceGlobs.buildingItemFlags = (unsigned int*)malloc(
+    interfaceGlobs.buildingItemFlags = (unsigned int*)Mem_Alloc(
         sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
     memset(interfaceGlobs.buildingItemFlags, 0,
            sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);

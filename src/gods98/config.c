@@ -12,6 +12,7 @@
  * depth (finding 12); lookups walk the list. */
 #include <stdarg.h>
 #include <stdlib.h>
+#include "gods98/mem_alloc.h"
 #include <string.h>
 
 #include "config.h"
@@ -291,7 +292,7 @@ BlockRec* block_find(BlockFile* conf, const char* path)
     int wildcard;
     char* s;
 
-    temp = (char*)malloc(strlen(path) + 1);
+    temp = (char*)Mem_Alloc(strlen(path) + 1);
     strcpy(temp, path);
     count = sound_variant_split(temp, argv, "::");
 
