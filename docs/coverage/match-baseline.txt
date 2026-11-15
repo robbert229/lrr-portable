@@ -1,4 +1,4 @@
-# input_sha256: 9f346ee8de4094c0f582353b1afec1b8c02341657971e4f446285bbade2ef69f
+# input_sha256: 39fc4499064526d5a99c33246bff78e86f4e1d20093c233e73579a9432d20d51
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1824,8 +1824,8 @@
 0x00461790 100.00 reward_draw_item
 0x00461c90 100.00 reward_draw_score
 0x00461dd0 100.00 reward_do_buttons
-0x00462030 63.75 reward_save_menu
-0x00462270 91.84 reward_advance
+0x00462030 94.18 reward_save_menu
+0x00462270 93.81 reward_advance
 0x00462390 100.00 reward_debug_keys
 0x00462460 100.00 reward_restart_flic
 0x004624a0 79.23 reward_update_state
@@ -1845,7 +1845,7 @@
 0x004629d0 93.67 reward_scroll_add_label
 0x00462ab0 100.00 reward_scroll_length_set
 0x00462ac0 100.00 reward_scroll_flags_set
-0x00462ad0 96.44 reward_scroll_update
+0x00462ad0 97.27 reward_scroll_update
 0x00462da0 100.00 roof_initialise
 0x00462e60 100.00 roof_set_texture
 0x00462ed0 100.00 roof_shutdown
@@ -4549,8 +4549,8 @@
 0x00461790 100.00 reward_draw_item
 0x00461c90 100.00 reward_draw_score
 0x00461dd0 100.00 reward_do_buttons
-0x00462030 63.75 reward_save_menu
-0x00462270 91.84 reward_advance
+0x00462030 94.18 reward_save_menu
+0x00462270 93.81 reward_advance
 0x00462390 100.00 reward_debug_keys
 0x00462460 100.00 reward_restart_flic
 0x004624a0 79.23 reward_update_state
@@ -4570,7 +4570,7 @@
 0x004629d0 93.67 reward_scroll_add_label
 0x00462ab0 100.00 reward_scroll_length_set
 0x00462ac0 100.00 reward_scroll_flags_set
-0x00462ad0 96.44 reward_scroll_update
+0x00462ad0 97.27 reward_scroll_update
 0x00462da0 100.00 roof_initialise
 0x00462e60 100.00 roof_set_texture
 0x00462ed0 100.00 roof_shutdown

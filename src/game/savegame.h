@@ -15,7 +15,10 @@
  * symbol numbering does not change. */
 #if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(LEGORRR_FRONTEND_UNIT_C)
 #define sav_tree_load front_levels_update_available /* 004173e0 */
-#define save_commit front_save_write_current_save_file /* 00417fc0 */
+/* Front_Save_WriteCurrentSaveFile takes no argument: the macro drops the
+ * port's, as save_mark_record's does (the declaration below becomes an
+ * old-style one). */
+#define save_commit(ctx) front_save_write_current_save_file() /* 00417fc0 */
 #endif
 
 #include <stddef.h>

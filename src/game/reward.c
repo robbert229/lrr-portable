@@ -1254,15 +1254,24 @@ void reward_save_menu(void)
                     current_selection_context_set(NULL);
                 }
                 if (sav_build_ctx_target()) {
-                    if (sav_build_ctx_target() != save && save)
+                    if (sav_build_ctx_target() != save && save) {
                         options_context_copy_and_replace_resource_target(snapshot);
-                    save_mark_record(NULL, REWARD_LEVEL_INDEX(
-                        ((RewardLegoLevel*)level_current_owner_get())->name));
-                    save_write_record_target(REWARD_LEVEL_INDEX(level->name),
-                                             (const uint8_t*)current);
-                    render_config_six_field_copy_out(render);
-                    options_context_six_field_set_target(render);
-                    save_commit(NULL);
+                        save_mark_record(NULL, REWARD_LEVEL_INDEX(
+                            ((RewardLegoLevel*)level_current_owner_get())->name));
+                        save_write_record_target(REWARD_LEVEL_INDEX(level->name),
+                                                 (const uint8_t*)current);
+                        render_config_six_field_copy_out(render);
+                        options_context_six_field_set_target(render);
+                        save_commit(NULL);
+                    } else {
+                        save_mark_record(NULL, REWARD_LEVEL_INDEX(
+                            ((RewardLegoLevel*)level_current_owner_get())->name));
+                        save_write_record_target(REWARD_LEVEL_INDEX(level->name),
+                                                 (const uint8_t*)current);
+                        render_config_six_field_copy_out(render);
+                        options_context_six_field_set_target(render);
+                        save_commit(NULL);
+                    }
                 } else {
                     REWARD_LEVEL_INDEX(((RewardLegoLevel*)level_current_owner_get())->name);
                 }

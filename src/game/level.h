@@ -37,6 +37,12 @@ uint32_t grid_record_count_get(int row, int column, int slot); /* 004374a0 */
 #define entity_type_grid_record_count_get nerps_object_count
 #endif
 uint32_t entity_type_grid_record_count_get(const char* type_name, int slot); /* 00455300 */
+/* Objective_HasAchieved (00458650) takes no argument; the macro drops
+ * the port's in the matching build's C callers, and rewrites this
+ * declaration into an old-style one. */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+#define level_objective_result_get(s) level_objective_result_get()
+#endif
 int level_objective_result_get(const struct LevelState* s); /* 00458650 */
 
 #ifdef __cplusplus
