@@ -25,7 +25,6 @@ gods98_sources = [
   'file_list_streams.cpp',
   'text_window_port.cpp',
   'flic_port.cpp',
-  'input_unit.cpp',
   'bitmap_font_port.cpp',
   'ptrstack.cpp',
   'message.cpp',
@@ -95,6 +94,7 @@ gods98_c_sources = [
   'mesh_unit.c',
   'flic_unit.c',
   'images_unit.c',
+  'input_unit.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 gods98_c_as_cpp = []

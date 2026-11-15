@@ -662,13 +662,13 @@ src/gods98/init_port.cpp
 src/gods98/input.cpp
 src/gods98/input.h
 src/gods98/input.hpp
-src/gods98/input_for_input_unit.hpp
 src/gods98/input_for_interface.hpp
 src/gods98/input_for_terrain_map.hpp
 src/gods98/input_from_interface.hpp
 src/gods98/input_keys.h
 src/gods98/input_shared.hpp
-src/gods98/input_unit.cpp
+src/gods98/input_unit.c
+src/gods98/input_unit.h
 src/gods98/keys.c
 src/gods98/keys.h
 src/gods98/lwo.c

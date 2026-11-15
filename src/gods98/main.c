@@ -19,9 +19,7 @@
  * (finding 679). Thirteen of its fields are shared with the port, which
  * defines them under its own names in other files (main_imports.h lists
  * them); in the matching build those names are mainGlobs fields
- * (main_globs.h), here and in every unit that reads them. The file also
- * holds the commons of Input.c that the converted units share, after the
- * last function.
+ * (main_globs.h), here and in every unit that reads them.
  *
  * C-compatible (ADR 0005): C in the matching build, C++ in the MinGW
  * reference build. */
@@ -1086,44 +1084,5 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
 
     return result;
 }
-
-
-/* Input.c's state that the port's own Input.c (input.cpp, input_unit.cpp)
- * and the converted units share: the two key maps and the mouse words. The
- * original keeps them in the commons (0076aa00-0076ac80), outside every
- * unit's .bss, so these are tentative definitions, as objective_unit.c's
- * lClicked (0076ab48). Input.c is not converted, so they are here, after
- * every function, where they move no symbol counter (finding 538). Natively
- * input.cpp and port_state.cpp define them (finding 679). */
-#ifdef __cplusplus
-extern "C" {
-#endif
-// GLOBAL: LEGORR 0x0076aa00
-unsigned char s_global_previous_keys[256];
-// GLOBAL: LEGORR 0x0076ab24
-unsigned int s_renderer_word_a;
-// GLOBAL: LEGORR 0x0076ab28
-unsigned int s_renderer_word_b;
-// GLOBAL: LEGORR 0x0076ab34
-int s_cursor_delta_x;
-// GLOBAL: LEGORR 0x0076ab38
-int s_cursor_delta_y;
-// GLOBAL: LEGORR 0x0076ab3c
-unsigned int g_renderer_word_c;
-// GLOBAL: LEGORR 0x0076ab40
-unsigned int s_window_mouse_word_40;
-// GLOBAL: LEGORR 0x0076ab4c
-unsigned int s_window_mouse_word_4c;
-// GLOBAL: LEGORR 0x0076ab50
-unsigned int s_window_mouse_word_50;
-// GLOBAL: LEGORR 0x0076ab54
-unsigned int s_window_mouse_word_54;
-// GLOBAL: LEGORR 0x0076ab58
-unsigned int s_window_mouse_word_58;
-// GLOBAL: LEGORR 0x0076ab80
-unsigned char s_global_current_keys[256];
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* !LEGORRR_BACKEND_MINIWIN */

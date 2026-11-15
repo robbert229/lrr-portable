@@ -623,8 +623,8 @@ uint32_t selection_marker_count_peek(void) { return s_marker_count; }
  * has no ported writer; each word lands as a zero-init static and the six
  * getters answer their installed half (the unowned-global deviation, per the
  * DAT-window convention). The install hooks are port-side. */
-/* Input.c's mouse words (0076ab24-0076ab58, commons): main.c defines them
- * in the Windows builds (finding 679), the port natively. */
+/* Input.c's mouse words (0076ab24-0076ab58, commons): input_unit.c defines
+ * them in the Windows builds (finding 683), the port natively. */
 #if !defined(LEGORRR_BACKEND_WINAPI)
 uint32_t s_renderer_word_a;              /* DAT_0076ab24 */
 uint32_t s_renderer_word_b;              /* DAT_0076ab28 */

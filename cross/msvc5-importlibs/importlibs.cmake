@@ -31,7 +31,8 @@ foreach(_member IN ITEMS sdk_exports dilib1 dilib2)
     DEPENDS "${_lrr_il_src}/${_member}.c" "${_lrr_il_src}/dinput_formats.h"
     WORKING_DIRECTORY "${_lrr_il_out}" VERBATIM)
 endforeach()
-foreach(_guid IN ITEMS GUID_XAxis GUID_YAxis GUID_ZAxis GUID_Key)
+foreach(_guid IN ITEMS GUID_XAxis GUID_YAxis GUID_ZAxis GUID_Key
+    GUID_SysKeyboard)
   add_custom_command(OUTPUT "${_lrr_il_out}/${_guid}.obj"
     COMMAND ${_lrr_il_cl} "/DDXGUID_${_guid}" "${_lrr_il_src}/dxguid.c"
       "/Fo${_guid}.obj"
@@ -55,9 +56,10 @@ add_custom_command(OUTPUT "${_lrr_il_out}/dsound.lib"
   WORKING_DIRECTORY "${_lrr_il_out}" VERBATIM)
 add_custom_command(OUTPUT "${_lrr_il_out}/dxguid.lib"
   COMMAND ${_lrr_il_lib} /out:dxguid.lib GUID_XAxis.obj GUID_YAxis.obj
-    GUID_ZAxis.obj GUID_Key.obj
+    GUID_ZAxis.obj GUID_Key.obj GUID_SysKeyboard.obj
   DEPENDS "${_lrr_il_out}/GUID_XAxis.obj" "${_lrr_il_out}/GUID_YAxis.obj"
     "${_lrr_il_out}/GUID_ZAxis.obj" "${_lrr_il_out}/GUID_Key.obj"
+    "${_lrr_il_out}/GUID_SysKeyboard.obj"
   WORKING_DIRECTORY "${_lrr_il_out}" VERBATIM)
 
 set(LRR_IMPORTLIB_FILES "${_lrr_il_out}/dinput.lib" "${_lrr_il_out}/dsound.lib"
