@@ -2549,55 +2549,55 @@ int interface_do_action(int type)
         mask = 0x10;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 21:
         mask = 0x8;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 28:
         mask = 0x4;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 27:
         mask = 0x2;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 30:
         mask = 0x20;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 29:
         mask = 0x40;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 66:
         command_context_post_to_hud(18, NULL);

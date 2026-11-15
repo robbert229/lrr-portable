@@ -1,4 +1,4 @@
-# input_sha256: 92e5d46e8ea370038190c0a0308d151fb6853efa66e8478c5a6b02852da3b349
+# input_sha256: a85a534165b2c68bb5649668222f7f0482efcbee64bda81e415b0ec454a5862e
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -643,7 +643,7 @@
 0x0041cfe0 100.00 selection_mode5_cancel_at_point
 0x0041d010 100.00 interface_back_to_main_if_selected
 0x0041d040 94.92 interface_is_item_available
-0x0041dca0 87.34 interface_do_action
+0x0041dca0 88.91 interface_do_action
 0x0041e750 100.00 selection_clear_request_and_hud_reset
 0x0041e770 100.00 interface_set_item_flash
 0x0041e7a0 100.00 interface_set_object_item_flash
@@ -3368,7 +3368,7 @@
 0x0041cfe0 100.00 selection_mode5_cancel_at_point
 0x0041d010 100.00 interface_back_to_main_if_selected
 0x0041d040 94.92 interface_is_item_available
-0x0041dca0 87.34 interface_do_action
+0x0041dca0 88.91 interface_do_action
 0x0041e750 100.00 selection_clear_request_and_hud_reset
 0x0041e770 100.00 interface_set_item_flash
 0x0041e7a0 100.00 interface_set_object_item_flash
