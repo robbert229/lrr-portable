@@ -1,4 +1,4 @@
-# input_sha256: 05033bbd0238686fdb36795c3e6fa67d4b0fc8c1ff918fc098bd0d0a4ef9ac17
+# input_sha256: 67f607c6c6162f43c2a80024c9a710c2aa5008a12a7bb25f98f61883c99e7788
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -280,7 +280,7 @@
 0x0040b850 100.00 packed_grid_cell_value_get
 0x0040b880 100.00 scene_cell_visual_channels_apply
 0x0040ba00 100.00 detail_place_mesh
-0x0040bb90 43.15 detail_set_mesh_frame
+0x0040bb90 47.13 detail_set_mesh_frame
 0x0040bd60 100.00 detail_matrix_setup
 0x0040bdc0 100.00 ledger_stub_0040bdc0_SetTimeoutTo10000
 0x0040bde0 100.00 effect_spawn_boulder_explode
@@ -374,7 +374,7 @@
 0x0040fe60 100.00 ptrstack_pop
 0x0040fe90 100.00 ptrstack_for_each
 0x0040fec0 100.00 random_unit_float
-0x0040fed0 36.62 steering_item_spread_tuning
+0x0040fed0 58.82 steering_item_spread_tuning
 0x0040ff50 100.00 scene_object_list_apply_float_callback
 0x0040ff70 100.00 object_vector3_set
 0x0040ff90 100.00 steering_item_set_tuning
@@ -3005,7 +3005,7 @@
 0x0040b850 100.00 packed_grid_cell_value_get
 0x0040b880 100.00 scene_cell_visual_channels_apply
 0x0040ba00 100.00 detail_place_mesh
-0x0040bb90 43.15 detail_set_mesh_frame
+0x0040bb90 47.13 detail_set_mesh_frame
 0x0040bd60 100.00 detail_matrix_setup
 0x0040bdc0 100.00 ledger_stub_0040bdc0_SetTimeoutTo10000
 0x0040bde0 100.00 effect_spawn_boulder_explode
@@ -3099,7 +3099,7 @@
 0x0040fe60 100.00 ptrstack_pop
 0x0040fe90 100.00 ptrstack_for_each
 0x0040fec0 100.00 random_unit_float
-0x0040fed0 36.62 steering_item_spread_tuning
+0x0040fed0 58.82 steering_item_spread_tuning
 0x0040ff50 100.00 scene_object_list_apply_float_callback
 0x0040ff70 100.00 object_vector3_set
 0x0040ff90 100.00 steering_item_set_tuning
