@@ -1,4 +1,4 @@
-# input_sha256: 8d53b7cc870c4664c55b20385f5b0cec5245c6a3da410c68cb15b0cc13243443
+# input_sha256: 5547d06769673ad2874b1e88e628e27ec4b89cc58b40b8b3dfc25f3a4d7171a2
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -331,7 +331,7 @@
 0x0040d850 59.97 electric_fence_spark
 0x0040dc20 100.00 electric_fence_beam_create
 0x0040dd90 100.00 electric_fence_block_vector_get
-0x0040de40 99.51 electric_fence_object_strike
+0x0040de40 100.00 electric_fence_object_strike
 0x0040e0c0 100.00 electric_fence_object_beam
 0x0040e1e0 100.00 electric_fence_stud_fits
 0x0040e350 100.00 electric_fence_stud_set
@@ -393,7 +393,7 @@
 0x004103f0 100.00 front_rock_wipe_play
 0x00410440 100.00 front_rock_wipe_stop
 0x00410450 100.00 front_cache_find_by_name
-0x00410490 98.21 front_cache_create
+0x00410490 100.00 front_cache_create
 0x00410520 100.00 front_cache_load_image
 0x00410560 100.00 front_cache_load_font
 0x004105a0 100.00 front_util_string_copy
@@ -414,13 +414,13 @@
 0x00410e20 100.00 front_menu_item_create_image_item
 0x00410f30 100.00 front_menu_free_menu
 0x00410fb0 100.00 front_menu_load_menu_image
-0x00411100 73.53 front_menu_create_menu
+0x00411100 87.25 front_menu_create_menu
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
 0x00411360 91.84 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
-0x00411530 86.43 front_menu_get_item_bounds
+0x00411530 88.38 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
 0x00411840 100.00 front_menu_was_mouse_released
 0x00411870 90.70 front_menu_item_slider_handle_input
@@ -3056,7 +3056,7 @@
 0x0040d850 59.97 electric_fence_spark
 0x0040dc20 100.00 electric_fence_beam_create
 0x0040dd90 100.00 electric_fence_block_vector_get
-0x0040de40 99.51 electric_fence_object_strike
+0x0040de40 100.00 electric_fence_object_strike
 0x0040e0c0 100.00 electric_fence_object_beam
 0x0040e1e0 100.00 electric_fence_stud_fits
 0x0040e350 100.00 electric_fence_stud_set
@@ -3118,7 +3118,7 @@
 0x004103f0 100.00 front_rock_wipe_play
 0x00410440 100.00 front_rock_wipe_stop
 0x00410450 100.00 front_cache_find_by_name
-0x00410490 98.21 front_cache_create
+0x00410490 100.00 front_cache_create
 0x00410520 100.00 front_cache_load_image
 0x00410560 100.00 front_cache_load_font
 0x004105a0 100.00 front_util_string_copy
@@ -3139,13 +3139,13 @@
 0x00410e20 100.00 front_menu_item_create_image_item
 0x00410f30 100.00 front_menu_free_menu
 0x00410fb0 100.00 front_menu_load_menu_image
-0x00411100 73.53 front_menu_create_menu
+0x00411100 87.25 front_menu_create_menu
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
 0x00411360 91.84 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
-0x00411530 86.43 front_menu_get_item_bounds
+0x00411530 88.38 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
 0x00411840 100.00 front_menu_was_mouse_released
 0x00411870 90.70 front_menu_item_slider_handle_input

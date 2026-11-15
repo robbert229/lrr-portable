@@ -497,8 +497,8 @@ Front_Cache* front_cache_create(const char* name)
             cache = (Front_Cache*)malloc(sizeof(Front_Cache));
             cache->path = (char*)malloc(strlen(name) + 1);
             strcpy(cache->path, name);
-            cache->image = NULL;
             cache->next = s_cacheList;
+            cache->image = NULL;
             cache->font = NULL;
             s_cacheList = cache;
         return cache;
@@ -1033,15 +1033,15 @@ Front_Menu* front_menu_create_menu(const char* title, const char* fullName,
         return NULL;
     }
     menu->menuFont = menuFont;
+    menu->xPos = xPos;
     menu->yPos = yPos;
     menu->autoCenter = autoCenter;
-    menu->displayTitle = displayTitle;
-    menu->xPos = xPos;
     menu->itemCapacity = 15;
     menu->itemCount = 0;
     menu->itemFocus = 0;
     menu->closed = 0;
     menu->centerOffset = centerOffset;
+    menu->displayTitle = displayTitle;
     menu->flags = canScroll ? 2 : 0;
     if (anchored != NULL) {
         menu->anchored = 1;
@@ -1195,9 +1195,9 @@ int front_menu_get_item_bounds(Front_Menu* menu, int index, int* rcX, int* rcY,
     item = menu->items[index];
     switch (item->itemType) {
     case Front_MenuItem_Slider:
+        slider = (Front_SliderData*)item->itemData;
         x = item->centerOffHi + menu->xPos + item->x1;
         y = menu->yPos + item->y1;
-        slider = (Front_SliderData*)item->itemData;
         width = formatted_text_printf_width((menu->itemFocus == index) ? item->fontHi : item->fontLo,
                                             item->banner);
         height = object_field_be4_dword_get((menu->itemFocus == index) ? menu->items[index]->fontHi

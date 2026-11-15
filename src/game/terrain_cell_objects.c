@@ -544,9 +544,9 @@ int electric_fence_object_strike(ElectricFenceObject* object)
                     dist = (float)sqrt((pos.x - blockPos.x) * (pos.x - blockPos.x) +
                                        (pos.y - blockPos.y) * (pos.y - blockPos.y));
                     if (dist < bestDist || 0.0f == bestDist) {
-                        found = 1;
                         bestDist = dist;
                         best = i;
+                        found = 1;
                     }
                 }
             }

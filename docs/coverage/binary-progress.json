@@ -1,15 +1,15 @@
 {
   "accuracy_percent": {
-    "full": 98.04,
-    "game_only": 97.83
+    "full": 98.05,
+    "game_only": 97.84
   },
-  "baseline_sha256": "2935e232e55952767bc2c56a9e035dcfbb50cc6ea42297c3f6bb8bc7a03c80c7",
+  "baseline_sha256": "cf2be463709f961d36184d0af5908ad4e728f45dc0c730342ddc900acdadf966",
   "correct_size_functions": {
     "full": {
       "bytes": 487609,
       "compared": 3017,
       "count": 2838,
-      "exact_functions": 2690,
+      "exact_functions": 2692,
       "mapped": 3019,
       "uncompared": 2
     },
@@ -17,7 +17,7 @@
       "bytes": 436776,
       "compared": 2721,
       "count": 2546,
-      "exact_functions": 2401,
+      "exact_functions": 2403,
       "mapped": 2723,
       "uncompared": 2
     },
@@ -255,9 +255,9 @@
     }
   },
   "exact_function_code_bytes": {
-    "bytes": 360312,
+    "bytes": 361082,
     "original_text_bytes": 642549,
-    "percent": 56.08
+    "percent": 56.2
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 7805,
@@ -304,7 +304,7 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "8d53b7cc870c4664c55b20385f5b0cec5245c6a3da410c68cb15b0cc13243443",
+  "input_sha256": "5547d06769673ad2874b1e88e628e27ec4b89cc58b40b8b3dfc25f3a4d7171a2",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 54,
@@ -1280,10 +1280,10 @@
       "units": 226
     },
     "unit_relative_identity": {
-      "identical_bytes": 291653,
+      "identical_bytes": 292423,
       "method": "whole function byte identity; image-address operands and external relative branches masked; missing functions count against original bytes",
       "original_bytes": 553892,
-      "percent": 52.66
+      "percent": 52.79
     },
     "units": [
       {
@@ -1447,8 +1447,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 1,
         "functions": 24,
-        "identical_function_bytes": 3252,
-        "identity_percent": 64.96,
+        "identical_function_bytes": 3884,
+        "identity_percent": 77.59,
         "mapped": 24,
         "original_function_bytes": 5006,
         "size_exact": false,
@@ -1507,8 +1507,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 126,
         "functions": 132,
-        "identical_function_bytes": 14309,
-        "identity_percent": 48.61,
+        "identical_function_bytes": 14447,
+        "identity_percent": 49.08,
         "mapped": 132,
         "original_function_bytes": 29437,
         "size_exact": false,
@@ -4014,18 +4014,18 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 11
   },
-  "listing_digests_sha256": "7e7fe0f43838115cbde8e6cc59240bcd0c87d95012d4418c4bb3221ce8a0fc76",
+  "listing_digests_sha256": "56b4601b9322113c3fafeeb9fb067116daa23f6b4730ef8a00723ccb4b0835e3",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 2690,
+        "exact": 2692,
         "mapped": 3019,
         "removed": 0,
         "removed_exact": null
       },
       "game_only": {
-        "exact": 2401,
+        "exact": 2403,
         "mapped": 2723,
         "removed": 0,
         "removed_exact": null
@@ -4117,8 +4117,8 @@
           "rebuilt": 10744
         },
         ".text": {
-          "differing": 583745,
-          "equal": 58804,
+          "differing": 583742,
+          "equal": 58807,
           "original": 642549,
           "rebuilt": 641797
         }
@@ -4204,7 +4204,7 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 6.32,
-      "identical_bytes": 58780,
+      "identical_bytes": 58783,
       "identical_percent": 9.15,
       "original_bytes": 642549,
       "rebuilt_bytes": 641797,
@@ -4241,8 +4241,8 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 6.33,
-    "identical_bytes": 58823,
-    "identical_percent": 9.15,
+    "identical_bytes": 58826,
+    "identical_percent": 9.16,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
