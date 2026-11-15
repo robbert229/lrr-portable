@@ -418,8 +418,11 @@ void engine_callback_triplet_shutdown_dispatch(void)
 }
 
 // WindowModeFlagSet records the mode selected by renderer startup.
-// GLOBAL: LEGORR 0x005764f4
+/* In the matching build the flag is G98-028's own field
+ * (file_list_streams.cpp, finding 684). */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 uint32_t s_window_mode_flag;
+#endif
 
 static void engine_pre_tick_context_run(EngineContext* ctx)
 {

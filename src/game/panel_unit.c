@@ -57,6 +57,13 @@
 #include "info.h"
 #include "ai.h"
 #include "lego_globs.h"
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: Lego.c's legoGlobs.flags1 (00556ecc) itself, as the
+ * original reads it, instead of engine.cpp's EngineContext word (#827,
+ * finding 684). lego.h's declaration stays, so no counter moves
+ * (finding 538). */
+#define engine_shared_state_word() (&legoGlobs_flags1)
+#endif
 
 #if !(defined(_MSC_VER) && _MSC_VER == 1100)
 #define PANEL_PORT 1
