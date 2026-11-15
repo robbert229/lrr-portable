@@ -8,7 +8,11 @@
   the original's, for the full and game-only Reccmp scopes.
 - `identical_prefix`: bytes of `.text` identical at the original addresses
   from the section start up to the first differing byte (and, supplementary,
-  the same with address operands masked).
+  the same with address operands masked). It reads the original-mode link
+  (`opt_ref`, no `/DEBUG`) when one is given (finding 687): the gate's
+  `.rdata` starts with the debug directory, so no `.rdata` operand of the
+  gate's code can equal the original's. `image` names the image measured,
+  and `gate` keeps the gate's figures.
 - `unit_size_agreement`: per original unit, whether every listed function has
   the correct size and the unit's first and last functions start and end at
   the original addresses.
@@ -245,22 +249,51 @@ def identical_prefix(original, rebuilt, start, funcs):
     return _attribute(result, start + n, funcs)
 
 
-def measure(original, rebuilt, map_path, funcs, full, game, entities, rows):
+def text_prefixes(original, pe, funcs):
+    """The raw and the masked identical prefix of one rebuilt `pefile.PE`."""
+    text = original.read(original.text[0], original.text[1] - original.text[0])
+    base = pe.OPTIONAL_HEADER.ImageBase
+    image = pe.get_memory_mapped_image()
+    start = original.text[0]
+    at_original = bytes(image[start - base:start - base + len(text)]) if start >= base else b''
+    prefix = identical_prefix(text, at_original, start, funcs)
+    obase = original.pe.OPTIONAL_HEADER.ImageBase
+    prefix['address_operands_masked'] = masked_prefix(
+        text, at_original, start, funcs,
+        (obase, obase + original.pe.OPTIONAL_HEADER.SizeOfImage), (base, base + pe.OPTIONAL_HEADER.SizeOfImage))
+    return prefix
+
+
+def _brief(prefix):
+    return {'bytes': prefix['bytes'], 'first_difference': prefix['first_difference'],
+            'function': prefix['function'], 'offset_in_function': prefix['offset_in_function']}
+
+
+def prefix_record(original, rebuilt, funcs, relink=None):
+    """The `identical_prefix` record: the original-mode link's prefixes when
+    `relink` is given, with the gate's alongside; otherwise the gate's."""
+    gate = text_prefixes(original, rebuilt, funcs)
+    if relink is None:
+        return {**gate, 'image': 'gate'}
+    prefix = text_prefixes(original, relink, funcs)
+    prefix['image'] = 'original-mode link'
+    prefix['gate'] = {**_brief(gate), 'address_operands_masked': _brief(gate['address_operands_masked'])}
+    return prefix
+
+
+def measure(original, rebuilt, map_path, funcs, full, game, entities, rows, relink=None):
     """The identity metrics of one matching build, as `binary-progress.json` keys.
 
-    `original` is a `translation_units.Binary`, `rebuilt` a `pefile.PE`.
+    `original` is a `translation_units.Binary`, `rebuilt` a `pefile.PE` (the
+    gate) and `relink` optionally the original-mode link's `pefile.PE`, which
+    the identical prefix then reads. Sizes are the gate's: both links hold
+    the same code.
     """
-    text = original.read(original.text[0], original.text[1] - original.text[0])
     base = rebuilt.OPTIONAL_HEADER.ImageBase
     image = rebuilt.get_memory_mapped_image()
     def rebuilt_read(address, size):
         return bytes(image[address - base:address - base + size]) if address >= base else b''
-    at_original = rebuilt_read(original.text[0], len(text))
-    prefix = identical_prefix(text, at_original, original.text[0], funcs)
-    obase = original.pe.OPTIONAL_HEADER.ImageBase
-    prefix['address_operands_masked'] = masked_prefix(
-        text, at_original, original.text[0], funcs,
-        (obase, obase + original.pe.OPTIONAL_HEADER.SizeOfImage), (base, base + rebuilt.OPTIONAL_HEADER.SizeOfImage))
+    prefix = prefix_record(original, rebuilt, funcs, relink)
     section = next(s for s in rebuilt.sections if s.Name.rstrip(b'\0') == b'.text')
     rebuilt_starts = {e['recomp'] for e in entities if e.get('type') == 1 and e.get('recomp') is not None}
     if map_path.is_file():

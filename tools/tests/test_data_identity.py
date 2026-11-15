@@ -102,12 +102,63 @@ class MeasureTests(unittest.TestCase):
         self.assertEqual((first['rebuilt_region'], first['offset_delta']), ('.rdata', None))
 
 
+
+class RelinkTests(unittest.TestCase):
+    """The original-mode link (finding 687): no debug directory before `.rdata`."""
+
+    def test_debug_lead_counts_extra_leading_zeros(self):
+        gate = {'.rdata': (0x402000, 0x402010, b'\0' * 8 + b'\0\0\x80\x3f')}
+        relink = {'.rdata': (0x402000, 0x402008, b'\0\0\x80\x3f')}
+        self.assertEqual(di.debug_lead(gate, relink), {'.rdata': 8})
+        self.assertEqual(di.debug_lead(relink, relink), {})
+
+    def test_translator_uses_lead_then_anchors_and_checks_bytes(self):
+        # Gate .rdata: an 8-byte lead, 1.0 and 2.0, a 4-byte gap, then the
+        # named 3.0. The relink has no lead but an 8-byte gap (alignment), so
+        # 1.0 and 2.0 move by -8 and the named symbol by -4 only: the items
+        # before the first anchor need the lead.
+        one, two, three = b'\0\0\x80\x3f', b'\0\0\0\x40', b'\0\0\x40\x40'
+        gate = {'.rdata': (0x402000, 0x402018, b'\0' * 8 + one + two + b'\0' * 4 + three)}
+        relink = {'.rdata': (0x402000, 0x402014, one + two + b'\0' * 8 + three)}
+        frm = [(0x402014, '_s', 'b.obj')]
+        to = [(0x402010, '_s', 'b.obj')]  # moved by -4: the alignment absorbed 4 bytes
+        t = di.translator(frm, to, gate, relink, di.debug_lead(gate, relink))
+        self.assertEqual(t(0x402008, 4), 0x402000)   # before the first anchor: by the lead
+        self.assertEqual(t(0x40200c, 4), 0x402004)
+        self.assertEqual(t(0x402014, 4), 0x402010)   # at the anchor
+        self.assertEqual(t(0x401000, 4), 0x401000)   # outside every section
+        no_lead = di.translator(frm, to, gate, relink)
+        self.assertEqual(no_lead(0x402008, 4), 0x402004)  # the anchor's shift, unchecked bytes disagree
+
+    def test_measure_reads_the_relink_and_keeps_the_gate(self):
+        # Gate: an 8-byte zero lead before .rdata's two constants; the relink has none.
+        one, two = b'\x01\x02\x03\x04', b'\x05\x06\x07\x08'
+        original = fake_pe([('.rdata', 0x2000, 8, one + two), ('.data', 0x4000, 0x200000, b'\0' * 0x10)])
+        gate = fake_pe([('.rdata', 0x2000, 16, b'\0' * 8 + one + two), ('.data', 0x3000, 0x200000, b'\0' * 0x10)])
+        relink = fake_pe([('.rdata', 0x2000, 8, one + two), ('.data', 0x3000, 0x200000, b'\0' * 0x10)])
+        entities = [{'orig': 0x402000, 'recomp': 0x402008, 'type': 2, 'size': 4},
+                    {'orig': 0x402004, 'recomp': 0x40200c, 'type': 2, 'size': 4}]
+        rows = [{'bss_range': '00404010-00404010'}]
+        result = di.measure(original, gate, MAP, entities, rows, relink, MAP)
+        self.assertEqual(result['image'], 'original-mode link')
+        rdata = result['regions']['.rdata']
+        self.assertEqual((rdata['identical_prefix']['bytes'], rdata['items']['at_original_offset'],
+                          rdata['items']['at_original_address']), (8, 2, 2))
+        self.assertEqual(result['gate']['.rdata']['at_original_offset'], 0)
+        self.assertEqual(result['gate']['.rdata']['identical_prefix_bytes'], 0)
+        # Without the relink's map, the gate is measured and only the .rdata prefix reads the relink.
+        gate_only = di.measure(original, gate, MAP, entities, rows, relink)
+        self.assertEqual((gate_only['image'], gate_only['regions']['.rdata']['identical_prefix']['bytes'],
+                          gate_only['regions']['.rdata']['items']['at_original_offset']), ('gate', 8, 0))
+        self.assertNotIn('gate', gate_only)
+
+
 class ReadmeStatusTests(unittest.TestCase):
     def test_committed_progress_prints_data_identity(self):
         root = Path(__file__).resolve().parents[2]
         out = subprocess.run([sys.executable, str(root / 'tools/readme_status.py')], check=True,
                              capture_output=True, text=True).stdout
-        self.assertIn('Data at original offsets:', out)
+        self.assertIn('Data at original offsets', out)
 
 
 if __name__ == '__main__':

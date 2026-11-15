@@ -1023,6 +1023,22 @@ first `<common>` symbol. The original's start at GAME-001's `.bss` (the lowest
 render` compares the `.data` prefix and the items at their original offset.
 Tests: `test_data_identity.py`.
 
+**The original-mode link (finding 687).** When `make match-progress` has
+relinked the build without `/DEBUG` (`opt-ref/LegoRR.exe` and its map), both
+`identical_prefix` and `data_identity` read that link, because the gate's
+`.rdata` opens with the 84-byte debug directory and so no `.rdata` operand or
+item of the gate can sit at its original offset. `image` names the image
+measured (`original-mode link`, or `gate` without the relink), and `gate`
+keeps the gate's figures: the raw and masked prefixes, and per region the
+start, the prefix and the items at the original offset and address.
+Reccmp pairs data items at the gate's addresses; `data_identity.translator`
+moves each to the relink by the nearest map symbol both links define (same
+name and object). Before a section's first such symbol it moves by the
+gate's extra leading zero bytes (the debug directory that `tools/reccmp.sh`
+zeroes in place), and it takes the first candidate whose bytes equal the
+item's in both links. The sizes and the unit agreement stay the gate's: both
+links hold the same code.
+
 Section comparisons align each named section at its start and use the
 original's virtual size as denominator (missing candidate bytes count as
 unequal); raw-file alignment padding is excluded. Imports and resources use

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* GAME-001 Advisor.c — original translation unit (text 00401000-00401cb0,
- * .rdata 0049e004-0049e00c, literals 004a1030-004a13fc, .bss
+ * .rdata 0049e000-0049e00c, literals 004a1030-004a13fc, .bss
  * 004b2db0-004b31c0; finding 505).
  *
  * The in-game advisor: a figure that plays one of eleven LWS animations at
@@ -78,11 +78,15 @@ typedef struct AdvisorPositionData {
     unsigned int flags; /* +20 */
 } AdvisorPositionData;
 
+/* The pointer name is the original sources' house style (`*lpX`). This
+ * unit does not use it. It stands for the symbol the named 25.0f constant
+ * used to cost, so vec_add and vec_dot keep their counter phase (finding
+ * 550 rule B, finding 687). Deviation (scoring only). */
 typedef struct AdvisorAnimData {
     void* cont;          /* +0 */
     float loopStartTime; /* +4 */
     float loopEndTime;   /* +8 */
-} AdvisorAnimData;
+} AdvisorAnimData, *lpAdvisorAnimData;
 
 typedef struct AdvisorGlobs {
     const char* positionName[ADVISOR_TYPE_COUNT];     /* 004b2db0 */
@@ -97,13 +101,11 @@ typedef struct AdvisorGlobs {
     unsigned int flags;                                /* 004b31bc */
 } AdvisorGlobs;
 
-/* The unit's .rdata (0049e004-0049e00c). The 1.0 (0049e008) that
- * vec_normalize divides and the 0.0 (0049e00c) that
- * advisor_scene_advance_completion_check compares stay literals: MSVC pools
- * them at the same addresses, and as annotated statics they move vec_dot's
- * counter phase (finding 550). */
-// GLOBAL: LEGORR 0x0049e004
-static const float s_advisor_frames_per_second = 25.0f;
+/* The unit's .rdata (0049e000-0049e00c) holds 0.96, 25.0, 1.0 and 0.0, in
+ * that order. All four are literals: MSVC 5.0 emits a function's float
+ * literals in first-use order, after every named constant, so a named
+ * 25.0f would come first (finding 687). The frame rate multiplies a float:
+ * a double product would pool 25.0 as a qword (finding 550). */
 
 /* External, as the original's: MSVC 5.0 compiles reads of a static struct
  * differently (advisor_transition_worker keeps the current type in another
@@ -258,8 +260,8 @@ void advisor_config_slots_load_target(BlockFile* config, const char* gameName)
                                                      0.0f, 1.0f, 0.0f);
                 scene_render_lock_toggle(advisorGlobs.anims[loop].cont, 1);
             }
-            advisorGlobs.anims[loop].loopStartTime = atof(argv[1]) * s_advisor_frames_per_second;
-            advisorGlobs.anims[loop].loopEndTime = atof(argv[2]) * s_advisor_frames_per_second;
+            advisorGlobs.anims[loop].loopStartTime = (float)atof(argv[1]) * 25.0f;
+            advisorGlobs.anims[loop].loopEndTime = (float)atof(argv[2]) * 25.0f;
         }
     }
 }

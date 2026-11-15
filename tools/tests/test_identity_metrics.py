@@ -108,12 +108,41 @@ class PrefixTests(unittest.TestCase):
         self.assertEqual(im.masked_prefix(self.orig, padded, 0x1000, self.funcs, image, image)['first_difference'], '0x100b')
 
 
+class PrefixRecordTests(unittest.TestCase):
+    """The identical prefix reads the original-mode link when given (finding 687)."""
+
+    def test_relink_measured_gate_kept(self):
+        try:
+            import capstone  # noqa: F401
+        except ImportError:
+            self.skipTest('capstone required')
+        code = bytes.fromhex('a100204000 c3')  # mov eax, [0x402000]; ret
+        def pe(text):
+            image = bytearray(0x3000)
+            image[0x1000:0x1000 + len(text)] = text
+            return SimpleNamespace(OPTIONAL_HEADER=SimpleNamespace(ImageBase=0x400000, SizeOfImage=0x3000),
+                                   get_memory_mapped_image=lambda: bytes(image))
+        original = SimpleNamespace(text=(0x401000, 0x401006), pe=pe(code),
+                                   read=lambda a, n: code[a - 0x401000:a - 0x401000 + n])
+        funcs = [SimpleNamespace(address=0x401000, end=0x401006, name='f')]
+        gate = pe(bytes.fromhex('a154204000 c3'))     # the operand 0x54 bytes late
+        relink = pe(code)
+        record = im.prefix_record(original, gate, funcs, relink)
+        self.assertEqual((record['image'], record['bytes'], record['first_difference']),
+                         ('original-mode link', 6, None))
+        self.assertEqual((record['gate']['bytes'], record['gate']['first_difference']), (1, '0x401001'))
+        self.assertEqual(record['gate']['address_operands_masked']['first_difference'], None)
+        alone = im.prefix_record(original, gate, funcs)
+        self.assertEqual((alone['image'], alone['bytes']), ('gate', 1))
+        self.assertNotIn('gate', alone)
+
+
 class ReadmeStatusTests(unittest.TestCase):
     def test_committed_progress_prints_identity_metrics(self):
         root = Path(__file__).resolve().parents[2]
         out = subprocess.run([sys.executable, str(root / 'tools/readme_status.py')], check=True,
                              capture_output=True, text=True).stdout
-        for label in ('Correct-size functions:', 'Identical prefix:', 'Units with size agreement:'):
+        for label in ('Correct-size functions:', 'Identical prefix', 'Units with size agreement:'):
             self.assertIn(label, out)
 
 
