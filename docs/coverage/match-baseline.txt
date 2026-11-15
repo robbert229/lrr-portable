@@ -1,4 +1,4 @@
-# input_sha256: 9cc85dc9ae8196d417cdc7c816e3b3e9ab401324334f172498e67dd80bd6a81e
+# input_sha256: 28cadba85e253de32174e5ac0e27fac7403f40ec900c2e4e7eebe10aa1118bb5
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2622,7 +2622,7 @@
 0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
 0x00488170 62.45 lws_interpolate
-0x004882e0 30.04 lws_absolute_key_set
+0x004882e0 30.28 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
 0x00488790 100.00 pair_table_append
@@ -5347,7 +5347,7 @@
 0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
 0x00488170 62.45 lws_interpolate
-0x004882e0 30.04 lws_absolute_key_set
+0x004882e0 30.28 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
 0x00488790 100.00 pair_table_append

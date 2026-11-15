@@ -881,7 +881,7 @@ void lws_absolute_key_set(LwsInfo* scene, LwsNode* node, LwsVector3* pos,
         float cosP = (float)cos(hpb->y);
         float py = node->pivotVector.y;
         float pz = node->pivotVector.z;
-        float a, c, b, d, e, f, g;
+        float e, a, c, b, d, f, g;
 
         a = scale->x * sinB;
         b = scale->x * cosB;
