@@ -3747,14 +3747,16 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
         if (!(flags & 0x10) && (flags & 0x20000)) {
             text = lego_terrain_surface_type_name_get(0x10);
             sfx = lego_surface_type_configured_value_at_index(0x10);
+            show = 1;
         } else if (flags & 0x20) {
             text = lego_terrain_surface_type_name_get(0xd);
             sfx = lego_surface_type_configured_value_at_index(0xd);
+            show = 1;
         } else {
             text = lego_terrain_surface_type_name_get(block->f_02);
             sfx = lego_surface_type_configured_value_at_index(block->f_02);
+            show = 1;
         }
-        show = 1;
     }
 
     if (show) {

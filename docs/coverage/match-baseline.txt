@@ -1,4 +1,4 @@
-# input_sha256: 19bb36d6572162d3edbb4fa19dcc79fbf5794fb7529fb945e895664b18ca5b85
+# input_sha256: 26f147565bee57715ca850be5b071beb03be4b7752d45901627f80fba1e30e97
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -743,7 +743,7 @@
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 100.00 lego_level_upgrade_name_strings_load
 0x00428020 99.26 lego_entity_command_status_feedback_dispatch
-0x00428330 72.03 lego_terrain_command_feedback_dispatch
+0x00428330 84.99 lego_terrain_command_feedback_dispatch
 0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
 0x004288e0 98.41 lego_level_debug_input_cell_mutator_dispatch
@@ -3468,7 +3468,7 @@
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 100.00 lego_level_upgrade_name_strings_load
 0x00428020 99.26 lego_entity_command_status_feedback_dispatch
-0x00428330 72.03 lego_terrain_command_feedback_dispatch
+0x00428330 84.99 lego_terrain_command_feedback_dispatch
 0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
 0x004288e0 98.41 lego_level_debug_input_cell_mutator_dispatch
