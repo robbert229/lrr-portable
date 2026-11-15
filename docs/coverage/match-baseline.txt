@@ -1,4 +1,4 @@
-# input_sha256: 05e989c083acf6cadf38911ad30d7bebcb3cc75a75b4509f582bd5463a389f85
+# input_sha256: f1f2a25c2021286fe2635e665c5b438ac244ed1e6d3ae6bbb19447d4ebc3f114
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2071,7 +2071,7 @@
 0x0046f1d0 100.00 weapons_get_damage_for_object
 0x0046f270 100.00 weapons_generic_damage_object
 0x0046f380 100.00 weapons_gun_hit_object
-0x0046f3b0 87.75 weapons_projectile_hit_check
+0x0046f3b0 88.98 weapons_projectile_hit_check
 0x0046f550 100.00 weapons_update
 0x0046f610 100.00 weapons_callback_update_object
 0x0046f770 100.00 weapons_projectile_hit_object
@@ -2092,7 +2092,7 @@
 0x004712f0 100.00 weapons_model_timer_get
 0x00471310 100.00 weapons_model_timer_set
 0x00471330 100.00 weapons_z_within_bounds
-0x00471370 84.38 weapons_callback_ray_candidate
+0x00471370 99.55 weapons_callback_ray_candidate
 0x00471630 97.93 weapons_ray_block_sweep
 0x00471860 100.00 weapons_ray_trace_nearest
 0x004718d0 88.00 weapons_object_pair_ray_hit
@@ -4796,7 +4796,7 @@
 0x0046f1d0 100.00 weapons_get_damage_for_object
 0x0046f270 100.00 weapons_generic_damage_object
 0x0046f380 100.00 weapons_gun_hit_object
-0x0046f3b0 87.75 weapons_projectile_hit_check
+0x0046f3b0 88.98 weapons_projectile_hit_check
 0x0046f550 100.00 weapons_update
 0x0046f610 100.00 weapons_callback_update_object
 0x0046f770 100.00 weapons_projectile_hit_object
@@ -4817,7 +4817,7 @@
 0x004712f0 100.00 weapons_model_timer_get
 0x00471310 100.00 weapons_model_timer_set
 0x00471330 100.00 weapons_z_within_bounds
-0x00471370 84.38 weapons_callback_ray_candidate
+0x00471370 99.55 weapons_callback_ray_candidate
 0x00471630 97.93 weapons_ray_block_sweep
 0x00471860 100.00 weapons_ray_trace_nearest
 0x004718d0 88.00 weapons_object_pair_ray_hit

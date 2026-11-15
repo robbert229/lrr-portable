@@ -472,8 +472,9 @@ void weapons_projectile_hit_check(Weapons_Projectile* projectile)
         search.direction = &dir;
         search.hit = 0;
         search.ignoreObject = projectile->owner;
-        range = weapon_type_range_get_target(projectile->weaponType);
-        if (range != 0.0f &&
+        /* Assigned in the test: the original keeps the range on the x87
+         * stack with fld st(0); fcomp (finding 681). */
+        if ((range = weapon_type_range_get_target(projectile->weaponType)) != 0.0f &&
             weapons_vector3d_distance(&projectile->startPos, &projectile->position) >= range) {
             legoobject_remove(WEAPONS_LOBJ(projectile->object));
             projectile->object = NULL;
@@ -1114,8 +1115,7 @@ static int weapons_callback_ray_candidate(Weapons_Object* obj,
     float proj[2];
     float ground;
     float dist;
-    float rx;
-    float ry;
+    float r[2]; /* adjacent slots, as in the original's frame (finding 681) */
 
     origin[0] = search->origin->x;
     origin[1] = search->origin->y;
@@ -1129,9 +1129,9 @@ static int weapons_callback_ray_candidate(Weapons_Object* obj,
         if ((float)sqrt((proj[0] - objPos[0]) * (proj[0] - objPos[0]) +
                         (proj[1] - objPos[1]) * (proj[1] - objPos[1])) <=
             entity_stats_float_at6c(WEAPONS_ENT(obj))) {
-            rx = proj[0] - origin[0];
-            ry = proj[1] - origin[1];
-            dist = (float)sqrt(rx * rx + ry * ry);
+            r[0] = proj[0] - origin[0];
+            r[1] = proj[1] - origin[1];
+            dist = weapons_vector2d_modulus(r);
             if (dist > -0.00001f && dist < 0.00001f) {
                 if (weapons_z_within_bounds(search->origin, search->direction,
                                             entity_stats_float_at74(WEAPONS_ENT(obj)), ground, 0.0f)) {
@@ -1143,16 +1143,16 @@ static int weapons_callback_ray_candidate(Weapons_Object* obj,
             }
             dist = dist / dirLen;
             if (dir[0] > -0.00001f && dir[0] < 0.00001f &&
-                rx > -0.00001f && rx < 0.00001f) {
+                r[0] > -0.00001f && r[0] < 0.00001f) {
                 if (!(dir[1] > -0.00001f && dir[1] < 0.00001f &&
-                      ry > -0.00001f && ry < 0.00001f)) {
-                    if (dir[1] / ry < 0.0f) dist *= -1.0f;
+                      r[1] > -0.00001f && r[1] < 0.00001f)) {
+                    if (dir[1] / r[1] < 0.0f) dist *= -1.0f;
                 }
                 else {
                     return 0;
                 }
             }
-            else if (dir[0] / rx < 0.0f) {
+            else if (dir[0] / r[0] < 0.0f) {
                 dist *= -1.0f;
             }
             if (dist > 0.0f && dist < search->hitDist) {
