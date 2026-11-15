@@ -68,8 +68,7 @@ static const float s_draw_two_pi = 6.28318548f;
 // GLOBAL: LEGORR 0x0049ea30
 static const double s_draw_255 = 255.0;
 
-// GLOBAL: LEGORR 0x005407e8
-static DrawGlobs drawGlobs;
+extern DrawGlobs drawGlobs; /* defined at the end of the file */
 
 static void Draw_Pixel8(int32_t x, int32_t y, uint32_t value);
 static void Draw_Pixel16(int32_t x, int32_t y, uint32_t value);
@@ -443,3 +442,13 @@ static void Draw_Pixel32(int32_t x, int32_t y, uint32_t value)
 {
     ((uint32_t*)((uint8_t*)drawGlobs.buffer + (y * drawGlobs.pitch)))[x] = value;
 }
+
+/* drawGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), after the 524 bytes of .bss the original
+ * has before it (005405dc, after Mesh.c's .bss), which nothing in the image
+ * reads. Zero-initialised externals, emitted in definition order
+ * (finding 686). */
+// GLOBAL: LEGORR 0x005405dc
+unsigned int draw_unknown_5405dc[131] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x005407e8
+DrawGlobs drawGlobs = { 0 };

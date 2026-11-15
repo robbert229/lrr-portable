@@ -231,8 +231,8 @@ typedef struct Weapons_Globs {
     BlockFile* config;                      /* 005053fc */
 } Weapons_Globs;  /* 0x1b90 bytes */
 
-// GLOBAL: LEGORR 0x00503870
-static Weapons_Globs weaponGlobs;
+/* Defined at the end of the file, after the storage before it. */
+extern Weapons_Globs weaponGlobs;
 
 /* The ray search record of the trace functions (0x18 bytes). */
 typedef struct Weapons_RaySearch {
@@ -1519,3 +1519,12 @@ void** weapons_port_stats_slot(void)
 {
     return (void**)&weaponGlobs.weaponStatsList;
 }
+
+/* weaponGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), and after the .bss the original has before
+ * it: 512 bytes at 00503670, after Text.c's .bss, which nothing in the image reads. Both are zero-initialised
+ * externals, which MSVC 5.0 emits in definition order (finding 686). */
+// GLOBAL: LEGORR 0x00503670
+unsigned int weapons_unknown_503670[128] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x00503870
+Weapons_Globs weaponGlobs = { 0 };

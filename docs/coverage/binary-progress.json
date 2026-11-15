@@ -1,9 +1,9 @@
 {
   "accuracy_percent": {
-    "full": 97.82,
-    "game_only": 97.59
+    "full": 97.83,
+    "game_only": 97.6
   },
-  "baseline_sha256": "2bab074eb9df23f8f3a986e4f33135521b796c02ae4db2cf6b501d17bf5f0f3b",
+  "baseline_sha256": "5e606ffb9e87fd719717429e92989be3b372e135c283444e64d853997ce09de6",
   "correct_size_functions": {
     "full": {
       "bytes": 467046,
@@ -26,9 +26,9 @@
   "data_identity": {
     "gate": {
       ".bss": {
-        "at_original_address": 37,
-        "at_original_offset": 37,
-        "at_original_offset_bytes": 177189,
+        "at_original_address": 114,
+        "at_original_offset": 114,
+        "at_original_offset_bytes": 562650,
         "rebuilt_start": "0x4b2db0",
         "start_delta": 0
       },
@@ -52,8 +52,8 @@
         "at_original_address": 0,
         "at_original_offset": 17,
         "at_original_offset_bytes": 179132,
-        "rebuilt_start": "0x548840",
-        "start_delta": -3296
+        "rebuilt_start": "0x549d20",
+        "start_delta": 2048
       }
     },
     "image": "original-mode link",
@@ -61,33 +61,46 @@
     "regions": {
       ".bss": {
         "first_difference": {
-          "object": "interface_unit.c.obj",
-          "offset_delta": 16,
-          "original": "0x4de208",
-          "rebuilt": "0x4de218",
+          "object": "unit_gods98:sound3d.c.obj",
+          "offset_delta": 4,
+          "original": "0x53387c",
+          "rebuilt": "0x533880",
           "rebuilt_region": ".bss"
         },
         "items": {
-          "at_original_address": 37,
-          "at_original_address_bytes": 177189,
-          "at_original_offset": 37,
-          "at_original_offset_bytes": 177189,
-          "paired": 152,
-          "paired_bytes": 610674
+          "at_original_address": 114,
+          "at_original_address_bytes": 562650,
+          "at_original_offset": 114,
+          "at_original_offset_bytes": 562650,
+          "paired": 164,
+          "paired_bytes": 616018
         },
         "objects": {
           "agreeing": [
             "advisor.c.obj",
             "aitask.c.obj",
             "animation_object.c.obj",
-            "frontend_unit.c.obj"
+            "frontend_unit.c.obj",
+            "interface_unit.c.obj",
+            "lego_unit.c.obj",
+            "legoobject_unit.c.obj",
+            "tutorial_script.c.obj",
+            "objective_unit.c.obj",
+            "objectrecall.c.obj",
+            "panel_unit.c.obj",
+            "pointer.c.obj",
+            "text.c.obj",
+            "weapons.c.obj",
+            "unit_gods98:main.c.obj",
+            "unit_gods98:config.c.obj",
+            "unit_gods98:font.c.obj"
           ],
-          "at_original_offset": 4,
-          "with_paired_items": 29
+          "at_original_offset": 17,
+          "with_paired_items": 35
         },
         "original_bytes": 616304,
         "original_start": "0x4b2db0",
-        "rebuilt_bytes": 613008,
+        "rebuilt_bytes": 618352,
         "rebuilt_start": "0x4b2db0",
         "start_delta": 0
       },
@@ -217,7 +230,7 @@
           "object": "<common>",
           "offset_delta": -3848,
           "original": "0x556fb8",
-          "rebuilt": "0x5553d0",
+          "rebuilt": "0x5568b0",
           "rebuilt_region": "commons"
         },
         "items": {
@@ -236,8 +249,8 @@
         "original_bytes": 2247092,
         "original_start": "0x549520",
         "rebuilt_bytes": 2244980,
-        "rebuilt_start": "0x548840",
-        "start_delta": -3296
+        "rebuilt_start": "0x549d20",
+        "start_delta": 2048
       }
     }
   },
@@ -247,8 +260,8 @@
     "percent": 54.86
   },
   "fully_identical_functions_at_original_address": {
-    "bytes": 5078,
-    "count": 72
+    "bytes": 5116,
+    "count": 76
   },
   "function_order_inversions": {
     "full": {
@@ -291,13 +304,13 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "e4441a362f2745d53646fd55bc8ddfecd12348f9a1e687f6389f59f1b73a3797",
+  "input_sha256": "23ed75c2c527312afe4e537b4e0e17a07b267108ac7db4ea100d92c0026d1f07",
   "layout": {
     "data_offset_agreement": {
-      "agreeing_units": 33,
+      "agreeing_units": 51,
       "eligible_units": 57,
       "method": "anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted",
-      "unattributed_or_unmapped_annotations": 130
+      "unattributed_or_unmapped_annotations": 139
     },
     "link_order_list": {
       "adjacent": 0,
@@ -1539,8 +1552,8 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
-        "data_offset_comparisons": 345,
+        "data_offset_agreement": true,
+        "data_offset_comparisons": 348,
         "functions": 216,
         "identical_function_bytes": 32368,
         "identity_percent": 39.17,
@@ -1563,7 +1576,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 123,
         "functions": 258,
         "identical_function_bytes": 36582,
@@ -1575,7 +1588,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 13,
         "functions": 20,
         "identical_function_bytes": 3030,
@@ -1599,7 +1612,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 1,
         "functions": 62,
         "identical_function_bytes": 6418,
@@ -1611,7 +1624,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 65,
         "functions": 26,
         "identical_function_bytes": 2696,
@@ -1623,7 +1636,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 313,
         "functions": 30,
         "identical_function_bytes": 1697,
@@ -1635,7 +1648,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 28,
         "functions": 14,
         "identical_function_bytes": 1203,
@@ -1659,7 +1672,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 12,
         "functions": 8,
         "identical_function_bytes": 1458,
@@ -1671,7 +1684,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 62,
         "functions": 52,
         "identical_function_bytes": 6274,
@@ -1683,7 +1696,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 56,
         "functions": 9,
         "identical_function_bytes": 1359,
@@ -1695,7 +1708,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 2,
         "functions": 14,
         "identical_function_bytes": 800,
@@ -1779,7 +1792,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 45,
         "functions": 35,
         "identical_function_bytes": 3625,
@@ -1803,7 +1816,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 134,
         "functions": 63,
         "identical_function_bytes": 14604,
@@ -1827,7 +1840,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 26,
         "functions": 10,
         "identical_function_bytes": 2467,
@@ -1887,7 +1900,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 10,
         "functions": 45,
         "identical_function_bytes": 2705,
@@ -1947,7 +1960,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 34,
         "functions": 24,
         "identical_function_bytes": 3102,
@@ -2019,7 +2032,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 2,
         "functions": 27,
         "identical_function_bytes": 1422,
@@ -2055,7 +2068,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 34,
         "functions": 36,
         "identical_function_bytes": 4669,
@@ -4001,7 +4014,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 11
   },
-  "listing_digests_sha256": "16877e6e7465928dae0c332bcebb2072e32c0b3089ec2fa0e0fd8b9cd796a91a",
+  "listing_digests_sha256": "655932774a5587ab03332aa6f3f4c13f816724feaeadeb77899bc48f7a94d71b",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4060,7 +4073,7 @@
     },
     "gate_text_symbols": 3295,
     "image": {
-      "bss_bytes": 2857988,
+      "bss_bytes": 2863332,
       "characteristics": 271,
       "common_dll_order_equal": true,
       "data_initialised_bytes": 73088,
@@ -4092,8 +4105,8 @@
           "rebuilt": 73216
         },
         ".idata": {
-          "differing": 2966,
-          "equal": 1146,
+          "differing": 2887,
+          "equal": 1225,
           "original": 4112,
           "rebuilt": 4112
         },
@@ -4104,8 +4117,8 @@
           "rebuilt": 10744
         },
         ".text": {
-          "differing": 595901,
-          "equal": 46648,
+          "differing": 595773,
+          "equal": 46776,
           "original": 642549,
           "rebuilt": 641461
         }
@@ -4113,7 +4126,7 @@
       "sections": {
         ".data": {
           "raw_size": 73216,
-          "virtual_size": 2931124
+          "virtual_size": 2936468
         },
         ".idata": {
           "raw_size": 4608,
@@ -4160,10 +4173,6 @@
     "entry_point_rva": {
       "original": 585728,
       "rebuilt": 584560
-    },
-    "image_size": {
-      "original": 3608576,
-      "rebuilt": 3604480
     }
   },
   "schema_version": 6,
@@ -4194,52 +4203,52 @@
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 4.43,
-      "identical_bytes": 46631,
-      "identical_percent": 7.26,
+      "excess_percent_points": 4.45,
+      "identical_bytes": 46759,
+      "identical_percent": 7.28,
       "original_bytes": 642549,
       "rebuilt_bytes": 641461,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 3.31,
-      "run_identical_bytes": 21292,
-      "run_identical_percent": 3.31
+      "run_excess_percent_points": 3.34,
+      "run_identical_bytes": 21449,
+      "run_identical_percent": 3.34
     },
     "imports": {
       "chance_percent": 34.58,
-      "excess_percent_points": 47.08,
-      "identical_bytes": 196,
-      "identical_percent": 81.67,
+      "excess_percent_points": 57.5,
+      "identical_bytes": 221,
+      "identical_percent": 92.08,
       "original_bytes": 240,
       "rebuilt_bytes": 240,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 9.17,
-      "run_identical_bytes": 22,
-      "run_identical_percent": 9.17
+      "run_excess_percent_points": 87.08,
+      "run_identical_bytes": 209,
+      "run_identical_percent": 87.08
     },
     "resources": {
       "chance_percent": 16.31,
-      "excess_percent_points": 83.48,
-      "identical_bytes": 2930,
-      "identical_percent": 99.8,
+      "excess_percent_points": 83.69,
+      "identical_bytes": 2936,
+      "identical_percent": 100.0,
       "original_bytes": 2936,
       "rebuilt_bytes": 2936,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 98.84,
-      "run_identical_bytes": 2902,
-      "run_identical_percent": 98.84
+      "run_excess_percent_points": 100.0,
+      "run_identical_bytes": 2936,
+      "run_identical_percent": 100.0
     }
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 4.44,
-    "identical_bytes": 46724,
-    "identical_percent": 7.27,
+    "excess_percent_points": 4.46,
+    "identical_bytes": 46852,
+    "identical_percent": 7.29,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
-    "run_excess_percent_points": 3.31,
-    "run_identical_bytes": 21292,
-    "run_identical_percent": 3.31
+    "run_excess_percent_points": 3.34,
+    "run_identical_bytes": 21449,
+    "run_identical_percent": 3.34
   },
   "unit_size_agreement": {
     "agreeing_unit_ids": [

@@ -1,4 +1,4 @@
-# input_sha256: e4441a362f2745d53646fd55bc8ddfecd12348f9a1e687f6389f59f1b73a3797
+# input_sha256: 23ed75c2c527312afe4e537b4e0e17a07b267108ac7db4ea100d92c0026d1f07
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1108,7 +1108,7 @@
 0x00442560 100.00 legoobject_world_z_callback_lake
 0x004425f0 100.00 legoobject_subobject_pose_delta_normalize_and_dispatch
 0x004428a0 98.94 legoobject_world_position_set
-0x00442b10 86.12 legoobject_movement_accumulator_apply
+0x00442b10 92.09 legoobject_movement_accumulator_apply
 0x00442f80 73.47 legoobject_pose_orientation_dispatch
 0x00443510 100.00 legoobject_scene_object_pose_position_sync
 0x00443670 100.00 legoobject_random_activity_attempt
@@ -3833,7 +3833,7 @@
 0x00442560 100.00 legoobject_world_z_callback_lake
 0x004425f0 100.00 legoobject_subobject_pose_delta_normalize_and_dispatch
 0x004428a0 98.94 legoobject_world_position_set
-0x00442b10 86.12 legoobject_movement_accumulator_apply
+0x00442b10 92.09 legoobject_movement_accumulator_apply
 0x00442f80 73.47 legoobject_pose_orientation_dispatch
 0x00443510 100.00 legoobject_scene_object_pose_position_sync
 0x00443670 100.00 legoobject_random_activity_attempt

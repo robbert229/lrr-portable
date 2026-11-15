@@ -10730,6 +10730,10 @@ int legoobject_scatter_spawn_drain_callback(Lego_Object* obj, void* data)
 #ifdef __cplusplus
 extern "C" {
 #endif
+/* 512 bytes of .bss before objectGlobs (004de590-004de790) that nothing
+ * in the image reads, after Lego.c's last item. */
+// GLOBAL: LEGORR 0x004de590
+unsigned int legoobject_unknown_4de590[128] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x004de790
 struct LegoObject_Globs objectGlobs = { 0 };
 

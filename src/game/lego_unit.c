@@ -73,6 +73,13 @@ static float s_lego_soundRollOff = 1.0f;
  * declaration. The matching build does not see this block. */
 #ifdef __cplusplus
 extern "C" {
+extern int s_lego_toolTipBlockX;
+extern int s_lego_toolTipBlockY;
+extern uint32_t s_lego_mouseLastY;
+extern uint32_t s_lego_mouseLastX;
+extern float s_lego_drag_x;
+extern float s_lego_drag_y;
+extern uint32_t s_lego_mslbLast;
 extern int s_lego_renameCursorOn;
 extern unsigned char s_lego_renamePrevKeyMap[256];
 extern float s_lego_upgradeTextTimer;
@@ -120,11 +127,9 @@ extern float s_lego_rollOffTextTimer;
  * distance (a static, as in the original), the drag flag, the previous
  * button states and the request to forget the previous states (externals,
  * defined at the end of the file; finding 691). */
-// GLOBAL: LEGORR 0x004de418
-static float s_lego_drag_x;
+extern float s_lego_drag_x;
 
-// GLOBAL: LEGORR 0x004de41c
-static float s_lego_drag_y;
+extern float s_lego_drag_y;
 
 extern int s_lego_dragging;
 
@@ -233,10 +238,8 @@ extern float s_lego_spotUmbra;
 
 /* Lego.c .bss: the radar map's mouse state. The last mouse position is
  * static, the rest external (defined at the end of the file; finding 691). */
-// GLOBAL: LEGORR 0x004de410
-static uint32_t s_lego_mouseLastY;
-// GLOBAL: LEGORR 0x004de414
-static uint32_t s_lego_mouseLastX;
+extern uint32_t s_lego_mouseLastY;
+extern uint32_t s_lego_mouseLastX;
 extern float s_lego_radarDragDistance;
 extern uint32_t s_lego_radarPrevButton;
 extern unsigned int s_lego_radarBlockX;
@@ -245,10 +248,8 @@ extern int s_lego_radarDragging;
 
 /* Lego.c .bss: the block (static) and the object (external) the tool tips
  * last hovered (finding 691). */
-// GLOBAL: LEGORR 0x004de208
-static int s_lego_toolTipBlockX;
-// GLOBAL: LEGORR 0x004de20c
-static int s_lego_toolTipBlockY;
+extern int s_lego_toolTipBlockX;
+extern int s_lego_toolTipBlockY;
 extern struct EntitySlot* s_lego_toolTipObject;
 
 /* Lego.c .bss: the debug keys' toggles and the unit the K key picked
@@ -9203,8 +9204,7 @@ void terrain_grid_entry_resources_release_all_current(void)
 
 /* Input's left mouse button (0076ab3c) at the last release check. A
  * static, as in the original (finding 691). */
-// GLOBAL: LEGORR 0x004de424
-static uint32_t s_lego_mslbLast;
+extern uint32_t s_lego_mslbLast;
 
 /* The tutorial icon's bob phase. */
 extern float s_lego_tutorialIconPhase;
@@ -10087,14 +10087,30 @@ void lego_panel_selection_highlight_toggle(int on)
  * retired it to the port tail (lego_port.cpp). Defined last, so no
  * function's symbol counter changes (finding 538). */
 
-/* Lego.c's external .bss (004de428-004de590), defined last in the
- * original's order (finding 691). MSVC 5.0 lays out an object's
- * uninitialised statics first and its zero-initialised externals after
- * them, in definition order (finding 687). The original's Lego.c .bss is
- * its statics (004de208-004de428) followed by these. Each name keeps a
- * declaration at its old place, so no function's symbol counter moves
- * (finding 538). Nothing in the original refers to 004de580; it is left
- * undefined (ADR 0005 rule 4). */
+/* Lego.c's .bss (004de208-004de590), defined last in the original's order
+ * as zero-initialised externals, which MSVC 5.0 emits in definition order
+ * (findings 686 and 687); it reorders uninitialised statics. Each name keeps
+ * a declaration at its old place, so no function's symbol counter moves
+ * (finding 538). The lego_unknown_* items stand for storage nothing in the
+ * image reads: 512 bytes at 004de210 and 4 each at 004de420 and 004de580. */
+// GLOBAL: LEGORR 0x004de208
+int s_lego_toolTipBlockX = 0;
+// GLOBAL: LEGORR 0x004de20c
+int s_lego_toolTipBlockY = 0;
+// GLOBAL: LEGORR 0x004de210
+int lego_unknown_4de210[128] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x004de410
+uint32_t s_lego_mouseLastY = 0;
+// GLOBAL: LEGORR 0x004de414
+uint32_t s_lego_mouseLastX = 0;
+// GLOBAL: LEGORR 0x004de418
+float s_lego_drag_x = 0;
+// GLOBAL: LEGORR 0x004de41c
+float s_lego_drag_y = 0;
+// GLOBAL: LEGORR 0x004de420
+int lego_unknown_4de420 = 0; /* never read */
+// GLOBAL: LEGORR 0x004de424
+uint32_t s_lego_mslbLast = 0;
 // GLOBAL: LEGORR 0x004de428
 int s_lego_renameCursorOn = 0;
 /* The previous frame's key map, for the rename input. */
@@ -10150,6 +10166,8 @@ struct EntitySlot* s_lego_toolTipObject = 0;
 int s_lego_debugLightToggle = 0;
 // GLOBAL: LEGORR 0x004de57c
 int s_lego_debugTransformToggle = 0;
+// GLOBAL: LEGORR 0x004de580
+int lego_unknown_4de580 = 0; /* never read */
 // GLOBAL: LEGORR 0x004de584
 struct EntitySlot* s_lego_debugRetargetObject = 0;
 /* The neighbour-pick rotation. */

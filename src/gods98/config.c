@@ -38,8 +38,7 @@ typedef struct ConfigGlobs {
     unsigned int flags;                    /* 00506520 */
 } ConfigGlobs;
 
-// GLOBAL: LEGORR 0x00506098
-static ConfigGlobs configGlobs;
+extern ConfigGlobs configGlobs; /* defined at the end of the file */
 
 /* Config_GetAngle's and Config_GetRGBValue's constants (.rdata). */
 // GLOBAL: LEGORR 0x0049e8f8
@@ -411,3 +410,13 @@ int block_text_token_pool_watermark_peek(void)
     return (int)configGlobs.list_count;
 }
 #endif /* !LEGORRR_BACKEND_WINAPI */
+
+/* configGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), after the 8 bytes of .bss the original has
+ * before it (00506090, after Main.c's .bss), which nothing in the image
+ * reads. Zero-initialised externals, emitted in definition order
+ * (finding 686). */
+// GLOBAL: LEGORR 0x00506090
+unsigned int config_unknown_506090[2] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x00506098
+ConfigGlobs configGlobs = { 0 };

@@ -72,8 +72,8 @@
 /* Other units read these fields directly (Lego.c, Interface.c, Info.c,
  * Priorities.c), so the struct is external. The zero initialiser keeps it
  * in this object's .bss rather than the common region (finding 554). */
-// GLOBAL: LEGORR 0x005000e0
-PanelGlobs panelGlobs = { 0 };
+/* Defined at the end of the file, after the storage before it. */
+extern PanelGlobs panelGlobs;
 
 // FUNCTION: LEGORR 0x0045a030
 void ui_panel_name_tables_init(void)
@@ -1458,3 +1458,11 @@ int advisor_animation_slot_id_resolve(int panelType, int button, int* advisor)
     return *advisor != 21;
 }
 
+/* panelGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), and after the .bss the original has before
+ * it: 512 bytes at 004ffee0, after ObjInfo.c's .bss, which nothing in the image reads. Both are zero-initialised
+ * externals, which MSVC 5.0 emits in definition order (finding 686). */
+// GLOBAL: LEGORR 0x004ffee0
+unsigned int panel_unknown_4ffee0[128] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x005000e0
+PanelGlobs panelGlobs = { 0 };

@@ -50,8 +50,8 @@ typedef struct Objective_Globs {
     int endTeleportEnabled;                 /* +0x288 */
 } Objective_Globs;
 
-// GLOBAL: LEGORR 0x004ffbc0
-static Objective_Globs objectiveGlobs;
+/* Defined at the end of the file, after the storage before it. */
+extern Objective_Globs objectiveGlobs;
 
 /* Input.c's INPUT.lClicked (0076ab48), which no converted unit defines
  * yet: a common definition, as the original's. */
@@ -927,3 +927,12 @@ int objective_callback_check_completed_object(struct Lego_Object* liveObj,
 
     return 0;
 }
+
+/* objectiveGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), and after the .bss the original has before
+ * it: 512 bytes at 004ff9c0, after NERPs.c's .bss, which nothing in the image reads. Both are zero-initialised
+ * externals, which MSVC 5.0 emits in definition order (finding 686). */
+// GLOBAL: LEGORR 0x004ff9c0
+unsigned int objective_unknown_4ff9c0[128] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x004ffbc0
+Objective_Globs objectiveGlobs = { 0 };

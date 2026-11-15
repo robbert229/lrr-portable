@@ -1261,8 +1261,8 @@ static int nerpsCurrentSound = -1;
 // GLOBAL: LEGORR 0x004a676c
 static NERPsBlockPointerCallback nerpsTutorialActionCallback = nerps_tutorial_action_callback;
 
-// GLOBAL: LEGORR 0x004ff958
-static NERPs_RuntimeGlobs nerpsruntimeGlobs;
+/* Defined at the end of the file, after the storage before it. */
+extern NERPs_RuntimeGlobs nerpsruntimeGlobs;
 
 // GLOBAL: LEGORR 0x00555d40
 NERPs_Globs nerpsGlobs;
@@ -4556,6 +4556,15 @@ int nerpfunc_get_monster_at_tutorial(unsigned int* stack)
     nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
     return search.count;
 }
+
+/* nerpsruntimeGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), and after the .bss the original has before
+ * it: 1,720 bytes at 004ff2a0, after Message.c's .bss, which nothing in the image reads. Both are zero-initialised
+ * externals, which MSVC 5.0 emits in definition order (finding 686). */
+// GLOBAL: LEGORR 0x004ff2a0
+unsigned int tutorial_script_unknown_4ff2a0[430] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x004ff958
+NERPs_RuntimeGlobs nerpsruntimeGlobs = { 0 };
 
 #ifdef __cplusplus
 }

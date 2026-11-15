@@ -196,12 +196,13 @@ struct Image_SurfaceIface {
 #define DirectDraw_bSurf() ((Image_SurfaceIface*)directDrawGlobs.bSurf)
 #define Image_Surface(image) ((Image_SurfaceIface*)(image)->surface)
 
-/* The unit's state (0x8c bytes). */
+/* The unit's state (0x90 bytes). */
 typedef struct Image_Globs {
     Image* listSet[IMAGE_MAXLISTS]; /* +0x00 00533908 */
     Image* freeList;                /* +0x80 00533988 */
     unsigned int listCount;         /* +0x84 0053398c */
     unsigned int flags;             /* +0x88 00533990 */
+    unsigned int unknown_8c;        /* +0x8c 00533994: never read */
 } Image_Globs;
 
 // GLOBAL: LEGORR 0x00533908

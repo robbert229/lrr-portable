@@ -332,11 +332,9 @@ static const Sound3DIID IID_IDirectSound3DBuffer = {
 };
 #endif
 
-// GLOBAL: LEGORR 0x005065b8
-static Sound3DGlobs s_sound3d;
+extern Sound3DGlobs s_sound3d; /* defined at the end of the file */
 
-// GLOBAL: LEGORR 0x0053387c
-static Sound3DFrameGlobs s_sound3d_frames;
+extern Sound3DFrameGlobs s_sound3d_frames; /* defined at the end of the file */
 
 int sound_bank_free_slot_find(int* handle);
 void sound_listener_frame_update(Sound3DFrame* frame, void* arg,
@@ -513,8 +511,7 @@ static int keyed_sweep(int key, void* node);
 
 /* Sound3D_Initialised (00533878). Shared by both backends: soundsys.c and
  * sound.cpp read it. */
-// GLOBAL: LEGORR 0x00533878
-int s_bank_sound_on = 0;
+extern int s_bank_sound_on; /* defined at the end of the file */
 
 /* The SFX slider's attenuation steps, in millibels (audio.cpp reads it). */
 // GLOBAL: LEGORR 0x004aae30
@@ -2436,3 +2433,22 @@ static int keyed_sweep(int key, void* node)
 }
 #endif /* !SOUND3D_DIRECTSOUND */
 
+/* The unit's .bss, defined after every function so that no function's
+ * symbol counter moves (finding 538), in the original's order: the 8 bytes
+ * before s_sound3d that nothing in the image reads, s_sound3d,
+ * Sound3D_Initialised, then the frame state. Zero-initialised externals,
+ * which MSVC 5.0 emits in definition order (finding 686). */
+#ifdef SOUND3D_DIRECTSOUND
+// GLOBAL: LEGORR 0x005065b0
+unsigned int sound3d_unknown_5065b0[2] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x005065b8
+Sound3DGlobs s_sound3d = { 0 };
+#endif
+/* Sound3D_Initialised. Shared by both backends: soundsys.c and sound.cpp
+ * read it. */
+// GLOBAL: LEGORR 0x00533878
+int s_bank_sound_on = 0;
+#ifdef SOUND3D_DIRECTSOUND
+// GLOBAL: LEGORR 0x0053387c
+Sound3DFrameGlobs s_sound3d_frames = { 0 };
+#endif
