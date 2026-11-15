@@ -82,6 +82,38 @@ annotations still cannot all be attributed. The `.bss` row now has
 one attributable item (the struct), so the tool no longer reports it as
 "partial".
 
+### On the stack (#823, `identity/815-lego-size` `51e01968`)
+
+The change was rebased onto #820 to #823 and measured again. These are the
+stack's final figures. `tools/binary_progress_inputs.txt` now lists
+`src/gods98/main_globs.h`, the hashed input #820 added.
+
+| Measure | #823 `51e01968` | This change |
+| --- | ---: | ---: |
+| **Exact-function code bytes** | **347,430 (54.07%)** | **348,304 (54.21%)** |
+| Exact functions, full / game-only | 2,634 / 2,346 | 2,636 / 2,348 |
+| Accuracy, full / game-only | 97.59% / 97.33% | 97.59% / 97.34% |
+| `.text` identical at original addresses | 6.76% (43,437 B) | 6.76% (43,434 B) |
+| `.data` identical | 24.41% (17,874 B) | **24.72% (18,102 B)** |
+| `.rdata` identical | 11.11% | 11.67% |
+| `.bss` items at original offset | 1 of 169 | 1 of 149 |
+| Identical prefix, raw / masked | 11 B / 7,187 B (to `0x402c13`) | same |
+| Correct-size functions, full / game-only | 2,801 / 2,510 | same |
+| Units with size agreement (sizes, start, end) | 2 of 227 (168, 5, 4) | same |
+| Entry point (original `0048f000`) | `0048ebb0` | same |
+| SizeOfImage (original 3,608,576) | 4,030,464 | same |
+| Data-offset agreement | 20 of 57 units | same |
+| Tail objects referenced from units | 8 | **3** |
+| Tail `.text` / `.bss` / `.data` / `.rdata` | | 79,408 / 284,421 / 19,629 / 14,777 |
+
+Three functions rise and none falls: the two Main.c functions above, and
+`00462ad0` reward_scroll_update (96.44 to 97.27). On the stack, that one
+now reads `mainGlobs.fixedFrameTiming`. The three remaining roots are
+`input.cpp` and `platform/winapi/frameloop.cpp`, through Input.c's own
+hooks, and `engine.cpp`, through Panel.c, Info.c and G98-028's
+`s_window_mode_flag`. #821 and #823 removed the save-buffer,
+startup-stream and light-setter roots.
+
 ## 1. mainGlobs
 
 | Offset | Field | Port name (shared fields) |
