@@ -4226,11 +4226,13 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
                                                                      position[0], position[1], 0.0f),
                                     0, NULL);
                         legoobject_remove(carried);
-                        goto next;
+                    } else {
+                        lego_level_resource_balance_add_and_sound(0);
+                        legoobject_remove(carried);
                     }
-                    lego_level_resource_balance_add_and_sound(0);
+                } else {
+                    legoobject_remove(carried);
                 }
-                legoobject_remove(carried);
             } else {
                 legoobject_action_record_consume_and_cleanup(obj, carried);
                 if (obj->type == 4)
@@ -4253,7 +4255,6 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
             if (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 4)
                 info_send(0x1d, NULL, target, NULL);
         }
-    next:
         obj->carriedObjects[i] = NULL;
     }
     obj->numCarriedObjects = 0;
@@ -7614,9 +7615,9 @@ int legoobject_flag_gated_callback_a(Lego_Object* liveObj, void* data)
 // FUNCTION: LEGORR 0x00446610
 void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapsed, float* outTransSpeed, float* outElapsed)
 {
-    unsigned int flag400 = obj->flags1 & 0x400;
-    unsigned int flag2 = obj->flags1 & 2;
     unsigned int flag8 = obj->flags1 & 8;
+    unsigned int flag2 = obj->flags1 & 2;
+    unsigned int flag400 = obj->flags1 & 0x400;
     unsigned int slow = obj->flags1 & 0x2000000;
     float transCoef;
     float speed;
@@ -7655,8 +7656,8 @@ void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapse
         centre = 1.0f;
         legoobject_transform_position_get(obj, &x, &y);
         if (terrain_map_world_to_block_centre(Lego_GetMap(), x, y, &blockPos[0], &blockPos[1], &centre)) {
-            coef = 1.0f - ((float)(unsigned int)terrain_cell_speed_class_current(blockPos) * 0.25f) *
-                              (1.0f - entity_stats_float_atd4(LEGOOBJ_SLOT(obj)));
+            coef = (float)(unsigned int)terrain_cell_speed_class_current(blockPos) * 0.25f;
+            coef = 1.0f - coef * (1.0f - entity_stats_float_atd4(LEGOOBJ_SLOT(obj)));
             if (level_cell_occupied_at_current(blockPos)) coef = entity_stats_float_atd8(LEGOOBJ_SLOT(obj)) * coef;
             if (obj->type == 2 &&
                 ((LegoObjJ_Level*)g_active_level_retail)->blocks[((LegoObjJ_Level*)g_active_level_retail)->width * blockPos[1] + blockPos[0]].terrain == 9)

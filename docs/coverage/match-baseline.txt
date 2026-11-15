@@ -1,4 +1,4 @@
-# input_sha256: dba86e525755f809991b9dce6fccf4f512aaa2f11289bcda6b4c93304ccb74fb
+# input_sha256: d76ebe9caef6aecaf422d7d1278f8c29192c32dcdf26b63e88d17e694e8a0423
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1133,7 +1133,7 @@
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
 0x00445df0 99.55 legoobject_flag_gated_callback_b
 0x004460f0 90.21 legoobject_flag_gated_callback_a
-0x00446610 71.66 legoobject_movement_tick_scale_and_delta_get
+0x00446610 89.66 legoobject_movement_tick_scale_and_delta_get
 0x004468c0 100.00 legoobject_route_adjacent_step_append
 0x004469c0 87.84 legoobject_nearest_connected_cell_route_select
 0x00446e40 100.00 legoobject_nearest_cell_route_commit
@@ -3858,7 +3858,7 @@
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
 0x00445df0 99.55 legoobject_flag_gated_callback_b
 0x004460f0 90.21 legoobject_flag_gated_callback_a
-0x00446610 71.66 legoobject_movement_tick_scale_and_delta_get
+0x00446610 89.66 legoobject_movement_tick_scale_and_delta_get
 0x004468c0 100.00 legoobject_route_adjacent_step_append
 0x004469c0 87.84 legoobject_nearest_connected_cell_route_select
 0x00446e40 100.00 legoobject_nearest_cell_route_commit
