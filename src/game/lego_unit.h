@@ -304,7 +304,7 @@ extern float legoGlobs_f_556178[2];             /* 00556178 */
 extern LegoPoint2FC legoGlobs_f_5563f8;  /* 005563f8 */
 extern int legoGlobs_f_556440;                  /* 00556440 */
 extern int legoGlobs_f_556444;                  /* 00556444 */
-extern int legoGlobs_f_556fb8[2];               /* 00556fb8 mouseBlockPos */
+extern int legoGlobs_mouseBlockPos[2];               /* 00556fb8 mouseBlockPos */
 
 struct EntitySlot;
 void lego_render_record_set_from_input(struct EntitySlot* object);

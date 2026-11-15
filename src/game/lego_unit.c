@@ -152,8 +152,11 @@ extern int s_lego_reset_buttons;
 
 /* The block under the pointer (mouseBlockPos). It follows legoGlobs, outside
  * its 0xef8 bytes, so it keeps its own definition. */
+/* The name puts this common after legoGlobs, as in the original: LINK
+ * lays out an object's commons in reverse symbol-table order, which MSVC
+ * 5.0 sorts by a hash of the name (finding 690). */
 // GLOBAL: LEGORR 0x00556fb8
-int legoGlobs_f_556fb8[2];
+int legoGlobs_mouseBlockPos[2];
 /* ---- state, group D ---- */
 
 /* legoGlobs.config (005560c0): the loaded Lego.cfg. */
@@ -2961,8 +2964,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
             s_triple_second = *(uint32_t*)&wPos.y;
             s_triple_third = *(uint32_t*)&wPos.z;
             s_panel_highlight_flags |= 0x400;
-            legoGlobs_f_556fb8[0] = bx;
-            legoGlobs_f_556fb8[1] = by;
+            legoGlobs_mouseBlockPos[0] = bx;
+            legoGlobs_mouseBlockPos[1] = by;
 
             if (!(legoGlobs_flags1 & 0x100) || (s_global_low_word & 0x81)) {
                 if (s_global_low_word & 0x80) {
@@ -3104,7 +3107,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                         if (s_global_low_word & 8) media_pointer_cursor_select(0x23);
                                         else media_pointer_cursor_select(0x24);
                                     if (leftReleased) {
-                                        cmd_produce(8, NULL, 0, legoGlobs_f_556fb8);
+                                        cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
                                         entity_deferred_work_schedule(liveObj);
                                         cmd_mark_matching_adapter(3, liveObj, NULL);
                                         media_action_feedback_sound_dispatch(0);
@@ -3141,8 +3144,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                 legoGlobs_f_556180 = bx;
                                 legoGlobs_f_556188 = 1;
                                 if (leftReleased &&
-                                    !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                    terrain_cell_command_create_adapter(legoGlobs_f_556fb8, 1, 1);
+                                    !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                    terrain_cell_command_create_adapter(legoGlobs_mouseBlockPos, 1, 1);
                                     media_action_feedback_sound_dispatch(0);
                                     selection_clear_request_and_hud_reset();
                                 }
@@ -3156,8 +3159,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                             else media_pointer_cursor_select(0x20);
                             advisor_text_animation_update(1, 0, 0);
                             if (leftReleased &&
-                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                terrain_cell_command_create_adapter(legoGlobs_f_556fb8, 0, 1);
+                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                terrain_cell_command_create_adapter(legoGlobs_mouseBlockPos, 0, 1);
                                 media_action_feedback_sound_dispatch(0);
                                 selection_clear_request_and_hud_reset();
                             }
@@ -3172,8 +3175,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                             else media_pointer_cursor_select(0x28);
                             advisor_text_animation_update(0, 0, 0);
                             if (leftReleased &&
-                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                cmd_produce(8, NULL, 0, legoGlobs_f_556fb8);
+                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
                                 media_action_feedback_sound_dispatch(0);
                                 selection_clear_request_and_hud_reset();
                             }
@@ -3185,12 +3188,12 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                         if (leftReleased) media_action_feedback_sound_dispatch(1);
                     } else if (lego_C_block_flag4(bx, by)) {
                         if (lego_C_block_is_wall(bx, by) &&
-                            (lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->f_02 == 1 ||
-                             lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->f_02 == 0xb)) {
+                            (lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->f_02 == 1 ||
+                             lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->f_02 == 0xb)) {
                             if (!(block->flags1 & 8))
                                 media_action_code_to_sound_alias(block->f_02);
                             if (!s_lego_dragging)
-                                lego_terrain_command_feedback_dispatch(legoGlobs_f_556fb8, 1, 1, 0);
+                                lego_terrain_command_feedback_dispatch(legoGlobs_mouseBlockPos, 1, 1, 0);
                             if (leftReleased) media_action_feedback_sound_dispatch(2);
                         } else {
                             /* Two flags, as in the original (finding 671):
@@ -3203,7 +3206,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                             if (!(block->flags1 & 8))
                                 media_action_code_to_sound_alias(block->f_02);
                             if (!s_lego_dragging)
-                                lego_terrain_command_feedback_dispatch(legoGlobs_f_556fb8, 1, 1, 0);
+                                lego_terrain_command_feedback_dispatch(legoGlobs_mouseBlockPos, 1, 1, 0);
                             if (selection_active_has_any_get()) {
                                 if (legoGlobs_flags1 & 0x40000) {
                                     if (block->f_00 == 1 ||
@@ -3216,8 +3219,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                         handled = 1;
                                         legoGlobs_f_556188 = 1;
                                         if (leftReleased &&
-                                            !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                            terrain_cell_command_create_adapter(legoGlobs_f_556fb8, 1, 1);
+                                            !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                            terrain_cell_command_create_adapter(legoGlobs_mouseBlockPos, 1, 1);
                                             media_action_feedback_sound_dispatch(0);
                                             selection_clear_request_and_hud_reset();
                                         }
@@ -3235,9 +3238,9 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                         else media_pointer_cursor_select(0x20);
                                         advisor_text_animation_update(1, 0, 0);
                                         if (leftReleased &&
-                                            !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                            terrain_cell_command_create_adapter(legoGlobs_f_556fb8, 0, 1);
-                                            cmd_mark_matching_adapter(8, NULL, legoGlobs_f_556fb8);
+                                            !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                            terrain_cell_command_create_adapter(legoGlobs_mouseBlockPos, 0, 1);
+                                            cmd_mark_matching_adapter(8, NULL, legoGlobs_mouseBlockPos);
                                             media_action_feedback_sound_dispatch(0);
                                             selection_clear_request_and_hud_reset();
                                         }
@@ -3256,9 +3259,9 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                             if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x29);
                                             else media_pointer_cursor_select(0x2a);
                                             if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                                cmd_produce(8, NULL, 0, legoGlobs_f_556fb8);
-                                                cmd_mark_matching_adapter(0xc, NULL, legoGlobs_f_556fb8);
+                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                                cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
+                                                cmd_mark_matching_adapter(0xc, NULL, legoGlobs_mouseBlockPos);
                                                 media_action_feedback_sound_dispatch(0);
                                                 selection_clear_request_and_hud_reset();
                                             }
@@ -3273,8 +3276,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                             else media_pointer_cursor_select(0x28);
                                             advisor_text_animation_update(0, 0, 0);
                                             if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                                cmd_produce(8, NULL, 0, legoGlobs_f_556fb8);
+                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                                cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
                                                 media_action_feedback_sound_dispatch(0);
                                                 selection_clear_request_and_hud_reset();
                                             }
@@ -3289,14 +3292,14 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                     !(block->flags2 & 0x20)) {
                                     if (block->flags1 & 8) {
                                         picked = 0;
-                                        if (lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x80000000) {
+                                        if (lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->flags1 & 0x80000000) {
                                             picked = 1;
                                             handled = 1;
                                             if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                                 cmd_produce(3, NULL, 0, NULL);
                                                 media_action_feedback_sound_dispatch(5);
-                                                command_context_post_to_hud(2, (const uint32_t*)legoGlobs_f_556fb8);
+                                                command_context_post_to_hud(2, (const uint32_t*)legoGlobs_mouseBlockPos);
                                             }
                                         }
                                         if (!picked && (block->flags1 & 0x8000)) {
@@ -3304,26 +3307,26 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                             if (leftReleased) media_action_feedback_sound_dispatch(1);
                                         }
                                         if (((block->flags1 & 0x100000) ||
-                                             (lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x40000000)) &&
-                                            !(lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x8000) &&
-                                            !lego_C_block_flag20000000(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])) {
+                                             (lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->flags1 & 0x40000000)) &&
+                                            !(lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->flags1 & 0x8000) &&
+                                            !lego_C_block_flag20000000(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])) {
                                             handled = 1;
                                             if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                                 media_action_feedback_sound_dispatch(5);
-                                                command_context_post_to_hud(4, (const uint32_t*)legoGlobs_f_556fb8);
+                                                command_context_post_to_hud(4, (const uint32_t*)legoGlobs_mouseBlockPos);
                                             }
                                         }
                                         if (handled) goto tracking;
                                         picked = 0;
-                                        if ((lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x40000000) ||
-                                            lego_C_block_flag20000000(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])) {
+                                        if ((lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->flags1 & 0x40000000) ||
+                                            lego_C_block_flag20000000(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])) {
                                             picked = 1;
                                             if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                                 cmd_produce(3, NULL, 0, NULL);
                                                 media_action_feedback_sound_dispatch(5);
-                                                command_context_post_to_hud(1, (const uint32_t*)legoGlobs_f_556fb8);
+                                                command_context_post_to_hud(1, (const uint32_t*)legoGlobs_mouseBlockPos);
                                             }
                                         }
 
@@ -3332,10 +3335,10 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                             if (block->flags1 & 0x200000) {
                                                 picked = 1;
                                                 if (leftReleased &&
-                                                    !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                    !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                                     cmd_produce(3, NULL, 0, NULL);
                                                     media_action_feedback_sound_dispatch(5);
-                                                    command_context_post_to_hud(1, (const uint32_t*)legoGlobs_f_556fb8);
+                                                    command_context_post_to_hud(1, (const uint32_t*)legoGlobs_mouseBlockPos);
                                                 }
                                             }
                                             if (!picked) {
@@ -3343,10 +3346,10 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 if (!(block->flags1 & 0x200000)) {
                                                     handled = 1;
                                                     if (leftReleased &&
-                                                        !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                        !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                                         cmd_produce(3, NULL, 0, NULL);
                                                         media_action_feedback_sound_dispatch(5);
-                                                        command_context_post_to_hud(5, (const uint32_t*)legoGlobs_f_556fb8);
+                                                        command_context_post_to_hud(5, (const uint32_t*)legoGlobs_mouseBlockPos);
                                                     }
                                                 }
                                                 if (!handled && leftReleased)
@@ -3357,10 +3360,10 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                     } else if (block->f_02 != 1 && !(block->flags1 & 0x40)) {
                                         handled = 1;
                                         if (leftReleased &&
-                                            !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                            !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                             cmd_produce(3, NULL, 0, NULL);
                                             media_action_feedback_sound_dispatch(4);
-                                            command_context_post_to_hud(7, (const uint32_t*)legoGlobs_f_556fb8);
+                                            command_context_post_to_hud(7, (const uint32_t*)legoGlobs_mouseBlockPos);
                                         }
                                     }
                                 }
