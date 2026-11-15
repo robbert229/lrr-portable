@@ -844,8 +844,8 @@ void smoke_group_show(Smoke* smoke, unsigned int groupID)
     ddiscene_object_position_get(smoke->cont, NULL, (float*)&pos);
     group->position = pos;
     group->time = 0.0f;
-    group->distance = 0.0f;
     group->velocity = vec;
+    group->distance = 0.0f;
     group->maxDistance = rand() % 30 + 40;
     smoke->delay = (0.5f / smoke->speed) * group->height;
 }

@@ -608,8 +608,8 @@ void weapons_projectile_update(Weapons_Projectile* projectile, float elapsed)
     dist = projectile->speed * elapsed;
     if (!projectile->curved) {
         projectile->position.x += projectile->direction.x * dist;
-        projectile->position.y += projectile->direction.y * dist;
         projectile->position.z += projectile->direction.z * dist;
+        projectile->position.y += projectile->direction.y * dist;
         ddiscene_object_position_set(cont, NULL, projectile->position.x,
                                      projectile->position.y, projectile->position.z);
         ddiscene_object_pose_method_dispatch(cont, NULL, projectile->direction.x,

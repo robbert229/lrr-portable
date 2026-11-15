@@ -884,11 +884,11 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
         }
     }
 
+    surfNormalsPtr = surfVerticesNorm;
+    surfVertexCountPtr = surfVertexCount;
+    textCoordsPtr = surfTextCoords;
     faceDataPtr = surfFaceData;
     surfVerticesPtr = surfVertices;
-    surfNormalsPtr = surfVerticesNorm;
-    textCoordsPtr = surfTextCoords;
-    surfVertexCountPtr = surfVertexCount;
     for (loop = 0; loop < lightWaveObject->aoSize.lwSurfaceCount; loop++) {
         Mesh_LightWave_Surface* lwSurf;
 
@@ -950,8 +950,8 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
 
         textCoordsPtr += size;
         surfNormalsPtr += size;
-        surfVerticesPtr += size;
         faceDataPtr += fDSize;
+        surfVerticesPtr += size;
         surfVertexCountPtr++;
     }
 

@@ -527,11 +527,11 @@ void AviMovie::FrameToSurface(LPBITMAPINFOHEADER lpbi)
 
     if (!surf->m_locked && surf->Lock()) locked = true;
 
+    src = (unsigned short*)((char*)lpbi + lpbi->biSize);
     dst = (unsigned short*)surf->m_desc.lpSurface;
     width = m_rect.right - m_rect.left;
     height = m_rect.bottom - m_rect.top;
     pitch = m_surf->m_desc.lPitch / 2;
-    src = (unsigned short*)((char*)lpbi + lpbi->biSize);
 
     bpp = m_surf->m_is555 ? 15 : m_surf->m_desc.ddpfPixelFormat.dwRGBBitCount;
     if (bpp == 15) {

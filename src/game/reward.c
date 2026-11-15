@@ -636,8 +636,8 @@ int reward_prepare_results(void)
         rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].damage;
     current->itemsArray[REWARD_ITEM_ROCKMONSTERS].lostCount =
         rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].lostCount;
-    current->buildingCounts = rewardGlobs.level.buildingCounts;
     current->blockCount = 0;
+    current->buildingCounts = rewardGlobs.level.buildingCounts;
     current->itemsArray[REWARD_ITEM_OXYGEN].actual =
         ((RewardLegoLevel*)g_active_level_retail)->oxygen;
     current->itemsArray[REWARD_ITEM_OXYGEN].total = 100.0f;

@@ -837,13 +837,13 @@ void lws_interpolate(LwsInfo* scene, LwsNode* node, unsigned short key,
     scale.x = curr->scale.x + scale.x;
     scale.y = curr->scale.y + scale.y;
     scale.z = curr->scale.z + scale.z;
-    hpb.x = next->hpb.x - curr->hpb.x;
     hpb.y = next->hpb.y - curr->hpb.y;
-    hpb.z = next->hpb.z - curr->hpb.z;
+    hpb.x = next->hpb.x - curr->hpb.x;
     hpb.x = hpb.x * delta;
-    hpb.y = hpb.y * delta;
-    hpb.z = hpb.z * delta;
     hpb.x = curr->hpb.x + hpb.x;
+    hpb.y = hpb.y * delta;
+    hpb.z = next->hpb.z - curr->hpb.z;
+    hpb.z = hpb.z * delta;
     hpb.y = curr->hpb.y + hpb.y;
     hpb.z = curr->hpb.z + hpb.z;
 

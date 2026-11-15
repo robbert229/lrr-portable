@@ -344,8 +344,8 @@ int text_window_update_overlay(TextWindow* window, float time,
             lineWidth += width;
             wordWidth += width;
             if ((float)lineWidth > window->windowSize.width) {
-                lineCount++;
                 lineWidth = wordWidth;
+                lineCount++;
             }
         }
     }

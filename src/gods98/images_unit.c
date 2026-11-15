@@ -659,10 +659,10 @@ Image* Image_Create(Image_SurfaceIface* surface, unsigned int width,
     imageGlobs.freeList = next;
 
     newImage->flags = 0;
+    newImage->penZeroRGB = penZero;
     newImage->width = width;
     newImage->height = height;
     newImage->surface = surface;
-    newImage->penZeroRGB = penZero;
     newImage->penZero = Image_DDColorMatch(surface, penZero);
     newImage->pen255 = Image_DDColorMatch(surface, pen255);
 
@@ -776,10 +776,10 @@ void Image_GetScreenshot(Image* image, unsigned int xsize, unsigned int ysize)
 
     memset(&desc, 0, sizeof(desc));
     desc.dwSize = sizeof(desc);
-    desc.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
-    desc.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
     desc.dwWidth = xsize;
     desc.dwHeight = ysize;
+    desc.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
+    desc.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
 
     if ((r = lpDD()->lpVtbl->CreateSurface(lpDD(), &desc, &surf, NULL)) != 0) {
         directx_result_diagnostic_dispatch(r, 3,

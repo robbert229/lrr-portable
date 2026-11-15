@@ -653,8 +653,8 @@ int directdraw_save_bmp(DirectDrawSurfaceIface* surface, const char* fname)
                 for (i = 0; i < 32; i++) if ((desc.ddpfPixelFormat.dwBBitMask >> i) & 1) bBits++;
                 for (y = 0; y < desc.dwHeight; y++) {
                     for (x = 0, offset = 0, out = 0; x < desc.dwWidth; x++) {
-                        value = *(unsigned int*)((unsigned char*)desc.lpSurface + y * desc.lPitch + offset);
                         out += 3;
+                        value = *(unsigned int*)((unsigned char*)desc.lpSurface + y * desc.lPitch + offset);
                         buffer[(desc.dwHeight - y - 1) * lineSize + out - 1] = (unsigned char)((value >> (gBits + bBits)) << (8 - rBits));
                         buffer[(desc.dwHeight - y - 1) * lineSize + out - 2] = (unsigned char)((value >> bBits) << (8 - gBits));
                         buffer[(desc.dwHeight - y - 1) * lineSize + out - 3] = (unsigned char)(value << (8 - bBits));
@@ -669,12 +669,12 @@ int directdraw_save_bmp(DirectDrawSurfaceIface* surface, const char* fname)
             header.bfType[1] = 'M';
             header.bfSize = size + sizeof(header);
             header.bfOffBits = sizeof(header);
+            header.biCompression = 0;
             header.biSize = 40;
             header.biWidth = desc.dwWidth;
             header.biHeight = desc.dwHeight;
             header.biPlanes = 1;
             header.biBitCount = 24;
-            header.biCompression = 0;
             header.biSizeImage = 0;
             header.biXPelsPerMeter = 1;
             header.biYPelsPerMeter = 1;

@@ -1,4 +1,4 @@
-# input_sha256: 9254027957c3fd4f65a5b02cfd036ac40d42dc757da0cf132a703d4ea8c9c657
+# input_sha256: 9d15cbed796dfe002e7509158594752b0ad7be2d3ebdd0846580daa74a543679
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1815,7 +1815,7 @@
 0x00460220 100.00 reward_level_start
 0x00460290 100.00 reward_building_counts_get
 0x00460310 100.00 reward_building_counts_callback
-0x00460360 70.13 reward_prepare_results
+0x00460360 76.17 reward_prepare_results
 0x00460910 100.00 reward_object_count_get
 0x00460950 90.86 reward_calculate_score
 0x00460f00 100.00 reward_create_scroll
@@ -1903,7 +1903,7 @@
 0x00465a90 100.00 transient_effect_registry_enable_set
 0x00465ac0 100.00 transient_effect_enable_set
 0x00465b00 100.00 transient_effect_instances_tick
-0x00465c50 96.33 transient_effect_particle_slot_initialize
+0x00465c50 97.54 transient_effect_particle_slot_initialize
 0x00465e00 89.04 transient_effect_segment_advance
 0x00465ee0 100.00 smoke_mesh_render_callback
 0x00465f40 33.15 transient_effect_instance_quad_vertices_build
@@ -2075,7 +2075,7 @@
 0x0046f550 100.00 weapons_update
 0x0046f610 100.00 weapons_callback_update_object
 0x0046f770 100.00 weapons_projectile_hit_object
-0x0046f920 51.28 weapons_projectile_update
+0x0046f920 52.01 weapons_projectile_update
 0x0046faf0 84.50 weapons_projectile_create
 0x0046fc70 59.89 weapons_projectile_create_curved
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
@@ -2271,7 +2271,7 @@
 0x00478000 100.00 main_time_get
 0x00478010 100.00 window_runtime_message_dispatch_filter
 0x00478040 100.00 window_message_dispatch_pump
-0x004780b0 97.78 renderer_window_mode_apply
+0x004780b0 98.89 renderer_window_mode_apply
 0x004781d0 99.00 direct3drm_device_initialize
 0x00478310 100.00 window_runtime_adjust_rect
 0x00478330 100.00 direct3d_render_preferences_apply
@@ -2284,7 +2284,7 @@
 0x00478940 100.00 d3d_material_state_flush
 0x00478980 100.00 music_mixer_volume_set
 0x004789a0 100.00 ledger_stub_004789a0_MusicMixerVolumeGet
-0x004789c0 91.29 audio_mixer_control_init
+0x004789c0 91.64 audio_mixer_control_init
 0x00478df0 100.00 block_text_token_pool_init
 0x00478e20 100.00 block_text_token_pool_destroy
 0x00478e60 92.16 block_open
@@ -2383,7 +2383,7 @@
 0x0047c550 100.00 directdraw_enum_mode_callback
 0x0047c610 100.00 directdraw_setup
 0x0047c8d0 100.00 directdraw_flip
-0x0047c8f0 74.38 directdraw_save_bmp
+0x0047c8f0 78.93 directdraw_save_bmp
 0x0047cc20 100.00 directdraw_return_front_buffer
 0x0047cc50 100.00 directdraw_blit_buffers
 0x0047ccf0 100.00 directdraw_shutdown
@@ -2413,12 +2413,12 @@
 0x0047def0 100.00 Image_GetPen255
 0x0047df50 100.00 Image_GetPixelMask
 0x0047dfa0 100.00 Image_GetPixel
-0x0047e050 66.67 Image_Create
+0x0047e050 78.26 Image_Create
 0x0047e0c0 100.00 Image_AddList
 0x0047e130 100.00 Image_RemoveAll
 0x0047e190 98.06 Image_DDColorMatch
 0x0047e2d0 100.00 Image_CR2RGB
-0x0047e300 96.88 Image_GetScreenshot
+0x0047e300 100.00 Image_GetScreenshot
 0x0047e3e0 100.00 Image_InitFromSurface
 0x0047e440 100.00 Image_SaveBMP
 0x0047e460 100.00 AviSurface::`scalar deleting destructor'
@@ -2434,7 +2434,7 @@
 0x0047e800 100.00 AviMovie::AviMovie
 0x0047e980 100.00 AviMovie::`scalar deleting destructor'
 0x0047e9a0 100.00 AviMovie::~AviMovie
-0x0047e9e0 60.75 AviMovie::FrameToSurface
+0x0047e9e0 66.36 AviMovie::FrameToSurface
 0x0047eb20 96.49 AviMovie::Update
 0x0047ebe0 100.00 AviMovie::GetLength
 0x0047ebf0 100.00 AviMovie::SetTime
@@ -2499,7 +2499,7 @@
 0x00480870 100.00 mesh_create_on_frame
 0x00480900 100.00 mesh_clone
 0x004809e0 100.00 mesh_load
-0x00480ac0 78.43 mesh_parse_lwo
+0x00480ac0 79.08 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
@@ -2583,7 +2583,7 @@
 0x00485250 100.00 text_buffer_append_vformat
 0x00485300 100.00 objective_advisor_text_copy
 0x00485390 88.18 text_buffer_draw_wrapped
-0x00485710 99.50 text_wrap_measure_and_draw_lines
+0x00485710 100.00 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 100.00 keyboard_key_names_init
@@ -2621,7 +2621,7 @@
 0x00487fc0 100.00 keyframe_time_segment_fraction
 0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
-0x00488170 34.17 lws_interpolate
+0x00488170 62.45 lws_interpolate
 0x004882e0 27.66 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
@@ -4540,7 +4540,7 @@
 0x00460220 100.00 reward_level_start
 0x00460290 100.00 reward_building_counts_get
 0x00460310 100.00 reward_building_counts_callback
-0x00460360 70.13 reward_prepare_results
+0x00460360 76.17 reward_prepare_results
 0x00460910 100.00 reward_object_count_get
 0x00460950 90.86 reward_calculate_score
 0x00460f00 100.00 reward_create_scroll
@@ -4628,7 +4628,7 @@
 0x00465a90 100.00 transient_effect_registry_enable_set
 0x00465ac0 100.00 transient_effect_enable_set
 0x00465b00 100.00 transient_effect_instances_tick
-0x00465c50 96.33 transient_effect_particle_slot_initialize
+0x00465c50 97.54 transient_effect_particle_slot_initialize
 0x00465e00 89.04 transient_effect_segment_advance
 0x00465ee0 100.00 smoke_mesh_render_callback
 0x00465f40 33.15 transient_effect_instance_quad_vertices_build
@@ -4800,7 +4800,7 @@
 0x0046f550 100.00 weapons_update
 0x0046f610 100.00 weapons_callback_update_object
 0x0046f770 100.00 weapons_projectile_hit_object
-0x0046f920 51.28 weapons_projectile_update
+0x0046f920 52.01 weapons_projectile_update
 0x0046faf0 84.50 weapons_projectile_create
 0x0046fc70 59.89 weapons_projectile_create_curved
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
@@ -4996,7 +4996,7 @@
 0x00478000 100.00 main_time_get
 0x00478010 100.00 window_runtime_message_dispatch_filter
 0x00478040 100.00 window_message_dispatch_pump
-0x004780b0 97.78 renderer_window_mode_apply
+0x004780b0 98.89 renderer_window_mode_apply
 0x004781d0 99.00 direct3drm_device_initialize
 0x00478310 100.00 window_runtime_adjust_rect
 0x00478330 100.00 direct3d_render_preferences_apply
@@ -5009,7 +5009,7 @@
 0x00478940 100.00 d3d_material_state_flush
 0x00478980 100.00 music_mixer_volume_set
 0x004789a0 100.00 ledger_stub_004789a0_MusicMixerVolumeGet
-0x004789c0 91.29 audio_mixer_control_init
+0x004789c0 91.64 audio_mixer_control_init
 0x00478df0 100.00 block_text_token_pool_init
 0x00478e20 100.00 block_text_token_pool_destroy
 0x00478e60 92.16 block_open
@@ -5108,7 +5108,7 @@
 0x0047c550 100.00 directdraw_enum_mode_callback
 0x0047c610 100.00 directdraw_setup
 0x0047c8d0 100.00 directdraw_flip
-0x0047c8f0 74.38 directdraw_save_bmp
+0x0047c8f0 78.93 directdraw_save_bmp
 0x0047cc20 100.00 directdraw_return_front_buffer
 0x0047cc50 100.00 directdraw_blit_buffers
 0x0047ccf0 100.00 directdraw_shutdown
@@ -5138,12 +5138,12 @@
 0x0047def0 100.00 Image_GetPen255
 0x0047df50 100.00 Image_GetPixelMask
 0x0047dfa0 100.00 Image_GetPixel
-0x0047e050 66.67 Image_Create
+0x0047e050 78.26 Image_Create
 0x0047e0c0 100.00 Image_AddList
 0x0047e130 100.00 Image_RemoveAll
 0x0047e190 98.06 Image_DDColorMatch
 0x0047e2d0 100.00 Image_CR2RGB
-0x0047e300 96.88 Image_GetScreenshot
+0x0047e300 100.00 Image_GetScreenshot
 0x0047e3e0 100.00 Image_InitFromSurface
 0x0047e440 100.00 Image_SaveBMP
 0x0047e460 100.00 AviSurface::`scalar deleting destructor'
@@ -5159,7 +5159,7 @@
 0x0047e800 100.00 AviMovie::AviMovie
 0x0047e980 100.00 AviMovie::`scalar deleting destructor'
 0x0047e9a0 100.00 AviMovie::~AviMovie
-0x0047e9e0 60.75 AviMovie::FrameToSurface
+0x0047e9e0 66.36 AviMovie::FrameToSurface
 0x0047eb20 96.49 AviMovie::Update
 0x0047ebe0 100.00 AviMovie::GetLength
 0x0047ebf0 100.00 AviMovie::SetTime
@@ -5224,7 +5224,7 @@
 0x00480870 100.00 mesh_create_on_frame
 0x00480900 100.00 mesh_clone
 0x004809e0 100.00 mesh_load
-0x00480ac0 78.43 mesh_parse_lwo
+0x00480ac0 79.08 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
@@ -5308,7 +5308,7 @@
 0x00485250 100.00 text_buffer_append_vformat
 0x00485300 100.00 objective_advisor_text_copy
 0x00485390 88.18 text_buffer_draw_wrapped
-0x00485710 99.50 text_wrap_measure_and_draw_lines
+0x00485710 100.00 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 100.00 keyboard_key_names_init
@@ -5346,7 +5346,7 @@
 0x00487fc0 100.00 keyframe_time_segment_fraction
 0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
-0x00488170 34.17 lws_interpolate
+0x00488170 62.45 lws_interpolate
 0x004882e0 27.66 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find

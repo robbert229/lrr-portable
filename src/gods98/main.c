@@ -605,10 +605,10 @@ void renderer_window_mode_apply(int fullScreen, int xPos, int yPos,
 
     if (!fullScreen) {
         rect.left = xPos;
+        mainGlobs.style = WS_POPUP | WS_SYSMENU | WS_CAPTION;
         rect.top = yPos;
         rect.right = xPos + width;
         rect.bottom = yPos + height;
-        mainGlobs.style = WS_POPUP | WS_SYSMENU | WS_CAPTION;
         window_runtime_adjust_rect(&rect);
         SetWindowLongA((HWND)g_platform_cursor_window_handle, GWL_STYLE, mainGlobs.style);
         SetWindowPos((HWND)g_platform_cursor_window_handle, NULL, rect.left, rect.top,
@@ -1041,8 +1041,8 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
                                         details.cbStruct = sizeof(details);
                                         details.dwControlID = controls[control].dwControlID;
                                         details.cChannels = line.cChannels;
-                                        details.cMultipleItems = 0;
                                         details.cbDetails = sizeof(DWORD);
+                                        details.cMultipleItems = 0;
                                         values = (DWORD*)malloc(sizeof(DWORD) * line.cChannels);
                                         details.paDetails = values;
                                         if (set) {
