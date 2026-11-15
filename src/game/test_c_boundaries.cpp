@@ -13,6 +13,7 @@
 #include "gods98/utils.h"
 #include "gods98/input.hpp"
 #include "gods98/input.h"
+#include "gods98/input_unit.h"
 #include "gods98/simtick.hpp"
 #include "gods98/simtick.h"
 #include "gods98/texture.hpp"

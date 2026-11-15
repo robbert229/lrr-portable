@@ -2009,12 +2009,12 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 0047ed60,AviStreamFrameCountGet,63,G98-012,,gods98,low,boundary:G98-013,src/gods98/avi_player.cpp
 0047ed70,InterfaceInvokeOneIfNonNull,63,G98-012,,gods98,low,boundary:G98-013,src/gods98/avi_player.cpp
 0047ed80,AviPlayerReadyGet,63,G98-012,,gods98,low,boundary:G98-013,src/gods98/avi_player.cpp
-0047ed90,DirectInputInitialize,64,G98-013,Input.c,gods98,high,file;string,src/gods98/input_unit.cpp
-0047eef0,InputStatePoll,64,G98-013,Input.c,gods98,low,boundary:G98-014,src/gods98/input_unit.cpp
-0047efb0,KeyboardDownKeyCount,64,G98-013,Input.c,gods98,low,boundary:G98-014,src/gods98/input_unit.cpp
-0047efd0,DirectInputShutdown,64,G98-013,Input.c,gods98,low,boundary:G98-014,src/gods98/input_unit.cpp
-0047f010,CursorPositionUpdate,64,G98-013,Input.c,gods98,low,boundary:G98-014,src/gods98/input_unit.cpp
-0047f0d0,CursorSetClientPosition,64,G98-013,Input.c,gods98,low,boundary:G98-014,src/gods98/input_unit.cpp
+0047ed90,DirectInputInitialize,64,G98-013,Input.c,gods98,high,file;string,src/gods98/input_unit.c
+0047eef0,InputStatePoll,64,G98-013,Input.c,gods98,low,boundary:G98-014,src/gods98/input_unit.c
+0047efb0,KeyboardDownKeyCount,64,G98-013,Input.c,gods98,low,boundary:G98-014,src/gods98/input_unit.c
+0047efd0,DirectInputShutdown,64,G98-013,Input.c,gods98,low,boundary:G98-014,src/gods98/input_unit.c
+0047f010,CursorPositionUpdate,64,G98-013,Input.c,gods98,low,boundary:G98-014,src/gods98/input_unit.c
+0047f0d0,CursorSetClientPosition,64,G98-013,Input.c,gods98,low,boundary:G98-014,src/gods98/input_unit.c
 0047f130,WadMountStartup,65,G98-014,Files.c,gods98,high,bss;string,src/gods98/files.c
 0047f4f0,FindCdKeyDrive,65,G98-014,Files.c,gods98,high,bss;string,src/gods98/files.c
 0047f590,WadMountPathCacheStore,65,G98-014,Files.c,gods98,high,bss,src/gods98/files.c
@@ -2533,7 +2533,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 0049b6e0,AVIFIL32.DLL::AVIStreamRelease,217,IMP-003,avifil32.lib,import,medium,boundary:IMP-003,src/crt/crt.cpp
 0049b6e6,AVIFIL32.DLL::AVIStreamGetFrame,217,IMP-003,avifil32.lib,import,medium,boundary:IMP-003,src/crt/crt.cpp
 0049b6ec,AVIFIL32.DLL::AVIFileInit,217,IMP-003,avifil32.lib,import,medium,boundary:IMP-003,src/crt/crt.cpp
-0049c7a8,DINPUT.DLL::DirectInputCreateA,218,IMP-004,dinput.lib,import,medium,boundary:IMP-004,
+0049c7a8,DINPUT.DLL::DirectInputCreateA,218,IMP-004,dinput.lib,import,medium,boundary:IMP-004,src/crt/crt.cpp
 0049c7ae,DSOUND.DLL::Ordinal_1,219,IMP-005,dsound.lib,import,medium,boundary:IMP-005,
 0049c7b4,KERNEL32.DLL::RtlUnwind,220,IMP-006,kernel32.lib,import,medium,boundary:IMP-006,
 0049c7c0,ExpandWadPayload,221,LATE-001,,late,high,boundary:LATE-001,src/gods98/rnc.c

@@ -41,8 +41,8 @@ void input_direct_state_bind(InputState* state)
 /* The previous frame's key map (Input.c's prevKey_Map), for the converted
  * C units that read it (gods98/input_keys.h). */
 extern "C" uint8_t s_global_previous_keys[INPUT_KEY_COUNT];
-/* Input.c's key maps and pointer deltas (commons): main.c defines them in
- * the Windows builds (finding 679), the port natively. */
+/* Input.c's key maps and pointer deltas (commons): input_unit.c defines
+ * them in the Windows builds (finding 683), the port natively. */
 #if !defined(LEGORRR_BACKEND_WINAPI)
 uint8_t s_global_current_keys[INPUT_KEY_COUNT];
 uint8_t s_global_previous_keys[INPUT_KEY_COUNT];
@@ -609,6 +609,175 @@ uint32_t input_indexed_window_peek(int which, int index)
     return 0u;
 }
 #endif /* !LEGORRR_BACKEND_WINAPI */
+
+#if defined(LEGORRR_BACKEND_MINIWIN)
+/* PORT-ONLY: the native bodies of Input.c's six functions (G98-013). The
+ * Windows builds compile the original's code in input_unit.c, which calls
+ * DirectInput and Win32 directly; the native port has neither, so the
+ * keyboard comes through the DirectInput hook table (unset natively, so the
+ * device never opens) and the cursor through the platform layer
+ * (finding 683). */
+int input_direct_initialize(void)
+{
+    input_reset(&s_direct_input_state);
+    s_direct_input_initialized = 0;
+    s_direct_input_keyboard_acquired = 0;
+    /* Retail only reports success after DirectInputCreate, keyboard-device
+     * creation, data-format/cooperative configuration, and Acquire succeed.
+     * Missing adapters cannot stand in for those operations. */
+    if (s_direct_input_hooks.interface_create == NULL ||
+        s_direct_input_hooks.keyboard_create == NULL ||
+        s_direct_input_hooks.devices_configure == NULL ||
+        s_direct_input_hooks.devices_acquire == NULL ||
+        s_direct_input_hooks.devices_release == NULL) {
+        input_reset(&s_direct_input_state);
+        return 0;
+    }
+    if (!s_direct_input_hooks.interface_create(s_direct_input_hooks.context)) {
+        input_reset(&s_direct_input_state);
+        return 0;
+    }
+    if (!s_direct_input_hooks.keyboard_create(s_direct_input_hooks.context))
+        goto failed;
+    if (s_direct_input_hooks.mouse_create != NULL &&
+        !s_direct_input_hooks.mouse_create(s_direct_input_hooks.context))
+        goto failed;
+    if (!s_direct_input_hooks.devices_configure(s_direct_input_hooks.context))
+        goto failed;
+    if (!s_direct_input_hooks.devices_acquire(s_direct_input_hooks.context))
+        goto failed;
+    s_direct_input_initialized = 1;
+    s_direct_input_keyboard_acquired = 1;
+    return 1;
+failed:
+    if (s_direct_input_hooks.devices_release != NULL)
+        s_direct_input_hooks.devices_release(s_direct_input_hooks.context);
+    input_reset(&s_direct_input_state);
+    s_direct_input_keyboard_acquired = 0;
+    return 0;
+}
+
+/* InputStatePoll (FUN_0047eef0): update the live keyboard snapshot using the
+ * engine's fullscreen and application-active gates. */
+void input_state_poll_retail(void)
+{
+    int poll_active = 1;
+
+    if ((s_engine_feature_word & 2u) == 0u)
+        poll_active = s_window_application_active != 0u;
+
+    if (!poll_active) {
+        InputState* s = s_active_input_state != NULL
+            ? s_active_input_state : &s_direct_input_state;
+        memset(s->cur, 0, sizeof(s->cur));
+        memset(s->prev, 0, sizeof(s->prev));
+        if (s_direct_input_initialized &&
+            s_direct_input_hooks.keyboard_unacquire != NULL) {
+            s_direct_input_hooks.keyboard_unacquire(
+                s_direct_input_hooks.context);
+        }
+        s_direct_input_keyboard_acquired = 0;
+        input_global_current_keys_copy(s);
+        return;
+    }
+    if (!s_direct_input_initialized) return;
+
+    InputState* s = s_active_input_state != NULL
+        ? s_active_input_state : &s_direct_input_state;
+    int result;
+    if (s_direct_input_keyboard_acquired) {
+        result = -0x7ff8ffe2;
+        if (s_direct_input_hooks.keyboard_state_read != NULL) {
+            memcpy(s->prev, s->cur, sizeof(s->cur));
+            memset(s->cur, 0, sizeof(s->cur));
+            result = s_direct_input_hooks.keyboard_state_read(
+                s_direct_input_hooks.context, INPUT_KEY_COUNT, s->cur);
+        }
+    }
+    else result = -0x7ff8ffe2;
+    if (result != 0) {
+        s_direct_input_keyboard_acquired = 0;
+        if (s_direct_input_hooks.keyboard_acquire != NULL &&
+            s_direct_input_hooks.keyboard_acquire(
+                s_direct_input_hooks.context) == 0) {
+            s_direct_input_keyboard_acquired = 1;
+        }
+    }
+    input_global_current_keys_copy(s);
+}
+
+/* KeyboardDownKeyCount (FUN_0047efb0): count nonzero entries in the current
+ * 256-byte key snapshot. The event backend maintains held state until it
+ * receives key-up. */
+int input_keyboard_down_key_count(void)
+{
+    int count = 0;
+    int i;
+    for (i = 0; i < INPUT_KEY_COUNT; ++i) {
+        if (s_global_current_keys[i] != 0u) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+void input_direct_shutdown(void)
+{
+    if (s_direct_input_initialized &&
+        s_direct_input_hooks.devices_release != NULL)
+        s_direct_input_hooks.devices_release(s_direct_input_hooks.context);
+    s_direct_input_initialized = 0;
+    s_direct_input_keyboard_acquired = 0;
+}
+
+/* CursorPositionUpdate (FUN_0047f010): sample the platform cursor, clamp it
+ * to the framebuffer, then publish the pair and per-sample delta. */
+void input_cursor_position_update(void)
+{
+    int x;
+    int y;
+    int width;
+    int height;
+    if (!platform_cursor_position_get(&x, &y)) return;
+    width = g_platform_cursor_width;
+    height = g_platform_cursor_height;
+    if (x >= width) x = width - 1;
+    if (y >= height) y = height - 1;
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    s_cursor_delta_x = x - (int32_t)s_renderer_word_a;
+    s_cursor_delta_y = y - (int32_t)s_renderer_word_b;
+    s_renderer_word_a = (uint32_t)x;
+    s_renderer_word_b = (uint32_t)y;
+}
+
+/* CursorSetClientPosition (FUN_0047f0d0): update the client-relative mouse
+ * words, clear the movement pair, and move the host cursor (through the
+ * cursor hooks when installed). */
+void input_cursor_client_position_set(int x, int y)
+{
+    int screen_x = x;
+    int screen_y = y;
+    s_renderer_word_a = (uint32_t)x;
+    s_renderer_word_b = (uint32_t)y;
+    s_cursor_delta_x = 0;
+    s_cursor_delta_y = 0;
+    if (s_input_client_to_screen_hook != NULL) {
+        if (s_input_client_to_screen_hook(&screen_x, &screen_y,
+                                          s_input_cursor_hook_context) == 0) {
+            screen_x = x;
+            screen_y = y;
+        }
+    }
+    if (s_input_set_cursor_position_hook != NULL) {
+        s_input_set_cursor_position_hook(screen_x, screen_y,
+                                         s_input_cursor_hook_context);
+    }
+    else {
+        platform_cursor_position_set(x, y);
+    }
+}
+#endif /* LEGORRR_BACKEND_MINIWIN */
 
 namespace unported_ledger_stubs {
 

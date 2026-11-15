@@ -410,8 +410,11 @@ else()
     # DirectDrawEnumerateA, as the original does (finding 596); vfw32: the
     # AVI player (gods98/avi_player.cpp) imports AVIFIL32 (finding 604);
     # ole32: the movie unit (gods98/movie_unit.cpp) imports CoInitialize and
-    # CoCreateInstance (finding 618).
-    target_link_libraries(program PRIVATE winmm d3drm ddraw vfw32 ole32 advapi32)
+    # CoCreateInstance (finding 618); dinput and dxguid: Input.c
+    # (gods98/input_unit.c) imports DirectInputCreateA and links
+    # c_dfDIKeyboard and GUID_SysKeyboard (finding 683).
+    target_link_libraries(program PRIVATE winmm d3drm ddraw vfw32 ole32 advapi32
+      dinput dxguid)
   endif()
 endif()
 if(WIN32)

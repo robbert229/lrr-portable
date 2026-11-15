@@ -336,6 +336,11 @@ extern "C" void __cdecl __multtenpow12(uint16_t*, uint32_t, int);
 // LIBRARY: LEGORR 0x0049b6c8 SYMBOL
 // _DirectDrawCreate@12
 
+/* DINPUT.LIB's import thunk, which Input.c calls directly
+ * (gods98/input_unit.c, finding 683). */
+// LIBRARY: LEGORR 0x0049c7a8 SYMBOL
+// _DirectInputCreateA@16
+
 /* VFW32.LIB's AVIFIL32 import thunks, which the AVI player calls directly
  * (gods98/avi_player.cpp, finding 604). */
 // LIBRARY: LEGORR 0x0049b6ce SYMBOL

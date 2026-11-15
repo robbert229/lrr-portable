@@ -113,7 +113,7 @@ lrr_link(unit   G98-009  gods98        gods98/sound3d.c)
 lrr_link(unit   G98-010  gods98        gods98/directdraw.c)
 lrr_link(unit   G98-011  gods98        gods98/images_unit.c)
 lrr_link(unit   G98-012  gods98        gods98/avi_player.cpp)
-lrr_link(unit   G98-013  gods98        gods98/input_unit.cpp)
+lrr_link(unit   G98-013  gods98        gods98/input_unit.c)
 lrr_link(unit   G98-014  gods98        gods98/files.c)
 lrr_link(unit   G98-015  gods98        gods98/mesh_unit.c)
 lrr_link(unit   G98-016  gods98        gods98/flic_unit.c)
@@ -302,9 +302,10 @@ set(LRR_LINK_LIBRARIES kernel32.lib libc.lib oldnames.lib
 # ordinary entries, and their list entries keep their place.
 set(LRR_LINK_LATE_MEMBERS gods98/rnc.c gods98/init.c)
 
-# Symbols the matching link pulls in by name, in this order. Input.c's
-# references to dinput.lib's data members and DirectInputCreateA are still in
-# port code that does not reference them, so they are named here until it is
-# converted; the order reproduces the original's member order in .text.
+# Symbols the matching link pulls in by name, in this order. Input.c
+# (input_unit.c, finding 683) references c_dfDIKeyboard and
+# DirectInputCreateA, but no object references c_dfDIMouse, and naming the
+# three here, in this order, reproduces the original's member order in .text
+# (finding 574).
 set(LRR_LINK_SYMBOLS /INCLUDE:_c_dfDIMouse /INCLUDE:_c_dfDIKeyboard
   /INCLUDE:_DirectInputCreateA@16)
