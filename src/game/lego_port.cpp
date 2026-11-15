@@ -9355,19 +9355,19 @@ extern "C" void lego_fog_colour_set_adapter(float r, float g, float b)
 #endif /* LRR_CONTAINER_PORT_NAMES */
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (light_interface_call_slot_40, 0x00473460)
-extern "C" void lego_light_penumbra_set_adapter(void* light, float value)
+extern "C" int lego_light_penumbra_set_adapter(void* light, float value)
 {
     uint32_t bits;
     memcpy(&bits, &value, sizeof(bits));
-    light_interface_call_slot_40(light, bits);
+    return light_interface_call_slot_40(light, bits);
 }
 
 // PORT-ONLY: original-ABI adapter for GAME-021 lego_unit.c (light_interface_call_slot_3c, 0x00473480)
-extern "C" void lego_light_umbra_set_adapter(void* light, float value)
+extern "C" int lego_light_umbra_set_adapter(void* light, float value)
 {
     uint32_t bits;
     memcpy(&bits, &value, sizeof(bits));
-    light_interface_call_slot_3c(light, bits);
+    return light_interface_call_slot_3c(light, bits);
 }
 
 /* ---- GAME-021 part 1 adapters, group A ---- */

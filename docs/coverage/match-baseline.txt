@@ -1,4 +1,4 @@
-# input_sha256: 1be88084ccac4c29547d979dd5b2687053de9616bbc27549aefe9ba73a34583f
+# input_sha256: 19c5b0d4682dcd43e66a19c5f2ee66da75f1d74a34d554b9bb421dfa5e2ef9a5
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -721,7 +721,7 @@
 0x00424cf0 100.00 lego_engine_shutdown_alt
 0x00424d00 100.00 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
-0x004250c0 99.61 lego_main_sim_step
+0x004250c0 100.00 lego_main_sim_step
 0x00425b40 100.00 lego_periodic_callback_dispatch
 0x00425b60 100.00 lego_object_sound_restart_callback
 0x00425c30 100.00 lego_transition_control
@@ -798,7 +798,7 @@
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 100.00 lego_stats_level_record_count_for_stat_type
 0x0042efc0 100.00 lego_play_movie
-0x0042f0c0 90.03 lego_level_free
+0x0042f0c0 99.32 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
 0x0042f6f0 83.85 lego_cell_init_pass
@@ -882,7 +882,7 @@
 0x004334f0 100.00 lego_render_quality_config_apply
 0x00433770 100.00 lego_scene_lights_build_from_config
 0x00433be0 100.00 lego_current_level_terrain_grid_pick
-0x00433c10 72.12 lego_entity_neighbor_blocked_cell_step_probe
+0x00433c10 98.83 lego_entity_neighbor_blocked_cell_step_probe
 0x00433e30 100.00 lego_grid_cell_entity_eligibility_check
 0x00433e80 94.51 lego_terrain_projected_cell_state_refresh
 0x00434450 100.00 lego_projected_cell_area_compare
@@ -890,7 +890,7 @@
 0x00434530 100.00 terrain_grid_entry_resources_release_all_current
 0x00434570 100.00 terrain_cell_drill_work_add_current
 0x004345f0 100.00 lego_panels_config_entry_apply
-0x00434710 95.55 lego_panel_button_layout_config_load
+0x00434710 100.00 lego_panel_button_layout_config_load
 0x00434a00 100.00 lego_advisor_tutorial_icon_image_load
 0x00434a50 100.00 lego_sound_samples_config_load
 0x00434af0 100.00 lego_text_messages_config_load
@@ -3446,7 +3446,7 @@
 0x00424cf0 100.00 lego_engine_shutdown_alt
 0x00424d00 100.00 lego_engine_shutdown
 0x004250a0 100.00 lego_exit
-0x004250c0 99.61 lego_main_sim_step
+0x004250c0 100.00 lego_main_sim_step
 0x00425b40 100.00 lego_periodic_callback_dispatch
 0x00425b60 100.00 lego_object_sound_restart_callback
 0x00425c30 100.00 lego_transition_control
@@ -3523,7 +3523,7 @@
 0x0042ed70 100.00 lego_entity_at
 0x0042ef40 100.00 lego_stats_level_record_count_for_stat_type
 0x0042efc0 100.00 lego_play_movie
-0x0042f0c0 90.03 lego_level_free
+0x0042f0c0 99.32 lego_level_free
 0x0042f2e0 100.00 lego_terrain_cell_edge_flag_set_and_update
 0x0042f350 96.26 lego_terrain_neighbor_coordinate_check
 0x0042f6f0 83.85 lego_cell_init_pass
@@ -3607,7 +3607,7 @@
 0x004334f0 100.00 lego_render_quality_config_apply
 0x00433770 100.00 lego_scene_lights_build_from_config
 0x00433be0 100.00 lego_current_level_terrain_grid_pick
-0x00433c10 72.12 lego_entity_neighbor_blocked_cell_step_probe
+0x00433c10 98.83 lego_entity_neighbor_blocked_cell_step_probe
 0x00433e30 100.00 lego_grid_cell_entity_eligibility_check
 0x00433e80 94.51 lego_terrain_projected_cell_state_refresh
 0x00434450 100.00 lego_projected_cell_area_compare
@@ -3615,7 +3615,7 @@
 0x00434530 100.00 terrain_grid_entry_resources_release_all_current
 0x00434570 100.00 terrain_cell_drill_work_add_current
 0x004345f0 100.00 lego_panels_config_entry_apply
-0x00434710 95.55 lego_panel_button_layout_config_load
+0x00434710 100.00 lego_panel_button_layout_config_load
 0x00434a00 100.00 lego_advisor_tutorial_icon_image_load
 0x00434a50 100.00 lego_sound_samples_config_load
 0x00434af0 100.00 lego_text_messages_config_load

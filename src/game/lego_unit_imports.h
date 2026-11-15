@@ -1148,8 +1148,19 @@ void lego_fog_colour_set_adapter(float r, float g, float b);    /* 00473e10 */
  * symbol counter does not move (finding 634). */
 #define renderer_fog_color_set_original(r, g, b) lego_fog_colour_set_adapter(r, g, b)
 #endif
-void lego_light_penumbra_set_adapter(void* light, float value); /* 00473460 */
-void lego_light_umbra_set_adapter(void* light, float value);    /* 00473480 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Matching build: the originals themselves, Container.c's
+ * Container_Light_SetSpotPenumbra (00473460) and Container_Light_SetSpotUmbra
+ * (00473480), which take the angle as a float. container.c serves them under
+ * these link names (container_link_names.h). Natively the port's light
+ * interface takes the float's bits, and lego_port.cpp's adapters pass them.
+ * Each macro renames one declaration and its calls (findings 634, 674 and
+ * 678). */
+#define lego_light_penumbra_set_adapter light_interface_call_slot_40
+#define lego_light_umbra_set_adapter light_interface_call_slot_3c
+#endif
+int lego_light_penumbra_set_adapter(void* spotlight, float angle); /* 00473460 */
+int lego_light_umbra_set_adapter(void* spotlight, float angle);    /* 00473480 */
 /* GAME-002 / helpwindow (frontend.hpp). */
 int main_sim_state_admission_predicate(void);                   /* 004191a0 */
 void advisor_callback_schedule_gate(void);                      /* 0041c440 */
