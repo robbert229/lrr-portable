@@ -56,6 +56,33 @@ unit's size moved away from the original's.
 `original_annotated` (2,718 to 2,719). This is the `/OPT:NOREF` relink flip
 that findings 654, 659, 663, 668, 671 and 676 also saw.
 
+### Rebased onto the #820–#822 stack
+
+Measured again on #822 (`match/819-near-miss-size-first`, `ac51ce6b`). The
+base was built on its own for its unit spans and tail roots, and the
+branch was measured with the full gate. The same four functions rise and
+nothing falls. The counter at `004311d0` is still 6,041.
+
+| Measure | #822 `ac51ce6b` | This change on it |
+| --- | ---: | ---: |
+| **Exact-function code bytes** | 344,002 (53.54%) | **347,430 (54.07%)** |
+| Accuracy, full / game-only | 97.58% / 97.32% | **97.59% / 97.33%** |
+| GAME-021 Lego.c | −224 | **−176** |
+| Offset of `00432e00` | −576 | −560 |
+| Correct-size functions, full | 2,798 (463,008 B) | **2,801 (464,811 B)** |
+| Correct-size functions, game-only | 2,507 (412,181 B) | **2,510 (413,984 B)** |
+| Identical prefix, raw / masked | 11 / 7,187 B | 11 / 7,187 B |
+| Units with size agreement | 2 | 2 |
+| `.text` identical at original addresses | 43,072 B | **43,437 B** |
+| `.data` identical | 24.31% | 24.41% |
+| Entry point (original `0048f000`) | `0048eb80` | **`0048ebb0`** |
+| SizeOfImage | 4,030,464 | 4,030,464 |
+| Tail objects referenced from units | 9 (`lego_port.cpp` among them) | **8** |
+
+On this base, `.text` identical at original addresses rises by 365
+bytes. The later units are close enough to their original addresses that
+the 48-byte move gains runs.
+
 ## 1. Per-function results
 
 Sizes are `code_extent` (finding 668), original and rebuilt. Scores come
