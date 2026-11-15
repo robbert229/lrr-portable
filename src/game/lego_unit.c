@@ -2856,11 +2856,11 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
     uint32_t pointer;
     int handled; /* also the overlay buttons' "clicked" flag */
 
-    s_panel_highlight_flags &= ~0x400;
     liveObj = NULL;
     placed = 0;
     overPanel = 0;
     leftReleased = 0;
+    s_panel_highlight_flags &= ~0x400;
     rightReleased = 0;
     surface_visibility_set(s_refresh_record, 1);
 

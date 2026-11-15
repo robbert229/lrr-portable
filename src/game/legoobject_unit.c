@@ -5319,13 +5319,13 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
     if (s_terrain_neighbor_path_cost != NULL) {
         memset(s_terrain_neighbor_path_cost, 0, width * height * sizeof(float));
 
-        step = 1;
         counts[0] = 1;
-        current = 0;
         s_terrain_neighbor_path_cost[width * startY + startX] = 1.0f;
+        step = 1;
         lists[0][0].blockPos[0] = startX;
         lists[0][0].blockPos[1] = startY;
         counts[1] = 0;
+        current = 0;
         countPtr = &counts[0];
         do {
             step++;
@@ -5401,13 +5401,13 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
             count = step;
             xs = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int));
             if (xs != NULL && (ys = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int))) != NULL) {
+                cy = endY;
+                cx = endX;
                 last = step - 1;
                 xs[last] = endX;
                 ys[last] = endY;
                 xs[0] = startX;
                 ys[0] = startY;
-                cx = endX;
-                cy = endY;
                 for (k = last; k != 1; k--) {
                     best = 10000.0f;
                     for (i = 0; i < 4; i++) {
@@ -7187,8 +7187,8 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
             if (!terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&
                 !terrain_cell_occupied_or_flag_current(blockPos[0], blockPos[1], 1))
             {
-                x = pos.x - x;
                 y = pos.y - y;
+                x = pos.x - x;
                 if ((float)sqrt(x * x + y * y) < entity_stats_float_at6c(LEGOOBJ_SLOT(obj))) {
                     legoobject_pairing_activity_raise_and_mutual_link(monster, obj);
                     return 0;

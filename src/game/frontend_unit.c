@@ -2248,8 +2248,8 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
         if (s_overwriteAnswer == 0) {
             g_front_save_menu_open = 1;
             menu->closed = 1;
-            s_saveSlotToWrite = -1;
             s_saveMenuOverwriteShowing = 0;
+            s_saveSlotToWrite = -1;
         } else if (s_overwriteAnswer == 1) {
             g_front_save_menu_open = 0;
             menu->closed = 1;
