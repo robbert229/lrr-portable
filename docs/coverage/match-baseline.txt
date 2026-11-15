@@ -1,4 +1,4 @@
-# input_sha256: a3b1280a4738518fc212118dfac28cb6c0945858afe465749587a31b62321f48
+# input_sha256: c19c8987e28b5bc86db44d0e234d4c60b651d07ef3baf4167118fb6c691a7c77
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -131,7 +131,7 @@
 0x004041b0 100.00 aitask_entity_task_chain_contains_kind
 0x004041e0 100.00 aitask_entity_command_chain_head_remove
 0x00404250 100.00 aitask_cmd_pool_timer_delta_apply
-0x00404280 92.18 aitask_cmd_entity_command_chain_tick
+0x00404280 98.18 aitask_cmd_entity_command_chain_tick
 0x00404e00 100.00 aitask_object_path_submit_to_grid_target
 0x00404ed0 100.00 aitask_check_object_candidate
 0x00404f10 100.00 aitask_object_task_target_filter_find
@@ -2856,7 +2856,7 @@
 0x004041b0 100.00 aitask_entity_task_chain_contains_kind
 0x004041e0 100.00 aitask_entity_command_chain_head_remove
 0x00404250 100.00 aitask_cmd_pool_timer_delta_apply
-0x00404280 92.18 aitask_cmd_entity_command_chain_tick
+0x00404280 98.18 aitask_cmd_entity_command_chain_tick
 0x00404e00 100.00 aitask_object_path_submit_to_grid_target
 0x00404ed0 100.00 aitask_check_object_candidate
 0x00404f10 100.00 aitask_object_task_target_filter_find

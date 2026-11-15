@@ -4378,8 +4378,9 @@ int aitask_cmd_entity_command_chain_tick(struct EntitySlot* object, void* data)
                         break;
                     case 0: {
                         AITaskPoint2I pos;
-                        int* bp = &task->blockX;
+                        int* bp;
                         entity_position_to_terrain_cell_adapter(object, &pos.x, &pos.y);
+                        bp = &task->blockX;
                         /* The test goes through result: MSVC then lays the
                          * route arm first and the at-target arm last, before
                          * the join, so the other cases keep their own
