@@ -513,14 +513,11 @@ unsigned int construction_zone_start_building(int objID, int* blockPos,
 
     for (i = 0; i < shapeCount; i++) {
         next = &shape[i + 1];
-        if (i == shapeCount - 1)
-            entrance = 0;
-        else if (shape[i].x != next->x)
-            entrance = 0;
-        else if (shape[i].y != next->y)
-            entrance = 0;
-        else {
+        if (i != shapeCount - 1 && shape[i].x == next->x && shape[i].y == next->y)
             entrance = 1;
+        else
+            entrance = 0;
+        if (entrance) {
             CONSTRUCTION_BLOCK(level, shape[i].x, shape[i].y).flags1 |=
                 CONSTRUCTION_BLOCK1_ENTRANCE;
             CONSTRUCTION_BLOCK_ZONE(level, shape[i].x, shape[i].y) = zone;
@@ -629,6 +626,7 @@ struct Lego_Object* construction_zone_complete_building(
     float xPos;
     float yPos;
     Lego_Object* obj;
+    ConstructionPoint2I* next;
 
     terrain_map_block_to_world(CONSTRUCTION_LEGO_GET_MAP(), zone->origin.x,
                                zone->origin.y, &xPos, &yPos);
@@ -641,8 +639,8 @@ struct Lego_Object* construction_zone_complete_building(
     }
     for (i = 0; i < zone->shapeCount; i++) {
         if (i != zone->shapeCount - 1 &&
-            zone->shapePoints[i].x == zone->shapePoints[i + 1].x &&
-            zone->shapePoints[i].y == zone->shapePoints[i + 1].y) {
+            zone->shapePoints[i].x == (next = &zone->shapePoints[i + 1])->x &&
+            zone->shapePoints[i].y == next->y) {
             lego_terrain_cell_flags_set_mask20108000(zone->shapePoints[i].x,
                                                      zone->shapePoints[i].y);
             legoobject_update_and_unregister_at_tile(obj, &zone->shapePoints[i].x);
