@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* GAME-050's copy of gods98 Maths.h's inline vector helpers (dot, modulus,
- * add, subtract, scale, normalise, ray end point and distance) over Weapons_Vector3F. The
+ * add, subtract, scale, normalise, ray end point and distance) over
+ * Weapons_Vector3F, and the 2D modulus over a float pair. The
  * original unit expands them in place, so they have no address of their
  * own. Only weapons.c includes this file, after Weapons_Vector3F.
  *
@@ -19,6 +20,14 @@ static __inline float weapons_vector3d_dot(const Weapons_Vector3F* a,
 static __inline float weapons_vector3d_modulus(const Weapons_Vector3F* v)
 {
     return (float)sqrt(weapons_vector3d_dot(v, v));
+}
+
+/* Maths_Vector2DModulus. 0x00471370 stores each component of its ray and
+ * squares it from that slot, as this expansion does (finding 681). The
+ * unit keeps its 2D points as float pairs, so v is one. */
+static __inline float weapons_vector2d_modulus(const float* v)
+{
+    return (float)sqrt(v[0] * v[0] + v[1] * v[1]);
 }
 
 static __inline Weapons_Vector3F* weapons_vector3d_subtract(
