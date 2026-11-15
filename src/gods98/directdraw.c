@@ -350,19 +350,24 @@ static HRESULT WINAPI directdraw_enum_device_callback(DirectDraw_Guid* lpGuid,
 static HRESULT WINAPI directdraw_enum_mode_callback(
     DirectDrawSurfaceDesc2* lpDDSurfaceDesc, LPVOID lpContext);
 
-/* IID_IDirectDraw4 and IID_IDirect3D3. The original links them from
- * dxguid.lib; as in sound3d.c and lws.c, the unit defines its own copies. */
+/* IID_IDirectDraw4 and IID_IDirect3D3. The matching build links them from
+ * dxguid.lib, as the original does (finding 688); the portable builds keep
+ * the unit's own copies. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
 // GLOBAL: LEGORR 0x0049f328
-static const DirectDraw_Guid s_iid_direct_draw4 = {
+extern const DirectDraw_Guid IID_IDirectDraw4;
+// GLOBAL: LEGORR 0x0049f648
+extern const DirectDraw_Guid IID_IDirect3D3;
+#else
+static const DirectDraw_Guid IID_IDirectDraw4 = {
     0x9c59509a, 0x39bd, 0x11d1,
     { 0x8c, 0x4a, 0x00, 0xc0, 0x4f, 0xd9, 0x30, 0xc5 }
 };
-
-// GLOBAL: LEGORR 0x0049f648
-static const DirectDraw_Guid s_iid_direct3d3 = {
+static const DirectDraw_Guid IID_IDirect3D3 = {
     0xbb223240, 0xe72b, 0x11d0,
     { 0xa9, 0xb4, 0x00, 0xaa, 0x00, 0xc0, 0x99, 0x3e }
 };
+#endif
 
 // GLOBAL: LEGORR 0x0076ac80
 DirectDraw_Globs directDrawGlobs;
@@ -420,10 +425,10 @@ int directdraw_enum_devices(const DirectDraw_Driver* driver,
 
     directDrawGlobs.deviceCount = 0;
     if (DirectDrawCreate((DirectDraw_Guid*)&driver->guid, &lpDD, NULL) == DD_OK) {
-        if (lpDD->lpVtbl->QueryInterface(lpDD, &s_iid_direct_draw4,
+        if (lpDD->lpVtbl->QueryInterface(lpDD, &IID_IDirectDraw4,
                                          (void**)&lpDD4) == DD_OK) {
             Direct3DIface* lpD3D;
-            if (lpDD4->lpVtbl->QueryInterface(lpDD4, &s_iid_direct3d3,
+            if (lpDD4->lpVtbl->QueryInterface(lpDD4, &IID_IDirect3D3,
                                               (void**)&lpD3D) == DD_OK) {
                 directDrawGlobs.deviceList = list;
                 lpD3D->lpVtbl->EnumDevices(lpD3D,
@@ -489,7 +494,7 @@ int directdraw_enum_modes(const DirectDraw_Driver* driver, int fullScreen,
         else guid = (DirectDraw_Guid*)&driver->guid;
         if (DirectDrawCreate(guid, &lpDD, NULL) == DD_OK) {
             DirectDrawIface* lpDD4;
-            if (lpDD->lpVtbl->QueryInterface(lpDD, &s_iid_direct_draw4,
+            if (lpDD->lpVtbl->QueryInterface(lpDD, &IID_IDirectDraw4,
                                              (void**)&lpDD4) == DD_OK) {
                 directDrawGlobs.modeList = list;
                 lpDD4->lpVtbl->EnumDisplayModes(lpDD4, 0, NULL, &fullScreen,
@@ -559,7 +564,7 @@ int directdraw_setup(int fullScreen, const DirectDraw_Driver* driver,
     renderer_window_mode_apply(fullScreen, xPos, yPos, width, height);
 
     if (DirectDrawCreate(guid, &lpDD, NULL) == DD_OK) {
-        if (lpDD->lpVtbl->QueryInterface(lpDD, &s_iid_direct_draw4, (void**)&directDrawGlobs.lpDirectDraw) == DD_OK) {
+        if (lpDD->lpVtbl->QueryInterface(lpDD, &IID_IDirectDraw4, (void**)&directDrawGlobs.lpDirectDraw) == DD_OK) {
             if (directDrawGlobs.lpDirectDraw->lpVtbl->SetCooperativeLevel(directDrawGlobs.lpDirectDraw, (HWND)directDrawGlobs.hWnd, fullScreen ? DDSCL_FULLSCREEN | DDSCL_EXCLUSIVE : DDSCL_NORMAL) == DD_OK) {
                 if (fullScreen) r = directDrawGlobs.lpDirectDraw->lpVtbl->SetDisplayMode(directDrawGlobs.lpDirectDraw, width, height, bpp, 0, 0);
                 else r = DD_OK;

@@ -164,23 +164,30 @@ typedef struct Main_StateChangeData {
     int changed;
 } Main_StateChangeData;
 
-/* IID_IDirectDrawSurface, IID_IDirect3DRM3 and IID_IDirect3DDevice3. The
- * original links them from dxguid.lib; like directdraw.c, the unit defines
- * its own copies. container.c annotates its copy of the first. */
-static const Main_Guid s_iid_direct_draw_surface = {
+/* IID_IDirectDrawSurface, IID_IDirect3DDevice3 and IID_IDirect3DRM3. The
+ * matching build links them from dxguid.lib, as the original does (finding
+ * 688); container.c annotates the first. The portable builds keep the
+ * unit's own copies. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+extern const Main_Guid IID_IDirectDrawSurface;
+// GLOBAL: LEGORR 0x0049f6d8
+extern const Main_Guid IID_IDirect3DDevice3;
+// GLOBAL: LEGORR 0x0049fbd8
+extern const Main_Guid IID_IDirect3DRM3;
+#else
+static const Main_Guid IID_IDirectDrawSurface = {
     0x6c14db81, 0xa733, 0x11ce,
     { 0xa5, 0x21, 0x00, 0x20, 0xaf, 0x0b, 0xe5, 0x60 }
 };
-// GLOBAL: LEGORR 0x0049f6d8
-static const Main_Guid s_iid_direct3d_device3 = {
+static const Main_Guid IID_IDirect3DDevice3 = {
     0xb0ab3b60, 0x33d7, 0x11d1,
     { 0xa9, 0x81, 0x00, 0xc0, 0x4f, 0xd7, 0xb1, 0x74 }
 };
-// GLOBAL: LEGORR 0x0049fbd8
-static const Main_Guid s_iid_direct3drm3 = {
+static const Main_Guid IID_IDirect3DRM3 = {
     0x4516ec83, 0x8f20, 0x11d0,
     { 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3 }
 };
+#endif
 
 /* The unit's .bss, mainGlobs (main_globs.h): one external definition with
  * `= { 0 }`, so it stays in the object's .bss (finding 669). Reward.c and
@@ -642,15 +649,15 @@ int direct3drm_device_initialize(DirectDraw_Device* dev, void* ddraw1,
     }
 
     if (Direct3DRMCreate((void*)&lpD3DRM1) == 0) {
-        if (lpD3DRM1->lpVtbl->QueryInterface(lpD3DRM1, &s_iid_direct3drm3,
+        if (lpD3DRM1->lpVtbl->QueryInterface(lpD3DRM1, &IID_IDirect3DRM3,
                                              &s_main_d3drm) == 0) {
-            backSurf->lpVtbl->QueryInterface(backSurf, &s_iid_direct_draw_surface,
+            backSurf->lpVtbl->QueryInterface(backSurf, &IID_IDirectDrawSurface,
                                              (void**)&surf1);
             if ((r = lpD3DRM()->lpVtbl->CreateDeviceFromSurface(
                      lpD3DRM(), guid, ddraw1, surf1, 0,
                      (Main_RMDevice**)&s_main_device)) == 0) {
                 lpDevice()->lpVtbl->GetDirect3DDevice2(lpDevice(), &imdev2);
-                imdev2->lpVtbl->QueryInterface(imdev2, &s_iid_direct3d_device3,
+                imdev2->lpVtbl->QueryInterface(imdev2, &IID_IDirect3DDevice3,
                                                &s_main_im_device);
                 imdev2->lpVtbl->Release(imdev2);
                 if (doubleBuffered)

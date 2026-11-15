@@ -194,14 +194,20 @@ struct AnimClone {
     unsigned long frameCount;            /* +0x1c */
 };
 
-/* IID_IDirect3DRMFrame3 (0049f988), resource.cpp's copy, and
- * IID_IDirect3DRMUserVisual (0049fb48), lws.c's. The original has one copy
- * of each, from the DirectX GUID library. */
+/* IID_IDirect3DRMFrame3 (0049f988) and IID_IDirect3DRMUserVisual
+ * (0049fb48). The matching build links both from dxguid.lib, as the
+ * original does (finding 688). The portable builds take the first from
+ * resource.cpp (s_resource_tree_child_iid) and the second from lws.c. */
 #ifdef __cplusplus
 extern "C" {
 #endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+extern const AnimCloneIID IID_IDirect3DRMFrame3;
+#else
 extern const unsigned char s_resource_tree_child_iid[16];
-extern const AnimCloneIID s_iid_user_visual;
+#define IID_IDirect3DRMFrame3 (*(const AnimCloneIID*)s_resource_tree_child_iid)
+#endif
+extern const AnimCloneIID IID_IDirect3DRMUserVisual;
 #ifdef __cplusplus
 }
 #endif
@@ -428,7 +434,7 @@ int anim_clone_walk_tree(AnimCloneFrame* frame, unsigned long level,
 
             children->lpVtbl->GetElement(children, loop, &child1);
             child1->lpVtbl->QueryInterface(child1,
-                                           (const AnimCloneIID*)s_resource_tree_child_iid,
+                                           &IID_IDirect3DRMFrame3,
                                            (void**)&child);
             child1->lpVtbl->Release(child1);
             if (anim_clone_walk_tree(child, level + 1, Callback, data)) {
@@ -480,7 +486,7 @@ void anim_clone_create_copy(AnimCloneFrame* orig, AnimCloneFrame* clone,
 
             children->lpVtbl->GetElement(children, loop, &child1);
             child1->lpVtbl->QueryInterface(child1,
-                                           (const AnimCloneIID*)s_resource_tree_child_iid,
+                                           &IID_IDirect3DRMFrame3,
                                            (void**)&child);
             child1->lpVtbl->Release(child1);
             lpD3DRM()->lpVtbl->CreateFrame(lpD3DRM(), clone, &newFrame);
@@ -504,7 +510,7 @@ void anim_clone_clone_lwo_meshes(AnimCloneFrame* orig, AnimCloneFrame* clone)
         orig->lpVtbl->GetVisuals(orig, &count, visual);
         for (loop = 0; loop < count; loop++) {
             if (visual[loop]->lpVtbl->QueryInterface(visual[loop],
-                                                     &s_iid_user_visual,
+                                                     &IID_IDirect3DRMUserVisual,
                                                      (void**)&userVisual) == 0) {
                 void* mesh = (void*)userVisual->lpVtbl->GetAppData(userVisual);
                 mesh_clone(mesh, clone);

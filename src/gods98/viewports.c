@@ -195,16 +195,21 @@ typedef struct Point2F {
 #define lpD3DRM() ((VpD3DRM*)s_main_d3drm)
 #define lpDevice() ((VpDevice*)s_main_device)
 
-/* IID_IDirect3DViewport3. The original has one copy, from the DirectX GUID
- * library; Mesh.c (mesh_unit.c) uses this one, so it has external linkage. */
+/* IID_IDirect3DViewport3, which Mesh.c (mesh_unit.c) uses too. The
+ * matching build links it from dxguid.lib, as the original does (finding
+ * 688); the portable builds define it here, with external linkage. */
 #ifdef __cplusplus
 extern "C" const VpIID IID_IDirect3DViewport3;
 #endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
 // GLOBAL: LEGORR 0x0049f778
+extern const VpIID IID_IDirect3DViewport3;
+#else
 const VpIID IID_IDirect3DViewport3 = {
     0xb0ab3b61, 0x33d7, 0x11d1,
     { 0xa9, 0x81, 0x00, 0xc0, 0x4f, 0xd7, 0xb1, 0x74 }
 };
+#endif
 
 /* The unit's state is one common symbol, outside every unit's attributed
  * .bss (finding 505), so this is a tentative definition. */

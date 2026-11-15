@@ -313,17 +313,24 @@ typedef struct Sound3DFrameGlobs {
 #define SOUND3D_STREAM_BUFFER(loop) \
     ((loop) ? s_sound3d.lpDSLoopStreamBuff : s_sound3d.lpDSStreamBuff)
 
+/* IID_IDirectSound3DListener and IID_IDirectSound3DBuffer: dxguid.lib's in
+ * the matching build, as in the original (finding 688); the portable builds
+ * keep the unit's own copies. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
 // GLOBAL: LEGORR 0x004a04f8
-static const Sound3DIID s_iid_directsound3d_listener = {
+extern const Sound3DIID IID_IDirectSound3DListener;
+// GLOBAL: LEGORR 0x004a0508
+extern const Sound3DIID IID_IDirectSound3DBuffer;
+#else
+static const Sound3DIID IID_IDirectSound3DListener = {
     0x279afa84, 0x4981, 0x11ce,
     { 0xa5, 0x21, 0x00, 0x20, 0xaf, 0x0b, 0xe5, 0x60 }
 };
-
-// GLOBAL: LEGORR 0x004a0508
-static const Sound3DIID s_iid_directsound3d_buffer = {
+static const Sound3DIID IID_IDirectSound3DBuffer = {
     0x279afa86, 0x4981, 0x11ce,
     { 0xa5, 0x21, 0x00, 0x20, 0xaf, 0x0b, 0xe5, 0x60 }
 };
+#endif
 
 // GLOBAL: LEGORR 0x005065b8
 static Sound3DGlobs s_sound3d;
@@ -545,7 +552,7 @@ int audio_system_init(void* window)
                     wfx.cbSize = 0;
                     s_sound3d.lpDSBuff->lpVtbl->SetFormat(s_sound3d.lpDSBuff, &wfx);
                     if (s_sound3d.lpDSBuff->lpVtbl->QueryInterface(
-                            s_sound3d.lpDSBuff, &s_iid_directsound3d_listener,
+                            s_sound3d.lpDSBuff, &IID_IDirectSound3DListener,
                             (void**)&s_sound3d.lp3DListenerInfo) == SOUND3D_DS_OK) {
                         s_sound3d.lp3DListenerInfo->lpVtbl->SetDopplerFactor(
                             s_sound3d.lp3DListenerInfo, 100.0f, SOUND3D_DS3D_IMMEDIATE);
@@ -1052,7 +1059,7 @@ int s_play_seam(int mode, int position, int slot, int loop,
                     soundBuff = sound->lpDsb3D[0];
                 }
 
-                soundBuff->lpVtbl->QueryInterface(soundBuff, &s_iid_directsound3d_buffer,
+                soundBuff->lpVtbl->QueryInterface(soundBuff, &IID_IDirectSound3DBuffer,
                                                   (void**)&sound3DBuff);
 
                 volume = sound->volume;

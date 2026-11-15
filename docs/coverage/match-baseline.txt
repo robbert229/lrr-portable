@@ -1,4 +1,4 @@
-# input_sha256: c9998dd6410af09780d4065937f1acc65fc89df66934f84266bb14cb12a80433
+# input_sha256: e0365c8ca4234cb8ca214fd6485ffef5f6117f30a8833a7bc9bc7a97cd569dad
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2272,7 +2272,7 @@
 0x00478010 100.00 window_runtime_message_dispatch_filter
 0x00478040 100.00 window_message_dispatch_pump
 0x004780b0 97.78 renderer_window_mode_apply
-0x004781d0 98.00 direct3drm_device_initialize
+0x004781d0 99.00 direct3drm_device_initialize
 0x00478310 100.00 window_runtime_adjust_rect
 0x00478330 100.00 direct3d_render_preferences_apply
 0x004783d0 100.00 window_title_set
@@ -4997,7 +4997,7 @@
 0x00478010 100.00 window_runtime_message_dispatch_filter
 0x00478040 100.00 window_message_dispatch_pump
 0x004780b0 97.78 renderer_window_mode_apply
-0x004781d0 98.00 direct3drm_device_initialize
+0x004781d0 99.00 direct3drm_device_initialize
 0x00478310 100.00 window_runtime_adjust_rect
 0x00478330 100.00 direct3d_render_preferences_apply
 0x004783d0 100.00 window_title_set

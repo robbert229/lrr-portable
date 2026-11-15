@@ -447,29 +447,34 @@ typedef struct Mesh_Globs {
 #define lpD3DRM() ((Mesh_D3DRM*)s_main_d3drm)
 #define lpIMDevice() ((Mesh_IMDevice*)s_main_im_device)
 
-/* IID_IDirect3DViewport3: Viewports.c's copy (viewports.c), which the two
- * units share. */
+/* IID_IDirect3DViewport3: dxguid.lib's in the matching build, Viewports.c's
+ * copy (viewports.c) in the portable builds. */
 extern const Mesh_IID IID_IDirect3DViewport3;
 
-/* IID_IDirect3DTexture2, IID_IDirect3DDevice2 and IID_IDirect3DRMViewport2.
- * The original links them from dxguid.lib; only this unit uses them. */
+/* IID_IDirect3DDevice2, IID_IDirect3DTexture2 and IID_IDirect3DRMViewport2.
+ * The matching build links them from dxguid.lib, as the original does
+ * (finding 688); the portable builds keep the unit's own copies. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
 // GLOBAL: LEGORR 0x0049f6c8
+extern const Mesh_IID IID_IDirect3DDevice2;
+// GLOBAL: LEGORR 0x0049f6f8
+extern const Mesh_IID IID_IDirect3DTexture2;
+// GLOBAL: LEGORR 0x0049f958
+extern const Mesh_IID IID_IDirect3DRMViewport2;
+#else
 static const Mesh_IID IID_IDirect3DDevice2 = {
     0x93281501, 0x8cf8, 0x11d0,
     { 0x89, 0xab, 0x00, 0xa0, 0xc9, 0x05, 0x41, 0x29 }
 };
-
-// GLOBAL: LEGORR 0x0049f6f8
 static const Mesh_IID IID_IDirect3DTexture2 = {
     0x93281502, 0x8cf8, 0x11d0,
     { 0x89, 0xab, 0x00, 0xa0, 0xc9, 0x05, 0x41, 0x29 }
 };
-
-// GLOBAL: LEGORR 0x0049f958
 static const Mesh_IID IID_IDirect3DRMViewport2 = {
     0x4a1b1be6, 0xbfed, 0x11d1,
     { 0x8e, 0xd8, 0x00, 0xa0, 0xc9, 0x67, 0xa4, 0x82 }
 };
+#endif
 
 /* External, as the original's: with a static struct MSVC 5.0 keeps the
  * tested free-list head in a register across mesh_add_list, where the

@@ -286,11 +286,13 @@ set(LRR_LINK_TAIL_LIBRARY lrr_tail)
 # Libraries of the matching build, after the objects, in the order of the
 # original's import directory, with LIBC placed so that its code precedes the
 # import thunks and RtlUnwind's thunk comes last (finding 574; ADR 0006
-# decision 1 as amended). dinput.lib, dsound.lib and dxguid.lib are rebuilt
-# from cross/msvc5-importlibs; vfw32.lib holds the avifil32 imports.
+# decision 1 as amended). dinput.lib, dsound.lib, amstrmid.lib and dxguid.lib
+# are rebuilt from cross/msvc5-importlibs; vfw32.lib holds the avifil32
+# imports. amstrmid.lib's member precedes dxguid.lib's in the original's GUID
+# block (finding 688).
 set(LRR_LINK_LIBRARIES kernel32.lib libc.lib oldnames.lib
   ole32.lib d3drm.lib ddraw.lib winmm.lib vfw32.lib dinput.lib dsound.lib
-  user32.lib gdi32.lib advapi32.lib dxguid.lib)
+  user32.lib gdi32.lib advapi32.lib amstrmid.lib dxguid.lib)
 
 # Units the original pulled from a library after the import libraries
 # (finding 657): LATE-001 (rnc.c) and LATE-002 (init.c) follow the import
