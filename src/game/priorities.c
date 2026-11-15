@@ -167,20 +167,19 @@ void priorities_load_positions(BlockFile* config, const char* game_name)
 int priorities_handle_cursor(unsigned int x, unsigned int y, int pressed,
                              int released, int apply)
 {
-    float panel_x;
-    float panel_y;
+    Point2F panel;
     unsigned int i;
     Point2F position;
 
     if (!request_record_ready_flag4_target(PRIORITIES_PANEL) &&
         !request_record_flag8_is_set_target(PRIORITIES_PANEL)) {
-        indexed_pair_get(PRIORITIES_PANEL, &panel_x, &panel_y);
+        indexed_pair_get(PRIORITIES_PANEL, &panel.x, &panel.y);
         for (i = 0; i < priorities.count; i++) {
             int type = priorities.list[i];
             Image* image = priorities.images[type];
             if (image != NULL) {
-                position.x = priorities.offsets[i].x + panel_x;
-                position.y = priorities.offsets[i].y + panel_y;
+                position.x = priorities.offsets[i].x + panel.x;
+                position.y = priorities.offsets[i].y + panel.y;
                 if ((float)x >= position.x &&
                     (float)x <= position.x + (float)image->width &&
                     position.y <= (float)y &&
@@ -301,8 +300,7 @@ void priorities_toggle(unsigned int index)
 void priorities_move_cursor_to_up_button(unsigned int index)
 {
     int button;
-    float panel_x;
-    float panel_y;
+    Point2F panel;
     Area2F area;
 
     switch (index) {
@@ -319,47 +317,45 @@ void priorities_move_cursor_to_up_button(unsigned int index)
     case 8: button = PRIORITIES_BUTTON_UP + 7; break;
     default: return;
     }
-    indexed_pair_get(PRIORITIES_PANEL, &panel_x, &panel_y);
+    indexed_pair_get(PRIORITIES_PANEL, &panel.x, &panel.y);
     ui_entry_bounds_get(PRIORITIES_PANEL, button, &area.x);
     input_cursor_client_position_set(
-        (int)(area.x + area.width * 0.5f + panel_x),
-        (int)(area.y + area.height * 0.5f + panel_y));
+        (int)(area.x + area.width * 0.5f + panel.x),
+        (int)(area.y + area.height * 0.5f + panel.y));
 }
 
 // FUNCTION: LEGORR 0x0045d640
 void priorities_move_cursor_to_image(unsigned int index)
 {
     int type = priorities.list[index];
-    float panel_x;
-    float panel_y;
+    Point2F panel;
 
     if (priorities.images[type] != NULL) {
         Image* image;
-        indexed_pair_get(PRIORITIES_PANEL, &panel_x, &panel_y);
+        indexed_pair_get(PRIORITIES_PANEL, &panel.x, &panel.y);
         image = priorities.images[type];
         input_cursor_client_position_set(
             (int)((float)(image->width >> 1) +
-                  (priorities.offsets[index].x + panel_x)),
+                  (priorities.offsets[index].x + panel.x)),
             (int)((float)(image->height >> 1) +
-                  (priorities.offsets[index].y + panel_y)));
+                  (priorities.offsets[index].y + panel.y)));
     }
 }
 
 // FUNCTION: LEGORR 0x0045d6d0
 void priorities_draw(void)
 {
-    float panel_x;
-    float panel_y;
+    Point2F panel;
     unsigned int i;
     Point2F position;
 
     if (!request_record_ready_flag4_target(PRIORITIES_PANEL)) {
-        indexed_pair_get(PRIORITIES_PANEL, &panel_x, &panel_y);
+        indexed_pair_get(PRIORITIES_PANEL, &panel.x, &panel.y);
         for (i = 0; i < priorities.count; i++) {
             int type;
             Image* image;
-            position.x = priorities.offsets[i].x + panel_x;
-            position.y = priorities.offsets[i].y + panel_y;
+            position.x = priorities.offsets[i].x + panel.x;
+            position.y = priorities.offsets[i].y + panel.y;
             type = priorities.list[i];
             if (priority_entry_state_get(type)) image = priorities.off_images[type];
             else if ((priorities.flags & PRIORITIES_FLAG_PRESSED) &&

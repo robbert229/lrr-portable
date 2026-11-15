@@ -3216,17 +3216,16 @@ int interface_callback_damaged(struct LegoObject* obj, void* data)
 int interface_callback_can_pick_up(struct LegoObject* obj, void* data)
 {
     void* container;
-    Point2F wPos;
-    int bx;
-    int by;
+    Point2I blockPos;
+    float wPos[3];
     unsigned int capacity;
 
     if (entity_capability_flags_get(LEGOOBJ(obj)) & 1) {
         if (!(obj->flags1 & 0x400) && !(obj->flags4 & 0x10000) &&
             (container = lego_object_get_container(obj)) != NULL) {
-            container_get_position(container, NULL, &wPos);
-            if (terrain_map_world_to_block(lego_get_map(), wPos.x, wPos.y, &bx, &by) &&
-                lego_terrain_cell_route_and_occupancy_check(NULL, bx, by, bx, by, 1)) {
+            container_get_position(container, NULL, (Point2F*)wPos);
+            if (terrain_map_world_to_block(lego_get_map(), wPos[0], wPos[1], &blockPos.x, &blockPos.y) &&
+                lego_terrain_cell_route_and_occupancy_check(NULL, blockPos.x, blockPos.y, blockPos.x, blockPos.y, 1)) {
                 return 1;
             }
         }
