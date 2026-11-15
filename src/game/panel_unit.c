@@ -1243,8 +1243,8 @@ void mission_crystal_quota_setup(BlockFile* config, const char* gameName,
 // FUNCTION: LEGORR 0x0045c0d0
 void panel_crystals_draw(unsigned int crystals, unsigned int usedCrystals)
 {
-    unsigned int counts[2] = { 0 };
     unsigned int pairs[2][6][2] = { 0 };
+    unsigned int counts[2] = { 0 };
     unsigned int row;
     unsigned int column;
     unsigned int k;

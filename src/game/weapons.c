@@ -772,9 +772,9 @@ Weapons_Object* weapons_fire_lazer(Weapons_Vector3F* fromPos, Weapons_Vector3F* 
                                    Weapons_Object* liveObj, float elapsed,
                                    float coef, int weaponType, float discharge)
 {
-    float dist;
     Weapons_Object* hitObject;
     Weapons_Vector3F rayDir;
+    float dist;
     Weapons_Vector3F endPos;
 
     dist = 1.0f;

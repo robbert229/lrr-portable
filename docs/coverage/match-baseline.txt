@@ -1,4 +1,4 @@
-# input_sha256: efd60006756f2eaf81fa3d2f8d5c5810893b7b3750cfdc18853d1fc580c0ff9c
+# input_sha256: 8d53b7cc870c4664c55b20385f5b0cec5245c6a3da410c68cb15b0cc13243443
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1745,7 +1745,7 @@
 0x0045bf70 100.00 ui_entry_bounds_get
 0x0045bfb0 100.00 three_surface_resources_load
 0x0045c040 95.83 mission_crystal_quota_setup
-0x0045c0d0 94.12 panel_crystals_draw
+0x0045c0d0 94.63 panel_crystals_draw
 0x0045c340 100.00 panel_resource_layout_store
 0x0045c3f0 100.00 advisor_progress_bar_fill_draw
 0x0045c4a0 100.00 global_value_0050080c_set
@@ -2039,7 +2039,7 @@
 0x0046d2c0 100.00 scene_resource_visibility_set
 0x0046d330 100.00 entity_type_flag_bit1_get_target
 0x0046d350 100.00 scene_resource_draw_at_origin
-0x0046d380 70.36 vehicle_set_position
+0x0046d380 70.51 vehicle_set_position
 0x0046d9e0 100.00 scene_object_resource_get
 0x0046d9f0 100.00 vehicle_find_null
 0x0046da50 100.00 vehicle_get_camera_null
@@ -2081,7 +2081,7 @@
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
 0x0046ff70 100.00 weapons_projectile_find_free
 0x0046ff90 100.00 weapons_lazer_find_free
-0x0046ffb0 56.49 weapons_fire_lazer
+0x0046ffb0 57.40 weapons_fire_lazer
 0x00470260 100.00 weapons_object_collision_check
 0x004702b0 59.40 weapons_object_quad_intersect
 0x00470540 100.00 weapons_object_center_proximity_check
@@ -2383,7 +2383,7 @@
 0x0047c550 100.00 directdraw_enum_mode_callback
 0x0047c610 100.00 directdraw_setup
 0x0047c8d0 100.00 directdraw_flip
-0x0047c8f0 71.90 directdraw_save_bmp
+0x0047c8f0 74.38 directdraw_save_bmp
 0x0047cc20 100.00 directdraw_return_front_buffer
 0x0047cc50 100.00 directdraw_blit_buffers
 0x0047ccf0 100.00 directdraw_shutdown
@@ -2391,18 +2391,18 @@
 0x0047cdd0 100.00 directdraw_get_avail_texture_mem
 0x0047ce20 100.00 directdraw_clear
 0x0047cee0 100.00 directdraw_create_clipper
-0x0047d000 66.82 directdraw_blt_8_to_16
+0x0047d000 68.72 directdraw_blt_8_to_16
 0x0047d2d0 100.00 directdraw_get_colour
 0x0047d3f0 100.00 directdraw_count_mask_bits
 0x0047d410 100.00 renderer_record_table_initialize
 0x0047d430 100.00 scene_object_registry_teardown
 0x0047d470 100.00 Image_Remove
 0x0047d490 74.23 Image_CopyToDataToSurface
-0x0047d520 42.17 Image_8BitSourceCopy
+0x0047d520 48.43 Image_8BitSourceCopy
 0x0047d700 100.00 Image_CountMaskBits
 0x0047d720 100.00 Image_CountMaskBitShift
 0x0047d740 100.00 Image_FlipSurface
-0x0047d800 75.95 Image_24BitSourceCopy
+0x0047d800 82.91 Image_24BitSourceCopy
 0x0047d9d0 78.55 Image_LoadBMPScaled
 0x0047db90 100.00 Image_RGB2CR
 0x0047dbc0 100.00 Image_SetPenZeroTrans
@@ -2622,7 +2622,7 @@
 0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
 0x00488170 34.17 lws_interpolate
-0x004882e0 26.92 lws_absolute_key_set
+0x004882e0 27.66 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
 0x00488790 100.00 pair_table_append
@@ -4470,7 +4470,7 @@
 0x0045bf70 100.00 ui_entry_bounds_get
 0x0045bfb0 100.00 three_surface_resources_load
 0x0045c040 95.83 mission_crystal_quota_setup
-0x0045c0d0 94.12 panel_crystals_draw
+0x0045c0d0 94.63 panel_crystals_draw
 0x0045c340 100.00 panel_resource_layout_store
 0x0045c3f0 100.00 advisor_progress_bar_fill_draw
 0x0045c4a0 100.00 global_value_0050080c_set
@@ -4764,7 +4764,7 @@
 0x0046d2c0 100.00 scene_resource_visibility_set
 0x0046d330 100.00 entity_type_flag_bit1_get_target
 0x0046d350 100.00 scene_resource_draw_at_origin
-0x0046d380 70.36 vehicle_set_position
+0x0046d380 70.51 vehicle_set_position
 0x0046d9e0 100.00 scene_object_resource_get
 0x0046d9f0 100.00 vehicle_find_null
 0x0046da50 100.00 vehicle_get_camera_null
@@ -4806,7 +4806,7 @@
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
 0x0046ff70 100.00 weapons_projectile_find_free
 0x0046ff90 100.00 weapons_lazer_find_free
-0x0046ffb0 56.49 weapons_fire_lazer
+0x0046ffb0 57.40 weapons_fire_lazer
 0x00470260 100.00 weapons_object_collision_check
 0x004702b0 59.40 weapons_object_quad_intersect
 0x00470540 100.00 weapons_object_center_proximity_check
@@ -5108,7 +5108,7 @@
 0x0047c550 100.00 directdraw_enum_mode_callback
 0x0047c610 100.00 directdraw_setup
 0x0047c8d0 100.00 directdraw_flip
-0x0047c8f0 71.90 directdraw_save_bmp
+0x0047c8f0 74.38 directdraw_save_bmp
 0x0047cc20 100.00 directdraw_return_front_buffer
 0x0047cc50 100.00 directdraw_blit_buffers
 0x0047ccf0 100.00 directdraw_shutdown
@@ -5116,18 +5116,18 @@
 0x0047cdd0 100.00 directdraw_get_avail_texture_mem
 0x0047ce20 100.00 directdraw_clear
 0x0047cee0 100.00 directdraw_create_clipper
-0x0047d000 66.82 directdraw_blt_8_to_16
+0x0047d000 68.72 directdraw_blt_8_to_16
 0x0047d2d0 100.00 directdraw_get_colour
 0x0047d3f0 100.00 directdraw_count_mask_bits
 0x0047d410 100.00 renderer_record_table_initialize
 0x0047d430 100.00 scene_object_registry_teardown
 0x0047d470 100.00 Image_Remove
 0x0047d490 74.23 Image_CopyToDataToSurface
-0x0047d520 42.17 Image_8BitSourceCopy
+0x0047d520 48.43 Image_8BitSourceCopy
 0x0047d700 100.00 Image_CountMaskBits
 0x0047d720 100.00 Image_CountMaskBitShift
 0x0047d740 100.00 Image_FlipSurface
-0x0047d800 75.95 Image_24BitSourceCopy
+0x0047d800 82.91 Image_24BitSourceCopy
 0x0047d9d0 78.55 Image_LoadBMPScaled
 0x0047db90 100.00 Image_RGB2CR
 0x0047dbc0 100.00 Image_SetPenZeroTrans
@@ -5347,7 +5347,7 @@
 0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
 0x00488170 34.17 lws_interpolate
-0x004882e0 26.92 lws_absolute_key_set
+0x004882e0 27.66 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
 0x00488790 100.00 pair_table_append

@@ -282,10 +282,11 @@ int Image_8BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
     if (bpp == 8) {
         return 0;
     } else if (bpp == 16) {
-        unsigned int gm = desc->ddpfPixelFormat.dwGBitMask;
         unsigned short* to = (unsigned short*)desc->lpSurface;
         int lineLen = image->bytes_per_line;
+        unsigned int gm = desc->ddpfPixelFormat.dwGBitMask;
         Image_PaletteEntry* pal = image->palette;
+        int x;
         unsigned int pitch = desc->lPitch;
         unsigned char* from = image->buffer1;
         unsigned int bm = desc->ddpfPixelFormat.dwBBitMask;
@@ -296,7 +297,6 @@ int Image_8BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
         int rshift = Image_CountMaskBitShift(rm);
         int gshift = Image_CountMaskBitShift(gm);
         int bshift = Image_CountMaskBitShift(bm);
-        int x;
         int y;
 
         for (y = 0; y < image->height; y++) {
@@ -375,13 +375,13 @@ int Image_24BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
     if (bpp == 8) {
         return 0;
     } else if (bpp == 16) {
+        unsigned int rm = desc->ddpfPixelFormat.dwRBitMask;
         unsigned int gm = desc->ddpfPixelFormat.dwGBitMask;
         unsigned int bm = desc->ddpfPixelFormat.dwBBitMask;
         unsigned short* to = (unsigned short*)desc->lpSurface;
         int lineLen = image->bytes_per_line;
         unsigned char* from = image->buffer1;
         unsigned int pitch = desc->lPitch;
-        unsigned int rm = desc->ddpfPixelFormat.dwRBitMask;
         int rbits = Image_CountMaskBits(rm);
         int gbits = Image_CountMaskBits(gm);
         int bbits = Image_CountMaskBits(bm);

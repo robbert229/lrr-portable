@@ -632,10 +632,10 @@ int directdraw_save_bmp(DirectDrawSurfaceIface* surface, const char* fname)
     DirectDrawBmpHeader header = { 0 };
     DirectDrawSurfaceDesc2 desc;
     File* ofp;
-    unsigned char* buffer;
     unsigned int lineSize, size, bytesPerPixel;
     unsigned int rBits = 0, gBits = 0;
     unsigned int x, y, i, offset, out;
+    unsigned char* buffer;
     unsigned int value;
     int success = FALSE;
     if ((ofp = file_open(fname, "wb")) != NULL) {
@@ -824,7 +824,7 @@ int directdraw_create_clipper(int fullScreen, unsigned int width, unsigned int h
 void directdraw_blt_8_to_16(DirectDrawSurfaceIface* target, DirectDrawSurfaceIface* source, void* palette)
 {
     DirectDrawSurfaceDesc2 descSource, descTarget;
-    unsigned int x, y, colour, val;
+    unsigned int x, colour, val, y;
     int i, shift, k, rBits, gBits, bBits;
     unsigned char r, g, b, index;
 
