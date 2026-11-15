@@ -96,6 +96,7 @@ src/game/camera_control.h
 src/game/camera_control_imports.h
 src/game/camera_control_port.cpp
 src/game/camera_drag.hpp
+src/game/camera_maths.h
 src/game/cell_flood_passes_port.cpp
 src/game/cmd.cpp
 src/game/cmd.h
