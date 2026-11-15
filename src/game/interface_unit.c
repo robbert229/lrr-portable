@@ -2933,7 +2933,7 @@ void interface_draw_dependencies(float x, float y)
 
     if (interfaceGlobs.flags & INTERFACE_FLAG_DEPENDENCIES) {
         dependencies_get_requirements(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex, 0, &list, &count);
-        if (count != 0) {
+        if (count > 0) {
             pos.x = x - 15.0f;
             pos.y = y;
             for (i = 0; i < count; i++) {

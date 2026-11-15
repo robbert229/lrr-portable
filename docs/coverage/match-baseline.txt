@@ -1,4 +1,4 @@
-# input_sha256: 1d9a6abd58a4794f5e1b7cce86b7ec852a12f646f89fbf3f431fb351a9cf1f35
+# input_sha256: 0de94a9a6f7d6fba2c60d94c937fbea2db378cc6d839c7a0426bd1a7263b7a69
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -659,7 +659,7 @@
 0x0041ea50 100.00 interface_set_menu
 0x0041eac0 100.00 interface_update_slide
 0x0041ec30 89.19 interface_draw_object_count
-0x0041eca0 99.28 interface_draw_dependencies
+0x0041eca0 100.00 interface_draw_dependencies
 0x0041ee60 100.00 interface_reset_dependency_timer
 0x0041ee80 72.39 interface_get_dependency_at_point
 0x0041f100 100.00 interface_object_type_present
@@ -1684,7 +1684,7 @@
 0x004588e0 100.00 objective_stop_showing_objective
 0x004589a0 100.00 objective_is_ended_original
 0x004589c0 90.57 lego_quit_poll_adapter
-0x00458be0 73.72 objective_tick_target
+0x00458be0 74.02 objective_tick_target
 0x00459050 100.00 objective_check_completed
 0x00459100 100.00 objective_callback_check_completed_object
 0x00459190 100.00 object_recall_store_minifigure
@@ -3384,7 +3384,7 @@
 0x0041ea50 100.00 interface_set_menu
 0x0041eac0 100.00 interface_update_slide
 0x0041ec30 89.19 interface_draw_object_count
-0x0041eca0 99.28 interface_draw_dependencies
+0x0041eca0 100.00 interface_draw_dependencies
 0x0041ee60 100.00 interface_reset_dependency_timer
 0x0041ee80 72.39 interface_get_dependency_at_point
 0x0041f100 100.00 interface_object_type_present
@@ -4409,7 +4409,7 @@
 0x004588e0 100.00 objective_stop_showing_objective
 0x004589a0 100.00 objective_is_ended_original
 0x004589c0 90.57 lego_quit_poll_adapter
-0x00458be0 73.72 objective_tick_target
+0x00458be0 74.02 objective_tick_target
 0x00459050 100.00 objective_check_completed
 0x00459100 100.00 objective_callback_check_completed_object
 0x00459190 100.00 object_recall_store_minifigure

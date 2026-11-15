@@ -841,7 +841,7 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
         } else {
             objective_score_text_origin_set(NULL);
         }
-        if (objectiveGlobs.currentPage[type]) {
+        if (objectiveGlobs.currentPage[type] > 0) {
             pos[0] = 130.0f;
             pos[1] = 315.0f;
             lego_objective_task_text_origin_set(pos);
