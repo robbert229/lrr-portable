@@ -1,9 +1,9 @@
 {
   "accuracy_percent": {
-    "full": 97.8,
-    "game_only": 97.57
+    "full": 97.79,
+    "game_only": 97.56
   },
-  "baseline_sha256": "bc34ee4a1e4e920c7645a709c1d16cc0f394d1960920fd64b22ea503ccfeaa77",
+  "baseline_sha256": "7db7143873bef4a09c5f1ba0c211510a1cca549c2cbf47cc74d50d442e67bde7",
   "correct_size_functions": {
     "full": {
       "bytes": 466551,
@@ -29,13 +29,13 @@
         "at_original_address": 0,
         "at_original_offset": 1,
         "at_original_offset_bytes": 1040,
-        "rebuilt_start": "0x4b2d40",
-        "start_delta": -112
+        "rebuilt_start": "0x4b2d70",
+        "start_delta": -64
       },
       ".data": {
-        "at_original_address": 196,
-        "at_original_offset": 196,
-        "at_original_offset_bytes": 3464,
+        "at_original_address": 2401,
+        "at_original_offset": 2401,
+        "at_original_offset_bytes": 57219,
         "identical_prefix_bytes": 12,
         "rebuilt_start": "0x4a1000",
         "start_delta": 0
@@ -52,8 +52,8 @@
         "at_original_address": 0,
         "at_original_offset": 17,
         "at_original_offset_bytes": 179132,
-        "rebuilt_start": "0x547c20",
-        "start_delta": -6400
+        "rebuilt_start": "0x547c40",
+        "start_delta": -6368
       }
     },
     "image": "original-mode link",
@@ -64,7 +64,7 @@
           "object": "aitask.c.obj",
           "offset_delta": -8,
           "original": "0x4b31c8",
-          "rebuilt": "0x4b3150",
+          "rebuilt": "0x4b3180",
           "rebuilt_region": ".bss"
         },
         "items": {
@@ -84,9 +84,9 @@
         },
         "original_bytes": 616304,
         "original_start": "0x4b2db0",
-        "rebuilt_bytes": 610016,
-        "rebuilt_start": "0x4b2d40",
-        "start_delta": -112
+        "rebuilt_bytes": 610000,
+        "rebuilt_start": "0x4b2d70",
+        "start_delta": -64
       },
       ".data": {
         "first_difference": {
@@ -102,12 +102,12 @@
           "rebuilt_object": "libc:crt0init.obj"
         },
         "items": {
-          "at_original_address": 196,
-          "at_original_address_bytes": 3464,
-          "at_original_offset": 196,
-          "at_original_offset_bytes": 3464,
-          "paired": 2454,
-          "paired_bytes": 68651
+          "at_original_address": 2401,
+          "at_original_address_bytes": 57219,
+          "at_original_offset": 2401,
+          "at_original_offset_bytes": 57219,
+          "paired": 2457,
+          "paired_bytes": 68687
         },
         "objects": {
           "agreeing": [
@@ -117,14 +117,63 @@
             "animation_object.c.obj",
             "bubbles.c.obj",
             "building_model.c.obj",
-            "terrain_cell_objects.c.obj"
+            "terrain_cell_objects.c.obj",
+            "encyclopedia.c.obj",
+            "frontend_unit.c.obj",
+            "helpwindow.c.obj",
+            "info_unit.c.obj",
+            "interface_unit.c.obj",
+            "lego_unit.c.obj",
+            "legoobject_unit.c.obj",
+            "lighteffects.c.obj",
+            "loader.c.obj",
+            "message_unit.c.obj",
+            "tutorial_script.c.obj",
+            "objective_unit.c.obj",
+            "objinfo.c.obj",
+            "panel_unit.c.obj",
+            "pointer.c.obj",
+            "radarmap.c.obj",
+            "reward.c.obj",
+            "sfx.c.obj",
+            "entity_stats.c.obj",
+            "teleporter.c.obj",
+            "text.c.obj",
+            "tooltip.c.obj",
+            "upgrade.c.obj",
+            "vehicle_model.c.obj",
+            "weapons.c.obj",
+            "unit_gods98:container.c.obj",
+            "unit_gods98:viewports.c.obj",
+            "unit_gods98:utils.c.obj",
+            "unit_gods98:main.c.obj",
+            "unit_gods98:sound3d.c.obj",
+            "unit_gods98:directdraw.c.obj",
+            "unit_gods98:images_unit.c.obj",
+            "unit_gods98:input_unit.c.obj",
+            "unit_gods98:files.c.obj",
+            "unit_gods98:mesh_unit.c.obj",
+            "unit_gods98:flic_unit.c.obj",
+            "unit_gods98:keys.c.obj",
+            "unit_gods98:lws.c.obj",
+            "unit_gods98:soundsys.c.obj",
+            "unit_gods98:dxerror.c.obj",
+            "unit_gods98:wad.c.obj",
+            "unit_gods98:lwo.c.obj",
+            "libc:fpinit.obj",
+            "libc:exsup.obj",
+            "libc:wincrt0.obj",
+            "libc:ctype.obj",
+            "libc:nlsdata1.obj",
+            "libc:cmiscdat.obj",
+            "libc:output.obj"
           ],
-          "at_original_offset": 7,
+          "at_original_offset": 56,
           "with_paired_items": 74
         },
         "original_bytes": 73136,
         "original_start": "0x4a1000",
-        "rebuilt_bytes": 73024,
+        "rebuilt_bytes": 73072,
         "rebuilt_start": "0x4a1000",
         "start_delta": 0
       },
@@ -165,7 +214,7 @@
           "object": "<common>",
           "offset_delta": -3848,
           "original": "0x556fb8",
-          "rebuilt": "0x5547b0",
+          "rebuilt": "0x5547d0",
           "rebuilt_region": "commons"
         },
         "items": {
@@ -184,15 +233,15 @@
         "original_bytes": 2247092,
         "original_start": "0x549520",
         "rebuilt_bytes": 2244980,
-        "rebuilt_start": "0x547c20",
-        "start_delta": -6400
+        "rebuilt_start": "0x547c40",
+        "start_delta": -6368
       }
     }
   },
   "exact_function_code_bytes": {
-    "bytes": 351876,
+    "bytes": 351938,
     "original_text_bytes": 642549,
-    "percent": 54.76
+    "percent": 54.77
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 2307,
@@ -239,13 +288,13 @@
     "original_text_bytes": 642549,
     "percent": 0.0
   },
-  "input_sha256": "d9bf6100b3a5aadee2d9bd42057722b230eaa4248f0222c6f5d31532603d0f10",
+  "input_sha256": "e0d3b7ec4cca0b08ec93f5fa1611807c7af2ef1dae563385065d29682198dd7b",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 22,
       "eligible_units": 57,
       "method": "anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted",
-      "unattributed_or_unmapped_annotations": 127
+      "unattributed_or_unmapped_annotations": 129
     },
     "link_order_list": {
       "adjacent": 0,
@@ -1440,7 +1489,7 @@
       {
         "contiguous": true,
         "data_offset_agreement": false,
-        "data_offset_comparisons": 122,
+        "data_offset_comparisons": 123,
         "functions": 132,
         "identical_function_bytes": 14309,
         "identity_percent": 48.61,
@@ -3949,7 +3998,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 11
   },
-  "listing_digests_sha256": "a03afcd233e8052608f86d9d154ec1db4c22adf2c21bd1d5cfcb386430c2ee9a",
+  "listing_digests_sha256": "29c5cebf4d9c69de9cf23b325a8a1ad2ee4fbdbba2c2c5f3453c10f9e4ec8835",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4008,10 +4057,10 @@
     },
     "gate_text_symbols": 3295,
     "image": {
-      "bss_bytes": 2854996,
+      "bss_bytes": 2854980,
       "characteristics": 271,
       "common_dll_order_equal": true,
-      "data_initialised_bytes": 72976,
+      "data_initialised_bytes": 73024,
       "debug_directory": [
         0,
         0
@@ -4034,8 +4083,8 @@
       "imported_names": 145,
       "section_bytes": {
         ".data": {
-          "differing": 52141,
-          "equal": 21075,
+          "differing": 2828,
+          "equal": 70388,
           "original": 73216,
           "rebuilt": 73216
         },
@@ -4052,8 +4101,8 @@
           "rebuilt": 10744
         },
         ".text": {
-          "differing": 597161,
-          "equal": 45388,
+          "differing": 597117,
+          "equal": 45432,
           "original": 642549,
           "rebuilt": 641381
         }
@@ -4061,7 +4110,7 @@
       "sections": {
         ".data": {
           "raw_size": 73216,
-          "virtual_size": 2928020
+          "virtual_size": 2928052
         },
         ".idata": {
           "raw_size": 4608,
@@ -4118,15 +4167,15 @@
   "sections": {
     ".data": {
       "chance_percent": 10.47,
-      "excess_percent_points": 18.31,
-      "identical_bytes": 21076,
-      "identical_percent": 28.79,
+      "excess_percent_points": 85.66,
+      "identical_bytes": 70387,
+      "identical_percent": 96.14,
       "original_bytes": 73216,
       "rebuilt_bytes": 73216,
       "run_chance_percent": 1.76,
-      "run_excess_percent_points": 19.41,
-      "run_identical_bytes": 15500,
-      "run_identical_percent": 21.17
+      "run_excess_percent_points": 88.94,
+      "run_identical_bytes": 66408,
+      "run_identical_percent": 90.7
     },
     ".rdata": {
       "chance_percent": 4.12,
@@ -4142,14 +4191,14 @@
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 4.23,
-      "identical_bytes": 45374,
-      "identical_percent": 7.06,
+      "excess_percent_points": 4.24,
+      "identical_bytes": 45418,
+      "identical_percent": 7.07,
       "original_bytes": 642549,
       "rebuilt_bytes": 641381,
       "run_chance_percent": 0.0,
       "run_excess_percent_points": 2.84,
-      "run_identical_bytes": 18236,
+      "run_identical_bytes": 18246,
       "run_identical_percent": 2.84
     },
     "imports": {
@@ -4179,14 +4228,14 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 4.25,
-    "identical_bytes": 45472,
+    "excess_percent_points": 4.26,
+    "identical_bytes": 45516,
     "identical_percent": 7.08,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
     "run_excess_percent_points": 2.84,
-    "run_identical_bytes": 18236,
+    "run_identical_bytes": 18246,
     "run_identical_percent": 2.84
   },
   "unit_size_agreement": {

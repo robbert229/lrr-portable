@@ -107,6 +107,10 @@ static char s_menuSaveText[] = "Menu::SaveText";
 static char s_menuLevelText[] = "Menu::LevelText";
 // GLOBAL: LEGORR 0x004a1f30
 static char s_menuOverwrite[] = "Menu::Overwrite";
+/* An eight-byte "Samples" that nothing in the image reads; the original
+ * defines it here, after the menu block names and before the -1 words. */
+// GLOBAL: LEGORR 0x004a1f40
+static char s_samplesName[] = "Samples";
 // GLOBAL: LEGORR 0x004a1f48
 static int s_selectHoverIndex = -1;
 // GLOBAL: LEGORR 0x004a1f4c

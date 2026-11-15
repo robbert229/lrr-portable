@@ -1,4 +1,4 @@
-# input_sha256: d9bf6100b3a5aadee2d9bd42057722b230eaa4248f0222c6f5d31532603d0f10
+# input_sha256: e0d3b7ec4cca0b08ec93f5fa1611807c7af2ef1dae563385065d29682198dd7b
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -418,12 +418,12 @@
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
-0x00411360 92.45 front_menu_item_select_test_string_collision
+0x00411360 91.24 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
-0x00411530 86.85 front_menu_get_item_bounds
+0x00411530 86.43 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
 0x00411840 100.00 front_menu_was_mouse_released
-0x00411870 96.90 front_menu_item_slider_handle_input
+0x00411870 95.35 front_menu_item_slider_handle_input
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
 0x00411a00 84.59 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
@@ -511,7 +511,7 @@
 0x00417430 90.91 float_to_long_x87
 0x00417460 94.61 front_callback_select_mission_item
 0x00417700 100.00 front_callback_select_tutorial_item
-0x004177e0 100.00 front_level_link_callback_load_menu_item
+0x004177e0 69.33 front_level_link_callback_load_menu_item
 0x004179b0 100.00 front_levels_load_menu_items
 0x00417a90 100.00 save_read_slot_target
 0x00417bd0 100.00 front_save_write_save_file
@@ -1343,8 +1343,8 @@
 0x00452e70 78.96 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
 0x00453220 90.60 nerps_shutdown
-0x004532e0 95.00 nerps_runtime_resolve_argument
-0x00453320 67.49 nerps_runtime_execute
+0x004532e0 100.00 nerps_runtime_resolve_argument
+0x00453320 69.53 nerps_runtime_execute
 0x004538a0 100.00 nerpfunc_set_game_speed
 0x00453900 100.00 nerps_set_has_next_button
 0x00453910 100.00 nerps_replay_message_sound
@@ -3143,12 +3143,12 @@
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
-0x00411360 92.45 front_menu_item_select_test_string_collision
+0x00411360 91.24 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
-0x00411530 86.85 front_menu_get_item_bounds
+0x00411530 86.43 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
 0x00411840 100.00 front_menu_was_mouse_released
-0x00411870 96.90 front_menu_item_slider_handle_input
+0x00411870 95.35 front_menu_item_slider_handle_input
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
 0x00411a00 84.59 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
@@ -3236,7 +3236,7 @@
 0x00417430 90.91 float_to_long_x87
 0x00417460 94.61 front_callback_select_mission_item
 0x00417700 100.00 front_callback_select_tutorial_item
-0x004177e0 100.00 front_level_link_callback_load_menu_item
+0x004177e0 69.33 front_level_link_callback_load_menu_item
 0x004179b0 100.00 front_levels_load_menu_items
 0x00417a90 100.00 save_read_slot_target
 0x00417bd0 100.00 front_save_write_save_file
@@ -4068,8 +4068,8 @@
 0x00452e70 78.96 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
 0x00453220 90.60 nerps_shutdown
-0x004532e0 95.00 nerps_runtime_resolve_argument
-0x00453320 67.49 nerps_runtime_execute
+0x004532e0 100.00 nerps_runtime_resolve_argument
+0x00453320 69.53 nerps_runtime_execute
 0x004538a0 100.00 nerpfunc_set_game_speed
 0x00453900 100.00 nerps_set_has_next_button
 0x00453910 100.00 nerps_replay_message_sound
