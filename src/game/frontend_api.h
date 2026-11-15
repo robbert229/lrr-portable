@@ -42,7 +42,6 @@ int front_campaign_snapshot_create(void* snapshot);
  * frontend_unit.cpp); nothing in the port sets them yet. */
 extern char* g_front_end_avi1;            /* DAT_00556fb0 */
 extern char* g_front_end_avi2;            /* DAT_00556fb4 */
-extern uint8_t g_front_save_slot_buffer[0xec]; /* DAT_00557418 */
 /* frontGlobs (00556fc0) is one struct, defined by frontend_unit.c with its
  * fields' types; these name the fields this header's users read, by their
  * offsets (finding 649). */
@@ -54,6 +53,14 @@ extern struct Front_Globs frontGlobs;
 #else
 /* Natively the port keeps its own (frontend_port.cpp). */
 extern void* g_front_save_tree;           /* DAT_00556ff8 */
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* frontGlobs.saveData[5] (00557418), the current game's save slot, which
+ * Reward.c reads the save file into (finding 680). */
+#define g_front_save_slot_buffer (&FRONT_GLOBS_FIELD(uint8_t, 0x458))
+#else
+/* Natively the port keeps its own (frontend_port.cpp). */
+extern uint8_t g_front_save_slot_buffer[0xec]; /* DAT_00557418 */
 #endif
 #define g_front_save_menu_result FRONT_GLOBS_FIELD(int, 0x544) /* 00557504 */
 #define g_front_save_menu_open FRONT_GLOBS_FIELD(int, 0x548)   /* 00557508 */

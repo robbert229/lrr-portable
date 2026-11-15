@@ -5095,8 +5095,10 @@ char* g_front_end_avi2;
 /* frontend_unit.c's frontGlobs.startMissionLink (00556ff8) in the
  * matching build (finding 628). */
 void* g_front_save_tree;
-#endif
+/* frontend_unit.c's frontGlobs.saveData[5] (00557418) in the matching
+ * build (finding 680). */
 uint8_t g_front_save_slot_buffer[0xec];
+#endif
 
 /* Front_LevelSet_IndexOf (00416e20) has C linkage under the name
  * front_level_set_index_of; savegame.cpp reaches it through its frozen
