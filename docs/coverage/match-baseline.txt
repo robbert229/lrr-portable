@@ -1,4 +1,4 @@
-# input_sha256: 482a5385ed13b0e5ccb788b40f0b495032d054196ebb2d5dceaa1c5a97622056
+# input_sha256: 6d6ccb318e654ea9a9f5b345e8298d9dcf8970143c98712a84af020ece80fa40
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -293,7 +293,7 @@
 0x0040c1b0 100.00 indexed_resource_handle_set_create
 0x0040c230 100.00 scene_slot_pose_scale_register
 0x0040c2f0 100.00 transient_effect_render_slot_configure
-0x0040c3a0 50.73 effect_update_all
+0x0040c3a0 52.94 effect_update_all
 0x0040c4d0 100.00 effect_update_boulder_explode
 0x0040c520 100.00 effect_update_smash_path
 0x0040c570 100.00 scene_cell_table_pair_read
@@ -3018,7 +3018,7 @@
 0x0040c1b0 100.00 indexed_resource_handle_set_create
 0x0040c230 100.00 scene_slot_pose_scale_register
 0x0040c2f0 100.00 transient_effect_render_slot_configure
-0x0040c3a0 50.73 effect_update_all
+0x0040c3a0 52.94 effect_update_all
 0x0040c4d0 100.00 effect_update_boulder_explode
 0x0040c520 100.00 effect_update_smash_path
 0x0040c570 100.00 scene_cell_table_pair_read

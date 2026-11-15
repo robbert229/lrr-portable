@@ -380,8 +380,8 @@ unsigned int effect_update_all(float elapsed, unsigned int** completeTypes,
     effect_update_misc_effects_all(elapsed);
 
     for (i = 0; i < EFFECT_ROCKFALL_NUMTYPES; i++) {
-        rockFall = &effectGlobs.rockFallEffects[effectGlobs.rockFallStyleIndex][i];
-        if (rockFall->cont != NULL) {
+        if (effectGlobs.rockFallEffects[effectGlobs.rockFallStyleIndex][i].cont != NULL) {
+            rockFall = &effectGlobs.rockFallEffects[effectGlobs.rockFallStyleIndex][i];
             for (j = 0; j < EFFECT_ROCKFALL_MAXINSTANCES; j++) {
                 if (!rockFall->finished[j]) {
                     if (ddiscene_advance_by_time_target(rockFall->conts[j], elapsed) > 0.0f) {
