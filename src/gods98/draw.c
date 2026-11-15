@@ -444,11 +444,11 @@ static void Draw_Pixel32(int32_t x, int32_t y, uint32_t value)
 }
 
 /* drawGlobs, defined after every function so that no function's symbol
- * counter moves (finding 538), after the 524 bytes of .bss the original
- * has before it (005405dc, after Mesh.c's .bss), which nothing in the image
+ * counter moves (finding 538), after the 520 bytes of .bss the original
+ * has before it (005405e0, after Mesh.c's .bss), which nothing in the image
  * reads. Zero-initialised externals, emitted in definition order
  * (finding 686). */
-// GLOBAL: LEGORR 0x005405dc
-unsigned int draw_unknown_5405dc[131] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x005405e0
+unsigned int draw_unknown_5405e0[130] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x005407e8
 DrawGlobs drawGlobs = { 0 };

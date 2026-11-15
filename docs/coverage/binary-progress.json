@@ -1,15 +1,15 @@
 {
   "accuracy_percent": {
-    "full": 97.83,
-    "game_only": 97.6
+    "full": 97.84,
+    "game_only": 97.61
   },
-  "baseline_sha256": "5e606ffb9e87fd719717429e92989be3b372e135c283444e64d853997ce09de6",
+  "baseline_sha256": "932907f60307443e3bc55627ae803e19f0b5aefb240eb100b07e00f6fc918e3d",
   "correct_size_functions": {
     "full": {
       "bytes": 467046,
       "compared": 3017,
       "count": 2814,
-      "exact_functions": 2658,
+      "exact_functions": 2663,
       "mapped": 3019,
       "uncompared": 2
     },
@@ -17,7 +17,7 @@
       "bytes": 416213,
       "compared": 2721,
       "count": 2522,
-      "exact_functions": 2369,
+      "exact_functions": 2374,
       "mapped": 2723,
       "uncompared": 2
     },
@@ -26,9 +26,9 @@
   "data_identity": {
     "gate": {
       ".bss": {
-        "at_original_address": 114,
-        "at_original_offset": 114,
-        "at_original_offset_bytes": 562650,
+        "at_original_address": 118,
+        "at_original_offset": 118,
+        "at_original_offset_bytes": 615078,
         "rebuilt_start": "0x4b2db0",
         "start_delta": 0
       },
@@ -49,11 +49,11 @@
         "start_delta": 0
       },
       "commons": {
-        "at_original_address": 0,
+        "at_original_address": 1,
         "at_original_offset": 17,
         "at_original_offset_bytes": 179132,
-        "rebuilt_start": "0x549d20",
-        "start_delta": 2048
+        "rebuilt_start": "0x549d40",
+        "start_delta": 2080
       }
     },
     "image": "original-mode link",
@@ -61,19 +61,19 @@
     "regions": {
       ".bss": {
         "first_difference": {
-          "object": "unit_gods98:sound3d.c.obj",
-          "offset_delta": 4,
-          "original": "0x53387c",
-          "rebuilt": "0x533880",
+          "object": "libc:fpinit.obj",
+          "offset_delta": 2064,
+          "original": "0x5490c8",
+          "rebuilt": "0x5498d8",
           "rebuilt_region": ".bss"
         },
         "items": {
-          "at_original_address": 114,
-          "at_original_address_bytes": 562650,
-          "at_original_offset": 114,
-          "at_original_offset_bytes": 562650,
+          "at_original_address": 118,
+          "at_original_address_bytes": 615078,
+          "at_original_offset": 118,
+          "at_original_offset_bytes": 615078,
           "paired": 164,
-          "paired_bytes": 616018
+          "paired_bytes": 616034
         },
         "objects": {
           "agreeing": [
@@ -93,14 +93,18 @@
             "weapons.c.obj",
             "unit_gods98:main.c.obj",
             "unit_gods98:config.c.obj",
-            "unit_gods98:font.c.obj"
+            "unit_gods98:font.c.obj",
+            "unit_gods98:sound3d.c.obj",
+            "unit_gods98:mesh_unit.c.obj",
+            "unit_gods98:draw.c.obj",
+            "unit_gods98:dxerror.c.obj"
           ],
-          "at_original_offset": 17,
-          "with_paired_items": 35
+          "at_original_offset": 21,
+          "with_paired_items": 36
         },
         "original_bytes": 616304,
         "original_start": "0x4b2db0",
-        "rebuilt_bytes": 618352,
+        "rebuilt_bytes": 618384,
         "rebuilt_start": "0x4b2db0",
         "start_delta": 0
       },
@@ -230,12 +234,12 @@
           "object": "<common>",
           "offset_delta": -3848,
           "original": "0x556fb8",
-          "rebuilt": "0x5568b0",
+          "rebuilt": "0x5568d0",
           "rebuilt_region": "commons"
         },
         "items": {
-          "at_original_address": 0,
-          "at_original_address_bytes": 0,
+          "at_original_address": 1,
+          "at_original_address_bytes": 2048000,
           "at_original_offset": 17,
           "at_original_offset_bytes": 179132,
           "paired": 61,
@@ -249,15 +253,15 @@
         "original_bytes": 2247092,
         "original_start": "0x549520",
         "rebuilt_bytes": 2244980,
-        "rebuilt_start": "0x549d20",
-        "start_delta": 2048
+        "rebuilt_start": "0x549d40",
+        "start_delta": 2080
       }
     }
   },
   "exact_function_code_bytes": {
-    "bytes": 352526,
+    "bytes": 352874,
     "original_text_bytes": 642549,
-    "percent": 54.86
+    "percent": 54.92
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 5116,
@@ -304,13 +308,13 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "23ed75c2c527312afe4e537b4e0e17a07b267108ac7db4ea100d92c0026d1f07",
+  "input_sha256": "e34fdc7d0aa3ef5acd87e349db227fa9b4d36e9d2f826a868f3eca5c92b1bbb4",
   "layout": {
     "data_offset_agreement": {
-      "agreeing_units": 51,
+      "agreeing_units": 54,
       "eligible_units": 57,
       "method": "anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted",
-      "unattributed_or_unmapped_annotations": 139
+      "unattributed_or_unmapped_annotations": 140
     },
     "link_order_list": {
       "adjacent": 0,
@@ -2008,8 +2012,8 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
-        "data_offset_comparisons": 4,
+        "data_offset_agreement": true,
+        "data_offset_comparisons": 3,
         "functions": 42,
         "identical_function_bytes": 4404,
         "identity_percent": 66.32,
@@ -2080,8 +2084,8 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
-        "data_offset_comparisons": 1,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
         "functions": 58,
         "identical_function_bytes": 7714,
         "identity_percent": 59.72,
@@ -2164,8 +2168,8 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": null,
-        "data_offset_comparisons": 0,
+        "data_offset_agreement": true,
+        "data_offset_comparisons": 1,
         "functions": 4,
         "identical_function_bytes": 181,
         "identity_percent": 100.0,
@@ -2200,7 +2204,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 331,
         "functions": 2,
         "identical_function_bytes": 62,
@@ -4014,18 +4018,18 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 11
   },
-  "listing_digests_sha256": "655932774a5587ab03332aa6f3f4c13f816724feaeadeb77899bc48f7a94d71b",
+  "listing_digests_sha256": "affbbdaa8fcfb535a590c6a0863a586c4f8c577ef646e64d35b4a0afdc664b3f",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 2658,
+        "exact": 2663,
         "mapped": 3019,
         "removed": 0,
         "removed_exact": null
       },
       "game_only": {
-        "exact": 2369,
+        "exact": 2374,
         "mapped": 2723,
         "removed": 0,
         "removed_exact": null
@@ -4073,7 +4077,7 @@
     },
     "gate_text_symbols": 3295,
     "image": {
-      "bss_bytes": 2863332,
+      "bss_bytes": 2863364,
       "characteristics": 271,
       "common_dll_order_equal": true,
       "data_initialised_bytes": 73088,
@@ -4117,8 +4121,8 @@
           "rebuilt": 10744
         },
         ".text": {
-          "differing": 595773,
-          "equal": 46776,
+          "differing": 595808,
+          "equal": 46741,
           "original": 642549,
           "rebuilt": 641461
         }
@@ -4126,7 +4130,7 @@
       "sections": {
         ".data": {
           "raw_size": 73216,
-          "virtual_size": 2936468
+          "virtual_size": 2936500
         },
         ".idata": {
           "raw_size": 4608,
@@ -4203,15 +4207,15 @@
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 4.45,
-      "identical_bytes": 46759,
-      "identical_percent": 7.28,
+      "excess_percent_points": 4.44,
+      "identical_bytes": 46724,
+      "identical_percent": 7.27,
       "original_bytes": 642549,
       "rebuilt_bytes": 641461,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 3.34,
-      "run_identical_bytes": 21449,
-      "run_identical_percent": 3.34
+      "run_excess_percent_points": 3.33,
+      "run_identical_bytes": 21427,
+      "run_identical_percent": 3.33
     },
     "imports": {
       "chance_percent": 34.58,
@@ -4241,14 +4245,14 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 4.46,
-    "identical_bytes": 46852,
+    "identical_bytes": 46817,
     "identical_percent": 7.29,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
-    "run_excess_percent_points": 3.34,
-    "run_identical_bytes": 21449,
-    "run_identical_percent": 3.34
+    "run_excess_percent_points": 3.33,
+    "run_identical_bytes": 21427,
+    "run_identical_percent": 3.33
   },
   "unit_size_agreement": {
     "agreeing_unit_ids": [

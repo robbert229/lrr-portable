@@ -334,7 +334,7 @@ static const Sound3DIID IID_IDirectSound3DBuffer = {
 
 extern Sound3DGlobs s_sound3d; /* defined at the end of the file */
 
-extern Sound3DFrameGlobs s_sound3d_frames; /* defined at the end of the file */
+#define s_sound3d_frames (*(Sound3DFrameGlobs*)sound3dState.frames)
 
 int sound_bank_free_slot_find(int* handle);
 void sound_listener_frame_update(Sound3DFrame* frame, void* arg,
@@ -511,7 +511,9 @@ static int keyed_sweep(int key, void* node);
 
 /* Sound3D_Initialised (00533878). Shared by both backends: soundsys.c and
  * sound.cpp read it. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern int s_bank_sound_on; /* defined at the end of the file */
+#endif
 
 /* The SFX slider's attenuation steps, in millibels (audio.cpp reads it). */
 // GLOBAL: LEGORR 0x004aae30
@@ -2444,11 +2446,15 @@ unsigned int sound3d_unknown_5065b0[2] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x005065b8
 Sound3DGlobs s_sound3d = { 0 };
 #endif
-/* Sound3D_Initialised. Shared by both backends: soundsys.c and sound.cpp
- * read it. */
+/* Sound3D_Initialised and the frame state (audio.h's Sound3D_State in the
+ * matching build). Shared by both backends: soundsys.c and sound.cpp read
+ * the flag. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
 // GLOBAL: LEGORR 0x00533878
+Sound3D_State sound3dState = { 0 };
+#else
 int s_bank_sound_on = 0;
 #ifdef SOUND3D_DIRECTSOUND
-// GLOBAL: LEGORR 0x0053387c
 Sound3DFrameGlobs s_sound3d_frames = { 0 };
+#endif
 #endif

@@ -1,4 +1,4 @@
-# input_sha256: 23ed75c2c527312afe4e537b4e0e17a07b267108ac7db4ea100d92c0026d1f07
+# input_sha256: e34fdc7d0aa3ef5acd87e349db227fa9b4d36e9d2f826a868f3eca5c92b1bbb4
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -188,9 +188,9 @@
 0x004074b0 94.29 type2_timed_registry_insert
 0x00407510 92.31 set_type2_object_record_value
 0x00407540 100.00 flagged_object_timer_registry_insert
-0x004075a0 98.32 screen_effects_tick
+0x004075a0 99.58 screen_effects_tick
 0x004078c0 100.00 bubble_live_object_update_bubble_image
-0x00407960 98.15 bubble_callback_draw_obj_info
+0x00407960 100.00 bubble_callback_draw_obj_info
 0x00407a10 100.00 bubble_live_object_get_bubble_image
 0x00407d60 100.00 entity_building_type_config_record_parse
 0x004082e0 100.00 scene_object_scalar_adjust_by_direction
@@ -970,7 +970,7 @@
 0x004383b0 100.00 legoobject_rover_work_queue_update
 0x00438460 100.00 legoobject_kind_record_update_dispatch
 0x00438580 100.00 legoobject_flag80000000_set_or_clear
-0x004385b0 96.00 legoobject_shared_eligibility_check
+0x004385b0 100.00 legoobject_shared_eligibility_check
 0x00438610 100.00 legoobject_create_in_world
 0x00438670 100.00 legoobject_at_grid_position_find
 0x004386b0 100.00 legoobject_grid_position_match_callback
@@ -1131,8 +1131,8 @@
 0x00445770 92.68 legoobject_behavior_callback_a
 0x00445830 75.77 legoobject_behavior_callback_b
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
-0x00445df0 91.44 legoobject_flag_gated_callback_b
-0x004460f0 89.69 legoobject_flag_gated_callback_a
+0x00445df0 92.34 legoobject_flag_gated_callback_b
+0x004460f0 90.21 legoobject_flag_gated_callback_a
 0x00446610 71.66 legoobject_movement_tick_scale_and_delta_get
 0x004468c0 100.00 legoobject_route_adjacent_step_append
 0x004469c0 87.84 legoobject_nearest_connected_cell_route_select
@@ -2258,7 +2258,7 @@
 0x00477550 100.00 string_duplicate
 0x00477590 100.00 formatted_text_escape_decode_and_emit
 0x00477610 100.00 case_insensitive_substring_find
-0x00477670 96.72 game_string_hash_compute
+0x00477670 100.00 game_string_hash_compute
 0x00477710 100.00 block_get_bool
 0x004777a0 100.00 WinMain
 0x00477bd0 100.00 low_texture_flag_set
@@ -2647,8 +2647,8 @@
 0x00489280 100.00 media_cd_audio_track_completion_poll
 0x00489330 100.00 media_cd_audio_device_open
 0x004893a0 100.00 media_cd_audio_stop_and_close
-0x004893f0 87.50 level_map_slots_reset
-0x00489410 95.65 level_map_slot_allocate
+0x004893f0 100.00 level_map_slots_reset
+0x00489410 100.00 level_map_slot_allocate
 0x00489460 100.00 level_map_slot_release
 0x004894a0 100.00 level_map_slot_get
 0x004894c0 100.00 scene_material_create
@@ -2913,9 +2913,9 @@
 0x004074b0 94.29 type2_timed_registry_insert
 0x00407510 92.31 set_type2_object_record_value
 0x00407540 100.00 flagged_object_timer_registry_insert
-0x004075a0 98.32 screen_effects_tick
+0x004075a0 99.58 screen_effects_tick
 0x004078c0 100.00 bubble_live_object_update_bubble_image
-0x00407960 98.15 bubble_callback_draw_obj_info
+0x00407960 100.00 bubble_callback_draw_obj_info
 0x00407a10 100.00 bubble_live_object_get_bubble_image
 0x00407d60 100.00 entity_building_type_config_record_parse
 0x004082e0 100.00 scene_object_scalar_adjust_by_direction
@@ -3695,7 +3695,7 @@
 0x004383b0 100.00 legoobject_rover_work_queue_update
 0x00438460 100.00 legoobject_kind_record_update_dispatch
 0x00438580 100.00 legoobject_flag80000000_set_or_clear
-0x004385b0 96.00 legoobject_shared_eligibility_check
+0x004385b0 100.00 legoobject_shared_eligibility_check
 0x00438610 100.00 legoobject_create_in_world
 0x00438670 100.00 legoobject_at_grid_position_find
 0x004386b0 100.00 legoobject_grid_position_match_callback
@@ -3856,8 +3856,8 @@
 0x00445770 92.68 legoobject_behavior_callback_a
 0x00445830 75.77 legoobject_behavior_callback_b
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
-0x00445df0 91.44 legoobject_flag_gated_callback_b
-0x004460f0 89.69 legoobject_flag_gated_callback_a
+0x00445df0 92.34 legoobject_flag_gated_callback_b
+0x004460f0 90.21 legoobject_flag_gated_callback_a
 0x00446610 71.66 legoobject_movement_tick_scale_and_delta_get
 0x004468c0 100.00 legoobject_route_adjacent_step_append
 0x004469c0 87.84 legoobject_nearest_connected_cell_route_select
@@ -4983,7 +4983,7 @@
 0x00477550 100.00 string_duplicate
 0x00477590 100.00 formatted_text_escape_decode_and_emit
 0x00477610 100.00 case_insensitive_substring_find
-0x00477670 96.72 game_string_hash_compute
+0x00477670 100.00 game_string_hash_compute
 0x00477710 100.00 block_get_bool
 0x004777a0 100.00 WinMain
 0x00477bd0 100.00 low_texture_flag_set
@@ -5372,8 +5372,8 @@
 0x00489280 100.00 media_cd_audio_track_completion_poll
 0x00489330 100.00 media_cd_audio_device_open
 0x004893a0 100.00 media_cd_audio_stop_and_close
-0x004893f0 87.50 level_map_slots_reset
-0x00489410 95.65 level_map_slot_allocate
+0x004893f0 100.00 level_map_slots_reset
+0x00489410 100.00 level_map_slot_allocate
 0x00489460 100.00 level_map_slot_release
 0x004894a0 100.00 level_map_slot_get
 0x004894c0 100.00 scene_material_create
