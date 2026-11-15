@@ -2929,15 +2929,19 @@ void interface_draw_dependencies(float x, float y)
             pos.y = y;
             for (i = 0; i < count; i++) {
                 if (i == 0) {
-                    image = interfaceGlobs.dependencyEqualsImage;
+                    if (interfaceGlobs.dependencyEqualsImage != NULL) {
+                        pos.x -= (float)(int)interfaceGlobs.dependencyEqualsImage->width;
+                        image_display_scaled(interfaceGlobs.dependencyEqualsImage, NULL, &pos, NULL);
+                    } else {
+                        pos.x -= 20.0f;
+                    }
                 } else {
-                    image = interfaceGlobs.dependencyPlusImage;
-                }
-                if (image != NULL) {
-                    pos.x -= (float)(int)image->width;
-                    image_display_scaled(image, NULL, &pos, NULL);
-                } else {
-                    pos.x -= 20.0f;
+                    if (interfaceGlobs.dependencyPlusImage != NULL) {
+                        pos.x -= (float)(int)interfaceGlobs.dependencyPlusImage->width;
+                        image_display_scaled(interfaceGlobs.dependencyPlusImage, NULL, &pos, NULL);
+                    } else {
+                        pos.x -= 20.0f;
+                    }
                 }
 
                 image = (Image*)input_binding_default_value_get(list[i].objType, list[i].objIndex, entity_pool_find_by_callback_filtered_current(INTERFACE_OBJECT_CALLBACK(terrain_cell_resource_entry_matches), &list[i]) != 0);
