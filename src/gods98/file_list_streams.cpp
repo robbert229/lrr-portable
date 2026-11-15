@@ -42,23 +42,26 @@ extern "C" uint32_t s_overlay_word_03610;
 #include "engine_for_file_list_streams.hpp"
 
 #if defined(_MSC_VER) && _MSC_VER < 1200
-/* The unit's stream state, at the original's addresses (finding 680): the
- * four stream handles (00575ce0-00575cec), the token-list path that
- * 0048b2f0 scans (00575cf0) and the output path it opens (005760f0), each
- * 1024 bytes. The original's block goes on with an unreferenced word
- * (005764f0) and the window-mode flag (005764f4), which engine.cpp still
- * defines as s_window_mode_flag. Natively startup_config.cpp keeps the
- * port's globals under the old names. */
+/* The unit's state, the original's whole 0x818-byte block (findings 680
+ * and 684): the four stream handles (00575ce0-00575cec), the token-list
+ * path that 0048b2f0 scans (00575cf0) and the output path it opens
+ * (005760f0), each 1024 bytes, a word no retail code references
+ * (005764f0) and the window-mode flag (005764f4) that 0048b260 clears and
+ * 0048b280 sets. Natively startup_config.cpp keeps the port's globals
+ * under the old names, and engine.cpp the flag. */
 struct FileListStreams_Globs {
     GameFileHandle* streams[4];     /* +0x000 */
     char tokenListPath[1024];       /* +0x010 */
     char outputPath[1024];          /* +0x410 */
+    uint32_t field_810;             /* +0x810 unreferenced in retail */
+    uint32_t windowMode;            /* +0x814 */
 };
 // GLOBAL: LEGORR 0x00575ce0
 FileListStreams_Globs fileListStreamsGlobs;
 #define s_startup_streams fileListStreamsGlobs.streams
 #define s_startup_token_list_path fileListStreamsGlobs.tokenListPath
 #define s_startup_output_path fileListStreamsGlobs.outputPath
+#define s_window_mode_flag fileListStreamsGlobs.windowMode
 #endif
 
 namespace unported_ledger_stubs {
@@ -74,7 +77,7 @@ extern "C" void ledger_stub_0048b260_StartupStreamStateReset()
      * the window-mode flag (finding 680). */
     s_startup_window_mode = 0u;
 #endif
-    window_mode_flag_set(0u);
+    s_window_mode_flag = 0u;
 }
 } // namespace unported_ledger_stubs
 
@@ -106,16 +109,18 @@ extern "C" void ledger_stub_0048b290_StartupStreamsClose()
 // FUNCTION: LEGORR 0x0048b2f0
 extern "C" void startup_config_stream_load(void)
 {
-    GameFileHandle* stream;
     startup_streams_close();
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+    /* Port-only guard: the port's paths may be unset. */
     if (s_startup_output_path[0] == '\0') return;
-    stream = game_file_open_dispatch(s_startup_output_path, "w");
-    s_startup_streams[3] = stream;
-    if (stream == NULL) return;
-    if (s_startup_token_list_path[0] != '\0')
-        resource_file_token_list_load_and_tree_scan_target(
-            s_startup_token_list_path);
-    game_file_close(stream);
+#endif
+    if ((s_startup_streams[3] = game_file_open_dispatch(s_startup_output_path, "w")) != NULL) {
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+        if (s_startup_token_list_path[0] != '\0')
+#endif
+        resource_file_token_list_load_and_tree_scan_target(s_startup_token_list_path);
+        game_file_close(s_startup_streams[3]);
+    }
     /* The retail routine leaves the just-closed value in DAT_00575cec. */
 }
 } // namespace unported_ledger_stubs

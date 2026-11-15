@@ -17,8 +17,15 @@ extern "C" {
 
 float EngineTimeScale(void);                                    /* 0041fb40 */
 void lego_game_speed_set(float speed);                          /* 00425ce0 lego_unit.c */
-/* Lego_GotoInfo (0042de40) in the original ABI; unannotated adapter
- * (engine.cpp). */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+/* Matching build: Lego.c's Lego_GotoInfo itself (lego_unit.c), instead of
+ * engine.cpp's adapter (#827, finding 684). It renames the declaration
+ * below and its use; the new name is not otherwise declared here
+ * (finding 538). */
+#define lego_goto_info lego_viewport_target_position_clamp /* 0042de40 */
+#endif
+/* Lego_GotoInfo (0042de40) in the original ABI; natively an unannotated
+ * adapter (engine.cpp). */
 void lego_goto_info(void* object, const int* blockPos, int force);
 int pointer_cursor_config_parse_target(const char* name,
                                        int* index_out);         /* 0045cbd0 */

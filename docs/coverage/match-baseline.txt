@@ -1,4 +1,4 @@
-# input_sha256: 1ecf702bbf7c3faa83e0462554d73f319e1458b9b6b61812a1335b38f7020328
+# input_sha256: 0bb84257e8caff56413386b41027dcdb826d82598264a121a835188504e6d9ef
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -578,7 +578,7 @@
 0x00419b20 100.00 info_find_message
 0x00419b50 100.00 info_get_next_y
 0x00419b80 100.00 info_send
-0x00419da0 95.24 incident_message_panel_refresh_if_active
+0x00419da0 100.00 incident_message_panel_refresh_if_active
 0x00419de0 100.00 pending_record_list_entry_move_to_front
 0x00419e60 100.00 pending_record_release_if_present
 0x00419e80 100.00 pending_record_list_entry_remove_and_release
@@ -1719,7 +1719,7 @@
 0x0045a650 39.44 panel_category_bounds_set
 0x0045a6e0 100.00 indexed_pair_set
 0x0045a700 100.00 indexed_pair_get
-0x0045a730 94.92 simtick_manager_tick
+0x0045a730 100.00 simtick_manager_tick
 0x0045a9c0 100.00 panel_texture_slots_blit_to
 0x0045aac0 100.00 panel_item_flag16_set
 0x0045ab00 100.00 panel_state_flags_toggle
@@ -1729,7 +1729,7 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
-0x0045adb0 82.69 panel_cursor_interaction_update
+0x0045adb0 87.04 panel_cursor_interaction_update
 0x0045b310 57.76 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
@@ -2668,10 +2668,10 @@
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
-0x0048b260 60.00 ledger_stub_0048b260_StartupStreamStateReset
+0x0048b260 100.00 ledger_stub_0048b260_StartupStreamStateReset
 0x0048b280 100.00 window_mode_flag_set
 0x0048b290 100.00 ledger_stub_0048b290_StartupStreamsClose
-0x0048b2f0 50.00 startup_config_stream_load
+0x0048b2f0 100.00 startup_config_stream_load
 0x0048b330 100.00 registry_path_split
 0x0048b360 100.00 registry_path_accessor
 0x0048b390 65.56 registry_path_create_keys
@@ -3303,7 +3303,7 @@
 0x00419b20 100.00 info_find_message
 0x00419b50 100.00 info_get_next_y
 0x00419b80 100.00 info_send
-0x00419da0 95.24 incident_message_panel_refresh_if_active
+0x00419da0 100.00 incident_message_panel_refresh_if_active
 0x00419de0 100.00 pending_record_list_entry_move_to_front
 0x00419e60 100.00 pending_record_release_if_present
 0x00419e80 100.00 pending_record_list_entry_remove_and_release
@@ -4444,7 +4444,7 @@
 0x0045a650 39.44 panel_category_bounds_set
 0x0045a6e0 100.00 indexed_pair_set
 0x0045a700 100.00 indexed_pair_get
-0x0045a730 94.92 simtick_manager_tick
+0x0045a730 100.00 simtick_manager_tick
 0x0045a9c0 100.00 panel_texture_slots_blit_to
 0x0045aac0 100.00 panel_item_flag16_set
 0x0045ab00 100.00 panel_state_flags_toggle
@@ -4454,7 +4454,7 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
-0x0045adb0 82.69 panel_cursor_interaction_update
+0x0045adb0 87.04 panel_cursor_interaction_update
 0x0045b310 57.76 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
@@ -5393,10 +5393,10 @@
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
-0x0048b260 60.00 ledger_stub_0048b260_StartupStreamStateReset
+0x0048b260 100.00 ledger_stub_0048b260_StartupStreamStateReset
 0x0048b280 100.00 window_mode_flag_set
 0x0048b290 100.00 ledger_stub_0048b290_StartupStreamsClose
-0x0048b2f0 50.00 startup_config_stream_load
+0x0048b2f0 100.00 startup_config_stream_load
 0x0048b330 100.00 registry_path_split
 0x0048b360 100.00 registry_path_accessor
 0x0048b390 65.56 registry_path_create_keys
