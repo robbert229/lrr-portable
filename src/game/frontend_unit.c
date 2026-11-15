@@ -1385,14 +1385,6 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
         mouseOver) {
         sfx_random_play_sound_normal(0x13, 0);
         switch (item->itemType) {
-        case Front_MenuItem_TextInput:
-            input = (Front_TextInputData*)item->itemData;
-            input->caretPos++;
-            if (input->caretPos > input->length - 1) {
-                input->caretPos = input->length - 1;
-            }
-            handled = mouseOver;
-            break;
         case Front_MenuItem_Slider:
             slider = (Front_SliderData*)item->itemData;
             if (!mouseOver) {
@@ -1421,6 +1413,14 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
             if (realSlider->callback != NULL) {
                 realSlider->callback(*realSlider->valuePtr);
             }
+            break;
+        case Front_MenuItem_TextInput:
+            input = (Front_TextInputData*)item->itemData;
+            input->caretPos++;
+            if (input->caretPos > input->length - 1) {
+                input->caretPos = input->length - 1;
+            }
+            handled = mouseOver;
             break;
         case Front_MenuItem_Cycle:
             cycle = (Front_CycleData*)item->itemData;
@@ -1483,13 +1483,6 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
                 slider->callback(*slider->valuePtr);
             }
             break;
-        case Front_MenuItem_TextInput:
-            input = (Front_TextInputData*)item->itemData;
-            input->caretPos--;
-            if (input->caretPos < 0) {
-                input->caretPos = 0;
-            }
-            break;
         case Front_MenuItem_RealSlider:
             realSlider = (Front_RealSliderData*)item->itemData;
             *realSlider->valuePtr -= realSlider->step;
@@ -1498,6 +1491,13 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
             }
             if (realSlider->callback != NULL) {
                 realSlider->callback(*realSlider->valuePtr);
+            }
+            break;
+        case Front_MenuItem_TextInput:
+            input = (Front_TextInputData*)item->itemData;
+            input->caretPos--;
+            if (input->caretPos < 0) {
+                input->caretPos = 0;
             }
             break;
         case Front_MenuItem_Cycle:

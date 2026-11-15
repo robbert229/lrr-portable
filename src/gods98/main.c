@@ -781,18 +781,6 @@ LRESULT window_game_window_procedure_retail(HWND hWnd, UINT message,
         s_window_close_requested = TRUE;
         break;
 
-    case WM_MOVE:
-    case WM_SIZE:
-    case WM_ACTIVATE:
-    case WM_NCACTIVATE:
-    case WM_KEYDOWN:
-    case WM_KEYUP:
-    case WM_SYSKEYDOWN:
-    case WM_MOUSEMOVE:
-    case WM_ENTERMENULOOP:
-    case WM_EXITMENULOOP:
-        return 0;
-
     case WM_WINDOWPOSCHANGING:
         ((WINDOWPOS*)lParam)->flags &= ~SWP_NOOWNERZORDER;
         return 0;
@@ -841,6 +829,18 @@ LRESULT window_game_window_procedure_retail(HWND hWnd, UINT message,
     case WM_RBUTTONDBLCLK:
         s_window_mouse_word_58 = TRUE;
         return 0;
+    case WM_MOVE:
+    case WM_SIZE:
+    case WM_ACTIVATE:
+    case WM_NCACTIVATE:
+    case WM_KEYDOWN:
+    case WM_KEYUP:
+    case WM_SYSKEYDOWN:
+    case WM_MOUSEMOVE:
+    case WM_ENTERMENULOOP:
+    case WM_EXITMENULOOP:
+        return 0;
+
     }
 
     return DefWindowProcA(hWnd, message, wParam, lParam);

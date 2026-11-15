@@ -1,4 +1,4 @@
-# input_sha256: 367d7b0698624f1a42b8a735c1602a1af5f2e6dfc90b359fe805160e4b61050a
+# input_sha256: 9cc85dc9ae8196d417cdc7c816e3b3e9ab401324334f172498e67dd80bd6a81e
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -425,7 +425,7 @@
 0x00411840 100.00 front_menu_was_mouse_released
 0x00411870 90.70 front_menu_item_slider_handle_input
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
-0x00411a00 84.59 front_menu_update_menu_items_input
+0x00411a00 89.05 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
 0x00411f10 63.01 front_menu_item_draw_slider
 0x00412170 100.00 front_menu_get_overlay_count
@@ -2277,7 +2277,7 @@
 0x00478330 100.00 direct3d_render_preferences_apply
 0x004783d0 100.00 window_title_set
 0x004783f0 96.88 main_init_app
-0x004784c0 51.43 window_game_window_procedure_retail
+0x004784c0 53.75 window_game_window_procedure_retail
 0x004786c0 45.71 window_activation_close_retail
 0x00478880 100.00 main_window_procedure
 0x004788d0 100.00 direct3d_render_state_set_cached
@@ -3150,7 +3150,7 @@
 0x00411840 100.00 front_menu_was_mouse_released
 0x00411870 90.70 front_menu_item_slider_handle_input
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
-0x00411a00 84.59 front_menu_update_menu_items_input
+0x00411a00 89.05 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
 0x00411f10 63.01 front_menu_item_draw_slider
 0x00412170 100.00 front_menu_get_overlay_count
@@ -5002,7 +5002,7 @@
 0x00478330 100.00 direct3d_render_preferences_apply
 0x004783d0 100.00 window_title_set
 0x004783f0 96.88 main_init_app
-0x004784c0 51.43 window_game_window_procedure_retail
+0x004784c0 53.75 window_game_window_procedure_retail
 0x004786c0 45.71 window_activation_close_retail
 0x00478880 100.00 main_window_procedure
 0x004788d0 100.00 direct3d_render_state_set_cached
