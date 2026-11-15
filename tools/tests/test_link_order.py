@@ -174,7 +174,7 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(lo.placements(lo.parse(text), text),
                          {"game/a.c": "explicit", "gods98/b.cpp": "explicit", "gods98/c.c": "member",
                           "game/tail.cpp": "tail"})
-        self.assertEqual(lo.library_object("member", "gods98/c.c"), "unit_c:c.c.obj")
+        self.assertEqual(lo.library_object("member", "gods98/c.c"), "unit_gods98:c.c.obj")
         self.assertEqual(lo.library_object("tail", "game/tail.cpp"), "lrr_tail:tail.cpp.obj")
         self.assertIsNone(lo.library_object("explicit", "game/a.c"))
 
@@ -182,7 +182,7 @@ class CheckTest(unittest.TestCase):
         build = self.root / "build"
         self.assertEqual(lo.member_objects(build), {})
         build.mkdir()
-        (build / lo.MEMBERS_FILE).write_text("unit_b gods98/b.cpp /x/b.cpp.obj\nlrr_tail game/tail.cpp /x/tail.cpp.obj\n")
+        (build / lo.MEMBERS_FILE).write_text("unit_gods98 gods98/b.cpp /x/b.cpp.obj\nlrr_tail game/tail.cpp /x/tail.cpp.obj\n")
         self.assertEqual(lo.member_objects(build), {"gods98/b.cpp": Path("/x/b.cpp.obj"),
                                                     "game/tail.cpp": Path("/x/tail.cpp.obj")})
 
@@ -229,11 +229,11 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(lo.check_map(entries, header + units + symbol(32, "libc:mem.obj")
                                       + symbol(48, "lrr_tail:tail.cpp.obj")), [])
         self.assertIn("linked explicitly", " ".join(lo.check_map(entries, header + units + symbol(32, "tail.cpp.obj"))))
-        # A unit from its own library keeps list order (finding 658).
-        member = symbol(0, "a.c.obj") + symbol(16, "unit_b:b.cpp.obj")
+        # A unit from the member library keeps list order (findings 658, 690).
+        member = symbol(0, "a.c.obj") + symbol(16, "unit_gods98:b.cpp.obj")
         self.assertEqual(lo.check_map(entries, header + member + symbol(32, "libc:mem.obj")), [])
         self.assertIn("out-of-order", " ".join(lo.check_map(
-            entries, header + symbol(0, "unit_b:b.cpp.obj") + symbol(16, "a.c.obj"))))
+            entries, header + symbol(0, "unit_gods98:b.cpp.obj") + symbol(16, "a.c.obj"))))
 
 
 if __name__ == "__main__":

@@ -230,7 +230,7 @@ def build_objects(build):
     """Every object the matching build links, as {path: library}.
 
     Library is the archive the object comes from (`link-members.txt`:
-    `lrr_tail`, `unit_<stem>`), `late_<stem>` for the late units, or None for
+    `lrr_tail`, `unit_gods98`), `late_<stem>` for the late units, or None for
     an explicit object.
     """
     members = {}

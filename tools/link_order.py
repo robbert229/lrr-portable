@@ -37,8 +37,11 @@ MATCHING_PLATFORM = "winapi"
 # after the late libraries (LRR_LINK_TAIL_LIBRARY; finding 658). The map names
 # its objects lrr_tail:<file>.obj; check() requires the list to agree.
 TAIL_LIBRARY = "lrr_tail"
-# Prefix of the libraries that hold one gods98 unit each (finding 658).
+# Prefix of the library that holds gods98's later units (finding 658).
 MEMBER_PREFIX = "unit_"
+# That library: one for every member unit, as the original's, so that LINK
+# allocates gods98's commons in reverse unit order (finding 690).
+MEMBER_LIBRARY = MEMBER_PREFIX + "gods98"
 # What CMakeLists.txt writes into the matching build directory: one line per
 # archived object, "<library> <source> <object path>".
 MEMBERS_FILE = "link-members.txt"
@@ -147,8 +150,9 @@ def placements(entries: list[Entry], text: str) -> dict[str, str]:
 
 
 def member_library(source: str) -> str:
-    """The library a gods98 member unit is archived in: ``unit_<stem>``."""
-    return MEMBER_PREFIX + Path(source).name.split(".")[0]
+    """The library a gods98 member unit is archived in: ``unit_gods98``
+    for every member (finding 690)."""
+    return MEMBER_LIBRARY
 
 
 def library_object(placement: str, source: str) -> str | None:

@@ -1,4 +1,4 @@
-# input_sha256: 88bd8ec28cfb4e8be8d7b4ba95911d8a96a95a1e664256696bcbbcf010932bcc
+# input_sha256: ca3abdbb184655e60245fb9292d5f9d009d40ca4439489fdfc5c52f92406bf2a
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -418,7 +418,7 @@
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
-0x00411360 91.24 front_menu_item_select_test_string_collision
+0x00411360 92.45 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
 0x00411530 86.85 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
@@ -1673,7 +1673,7 @@
 0x00457460 100.00 nerpfunc_get_unit_at_block
 0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
 0x004574e0 99.69 objective_load_objective_text
-0x00457d40 61.49 objective_load_original
+0x00457d40 71.59 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
 0x004585c0 100.00 objective_set_block_objective
 0x004585f0 100.00 objective_set_timer_objective
@@ -3143,7 +3143,7 @@
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
-0x00411360 91.24 front_menu_item_select_test_string_collision
+0x00411360 92.45 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
 0x00411530 86.85 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
@@ -4398,7 +4398,7 @@
 0x00457460 100.00 nerpfunc_get_unit_at_block
 0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
 0x004574e0 99.69 objective_load_objective_text
-0x00457d40 61.49 objective_load_original
+0x00457d40 71.59 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
 0x004585c0 100.00 objective_set_block_objective
 0x004585f0 100.00 objective_set_timer_objective

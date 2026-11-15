@@ -309,6 +309,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
     char* s;
     int argc;
     unsigned int r, g, b;
+    unsigned int crystals;
     float timer;
 
     memset(OBJECTIVE_DATA(level), 0, sizeof(Objective_Data));
@@ -408,12 +409,15 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
         free(s);
     }
 
-    objective_set_cry_ore_objectives(level, atoi(block_get_strptr(config, string_path_join(gameName, levelName,
+    /* The original reads the crystal quota first, into a local: its
+     * "CrystalObjective" use comes before "OreObjective" (finding 690). */
+    crystals = atoi(block_get_strptr(config, string_path_join(gameName, levelName,
                         // STRING: LEGORR 0x004a817c
                         "CrystalObjective", NULL))
                     ? block_get_strptr(config, string_path_join(gameName, levelName,
                           "CrystalObjective", NULL))
-                    : ""),
+                    : "");
+    objective_set_cry_ore_objectives(level, crystals,
                atoi(block_get_strptr(config, string_path_join(gameName, levelName,
                    // STRING: LEGORR 0x004a816c
                    "OreObjective", NULL))

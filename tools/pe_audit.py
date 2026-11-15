@@ -176,7 +176,7 @@ def classify_object(obj: str, kinds: dict[str, str]) -> str:
                 and member in kinds:
             # A list entry linked from a library: a late unit (late_<stem>.lib,
             # link_order.late_library; finding 657), a gods98 member unit
-            # (unit_<stem>.lib) or a port-tail object (lrr_tail.lib; finding 658).
+            # (unit_gods98.lib, finding 690) or a port-tail object (lrr_tail.lib; finding 658).
             return kinds[member]
         return "libc" if lib == "libc" else "library:" + lib
     return kinds.get(obj.lower(), "other")

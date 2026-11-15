@@ -174,6 +174,7 @@ For data to land at original addresses, these must hold, in this order:
 4. **Common symbols** (from `00549520`): their allocation order is not yet
    understood (finding 516). It is characterised in its own stage. The
    region comes last in `.bss`, so deferring it moves nothing else.
+   *Characterised by the addendum of 2026-11-14 (finding 690).*
 5. **No storage made up for scoring.**
    - The named-section padding in `frontend.cpp`, `audio.cpp` and `cmd.cpp`
      goes.
@@ -406,6 +407,30 @@ Together these take the full function-order inversions from 5,568 to 801 pairs, 
 **What decision 1's reasons still say.** Explicit objects remain the rule for the game segment and Movie.cpp. Member libraries reproduce list order only while every member is referenced before its library is searched. Today they all are. A conversion that breaks this fails `make reccmp-check` through the map check. The link-order list is still the only authority on order.
 
 **What decision 4 loses.** Tail objects that nothing references are not linked. Under `/OPT:REF` they contributed nothing but one `.bss` block (`sfx_port.cpp`'s, which nothing reads). The tail's code and data now follow LIBC's and the late units', so they no longer shift LIBC.
+
+## Addendum (2026-11-14): the commons and one gods98 library
+
+**Status: proposed** by #839 ([finding 690](../findings/690-data-commons-order-and-frontend-arrays.md)). It amends decision 5.4 and the addendum of 2026-11-13 (steps 2 and 4: a library per gods98 unit, the late units after the import libraries).
+
+**How LINK 5.0 allocates the commons.** Scratch links of small C objects show:
+1. Each common belongs to the first object that defines it, in the order LINK reads objects. A later definition, or an earlier undefined reference, does not move it.
+2. LINK allocates the commons input by input, in command-line order: first the explicit objects, then each library, whichever pass pulled its members.
+3. Within the explicit objects or one library, the objects come in reverse order of reading (pulling). Within one object, the commons come in reverse order of its COFF symbol table, which MSVC 5.0 orders by name, not by definition.
+
+The original's four groups follow from this: the game units in reverse (explicit objects), RNC and Init.c, gods98 in reverse (one library), LIBC. RNC and Init.c's code follows the import thunks, so LINK pulled them in its second pass. Their commons still come before gods98's, so they came from a library searched before gods98's (or from gods98's own library, pulled last).
+
+**The matching build links, in this order:**
+1. the game units and Movie.cpp as explicit objects (unchanged);
+2. the late units' libraries, `late_rnc.lib` then `late_init.lib`;
+3. every later gods98 unit from one library, `unit_gods98.lib`, in list order;
+4. the libraries of the 2026-11-12 addendum;
+5. the port tail library (unchanged).
+
+Only gods98 units reference the late units, so LINK still pulls them in its second pass, after the import thunks. One library gives gods98's commons the original's reverse order, where a library per unit gave list order.
+
+**Pull order.** Within one library, LINK pulls members in the order their symbols first became unresolved. That follows each object's COFF symbol table, which follows the names. The rebuilt names are not the original's, so the rebuilt references alone pulled Font.c before Maths.c, and Sound3D.c and AnimClone.c late. `LRR_LINK_MEMBER_ORDER` names one live symbol of each gods98 member in list order (`/INCLUDE`), which pulls them in list order. It is a `Deviation (scoring only)` of the link command: `.text`, `.data` and every non-common symbol keep their addresses. The map check still requires list order.
+
+**What it does not fix.** The order of the commons within one object follows their names: Lego.c's `legoGlobs_f_556fb8`, RNC's nine tables and Wad.c's two arrays are in another order than the original's. G98-028's block is a common in the original but `.bss` in the rebuild, because `file_list_streams.cpp` is C++.
 
 ## Consequences
 
