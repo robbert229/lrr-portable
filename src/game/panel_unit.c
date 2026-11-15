@@ -1295,20 +1295,21 @@ void panel_crystals_draw(unsigned int crystals, unsigned int usedCrystals)
         position.x = 624.0f;
         position.y = 429.0f;
         n = panelGlobs.crystalQuota;
-        while (n--) {
+        while (n-- > 0) {
             image_display_scaled(panelGlobs.crystalNoSmallImage, NULL, &position, NULL);
             position.y -= 17.0f;
         }
     }
 
-    if ((image = panelGlobs.crystalSmallImage) != NULL) {
+    if (panelGlobs.crystalSmallImage != NULL) {
+        image = panelGlobs.crystalSmallImage;
         n = 0;
         if (crystals > panelGlobs.crystalQuota) crystals = panelGlobs.crystalQuota;
         if (usedCrystals > panelGlobs.crystalQuota) usedCrystals = panelGlobs.crystalQuota;
         position.x = 624.0f;
         position.y = 429.0f;
         if (panelGlobs.crystalUsedImage != NULL) {
-            for (n = 0; n < usedCrystals; n++) {
+            for (; n < usedCrystals; n++) {
                 image_display_scaled(panelGlobs.crystalSmallImage, NULL, &position, NULL);
                 position.y -= 17.0f;
             }
