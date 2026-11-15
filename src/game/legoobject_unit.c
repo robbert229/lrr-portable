@@ -9082,17 +9082,16 @@ int legoobject_activity_terrain_eligibility_transition(Lego_Object* obj, float e
         if (!lego_terrain_cell_allows_placement(LEGOOBJ_SLOT(obj), blockPos.x, blockPos.y)) {
             legoobject_set_activity(obj, 0xb, 1);
             obj->flags1 = (obj->flags1 & ~0x40) | 0x80000000;
-        } else {
-            if (obj->animTime <= legoobject_zero)
-                return 1;
+            level_tile_mark_current_target(&blockPos.x, 0);
+        } else if (obj->animTime > legoobject_zero) {
             obj->flags1 &= ~0x40;
             legoobject_set_activity(obj, 0, 0);
             lego_terrain_cell_queued_work_transition(blockPos.x, blockPos.y);
             obj->targetBlockPos[1] = -1.0f;
             obj->targetBlockPos[0] = -1.0f;
             *out = 1;
+            level_tile_mark_current_target(&blockPos.x, 0);
         }
-        level_tile_mark_current_target(&blockPos.x, 0);
         return 1;
     }
     return 0;

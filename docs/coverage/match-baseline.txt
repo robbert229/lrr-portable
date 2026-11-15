@@ -1,4 +1,4 @@
-# input_sha256: c467a9096328f52314e3a61ba2a56ba977633974d4cd2a55b1fee54ff893f8b1
+# input_sha256: 707fdd0a17a4136050c90416b66884bacbb8b8fb4ae41d8162a196334b5d4587
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1171,7 +1171,7 @@
 0x00449610 100.00 legoobject_coordinate_route_and_mark
 0x00449700 100.00 legoobject_route_step_command_issue
 0x00449880 100.00 legoobject_blocked_cell_approach_weight_write
-0x00449980 77.42 legoobject_activity_terrain_eligibility_transition
+0x00449980 100.00 legoobject_activity_terrain_eligibility_transition
 0x00449a70 100.00 legoobject_activity23_state_transition
 0x00449ac0 100.00 legoobject_proximity_step_command_issue_clearing_gate
 0x00449c00 100.00 legoobject_simtick_render_step
@@ -3896,7 +3896,7 @@
 0x00449610 100.00 legoobject_coordinate_route_and_mark
 0x00449700 100.00 legoobject_route_step_command_issue
 0x00449880 100.00 legoobject_blocked_cell_approach_weight_write
-0x00449980 77.42 legoobject_activity_terrain_eligibility_transition
+0x00449980 100.00 legoobject_activity_terrain_eligibility_transition
 0x00449a70 100.00 legoobject_activity23_state_transition
 0x00449ac0 100.00 legoobject_proximity_step_command_issue_clearing_gate
 0x00449c00 100.00 legoobject_simtick_render_step
