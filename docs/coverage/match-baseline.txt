@@ -1,4 +1,4 @@
-# input_sha256: 39fc4499064526d5a99c33246bff78e86f4e1d20093c233e73579a9432d20d51
+# input_sha256: 6eb5ee68dee25bd5a326cce439af2900a8091307a9b3cabd31705262774fb58e
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1825,7 +1825,7 @@
 0x00461c90 100.00 reward_draw_score
 0x00461dd0 100.00 reward_do_buttons
 0x00462030 94.18 reward_save_menu
-0x00462270 93.81 reward_advance
+0x00462270 95.34 reward_advance
 0x00462390 100.00 reward_debug_keys
 0x00462460 100.00 reward_restart_flic
 0x004624a0 79.23 reward_update_state
@@ -2557,7 +2557,7 @@
 0x00484260 100.00 Flic_Load
 0x00484320 67.74 Flic_FindChunk
 0x004844b0 100.00 Flic_FrameChunk
-0x00484610 44.87 Flic_DoChunk
+0x00484610 46.15 Flic_DoChunk
 0x00484720 100.00 Flic_LoadPointers
 0x004847d0 100.00 Flic_LoadPalette64
 0x00484880 61.11 Flic_Copy
@@ -4550,7 +4550,7 @@
 0x00461c90 100.00 reward_draw_score
 0x00461dd0 100.00 reward_do_buttons
 0x00462030 94.18 reward_save_menu
-0x00462270 93.81 reward_advance
+0x00462270 95.34 reward_advance
 0x00462390 100.00 reward_debug_keys
 0x00462460 100.00 reward_restart_flic
 0x004624a0 79.23 reward_update_state
@@ -5282,7 +5282,7 @@
 0x00484260 100.00 Flic_Load
 0x00484320 67.74 Flic_FindChunk
 0x004844b0 100.00 Flic_FrameChunk
-0x00484610 44.87 Flic_DoChunk
+0x00484610 46.15 Flic_DoChunk
 0x00484720 100.00 Flic_LoadPointers
 0x004847d0 100.00 Flic_LoadPalette64
 0x00484880 61.11 Flic_Copy
