@@ -997,6 +997,32 @@ Schema 5 adds three identity measures (`tools/identity_metrics.py`, finding
 `tools/readme_status.py` prints the three. `pr_match_progress.py render`
 compares their counts.
 
+Schema 6 adds `data_identity` (`tools/data_identity.py`, finding 680): where
+data lands, for four regions measured from their own starts. The regions are
+`.rdata`, the initialised part of `.data`, the per-object `.bss` and the
+commons. The rebuilt `.bss` and commons start at the map's `.bss` group and
+first `<common>` symbol. The original's start at GAME-001's `.bss` (the lowest
+`bss_range` in `translation-unit-ranges.csv`) and at `00549520`. Per region:
+
+- `original_start`, `rebuilt_start`, their sizes and `start_delta`;
+- `identical_prefix`: raw bytes equal from the region start
+  (section-relative). `.rdata` is read from the original-mode relink when
+  `opt-ref/LegoRR.exe` exists, because the gate's `.rdata` starts with the
+  debug directory;
+- `items`: Reccmp's paired data entities (`entities.json` types 2, 3, 4, 5
+  and 11) whose original address is in the region, with the counts and bytes
+  at the original offset and at the original address;
+- `objects`: the rebuilt objects that define those items (the map symbol at
+  or below each address). An object agrees when all its items are at their
+  original offsets;
+- `first_difference`: the first item, in original order, not at its original
+  offset, with its rebuilt region, offset delta and object.
+
+`python3 tools/data_identity.py` prints the field for the current build.
+`readme_status.py` prints a one-line summary, and `pr_match_progress.py
+render` compares the `.data` prefix and the items at their original offset.
+Tests: `test_data_identity.py`.
+
 Section comparisons align each named section at its start and use the
 original's virtual size as denominator (missing candidate bytes count as
 unequal); raw-file alignment padding is excluded. Imports and resources use
