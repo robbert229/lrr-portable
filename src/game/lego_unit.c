@@ -9872,8 +9872,8 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
                      (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 12) * -0.5f) - (float)(textWidth >> 1);
             wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 8);
             wndRect[2] = (float)textHeight;
-            if (legoInput_mouseX < textX || legoInput_mouseX >= textX + textWidth ||
-                legoInput_mouseY < wndRect[0] || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
+            if (textX > legoInput_mouseX || legoInput_mouseX >= textX + textWidth ||
+                wndRect[0] > legoInput_mouseY || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
                 LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingHi;
                 text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
             } else {
@@ -9892,8 +9892,8 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
                      (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 12) * -0.5f) - (float)(textWidth >> 1);
             wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 8);
             wndRect[2] = (float)textHeight;
-            if (legoInput_mouseX < textX || legoInput_mouseX >= textX + textWidth ||
-                legoInput_mouseY < wndRect[0] || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
+            if (textX > legoInput_mouseX || legoInput_mouseX >= textX + textWidth ||
+                wndRect[0] > legoInput_mouseY || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
                 LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingHi;
                 text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
             } else {

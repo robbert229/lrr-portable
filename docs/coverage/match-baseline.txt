@@ -1,4 +1,4 @@
-# input_sha256: 5476efd659e7607c6b4c7945526deec8a17674b3d3e72389d42285fcb8b5fa16
+# input_sha256: a37d35867d66d261e718306e4cbce853733cd1fc55dca397217cb234674a1ffe
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -906,7 +906,7 @@
 0x00435300 93.51 lego_tutorial_block_icons_update
 0x00435550 100.00 ledger_stub_00435550_GlobalStateZeroTransitionDetect
 0x00435580 76.92 lego_global_handle_position_apply_if_present
-0x004355c0 65.42 lego_menu_option_panel_texture_update
+0x004355c0 67.16 lego_menu_option_panel_texture_update
 0x00435940 100.00 lego_keep_running
 0x00435a20 100.00 global_state_low_byte_clear_and_refresh
 0x00435a50 100.00 lego_camera_registry_probe
@@ -1063,7 +1063,7 @@
 0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
-0x0043c810 89.38 legoobject_update_callback
+0x0043c810 89.73 legoobject_update_callback
 0x0043eea0 90.96 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
@@ -1091,7 +1091,7 @@
 0x00440bf0 100.00 legoobject_object_list_field_assign_all
 0x00440c30 100.00 legoobject_grid_route_search_adapter
 0x00440c70 51.91 legoobject_terrain_grid_path_search
-0x004410f0 70.91 legoobject_terrain_neighbor_path_check
+0x004410f0 71.13 legoobject_terrain_neighbor_path_check
 0x00441700 100.00 legoobject_route_setup_and_marker_associate
 0x00441940 100.00 legoobject_action_sequence_reset
 0x00441b30 100.00 legoobject_state_reset
@@ -1148,7 +1148,7 @@
 0x004477d0 97.70 legoobject_path_step_lookahead_write
 0x00447900 100.00 legoobject_type_four_callback_dispatch
 0x00447920 100.00 legoobject_type_four_callback
-0x00447950 85.61 legoobject_directional_activity_start
+0x00447950 88.73 legoobject_directional_activity_start
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 100.00 legoobject_activity_tick
 0x00447c40 100.00 legoobject_activity_register_bookkeeping
@@ -3631,7 +3631,7 @@
 0x00435300 93.51 lego_tutorial_block_icons_update
 0x00435550 100.00 ledger_stub_00435550_GlobalStateZeroTransitionDetect
 0x00435580 76.92 lego_global_handle_position_apply_if_present
-0x004355c0 65.42 lego_menu_option_panel_texture_update
+0x004355c0 67.16 lego_menu_option_panel_texture_update
 0x00435940 100.00 lego_keep_running
 0x00435a20 100.00 global_state_low_byte_clear_and_refresh
 0x00435a50 100.00 lego_camera_registry_probe
@@ -3788,7 +3788,7 @@
 0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
-0x0043c810 89.38 legoobject_update_callback
+0x0043c810 89.73 legoobject_update_callback
 0x0043eea0 90.96 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
@@ -3816,7 +3816,7 @@
 0x00440bf0 100.00 legoobject_object_list_field_assign_all
 0x00440c30 100.00 legoobject_grid_route_search_adapter
 0x00440c70 51.91 legoobject_terrain_grid_path_search
-0x004410f0 70.91 legoobject_terrain_neighbor_path_check
+0x004410f0 71.13 legoobject_terrain_neighbor_path_check
 0x00441700 100.00 legoobject_route_setup_and_marker_associate
 0x00441940 100.00 legoobject_action_sequence_reset
 0x00441b30 100.00 legoobject_state_reset
@@ -3873,7 +3873,7 @@
 0x004477d0 97.70 legoobject_path_step_lookahead_write
 0x00447900 100.00 legoobject_type_four_callback_dispatch
 0x00447920 100.00 legoobject_type_four_callback
-0x00447950 85.61 legoobject_directional_activity_start
+0x00447950 88.73 legoobject_directional_activity_start
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 100.00 legoobject_activity_tick
 0x00447c40 100.00 legoobject_activity_register_bookkeeping

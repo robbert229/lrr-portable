@@ -3568,7 +3568,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
     } else if (obj->flags2 & 0x4000) {
     } else if (obj->flags1 & 4) {
         if (obj->flags1 & 0x80) {
-            if (obj->animTime > legoobject_zero) {
+            if (legoobject_zero < obj->animTime) {
                 cont = legoobject_type_component_get(obj);
                 render_object_rotate_axis(cont, 1, 0.0f, 1.0f, 0.0f, 1.5707964f);
                 ddiscene_frame_update_and_callbacks(cont, 0.0f);
@@ -5438,7 +5438,7 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
                 *outYs = ys;
                 *outCount = count;
                 if ((xs[0] != xs[1] || abs((int)(ys[0] - ys[1])) != 1) &&
-                    (ys[0] != ys[1] || abs((int)(xs[0] - xs[1])) != 1)) {
+                    (ys[1] != ys[0] || abs((int)(xs[0] - xs[1])) != 1)) {
                     free(xs);
                     free(ys);
                     return legoobject_terrain_grid_path_search(obj, startX, startY, endX, endY,
@@ -8204,12 +8204,12 @@ void legoobject_directional_activity_start(Lego_Object* obj, float* dir, int mod
             face = *(LegoObjP_Point2F*)obj->faceDirection;
             d = *(LegoObjP_Point2F*)dir;
             c = (float)cos(0.78539818f);
-            inv = 1.0f / (float)sqrt(face.x * face.x + face.y * face.y);
+            inv = 1.0f / (float)sqrt(face.y * face.y + face.x * face.x);
             face.x = face.x * inv;
             face.y = face.y * inv;
             dot = face.x * d.x + face.y * d.y;
             limit = 1.0f - c;
-            if (dot > limit) activity = 0x1a;
+            if (limit < dot) activity = 0x1a;
             else if (dot < -limit) activity = 0x19;
             else if (face.y * d.x - face.x * d.y > legoobject_zero) activity = 0x18;
             else activity = 0x17;
