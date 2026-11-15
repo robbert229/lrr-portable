@@ -1366,8 +1366,8 @@ int nerps_file_load_message_file(const char* filename)
                         for (i = 0; i < lineCount; i++) list[i] = lines[i];
                         if (lineCount) Mem_Free(lines);
                         list[lineCount] = (char*)s;
-                        lineCount++;
                         lines = list;
+                        lineCount++;
                     }
                 }
                 lineStart = 0;
@@ -1447,8 +1447,8 @@ void nerps_runtime_execute(float elapsed)
     statements = 0;
     if (script != NULL) {
         count = nerpsGlobs.scriptSize / 4;
-        condition = 0;
         operation = 0;
+        condition = 0;
         for (i = 0; i < count; i++) {
             argCount = 0;
             if (script[i] & 0x20000) {
@@ -4082,8 +4082,8 @@ void nerps_parse_message(char* text, char* output, int setTimer)
     char* p;
     unsigned char found;
 
-    imageCount = 0;
     time = nerpsMessageTime.defaultTime;
+    imageCount = 0;
     out = output;
     if (nerpsGlobs.imageCount == 0 && nerpsGlobs.soundCount == 0 && output != NULL) {
         strcpy(output, text);

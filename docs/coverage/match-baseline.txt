@@ -1,4 +1,4 @@
-# input_sha256: 5fba62fcb9f48284d43ffa3bcdc05ad67046bea3b08a2148b9bcc482fde2079b
+# input_sha256: 9254027957c3fd4f65a5b02cfd036ac40d42dc757da0cf132a703d4ea8c9c657
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1259,7 +1259,7 @@
 0x0044e860 100.00 terrain_map_block_hidden_get
 0x0044e880 100.00 terrain_map_vertex_normals_update_all
 0x0044e8c0 98.72 terrain_map_shape_tolerance_check
-0x0044ead0 93.25 terrain_map_shape_flatten
+0x0044ead0 94.07 terrain_map_shape_flatten
 0x0044edf0 100.00 terrain_map_block_rotated_set
 0x0044efb0 100.00 terrain_map_block_vertex_modified
 0x0044eff0 100.00 terrain_map_update
@@ -1280,13 +1280,13 @@
 0x0044f870 78.08 terrain_map_world_to_block_offset
 0x0044f940 100.00 terrain_map_world_z_get
 0x0044fab0 91.78 terrain_map_world_normal_get
-0x0044fb90 77.33 terrain_map_world_edge_point_get
+0x0044fb90 77.95 terrain_map_world_edge_point_get
 0x0044fe70 100.00 terrain_map_world_z_unmodified_get
 0x00450060 45.07 terrain_map_block_first_vertex_get
 0x004500d0 100.00 terrain_map_block_vertices_get
 0x00450220 100.00 terrain_map_block_vertices_raw_get
 0x004502c0 100.00 level_coord_pair_within_bounds_target
-0x004502e0 82.38 terrain_map_screen_pick
+0x004502e0 85.50 terrain_map_screen_pick
 0x00450560 100.00 terrain_map_ray_intersection
 0x00450600 100.00 terrain_map_visible_radius_add
 0x00450700 100.00 terrain_map_block_hide
@@ -1340,11 +1340,11 @@
 0x00452cc0 100.00 selected_entity_state_monitor
 0x00452d60 86.44 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
-0x00452e70 96.15 nerps_file_load_message_file
+0x00452e70 96.50 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
 0x00453220 100.00 nerps_shutdown
 0x004532e0 100.00 nerps_runtime_resolve_argument
-0x00453320 69.53 nerps_runtime_execute
+0x00453320 69.75 nerps_runtime_execute
 0x004538a0 100.00 nerpfunc_set_game_speed
 0x00453900 100.00 nerps_set_has_next_button
 0x00453910 100.00 nerps_replay_message_sound
@@ -1652,7 +1652,7 @@
 0x004567d0 100.00 nerpfunc_get_objective_switch
 0x004567f0 100.00 nerpfunc_get_objective_showing
 0x00456810 100.00 nerps_play_message_sound
-0x00456830 67.59 nerps_parse_message
+0x00456830 67.85 nerps_parse_message
 0x00456b80 100.00 nerps_init_block_pointers_table
 0x00456c30 100.00 nerps_get_block_pointer
 0x00456c60 100.00 nerps_free_block_pointers
@@ -1730,7 +1730,7 @@
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
 0x0045adb0 87.04 panel_cursor_interaction_update
-0x0045b310 57.76 panel_button_collision_check
+0x0045b310 59.52 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
 0x0045b620 100.00 ui_list_priority_button_action_dispatch
@@ -3984,7 +3984,7 @@
 0x0044e860 100.00 terrain_map_block_hidden_get
 0x0044e880 100.00 terrain_map_vertex_normals_update_all
 0x0044e8c0 98.72 terrain_map_shape_tolerance_check
-0x0044ead0 93.25 terrain_map_shape_flatten
+0x0044ead0 94.07 terrain_map_shape_flatten
 0x0044edf0 100.00 terrain_map_block_rotated_set
 0x0044efb0 100.00 terrain_map_block_vertex_modified
 0x0044eff0 100.00 terrain_map_update
@@ -4005,13 +4005,13 @@
 0x0044f870 78.08 terrain_map_world_to_block_offset
 0x0044f940 100.00 terrain_map_world_z_get
 0x0044fab0 91.78 terrain_map_world_normal_get
-0x0044fb90 77.33 terrain_map_world_edge_point_get
+0x0044fb90 77.95 terrain_map_world_edge_point_get
 0x0044fe70 100.00 terrain_map_world_z_unmodified_get
 0x00450060 45.07 terrain_map_block_first_vertex_get
 0x004500d0 100.00 terrain_map_block_vertices_get
 0x00450220 100.00 terrain_map_block_vertices_raw_get
 0x004502c0 100.00 level_coord_pair_within_bounds_target
-0x004502e0 82.38 terrain_map_screen_pick
+0x004502e0 85.50 terrain_map_screen_pick
 0x00450560 100.00 terrain_map_ray_intersection
 0x00450600 100.00 terrain_map_visible_radius_add
 0x00450700 100.00 terrain_map_block_hide
@@ -4065,11 +4065,11 @@
 0x00452cc0 100.00 selected_entity_state_monitor
 0x00452d60 86.44 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
-0x00452e70 96.15 nerps_file_load_message_file
+0x00452e70 96.50 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
 0x00453220 100.00 nerps_shutdown
 0x004532e0 100.00 nerps_runtime_resolve_argument
-0x00453320 69.53 nerps_runtime_execute
+0x00453320 69.75 nerps_runtime_execute
 0x004538a0 100.00 nerpfunc_set_game_speed
 0x00453900 100.00 nerps_set_has_next_button
 0x00453910 100.00 nerps_replay_message_sound
@@ -4377,7 +4377,7 @@
 0x004567d0 100.00 nerpfunc_get_objective_switch
 0x004567f0 100.00 nerpfunc_get_objective_showing
 0x00456810 100.00 nerps_play_message_sound
-0x00456830 67.59 nerps_parse_message
+0x00456830 67.85 nerps_parse_message
 0x00456b80 100.00 nerps_init_block_pointers_table
 0x00456c30 100.00 nerps_get_block_pointer
 0x00456c60 100.00 nerps_free_block_pointers
@@ -4455,7 +4455,7 @@
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
 0x0045adb0 87.04 panel_cursor_interaction_update
-0x0045b310 57.76 panel_button_collision_check
+0x0045b310 59.52 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
 0x0045b620 100.00 ui_list_priority_button_action_dispatch

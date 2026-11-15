@@ -3,20 +3,20 @@
     "full": 98.05,
     "game_only": 97.85
   },
-  "baseline_sha256": "d1c29acfd3a97c0f0371640101c82e25d2494d7957a61ab73a09c9693d3bc7ee",
+  "baseline_sha256": "035fd6bb38a4dea5d9ba46de44c8c86e77886ccf7a49adf0b5150f5eccc2b047",
   "correct_size_functions": {
     "full": {
-      "bytes": 487609,
+      "bytes": 488244,
       "compared": 3017,
-      "count": 2838,
+      "count": 2839,
       "exact_functions": 2693,
       "mapped": 3019,
       "uncompared": 2
     },
     "game_only": {
-      "bytes": 436776,
+      "bytes": 437411,
       "compared": 2721,
-      "count": 2546,
+      "count": 2547,
       "exact_functions": 2404,
       "mapped": 2723,
       "uncompared": 2
@@ -304,7 +304,7 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "5fba62fcb9f48284d43ffa3bcdc05ad67046bea3b08a2148b9bcc482fde2079b",
+  "input_sha256": "9254027957c3fd4f65a5b02cfd036ac40d42dc757da0cf132a703d4ea8c9c657",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 54,
@@ -4014,7 +4014,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 11
   },
-  "listing_digests_sha256": "eee7063ce78975e84a2145d75c3d6479e7fd9072077960381e974bae0be131ad",
+  "listing_digests_sha256": "2acbeaba949aac5963da51cd98f8ad5fbda69d943e5b488e1d300a40b2dbb8e2",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4117,8 +4117,8 @@
           "rebuilt": 10744
         },
         ".text": {
-          "differing": 583752,
-          "equal": 58797,
+          "differing": 583746,
+          "equal": 58803,
           "original": 642549,
           "rebuilt": 641797
         }
@@ -4204,7 +4204,7 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 6.32,
-      "identical_bytes": 58773,
+      "identical_bytes": 58778,
       "identical_percent": 9.15,
       "original_bytes": 642549,
       "rebuilt_bytes": 641797,
@@ -4241,7 +4241,7 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 6.33,
-    "identical_bytes": 58816,
+    "identical_bytes": 58821,
     "identical_percent": 9.15,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,

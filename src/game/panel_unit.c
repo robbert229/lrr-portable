@@ -815,9 +815,9 @@ int panel_button_collision_check(int* outPanel, int* outButton, int mouseX,
                     if (leftButton) {
                         if (panelGlobs.selectedButton == PANEL_MAX_BUTTONS) {
                             if (!leftButtonLast) {
-                                panelGlobs.selectedPanel = panelType;
                                 panelGlobs.selectedButton = i;
                                 found = 1;
+                                panelGlobs.selectedPanel = panelType;
                                 *outButton = i;
                                 button->flags = (button->flags & ~PANEL_BUTTON_FLAG_HIGHLIGHT) | PANEL_BUTTON_FLAG_PRESSED;
                             } else {

@@ -338,12 +338,12 @@ void terrain_map_shape_flatten(TerrainMap* map,
     unsigned int i, j;
     TerrainMapPoint2I* point;
 
+    averageCount = 0;
     half = tolerance * 0.5f;
     vertexOffsets[1].x = 1;
     vertexOffsets[2].x = 1;
     vertexOffsets[2].y = 1;
     vertexOffsets[3].y = 1;
-    averageCount = 0;
     foundCount = 0;
     average = 0.0f;
     vertexOffsets[0].x = 0;
@@ -883,10 +883,10 @@ int terrain_map_world_edge_point_get(TerrainMap* map, float x, float y,
     lineStart = *(TerrainMapPoint2*)&v[a];
     point.x = x;
     point.y = y;
-    lineDir.x -= lineStart.x;
     lineDir.y -= lineStart.y;
-    normal2.x = normal.x;
+    lineDir.x -= lineStart.x;
     normal2.y = normal.y;
+    normal2.x = normal.x;
     line_intersection_2d_compute(&result.x, &lineStart.x, &lineDir.x,
                                  &point.x, &normal2.x);
     distance *= map->blockSize;
@@ -1042,14 +1042,14 @@ int terrain_map_screen_pick(TerrainMap* map, void* viewport,
     camera_screen_coordinate_project(
         (const ViewProjectionAdapter*)viewport, &direction.x, farPoint);
     direction.x -= origin.x;
-    direction.y -= origin.y;
     direction.z -= origin.z;
+    direction.y -= origin.y;
     scale = 1.0f / (float)sqrt(direction.z * direction.z +
                                direction.y * direction.y +
                                direction.x * direction.x);
-    direction.x = scale * direction.x;
-    direction.y = scale * direction.y;
     direction.z = scale * direction.z;
+    direction.y = scale * direction.y;
+    direction.x = scale * direction.x;
     if (!terrain_map_ray_intersection(map, &origin, &direction, intersection,
                                       &block, 20)) {
         return 0;
