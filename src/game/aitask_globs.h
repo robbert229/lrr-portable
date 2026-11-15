@@ -35,7 +35,8 @@ typedef struct AITask_Globs {
     unsigned int commandCounts[4800];   /* 004b34f4 */
     int priorityState[27];              /* 004b7ff4 */
     unsigned int flags;                 /* 004b8060 */
-} AITask_Globs;  /* 0x4e9c bytes */
+    unsigned int unknown_4e9c[620];     /* 004b8064-004b8a14: never read */
+} AITask_Globs;  /* 0x584c bytes */
 
 extern AITask_Globs aiTaskGlobs;  /* defined in aitask.c */
 

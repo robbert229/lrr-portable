@@ -1,4 +1,4 @@
-# input_sha256: a467274daab4fb5b1ea89dd6f1a250551110c3d5fff5baf41b49514cce1cee74
+# input_sha256: 2e2e57ef822f64b72bcca0bc49e8e8a037a1832a23f6ede4f979b01f0521e3b5
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -254,10 +254,10 @@
 0x0040a3d0 100.00 screen_effect_flags_clear_and_release
 0x0040a400 100.00 preload_numbered_bitmaps
 0x0040a4b0 100.00 quad_mesh_render_record_create
-0x0040a5c0 90.91 damage_font_get_next_free
+0x0040a5c0 100.00 damage_font_get_next_free
 0x0040a5e0 99.25 damage_font_set_damage_number
 0x0040a740 71.57 damage_font_mesh_render_callback
-0x0040aa10 94.74 simtick_table_dispatch_original
+0x0040aa10 100.00 simtick_table_dispatch_original
 0x0040aa40 100.00 damage_font_update
 0x0040aae0 100.00 entity_quad_mesh_render_record_allowed
 0x0040ab10 100.00 global_mode_zero_input_set
@@ -2979,10 +2979,10 @@
 0x0040a3d0 100.00 screen_effect_flags_clear_and_release
 0x0040a400 100.00 preload_numbered_bitmaps
 0x0040a4b0 100.00 quad_mesh_render_record_create
-0x0040a5c0 90.91 damage_font_get_next_free
+0x0040a5c0 100.00 damage_font_get_next_free
 0x0040a5e0 99.25 damage_font_set_damage_number
 0x0040a740 71.57 damage_font_mesh_render_callback
-0x0040aa10 94.74 simtick_table_dispatch_original
+0x0040aa10 100.00 simtick_table_dispatch_original
 0x0040aa40 100.00 damage_font_update
 0x0040aae0 100.00 entity_quad_mesh_render_record_allowed
 0x0040ab10 100.00 global_mode_zero_input_set

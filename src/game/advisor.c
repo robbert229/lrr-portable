@@ -111,6 +111,7 @@ typedef struct AdvisorGlobs {
     float scalar;                                      /* 004b31b4 */
     void* lightCont;                                   /* 004b31b8 */
     unsigned int flags;                                /* 004b31bc */
+    unsigned int unknown_410[2];                       /* 004b31c0: never read */
 } AdvisorGlobs;
 
 /* The unit's .rdata (0049e000-0049e00c) holds 0.96, 25.0, 1.0 and 0.0, in
