@@ -6856,9 +6856,9 @@ int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                 }
             }
 
-            LEGO_2F_BLOCK(level, bx, by).flags1 |= 0x8;
             pos[0] = bx;
             pos[1] = by;
+            LEGO_2F_BLOCK(level, bx, by).flags1 |= 0x8;
             lego_terrain_neighbor_flag_refresh(level, pos, 1);
             LEGO_2F_BLOCK(level, bx, by).flags1 &= ~0x20;
             LEGO_2F_BLOCK(level, bx, by).flags1 |= 0x400000;

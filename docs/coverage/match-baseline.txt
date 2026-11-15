@@ -1,4 +1,4 @@
-# input_sha256: 1310318b1b9519078a556465ca719ba18b4117423205497bd202b1167729b2f6
+# input_sha256: dba86e525755f809991b9dce6fccf4f512aaa2f11289bcda6b4c93304ccb74fb
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -805,7 +805,7 @@
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 100.00 lego_terrain_neighbor_flag_set
-0x00430530 97.34 lego_terrain_cell_mutate
+0x00430530 98.46 lego_terrain_cell_mutate
 0x00430df0 92.49 lego_terrain_neighbor_refresh
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
@@ -3530,7 +3530,7 @@
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 100.00 lego_terrain_neighbor_flag_set
-0x00430530 97.34 lego_terrain_cell_mutate
+0x00430530 98.46 lego_terrain_cell_mutate
 0x00430df0 92.49 lego_terrain_neighbor_refresh
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
