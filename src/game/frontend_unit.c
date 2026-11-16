@@ -4122,13 +4122,19 @@ const char* front_get_selected_level(void)
         if (index != -1) {
             return frontGlobs_missionLevels.idNames[index];
         }
+        return NULL;
     } else if (front_is_tutorial_selected()) {
         index = front_level_link_get_set_index(frontGlobs_startTutorialLink, frontGlobs_mainMenuValues[5]);
         if (index != -1) {
             return frontGlobs_tutorialLevels.idNames[index];
         }
+        return NULL;
     }
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+    /* The original falls off the end when neither is selected, with the
+     * failed test's zero in eax; C++ needs a return. */
     return NULL;
+#endif
 }
 
 // FUNCTION: LEGORR 0x00416dd0
