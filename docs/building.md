@@ -238,7 +238,8 @@ art, so both builds compile the same resources.
 `rbit discover grind` searches donor compiles for one function against a
 reference object: a compile of the unit, kept in `reference/` and never
 committed, whose function body equals the original's except in relocated
-fields.
+fields. `make reprobit-reference ADDR=0x...` finds that object and writes
+the grind plan ([`tools/README.md`](../tools/README.md#reprobit_referencepy--reference-objects-for-reprobits-grind)).
 
 ## Meson build
 

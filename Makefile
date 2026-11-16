@@ -23,7 +23,7 @@ RECCMP_D3DRM_SHA256 ?= 6f046d7041c3257e9c1f870ab03123ee7e46b2a081791c687a7989691
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: opt-ref-link opt-ref opt-ref-callers unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reccmp-run-d3drm reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-search phase-probe match-function-parity convert-unit relocate-unit tools-test
+.PHONY: opt-ref-link opt-ref opt-ref-callers unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reccmp-run-d3drm reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-search phase-probe reprobit-reference match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -127,6 +127,18 @@ phase-probe:
 	@REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
 	  python3 ./tools/phase_probe.py $(if $(PADS_AT),pads-at "$(UNIT)" $(PADS_AT),probe $(ADDR) $(PROBE_ARGS))
 
+# Reference objects and grind plans for ReproBit's discovery
+# (tools/reprobit_reference.py): ADDR=0x... (several, one unit)
+# [REFERENCE_ARGS="--pads 0 255"]. Writes reference/grind/<addr>.{obj,json};
+# never run during a build.
+reprobit-reference:
+	@if [ -z "$(ADDR)" ]; then \
+	  echo "usage: make reprobit-reference ADDR=0x00479a30 [REFERENCE_ARGS=...]" >&2; \
+	  exit 2; \
+	fi
+	@REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
+	  python3 ./tools/reprobit_reference.py $(ADDR) $(REFERENCE_ARGS)
+
 # Scaffold an original-shape conversion of one unit (ADR 0005, step 0).
 # UNIT=G98-029 [CONVERT_ARGS="--stem registry --dry-run"]; see tools/README.md.
 convert-unit:
@@ -190,6 +202,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_msvc_permuter.py'
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_search.py'
 	python3 -m unittest discover -s tools/tests -p 'test_phase_probe.py'
+	python3 -m unittest discover -s tools/tests -p 'test_reprobit_reference.py'
 	python3 -m unittest discover -s tools/tests -p 'test_match_function_flags.py'
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_cohort.py'
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
