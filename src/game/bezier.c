@@ -15,19 +15,19 @@
 
 /* The unit's .rdata, in original order. It opens with d3drmdef.h's four
  * consts at 0049e034 (finding 524), then an unreferenced 1.0 at 0049e044:
- * a named constant, since the 1.0 at 0049e050 is a second one (finding
- * 646). Its original name is not known. */
+ * a named constant, since a literal 1.0 would be pooled with the one at
+ * 0049e050 (finding 646). Its original name is not known. The 3.0 is named:
+ * as a literal, MSVC folds the subtractions into a -3.0 of its own. The 0.0
+ * (0049e04c) and the 1.0 (0049e050) are literals, which MSVC emits after the
+ * named constants in first-use order: polyline_segment_lengths_total's 0.0
+ * (two immediate stores, but the literal is still pooled), then
+ * bezier_curve_samples_build's 1.0. path_arc_length_interpolate's 0.0 reads
+ * the pooled literal. Named, the 0.0 and 1.0 left polyline's literal 0.0 as
+ * a fifth word nothing reads. */
 // GLOBAL: LEGORR 0x0049e044
 static const float s_bezier_unref_one = 1.0f;
 // GLOBAL: LEGORR 0x0049e048
 static const float s_bezier_three = 3.0f;
-// GLOBAL: LEGORR 0x0049e04c
-static const float s_bezier_zero = 0.0f;
-/* BezierCurveSamplesBuild's 1.0. MSVC hoists 1.0f / (count - 1) out of the
- * loop only for a literal, so the function computes the step itself before
- * a do-while, which then reads this constant as the original does. */
-// GLOBAL: LEGORR 0x0049e050
-static const float s_bezier_one = 1.0f;
 
 /* The control points c1 = p0 + 3 * p1 and c2 = p2 - 3 * p3 are computed
  * before r->x is written: the original reloads only p0 and p2 after that
@@ -103,7 +103,7 @@ void bezier_curve_samples_build(BezierCurve* curve, const Point2F* p0,
     curve->points[0] = *p0;
     i = 1;
     if (i < count) {
-        float step = s_bezier_one / (float)(count - 1);
+        float step = 1.0f / (float)(count - 1);
         do {
             cubic_bezier_point_evaluate(&curve->points[i], p0, p1, p2, p3,
                                         (float)i * step);
@@ -116,7 +116,7 @@ unsigned int path_arc_length_interpolate(const BezierCurve* curve,
                                          float distance, Point2F* r)
 {
     unsigned int i;
-    float dist = s_bezier_zero;
+    float dist = 0.0f;
     float frac;
     Point2F delta;
 
