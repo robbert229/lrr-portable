@@ -1,4 +1,4 @@
-# input_sha256: c666af0cd5d64fce143531ea680423ed429f757ad2640b61e8d44e6bb5add15f
+# input_sha256: 0ad83684120c05a398f05cf487ce0f20531060ee403fff7805a426d3fd3bc328
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -244,7 +244,7 @@
 0x004099f0 100.00 construction_zone_free
 0x00409a40 100.00 construction_zone_remove_barriers
 0x00409a90 100.00 construction_place_building
-0x00409b30 92.36 construction_zone_complete_building
+0x00409b30 100.00 construction_zone_complete_building
 0x00409cd0 100.00 construction_update_cardinal_blocks
 0x00409d40 100.00 level_state_stored_value_set
 0x00409d50 100.00 entity_cell_path_effects_apply_current
@@ -325,10 +325,10 @@
 0x0040d450 100.00 electric_fence_update
 0x0040d490 100.00 electric_fence_run_through_lists
 0x0040d4f0 100.00 electric_fence_spark_from
-0x0040d5e0 93.97 electric_fence_building_spark_callback
+0x0040d5e0 100.00 electric_fence_building_spark_callback
 0x0040d720 100.00 electric_fence_building_clear_callback
 0x0040d770 100.00 electric_fence_node_update_callback
-0x0040d850 59.97 electric_fence_spark
+0x0040d850 60.31 electric_fence_spark
 0x0040dc20 100.00 electric_fence_beam_create
 0x0040dd90 100.00 electric_fence_block_vector_get
 0x0040de40 100.00 electric_fence_object_strike
@@ -805,7 +805,7 @@
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 100.00 lego_terrain_neighbor_flag_set
-0x00430530 98.46 lego_terrain_cell_mutate
+0x00430530 99.58 lego_terrain_cell_mutate
 0x00430df0 92.49 lego_terrain_neighbor_refresh
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
@@ -882,7 +882,7 @@
 0x004334f0 100.00 lego_render_quality_config_apply
 0x00433770 100.00 lego_scene_lights_build_from_config
 0x00433be0 100.00 lego_current_level_terrain_grid_pick
-0x00433c10 98.83 lego_entity_neighbor_blocked_cell_step_probe
+0x00433c10 100.00 lego_entity_neighbor_blocked_cell_step_probe
 0x00433e30 100.00 lego_grid_cell_entity_eligibility_check
 0x00433e80 94.74 lego_terrain_projected_cell_state_refresh
 0x00434450 100.00 lego_projected_cell_area_compare
@@ -1035,7 +1035,7 @@
 0x0043abf0 100.00 legoobject_terrain_cell_variant_update_queue
 0x0043ac90 98.44 legoobject_terrain_cell_variant_visit_callback
 0x0043ad50 99.02 legoobject_predug_spawn_coordinate_select_and_create
-0x0043aea0 92.00 legoobject_emergence_random_spawn_attempt
+0x0043aea0 100.00 legoobject_emergence_random_spawn_attempt
 0x0043af30 100.00 legoobject_creature_spawn_from_emergence
 0x0043b270 100.00 legoobject_update_all
 0x0043b320 100.00 legoobject_remove_all
@@ -1064,7 +1064,7 @@
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
 0x0043c810 89.82 legoobject_update_callback
-0x0043eea0 90.96 legoobject_simulation_queue_flush
+0x0043eea0 100.00 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
 0x0043f150 100.00 legoobject_spawn_request_queue_add
@@ -1258,8 +1258,8 @@
 0x0044e6d0 98.35 terrain_map_block_texture_fade_set
 0x0044e860 100.00 terrain_map_block_hidden_get
 0x0044e880 100.00 terrain_map_vertex_normals_update_all
-0x0044e8c0 98.72 terrain_map_shape_tolerance_check
-0x0044ead0 94.07 terrain_map_shape_flatten
+0x0044e8c0 99.36 terrain_map_shape_tolerance_check
+0x0044ead0 96.71 terrain_map_shape_flatten
 0x0044edf0 100.00 terrain_map_block_rotated_set
 0x0044efb0 100.00 terrain_map_block_vertex_modified
 0x0044eff0 100.00 terrain_map_update
@@ -1657,7 +1657,7 @@
 0x00456c30 100.00 nerps_get_block_pointer
 0x00456c60 100.00 nerps_free_block_pointers
 0x00456cb0 100.00 nerps_block_pointer_enumerate
-0x00456d00 99.30 nerps_tutorial_action_callback
+0x00456d00 100.00 nerps_tutorial_action_callback
 0x00457060 100.00 nerps_object_at_tutorial_block_callback
 0x004570d0 100.00 nerps_tutorial_icon_object_callback
 0x00457130 100.00 nerpfunc_make_someone_on_this_block_pick_up_something_on_this_block
@@ -2241,7 +2241,7 @@
 0x00476fb0 100.00 renderer_object_set_clip_distance
 0x00476fd0 100.00 resource_interface_call_slot8c
 0x00476ff0 100.00 resource_interface_call_slot90
-0x00477010 96.30 ledger_stub_00477010_DDiSceneDrawBegin
+0x00477010 100.00 ledger_stub_00477010_DDiSceneDrawBegin
 0x00477150 100.00 ddiscene_draw_end
 0x00477220 100.00 render_resource_track_and_retain
 0x00477240 100.00 scene_current_object_set_original
@@ -2456,7 +2456,7 @@
 0x0047f0d0 100.00 input_cursor_client_position_set
 0x0047f130 100.00 resource_mount_startup_target
 0x0047f4f0 100.00 resource_find_cd_key_drive
-0x0047f590 97.56 file_set_base_search_path
+0x0047f590 100.00 file_set_base_search_path
 0x0047f600 100.00 resource_debug_output_format
 0x0047f640 100.00 file_load_wad
 0x0047f660 100.00 resource_cd_file_path_get
@@ -2969,7 +2969,7 @@
 0x004099f0 100.00 construction_zone_free
 0x00409a40 100.00 construction_zone_remove_barriers
 0x00409a90 100.00 construction_place_building
-0x00409b30 92.36 construction_zone_complete_building
+0x00409b30 100.00 construction_zone_complete_building
 0x00409cd0 100.00 construction_update_cardinal_blocks
 0x00409d40 100.00 level_state_stored_value_set
 0x00409d50 100.00 entity_cell_path_effects_apply_current
@@ -3050,10 +3050,10 @@
 0x0040d450 100.00 electric_fence_update
 0x0040d490 100.00 electric_fence_run_through_lists
 0x0040d4f0 100.00 electric_fence_spark_from
-0x0040d5e0 93.97 electric_fence_building_spark_callback
+0x0040d5e0 100.00 electric_fence_building_spark_callback
 0x0040d720 100.00 electric_fence_building_clear_callback
 0x0040d770 100.00 electric_fence_node_update_callback
-0x0040d850 59.97 electric_fence_spark
+0x0040d850 60.31 electric_fence_spark
 0x0040dc20 100.00 electric_fence_beam_create
 0x0040dd90 100.00 electric_fence_block_vector_get
 0x0040de40 100.00 electric_fence_object_strike
@@ -3530,7 +3530,7 @@
 0x004302b0 100.00 map_cell_tracking_flags_clear_and_refresh_current
 0x00430320 100.00 terrain_cell_work_flag_clear_current
 0x00430470 100.00 lego_terrain_neighbor_flag_set
-0x00430530 98.46 lego_terrain_cell_mutate
+0x00430530 99.58 lego_terrain_cell_mutate
 0x00430df0 92.49 lego_terrain_neighbor_refresh
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
@@ -3607,7 +3607,7 @@
 0x004334f0 100.00 lego_render_quality_config_apply
 0x00433770 100.00 lego_scene_lights_build_from_config
 0x00433be0 100.00 lego_current_level_terrain_grid_pick
-0x00433c10 98.83 lego_entity_neighbor_blocked_cell_step_probe
+0x00433c10 100.00 lego_entity_neighbor_blocked_cell_step_probe
 0x00433e30 100.00 lego_grid_cell_entity_eligibility_check
 0x00433e80 94.74 lego_terrain_projected_cell_state_refresh
 0x00434450 100.00 lego_projected_cell_area_compare
@@ -3760,7 +3760,7 @@
 0x0043abf0 100.00 legoobject_terrain_cell_variant_update_queue
 0x0043ac90 98.44 legoobject_terrain_cell_variant_visit_callback
 0x0043ad50 99.02 legoobject_predug_spawn_coordinate_select_and_create
-0x0043aea0 92.00 legoobject_emergence_random_spawn_attempt
+0x0043aea0 100.00 legoobject_emergence_random_spawn_attempt
 0x0043af30 100.00 legoobject_creature_spawn_from_emergence
 0x0043b270 100.00 legoobject_update_all
 0x0043b320 100.00 legoobject_remove_all
@@ -3789,7 +3789,7 @@
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
 0x0043c810 89.82 legoobject_update_callback
-0x0043eea0 90.96 legoobject_simulation_queue_flush
+0x0043eea0 100.00 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
 0x0043f150 100.00 legoobject_spawn_request_queue_add
@@ -3983,8 +3983,8 @@
 0x0044e6d0 98.35 terrain_map_block_texture_fade_set
 0x0044e860 100.00 terrain_map_block_hidden_get
 0x0044e880 100.00 terrain_map_vertex_normals_update_all
-0x0044e8c0 98.72 terrain_map_shape_tolerance_check
-0x0044ead0 94.07 terrain_map_shape_flatten
+0x0044e8c0 99.36 terrain_map_shape_tolerance_check
+0x0044ead0 96.71 terrain_map_shape_flatten
 0x0044edf0 100.00 terrain_map_block_rotated_set
 0x0044efb0 100.00 terrain_map_block_vertex_modified
 0x0044eff0 100.00 terrain_map_update
@@ -4382,7 +4382,7 @@
 0x00456c30 100.00 nerps_get_block_pointer
 0x00456c60 100.00 nerps_free_block_pointers
 0x00456cb0 100.00 nerps_block_pointer_enumerate
-0x00456d00 99.30 nerps_tutorial_action_callback
+0x00456d00 100.00 nerps_tutorial_action_callback
 0x00457060 100.00 nerps_object_at_tutorial_block_callback
 0x004570d0 100.00 nerps_tutorial_icon_object_callback
 0x00457130 100.00 nerpfunc_make_someone_on_this_block_pick_up_something_on_this_block
@@ -4966,7 +4966,7 @@
 0x00476fb0 100.00 renderer_object_set_clip_distance
 0x00476fd0 100.00 resource_interface_call_slot8c
 0x00476ff0 100.00 resource_interface_call_slot90
-0x00477010 96.30 ledger_stub_00477010_DDiSceneDrawBegin
+0x00477010 100.00 ledger_stub_00477010_DDiSceneDrawBegin
 0x00477150 100.00 ddiscene_draw_end
 0x00477220 100.00 render_resource_track_and_retain
 0x00477240 100.00 scene_current_object_set_original
@@ -5181,7 +5181,7 @@
 0x0047f0d0 100.00 input_cursor_client_position_set
 0x0047f130 100.00 resource_mount_startup_target
 0x0047f4f0 100.00 resource_find_cd_key_drive
-0x0047f590 97.56 file_set_base_search_path
+0x0047f590 100.00 file_set_base_search_path
 0x0047f600 100.00 resource_debug_output_format
 0x0047f640 100.00 file_load_wad
 0x0047f660 100.00 resource_cd_file_path_get

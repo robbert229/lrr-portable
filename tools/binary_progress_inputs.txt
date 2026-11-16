@@ -58,6 +58,7 @@ src/game/actor_scene.hpp
 src/game/advisor.c
 src/game/advisor.h
 src/game/advisor_maths.h
+src/game/advisor_tail.h
 src/game/ai.cpp
 src/game/ai.h
 src/game/ai.hpp
@@ -120,6 +121,7 @@ src/game/collision.c
 src/game/collision.h
 src/game/collision_link_names.h
 src/game/collision_maths.h
+src/game/collision_tail.h
 src/game/combat_ray_ports.hpp
 src/game/construction.c
 src/game/construction.h
@@ -816,6 +818,7 @@ src/gods98/sound.h
 src/gods98/sound.hpp
 src/gods98/sound3d.c
 src/gods98/sound3d.h
+src/gods98/sound3d_tail.h
 src/gods98/sound_api.h
 src/gods98/sound_for_sfx.hpp
 src/gods98/sound_for_sound3d.hpp
