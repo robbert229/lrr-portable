@@ -1,0 +1,459 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+// The DirectX 6 interface versions the units call (ADR 0007, decision 3)
+// are declared in miniwin. Each is reached by QueryInterface or a Create
+// method from an object miniwin creates. The methods miniwin does not
+// implement yet must return a failure code rather than crash or succeed.
+// Synthetic only: an offscreen SDL window, no game data.
+#include <miniwin/d3drm.h>
+#include <miniwin/ddraw.h>
+#include <miniwin/dinput.h>
+
+#include <SDL3/SDL.h>
+
+#include <stdio.h>
+
+static int failures;
+
+#define CHECK(expr)                                                        \
+    do {                                                                   \
+        if (!(expr)) {                                                     \
+            fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__,         \
+                    __LINE__, #expr);                                      \
+            ++failures;                                                    \
+        }                                                                  \
+    } while (0)
+
+// The object answers riid; the returned pointer is released again.
+static bool Answers(IUnknown* object, const GUID& riid)
+{
+    void* out = nullptr;
+    if (object->QueryInterface(riid, &out) != DD_OK || !out) {
+        return false;
+    }
+    // Every miniwin interface derives IUnknown virtually, so the
+    // reference is released through the object, not through out.
+    object->Release();
+    return true;
+}
+
+static int UserVisualCallback(IDirect3DRMUserVisual*, void*,
+                              D3DRMUSERVISUALREASON, IDirect3DRMDevice*,
+                              IDirect3DRMViewport*)
+{
+    return 0;
+}
+
+static HRESULT FindSoftwareDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDESC,
+                                  LPD3DDEVICEDESC, LPVOID ctx)
+{
+    GUID* found = static_cast<GUID*>(ctx);
+    if (SDL_strcmp(name, "Miniwin Emulation") == 0) {
+        *found = *guid;
+    }
+    return DDENUMRET_OK;
+}
+
+static void CheckDirectDraw(IDirectDraw* dd, IDirectDrawSurface** outSurface)
+{
+    CHECK(Answers(dd, IID_IDirectDraw));
+    CHECK(Answers(dd, IID_IDirectDraw2));
+    IDirectDraw4* dd4 = nullptr;
+    CHECK(dd->QueryInterface(IID_IDirectDraw4, (void**) &dd4) == DD_OK && dd4);
+    if (dd4) {
+        DDSURFACEDESC2 desc2 = {};
+        desc2.dwSize = sizeof(desc2);
+        IDirectDrawSurface4* surface4 = nullptr;
+        DDSCAPS2 caps2 = {};
+        DWORD total = 0, free = 0;
+        CHECK(dd4->CreateSurface(&desc2, &surface4, nullptr) == DDERR_UNSUPPORTED);
+        CHECK(dd4->EnumDisplayModes(0, nullptr, nullptr, nullptr) == DDERR_UNSUPPORTED);
+        CHECK(dd4->SetDisplayMode(64, 64, 32, 0, 0) == DDERR_UNSUPPORTED);
+        CHECK(dd4->GetAvailableVidMem(&caps2, &total, &free) == DDERR_UNSUPPORTED);
+        dd4->Release();
+    }
+
+    IDirectDrawClipper* clipper = nullptr;
+    CHECK(dd->CreateClipper(0, &clipper, nullptr) == DD_OK && clipper);
+    if (clipper) {
+        CHECK(clipper->SetClipList(nullptr, 0) == DDERR_UNSUPPORTED);
+        clipper->Release();
+    }
+
+    DDSURFACEDESC desc = {};
+    desc.dwSize = sizeof(desc);
+    desc.dwFlags = DDSD_CAPS | DDSD_WIDTH | DDSD_HEIGHT;
+    desc.dwWidth = 64;
+    desc.dwHeight = 64;
+    desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
+    IDirectDrawSurface* surface = nullptr;
+    CHECK(dd->CreateSurface(&desc, &surface, nullptr) == DD_OK && surface);
+    *outSurface = surface;
+    if (!surface) {
+        return;
+    }
+    CHECK(Answers(surface, IID_IDirectDrawSurface));
+    CHECK(Answers(surface, IID_IDirectDrawSurface3));
+    IDirectDrawSurface4* surface4 = nullptr;
+    CHECK(surface->QueryInterface(IID_IDirectDrawSurface4, (void**) &surface4) == DD_OK && surface4);
+    if (surface4) {
+        DDSURFACEDESC2 desc2 = {};
+        desc2.dwSize = sizeof(desc2);
+        DDSCAPS2 caps2 = {};
+        IDirectDrawSurface4* attached = nullptr;
+        CHECK(surface4->Blt(nullptr, surface4, nullptr, DDBLT_WAIT, nullptr) == DDERR_UNSUPPORTED);
+        CHECK(surface4->Flip(nullptr, DDFLIP_WAIT) == DDERR_UNSUPPORTED);
+        CHECK(surface4->GetAttachedSurface(&caps2, &attached) == DDERR_UNSUPPORTED);
+        CHECK(surface4->GetSurfaceDesc(&desc2) == DDERR_UNSUPPORTED);
+        CHECK(surface4->Lock(nullptr, &desc2, DDLOCK_WAIT, nullptr) == DDERR_UNSUPPORTED);
+        CHECK(surface4->Unlock(nullptr) == DDERR_UNSUPPORTED);
+        surface4->Release();
+    }
+    IDirect3DTexture2* texture2 = nullptr;
+    CHECK(surface->QueryInterface(IID_IDirect3DTexture2, (void**) &texture2) == DD_OK && texture2);
+    if (texture2) {
+        D3DTEXTUREHANDLE handle = 0;
+        CHECK(texture2->GetHandle(nullptr, &handle) == DDERR_UNSUPPORTED);
+        texture2->Release();
+    }
+}
+
+static void CheckDirect3D(IDirectDraw* dd)
+{
+    IDirect3D3* d3d3 = nullptr;
+    CHECK(dd->QueryInterface(IID_IDirect3D3, (void**) &d3d3) == DD_OK && d3d3);
+    if (!d3d3) {
+        return;
+    }
+    IDirect3DMaterial3* material = nullptr;
+    CHECK(d3d3->CreateMaterial(&material, nullptr) == DD_OK && material);
+    if (material) {
+        CHECK(Answers(material, IID_IDirect3DMaterial3));
+        D3DMATERIAL data = {};
+        data.dwSize = sizeof(data);
+        D3DMATERIALHANDLE handle = 0;
+        CHECK(material->SetMaterial(&data) == DDERR_UNSUPPORTED);
+        CHECK(material->GetHandle(nullptr, &handle) == DDERR_UNSUPPORTED);
+        material->Release();
+    }
+    d3d3->Release();
+}
+
+static void CheckDevice(IDirect3DRMDevice3* device)
+{
+    CHECK(Answers(device, IID_IDirect3DRMDevice));
+    CHECK(Answers(device, IID_IDirect3DRMDevice2));
+    CHECK(Answers(device, IID_IDirect3DRMDevice3));
+    DDPIXELFORMAT format = {};
+    CHECK(device->FindPreferredTextureFormat(DDBD_16, 0, &format) == E_NOTIMPL);
+
+    IDirect3DDevice2* imDevice2 = nullptr;
+    CHECK(device->GetDirect3DDevice2(&imDevice2) == DD_OK && imDevice2);
+    if (!imDevice2) {
+        return;
+    }
+    IDirect3DDevice3* imDevice = nullptr;
+    CHECK(imDevice2->QueryInterface(IID_IDirect3DDevice3, (void**) &imDevice) == DD_OK && imDevice);
+    imDevice2->Release();
+    if (!imDevice) {
+        return;
+    }
+    DWORD value = 0;
+    D3DMATRIX matrix = {};
+    WORD indices[3] = {0, 1, 2};
+    float vertices[3 * 8] = {};
+    IDirect3DTexture2* texture = nullptr;
+    IDirect3D3* d3d = nullptr;
+    CHECK(imDevice->GetDirect3D(&d3d) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->SetCurrentViewport(nullptr) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->GetRenderState(D3DRENDERSTATE_ZENABLE, &value) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, 1) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->GetLightState(D3DLIGHTSTATE_AMBIENT, &value) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->SetLightState(D3DLIGHTSTATE_AMBIENT, 0) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->SetTransform(D3DTRANSFORMSTATE_WORLD, &matrix) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->GetTransform(D3DTRANSFORMSTATE_WORLD, &matrix) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, vertices, 3, indices, 3, 0) ==
+          DDERR_UNSUPPORTED);
+    CHECK(imDevice->GetTexture(0, &texture) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->SetTexture(0, nullptr) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->GetTextureStageState(0, D3DTSS_COLOROP, &value) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->SetTextureStageState(0, D3DTSS_COLOROP, 0) == DDERR_UNSUPPORTED);
+    imDevice->Release();
+}
+
+static void CheckViewport(IDirect3DRM3* d3drm, IDirect3DRMDevice3* device, IDirect3DRMFrame3* camera)
+{
+    IDirect3DRMViewport2* viewport = nullptr;
+    CHECK(d3drm->CreateViewport(device, camera, 0, 0, 64, 64, &viewport) == DD_OK && viewport);
+    if (!viewport) {
+        return;
+    }
+    CHECK(Answers(viewport, IID_IDirect3DRMViewport));
+    CHECK(Answers(viewport, IID_IDirect3DRMViewport2));
+    IDirect3DRMFrame3* got = nullptr;
+    CHECK(viewport->GetCamera(&got) == DD_OK && got == camera);
+    if (got) {
+        got->Release();
+    }
+    CHECK(viewport->Clear(D3DRMCLEAR_ALL) == E_NOTIMPL);
+    CHECK(viewport->GetX() == 0);
+    CHECK(viewport->GetY() == 0);
+
+    IDirect3DViewport* imViewport1 = nullptr;
+    CHECK(viewport->GetDirect3DViewport(&imViewport1) == DD_OK && imViewport1);
+    if (imViewport1) {
+        IDirect3DViewport3* imViewport = nullptr;
+        CHECK(imViewport1->QueryInterface(IID_IDirect3DViewport3, (void**) &imViewport) == DD_OK && imViewport);
+        if (imViewport) {
+            D3DRECT rect = {0, 0, 64, 64};
+            CHECK(imViewport->Clear2(1, &rect, 0, 0, 1.0f, 0) == DDERR_UNSUPPORTED);
+            imViewport->Release();
+        }
+        imViewport1->Release();
+    }
+    viewport->Release();
+}
+
+static void CheckFrame(IDirect3DRM3* d3drm, IDirect3DRMFrame3** outCamera)
+{
+    IDirect3DRMFrame3* frame = nullptr;
+    CHECK(d3drm->CreateFrame(nullptr, &frame) == DD_OK && frame);
+    *outCamera = frame;
+    if (!frame) {
+        return;
+    }
+    CHECK(Answers(frame, IID_IDirect3DRMFrame));
+    CHECK(Answers(frame, IID_IDirect3DRMFrame2));
+    CHECK(Answers(frame, IID_IDirect3DRMFrame3));
+
+    // The version-3 overloads that only widen pointer types forward to
+    // the existing implementation.
+    IDirect3DRMFrame3* child = nullptr;
+    CHECK(d3drm->CreateFrame(nullptr, &child) == DD_OK && child);
+    D3DVECTOR position = {};
+    CHECK(frame->AddChild(child) == DD_OK);
+    CHECK(child->GetPosition(nullptr, &position) == DD_OK);
+    CHECK(frame->DeleteChild(child) == DD_OK);
+
+    D3DRMMATRIX4D matrix = {};
+    D3DVECTOR dir = {}, up = {};
+    DWORD count = 0;
+    IDirect3DRMFrame3* other = nullptr;
+    CHECK(frame->AddTranslation(D3DRMCOMBINE_BEFORE, 1, 2, 3) == E_NOTIMPL);
+    CHECK(frame->AddScale(D3DRMCOMBINE_BEFORE, 1, 1, 1) == E_NOTIMPL);
+    CHECK(frame->AddRotation(D3DRMCOMBINE_BEFORE, 0, 1, 0, 1) == E_NOTIMPL);
+    CHECK(frame->AddVisual(static_cast<IUnknown*>(child)) == E_NOTIMPL);
+    CHECK(frame->GetParent(&other) == E_NOTIMPL);
+    CHECK(frame->GetScene(&other) == E_NOTIMPL);
+    CHECK(frame->GetTransform(nullptr, matrix) == E_NOTIMPL);
+    CHECK(frame->GetOrientation(nullptr, &dir, &up) == E_NOTIMPL);
+    CHECK(frame->GetVisuals(&count, nullptr) == E_NOTIMPL);
+    CHECK(frame->InverseTransform(&dir, &up) == E_NOTIMPL);
+    CHECK(frame->Load(nullptr, nullptr, D3DRMLOAD_FROMFILE, nullptr, nullptr) == E_NOTIMPL);
+    CHECK(frame->LookAt(child, nullptr, D3DRMCONSTRAIN_Z) == E_NOTIMPL);
+    CHECK(frame->DeleteVisual(static_cast<IUnknown*>(child)) == E_NOTIMPL);
+    CHECK(frame->GetSceneBackground() == 0);
+    CHECK(frame->SetSceneBackground(0) == E_NOTIMPL);
+    CHECK(frame->SetSceneFogEnable(TRUE) == E_NOTIMPL);
+    CHECK(frame->SetSceneFogColor(0) == E_NOTIMPL);
+    CHECK(frame->SetSceneFogMode(D3DRMFOG_LINEAR) == E_NOTIMPL);
+    CHECK(frame->SetSceneFogParams(1, 10, 1) == E_NOTIMPL);
+    CHECK(frame->SetSceneFogMethod(D3DRMFOGMETHOD_VERTEX) == E_NOTIMPL);
+    CHECK(frame->SetOrientation(nullptr, 0, 0, 1, 0, 1, 0) == E_NOTIMPL);
+    CHECK(frame->SetPosition(nullptr, 1, 2, 3) == E_NOTIMPL);
+    CHECK(frame->SetSortMode(D3DRMSORT_NONE) == E_NOTIMPL);
+    CHECK(frame->Transform(&dir, &up) == E_NOTIMPL);
+    if (child) {
+        child->Release();
+    }
+}
+
+static void CheckRetainedMode(IDirectDraw* dd, IDirectDrawSurface* surface)
+{
+    IDirect3DRM* d3drm1 = nullptr;
+    CHECK(Direct3DRMCreate(&d3drm1) == DD_OK && d3drm1);
+    if (!d3drm1) {
+        return;
+    }
+    CHECK(Answers(d3drm1, IID_IDirect3DRM));
+    CHECK(Answers(d3drm1, IID_IDirect3DRM2));
+    IDirect3DRM3* d3drm = nullptr;
+    CHECK(d3drm1->QueryInterface(IID_IDirect3DRM3, (void**) &d3drm) == DD_OK && d3drm);
+    d3drm1->Release();
+    if (!d3drm) {
+        return;
+    }
+
+    IDirect3DRMFrame3* camera = nullptr;
+    CheckFrame(d3drm, &camera);
+
+    IDirect3DRMTexture3* loaded = nullptr;
+    CHECK(d3drm->LoadTexture("synthetic.bmp", &loaded) == E_NOTIMPL);
+
+    IDirect3DRMMaterial2* material = nullptr;
+    CHECK(d3drm->CreateMaterial(10.0f, &material) == DD_OK && material);
+    if (material) {
+        CHECK(Answers(material, IID_IDirect3DRMMaterial));
+        CHECK(Answers(material, IID_IDirect3DRMMaterial2));
+        CHECK(material->GetPower() == 10.0f);
+        CHECK(material->SetSpecular(1, 1, 1) == E_NOTIMPL);
+        CHECK(material->SetEmissive(0, 0, 0) == E_NOTIMPL);
+        material->Release();
+    }
+
+    IDirect3DRMMeshBuilder3* builder = nullptr;
+    CHECK(d3drm->CreateMeshBuilder(&builder) == DD_OK && builder);
+    if (builder) {
+        CHECK(Answers(builder, IID_IDirect3DRMMeshBuilder));
+        CHECK(Answers(builder, IID_IDirect3DRMMeshBuilder2));
+        CHECK(Answers(builder, IID_IDirect3DRMMeshBuilder3));
+        IDirect3DRMMesh* mesh = nullptr;
+        CHECK(builder->Load(nullptr, nullptr, D3DRMLOAD_FROMMEMORY, nullptr, nullptr) == E_NOTIMPL);
+        CHECK(builder->SetPerspective(TRUE) == E_NOTIMPL);
+        CHECK(builder->CreateMesh(&mesh) == E_NOTIMPL);
+        builder->Release();
+    }
+
+    IDirect3DRMAnimationSet2* animationSet = nullptr;
+    CHECK(d3drm->CreateAnimationSet(&animationSet) == DD_OK && animationSet);
+    if (animationSet) {
+        CHECK(Answers(animationSet, IID_IDirect3DRMAnimationSet2));
+        CHECK(animationSet->Load(nullptr, nullptr, D3DRMLOAD_FROMFILE, nullptr, nullptr, camera) == E_NOTIMPL);
+        CHECK(animationSet->SetTime(0.5f) == E_NOTIMPL);
+        animationSet->Release();
+    }
+
+    IDirect3DRMUserVisual* userVisual = nullptr;
+    CHECK(d3drm->CreateUserVisual(UserVisualCallback, nullptr, &userVisual) == DD_OK && userVisual);
+    if (userVisual) {
+        int tag = 0;
+        CHECK(Answers(userVisual, IID_IDirect3DRMUserVisual));
+        CHECK(userVisual->SetAppData(&tag) == DD_OK);
+        CHECK(userVisual->GetAppData() == &tag);
+        userVisual->Release();
+    }
+
+    IDirect3DRMMesh* mesh = nullptr;
+    CHECK(d3drm->CreateMesh(&mesh) == DD_OK && mesh);
+    if (mesh) {
+        CHECK(mesh->Scale(2, 2, 2) == E_NOTIMPL);
+        mesh->Release();
+    }
+
+    IDirect3DRMLight* light = nullptr;
+    CHECK(d3drm->CreateLightRGB(D3DRMLIGHT_SPOT, 1, 1, 1, &light) == DD_OK && light);
+    if (light) {
+        CHECK(light->SetColor(0xffffffff) == E_NOTIMPL);
+        CHECK(light->SetRange(10) == E_NOTIMPL);
+        CHECK(light->SetUmbra(0.5f) == E_NOTIMPL);
+        CHECK(light->SetPenumbra(0.6f) == E_NOTIMPL);
+        CHECK(light->SetEnableFrame(camera) == E_NOTIMPL);
+        light->Release();
+    }
+
+    IDirect3DRMTexture3* texture = nullptr;
+    CHECK(surface && d3drm->CreateTextureFromSurface(surface, &texture) == DD_OK && texture);
+    if (texture) {
+        CHECK(Answers(texture, IID_IDirect3DRMTexture));
+        CHECK(Answers(texture, IID_IDirect3DRMTexture2));
+        CHECK(Answers(texture, IID_IDirect3DRMTexture3));
+        CHECK(texture->GetImage() == nullptr);
+        CHECK(texture->SetDecalTransparency(TRUE) == E_NOTIMPL);
+        CHECK(texture->SetDecalTransparentColor(0) == E_NOTIMPL);
+        CHECK(texture->GenerateMIPMap(0) == E_NOTIMPL);
+        texture->Release();
+    }
+
+    // A device needs a renderer: the software one, on the offscreen window.
+    IDirect3D2* d3d2 = nullptr;
+    GUID software = {};
+    CHECK(dd->QueryInterface(IID_IDirect3D2, (void**) &d3d2) == DD_OK && d3d2);
+    if (d3d2) {
+        d3d2->EnumDevices(FindSoftwareDevice, &software);
+        d3d2->Release();
+    }
+    IDirect3DRMDevice3* device = nullptr;
+    // Device flags (D3DRMDEVICE_NOZBUFFER) are not supported yet.
+    CHECK(surface && d3drm->CreateDeviceFromSurface(&software, dd, surface, 1, &device) == E_NOTIMPL);
+    CHECK(surface && d3drm->CreateDeviceFromSurface(&software, dd, surface, 0, &device) == DD_OK && device);
+    if (device) {
+        CheckDevice(device);
+        if (camera) {
+            CheckViewport(d3drm, device, camera);
+        }
+    }
+    if (camera) {
+        camera->Release();
+    }
+    d3drm->Release();
+}
+
+static void CheckDirectInput()
+{
+    IDirectInputA* input = nullptr;
+    CHECK(DirectInputCreateA(nullptr, 0x0500, &input, nullptr) == DI_OK && input);
+    if (!input) {
+        return;
+    }
+    CHECK(Answers(input, IID_IDirectInputA));
+    IDirectInputDeviceA* other = nullptr;
+    CHECK(input->CreateDevice(IID_IDirectInputA, &other, nullptr) == DIERR_DEVICENOTREG);
+    IDirectInputDeviceA* keyboard = nullptr;
+    CHECK(input->CreateDevice(GUID_SysKeyboard, &keyboard, nullptr) == DI_OK && keyboard);
+    if (keyboard) {
+        CHECK(Answers(keyboard, IID_IDirectInputDeviceA));
+        IDirectInputDevice2A* keyboard2 = nullptr;
+        CHECK(keyboard->QueryInterface(IID_IDirectInputDevice2A, (void**) &keyboard2) == DI_OK && keyboard2);
+        unsigned char state[256];
+        CHECK(keyboard->SetDataFormat(&c_dfDIKeyboard) == DIERR_UNSUPPORTED);
+        CHECK(keyboard->SetCooperativeLevel(nullptr, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND) == DIERR_UNSUPPORTED);
+        CHECK(keyboard->Acquire() == DIERR_UNSUPPORTED);
+        CHECK(keyboard->GetDeviceState(sizeof(state), state) == DIERR_UNSUPPORTED);
+        CHECK(keyboard->Unacquire() == DIERR_UNSUPPORTED);
+        if (keyboard2) {
+            CHECK(keyboard2->Poll() == DIERR_UNSUPPORTED);
+            keyboard2->Release();
+        }
+        keyboard->Release();
+    }
+    input->Release();
+}
+
+int main()
+{
+    // The stubs log once each; keep the test output to its own checks.
+    SDL_SetLogPriority(SDL_LOG_CATEGORY_CUSTOM, SDL_LOG_PRIORITY_CRITICAL);
+    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+        return 1;
+    }
+    SDL_Window* window = SDL_CreateWindow("miniwin_dx6", 64, 64, 0);
+    if (!window) {
+        fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    IDirectDraw* dd = nullptr;
+    CHECK(DirectDrawCreate(nullptr, &dd, nullptr) == DD_OK && dd);
+    if (dd) {
+        CHECK(dd->SetCooperativeLevel(reinterpret_cast<HWND>(window), DDSCL_NORMAL) == DD_OK);
+        IDirectDrawSurface* surface = nullptr;
+        CheckDirectDraw(dd, &surface);
+        CheckDirect3D(dd);
+        CheckRetainedMode(dd, surface);
+        if (surface) {
+            surface->Release();
+        }
+    }
+    CheckDirectInput();
+
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    if (failures) {
+        fprintf(stderr, "%d check(s) failed\n", failures);
+        return 1;
+    }
+    printf("miniwin DX6 interfaces: all checks passed\n");
+    return 0;
+}

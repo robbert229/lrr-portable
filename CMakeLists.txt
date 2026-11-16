@@ -159,6 +159,14 @@ if(BUILD_TESTING)
     add_test(NAME registry COMMAND registry_test)
   endif()
 
+  # The DirectX 6 interface versions the units use, declared in miniwin
+  # (ADR 0007, decision 3): reachable, and failing rather than crashing
+  # where miniwin has only a stub.
+  add_executable(miniwin_dx6_test ${PLATFORM_DIR}/native/test_miniwin_dx6.cpp)
+  target_link_libraries(miniwin_dx6_test PRIVATE miniwin)
+  add_test(NAME miniwin_dx6 COMMAND miniwin_dx6_test)
+  set_tests_properties(miniwin_dx6 PROPERTIES LABELS miniwin)
+
   add_executable(c_boundaries_test ${GAME_DIR}/test_c_boundaries.cpp)
   target_include_directories(c_boundaries_test PRIVATE ${SRC_ROOT} ${GAME_DIR}
     ${ENGINE_DIR})
