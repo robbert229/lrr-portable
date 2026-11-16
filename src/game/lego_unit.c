@@ -2604,7 +2604,7 @@ void lego_terrain_pointer_command_update(void)
     float scroll[2];
     unsigned int bx, by;
     struct EntitySlot* liveObj;
-    float objPos[3];
+    float objPos[2];
     unsigned int clickX, clickY;
 
     if ((legoGlobs_flags1 & 2) && (legoGlobs_flags1 & 0x1000) && !(legoGlobs_flags1 & 0x100)) {
@@ -2617,23 +2617,25 @@ void lego_terrain_pointer_command_update(void)
             media_pointer_cursor_select(0);
             if (!(system_state_flags_get_original(0) & 0x1000))
                 s_lego_radarDragDistance += (float)sqrt(diff[0] * diff[0] + diff[1] * diff[1]);
+        }
 
-            if (s_lego_radarDragging && g_renderer_word_c && s_lego_radarDragDistance >= 4.0f &&
-                terrain_point_pick_resolve_original(
-                    (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
-                    s_renderer_word_a, s_renderer_word_b, scroll, &bx, &by)) {
-                selection_record_point_get((struct ViewContext*)s_zoom_step_context, diff);
-                if (bx < (unsigned int)view_grid_edge_get() ||
-                    bx >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), unsigned int, 0x0) - view_grid_edge_get())
-                    scroll[0] = diff[0];
-                if (by < (unsigned int)view_grid_edge_get() ||
-                    by >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), unsigned int, 0x4) - view_grid_edge_get())
-                    scroll[1] = diff[1];
-                if (s_context_mode == 1)
-                    selection_record_point_set((struct ViewContext*)s_zoom_step_context, scroll[0], scroll[1]);
-                media_pointer_cursor_select(0xc);
-                legoGlobs_flags1 |= 0x200;
-            }
+        if (s_lego_radarDragging && g_renderer_word_c && s_lego_radarDragDistance >= 4.0f &&
+            terrain_point_pick_resolve_original(
+                (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
+                s_renderer_word_a, s_renderer_word_b, scroll, &bx, &by)) {
+            LegoVector3FC camPos;
+
+            selection_record_point_get((struct ViewContext*)s_zoom_step_context, &camPos.x);
+            if (bx < (unsigned int)view_grid_edge_get() ||
+                bx >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), unsigned int, 0x0) - view_grid_edge_get())
+                scroll[0] = camPos.x;
+            if (by < (unsigned int)view_grid_edge_get() ||
+                by >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), unsigned int, 0x4) - view_grid_edge_get())
+                scroll[1] = camPos.y;
+            if (s_context_mode == 1)
+                selection_record_point_set((struct ViewContext*)s_zoom_step_context, scroll[0], scroll[1]);
+            media_pointer_cursor_select(0xc);
+            legoGlobs_flags1 |= 0x200;
         }
 
         if (rect_contains_point_half_open((const float*)LEGO_LEVEL_PTR(void, level->f_084),
@@ -3472,13 +3474,6 @@ end:
     s_lego_prev_left_button = legoInput_mslb;
     s_lego_prev_right_button = legoInput_msrb;
 }
-
-/* The time the buttons have been up (004de56c), declared at file scope
- * after its one reader. As a function static it cost one symbol more than
- * the block-scope extern above; this declaration restores the count for
- * every later function (finding 538, finding 691). Deviation (scoring
- * only). */
-extern float s_lego_hold_time;
 
 /* ToolTipInfoStringsLoad [group G] */
 // FUNCTION: LEGORR 0x00427e00
