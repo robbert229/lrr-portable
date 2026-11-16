@@ -495,8 +495,10 @@ int file_getc(File* f)
     case FileSystem_Wad:
         len = wad_file_length(f->stream.wad->hFile) - 1;
         if (f->stream.wad->streamPos >= len) return -1;
-        return *(int*)((char*)wad_file_data(f->stream.wad->hFile) +
-                       f->stream.wad->streamPos++);
+        /* The original loads 4 bytes and its callers keep the low one;
+         * reading the byte alone does not run past the WAD buffer. */
+        return *((const char*)wad_file_data(f->stream.wad->hFile) +
+                 f->stream.wad->streamPos++);
     case FileSystem_Std:
         return fgetc(f->stream.std);
     default:
