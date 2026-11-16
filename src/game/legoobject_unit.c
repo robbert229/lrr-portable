@@ -4827,8 +4827,10 @@ getOut:
     obj->driveObject = NULL;
     driver->driveObject = NULL;
     driver->flags2 &= ~8;
+    /* The z goes through a double, as in legoobject_world_position_set:
+     * the original pushes it after the call's cleanup. */
     ddiscene_object_position_set(driverCont, NULL, pos[0], pos[1],
-        terrain_map_world_z_get(Lego_GetMap(), pos[0], pos[1]));
+        (float)(terrain_map_world_z_get(Lego_GetMap(), pos[0], pos[1]) + 0.0));
     ddiscene_object_pose_method_dispatch(driverCont, NULL, dir[0], dir[1], 0.0f, 0.0f, 0.0f, -1.0f);
     legoobject_set_activity(driver, 0, 0);
     driver->activityName2 = NULL;
