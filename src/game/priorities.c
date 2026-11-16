@@ -80,6 +80,7 @@ void priorities_load_images(BlockFile* config, const char* game_name)
     char line[512];
 
     for (item = block_subgroup(config,
+             // STRING: LEGORR 0x004a8ef0
              string_path_join(game_name, "PriorityImages", NULL));
          item != NULL; item = block_next_equal_key(item)) {
         if (cmd_kind_by_name(item->key, &type)) {
@@ -153,6 +154,7 @@ void priorities_load_positions(BlockFile* config, const char* game_name)
     for (i = 0; i < PRIORITY_TYPE_COUNT; i++) {
         itoa(i + 1, number, 10);
         value = block_get_strptr(config, string_path_join(game_name,
+            // STRING: LEGORR 0x004a8f0c
             "PrioritiesImagePositions", number, NULL));
         if (value != NULL) {
             /* The original tokenises the config's own value in place. */
@@ -320,8 +322,8 @@ void priorities_move_cursor_to_up_button(unsigned int index)
     indexed_pair_get(PRIORITIES_PANEL, &panel.x, &panel.y);
     ui_entry_bounds_get(PRIORITIES_PANEL, button, &area.x);
     input_cursor_client_position_set(
-        (int)(area.x + area.width * 0.5f + panel.x),
-        (int)(area.y + area.height * 0.5f + panel.y));
+        (int)(area.x + (area.width * 0.5f) + panel.x),
+        (int)(area.y + (area.height * 0.5f) + panel.y));
 }
 
 // FUNCTION: LEGORR 0x0045d640
