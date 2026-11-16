@@ -52,7 +52,11 @@ add_library(miniwin STATIC ${MINIWIN_SOURCES})
 target_include_directories(miniwin PUBLIC "${MINIWIN}/include"
   "${MINIWIN}/src/internal"
   "${MINIWIN}/src/d3drm/backends/sdl3gpu/shaders/generated")
-target_compile_definitions(miniwin PRIVATE MINIWIN USE_SOFTWARE_RENDER USE_PALETTE_SW_RENDER)
+# The machine miniwin emulates for the game: a 16-bit RGB565 display (the
+# units convert images to 16-bit only), and the software renderer described as
+# a hardware device, since Init.c's -best accepts only HAL devices.
+target_compile_definitions(miniwin PRIVATE MINIWIN USE_SOFTWARE_RENDER USE_PALETTE_SW_RENDER
+  MINIWIN_PIXELFORMAT=SDL_PIXELFORMAT_RGB565 MINIWIN_SOFTWARE_HAL)
 target_link_libraries(miniwin PUBLIC SDL3::SDL3)
 
 # The units, in one library (ADR 0003's game/gods98 split is a source
@@ -109,4 +113,12 @@ if(BUILD_TESTING)
   target_link_libraries(miniwin_dx6_test PRIVATE miniwin)
   add_test(NAME miniwin_dx6 COMMAND miniwin_dx6_test)
   set_tests_properties(miniwin_dx6 PROPERTIES LABELS miniwin)
+
+  # What the boot to the main menu needs from miniwin, on synthetic data:
+  # display modes, DirectDraw 4 surfaces and blits, the framebuffer, and
+  # Direct3DRM frame transforms.
+  add_executable(miniwin_ddraw4_test ${PLATFORM_DIR}/native/test_miniwin_ddraw4.cpp)
+  target_link_libraries(miniwin_ddraw4_test PRIVATE miniwin)
+  add_test(NAME miniwin_ddraw4 COMMAND miniwin_ddraw4_test)
+  set_tests_properties(miniwin_ddraw4 PROPERTIES LABELS miniwin)
 endif()

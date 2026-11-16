@@ -2,7 +2,9 @@
 // The DirectX 6 interface versions the units call (ADR 0007, decision 3)
 // are declared in miniwin. Each is reached by QueryInterface or a Create
 // method from an object miniwin creates. The methods miniwin does not
-// implement yet must return a failure code rather than crash or succeed.
+// implement yet must return a failure code rather than crash or succeed;
+// the ones it implements return success here and are exercised in
+// test_miniwin_ddraw4.cpp.
 // Synthetic only: an offscreen SDL window, no game data.
 #include <miniwin/d3drm.h>
 #include <miniwin/ddraw.h>
@@ -65,17 +67,18 @@ static void CheckDirectDraw(IDirectDraw* dd, IDirectDrawSurface** outSurface)
         IDirectDrawSurface4* surface4 = nullptr;
         DDSCAPS2 caps2 = {};
         DWORD total = 0, free = 0;
-        CHECK(dd4->CreateSurface(&desc2, &surface4, nullptr) == DDERR_UNSUPPORTED);
-        CHECK(dd4->EnumDisplayModes(0, nullptr, nullptr, nullptr) == DDERR_UNSUPPORTED);
-        CHECK(dd4->SetDisplayMode(64, 64, 32, 0, 0) == DDERR_UNSUPPORTED);
-        CHECK(dd4->GetAvailableVidMem(&caps2, &total, &free) == DDERR_UNSUPPORTED);
+        // Behaviour is covered by test_miniwin_ddraw4.cpp.
+        CHECK(dd4->CreateSurface(&desc2, &surface4, nullptr) == DDERR_INVALIDPARAMS);
+        CHECK(dd4->EnumDisplayModes(0, nullptr, nullptr, nullptr) == DDERR_INVALIDPARAMS);
+        CHECK(dd4->SetDisplayMode(64, 64, 32, 0, 0) == DD_OK);
+        CHECK(dd4->GetAvailableVidMem(&caps2, &total, &free) == DD_OK && total && free);
         dd4->Release();
     }
 
     IDirectDrawClipper* clipper = nullptr;
     CHECK(dd->CreateClipper(0, &clipper, nullptr) == DD_OK && clipper);
     if (clipper) {
-        CHECK(clipper->SetClipList(nullptr, 0) == DDERR_UNSUPPORTED);
+        CHECK(clipper->SetClipList(nullptr, 0) == DD_OK);
         clipper->Release();
     }
 
@@ -100,12 +103,12 @@ static void CheckDirectDraw(IDirectDraw* dd, IDirectDrawSurface** outSurface)
         desc2.dwSize = sizeof(desc2);
         DDSCAPS2 caps2 = {};
         IDirectDrawSurface4* attached = nullptr;
-        CHECK(surface4->Blt(nullptr, surface4, nullptr, DDBLT_WAIT, nullptr) == DDERR_UNSUPPORTED);
-        CHECK(surface4->Flip(nullptr, DDFLIP_WAIT) == DDERR_UNSUPPORTED);
-        CHECK(surface4->GetAttachedSurface(&caps2, &attached) == DDERR_UNSUPPORTED);
-        CHECK(surface4->GetSurfaceDesc(&desc2) == DDERR_UNSUPPORTED);
-        CHECK(surface4->Lock(nullptr, &desc2, DDLOCK_WAIT, nullptr) == DDERR_UNSUPPORTED);
-        CHECK(surface4->Unlock(nullptr) == DDERR_UNSUPPORTED);
+        CHECK(surface4->Blt(nullptr, surface4, nullptr, DDBLT_WAIT, nullptr) == DD_OK);
+        CHECK(surface4->Flip(nullptr, DDFLIP_WAIT) == DDERR_NOTFLIPPABLE);
+        CHECK(surface4->GetAttachedSurface(&caps2, &attached) == DDERR_NOTFOUND);
+        CHECK(surface4->GetSurfaceDesc(&desc2) == DD_OK && desc2.dwWidth == 64);
+        CHECK(surface4->Lock(nullptr, &desc2, DDLOCK_WAIT, nullptr) == DD_OK && desc2.lpSurface);
+        CHECK(surface4->Unlock(nullptr) == DD_OK);
         surface4->Release();
     }
     IDirect3DTexture2* texture2 = nullptr;
@@ -131,8 +134,8 @@ static void CheckDirect3D(IDirectDraw* dd)
         D3DMATERIAL data = {};
         data.dwSize = sizeof(data);
         D3DMATERIALHANDLE handle = 0;
-        CHECK(material->SetMaterial(&data) == DDERR_UNSUPPORTED);
-        CHECK(material->GetHandle(nullptr, &handle) == DDERR_UNSUPPORTED);
+        CHECK(material->SetMaterial(&data) == DD_OK);
+        CHECK(material->GetHandle(nullptr, &handle) == DD_OK && handle != 0);
         material->Release();
     }
     d3d3->Release();
@@ -163,7 +166,10 @@ static void CheckDevice(IDirect3DRMDevice3* device)
     float vertices[3 * 8] = {};
     IDirect3DTexture2* texture = nullptr;
     IDirect3D3* d3d = nullptr;
-    CHECK(imDevice->GetDirect3D(&d3d) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->GetDirect3D(&d3d) == DD_OK && d3d);
+    if (d3d) {
+        d3d->Release();
+    }
     CHECK(imDevice->SetCurrentViewport(nullptr) == DDERR_UNSUPPORTED);
     CHECK(imDevice->GetRenderState(D3DRENDERSTATE_ZENABLE, &value) == DDERR_UNSUPPORTED);
     CHECK(imDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, 1) == DDERR_UNSUPPORTED);
@@ -238,30 +244,35 @@ static void CheckFrame(IDirect3DRM3* d3drm, IDirect3DRMFrame3** outCamera)
     D3DVECTOR dir = {}, up = {};
     DWORD count = 0;
     IDirect3DRMFrame3* other = nullptr;
-    CHECK(frame->AddTranslation(D3DRMCOMBINE_BEFORE, 1, 2, 3) == E_NOTIMPL);
-    CHECK(frame->AddScale(D3DRMCOMBINE_BEFORE, 1, 1, 1) == E_NOTIMPL);
-    CHECK(frame->AddRotation(D3DRMCOMBINE_BEFORE, 0, 1, 0, 1) == E_NOTIMPL);
+    // The transform methods are covered by test_miniwin_ddraw4.cpp.
+    CHECK(frame->AddTranslation(D3DRMCOMBINE_BEFORE, 1, 2, 3) == DD_OK);
+    CHECK(frame->AddScale(D3DRMCOMBINE_BEFORE, 1, 1, 1) == DD_OK);
+    CHECK(frame->AddRotation(D3DRMCOMBINE_BEFORE, 0, 1, 0, 1) == DD_OK);
     CHECK(frame->AddVisual(static_cast<IUnknown*>(child)) == E_NOTIMPL);
-    CHECK(frame->GetParent(&other) == E_NOTIMPL);
-    CHECK(frame->GetScene(&other) == E_NOTIMPL);
-    CHECK(frame->GetTransform(nullptr, matrix) == E_NOTIMPL);
-    CHECK(frame->GetOrientation(nullptr, &dir, &up) == E_NOTIMPL);
+    CHECK(frame->GetParent(&other) == DD_OK && other == nullptr);
+    CHECK(frame->GetScene(&other) == DD_OK && other == frame);
+    if (other) {
+        other->Release();
+    }
+    CHECK(frame->GetTransform(nullptr, matrix) == DD_OK);
+    CHECK(frame->GetOrientation(nullptr, &dir, &up) == DD_OK);
     CHECK(frame->GetVisuals(&count, nullptr) == E_NOTIMPL);
-    CHECK(frame->InverseTransform(&dir, &up) == E_NOTIMPL);
+    CHECK(frame->InverseTransform(&dir, &up) == DD_OK);
     CHECK(frame->Load(nullptr, nullptr, D3DRMLOAD_FROMFILE, nullptr, nullptr) == E_NOTIMPL);
     CHECK(frame->LookAt(child, nullptr, D3DRMCONSTRAIN_Z) == E_NOTIMPL);
     CHECK(frame->DeleteVisual(static_cast<IUnknown*>(child)) == E_NOTIMPL);
-    CHECK(frame->GetSceneBackground() == 0);
-    CHECK(frame->SetSceneBackground(0) == E_NOTIMPL);
-    CHECK(frame->SetSceneFogEnable(TRUE) == E_NOTIMPL);
-    CHECK(frame->SetSceneFogColor(0) == E_NOTIMPL);
-    CHECK(frame->SetSceneFogMode(D3DRMFOG_LINEAR) == E_NOTIMPL);
-    CHECK(frame->SetSceneFogParams(1, 10, 1) == E_NOTIMPL);
-    CHECK(frame->SetSceneFogMethod(D3DRMFOGMETHOD_VERTEX) == E_NOTIMPL);
-    CHECK(frame->SetOrientation(nullptr, 0, 0, 1, 0, 1, 0) == E_NOTIMPL);
-    CHECK(frame->SetPosition(nullptr, 1, 2, 3) == E_NOTIMPL);
-    CHECK(frame->SetSortMode(D3DRMSORT_NONE) == E_NOTIMPL);
-    CHECK(frame->Transform(&dir, &up) == E_NOTIMPL);
+    CHECK(frame->GetSceneBackground() == 0xFF000000);
+    CHECK(frame->SetSceneBackground(0xFF102030) == DD_OK);
+    CHECK(frame->GetSceneBackground() == 0xFF102030);
+    CHECK(frame->SetSceneFogEnable(TRUE) == DD_OK);
+    CHECK(frame->SetSceneFogColor(0) == DD_OK);
+    CHECK(frame->SetSceneFogMode(D3DRMFOG_LINEAR) == DD_OK);
+    CHECK(frame->SetSceneFogParams(1, 10, 1) == DD_OK);
+    CHECK(frame->SetSceneFogMethod(D3DRMFOGMETHOD_VERTEX) == DD_OK);
+    CHECK(frame->SetOrientation(nullptr, 0, 0, 1, 0, 1, 0) == DD_OK);
+    CHECK(frame->SetPosition(nullptr, 1, 2, 3) == DD_OK);
+    CHECK(frame->SetSortMode(D3DRMSORT_NONE) == DD_OK);
+    CHECK(frame->Transform(&dir, &up) == DD_OK);
     if (child) {
         child->Release();
     }
