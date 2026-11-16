@@ -4254,10 +4254,16 @@ int nerps_tutorial_action_callback(NERPs_BlockPointer* blockPointer,
         search->count += level_cell_occupied_at_current(&blockPos.x);
         return 1;
     case 4: /* SetTutorialBlockIsPath */
-        level->blocks[y * level->width + x].flags1 &= ~3;
+    {
+        /* Through a block pointer: the original addresses flags1 from the
+         * block's own address (lea, then [eax + 8]). */
+        NERPs_Block* block = &level->blocks[y * level->width + x];
+
+        block->flags1 &= ~3;
         terrain_cell_state_update_current(&blockPos.x);
         terrain_cell_variant_flag_propagate_current(&blockPos.x);
         return 1;
+    }
     case 5: /* SetCameraGotoTutorial */
         lego_viewport_target_position_clamp(NULL, &blockPos.x, 1);
         return 1;
