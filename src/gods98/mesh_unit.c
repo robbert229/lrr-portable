@@ -736,8 +736,8 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
     if (lightWaveObject->aoFileUV) {
         vertexUVs = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * size * 20);
         mesh_uview_mesh(lightWaveObject, vertexUVs);
+        surfTextCoords = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * lightWaveObject->aoSize.lwSurfaceCount * (lightWaveObject->aoSize.lwVertCount * 2));
         size = (lightWaveObject->aoSize.lwVertCount * 2);
-        surfTextCoords = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * lightWaveObject->aoSize.lwSurfaceCount * size);
     } else {
         surfTextCoords = (Mesh_Point2F*)malloc(sizeof(Mesh_Point2F) * size);
     }
