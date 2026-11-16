@@ -22,8 +22,8 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
-struct LevelState;
+struct Lego_Object;
+struct Lego_Level;
 
 /* Main.c (advisor.c): Main_appWidth and Main_appHeight. */
 int display_width_get(void);                                     /* 00401c30 */
@@ -58,7 +58,7 @@ int terrain_cell_type_get_at_current(uint32_t cx, uint32_t cy,
     ((struct TerrainMap*)level_current_terrain_get(0, 0))
 
 /* Stats.c (entity_stats.c), by its link name: StatsObject_GetStatsFlags2. */
-uint32_t entity_state_flags_get(const struct EntitySlot* e);     /* 00469e80 */
+uint32_t entity_state_flags_get(const struct Lego_Object* e);     /* 00469e80 */
 
 /* Viewports.c (viewports.c), by its link name: Viewport_InverseTransform
  * (the screen point, a Point4F, to a world Point3F). */

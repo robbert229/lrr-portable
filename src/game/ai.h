@@ -13,16 +13,10 @@
 extern "C" {
 #endif
 
-/* Matching build: both words are objectGlobs fields (004de790,
- * legoobject_globs.h, finding 662): flags (+0x684) and the count of the
- * buildings among the visited units (+0xc438). objectGlobs is declared
- * here without its struct, at the offsets legoobject_globs.h gives:
- * the declaration and its new tag cost the two symbols of the two
- * declarations it replaces, so panel_unit.c's symbol counter does not move
- * (the header itself would cost three). Deviation (scoring only). */
-extern struct LegoObject_Globs objectGlobs;
-#define s_entity_state_flags (*(unsigned int*)((char*)&objectGlobs + 0x684))
-#define s_lego_object_tool_tip_gate (*(int*)((char*)&objectGlobs + 0xc438))
+/* Both words are objectGlobs fields (legoobject_globs.h, finding 662):
+ * flags and the count of the buildings among the visited units. */
+#include "legoobject_globs.h"
+#define s_lego_object_tool_tip_gate objectGlobs.field_c438
 
 /* FUN_0044c550 (GAME-023). */
 /* In the matching build 0044c550 is legoobject_unit.c's (GAME-023 part 3,

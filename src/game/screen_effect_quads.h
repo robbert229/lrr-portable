@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 struct TextureSurface;
 struct DamageFont_Data;
 
@@ -31,7 +31,7 @@ void damage_font_cleanup(void);
 void damage_font_load_frames(const char* dirName, const char* fileName);
 
 /* DamageFont_DisplayDamage_OverLiveObject (0040a4b0). */
-void damage_font_display_damage_over_live_object(struct EntitySlot* liveObj,
+void damage_font_display_damage_over_live_object(struct Lego_Object* liveObj,
                                                  unsigned int damage);
 
 /* DamageFont_GetNextFree (0040a5c0). */
@@ -48,7 +48,7 @@ void damage_font_update_all(float elapsed);
 void damage_font_update(struct DamageFont_Data* data, float elapsed);
 
 /* DamageFont_LiveObject_CheckCanShowDamage (0040aae0). */
-int damage_font_live_object_check_can_show_damage(struct EntitySlot* liveObj);
+int damage_font_live_object_check_can_show_damage(struct Lego_Object* liveObj);
 
 #ifdef __cplusplus
 }

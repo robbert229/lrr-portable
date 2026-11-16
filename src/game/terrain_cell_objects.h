@@ -21,43 +21,21 @@
 #define LEGORRR_GAME_TERRAIN_CELL_OBJECTS_H
 
 #include "terrain_map.h"
+#include "lego_level_record.h"
+#include "legoobject_record.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 struct GameContext;
 
-/* Lego_Level fields the unit reads (Lego.c, 0x284 bytes; the port's
- * LevelState words). */
-typedef struct ElectricFenceLevelBlock {
-    unsigned char unk_00[2];
-    unsigned char predug;       /* +0x02 6 and 7 are not fenceable */
-    unsigned char unk_03[5];
-    unsigned int flags1;        /* +0x08 0x8: the block is ground */
-    unsigned char unk_0c[0x3c];
-} ElectricFenceLevelBlock;      /* 0x48 */
-
-typedef struct ElectricFenceLevel {
-    char* name;                 /* +0x000 */
-    TerrainMap* map;            /* +0x004 */
-    unsigned char unk_008[0xc];
-    unsigned int width;         /* +0x014 */
-    unsigned int height;        /* +0x018 */
-    unsigned char unk_01c[0x9c];
-    ElectricFenceLevelBlock* blocks; /* +0x0b8 */
-} ElectricFenceLevel;
-
-/* LegoObject fields the unit reads (LegoObject.c, 0x40c bytes). */
-typedef struct ElectricFenceObject {
-    int type;                   /* +0x000 4 is a building */
-    unsigned char unk_004[0x14];
-    void* stats;                /* +0x018 the building's shape owner */
-    unsigned char unk_01c[0x3c8];
-    unsigned int flags3;        /* +0x3e4 0x2000000: on the fence grid */
-    unsigned int flags4;        /* +0x3e8 0x20000000: carries a charge */
-} ElectricFenceObject;
+/* Lego.c's level and block records (lego_level_record.h) and LegoObject.c's
+ * object record (legoobject_record.h), by the names the unit uses. */
+typedef struct Lego_Block ElectricFenceLevelBlock;
+typedef struct Lego_Level ElectricFenceLevel;
+typedef struct Lego_Object ElectricFenceObject;
 
 /* One list node per fence (0x14 bytes). A live node points nextFree at
  * itself. */

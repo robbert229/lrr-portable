@@ -42,7 +42,7 @@ extern const char* s_activity[79];
  * (00473340): container_unit.cpp gives the ledger stub C linkage. */
 unsigned int ledger_stub_00473340_SceneActionNamePresent(
     void* scene_object, void* action_name);                      /* 00473340 */
-void scene_object_owner_set(void* scene_object, uint32_t owner); /* 00473da0 */
+void scene_object_owner_set(void* scene_object, void* owner);   /* 00473da0 */
 /* Container_EnableSoundTriggers (00473ec0): the port's entry takes a hook
  * table; PORT-ONLY adapter at the end of vehicle_model_port.cpp. */
 void vehicle_container_enable_sound_triggers_adapter(void* cont,

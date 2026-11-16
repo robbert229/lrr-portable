@@ -26,6 +26,14 @@
 #define LEGORRR_GAME_WEAPONS_UNIT
 #include "weapons.h"
 #include "weapons_imports.h"
+#include "legoobject_record.h"
+#include "weapons_record.h"
+#include "upgrade_record.h"
+#include "vehicle_model_record.h"
+#include "building_model_record.h"
+
+/* LegoObject, the fields this unit reads. */
+typedef struct Lego_Object Weapons_Object;
 /* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
  * above, pays for its symbols (finding 538). */
 #include "lego_globs.h"
@@ -36,53 +44,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct Weapons_Vector3F {
-    float x, y, z;
-} Weapons_Vector3F;
-
-/* LegoObject (0x40c bytes), the fields this unit reads. */
-typedef struct Weapons_Object {
-    int type;                         /* +0x000 LegoObject_Type */
-    int id;                           /* +0x004 */
-    unsigned char pad_008[0x00c - 0x008];
-    void* vehicle;                    /* +0x00c VehicleModel */
-    unsigned char pad_010[0x018 - 0x010];
-    void* building;                   /* +0x018 BuildingModel */
-    unsigned char pad_01c[0x330 - 0x01c];
-    unsigned int objLevel;            /* +0x330 */
-    unsigned char pad_334[0x358 - 0x334];
-    float slowDeathTimer;             /* +0x358 */
-    int slowDeathWeapon;              /* +0x35c */
-    float weaponCoolDown;             /* +0x360 */
-    unsigned char pad_364[0x3c4 - 0x364];
-    struct Weapons_Object* lazerHitObject; /* +0x3c4 */
-    unsigned char pad_3c8[0x3e8 - 0x3c8];
-    unsigned int flags3;              /* +0x3e8 */
-    unsigned int flags4;              /* +0x3ec */
-    unsigned char pad_3f0[0x40c - 0x3f0];
-} Weapons_Object;
-
-/* The weapon entry a model slot names (+0x0c: the WeaponTypes name). */
-typedef struct Weapons_ModelWeapon {
-    unsigned char pad_00[0x0c];
-    const char* name;                 /* +0x0c */
-} Weapons_ModelWeapon;
-
-/* The weapons part of a vehicle (+0x138) or building (+0xa0) model: up to
- * three weapon slots, each with two fire nulls and an x and a y pivot. */
-typedef struct Weapons_Model {
-    void* fireNulls[3][2];            /* +0x00 */
-    void* xPivots[3];                 /* +0x18 */
-    void* yPivots[3];                 /* +0x24 */
-    float pitchRange;                 /* +0x30 */
-    float f_34[4];                    /* +0x34 */
-    Weapons_Vector3F fireDirs[3];     /* +0x44 */
-    Weapons_Vector3F targets[3];      /* +0x68 */
-    Weapons_ModelWeapon* weaponNames[3]; /* +0x8c */
-    float timers[3];                  /* +0x98 */
-    unsigned int weaponCount;         /* +0xa4 */
-} Weapons_Model;
 
 struct Weapons_Projectile;
 struct Weapons_RaySearch;
@@ -173,7 +134,7 @@ void** weapons_port_stats_slot(void);
 
 /* The callees' declarations take the port's EntitySlot and the GAME-023
  * unit's Lego_Object; the unit passes its own view of the same record. */
-#define WEAPONS_ENT(obj) ((struct EntitySlot*)(obj))
+#define WEAPONS_ENT(obj) ((struct Lego_Object*)(obj))
 #define WEAPONS_LOBJ(obj) ((Lego_Object*)(obj))
 
 #include "weapons_maths.h"
@@ -1066,9 +1027,9 @@ Weapons_Model* weapons_get_weapons_model(Weapons_Object* obj)
 {
     switch (obj->type) {
     case 1:
-        return (Weapons_Model*)((char*)obj->vehicle + 0x138);
+        return &obj->vehicle->weapons;
     case 4:
-        return (Weapons_Model*)((char*)obj->building + 0xa0);
+        return &obj->building->weapons;
     }
     return NULL;
 }
@@ -1289,13 +1250,13 @@ void* weapons_model_fire_null_get(Weapons_Model* model, unsigned int slot,
 // FUNCTION: LEGORR 0x00471a40
 void* weapons_model_x_pivot_get(Weapons_Model* model, unsigned int slot)
 {
-    return model->xPivots[slot];
+    return model->xPivotNulls[slot];
 }
 
 // FUNCTION: LEGORR 0x00471a50
 void* weapons_model_y_pivot_get(Weapons_Model* model, unsigned int slot)
 {
-    return model->yPivots[slot];
+    return model->yPivotNulls[slot];
 }
 
 // FUNCTION: LEGORR 0x00471a60
@@ -1320,8 +1281,8 @@ void weapons_model_aim(Weapons_Model* model, Weapons_Vector3F* target,
         model->fireDirs[slot].y = len * dir.y + model->fireDirs[slot].y;
         model->fireDirs[slot].z = len * dir.z + model->fireDirs[slot].z;
         weapons_vector3d_normalise(&model->fireDirs[slot]);
-        if (model->fireDirs[slot].z > model->pitchRange) {
-            model->fireDirs[slot].z = model->pitchRange;
+        if (model->fireDirs[slot].z > model->pivotMaxZ) {
+            model->fireDirs[slot].z = model->pivotMaxZ;
         }
         yPivot = weapons_model_y_pivot_get(model, slot);
         if (yPivot != NULL) {
@@ -1391,7 +1352,7 @@ int weapons_model_fire_update(Weapons_Object* obj, float elapsed, unsigned int s
                 fireNull = weapons_model_fire_null_get(weapons_get_weapons_model(obj), slot, i);
                 if (fireNull == NULL) return 1;
                 weaponType = object_type_name_index_find(
-                    weapons_get_weapons_model(obj)->weaponNames[slot]->name);
+                    weapons_get_weapons_model(obj)->weaponParts[slot]->weaponName);
                 range = weapon_type_range_get_target(weaponType);
                 discharge = entity_speed_component_get(WEAPONS_ENT(obj));
                 if (discharge == 0.0f) discharge = 1.0f;

@@ -12,8 +12,8 @@
 extern "C" {
 #endif
 
-struct LevelState;
-extern struct LevelState* g_active_level_retail;            /* DAT_005560d4 */
+struct Lego_Level;
+extern struct Lego_Level* g_active_level_retail;            /* DAT_005560d4 */
 
 #ifdef __cplusplus
 }

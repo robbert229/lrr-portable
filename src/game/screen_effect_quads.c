@@ -210,7 +210,7 @@ void damage_font_load_frames(const char* dirName, const char* fileName)
 }
 
 // FUNCTION: LEGORR 0x0040a4b0
-void damage_font_display_damage_over_live_object(struct EntitySlot* liveObj,
+void damage_font_display_damage_over_live_object(struct Lego_Object* liveObj,
                                                  unsigned int damage)
 {
     unsigned int indices[6] = { 0, 2, 1, 0, 3, 2 };
@@ -310,11 +310,11 @@ static void damage_font_mesh_render_callback(void* mesh, DamageFont_Data* data,
     float uvs[8] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f };
     DamageFont_Vector3F up;
 
-    camera = (void*)(uintptr_t)lego_context_selected_global_pointer_get();
+    camera = lego_context_selected_global_pointer_get();
     scale = (data->timer * (1.0f / DAMAGEFONT_MAXTIME)) * 2.0f - -1.0f;
     ddiscene_object_pose_method_dispatch(data->cont, NULL, 0.0f, 0.0f, 1.0f,
                                          0.0f, 1.0f, 0.0f);
-    cam = (void*)(uintptr_t)scene_object_query_value_if_ready(view);
+    cam = scene_object_query_value_if_ready(view);
     ddiscene_object_facing_pair_get(cam, NULL, (float*)&dir, (float*)&up);
     ddiscene_object_position_get(camera, NULL, (float*)&camPos);
 
@@ -371,7 +371,7 @@ void damage_font_update(DamageFont_Data* data, float elapsed)
 }
 
 // FUNCTION: LEGORR 0x0040aae0
-int damage_font_live_object_check_can_show_damage(struct EntitySlot* liveObj)
+int damage_font_live_object_check_can_show_damage(struct Lego_Object* liveObj)
 {
     if (!(entity_state_flags_get(liveObj) & 0x8000000) &&
         ((DamageFont_LiveObject*)liveObj)->type != 8 &&

@@ -15,6 +15,8 @@
 #include "frontend_unit_link_names.h"
 #include "frontend_unit.h"
 #include "frontend_unit_imports.h"
+#include "frontend_record.h"
+#include "gods98/flic_record.h"
 #include "crt/vc5names.h"
 #include "gods98/winmm.h"
 
@@ -151,57 +153,6 @@ static unsigned int s_keyCharacters[256] = {
     0x32, 0x33, 0x30, 0x00
 };
 
-/* 0x14 bytes (00417090): one level of a level set's link graph. */
-typedef struct Front_LevelLink {
-    int setIndex;                           /* +0x00 index in the set */
-    struct Front_LevelLink** linkLevels;    /* +0x04 */
-    unsigned int linkCount;                 /* +0x08 */
-    int field_c;                            /* +0x0c */
-    int visited;                            /* +0x10 */
-} Front_LevelLink;
-
-/* 0x14 bytes (004154b0): the missions or the tutorials. */
-typedef struct Front_LevelSet {
-    int count;                      /* +0x00 */
-    char** idNames;                 /* +0x04 */
-    char** langNames;               /* +0x08 */
-    Front_LevelLink** levels;       /* +0x0c */
-    int* visitedList;               /* +0x10 */
-} Front_LevelSet;
-
-/* One level's saved reward record, 0x3190 bytes (00417a90): a flag word
- * and Reward.c's 0x318c-byte level record. */
-typedef struct Front_RewardLevel {
-    unsigned char field_0[0x2fb4];  /* +0x0000 */
-    float score;                    /* +0x2fb4 */
-    unsigned char field_2fb8[0x1d4]; /* +0x2fb8 */
-} Front_RewardLevel;
-
-typedef struct Front_SaveReward {
-    unsigned int flags;             /* +0x0000 1 completed, 2 a tutorial */
-    Front_RewardLevel reward;       /* +0x0004 Reward.c's record */
-} Front_SaveReward;
-
-/* The six values a save keeps for Reward.c (00417f20). */
-typedef struct Front_SaveStruct18 {
-    int values[6];
-} Front_SaveStruct18;
-
-/* A save slot, 0xb8 bytes in frontGlobs (00417e50); the file holds the
- * first 0xb0 (read) or 0xb4 (written) bytes. */
-typedef struct Front_SaveData {
-    int field_0;                    /* +0x00 */
-    int musicVolume;                /* +0x04 */
-    int sfxVolume;                  /* +0x08 */
-    int gameSpeed;                  /* +0x0c */
-    int brightness;                 /* +0x10 */
-    int field_14;                   /* +0x14 */
-    unsigned int missionsCount;     /* +0x18 */
-    Front_SaveStruct18 saveStruct18; /* +0x1c */
-    Front_SaveReward* missionsTable; /* +0x34 */
-    unsigned char field_38[0x80];   /* +0x38 */
-} Front_SaveData;
-
 /* The save file's image of a Front_SaveData: the Win32 layout, 0xb8 bytes,
  * of which the file holds the first 0xb0 (read) or 0xb4 (written). The
  * missionsTable pointer's slot (+0x34) holds no data on disk. */
@@ -255,88 +206,8 @@ static void front_save_data_serialize(const Front_SaveData* data, unsigned char*
     memcpy(bytes + 0x38, data->field_38, sizeof(data->field_38));
 }
 
-/* frontGlobs (00556fc0, 0x890 bytes), as the original's one struct: a
- * store into one field then orders the stores around it as the original
- * does (finding 635). Fields the port does not model keep their offsets
- * as field_<offset>; the unit's code names the fields through the
- * frontGlobs_* macros below. */
-typedef struct Front_Globs {
-    Front_MenuSet* pausedMenuSet;                 /* +0x000 */
-    void* mainMenuSet;                            /* +0x004 Front_MenuSet* */
-    Front_MenuSet* optionsMenuSet;                /* +0x008 */
-    Front_MenuSet* saveMenuSet;                   /* +0x00c */
-    Front_LevelSet tutorialLevels;                /* +0x010 */
-    Front_LevelSet missionLevels;                 /* +0x024 */
-    Front_LevelLink* startMissionLink;            /* +0x038 */
-    Front_LevelLink* startTutorialLink;           /* +0x03c */
-    int field_40[4];                              /* +0x040 */
-    /* The main menu's item values, by menu (Front_RunScreenMenuType
-     * indexes them): [0] the credits trigger, [3] quit, [4] the mission
-     * select, [5] the tutorial select. */
-    int mainMenuValues[6];                        /* +0x050 */
-    int field_68;                                 /* +0x068 */
-    int triggerContinueMission;                   /* +0x06c */
-    int sliderGameSpeed;                          /* +0x070 */
-    int sliderSFXVolume;                          /* +0x074 */
-    int sliderMusicVolume;                        /* +0x078 */
-    int sliderBrightness;                         /* +0x07c */
-    int cycleHelpWindow;                          /* +0x080 */
-    int triggerReplayObjective;                   /* +0x084 */
-    int triggerQuitMission;                       /* +0x088 */
-    int triggerRestartMission;                    /* +0x08c */
-    int cycleWallDetail;                          /* +0x090 */
-    int cycleMusicOn;                             /* +0x094 */
-    int cycleSFXOn;                               /* +0x098 */
-    int cycleAutoGameSpeed;                       /* +0x09c */
-    int saveMenuSelect;                           /* +0x0a0 */
-    int overlayY;                                 /* +0x0a4 */
-    int overlayX;                                 /* +0x0a8 */
-    struct Flic* overlayImage;                    /* +0x0ac */
-    unsigned int overlayStartTime;                /* +0x0b0 */
-    unsigned int overlayCurrTime;                 /* +0x0b4 */
-    Front_Font* versionFont;                      /* +0x0b8 */
-    char* versionString;                          /* +0x0bc */
-    /* Five save slots and the current game's (slot 5). */
-    Front_SaveData saveData[6];                   /* +0x0c0 */
-    int saveNumber;                               /* +0x510 */
-    char* defaultLevelBMPS;                       /* +0x514 */
-    int field_518;                                /* +0x518 */
-    int scrollOffsetX;                            /* +0x51c */
-    int scrollOffsetY;                            /* +0x520 */
-    int field_524[2];                             /* +0x524 */
-    void* rockWipeAnim;                           /* +0x52c */
-    unsigned int rockWipeFlags;                   /* +0x530 */
-    float rockWipeTimer;                          /* +0x534 */
-    float rockWipeLastUpdateTime;                 /* +0x538 */
-    void* rockWipeLight;                          /* +0x53c */
-    int isLoadSaveMenu;                           /* +0x540 */
-    int saveMenuResult;                           /* +0x544 */
-    int saveMenuOpen;                             /* +0x548 */
-    /* Unsigned: 004124f0 converts them with a zero high word (fild qword). */
-    unsigned int saveImageBigWidth;               /* +0x54c */
-    unsigned int saveImageBigHeight;              /* +0x550 */
-    char saveSlotFormat[64];                      /* +0x554 */
-    char langSaveGame[64];                        /* +0x594 */
-    Front_SaveTextWindow* saveTextWnd;            /* +0x5d4 */
-    Front_LevelTextWindow* saveLevelWnd;          /* +0x5d8 */
-    char overwriteTitle[128];                     /* +0x5dc */
-    char overwriteText[256];                      /* +0x65c */
-    char overwriteOK[128];                        /* +0x75c */
-    char overwriteCancel[128];                    /* +0x7dc */
-    int levelSelectUpdate;                        /* +0x85c */
-    int field_860;                                /* +0x860 */
-    int levelSelectHoverNumber;                   /* +0x864 */
-    int maxLevelScreens;                          /* +0x868 */
-    int field_86c[2];                             /* +0x86c */
-    int currLevelNumber;                          /* +0x874 */
-    int prevLevelNumber;                          /* +0x878 */
-    int playLevelStream;                          /* +0x87c */
-    float levelStreamTimer;                       /* +0x880 */
-    int field_884[3];                             /* +0x884 */
-} Front_Globs;
-
 /* frontend_api.h and objective_unit_imports.h name the fields that
- * Reward.c, Objective.c and the port read, by offset. */
+ * Reward.c and Objective.c read (frontend_record.h). */
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1708,8 +1579,8 @@ void front_menu_update_overlays(Front_Menu* menu)
         endFrame = (int)((float)(currTime - frontGlobs_overlayStartTime) * 0.025f);
         frontGlobs_overlayCurrTime = currTime;
         if (s_overlayTriggered &&
-            *(int*)((char*)frontGlobs_overlayImage + 0x624) >=
-                (int)*(unsigned short*)((char*)frontGlobs_overlayImage + 0x646)) {
+            ((FLICSTRUCT*)frontGlobs_overlayImage)->currentframe >=
+                (int)((FLICSTRUCT*)frontGlobs_overlayImage)->fsHeader.frames) {
             endFrame = startFrame;
             s_overlayIndex = -2;
         }
@@ -2395,7 +2266,7 @@ void front_menu_load_slot_images(void)
         save_read_slot_target(i, &saveData, 1);
         *completion = 0;
         for (k = 8; k < saveData.missionsCount; k++) {
-            *completion += (*(float*)((char*)saveData.missionsTable + k * 0x3190 + 0x2fb8) != 0.0f) ? 4 : 0;
+            *completion += (saveData.missionsTable[k].reward.score != 0.0f) ? 4 : 0;
         }
         free(saveData.missionsTable);
         i++;
@@ -2947,7 +2818,7 @@ void front_callback_slider_brightness(int brightness)
     level = (float)brightness * 0.1f;
     spot = level * 0.8f - -0.2f;
     render_object_set_packed_rgba_from_float_channels(legoGlobs_spotlightTop, level, level, level, 1.0f);
-    render_object_set_packed_rgba_from_float_channels((void*)(uintptr_t)legoGlobs_f_5560f8, spot, spot, spot, 1.0f);
+    render_object_set_packed_rgba_from_float_channels(legoGlobs_f_5560f8, spot, spot, spot, 1.0f);
     light_interface_call_slot_40(legoGlobs_spotlightTop, FRONT_FLOAT_ARG(level * 1.5f - -0.5f));
     light_interface_call_slot_3c(legoGlobs_spotlightTop, FRONT_FLOAT_ARG(level * 0.8f - -0.2f));
 }
@@ -3119,6 +2990,9 @@ void front_save_set_save_number(int saveNumber); /* 00417ea0 */
 void front_save_set_level_completed(unsigned int levelIndex); /* 00417eb0 */
 void front_save_set_save_struct_18(const Front_SaveStruct18* saveStruct18); /* 00417f20 */
 int front_save_set_reward_level(int levelIndex, const uint8_t* rewardLevel); /* 00417f40 */
+/* Reward.c's save image of a RewardLevel (reward.h). */
+struct RewardLevel;
+void reward_level_serialize(const struct RewardLevel* level, unsigned char* image);
 void* front_save_get_reward_level(int levelIndex); /* 00417f90 */
 void front_save_write_current_save_file(void); /* 00417fc0 */
 int front_is_load_save_menu(void); /* 00417fe0 */
@@ -4768,7 +4642,8 @@ int front_save_set_reward_level(int levelIndex, const uint8_t* rewardLevel)
 
     saveData = (Front_SaveData*)front_save_get_current_save_data();
     if (saveData != NULL && levelIndex < (int)saveData->missionsCount) {
-        saveData->missionsTable[levelIndex].reward = *(const Front_RewardLevel*)rewardLevel;
+        reward_level_serialize((const struct RewardLevel*)rewardLevel,
+                               (unsigned char*)&saveData->missionsTable[levelIndex].reward);
         return 1;
     }
     return 0;

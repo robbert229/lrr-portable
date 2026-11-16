@@ -84,7 +84,7 @@ void electric_fence_block_surfaces_update(int bx, int by)
     unsigned int i;
     int x, y;
 
-    level_block_surface_update((struct LevelState*)electricFenceGlobs.level,
+    level_block_surface_update((struct Lego_Level*)electricFenceGlobs.level,
                                bx, by, 0);
     for (i = 0; i < 4; i++) {
         x = bx + DIRECTIONS[i].x;
@@ -92,7 +92,7 @@ void electric_fence_block_surfaces_update(int bx, int by)
         if (level_coord_pair_within_bounds_target(
                 (const unsigned int*)electricFenceGlobs.level->map, x, y))
             level_block_surface_update(
-                (struct LevelState*)electricFenceGlobs.level, x, y, 0);
+                (struct Lego_Level*)electricFenceGlobs.level, x, y, 0);
     }
 }
 
@@ -101,7 +101,7 @@ void electric_fence_add(ElectricFenceObject* object)
 {
     int bx, by;
 
-    legoobject_block_position_get((struct EntitySlot*)object, &bx, &by);
+    legoobject_block_position_get((struct Lego_Object*)object, &bx, &by);
     electric_fence_create(object, bx, by);
 }
 
@@ -123,7 +123,7 @@ ElectricFenceNode* electric_fence_create(ElectricFenceObject* object, int bx,
     node->blockY = by;
     electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags = 0;
     electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence = node;
-    object->flags3 |= 0x2000000;
+    object->flags2 |= 0x2000000;
     electric_fence_block_surfaces_update(bx, by);
     return node;
 }
@@ -152,8 +152,8 @@ void electric_fence_remove(ElectricFenceObject* object)
     int bx, by;
     ElectricFenceNode* node;
 
-    if (object->flags3 & 0x2000000) {
-        legoobject_block_position_get((struct EntitySlot*)object, &bx, &by);
+    if (object->flags2 & 0x2000000) {
+        legoobject_block_position_get((struct Lego_Object*)object, &bx, &by);
         node = electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence;
         if (node != NULL)
             electric_fence_remove_node(node, bx, by);
@@ -201,7 +201,7 @@ int electric_fence_debug_remove(int bx, int by)
     if (node != NULL) {
         object = node->object;
         electric_fence_remove(object);
-        entity_teardown((struct EntitySlot*)object);
+        entity_teardown((struct Lego_Object*)object);
         return 1;
     }
     return 0;
@@ -218,7 +218,7 @@ int electric_fence_can_place_at_block(int bx, int by)
 
     idx = electricFenceGlobs.level->width * by + bx;
     block = &electricFenceGlobs.level->blocks[idx];
-    if (!(block->flags1 & 0x8) || block->predug == 6 || block->predug == 7 ||
+    if (!(block->flags1 & 0x8) || block->f_02 == 6 || block->f_02 == 7 ||
         electricFenceGlobs.fenceGrid[idx].fence != NULL ||
         electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0))
         return 0;
@@ -269,10 +269,10 @@ void electric_fence_update(float elapsed)
         (ElectricFenceNodeCallback)electric_fence_node_update_callback,
         &elapsed);
     entity_pool_find_by_callback_filtered_current(
-        (int (*)(struct EntitySlot*, void*))electric_fence_building_clear_callback,
+        (int (*)(struct Lego_Object*, void*))electric_fence_building_clear_callback,
         NULL);
     entity_pool_find_by_callback_filtered_current(
-        (int (*)(struct EntitySlot*, void*))electric_fence_building_spark_callback,
+        (int (*)(struct Lego_Object*, void*))electric_fence_building_spark_callback,
         &elapsed);
 }
 
@@ -303,13 +303,13 @@ int electric_fence_spark_from(ElectricFenceObject* object, int bx, int by)
     electric_fence_run_through_lists(
         (ElectricFenceNodeCallback)electric_fence_node_update_callback, NULL);
     entity_pool_find_by_callback_filtered_current(
-        (int (*)(struct EntitySlot*, void*))electric_fence_building_clear_callback,
+        (int (*)(struct Lego_Object*, void*))electric_fence_building_clear_callback,
         NULL);
     if (object != NULL) {
-        entity_transform_position_get_outputs((struct EntitySlot*)object, &wPos.x, &wPos.y);
+        entity_transform_position_get_outputs((struct Lego_Object*)object, &wPos.x, &wPos.y);
         terrain_map_world_to_block(electricFenceGlobs.level->map, wPos.x, wPos.y, &bx, &by);
-        if (!(entity_state_flags_get((struct EntitySlot*)object) & 0x400) &&
-            !(object->flags4 & 0x20000000))
+        if (!(entity_state_flags_get((struct Lego_Object*)object) & 0x400) &&
+            !(object->flags3 & 0x20000000))
             return 0;
     } else {
         if (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence == NULL &&
@@ -332,7 +332,7 @@ int electric_fence_building_spark_callback(ElectricFenceObject* object,
     TerrainMapPoint2I* next;
 
     if (object->type == 4) {
-        legoobject_block_position_get((struct EntitySlot*)object, &blockPos.x, &blockPos.y);
+        legoobject_block_position_get((struct Lego_Object*)object, &blockPos.x, &blockPos.y);
         if (electric_fence_block_is_building(electricFenceGlobs.level, blockPos.x, blockPos.y, 1)) {
             entity_surface_vector_normalize(object, &dir.x);
             if (fabs(dir.x) > fabs(dir.y)) {
@@ -347,7 +347,7 @@ int electric_fence_building_spark_callback(ElectricFenceObject* object,
                     direction = 2;
             }
             shape = (TerrainMapPoint2I*)(uintptr_t)task_field84_get_and_field88_out(
-                object->stats, &count);
+                object->building, &count);
             shape = (TerrainMapPoint2I*)rotated_pairs_scratch_fill(
                 &blockPos.x, (const int*)shape, count, direction);
             for (i = 0; i < count; i++) {
@@ -370,7 +370,7 @@ int electric_fence_building_clear_callback(ElectricFenceObject* object,
     TerrainMapPoint2I blockPos;
 
     if (object->type == 4) {
-        legoobject_block_position_get((struct EntitySlot*)object, &blockPos.x, &blockPos.y);
+        legoobject_block_position_get((struct Lego_Object*)object, &blockPos.x, &blockPos.y);
         electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * blockPos.y + blockPos.x].flags = 0;
     }
     return 0;
@@ -524,7 +524,7 @@ int electric_fence_object_strike(ElectricFenceObject* object)
     unsigned int i, best;
     ElectricFenceNode* node;
 
-    entity_transform_position_get_outputs((struct EntitySlot*)object, &pos.x, &pos.y);
+    entity_transform_position_get_outputs((struct Lego_Object*)object, &pos.x, &pos.y);
     terrain_map_world_to_block(electricFenceGlobs.level->map, pos.x, pos.y, &bx, &by);
     tx = bx;
     ty = by;
@@ -584,7 +584,7 @@ void electric_fence_object_beam(ElectricFenceObject* object,
     objPos.y = position->y;
     objPos.z = terrain_map_world_z_get(electricFenceGlobs.level->map,
                                        position->x, position->y) -
-        entity_stats_float_at74((struct EntitySlot*)object) * 0.5f;
+        entity_stats_float_at74((struct Lego_Object*)object) * 0.5f;
     dir.x = objPos.x - blockPos.x;
     dir.y = objPos.y - blockPos.y;
     dir.z = objPos.z - blockPos.z;
@@ -593,9 +593,9 @@ void electric_fence_object_beam(ElectricFenceObject* object,
     dir2D.x = dir.x;
     dir2D.y = dir.y;
     ledger_stub_0046f270_TypeMotionScaleApplyDispatch(
-        (struct EntitySlot*)object, object_type_name_index_find("FenceSpark"),
+        (struct Lego_Object*)object, object_type_name_index_find("FenceSpark"),
         1, 0.0f, &dir2D);
-    entity_action_route_state_initialize((struct EntitySlot*)object);
+    entity_action_route_state_initialize((struct Lego_Object*)object);
 }
 
 // FUNCTION: LEGORR 0x0040e1e0
@@ -645,7 +645,7 @@ void electric_fence_stud_set(ElectricFenceLevel* level, int bx, int by,
             }
         } else {
             if (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].stud != NULL) {
-                entity_teardown((struct EntitySlot*)electricFenceGlobs.fenceGrid[
+                entity_teardown((struct Lego_Object*)electricFenceGlobs.fenceGrid[
                     electricFenceGlobs.level->width * by + bx].stud);
                 electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].stud = NULL;
                 electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags = 0;

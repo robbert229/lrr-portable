@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-struct LevelState;
+struct Lego_Level;
 /* The matching build calls Lego.c's original-shape entry in lego_unit.c
  * (GAME-021 part 2, finding 571); the port model is unannotated. One
  * declaration either way (finding 538, rule B). */
@@ -34,7 +34,7 @@ uint32_t entity_type_grid_record_count_get(const char* type_name, int slot); /* 
  * the port's in the matching build's C callers, and rewrites this
  * declaration into an old-style one. */
 #define level_objective_result_get(s) level_objective_result_get()
-int level_objective_result_get(const struct LevelState* s); /* 00458650 */
+int level_objective_result_get(const struct Lego_Level* s); /* 00458650 */
 
 #ifdef __cplusplus
 }

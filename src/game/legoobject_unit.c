@@ -29,6 +29,15 @@
 #include "crt/vc5names.h"
 #include "legoobject_unit.h"
 #include "legoobject_unit_imports.h"
+#include "steering_record.h"
+#include "vehicle_model_record.h"
+#include "building_model_record.h"
+#include "upgrade_record.h"
+#include "animation_object_record.h"
+#include "entity_stats.h"
+#include "lego_level_record.h"
+#include "construction_record.h"
+#include "aitask_record.h"
 #include "lego_globs.h"
 
 /* ------------------------------------------------------------------ */
@@ -608,16 +617,16 @@ int legoobject_remove(Lego_Object* obj)
     legoobject_action_sequence_reset(obj, 0);
     legoobject_type_four_callback_dispatch(obj);
     legoobject_attached_object_list_detach(obj, 0);
-    entity_drain_command_chain((struct EntitySlot*)obj);
+    entity_drain_command_chain((struct Lego_Object*)obj);
     legoobject_pool_find_with_local_predicate(obj);
-    global_value_clear_if_equal((int)(uintptr_t)obj);
-    if ((entity_stats_word_get((struct EntitySlot*)obj) & 4) ||
-        (entity_stats_word_get((struct EntitySlot*)obj) & 2)) {
+    global_value_clear_if_equal(obj);
+    if ((entity_stats_word_get((struct Lego_Object*)obj) & 4) ||
+        (entity_stats_word_get((struct Lego_Object*)obj) & 2)) {
         task_callback_dispatch(obj);
     }
     selection_object_detach(obj);
     info_remove_object_references(obj);
-    entity_pointer_registries_remove((struct EntitySlot*)obj);
+    entity_pointer_registries_remove((struct Lego_Object*)obj);
     legoobject_callback_dispatch_unless_type_five(obj);
     lego_object_pointer_registry_clear_match(obj);
 
@@ -626,16 +635,16 @@ int legoobject_remove(Lego_Object* obj)
             (struct ScenePairedAnimationState*)obj->vehicle);
         free(obj->vehicle);
     } else if (obj->type == 2) {
-        entity_payload_release_subslots((struct EntitySlot*)obj->miniFigure);
+        entity_payload_release_subslots((struct Lego_Object*)obj->miniFigure);
         free(obj->miniFigure);
     } else if (obj->type == 3) {
-        if (entity_stats_word_get((struct EntitySlot*)obj) & 0x200000) {
+        if (entity_stats_word_get((struct Lego_Object*)obj) & 0x200000) {
             legoobject_auxiliary_payload_release(obj);
         }
-        entity_payload_release_subslots((struct EntitySlot*)obj->rockMonster);
+        entity_payload_release_subslots((struct Lego_Object*)obj->rockMonster);
         free(obj->rockMonster);
     } else if (obj->type == 4) {
-        entity_payload_teardown((struct EntitySlot*)obj->building);
+        entity_payload_teardown((struct Lego_Object*)obj->building);
         free(obj->building);
     } else if (obj->flags3 & 0x20000) {
         ledger_stub_00472a40_DDiSceneObjectDestroy(obj->other);
@@ -741,7 +750,7 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
         if (rec->blockPos[0] == blockPos[0] && rec->blockPos[1] == blockPos[1]) {
             if (rec->type == 4) {
                 shape = (void*)task_field84_get_and_field88_out(
-                    (char*)legoGlobs_buildingData + rec->id * 0x14c, &shapeCount);
+                    &legoGlobs_buildingData[rec->id], &shapeCount);
                 direction = (unsigned int)((float)(rec->heading * 0.15915494f) * 8.0f);
                 direction = ((direction & 1) + direction) >> 1;
                 points = rotated_pairs_scratch_fill((const int*)rec, (const int*)shape,
@@ -758,7 +767,7 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
                                               rec->worldPos[1], rec->heading, 1);
                 }
                 if (rec->type == 6 || rec->type == 7 || rec->type == 8 || rec->type == 9) {
-                    cmd_create_task((struct EntitySlot*)obj, 0);
+                    cmd_create_task((struct Lego_Object*)obj, 0);
                 }
                 obj->health = rec->health;
                 if (obj->type == 2) {
@@ -791,11 +800,11 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
                     target = objs[j];
                     obj->routeToObject = target;
                     obj->flags2 |= 0x4;
-                    if (entity_capability_flags_get((struct EntitySlot*)target) & 0x100) {
+                    if (entity_capability_flags_get((struct Lego_Object*)target) & 0x100) {
                         mode = 1;
-                    } else if (!(entity_stats_word_get((struct EntitySlot*)target) & 0x1000000)) {
+                    } else if (!(entity_stats_word_get((struct Lego_Object*)target) & 0x1000000)) {
                         mode = 4;
-                    } else if (!(entity_stats_word_get((struct EntitySlot*)target) & 0x2000000)) {
+                    } else if (!(entity_stats_word_get((struct Lego_Object*)target) & 0x2000000)) {
                         mode = 2;
                     } else {
                         mode = 1;
@@ -844,8 +853,8 @@ void legoobject_deferred_olist_queue_add(void* model, int type, int id, float* w
 // FUNCTION: LEGORR 0x00437cc0
 int legoobject_flag40000_threshold_compare(Lego_Object* obj)
 {
-    if (entity_state_flags_get((struct EntitySlot*)obj) & 0x40000) {
-        if (entity_stats_float_ate8((struct EntitySlot*)obj) < obj->health) {
+    if (entity_state_flags_get((struct Lego_Object*)obj) & 0x40000) {
+        if (entity_stats_float_ate8((struct Lego_Object*)obj) < obj->health) {
             return 1;
         }
     }
@@ -873,72 +882,72 @@ Lego_Object* legoobject_create(void* model, int type, int id)
         sound_subsystem_enable_set(0, 0);
 
         if (obj->type == 1) {
-            obj->vehicle = malloc(0x1ec);
+            obj->vehicle = (VehicleModel*)malloc(sizeof(VehicleModel));
             scene_record_template_instantiate((struct ScenePairedAnimationState*)model, (struct ScenePairedAnimationState*)obj->vehicle);
             scene_assign_owner_from_model((struct ScenePairedAnimationState*)obj->vehicle, obj);
             obj->carryNullFrames = object_record_field11c_get(obj->vehicle);
             scene_record_indexed_entries_rebuild_original(obj->vehicle, 0);
             obj->abilityFlags = 0x20;
             obj->flags3 |= 0x441190;
-            entity_building_index_set((struct EntitySlot*)obj, 0);
-            if (LEGOOBJ_FIELD(model, int, 0xb4)) obj->flags3 |= 0x2;
-            if (LEGOOBJ_FIELD(model, int, 0xdc)) {
+            entity_building_index_set((struct Lego_Object*)obj, 0);
+            if (((VehicleModel*)model)->drillNullName) obj->flags3 |= 0x2;
+            if (((VehicleModel*)model)->carryNullName) {
                 obj->flags3 |= 0x20;
-                if (entity_stats_word_get((struct EntitySlot*)obj) & 0x2000000) obj->flags3 |= 0x40;
+                if (entity_stats_word_get((struct Lego_Object*)obj) & 0x2000000) obj->flags3 |= 0x40;
             }
         } else if (obj->type == 2) {
-            obj->miniFigure = malloc(0x74);
+            obj->miniFigure = (AnimationObject*)malloc(sizeof(AnimationObject));
             renderer_record_clone((struct AnimationObject*)model, (struct AnimationObject*)obj->miniFigure);
-            scene_assign_entity_owner(obj->miniFigure, (uint32_t)(uintptr_t)obj);
+            scene_assign_entity_owner(obj->miniFigure, obj);
             obj->carryNullFrames = ((uint32_t (*)(void*))flic_opcode25_success_stub)(obj->miniFigure);
             obj->flags3 |= 0x4401f5;
-            if (LEGOOBJ_FIELD(model, int, 0x2c)) obj->flags3 |= 0x2;
-            entity_building_index_set((struct EntitySlot*)obj, 0);
+            if (((AnimationObject*)model)->drillNullName) obj->flags3 |= 0x2;
+            entity_building_index_set((struct Lego_Object*)obj, 0);
             obj->flags3 |= 0x8000;
             legoobject_activity_grant(obj, 0);
         } else if (obj->type == 3) {
-            obj->rockMonster = malloc(0x74);
+            obj->rockMonster = (AnimationObject*)malloc(sizeof(AnimationObject));
             renderer_record_clone((struct AnimationObject*)model, (struct AnimationObject*)obj->rockMonster);
-            scene_assign_entity_owner(obj->rockMonster, (uint32_t)(uintptr_t)obj);
+            scene_assign_entity_owner(obj->rockMonster, obj);
             obj->carryNullFrames = ((uint32_t (*)(void*))flic_opcode25_success_stub)(obj->rockMonster);
             obj->flags3 |= 0x8440200;
-            if (LEGOOBJ_FIELD(model, int, 0x2c)) obj->flags3 |= 0x2;
-            entity_building_index_set((struct EntitySlot*)obj, 0);
-            if (entity_stats_word_get((struct EntitySlot*)obj) & 0x200000) {
+            if (((AnimationObject*)model)->drillNullName) obj->flags3 |= 0x2;
+            entity_building_index_set((struct Lego_Object*)obj, 0);
+            if (entity_stats_word_get((struct Lego_Object*)obj) & 0x200000) {
                 legoobject_scene_object_tree_attach(obj);
-                if (!(entity_stats_word_get((struct EntitySlot*)obj) & 0x400000)) {
+                if (!(entity_stats_word_get((struct Lego_Object*)obj) & 0x400000)) {
                     legoobject_type_operation_dispatch(obj, 1);
                     obj->flags3 &= ~0x100;
                 }
             } else {
                 obj->field_32c = 0;
             }
-            if (legoobject_flag40000_threshold_compare(obj)) entity_command15_validated_record_queue((struct EntitySlot*)obj);
+            if (legoobject_flag40000_threshold_compare(obj)) entity_command15_validated_record_queue((struct Lego_Object*)obj);
             obj->flags3 |= 0x80000000;
         } else if (obj->type == 4) {
-            obj->building = malloc(0x14c);
+            obj->building = (BuildingModel*)malloc(sizeof(BuildingModel));
             scene_object_record_clone_retain_handles((struct SceneObjectRecord*)model, (struct SceneObjectRecord*)obj->building);
-            scene_assign_entity_owner(obj->building, (uint32_t)(uintptr_t)obj);
+            scene_assign_entity_owner(obj->building, obj);
             obj->carryNullFrames = scene_object_flags_get(obj->building);
             obj->flags3 |= 0x40100;
-            entity_payload_state_set((struct EntitySlot*)obj->building, 0);
-            entity_building_index_set((struct EntitySlot*)obj, 0);
-            if (entity_stats_word_get((struct EntitySlot*)obj) & 0x10) legoGlobs_f_55644c = obj;
-            if (entity_stats_word_get((struct EntitySlot*)obj) & 0x20) legoGlobs_f_556450 = obj;
-            if (entity_stats_word_get((struct EntitySlot*)obj) & 0x40) legoGlobs_f_556454 = obj;
-            entity_stats_word_get((struct EntitySlot*)obj);
-            if (entity_stats_word_get((struct EntitySlot*)obj) & 0x4000) task_record_kind11_timed_queue(obj);
+            entity_payload_state_set((struct Lego_Object*)obj->building, 0);
+            entity_building_index_set((struct Lego_Object*)obj, 0);
+            if (entity_stats_word_get((struct Lego_Object*)obj) & 0x10) legoGlobs_f_55644c = obj;
+            if (entity_stats_word_get((struct Lego_Object*)obj) & 0x20) legoGlobs_f_556450 = obj;
+            if (entity_stats_word_get((struct Lego_Object*)obj) & 0x40) legoGlobs_f_556454 = obj;
+            entity_stats_word_get((struct Lego_Object*)obj);
+            if (entity_stats_word_get((struct Lego_Object*)obj) & 0x4000) task_record_kind11_timed_queue(obj);
             task_record_kind10_queue(obj);
             obj->abilityFlags = 0x20;
             legoobject_activity_scene_state_update();
         } else if (obj->type == 10) {
-            obj->upgradePart = malloc(0x10);
+            obj->upgradePart = (Upgrade_PartModel*)malloc(sizeof(Upgrade_PartModel));
             render_resource_binding_copy_and_convert((struct RenderResourceBinding*)model, (struct RenderResourceBinding*)obj->upgradePart);
-            obj->stats = s_stats_upgrade_part;
+            obj->stats = (struct StatsData*)s_stats_upgrade_part;
             obj->flags3 |= 0x80000;
         } else {
             obj->other = entity_visual_resource_load(model);
-            scene_object_owner_set(obj->other, (uint32_t)(uintptr_t)obj);
+            scene_object_owner_set(obj->other, obj);
             obj->flags3 |= 0x20000;
             if (obj->type == 11) obj->flags3 |= 0x40100;
             if (obj->type == 7 || obj->type == 6) obj->flags3 |= 0x100100;
@@ -946,10 +955,10 @@ Lego_Object* legoobject_create(void* model, int type, int id)
             legoobject_rover_work_queue_update(obj, 1);
             switch (obj->type) {
             case 8:
-                obj->stats = s_stats_dynamite;
+                obj->stats = (struct StatsData*)s_stats_dynamite;
                 break;
             case 9:
-                obj->stats = s_stats_barrier;
+                obj->stats = (struct StatsData*)s_stats_barrier;
                 break;
             case 12:
             case 13:
@@ -958,10 +967,10 @@ Lego_Object* legoobject_create(void* model, int type, int id)
             case 17:
             case 18:
             case 19:
-                obj->stats = s_stats_small_object;
+                obj->stats = (struct StatsData*)s_stats_small_object;
                 break;
             default:
-                entity_building_index_set((struct EntitySlot*)obj, 0);
+                entity_building_index_set((struct Lego_Object*)obj, 0);
                 break;
             }
         }
@@ -976,13 +985,13 @@ Lego_Object* legoobject_create(void* model, int type, int id)
         obj->activityName1 = s_activity[0];
         legoobject_activity_register_bookkeeping(obj);
 
-        task_record_kind14_remove_if_head((struct EntitySlot*)obj);
+        task_record_kind14_remove_if_head((struct Lego_Object*)obj);
         renderer_flag_bit6_set(1);
         if (soundOn) sound_subsystem_enable_set(1, 0);
 
         legoobject_kind_four_post_create_resolve(obj);
         s_grid_count_second[(obj->type * 15 + obj->id) * 16]++;
-        if (entity_state_flags_get((struct EntitySlot*)obj) & 0x80000000) obj->flags3 &= ~0x100;
+        if (entity_state_flags_get((struct Lego_Object*)obj) & 0x80000000) obj->flags3 &= ~0x100;
 
         return obj;
     }
@@ -1063,9 +1072,9 @@ void legoobject_kind_record_update_dispatch(Lego_Object* obj)
     if (obj->type == 4) {
         legoobject_activity_register_bookkeeping(obj);
         obj->flags3 |= 0x20;
-        if (entity_stats_word_get((struct EntitySlot*)obj) & 0x8) task_record_create_and_scan_grid(obj);
-        else if (entity_stats_word_get((struct EntitySlot*)obj) & 0x2) timed_task_record_initialize_and_link(obj, 7, 0, 0);
-        else if (entity_stats_word_get((struct EntitySlot*)obj) & 0x4) timed_task_record_initialize_and_link(obj, 6, 0, 0);
+        if (entity_stats_word_get((struct Lego_Object*)obj) & 0x8) task_record_create_and_scan_grid(obj);
+        else if (entity_stats_word_get((struct Lego_Object*)obj) & 0x2) timed_task_record_initialize_and_link(obj, 7, 0, 0);
+        else if (entity_stats_word_get((struct Lego_Object*)obj) & 0x4) timed_task_record_initialize_and_link(obj, 6, 0, 0);
         else obj->flags3 &= ~0x20;
         legoobject_activity_scene_state_update();
         obj->flags4 |= 0x200000;
@@ -1138,7 +1147,7 @@ int legoobject_grid_position_match_callback(Lego_Object* obj, void* data)
     LegoObjGD_BlockSearch* search = (LegoObjGD_BlockSearch*)data;
     int blockPos[2];
 
-    if (obj->type == 4 && (entity_state_flags_get((struct EntitySlot*)obj) & 0x200) &&
+    if (obj->type == 4 && (entity_state_flags_get((struct Lego_Object*)obj) & 0x200) &&
         legoobject_shared_eligibility_check(obj, 0))
     {
         legoobject_position_to_terrain_cell(obj, &blockPos[0], &blockPos[1]);
@@ -1156,7 +1165,7 @@ int legoobject_grid_position_match_callback(Lego_Object* obj, void* data)
 // FUNCTION: LEGORR 0x00438720
 int legoobject_available_resource_spend(Lego_Object* obj, int amount)
 {
-    if (LEGOOBJ_FIELD(g_active_level_retail, int, 0x1f8)) amount = 0;
+    if (g_active_level_retail->noDrain) amount = 0;
     if (((int (*)(int))noop_callback)(0) >= amount) {
         global_object_field98_add(amount);
         return 1;
@@ -1190,8 +1199,8 @@ void legoobject_building_upgrade_commit(Lego_Object* building)
         if (legoobject_building_upgrade_resource_admission_check(building, &cost)) {
             lego_upgrade_resource_debit(cost != 0, cost ? cost : legoGlobs_BuildingUpgradeCostOre);
             building->field_3d8 = 0.0f;
-            entity_payload_state_set((struct EntitySlot*)building->building, building->objLevel + 1);
-            legoobject_gd_building_index_set_adapter((struct EntitySlot*)building, building->objLevel + 1);
+            entity_payload_state_set((struct Lego_Object*)building->building, building->objLevel + 1);
+            legoobject_gd_building_index_set_adapter((struct Lego_Object*)building, building->objLevel + 1);
             ddiscene_object_position_get(legoobject_type_component_get(building), NULL, wPos);
             lava_effect_select_and_place(9, wPos, NULL);
             building_upgrade_state_changed_dispatch(building->type, building->id, building->objLevel, 0);
@@ -1455,12 +1464,12 @@ Lego_Object* legoobject_query_center_mask100(Lego_Object* obj, float* center, in
 // FUNCTION: LEGORR 0x00438ed0
 int legoobject_flags_contain_requested_single_bit(Lego_Object* obj, int selector)
 {
-    if (!(entity_state_flags_get((struct EntitySlot*)obj) & 0x4) || selector != 1) {
-        if (!(entity_state_flags_get((struct EntitySlot*)obj) & 0x8) || selector != 2) {
-            if (!(entity_state_flags_get((struct EntitySlot*)obj) & 0x10) || selector != 4) {
-                if (!(entity_state_flags_get((struct EntitySlot*)obj) & 0x20) || selector != 8) {
-                    if (!(entity_state_flags_get((struct EntitySlot*)obj) & 0x40) || selector != 0x10) {
-                        if (!(entity_state_flags_get((struct EntitySlot*)obj) & 0x80) || selector != 0x20) {
+    if (!(entity_state_flags_get((struct Lego_Object*)obj) & 0x4) || selector != 1) {
+        if (!(entity_state_flags_get((struct Lego_Object*)obj) & 0x8) || selector != 2) {
+            if (!(entity_state_flags_get((struct Lego_Object*)obj) & 0x10) || selector != 4) {
+                if (!(entity_state_flags_get((struct Lego_Object*)obj) & 0x20) || selector != 8) {
+                    if (!(entity_state_flags_get((struct Lego_Object*)obj) & 0x40) || selector != 0x10) {
+                        if (!(entity_state_flags_get((struct Lego_Object*)obj) & 0x80) || selector != 0x20) {
                             return 0;
                         }
                     }
@@ -1509,7 +1518,7 @@ int legoobject_route_marker_candidate_visit(Lego_Object* obj, void* data)
                 if (obj->type == 4) found = 1;
             } else {
                 if (flags & 0x1) {
-                    if ((entity_stats_word_get((struct EntitySlot*)obj) & 0x8) &&
+                    if ((entity_stats_word_get((struct Lego_Object*)obj) & 0x8) &&
                         legoobject_action_kind_supported(
                             obj, search->actionKind, search->actionArgument,
                             search->actionExtra)) {
@@ -1520,8 +1529,8 @@ int legoobject_route_marker_candidate_visit(Lego_Object* obj, void* data)
                     if (legoobject_dock_definition_matches_cell(obj)) found = 1;
                 }
                 if (flags & 0x2000) {
-                    if (!(entity_state_flags_get((struct EntitySlot*)obj) & 0x400) &&
-                        !(entity_state_flags_get((struct EntitySlot*)obj) & 0x200) &&
+                    if (!(entity_state_flags_get((struct Lego_Object*)obj) & 0x400) &&
+                        !(entity_state_flags_get((struct Lego_Object*)obj) & 0x200) &&
                         legoobject_shared_eligibility_check(obj, 0)) {
                         found = 1;
                     }
@@ -1530,37 +1539,37 @@ int legoobject_route_marker_candidate_visit(Lego_Object* obj, void* data)
                     if (legoobject_flags_contain_requested_single_bit(obj, search->selector)) found = 1;
                 }
                 if (flags & 0x40) {
-                    if (!(entity_stats_word_get((struct EntitySlot*)obj) & 0x8) && obj->type == 4) found = 1;
+                    if (!(entity_stats_word_get((struct Lego_Object*)obj) & 0x8) && obj->type == 4) found = 1;
                 }
                 if (flags & 0x80) {
-                    if ((entity_state_flags_get((struct EntitySlot*)obj) & 0x2) &&
+                    if ((entity_state_flags_get((struct Lego_Object*)obj) & 0x2) &&
                         obj->interactObject == NULL) {
                         found = 1;
                     }
                 }
                 if (flags & 0x800) {
-                    if (entity_stats_word_get((struct EntitySlot*)obj) & 0x80000000) found = 1;
+                    if (entity_stats_word_get((struct Lego_Object*)obj) & 0x80000000) found = 1;
                 }
                 if (flags & 0x10) {
-                    if (entity_stats_word_get((struct EntitySlot*)obj) & 0x10) found = 1;
+                    if (entity_stats_word_get((struct Lego_Object*)obj) & 0x10) found = 1;
                 }
                 if (flags & 0x20) {
-                    if (entity_stats_word_get((struct EntitySlot*)obj) & 0x20) found = 1;
+                    if (entity_stats_word_get((struct Lego_Object*)obj) & 0x20) found = 1;
                 }
                 if (flags & 0x200) {
-                    if (entity_stats_word_get((struct EntitySlot*)obj) & 0x40) found = 1;
+                    if (entity_stats_word_get((struct Lego_Object*)obj) & 0x40) found = 1;
                 }
                 if (flags & 0x2) {
-                    if (((entity_stats_word_get((struct EntitySlot*)obj) & 0x2) && search->actionKind == 7) ||
-                        ((entity_stats_word_get((struct EntitySlot*)obj) & 0x4) && search->actionKind == 6)) {
+                    if (((entity_stats_word_get((struct Lego_Object*)obj) & 0x2) && search->actionKind == 7) ||
+                        ((entity_stats_word_get((struct Lego_Object*)obj) & 0x4) && search->actionKind == 6)) {
                         found = 1;
                     }
                 }
                 if (flags & 0x4) {
-                    if (entity_stats_word_get((struct EntitySlot*)obj) & 0x4000) found = 1;
+                    if (entity_stats_word_get((struct Lego_Object*)obj) & 0x4000) found = 1;
                 }
                 if (flags & 0x8) {
-                    if (entity_stats_word_get((struct EntitySlot*)obj) & 0x100000) found = 1;
+                    if (entity_stats_word_get((struct Lego_Object*)obj) & 0x100000) found = 1;
                 }
             }
             if (found) {
@@ -1592,7 +1601,7 @@ int legoobject_task_kind_filtered_search(int selector)
 // FUNCTION: LEGORR 0x00439240
 int legoobject_task_flags_and_cell_task_match(Lego_Object* obj, void* task)
 {
-    if (entity_stats_word_get((struct EntitySlot*)obj) & 0x8) {
+    if (entity_stats_word_get((struct Lego_Object*)obj) & 0x8) {
         if (legoobject_action_kind_supported(
                 obj, *(int*)task, 0, 0)) {
             return 1;
@@ -1657,8 +1666,8 @@ void legoobject_build_placement_command_setup(int* cell, int id, LegoObjGE_Point
     if (update) {
         info_send(0, NULL, NULL, (struct InfoPoint2I*)cell);
         advisor_text_animation_update(0x11, 1, 0);
-        LEGOOBJ_FIELD(level_current_owner_get(), LegoObjGE_Block*, 0xb8)
-            [LEGOOBJ_FIELD(level_current_owner_get(), int, 0x14) * cell[1] + cell[0]].field_2c++;
+        level_current_owner_get()->blocks
+            [level_current_owner_get()->width * cell[1] + cell[0]].f_2c++;
     }
 }
 
@@ -1684,8 +1693,8 @@ void legoobject_build_placement_alternate_command_setup(int* cell, int id, LegoO
     cmd_produce(0x1c, obj, 0, 0);
     advisor_text_animation_update(0x13, 1, 0);
     if (update) {
-        LEGOOBJ_FIELD(level_current_owner_get(), LegoObjGE_Block*, 0xb8)
-            [LEGOOBJ_FIELD(level_current_owner_get(), int, 0x14) * cell[1] + cell[0]].field_30++;
+        level_current_owner_get()->blocks
+            [level_current_owner_get()->width * cell[1] + cell[0]].f_30++;
     }
 }
 
@@ -2381,7 +2390,7 @@ void legoobject_lava_crust_activity_register(Lego_Object* obj)
 
     if (obj->type == 1 && !(entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x2000000)) {
         legoobject_position_to_terrain_cell(obj, &blockPos.x, &blockPos.y);
-        if (LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos.y + blockPos.x].terrain == 9 &&
+        if (LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos.y + blockPos.x].f_02 == 9 &&
             LegoObjG_liveCount < 100)
         {
             LegoObjG_liveObjs[LegoObjG_liveCount] = obj;
@@ -2523,7 +2532,7 @@ Lego_Object* legoobject_predug_spawn_coordinate_select_and_create(Lego_Object* o
         terrain_map_block_to_world(Lego_GetMap(), blockPos[0], blockPos[1], &wPos[0], &wPos[1]);
         wPos[0] = (float)(dir[0] * 12.75f) + wPos[0];
         wPos[1] = (float)(dir[1] * 12.75f) + wPos[1];
-        obj = legoobject_create_in_world((LegoObjH_CreatureModel*)legoGlobs_rockMonsterData + id,
+        obj = legoobject_create_in_world(&legoGlobs_rockMonsterData[id],
                                          3, id, 0, wPos[0], wPos[1], heading);
         if (obj != NULL) {
             obj->flags1 |= 0x100;
@@ -2556,7 +2565,7 @@ Lego_Object* legoobject_emergence_random_spawn_attempt(void)
         bx = rng_thunk_draw15() % width;
         by = rng_thunk_draw15() % height;
         obj = legoobject_creature_spawn_from_emergence(
-            (LegoObjH_CreatureModel*)legoGlobs_rockMonsterData + id, 3, id, bx, by);
+            &legoGlobs_rockMonsterData[id], 3, id, bx, by);
         if (obj != NULL)
             return obj;
     }
@@ -2761,7 +2770,7 @@ int legoobject_pick_at_screen_position_callback(Lego_Object* obj, void* data)
             else
                 rotation = 2;
         }
-        shape = (LegoObjF_Point2I*)task_field84_get_and_field88_out((LegoObjH_BuildingModel*)legoGlobs_buildingData + obj->id,
+        shape = (LegoObjF_Point2I*)task_field84_get_and_field88_out(&legoGlobs_buildingData[obj->id],
                                                                      &shapeCount);
         shape = (LegoObjF_Point2I*)rotated_pairs_scratch_fill(blockPos, (int*)shape, shapeCount, rotation);
         count = 0;
@@ -3019,7 +3028,7 @@ void legoobject_objective_sidecar_append_gate(Lego_Object* obj)
 
     if (obj->flags3 & 0x800000) {
         if (obj->driveObject != NULL) {
-            interface_driven_object_menu_check((struct LegoObject*)obj);
+            interface_driven_object_menu_check((struct Lego_Object*)obj);
             obj->driveObject->flags2 &= ~0x8;
             obj->driveObject->driveObject = NULL;
             obj->driveObject = NULL;
@@ -3058,7 +3067,7 @@ void legoobject_objective_sidecar_append_gate(Lego_Object* obj)
     }
 
     if (obj->type == 2 || obj->type == 1 || obj->type == 11 ||
-        (obj->type == 4 && ((LEGOOBJ_FIELD(obj, unsigned char, 0x390) & 4) || (obj->flags4 & 0x8))))
+        (obj->type == 4 && ((obj->teleporterMode & 4) || (obj->flags4 & 0x8))))
     {
         if (!(obj->flags3 & 0x40000))
             return;
@@ -3088,7 +3097,7 @@ void legoobject_objective_sidecar_append_gate(Lego_Object* obj)
             {
                 obj->driveObject->health = -1.0f;
             } else {
-                interface_driven_object_menu_check((struct LegoObject*)obj);
+                interface_driven_object_menu_check((struct Lego_Object*)obj);
                 obj->driveObject->flags2 &= ~0x8;
                 if (obj->driveObject->type == 2)
                     activity_runner_update((struct AnimationObject*)obj->driveObject->miniFigure, s_activity[0], 0.0f);
@@ -3215,7 +3224,7 @@ int legoobject_periodic_timer25_callback(Lego_Object* obj, void* data)
  * functions that test this, as a switch or a shared helper would. */
 #define LEGOOBJ_I_GATHERING(obj) \
     ((obj) != NULL && (obj)->type - 2 == 0 && (obj)->aiTask != NULL && \
-     ((LegoObjI_AITask*)(obj)->aiTask)->taskType == 0x1a)
+     ((LegoObjI_AITask*)(obj)->aiTask)->type == 0x1a)
 
 /* The object (a type 2) is running a task of type 0x1a whose target is
  * within reach and not behind a wall. */
@@ -3224,8 +3233,8 @@ int legoobject_type26_command_completion_gate(Lego_Object* obj)
 {
     if (LEGOOBJ_I_GATHERING(obj) &&
         entity_centers_within_configured_radius(LEGOOBJ_SLOT(obj),
-            LEGOOBJ_SLOT(((LegoObjI_AITask*)obj->aiTask)->targetObject)) &&
-        !object_pair_ray_hit_check(obj, ((LegoObjI_AITask*)obj->aiTask)->targetObject))
+            LEGOOBJ_SLOT(((LegoObjI_AITask*)obj->aiTask)->object)) &&
+        !object_pair_ray_hit_check(obj, ((LegoObjI_AITask*)obj->aiTask)->object))
     {
         return 1;
     }
@@ -3386,7 +3395,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
     if (obj->flags4 & 0x40000) {
         cont = legoobject_type_component_get(obj);
         if (cont != NULL) {
-            int sample = (int)entity_stats_word_atc8((struct EntitySlot*)obj);
+            int sample = (int)entity_stats_word_atc8((struct Lego_Object*)obj);
             if (sample != 0) {
                 obj->soundHandle = sound_submission_route_wrapper(cont, sample, 1, 1, NULL);
                 obj->flags4 |= 0x80000;
@@ -3395,10 +3404,10 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         obj->flags4 &= ~0x40000;
     }
     if ((s_panel_highlight_flags & 1) && legoobject_ai_can_do(obj)) {
-        type2_timed_registry_insert((struct EntitySlot*)obj);
+        type2_timed_registry_insert((struct Lego_Object*)obj);
         obj->flags4 |= 0x20;
     } else {
-        set_type2_object_record_value((struct EntitySlot*)obj, 0);
+        set_type2_object_record_value((struct Lego_Object*)obj, 0);
         obj->flags4 &= ~0x20;
     }
     if (obj->type == 1 && (obj->flags4 & 0x40) && obj->routeToObject == NULL &&
@@ -3411,7 +3420,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         LegoObjJ_Point2I blockPos;
         level = (LegoObjJ_Level*)level_current_owner_get();
         legoobject_position_to_terrain_cell(obj, &blockPos.x, &blockPos.y);
-        if (level->blocks[level->width * blockPos.y + blockPos.x].flags1 & 0x80)
+        if (level->blocks[level->width * blockPos.y + blockPos.x].flags2 & 0x80)
             lego_emerge_map_trigger_spawn((struct Lego_Level*)level, (struct LegoPoint2I2A*)&blockPos, NULL);
     }
     legoobject_building_deposit_state_monitor(obj);
@@ -3422,10 +3431,10 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
     } else {
         tickResult = legoobject_activity_tick(obj, elapsed);
     }
-    if (entity_stats_word_get((struct EntitySlot*)obj) & 0x80000070)
+    if (entity_stats_word_get((struct Lego_Object*)obj) & 0x80000070)
         legoobject_spawn_request_queue_process(obj);
     if (obj->type != 4 || legoobject_shared_eligibility_check(obj, 0))
-        lego_air_supply_amount_update((struct EntitySlot*)obj, elapsed);
+        lego_air_supply_amount_update((struct Lego_Object*)obj, elapsed);
     if (s_entity_state_flags & 4)
         legoobject_kind_four_post_create_resolve(obj);
     else
@@ -3458,7 +3467,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         if (obj->flags1 & 0x10) {
             cont = legoobject_type_component_get(obj);
             obj->drillSoundHandle = sound_submission_route_wrapper(cont,
-                (int)entity_stats_word_at_c0_or_c4((struct EntitySlot*)obj, 0), 1, 1, NULL);
+                (int)entity_stats_word_at_c0_or_c4((struct Lego_Object*)obj, 0), 1, 1, NULL);
             obj->flags4 |= 0x100000;
             obj->flags1 &= ~0x10;
         }
@@ -3468,7 +3477,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             by = route[obj->routeBlocksCurrent].blockPos[1];
         }
         if (route == NULL ||
-            !terrain_cell_walkability_query_current((struct EntitySlot*)obj,
+            !terrain_cell_walkability_query_current((struct Lego_Object*)obj,
                 (int)obj->targetBlockPos[0], (int)obj->targetBlockPos[1],
                 obj->flags3 & 0x2000000, 1)) {
             obj->flags1 &= ~8;
@@ -3477,7 +3486,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             sound_handle_stop_forward(obj->drillSoundHandle);
             obj->flags4 &= ~0x100000;
             sound_submission_route_wrapper(cont,
-                (int)entity_stats_word_at_c0_or_c4((struct EntitySlot*)obj, 1), 0, 1, NULL);
+                (int)entity_stats_word_at_c0_or_c4((struct Lego_Object*)obj, 1), 0, 1, NULL);
             ((void (*)(int, int, int))flic_opcode27_fallback_noop)(0, 0, 0);
             obj->flags3 &= ~0x4000;
         } else if (legoobject_work_object_position_get(obj, &wx, &wy)) {
@@ -3485,13 +3494,13 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                 ((void (*)(void*, void*, int))flic_opcode27_fallback_noop)(
                     renderer_cached_handle_40_get_or_create(obj->miniFigure),
                     lego_mode_dependent_field24_get(), 0);
-            speed = entity_stats_float_at24_indexed((struct EntitySlot*)obj,
+            speed = entity_stats_float_at24_indexed((struct Lego_Object*)obj,
                 lego_terrain_cell_material_get((int)obj->targetBlockPos[0], (int)obj->targetBlockPos[1]));
-            if ((entity_stats_word_get((struct EntitySlot*)obj) & 1) && (obj->flags3 & 0x2000000))
+            if ((entity_stats_word_get((struct Lego_Object*)obj) & 1) && (obj->flags3 & 0x2000000))
                 speed *= 0.5f;
             if (terrain_cell_drill_work_add_current((int)obj->targetBlockPos[0],
                     (int)obj->targetBlockPos[1], speed, elapsed)) {
-                if (terrain_cell_walkability_query_current((struct EntitySlot*)obj,
+                if (terrain_cell_walkability_query_current((struct Lego_Object*)obj,
                         (int)obj->targetBlockPos[0], (int)obj->targetBlockPos[1],
                         obj->flags3 & 0x2000000, 1)) {
                     cell.x = (int)obj->targetBlockPos[0];
@@ -3501,7 +3510,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                     else
                         ok = lego_terrain_cell_mutate((struct Lego_Level*)level_current_owner_get(), bx, by, 0);
                     if (ok) {
-                        entity_command_unlink_by_kind((struct EntitySlot*)obj, 8, NULL, 1);
+                        entity_command_unlink_by_kind((struct Lego_Object*)obj, 8, NULL, 1);
                         obj->flags1 &= ~8;
                         level_tile_mark_current_target((int*)&cell, 0);
                         if (((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags == 1)
@@ -3510,7 +3519,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                         sound_handle_stop_forward(obj->drillSoundHandle);
                         obj->flags4 &= ~0x100000;
                         sound_submission_route_wrapper(cont,
-                            (int)entity_stats_word_at_c0_or_c4((struct EntitySlot*)obj, 1), 0, 1, NULL);
+                            (int)entity_stats_word_at_c0_or_c4((struct Lego_Object*)obj, 1), 0, 1, NULL);
                         ((void (*)(int, int, int))flic_opcode27_fallback_noop)(0, 0, 0);
                         obj->flags3 &= ~0x4000;
                     }
@@ -3643,7 +3652,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                 target->numCarriedObjects++;
                 obj->flags2 &= ~0x80000000;
                 legoobject_set_activity(obj, 0, 0);
-                entity_command_unlink_by_kind((struct EntitySlot*)obj, 0x1e, NULL, 1);
+                entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x1e, NULL, 1);
                 target->flags4 &= ~0x10000;
             }
         } else {
@@ -3684,7 +3693,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
     } else if (obj->flags1 & 0x2000) {
         if (obj->animTime > legoobject_zero) {
             obj->flags1 &= ~0x2000;
-            entity_command_unlink_by_kind((struct EntitySlot*)obj, 5, obj, 1);
+            entity_command_unlink_by_kind((struct Lego_Object*)obj, 5, obj, 1);
             legoobject_simulation_queue_flush(obj);
         } else if (obj->routeToObject != NULL) {
             obj->routeToObject->flags3 |= 0x1000000;
@@ -3698,7 +3707,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         if (obj->flags2 & 0x10000) legoobject_terrain_cell_variant_update_queue(obj);
         if (obj->animTime > legoobject_zero) {
             obj->flags2 &= ~0x200000;
-            entity_command_unlink_by_kind((struct EntitySlot*)obj, 0x19, NULL, 1);
+            entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x19, NULL, 1);
             if (!(obj->flags2 & 0x20000)) legoobject_terrain_cell_variant_update_queue(obj);
         }
     } else if (obj->flags2 & 0x40000) {
@@ -3713,7 +3722,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             obj->flags3 &= ~0x80000000;
         }
     } else if (obj->flags1 & 0x1000000) {
-        if ((entity_state_flags_get((struct EntitySlot*)obj) & 0x80000) &&
+        if ((entity_state_flags_get((struct Lego_Object*)obj) & 0x80000) &&
             obj->routeToObject != NULL && !(obj->routeToObject->flags4 & 0x10)) {
             if (legoobject_shared_eligibility_check(obj->routeToObject, 0)) {
                 info_send(0xf, NULL, obj->routeToObject, NULL);
@@ -3727,7 +3736,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         if (obj->animTime > legoobject_zero) {
             if (!(obj->flags2 & 0x20000) && legoobject_progress_negative_delta_handle(obj)) {
                 obj->flags2 &= ~0x80000;
-                entity_command_unlink_by_kind((struct EntitySlot*)obj, 10, NULL, 1);
+                entity_command_unlink_by_kind((struct Lego_Object*)obj, 10, NULL, 1);
             }
             if (obj->flags2 & 0x80000) {
                 cont = legoobject_type_component_get(obj);
@@ -3739,15 +3748,15 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                     legoobject_activity_scene_state_update();
                     obj->routeToObject = NULL;
                 }
-                entity_command_unlink_by_kind((struct EntitySlot*)obj, 10, NULL, 1);
+                entity_command_unlink_by_kind((struct Lego_Object*)obj, 10, NULL, 1);
             }
         }
     } else if (obj->flags1 & 0x40000000) {
         if (obj->animTime > legoobject_zero) {
             if (legoobject_progress_advance_by_25(obj)) {
                 obj->flags1 &= ~0x40000000;
-                entity_command_unlink_by_kind((struct EntitySlot*)obj, 0x10, NULL, 1);
-                entity_command_unlink_by_kind((struct EntitySlot*)obj, 0x11, NULL, 1);
+                entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x10, NULL, 1);
+                entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x11, NULL, 1);
             } else {
                 cont = legoobject_type_component_get(obj);
                 ddiscene_frame_update_and_callbacks(cont, obj->animTime);
@@ -3756,27 +3765,27 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
     } else if (obj->flags2 & 0x40) {
         obj->flags2 &= ~0x40;
         if (obj->aiTask != NULL) {
-            legoobject_activity_grant(obj, ((LegoObjJ_AITask*)obj->aiTask)->activity);
-            entity_command_unlink_by_kind((struct EntitySlot*)obj, 0x13, NULL, 1);
+            legoobject_activity_grant(obj, (int)(intptr_t)((LegoObjJ_AITask*)obj->aiTask)->field_38);
+            entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x13, NULL, 1);
         }
     } else if (obj->flags2 & 0x400) {
         if (obj->animTime > legoobject_zero) {
             obj->flags2 &= ~0x400;
-            entity_command_unlink_by_kind((struct EntitySlot*)obj, 0x17, NULL, 1);
+            entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x17, NULL, 1);
         }
     } else if (obj->flags2 & 0x8000) {
         if (obj->type == 2) {
             if (obj->routeToObject != NULL) {
                 if (!(animation_object_time_get((struct AnimationObject*)obj->miniFigure) <
-                      entity_stats_float_atf4((struct EntitySlot*)obj) *
-                          entity_speed_component_get((struct EntitySlot*)obj->routeToObject))) {
+                      entity_stats_float_atf4((struct Lego_Object*)obj) *
+                          entity_speed_component_get((struct Lego_Object*)obj->routeToObject))) {
                     unsigned int upgrade;
-                    entity_command_unlink_by_kind((struct EntitySlot*)obj, 0x15, NULL, 1);
+                    entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x15, NULL, 1);
                     legoobject_set_activity(obj, 0, 0);
                     legoobject_activity_register_bookkeeping(obj);
                     upgrade = obj->objLevel + 1;
                     if (upgrade < building_upgrade_admission_check(obj->type, obj->id)) {
-                        entity_building_index_set((struct EntitySlot*)obj, upgrade);
+                        entity_building_index_set((struct Lego_Object*)obj, upgrade);
                         building_upgrade_state_changed_dispatch(obj->type, obj->id, obj->objLevel, 0);
                     }
                     obj->routeToObject = NULL;
@@ -3787,10 +3796,10 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             }
         } else if (obj->animTime > legoobject_zero) {
             if (obj->routeToObject == NULL ||
-                !(entity_state_flags_get((struct EntitySlot*)obj->routeToObject) & 2)) {
+                !(entity_state_flags_get((struct Lego_Object*)obj->routeToObject) & 2)) {
                 obj->flags2 &= ~0x8000;
             } else if (!(obj->routeToObject->flags2 & 0x8000)) {
-                entity_command_unlink_by_kind((struct EntitySlot*)obj, 0x15, NULL, 1);
+                entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x15, NULL, 1);
                 if ((unsigned int)lego_upgrade_resource_check(0) >=
                     entity_mapped_indexed_record_word_at_fc_get(obj->type, obj->id, obj->field_404)) {
                     legoobject_indexed_flag_set_and_refresh(obj);
@@ -3832,8 +3841,8 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         legoobject_activity_timeout_accumulate_and_raise(obj, elapsed);
         legoobject_proximity_activity_raise(obj);
         if (obj->flags2 & 0x4000000) {
-            if (!entity_centers_within_configured_radius((struct EntitySlot*)obj,
-                    (struct EntitySlot*)((LegoObjJ_AITask*)obj->aiTask)->object) ||
+            if (!entity_centers_within_configured_radius((struct Lego_Object*)obj,
+                    (struct Lego_Object*)((LegoObjJ_AITask*)obj->aiTask)->object) ||
                 object_pair_ray_hit_check(obj, ((LegoObjJ_AITask*)obj->aiTask)->object))
                 obj->flags2 &= ~0x4000000;
             else
@@ -3869,7 +3878,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             LegoObjJ_Point2I blockPos;
             blockPos.x = (int)obj->targetBlockPos[0];
             blockPos.y = (int)obj->targetBlockPos[1];
-            if (!(entity_state_flags_get((struct EntitySlot*)obj) & 0x100000) &&
+            if (!(entity_state_flags_get((struct Lego_Object*)obj) & 0x100000) &&
                 !terrain_cell_walkable_flag_current(blockPos.x, blockPos.y)) {
                 obj->flags1 &= ~0x20000;
                 obj->flags2 |= 0x20;
@@ -3879,7 +3888,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                     legoobject_set_activity(obj, 0xd, 0);
                     legoobject_activity_register_bookkeeping(obj);
                 }
-                if (entity_state_flags_get((struct EntitySlot*)obj) & 0x10000000)
+                if (entity_state_flags_get((struct Lego_Object*)obj) & 0x10000000)
                     lego_terrain_cell_flag20_clear_and_refresh((int*)&blockPos);
             } else {
                 legoobject_set_activity(obj, 0xd, 0);
@@ -3915,17 +3924,17 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                 obj->carriedObjects[obj->numCarriedObjects]->carryingThisObject = obj;
                 obj->carriedObjects[obj->numCarriedObjects]->carryingIndex = obj->numCarriedObjects;
                 obj->flags1 |= 0x400;
-                entity_command_unlink_by_kind((struct EntitySlot*)obj, 3,
+                entity_command_unlink_by_kind((struct Lego_Object*)obj, 3,
                     obj->carriedObjects[obj->numCarriedObjects], 1);
-                ai_idle_chain_record_attach((struct EntitySlot*)obj);
+                ai_idle_chain_record_attach((struct Lego_Object*)obj);
                 obj->numCarriedObjects++;
             }
         } else if (obj->flags1 & 0x2000) {
             legoobject_set_activity(obj, 0x1d, 0);
             target = obj->routeToObject;
             if (target != NULL &&
-                ((entity_stats_word_get((struct EntitySlot*)target) & 4) ||
-                 (entity_stats_word_get((struct EntitySlot*)target) & 2))) {
+                ((entity_stats_word_get((struct Lego_Object*)target) & 4) ||
+                 (entity_stats_word_get((struct Lego_Object*)target) & 2))) {
                 target = obj->routeToObject;
                 if (!(target->flags1 & 0x2000) && !(target->flags3 & 0x1000000) &&
                     target->numCarriedObjects != target->carryNullFrames)
@@ -3941,7 +3950,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             legoobject_position_to_terrain_cell(obj, &blockPos.x, &blockPos.y);
             if (((unsigned int)terrain_cell_speed_class_current((int*)&blockPos) > 2 ||
                  ((LegoObjJ_Level*)g_active_level_retail)->blocks[
-                     ((LegoObjJ_Level*)g_active_level_retail)->width * blockPos.y + blockPos.x].terrain == 9) &&
+                     ((LegoObjJ_Level*)g_active_level_retail)->width * blockPos.y + blockPos.x].f_02 == 9) &&
                 (obj->flags3 & 0x10000000))
                 legoobject_set_activity(obj, 0x12, 0);
             else
@@ -3956,7 +3965,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                 legoobject_set_activity(obj, 3, 0);
             else if (((unsigned int)terrain_cell_speed_class_current((int*)&blockPos) > 2 ||
                       ((LegoObjJ_Level*)g_active_level_retail)->blocks[
-                          ((LegoObjJ_Level*)g_active_level_retail)->width * blockPos.y + blockPos.x].terrain == 9) &&
+                          ((LegoObjJ_Level*)g_active_level_retail)->width * blockPos.y + blockPos.x].f_02 == 9) &&
                      (obj->flags3 & 0x10000000))
                 legoobject_set_activity(obj, 2, 0);
             else
@@ -3981,7 +3990,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         }
     } else if (legoobject_activity_terrain_eligibility_transition(obj, elapsed, &transitionDone)) {
         if (transitionDone)
-            entity_command_unlink_by_kind((struct EntitySlot*)obj, 0xb, NULL, 1);
+            entity_command_unlink_by_kind((struct Lego_Object*)obj, 0xb, NULL, 1);
     } else if (obj->flags1 & 0x100) {
         if (obj->animTime > legoobject_zero) {
             obj->flags1 &= ~0x100;
@@ -4001,7 +4010,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
     } else if (obj->flags2 & 4) {
         target = obj->routeToObject;
         obj->flags2 &= ~4;
-        entity_command_unlink_by_kind((struct EntitySlot*)obj, 0x12, NULL, 1);
+        entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x12, NULL, 1);
         obj->flags2 |= 8;
         target->flags4 &= ~0x80;
         if (target->routeToObject != NULL)
@@ -4011,7 +4020,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         obj->driveObject = target;
         target->driveObject = obj;
         obj->routeToObject = NULL;
-        interface_object_menu_check((struct LegoObject*)obj->driveObject);
+        interface_object_menu_check((struct Lego_Object*)obj->driveObject);
         legoobject_pose_orientation_dispatch(obj, elapsed);
         target->activityName2 = NULL;
         legoobject_activity_register_bookkeeping(target);
@@ -4028,20 +4037,20 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             LegoObjJ_Point2I blockPos;
             legoobject_position_to_terrain_cell(obj, &blockPos.x, &blockPos.y);
             descriptor = terrain_descriptor_find_exact_current((const uint32_t*)&blockPos, NULL);
-            if (descriptor != NULL && (LEGOOBJ_FIELD(descriptor, unsigned char, 0xd0) & 2)) {
+            if (descriptor != NULL && (((Lego_ConstructionZone*)descriptor)->flags & 2)) {
                 terrain_cell_variant_flag_propagate_current((int*)&blockPos);
                 simtick_selection_group_release((const uint32_t*)&blockPos);
                 info_send(0x20, NULL, NULL, (struct InfoPoint2I*)&blockPos);
                 aitask_task_pair_record_enqueue((int*)&blockPos);
             }
             obj->flags2 &= ~0x200;
-            entity_command_unlink_by_kind((struct EntitySlot*)obj, 0x16, NULL, 1);
+            entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x16, NULL, 1);
         }
     } else if (obj->flags1 & 0x40000) {
         if (obj->type == 1) legoobject_pose_orientation_dispatch(obj, elapsed);
         if (obj->animTime > legoobject_zero) {
             obj->flags1 &= ~0x40000;
-            entity_command_unlink_by_kind((struct EntitySlot*)obj, 0xc, NULL, 1);
+            entity_command_unlink_by_kind((struct Lego_Object*)obj, 0xc, NULL, 1);
             if (obj->type == 1) legoobject_set_activity(obj, 0, 0);
         }
     } else if (obj->flags1 & 0x80000000) {
@@ -4076,7 +4085,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                 (Lego_Object*)obj->field_3c0, 10.0f, 1, elapsed);
             legoobject_set_activity(obj, 0, 0);
         }
-    } else if (entity_neighbor_blocked_cell_step_probe((struct EntitySlot*)obj, elapsed, 0)) {
+    } else if (entity_neighbor_blocked_cell_step_probe((struct Lego_Object*)obj, elapsed, 0)) {
     } else if ((result = legoobject_movement_accumulator_apply(obj, elapsed, &tickResult)) != 0) {
         float wx, wy;
         if (result == 1) {
@@ -4094,18 +4103,18 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             float speed;
             if (terrain_map_world_to_block(Lego_GetMap(), wx, wy, &bx, &by) &&
                 terrain_cell_walkable_flag_current(bx, by)) {
-                speed = entity_stats_float_at24_indexed((struct EntitySlot*)obj,
+                speed = entity_stats_float_at24_indexed((struct Lego_Object*)obj,
                     lego_terrain_cell_material_get(bx, by));
                 if (!(obj->flags4 & 0x20000)) {
                     legoobject_type_component_get(obj);
                     obj->drillSoundHandle = sound_alias_play(
-                        (int)entity_stats_word_at_c0_or_c4((struct EntitySlot*)obj, 0), 1);
+                        (int)entity_stats_word_at_c0_or_c4((struct Lego_Object*)obj, 0), 1);
                     obj->flags4 |= 0x120000;
                 }
                 stopDrillSound = 0;
                 legoobject_set_activity(obj, 4, 0);
                 if (terrain_cell_drill_work_add_current(bx, by, speed, elapsed) &&
-                    terrain_cell_walkability_query_current((struct EntitySlot*)obj, bx, by, 0, 1))
+                    terrain_cell_walkability_query_current((struct Lego_Object*)obj, bx, by, 0, 1))
                     lego_terrain_cell_mutate((struct Lego_Level*)level_current_owner_get(), bx, by, 0);
             }
         }
@@ -4121,13 +4130,13 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                     target = obj->carriedObjects[0];
                     if (target->type == 5) {
                         target = legoobject_query_center_mask_from_argument(obj, 0x400);
-                        cmd_produce(0x22, obj, (int)(uintptr_t)target, NULL);
+                        cmd_produce(0x22, obj, (uintptr_t)target, NULL);
                     } else {
                         obj->carriedObjects[0] = NULL;
                         obj->numCarriedObjects = 0;
                         target->carryingThisObject = NULL;
                         target->interactObject = NULL;
-                        entity_command_unlink_by_kind((struct EntitySlot*)obj, 3, target, 1);
+                        entity_command_unlink_by_kind((struct Lego_Object*)obj, 3, target, 1);
                         legoobject_action_record_consume_and_cleanup(obj, target);
                         obj->flags1 &= ~0x400;
                     }
@@ -4160,7 +4169,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         legoobject_type_component_get(obj);
         sound_handle_stop_forward(obj->drillSoundHandle);
         obj->flags4 &= ~0x100000;
-        sound_alias_play((int)entity_stats_word_at_c0_or_c4((struct EntitySlot*)obj, 1), 0);
+        sound_alias_play((int)entity_stats_word_at_c0_or_c4((struct Lego_Object*)obj, 1), 0);
         obj->flags4 &= ~0x20000;
     }
     legoobject_activity_register_bookkeeping(obj);
@@ -4168,7 +4177,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         legoobject_scene_object_pose_position_sync(obj);
     if (obj->flags1 & 0x400)
         legoobject_attached_direction_vector_update(obj);
-    if (entity_flag100_and_shared_eligibility_check((struct EntitySlot*)obj))
+    if (entity_flag100_and_shared_eligibility_check((struct Lego_Object*)obj))
         ((int (*)(void*, float))entity_velocity_slot_dispatch)(obj, elapsed);
     ((void (*)(Lego_Object*, float))legoobject_behavior_callback_tick)(obj, elapsed);
     legoobject_motion_to_scene_node_sync(obj, *(float*)data);
@@ -4272,7 +4281,7 @@ void legoobject_trigger_frame_callback(void* cont, void* data)
 {
     Lego_Object* owner;
 
-    owner = (Lego_Object*)(size_t)scene_object_owner_get(cont);
+    owner = (Lego_Object*)scene_object_owner_get(cont);
     if (owner != NULL)
         owner->flags2 |= 0x10000;
 }
@@ -4497,7 +4506,7 @@ void legoobject_energy_low_target_route_command_tick(Lego_Object* obj, float ela
 
     legoobject_position_to_terrain_cell(obj, &blockPos[0], &blockPos[1]);
     if (obj->carryingThisObject == NULL &&
-        LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos[1] + blockPos[0]].terrain == 6 &&
+        LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos[1] + blockPos[0]].f_02 == 6 &&
         (obj->type == 7 || obj->type == 6))
     {
         level_state_field9c_add(1);
@@ -4856,7 +4865,7 @@ int legoobject_level_debug_cell_retarget_dispatch(Lego_Object* obj, Lego_Object*
 
     cont = NULL;
     task = (LegoObjI_AITask*)obj->aiTask;
-    if ((task == NULL || (task->taskType == 0x12 && LEGOOBJ_FIELD(task, int, 0x60) == 0)) &&
+    if ((task == NULL || (task->type == 0x12 && task->next == NULL)) &&
         obj->driveObject == NULL && target->driveObject == NULL && obj->type == 2)
     {
         if ((obj->abilityFlags & 5) && (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x2000000) &&
@@ -5075,7 +5084,7 @@ void legoobject_attached_direction_vector_update(Lego_Object* obj)
 
 /* Set every texture frame of a type-5 object's animated texture. */
 // FUNCTION: LEGORR 0x00440bf0
-void legoobject_object_list_field_assign_all(Lego_Object* obj, int value)
+void legoobject_object_list_field_assign_all(Lego_Object* obj, void* value)
 {
     unsigned int count;
     unsigned int i;
@@ -5083,7 +5092,7 @@ void legoobject_object_list_field_assign_all(Lego_Object* obj, int value)
     if (obj->type == 5) {
         count = animated_texture_frame_count(obj->other);
         for (i = 0; i < count; i++)
-            animated_texture_frame_set(obj->other, i, (const void*)(intptr_t)value);
+            animated_texture_frame_set(obj->other, i, value);
     }
 }
 
@@ -5716,7 +5725,7 @@ int legoobject_face_target_action_start(Lego_Object* obj, Lego_Object* target, i
     float objPos[3];
     float len;
 
-    if (obj->field_360 > legoobject_zero || (s_panel_highlight_flags & 4) || target->type != 3)
+    if (obj->weaponCoolDown > legoobject_zero || (s_panel_highlight_flags & 4) || target->type != 3)
         return 0;
     if (legoobject_flags_mask107c33de_or_1c00203_any_test(obj))
         return 0;
@@ -5791,7 +5800,7 @@ void legoobject_kind_effect_slot_init_dispatch(Lego_Object* obj, int kind)
         object_flight_curve_record_init(obj, wPos, obj->weaponTarget, weapon, 4);
         break;
     }
-    obj->field_360 = weapon_type_recharge_time_get_target(weapon);
+    obj->weaponCoolDown = weapon_type_recharge_time_get_target(weapon);
 }
 
 /* Stop the object (dropping what it carries), start activity 0x4d and
@@ -5921,7 +5930,7 @@ float legoobject_world_z_callback_lake(float x, float y, struct TerrainMap* map)
 
     centre = 0.0f;
     if (terrain_map_world_to_block_centre(map, x, y, &blockPos[0], &blockPos[1], &centre)) {
-        if (LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos[1] + blockPos[0]].terrain == 9)
+        if (LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos[1] + blockPos[0]].f_02 == 9)
             centre *= 8.0f;
         else
             centre = 0.0f;
@@ -6599,7 +6608,7 @@ void legoobject_activity_timeout_accumulate_and_raise(Lego_Object* obj, float el
                 obj->field_33c * 0.04f > rate * obj->health) {
                 legoobject_position_to_terrain_cell(obj, &blockPos.x, &blockPos.y);
                 if (!terrain_cell_state_equals_six_current(&blockPos.x) &&
-                    LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos.y + blockPos.x].terrain != 9 &&
+                    LegoObjG_currLevel->blocks[LegoObjG_currLevel->width * blockPos.y + blockPos.x].f_02 != 9 &&
                     obj->routeBlocksCurrent != obj->routeBlocksTotal - 1) {
                     obj->field_33c = 0.0f;
                     obj->flags3 |= 0x4000;
@@ -7224,17 +7233,17 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
     }
 
     if (obj->type == 2 && (entity_stats_word_get(LEGOOBJ_SLOT(monster)) & 0x200000)) {
-        x = pos.x - LEGOOBJ_FIELD(monster, LegoObjO_Home*, 0x32c)->x;
-        y = pos.y - LEGOOBJ_FIELD(monster, LegoObjO_Home*, 0x32c)->y;
+        x = pos.x - monster->field_32c->x;
+        y = pos.y - monster->field_32c->y;
         if ((float)sqrt(x * x + y * y) < entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) + radius) {
             legoobject_damage_apply(obj, entity_indexed_float_lookup_with_minus_one_fallback(
                                              // STRING: LEGORR 0x004a50c8
                                              object_type_name_index_find("BatAttack"), obj),
                                     1, 1.0f);
             monster->flags2 |= 0x80;
-            if (!(LEGOOBJ_FIELD(monster, LegoObjO_Home*, 0x32c)->flags & 1)) {
-                aitask_entity_task_batch_append((struct EntitySlot**)&monster, 1, LEGOOBJ_SLOT(obj));
-                LEGOOBJ_FIELD(monster, LegoObjO_Home*, 0x32c)->flags |= 1;
+            if (!(monster->field_32c->flags & 1)) {
+                aitask_entity_task_batch_append((struct Lego_Object**)&monster, 1, LEGOOBJ_SLOT(obj));
+                monster->field_32c->flags |= 1;
             }
         }
     }
@@ -7410,10 +7419,10 @@ float animation_object_value_get(void* object);                            /* 00
  * constant_zero_float_get, which takes no argument in the port). */
 double constant_zero_float_get(void* building);                            /* 00408930 */
 /* Stats.c (entity.hpp, entity_stats.c). */
-float entity_stats_float_at20(const struct EntitySlot* e);                 /* 00469cb0 */
-float entity_stats_float_atd4(const struct EntitySlot* e);                 /* 00469ce0 */
-float entity_stats_float_atd8(const struct EntitySlot* e);                 /* 00469d20 */
-void* entity_stats_field_at_a0_corpus(const struct EntitySlot* e);         /* 00469da0 */
+float entity_stats_float_at20(const struct Lego_Object* e);                 /* 00469cb0 */
+float entity_stats_float_atd4(const struct Lego_Object* e);                 /* 00469ce0 */
+float entity_stats_float_atd8(const struct Lego_Object* e);                 /* 00469d20 */
+void* entity_stats_field_at_a0_corpus(const struct Lego_Object* e);         /* 00469da0 */
 /* Kept, unreferenced: the old names of legoGlobs fields (lego_globs.h,
  * finding 653), so that the symbol counter below does not move.
  * Deviation (scoring only). */
@@ -7656,7 +7665,7 @@ void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapse
             coef = 1.0f - coef * (1.0f - entity_stats_float_atd4(LEGOOBJ_SLOT(obj)));
             if (level_cell_occupied_at_current(blockPos)) coef = entity_stats_float_atd8(LEGOOBJ_SLOT(obj)) * coef;
             if (obj->type == 2 &&
-                ((LegoObjJ_Level*)g_active_level_retail)->blocks[((LegoObjJ_Level*)g_active_level_retail)->width * blockPos[1] + blockPos[0]].terrain == 9)
+                ((LegoObjJ_Level*)g_active_level_retail)->blocks[((LegoObjJ_Level*)g_active_level_retail)->width * blockPos[1] + blockPos[0]].f_02 == 9)
             {
                 coef = (1.0f - centre * 0.8f) * coef;
             }
@@ -7863,7 +7872,7 @@ int legoobject_conditional_type_five_spawn(Lego_Object* obj)
         legoobject_world_position_set(boulder, 10000.0f, 10000.0f, 0.0f, 1);
         legoobject_type_operation_dispatch(boulder, 1);
         if (legoobject_try_create_linked_at_position(obj, blockPos[0], blockPos[1], boulder)) {
-            legoobject_object_list_field_assign_all(boulder, (int)(uintptr_t)lego_terrain_cell_palette_resource_at_grid_position(blockPos));
+            legoobject_object_list_field_assign_all(boulder, lego_terrain_cell_palette_resource_at_grid_position(blockPos));
             obj->field_33c = 0.0f;
             return 1;
         }
@@ -7973,7 +7982,7 @@ extern float legoGlobs_DrainTime;                                          /* 00
 #define legoGlobs_DrainTime legoGlobs.DrainTime
 
 /* Stats.c (entity.hpp, entity_stats.c). */
-float entity_stats_float_at88(const struct EntitySlot* e);                 /* 00469f20 */
+float entity_stats_float_at88(const struct Lego_Object* e);                 /* 00469f20 */
 /* Vehicle.c (vehicle_model.h, vehicle_model.c). */
 float vehicle_move_animation(struct VehicleModel* vehicle, float elapsed1, float elapsed2,
                              unsigned int repeats);                        /* 0046d1c0 */
@@ -8510,9 +8519,9 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
 /* ---- state and imports, group R (004487c0-00449ac0; part 3, issue #615) ---- */
 
 /* Lego.c (lego_unit.c): the level's cell predicates and markers. */
-int lego_entity_move_destination_cell_usable(struct EntitySlot* liveObj, unsigned int bx, unsigned int by); /* 00432950 */
+int lego_entity_move_destination_cell_usable(struct Lego_Object* liveObj, unsigned int bx, unsigned int by); /* 00432950 */
 int level_cell_flag8_check_target(const void* unused, int bx, int by); /* 004329d0 */
-int lego_terrain_cell_allows_placement(struct EntitySlot* liveObj, unsigned int bx, unsigned int by); /* 00432a20 */
+int lego_terrain_cell_allows_placement(struct Lego_Object* liveObj, unsigned int bx, unsigned int by); /* 00432a20 */
 void terrain_cell_flag_80000_clear_or_set_current(const int blockPos[2], int on); /* 00432710 */
 void terrain_cell_flag_10000000_set_current(const int cell_xy[2], int set); /* 00433120 */
 void lego_terrain_cell_queued_work_transition(unsigned int bx, unsigned int by); /* 00431140 */
@@ -9185,7 +9194,7 @@ extern uint32_t s_engine_feature_word;            /* 00505f84 mainGlobs.flags */
 void media_pointer_cursor_select(int slot);                             /* 0045cc20 */
 void selection_clear_request_and_hud_reset(void);                       /* 0041e750 */
 void surface_visibility_set(const void* record, uint32_t flag);         /* 00464720 */
-void cmd_operation_group_append_object(uint32_t key, struct EntitySlot* entity); /* 00408ce0 */
+void cmd_operation_group_append_object(uint32_t key, struct Lego_Object* entity); /* 00408ce0 */
 uint32_t entity_indexed_record_word_at_b0_get(int type, int id, int level); /* 00469ac0 */
 uint32_t stats_table_word_at_b8(int type, int id, int level);           /* 00469b20 */
 uint32_t stats_table_word_at_d0(int type, int id, int level);           /* 00469f60 */
@@ -9206,11 +9215,7 @@ void construction_zone_request_resource(int* blockPos, int objType,
                                         unsigned int count);        /* 00408e50 */
 
 /* Lego_Level's block grid size. */
-typedef struct LegoObjS_Level {
-    unsigned char pad_00[0x14];
-    unsigned int width;               /* +0x14 */
-    unsigned int height;              /* +0x18 */
-} LegoObjS_Level;
+typedef struct Lego_Level LegoObjS_Level;
 
 /* Map3D's block size (Map3D +0x10). */
 typedef struct LegoObjS_Map {
@@ -9242,7 +9247,7 @@ void legoobject_render_step_callback(void* group, void* item, void* data)
     int bx;
     int by;
 
-    cont = LEGOOBJ_FIELD(item, void*, 0x98);
+    cont = ((SteeringItem*)item)->container;
     ddiscene_object_position_get(cont, NULL, wPos);
     terrain_map_world_to_block(Lego_GetMap(), wPos[0], wPos[1], &bx, &by);
     if ((unsigned int)bx <= ((LegoObjS_Level*)level_current_owner_get())->width &&
@@ -9321,7 +9326,7 @@ int legoobject_hide_check_callback(Lego_Object* obj, void* data)
                 else
                     dir = 2;
             }
-            shape = (LegoObjF_Point2I*)task_field84_get_and_field88_out((char*)legoGlobs_buildingData + obj->id * 0x14c, &count);
+            shape = (LegoObjF_Point2I*)task_field84_get_and_field88_out(&legoGlobs_buildingData[obj->id], &count);
             shape = (LegoObjF_Point2I*)rotated_pairs_scratch_fill(&shapePos.x, (int*)shape, count, dir);
             for (i = 0; i < count; i++) {
                 next = &shape[i + 1];
@@ -9683,7 +9688,7 @@ int legoobject_building_placement_preview_update(int objType, int objID, int cli
     if (objType == 4) {
         if (active) {
             if (terrain_cell_flag_8_bounded_current(bx, by)) {
-                shape = (int*)task_field84_get_and_field88_out((char*)legoGlobs_buildingData + objID * 0x14c, &count);
+                shape = (int*)task_field84_get_and_field88_out(&legoGlobs_buildingData[objID], &count);
                 waterEntrances = stats_table_word_at_d0(4, objID, 0);
                 surface_visibility_set(surface, 0);
                 terrain_map_block_to_world(Lego_GetMap(), bx, by, &wPos.x, &wPos.y);
@@ -9699,7 +9704,7 @@ int legoobject_building_placement_preview_update(int objType, int objID, int cli
                     legoGlobs_f_556448 = 2;
                 for (i = 0; i < 5; i++) {
                     placed = legoobject_gs_placement_footprint_check_adapter(surface, &blockPos.x, shape, count,
-                        (i + legoGlobs_f_556448) & 3, LEGOOBJ_FIELD(g_active_level_retail, void*, 0x4),
+                        (i + legoGlobs_f_556448) & 3, g_active_level_retail->map,
                         waterEntrances);
                     if (placed != NULL) {
                         if (!toolTipOnly) {
@@ -9846,31 +9851,16 @@ void legoobject_random_kind_six_scatter_spawn(Lego_Object* obj, unsigned int cou
 /* ---- state and imports, group T (0044af90-0044c5f0; part 3, issue #615) ---- */
 
 /* Stats.c (entity.hpp, ai.hpp; entity_stats.c). */
-int ai_activity_cap(const struct EntitySlot* e);                           /* 0046a060 */
+int ai_activity_cap(const struct Lego_Object* e);                           /* 0046a060 */
 int entity_grouped_code_table_find_value_index(uint32_t value, int* outTool); /* 0046a120 */
 /* Interface.c (interface_unit.h). */
-void interface_back_to_main_if_selected(struct LegoObject* obj);           /* 0041d010 */
+void interface_back_to_main_if_selected(struct Lego_Object* obj);           /* 0041d010 */
 
 /* Group T, 0044b680-0044c5f0. A flock (steering.c's SteeringGroup, 0x28
  * bytes) and its items (SteeringItem, 0xa0 bytes): the fields this unit
  * reads. */
-typedef struct LegoObjT_FlockItem {
-    float target[3];                  /* +0x00 */
-    unsigned char pad_0c[0x24 - 0x0c];
-    float yaw;                        /* +0x24 */
-    float pitch;                      /* +0x28 */
-    unsigned char pad_2c[0x58 - 0x2c];
-    float transform[16];              /* +0x58 row 3 is the position */
-    void* container;                  /* +0x98 */
-    void* next;                       /* +0x9c */
-} LegoObjT_FlockItem;
-typedef struct LegoObjT_Flock {
-    LegoObjT_FlockItem* leader;       /* +0x00 */
-    unsigned char pad_04[0x14 - 0x04];
-    float attackTime;                 /* +0x14 */
-    unsigned char pad_18[0x24 - 0x18];
-    unsigned int flags;               /* +0x24 bit 0: attacking */
-} LegoObjT_Flock;
+typedef SteeringItem LegoObjT_FlockItem;
+typedef SteeringGroup LegoObjT_Flock;
 /* The data 0044b850 receives: the step and the object's flocks stats. */
 typedef struct LegoObjT_FlockUpdate {
     float elapsed;
@@ -9907,14 +9897,14 @@ void scene_object_list_apply_second_position_callback(void* group, const float* 
 void steering_item_follow_target(void* group, void* item, void* data);  /* 004100d0 */
 int callback_operation_run_and_return_status(void* group);              /* 00410280 */
 /* Stats.c's flocks getters (entity_stats.c; entity_stats_link_names.h). */
-float entity_stats_float_at130(const struct EntitySlot* e);             /* 0046a170 */
-float entity_stats_float_at134(const struct EntitySlot* e);             /* 0046a190 */
-float entity_stats_float_at120(const struct EntitySlot* e);             /* 0046a1b0 */
-float entity_stats_float_at128(const struct EntitySlot* e);             /* 0046a1d0 */
-float entity_stats_float_at124(const struct EntitySlot* e);             /* 0046a1f0 */
-unsigned int entity_stats_word_at13c(const struct EntitySlot* e);       /* 0046a210 */
-float entity_stats_float_at12c(const struct EntitySlot* e);             /* 0046a230 */
-float entity_stats_float_at138(const struct EntitySlot* e);             /* 0046a250 */
+float entity_stats_float_at130(const struct Lego_Object* e);             /* 0046a170 */
+float entity_stats_float_at134(const struct Lego_Object* e);             /* 0046a190 */
+float entity_stats_float_at120(const struct Lego_Object* e);             /* 0046a1b0 */
+float entity_stats_float_at128(const struct Lego_Object* e);             /* 0046a1d0 */
+float entity_stats_float_at124(const struct Lego_Object* e);             /* 0046a1f0 */
+unsigned int entity_stats_word_at13c(const struct Lego_Object* e);       /* 0046a210 */
+float entity_stats_float_at12c(const struct Lego_Object* e);             /* 0046a230 */
+float entity_stats_float_at138(const struct Lego_Object* e);             /* 0046a250 */
 /* G98 Container.c (view.hpp, scene_pool.hpp: C linkage). */
 void* scene_root_object_get(void);                                      /* 00472940 */
 void* ddiscene_object_allocate(const void* cont);                       /* 00472950 */
@@ -9936,7 +9926,7 @@ int terrain_map_screen_pick(struct TerrainMap* map, void* viewport, unsigned int
                             unsigned int my, unsigned int* bx, unsigned int* by,
                             struct TerrainMapVector3* intersection);   /* 004502e0 */
 /* Lego.c (lego_unit.h, lego_unit.c). */
-void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* blockPos,
+void lego_viewport_target_position_clamp(struct Lego_Object* liveObj, const int* blockPos,
                                          int smooth);                   /* 0042de40 */
 /* Kept, unreferenced: the old names of legoGlobs fields (lego_globs.h,
  * finding 653), so that the symbol counter below does not move.
@@ -10072,7 +10062,7 @@ void legoobject_pairing_activity_raise_and_mutual_link(Lego_Object* first, Lego_
         !(second->flags2 & 2) && !legoobject_flags_mask107c33de_or_1c00203_any_test(first) &&
         entity_stats_float_ate8(LEGOOBJ_SLOT(first)) < first->health)
     {
-        interface_back_to_main_if_selected((struct LegoObject*)second);
+        interface_back_to_main_if_selected((struct Lego_Object*)second);
         legoobject_state_reset(second, 0, 1);
         legoobject_state_reset(first, 0, 1);
         legoobject_set_activity(first, 0x25, 1);
@@ -10222,7 +10212,7 @@ void legoobject_scene_object_tree_attach(Lego_Object* obj)
     cont = legoobject_type_component_get(obj);
     root = ddiscene_object_allocate(cont);
     ddiscene_scene_object_attach_or_unlink(root, scene_root_object_get());
-    obj->field_32c = callback_state_record_create(NULL, NULL,
+    obj->field_32c = (SteeringGroup*)callback_state_record_create(NULL, NULL,
         entity_stats_float_at120(LEGOOBJ_SLOT(obj)), entity_stats_float_at124(LEGOOBJ_SLOT(obj)),
         0.0f, obj);
     ((LegoObjT_Flock*)(uintptr_t)obj->field_32c)->leader->container = root;
@@ -10428,9 +10418,9 @@ void legoobject_auxiliary_payload_release(Lego_Object* obj)
         return;
     }
     flock = (LegoObjT_Flock*)obj->field_32c;
-    target[0] = flock->leader->target[0];
-    target[1] = flock->leader->target[1];
-    target[2] = flock->leader->target[2];
+    target[0] = flock->leader->target.x;
+    target[1] = flock->leader->target.y;
+    target[2] = flock->leader->target.z;
     rec->scene_object = flock;
     rec->flags = entity_stats_word_get(LEGOOBJ_SLOT(obj));
     rec->next = s_entity_auxiliary_release_records;
@@ -10671,7 +10661,7 @@ int legoobject_scatter_spawn_drain_callback(Lego_Object* obj, void* data)
         s_object_f_4eabc4++;
         if (obj->type == 4) s_object_f_4eabc8++;
         lego_viewport_target_position_clamp(LEGOOBJ_SLOT(obj), NULL, 0);
-        if (terrain_map_screen_pick((struct TerrainMap*)LEGOOBJ_FIELD(g_active_level_retail, void*, 0x4),
+        if (terrain_map_screen_pick((struct TerrainMap*)g_active_level_retail->map,
                                     legoGlobs_viewMain, s_renderer_word_a, s_renderer_word_b,
                                     &bx, &by, (struct TerrainMapVector3*)wPos))
             ddiscene_object_position_set(legoGlobs_f_556108, NULL, wPos[0], wPos[1], wPos[2] - 250.0f);

@@ -13,13 +13,13 @@
 extern "C" {
 #endif
 
-struct LevelState;
+struct Lego_Level;
 
 uint32_t lego_terrain_cell_secondary_flag_100(const int blockPos[2]); /* 00432170, lego_unit.c */
 uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy, int mode); /* 00432aa0 */
 /* 0042f6f0 Level_BlockUpdateSurface. The port entry takes the column as a
  * float; this adapter, in the GAME-013 port tail, converts it. */
-void level_block_surface_update(struct LevelState* level, int bx, int by,
+void level_block_surface_update(struct Lego_Level* level, int bx, int by,
                                 int reserved);
 
 #ifdef __cplusplus

@@ -33,9 +33,9 @@ extern "C" {
 /* The LegoObject's teleporter fields (+0x390 to +0x398). legoobject_unit.h
  * keeps them as padding, so that its includers' symbol numbering does not
  * change (finding 538). */
-#define TELEPORTER_MODE(obj) LEGOOBJ_FIELD((obj), unsigned int, 0x390)
-#define TELEPORTER_FLAGS(obj) LEGOOBJ_FIELD((obj), unsigned int, 0x394)
-#define TELEPORTER_SERVICE(obj) LEGOOBJ_FIELD((obj), Teleporter_Service*, 0x398)
+#define TELEPORTER_MODE(obj) ((obj))->teleporterMode
+#define TELEPORTER_FLAGS(obj) ((obj))->teleporterFlags
+#define TELEPORTER_SERVICE(obj) ((obj))->teleporterService
 
 /* LegoObject flags3 0x800000 (LIVEOBJ3_REMOVING) and flags4 8
  * (LIVEOBJ4_TELEPORTING). */

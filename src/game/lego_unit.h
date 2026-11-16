@@ -16,92 +16,13 @@
 
 #include <stdint.h>
 
+#include "lego_level_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* ---- group M ---- */
-
-/* Lego_Level (0x284 bytes on Win32): the current level,
- * legoGlobs.currLevel (005560d4). The offsets are the original's; the
- * pointer fields hold real pointers (ADR 0007 decision 4). Unnamed fields
- * are named by offset. */
-
-typedef struct Lego_Block Lego_Block;
-typedef struct Lego_Level {
-    char* name;            /* +0x000 */
-    struct TerrainMap* map; /* +0x004 Map3D */
-    void* emergeMap;       /* +0x008 */
-    uint32_t f_00c;
-    uint32_t f_010;
-    uint32_t width;                 /* +0x014 */
-    uint32_t height;                /* +0x018 */
-    float blockSize;                /* +0x01c */
-    float digDepth;                 /* +0x020 */
-    float roofHeight;               /* +0x024 */
-    float roughLevel;               /* +0x028 */
-    int useRoof;                    /* +0x02c */
-    int safeCaverns;                /* +0x030 */
-    float selBoxHeight;             /* +0x034 */
-    uint32_t f_038[15];             /* +0x038 */
-    uint32_t f_074;                 /* +0x074 tile mesh grid width */
-    uint32_t f_078;                 /* +0x078 tile mesh grid height */
-    void* textureSet;      /* +0x07c Detail_TextureSet */
-    void** f_080;          /* +0x080 tile meshes, f_074 * f_078 */
-    void* f_084;                    /* +0x084 radar map record */
-    uint32_t f_088;
-    int f_08c;                      /* +0x08c */
-    uint32_t f_090;
-    int f_094;                      /* +0x094 */
-    int f_098;                      /* +0x098 */
-    int f_09c;                      /* +0x09c */
-    int crystals;                   /* +0x0a0 */
-    uint32_t f_0a4;
-    int f_0a8;                      /* +0x0a8 */
-    int ore;                        /* +0x0ac */
-    uint32_t f_0b0;                 /* +0x0b0 */
-    char* nextLevel;       /* +0x0b4 */
-    Lego_Block* blocks;     /* +0x0b8 width * height */
-    uint32_t f_0bc[78];             /* +0x0bc objective data */
-    int startFP;                    /* +0x1f4 */
-    int noDrain;                    /* +0x1f8 */
-    float oxygenLevel;              /* +0x1fc */
-    float oxygenRate;               /* +0x200 */
-    float f_204;                    /* +0x204 oxygen level of the last air message */
-    float buildingTolerance;        /* +0x208 */
-    float buildingMaxVariation;     /* +0x20c */
-    float upgradeTimes[20];         /* +0x210 */
-    float trainTime;                /* +0x260 */
-    float emergeTimeOut;            /* +0x264 */
-    float f_268;                    /* +0x268 */
-    uint32_t f_26c;                 /* +0x26c */
-    char* fullName;        /* +0x270 */
-    uint32_t f_274;                 /* +0x274 BoulderAnimation */
-    uint32_t f_278;
-    int status;                     /* +0x27c */
-    int disableStartTeleport;       /* +0x280 */
-} Lego_Level;
-
-/* Lego_Block (0x48 bytes): one map block, currLevel->blocks[y * width + x]. */
-struct Lego_Block {
-    unsigned char f_00;
-    unsigned char texture;          /* +0x01 */
-    unsigned char f_02;
-    unsigned char f_03;
-    unsigned char f_04;
-    unsigned char f_05;
-    unsigned char f_06;
-    unsigned char f_07;
-    uint32_t flags1;                /* +0x08 */
-    uint32_t flags2;                /* +0x0c */
-    uint32_t f_10[14];              /* +0x10 */
-};
-
-/* A field of an original record the port does not lay out as the original
- * (LegoObject, LegoCamera and the like), read by offset as the original
- * code does. The offsets are the Win32 layout; only the matching and
- * Win32 reference builds run this code. */
-#define LEGO_FIELD(ptr, type, offset) (*(type*)((char*)(ptr) + (offset)))
 
 /* legoGlobs.currLevel: the port's g_active_level_retail (terrain_grid.cpp,
  * 005560d4) through the original's view. */
@@ -114,7 +35,7 @@ struct Lego_Block {
  * does not move (finding 538). Three of them (flags1, cameraFP and the
  * field at 005560f8) are dropped instead, which pays for lego_globs.h's
  * three symbols in the units that include both. Deviation (scoring only). */
-extern uint32_t legoGlobs_f_556104;             /* 00556104 */
+extern void* legoGlobs_f_556104;                /* 00556104 */
 extern void* legoGlobs_selectedObject;          /* 00556160 */
 
 /* Shared: their callers already use the original's contract. */
@@ -151,7 +72,7 @@ void lego_game_speed_set(float speed);
 void* lego_terrain_cell_palette_resource_at_grid_position(const int* xy);
 void lego_global_triple_copy_out(uint32_t* out);
 void lego_objective_task_text_origin_set(const float* pair);
-uint32_t lego_context_selected_global_pointer_get(void);
+void* lego_context_selected_global_pointer_get(void);
 int lego_entity_matches_current_selection_or_owner(const void* object);
 
 
@@ -296,8 +217,8 @@ extern int legoGlobs_f_556440;                  /* 00556440 */
 extern int legoGlobs_f_556444;                  /* 00556444 */
 extern int legoGlobs_mouseBlockPos[2];               /* 00556fb8 mouseBlockPos */
 
-struct EntitySlot;
-void lego_render_record_set_from_input(struct EntitySlot* object);
+struct Lego_Object;
+void lego_render_record_set_from_input(struct Lego_Object* object);
 void lego_update_render_viewport_state(void);
 void lego_cursor_ray_to_camera_route(float elapsed);
 void lego_main_sim_interaction_and_cell_update(float elapsedGame,
@@ -305,7 +226,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                int keyDownT, int keyDownR,
                                                int keyDownShift);
 /* Other groups' functions, with the signatures group C assumed. */
-void lego_entity_command_status_feedback_dispatch(struct EntitySlot* object); /* F 00428020 */
+void lego_entity_command_status_feedback_dispatch(struct Lego_Object* object); /* F 00428020 */
 void lego_terrain_command_feedback_dispatch(const int* blockPos, int a,
                                             int b, int c);   /* F 00428330 */
 int lego_terrain_cell_command_predicate(const int* blockPos); /* F 00428780 */
@@ -324,7 +245,7 @@ typedef struct LegoInitialResourcesD {
 } LegoInitialResourcesD;
 
 struct BlockRec;
-struct EntitySlot;
+struct Lego_Object;
 extern float legoGlobs_FPClipBlocks;                /* 00556110 */
 extern float legoGlobs_fogColourRGB[3];         /* 0055640c */
 extern float legoGlobs_highFogColourRGB[3];     /* 00556418 */
@@ -337,7 +258,7 @@ extern char* legoGlobs_endGameAVI1;             /* 00556fb0 */
 extern char* legoGlobs_endGameAVI2;             /* 00556fb4 */
 
 int lego_level_load(const char* levelName);
-int lego_entity_effect_counters_apply_from_record(struct EntitySlot* object, void* data);
+int lego_entity_effect_counters_apply_from_record(struct Lego_Object* object, void* data);
 int lego_load_tile_meshes(Lego_Level* level, const char* baseName);
 void lego_rectangular_resource_table_destroy(Lego_Level* level);
 /* Group G's SetViewMode (004295f0); signature assumed here. */
@@ -347,12 +268,14 @@ void lego_sound_minimum_distance_update_mode(int mode, void* object, int cameraF
 
 /* ---- group E ---- */
 
-/* The per-type model records legoGlobs keeps arrays of, by size only (the
- * shutdown passes their addresses to their owners' release functions). */
-typedef struct LegoVehicleModelE { unsigned char bytes[0x1ec]; } LegoVehicleModelE;
-typedef struct LegoCreatureModelE { unsigned char bytes[0x74]; } LegoCreatureModelE;
-typedef struct LegoBuildingModelE { unsigned char bytes[0x14c]; } LegoBuildingModelE;
-typedef struct LegoUpgradeModelE { unsigned char bytes[0x10]; } LegoUpgradeModelE;
+/* The per-type model records legoGlobs keeps arrays of (the shutdown
+ * passes their addresses to their owners' release functions): Vehicle.c's,
+ * Creature.c's (animation_object_record.h), Building.c's and Upgrade.c's
+ * models. */
+typedef struct VehicleModel LegoVehicleModelE;
+typedef struct AnimationObject LegoCreatureModelE;
+typedef struct BuildingModel LegoBuildingModelE;
+typedef struct Upgrade_PartModel LegoUpgradeModelE;
 /* Maths.h Point2F / Vector3F / Vector4F. */
 typedef struct LegoPoint2FE { float x, y; } LegoPoint2FE;
 typedef struct LegoVector3FE { float x, y, z; } LegoVector3FE;
@@ -360,7 +283,7 @@ typedef struct LegoVector4FE { float x, y, z, w; } LegoVector4FE;
 
 struct BlockRec;
 struct ViewProjectionAdapter;
-struct EntitySlot;
+struct Lego_Object;
 
 extern LegoVehicleModelE* legoGlobs_vehicleData;        /* 005561d4 */
 extern LegoCreatureModelE* legoGlobs_miniFigureData;    /* 005561d8 */
@@ -374,16 +297,16 @@ extern char** legoGlobs_upgradeName;                    /* 005561f8 */
 
 /* gods98 Input's key maps (0076ab80 this frame, 0076aa00 last frame). */
 
-void lego_air_supply_amount_update(struct EntitySlot* liveObj,
+void lego_air_supply_amount_update(struct Lego_Object* liveObj,
                                    float elapsed);
 void lego_terrain_cell_flag_cleanup(Lego_Level* level, float elapsed);
 void lego_sine_phase_midpoint_blend_dispatch(int on, float elapsed);
-int lego_default_transform_apply_if_flagged(struct EntitySlot* liveObj,
+int lego_default_transform_apply_if_flagged(struct Lego_Object* liveObj,
                                             void* data);
 void lego_default_transform_apply_all(void* view);
 void lego_selected_object_outlines_draw(struct ViewProjectionAdapter* view);
 void lego_selected_entity_ground_marker_render(
-    struct EntitySlot* liveObj, struct ViewProjectionAdapter* view,
+    struct Lego_Object* liveObj, struct ViewProjectionAdapter* view,
     float r, float g, float b);
 void lego_engine_shutdown_alt(void);
 void lego_engine_shutdown(void);
@@ -391,7 +314,7 @@ void lego_exit(void);
 int lego_main_sim_step(float elapsedGame, float elapsed, int* keyDownT,
                        int* keyDownR, int* keyDownAnyShift);
 void lego_periodic_callback_dispatch(int stop);
-int lego_object_sound_restart_callback(struct EntitySlot* liveObj,
+int lego_object_sound_restart_callback(struct Lego_Object* liveObj,
                                        void* data);
 /* Group G's (assumed signatures). */
 void lego_transition_control(int a, unsigned int b);
@@ -402,11 +325,9 @@ void lego_audio_playback_toggle(int on);
 
 /* ---- group F ---- */
 
-/* Lego_RockMonsterData? (0x74 bytes): one creature type's data, read by
- * address only. */
-typedef struct LegoCreatureDataF {
-    unsigned char f_00[0x74];
-} LegoCreatureDataF;
+/* Lego_RockMonsterData? (0x74 bytes on Win32): one creature type's data, read
+ * by address only. */
+typedef struct AnimationObject LegoCreatureDataF;
 
 /* gods98 Input's key maps (stand-ins in lego_unit.c), and Input.h's
  * Input_IsKeyPressed. */
@@ -443,14 +364,14 @@ extern char* legoGlobs_upgradeNames[16];  /* 00556f58 */
 struct BlockRec;
 void lego_misc_object_resources_load(struct BlockRec* config);
 
-struct EntitySlot;
+struct Lego_Object;
 void lego_terrain_pointer_command_update(void);
 void lego_spawn_coordinate_pool_tick(float elapsed);
-void lego_entity_command_status_feedback_dispatch(struct EntitySlot* liveObj);
+void lego_entity_command_status_feedback_dispatch(struct Lego_Object* liveObj);
 void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstruction,
                                             int playSound, int showCavern);
 int lego_terrain_cell_command_predicate(const int* blockPos);
-void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct EntitySlot* liveObj,
+void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct Lego_Object* liveObj,
                                                    float elapsed);
 
 
@@ -584,7 +505,7 @@ void lego_object_the_names_load(struct BlockRec* config);
 void lego_object_pointer_registry_clear_match(void* object);
 int lego_object_pointer_registry_get_slot(unsigned int index, void** objOut);
 
-void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* blockPos,
+void lego_viewport_target_position_clamp(struct Lego_Object* liveObj, const int* blockPos,
                                          int smooth);
 
 /* ---- part 2 declarations, group 2C: end ---- */
@@ -698,10 +619,10 @@ int selected_entities_any_predicate_match(int cx, int cy, int require_stat_bit);
 int lego_any_object_can_occupy_terrain_cell(int bx, int by);        /* 00431ab0 */
 int lego_terrain_placement_blocked_adjacent_cell_scan(int bx, int by,
                                                       int mode, int water); /* 00431b20 */
-int lego_first_free_neighbor_cell_pick(struct EntitySlot* liveObj,
+int lego_first_free_neighbor_cell_pick(struct Lego_Object* liveObj,
                                        const int blockPos[2], int outPos[2],
                                        int skipWalls);              /* 00431c70 */
-int lego_terrain_cell_route_and_occupancy_check(struct EntitySlot* liveObj,
+int lego_terrain_cell_route_and_occupancy_check(struct Lego_Object* liveObj,
                                                 int bx, int by, int toX,
                                                 int toY, int ignoreOwnBlock); /* 00431da0 */
 void lego_terrain_cell_flag100_set_and_track(const int blockPos[2]);  /* 00432100 */

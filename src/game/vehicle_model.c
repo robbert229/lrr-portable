@@ -30,114 +30,24 @@
 #include "crt/vc5names.h"
 #include "vehicle_model.h"
 #include "vehicle_model_imports.h"
+#include "vehicle_model_record.h"
+#include "gods98/container_record.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct Vehicle_Vector3F {
-    float x, y, z;
-} Vehicle_Vector3F;
-
 #include "vehicle_model_maths.h"
-
-#define VEHICLE_MAXWHEELS 6
-#define VEHICLE_MAXCARRYNULLS 10
-#define VEHICLE_MAXCAMERANULLS 4
-#define VEHICLE_MAXWEAPONS 3
-#define VEHICLE_MAXFIRES 2
 
 #define VEHICLE_FLAG_SOURCE 0x1      /* owns the null names (Vehicle_Load) */
 #define VEHICLE_FLAG_HIDDEN 0x2
 #define VEHICLE_FLAG_NOACTIVITY1 0x4 /* contAct1's animation is not moved */
 #define VEHICLE_FLAG_HOLDMISSING 0x8
 
-/* The part of a Container the unit reads: its type (+0x10; 1 is a mesh). */
-typedef struct Vehicle_Container {
-    unsigned char pad_00[0x10];
-    int type;                                     /* +0x10 */
-} Vehicle_Container;
-
-/* One part of an upgrade level (Upgrade.c, GAME-047; 0x14 bytes). */
-typedef struct Vehicle_UpgradePartInfo {
-    unsigned int level;                           /* +0x00 */
-    unsigned int nullFrameNo;                     /* +0x04 */
-    char* nullName;                               /* +0x08 */
-    char* weaponName;                             /* +0x0c */
-    void* upgradeData;                            /* +0x10 */
-} Vehicle_UpgradePartInfo;
-
-/* An upgrade part's model (Upgrade.c; 0x10 bytes), each upgrade-part
- * LegoObject's clone. */
-typedef struct Vehicle_UpgradePart {
-    unsigned int objID;                           /* +0x00 */
-    void* cont;                                   /* +0x04 */
-    struct Vehicle_PartObject* nextObject;        /* +0x08 */
-    Vehicle_UpgradePartInfo* partInfo;            /* +0x0c */
-} Vehicle_UpgradePart;
-
-/* The part of a LegoObject the unit reads: its upgrade part (+0x20). */
-typedef struct Vehicle_PartObject {
-    unsigned char pad_00[0x20];
-    Vehicle_UpgradePart* upgradePart;             /* +0x20 */
-} Vehicle_PartObject;
-
-/* Upgrade.c's model (GAME-047), embedded in the vehicle model at +0x124. */
-typedef struct Vehicle_Upgrades {
-    Vehicle_UpgradePartInfo* parts;               /* +0x00 */
-    unsigned int count;                           /* +0x04 */
-    unsigned int currentLevel;                    /* +0x08 */
-    unsigned int levels;                          /* +0x0c a bit per type */
-    Vehicle_PartObject* objectList;               /* +0x10 the shown parts */
-} Vehicle_Upgrades;
-
-/* The original's VehicleModel, 0x1ec bytes. */
-typedef struct VehicleModel {
-    unsigned int objID;                           /* +0x000 */
-    char* wheelNullName;                          /* +0x004 */
-    void* contAct1;                               /* +0x008 */
-    void* contAct2;                               /* +0x00c */
-    void* contWheels[VEHICLE_MAXWHEELS];          /* +0x010 */
-    void* wheelNulls[VEHICLE_MAXWHEELS];          /* +0x028 */
-    unsigned int wheelNullsCount;                 /* +0x040 */
-    unsigned char pad_044[0x18];                  /* +0x044 */
-    Vehicle_Vector3F lastUp;                      /* +0x05c */
-    float wheelRadius;                            /* +0x068 */
-    Vehicle_Vector3F wheelLastPos[VEHICLE_MAXWHEELS]; /* +0x06c */
-    char* drillNullName;                          /* +0x0b4 */
-    char* depositNullName;                        /* +0x0b8 */
-    char* fireNullName;                           /* +0x0bc */
-    char* driverNullName;                         /* +0x0c0 */
-    char* yPivotNullName;                         /* +0x0c4 */
-    char* xPivotNullName;                         /* +0x0c8 */
-    void* drillNull;                              /* +0x0cc */
-    void* depositNull;                            /* +0x0d0 */
-    void* driverNull;                             /* +0x0d4 */
-    int cameraFlipDir;                            /* +0x0d8 */
-    char* carryNullName;                          /* +0x0dc */
-    char* cameraNullName;                         /* +0x0e0 */
-    void* carryNulls[VEHICLE_MAXCARRYNULLS];      /* +0x0e4 */
-    void* cameraNulls[VEHICLE_MAXCAMERANULLS];    /* +0x10c */
-    unsigned int carryNullFrames;                 /* +0x11c */
-    unsigned int cameraNullFrames;                /* +0x120 */
-    Vehicle_Upgrades upgrades;                    /* +0x124 */
-    /* +0x138-+0x1e0 is weapons.c's Weapons_Model, of which the unit
-     * writes the nulls. */
-    void* fireNullPairs[VEHICLE_MAXWEAPONS][VEHICLE_MAXFIRES]; /* +0x138 */
-    void* xPivotNulls[VEHICLE_MAXWEAPONS];        /* +0x150 */
-    void* yPivotNulls[VEHICLE_MAXWEAPONS];        /* +0x15c */
-    float pivotMaxZ;                              /* +0x168 */
-    float pivotMinZ;                              /* +0x16c */
-    unsigned int fireNullPairFrames[VEHICLE_MAXWEAPONS]; /* +0x170 */
-    unsigned char weapons_17c[0x48];              /* +0x17c */
-    Vehicle_UpgradePartInfo* weaponParts[VEHICLE_MAXWEAPONS]; /* +0x1c4 */
-    unsigned char weapons_1d0[0x0c];              /* +0x1d0 */
-    unsigned int weaponCount;                     /* +0x1dc */
-    ModelEntryRecord* polyMedium1;                /* +0x1e0 */
-    ModelEntryRecord* polyMedium2;                /* +0x1e4 */
-    unsigned int flags;                           /* +0x1e8 */
-} VehicleModel;
+/* Container.c's container (gods98/container_record.h): the unit reads its
+ * type (1 is a mesh). */
+typedef struct Container Vehicle_Container;
 
 // FUNCTION: LEGORR 0x0046c3d0
 int vehicle_is_camera_flip_dir(VehicleModel* vehicle)
@@ -177,14 +87,8 @@ int vehicle_set_activity(VehicleModel* vehicle, const char* activityName,
     return result;
 }
 
-/* Matching build: activityName is an objectGlobs field (004de790 +0x534,
- * legoobject_globs.h, finding 662). objectGlobs is declared here, without
- * its struct, just before the one function that reads it, so the symbol
- * counter of the functions above does not move; it costs two symbols, and
- * the header would cost three. Deviation (scoring only). */
-extern struct LegoObject_Globs objectGlobs;
-#undef s_activity
-#define s_activity ((const char**)((char*)&objectGlobs + 0x534))
+/* activityName is an objectGlobs field (legoobject_globs.h, finding 662). */
+#include "legoobject_globs.h"
 /* Hang each shown upgrade part on its null and set its activity, and record
  * the weapon parts' fire and pivot nulls. Building.c's
  * Building_SetUpgradeActivity (004083a0) is the same code. */
@@ -200,12 +104,12 @@ void vehicle_set_upgrade_activity(VehicleModel* vehicle, const char* activityNam
     unsigned int loop, sub, weapon, frame;
 
     for (loop = 0; loop < VEHICLE_MAXWEAPONS; loop++) {
-        vehicle->weaponParts[loop] = NULL;
-        vehicle->yPivotNulls[loop] = NULL;
-        vehicle->xPivotNulls[loop] = NULL;
-        for (sub = 0; sub < VEHICLE_MAXFIRES; sub++) vehicle->fireNullPairs[loop][sub] = NULL;
+        vehicle->weapons.weaponParts[loop] = NULL;
+        vehicle->weapons.yPivotNulls[loop] = NULL;
+        vehicle->weapons.xPivotNulls[loop] = NULL;
+        for (sub = 0; sub < VEHICLE_MAXFIRES; sub++) vehicle->weapons.fireNulls[loop][sub] = NULL;
     }
-    vehicle->weaponCount = 0;
+    vehicle->weapons.weaponCount = 0;
 
     while (obj) {
         upgradePart = obj->upgradePart;
@@ -222,21 +126,21 @@ void vehicle_set_upgrade_activity(VehicleModel* vehicle, const char* activityNam
         }
 
         if (partInfo->weaponName) {
-            weapon = vehicle->weaponCount;
+            weapon = vehicle->weapons.weaponCount;
             frame = 0;
-            vehicle->fireNullPairFrames[weapon] = 0;
+            vehicle->weapons.fireNullCounts[weapon] = 0;
             for (sub = 0; sub < VEHICLE_MAXFIRES; sub++) {
-                vehicle->fireNullPairs[weapon][sub] = NULL;
-                name = xf_texture_name_format(vehicle->contAct1, vehicle->fireNullName, (const int*)&vehicle->fireNullPairFrames[weapon]);
-                vehicle->fireNullPairs[weapon][vehicle->fireNullPairFrames[weapon]] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
-                if (vehicle->fireNullPairs[weapon][vehicle->fireNullPairFrames[weapon]++] == NULL) break;
+                vehicle->weapons.fireNulls[weapon][sub] = NULL;
+                name = xf_texture_name_format(vehicle->contAct1, vehicle->fireNullName, (const int*)&vehicle->weapons.fireNullCounts[weapon]);
+                vehicle->weapons.fireNulls[weapon][vehicle->weapons.fireNullCounts[weapon]] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
+                if (vehicle->weapons.fireNulls[weapon][vehicle->weapons.fireNullCounts[weapon]++] == NULL) break;
             }
             name = xf_texture_name_format(vehicle->contAct1, vehicle->xPivotNullName, (const int*)&frame);
-            vehicle->xPivotNulls[weapon] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
+            vehicle->weapons.xPivotNulls[weapon] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
             name = xf_texture_name_format(vehicle->contAct1, vehicle->yPivotNullName, (const int*)&frame);
-            vehicle->yPivotNulls[weapon] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
-            vehicle->weaponParts[weapon] = partInfo;
-            vehicle->weaponCount++;
+            vehicle->weapons.yPivotNulls[weapon] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
+            vehicle->weapons.weaponParts[weapon] = partInfo;
+            vehicle->weapons.weaponCount++;
         }
 
         obj = upgradePart->nextObject;
@@ -328,24 +232,24 @@ int vehicle_load(VehicleModel* vehicle, unsigned int objID, void* root,
             if (block_get_strptr(config, string_path_join(gameName,
                 // STRING: LEGORR 0x004a1cec
                 "PivotMaxZ", NULL))) {
-                vehicle->pivotMaxZ = (float)atof(block_get_strptr(config,
+                vehicle->weapons.pivotMaxZ = (float)atof(block_get_strptr(config,
                         string_path_join(gameName, "PivotMaxZ", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "PivotMaxZ", NULL))
                     : "");
             } else {
-                vehicle->pivotMaxZ = 1.0f;
+                vehicle->weapons.pivotMaxZ = 1.0f;
             }
             if (block_get_strptr(config, string_path_join(gameName,
                 // STRING: LEGORR 0x004a1ce0
                 "PivotMinZ", NULL))) {
-                vehicle->pivotMinZ = (float)atof(block_get_strptr(config,
+                vehicle->weapons.pivotMinZ = (float)atof(block_get_strptr(config,
                         string_path_join(gameName, "PivotMinZ", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "PivotMinZ", NULL))
                     : "");
             } else {
-                vehicle->pivotMinZ = -1.0f;
+                vehicle->weapons.pivotMinZ = -1.0f;
             }
 
             upgrade_load((struct Upgrade_Model*)&vehicle->upgrades, config, gameName);
@@ -534,10 +438,10 @@ void vehicle_set_owner_object(VehicleModel* vehicle, void* liveObj)
 {
     unsigned int loop;
 
-    scene_object_owner_set(vehicle->contAct1, (uint32_t)(size_t)liveObj);
-    if (vehicle->contAct2) scene_object_owner_set(vehicle->contAct2, (uint32_t)(size_t)liveObj);
+    scene_object_owner_set(vehicle->contAct1, liveObj);
+    if (vehicle->contAct2) scene_object_owner_set(vehicle->contAct2, liveObj);
     for (loop = 0; loop < vehicle->wheelNullsCount; loop++) {
-        if (vehicle->contWheels[loop]) scene_object_owner_set(vehicle->contWheels[loop], (uint32_t)(size_t)liveObj);
+        if (vehicle->contWheels[loop]) scene_object_owner_set(vehicle->contWheels[loop], liveObj);
     }
 }
 

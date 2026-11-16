@@ -45,7 +45,7 @@ void scene_indexed_record_list_rebuild_for_value(
 
 /* G98-002 Container.c (container_unit.cpp). */
 uint32_t scene_object_flag_bit3_get_target(const void* scene_object); /* 00473ba0 */
-void scene_object_owner_set(void* scene_object, uint32_t owner); /* 00473da0 */
+void scene_object_owner_set(void* scene_object, void* owner);   /* 00473da0 */
 void render_object_set_identity_transform(void* object);         /* 00475610 */
 void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* source_pair_record); /* 00475710 */

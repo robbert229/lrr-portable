@@ -20,21 +20,23 @@
 #include "legoobject_unit.h"
 #include "terrain_map.h"
 
+#include "gods98/container_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct EntitySlot;
-struct LevelState;
+struct Lego_Object;
+struct Lego_Level;
 struct EngineTaskCallbackRecord;
 struct MeshRecordPool;
 
 /* GAME-021 Lego.c (terrain_grid.cpp, engine.cpp, lego.cpp, level.hpp). */
-extern struct LevelState* g_active_level_retail;   /* 005560d4 currLevel */
+extern struct Lego_Level* g_active_level_retail;   /* 005560d4 currLevel */
 extern const char* s_engine_config_root;            /* 005560c4 gameName */
 extern float s_scroll_scale;                        /* 0055615c gameSpeed */
 extern uint32_t s_panel_highlight_flags;            /* 00556ed0 flags2 */
-struct LevelState* level_current_owner_get(void);   /* 00431560 Lego_GetLevel */
+struct Lego_Level* level_current_owner_get(void);   /* 00431560 Lego_GetLevel */
 /* 00431570 Lego_GetMap takes no arguments. lego_unit.c defines it with the
  * port's two ignored cell arguments, so the C matching build calls it
  * through an unprototyped function type, which pushes none, as the original
@@ -66,44 +68,44 @@ int terrain_cell_drill_work_add_current(int x, int y, float divisor,
 #define entity_one_shot_attached_effect_start legoobject_one_shot_attached_effect_start
 #define entity_pair_scalar_fields_set legoobject_pair_scalar_fields_set
 void* entity_type_component_get(const void* entity_record);       /* 0044a200 */
-void entity_transform_position_get_outputs(const struct EntitySlot* entity,
+void entity_transform_position_get_outputs(const struct Lego_Object* entity,
                                            float* out_x,
                                            float* out_y);         /* 00442260 */
-int entity_type3_flag04000000_test(const struct EntitySlot* e);   /* 004436f0 */
-void entity_directional_activity_start(struct EntitySlot* entity,
+int entity_type3_flag04000000_test(const struct Lego_Object* e);   /* 004436f0 */
+void entity_directional_activity_start(struct Lego_Object* entity,
                                        const float direction[2],
                                        int mode);                 /* 00447950 */
-int entity_one_shot_attached_effect_start(struct EntitySlot* entity,
+int entity_one_shot_attached_effect_start(struct Lego_Object* entity,
                                           float duration);        /* 0044c030 */
-int ai_activity_probe(const struct EntitySlot* e);                /* 0043c440 */
+int ai_activity_probe(const struct Lego_Object* e);                /* 0043c440 */
 int entity_task_at_grid_coordinate_find(uint32_t x, uint32_t y,
-                                        struct EntitySlot** out_entity); /* 0043b360 */
+                                        struct Lego_Object** out_entity); /* 0043b360 */
 /* 0043f6a0 and 0044c150 take the original's arguments only through
  * lego.cpp's adapters natively: the port's entries take three arguments,
  * and an integer pair. The matching build calls the annotated functions
  * with the original's arguments; the extra one is ignored (cdecl). */
 #define entity_damage_apply_original entity_damage_apply
 #define entity_pair_scalar_fields_set_original entity_pair_scalar_fields_set
-void entity_damage_apply_original(struct EntitySlot* entity, float damage,
+void entity_damage_apply_original(struct Lego_Object* entity, float damage,
                                   int emitEffects, float elapsed); /* 0043f6a0 */
-int entity_pair_scalar_fields_set_original(struct EntitySlot* entity,
+int entity_pair_scalar_fields_set_original(struct Lego_Object* entity,
                                            const float* pair,
                                            float scalar);         /* 0044c150 */
 
 /* GAME-043 Stats.c (entity_stats.cpp, entity.hpp). */
-float entity_stats_float_at6c(const struct EntitySlot* e);        /* 00469d40 */
-float entity_stats_float_at74(const struct EntitySlot* e);        /* 00469d50 */
-void* entity_stats_field_at_a0_corpus(const struct EntitySlot* e); /* 00469da0 */
-uint32_t entity_stats_word_get(const struct EntitySlot* e);       /* 00469e60 */
-uint32_t entity_state_flags_get(const struct EntitySlot* e);      /* 00469e80 */
+float entity_stats_float_at6c(const struct Lego_Object* e);        /* 00469d40 */
+float entity_stats_float_at74(const struct Lego_Object* e);        /* 00469d50 */
+void* entity_stats_field_at_a0_corpus(const struct Lego_Object* e); /* 00469da0 */
+uint32_t entity_stats_word_get(const struct Lego_Object* e);       /* 00469e60 */
+uint32_t entity_state_flags_get(const struct Lego_Object* e);      /* 00469e80 */
 uint32_t building_upgrade_admission_check(int type, int row);     /* 00469f40 */
-float entity_speed_component_get(const struct EntitySlot* e);     /* 0046a0a0 */
-float entity_collision_radius_get(const struct EntitySlot* e);    /* 0046a270 */
-float entity_stats_float_at114(const struct EntitySlot* e);       /* 0046a290 */
-float entity_stats_float_at118(const struct EntitySlot* e);       /* 0046a2b0 */
-float entity_stats_float_at11c(const struct EntitySlot* e);       /* 0046a2d0 */
-float entity_stats_float_at110(const struct EntitySlot* e);       /* 0046a2f0 */
-float entity_stats_float_at10c(const struct EntitySlot* e);       /* 0046a310 */
+float entity_speed_component_get(const struct Lego_Object* e);     /* 0046a0a0 */
+float entity_collision_radius_get(const struct Lego_Object* e);    /* 0046a270 */
+float entity_stats_float_at114(const struct Lego_Object* e);       /* 0046a290 */
+float entity_stats_float_at118(const struct Lego_Object* e);       /* 0046a2b0 */
+float entity_stats_float_at11c(const struct Lego_Object* e);       /* 0046a2d0 */
+float entity_stats_float_at110(const struct Lego_Object* e);       /* 0046a2f0 */
+float entity_stats_float_at10c(const struct Lego_Object* e);       /* 0046a310 */
 
 /* Other game units. */
 void point_project_onto_line2d(const float* line_start, const float* line_end,
@@ -124,9 +126,10 @@ int sound_submission_route_wrapper(const void* wrapped_position, int alias,
  * float, the port double (sound.hpp). */
 float sound_object_duration_get(int alias);                       /* 00465160 */
 
-/* gods98 Container.c and Mesh.c (view.hpp, surface.hpp, record.hpp). The
- * container's master frame is at +0x04. */
-#define WEAPONS_CONTAINER_FRAME(cont) (*(void**)((char*)(cont) + 0x4))
+/* gods98 Container.c and Mesh.c (view.hpp, surface.hpp, record.hpp). The frame
+ * these units hang meshes on is the container's activity frame (+0x04,
+ * gods98/container_record.h). */
+#define WEAPONS_CONTAINER_FRAME(cont) ((void*)((struct Container*)(cont))->activityFrame)
 int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);              /* 004754c0 */
 int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,

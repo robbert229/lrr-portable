@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-struct LevelState;
+struct Lego_Level;
 struct EngineContext;
 struct TextureSurface;
 
@@ -34,7 +34,7 @@ void ledger_stub_00425c30_TransitionControl(int enabled, uint32_t parameter);
 void media_action_feedback_sound_dispatch(int event);
 /* FUN_00431560: the current level. The original reads its objective result
  * at +0x27c. */
-struct LevelState* level_current_owner_get(void);
+struct Lego_Level* level_current_owner_get(void);
 /* FUN_00435aa0: the call-to-arms highlight, lego_unit.c's original-shape
  * function (the port's entry, which also takes the engine context, stays in
  * lego_port.cpp for native callers). */

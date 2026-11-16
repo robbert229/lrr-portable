@@ -449,7 +449,7 @@ int sfx_random_play_sound3d_on_container(void* cont, int sfxID, int loop,
 {
     void* frame;
 
-    if (cont != NULL) frame = (void*)(uintptr_t)scene_object_wrapped_pointer_get(cont);
+    if (cont != NULL) frame = scene_object_wrapped_pointer_get(cont);
     else frame = NULL;
     return sfx_random_play_sound3d_on_frame_internal(frame, sfxID, loop, onCont, wPos);
 }
@@ -878,7 +878,7 @@ void smoke_mesh_render_callback(void* mesh, Smoke* smoke, void* viewport)
 {
     SFX_Vector3F camPos;
     unsigned int i;
-    void* camera = (void*)(uintptr_t)lego_context_selected_global_pointer_get();
+    void* camera = lego_context_selected_global_pointer_get();
 
     ddiscene_object_position_get(camera, NULL, (float*)&camPos);
     for (i = 0; i < smoke->groupCount; i++) {
@@ -895,7 +895,7 @@ void smoke_group_set_vertices(Smoke* smoke, unsigned int groupID, void* viewport
     SFX_Vector3F vertices[4];
     SFX_Vector3F dir, camUp, up, side;
     float scale;
-    void* camera = (void*)(uintptr_t)scene_object_query_value_if_ready(viewport);
+    void* camera = scene_object_query_value_if_ready(viewport);
 
     ddiscene_object_facing_pair_get(camera, NULL, (float*)&dir, (float*)&camUp);
 

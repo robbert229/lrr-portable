@@ -22,93 +22,12 @@
 #include "crt/vc5names.h"
 #include "building_model.h"
 #include "building_model_imports.h"
+#include "building_model_record.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define BUILDING_MAXCARRYNULLS 6
-#define BUILDING_MAXCAMERANULLS 4
-#define BUILDING_MAXTOOLNULLS 6
-#define BUILDING_MAXSHAPEPOINTS 10
-#define BUILDING_MAXWEAPONS 3
-
-#define BUILDING_FLAG_SOURCE 0x1        /* the loaded model, not a clone */
-#define BUILDING_FLAG_POWERLEVELCHANGED 0x2
-
-typedef struct Building_Point2I {
-    int x, y;
-} Building_Point2I;
-
-/* Upgrade.c's part data (GAME-047): the table entry a part was made from. */
-typedef struct Building_UpgradeData {
-    unsigned int level;                           /* +0x00 */
-    unsigned int nullFrameNo;                     /* +0x04 */
-    char* nullName;                               /* +0x08 */
-    void* weapon;                                 /* +0x0c the weapon slot's name */
-} Building_UpgradeData;
-
-/* Upgrade.c's part (LegoObject +0x20). */
-typedef struct Building_UpgradePart {
-    unsigned int objID;                           /* +0x00 */
-    void* cont;                                   /* +0x04 */
-    struct Building_PartObject* nextObject;       /* +0x08 */
-    Building_UpgradeData* data;                   /* +0x0c */
-} Building_UpgradePart;
-
-/* The part of a LegoObject the unit reads: its upgrade part (+0x20). */
-typedef struct Building_PartObject {
-    unsigned char pad_00[0x20];
-    Building_UpgradePart* upgradePart;            /* +0x20 */
-} Building_PartObject;
-
-/* Upgrade.c's model (GAME-047), embedded in the building model at +0x8c. */
-typedef struct Building_Upgrades {
-    unsigned char pad_00[0x08];
-    unsigned int currentLevel;                    /* +0x08 */
-    unsigned int levels;                          /* +0x0c a bit per type */
-    Building_PartObject* firstObject;             /* +0x10 */
-} Building_Upgrades;
-
-/* The original's BuildingModel, 0x14c bytes. +0xa0-+0x148 is weapons.c's
- * Weapons_Model (finding 590), of which the unit writes the nulls. */
-typedef struct BuildingModel {
-    unsigned int objID;                           /* +0x000 */
-    void* contAct;                                /* +0x004 */
-    char* carryNullName;                          /* +0x008 */
-    char* cameraNullName;                         /* +0x00c */
-    char* depositNullName;                        /* +0x010 */
-    char* entranceNullName;                       /* +0x014 */
-    char* toolNullName;                           /* +0x018 */
-    char* fireNullName;                           /* +0x01c */
-    char* yPivotNullName;                         /* +0x020 */
-    char* xPivotNullName;                         /* +0x024 */
-    void* carryNulls[BUILDING_MAXCARRYNULLS];     /* +0x028 */
-    void* cameraNulls[BUILDING_MAXCAMERANULLS];   /* +0x040 */
-    void* toolNulls[BUILDING_MAXTOOLNULLS];       /* +0x050 */
-    void* depositNull;                            /* +0x068 */
-    void* entranceNull;                           /* +0x06c */
-    unsigned int carryNullFrames;                 /* +0x070 */
-    unsigned int cameraNullFrames;                /* +0x074 */
-    unsigned int toolNullFrames;                  /* +0x078 */
-    void* contPowerLevel;                         /* +0x07c */
-    float powerLevel;                             /* +0x080 */
-    Building_Point2I* shapePoints;                /* +0x084 */
-    unsigned int shapeCount;                      /* +0x088 */
-    Building_Upgrades upgrades;                   /* +0x08c */
-    void* fireNulls[BUILDING_MAXWEAPONS][2];      /* +0x0a0 */
-    void* xPivotNulls[BUILDING_MAXWEAPONS];       /* +0x0b8 */
-    void* yPivotNulls[BUILDING_MAXWEAPONS];       /* +0x0c4 */
-    float pivotMaxZ;                              /* +0x0d0 */
-    float pivotMinZ;                              /* +0x0d4 */
-    unsigned int fireNullCounts[BUILDING_MAXWEAPONS]; /* +0x0d8 */
-    unsigned char weapons_e4[0x48];               /* +0x0e4 */
-    void* weaponParts[BUILDING_MAXWEAPONS];       /* +0x12c the parts' data */
-    unsigned char weapons_138[0x0c];              /* +0x138 */
-    unsigned int weaponCount;                     /* +0x144 */
-    unsigned int flags;                           /* +0x148 */
-} BuildingModel;
 
 // FUNCTION: LEGORR 0x00407d60
 int building_load(BuildingModel* building, unsigned int objID, void* root,
@@ -189,22 +108,22 @@ int building_load(BuildingModel* building, unsigned int objID, void* root,
                 string_path_join(gameName, "xPivot", NULL));
 
             if (block_get_strptr(config, string_path_join(gameName, "PivotMaxZ", NULL))) {
-                building->pivotMaxZ = (float)atof(block_get_strptr(config,
+                building->weapons.pivotMaxZ = (float)atof(block_get_strptr(config,
                         string_path_join(gameName, "PivotMaxZ", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "PivotMaxZ", NULL))
                     : "");
             } else {
-                building->pivotMaxZ = 1.0f;
+                building->weapons.pivotMaxZ = 1.0f;
             }
             if (block_get_strptr(config, string_path_join(gameName, "PivotMinZ", NULL))) {
-                building->pivotMinZ = (float)atof(block_get_strptr(config,
+                building->weapons.pivotMinZ = (float)atof(block_get_strptr(config,
                         string_path_join(gameName, "PivotMinZ", NULL))
                     ? block_get_strptr(config,
                           string_path_join(gameName, "PivotMinZ", NULL))
                     : "");
             } else {
-                building->pivotMinZ = -1.0f;
+                building->weapons.pivotMinZ = -1.0f;
             }
 
             upgrade_load((struct Upgrade_Model*)&building->upgrades, config, gameName);
@@ -271,17 +190,11 @@ void* building_get_shape_points(BuildingModel* building, unsigned int* count)
 // FUNCTION: LEGORR 0x00408380
 void building_set_owner_object(BuildingModel* building, void* liveObj)
 {
-    scene_object_owner_set(building->contAct, (uint32_t)(size_t)liveObj);
+    scene_object_owner_set(building->contAct, liveObj);
 }
 
-/* Matching build: activityName is an objectGlobs field (004de790 +0x534,
- * legoobject_globs.h, finding 662). objectGlobs is declared here, without
- * its struct, just before the one function that reads it, so the symbol
- * counter of the functions above does not move; it costs two symbols, and
- * the header would cost three. Deviation (scoring only). */
-extern struct LegoObject_Globs objectGlobs;
-#undef s_activity
-#define s_activity ((const char**)((char*)&objectGlobs + 0x534))
+/* activityName is an objectGlobs field (legoobject_globs.h, finding 662). */
+#include "legoobject_globs.h"
 // FUNCTION: LEGORR 0x004083a0
 void building_set_upgrade_activity(BuildingModel* building, const char* activityName)
 {
@@ -294,21 +207,21 @@ void building_set_upgrade_activity(BuildingModel* building, const char* activity
     unsigned int loop, index;
     int instance;
 
-    object = building->upgrades.firstObject;
+    object = building->upgrades.objectList;
     /* The first object is read before the weapon slots are cleared, and the
      * part names are formatted into a temporary before each search, as the
      * original orders its pushes. */
     for (loop = 0; loop < BUILDING_MAXWEAPONS; loop++) {
-        building->weaponParts[loop] = NULL;
-        building->yPivotNulls[loop] = NULL;
-        building->xPivotNulls[loop] = NULL;
-        memset(building->fireNulls[loop], 0, sizeof(building->fireNulls[loop]));
+        building->weapons.weaponParts[loop] = NULL;
+        building->weapons.yPivotNulls[loop] = NULL;
+        building->weapons.xPivotNulls[loop] = NULL;
+        memset(building->weapons.fireNulls[loop], 0, sizeof(building->weapons.fireNulls[loop]));
     }
-    building->weaponCount = 0;
+    building->weapons.weaponCount = 0;
 
     while (object) {
         part = object->upgradePart;
-        data = part->data;
+        data = part->partInfo;
         parent = animation_object_null_find((AnimationObject*)building, data->nullName, data->nullFrameNo);
         cont = animation_object_handle_get(part);
         ddiscene_scene_object_attach_or_unlink(cont, parent);
@@ -320,24 +233,24 @@ void building_set_upgrade_activity(BuildingModel* building, const char* activity
             scene_action_name_set(part->cont, standName);
         }
 
-        if (data->weapon) {
-            index = building->weaponCount;
+        if (data->weaponName) {
+            index = building->weapons.weaponCount;
             instance = 0;
-            building->fireNullCounts[index] = 0;
+            building->weapons.fireNullCounts[index] = 0;
             for (loop = 0; loop < 2; loop++) {
-                building->fireNulls[index][loop] = NULL;
+                building->weapons.fireNulls[index][loop] = NULL;
                 name = xf_texture_name_format(building->contAct, building->fireNullName,
-                                              (const int*)&building->fireNullCounts[index]);
-                building->fireNulls[index][building->fireNullCounts[index]] =
+                                              (const int*)&building->weapons.fireNullCounts[index]);
+                building->weapons.fireNulls[index][building->weapons.fireNullCounts[index]] =
                     resource_name_register_or_query_target((void**)cont, name, 0, NULL);
-                if (!building->fireNulls[index][building->fireNullCounts[index]++]) break;
+                if (!building->weapons.fireNulls[index][building->weapons.fireNullCounts[index]++]) break;
             }
             name = xf_texture_name_format(building->contAct, building->xPivotNullName, &instance);
-            building->xPivotNulls[index] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
+            building->weapons.xPivotNulls[index] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
             name = xf_texture_name_format(building->contAct, building->yPivotNullName, &instance);
-            building->yPivotNulls[index] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
-            building->weaponParts[index] = data;
-            building->weaponCount++;
+            building->weapons.yPivotNulls[index] = resource_name_register_or_query_target((void**)cont, name, 0, NULL);
+            building->weapons.weaponParts[index] = data;
+            building->weapons.weaponCount++;
         }
         object = part->nextObject;
     }

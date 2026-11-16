@@ -16,6 +16,8 @@
 #ifndef LEGORRR_GODS98_MESH_API_H
 #define LEGORRR_GODS98_MESH_API_H
 
+#include "gods98/mesh_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

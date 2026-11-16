@@ -19,12 +19,12 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 struct TextureSurface;
 
 /* GAME-009 DamageFont (screen_effect_quads.c):
  * DamageFont_LiveObject_CheckCanShowDamage. */
-int damage_font_live_object_check_can_show_damage(struct EntitySlot* liveObj); /* 0040aae0 */
+int damage_font_live_object_check_can_show_damage(struct Lego_Object* liveObj); /* 0040aae0 */
 
 /* gods98 Utils.c (utils.c): Util_Tokenise. */
 int sound_variant_split(char* text, char** out, const char* separators); /* 00477440 */

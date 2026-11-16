@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include "gods98/config.h"
+#include "frontend_record.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,21 +45,20 @@ int front_campaign_snapshot_create(void* snapshot);
  * frontend_unit.cpp); nothing in the port sets them yet. */
 extern char* g_front_end_avi1;            /* DAT_00556fb0 */
 extern char* g_front_end_avi2;            /* DAT_00556fb4 */
-/* frontGlobs (00556fc0) is one struct, defined by frontend_unit.c with its
- * fields' types; these name the fields this header's users read, by their
- * offsets (finding 649). */
+/* frontGlobs (00556fc0) is one struct, defined by frontend_unit.c
+ * (frontend_record.h); these name the fields this header's users read
+ * (finding 649). */
 extern struct Front_Globs frontGlobs;
-#define FRONT_GLOBS_FIELD(type, offset) (*(type*)((char*)&frontGlobs + (offset)))
-#define g_front_main_menu_set FRONT_GLOBS_FIELD(void*, 0x004)  /* 00556fc4 */
-#define g_front_save_tree FRONT_GLOBS_FIELD(void*, 0x038)      /* 00556ff8 */
+#define g_front_main_menu_set frontGlobs.mainMenuSet          /* 00556fc4 */
+#define g_front_save_tree frontGlobs.startMissionLink        /* 00556ff8 */
 /* frontGlobs.missionLevels (00556fe4), the mission level set, which
  * Reward.c passes Front_Levels_UpdateAvailable by address. */
-#define g_front_mission_levels (&FRONT_GLOBS_FIELD(uint8_t, 0x024))
+#define g_front_mission_levels (&frontGlobs.missionLevels)
 /* frontGlobs.saveData[5] (00557418), the current game's save slot, which
  * Reward.c reads the save file into (finding 680). */
-#define g_front_save_slot_buffer (&FRONT_GLOBS_FIELD(uint8_t, 0x458))
-#define g_front_save_menu_result FRONT_GLOBS_FIELD(int, 0x544) /* 00557504 */
-#define g_front_save_menu_open FRONT_GLOBS_FIELD(int, 0x548)   /* 00557508 */
+#define g_front_save_slot_buffer (&frontGlobs.saveData[5])
+#define g_front_save_menu_result frontGlobs.saveMenuResult   /* 00557504 */
+#define g_front_save_menu_open frontGlobs.saveMenuOpen       /* 00557508 */
 
 #ifdef __cplusplus
 }

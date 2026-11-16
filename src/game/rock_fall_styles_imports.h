@@ -22,10 +22,10 @@
 extern "C" {
 #endif
 
-struct LevelState;
+struct Lego_Level;
 struct Lego_Object;
 
-struct LevelState* level_current_owner_get(void); /* 00431560 Lego_GetLevel */
+struct Lego_Level* level_current_owner_get(void); /* 00431560 Lego_GetLevel */
 /* 00431570 Lego_GetMap takes no arguments. lego_unit.c defines it with the
  * port's two ignored cell arguments, so the C matching build calls it
  * through an unprototyped function type, which pushes none, as the original

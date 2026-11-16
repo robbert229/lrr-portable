@@ -26,6 +26,7 @@
 #include "crt/vc5names.h"
 #include "dependencies.h"
 #include "dependencies_imports.h"
+#include "legoobject_record.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -195,9 +196,9 @@ int dependencies_live_object_callback(struct Lego_Object* liveObj, void* data)
     Dependencies_Requirement* search = (Dependencies_Requirement*)data;
 
     if (!legoobject_task_kind_filtered_search(search->objType)) {
-        if (search->objType != *(int*)((char*)liveObj + 0x0)) return 0;
-        if (search->objID != *(unsigned int*)((char*)liveObj + 0x4)) return 0;
-        if (search->hasLevel && search->objLevel > *(unsigned int*)((char*)liveObj + 0x330)) return 0;
+        if (search->objType != liveObj->type) return 0;
+        if (search->objID != (unsigned int)liveObj->id) return 0;
+        if (search->hasLevel && search->objLevel > liveObj->objLevel) return 0;
     }
     return 1;
 }

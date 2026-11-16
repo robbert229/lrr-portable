@@ -48,6 +48,7 @@
 #include "g98_026.h"
 #include "directdraw.h"
 #include "container_imports.h"
+#include "gods98/mesh_record.h"
 
 #include <miniwin/d3drm.h>
 #include <miniwin/ddraw.h>
@@ -58,20 +59,6 @@
 // STRING: LEGORR 0x004aab84
 #define CONTAINER_ACTIVITYFRAMEPREFIX "ActFrame"
 #define CONTAINER_ULONG_MAX 0xffffffff
-
-typedef enum Container_Type {
-    Container_Invalid = -1,
-    Container_Null = 0,
-    Container_Mesh = 1,
-    Container_Frame = 2,
-    Container_Anim = 3,
-    Container_FromActivity = 4,
-    Container_Light = 5,
-    Container_Reference = 6,
-    Container_LWS = 7,
-    Container_LWO = 8,
-    Container_TypeCount = 9
-} Container_Type;
 
 typedef enum Container_SearchMode {
     Container_SearchMode_FirstMatch = 0,
@@ -116,37 +103,6 @@ typedef struct CntImage {
 #define lpDevice() ((LPDIRECT3DRMDEVICE3)s_main_device)
 /* DirectDraw.c's lpDD() (0076ac84). */
 #define lpDD() ((LPDIRECTDRAW4)CONTAINER_LPDD())
-
-/* A container's type data (Container_SetTypeData). */
-typedef struct Container_TypeData {
-    char* name;                 /* +0x00 the current activity */
-    LPDIRECT3DRMLIGHT light;            /* +0x04 */
-    LPDIRECT3DRMMESH mesh;              /* +0x08 */
-    void* transMesh;            /* +0x0c Mesh.c's mesh */
-} Container_TypeData;
-
-/* The clones of an activity or animation container (Container_Clone). */
-typedef struct Container_CloneData {
-    struct Container* clonedFrom;  /* +0x00 */
-    struct Container** cloneTable; /* +0x04 */
-    unsigned long cloneCount;      /* +0x08 */
-    unsigned long cloneNumber;     /* +0x0c */
-    int used;                      /* +0x10 */
-} Container_CloneData;
-
-struct Container {
-    LPDIRECT3DRMFRAME3 masterFrame;                       /* +0x00 */
-    LPDIRECT3DRMFRAME3 activityFrame;                     /* +0x04 */
-    LPDIRECT3DRMFRAME3 hiddenFrame;                       /* +0x08 */
-    Container_TypeData* typeData;                /* +0x0c */
-    Container_Type type;                         /* +0x10 */
-    unsigned long flags;                         /* +0x14 */
-    ContainerActivityCallback activityCallback;  /* +0x18 */
-    void* activityCallbackData;                  /* +0x1c */
-    void* userData;                              /* +0x20 */
-    Container_CloneData* cloneData;              /* +0x24 */
-    struct Container* nextFree;                  /* +0x28 */
-};
 
 /* A Container_LoadTexture2 texture. */
 struct Container_Texture {
@@ -1388,12 +1344,9 @@ void Container_FreeTexture(Container_Texture* text)
     }
 }
 
-/* Mesh.c's Mesh, as far as Container_Mesh_Swap reads it: its user visual
- * (+0x0c). */
-typedef struct Container_MeshView {
-    void* reserved[3];
-    LPDIRECT3DRMUSERVISUAL uv;  /* +0x0c */
-} Container_MeshView;
+/* Mesh.c's Mesh (gods98/mesh_record.h): Container_Mesh_Swap reads its user
+ * visual. */
+typedef struct Mesh Container_MeshView;
 
 // FUNCTION: LEGORR 0x00474760
 void Container_Mesh_Swap(Container* target, Container* origin, int restore)

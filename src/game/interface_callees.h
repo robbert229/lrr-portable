@@ -24,68 +24,26 @@
 #include <stdint.h>
 
 #include "gods98/images.h"
+#include "legoobject_record.h"
+#include "lego_level_record.h"
+#include "camera_control.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct EntitySlot;
-struct LevelState;
+struct Lego_Object;
+struct Lego_Level;
 struct Point2I;
 struct TerrainMap;
 struct TextureSurface;
 
-/* The fields of LegoObject (LegoObject.c, GAME-023) that the unit reads, at
- * their Win32 offsets. The port's EntitySlot has another layout; the unit
- * passes these records to port entries as EntitySlot pointers. */
-typedef struct LegoObject {
-    int type;                               /* +0x000 */
-    int id;                                 /* +0x004 */
-    char* customName;                       /* +0x008 */
-    unsigned char pad_00c[0x308 - 0x00c];
-    struct LegoObject* interactObject;      /* +0x308 */
-    unsigned char pad_30c[0x324 - 0x30c];
-    unsigned int carriedCount;              /* +0x324 */
-    unsigned int carryCount;                /* +0x328 */
-    unsigned char pad_32c[0x330 - 0x32c];
-    unsigned int objLevel;                  /* +0x330 */
-    unsigned char pad_334[0x340 - 0x334];
-    float health;                           /* +0x340 */
-    float energy;                           /* +0x344 */
-    unsigned char pad_348[0x36c - 0x348];
-    struct LegoObject* driveObject;         /* +0x36c */
-    unsigned char pad_370[0x3d4 - 0x370];
-    float field_3d4;                        /* +0x3d4 */
-    int field_3d8;                          /* +0x3d8 */
-    unsigned char pad_3dc[0x3e0 - 0x3dc];
-    unsigned int flags1;                    /* +0x3e0 */
-    unsigned int flags2;                    /* +0x3e4 */
-    unsigned int flags3;                    /* +0x3e8 */
-    unsigned int flags4;                    /* +0x3ec */
-    unsigned int abilityFlags;              /* +0x3f0 */
-} LegoObject;
-
-
-/* Lego_Block (0x48 bytes) and the Lego_Level fields the unit reads. */
-typedef struct LegoBlock {
-    unsigned char pad_00[2];
-    unsigned char terrain;                  /* +0x02 */
-    unsigned char pad_03[5];
-    unsigned int flags1;                    /* +0x08 */
-    unsigned char pad_0c[0x48 - 0x0c];
-} LegoBlock;
-
-typedef struct LegoLevel {
-    unsigned char pad_00[0x14];
-    unsigned int width;                     /* +0x14 */
-    unsigned char pad_18[0xb8 - 0x18];
-    LegoBlock* blocks;                      /* +0xb8 */
-} LegoLevel;
-
-typedef struct LegoCamera {
-    unsigned char pad_00[0x14];
-    int mode;                               /* +0x14 */
-} LegoCamera;
+/* LegoObject.c's object record (legoobject_record.h), Lego.c's block and
+ * level records (lego_level_record.h) and the camera (camera_control.h), by
+ * the names the unit uses. */
+typedef struct Lego_Object LegoObject;
+typedef struct Lego_Block LegoBlock;
+typedef struct Lego_Level LegoLevel;
 
 /* One entry of a Dependencies.c requirement list (0x10 bytes). */
 typedef struct InterfaceDependency {
@@ -106,13 +64,13 @@ typedef struct InterfaceObjectSearch {
     unsigned int flags;                     /* +0x14: 1 type, 2 ability */
 } InterfaceObjectSearch;
 
-#define LEGOOBJ(o) ((struct EntitySlot*)(o))
-#define INTERFACE_OBJECT_CALLBACK(f) ((int (*)(struct EntitySlot*, void*))(f))
+#define LEGOOBJ(o) ((struct Lego_Object*)(o))
+#define INTERFACE_OBJECT_CALLBACK(f) ((int (*)(struct Lego_Object*, void*))(f))
 
 /* ---- legoGlobs (Lego.c) stand-ins and key maps (Input.c) ---------------- */
 
 /* DAT_005560d4 legoGlobs.currLevel. terrain_grid.cpp owns it. */
-extern struct LevelState* g_active_level_retail;
+extern struct Lego_Level* g_active_level_retail;
 #define lego_current_level ((LegoLevel*)g_active_level_retail)
 #define LEGO_LEVEL_BLOCK(level, x, y) \
     (&((LegoLevel*)(level))->blocks[((LegoLevel*)(level))->width * (y) + (x)])
@@ -155,16 +113,11 @@ extern unsigned int lego_flags1;
 extern unsigned int s_global_low_word_c;
 /* DAT_00556f58: the upgrade level names. */
 extern char* lego_upgrade_level_names[16];
-/* Matching build: LegoObject.c's tool-tip sounds (004de814) and the ore
- * icon of the cost tool tip (004eadc0) are objectGlobs fields (004de790,
- * legoobject_globs.h, finding 662), at +0x84 and +0xc630. objectGlobs is
- * declared here without its struct: the declaration and its new tag cost
- * the two symbols of the two declarations it replaces, so
- * interface_unit.c's symbol counter does not move (the header itself would
- * cost three). Deviation (scoring only). */
-extern struct LegoObject_Globs objectGlobs;
-#define object_tooltip_sfx ((int*)((char*)&objectGlobs + 0x84))
-#define lego_tooltip_ore_icon (*(void**)((char*)&objectGlobs + 0xc630))
+/* objectGlobs' per-surface tool tip sounds and ore tool tip icon
+ * (legoobject_globs.h, finding 662). */
+#include "legoobject_globs.h"
+#define object_tooltip_sfx objectGlobs.field_84
+#define lego_tooltip_ore_icon objectGlobs.ToolTipIcon_Ore
 /* DAT_0076ab80/DAT_0076aa00: Input.c's key map and the previous frame's. */
 #include "gods98/input_key_names.h"
 extern unsigned char input_key_map[256];
@@ -173,12 +126,12 @@ extern unsigned char input_prev_key_map[256];
 /* ---- port entries with the original contract ---------------------------- */
 
 /* AITask.c (GAME-002): its original-shape unit, game/aitask.h (finding 570) */
-void aitask_cmd_mark_matching(int type, struct EntitySlot* object, const int* blockPos);
-void aitask_task_type23_create_for_category_mask(struct EntitySlot* object, int mask, int detach);
-void aitask_entity_kind_command_issue(struct EntitySlot* object);
-void aitask_entity_conditional_task_schedule(struct EntitySlot* object);
-void aitask_object_command_task_create(struct EntitySlot* object, int param);
-void aitask_entity_threshold_progress_event_queue(struct EntitySlot* object,
+void aitask_cmd_mark_matching(int type, struct Lego_Object* object, const int* blockPos);
+void aitask_task_type23_create_for_category_mask(struct Lego_Object* object, int mask, int detach);
+void aitask_entity_kind_command_issue(struct Lego_Object* object);
+void aitask_entity_conditional_task_schedule(struct Lego_Object* object);
+void aitask_object_command_task_create(struct Lego_Object* object, int param);
+void aitask_entity_threshold_progress_event_queue(struct Lego_Object* object,
                                                   int urgent);
 int aitask_object_event_type2_queue(void* payload);
 /* ToolTip.c (GAME-046): game/cmd.hpp */
@@ -189,10 +142,10 @@ int selected_entities_any_predicate_match(int cx, int cy, int require_stat_bit);
 int lego_any_object_can_occupy_terrain_cell(int bx, int by);
 void terrain_cell_work_flag_clear_current(const int coord[2],
                                           uint32_t selector);
-int lego_terrain_cell_route_and_occupancy_check(struct EntitySlot* liveObj,
+int lego_terrain_cell_route_and_occupancy_check(struct Lego_Object* liveObj,
                                                 int bx, int by, int toX,
                                                 int toY, int ignoreOwnBlock);
-int terrain_cell_walkability_query_current(const struct EntitySlot* entity,
+int terrain_cell_walkability_query_current(const struct Lego_Object* entity,
                                            uint32_t x, uint32_t y,
                                            int require_stat_bit,
                                            int gated_mode);
@@ -223,33 +176,33 @@ int terrain_cell_resource_entry_matches(const uint32_t* cell_record,
 void global_flag_bit0_clear(void);
 /* LegoObject.c (GAME-023): game/entity.hpp, game/ai.hpp */
 int entity_pool_find_by_callback_filtered_current(
-    int (*callback)(struct EntitySlot*, void*), void* payload);
-int building_upgrade_resource_admission_check(struct EntitySlot* building,
+    int (*callback)(struct Lego_Object*, void*), void* payload);
+int building_upgrade_resource_admission_check(struct Lego_Object* building,
                                               uint32_t* out_secondary_cost);
-void building_upgrade_commit(struct EntitySlot* building);
-int entity_action_kind_prerequisite_check(struct EntitySlot* entity,
+void building_upgrade_commit(struct Lego_Object* building);
+int entity_action_kind_prerequisite_check(struct Lego_Object* entity,
                                           int action);
-struct EntitySlot* entity_route_marker_candidate_find(
-    struct EntitySlot* source, int include_secondary);
+struct Lego_Object* entity_route_marker_candidate_find(
+    struct Lego_Object* source, int include_secondary);
 const char* localized_object_name_get(uint32_t kind, int index);
-uint32_t entity_stats_flag10_test(const struct EntitySlot* e);
-uint32_t entity_stats_flag20_test(const struct EntitySlot* e);
-uint32_t entity_stats_flag40_test(const struct EntitySlot* e);
-int entity_vehicle_unload_cell_find_if_eligible(const struct EntitySlot* entity,
+uint32_t entity_stats_flag10_test(const struct Lego_Object* e);
+uint32_t entity_stats_flag20_test(const struct Lego_Object* e);
+uint32_t entity_stats_flag40_test(const struct Lego_Object* e);
+int entity_vehicle_unload_cell_find_if_eligible(const struct Lego_Object* entity,
                                                 int out_xy[2]);
-int entity_record_flag20_query(const struct EntitySlot* entity,
+int entity_record_flag20_query(const struct Lego_Object* entity,
                                int out_xy[2]);
-struct EntitySlot* entity_action_kind_entity_create_and_command_issue(
-    struct EntitySlot* source, int kind, int selector, int argument);
-int entity_shared_eligibility_check(const struct EntitySlot* e, int relaxed);
-int ai_activity_scan(const struct EntitySlot* e, int activity);
-void entity_activity23_state_transition(struct EntitySlot* e);
+struct Lego_Object* entity_action_kind_entity_create_and_command_issue(
+    struct Lego_Object* source, int kind, int selector, int argument);
+int entity_shared_eligibility_check(const struct Lego_Object* e, int relaxed);
+int ai_activity_scan(const struct Lego_Object* e, int activity);
+void entity_activity23_state_transition(struct Lego_Object* e);
 /* Message.c (GAME-027): game/select.hpp */
 int selection_active_has_any_get(void);
-struct EntitySlot* selection_active_entity_get(void);
-struct EntitySlot* const* selection_active_records_get(void);
+struct Lego_Object* selection_active_entity_get(void);
+struct Lego_Object* const* selection_active_records_get(void);
 uint32_t selection_active_count_get(void);
-uint32_t selection_contains_entity_active_target(struct EntitySlot* entity,
+uint32_t selection_contains_entity_active_target(struct Lego_Object* entity,
                                                  uint32_t* index_out);
 void selection_clear_active(void);
 #define selection_active_entity_get_obj() \
@@ -258,15 +211,15 @@ void selection_clear_active(void);
     ((LegoObject**)selection_active_records_get())
 /* Stats.c (GAME-043): game/entity.hpp */
 uint32_t entity_indexed_record_word_at_b4_get(int group, int index, int slot);
-uint32_t entity_stats_word_get(const struct EntitySlot* e);
-uint32_t entity_state_flags_get(const struct EntitySlot* e);
-uint32_t entity_capability_flags_get(const struct EntitySlot* e);
+uint32_t entity_stats_word_get(const struct Lego_Object* e);
+uint32_t entity_state_flags_get(const struct Lego_Object* e);
+uint32_t entity_capability_flags_get(const struct Lego_Object* e);
 uint32_t stats_table_word_at_148(int type, int row);
 uint32_t stats_table_word_at_14c(int type, int row);
 uint32_t building_upgrade_admission_check(int type, int row);
 uint32_t stats_instance_word_at_ec(const void* config_block);
 /* LegoObject.c (GAME-023): game/entity.hpp */
-int entity_action_target_cell_is_valid(struct EntitySlot* entity);
+int entity_action_target_cell_is_valid(struct Lego_Object* entity);
 /* SFX.c (GAME-041): gods98/sound.hpp */
 int sound_submit_with_global_cooldown(int alias, int* out_handle);
 

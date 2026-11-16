@@ -17,7 +17,7 @@ extern "C" {
 #endif
 
 struct AITask;
-struct EntitySlot;
+struct Lego_Object;
 
 typedef struct AITask_Globs {
     struct AITask* poolBlocks[12];      /* 004b31c8 CmdPoolGrow block table */
@@ -28,9 +28,9 @@ typedef struct AITask_Globs {
     int priorityValues[27];             /* 004b32e8 */
     struct AITask* globalHead;          /* 004b3354 the head (pending) list */
     struct AITask* globalTail;          /* 004b3358 the second (timer) list */
-    struct EntitySlot* assignCandidates[50]; /* 004b335c */
+    struct Lego_Object* assignCandidates[50]; /* 004b335c */
     unsigned int assignCandidateCount;  /* 004b3424 */
-    struct EntitySlot* timerCandidates[50];  /* 004b3428 */
+    struct Lego_Object* timerCandidates[50];  /* 004b3428 */
     unsigned int timerCandidateCount;   /* 004b34f0 */
     unsigned int commandCounts[4800];   /* 004b34f4 */
     int priorityState[27];              /* 004b7ff4 */

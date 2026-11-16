@@ -9,121 +9,20 @@
  * MSVC's symbol numbering (finding 538). src/game/test_c_boundaries.cpp
  * checks it against the C++ declarations of the shared functions.
  *
- * The offsets are the original's Win32 layout. The port's EntitySlot
- * (game.hpp) is another layout; the unit's functions that read Lego_Object
- * run only in the matching build. */
+ * Lego_Object itself is in legoobject_record.h, which other units include
+ * to read its fields. */
 #ifndef LEGORRR_GAME_LEGOOBJECT_UNIT_H
 #define LEGORRR_GAME_LEGOOBJECT_UNIT_H
 
 #include <stdint.h>
 
+#include "legoobject_record.h"
+#include "lego_level_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Reads a field of an original record by its Win32 offset, for records and
- * fields the unit has no struct member for yet. */
-#define LEGOOBJ_FIELD(ptr, type, offset) (*(type*)((char*)(ptr) + (offset)))
-
-/* LegoObject (0x40c bytes): the original's object record. The pool
- * (legoobject_pool_chunk_allocate) hands them out from chunks in strides of
- * 0x40c; +0x408 links free records. Named by role where the port or the
- * pseudocode knows it, otherwise by offset. Lego_Object, not LegoObject:
- * interface_callees.h (GAME-020) defines a partial LegoObject view, and the
- * boundary test includes both headers. */
-typedef struct Lego_Object {
-    int type;                         /* +0x000 LegoObject_Type */
-    int id;                           /* +0x004 object index within the type */
-    char* customName;                 /* +0x008 */
-    void* vehicle;                    /* +0x00c model, by type */
-    void* miniFigure;                 /* +0x010 */
-    void* rockMonster;                /* +0x014 */
-    void* building;                   /* +0x018 */
-    void* other;                      /* +0x01c */
-    void* upgradePart;                /* +0x020 */
-    void* routeBlocks;                /* +0x024 route buffer */
-    unsigned int routeBlocksTotal;    /* +0x028 */
-    unsigned int routeBlocksCurrent;  /* +0x02c */
-    unsigned int routeCurveCount;     /* +0x030 BezierCurve routeCurve: count */
-    float routeCurvePoints[50][2];    /* +0x034 routeCurve.points */
-    float routeCurveDistances[50];    /* +0x1c4 routeCurve.distances */
-    float field_28c;                  /* +0x28c */
-    float field_290;                  /* +0x290 */
-    float field_294;                  /* +0x294 */
-    float field_298;                  /* +0x298 last route direction x */
-    float field_29c;                  /* +0x29c last route direction y */
-    float field_2a0;                  /* +0x2a0 */
-    float field_2a4;                  /* +0x2a4 */
-    float field_2a8;                  /* +0x2a8 */
-    float faceDirection[3];           /* +0x2ac */
-    float faceDirectionLength;        /* +0x2b8 */
-    int field_2bc;                    /* +0x2bc */
-    int field_2c0;                    /* +0x2c0 */
-    float field_2c4;                  /* +0x2c4 */
-    float field_2c8;                  /* +0x2c8 */
-    float field_2cc;                  /* +0x2cc */
-    unsigned int field_2d0;           /* +0x2d0 */
-    float animTime;                   /* +0x2d4 */
-    unsigned int animRepeat;          /* +0x2d8 */
-    void* field_2dc;                  /* +0x2dc sink effect container */
-    int field_2e0;                    /* +0x2e0 */
-    void* activityCont;               /* +0x2e4 container the activity runs */
-    const char* activityName1;        /* +0x2e8 activityName entries */
-    const char* activityName2;        /* +0x2ec */
-    void* aiTask;                     /* +0x2f0 command chain head */
-    float targetBlockPos[2];          /* +0x2f4 */
-    struct Lego_Object* routeToObject;  /* +0x2fc */
-    struct Lego_Object* interactObject; /* +0x300 reciprocal of +0x2fc */
-    struct Lego_Object* carryingThisObject; /* +0x304 */
-    struct Lego_Object* carriedObjects[6];  /* +0x308 */
-    unsigned int carryingIndex;       /* +0x320 */
-    unsigned int numCarriedObjects;   /* +0x324 */
-    unsigned int carryNullFrames;     /* +0x328 */
-    void* field_32c;                  /* +0x32c */
-    unsigned int objLevel;            /* +0x330 */
-    void* stats;                      /* +0x334 ObjectStats */
-    float aiTimer;                    /* +0x338 */
-    float field_33c;                  /* +0x33c */
-    float health;                     /* +0x340 */
-    float energy;                     /* +0x344 */
-    void* field_348;                  /* +0x348 */
-    int field_34c;                    /* +0x34c */
-    int drillSoundHandle;             /* +0x350 */
-    int soundHandle;                  /* +0x354 */
-    unsigned char pad_358[0x360 - 0x358];
-    float field_360;                  /* +0x360 */
-    void* field_364;                  /* +0x364 */
-    float field_368;                  /* +0x368 */
-    struct Lego_Object* driveObject;  /* +0x36c */
-    int carriedTools[5];              /* +0x370 */
-    unsigned int numCarriedTools;     /* +0x384 */
-    float bubbleTimer;                /* +0x388 Bubbles.c's image timer */
-    void* bubbleImage;                /* +0x38c Image*: the current bubble */
-    unsigned char pad_390[0x39c - 0x390];
-    float weaponDirection[3];         /* +0x39c fire direction */
-    float weaponTarget[3];            /* +0x3a8 fire target position */
-    float field_3b4;                  /* +0x3b4 */
-    float field_3b8;                  /* +0x3b8 */
-    float field_3bc;                  /* +0x3bc */
-    void* field_3c0;                  /* +0x3c0 */
-    unsigned char pad_3c4[0x3cc - 0x3c4];
-    struct Lego_Object* field_3cc;    /* +0x3cc */
-    float field_3d0;                  /* +0x3d0 */
-    float field_3d4;                  /* +0x3d4 */
-    float field_3d8;                  /* +0x3d8 */
-    float field_3dc;                  /* +0x3dc */
-    unsigned int flags1;              /* +0x3e0 */
-    unsigned int flags2;              /* +0x3e4 */
-    unsigned int flags3;              /* +0x3e8 */
-    unsigned int flags4;              /* +0x3ec */
-    unsigned int abilityFlags;        /* +0x3f0 */
-    int field_3f4;                    /* +0x3f4 */
-    int field_3f8;                    /* +0x3f8 */
-    float field_3fc;                  /* +0x3fc */
-    float field_400;                  /* +0x400 */
-    int field_404;                    /* +0x404 */
-    struct Lego_Object* nextFree;     /* +0x408 */
-} Lego_Object;
 
 /* LegoObject_RunThroughLists callback. */
 typedef int (*Lego_ObjectCallback)(Lego_Object* obj, void* data);
@@ -151,19 +50,6 @@ void legoobject_callback_dispatch_unless_type_five(Lego_Object* obj); /* 004374f
 int legoobject_linked_route_clear_callback(Lego_Object* obj, void* data); /* 00437510 */
 
 /* ---- group B: 00437540-00437cc0 ---- */
-/* objectGlobs.recordObjs (004e8544): one deferred object of the level's
- * object list, 0x2c bytes, created when its block is uncovered. */
-typedef struct LegoObjGB_DeferredRecord {
-    int blockPos[2];                  /* +0x00 */
-    float worldPos[2];                /* +0x08 */
-    float heading;                    /* +0x10 */
-    void* model;                      /* +0x14 */
-    int type;                         /* +0x18 */
-    int id;                           /* +0x1c */
-    float health;                     /* +0x20 */
-    char* name;                       /* +0x24 */
-    char* linkName;                   /* +0x28 driving/route target's name */
-} LegoObjGB_DeferredRecord;
 int legoobject_remove(Lego_Object* obj);                        /* 00437540 */
 int legoobject_run_through_lists_skip_upgrade_parts(Lego_ObjectCallback callback, void* data); /* 004377b0 */
 int legoobject_run_through_lists(Lego_ObjectCallback callback, void* data, int skipUpgradeParts); /* 004377d0 */
@@ -243,12 +129,7 @@ typedef struct LegoObjGE_RouteMarkerSearch {
     int selector;            /* +0x20 legoobject_flags_contain_requested_single_bit */
 } LegoObjGE_RouteMarkerSearch;
 /* Lego_Level and Lego_Block (0x48), the fields group E reads. */
-typedef struct LegoObjGE_Block {
-    unsigned char pad_00[0x2c];
-    int field_2c;            /* +0x2c build-placement counter */
-    int field_30;            /* +0x30 alternate build-placement counter */
-    unsigned char pad_34[0x48 - 0x34];
-} LegoObjGE_Block;
+typedef struct Lego_Block LegoObjGE_Block;
 /* Point2F. */
 typedef struct LegoObjGE_Point2F {
     float x;
@@ -287,11 +168,7 @@ int legoobject_record_flag20_query(Lego_Object* obj, int* outCell); /* 00439e40 
 
 /* ---- group G: 00439e70-0043a960 ---- */
 /* Lego_Block (0x48) and the Lego_Level fields group G reads. */
-typedef struct LegoObjG_Block {
-    unsigned char pad_00[2];
-    unsigned char terrain;            /* +0x02 */
-    unsigned char pad_03[0x48 - 0x03];
-} LegoObjG_Block;
+typedef struct Lego_Block LegoObjG_Block;
 /* RoutingBlock (0x14 bytes): one entry of Lego_Object.routeBlocks. */
 typedef struct LegoObjG_RouteBlock {
     int blockPos[2];                  /* +0x00 */
@@ -300,12 +177,7 @@ typedef struct LegoObjG_RouteBlock {
     unsigned char actionFlags;        /* +0x11 */
     unsigned char pad_12[0x14 - 0x12];
 } LegoObjG_RouteBlock;
-typedef struct LegoObjG_Level {
-    unsigned char pad_00[0x14];
-    unsigned int width;               /* +0x14 */
-    unsigned char pad_18[0xb8 - 0x18];
-    LegoObjG_Block* blocks;           /* +0xb8 */
-} LegoObjG_Level;
+typedef struct Lego_Level LegoObjG_Level;
 void legoobject_attached_object_list_detach(Lego_Object* obj, int resetMode); /* 00439e70 */
 int legoobject_cell_step_command_issue_with_jitter(Lego_Object* obj, int* target, float* input, int mode, int markPending); /* 0043a120 */
 int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target); /* 0043a300 */
@@ -349,13 +221,9 @@ typedef struct LegoObjH_Map {
     int blockHeight;                  /* +0x04 */
 } LegoObjH_Map;
 /* legoGlobs.rockMonsterData: the creature models (0x74 bytes each). */
-typedef struct LegoObjH_CreatureModel {
-    unsigned char bytes[0x74];
-} LegoObjH_CreatureModel;
+typedef struct AnimationObject LegoObjH_CreatureModel;
 /* legoGlobs.buildingData: the building models (0x14c bytes each). */
-typedef struct LegoObjH_BuildingModel {
-    unsigned char bytes[0x14c];
-} LegoObjH_BuildingModel;
+typedef struct BuildingModel LegoObjH_BuildingModel;
 void legoobject_queue_for_rockfall_processing_if_eligible(Lego_Object* obj); /* 0043a9e0 */
 void legoobject_pair_interaction_gate(Lego_Object* obj, Lego_Object* other); /* 0043a9f0 */
 void legoobject_proximity_activity_raise(Lego_Object* obj); /* 0043aab0 */
@@ -380,11 +248,7 @@ void legoobject_detach_carried_object_and_reset_state(Lego_Object* obj); /* 0043
 
 /* ---- group I1: 0043bc40-0043c6b0 (part 2, issue #588) ---- */
 /* AITask, the fields group I reads. */
-typedef struct LegoObjI_AITask {
-    int taskType;                     /* +0x00 AITask_Type */
-    unsigned char pad_04[0x10 - 0x04];
-    Lego_Object* targetObject;        /* +0x10 */
-} LegoObjI_AITask;
+typedef struct AITask LegoObjI_AITask;
 void legoobject_objective_sidecar_append_gate(Lego_Object* obj); /* 0043bc40 */
 int legoobject_state_pair_predicate(int type, int id, int type2, int id2); /* 0043c200 */
 int legoobject_nested_float_add_unless_blocked(Lego_Object* obj, void* data); /* 0043c280 */
@@ -401,19 +265,8 @@ void legoobject_activity_counters_advance(Lego_Object* obj, float elapsed); /* 0
 
 /* ---- group J: 0043c810-0043c810 (part 2, issue #588) ---- */
 /* Lego_Block (0x48) and the Lego_Level fields group J reads. */
-typedef struct LegoObjJ_Block {
-    unsigned char pad_00[2];
-    unsigned char terrain;            /* +0x02 */
-    unsigned char pad_03[0x0c - 0x03];
-    unsigned int flags1;              /* +0x0c */
-    unsigned char pad_10[0x48 - 0x10];
-} LegoObjJ_Block;
-typedef struct LegoObjJ_Level {
-    unsigned char pad_00[0x14];
-    unsigned int width;               /* +0x14 */
-    unsigned char pad_18[0xb8 - 0x18];
-    LegoObjJ_Block* blocks;           /* +0xb8 */
-} LegoObjJ_Level;
+typedef struct Lego_Block LegoObjJ_Block;
+typedef struct Lego_Level LegoObjJ_Level;
 /* Vector3F. */
 typedef struct LegoObjJ_Vector3F {
     float x;
@@ -425,13 +278,8 @@ typedef struct LegoObjJ_Point2I {
     int x;
     int y;
 } LegoObjJ_Point2I;
-/* AITask (0x68), the fields 0043c810 reads. */
-typedef struct LegoObjJ_AITask {
-    unsigned char pad_00[0x10];
-    Lego_Object* object;              /* +0x10 */
-    unsigned char pad_14[0x38 - 0x14];
-    int activity;                     /* +0x38 */
-} LegoObjJ_AITask;
+/* AITask (aitask_record.h): 0043c810 reads its object and activity (+0x38). */
+typedef struct AITask LegoObjJ_AITask;
 /* LegoObject_Callback_Update: the per-object update LegoObject_UpdateAll
  * (0043b270) runs through LegoObject_RunThroughLists; data points at the
  * elapsed time. */
@@ -511,7 +359,7 @@ void legoobject_spatial_callback_query_at_optional_coordinate(Lego_Object* obj, 
 int legoobject_spatial_callback_query_at_optional_coordinate_visit(Lego_Object* obj, void* data); /* 00440920 */
 void legoobject_set_activity(Lego_Object* obj, int activity, int restart); /* 004409e0 */
 void legoobject_attached_direction_vector_update(Lego_Object* obj); /* 00440a10 */
-void legoobject_object_list_field_assign_all(Lego_Object* obj, int value); /* 00440bf0 */
+void legoobject_object_list_field_assign_all(Lego_Object* obj, void* value); /* 00440bf0 */
 int legoobject_grid_route_search_adapter(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount); /* 00440c30 */
 int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount, int (*callback)(Lego_Object* obj, int* blockPos, void* data), void* data); /* 00440c70 */
 
@@ -660,14 +508,9 @@ void legoobject_enter_event21_state_once(Lego_Object* obj); /* 00444620 */
 
 /* ---- group O: 00444680-00445830 (part 2, issue #588) ---- */
 /* The record field_32c points at for a rock monster with stats flag
- * 0x200000 (a bat's home position and its attack flag). */
-typedef struct LegoObjO_Home {
-    unsigned char pad_00[0x18];
-    float x;                          /* +0x18 */
-    float pad_1c;                     /* +0x1c */
-    float y;                          /* +0x20 */
-    unsigned int flags;               /* +0x24 */
-} LegoObjO_Home;
+ * 0x200000: its flock (steering_record.h), which holds a bat's home position
+ * and its attack flag. */
+typedef struct SteeringGroup LegoObjO_Home;
 int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int turn, int reverse); /* 00444680 */
 void legoobject_turn_to_vector_activity_issue(Lego_Object* obj, float* dir); /* 00444fb0 */
 void legoobject_path_step_vector_normalize(Lego_Object* obj); /* 004451e0 */

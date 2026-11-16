@@ -16,12 +16,12 @@
 extern "C" {
 #endif
 
-struct LevelState;
+struct Lego_Level;
 struct TextureSurface;
 
 /* Lego.c (lego_unit.c; terrain_grid.cpp natively): legoGlobs.currLevel
  * (005560d4) and legoGlobs.flags1 (00556ecc). */
-extern struct LevelState* g_active_level_retail;
+extern struct Lego_Level* g_active_level_retail;
 
 /* Interface.c (interface_unit.c): Interface_GetFlashingState. */
 uint32_t sim_status_banner_word_get(void);                         /* 0041b9b0 */

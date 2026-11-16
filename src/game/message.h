@@ -8,12 +8,14 @@
 #ifndef LEGORRR_GAME_MESSAGE_H
 #define LEGORRR_GAME_MESSAGE_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* FUN_00452060 Message_PostEvent. */
-void cmd_produce(int op, const void* a1, int a2, const int* pair);
+void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair);
 
 #ifdef __cplusplus
 }

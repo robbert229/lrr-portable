@@ -29,6 +29,8 @@
 #include "crt/vc5names.h"
 #include "upgrade.h"
 #include "upgrade_imports.h"
+#include "legoobject_record.h"
+#include "upgrade_record.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -40,38 +42,8 @@ extern "C" {
 
 #define LEGOOBJECT_UPGRADEPART 10
 
-/* One part of an upgrade level (0x14 bytes). */
-typedef struct Upgrade_PartInfo {
-    unsigned int level;                           /* +0x00 */
-    unsigned int nullFrameNo;                     /* +0x04 */
-    char* nullName;                               /* +0x08 */
-    char* weaponName;                             /* +0x0c */
-    void* upgradeData;                            /* +0x10 the part's model */
-} Upgrade_PartInfo;
-
-/* An object's upgrades (0x14 bytes). */
-typedef struct Upgrade_Model {
-    Upgrade_PartInfo* parts;                      /* +0x00 */
-    unsigned int count;                           /* +0x04 */
-    unsigned int currentLevel;                    /* +0x08 */
-    unsigned int levels;                          /* +0x0c a bit per type */
-    struct Lego_Object* objectList;               /* +0x10 the shown parts */
-} Upgrade_Model;
-
-/* An upgrade part's model (0x10 bytes): lego_unit.c's upgrade types, and
- * each upgrade-part LegoObject's clone (+0x20). */
-typedef struct Upgrade_PartModel {
-    unsigned int objID;                           /* +0x00 */
-    void* cont;                                   /* +0x04 */
-    struct Lego_Object* nextObject;               /* +0x08 */
-    Upgrade_PartInfo* partInfo;                   /* +0x0c */
-} Upgrade_PartModel;
-
-/* The part of a LegoObject the unit reads: its upgrade part (+0x20). */
-typedef struct Upgrade_Object {
-    unsigned char pad_00[0x20];
-    Upgrade_PartModel* upgradePart;               /* +0x20 */
-} Upgrade_Object;
+/* The LegoObject, whose upgradePart (+0x20) the unit reads. */
+typedef struct Lego_Object Upgrade_Object;
 
 // FUNCTION: LEGORR 0x0046c030
 void upgrade_part_load(Upgrade_PartModel* upgradeModel, unsigned int objID,
@@ -111,14 +83,8 @@ float upgrade_part_move_animation(Upgrade_PartModel* upgradeModel,
     return 0.0f;
 }
 
-/* Matching build: activityName is an objectGlobs field (004de790 +0x534,
- * legoobject_globs.h, finding 662). objectGlobs is declared here, without
- * its struct, just before the one function that reads it, so the symbol
- * counter of the functions above does not move; it costs two symbols, and
- * the header would cost three. Deviation (scoring only). */
-extern struct LegoObject_Globs objectGlobs;
-#undef s_activity
-#define s_activity ((const char**)((char*)&objectGlobs + 0x534))
+/* activityName is an objectGlobs field (legoobject_globs.h, finding 662). */
+#include "legoobject_globs.h"
 // FUNCTION: LEGORR 0x0046c130
 void upgrade_part_set_activity(Upgrade_PartModel* upgradeModel,
                                const char* activityName)

@@ -29,6 +29,8 @@
  * struct and objectGlobs then cost an including unit two symbols, and the
  * directive one (finding 538, finding 653). The macros give the pointer
  * fields their types. */
+#include "legoobject_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -53,7 +55,7 @@ struct LegoObject_Globs {
     int field_9d5c[10][2];                   /* +0x9d5c 004e84ec s_type11_cell_coordinates */
     unsigned int field_9dac;                 /* +0x9dac 004e853c s_predug_coordinate_count */
     unsigned int field_9db0;                 /* +0x9db0 004e8540 s_type11_cell_coordinate_count */
-    unsigned int recordObjs[200][11];            /* +0x9db4 004e8544 objectGlobs_recordObjs (LegoObjGB_DeferredRecord, 0x2c each) */
+    LegoObjGB_DeferredRecord recordObjs[200];    /* +0x9db4 004e8544 objectGlobs_recordObjs (0x2c each on Win32) */
     unsigned int recordObjsCount;            /* +0xc014 004ea7a4 objectGlobs_recordObjsCount */
     float field_c018;                        /* +0xc018 004ea7a8 objectGlobs_queuedAnimationFraction */
     unsigned int field_c01c[6];                  /* +0xc01c 004ea7ac s_render_config_snapshot */
@@ -61,7 +63,7 @@ struct LegoObject_Globs {
     int field_c434;                          /* +0xc434 004eabc4 s_object_f_4eabc4; their count */
     int field_c438;                          /* +0xc438 004eabc8 s_object_f_4eabc8; the buildings among them */
 #ifdef __cplusplus
-    struct EntitySlot* liveObjs[100];        /* +0xc43c 004eabcc s_idle100 */
+    struct Lego_Object* liveObjs[100];        /* +0xc43c 004eabcc s_idle100 */
 #else
     void* liveObjs[100];                     /* +0xc43c 004eabcc s_idle100 */
 #endif
@@ -81,7 +83,7 @@ extern struct LegoObject_Globs objectGlobs;
 #define objectGlobs_f_4dee0c objectGlobs.field_67c
 #define objectGlobs_f_4e8444 objectGlobs.field_9cb4
 #define s_lego_f_4e8448 objectGlobs.field_9cb8
-#define objectGlobs_recordObjs ((LegoObjGB_DeferredRecord*)objectGlobs.recordObjs)
+#define objectGlobs_recordObjs (objectGlobs.recordObjs)
 #define objectGlobs_recordObjsCount objectGlobs.recordObjsCount
 #define objectGlobs_queuedAnimationFraction objectGlobs.field_c018
 #define objectGlobs_f_4ea7c4 ((Lego_Object**)objectGlobs.field_c034)

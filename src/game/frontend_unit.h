@@ -13,6 +13,8 @@
 #ifndef LEGORRR_GAME_FRONTEND_UNIT_H
 #define LEGORRR_GAME_FRONTEND_UNIT_H
 
+#include "frontend_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -131,71 +133,6 @@ typedef struct Front_SelectData {
     Front_SelectCallback callback;  /* +0x54 */
     struct Front_Menu* nextMenu;    /* +0x58 */
 } Front_SelectData;
-
-/* 0x3c bytes (00410d50, 00410e20). */
-typedef struct Front_MenuItem {
-    char* banner;               /* +0x00 */
-    int length;                 /* +0x04 */
-    Front_Font* fontHi;         /* +0x08 */
-    Front_Font* fontLo;         /* +0x0c */
-    void* itemData;             /* +0x10 */
-    int itemType;               /* +0x14 Front_MenuItemType */
-    int x1;                     /* +0x18 */
-    int y1;                     /* +0x1c */
-    int centerOffLo;            /* +0x20 */
-    int centerOffHi;            /* +0x24 */
-    int isImageItem;            /* +0x28 */
-    struct Image* imageLo;      /* +0x2c */
-    struct Image* imageHi;      /* +0x30 */
-    int toolTipType;            /* +0x34 */
-    int notInTuto;              /* +0x38 */
-} Front_MenuItem;
-
-/* 0x20 bytes (00413f90): an animation played over a menu. */
-typedef struct Front_MenuOverlay {
-    char* filename;                     /* +0x00 */
-    int overlayType;                    /* +0x04 1 avi, 2 bmp, 3 lws */
-    int field_8;                        /* +0x08 */
-    int x;                              /* +0x0c */
-    int y;                              /* +0x10 */
-    int sfxType;                        /* +0x14 */
-    struct Front_MenuOverlay* next;     /* +0x18 */
-    int field_1c;                       /* +0x1c */
-} Front_MenuOverlay;
-
-/* 0xa0 bytes (00411100). */
-typedef struct Front_Menu {
-    char* title;                    /* +0x00 */
-    char* fullName;                 /* +0x04 */
-    int titleLength;                /* +0x08 */
-    Front_Font* menuFont;           /* +0x0c */
-    struct Image* menuImage;        /* +0x10 */
-    struct Image* menuImageDark;    /* +0x14 */
-    Front_MenuItem** items;         /* +0x18 */
-    int itemCount;                  /* +0x1c */
-    int itemCapacity;               /* +0x20 */
-    int itemFocus;                  /* +0x24 */
-    int closed;                     /* +0x28 */
-    int xPos;                       /* +0x2c */
-    int yPos;                       /* +0x30 */
-    unsigned int flags;             /* +0x34 1 image position set, 2 can scroll */
-    float imagePos[2];              /* +0x38 */
-    Front_MenuOverlay* overlays;    /* +0x40 */
-    int autoCenter;                 /* +0x44 */
-    int displayTitle;               /* +0x48 */
-    int anchored;                   /* +0x4c */
-    int anchoredX;                  /* +0x50 */
-    int anchoredY;                  /* +0x54 */
-    int centerOffset;               /* +0x58 */
-    char name[64];                  /* +0x5c */
-    int playRandom;                 /* +0x9c */
-} Front_Menu;
-
-/* 8 bytes (00414070). */
-typedef struct Front_MenuSet {
-    Front_Menu** menus;             /* +0x00 */
-    int menuCount;                  /* +0x04 */
-} Front_MenuSet;
 
 /* 0x10 bytes (00410490): the image and font cache, by file name. */
 typedef struct Front_Cache {

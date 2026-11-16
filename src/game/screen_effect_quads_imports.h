@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 struct Lego_Object;
 struct EngineTaskCallbackRecord;
 struct MeshRecordPool;
@@ -59,7 +59,7 @@ void* file_load_binary(const char* filename,
 void sound_subsystem_frame_tick(float dt);                        /* 004651a0 */
 
 /* GAME-021 Lego.c: the current camera's container. */
-uint32_t lego_context_selected_global_pointer_get(void);          /* 004295a0 */
+void* lego_context_selected_global_pointer_get(void);          /* 004295a0 */
 
 /* GAME-023 LegoObject.c: LegoObject_GetActivityContainer. */
 void* legoobject_type_component_get(struct Lego_Object* obj);      /* 0044a200 */
@@ -67,8 +67,8 @@ void* legoobject_type_component_get(struct Lego_Object* obj);      /* 0044a200 *
 /* GAME-043 Stats.c (entity_stats.c), by the names its definitions take in
  * the matching build (entity_stats_link_names.h): StatsObject_GetCollHeight
  * and StatsObject_GetStatsFlags2. */
-float entity_stats_float_at74(const struct EntitySlot* e);       /* 00469d50 */
-uint32_t entity_state_flags_get(const struct EntitySlot* e);     /* 00469e80 */
+float entity_stats_float_at74(const struct Lego_Object* e);       /* 00469d50 */
+uint32_t entity_state_flags_get(const struct Lego_Object* e);     /* 00469e80 */
 
 /* gods98 Container.c (scene_pool.hpp, view.hpp, record.h, view.h). The
  * container's master frame is at +0x04. */
@@ -81,7 +81,7 @@ void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* parent);        /* 00475710 */
 /* gods98 Viewports.c (viewports.c): Viewport_GetCamera, by its matching
  * build name (viewports_link_names.h). */
-uint32_t scene_object_query_value_if_ready(void* object);         /* 00476f70 */
+void* scene_object_query_value_if_ready(void* object);            /* 00476f70 */
 
 /* gods98 Mesh.c (view.hpp, surface.hpp, record.hpp). The port's models are
  * the port tail gods98/mesh_port.cpp; in the matching build (MSVC 5.0) the

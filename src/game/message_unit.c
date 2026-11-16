@@ -15,6 +15,7 @@
 #include "message_unit_link_names.h"
 #include "message_unit.h"
 #include "message_unit_imports.h"
+#include "camera_control.h"
 #include "crt/vc5names.h"
 /* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
  * above, pays for its symbols (finding 538). */
@@ -209,7 +210,7 @@ int message_lookup_physical_name(const char* name)
 
 // FUNCTION: LEGORR 0x00452010
 void message_add_message_action(unsigned char key, unsigned int type,
-                                Lego_Object* argument1, unsigned int argument2,
+                                Lego_Object* argument1, uintptr_t argument2,
                                 const int* blockPos)
 {
     Message_Event* event;
@@ -228,7 +229,7 @@ void message_add_message_action(unsigned char key, unsigned int type,
 
 // FUNCTION: LEGORR 0x00452060
 void message_post_event(unsigned int type, Lego_Object* argument1,
-                        unsigned int argument2, const int* blockPos)
+                        uintptr_t argument2, const int* blockPos)
 {
     Message_Event* event;
 
@@ -288,16 +289,16 @@ void message_update(void)
             break;
         case MESSAGE_USERGOTO:
             aitask_selection_drag_area_command_create(
-                (struct EntitySlot**)messageGlobs.selectedUnitList,
+                (struct Lego_Object**)messageGlobs.selectedUnitList,
                 messageGlobs.selectedUnitCount, list[loop].blockPos,
                 list[loop].argument2);
             break;
         case MESSAGE_GOTO:
-            aitask_cmd_create_move((struct EntitySlot*)list[loop].argument1,
+            aitask_cmd_create_move((struct Lego_Object*)list[loop].argument1,
                                    list[loop].blockPos, list[loop].argument2);
             break;
         case MESSAGE_ROCKMONSTERGOTO:
-            aitask_cmd_create_move((struct EntitySlot*)list[loop].argument1,
+            aitask_cmd_create_move((struct Lego_Object*)list[loop].argument1,
                                    list[loop].blockPos, list[loop].argument2);
             break;
         case MESSAGE_FIRSTPERSON:
@@ -306,7 +307,7 @@ void message_update(void)
         case MESSAGE_TRACKOBJECT:
             if (messageGlobs.selectedUnitCount)
                 lego_render_record_set_from_input(
-                    (struct EntitySlot*)messageGlobs.selectedUnitList[0]);
+                    (struct Lego_Object*)messageGlobs.selectedUnitList[0]);
             break;
         case MESSAGE_TOPVIEW:
             lego_sound_minimum_distance_update_mode(1, NULL, 0);
@@ -320,10 +321,10 @@ void message_update(void)
                                              list[loop].argument2 >> 16);
             break;
         case MESSAGE_COLLECTCRYSTAL:
-            aitask_cmd_create_task((struct EntitySlot*)list[loop].argument1, 0.0f);
+            aitask_cmd_create_task((struct Lego_Object*)list[loop].argument1, 0.0f);
             break;
         case MESSAGE_COLLECTORE:
-            aitask_cmd_create_task((struct EntitySlot*)list[loop].argument1, 0.0f);
+            aitask_cmd_create_task((struct Lego_Object*)list[loop].argument1, 0.0f);
             break;
         case MESSAGE_GENERATECRYSTAL:
             legoobject_build_placement_command_setup(list[loop].blockPos, 0, NULL, 1);
@@ -339,8 +340,8 @@ void message_update(void)
             legoobject_build_placement_command_batch_expand(list[loop].blockPos);
             break;
         case MESSAGE_CRYSTALTOREFINERY:
-            aitask_cmd_create_gated((struct EntitySlot*)list[loop].argument1,
-                                    (struct EntitySlot*)(uintptr_t)list[loop].argument2);
+            aitask_cmd_create_gated((struct Lego_Object*)list[loop].argument1,
+                                    (struct Lego_Object*)(uintptr_t)list[loop].argument2);
             break;
         case MESSAGE_GENERATEROCKMONSTER:
             legoobject_emergence_random_spawn_attempt();
@@ -356,8 +357,8 @@ void message_update(void)
                                                       (Lego_Object*)(uintptr_t)list[loop].argument2);
             break;
         case MESSAGE_FOLLOWATTACK:
-            aitask_cmd_create_target((struct EntitySlot*)list[loop].argument1,
-                                     (struct EntitySlot*)(uintptr_t)list[loop].argument2);
+            aitask_cmd_create_target((struct Lego_Object*)list[loop].argument1,
+                                     (struct Lego_Object*)(uintptr_t)list[loop].argument2);
             break;
         case MESSAGE_REDUCESELECTION:
             message_reduce_selected_units();
@@ -398,8 +399,8 @@ void message_remove_object_reference(Lego_Object* deadObj)
         lego_sound_minimum_distance_update_mode(1, NULL, 0);
         legoGlobs_selectedObject = NULL;
     }
-    if (LEGO_FIELD(legoGlobs_cameraTrack, Lego_Object*, 0x04) == deadObj) {
-        LEGO_FIELD(legoGlobs_cameraTrack, Lego_Object*, 0x04) = NULL;
+    if (legoGlobs_cameraTrack->trackObj == deadObj) {
+        legoGlobs_cameraTrack->trackObj = NULL;
         legoobject_transform_position_get(deadObj, &legoGlobs_f_5563f8.x,
                                           &legoGlobs_f_5563f8.y);
         legoGlobs_flags1 |= 0x4000;
@@ -524,10 +525,10 @@ int message_select_object2(Lego_Object* obj, int noDoubleSelect,
             if (obj->type != 4 && !(obj->flags1 & 0x24002000) &&
                 !(obj->flags2 & 0x100)) {
                 legoobject_action_sequence_reset(obj, 0);
-                aitask_entity_activity_records_refresh((struct EntitySlot*)obj);
+                aitask_entity_activity_records_refresh((struct Lego_Object*)obj);
                 if (obj->type == 2 && faceCamera) {
                     Container_GetOrientation(
-                        LEGO_FIELD(s_zoom_step_context, struct Container*, 0x30),
+                        (struct Container*)s_zoom_step_context->contTilt,
                         NULL, dir, NULL);
                     faceDir[0] = -dir[0];
                     faceDir[1] = -dir[1];

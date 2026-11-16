@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 struct ElectricFenceObject;
 struct Container;
 struct StatsObject;
@@ -34,18 +34,18 @@ extern void* s_zoom_step_context;           /* 005560e4 cameraMain */
  * (00556160 objectFP), legoGlobs_f_5563f8 and legoGlobs_flags1 (00556ecc). */
 
 /* GAME-002 AITask.c (aitask.c). */
-void aitask_cmd_create_task(struct EntitySlot* object, float timeIn); /* 00402720 */
-void aitask_selection_drag_area_command_create(struct EntitySlot** objects,
+void aitask_cmd_create_task(struct Lego_Object* object, float timeIn); /* 00402720 */
+void aitask_selection_drag_area_command_create(struct Lego_Object** objects,
                                                unsigned int count,
                                                const int* blockPos,
                                                int param);        /* 00403270 */
-void aitask_cmd_create_move(struct EntitySlot* object, const int* blockPos,
+void aitask_cmd_create_move(struct Lego_Object* object, const int* blockPos,
                             int param);                           /* 004035c0 */
-void aitask_cmd_create_gated(struct EntitySlot* object,
-                             struct EntitySlot* target);          /* 00403610 */
-void aitask_cmd_create_target(struct EntitySlot* object,
-                              struct EntitySlot* target);         /* 004036c0 */
-void aitask_entity_activity_records_refresh(struct EntitySlot* object); /* 00403b60 */
+void aitask_cmd_create_gated(struct Lego_Object* object,
+                             struct Lego_Object* target);          /* 00403610 */
+void aitask_cmd_create_target(struct Lego_Object* object,
+                              struct Lego_Object* target);         /* 004036c0 */
+void aitask_entity_activity_records_refresh(struct Lego_Object* object); /* 00403b60 */
 /* GAME-008 (entity.cpp). */
 void entity_destroy_tracked_pointer_cleanup(void* entity);        /* 00409ff0 */
 /* GAME-013 (terrain_cell_objects.c). */
@@ -53,7 +53,7 @@ void electric_fence_remove(struct ElectricFenceObject* object);   /* 0040d0a0 */
 /* GAME-020 Interface.c (interface_unit.c). */
 void command_context_post_to_hud(int menu, const uint32_t blockPos[2]); /* 0041b2d0 */
 /* GAME-021 Lego.c (lego_unit.c). */
-void lego_render_record_set_from_input(struct EntitySlot* object); /* 00425d50 */
+void lego_render_record_set_from_input(struct Lego_Object* object); /* 00425d50 */
 void lego_sound_minimum_distance_update_mode(int viewMode, void* liveObj,
                                              int cameraFrame);    /* 004295f0 */
 void* level_current_terrain_get(int cell_x, int cell_y);          /* 00431570 */

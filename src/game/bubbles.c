@@ -22,6 +22,7 @@
 #include "crt/vc5names.h"
 #include "bubbles.h"
 #include "bubbles_imports.h"
+#include "aitask_record.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -122,17 +123,9 @@ typedef struct Bubble_Vector3F {
     float z;
 } Bubble_Vector3F;
 
-/* The original command record's fields the unit reads (AITask, 0x68
- * bytes; aitask.h). */
-typedef struct Bubble_AITask {
-    int taskType;                    /* +0x00 */
-    unsigned char pad_04[0x10 - 0x04];
-    Lego_Object* targetObject;       /* +0x10 */
-    unsigned char pad_14[0x38 - 0x14];
-    int toolType;                    /* +0x38 */
-    unsigned char pad_3c[0x60 - 0x3c];
-    struct Bubble_AITask* next;      /* +0x60 */
-} Bubble_AITask;
+/* The original command record (AITask, aitask_record.h): the unit reads its
+ * type, target object, tool type (+0x38) and link. */
+typedef struct AITask Bubble_AITask;
 
 /* One table entry: the object and the time it has left. */
 typedef struct BubbleTimer {
@@ -417,7 +410,7 @@ void bubble_show_health_bar(Lego_Object* liveObj)
     unsigned int i;
     BubbleTimer* bubbleTimer;
 
-    if (entity_capability_flags_get((struct EntitySlot*)liveObj) & STATS3_SHOWHEALTHBAR) {
+    if (entity_capability_flags_get((struct Lego_Object*)liveObj) & STATS3_SHOWHEALTHBAR) {
         for (i = 0; i < BUBBLE_MAXHEALTHBARS; i++) {
             bubbleTimer = &bubbleGlobs.healthBarTable[i];
             if (liveObj == bubbleTimer->object) break;
@@ -455,7 +448,7 @@ void bubble_draw_all_obj_infos(float elapsedGame)
                 Point2F screenPt;
                 Bubble_Vector3F wPos;
                 ddiscene_object_position_get(legoobject_type_component_get(liveObj), NULL, (float*)&wPos);
-                wPos.z -= entity_stats_float_at74((struct EntitySlot*)liveObj);
+                wPos.z -= entity_stats_float_at74((struct Lego_Object*)liveObj);
                 viewport_world_to_screen((struct Viewport*)legoGlobs_viewMain, &screenPt, (struct Vector3F*)&wPos);
                 legacy_entity_screen_ring_render(liveObj, (int)screenPt.x, (int)screenPt.y);
             }
@@ -477,7 +470,7 @@ void bubble_draw_all_obj_infos(float elapsedGame)
                         Point2F screenPt;
                         Bubble_Vector3F wPos;
                         ddiscene_object_position_get(legoobject_type_component_get(liveObj), NULL, (float*)&wPos);
-                        wPos.z -= entity_stats_float_at74((struct EntitySlot*)liveObj);
+                        wPos.z -= entity_stats_float_at74((struct Lego_Object*)liveObj);
                         viewport_world_to_screen((struct Viewport*)legoGlobs_viewMain, &screenPt, (struct Vector3F*)&wPos);
                         screenPt.y -= (float)(int)image->height;
                         screenPt.x -= (float)(int)image->width * 0.5f;
@@ -534,7 +527,7 @@ void bubble_live_object_update_bubble_image(Lego_Object* liveObj, float elapsedG
     Bubble_Vector3F wPos;
 
     ddiscene_object_position_get(legoobject_type_component_get(liveObj), NULL, (float*)&wPos);
-    wPos.z -= entity_stats_float_at74((struct EntitySlot*)liveObj);
+    wPos.z -= entity_stats_float_at74((struct Lego_Object*)liveObj);
     viewport_world_to_screen((struct Viewport*)legoGlobs_viewMain, screenPt, (struct Vector3F*)&wPos);
 
     liveObj->bubbleTimer -= elapsedGame;
@@ -584,9 +577,9 @@ void bubble_live_object_get_bubble_image(Lego_Object* liveObj, Image** outImage)
     }
     if (aiTask == NULL) return;
 
-    while (aiTask->taskType == AITASK_TYPE_WAIT && aiTask->next != NULL) aiTask = aiTask->next;
+    while (aiTask->type == AITASK_TYPE_WAIT && aiTask->next != NULL) aiTask = aiTask->next;
 
-    switch (aiTask->taskType) {
+    switch (aiTask->type) {
     case AITASK_TYPE_GATHER:
         if (liveObj->carriedObjects[0] != NULL) {
             if (liveObj->carriedObjects[0]->type == LEGOOBJECT_POWERCRYSTAL) *outImage = bubbleGlobs.bubbleImage[Bubble_CarryCrystal];
@@ -612,27 +605,27 @@ void bubble_live_object_get_bubble_image(Lego_Object* liveObj, Image** outImage)
         *outImage = bubbleGlobs.bubbleImage[Bubble_Goto];
         break;
     case AITASK_TYPE_COLLECT:
-        if (aiTask->targetObject->type == LEGOOBJECT_POWERCRYSTAL) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectCrystal];
-        else if (aiTask->targetObject->type == LEGOOBJECT_ORE) {
-            if (aiTask->targetObject->id == 0) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectOre];
+        if (aiTask->object->type == LEGOOBJECT_POWERCRYSTAL) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectCrystal];
+        else if (aiTask->object->type == LEGOOBJECT_ORE) {
+            if (aiTask->object->id == 0) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectOre];
             else *outImage = bubbleGlobs.bubbleImage[Bubble_CollectStud];
         }
-        else if (aiTask->targetObject->type == LEGOOBJECT_DYNAMITE) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectDynamite];
-        else if (aiTask->targetObject->type == LEGOOBJECT_BARRIER) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectBarrier];
-        else if (aiTask->targetObject->type == LEGOOBJECT_ELECTRICFENCE) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectElecFence];
+        else if (aiTask->object->type == LEGOOBJECT_DYNAMITE) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectDynamite];
+        else if (aiTask->object->type == LEGOOBJECT_BARRIER) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectBarrier];
+        else if (aiTask->object->type == LEGOOBJECT_ELECTRICFENCE) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectElecFence];
         break;
     case AITASK_TYPE_DYNAMITE:
         *outImage = bubbleGlobs.bubbleImage[Bubble_Dynamite];
         break;
     case AITASK_TYPE_GETTOOL:
-        if (aiTask->toolType == 0) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectDrill];
-        else if (aiTask->toolType == 1) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectSpade];
-        else if (aiTask->toolType == 2) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectHammer];
-        else if (aiTask->toolType == 3) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectSpanner];
-        else if (aiTask->toolType == 4) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectLaser];
-        else if (aiTask->toolType == 5) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectPusher];
-        else if (aiTask->toolType == 7) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectFreezer];
-        else if (aiTask->toolType == 6) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectBirdScarer];
+        if ((int)(intptr_t)aiTask->field_38 == 0) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectDrill];
+        else if ((int)(intptr_t)aiTask->field_38 == 1) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectSpade];
+        else if ((int)(intptr_t)aiTask->field_38 == 2) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectHammer];
+        else if ((int)(intptr_t)aiTask->field_38 == 3) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectSpanner];
+        else if ((int)(intptr_t)aiTask->field_38 == 4) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectLaser];
+        else if ((int)(intptr_t)aiTask->field_38 == 5) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectPusher];
+        else if ((int)(intptr_t)aiTask->field_38 == 7) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectFreezer];
+        else if ((int)(intptr_t)aiTask->field_38 == 6) *outImage = bubbleGlobs.bubbleImage[Bubble_CollectBirdScarer];
         break;
     case AITASK_TYPE_REINFORCE:
         *outImage = bubbleGlobs.bubbleImage[Bubble_Reinforce];

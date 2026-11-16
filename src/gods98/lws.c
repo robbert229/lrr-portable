@@ -31,6 +31,7 @@
 #include "utils.h"
 #include "files_open.h"
 #include "mesh_unit.h"
+#include "gods98/mesh_record.h"
 #include "main.h"
 #include "sound3d.h"
 #include "crt/crt.h"
@@ -923,7 +924,7 @@ void lws_nodes_load(LwsInfo* scene, LwsNode* node)
     if (!(node->flags & LWSNODE_FLAG_NULL)) {
         if ((mesh = lws_mesh_load(scene->filePath, node->name, frame, 0)) != NULL) {
             if (node->flags & LWSNODE_FLAG_FACECAMERA) {
-                *(unsigned long*)((char*)mesh + 0x2c) |= LWS_MESH_FLAG_FACECAMERA;
+                ((Mesh*)mesh)->flags |= LWS_MESH_FLAG_FACECAMERA;
             }
             if (node->dissolveLevel && 0 == node->dissolveCount) {
                 lws_dissolve_level_set(scene, node, *node->dissolveLevel);

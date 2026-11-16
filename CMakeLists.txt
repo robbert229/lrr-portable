@@ -82,7 +82,7 @@ endif()
 include(CTest)
 if(BUILD_TESTING)
   # The units' own tests: each calls one unit directly.
-  foreach(name IN ITEMS bezier steering animation_object)
+  foreach(name IN ITEMS bezier steering animation_object reward)
     add_executable(${name}_test ${GAME_DIR}/test_${name}.cpp)
     target_link_libraries(${name}_test PRIVATE units)
     add_test(NAME ${name} COMMAND ${name}_test)

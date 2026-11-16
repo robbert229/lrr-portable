@@ -19,8 +19,8 @@ extern "C" {
 /* GAME-021 Lego.c (lego_unit.h): legoGlobs.currLevel (terrain_grid.cpp's
  * g_active_level_retail, legoGlobs_currLevel), Lego_Level, and the two
  * placement checks. */
-struct LevelState;
-extern struct LevelState* g_active_level_retail;            /* 005560d4 */
+struct Lego_Level;
+extern struct Lego_Level* g_active_level_retail;            /* 005560d4 */
 uint32_t terrain_cell_flag_8000_current(const int cell_xy[2]);   /* 00433030 */
 uint32_t level_cell_occupied_at_current(const int cell_xy[2]);   /* 00433090 */
 

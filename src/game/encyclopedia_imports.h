@@ -16,13 +16,13 @@ extern "C" {
 struct BlockRec;
 struct Lego_Object;
 struct ViewProjectionAdapter;
-struct EntitySlot;
+struct Lego_Object;
 
-#define encyclopedia_typeCounts ((unsigned int*)((char*)&legoGlobs_config + 0x1bc))
+#define encyclopedia_typeCounts (legoGlobs.typeCounts)
 
 /* GAME-021 Lego.c (lego_unit.c): Lego_DrawObjectSelectionBox. */
 void lego_selected_entity_ground_marker_render(
-    struct EntitySlot* liveObj, struct ViewProjectionAdapter* view,
+    struct Lego_Object* liveObj, struct ViewProjectionAdapter* view,
     float r, float g, float b);                               /* 004248b0 */
 /* GAME-023 LegoObject.c (legoobject_unit.c): LegoObject_GetObjTypeInfo. */
 void legoobject_copy_two_dword_pair(void* record, unsigned int* outA,

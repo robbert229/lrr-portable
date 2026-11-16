@@ -28,12 +28,6 @@ extern "C" {
  * (finding 692). The other compilers use camera_control_imports.h alone. */
 #include "camera_maths.h"
 
-typedef struct Camera_Vector3F {
-    float x;
-    float y;
-    float z;
-} Camera_Vector3F;
-
 /* The prefix of Map3D (terrain_map.h's TerrainMap). */
 typedef struct Camera_Map {
     unsigned int gridWidth;   /* +0x00 */
@@ -58,38 +52,6 @@ typedef struct Camera_Level {
 #define CAMERA_FLAG_FREEMOVEMENT  0x08
 #define CAMERA_FLAG_FPSETUP       0x10
 
-/* LegoCamera (0xbc bytes, Mem_Alloc'd by Camera_Create). */
-typedef struct LegoCamera {
-    int type;                         /* +0x00 LegoCamera_Type */
-    struct EntitySlot* trackObj;      /* +0x04 tracked or first-person object */
-    float trackRadarZoomSpeed;        /* +0x08 */
-    float trackRadarZoom;             /* +0x0c */
-    float trackRadarRotationSpeed;    /* +0x10 */
-    int trackFPCameraFrame;           /* +0x14 */
-    Camera_Vector3F moveVector;       /* +0x18 */
-    void* contCam;                    /* +0x24 the camera container */
-    void* contRoot;                   /* +0x28 position and rotation (z) */
-    void* contListener;               /* +0x2c the sound listener */
-    void* contTilt;                   /* +0x30 tilt (x), child of contRoot */
-    void* contEar;                    /* +0x34 top-down only */
-    unsigned char unused_38[0x40];    /* +0x38 */
-    float tilt;                       /* +0x78 */
-    float tiltMin;                    /* +0x7c */
-    float tiltMax;                    /* +0x80 */
-    float rotation;                   /* +0x84 */
-    float rotationMin;                /* +0x88 */
-    float rotationMax;                /* +0x8c */
-    float zoom;                       /* +0x90 */
-    float zoomMin;                    /* +0x94 */
-    float zoomMax;                    /* +0x98 */
-    float moveSpeed;                  /* +0x9c */
-    float shakeIntensity;             /* +0xa0 */
-    float shakeDuration;              /* +0xa4 */
-    float shakeTimer;                 /* +0xa8 */
-    Camera_Vector3F shakeVector;      /* +0xac */
-    unsigned char flags;              /* +0xb8 LegoCamera_Flags */
-} LegoCamera;
-
 /* Container_Create (00472950). The port types its argument as the parent's
  * scene-object descriptor, which is the parent container (lego_port.cpp's
  * lego_container_create_adapter); scene_pool.hpp gives it C linkage. */
@@ -103,10 +65,10 @@ void camera_init_camera_movements(float cameraSpeed, float cameraDropOff,
                                   int mouseScrollIndent);
 void camera_copy_fp_position_orientation(LegoCamera* cam,
                                          LegoCamera* otherCam);
-void camera_track_object(LegoCamera* cam, struct EntitySlot* obj,
+void camera_track_object(LegoCamera* cam, struct Lego_Object* obj,
                          float trackSpeed, float trackZoom, float tilt,
                          float trackRotationSpeed);
-void camera_set_fp_object(LegoCamera* cam, struct EntitySlot* obj,
+void camera_set_fp_object(LegoCamera* cam, struct Lego_Object* obj,
                           int cameraFrame);
 int camera_get_fp_camera_frame(LegoCamera* cam);
 void camera_stop_movement(LegoCamera* cam);
@@ -244,7 +206,7 @@ void camera_copy_fp_position_orientation(LegoCamera* cam,
 }
 
 // FUNCTION: LEGORR 0x00435ebb
-void camera_track_object(LegoCamera* cam, struct EntitySlot* obj,
+void camera_track_object(LegoCamera* cam, struct Lego_Object* obj,
                          float trackSpeed, float trackZoom, float tilt,
                          float trackRotationSpeed)
 {
@@ -256,7 +218,7 @@ void camera_track_object(LegoCamera* cam, struct EntitySlot* obj,
 }
 
 // FUNCTION: LEGORR 0x00435ef4
-void camera_set_fp_object(LegoCamera* cam, struct EntitySlot* obj,
+void camera_set_fp_object(LegoCamera* cam, struct Lego_Object* obj,
                           int cameraFrame)
 {
     cam->trackObj = obj;

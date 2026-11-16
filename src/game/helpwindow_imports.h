@@ -63,7 +63,7 @@ void media_action_feedback_sound_dispatch(int event);         /* 00428800 */
 /* legoGlobs' type counts (0055627c-0055628c). The port's copies are
  * entity.cpp's C++ s_catalog_counts, so the unit reads them at their
  * offset in legoGlobs, as lego_unit.c does (lego_unit_imports.h). */
-#define helpWindow_typeCounts ((unsigned int*)((char*)&legoGlobs_config + 0x1bc))
+#define helpWindow_typeCounts (legoGlobs.typeCounts)
 
 /* GAME-023 LegoObject.c (legoobject_unit.c). */
 const char* legoobject_the_name_get(unsigned int kind, int index); /* 00439790 */

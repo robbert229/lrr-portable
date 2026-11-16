@@ -15,6 +15,8 @@
 #ifndef LEGORRR_GAME_MESSAGE_UNIT_H
 #define LEGORRR_GAME_MESSAGE_UNIT_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -58,7 +60,7 @@ struct Lego_Object;
 typedef struct Message_Event {
     unsigned int type;              /* +0x00 Message_Type */
     struct Lego_Object* argument1;  /* +0x04 */
-    unsigned int argument2;         /* +0x08 */
+    uintptr_t argument2;            /* +0x08 an int or an object */
     int blockPos[2];                /* +0x0c */
 } Message_Event;
 
@@ -71,10 +73,10 @@ int message_lookup_physical_name(const char* name);
 /* 00452010 */
 void message_add_message_action(unsigned char key, unsigned int type,
                                 struct Lego_Object* argument1,
-                                unsigned int argument2, const int* blockPos);
+                                uintptr_t argument2, const int* blockPos);
 /* 00452060 */
 void message_post_event(unsigned int type, struct Lego_Object* argument1,
-                        unsigned int argument2, const int* blockPos);
+                        uintptr_t argument2, const int* blockPos);
 /* 004520d0 */
 void message_update(void);
 /* 00452430 */

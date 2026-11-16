@@ -23,53 +23,16 @@
 
 #include "crt/vc5names.h"
 #include "textwindow_imports.h"
+#include "gods98/textwindow_record.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define TEXTWINDOW_MAXSTRINGLEN 1024
-#define TEXTWINDOW_MAXLINES 256
-
 #define TEXTWINDOW_FLAG_WINDOWWRAPPED 0x1
 #define TEXTWINDOW_FLAG_OVERLAY 0x2
 #define TEXTWINDOW_FLAG_CENTERED 0x4
-
-/* Font.c's record, as far as the unit reads it: Font_GetHeight is an inline
- * read of +0xbe4. */
-typedef struct TextWindowFontPos {
-    float x, y;
-} TextWindowFontPos;
-
-typedef struct Font {
-    void* image;                         /* +0x000 */
-    TextWindowFontPos posSet[10][19];    /* +0x004 */
-    TextWindowFontPos sizeSet[10][19];   /* +0x5f4 */
-    unsigned int height;                 /* +0xbe4 */
-    unsigned int tabWidth;               /* +0xbe8 */
-} Font;
-
-#define Font_GetHeight(f) ((f)->height)
-
-typedef struct TextWindowArea {
-    float x, y, width, height;
-} TextWindowArea;
-
-/* One text window (0x830 bytes). */
-typedef struct TextWindow {
-    Font* font;                                 /* +0x000 */
-    TextWindowArea windowSize;                  /* +0x004 */
-    char* windowBuf;                            /* +0x014 */
-    char secondaryBuf[TEXTWINDOW_MAXSTRINGLEN]; /* +0x018 */
-    unsigned int windowBufLen;                  /* +0x418 */
-    unsigned int usedLen;                       /* +0x41c */
-    unsigned int lineList[TEXTWINDOW_MAXLINES]; /* +0x420 */
-    unsigned int lineCount;                     /* +0x820 */
-    unsigned int maxLines;                      /* +0x824 */
-    float displayDelay;                         /* +0x828 */
-    unsigned int flags;                         /* +0x82c */
-} TextWindow;
 
 TextWindow* text_window_create(Font* font, TextWindowArea* size,
                                unsigned int bufferSize);
@@ -222,7 +185,7 @@ int text_window_update(TextWindow* window, unsigned int posFromEnd,
     if (lpLinesUsed) *lpLinesUsed = 0;
 
     window->maxLines = (unsigned int)window->windowSize.height /
-                       Font_GetHeight(window->font);
+                       window->font->fontHeight;
 
     if (!(window->flags & TEXTWINDOW_FLAG_OVERLAY)) {
         closest = window->windowBufLen;
@@ -282,11 +245,11 @@ int text_window_update(TextWindow* window, unsigned int posFromEnd,
                 loop < window->lineCount - posFromEnd) {
                 y = (int)window->windowSize.y +
                     (posFromEnd + loop + window->maxLines - window->lineCount) *
-                    Font_GetHeight(window->font);
+                    window->font->fontHeight;
             }
             else if (window->lineCount <= window->maxLines) {
                 y = (int)window->windowSize.y +
-                    loop * Font_GetHeight(window->font);
+                    loop * window->font->fontHeight;
             }
             else {
                 y = 0;
@@ -302,7 +265,7 @@ int text_window_update(TextWindow* window, unsigned int posFromEnd,
             }
         }
 
-        if (lpLinesUsed) *lpLinesUsed += Font_GetHeight(window->font);
+        if (lpLinesUsed) *lpLinesUsed += window->font->fontHeight;
 
         return 0;
     }
@@ -362,12 +325,12 @@ int text_window_update_overlay(TextWindow* window, float time,
             loop >= lineCount - window->maxLines && loop < lineCount) {
             y = (int)window->windowSize.y +
                 (loop - lineCount + window->maxLines) *
-                Font_GetHeight(window->font);
+                window->font->fontHeight;
             result = 1;
         }
         else if (lineCount <= window->maxLines) {
             y = (int)window->windowSize.y +
-                loop * Font_GetHeight(window->font);
+                loop * window->font->fontHeight;
         }
         else {
             y = 0;
