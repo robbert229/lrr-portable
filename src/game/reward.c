@@ -773,7 +773,7 @@ int reward_object_count_get(const char* name, int a, int b)
 #define REWARD_SCORE(current, item, value) \
     for (i = 0; (float)i < (item).importance; i++) { \
         (current)->itemsArray[REWARD_ITEM_SCORE].actual = \
-            (value) + (current)->itemsArray[REWARD_ITEM_SCORE].actual; \
+            ((value) + (current)->itemsArray[REWARD_ITEM_SCORE].actual); \
         (current)->itemsArray[REWARD_ITEM_SCORE].total = \
             (current)->itemsArray[REWARD_ITEM_SCORE].total - -100.0f; \
     }
