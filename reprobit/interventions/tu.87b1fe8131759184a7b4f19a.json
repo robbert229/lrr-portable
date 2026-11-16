@@ -1,0 +1,1 @@
+{"build_target":"link_024_camera_control","interventions":[],"schema_version":3,"source":"src/game/camera_control.c","source_digest":{"algorithm":"sha256","value":"c5eef2fd9d3d1bfe1c1581d032c15f345cae4c9db65817bc72080bb282c3f627"},"target_id":"program","translation_unit_id":"tu.87b1fe8131759184a7b4f19a"}

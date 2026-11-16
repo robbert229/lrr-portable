@@ -249,7 +249,7 @@ def thunk_order(map_text: str) -> list[str]:
         obj = s["object"]
         if pe_audit.IMPORT_OBJECT.match(obj) and not s["name"].startswith("__imp_"):
             out.append(f"{obj.split(':', 1)[1].lower()}:{s['name']}")
-        elif obj.lower().startswith("dinput:"):
+        elif obj.lower().startswith(("dinput:", "dinput_data:")):
             out.append(f"dinput-data:{s['name']}")
     return out
 

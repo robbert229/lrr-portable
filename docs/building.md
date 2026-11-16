@@ -217,6 +217,30 @@ prints the similarity, the baseline delta and a diff (`JSON=1` for JSON).
 See [`tools/README.md`](../tools/README.md#match_functionpy--single-function-match-loop)
 for options, timings and how its scores relate to a full report.
 
+### ReproBit build
+
+[ReproBit](https://github.com/isledecomp/reprobit) (`rbit`) builds the
+same CMake graph, without the Reccmp PDB and map, and records how every byte
+was made. `reprobit/` holds its committed records: the source lock, the
+imported compiler and linker graph, the original's digest, and per-unit
+interventions with their proofs. An intervention is a payload-free donor
+compile, such as an `extern int` run after the unit's includes, and the
+function body taken from it. That reaches a compile state the source itself
+should not encode (ADR 0005 forbids committed padding). `tools/reprobit.sh`
+locks the sources, imports the graph and builds `build/LegoRR.exe`.
+
+It needs an `rbit` with MSVC 5.0 C support (`LIB /DEF` import libraries,
+`/ML`, and extern-run grind), and `reference/` must be a real directory
+holding a copy of `LegoRR.exe`, not a symlink. Its build has no icon: the
+icon is licensed art that only the matching build extracts, in
+`src/version_icon.rc`. ReproBit's build therefore differs from the original
+in `.rsrc`, while its code and data match the matching build's.
+
+`rbit discover grind` searches donor compiles for one function against a
+reference object: a compile of the unit, kept in `reference/` and never
+committed, whose function body equals the original's except in relocated
+fields.
+
 ## Meson build
 
 The native Meson build also needs SDL3 development files, pkg-config, and

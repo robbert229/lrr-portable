@@ -347,12 +347,23 @@ else()
     ${GAME_DIR}/dependency_grid.cpp ${GAME_DIR}/screen_pick.cpp)
 endif()
 if(PLATFORM STREQUAL "winapi")
-  list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
+  if(LRR_RECCMP)
+    list(APPEND LRR_SOURCES ${SRC_ROOT}/version_icon.rc)
+  else()
+    list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
+  endif()
+endif()
+if(LRR_CLASSIC_MSVC5)
+  # The original's resources (#560, finding 651): no VERSIONINFO, and its
+  # icon and group icon. Only the matching build has the icon (below), in
+  # version_icon.rc: ReproBit's build cannot read it, since its resource scan
+  # follows every conditional branch of version.rc.
+  set_source_files_properties(${SRC_ROOT}/version.rc ${SRC_ROOT}/version_icon.rc
+    PROPERTIES COMPILE_DEFINITIONS LRR_ORIGINAL_RESOURCES)
 endif()
 if(LRR_RECCMP)
-  # The original's resources (#560, finding 651): its icon and group icon,
-  # and no VERSIONINFO. The icon is licensed art and never committed, so the
-  # build extracts it from the original executable, as the tools read it.
+  # The icon is licensed art and never committed, so the build extracts it
+  # from the original executable, as the tools read it.
   set(LRR_ORIGINAL_EXE "${CMAKE_CURRENT_SOURCE_DIR}/reference/LegoRR.exe" CACHE FILEPATH
     "The original LegoRR.exe the matching build takes its icon from")
   if(NOT EXISTS "${LRR_ORIGINAL_EXE}")
@@ -369,8 +380,7 @@ if(LRR_RECCMP)
     COMMENT "Extracting the original's icon from ${LRR_ORIGINAL_EXE}"
     VERBATIM)
   # RC runs in the build directory and finds LegoRR.ico there.
-  set_source_files_properties(${SRC_ROOT}/version.rc PROPERTIES
-    COMPILE_DEFINITIONS LRR_ORIGINAL_RESOURCES
+  set_source_files_properties(${SRC_ROOT}/version_icon.rc PROPERTIES
     OBJECT_DEPENDS "${LRR_ICON}")
 endif()
 add_executable(program ${LRR_SOURCES})
@@ -384,13 +394,23 @@ if(LRR_RECCMP)
   target_link_options(program PRIVATE "/MAP:${CMAKE_BINARY_DIR}/LegoRR.map")
 endif()
 if(LRR_CLASSIC_MSVC5)
-  # The DirectX libraries the toolchain lacks, rebuilt from source and
-  # searched before its lib directory (finding 574).
-  include(${CMAKE_CURRENT_SOURCE_DIR}/cross/msvc5-importlibs/importlibs.cmake)
-  add_dependencies(program lrr_msvc5_importlibs)
-  set_property(TARGET program APPEND PROPERTY LINK_DEPENDS ${LRR_IMPORTLIB_FILES})
-  target_link_options(program PRIVATE "/LIBPATH:${LRR_IMPORTLIB_DIR}"
-    ${LRR_LINK_MEMBER_ORDER} ${LRR_LINK_SYMBOLS})
+  # The DirectX libraries the toolchain lacks, rebuilt from source (finding
+  # 574). Each target's full path takes the place the link order gives the
+  # library's name, so LINK reads them in the same order and never searches
+  # the toolchain's own dinput.lib or dsound.lib.
+  add_subdirectory(cross/msvc5-importlibs)
+  set(_lrr_link_libraries "")
+  foreach(_lib IN LISTS LRR_LINK_LIBRARIES)
+    list(FIND LRR_IMPORTLIB_TARGETS "${_lib}" _index)
+    if(_index GREATER -1)
+      math(EXPR _index "${_index} + 1")
+      list(GET LRR_IMPORTLIB_TARGETS ${_index} _lib)
+      string(REPLACE "+" ";" _lib "${_lib}")
+    endif()
+    list(APPEND _lrr_link_libraries "${_lib}")
+  endforeach()
+  set(LRR_LINK_LIBRARIES ${_lrr_link_libraries})
+  target_link_options(program PRIVATE ${LRR_LINK_MEMBER_ORDER} ${LRR_LINK_SYMBOLS})
   # The late units' libraries, then the gods98 member library, come first:
   # LINK infers the entry point after the explicit objects, and the
   # original's wincrt0.obj follows Movie.cpp's LIBC references but precedes

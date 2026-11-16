@@ -1,0 +1,1 @@
+{"build_target":"lrr_il_dinput_data","interventions":[],"schema_version":3,"source":"cross/msvc5-importlibs/dilib1.c","source_digest":{"algorithm":"sha256","value":"123d79be8c83622fec2b1abc5f1142a69a0995f955efc7f2191543217f393fb1"},"target_id":"program","translation_unit_id":"tu.c68089aef42e65f3d641133b"}
