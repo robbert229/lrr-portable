@@ -473,3 +473,5 @@ int media_cd_audio_stop_and_close(void)
     }
     return 1;
 }
+
+#include "gods98/d3drmdef_consts.h"
