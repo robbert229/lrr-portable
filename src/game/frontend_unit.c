@@ -4424,8 +4424,10 @@ void front_callback_select_mission_item(float elapsed, int selectIndex)
             }
         }
     } else {
-        front_util_print_f(font, s_display_w / 2 - (int)formatted_text_printf_width(font, levelName) / 2,
-                           390, levelName);
+        /* The x position is computed before the call's other arguments;
+         * a new local for it shifts 0x004177e0's symbol phase. */
+        selectIndex = s_display_w / 2 - (int)formatted_text_printf_width(font, levelName) / 2;
+        front_util_print_f(font, selectIndex, 390, levelName);
     }
 
     if (saveData != NULL && (saveData->missionsTable[link->setIndex].flags & 1) &&
