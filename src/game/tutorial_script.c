@@ -1314,8 +1314,8 @@ int nerps_file_load_message_file(const char* filename)
                     if (*s == ':') {
                         char* key = (char*)++s;
                         if (sscanf((char*)s, "%s", imageKey)) {
-                            lineStart = 0;
                             s += strlen(imageKey);
+                            lineStart = 0;
                             while (*s < '!' && (unsigned int)(s - nerpsGlobs.messageBuffer) < fileSize) {
                                 if (*s == '\r') lineStart = 1;
                                 *s++ = '\0';
@@ -1341,8 +1341,8 @@ int nerps_file_load_message_file(const char* filename)
                     if (*s == '$') {
                         char* key = (char*)++s;
                         if (sscanf((char*)s, "%s", soundKey)) {
-                            lineStart = 0;
                             s += strlen(soundKey);
+                            lineStart = 0;
                             while (*s < '!' && (unsigned int)(s - nerpsGlobs.messageBuffer) < fileSize) {
                                 if (*s == '\r') lineStart = 1;
                                 *s++ = '\0';
