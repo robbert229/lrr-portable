@@ -1392,7 +1392,7 @@ int reward_update_state(int* count, int* state, float* time)
 
     if (*time >= rewardGlobs.timer && *state == 0)
         next = 1;
-    if (*state != 0 && *time >= rewardGlobs.timer + rewardGlobs.timer &&
+    if (*state != 0 && rewardGlobs.timer * 2.0 <= *time &&
         ((RewardLegoLevel*)level_current_owner_get())->status == 1 && *count < 10)
         next = 1;
 
@@ -1402,21 +1402,19 @@ int reward_update_state(int* count, int* state, float* time)
         if (current->items[*count - 1].soundName &&
             sound_alias_lookup(current->items[*count - 1].soundName, &sound))
             sound_request_queue_submit(sound, 0);
-        if (*count > 9) {
-            if (*state == 0) {
-                *count = 9;
+        if (*count > 9 && *state == 0) {
+            *count = 9;
+            (*state)++;
+            return *state;
+        }
+        if (*count > 9 && *state > 1) {
+            if (*count > 10) {
+                *count = 10;
                 (*state)++;
                 return *state;
             }
-            if (*count > 9 && *state > 1) {
-                if (*count > 10) {
-                    *count = 10;
-                    (*state)++;
-                    return *state;
-                }
-                for (i = 0; i < REWARD_ITEM_COUNT; i++)
-                    reward_restart_flic(&current->items[i]);
-            }
+            for (i = 0; i < REWARD_ITEM_COUNT; i++)
+                reward_restart_flic(&current->items[i]);
         }
     }
 #if !defined(_MSC_VER)
