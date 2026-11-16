@@ -3,7 +3,7 @@
     "full": 98.68,
     "game_only": 98.54
   },
-  "baseline_sha256": "67f903a5da04354f7d572e30813bd158b5e0beccbbb5b633ea7b03fcf5be41aa",
+  "baseline_sha256": "95ec5d2bcc8e4c313a2f41130456519d42755461b51ce396d3841dcbc7a9d9a9",
   "correct_size_functions": {
     "full": {
       "bytes": 511680,
@@ -291,8 +291,8 @@
   },
   "function_order_inversions": {
     "full": {
-      "adjacent": 2,
-      "pairs": 24
+      "adjacent": 1,
+      "pairs": 1
     },
     "game_only": {
       "adjacent": 1,
@@ -330,7 +330,7 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "cec52e95f852233e559506732daf2a7126968d3be47a5e1c7546ee58249d034b",
+  "input_sha256": "79a65c6797274801f76eee619876870b11e0c969e231cb5a56e9d6d7ea1cfbae",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 57,
@@ -1256,6 +1256,10 @@
           "object": "dsound:DSOUND.dll"
         },
         {
+          "first_public_address": "0x49c604",
+          "object": "kernel32:KERNEL32.dll"
+        },
+        {
           "first_public_address": "0x49c610",
           "object": "late_rnc:rnc.c.obj"
         },
@@ -1265,22 +1269,18 @@
         },
         {
           "first_public_address": "0x49d900",
-          "object": "kernel32:KERNEL32.dll"
-        },
-        {
-          "first_public_address": "0x49d910",
           "object": "libc:strnicmp.obj"
         },
         {
-          "first_public_address": "0x49d9c0",
+          "first_public_address": "0x49d9b0",
           "object": "libc:xtoa.obj"
         },
         {
-          "first_public_address": "0x49da70",
+          "first_public_address": "0x49da60",
           "object": "libc:strlwr.obj"
         },
         {
-          "first_public_address": "0x49db30",
+          "first_public_address": "0x49db20",
           "object": "libc:strupr.obj"
         }
       ]
@@ -1300,9 +1300,9 @@
       "units": 226
     },
     "unit_order_inversions": {
-      "adjacent": 1,
+      "adjacent": 0,
       "method": "median mapped function address per unit; ties are not inversions",
-      "pairs": 2,
+      "pairs": 0,
       "units": 227
     },
     "unit_relative_identity": {
@@ -4040,7 +4040,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 8
   },
-  "listing_digests_sha256": "2a0044e7d99e5a2f3d91c2ac15e06664004969ea464dddc93b2952ab16148810",
+  "listing_digests_sha256": "70c135b6b34d6beaae876a015e674253b1f5f27a71fd9a581d298df9bbe2a072",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4059,17 +4059,17 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 579968,
-        "functions": 2717,
+        "bytes": 580032,
+        "functions": 2719,
         "removed_bytes": 0,
         "removed_functions": 0
       }
     },
     "by_category": {
       "import_thunks": {
-        "bytes": 1133,
+        "bytes": 1117,
         "functions": 146,
-        "removed_bytes": 927,
+        "removed_bytes": 911,
         "removed_functions": 132
       },
       "libc": {
@@ -4079,8 +4079,8 @@
         "removed_functions": 78
       },
       "original_annotated": {
-        "bytes": 579968,
-        "functions": 2717,
+        "bytes": 580032,
+        "functions": 2719,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4091,8 +4091,8 @@
         "removed_functions": 0
       },
       "port_unit": {
-        "bytes": 480,
-        "functions": 20,
+        "bytes": 416,
+        "functions": 18,
         "removed_bytes": 368,
         "removed_functions": 15
       }
@@ -4131,8 +4131,8 @@
           "rebuilt": 73216
         },
         ".idata": {
-          "differing": 2887,
-          "equal": 1225,
+          "differing": 832,
+          "equal": 3280,
           "original": 4112,
           "rebuilt": 4112
         },
@@ -4143,10 +4143,10 @@
           "rebuilt": 11048
         },
         ".text": {
-          "differing": 550104,
-          "equal": 92445,
+          "differing": 550097,
+          "equal": 92452,
           "original": 642549,
-          "rebuilt": 642133
+          "rebuilt": 642117
         }
       },
       "sections": {
@@ -4168,7 +4168,7 @@
         },
         ".text": {
           "raw_size": 642560,
-          "virtual_size": 642133
+          "virtual_size": 642117
         }
       },
       "thunk_order": [
@@ -4191,7 +4191,7 @@
       ]
     },
     "reference": "gate against its /DEBUG /OPT:NOREF relink",
-    "removed_bytes": 9463,
+    "removed_bytes": 9447,
     "removed_functions": 225,
     "unmapped_annotations": []
   },
@@ -4230,26 +4230,26 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 11.55,
-      "identical_bytes": 92391,
+      "identical_bytes": 92398,
       "identical_percent": 14.38,
       "original_bytes": 642549,
-      "rebuilt_bytes": 642133,
+      "rebuilt_bytes": 642117,
       "run_chance_percent": 0.0,
       "run_excess_percent_points": 9.73,
-      "run_identical_bytes": 62500,
+      "run_identical_bytes": 62541,
       "run_identical_percent": 9.73
     },
     "imports": {
       "chance_percent": 34.58,
-      "excess_percent_points": 57.5,
-      "identical_bytes": 221,
-      "identical_percent": 92.08,
+      "excess_percent_points": 65.42,
+      "identical_bytes": 240,
+      "identical_percent": 100.0,
       "original_bytes": 240,
       "rebuilt_bytes": 240,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 87.08,
-      "run_identical_bytes": 209,
-      "run_identical_percent": 87.08
+      "run_excess_percent_points": 100.0,
+      "run_identical_bytes": 240,
+      "run_identical_percent": 100.0
     },
     "resources": {
       "chance_percent": 16.31,
@@ -4267,13 +4267,13 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 11.56,
-    "identical_bytes": 92418,
+    "identical_bytes": 92428,
     "identical_percent": 14.38,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
     "run_excess_percent_points": 9.73,
-    "run_identical_bytes": 62500,
+    "run_identical_bytes": 62541,
     "run_identical_percent": 9.73
   },
   "unit_size_agreement": {

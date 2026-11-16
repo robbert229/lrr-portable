@@ -93,6 +93,7 @@ src/game/building_model_imports.h
 src/game/building_model_link_names.h
 src/game/building_model_port.cpp
 src/game/building_model_ports.h
+src/game/building_model_tail.h
 src/game/building_scene.cpp
 src/game/building_scene.hpp
 src/game/camera_control.c
