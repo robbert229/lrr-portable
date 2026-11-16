@@ -824,19 +824,19 @@ int directdraw_create_clipper(int fullScreen, unsigned int width, unsigned int h
 void directdraw_blt_8_to_16(DirectDrawSurfaceIface* target, DirectDrawSurfaceIface* source, void* palette)
 {
     DirectDrawSurfaceDesc2 descSource, descTarget;
-    unsigned int x, colour, val, y;
-    int i, shift, k, rBits, gBits, bBits;
+    unsigned int x, colour, val, y, k;
+    int i, shift, rBits, gBits, bBits;
     unsigned char r, g, b, index;
 
-    memset(&descSource, 0, sizeof(descSource));
     memset(&descTarget, 0, sizeof(descTarget));
-    descSource.dwSize = sizeof(descSource);
+    memset(&descSource, 0, sizeof(descSource));
     descTarget.dwSize = sizeof(descTarget);
+    descSource.dwSize = sizeof(descSource);
     if (source->lpVtbl->Lock(source, NULL, &descSource, DDLOCK_WAIT, NULL) == DD_OK) {
         if (descSource.ddpfPixelFormat.dwRGBBitCount == 8 &&
             target->lpVtbl->Lock(target, NULL, &descTarget, DDLOCK_WAIT, NULL) == DD_OK) {
             if (descTarget.ddpfPixelFormat.dwRGBBitCount == 16 &&
-                descSource.dwWidth == descTarget.dwWidth &&
+                descTarget.dwWidth == descSource.dwWidth &&
                 descTarget.dwHeight == descSource.dwHeight) {
                 for (i = 0, rBits = 0; i < 32; i++) if ((descTarget.ddpfPixelFormat.dwRBitMask >> i) & 1) rBits++;
                 for (i = 0, gBits = 0; i < 32; i++) if ((descTarget.ddpfPixelFormat.dwGBitMask >> i) & 1) gBits++;
@@ -844,7 +844,7 @@ void directdraw_blt_8_to_16(DirectDrawSurfaceIface* target, DirectDrawSurfaceIfa
                 for (y = 0; y < descSource.dwHeight; y++) {
                     for (x = 0; x < descSource.dwWidth; x += 4) {
                         val = *(unsigned int*)((unsigned char*)descSource.lpSurface + y * descSource.lPitch + x);
-                        for (shift = 24, k = 3; shift >= 0; shift -= 8, k--) {
+                        for (shift = 24, k = 3; shift >= 0; k--, shift -= 8) {
                             index = (unsigned char)(val >> shift);
                             r = ((DirectDrawPaletteEntry*)palette)[index].peRed >> (8 - rBits);
                             g = ((DirectDrawPaletteEntry*)palette)[index].peGreen >> (8 - gBits);
