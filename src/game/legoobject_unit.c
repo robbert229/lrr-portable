@@ -733,6 +733,8 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
     LegoObjGB_DeferredRecord* rec;
     Lego_Object* obj;
     Lego_Object* target;
+    /* No longer assigned (each branch calls the dispatch), but its symbol
+     * keeps the counter phase of the functions after this one. */
     unsigned int mode;
 
     count = 0;
@@ -787,20 +789,20 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
         if (linkNames[i] != NULL) {
             for (j = 0; j < count; j++) {
                 if (i != j && stricmp(names[j], linkNames[i]) == 0) {
+                    objs[i]->routeToObject = objs[j];
                     obj = objs[i];
                     target = objs[j];
-                    obj->routeToObject = target;
                     obj->flags2 |= 0x4;
                     if (entity_capability_flags_get((struct EntitySlot*)target) & 0x100) {
-                        mode = 1;
-                    } else if (!(entity_stats_word_get((struct EntitySlot*)target) & 0x1000000)) {
-                        mode = 4;
-                    } else if (!(entity_stats_word_get((struct EntitySlot*)target) & 0x2000000)) {
-                        mode = 2;
+                        legoobject_linked_activity_event_dispatch(obj, 1);
+                    } else if (entity_stats_word_get((struct EntitySlot*)target) & 0x1000000) {
+                        if (entity_stats_word_get((struct EntitySlot*)target) & 0x2000000)
+                            legoobject_linked_activity_event_dispatch(obj, 1);
+                        else
+                            legoobject_linked_activity_event_dispatch(obj, 2);
                     } else {
-                        mode = 1;
+                        legoobject_linked_activity_event_dispatch(obj, 4);
                     }
-                    legoobject_linked_activity_event_dispatch(obj, mode);
                     legoobject_linked_route_flag_clear(obj, target);
                 }
             }
