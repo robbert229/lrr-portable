@@ -345,11 +345,13 @@ def triage_file(path):
     return hits
 
 
-def build_launch(args, game_cmd, bootstrap=True):
+def build_launch(args, game_cmd, bootstrap=True, extra_env=None, gamescope_args=()):
     """Return (cmd, outer_env). Under gamescope, wine-specific vars are exported
     *inside* the wrapped command (`env k=v … wine …`): gamescope's compositor
     breaks — Wayland init fails and it segfaults — when it inherits wine's
-    LD_LIBRARY_PATH/WINE* environment itself."""
+    LD_LIBRARY_PATH/WINE* environment itself. `extra_env` is merged into the
+    wine environment (the seam recorder's WINEDLLOVERRIDES and SEAMREC_*), and
+    `gamescope_args` are prepended to gamescope's own (e.g. a headless backend)."""
     runner = find_runner()
     if runner is None:
         raise SystemExit("no Proton/umu runner found — install one via ProtonUp-Qt "
@@ -359,6 +361,7 @@ def build_launch(args, game_cmd, bootstrap=True):
     else:  # wine runs exes directly; umu-run takes the exe as its sole argument
         wine_cmd = [str(runner["path"])] + game_cmd
     env = runner_env(runner)
+    env.update(extra_env or {})
     if runner["kind"] == "wine" and bootstrap:
         bootstrap_wine(runner, env)
     elif runner["kind"] == "proton" and bootstrap:
@@ -366,7 +369,7 @@ def build_launch(args, game_cmd, bootstrap=True):
         ensure_gst_libav_deps(runner)
     if getattr(args, "gamescope", True) and shutil.which("gamescope"):
         exported = sorted(f"{k}={v}" for k, v in env.items() if os.environ.get(k) != v)
-        cmd = (["gamescope", "-w", "640", "-h", "480", "-r", "60", "-F", "nearest", "--"]
+        cmd = (["gamescope", *gamescope_args, "-w", "640", "-h", "480", "-r", "60", "-F", "nearest", "--"]
                + ["env"] + exported + wine_cmd)
         return cmd, dict(os.environ)
     return wine_cmd, env

@@ -1,0 +1,24 @@
+# Boot the shipped game to the main menu and quit through "Quit Game".
+# Frame numbers count the game's message pumps (one per rendered frame).
+args -best              # skip the driver/mode dialog (init.c): HAL device, 640x480x16
+frame_ms 40             # virtual clock: 25 frames per second of game time
+stop_after 2000         # safety net; the scenario exits on its own well before
+cursor 320 240
+
+# skip the intro movies: any key skips front_play_movie
+at 100 key 0x39 down    # DIK_SPACE
+at 102 key 0x39 up
+at 200 key 0x39 down
+at 202 key 0x39 up
+at 300 key 0x39 down
+at 302 key 0x39 up
+
+# the main menu is up by frame ~775: point at "Quit Game" and click it
+at 850 cursor 320 378
+at 860 lbutton down
+at 863 lbutton up
+
+# "Are you sure?": click "Yes"; the game shuts down and exits
+at 900 cursor 320 278
+at 910 lbutton down
+at 913 lbutton up

@@ -1,0 +1,2519 @@
+seamrec-scenario 1
+args -best
+# scripted
+msg 26 0x001c 0x1 0x0
+av Update #37 0x00000000
+di Acquire #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000 39:80
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000 39:80
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000 39:80
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000 39:80
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00000000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+av Update #37 0x00040003
+time t 111000
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111040
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111080
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111120
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111160
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111200
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111280
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111320
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111360
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111400
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111440
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111480
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111520
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111560
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111600
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111640
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111680
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111720
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111760
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111800
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111840
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111880
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111920
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 111960
+di GetDeviceState #2 0x00000000 39:80
+cursor pos 1 320 240
+time t 112000
+av Update #46 0x00000000
+di GetDeviceState #2 0x00000000 39:80
+cursor pos 1 320 240
+time t 112040
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 130760
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 130800
+ds GetCurrentPosition #77753 0x00000000 0 1764
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 130840
+ds GetCurrentPosition #77753 0x00000000 7056 8820
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 130880
+ds GetCurrentPosition #77753 0x00000000 14112 15876
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 130920
+ds GetCurrentPosition #77753 0x00000000 21168 22932
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 130960
+ds GetCurrentPosition #77753 0x00000000 28224 29988
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131000
+ds GetCurrentPosition #77753 0x00000000 35280 37044
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131040
+ds GetCurrentPosition #77753 0x00000000 42336 44100
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131080
+ds GetCurrentPosition #77753 0x00000000 49392 51156
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131120
+ds GetCurrentPosition #77753 0x00000000 56448 58212
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131160
+ds GetCurrentPosition #77753 0x00000000 63504 65268
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131200
+ds GetCurrentPosition #77753 0x00000000 70560 72324
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131240
+ds GetCurrentPosition #77753 0x00000000 77616 79380
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131280
+ds GetCurrentPosition #77753 0x00000000 84672 86436
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131320
+ds GetCurrentPosition #77753 0x00000000 91728 93492
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131360
+ds GetCurrentPosition #77753 0x00000000 98784 100548
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131400
+ds GetCurrentPosition #77753 0x00000000 105840 107604
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131440
+ds GetCurrentPosition #77753 0x00000000 112896 114660
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131480
+ds GetCurrentPosition #77753 0x00000000 119952 121716
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131520
+ds GetCurrentPosition #77753 0x00000000 127008 128772
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131560
+ds GetCurrentPosition #77753 0x00000000 134064 135828
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131600
+ds GetCurrentPosition #77753 0x00000000 141120 142884
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131640
+ds GetCurrentPosition #77753 0x00000000 148176 149940
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131680
+ds GetCurrentPosition #77753 0x00000000 155232 156996
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131720
+ds GetCurrentPosition #77753 0x00000000 162288 164052
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131760
+ds GetCurrentPosition #77753 0x00000000 169344 171108
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131800
+ds GetCurrentPosition #77753 0x00000000 176400 178164
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131840
+ds GetCurrentPosition #77753 0x00000000 183456 185220
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131880
+ds GetCurrentPosition #77753 0x00000000 190512 192276
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131920
+ds GetCurrentPosition #77753 0x00000000 197568 199332
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 131960
+ds GetCurrentPosition #77753 0x00000000 204624 206388
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132000
+ds GetCurrentPosition #77753 0x00000000 211680 213444
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132040
+ds GetCurrentPosition #77753 0x00000000 218736 220500
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132080
+ds GetCurrentPosition #77753 0x00000000 225792 227556
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132120
+ds GetCurrentPosition #77753 0x00000000 232848 234612
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132160
+ds GetCurrentPosition #77753 0x00000000 239904 241668
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132200
+ds GetCurrentPosition #77753 0x00000000 246960 248724
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132240
+ds GetCurrentPosition #77753 0x00000000 254016 255780
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132280
+ds GetCurrentPosition #77753 0x00000000 261072 262836
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132320
+ds GetCurrentPosition #77753 0x00000000 268128 269892
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132360
+ds GetCurrentPosition #77753 0x00000000 275184 276948
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132400
+ds GetCurrentPosition #77753 0x00000000 282240 284004
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132440
+ds GetCurrentPosition #77753 0x00000000 289296 291060
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132480
+ds GetCurrentPosition #77753 0x00000000 296352 298116
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132520
+ds GetCurrentPosition #77753 0x00000000 303408 305172
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132560
+ds GetCurrentPosition #77753 0x00000000 310464 312228
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132600
+ds GetCurrentPosition #77753 0x00000000 317520 319284
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132640
+ds GetCurrentPosition #77753 0x00000000 324576 326340
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132680
+ds GetCurrentPosition #77753 0x00000000 331632 333396
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132720
+ds GetCurrentPosition #77753 0x00000000 338688 340452
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132760
+ds GetCurrentPosition #77753 0x00000000 345744 347508
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132800
+ds GetCurrentPosition #77753 0x00000000 352800 354564
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132840
+ds GetCurrentPosition #77753 0x00000000 359856 361620
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132880
+ds GetCurrentPosition #77753 0x00000000 366912 368676
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132920
+ds GetCurrentPosition #77753 0x00000000 373968 375732
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 132960
+ds GetCurrentPosition #77753 0x00000000 381024 382788
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133000
+ds GetCurrentPosition #77753 0x00000000 388080 389844
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133040
+ds GetCurrentPosition #77753 0x00000000 395136 396900
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133080
+ds GetCurrentPosition #77753 0x00000000 402192 403956
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133120
+ds GetCurrentPosition #77753 0x00000000 409248 411012
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133160
+ds GetCurrentPosition #77753 0x00000000 416304 418068
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133200
+ds GetCurrentPosition #77753 0x00000000 423360 425124
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133240
+ds GetCurrentPosition #77753 0x00000000 430416 432180
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133280
+ds GetCurrentPosition #77753 0x00000000 437472 439236
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133320
+ds GetCurrentPosition #77753 0x00000000 444528 446292
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133360
+ds GetCurrentPosition #77753 0x00000000 451584 453348
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133400
+ds GetCurrentPosition #77753 0x00000000 458640 460404
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133440
+ds GetCurrentPosition #77753 0x00000000 465696 467460
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133480
+ds GetCurrentPosition #77753 0x00000000 472752 474516
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133520
+ds GetCurrentPosition #77753 0x00000000 479808 481572
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133560
+ds GetCurrentPosition #77753 0x00000000 486864 488628
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133600
+ds GetCurrentPosition #77753 0x00000000 493920 495684
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133640
+ds GetCurrentPosition #77753 0x00000000 500976 502740
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133680
+ds GetCurrentPosition #77753 0x00000000 508032 509796
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133720
+ds GetCurrentPosition #77753 0x00000000 515088 516852
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133760
+ds GetCurrentPosition #77753 0x00000000 522144 523908
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133800
+ds GetCurrentPosition #77753 0x00000000 0 1764
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133840
+ds GetCurrentPosition #77753 0x00000000 7056 8820
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133880
+ds GetCurrentPosition #77753 0x00000000 14112 15876
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133920
+ds GetCurrentPosition #77753 0x00000000 21168 22932
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 240
+time t 133960
+ds GetCurrentPosition #77753 0x00000000 28224 29988
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134000
+ds GetCurrentPosition #77753 0x00000000 35280 37044
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134040
+ds GetCurrentPosition #77753 0x00000000 42336 44100
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134080
+ds GetCurrentPosition #77753 0x00000000 49392 51156
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134120
+ds GetCurrentPosition #77753 0x00000000 56448 58212
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134160
+ds GetCurrentPosition #77753 0x00000000 63504 65268
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134200
+ds GetCurrentPosition #77753 0x00000000 70560 72324
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134240
+ds GetCurrentPosition #77753 0x00000000 77616 79380
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134280
+ds GetCurrentPosition #77753 0x00000000 84672 86436
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134320
+ds GetCurrentPosition #77753 0x00000000 91728 93492
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134360
+ds GetCurrentPosition #77753 0x00000000 98784 100548
+msg 403526 0x0201 0x1 0x17a0140
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134400
+ds GetCurrentPosition #77753 0x00000000 105840 107604
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134440
+ds GetCurrentPosition #77753 0x00000000 112896 114660
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134480
+ds GetCurrentPosition #77753 0x00000000 119952 121716
+msg 403749 0x0202 0x0 0x17a0140
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134520
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 127008 128772
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134560
+time t 134560
+time t 134560
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 134064 135828
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134600
+time t 134600
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 141120 142884
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134640
+time t 134640
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 148176 149940
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134680
+time t 134680
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 155232 156996
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134720
+time t 134720
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 162288 164052
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134760
+time t 134760
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 169344 171108
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134800
+time t 134800
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 176400 178164
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134840
+time t 134840
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 183456 185220
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134880
+time t 134880
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 190512 192276
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134920
+time t 134920
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 197568 199332
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 134960
+time t 134960
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 204624 206388
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135000
+time t 135000
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 211680 213444
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135040
+time t 135040
+ds GetStatus #127 0x00000000 1
+ds GetStatus #125 0x00000000 0
+ds GetCurrentPosition #77753 0x00000000 218736 220500
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135080
+time t 135080
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 225792 227556
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135120
+time t 135120
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 232848 234612
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135160
+time t 135160
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 239904 241668
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135200
+time t 135200
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 246960 248724
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135240
+time t 135240
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 254016 255780
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135280
+time t 135280
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 261072 262836
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135320
+time t 135320
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 268128 269892
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135360
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 275184 276948
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135400
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 282240 284004
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135440
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 289296 291060
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135480
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 296352 298116
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135520
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 303408 305172
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135560
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 310464 312228
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135600
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 317520 319284
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135640
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 324576 326340
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135680
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 331632 333396
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135720
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 338688 340452
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135760
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 345744 347508
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135800
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 352800 354564
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135840
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 359856 361620
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135880
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 366912 368676
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135920
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 373968 375732
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 378
+time t 135960
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 381024 382788
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136000
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 388080 389844
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136040
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 395136 396900
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136080
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 402192 403956
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136120
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 409248 411012
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136160
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 416304 418068
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136200
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 423360 425124
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136240
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 430416 432180
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136280
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 437472 439236
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136320
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 444528 446292
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136360
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 451584 453348
+msg 485193 0x0201 0x1 0x1160140
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136400
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 458640 460404
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136440
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 465696 467460
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136480
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 472752 474516
+msg 485293 0x0202 0x0 0x1160140
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136520
+ds GetStatus #125 0x00000000 1
+ds GetStatus #127 0x00000000 1
+ds GetCurrentPosition #77753 0x00000000 479808 481572
+di GetDeviceState #2 0x00000000
+cursor pos 1 320 278
+time t 136560
+msg 485351 0x001c 0x0 0x0
+msg 485351 0x0002 0x0 0x0
+di Unacquire #2 0x00000000
+end 914

@@ -68,3 +68,12 @@ table is a cross-check, not a checklist that must fill up.
 (the shipped file contains `DontPlayAvis FALSE` verbatim) → byte-level
 repack with backup under `backups/`. The same shape is the template for the
 bigger CDDA patch when we decide which sound backend to swap in.
+
+## Seam recorder
+
+[`tools/seamrec/`](../seamrec/README.md) builds on this harness: proxy DLLs
+beside the shipped exe record its DX6/Win32 seam calls and replay scenarios
+deterministically (ADR 0007, "Validation"). It reuses `find_runner()` and
+`build_launch()` (whose `extra_env` and `gamescope_args` parameters exist for
+it), stages its own copy of the game, and by default runs in a private Xvfb +
+null-audio sandbox instead of gamescope.

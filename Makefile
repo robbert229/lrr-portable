@@ -54,3 +54,12 @@ reference-run:
 	  STEAM_COMPAT_DATA_PATH="$(COMPATDATA)" \
 	  STEAM_COMPAT_CLIENT_INSTALL_PATH="$(HOME)" \
 	    "$$proton_bin" runinprefix ./LegoRR.exe
+
+# Seam recorder (ADR 0007 "Validation"): proxy DLLs that record the shipped
+# LegoRR.exe's DX6/Win32 seam calls. Needs podman; see tools/seamrec/README.md.
+.PHONY: seamrec seamrec-check
+seamrec:
+	python3 tools/seamrec/seamrec.py build
+
+seamrec-check: seamrec
+	python3 tools/seamrec/seamrec.py check boot-menu-quit
