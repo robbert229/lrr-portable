@@ -67,9 +67,12 @@ static const float s_maths_four = 4.0f;
 
 /* Maths.h's inline vector helpers (Maths_Vector3DModulus, _Scale and
  * _Normalise). Like the original's, they are always inlined. */
+/* The products in parentheses: MSVC 5.0 keeps a parenthesised float
+ * subexpression as written (finding 661), which gives the original's x87
+ * order where two moduli interleave. */
 static __inline float maths_vector3d_modulus(const Vector3F* v)
 {
-    return (float)sqrt(v->x * v->x + v->y * v->y + v->z * v->z);
+    return (float)sqrt((v->x * v->x) + (v->y * v->y) + (v->z * v->z));
 }
 
 static __inline Vector3F* maths_vector3d_scale(Vector3F* r, const Vector3F* a, float f)
