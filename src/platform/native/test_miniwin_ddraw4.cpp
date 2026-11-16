@@ -4,7 +4,7 @@
 // emulated 16-bit display, IDirectDraw4/IDirectDrawSurface4 surfaces, Lock,
 // fills and colour-keyed blits, the framebuffer and its flip, the software
 // device described as HAL, and IDirect3DRMFrame3 transforms and visuals.
-// Synthetic only: an offscreen SDL window, no game data.
+// Synthetic only: a dummy-driver SDL window, no game data.
 #include <miniwin/d3drm.h>
 #include <miniwin/ddraw.h>
 #include <miniwin/windows.h>
@@ -488,7 +488,7 @@ static void CheckFrames()
 int main()
 {
     SDL_SetLogPriority(SDL_LOG_CATEGORY_CUSTOM, SDL_LOG_PRIORITY_CRITICAL);
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "offscreen");
+    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
