@@ -1,4 +1,4 @@
-# Build, run, and compare
+# Build and run
 
 [Project overview](../README.md) · [Implementation notes](implementation.md)
 
@@ -17,8 +17,8 @@ make build
 make run WAD_DIR=/path/to/game
 ```
 
-The default backend is `native`. miniwin supplies the Windows-compatible
-interfaces over SDL3; this backend does not require Wine. `BUILD_DIR` selects
+miniwin supplies the Windows-compatible interfaces over SDL3 on every host,
+Windows included (ADR 0007); the build does not require Wine. `BUILD_DIR` selects
 another build directory. `MOVIES=auto|enabled|disabled` controls detection of
 FFmpeg runtime libraries; the default is `auto`. Movie playback requires the
 runtime libraries, rather than FFmpeg headers at build time.
@@ -27,7 +27,7 @@ For direct CMake use, initialize miniwin first:
 
 ```sh
 tools/setup-miniwin.sh
-cmake -S . -B build -DPLATFORM=native -DMOVIES=auto
+cmake -S . -B build -DMOVIES=auto
 cmake --build build
 LEGORRR_WAD_DIR=/path/to/game ./build/LegoRR
 ```
@@ -40,7 +40,8 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Omit `TEST_WADS_DIR` for synthetic-fixture tests only. Real-data probes need
+`make test` runs the same build and ctest in `BUILD_DIR`. Omit
+`TEST_WADS_DIR` for synthetic-fixture tests only. Real-data probes need
 original game files and are skipped when those files are not configured.
 Passing tests establishes the behavior covered by those tests; gameplay
 comparison against the original is a separate check.
@@ -48,10 +49,11 @@ comparison against the original is a separate check.
 ## Continuous integration
 
 The `native-build` workflow (`.github/workflows/native-build.yml`) runs on pull
-requests and pushes to `main`. Its check is required for merging. It checks out
+requests and pushes to `main` and `develop`. Its check is required for merging. It checks out
 the repository without submodules, runs `tools/setup-miniwin.sh` to fetch only
 `miniwin/`, and then runs the native commands from [Tests](#tests) with
-`TEST_WADS_DIR` unset, so only the synthetic-fixture tests run.
+`TEST_WADS_DIR` unset, so only the synthetic-fixture tests run. It also runs
+the Python tool tests in `tools/tests`.
 
 SDL3 comes from a pinned source build of release-3.4.18 (commit `829a65d7`),
 configured headless with `SDL_UNIX_CONSOLE_BUILD` and without X11 or Wayland.
@@ -60,203 +62,27 @@ version. `ubuntu-24.04` has no SDL3 development package, so a distro package is
 not used. When you change the SDL version or its build recipe, update
 `SDL_VERSION`, `SDL_COMMIT`, or `SDL_CACHE_VERSION` in the workflow.
 
-The matching build, the Reccmp gate (`make reccmp-check`), and real-data tests
-need licensed inputs and the MSVC 5.0 toolchain. They stay local and are not run
+Real-data tests need licensed game files, so they stay local and are not run
 in CI.
 
-## Windows reference backend
+## Sources
 
-The reference backend builds a 32-bit Windows executable for comparison with
-the shipped game. Install the i686 MinGW-w64 compiler, resource compiler, and
-archive tools before configuring:
+`src/link_order.cmake` is the source list: one
+`lrr_link(<kind> <key> <library> <source>)` line per source, with the library
+(`game`, `gods98`, `platform_glue` or `program`) it is built into. Its header
+explains the fields. It is the only place that adds a game, gods98, platform
+or program source to the build. The units rebuilt in original shape are its
+`.c` files and its `.cpp` entries of kind `unit`; they compile as C++17.
 
-```sh
-make setup BUILD_DIR=build-winapi PLATFORM=winapi \
-  CMAKE_TOOLCHAIN_FILE=cross/i686-toolchain.cmake
-cmake --build build-winapi
-```
+## Running the original
 
-See [ADR 0001](adr/0001-minwg-cross-toolchain.md),
-[ADR 0002](adr/0002-run-port-integrity-bypass.md),
-[ADR 0004](adr/0004-miniwin-native-port.md), and
-[ADR 0005](adr/0005-original-shape-c-units.md) for the toolchain and comparison
-rationale. Units rebuilt in original shape (the `.c` files of the link-order
-list, `src/link_order.cmake`) are compiled as C by the matching build and as
-C++ by every other build. The [compatibility harness](../tools/compat/README.md) documents
-running the original executable under Proton.
+`make reference-run` runs the shipped `LegoRR.exe` from `REFERENCE_DIR`
+(default `reference/`) under Proton, with the
+[compatibility harness](../tools/compat/README.md)'s runner and prefix. Set
+`PROTON_BIN` (or `RR_A2_PROTON`) and `COMPATDATA` to override them.
 
-## MSVC 5.0 and Reccmp
+## The matching build
 
-Keep source changes compatible with MSVC 5.0. With the configured classic
-toolchain, Wine, and Reccmp available, build the candidate and generate a report:
-
-```sh
-make reccmp-report RECCMP_WINE_BIN=/path/to/wine \
-  RECCMP_RECCMP=/path/to/reccmp-reccmp
-```
-
-`make reccmp` is an alias. The toolchain defaults to
-`~/.local/share/reprobit/toolchains/msvc_5_0_rtm`; override it with
-`REPROBIT_MSVC_5_0_RTM_ROOT=/path/to/toolchain`. Reports go to
-`build-reccmp/reccmp-report/index.html` and `results.json`.
-
-There is one matching build. It links with `/INCREMENTAL:NO` (ADR 0006
-decision 2), so the executable has no incremental-link thunks and, like the
-original, no `.reloc` section. It also links in the original's mode,
-`/OPT:REF /OPT:NOICF` (finding 642): code that nothing live references is
-removed, as the original's link removed it, and identical functions are not
-folded. `/DEBUG` stays for Reccmp's PDB. An annotated function that loses its
-last live caller therefore leaves the report, and the gate treats that as a
-drop; `make opt-ref-callers` names its original callers. `tools/reccmp.sh`
-then removes the PE debug directory, which the original also lacks; the linker PDB stays next to the
-executable for Reccmp. The link also writes a map to `build-reccmp/LegoRR.map`
-(gitignored with the rest of `build-reccmp/`): the section layout, then every
-public symbol with its address and contributing `library:object`, sorted by
-address, which shows the link order. The gate, `make binary-progress` and
-`make match-progress` all read this one build.
-
-### Link order
-
-`src/link_order.cmake` is the *link-order list* (ADR 0006 decision 1): one
-`lrr_link(<kind> <key> <library> <source> [<platform>])` line per source, in
-the original's link order. Its header explains the fields. It is the only
-place that adds a game, gods98, platform or program source to the build:
-
-- **The matching build** compiles each entry as its own object (a CMake object
-  library `link_<position>_<stem>`, with the include path of the entry's
-  library). It links them as the original did (findings 658 and 690):
-  1. the game units and gods98's first unit, Movie.cpp
-     (`LRR_LINK_EXPLICIT_LAST`), as explicit objects in list order;
-  2. the late units' libraries (below);
-  3. every later gods98 unit from one library, `unit_gods98.lib`, in list
-     order (the map shows `unit_gods98:container.c.obj`). `LRR_LINK_MEMBER_ORDER`
-     names one symbol per unit, in list order, so LINK pulls them in that
-     order;
-  4. the libraries in `LRR_LINK_LIBRARIES`: LIBC, `oldnames.lib` and the
-     import libraries in the original's order;
-  5. the port tail and the CRT-range legacy files from one library,
-     `lrr_tail.lib`.
-
-  LINK allocates the commons library by library, in command-line order, and
-  within the explicit objects or one library in reverse order of the objects
-  it took (finding 690). So the commons come as the original's: the game
-  units in reverse, the late units, gods98 in reverse, LIBC.
-
-  LINK 5.0 keeps command-line object order in every section and pulls
-  library members when they are first referenced, so the map shows the units'
-  `.text`, `.data` and `.bss` in list order, then the LIBC members, the
-  import thunks, the late units and the tail. A unit pulled out of list
-  order fails `tools/link_order.py check-map`. The link names no `/ENTRY`:
-  LINK infers `WinMainCRTStartup` after the explicit objects, which puts
-  `wincrt0.obj` where the original has it.
-- **The native and reference builds** build `game`, `gods98` and
-  `platform_glue` from the entries' `library` column; order does not matter
-  there (ADR 0003).
-
-Two late units are the exception (finding 657). The original has LATE-001
-(`gods98/rnc.c`) and LATE-002 (`gods98/init.c`) after the import thunks, so
-`LRR_LINK_LATE_MEMBERS` names them. The matching build archives each into its
-own `late_<stem>.lib`, searched in list order before `unit_gods98.lib`. Only
-gods98 units reference them, so LINK pulls them in its second pass, after the
-import thunks, and their commons come before gods98's (finding 690). The
-map shows them as `late_rnc:rnc.c.obj` and `late_init:init.c.obj`. Their
-list entries stay where they are, and every other build compiles them as
-usual.
-
-Order is the game segment (converted units at their unit's position, each
-mixed legacy file at the median original address of its functions), the
-gods98 segment, the port tail (port-only files), then the legacy files whose
-functions lie in the CRT range. `tools/convert_unit.py` and
-`tools/relocate_unit.py` add a new unit's line. When relocation drains a
-legacy file of its last original function, the file becomes a tail entry.
-`python3 tools/link_order.py` prints the list.
-
-### Match baseline gate
-
-`docs/coverage/match-baseline.txt` is the committed *match baseline*: every
-function's Reccmp similarity score (percent, two decimals, sorted by address)
-for the game-only and full scopes. Parallel changes can silently erase each
-other's matches, so check before handing work back:
-
-```sh
-make reccmp-check      # rebuild, then compare against the baseline
-make reccmp-compare    # compare an existing build-reccmp/reccmp-report only
-```
-
-Both exit non-zero and list every function that fell below baseline as
-`old -> new`. Improvements, newly mapped and newly unmapped functions are
-reported but do not fail. To accept a deliberate change (an improvement, or an
-intended drop), rebuild with `make reccmp-report`, run
-`make reccmp-baseline-update`, and commit the baseline in the same change.
-`RECCMP_BASELINE=<file>` and `RECCMP_BUILD_DIR=<dir>` override the paths. The
-logic lives in `tools/match_baseline.py`.
-
-```sh
-make reccmp-lint
-make reference-run
-make reccmp-run
-```
-
-The run targets use the same Proton runner, compatibility prefix, and reference
-working directory. `reccmp-run` requires an already-built candidate. Set
-`RECCMP_PROTON_BIN` and `RECCMP_COMPATDATA` to override the runner and prefix;
-`RECCMP_REFERENCE_DIR` selects the original game directory.
-
-The [coverage ledger](coverage/README.md) measures source citations. Reccmp
-compares compiled functions with the original executable; its percentages
-measure something different. Record the build configuration and report scope
-when publishing a score, as in the
-[optimization-flag sweep](findings/486-msvc5-optimization-flag-reccmp-sweep.md).
-
-### Single-function loop
-
-`make match-function ADDR=0x00478e60` compiles only the translation unit that
-holds the function, with the same flags, and scores it with Reccmp's own
-comparator against the original in about a second, without linking. It
-prints the similarity, the baseline delta and a diff (`JSON=1` for JSON).
-See [`tools/README.md`](../tools/README.md#match_functionpy--single-function-match-loop)
-for options, timings and how its scores relate to a full report.
-
-## Meson build
-
-The native Meson build also needs SDL3 development files, pkg-config, and
-bootstrapped miniwin. Run its tests from the build directory via Meson:
-
-```sh
-tools/setup-miniwin.sh
-meson setup builddir-meson
-meson compile -C builddir-meson
-meson test -C builddir-meson --print-errorlogs
-```
-
-Use `-Dtest_wads_dir=/path/to/game` at setup for real-data probes, and
-`-Dmovies=auto|enabled|disabled` to control movie detection. CMake through
-`make` remains the current primary entry point.
-
-### Whole-binary progress
-
-`make binary-progress` rebuilds the matching build (`make reccmp-report`) and
-compares its executable with the original, refreshing
-`docs/coverage/binary-progress.json`; `make binary-progress-compare` compares
-an existing build without rebuilding. Install Python `pefile` and `capstone`
-for the report; `BINARY_PROGRESS_PYTHON` selects their interpreter. See [tool
-documentation](../tools/README.md#whole-binary-progress) for definitions and
-input hashing. Run `make reccmp-check` for the match baseline gate.
-
-### PR matching progress
-
-For any change to matching-build inputs, run `make reccmp-check`, investigate
-any drops under the ADR 0005 entropy policy, then run `make match-progress`
-and commit `docs/coverage/match-baseline.txt`,
-`docs/coverage/match-listing-digests.txt` and
-`docs/coverage/binary-progress.json`. This reruns `make reccmp-report`,
-refreshes the baseline and listing digests from it and compares the same
-executable for the whole-binary report. There is no second build: after `make reccmp-check`, CMake has nothing
-to recompile or relink, so only Reccmp runs again. The hash alone cannot
-establish that the baseline is current. CI checks the progress and baseline
-fingerprints and baseline digest in
-`matching-progress-freshness` without the toolchain;
-it reports progress in a single comment for same-repository PRs. Fork PRs
-get the freshness check but no comment. This check verifies freshness, not
-measurement correctness. On a generated-file conflict, take either side and
-regenerate all three with `make match-progress`; never hand-merge them.
+develop has no matching build, Reccmp gate or Windows reference backend
+(ADR 0007). They remain on `main` until the decomp tag; see `main`'s
+`docs/building.md`.

@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
 # Required check: builds the native port and runs its synthetic-fixture tests.
-# The matching build (make reccmp-check) needs licensed inputs and the MSVC 5.0
-# toolchain, so it stays local (see docs/building.md).
+# develop has no matching build (ADR 0007).
 name: native-build
 
 on:
@@ -34,11 +33,8 @@ jobs:
         with:
           submodules: false
 
-      - name: Check link order
-        run: |
-          python3 tools/link_order.py check
-          python3 tools/meson_source_parity.py
-          python3 -m unittest discover -s tools/tests -p 'test_meson_source_parity.py'
+      - name: Test the Python tools
+        run: python3 -m unittest discover -s tools/tests
 
       - name: Install build tools
         run: |

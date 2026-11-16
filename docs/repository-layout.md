@@ -12,24 +12,22 @@ docs/decompiles/    Canonical and legacy Ghidra pseudocode; see
                     docs/decompiles/README.md
 docs/evidence/      Exported REA evidence bundle (address-level citations)
 tools/              Analysis tooling: unwad.py, Ghidra function-naming script
+docs/coverage/      Original translation units, function areas and call graph
+                    of LegoRR.exe (frozen at the develop fork; their
+                    generators are on main)
 docs/adr/           Architecture decision records (build/port decisions)
 reference/          (gitignored) the original, unmodified game files
 unpacked/           (gitignored) 5,845 assets extracted from the .wad archives
-cross/              MinGW-w64 Win32 toolchain inputs
-  msvc5-importlibs/ DirectX import libraries the MSVC 5.0 matching build rebuilds (finding 574)
-CMakeLists.txt      Active CMake build (PLATFORM=native|winapi)
+CMakeLists.txt      The CMake build (native, SDL3 + miniwin)
 src/link_order.cmake
-                    The link-order list (ADR 0006): every game, gods98,
-                    platform and program source in original link order, with
-                    its library; the matching build links them in this order
-meson.build         Existing Meson build (kept during the CMake migration)
+                    The source list: every game, gods98, platform and
+                    program source, in the original's unit order, with its
+                    library
 src/                Reconstruction source tree: game/ and gods98/ (original
                     units: one <stem>.c or <stem>.cpp per unit, plus legacy
                     mixed files and their private <file>_shared.hpp headers
-                    from relocation), platform/ (backend entry points), crt/
-                    (runtime stand-ins for the portable builds; the matching
-                    build takes the C runtime from LIBC.LIB), main.cpp
-subprojects/        miniwin CMake bridge (sparse isle-portable submodule)
+                    from relocation), platform/ (native entry points), crt/
+                    (stand-ins for the original's static C runtime), main.cpp
 3rdparty/           Dependency submodules (isle-portable, sparse → miniwin/)
 ```
 

@@ -80,9 +80,7 @@ extern "C" int __cdecl _ctrlfp(unsigned int, unsigned int);
 #endif
 #endif
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-#include <windows.h>
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -617,23 +615,14 @@ void crt_runtime_error_message(int error_code)
     if (crt_runtime_error_reporting_enabled()) {
         int handle = crt_file_descriptor_handle_get(2u);
         if (handle == -1) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-            HANDLE standard_error = GetStdHandle((DWORD)-12);
-            DWORD written;
-            WriteFile(standard_error, message, (DWORD)strlen(message),
-                      &written, NULL);
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
             (void)write(2, message, strlen(message));
 #else
             (void)fputs(message, stderr);
 #endif
         }
         else {
-#if defined(LEGORRR_BACKEND_WINAPI)
-            DWORD written;
-            WriteFile((HANDLE)handle, message, (DWORD)strlen(message),
-                      &written, NULL);
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
             (void)write(handle, message, strlen(message));
 #else
             (void)fputs(message, stderr);
@@ -645,11 +634,7 @@ void crt_runtime_error_message(int error_code)
         char module_name[260];
         char dialog[512];
         module_name[0] = '\0';
-#if defined(LEGORRR_BACKEND_WINAPI)
-        if (GetModuleFileNameA(NULL, module_name, sizeof(module_name)) == 0u) {
-            strcpy(module_name, "<program name unknown>");
-        }
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
         {
             ssize_t count = readlink("/proc/self/exe", module_name,
                                      sizeof(module_name) - 1u);
@@ -699,40 +684,10 @@ int crt_runtime_error_message_box_display(const char* message,
                                           const char* title,
                                           unsigned int flags)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    typedef int (WINAPI *CrtMessageBoxAProc)(HWND, LPCSTR, LPCSTR, UINT);
-    typedef HWND (WINAPI *CrtGetActiveWindowProc)(void);
-    typedef HWND (WINAPI *CrtGetLastActivePopupProc)(HWND);
-    HMODULE module;
-    HWND owner = NULL;
-    if (s_runtime_message_box_proc == NULL) {
-        module = LoadLibraryA("user32.dll");
-        if (module == NULL) {
-            return 0;
-        }
-        s_runtime_message_box_proc = (void*)GetProcAddress(module, "MessageBoxA");
-        if (s_runtime_message_box_proc == NULL) {
-            return 0;
-        }
-        s_runtime_active_window_proc =
-            (void*)GetProcAddress(module, "GetActiveWindow");
-        s_runtime_last_popup_proc =
-            (void*)GetProcAddress(module, "GetLastActivePopup");
-    }
-    if (s_runtime_active_window_proc != NULL) {
-        owner = ((CrtGetActiveWindowProc)s_runtime_active_window_proc)();
-    }
-    if (owner != NULL && s_runtime_last_popup_proc != NULL) {
-        owner = ((CrtGetLastActivePopupProc)s_runtime_last_popup_proc)(owner);
-    }
-    return ((CrtMessageBoxAProc)s_runtime_message_box_proc)(
-        owner, message, title, (UINT)flags);
-#else
     (void)message;
     (void)title;
     (void)flags;
     return 0;
-#endif
 }
 #endif
 
@@ -1154,23 +1109,7 @@ uint32_t crt_floating_point_feature_probe(void)
 #if defined(_MSC_VER)
     return (uint32_t)_ms_p5_mp_test_fdiv();
 #else
-#if defined(LEGORRR_BACKEND_WINAPI)
-    typedef BOOL (WINAPI *ProcessorFeatureProbe)(DWORD);
-    HMODULE module = GetModuleHandleA("KERNEL32");
-    FARPROC address;
-    ProcessorFeatureProbe probe;
-    if (module == NULL) {
-        return processor_feature_fallback_false();
-    }
-    address = GetProcAddress(module, "IsProcessorFeaturePresent");
-    if (address == NULL) {
-        return processor_feature_fallback_false();
-    }
-    probe = (ProcessorFeatureProbe)address;
-    return probe(0) ? 1u : 0u;
-#else
     return processor_feature_fallback_false();
-#endif
 #endif
 }
 #endif
@@ -3030,37 +2969,6 @@ void crt_timezone_state_init(void)
 
     timezone_text = crt_environment_variable_lookup("TZ");
     if (timezone_text == NULL) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-        DWORD timezone_result;
-        timezone_result = GetTimeZoneInformation(
-            (LPTIME_ZONE_INFORMATION)&s_timezone_information);
-        if (timezone_result != TIME_ZONE_ID_INVALID) {
-            s_timezone_from_windows = 1;
-            s_timezone_bias_seconds = s_timezone_information.bias * 60;
-            if (s_timezone_information.standard_date.month != 0) {
-                s_timezone_bias_seconds +=
-                    s_timezone_information.standard_bias * 60;
-            }
-            if (s_timezone_information.daylight_date.month == 0 ||
-                s_timezone_information.daylight_bias == 0) {
-                s_daylight_saving_available = 0;
-                s_daylight_saving_bias_seconds = 0;
-            } else {
-                s_daylight_saving_available = 1;
-                s_daylight_saving_bias_seconds =
-                    (s_timezone_information.daylight_bias -
-                     s_timezone_information.standard_bias) * 60;
-            }
-            crt_wide_char_to_multi_byte_compat(
-                s_standard_timezone_name,
-                s_timezone_information.standard_name, 0x40u);
-            crt_wide_char_to_multi_byte_compat(
-                s_daylight_timezone_name,
-                s_timezone_information.daylight_name, 0x40u);
-            s_standard_timezone_name[63] = '\0';
-            s_daylight_timezone_name[63] = '\0';
-        }
-#endif
         return;
     }
     if (*timezone_text == '\0') {
@@ -3283,19 +3191,11 @@ int crt_codepage_get(int codepage)
     s_codepage_fallback_mode = 0u;
     if (codepage == -2) {
         s_codepage_fallback_mode = 1u;
-#if defined(LEGORRR_BACKEND_WINAPI)
-        return (int)GetOEMCP();
-#else
         return 0;
-#endif
     }
     if (codepage == -3) {
         s_codepage_fallback_mode = 1u;
-#if defined(LEGORRR_BACKEND_WINAPI)
-        return (int)GetACP();
-#else
         return 0;
-#endif
     }
     if (codepage == -4) {
         /* Corpus 0x49651d loads the page before setting fallback mode. */
@@ -3378,56 +3278,11 @@ int crt_locale_codepage_table_update(int requested_codepage)
         }
     }
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-    {
-        CPINFO info;
-        if (GetCPInfo((UINT)codepage, &info) == 0) {
-            if (s_codepage_fallback_mode == 0u) {
-                return -1;
-            }
-            crt_ctype_tables_reset();
-            return 0;
-        }
-        memset(s_multibyte_character_flags, 0,
-               sizeof s_multibyte_character_flags);
-        /* Corpus 0x496370 uses the unsigned <= 1 width gate. */
-        if (info.MaxCharSize <= 1u) {
-            s_active_codepage = 0u;
-            s_active_locale_table = 0u;
-        }
-        else {
-            unsigned byte_index;
-            unsigned range_index;
-            for (range_index = 0u; range_index + 1u < 12u;
-                 range_index += 2u) {
-                const unsigned first = info.LeadByte[range_index];
-                const unsigned last = info.LeadByte[range_index + 1u];
-                if (first == 0u || last == 0u) {
-                    break;
-                }
-                for (byte_index = first; byte_index <= last; ++byte_index) {
-                    s_multibyte_character_flags[byte_index + 1u] |= 4u;
-                }
-            }
-            for (byte_index = 1u; byte_index < 0xffu; ++byte_index) {
-                s_multibyte_character_flags[byte_index + 1u] |= 8u;
-            }
-            s_active_codepage = codepage;
-            s_active_locale_table =
-                crt_codepage_locale_id_lookup(codepage);
-        }
-        s_codepage_metadata_word0 = 0u;
-        s_codepage_metadata_word1 = 0u;
-        s_codepage_metadata_word2 = 0u;
-        return 0;
-    }
-#else
     if (s_codepage_fallback_mode == 0u) {
         return -1;
     }
     crt_ctype_tables_reset();
     return 0;
-#endif
 }
 #endif
 
@@ -3495,54 +3350,6 @@ int crt_get_string_type_a_compat(uint32_t info_type, const char* source,
                                  int source_count, uint16_t* result,
                                  uint32_t codepage, uint32_t locale)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    if (s_string_type_api_mode == 0) {
-        WORD probe;
-        if (GetStringTypeA(0, 1u, "", 1, &probe) != 0) {
-            s_string_type_api_mode = 2;
-        }
-        else if (GetStringTypeW(1u, L"", 1, &probe) != 0) {
-            s_string_type_api_mode = 1;
-        }
-        else {
-            return 0;
-        }
-    }
-    if (s_string_type_api_mode == 2) {
-        if (locale == 0u) {
-            locale = s_crt_locale_handle;
-        }
-        return GetStringTypeA((LCID)locale, info_type, source,
-                              source_count, (LPWORD)result);
-    }
-    if (s_string_type_api_mode == 1) {
-        int wide_count;
-        WCHAR* wide_source = NULL;
-        BOOL success;
-        if (codepage == 0u) {
-            codepage = s_ansi_codepage;
-        }
-        wide_count = MultiByteToWideChar((UINT)codepage, 9u, source,
-                                         source_count, NULL, 0);
-        if (wide_count != 0) {
-            wide_source = (WCHAR*)crt_calloc_aligned(2, wide_count);
-            if (wide_source != NULL) {
-                wide_count = MultiByteToWideChar((UINT)codepage, 1u, source,
-                                                 source_count, wide_source,
-                                                 wide_count);
-                if (wide_count != 0) {
-                    success = GetStringTypeW(info_type, wide_source,
-                                             wide_count, (LPWORD)result);
-                    engine_heap_free(wide_source);
-                    return success;
-                }
-            }
-        }
-        engine_heap_free(wide_source);
-        return 0;
-    }
-    return s_string_type_api_mode;
-#else
     (void)info_type;
     (void)source;
     (void)source_count;
@@ -3550,7 +3357,6 @@ int crt_get_string_type_a_compat(uint32_t info_type, const char* source,
     (void)codepage;
     (void)locale;
     return 0;
-#endif
 }
 #endif
 
@@ -3589,16 +3395,6 @@ uint32_t crt_multibyte_to_wide_char(uint16_t* output, const uint8_t* source,
     if ((s_ctype_pointer[(unsigned)first] & 0x8000u) != 0u) {
         if ((int)s_max_multibyte_width > 1 &&
             (int)s_max_multibyte_width <= (int)max_bytes) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-            converted = MultiByteToWideChar(s_ansi_codepage, 9u,
-                                            (const char*)source,
-                                            (int)s_max_multibyte_width,
-                                            (LPWSTR)output,
-                                            output != NULL ? 1 : 0);
-            if (converted != 0) {
-                return s_max_multibyte_width;
-            }
-#endif
         }
         if (max_bytes < s_max_multibyte_width) {
             s_math_error_code = 0x2au;
@@ -3610,15 +3406,6 @@ uint32_t crt_multibyte_to_wide_char(uint16_t* output, const uint8_t* source,
         s_math_error_code = 0x2au;
         return 0xffffffffu;
     }
-#if defined(LEGORRR_BACKEND_WINAPI)
-    converted = MultiByteToWideChar(s_ansi_codepage, 9u,
-                                    (const char*)source, 1,
-                                    (LPWSTR)output,
-                                    output != NULL ? 1 : 0);
-    if (converted != 0) {
-        return 1u;
-    }
-#endif
     s_math_error_code = 0x2au;
     return 0xffffffffu;
 #endif
@@ -3725,86 +3512,6 @@ int crt_locale_character_map_string(uint32_t locale, uint32_t flags,
                                      int destination_count,
                                      uint32_t codepage)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    int input_count = source_count;
-    if (s_locale_map_api_mode == 0) {
-        if (LCMapStringA(0, 0x100u, "", 1, NULL, 0) != 0) {
-            s_locale_map_api_mode = 2;
-        }
-        else if (LCMapStringW(0, 0x100u, L"", 1, NULL, 0) != 0) {
-            s_locale_map_api_mode = 1;
-        }
-        else {
-            return 0;
-        }
-    }
-    if (input_count > 0) {
-        input_count = crt_bounded_string_length(source, input_count);
-    }
-    if (s_locale_map_api_mode == 2) {
-        return LCMapStringA((LCID)locale, flags, source, input_count,
-                            (LPSTR)destination, destination_count);
-    }
-    if (s_locale_map_api_mode == 1) {
-        WCHAR* wide_source;
-        WCHAR* wide_mapped = NULL;
-        int wide_count;
-        int mapped_count;
-        int result;
-        if (codepage == 0u) {
-            codepage = s_ansi_codepage;
-        }
-        wide_count = MultiByteToWideChar((UINT)codepage, 9u, source,
-                                         input_count, NULL, 0);
-        if (wide_count == 0) {
-            return 0;
-        }
-        wide_source = (WCHAR*)engine_heap_alloc((long)wide_count * 2L);
-        if (wide_source == NULL) {
-            return 0;
-        }
-        if (MultiByteToWideChar((UINT)codepage, 1u, source, input_count,
-                                wide_source, wide_count) == 0) {
-            engine_heap_free(wide_source);
-            return 0;
-        }
-        mapped_count = LCMapStringW((LCID)locale, flags, wide_source,
-                                    wide_count, NULL, 0);
-        if (mapped_count == 0) {
-            engine_heap_free(wide_source);
-            return 0;
-        }
-        if ((flags & 0x400u) != 0u) {
-            if (destination_count == 0 || destination_count < mapped_count) {
-                engine_heap_free(wide_source);
-                return 0;
-            }
-            result = LCMapStringW((LCID)locale, flags, wide_source,
-                                  wide_count, (LPWSTR)destination,
-                                  destination_count);
-            engine_heap_free(wide_source);
-            return result;
-        }
-        wide_mapped = (WCHAR*)engine_heap_alloc((long)mapped_count * 2L);
-        if (wide_mapped == NULL) {
-            engine_heap_free(wide_source);
-            return 0;
-        }
-        if (LCMapStringW((LCID)locale, flags, wide_source, wide_count,
-                         wide_mapped, mapped_count) == 0) {
-            engine_heap_free(wide_source);
-            engine_heap_free(wide_mapped);
-            return 0;
-        }
-        result = WideCharToMultiByte((UINT)codepage, 0x220u, wide_mapped,
-                                     mapped_count, (LPSTR)destination,
-                                     destination_count, NULL, NULL);
-        engine_heap_free(wide_source);
-        engine_heap_free(wide_mapped);
-        return result;
-    }
-    return s_locale_map_api_mode;
-#else
     (void)locale;
     (void)flags;
     (void)source;
@@ -3813,7 +3520,6 @@ int crt_locale_character_map_string(uint32_t locale, uint32_t flags,
     (void)destination_count;
     (void)codepage;
     return 0;
-#endif
 }
 #endif
 
@@ -4335,66 +4041,6 @@ char** crt_environment_array_clone(char** entries)
 #if !defined(_MSC_VER)
 char* crt_environment_block_get(void)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    WCHAR* wide_block = NULL;
-    char* narrow_block = NULL;
-    if (s_environment_api_mode == 0) {
-        wide_block = GetEnvironmentStringsW();
-        if (wide_block != NULL) s_environment_api_mode = 1;
-        else {
-            narrow_block = GetEnvironmentStringsA();
-            if (narrow_block == NULL) return NULL;
-            s_environment_api_mode = 2;
-        }
-    }
-    if (s_environment_api_mode == 1) {
-        int count = 0;
-        int converted;
-        WCHAR* end;
-        if (wide_block == NULL) wide_block = GetEnvironmentStringsW();
-        if (wide_block == NULL) return NULL;
-        end = wide_block;
-        while (*end != 0) {
-            while (*end != 0) ++end;
-            ++end;
-        }
-        count = (int)(end - wide_block) + 1;
-        converted = WideCharToMultiByte(CP_ACP, 0, wide_block, count,
-                                        NULL, 0, NULL, NULL);
-        if (converted > 0) {
-            narrow_block = (char*)engine_heap_alloc(converted);
-            if (narrow_block != NULL &&
-                WideCharToMultiByte(CP_ACP, 0, wide_block, count, narrow_block,
-                                    converted, NULL, NULL) == 0) {
-                engine_heap_free(narrow_block);
-                narrow_block = NULL;
-            }
-        }
-        FreeEnvironmentStringsW(wide_block);
-        return narrow_block;
-    }
-    if (s_environment_api_mode == 2) {
-        int count = 0;
-        int i;
-        char* end;
-        if (narrow_block == NULL) narrow_block = GetEnvironmentStringsA();
-        if (narrow_block == NULL) return NULL;
-        end = narrow_block;
-        while (*end != '\0') {
-            while (*end != '\0') ++end;
-            ++end;
-        }
-        count = (int)(end - narrow_block) + 1;
-        {
-            char* result = (char*)engine_heap_alloc(count);
-            if (result != NULL) {
-                for (i = 0; i < count; ++i) result[i] = narrow_block[i];
-            }
-            FreeEnvironmentStringsA(narrow_block);
-            return result;
-        }
-    }
-#else
     char** entry;
     long count = 1;
     char* block;
@@ -4412,7 +4058,6 @@ char* crt_environment_block_get(void)
     }
     *output = '\0';
     return block;
-#endif
 }
 #endif
 
@@ -4477,71 +4122,6 @@ int crt_compare_string_compat(uint32_t locale, uint32_t flags,
     if (right_count > 0) {
         right_length = crt_bounded_string_length(right, right_count);
     }
-#if defined(LEGORRR_BACKEND_WINAPI)
-    if (s_compare_string_api_mode == 0) {
-        if (CompareStringA(0, 0, "", 1, "", 1) != 0) s_compare_string_api_mode = 2;
-        else if (CompareStringW(0, 0, L"", 1, L"", 1) != 0) s_compare_string_api_mode = 1;
-        else return 0;
-    }
-    if (s_compare_string_api_mode == 2) {
-        return CompareStringA((LCID)locale, (DWORD)flags, left, left_length,
-                              right, right_length);
-    }
-    if (s_compare_string_api_mode == 1) {
-        WCHAR* wide_left;
-        WCHAR* wide_right;
-        int wide_left_count;
-        int wide_right_count;
-        int result;
-        if (codepage == 0) codepage = s_ansi_codepage;
-        if (left_length == 0 || right_length == 0) {
-            CPINFO info;
-            const char* candidate;
-            int candidate_length;
-            int order;
-            if (left_length == right_length) return 2;
-            if (right_length > 1) return 1;
-            if (left_length > 1) return 3;
-            if (!GetCPInfo((UINT)codepage, &info)) return 0;
-            candidate = left_length > 0 ? left : right;
-            candidate_length = left_length > 0 ? left_length : right_length;
-            order = left_length > 0 ? 3 : 1;
-            if (info.MaxCharSize < 2 || candidate_length <= 0) return order;
-            for (i = 0; i + 1 < (int)sizeof(info.LeadByte); i += 2) {
-                if (info.LeadByte[i] == 0 || info.LeadByte[i + 1] == 0) break;
-                if (info.LeadByte[i] <= (BYTE)candidate[0] &&
-                    (BYTE)candidate[0] <= info.LeadByte[i + 1]) return 2;
-            }
-            return order;
-        }
-        wide_left_count = MultiByteToWideChar((UINT)codepage, 9, left, left_length, NULL, 0);
-        if (wide_left_count == 0) return 0;
-        wide_left = (WCHAR*)engine_heap_alloc((long)wide_left_count * sizeof(WCHAR));
-        if (wide_left == NULL) return 0;
-        if (MultiByteToWideChar((UINT)codepage, 1, left, left_length,
-                                wide_left, wide_left_count) == 0) {
-            engine_heap_free(wide_left);
-            return 0;
-        }
-        wide_right_count = MultiByteToWideChar((UINT)codepage, 9, right, right_length, NULL, 0);
-        if (wide_right_count == 0) {
-            engine_heap_free(wide_left);
-            return 0;
-        }
-        wide_right = (WCHAR*)engine_heap_alloc((long)wide_right_count * sizeof(WCHAR));
-        if (wide_right == NULL) {
-            engine_heap_free(wide_left);
-            return 0;
-        }
-        if (MultiByteToWideChar((UINT)codepage, 1, right, right_length,
-                                wide_right, wide_right_count) == 0) result = 0;
-        else result = CompareStringW((LCID)locale, (DWORD)flags, wide_left,
-                                     wide_left_count, wide_right, wide_right_count);
-        engine_heap_free(wide_left);
-        engine_heap_free(wide_right);
-        return result;
-    }
-#else
     (void)locale;
     if (left_length < 0) left_length = (int)strlen(left);
     if (right_length < 0) right_length = (int)strlen(right);
@@ -4564,7 +4144,6 @@ int crt_compare_string_compat(uint32_t locale, uint32_t flags,
     if (left_length < right_length) return 1;
     if (left_length > right_length) return 3;
     return 2;
-#endif
     return 0;
 }
 #endif
@@ -4690,12 +4269,8 @@ int crt_put_env_update(char* text, int sync_process)
             int i;
             for (i = 0; i < length; ++i) copy[i] = text[i];
             copy[name_length] = '\0';
-#if defined(LEGORRR_BACKEND_WINAPI)
-            SetEnvironmentVariableA(copy, deleting ? NULL : copy + name_length + 1);
-#else
             if (deleting) unsetenv(copy);
             else setenv(copy, copy + name_length + 1, 1);
-#endif
             engine_heap_free(copy);
         }
     }
@@ -4708,25 +4283,7 @@ int crt_put_env_update(char* text, int sync_process)
 #if !defined(_MSC_VER)
 int crt_wide_environment_string_list_convert(void)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    uint16_t** entry = s_wide_environment;
-    if (entry == NULL || *entry == NULL) return 0;
-    while (*entry != NULL) {
-        int count = WideCharToMultiByte(CP_OEMCP, 0, (LPCWCH)*entry, -1,
-                                        NULL, 0, NULL, NULL);
-        char* converted;
-        if (count == 0) return -1;
-        converted = (char*)engine_heap_alloc(count);
-        if (converted == NULL) return -1;
-        if (WideCharToMultiByte(CP_OEMCP, 0, (LPCWCH)*entry, -1,
-                                converted, count, NULL, NULL) == 0) return -1;
-        crt_put_env_update(converted, 0);
-        ++entry;
-    }
-    return 0;
-#else
     return (s_wide_environment == NULL || *s_wide_environment == NULL) ? 0 : -1;
-#endif
 }
 #endif
 
@@ -5480,23 +5037,6 @@ int crt_file_descriptor_set_handle(unsigned fd, int handle)
         unsigned char* entry =
             (unsigned char*)s_fd_flag_blocks[fd >> 5] + (fd & 0x1fu) * 8u;
         if (*(int*)entry == -1) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-            if (s_runtime_error_console_mode == 1) {
-                if (fd == 0u) {
-                    SetStdHandle((DWORD)-10, (HANDLE)handle);
-                }
-                else if (fd == 1u) {
-                    SetStdHandle((DWORD)-11, (HANDLE)handle);
-                    *(int*)entry = handle;
-                    return 0;
-                }
-                else if (fd == 2u) {
-                    SetStdHandle((DWORD)-12, (HANDLE)handle);
-                    *(int*)entry = handle;
-                    return 0;
-                }
-            }
-#endif
             *(int*)entry = handle;
             return 0;
         }
@@ -5517,19 +5057,6 @@ int crt_file_descriptor_close_slot(unsigned fd)
         unsigned char* entry =
             (unsigned char*)s_fd_flag_blocks[fd >> 5] + (fd & 0x1fu) * 8u;
         if ((entry[4] & 1u) != 0u && *(int*)entry != -1) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-            if (s_runtime_error_console_mode == 1) {
-                if (fd == 0u) {
-                    SetStdHandle((DWORD)-10, NULL);
-                }
-                else if (fd == 1u) {
-                    SetStdHandle((DWORD)-11, NULL);
-                }
-                else if (fd == 2u) {
-                    SetStdHandle((DWORD)-12, NULL);
-                }
-            }
-#endif
             *(int*)entry = -1;
             return 0;
         }
@@ -5614,12 +5141,6 @@ int crt_find_handle_close(int handle)
 {
 #if defined(_MSC_VER)
     return _findclose((long)handle);
-#elif defined(LEGORRR_BACKEND_WINAPI)
-    if (FindClose((HANDLE)handle) == 0) {
-        s_math_error_code = 0x16u;
-        return -1;
-    }
-    return 0;
 #elif !defined(_MSC_VER)
     (void)handle;
     s_math_error_code = EINVAL;
@@ -5673,11 +5194,7 @@ int crt_file_descriptor_close(unsigned fd)
             }
         }
         if (handle != -1) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-            if (CloseHandle((HANDLE)handle) == 0) {
-                os_error = GetLastError();
-            }
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
             if (close(handle) != 0) {
                 s_math_error_code = (uint32_t)errno;
                 s_win32_error_code = 0u;
@@ -5785,88 +5302,7 @@ int crt_win32_file_descriptor_open(const char* path, uint32_t flags,
         s_win32_error_code = 0u;
         return -1;
     }
-#if defined(LEGORRR_BACKEND_WINAPI)
-    {
-        SECURITY_ATTRIBUTES security;
-        HANDLE handle;
-        DWORD type;
-        security.nLength = sizeof security;
-        security.lpSecurityDescriptor = NULL;
-        security.bInheritHandle = ((flags & 0x80u) == 0u) ? TRUE : FALSE;
-        descriptor_flags = (unsigned char)((flags & 0x80u) == 0u ? 0u : 0x10u);
-        if ((flags & 0x8000u) == 0u &&
-            ((flags & 0x4000u) != 0u || s_file_open_share_state != 0x8000u)) {
-            descriptor_flags |= 0x80u;
-        }
-        handle = CreateFileA(path, access, share_mode, &security, disposition,
-                             handle_flags, NULL);
-        if (handle == INVALID_HANDLE_VALUE) {
-            crt_win32_error_map_to_errno(GetLastError());
-            return -1;
-        }
-        type = GetFileType(handle);
-        if (type == 0u) {
-            DWORD error = GetLastError();
-            (void)CloseHandle(handle);
-            crt_win32_error_map_to_errno(error);
-            return -1;
-        }
-        if ((type & 0xffu) == 2u) {
-            descriptor_flags |= 0x40u;
-        }
-        else if ((type & 0xffu) == 3u) {
-            descriptor_flags |= 8u;
-        }
-        (void)crt_file_descriptor_set_handle((unsigned)fd, (int)handle);
-        {
-            unsigned char* entry = (unsigned char*)s_fd_flag_blocks[fd >> 5] +
-                                  (fd & 0x1f) * 8u;
-            entry[4] = (unsigned char)(descriptor_flags | 1u);
-            if ((descriptor_flags & 0x48u) == 0u &&
-                (descriptor_flags & 0x80u) != 0u && (flags & 2u) != 0u) {
-                uint32_t last = crt_win32_file_descriptor_seek((uint32_t)fd, -1, 2u);
-                if (last == 0xffffffffu) {
-                    if (s_math_error_code != 0x83u) {
-                        (void)crt_file_descriptor_close((unsigned)fd);
-                        return -1;
-                    }
-                }
-                else {
-                    unsigned char last_byte = 0u;
-#if defined(LEGORRR_BACKEND_WINAPI)
-                    DWORD transferred = 0u;
-                    int read_count = ReadFile(handle, &last_byte, 1u,
-                                              &transferred, NULL) != 0 &&
-                                     transferred == 1u ? 1 : 0;
-#else
-                    int read_count = 0;
-#endif
-                    if (read_count == 0 && last_byte == 0x1au) {
-                        SetLastError(NO_ERROR);
-                        if ((uint32_t)SetFilePointer(handle, (LONG)last, NULL, FILE_BEGIN) == 0xffffffffu &&
-                            GetLastError() != NO_ERROR) {
-                            crt_win32_error_map_to_errno(GetLastError());
-                            (void)crt_file_descriptor_close((unsigned)fd);
-                            return -1;
-                        }
-                        if (SetEndOfFile(handle) == 0) {
-                            crt_win32_error_map_to_errno(GetLastError());
-                            (void)crt_file_descriptor_close((unsigned)fd);
-                            return -1;
-                        }
-                    }
-                    if (crt_win32_file_descriptor_seek((uint32_t)fd, 0, 0u) == 0xffffffffu) {
-                        (void)crt_file_descriptor_close((unsigned)fd);
-                        return -1;
-                    }
-                }
-            }
-            if ((descriptor_flags & 0x48u) == 0u && (flags & 8u) != 0u) {
-                entry[4] |= 0x20u;
-            }
-        }
-    }
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
     {
         int native_flags;
         int native_fd;
@@ -5990,61 +5426,7 @@ void crt_file_descriptor_table_init(void)
         entry[4] = 0u;
         entry[5] = 10u;
     }
-#if defined(LEGORRR_BACKEND_WINAPI)
-    {
-        STARTUPINFOA startup;
-        GetStartupInfoA(&startup);
-        if (startup.cbReserved2 != 0u && startup.lpReserved2 != NULL) {
-            const unsigned char* reserved = startup.lpReserved2;
-            uint32_t inherited_count;
-            uint32_t import_count;
-            const unsigned char* inherited_flags;
-            const unsigned char* inherited_handles;
-            memcpy(&inherited_count, reserved, sizeof inherited_count);
-            inherited_flags = reserved + 4u;
-            inherited_handles = inherited_flags + inherited_count;
-            import_count = inherited_count;
-            if (import_count > 0x800u) {
-                import_count = 0x800u;
-            }
-            while ((uint32_t)s_fd_flag_count < import_count) {
-                const unsigned block_index = (unsigned)s_fd_flag_count >> 5;
-                unsigned char* block =
-                    (unsigned char*)engine_heap_alloc(0x100);
-                if (block == NULL) {
-                    import_count = (uint32_t)s_fd_flag_count;
-                    break;
-                }
-                s_fd_flag_blocks[block_index] = block;
-                s_fd_flag_count += 0x20;
-                for (entry = block; entry < block + 0x100; entry += 8) {
-                    *(int*)entry = -1;
-                    entry[4] = 0u;
-                    entry[5] = 10u;
-                }
-            }
-            for (slot = 0u; slot < import_count; ++slot) {
-                uint32_t raw_handle;
-                const unsigned block_index = slot >> 5;
-                const unsigned entry_index = slot & 0x1fu;
-                unsigned char* entry;
-                memcpy(&raw_handle, inherited_handles + slot * 4u, 4u);
-                if (raw_handle == 0xffffffffu ||
-                    (inherited_flags[slot] & 1u) == 0u) {
-                    continue;
-                }
-                if ((inherited_flags[slot] & 8u) == 0u &&
-                    GetFileType((HANDLE)raw_handle) == 0u) {
-                    continue;
-                }
-                entry = (unsigned char*)s_fd_flag_blocks[block_index] +
-                        entry_index * 8u;
-                *(uint32_t*)entry = raw_handle;
-                entry[4] = inherited_flags[slot];
-            }
-        }
-    }
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
     for (slot = 0u; slot < 3u; ++slot) {
         unsigned char* entry = first_block + slot * 8u;
         *(int*)entry = (int)slot;
@@ -6054,36 +5436,12 @@ void crt_file_descriptor_table_init(void)
     for (slot = 0u; slot < 3u; ++slot) {
         unsigned char* entry = first_block + slot * 8u;
         if (*(int*)entry == -1) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-            DWORD standard_id = slot == 0u ? (DWORD)-10 :
-                                slot == 1u ? (DWORD)-11 : (DWORD)-12;
-            HANDLE handle = GetStdHandle(standard_id);
-            DWORD file_type;
             entry[4] = 0x81u;
-            if (handle == INVALID_HANDLE_VALUE ||
-                (file_type = GetFileType(handle)) == 0u) {
-                entry[4] |= 0x40u;
-            }
-            else {
-                *(HANDLE*)entry = handle;
-                if ((file_type & 0xffu) == 2u) {
-                    entry[4] |= 0x40u;
-                }
-                else if ((file_type & 0xffu) == 3u) {
-                    entry[4] |= 8u;
-                }
-            }
-#else
-            entry[4] = 0x81u;
-#endif
         }
         else {
             entry[4] |= 0x80u;
         }
     }
-#if defined(LEGORRR_BACKEND_WINAPI)
-    (void)SetHandleCount((unsigned)s_fd_flag_count);
-#endif
 }
 #endif
 
@@ -6138,18 +5496,7 @@ int crt_win32_file_descriptor_read(uint32_t fd, char* buffer,
     bytes_read = 0u;
     os_error = 0u;
     if (count != 0u) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    {
-        DWORD transferred = 0u;
-        if (ReadFile((HANDLE)*(int*)entry, output, count, &transferred,
-                     NULL) == 0) {
-            os_error = GetLastError();
-        }
-        else {
-            bytes_read = (uint32_t)transferred;
-        }
-    }
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
     {
         ssize_t transferred = read(*(int*)entry, output, count);
         if (transferred < 0) {
@@ -6215,16 +5562,7 @@ int crt_win32_file_descriptor_read(uint32_t fd, char* buffer,
                 unsigned char lookahead = 0u;
                 uint32_t lookahead_read = 0u;
                 uint32_t lookahead_error = 0u;
-#if defined(LEGORRR_BACKEND_WINAPI)
-                DWORD transferred = 0u;
-                if (ReadFile((HANDLE)*(int*)entry, &lookahead, 1u,
-                             &transferred, NULL) == 0) {
-                    lookahead_error = GetLastError();
-                }
-                else {
-                    lookahead_read = (uint32_t)transferred;
-                }
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
                 ssize_t transferred = read(*(int*)entry, &lookahead, 1u);
                 if (transferred < 0) {
                     lookahead_error = (uint32_t)errno;
@@ -6489,19 +5827,7 @@ uint32_t crt_win32_file_descriptor_seek(uint32_t fd, int32_t distance,
                 s_math_error_code = 9u;
                 return 0xffffffffu;
             }
-#if defined(LEGORRR_BACKEND_WINAPI)
-            {
-                DWORD result = SetFilePointer((HANDLE)handle, (LONG)distance,
-                                              NULL, (DWORD)method);
-                DWORD error = (result == 0xffffffffu) ? GetLastError() : 0u;
-                if (error != 0u) {
-                    crt_win32_error_map_to_errno(error);
-                    return 0xffffffffu;
-                }
-                entry[4] = (unsigned char)(entry[4] & 0xfdu);
-                return (uint32_t)result;
-            }
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
             {
                 int whence = (method == 0u) ? SEEK_SET :
                              (method == 1u) ? SEEK_CUR : SEEK_END;
@@ -6576,15 +5902,7 @@ int crt_win32_file_descriptor_write(uint32_t fd, char* buffer,
     inserted_crs = 0u;
     os_error = 0u;
     if ((entry[5] & 0x80u) == 0u) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-        DWORD written = 0u;
-        if (!WriteFile((HANDLE)handle, buffer, count, &written, NULL)) {
-            os_error = GetLastError();
-        }
-        else {
-            written_total = (uint32_t)written;
-        }
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
         ssize_t written = write(handle, buffer, count);
         if (written < 0) {
             s_math_error_code = (uint32_t)errno;
@@ -6618,20 +5936,7 @@ int crt_win32_file_descriptor_write(uint32_t fd, char* buffer,
                 *out++ = ch;
             } while (out - translated < 0x400);
             out_count = (uint32_t)(out - translated);
-#if defined(LEGORRR_BACKEND_WINAPI)
-            {
-                DWORD written = 0u;
-                if (!WriteFile((HANDLE)handle, translated, out_count,
-                               &written, NULL)) {
-                    os_error = GetLastError();
-                    break;
-                }
-                written_total += (uint32_t)written;
-                if (written < out_count || source_end <= source) {
-                    break;
-                }
-            }
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
             {
                 ssize_t written = write(handle, translated, out_count);
                 if (written < 0) {
@@ -6953,18 +6258,6 @@ int crt_wide_char_to_multibyte(char* dest, uint32_t wide)
             return 1;
         }
     }
-#if defined(LEGORRR_BACKEND_WINAPI)
-    else {
-        BOOL used_default = FALSE;
-        int converted = WideCharToMultiByte((UINT)s_ansi_codepage, 0x220u,
-                                            (LPCWSTR)&ch, 1, dest,
-                                            (int)s_max_multibyte_width,
-                                            NULL, &used_default);
-        if (converted != 0 && used_default == FALSE) {
-            return converted;
-        }
-    }
-#endif
     s_math_error_code = 0x2au; /* pinned: the corpus's EILSEQ-shaped store */
     return -1;
 #endif
@@ -7237,9 +6530,6 @@ void crt_floating_point_exception_raise(uint32_t* record,
     uint32_t flags;
     uint32_t rounding;
     uint32_t precision_code;
-#if defined(LEGORRR_BACKEND_WINAPI)
-    DWORD exception_argument;
-#endif
 
     record[1] = 0u;
     record[2] = 0u;
@@ -7305,12 +6595,7 @@ void crt_floating_point_exception_raise(uint32_t* record,
     record[16] = result[0];
     record[17] = result[1];
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-    exception_argument = (DWORD)record;
-    RaiseException((DWORD)exception_code, 0u, 1u, &exception_argument);
-#else
     (void)exception_code;
-#endif
 
     flags = *control_word;
     if ((record[2] & 0x10u) != 0u) { flags &= ~1u; }

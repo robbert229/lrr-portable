@@ -1,56 +1,29 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
-# The link-order list (ADR 0006 decision 1; GLOSSARY.md). It is the only
-# authority on the order in which the matching build links its objects, and
-# it decides which library each source belongs to in the native and
-# reference builds (ADR 0003 as amended), where order does not matter.
+# The source list: every game, gods98, platform and program source of the
+# native build, with the library it belongs to. On develop it is only a
+# source list; the order of entries no longer matters to the build. It keeps
+# the original's unit order (ADR 0006 on main) so the units can be read in
+# the order the original linked them.
 #
-# One entry per object, in link order:
+# One entry per source:
 #
-#   lrr_link(<kind> <key> <library> <source> [<platform>])
+#   lrr_link(<kind> <key> <library> <source>)
 #
-#   kind      unit    the file holds exactly one original unit (converted to
-#                     original shape as <stem>.c, or relocated as <stem>.cpp);
-#                     key is its unit id in translation-unit-ranges.csv
-#             legacy  a mixed file that still holds original functions; key is
-#                     the lower median original address of its FUNCTION and LIBRARY
-#                     markers (for an even count, use the lower middle), which
-#                     places it among the units
-#             tail    port-only code: the port tail (ADR 0006 decision 4);
-#                     key is "-"
-#   key       see kind; units and legacy files are in ascending key order
+#   kind      unit    the file holds exactly one original unit (ADR 0005;
+#                     ADR 0007 decision 1); key is its unit id in
+#                     docs/coverage/translation-unit-ranges.csv
+#             legacy  a mixed file that still holds original functions; key
+#                     is an original address that places it among the units
+#             tail    port-only code: the port shell (ADR 0007 decision 2
+#                     deletes it); key is "-"
 #   library   game, gods98, platform_glue or program (the executable's own
 #             sources)
 #   source    path under SRC_ROOT
-#   platform  native or winapi when the object belongs to one backend only;
-#             portable when it belongs to every build but the MSVC 5.0
-#             matching build (native and the MinGW reference build)
 #
-# Order: the game segment, then the gods98 segment, then the port tail, then
-# the portable-only runtime stand-ins and the late units. Libraries follow, in
-# LRR_LINK_LIBRARIES. Fields are separated by blanks; one entry per line, so
-# tools read this file without CMake (tools/link_order.py).
-#
-# How the matching build links the entries, in this order (findings 658
-# and 690):
-#   1. explicit objects: the entries up to LRR_LINK_EXPLICIT_LAST;
-#   2. one library per late unit (LRR_LINK_LATE_MEMBERS), in list order;
-#   3. one library, unit_gods98.lib, holding every later gods98 unit in list
-#      order, with LRR_LINK_MEMBER_ORDER naming one symbol of each;
-#   4. LRR_LINK_LIBRARIES;
-#   5. LRR_LINK_TAIL_LIBRARY, holding every entry from the first port-tail
-#      entry on, except the late units.
-# LINK keeps the order of explicit objects and pulls library members as they
-# are referenced, so steps 2, 3 and 5 keep list order only while each member
-# is referenced in that order; the map check (tools/link_order.py
-# check-map) fails otherwise. Nothing in steps 1 and 3's first pass
-# references the late units, so LINK pulls them in its second pass, after
-# the import thunks, as the original has them (finding 657).
-#
-# tools/convert_unit.py inserts a converted unit's entry here. A converted
-# unit's .c file is compiled as C in the matching build and as C++ elsewhere.
+# Fields are separated by blanks, one entry per line.
 
-# Ordered game and gods98 segments, port tail, then CRT-range legacy files.
+# The game units, then the gods98 units, the port tail and the legacy files.
 lrr_link(unit   GAME-001 game          game/advisor.c)
 lrr_link(unit   GAME-002 game          game/aitask.c)
 lrr_link(unit   GAME-003 game          game/bezier.c)
@@ -136,9 +109,7 @@ lrr_link(unit   G98-030  gods98        gods98/wad.c)
 lrr_link(unit   G98-031  gods98        gods98/lwo.c)
 
 # Port tail
-lrr_link(tail   -        game          game/actor_scene.cpp winapi)
-lrr_link(tail   -        game          game/building_scene.cpp winapi)
-lrr_link(tail   -        game          game/creature_scene.cpp native)
+lrr_link(tail   -        game          game/creature_scene.cpp)
 lrr_link(tail   -        game          game/entity_motion_owner.cpp)
 lrr_link(tail   -        game          game/game.cpp)
 lrr_link(tail   -        game          game/opgroup.cpp)
@@ -148,35 +119,33 @@ lrr_link(tail   -        game          game/frontend_port.cpp)
 lrr_link(tail   -        gods98        gods98/avi_player_port.cpp)
 lrr_link(tail   -        gods98        gods98/block.cpp)
 lrr_link(tail   -        gods98        gods98/container_port.cpp)
-lrr_link(tail   -        gods98        gods98/container_native.cpp native)
-lrr_link(tail   -        gods98        gods98/container_route.cpp native)
+lrr_link(tail   -        gods98        gods98/container_native.cpp)
+lrr_link(tail   -        gods98        gods98/container_route.cpp)
 lrr_link(tail   -        gods98        gods98/draw_port.cpp)
 lrr_link(tail   -        gods98        gods98/files_port.cpp)
 lrr_link(tail   -        gods98        gods98/flic_port.cpp)
-lrr_link(tail   -        gods98        gods98/gods98.cpp native)
+lrr_link(tail   -        gods98        gods98/gods98.cpp)
 lrr_link(tail   -        gods98        gods98/images_port.cpp)
 lrr_link(tail   -        gods98        gods98/lwo_port.cpp)
 lrr_link(tail   -        gods98        gods98/lws_port.cpp)
 lrr_link(tail   -        gods98        gods98/mesh_port.cpp)
 lrr_link(tail   -        gods98        gods98/com_object_tree_port.cpp)
 lrr_link(tail   -        gods98        gods98/lwsc_scene.cpp)
-lrr_link(tail   -        gods98        gods98/lwsc_miniwin.cpp native)
-lrr_link(tail   -        gods98        gods98/lwsc_winapi.cpp winapi)
+lrr_link(tail   -        gods98        gods98/lwsc_miniwin.cpp)
 lrr_link(tail   -        gods98        gods98/registry_port.cpp)
 lrr_link(tail   -        gods98        gods98/sound_wave.cpp)
 lrr_link(tail   -        gods98        gods98/bitmap_font_port.cpp)
 lrr_link(tail   -        gods98        gods98/text_window_port.cpp)
-lrr_link(tail   -        gods98        gods98/tickers.cpp native)
-lrr_link(tail   -        gods98        gods98/video_graph_port.cpp native)
+lrr_link(tail   -        gods98        gods98/tickers.cpp)
+lrr_link(tail   -        gods98        gods98/video_graph_port.cpp)
 lrr_link(tail   -        gods98        gods98/viewports_port.cpp)
 lrr_link(tail   -        gods98        gods98/winmm_port.cpp)
 lrr_link(tail   -        gods98        gods98/frameloop.cpp)
 lrr_link(tail   -        gods98        gods98/surface.cpp)
-lrr_link(tail   -        platform_glue platform/winapi/frameloop.cpp winapi)
 lrr_link(tail   -        gods98        gods98/audio.cpp)
-lrr_link(tail   -        program       main.cpp native)
-lrr_link(tail   -        program       platform/native/entry.cpp native)
-lrr_link(tail   -        platform_glue platform/native/frameloop.cpp native)
+lrr_link(tail   -        program       main.cpp)
+lrr_link(tail   -        program       platform/native/entry.cpp)
+lrr_link(tail   -        platform_glue platform/native/frameloop.cpp)
 lrr_link(tail   -        gods98        gods98/flic.cpp)
 lrr_link(tail   -        game          game/screen_pick.cpp)
 lrr_link(tail   -        game          game/dependency_grid.cpp)
@@ -269,95 +238,9 @@ lrr_link(tail   -        gods98        gods98/port_state.cpp)
 lrr_link(legacy 0048e160 game          game/level.cpp)
 lrr_link(legacy 0048e1e0 gods98        gods98/string.cpp)
 
-# The runtime stand-ins: portable builds only. The matching build takes the
-# whole C runtime from LIBC.LIB (issue #447, finding 643); their markers name
-# LIBC's members by symbol.
-lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp portable)
-lrr_link(legacy 00493ef0 gods98        crt/crt.cpp portable)
+# The runtime stand-ins for the original's statically linked C runtime
+# (issue #447, finding 643).
+lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp)
+lrr_link(legacy 00493ef0 gods98        crt/crt.cpp)
 lrr_link(unit   LATE-001 gods98        gods98/rnc.c)
 lrr_link(unit   LATE-002 gods98        gods98/init.c)
-
-# The last explicit object of the matching build: gods98's first unit,
-# Movie.cpp. The original's game units and Movie.cpp were objects, and the
-# rest of gods98 came from a library: LINK pulled the inferred entry
-# point's wincrt0.obj between Movie.cpp's LIBC references and Container.c's,
-# which it does only at the end of the explicit objects (finding 658).
-set(LRR_LINK_EXPLICIT_LAST gods98/movie_unit.cpp)
-
-# The library the matching build archives the port tail in (step 5 above).
-set(LRR_LINK_TAIL_LIBRARY lrr_tail)
-
-# Libraries of the matching build, after the objects, in the order of the
-# original's import directory, with LIBC placed so that its code precedes the
-# import thunks and RtlUnwind's thunk comes last (finding 574; ADR 0006
-# decision 1 as amended). dinput.lib, dsound.lib, amstrmid.lib and dxguid.lib
-# are rebuilt from cross/msvc5-importlibs; vfw32.lib holds the avifil32
-# imports. amstrmid.lib's member precedes dxguid.lib's in the original's GUID
-# block (finding 688).
-set(LRR_LINK_LIBRARIES kernel32.lib libc.lib oldnames.lib
-  ole32.lib d3drm.lib ddraw.lib winmm.lib vfw32.lib dinput.lib dsound.lib
-  user32.lib gdi32.lib advapi32.lib amstrmid.lib dxguid.lib)
-
-# Units the original pulled in LINK's second pass (finding 657): LATE-001
-# (rnc.c) and LATE-002 (init.c) follow the import thunks. The matching build
-# archives each of these entries' objects into its own library
-# (late_<stem>.lib), searched in this order before unit_gods98.lib. Only
-# gods98 units reference them (Wad.c and Main.c), so LINK pulls them in its
-# second pass and places their code and data after LIBC's first-pass members
-# and the DirectX thunks. Their commons come before gods98's, as in the
-# original: LINK allocates the commons library by library in command-line
-# order, whatever the pass (finding 690). The original also has RtlUnwind's
-# thunk before them; here it still follows them. Every other build compiles
-# them as ordinary entries, and their list entries keep their place.
-set(LRR_LINK_LATE_MEMBERS gods98/rnc.c gods98/init.c)
-
-# One symbol of each gods98 unit in unit_gods98.lib, in list order, that the
-# image keeps anyway. The original pulled gods98 from one library, so its
-# commons come in reverse unit order: LINK allocates commons library by
-# library, and within a library in reverse order of the members it pulled
-# (finding 690). Within one library LINK pulls members in the order their
-# symbols first became unresolved, which follows each object's COFF symbol
-# table, and MSVC 5.0 orders that by name. The rebuilt names are not the
-# original's, so the rebuilt references alone would pull Font.c before
-# Maths.c, and Sound3D.c and AnimClone.c late. Naming one symbol per unit
-# here, in list order, makes them unresolved first and in list order.
-# Deviation (scoring only): a link directive the original did not need; it
-# changes no code or storage of its own (.text is identical with it). When a
-# unit loses or renames its symbol, name another that the gate's map lists.
-set(LRR_LINK_MEMBER_ORDER
-  /INCLUDE:_container_initialise_original
-  /INCLUDE:_scene_resource_slots_initialize
-  /INCLUDE:_sound_variant_split
-  /INCLUDE:_WinMain@16
-  /INCLUDE:_block_text_token_pool_init
-  /INCLUDE:_d3drm_vector_random
-  /INCLUDE:_font_atlas_record_create
-  /INCLUDE:_audio_system_init
-  /INCLUDE:_directdraw_initialise
-  /INCLUDE:_renderer_record_table_initialize
-  /INCLUDE:_avi_initialise
-  /INCLUDE:_input_direct_initialize
-  /INCLUDE:_resource_mount_startup_target
-  /INCLUDE:_mesh_initialise
-  /INCLUDE:_flic_setup
-  /INCLUDE:_text_buffer_create
-  /INCLUDE:_keyboard_key_names_init
-  /INCLUDE:_surface_render_setup
-  /INCLUDE:_lws_parse
-  /INCLUDE:_media_cd_audio_device_state_update
-  /INCLUDE:_level_map_slots_reset
-  /INCLUDE:_scene_material_create
-  /INCLUDE:_indexed_bitmap_palette_data_prepare
-  /INCLUDE:_directx_error_message_format
-  /INCLUDE:_ledger_stub_0048b260_StartupStreamStateReset
-  /INCLUDE:_registry_path_split
-  /INCLUDE:_wad_get_file_name
-  /INCLUDE:_string_case_substring_find)
-
-# Symbols the matching link pulls in by name, in this order. Input.c
-# (input_unit.c, finding 683) references c_dfDIKeyboard and
-# DirectInputCreateA, but no object references c_dfDIMouse, and naming the
-# three here, in this order, reproduces the original's member order in .text
-# (finding 574).
-set(LRR_LINK_SYMBOLS /INCLUDE:_c_dfDIMouse /INCLUDE:_c_dfDIKeyboard
-  /INCLUDE:_DirectInputCreateA@16)

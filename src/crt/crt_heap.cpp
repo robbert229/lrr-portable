@@ -12,9 +12,7 @@ extern "C" void* __cdecl _heap_alloc(size_t);
 extern "C" void* __cdecl _nh_malloc(size_t, int);
 #endif
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-#include <windows.h>
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
 #include <sys/mman.h>
 #include <unistd.h>
 #endif
@@ -42,11 +40,7 @@ typedef struct CrtHeapPageEntry {
     uint32_t search_limit;
 } CrtHeapPageEntry;
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-typedef uint32_t CrtHeapAddress;
-#else
 typedef unsigned char* CrtHeapAddress;
-#endif
 
 typedef struct CrtHeapArena {
     struct CrtHeapArena* next;
@@ -59,21 +53,12 @@ typedef struct CrtHeapArena {
     uint32_t tail_words[2];
 } CrtHeapArena;
 
-#if defined(LEGORRR_BACKEND_WINAPI)
-#define CRT_POOL_RESERVE_BASE(arena) ((unsigned char*)(uintptr_t)(arena)->reserve_base)
-#define CRT_POOL_RESERVE_END(arena) ((unsigned char*)(uintptr_t)(arena)->reserve_end)
-#define CRT_POOL_SET_RESERVE(arena, base, end) \
-    ((arena)->reserve_base = (uint32_t)(uintptr_t)(base), \
-     (arena)->reserve_end = (uint32_t)(uintptr_t)(end))
-#define CRT_POOL_HAS_RESERVATION(arena) ((arena)->reserve_base != 0xffffffffu)
-#else
 #define CRT_POOL_RESERVE_BASE(arena) ((arena)->reserve_base)
 #define CRT_POOL_RESERVE_END(arena) ((arena)->reserve_end)
 #define CRT_POOL_SET_RESERVE(arena, base, end) \
     ((arena)->reserve_base = (base), (arena)->reserve_end = (end))
 #define CRT_POOL_HAS_RESERVATION(arena) \
     (CRT_POOL_RESERVE_BASE(arena) != (unsigned char*)-1)
-#endif
 
 /* LIBC.LIB data ___small_block_heap at 0x004affb8 (src/crt/libc_symbols.csv). */
 static CrtHeapArena s_pool_root = {
@@ -81,13 +66,8 @@ static CrtHeapArena s_pool_root = {
     &s_pool_root,
     &s_pool_root.pages[0],
     &s_pool_root.pages[0],
-#if defined(LEGORRR_BACKEND_WINAPI)
-    0xffffffffu,
-    0xffffffffu,
-#else
     (unsigned char*)-1,
     (unsigned char*)-1,
-#endif
     { { 0xf0, 0xf1u } },
     { 0u, 0u }
 };
@@ -97,37 +77,22 @@ static CrtHeapArena* s_preferred_arena = &s_pool_root;
 static uint32_t s_pool_small_threshold = 480u;
 /* LIBC.LIB static data at 0x00549150: not annotated (finding 540). */
 static int32_t s_free_small_page_count;
-#if defined(LEGORRR_BACKEND_WINAPI)
-/* LIBC.LIB data __crtheap at 0x0076dec4 (src/crt/libc_symbols.csv). */
-static HANDLE s_process_heap;
-#else
 static void* s_process_heap;
-#endif
 static int s_heap_initialized;
 
 static void* crt_pool_descriptor_allocate(void)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    return HeapAlloc(s_process_heap, 0, 0x2020u);
-#else
     return calloc(1, sizeof(CrtHeapArena));
-#endif
 }
 
 static void crt_pool_descriptor_free(void* descriptor)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    HeapFree(s_process_heap, 0, descriptor);
-#else
     free(descriptor);
-#endif
 }
 
 static void* crt_pool_reserve(void)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    return VirtualAlloc(NULL, 0x400000u, MEM_RESERVE, PAGE_READWRITE);
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
     void* base = mmap(NULL, 0x400000u, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     return (base == MAP_FAILED) ? NULL : base;
 #else
@@ -137,9 +102,7 @@ static void* crt_pool_reserve(void)
 
 static void* crt_pool_commit(void* address, uint32_t size)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    return VirtualAlloc(address, size, MEM_COMMIT, PAGE_READWRITE);
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
     if (mprotect(address, size, PROT_READ | PROT_WRITE) != 0) return NULL;
     memset(address, 0, size);
     return address;
@@ -152,9 +115,7 @@ static void* crt_pool_commit(void* address, uint32_t size)
 
 static int crt_pool_decommit(void* address, uint32_t size)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    return VirtualFree(address, size, MEM_DECOMMIT) != 0;
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
     if (mprotect(address, size, PROT_NONE) != 0) return 0;
     madvise(address, size, MADV_DONTNEED);
     return 1;
@@ -167,9 +128,7 @@ static int crt_pool_decommit(void* address, uint32_t size)
 
 static int crt_pool_release(void* address)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    return VirtualFree(address, 0, MEM_RELEASE) != 0;
-#elif !defined(_MSC_VER)
+#if !defined(_MSC_VER)
     return munmap(address, 0x400000u) == 0;
 #else
     (void)address;
@@ -184,22 +143,12 @@ static int crt_pool_page_index(CrtHeapArena* arena, CrtHeapPageEntry* page)
 
 static unsigned char* crt_pool_page_cursor_get(unsigned char* page, uint32_t value)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    (void)page;
-    return (unsigned char*)(uintptr_t)value;
-#else
     return page + value;
-#endif
 }
 
 static uint32_t crt_pool_page_cursor_set(unsigned char* page, unsigned char* cursor)
 {
-#if defined(LEGORRR_BACKEND_WINAPI)
-    (void)page;
-    return (uint32_t)(uintptr_t)cursor;
-#else
     return (uint32_t)(cursor - page);
-#endif
 }
 
 /* sbheap.obj supplies this region initializer on the MSVC build. */
@@ -271,16 +220,9 @@ int crt_heap_initialize(void)
 #if defined(_MSC_VER)
     return _heap_init();
 #else
-#if defined(LEGORRR_BACKEND_WINAPI)
-    s_process_heap = HeapCreate(1u, 0x1000u, 0u);
-#else
     s_process_heap = (void*)1;
-#endif
     if (s_process_heap == NULL) return 0;
     if (engine_pool_arena_create() == NULL) {
-#if defined(LEGORRR_BACKEND_WINAPI)
-        HeapDestroy(s_process_heap);
-#endif
         return 0;
     }
     s_heap_initialized = 1;
@@ -296,27 +238,15 @@ int crt_heap_initialize(void)
 void crt_heap_block_free(void* block)
 {
     CrtHeapArena* arena = (CrtHeapArena*)block;
-#if defined(LEGORRR_BACKEND_WINAPI)
-    VirtualFree((LPVOID)(uintptr_t)arena->reserve_base, 0, MEM_RELEASE);
-#else
     crt_pool_release(CRT_POOL_RESERVE_BASE(arena));
-#endif
     if (s_preferred_arena == arena) s_preferred_arena = arena->previous;
     if (arena != &s_pool_root) {
         arena->previous->next = arena->next;
         arena->next->previous = arena->previous;
-#if defined(LEGORRR_BACKEND_WINAPI)
-        HeapFree(s_process_heap, 0, arena);
-#else
         crt_pool_descriptor_free(arena);
-#endif
     }
     else {
-#if defined(LEGORRR_BACKEND_WINAPI)
-        s_pool_root.reserve_base = 0xffffffffu;
-#else
         s_pool_root.reserve_base = (unsigned char*)-1;
-#endif
     }
 }
 
@@ -597,28 +527,14 @@ void* engine_heap_alloc_aligned(long size)
      * 480-byte threshold, followed by the process heap. */
     unsigned rounded = ((unsigned)size + 15u) & 0xfffffff0u;
     unsigned size_units = rounded >> 4;
-#if !defined(LEGORRR_BACKEND_WINAPI)
     if (rounded == 0u) {
         rounded = 16u; /* host aligned_alloc requires a nonzero allocation */
     }
-#endif
     if (rounded <= s_pool_small_threshold) {
         void* block = engine_pool_allocate(size_units);
         if (block != NULL) return block;
     }
-#if defined(LEGORRR_BACKEND_WINAPI)
-    if (s_heap_initialized) return HeapAlloc(s_process_heap, 0, rounded);
-    {
-        void* base = malloc(rounded + 16u + sizeof(void*));
-        uintptr_t aligned;
-        if (base == NULL) return NULL;
-        aligned = ((uintptr_t)base + sizeof(void*) + 15u) & ~(uintptr_t)15u;
-        ((void**)aligned)[-1] = base;
-        return (void*)aligned;
-    }
-#else
     return aligned_alloc(16u, rounded);
-#endif
 #endif
 }
 #endif
@@ -696,12 +612,7 @@ void engine_heap_free(void* ptr)
             small_heap_page_free_slot_update(arena, page_base, allocation_tag);
             return;
         }
-#if defined(LEGORRR_BACKEND_WINAPI)
-        if (s_heap_initialized) HeapFree(s_process_heap, 0, ptr);
-        else free(((void**)ptr)[-1]);
-#else
         free(ptr);
-#endif
     }
 #endif
 }

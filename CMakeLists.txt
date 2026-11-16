@@ -1,444 +1,130 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 cmake_minimum_required(VERSION 3.20)
 
-# The original LegoRR executable has no MSVCRT.DLL import table entry, so its
-# VC5 CRT is linked into the image. Reccmp has matched CRT objects from the
-# VC5 single-thread static runtime (/ML, LIBC.LIB).
-if(LRR_CLASSIC_MSVC5)
-  if(POLICY CMP0091)
-    cmake_policy(SET CMP0091 NEW)
-  endif()
-  # CMake has no model for VC5's single-thread /ML runtime. Disable its
-  # default /MD selection; the classic-profile flags below supply /ML.
-  set(CMAKE_MSVC_RUNTIME_LIBRARY "")
-endif()
-
 project(lrr-portable VERSION 0.1.0 LANGUAGES CXX)
-# The matching build compiles units rebuilt in original shape as C, as the
-# original was (ADR 0005). Other builds compile those sources as C++.
-if(LRR_CLASSIC_MSVC5)
-  enable_language(C)
-endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(PLATFORM "native" CACHE STRING "Backend to build (native or winapi)")
-set_property(CACHE PLATFORM PROPERTY STRINGS native winapi)
 set(SRC_ROOT "src" CACHE PATH "Directory containing the reconstruction source tree")
 set(TEST_WADS_DIR "" CACHE PATH "Directory containing shipped wads for real-data tests")
 set(MOVIES "auto" CACHE STRING "Movie runtime support (auto, enabled, disabled)")
 set_property(CACHE MOVIES PROPERTY STRINGS auto enabled disabled)
-option(LRR_CLASSIC_MSVC5 "Use CMake linker flags compatible with MSVC 5.0" OFF)
-option(LRR_RECCMP "Generate a link PDB for Reccmp comparisons" OFF)
 
-if(LRR_RECCMP AND NOT LRR_CLASSIC_MSVC5)
-  message(FATAL_ERROR "LRR_RECCMP requires LRR_CLASSIC_MSVC5")
-endif()
-
-if(LRR_CLASSIC_MSVC5)
-  # CMake's Windows-MSVC module emits newer spellings that the classic
-  # toolchain's ReproBit command model does not admit.
-  include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/src/compat/msvc5")
-
-  foreach(_lang IN ITEMS C CXX)
-    string(REGEX REPLACE "[ /-][Mm][DdTtLl][Dd]?" "" _classic_flags
-      " ${CMAKE_${_lang}_FLAGS}")
-    string(REGEX REPLACE "[ /]Zm[0-9]+" "" _classic_flags "${_classic_flags}")
-    string(STRIP "${_classic_flags}" _classic_flags)
-    string(APPEND _classic_flags " /ML")
-    set(CMAKE_${_lang}_FLAGS "${_classic_flags}" CACHE STRING
-      "Classic MSVC 5.0 compatible compiler flags" FORCE)
-  endforeach()
-
-  foreach(_link_kind IN ITEMS STATIC EXE SHARED MODULE)
-    foreach(_config IN ITEMS "" DEBUG MINSIZEREL RELEASE RELWITHDEBINFO)
-      if(_config)
-        set(_link_flags "CMAKE_${_link_kind}_LINKER_FLAGS_${_config}")
-      else()
-        set(_link_flags "CMAKE_${_link_kind}_LINKER_FLAGS")
-      endif()
-      string(REGEX REPLACE "/[Mm][Aa][Cc][Hh][Ii][Nn][Ee]:[Xx]86" "/machine:i386"
-        _classic_link_flags "${${_link_flags}}")
-      string(REGEX REPLACE "/[Pp][Dd][Bb][Tt][Yy][Pp][Ee]:[Ss][Ee][Pp][Tt]"
-        "" _classic_link_flags "${_classic_link_flags}")
-      string(REGEX REPLACE "[ /][Dd][Ee][Bb][Uu][Gg]" ""
-        _classic_link_flags "${_classic_link_flags}")
-      set(${_link_flags} "${_classic_link_flags}" CACHE STRING
-        "Classic MSVC 5.0 compatible linker flags" FORCE)
-    endforeach()
-  endforeach()
-
-  if(LRR_RECCMP)
-    # Reccmp reads the linker PDB, so retain CMake's /PDB:<TARGET_PDB> rule
-    # and add /DEBUG explicitly after filtering newer CMake/MSVC flags above.
-    # The matching build links without incremental mode (ADR 0006 decision
-    # 2): its thunks change call sites and it adds a .reloc section the
-    # original lacks. The trailing /INCREMENTAL:NO overrides the default that
-    # /DEBUG and CMake's RelWithDebInfo flags select. The program target also
-    # writes a /MAP, which by itself would disable incremental mode (LNK4075).
-    string(APPEND CMAKE_CXX_LINK_EXECUTABLE " /DEBUG /INCREMENTAL:NO")
-  else()
-    # ReproBit's current evidence model treats PDBs as compile-stage
-    # artifacts, so omit the link PDB and its /DEBUG switch for that profile.
-    string(REGEX REPLACE "[ /][Pp][Dd][Bb]:<TARGET_PDB>" ""
-      _classic_exe_link_rule "${CMAKE_CXX_LINK_EXECUTABLE}")
-    set(CMAKE_CXX_LINK_EXECUTABLE "${_classic_exe_link_rule}")
-  endif()
-
-  # CMake's MSVC rule shares one compiler PDB per target. Give each object
-  # its own PDB so ReproBit can model the compile steps as isolated producers.
-  set(CMAKE_CXX_COMPILE_OBJECT
-    "<CMAKE_CXX_COMPILER> /nologo /TP <DEFINES> <INCLUDES> <FLAGS> /Fo<OBJECT> /Fd<OBJECT>.pdb -c <SOURCE>")
-  set(CMAKE_C_COMPILE_OBJECT
-    "<CMAKE_C_COMPILER> /nologo /TC <DEFINES> <INCLUDES> <FLAGS> /Fo<OBJECT> /Fd<OBJECT>.pdb -c <SOURCE>")
-endif()
-
-if(NOT PLATFORM STREQUAL "native" AND NOT PLATFORM STREQUAL "winapi")
-  message(FATAL_ERROR "PLATFORM must be native or winapi")
-endif()
 if(NOT MOVIES MATCHES "^(auto|enabled|disabled)$")
   message(FATAL_ERROR "MOVIES must be auto, enabled, or disabled")
 endif()
 
-if(PLATFORM STREQUAL "native")
-  add_compile_definitions(LEGORRR_BACKEND_MINIWIN=1)
-else()
-  add_compile_definitions(LEGORRR_BACKEND_WINAPI=1)
-endif()
+# The port shell still has guards on the backend; miniwin is the only one.
+add_compile_definitions(LEGORRR_BACKEND_MINIWIN=1)
 
 set(ENGINE_DIR "${SRC_ROOT}/gods98")
 set(GAME_DIR "${SRC_ROOT}/game")
 set(CRT_DIR "${SRC_ROOT}/crt")
 set(PLATFORM_DIR "${SRC_ROOT}/platform")
 
-# The link-order list (ADR 0006): every game, gods98, platform and program
-# source, in the matching build's link order, with its library.
+# The source list (src/link_order.cmake): every game, gods98, platform and
+# program source, with its library.
 get_filename_component(LRR_SRC_ROOT_ABS "${SRC_ROOT}" ABSOLUTE
   BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(LRR_LINK_ORDER_FILE "${LRR_SRC_ROOT_ABS}/link_order.cmake")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   "${LRR_LINK_ORDER_FILE}")
-set(LRR_LINK_SOURCES "")
-set(LRR_LINK_TARGETS "")
 set(LRR_ORIGINAL_SHAPE_SOURCES "")
 foreach(_lib IN ITEMS game gods98 platform_glue program)
   set(LRR_LINK_SOURCES_${_lib} "")
 endforeach()
 macro(lrr_link kind key library source)
-  # "portable": every build but the MSVC 5.0 matching build (link_order.cmake).
-  if("${ARGN}" STREQUAL "" OR "${ARGN}" STREQUAL "${PLATFORM}"
-      OR ("${ARGN}" STREQUAL "portable" AND NOT LRR_CLASSIC_MSVC5))
-    list(APPEND LRR_LINK_SOURCES "${SRC_ROOT}/${source}")
-    list(APPEND LRR_LINK_TARGETS "${library}")
-    list(APPEND LRR_LINK_KINDS "${kind}")
-    list(APPEND LRR_LINK_SOURCES_${library} "${SRC_ROOT}/${source}")
-    # Units rebuilt in original shape (ADR 0005) are the list's .c files.
-    if("${source}" MATCHES "\\.c$")
-      list(APPEND LRR_ORIGINAL_SHAPE_SOURCES "${SRC_ROOT}/${source}")
-    endif()
+  list(APPEND LRR_LINK_SOURCES_${library} "${SRC_ROOT}/${source}")
+  # Units rebuilt in original shape (ADR 0005) are the list's .c files.
+  if("${source}" MATCHES "\\.c$")
+    list(APPEND LRR_ORIGINAL_SHAPE_SOURCES "${SRC_ROOT}/${source}")
   endif()
 endmacro()
 include("${LRR_LINK_ORDER_FILE}")
 
-# Units rebuilt in original shape are C in the matching build and C++
-# elsewhere, because the native port's miniwin headers are C++-only.
-if(NOT LRR_CLASSIC_MSVC5)
-  set_source_files_properties(${LRR_ORIGINAL_SHAPE_SOURCES} PROPERTIES
-    LANGUAGE CXX)
+# Units rebuilt in original shape compile as C++17 (ADR 0007 decision 5);
+# miniwin's headers are C++-only.
+set_source_files_properties(${LRR_ORIGINAL_SHAPE_SOURCES} PROPERTIES
+  LANGUAGE CXX)
+
+# The list's sources grouped into libraries (ADR 0003).
+add_library(gods98 STATIC ${LRR_LINK_SOURCES_gods98})
+target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
+add_library(game STATIC ${LRR_LINK_SOURCES_game})
+target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
+target_link_libraries(game PUBLIC gods98)
+# gods98 (frame loop, sim tick) calls into game; static libraries may be
+# mutually dependent, so every consumer of either one resolves both.
+target_link_libraries(gods98 PUBLIC game)
+add_library(platform_glue STATIC ${LRR_LINK_SOURCES_platform_glue})
+target_include_directories(platform_glue PUBLIC ${SRC_ROOT})
+target_link_libraries(gods98 PUBLIC platform_glue ${CMAKE_DL_LIBS})
+
+set(MINIWIN "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/isle-portable/miniwin")
+if(NOT EXISTS "${MINIWIN}/include/miniwin/windows.h")
+  message(FATAL_ERROR "miniwin is not bootstrapped; run tools/setup-miniwin.sh")
 endif()
+find_package(SDL3 CONFIG REQUIRED)
+set(MINIWIN_SOURCES
+  windows/windows.cpp ddraw/ddpalette.cpp ddraw/ddraw.cpp ddraw/ddsurface.cpp
+  ddraw/framebuffer.cpp d3drm/d3drm.cpp d3drm/d3drmdevice.cpp
+  d3drm/d3drmframe.cpp d3drm/d3drmlight.cpp d3drm/d3drmmesh.cpp
+  d3drm/d3drmtexture.cpp d3drm/d3drmviewport.cpp d3drm/d3drmrenderer.cpp
+  internal/meshutils.cpp d3drm/backends/software/renderer.cpp
+  d3drm/backends/palettesw/renderer.cpp)
+list(TRANSFORM MINIWIN_SOURCES PREPEND "${MINIWIN}/src/")
+add_library(miniwin STATIC ${MINIWIN_SOURCES})
+target_include_directories(miniwin PUBLIC "${MINIWIN}/include"
+  "${MINIWIN}/src/internal"
+  "${MINIWIN}/src/d3drm/backends/sdl3gpu/shaders/generated")
+target_compile_definitions(miniwin PRIVATE MINIWIN USE_SOFTWARE_RENDER USE_PALETTE_SW_RENDER)
+target_link_libraries(miniwin PUBLIC SDL3::SDL3)
+target_compile_definitions(gods98 PUBLIC MINIWIN)
+target_link_libraries(gods98 PUBLIC miniwin SDL3::SDL3)
+target_link_libraries(platform_glue PUBLIC miniwin)
 
-if(LRR_CLASSIC_MSVC5)
-  if(NOT PLATFORM STREQUAL "winapi")
-    message(FATAL_ERROR "LRR_CLASSIC_MSVC5 builds PLATFORM=winapi only")
-  endif()
-  # The matching build links one object per list entry, explicitly and in
-  # list order, then the list's libraries (ADR 0006 decision 1). LINK 5.0
-  # keeps command-line object order in every section. Each object keeps the
-  # include path of its library in the other builds.
-  set(LRR_LINK_INCLUDES_game ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
-  set(LRR_LINK_INCLUDES_program ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
-  set(LRR_LINK_INCLUDES_gods98 ${SRC_ROOT} ${ENGINE_DIR} ${GAME_DIR})
-  set(LRR_LINK_INCLUDES_platform_glue ${SRC_ROOT})
-  # Units the original compiled without optimisation: their code keeps the
-  # frame pointer and reloads every operand, and the functions are packed
-  # with int3 fill (finding 505 rule 5; finding 587). They take /Od after the
-  # configuration's /O2, and /Ob0 after its /Ob1, as plain /Od gives: no
-  # inline expansion, so Maths.h's inline functions are called (finding 692).
-  set(LRR_UNOPTIMISED_UNITS "${SRC_ROOT}/game/camera_control.c")
-  set(LRR_LINK_OBJECTS "")
-  set(LRR_LINK_LATE_SOURCES "")
-  set(LRR_LINK_LATE_TARGETS "")
-  set(LRR_LINK_TAIL_OBJECTS "")
-  set(LRR_LINK_MEMBER_OBJECTS "")
-  set(LRR_LINK_MEMBER_RECORDS "")
-  set(_lrr_place explicit)
-  set(_lrr_index 0)
-  foreach(_src _lib _kind IN ZIP_LISTS LRR_LINK_SOURCES LRR_LINK_TARGETS LRR_LINK_KINDS)
-    # The list's late members go to their own libraries, after the others
-    # (LRR_LINK_LATE_MEMBERS, link_order.cmake; finding 657).
-    string(REPLACE "${SRC_ROOT}/" "" _rel "${_src}")
-    if(_rel IN_LIST LRR_LINK_LATE_MEMBERS)
-      list(APPEND LRR_LINK_LATE_SOURCES "${_src}")
-      list(APPEND LRR_LINK_LATE_TARGETS "${_lib}")
-      continue()
-    endif()
-    math(EXPR _lrr_index "${_lrr_index} + 1")
-    get_filename_component(_stem "${_src}" NAME_WE)
-    string(LENGTH "00${_lrr_index}" _len)
-    math(EXPR _len "${_len} - 3")
-    string(SUBSTRING "00${_lrr_index}" ${_len} 3 _pos)
-    set(_target "link_${_pos}_${_stem}")
-    add_library(${_target} OBJECT ${_src})
-    target_include_directories(${_target} PRIVATE ${LRR_LINK_INCLUDES_${_lib}})
-    if(_src IN_LIST LRR_UNOPTIMISED_UNITS)
-      target_compile_options(${_target} PRIVATE /Od /Ob0)
-    endif()
-    # Where the object goes (finding 658). Each keeps its own target, so it
-    # compiles the same wherever it is linked from:
-    # - explicit: the game units and gods98's first, up to
-    #   LRR_LINK_EXPLICIT_LAST (link_order.cmake);
-    # - member: each later gods98 unit, archived in list order into one
-    #   library, unit_gods98.lib, searched before LRR_LINK_LIBRARIES
-    #   (finding 690);
-    # - tail: from the first port-tail entry on, every entry (the tail and
-    #   the CRT-range legacy files) goes to lrr_tail.lib, below.
-    if(_kind STREQUAL "tail")
-      set(_lrr_place tail)
-    endif()
-    if(_lrr_place STREQUAL "tail")
-      list(APPEND LRR_LINK_TAIL_OBJECTS "$<TARGET_OBJECTS:${_target}>")
-      string(APPEND LRR_LINK_MEMBER_RECORDS "${LRR_LINK_TAIL_LIBRARY} ${_rel} $<TARGET_OBJECTS:${_target}>\n")
-    elseif(_lrr_place STREQUAL "member")
-      if(NOT _kind STREQUAL "unit")
-        message(FATAL_ERROR "${_rel}: only unit entries may follow LRR_LINK_EXPLICIT_LAST before the tail")
-      endif()
-      list(APPEND LRR_LINK_MEMBER_OBJECTS "$<TARGET_OBJECTS:${_target}>")
-      string(APPEND LRR_LINK_MEMBER_RECORDS "unit_gods98 ${_rel} $<TARGET_OBJECTS:${_target}>\n")
-    else()
-      list(APPEND LRR_LINK_OBJECTS "$<TARGET_OBJECTS:${_target}>")
-    endif()
-    if(_rel STREQUAL LRR_LINK_EXPLICIT_LAST)
-      set(_lrr_place member)
-    endif()
-  endforeach()
-  if(_lrr_place STREQUAL "explicit")
-    message(FATAL_ERROR "LRR_LINK_EXPLICIT_LAST names a source the list lacks: "
-      "${LRR_LINK_EXPLICIT_LAST}")
-  endif()
-  list(LENGTH LRR_LINK_LATE_MEMBERS _lrr_late_wanted)
-  list(LENGTH LRR_LINK_LATE_SOURCES _lrr_late_found)
-  if(NOT _lrr_late_wanted EQUAL _lrr_late_found)
-    message(FATAL_ERROR "LRR_LINK_LATE_MEMBERS names a source the list lacks: "
-      "${LRR_LINK_LATE_MEMBERS}")
-  endif()
-  # One library per late member, in list order: LINK searches each library
-  # in turn, so the members come out in list order. In one library, init.c
-  # came out before rnc.c (finding 657). tools/link_order.py's late_library()
-  # mirrors the late_<stem> name.
-  set(LRR_LINK_LATE_LIBRARIES "")
-  foreach(_src _lib IN ZIP_LISTS LRR_LINK_LATE_SOURCES LRR_LINK_LATE_TARGETS)
-    get_filename_component(_stem "${_src}" NAME_WE)
-    add_library(late_${_stem} STATIC ${_src})
-    target_include_directories(late_${_stem} PRIVATE ${LRR_LINK_INCLUDES_${_lib}})
-    list(APPEND LRR_LINK_LATE_LIBRARIES late_${_stem})
-  endforeach()
-  # The port tail as one library (ADR 0006 addendum of 2026-11-13, finding
-  # 658). LINK pulls a LIBC member when the first unresolved reference to it
-  # comes up, so explicit tail objects pulled members before LIBC's own
-  # references to them, out of the original's order. From a library searched
-  # after LIBC, the tail is pulled in LINK's first pass and the LIBC members
-  # only it needs in the second, after the import thunks, where the original
-  # has nothing of its own. Tail objects that nothing references are not
-  # linked; under /OPT:REF they contributed nothing anyway.
-  add_library(${LRR_LINK_TAIL_LIBRARY} STATIC ${LRR_LINK_TAIL_OBJECTS})
-  set_target_properties(${LRR_LINK_TAIL_LIBRARY} PROPERTIES LINKER_LANGUAGE CXX)
-  # gods98's later units as one library, as the original linked them
-  # (finding 690). LINK allocates the commons library by library in
-  # command-line order, and within a library in reverse order of the members
-  # it pulled, so one library gives gods98's commons the original's reverse
-  # unit order; a library per unit gave list order. LRR_LINK_MEMBER_ORDER
-  # (link_order.cmake) keeps the members' pull order, and so their code, in
-  # list order.
-  add_library(unit_gods98 STATIC ${LRR_LINK_MEMBER_OBJECTS})
-  set_target_properties(unit_gods98 PROPERTIES LINKER_LANGUAGE CXX)
-  list(LENGTH LRR_LINK_MEMBER_OBJECTS _lrr_members)
-  list(LENGTH LRR_LINK_MEMBER_ORDER _lrr_member_symbols)
-  if(NOT _lrr_members EQUAL _lrr_member_symbols)
-    message(FATAL_ERROR "LRR_LINK_MEMBER_ORDER names ${_lrr_member_symbols} "
-      "symbols for ${_lrr_members} gods98 member units; name one per unit")
-  endif()
-  # Which library each archived object is in, for the tools that read the
-  # objects (tools/link_order.py's member_objects()).
-  file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/link-members.txt"
-    CONTENT "${LRR_LINK_MEMBER_RECORDS}")
-else()
-  # The native and reference builds group the list's sources into libraries
-  # (ADR 0003); their order does not matter there.
-  add_library(gods98 STATIC ${LRR_LINK_SOURCES_gods98})
-  target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
-  add_library(game STATIC ${LRR_LINK_SOURCES_game})
-  target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
-  target_link_libraries(game PUBLIC gods98)
-  # gods98 (frame loop, sim tick) calls into game; static libraries may be
-  # mutually dependent, so every consumer of either one resolves both.
-  target_link_libraries(gods98 PUBLIC game)
-  add_library(platform_glue STATIC ${LRR_LINK_SOURCES_platform_glue})
-  target_include_directories(platform_glue PUBLIC ${SRC_ROOT})
-  target_link_libraries(gods98 PUBLIC platform_glue ${CMAKE_DL_LIBS})
-endif()
-
-if(PLATFORM STREQUAL "native")
-  set(MINIWIN "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/isle-portable/miniwin")
-  if(NOT EXISTS "${MINIWIN}/include/miniwin/windows.h")
-    message(FATAL_ERROR "miniwin is not bootstrapped; run tools/setup-miniwin.sh")
-  endif()
-  find_package(SDL3 CONFIG REQUIRED)
-  set(MINIWIN_SOURCES
-    windows/windows.cpp ddraw/ddpalette.cpp ddraw/ddraw.cpp ddraw/ddsurface.cpp
-    ddraw/framebuffer.cpp d3drm/d3drm.cpp d3drm/d3drmdevice.cpp
-    d3drm/d3drmframe.cpp d3drm/d3drmlight.cpp d3drm/d3drmmesh.cpp
-    d3drm/d3drmtexture.cpp d3drm/d3drmviewport.cpp d3drm/d3drmrenderer.cpp
-    internal/meshutils.cpp d3drm/backends/software/renderer.cpp
-    d3drm/backends/palettesw/renderer.cpp)
-  list(TRANSFORM MINIWIN_SOURCES PREPEND "${MINIWIN}/src/")
-  add_library(miniwin STATIC ${MINIWIN_SOURCES})
-  target_include_directories(miniwin PUBLIC "${MINIWIN}/include"
-    "${MINIWIN}/src/internal"
-    "${MINIWIN}/src/d3drm/backends/sdl3gpu/shaders/generated")
-  target_compile_definitions(miniwin PRIVATE MINIWIN USE_SOFTWARE_RENDER USE_PALETTE_SW_RENDER)
-  target_link_libraries(miniwin PUBLIC SDL3::SDL3)
-  target_compile_definitions(gods98 PUBLIC MINIWIN)
-  target_link_libraries(gods98 PUBLIC miniwin SDL3::SDL3)
-  target_link_libraries(platform_glue PUBLIC miniwin)
-
-  if(NOT MOVIES STREQUAL "disabled")
-    # The movie module resolves FFmpeg at runtime. Keep these ordered soname
-    # candidates in step with Meson's configure-time capability probe.
-    if(APPLE)
-      set(MOVIE_FORMAT "libavformat.63.dylib;libavformat.62.dylib;libavformat.61.dylib;libavformat.dylib")
-      set(MOVIE_CODEC "libavcodec.63.dylib;libavcodec.62.dylib;libavcodec.61.dylib;libavcodec.dylib")
-      set(MOVIE_UTIL "libavutil.61.dylib;libavutil.60.dylib;libavutil.59.dylib;libavutil.dylib")
-      set(MOVIE_SCALE "libswscale.10.dylib;libswscale.9.dylib;libswscale.8.dylib;libswscale.dylib")
-    else()
-      set(MOVIE_FORMAT "libavformat.so.63;libavformat.so.62;libavformat.so.61;libavformat.so")
-      set(MOVIE_CODEC "libavcodec.so.63;libavcodec.so.62;libavcodec.so.61;libavcodec.so")
-      set(MOVIE_UTIL "libavutil.so.61;libavutil.so.60;libavutil.so.59;libavutil.so")
-      set(MOVIE_SCALE "libswscale.so.10;libswscale.so.9;libswscale.so.8;libswscale.so")
-    endif()
-    foreach(pair IN ITEMS "LIBAVFORMAT;${MOVIE_FORMAT}" "LIBAVCODEC;${MOVIE_CODEC}" "LIBAVUTIL;${MOVIE_UTIL}" "LIBSWSCALE;${MOVIE_SCALE}")
-      list(GET pair 0 key)
-      list(REMOVE_AT pair 0)
-      string(REPLACE ";" "\\;" value "${pair}")
-      target_compile_definitions(gods98 PUBLIC "LEGORRR_MOVIE_${key}=\"${value}\"")
-    endforeach()
+if(NOT MOVIES STREQUAL "disabled")
+  # The movie module resolves FFmpeg at runtime. These are the ordered soname
+  # candidates it tries.
+  if(APPLE)
+    set(MOVIE_FORMAT "libavformat.63.dylib;libavformat.62.dylib;libavformat.61.dylib;libavformat.dylib")
+    set(MOVIE_CODEC "libavcodec.63.dylib;libavcodec.62.dylib;libavcodec.61.dylib;libavcodec.dylib")
+    set(MOVIE_UTIL "libavutil.61.dylib;libavutil.60.dylib;libavutil.59.dylib;libavutil.dylib")
+    set(MOVIE_SCALE "libswscale.10.dylib;libswscale.9.dylib;libswscale.8.dylib;libswscale.dylib")
   else()
-    target_compile_definitions(gods98 PUBLIC LEGORRR_MOVIES_CFG_DISABLED=1)
+    set(MOVIE_FORMAT "libavformat.so.63;libavformat.so.62;libavformat.so.61;libavformat.so")
+    set(MOVIE_CODEC "libavcodec.so.63;libavcodec.so.62;libavcodec.so.61;libavcodec.so")
+    set(MOVIE_UTIL "libavutil.so.61;libavutil.so.60;libavutil.so.59;libavutil.so")
+    set(MOVIE_SCALE "libswscale.so.10;libswscale.so.9;libswscale.so.8;libswscale.so")
   endif()
+  foreach(pair IN ITEMS "LIBAVFORMAT;${MOVIE_FORMAT}" "LIBAVCODEC;${MOVIE_CODEC}" "LIBAVUTIL;${MOVIE_UTIL}" "LIBSWSCALE;${MOVIE_SCALE}")
+    list(GET pair 0 key)
+    list(REMOVE_AT pair 0)
+    string(REPLACE ";" "\\;" value "${pair}")
+    target_compile_definitions(gods98 PUBLIC "LEGORRR_MOVIE_${key}=\"${value}\"")
+  endforeach()
+else()
+  target_compile_definitions(gods98 PUBLIC LEGORRR_MOVIES_CFG_DISABLED=1)
 endif()
 
-if(LRR_CLASSIC_MSVC5)
-  set(LRR_SOURCES ${LRR_LINK_OBJECTS})
-else()
-  # These game sources register hooks that nothing references, so the
-  # program compiles them itself to keep them in the static link.
-  set(LRR_SOURCES ${LRR_LINK_SOURCES_program}
-    ${GAME_DIR}/dependency_grid.cpp ${GAME_DIR}/screen_pick.cpp)
-endif()
-if(PLATFORM STREQUAL "winapi")
-  list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
-endif()
-if(LRR_RECCMP)
-  # The original's resources (#560, finding 651): its icon and group icon,
-  # and no VERSIONINFO. The icon is licensed art and never committed, so the
-  # build extracts it from the original executable, as the tools read it.
-  set(LRR_ORIGINAL_EXE "${CMAKE_CURRENT_SOURCE_DIR}/reference/LegoRR.exe" CACHE FILEPATH
-    "The original LegoRR.exe the matching build takes its icon from")
-  if(NOT EXISTS "${LRR_ORIGINAL_EXE}")
-    message(FATAL_ERROR "The matching build extracts the original's icon from "
-      "${LRR_ORIGINAL_EXE}, which is missing. Place the original executable "
-      "there (or set LRR_ORIGINAL_EXE); it is licensed and never committed.")
-  endif()
-  find_program(LRR_PYTHON3 NAMES python3 REQUIRED)
-  set(LRR_ICON "${CMAKE_BINARY_DIR}/LegoRR.ico")
-  add_custom_command(OUTPUT "${LRR_ICON}"
-    COMMAND "${LRR_PYTHON3}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/pe_stamps.py" icon
-      "${LRR_ORIGINAL_EXE}" "${LRR_ICON}"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/pe_stamps.py" "${LRR_ORIGINAL_EXE}"
-    COMMENT "Extracting the original's icon from ${LRR_ORIGINAL_EXE}"
-    VERBATIM)
-  # RC runs in the build directory and finds LegoRR.ico there.
-  set_source_files_properties(${SRC_ROOT}/version.rc PROPERTIES
-    COMPILE_DEFINITIONS LRR_ORIGINAL_RESOURCES
-    OBJECT_DEPENDS "${LRR_ICON}")
-endif()
+# These game sources register hooks that nothing references, so the
+# program compiles them itself to keep them in the static link.
+set(LRR_SOURCES ${LRR_LINK_SOURCES_program}
+  ${GAME_DIR}/dependency_grid.cpp ${GAME_DIR}/screen_pick.cpp)
 add_executable(program ${LRR_SOURCES})
-# Keep the shipped executable name while using ReproBit's lowercase target ID.
 set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
-if(LRR_RECCMP)
-  set_target_properties(program PROPERTIES
-    PDB_NAME "LegoRR"
-    PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
-  # The link map records the object contributions in link order (ADR 0006).
-  target_link_options(program PRIVATE "/MAP:${CMAKE_BINARY_DIR}/LegoRR.map")
-endif()
-if(LRR_CLASSIC_MSVC5)
-  # The DirectX libraries the toolchain lacks, rebuilt from source and
-  # searched before its lib directory (finding 574).
-  include(${CMAKE_CURRENT_SOURCE_DIR}/cross/msvc5-importlibs/importlibs.cmake)
-  add_dependencies(program lrr_msvc5_importlibs)
-  set_property(TARGET program APPEND PROPERTY LINK_DEPENDS ${LRR_IMPORTLIB_FILES})
-  target_link_options(program PRIVATE "/LIBPATH:${LRR_IMPORTLIB_DIR}"
-    ${LRR_LINK_MEMBER_ORDER} ${LRR_LINK_SYMBOLS})
-  # The late units' libraries, then the gods98 member library, come first:
-  # LINK infers the entry point after the explicit objects, and the
-  # original's wincrt0.obj follows Movie.cpp's LIBC references but precedes
-  # Container.c's (finding 658). Nothing references the late units before
-  # gods98's members do, so LINK pulls them in its second pass; listed
-  # first, their commons come before gods98's, as in the original (finding
-  # 690).
-  target_link_libraries(program PRIVATE ${LRR_LINK_LATE_LIBRARIES} unit_gods98)
-  target_link_libraries(program PRIVATE ${LRR_LINK_LIBRARIES})
-  target_link_libraries(program PRIVATE ${LRR_LINK_TAIL_LIBRARY})
-  # No /ENTRY: LINK infers WinMainCRTStartup from WinMain and pulls
-  # wincrt0.obj where the original has it, after exsup.obj. /ENTRY made it
-  # LIBC's first member, so its own LIBC references came before the units'
-  # (finding 658).
-  # The original's link mode (#562, finding 642): it was linked without
-  # /DEBUG, so LINK 5.0 removed unreferenced COMDATs (/OPT:REF), and it folded
-  # no identical functions. The matching build states both, because /DEBUG
-  # (kept for Reccmp's PDB) would otherwise select /OPT:NOREF. The original
-  # kept every function of its objects, which had no /Gy; the matching
-  # build's objects do, so /INCLUDE keeps the original's annotated function
-  # that nothing references: LegoObject.c's 00438390, unreferenced in the
-  # original as well. (004907c0 is LIBC cvt.obj's static __shift, which LIBC
-  # links and calls; tools/reccmp_map_statics.py names it, finding 643.)
-  target_link_options(program PRIVATE "/OPT:REF" "/OPT:NOICF"
-    "/INCLUDE:_legoobject_global_animation_state_get")
-else()
-  # The frame-loop object in gods98 calls into game, while game itself uses
-  # gods98 APIs. Repeat the archive so GNU ld resolves this static-library
-  # cycle.
-  target_link_libraries(program PRIVATE game gods98 game platform_glue)
-  if(PLATFORM STREQUAL "winapi")
-    # ddraw: DirectDraw.c (gods98/directdraw.c) imports DirectDrawCreate and
-    # DirectDrawEnumerateA, as the original does (finding 596); vfw32: the
-    # AVI player (gods98/avi_player.cpp) imports AVIFIL32 (finding 604);
-    # ole32: the movie unit (gods98/movie_unit.cpp) imports CoInitialize and
-    # CoCreateInstance (finding 618); dinput and dxguid: Input.c
-    # (gods98/input_unit.c) imports DirectInputCreateA and links
-    # c_dfDIKeyboard and GUID_SysKeyboard (finding 683).
-    target_link_libraries(program PRIVATE winmm d3drm ddraw vfw32 ole32 advapi32
-      dinput dxguid)
-  endif()
-endif()
+# The frame-loop object in gods98 calls into game, while game itself uses
+# gods98 APIs. Repeat the archive so GNU ld resolves this static-library
+# cycle.
+target_link_libraries(program PRIVATE game gods98 game platform_glue)
 if(WIN32)
   set_target_properties(program PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
 include(CTest)
-if(BUILD_TESTING AND PLATFORM STREQUAL "native")
+if(BUILD_TESTING)
   set(GODS98_TESTS resource texture sound input audio camera view message airbeat
     mainsim simtick enginebind block model entity_ae movie flic media draw)
   set(GODS98_TEST_SOURCES test_resource.cpp test_texture.cpp test_sound.cpp test_input.cpp

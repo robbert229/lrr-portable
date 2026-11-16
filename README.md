@@ -1,19 +1,17 @@
 # lrr-portable
 
 A decompilation and portable reconstruction of **Lego Rock Raiders** (1999).
-The goal is a native Linux port using SDL3/miniwin, with a Windows reference
-build for comparison against the original. I would currently classify it as a
+The goal is a native port using SDL3/miniwin. I would currently classify it as a
 vibe-coded slop fest, however things are developing rapidly. I hope to have it
 in a playable state before the end of November 2026.
 
 ## Decompilation status
 
-<!-- Figures come from the committed reports in docs/coverage/. Refresh them
-     with `python3 tools/readme_status.py` (no build needed); recount the
-     source ledger with `python3 tools/coverage_ledger.py`. -->
-
-Figures from the reports committed on `main` at `77f65f61` (#848,
-**2026-11-15**), built with MSVC 5.0 and compared with Reccmp:
+This is the `develop` branch, where the port runs the original-shape units
+on miniwin ([ADR 0007](docs/adr/0007-port-on-develop-units-on-miniwin.md)).
+The decompilation and its matching build continue on `main`. Figures from
+the reports committed on `main` at `77f65f61` (#848, **2026-11-15**), built
+with MSVC 5.0 and compared with Reccmp:
 
 | Measure | Value |
 | --- | ---: |
@@ -44,11 +42,11 @@ CLGen.dat  D3DRM.DLL  LegoRR0.wad  LegoRR.exe  legoRR-stub.log  Saves
 CLGen.exe  Data       LegoRR1.wad  LegoRR.icd  Readme.txt
 ```
 
-You can then generate the report, and run:
+You can then build and run the port, and run the tests:
 
 ```sh
-make reccmp-report
-make reccmp-run
+make run
+make test
 ```
 
 [Build guide](docs/building.md) · [Findings](docs/findings/README.md) ·

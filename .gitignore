@@ -5,11 +5,4 @@ __pycache__/
 build-*/
 legoRR-stub.log
 
-subprojects/.wraplock
-
 build/
-/.reprobit-state/
-/.reprobit-transactions/
-reccmp-build.yml
-
-/builddir-meson/

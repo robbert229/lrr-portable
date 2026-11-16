@@ -29,17 +29,10 @@ _Avoid_: "the wine script", "the compat tool"
 **seam**:
 The DX6-era API surface recorded in finding 15 §1 — the set of entry points
 (DDraw, d3drm, DInput, DSOUND, WINMM, AVIFIL32…) the game logic was written
-against. Everything above it is platform-neutral; the *platform* option
-picks which adapter satisfies it. `src/platform/platform.h` re-exports that
+against. Everything above it is platform-neutral; on `develop` miniwin is
+the one adapter that satisfies it (ADR 0007). `src/platform/platform.h` re-exports that
 surface under one roof.
 _Avoid_: "boundary", "port" when you mean the seam
-
-**platform**:
-The meson option (`-Dplatform=native|winapi`) that selects which adapter
-satisfies the seam at build time. Named `platform` rather than "backend"
-because Meson reserves `backend` for its own build backend; the concept the
-docs otherwise call *backend* (the adapter) maps one-to-one on to it.
-_Avoid_: "the backend option" (misleading — the option is `platform`)
 
 **decompile corpus**:
 The named Ghidra pseudocode dump at `docs/decompiles/legacy/engine-region.c`
@@ -48,8 +41,8 @@ _Avoid_: "the decomp", "engine-region"
 
 **reconstruction**:
 The recompilable C++ source tree that reimplements `LegoRR.exe` from the
-decompile corpus. Lives under `src/` (relocatable via the `src_root` meson
-option), split into per-subsystem static libraries mirroring gods98. Written
+decompile corpus. Lives under `src/` (relocatable via the CMake `SRC_ROOT`
+cache variable), split into per-subsystem static libraries mirroring gods98. Written
 in C++ with discipline (plain structs, C++ where the seam demands it — ADR
 0004), compiled against the DX6-era API surface from finding 15.
 _Avoid_: "the decompiled source" when you mean the new build tree

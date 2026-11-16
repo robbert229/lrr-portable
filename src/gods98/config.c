@@ -349,7 +349,6 @@ void block_text_token_pool_grow(void)
 
 /* Port-only additions (not in the original unit). */
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* block_open's tokeniser over a heap copy of `text`. */
 BlockFile* block_parse(const char* text, size_t length)
 {
@@ -410,7 +409,6 @@ int block_text_token_pool_watermark_peek(void)
 {
     return (int)configGlobs.list_count;
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* configGlobs, defined after every function so that no function's symbol
  * counter moves (finding 538), after the 8 bytes of .bss the original has
