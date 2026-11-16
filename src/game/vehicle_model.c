@@ -351,10 +351,10 @@ void vehicle_remove(VehicleModel* vehicle)
 void vehicle_swap_poly_medium(VehicleModel* vehicle, int swap)
 {
     resource_list_update_matching_key(vehicle->polyMedium1, vehicle->contAct1,
-                                      (void*)(size_t)(swap == 0), 0);
+                                      (swap == 0), 0);
     if (vehicle->contAct2 && vehicle->polyMedium2) {
         resource_list_update_matching_key(vehicle->polyMedium2, vehicle->contAct2,
-                                          (void*)(size_t)(swap == 0), 0);
+                                          (swap == 0), 0);
     }
 }
 

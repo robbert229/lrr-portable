@@ -35,19 +35,19 @@ extern uint32_t s_engine_feature_word;
 /* Mesh.c (G98-015, mesh_unit.cpp), by the port's names where they have
  * C linkage (mesh_unit.h has five more). */
 struct EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
-    void* owner, void* callback, uint32_t mode, void* context,
-    uint32_t flag_value);                                         /* 00480870 */
-int mesh_record_allocate_and_fill(struct MeshRecordPool* pool,
-                                  uint32_t vertex_count,
-                                  uint32_t index_rows,
-                                  uint32_t index_columns,
-                                  const uint16_t* source_indices); /* 00482220 */
-void indexed_record_flag6c_bit0_set(void* record, int index, int set); /* 004827a0 */
-void animated_texture_frame_surface_set(void* texture, int frame_index,
+    void* owner, void* callback, unsigned long mode, void* context,
+    unsigned long flag_value);                                         /* 00480870 */
+long mesh_record_allocate_and_fill(struct MeshRecordPool* pool,
+                                  unsigned long vertex_count,
+                                  unsigned long index_rows,
+                                  unsigned long index_columns,
+                                  const unsigned int* source_indices); /* 00482220 */
+void indexed_record_flag6c_bit0_set(void* record, unsigned long index, int set); /* 004827a0 */
+void animated_texture_frame_surface_set(void* texture, unsigned long frame_index,
                                         const void* frame_state); /* 004830c0 */
-uint32_t render_object_color_vector_set(void* record, int block, float red,
+uint32_t render_object_color_vector_set(void* record, unsigned long block, float red,
                                         float green, float blue,
-                                        int slot);                /* 00483270 */
+                                        unsigned long slot);                /* 00483270 */
 
 /* Five more Mesh.c entries. The matching build (C) calls mesh_unit.c by
  * its names there (mesh_link_names.h for three of them, finding 625),
@@ -57,7 +57,7 @@ uint32_t render_object_color_vector_set(void* record, int block, float red,
 #define container_mesh_set_vertices_adapter mesh_set_vertices
 #define container_mesh_get_vertices_adapter indexed_geometry_data_copy_to_output
 #define container_mesh_is_group_hidden_adapter indexed_record_flag6c_bit0_get
-int container_mesh_get_group_adapter(void* mesh, unsigned long groupID,
+void container_mesh_get_group_adapter(void* mesh, unsigned long groupID,
                                      unsigned long* vertexCount,
                                      unsigned long* faceCount,
                                      unsigned long* vPerFace,
@@ -65,16 +65,16 @@ int container_mesh_get_group_adapter(void* mesh, unsigned long groupID,
                                      unsigned long* faceData);    /* 004821a0 */
 void container_mesh_scale_adapter(void* mesh, float x, float y,
                                   float z);                       /* 00482370 */
-int container_mesh_set_vertices_adapter(void* mesh,
-                                        unsigned long groupID,
-                                        unsigned long index,
-                                        unsigned long count,
-                                        void* values);            /* 004823e0 */
-int container_mesh_get_vertices_adapter(void* mesh,
-                                        unsigned long groupID,
-                                        unsigned long index,
-                                        unsigned long count,
-                                        void* retArray);          /* 00482470 */
+void container_mesh_set_vertices_adapter(void* mesh,
+                                         unsigned long groupID,
+                                         unsigned long index,
+                                         unsigned long count,
+                                         void* values);           /* 004823e0 */
+void container_mesh_get_vertices_adapter(void* mesh,
+                                         unsigned long groupID,
+                                         unsigned long index,
+                                         unsigned long count,
+                                         void* retArray);         /* 00482470 */
 int container_mesh_is_group_hidden_adapter(void* mesh,
                                            unsigned long groupID); /* 00482780 */
 

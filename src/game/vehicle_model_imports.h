@@ -49,9 +49,9 @@ void vehicle_container_enable_sound_triggers_adapter(void* cont,
                                                      int on);    /* 00473ec0 */
 uint32_t scene_object_bounds_union(void* scene_object,
                                    float bounds_min_max[6]);     /* 00474f10 */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);              /* 004754c0 */
-int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+void ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3],
                                     float second[3]);             /* 00475500 */
 void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,

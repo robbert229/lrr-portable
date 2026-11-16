@@ -581,7 +581,7 @@ typedef struct LegoBlockActivity2F {
  * other targets. level_current_owner_get is in lego_unit_imports.h. */
 void map_cell_tracking_flags_clear_and_refresh_current(const int cell_xy[2]);
 void terrain_cell_work_flag_clear_current(const int coord[2], uint32_t selector);
-void* level_current_terrain_get(int cell_x, int cell_y);
+void* level_current_terrain_get(void);
 
 void lego_terrain_neighbor_flag_set(Lego_Level* level, int unused,
                                     unsigned int bx, unsigned int by);

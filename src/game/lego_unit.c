@@ -715,7 +715,7 @@ int lego_game_config_init(void)
             textPauseTimeStr = (textPauseTimeStr = LEGO_A_CFG_FLOAT(cfgStr, string_path_join(s_engine_config_root, "Main",
                 // STRING: LEGORR 0x004a3ba8
                 "TextPauseTime", 0))) * 25.0f;
-            ui_message_strings_initialize(legoGlobs_textOnlyWindow, legoGlobs_textImageWindow, (void*)316, (void*)425, textPauseTimeStr);
+            ui_message_strings_initialize(legoGlobs_textOnlyWindow, legoGlobs_textImageWindow, 316, 425, textPauseTimeStr);
 
             panelWindow.x = 55.0f;
             panelWindow.y = 435.0f;
@@ -1062,10 +1062,10 @@ int lego_game_config_init(void)
                     media_pointer_cursor_select(0);
 
                     if (s_panel_highlight_flags & 0x10) {
-                        lego_key_callback_set_adapter(2, 9, 0, 0, 0);
-                        lego_key_callback_set_adapter(3, 9, 0, 1, 0);
-                        lego_key_callback_set_adapter(5, 10, 0, 0, 0);
-                        lego_key_callback_set_adapter(4, 11, 0, 0, 0);
+                        lego_key_callback_set_adapter(2, 9, NULL, 0, NULL);
+                        lego_key_callback_set_adapter(3, 9, NULL, 1, NULL);
+                        lego_key_callback_set_adapter(5, 10, NULL, 0, NULL);
+                        lego_key_callback_set_adapter(4, 11, NULL, 0, NULL);
                     }
 
                     transient_effect_textures_preload(
@@ -1645,7 +1645,7 @@ int lego_engine_tick(float elapsed)
 
     if (s_context_mode == 1 && !(legoGlobs_flags1 & 0x100000)) {
         world_render_pass_a_original(legoGlobs_currLevel, legoGlobs_viewMain, elapsedWorld, elapsed);
-        world_render_pass_b_original(legoGlobs_currLevel, legoGlobs_viewMain, elapsedWorld, elapsed);
+        world_render_pass_b_original(legoGlobs_currLevel, legoGlobs_viewMain, 0, elapsed);
     }
 
     terrain_map_visible_clear(legoGlobs_currLevel->map);
@@ -1671,8 +1671,7 @@ int lego_engine_tick(float elapsed)
         simtick_manager_tick(5, elapsed);
         panel_crystals_draw_original(
             legoGlobs_currLevel != NULL ? legoGlobs_currLevel->f_08c : crystals,
-            legoGlobs_currLevel != NULL ? legoGlobs_currLevel->f_08c - legoGlobs_currLevel->f_098 : used,
-            elapsedWorld);
+            legoGlobs_currLevel != NULL ? legoGlobs_currLevel->f_08c - legoGlobs_currLevel->f_098 : used);
         panel_side_bar_draw();
         panel_print_f(5, s_lego_crystal_count_font, 16, 469, 1, "%i",
                       legoGlobs_currLevel->crystals + legoGlobs_currLevel->ore * 5);
@@ -2042,7 +2041,7 @@ void lego_selected_entity_ground_marker_render(
             b *= 0.3f;
         }
         entity_transform_position_get_outputs(liveObj, &worldPos.x, &worldPos.y);
-        worldPos.z = terrain_map_world_z_get((struct TerrainMap*)level_current_terrain_get(0, 0), worldPos.x, worldPos.y);
+        worldPos.z = terrain_map_world_z_get((struct TerrainMap*)level_current_terrain_get(), worldPos.x, worldPos.y);
         worldPos.z -= entity_stats_float_at74(liveObj) / 2.0f;
         camera_project_point_to_screen(view, &sPos.x, &worldPos.x);
 
@@ -2557,7 +2556,7 @@ void global_scroll_guard_set(int value)
 void lego_game_speed_set(float speed)
 {
     if (speed >= s_scroll_scale || s_scroll_guard == 0) {
-        options_scroll_index_store_current(speed);
+        options_scroll_index_store_current();
         s_scroll_scale = speed;
         if (speed < 0.0f) s_scroll_scale = 0.0f;
         if (s_scroll_scale > 3.0f) s_scroll_scale = 3.0f;
@@ -2688,8 +2687,8 @@ void lego_spawn_coordinate_pool_tick(float elapsed)
     if (legoGlobs_currLevel->f_26c != 0x14) {
         g_camera_countdown -= elapsed;
         if (g_camera_countdown < 0.0f) {
-            if (spawn_registry_probe_adapter(0, 0))
-                predug_spawn_coordinate_select_and_create(0, legoGlobs_currLevel->f_26c);
+            if (spawn_registry_probe_adapter(NULL, 0))
+                predug_spawn_coordinate_select_and_create(NULL, legoGlobs_currLevel->f_26c);
             g_camera_countdown = legoGlobs_currLevel->f_268;
         }
     }
@@ -2933,13 +2932,13 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
     if (!(legoGlobs_flags1 & 0x100) && !(s_panel_highlight_flags & 0x1000) &&
         interface_handle_mouse_adapter(legoInput_mouseX, legoInput_mouseY,
                                        legoInput_mslb, s_lego_prev_left_button,
-                                       leftReleased, elapsedAbs)) {
+                                       leftReleased)) {
         legoGlobs_flags1 |= 0x200;
         goto end;
     }
     if (!(legoGlobs_flags1 & 0x100) &&
         info_check_click_adapter(legoInput_mouseX, legoInput_mouseY,
-                                 leftReleased, rightReleased)) {
+                                 leftReleased)) {
         legoGlobs_flags1 |= 0x200;
         if (leftReleased) media_action_feedback_sound_dispatch(0);
         goto end;
@@ -4027,7 +4026,7 @@ void lego_scene_marker_update_and_draw(float elapsed, int track)
                 s_zoom_step_context->contCam, NULL, &dir.x,
                 NULL);
             lego_G_vector3d_scale(&dir, &dir, terrain_context_scale_get(
-                level_current_terrain_get(0, 0)) * 3.0f);
+                level_current_terrain_get()) * 3.0f);
             lego_G_vector3d_add(&pos, &dir, &pos);
             terrain_map_world_to_block(
                 legoGlobs_currLevel->map,
@@ -4193,10 +4192,8 @@ void lego_sound_minimum_distance_update_mode(int viewMode, void* liveObj,
             *(LegoA_Sound3DFrameArg*)s_zoom_step_context->contEar);
         sound_tracked_buffers_set_min_distance(
             legoGlobs_MinDistFor3DSoundsOnTopView);
-        /* 0.5f: the port's entry takes the float's bits. */
         resource_interface_call_slot40_and_clear_field14(
-            (struct ResourceInterfaceWrapper*)legoGlobs_viewMain,
-            0x3f000000);
+            (struct ResourceInterfaceWrapper*)legoGlobs_viewMain, 0.5f);
         renderer_object_set_clip_distance(legoGlobs_viewMain,
                                           legoGlobs_TVClipDist);
     }
@@ -4642,7 +4639,7 @@ int lego_level_load(const char* levelName)
                     // STRING: LEGORR 0x004a41e8
                     if (LEGO_D_BOOL("Precreate") == 1) {
                         void* objects[10];
-                        for (i = 0; i < 10; i++) objects[i] = lego_object_create_adapter(legoGlobs_miniFigureData, 2, NULL);
+                        for (i = 0; i < 10; i++) objects[i] = lego_object_create_adapter(legoGlobs_miniFigureData, 2, 0);
                         for (i = 0; i < 10; i++) entity_teardown((struct Lego_Object*)objects[i]);
                     }
                     return 1;
@@ -4676,8 +4673,8 @@ int lego_level_load(const char* levelName)
 int lego_entity_effect_counters_apply_from_record(struct Lego_Object* object, void* data)
 {
     if (entity_stats_word_get(object) & 0x8) {
-        simulation_update_counter_add_original(object, ((LegoInitialResourcesD*)data)->crystals);
-        simulation_mode_counter_add_original(object, ((LegoInitialResourcesD*)data)->ore);
+        simulation_update_counter_add_original(0, ((LegoInitialResourcesD*)data)->crystals);
+        simulation_mode_counter_add_original(0, ((LegoInitialResourcesD*)data)->ore);
     }
     return 0;
 }
@@ -5562,7 +5559,7 @@ int lego_upgrade_types_load(void)
                 arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "UpgradeTypes", NULL));
                 while (arrayItem != NULL) {
                     render_resource_binding_initialize((struct RenderResourceBinding*)&((LegoUpgradeModelE*)s_upgrade_records)[loop],
-                                                       (void*)(size_t)loop, legoGlobs_rootCont, arrayItem->value);
+                                                       loop, legoGlobs_rootCont, arrayItem->value);
                     animation_object_visibility_set(&((LegoUpgradeModelE*)s_upgrade_records)[loop], 1);
                     legoGlobs_upgradeName[loop] = (char*)malloc(strlen(arrayItem->key) + 1);
                     memcpy(legoGlobs_upgradeName[loop], arrayItem->key, strlen(arrayItem->key) + 1);
@@ -5880,7 +5877,7 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                     }
                     first = 0;
                     if (objType != 4) entity_world_position_set(obj, wPos.x, wPos.y, heading, 1);
-                    if (objType == 6 || objType == 7 || objType == 8 || objType == 9) cmd_create_task(obj, 0);
+                    if (objType == 6 || objType == 7 || objType == 8 || objType == 9) cmd_create_task(obj, 0.0f);
                     if (s_lego_f_4e8448 == NULL && obj->type == 2) s_lego_f_4e8448 = obj;
                     if (legoGlobs_recordObjectCount < 10) {
                         legoGlobs_recordObjects[legoGlobs_recordObjectCount] = obj;
@@ -6487,10 +6484,9 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
                     dirVec[0] = 0.1f;
                     dirVec[1] = 0.1f;
                     dirVec[2] = -1.0f;
-                    /* The port types the ninth argument as a word: 0.3f. */
                     block->f_1c =
                         transient_effect_emitter_create(NULL, bx, by, (int*)dirVec, 0.6f, 0.4f, 0.0f, 1.0f,
-                                                        0x3e99999a, 0, block->f_20, 0x26);
+                                                        0.3f, 0, block->f_20, 0x26);
                     block->flags1 |= 0x4000;
                 }
             } else {
@@ -7138,10 +7134,9 @@ struct Lego_Level* level_current_owner_get(void)
     return g_active_level_retail;
 }
 
-/* Lego_GetMap. The port's callers pass the two block coordinates the
- * original pushes for the call that consumes the map; it reads neither. */
+/* Lego_GetMap. */
 // FUNCTION: LEGORR 0x00431570
-void* level_current_terrain_get(int cell_x, int cell_y)
+void* level_current_terrain_get(void)
 {
     return (((Lego_Level*)level_current_owner_get())->map);
 }
@@ -8281,8 +8276,8 @@ int lego_scene_lights_build_from_config(void);                       /* 00433770
  * (finding 538 rule B, finding 639). */
 int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void);      /* 00435550 */
 int lego_global_handle_position_apply_if_present(void);              /* 00435580 */
-void lego_current_level_terrain_grid_pick(float x, float y, int* bx,
-                                          int* by);                  /* 00433be0 */
+int lego_current_level_terrain_grid_pick(float x, float y, int* bx,
+                                         int* by);                   /* 00433be0 */
 int lego_entity_neighbor_blocked_cell_step_probe(struct Lego_Object* object,
                                                  float elapsed,
                                                  int force);         /* 00433c10 */
@@ -8306,11 +8301,11 @@ int terrain_map_block_vertices_get(struct TerrainMap* map, unsigned int bx,
                                    struct TerrainMapVector3* positions); /* 004500d0 */
 int terrain_map_block_hidden_get(struct TerrainMap* map, int bx, int by); /* 0044e860 */
 void terrain_map_visible_add(struct TerrainMap* map, int bx, int by);     /* 00450730 */
-/* G98 Container.c (view.hpp, container_unit.cpp): the light's colour and
- * the spot/range values are float bit patterns in the port's contract. */
-void* ddiscene_light_create(void* owner, uint32_t value_a, uint32_t value_b,
-                            uint32_t value_c, uint32_t value_d);  /* 004734f0 */
-int light_interface_call_slot_38(void* record, uint32_t value);   /* 004734a0 */
+/* G98 Container.c: Container_MakeLight and Container_Light_SetSpotRange,
+ * with the original's float colour and range. */
+void* ddiscene_light_create(void* owner, unsigned long type, float r,
+                            float g, float b);                    /* 004734f0 */
+int light_interface_call_slot_38(void* record, float dist);       /* 004734a0 */
 /* Container.c's spot setters (lego_unit_imports.h), again for the lights
  * set-up below, with the original's float angle. */
 int lego_light_umbra_set_adapter(void* spotlight, float angle);    /* 00473480 */
@@ -8348,20 +8343,19 @@ void lego_roof_block_vertices_set_adapter(unsigned int bx, unsigned int by,
                                           struct TerrainMapVector3* v1,
                                           struct TerrainMapVector3* v2,
                                           struct TerrainMapVector3* v3); /* 00462f20 */
-/* Matching build: Main.c's Main_Setup3D itself (gods98/main.c since #738,
- * which reads the first five of the seven arguments). A rename of the
- * declaration below, one for one. */
+/* Main.c's Main_Setup3D (gods98/main.c since #738). It takes five
+ * arguments; the original's caller also pushes the blend and sort flags,
+ * which it never reads. */
 #define lego_main_setup3d_adapter direct3d_render_preferences_apply
 void lego_main_setup3d_adapter(int quality, int dither, int filter,
-                               int mipmap, int linearMipMap, int blend,
-                               int sort);                         /* 00478330 */
+                               int mipmap, int linearMipMap);     /* 00478330 */
 /* container_link_names.h's matching-build link name of Container_Create
  * (container.c since #697). */
 #define lego_container_create_adapter ddiscene_object_allocate
 void* lego_container_create_adapter(void* parent);                /* 00472950 */
 float lego_viewport_field_get_adapter(void* view);                /* 00477270 */
-void lego_viewport_size_get_adapter(void* view, unsigned int* width,
-                                    unsigned int* height);        /* 00476f10 */
+void lego_viewport_size_get_adapter(void* view, unsigned long* width,
+                                    unsigned long* height);       /* 00476f10 */
 float lego_projected_quad_area_adapter(struct TerrainMapVector3* vertices,
                                        void* view,
                                        const float screen[2],
@@ -8482,8 +8476,7 @@ int lego_render_quality_config_apply(void)
                     // STRING: LEGORR 0x004a4728
                     "linearmipmap", 0));
             lego_main_setup3d_adapter(quality, dither == 1, filter == 1,
-                                      mipmap == 1, linearMipMap == 1,
-                                      blend == 1, sort == 1);
+                                      mipmap == 1, linearMipMap == 1);
             return 1;
         }
     }
@@ -8504,7 +8497,7 @@ int lego_scene_lights_build_from_config(void)
             &r, &g, &b)) return 0;
     if ((legoGlobs_spotlightTop = ddiscene_light_create(
              s_zoom_step_context->contListener, 2,
-             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == NULL) return 0;
+             r, g, b)) == NULL) return 0;
     lego_light_penumbra_set_adapter(legoGlobs_spotlightTop, 0.85f);
     lego_light_umbra_set_adapter(legoGlobs_spotlightTop, 0.4f);
     ddiscene_object_position_set(legoGlobs_spotlightTop,
@@ -8521,7 +8514,7 @@ int lego_scene_lights_build_from_config(void)
             &r, &g, &b)) return 0;
     if ((legoGlobs_spotlightTrack = ddiscene_light_create(
              legoGlobs_cameraTrack->contRoot, 2,
-             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == NULL) return 0;
+             r, g, b)) == NULL) return 0;
     ddiscene_object_position_set(legoGlobs_spotlightTrack, NULL,
                                  0.0f, 0.0f, -150.0f);
     ddiscene_object_pose_method_dispatch(legoGlobs_spotlightTrack, NULL,
@@ -8533,7 +8526,7 @@ int lego_scene_lights_build_from_config(void)
                 "ambientrgb", 0),
             &r, &g, &b)) return 0;
     if ((legoGlobs_ambientLight = ddiscene_light_create(legoGlobs_rootCont, 0,
-             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == NULL) return 0;
+             r, g, b)) == NULL) return 0;
 
     if (!config_rgb_vector_read(legoGlobs_config,
             string_path_join(s_engine_config_root, "Main",
@@ -8542,7 +8535,7 @@ int lego_scene_lights_build_from_config(void)
             &r, &g, &b)) return 0;
     if ((legoGlobs_f_5560f8 = ddiscene_light_create(
              legoGlobs_cameraFP->contCam, 1,
-             *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == 0) return 0;
+             r, g, b)) == 0) return 0;
 
     if (config_rgb_vector_read(legoGlobs_config,
             string_path_join(s_engine_config_root, "Main",
@@ -8551,19 +8544,19 @@ int lego_scene_lights_build_from_config(void)
             &r, &g, &b)) {
         legoGlobs_dirLightFP = ddiscene_light_create(
             legoGlobs_cameraFP->contCam, 3,
-            *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b);
+            r, g, b);
     } else {
         legoGlobs_dirLightFP = NULL;
     }
 
     if ((legoGlobs_dirLightCallToArms = ddiscene_light_create(
              legoGlobs_cameraFP->contCam, 3,
-             0x3f800000, 0, 0)) == NULL) return 0; /* 1, 0, 0 */
+             1.0f, 0.0f, 0.0f)) == NULL) return 0;
 
     legoGlobs_f_556108 = lego_container_create_adapter(scene_root_object_get());
     if ((legoGlobs_f_556104 = ddiscene_light_create(
              legoGlobs_f_556108, 2,
-             0x3f800000, 0x3f800000, 0x3f800000)) == 0) return 0; /* 1, 1, 1 */
+             1.0f, 1.0f, 1.0f)) == 0) return 0;
     scene_transform_state_initialize(legoGlobs_f_556104,
                                      legoGlobs_f_556108, 0.8f, 0.8f, 0.8f);
     ddiscene_object_pose_method_dispatch(legoGlobs_f_556104, NULL,
@@ -8579,19 +8572,19 @@ int lego_scene_lights_build_from_config(void)
     scene_render_lock_toggle(legoGlobs_f_556104, 1);
     scene_render_lock_toggle(legoGlobs_dirLightCallToArms, 1);
 
-    light_interface_call_slot_38(legoGlobs_spotlightTop, 0x44fa0000); /* 2000.0f */
-    light_interface_call_slot_38(legoGlobs_spotlightTrack, 0x44fa0000);
-    light_interface_call_slot_38(legoGlobs_f_556104, 0x44fa0000);
+    light_interface_call_slot_38(legoGlobs_spotlightTop, 2000.0f);
+    light_interface_call_slot_38(legoGlobs_spotlightTrack, 2000.0f);
+    light_interface_call_slot_38(legoGlobs_f_556104, 2000.0f);
     return 1;
 }
 
 /* Lego_GetBlockXYFromWorldPos? [group 3B]: the current level's
  * Map3D_WorldToBlockPos. */
 // FUNCTION: LEGORR 0x00433be0
-void lego_current_level_terrain_grid_pick(float x, float y, int* bx, int* by)
+int lego_current_level_terrain_grid_pick(float x, float y, int* bx, int* by)
 {
-    terrain_map_world_to_block(legoGlobs_currLevel->map,
-                               x, y, bx, by);
+    return terrain_map_world_to_block(legoGlobs_currLevel->map,
+                                      x, y, bx, by);
 }
 
 /* [group 3B] Slug/object scare step: at a random interval (the elapsed
@@ -8658,7 +8651,7 @@ int lego_grid_cell_entity_eligibility_check(int bx, int by)
 {
     if (!(legoGlobs_currLevel->blocks
               [legoGlobs_currLevel->width * by + bx].flags1 & 0x100) &&
-        terrain_map_block_hidden_get((struct TerrainMap*)level_current_terrain_get(0, 0),
+        terrain_map_block_hidden_get((struct TerrainMap*)level_current_terrain_get(),
                                      bx, by)) {
         return 1;
     }
@@ -8689,6 +8682,7 @@ void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
     int camX, camY;
     int startX, startY, endX, endY;
     unsigned int x, y;
+    unsigned long vpWidth, vpHeight;
     float screen[2];
     float cosFov;
     float dist;
@@ -8701,9 +8695,9 @@ void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
     terrain_map_world_to_block(map, camPos.x, camPos.y, &camX, &camY);
     ddiscene_object_facing_pair_get(cont, NULL, &camDir.x, NULL);
     cosFov = (float)cos(lego_viewport_field_get_adapter(legoGlobs_viewMain) * 1.4f);
-    lego_viewport_size_get_adapter(legoGlobs_viewMain, &x, &y);
-    screen[0] = (float)x;
-    screen[1] = (float)y;
+    lego_viewport_size_get_adapter(legoGlobs_viewMain, &vpWidth, &vpHeight);
+    screen[0] = (float)vpWidth;
+    screen[1] = (float)vpHeight;
 
     startX = camX - radius;
     startY = camY - radius;

@@ -35,14 +35,10 @@ void engine_memory_free(void* ptr);                               /* 00402210 */
 
 /* GAME-021 Lego.c. */
 void lego_flags1_bit17_set(int on);                               /* 0041f940 */
-/* 00431570 Lego_GetMap takes no arguments. lego_unit.c defines it with the
- * port's two ignored cell arguments, so the C matching build calls it
- * through an unprototyped function type, which pushes none, as the original
- * does; the native C++ compile goes through lego.cpp's adapter (as
- * weapons_imports.h). */
-void* level_current_terrain_get(int cell_x, int cell_y);          /* 00431570 */
+/* 00431570 Lego_GetMap takes no arguments. */
+void* level_current_terrain_get(void);          /* 00431570 */
 #define CAMERA_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get(0, 0))
+    ((struct TerrainMap*)level_current_terrain_get())
 
 /* GAME-023 LegoObject.c (entity.hpp). */
 /* In the matching build these name legoobject_unit.c's functions at the
@@ -66,9 +62,9 @@ float terrain_map_world_z_unmodified_get(struct TerrainMap* map, float x,
  * (00472950) is declared in camera_control.c: the port types its argument
  * as the parent's scene-object descriptor. */
 void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object); /* 00472a40 */
-int ddiscene_object_position_set(void* object, void* alternate_frame,
+void ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z);      /* 00475430 */
-int ddiscene_object_pose_method_dispatch(void* object,
+void ddiscene_object_pose_method_dispatch(void* object,
                                          void* alternate_frame,
                                          float parameter_3,
                                          float parameter_4,
@@ -76,9 +72,9 @@ int ddiscene_object_pose_method_dispatch(void* object,
                                          float parameter_6,
                                          float parameter_7,
                                          float parameter_8);      /* 00475470 */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);              /* 004754c0 */
-int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+void ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3],
                                     float second[3]);             /* 00475500 */
 void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,

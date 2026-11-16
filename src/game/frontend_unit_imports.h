@@ -86,17 +86,17 @@ void render_object_set_packed_rgba_from_float_channels(
     void* scene_object, float red, float green, float blue,
     float alpha);                                                 /* 004750b0 */
 float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 00475140 */
-unsigned int ddiscene_object_frame_position_get(void* scene_object); /* 004753f0 */
-int ddiscene_object_position_set(void* object, void* alternate_frame,
+unsigned long ddiscene_object_frame_position_get(void* scene_object); /* 004753f0 */
+void ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z);      /* 00475430 */
-int ddiscene_object_pose_method_dispatch(void* object,
+void ddiscene_object_pose_method_dispatch(void* object,
                                          void* alternate_frame,
                                          float dir_x, float dir_y,
                                          float dir_z, float up_x,
                                          float up_y, float up_z); /* 00475470 */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);              /* 004754c0 */
-int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+void ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3]); /* 00475500 */
 void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* parent);        /* 00475710 */

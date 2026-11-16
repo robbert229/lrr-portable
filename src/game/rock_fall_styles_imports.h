@@ -26,14 +26,10 @@ struct Lego_Level;
 struct Lego_Object;
 
 struct Lego_Level* level_current_owner_get(void); /* 00431560 Lego_GetLevel */
-/* 00431570 Lego_GetMap takes no arguments. lego_unit.c defines it with the
- * port's two ignored cell arguments, so the C matching build calls it
- * through an unprototyped function type, which pushes none, as the original
- * does; the native C++ compile goes through lego_port.cpp's adapter (as
- * weapons_imports.h). */
-void* level_current_terrain_get(int cell_x, int cell_y);          /* 00431570 */
+/* 00431570 Lego_GetMap takes no arguments. */
+void* level_current_terrain_get(void);          /* 00431570 */
 #define EFFECT_LEGO_GET_MAP() \
-    ((TerrainMap*)level_current_terrain_get(0, 0))
+    ((TerrainMap*)level_current_terrain_get())
 
 /* GAME-023 LegoObject.c (legoobject_unit.h, entity.hpp). */
 void legoobject_spatial_callback_query_at_optional_coordinate(
@@ -46,7 +42,7 @@ void legoobject_transform_position_get(struct Lego_Object* obj, float* outX,
 void* entity_type_component_get(const void* entity_record);      /* 0044a200 */
 
 /* gods98 Container.c (view.hpp). */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);             /* 004754c0 */
 
 #ifdef __cplusplus

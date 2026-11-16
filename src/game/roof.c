@@ -111,7 +111,7 @@ void roof_set_block_roof_vertices(unsigned int bx, unsigned int by,
     if (block->flags & ROOF_FLAG_NOGROUP) {
         faceData[0] = 0; faceData[1] = 1; faceData[2] = 3;
         faceData[3] = 1; faceData[4] = 2; faceData[5] = 3;
-        if ((block->groupID = mesh_record_allocate_or_append(roofGlobs.contMesh, 4, 2, 3, (const unsigned short*)faceData)) != -1) {
+        if ((block->groupID = mesh_record_allocate_or_append(roofGlobs.contMesh, 4, 2, 3, faceData)) != -1) {
             animated_texture_frame_set(roofGlobs.contMesh, block->groupID, roofGlobs.texture);
             container_mesh_perspective_correction_set(roofGlobs.contMesh, block->groupID, 1);
             container_mesh_hide_group(roofGlobs.contMesh, block->groupID, 1);

@@ -73,7 +73,7 @@ int nerpfunc_set_objective_switch(unsigned int* stack);           /* 004567c0 */
 #define objective_osf_store_adapter object_recall_snapshot
 #define objective_osf_restore_adapter object_recall_restore
 void objective_osf_store_adapter(void);                           /* 004592e0 */
-void objective_osf_restore_adapter(void);                         /* 00459360 */
+int objective_osf_restore_adapter(void);                         /* 00459360 */
 /* GAME-037 Reward.c (reward.c). */
 int reward_level_start(void);                                     /* 00460220 */
 void reward_score_add(float value);                               /* 00462800 */
@@ -113,7 +113,7 @@ void image_surface_blit_transformed(struct TextureSurface* surface,
                                     float high_green, float high_blue); /* 0047dbf0 */
 /* Image_GetScreenshot (0047e300) has no port entry with the original's
  * contract: an unannotated adapter in objective_port.cpp. */
-int objective_image_get_screenshot_adapter(void* image, unsigned int xsize,
+void objective_image_get_screenshot_adapter(void* image, unsigned int xsize,
                                            unsigned int ysize);  /* 0047e300 */
 /* gods98 Input.c (input). */
 void input_cursor_client_position_set(int x, int y);              /* 0047f0d0 */

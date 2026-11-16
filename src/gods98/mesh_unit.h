@@ -44,17 +44,17 @@ struct Model;
 
 void* mesh_clone(void* mesh, void* frame);
 
-struct Model* lwo_model_entry_load(const char* path, void* flags,
-                                   void* context);
+struct Model* lwo_model_entry_load(const char* path, void* frame,
+                                   int noTextures);
 
 int mesh_texture_time_set(void* mesh, float time);
 
 void mesh_remove(void* mesh, void* frame);
 
-uint32_t pointer_value_get(const void* pointed);
+unsigned long pointer_value_get(const void* pointed);
 
-uint32_t mesh_group_material_values_set(void* mesh, int group,
-                                        float value, int type);
+uint32_t mesh_group_material_values_set(void* mesh, unsigned long group,
+                                        float value, unsigned long type);
 
 #ifdef __cplusplus
 }

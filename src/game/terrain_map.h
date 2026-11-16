@@ -355,7 +355,7 @@ ModelEntryRecord* model_primitive_record_create(ModelEntryRecord* previous,
 ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head);
 /* FUN_00451bc0 MeshLOD_SwapTarget. */
 void resource_list_update_matching_key(void* list, void* library,
-                                       void* update_value,
+                                       int restore,
                                        unsigned int key);
 /* FUN_00451c30 MeshLOD_RemoveTargets. */
 void linked_record_field4_clear(void* record);

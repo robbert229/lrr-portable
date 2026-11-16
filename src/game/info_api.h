@@ -27,7 +27,7 @@ void lego_game_speed_set(float speed);                          /* 00425ce0 lego
 void lego_goto_info(void* object, const int* blockPos, int force);
 int pointer_cursor_config_parse_target(const char* name,
                                        int* index_out);         /* 0045cbd0 */
-uint32_t indexed_global_value_at_get(int index);                /* 0045cc10 */
+struct Image* indexed_global_value_at_get(int index);          /* 0045cc10 */
 void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
                                    uint32_t* out_y);            /* 00463ea0 */
 void indexed_text_metrics_pair_set(int index, uint32_t x,

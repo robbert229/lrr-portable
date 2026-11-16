@@ -19,22 +19,22 @@ void* container_load(void* parent, const char* filename,
 void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object); /* 00472a40 */
 void* entity_visual_resource_load(void* scene_object);              /* 00473690 */
 void scene_render_lock_toggle(void* scene_object, int enabled);     /* 00473b40 */
-int animated_texture_frame_count(const void* texture);              /* 00474a20 */
-unsigned int lwo_layer_polygon_vertex_data_read(void* object, int block,
-                                                int first_vertex, int count,
+unsigned long animated_texture_frame_count(const void* texture);              /* 00474a20 */
+unsigned long lwo_layer_polygon_vertex_data_read(void* object, unsigned long block,
+                                                unsigned long first_vertex, unsigned long count,
                                                 void* output);      /* 00474cc0 */
-void container_mesh_set_vertices(void* mesh, unsigned int group,
-                                 unsigned int index, unsigned int count,
+unsigned long container_mesh_set_vertices(void* mesh, unsigned long group,
+                                 unsigned long index, unsigned long count,
                                  const void* vertices);             /* 00474d30 */
-void animated_texture_frame_set(void* texture, unsigned int frame_index,
+void animated_texture_frame_set(void* texture, unsigned long frame_index,
                                 const void* frame_state);           /* 00474da0 */
 void container_mesh_perspective_correction_set(void* mesh,
-                                               unsigned int group, int on); /* 00474e30 */
+                                               unsigned long group, int on); /* 00474e30 */
 void render_object_set_packed_rgba_from_float_channels(
     void* scene_object, float red, float green, float blue, float alpha); /* 004750b0 */
-int ddiscene_object_position_set(void* object, void* alternate_frame,
+void ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z);        /* 00475430 */
-int ddiscene_object_pose_method_dispatch(void* object,
+void ddiscene_object_pose_method_dispatch(void* object,
                                          void* alternate_frame,
                                          float dir_x, float dir_y,
                                          float dir_z, float up_x,
@@ -56,13 +56,13 @@ void* detail_container_load_texture2_adapter(const char* fname,
                                              unsigned int* width,
                                              unsigned int* height); /* 004744f0 */
 void detail_container_free_texture_adapter(void* texture);          /* 00474710 */
-void detail_container_mesh_get_group_adapter(void* cont, unsigned int group,
-                                             unsigned int* vertexCount,
-                                             unsigned int* faceCount,
-                                             unsigned int* vPerFace,
-                                             unsigned int* faceDataSize,
-                                             unsigned int* faceData); /* 00474c40 */
-void detail_container_mesh_scale_adapter(void* cont, float x, float y,
+int detail_container_mesh_get_group_adapter(void* cont, unsigned long group,
+                                            unsigned long* vertexCount,
+                                            unsigned long* faceCount,
+                                            unsigned long* vPerFace,
+                                            unsigned long* faceDataSize,
+                                            unsigned long* faceData); /* 00474c40 */
+int detail_container_mesh_scale_adapter(void* cont, float x, float y,
                                          float z);                  /* 00474e90 */
 void detail_container_inverse_transform_adapter(void* cont, void* dest,
                                                 const void* src);   /* 00475090 */

@@ -214,7 +214,7 @@ void info_compile_text(char* text, char** outText)
             }
             name[i] = '\0';
             if (pointer_cursor_config_parse_target(name, &pointerType)) {
-                image = (int)indexed_global_value_at_get(pointerType);
+                image = (int)(uintptr_t)indexed_global_value_at_get(pointerType);
             } else if (info_get_type(name, &type)) {
                 image = (int)(uintptr_t)info_get_image(type);
             }

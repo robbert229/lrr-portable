@@ -30,8 +30,8 @@ int frontend_enabled(BlockFile* cfg);                       /* 00416d00 */
 int save_slot_open(void);                                   /* 00416d50 */
 int is_in_game(void);                                       /* 00416d60 */
 int* active_object_list_word(void);                         /* 00416e00 */
-void* current_selection_context_get(void);                  /* 00417fe0 */
-void current_selection_context_set(void* context);          /* 00417ff0 */
+int current_selection_context_get(void);                    /* 00417fe0 */
+void current_selection_context_set(int isLoadSaveMenu);     /* 00417ff0 */
 void pointer_cursor_draw_target(uint32_t x, uint32_t y);    /* 0045cc70 */
 
 struct SavListWindow;
@@ -39,7 +39,7 @@ int front_level_set_index_of(const struct SavListWindow* win,
                              const char* name);             /* 00416e20 */
 /* Front_Save_CopySaveData (00418040) in the original ABI; unannotated
  * adapter (frontend_unit.cpp). */
-int front_campaign_snapshot_create(void* snapshot);
+void front_campaign_snapshot_create(void* snapshot);
 
 /* FrontEnd.c state without a port owner. Port globals stand in (end of
  * frontend_unit.cpp); nothing in the port sets them yet. */

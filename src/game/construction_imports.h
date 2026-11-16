@@ -60,13 +60,9 @@ int always_accept_place_command_cell(void);
 int always_accept_place_command_cell();
 #define CONSTRUCTION_BLOCK_IS_PATH(pos) always_accept_place_command_cell(pos)
 #endif
-/* 00431570 Lego_GetMap takes no arguments. lego_unit.c defines it with the
- * port's two ignored cell arguments, so the C matching build calls it
- * through an unprototyped function type, which pushes none, as the original
- * does; the native C++ compile goes through lego_port.cpp's adapter (as
- * fallin_imports.h). */
+/* 00431570 Lego_GetMap takes no arguments. */
 #define CONSTRUCTION_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get(0, 0))
+    ((struct TerrainMap*)level_current_terrain_get())
 /* GAME-023 LegoObject.c (legoobject_unit.c; the rest in legoobject_unit.h). */
 void legoobject_dispatch_event5_and_set_flag(Lego_Object* obj);       /* 00447b00 */
 /* GAME-027 Message.c (message.h). */

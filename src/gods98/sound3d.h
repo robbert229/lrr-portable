@@ -45,7 +45,7 @@ int sound_bank_entry_release(int slot);
 /* Sound3D_Update listener tick (FUN_0047aba0): move the listener to the
  * listener frame. The context is the port's ticker argument; the original
  * takes none. */
-void simtick_sound_keepalive(struct EngineContext* c);
+void simtick_sound_keepalive(void);
 
 /* Sound3D_Play2 (FUN_0047ad70): play a sample attached to a frame (mode
  * 0), at a world position (mode 1) or without 3D (mode 2); returns the

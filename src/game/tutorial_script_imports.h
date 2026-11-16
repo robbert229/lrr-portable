@@ -134,7 +134,7 @@ void camera_project_point_to_screen(
 
 /* G98-002 Container.c: Container_GetPosition by its matching-build link
  * name (container_link_names.h); natively the port's view.cpp serves it. */
-int ddiscene_object_position_get(void* object, void* reference,
+void ddiscene_object_position_get(void* object, void* reference,
                                  float* position);          /* 004754c0 */
 
 /* G98 Flic.c (flic_unit.cpp): the NERPs function table's "True" row. */
@@ -178,8 +178,8 @@ int grid_record_count_difference_get(int row, int column, int slot,
 unsigned int legoobject_global_animation_state_get(void);   /* 00438390 */
 void legoobject_global_animation_state_set(unsigned int state); /* 004383a0 */
 void entity_activity_scene_state_update_retail(void);       /* 00439990 */
-void* predug_spawn_coordinate_select_and_create(int source_object,
-                                                int type);  /* 0043ad50 */
+void* predug_spawn_coordinate_select_and_create(void* originObj,
+                                                int id);     /* 0043ad50 */
 void entity_action_sequence_reset(struct Lego_Object* entity,
                                   int preserve_mode);       /* 00441940 */
 int entity_type3_flag04000000_test(const struct Lego_Object* e); /* 004436f0 */

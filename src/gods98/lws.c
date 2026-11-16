@@ -834,7 +834,7 @@ void* lws_mesh_load(const char* baseDir, const char* fname, LPDIRECT3DRMFRAME3 f
         mesh_clone(mesh, frame);
         return mesh;
     }
-    if ((mesh = lwo_model_entry_load(path, frame, (void*)(long)noTextures)) != NULL) {
+    if ((mesh = lwo_model_entry_load(path, frame, noTextures)) != NULL) {
         pair_table_append(lwsGlobs.meshPathList, &lwsGlobs.meshPathCount, path, mesh);
         return mesh;
     }
@@ -845,7 +845,7 @@ void* lws_mesh_load(const char* baseDir, const char* fname, LPDIRECT3DRMFRAME3 f
             mesh_clone(mesh, frame);
             return mesh;
         }
-        if ((mesh = lwo_model_entry_load(path, frame, (void*)(long)noTextures)) != NULL) {
+        if ((mesh = lwo_model_entry_load(path, frame, noTextures)) != NULL) {
             pair_table_append(lwsGlobs.meshPathListShared, &lwsGlobs.meshPathCountShared, fname, mesh);
             return mesh;
         }

@@ -232,7 +232,7 @@ void damage_font_display_damage_over_live_object(struct Lego_Object* liveObj,
                 (void*)damage_font_mesh_render_callback, 0x3000, data, 0);
             for (i = 0; i < 4; i++) {
                 mesh_record_allocate_and_fill((struct MeshRecordPool*)data->mesh,
-                                              4, 2, 3, (const uint16_t*)indices);
+                                              4, 2, 3, indices);
             }
         } else {
             ddiscene_scene_object_attach_or_unlink(

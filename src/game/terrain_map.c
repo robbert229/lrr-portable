@@ -98,7 +98,7 @@ TerrainMap* terrain_map_create(void* root, const char* filename,
                     for (i = 0; i < map->gridWidth * map->gridHeight; i++) {
                         group = mesh_record_allocate_or_append(
                             map->mesh, 4, 2, 3,
-                            (const unsigned short*)faceData);
+                            faceData);
                         container_mesh_hide_group(map->mesh, group, 1);
                         animated_texture_frame_bind(map->mesh, group, 3);
                     }
@@ -231,7 +231,7 @@ void terrain_map_block_texture_fade_set(TerrainMap* map, unsigned int bx,
                 if (transition->groupID == -1) {
                     transition->groupID = mesh_record_allocate_or_append(
                         map->transMesh, 4, 2, 3,
-                        (const unsigned short*)faceData);
+                        faceData);
                 }
                 else {
                     container_mesh_hide_group(map->transMesh,
@@ -1724,7 +1724,7 @@ ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head)
 
 // FUNCTION: LEGORR 0x00451bc0
 void resource_list_update_matching_key(void* list, void* library,
-                                       void* update_value,
+                                       int restore,
                                        unsigned int key)
 {
     ModelEntryRecord* record;
@@ -1738,7 +1738,7 @@ void resource_list_update_matching_key(void* list, void* library,
             }
             if (record->instance) {
                 interface_array_forward_sync(record->instance, record->object,
-                                             update_value);
+                                             restore);
             }
         }
     }

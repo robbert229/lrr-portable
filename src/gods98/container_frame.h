@@ -24,14 +24,12 @@ extern "C" {
  * arguments; the macro passes the last one, 0, as the original does. A
  * macro and an unnamed parameter leave sound3d.c's symbol numbering as it
  * was (finding 538). */
-void ddiscene_animation_hook_create(void* scene_object, int callback,
-                                    const char* name,
-                                    const uint32_t* value_0c, int value_08,
-                                    const uint32_t* value_10,
-                                    const uint32_t* value_14,
-                                    int value_18, int value_24,
-                                    const uint32_t* value_20,
-                                    const uint32_t*);
+void ddiscene_animation_hook_create(void* frame, void* owner,
+                                    void* animClone, const char* asfname,
+                                    unsigned long* frameCount,
+                                    const char* frameName, float* currTime,
+                                    float* transCo, const char* actSample,
+                                    void* soundRecord, unsigned long*);
 #define ddiscene_animation_hook_create(a, b, c, d, e, f, g, h, i, j) \
     ddiscene_animation_hook_create(a, b, c, d, e, f, g, h, i, j, 0)
 

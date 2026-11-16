@@ -99,7 +99,7 @@ extern uint32_t legoGlobs_flags1;                         /* 00556ecc */
 extern struct BuildingModel* legoGlobs_buildingData; /* 005561e0 */
 /* AITask.c (cmd.hpp, aitask.cpp). */
 void argument_callback_dispatch(void* arg);                     /* 00402aa0 */
-void cmd_create_task(struct Lego_Object* e, int32_t parameter);  /* 00402720 */
+void cmd_create_task(struct Lego_Object* e, float timeIn);       /* 00402720 */
 void task_callback_dispatch(void* payload);                     /* 00403a10 */
 void entity_drain_command_chain(struct Lego_Object* e);          /* 00403a50 */
 /* Bubble.c (ai.hpp, bubbles.cpp). */
@@ -123,7 +123,7 @@ void info_send(int type, char* text, void* object,
 /* Lego.c: 0042dfc0 is lego_unit.c's (lego_unit.h, C linkage); 00431570 is
  * an adapter at the end of lego.cpp. */
 void lego_object_pointer_registry_clear_match(void* object);    /* 0042dfc0 */
-void* level_current_terrain_get(int cell_x, int cell_y); /* 00431570 */
+void* level_current_terrain_get(void); /* 00431570 */
 /* LegoObject.c part 3 (entity.hpp, legoobject_port.cpp). */
 void legoobject_type_four_callback_dispatch(Lego_Object* obj); /* 00447900 */
 /* Map3D.c (terrain_map.h). */
@@ -160,7 +160,7 @@ void* construction_place_building(int objID, int* blockPos,
 /* Matching build: NERPs.c's 00454880 itself (tutorial_script.c), which the
  * original calls with the object's type it does not read (issue #730). */
 #define legoobject_gb_tutorial_counter_increment_adapter nerps_monster_destroyed
-void legoobject_gb_tutorial_counter_increment_adapter(int type);   /* 00454880 */
+void legoobject_gb_tutorial_counter_increment_adapter(void);      /* 00454880 */
 
 /* ---- group C ---- */
 /* legoGlobs stand-ins defined in lego_unit.c (GAME-021). */
@@ -179,10 +179,10 @@ int sound_subsystem_enabled(void);                            /* 00465370 */
 void sound_subsystem_enable_set(int enable, int stop_active); /* 00465260 */
 void* entity_visual_resource_load(void* scene_object);        /* 00473690 */
 void scene_object_owner_set(void* scene_object, void* owner);   /* 00473da0 */
-int animated_texture_frame_count(const void* texture);        /* 00474a20 */
-void scene_mesh_color_set(void* object, int block, float red, float green,
+unsigned long animated_texture_frame_count(const void* texture);        /* 00474a20 */
+void scene_mesh_color_set(void* object, unsigned long block, float red, float green,
                           float blue);                        /* 00474ff0 */
-void scene_mesh_color_and_alpha_set(void* object, int block, float red,
+void scene_mesh_color_and_alpha_set(void* object, unsigned long block, float red,
                                     float green, float blue,
                                     float alpha);             /* 00475020 */
 /* FlicOpcode25SuccessStub (flic.hpp): six bytes that return 1. The
@@ -256,7 +256,7 @@ int lego_upgrade_resource_check(int ore);           /* 0041f900 */
 void lego_upgrade_resource_debit(int ore, int amount); /* 0041f9e0 */
 /* 00431570 takes no argument; the port's entry takes two ignored cells
  * (adapter at the end of lego.cpp). */
-void* level_current_terrain_get(int cell_x, int cell_y); /* 00431570 */
+void* level_current_terrain_get(void); /* 00431570 */
 /* Info.c (info_unit.c). */
 void info_send(int type, char* text, void* object,
                struct InfoPoint2I* blockPos);       /* 00419b80 */
@@ -283,7 +283,7 @@ uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
 uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
                               int reject_masked);   /* 0046cf40 */
 /* Container.c (container_unit.cpp). */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]); /* 004754c0 */
 /* Effects (rock_fall_styles.cpp). */
 int lava_effect_select_and_place(int slot, const float* position,
@@ -374,10 +374,9 @@ const char* string_path_join(const char* root, ...);                         /* 
 char* block_get_str_copy(struct BlockRec* root, const char* path);           /* 00479050 */
 /* GAME-021 (lego_unit.c). */
 void global_object_field98_clear_current(void);                              /* 0041f8c0 */
-/* Lego_GetMap (00431570) takes no argument; the port's entry (level.hpp)
- * takes two it ignores. A cdecl call without them is the original's. */
-void* level_current_terrain_get(int cell_x, int cell_y);                     /* 00431570 */
-#define Lego_GetMap() ((struct TerrainMap*)((void* (*)(void))level_current_terrain_get)())
+/* Lego_GetMap (00431570) takes no argument. */
+void* level_current_terrain_get(void);                     /* 00431570 */
+#define Lego_GetMap() ((struct TerrainMap*)level_current_terrain_get())
 uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);      /* 00432b50 */
 /* Matching build: lego_unit.c's original-shape entry (finding 571). */
 int lego_terrain_cell_route_and_occupancy_check(struct Lego_Object* liveObj,
@@ -438,12 +437,12 @@ void global_object_field8c_subtract(int amount);                            /* 0
 void lego_upgrade_resource_debit(int ore, int amount);                      /* 0041f9e0 */
 /* G98 Container.c (view.hpp, container.h). */
 void* scene_object_indexed_secondary_handle_get_or_create(void* record, int index); /* 00408810 */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);                         /* 004754c0 */
 uint32_t scene_action_name_set(void* scene_object, const char* action_name); /* 00473370 */
 /* GAME-027 Message.c (cmd.hpp). */
 void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair);          /* 00452060 */
-int ddiscene_object_position_set(void* object, void* alternate_frame,
+void ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z);                 /* 00475430 */
 /* GAME-002 AITask.c (cmd.hpp, entity.hpp; defined in aitask.cpp). */
 void entity_command_unlink_by_kind(struct Lego_Object* e, int type,
@@ -453,7 +452,7 @@ void entity_activity_record_remove_by_type(void* entity, int type,
 /* GAME-021 Lego.c (level.hpp; port models in lego.cpp). */
 int terrain_cell_state_equals_six_current(const int cell_xy[2]);            /* 00432f00 */
 uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy, int mode);   /* 00432aa0 */
-int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+void ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3]);        /* 00475500 */
 /* LegoObject.c part 3 (ai.hpp). */
 int legoobject_activity_register_bookkeeping(Lego_Object* obj); /* 00447c40 */
@@ -620,9 +619,9 @@ uint32_t scene_action_name_set(void* scene_object, const char* action_name); /* 
 void* entity_visual_resource_load(void* scene_object);                     /* 00473690 */
 void scene_render_lock_toggle(void* scene_object, int enabled);            /* 00473b40 */
 float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 00475140 */
-int ddiscene_object_position_set(void* object, void* alternate_frame,
+void ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z);                /* 00475430 */
-int ddiscene_object_pose_method_dispatch(void* object, void* alternate_frame,
+void ddiscene_object_pose_method_dispatch(void* object, void* alternate_frame,
                                          float parameter_3, float parameter_4,
                                          float parameter_5, float parameter_6,
                                          float parameter_7,
@@ -636,7 +635,7 @@ void* scene_object_primary_handle_get_or_create(void* record);             /* 00
 void lego_level_resource_balance_add_and_sound(int ore);                   /* 0041f9a0 */
 void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair);         /* 00452060 */
 uint32_t stats_instance_word_at_ec(const void* config_block);              /* 00469bb0 */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);                        /* 004754c0 */
 /* 0043f130-0043f6a0's callees. */
 extern unsigned int legoGlobs_f_556514;   /* lego_unit.c, 00556514 objTeleportQueue count */
@@ -670,7 +669,7 @@ uint32_t entity_indexed_record_word_at_b4_get(int group, int index,
                                               int slot);                    /* 00469af0 */
 uint32_t stats_table_word_at_148(int type, int row);                       /* 00469ee0 */
 void six_resource_slots_set_state(const void* record, uint32_t flag);      /* 0046cfc0 */
-int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+void ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3]);       /* 00475500 */
 /* 0043f7d0's callees. */
 extern uint32_t s_panel_highlight_flags;  /* engine.cpp, 00556ed0 legoGlobs.flags2 */
@@ -731,7 +730,7 @@ void* renderer_cached_handle_40_get_or_create(void* object);          /* 00406fb
 int renderer_cached_handle_4c_is_not_one(struct AnimationObject* object); /* 00407040 */
 void type2_timed_registry_insert(struct Lego_Object* record);          /* 004074b0 */
 void set_type2_object_record_value(struct Lego_Object* record,
-                                   uint32_t value);                   /* 00407510 */
+                                   float timer);                     /* 00407510 */
 void* terrain_descriptor_find_exact_current(const uint32_t* pair_key,
                                             const uint32_t* single_key); /* 004090c0 */
 void simtick_selection_group_release(const uint32_t key_pair[2]);    /* 00409110 */
@@ -759,18 +758,16 @@ int terrain_cell_walkable_flag_current(uint32_t cx, uint32_t cy);     /* 00432bd
 int terrain_cell_speed_class_current(const int cell_xy[2]);           /* 00432c50 */
 uint32_t terrain_cell_flag_20_bounded_current(uint32_t cx, uint32_t cy); /* 00432d90 */
 void level_tile_mark_current_target(const int cell_xy[2], int set);   /* 00432e00 */
-/* Matching build: lego_unit.c's 00433be0 and 00433c10 themselves; the one
- * caller of 00433be0 already casts away the port's context argument
- * (finding 626). */
+/* lego_unit.c's 00433be0 and 00433c10 themselves (finding 626). */
 #define current_level_terrain_grid_pick lego_current_level_terrain_grid_pick
 #define entity_neighbor_blocked_cell_step_probe lego_entity_neighbor_blocked_cell_step_probe
-void current_level_terrain_grid_pick(struct EngineContext* ctx, float x, float y,
-                                     int* gx, int* gy);               /* 00433be0 */
+int current_level_terrain_grid_pick(float x, float y, int* gx,
+                                    int* gy);                         /* 00433be0 */
 int entity_neighbor_blocked_cell_step_probe(struct Lego_Object* entity,
                                             float cadence, int mode); /* 00433c10 */
 int terrain_cell_drill_work_add_current(int x, int y, float divisor,
                                         float elapsed);               /* 00434570 */
-void panel_selection_highlight_toggle(struct EngineContext* ctx, int on);             /* 00435aa0 */
+void panel_selection_highlight_toggle(int on);                        /* 00435aa0 */
 /* Matching build: lego_unit.c's 00435aa0 itself, already declared above
  * (lego_panel_selection_highlight_toggle_adapter). After the declaration,
  * so only the use changes and the symbol counter does not move (#805,
@@ -797,16 +794,16 @@ uint32_t entity_stats_word_atc8(const struct Lego_Object* e);          /* 00469f
 float entity_stats_float_atf4(const struct Lego_Object* e);            /* 0046a080 */
 float entity_speed_component_get(const struct Lego_Object* e);         /* 0046a0a0 */
 uint32_t stats_table_word_at_100(int type, int row, int stride_index); /* 0046a0f0 */
-void scene_object_attached_resource_release(void* record);           /* 0046d1a0 */
+float scene_object_attached_resource_release(void* record);          /* 0046d1a0 */
 int object_pair_ray_hit_check(void* first, void* second);             /* 004718d0 */
 int entity_flag100_and_shared_eligibility_check(const struct Lego_Object* e); /* 00471ce0 */
-int entity_velocity_slot_dispatch(void* entity, void* argument);      /* 00471fc0 */
+int entity_velocity_slot_dispatch(void* entity, float elapsed);       /* 00471fc0 */
 int entity_centers_within_configured_radius(const struct Lego_Object* first,
                                             const struct Lego_Object* second); /* 00472080 */
 float ddiscene_advance_by_time_target(void* scene_object, float delta); /* 00475120 */
 float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 00475140 */
 void ddiscene_apply_act_frame_timing(void* scene_object);            /* 00475300 */
-int ddiscene_object_pose_method_dispatch(void* object, void* alternate_frame,
+void ddiscene_object_pose_method_dispatch(void* object, void* alternate_frame,
                                          float parameter_3, float parameter_4,
                                          float parameter_5, float parameter_6,
                                          float parameter_7, float parameter_8); /* 00475470 */
@@ -835,10 +832,9 @@ struct SceneResourceAnimationRecord;
 
 /* LegoObject_GetCarryNull?: legoobject_visual_resource_get_or_create
  * (0043a5f0) returns the object's carry null or, failing that, its
- * activity container; part 1 declares it void (its result is the last
- * call's), so group K reads the result through a cast. */
+ * activity container. */
 #define legoobject_k_carry_null_get(obj) \
-    (((void* (*)(Lego_Object*))legoobject_visual_resource_get_or_create)(obj))
+    legoobject_visual_resource_get_or_create(obj)
 
 /* Maths_Vector3DModulus (Maths.h inline; the unit includes <math.h>). */
 #define legoobject_vector3d_modulus(v) \
@@ -863,14 +859,14 @@ int sound_alias_lookup(const char* name, int* out_index);            /* 00464c70
 int sound_submission_route_wrapper(const void* wrapped_position, int alias,
                                    int loop, int positional,
                                    const float* xyz);                /* 00465050 */
-double sound_object_duration_get(int alias);                         /* 00465160 */
+float sound_object_duration_get(int alias);                          /* 00465160 */
 /* GAME-043 Stats.c (entity.hpp, entity_stats.cpp). */
 uint32_t stats_instance_word_at_f0(const void* config_block);        /* 00469be0 */
 /* GAME-047 Vehicle.c (resource.hpp, vehicle_model.cpp): Vehicle_GetCarryNull. */
 void* attached_entity_slot_object_get(struct SceneResourceAnimationRecord* record,
                                       int index);                    /* 0046db20 */
 /* G98 Container.c (scene_resources.hpp, container_unit.cpp): Container_Texture_SetSurface?. */
-void animated_texture_frame_set(void* texture, uint32_t frame_index,
+void animated_texture_frame_set(void* texture, unsigned long frame_index,
                                 const void* frame_state);            /* 00474da0 */
 
 /* ---- group L (part 2, issue #588) ---- */
@@ -928,7 +924,7 @@ int object_flight_curve_record_init(void* owner, const float start[3],
                                     const float end[3], uint32_t auxiliary,
                                     uint32_t mode);                  /* 0046fc70 */
 /* G98 Container.c (view.hpp): Container_SetOrientation. */
-int ddiscene_object_pose_method_dispatch(void* object, void* alternate_frame,
+void ddiscene_object_pose_method_dispatch(void* object, void* alternate_frame,
                                          float parameter_3, float parameter_4,
                                          float parameter_5, float parameter_6,
                                          float parameter_7, float parameter_8); /* 00475470 */
@@ -938,11 +934,10 @@ float* d3drm_vector_rotate(float* r, float* v, float* axis, float theta); /* 004
 /* ---- group M (part 2, issue #588) ---- */
 /* GAME-002 AITask.c (aitask.c). */
 void aitask_entity_pending_task_flag_clear(struct Lego_Object* object);      /* 00403b40 */
-/* 0040c5b0 (resource.hpp, rock_fall_styles.cpp): the original returns the
- * container it creates for the block; the unit calls the port's entry
- * through a cast. */
-int scene_resource_slot_register_name(uint32_t handle_key,
-                                      uint32_t secondary_key);               /* 0040c5b0 */
+/* 0040c5b0 Effect_FindRockFallPart (rock_fall_styles.c): the container
+ * it creates for the block. */
+void* scene_resource_slot_register_name(unsigned int bx,
+                                        unsigned int by);                    /* 0040c5b0 */
 /* GAME-021 Lego.c (level.hpp, lego.cpp). */
 uint32_t terrain_cell_flag_800_bounded_current(uint32_t cx, uint32_t cy);    /* 00432b00 */
 /* GAME-021 Lego.c (lego_unit.h; level.hpp, lego.cpp). */
@@ -1053,7 +1048,7 @@ float entity_indexed_float_lookup_with_minus_one_fallback(
 /* G98 Container.c (view.hpp): Container_GetAnimationTime and
  * Container_GetAnimationFrames. */
 float ddiscene_object_length_get(void* scene_object);              /* 00475390 */
-uint32_t ddiscene_object_frame_position_get(void* scene_object);   /* 004753f0 */
+unsigned long ddiscene_object_frame_position_get(void* scene_object);   /* 004753f0 */
 /* LegoObject.c part 3 (issue #615): the unit's own function. */
 void legoobject_pairing_activity_raise_and_mutual_link(Lego_Object* first,
                                                        Lego_Object* second); /* 0044b250 */
