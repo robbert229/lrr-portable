@@ -22,6 +22,7 @@
 #include "dxerror.h"
 
 #include <miniwin/d3drm.h>
+#include "gods98/container_record.h"
 
 #define VIEWPORT_MAXLISTS 32
 #define VIEWPORT_FLAG_INITIALISED 0x00000001
@@ -33,10 +34,7 @@ typedef struct VpArea2F {
     float height;
 } VpArea2F;
 
-/* Container.c's Container: its master frame is the first word. */
-typedef struct Container {
-    LPDIRECT3DRMFRAME3 masterFrame;
-} Container;
+/* Container.c's Container (gods98/container_record.h). */
 
 /* Container.c's frame app data: its owning container is the first word. */
 typedef struct VpAppData {

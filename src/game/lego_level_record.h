@@ -29,7 +29,7 @@ typedef struct Lego_Level {
     struct TerrainMap* map;         /* +0x004 Map3D */
     void* emergeMap;                /* +0x008 the emerge triggers */
     uint32_t f_00c;                 /* +0x00c the emerge trigger count */
-    uint32_t f_010;                 /* +0x010 */
+    void* rewardKey;                /* +0x010 reward_level_get's key */
     uint32_t width;                 /* +0x014 */
     uint32_t height;                /* +0x018 */
     float blockSize;                /* +0x01c */
@@ -46,7 +46,7 @@ typedef struct Lego_Level {
     void** f_080;                   /* +0x080 tile meshes, f_074 * f_078 */
     void* f_084;                    /* +0x084 radar map record */
     struct LegoBlockActivity2F* f_088; /* +0x088 the block activities */
-    int f_08c;                      /* +0x08c */
+    int f_08c;                      /* +0x08c Reward.c: crystals */
     uint32_t f_090;                 /* +0x090 */
     int f_094;                      /* +0x094 NERPs: crystals picked up */
     int f_098;                      /* +0x098 */

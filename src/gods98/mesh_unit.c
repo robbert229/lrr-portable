@@ -179,23 +179,6 @@ struct Mesh_Group {
 };
 
 
-/* A mesh (0x34 bytes). */
-struct Mesh {
-    unsigned long groupCount;              /* +0x00 */
-    unsigned long listSize;                /* +0x04 */
-    Mesh_Group* groupList;                 /* +0x08 */
-    LPDIRECT3DRMUSERVISUAL uv;             /* +0x0c */
-    Mesh_RenderCallbackFunc renderCallback; /* +0x10 */
-    void* renderCallbackData;              /* +0x14 */
-    unsigned long renderFlags;             /* +0x18 */
-    Mesh_LightWave_Surface* lightWaveSurf; /* +0x1c */
-    unsigned long numOfRefs;               /* +0x20 */
-    Mesh* clonedFrom;                      /* +0x24 */
-    LPDIRECT3DRMFRAME3 frameCreatedOn;     /* +0x28 */
-    unsigned long flags;                   /* +0x2c */
-    Mesh* nextFree;                        /* +0x30 */
-};
-
 /* A post-render entry (0x48 bytes). */
 typedef struct Mesh_PostRenderInfo {
     Mesh* mesh;                            /* +0x00 */

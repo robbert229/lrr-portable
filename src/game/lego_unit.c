@@ -9330,10 +9330,10 @@ void lego_surface_type_descriptions_config_load(struct BlockRec* config,
     for (sfx = s_surface_type_values; sfx < &s_surface_type_values[18]; sfx++) {
         // STRING: LEGORR 0x004a4878
         if ((str = block_get_strptr(config, string_path_join(gameName, "SurfaceTypeDescriptions",
-                                                             ((const char**)sfx)[-36], 0))) != NULL) {
+                                                             legoGlobs_langSurface_name[sfx - s_surface_type_values], 0))) != NULL) {
             strcpy(buff, str);
             sound_variant_split((char*)str, argv, ",");
-            ((const char**)sfx)[-18] = formatted_text_escape_decode_and_emit(argv[0]);
+            s_surface_type_names[sfx - s_surface_type_values] = formatted_text_escape_decode_and_emit(argv[0]);
             *sfx = sound_alias_lookup(argv[1], &sfxType) ? sfxType : 0;
         }
     }

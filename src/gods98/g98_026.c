@@ -13,7 +13,7 @@ typedef struct IndexedBitmapPaletteData {
     uint32_t indexed_flag;      /* +0x14: 0 for 8-bit, 1 otherwise */
     uint32_t scanline_stride;   /* +0x18 */
     const uint8_t* pixels;      /* +0x1c */
-    uint32_t reserved_20;       /* +0x20 = 0 */
+    void* reserved_20;          /* +0x20 = 0 (CntImage.buffer2) */
     uint32_t channel_fields[4]; /* +0x24..+0x30; 8-bit = 0xfc each */
     uint32_t palette_count;     /* +0x34 */
     uint32_t* palette;          /* +0x38 */
@@ -70,12 +70,12 @@ void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap, uint32_t size,
     output->flag_0c = 1;
     output->flag_08 = 1;
     output->pixels = bitmap + *(const uint32_t*)(bitmap + 10);
-    output->reserved_20 = 0;
+    output->reserved_20 = NULL;
 }
 
 // FUNCTION: LEGORR 0x00489d70
 void object_field_38_release_target(void* record)
 {
-    void* field = *(void**)((char*)record + 0x38);
+    void* field = ((IndexedBitmapPaletteData*)record)->palette;
     if (field != NULL) free(field);
 }

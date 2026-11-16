@@ -17,6 +17,7 @@
 #include "gods98/utils.h"
 #include "lego_unit.h"
 #include "reward.h"
+#include "frontend_record.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,10 +39,8 @@ extern uint32_t s_panel_highlight_flags;    /* 00556ed0 flags2 */
 
 /* GAME-017 FrontEnd.c's frontGlobs stand-ins (frontend_unit.c). */
 extern struct Front_Globs frontGlobs;
-#define frontGlobs_saveImageBigWidth \
-    (*(unsigned int*)((char*)&frontGlobs + 0x54c))  /* 0055750c */
-#define frontGlobs_saveImageBigHeight \
-    (*(unsigned int*)((char*)&frontGlobs + 0x550))  /* 00557510 */
+#define frontGlobs_saveImageBigWidth frontGlobs.saveImageBigWidth   /* 0055750c */
+#define frontGlobs_saveImageBigHeight frontGlobs.saveImageBigHeight /* 00557510 */
 
 /* GAME-001 Advisor.c (advisor.c). */
 int advisor_request_admit(int advisorType, int loop);             /* 004018c0 */

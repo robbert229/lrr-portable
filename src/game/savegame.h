@@ -34,7 +34,7 @@ extern "C" {
 struct GameContext;
 struct EngineContext;
 void sav_tree_load(void* node, void* window_base, void** blocks,
-                   uint32_t window, uint32_t flag,
+                   void* window, uint32_t flag,
                    const struct EngineContext* eng);        /* 004173e0 */
 int save_read_slot_target(uint32_t slot, void* slot_context, int mode); /* 00417a90 */
 void* sav_slot_ctx_target(int slot);                        /* 00417e50 */

@@ -31,6 +31,7 @@
 #include "vehicle_model.h"
 #include "vehicle_model_imports.h"
 #include "vehicle_model_record.h"
+#include "gods98/container_record.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -44,11 +45,9 @@ extern "C" {
 #define VEHICLE_FLAG_NOACTIVITY1 0x4 /* contAct1's animation is not moved */
 #define VEHICLE_FLAG_HOLDMISSING 0x8
 
-/* The part of a Container the unit reads: its type (+0x10; 1 is a mesh). */
-typedef struct Vehicle_Container {
-    unsigned char pad_00[0x10];
-    int type;                                     /* +0x10 */
-} Vehicle_Container;
+/* Container.c's container (gods98/container_record.h): the unit reads its
+ * type (1 is a mesh). */
+typedef struct Container Vehicle_Container;
 
 // FUNCTION: LEGORR 0x0046c3d0
 int vehicle_is_camera_flip_dir(VehicleModel* vehicle)
@@ -88,14 +87,8 @@ int vehicle_set_activity(VehicleModel* vehicle, const char* activityName,
     return result;
 }
 
-/* Matching build: activityName is an objectGlobs field (004de790 +0x534,
- * legoobject_globs.h, finding 662). objectGlobs is declared here, without
- * its struct, just before the one function that reads it, so the symbol
- * counter of the functions above does not move; it costs two symbols, and
- * the header would cost three. Deviation (scoring only). */
-extern struct LegoObject_Globs objectGlobs;
-#undef s_activity
-#define s_activity ((const char**)((char*)&objectGlobs + 0x534))
+/* activityName is an objectGlobs field (legoobject_globs.h, finding 662). */
+#include "legoobject_globs.h"
 /* Hang each shown upgrade part on its null and set its activity, and record
  * the weapon parts' fire and pivot nulls. Building.c's
  * Building_SetUpgradeActivity (004083a0) is the same code. */

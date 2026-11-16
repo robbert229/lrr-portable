@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "panel_unit.h"
+#include "lego_level_record.h"
 #include "frontend.h"
 #include "interface.h"
 #include "lego.h"
@@ -676,7 +677,7 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
 
         if (!clicked) return 1;
 
-        if (*(int*)((char*)level_current_owner_get() + 0x27c) == 0) {
+        if (((Lego_Level*)level_current_owner_get())->status == 0) {
             media_action_feedback_sound_dispatch(0);
             switch (panelType) {
             case PANEL_CAMERA_CONTROL:

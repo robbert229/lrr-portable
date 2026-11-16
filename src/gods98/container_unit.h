@@ -28,19 +28,11 @@
 #include <miniwin/d3drm.h>
 #include <miniwin/ddraw.h>
 
+#include "gods98/container_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-typedef struct Container Container;
-typedef struct Container_Texture Container_Texture;
-struct AnimClone;
-
-typedef void (*ContainerTriggerFrameCallback)(Container* cont, void* data);
-typedef void (*ContainerSoundTriggerCallback)(const char* sample,
-                                              Container* cont, void* data);
-typedef void (*ContainerActivityCallback)(Container* cont, void* data);
-typedef int (*ContainerWalkTreeCallback)(LPDIRECT3DRMFRAME3 frame, void* data);
 
 Container* Container_Initialise(const char* gameName);               /* 00472710 */
 void Container_Shutdown(void);                                       /* 00472800 */

@@ -20,6 +20,8 @@
 #include "legoobject_unit.h"
 #include "terrain_map.h"
 
+#include "gods98/container_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -124,9 +126,10 @@ int sound_submission_route_wrapper(const void* wrapped_position, int alias,
  * float, the port double (sound.hpp). */
 float sound_object_duration_get(int alias);                       /* 00465160 */
 
-/* gods98 Container.c and Mesh.c (view.hpp, surface.hpp, record.hpp). The
- * container's master frame is at +0x04. */
-#define WEAPONS_CONTAINER_FRAME(cont) (*(void**)((char*)(cont) + 0x4))
+/* gods98 Container.c and Mesh.c (view.hpp, surface.hpp, record.hpp). The frame
+ * these units hang meshes on is the container's activity frame (+0x04,
+ * gods98/container_record.h). */
+#define WEAPONS_CONTAINER_FRAME(cont) ((void*)((struct Container*)(cont))->activityFrame)
 int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);              /* 004754c0 */
 int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,

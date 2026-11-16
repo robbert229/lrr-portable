@@ -37,6 +37,7 @@
 #include "lego_level_record.h"
 #include "legoobject_record.h"
 #include "entity_stats.h"
+#include "camera_control.h"
 
 /* The unit's functions have C linkage in the native C++ compile too: the
  * port tail's adapters and the shared entry expect it. */
@@ -4205,7 +4206,7 @@ int nerps_tutorial_action_callback(NERPs_BlockPointer* blockPointer,
         lego_viewport_target_position_clamp(NULL, &blockPos.x, 1);
         return 1;
     case 6: /* GetCameraAtTutorial */
-        ddiscene_object_position_get(*(void**)((char*)s_zoom_step_context + 0x2c),
+        ddiscene_object_position_get(s_zoom_step_context->contListener,
                                      NULL, &cameraPos.x);
         terrain_map_world_to_block(level->map, cameraPos.x, cameraPos.y,
                                    &cameraBlockPos.x, &cameraBlockPos.y);

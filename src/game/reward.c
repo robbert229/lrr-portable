@@ -17,6 +17,9 @@
 #include <stdio.h>
 
 #include "reward.h"
+#include "terrain_map.h"
+#include "frontend_record.h"
+#include "gods98/flic_record.h"
 #include "crt/crt.h"
 #include "crt/crt_mouse.h"
 #include "crt/vc5names.h"
@@ -50,8 +53,8 @@
 #include "reward_movie.h"
 #include "lego_globs.h"
 
-/* Flic.c's current frame (+0x624). The port's Flic has another layout. */
-#define REWARD_FLIC_FRAME(flic) (*(int*)((char*)(flic) + 0x624))
+/* Flic.c's current frame (gods98/flic_record.h). */
+#define REWARD_FLIC_FRAME(flic) (((FLICSTRUCT*)(flic))->currentframe)
 
 /* Input.c's mouse position is signed; the port's words are unsigned. */
 #define REWARD_MOUSE_X ((int)s_renderer_word_a)
@@ -636,7 +639,7 @@ int reward_prepare_results(void)
     current->blockCount = 0;
     current->buildingCounts = rewardGlobs.level.buildingCounts;
     current->itemsArray[REWARD_ITEM_OXYGEN].actual =
-        ((RewardLegoLevel*)g_active_level_retail)->oxygen;
+        ((RewardLegoLevel*)g_active_level_retail)->oxygenLevel;
     current->itemsArray[REWARD_ITEM_OXYGEN].total = 100.0f;
     current->itemsArray[REWARD_ITEM_TIMER].actual =
         rewardGlobs.level.itemsArray[REWARD_ITEM_TIMER].actual;
@@ -644,9 +647,9 @@ int reward_prepare_results(void)
         rewardGlobs.level.itemsArray[REWARD_ITEM_TIMER].total /
         current->itemsArray[REWARD_ITEM_TIMER].actual;
 
-    for (x = 0; x < level->map->blockWidth; x++) {
-        for (y = 0; y < level->map->blockHeight; y++) {
-            predug = level->blocks[y * level->width + x].predug;
+    for (x = 0; x < ((TerrainMap*)level->map)->blockWidth; x++) {
+        for (y = 0; y < ((TerrainMap*)level->map)->blockHeight; y++) {
+            predug = level->blocks[y * level->width + x].f_02;
             current->blockCount++;
             pos[0] = x;
             pos[1] = y;
@@ -680,8 +683,8 @@ int reward_prepare_results(void)
     for (i = 0; i < current->buildingCount; i++)
         sprintf(current->buildingNames[i], "%s", current->buildingCounts.names[i]);
 
-    current->itemsArray[REWARD_ITEM_CRYSTALS].actual = (float)level->crystals;
-    current->itemsArray[REWARD_ITEM_ORE].actual = (float)level->ore;
+    current->itemsArray[REWARD_ITEM_CRYSTALS].actual = (float)level->f_08c;
+    current->itemsArray[REWARD_ITEM_ORE].actual = (float)level->crystals;
     current->itemsArray[REWARD_ITEM_FIGURES].total =
         (float)current->itemsArray[REWARD_ITEM_FIGURES].count;
     current->itemsArray[REWARD_ITEM_FIGURES].actual =
@@ -1283,13 +1286,8 @@ void reward_save_menu(void)
     }
 }
 
-/* FrontEnd.c's save record (SaveData, partial). */
-typedef struct RewardSaveData {
-    unsigned char unk_00[0x18];
-    unsigned int rewardCount;   /* +0x18 */
-    unsigned char unk_1c[0x18];
-    unsigned char* rewards;     /* +0x34 0x3190-byte records */
-} RewardSaveData;
+/* FrontEnd.c's save slot (frontend_record.h). */
+typedef Front_SaveData RewardSaveData;
 
 // FUNCTION: LEGORR 0x00462270
 void reward_advance(void)
@@ -1309,7 +1307,8 @@ void reward_advance(void)
     save_write_record_target(index, (const uint8_t*)reward_current_level_get());
     if (created) {
         if ((data = (RewardSaveData*)sav_slot_ctx_target(5)) != NULL) {
-            memset(data->rewards + 0x3190, 0, data->rewardCount * 0x3190 - 0x3190);
+            memset(data->missionsTable + 1, 0,
+                   data->missionsCount * sizeof(Front_SaveReward) - sizeof(Front_SaveReward));
             if (((RewardLegoLevel*)level_current_owner_get())->status == 1)
                 save_mark_record(NULL, index);
             save_write_record_target(index, (const uint8_t*)reward_current_level_get());
@@ -1318,9 +1317,9 @@ void reward_advance(void)
         save_read_slot_target(5, g_front_save_slot_buffer, 0);
     }
     sav_tree_load(g_front_save_tree,
-                  ((RewardSaveData*)sav_build_ctx_target())->rewards,
+                  ((RewardSaveData*)sav_build_ctx_target())->missionsTable,
                   (void**)REWARD_MISSION_LEVELS,
-                  *(uint32_t*)((char*)((void**)((void**)(*(void****)g_front_main_menu_set)[1])[6])[1] + 0x10), 0, NULL);
+                  ((Front_MenuSet*)g_front_main_menu_set)->menus[1]->items[1]->itemData, 0, NULL);
     save_state_event_context_set(0);
 }
 
@@ -1661,4 +1660,164 @@ int reward_scroll_update(RewardScroll* scroll)
         }
     }
     return 1;
+}
+
+
+/* ---- The save file's image of a RewardLevel (reward.h) ---------------- */
+
+static void reward_image_put_word(unsigned char* image, unsigned int offset,
+                                  uint32_t value)
+{
+    image[offset] = (unsigned char)value;
+    image[offset + 1] = (unsigned char)(value >> 8);
+    image[offset + 2] = (unsigned char)(value >> 16);
+    image[offset + 3] = (unsigned char)(value >> 24);
+}
+
+static uint32_t reward_image_word(const unsigned char* image, unsigned int offset)
+{
+    return (uint32_t)image[offset] | ((uint32_t)image[offset + 1] << 8) |
+           ((uint32_t)image[offset + 2] << 16) | ((uint32_t)image[offset + 3] << 24);
+}
+
+static void reward_image_put_float(unsigned char* image, unsigned int offset,
+                                   float value)
+{
+    uint32_t word;
+    memcpy(&word, &value, sizeof(word));
+    reward_image_put_word(image, offset, word);
+}
+
+static float reward_image_float(const unsigned char* image, unsigned int offset)
+{
+    uint32_t word = reward_image_word(image, offset);
+    float value;
+    memcpy(&value, &word, sizeof(value));
+    return value;
+}
+
+/* One RewardLevelItem, 0x210 bytes at offset. */
+static void reward_level_item_serialize(const RewardLevelItem* item,
+                                        unsigned char* image, unsigned int offset)
+{
+    reward_image_put_word(image, offset + 0x000, item->flags);
+    memcpy(image + offset + 0x004, item->name, sizeof(item->name));
+    reward_image_put_float(image, offset + 0x024, item->importance);
+    reward_image_put_word(image, offset + 0x028, item->quota);
+    reward_image_put_word(image, offset + 0x02c, item->unk_02c);
+    reward_image_put_float(image, offset + 0x030, item->total);
+    reward_image_put_float(image, offset + 0x034, item->actual);
+    reward_image_put_float(image, offset + 0x038, item->percent);
+    reward_image_put_word(image, offset + 0x03c, item->count);
+    reward_image_put_word(image, offset + 0x040, item->startCount);
+    reward_image_put_word(image, offset + 0x044, item->lostCount);
+    reward_image_put_float(image, offset + 0x048, item->damage);
+    reward_image_put_word(image, offset + 0x04c, item->unk_04c);
+    reward_image_put_word(image, offset + 0x050, item->percentInt);
+    memcpy(image + offset + 0x054, item->text, sizeof(item->text));
+    memcpy(image + offset + 0x0d4, item->percentText, sizeof(item->percentText));
+    reward_image_put_word(image, offset + 0x154, item->textX);
+    reward_image_put_word(image, offset + 0x158, item->textY);
+    reward_image_put_word(image, offset + 0x15c, item->imageX);
+    reward_image_put_word(image, offset + 0x160, item->imageY);
+    reward_image_put_word(image, offset + 0x164, item->boxImageX);
+    reward_image_put_word(image, offset + 0x168, item->boxImageY);
+    memcpy(image + offset + 0x16c, item->flicName, sizeof(item->flicName));
+    reward_image_put_word(image, offset + 0x1ec, item->flicWidth);
+    reward_image_put_word(image, offset + 0x1f0, item->flicHeight);
+    reward_image_put_word(image, offset + 0x1f4, item->flicX);
+    reward_image_put_word(image, offset + 0x1f8, item->flicY);
+    /* flic, image, font, soundName and boxImage (+0x1fc-+0x20c). */
+    memset(image + offset + 0x1fc, 0, 0x210 - 0x1fc);
+}
+
+static void reward_level_item_parse(const unsigned char* image, unsigned int offset,
+                                    RewardLevelItem* item)
+{
+    item->flags = reward_image_word(image, offset + 0x000);
+    memcpy(item->name, image + offset + 0x004, sizeof(item->name));
+    item->importance = reward_image_float(image, offset + 0x024);
+    item->quota = reward_image_word(image, offset + 0x028);
+    item->unk_02c = reward_image_word(image, offset + 0x02c);
+    item->total = reward_image_float(image, offset + 0x030);
+    item->actual = reward_image_float(image, offset + 0x034);
+    item->percent = reward_image_float(image, offset + 0x038);
+    item->count = reward_image_word(image, offset + 0x03c);
+    item->startCount = reward_image_word(image, offset + 0x040);
+    item->lostCount = reward_image_word(image, offset + 0x044);
+    item->damage = reward_image_float(image, offset + 0x048);
+    item->unk_04c = reward_image_word(image, offset + 0x04c);
+    item->percentInt = reward_image_word(image, offset + 0x050);
+    memcpy(item->text, image + offset + 0x054, sizeof(item->text));
+    memcpy(item->percentText, image + offset + 0x0d4, sizeof(item->percentText));
+    item->textX = reward_image_word(image, offset + 0x154);
+    item->textY = reward_image_word(image, offset + 0x158);
+    item->imageX = reward_image_word(image, offset + 0x15c);
+    item->imageY = reward_image_word(image, offset + 0x160);
+    item->boxImageX = reward_image_word(image, offset + 0x164);
+    item->boxImageY = reward_image_word(image, offset + 0x168);
+    memcpy(item->flicName, image + offset + 0x16c, sizeof(item->flicName));
+    item->flicWidth = reward_image_word(image, offset + 0x1ec);
+    item->flicHeight = reward_image_word(image, offset + 0x1f0);
+    item->flicX = reward_image_word(image, offset + 0x1f4);
+    item->flicY = reward_image_word(image, offset + 0x1f8);
+    item->flic = NULL;
+    item->image = NULL;
+    item->font = NULL;
+    item->soundName = NULL;
+    item->boxImage = NULL;
+}
+
+static_assert(0x1cec + REWARD_ITEM_COUNT * 0x210 == REWARD_LEVEL_IMAGE_SIZE,
+              "the RewardLevel image ends with the items");
+static_assert(sizeof(((RewardLevel*)0)->buildingNames) == 100 * 64,
+              "RewardLevel.buildingNames");
+
+void reward_level_serialize(const RewardLevel* level, unsigned char* image)
+{
+    unsigned int i;
+
+    reward_image_put_word(image, 0x0000, (uint32_t)level->enabled);
+    reward_image_put_word(image, 0x0004, (uint32_t)level->saveHasCapture);
+    for (i = 0; i < 8; i++)
+        reward_image_put_word(image, 0x0008 + i * 4, level->saveCapture[i]);
+    /* buildingCounts.names (+0x0028): 100 pointer slots. */
+    memset(image + 0x0028, 0, 100 * 4);
+    reward_image_put_word(image, 0x01b8, level->buildingCounts.count);
+    reward_image_put_word(image, 0x01bc, level->buildingCounts.gridCount);
+    reward_image_put_word(image, 0x01c0, level->modifier);
+    reward_image_put_word(image, 0x01c4, level->unk_1c4);
+    reward_image_put_word(image, 0x01c8, level->blockCount);
+    reward_image_put_word(image, 0x01cc, level->buildingCount);
+    reward_image_put_word(image, 0x01d0, level->buildingGridCount);
+    memcpy(image + 0x01d4, level->buildingNames, sizeof(level->buildingNames));
+    reward_level_item_serialize(&level->walls, image, 0x1ad4);
+    reward_image_put_word(image, 0x1ce4, level->itemCount);
+    reward_image_put_word(image, 0x1ce8, 0); /* items */
+    for (i = 0; i < REWARD_ITEM_COUNT; i++)
+        reward_level_item_serialize(&level->itemsArray[i], image, 0x1cec + i * 0x210);
+}
+
+void reward_level_parse(const unsigned char* image, RewardLevel* level)
+{
+    unsigned int i;
+
+    level->enabled = (int)reward_image_word(image, 0x0000);
+    level->saveHasCapture = (int)reward_image_word(image, 0x0004);
+    for (i = 0; i < 8; i++)
+        level->saveCapture[i] = reward_image_word(image, 0x0008 + i * 4);
+    for (i = 0; i < 100; i++) level->buildingCounts.names[i] = NULL;
+    level->buildingCounts.count = reward_image_word(image, 0x01b8);
+    level->buildingCounts.gridCount = reward_image_word(image, 0x01bc);
+    level->modifier = reward_image_word(image, 0x01c0);
+    level->unk_1c4 = reward_image_word(image, 0x01c4);
+    level->blockCount = reward_image_word(image, 0x01c8);
+    level->buildingCount = reward_image_word(image, 0x01cc);
+    level->buildingGridCount = reward_image_word(image, 0x01d0);
+    memcpy(level->buildingNames, image + 0x01d4, sizeof(level->buildingNames));
+    reward_level_item_parse(image, 0x1ad4, &level->walls);
+    level->itemCount = reward_image_word(image, 0x1ce4);
+    level->items = NULL;
+    for (i = 0; i < REWARD_ITEM_COUNT; i++)
+        reward_level_item_parse(image, 0x1cec + i * 0x210, &level->itemsArray[i]);
 }

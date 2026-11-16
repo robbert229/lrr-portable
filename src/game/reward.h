@@ -33,6 +33,8 @@
 #include "gods98/config.h"
 #include "gods98/images.h"
 
+#include "lego_level_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -62,40 +64,10 @@ struct TextureSurface;
 #define REWARD_ITEM_FLAG_TEXTBOXED 0x20  /* the box is the darker one */
 #define REWARD_ITEM_FLAG_BOXIMAGE 0x40   /* BoxImages loaded */
 
-/* Lego_Level fields the unit reads (Lego.c, 0x284 bytes; the port's
- * LevelState words). */
-typedef struct RewardLegoBlock {
-    unsigned char unk_00[2];
-    unsigned char predug;       /* +0x02 */
-    unsigned char unk_03[5];
-    unsigned int flags1;        /* +0x08 */
-    unsigned char unk_0c[0x3c];
-} RewardLegoBlock;              /* 0x48 */
-
-typedef struct RewardLegoMap {
-    unsigned int blockWidth;    /* +0x00 */
-    unsigned int blockHeight;   /* +0x04 */
-} RewardLegoMap;
-
-typedef struct RewardLegoLevel {
-    char* name;                 /* +0x000 */
-    RewardLegoMap* map;         /* +0x004 */
-    unsigned char unk_008[8];
-    void* rewardKey;            /* +0x010 the argument of reward_level_get */
-    unsigned int width;         /* +0x014 */
-    unsigned char unk_018[0x74];
-    unsigned int crystals;      /* +0x08c */
-    unsigned char unk_090[0x10];
-    unsigned int ore;           /* +0x0a0 */
-    unsigned char unk_0a4[0x14];
-    RewardLegoBlock* blocks;    /* +0x0b8 */
-    unsigned char unk_0bc[0x140];
-    float oxygen;               /* +0x1fc */
-    unsigned char unk_200[0x70];
-    char* fullName;             /* +0x270 */
-    unsigned char unk_274[8];
-    int status;                 /* +0x27c 1 complete, 2 failed, 3 quit */
-} RewardLegoLevel;
+/* Lego.c's level and block records (lego_level_record.h) and the prefix of
+ * its map (terrain_map.h's TerrainMap), by the names the unit uses. */
+typedef struct Lego_Block RewardLegoBlock;
+typedef struct Lego_Level RewardLegoLevel;
 
 /* One reward item (0x210 bytes). */
 typedef struct RewardLevelItem {
@@ -275,6 +247,13 @@ void global_counter_at_00555328_increment(void);          /* 00462880 */
 void global_counter_at_0055532c_increment(void);          /* 00462890 */
 void global_float_accumulator_00555330_add(float value);  /* 004628a0 */
 void global_float_accumulate_00555120(float value);       /* 004628c0 */
+
+/* The save file's image of a RewardLevel: its Win32 layout, 0x318c bytes,
+ * which FrontEnd.c keeps after each saved level's flag word. The pointer
+ * slots are written as 0 and read back as NULL. */
+#define REWARD_LEVEL_IMAGE_SIZE 0x318c
+void reward_level_serialize(const RewardLevel* level, unsigned char* image);
+void reward_level_parse(const unsigned char* image, RewardLevel* level);
 
 RewardScroll* reward_scroll_create(RewardScroll** out, Area2F area,
                                    float speed);          /* 004628e0 */
