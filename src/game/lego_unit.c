@@ -9740,8 +9740,8 @@ void lego_random_variant_cell_scatter(const int* blockPos, int radius, int stopA
     unsigned int dx, dy;
     int pos[2];
 
-    memset(done, 0, sizeof(done));
     size = radius * 2;
+    memset(done, 0, sizeof(done));
     for (count = 0; count < (stopAtFirst ? size * size : (size * size) / 4); count++) {
         dx = rng_thunk_draw15() % size;
         dy = rng_thunk_draw15() % size;
