@@ -1173,9 +1173,7 @@ void weapons_ray_block_sweep(Weapons_RaySearch* search)
 
     WEAPONS_LEGO_GET_MAP();
     WEAPONS_LEGO_GET_MAP();
-    end.x = search->direction->x + search->origin->x;
-    end.y = search->origin->y + search->direction->y;
-    end.z = search->origin->z + search->direction->z;
+    weapons_vector3d_add(&end, search->origin, search->direction);
     if (!terrain_map_world_to_block(WEAPONS_LEGO_GET_MAP(), search->origin->x,
                                     search->origin->y, (int*)&startX, (int*)&startY)) {
         if (startX >= WEAPONS_MAP_WIDTH()) startX = WEAPONS_MAP_WIDTH() - 1;
