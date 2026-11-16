@@ -2462,11 +2462,12 @@ void front_run_screen_menu(Front_Menu* menu)
     if (nextMenu == frontGlobs_saveMenuSet->menus[0] && s_saveSlotToWrite >= 0) {
         if (reward_current_level_get() != NULL &&
             *(void**)((char*)(level = reward_current_level_get()) + 4) != NULL) {
-            sprintf(buff, "%s\\%d.dat",
-                    block_get_str_copy(legoGlobs_config,
-                                       string_path_join(s_engine_config_root, s_menuSaveImage,
-                                                        "Path", NULL)),
-                    s_saveSlotToWrite);
+            /* The original reads the path before pushing the slot number.
+             * nextMenu, dead here, holds it: a new local shifts 0x004177e0's
+             * symbol phase. */
+            nextMenu = (Front_Menu*)block_get_str_copy(legoGlobs_config,
+                                       string_path_join(s_engine_config_root, s_menuSaveImage, "Path", NULL));
+            sprintf(buff, "%s\\%d.dat", (char*)nextMenu, s_saveSlotToWrite);
             front_image_save_bmp_adapter((char*)level + 8, buff);
         }
     }
