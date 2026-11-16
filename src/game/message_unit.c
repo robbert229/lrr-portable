@@ -510,6 +510,7 @@ int message_select_object2(Lego_Object* obj, int noDoubleSelect,
 {
     float faceDir[2];
     float dir[3];
+    void* cont;
 
     if (obj->carryingThisObject) obj = obj->carryingThisObject;
 
@@ -541,8 +542,8 @@ int message_select_object2(Lego_Object* obj, int noDoubleSelect,
             if (obj->flags3 & 0x80) {
                 if (!(stats_object_get_stats_flags1((struct StatsObject*)obj) &
                       MESSAGE_STATS1_CANBEDRIVEN) || obj->driveObject) {
-                    sfx_random_play_sound3d_on_container(
-                        legoobject_type_component_get(obj), 0x11, 0, 1, NULL);
+                    cont = legoobject_type_component_get(obj);
+                    sfx_random_play_sound3d_on_container(cont, 0x11, 0, 1, NULL);
                     return 1;
                 }
             }
