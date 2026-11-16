@@ -12,45 +12,59 @@ in a playable state before the end of November 2026.
      with `python3 tools/readme_status.py` (no build needed); recount the
      source ledger with `python3 tools/coverage_ledger.py`. -->
 
-Verified **2026-11-14** on the #786 stack (`7ece767f` plus #788), with MSVC 5.0 and Reccmp:
+Figures from the reports committed on `main` at `77f65f61` (#848,
+**2026-11-15**), built with MSVC 5.0 and compared with Reccmp:
 
 | Measure | Value |
 | --- | ---: |
-| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **338,194 / 642,549 bytes (52.63%)** |
-| Accuracy: mean Reccmp score of mapped functions, game-only / full | 96.76% / 97.10% |
-| Mapped functions, game-only / full | 2,538 / 2,833 |
-| Exact (100%) functions, game-only / full | 2,135 / 2,423 |
-| Functions byte-identical at their original address | 14 (631 bytes) |
+| **Exact-function code bytes**: original code in functions Reccmp scores at 100% | **365,396 / 642,549 bytes (56.87%)** |
+| Accuracy: mean Reccmp score of mapped functions, game-only / full | 98.04% / 98.23% |
+| Mapped functions, game-only / full | 2,723 / 3,019 |
+| Exact (100%) functions, game-only / full | 2,418 / 2,707 |
+| Functions byte-identical at their original address | 114 (8,094 bytes) |
+| `.text` bytes identical at their original address | 9.42% (chance 2.83%) |
 
 The old headline, Reccmp's game-only "progress" (47.77% on 2026-11-04), is no
 longer tracked; exact-function code bytes replaced it, and accuracy is the same
 Reccmp measure as before (then 48.27%).
 [Report details and reproduction](docs/coverage/reccmp.md).
 
-`LegoObject.c`, `Lego.c` and `Main.c` are now converted to their original
-shape. The matching build links in the original's mode, `/DEBUG /OPT:REF
-/OPT:NOICF`, and its `/OPT:REF` drops no annotated function
+The goal is now a byte-identical image: the original-mode matching link should
+equal the original `LegoRR.exe` apart from the PE header's `TimeDateStamp` and
+`CheckSum`, as checked by `python3 tools/image_identity.py`. #848 started that
+work. Every common now sits at its original address (47 of 47), `.bss` starts
+at its original address with 118 of 164 items in place, and 2,401 of 2,458
+`.data` items sit at their original offsets in a `.data` section of the
+original's size
+([finding 687](docs/findings/687-original-mode-measures-advisor-constants-bss-gaps.md),
+[finding 690](docs/findings/690-data-commons-order-and-frontend-arrays.md),
+[finding 691](docs/findings/691-lego-bss-statics-then-externals.md)).
+The first differing byte is still near the start of `.text`: 365 bytes in, or
+7,187 bytes in when address operands are masked.
+
+`LegoObject.c`, `Lego.c`, `Main.c` and `Input.c` are converted to their
+original shape. The matching build links in the original's mode, `/DEBUG
+/OPT:REF /OPT:NOICF`, and its `/OPT:REF` drops no annotated function
 ([finding 642](docs/findings/642-gate-takes-the-original-link-mode.md)). Its
 C runtime comes from `LIBC.LIB` alone, as the original's did
-([finding 643](docs/findings/643-crt-from-libc-and-late-members.md)). The
-image now ends at `0x7f5000`, below the original's flag constant `0x800000`,
-so scores come from plain Reccmp with no plain-immediate wrapper; `make
-pe-audit` and the gate fail if the image grows past it again
+([finding 643](docs/findings/643-crt-from-libc-and-late-members.md)). The image
+stays below the original's flag constant `0x800000`, so scores come from plain
+Reccmp with no plain-immediate wrapper; `make pe-audit` and the gate fail if
+the image grows past it again
 ([finding 647](docs/findings/647-retire-plain-immediate-wrapper.md)).
-The link also follows the original's object and library layout: the game units
-and Movie.cpp as explicit objects, the other gods98 units and the port tail
-from libraries, and the late units after the import libraries. Function-order
-inversions fell from 12,261 pairs to 222 (1 in gods98 code, none in game
-code), 223 of 225 units are contiguous, and the entry point is `0x8d0f0`
-against the original's `0x8f000` ([finding 657](docs/findings/657-function-order-and-unit-contiguity-breakdown.md),
+The link also follows the original's object and library layout, and the port
+tail is now empty. Function-order inversions stand at 222 pairs (1 in gods98
+code, none in game code), 224 of 226 units are contiguous, and the entry point
+is `0x8ecf0` against the original's `0x8f000`
+([finding 657](docs/findings/657-function-order-and-unit-contiguity-breakdown.md),
 [finding 658](docs/findings/658-libc-member-order-gods98-members-and-tail-library.md),
-[finding 667](docs/findings/667-lego-callbacks-and-early-crt-references.md)).
+[finding 692](docs/findings/692-entry-point-sqrt-member-unit-size-sweep.md)).
 The resources and PE header stamps match the original's
 ([finding 651](docs/findings/651-original-resources-and-header-stamps.md)).
 
-The [source ledger](docs/coverage/README.md) records **2,282 / 2,564 functions
-(89.0%) with source citations**, plus 280 runtime/import functions and 2 named
-functions not yet cited. Source coverage and binary similarity measure
+The [source ledger](docs/coverage/README.md) records **2,288 / 2,564 functions
+(89.2%) with source citations**, plus 271 runtime/import functions, and 4 named
+and 1 anonymous function not yet cited. Source coverage and binary similarity measure
 different things; neither guarantees correct gameplay.
 
 ## What works, what remains
