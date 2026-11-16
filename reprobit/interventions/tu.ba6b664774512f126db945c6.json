@@ -1,1 +1,1 @@
-{"build_target":"link_012_detail","interventions":[],"schema_version":3,"source":"src/game/detail.c","source_digest":{"algorithm":"sha256","value":"e77bcb9e4f8aa1042597c7bc995af77b07489c7e02be1658d9ffb0fa2e023bc4"},"target_id":"program","translation_unit_id":"tu.ba6b664774512f126db945c6"}
+{"build_target":"link_012_detail","interventions":[],"schema_version":3,"source":"src/game/detail.c","source_digest":{"algorithm":"sha256","value":"7b37c58f443ef905ab0b5194f50c8f51924d7da68f3ad8eba5c7b3c228396c57"},"target_id":"program","translation_unit_id":"tu.ba6b664774512f126db945c6"}
