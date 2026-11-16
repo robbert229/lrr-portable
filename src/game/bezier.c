@@ -22,9 +22,9 @@
 static const float s_bezier_three = 3.0f;
 // GLOBAL: LEGORR 0x0049e04c
 static const float s_bezier_zero = 0.0f;
-/* BezierCurveSamplesBuild's 1.0. The function uses the literal: MSVC hoists
- * 1.0f / (count - 1) out of the loop only for a constant, as the original
- * does, and not for a const variable. This copy keeps the table's layout. */
+/* BezierCurveSamplesBuild's 1.0. MSVC hoists 1.0f / (count - 1) out of the
+ * loop only for a literal, so the function computes the step itself before
+ * a do-while, which then reads this constant as the original does. */
 // GLOBAL: LEGORR 0x0049e050
 static const float s_bezier_one = 1.0f;
 
@@ -100,9 +100,13 @@ void bezier_curve_samples_build(BezierCurve* curve, const Point2F* p0,
     if (count >= BEZIER_MAXPOINTS) count = BEZIER_MAXPOINTS;
     curve->count = count;
     curve->points[0] = *p0;
-    for (i = 1; i < count; i++) {
-        cubic_bezier_point_evaluate(&curve->points[i], p0, p1, p2, p3,
-                                    (float)i * (1.0f / (float)(count - 1)));
+    i = 1;
+    if (i < count) {
+        float step = s_bezier_one / (float)(count - 1);
+        do {
+            cubic_bezier_point_evaluate(&curve->points[i], p0, p1, p2, p3,
+                                        (float)i * step);
+        } while (++i < count);
     }
 }
 
