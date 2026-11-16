@@ -1314,22 +1314,33 @@ void weapons_model_aim(Weapons_Model* model, Weapons_Vector3F* target,
         weapons_vector3d_subtract(&dir, &model->targets[slot], &pos);
         len = 1.0f / weapons_vector3d_modulus(&dir);
         weapons_vector3d_scale(&model->fireDirs[slot], &model->fireDirs[slot], elapsed);
-        model->fireDirs[slot].x = len * dir.x + model->fireDirs[slot].x;
-        model->fireDirs[slot].y = len * dir.y + model->fireDirs[slot].y;
-        model->fireDirs[slot].z = len * dir.z + model->fireDirs[slot].z;
+        /* The sum goes through a pointer to the fire direction (target is
+         * dead here, and a new local would shift weapons_ray_block_sweep's
+         * symbol phase): the original addresses its y from the same base
+         * as x and z instead of keeping the address of
+         * model->fireDirs[slot].y in a register. */
+        target = &model->fireDirs[slot];
+        target->x = len * dir.x + target->x;
+        target->y = len * dir.y + target->y;
+        target->z = len * dir.z + target->z;
         weapons_vector3d_normalise(&model->fireDirs[slot]);
         if (model->fireDirs[slot].z > model->pitchRange) {
             model->fireDirs[slot].z = model->pitchRange;
         }
         yPivot = weapons_model_y_pivot_get(model, slot);
         if (yPivot != NULL) {
-            ddiscene_object_pose_method_dispatch(yPivot, NULL, model->fireDirs[slot].x,
-                                                 model->fireDirs[slot].y, 0.0f,
+            /* The fire direction goes through a double in both calls: the
+             * original copies it through the x87 stack. (Block float locals
+             * do the same but shift weapons_ray_block_sweep's symbol phase.) */
+            ddiscene_object_pose_method_dispatch(yPivot, NULL,
+                                                 (float)(model->fireDirs[slot].x + 0.0),
+                                                 (float)(model->fireDirs[slot].y + 0.0), 0.0f,
                                                  0.0f, 0.0f, -1.0f);
         }
-        ddiscene_object_pose_method_dispatch(xPivot, NULL, model->fireDirs[slot].x,
-                                             model->fireDirs[slot].y,
-                                             model->fireDirs[slot].z,
+        ddiscene_object_pose_method_dispatch(xPivot, NULL,
+                                             (float)(model->fireDirs[slot].x + 0.0),
+                                             (float)(model->fireDirs[slot].y + 0.0),
+                                             (float)(model->fireDirs[slot].z + 0.0),
                                              0.0f, 0.0f, -1.0f);
     }
 }
