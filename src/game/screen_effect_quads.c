@@ -284,9 +284,9 @@ void damage_font_set_damage_number(DamageFont_Data* data, unsigned int damage)
         indexed_record_flag6c_bit0_set(data->mesh, i, FALSE);
         damage = (damage - damage % 10) / 10;
     }
+    digitCount++;
     animated_texture_frame_surface_set(data->mesh, i,
                                        damageFontGlobs.fontTextMinus);
-    digitCount++;
     for (i = digitCount; i < 4; i++) {
         indexed_record_flag6c_bit0_set(data->mesh, i, TRUE);
     }
