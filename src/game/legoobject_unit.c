@@ -4226,20 +4226,23 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
             if (carried->type == 7) {
                 if (i == 0 || i >= stats_instance_word_at_ec(obj)) {
                     cont = scene_object_primary_handle_get_or_create(obj->building);
+                    /* first's second test keeps MSVC from folding
+                     * (i == 0) == 1 (the original's sete and cmp 1); the
+                     * shared remove is the original's cross-jump. */
                     first = (i == 0);
                     if (first == 1) {
                         ddiscene_object_position_get(cont, NULL, position);
-                        cmd_produce(0x1c, legoobject_create_in_world(legoGlobs_contProcessedOre, 7, 1, 0,
-                                                                     position[0], position[1], 0.0f),
-                                    0, NULL);
+                        cont = legoobject_create_in_world(legoGlobs_contProcessedOre, 7, 1, 0,
+                                                          position[0], position[1], 0.0f);
+                        cmd_produce(0x1c, cont, 0, NULL);
                         legoobject_remove(carried);
-                    } else {
+                        goto removed;
+                    } else if (first != 1) {
                         lego_level_resource_balance_add_and_sound(0);
-                        legoobject_remove(carried);
                     }
-                } else {
-                    legoobject_remove(carried);
                 }
+                legoobject_remove(carried);
+            removed:;
             } else {
                 legoobject_action_record_consume_and_cleanup(obj, carried);
                 if (obj->type == 4)
