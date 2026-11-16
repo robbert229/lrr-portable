@@ -135,7 +135,7 @@ Detail_Mesh* detail_load_meshes(void* root, const char* uncoveredName,
                                 Detail_TextureSet* textureSet)
 {
     Detail_Mesh* mesh;
-    unsigned int loop, sub, vertexCount;
+    unsigned int loop, sub;
     Detail_Vertex* vertices;
     int swapV, swapU;
     float scale;
@@ -162,6 +162,8 @@ Detail_Mesh* detail_load_meshes(void* root, const char* uncoveredName,
             }
 
             for (loop = 0; loop < DETAIL_MESH_COUNT; loop++) {
+                unsigned int vertexCount;
+
                 if (loop == 0) swapV = swapU = 0;
                 else swapV = swapU = 1;
 
