@@ -1,4 +1,4 @@
-# input_sha256: 3b3675d5bc0c82b71e2f835f7d2b011631d33e5e5d7c0b280f5af70535a2e0bc
+# input_sha256: 0e4b4cab818df0543f6270947981491f3a2d2cbdd12a8f99691d27db5d185fdd
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2131,7 +2131,7 @@
 0x00472950 100.00 ddiscene_object_allocate
 0x00472a40 100.00 ledger_stub_00472a40_DDiSceneObjectDestroy
 0x00472a50 100.00 Container_Remove2
-0x00472cd0 88.85 container_load
+0x00472cd0 91.10 container_load
 0x00473340 100.00 ledger_stub_00473340_SceneActionNamePresent
 0x00473370 97.98 scene_action_name_set
 0x00473460 100.00 light_interface_call_slot_40
@@ -2398,11 +2398,11 @@
 0x0047d430 100.00 scene_object_registry_teardown
 0x0047d470 100.00 Image_Remove
 0x0047d490 74.23 Image_CopyToDataToSurface
-0x0047d520 52.20 Image_8BitSourceCopy
+0x0047d520 54.49 Image_8BitSourceCopy
 0x0047d700 100.00 Image_CountMaskBits
 0x0047d720 100.00 Image_CountMaskBitShift
 0x0047d740 100.00 Image_FlipSurface
-0x0047d800 85.44 Image_24BitSourceCopy
+0x0047d800 88.34 Image_24BitSourceCopy
 0x0047d9d0 84.67 Image_LoadBMPScaled
 0x0047db90 100.00 Image_RGB2CR
 0x0047dbc0 100.00 Image_SetPenZeroTrans
@@ -4856,7 +4856,7 @@
 0x00472950 100.00 ddiscene_object_allocate
 0x00472a40 100.00 ledger_stub_00472a40_DDiSceneObjectDestroy
 0x00472a50 100.00 Container_Remove2
-0x00472cd0 88.85 container_load
+0x00472cd0 91.10 container_load
 0x00473340 100.00 ledger_stub_00473340_SceneActionNamePresent
 0x00473370 97.98 scene_action_name_set
 0x00473460 100.00 light_interface_call_slot_40
@@ -5123,11 +5123,11 @@
 0x0047d430 100.00 scene_object_registry_teardown
 0x0047d470 100.00 Image_Remove
 0x0047d490 74.23 Image_CopyToDataToSurface
-0x0047d520 52.20 Image_8BitSourceCopy
+0x0047d520 54.49 Image_8BitSourceCopy
 0x0047d700 100.00 Image_CountMaskBits
 0x0047d720 100.00 Image_CountMaskBitShift
 0x0047d740 100.00 Image_FlipSurface
-0x0047d800 85.44 Image_24BitSourceCopy
+0x0047d800 88.34 Image_24BitSourceCopy
 0x0047d9d0 84.67 Image_LoadBMPScaled
 0x0047db90 100.00 Image_RGB2CR
 0x0047dbc0 100.00 Image_SetPenZeroTrans
