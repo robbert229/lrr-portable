@@ -199,10 +199,7 @@ int scroll_info_update(unsigned int* index, unsigned int mouseX,
                             position = scroll_info_round(offset / step);
                         }
                         scrollInfo->slider->position = position;
-                        handled = 1;
                         scrollInfo->slider->dirty = 1;
-                        *index = i;
-                        goto layout;
                     }
                 } else {
                     if (scrollInfoGlobs.selection == SCROLLINFO_SELECT_NONE) {
@@ -216,7 +213,6 @@ int scroll_info_update(unsigned int* index, unsigned int mouseX,
                 scrollInfoOverSlider = 0;
             }
 
-        layout:
             slider = scrollInfo->slider;
             if (slider->dirty) {
                 if (scrollInfo->flags & SCROLLINFO_FLAG_VERTICAL) {
