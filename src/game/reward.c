@@ -644,8 +644,8 @@ int reward_prepare_results(void)
         rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].damage;
     current->itemsArray[REWARD_ITEM_ROCKMONSTERS].lostCount =
         rewardGlobs.level.itemsArray[REWARD_ITEM_ROCKMONSTERS].lostCount;
-    current->blockCount = 0;
     current->buildingCounts = rewardGlobs.level.buildingCounts;
+    current->blockCount = 0;
     current->itemsArray[REWARD_ITEM_OXYGEN].actual =
         ((RewardLegoLevel*)g_active_level_retail)->oxygen;
     current->itemsArray[REWARD_ITEM_OXYGEN].total = 100.0f;
@@ -655,12 +655,13 @@ int reward_prepare_results(void)
         rewardGlobs.level.itemsArray[REWARD_ITEM_TIMER].total /
         current->itemsArray[REWARD_ITEM_TIMER].actual;
 
+    y = 0;
     for (x = 0; x < level->map->blockWidth; x++) {
-        for (y = 0; y < level->map->blockHeight; y++) {
+        for (; y < level->map->blockHeight; y++) {
             predug = level->blocks[y * level->width + x].predug;
-            current->blockCount++;
             pos[0] = x;
             pos[1] = y;
+            current->blockCount++;
             terrain_cell_byte_state_classify_current(pos, &crystals, &unusedA, &ore, &unusedB);
             current->itemsArray[REWARD_ITEM_CRYSTALS].total += (float)crystals;
             current->itemsArray[REWARD_ITEM_ORE].total += (float)ore;
@@ -682,6 +683,7 @@ int reward_prepare_results(void)
                     current->itemsArray[REWARD_ITEM_DIGGABLE].total - -1.0f;
             }
         }
+        y = 0;
     }
 
     current->buildingCount = current->buildingCounts.count;
@@ -698,10 +700,10 @@ int reward_prepare_results(void)
     current->itemsArray[REWARD_ITEM_FIGURES].actual =
         (float)(current->itemsArray[REWARD_ITEM_FIGURES].count -
                 current->itemsArray[REWARD_ITEM_FIGURES].startCount);
-    current->itemsArray[REWARD_ITEM_ROCKMONSTERS].actual =
-        current->itemsArray[REWARD_ITEM_ROCKMONSTERS].damage;
     current->itemsArray[REWARD_ITEM_ROCKMONSTERS].total =
         (float)(current->itemsArray[REWARD_ITEM_ROCKMONSTERS].count * 100);
+    current->itemsArray[REWARD_ITEM_ROCKMONSTERS].actual =
+        current->itemsArray[REWARD_ITEM_ROCKMONSTERS].damage;
     current->itemsArray[REWARD_ITEM_CONSTRUCTIONS].total = (float)current->buildingCount;
     current->itemsArray[REWARD_ITEM_CONSTRUCTIONS].actual =
         (float)((current->buildingCount - current->buildingGridCount) + 1);
