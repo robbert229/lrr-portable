@@ -3,7 +3,7 @@
     "full": 98.68,
     "game_only": 98.54
   },
-  "baseline_sha256": "7897d8d6b5c4423ab0d572dfc6fc73c25777f63fe0206eee996719e8870fc7fc",
+  "baseline_sha256": "0adabd438d2efaf8730cfc89509f9d780a2df2cb8979289cd7ea6a10b4f775ed",
   "correct_size_functions": {
     "full": {
       "bytes": 511680,
@@ -228,23 +228,23 @@
       ".rdata": {
         "first_difference": {
           "object": null,
-          "offset_delta": -20,
-          "original": "0x49e048",
-          "rebuilt": "0x49e034",
+          "offset_delta": 4,
+          "original": "0x49e054",
+          "rebuilt": "0x49e058",
           "rebuilt_region": ".rdata"
         },
         "identical_prefix": {
-          "bytes": 52,
-          "first_difference": "0x49e034",
+          "bytes": 90,
+          "first_difference": "0x49e05a",
           "rebuilt_object": null
         },
         "items": {
-          "at_original_address": 8,
-          "at_original_address_bytes": 32,
-          "at_original_offset": 8,
-          "at_original_offset_bytes": 32,
-          "paired": 96,
-          "paired_bytes": 1028
+          "at_original_address": 12,
+          "at_original_address_bytes": 48,
+          "at_original_offset": 12,
+          "at_original_offset_bytes": 48,
+          "paired": 97,
+          "paired_bytes": 1032
         },
         "objects": {
           "agreeing": [],
@@ -253,7 +253,7 @@
         },
         "original_bytes": 11232,
         "original_start": "0x49e000",
-        "rebuilt_bytes": 10840,
+        "rebuilt_bytes": 11048,
         "rebuilt_start": "0x49e000",
         "start_delta": 0
       },
@@ -332,13 +332,13 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "02934f7d3ccbabd8454f9f44f4680cb6667360f514e933769ce355b22888ff93",
+  "input_sha256": "25581c5e21c0f6e43f3d8ac487277ed0c968432133ea7cd7c9bd2523d5735b9b",
   "layout": {
     "data_offset_agreement": {
-      "agreeing_units": 54,
+      "agreeing_units": 55,
       "eligible_units": 57,
       "method": "anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted",
-      "unattributed_or_unmapped_annotations": 124
+      "unattributed_or_unmapped_annotations": 125
     },
     "link_order_list": {
       "adjacent": 0,
@@ -2168,7 +2168,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 20,
         "functions": 25,
         "identical_function_bytes": 3826,
@@ -4042,7 +4042,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 8
   },
-  "listing_digests_sha256": "3a44508d02e109733098883ab938544ee62fcff3979c7b23b243718c4a2677cd",
+  "listing_digests_sha256": "03673be6530db5f9b4c35d44176ccfc313cf82a534ec0b8e0519831119bf0c3e",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4127,8 +4127,8 @@
       "imported_names": 145,
       "section_bytes": {
         ".data": {
-          "differing": 1006,
-          "equal": 72210,
+          "differing": 986,
+          "equal": 72230,
           "original": 73216,
           "rebuilt": 73216
         },
@@ -4139,14 +4139,14 @@
           "rebuilt": 4112
         },
         ".rdata": {
-          "differing": 8599,
-          "equal": 2633,
+          "differing": 8020,
+          "equal": 3212,
           "original": 11232,
-          "rebuilt": 10840
+          "rebuilt": 11048
         },
         ".text": {
-          "differing": 550395,
-          "equal": 92154,
+          "differing": 550119,
+          "equal": 92430,
           "original": 642549,
           "rebuilt": 642133
         }
@@ -4162,7 +4162,7 @@
         },
         ".rdata": {
           "raw_size": 11264,
-          "virtual_size": 10840
+          "virtual_size": 11048
         },
         ".rsrc": {
           "raw_size": 3072,
@@ -4207,38 +4207,38 @@
   "sections": {
     ".data": {
       "chance_percent": 10.47,
-      "excess_percent_points": 88.15,
-      "identical_bytes": 72210,
-      "identical_percent": 98.63,
+      "excess_percent_points": 88.2,
+      "identical_bytes": 72244,
+      "identical_percent": 98.67,
       "original_bytes": 73216,
       "rebuilt_bytes": 73216,
       "run_chance_percent": 1.76,
-      "run_excess_percent_points": 92.19,
-      "run_identical_bytes": 68787,
+      "run_excess_percent_points": 92.2,
+      "run_identical_bytes": 68790,
       "run_identical_percent": 93.95
     },
     ".rdata": {
       "chance_percent": 4.12,
-      "excess_percent_points": 21.6,
-      "identical_bytes": 2889,
-      "identical_percent": 25.72,
+      "excess_percent_points": 27.71,
+      "identical_bytes": 3575,
+      "identical_percent": 31.83,
       "original_bytes": 11232,
-      "rebuilt_bytes": 10936,
+      "rebuilt_bytes": 11128,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 0.93,
-      "run_identical_bytes": 104,
-      "run_identical_percent": 0.93
+      "run_excess_percent_points": 1.18,
+      "run_identical_bytes": 132,
+      "run_identical_percent": 1.18
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 11.51,
-      "identical_bytes": 92132,
-      "identical_percent": 14.34,
+      "excess_percent_points": 11.55,
+      "identical_bytes": 92376,
+      "identical_percent": 14.38,
       "original_bytes": 642549,
       "rebuilt_bytes": 642133,
       "run_chance_percent": 0.0,
       "run_excess_percent_points": 9.71,
-      "run_identical_bytes": 62397,
+      "run_identical_bytes": 62396,
       "run_identical_percent": 9.71
     },
     "imports": {
@@ -4268,14 +4268,14 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 11.52,
-    "identical_bytes": 92159,
-    "identical_percent": 14.34,
+    "excess_percent_points": 11.55,
+    "identical_bytes": 92403,
+    "identical_percent": 14.38,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
     "run_excess_percent_points": 9.71,
-    "run_identical_bytes": 62397,
+    "run_identical_bytes": 62396,
     "run_identical_percent": 9.71
   },
   "unit_size_agreement": {
