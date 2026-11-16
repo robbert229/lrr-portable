@@ -1640,13 +1640,15 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
     }
     if (!hitAFound && !hitBFound) return 0;
     if (hitAFound && hitBFound) {
-        if (terrain_map_vector3d_distance(&hit[0], origin) <
-            terrain_map_vector3d_distance(&hit[1], origin)) {
-            *intersection = hit[0];
+        if (!(terrain_map_vector3d_distance(&hit[0], origin) <
+              terrain_map_vector3d_distance(&hit[1], origin))) {
+            *intersection = hit[1];
             return 1;
         }
+        *intersection = hit[0];
+        return 1;
     }
-    else if (hitAFound) {
+    if (hitAFound) {
         *intersection = hit[0];
         return 1;
     }
