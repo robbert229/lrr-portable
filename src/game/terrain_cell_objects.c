@@ -59,6 +59,11 @@ void electric_fence_initialise(ElectricFenceLevel* level)
     electricFenceGlobs.listCount = 0;
 }
 
+/* A header inline copy whose 1.0 and 0.0 open the unit's .rdata
+ * (0049e110, 0049e114; saturate_inline.h). Above electric_fence_initialise
+ * it moves that function's symbol counter; after it, nothing changes. */
+#include "saturate_inline.h"
+
 // FUNCTION: LEGORR 0x0040ce30
 void electric_fence_shutdown(void)
 {
