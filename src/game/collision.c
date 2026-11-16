@@ -39,8 +39,8 @@ float collision_segment_point_distance(const CollisionPoint2F* point,
     collision_vector2d_subtract(&dir, end, start);
     collision_vector2d_subtract(&toEnd, point, end);
     dist = collision_vector2d_modulus(&toEnd);
-    collision_vector2d_normalise(&dir);
     collision_vector2d_scale(&toEnd, &toEnd, 1.0f / dist);
+    collision_vector2d_normalise(&dir);
     if (collision_vector2d_dot(&toEnd, &dir) < 0.0f) {
         collision_vector2d_subtract(&toStart, point, start);
         dist = collision_vector2d_modulus(&toStart);
