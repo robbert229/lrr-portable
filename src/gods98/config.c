@@ -251,7 +251,7 @@ BlockRec* block_record_create(BlockRec* prev)
     if (configGlobs.free_list == NULL) block_text_token_pool_grow();
 
     conf = configGlobs.free_list;
-    configGlobs.free_list = configGlobs.free_list->next_free;
+    configGlobs.free_list = conf->next_free;
     conf->next_free = conf;
 
     conf->key = NULL;
@@ -261,8 +261,8 @@ BlockRec* block_record_create(BlockRec* prev)
     if (prev) {
         prev->next = conf;
         conf->prev = prev;
-        conf->file_text = NULL;
         conf->depth = prev->depth;
+        conf->file_text = NULL;
     }
     else {
         conf->depth = 0;
