@@ -188,8 +188,14 @@ void effect_spawn_boulder_explode_at(Effect_Vector3F* wPos)
             else
                 cont = entity_visual_resource_load(legoGlobs_contBoulderExplode);
             ddiscene_frame_update_and_callbacks(effectGlobs.boulderExplodeConts[i] = cont, 0.0f);
-            ddiscene_object_position_set(effectGlobs.boulderExplodeConts[i], NULL,
-                                         wPos->x, wPos->y, wPos->z);
+            {
+                /* y and z as float locals of the block: the original copies
+                 * them through the x87 stack and only x through a register. */
+                float y = wPos->y;
+                float z = wPos->z;
+                ddiscene_object_position_set(effectGlobs.boulderExplodeConts[i], NULL,
+                                             wPos->x, y, z);
+            }
             ddiscene_object_pose_method_dispatch(effectGlobs.boulderExplodeConts[i], NULL,
                                                  0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f);
             return;
