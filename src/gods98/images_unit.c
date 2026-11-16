@@ -287,7 +287,7 @@ int Image_8BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
         unsigned int gm = desc->ddpfPixelFormat.dwGBitMask;
         Image_PaletteEntry* pal = image->palette;
         int x;
-        unsigned int pitch = desc->lPitch;
+        unsigned int pitch = (unsigned int)desc->lPitch / 2;
         unsigned char* from = image->buffer1;
         unsigned int bm = desc->ddpfPixelFormat.dwBBitMask;
         unsigned int rm = desc->ddpfPixelFormat.dwRBitMask;
@@ -307,7 +307,7 @@ int Image_8BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
                                          ((pal[index].green >> (8 - gbits)) << gshift));
             }
             from += lineLen - image->width;
-            to += (pitch / 2) - image->width;
+            to += pitch - image->width;
         }
 
         Image_FlipSurface(desc);
