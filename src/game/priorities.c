@@ -276,12 +276,13 @@ void priorities_move_up(unsigned int index)
 {
     if (index != 0 && index < priorities.count) {
         int type = priorities.list[index];
+        unsigned int offset = index * PRIORITIES_VALUE_STEP;
         priorities.list[index] = priorities.list[index - 1];
         priorities.list[index - 1] = type;
         priority_entry_order_value_set(priorities.list[index],
-            PRIORITIES_TOP_VALUE - index * PRIORITIES_VALUE_STEP);
+            PRIORITIES_TOP_VALUE - offset);
         priority_entry_order_value_set(priorities.list[index - 1],
-            PRIORITIES_TOP_VALUE - (index - 1) * PRIORITIES_VALUE_STEP);
+            PRIORITIES_TOP_VALUE + PRIORITIES_VALUE_STEP - offset);
         priorities_move_cursor_to_up_button(index - 1);
     }
     media_action_feedback_sound_dispatch(0);
