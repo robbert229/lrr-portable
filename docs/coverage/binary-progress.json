@@ -1,23 +1,23 @@
 {
   "accuracy_percent": {
-    "full": 98.63,
-    "game_only": 98.48
+    "full": 98.66,
+    "game_only": 98.52
   },
-  "baseline_sha256": "4ba2d6f757a3ec1c13eedb0af184377473bfb7dbabe06cf12f7ea558fd68c266",
+  "baseline_sha256": "2ac64d3f11e909d132d7c620b22be7e9655ffa4e1fd1eaef0a31f9fd400b498f",
   "correct_size_functions": {
     "full": {
-      "bytes": 509537,
+      "bytes": 509777,
       "compared": 3020,
-      "count": 2892,
-      "exact_functions": 2782,
+      "count": 2894,
+      "exact_functions": 2785,
       "mapped": 3022,
       "uncompared": 2
     },
     "game_only": {
-      "bytes": 458686,
+      "bytes": 458926,
       "compared": 2721,
-      "count": 2597,
-      "exact_functions": 2489,
+      "count": 2599,
+      "exact_functions": 2492,
       "mapped": 2723,
       "uncompared": 2
     },
@@ -283,9 +283,9 @@
     }
   },
   "exact_function_code_bytes": {
-    "bytes": 391266,
+    "bytes": 391606,
     "original_text_bytes": 642549,
-    "percent": 60.89
+    "percent": 60.95
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 8008,
@@ -332,7 +332,7 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "375f7921053e86457a78048acaaea5433095755f4c1f8130771b5a7ed286fb9a",
+  "input_sha256": "e9989de47eb55ff0a36c77c07586cbf238e3d0c201374ee79370f8b7537d0598",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 54,
@@ -1308,10 +1308,10 @@
       "units": 227
     },
     "unit_relative_identity": {
-      "identical_bytes": 316988,
+      "identical_bytes": 317328,
       "method": "whole function byte identity; image-address operands and external relative branches masked; missing functions count against original bytes",
       "original_bytes": 553892,
-      "percent": 57.23
+      "percent": 57.29
     },
     "units": [
       {
@@ -1655,8 +1655,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 65,
         "functions": 26,
-        "identical_function_bytes": 3081,
-        "identity_percent": 76.76,
+        "identical_function_bytes": 3181,
+        "identity_percent": 79.25,
         "mapped": 26,
         "original_function_bytes": 4014,
         "size_exact": false,
@@ -1739,8 +1739,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 4,
         "functions": 14,
-        "identical_function_bytes": 1780,
-        "identity_percent": 71.77,
+        "identical_function_bytes": 2020,
+        "identity_percent": 81.45,
         "mapped": 14,
         "original_function_bytes": 2480,
         "size_exact": false,
@@ -4042,18 +4042,18 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 8
   },
-  "listing_digests_sha256": "2fc23ca62c89a8c9723382a87e74df1e7a89d9b3ee99247d9884f013d381bc88",
+  "listing_digests_sha256": "170aa4d6d8fae4298f0a0a52280aab3091eae156be7f31e80853647cf5a88169",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 2782,
+        "exact": 2785,
         "mapped": 3022,
         "removed": 0,
         "removed_exact": null
       },
       "game_only": {
-        "exact": 2489,
+        "exact": 2492,
         "mapped": 2723,
         "removed": 0,
         "removed_exact": null
@@ -4145,8 +4145,8 @@
           "rebuilt": 10840
         },
         ".text": {
-          "differing": 581549,
-          "equal": 61000,
+          "differing": 581551,
+          "equal": 60998,
           "original": 642549,
           "rebuilt": 642101
         }
@@ -4232,7 +4232,7 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 6.66,
-      "identical_bytes": 60980,
+      "identical_bytes": 60978,
       "identical_percent": 9.49,
       "original_bytes": 642549,
       "rebuilt_bytes": 642101,
@@ -4269,7 +4269,7 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 6.67,
-    "identical_bytes": 61010,
+    "identical_bytes": 61008,
     "identical_percent": 9.49,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,

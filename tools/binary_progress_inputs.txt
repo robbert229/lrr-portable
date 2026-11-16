@@ -591,6 +591,7 @@ src/gods98/container_port.cpp
 src/gods98/container_route.cpp
 src/gods98/container_route.h
 src/gods98/container_unit.h
+src/gods98/d3drmdef_consts.h
 src/gods98/directdraw.c
 src/gods98/directdraw.h
 src/gods98/directdraw_imports.h
