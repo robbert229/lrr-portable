@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* Original translation unit G98-020, Lws.c (text 004869f0-00488b50; .rdata
- * 0049ea48-0049ea58; literals 004ab5f8-004ab6c8; .bss 00540838-00544864;
+ * 0049ea38-0049ea58; literals 004ab5f8-004ab6c8; .bss 00540838-00544864;
  * finding 505): the LightWave scene loader.
  *
  * Lws_Parse reads an "LWSC" version 1 .lws file into a node list: each
@@ -251,11 +251,20 @@ const LwsIID IID_IDirect3DRMUserVisual = {
 #endif
 
 /* The degree-to-radian factors. Lws_Parse multiplies by each in turn; as
- * literals MSVC folds them into one constant. */
-// GLOBAL: LEGORR 0x0049ea4c
+ * literals MSVC folds them into one constant. In C they are only declared
+ * here (tentative definitions) and defined at the end of the file, after
+ * d3drmdef.h's four consts (finding 524): MSVC 5.0 numbers a static at
+ * its first declaration, so no function's symbol counter moves, and emits
+ * .rdata in definition order, so the consts open the unit's block as at
+ * 0049ea38. Defining the consts here instead moves the counter, and
+ * lws_interpolate and lws_absolute_key_set fall. */
+#ifdef __cplusplus
 static const float s_lws_pi = 3.14159265358979323846f;
-// GLOBAL: LEGORR 0x0049ea48
 static const float s_lws_one_over_180 = 1.0f / 180.0f;
+#else
+static const float s_lws_pi;
+static const float s_lws_one_over_180;
+#endif
 
 // GLOBAL: LEGORR 0x00540838
 static LwsGlobs lwsGlobs;
@@ -1090,3 +1099,12 @@ void lws_node_free(LwsInfo* scene, LwsNode* node)
         }
     }
 }
+
+/* The unit's .rdata, in original order (see s_lws_pi above). */
+#include "gods98/d3drmdef_consts.h"
+#ifndef __cplusplus
+// GLOBAL: LEGORR 0x0049ea48
+static const float s_lws_one_over_180 = 1.0f / 180.0f;
+// GLOBAL: LEGORR 0x0049ea4c
+static const float s_lws_pi = 3.14159265358979323846f;
+#endif
