@@ -1577,13 +1577,13 @@ void front_menu_item_draw_slider(Front_SliderData* slider, unsigned int x, unsig
     Point2F dest;
     float pct;
 
+    pct = (float)((value * 100) / range);
     src.x = 0.0f;
     src.y = 0.0f;
-    dest.x = (float)x;
-    dest.y = (float)y;
-    pct = (float)((value * 100) / range);
     src.width = pct;
     src.height = 20.0f;
+    dest.x = (float)x;
+    dest.y = (float)y;
     image_display_scaled(slider->imageBarOn, &src, &dest, NULL);
 
     src.x = pct;
@@ -1605,7 +1605,9 @@ void front_menu_item_draw_slider(Front_SliderData* slider, unsigned int x, unsig
         image_display_scaled(slider->imageCapRight, NULL, &dest, NULL);
     }
     if (slider->imageMinusLo != NULL && slider->imageMinusHi != NULL) {
-        dest.x = (float)x - (float)(int)(slider->imageMinusLo->width + 4);
+        /* The width is converted as a signed int: (float)(int)(width + 4)
+         * compiles as an unsigned conversion. */
+        dest.x = (float)x - (float)((int)slider->imageMinusLo->width + 4);
         dest.y = (float)y;
         if (front_maths_is_point_inside_rect(FRONT_MSX, FRONT_MSY, (int)dest.x, (int)dest.y,
                                              slider->imageMinusLo->width,
