@@ -57,9 +57,13 @@ objects (`build-reccmp/CMakeFiles/program.dir/link.txt`).
    rest depends on members the original pulled whose slots `/OPT:REF` then
    removed: they take part in the sort but leave no IAT slot and no
    `.idata$6` string. Greedy searches for such "ghost" members reach 102 to
-   112 slots but do not converge on a consistent set. So the members still
-   have to be found from the source side (removed functions' imports, LIBC
-   members pulled only by removed code).
+   112 slots but do not converge on a consistent set.
+6. **Fourteen ghost members give 145 of 145.** A search over per-run ghost
+   counts converges on one family of 14 (section *Ghost import members*).
+   The matching build now carries them as unused header inline copies,
+   together with gods98's visible pull order, and every DLL's slots equal
+   the original's. Only their counts and positions are evidenced; most
+   names are placeholders.
 
 ## The model, step by step
 
@@ -115,9 +119,9 @@ three places:
   references it right after `GetDriveTypeA`.
 
 The first two are link order, fixed here. The third is source order in
-gods98 and is left open: it moves two imports, and with the ghosts unknown
-it cannot be scored yet. In the scratch model it alone lowers the agreement
-from 39 to 27.
+gods98. In the scratch model it alone lowers the agreement from 39 to 27;
+it is fixed together with the ghost members (section *Ghost import
+members*).
 
 ## Link order
 
@@ -149,6 +153,7 @@ bytes earlier, and `.text` is 16 bytes shorter. No score changes.
 | Wine runtime, old order (base) | 1 | 1 | 1 | 12 |
 | native runtime, old order | 0 | 0 | 2 | 8 |
 | native runtime, this link order (gate) | 24 | 1 | 1 | 39 |
+| with the ghost members below | 70 | 34 | 20 | 145 |
 
 The middle row is lower than the base, but both differences are accidents of
 two `qsort`s. Only a native-runtime link can reach the original's order.
@@ -156,17 +161,104 @@ two `qsort`s. Only a native-runtime link can reach the original's order.
 `make reccmp-check` passes after each change, with no function below the
 baseline. The means are unchanged: game-only 98.52%, full 98.66%.
 
+## Ghost import members
+
+With the original's visible pull order, 14 ghost import members give
+**145 of 145** slots: members whose only references are code `/OPT:REF`
+removed. They take part in LINK's `qsort` and then lose their slots and
+`.idata$6` strings, so the image shows only their effect on the order.
+
+**How the set was found.** A ghost member of a library can load only when
+LINK searches that library, which gives 24 runs. Only the number of ghosts
+in each run changes the permutation, because the `qsort` sees only the key
+sequence. Placement within a run was then checked exactly by backtracking
+(a scratch search over `iat_order.py`'s model; its programs are not kept).
+- An exhaustive search over up to three ghosts reached 111 slots at most.
+- Annealing with exhaustive pair moves found 145 in 10 of 96 restarts, all
+  with the same per-run counts.
+- From that vector, no 13-ghost neighbour reaches 145. A breadth-first
+  search over single moves at 14 ghosts finds exactly four vectors.
+
+The search above three ghosts is not exhaustive over every count vector,
+but every independent search converged on this family.
+
+| DLL | Ghosts | Allowed positions (undefined-symbol order) |
+| --- | ---: | --- |
+| KERNEL32, gods98 | 7 | before crt0dat.obj's `GetCurrentProcess`; any spread over gods98's references and LIBC's up to crt0dat |
+| KERNEL32, LIBC | 2 | after `GetCurrentProcess`, before testfdiv.obj's `GetProcAddress`; at least one after getcwd.obj's `GetFullPathNameA` |
+| d3drm | 1 | after Maths.c's `D3DRMVectorRandom` |
+| DDRAW | 1 | after DirectDraw.c's `DirectDrawCreate` |
+| AVIFIL32 | 1 | straight after `AVIFileInit` |
+| USER32 | 1 | first USER32 run, after Main.c's `CreateWindowExA`, no later than SoundSys.c's `wsprintfA` |
+| one of four | 1 | ADVAPI32 after `RegCloseKey` in the registry unit's run; ADVAPI32 or AVIFIL32 in the second loop; or GDI32 |
+
+Ghosts are not allowed in the explicit objects' KERNEL32 run, ole32, WINMM,
+DINPUT, DSOUND or Init.c's USER32 run.
+
+**What the matching build uses.** Each reference is an unused
+`extern __inline` copy in a small header included after its unit's last
+function (finding 693's form); `/OPT:REF` removes the copy:
+
+| Header | Ghost (and DLL) | Evidence for the name |
+| --- | --- | --- |
+| `g98_029_tail.h` | `RegSetValueExA` (ADVAPI32) | good: the unit queries values and never sets one |
+| `avi_player_tail.h` | `AVIFileExit` (AVIFIL32) | good: the unit calls `AVIFileInit` and never `AVIFileExit` |
+| `files_tail.h` | `_rmdir`, `rename` (LIBC: `RemoveDirectoryA`, `MoveFileA`) | good: Files.c wraps `remove`, `_chmod`, `_mkdir`, `_findfirst` and `_getcwd`; neither member pulls anything new |
+| `maths_tail.h` | `D3DRMVectorModulus` (d3drm) | placeholder; Maths.c wraps `D3DRMVector*` functions |
+| `directdraw_tail.h` | `DirectDrawCreateClipper` (DDRAW) | placeholder |
+| `input_tail.h` | `GetKeyState` (USER32) | placeholder |
+| `main_tail.h`, `sound3d_tail.h`, `files_tail.h` | seven KERNEL32 imports | placeholders: `GetTickCount`, `QueryPerformanceCounter`, `QueryPerformanceFrequency`, `GlobalLock`, `GlobalUnlock`, `GetVolumeInformationA`, `GetFileSize` |
+
+Only the counts and positions are evidenced. The names leave no trace in
+the image. LIBC carriers that were rejected:
+- `time.obj` pulls tzset.obj early and moves the visible
+  `GetTimeZoneInformation` (109 slots);
+- `chdir.obj` and `drive.obj` pull `SetEnvironmentVariableA` and
+  `_toupper`.
+
+**The visible order.** The same change fixes gods98's pull order:
+- `input_tail.h` makes Input.c, the object before Files.c, reference
+  `OutputDebugStringA`, since Files.c's own reference (File_Error) follows its
+  `GetDriveTypeA` (File_FindDataCD);
+- `files_tail.h` makes Files.c reference `CloseHandle`.
+
+Which gods98 object the original's earlier `OutputDebugStringA` came from is
+not known.
+
+**Compiler fact used for placement** (scratch compile, `/O2`). An object
+lists its undefined externals function by function, in definition order, and
+within one function in *reverse* call order. Example: registry_path_create_keys
+calls Query, Create and Close, and the object lists `RegCloseKey`,
+`RegCreateKeyA`, `RegQueryValueExA`. MSVC 5.0 emits an unused
+`extern __inline` copy in C++ as in C (avi_player.cpp).
+
+**Slots, one change at a time** (each a full matching build):
+
+| Change | Slots |
+| --- | ---: |
+| before | 39 |
+| d3drm (`maths_tail.h`) | 41 |
+| DDRAW (`directdraw_tail.h`) | 41 |
+| AVIFIL32 (`avi_player_tail.h`) | 51 |
+| USER32 (`input_tail.h`) | 58 |
+| ADVAPI32 (`g98_029_tail.h`) | 99 |
+| KERNEL32: visible order and nine ghosts | 145 |
+
+The KERNEL32 part alone, without the others, gives 35. At every step
+`.idata$6` keeps its order, and after the last step it equals the original's.
+`.rdata`, `.data` and `.idata` sizes are unchanged and the 146 LIBC members
+keep their order.
+
+One function moves. With `maths_tail.h`,
+surface_triangle_area_calculate (`0x00479630`) rises from 60.37% to 63.47%:
+its body is 0x26e bytes, the original's length, where it was 0x276. `.text`
+is 16 bytes shorter (one alignment step). The header comes after the
+function and adds no code to the image, so the change is in how MSVC 5.0
+compiles the function. Why a later declaration moves it is not known. No
+other score moves.
+
 ## Not done
 
 - **ReproBit** runs `link.exe` through its own toolchain transport, not
   CMake's `CMAKE_LINKER`. It needs the same staged runtime, or a Wine
   override scoped to `link.exe` that keeps Wine's own `msvcrt`.
-- **The ghost members.** Candidates to check from the source side:
-  - an ADVAPI32 import that Registry.c's removed functions reference;
-  - KERNEL32 imports from LIBC members that only removed code pulls (the
-    search places one between `VirtualAlloc` and `RaiseException`);
-  - the gods98 order of `GetDriveTypeA`, `OutputDebugStringA` and
-    `CloseHandle`.
-
-  Each candidate can be checked with a scratch relink and
-  `iat_order.py slots` in about a minute.
