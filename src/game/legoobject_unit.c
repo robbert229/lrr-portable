@@ -2760,7 +2760,8 @@ int legoobject_pick_at_screen_position_callback(Lego_Object* obj, void* data)
     points[0][2] = terrain_map_world_z_get(Lego_GetMap(), points[0][0], points[0][1]);
     points[0][2] -= entity_stats_float_at74(LEGOOBJ_SLOT(obj)) * 0.5f;
     if (obj->type == 4) {
-        ddiscene_object_facing_pair_get(legoobject_type_component_get(obj), NULL, dir, NULL);
+        shape = (LegoObjF_Point2I*)legoobject_type_component_get(obj);
+        ddiscene_object_facing_pair_get(shape, NULL, dir, NULL);
         if (fabs(dir[0]) > fabs(dir[1])) {
             if (dir[0] > legoobject_zero)
                 rotation = 1;
