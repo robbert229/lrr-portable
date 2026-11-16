@@ -499,6 +499,21 @@ int radarmap_inside_radar(RadarMap* radarMap, uint32_t screenX, uint32_t screenY
     return 0;
 }
 
+/* Maths.h's inline Vector2DScale and Vector2DAdd. */
+static __inline Point2F* radarmap_vector2d_scale(Point2F* r, Point2F* a, float f)
+{
+    r->x = f * a->x;
+    r->y = f * a->y;
+    return r;
+}
+
+static __inline Point2F* radarmap_vector2d_add(Point2F* r, Point2F* a, Point2F* b)
+{
+    r->x = a->x + b->x;
+    r->y = a->y + b->y;
+    return r;
+}
+
 // FUNCTION: LEGORR 0x0045e6d0
 int radarmap_screen_to_block_pos(RadarMap* radarMap, uint32_t screenX,
                                  uint32_t screenY, Point2F* outWorldPos,
@@ -515,13 +530,11 @@ int radarmap_screen_to_block_pos(RadarMap* radarMap, uint32_t screenX,
         if (y >= radarMap->screenRect.y &&
             y < radarMap->screenRect.y + radarMap->screenRect.height) {
             scale = 1.0f / radarMap->zoom;
-            wPos.y = radarMap->blockSize *
-                     ((radarMap->screenRect.y + radarMap->screenRect.width * 0.5f) - y) *
-                     scale + radarMap->centrePos.y;
-            wPos.x = radarMap->centrePos.x -
-                     radarMap->blockSize *
-                     ((radarMap->screenRect.x + radarMap->screenRect.width * 0.5f) - x) *
-                     scale;
+            wPos.x = ((radarMap->screenRect.x + (radarMap->screenRect.width * 0.5f)) - x) * scale;
+            wPos.y = ((radarMap->screenRect.y + (radarMap->screenRect.width * 0.5f)) - y) * scale;
+            wPos.x = -wPos.x;
+            radarmap_vector2d_scale(&wPos, &wPos, radarMap->blockSize);
+            radarmap_vector2d_add(&wPos, &radarMap->centrePos, &wPos);
             if (terrain_map_world_to_block(radarMap->map, wPos.x, wPos.y, outBx, outBy)) {
                 if (outWorldPos) *outWorldPos = wPos;
                 return 1;
