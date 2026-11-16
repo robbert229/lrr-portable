@@ -2822,9 +2822,11 @@ void legoobject_select_in_screen_rect(void* viewport, float* corner1, float* cor
     if (!(LegoObjH_NERPsTutorialFlags(0) & 8)) {
         search.viewport = viewport;
         search.left = (corner1[0] < corner2[0]) ? corner1[0] : corner2[0];
-        search.top = (corner2[1] > corner1[1]) ? corner1[1] : corner2[1];
+        /* The original selects the vertical bounds on the x87 stack (in
+         * double precision) and the horizontal ones with integer moves. */
+        search.top = (float)((double)corner1[1] < (double)corner2[1] ? (double)corner1[1] : (double)corner2[1]);
         search.right = (corner1[0] > corner2[0]) ? corner1[0] : corner2[0];
-        search.bottom = (corner2[1] >= corner1[1]) ? corner2[1] : corner1[1];
+        search.bottom = (float)((double)corner1[1] > (double)corner2[1] ? (double)corner1[1] : (double)corner2[1]);
         legoobject_run_through_lists_skip_upgrade_parts(legoobject_select_in_screen_rect_callback, &search);
         cmd_produce(0x2d, NULL, 0, NULL);
     }
