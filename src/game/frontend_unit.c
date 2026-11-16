@@ -1698,9 +1698,12 @@ void front_menu_update_overlays(Front_Menu* menu)
             s_overlayTriggered = 0;
         }
     } else {
+        /* The original reads playRandom before the overlay test; startFrame
+         * holds it, since a new local shifts 0x004177e0's symbol phase. */
         overlay = menu->overlays;
+        startFrame = menu->playRandom;
         if (overlay != NULL) {
-            if (menu->playRandom == 1) {
+            if (startFrame == 1) {
                 count = front_menu_should_random_play() ? front_menu_get_overlay_count(menu) : 0;
                 if (count != 0) {
                     for (index = (unsigned int)rand() % count; index > 0; index--) {
