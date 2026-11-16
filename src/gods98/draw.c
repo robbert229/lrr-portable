@@ -54,19 +54,25 @@ typedef struct DrawGlobs {
     uint32_t flags;               /* +0x48 00540830 */
 } DrawGlobs;
 
-/* The .rdata block opens with the {1, 2, 4, -1} header table at 0049ea10
- * (d3drmdef.h, finding 524), which is not reproduced: the toolchain's
- * DirectX 3 d3drm.h moves the symbol counter so that Draw_Pixel24 and
- * viewport_subrectangle_set fall (finding 646). 0049ea2c is the double's
- * alignment. */
-// GLOBAL: LEGORR 0x0049ea20
+/* The .rdata block opens with the {1, 2, 4, -1} table at 0049ea10:
+ * d3drmdef.h's four consts (finding 524). Defining them here moves the
+ * symbol counter so that viewport_subrectangle_set falls (finding 646), so
+ * in C the constants are only declared here (tentative definitions) and
+ * defined at the end of the file, behind d3drmdef_consts.h: MSVC 5.0
+ * numbers a static at its first declaration, so no function's counter
+ * moves, and emits .rdata in definition order, so the table opens the
+ * block. 0049ea2c is the double's alignment. */
+#ifdef __cplusplus
 static const float s_draw_zero = 0.0f;
-// GLOBAL: LEGORR 0x0049ea24
 static const float s_draw_one = 1.0f;
-// GLOBAL: LEGORR 0x0049ea28
 static const float s_draw_two_pi = 6.28318548f;
-// GLOBAL: LEGORR 0x0049ea30
 static const double s_draw_255 = 255.0;
+#else
+static const float s_draw_zero;
+static const float s_draw_one;
+static const float s_draw_two_pi;
+static const double s_draw_255;
+#endif
 
 extern DrawGlobs drawGlobs; /* defined at the end of the file */
 
@@ -452,3 +458,16 @@ static void Draw_Pixel32(int32_t x, int32_t y, uint32_t value)
 unsigned int draw_unknown_5405e0[130] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x005407e8
 DrawGlobs drawGlobs = { 0 };
+
+/* The unit's .rdata, in original order (see s_draw_zero above). */
+#include "gods98/d3drmdef_consts.h"
+#ifndef __cplusplus
+// GLOBAL: LEGORR 0x0049ea20
+static const float s_draw_zero = 0.0f;
+// GLOBAL: LEGORR 0x0049ea24
+static const float s_draw_one = 1.0f;
+// GLOBAL: LEGORR 0x0049ea28
+static const float s_draw_two_pi = 6.28318548f;
+// GLOBAL: LEGORR 0x0049ea30
+static const double s_draw_255 = 255.0;
+#endif
