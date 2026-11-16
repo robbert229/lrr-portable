@@ -904,3 +904,5 @@ unsigned int directdraw_count_mask_bits(unsigned int mask)
 }
 
 #endif /* !LEGORRR_BACKEND_MINIWIN */
+
+#include "directdraw_tail.h"
