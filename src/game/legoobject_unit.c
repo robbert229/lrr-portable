@@ -2892,10 +2892,9 @@ int legoobject_lod_meshes_update_callback(Lego_Object* obj, void* data)
             if (obj->field_34c == 0) {
                 cont = legoobject_type_component_get(obj);
                 ddiscene_object_position_get(cont, NULL, position);
-                dist = (float)sqrt((search->position[0] - position[0]) * (search->position[0] - position[0]) +
+                if ((dist = (float)sqrt((search->position[0] - position[0]) * (search->position[0] - position[0]) +
                                    (search->position[1] - position[1]) * (search->position[1] - position[1]) +
-                                   (search->position[2] - position[2]) * (search->position[2] - position[2]));
-                if (dist <= search->highDist) {
+                                   (search->position[2] - position[2]) * (search->position[2] - position[2]))) <= search->highDist) {
                     if (obj->type == 2)
                         renderer_object_update_from_record_field68((struct AnimationObject*)obj->miniFigure, 1);
                     else if (obj->type == 3)
