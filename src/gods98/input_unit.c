@@ -303,3 +303,5 @@ void input_cursor_client_position_set(int x, int y)
 #endif /* !LEGORRR_BACKEND_MINIWIN */
 
 #include "gods98/d3drmdef_consts.h"
+
+#include "input_tail.h"

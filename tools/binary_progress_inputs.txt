@@ -686,6 +686,7 @@ src/gods98/input_globs.h
 src/gods98/input_key_names.h
 src/gods98/input_keys.h
 src/gods98/input_shared.hpp
+src/gods98/input_tail.h
 src/gods98/input_unit.c
 src/gods98/input_unit.h
 src/gods98/keys.c
