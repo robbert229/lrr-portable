@@ -1,4 +1,4 @@
-# input_sha256: 86dab41f2cae19897f03c1349b3eeb396f7875548e93bfab5ee06ce2ebdde67b
+# input_sha256: d98bf64335b8cc5998e0a3caf3696b67681cba7b6e89db888247813a6a631d1d
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -274,7 +274,7 @@
 0x0040b310 100.00 terrain_cell_resource_grid_load
 0x0040b410 100.00 terrain_cell_resource_grid_dispose
 0x0040b470 100.00 lego_projected_quad_area_adapter
-0x0040b5f0 93.45 tile_model_entity_register_original
+0x0040b5f0 100.00 tile_model_entity_register_original
 0x0040b7d0 100.00 cell_visual_channel_table_dispose_original
 0x0040b810 100.00 lego_detail_mesh_resources_clear_adapter
 0x0040b850 100.00 packed_grid_cell_value_get
@@ -284,7 +284,7 @@
 0x0040bd60 100.00 detail_matrix_setup
 0x0040bdc0 100.00 ledger_stub_0040bdc0_SetTimeoutTo10000
 0x0040bde0 100.00 effect_spawn_boulder_explode
-0x0040be10 75.00 scene_light_create_at_position
+0x0040be10 88.24 scene_light_create_at_position
 0x0040beb0 100.00 effect_spawn_smash_path
 0x0040bf70 100.00 rock_fall_style_name_lookup
 0x0040bfc0 100.00 rockfall_style_table_base_set
@@ -314,7 +314,7 @@
 0x0040ce80 100.00 electric_fence_restart
 0x0040cea0 100.00 electric_fence_block_surfaces_update
 0x0040cf50 100.00 electric_fence_add
-0x0040cf80 70.48 electric_fence_create
+0x0040cf80 100.00 electric_fence_create
 0x0040d030 100.00 electric_fence_add_list
 0x0040d0a0 100.00 electric_fence_remove
 0x0040d100 100.00 electric_fence_remove_node
@@ -430,7 +430,7 @@
 0x00411f10 63.01 front_menu_item_draw_slider
 0x00412170 100.00 front_menu_get_overlay_count
 0x00412190 100.00 front_menu_should_random_play
-0x004121b0 96.28 front_menu_update_overlays
+0x004121b0 100.00 front_menu_update_overlays
 0x00412450 100.00 front_menu_item_draw_select_item
 0x004124f0 88.00 front_menu_item_draw_save_image
 0x00412750 90.39 front_menu_item_draw_select_text_window
@@ -440,7 +440,7 @@
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
-0x00413b80 90.77 front_run_screen_menu
+0x00413b80 98.15 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
 0x00413e60 100.00 front_menu_item_parse_type_string
 0x00413f00 100.00 mission_replace_char
@@ -448,7 +448,7 @@
 0x00413f90 100.00 front_menu_create_overlay
 0x00414010 100.00 front_menu_item_load_slider_images
 0x00414070 100.00 front_menu_set_create
-0x004140c0 99.90 front_load_menu_set
+0x004140c0 100.00 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
 0x00414ce0 100.00 front_is_intros_enabled
 0x00414d30 77.11 front_callback_slider_brightness
@@ -500,7 +500,7 @@
 0x00416f40 100.00 list_has_item
 0x00416fb0 100.00 list_set_node
 0x00417020 100.00 list_get_node
-0x00417090 90.32 front_level_set_load_level_links
+0x00417090 100.00 front_level_set_load_level_links
 0x004171c0 100.00 sav_tree_walk
 0x00417240 100.00 front_level_link_callback_inc_count
 0x00417250 100.00 front_level_link_callback_find_by_link_index
@@ -509,7 +509,7 @@
 0x004172f0 100.00 sav_tree_walk2
 0x004173e0 100.00 front_levels_update_available
 0x00417430 90.91 float_to_long_x87
-0x00417460 99.07 front_callback_select_mission_item
+0x00417460 100.00 front_callback_select_mission_item
 0x00417700 100.00 front_callback_select_tutorial_item
 0x004177e0 100.00 front_level_link_callback_load_menu_item
 0x004179b0 100.00 front_levels_load_menu_items
@@ -534,14 +534,14 @@
 0x00418120 100.00 upgrade_average_is_above_99
 0x00418190 100.00 selection_mode_state_set
 0x004181a0 100.00 selection_state_flag_clear_bit0
-0x004181b0 98.62 help_window_initialise_adapter
+0x004181b0 100.00 help_window_initialise_adapter
 0x00418450 100.00 help_window_load_infos
 0x004185f0 100.00 help_window_load_buttons
 0x00418800 100.00 mode_flag_pair_apply_if_bit2
 0x00418830 100.00 building_upgrade_state_changed_dispatch
 0x00418920 100.00 help_window_list_dependencies
 0x004189d0 100.00 help_window_close
-0x00418a00 93.36 help_window_update
+0x00418a00 100.00 help_window_update
 0x00418da0 100.00 help_window_button_hit_test
 0x00418f80 100.00 help_window_button_tooltip
 0x00418fc0 100.00 help_window_press_button
@@ -790,7 +790,7 @@
 0x0042d460 100.00 lego_upgrade_types_load
 0x0042d600 100.00 lego_object_names_load
 0x0042da20 100.00 lego_object_the_names_load
-0x0042de40 92.31 lego_viewport_target_position_clamp
+0x0042de40 100.00 lego_viewport_target_position_clamp
 0x0042dfc0 100.00 lego_object_pointer_registry_clear_match
 0x0042dff0 100.00 lego_object_pointer_registry_get_slot
 0x0042e020 75.15 lego_object_list_load_file
@@ -884,7 +884,7 @@
 0x00433be0 100.00 lego_current_level_terrain_grid_pick
 0x00433c10 98.83 lego_entity_neighbor_blocked_cell_step_probe
 0x00433e30 100.00 lego_grid_cell_entity_eligibility_check
-0x00433e80 94.51 lego_terrain_projected_cell_state_refresh
+0x00433e80 94.74 lego_terrain_projected_cell_state_refresh
 0x00434450 100.00 lego_projected_cell_area_compare
 0x00434480 100.00 lego_terrain_cell_surface_update_dispatch_level
 0x00434530 100.00 terrain_grid_entry_resources_release_all_current
@@ -903,7 +903,7 @@
 0x00435190 100.00 lego_surface_type_configured_value_at_index
 0x004351a0 100.00 media_action_code_to_sound_alias
 0x00435230 72.87 lego_random_variant_cell_scatter
-0x00435300 93.51 lego_tutorial_block_icons_update
+0x00435300 99.48 lego_tutorial_block_icons_update
 0x00435550 100.00 ledger_stub_00435550_GlobalStateZeroTransitionDetect
 0x00435580 100.00 lego_global_handle_position_apply_if_present
 0x004355c0 67.16 lego_menu_option_panel_texture_update
@@ -1299,7 +1299,7 @@
 0x00450a80 100.00 terrain_map_wobble_emissive_set
 0x00450b60 45.08 terrain_map_uv_wobble_update
 0x00450f30 100.00 terrain_map_block_vertex_normals_update
-0x00451180 67.61 terrain_map_block_pair_fades
+0x00451180 100.00 terrain_map_block_pair_fades
 0x00451230 100.00 terrain_map_block_vertex_normal_set
 0x004512d0 91.37 terrain_map_block_vertex_normal_get
 0x00451450 100.00 terrain_map_block_vertex_offset
@@ -2999,7 +2999,7 @@
 0x0040b310 100.00 terrain_cell_resource_grid_load
 0x0040b410 100.00 terrain_cell_resource_grid_dispose
 0x0040b470 100.00 lego_projected_quad_area_adapter
-0x0040b5f0 93.45 tile_model_entity_register_original
+0x0040b5f0 100.00 tile_model_entity_register_original
 0x0040b7d0 100.00 cell_visual_channel_table_dispose_original
 0x0040b810 100.00 lego_detail_mesh_resources_clear_adapter
 0x0040b850 100.00 packed_grid_cell_value_get
@@ -3009,7 +3009,7 @@
 0x0040bd60 100.00 detail_matrix_setup
 0x0040bdc0 100.00 ledger_stub_0040bdc0_SetTimeoutTo10000
 0x0040bde0 100.00 effect_spawn_boulder_explode
-0x0040be10 75.00 scene_light_create_at_position
+0x0040be10 88.24 scene_light_create_at_position
 0x0040beb0 100.00 effect_spawn_smash_path
 0x0040bf70 100.00 rock_fall_style_name_lookup
 0x0040bfc0 100.00 rockfall_style_table_base_set
@@ -3039,7 +3039,7 @@
 0x0040ce80 100.00 electric_fence_restart
 0x0040cea0 100.00 electric_fence_block_surfaces_update
 0x0040cf50 100.00 electric_fence_add
-0x0040cf80 70.48 electric_fence_create
+0x0040cf80 100.00 electric_fence_create
 0x0040d030 100.00 electric_fence_add_list
 0x0040d0a0 100.00 electric_fence_remove
 0x0040d100 100.00 electric_fence_remove_node
@@ -3155,7 +3155,7 @@
 0x00411f10 63.01 front_menu_item_draw_slider
 0x00412170 100.00 front_menu_get_overlay_count
 0x00412190 100.00 front_menu_should_random_play
-0x004121b0 96.28 front_menu_update_overlays
+0x004121b0 100.00 front_menu_update_overlays
 0x00412450 100.00 front_menu_item_draw_select_item
 0x004124f0 88.00 front_menu_item_draw_save_image
 0x00412750 90.39 front_menu_item_draw_select_text_window
@@ -3165,7 +3165,7 @@
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
-0x00413b80 90.77 front_run_screen_menu
+0x00413b80 98.15 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
 0x00413e60 100.00 front_menu_item_parse_type_string
 0x00413f00 100.00 mission_replace_char
@@ -3173,7 +3173,7 @@
 0x00413f90 100.00 front_menu_create_overlay
 0x00414010 100.00 front_menu_item_load_slider_images
 0x00414070 100.00 front_menu_set_create
-0x004140c0 99.90 front_load_menu_set
+0x004140c0 100.00 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
 0x00414ce0 100.00 front_is_intros_enabled
 0x00414d30 77.11 front_callback_slider_brightness
@@ -3225,7 +3225,7 @@
 0x00416f40 100.00 list_has_item
 0x00416fb0 100.00 list_set_node
 0x00417020 100.00 list_get_node
-0x00417090 90.32 front_level_set_load_level_links
+0x00417090 100.00 front_level_set_load_level_links
 0x004171c0 100.00 sav_tree_walk
 0x00417240 100.00 front_level_link_callback_inc_count
 0x00417250 100.00 front_level_link_callback_find_by_link_index
@@ -3234,7 +3234,7 @@
 0x004172f0 100.00 sav_tree_walk2
 0x004173e0 100.00 front_levels_update_available
 0x00417430 90.91 float_to_long_x87
-0x00417460 99.07 front_callback_select_mission_item
+0x00417460 100.00 front_callback_select_mission_item
 0x00417700 100.00 front_callback_select_tutorial_item
 0x004177e0 100.00 front_level_link_callback_load_menu_item
 0x004179b0 100.00 front_levels_load_menu_items
@@ -3259,14 +3259,14 @@
 0x00418120 100.00 upgrade_average_is_above_99
 0x00418190 100.00 selection_mode_state_set
 0x004181a0 100.00 selection_state_flag_clear_bit0
-0x004181b0 98.62 help_window_initialise_adapter
+0x004181b0 100.00 help_window_initialise_adapter
 0x00418450 100.00 help_window_load_infos
 0x004185f0 100.00 help_window_load_buttons
 0x00418800 100.00 mode_flag_pair_apply_if_bit2
 0x00418830 100.00 building_upgrade_state_changed_dispatch
 0x00418920 100.00 help_window_list_dependencies
 0x004189d0 100.00 help_window_close
-0x00418a00 93.36 help_window_update
+0x00418a00 100.00 help_window_update
 0x00418da0 100.00 help_window_button_hit_test
 0x00418f80 100.00 help_window_button_tooltip
 0x00418fc0 100.00 help_window_press_button
@@ -3515,7 +3515,7 @@
 0x0042d460 100.00 lego_upgrade_types_load
 0x0042d600 100.00 lego_object_names_load
 0x0042da20 100.00 lego_object_the_names_load
-0x0042de40 92.31 lego_viewport_target_position_clamp
+0x0042de40 100.00 lego_viewport_target_position_clamp
 0x0042dfc0 100.00 lego_object_pointer_registry_clear_match
 0x0042dff0 100.00 lego_object_pointer_registry_get_slot
 0x0042e020 75.15 lego_object_list_load_file
@@ -3609,7 +3609,7 @@
 0x00433be0 100.00 lego_current_level_terrain_grid_pick
 0x00433c10 98.83 lego_entity_neighbor_blocked_cell_step_probe
 0x00433e30 100.00 lego_grid_cell_entity_eligibility_check
-0x00433e80 94.51 lego_terrain_projected_cell_state_refresh
+0x00433e80 94.74 lego_terrain_projected_cell_state_refresh
 0x00434450 100.00 lego_projected_cell_area_compare
 0x00434480 100.00 lego_terrain_cell_surface_update_dispatch_level
 0x00434530 100.00 terrain_grid_entry_resources_release_all_current
@@ -3628,7 +3628,7 @@
 0x00435190 100.00 lego_surface_type_configured_value_at_index
 0x004351a0 100.00 media_action_code_to_sound_alias
 0x00435230 72.87 lego_random_variant_cell_scatter
-0x00435300 93.51 lego_tutorial_block_icons_update
+0x00435300 99.48 lego_tutorial_block_icons_update
 0x00435550 100.00 ledger_stub_00435550_GlobalStateZeroTransitionDetect
 0x00435580 100.00 lego_global_handle_position_apply_if_present
 0x004355c0 67.16 lego_menu_option_panel_texture_update
@@ -4024,7 +4024,7 @@
 0x00450a80 100.00 terrain_map_wobble_emissive_set
 0x00450b60 45.08 terrain_map_uv_wobble_update
 0x00450f30 100.00 terrain_map_block_vertex_normals_update
-0x00451180 67.61 terrain_map_block_pair_fades
+0x00451180 100.00 terrain_map_block_pair_fades
 0x00451230 100.00 terrain_map_block_vertex_normal_set
 0x004512d0 91.37 terrain_map_block_vertex_normal_get
 0x00451450 100.00 terrain_map_block_vertex_offset
