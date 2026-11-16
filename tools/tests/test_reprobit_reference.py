@@ -149,3 +149,20 @@ class SyntheticReferenceTest(unittest.TestCase):
         compiled = bytes.fromhex("8d4c24088d542408e800000000c3")
         self.assertIsNone(rr.synthetic_reference(self._object(compiled), "_f", compiled[:-1]))
         self.assertIsNone(rr.synthetic_reference(self._object(compiled), "_f", compiled))
+
+
+class StaticSymbolTest(unittest.TestCase):
+    def test_static_function_named_from_the_link_map(self) -> None:
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "docs" / "coverage").mkdir(parents=True)
+            (root / "build-reccmp").mkdir()
+            (root / "docs" / "coverage" / "match-baseline.txt").write_text(
+                "[full]\n0x00471370 99.55 weapons_callback_ray_candidate\n0x00401000 100.00 advisor_init\n")
+            (root / "build-reccmp" / "LegoRR.map").write_text(
+                " 0001:00000000       _advisor_init 00401000 f advisor.c.obj\n\n Static symbols\n\n"
+                " 0001:000701f0       _weapons_callback_ray_candidate 004711f0 f weapons.c.obj\n")
+            self.assertEqual(rr.static_symbol(0x471370, root), "_weapons_callback_ray_candidate")
+            self.assertIsNone(rr.static_symbol(0x401000, root))
+            self.assertIsNone(rr.static_symbol(0x123456, root))

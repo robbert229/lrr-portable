@@ -211,6 +211,35 @@ class Found:
     plan_path: str | None = None
 
 
+def static_symbol(address: int, root: Path | None = None) -> str | None:
+    """A static function's COFF name, from the matching build's link map.
+
+    A single-unit compile has no map, so Reccmp cannot name a static function
+    there. The full matching build's map lists it under "Static symbols";
+    the match baseline gives the address's name.
+    """
+    root = root or Path(__file__).resolve().parent.parent
+    name = None
+    baseline = root / "docs" / "coverage" / "match-baseline.txt"
+    link_map = root / "build-reccmp" / "LegoRR.map"
+    if not baseline.is_file() or not link_map.is_file():
+        return None
+    for line in baseline.read_text().splitlines():
+        parts = line.split()
+        if len(parts) >= 3 and parts[0].startswith("0x") and int(parts[0], 16) == address:
+            name = parts[2]
+            break
+    if name is None:
+        return None
+    statics = False
+    for line in link_map.read_text(errors="replace").splitlines():
+        if line.strip() == "Static symbols":
+            statics = True
+        elif statics and len(line.split()) >= 2 and line.split()[1] == "_" + name:
+            return "_" + name
+    return None
+
+
 def find_references(addresses: list[int], *, pads: tuple[int, int], jobs: int,
                     synthetic: bool = False) -> tuple[Path, list[Found], dict[int, bytes]]:
     """Sweep pad counts for one unit; the first exact compile per address."""
@@ -227,7 +256,7 @@ def find_references(addresses: list[int], *, pads: tuple[int, int], jobs: int,
             guard.close()
         symbols = {}
         for address in addresses:
-            symbol = scored[address].symbol
+            symbol = scored[address].symbol or static_symbol(address)
             if not symbol:
                 raise ReferenceError(f"{address:#x}: {scored[address].error or 'no compiled symbol'}")
             symbols[address] = symbol
