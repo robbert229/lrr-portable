@@ -7045,8 +7045,6 @@ int legoobject_path_step_vector_callback(Lego_Object* obj, void* data)
     float dy;
     Point2F pos;
     Point2F away;
-    float* points;
-    float* last;
 
     if (obj != *(Lego_Object**)data && obj->carryingThisObject != *(Lego_Object**)data &&
         obj->interactObject != *(Lego_Object**)data && !(obj->flags3 & 0x2000) &&
@@ -7076,10 +7074,8 @@ int legoobject_path_step_vector_callback(Lego_Object* obj, void* data)
                 *(Point2F*)routing->routeCurvePoints[i] = away;
             }
         }
-        points = routing->routeCurvePoints[routing->routeCurveCount - 2];
-        last = routing->routeCurvePoints[routing->routeCurveCount - 1];
-        last[0] = points[0] + (points[0] - points[-2]);
-        last[1] = points[1] + (points[1] - points[-1]);
+        legoobject_o_vector2_subtract(&away, (Point2F*)routing->routeCurvePoints[routing->routeCurveCount - 2], (Point2F*)routing->routeCurvePoints[routing->routeCurveCount - 3]);
+        legoobject_o_vector2_add((Point2F*)routing->routeCurvePoints[routing->routeCurveCount - 1], (Point2F*)routing->routeCurvePoints[routing->routeCurveCount - 2], &away);
     }
     return 0;
 }
