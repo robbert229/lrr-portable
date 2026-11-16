@@ -2142,20 +2142,6 @@ int legoobject_cell_step_command_issue_with_jitter(Lego_Object* obj, int* target
 // FUNCTION: LEGORR 0x0043a300
 int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
 {
-    int fromY;
-    int* routeX;
-    int* routeY;
-    int fromX;
-    unsigned int count;
-    int result;
-    int toX;
-    int toY;
-    int dir;
-    void* cont;
-    float targetPos[2];
-    float pos[2];
-    float facing[3];
-    float contPos[3];
 
     if (obj->flags1 & 0x400) {
         if ((entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x4) ||
@@ -2169,6 +2155,18 @@ int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
         } else if (legoobject_accepts_target_for_task_check(target, obj->carriedObjects[0], 0) ||
             (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x8))
         {
+            int fromY;
+            int fromX;
+            int result;
+            int toX;
+            int toY;
+            int dir;
+            void* cont;
+            float targetPos[2];
+            float pos[2];
+            float facing[3];
+            float contPos[3];
+
             cont = NULL;
             if (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x8)
                 cont = scene_object_indexed_secondary_handle_get_or_create(target->building, s_activity_resource_slots[10]);
@@ -2196,6 +2194,10 @@ int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
                 result = legoobject_route_setup_and_marker_associate(obj, 1,
                 (unsigned int*)&toX, (unsigned int*)&toY, targetPos);
             } else {
+                int* routeX;
+                int* routeY;
+                unsigned int count;
+
                 if (!legoobject_terrain_neighbor_path_check(obj, fromX, fromY, toX, toY,
                         (unsigned int**)&routeX, (unsigned int**)&routeY, (unsigned int*)&count, NULL, NULL))
                     return 0;

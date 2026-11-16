@@ -1,4 +1,4 @@
-# input_sha256: ff7f5864cc3e523e393bdcc04027280a4da4d116bbe4cb3122dba9b93c80bb1b
+# input_sha256: f66f2b9fb8196dfa3955cff472349972eb22320f2691f176500f72308b8b90dc
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1020,7 +1020,7 @@
 0x00439e40 100.00 legoobject_record_flag20_query
 0x00439e70 100.00 legoobject_attached_object_list_detach
 0x0043a120 100.00 legoobject_cell_step_command_issue_with_jitter
-0x0043a300 71.14 legoobject_deposit_activity_gate
+0x0043a300 88.27 legoobject_deposit_activity_gate
 0x0043a5f0 100.00 legoobject_visual_resource_get_or_create
 0x0043a650 100.00 legoobject_action_kind_create_and_command_issue
 0x0043a7c0 100.00 legoobject_action_kind_supported
@@ -3745,7 +3745,7 @@
 0x00439e40 100.00 legoobject_record_flag20_query
 0x00439e70 100.00 legoobject_attached_object_list_detach
 0x0043a120 100.00 legoobject_cell_step_command_issue_with_jitter
-0x0043a300 71.14 legoobject_deposit_activity_gate
+0x0043a300 88.27 legoobject_deposit_activity_gate
 0x0043a5f0 100.00 legoobject_visual_resource_get_or_create
 0x0043a650 100.00 legoobject_action_kind_create_and_command_issue
 0x0043a7c0 100.00 legoobject_action_kind_supported
