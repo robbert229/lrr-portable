@@ -139,7 +139,7 @@ void file_initialise(const char* programName, int insistOnCD,
                 // STRING: LEGORR 0x004aaf1c
                 "cd.key");
         // STRING: LEGORR 0x004a1eac
-        if ((fp = fopen(path, "r")) != NULL) {
+        if ((fp = files_native_fopen(path, "r")) != NULL) { // [library:filesystem]
             fclose(fp);
             failed = 1;
         }
@@ -150,7 +150,7 @@ void file_initialise(const char* programName, int insistOnCD,
         sprintf(path, "%s\\%s", "Data",
                 // STRING: LEGORR 0x004aaf10
                 "delme.dat");
-        if ((fp = fopen(path, "r")) != NULL) {
+        if ((fp = files_native_fopen(path, "r")) != NULL) { // [library:filesystem]
             fclose(fp);
             _chmod(path, 0x80);
             remove(path);
@@ -274,7 +274,7 @@ File* file_open(const char* fName, const char* mode)
         break;
     case FileSystem_Std:
         if ((file = file_alloc(fs)) != NULL) {
-            if ((file->stream.std = fopen(fullName, mode)) != NULL) {
+            if ((file->stream.std = files_native_fopen(fullName, mode)) != NULL) { // [library:filesystem]
                 // STRING: LEGORR 0x004aafa4
                 flic_opcode27_fallback_noop("STD Load %s\n", fullName);
                 return file;
@@ -468,7 +468,7 @@ int file_exists(const char* fName)
     fullName = file_verify_filename(fName);
     fs = file_check_system(fullName, "r");
     if (fs == FileSystem_Std) {
-        if ((f = fopen(fullName, "r")) != NULL) {
+        if ((f = files_native_fopen(fullName, "r")) != NULL) { // [library:filesystem]
             fclose(f);
             return 1;
         }

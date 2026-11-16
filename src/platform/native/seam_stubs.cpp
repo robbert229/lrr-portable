@@ -386,6 +386,71 @@ int files_native_mkdir(const char* path)
     return SDL_CreateDirectory(path) ? 0 : -1;
 }
 
+/* [library:filesystem] Working. The units build Windows paths: '\\'
+ * separators, and names whose case need not match the files on disk. */
+namespace {
+
+struct CaseMatch {
+    const char* want;
+    std::string found;
+};
+
+SDL_EnumerationResult SDLCALL MatchEntryCase(void* userdata, const char* dirname,
+                                             const char* fname)
+{
+    (void)dirname;
+    CaseMatch* match = static_cast<CaseMatch*>(userdata);
+    if (SDL_strcasecmp(fname, match->want) == 0) {
+        match->found = fname;
+        return SDL_ENUM_SUCCESS;
+    }
+    return SDL_ENUM_CONTINUE;
+}
+
+/* The host path for a Windows one: each component that does not exist as
+ * spelled takes the spelling of an entry that matches it without case. */
+std::string HostPath(const char* path)
+{
+    std::string text(path);
+    for (char& c : text) {
+        if (c == '\\') c = '/';
+    }
+    std::string resolved;
+    size_t start = 0;
+    if (!text.empty() && text[0] == '/') {
+        resolved = "/";
+        start = 1;
+    }
+    while (start <= text.size()) {
+        size_t end = text.find('/', start);
+        if (end == std::string::npos) end = text.size();
+        std::string part = text.substr(start, end - start);
+        start = end + 1;
+        if (part.empty() || part == ".") continue;
+        std::string dir = resolved.empty() ? "." : resolved;
+        std::string candidate = resolved.empty() ? part :
+            (resolved == "/" ? "/" + part : resolved + "/" + part);
+        SDL_PathInfo info;
+        if (part != ".." && !SDL_GetPathInfo(candidate.c_str(), &info)) {
+            CaseMatch match = { part.c_str(), std::string() };
+            SDL_EnumerateDirectory(dir.c_str(), MatchEntryCase, &match);
+            if (!match.found.empty()) {
+                candidate = resolved.empty() ? match.found :
+                    (resolved == "/" ? "/" + match.found : resolved + "/" + match.found);
+            }
+        }
+        resolved = candidate;
+    }
+    return resolved;
+}
+
+} // namespace
+
+FILE* files_native_fopen(const char* path, const char* mode)
+{
+    return fopen(HostPath(path).c_str(), mode);
+}
+
 /* Working: a relative path is taken from the working directory. */
 char* files_native_fullpath(char* absPath, const char* relPath,
                             unsigned int maxLength)

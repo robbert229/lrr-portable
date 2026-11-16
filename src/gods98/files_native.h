@@ -4,9 +4,11 @@
  * files_native_* function in platform/native/seam_stubs.cpp, so these
  * declarations cannot clash with a host declaration of the same name, until
  * the filesystem substitution of ADR 0007 replaces the calls in files.c.
- * Only files.c includes this file. */
+ * files.c includes this file, and movie_unit.cpp for files_native_fopen. */
 #ifndef LEGORRR_GODS98_FILES_NATIVE_H
 #define LEGORRR_GODS98_FILES_NATIVE_H
+
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,6 +43,12 @@ char* files_native_fullpath(char* absPath, const char* relPath,
 #define _getcwd files_native_getcwd
 #define _mkdir files_native_mkdir
 #define _fullpath files_native_fullpath
+
+/* [library:filesystem]: fopen of a Windows path ("Data\\Avi\\x.flh", or
+ * an absolute path from _fullpath) on the host: the separators become the
+ * host's, and a component missing as spelled is matched without regard to
+ * case, as on the original's file system. Needs <stdio.h>. */
+FILE* files_native_fopen(const char* path, const char* mode);
 
 /* KERNEL32 */
 #define DRIVE_CDROM 5
