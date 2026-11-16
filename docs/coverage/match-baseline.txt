@@ -1,4 +1,4 @@
-# input_sha256: 91aeb0f090760c577d958e01732f9ea5fb1ae34a1ac5e8bde541b59bdcf5afea
+# input_sha256: c666af0cd5d64fce143531ea680423ed429f757ad2640b61e8d44e6bb5add15f
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -5685,7 +5685,7 @@
 0x00499860 100.00 ___tzset
 0x00499880 100.00 __tzset
 0x00499b30 100.00 __isindst
-0x00499da0 98.54 _cvtdate
+0x00499da0 100.00 _cvtdate
 0x00499f40 100.00 __fcloseall
 0x00499fb0 100.00 ___addl
 0x00499fe0 100.00 ___add_12
