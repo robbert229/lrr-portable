@@ -104,7 +104,7 @@ void priorities_reset(void)
 
     for (i = 0; i < priorities.count; i++) {
         priorities.list[i] = priorities.initial_list[i];
-        priority_entry_order_value_set(priorities.initial_list[i],
+        priority_entry_order_value_set(priorities.list[i],
                                        priorities.initial_values[i]);
         priority_entry_state_set(priorities.list[i],
                                  priorities.initial_states[i]);
