@@ -317,7 +317,8 @@ int lwo_surface_names_read(File* file, LWSIZE* size, LWSURFLIST** list,
         if (len & 1) len++;
         if (list) {
             name = (char*)malloc(len);
-            names = (char**)malloc(offset + 4);
+            /* The original grows the array by 4 bytes: one Win32 pointer. */
+            names = (char**)malloc(offset + sizeof(char*));
             memcpy(name, ptr, len);
             if (offset) {
                 memcpy(names, surfList->srfName, offset);
@@ -329,7 +330,7 @@ int lwo_surface_names_read(File* file, LWSIZE* size, LWSURFLIST** list,
             surfList->srfCount = num + 1;
         }
         num++;
-        offset += 4;
+        offset += sizeof(char*);
         *count = num;
         csize -= len;
         ptr += len;
