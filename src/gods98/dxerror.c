@@ -1122,3 +1122,5 @@ int directx_result_diagnostic_dispatch(int err, int module, const char* file,
 unsigned int dxerror_unknown_5488a0[2] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x005488a8
 DxerrorGlobs dxerrorGlobs = { 0 };
+
+#include "gods98/d3drmdef_consts.h"
