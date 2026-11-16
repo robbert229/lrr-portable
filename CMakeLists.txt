@@ -69,9 +69,11 @@ endif()
 find_package(SDL3 CONFIG REQUIRED)
 set(MINIWIN_SOURCES
   windows/windows.cpp ddraw/ddpalette.cpp ddraw/ddraw.cpp ddraw/ddsurface.cpp
-  ddraw/framebuffer.cpp d3drm/d3drm.cpp d3drm/d3drmdevice.cpp
-  d3drm/d3drmframe.cpp d3drm/d3drmlight.cpp d3drm/d3drmmesh.cpp
-  d3drm/d3drmtexture.cpp d3drm/d3drmviewport.cpp d3drm/d3drmrenderer.cpp
+  ddraw/framebuffer.cpp dinput/dinput.cpp d3d/d3dmaterial.cpp
+  d3d/d3dviewport.cpp d3drm/d3drm.cpp d3drm/d3drmanimationset.cpp
+  d3drm/d3drmdevice.cpp d3drm/d3drmframe.cpp d3drm/d3drmlight.cpp
+  d3drm/d3drmmesh.cpp d3drm/d3drmmeshbuilder.cpp d3drm/d3drmtexture.cpp
+  d3drm/d3drmuservisual.cpp d3drm/d3drmviewport.cpp d3drm/d3drmrenderer.cpp
   internal/meshutils.cpp d3drm/backends/software/renderer.cpp
   d3drm/backends/palettesw/renderer.cpp)
 list(TRANSFORM MINIWIN_SOURCES PREPEND "${MINIWIN}/src/")
