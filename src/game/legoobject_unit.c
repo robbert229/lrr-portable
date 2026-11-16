@@ -7658,22 +7658,22 @@ void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapse
 
     {
         float centre;
-        int blockPos[2];
+        LegoObjJ_Point2I blockPos;
         LegoObjGE_Point2F xy;
         float coef;
 
         centre = 1.0f;
         legoobject_transform_position_get(obj, &xy.x, &xy.y);
-        if (terrain_map_world_to_block_centre(Lego_GetMap(), xy.x, xy.y, &blockPos[0], &blockPos[1], &centre)) {
-            coef = (float)(unsigned int)terrain_cell_speed_class_current(blockPos) * 0.25f;
+        if (terrain_map_world_to_block_centre(Lego_GetMap(), xy.x, xy.y, &blockPos.x, &blockPos.y, &centre)) {
+            coef = (float)(unsigned int)terrain_cell_speed_class_current((int*)&blockPos) * 0.25f;
             coef = 1.0f - coef * (1.0f - entity_stats_float_atd4(LEGOOBJ_SLOT(obj)));
-            if (level_cell_occupied_at_current(blockPos)) coef = entity_stats_float_atd8(LEGOOBJ_SLOT(obj)) * coef;
+            if (level_cell_occupied_at_current((int*)&blockPos)) coef = entity_stats_float_atd8(LEGOOBJ_SLOT(obj)) * coef;
             if (obj->type == 2 &&
-                ((LegoObjJ_Level*)g_active_level_retail)->blocks[((LegoObjJ_Level*)g_active_level_retail)->width * blockPos[1] + blockPos[0]].terrain == 9)
+                ((LegoObjJ_Level*)g_active_level_retail)->blocks[((LegoObjJ_Level*)g_active_level_retail)->width * blockPos.y + blockPos.x].terrain == 9)
             {
                 coef = (1.0f - centre * 0.8f) * coef;
             }
-            if (terrain_cell_flag_8_bounded_current(blockPos[0], blockPos[1])) *outTransSpeed *= coef;
+            if (terrain_cell_flag_8_bounded_current(blockPos.x, blockPos.y)) *outTransSpeed *= (double)coef;
         }
     }
 
@@ -7681,8 +7681,8 @@ void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapse
     else *outElapsed = 1.0f;
     if (obj->type == 4 && (entity_state_flags_get(LEGOOBJ_SLOT(obj)) & 2) && (obj->flags2 & 0x8000))
         *outElapsed = entity_speed_component_get(LEGOOBJ_SLOT(obj)) * *outElapsed;
-    *outElapsed *= elapsed;
-    *outTransSpeed *= elapsed;
+    *outElapsed *= (double)elapsed;
+    *outTransSpeed *= (double)elapsed;
 }
 
 /* LegoObject_Route_AddBlock: append the block (bx, by) to the route being
