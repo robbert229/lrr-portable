@@ -1446,7 +1446,7 @@ void Container_Mesh_Swap(Container* target, Container* origin, int restore)
 // FUNCTION: LEGORR 0x004748f0
 unsigned long Container_Mesh_AddGroup(Container* cont, unsigned long vertexCount,
                                       unsigned long faceCount, unsigned long vPerFace,
-                                      unsigned long* faceData)
+                                      unsigned int* faceData)
 {
     if (cont->typeData->transMesh) {
         return mesh_record_allocate_and_fill((struct MeshRecordPool*)cont->typeData->transMesh,

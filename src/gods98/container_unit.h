@@ -103,7 +103,7 @@ unsigned long Container_Mesh_AddGroup(Container* cont,
                                        unsigned long vertexCount,
                                        unsigned long faceCount,
                                        unsigned long vPerFace,
-                                       unsigned long* faceData);     /* 004748f0 */
+                                       unsigned int* faceData);     /* 004748f0 */
 unsigned long Container_Mesh_GetGroupCount(Container* cont);       /* 00474a20 */
 void Container_Mesh_SetQuality(Container* cont, unsigned long groupID,
                                 unsigned long quality);              /* 00474a60 */
