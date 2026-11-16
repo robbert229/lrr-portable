@@ -752,9 +752,11 @@ int main_init_app(HINSTANCE hInstance)
             SetFocus((HWND)g_platform_cursor_window_handle);
             return TRUE;
         } else {
-            // STRING: LEGORR 0x004aae00
-            // STRING: LEGORR 0x004aae20
-            MessageBoxA(NULL, "Unable to Create Main Window", "Fatal Error", MB_OK);
+            MessageBoxA(NULL,
+                        // STRING: LEGORR 0x004aae00
+                        "Unable to Create Main Window",
+                        // STRING: LEGORR 0x004aae20
+                        "Fatal Error", MB_OK);
         }
     } else {
         // STRING: LEGORR 0x004aade0
