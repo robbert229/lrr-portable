@@ -3765,7 +3765,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
     } else if (obj->flags2 & 0x40) {
         obj->flags2 &= ~0x40;
         if (obj->aiTask != NULL) {
-            legoobject_activity_grant(obj, ((LegoObjJ_AITask*)obj->aiTask)->activity);
+            legoobject_activity_grant(obj, (int)(intptr_t)((LegoObjJ_AITask*)obj->aiTask)->field_38);
             entity_command_unlink_by_kind((struct Lego_Object*)obj, 0x13, NULL, 1);
         }
     } else if (obj->flags2 & 0x400) {
@@ -9215,11 +9215,7 @@ void construction_zone_request_resource(int* blockPos, int objType,
                                         unsigned int count);        /* 00408e50 */
 
 /* Lego_Level's block grid size. */
-typedef struct LegoObjS_Level {
-    unsigned char pad_00[0x14];
-    unsigned int width;               /* +0x14 */
-    unsigned int height;              /* +0x18 */
-} LegoObjS_Level;
+typedef struct Lego_Level LegoObjS_Level;
 
 /* Map3D's block size (Map3D +0x10). */
 typedef struct LegoObjS_Map {

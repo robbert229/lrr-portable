@@ -18,7 +18,7 @@ struct Lego_Object;
 struct ViewProjectionAdapter;
 struct Lego_Object;
 
-#define encyclopedia_typeCounts ((unsigned int*)((char*)&legoGlobs_config + 0x1bc))
+#define encyclopedia_typeCounts (legoGlobs.typeCounts)
 
 /* GAME-021 Lego.c (lego_unit.c): Lego_DrawObjectSelectionBox. */
 void lego_selected_entity_ground_marker_render(

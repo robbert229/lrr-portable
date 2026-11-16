@@ -23,6 +23,7 @@
 
 #include "crt/vc5names.h"
 #include "rock_fall_styles_imports.h"
+#include "lego_level_record.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -50,11 +51,9 @@ typedef struct Effect_Object {
     void* other;                      /* +0x1c */
 } Effect_Object;
 
-/* Lego_Level's BoulderAnimation (lego_unit.h's f_274): 2 is the ice set. */
-typedef struct Effect_Level {
-    unsigned char unknown_000[0x274];
-    int boulderAnimation;             /* +0x274 */
-} Effect_Level;
+/* Lego_Level's BoulderAnimation (lego_level_record.h's f_274): 2 is the ice
+ * set. */
+typedef struct Lego_Level Effect_Level;
 
 #define EFFECT_ROCKFALL_MAXSTYLES 4
 #define EFFECT_ROCKFALL_NUMTYPES 3
@@ -182,7 +181,7 @@ void effect_spawn_boulder_explode_at(Effect_Vector3F* wPos)
 
     for (i = 0; i < 4; i++) {
         if (effectGlobs.boulderExplodeConts[i] == NULL) {
-            if (((Effect_Level*)level_current_owner_get())->boulderAnimation == 2)
+            if (((Effect_Level*)level_current_owner_get())->f_274 == 2)
                 effectGlobs.boulderExplodeConts[i] = entity_visual_resource_load(legoGlobs_contBoulderExplodeIce);
             else
                 effectGlobs.boulderExplodeConts[i] = entity_visual_resource_load(legoGlobs_contBoulderExplode);

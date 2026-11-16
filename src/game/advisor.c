@@ -20,6 +20,7 @@
 #include <stdlib.h>
 
 #include "advisor.h"
+#include "camera_control.h"
 #include "frontend.h"
 #include "gods98/font.h"
 #include "panel.h"
@@ -67,12 +68,9 @@
  * multiply defined (finding 692). */
 #define MATHS_INLINE inline
 
-/* The prefix of the game camera (LegoCamera) that Advisor_Initialise
- * reads: its camera container is the word at +0x24. */
-typedef struct AdvisorCamera {
-    void* fields[9];
-    void* contCam;
-} AdvisorCamera;
+/* The game camera (camera_control.h's LegoCamera): Advisor_Initialise
+ * reads its camera container. */
+typedef struct LegoCamera AdvisorCamera;
 
 typedef struct AdvisorPositionData {
     int animType;       /* +00 */

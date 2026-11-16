@@ -118,6 +118,8 @@
 #define front_run_screen_menu_type_adapter front_run_screen_menu_type /* 00416c80 */
 #define front_get_selected_level_adapter front_get_selected_level   /* 00416d70 */
 
+#include "text_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1347,18 +1349,7 @@ struct TerrainMap;
 struct ViewProjectionAdapter;
 
 /* Globals the port models in other files. */
-/* Text.c's textGlobs (text.c, 00503190; finding 607), as far as Lego.c
- * writes it: the NERPs message counter (00503610) and the message timer
- * (00503618). Natively the port's text_port.cpp word and lego_unit.c's own
- * word stand in for them. One struct and one extern replace the two
- * declarations of those words, so the unit's symbol numbering (finding 538)
- * does not change. */
-struct Text_Globs {
-    unsigned char reserved[0x480];
-    uint32_t counter;                         /* +0x480 */
-    char* currText;                           /* +0x484 */
-    float timer;                              /* +0x488 */
-};
+/* Text.c's textGlobs (text_record.h; 00503190, finding 607). */
 extern struct Text_Globs textGlobs;
 #define s_overlay_word_03610 textGlobs.counter
 #define textGlobs_f_503618 textGlobs.timer

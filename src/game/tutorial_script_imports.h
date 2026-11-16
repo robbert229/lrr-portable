@@ -24,6 +24,8 @@
  * #define adds no declaration, so the symbol numbering does not move. */
 #define camera_project_point_to_screen viewport_world_to_screen
 
+#include "text_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -118,16 +120,7 @@ int sound_deferred_timer_set_if_idle(float seconds);        /* 00464ec0 */
 /* GAME-045 Text.c (text.c; text_port.cpp, message.hpp, frontend.hpp
  * natively). The original's Text_SetNERPsMessage (0046ac20) takes the
  * message line; the port's request word is that pointer on Win32. */
-/* Text.c's textGlobs (text.c, 00503190; finding 607), as far as NERPs
- * writes it: the message counter (00503610) and the message line
- * (00503614). One struct and one extern replace the two word declarations
- * that native builds use, so the unit's symbol numbering (finding 538) does
- * not change. */
-struct Text_Globs {
-    unsigned char reserved[0x480];
-    uint32_t counter;                                       /* +0x480 */
-    char* currText;                                         /* +0x484 */
-};
+/* Text.c's textGlobs (text_record.h; 00503190, finding 607). */
 extern struct Text_Globs textGlobs;
 #define s_overlay_word_03610 textGlobs.counter
 #define s_overlay_word_03614 textGlobs.currText

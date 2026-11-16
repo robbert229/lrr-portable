@@ -291,13 +291,8 @@ typedef struct LegoObjJ_Point2I {
     int x;
     int y;
 } LegoObjJ_Point2I;
-/* AITask (0x68), the fields 0043c810 reads. */
-typedef struct LegoObjJ_AITask {
-    unsigned char pad_00[0x10];
-    Lego_Object* object;              /* +0x10 */
-    unsigned char pad_14[0x38 - 0x14];
-    int activity;                     /* +0x38 */
-} LegoObjJ_AITask;
+/* AITask (aitask_record.h): 0043c810 reads its object and activity (+0x38). */
+typedef struct AITask LegoObjJ_AITask;
 /* LegoObject_Callback_Update: the per-object update LegoObject_UpdateAll
  * (0043b270) runs through LegoObject_RunThroughLists; data points at the
  * elapsed time. */

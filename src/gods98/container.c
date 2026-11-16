@@ -48,6 +48,7 @@
 #include "g98_026.h"
 #include "directdraw.h"
 #include "container_imports.h"
+#include "gods98/mesh_record.h"
 
 #include <miniwin/d3drm.h>
 #include <miniwin/ddraw.h>
@@ -1343,12 +1344,9 @@ void Container_FreeTexture(Container_Texture* text)
     }
 }
 
-/* Mesh.c's Mesh, as far as Container_Mesh_Swap reads it: its user visual
- * (+0x0c). */
-typedef struct Container_MeshView {
-    void* reserved[3];
-    LPDIRECT3DRMUSERVISUAL uv;  /* +0x0c */
-} Container_MeshView;
+/* Mesh.c's Mesh (gods98/mesh_record.h): Container_Mesh_Swap reads its user
+ * visual. */
+typedef struct Mesh Container_MeshView;
 
 // FUNCTION: LEGORR 0x00474760
 void Container_Mesh_Swap(Container* target, Container* origin, int restore)
