@@ -1391,7 +1391,7 @@ void terrain_map_block_vertex_normals_update(TerrainMap* map,
     normals[3].y = 0.0f;
     normals[3].z = 0.0f;
     for (i = 0; i < 4; i++) {
-        blockOffsets[i].x += (float)vx;
+        blockOffsets[i].x = (blockOffsets[i].x) + (float)vx;
         blockOffsets[i].y = (float)vy + blockOffsets[i].y;
     }
     for (i = 0; i < 4; i++) {
