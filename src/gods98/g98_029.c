@@ -38,32 +38,28 @@ int registry_path_create_keys(HKEY root, const char* path, const char* name,
     HKEY child;
     char component[100];
     int result;
-#ifndef _WIN32
-    DWORD type;
-#endif
-    path = registry_path_split(path, component);
+    const char* rest;
+
+    rest = registry_path_split(path, component);
     if (component[0] == '\0') {
-#ifdef _WIN32
-        /* The 32-bit original reuses its path argument as the type word. */
-        path = 0;
-#define REGISTRY_TYPE ((DWORD*)&path)
-#else
+        /* Block-scoped: MSVC puts them in the dead path and size slots. */
+        DWORD type;
+        DWORD dataSize;
+
+        dataSize = size;
         type = 0;
-#define REGISTRY_TYPE (&type)
-#endif
         switch (mode) {
         case 0:
-            return RegQueryValueExA(root, name, 0, REGISTRY_TYPE, (unsigned char*)output, (DWORD*)&size) == 0;
+            return RegQueryValueExA(root, name, 0, &type, (unsigned char*)output, &dataSize) == 0;
         case 1:
-            return RegQueryValueExA(root, name, 0, REGISTRY_TYPE, (unsigned char*)output, (DWORD*)&size) == 0;
+            return RegQueryValueExA(root, name, 0, &type, (unsigned char*)output, &dataSize) == 0;
         default:
             return 0;
         }
     }
-#undef REGISTRY_TYPE
     RegCreateKeyA(root, component, &child);
     if (child == 0) return 0;
-    result = registry_path_create_keys(child, path, name, mode, output, size);
+    result = registry_path_create_keys(child, rest, name, mode, output, size);
     RegCloseKey(child);
     return result;
 }
