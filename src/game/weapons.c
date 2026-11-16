@@ -1414,8 +1414,8 @@ int weapons_model_fire_update(Weapons_Object* obj, float elapsed, unsigned int s
                 weaponType = object_type_name_index_find(
                     weapons_get_weapons_model(obj)->weaponNames[slot]->name);
                 range = weapon_type_range_get_target(weaponType);
-                discharge = entity_speed_component_get(WEAPONS_ENT(obj));
-                if (discharge == 0.0f) discharge = 1.0f;
+                if ((discharge = entity_speed_component_get(WEAPONS_ENT(obj))) == 0.0f)
+                    discharge = 1.0f;
                 if (i == 0) {
                     weapons_model_timer_set(obj, weapon_type_recharge_time_get_target(weaponType), slot);
                     weapons_model_fire_dir_get(weapons_get_weapons_model(obj), &dir, slot);
