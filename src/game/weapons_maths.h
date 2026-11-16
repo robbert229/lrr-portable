@@ -59,6 +59,21 @@ static __inline Weapons_Vector3F* weapons_vector3d_scale(
     return r;
 }
 
+/* weapons_fire_lazer's ray: a scale whose x product is cast to float. The
+ * cast changes nothing in value; it makes MSVC 5.0 load the factor twice and
+ * all three components before the first store, the original's x87 order
+ * (plain stores give a load-multiply-store per component). It stands for an
+ * original helper or macro whose exact form is unknown, and has the plain
+ * scale's three parameters so the unit's symbol count is unchanged. */
+static __inline Weapons_Vector3F* weapons_vector3d_scale_cast(
+    Weapons_Vector3F* r, const Weapons_Vector3F* a, float f)
+{
+    r->x = (float)(a->x * f);
+    r->y = a->y * f;
+    r->z = a->z * f;
+    return r;
+}
+
 static __inline Weapons_Vector3F* weapons_vector3d_normalise(Weapons_Vector3F* r)
 {
     return weapons_vector3d_scale(r, r, 1.0f / weapons_vector3d_modulus(r));

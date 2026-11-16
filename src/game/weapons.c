@@ -792,7 +792,7 @@ Weapons_Object* weapons_fire_lazer(Weapons_Vector3F* fromPos, Weapons_Vector3F* 
     dist = 1.0f;
     hitObject = NULL;
     sound_submission_route_wrapper(NULL, 0x1b, 0, 0, (const float*)fromPos);
-    weapons_vector3d_scale(&rayDir, dir, coef);
+    weapons_vector3d_scale_cast(&rayDir, dir, coef);
     weapons_ray_trace_nearest(fromPos, &rayDir, &hitObject, &dist, liveObj);
     weapons_vector3d_scale(&rayDir, &rayDir, dist);
     weapons_vector3d_add(&endPos, &rayDir, fromPos);
@@ -807,8 +807,8 @@ Weapons_Object* weapons_fire_lazer(Weapons_Vector3F* fromPos, Weapons_Vector3F* 
                                    &blockPos[0], &blockPos[1]);
         if (terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&
             !terrain_cell_state_equals_one_current(blockPos)) {
-            surface = legoGlobs_currLevel_blocks[legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].f_02;
-            if (surface != 0xb) {
+            if (legoGlobs_currLevel_blocks[legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].f_02 != 0xb) {
+                surface = legoGlobs_currLevel_blocks[legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].f_02;
                 coef = weapon_type_wall_destroy_time_get_target(weaponType, surface);
                 if (terrain_cell_drill_work_add_current(blockPos[0], blockPos[1], coef, elapsed)) {
                     lego_terrain_cell_mutate(WEAPONS_LEGO_GET_LEVEL(), blockPos[0], blockPos[1], 0);
