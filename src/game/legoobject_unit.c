@@ -6202,7 +6202,8 @@ void legoobject_pose_orientation_dispatch(Lego_Object* obj, float elapsed)
         LegoObjM_Point2F newPos;
         LegoObjM_Point2F edge;
         float pos[3];
-        ddiscene_object_position_get(legoobject_type_component_get(obj), NULL, pos);
+        void* cont = legoobject_type_component_get(obj);
+        ddiscene_object_position_get(cont, NULL, pos);
         newPos.x = pos[0];
         newPos.y = pos[1];
         legoobject_position_to_terrain_cell(obj, &bx, &by);
@@ -6258,9 +6259,9 @@ void legoobject_pose_orientation_dispatch(Lego_Object* obj, float elapsed)
                     pos[2] = wz;
                 ddiscene_object_position_set(obj->other, NULL, pos[0], pos[1], pos[2]);
             }
-            if (pos[2] > wz - -0.5f) {
+            if (pos[2] > (wz - -0.5f)) {
                 pos[2] -= elapsed;
-                if (wz > pos[2])
+                if (pos[2] < wz)
                     pos[2] = wz;
                 ddiscene_object_position_set(obj->other, NULL, pos[0], pos[1], pos[2]);
             }
