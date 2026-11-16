@@ -212,3 +212,6 @@ void object_tracked_replace_and_remove(Lego_Object* liveObj)
     legoobject_remove(liveObj);
     legoobject_activity_scene_state_update();
 }
+
+/* A header inline copy's 1.0 closes the unit's .rdata (0049e0a4). */
+#include "reciprocal_inline.h"
