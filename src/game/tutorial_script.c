@@ -2117,7 +2117,7 @@ void nerps_draw_tutorial_icon(NERPs_Level* level, void* viewport, int unused, fl
             world.z = terrain_map_world_z_get(level->map, world.x, world.y);
             camera_project_point_to_screen((struct ViewProjectionAdapter*)viewport, screen, &world.x);
             screen[0] -= (float)((int)legoGlobs_TutorialIcon->width / 2);
-            screen[1] -= bounce * 20.0f + (float)((int)legoGlobs_TutorialIcon->height * 2);
+            screen[1] -= (bounce * 20.0f) + (float)((int)legoGlobs_TutorialIcon->height * 2);
             image_display_scaled(legoGlobs_TutorialIcon, NULL, (Point2F*)screen, NULL);
         }
     }
