@@ -1248,10 +1248,14 @@ static int nerpsHasNextButton = 1;
 static NERPs_Next nerpsNext = { 1, 0 };
 // GLOBAL: LEGORR 0x004a6748
 static NERPs_MessageTime nerpsMessageTime = { 1000.0f, 500.0f, 4000.0f, 0.0f };
+/* SetMessageIconPos' screen position (004a6758). */
+typedef struct NERPs_IconPos {
+    float x;                          /* 004a6758 */
+    float y;                          /* 004a675c */
+} NERPs_IconPos;
+
 // GLOBAL: LEGORR 0x004a6758
-static float nerpsIconX = 260.0f;
-// GLOBAL: LEGORR 0x004a675c
-static float nerpsIconY = 386.0f;
+static NERPs_IconPos nerpsIconPos = { 260.0f, 386.0f };
 // GLOBAL: LEGORR 0x004a6760
 static unsigned int nerpsIconWidth = 20;
 // GLOBAL: LEGORR 0x004a6764
@@ -2340,8 +2344,8 @@ int nerpfunc_get_any_key_pressed(unsigned int* stack)
 // FUNCTION: LEGORR 0x00454b10
 int nerpfunc_set_icon_pos(unsigned int* stack)
 {
-    nerpsIconX = (float)stack[0];
-    nerpsIconY = (float)stack[1];
+    nerpsIconPos.x = (float)stack[0];
+    nerpsIconPos.y = (float)stack[1];
     return 0;
 }
 
@@ -4078,46 +4082,51 @@ void nerps_parse_message(char* text, char* output, int setTimer)
     unsigned char i;
     char* out;
     unsigned char imageCount;
+    char* s;
     float time;
     struct Image* images[20] = { NULL };
     char name[256];
     char* p;
     unsigned char found;
 
-    time = nerpsMessageTime.defaultTime;
     imageCount = 0;
+    time = nerpsMessageTime.defaultTime;
+    s = text;
     out = output;
     if (nerpsGlobs.imageCount == 0 && nerpsGlobs.soundCount == 0 && output != NULL) {
         strcpy(output, text);
     } else {
-        while (*text != '\0') {
-            if (*text == '<') {
-                text++;
+        while (*s != '\0') {
+            if (*s == '<') {
+                s++;
                 found = 0;
                 p = name;
-                while (*text != '\0' && !found) {
-                    if (*text == '>') {
+                while (*s != '\0' && !found) {
+                    if (*s != '>') {
+                        *p++ = *s++;
+                    } else {
                         *p++ = '\0';
-                        text++;
+                        s++;
                         for (i = 0; i < nerpsGlobs.imageCount; i++) {
                             if (!stricmp(nerpsGlobs.imageList[i].key, name)) {
-                                images[imageCount++] = nerpsGlobs.imageList[i].image;
+                                struct Image* image = nerpsGlobs.imageList[i].image;
                                 found = 1;
+                                images[imageCount++] = image;
                                 break;
                             }
                         }
-                    } else {
-                        *p++ = *text++;
                     }
                 }
-            } else if (*text == '#') {
-                text++;
+            } else if (*s == '#') {
+                s++;
                 found = 0;
                 p = name;
-                while (*text != '\0' && !found) {
-                    if (*text == '#') {
+                while (*s != '\0' && !found) {
+                    if (*s != '#') {
+                        *p++ = *s++;
+                    } else {
                         *p++ = '\0';
-                        text++;
+                        s++;
                         for (i = 0; i < nerpsGlobs.soundCount; i++) {
                             if (!stricmp(nerpsGlobs.soundList[i].key, name)) {
                                 int sound = nerpsGlobs.soundList[i].sound;
@@ -4139,22 +4148,21 @@ void nerps_parse_message(char* text, char* output, int setTimer)
                             }
                         }
                         found = 1;
-                    } else {
-                        *p++ = *text++;
                     }
                 }
             } else {
-                if (output != NULL) *out++ = *text;
-                text++;
+                if (output != NULL) *out++ = *s;
+                s++;
             }
         }
         if (output != NULL) *out = '\0';
-        if (imageCount) {
-            int k;
+        {
+            unsigned char k;
             for (k = 0; k < imageCount; k++) {
                 Point2F pos;
-                pos.x = (float)(nerpsIconSpace * k) + (nerpsIconX - (float)(nerpsIconWidth * imageCount));
-                pos.y = nerpsIconY;
+                pos = *(Point2F*)&nerpsIconPos;
+                pos.x -= (float)(nerpsIconWidth * imageCount);
+                pos.x += (float)(nerpsIconSpace * k);
                 image_display_scaled(images[k], NULL, &pos, NULL);
             }
         }
