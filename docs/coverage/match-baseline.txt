@@ -1,4 +1,4 @@
-# input_sha256: 0e4b4cab818df0543f6270947981491f3a2d2cbdd12a8f99691d27db5d185fdd
+# input_sha256: 10a61ec6814b01c45f1d4c6683cfdd077ca338b4a68820ef5670555186a18de1
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -374,7 +374,7 @@
 0x0040fe60 100.00 ptrstack_pop
 0x0040fe90 100.00 ptrstack_for_each
 0x0040fec0 100.00 random_unit_float
-0x0040fed0 58.82 steering_item_spread_tuning
+0x0040fed0 94.12 steering_item_spread_tuning
 0x0040ff50 100.00 scene_object_list_apply_float_callback
 0x0040ff70 100.00 object_vector3_set
 0x0040ff90 100.00 steering_item_set_tuning
@@ -384,7 +384,7 @@
 0x00410070 100.00 scene_object_list_apply_position_callback
 0x00410090 100.00 steering_item_set_target
 0x004100b0 100.00 scene_object_list_apply_second_position_callback
-0x004100d0 53.99 steering_item_follow_target
+0x004100d0 55.73 steering_item_follow_target
 0x00410230 100.00 steering_item_arrived
 0x00410280 100.00 callback_operation_run_and_return_status
 0x004102b0 100.00 front_util_replace_text_spaces
@@ -2081,7 +2081,7 @@
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
 0x0046ff70 100.00 weapons_projectile_find_free
 0x0046ff90 100.00 weapons_lazer_find_free
-0x0046ffb0 57.40 weapons_fire_lazer
+0x0046ffb0 100.00 weapons_fire_lazer
 0x00470260 100.00 weapons_object_collision_check
 0x004702b0 61.25 weapons_object_quad_intersect
 0x00470540 100.00 weapons_object_center_proximity_check
@@ -2277,7 +2277,7 @@
 0x00478330 100.00 direct3d_render_preferences_apply
 0x004783d0 100.00 window_title_set
 0x004783f0 100.00 main_init_app
-0x004784c0 53.75 window_game_window_procedure_retail
+0x004784c0 60.25 window_game_window_procedure_retail
 0x004786c0 45.71 window_activation_close_retail
 0x00478880 100.00 main_window_procedure
 0x004788d0 100.00 direct3d_render_state_set_cached
@@ -2603,7 +2603,7 @@
 0x00486880 100.00 Draw_Pixel8
 0x004868a0 100.00 Draw_Pixel16
 0x004868d0 100.00 Draw_Pixel16XOR
-0x00486900 33.33 Draw_Pixel16HalfTrans
+0x00486900 60.67 Draw_Pixel16HalfTrans
 0x004869a0 100.00 Draw_Pixel24
 0x004869d0 100.00 Draw_Pixel32
 0x004869f0 94.80 lws_parse
@@ -3099,7 +3099,7 @@
 0x0040fe60 100.00 ptrstack_pop
 0x0040fe90 100.00 ptrstack_for_each
 0x0040fec0 100.00 random_unit_float
-0x0040fed0 58.82 steering_item_spread_tuning
+0x0040fed0 94.12 steering_item_spread_tuning
 0x0040ff50 100.00 scene_object_list_apply_float_callback
 0x0040ff70 100.00 object_vector3_set
 0x0040ff90 100.00 steering_item_set_tuning
@@ -3109,7 +3109,7 @@
 0x00410070 100.00 scene_object_list_apply_position_callback
 0x00410090 100.00 steering_item_set_target
 0x004100b0 100.00 scene_object_list_apply_second_position_callback
-0x004100d0 53.99 steering_item_follow_target
+0x004100d0 55.73 steering_item_follow_target
 0x00410230 100.00 steering_item_arrived
 0x00410280 100.00 callback_operation_run_and_return_status
 0x004102b0 100.00 front_util_replace_text_spaces
@@ -4806,7 +4806,7 @@
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
 0x0046ff70 100.00 weapons_projectile_find_free
 0x0046ff90 100.00 weapons_lazer_find_free
-0x0046ffb0 57.40 weapons_fire_lazer
+0x0046ffb0 100.00 weapons_fire_lazer
 0x00470260 100.00 weapons_object_collision_check
 0x004702b0 61.25 weapons_object_quad_intersect
 0x00470540 100.00 weapons_object_center_proximity_check
@@ -5002,7 +5002,7 @@
 0x00478330 100.00 direct3d_render_preferences_apply
 0x004783d0 100.00 window_title_set
 0x004783f0 100.00 main_init_app
-0x004784c0 53.75 window_game_window_procedure_retail
+0x004784c0 60.25 window_game_window_procedure_retail
 0x004786c0 45.71 window_activation_close_retail
 0x00478880 100.00 main_window_procedure
 0x004788d0 100.00 direct3d_render_state_set_cached
@@ -5328,7 +5328,7 @@
 0x00486880 100.00 Draw_Pixel8
 0x004868a0 100.00 Draw_Pixel16
 0x004868d0 100.00 Draw_Pixel16XOR
-0x00486900 33.33 Draw_Pixel16HalfTrans
+0x00486900 60.67 Draw_Pixel16HalfTrans
 0x004869a0 100.00 Draw_Pixel24
 0x004869d0 100.00 Draw_Pixel32
 0x004869f0 94.80 lws_parse
