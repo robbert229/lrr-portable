@@ -923,8 +923,8 @@ Lego_Object* legoobject_create(void* model, int type, int id)
             obj->flags3 |= 0x40100;
             entity_payload_state_set((struct EntitySlot*)obj->building, 0);
             entity_building_index_set((struct EntitySlot*)obj, 0);
-            if (entity_stats_word_get((struct EntitySlot*)obj) & 0x10) legoGlobs_f_55644c = (uint32_t)(uintptr_t)obj;
-            if (entity_stats_word_get((struct EntitySlot*)obj) & 0x20) legoGlobs_f_556450 = (uint32_t)(uintptr_t)obj;
+            if (entity_stats_word_get((struct EntitySlot*)obj) & 0x10) legoGlobs_f_55644c = obj;
+            if (entity_stats_word_get((struct EntitySlot*)obj) & 0x20) legoGlobs_f_556450 = obj;
             if (entity_stats_word_get((struct EntitySlot*)obj) & 0x40) legoGlobs_f_556454 = obj;
             entity_stats_word_get((struct EntitySlot*)obj);
             if (entity_stats_word_get((struct EntitySlot*)obj) & 0x4000) task_record_kind11_timed_queue(obj);
@@ -3201,7 +3201,7 @@ int legoobject_periodic_timer25_callback(Lego_Object* obj, void* data)
                 float position[2];
                 legoobject_transform_position_get(obj, &position[0], &position[1]);
                 textured_scene_object_draw_at_position(
-                    (void*)(size_t)global_state_field84_get_current_target(), position,
+                    global_state_field84_get_current_target(), position,
                     radius * (terrain_context_scale_get(Lego_GetMap()) * fraction),
                     1.0f - fraction);
             }
@@ -5083,7 +5083,7 @@ void legoobject_object_list_field_assign_all(Lego_Object* obj, int value)
     if (obj->type == 5) {
         count = animated_texture_frame_count(obj->other);
         for (i = 0; i < count; i++)
-            animated_texture_frame_set(obj->other, i, (const void*)value);
+            animated_texture_frame_set(obj->other, i, (const void*)(intptr_t)value);
     }
 }
 
@@ -9386,6 +9386,8 @@ int legoobject_type_operation_release(Lego_Object* obj)
         return legoobject_gs_object_is_hidden_adapter(obj->upgradePart);
     if (obj->flags3 & 0x20000)
         return legoobject_gs_container_is_hidden_adapter(obj->other);
+    /* Another object type: the original returns an undefined value. */
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x0044a070
@@ -10220,7 +10222,7 @@ void legoobject_scene_object_tree_attach(Lego_Object* obj)
     cont = legoobject_type_component_get(obj);
     root = ddiscene_object_allocate(cont);
     ddiscene_scene_object_attach_or_unlink(root, scene_root_object_get());
-    obj->field_32c = (int)(uintptr_t)callback_state_record_create(NULL, NULL,
+    obj->field_32c = callback_state_record_create(NULL, NULL,
         entity_stats_float_at120(LEGOOBJ_SLOT(obj)), entity_stats_float_at124(LEGOOBJ_SLOT(obj)),
         0.0f, obj);
     ((LegoObjT_Flock*)(uintptr_t)obj->field_32c)->leader->container = root;

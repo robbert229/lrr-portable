@@ -1269,7 +1269,7 @@ struct EntitySlot* object_create_from_container_adapter(void* container,
 /* Matching build: LegoObject_Create itself, by way of the alias of
  * lego_object_create_adapter (declared above). */
 #define object_create_from_container_adapter(container, type, id) \
-    ((struct EntitySlot*)lego_object_create_adapter((container), (type), (void*)(id)))
+    ((struct EntitySlot*)lego_object_create_adapter((container), (type), (void*)(intptr_t)(id)))
 void entity_type_operation_dispatch_adapter(struct EntitySlot* entity,
                                             int operation); /* 00449f50 */
 int entity_try_create_linked_at_position_original(struct EntitySlot* entity,
@@ -1596,8 +1596,8 @@ int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,
 void camera_tilt_set(void* camera, float value);                /* 00436860 */
 void camera_rotation_set(void* camera, float value);            /* 00436953 */
 /* GAME Building.c (building_model.h): Building_GetShapePoints. */
-uint32_t task_field84_get_and_field88_out(const void* task,
-                                          uint32_t* out88);     /* 00408360 */
+void* task_field84_get_and_field88_out(const void* task,
+                                       uint32_t* out88);     /* 00408360 */
 /* GAME Construction.c (placement_footprint.h): the shape rotated to a
  * direction around a block. */
 void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,

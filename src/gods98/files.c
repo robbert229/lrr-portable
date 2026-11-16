@@ -791,13 +791,17 @@ void file_check_redundant_files(const char* logName)
     char line[1024];
 
     if ((f = file_open(logName, "r")) != NULL) {
+        /* The original hands the File record itself to fscanf and fclose
+         * as a C library stream; read the record's own stream instead (a
+         * WAD stream has none) and close the record. */
+        FILE* stream = (f->type == FileSystem_Std) ? f->stream.std : NULL;
         fileRedundantListCount = 0;
-        /* The original reads the File record as a C library stream. */
-        while (fscanf((FILE*)f, "%s", line) != EOF) {
+        while (stream && fileRedundantListCount < 2000 &&
+               fscanf(stream, "%1023s", line) != EOF) {
             strcpy(fileRedundantList[fileRedundantListCount++], line);
         }
         file_check_directory(fileGlobs.dataDir);
-        fclose((FILE*)f);
+        file_close(f);
     }
 }
 

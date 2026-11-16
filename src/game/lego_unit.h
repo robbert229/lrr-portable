@@ -48,7 +48,7 @@ typedef struct Lego_Level {
     uint32_t f_078;                 /* +0x078 tile mesh grid height */
     void* textureSet;      /* +0x07c Detail_TextureSet */
     void** f_080;          /* +0x080 tile meshes, f_074 * f_078 */
-    uint32_t f_084;                 /* +0x084 */
+    void* f_084;                    /* +0x084 radar map record */
     uint32_t f_088;
     int f_08c;                      /* +0x08c */
     uint32_t f_090;
@@ -138,7 +138,7 @@ void media_action_feedback_sound_dispatch(int event);
 uint32_t active_engine_field_b0_get_current(void);
 float engine_float_field210_get_by_index_current(int index);
 float engine_float_field260_get_current_target(void);
-uint32_t global_state_field84_get_current_target(void);
+void* global_state_field84_get_current_target(void);
 
 /* The unit's own entries (the port keeps its models in lego.cpp). */
 int lego_upgrade_resource_check(int ore);
@@ -329,8 +329,8 @@ extern float legoGlobs_FPClipBlocks;                /* 00556110 */
 extern float legoGlobs_fogColourRGB[3];         /* 0055640c */
 extern float legoGlobs_highFogColourRGB[3];     /* 00556418 */
 extern float legoGlobs_f_556424;                /* 00556424 */
-extern uint32_t legoGlobs_f_55644c;             /* 0055644c */
-extern uint32_t legoGlobs_f_556450;             /* 00556450 */
+extern void* legoGlobs_f_55644c;               /* 0055644c */
+extern void* legoGlobs_f_556450;               /* 00556450 */
 extern float legoGlobs_f_556ef8;                /* 00556ef8 */
 extern int legoGlobs_f_556f14;                  /* 00556f14 */
 extern char* legoGlobs_endGameAVI1;             /* 00556fb0 */

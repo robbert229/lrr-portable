@@ -985,6 +985,8 @@ int terrain_map_block_vertices_get(TerrainMap* map, unsigned int bx,
         positions[3] = vertices[3].position;
         return 0;
     }
+    /* Outside the map: the original returns an undefined value. */
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x00450220

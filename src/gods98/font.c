@@ -203,7 +203,10 @@ unsigned int font_v_print_f2(Font* font, int x, int y, int render,
                           (isdigit((unsigned char)line[loop + 4 + hex]) ? '0' : 'a' - 10)) << shift;
                 shift -= 4;
             }
-            if (image = (Image*)value) {
+            /* A 32-bit image address in the text: no unit writes one, and
+             * a 64-bit pointer does not fit the eight digits (known 32-bit
+             * spot, ADR 0007 decision 4). */
+            if (image = (Image*)(uintptr_t)value) {
                 pos.x = (float)(lineWidth + x);
                 pos.y = (float)y;
                 lineWidth += image->width;

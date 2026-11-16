@@ -203,6 +203,8 @@ int message_lookup_physical_name(const char* name)
     for (i = 0; i < MESSAGE_TYPE_COUNT; i++) {
         if (!stricmp(messageGlobs.messageName[i] + 8, name)) return i;
     }
+    /* No name matches: the original returns an undefined value. */
+    return -1;
 }
 
 // FUNCTION: LEGORR 0x00452010

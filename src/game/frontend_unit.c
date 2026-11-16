@@ -202,6 +202,59 @@ typedef struct Front_SaveData {
     unsigned char field_38[0x80];   /* +0x38 */
 } Front_SaveData;
 
+/* The save file's image of a Front_SaveData: the Win32 layout, 0xb8 bytes,
+ * of which the file holds the first 0xb0 (read) or 0xb4 (written). The
+ * missionsTable pointer's slot (+0x34) holds no data on disk. */
+#define FRONT_SAVEDATA_FILE_SIZE 0xb8
+
+static uint32_t front_save_data_word(const unsigned char* bytes, int offset)
+{
+    return (uint32_t)bytes[offset] | ((uint32_t)bytes[offset + 1] << 8) |
+           ((uint32_t)bytes[offset + 2] << 16) | ((uint32_t)bytes[offset + 3] << 24);
+}
+
+static void front_save_data_put_word(unsigned char* bytes, int offset, uint32_t value)
+{
+    bytes[offset] = (unsigned char)value;
+    bytes[offset + 1] = (unsigned char)(value >> 8);
+    bytes[offset + 2] = (unsigned char)(value >> 16);
+    bytes[offset + 3] = (unsigned char)(value >> 24);
+}
+
+/* Parses a save file's image into a Front_SaveData; missionsTable is NULL. */
+static void front_save_data_parse(const unsigned char* bytes, Front_SaveData* out)
+{
+    int i;
+    out->field_0 = (int)front_save_data_word(bytes, 0x00);
+    out->musicVolume = (int)front_save_data_word(bytes, 0x04);
+    out->sfxVolume = (int)front_save_data_word(bytes, 0x08);
+    out->gameSpeed = (int)front_save_data_word(bytes, 0x0c);
+    out->brightness = (int)front_save_data_word(bytes, 0x10);
+    out->field_14 = (int)front_save_data_word(bytes, 0x14);
+    out->missionsCount = front_save_data_word(bytes, 0x18);
+    for (i = 0; i < 6; i++)
+        out->saveStruct18.values[i] = (int)front_save_data_word(bytes, 0x1c + i * 4);
+    out->missionsTable = NULL;
+    memcpy(out->field_38, bytes + 0x38, sizeof(out->field_38));
+}
+
+/* Writes a Front_SaveData's save file image. */
+static void front_save_data_serialize(const Front_SaveData* data, unsigned char* bytes)
+{
+    int i;
+    front_save_data_put_word(bytes, 0x00, (uint32_t)data->field_0);
+    front_save_data_put_word(bytes, 0x04, (uint32_t)data->musicVolume);
+    front_save_data_put_word(bytes, 0x08, (uint32_t)data->sfxVolume);
+    front_save_data_put_word(bytes, 0x0c, (uint32_t)data->gameSpeed);
+    front_save_data_put_word(bytes, 0x10, (uint32_t)data->brightness);
+    front_save_data_put_word(bytes, 0x14, (uint32_t)data->field_14);
+    front_save_data_put_word(bytes, 0x18, data->missionsCount);
+    for (i = 0; i < 6; i++)
+        front_save_data_put_word(bytes, 0x1c + i * 4, (uint32_t)data->saveStruct18.values[i]);
+    front_save_data_put_word(bytes, 0x34, 0);
+    memcpy(bytes + 0x38, data->field_38, sizeof(data->field_38));
+}
+
 /* frontGlobs (00556fc0, 0x890 bytes), as the original's one struct: a
  * store into one field then orders the stores around it as the original
  * does (finding 635). Fields the port does not model keep their offsets
@@ -2334,17 +2387,17 @@ void front_menu_load_slot_images(void)
     }
     i = 0;
     for (completion = s_saveSlotCompletion; completion < s_saveSlotCompletion + 5; completion++) {
-        /* A Front_SaveData (0xb8 bytes, defined with part 2): [6] is
-         * missionsCount, [13] missionsTable. Each mission record is 0x3190
-         * bytes, its reward score at +0x2fb8. */
-        int saveData[0xb8 / 4] = { 0 };
+        /* Each mission record is 0x3190 bytes, its reward score at
+         * +0x2fb8. */
+        Front_SaveData saveData;
 
-        save_read_slot_target(i, saveData, 1);
+        memset(&saveData, 0, sizeof(saveData));
+        save_read_slot_target(i, &saveData, 1);
         *completion = 0;
-        for (k = 8; k < (unsigned int)saveData[6]; k++) {
-            *completion += (*(float*)((char*)saveData[13] + k * 0x3190 + 0x2fb8) != 0.0f) ? 4 : 0;
+        for (k = 8; k < saveData.missionsCount; k++) {
+            *completion += (*(float*)((char*)saveData.missionsTable + k * 0x3190 + 0x2fb8) != 0.0f) ? 4 : 0;
         }
-        free((void*)saveData[13]);
+        free(saveData.missionsTable);
         i++;
     }
 }
@@ -4537,7 +4590,11 @@ int front_save_read_save_file(uint32_t saveIndex, void* outData, int readOnly)
         if (file != NULL) {
             missionsCount = 0;
             tutorialsCount = 0;
-            file_read(outData, 0xb0, 1, file);
+            {
+                unsigned char image[FRONT_SAVEDATA_FILE_SIZE] = { 0 };
+                file_read(image, 0xb0, 1, file);
+                front_save_data_parse(image, (Front_SaveData*)outData);
+            }
             front_level_link_run_through_links(g_front_save_tree,
                                                front_level_link_callback_inc_count, &missionsCount);
             front_levels_reset_visited();
@@ -4583,7 +4640,9 @@ int front_save_write_save_file(unsigned int saveIndex, Front_SaveData* saveData)
             // STRING: LEGORR 0x004a2794
             file = file_open(buffer, "wb");
             if (file != NULL) {
-                file_write(saveData, 0xb0, 1, file);
+                unsigned char image[FRONT_SAVEDATA_FILE_SIZE];
+                front_save_data_serialize(saveData, image);
+                file_write(image, 0xb0, 1, file);
                 if (saveData->missionsCount != 0) {
                     file_write(saveData->missionsTable, sizeof(Front_SaveReward), saveData->missionsCount, file);
                 }
@@ -4608,7 +4667,9 @@ int front_save_write_save_file(unsigned int saveIndex, Front_SaveData* saveData)
                 front_level_link_run_through_links(g_front_save_tree,
                                                    front_level_link_callback_inc_count, &newData.missionsCount);
                 front_levels_reset_visited();
-                file_write(&newData, 0xb4, 1, file);
+                unsigned char image[FRONT_SAVEDATA_FILE_SIZE];
+                front_save_data_serialize(&newData, image);
+                file_write(image, 0xb4, 1, file);
                 for (i = 0; i < newData.missionsCount; i++) {
                     file_write(&newReward, sizeof(Front_SaveReward), 1, file);
                 }

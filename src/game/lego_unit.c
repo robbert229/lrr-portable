@@ -387,6 +387,8 @@ int noop_callback(int onlyUsable)
         if (onlyUsable) return legoGlobs_currLevel->f_08c;
         return legoGlobs_currLevel->f_08c - legoGlobs_currLevel->f_098;
     }
+    /* No level: the original returns an undefined value. */
+    return 0;
 }
 
 /* UpgradeResourceCheck [group M] */
@@ -398,6 +400,8 @@ int lego_upgrade_resource_check(int ore)
         return legoGlobs_currLevel->crystals;
     }
     /* Like the original, no value: eax still holds the null level. */
+    /* No level: the original returns the null level's 0 in eax. */
+    return 0;
 }
 
 /* LevelStateField9CAdd [group M] */
@@ -1355,6 +1359,8 @@ void* lego_mode_dependent_field24_get(void)
 {
     if (s_context_mode == 1) return LEGO_FIELD(s_zoom_step_context, void*, 0x24);
     else if (s_context_mode == 0) return LEGO_FIELD(legoGlobs_cameraFP, void*, 0x24);
+    /* Another view mode: the original returns an undefined value. */
+    return NULL;
 }
 
 /* GlobalFloatField00556F00Get [group M] */
@@ -4719,7 +4725,7 @@ void lego_rectangular_resource_table_destroy(Lego_Level* level)
 
 /* GlobalStateField84Get [group M] */
 // FUNCTION: LEGORR 0x0042b500
-uint32_t global_state_field84_get_current_target(void)
+void* global_state_field84_get_current_target(void)
 {
     return legoGlobs_currLevel->f_084;
 }
@@ -4758,7 +4764,7 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
     ((level->map) = (terrain_map_create(legoGlobs_rootCont, surfaceMap, level->blockSize,
                                                       level->roughLevel)));
     if (level->map) {
-        level->f_084 = (uint32_t)(uintptr_t)ui_render_record_create(
+        level->f_084 = ui_render_record_create(
             level->map, (const uint32_t*)legoGlobs_f_5563e4,
             LEGO_FIELD(&s_lego_radar_zoom, uint32_t, 0));
         terrain_map_perspective_correction_set(level->map, 1);
@@ -4823,6 +4829,8 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
             }
         }
     }
+    /* A failed load: the original returns an undefined value. */
+    return 0;
 }
 
 /* SurfaceTextCharacterMapInitialize [group 2A]: Lego_InitTextureMappings.
@@ -6156,6 +6164,8 @@ unsigned int lego_stats_level_record_count_for_stat_type(int objType)
     case 19:
         return 1;
     }
+    /* Other stat types: the original returns an undefined value. */
+    return 0;
 }
 
 
@@ -6716,7 +6726,7 @@ inline void terrain_cell_work_flag_clear_current(const int coord[2], uint32_t se
         LEGO_2F_BLOCK(legoGlobs_currLevel, coord[0], coord[1]).flags1 &= ~0x200000;
         map_cell_tracking_flags_clear_and_refresh_current(coord);
         for (i = 0; i < 4; i++)
-            coordinate_pair_event_queue(coord, (void*)selector);
+            coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
         LEGO_2F_BLOCK(legoGlobs_currLevel, coord[0], coord[1]).flags1 |= 0x3;
     }
 }

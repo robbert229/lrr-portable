@@ -79,7 +79,7 @@ typedef struct Lego_Object {
     unsigned int carryingIndex;       /* +0x320 */
     unsigned int numCarriedObjects;   /* +0x324 */
     unsigned int carryNullFrames;     /* +0x328 */
-    int field_32c;                    /* +0x32c */
+    void* field_32c;                  /* +0x32c */
     unsigned int objLevel;            /* +0x330 */
     void* stats;                      /* +0x334 ObjectStats */
     float aiTimer;                    /* +0x338 */

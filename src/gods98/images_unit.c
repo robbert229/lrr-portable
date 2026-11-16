@@ -467,6 +467,8 @@ unsigned int Image_GetPen255(Image* image)
 
     /* The original falls off the end here: eax holds GetPixelFormat's
      * error code. */
+    /* GetPixelFormat failed: the original returns its error code. */
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x0047df50

@@ -810,6 +810,8 @@ int mesh_get_texture_seq_info(const char* tname, char* tfname,
 
     /* The original's success path has no return statement: it ends with
      * the tnumlen pointer in eax (finding 677). */
+    /* Success: the original returns the tnumlen pointer, non-zero. */
+    return 1;
 }
 
 // FUNCTION: LEGORR 0x00481b80

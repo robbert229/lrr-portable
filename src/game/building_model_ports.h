@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88); /* 00408360 */
+void* task_field84_get_and_field88_out(const void* task, uint32_t* out88); /* 00408360 */
 
 #ifdef __cplusplus
 }

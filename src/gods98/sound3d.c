@@ -571,7 +571,7 @@ int sound_attached_stop_by_entity(Sound3DFrame* frame,
  * object-attached sources are tracked through the existing spatial hooks.
  * Stream selection and loop-buffer ownership remain with the bank path. */
 // FUNCTION: LEGORR 0x0047ad70
-int s_play_seam(int mode, int position, int slot, int loop,
+int s_play_seam(int mode, intptr_t position, int slot, int loop,
                 const float* xyz)
 {
     Sound3DFrame* frame = (Sound3DFrame*)position;

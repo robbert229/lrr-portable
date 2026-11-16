@@ -107,7 +107,7 @@ void entity_pointer_registries_remove(struct EntitySlot* record); /* 004073a0 */
 /* Creature.c / Building.c / Vehicle.c / Upgrade.c payload releases. */
 void entity_payload_release_subslots(struct EntitySlot* e);     /* 00406ec0 */
 void entity_payload_teardown(struct EntitySlot* e);             /* 00408940 */
-uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88); /* 00408360 */
+void* task_field84_get_and_field88_out(const void* task, uint32_t* out88); /* 00408360 */
 void entity_payload_type1_release(
     struct ScenePairedAnimationState* state);                   /* 0046ce10 */
 void render_resource_binding_release(
@@ -166,8 +166,8 @@ void legoobject_gb_tutorial_counter_increment_adapter(int type);   /* 00454880 *
 /* legoGlobs stand-ins defined in lego_unit.c (GAME-021). */
 extern float legoGlobs_PowerCrystalRGB[3];                    /* 00556428 */
 extern float legoGlobs_UnpoweredCrystalRGB[3];                /* 00556434 */
-extern uint32_t legoGlobs_f_55644c;                           /* 0055644c */
-extern uint32_t legoGlobs_f_556450;                           /* 00556450 */
+extern void* legoGlobs_f_55644c;                             /* 0055644c */
+extern void* legoGlobs_f_556450;                             /* 00556450 */
 struct ScenePairedAnimationState;
 struct AnimationObject;
 struct SceneObjectRecord;
@@ -576,7 +576,7 @@ void info_send(int type, char* text, void* object,
 /* GAME-021 Lego.c (lego_unit.c, lego.cpp). */
 float engine_float_field210_get_by_index_current(int index);               /* 00429860 */
 float engine_float_field260_get_current_target(void);                      /* 00429880 */
-uint32_t global_state_field84_get_current_target(void);                    /* 0042b500 */
+void* global_state_field84_get_current_target(void);                    /* 0042b500 */
 void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
                                                int radius);                 /* 00435010 */
 /* LegoObject.c part 3 (ai.hpp, legoobject_port.cpp). */
@@ -967,7 +967,7 @@ void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapse
                                                   float* outTransSpeed,
                                                   float* outElapsed);        /* 00446610 */
 /* GAME-047 Vehicle.c (record.hpp, vehicle_model.cpp): Vehicle_GetActivityContainer. */
-uint32_t scene_object_resource_get(const void* scene_object);                /* 0046d9e0 */
+void* scene_object_resource_get(const void* scene_object);                /* 0046d9e0 */
 /* GAME-004 Creature.c (record.hpp, animation_object.h): Creature_GetActivityContainer. */
 void* animation_object_handle_get(const void* object);                     /* 00406e30 */
 struct AnimationObject;

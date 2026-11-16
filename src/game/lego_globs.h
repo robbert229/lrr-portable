@@ -143,8 +143,8 @@ struct Lego_Globs {
     int field_380;                           /* +0x380 00556440 legoGlobs_f_556440 */
     int field_384;                           /* +0x384 00556444 legoGlobs_f_556444 */
     int field_388;                           /* +0x388 00556448 legoGlobs_f_556448 */
-    uint32_t field_38c;                      /* +0x38c 0055644c legoGlobs_f_55644c */
-    uint32_t field_390;                      /* +0x390 00556450 legoGlobs_f_556450 */
+    void* field_38c;                         /* +0x38c 0055644c legoGlobs_f_55644c */
+    void* field_390;                         /* +0x390 00556450 legoGlobs_f_556450 */
     void* field_394;                         /* +0x394 00556454 legoGlobs_f_556454 (Lego_Object*) */
     float MinEnergyForEat;                   /* +0x398 00556458 legoGlobs_MinEnergyForEat */
     void* TutorialIcon;                      /* +0x39c 0055645c legoGlobs_TutorialIcon (Image*) */
