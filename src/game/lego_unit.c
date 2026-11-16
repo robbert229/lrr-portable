@@ -9838,11 +9838,9 @@ int lego_global_handle_position_apply_if_present(void)
 
     pos[0] = 0.0f;
     pos[1] = 0.0f;
-    if (s_position_handle) {
-        image_display_scaled((struct Image*)s_position_handle, NULL, (const struct Point2F*)pos, NULL);
-        return 1;
-    }
-    return 0;
+    if (!s_position_handle) return 0;
+    image_display_scaled((struct Image*)s_position_handle, NULL, (const struct Point2F*)pos, NULL);
+    return 1;
 }
 
 /* MenuOptionPanelTextureUpdate [group 3C]: draws the in-game dialog and
