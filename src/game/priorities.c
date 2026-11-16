@@ -347,25 +347,29 @@ void priorities_move_cursor_to_image(unsigned int index)
 // FUNCTION: LEGORR 0x0045d6d0
 void priorities_draw(void)
 {
-    Point2F panel;
-    unsigned int i;
     Point2F position;
+    unsigned int i;
+    Point2F panel;
 
     if (!request_record_ready_flag4_target(PRIORITIES_PANEL)) {
         indexed_pair_get(PRIORITIES_PANEL, &panel.x, &panel.y);
         for (i = 0; i < priorities.count; i++) {
             int type;
             Image* image;
+            type = priorities.list[i];
             position.x = priorities.offsets[i].x + panel.x;
             position.y = priorities.offsets[i].y + panel.y;
-            type = priorities.list[i];
-            if (priority_entry_state_get(type)) image = priorities.off_images[type];
-            else if ((priorities.flags & PRIORITIES_FLAG_PRESSED) &&
-                     priorities.selected == i) {
+            if (priority_entry_state_get(type)) {
+                image = priorities.off_images[type];
+                if (image != NULL) image_display_scaled(image, NULL, &position, NULL);
+            } else if ((priorities.flags & PRIORITIES_FLAG_PRESSED) &&
+                       priorities.selected == i) {
                 image = priorities.pressed_images[type];
+                if (image != NULL) image_display_scaled(image, NULL, &position, NULL);
+            } else {
+                image = priorities.images[type];
+                if (image != NULL) image_display_scaled(image, NULL, &position, NULL);
             }
-            else image = priorities.images[type];
-            if (image != NULL) image_display_scaled(image, NULL, &position, NULL);
         }
         if (priorities.flags & PRIORITIES_FLAG_HOVER) {
             position_tracker_box_draw(&priorities.hover_area.x);
