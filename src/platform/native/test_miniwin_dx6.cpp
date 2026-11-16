@@ -248,7 +248,7 @@ static void CheckFrame(IDirect3DRM3* d3drm, IDirect3DRMFrame3** outCamera)
     CHECK(frame->AddTranslation(D3DRMCOMBINE_BEFORE, 1, 2, 3) == DD_OK);
     CHECK(frame->AddScale(D3DRMCOMBINE_BEFORE, 1, 1, 1) == DD_OK);
     CHECK(frame->AddRotation(D3DRMCOMBINE_BEFORE, 0, 1, 0, 1) == DD_OK);
-    CHECK(frame->AddVisual(static_cast<IUnknown*>(child)) == E_NOTIMPL);
+    CHECK(frame->AddVisual(static_cast<IUnknown*>(child)) == DD_OK);
     CHECK(frame->GetParent(&other) == DD_OK && other == nullptr);
     CHECK(frame->GetScene(&other) == DD_OK && other == frame);
     if (other) {
@@ -256,11 +256,11 @@ static void CheckFrame(IDirect3DRM3* d3drm, IDirect3DRMFrame3** outCamera)
     }
     CHECK(frame->GetTransform(nullptr, matrix) == DD_OK);
     CHECK(frame->GetOrientation(nullptr, &dir, &up) == DD_OK);
-    CHECK(frame->GetVisuals(&count, nullptr) == E_NOTIMPL);
+    CHECK(frame->GetVisuals(&count, nullptr) == DD_OK && count == 1);
     CHECK(frame->InverseTransform(&dir, &up) == DD_OK);
     CHECK(frame->Load(nullptr, nullptr, D3DRMLOAD_FROMFILE, nullptr, nullptr) == E_NOTIMPL);
     CHECK(frame->LookAt(child, nullptr, D3DRMCONSTRAIN_Z) == E_NOTIMPL);
-    CHECK(frame->DeleteVisual(static_cast<IUnknown*>(child)) == E_NOTIMPL);
+    CHECK(frame->DeleteVisual(static_cast<IUnknown*>(child)) == DD_OK);
     CHECK(frame->GetSceneBackground() == 0xFF000000);
     CHECK(frame->SetSceneBackground(0xFF102030) == DD_OK);
     CHECK(frame->GetSceneBackground() == 0xFF102030);

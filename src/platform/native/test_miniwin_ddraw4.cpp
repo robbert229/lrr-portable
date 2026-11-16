@@ -3,7 +3,7 @@
 // (DirectDraw.c, Images.c, Init.c, Container.c): display modes on the
 // emulated 16-bit display, IDirectDraw4/IDirectDrawSurface4 surfaces, Lock,
 // fills and colour-keyed blits, the framebuffer and its flip, the software
-// device described as HAL, and IDirect3DRMFrame3 transforms.
+// device described as HAL, and IDirect3DRMFrame3 transforms and visuals.
 // Synthetic only: an offscreen SDL window, no game data.
 #include <miniwin/d3drm.h>
 #include <miniwin/ddraw.h>
@@ -374,6 +374,12 @@ static void CheckFrameBuffer(IDirectDraw4* dd, IDirectDraw* dd1, SDL_Window* win
 
 // ---- frames -------------------------------------------------------------
 
+static int UserVisualCallback(IDirect3DRMUserVisual*, void*, D3DRMUSERVISUALREASON, IDirect3DRMDevice*,
+                              IDirect3DRMViewport*)
+{
+    return 0;
+}
+
 static void CheckFrames()
 {
     IDirect3DRM* d3drm1 = nullptr;
@@ -447,6 +453,31 @@ static void CheckFrames()
     in = {0, 0, 1};
     CHECK(child->Transform(&out, &in) == DD_OK && NearVector(out, 4, 0, 2));
     CHECK(child->SetOrientation(scene, 0, 0, 0, 0, 1, 0) == DDERR_INVALIDPARAMS);
+
+    // Visuals through IUnknown (Lws.c reads a node's user visual back).
+    IDirect3DRMUserVisual* userVisual = nullptr;
+    CHECK(d3drm->CreateUserVisual(UserVisualCallback, nullptr, &userVisual) == DD_OK && userVisual);
+    if (userVisual) {
+        int tag = 0;
+        userVisual->SetAppData(&tag);
+        DWORD count = 0;
+        CHECK(parent->AddVisual(static_cast<IUnknown*>(userVisual)) == DD_OK);
+        CHECK(parent->GetVisuals(&count, nullptr) == DD_OK && count == 1);
+        IUnknown* visual = nullptr;
+        CHECK(parent->GetVisuals(&count, &visual) == DD_OK && visual);
+        if (visual) {
+            IDirect3DRMUserVisual* asUser = nullptr;
+            CHECK(visual->QueryInterface(IID_IDirect3DRMUserVisual, (void**) &asUser) == DD_OK && asUser);
+            visual->Release();
+            if (asUser) {
+                CHECK(asUser->GetAppData() == &tag);
+                asUser->Release();
+            }
+        }
+        CHECK(parent->DeleteVisual(static_cast<IUnknown*>(userVisual)) == DD_OK);
+        CHECK(parent->GetVisuals(&count, nullptr) == DD_OK && count == 0);
+        userVisual->Release();
+    }
 
     child->Release();
     parent->Release();
