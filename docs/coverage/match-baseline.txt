@@ -1,4 +1,4 @@
-# input_sha256: 682a5e578da73642a0a4083d67e1047cca563f037a9867f58d00ef7e8ed2bb39
+# input_sha256: efb99132fbaa582d0c19160948e9e9ec5208e2a0449ef35911446711f2604cd4
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -214,10 +214,10 @@
 0x00408940 100.00 entity_payload_teardown
 0x00408970 100.00 task_flag_bit_query
 0x004089a0 100.00 entity_payload_state_set
-0x004089d0 92.75 collision_segment_point_distance
+0x004089d0 96.12 collision_segment_point_distance
 0x00408b00 100.00 point_to_polyline_minimum_segment_distance
-0x00408b60 62.26 point_project_onto_line2d
-0x00408bf0 74.51 point2d_project_onto_direction
+0x00408b60 64.15 point_project_onto_line2d
+0x00408bf0 79.25 point2d_project_onto_direction
 0x00408c80 100.00 string_table_index_lookup
 0x00408ce0 100.00 cmd_operation_group_append_object
 0x00408d70 100.00 terrain_descriptor_coordinate_count_limit_check
@@ -255,7 +255,7 @@
 0x0040a400 100.00 preload_numbered_bitmaps
 0x0040a4b0 100.00 quad_mesh_render_record_create
 0x0040a5c0 100.00 damage_font_get_next_free
-0x0040a5e0 99.25 damage_font_set_damage_number
+0x0040a5e0 100.00 damage_font_set_damage_number
 0x0040a740 71.57 damage_font_mesh_render_callback
 0x0040aa10 100.00 simtick_table_dispatch_original
 0x0040aa40 100.00 damage_font_update
@@ -905,7 +905,7 @@
 0x00435230 72.87 lego_random_variant_cell_scatter
 0x00435300 93.51 lego_tutorial_block_icons_update
 0x00435550 100.00 ledger_stub_00435550_GlobalStateZeroTransitionDetect
-0x00435580 76.92 lego_global_handle_position_apply_if_present
+0x00435580 100.00 lego_global_handle_position_apply_if_present
 0x004355c0 67.16 lego_menu_option_panel_texture_update
 0x00435940 100.00 lego_keep_running
 0x00435a20 100.00 global_state_low_byte_clear_and_refresh
@@ -1240,7 +1240,7 @@
 0x0044cff0 100.00 light_effects_update_colour
 0x0044d0d0 100.00 light_effects_update_blink
 0x0044d250 100.00 light_effects_flip_sign
-0x0044d280 99.28 light_effects_update_fade
+0x0044d280 100.00 light_effects_update_fade
 0x0044d710 100.00 light_effects_set_fade_speed
 0x0044d760 86.17 light_effects_update_move
 0x0044d9a0 91.11 light_effects_check_move_limit
@@ -1332,7 +1332,7 @@
 0x00452650 100.00 cmd_array_find_value_index
 0x00452690 100.00 selection_active_candidate_already_selected_or_marked
 0x004526c0 100.00 selection_candidate_filter_default
-0x004526e0 97.52 selection_candidate_filter_active
+0x004526e0 100.00 selection_candidate_filter_active
 0x00452870 100.00 selection_candidate_eligibility_check
 0x004528c0 100.00 selection_state_tick_active
 0x00452be0 100.00 selection_clear_active
@@ -1860,9 +1860,9 @@
 0x00463770 100.00 scroll_rect_resource_record_create
 0x00463810 100.00 scroll_info_add_create_structure
 0x004638a0 95.13 info_panel_check_collision
-0x00463c00 94.85 scroll_info_mouse_over_structure
+0x00463c00 100.00 scroll_info_mouse_over_structure
 0x00463c90 100.00 scroll_info_mouse_over_create_structure
-0x00463d20 86.46 view_blit_rect_positions_apply
+0x00463d20 90.62 view_blit_rect_positions_apply
 0x00463e40 100.00 float_round_to_nearest_int
 0x00463ea0 100.00 indexed_text_metrics_pair_get
 0x00463ed0 100.00 indexed_text_metrics_pair_set
@@ -2055,8 +2055,8 @@
 0x0046e1c0 100.00 water_change_view_mode
 0x0046e220 100.00 terrain_cell_surface_quad_height_fill_current
 0x0046e330 100.00 water_seal_block
-0x0046e390 99.50 water_update
-0x0046e610 95.58 water_update_flow_blocks
+0x0046e390 100.00 water_update
+0x0046e610 96.69 water_update_flow_blocks
 0x0046e8a0 100.00 water_find_pool
 0x0046e9a0 100.00 water_compare_pools
 0x0046e9d0 100.00 water_find_joining_pool
@@ -2939,10 +2939,10 @@
 0x00408940 100.00 entity_payload_teardown
 0x00408970 100.00 task_flag_bit_query
 0x004089a0 100.00 entity_payload_state_set
-0x004089d0 92.75 collision_segment_point_distance
+0x004089d0 96.12 collision_segment_point_distance
 0x00408b00 100.00 point_to_polyline_minimum_segment_distance
-0x00408b60 62.26 point_project_onto_line2d
-0x00408bf0 74.51 point2d_project_onto_direction
+0x00408b60 64.15 point_project_onto_line2d
+0x00408bf0 79.25 point2d_project_onto_direction
 0x00408c80 100.00 string_table_index_lookup
 0x00408ce0 100.00 cmd_operation_group_append_object
 0x00408d70 100.00 terrain_descriptor_coordinate_count_limit_check
@@ -2980,7 +2980,7 @@
 0x0040a400 100.00 preload_numbered_bitmaps
 0x0040a4b0 100.00 quad_mesh_render_record_create
 0x0040a5c0 100.00 damage_font_get_next_free
-0x0040a5e0 99.25 damage_font_set_damage_number
+0x0040a5e0 100.00 damage_font_set_damage_number
 0x0040a740 71.57 damage_font_mesh_render_callback
 0x0040aa10 100.00 simtick_table_dispatch_original
 0x0040aa40 100.00 damage_font_update
@@ -3630,7 +3630,7 @@
 0x00435230 72.87 lego_random_variant_cell_scatter
 0x00435300 93.51 lego_tutorial_block_icons_update
 0x00435550 100.00 ledger_stub_00435550_GlobalStateZeroTransitionDetect
-0x00435580 76.92 lego_global_handle_position_apply_if_present
+0x00435580 100.00 lego_global_handle_position_apply_if_present
 0x004355c0 67.16 lego_menu_option_panel_texture_update
 0x00435940 100.00 lego_keep_running
 0x00435a20 100.00 global_state_low_byte_clear_and_refresh
@@ -3965,7 +3965,7 @@
 0x0044cff0 100.00 light_effects_update_colour
 0x0044d0d0 100.00 light_effects_update_blink
 0x0044d250 100.00 light_effects_flip_sign
-0x0044d280 99.28 light_effects_update_fade
+0x0044d280 100.00 light_effects_update_fade
 0x0044d710 100.00 light_effects_set_fade_speed
 0x0044d760 86.17 light_effects_update_move
 0x0044d9a0 91.11 light_effects_check_move_limit
@@ -4057,7 +4057,7 @@
 0x00452650 100.00 cmd_array_find_value_index
 0x00452690 100.00 selection_active_candidate_already_selected_or_marked
 0x004526c0 100.00 selection_candidate_filter_default
-0x004526e0 97.52 selection_candidate_filter_active
+0x004526e0 100.00 selection_candidate_filter_active
 0x00452870 100.00 selection_candidate_eligibility_check
 0x004528c0 100.00 selection_state_tick_active
 0x00452be0 100.00 selection_clear_active
@@ -4585,9 +4585,9 @@
 0x00463770 100.00 scroll_rect_resource_record_create
 0x00463810 100.00 scroll_info_add_create_structure
 0x004638a0 95.13 info_panel_check_collision
-0x00463c00 94.85 scroll_info_mouse_over_structure
+0x00463c00 100.00 scroll_info_mouse_over_structure
 0x00463c90 100.00 scroll_info_mouse_over_create_structure
-0x00463d20 86.46 view_blit_rect_positions_apply
+0x00463d20 90.62 view_blit_rect_positions_apply
 0x00463e40 100.00 float_round_to_nearest_int
 0x00463ea0 100.00 indexed_text_metrics_pair_get
 0x00463ed0 100.00 indexed_text_metrics_pair_set
@@ -4780,8 +4780,8 @@
 0x0046e1c0 100.00 water_change_view_mode
 0x0046e220 100.00 terrain_cell_surface_quad_height_fill_current
 0x0046e330 100.00 water_seal_block
-0x0046e390 99.50 water_update
-0x0046e610 95.58 water_update_flow_blocks
+0x0046e390 100.00 water_update
+0x0046e610 96.69 water_update_flow_blocks
 0x0046e8a0 100.00 water_find_pool
 0x0046e9a0 100.00 water_compare_pools
 0x0046e9d0 100.00 water_find_joining_pool
