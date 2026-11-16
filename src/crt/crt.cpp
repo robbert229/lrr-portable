@@ -329,6 +329,11 @@ extern "C" void __cdecl __multtenpow12(uint16_t*, uint32_t, int);
 // LIBRARY: LEGORR 0x0048efe6 SYMBOL
 // __NLG_Notify
 
+/* D3DRM.LIB's import thunk, which Main.c calls directly
+ * (gods98/main.c, finding 412). */
+// LIBRARY: LEGORR 0x0049b6b0 SYMBOL
+// _Direct3DRMCreate@4
+
 /* DDRAW.LIB's import thunks, which DirectDraw.c calls directly
  * (gods98/directdraw.c, finding 596). */
 // LIBRARY: LEGORR 0x0049b6c2 SYMBOL
