@@ -5282,10 +5282,8 @@ int aitask_place_command_eligibility_check(AITask* task, struct EntitySlot* obje
             if (outWPos != NULL)
                 terrain_map_block_to_world(AITASK_LEGO_GET_MAP(), task->blockX, task->blockY,
                                            &outWPos[0], &outWPos[1]);
-            if (outBPos != NULL) {
-                outBPos[0] = task->blockX;
-                outBPos[1] = task->blockY;
-            }
+            if (outBPos != NULL)
+                *(AITaskPoint2I*)outBPos = *(AITaskPoint2I*)&task->blockX;
         }
     } else if (task->type == 0x13) {
         struct EntitySlot* found;
