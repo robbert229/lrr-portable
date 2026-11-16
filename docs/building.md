@@ -37,6 +37,22 @@ cmake --build build
 cd /path/to/game && /path/to/build/LegoRR -best -window
 ```
 
+miniwin emulates a 16-bit RGB565 display and describes its software renderer
+as a hardware device, which is what `-best` looks for (see the
+`MINIWIN_PIXELFORMAT` and `MINIWIN_SOFTWARE_HAL` definitions in
+`CMakeLists.txt`). For a headless run, use SDL's offscreen driver and have
+miniwin write each presented frame to a file:
+
+```sh
+cd /path/to/game
+SDL_VIDEODRIVER=offscreen MINIWIN_DUMP_FRAME=/tmp/frame.png /path/to/build/LegoRR -best -window
+```
+
+Run the binary from a copy of the game directory, or from one whose WADs are
+symbolic links, so that nothing the program writes lands in your reference
+data. The front end ignores close requests, so stop a headless run with
+`timeout`.
+
 ## Tests
 
 ```sh
