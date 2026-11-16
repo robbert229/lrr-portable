@@ -664,6 +664,8 @@ void formatted_text_printf(const struct TextureSurface* font,
     va_end(args);
 }
 
+#include "advisor_tail.h"
+
 #if !(defined(_MSC_VER) && _MSC_VER == 1100)
 /* Port-only test accessors, compiled out of the matching build (ADR 0006). */
 uint32_t advisor_state_word_peek(void)

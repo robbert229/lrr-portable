@@ -2458,3 +2458,5 @@ int s_bank_sound_on = 0;
 Sound3DFrameGlobs s_sound3d_frames = { 0 };
 #endif
 #endif
+
+#include "sound3d_tail.h"

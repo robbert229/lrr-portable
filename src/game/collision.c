@@ -105,6 +105,8 @@ void collision_project_onto_direction(const CollisionPoint2F* origin,
     out->y = dir.y * t + origin->y;
 }
 
+#include "collision_tail.h"
+
 #ifdef __cplusplus
 }
 #endif
