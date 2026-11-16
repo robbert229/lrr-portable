@@ -13,7 +13,7 @@
 static __inline float collision_vector2d_dot(const CollisionPoint2F* a,
                                              const CollisionPoint2F* b)
 {
-    return a->x * b->x + a->y * b->y;
+    return (a->x * b->x) + (a->y * b->y);
 }
 
 static __inline float collision_vector2d_modulus(const CollisionPoint2F* v)
@@ -41,7 +41,7 @@ static __inline CollisionPoint2F* collision_vector2d_normalise(
     CollisionPoint2F* r)
 {
     return collision_vector2d_scale(r, r,
-                                    1.0f / collision_vector2d_modulus(r));
+                                    (1.0f / collision_vector2d_modulus(r)));
 }
 
 static __inline CollisionPoint2F* collision_ray_end_point(
