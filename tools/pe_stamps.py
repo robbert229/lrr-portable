@@ -3,9 +3,8 @@
 """The original's resources and header stamps for the matching build (#560).
 
 ``icon ORIGINAL OUT.ico`` rebuilds the shipped icon file from the original's
-``GROUP_ICON 113`` and its ``ICON`` leaves. The icon is licensed art, so it is
-never committed: the matching build extracts it from ``reference/LegoRR.exe``
-before RC compiles ``src/version_icon.rc``.
+``GROUP_ICON 113`` and its ``ICON`` leaves. It wrote ``src/LegoRR.ico``, which
+``src/version.rc`` compiles into the MSVC 5.0 builds.
 
 ``stamp EXE`` is the post-link step after ``strip_pe_debug.py``. It writes the
 original's COFF ``TimeDateStamp``, the resource directories' ``TimeDateStamp``

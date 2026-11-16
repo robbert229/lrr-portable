@@ -5,16 +5,19 @@
 # lock, the CMake graph import and an incremental build. Run it where Wine,
 # CMake and an MSVC 5.0 capable rbit are on PATH (RBIT selects another rbit).
 # reference/ must be a real directory holding a copy of LegoRR.exe, not a
-# symlink. ReproBit's build has no icon: version_icon.rc is the matching
-# build's alone, so the .rsrc section differs from the original's.
+# symlink.
 set -euo pipefail
 
 project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 rbit="${RBIT:-rbit}"
 toolchain_root="${REPROBIT_MSVC_5_0_RTM_ROOT:-${HOME}/.local/share/reprobit/toolchains/msvc_5_0_rtm}"
-# ReproBit refuses a directory reached under two names (such as /home and
-# /var/home on Fedora Atomic), so pass the toolchain's resolved path.
-toolchain=(--toolchain-root "$(realpath -- "${toolchain_root}")")
+# ReproBit refuses a directory reached under two names, such as /home and
+# /var/home on Fedora Atomic (where a container may see both), so spell the
+# toolchain's home the way the project's path spells it.
+if [[ "${project_root}" == /var/home/* && "${toolchain_root}" == /home/* ]]; then
+  toolchain_root="/var${toolchain_root}"
+fi
+toolchain=(--toolchain-root "${toolchain_root}")
 
 # The matching build's inputs; the source lock keeps this selection.
 "${rbit}" source lock "${project_root}" \

@@ -17,6 +17,7 @@ docs/coverage/translation-units.csv
 docs/coverage/translation-units.spec.csv
 docs/decompiles/full/manifest.csv
 reccmp-project.yml
+src/LegoRR.ico
 src/compat/msvc5/cstdint
 src/compat/msvc5/stdint.h
 src/crt/crt.cpp
@@ -892,7 +893,6 @@ src/platform/platform.h
 src/platform/winapi/frameloop.cpp
 src/platform/window.h
 src/version.rc
-src/version_icon.rc
 tools/binary_progress.py
 tools/binary_progress_hash.py
 tools/binary_progress_inputs.txt

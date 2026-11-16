@@ -231,10 +231,9 @@ locks the sources, imports the graph and builds `build/LegoRR.exe`.
 
 It needs an `rbit` with MSVC 5.0 C support (`LIB /DEF` import libraries,
 `/ML`, and extern-run grind), and `reference/` must be a real directory
-holding a copy of `LegoRR.exe`, not a symlink. Its build has no icon: the
-icon is licensed art that only the matching build extracts, in
-`src/version_icon.rc`. ReproBit's build therefore differs from the original
-in `.rsrc`, while its code and data match the matching build's.
+holding a copy of `LegoRR.exe`, not a symlink. The original's icon is
+committed as `src/LegoRR.ico`, as the LEGO Island decompilation commits its
+art, so both builds compile the same resources.
 
 `rbit discover grind` searches donor compiles for one function against a
 reference object: a compile of the unit, kept in `reference/` and never

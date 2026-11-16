@@ -347,41 +347,14 @@ else()
     ${GAME_DIR}/dependency_grid.cpp ${GAME_DIR}/screen_pick.cpp)
 endif()
 if(PLATFORM STREQUAL "winapi")
-  if(LRR_RECCMP)
-    list(APPEND LRR_SOURCES ${SRC_ROOT}/version_icon.rc)
-  else()
-    list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
-  endif()
+  list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
 endif()
 if(LRR_CLASSIC_MSVC5)
-  # The original's resources (#560, finding 651): no VERSIONINFO, and its
-  # icon and group icon. Only the matching build has the icon (below), in
-  # version_icon.rc: ReproBit's build cannot read it, since its resource scan
-  # follows every conditional branch of version.rc.
-  set_source_files_properties(${SRC_ROOT}/version.rc ${SRC_ROOT}/version_icon.rc
-    PROPERTIES COMPILE_DEFINITIONS LRR_ORIGINAL_RESOURCES)
-endif()
-if(LRR_RECCMP)
-  # The icon is licensed art and never committed, so the build extracts it
-  # from the original executable, as the tools read it.
-  set(LRR_ORIGINAL_EXE "${CMAKE_CURRENT_SOURCE_DIR}/reference/LegoRR.exe" CACHE FILEPATH
-    "The original LegoRR.exe the matching build takes its icon from")
-  if(NOT EXISTS "${LRR_ORIGINAL_EXE}")
-    message(FATAL_ERROR "The matching build extracts the original's icon from "
-      "${LRR_ORIGINAL_EXE}, which is missing. Place the original executable "
-      "there (or set LRR_ORIGINAL_EXE); it is licensed and never committed.")
-  endif()
-  find_program(LRR_PYTHON3 NAMES python3 REQUIRED)
-  set(LRR_ICON "${CMAKE_BINARY_DIR}/LegoRR.ico")
-  add_custom_command(OUTPUT "${LRR_ICON}"
-    COMMAND "${LRR_PYTHON3}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/pe_stamps.py" icon
-      "${LRR_ORIGINAL_EXE}" "${LRR_ICON}"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/pe_stamps.py" "${LRR_ORIGINAL_EXE}"
-    COMMENT "Extracting the original's icon from ${LRR_ORIGINAL_EXE}"
-    VERBATIM)
-  # RC runs in the build directory and finds LegoRR.ico there.
-  set_source_files_properties(${SRC_ROOT}/version_icon.rc PROPERTIES
-    OBJECT_DEPENDS "${LRR_ICON}")
+  # The original's resources (#560, finding 651): its icon and group icon
+  # (src/LegoRR.ico), and no VERSIONINFO.
+  set_source_files_properties(${SRC_ROOT}/version.rc PROPERTIES
+    COMPILE_DEFINITIONS LRR_ORIGINAL_RESOURCES
+    OBJECT_DEPENDS "${LRR_SRC_ROOT_ABS}/LegoRR.ico")
 endif()
 add_executable(program ${LRR_SOURCES})
 # Keep the shipped executable name while using ReproBit's lowercase target ID.
