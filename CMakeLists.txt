@@ -377,6 +377,17 @@ if(LRR_CLASSIC_MSVC5)
   # the toolchain's own dinput.lib or dsound.lib.
   add_subdirectory(cross/msvc5-importlibs)
   set(_lrr_link_libraries "")
+  # The toolchain root for the libraries searched twice: the toolchain file's
+  # LRR_MSVC5_ROOT, or, where a caller configures with its own toolchain file
+  # (ReproBit's import), the root above the compiler's wine/x86/cl.
+  set(_lrr_toolchain_root "${LRR_MSVC5_ROOT}")
+  if(NOT _lrr_toolchain_root)
+    get_filename_component(_lrr_cl_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+    get_filename_component(_lrr_cl_root "${_lrr_cl_dir}/../.." ABSOLUTE)
+    if(EXISTS "${_lrr_cl_root}/lib/kernel32.lib")
+      set(_lrr_toolchain_root "${_lrr_cl_root}")
+    endif()
+  endif()
   foreach(_lib IN LISTS LRR_LINK_LIBRARIES)
     list(FIND LRR_IMPORTLIB_TARGETS "${_lib}" _index)
     if(_index GREATER -1)
@@ -388,8 +399,8 @@ if(LRR_CLASSIC_MSVC5)
     # searches a name once, so the second search names the file (finding
     # 694).
     list(FIND LRR_LINK_FIRST_LIBRARIES "${_lib}" _index)
-    if(_index GREATER -1 AND LRR_MSVC5_ROOT)
-      set(_lib "${LRR_MSVC5_ROOT}/lib/${_lib}")
+    if(_index GREATER -1 AND _lrr_toolchain_root)
+      set(_lib "${_lrr_toolchain_root}/lib/${_lib}")
     endif()
     list(APPEND _lrr_link_libraries "${_lib}")
   endforeach()
