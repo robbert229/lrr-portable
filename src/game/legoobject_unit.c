@@ -7740,10 +7740,8 @@ int legoobject_nearest_connected_cell_route_select(Lego_Object* obj, unsigned in
     LegoObjP_Point2F dirs8[8] = {{-1.0f, -2.0f}, {0.0f, -2.0f}, {1.0f, -1.0f}, {1.0f, 0.0f},
                                  {0.0f, 1.0f}, {-1.0f, 1.0f}, {-2.0f, 0.0f}, {-2.0f, -1.0f}};
     LegoObjP_Point2F dirs4[4] = {{0.0f, -1.0f}, {1.0f, 0.0f}, {0.0f, 1.0f}, {-1.0f, 0.0f}};
-    float py;
-    float px;
-    float wy;
-    float wx;
+    LegoObjP_Point2F opos;
+    LegoObjP_Point2F wpos;
     float dist;
     int objBy;
     int objBx;
@@ -7763,9 +7761,9 @@ int legoobject_nearest_connected_cell_route_select(Lego_Object* obj, unsigned in
 
     legoobject_position_to_terrain_cell(obj, &objBx, &objBy);
     if (!strict) {
-        terrain_map_block_to_world(Lego_GetMap(), bx, by, &wx, &wy);
-        legoobject_transform_position_get(obj, &px, &py);
-        dist = (float)sqrt((wx - px) * (wx - px) + (wy - py) * (wy - py));
+        terrain_map_block_to_world(Lego_GetMap(), bx, by, &wpos.x, &wpos.y);
+        legoobject_transform_position_get(obj, &opos.x, &opos.y);
+        dist = (float)sqrt((wpos.x - opos.x) * (wpos.x - opos.x) + (wpos.y - opos.y) * (wpos.y - opos.y));
         if (dist < ((float*)Lego_GetMap())[4]) canReach = 0;
     }
 
