@@ -62,9 +62,9 @@ is `0x8ecf0` against the original's `0x8f000`
 The resources and PE header stamps match the original's
 ([finding 651](docs/findings/651-original-resources-and-header-stamps.md)).
 
-The [source ledger](docs/coverage/README.md) records **2,284 / 2,564 functions
-(89.1%) with source citations**, plus 278 runtime/import functions and 2 named
-functions not yet cited. Source coverage and binary similarity measure
+The [source ledger](docs/coverage/README.md) records **2,288 / 2,564 functions
+(89.2%) with source citations**, plus 271 runtime/import functions, and 4 named
+and 1 anonymous function not yet cited. Source coverage and binary similarity measure
 different things; neither guarantees correct gameplay.
 
 ## What works, what remains
