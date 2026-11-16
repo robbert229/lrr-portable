@@ -1573,7 +1573,7 @@ void nerps_message_previous(void)
             nerpsGlobs.messageOffset = nerpsGlobs.messageHistoryCount;
         line = nerps_file_get_message_line(
             nerpsGlobs.messageHistory[nerpsGlobs.messageHistoryCount - nerpsGlobs.messageOffset - 1]);
-        advisor_text_request_setup((uint32_t)(uintptr_t)line, 0);
+        advisor_text_request_setup(line, 0);
         if (nerpsGlobs.messageOffset == 0) {
             engine_global_state_flags_bits6_and_9_set_target(0, 1);
             if (nerpfunc_get_tutorial_flags(NULL)) nerpfunc_set_game_speed(stack);
@@ -3980,7 +3980,7 @@ int nerpfunc_set_message(unsigned int* stack)
         if (nerpsGlobs.messageHistoryCount) engine_global_state_flags_bit7_set_target(1);
         if (nerpsGlobs.messageOffset) nerpsGlobs.messageOffset++;
     }
-    advisor_text_request_setup((uint32_t)(uintptr_t)text, stack[1]);
+    advisor_text_request_setup(text, stack[1]);
     nerpsruntimeGlobs.messageWait = stack[1];
     nerpsNext.pressed = 1;
     if (nerpfunc_get_message_wait(NULL)) {

@@ -619,7 +619,7 @@ int legoobject_remove(Lego_Object* obj)
     legoobject_attached_object_list_detach(obj, 0);
     entity_drain_command_chain((struct Lego_Object*)obj);
     legoobject_pool_find_with_local_predicate(obj);
-    global_value_clear_if_equal((int)(uintptr_t)obj);
+    global_value_clear_if_equal(obj);
     if ((entity_stats_word_get((struct Lego_Object*)obj) & 4) ||
         (entity_stats_word_get((struct Lego_Object*)obj) & 2)) {
         task_callback_dispatch(obj);
@@ -898,7 +898,7 @@ Lego_Object* legoobject_create(void* model, int type, int id)
         } else if (obj->type == 2) {
             obj->miniFigure = (AnimationObject*)malloc(sizeof(AnimationObject));
             renderer_record_clone((struct AnimationObject*)model, (struct AnimationObject*)obj->miniFigure);
-            scene_assign_entity_owner(obj->miniFigure, (uint32_t)(uintptr_t)obj);
+            scene_assign_entity_owner(obj->miniFigure, obj);
             obj->carryNullFrames = ((uint32_t (*)(void*))flic_opcode25_success_stub)(obj->miniFigure);
             obj->flags3 |= 0x4401f5;
             if (((AnimationObject*)model)->drillNullName) obj->flags3 |= 0x2;
@@ -908,7 +908,7 @@ Lego_Object* legoobject_create(void* model, int type, int id)
         } else if (obj->type == 3) {
             obj->rockMonster = (AnimationObject*)malloc(sizeof(AnimationObject));
             renderer_record_clone((struct AnimationObject*)model, (struct AnimationObject*)obj->rockMonster);
-            scene_assign_entity_owner(obj->rockMonster, (uint32_t)(uintptr_t)obj);
+            scene_assign_entity_owner(obj->rockMonster, obj);
             obj->carryNullFrames = ((uint32_t (*)(void*))flic_opcode25_success_stub)(obj->rockMonster);
             obj->flags3 |= 0x8440200;
             if (((AnimationObject*)model)->drillNullName) obj->flags3 |= 0x2;
@@ -927,7 +927,7 @@ Lego_Object* legoobject_create(void* model, int type, int id)
         } else if (obj->type == 4) {
             obj->building = (BuildingModel*)malloc(sizeof(BuildingModel));
             scene_object_record_clone_retain_handles((struct SceneObjectRecord*)model, (struct SceneObjectRecord*)obj->building);
-            scene_assign_entity_owner(obj->building, (uint32_t)(uintptr_t)obj);
+            scene_assign_entity_owner(obj->building, obj);
             obj->carryNullFrames = scene_object_flags_get(obj->building);
             obj->flags3 |= 0x40100;
             entity_payload_state_set((struct Lego_Object*)obj->building, 0);
@@ -947,7 +947,7 @@ Lego_Object* legoobject_create(void* model, int type, int id)
             obj->flags3 |= 0x80000;
         } else {
             obj->other = entity_visual_resource_load(model);
-            scene_object_owner_set(obj->other, (uint32_t)(uintptr_t)obj);
+            scene_object_owner_set(obj->other, obj);
             obj->flags3 |= 0x20000;
             if (obj->type == 11) obj->flags3 |= 0x40100;
             if (obj->type == 7 || obj->type == 6) obj->flags3 |= 0x100100;
@@ -4130,7 +4130,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                     target = obj->carriedObjects[0];
                     if (target->type == 5) {
                         target = legoobject_query_center_mask_from_argument(obj, 0x400);
-                        cmd_produce(0x22, obj, (int)(uintptr_t)target, NULL);
+                        cmd_produce(0x22, obj, (uintptr_t)target, NULL);
                     } else {
                         obj->carriedObjects[0] = NULL;
                         obj->numCarriedObjects = 0;
@@ -5084,7 +5084,7 @@ void legoobject_attached_direction_vector_update(Lego_Object* obj)
 
 /* Set every texture frame of a type-5 object's animated texture. */
 // FUNCTION: LEGORR 0x00440bf0
-void legoobject_object_list_field_assign_all(Lego_Object* obj, int value)
+void legoobject_object_list_field_assign_all(Lego_Object* obj, void* value)
 {
     unsigned int count;
     unsigned int i;
@@ -5092,7 +5092,7 @@ void legoobject_object_list_field_assign_all(Lego_Object* obj, int value)
     if (obj->type == 5) {
         count = animated_texture_frame_count(obj->other);
         for (i = 0; i < count; i++)
-            animated_texture_frame_set(obj->other, i, (const void*)(intptr_t)value);
+            animated_texture_frame_set(obj->other, i, value);
     }
 }
 
@@ -7872,7 +7872,7 @@ int legoobject_conditional_type_five_spawn(Lego_Object* obj)
         legoobject_world_position_set(boulder, 10000.0f, 10000.0f, 0.0f, 1);
         legoobject_type_operation_dispatch(boulder, 1);
         if (legoobject_try_create_linked_at_position(obj, blockPos[0], blockPos[1], boulder)) {
-            legoobject_object_list_field_assign_all(boulder, (int)(uintptr_t)lego_terrain_cell_palette_resource_at_grid_position(blockPos));
+            legoobject_object_list_field_assign_all(boulder, lego_terrain_cell_palette_resource_at_grid_position(blockPos));
             obj->field_33c = 0.0f;
             return 1;
         }

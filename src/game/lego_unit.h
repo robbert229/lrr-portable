@@ -35,7 +35,7 @@ extern "C" {
  * does not move (finding 538). Three of them (flags1, cameraFP and the
  * field at 005560f8) are dropped instead, which pays for lego_globs.h's
  * three symbols in the units that include both. Deviation (scoring only). */
-extern uint32_t legoGlobs_f_556104;             /* 00556104 */
+extern void* legoGlobs_f_556104;                /* 00556104 */
 extern void* legoGlobs_selectedObject;          /* 00556160 */
 
 /* Shared: their callers already use the original's contract. */
@@ -72,7 +72,7 @@ void lego_game_speed_set(float speed);
 void* lego_terrain_cell_palette_resource_at_grid_position(const int* xy);
 void lego_global_triple_copy_out(uint32_t* out);
 void lego_objective_task_text_origin_set(const float* pair);
-uint32_t lego_context_selected_global_pointer_get(void);
+void* lego_context_selected_global_pointer_get(void);
 int lego_entity_matches_current_selection_or_owner(const void* object);
 
 

@@ -2223,8 +2223,8 @@ void aitask_cmd_validated_record_queue(AITask* source)
         source->flags |= 0x1000;
         task = aitask_cmd_alloc(0x13);
         if (source->flags & 0x100) {
-            task->buffer = malloc(source->count * 4);
-            memcpy(task->buffer, source->buffer, source->count * 4);
+            task->buffer = malloc(source->count * sizeof(struct Lego_Object*));
+            memcpy(task->buffer, source->buffer, source->count * sizeof(struct Lego_Object*));
             task->count = source->count;
             task->flags |= 0x100;
         }
@@ -3676,7 +3676,7 @@ void aitask_entity_command_unlink_by_kind(struct Lego_Object* object, int type,
         (found = (struct Lego_Object*)ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
              object, NULL, target->type,
              target->objLevel)) != NULL)
-        cmd_produce(0x18, object, (int)(size_t)found, NULL);
+        cmd_produce(0x18, object, (uintptr_t)found, NULL);
     for (task = object->aiTask; task != NULL; task = task->next) {
         if (type == task->type) {
             appendObject = NULL;
@@ -4418,8 +4418,8 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
                         ((task->flags & 0x100) ||
                          !selection_contains_entity_active_target(object, NULL)) &&
                         (!(task->flags & 0x100) ||
-                         cmd_array_find_value_index((const int*)task->buffer, task->count,
-                                                    (int)(size_t)object, NULL))) {
+                         cmd_array_find_value_index((struct Lego_Object**)task->buffer, task->count,
+                                                    object, NULL))) {
                         AITaskPoint2I taskPos;
                         int noRoute;
                         taskPos.x = task->blockX;
@@ -4500,8 +4500,8 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
                         }
                     }
                     if ((task->flags & 0x100) &&
-                        cmd_array_find_value_index((const int*)task->buffer, task->count,
-                                                   (int)(size_t)object, NULL)) {
+                        cmd_array_find_value_index((struct Lego_Object**)task->buffer, task->count,
+                                                   object, NULL)) {
                         task = NULL;
                         break;
                     }
@@ -5800,8 +5800,8 @@ void aitask_pending_command_entity_assignment_tick(void)
                 if (object != NULL &&
                     ((task->flags & 0x100) || !selection_contains_entity_active_target(object, NULL)) &&
                     (!(task->flags & 0x100) ||
-                     cmd_array_find_value_index((const int*)task->buffer, task->count,
-                                                (int)(size_t)object, NULL))) {
+                     cmd_array_find_value_index((struct Lego_Object**)task->buffer, task->count,
+                                                object, NULL))) {
                     float oPos[2];
                     float wPos[2];
                     int bPos[2];
@@ -5891,7 +5891,7 @@ void aitask_pending_command_entity_assignment_tick(void)
                             message = 0x30;
                             break;
                         }
-                        cmd_produce(message, best, (int)(size_t)task, bPos);
+                        cmd_produce(message, best, (uintptr_t)task, bPos);
                         if (!(task->flags & 0x100))
                             task->entityRef = best;
                         if (task->type == 0xc && AITASK_OBJ(best)->type == 1) {
@@ -5925,7 +5925,7 @@ void aitask_pending_command_entity_assignment_tick(void)
                             break;
                         }
                         if (lego_first_free_neighbor_cell_pick(best, bPos, nearBPos, 1)) {
-                            cmd_produce(message, best, (int)(size_t)task, nearBPos);
+                            cmd_produce(message, best, (uintptr_t)task, nearBPos);
                             if (!(task->flags & 0x100))
                                 task->entityRef = best;
                         } else {
@@ -5945,8 +5945,8 @@ void aitask_pending_command_entity_assignment_tick(void)
                         if (object != NULL &&
                             ((task->flags & 0x100) || !selection_contains_entity_active_target(object, NULL)) &&
                             (!(task->flags & 0x100) ||
-                             cmd_array_find_value_index((const int*)task->buffer, task->count,
-                                                        (int)(size_t)object, NULL))) {
+                             cmd_array_find_value_index((struct Lego_Object**)task->buffer, task->count,
+                                                        object, NULL))) {
                             if (aitask_place_command_eligibility_check(task, object, NULL, NULL, NULL, 0, 1)) {
                                 aitask_cmd_validated_record_queue(task);
                                 break;
@@ -5963,8 +5963,8 @@ void aitask_pending_command_entity_assignment_tick(void)
                         if (object != NULL &&
                             ((task->flags & 0x100) || !selection_contains_entity_active_target(object, NULL)) &&
                             (!(task->flags & 0x100) ||
-                             cmd_array_find_value_index((const int*)task->buffer, task->count,
-                                                        (int)(size_t)object, NULL))) {
+                             cmd_array_find_value_index((struct Lego_Object**)task->buffer, task->count,
+                                                        object, NULL))) {
                             if (aitask_place_command_eligibility_check(task, object, wPos, NULL, NULL, 0, 0)) {
                                 found = object;
                                 if (aitask_place_command_eligibility_check(task, object, wPos, NULL, NULL, 0, 1)) {

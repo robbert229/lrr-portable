@@ -210,7 +210,7 @@ int message_lookup_physical_name(const char* name)
 
 // FUNCTION: LEGORR 0x00452010
 void message_add_message_action(unsigned char key, unsigned int type,
-                                Lego_Object* argument1, unsigned int argument2,
+                                Lego_Object* argument1, uintptr_t argument2,
                                 const int* blockPos)
 {
     Message_Event* event;
@@ -229,7 +229,7 @@ void message_add_message_action(unsigned char key, unsigned int type,
 
 // FUNCTION: LEGORR 0x00452060
 void message_post_event(unsigned int type, Lego_Object* argument1,
-                        unsigned int argument2, const int* blockPos)
+                        uintptr_t argument2, const int* blockPos)
 {
     Message_Event* event;
 

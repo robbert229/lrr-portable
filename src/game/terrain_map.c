@@ -245,7 +245,7 @@ void terrain_map_block_texture_fade_set(TerrainMap* map, unsigned int bx,
                 }
                 animated_texture_frame_set(
                     map->transMesh, transition->groupID,
-                    (const void*)(size_t)packed_grid_cell_value_get(
+                    packed_grid_cell_value_get(
                         map->textureSet,
                         map->blocks[by * map->blockWidth + bx].texture));
                 transition->x = bx;
@@ -544,7 +544,7 @@ void terrain_map_block_texture_set(TerrainMap* map, unsigned int bx,
     unsigned char uvOrder[4];
     TerrainMapVertex vertices[4];
     unsigned int group;
-    unsigned int handle;
+    void* handle;
     unsigned int i;
     unsigned char corner;
 
@@ -560,7 +560,7 @@ void terrain_map_block_texture_set(TerrainMap* map, unsigned int bx,
             TERRAIN_MAP_BLOCK_ROTATED) {
             direction++;
         }
-        animated_texture_frame_set(map->mesh, group, (const void*)(size_t)handle);
+        animated_texture_frame_set(map->mesh, group, handle);
         if (!(map->blocks[by * map->blockWidth + bx].flags &
               TERRAIN_MAP_BLOCK_UVWOBBLE)) {
             lwo_layer_polygon_vertex_data_read(map->mesh, group, 0, 4,

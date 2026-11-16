@@ -48,10 +48,10 @@ struct Lego_Globs {
     struct LegoCamera* cameraFP;                     /* +0x02c 005560ec legoGlobs_cameraFP */
     void* spotlightTop;                      /* +0x030 005560f0 legoGlobs_spotlightTop */
     void* spotlightTrack;                    /* +0x034 005560f4 legoGlobs_spotlightTrack */
-    uint32_t field_38;                       /* +0x038 005560f8 legoGlobs_f_5560f8; pointLightFP */
+    void* field_38;                          /* +0x038 005560f8 legoGlobs_f_5560f8; pointLightFP */
     void* dirLightFP;                        /* +0x03c 005560fc legoGlobs_dirLightFP */
     void* ambientLight;                      /* +0x040 00556100 legoGlobs_ambientLight */
-    uint32_t field_44;                       /* +0x044 00556104 legoGlobs_f_556104 */
+    void* field_44;                          /* +0x044 00556104 legoGlobs_f_556104 */
     void* field_48;                          /* +0x048 00556108 legoGlobs_f_556108; the pointer-following container */
     void* dirLightCallToArms;                /* +0x04c 0055610c legoGlobs_dirLightCallToArms */
     float FPClipBlocks;                      /* +0x050 00556110 legoGlobs_FPClipBlocks */

@@ -132,7 +132,7 @@ extern struct Text_Globs textGlobs;
 #define s_overlay_word_03610 textGlobs.counter
 #define s_overlay_word_03614 textGlobs.currText
 void ui_message_overlay_state_initialize(void);             /* 0046aa90 */
-void advisor_text_request_setup(uint32_t request, uint32_t flags); /* 0046ac20 */
+void advisor_text_request_setup(char* message, uint32_t counter); /* 0046ac20 */
 
 /* G98 Viewports.c (viewports.cpp, view.hpp): Viewport_WorldToScreen. */
 void camera_project_point_to_screen(

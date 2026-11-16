@@ -40,7 +40,7 @@ void* level_current_terrain_get(int cell_x, int cell_y);           /* 00431570 *
     ((TerrainMap*)level_current_terrain_get(0, 0))
 #endif
 /* 004295a0: the current camera's container (Lego.c). */
-uint32_t lego_context_selected_global_pointer_get(void);           /* 004295a0 */
+void* lego_context_selected_global_pointer_get(void);           /* 004295a0 */
 
 /* gods98 Container.c (crt.hpp, view.hpp, record.hpp). The frame these
  * units hang meshes on is the container's activity frame (+0x04,

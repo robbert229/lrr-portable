@@ -438,10 +438,10 @@ void vehicle_set_owner_object(VehicleModel* vehicle, void* liveObj)
 {
     unsigned int loop;
 
-    scene_object_owner_set(vehicle->contAct1, (uint32_t)(size_t)liveObj);
-    if (vehicle->contAct2) scene_object_owner_set(vehicle->contAct2, (uint32_t)(size_t)liveObj);
+    scene_object_owner_set(vehicle->contAct1, liveObj);
+    if (vehicle->contAct2) scene_object_owner_set(vehicle->contAct2, liveObj);
     for (loop = 0; loop < vehicle->wheelNullsCount; loop++) {
-        if (vehicle->contWheels[loop]) scene_object_owner_set(vehicle->contWheels[loop], (uint32_t)(size_t)liveObj);
+        if (vehicle->contWheels[loop]) scene_object_owner_set(vehicle->contWheels[loop], liveObj);
     }
 }
 

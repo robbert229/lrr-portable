@@ -115,7 +115,7 @@ void render_resource_binding_release(
 /* ElectricFence.c (terrain_cell_objects.h). */
 void electric_fence_add(struct ElectricFenceObject* object);    /* 0040cf50 */
 /* Encyclopedia.c (crt.hpp): takes the object as an int. */
-void global_value_clear_if_equal(int value);                    /* 0040e910 */
+void global_value_clear_if_equal(struct Lego_Object* dead);     /* 0040e910 */
 /* Info.c (info_unit.h). */
 void info_remove_object_references(void* object);               /* 00419830 */
 void info_send(int type, char* text, void* object,
@@ -178,7 +178,7 @@ void renderer_flag_bit6_set(int value);                       /* 004728e0 */
 int sound_subsystem_enabled(void);                            /* 00465370 */
 void sound_subsystem_enable_set(int enable, int stop_active); /* 00465260 */
 void* entity_visual_resource_load(void* scene_object);        /* 00473690 */
-void scene_object_owner_set(void* scene_object, uint32_t owner); /* 00473da0 */
+void scene_object_owner_set(void* scene_object, void* owner);   /* 00473da0 */
 int animated_texture_frame_count(const void* texture);        /* 00474a20 */
 void scene_mesh_color_set(void* object, int block, float red, float green,
                           float blue);                        /* 00474ff0 */
@@ -193,7 +193,7 @@ uint32_t flic_opcode25_success_stub(void);                    /* 00484b90 */
  * entity.hpp). */
 void renderer_record_clone(struct AnimationObject* source,
                            struct AnimationObject* destination); /* 00406cb0 */
-void scene_assign_entity_owner(const void* scene, uint32_t owner); /* 00408380 */
+void scene_assign_entity_owner(const void* scene, void* owner);  /* 00408380 */
 void scene_object_record_clone_retain_handles(
     const struct SceneObjectRecord* source,
     struct SceneObjectRecord* destination);                   /* 00408620 */
@@ -346,7 +346,7 @@ int terrain_map_block_vertices_get(struct TerrainMap* map, unsigned int bx,
                                    unsigned int by,
                                    struct TerrainMapVector3* positions); /* 004500d0 */
 /* Message.c (message.h). */
-void cmd_produce(int op, const void* a1, int a2, const int* pair); /* 00452060 */
+void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair); /* 00452060 */
 /* Stats.c (entity.hpp). */
 uint32_t entity_stats_word_get(const struct Lego_Object* e);    /* 00469e60 */
 uint32_t entity_state_flags_get(const struct Lego_Object* e);   /* 00469e80 */
@@ -442,7 +442,7 @@ int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);                         /* 004754c0 */
 uint32_t scene_action_name_set(void* scene_object, const char* action_name); /* 00473370 */
 /* GAME-027 Message.c (cmd.hpp). */
-void cmd_produce(int op, const void* a1, int a2, const int* pair);          /* 00452060 */
+void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair);          /* 00452060 */
 int ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z);                 /* 00475430 */
 /* GAME-002 AITask.c (cmd.hpp, entity.hpp; defined in aitask.cpp). */
@@ -634,7 +634,7 @@ extern void* legoGlobs_contProcessedOre;                                   /* 00
 void scene_object_scalar_adjust_by_direction(void* record, int direction); /* 004082e0 */
 void* scene_object_primary_handle_get_or_create(void* record);             /* 004087b0 */
 void lego_level_resource_balance_add_and_sound(int ore);                   /* 0041f9a0 */
-void cmd_produce(int op, const void* a1, int a2, const int* pair);         /* 00452060 */
+void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair);         /* 00452060 */
 uint32_t stats_instance_word_at_ec(const void* config_block);              /* 00469bb0 */
 int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);                        /* 004754c0 */

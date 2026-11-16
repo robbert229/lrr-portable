@@ -878,7 +878,7 @@ void smoke_mesh_render_callback(void* mesh, Smoke* smoke, void* viewport)
 {
     SFX_Vector3F camPos;
     unsigned int i;
-    void* camera = (void*)(uintptr_t)lego_context_selected_global_pointer_get();
+    void* camera = lego_context_selected_global_pointer_get();
 
     ddiscene_object_position_get(camera, NULL, (float*)&camPos);
     for (i = 0; i < smoke->groupCount; i++) {

@@ -59,7 +59,7 @@ void* file_load_binary(const char* filename,
 void sound_subsystem_frame_tick(float dt);                        /* 004651a0 */
 
 /* GAME-021 Lego.c: the current camera's container. */
-uint32_t lego_context_selected_global_pointer_get(void);          /* 004295a0 */
+void* lego_context_selected_global_pointer_get(void);          /* 004295a0 */
 
 /* GAME-023 LegoObject.c: LegoObject_GetActivityContainer. */
 void* legoobject_type_component_get(struct Lego_Object* obj);      /* 0044a200 */

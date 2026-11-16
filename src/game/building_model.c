@@ -190,7 +190,7 @@ void* building_get_shape_points(BuildingModel* building, unsigned int* count)
 // FUNCTION: LEGORR 0x00408380
 void building_set_owner_object(BuildingModel* building, void* liveObj)
 {
-    scene_object_owner_set(building->contAct, (uint32_t)(size_t)liveObj);
+    scene_object_owner_set(building->contAct, liveObj);
 }
 
 /* activityName is an objectGlobs field (legoobject_globs.h, finding 662). */

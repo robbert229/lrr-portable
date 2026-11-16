@@ -8,6 +8,8 @@
 #ifndef LEGORRR_GAME_CONSTRUCTION_IMPORTS_H
 #define LEGORRR_GAME_CONSTRUCTION_IMPORTS_H
 
+#include <stdint.h>
+
 #include "legoobject_unit.h"
 #include "lego_unit.h"
 #include "terrain_grid.h"
@@ -68,7 +70,7 @@ int always_accept_place_command_cell();
 /* GAME-023 LegoObject.c (legoobject_unit.c; the rest in legoobject_unit.h). */
 void legoobject_dispatch_event5_and_set_flag(Lego_Object* obj);       /* 00447b00 */
 /* GAME-027 Message.c (message.h). */
-void cmd_produce(int op, const void* a1, int a2, const int* pair);    /* 00452060 */
+void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair);    /* 00452060 */
 /* GAME-043 Stats.c, by the port's names, which entity_stats.c's
  * definitions take in the matching build (entity_stats_link_names.h). */
 uint32_t entity_indexed_record_word_at_b0_get(int group, int index,

@@ -653,7 +653,7 @@ int lego_game_config_init(void)
     // STRING: LEGORR 0x004a3c44
     DAT_0055613c = font_atlas_record_create("Interface\\Fonts\\RSFont.bmp");
 
-    incident_message_catalog_init((uint32_t)(uintptr_t)s_lego_text_window_font);
+    incident_message_catalog_init(s_lego_text_window_font);
     interface_initialise(565, 18, s_lego_crystal_count_font);
 
     if ((legoGlobs_rootCont = container_initialise_original(s_engine_config_root)) != NULL) {
@@ -946,7 +946,7 @@ int lego_game_config_init(void)
                     if (block_get_bool_path(cfgStr, string_path_join(s_engine_config_root, "Main",
                         // STRING: LEGORR 0x004a3904
                         "HelpWindowOn", 0)) == 1) {
-                        selection_mode_state_set((uint32_t)(uintptr_t)legoGlobs_fontBriefingLo);
+                        selection_mode_state_set(legoGlobs_fontBriefingLo);
                         help_window_initialise_adapter(cfgStr, s_engine_config_root);
                     }
                     frontend_render_three_pass_update(cfgStr, s_engine_config_root);
@@ -1573,12 +1573,12 @@ int lego_engine_tick(float elapsed)
     scene_render_lock_toggle(legoGlobs_ambientLight, 0);
     if (s_context_mode == 1) {
         if (!(legoGlobs_flags1 & 0x100000))
-            scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_556104, 0);
+            scene_render_lock_toggle(legoGlobs_f_556104, 0);
         scene_render_lock_toggle(legoGlobs_spotlightTop, 0);
         ledger_stub_00477010_DDiSceneDrawBegin(legoGlobs_viewMain, 1);
         ddiscene_draw_end(legoGlobs_viewMain, legoGlobs_rootCont, elapsed);
         scene_render_lock_toggle(legoGlobs_spotlightTop, 1);
-        scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_556104, 1);
+        scene_render_lock_toggle(legoGlobs_f_556104, 1);
     } else if (s_context_mode == 0) {
         graphics_overlay_visibility_set(0);
         terrain_dirty_quad_normal_emit_pass_original();
@@ -1590,7 +1590,7 @@ int lego_engine_tick(float elapsed)
                                        record_field14_get(legoGlobs_cameraFP), 1);
         lego_sine_phase_midpoint_blend_dispatch(1, elapsedWorld);
         if (!(legoGlobs_flags1 & 0x100000)) {
-            scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_5560f8, 0);
+            scene_render_lock_toggle(legoGlobs_f_5560f8, 0);
             if (legoGlobs_dirLightFP != NULL) {
                 render_object_rotate_axis(legoGlobs_dirLightFP, 2, 0.0f, 1.0f, 0.0f, elapsed * 0.01f);
                 scene_render_lock_toggle(legoGlobs_dirLightFP, 0);
@@ -1598,7 +1598,7 @@ int lego_engine_tick(float elapsed)
         }
         ledger_stub_00477010_DDiSceneDrawBegin(legoGlobs_viewMain, 1);
         ddiscene_draw_end(legoGlobs_viewMain, legoGlobs_rootCont, elapsed);
-        scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_5560f8, 1);
+        scene_render_lock_toggle(legoGlobs_f_5560f8, 1);
         if (legoGlobs_dirLightFP != NULL) scene_render_lock_toggle(legoGlobs_dirLightFP, 1);
         lego_sine_phase_midpoint_blend_dispatch(0, elapsedWorld);
         entity_type_two_event_dispatch((const struct Lego_Object*)legoGlobs_selectedObject,
@@ -2450,20 +2450,20 @@ int lego_main_sim_step(float elapsedGame, float elapsed, int* keyDownT,
         if (s_global_current_keys[0x2a]) {
             if (s_global_current_keys[0x06]) {
                 s_lego_spotPenumbra -= -0.02f;
-                lego_light_penumbra_set_adapter((void*)(uintptr_t)legoGlobs_f_556104, s_lego_spotPenumbra);
+                lego_light_penumbra_set_adapter(legoGlobs_f_556104, s_lego_spotPenumbra);
             }
             if (s_global_current_keys[0x07]) {
                 s_lego_spotUmbra -= -0.02f;
-                lego_light_umbra_set_adapter((void*)(uintptr_t)legoGlobs_f_556104, s_lego_spotUmbra);
+                lego_light_umbra_set_adapter(legoGlobs_f_556104, s_lego_spotUmbra);
             }
         } else {
             if (s_global_current_keys[0x06]) {
                 s_lego_spotPenumbra -= 0.02f;
-                lego_light_penumbra_set_adapter((void*)(uintptr_t)legoGlobs_f_556104, s_lego_spotPenumbra);
+                lego_light_penumbra_set_adapter(legoGlobs_f_556104, s_lego_spotPenumbra);
             }
             if (s_global_current_keys[0x07]) {
                 s_lego_spotUmbra -= 0.02f;
-                lego_light_umbra_set_adapter((void*)(uintptr_t)legoGlobs_f_556104, s_lego_spotUmbra);
+                lego_light_umbra_set_adapter(legoGlobs_f_556104, s_lego_spotUmbra);
             }
         }
     }
@@ -3923,7 +3923,7 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct Lego_Ob
             entity_type_operation_dispatch_adapter(boulder, 1);
             entity_try_create_linked_at_position_original(unit, x, y, boulder);
             object_list_field_assign_all(boulder,
-                (void*)(uintptr_t)packed_grid_cell_value_get(level->textureSet,
+                packed_grid_cell_value_get(level->textureSet,
                     level->blocks[level->width * y + x].texture));
         }
     }
@@ -4001,7 +4001,7 @@ void lego_block_visible_callback(int bx, int by)
 void* lego_terrain_cell_palette_resource_at_grid_position(const int* xy)
 {
     int idx = xy[0] + xy[1] * legoGlobs_currLevel->width;
-    return (void*)(uintptr_t)packed_grid_cell_value_get(
+    return packed_grid_cell_value_get(
         legoGlobs_currLevel->textureSet,
         legoGlobs_currLevel->blocks[idx].texture);
 }
@@ -4131,7 +4131,7 @@ void lego_camera_pointer_ray_route(unsigned int mouseX, unsigned int mouseY,
 
 /* ContextSelectedGlobalPointerGet [group M] */
 // FUNCTION: LEGORR 0x004295a0
-uint32_t lego_context_selected_global_pointer_get(void)
+void* lego_context_selected_global_pointer_get(void)
 {
     if (s_context_mode == 0) return legoGlobs_f_5560f8;
     return legoGlobs_f_556104;
@@ -4159,7 +4159,7 @@ void lego_sound_minimum_distance_update_mode(int viewMode, void* liveObj,
         field = 0.9f;
         if (cameraFrame) field = 0.6f;
         record_fields_4_and_14_set(legoGlobs_cameraFP,
-                                   (uint32_t)(uintptr_t)liveObj,
+                                   (struct Lego_Object*)liveObj,
                                    cameraFrame);
         global_entity_render_parameter_mode_set(1);
         terrain_map_wobble_emissive_set(
@@ -6262,7 +6262,7 @@ const char* lego_level_free(void)
         info_enable(0);
         graphics_overlay_resources_release();
         screen_effect_record_set_original(legoGlobs_cameraTrack, NULL, 0.0f, 0.0f, 0.0f, 0.0f);
-        record_fields_4_and_14_set(legoGlobs_cameraFP, 0, 0);
+        record_fields_4_and_14_set(legoGlobs_cameraFP, NULL, 0);
         selection_active_count_reset();
         tutorial_display_resources_release();
         ui_render_record_free((void*)(uintptr_t)level->f_084);
@@ -8540,7 +8540,7 @@ int lego_scene_lights_build_from_config(void)
                 // STRING: LEGORR 0x004a47a4
                 "fplightrgb", 0),
             &r, &g, &b)) return 0;
-    if ((legoGlobs_f_5560f8 = (uint32_t)(uintptr_t)ddiscene_light_create(
+    if ((legoGlobs_f_5560f8 = ddiscene_light_create(
              legoGlobs_cameraFP->contCam, 1,
              *(uint32_t*)&r, *(uint32_t*)&g, *(uint32_t*)&b)) == 0) return 0;
 
@@ -8561,27 +8561,27 @@ int lego_scene_lights_build_from_config(void)
              0x3f800000, 0, 0)) == NULL) return 0; /* 1, 0, 0 */
 
     legoGlobs_f_556108 = lego_container_create_adapter(scene_root_object_get());
-    if ((legoGlobs_f_556104 = (uint32_t)(uintptr_t)ddiscene_light_create(
+    if ((legoGlobs_f_556104 = ddiscene_light_create(
              legoGlobs_f_556108, 2,
              0x3f800000, 0x3f800000, 0x3f800000)) == 0) return 0; /* 1, 1, 1 */
-    scene_transform_state_initialize((void*)(uintptr_t)legoGlobs_f_556104,
+    scene_transform_state_initialize(legoGlobs_f_556104,
                                      legoGlobs_f_556108, 0.8f, 0.8f, 0.8f);
-    ddiscene_object_pose_method_dispatch((void*)(uintptr_t)legoGlobs_f_556104, NULL,
+    ddiscene_object_pose_method_dispatch(legoGlobs_f_556104, NULL,
                                          0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f);
-    lego_light_penumbra_set_adapter((void*)(uintptr_t)legoGlobs_f_556104, 0.85f);
-    lego_light_umbra_set_adapter((void*)(uintptr_t)legoGlobs_f_556104, 0.0f);
+    lego_light_penumbra_set_adapter(legoGlobs_f_556104, 0.85f);
+    lego_light_umbra_set_adapter(legoGlobs_f_556104, 0.0f);
 
-    scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_5560f8, 1);
+    scene_render_lock_toggle(legoGlobs_f_5560f8, 1);
     if (legoGlobs_dirLightFP != NULL) scene_render_lock_toggle(legoGlobs_dirLightFP, 1);
     scene_render_lock_toggle(legoGlobs_spotlightTop, 1);
     scene_render_lock_toggle(legoGlobs_spotlightTrack, 1);
     scene_render_lock_toggle(legoGlobs_ambientLight, 1);
-    scene_render_lock_toggle((void*)(uintptr_t)legoGlobs_f_556104, 1);
+    scene_render_lock_toggle(legoGlobs_f_556104, 1);
     scene_render_lock_toggle(legoGlobs_dirLightCallToArms, 1);
 
     light_interface_call_slot_38(legoGlobs_spotlightTop, 0x44fa0000); /* 2000.0f */
     light_interface_call_slot_38(legoGlobs_spotlightTrack, 0x44fa0000);
-    light_interface_call_slot_38((void*)(uintptr_t)legoGlobs_f_556104, 0x44fa0000);
+    light_interface_call_slot_38(legoGlobs_f_556104, 0x44fa0000);
     return 1;
 }
 

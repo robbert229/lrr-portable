@@ -377,7 +377,7 @@ void legoobject_spatial_callback_query_at_optional_coordinate(Lego_Object* obj, 
 int legoobject_spatial_callback_query_at_optional_coordinate_visit(Lego_Object* obj, void* data); /* 00440920 */
 void legoobject_set_activity(Lego_Object* obj, int activity, int restart); /* 004409e0 */
 void legoobject_attached_direction_vector_update(Lego_Object* obj); /* 00440a10 */
-void legoobject_object_list_field_assign_all(Lego_Object* obj, int value); /* 00440bf0 */
+void legoobject_object_list_field_assign_all(Lego_Object* obj, void* value); /* 00440bf0 */
 int legoobject_grid_route_search_adapter(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount); /* 00440c30 */
 int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount, int (*callback)(Lego_Object* obj, int* blockPos, void* data), void* data); /* 00440c70 */
 

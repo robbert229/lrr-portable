@@ -151,8 +151,8 @@ extern int s_scroll_guard;                    /* 004de548, defined at the end */
 void ui_overlay_animation_advance(int up, unsigned int count); /* 0045c580 */
 /* GAME-011 (tile_variants.h): Detail_GetTexture, which takes the texture
  * as a byte. */
-unsigned int packed_grid_cell_value_get(const void* grid,
-                                        unsigned char packed_cell); /* 0040b850 */
+void* packed_grid_cell_value_get(const void* grid,
+                                 unsigned char packed_cell); /* 0040b850 */
 /* G98 sound (sound.hpp, sound.h). */
 int sound_batch_mode_get(void);                            /* 004652b0 */
 void sound_batch_queue_drain(int batch_set, int replay);   /* 004652d0 */
@@ -258,7 +258,7 @@ void* font_atlas_record_create(const char* name);          /* 00479ee0 */
 /* GAME Info.c (message.hpp, frontend.hpp). The original passes the font. */
 /* Matching build: the original itself, in Info.c (info_unit.c) (finding 634). */
 #define incident_message_catalog_init info_initialise
-void incident_message_catalog_init(uint32_t owner);        /* 00419230 */
+void incident_message_catalog_init(void* level);           /* 00419230 */
 /* Matching build: the original itself, in Info.c (info_unit.c) (finding 634). */
 #define interface_message_tab_info_text_load info_set_overflow_image_file
 void interface_message_tab_info_text_load(const char* path); /* 00419430 */
@@ -352,7 +352,7 @@ float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff); /* 0047
 /* GAME placement_footprint.cpp (record.hpp). */
 void surface_visibility_set(const void* record, uint32_t flag); /* 00464720 */
 /* GAME HelpWindow.c (frontend.hpp). The original passes the font. */
-void selection_mode_state_set(uint32_t value);             /* 00418190 */
+void selection_mode_state_set(void* font);                /* 00418190 */
 /* GAME ObjInfo.c (frontend.hpp), LightEffects.c (effects.hpp). */
 void frontend_render_three_pass_update(struct BlockRec* values,
                                        const char* config_root); /* 00459530 */
@@ -834,7 +834,7 @@ void cmd_mark_matching_adapter(int type, struct Lego_Object* object,
 void entity_deferred_work_schedule(struct Lego_Object* e);
 void entity_kind_command_issue(struct Lego_Object* e);
 /* Message.c (message.h, cmd.hpp): Message_PostEvent (00452060). */
-void cmd_produce(int op, const void* a1, int a2, const int* pair);
+void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair);
 /* Interface.c (interface.h): 0041b2d0 and 0041e750. */
 void command_context_post_to_hud(int kind, const uint32_t coord[2]);
 void selection_clear_request_and_hud_reset(void);
@@ -883,7 +883,7 @@ void mission_crystal_quota_setup(struct BlockRec* config, const char* gameName,
 int priorities_load(struct BlockRec* config, const char* game_name,
                     const char* level_name);                           /* 0045cf50 */
 /* Message.c (message.h) and Interface.c (interface.h). */
-void cmd_produce(int op, const void* a1, int a2, const int* pair);    /* 00452060 */
+void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair);    /* 00452060 */
 void command_context_post_to_hud(int kind, const uint32_t coord[2]);  /* 0041b2d0 */
 
 /* Port entries with the original's contract (extern "C" in place). */
@@ -1009,7 +1009,7 @@ void render_resource_track_and_retain(void* resource);          /* 00477220 */
 void entity_payload_type1_release(
     struct ScenePairedAnimationState* state);                   /* 0046ce10 */
 /* GAME-024 Message.c (message.h, select.hpp). */
-void cmd_produce(int op, const void* a1, int a2, const int* pair); /* 00452060 */
+void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair); /* 00452060 */
 struct Lego_Object* selection_active_entity_get(void);           /* 004525c0 */
 struct Lego_Object* const* selection_active_records_get(void);   /* 004525e0 */
 uint32_t selection_active_count_get(void);                      /* 004525f0 */
@@ -1449,10 +1449,9 @@ void surface_draw_polyline(struct Point2F* fromList, struct Point2F* toList,
 void media_cd_audio_track_start(int track, int mode,
                                 void (*callback)(void));        /* 00488bb0 */
 void media_cd_audio_stop_and_close_if_active(void);             /* 00488bf0 */
-/* GAME-024 camera (record.hpp). The original takes the tracked object as
- * a pointer; the port's entry types it as a word. */
-void record_fields_4_and_14_set(void* record, uint32_t value_a,
-                                uint32_t value_b);              /* 00435ef4 */
+/* GAME-024 camera: Camera_SetFPObject. */
+void record_fields_4_and_14_set(void* record, struct Lego_Object* obj,
+                                int cameraFrame);               /* 00435ef4 */
 /* GAME Map3D.c (terrain_map.h). */
 int terrain_map_world_to_block(struct TerrainMap* map, float x, float y,
                                int* bx, int* by);               /* 0044f6d0 */

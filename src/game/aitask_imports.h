@@ -7,6 +7,8 @@
 #ifndef LEGORRR_GAME_AITASK_IMPORTS_H
 #define LEGORRR_GAME_AITASK_IMPORTS_H
 
+#include <stdint.h>
+
 #include "gods98/directdraw.h"
 
 #ifdef __cplusplus
@@ -145,7 +147,7 @@ int terrain_descriptor_coordinate_count_limit_check(
 void cmd_operation_group_append_object(unsigned int key,
                                        struct Lego_Object* entity);   /* 00408ce0 */
 /* Message.c (cmd.hpp) and the advisor (frontend.hpp). */
-void cmd_produce(int op, const void* a1, int a2, const int* pair);   /* 00452060 */
+void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair);   /* 00452060 */
 void advisor_text_animation_update(int slot, int force, int selected); /* 0046ac60 */
 /* Maths.c (maths.h). */
 float random_float_range(float low, float high);                     /* 004798b0 */
@@ -313,9 +315,10 @@ void idle_register(struct Lego_Object* object);                       /* 0040745
 /* Message.c (select.hpp, cmd.hpp, message.h). */
 unsigned int selection_contains_entity_active_target(struct Lego_Object* entity,
                                                      unsigned int* index_out); /* 00452610 */
-int cmd_array_find_value_index(const int* array, unsigned count, int value,
+int cmd_array_find_value_index(struct Lego_Object** array, unsigned count,
+                               struct Lego_Object* value,
                                unsigned* index_out);                 /* 00452650 */
-void cmd_produce(int op, const void* a1, int a2, const int* pair);   /* 00452060 */
+void cmd_produce(int op, const void* a1, uintptr_t a2, const int* pair);   /* 00452060 */
 /* Lego.c (level.hpp; lego.cpp). */
 /* 00431c70: lego_first_free_neighbor_cell_pick (lego_unit.h). */
 /* LegoObject.c (legoobject.h). */

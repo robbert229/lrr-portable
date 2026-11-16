@@ -310,7 +310,7 @@ static void damage_font_mesh_render_callback(void* mesh, DamageFont_Data* data,
     float uvs[8] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f };
     DamageFont_Vector3F up;
 
-    camera = (void*)(uintptr_t)lego_context_selected_global_pointer_get();
+    camera = lego_context_selected_global_pointer_get();
     scale = (data->timer * (1.0f / DAMAGEFONT_MAXTIME)) * 2.0f - -1.0f;
     ddiscene_object_pose_method_dispatch(data->cont, NULL, 0.0f, 0.0f, 1.0f,
                                          0.0f, 1.0f, 0.0f);
