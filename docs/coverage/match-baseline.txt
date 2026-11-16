@@ -1,4 +1,4 @@
-# input_sha256: 82f4efd524ee29a334f9522970fdcc0b3ef62eaaedf5bf0effb236c022ef0969
+# input_sha256: d445d56929885c61f10a9375b95090e55e6499b46728f1d918565e8af11add41
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1277,7 +1277,7 @@
 0x0044f6d0 100.00 terrain_map_world_to_block
 0x0044f700 96.55 terrain_map_world_to_block_centre
 0x0044f810 100.00 terrain_map_world_to_block_clamped
-0x0044f870 78.08 terrain_map_world_to_block_offset
+0x0044f870 100.00 terrain_map_world_to_block_offset
 0x0044f940 100.00 terrain_map_world_z_get
 0x0044fab0 91.78 terrain_map_world_normal_get
 0x0044fb90 77.95 terrain_map_world_edge_point_get
@@ -4002,7 +4002,7 @@
 0x0044f6d0 100.00 terrain_map_world_to_block
 0x0044f700 96.55 terrain_map_world_to_block_centre
 0x0044f810 100.00 terrain_map_world_to_block_clamped
-0x0044f870 78.08 terrain_map_world_to_block_offset
+0x0044f870 100.00 terrain_map_world_to_block_offset
 0x0044f940 100.00 terrain_map_world_z_get
 0x0044fab0 91.78 terrain_map_world_normal_get
 0x0044fb90 77.95 terrain_map_world_edge_point_get

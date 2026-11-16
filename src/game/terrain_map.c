@@ -740,9 +740,7 @@ int terrain_map_world_to_block_offset(TerrainMap* map,
                                       TerrainMapPoint2* block,
                                       TerrainMapPoint2* offset)
 {
-    TerrainMapPoint2 centre;
     unsigned int bx, by;
-    float scale;
 
     if (terrain_map_world_to_block(map, pos->x, pos->y, (int*)&bx, (int*)&by)) {
         if (block) {
@@ -750,6 +748,9 @@ int terrain_map_world_to_block_offset(TerrainMap* map,
             block->y = (float)by;
         }
         if (offset) {
+            TerrainMapPoint2 centre;
+            float scale;
+
             terrain_map_block_to_world(map, bx, by, &centre.x, &centre.y);
             offset->x = pos->x - centre.x;
             offset->y = pos->y - centre.y;
