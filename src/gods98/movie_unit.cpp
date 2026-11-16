@@ -25,6 +25,7 @@
 #include <miniwin/windows.h>
 
 #include "files.h"
+#include "files_native.h"
 #include "../game/aitask.h"
 #include "../crt/vc5names.h"
 
@@ -297,6 +298,10 @@ bool G98CMovie::OpenStream(const char* fName, MovieAMStream** streamOut,
 G98CMovie::G98CMovie(const char* fName, MovieSurface3* destSurf,
                      MovieUnknown* ddraw)
 {
+    /* The original leaves m_amStream and m_filename unset; they are read
+     * when no stream opens. */
+    m_amStream = NULL;
+    m_filename = NULL;
     m_primaryVidStream = NULL;
     m_ddStream = NULL;
     m_surface = NULL;
@@ -385,12 +390,15 @@ G98CMovie* movie_load(const char* fName)
     char cdName[512];
     FILE* fp;
 
-    ((MovieUnknown*)renderer_global_dword_get())
-        ->QueryInterface(IID_IDirectDraw2, (void**)&ddraw);
-    ((MovieUnknown*)render_surface_secondary_get())
-        ->QueryInterface(IID_IDirectDrawSurface3, (void**)&surf);
+    /* The original hands DirectShow the IDirectDraw2 and the back buffer's
+     * IDirectDrawSurface3. miniwin's objects are not COM-layout objects
+     * that this unit's DirectShow views (MovieUnknown, MovieSurface3) can
+     * call, and DirectShow is stubbed, so the movie gets neither: it opens
+     * no stream, Update reports no frame, and the caller skips it. */
+    ddraw = NULL; // [library:video]
+    surf = NULL; // [library:video]
 
-    if ((fp = fopen(fullName, "r")) != NULL) {
+    if ((fp = files_native_fopen(fullName, "r")) != NULL) { // [library:filesystem]
         fclose(fp);
         mov = new G98CMovie(fullName, surf, ddraw);
     } else if (file_get_cd_file_path(cdName, fName)) {
