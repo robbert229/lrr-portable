@@ -701,11 +701,20 @@ int effect_spawn_particle(unsigned int type, Effect_Vector3F* wPos,
         misc->timer = 0.0f;
         misc->conts[misc->count] = entity_visual_resource_load(misc->cont);
         ddiscene_frame_update_and_callbacks(misc->conts[misc->count], 0.0f);
-        ddiscene_object_position_set(misc->conts[misc->count], NULL, wPos->x, wPos->y, wPos->z);
-        if (dir != NULL)
+        {
+            /* y and z of each vector as float locals of a block, as in
+             * effect_spawn_boulder_explode_at: the original copies them
+             * through the x87 stack. */
+            float y = wPos->y;
+            float z = wPos->z;
+            ddiscene_object_position_set(misc->conts[misc->count], NULL, wPos->x, y, z);
+        }
+        if (dir != NULL) {
+            float y = dir->y;
+            float z = dir->z;
             ddiscene_object_pose_method_dispatch(misc->conts[misc->count], NULL,
-                                                 dir->x, dir->y, dir->z, 0.0f, 0.0f, -1.0f);
-        else
+                                                 dir->x, y, z, 0.0f, 0.0f, -1.0f);
+        } else
             ddiscene_object_pose_method_dispatch(misc->conts[misc->count], NULL,
                                                  0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f);
         misc->count++;
