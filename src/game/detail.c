@@ -300,7 +300,13 @@ void detail_set_mesh_frame(void* cont, float blockSize, Detail_Vector3F* a,
     ddiscene_object_pose_method_dispatch(cont, NULL, -(up.x * upScale), -(up.y * upScale),
                                          -(up.z * upScale), dir.x * dirScale,
                                          dir.y * dirScale, dir.z * dirScale);
-    ddiscene_object_position_set(cont, NULL, a->x, a->y, a->z);
+    {
+        /* y and z as float locals of the block: the original copies them
+         * through the x87 stack and only x through a register. */
+        float y = a->y;
+        float z = a->z;
+        ddiscene_object_position_set(cont, NULL, a->x, y, z);
+    }
     detail_container_inverse_transform_adapter(cont, &tb, b);
     detail_container_inverse_transform_adapter(cont, &tc, c);
     detail_matrix_setup(&mat[0][0], blockSize, blockSize, tb.y, tc.x, tc.y);
