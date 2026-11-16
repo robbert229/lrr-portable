@@ -7192,10 +7192,14 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
 
     if (obj->type == 2) {
         if (entity_stats_word_get(LEGOOBJ_SLOT(monster)) & 0x8000) {
-            ddiscene_object_facing_pair_get(legoobject_type_component_get(monster), NULL, dir, NULL);
-            x = 1.0f / (float)sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
-            y = dir[1] * x * 15.0f + mpos.y;
-            x = dir[0] * x * 15.0f + mpos.x;
+            void* cont = legoobject_type_component_get(monster);
+            float len;
+            ddiscene_object_facing_pair_get(cont, NULL, dir, NULL);
+            len = 1.0f / (float)sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
+            x = dir[0] * len * 15.0f;
+            y = dir[1] * len * 15.0f;
+            x += mpos.x;
+            y += mpos.y;
             terrain_map_world_to_block(Lego_GetMap(), x, y, &blockPos[0], &blockPos[1]);
             if (!terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&
                 !terrain_cell_occupied_or_flag_current(blockPos[0], blockPos[1], 1))
@@ -7216,7 +7220,7 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
             }
         }
         if (entity_stats_word_get(LEGOOBJ_SLOT(monster)) & 0x800) {
-            if (legoobject_zero != radius && dist < entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) + radius) {
+            if (legoobject_zero != radius && dist < (entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) + radius)) {
                 legoobject_o_vector2_scale(&d, &d, 1.0f / dist);
                 legoobject_flagged_vector_step_command_issue(obj, &d.x);
             }
@@ -7224,8 +7228,8 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
     }
 
     if ((obj->type == 1 || obj->type == 2) && !(obj->flags1 & 0x200)) {
-        if (entity_stats_float_ate8(LEGOOBJ_SLOT(monster)) < obj->health &&
-            entity_stats_float_at94(LEGOOBJ_SLOT(obj)) > dist)
+        if (entity_stats_float_ate8(LEGOOBJ_SLOT(monster)) < monster->health &&
+            entity_stats_float_at94(LEGOOBJ_SLOT(monster)) > dist)
         {
             legoobject_pair_interaction_gate(monster, obj);
         }
@@ -7234,7 +7238,7 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
     if ((obj->type == 2 || obj->type == 1) && (entity_stats_word_get(LEGOOBJ_SLOT(monster)) & 0x2000) &&
         !(monster->flags1 & 0x8000000))
     {
-        if (dist < entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) + radius) {
+        if (dist < (entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) + radius)) {
             if (legoobject_random_cell_step_route_issue(monster)) monster->flags1 |= 0x8000000;
         }
     }
@@ -7258,7 +7262,7 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
     if (entity_stats_word_get(LEGOOBJ_SLOT(monster)) & 0x40000) {
         // STRING: LEGORR 0x004a50bc
         if (entity_type_pair_lookup("Scorpion", &type, &id, NULL) && type == obj->type && id == obj->id) {
-            if (legoobject_zero != radius && dist < entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) + radius) {
+            if (legoobject_zero != radius && dist < (entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) + radius)) {
                 legoobject_o_vector2_scale(&d, &d, 1.0f / dist);
                 legoobject_flagged_vector_step_command_issue(obj, &d.x);
             }
