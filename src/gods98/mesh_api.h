@@ -111,7 +111,7 @@ void mesh_get_group(Mesh* mesh, unsigned long groupID,
 unsigned long mesh_get_group_count(Mesh* mesh);  /* 00482210 */
 long mesh_add_group(Mesh* mesh, unsigned long vertexCount,
                     unsigned long faceCount, unsigned long vPerFace,
-                    unsigned long* faceData);  /* 00482220 */
+                    unsigned int* faceData);  /* 00482220 */
 void mesh_alter_group_render_flags(Mesh* mesh, unsigned long groupID,
                                    unsigned long newFlags);  /* 00482350 */
 void mesh_scale(Mesh* mesh, float x, float y, float z);  /* 00482370 */

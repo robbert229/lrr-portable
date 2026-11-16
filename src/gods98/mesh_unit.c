@@ -112,8 +112,9 @@ struct Mesh_ContVertex {
     Mesh_Vector3F normal;   /* +0x0c */
     float tu;               /* +0x18 */
     float tv;               /* +0x1c */
-    unsigned long colour;   /* +0x20 */
+    unsigned int colour;    /* +0x20: a 32-bit word, as on Win32 */
 };
+static_assert(sizeof(Mesh_ContVertex) == 0x24, "Container.c's vertex is 0x24 bytes");
 
 /* Viewports.c's Viewport: the Direct3DRM viewport at +0x10 and the
  * rendering flag at +0x18. */
@@ -451,7 +452,7 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
     Mesh_Vector3F** surfVerticesNorm;
     unsigned long* surfVertexCount;
     unsigned long* surfVertexRef;
-    unsigned long* surfFaceData;
+    unsigned int* surfFaceData;
     unsigned long* surfFaceDataCount;
     Mesh_Vector3F* faceNorm;
     Mesh_Vector3F* vertexNorm;
@@ -462,7 +463,7 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
     unsigned long surfArraySize, surfFDArraySize;
     unsigned long face, vertex, loop;
     unsigned long groupID, renderFlags;
-    unsigned long* faceDataPtr;
+    unsigned int* faceDataPtr;
     Mesh_Vector3F* surfVerticesPtr;
     Mesh_Vector3F** surfNormalsPtr;
     Mesh_Point2F* textCoordsPtr;
@@ -487,7 +488,7 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
     surfVerticesNorm = (Mesh_Vector3F**)malloc(sizeof(Mesh_Vector3F*) * surfArraySize);
     surfVertexCount = (unsigned long*)malloc(sizeof(unsigned long) * lightWaveObject->aoSize.lwSurfaceCount);
     surfVertexRef = (unsigned long*)malloc(sizeof(unsigned long) * surfArraySize);
-    surfFaceData = (unsigned long*)malloc(sizeof(unsigned long) * (lightWaveObject->aoSize.lwSurfaceCount * fDSize));
+    surfFaceData = (unsigned int*)malloc(sizeof(unsigned int) * (lightWaveObject->aoSize.lwSurfaceCount * fDSize));
     surfFaceDataCount = (unsigned long*)malloc(sizeof(unsigned long) * lightWaveObject->aoSize.lwSurfaceCount);
     faceNorm = (Mesh_Vector3F*)malloc(sizeof(Mesh_Vector3F) * lightWaveObject->aoSize.lwPolyCount);
     vertexNorm = (Mesh_Vector3F*)malloc(sizeof(Mesh_Vector3F) * size);
@@ -1019,7 +1020,7 @@ unsigned long mesh_get_group_count(Mesh* mesh)
 // FUNCTION: LEGORR 0x00482220
 long mesh_add_group(Mesh* mesh, unsigned long vertexCount,
                     unsigned long faceCount, unsigned long vPerFace,
-                    unsigned long* faceData)
+                    unsigned int* faceData)
 {
     Mesh_Group* group;
     unsigned long loop, size;

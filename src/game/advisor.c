@@ -195,8 +195,7 @@ void advisor_scene_controller_initialize(const char* gameName,
     advisorGlobs.cameraCont = ((AdvisorCamera*)camera)->contCam;
     advisorGlobs.viewMain = viewMain;
     advisorGlobs.lightCont = ddiscene_light_create(((AdvisorCamera*)camera)->contCam, 3,
-                                                   0x3f800000, 0x3f800000,
-                                                   0x3f800000);
+                                                   1.0f, 1.0f, 1.0f);
     ddiscene_object_pose_method_dispatch(advisorGlobs.lightCont,
                                          ((AdvisorCamera*)camera)->contCam, 0.0f, 0.0f, -1.0f,
                                          0.0f, 1.0f, 0.0f);

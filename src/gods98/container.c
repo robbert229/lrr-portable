@@ -939,7 +939,7 @@ int Container_IsHidden(Container* cont)
 
 // FUNCTION: LEGORR 0x00473bc0
 Container* Container_SearchTree(Container* root, const char* name, int mode,
-                                unsigned long* count)
+                                unsigned int* count)
 {
     Container_SearchData search;
 
@@ -1399,7 +1399,7 @@ void Container_Mesh_Swap(Container* target, Container* origin, int restore)
 // FUNCTION: LEGORR 0x004748f0
 unsigned long Container_Mesh_AddGroup(Container* cont, unsigned long vertexCount,
                                       unsigned long faceCount, unsigned long vPerFace,
-                                      unsigned long* faceData)
+                                      unsigned int* faceData)
 {
     if (cont->typeData->transMesh) {
         return mesh_record_allocate_and_fill((struct MeshRecordPool*)cont->typeData->transMesh,
@@ -2452,11 +2452,16 @@ void Container_Frame_FormatName(LPDIRECT3DRMFRAME3 frame, const char* msg, ...)
     char* name;
     unsigned long len;
     va_list args;
+    va_list again;
 
     va_start(args, msg);
+    /* The original walks the same va_list twice, which Win32's pointer
+     * va_list allows; x86-64 needs a copy. */
+    va_copy(again, args);
     len = vsprintf(buffer, msg, args);
     name = (char*)malloc(len + 1);
-    vsprintf(name, msg, args);
+    vsprintf(name, msg, again);
+    va_end(again);
     va_end(args);
 
     frame->SetName(name);

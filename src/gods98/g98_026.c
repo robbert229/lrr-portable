@@ -4,6 +4,15 @@
 #include "g98_026.h"
 #include "crt/vc5names.h"
 
+/* The BMP header's 32-bit fields sit at unaligned offsets; read them
+ * bytewise. */
+static inline int32_t bmp_read_i32(const uint8_t* at)
+{
+    int32_t value;
+    memcpy(&value, at, sizeof(value));
+    return value;
+}
+
 typedef struct IndexedBitmapPaletteData {
     int32_t width;             /* +0x00 */
     int32_t height;            /* +0x04 */
@@ -32,7 +41,7 @@ void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap, uint32_t size,
     uint8_t red;
     (void)size;
     if (*(const uint16_t*)(bitmap + 0x1c) == 8) {
-        count = *(const int32_t*)(bitmap + 0x2e);
+        count = bmp_read_i32(bitmap + 0x2e);
         if (count == 0) count = 256;
         palette = (uint32_t*)malloc(0x400);
         memset(palette, 0, 0x400);
@@ -55,8 +64,8 @@ void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap, uint32_t size,
         output->palette_count = 0;
         output->palette = NULL;
     }
-    output->width = *(const int32_t*)(bitmap + 0x12);
-    output->height = *(const int32_t*)(bitmap + 0x16);
+    output->width = bmp_read_i32(bitmap + 0x12);
+    output->height = bmp_read_i32(bitmap + 0x16);
     bpp = *(const uint16_t*)(bitmap + 0x1c);
     output->bits_per_pixel = bpp;
     switch (bpp) {

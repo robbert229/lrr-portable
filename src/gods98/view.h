@@ -18,11 +18,9 @@ extern "C" {
 
 typedef struct ViewProjectionAdapter ViewProjectionAdapter;
 
-/* Container_MakeLight (FUN_004734f0): the colour components are passed as
- * their float bits. */
-void* ddiscene_light_create(void* owner, uint32_t value_a,
-                            uint32_t value_b, uint32_t value_c,
-                            uint32_t value_d);
+/* Container_MakeLight (FUN_004734f0). */
+void* ddiscene_light_create(void* owner, unsigned int type, float r,
+                            float g, float b);
 /* FUN_004734c0: the second argument is the container. */
 void advisor_companion_transform_apply(void* unused, void** object_reference);
 /* Container_MoveAnimation (FUN_00475120). */

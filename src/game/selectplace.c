@@ -88,7 +88,7 @@ SelectPlace* selectplace_create(struct Container* root, float tileDepth)
             selectPlace->tileDepth = tileDepth;
 
             for (loop = 0; loop < SELECTPLACE_MAXGROUPS; loop++) {
-                Container_Mesh_AddGroup(selectPlace->contMesh, 5 * 4, 5 * 2, 3, (unsigned long*)faceData);
+                Container_Mesh_AddGroup(selectPlace->contMesh, 5 * 4, 5 * 2, 3, faceData);
                 for (face = 0; face < 5; face++) {
                     for (sub = 0; sub < 4; sub++) {
                         vertices[sub].normal = normalList[face];

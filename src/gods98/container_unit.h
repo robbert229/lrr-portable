@@ -68,7 +68,7 @@ void Container_Hide2(Container* cont, int hide);                     /* 00473b20
 void Container_Hide(Container* cont, int hide);                      /* 00473b40 */
 int Container_IsHidden(Container* cont);                            /* 00473ba0 */
 Container* Container_SearchTree(Container* root, const char* name,
-                                 int mode, unsigned long* count);    /* 00473bc0 */
+                                 int mode, unsigned int* count);     /* 00473bc0 */
 char* Container_FormatPartName(Container* cont, const char* partname,
                                  unsigned long* instance);           /* 00473c60 */
 void Container_SetUserData(Container* cont, void* data);           /* 00473da0 */
@@ -95,7 +95,7 @@ unsigned long Container_Mesh_AddGroup(Container* cont,
                                        unsigned long vertexCount,
                                        unsigned long faceCount,
                                        unsigned long vPerFace,
-                                       unsigned long* faceData);     /* 004748f0 */
+                                       unsigned int* faceData);     /* 004748f0 */
 unsigned long Container_Mesh_GetGroupCount(Container* cont);       /* 00474a20 */
 void Container_Mesh_SetQuality(Container* cont, unsigned long groupID,
                                 unsigned long quality);              /* 00474a60 */
