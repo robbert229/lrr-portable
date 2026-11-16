@@ -601,36 +601,48 @@ void weapons_projectile_update(Weapons_Projectile* projectile, float elapsed)
 {
     void* cont;
     Point2F curvePos;
-    float dist;
+    Weapons_Vector3F vec;
 
     cont = entity_type_component_get(projectile->object);
     ddiscene_object_position_get(cont, NULL, (float*)&projectile->lastPosition);
-    dist = projectile->speed * elapsed;
+    /* The step is kept in elapsed's slot, both branches build the move in
+     * one vector local through the maths helpers, and the positions and
+     * directions go to the scene as float locals of a block: the original
+     * copies them through the x87 stack. */
+    elapsed = projectile->speed * elapsed;
     if (!projectile->curved) {
-        projectile->position.x += projectile->direction.x * dist;
-        projectile->position.z += projectile->direction.z * dist;
-        projectile->position.y += projectile->direction.y * dist;
-        ddiscene_object_position_set(cont, NULL, projectile->position.x,
-                                     projectile->position.y, projectile->position.z);
-        ddiscene_object_pose_method_dispatch(cont, NULL, projectile->direction.x,
-                                             projectile->direction.y,
-                                             projectile->direction.z,
-                                             0.0f, 0.0f, -1.0f);
+        weapons_vector3d_scale(&vec, &projectile->direction, elapsed);
+        weapons_vector3d_add(&projectile->position, &projectile->position, &vec);
+        {
+            float x = projectile->position.x;
+            float y = projectile->position.y;
+            float z = projectile->position.z;
+            ddiscene_object_position_set(cont, NULL, x, y, z);
+        }
+        {
+            float x = projectile->direction.x;
+            float y = projectile->direction.y;
+            float z = projectile->direction.z;
+            ddiscene_object_pose_method_dispatch(cont, NULL, x, y, z, 0.0f, 0.0f, -1.0f);
+        }
     }
     else {
-        dist += projectile->curveDistance;
-        projectile->curveDistance = dist;
-        path_arc_length_interpolate(&projectile->curve, dist, &curvePos);
-        projectile->position.x = projectile->direction.x * curvePos.x + projectile->startPos.x;
-        projectile->position.y = projectile->startPos.y + projectile->direction.y * curvePos.x;
-        projectile->position.z = projectile->startPos.z + curvePos.y;
-        ddiscene_object_position_set(cont, NULL, projectile->position.x,
-                                     projectile->position.y, projectile->position.z);
-        ddiscene_object_pose_method_dispatch(
-            cont, NULL, projectile->position.x - projectile->lastPosition.x,
-            projectile->position.y - projectile->lastPosition.y,
-            (projectile->position.z - projectile->lastPosition.z) * 0.25f,
-            0.0f, 0.0f, -1.0f);
+        elapsed += projectile->curveDistance;
+        projectile->curveDistance = elapsed;
+        path_arc_length_interpolate(&projectile->curve, elapsed, &curvePos);
+        vec.x = projectile->direction.x * curvePos.x;
+        vec.y = projectile->direction.y * curvePos.x;
+        vec.z = curvePos.y;
+        weapons_vector3d_add(&projectile->position, &projectile->startPos, &vec);
+        {
+            float x = projectile->position.x;
+            float y = projectile->position.y;
+            float z = projectile->position.z;
+            ddiscene_object_position_set(cont, NULL, x, y, z);
+        }
+        weapons_vector3d_subtract(&vec, &projectile->position, &projectile->lastPosition);
+        ddiscene_object_pose_method_dispatch(cont, NULL, vec.x, vec.y, vec.z * 0.25f,
+                                             0.0f, 0.0f, -1.0f);
     }
 }
 
