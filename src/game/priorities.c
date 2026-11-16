@@ -180,15 +180,16 @@ int priorities_handle_cursor(unsigned int x, unsigned int y, int pressed,
             int type = priorities.list[i];
             Image* image = priorities.images[type];
             if (image != NULL) {
+                unsigned int height = image->height;
+                unsigned int width = image->width;
                 position.x = priorities.offsets[i].x + panel.x;
                 position.y = priorities.offsets[i].y + panel.y;
                 if ((float)x >= position.x &&
-                    (float)x <= position.x + (float)image->width &&
-                    position.y <= (float)y &&
-                    (float)y <= position.y + (float)image->height) {
+                    (float)x <= position.x + (float)width &&
+                    (float)y >= position.y &&
+                    (float)y <= position.y + (float)height) {
                     priorities.flags |= PRIORITIES_FLAG_HOVER;
-                    priorities_set_hover_area(&position, image->width - 1,
-                                              image->height - 1);
+                    priorities_set_hover_area(&position, width - 1, height - 1);
                     if (!pressed) {
                         if (s_tool_tip_index == i && s_tool_tip_type == type) {
                             tooltip_set_content(PRIORITIES_TOOLTIP,
