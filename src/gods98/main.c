@@ -536,8 +536,7 @@ unsigned int render_feature_flags_get(void)
 // FUNCTION: LEGORR 0x00477f80
 int window_runtime_display_caps_query(void)
 {
-    HDC hdc = GetDC((HWND)g_platform_cursor_window_handle);
-    return GetDeviceCaps(hdc, BITSPIXEL);
+    return GetDeviceCaps(GetDC((HWND)g_platform_cursor_window_handle), BITSPIXEL);
 }
 
 // FUNCTION: LEGORR 0x00477fa0
