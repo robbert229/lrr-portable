@@ -357,18 +357,16 @@ int file_read(void* buffer, int size, int count, File* f)
 {
     FileSys fs;
     int length;
-    int read;
     int amount;
 
     fs = file_get_system(f);
     switch (fs) {
     case FileSystem_Wad:
         length = wad_file_length(f->stream.wad->hFile);
-        read = size * count;
-        if (read + f->stream.wad->streamPos > length)
+        if (size * count + f->stream.wad->streamPos > length)
             amount = length - f->stream.wad->streamPos;
         else
-            amount = read;
+            amount = size * count;
         memcpy(buffer,
                (char*)wad_file_data(f->stream.wad->hFile) +
                    f->stream.wad->streamPos,
