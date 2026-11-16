@@ -186,7 +186,8 @@ void message_remove_events_with_object(Lego_Object* obj)
     unsigned int count = messageGlobs.eventCount[messageGlobs.eventAB];
 
     for (loop = 0; loop < count; loop++) {
-        if (messageGlobs.eventList[messageGlobs.eventAB][loop].argument1 == obj) {
+        Message_Event* event = &messageGlobs.eventList[messageGlobs.eventAB][loop];
+        if (obj == event->argument1) {
             count--;
             messageGlobs.eventList[messageGlobs.eventAB][loop] =
                 messageGlobs.eventList[messageGlobs.eventAB][count];
