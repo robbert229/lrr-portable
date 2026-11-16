@@ -18,7 +18,7 @@ extern "C" {
 
 struct Viewport;
 struct Container;
-struct VpFrame;
+struct IDirect3DRMFrame3;
 struct Vector3F;
 struct Vector4F;
 struct Point2F;
@@ -53,7 +53,8 @@ void viewport_transform(struct Viewport* vp, struct Vector4F* dest,
                         const struct Vector3F* src);         /* 004772b0 */
 void viewport_world_to_screen(struct Viewport* vp, struct Point2F* screen,
                               const struct Vector3F* world); /* 004772d0 */
-struct VpFrame* viewport_get_scene(struct Viewport* vp);     /* 00477310 */
+struct IDirect3DRMFrame3* viewport_get_scene(
+    struct Viewport* vp);                                    /* 00477310 */
 void viewport_add_list(void);                                /* 00477370 */
 void viewport_remove_all(void);                              /* 004773e0 */
 

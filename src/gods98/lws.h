@@ -31,7 +31,7 @@ extern "C" {
 
 typedef struct LwsInfo LwsInfo;
 typedef struct LwsNode LwsNode;
-struct LwsFrame;
+struct IDirect3DRMFrame3; /* miniwin's <miniwin/d3drm.h> */
 
 /* Lws_Initialise's callbacks: find a sample by name, play a sample on a
  * frame, and whether sound is on. */
@@ -88,11 +88,11 @@ void lws_sound_triggers_setup(LwsInfo* scene);
 
 /* Lws_LoadMeshes (FUN_00487990): create the frames under `parent` and load
  * their meshes, then show frame 0. */
-void lws_meshes_load(LwsInfo* scene, struct LwsFrame* parent);
+void lws_meshes_load(LwsInfo* scene, struct IDirect3DRMFrame3* parent);
 
 /* Lws_Clone (FUN_00487a00): a scene sharing `scene`'s nodes, with its own
  * frames under `parent`. */
-LwsInfo* lws_clone(LwsInfo* scene, struct LwsFrame* parent);
+LwsInfo* lws_clone(LwsInfo* scene, struct IDirect3DRMFrame3* parent);
 
 /* Lws_SetTime (FUN_00487ba0). */
 void lws_time_set(LwsInfo* scene, float time);
@@ -122,11 +122,12 @@ void lws_absolute_key_set(LwsInfo* scene, LwsNode* node,
 
 /* Lws_LoadMesh (FUN_004885c0). */
 void* lws_mesh_load(const char* baseDir, const char* fname,
-                    struct LwsFrame* frame, int noTextures);
+                    struct IDirect3DRMFrame3* frame, int noTextures);
 
 /* Lws_CreateFrames (FUN_004887c0). */
 void lws_frames_create(LwsInfo* scene, LwsNode* node,
-                       struct LwsFrame* parent, unsigned short* frameCount);
+                       struct IDirect3DRMFrame3* parent,
+                       unsigned short* frameCount);
 
 /* Lws_LoadNodes (FUN_00488900). */
 void lws_nodes_load(LwsInfo* scene, LwsNode* node);
@@ -142,6 +143,22 @@ void lws_free(LwsInfo* scene);
 void lws_node_free(LwsInfo* scene, LwsNode* node);
 
 #ifdef __cplusplus
+}
+#endif
+
+#if defined(__cplusplus) && !defined(LEGORRR_LWS_UNIT)
+/* animclone.c and container.c still pass their frames as struct LwsFrame*,
+ * the type lws.h declared before lws.c called miniwin's interfaces. These
+ * forward to the real signatures until those units pass an
+ * IDirect3DRMFrame3* themselves; then delete them. */
+struct LwsFrame;
+inline void lws_meshes_load(LwsInfo* scene, struct LwsFrame* parent)
+{
+    lws_meshes_load(scene, (struct IDirect3DRMFrame3*)parent);
+}
+inline LwsInfo* lws_clone(LwsInfo* scene, struct LwsFrame* parent)
+{
+    return lws_clone(scene, (struct IDirect3DRMFrame3*)parent);
 }
 #endif
 

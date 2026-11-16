@@ -13,6 +13,23 @@
 #include <float.h>
 #include <errno.h>
 
+/* IID_IDirect3DRMUserVisual (0049fb48) with C linkage, for animclone.c
+ * (G98-025), which declares it with its own IID struct. lws.c defined it
+ * until it called miniwin's interfaces; it now uses miniwin's (d3drm.h),
+ * whose copy has internal linkage, so this file, which does not include
+ * miniwin's d3drm.h, keeps the C-linkage one. Delete it when animclone.c
+ * uses miniwin's too. */
+struct LwscUserVisualIID {
+    unsigned long data1;
+    unsigned short data2;
+    unsigned short data3;
+    unsigned char data4[8];
+};
+extern "C" const LwscUserVisualIID IID_IDirect3DRMUserVisual = {
+    0x59163de0, 0x6d43, 0x11cf,
+    { 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1 }
+};
+
 struct LwscSceneTemplate {
     unsigned int references;
     unsigned int first_frame, last_frame;
