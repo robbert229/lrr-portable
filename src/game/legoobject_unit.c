@@ -4717,23 +4717,21 @@ int legoobject_route_marker_setup(Lego_Object* obj)
     void* cont;
     int result;
     unsigned int count;
-    int bx;
-    int by;
-    int ownX;
-    int ownY;
+    LegoObjF_Point2I bxby;
+    LegoObjF_Point2I ownXownY;
     float pos[3];
     unsigned int* xs;
     unsigned int* ys;
 
-    legoobject_position_to_terrain_cell(obj, &ownX, &ownY);
+    legoobject_position_to_terrain_cell(obj, &ownXownY.x, &ownXownY.y);
     target = legoobject_route_marker_candidate_find(obj, 1);
     if (target != NULL && (cont = legoobject_k_carry_null_get(target)) != NULL) {
         ddiscene_object_position_get(cont, NULL, pos);
-        if (terrain_map_world_to_block(Lego_GetMap(), pos[0], pos[1], &bx, &by)) {
-            if (bx == ownX && by == ownY) {
-                result = legoobject_route_setup_and_marker_associate(obj, 1, (unsigned int*)&bx, (unsigned int*)&by, pos);
+        if (terrain_map_world_to_block(Lego_GetMap(), pos[0], pos[1], &bxby.x, &bxby.y)) {
+            if (bxby.x == ownXownY.x && bxby.y == ownXownY.y) {
+                result = legoobject_route_setup_and_marker_associate(obj, 1, (unsigned int*)&bxby.x, (unsigned int*)&bxby.y, pos);
             } else {
-                if (!legoobject_terrain_neighbor_path_check(obj, ownX, ownY, bx, by, &xs, &ys, &count, NULL, NULL))
+                if (!legoobject_terrain_neighbor_path_check(obj, ownXownY.x, ownXownY.y, bxby.x, bxby.y, &xs, &ys, &count, NULL, NULL))
                     return 0;
                 result = legoobject_route_setup_and_marker_associate(obj, count, xs, ys, pos);
                 free(xs);
@@ -6898,7 +6896,10 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
                     dir.x = obj->faceDirection[0] = -obj->faceDirection[0];
                     dir.y = obj->faceDirection[1] = -obj->faceDirection[1];
                 }
-                legoobject_set_activity(obj, (obj->flags1 & 0x400) ? 0x15 : 10, 0);
+                if (obj->flags1 & 0x400)
+                    legoobject_set_activity(obj, 0x15, 0);
+                else
+                    legoobject_set_activity(obj, 10, 0);
                 if (obj->type != 1) obj->flags1 |= 0x80;
             } else {
                 legoobject_o_vector3_cross(&toward, &toward, (LegoObjJ_Vector3F*)obj->faceDirection);
@@ -7649,13 +7650,12 @@ void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapse
     {
         float centre;
         int blockPos[2];
-        float x;
-        float y;
+        LegoObjGE_Point2F xy;
         float coef;
 
         centre = 1.0f;
-        legoobject_transform_position_get(obj, &x, &y);
-        if (terrain_map_world_to_block_centre(Lego_GetMap(), x, y, &blockPos[0], &blockPos[1], &centre)) {
+        legoobject_transform_position_get(obj, &xy.x, &xy.y);
+        if (terrain_map_world_to_block_centre(Lego_GetMap(), xy.x, xy.y, &blockPos[0], &blockPos[1], &centre)) {
             coef = (float)(unsigned int)terrain_cell_speed_class_current(blockPos) * 0.25f;
             coef = 1.0f - coef * (1.0f - entity_stats_float_atd4(LEGOOBJ_SLOT(obj)));
             if (level_cell_occupied_at_current(blockPos)) coef = entity_stats_float_atd8(LEGOOBJ_SLOT(obj)) * coef;
@@ -10037,8 +10037,7 @@ void legoobject_tiny_monster_spawn_and_teardown(Lego_Object* obj)
     int type;
     int id;
     void* model;
-    float x;
-    float y;
+    LegoObjGE_Point2F xy;
     unsigned int count;
     Lego_Object* tiny;
 
@@ -10063,9 +10062,9 @@ void legoobject_tiny_monster_spawn_and_teardown(Lego_Object* obj)
         }
     }
     if (entity_type_pair_lookup(name, &type, &id, (int*)&model)) {
-        legoobject_transform_position_get(obj, &x, &y);
+        legoobject_transform_position_get(obj, &xy.x, &xy.y);
         for (count = 0; count < 3; count++) {
-            tiny = legoobject_create_in_world(model, type, id, 0, x, y, (float)(rng_thunk_draw15() % 7));
+            tiny = legoobject_create_in_world(model, type, id, 0, xy.x, xy.y, (float)(rng_thunk_draw15() % 7));
             tiny->health = -1.0f;
             if (!legoobject_route_step_command_issue(tiny)) {
                 legoobject_remove(tiny);

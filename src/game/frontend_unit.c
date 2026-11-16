@@ -1765,7 +1765,7 @@ void front_menu_item_draw_save_image(Front_Menu* menu, int selIndex,
 {
     struct Image* image;
     char* stringParts[2];
-    char buff[8];
+    char buff[20];
     char* str;
     Point2F dest;
     Point2F size;

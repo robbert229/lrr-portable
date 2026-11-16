@@ -1184,20 +1184,19 @@ int interface_get_item_at_point(unsigned int x, unsigned int y, int* type,
                                 int* objType, int* objIndex)
 {
     unsigned int count;
-    float left;
-    float top;
+    Point2F pos;
     InterfaceItemSearch search;
 
     count = interface_get_menu_item_count(interfaceGlobs.currMenuType);
     if (interface_menu_has_back_button(interfaceGlobs.currMenuType)) {
-        left = interfaceGlobs.backButtonOffsets[count - 1].x +
-               interfaceGlobs.currMenuPosition.x;
-        top = interfaceGlobs.backButtonOffsets[count - 1].y +
-              interfaceGlobs.currMenuPosition.y;
-        if ((float)x >= left &&
-            (float)x <= (float)interfaceGlobs.backButtonWidth + left &&
-            (float)y >= top &&
-            (float)y <= (float)interfaceGlobs.backButtonHeight + top) {
+        pos.x = interfaceGlobs.backButtonOffsets[count - 1].x +
+                interfaceGlobs.currMenuPosition.x;
+        pos.y = interfaceGlobs.backButtonOffsets[count - 1].y +
+                interfaceGlobs.currMenuPosition.y;
+        if ((float)x >= pos.x &&
+            (float)x <= (float)interfaceGlobs.backButtonWidth + pos.x &&
+            (float)y >= pos.y &&
+            (float)y <= (float)interfaceGlobs.backButtonHeight + pos.y) {
             *type = 0;
             return 1;
         }
