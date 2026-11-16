@@ -430,7 +430,7 @@ static void Draw_Pixel16HalfTrans(int32_t x, int32_t y, uint32_t value)
 
     *addr = (uint16_t)(
         (((((colour >> 1) & greenHalf) & 0x7fe0) + (((pixel >> 1) & greenHalf) & 0x7fe0)) & drawGlobs.greenMask) |
-        ((((colour >> 1) & blueHalf) + ((pixel >> 1) & blueHalf)) & drawGlobs.blueMask) |
+        (((((uint16_t)value >> 1) & blueHalf) + ((*addr >> 1) & blueHalf)) & drawGlobs.blueMask) |
         ((((colour >> 1) & 0x7800) + ((pixel >> 1) & 0x7800)) & drawGlobs.redMask));
 }
 
