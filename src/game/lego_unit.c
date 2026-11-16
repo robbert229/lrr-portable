@@ -9841,7 +9841,6 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
 {
     float pos[2];
     Area2F wndRect;
-    float textX;
     unsigned int textWidth;
     unsigned int textHeight;
     int result = -1;
@@ -9859,11 +9858,12 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
             memset(&wndRect.y, 0, 3 * sizeof(float));
             textWidth = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingHi, ok);
             textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
-            textX = (LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 4) -
-                     LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 12) * -0.5f) - (float)(textWidth >> 1);
+            wndRect.x = (LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 4) -
+                         LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 12) * -0.5f - (float)(textWidth >> 1));
             wndRect.y = LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 8);
+            wndRect.width = (float)textWidth;
             wndRect.height = (float)textHeight;
-            if (legoInput_mouseX > textX && legoInput_mouseX < textX + textWidth &&
+            if (legoInput_mouseX > wndRect.x && legoInput_mouseX < wndRect.x + wndRect.width &&
                 legoInput_mouseY > wndRect.y && legoInput_mouseY < wndRect.y + wndRect.height) {
                 LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingLo;
                 text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
@@ -9877,11 +9877,12 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
             memset(&wndRect.y, 0, 3 * sizeof(float));
             textWidth = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingHi, cancel);
             textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
-            textX = (LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 4) -
-                     LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 12) * -0.5f) - (float)(textWidth >> 1);
+            wndRect.x = (LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 4) -
+                         LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 12) * -0.5f - (float)(textWidth >> 1));
             wndRect.y = LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 8);
+            wndRect.width = (float)textWidth;
             wndRect.height = (float)textHeight;
-            if (legoInput_mouseX > textX && legoInput_mouseX < textX + textWidth &&
+            if (legoInput_mouseX > wndRect.x && legoInput_mouseX < wndRect.x + wndRect.width &&
                 legoInput_mouseY > wndRect.y && legoInput_mouseY < wndRect.y + wndRect.height) {
                 LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingLo;
                 text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
