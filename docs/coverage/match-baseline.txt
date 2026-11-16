@@ -1,4 +1,4 @@
-# input_sha256: e9989de47eb55ff0a36c77c07586cbf238e3d0c201374ee79370f8b7537d0598
+# input_sha256: 02934f7d3ccbabd8454f9f44f4680cb6667360f514e933769ce355b22888ff93
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -418,7 +418,7 @@
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
-0x00411360 91.84 front_menu_item_select_test_string_collision
+0x00411360 100.00 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
 0x00411530 88.38 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
@@ -435,12 +435,12 @@
 0x004124f0 88.00 front_menu_item_draw_save_image
 0x00412750 90.39 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
-0x00412af0 96.10 front_menu_draw_menu_image
+0x00412af0 100.00 front_menu_draw_menu_image
 0x00412c00 59.95 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
-0x00413b80 98.15 front_run_screen_menu
+0x00413b80 100.00 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
 0x00413e60 100.00 front_menu_item_parse_type_string
 0x00413f00 100.00 mission_replace_char
@@ -489,7 +489,7 @@
 0x00416d00 100.00 frontend_enabled
 0x00416d50 100.00 save_slot_open
 0x00416d60 100.00 is_in_game
-0x00416d70 96.67 front_get_selected_level
+0x00416d70 100.00 front_get_selected_level
 0x00416dd0 100.00 quit_menu_probe
 0x00416de0 100.00 level_start_flag
 0x00416df0 100.00 menu_options_flag
@@ -1306,7 +1306,7 @@
 0x004514f0 100.00 terrain_map_block_face_normals_update
 0x004515a0 100.00 terrain_map_file_specs_get
 0x004515c0 100.00 terrain_map_file_block_value
-0x004515e0 92.36 terrain_map_block_ray_intersection
+0x004515e0 100.00 terrain_map_block_ray_intersection
 0x004519b0 100.00 model_entry_record_load
 0x00451ab0 100.00 model_primitive_record_create
 0x00451b30 100.00 model_entry_list_flatten
@@ -1340,7 +1340,7 @@
 0x00452cc0 100.00 selected_entity_state_monitor
 0x00452d60 86.44 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
-0x00452e70 96.50 nerps_file_load_message_file
+0x00452e70 100.00 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
 0x00453220 100.00 nerps_shutdown
 0x004532e0 100.00 nerps_runtime_resolve_argument
@@ -1859,7 +1859,7 @@
 0x00463730 100.00 indexed_float_pair_set
 0x00463770 100.00 scroll_rect_resource_record_create
 0x00463810 100.00 scroll_info_add_create_structure
-0x004638a0 95.13 info_panel_check_collision
+0x004638a0 100.00 info_panel_check_collision
 0x00463c00 100.00 scroll_info_mouse_over_structure
 0x00463c90 100.00 scroll_info_mouse_over_create_structure
 0x00463d20 90.62 view_blit_rect_positions_apply
@@ -2104,7 +2104,7 @@
 0x00471c70 100.00 weapons_model_fire_dir_get
 0x00471ca0 100.00 weapons_object_center_get
 0x00471ce0 100.00 weapons_object_can_be_hit
-0x00471d20 95.60 weapons_model_fire_update
+0x00471d20 100.00 weapons_model_fire_update
 0x00471f00 100.00 weapons_model_aim_update
 0x00471fc0 100.00 weapons_object_update_weapons
 0x00472060 100.00 weapons_callback_remove_lazer_hit_reference
@@ -3143,7 +3143,7 @@
 0x00411260 100.00 front_menu_add_menu_item
 0x004112e0 100.00 front_maths_is_point_inside_rect
 0x00411320 100.00 front_maths_is_point_inside_rect_centered
-0x00411360 91.84 front_menu_item_select_test_string_collision
+0x00411360 100.00 front_menu_item_select_test_string_collision
 0x004114f0 100.00 front_menu_is_level_item_under_mouse
 0x00411530 88.38 front_menu_get_item_bounds
 0x00411790 100.00 front_menu_find_item_under_mouse
@@ -3160,12 +3160,12 @@
 0x004124f0 88.00 front_menu_item_draw_save_image
 0x00412750 90.39 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
-0x00412af0 96.10 front_menu_draw_menu_image
+0x00412af0 100.00 front_menu_draw_menu_image
 0x00412c00 59.95 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
-0x00413b80 98.15 front_run_screen_menu
+0x00413b80 100.00 front_run_screen_menu
 0x00413e20 100.00 front_screen_menu_loop
 0x00413e60 100.00 front_menu_item_parse_type_string
 0x00413f00 100.00 mission_replace_char
@@ -3214,7 +3214,7 @@
 0x00416d00 100.00 frontend_enabled
 0x00416d50 100.00 save_slot_open
 0x00416d60 100.00 is_in_game
-0x00416d70 96.67 front_get_selected_level
+0x00416d70 100.00 front_get_selected_level
 0x00416dd0 100.00 quit_menu_probe
 0x00416de0 100.00 level_start_flag
 0x00416df0 100.00 menu_options_flag
@@ -4031,7 +4031,7 @@
 0x004514f0 100.00 terrain_map_block_face_normals_update
 0x004515a0 100.00 terrain_map_file_specs_get
 0x004515c0 100.00 terrain_map_file_block_value
-0x004515e0 92.36 terrain_map_block_ray_intersection
+0x004515e0 100.00 terrain_map_block_ray_intersection
 0x004519b0 100.00 model_entry_record_load
 0x00451ab0 100.00 model_primitive_record_create
 0x00451b30 100.00 model_entry_list_flatten
@@ -4065,7 +4065,7 @@
 0x00452cc0 100.00 selected_entity_state_monitor
 0x00452d60 86.44 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
-0x00452e70 96.50 nerps_file_load_message_file
+0x00452e70 100.00 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
 0x00453220 100.00 nerps_shutdown
 0x004532e0 100.00 nerps_runtime_resolve_argument
@@ -4584,7 +4584,7 @@
 0x00463730 100.00 indexed_float_pair_set
 0x00463770 100.00 scroll_rect_resource_record_create
 0x00463810 100.00 scroll_info_add_create_structure
-0x004638a0 95.13 info_panel_check_collision
+0x004638a0 100.00 info_panel_check_collision
 0x00463c00 100.00 scroll_info_mouse_over_structure
 0x00463c90 100.00 scroll_info_mouse_over_create_structure
 0x00463d20 90.62 view_blit_rect_positions_apply
@@ -4829,7 +4829,7 @@
 0x00471c70 100.00 weapons_model_fire_dir_get
 0x00471ca0 100.00 weapons_object_center_get
 0x00471ce0 100.00 weapons_object_can_be_hit
-0x00471d20 95.60 weapons_model_fire_update
+0x00471d20 100.00 weapons_model_fire_update
 0x00471f00 100.00 weapons_model_aim_update
 0x00471fc0 100.00 weapons_object_update_weapons
 0x00472060 100.00 weapons_callback_remove_lazer_hit_reference
