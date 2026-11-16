@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* GAME-003 — original translation unit (text 004065f0-00406990, .rdata
- * 0049e048-0049e050; finding 505). Cubic Bezier sampling and arc-length
+ * 0049e034-0049e050; finding 505). Cubic Bezier sampling and arc-length
  * helpers.
  *
  * Rebuilt in the original's shape (issue #417, ADR 0005): one file for the
@@ -11,13 +11,14 @@
 #include <math.h>
 
 #include "bezier.h"
+#include "gods98/d3drmdef_consts.h"
 
-/* The unit's .rdata, in original order. Like Maths.c, the unit does not
- * reproduce the 16-byte {1, 2, 4, -1} table at 0049e034 that opens its block
- * (finding 505), nor the unreferenced 1.0 after it at 0049e044. The table
- * is d3drmdef.h's (finding 524), but the toolchain's DirectX 3 d3drm.h
- * shifts the symbol counter so that cubic_bezier_point_evaluate falls
- * (finding 646). */
+/* The unit's .rdata, in original order. It opens with d3drmdef.h's four
+ * consts at 0049e034 (finding 524), then an unreferenced 1.0 at 0049e044:
+ * a named constant, since the 1.0 at 0049e050 is a second one (finding
+ * 646). Its original name is not known. */
+// GLOBAL: LEGORR 0x0049e044
+static const float s_bezier_unref_one = 1.0f;
 // GLOBAL: LEGORR 0x0049e048
 static const float s_bezier_three = 3.0f;
 // GLOBAL: LEGORR 0x0049e04c
