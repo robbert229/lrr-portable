@@ -1055,8 +1055,8 @@ int terrain_map_screen_pick(TerrainMap* map, void* viewport,
                                       &block, 20)) {
         return 0;
     }
-    for (oy = -2; oy < 3; oy++) {
-        for (ox = -2; ox < 3; ox++) {
+    for (oy = -2; oy <= 2; oy++) {
+        for (ox = -2; ox <= 2; ox++) {
             if ((unsigned int)(ox + block.x) < map->gridWidth &&
                 (unsigned int)(oy + block.y) < map->gridHeight) {
                 terrain_map_block_vertices_get(map, ox + block.x,
