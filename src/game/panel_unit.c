@@ -689,8 +689,7 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
             }
         }
 
-        if (!clicked) return 1;
-
+        if (clicked) {
         if (*(int*)((char*)level_current_owner_get() + 0x27c) == 0) {
             media_action_feedback_sound_dispatch(0);
             switch (panelType) {
@@ -702,11 +701,13 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
                     panel_state_flags_toggle(0);
                     panel_state_flags_toggle(1);
                 } else if (button == 1) {
-                    *engine_shared_state_word() = (*engine_shared_state_word() & ~0x1000) | 0x2000;
+                    *engine_shared_state_word() |= 0x2000;
+                    *engine_shared_state_word() &= ~0x1000;
                     panel_item_flag16_set(PANEL_RADAR, 2, 1);
                     panel_item_flag16_set(PANEL_RADAR, 3, 1);
                 } else if (button == 4) {
-                    *engine_shared_state_word() = (*engine_shared_state_word() & ~0x2000) | 0x1000;
+                    *engine_shared_state_word() &= ~0x2000;
+                    *engine_shared_state_word() |= 0x1000;
                     panel_item_flag16_set(PANEL_RADAR, 2, 0);
                     panel_item_flag16_set(PANEL_RADAR, 3, 0);
                 }
@@ -755,6 +756,9 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
             }
             return 1;
         }
+            media_action_feedback_sound_dispatch(1);
+        }
+        return 1;
     } else {
         if (info_panel_check_collision(&infoReleased, mouseX, mouseY,
                                        leftButton, leftButtonLast)) {
@@ -764,9 +768,6 @@ int panel_cursor_interaction_update(float elapsed, int mouseX, int mouseY,
         }
         return 0;
     }
-
-    media_action_feedback_sound_dispatch(1);
-    return 1;
 }
 
 // FUNCTION: LEGORR 0x0045b310
