@@ -100,28 +100,38 @@ float* d3drm_vector_rotate(float* r, float* v, float* axis, float theta)
     return D3DRMVectorRotate(r, v, axis, theta);
 }
 
+/* Maths.h's Maths_Vector3DSubtract. Through it the two edges are
+ * address-taken, which puts v2 below v1 in the frame as in the original. */
+static __inline Vector3F* maths_vector3d_subtract(Vector3F* r, const Vector3F* a, const Vector3F* b)
+{
+    r->x = a->x - b->x;
+    r->y = a->y - b->y;
+    r->z = a->z - b->z;
+    return r;
+}
+
 // FUNCTION: LEGORR 0x00479530
 float* surface_triangle_normal_calculate(float* n, const float* p1,
                                          const float* p2, const float* p3)
 {
     Vector3F v1, v2;
+    /* The output as a vector. The local adds one symbol, which keeps the
+     * later functions' symbol-counter phase where it was before the
+     * subtract helper (phase_probe: helper alone needs +1). */
+    Vector3F* r = (Vector3F*)n;
     float x, y, z, len;
 
-    v1.x = p2[0] - p1[0];
-    v1.y = p2[1] - p1[1];
-    v1.z = p2[2] - p1[2];
-    v2.x = p3[0] - p2[0];
-    v2.y = p3[1] - p2[1];
-    v2.z = p3[2] - p2[2];
+    maths_vector3d_subtract(&v1, (const Vector3F*)p2, (const Vector3F*)p1);
+    maths_vector3d_subtract(&v2, (const Vector3F*)p3, (const Vector3F*)p2);
 
-    x = v1.y * v2.z - v1.z * v2.y;
-    y = v1.z * v2.x - v1.x * v2.z;
-    z = v1.x * v2.y - v1.y * v2.x;
+    x = (v1.y * v2.z) - (v1.z * v2.y);
+    y = (v1.z * v2.x) - (v1.x * v2.z);
+    z = (v1.x * v2.y) - (v1.y * v2.x);
 
-    len = s_maths_one / (float)sqrt(y * y + x * x + z * z);
-    n[0] = len * x;
-    n[1] = len * y;
-    n[2] = len * z;
+    len = s_maths_one / (float)sqrt(y * y + z * z + x * x);
+    r->x = len * x;
+    r->y = len * y;
+    r->z = len * z;
     return n;
 }
 
