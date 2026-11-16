@@ -474,9 +474,9 @@ static int radarmap_callback_draw_object(struct Lego_Object* liveObj, void* data
             size = 1.0f / 3.0f;
         }
         radarMap->drawRectList[radarMap->drawRectCount].rect.x =
-            wPos.x - (size * 0.5f) * radarMap->blockSize;
+            wPos.x - ((size * 0.5f) * radarMap->blockSize);
         radarMap->drawRectList[radarMap->drawRectCount].rect.y =
-            wPos.y + (size * 0.5f) * radarMap->blockSize;
+            wPos.y + ((size * 0.5f) * radarMap->blockSize);
         radarMap->drawRectList[radarMap->drawRectCount].rect.width =
             size * radarMap->blockSize;
         radarMap->drawRectList[radarMap->drawRectCount].rect.height =
