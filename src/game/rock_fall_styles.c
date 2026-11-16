@@ -23,6 +23,9 @@
 
 #include "crt/vc5names.h"
 #include "rock_fall_styles_imports.h"
+/* A header inline copy whose 1.0 and 0.0 the unit's code then reads
+ * (0049e104, 0049e108): see saturate_inline.h and the end of the file. */
+#include "saturate_inline.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -722,6 +725,17 @@ int effect_spawn_particle(unsigned int type, Effect_Vector3F* wPos,
     }
     return 0;
 }
+
+/* The unit's .rdata in the original (0049e100-0049e110): a 1.0 that
+ * nothing reads, then the literals 1.0, 0.0 and 12.5. MSVC 5.0 emits named
+ * constants before literals and pools a literal once per object, so the
+ * first 1.0 is a named constant (as AITask.c's at 0049e010; finding 689),
+ * and the literals' 1.0-before-0.0 order is saturate_inline.h's. The 1.0
+ * cannot close Detail.c's block: Detail.c's literal 1.0 is pooled at
+ * 0049e0d4. Defined here, after the functions, it keeps their symbol
+ * counter and is still emitted first. Its original name is not known. */
+// GLOBAL: LEGORR 0x0049e100
+static const float s_rdata_0049e100 = 1.0f;
 
 #ifdef __cplusplus
 }
