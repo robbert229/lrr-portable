@@ -8882,8 +8882,7 @@ int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
         !(LEGO_FIELD(object, uint32_t, 0x3e0) & 1) &&
         !entity_flags_mask107c33de_or_1c00203_any_test(object) &&
         elapsed != 0.0f) {
-        rate = elapsed;
-        if (elapsed > 300.0f) rate = 300.0f;
+        if ((rate = elapsed) > 300.0f) rate = 300.0f;
         if ((unsigned int)(int)rng_thunk_draw15() % (unsigned int)(300.0f / rate) == 0) {
             entity_block_pos_get_adapter(object, &bx, &by);
             for (i = 0; i < 4; i++) {
@@ -8904,8 +8903,7 @@ int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
         !entity_flags_mask107c33de_or_1c00203_any_test(object)) {
         maxRate = *(float*)(LEGO_FIELD(object, char*, 0x334) + 0x140);
         if (elapsed != 0.0f) {
-            rate = elapsed;
-            if (elapsed > maxRate) rate = maxRate;
+            if ((rate = elapsed) > maxRate) rate = maxRate;
             if (force || (unsigned int)(int)rng_thunk_draw15() % (unsigned int)(maxRate / rate) == 0) {
                 lego_entity_random_cell_step_route_adapter(object);
                 return 1;
