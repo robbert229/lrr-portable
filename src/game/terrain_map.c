@@ -1341,7 +1341,8 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
                 cur.y = vertices[k].tv;
                 target.x = wobble.x + uvOffsets[j].x;
                 target.y = wobble.y + uvOffsets[j].y;
-                dist = terrain_map_vector2d_distance(&cur, &target);
+                dist = (float)sqrt((cur.x - target.x) * (cur.x - target.x) +
+                                   (cur.y - target.y) * (cur.y - target.y));
                 if (dist > 0.36f) {
                     cur = target;
                 }
@@ -1350,8 +1351,10 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
                     wobble.y = random_float_range(0.0f, 1.0f);
                     terrain_map_vector2d_normalise(&wobble);
                     uvw = &map->blocks[(y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x].uvWobble;
-                    wobble.x = (uvw->x + wobble.x) * 0.3f;
-                    wobble.y = (uvw->y + wobble.y) * 0.3f;
+                    wobble.x = uvw->x + wobble.x;
+                    wobble.y = uvw->y + wobble.y;
+                    wobble.x = wobble.x * 0.3f;
+                    wobble.y = wobble.y * 0.3f;
                     target.x = wobble.x + uvOffsets[j].x;
                     target.y = wobble.y + uvOffsets[j].y;
                     *uvw = wobble;
