@@ -141,7 +141,7 @@ AnimClone* anim_clone_make(AnimClone* orig, LPDIRECT3DRMFRAME3 parent,
 
     if (orig->lws) {
         *clone = *orig;
-        clone->scene = lws_clone(orig->scene, (struct LwsFrame*)parent);
+        clone->scene = lws_clone(orig->scene, parent);
         clone->clonedFrom = NULL;
         if (frameCount) *frameCount = orig->frameCount;
     } else {

@@ -146,20 +146,4 @@ void lws_node_free(LwsInfo* scene, LwsNode* node);
 }
 #endif
 
-#if defined(__cplusplus) && !defined(LEGORRR_LWS_UNIT)
-/* animclone.c and container.c still pass their frames as struct LwsFrame*,
- * the type lws.h declared before lws.c called miniwin's interfaces. These
- * forward to the real signatures until those units pass an
- * IDirect3DRMFrame3* themselves; then delete them. */
-struct LwsFrame;
-inline void lws_meshes_load(LwsInfo* scene, struct LwsFrame* parent)
-{
-    lws_meshes_load(scene, (struct IDirect3DRMFrame3*)parent);
-}
-inline LwsInfo* lws_clone(LwsInfo* scene, struct LwsFrame* parent)
-{
-    return lws_clone(scene, (struct IDirect3DRMFrame3*)parent);
-}
-#endif
-
 #endif /* LEGORRR_GODS98_LWS_H */
