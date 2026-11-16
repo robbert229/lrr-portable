@@ -1,5 +1,8 @@
 # Native Linux (miniwin) is the primary target; Win32/MinGW is the reference build
 
+**Status:** superseded on how the port is structured and where it lives by
+[ADR 0007](0007-port-on-develop-units-on-miniwin.md).
+
 The end goal is a **native Linux port running `lrr-portable` with no Wine
 layer**. The sequencing answer to "Windows-first or port-first" was: *flip to
 native-first*, because the port adapter is not something we must build from
