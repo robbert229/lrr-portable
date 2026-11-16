@@ -1433,7 +1433,6 @@ void nerps_runtime_execute(float elapsed)
     unsigned int result;
     unsigned int statements;
     unsigned int* script;
-    unsigned int stack[3];
     unsigned int count;
     char buff[512];
     unsigned int condition;
@@ -1452,6 +1451,7 @@ void nerps_runtime_execute(float elapsed)
         for (i = 0; i < count; i++) {
             argCount = 0;
             if (script[i] & 0x20000) {
+                unsigned int stack[3];
                 if ((script[i] & 0xffff) == 0 && (condition || operation == 0)) break;
                 kind = nerpsFunctions[script[i] & 0xffff].argumentCount;
                 if (kind == 0 || kind == 1 || kind == 2) {

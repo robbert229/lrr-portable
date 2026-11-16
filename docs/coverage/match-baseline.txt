@@ -1,4 +1,4 @@
-# input_sha256: f66f2b9fb8196dfa3955cff472349972eb22320f2691f176500f72308b8b90dc
+# input_sha256: 8186111f3fdd0af7d3493e5ed16ca423c7d7ca7c0de4bf41919ebcca1ddfc552
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -448,7 +448,7 @@
 0x00413f90 100.00 front_menu_create_overlay
 0x00414010 100.00 front_menu_item_load_slider_images
 0x00414070 100.00 front_menu_set_create
-0x004140c0 94.07 front_load_menu_set
+0x004140c0 99.90 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
 0x00414ce0 100.00 front_is_intros_enabled
 0x00414d30 77.11 front_callback_slider_brightness
@@ -1251,7 +1251,7 @@
 0x0044dde0 100.00 loader_display_loading_bar
 0x0044dec0 100.00 loader_file_load_callback
 0x0044e0a0 100.00 loader_display_shutdown
-0x0044e0c0 92.57 terrain_map_create
+0x0044e0c0 93.43 terrain_map_create
 0x0044e4d0 100.00 terrain_map_vertices_build
 0x0044e670 100.00 terrain_map_remove
 0x0044e6b0 100.00 terrain_map_texture_no_fade_set
@@ -1673,7 +1673,7 @@
 0x00457460 100.00 nerpfunc_get_unit_at_block
 0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
 0x004574e0 99.69 objective_load_objective_text
-0x00457d40 71.59 objective_load_original
+0x00457d40 78.21 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
 0x004585c0 100.00 objective_set_block_objective
 0x004585f0 100.00 objective_set_timer_objective
@@ -3173,7 +3173,7 @@
 0x00413f90 100.00 front_menu_create_overlay
 0x00414010 100.00 front_menu_item_load_slider_images
 0x00414070 100.00 front_menu_set_create
-0x004140c0 94.07 front_load_menu_set
+0x004140c0 99.90 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
 0x00414ce0 100.00 front_is_intros_enabled
 0x00414d30 77.11 front_callback_slider_brightness
@@ -3976,7 +3976,7 @@
 0x0044dde0 100.00 loader_display_loading_bar
 0x0044dec0 100.00 loader_file_load_callback
 0x0044e0a0 100.00 loader_display_shutdown
-0x0044e0c0 92.57 terrain_map_create
+0x0044e0c0 93.43 terrain_map_create
 0x0044e4d0 100.00 terrain_map_vertices_build
 0x0044e670 100.00 terrain_map_remove
 0x0044e6b0 100.00 terrain_map_texture_no_fade_set
@@ -4398,7 +4398,7 @@
 0x00457460 100.00 nerpfunc_get_unit_at_block
 0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
 0x004574e0 99.69 objective_load_objective_text
-0x00457d40 71.59 objective_load_original
+0x00457d40 78.21 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
 0x004585c0 100.00 objective_set_block_objective
 0x004585f0 100.00 objective_set_timer_objective

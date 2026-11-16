@@ -49,7 +49,6 @@ static TerrainMapPoint2I s_terrain_map_flatten_blocks[10];
 TerrainMap* terrain_map_create(void* root, const char* filename,
                                float blockSize, float roughLevel)
 {
-    unsigned int faceData[6];
     TerrainMapFile* file;
     TerrainMap* map;
     unsigned int i = 0;
@@ -89,6 +88,7 @@ TerrainMap* terrain_map_create(void* root, const char* filename,
                 if ((map->blocks = (TerrainMapBlock*)malloc(
                          map->blockWidth * map->blockHeight *
                          sizeof(TerrainMapBlock))) != NULL) {
+                    unsigned int faceData[6];
                     faceData[0] = 0;
                     faceData[1] = 1;
                     faceData[2] = 3;

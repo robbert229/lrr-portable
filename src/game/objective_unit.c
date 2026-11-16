@@ -304,7 +304,6 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
 {
     int objType;
     unsigned int objID;
-    int blockPos[2];
     char* argv[60];
     char buff[1024];
     int hitTimeFail = 0;
@@ -453,6 +452,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
                                                          // STRING: LEGORR 0x004a811c
                                                          "BlockObjective",
                                                          NULL)))) {
+        int blockPos[2];
         s = string_duplicate(str);
         sound_variant_split(s, argv, ",");
         blockPos[0] = atoi(argv[0]);

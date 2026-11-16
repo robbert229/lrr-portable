@@ -2637,7 +2637,6 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
     int centerOffset;
     int xPos;
     int yPos;
-    int sfxType;
     int i;
     int j;
     int k;
@@ -2722,6 +2721,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                                                       "ItemCount", NULL));
 
         for (j = 1;; j++) {
+            int sfxType;
             // STRING: LEGORR 0x004a2410
             sprintf(buff, "Overlay%i", j);
             itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, NULL));
