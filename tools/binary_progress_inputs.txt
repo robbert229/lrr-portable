@@ -1,6 +1,8 @@
 CMakeLists.txt
 cross/msvc5-importlibs/CMakeLists.txt
 cross/msvc5-importlibs/amstrmid.c
+cross/msvc5-importlibs/ddraw.def
+cross/msvc5-importlibs/ddraw_exports.c
 cross/msvc5-importlibs/dilib1.c
 cross/msvc5-importlibs/dilib2.c
 cross/msvc5-importlibs/dinput.def
