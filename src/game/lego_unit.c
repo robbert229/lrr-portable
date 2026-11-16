@@ -9856,43 +9856,39 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
         text_buffer_reset_target(legoGlobs_DialogTextWndOK);
         text_buffer_reset_target(legoGlobs_DialogTextWndCancel);
         if (ok) {
-            wndRect.y = 0.0f;
-            wndRect.width = 0.0f;
-            wndRect.height = 0.0f;
-            textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
+            memset(&wndRect.y, 0, 3 * sizeof(float));
             textWidth = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingHi, ok);
-            textX = ((float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 4) -
-                     (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 12) * -0.5f) - (float)(textWidth >> 1);
-            wndRect.y = (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 8);
+            textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
+            textX = (LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 4) -
+                     LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 12) * -0.5f) - (float)(textWidth >> 1);
+            wndRect.y = LEGO_FIELD(legoGlobs_DialogTextWndOK, float, 8);
             wndRect.height = (float)textHeight;
-            if (textX > legoInput_mouseX || legoInput_mouseX >= textX + textWidth ||
-                wndRect.y > legoInput_mouseY || legoInput_mouseY >= wndRect.y + wndRect.height) {
-                LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingHi;
-                text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
-            } else {
+            if (legoInput_mouseX > textX && legoInput_mouseX < textX + textWidth &&
+                legoInput_mouseY > wndRect.y && legoInput_mouseY < wndRect.y + wndRect.height) {
                 LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingLo;
                 text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
                 if (ledger_stub_00435550_GlobalStateZeroTransitionDetect()) result = 1;
+            } else {
+                LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingHi;
+                text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
             }
         }
         if (cancel) {
-            wndRect.y = 0.0f;
-            wndRect.width = 0.0f;
-            wndRect.height = 0.0f;
+            memset(&wndRect.y, 0, 3 * sizeof(float));
             textWidth = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingHi, cancel);
             textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
-            textX = ((float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 4) -
-                     (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 12) * -0.5f) - (float)(textWidth >> 1);
-            wndRect.y = (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 8);
+            textX = (LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 4) -
+                     LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 12) * -0.5f) - (float)(textWidth >> 1);
+            wndRect.y = LEGO_FIELD(legoGlobs_DialogTextWndCancel, float, 8);
             wndRect.height = (float)textHeight;
-            if (textX > legoInput_mouseX || legoInput_mouseX >= textX + textWidth ||
-                wndRect.y > legoInput_mouseY || legoInput_mouseY >= wndRect.y + wndRect.height) {
-                LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingHi;
-                text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
-            } else {
+            if (legoInput_mouseX > textX && legoInput_mouseX < textX + textWidth &&
+                legoInput_mouseY > wndRect.y && legoInput_mouseY < wndRect.y + wndRect.height) {
                 LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingLo;
                 text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
                 if (ledger_stub_00435550_GlobalStateZeroTransitionDetect()) result = 0;
+            } else {
+                LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingHi;
+                text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
             }
         }
         text_buffer_append_format(legoGlobs_DialogTextWndTitle, title);
