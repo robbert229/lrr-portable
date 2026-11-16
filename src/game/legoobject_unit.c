@@ -7137,8 +7137,7 @@ int legoobject_behavior_callback_a(Lego_Object* obj, void* data)
         legoobject_transform_position_get(obj, &pos.x, &pos.y);
         legoobject_transform_position_get((Lego_Object*)data, &opos.x, &opos.y);
         legoobject_o_vector2_subtract(&d, &pos, &opos);
-        dist = legoobject_o_vector2_modulus(&d);
-        if (dist < legoGlobs_DynamiteDamageRadius) {
+        if ((dist = legoobject_o_vector2_modulus(&d)) < legoGlobs_DynamiteDamageRadius) {
             legoobject_o_vector2_scale(&dir, &d, 1.0f / dist);
             legoobject_flagged_vector_step_command_issue(obj, &dir.x);
             return 0;
