@@ -79,3 +79,5 @@ void object_field_38_release_target(void* record)
     void* field = *(void**)((char*)record + 0x38);
     if (field != NULL) free(field);
 }
+
+#include "gods98/d3drmdef_consts.h"
