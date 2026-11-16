@@ -11,10 +11,12 @@
 #ifndef LEGORRR_GAME_WEAPONS_MATHS_H
 #define LEGORRR_GAME_WEAPONS_MATHS_H
 
+/* The products in parentheses, as mesh_maths.h's: MSVC 5.0 keeps a
+ * parenthesised float subexpression as written (finding 661). */
 static __inline float weapons_vector3d_dot(const Weapons_Vector3F* a,
                                            const Weapons_Vector3F* b)
 {
-    return a->x * b->x + a->y * b->y + a->z * b->z;
+    return (a->x * b->x) + (a->y * b->y) + (a->z * b->z);
 }
 
 static __inline float weapons_vector3d_modulus(const Weapons_Vector3F* v)
