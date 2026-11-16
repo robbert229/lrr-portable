@@ -22,6 +22,20 @@ def coff_with(body: bytes, relocations: list[msvc_coff.Relocation], symbol: str 
     return msvc_coff.CoffObject("x.obj", [text], symbols, [], [], None)
 
 
+def _coff_with_function(body: bytes, reloc_offset: int = 9) -> bytes:
+    """A minimal i386 COFF: one code section holding ``_f``, one REL32 to ``_g``."""
+    raw = 20 + 40
+    rel = raw + len(body)
+    sym = rel + 10
+    header = struct.pack("<HHIIIHH", 0x14C, 1, 0, sym, 2, 0, 0)
+    section = b".text\0\0\0" + struct.pack("<IIIIIIHHI", 0, 0, len(body), raw, rel, 0, 1, 0,
+                                              msvc_coff.IMAGE_SCN_CNT_CODE)
+    relocation = struct.pack("<IIH", reloc_offset, 1, 0x14)
+    symbols = (b"_f\0\0\0\0\0\0" + struct.pack("<IhHBB", 0, 1, FUNCTION, 2, 0)
+               + b"_g\0\0\0\0\0\0" + struct.pack("<IhHBB", 0, 0, FUNCTION, 2, 0))
+    return header + section + body + relocation + symbols + struct.pack("<I", 4)
+
+
 class BodyTests(unittest.TestCase):
     def test_body_and_relocated_spans(self):
         body = bytes(range(16))
@@ -117,3 +131,21 @@ class CountWindowTest(unittest.TestCase):
         start, stop = rr.count_window(121)
         self.assertEqual(stop - start + 1, 64)
         self.assertTrue(start <= 121 <= stop)
+
+
+class SyntheticReferenceTest(unittest.TestCase):
+    def _object(self, body: bytes) -> bytes:
+        return _coff_with_function(body)
+
+    def test_the_original_body_replaces_the_compile_outside_relocations(self):
+        compiled = bytes.fromhex("8d4c24088d542408e800000000c3")
+        original = bytes.fromhex("8d5424088d4c2408e8aabbccddc3")
+        data = rr.synthetic_reference(self._object(compiled), "_f", original)
+        body, spans = rr.function_body(msvc_coff.parse_coff(data), "_f")
+        self.assertEqual(spans, [(9, 13)])
+        self.assertEqual(body, bytes.fromhex("8d5424088d4c2408e800000000c3"))
+
+    def test_no_reference_when_lengths_differ_or_bodies_agree(self):
+        compiled = bytes.fromhex("8d4c24088d542408e800000000c3")
+        self.assertIsNone(rr.synthetic_reference(self._object(compiled), "_f", compiled[:-1]))
+        self.assertIsNone(rr.synthetic_reference(self._object(compiled), "_f", compiled))

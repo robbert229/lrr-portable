@@ -96,6 +96,35 @@ def body_matches(body: bytes, spans: list[tuple[int, int]], original: bytes) -> 
     return len(original) == len(body) and masked(body, spans) == masked(original, spans)
 
 
+def synthetic_reference(data: bytes, symbol: str, original: bytes) -> bytes | None:
+    """``data`` with ``symbol``'s body replaced by the original's bytes.
+
+    The compile's relocated fields are kept: they hold addends, not linked
+    addresses. None when the bodies differ in length (no reordering of the
+    compile's instructions can reach the original) or already agree.
+    """
+    coff = msvc_coff.parse_coff(data, "synthetic reference")
+    result = function_body(coff, symbol)
+    if result is None:
+        return None
+    body, spans = result
+    if len(original) != len(body):
+        return None
+    target = bytearray(original)
+    for start, end in spans:
+        target[start:end] = body[start:end]
+    if bytes(target) == body:
+        return None
+    sym = next(s for s in coff.symbols.values()
+               if s.name == symbol and s.section > 0 and s.is_function)
+    optional_size = struct.unpack_from("<H", data, 16)[0]
+    header = 20 + optional_size + (sym.section - 1) * 40
+    raw = struct.unpack_from("<I", data, header + 20)[0] + sym.value
+    out = bytearray(data)
+    out[raw:raw + len(body)] = target
+    return bytes(out)
+
+
 def translation_unit(build_plan: dict, source: str) -> dict:
     units = [u for u in build_plan.get("translation_units", []) if u.get("source") == source]
     if len(units) != 1:
@@ -177,11 +206,13 @@ class Found:
     symbol: str
     pads: int | None
     placement: str = "after_includes"
+    synthetic: bool = False
     object_path: str | None = None
     plan_path: str | None = None
 
 
-def find_references(addresses: list[int], *, pads: tuple[int, int], jobs: int) -> tuple[Path, list[Found], dict[int, bytes]]:
+def find_references(addresses: list[int], *, pads: tuple[int, int], jobs: int,
+                    synthetic: bool = False) -> tuple[Path, list[Found], dict[int, bytes]]:
     """Sweep pad counts for one unit; the first exact compile per address."""
     import match_function as mf
     import phase_probe as pp
@@ -243,6 +274,20 @@ def find_references(addresses: list[int], *, pads: tuple[int, int], jobs: int) -
                             objects[address] = data
                 if all(item.pads is not None for item in found.values()):
                     break
+        if synthetic and any(item.pads is None for item in found.values()):
+            _n, base = compile_pads(0)
+            if base is not None:
+                for address, item in found.items():
+                    if item.pads is not None:
+                        continue
+                    result = function_body(msvc_coff.parse_coff(base, "unpadded compile"), item.symbol)
+                    if result is None:
+                        continue
+                    data = synthetic_reference(base, item.symbol,
+                                               original_bytes(exe, address, len(result[0])))
+                    if data is not None:
+                        item.pads, item.synthetic = 0, True
+                        objects[address] = data
         return source, list(found.values()), objects
     finally:
         unit.close()
@@ -254,14 +299,14 @@ def write_outputs(source: Path, found: list[Found], objects: dict[int, bytes], *
     unit = translation_unit(build_plan, source.relative_to(ROOT).as_posix())
     out.mkdir(parents=True, exist_ok=True)
     for item in found:
-        if not item.pads:
+        if not item.pads and not item.synthetic:
             continue  # None: no pad count fits; 0: the source already compiles to it
         obj = out / f"{item.address:08x}.obj"
         plan = out / f"{item.address:08x}.json"
         obj.write_bytes(objects[item.address])
         reference = obj.relative_to(ROOT).as_posix()
         plan.write_bytes(grind_plan(unit=unit, symbol=item.symbol, reference=reference,
-                                    counts=counts or count_window(item.pads),
+                                    counts=counts or ((1, 4) if item.synthetic else count_window(item.pads)),
                                     placement=item.placement))
         item.object_path = reference
         item.plan_path = plan.relative_to(ROOT).as_posix()
@@ -276,6 +321,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="extern-run lengths the grind plan searches (default: 64 lengths "
                              "centred on the pad count found; at most 64)")
     parser.add_argument("--jobs", type=int, default=min(8, os.cpu_count() or 1))
+    parser.add_argument("--synthetic", action="store_true",
+                        help="for an address no pad count reproduces, write a synthetic reference: "
+                             "the unpadded compile with the function's body replaced by the "
+                             "original's (for grind's donor rewriting)")
     parser.add_argument("--out", type=Path, default=ROOT / "reference" / "grind")
     parser.add_argument("--json", action="store_true")
     return parser
@@ -290,7 +339,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.pads[0] < 0 or args.pads[1] < args.pads[0]:
             raise ReferenceError("--pads must be an increasing range from 0")
         out = output_dir(args.out)
-        source, found, objects = find_references(args.addresses, pads=tuple(args.pads), jobs=args.jobs)
+        source, found, objects = find_references(args.addresses, pads=tuple(args.pads), jobs=args.jobs,
+                                                 synthetic=args.synthetic)
         write_outputs(source, found, objects, out=out,
                       counts=tuple(args.counts) if args.counts is not None else None)
     except Exception as exc:  # pylint: disable=broad-except
@@ -305,6 +355,10 @@ def main(argv: list[str] | None = None) -> int:
             if item.pads is None:
                 print(f"{item.address:#010x} {item.symbol}: no pad count in {args.pads[0]}..{args.pads[1]} "
                       "reproduces the original's body")
+            elif item.synthetic:
+                print(f"{item.address:#010x} {item.symbol}: synthetic reference {item.object_path} "
+                      "(the original's body in the unpadded compile)")
+                print(f"  rbit discover grind . --expert-plan {item.plan_path} [--accept-progress]")
             elif item.pads == 0:
                 print(f"{item.address:#010x} {item.symbol}: the unit already compiles to the original's "
                       "body (outside relocated fields); nothing for grind to find")
