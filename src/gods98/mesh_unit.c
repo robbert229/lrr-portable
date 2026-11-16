@@ -2155,3 +2155,5 @@ int mesh_render_triangle_list(unsigned long matHandle, Mesh_Texture2* texture,
 #ifdef __cplusplus
 }
 #endif
+
+#include "gods98/d3drmdef_consts.h"
