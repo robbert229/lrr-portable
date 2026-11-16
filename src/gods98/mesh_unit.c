@@ -112,8 +112,9 @@ struct Mesh_ContVertex {
     Mesh_Vector3F normal;   /* +0x0c */
     float tu;               /* +0x18 */
     float tv;               /* +0x1c */
-    unsigned long colour;   /* +0x20 */
+    unsigned int colour;    /* +0x20: a 32-bit word, as on Win32 */
 };
+static_assert(sizeof(Mesh_ContVertex) == 0x24, "Container.c's vertex is 0x24 bytes");
 
 /* Viewports.c's Viewport: the Direct3DRM viewport at +0x10 and the
  * rendering flag at +0x18. */
