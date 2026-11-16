@@ -1,4 +1,4 @@
-# input_sha256: 76538a435914e6f7c4999e2aa501f502f1bba3e64c0d46c8009fae51cf1ee131
+# input_sha256: 71040a8a248cd318a77013888f7d52b2806e98cf4df6090698fea9c380dc6eb4
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1041,8 +1041,8 @@
 0x0043b320 100.00 legoobject_remove_all
 0x0043b350 100.00 legoobject_remove_all_callback
 0x0043b360 100.00 legoobject_pick_at_screen_position
-0x0043b3b0 87.29 legoobject_pick_at_screen_position_callback
-0x0043b6c0 77.69 legoobject_select_in_screen_rect
+0x0043b3b0 95.45 legoobject_pick_at_screen_position_callback
+0x0043b6c0 96.72 legoobject_select_in_screen_rect
 0x0043b770 100.00 legoobject_select_in_screen_rect_callback
 0x0043b820 100.00 legoobject_first_person_meshes_swap
 0x0043b850 100.00 legoobject_lod_meshes_update
@@ -1139,7 +1139,7 @@
 0x00446e40 100.00 legoobject_nearest_cell_route_commit
 0x004470d0 100.00 legoobject_conditional_type_five_spawn
 0x004471b0 100.00 legoobject_try_create_linked_at_position
-0x00447210 85.07 legoobject_adjacent_placement_cell_search
+0x00447210 100.00 legoobject_adjacent_placement_cell_search
 0x004473b0 100.00 legoobject_route_to_cell_command_issue
 0x004474f0 100.00 legoobject_linked_proximity_response
 0x004475c0 100.00 legoobject_progress_negative_delta_handle
@@ -1205,7 +1205,7 @@
 0x0044b370 100.00 legoobject_activity_grant
 0x0044b480 100.00 legoobject_activity_scan
 0x0044b4c0 100.00 legoobject_type_two_target_resolve_and_apply
-0x0044b500 52.33 legoobject_position_step_command_issue_and_link
+0x0044b500 100.00 legoobject_position_step_command_issue_and_link
 0x0044b680 100.00 legoobject_scene_object_tree_attach
 0x0044b7a0 100.00 legoobject_matrix_rotate_z_with_offset
 0x0044b850 100.00 legoobject_scene_node_sync_callback
@@ -3766,8 +3766,8 @@
 0x0043b320 100.00 legoobject_remove_all
 0x0043b350 100.00 legoobject_remove_all_callback
 0x0043b360 100.00 legoobject_pick_at_screen_position
-0x0043b3b0 87.29 legoobject_pick_at_screen_position_callback
-0x0043b6c0 77.69 legoobject_select_in_screen_rect
+0x0043b3b0 95.45 legoobject_pick_at_screen_position_callback
+0x0043b6c0 96.72 legoobject_select_in_screen_rect
 0x0043b770 100.00 legoobject_select_in_screen_rect_callback
 0x0043b820 100.00 legoobject_first_person_meshes_swap
 0x0043b850 100.00 legoobject_lod_meshes_update
@@ -3864,7 +3864,7 @@
 0x00446e40 100.00 legoobject_nearest_cell_route_commit
 0x004470d0 100.00 legoobject_conditional_type_five_spawn
 0x004471b0 100.00 legoobject_try_create_linked_at_position
-0x00447210 85.07 legoobject_adjacent_placement_cell_search
+0x00447210 100.00 legoobject_adjacent_placement_cell_search
 0x004473b0 100.00 legoobject_route_to_cell_command_issue
 0x004474f0 100.00 legoobject_linked_proximity_response
 0x004475c0 100.00 legoobject_progress_negative_delta_handle
@@ -3930,7 +3930,7 @@
 0x0044b370 100.00 legoobject_activity_grant
 0x0044b480 100.00 legoobject_activity_scan
 0x0044b4c0 100.00 legoobject_type_two_target_resolve_and_apply
-0x0044b500 52.33 legoobject_position_step_command_issue_and_link
+0x0044b500 100.00 legoobject_position_step_command_issue_and_link
 0x0044b680 100.00 legoobject_scene_object_tree_attach
 0x0044b7a0 100.00 legoobject_matrix_rotate_z_with_offset
 0x0044b850 100.00 legoobject_scene_node_sync_callback
