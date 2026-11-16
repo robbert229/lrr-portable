@@ -54,12 +54,12 @@ void* scene_root_object_get(void);                                 /* 00472940 *
  * (container_link_names.h; #805, finding 674). */
 #define lego_container_create_adapter ddiscene_object_allocate
 void* lego_container_create_adapter(void* parent);                 /* 00472950 */
-uint32_t scene_object_wrapped_pointer_get(const void* wrapped);    /* 00473680 */
+void* scene_object_wrapped_pointer_get(const void* wrapped);       /* 00473680 */
 int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);               /* 004754c0 */
 int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3]); /* 00475500 */
-uint32_t scene_object_query_value_if_ready(void* object);          /* 00476f70 */
+void* scene_object_query_value_if_ready(void* object);             /* 00476f70 */
 
 /* gods98 Mesh.c (view.hpp, surface.hpp, record.hpp, mesh_unit.h). */
 struct EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(

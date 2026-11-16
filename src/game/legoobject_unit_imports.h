@@ -651,7 +651,7 @@ void lego_panel_selection_highlight_toggle_adapter(int on);                /* 00
 void global_float_accumulator_00555330_add(float value);                   /* 004628a0 */
 void global_float_accumulate_00555120(float value);                        /* 004628c0 */
 float entity_stats_float_at80(const struct Lego_Object* e);                 /* 00469dc0 */
-uint32_t scene_object_owner_get(const void* scene_object);                 /* 00473db0 */
+void* scene_object_owner_get(const void* scene_object);                    /* 00473db0 */
 /* 0043f190's callees. */
 struct TerrainMap;
 void global_object_field8c_subtract(int amount);                           /* 0041f880 */

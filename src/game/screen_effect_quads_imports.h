@@ -81,7 +81,7 @@ void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* parent);        /* 00475710 */
 /* gods98 Viewports.c (viewports.c): Viewport_GetCamera, by its matching
  * build name (viewports_link_names.h). */
-uint32_t scene_object_query_value_if_ready(void* object);         /* 00476f70 */
+void* scene_object_query_value_if_ready(void* object);            /* 00476f70 */
 
 /* gods98 Mesh.c (view.hpp, surface.hpp, record.hpp). The port's models are
  * the port tail gods98/mesh_port.cpp; in the matching build (MSVC 5.0) the

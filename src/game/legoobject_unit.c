@@ -4281,7 +4281,7 @@ void legoobject_trigger_frame_callback(void* cont, void* data)
 {
     Lego_Object* owner;
 
-    owner = (Lego_Object*)(size_t)scene_object_owner_get(cont);
+    owner = (Lego_Object*)scene_object_owner_get(cont);
     if (owner != NULL)
         owner->flags2 |= 0x10000;
 }

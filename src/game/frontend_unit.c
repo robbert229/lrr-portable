@@ -2818,7 +2818,7 @@ void front_callback_slider_brightness(int brightness)
     level = (float)brightness * 0.1f;
     spot = level * 0.8f - -0.2f;
     render_object_set_packed_rgba_from_float_channels(legoGlobs_spotlightTop, level, level, level, 1.0f);
-    render_object_set_packed_rgba_from_float_channels((void*)(uintptr_t)legoGlobs_f_5560f8, spot, spot, spot, 1.0f);
+    render_object_set_packed_rgba_from_float_channels(legoGlobs_f_5560f8, spot, spot, spot, 1.0f);
     light_interface_call_slot_40(legoGlobs_spotlightTop, FRONT_FLOAT_ARG(level * 1.5f - -0.5f));
     light_interface_call_slot_3c(legoGlobs_spotlightTop, FRONT_FLOAT_ARG(level * 0.8f - -0.2f));
 }

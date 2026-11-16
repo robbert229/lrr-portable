@@ -314,7 +314,7 @@ static void damage_font_mesh_render_callback(void* mesh, DamageFont_Data* data,
     scale = (data->timer * (1.0f / DAMAGEFONT_MAXTIME)) * 2.0f - -1.0f;
     ddiscene_object_pose_method_dispatch(data->cont, NULL, 0.0f, 0.0f, 1.0f,
                                          0.0f, 1.0f, 0.0f);
-    cam = (void*)(uintptr_t)scene_object_query_value_if_ready(view);
+    cam = scene_object_query_value_if_ready(view);
     ddiscene_object_facing_pair_get(cam, NULL, (float*)&dir, (float*)&up);
     ddiscene_object_position_get(camera, NULL, (float*)&camPos);
 
