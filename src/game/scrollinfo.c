@@ -246,8 +246,9 @@ int scroll_info_mouse_over_structure(ScrollInfo_Struct* scrollInfo,
                                      ScrollInfo_Button* button, int mouseX,
                                      int mouseY)
 {
-    float x = panelGlobs.panelTable[scrollInfo->panel].currPos.x + scrollInfo->xOffset;
-    float y = panelGlobs.panelTable[scrollInfo->panel].currPos.y + scrollInfo->yOffset;
+    PanelData* panel = &panelGlobs.panelTable[scrollInfo->panel];
+    float x = (panel->currPos.x) + scrollInfo->xOffset;
+    float y = (panel->currPos.y) + scrollInfo->yOffset;
 
     mouseX -= (int)x;
     mouseY -= (int)y;
