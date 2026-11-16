@@ -20,19 +20,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <miniwin/ddraw.h>
+
 #include "draw.h"
 #include "crt/crt.h"
 
 #if defined(LEGORRR_BACKEND_MINIWIN)
 #define DRAW_BACK_SURFACE() (draw_port_back_surface)
 #else
-#define DRAW_BACK_SURFACE() ((DrawSurface*)(uintptr_t)s_render_surface_secondary)
+#define DRAW_BACK_SURFACE() ((LPDIRECTDRAWSURFACE4)(uintptr_t)s_render_surface_secondary)
 #endif
 
 #define DRAW_FLAG_INITIALISED 0x1
-
-#define DRAW_DD_OK 0
-#define DRAW_DDLOCK_WAIT 0x1
 
 typedef void (*DrawPixelFunc)(int32_t x, int32_t y, uint32_t value);
 
@@ -97,8 +96,8 @@ void surface_render_setup(const Area2F* window)
 // FUNCTION: LEGORR 0x00485ea0
 void viewport_subrectangle_set(const Area2F* window)
 {
-    DrawSurface* surf = DRAW_BACK_SURFACE();
-    DrawSurfaceDesc desc;
+    LPDIRECTDRAWSURFACE4 surf = DRAW_BACK_SURFACE();
+    DDSURFACEDESC2 desc;
     float width, height;
 
     drawGlobs.clipStart.x = 0.0f;
@@ -110,7 +109,7 @@ void viewport_subrectangle_set(const Area2F* window)
 
     memset(&desc, 0, sizeof(desc));
     desc.dwSize = sizeof(desc);
-    if (surf->lpVtbl->GetSurfaceDesc(surf, &desc) == DRAW_DD_OK) {
+    if (surf->GetSurfaceDesc(&desc) == DD_OK) {
         width = (float)desc.dwWidth;
         height = (float)desc.dwHeight;
         drawGlobs.clipEnd.x = width;
@@ -140,7 +139,7 @@ void surface_draw_polyline(Point2F* fromList, Point2F* toList,
                            uint32_t count, float r, float g, float b,
                            int effect)
 {
-    DrawSurface* surf = DRAW_BACK_SURFACE();
+    LPDIRECTDRAWSURFACE4 surf = DRAW_BACK_SURFACE();
     uint32_t colour;
     uint32_t loop;
     Point2F* from;
@@ -164,7 +163,7 @@ void surface_draw_polyline(Point2F* fromList, Point2F* toList,
 void surface_fill_pixel_spans(Area2F* rectList, uint32_t count, float r,
                               float g, float b, int effect)
 {
-    DrawSurface* surf = DRAW_BACK_SURFACE();
+    LPDIRECTDRAWSURFACE4 surf = DRAW_BACK_SURFACE();
     uint32_t colour;
     uint32_t loop;
     Area2F rect;
@@ -198,7 +197,7 @@ void surface_fill_pixel_spans(Area2F* rectList, uint32_t count, float r,
 void surface_fill_pixel_span_records(DrawRect* rectList, uint32_t count,
                                      int effect)
 {
-    DrawSurface* surf = DRAW_BACK_SURFACE();
+    LPDIRECTDRAWSURFACE4 surf = DRAW_BACK_SURFACE();
     uint32_t colour;
     uint32_t loop;
     Area2F rect;
@@ -235,7 +234,7 @@ void surface_draw_circle_pixels(Point2F* pos, uint32_t radius,
                                 uint32_t dotCount, float r, float g, float b,
                                 int effect)
 {
-    DrawSurface* surf = DRAW_BACK_SURFACE();
+    LPDIRECTDRAWSURFACE4 surf = DRAW_BACK_SURFACE();
     float step = s_draw_two_pi / (float)dotCount;
     uint32_t colour;
     uint32_t loop;
@@ -270,21 +269,20 @@ uint32_t surface_color_pack_to_pixel(float r, float g, float b)
 
 /* Draw_LockSurface. */
 // FUNCTION: LEGORR 0x00486550
-int surface_active_pixel_writer_configure(void* surf, int effect)
+int surface_active_pixel_writer_configure(LPDIRECTDRAWSURFACE4 surf, int effect)
 {
-    DrawSurface* surface = (DrawSurface*)surf;
-    DrawSurfaceDesc desc;
+    DDSURFACEDESC2 desc;
     uint32_t loop;
 
     memset(&desc, 0, sizeof(desc));
     desc.dwSize = sizeof(desc);
-    if (surface->lpVtbl->Lock(surface, NULL, &desc, DRAW_DDLOCK_WAIT, NULL) == DRAW_DD_OK) {
+    if (surf->Lock(NULL, &desc, DDLOCK_WAIT, NULL) == DD_OK) {
         drawGlobs.buffer = desc.lpSurface;
         drawGlobs.pitch = desc.lPitch;
-        drawGlobs.redMask = desc.pfRBitMask;
-        drawGlobs.greenMask = desc.pfGBitMask;
-        drawGlobs.blueMask = desc.pfBBitMask;
-        drawGlobs.bpp = desc.pfRGBBitCount;
+        drawGlobs.redMask = desc.ddpfPixelFormat.dwRBitMask;
+        drawGlobs.greenMask = desc.ddpfPixelFormat.dwGBitMask;
+        drawGlobs.blueMask = desc.ddpfPixelFormat.dwBBitMask;
+        drawGlobs.bpp = desc.ddpfPixelFormat.dwRGBBitCount;
         drawGlobs.redBits = drawGlobs.greenBits = drawGlobs.blueBits = 0;
         for (loop = 0; loop < drawGlobs.bpp; loop++) {
             if (drawGlobs.redMask & (1 << loop)) drawGlobs.redBits++;
@@ -299,11 +297,9 @@ int surface_active_pixel_writer_configure(void* surf, int effect)
 
 /* Draw_UnlockSurface. */
 // FUNCTION: LEGORR 0x00486650
-void surface_unlock_reset_pixel_writer(void* surf)
+void surface_unlock_reset_pixel_writer(LPDIRECTDRAWSURFACE4 surf)
 {
-    DrawSurface* surface = (DrawSurface*)surf;
-
-    surface->lpVtbl->Unlock(surface, NULL);
+    surf->Unlock(NULL);
     drawGlobs.buffer = NULL;
     drawGlobs.pitch = 0;
     drawGlobs.redMask = 0;

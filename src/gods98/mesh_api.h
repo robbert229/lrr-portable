@@ -54,16 +54,18 @@ typedef struct Mesh_Group Mesh_Group;
 typedef struct Mesh_Texture Mesh_Texture;
 typedef struct Mesh_TextureReference Mesh_TextureReference;
 typedef struct Mesh_LightWave_Surface Mesh_LightWave_Surface;
-typedef struct Mesh_D3DMaterial Mesh_D3DMaterial;   /* D3DMATERIAL */
 typedef struct Mesh_Matrix Mesh_Matrix;             /* D3DMATRIX */
 typedef struct Mesh_Vector3F Mesh_Vector3F;
 typedef struct Mesh_Point2F Mesh_Point2F;
 typedef struct Mesh_ContVertex Mesh_ContVertex;     /* Container.c's vertex */
 typedef struct Mesh_Viewport Mesh_Viewport;         /* Viewports.c's Viewport */
-typedef struct Mesh_Frame Mesh_Frame;               /* IDirect3DRMFrame3 */
-typedef struct Mesh_RMViewport Mesh_RMViewport;     /* IDirect3DRMViewport */
-typedef struct Mesh_Surface Mesh_Surface;           /* IDirectDrawSurface4 */
-typedef struct Mesh_Texture2 Mesh_Texture2;         /* IDirect3DTexture2 */
+/* miniwin's DirectX types (<miniwin/d3drm.h>), declared here so that the
+ * header does not pull in miniwin's DirectX headers. */
+struct D3DMATERIAL;
+struct IDirect3DRMFrame3;
+struct IDirect3DRMViewport;
+struct IDirectDrawSurface4;
+struct IDirect3DTexture2;
 
 /* A mesh's render callback: Mesh_SetMeshRenderDesc calls it before the
  * mesh's render states are set. */
@@ -72,16 +74,17 @@ typedef void (*Mesh_RenderCallbackFunc)(Mesh* mesh, void* data,
 
 int mesh_initialise(const char* sharedTextureDir);  /* 004805b0 */
 int mesh_create_global_material(void);  /* 00480650 */
-int mesh_set_material(Mesh_D3DMaterial* newMaterial);  /* 00480780 */
+int mesh_set_material(struct D3DMATERIAL* newMaterial);  /* 00480780 */
 Mesh* mesh_obtain_from_list(void);  /* 004807a0 */
 void mesh_return_to_list(Mesh* deadMesh);  /* 004807d0 */
 void mesh_add_list(void);  /* 004807f0 */
-Mesh* mesh_create_on_frame(Mesh_Frame* frame,
+Mesh* mesh_create_on_frame(struct IDirect3DRMFrame3* frame,
                            Mesh_RenderCallbackFunc renderFunc,
                            unsigned long renderFlags, void* data,
                            unsigned long type);  /* 00480870 */
 void* mesh_clone(void* srcMesh, void* frame);  /* 00480900 */
-Mesh* mesh_load(const char* fname, Mesh_Frame* frame, int noTextures);  /* 004809e0 */
+Mesh* mesh_load(const char* fname, struct IDirect3DRMFrame3* frame,
+                int noTextures);  /* 004809e0 */
 int mesh_parse_lwo(const char* basePath, Mesh* mesh,
                    struct APPOBJ* lightWaveObject, int noTextures);  /* 00480ac0 */
 void mesh_get_surf_info(const char* basePath, struct APPOBJ* lightWaveObject,
@@ -149,20 +152,22 @@ Mesh_TextureReference* mesh_search_texture_list(
     const char* path);  /* 00483030 */
 void mesh_add_texture_reference(Mesh_TextureReference* textureList,
                                 unsigned long* count, const char* path,
-                                Mesh_Surface* surface, int trans);  /* 00483080 */
+                                struct IDirectDrawSurface4* surface,
+                                int trans);  /* 00483080 */
 void mesh_set_group_texture(Mesh* mesh, unsigned long groupID,
                             Mesh_Texture* texture);  /* 004830c0 */
 void mesh_remove_group_texture(Mesh* mesh, unsigned long groupID);  /* 00483140 */
 int mesh_create_group_material(Mesh* mesh, unsigned long groupID);  /* 00483170 */
 int mesh_set_group_material(Mesh* mesh, unsigned long groupID,
-                            Mesh_D3DMaterial* material);  /* 00483240 */
+                            struct D3DMATERIAL* material);  /* 00483240 */
 int mesh_set_group_colour(Mesh* mesh, unsigned long groupID, float r,
                           float g, float b, unsigned long type);  /* 00483270 */
-Mesh_D3DMaterial* mesh_get_group_material(Mesh* mesh, unsigned long groupID);  /* 00483400 */
+struct D3DMATERIAL* mesh_get_group_material(Mesh* mesh,
+                                            unsigned long groupID);  /* 00483400 */
 int mesh_set_group_material_values(Mesh* mesh, unsigned long groupID,
                                    float value, unsigned long type);  /* 00483420 */
 void mesh_set_identity_matrix(Mesh_Matrix* m);  /* 00483540 */
-int mesh_set_current_viewport(Mesh_RMViewport* lpView);  /* 00483580 */
+int mesh_set_current_viewport(struct IDirect3DRMViewport* lpView);  /* 00483580 */
 int mesh_set_current_gods_viewport(Mesh_Viewport* vp);  /* 00483600 */
 int mesh_set_transform(unsigned long state, Mesh_Matrix* mat);  /* 00483690 */
 int mesh_set_texture_stage_state(unsigned long type, unsigned long value);  /* 00483810 */
@@ -174,7 +179,8 @@ int mesh_render_group(Mesh* mesh, Mesh_Group* group, Mesh_Matrix* matWorld,
                       int alphaBlend);  /* 00483a90 */
 int mesh_set_group_render_desc(Mesh* mesh, Mesh_Group* group,
                                Mesh_Matrix* matWorld, int alphaBlend);  /* 00483b00 */
-int mesh_render_triangle_list(unsigned long matHandle, Mesh_Texture2* texture,
+int mesh_render_triangle_list(unsigned long matHandle,
+                              struct IDirect3DTexture2* texture,
                               unsigned long renderFlags, void* vertices,
                               unsigned long vertexCount,
                               unsigned short* faceData,

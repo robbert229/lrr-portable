@@ -9,44 +9,12 @@
  * window stays as it was and nothing is drawn, as before the conversion.
  * Tests install their own surface. */
 #if defined(LEGORRR_BACKEND_MINIWIN)
-#include <stddef.h>
-
 #include "draw.h"
+#include "draw_port.hpp"
 
-static const long kDrawPortSurfaceLost = (long)0x887601c2; /* DDERR_SURFACELOST */
-
-static long draw_port_get_surface_desc(DrawSurface* surf,
-                                       DrawSurfaceDesc* desc)
-{
-    (void)surf;
-    (void)desc;
-    return kDrawPortSurfaceLost;
-}
-
-static long draw_port_lock(DrawSurface* surf, void* rect,
-                           DrawSurfaceDesc* desc, uint32_t flags, void* event)
-{
-    (void)surf;
-    (void)rect;
-    (void)desc;
-    (void)flags;
-    (void)event;
-    return kDrawPortSurfaceLost;
-}
-
-static long draw_port_unlock(DrawSurface* surf, void* rect)
-{
-    (void)surf;
-    (void)rect;
-    return kDrawPortSurfaceLost;
-}
-
-static const DrawSurfaceVtbl s_draw_port_no_surface_vtbl = {
-    {}, draw_port_get_surface_desc, {}, draw_port_lock, {}, draw_port_unlock
-};
-static DrawSurface s_draw_port_no_surface = { &s_draw_port_no_surface_vtbl };
+static DrawPortLostSurface s_draw_port_no_surface;
 
 extern "C" {
-DrawSurface* draw_port_back_surface = &s_draw_port_no_surface;
+LPDIRECTDRAWSURFACE4 draw_port_back_surface = &s_draw_port_no_surface;
 }
 #endif

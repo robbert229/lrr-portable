@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "gods98/draw.h"
+#include "gods98/draw_port.hpp"
 
 static int s_failures = 0;
 
@@ -24,66 +25,59 @@ static void CHECK(int cond, const char* what)
 
 enum { FAKE_WIDTH = 10, FAKE_HEIGHT = 8, FAKE_PITCH = 48 };
 
-struct FakeSurface {
-    DrawSurface base;
+/* An IDirectDrawSurface4 with the three methods draw.c calls. */
+struct FakeSurface : public DrawPortLostSurface {
     uint32_t bpp;
     uint32_t masks[3];
     int locks;
     int unlocks;
     int locked;
     uint8_t pixels[FAKE_PITCH * FAKE_HEIGHT + 4];
-};
 
-static long DRAW_STDCALL fake_get_surface_desc(DrawSurface* surf,
-                                               DrawSurfaceDesc* desc)
-{
-    (void)surf;
-    if (desc->dwSize != sizeof(DrawSurfaceDesc)) return 1;
-    desc->dwWidth = FAKE_WIDTH;
-    desc->dwHeight = FAKE_HEIGHT;
-    return 0;
-}
+    HRESULT GetSurfaceDesc(LPDDSURFACEDESC2 desc) override
+    {
+        if (desc->dwSize != sizeof(DDSURFACEDESC2)) return DDERR_INVALIDPARAMS;
+        desc->dwWidth = FAKE_WIDTH;
+        desc->dwHeight = FAKE_HEIGHT;
+        return DD_OK;
+    }
 
-static long DRAW_STDCALL fake_lock(DrawSurface* surf, void* rect,
-                                   DrawSurfaceDesc* desc, uint32_t flags,
-                                   void* event)
-{
-    FakeSurface* fake = (FakeSurface*)surf;
-    if (rect != NULL || event != NULL || flags != 1u) return 1;
-    if (desc->dwSize != sizeof(DrawSurfaceDesc)) return 1;
-    fake->locks++;
-    fake->locked = 1;
-    desc->lpSurface = fake->pixels;
-    desc->lPitch = FAKE_PITCH;
-    desc->pfRGBBitCount = fake->bpp;
-    desc->pfRBitMask = fake->masks[0];
-    desc->pfGBitMask = fake->masks[1];
-    desc->pfBBitMask = fake->masks[2];
-    return 0;
-}
+    HRESULT Lock(LPRECT rect, LPDDSURFACEDESC2 desc, DDLockFlags flags,
+                 HANDLE event) override
+    {
+        if (rect != NULL || event != NULL || flags != DDLOCK_WAIT)
+            return DDERR_INVALIDPARAMS;
+        if (desc->dwSize != sizeof(DDSURFACEDESC2)) return DDERR_INVALIDPARAMS;
+        locks++;
+        locked = 1;
+        desc->lpSurface = pixels;
+        desc->lPitch = FAKE_PITCH;
+        desc->ddpfPixelFormat.dwRGBBitCount = bpp;
+        desc->ddpfPixelFormat.dwRBitMask = masks[0];
+        desc->ddpfPixelFormat.dwGBitMask = masks[1];
+        desc->ddpfPixelFormat.dwBBitMask = masks[2];
+        return DD_OK;
+    }
 
-static long DRAW_STDCALL fake_unlock(DrawSurface* surf, void* rect)
-{
-    FakeSurface* fake = (FakeSurface*)surf;
-    (void)rect;
-    fake->unlocks++;
-    fake->locked = 0;
-    return 0;
-}
-
-static const DrawSurfaceVtbl s_fake_vtbl = {
-    {}, fake_get_surface_desc, {}, fake_lock, {}, fake_unlock
+    HRESULT Unlock(LPRECT) override
+    {
+        unlocks++;
+        locked = 0;
+        return DD_OK;
+    }
 };
 
 static void fake_init(FakeSurface* fake, uint32_t bpp, uint32_t red,
                       uint32_t green, uint32_t blue)
 {
-    memset(fake, 0, sizeof(*fake));
-    fake->base.lpVtbl = &s_fake_vtbl;
     fake->bpp = bpp;
     fake->masks[0] = red;
     fake->masks[1] = green;
     fake->masks[2] = blue;
+    fake->locks = 0;
+    fake->unlocks = 0;
+    fake->locked = 0;
+    memset(fake->pixels, 0, sizeof(fake->pixels));
 }
 
 static uint16_t pixel16(const FakeSurface* fake, int x, int y)
@@ -112,16 +106,12 @@ static void set_area(Area2F* area, float x, float y, float w, float h)
 
 int main(void)
 {
-    DrawSurface* const native_surface = draw_port_back_surface;
+    LPDIRECTDRAWSURFACE4 const native_surface = draw_port_back_surface;
     FakeSurface fake;
     Area2F area;
     Area2F clip;
 
     CHECK(sizeof(DrawRect) == 0x1c, "a coloured rectangle is 0x1c bytes");
-    CHECK(offsetof(DrawSurfaceDesc, lPitch) == 0x10, "lPitch at +0x10");
-    CHECK(offsetof(DrawSurfaceDesc, pfRGBBitCount) ==
-          offsetof(DrawSurfaceDesc, lpSurface) + sizeof(void*) + 0x20 + 0xc,
-          "the pixel format follows the colour keys");
 
     /* The native default surface fails, so nothing is locked or drawn. */
     surface_render_setup(NULL);
@@ -132,7 +122,7 @@ int main(void)
           "no surface: the lock fails");
 
     fake_init(&fake, 16, 0xf800, 0x07e0, 0x001f);
-    draw_port_back_surface = &fake.base;
+    draw_port_back_surface = &fake;
 
     /* Draw_SetClipWindow / Draw_GetClipWindow. */
     viewport_subrectangle_set(NULL);
@@ -158,14 +148,14 @@ int main(void)
     surface_render_setup(NULL);
 
     /* Draw_LockSurface, Draw_GetColour and Draw_UnlockSurface (5:6:5). */
-    CHECK(surface_active_pixel_writer_configure(&fake.base, DRAW_EFFECT_NONE),
+    CHECK(surface_active_pixel_writer_configure(&fake, DRAW_EFFECT_NONE),
           "a 16-bit surface locks");
     CHECK(fake.locked == 1, "the surface stays locked");
     CHECK(surface_color_pack_to_pixel(1.0f, 0.0f, 0.0f) == 0xf800, "red");
     CHECK(surface_color_pack_to_pixel(0.0f, 1.0f, 0.0f) == 0x07e0, "green");
     CHECK(surface_color_pack_to_pixel(0.0f, 0.0f, 1.0f) == 0x001f, "blue");
     CHECK(surface_color_pack_to_pixel(1.0f, 1.0f, 1.0f) == 0xffff, "white");
-    surface_unlock_reset_pixel_writer(&fake.base);
+    surface_unlock_reset_pixel_writer(&fake);
     CHECK(fake.locked == 0 && fake.unlocks == 1, "the surface is unlocked");
 
     /* Draw_LineListEx and Draw_LineActual: both ends drawn, clipped. */
@@ -272,18 +262,18 @@ int main(void)
         CHECK(value == 0x00ff005a, "a 24-bit pixel");
 
         fake_init(&fake, 8, 0, 0, 0);
-        CHECK(surface_active_pixel_writer_configure(&fake.base,
+        CHECK(surface_active_pixel_writer_configure(&fake,
                                                     DRAW_EFFECT_NONE),
               "an 8-bit surface locks");
         CHECK(surface_color_pack_to_pixel(1.0f, 1.0f, 1.0f) == 0,
               "8-bit colours are 0");
-        surface_unlock_reset_pixel_writer(&fake.base);
+        surface_unlock_reset_pixel_writer(&fake);
         fake.pixels[FAKE_PITCH + 2] = 0x33;
         surface_draw_polyline(&at, &at, 1, 1.0f, 1.0f, 1.0f, DRAW_EFFECT_NONE);
         CHECK(fake.pixels[FAKE_PITCH + 2] == 0, "an 8-bit pixel");
 
         fake_init(&fake, 15, 0x7c00, 0x03e0, 0x001f);
-        CHECK(!surface_active_pixel_writer_configure(&fake.base,
+        CHECK(!surface_active_pixel_writer_configure(&fake,
                                                      DRAW_EFFECT_NONE),
               "an unsupported depth fails");
         CHECK(fake.locks == 1 && fake.unlocks == 1 && fake.locked == 0,

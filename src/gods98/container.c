@@ -2637,7 +2637,7 @@ struct AnimClone* Container_LoadAnimSet(const char* fname,
         strcpy(path, fname);
         path[strlen(path) - 2] = '\0';
         if ((scene = lws_parse(path, looping)) != NULL) {
-            lws_meshes_load(scene, (struct LwsFrame*)frame);
+            lws_meshes_load(scene, frame);
             lws_time_set(scene, 0.0f);
             if (frameCount) *frameCount = resource_entry_id_get(scene);
             animClone = anim_clone_register_lws(

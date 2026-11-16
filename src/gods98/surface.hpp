@@ -772,11 +772,12 @@ extern "C" int surface_pixel_writer_select_by_format(
 /* Draw_LockSurface (FUN_00486550): on success the surface stays locked
  * until surface_unlock_reset_pixel_writer(). */
 extern "C" int surface_active_pixel_writer_configure(
-    void* surf, int effect); /* draw.h */
+    struct IDirectDrawSurface4* surf, int effect); /* draw.h */
 typedef void (*SurfaceWriterUnlockHook)(void* surface, int flags);
 void surface_writer_unlock_hook_set(SurfaceWriterUnlockHook hook);
 void surface_directdraw_unlock(void* surface); /* FUN_0047ded0 */
-extern "C" void surface_unlock_reset_pixel_writer(void* surf); /* FUN_00486650, draw.h */
+extern "C" void surface_unlock_reset_pixel_writer(
+    struct IDirectDrawSurface4* surf); /* FUN_00486650, draw.h */
 extern "C" void surface_bresenham_line_walk_clipped(
     int32_t x1, int32_t y1, int32_t x2, int32_t y2,
     uint32_t colour); /* FUN_00486720, draw.h */

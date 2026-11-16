@@ -28,15 +28,9 @@
 
 #include "crt/vc5names.h"
 
-/* The original's Standard.h includes the Windows and DirectX headers. MSVC
- * 5.0's DirectX headers are DirectX 3's, without the interfaces this unit
- * calls, so it declares its own (below) and includes only <windows.h>, in
- * the matching build only, as config.c does. Of the include sets tried
- * (finding 625), this one, with mesh_api.h's three enums, puts the most
- * functions in the symbol counter's phase that matches (finding 538). */
-#if defined(_MSC_VER) && _MSC_VER == 1100
-#include <windows.h>
-#endif
+/* The original's Standard.h includes the Windows and DirectX headers; the
+ * unit calls miniwin's DirectX interfaces. */
+#include <miniwin/d3drm.h>
 
 #include "mesh_api.h"
 #include "mesh_imports.h"
@@ -45,12 +39,6 @@
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-#if defined(_WIN32)
-#define MESH_STDCALL __stdcall
-#else
-#define MESH_STDCALL
 #endif
 
 #define MESH_MAXLISTS 20
@@ -85,13 +73,6 @@ extern "C" {
 #define MESH_TFLAG_SEQUENCE 0x00000080
 #define MESH_TFLAG_PIXELBLENDING 0x00000020
 
-typedef struct Mesh_IID {
-    unsigned long data1;
-    unsigned short data2;
-    unsigned short data3;
-    unsigned char data4[8];
-} Mesh_IID;
-
 struct Mesh_Vector3F {
     float x;
     float y;
@@ -111,18 +92,6 @@ typedef struct Mesh_Colour4F {
     float b;
     float a;
 } Mesh_Colour4F;
-
-/* D3DMATERIAL (0x50 bytes). */
-struct Mesh_D3DMaterial {
-    unsigned long dwSize;     /* +0x00 */
-    Mesh_Colour4F diffuse;    /* +0x04 */
-    Mesh_Colour4F ambient;    /* +0x14 */
-    Mesh_Colour4F specular;   /* +0x24 */
-    Mesh_Colour4F emissive;   /* +0x34 */
-    float power;              /* +0x44 */
-    unsigned long hTexture;   /* +0x48 */
-    unsigned long dwRampSize; /* +0x4c */
-};
 
 /* D3DMATRIX. */
 struct Mesh_Matrix {
@@ -146,189 +115,6 @@ struct Mesh_ContVertex {
     unsigned long colour;   /* +0x20 */
 };
 
-typedef struct Mesh_Unknown Mesh_Unknown;     /* IUnknown */
-typedef struct Mesh_D3D Mesh_D3D;             /* IDirect3D3 */
-typedef struct Mesh_IMDevice Mesh_IMDevice;   /* IDirect3DDevice3 */
-typedef struct Mesh_IMDevice2 Mesh_IMDevice2; /* IDirect3DDevice2 */
-typedef struct Mesh_Material Mesh_Material;   /* IDirect3DMaterial3 */
-typedef struct Mesh_IMViewport Mesh_IMViewport; /* IDirect3DViewport3 */
-typedef struct Mesh_D3DRM Mesh_D3DRM;         /* IDirect3DRM3 */
-typedef struct Mesh_UserVisual Mesh_UserVisual; /* IDirect3DRMUserVisual */
-typedef struct Mesh_RMDevice Mesh_RMDevice;   /* IDirect3DRMDevice3 */
-
-typedef struct Mesh_UnknownVtbl {
-    long (MESH_STDCALL* QueryInterface)(Mesh_Unknown*, const Mesh_IID*,
-                                        void**);                /* +0x00 */
-    unsigned long (MESH_STDCALL* AddRef)(Mesh_Unknown*);         /* +0x04 */
-    unsigned long (MESH_STDCALL* Release)(Mesh_Unknown*);        /* +0x08 */
-} Mesh_UnknownVtbl;
-struct Mesh_Unknown {
-    const Mesh_UnknownVtbl* lpVtbl;
-};
-
-typedef struct Mesh_D3DVtbl {
-    void* slots_00[2];
-    unsigned long (MESH_STDCALL* Release)(Mesh_D3D*);            /* +0x08 */
-    void* slots_0c[2];
-    long (MESH_STDCALL* CreateMaterial)(Mesh_D3D*, Mesh_Material**,
-                                        Mesh_Unknown*);         /* +0x14 */
-} Mesh_D3DVtbl;
-struct Mesh_D3D {
-    const Mesh_D3DVtbl* lpVtbl;
-};
-
-typedef struct Mesh_MaterialVtbl {
-    void* slots_00[2];
-    unsigned long (MESH_STDCALL* Release)(Mesh_Material*);       /* +0x08 */
-    long (MESH_STDCALL* SetMaterial)(Mesh_Material*,
-                                     Mesh_D3DMaterial*);        /* +0x0c */
-    void* slots_10[1];
-    long (MESH_STDCALL* GetHandle)(Mesh_Material*, Mesh_IMDevice*,
-                                   unsigned long*);             /* +0x14 */
-} Mesh_MaterialVtbl;
-struct Mesh_Material {
-    const Mesh_MaterialVtbl* lpVtbl;
-};
-
-typedef struct Mesh_Texture2Vtbl {
-    void* slots_00[2];
-    unsigned long (MESH_STDCALL* Release)(Mesh_Texture2*);       /* +0x08 */
-    long (MESH_STDCALL* GetHandle)(Mesh_Texture2*, Mesh_IMDevice2*,
-                                   unsigned long*);             /* +0x0c */
-} Mesh_Texture2Vtbl;
-struct Mesh_Texture2 {
-    const Mesh_Texture2Vtbl* lpVtbl;
-};
-
-typedef struct Mesh_IMDevice2Vtbl {
-    void* slots_00[2];
-    unsigned long (MESH_STDCALL* Release)(Mesh_IMDevice2*);      /* +0x08 */
-} Mesh_IMDevice2Vtbl;
-struct Mesh_IMDevice2 {
-    const Mesh_IMDevice2Vtbl* lpVtbl;
-};
-
-typedef struct Mesh_SurfaceVtbl {
-    long (MESH_STDCALL* QueryInterface)(Mesh_Surface*, const Mesh_IID*,
-                                        void**);                /* +0x00 */
-    unsigned long (MESH_STDCALL* AddRef)(Mesh_Surface*);         /* +0x04 */
-} Mesh_SurfaceVtbl;
-struct Mesh_Surface {
-    const Mesh_SurfaceVtbl* lpVtbl;
-};
-
-typedef struct Mesh_IMViewportVtbl {
-    long (MESH_STDCALL* QueryInterface)(Mesh_IMViewport*, const Mesh_IID*,
-                                        void**);                /* +0x00 */
-    void* slots_04[1];
-    unsigned long (MESH_STDCALL* Release)(Mesh_IMViewport*);     /* +0x08 */
-} Mesh_IMViewportVtbl;
-struct Mesh_IMViewport {
-    const Mesh_IMViewportVtbl* lpVtbl;
-};
-
-typedef struct Mesh_IMDeviceVtbl {
-    long (MESH_STDCALL* QueryInterface)(Mesh_IMDevice*, const Mesh_IID*,
-                                        void**);                /* +0x00 */
-    void* slots_04[1];
-    unsigned long (MESH_STDCALL* Release)(Mesh_IMDevice*);       /* +0x08 */
-    void* slots_0c[8];
-    long (MESH_STDCALL* GetDirect3D)(Mesh_IMDevice*, Mesh_D3D**); /* +0x2c */
-    long (MESH_STDCALL* SetCurrentViewport)(Mesh_IMDevice*,
-                                            Mesh_IMViewport*);  /* +0x30 */
-    void* slots_34[8];
-    long (MESH_STDCALL* GetRenderState)(Mesh_IMDevice*, unsigned long,
-                                        unsigned long*);        /* +0x54 */
-    long (MESH_STDCALL* SetRenderState)(Mesh_IMDevice*, unsigned long,
-                                        unsigned long);         /* +0x58 */
-    long (MESH_STDCALL* GetLightState)(Mesh_IMDevice*, unsigned long,
-                                       unsigned long*);         /* +0x5c */
-    long (MESH_STDCALL* SetLightState)(Mesh_IMDevice*, unsigned long,
-                                       unsigned long);          /* +0x60 */
-    long (MESH_STDCALL* SetTransform)(Mesh_IMDevice*, unsigned long,
-                                      Mesh_Matrix*);            /* +0x64 */
-    long (MESH_STDCALL* GetTransform)(Mesh_IMDevice*, unsigned long,
-                                      Mesh_Matrix*);            /* +0x68 */
-    void* slots_6c[2];
-    long (MESH_STDCALL* DrawIndexedPrimitive)(Mesh_IMDevice*, unsigned long,
-                                              unsigned long, void*,
-                                              unsigned long,
-                                              unsigned short*,
-                                              unsigned long,
-                                              unsigned long);   /* +0x74 */
-    void* slots_78[7];
-    long (MESH_STDCALL* GetTexture)(Mesh_IMDevice*, unsigned long,
-                                    Mesh_Texture2**);           /* +0x94 */
-    long (MESH_STDCALL* SetTexture)(Mesh_IMDevice*, unsigned long,
-                                    Mesh_Texture2*);            /* +0x98 */
-    long (MESH_STDCALL* GetTextureStageState)(Mesh_IMDevice*, unsigned long,
-                                              unsigned long,
-                                              unsigned long*);  /* +0x9c */
-    long (MESH_STDCALL* SetTextureStageState)(Mesh_IMDevice*, unsigned long,
-                                              unsigned long,
-                                              unsigned long);   /* +0xa0 */
-} Mesh_IMDeviceVtbl;
-struct Mesh_IMDevice {
-    const Mesh_IMDeviceVtbl* lpVtbl;
-};
-
-typedef int (*Mesh_UserVisualCallback)(Mesh_UserVisual* lpD3DRMUV,
-                                       void* lpArg, int lpD3DRMUVreason,
-                                       Mesh_RMDevice* lpD3DRMDev,
-                                       Mesh_RMViewport* lpView);
-
-typedef struct Mesh_D3DRMVtbl {
-    void* slots_00[22];
-    long (MESH_STDCALL* CreateUserVisual)(Mesh_D3DRM*,
-                                          Mesh_UserVisualCallback, void*,
-                                          Mesh_UserVisual**);   /* +0x58 */
-} Mesh_D3DRMVtbl;
-struct Mesh_D3DRM {
-    const Mesh_D3DRMVtbl* lpVtbl;
-};
-
-typedef struct Mesh_FrameVtbl {
-    void* slots_00[18];
-    long (MESH_STDCALL* AddVisual)(Mesh_Frame*, Mesh_Unknown*);   /* +0x48 */
-    void* slots_4c[7];
-    long (MESH_STDCALL* GetScene)(Mesh_Frame*, Mesh_Frame**);     /* +0x68 */
-    void* slots_6c[8];
-    long (MESH_STDCALL* LookAt)(Mesh_Frame*, Mesh_Frame*, Mesh_Frame*,
-                                unsigned long);                 /* +0x8c */
-    void* slots_90[4];
-    long (MESH_STDCALL* DeleteVisual)(Mesh_Frame*, Mesh_Unknown*); /* +0xa0 */
-} Mesh_FrameVtbl;
-struct Mesh_Frame {
-    const Mesh_FrameVtbl* lpVtbl;
-};
-
-typedef struct Mesh_UserVisualVtbl {
-    void* slots_00[2];
-    unsigned long (MESH_STDCALL* Release)(Mesh_UserVisual*);     /* +0x08 */
-    void* slots_0c[3];
-    long (MESH_STDCALL* SetAppData)(Mesh_UserVisual*, void*);    /* +0x18 */
-} Mesh_UserVisualVtbl;
-struct Mesh_UserVisual {
-    const Mesh_UserVisualVtbl* lpVtbl;
-};
-
-typedef struct Mesh_RMViewportVtbl {
-    long (MESH_STDCALL* QueryInterface)(Mesh_RMViewport*, const Mesh_IID*,
-                                        void**);                /* +0x00 */
-    void* slots_04[1];
-    unsigned long (MESH_STDCALL* Release)(Mesh_RMViewport*);     /* +0x08 */
-    void* slots_0c[4];
-    void* (MESH_STDCALL* GetAppData)(Mesh_RMViewport*);          /* +0x1c */
-    void* slots_20[17];
-    long (MESH_STDCALL* GetCamera)(Mesh_RMViewport*, Mesh_Frame**); /* +0x64 */
-    void* slots_68[12];
-    long (MESH_STDCALL* GetDirect3DViewport)(Mesh_RMViewport*,
-                                             Mesh_IMViewport**); /* +0x98 */
-} Mesh_RMViewportVtbl;
-struct Mesh_RMViewport {
-    const Mesh_RMViewportVtbl* lpVtbl;
-};
-
 /* Viewports.c's Viewport: the Direct3DRM viewport at +0x10 and the
  * rendering flag at +0x18. */
 struct Mesh_Viewport {
@@ -336,7 +122,7 @@ struct Mesh_Viewport {
     float yoffset;          /* +0x04 */
     float width;            /* +0x08 */
     float height;           /* +0x0c */
-    Mesh_RMViewport* lpVP;  /* +0x10 */
+    LPDIRECT3DRMVIEWPORT2 lpVP; /* +0x10 */
     float smoothFOV;        /* +0x14 */
     int rendering;          /* +0x18 */
 };
@@ -351,15 +137,15 @@ typedef struct Mesh_Container {
 
 /* A texture (0xc bytes). */
 struct Mesh_Texture {
-    Mesh_Surface* surface;  /* +0x00 */
-    Mesh_Texture2* texture; /* +0x04 */
+    LPDIRECTDRAWSURFACE4 surface; /* +0x00 */
+    LPDIRECT3DTEXTURE2 texture;   /* +0x04 */
     int colourKey;          /* +0x08 */
 };
 
 /* A loaded texture's name (0xc bytes). */
 struct Mesh_TextureReference {
-    Mesh_Surface* surface;  /* +0x00 */
-    char* path;             /* +0x04 */
+    LPDIRECTDRAWSURFACE4 surface; /* +0x00 */
+    char* path;                   /* +0x04 */
     int trans;              /* +0x08 */
 };
 
@@ -385,8 +171,8 @@ struct Mesh_Group {
     unsigned long vertexCount;             /* +0x04 */
     unsigned short* faceData;              /* +0x08 */
     Mesh_Vertex* vertices;                 /* +0x0c */
-    Mesh_D3DMaterial material;             /* +0x10 */
-    Mesh_Texture2* imText;                 /* +0x60 */
+    D3DMATERIAL material;                  /* +0x10 */
+    LPDIRECT3DTEXTURE2 imText;             /* +0x60 */
     unsigned long renderFlags;             /* +0x64 */
     Mesh_LightWave_Surface* lightWaveSurfaceInfo; /* +0x68 */
     unsigned long flags;                   /* +0x6c */
@@ -398,14 +184,14 @@ struct Mesh {
     unsigned long groupCount;              /* +0x00 */
     unsigned long listSize;                /* +0x04 */
     Mesh_Group* groupList;                 /* +0x08 */
-    Mesh_UserVisual* uv;                   /* +0x0c */
+    LPDIRECT3DRMUSERVISUAL uv;             /* +0x0c */
     Mesh_RenderCallbackFunc renderCallback; /* +0x10 */
     void* renderCallbackData;              /* +0x14 */
     unsigned long renderFlags;             /* +0x18 */
     Mesh_LightWave_Surface* lightWaveSurf; /* +0x1c */
     unsigned long numOfRefs;               /* +0x20 */
     Mesh* clonedFrom;                      /* +0x24 */
-    Mesh_Frame* frameCreatedOn;            /* +0x28 */
+    LPDIRECT3DRMFRAME3 frameCreatedOn;     /* +0x28 */
     unsigned long flags;                   /* +0x2c */
     Mesh* nextFree;                        /* +0x30 */
 };
@@ -432,50 +218,21 @@ typedef struct Mesh_Globs {
     Mesh_TextureReference textureListShared[MESH_TEXTURELISTSIZE];   /* +0x6198 */
     unsigned long textureCount;                                      /* +0xc198 */
     unsigned long textureCountShared;                                /* +0xc19c */
-    unsigned long oldTextureRM;                                      /* +0xc1a0 */
-    unsigned long oldMatIM;                                          /* +0xc1a4 */
-    Mesh_Texture2* oldTextureIM;                                     /* +0xc1a8 */
-    unsigned long currTextureRM;                                     /* +0xc1ac */
-    unsigned long currMatIM;                                         /* +0xc1b0 */
-    Mesh_Texture2* currTextureIM;                                    /* +0xc1b4 */
-    unsigned long matHandle;                                         /* +0xc1b8 */
-    Mesh_Material* mat;                                              /* +0xc1bc */
+    DWORD oldTextureRM;                                              /* +0xc1a0 */
+    DWORD oldMatIM;                                                  /* +0xc1a4 */
+    LPDIRECT3DTEXTURE2 oldTextureIM;                                 /* +0xc1a8 */
+    DWORD currTextureRM;                                             /* +0xc1ac */
+    DWORD currMatIM;                                                 /* +0xc1b0 */
+    LPDIRECT3DTEXTURE2 currTextureIM;                                /* +0xc1b4 */
+    D3DMATERIALHANDLE matHandle;                                     /* +0xc1b8 */
+    LPDIRECT3DMATERIAL3 mat;                                         /* +0xc1bc */
     Mesh* listSet[MESH_MAXLISTS];                                    /* +0xc1c0 */
     Mesh* freeList;                                                  /* +0xc210 */
     unsigned long listCount;                                         /* +0xc214 */
 } Mesh_Globs;
 
-#define lpD3DRM() ((Mesh_D3DRM*)s_main_d3drm)
-#define lpIMDevice() ((Mesh_IMDevice*)s_main_im_device)
-
-/* IID_IDirect3DViewport3: dxguid.lib's in the matching build, Viewports.c's
- * copy (viewports.c) in the portable builds. */
-extern const Mesh_IID IID_IDirect3DViewport3;
-
-/* IID_IDirect3DDevice2, IID_IDirect3DTexture2 and IID_IDirect3DRMViewport2.
- * The matching build links them from dxguid.lib, as the original does
- * (finding 688); the portable builds keep the unit's own copies. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
-// GLOBAL: LEGORR 0x0049f6c8
-extern const Mesh_IID IID_IDirect3DDevice2;
-// GLOBAL: LEGORR 0x0049f6f8
-extern const Mesh_IID IID_IDirect3DTexture2;
-// GLOBAL: LEGORR 0x0049f958
-extern const Mesh_IID IID_IDirect3DRMViewport2;
-#else
-static const Mesh_IID IID_IDirect3DDevice2 = {
-    0x93281501, 0x8cf8, 0x11d0,
-    { 0x89, 0xab, 0x00, 0xa0, 0xc9, 0x05, 0x41, 0x29 }
-};
-static const Mesh_IID IID_IDirect3DTexture2 = {
-    0x93281502, 0x8cf8, 0x11d0,
-    { 0x89, 0xab, 0x00, 0xa0, 0xc9, 0x05, 0x41, 0x29 }
-};
-static const Mesh_IID IID_IDirect3DRMViewport2 = {
-    0x4a1b1be6, 0xbfed, 0x11d1,
-    { 0x8e, 0xd8, 0x00, 0xa0, 0xc9, 0x67, 0xa4, 0x82 }
-};
-#endif
+#define lpD3DRM() ((LPDIRECT3DRM3)s_main_d3drm)
+#define lpIMDevice() ((LPDIRECT3DDEVICE3)s_main_im_device)
 
 /* External, as the original's: with a static struct MSVC 5.0 keeps the
  * tested free-list head in a register across mesh_add_list, where the
@@ -485,10 +242,11 @@ static const Mesh_IID IID_IDirect3DRMViewport2 = {
 // GLOBAL: LEGORR 0x005343c0
 Mesh_Globs meshGlobs = { 0 };
 
-static int mesh_render_callback(Mesh_UserVisual* lpD3DRMUV, void* lpArg,
-                                int lpD3DRMUVreason,
-                                Mesh_RMDevice* lpD3DRMDev,
-                                Mesh_RMViewport* lpView);
+static int mesh_render_callback(LPDIRECT3DRMUSERVISUAL lpD3DRMUV,
+                                void* lpArg,
+                                D3DRMUSERVISUALREASON lpD3DRMUVreason,
+                                IDirect3DRMDevice* lpD3DRMDev,
+                                IDirect3DRMViewport* lpView);
 
 // FUNCTION: LEGORR 0x004805b0
 int mesh_initialise(const char* sharedTextureDir)
@@ -521,9 +279,9 @@ int mesh_initialise(const char* sharedTextureDir)
 // FUNCTION: LEGORR 0x00480650
 int mesh_create_global_material(void)
 {
-    Mesh_D3D* d3d;
-    Mesh_D3DMaterial material = {
-        sizeof(Mesh_D3DMaterial),
+    LPDIRECT3D3 d3d;
+    D3DMATERIAL material = {
+        sizeof(D3DMATERIAL),
         { 1.0f, 1.0f, 1.0f, 1.0f },
         { 0.0f, 0.0f, 0.0f, 0.0f },
         { 0.0f, 0.0f, 0.0f, 0.0f },
@@ -531,29 +289,28 @@ int mesh_create_global_material(void)
         0.0f, 0, 0
     };
 
-    lpIMDevice()->lpVtbl->GetDirect3D(lpIMDevice(), &d3d);
+    lpIMDevice()->GetDirect3D(&d3d);
 
-    if (d3d->lpVtbl->CreateMaterial(d3d, &meshGlobs.mat, NULL) != 0) {
-        if (d3d) d3d->lpVtbl->Release(d3d);
+    if (d3d->CreateMaterial(&meshGlobs.mat, NULL) != D3D_OK) {
+        if (d3d) d3d->Release();
         return 0;
     }
-    if (meshGlobs.mat->lpVtbl->GetHandle(meshGlobs.mat, lpIMDevice(),
-                                         &meshGlobs.matHandle) != 0) {
-        if (d3d) d3d->lpVtbl->Release(d3d);
+    if (meshGlobs.mat->GetHandle(lpIMDevice(), &meshGlobs.matHandle) != D3D_OK) {
+        if (d3d) d3d->Release();
         return 0;
     }
 
     mesh_set_material(&material);
-    if (d3d) d3d->lpVtbl->Release(d3d);
+    if (d3d) d3d->Release();
 
     return 1;
 
 }
 
 // FUNCTION: LEGORR 0x00480780
-int mesh_set_material(Mesh_D3DMaterial* newMaterial)
+int mesh_set_material(LPD3DMATERIAL newMaterial)
 {
-    return meshGlobs.mat->lpVtbl->SetMaterial(meshGlobs.mat, newMaterial) == 0;
+    return meshGlobs.mat->SetMaterial(newMaterial) == D3D_OK;
 }
 
 // FUNCTION: LEGORR 0x004807a0
@@ -601,7 +358,7 @@ void mesh_add_list(void)
 }
 
 // FUNCTION: LEGORR 0x00480870
-Mesh* mesh_create_on_frame(Mesh_Frame* frame,
+Mesh* mesh_create_on_frame(LPDIRECT3DRMFRAME3 frame,
                            Mesh_RenderCallbackFunc renderFunc,
                            unsigned long renderFlags, void* data,
                            unsigned long type)
@@ -610,10 +367,9 @@ Mesh* mesh_create_on_frame(Mesh_Frame* frame,
 
     container_get_root();
 
-    lpD3DRM()->lpVtbl->CreateUserVisual(lpD3DRM(), mesh_render_callback,
-                                        mesh, &mesh->uv);
-    frame->lpVtbl->AddVisual(frame, (Mesh_Unknown*)mesh->uv);
-    mesh->uv->lpVtbl->SetAppData(mesh->uv, mesh);
+    lpD3DRM()->CreateUserVisual(mesh_render_callback, mesh, &mesh->uv);
+    frame->AddVisual(mesh->uv);
+    mesh->uv->SetAppData(mesh);
 
     mesh->frameCreatedOn = frame;
     mesh->renderCallback = renderFunc;
@@ -636,7 +392,7 @@ void* mesh_clone(void* srcMesh, void* frame)
 {
     Mesh* newMesh = mesh_obtain_from_list();
     Mesh* mesh = (Mesh*)srcMesh;
-    Mesh_Frame* lpFrame = (Mesh_Frame*)frame;
+    LPDIRECT3DRMFRAME3 lpFrame = (LPDIRECT3DRMFRAME3)frame;
     unsigned long loop;
 
 
@@ -653,10 +409,9 @@ void* mesh_clone(void* srcMesh, void* frame)
         mesh_set_group_material(newMesh, loop, &mesh->groupList[loop].material);
     }
 
-    lpD3DRM()->lpVtbl->CreateUserVisual(lpD3DRM(), mesh_render_callback,
-                                        newMesh, &newMesh->uv);
-    lpFrame->lpVtbl->AddVisual(lpFrame, (Mesh_Unknown*)newMesh->uv);
-    newMesh->uv->lpVtbl->SetAppData(newMesh->uv, newMesh);
+    lpD3DRM()->CreateUserVisual(mesh_render_callback, newMesh, &newMesh->uv);
+    lpFrame->AddVisual(newMesh->uv);
+    newMesh->uv->SetAppData(newMesh);
 
     newMesh->frameCreatedOn = lpFrame;
     mesh->numOfRefs++;
@@ -667,7 +422,7 @@ void* mesh_clone(void* srcMesh, void* frame)
 }
 
 // FUNCTION: LEGORR 0x004809e0
-Mesh* mesh_load(const char* fname, Mesh_Frame* frame, int noTextures)
+Mesh* mesh_load(const char* fname, LPDIRECT3DRMFRAME3 frame, int noTextures)
 {
     APPOBJ* lightWaveObject;
     char path[260];
@@ -1217,15 +972,15 @@ int mesh_set_texture_time2(Mesh* mesh, float frame)
 void mesh_remove(void* meshPtr, void* frame)
 {
     Mesh* mesh = (Mesh*)meshPtr;
-    Mesh_Frame* lpFrame = (Mesh_Frame*)frame;
+    LPDIRECT3DRMFRAME3 lpFrame = (LPDIRECT3DRMFRAME3)frame;
     unsigned long groupID;
 
-    lpFrame->lpVtbl->DeleteVisual(lpFrame, (Mesh_Unknown*)mesh->uv);
+    lpFrame->DeleteVisual(mesh->uv);
 
     if (mesh->clonedFrom) {
         Mesh* clonedFrom = mesh->clonedFrom;
         if (mesh->uv) {
-            mesh->uv->lpVtbl->Release(mesh->uv);
+            mesh->uv->Release();
             mesh->uv = NULL;
         }
         free(mesh->groupList);
@@ -1235,7 +990,7 @@ void mesh_remove(void* meshPtr, void* frame)
 
     if (--mesh->numOfRefs == 0) {
         if (mesh->uv) {
-            mesh->uv->lpVtbl->Release(mesh->uv);
+            mesh->uv->Release();
             mesh->uv = NULL;
         }
         for (groupID = 0; groupID < mesh->groupCount; groupID++) {
@@ -1462,15 +1217,16 @@ void mesh_hide(Mesh* mesh, int hide)
 }
 
 // FUNCTION: LEGORR 0x004827f0
-static int mesh_render_callback(Mesh_UserVisual* lpD3DRMUV, void* lpArg,
-                                int lpD3DRMUVreason,
-                                Mesh_RMDevice* lpD3DRMDev,
-                                Mesh_RMViewport* lpView)
+static int mesh_render_callback(LPDIRECT3DRMUSERVISUAL lpD3DRMUV,
+                                void* lpArg,
+                                D3DRMUSERVISUALREASON lpD3DRMUVreason,
+                                IDirect3DRMDevice* lpD3DRMDev,
+                                IDirect3DRMViewport* lpView)
 {
     Mesh* mesh = (Mesh*)lpArg;
     int alphaFound, renderStatesStored;
 
-    if (lpD3DRMUVreason == 0) {
+    if (lpD3DRMUVreason == D3DRMUSERVISUAL_CANSEE) {
         if (lpIMDevice()) {
             Mesh_Container* cont;
             Mesh_Viewport* vp;
@@ -1479,22 +1235,22 @@ static int mesh_render_callback(Mesh_UserVisual* lpD3DRMUV, void* lpArg,
             cont = (Mesh_Container*)container_frame_get_container(mesh->frameCreatedOn);
             if (cont && (cont->flags & MESH_CONTAINER_FLAG_HIDDEN)) return 0;
             if ((mesh->flags & MESH_FLAG_FACECAMERA) && !(mesh->flags & MESH_FLAG_FACECAMERADONE)) {
-                vp = (Mesh_Viewport*)lpView->lpVtbl->GetAppData(lpView);
+                vp = (Mesh_Viewport*)lpView->GetAppData();
                 if (vp->rendering) {
-                    Mesh_Frame* scene;
-                    Mesh_Frame* camera;
-                    mesh->frameCreatedOn->lpVtbl->GetScene(mesh->frameCreatedOn, &scene);
-                    vp->lpVP->lpVtbl->GetCamera(vp->lpVP, &camera);
-                    mesh->frameCreatedOn->lpVtbl->LookAt(mesh->frameCreatedOn, camera, scene, 0);
+                    LPDIRECT3DRMFRAME3 scene;
+                    LPDIRECT3DRMFRAME3 camera;
+                    mesh->frameCreatedOn->GetScene(&scene);
+                    vp->lpVP->GetCamera(&camera);
+                    mesh->frameCreatedOn->LookAt(camera, scene, D3DRMCONSTRAIN_Z);
                     mesh->flags |= MESH_FLAG_FACECAMERADONE;
                 }
             }
             return 1;
         }
-    } else if (lpD3DRMUVreason == 1) {
+    } else if (lpD3DRMUVreason == D3DRMUSERVISUAL_RENDER) {
         if (lpIMDevice()) {
             Mesh_Matrix matWorld;
-            Mesh_RMViewport* view;
+            LPDIRECT3DRMVIEWPORT2 view;
             Mesh_Viewport* vp;
             unsigned long groupID;
             Mesh_Group* group;
@@ -1502,10 +1258,10 @@ static int mesh_render_callback(Mesh_UserVisual* lpD3DRMUV, void* lpArg,
             alphaFound = 0;
             renderStatesStored = 0;
             mesh->flags &= ~MESH_FLAG_FACECAMERADONE;
-            lpIMDevice()->lpVtbl->GetTransform(lpIMDevice(), 1, &matWorld);
+            lpIMDevice()->GetTransform(D3DTRANSFORMSTATE_WORLD, (LPD3DMATRIX)&matWorld);
             mesh_set_current_viewport(lpView);
-            lpView->lpVtbl->QueryInterface(lpView, &IID_IDirect3DRMViewport2, (void**)&view);
-            vp = (Mesh_Viewport*)view->lpVtbl->GetAppData(view);
+            lpView->QueryInterface(IID_IDirect3DRMViewport2, (void**)&view);
+            vp = (Mesh_Viewport*)view->GetAppData();
 
             if (mesh->flags & MESH_FLAG_POSTEFFECT) {
                 mesh_add_to_post_render_list(mesh, &matWorld);
@@ -1551,7 +1307,7 @@ static int mesh_render_callback(Mesh_UserVisual* lpD3DRMUV, void* lpArg,
                 mesh_restore_texture_and_mat();
             }
 
-            if (view) view->lpVtbl->Release(view);
+            if (view) view->Release();
         }
         return 1;
     }
@@ -1712,7 +1468,7 @@ Mesh_Texture* mesh_load_texture(const char* baseDir, const char* name,
                         unsigned long* width, unsigned long* height)
 {
     Mesh_Texture* texture = (Mesh_Texture*)malloc(sizeof(Mesh_Texture));
-    Mesh_Surface* surface;
+    LPDIRECTDRAWSURFACE4 surface;
     Mesh_TextureReference* ref;
     int trans;
     char path[260];
@@ -1722,17 +1478,17 @@ Mesh_Texture* mesh_load_texture(const char* baseDir, const char* name,
 
     if (ref = (Mesh_TextureReference*)mesh_search_texture_list(meshGlobs.textureList, meshGlobs.textureCount, path)) {
         surface = ref->surface;
-        if (surface) surface->lpVtbl->AddRef(surface);
+        if (surface) surface->AddRef();
         trans = ref->trans;
-    } else if (surface = (Mesh_Surface*)container_load_texture_surface(path, 1, width, height, &trans)) {
+    } else if (surface = (LPDIRECTDRAWSURFACE4)container_load_texture_surface(path, 1, width, height, &trans)) {
         mesh_add_texture_reference(meshGlobs.textureList, &meshGlobs.textureCount, path, surface, trans);
     } else if (meshGlobs.sharedTextureDir) {
         sprintf(path, "%s%s", meshGlobs.sharedTextureDir, name);
         if (ref = (Mesh_TextureReference*)mesh_search_texture_list(meshGlobs.textureListShared, meshGlobs.textureCountShared, path)) {
             surface = ref->surface;
-            if (surface) surface->lpVtbl->AddRef(surface);
+            if (surface) surface->AddRef();
             trans = ref->trans;
-        } else if (surface = (Mesh_Surface*)container_load_texture_surface(path, 1, width, height, &trans)) {
+        } else if (surface = (LPDIRECTDRAWSURFACE4)container_load_texture_surface(path, 1, width, height, &trans)) {
             mesh_add_texture_reference(meshGlobs.textureListShared, &meshGlobs.textureCountShared, path, surface, trans);
         }
     }
@@ -1765,11 +1521,11 @@ Mesh_TextureReference* mesh_search_texture_list(
 // FUNCTION: LEGORR 0x00483080
 void mesh_add_texture_reference(Mesh_TextureReference* textureList,
                                 unsigned long* count, const char* path,
-                                Mesh_Surface* surface, int trans)
+                                LPDIRECTDRAWSURFACE4 surface, int trans)
 {
 
     textureList[*count].path = string_duplicate(path);
-    textureList[*count].surface = (Mesh_Surface*)surface;
+    textureList[*count].surface = surface;
     textureList[*count].trans = trans;
     (*count)++;
 }
@@ -1781,8 +1537,8 @@ void mesh_set_group_texture(Mesh* mesh, unsigned long groupID,
 
     if (texture) {
         if (texture->surface) {
-            texture->surface->lpVtbl->QueryInterface(texture->surface, &IID_IDirect3DTexture2,
-                                                     (void**)&mesh->groupList[groupID].imText);
+            texture->surface->QueryInterface(IID_IDirect3DTexture2,
+                                             (void**)&mesh->groupList[groupID].imText);
         }
         if (texture->colourKey) mesh->groupList[groupID].flags |= MESH_GROUP_FLAG_HASCOLOURKEY;
         else mesh->groupList[groupID].flags &= ~MESH_GROUP_FLAG_HASCOLOURKEY;
@@ -1795,7 +1551,7 @@ void mesh_remove_group_texture(Mesh* mesh, unsigned long groupID)
     Mesh_Group* group = &mesh->groupList[groupID];
 
     if (group->imText) {
-        group->imText->lpVtbl->Release(group->imText);
+        group->imText->Release();
         group->imText = NULL;
     }
 }
@@ -1803,8 +1559,8 @@ void mesh_remove_group_texture(Mesh* mesh, unsigned long groupID)
 // FUNCTION: LEGORR 0x00483170
 int mesh_create_group_material(Mesh* mesh, unsigned long groupID)
 {
-    Mesh_D3DMaterial material = {
-        sizeof(Mesh_D3DMaterial),
+    D3DMATERIAL material = {
+        sizeof(D3DMATERIAL),
         { 1.0f, 1.0f, 1.0f, 1.0f },
         { 0.0f, 0.0f, 0.0f, 0.0f },
         { 0.0f, 0.0f, 0.0f, 0.0f },
@@ -1819,7 +1575,7 @@ int mesh_create_group_material(Mesh* mesh, unsigned long groupID)
 
 // FUNCTION: LEGORR 0x00483240
 int mesh_set_group_material(Mesh* mesh, unsigned long groupID,
-                            Mesh_D3DMaterial* material)
+                            LPD3DMATERIAL material)
 {
 
     mesh->groupList[groupID].material = *material;
@@ -1832,7 +1588,7 @@ int mesh_set_group_colour(Mesh* mesh, unsigned long groupID, float r,
                           float g, float b, unsigned long type)
 {
     Mesh_Group* group = &mesh->groupList[groupID];
-    Mesh_D3DMaterial* material = mesh_get_group_material(mesh, groupID);
+    LPD3DMATERIAL material = mesh_get_group_material(mesh, groupID);
 
     if (r < 0.0f) r = 0.0f;
     if (g < 0.0f) g = 0.0f;
@@ -1865,7 +1621,7 @@ int mesh_set_group_colour(Mesh* mesh, unsigned long groupID, float r,
 }
 
 // FUNCTION: LEGORR 0x00483400
-Mesh_D3DMaterial* mesh_get_group_material(Mesh* mesh, unsigned long groupID)
+LPD3DMATERIAL mesh_get_group_material(Mesh* mesh, unsigned long groupID)
 {
 
     return &mesh->groupList[groupID].material;
@@ -1876,7 +1632,7 @@ int mesh_set_group_material_values(Mesh* mesh, unsigned long groupID,
                                    float value, unsigned long type)
 {
     Mesh_Group* group = &mesh->groupList[groupID];
-    Mesh_D3DMaterial* material = mesh_get_group_material(mesh, groupID);
+    LPD3DMATERIAL material = mesh_get_group_material(mesh, groupID);
 
     if (value < 0.0f) value = 0.0f;
     if (value > 1.0f) value = 1.0f;
@@ -1914,26 +1670,26 @@ void mesh_set_identity_matrix(Mesh_Matrix* m)
 }
 
 // FUNCTION: LEGORR 0x00483580
-int mesh_set_current_viewport(Mesh_RMViewport* lpView)
+int mesh_set_current_viewport(LPDIRECT3DRMVIEWPORT lpView)
 {
-    Mesh_IMViewport* imview1;
-    Mesh_IMViewport* imview;
+    LPDIRECT3DVIEWPORT imview1;
+    LPDIRECT3DVIEWPORT3 imview;
 
-    if (lpView->lpVtbl->GetDirect3DViewport(lpView, &imview1) != 0) return 0;
+    if (lpView->GetDirect3DViewport(&imview1) != D3DRM_OK) return 0;
 
-    if (imview1->lpVtbl->QueryInterface(imview1, &IID_IDirect3DViewport3, (void**)&imview) != 0) {
-        if (imview1) imview1->lpVtbl->Release(imview1);
+    if (imview1->QueryInterface(IID_IDirect3DViewport3, (void**)&imview) != DD_OK) {
+        if (imview1) imview1->Release();
         return 0;
     }
     if (imview1) {
-        imview1->lpVtbl->Release(imview1);
+        imview1->Release();
         imview1 = NULL;
     }
-    if (lpIMDevice()->lpVtbl->SetCurrentViewport(lpIMDevice(), imview) != 0) {
-        if (imview) imview->lpVtbl->Release(imview);
+    if (lpIMDevice()->SetCurrentViewport(imview) != D3D_OK) {
+        if (imview) imview->Release();
         return 0;
     }
-    if (imview) imview->lpVtbl->Release(imview);
+    if (imview) imview->Release();
 
     return 1;
 }
@@ -1941,24 +1697,24 @@ int mesh_set_current_viewport(Mesh_RMViewport* lpView)
 // FUNCTION: LEGORR 0x00483600
 int mesh_set_current_gods_viewport(Mesh_Viewport* vp)
 {
-    Mesh_IMViewport* imview1;
-    Mesh_IMViewport* imview;
+    LPDIRECT3DVIEWPORT imview1;
+    LPDIRECT3DVIEWPORT3 imview;
 
-    if (vp->lpVP->lpVtbl->GetDirect3DViewport(vp->lpVP, &imview1) != 0) return 0;
+    if (vp->lpVP->GetDirect3DViewport(&imview1) != D3DRM_OK) return 0;
 
-    if (imview1->lpVtbl->QueryInterface(imview1, &IID_IDirect3DViewport3, (void**)&imview) != 0) {
-        if (imview1) imview1->lpVtbl->Release(imview1);
+    if (imview1->QueryInterface(IID_IDirect3DViewport3, (void**)&imview) != DD_OK) {
+        if (imview1) imview1->Release();
         return 0;
     }
     if (imview1) {
-        imview1->lpVtbl->Release(imview1);
+        imview1->Release();
         imview1 = NULL;
     }
-    if (lpIMDevice()->lpVtbl->SetCurrentViewport(lpIMDevice(), imview) != 0) {
-        if (imview) imview->lpVtbl->Release(imview);
+    if (lpIMDevice()->SetCurrentViewport(imview) != D3D_OK) {
+        if (imview) imview->Release();
         return 0;
     }
-    if (imview) imview->lpVtbl->Release(imview);
+    if (imview) imview->Release();
 
     return 1;
 }
@@ -1969,7 +1725,7 @@ int mesh_set_transform(unsigned long state, Mesh_Matrix* mat)
     Mesh_Matrix oldMatrix;
     Mesh_Matrix newMatrix = *mat;
 
-    lpIMDevice()->lpVtbl->GetTransform(lpIMDevice(), state, &oldMatrix);
+    lpIMDevice()->GetTransform((D3DTRANSFORMSTATETYPE)state, (LPD3DMATRIX)&oldMatrix);
 
     if (oldMatrix.m[0][0] != newMatrix.m[0][0] || oldMatrix.m[0][1] != newMatrix.m[0][1] ||
         oldMatrix.m[0][2] != newMatrix.m[0][2] || oldMatrix.m[0][3] != newMatrix.m[0][3] ||
@@ -1979,7 +1735,7 @@ int mesh_set_transform(unsigned long state, Mesh_Matrix* mat)
         oldMatrix.m[2][2] != newMatrix.m[2][2] || oldMatrix.m[2][3] != newMatrix.m[2][3] ||
         oldMatrix.m[3][0] != newMatrix.m[3][0] || oldMatrix.m[3][1] != newMatrix.m[3][1] ||
         oldMatrix.m[3][2] != newMatrix.m[3][2] || oldMatrix.m[3][3] != newMatrix.m[3][3]) {
-        if (lpIMDevice()->lpVtbl->SetTransform(lpIMDevice(), state, mat) != 0) return 0;
+        if (lpIMDevice()->SetTransform((D3DTRANSFORMSTATETYPE)state, (LPD3DMATRIX)mat) != D3D_OK) return 0;
     }
 
     return 1;
@@ -1988,12 +1744,12 @@ int mesh_set_transform(unsigned long state, Mesh_Matrix* mat)
 // FUNCTION: LEGORR 0x00483810
 int mesh_set_texture_stage_state(unsigned long type, unsigned long value)
 {
-    unsigned long oldValue;
+    DWORD oldValue;
 
-    if (lpIMDevice()->lpVtbl->GetTextureStageState(lpIMDevice(), 0, type, &oldValue) != 0) oldValue = -1;
+    if (lpIMDevice()->GetTextureStageState(0, (D3DTEXTURESTAGESTATETYPE)type, &oldValue) != D3D_OK) oldValue = -1;
 
     if (oldValue != value) {
-        if (lpIMDevice()->lpVtbl->SetTextureStageState(lpIMDevice(), 0, type, value) != 0) return 0;
+        if (lpIMDevice()->SetTextureStageState(0, (D3DTEXTURESTAGESTATETYPE)type, value) != D3D_OK) return 0;
         if (meshGlobs.stateData[type].changed) {
             if (meshGlobs.stateData[type].origValue == oldValue) meshGlobs.stateData[type].changed = 0;
         } else {
@@ -2008,16 +1764,16 @@ int mesh_set_texture_stage_state(unsigned long type, unsigned long value)
 // FUNCTION: LEGORR 0x004838b0
 void mesh_store_texture_and_mat(void)
 {
-    lpIMDevice()->lpVtbl->GetLightState(lpIMDevice(), 1, &meshGlobs.oldMatIM);
+    lpIMDevice()->GetLightState(D3DLIGHTSTATE_MATERIAL, &meshGlobs.oldMatIM);
     meshGlobs.currMatIM = meshGlobs.oldMatIM;
 
     if (!(s_engine_feature_word & 0x20)) {
-        lpIMDevice()->lpVtbl->GetTexture(lpIMDevice(), 0, &meshGlobs.oldTextureIM);
+        lpIMDevice()->GetTexture(0, &meshGlobs.oldTextureIM);
         meshGlobs.currTextureIM = meshGlobs.oldTextureIM;
-        lpIMDevice()->lpVtbl->GetRenderState(lpIMDevice(), 1, &meshGlobs.oldTextureRM);
-        if (meshGlobs.oldTextureRM) lpIMDevice()->lpVtbl->SetRenderState(lpIMDevice(), 1, 0);
+        lpIMDevice()->GetRenderState(D3DRENDERSTATE_TEXTUREHANDLE, &meshGlobs.oldTextureRM);
+        if (meshGlobs.oldTextureRM) lpIMDevice()->SetRenderState(D3DRENDERSTATE_TEXTUREHANDLE, 0);
     } else {
-        lpIMDevice()->lpVtbl->GetRenderState(lpIMDevice(), 1, &meshGlobs.oldTextureRM);
+        lpIMDevice()->GetRenderState(D3DRENDERSTATE_TEXTUREHANDLE, &meshGlobs.oldTextureRM);
         meshGlobs.currTextureRM = meshGlobs.oldTextureRM;
     }
 }
@@ -2026,16 +1782,16 @@ void mesh_store_texture_and_mat(void)
 void mesh_restore_texture_and_mat(void)
 {
     if (meshGlobs.currMatIM != meshGlobs.oldMatIM) {
-        lpIMDevice()->lpVtbl->SetLightState(lpIMDevice(), 1, meshGlobs.oldMatIM);
+        lpIMDevice()->SetLightState(D3DLIGHTSTATE_MATERIAL, meshGlobs.oldMatIM);
     }
 
     if (!(s_engine_feature_word & 0x20)) {
         if (meshGlobs.currTextureIM != meshGlobs.oldTextureIM) {
-            lpIMDevice()->lpVtbl->SetTexture(lpIMDevice(), 0, meshGlobs.oldTextureIM);
+            lpIMDevice()->SetTexture(0, meshGlobs.oldTextureIM);
         }
-        if (meshGlobs.oldTextureRM) lpIMDevice()->lpVtbl->SetRenderState(lpIMDevice(), 1, meshGlobs.oldTextureRM);
+        if (meshGlobs.oldTextureRM) lpIMDevice()->SetRenderState(D3DRENDERSTATE_TEXTUREHANDLE, meshGlobs.oldTextureRM);
     } else {
-        lpIMDevice()->lpVtbl->SetRenderState(lpIMDevice(), 1, meshGlobs.oldTextureRM);
+        lpIMDevice()->SetRenderState(D3DRENDERSTATE_TEXTUREHANDLE, meshGlobs.oldTextureRM);
     }
 }
 
@@ -2111,27 +1867,27 @@ int mesh_set_group_render_desc(Mesh* mesh, Mesh_Group* group,
 }
 
 // FUNCTION: LEGORR 0x00483b70
-int mesh_render_triangle_list(unsigned long matHandle, Mesh_Texture2* texture,
+int mesh_render_triangle_list(unsigned long matHandle, LPDIRECT3DTEXTURE2 texture,
                               unsigned long renderFlags, void* vertices,
                               unsigned long vertexCount,
                               unsigned short* faceData,
                               unsigned long indexCount)
 {
-    Mesh_IMDevice2* dev2;
+    LPDIRECT3DDEVICE2 dev2;
     int ok = 1;
 
     if (!(s_engine_feature_word & 0x20)) {
         if (texture != meshGlobs.currTextureIM) {
-            if (lpIMDevice()->lpVtbl->SetTexture(lpIMDevice(), 0, texture) != 0) ok = 0;
+            if (lpIMDevice()->SetTexture(0, texture) != D3D_OK) ok = 0;
             else meshGlobs.currTextureIM = texture;
         }
     } else {
-        unsigned long handle = 0;
+        D3DTEXTUREHANDLE handle = 0;
         if (texture) {
-            lpIMDevice()->lpVtbl->QueryInterface(lpIMDevice(), &IID_IDirect3DDevice2, (void**)&dev2);
-            texture->lpVtbl->GetHandle(texture, dev2, &handle);
+            lpIMDevice()->QueryInterface(IID_IDirect3DDevice2, (void**)&dev2);
+            texture->GetHandle(dev2, &handle);
             if (dev2) {
-                dev2->lpVtbl->Release(dev2);
+                dev2->Release();
                 dev2 = NULL;
             }
         }
@@ -2142,12 +1898,12 @@ int mesh_render_triangle_list(unsigned long matHandle, Mesh_Texture2* texture,
     }
 
     if (matHandle != meshGlobs.currMatIM) {
-        if (lpIMDevice()->lpVtbl->SetLightState(lpIMDevice(), 1, matHandle) != 0) ok = 0;
+        if (lpIMDevice()->SetLightState(D3DLIGHTSTATE_MATERIAL, matHandle) != D3D_OK) ok = 0;
         else meshGlobs.currMatIM = matHandle;
     }
 
-    if (lpIMDevice()->lpVtbl->DrawIndexedPrimitive(lpIMDevice(), 4, renderFlags, vertices,
-                                                   vertexCount, faceData, indexCount, 0) != 0) ok = 0;
+    if (lpIMDevice()->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, renderFlags, vertices,
+                                           vertexCount, faceData, indexCount, 0) != D3D_OK) ok = 0;
 
     return ok;
 }

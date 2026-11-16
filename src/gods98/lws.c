@@ -18,8 +18,7 @@
  * unannotated. lws.h lists which functions keep a port name and contract.
  *
  * C-compatible (ADR 0005): C in the matching build, C++ elsewhere. The
- * frames, user visuals and IDirect3DRM3 are called through their COM
- * method tables, declared here with the slots the unit uses. */
+ * frames, user visuals and IDirect3DRM3 are miniwin's interfaces. */
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
@@ -36,11 +35,7 @@
 #include "sound3d.h"
 #include "crt/crt.h"
 
-#if defined(_WIN32)
-#define LWS_STDCALL __stdcall
-#else
-#define LWS_STDCALL
-#endif
+#include <miniwin/d3drm.h>
 
 #define LWS_MAXLINELEN 1024
 #define LWS_MAXARGS 20
@@ -66,85 +61,11 @@
 /* Mesh.c's colour type for Mesh_SetGroupMaterialValues: the alpha. */
 #define LWS_MESH_COLOUR_ALPHA 4
 
-typedef struct LwsIID {
-    unsigned long data1;
-    unsigned short data2;
-    unsigned short data3;
-    unsigned char data4[8];
-} LwsIID;
-
 typedef struct LwsVector3 {
     float x;
     float y;
     float z;
 } LwsVector3;
-
-typedef struct LwsFrame LwsFrame;            /* IDirect3DRMFrame3 */
-typedef struct LwsUnknown LwsUnknown;        /* IUnknown */
-typedef struct LwsUserVisual LwsUserVisual;  /* IDirect3DRMUserVisual */
-typedef struct LwsD3DRM LwsD3DRM;            /* IDirect3DRM3 */
-
-typedef struct LwsFrameVtbl {
-    long (LWS_STDCALL* QueryInterface)(LwsFrame*, const LwsIID*, void**);
-    unsigned long (LWS_STDCALL* AddRef)(LwsFrame*);
-    unsigned long (LWS_STDCALL* Release)(LwsFrame*);        /* +0x08 */
-    void* slots_0c[5];
-    long (LWS_STDCALL* SetName)(LwsFrame*, const char*);     /* +0x20 */
-    void* slots_24[5];
-    long (LWS_STDCALL* AddTransform)(LwsFrame*, int,
-                                     float (*)[4]);          /* +0x38 */
-    void* slots_3c[8];
-    long (LWS_STDCALL* GetParent)(LwsFrame*, LwsFrame**);    /* +0x5c */
-    void* slots_60[5];
-    long (LWS_STDCALL* GetTransform)(LwsFrame*, LwsFrame*,
-                                     float (*)[4]);          /* +0x74 */
-    void* slots_78[2];
-    long (LWS_STDCALL* GetVisuals)(LwsFrame*, unsigned long*,
-                                   LwsUnknown**);            /* +0x80 */
-} LwsFrameVtbl;
-
-struct LwsFrame {
-    const LwsFrameVtbl* lpVtbl;
-};
-
-typedef struct LwsUnknownVtbl {
-    long (LWS_STDCALL* QueryInterface)(LwsUnknown*, const LwsIID*, void**);
-    unsigned long (LWS_STDCALL* AddRef)(LwsUnknown*);
-    unsigned long (LWS_STDCALL* Release)(LwsUnknown*);      /* +0x08 */
-} LwsUnknownVtbl;
-
-struct LwsUnknown {
-    const LwsUnknownVtbl* lpVtbl;
-};
-
-typedef struct LwsUserVisualVtbl {
-    long (LWS_STDCALL* QueryInterface)(LwsUserVisual*, const LwsIID*,
-                                       void**);
-    unsigned long (LWS_STDCALL* AddRef)(LwsUserVisual*);
-    unsigned long (LWS_STDCALL* Release)(LwsUserVisual*);   /* +0x08 */
-    void* slots_0c[4];
-    unsigned long (LWS_STDCALL* GetAppData)(LwsUserVisual*); /* +0x1c */
-} LwsUserVisualVtbl;
-
-struct LwsUserVisual {
-    const LwsUserVisualVtbl* lpVtbl;
-};
-
-typedef struct LwsD3DRMVtbl {
-    long (LWS_STDCALL* QueryInterface)(LwsD3DRM*, const LwsIID*, void**);
-    unsigned long (LWS_STDCALL* AddRef)(LwsD3DRM*);
-    unsigned long (LWS_STDCALL* Release)(LwsD3DRM*);
-    void* slots_0c[1];
-    long (LWS_STDCALL* CreateFrame)(LwsD3DRM*, LwsFrame*,
-                                    LwsFrame**);             /* +0x10 */
-} LwsD3DRMVtbl;
-
-struct LwsD3DRM {
-    const LwsD3DRMVtbl* lpVtbl;
-};
-
-/* D3DRMCOMBINE_REPLACE. */
-#define LWS_COMBINE_REPLACE 0
 
 typedef struct LwsSoundTrigger {
     unsigned long sfxID;                                 /* +0x00 */
@@ -184,7 +105,7 @@ struct LwsInfo {
     char* filePath;                                      /* +0x08 */
     float lastTime;                                      /* +0x0c */
     float time;                                          /* +0x10 */
-    LwsFrame** frameList;                                /* +0x14 */
+    LPDIRECT3DRMFRAME3* frameList;                       /* +0x14 */
     LwsSoundTrigger* triggerList;                        /* +0x18 */
     LwsNode* masterNode;                                 /* +0x1c */
     LwsNode* nodeList;                                   /* +0x20 */
@@ -234,21 +155,8 @@ void pair_table_append(LwsMeshPath* list, unsigned int* count,
 }
 #endif
 
-/* IID_IDirect3DRMUserVisual, which G98-025 (animclone.c) uses too. The
- * matching build links it from dxguid.lib, as the original does (finding
- * 688); the portable builds define it here, with external linkage. */
-#ifdef __cplusplus
-extern "C" const LwsIID IID_IDirect3DRMUserVisual;
-#endif
-#if defined(_MSC_VER) && _MSC_VER < 1200
-// GLOBAL: LEGORR 0x0049fb48
-extern const LwsIID IID_IDirect3DRMUserVisual;
-#else
-const LwsIID IID_IDirect3DRMUserVisual = {
-    0x59163de0, 0x6d43, 0x11cf,
-    { 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1 }
-};
-#endif
+/* IID_IDirect3DRMUserVisual is miniwin's (d3drm.h). animclone.c's C-linkage
+ * copy is defined in lws_port.cpp until animclone.c uses miniwin's too. */
 
 /* The degree-to-radian factors. Lws_Parse multiplies by each in turn; as
  * literals MSVC folds them into one constant. */
@@ -564,12 +472,12 @@ void lws_sound_triggers_setup(LwsInfo* scene)
 }
 
 // FUNCTION: LEGORR 0x00487990
-void lws_meshes_load(LwsInfo* scene, LwsFrame* parent)
+void lws_meshes_load(LwsInfo* scene, LPDIRECT3DRMFRAME3 parent)
 {
     unsigned short frameCount = 0;
     LwsNode* node;
 
-    scene->frameList = (LwsFrame**)malloc(sizeof(LwsFrame*) * scene->nodeCount);
+    scene->frameList = (LPDIRECT3DRMFRAME3*)malloc(sizeof(LPDIRECT3DRMFRAME3) * scene->nodeCount);
     for (node = scene->masterNode; node; node = node->next) {
         lws_frames_create(scene, node, parent, &frameCount);
         lws_nodes_load(scene, node);
@@ -578,20 +486,20 @@ void lws_meshes_load(LwsInfo* scene, LwsFrame* parent)
 }
 
 // FUNCTION: LEGORR 0x00487a00
-LwsInfo* lws_clone(LwsInfo* scene, LwsFrame* parent)
+LwsInfo* lws_clone(LwsInfo* scene, LPDIRECT3DRMFRAME3 parent)
 {
     LwsInfo* newScene = (LwsInfo*)malloc(sizeof(LwsInfo));
     unsigned short frameCount = 0;
     unsigned short loop;
     LwsNode* node;
-    LwsFrame* parentFrame;
+    LPDIRECT3DRMFRAME3 parentFrame;
 
     if (scene->clonedFrom) scene = scene->clonedFrom;
 
     memset(newScene, 0, sizeof(LwsInfo));
     memcpy(newScene, scene, sizeof(LwsInfo));
     newScene->referenceCount = 1;
-    newScene->frameList = (LwsFrame**)malloc(sizeof(LwsFrame*) * newScene->nodeCount);
+    newScene->frameList = (LPDIRECT3DRMFRAME3*)malloc(sizeof(LPDIRECT3DRMFRAME3) * newScene->nodeCount);
     for (node = newScene->masterNode; node; node = node->next) {
         lws_frames_create(newScene, node, parent, &frameCount);
     }
@@ -600,24 +508,24 @@ LwsInfo* lws_clone(LwsInfo* scene, LwsFrame* parent)
         float mat[4][4];
         node = &newScene->nodeList[loop];
 
-        scene->frameList[loop]->lpVtbl->GetParent(scene->frameList[loop], &parentFrame);
-        scene->frameList[loop]->lpVtbl->GetTransform(scene->frameList[loop], parentFrame, mat);
-        parentFrame->lpVtbl->Release(parentFrame);
-        newScene->frameList[loop]->lpVtbl->AddTransform(newScene->frameList[loop], LWS_COMBINE_REPLACE, mat);
+        scene->frameList[loop]->GetParent(&parentFrame);
+        scene->frameList[loop]->GetTransform(parentFrame, mat);
+        parentFrame->Release();
+        newScene->frameList[loop]->AddTransform(D3DRMCOMBINE_REPLACE, mat);
 
         if (!(node->flags & LWSNODE_FLAG_NULL)) {
-            LwsFrame* frame = scene->frameList[node->frameIndex];
-            LwsUnknown* iunknown;
-            LwsUserVisual* userVisual;
-            unsigned long count;
+            LPDIRECT3DRMFRAME3 frame = scene->frameList[node->frameIndex];
+            IUnknown* iunknown;
+            LPDIRECT3DRMUSERVISUAL userVisual;
+            DWORD count;
             void* mesh;
 
-            frame->lpVtbl->GetVisuals(frame, &count, NULL);
-            frame->lpVtbl->GetVisuals(frame, &count, &iunknown);
-            iunknown->lpVtbl->QueryInterface(iunknown, &IID_IDirect3DRMUserVisual, (void**)&userVisual);
-            iunknown->lpVtbl->Release(iunknown);
-            mesh = (void*)userVisual->lpVtbl->GetAppData(userVisual);
-            userVisual->lpVtbl->Release(userVisual);
+            frame->GetVisuals(&count, NULL);
+            frame->GetVisuals(&count, &iunknown);
+            iunknown->QueryInterface(IID_IDirect3DRMUserVisual, (void**)&userVisual);
+            iunknown->Release();
+            mesh = userVisual->GetAppData();
+            userVisual->Release();
 
             mesh_clone(mesh, newScene->frameList[node->frameIndex]);
         }
@@ -686,18 +594,18 @@ float animation_track_find_keyframe_and_fraction(LwsNode* node, float time,
 void lws_textures_animate(LwsInfo* scene, LwsNode* node)
 {
     if (!(node->flags & LWSNODE_FLAG_NULL)) {
-        LwsFrame* frame = scene->frameList[node->frameIndex];
-        LwsUnknown* iunknown;
-        LwsUserVisual* userVisual;
-        unsigned long count;
+        LPDIRECT3DRMFRAME3 frame = scene->frameList[node->frameIndex];
+        IUnknown* iunknown;
+        LPDIRECT3DRMUSERVISUAL userVisual;
+        DWORD count;
         void* mesh;
 
-        frame->lpVtbl->GetVisuals(frame, &count, NULL);
-        frame->lpVtbl->GetVisuals(frame, &count, &iunknown);
-        iunknown->lpVtbl->QueryInterface(iunknown, &IID_IDirect3DRMUserVisual, (void**)&userVisual);
-        iunknown->lpVtbl->Release(iunknown);
-        mesh = (void*)userVisual->lpVtbl->GetAppData(userVisual);
-        userVisual->lpVtbl->Release(userVisual);
+        frame->GetVisuals(&count, NULL);
+        frame->GetVisuals(&count, &iunknown);
+        iunknown->QueryInterface(IID_IDirect3DRMUserVisual, (void**)&userVisual);
+        iunknown->Release();
+        mesh = userVisual->GetAppData();
+        userVisual->Release();
 
         mesh_texture_time_set(mesh, scene->time);
     }
@@ -707,7 +615,7 @@ void lws_textures_animate(LwsInfo* scene, LwsNode* node)
 void lws_trigger_handle(LwsInfo* scene, LwsNode* node)
 {
     if (node->flags & LWSNODE_FLAG_SOUNDTRIGGER) {
-        LwsFrame* frame = scene->frameList[node->frameIndex];
+        LPDIRECT3DRMFRAME3 frame = scene->frameList[node->frameIndex];
         LwsSoundTrigger* trigger = &scene->triggerList[node->triggerIndex];
         unsigned short loop;
 
@@ -788,20 +696,20 @@ void lws_dissolve_interpolate(LwsInfo* scene, LwsNode* node,
 // FUNCTION: LEGORR 0x004880d0
 void lws_dissolve_level_set(LwsInfo* scene, LwsNode* node, float level)
 {
-    LwsFrame* frame = scene->frameList[node->frameIndex];
-    LwsUnknown* iunknown;
-    LwsUserVisual* userVisual;
-    unsigned long count;
+    LPDIRECT3DRMFRAME3 frame = scene->frameList[node->frameIndex];
+    IUnknown* iunknown;
+    LPDIRECT3DRMUSERVISUAL userVisual;
+    DWORD count;
     void* mesh;
     unsigned long groupCount;
     unsigned long group;
 
-    frame->lpVtbl->GetVisuals(frame, &count, NULL);
-    frame->lpVtbl->GetVisuals(frame, &count, &iunknown);
-    iunknown->lpVtbl->QueryInterface(iunknown, &IID_IDirect3DRMUserVisual, (void**)&userVisual);
-    iunknown->lpVtbl->Release(iunknown);
-    mesh = (void*)userVisual->lpVtbl->GetAppData(userVisual);
-    userVisual->lpVtbl->Release(userVisual);
+    frame->GetVisuals(&count, NULL);
+    frame->GetVisuals(&count, &iunknown);
+    iunknown->QueryInterface(IID_IDirect3DRMUserVisual, (void**)&userVisual);
+    iunknown->Release();
+    mesh = userVisual->GetAppData();
+    userVisual->Release();
 
     groupCount = pointer_value_get(mesh);
     for (group = 0; group < groupCount; group++) {
@@ -854,15 +762,15 @@ void lws_interpolate(LwsInfo* scene, LwsNode* node, unsigned short key,
 void lws_absolute_key_set(LwsInfo* scene, LwsNode* node, LwsVector3* pos,
                           LwsVector3* hpb, LwsVector3* scale)
 {
-    LwsFrame* frame = scene->frameList[node->frameIndex];
+    LPDIRECT3DRMFRAME3 frame = scene->frameList[node->frameIndex];
     float mat[4][4];
 
     if (node->flags & LWSNODE_FLAG_FACECAMERA) {
-        LwsFrame* parent;
+        LPDIRECT3DRMFRAME3 parent;
 
-        frame->lpVtbl->GetParent(frame, &parent);
-        frame->lpVtbl->GetTransform(frame, parent, mat);
-        parent->lpVtbl->Release(parent);
+        frame->GetParent(&parent);
+        frame->GetTransform(parent, mat);
+        parent->Release();
         parent = NULL;
 
         mat[0][0] *= scale->x;
@@ -908,11 +816,11 @@ void lws_absolute_key_set(LwsInfo* scene, LwsNode* node, LwsVector3* pos,
         mat[3][3] = 1.0f;
     }
 
-    frame->lpVtbl->AddTransform(frame, LWS_COMBINE_REPLACE, mat);
+    frame->AddTransform(D3DRMCOMBINE_REPLACE, mat);
 }
 
 // FUNCTION: LEGORR 0x004885c0
-void* lws_mesh_load(const char* baseDir, const char* fname, LwsFrame* frame,
+void* lws_mesh_load(const char* baseDir, const char* fname, LPDIRECT3DRMFRAME3 frame,
                     int noTextures)
 {
     char path[260];
@@ -968,23 +876,23 @@ void pair_table_append(LwsMeshPath* list, unsigned int* count,
 }
 
 // FUNCTION: LEGORR 0x004887c0
-void lws_frames_create(LwsInfo* scene, LwsNode* node, LwsFrame* parent,
+void lws_frames_create(LwsInfo* scene, LwsNode* node, LPDIRECT3DRMFRAME3 parent,
                        unsigned short* frameCount)
 {
-    LwsD3DRM* d3drm = (LwsD3DRM*)s_main_d3drm;
-    LwsFrame* frame;
+    LPDIRECT3DRM3 d3drm = (LPDIRECT3DRM3)s_main_d3drm;
+    LPDIRECT3DRMFRAME3 frame;
     unsigned char name[1024];
     unsigned char* s;
     LwsNode* child;
 
-    d3drm->lpVtbl->CreateFrame(d3drm, parent, &frame);
+    d3drm->CreateFrame(parent, &frame);
 
     if (node->flags & LWSNODE_FLAG_FACECAMERA) {
         float mat[4][4];
         memset(mat, 0, sizeof(mat));
         mat[3][0] = mat[3][1] = mat[3][2] = 0.0f;
         mat[0][0] = mat[1][1] = mat[2][2] = mat[3][3] = 1.0f;
-        frame->lpVtbl->AddTransform(frame, LWS_COMBINE_REPLACE, mat);
+        frame->AddTransform(D3DRMCOMBINE_REPLACE, mat);
     }
 
     scene->frameList[*frameCount] = frame;
@@ -996,7 +904,7 @@ void lws_frames_create(LwsInfo* scene, LwsNode* node, LwsFrame* parent,
     for (s = name; '\0' != *s; s++) {
         if (!isprint(*s)) *s = '_';
     }
-    frame->lpVtbl->SetName(frame, (const char*)name);
+    frame->SetName((const char*)name);
 
     for (child = node->childList; child; child = child->next) {
         lws_frames_create(scene, child, frame, frameCount);
@@ -1006,7 +914,7 @@ void lws_frames_create(LwsInfo* scene, LwsNode* node, LwsFrame* parent,
 // FUNCTION: LEGORR 0x00488900
 void lws_nodes_load(LwsInfo* scene, LwsNode* node)
 {
-    LwsFrame* frame = scene->frameList[node->frameIndex];
+    LPDIRECT3DRMFRAME3 frame = scene->frameList[node->frameIndex];
     void* mesh;
     LwsNode* child;
 
@@ -1065,18 +973,18 @@ void lws_free(LwsInfo* scene)
 void lws_node_free(LwsInfo* scene, LwsNode* node)
 {
     if (!(node->flags & LWSNODE_FLAG_NULL)) {
-        LwsFrame* frame = scene->frameList[node->frameIndex];
-        LwsUnknown* iunknown;
-        LwsUserVisual* userVisual;
-        unsigned long count;
+        LPDIRECT3DRMFRAME3 frame = scene->frameList[node->frameIndex];
+        IUnknown* iunknown;
+        LPDIRECT3DRMUSERVISUAL userVisual;
+        DWORD count;
         void* mesh;
 
-        frame->lpVtbl->GetVisuals(frame, &count, NULL);
-        frame->lpVtbl->GetVisuals(frame, &count, &iunknown);
-        iunknown->lpVtbl->QueryInterface(iunknown, &IID_IDirect3DRMUserVisual, (void**)&userVisual);
-        iunknown->lpVtbl->Release(iunknown);
-        mesh = (void*)userVisual->lpVtbl->GetAppData(userVisual);
-        userVisual->lpVtbl->Release(userVisual);
+        frame->GetVisuals(&count, NULL);
+        frame->GetVisuals(&count, &iunknown);
+        iunknown->QueryInterface(IID_IDirect3DRMUserVisual, (void**)&userVisual);
+        iunknown->Release();
+        mesh = userVisual->GetAppData();
+        userVisual->Release();
 
         mesh_remove(mesh, scene->frameList[node->frameIndex]);
     }
