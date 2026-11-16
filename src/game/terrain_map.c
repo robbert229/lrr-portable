@@ -57,7 +57,7 @@ TerrainMap* terrain_map_create(void* root, const char* filename,
     TerrainMapPoint2* uv;
     float r;
     float scale;
-    int diffA, diffB;
+    unsigned int diffA, diffB;
     TerrainMapBlock* block;
 
     if ((file = (TerrainMapFile*)read_whole_file(filename, NULL)) != NULL) {
@@ -129,7 +129,7 @@ TerrainMap* terrain_map_create(void* root, const char* filename,
                                     map->blocks[(y + 1) * map->blockWidth + x + 1].height;
                             diffB = map->blocks[y * map->blockWidth + x + 1].height -
                                     map->blocks[(y + 1) * map->blockWidth + x].height;
-                            if ((unsigned int)abs(diffA) < (unsigned int)abs(diffB)) {
+                            if ((unsigned int)abs((int)diffA) < (unsigned int)abs((int)diffB)) {
                                 terrain_map_block_rotated_set(map, x, y, 1);
                             }
                             else {
