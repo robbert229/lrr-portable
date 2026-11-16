@@ -333,6 +333,7 @@ int electric_fence_building_spark_callback(ElectricFenceObject* object,
     TerrainMapPoint2 dir;
     TerrainMapPoint2I blockPos;
     unsigned int direction, count, i;
+    int entrance;
     TerrainMapPoint2I* shape;
     TerrainMapPoint2I* next;
 
@@ -359,9 +360,13 @@ int electric_fence_building_spark_callback(ElectricFenceObject* object,
                 next = &shape[i + 1];
                 if (i != count - 1 && shape[i].x == next->x &&
                     shape[i].y == next->y)
-                    i++;
+                    entrance = 1;
                 else
+                    entrance = 0;
+                if (!entrance)
                     electric_fence_spark(shape[i].x, shape[i].y, 0, elapsedGame);
+                else
+                    i++;
             }
         }
     }
