@@ -7922,8 +7922,9 @@ int legoobject_adjacent_placement_cell_search(Lego_Object* obj, Lego_Object* tar
                 for (i = 0, j = start; i < 12; i++, j++) {
                     k = j;
                     if (reverse == 1) k = 24 - j;
-                    blockPos[0] = offsets[k % 12][0] + targetPos[0];
-                    blockPos[1] = offsets[k % 12][1] + targetPos[1];
+                    k %= 12;
+                    blockPos[0] = offsets[k][0] + targetPos[0];
+                    blockPos[1] = offsets[k][1] + targetPos[1];
                     if ((pass == 1 || !terrain_cell_mask_180000_current(blockPos)) &&
                         legoobject_route_to_cell_command_issue(obj, blockPos[0], blockPos[1], target))
                         return 1;
