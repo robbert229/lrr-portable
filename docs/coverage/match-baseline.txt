@@ -1,4 +1,4 @@
-# input_sha256: 59f051c186dc1e5f61a891b2af82ef5f40e90dd9175bae94753a4dd2ac65c611
+# input_sha256: 76538a435914e6f7c4999e2aa501f502f1bba3e64c0d46c8009fae51cf1ee131
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1815,7 +1815,7 @@
 0x00460220 100.00 reward_level_start
 0x00460290 100.00 reward_building_counts_get
 0x00460310 100.00 reward_building_counts_callback
-0x00460360 76.92 reward_prepare_results
+0x00460360 92.68 reward_prepare_results
 0x00460910 100.00 reward_object_count_get
 0x00460950 90.86 reward_calculate_score
 0x00460f00 100.00 reward_create_scroll
@@ -1828,7 +1828,7 @@
 0x00462270 100.00 reward_advance
 0x00462390 100.00 reward_debug_keys
 0x00462460 100.00 reward_restart_flic
-0x004624a0 79.23 reward_update_state
+0x004624a0 87.97 reward_update_state
 0x00462600 100.00 reward_draw_values
 0x00462700 100.00 reward_update_input
 0x00462780 75.32 reward_check_skip
@@ -2077,7 +2077,7 @@
 0x0046f770 100.00 weapons_projectile_hit_object
 0x0046f920 52.01 weapons_projectile_update
 0x0046faf0 84.50 weapons_projectile_create
-0x0046fc70 59.89 weapons_projectile_create_curved
+0x0046fc70 60.87 weapons_projectile_create_curved
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
 0x0046ff70 100.00 weapons_projectile_find_free
 0x0046ff90 100.00 weapons_lazer_find_free
@@ -2087,7 +2087,7 @@
 0x00470540 100.00 weapons_object_center_proximity_check
 0x00470630 100.00 weapons_object_line_side_check
 0x00470690 100.00 weapons_lazer_create
-0x00470760 56.38 weapons_mesh_build_segment
+0x00470760 56.93 weapons_mesh_build_segment
 0x004712c0 100.00 weapons_get_weapons_model
 0x004712f0 100.00 weapons_model_timer_get
 0x00471310 100.00 weapons_model_timer_set
@@ -2100,7 +2100,7 @@
 0x00471a20 100.00 weapons_model_fire_null_get
 0x00471a40 100.00 weapons_model_x_pivot_get
 0x00471a50 100.00 weapons_model_y_pivot_get
-0x00471a60 69.30 weapons_model_aim
+0x00471a60 75.98 weapons_model_aim
 0x00471c70 100.00 weapons_model_fire_dir_get
 0x00471ca0 100.00 weapons_object_center_get
 0x00471ce0 100.00 weapons_object_can_be_hit
@@ -4540,7 +4540,7 @@
 0x00460220 100.00 reward_level_start
 0x00460290 100.00 reward_building_counts_get
 0x00460310 100.00 reward_building_counts_callback
-0x00460360 76.92 reward_prepare_results
+0x00460360 92.68 reward_prepare_results
 0x00460910 100.00 reward_object_count_get
 0x00460950 90.86 reward_calculate_score
 0x00460f00 100.00 reward_create_scroll
@@ -4553,7 +4553,7 @@
 0x00462270 100.00 reward_advance
 0x00462390 100.00 reward_debug_keys
 0x00462460 100.00 reward_restart_flic
-0x004624a0 79.23 reward_update_state
+0x004624a0 87.97 reward_update_state
 0x00462600 100.00 reward_draw_values
 0x00462700 100.00 reward_update_input
 0x00462780 75.32 reward_check_skip
@@ -4802,7 +4802,7 @@
 0x0046f770 100.00 weapons_projectile_hit_object
 0x0046f920 52.01 weapons_projectile_update
 0x0046faf0 84.50 weapons_projectile_create
-0x0046fc70 59.89 weapons_projectile_create_curved
+0x0046fc70 60.87 weapons_projectile_create_curved
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
 0x0046ff70 100.00 weapons_projectile_find_free
 0x0046ff90 100.00 weapons_lazer_find_free
@@ -4812,7 +4812,7 @@
 0x00470540 100.00 weapons_object_center_proximity_check
 0x00470630 100.00 weapons_object_line_side_check
 0x00470690 100.00 weapons_lazer_create
-0x00470760 56.38 weapons_mesh_build_segment
+0x00470760 56.93 weapons_mesh_build_segment
 0x004712c0 100.00 weapons_get_weapons_model
 0x004712f0 100.00 weapons_model_timer_get
 0x00471310 100.00 weapons_model_timer_set
@@ -4825,7 +4825,7 @@
 0x00471a20 100.00 weapons_model_fire_null_get
 0x00471a40 100.00 weapons_model_x_pivot_get
 0x00471a50 100.00 weapons_model_y_pivot_get
-0x00471a60 69.30 weapons_model_aim
+0x00471a60 75.98 weapons_model_aim
 0x00471c70 100.00 weapons_model_fire_dir_get
 0x00471ca0 100.00 weapons_object_center_get
 0x00471ce0 100.00 weapons_object_can_be_hit
