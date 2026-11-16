@@ -1,4 +1,4 @@
-# input_sha256: b3fe2cf07a07c90e0924b5426cf099093972162606392a7793b0d9df63540e7e
+# input_sha256: 02bd254790bb027ec62ff5318eaa31587e6f84c9c1cc75b00b77d579f6dfc7c3
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -729,7 +729,7 @@
 0x00425ce0 100.00 lego_game_speed_set
 0x00425d50 100.00 lego_render_record_set_from_input
 0x00425d80 100.00 current_engine_mode_is_zero
-0x00425d90 89.93 lego_terrain_pointer_command_update
+0x00425d90 100.00 lego_terrain_pointer_command_update
 0x004261c0 100.00 lego_spawn_coordinate_pool_tick
 0x00426230 100.00 lego_global_triple_copy_out
 0x00426250 100.00 lego_update_render_viewport_state
@@ -818,13 +818,13 @@
 0x00431560 100.00 level_current_owner_get
 0x00431570 100.00 level_current_terrain_get
 0x00431580 100.00 lego_terrain_neighbor_work_flag_scan
-0x00431780 69.91 lego_terrain_stamp_impact_handle
+0x00431780 71.12 lego_terrain_stamp_impact_handle
 0x004319b0 100.00 lego_terrain_cell_material_get
 0x004319e0 100.00 level_map_cell_get
 0x00431a30 100.00 selected_entities_any_predicate_match
 0x00431ab0 100.00 lego_any_object_can_occupy_terrain_cell
 0x00431b20 96.04 lego_terrain_placement_blocked_adjacent_cell_scan
-0x00431c70 70.94 lego_first_free_neighbor_cell_pick
+0x00431c70 74.51 lego_first_free_neighbor_cell_pick
 0x00431da0 100.00 lego_terrain_cell_route_and_occupancy_check
 0x00432100 100.00 lego_terrain_cell_flag100_set_and_track
 0x00432170 100.00 lego_terrain_cell_secondary_flag_100
@@ -906,7 +906,7 @@
 0x00435300 99.48 lego_tutorial_block_icons_update
 0x00435550 100.00 ledger_stub_00435550_GlobalStateZeroTransitionDetect
 0x00435580 100.00 lego_global_handle_position_apply_if_present
-0x004355c0 67.16 lego_menu_option_panel_texture_update
+0x004355c0 71.22 lego_menu_option_panel_texture_update
 0x00435940 100.00 lego_keep_running
 0x00435a20 100.00 global_state_low_byte_clear_and_refresh
 0x00435a50 100.00 lego_camera_registry_probe
@@ -1729,7 +1729,7 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
-0x0045adb0 91.36 panel_cursor_interaction_update
+0x0045adb0 99.37 panel_cursor_interaction_update
 0x0045b310 59.52 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
@@ -3454,7 +3454,7 @@
 0x00425ce0 100.00 lego_game_speed_set
 0x00425d50 100.00 lego_render_record_set_from_input
 0x00425d80 100.00 current_engine_mode_is_zero
-0x00425d90 89.93 lego_terrain_pointer_command_update
+0x00425d90 100.00 lego_terrain_pointer_command_update
 0x004261c0 100.00 lego_spawn_coordinate_pool_tick
 0x00426230 100.00 lego_global_triple_copy_out
 0x00426250 100.00 lego_update_render_viewport_state
@@ -3543,13 +3543,13 @@
 0x00431560 100.00 level_current_owner_get
 0x00431570 100.00 level_current_terrain_get
 0x00431580 100.00 lego_terrain_neighbor_work_flag_scan
-0x00431780 69.91 lego_terrain_stamp_impact_handle
+0x00431780 71.12 lego_terrain_stamp_impact_handle
 0x004319b0 100.00 lego_terrain_cell_material_get
 0x004319e0 100.00 level_map_cell_get
 0x00431a30 100.00 selected_entities_any_predicate_match
 0x00431ab0 100.00 lego_any_object_can_occupy_terrain_cell
 0x00431b20 96.04 lego_terrain_placement_blocked_adjacent_cell_scan
-0x00431c70 70.94 lego_first_free_neighbor_cell_pick
+0x00431c70 74.51 lego_first_free_neighbor_cell_pick
 0x00431da0 100.00 lego_terrain_cell_route_and_occupancy_check
 0x00432100 100.00 lego_terrain_cell_flag100_set_and_track
 0x00432170 100.00 lego_terrain_cell_secondary_flag_100
@@ -3631,7 +3631,7 @@
 0x00435300 99.48 lego_tutorial_block_icons_update
 0x00435550 100.00 ledger_stub_00435550_GlobalStateZeroTransitionDetect
 0x00435580 100.00 lego_global_handle_position_apply_if_present
-0x004355c0 67.16 lego_menu_option_panel_texture_update
+0x004355c0 71.22 lego_menu_option_panel_texture_update
 0x00435940 100.00 lego_keep_running
 0x00435a20 100.00 global_state_low_byte_clear_and_refresh
 0x00435a50 100.00 lego_camera_registry_probe
@@ -4454,7 +4454,7 @@
 0x0045abb0 100.00 panel_item_flag32_set
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
-0x0045adb0 91.36 panel_cursor_interaction_update
+0x0045adb0 99.37 panel_cursor_interaction_update
 0x0045b310 59.52 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
