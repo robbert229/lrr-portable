@@ -311,7 +311,6 @@ int Image_8BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
         }
 
         Image_FlipSurface(desc);
-        return 1;
     } else if (bpp == 24) {
         return 0;
     } else if (bpp == 32) {
@@ -405,7 +404,6 @@ int Image_24BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
         }
 
         Image_FlipSurface(desc);
-        return 1;
     } else if (bpp == 24) {
         return 0;
     } else if (bpp == 32) {
