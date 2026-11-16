@@ -9,7 +9,7 @@ It classifies where each function belongs; it does not claim every function is f
 - Area boundaries describe what responsibility is included and where it stops. A function can sit near a boundary; `classification_note` preserves a narrower exception when needed.
 - **Basis**: `body` means the pseudocode body supports the assignment; `name+body` uses both; `name` uses the human alias; `import-symbol` uses an import/runtime symbol; `address-cluster` relies on a surrounding cluster; `unresolved` means the role remains opaque and the assignment is provisional.
 - **Confidence** describes confidence in area placement, not completeness of behavioral understanding: `high` = the area is clear; `medium` = plausible placement with some ambiguity; `low` = provisional placement that needs follow-up.
-- Port/reconstruction status remains in [`ledger.csv`](ledger.csv). Address partitions used during review are not semantic boundaries.
+- Port/reconstruction status is in the coverage ledger on `main`. Address partitions used during review are not semantic boundaries.
 
 Assignment confidence: 716 high, 1819 medium, 29 low. Basis counts: address-cluster 1, body 46, import-symbol 31, name 1027, name+body 1436, unresolved 23.
 23 functions with opaque pseudocode are provisionally grouped by surrounding subsystem.

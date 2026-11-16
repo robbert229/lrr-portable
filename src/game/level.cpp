@@ -420,50 +420,14 @@ uint16_t level_map_cell(const MapFile* m, int x, int y)
 
 int terrain_roof_owner_initialize(LevelState* level)
 {
-#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-    TerrainState* terrain = level != NULL ? (TerrainState*)level->ptr_terrain : NULL;
-    void* root = scene_root_object_get();
-    if (terrain == NULL || terrain->owner_level != level || root == NULL ||
-        terrain->roof_scene != NULL ||
-        indexed_surface_scene_owner_get() != NULL) return 0;
-    if (!indexed_surface_resource_allocate(root, terrain->width,
-                                           terrain->height)) return 0;
-    void* scene = indexed_surface_scene_owner_get();
-    if (scene == NULL) { graphics_overlay_resources_release(); return 0; }
-    free(terrain->derived_mesh.records);
-    terrain->derived_mesh.records = indexed_surface_geometry_records_get();
-    terrain->roof_scene = scene;
-    terrain->roof_root = root;
-    graphics_overlay_visibility_set(1u);
-    return 1;
-#else
     (void)level;
     return 0;
-#endif
 }
 
 int terrain_roof_visibility_get(const LevelState* level)
 {
-#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-    typedef long (__stdcall *ParentGet)(void*, void**);
-    typedef unsigned long (__stdcall *Release)(void*);
-    const TerrainState* t = level != NULL ? (const TerrainState*)level->ptr_terrain : NULL;
-    void* channels[3];
-    void* parent = NULL;
-    if (t == NULL || t->roof_scene == NULL ||
-        t->roof_scene != indexed_surface_scene_owner_get() ||
-        t->roof_root != scene_root_object_get()) return -1;
-    memcpy(channels, t->roof_scene, sizeof(channels));
-    if (((ParentGet)(*(void***)channels[1])[0x5c / 4])(
-            channels[1], &parent) != 0 || parent == NULL) return -1;
-    int result = parent == channels[0] ? 1 :
-                 (parent == channels[2] ? 0 : -1);
-    ((Release)(*(void***)parent)[2])(parent);
-    return result;
-#else
     (void)level;
     return -1;
-#endif
 }
 
 int terrain_cell_roof_vertices_get(const LevelState* level, uint32_t x,
@@ -626,12 +590,10 @@ void terrain_create_cell_surface_vectors_rebuild(TerrainState* terrain,
     memcpy(record + 0x0cu, second, sizeof(second));
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void* terrain_create(const char* surface_map, float blocksize)
 {
     return terrain_create_retail(NULL, surface_map, blocksize, 0.0f);
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 void terrain_destroy(void* handle)
 {
@@ -1310,7 +1272,6 @@ void level_tile_mark_current(const int cell_xy[2], int set)
     level_tile_mark_current_target(cell_xy, set);
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 int level_tile_occupied(const LevelState* s, int cx, int cy)
 {
     const uint8_t* rec = level_voxel(s, cx, cy);
@@ -1321,7 +1282,6 @@ int level_tile_occupied(const LevelState* s, int cx, int cy)
     __builtin_memcpy(&flags, rec + 0x08, sizeof(flags));
     return (flags & TILE_FLAG_OCCUPIED) != 0;
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 int level_tile_type(const LevelState* s, int cx, int cy)
 {
@@ -1649,7 +1609,6 @@ uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
     return 1;
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);
@@ -1665,7 +1624,6 @@ uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy)
     }
     return 0u;
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy)
 {
@@ -1699,7 +1657,6 @@ uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy)
     return 0u;
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* FUN_00432b90: unchecked signed state byte in {8, 10, 11}. */
 int level_cell_type_is_8_or_10_or_11(const LevelState* s, int cx, int cy)
 {
@@ -1710,7 +1667,6 @@ int level_cell_type_is_8_or_10_or_11(const LevelState* s, int cx, int cy)
     const int type = (int)(signed char)rec[2];
     return type == 8 || type == 10 || type == 11;
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* FUN_00432dd0: entity-reservation bit (the level_tile_mark flag). */
 uint32_t level_cell_flag_reserved(const LevelState* s, int cx, int cy)
@@ -1737,7 +1693,6 @@ void level_cell_flag_80000_set(LevelState* s, int cx, int cy, int set)
     __builtin_memcpy(rec + 0x08, &flags, sizeof(flags));
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* FUN_004332c0: record byte +3, unsigned. */
 int level_cell_record_byte3(const LevelState* s, int cx, int cy)
 {
@@ -1759,7 +1714,6 @@ void level_cell_work_flag_set(LevelState* s, int cx, int cy)
         }
     }
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* TerrainCellWorkFlagClear (FUN_00430320): target-shaped implementation
  * below obtains the current level from GameContext. This explicit-level
@@ -1904,14 +1858,12 @@ void air_supply_amount_update_current(const struct EntitySlot* e, float delta)
     air_supply_amount_update(level_current_owner_get(), e, delta);
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t global_state_field84_get(const LevelState* s)
 {
     if (s != NULL && s == g_active_level_retail)
         return global_state_field84_get_current_target();
     return s != NULL ? (uint32_t)level_int(s, LEVEL_OFF_STATE84) : 0u;
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 // PORT-ONLY: current-level convenience for interface_port.cpp over upgrade_resource_check; no original function (finding 617)
 uint32_t upgrade_resource_check_current(int selector)
@@ -2318,7 +2270,6 @@ void map_cell_tracking_activity_state_update(GameContext* game,
     }
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* Explicit-level adapter for the current-level retail entry below. */
 void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
                                                const int cell_xy[2])
@@ -2344,7 +2295,6 @@ void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
     coordinate_pair_callback_dispatch(cell_xy);
     flic_opcode27_fallback_noop();
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* TerrainCellStateUpdate (FUN_00432c90): the retail entry takes only the
  * coordinate pair and reads the active level global. Keep the explicit-level
@@ -2732,7 +2682,6 @@ void terrain_edge_flag_midpoint_update(LevelState* level)
     }
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
                                        int center_y, int radius)
 {
@@ -2754,7 +2703,6 @@ void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
         }
     }
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* TerrainNeighborWorkFlagScan (FUN_00431580): the work-flag breadth-first
  * sweep. A double-buffered float-pair queue (two pages of (w+h)*2 entries
@@ -2842,7 +2790,6 @@ void terrain_neighbor_work_flag_scan(LevelState* s, unsigned int seed_x,
 typedef char cell_coordinate_timestamp_stride_check[
     sizeof(CellCoordinateTimestamp) == 8u ? 1 : -1];
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 /* terrain_cell_dirty_flag: faithful physical-byte read (see level.hpp). */
 int terrain_cell_dirty_flag(const void* terrain, int x, int y)
 {
@@ -2855,7 +2802,6 @@ int terrain_cell_dirty_flag(const void* terrain, int x, int y)
             + ((size_t)y * (size_t)t->width + (size_t)x)
               * TERRAIN_BLOCK_STRIDE + 0x19)[0] & 0x10;
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* --- the cell-list min-distance scale apply (see level.hpp) ---------------
  * The corpus's cell-list context (the level block's +0x10 pointer) has no
@@ -2867,7 +2813,6 @@ void*    s_cell_list_object;
 int      s_cell_list_scale;
 uint32_t s_cell_list_flags; /* corpus word +0x73d0: bit 2 = applied */
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void cell_list_apply_state_install(void* scene_object, int scale)
 {
     s_cell_list_object = scene_object;
@@ -2883,7 +2828,6 @@ uint32_t cell_list_apply_flags_peek(void)
 {
     return s_cell_list_flags;
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* Flat dword index of a cell's selector word, or -1 when the coordinate
  * cannot address the region (bounds deviation). */
@@ -2911,7 +2855,6 @@ static int64_t grid_rec_field_index(int x, int y, int field)
     return word;
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void terrain_cell_record_get(int x, int y, int field,
                              uint32_t* value_a, uint32_t* value_b)
 {
@@ -2950,7 +2893,6 @@ void terrain_cell_record_get(int x, int y, int field,
     if (value_a != NULL) *value_a = s_grid_rec[(size_t)pointer_index];
     if (value_b != NULL) *value_b = s_grid_rec[(size_t)table_index];
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 uint32_t cell_flag4_is_set(int x, int y, int field)
 {
@@ -3106,7 +3048,6 @@ void terrain_cell_refresh_dispatch_level(LevelState* lvl,
     }
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
                                    int y)
 {
@@ -3117,7 +3058,6 @@ void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
      * retail entrypoint. */
     terrain_cell_refresh_dispatch_level(lvl, cell_xy, 0);
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 CoordinateEntityDispatchHook s_coordinate_direct_callback;
 CoordinateEntityDispatchHook s_coordinate_mode_zero_callback;
@@ -3193,7 +3133,6 @@ void global_object_fielda8_increment_for_level(LevelState* s)
     if (s != NULL) level_set_int(s, 0xA8, level_int(s, 0xA8) + 1);
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t level_field8c_get(const LevelState* s)
 {
     return s != NULL ? (uint32_t)level_int(s, 0x8C) : 0u;
@@ -3208,7 +3147,6 @@ uint32_t level_field9c_get(const LevelState* s)
 {
     return s != NULL ? (uint32_t)level_int(s, 0x9C) : 0u;
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 uint32_t level_field94_get(const LevelState* s)
 {
@@ -3220,7 +3158,6 @@ uint32_t level_fielda8_get(const LevelState* s)
     return s != NULL ? (uint32_t)level_int(s, 0xA8) : 0u;
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void terrain_sfx_grid_cell_set(int cell, int handle)
 {
     if (cell >= 0 && cell < TERRAIN_SFX_GRID_CELLS) {
@@ -3235,7 +3172,6 @@ int terrain_sfx_grid_cell_peek(int cell)
     }
     return s_terrain_sfx_grid[cell];
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 TerrainChoiceWindow s_choice_windows[4];
 uint32_t s_choice_scalar[2];  /* DAT_004c7e98/e9c role */
@@ -3243,7 +3179,6 @@ uint32_t s_choice_active;     /* DAT_004c7ea0 role */
 uint32_t s_choice_flags;      /* DAT_004c7ea8 role */
 uintptr_t s_choice_record;    /* DAT_004c7ea4 role */
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 void terrain_choice_window_install(int word, uint32_t value)
 {
     if (word >= 0)
@@ -3290,10 +3225,8 @@ void terrain_choice_scalar_install(int scalar, uint32_t value)
 }
 
 uint32_t terrain_choice_active_peek(void) { return s_choice_active; }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 uint32_t terrain_choice_flags_peek(void) { return s_choice_flags; }
 void terrain_choice_flags_set(uint32_t flags) { s_choice_flags = flags; }
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uintptr_t terrain_choice_record_peek(void) { return s_choice_record; }
 
 /* CellCardinalNeighborApply (FUN_00409cd0) — see level.hpp. The corpus's
@@ -3307,7 +3240,6 @@ void cell_cardinal_neighbor_apply(const struct GameContext* ctx, int x,
                                       y + k_offsets[2 * i + 1]);
     }
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* TerrainCreate's 0x34/0x4034 reciprocal variant lists are hosted in a
  * separate allocation on native builds. This accessor supplies the same
@@ -3731,9 +3663,7 @@ void* tutorial_path_descriptor_create(const uint32_t* coord_pair)
 }
 #endif
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t path_record_count_peek(void) { return s_path_record_count; }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 void* path_record_last_peek(void) { return s_path_record_last; }
 
 /* Test hook: stages a count-table slot (the corpus's table writers are
@@ -3821,7 +3751,6 @@ static void lava_erosion_runtime_tables_clear(void)
     s_ts_now = 0;
 }
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 float erosion_decay_scale_peek(void) { return s_erosion_decay_scale; }
 float erosion_delay_scale_peek(void) { return s_erosion_delay_scale; }
 int erosion_timestamp_tick_peek(void) { return s_ts_now; }
@@ -3870,7 +3799,6 @@ int lava_erosion_neighbor_check_level(const LevelState* s, int seed_x,
     }
     return 0;
 }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 /* LavaErosionStageRegister (FUN_0040ea10): claim the first inactive stage
  * slot, seed the cell byte and countdown, then append it to the ordered
@@ -4023,9 +3951,7 @@ void lava_erosion_mutation_threshold_set(unsigned int threshold)
 const int s_cardinal_deltas[4][2] = {{0, -1}, {1, 0}, {0, 1},
                                             {-1, 0}};
 
-#if !defined(LEGORRR_BACKEND_WINAPI) /* native backend and tests only (#576) */
 uint32_t neighbor_pick_rotation_peek(void) { return s_neighbor_pick_rotation; }
-#endif /* !LEGORRR_BACKEND_WINAPI */
 
 static int route_cell_byte(const LevelState* s, int x, int y, int off)
 {

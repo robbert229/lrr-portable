@@ -25,13 +25,8 @@
 #if defined(LEGORRR_BACKEND_MINIWIN)
 #  include <miniwin/windows.h>
 #  include <miniwin/ddraw.h>
-#elif defined(LEGORRR_BACKEND_WINAPI)
-#  include <windows.h>
-/* TODO(winapi): vendored DirectDraw headers for the reference build
- * (MinGW-w64 ships no DirectDraw headers). The winapi adapter is A/B-only
- * (ADR 0004) and is not wired here yet. */
 #else
-#  error "no platform defined — set the meson option platform=native|winapi"
+#  error "LEGORRR_BACKEND_MINIWIN is not defined; build with CMake"
 #endif
 
 /* --- Platform window + presentation (backend-specific glue) --------------- */
