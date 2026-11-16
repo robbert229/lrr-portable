@@ -1143,18 +1143,18 @@ void mesh_uview_mesh(APPOBJ* lightWaveObject, Mesh_Point2F* textCoords)
                                     lightWaveObject->aoVerts = (float*)realloc(lightWaveObject->aoVerts, sizeof(Mesh_Vector3F) * (lightWaveObject->aoSize.lwVertCount + 11));
                                 }
                                 {
-                                    unsigned long index = lightWaveObject->aoPoly[polyIndex].plyData[polyVert];
-                                    unsigned long newIndex = lightWaveObject->aoSize.lwVertCount;
-                                    lightWaveObject->aoVerts[(newIndex * 3) + 0] = lightWaveObject->aoVerts[(index * 3) + 0];
-                                    lightWaveObject->aoVerts[(newIndex * 3) + 1] = lightWaveObject->aoVerts[(index * 3) + 1];
-                                    lightWaveObject->aoVerts[(newIndex * 3) + 2] = lightWaveObject->aoVerts[(index * 3) + 2];
+                                    unsigned long index = lightWaveObject->aoPoly[polyIndex].plyData[polyVert] * 3;
+                                    unsigned long newIndex = lightWaveObject->aoSize.lwVertCount * 3;
+                                    lightWaveObject->aoVerts[newIndex + 0] = lightWaveObject->aoVerts[index + 0];
+                                    lightWaveObject->aoVerts[newIndex + 1] = lightWaveObject->aoVerts[index + 1];
+                                    lightWaveObject->aoVerts[newIndex + 2] = lightWaveObject->aoVerts[index + 2];
                                 }
                                 lightWaveObject->aoPoly[polyIndex].plyData[polyVert] = (unsigned short)lightWaveObject->aoSize.lwVertCount;
                                 textCoords[lightWaveObject->aoPoly[polyIndex].plyData[polyVert]].x = u;
                                 textCoords[lightWaveObject->aoPoly[polyIndex].plyData[polyVert]].y = v;
                                 lightWaveObject->aoSize.lwVertCount++;
                                 newVertCount++;
-                                if (newVertCount > 9) newVertCount = 0;
+                                if (newVertCount >= 10) newVertCount = 0;
                             }
                             polyVert++;
                         }
