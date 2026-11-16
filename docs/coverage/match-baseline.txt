@@ -1,4 +1,4 @@
-# input_sha256: 71040a8a248cd318a77013888f7d52b2806e98cf4df6090698fea9c380dc6eb4
+# input_sha256: 9971c4c38e9ddd77c43cc80977049d1732f5b33ec499c0f81d583221ffcaa122
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -284,7 +284,7 @@
 0x0040bd60 100.00 detail_matrix_setup
 0x0040bdc0 100.00 ledger_stub_0040bdc0_SetTimeoutTo10000
 0x0040bde0 100.00 effect_spawn_boulder_explode
-0x0040be10 88.24 scene_light_create_at_position
+0x0040be10 100.00 scene_light_create_at_position
 0x0040beb0 100.00 effect_spawn_smash_path
 0x0040bf70 100.00 rock_fall_style_name_lookup
 0x0040bfc0 100.00 rockfall_style_table_base_set
@@ -308,7 +308,7 @@
 0x0040c990 100.00 misc_objects_effect_slots_bind_original
 0x0040cb70 100.00 effect_update_misc_effect
 0x0040cc40 100.00 effect_update_misc_effects_all
-0x0040cce0 60.69 lava_effect_select_and_place
+0x0040cce0 100.00 lava_effect_select_and_place
 0x0040cdc0 100.00 electric_fence_initialise
 0x0040ce30 100.00 electric_fence_shutdown
 0x0040ce80 100.00 electric_fence_restart
@@ -427,7 +427,7 @@
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
 0x00411a00 89.05 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
-0x00411f10 63.01 front_menu_item_draw_slider
+0x00411f10 98.92 front_menu_item_draw_slider
 0x00412170 100.00 front_menu_get_overlay_count
 0x00412190 100.00 front_menu_should_random_play
 0x004121b0 100.00 front_menu_update_overlays
@@ -451,7 +451,7 @@
 0x004140c0 100.00 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
 0x00414ce0 100.00 front_is_intros_enabled
-0x00414d30 77.11 front_callback_slider_brightness
+0x00414d30 100.00 front_callback_slider_brightness
 0x00414de0 100.00 front_callback_slider_sound_volume
 0x00414df0 100.00 audio_menu_volume_set
 0x00414e10 100.00 option_music_default
@@ -2075,7 +2075,7 @@
 0x0046f550 100.00 weapons_update
 0x0046f610 100.00 weapons_callback_update_object
 0x0046f770 100.00 weapons_projectile_hit_object
-0x0046f920 52.01 weapons_projectile_update
+0x0046f920 89.63 weapons_projectile_update
 0x0046faf0 84.50 weapons_projectile_create
 0x0046fc70 60.87 weapons_projectile_create_curved
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
@@ -2100,7 +2100,7 @@
 0x00471a20 100.00 weapons_model_fire_null_get
 0x00471a40 100.00 weapons_model_x_pivot_get
 0x00471a50 100.00 weapons_model_y_pivot_get
-0x00471a60 75.98 weapons_model_aim
+0x00471a60 85.41 weapons_model_aim
 0x00471c70 100.00 weapons_model_fire_dir_get
 0x00471ca0 100.00 weapons_object_center_get
 0x00471ce0 100.00 weapons_object_can_be_hit
@@ -3009,7 +3009,7 @@
 0x0040bd60 100.00 detail_matrix_setup
 0x0040bdc0 100.00 ledger_stub_0040bdc0_SetTimeoutTo10000
 0x0040bde0 100.00 effect_spawn_boulder_explode
-0x0040be10 88.24 scene_light_create_at_position
+0x0040be10 100.00 scene_light_create_at_position
 0x0040beb0 100.00 effect_spawn_smash_path
 0x0040bf70 100.00 rock_fall_style_name_lookup
 0x0040bfc0 100.00 rockfall_style_table_base_set
@@ -3033,7 +3033,7 @@
 0x0040c990 100.00 misc_objects_effect_slots_bind_original
 0x0040cb70 100.00 effect_update_misc_effect
 0x0040cc40 100.00 effect_update_misc_effects_all
-0x0040cce0 60.69 lava_effect_select_and_place
+0x0040cce0 100.00 lava_effect_select_and_place
 0x0040cdc0 100.00 electric_fence_initialise
 0x0040ce30 100.00 electric_fence_shutdown
 0x0040ce80 100.00 electric_fence_restart
@@ -3152,7 +3152,7 @@
 0x004119d0 100.00 front_menu_item_check_not_in_tuto_any_tutorial_flags
 0x00411a00 89.05 front_menu_update_menu_items_input
 0x00411f00 100.00 input_key_context_check
-0x00411f10 63.01 front_menu_item_draw_slider
+0x00411f10 98.92 front_menu_item_draw_slider
 0x00412170 100.00 front_menu_get_overlay_count
 0x00412190 100.00 front_menu_should_random_play
 0x004121b0 100.00 front_menu_update_overlays
@@ -3176,7 +3176,7 @@
 0x004140c0 100.00 front_load_menu_set
 0x00414c90 100.00 front_get_menu_id_by_name
 0x00414ce0 100.00 front_is_intros_enabled
-0x00414d30 77.11 front_callback_slider_brightness
+0x00414d30 100.00 front_callback_slider_brightness
 0x00414de0 100.00 front_callback_slider_sound_volume
 0x00414df0 100.00 audio_menu_volume_set
 0x00414e10 100.00 option_music_default
@@ -4800,7 +4800,7 @@
 0x0046f550 100.00 weapons_update
 0x0046f610 100.00 weapons_callback_update_object
 0x0046f770 100.00 weapons_projectile_hit_object
-0x0046f920 52.01 weapons_projectile_update
+0x0046f920 89.63 weapons_projectile_update
 0x0046faf0 84.50 weapons_projectile_create
 0x0046fc70 60.87 weapons_projectile_create_curved
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
@@ -4825,7 +4825,7 @@
 0x00471a20 100.00 weapons_model_fire_null_get
 0x00471a40 100.00 weapons_model_x_pivot_get
 0x00471a50 100.00 weapons_model_y_pivot_get
-0x00471a60 75.98 weapons_model_aim
+0x00471a60 85.41 weapons_model_aim
 0x00471c70 100.00 weapons_model_fire_dir_get
 0x00471ca0 100.00 weapons_object_center_get
 0x00471ce0 100.00 weapons_object_can_be_hit
