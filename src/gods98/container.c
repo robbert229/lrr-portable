@@ -1094,7 +1094,7 @@ int Container_IsCurrentActivity(Container* cont, const char* actname)
 // FUNCTION: LEGORR 0x00473370
 int Container_SetActivity(Container* cont, const char* actname)
 {
-    char* freeName = NULL;
+    char* freeName;
     char* currAnimName;
     CntFrame* newFrame;
     CntFrame* oldFrame;
@@ -1102,6 +1102,7 @@ int Container_SetActivity(Container* cont, const char* actname)
     int result = 0;
 
     if (cont->type == Container_FromActivity) {
+        freeName = NULL;
         if (newFrame = Container_Frame_Find(cont, actname, 1)) {
             if (cont->typeData && (currAnimName = cont->typeData->name)) {
                 if (oldFrame = Container_Frame_Find(cont, currAnimName, 0)) {
