@@ -50,6 +50,18 @@ Measured with full matching builds under the gate's link mode.
 7. **No function scores lower**, and `_cvtdate` (`0x00499da0`) rises from
    98.54% to 100%.
 
+## A string literal placed by the same mechanism
+
+String literals are pick-any COMDATs, and LINK keeps the first object's
+copy. The original's `"LWO"` (`004a1d5c`) sits after Building.c's strings
+and before the screen-effect unit's, but its first live reader is
+RockFallStyles.c (`0040c953`), so the matching build placed it among
+RockFallStyles.c's strings, and the 0x84 bytes between were 4 bytes early.
+`src/game/building_model_tail.h` gives Building.c an unused `extern __inline`
+copy that uses the literal; /OPT:REF removes its code, and the literal lands
+at `004a1d5c`. After it, every `.data` word that differs from the original
+is a pointer into `.text`.
+
 ## Method
 
 - `coffrefs.py`-style scan: each object's undefined externals, in symbol
