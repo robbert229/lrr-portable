@@ -384,6 +384,13 @@ if(LRR_CLASSIC_MSVC5)
       list(GET LRR_IMPORTLIB_TARGETS ${_index} _lib)
       string(REPLACE "+" ";" _lib "${_lib}")
     endif()
+    # A library also searched earlier (LRR_LINK_FIRST_LIBRARIES): LINK
+    # searches a name once, so the second search names the file (finding
+    # 694).
+    list(FIND LRR_LINK_FIRST_LIBRARIES "${_lib}" _index)
+    if(_index GREATER -1 AND LRR_MSVC5_ROOT)
+      set(_lib "${LRR_MSVC5_ROOT}/lib/${_lib}")
+    endif()
     list(APPEND _lrr_link_libraries "${_lib}")
   endforeach()
   set(LRR_LINK_LIBRARIES ${_lrr_link_libraries})
@@ -395,7 +402,10 @@ if(LRR_CLASSIC_MSVC5)
   # gods98's members do, so LINK pulls them in its second pass; listed
   # first, their commons come before gods98's, as in the original (finding
   # 690).
-  target_link_libraries(program PRIVATE ${LRR_LINK_LATE_LIBRARIES} unit_gods98)
+  # kernel32.lib's first search comes before the gods98 members load, so it
+  # pulls only the explicit objects' imports (finding 694).
+  target_link_libraries(program PRIVATE ${LRR_LINK_LATE_LIBRARIES}
+    ${LRR_LINK_FIRST_LIBRARIES} unit_gods98)
   target_link_libraries(program PRIVATE ${LRR_LINK_LIBRARIES})
   target_link_libraries(program PRIVATE ${LRR_LINK_TAIL_LIBRARY})
   # No /ENTRY: LINK infers WinMainCRTStartup from WinMain and pulls

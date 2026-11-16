@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 import tempfile
 import unittest
@@ -100,8 +101,14 @@ class CommittedListTest(unittest.TestCase):
     def test_matching_libraries_put_libc_after_kernel32(self):
         # Finding 574: kernel32's descriptor comes first, and LIBC follows it
         # so that RtlUnwind's thunk is pulled after the DirectX thunks.
-        libs = lo.libraries((lo.ROOT / lo.LIST).read_text(encoding="utf-8"))
-        self.assertEqual(libs[:3], ["kernel32.lib", "libc.lib", "oldnames.lib"])
+        # Finding 694: kernel32.lib is searched first before the gods98
+        # library (LRR_LINK_FIRST_LIBRARIES), and again before user32.lib.
+        text = (lo.ROOT / lo.LIST).read_text(encoding="utf-8")
+        first = re.search(r"^set\(LRR_LINK_FIRST_LIBRARIES ([^)]*)\)", text, re.M)
+        self.assertEqual(first.group(1).split(), ["kernel32.lib"])
+        libs = lo.libraries(text)
+        self.assertEqual(libs[:2], ["libc.lib", "oldnames.lib"])
+        self.assertEqual(libs[libs.index("user32.lib") - 1], "kernel32.lib")
 
 
     def test_late_members_link_after_the_libraries(self):

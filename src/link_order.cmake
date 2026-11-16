@@ -34,7 +34,8 @@
 # How the matching build links the entries, in this order (findings 658
 # and 690):
 #   1. explicit objects: the entries up to LRR_LINK_EXPLICIT_LAST;
-#   2. one library per late unit (LRR_LINK_LATE_MEMBERS), in list order;
+#   2. one library per late unit (LRR_LINK_LATE_MEMBERS), in list order,
+#      then LRR_LINK_FIRST_LIBRARIES (kernel32.lib; finding 694);
 #   3. one library, unit_gods98.lib, holding every later gods98 unit in list
 #      order, with LRR_LINK_MEMBER_ORDER naming one symbol of each;
 #   4. LRR_LINK_LIBRARIES;
@@ -294,9 +295,20 @@ set(LRR_LINK_TAIL_LIBRARY lrr_tail)
 # are rebuilt from cross/msvc5-importlibs; vfw32.lib holds the avifil32
 # imports. amstrmid.lib's member precedes dxguid.lib's in the original's GUID
 # block (finding 688).
-set(LRR_LINK_LIBRARIES kernel32.lib libc.lib oldnames.lib
+#
+# The original's hint/name strings keep LINK's pull order (finding 694). Its
+# first KERNEL32 run holds only the explicit objects' imports, so
+# kernel32.lib was searched before the gods98 library: it is
+# LRR_LINK_FIRST_LIBRARIES, linked between the late libraries and
+# unit_gods98.lib. Its second run, Main.c's imports and then LIBC's, comes
+# before USER32's first run, so kernel32.lib was searched again before
+# user32.lib in LINK's first library loop: the second kernel32.lib below.
+# LINK searches a library name once, so CMakeLists.txt passes that one by
+# the toolchain's full path.
+set(LRR_LINK_FIRST_LIBRARIES kernel32.lib)
+set(LRR_LINK_LIBRARIES libc.lib oldnames.lib
   ole32.lib d3drm.lib ddraw.lib winmm.lib vfw32.lib dinput.lib dsound.lib
-  user32.lib gdi32.lib advapi32.lib amstrmid.lib dxguid.lib)
+  kernel32.lib user32.lib gdi32.lib advapi32.lib amstrmid.lib dxguid.lib)
 
 # Units the original pulled in LINK's second pass (finding 657): LATE-001
 # (rnc.c) and LATE-002 (init.c) follow the import thunks. The matching build
@@ -306,8 +318,9 @@ set(LRR_LINK_LIBRARIES kernel32.lib libc.lib oldnames.lib
 # second pass and places their code and data after LIBC's first-pass members
 # and the DirectX thunks. Their commons come before gods98's, as in the
 # original: LINK allocates the commons library by library in command-line
-# order, whatever the pass (finding 690). The original also has RtlUnwind's
-# thunk before them; here it still follows them. Every other build compiles
+# order, whatever the pass (finding 690). RtlUnwind's thunk comes before
+# them, as in the original, since kernel32.lib's second search precedes
+# user32.lib's in the first pass (finding 694). Every other build compiles
 # them as ordinary entries, and their list entries keep their place.
 set(LRR_LINK_LATE_MEMBERS gods98/rnc.c gods98/init.c)
 
