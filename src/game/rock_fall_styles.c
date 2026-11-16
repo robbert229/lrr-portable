@@ -179,14 +179,15 @@ void effect_spawn_boulder_explode(Effect_Object* obj)
 void effect_spawn_boulder_explode_at(Effect_Vector3F* wPos)
 {
     unsigned int i;
+    void* cont;
 
     for (i = 0; i < 4; i++) {
         if (effectGlobs.boulderExplodeConts[i] == NULL) {
             if (((Effect_Level*)level_current_owner_get())->boulderAnimation == 2)
-                effectGlobs.boulderExplodeConts[i] = entity_visual_resource_load(legoGlobs_contBoulderExplodeIce);
+                cont = entity_visual_resource_load(legoGlobs_contBoulderExplodeIce);
             else
-                effectGlobs.boulderExplodeConts[i] = entity_visual_resource_load(legoGlobs_contBoulderExplode);
-            ddiscene_frame_update_and_callbacks(effectGlobs.boulderExplodeConts[i], 0.0f);
+                cont = entity_visual_resource_load(legoGlobs_contBoulderExplode);
+            ddiscene_frame_update_and_callbacks(effectGlobs.boulderExplodeConts[i] = cont, 0.0f);
             ddiscene_object_position_set(effectGlobs.boulderExplodeConts[i], NULL,
                                          wPos->x, wPos->y, wPos->z);
             ddiscene_object_pose_method_dispatch(effectGlobs.boulderExplodeConts[i], NULL,
