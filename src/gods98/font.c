@@ -263,11 +263,10 @@ Font* font_create(Image* image)
 {
     Font* newFont;
 
-    if ((newFont = fontGlobs.freeList) == NULL) {
-        font_add_list();
-        newFont = fontGlobs.freeList;
-    }
-    fontGlobs.freeList = newFont->nextFree;
+    if (fontGlobs.freeList == NULL) font_add_list();
+
+    newFont = fontGlobs.freeList;
+    fontGlobs.freeList = fontGlobs.freeList->nextFree;
     memset(newFont, 0, sizeof(Font));
     newFont->nextFree = newFont;
     newFont->image = image;
