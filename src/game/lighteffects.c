@@ -497,9 +497,9 @@ void light_effects_update_fade(float elapsedGame)
                 lightEffectsGlobs.fadePosRGB.r = 0.0f;
                 lightEffectsGlobs.fadePosRGB.g = 0.0f;
                 lightEffectsGlobs.fadePosRGB.b = 0.0f;
-                lightEffectsGlobs.fadeDestRGB.r = (float)fabs(lightEffectsGlobs.fadeRGBMax.r - lightEffectsGlobs.fadeRGBMin.r) * rnd + lightEffectsGlobs.fadeRGBMin.r;
-                lightEffectsGlobs.fadeDestRGB.g = (float)fabs(lightEffectsGlobs.fadeRGBMax.g - lightEffectsGlobs.fadeRGBMin.g) * rnd + lightEffectsGlobs.fadeRGBMin.g;
-                lightEffectsGlobs.fadeDestRGB.b = (float)fabs(lightEffectsGlobs.fadeRGBMax.b - lightEffectsGlobs.fadeRGBMin.b) * rnd + lightEffectsGlobs.fadeRGBMin.b;
+                lightEffectsGlobs.fadeDestRGB.r = ((float)fabs(lightEffectsGlobs.fadeRGBMax.r - lightEffectsGlobs.fadeRGBMin.r) * rnd) + lightEffectsGlobs.fadeRGBMin.r;
+                lightEffectsGlobs.fadeDestRGB.g = ((float)fabs(lightEffectsGlobs.fadeRGBMax.g - lightEffectsGlobs.fadeRGBMin.g) * rnd) + lightEffectsGlobs.fadeRGBMin.g;
+                lightEffectsGlobs.fadeDestRGB.b = ((float)fabs(lightEffectsGlobs.fadeRGBMax.b - lightEffectsGlobs.fadeRGBMin.b) * rnd) + lightEffectsGlobs.fadeRGBMin.b;
                 light_effects_set_fade_speed();
                 lightEffectsGlobs.flags |= (LIGHTFX_FLAG_FADING | LIGHTFX_FLAG_FADE_UP);
             }
