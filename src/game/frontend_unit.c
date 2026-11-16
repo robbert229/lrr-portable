@@ -1920,17 +1920,17 @@ void front_menu_draw_load_save_text(Front_Menu** menu)
 // FUNCTION: LEGORR 0x00412af0
 void front_menu_draw_menu_image(Front_Menu* menu, int light)
 {
-    Area2F src;
-    Point2F dest;
-
     if (light) {
         if (menu->menuImage != NULL) {
+            Area2F src;
+            Point2F dest;
+
             if (menu->flags & 1) {
                 image_display_scaled(menu->menuImage, NULL, (Point2F*)menu->imagePos, NULL);
                 return;
             }
-            src.y = -(float)frontGlobs_scrollOffsetY;
             src.x = -(float)frontGlobs_scrollOffsetX;
+            src.y = -(float)frontGlobs_scrollOffsetY;
             src.width = 640.0f;
             src.height = 480.0f;
             dest.x = 0.0f;
@@ -1939,6 +1939,9 @@ void front_menu_draw_menu_image(Front_Menu* menu, int light)
         }
     } else {
         if (menu->menuImageDark != NULL) {
+            Area2F src;
+            Point2F dest;
+
             if (menu->flags & 1) {
                 image_display_scaled(menu->menuImageDark, NULL, (Point2F*)menu->imagePos, NULL);
                 return;
@@ -2402,7 +2405,9 @@ void front_run_screen_menu(Front_Menu* menu)
     unsigned int currTime;
     void* level;
     char buff[128];
+    Front_Menu* currMenu;
 
+    currMenu = menu;
     transition = 0;
     menuTransition = 0;
     elapsed = 1.0f;
@@ -2420,24 +2425,24 @@ void front_run_screen_menu(Front_Menu* menu)
     g_front_save_menu_open = 1;
     frontGlobs_overlayImage = NULL;
     lastTime = timeGetTime();
-    while (!menu->closed) {
+    while (!currMenu->closed) {
         if (!transition) {
-            nextMenu = front_menu_update(elapsed, menu, NULL);
+            nextMenu = front_menu_update(elapsed, currMenu, NULL);
         } else {
-            front_menu_update(elapsed, menu, &menuTransition);
+            front_menu_update(elapsed, currMenu, &menuTransition);
         }
-        if (menu == frontGlobs_mainMenuSet->menus[0] && nextMenu != menu) {
+        if (currMenu == frontGlobs_mainMenuSet->menus[0] && nextMenu != currMenu) {
             frontGlobs_f_557028 = -1;
             save_menu_refresh_target(FRONT_FLOAT_ARG(elapsed), -1);
         }
-        front_menu_update_mouse_position(menu, elapsed);
+        front_menu_update_mouse_position(currMenu, elapsed);
         tooltip_update(s_renderer_word_a, s_renderer_word_b, elapsed);
         sfx_update(elapsed);
         main_loop_frame_pump(0);
         currTime = timeGetTime();
         elapsed = (float)(currTime - lastTime) * 0.025f;
         lastTime = currTime;
-        if (!transition && nextMenu != menu) {
+        if (!transition && nextMenu != currMenu) {
             front_rock_wipe_play();
             transition = 1;
             if (frontGlobs_rockWipeAnim == NULL) {
@@ -2445,7 +2450,7 @@ void front_run_screen_menu(Front_Menu* menu)
             }
         }
         if (transition && menuTransition) {
-            if (menu->menuImage != nextMenu->menuImage && frontGlobs_overlayImage != NULL) {
+            if (currMenu->menuImage != nextMenu->menuImage && frontGlobs_overlayImage != NULL) {
                 flic_close(frontGlobs_overlayImage);
                 Mem_Free(frontGlobs_overlayImage);
                 sound_stream_stop_and_release(0);
@@ -2455,7 +2460,7 @@ void front_run_screen_menu(Front_Menu* menu)
             }
             frontGlobs_scrollOffsetY = 0;
             frontGlobs_scrollOffsetX = 0;
-            menu = nextMenu;
+            currMenu = nextMenu;
             transition = 0;
             menuTransition = 0;
         }
@@ -2464,12 +2469,12 @@ void front_run_screen_menu(Front_Menu* menu)
     if (nextMenu == frontGlobs_saveMenuSet->menus[0] && s_saveSlotToWrite >= 0) {
         if (reward_current_level_get() != NULL &&
             *(void**)((char*)(level = reward_current_level_get()) + 4) != NULL) {
-            /* The original reads the path before pushing the slot number.
-             * nextMenu, dead here, holds it: a new local shifts 0x004177e0's
-             * symbol phase. */
-            nextMenu = (Front_Menu*)block_get_str_copy(legoGlobs_config,
-                                       string_path_join(s_engine_config_root, s_menuSaveImage, "Path", NULL));
-            sprintf(buff, "%s\\%d.dat", (char*)nextMenu, s_saveSlotToWrite);
+            char* path;
+
+            /* The original reads the path before pushing the slot number. */
+            path = block_get_str_copy(legoGlobs_config,
+                                      string_path_join(s_engine_config_root, s_menuSaveImage, "Path", NULL));
+            sprintf(buff, "%s\\%d.dat", path, s_saveSlotToWrite);
             front_image_save_bmp_adapter((char*)level + 8, buff);
         }
     }
