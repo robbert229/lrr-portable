@@ -260,10 +260,11 @@ void priorities_move_to_top(unsigned int index)
     if (index != 0 && index < priorities.count) {
         int type = priorities.list[index];
         unsigned int i;
-        for (i = 0; i < index; i++) {
+        for (i = 0; index - i > 0; i++) {
+            unsigned int offset = index * PRIORITIES_VALUE_STEP;
             priorities.list[index - i] = priorities.list[index - i - 1];
             priority_entry_order_value_set(priorities.list[index - i],
-                PRIORITIES_TOP_VALUE - (index - i) * PRIORITIES_VALUE_STEP);
+                PRIORITIES_TOP_VALUE + i * PRIORITIES_VALUE_STEP - offset);
         }
         priorities.list[0] = type;
         priority_entry_order_value_set(type, PRIORITIES_TOP_VALUE);
