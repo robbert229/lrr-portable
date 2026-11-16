@@ -139,3 +139,10 @@ Notes:
 * `unwad.py` is the earlier extract-only script from the finding-01 work;
   `rrwad.py` supersedes it (it also converts `foo\bar.bmp` names into real
   directories instead of literal backslash files).
+
+## `seamrec/` — seam recorder for the shipped binary (ADR 0007)
+
+Proxy DLLs that log every DX6/Win32 seam call `LegoRR.exe` makes and replay
+recorded scenarios deterministically. `make seamrec` builds them (podman,
+mingw-w64); `make seamrec-check` replays `boot-menu-quit` twice and checks
+the logs match. See [`seamrec/README.md`](seamrec/README.md).
