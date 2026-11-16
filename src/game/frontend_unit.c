@@ -2917,15 +2917,23 @@ int front_is_intros_enabled(void)
 // FUNCTION: LEGORR 0x00414d30
 void front_callback_slider_brightness(int brightness)
 {
-    float level;
-    float spot;
+    /* The original keeps the two levels in memory (levels[1] is the point
+     * light's) and computes the top spotlight's level a second time for its
+     * own call: that gives its stores, its argument copy and the umbra's
+     * reload. An array rather than two floats or an anonymous struct keeps
+     * 0x004177e0's symbol phase (period 8). */
+    float levels[2];
+    float top;
 
-    level = (float)brightness * 0.1f;
-    spot = level * 0.8f - -0.2f;
-    render_object_set_packed_rgba_from_float_channels(legoGlobs_spotlightTop, level, level, level, 1.0f);
-    render_object_set_packed_rgba_from_float_channels((void*)(uintptr_t)legoGlobs_f_5560f8, spot, spot, spot, 1.0f);
-    light_interface_call_slot_40(legoGlobs_spotlightTop, FRONT_FLOAT_ARG(level * 1.5f - -0.5f));
-    light_interface_call_slot_3c(legoGlobs_spotlightTop, FRONT_FLOAT_ARG(level * 0.8f - -0.2f));
+    levels[0] = (float)brightness * 0.1f;
+    top = (float)brightness * 0.1f;
+    levels[1] = top * 0.8f - -0.2f;
+    render_object_set_packed_rgba_from_float_channels(legoGlobs_spotlightTop, top, top, top, 1.0f);
+    render_object_set_packed_rgba_from_float_channels((void*)(uintptr_t)legoGlobs_f_5560f8,
+                                                      levels[1], levels[1], levels[1], 1.0f);
+    light_interface_call_slot_40(legoGlobs_spotlightTop, FRONT_FLOAT_ARG(levels[0] * 1.5f - -0.5f));
+    light_interface_call_slot_3c(legoGlobs_spotlightTop,
+                                 FRONT_FLOAT_ARG((float)(levels[0] + 0.0) * 0.8f - -0.2f));
 }
 
 // FUNCTION: LEGORR 0x00414de0
