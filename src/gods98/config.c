@@ -95,12 +95,15 @@ BlockFile* block_open(const char* path)
 
         for (s = root->file_text, loop = 0; loop < (unsigned int)size; loop++) {
             if (*s != '\0') {
-                if (*s == '}' && s[1] == '\0') conf->depth--;
+                /* The loaded text has no terminator: a brace in the last
+                 * byte ends there, where the original read past it. */
+                int last = (loop + 1 == (unsigned int)size);
+                if (*s == '}' && (last || s[1] == '\0')) conf->depth--;
                 else if (conf->key == NULL) conf->key = s;
                 else {
                     conf->value = s;
                     conf = block_record_create(conf);
-                    if (*s == '{' && s[1] == '\0') conf->depth++;
+                    if (*s == '{' && (last || s[1] == '\0')) conf->depth++;
                 }
                 while (loop < (unsigned int)size && *s++ != '\0') loop++;
             }
