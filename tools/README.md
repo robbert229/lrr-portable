@@ -789,6 +789,18 @@ bytes up to the next symbol, so a large static without a map symbol is counted
 to the symbol before it. Read sizes from the COFF objects when that matters.
 The tool does not change `binary-progress.json`.
 
+## Import slot order (`iat_order.py`)
+
+`iat_order.py` models how LINK 5.0 orders the slots within each DLL's import
+address table (finding 694). `slots ORIGINAL REBUILT` prints the slots that
+agree, per DLL. `predict LOG --crt microsoft|wine [--exe EXE]` applies the
+rule to a `/VERBOSE` link log: Microsoft's MSVCRT 5.00 `qsort` (the matching
+build's linker since finding 694) or Wine's builtin one, keyed on the DLL
+name. With `--exe` it compares the prediction with an image and exits 1 on a
+difference. To try a change in pull order, relink from `link.txt` with
+`/VERBOSE` in a scratch directory (finding 574's recipe) and predict from
+its log; the relink takes about a minute.
+
 ## Image-end guard (`pe_audit.py --image-end-only`)
 
 The original image ends at `0x771000`, and its mapped functions use
