@@ -5043,8 +5043,8 @@ int lego_load_emerge_layer(Lego_Level* level, const char* filename)
                     pos.x = x;
                     pos.y = y;
                     value = level_map_cell_get(handle, x, y);
-                    erode = 0;
-                    if (value == 0 || (value % 2) == 1) value++;
+                    erode = value % 2;
+                    if (value == 0 || erode) { value++; erode = 0; }
                     else erode = 1;
                     LEGO_2A_BLOCK(level, x, y).f_06 = (unsigned char)(value >> 1);
                     if (erode) lava_erosion_stage_register(&pos.x, rng_thunk_draw15() % 4);
