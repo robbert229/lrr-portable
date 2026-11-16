@@ -69,9 +69,11 @@ endif()
 find_package(SDL3 CONFIG REQUIRED)
 set(MINIWIN_SOURCES
   windows/windows.cpp ddraw/ddpalette.cpp ddraw/ddraw.cpp ddraw/ddsurface.cpp
-  ddraw/framebuffer.cpp d3drm/d3drm.cpp d3drm/d3drmdevice.cpp
-  d3drm/d3drmframe.cpp d3drm/d3drmlight.cpp d3drm/d3drmmesh.cpp
-  d3drm/d3drmtexture.cpp d3drm/d3drmviewport.cpp d3drm/d3drmrenderer.cpp
+  ddraw/framebuffer.cpp dinput/dinput.cpp d3d/d3dmaterial.cpp
+  d3d/d3dviewport.cpp d3drm/d3drm.cpp d3drm/d3drmanimationset.cpp
+  d3drm/d3drmdevice.cpp d3drm/d3drmframe.cpp d3drm/d3drmlight.cpp
+  d3drm/d3drmmesh.cpp d3drm/d3drmmeshbuilder.cpp d3drm/d3drmtexture.cpp
+  d3drm/d3drmuservisual.cpp d3drm/d3drmviewport.cpp d3drm/d3drmrenderer.cpp
   internal/meshutils.cpp d3drm/backends/software/renderer.cpp
   d3drm/backends/palettesw/renderer.cpp)
 list(TRANSFORM MINIWIN_SOURCES PREPEND "${MINIWIN}/src/")
@@ -156,6 +158,14 @@ if(BUILD_TESTING)
     target_link_libraries(registry_test PRIVATE miniwin)
     add_test(NAME registry COMMAND registry_test)
   endif()
+
+  # The DirectX 6 interface versions the units use, declared in miniwin
+  # (ADR 0007, decision 3): reachable, and failing rather than crashing
+  # where miniwin has only a stub.
+  add_executable(miniwin_dx6_test ${PLATFORM_DIR}/native/test_miniwin_dx6.cpp)
+  target_link_libraries(miniwin_dx6_test PRIVATE miniwin)
+  add_test(NAME miniwin_dx6 COMMAND miniwin_dx6_test)
+  set_tests_properties(miniwin_dx6 PROPERTIES LABELS miniwin)
 
   add_executable(c_boundaries_test ${GAME_DIR}/test_c_boundaries.cpp)
   target_include_directories(c_boundaries_test PRIVATE ${SRC_ROOT} ${GAME_DIR}

@@ -6,7 +6,9 @@
 # with a blob-none filter AND a cone sparse-checkout of miniwin/ ONLY — the
 # sibling game's decompiled source is never written to the working tree, not
 # even transiently. The checkout is pinned to the exact commit recorded in the
-# superproject's gitlink, so the build stays reproducible.
+# superproject's gitlink, so the build stays reproducible. The URL is the
+# project's isle-portable fork, which carries miniwin patches still in
+# upstream review (ADR 0007).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -23,7 +25,7 @@ if ! git ls-remote --exit-code "$(git config -f .gitmodules --get submodule.$SUB
     exit 1
 fi
 
-UR=$(git config -f .gitmodules --get submodule.$SUB.url || echo "https://github.com/isledecomp/isle-portable.git")
+UR=$(git config -f .gitmodules --get submodule.$SUB.url || echo "https://github.com/robbert229/isle-portable.git")
 
 # Sparse-aware partial clone: commits+trees only, no blobs, no worktree files.
 # Sparse patterns are established BEFORE any checkout, so non-miniwin content
