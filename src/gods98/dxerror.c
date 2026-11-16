@@ -58,8 +58,7 @@ static const char* dxerror_module_names[8] = {
     "IUknown Interface"
 };
 
-// GLOBAL: LEGORR 0x005488a8
-static DxerrorGlobs dxerrorGlobs;
+extern DxerrorGlobs dxerrorGlobs; /* defined at the end of the file */
 
 // FUNCTION: LEGORR 0x00489d90
 void directx_error_message_format(const char* name, const char* description)
@@ -1113,3 +1112,13 @@ int directx_result_diagnostic_dispatch(int err, int module, const char* file,
     }
     return err;
 }
+
+/* dxerrorGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), after the 8 bytes of .bss the original has
+ * before it (005488a0, after G98-024's handle table), which nothing in the
+ * image reads. Zero-initialised externals, emitted in definition order
+ * (finding 686). */
+// GLOBAL: LEGORR 0x005488a0
+unsigned int dxerror_unknown_5488a0[2] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x005488a8
+DxerrorGlobs dxerrorGlobs = { 0 };

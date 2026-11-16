@@ -17,8 +17,20 @@ extern "C" {
 /* Sound3D_Initialise (FUN_0047a640): start DirectSound on window. */
 int audio_system_init(void* window);
 
-/* DAT_00533878: set while 3D sound is running. */
+/* DAT_00533878: set while 3D sound is running. In the matching build it is
+ * the first word of Sound3D.c's state after s_sound3d, followed by the
+ * frame state (0x88 bytes, typed in sound3d.c): one struct, which is how
+ * the original's frame state sits 4-aligned at 0053387c. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+typedef struct Sound3D_State {
+    int initialised;                 /* 00533878 */
+    unsigned char frames[0x88];      /* 0053387c */
+} Sound3D_State;
+extern Sound3D_State sound3dState;
+#define s_bank_sound_on (sound3dState.initialised)
+#else
 extern int s_bank_sound_on;
+#endif
 
 #ifdef __cplusplus
 }

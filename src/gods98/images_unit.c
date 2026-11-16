@@ -196,12 +196,13 @@ struct Image_SurfaceIface {
 #define DirectDraw_bSurf() ((Image_SurfaceIface*)directDrawGlobs.bSurf)
 #define Image_Surface(image) ((Image_SurfaceIface*)(image)->surface)
 
-/* The unit's state (0x8c bytes). */
+/* The unit's state (0x90 bytes). */
 typedef struct Image_Globs {
     Image* listSet[IMAGE_MAXLISTS]; /* +0x00 00533908 */
     Image* freeList;                /* +0x80 00533988 */
     unsigned int listCount;         /* +0x84 0053398c */
     unsigned int flags;             /* +0x88 00533990 */
+    unsigned int unknown_8c;        /* +0x8c 00533994: never read */
 } Image_Globs;
 
 // GLOBAL: LEGORR 0x00533908
@@ -281,10 +282,11 @@ int Image_8BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
     if (bpp == 8) {
         return 0;
     } else if (bpp == 16) {
-        unsigned int gm = desc->ddpfPixelFormat.dwGBitMask;
         unsigned short* to = (unsigned short*)desc->lpSurface;
         int lineLen = image->bytes_per_line;
+        unsigned int gm = desc->ddpfPixelFormat.dwGBitMask;
         Image_PaletteEntry* pal = image->palette;
+        int x;
         unsigned int pitch = desc->lPitch;
         unsigned char* from = image->buffer1;
         unsigned int bm = desc->ddpfPixelFormat.dwBBitMask;
@@ -295,7 +297,6 @@ int Image_8BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
         int rshift = Image_CountMaskBitShift(rm);
         int gshift = Image_CountMaskBitShift(gm);
         int bshift = Image_CountMaskBitShift(bm);
-        int x;
         int y;
 
         for (y = 0; y < image->height; y++) {
@@ -374,13 +375,13 @@ int Image_24BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
     if (bpp == 8) {
         return 0;
     } else if (bpp == 16) {
+        unsigned int rm = desc->ddpfPixelFormat.dwRBitMask;
         unsigned int gm = desc->ddpfPixelFormat.dwGBitMask;
         unsigned int bm = desc->ddpfPixelFormat.dwBBitMask;
         unsigned short* to = (unsigned short*)desc->lpSurface;
         int lineLen = image->bytes_per_line;
         unsigned char* from = image->buffer1;
         unsigned int pitch = desc->lPitch;
-        unsigned int rm = desc->ddpfPixelFormat.dwRBitMask;
         int rbits = Image_CountMaskBits(rm);
         int gbits = Image_CountMaskBits(gm);
         int bbits = Image_CountMaskBits(bm);
@@ -527,7 +528,6 @@ void Image_DisplayScaled(Image* image, const Area2F* src,
 {
     Image_Rect r_src;
     Image_Rect r_dst;
-    Image_SurfaceIface* bSurf = DirectDraw_bSurf();
 
     if (src) {
         r_src.left = (int)floor(src->x);
@@ -551,10 +551,12 @@ void Image_DisplayScaled(Image* image, const Area2F* src,
         }
     }
 
-    bSurf->lpVtbl->Blt(bSurf, destPos ? &r_dst : NULL, Image_Surface(image),
-                       src ? &r_src : NULL,
-                       (image->flags & IMAGE_FLAG_TRANS) ? DDBLT_KEYSRC | DDBLT_WAIT : DDBLT_WAIT,
-                       NULL);
+    if (image->flags & IMAGE_FLAG_TRANS)
+        DirectDraw_bSurf()->lpVtbl->Blt(DirectDraw_bSurf(), destPos ? &r_dst : NULL, Image_Surface(image),
+                                        src ? &r_src : NULL, DDBLT_KEYSRC | DDBLT_WAIT, NULL);
+    else
+        DirectDraw_bSurf()->lpVtbl->Blt(DirectDraw_bSurf(), destPos ? &r_dst : NULL, Image_Surface(image),
+                                        src ? &r_src : NULL, DDBLT_WAIT, NULL);
 }
 
 // FUNCTION: LEGORR 0x0047de60
@@ -658,10 +660,10 @@ Image* Image_Create(Image_SurfaceIface* surface, unsigned int width,
     imageGlobs.freeList = next;
 
     newImage->flags = 0;
+    newImage->penZeroRGB = penZero;
     newImage->width = width;
     newImage->height = height;
     newImage->surface = surface;
-    newImage->penZeroRGB = penZero;
     newImage->penZero = Image_DDColorMatch(surface, penZero);
     newImage->pen255 = Image_DDColorMatch(surface, pen255);
 
@@ -775,10 +777,10 @@ void Image_GetScreenshot(Image* image, unsigned int xsize, unsigned int ysize)
 
     memset(&desc, 0, sizeof(desc));
     desc.dwSize = sizeof(desc);
-    desc.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
-    desc.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
     desc.dwWidth = xsize;
     desc.dwHeight = ysize;
+    desc.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
+    desc.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
 
     if ((r = lpDD()->lpVtbl->CreateSurface(lpDD(), &desc, &surf, NULL)) != 0) {
         directx_result_diagnostic_dispatch(r, 3,

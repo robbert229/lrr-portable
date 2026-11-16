@@ -108,8 +108,8 @@ typedef struct Pointer_Globs {
     float timer;                                /* +0x464 00500efc */
 } Pointer_Globs; /* 0x468 */
 
-// GLOBAL: LEGORR 0x00500a98
-static Pointer_Globs pointerGlobs;
+/* Defined at the end of the file, after the storage before it. */
+extern Pointer_Globs pointerGlobs;
 
 // FUNCTION: LEGORR 0x0045c830
 void pointer_initialise(void)
@@ -342,6 +342,15 @@ void pointer_update(float elapsed)
 {
     if (pointerGlobs.timer > 0.0f) pointerGlobs.timer -= elapsed;
 }
+
+/* pointerGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), and after the .bss the original has before
+ * it: 512 bytes at 00500898, after Panel.c's .bss, which nothing in the image reads. Both are zero-initialised
+ * externals, which MSVC 5.0 emits in definition order (finding 686). */
+// GLOBAL: LEGORR 0x00500898
+unsigned int pointer_unknown_500898[128] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x00500a98
+Pointer_Globs pointerGlobs = { 0 };
 
 #ifdef __cplusplus
 }

@@ -308,7 +308,6 @@ static void damage_font_mesh_render_callback(void* mesh, DamageFont_Data* data,
     DamageFont_Vector3F camPos;
     float uvs[8] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f };
     DamageFont_Vector3F up;
-    float size;
 
     camera = (void*)(uintptr_t)lego_context_selected_global_pointer_get();
     scale = (data->timer * (1.0f / DAMAGEFONT_MAXTIME)) * 2.0f - -1.0f;
@@ -319,9 +318,8 @@ static void damage_font_mesh_render_callback(void* mesh, DamageFont_Data* data,
     ddiscene_object_position_get(camera, NULL, (float*)&camPos);
 
     damage_font_vector3d_cross_product(&side, &up, &dir);
-    size = scale * 3.0f;
-    damage_font_vector3d_scale(&side, &side, size);
-    damage_font_vector3d_scale(&up, &up, size);
+    damage_font_vector3d_scale(&side, &side, scale * 3.0f);
+    damage_font_vector3d_scale(&up, &up, scale * 3.0f);
     offset = 1.0f - (float)data->digitCount * 0.5f;
     for (i = 0; i < data->digitCount; i++) {
         verts[0].x = data->position.x - side.x * offset;

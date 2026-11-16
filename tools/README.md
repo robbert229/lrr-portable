@@ -1039,6 +1039,17 @@ zeroes in place), and it takes the first candidate whose bytes equal the
 item's in both links. The sizes and the unit agreement stay the gate's: both
 links hold the same code.
 
+**Whole-image identity.** `python3 tools/image_identity.py` compares the
+original-mode link (`build-reccmp/opt-ref/LegoRR.exe`) with
+`reference/LegoRR.exe` byte for byte, ignoring only the COFF
+`TimeDateStamp` and the optional header's `CheckSum`. It prints the differing
+bytes left over the whole file (missing or extra bytes count), the first
+difference with its section and address, and per section the differing
+bytes, compared from each section's start, with the identical prefix and
+whether the section's address agrees. It exits 0 only when the images are
+identical, which is the end state of the matching work. `--json` prints the
+report. Tests: `test_image_identity.py`.
+
 Section comparisons align each named section at its start and use the
 original's virtual size as denominator (missing candidate bytes count as
 unequal); raw-file alignment padding is excluded. Imports and resources use

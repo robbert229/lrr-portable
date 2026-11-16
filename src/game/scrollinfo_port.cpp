@@ -154,8 +154,8 @@ void view_blit_rect_positions_apply(int view)
     if (k < 0 || k >= PANEL_TYPE_COUNT) {
         return; /* deviation: the corpus strides its own block blindly */
     }
-    const float ox = s_fpair_a[view] + panelGlobs.panelTable[k].xCurr;
-    const float oy = s_fpair_b[view] + panelGlobs.panelTable[k].yCurr;
+    const float ox = s_fpair_a[view] + panelGlobs.panelTable[k].currPos.x;
+    const float oy = s_fpair_b[view] + panelGlobs.panelTable[k].currPos.y;
     crt_surface_blit_record(s_view_handle[view], ox, oy);
 
     for (int which = 0; which <= 1; ++which) {

@@ -634,7 +634,7 @@ Smoke* smoke_create_smoke_area(void* cont, int bx, int by, SFX_Vector3F* dir,
         ddiscene_object_position_set(smoke->cont, NULL, wPos.x, wPos.y, wPos.z);
         smoke->flags = SMOKE_FLAG_OWNCONTAINER;
         smoke->worldPos = wPos;
-        if ((seed & 3) == 0) smoke->sfxID = sfxID;
+        if (0 == (seed & 3)) smoke->sfxID = sfxID;
     }
     else if (type == 1) {
         smoke->flags = SMOKE_FLAG_GROUPS;
@@ -844,8 +844,8 @@ void smoke_group_show(Smoke* smoke, unsigned int groupID)
     ddiscene_object_position_get(smoke->cont, NULL, (float*)&pos);
     group->position = pos;
     group->time = 0.0f;
-    group->distance = 0.0f;
     group->velocity = vec;
+    group->distance = 0.0f;
     group->maxDistance = rand() % 30 + 40;
     smoke->delay = (0.5f / smoke->speed) * group->height;
 }

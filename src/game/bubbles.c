@@ -140,7 +140,8 @@ typedef struct BubbleTimer {
     float timer;
 } BubbleTimer;
 
-/* The unit's state (0x4f4 bytes). */
+/* The unit's state (0x508 bytes: the original's RNC commons start at
+ * 00557d68, and nothing in the image reads the last 20 bytes). */
 typedef struct Bubble_Globs {
     int alwaysVisible;                           /* 00557860 */
     Image* bubbleImage[Bubble_Type_Count];       /* 00557864 */
@@ -150,6 +151,7 @@ typedef struct Bubble_Globs {
     BubbleTimer bubbleTable[BUBBLE_MAXBUBBLES];  /* 00557a84 */
     BubbleTimer powerOffTable[BUBBLE_MAXPOWEROFFS]; /* 00557b24 */
     BubbleTimer callToArmsTable[BUBBLE_MAXCALLTOARMS]; /* 00557bc4 */
+    unsigned int unknown_4f4[5];                 /* 00557d54: never read */
 } Bubble_Globs;
 
 // GLOBAL: LEGORR 0x00557860

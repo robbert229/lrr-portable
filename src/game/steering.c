@@ -89,11 +89,11 @@ SteeringItem* scene_node_record_create(const SteeringVector3* position,
     if (position != NULL) item->position = *position;
     else item->position = origin;
 
-    item->wanderTime = 0.0f;
     item->turnStep = item->baseTurnStep = turnStep;
     item->speed = item->baseSpeed = speed;
     item->wanderRadius = item->baseWanderRadius = wanderRadius;
     item->wanderPeriod = item->baseWanderPeriod = wanderPeriod;
+    item->wanderTime = 0.0f;
     item->container = container;
     return item;
 }
@@ -318,8 +318,8 @@ void steering_item_spread_tuning(SteeringGroup* group,
 {
     float spread = *(float*)data;
     float r = random_unit_float();
-    float scale = s_steering_one / spread;
     float factor = (2.0f * r) - s_steering_one;
+    float scale = s_steering_one / spread;
 
     item->turnStep = scale * factor * item->baseTurnStep + item->baseTurnStep;
     item->wanderRadius = scale * factor * item->baseWanderRadius + item->baseWanderRadius;

@@ -110,10 +110,10 @@ void request_record_panel_bounds_peek(int panel, float* out_x1,
                                       float* out_y2)
 {
     PanelData* record = &panelGlobs.panelTable[panel];
-    if (out_x1 != NULL) *out_x1 = record->xOut;
-    if (out_y1 != NULL) *out_y1 = record->yOut;
-    if (out_x2 != NULL) *out_x2 = record->xIn;
-    if (out_y2 != NULL) *out_y2 = record->yIn;
+    if (out_x1 != NULL) *out_x1 = record->outPos.x;
+    if (out_y1 != NULL) *out_y1 = record->outPos.y;
+    if (out_x2 != NULL) *out_x2 = record->inPos.x;
+    if (out_y2 != NULL) *out_y2 = record->inPos.y;
 }
 
 int request_record_ready_flag4(int index)

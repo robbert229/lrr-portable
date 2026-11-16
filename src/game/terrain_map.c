@@ -16,6 +16,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "gods98/mem_free.h"
 #include <string.h>
 
 #include "terrain_map.h"
@@ -48,7 +49,6 @@ static TerrainMapPoint2I s_terrain_map_flatten_blocks[10];
 TerrainMap* terrain_map_create(void* root, const char* filename,
                                float blockSize, float roughLevel)
 {
-    unsigned int faceData[6];
     TerrainMapFile* file;
     TerrainMap* map;
     unsigned int i = 0;
@@ -88,6 +88,7 @@ TerrainMap* terrain_map_create(void* root, const char* filename,
                 if ((map->blocks = (TerrainMapBlock*)malloc(
                          map->blockWidth * map->blockHeight *
                          sizeof(TerrainMapBlock))) != NULL) {
+                    unsigned int faceData[6];
                     faceData[0] = 0;
                     faceData[1] = 1;
                     faceData[2] = 3;
@@ -137,14 +138,14 @@ TerrainMap* terrain_map_create(void* root, const char* filename,
                             }
                         }
                     }
-                    free(file);
+                    Mem_Free(file);
                     return map;
                 }
                 ledger_stub_00472a40_DDiSceneObjectDestroy(map->mesh);
             }
-            free(map);
+            Mem_Free(map);
         }
-        free(file);
+        Mem_Free(file);
     }
     return NULL;
 }
@@ -337,12 +338,12 @@ void terrain_map_shape_flatten(TerrainMap* map,
     unsigned int i, j;
     TerrainMapPoint2I* point;
 
+    averageCount = 0;
     half = tolerance * 0.5f;
     vertexOffsets[1].x = 1;
     vertexOffsets[2].x = 1;
     vertexOffsets[2].y = 1;
     vertexOffsets[3].y = 1;
-    averageCount = 0;
     foundCount = 0;
     average = 0.0f;
     vertexOffsets[0].x = 0;
@@ -739,9 +740,7 @@ int terrain_map_world_to_block_offset(TerrainMap* map,
                                       TerrainMapPoint2* block,
                                       TerrainMapPoint2* offset)
 {
-    TerrainMapPoint2 centre;
     unsigned int bx, by;
-    float scale;
 
     if (terrain_map_world_to_block(map, pos->x, pos->y, (int*)&bx, (int*)&by)) {
         if (block) {
@@ -749,6 +748,9 @@ int terrain_map_world_to_block_offset(TerrainMap* map,
             block->y = (float)by;
         }
         if (offset) {
+            TerrainMapPoint2 centre;
+            float scale;
+
             terrain_map_block_to_world(map, bx, by, &centre.x, &centre.y);
             offset->x = pos->x - centre.x;
             offset->y = pos->y - centre.y;
@@ -882,10 +884,10 @@ int terrain_map_world_edge_point_get(TerrainMap* map, float x, float y,
     lineStart = *(TerrainMapPoint2*)&v[a];
     point.x = x;
     point.y = y;
-    lineDir.x -= lineStart.x;
     lineDir.y -= lineStart.y;
-    normal2.x = normal.x;
+    lineDir.x -= lineStart.x;
     normal2.y = normal.y;
+    normal2.x = normal.x;
     line_intersection_2d_compute(&result.x, &lineStart.x, &lineDir.x,
                                  &point.x, &normal2.x);
     distance *= map->blockSize;
@@ -1041,14 +1043,14 @@ int terrain_map_screen_pick(TerrainMap* map, void* viewport,
     camera_screen_coordinate_project(
         (const ViewProjectionAdapter*)viewport, &direction.x, farPoint);
     direction.x -= origin.x;
-    direction.y -= origin.y;
     direction.z -= origin.z;
+    direction.y -= origin.y;
     scale = 1.0f / (float)sqrt(direction.z * direction.z +
                                direction.y * direction.y +
                                direction.x * direction.x);
-    direction.x = scale * direction.x;
-    direction.y = scale * direction.y;
     direction.z = scale * direction.z;
+    direction.y = scale * direction.y;
+    direction.x = scale * direction.x;
     if (!terrain_map_ray_intersection(map, &origin, &direction, intersection,
                                       &block, 20)) {
         return 0;

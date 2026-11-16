@@ -29,6 +29,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "gods98/mem_free.h"
 #include <string.h>
 
 #include "crt/vc5names.h"
@@ -1261,8 +1262,8 @@ static int nerpsCurrentSound = -1;
 // GLOBAL: LEGORR 0x004a676c
 static NERPsBlockPointerCallback nerpsTutorialActionCallback = nerps_tutorial_action_callback;
 
-// GLOBAL: LEGORR 0x004ff958
-static NERPs_RuntimeGlobs nerpsruntimeGlobs;
+/* Defined at the end of the file, after the storage before it. */
+extern NERPs_RuntimeGlobs nerpsruntimeGlobs;
 
 // GLOBAL: LEGORR 0x00555d40
 NERPs_Globs nerpsGlobs;
@@ -1324,7 +1325,7 @@ int nerps_file_load_message_file(const char* filename)
                                         sizeof(NERPs_MessageImage) * (nerpsGlobs.imageCount + 1));
                                     unsigned int i;
                                     for (i = 0; i < nerpsGlobs.imageCount; i++) list[i] = nerpsGlobs.imageList[i];
-                                    if (nerpsGlobs.imageCount) free(nerpsGlobs.imageList);
+                                    if (nerpsGlobs.imageCount) Mem_Free(nerpsGlobs.imageList);
                                     list[nerpsGlobs.imageCount].key = key;
                                     list[nerpsGlobs.imageCount].image = image;
                                     nerpsGlobs.imageList = list;
@@ -1351,7 +1352,7 @@ int nerps_file_load_message_file(const char* filename)
                                         sizeof(NERPs_MessageSound) * (nerpsGlobs.soundCount + 1));
                                     unsigned int i;
                                     for (i = 0; i < nerpsGlobs.soundCount; i++) list[i] = nerpsGlobs.soundList[i];
-                                    if (nerpsGlobs.soundCount) free(nerpsGlobs.soundList);
+                                    if (nerpsGlobs.soundCount) Mem_Free(nerpsGlobs.soundList);
                                     list[nerpsGlobs.soundCount].key = key;
                                     list[nerpsGlobs.soundCount].sound = sound;
                                     nerpsGlobs.soundList = list;
@@ -1363,10 +1364,10 @@ int nerps_file_load_message_file(const char* filename)
                         char** list = (char**)malloc(sizeof(char*) * (lineCount + 1));
                         unsigned int i;
                         for (i = 0; i < lineCount; i++) list[i] = lines[i];
-                        if (lineCount) free(lines);
+                        if (lineCount) Mem_Free(lines);
                         list[lineCount] = (char*)s;
-                        lineCount++;
                         lines = list;
+                        lineCount++;
                     }
                 }
                 lineStart = 0;
@@ -1392,10 +1393,10 @@ int nerps_shutdown(void)
 {
     unsigned int i;
 
-    if (nerpsGlobs.scriptSize) free(nerpsGlobs.scriptBuffer);
+    if (nerpsGlobs.scriptSize) Mem_Free(nerpsGlobs.scriptBuffer);
     if (nerpsGlobs.messageBuffer) {
-        free(nerpsGlobs.messageBuffer);
-        if (nerpsGlobs.messageLines) free(nerpsGlobs.messageLines);
+        Mem_Free(nerpsGlobs.messageBuffer);
+        if (nerpsGlobs.messageLines) Mem_Free(nerpsGlobs.messageLines);
     }
     nerpsGlobs.messageBuffer = NULL;
     nerpsGlobs.messageLines = NULL;
@@ -1404,7 +1405,7 @@ int nerps_shutdown(void)
     for (i = 0; i < nerpsGlobs.soundCount; i++) sound_bank_entry_release(nerpsGlobs.soundList[i].sound);
     if (nerpsGlobs.soundCount > 0) {
         if (nerpsGlobs.soundList) {
-            free(nerpsGlobs.soundList);
+            Mem_Free(nerpsGlobs.soundList);
             nerpsGlobs.soundList = NULL;
         }
         nerpsGlobs.soundCount = 0;
@@ -1432,7 +1433,6 @@ void nerps_runtime_execute(float elapsed)
     unsigned int result;
     unsigned int statements;
     unsigned int* script;
-    unsigned int stack[3];
     unsigned int count;
     char buff[512];
     unsigned int condition;
@@ -1446,11 +1446,12 @@ void nerps_runtime_execute(float elapsed)
     statements = 0;
     if (script != NULL) {
         count = nerpsGlobs.scriptSize / 4;
-        condition = 0;
         operation = 0;
+        condition = 0;
         for (i = 0; i < count; i++) {
             argCount = 0;
             if (script[i] & 0x20000) {
+                unsigned int stack[3];
                 if ((script[i] & 0xffff) == 0 && (condition || operation == 0)) break;
                 kind = nerpsFunctions[script[i] & 0xffff].argumentCount;
                 if (kind == 0 || kind == 1 || kind == 2) {
@@ -2692,7 +2693,7 @@ int nerps_powered_count_callback(NERPs_Object* obj, void* data)
 {
     NERPs_ObjectSearch* search = (NERPs_ObjectSearch*)data;
 
-    if (obj->type == search->type && obj->id == (int)search->id) {
+    if (search->type == obj->type && (int)search->id == obj->id) {
         if (obj->flags3 & 0x20000000) search->count++;
         else search->count = 0;
     }
@@ -4081,8 +4082,8 @@ void nerps_parse_message(char* text, char* output, int setTimer)
     char* p;
     unsigned char found;
 
-    imageCount = 0;
     time = nerpsMessageTime.defaultTime;
+    imageCount = 0;
     out = output;
     if (nerpsGlobs.imageCount == 0 && nerpsGlobs.soundCount == 0 && output != NULL) {
         strcpy(output, text);
@@ -4556,6 +4557,15 @@ int nerpfunc_get_monster_at_tutorial(unsigned int* stack)
     nerps_block_pointer_enumerate(stack[0], nerpsTutorialActionCallback, &search);
     return search.count;
 }
+
+/* nerpsruntimeGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), and after the .bss the original has before
+ * it: 1,720 bytes at 004ff2a0, after Message.c's .bss, which nothing in the image reads. Both are zero-initialised
+ * externals, which MSVC 5.0 emits in definition order (finding 686). */
+// GLOBAL: LEGORR 0x004ff2a0
+unsigned int tutorial_script_unknown_4ff2a0[430] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x004ff958
+NERPs_RuntimeGlobs nerpsruntimeGlobs = { 0 };
 
 #ifdef __cplusplus
 }

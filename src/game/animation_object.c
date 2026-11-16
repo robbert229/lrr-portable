@@ -280,14 +280,15 @@ void* animation_object_null_find(AnimationObject* object, const char* name,
 // FUNCTION: LEGORR 0x00406f80
 void* activity_runner_state_read(AnimationObject* object, int cameraNo)
 {
-    if (object->cameraNullName) {
+    void* result = object->cameraNullName;
+    if (result) {
         if (object->cameraNulls[cameraNo] == NULL) {
             object->cameraNulls[cameraNo] = animation_object_null_find(
                 object, object->cameraNullName, cameraNo);
         }
-        return object->cameraNulls[cameraNo];
+        result = object->cameraNulls[cameraNo];
     }
-    return NULL;
+    return result;
 }
 
 // FUNCTION: LEGORR 0x00406fb0

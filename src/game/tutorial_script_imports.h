@@ -182,7 +182,11 @@ void aitask_task_registry_remove_type10_entries_for_entity(
 extern struct LevelState* g_active_level_retail;            /* 005560d4 currLevel */
 extern uint32_t s_panel_highlight_flags;                    /* 00556ed0 flags2 */
 void global_object_field8c_increment(void);                 /* 0041f870 */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+int noop_callback(int);   /* 0041f8e0 Lego_GetCrystalCount */
+#else
 void noop_callback(void);                                   /* 0041f8e0 */
+#endif
 void lego_level_resource_balance_add_and_sound(int ore);    /* 0041f9a0 */
 void lego_transition_control(int on, unsigned int flags);   /* 00425c30 */
 uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy,
@@ -228,6 +232,11 @@ void directdraw_flip(void);                                 /* 0047c8d0 */
 void input_state_poll_retail(void);                         /* 0047eef0 */
 int input_keyboard_down_key_count(void);                    /* 0047efb0 */
 short rng_thunk_draw15(void);                               /* 004798a0 */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* The key maps' matching-build names (input_key_names.h). */
+#define s_global_current_keys inputKeyMap
+#define s_global_previous_keys inputPrevKeyMap
+#endif
 extern uint8_t s_global_current_keys[256];                  /* 0076ab80 Input_KeyMap */
 extern uint8_t s_global_previous_keys[256];                 /* 0076aa00 Input_PrevKeyMap */
 

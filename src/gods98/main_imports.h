@@ -59,12 +59,16 @@ extern unsigned int s_render_feature_flags;
 /* DAT_0076ab3c to DAT_0076ab58: Input.c's mouse button state, which the
  * window procedures write: commons that main.c defines after its last
  * function (finding 679), port_state.cpp natively. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_globs.h"
+#else
 extern unsigned int g_renderer_word_c;
 extern unsigned int s_window_mouse_word_40;
 extern unsigned int s_window_mouse_word_4c;
 extern unsigned int s_window_mouse_word_50;
 extern unsigned int s_window_mouse_word_54;
 extern unsigned int s_window_mouse_word_58;
+#endif
 
 #ifdef __cplusplus
 }

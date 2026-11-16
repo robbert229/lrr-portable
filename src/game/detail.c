@@ -285,9 +285,9 @@ void detail_place_mesh(void* cont, float blockSize, Detail_Vector3F* a,
 void detail_set_mesh_frame(void* cont, float blockSize, Detail_Vector3F* a,
                            Detail_Vector3F* b, Detail_Vector3F* c)
 {
-    Detail_Vector3F dir, up, tb, tc;
     float mat[4][4];
     float dirScale, upScale;
+    Detail_Vector3F dir, up, tb, tc;
 
     detail_vector3d_subtract(&dir, b, a);
     detail_vector3d_subtract(&up, c, b);

@@ -229,6 +229,16 @@ struct AviDirectDraw4 {
 #endif
 
 /* Read by every AviMovie method; nothing in the image writes it. */
+/* Eight RGB byte triples (black, white, red, green, blue, yellow, magenta,
+ * cyan) that nothing in the image reads; the original's .data has them
+ * here, between Images.c's literals and Input.c's. */
+// GLOBAL: LEGORR 0x004aaeb8
+static unsigned char s_aviColours[8][3] = {
+    { 0x00, 0x00, 0x00 }, { 0xff, 0xff, 0xff }, { 0xff, 0x00, 0x00 },
+    { 0x00, 0xff, 0x00 }, { 0x00, 0x00, 0xff }, { 0xff, 0xff, 0x00 },
+    { 0xff, 0x00, 0xff }, { 0x00, 0xff, 0xff }
+};
+
 // GLOBAL: LEGORR 0x00533998
 static bool s_aviDisabled;
 
@@ -517,11 +527,11 @@ void AviMovie::FrameToSurface(LPBITMAPINFOHEADER lpbi)
 
     if (!surf->m_locked && surf->Lock()) locked = true;
 
+    src = (unsigned short*)((char*)lpbi + lpbi->biSize);
     dst = (unsigned short*)surf->m_desc.lpSurface;
     width = m_rect.right - m_rect.left;
     height = m_rect.bottom - m_rect.top;
     pitch = m_surf->m_desc.lPitch / 2;
-    src = (unsigned short*)((char*)lpbi + lpbi->biSize);
 
     bpp = m_surf->m_is555 ? 15 : m_surf->m_desc.ddpfPixelFormat.dwRGBBitCount;
     if (bpp == 15) {

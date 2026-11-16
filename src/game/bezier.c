@@ -30,15 +30,17 @@ static const float s_bezier_one = 1.0f;
 
 /* The control points c1 = p0 + 3 * p1 and c2 = p2 - 3 * p3 are computed
  * before r->x is written: the original reloads only p0 and p2 after that
- * store. The order of the local declarations and of the r->x terms sets
- * MSVC's x87 register choice (finding 506); this order scored best. */
+ * store. Both axes' coefficients come before either result: that gives the
+ * original's size (0x13e bytes), so the code after it keeps its addresses.
+ * The x87 register choice depends on the symbol counter's phase, which the
+ * unit cannot reach without d3drm.h's table (#481, finding 646). */
 // FUNCTION: LEGORR 0x004065f0
 void cubic_bezier_point_evaluate(Point2F* r, const Point2F* p0,
                                  const Point2F* p1, const Point2F* p2,
                                  const Point2F* p3, float t)
 {
     Point2F c1, c2;
-    float tCubed, ax, cx, tSquared, cy, bx, by, ay;
+    float ax, cx, tCubed, tSquared, cy, bx, by, ay;
 
     tSquared = t * t;
     tCubed = tSquared * t;
@@ -51,11 +53,10 @@ void cubic_bezier_point_evaluate(Point2F* r, const Point2F* p0,
     cx = s_bezier_three * (c1.x - p0->x);
     bx = s_bezier_three * (c2.x - c1.x) - cx;
     ax = p2->x - p0->x - cx - bx;
-    r->x = (ax * tCubed) + (cx * t) + (bx * tSquared) + p0->x;
-
     cy = s_bezier_three * (c1.y - p0->y);
     by = s_bezier_three * (c2.y - c1.y) - cy;
     ay = p2->y - p0->y - cy - by;
+    r->x = (ax * tCubed) + (cx * t) + (bx * tSquared) + p0->x;
     r->y = (ay * tCubed) + (by * tSquared) + (cy * t) + p0->y;
 }
 

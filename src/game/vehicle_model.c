@@ -642,6 +642,7 @@ void vehicle_set_position(VehicleModel* vehicle, float xPos, float yPos,
      * builds from the locals' use weights and declarations (finding 590).
      * `angle` is the one scratch float: the dot product, then each wheel's
      * turn. */
+    float angle;
     Vehicle_Vector3F newUp;
     Vehicle_Vector3F wheelPos[VEHICLE_MAXWHEELS];
     unsigned int loop;
@@ -651,7 +652,6 @@ void vehicle_set_position(VehicleModel* vehicle, float xPos, float yPos,
     Vehicle_Vector3F normA;
     Vehicle_Vector3F vecA;
     Vehicle_Vector3F up;
-    float angle;
 
     ddiscene_object_position_set(vehicle->contAct1, NULL, xPos, yPos,
                                  zCallback(xPos, yPos, surfMap));

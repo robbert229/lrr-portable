@@ -226,14 +226,14 @@ int objinfo_load_bubble(struct BlockRec* config, const char* gameName)
 // FUNCTION: LEGORR 0x00459b00
 void objinfo_draw_health_bar(struct Lego_Object* liveObj, int screenX, int screenY)
 {
+    float health;
     Point2F hiTo[OBJINFO_MAXBORDERLINES];
     Point2F loTo[OBJINFO_MAXBORDERLINES];
     Point2F hiFrom[OBJINFO_MAXBORDERLINES];
     Point2F loFrom[OBJINFO_MAXBORDERLINES];
     unsigned int lineCount = 0;
-    Area2F rect;
     float width, height;
-    float health;
+    Area2F rect;
     unsigned int loop;
     float border;
     float* colour;

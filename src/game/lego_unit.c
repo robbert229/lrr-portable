@@ -31,6 +31,11 @@
 #include <string.h>
 
 #include "crt/vc5names.h"
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Input.c's key maps under their matching-build names (lego_unit.h
+ * declares them). */
+#include "gods98/input_key_names.h"
+#endif
 #include "lego_unit.h"
 #include "lego_unit_imports.h"
 #include "lego_globs.h"
@@ -73,6 +78,13 @@ static float s_lego_soundRollOff = 1.0f;
  * declaration. The matching build does not see this block. */
 #ifdef __cplusplus
 extern "C" {
+extern int s_lego_toolTipBlockX;
+extern int s_lego_toolTipBlockY;
+extern uint32_t s_lego_mouseLastY;
+extern uint32_t s_lego_mouseLastX;
+extern float s_lego_drag_x;
+extern float s_lego_drag_y;
+extern uint32_t s_lego_mslbLast;
 extern int s_lego_renameCursorOn;
 extern unsigned char s_lego_renamePrevKeyMap[256];
 extern float s_lego_upgradeTextTimer;
@@ -120,11 +132,9 @@ extern float s_lego_rollOffTextTimer;
  * distance (a static, as in the original), the drag flag, the previous
  * button states and the request to forget the previous states (externals,
  * defined at the end of the file; finding 691). */
-// GLOBAL: LEGORR 0x004de418
-static float s_lego_drag_x;
+extern float s_lego_drag_x;
 
-// GLOBAL: LEGORR 0x004de41c
-static float s_lego_drag_y;
+extern float s_lego_drag_y;
 
 extern int s_lego_dragging;
 
@@ -147,8 +157,11 @@ extern int s_lego_reset_buttons;
 
 /* The block under the pointer (mouseBlockPos). It follows legoGlobs, outside
  * its 0xef8 bytes, so it keeps its own definition. */
+/* The name puts this common after legoGlobs, as in the original: LINK
+ * lays out an object's commons in reverse symbol-table order, which MSVC
+ * 5.0 sorts by a hash of the name (finding 690). */
 // GLOBAL: LEGORR 0x00556fb8
-int legoGlobs_f_556fb8[2];
+int legoGlobs_mouseBlockPos[2];
 /* ---- state, group D ---- */
 
 /* legoGlobs.config (005560c0): the loaded Lego.cfg. */
@@ -233,10 +246,8 @@ extern float s_lego_spotUmbra;
 
 /* Lego.c .bss: the radar map's mouse state. The last mouse position is
  * static, the rest external (defined at the end of the file; finding 691). */
-// GLOBAL: LEGORR 0x004de410
-static uint32_t s_lego_mouseLastY;
-// GLOBAL: LEGORR 0x004de414
-static uint32_t s_lego_mouseLastX;
+extern uint32_t s_lego_mouseLastY;
+extern uint32_t s_lego_mouseLastX;
 extern float s_lego_radarDragDistance;
 extern uint32_t s_lego_radarPrevButton;
 extern unsigned int s_lego_radarBlockX;
@@ -245,10 +256,8 @@ extern int s_lego_radarDragging;
 
 /* Lego.c .bss: the block (static) and the object (external) the tool tips
  * last hovered (finding 691). */
-// GLOBAL: LEGORR 0x004de208
-static int s_lego_toolTipBlockX;
-// GLOBAL: LEGORR 0x004de20c
-static int s_lego_toolTipBlockY;
+extern int s_lego_toolTipBlockX;
+extern int s_lego_toolTipBlockY;
 extern struct EntitySlot* s_lego_toolTipObject;
 
 /* Lego.c .bss: the debug keys' toggles and the unit the K key picked
@@ -373,11 +382,23 @@ void global_object_field98_clear_current(void)
     if (legoGlobs_currLevel != NULL) legoGlobs_currLevel->f_098 = 0;
 }
 
-/* NoOpCallback [group M] */
+/* Lego_GetCrystalCount: the level's crystals, less those used unless
+ * onlyUsable is set. Like the original, no value without a level. Natively
+ * the port keeps an empty callback under this name. */
 // FUNCTION: LEGORR 0x0041f8e0
+#if defined(_MSC_VER) && _MSC_VER < 1200
+int noop_callback(int onlyUsable)
+{
+    if (legoGlobs_currLevel != NULL) {
+        if (onlyUsable) return legoGlobs_currLevel->f_08c;
+        return legoGlobs_currLevel->f_08c - legoGlobs_currLevel->f_098;
+    }
+}
+#else
 void noop_callback(void)
 {
 }
+#endif
 
 /* UpgradeResourceCheck [group M] */
 // FUNCTION: LEGORR 0x0041f900
@@ -2670,9 +2691,9 @@ void lego_terrain_pointer_command_update(void)
             s_lego_radarDragDistance = 0.0f;
             s_lego_radarDragging = 0;
         }
-        s_lego_radarPrevButton = g_renderer_word_c;
         s_lego_mouseLastX = s_renderer_word_a;
         s_lego_mouseLastY = s_renderer_word_b;
+        s_lego_radarPrevButton = g_renderer_word_c;
     }
 }
 
@@ -2835,11 +2856,11 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
     uint32_t pointer;
     int handled; /* also the overlay buttons' "clicked" flag */
 
-    s_panel_highlight_flags &= ~0x400;
     liveObj = NULL;
     placed = 0;
     overPanel = 0;
     leftReleased = 0;
+    s_panel_highlight_flags &= ~0x400;
     rightReleased = 0;
     surface_visibility_set(s_refresh_record, 1);
 
@@ -2960,8 +2981,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
             s_triple_second = *(uint32_t*)&wPos.y;
             s_triple_third = *(uint32_t*)&wPos.z;
             s_panel_highlight_flags |= 0x400;
-            legoGlobs_f_556fb8[0] = bx;
-            legoGlobs_f_556fb8[1] = by;
+            legoGlobs_mouseBlockPos[0] = bx;
+            legoGlobs_mouseBlockPos[1] = by;
 
             if (!(legoGlobs_flags1 & 0x100) || (s_global_low_word & 0x81)) {
                 if (s_global_low_word & 0x80) {
@@ -3103,7 +3124,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                         if (s_global_low_word & 8) media_pointer_cursor_select(0x23);
                                         else media_pointer_cursor_select(0x24);
                                     if (leftReleased) {
-                                        cmd_produce(8, NULL, 0, legoGlobs_f_556fb8);
+                                        cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
                                         entity_deferred_work_schedule(liveObj);
                                         cmd_mark_matching_adapter(3, liveObj, NULL);
                                         media_action_feedback_sound_dispatch(0);
@@ -3140,8 +3161,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                 legoGlobs_f_556180 = bx;
                                 legoGlobs_f_556188 = 1;
                                 if (leftReleased &&
-                                    !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                    terrain_cell_command_create_adapter(legoGlobs_f_556fb8, 1, 1);
+                                    !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                    terrain_cell_command_create_adapter(legoGlobs_mouseBlockPos, 1, 1);
                                     media_action_feedback_sound_dispatch(0);
                                     selection_clear_request_and_hud_reset();
                                 }
@@ -3155,8 +3176,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                             else media_pointer_cursor_select(0x20);
                             advisor_text_animation_update(1, 0, 0);
                             if (leftReleased &&
-                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                terrain_cell_command_create_adapter(legoGlobs_f_556fb8, 0, 1);
+                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                terrain_cell_command_create_adapter(legoGlobs_mouseBlockPos, 0, 1);
                                 media_action_feedback_sound_dispatch(0);
                                 selection_clear_request_and_hud_reset();
                             }
@@ -3171,8 +3192,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                             else media_pointer_cursor_select(0x28);
                             advisor_text_animation_update(0, 0, 0);
                             if (leftReleased &&
-                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                cmd_produce(8, NULL, 0, legoGlobs_f_556fb8);
+                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
                                 media_action_feedback_sound_dispatch(0);
                                 selection_clear_request_and_hud_reset();
                             }
@@ -3184,12 +3205,12 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                         if (leftReleased) media_action_feedback_sound_dispatch(1);
                     } else if (lego_C_block_flag4(bx, by)) {
                         if (lego_C_block_is_wall(bx, by) &&
-                            (lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->f_02 == 1 ||
-                             lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->f_02 == 0xb)) {
+                            (lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->f_02 == 1 ||
+                             lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->f_02 == 0xb)) {
                             if (!(block->flags1 & 8))
                                 media_action_code_to_sound_alias(block->f_02);
                             if (!s_lego_dragging)
-                                lego_terrain_command_feedback_dispatch(legoGlobs_f_556fb8, 1, 1, 0);
+                                lego_terrain_command_feedback_dispatch(legoGlobs_mouseBlockPos, 1, 1, 0);
                             if (leftReleased) media_action_feedback_sound_dispatch(2);
                         } else {
                             /* Two flags, as in the original (finding 671):
@@ -3202,7 +3223,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                             if (!(block->flags1 & 8))
                                 media_action_code_to_sound_alias(block->f_02);
                             if (!s_lego_dragging)
-                                lego_terrain_command_feedback_dispatch(legoGlobs_f_556fb8, 1, 1, 0);
+                                lego_terrain_command_feedback_dispatch(legoGlobs_mouseBlockPos, 1, 1, 0);
                             if (selection_active_has_any_get()) {
                                 if (legoGlobs_flags1 & 0x40000) {
                                     if (block->f_00 == 1 ||
@@ -3215,8 +3236,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                         handled = 1;
                                         legoGlobs_f_556188 = 1;
                                         if (leftReleased &&
-                                            !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                            terrain_cell_command_create_adapter(legoGlobs_f_556fb8, 1, 1);
+                                            !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                            terrain_cell_command_create_adapter(legoGlobs_mouseBlockPos, 1, 1);
                                             media_action_feedback_sound_dispatch(0);
                                             selection_clear_request_and_hud_reset();
                                         }
@@ -3234,9 +3255,9 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                         else media_pointer_cursor_select(0x20);
                                         advisor_text_animation_update(1, 0, 0);
                                         if (leftReleased &&
-                                            !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                            terrain_cell_command_create_adapter(legoGlobs_f_556fb8, 0, 1);
-                                            cmd_mark_matching_adapter(8, NULL, legoGlobs_f_556fb8);
+                                            !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                            terrain_cell_command_create_adapter(legoGlobs_mouseBlockPos, 0, 1);
+                                            cmd_mark_matching_adapter(8, NULL, legoGlobs_mouseBlockPos);
                                             media_action_feedback_sound_dispatch(0);
                                             selection_clear_request_and_hud_reset();
                                         }
@@ -3255,9 +3276,9 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                             if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x29);
                                             else media_pointer_cursor_select(0x2a);
                                             if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                                cmd_produce(8, NULL, 0, legoGlobs_f_556fb8);
-                                                cmd_mark_matching_adapter(0xc, NULL, legoGlobs_f_556fb8);
+                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                                cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
+                                                cmd_mark_matching_adapter(0xc, NULL, legoGlobs_mouseBlockPos);
                                                 media_action_feedback_sound_dispatch(0);
                                                 selection_clear_request_and_hud_reset();
                                             }
@@ -3272,8 +3293,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                             else media_pointer_cursor_select(0x28);
                                             advisor_text_animation_update(0, 0, 0);
                                             if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
-                                                cmd_produce(8, NULL, 0, legoGlobs_f_556fb8);
+                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                                cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
                                                 media_action_feedback_sound_dispatch(0);
                                                 selection_clear_request_and_hud_reset();
                                             }
@@ -3288,14 +3309,14 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                     !(block->flags2 & 0x20)) {
                                     if (block->flags1 & 8) {
                                         picked = 0;
-                                        if (lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x80000000) {
+                                        if (lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->flags1 & 0x80000000) {
                                             picked = 1;
                                             handled = 1;
                                             if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                                 cmd_produce(3, NULL, 0, NULL);
                                                 media_action_feedback_sound_dispatch(5);
-                                                command_context_post_to_hud(2, (const uint32_t*)legoGlobs_f_556fb8);
+                                                command_context_post_to_hud(2, (const uint32_t*)legoGlobs_mouseBlockPos);
                                             }
                                         }
                                         if (!picked && (block->flags1 & 0x8000)) {
@@ -3303,26 +3324,26 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                             if (leftReleased) media_action_feedback_sound_dispatch(1);
                                         }
                                         if (((block->flags1 & 0x100000) ||
-                                             (lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x40000000)) &&
-                                            !(lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x8000) &&
-                                            !lego_C_block_flag20000000(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])) {
+                                             (lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->flags1 & 0x40000000)) &&
+                                            !(lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->flags1 & 0x8000) &&
+                                            !lego_C_block_flag20000000(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])) {
                                             handled = 1;
                                             if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                                 media_action_feedback_sound_dispatch(5);
-                                                command_context_post_to_hud(4, (const uint32_t*)legoGlobs_f_556fb8);
+                                                command_context_post_to_hud(4, (const uint32_t*)legoGlobs_mouseBlockPos);
                                             }
                                         }
                                         if (handled) goto tracking;
                                         picked = 0;
-                                        if ((lego_C_block_at(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])->flags1 & 0x40000000) ||
-                                            lego_C_block_flag20000000(legoGlobs_f_556fb8[0], legoGlobs_f_556fb8[1])) {
+                                        if ((lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->flags1 & 0x40000000) ||
+                                            lego_C_block_flag20000000(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])) {
                                             picked = 1;
                                             if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                                 cmd_produce(3, NULL, 0, NULL);
                                                 media_action_feedback_sound_dispatch(5);
-                                                command_context_post_to_hud(1, (const uint32_t*)legoGlobs_f_556fb8);
+                                                command_context_post_to_hud(1, (const uint32_t*)legoGlobs_mouseBlockPos);
                                             }
                                         }
 
@@ -3331,10 +3352,10 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                             if (block->flags1 & 0x200000) {
                                                 picked = 1;
                                                 if (leftReleased &&
-                                                    !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                    !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                                     cmd_produce(3, NULL, 0, NULL);
                                                     media_action_feedback_sound_dispatch(5);
-                                                    command_context_post_to_hud(1, (const uint32_t*)legoGlobs_f_556fb8);
+                                                    command_context_post_to_hud(1, (const uint32_t*)legoGlobs_mouseBlockPos);
                                                 }
                                             }
                                             if (!picked) {
@@ -3342,10 +3363,10 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 if (!(block->flags1 & 0x200000)) {
                                                     handled = 1;
                                                     if (leftReleased &&
-                                                        !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                                        !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                                         cmd_produce(3, NULL, 0, NULL);
                                                         media_action_feedback_sound_dispatch(5);
-                                                        command_context_post_to_hud(5, (const uint32_t*)legoGlobs_f_556fb8);
+                                                        command_context_post_to_hud(5, (const uint32_t*)legoGlobs_mouseBlockPos);
                                                     }
                                                 }
                                                 if (!handled && leftReleased)
@@ -3356,10 +3377,10 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                     } else if (block->f_02 != 1 && !(block->flags1 & 0x40)) {
                                         handled = 1;
                                         if (leftReleased &&
-                                            !lego_terrain_cell_command_predicate(legoGlobs_f_556fb8)) {
+                                            !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
                                             cmd_produce(3, NULL, 0, NULL);
                                             media_action_feedback_sound_dispatch(4);
-                                            command_context_post_to_hud(7, (const uint32_t*)legoGlobs_f_556fb8);
+                                            command_context_post_to_hud(7, (const uint32_t*)legoGlobs_mouseBlockPos);
                                         }
                                     }
                                 }
@@ -3726,20 +3747,24 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
         if (!(flags & 0x10) && (flags & 0x20000)) {
             text = lego_terrain_surface_type_name_get(0x10);
             sfx = lego_surface_type_configured_value_at_index(0x10);
+            show = 1;
         } else if (flags & 0x20) {
             text = lego_terrain_surface_type_name_get(0xd);
             sfx = lego_surface_type_configured_value_at_index(0xd);
+            show = 1;
         } else {
             text = lego_terrain_surface_type_name_get(block->f_02);
             sfx = lego_surface_type_configured_value_at_index(block->f_02);
+            show = 1;
         }
-        show = 1;
     }
 
     if (show) {
         tooltip_set_content(6, "%s", text);
-        if (!playSound) sfx = 0;
-        timed_effect_cue_request_set_corpus(6, sfx);
+        if (playSound)
+            timed_effect_cue_request_set_corpus(6, sfx);
+        else
+            timed_effect_cue_request_set_corpus(6, 0);
         timed_effect_update_request_set_corpus(6);
     }
 }
@@ -5455,9 +5480,9 @@ int lego_entity_vehicle_type_table_load(void)
                     arrayItem = block_next_equal_key(arrayItem);
                 }
                 if (arrayItem == NULL) return 1;
-                free(legoGlobs_vehicleName);
+                lego_e_mem_free(legoGlobs_vehicleName);
             }
-            free(legoGlobs_vehicleData);
+            lego_e_mem_free(legoGlobs_vehicleData);
         }
     }
     return 0;
@@ -5492,9 +5517,9 @@ int lego_entity_minifigure_type_table_load(void)
                     arrayItem = block_next_equal_key(arrayItem);
                 }
                 if (arrayItem == NULL) return 1;
-                free(legoGlobs_miniFigureName);
+                lego_e_mem_free(legoGlobs_miniFigureName);
             }
-            free(legoGlobs_miniFigureData);
+            lego_e_mem_free(legoGlobs_miniFigureData);
         }
     }
     return 0;
@@ -5529,9 +5554,9 @@ int lego_entity_rockmonster_type_table_load(void)
                     arrayItem = block_next_equal_key(arrayItem);
                 }
                 if (arrayItem == NULL) return 1;
-                free(legoGlobs_rockMonsterName);
+                lego_e_mem_free(legoGlobs_rockMonsterName);
             }
-            free(legoGlobs_rockMonsterData);
+            lego_e_mem_free(legoGlobs_rockMonsterData);
         }
     }
     return 0;
@@ -5566,9 +5591,9 @@ int lego_entity_building_types_load(void)
                     arrayItem = block_next_equal_key(arrayItem);
                 }
                 if (arrayItem == NULL) return 1;
-                free(legoGlobs_buildingName);
+                lego_e_mem_free(legoGlobs_buildingName);
             }
-            free(legoGlobs_buildingData);
+            lego_e_mem_free(legoGlobs_buildingData);
         }
     }
     return 0;
@@ -5603,9 +5628,9 @@ int lego_upgrade_types_load(void)
                     arrayItem = block_next_equal_key(arrayItem);
                 }
                 if (arrayItem == NULL) return 1;
-                free(legoGlobs_upgradeName);
+                lego_e_mem_free(legoGlobs_upgradeName);
             }
-            free(s_upgrade_records);
+            lego_e_mem_free(s_upgrade_records);
         }
     }
     return 0;
@@ -5862,10 +5887,10 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                         "driving", NULL));
                 olNames[count] = olName = string_duplicate(item->key);
 
-                xPos -= 1.0f;
                 yPos -= 1.0f;
-                bx = (unsigned int)xPos;
+                xPos -= 1.0f;
                 by = (unsigned int)yPos;
+                bx = (unsigned int)xPos;
                 terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by, &wPos.x, &wPos.y);
                 wPos.x += (xPos - (bx + 0.5f)) * level->blockSize;
                 yPos = (yPos - (by + 0.5f)) * level->blockSize;
@@ -6473,18 +6498,24 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
                 cmd_produce(0xe, NULL, LEGO_2E_CURR_BLOCK(bx, by).f_03, pos);
         }
         if (!(block->flags1 & 0x400000)) {
-            if (!(LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 & 0x400) &&
-                !(LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags2 & 0x4))
-            if (!(LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 & 0x8000) &&
-                !terrain_cell_predicate_check_current((const uint32_t*)blockPos)) {
-                LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x200000;
-                LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x20000000;
-                LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x40000000;
-                entity_activity_scene_state_update_retail();
-                coordinate_pair_callback_dispatch(blockPos);
-                lego_noop_point_adapter(blockPos);
-                for (i = 0; i < 4; i++) coordinate_pair_event_queue(blockPos, (void*)0x28);
-                LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 |= 0x3;
+            /* 00430320's body, inline: the level copy keeps the third test
+             * from reusing the block address, as in the original. */
+            {
+                Lego_Level* currLevel = legoGlobs_currLevel;
+
+                if (!(LEGO_2F_BLOCK(currLevel, blockPos[0], blockPos[1]).flags1 & 0x400) &&
+                    !(LEGO_2F_BLOCK(currLevel, blockPos[0], blockPos[1]).flags2 & 0x4) &&
+                    !(LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 & 0x8000) &&
+                    !terrain_cell_predicate_check_current((const uint32_t*)blockPos)) {
+                    LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x200000;
+                    LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x20000000;
+                    LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 &= ~0x40000000;
+                    entity_activity_scene_state_update_retail();
+                    coordinate_pair_callback_dispatch(blockPos);
+                    lego_noop_point_adapter(blockPos);
+                    for (i = 0; i < 4; i++) coordinate_pair_event_queue(blockPos, (void*)0x28);
+                    LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 |= 0x3;
+                }
             }
             LEGO_2E_CURR_BLOCK(blockPos[0], blockPos[1]).flags1 |= 0x400000;
             selection_mode7_cancel_at_point((const uint32_t*)blockPos);
@@ -6739,116 +6770,27 @@ extern __inline void map_cell_tracking_flags_clear_and_refresh_current(const int
 }
 
 /* Clears a block's pending work once nothing occupies or reserves it, and
- * queues four of the given event for it. The original computes the block
- * address once for its first two tests (flags1 & 0x400, flags2 & 4) and
- * again, re-reading the level's width and blocks, for flags1 & 0x8000;
- * MSVC 5.0 merges the three tests of every C form tried (one && chain, an
- * if-return, nested ifs, a block pointer, inline helpers taking the level,
- * the block coordinates or the pair, operand orders, value copies and a
- * second index form), giving 70.66-74.42%. As for 00429160, the matching
- * build keeps the port's instruction-for-instruction body. 00430530 inlines
- * the same code. */
+ * queues four of the given event for it. Inline in the original as well:
+ * 00430530 expands it. The original computes the block address once for its
+ * first two tests (flags1 & 0x400, flags2 & 4) and again, re-reading the
+ * level's width and blocks, for flags1 & 0x8000: the first two read the
+ * level through a local copy, the third through the global, so MSVC 5.0
+ * cannot merge the three tests (as 0042c760's expansion does). */
 // FUNCTION: LEGORR 0x00430320
-__declspec(naked) void terrain_cell_work_flag_clear_current(
-    const int coord[2], uint32_t selector)
+extern __inline void terrain_cell_work_flag_clear_current(const int coord[2], uint32_t selector)
 {
-    __asm {
-        mov ecx, dword ptr [g_active_level_retail]
-        push ebx
-        push esi
-        mov esi, dword ptr [esp + 0ch]
-        mov eax, dword ptr [ecx + 14h]
-        mov ebx, dword ptr [ecx + 0b8h]
-        mov edx, dword ptr [esi + 4]
-        push edi
-        imul eax, edx
-        mov edi, dword ptr [esi]
-        add eax, edi
-        lea eax, dword ptr [eax + eax*8]
-        lea eax, dword ptr [ebx + eax*8]
-        mov ebx, dword ptr [eax + 8]
-        test bh, 4
-        jne terrain_cell_work_flag_clear_done
-        test byte ptr [eax + 0ch], 4
-        jne terrain_cell_work_flag_clear_done
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, edx
-        add eax, edi
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        test ch, 80h
-        jne terrain_cell_work_flag_clear_done
-        push esi
-        call terrain_cell_predicate_check_current
-        add esp, 4
-        test eax, eax
-        jne terrain_cell_work_flag_clear_done
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, edx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and ecx, 0ffdfffffh
-        mov dword ptr [eax], ecx
-        mov ecx, dword ptr [g_active_level_retail]
-        mov ebx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, ebx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov edi, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and edi, 0dfffffffh
-        mov dword ptr [eax], edi
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, edx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ebx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and ebx, 0bfffffffh
-        mov dword ptr [eax], ebx
-        call entity_activity_scene_state_update_retail
-        push esi
-        call coordinate_pair_callback_dispatch
-        add esp, 4
-        push esi
-        call flic_opcode27_fallback_noop
-        mov ebx, dword ptr [esp + 18h]
-        add esp, 4
-        mov edi, 4
-    terrain_cell_work_flag_clear_queue_loop:
-        push ebx
-        push esi
-        call coordinate_pair_event_queue
-        add esp, 8
-        dec edi
-        jne terrain_cell_work_flag_clear_queue_loop
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esi]
-        mov eax, dword ptr [ecx + 14h]
-        imul eax, dword ptr [esi + 4]
-        add eax, edx
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        or ecx, 3
-        mov dword ptr [eax], ecx
-    terrain_cell_work_flag_clear_done:
-        pop edi
-        pop esi
-        pop ebx
-        ret
+    Lego_Level* currLevel = legoGlobs_currLevel;
+    int i;
+
+    if (!(LEGO_2F_BLOCK(currLevel, coord[0], coord[1]).flags1 & 0x400) &&
+        !(LEGO_2F_BLOCK(currLevel, coord[0], coord[1]).flags2 & 0x4) &&
+        !(LEGO_2F_BLOCK(legoGlobs_currLevel, coord[0], coord[1]).flags1 & 0x8000) &&
+        !terrain_cell_predicate_check_current((const uint32_t*)coord)) {
+        LEGO_2F_BLOCK(legoGlobs_currLevel, coord[0], coord[1]).flags1 &= ~0x200000;
+        map_cell_tracking_flags_clear_and_refresh_current(coord);
+        for (i = 0; i < 4; i++)
+            coordinate_pair_event_queue(coord, (void*)selector);
+        LEGO_2F_BLOCK(legoGlobs_currLevel, coord[0], coord[1]).flags1 |= 0x3;
     }
 }
 
@@ -6918,9 +6860,9 @@ int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                 }
             }
 
-            LEGO_2F_BLOCK(level, bx, by).flags1 |= 0x8;
             pos[0] = bx;
             pos[1] = by;
+            LEGO_2F_BLOCK(level, bx, by).flags1 |= 0x8;
             lego_terrain_neighbor_flag_refresh(level, pos, 1);
             LEGO_2F_BLOCK(level, bx, by).flags1 &= ~0x20;
             LEGO_2F_BLOCK(level, bx, by).flags1 |= 0x400000;
@@ -6954,17 +6896,7 @@ int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                 terrain_cell_surface_quad_height_fill_current((struct LevelState*)level, bx, by);
                 pos2[0] = bx;
                 pos2[1] = by;
-                /* TerrainCellWorkFlagClear (00430320), inline. */
-                if (!(LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 & 0x400) &&
-                    !(LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags2 & 0x4) &&
-                    !(LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 & 0x8000) &&
-                    !terrain_cell_predicate_check_current((const uint32_t*)pos2)) {
-                    LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 &= ~0x200000;
-                    map_cell_tracking_flags_clear_and_refresh_current(pos2);
-                    for (i = 0; i < 4; i++)
-                        coordinate_pair_event_queue(pos2, (void*)0x28);
-                    LEGO_2F_BLOCK(legoGlobs_currLevel, pos2[0], pos2[1]).flags1 |= 0x3;
-                }
+                terrain_cell_work_flag_clear_current(pos2, 0x28);
                 selection_mode7_cancel_at_point((const uint32_t*)pos2);
             }
 
@@ -7150,7 +7082,8 @@ void lego_terrain_cell_queued_work_transition(unsigned int bx, unsigned int by)
 // FUNCTION: LEGORR 0x004311d0
 void lego_block_activity_create(Lego_Level* level, const int* blockPos, int build)
 {
-    float wx, wy, wz;
+    LegoPoint2F2G wxwy;
+    float wz;
     LegoVector3FC dirs[4] = {
         { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f },
         { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }
@@ -7181,9 +7114,9 @@ void lego_block_activity_create(Lego_Level* level, const int* blockPos, int buil
             LEGO_2F_PTR_SET(LEGO_2F_BLOCK(level, blockPos[0], blockPos[1]).f_10[2], activity);
         }
         terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
-                                   blockPos[0], blockPos[1], &wx, &wy);
-        wz = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wx, wy);
-        ddiscene_object_position_set(activity->cont, NULL, wx, wy, wz);
+                                   blockPos[0], blockPos[1], &wxwy.x, &wxwy.y);
+        wz = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wxwy.x, wxwy.y);
+        ddiscene_object_position_set(activity->cont, NULL, wxwy.x, wxwy.y, wz);
         ddiscene_object_pose_method_dispatch(activity->cont, NULL, (float)dirs[direction].x,
                                              (float)dirs[direction].y, (float)dirs[direction].z,
                                              0.0f, 0.0f, -1.0f);
@@ -9203,8 +9136,7 @@ void terrain_grid_entry_resources_release_all_current(void)
 
 /* Input's left mouse button (0076ab3c) at the last release check. A
  * static, as in the original (finding 691). */
-// GLOBAL: LEGORR 0x004de424
-static uint32_t s_lego_mslbLast;
+extern uint32_t s_lego_mslbLast;
 
 /* The tutorial icon's bob phase. */
 extern float s_lego_tutorialIconPhase;
@@ -9945,8 +9877,8 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
                      (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 12) * -0.5f) - (float)(textWidth >> 1);
             wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 8);
             wndRect[2] = (float)textHeight;
-            if (legoInput_mouseX < textX || legoInput_mouseX >= textX + textWidth ||
-                legoInput_mouseY < wndRect[0] || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
+            if (textX > legoInput_mouseX || legoInput_mouseX >= textX + textWidth ||
+                wndRect[0] > legoInput_mouseY || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
                 LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingHi;
                 text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
             } else {
@@ -9965,8 +9897,8 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
                      (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 12) * -0.5f) - (float)(textWidth >> 1);
             wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 8);
             wndRect[2] = (float)textHeight;
-            if (legoInput_mouseX < textX || legoInput_mouseX >= textX + textWidth ||
-                legoInput_mouseY < wndRect[0] || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
+            if (textX > legoInput_mouseX || legoInput_mouseX >= textX + textWidth ||
+                wndRect[0] > legoInput_mouseY || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
                 LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingHi;
                 text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
             } else {
@@ -10087,14 +10019,30 @@ void lego_panel_selection_highlight_toggle(int on)
  * retired it to the port tail (lego_port.cpp). Defined last, so no
  * function's symbol counter changes (finding 538). */
 
-/* Lego.c's external .bss (004de428-004de590), defined last in the
- * original's order (finding 691). MSVC 5.0 lays out an object's
- * uninitialised statics first and its zero-initialised externals after
- * them, in definition order (finding 687). The original's Lego.c .bss is
- * its statics (004de208-004de428) followed by these. Each name keeps a
- * declaration at its old place, so no function's symbol counter moves
- * (finding 538). Nothing in the original refers to 004de580; it is left
- * undefined (ADR 0005 rule 4). */
+/* Lego.c's .bss (004de208-004de590), defined last in the original's order
+ * as zero-initialised externals, which MSVC 5.0 emits in definition order
+ * (findings 686 and 687); it reorders uninitialised statics. Each name keeps
+ * a declaration at its old place, so no function's symbol counter moves
+ * (finding 538). The lego_unknown_* items stand for storage nothing in the
+ * image reads: 512 bytes at 004de210 and 4 each at 004de420 and 004de580. */
+// GLOBAL: LEGORR 0x004de208
+int s_lego_toolTipBlockX = 0;
+// GLOBAL: LEGORR 0x004de20c
+int s_lego_toolTipBlockY = 0;
+// GLOBAL: LEGORR 0x004de210
+int lego_unknown_4de210[128] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x004de410
+uint32_t s_lego_mouseLastY = 0;
+// GLOBAL: LEGORR 0x004de414
+uint32_t s_lego_mouseLastX = 0;
+// GLOBAL: LEGORR 0x004de418
+float s_lego_drag_x = 0;
+// GLOBAL: LEGORR 0x004de41c
+float s_lego_drag_y = 0;
+// GLOBAL: LEGORR 0x004de420
+int lego_unknown_4de420 = 0; /* never read */
+// GLOBAL: LEGORR 0x004de424
+uint32_t s_lego_mslbLast = 0;
 // GLOBAL: LEGORR 0x004de428
 int s_lego_renameCursorOn = 0;
 /* The previous frame's key map, for the rename input. */
@@ -10150,6 +10098,8 @@ struct EntitySlot* s_lego_toolTipObject = 0;
 int s_lego_debugLightToggle = 0;
 // GLOBAL: LEGORR 0x004de57c
 int s_lego_debugTransformToggle = 0;
+// GLOBAL: LEGORR 0x004de580
+int lego_unknown_4de580 = 0; /* never read */
 // GLOBAL: LEGORR 0x004de584
 struct EntitySlot* s_lego_debugRetargetObject = 0;
 /* The neighbour-pick rotation. */

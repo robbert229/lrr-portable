@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "gods98/mem_free.h"
 #include <string.h>
 
 #include "crt/vc5names.h"
@@ -167,7 +168,7 @@ void upgrade_load(Upgrade_Model* upgrades, BlockFile* config,
     }
 
     if (upgrades->count == 0) {
-        free(upgrades->parts);
+        Mem_Free(upgrades->parts);
         upgrades->parts = NULL;
     }
 }

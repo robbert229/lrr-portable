@@ -632,10 +632,10 @@ int directdraw_save_bmp(DirectDrawSurfaceIface* surface, const char* fname)
     DirectDrawBmpHeader header = { 0 };
     DirectDrawSurfaceDesc2 desc;
     File* ofp;
-    unsigned char* buffer;
     unsigned int lineSize, size, bytesPerPixel;
     unsigned int rBits = 0, gBits = 0;
     unsigned int x, y, i, offset, out;
+    unsigned char* buffer;
     unsigned int value;
     int success = FALSE;
     if ((ofp = file_open(fname, "wb")) != NULL) {
@@ -653,8 +653,8 @@ int directdraw_save_bmp(DirectDrawSurfaceIface* surface, const char* fname)
                 for (i = 0; i < 32; i++) if ((desc.ddpfPixelFormat.dwBBitMask >> i) & 1) bBits++;
                 for (y = 0; y < desc.dwHeight; y++) {
                     for (x = 0, offset = 0, out = 0; x < desc.dwWidth; x++) {
-                        value = *(unsigned int*)((unsigned char*)desc.lpSurface + y * desc.lPitch + offset);
                         out += 3;
+                        value = *(unsigned int*)((unsigned char*)desc.lpSurface + y * desc.lPitch + offset);
                         buffer[(desc.dwHeight - y - 1) * lineSize + out - 1] = (unsigned char)((value >> (gBits + bBits)) << (8 - rBits));
                         buffer[(desc.dwHeight - y - 1) * lineSize + out - 2] = (unsigned char)((value >> bBits) << (8 - gBits));
                         buffer[(desc.dwHeight - y - 1) * lineSize + out - 3] = (unsigned char)(value << (8 - bBits));
@@ -669,12 +669,12 @@ int directdraw_save_bmp(DirectDrawSurfaceIface* surface, const char* fname)
             header.bfType[1] = 'M';
             header.bfSize = size + sizeof(header);
             header.bfOffBits = sizeof(header);
+            header.biCompression = 0;
             header.biSize = 40;
             header.biWidth = desc.dwWidth;
             header.biHeight = desc.dwHeight;
             header.biPlanes = 1;
             header.biBitCount = 24;
-            header.biCompression = 0;
             header.biSizeImage = 0;
             header.biXPelsPerMeter = 1;
             header.biYPelsPerMeter = 1;
@@ -824,7 +824,7 @@ int directdraw_create_clipper(int fullScreen, unsigned int width, unsigned int h
 void directdraw_blt_8_to_16(DirectDrawSurfaceIface* target, DirectDrawSurfaceIface* source, void* palette)
 {
     DirectDrawSurfaceDesc2 descSource, descTarget;
-    unsigned int x, y, colour, val;
+    unsigned int x, colour, val, y;
     int i, shift, k, rBits, gBits, bBits;
     unsigned char r, g, b, index;
 
@@ -836,7 +836,7 @@ void directdraw_blt_8_to_16(DirectDrawSurfaceIface* target, DirectDrawSurfaceIfa
         if (descSource.ddpfPixelFormat.dwRGBBitCount == 8 &&
             target->lpVtbl->Lock(target, NULL, &descTarget, DDLOCK_WAIT, NULL) == DD_OK) {
             if (descTarget.ddpfPixelFormat.dwRGBBitCount == 16 &&
-                descTarget.dwWidth == descSource.dwWidth &&
+                descSource.dwWidth == descTarget.dwWidth &&
                 descTarget.dwHeight == descSource.dwHeight) {
                 for (i = 0, rBits = 0; i < 32; i++) if ((descTarget.ddpfPixelFormat.dwRBitMask >> i) & 1) rBits++;
                 for (i = 0, gBits = 0; i < 32; i++) if ((descTarget.ddpfPixelFormat.dwGBitMask >> i) & 1) gBits++;

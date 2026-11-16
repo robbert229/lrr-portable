@@ -11,6 +11,7 @@
  * are the live ones and nothing calls the unit. See objective_unit.h for
  * the records. */
 #include <stdlib.h>
+#include "gods98/mem_free.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -50,13 +51,15 @@ typedef struct Objective_Globs {
     int endTeleportEnabled;                 /* +0x288 */
 } Objective_Globs;
 
-// GLOBAL: LEGORR 0x004ffbc0
-static Objective_Globs objectiveGlobs;
+/* Defined at the end of the file, after the storage before it. */
+extern Objective_Globs objectiveGlobs;
 
-/* Input.c's INPUT.lClicked (0076ab48), which no converted unit defines
- * yet: a common definition, as the original's. */
-// GLOBAL: LEGORR 0x0076ab48
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* Input.c's INPUT.lClicked (0076ab48): a field of inputGlobs. */
+#include "gods98/input_globs.h"
+#else
 uint32_t s_window_mouse_word_48;
+#endif
 
 // FUNCTION: LEGORR 0x004574e0
 void objective_load_objective_text(struct BlockRec* config,
@@ -301,7 +304,6 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
 {
     int objType;
     unsigned int objID;
-    int blockPos[2];
     char* argv[60];
     char buff[1024];
     int hitTimeFail = 0;
@@ -450,6 +452,7 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
                                                          // STRING: LEGORR 0x004a811c
                                                          "BlockObjective",
                                                          NULL)))) {
+        int blockPos[2];
         s = string_duplicate(str);
         sound_variant_split(s, argv, ",");
         blockPos[0] = atoi(argv[0]);
@@ -707,7 +710,7 @@ next_page_sound:
         }
 
         if (objectiveGlobs.currentPage[type] > 0 &&
-            (int)s_renderer_word_a > 129 &&
+            (int)s_renderer_word_a >= 130 &&
             (int)s_renderer_word_a < (int)legoGlobs_BackButtonImage->width + 130 &&
             (int)s_renderer_word_b >= 315 &&
             (int)s_renderer_word_b < (int)legoGlobs_BackButtonImage->height + 315) {
@@ -732,7 +735,6 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
     int playMusic = 0;
     int showTextWindows = 0;
     int showing = 0;
-    void* textWindow;
 
     setQueueMode = 0;
 
@@ -822,7 +824,7 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
                 (sfx_random_get_sample_play_time(sfxID) - 1.5f) * 25.0f;
             sfx_set_queue_mode_and_flush(1);
         }
-        free(objectiveGlobs.soundName);
+        Mem_Free(objectiveGlobs.soundName);
         objectiveGlobs.soundName = NULL;
     }
     objectiveGlobs.showing = showing;
@@ -839,7 +841,7 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
         } else {
             objective_score_text_origin_set(NULL);
         }
-        if (objectiveGlobs.currentPage[type]) {
+        if (objectiveGlobs.currentPage[type] > 0) {
             pos[0] = 130.0f;
             pos[1] = 315.0f;
             lego_objective_task_text_origin_set(pos);
@@ -862,11 +864,19 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
                                  NULL);
 
         switch (level->status) {
-        case 1: textWindow = objectiveGlobs.completedTextWindow; break;
-        case 2: textWindow = objectiveGlobs.failedTextWindow; break;
-        default: textWindow = objectiveGlobs.briefingTextWindow; break;
+        case 1:
+            if (objectiveGlobs.completedTextWindow)
+                text_buffer_draw_wrapped(objectiveGlobs.completedTextWindow, 0, elapsedGame, NULL);
+            break;
+        case 2:
+            if (objectiveGlobs.failedTextWindow)
+                text_buffer_draw_wrapped(objectiveGlobs.failedTextWindow, 0, elapsedGame, NULL);
+            break;
+        default:
+            if (objectiveGlobs.briefingTextWindow)
+                text_buffer_draw_wrapped(objectiveGlobs.briefingTextWindow, 0, elapsedGame, NULL);
+            break;
         }
-        if (textWindow) text_buffer_draw_wrapped(textWindow, 0, elapsedGame, NULL);
 
         if (objectiveGlobs.textWindows[type])
             text_buffer_draw_wrapped(objectiveGlobs.textWindows[type], 0,
@@ -927,3 +937,12 @@ int objective_callback_check_completed_object(struct Lego_Object* liveObj,
 
     return 0;
 }
+
+/* objectiveGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), and after the .bss the original has before
+ * it: 512 bytes at 004ff9c0, after NERPs.c's .bss, which nothing in the image reads. Both are zero-initialised
+ * externals, which MSVC 5.0 emits in definition order (finding 686). */
+// GLOBAL: LEGORR 0x004ff9c0
+unsigned int objective_unknown_4ff9c0[128] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x004ffbc0
+Objective_Globs objectiveGlobs = { 0 };

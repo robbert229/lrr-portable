@@ -66,11 +66,21 @@ int wad_get_free_wad(void);
 int wad_file_open_in_wad(const char* fName, int wadNo);
 void* wad_file_get_pointer(int handle);
 
-/* Commons, as in the original. */
+/* The unit's state: one common, as in the original. The archive records
+ * (00575500) and the file handles (005756a0) are 56 bytes apart, and
+ * nothing in the image reads those bytes (00575668). Two commons cannot
+ * keep them: LINK's /OPT:REF drops a common nothing references. */
+typedef struct Wad_Globs {
+    Wad wads[MAX_WADS];              /* 00575500 */
+    unsigned char unknown_168[56];   /* 00575668: never read */
+    WadFile wadFiles[MAX_FILES];     /* 005756a0 */
+} Wad_Globs;
+
 // GLOBAL: LEGORR 0x00575500
-Wad wads[MAX_WADS];
-// GLOBAL: LEGORR 0x005756a0
-WadFile wadFiles[MAX_FILES];
+Wad_Globs wadGlobs;
+
+#define wads (wadGlobs.wads)
+#define wadFiles (wadGlobs.wadFiles)
 
 /* GetFileName: a NUL-terminated name from the archive's name table. */
 // FUNCTION: LEGORR 0x0048b4a0

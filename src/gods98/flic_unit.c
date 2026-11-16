@@ -594,13 +594,13 @@ int Flic_DoChunk(LPFLICSTRUCT fsp)
         Flic_Unsupported(fsp);
         retval = 1;
         break;
+    case FLI_CHUNK_FLI_COPY:
+        Flic_Copy(fsp);
+        retval = 1;
+        break;
     case FLI_CHUNK_BYTE_RUN:
     case FLI_CHUNK_DTA_BRUN:
         Flic_Brun(fsp);
-        retval = 1;
-        break;
-    case FLI_CHUNK_FLI_COPY:
-        Flic_Copy(fsp);
         retval = 1;
         break;
     case FLI_CHUNK_DELTA_FLC:

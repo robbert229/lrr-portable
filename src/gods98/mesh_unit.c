@@ -424,6 +424,7 @@ typedef struct Mesh_TextureStateChangeData {
 } Mesh_TextureStateChangeData;
 
 typedef struct Mesh_Globs {
+    unsigned int unknown_0000;   /* 005343c0: never read; the original's state is 4-aligned at 005343c4 */
     Mesh_PostRenderInfo* postRenderList;                             /* +0x0000 */
     Mesh_TextureStateChangeData stateData[MESH_MAXTEXTURESTAGESTATES]; /* +0x0004 */
     char* sharedTextureDir;                                          /* +0x0194 */
@@ -481,7 +482,7 @@ static const Mesh_IID IID_IDirect3DRMViewport2 = {
  * original reloads it (Mesh_ObtainFromList; findings 669 and 677). The zero
  * initialiser keeps it in this object's .bss rather than the common region
  * (finding 554). */
-// GLOBAL: LEGORR 0x005343c4
+// GLOBAL: LEGORR 0x005343c0
 Mesh_Globs meshGlobs = { 0 };
 
 static int mesh_render_callback(Mesh_UserVisual* lpD3DRMUV, void* lpArg,
@@ -883,11 +884,11 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
         }
     }
 
+    surfNormalsPtr = surfVerticesNorm;
+    surfVertexCountPtr = surfVertexCount;
+    textCoordsPtr = surfTextCoords;
     faceDataPtr = surfFaceData;
     surfVerticesPtr = surfVertices;
-    surfNormalsPtr = surfVerticesNorm;
-    textCoordsPtr = surfTextCoords;
-    surfVertexCountPtr = surfVertexCount;
     for (loop = 0; loop < lightWaveObject->aoSize.lwSurfaceCount; loop++) {
         Mesh_LightWave_Surface* lwSurf;
 
@@ -949,8 +950,8 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
 
         textCoordsPtr += size;
         surfNormalsPtr += size;
-        surfVerticesPtr += size;
         faceDataPtr += fDSize;
+        surfVerticesPtr += size;
         surfVertexCountPtr++;
     }
 

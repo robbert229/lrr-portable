@@ -63,37 +63,47 @@ typedef struct Front_LevelTextWindow {
     char tutorialText[256];         /* +0x628 "Tutorial" */
 } Front_LevelTextWindow;
 
-/* The original's FrontEnd.c .bss (004d78c8-004db8e8). */
+/* The original's FrontEnd.c .bss (004d78c8-004db8e8), in the original's
+ * order. Zero-initialised externals, as MSVC 5.0 emits those in definition
+ * order (finding 686) while it reorders uninitialised statics. The three
+ * front_unknown_* items stand for storage nothing in the image reads: 512
+ * bytes at 004d7908, 8 at 004db848 and 4 at 004db8d8. */
 // GLOBAL: LEGORR 0x004d78c8
-static int s_printXList[FRONT_PRINT_MAX];
+int s_printXList[FRONT_PRINT_MAX] = { 0 };
+// GLOBAL: LEGORR 0x004d7908
+int front_unknown_4d7908[128] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x004d7b08
-static Front_Font* s_printFontList[FRONT_PRINT_MAX];
+Front_Font* s_printFontList[FRONT_PRINT_MAX] = { 0 };
 // GLOBAL: LEGORR 0x004d7b48
-static char s_printTextList[FRONT_PRINT_MAX][1024];
+char s_printTextList[FRONT_PRINT_MAX][1024] = { 0 };
 // GLOBAL: LEGORR 0x004db748
-static char s_replaceSpacesBuffer[256];
+char s_replaceSpacesBuffer[256] = { 0 };
+// GLOBAL: LEGORR 0x004db848
+int front_unknown_4db848[2] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x004db850
-static int s_printYList[FRONT_PRINT_MAX];
+int s_printYList[FRONT_PRINT_MAX] = { 0 };
 // GLOBAL: LEGORR 0x004db890
-static struct Image* s_saveSlotImages[5];
+struct Image* s_saveSlotImages[5] = { 0 };
 // GLOBAL: LEGORR 0x004db8a8
-static int s_saveSlotCompletion[5];
+int s_saveSlotCompletion[5] = { 0 };
 // GLOBAL: LEGORR 0x004db8bc
-static int s_saveMenuOverwriteShowing;
+int s_saveMenuOverwriteShowing = 0;
 // GLOBAL: LEGORR 0x004db8c0
-static int s_overlayTriggered;
+int s_overlayTriggered = 0;
 // GLOBAL: LEGORR 0x004db8c4
-static int s_loadSaveTextShown;
+int s_loadSaveTextShown = 0;
 // GLOBAL: LEGORR 0x004db8c8
-static Front_Menu* s_savedNextMenu;
+Front_Menu* s_savedNextMenu = 0;
 // GLOBAL: LEGORR 0x004db8cc
-static Front_Cache* s_cacheList;
+Front_Cache* s_cacheList = 0;
 // GLOBAL: LEGORR 0x004db8d0
-static unsigned int s_printCount;
+unsigned int s_printCount = 0;
 // GLOBAL: LEGORR 0x004db8d4
-static int s_mouseLeftPrevious;
+int s_mouseLeftPrevious = 0;
+// GLOBAL: LEGORR 0x004db8d8
+int front_unknown_4db8d8 = 0; /* never read */
 // GLOBAL: LEGORR 0x004db8dc
-static int s_textInputBlink;
+int s_textInputBlink = 0;
 
 /* FrontEnd.c's initialised .data (004a1f00-004a1f60). The four menu block
  * names are initialised arrays, not literals: the original has them first in
@@ -107,6 +117,10 @@ static char s_menuSaveText[] = "Menu::SaveText";
 static char s_menuLevelText[] = "Menu::LevelText";
 // GLOBAL: LEGORR 0x004a1f30
 static char s_menuOverwrite[] = "Menu::Overwrite";
+/* An eight-byte "Samples" that nothing in the image reads; the original
+ * defines it here, after the menu block names and before the -1 words. */
+// GLOBAL: LEGORR 0x004a1f40
+static char s_samplesName[] = "Samples";
 // GLOBAL: LEGORR 0x004a1f48
 static int s_selectHoverIndex = -1;
 // GLOBAL: LEGORR 0x004a1f4c
@@ -483,8 +497,8 @@ Front_Cache* front_cache_create(const char* name)
             cache = (Front_Cache*)malloc(sizeof(Front_Cache));
             cache->path = (char*)malloc(strlen(name) + 1);
             strcpy(cache->path, name);
-            cache->image = NULL;
             cache->next = s_cacheList;
+            cache->image = NULL;
             cache->font = NULL;
             s_cacheList = cache;
         return cache;
@@ -1009,7 +1023,10 @@ Front_Menu* front_menu_create_menu(const char* title, const char* fullName,
     memset(menu, 0, sizeof(Front_Menu));
     menu->title = front_util_string_copy(title);
     menu->fullName = front_util_string_copy(fullName);
-    if (menu->title == NULL || menu->fullName == NULL) {
+    if (menu->title == NULL) {
+        return NULL;
+    }
+    if (menu->fullName == NULL) {
         return NULL;
     }
     menu->titleLength = strlen(title);
@@ -1019,15 +1036,15 @@ Front_Menu* front_menu_create_menu(const char* title, const char* fullName,
         return NULL;
     }
     menu->menuFont = menuFont;
+    menu->xPos = xPos;
     menu->yPos = yPos;
     menu->autoCenter = autoCenter;
-    menu->displayTitle = displayTitle;
-    menu->xPos = xPos;
     menu->itemCapacity = 15;
     menu->itemCount = 0;
     menu->itemFocus = 0;
     menu->closed = 0;
     menu->centerOffset = centerOffset;
+    menu->displayTitle = displayTitle;
     menu->flags = canScroll ? 2 : 0;
     if (anchored != NULL) {
         menu->anchored = 1;
@@ -1181,9 +1198,9 @@ int front_menu_get_item_bounds(Front_Menu* menu, int index, int* rcX, int* rcY,
     item = menu->items[index];
     switch (item->itemType) {
     case Front_MenuItem_Slider:
+        slider = (Front_SliderData*)item->itemData;
         x = item->centerOffHi + menu->xPos + item->x1;
         y = menu->yPos + item->y1;
-        slider = (Front_SliderData*)item->itemData;
         width = formatted_text_printf_width((menu->itemFocus == index) ? item->fontHi : item->fontLo,
                                             item->banner);
         height = object_field_be4_dword_get((menu->itemFocus == index) ? menu->items[index]->fontHi
@@ -1371,14 +1388,6 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
         mouseOver) {
         sfx_random_play_sound_normal(0x13, 0);
         switch (item->itemType) {
-        case Front_MenuItem_TextInput:
-            input = (Front_TextInputData*)item->itemData;
-            input->caretPos++;
-            if (input->caretPos > input->length - 1) {
-                input->caretPos = input->length - 1;
-            }
-            handled = mouseOver;
-            break;
         case Front_MenuItem_Slider:
             slider = (Front_SliderData*)item->itemData;
             if (!mouseOver) {
@@ -1407,6 +1416,14 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
             if (realSlider->callback != NULL) {
                 realSlider->callback(*realSlider->valuePtr);
             }
+            break;
+        case Front_MenuItem_TextInput:
+            input = (Front_TextInputData*)item->itemData;
+            input->caretPos++;
+            if (input->caretPos > input->length - 1) {
+                input->caretPos = input->length - 1;
+            }
+            handled = mouseOver;
             break;
         case Front_MenuItem_Cycle:
             cycle = (Front_CycleData*)item->itemData;
@@ -1469,13 +1486,6 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
                 slider->callback(*slider->valuePtr);
             }
             break;
-        case Front_MenuItem_TextInput:
-            input = (Front_TextInputData*)item->itemData;
-            input->caretPos--;
-            if (input->caretPos < 0) {
-                input->caretPos = 0;
-            }
-            break;
         case Front_MenuItem_RealSlider:
             realSlider = (Front_RealSliderData*)item->itemData;
             *realSlider->valuePtr -= realSlider->step;
@@ -1484,6 +1494,13 @@ Front_Menu* front_menu_update_menu_items_input(float elapsed, Front_Menu* menu)
             }
             if (realSlider->callback != NULL) {
                 realSlider->callback(*realSlider->valuePtr);
+            }
+            break;
+        case Front_MenuItem_TextInput:
+            input = (Front_TextInputData*)item->itemData;
+            input->caretPos--;
+            if (input->caretPos < 0) {
+                input->caretPos = 0;
             }
             break;
         case Front_MenuItem_Cycle:
@@ -1562,11 +1579,11 @@ void front_menu_item_draw_slider(Front_SliderData* slider, unsigned int x, unsig
 
     src.x = 0.0f;
     src.y = 0.0f;
+    dest.x = (float)x;
+    dest.y = (float)y;
     pct = (float)((value * 100) / range);
     src.width = pct;
     src.height = 20.0f;
-    dest.x = (float)x;
-    dest.y = (float)y;
     image_display_scaled(slider->imageBarOn, &src, &dest, NULL);
 
     src.x = pct;
@@ -1610,6 +1627,11 @@ void front_menu_item_draw_slider(Front_SliderData* slider, unsigned int x, unsig
         }
     }
 }
+
+/* gods98 Memory.h's Mem_Free. Declared here, not with the includes, so
+ * that the symbol counter at 0x00411360 and the functions before it stays
+ * the one they were matched with (finding 538, rule B). */
+#include "gods98/mem_free.h"
 
 // FUNCTION: LEGORR 0x00412170
 int front_menu_get_overlay_count(Front_Menu* menu)
@@ -1665,7 +1687,7 @@ void front_menu_update_overlays(Front_Menu* menu)
         }
         if (!flic_animate(frontGlobs_overlayImage, &area, endFrame != startFrame, 0)) {
             flic_close(frontGlobs_overlayImage);
-            free(frontGlobs_overlayImage);
+            Mem_Free(frontGlobs_overlayImage);
             frontGlobs_overlayImage = NULL;
             frontGlobs_overlayStartTime = 0;
             frontGlobs_overlayCurrTime = 0;
@@ -1743,7 +1765,7 @@ void front_menu_item_draw_save_image(Front_Menu* menu, int selIndex,
 {
     struct Image* image;
     char* stringParts[2];
-    char buff[8];
+    char buff[20];
     char* str;
     Point2F dest;
     Point2F size;
@@ -1786,6 +1808,7 @@ void front_menu_item_draw_select_text_window(Front_Menu** menu,
     int j;
     Front_MenuItem* item;
     Front_SelectData* select;
+    float pct;
 
     if (*menu == frontGlobs_mainMenuSet->menus[3] || *menu == frontGlobs_saveMenuSet->menus[0]) {
         if (*menu == frontGlobs_saveMenuSet->menus[0] && s_selectClickIndex >= 0) {
@@ -1799,47 +1822,50 @@ void front_menu_item_draw_select_text_window(Front_Menu** menu,
         text_buffer_reset_target(frontGlobs_saveTextWnd->textWindow);
         // STRING: LEGORR 0x004a238c
         text_buffer_append_format(frontGlobs_saveTextWnd->textWindow, "\n");
-        if (s_overlayIndex == -2) {
+        switch (s_overlayIndex) {
+        case -2:
             if (s_savedNextMenu != NULL) {
                 *nextMenu = s_savedNextMenu;
             }
             s_savedNextMenu = NULL;
             s_selectHoverIndex = -1;
             s_overlayShownIndex = -1;
-            goto reset;
-        } else if (s_overlayIndex == -1) {
-reset:
+            /* fall through */
+        case -1:
             *origMenu = NULL;
             s_selectClickIndex = -1;
             text_buffer_append_format(frontGlobs_saveTextWnd->textWindow,
                                       (*menu == frontGlobs_mainMenuSet->menus[3])
                                           ? frontGlobs_saveTextWnd->loadText
                                           : frontGlobs_saveTextWnd->saveText);
-        } else {
+            break;
+        default:
             s_savedNextMenu = *nextMenu;
             *nextMenu = *origMenu;
             s_overlayShownIndex = s_overlayIndex;
+            break;
         }
-        if (s_overlayShownIndex < 0) {
-            if (s_selectHoverIndex >= 0) {
-                text_buffer_append_format(frontGlobs_saveTextWnd->textWindow, "\n");
-                text_buffer_append_format(frontGlobs_saveTextWnd->textWindow,
-                                          frontGlobs_saveTextWnd->slotText,
-                                          (int)((float)s_saveSlotCompletion[s_selectHoverIndex] * 100.0f));
-            }
-        } else {
+        if (s_overlayShownIndex >= 0) {
             text_buffer_reset_target(frontGlobs_saveTextWnd->textWindow);
             if (*menu == frontGlobs_mainMenuSet->menus[3]) {
                 text_buffer_append_format(frontGlobs_saveTextWnd->textWindow,
                                           frontGlobs_saveTextWnd->slotNumberText,
                                           s_overlayShownIndex + 1, 0);
             }
+        } else if (s_selectHoverIndex >= 0) {
+            pct = (float)(unsigned int)s_saveSlotCompletion[s_selectHoverIndex];
+            if (pct > 100.0f) {
+                pct = 100.0f;
+            }
+            text_buffer_append_format(frontGlobs_saveTextWnd->textWindow, "\n");
+            text_buffer_append_format(frontGlobs_saveTextWnd->textWindow,
+                                      frontGlobs_saveTextWnd->slotText, (int)pct);
         }
         if (frontGlobs_saveTextWnd->textWindow != NULL) {
             text_buffer_draw_wrapped(frontGlobs_saveTextWnd->textWindow, 0, 1.0f, NULL);
         }
     }
-    if (*menu == frontGlobs_mainMenuSet->menus[3]) {
+    if (*menu == frontGlobs_mainMenuSet->menus[3] && frontGlobs_saveSlotFormat != NULL) {
         for (i = 0; i < (*menu)->itemCount; i++) {
             item = (*menu)->items[i];
             if (item->itemType == Front_MenuItem_Select) {
@@ -1898,8 +1924,8 @@ void front_menu_draw_menu_image(Front_Menu* menu, int light)
                 image_display_scaled(menu->menuImage, NULL, (Point2F*)menu->imagePos, NULL);
                 return;
             }
-            src.x = -(float)frontGlobs_scrollOffsetX;
             src.y = -(float)frontGlobs_scrollOffsetY;
+            src.x = -(float)frontGlobs_scrollOffsetX;
             src.width = 640.0f;
             src.height = 480.0f;
             dest.x = 0.0f;
@@ -2225,8 +2251,8 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
         if (s_overwriteAnswer == 0) {
             g_front_save_menu_open = 1;
             menu->closed = 1;
-            s_saveSlotToWrite = -1;
             s_saveMenuOverwriteShowing = 0;
+            s_saveSlotToWrite = -1;
         } else if (s_overwriteAnswer == 1) {
             g_front_save_menu_open = 0;
             menu->closed = 1;
@@ -2390,10 +2416,10 @@ void front_run_screen_menu(Front_Menu* menu)
     frontGlobs_overlayImage = NULL;
     lastTime = timeGetTime();
     while (!menu->closed) {
-        if (transition) {
-            front_menu_update(elapsed, menu, &menuTransition);
-        } else {
+        if (!transition) {
             nextMenu = front_menu_update(elapsed, menu, NULL);
+        } else {
+            front_menu_update(elapsed, menu, &menuTransition);
         }
         if (menu == frontGlobs_mainMenuSet->menus[0] && nextMenu != menu) {
             frontGlobs_f_557028 = -1;
@@ -2416,7 +2442,7 @@ void front_run_screen_menu(Front_Menu* menu)
         if (transition && menuTransition) {
             if (menu->menuImage != nextMenu->menuImage && frontGlobs_overlayImage != NULL) {
                 flic_close(frontGlobs_overlayImage);
-                free(frontGlobs_overlayImage);
+                Mem_Free(frontGlobs_overlayImage);
                 sound_stream_stop_and_release(0);
                 frontGlobs_overlayImage = NULL;
                 frontGlobs_overlayStartTime = 0;
@@ -2424,16 +2450,15 @@ void front_run_screen_menu(Front_Menu* menu)
             }
             frontGlobs_scrollOffsetY = 0;
             frontGlobs_scrollOffsetX = 0;
+            menu = nextMenu;
             transition = 0;
             menuTransition = 0;
-            menu = nextMenu;
         }
     }
     front_menu_free_slot_images();
     if (nextMenu == frontGlobs_saveMenuSet->menus[0] && s_saveSlotToWrite >= 0) {
-        level = reward_current_level_get();
-        if (level != NULL && *(void**)((char*)reward_current_level_get() + 4) != NULL) {
-            level = reward_current_level_get();
+        if (reward_current_level_get() != NULL &&
+            *(void**)((char*)(level = reward_current_level_get()) + 4) != NULL) {
             sprintf(buff, "%s\\%d.dat",
                     block_get_str_copy(legoGlobs_config,
                                        string_path_join(s_engine_config_root, s_menuSaveImage,
@@ -2444,7 +2469,7 @@ void front_run_screen_menu(Front_Menu* menu)
     }
     if (frontGlobs_overlayImage != NULL) {
         flic_close(frontGlobs_overlayImage);
-        free(frontGlobs_overlayImage);
+        Mem_Free(frontGlobs_overlayImage);
         sound_stream_stop_and_release(0);
         frontGlobs_overlayImage = NULL;
         frontGlobs_overlayStartTime = 0;
@@ -2612,7 +2637,6 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
     int centerOffset;
     int xPos;
     int yPos;
-    int sfxType;
     int i;
     int j;
     int k;
@@ -2697,6 +2721,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                                                       "ItemCount", NULL));
 
         for (j = 1;; j++) {
+            int sfxType;
             // STRING: LEGORR 0x004a2410
             sprintf(buff, "Overlay%i", j);
             itemString = block_get_str_copy(legoGlobs_config, string_path_join(s_engine_config_root, itemPath, buff, NULL));
@@ -2978,8 +3003,10 @@ int ledger_stub_004789a0_MusicMixerVolumeGet(float* music,
                                              float* sfx);         /* 004789a0 */
 /* gods98 Utils.c (utils.c). */
 char* string_duplicate(const char* text);                         /* 00477550 */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: frontend_unit_imports.h */
 /* gods98 Input.c (input_unit.cpp): Input_AnyKeyPressed. */
 int input_keyboard_down_key_count(void);                          /* 0047efb0 */
+#endif
 /* Container_MakeLight (004734f0): view.h types the colours as their
  * bits; the matching build passes the floats. Image_SaveBMP-style
  * adapters for ObjectRecall.c's save (004593e0), whose port entry takes
@@ -3001,9 +3028,9 @@ void front_object_recall_save_adapter(const char* fname);           /* 004593e0 
 
 /* FrontEnd.c .bss: Front_Options_Update's menu and menu set. */
 // GLOBAL: LEGORR 0x004db8e0
-static Front_Menu* s_optionsMenu;
+Front_Menu* s_optionsMenu = 0;
 // GLOBAL: LEGORR 0x004db8e4
-static Front_MenuSet* s_optionsMenuSet;
+Front_MenuSet* s_optionsMenuSet = 0;
 
 /* Part 2's functions. */
 void front_callback_slider_music_volume(int volume); /* 00414df0 */
@@ -4281,8 +4308,8 @@ int front_level_link_callback_find_by_link_index(Front_LevelLink* link, void* da
 
     search = (Front_LevelLinkSearch*)data;
     if (search->linkIndex == search->currentIndex) {
-        search->resultIndex = search->currentIndex;
         search->resultLink = link;
+        search->resultIndex = search->currentIndex;
         return 1;
     }
     search->currentIndex++;
@@ -4372,8 +4399,8 @@ int front_save_get_level_score(unsigned int index, Front_SaveData* saveData)
 // FUNCTION: LEGORR 0x00417460
 void front_callback_select_mission_item(float elapsed, int selectIndex)
 {
-    Front_Font* font = frontGlobs_mainMenuSet->menus[1]->menuFont;
     Front_LevelTextWindow* wnd = frontGlobs_saveLevelWnd;
+    Front_Font* font = frontGlobs_mainMenuSet->menus[1]->menuFont;
     Front_LevelLink* link = front_level_link_find_by_link_index(g_front_save_tree, selectIndex);
     const char* levelName = frontGlobs_missionLevels.langNames[link->setIndex];
     char levelNumber[64] = { 0 };

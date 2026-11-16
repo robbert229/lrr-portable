@@ -23,6 +23,12 @@ void main_menu_text_item(void);                             /* 004103d0 */
 #define menu_enter(fe, mode) front_run_screen_menu_type(mode)
 #endif
 int menu_enter(struct FrontEnd* fe, int mode);              /* 00416c80 */
+/* Front_IsFrontEndEnabled (00416d00) takes no argument; the macro drops
+ * the port's in the matching build's C callers, and rewrites this
+ * declaration into an old-style one. */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+#define frontend_enabled(cfg) frontend_enabled()
+#endif
 int frontend_enabled(BlockFile* cfg);                       /* 00416d00 */
 int save_slot_open(void);                                   /* 00416d50 */
 int is_in_game(void);                                       /* 00416d60 */
@@ -53,6 +59,11 @@ extern struct Front_Globs frontGlobs;
 #else
 /* Natively the port keeps its own (frontend_port.cpp). */
 extern void* g_front_save_tree;           /* DAT_00556ff8 */
+#endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+/* frontGlobs.missionLevels (00556fe4), the mission level set, which
+ * Reward.c passes Front_Levels_UpdateAvailable by address. */
+#define g_front_mission_levels (&FRONT_GLOBS_FIELD(uint8_t, 0x024))
 #endif
 #if defined(_MSC_VER) && _MSC_VER < 1200
 /* frontGlobs.saveData[5] (00557418), the current game's save slot, which

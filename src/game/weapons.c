@@ -231,8 +231,8 @@ typedef struct Weapons_Globs {
     BlockFile* config;                      /* 005053fc */
 } Weapons_Globs;  /* 0x1b90 bytes */
 
-// GLOBAL: LEGORR 0x00503870
-static Weapons_Globs weaponGlobs;
+/* Defined at the end of the file, after the storage before it. */
+extern Weapons_Globs weaponGlobs;
 
 /* The ray search record of the trace functions (0x18 bytes). */
 typedef struct Weapons_RaySearch {
@@ -608,8 +608,8 @@ void weapons_projectile_update(Weapons_Projectile* projectile, float elapsed)
     dist = projectile->speed * elapsed;
     if (!projectile->curved) {
         projectile->position.x += projectile->direction.x * dist;
-        projectile->position.y += projectile->direction.y * dist;
         projectile->position.z += projectile->direction.z * dist;
+        projectile->position.y += projectile->direction.y * dist;
         ddiscene_object_position_set(cont, NULL, projectile->position.x,
                                      projectile->position.y, projectile->position.z);
         ddiscene_object_pose_method_dispatch(cont, NULL, projectile->direction.x,
@@ -772,9 +772,9 @@ Weapons_Object* weapons_fire_lazer(Weapons_Vector3F* fromPos, Weapons_Vector3F* 
                                    Weapons_Object* liveObj, float elapsed,
                                    float coef, int weaponType, float discharge)
 {
-    float dist;
     Weapons_Object* hitObject;
     Weapons_Vector3F rayDir;
+    float dist;
     Weapons_Vector3F endPos;
 
     dist = 1.0f;
@@ -885,7 +885,7 @@ int weapons_object_quad_intersect(Weapons_Object* obj, float* fromPos,
         if (line_intersection_2d_compute(hit, from, to, pt, edge)) {
             if ((float)fabs(pt[0] - pt[2]) <= (float)fabs(pt[1] - pt[3])) {
                 if ((hit[1] > pt[1] && hit[1] < pt[3]) ||
-                    (hit[1] < pt[1] && hit[1] > pt[3])) goto found;
+                    (pt[1] > hit[1] && pt[3] < hit[1])) goto found;
             }
             else if ((hit[0] > pt[0] && hit[0] < pt[2]) ||
                      (hit[0] < pt[0] && hit[0] > pt[2])) {
@@ -1020,7 +1020,7 @@ void weapons_mesh_build_segment(void* mesh, float radius,
     weapons_vector3d_scale(&dir, &dir, radius);
     weapons_vector3d_scale(&perp, &perp, radius);
     vertices[0].x = perp.x + WEAPONS_OCTAGON_K * dir.x;
-    vertices[0].y = perp.y + WEAPONS_OCTAGON_K * dir.y;
+    vertices[0].y = perp.y + dir.y * (WEAPONS_OCTAGON_K);
     vertices[0].z = perp.z + WEAPONS_OCTAGON_K * dir.z;
     vertices[1].x = dir.x + WEAPONS_OCTAGON_K * perp.x;
     vertices[1].y = dir.y + WEAPONS_OCTAGON_K * perp.y;
@@ -1519,3 +1519,12 @@ void** weapons_port_stats_slot(void)
 {
     return (void**)&weaponGlobs.weaponStatsList;
 }
+
+/* weaponGlobs, defined after every function so that no function's symbol
+ * counter moves (finding 538), and after the .bss the original has before
+ * it: 512 bytes at 00503670, after Text.c's .bss, which nothing in the image reads. Both are zero-initialised
+ * externals, which MSVC 5.0 emits in definition order (finding 686). */
+// GLOBAL: LEGORR 0x00503670
+unsigned int weapons_unknown_503670[128] = { 0 }; /* never read */
+// GLOBAL: LEGORR 0x00503870
+Weapons_Globs weaponGlobs = { 0 };

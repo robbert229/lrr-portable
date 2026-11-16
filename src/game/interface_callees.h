@@ -180,6 +180,9 @@ extern int object_tooltip_sfx[];
 extern void* lego_tooltip_ore_icon;
 #endif
 /* DAT_0076ab80/DAT_0076aa00: Input.c's key map and the previous frame's. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_key_names.h"
+#endif
 extern unsigned char input_key_map[256];
 extern unsigned char input_prev_key_map[256];
 

@@ -255,7 +255,7 @@ void sound_samples_config_load(struct BlockRec* config, int allow_marked); /* 00
 /* GAME pointer.cpp (ui_list.hpp, frontend.hpp, media.hpp). */
 void ui_pointer_cursor_name_registry_init(void);           /* 0045c830 */
 void pointer_cursor_config_load_target(struct BlockRec* first_entry); /* 0045ca70 */
-void media_pointer_cursor_select(int slot);                /* 0045cc20 */
+void media_pointer_cursor_select(int);                /* 0045cc20 */
 /* GAME-004 Bubbles.c (util.hpp, ai.hpp). */
 void bubble_action_strings_initialize(void);               /* 004070b0 */
 void bubble_config_texture_load(struct BlockRec* cfg);     /* 00407240 */
@@ -402,7 +402,7 @@ void* container_initialise_original(const char* gameName);
 #endif
 void lego_object_trigger_frame_callback_adapter(void* cont, void* data);
 /* DirectDraw_AdjustTextureUsage (0047cd50, directdraw.h). */
-void directdraw_adjust_texture_usage(unsigned int* textureUsage);
+void directdraw_adjust_texture_usage(unsigned int*);
 /* TextWindow-backed message panel set-up (0046a950): no port entry
  * (lego.cpp). */
 void text_message_panel_initialise_adapter(const char* imageFile,
@@ -563,8 +563,12 @@ struct PanelGlobs;
 extern int32_t s_application_mode;            /* engine.cpp, 00505f88 mainGlobs.programmerLevel */
 extern int s_display_w;                       /* crt.cpp, 00505924 appWidth */
 #endif
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_globs.h"
+#else
 extern uint32_t s_renderer_word_a;            /* crt.cpp, 0076ab24 mouse x */
 extern uint32_t s_renderer_word_b;            /* crt.cpp, 0076ab28 mouse y */
+#endif
 extern float s_panel_highlight_timer;         /* engine.cpp, 00556efc */
 extern struct PanelGlobs panelGlobs;          /* panel_unit.c, 005000e0 */
 /* The two interface fonts, legoGlobs 00556124 and 00556128 (lego.cpp,
@@ -632,7 +636,7 @@ void tutorial_frame_timer_array_advance(float delta);      /* 00453bb0 */
 void objective_announce_current(int who);                  /* 00458670 objective_unit.cpp */
 void objective_tick_target(void* engine, struct LevelState* s,
                            float checker_dt, float frame_dt); /* 00458be0 */
-void media_pointer_cursor_select(int slot);                /* 0045cc20 pointer.cpp */
+void media_pointer_cursor_select(int);                /* 0045cc20 pointer.cpp */
 void pointer_cursor_draw_target(uint32_t x, uint32_t y);   /* 0045cc70 */
 void media_pointer_cursor_override_tick(float delta);      /* 0045cd90 */
 void graphics_overlay_visibility_set(uint32_t flag);       /* 004634b0 */
@@ -756,10 +760,12 @@ int sound_variant_property_read_original(int alias_index); /* 00465030 */
 /* gods98 Input's mouse state (crt.cpp, input.cpp). The port types the
  * position and button words unsigned; the original reads them as
  * signed ints. */
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
 extern uint32_t g_renderer_word_c;            /* crt.cpp, 0076ab3c mslb */
 extern uint32_t s_window_mouse_word_40;       /* crt.cpp, 0076ab40 msrb */
 extern int s_cursor_delta_x;                  /* input.cpp, 0076ab34 diffX */
 extern int s_cursor_delta_y;                  /* input.cpp, 0076ab38 diffY */
+#endif
 #define legoInput_mouseX ((int)s_renderer_word_a)
 #define legoInput_mouseY ((int)s_renderer_word_b)
 #define legoInput_mslb g_renderer_word_c

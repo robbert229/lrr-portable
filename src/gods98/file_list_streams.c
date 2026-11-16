@@ -1,7 +1,39 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* G98-028 G98-028: the unit's functions in original address order and the
- * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
- * Body hashes: docs/coverage/relocations/G98-028.csv. */
+/* G98-028: the startup file-list streams (findings 505, 680 and 684), in
+ * the original's shape as C (ADR 0005). The original's unit is C: its state
+ * is a common (00575ce0), which only a C tentative definition gives; a C++
+ * global goes to .bss. The functions are in original address order.
+ * Natively the file builds as C++ against the port's names. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include <stddef.h>
+
+#include "files_open.h"
+
+void resource_file_token_list_load_and_tree_scan_target(const char* token_file); /* 004802d0 */
+
+/* The unit's state, the original's whole 0x818-byte block (findings 680
+ * and 684): the four stream handles (00575ce0-00575cec), the token-list
+ * path that 0048b2f0 scans (00575cf0) and the output path it opens
+ * (005760f0), each 1024 bytes, a word no retail code references
+ * (005764f0) and the window-mode flag (005764f4) that 0048b260 clears and
+ * 0048b280 sets. */
+typedef struct FileListStreams_Globs {
+    struct GameFileHandle* streams[4]; /* +0x000 */
+    char tokenListPath[1024];          /* +0x010 */
+    char outputPath[1024];             /* +0x410 */
+    unsigned int field_810;            /* +0x810 unreferenced in retail */
+    unsigned int windowMode;           /* +0x814 */
+} FileListStreams_Globs;
+
+/* A tentative definition: a common, as in the original. */
+// GLOBAL: LEGORR 0x00575ce0
+FileListStreams_Globs fileListStreamsGlobs;
+
+#define s_startup_streams fileListStreamsGlobs.streams
+#define s_startup_token_list_path fileListStreamsGlobs.tokenListPath
+#define s_startup_output_path fileListStreamsGlobs.outputPath
+#define s_window_mode_flag fileListStreamsGlobs.windowMode
+#else
 #include <stddef.h>
 #include <stdint.h>
 #include "port_loop_ports.hpp"
@@ -39,34 +71,17 @@
 extern "C" uint32_t s_overlay_word_03610;
 #include "engine_for_file_list_streams.hpp"
 #include "game/startup_config_for_file_list_streams.hpp"
-#include "engine_for_file_list_streams.hpp"
-
-#if defined(_MSC_VER) && _MSC_VER < 1200
-/* The unit's state, the original's whole 0x818-byte block (findings 680
- * and 684): the four stream handles (00575ce0-00575cec), the token-list
- * path that 0048b2f0 scans (00575cf0) and the output path it opens
- * (005760f0), each 1024 bytes, a word no retail code references
- * (005764f0) and the window-mode flag (005764f4) that 0048b260 clears and
- * 0048b280 sets. Natively startup_config.cpp keeps the port's globals
- * under the old names, and engine.cpp the flag. */
-struct FileListStreams_Globs {
-    GameFileHandle* streams[4];     /* +0x000 */
-    char tokenListPath[1024];       /* +0x010 */
-    char outputPath[1024];          /* +0x410 */
-    uint32_t field_810;             /* +0x810 unreferenced in retail */
-    uint32_t windowMode;            /* +0x814 */
-};
-// GLOBAL: LEGORR 0x00575ce0
-FileListStreams_Globs fileListStreamsGlobs;
-#define s_startup_streams fileListStreamsGlobs.streams
-#define s_startup_token_list_path fileListStreamsGlobs.tokenListPath
-#define s_startup_output_path fileListStreamsGlobs.outputPath
-#define s_window_mode_flag fileListStreamsGlobs.windowMode
+/* Natively startup_config.cpp keeps the port's globals under the old names
+ * (in unported_ledger_stubs), and engine.cpp the window-mode flag. */
+using namespace unported_ledger_stubs;
 #endif
 
-namespace unported_ledger_stubs {
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // FUNCTION: LEGORR 0x0048b260
-extern "C" void ledger_stub_0048b260_StartupStreamStateReset()
+void ledger_stub_0048b260_StartupStreamStateReset(void)
 {
     s_startup_streams[0] = NULL;
     s_startup_streams[1] = NULL;
@@ -79,17 +94,15 @@ extern "C" void ledger_stub_0048b260_StartupStreamStateReset()
 #endif
     s_window_mode_flag = 0u;
 }
-} // namespace unported_ledger_stubs
 
 // FUNCTION: LEGORR 0x0048b280
-void window_mode_flag_set(uint32_t mode)
+void window_mode_flag_set(unsigned int mode)
 {
     s_window_mode_flag = mode;
 }
 
-namespace unported_ledger_stubs {
 // FUNCTION: LEGORR 0x0048b290
-extern "C" void ledger_stub_0048b290_StartupStreamsClose()
+void ledger_stub_0048b290_StartupStreamsClose(void)
 {
     if (s_startup_streams[0] != NULL)
         game_file_close(s_startup_streams[0]);
@@ -101,13 +114,15 @@ extern "C" void ledger_stub_0048b290_StartupStreamsClose()
     s_startup_streams[1] = NULL;
     s_startup_streams[0] = NULL;
 }
+
 #if defined(_MSC_VER) && _MSC_VER < 1200
 /* The original calls 0048b290 here, not startup_config.cpp's copy
  * (finding 680). */
 #define startup_streams_close ledger_stub_0048b290_StartupStreamsClose
 #endif
+
 // FUNCTION: LEGORR 0x0048b2f0
-extern "C" void startup_config_stream_load(void)
+void startup_config_stream_load(void)
 {
     startup_streams_close();
 #if !(defined(_MSC_VER) && _MSC_VER < 1200)
@@ -123,4 +138,7 @@ extern "C" void startup_config_stream_load(void)
     }
     /* The retail routine leaves the just-closed value in DAT_00575cec. */
 }
-} // namespace unported_ledger_stubs
+
+#ifdef __cplusplus
+}
+#endif

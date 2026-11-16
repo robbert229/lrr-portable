@@ -23,6 +23,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "gods98/mem_alloc.h"
 #include <string.h>
 
 #include "crt/vc5names.h"
@@ -1225,8 +1226,8 @@ Lego_Object* legoobject_unknown_00438960(Lego_Object* obj, int alt)
 {
     LegoObjGD_SearchData search;
 
-    search.result = NULL;
     search.x = 0.0f;
+    search.result = NULL;
     search.y = 0.0f;
     search.bestDistance = 10000.0f;
     search.mask = 0x2000;
@@ -2141,20 +2142,6 @@ int legoobject_cell_step_command_issue_with_jitter(Lego_Object* obj, int* target
 // FUNCTION: LEGORR 0x0043a300
 int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
 {
-    int fromY;
-    int* routeX;
-    int* routeY;
-    int fromX;
-    unsigned int count;
-    int result;
-    int toX;
-    int toY;
-    int dir;
-    void* cont;
-    float targetPos[2];
-    float pos[2];
-    float facing[3];
-    float contPos[3];
 
     if (obj->flags1 & 0x400) {
         if ((entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x4) ||
@@ -2168,6 +2155,18 @@ int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
         } else if (legoobject_accepts_target_for_task_check(target, obj->carriedObjects[0], 0) ||
             (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x8))
         {
+            int fromY;
+            int fromX;
+            int result;
+            int toX;
+            int toY;
+            int dir;
+            void* cont;
+            float targetPos[2];
+            float pos[2];
+            float facing[3];
+            float contPos[3];
+
             cont = NULL;
             if (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x8)
                 cont = scene_object_indexed_secondary_handle_get_or_create(target->building, s_activity_resource_slots[10]);
@@ -2195,6 +2194,10 @@ int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
                 result = legoobject_route_setup_and_marker_associate(obj, 1,
                 (unsigned int*)&toX, (unsigned int*)&toY, targetPos);
             } else {
+                int* routeX;
+                int* routeY;
+                unsigned int count;
+
                 if (!legoobject_terrain_neighbor_path_check(obj, fromX, fromY, toX, toY,
                         (unsigned int**)&routeX, (unsigned int**)&routeY, (unsigned int*)&count, NULL, NULL))
                     return 0;
@@ -3567,7 +3570,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
     } else if (obj->flags2 & 0x4000) {
     } else if (obj->flags1 & 4) {
         if (obj->flags1 & 0x80) {
-            if (obj->animTime > legoobject_zero) {
+            if (legoobject_zero < obj->animTime) {
                 cont = legoobject_type_component_get(obj);
                 render_object_rotate_axis(cont, 1, 0.0f, 1.0f, 0.0f, 1.5707964f);
                 ddiscene_frame_update_and_callbacks(cont, 0.0f);
@@ -4225,11 +4228,13 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
                                                                      position[0], position[1], 0.0f),
                                     0, NULL);
                         legoobject_remove(carried);
-                        goto next;
+                    } else {
+                        lego_level_resource_balance_add_and_sound(0);
+                        legoobject_remove(carried);
                     }
-                    lego_level_resource_balance_add_and_sound(0);
+                } else {
+                    legoobject_remove(carried);
                 }
-                legoobject_remove(carried);
             } else {
                 legoobject_action_record_consume_and_cleanup(obj, carried);
                 if (obj->type == 4)
@@ -4252,7 +4257,6 @@ void legoobject_simulation_queue_flush(Lego_Object* obj)
             if (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 4)
                 info_send(0x1d, NULL, target, NULL);
         }
-    next:
         obj->carriedObjects[i] = NULL;
     }
     obj->numCarriedObjects = 0;
@@ -4667,9 +4671,6 @@ int legoobject_route_to_explicit_target(Lego_Object* obj, Lego_Object* target)
 {
     int result;
     void* cont;
-    unsigned int* xs;
-    unsigned int* ys;
-    unsigned int count;
     int bx;
     int by;
     int objX;
@@ -4687,12 +4688,18 @@ int legoobject_route_to_explicit_target(Lego_Object* obj, Lego_Object* target)
             if (terrain_map_world_to_block(Lego_GetMap(), pos[0], pos[1], &bx, &by)) {
                 if (bx == objX && by == objY) {
                     result = legoobject_route_setup_and_marker_associate(obj, 1, (unsigned int*)&bx, (unsigned int*)&by, pos);
-                } else if (legoobject_terrain_neighbor_path_check(obj, objX, objY, bx, by, &xs, &ys, &count, NULL, NULL)) {
-                    result = legoobject_route_setup_and_marker_associate(obj, count, xs, ys, pos);
-                    free(xs);
-                    free(ys);
                 } else {
-                    return 0;
+                    unsigned int* xs;
+                    unsigned int* ys;
+                    unsigned int count;
+
+                    if (legoobject_terrain_neighbor_path_check(obj, objX, objY, bx, by, &xs, &ys, &count, NULL, NULL)) {
+                        result = legoobject_route_setup_and_marker_associate(obj, count, xs, ys, pos);
+                        free(xs);
+                        free(ys);
+                    } else {
+                        return 0;
+                    }
                 }
                 if (result) {
                     obj->routeToObject = target;
@@ -4715,23 +4722,21 @@ int legoobject_route_marker_setup(Lego_Object* obj)
     void* cont;
     int result;
     unsigned int count;
-    int bx;
-    int by;
-    int ownX;
-    int ownY;
+    LegoObjF_Point2I bxby;
+    LegoObjF_Point2I ownXownY;
     float pos[3];
     unsigned int* xs;
     unsigned int* ys;
 
-    legoobject_position_to_terrain_cell(obj, &ownX, &ownY);
+    legoobject_position_to_terrain_cell(obj, &ownXownY.x, &ownXownY.y);
     target = legoobject_route_marker_candidate_find(obj, 1);
     if (target != NULL && (cont = legoobject_k_carry_null_get(target)) != NULL) {
         ddiscene_object_position_get(cont, NULL, pos);
-        if (terrain_map_world_to_block(Lego_GetMap(), pos[0], pos[1], &bx, &by)) {
-            if (bx == ownX && by == ownY) {
-                result = legoobject_route_setup_and_marker_associate(obj, 1, (unsigned int*)&bx, (unsigned int*)&by, pos);
+        if (terrain_map_world_to_block(Lego_GetMap(), pos[0], pos[1], &bxby.x, &bxby.y)) {
+            if (bxby.x == ownXownY.x && bxby.y == ownXownY.y) {
+                result = legoobject_route_setup_and_marker_associate(obj, 1, (unsigned int*)&bxby.x, (unsigned int*)&bxby.y, pos);
             } else {
-                if (!legoobject_terrain_neighbor_path_check(obj, ownX, ownY, bx, by, &xs, &ys, &count, NULL, NULL))
+                if (!legoobject_terrain_neighbor_path_check(obj, ownXownY.x, ownXownY.y, bxby.x, bxby.y, &xs, &ys, &count, NULL, NULL))
                     return 0;
                 result = legoobject_route_setup_and_marker_associate(obj, count, xs, ys, pos);
                 free(xs);
@@ -5155,7 +5160,7 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
         if (s_terrain_path_depth != NULL)
             free(s_terrain_path_depth);
         s_terrain_path_depth_count = width * height;
-        s_terrain_path_depth = (unsigned int*)malloc(s_terrain_path_depth_count * sizeof(unsigned int));
+        s_terrain_path_depth = (unsigned int*)Mem_Alloc(s_terrain_path_depth_count * sizeof(unsigned int));
     }
     if (s_terrain_path_depth != NULL) {
         memset(s_terrain_path_depth, 0, width * height * sizeof(unsigned int));
@@ -5214,8 +5219,8 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
         if (found == -1)
             return 0;
 
-        xs = (unsigned int*)malloc(step * sizeof(unsigned int));
-        if (xs != NULL && (ys = (unsigned int*)malloc(step * sizeof(unsigned int))) != NULL) {
+        xs = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int));
+        if (xs != NULL && (ys = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int))) != NULL) {
             k = step - 1;
             cx = endX;
             cy = endY;
@@ -5262,6 +5267,7 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
 // FUNCTION: LEGORR 0x004410f0
 int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount, LegoObjL_RouteCallback callback, void* data)
 {
+    unsigned int y;
     int i;
     unsigned int* countPtr;
     unsigned int width;
@@ -5280,7 +5286,6 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
     int DIRECTIONS[4][2];
     LegoObjG_RouteBlock lists[2][100];
     unsigned int x;
-    unsigned int y;
     int tx;
     int ty;
     unsigned int* map;
@@ -5312,18 +5317,18 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
         if (s_terrain_neighbor_path_cost != NULL)
             free(s_terrain_neighbor_path_cost);
         s_terrain_path_depth_count = width * height;
-        s_terrain_neighbor_path_cost = (float*)malloc(s_terrain_path_depth_count * sizeof(float));
+        s_terrain_neighbor_path_cost = (float*)Mem_Alloc(s_terrain_path_depth_count * sizeof(float));
     }
     if (s_terrain_neighbor_path_cost != NULL) {
         memset(s_terrain_neighbor_path_cost, 0, width * height * sizeof(float));
 
-        step = 1;
         counts[0] = 1;
-        current = 0;
         s_terrain_neighbor_path_cost[width * startY + startX] = 1.0f;
+        step = 1;
         lists[0][0].blockPos[0] = startX;
         lists[0][0].blockPos[1] = startY;
         counts[1] = 0;
+        current = 0;
         countPtr = &counts[0];
         do {
             step++;
@@ -5397,15 +5402,15 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
             unsigned int bestPos[2];
 
             count = step;
-            xs = (unsigned int*)malloc(step * sizeof(unsigned int));
-            if (xs != NULL && (ys = (unsigned int*)malloc(step * sizeof(unsigned int))) != NULL) {
+            xs = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int));
+            if (xs != NULL && (ys = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int))) != NULL) {
+                cy = endY;
+                cx = endX;
                 last = step - 1;
                 xs[last] = endX;
                 ys[last] = endY;
                 xs[0] = startX;
                 ys[0] = startY;
-                cx = endX;
-                cy = endY;
                 for (k = last; k != 1; k--) {
                     best = 10000.0f;
                     for (i = 0; i < 4; i++) {
@@ -5436,7 +5441,7 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
                 *outYs = ys;
                 *outCount = count;
                 if ((xs[0] != xs[1] || abs((int)(ys[0] - ys[1])) != 1) &&
-                    (ys[0] != ys[1] || abs((int)(xs[0] - xs[1])) != 1)) {
+                    (ys[1] != ys[0] || abs((int)(xs[0] - xs[1])) != 1)) {
                     free(xs);
                     free(ys);
                     return legoobject_terrain_grid_path_search(obj, startX, startY, endX, endY,
@@ -6097,7 +6102,7 @@ int legoobject_movement_accumulator_apply(Lego_Object* obj, float elapsed, float
         trans[1] = 0.0f;
         inv = 1.0f / (float)sqrt((float)obj->field_2bc * (float)obj->field_2bc +
                                  (float)obj->field_2c0 * (float)obj->field_2c0);
-        trans[2] = inv * (float)obj->field_2c0 * moveSpeed;
+        trans[2] = moveSpeed * (inv * (float)obj->field_2c0);
         trans[0] = inv * (float)obj->field_2bc * moveSpeed;
         scene_object_camera_teleport_or_offset(cont, 1, trans[0], trans[1], trans[2]);
         result = 1;
@@ -6248,7 +6253,7 @@ void legoobject_pose_orientation_dispatch(Lego_Object* obj, float elapsed)
             }
             if (pos[2] > wz - -0.5f) {
                 pos[2] -= elapsed;
-                if (pos[2] < wz)
+                if (wz > pos[2])
                     pos[2] = wz;
                 ddiscene_object_position_set(obj->other, NULL, pos[0], pos[1], pos[2]);
             }
@@ -6896,7 +6901,10 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
                     dir.x = obj->faceDirection[0] = -obj->faceDirection[0];
                     dir.y = obj->faceDirection[1] = -obj->faceDirection[1];
                 }
-                legoobject_set_activity(obj, (obj->flags1 & 0x400) ? 0x15 : 10, 0);
+                if (obj->flags1 & 0x400)
+                    legoobject_set_activity(obj, 0x15, 0);
+                else
+                    legoobject_set_activity(obj, 10, 0);
                 if (obj->type != 1) obj->flags1 |= 0x80;
             } else {
                 legoobject_o_vector3_cross(&toward, &toward, (LegoObjJ_Vector3F*)obj->faceDirection);
@@ -7078,8 +7086,8 @@ int legoobject_move_vector_surface_probe(Lego_Object* obj)
     int bx2;
     int by;
     int bx;
-    Point2F dir;
     Point2F pos;
+    Point2F dir;
 
     legoobject_position_to_terrain_cell(obj, &bx, &by);
     if (!terrain_cell_walkable_flag_current(bx, by)) {
@@ -7146,7 +7154,6 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
     float dist;
     Lego_Object* monster = (Lego_Object*)data;
     float radius;
-    float x;
     float y;
     int type;
     int id;
@@ -7155,6 +7162,7 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
     Point2F mpos;
     int blockPos[2];
     float dir[3];
+    float x;
 
     legoobject_transform_position_get(monster, &mpos.x, &mpos.y);
     legoobject_transform_position_get(obj, &pos.x, &pos.y);
@@ -7185,8 +7193,8 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
             if (!terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&
                 !terrain_cell_occupied_or_flag_current(blockPos[0], blockPos[1], 1))
             {
-                x = pos.x - x;
                 y = pos.y - y;
+                x = pos.x - x;
                 if ((float)sqrt(x * x + y * y) < entity_stats_float_at6c(LEGOOBJ_SLOT(obj))) {
                     legoobject_pairing_activity_raise_and_mutual_link(monster, obj);
                     return 0;
@@ -7513,8 +7521,8 @@ int legoobject_flag_gated_callback_b(Lego_Object* liveObj, void* data)
 int legoobject_flag_gated_callback_a(Lego_Object* liveObj, void* data)
 {
     LegoObjP_CollisionSearch* search = (LegoObjP_CollisionSearch*)data;
-    Lego_Object* obj = search->obj;
     LegoObjP_Point2F objPos;
+    Lego_Object* obj = search->obj;
     LegoObjP_Point2F livePos;
     void* liveCont;
     void* objCont;
@@ -7613,9 +7621,9 @@ int legoobject_flag_gated_callback_a(Lego_Object* liveObj, void* data)
 // FUNCTION: LEGORR 0x00446610
 void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapsed, float* outTransSpeed, float* outElapsed)
 {
-    unsigned int flag400 = obj->flags1 & 0x400;
-    unsigned int flag2 = obj->flags1 & 2;
     unsigned int flag8 = obj->flags1 & 8;
+    unsigned int flag2 = obj->flags1 & 2;
+    unsigned int flag400 = obj->flags1 & 0x400;
     unsigned int slow = obj->flags1 & 0x2000000;
     float transCoef;
     float speed;
@@ -7647,15 +7655,14 @@ void legoobject_movement_tick_scale_and_delta_get(Lego_Object* obj, float elapse
     {
         float centre;
         int blockPos[2];
-        float x;
-        float y;
+        LegoObjGE_Point2F xy;
         float coef;
 
         centre = 1.0f;
-        legoobject_transform_position_get(obj, &x, &y);
-        if (terrain_map_world_to_block_centre(Lego_GetMap(), x, y, &blockPos[0], &blockPos[1], &centre)) {
-            coef = 1.0f - ((float)(unsigned int)terrain_cell_speed_class_current(blockPos) * 0.25f) *
-                              (1.0f - entity_stats_float_atd4(LEGOOBJ_SLOT(obj)));
+        legoobject_transform_position_get(obj, &xy.x, &xy.y);
+        if (terrain_map_world_to_block_centre(Lego_GetMap(), xy.x, xy.y, &blockPos[0], &blockPos[1], &centre)) {
+            coef = (float)(unsigned int)terrain_cell_speed_class_current(blockPos) * 0.25f;
+            coef = 1.0f - coef * (1.0f - entity_stats_float_atd4(LEGOOBJ_SLOT(obj)));
             if (level_cell_occupied_at_current(blockPos)) coef = entity_stats_float_atd8(LEGOOBJ_SLOT(obj)) * coef;
             if (obj->type == 2 &&
                 ((LegoObjJ_Level*)g_active_level_retail)->blocks[((LegoObjJ_Level*)g_active_level_retail)->width * blockPos[1] + blockPos[0]].terrain == 9)
@@ -7950,12 +7957,12 @@ int legoobject_route_to_cell_command_issue(Lego_Object* obj, int bx, int by, Leg
             legoobject_position_to_terrain_cell(obj, &objX, &objY);
             if (objX == bx && objY == by) {
                 result = legoobject_route_setup_and_marker_associate(obj, 1, (unsigned int*)&objX, (unsigned int*)&objY, NULL);
-            } else {
-                if (!legoobject_terrain_neighbor_path_check(obj, objX, objY, bx, by, &xs, &ys, &count, NULL, NULL))
-                    return 0;
+            } else if (legoobject_terrain_neighbor_path_check(obj, objX, objY, bx, by, &xs, &ys, &count, NULL, NULL)) {
                 result = legoobject_route_setup_and_marker_associate(obj, count, xs, ys, NULL);
                 free(xs);
                 free(ys);
+            } else {
+                return 0;
             }
             if (result) {
                 ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 5;
@@ -8188,8 +8195,8 @@ int legoobject_type_four_callback(Lego_Object* obj, void* data)
 // FUNCTION: LEGORR 0x00447950
 void legoobject_directional_activity_start(Lego_Object* obj, float* dir, int mode)
 {
-    LegoObjP_Point2F face;
     LegoObjP_Point2F d;
+    LegoObjP_Point2F face;
     float c;
     float inv;
     float dot;
@@ -8202,12 +8209,12 @@ void legoobject_directional_activity_start(Lego_Object* obj, float* dir, int mod
             face = *(LegoObjP_Point2F*)obj->faceDirection;
             d = *(LegoObjP_Point2F*)dir;
             c = (float)cos(0.78539818f);
-            inv = 1.0f / (float)sqrt(face.x * face.x + face.y * face.y);
+            inv = 1.0f / (float)sqrt(face.y * face.y + face.x * face.x);
             face.x = face.x * inv;
             face.y = face.y * inv;
             dot = face.x * d.x + face.y * d.y;
             limit = 1.0f - c;
-            if (dot > limit) activity = 0x1a;
+            if (limit < dot) activity = 0x1a;
             else if (dot < -limit) activity = 0x19;
             else if (face.y * d.x - face.x * d.y > legoobject_zero) activity = 0x18;
             else activity = 0x17;
@@ -8860,9 +8867,6 @@ int legoobject_walkable_target_cell_route_issue(Lego_Object* obj, int* blockPos)
 int legoobject_cell_step_command_issue_with_target_mark(Lego_Object* obj, int* blockPos)
 {
     int result;
-    unsigned int* routeX;
-    unsigned int* routeY;
-    unsigned int count;
     LegoObjF_Point2I ownPos;
 
     if (terrain_cell_speed_class_current(blockPos)) {
@@ -8873,6 +8877,10 @@ int legoobject_cell_step_command_issue_with_target_mark(Lego_Object* obj, int* b
             result = legoobject_route_setup_and_marker_associate(obj, 1,
                 (unsigned int*)&blockPos[0], (unsigned int*)&blockPos[1], NULL);
         } else {
+            unsigned int* routeX;
+            unsigned int* routeY;
+            unsigned int count;
+
             if (legoobject_terrain_neighbor_path_check(obj, ownPos.x, ownPos.y, blockPos[0], blockPos[1],
                     &routeX, &routeY, &count, NULL, NULL)) {
                 result = legoobject_route_setup_and_marker_associate(obj, count, routeX, routeY, NULL);
@@ -9080,17 +9088,16 @@ int legoobject_activity_terrain_eligibility_transition(Lego_Object* obj, float e
         if (!lego_terrain_cell_allows_placement(LEGOOBJ_SLOT(obj), blockPos.x, blockPos.y)) {
             legoobject_set_activity(obj, 0xb, 1);
             obj->flags1 = (obj->flags1 & ~0x40) | 0x80000000;
-        } else {
-            if (obj->animTime <= legoobject_zero)
-                return 1;
+            level_tile_mark_current_target(&blockPos.x, 0);
+        } else if (obj->animTime > legoobject_zero) {
             obj->flags1 &= ~0x40;
             legoobject_set_activity(obj, 0, 0);
             lego_terrain_cell_queued_work_transition(blockPos.x, blockPos.y);
             obj->targetBlockPos[1] = -1.0f;
             obj->targetBlockPos[0] = -1.0f;
             *out = 1;
+            level_tile_mark_current_target(&blockPos.x, 0);
         }
-        level_tile_mark_current_target(&blockPos.x, 0);
         return 1;
     }
     return 0;
@@ -9293,6 +9300,7 @@ int legoobject_hide_check_callback(Lego_Object* obj, void* data)
     LegoObjF_Point2I shapePos;
     float faceDir[2];
     float wPos[2];
+    LegoObjF_Point2I* next;
 
     hide = 0;
     if (entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x200000) {
@@ -9335,8 +9343,9 @@ int legoobject_hide_check_callback(Lego_Object* obj, void* data)
             shape = (LegoObjF_Point2I*)task_field84_get_and_field88_out((char*)legoGlobs_buildingData + obj->id * 0x14c, &count);
             shape = (LegoObjF_Point2I*)rotated_pairs_scratch_fill(&shapePos.x, (int*)shape, count, dir);
             for (i = 0; i < count; i++) {
-                if (i != count - 1 && shape[i].x == shape[i + 1].x &&
-                    shape[i].y == shape[i + 1].y) {
+                next = &shape[i + 1];
+                if (i != count - 1 && shape[i].x == next->x &&
+                    shape[i].y == next->y) {
                     skip = 1;
                 } else {
                     skip = 0;
@@ -9984,8 +9993,12 @@ extern int s_object_f_4eabc4;                     /* 004eabc4 objectGlobs list c
 extern int s_object_f_4eabc8;                     /* 004eabc8 its buildings */
 #define s_object_f_4eabc8 objectGlobs.field_c438
 /* Mouse position (crt_mouse.h, crt.cpp). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_globs.h"
+#else
 extern uint32_t s_renderer_word_a;                /* 0076ab24 mouse x */
 extern uint32_t s_renderer_word_b;                /* 0076ab28 mouse y */
+#endif
 /* Reward.c (reward.h, reward.c). */
 void global_counter_at_00555328_increment(void);                        /* 00462880 */
 /* objectGlobs' list of the objects 0044c5f0 has visited (004ea7c4); its
@@ -10030,8 +10043,7 @@ void legoobject_tiny_monster_spawn_and_teardown(Lego_Object* obj)
     int type;
     int id;
     void* model;
-    float x;
-    float y;
+    LegoObjGE_Point2F xy;
     unsigned int count;
     Lego_Object* tiny;
 
@@ -10056,9 +10068,9 @@ void legoobject_tiny_monster_spawn_and_teardown(Lego_Object* obj)
         }
     }
     if (entity_type_pair_lookup(name, &type, &id, (int*)&model)) {
-        legoobject_transform_position_get(obj, &x, &y);
+        legoobject_transform_position_get(obj, &xy.x, &xy.y);
         for (count = 0; count < 3; count++) {
-            tiny = legoobject_create_in_world(model, type, id, 0, x, y, (float)(rng_thunk_draw15() % 7));
+            tiny = legoobject_create_in_world(model, type, id, 0, xy.x, xy.y, (float)(rng_thunk_draw15() % 7));
             tiny->health = -1.0f;
             if (!legoobject_route_step_command_issue(tiny)) {
                 legoobject_remove(tiny);
@@ -10192,17 +10204,14 @@ int legoobject_type_two_target_resolve_and_apply(Lego_Object* obj, int code)
 // FUNCTION: LEGORR 0x0044b500
 int legoobject_position_step_command_issue_and_link(Lego_Object* obj, int selector)
 {
-    int result = 0;
     int ok = 0;
+    int result = 0;
     float pos[2];
     Lego_Object* building;
     float nullPos[3];
     float target[2];
     LegoObjF_Point2I toBlock;
     LegoObjF_Point2I fromBlock;
-    unsigned int* xs;
-    unsigned int* ys;
-    unsigned int count;
 
     if (obj->type == 2) {
         legoobject_transform_position_get(obj, &pos[0], &pos[1]);
@@ -10219,6 +10228,10 @@ int legoobject_position_step_command_issue_and_link(Lego_Object* obj, int select
                 result = legoobject_route_setup_and_marker_associate(obj, 1, (unsigned int*)&toBlock.x,
                                                                      (unsigned int*)&toBlock.y, target);
             } else {
+                unsigned int* xs;
+                unsigned int* ys;
+                unsigned int count;
+
                 if (legoobject_terrain_neighbor_path_check(obj, fromBlock.x, fromBlock.y, toBlock.x, toBlock.y,
                                                            &xs, &ys, &count, NULL, NULL))
                 {
@@ -10730,6 +10743,10 @@ int legoobject_scatter_spawn_drain_callback(Lego_Object* obj, void* data)
 #ifdef __cplusplus
 extern "C" {
 #endif
+/* 512 bytes of .bss before objectGlobs (004de590-004de790) that nothing
+ * in the image reads, after Lego.c's last item. */
+// GLOBAL: LEGORR 0x004de590
+unsigned int legoobject_unknown_4de590[128] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x004de790
 struct LegoObject_Globs objectGlobs = { 0 };
 

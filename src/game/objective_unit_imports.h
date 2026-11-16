@@ -29,11 +29,15 @@ struct LevelState;
 extern int s_display_w;                     /* 00505924 appWidth */
 extern int s_display_h;                     /* 00505928 appHeight */
 extern int32_t s_application_mode;          /* 00505f88 programmerLevel */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+#include "gods98/input_globs.h"
+#else
 extern uint32_t s_renderer_word_a;          /* 0076ab24 msx */
 extern uint32_t s_renderer_word_b;          /* 0076ab28 msy */
 extern uint32_t g_renderer_word_c;          /* 0076ab3c mslb */
 extern uint32_t s_window_mouse_word_40;     /* 0076ab40 msrb */
 extern uint32_t s_window_mouse_word_4c;     /* 0076ab4c */
+#endif
 
 /* GAME-021 Lego.c's legoGlobs fields (the port's globals; lego_unit.h has
  * the unit's stand-ins). */

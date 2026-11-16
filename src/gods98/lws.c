@@ -837,13 +837,13 @@ void lws_interpolate(LwsInfo* scene, LwsNode* node, unsigned short key,
     scale.x = curr->scale.x + scale.x;
     scale.y = curr->scale.y + scale.y;
     scale.z = curr->scale.z + scale.z;
-    hpb.x = next->hpb.x - curr->hpb.x;
     hpb.y = next->hpb.y - curr->hpb.y;
-    hpb.z = next->hpb.z - curr->hpb.z;
+    hpb.x = next->hpb.x - curr->hpb.x;
     hpb.x = hpb.x * delta;
-    hpb.y = hpb.y * delta;
-    hpb.z = hpb.z * delta;
     hpb.x = curr->hpb.x + hpb.x;
+    hpb.y = hpb.y * delta;
+    hpb.z = next->hpb.z - curr->hpb.z;
+    hpb.z = hpb.z * delta;
     hpb.y = curr->hpb.y + hpb.y;
     hpb.z = curr->hpb.z + hpb.z;
 
@@ -881,7 +881,7 @@ void lws_absolute_key_set(LwsInfo* scene, LwsNode* node, LwsVector3* pos,
         float cosP = (float)cos(hpb->y);
         float py = node->pivotVector.y;
         float pz = node->pivotVector.z;
-        float a, b, c, d, e, f, g;
+        float e, a, c, b, d, f, g;
 
         a = scale->x * sinB;
         b = scale->x * cosB;
@@ -902,7 +902,7 @@ void lws_absolute_key_set(LwsInfo* scene, LwsNode* node, LwsVector3* pos,
         mat[0][3] = 0.0f;
         mat[1][3] = 0.0f;
         mat[2][3] = 0.0f;
-        mat[3][0] = px * mat[0][0] + py * mat[1][0] + pz * mat[2][0] + pos->x;
+        mat[3][0] = pz * mat[2][0] + (px * mat[0][0] + py * mat[1][0]) + pos->x;
         mat[3][1] = px * mat[0][1] + py * mat[1][1] + pz * mat[2][1] + pos->y;
         mat[3][2] = px * mat[0][2] + py * mat[1][2] + pz * mat[2][2] + pos->z;
         mat[3][3] = 1.0f;

@@ -2,6 +2,11 @@
 /* G98-029: registry path traversal and value query (finding 505). */
 #include "g98_029.h"
 
+/* A word holding 16 that nothing in the image reads; the original's .data
+ * has it here, after DXError.c's literals and before Wad.c's. */
+// GLOBAL: LEGORR 0x004af9e4
+static int s_registryWord = 16;
+
 // FUNCTION: LEGORR 0x0048b330
 const char* registry_path_split(const char* path, char* out)
 {

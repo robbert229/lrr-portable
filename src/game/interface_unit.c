@@ -66,10 +66,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "gods98/mem_alloc.h"
 #include <string.h>
 
 #include "interface_unit.h"
 #include "interface_callees.h"
+#include "interface_mem.h"
 #include "advisor.h"
 #include "frontend.h"
 #include "lego.h"
@@ -342,22 +344,22 @@ void interface_shutdown(void)
     for (menu = interfaceGlobs.menus;
          menu < interfaceGlobs.menus + INTERFACE_MENU_COUNT; menu++) {
         if (menu->items != NULL) {
-            free(menu->items);
+            interface_mem_free(menu->items);
         }
     }
 
-    free(interfaceGlobs.vehicleItemIcons);
-    free(interfaceGlobs.vehicleItemIconsDisabled);
-    free(interfaceGlobs.vehicleItemIconsPressed);
-    free(interfaceGlobs.vehicleItemClicks);
-    free(interfaceGlobs.vehicleItemF2keys);
-    free(interfaceGlobs.vehicleItemFlags);
-    free(interfaceGlobs.buildingItemIcons);
-    free(interfaceGlobs.buildingItemIconsDisabled);
-    free(interfaceGlobs.buildingItemIconsPressed);
-    free(interfaceGlobs.buildingItemClicks);
-    free(interfaceGlobs.buildingItemF2keys);
-    free(interfaceGlobs.buildingItemFlags);
+    interface_mem_free(interfaceGlobs.vehicleItemIcons);
+    interface_mem_free(interfaceGlobs.vehicleItemIconsDisabled);
+    interface_mem_free(interfaceGlobs.vehicleItemIconsPressed);
+    interface_mem_free(interfaceGlobs.vehicleItemClicks);
+    interface_mem_free(interfaceGlobs.vehicleItemF2keys);
+    interface_mem_free(interfaceGlobs.vehicleItemFlags);
+    interface_mem_free(interfaceGlobs.buildingItemIcons);
+    interface_mem_free(interfaceGlobs.buildingItemIconsDisabled);
+    interface_mem_free(interfaceGlobs.buildingItemIconsPressed);
+    interface_mem_free(interfaceGlobs.buildingItemClicks);
+    interface_mem_free(interfaceGlobs.buildingItemF2keys);
+    interface_mem_free(interfaceGlobs.buildingItemFlags);
 }
 
 // FUNCTION: LEGORR 0x0041a920
@@ -406,26 +408,26 @@ int interface_get_menu_item_type(const char* name, int* type)
 // FUNCTION: LEGORR 0x0041aa00
 void interface_init_object_items(void)
 {
-    interfaceGlobs.vehicleItemClicks = (unsigned int*)malloc(
+    interfaceGlobs.vehicleItemClicks = (unsigned int*)Mem_Alloc(
         sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
     memset(interfaceGlobs.vehicleItemClicks, 0,
            sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
     interfaceGlobs.vehicleItemF2keys =
-        (unsigned char*)malloc(LEGO_VEHICLE_TYPE_COUNT);
+        (unsigned char*)Mem_Alloc(LEGO_VEHICLE_TYPE_COUNT);
     memset(interfaceGlobs.vehicleItemF2keys, 0, LEGO_VEHICLE_TYPE_COUNT);
-    interfaceGlobs.vehicleItemFlags = (unsigned int*)malloc(
+    interfaceGlobs.vehicleItemFlags = (unsigned int*)Mem_Alloc(
         sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
     memset(interfaceGlobs.vehicleItemFlags, 0,
            sizeof(unsigned int) * LEGO_VEHICLE_TYPE_COUNT);
 
-    interfaceGlobs.buildingItemClicks = (unsigned int*)malloc(
+    interfaceGlobs.buildingItemClicks = (unsigned int*)Mem_Alloc(
         sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
     memset(interfaceGlobs.buildingItemClicks, 0,
            sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
     interfaceGlobs.buildingItemF2keys =
-        (unsigned char*)malloc(LEGO_BUILDING_TYPE_COUNT);
+        (unsigned char*)Mem_Alloc(LEGO_BUILDING_TYPE_COUNT);
     memset(interfaceGlobs.buildingItemF2keys, 0, LEGO_BUILDING_TYPE_COUNT);
-    interfaceGlobs.buildingItemFlags = (unsigned int*)malloc(
+    interfaceGlobs.buildingItemFlags = (unsigned int*)Mem_Alloc(
         sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
     memset(interfaceGlobs.buildingItemFlags, 0,
            sizeof(unsigned int) * LEGO_BUILDING_TYPE_COUNT);
@@ -862,9 +864,14 @@ int interface_callback_draw_item(int type, int objType, int objIndex,
         } else if (objType == 4) {
             flash = interfaceGlobs.buildingItemFlags[objIndex] &
                     INTERFACE_ITEM_FLASH;
-        } else {
+        }
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+        /* The original leaves `flash` unset for other object types; its
+         * register then still holds objType, which the port keeps. */
+        else {
             flash = objType;
         }
+#endif
         interface_set_object_item_pressed(objType, objIndex, 0);
     } else {
         interface_update_item_enabled(type);
@@ -1177,20 +1184,19 @@ int interface_get_item_at_point(unsigned int x, unsigned int y, int* type,
                                 int* objType, int* objIndex)
 {
     unsigned int count;
-    float left;
-    float top;
+    Point2F pos;
     InterfaceItemSearch search;
 
     count = interface_get_menu_item_count(interfaceGlobs.currMenuType);
     if (interface_menu_has_back_button(interfaceGlobs.currMenuType)) {
-        left = interfaceGlobs.backButtonOffsets[count - 1].x +
-               interfaceGlobs.currMenuPosition.x;
-        top = interfaceGlobs.backButtonOffsets[count - 1].y +
-              interfaceGlobs.currMenuPosition.y;
-        if ((float)x >= left &&
-            (float)x <= (float)interfaceGlobs.backButtonWidth + left &&
-            (float)y >= top &&
-            (float)y <= (float)interfaceGlobs.backButtonHeight + top) {
+        pos.x = interfaceGlobs.backButtonOffsets[count - 1].x +
+                interfaceGlobs.currMenuPosition.x;
+        pos.y = interfaceGlobs.backButtonOffsets[count - 1].y +
+                interfaceGlobs.currMenuPosition.y;
+        if ((float)x >= pos.x &&
+            (float)x <= (float)interfaceGlobs.backButtonWidth + pos.x &&
+            (float)y >= pos.y &&
+            (float)y <= (float)interfaceGlobs.backButtonHeight + pos.y) {
             *type = 0;
             return 1;
         }
@@ -1656,28 +1662,16 @@ void position_tracker_box_draw(const float bounds[4])
     return;
 #endif
     if (!(lego_flags1 & 0x100000)) {
-        list[0].x = area->x - 1.0f;
-        list[0].y = area->y - 1.0f;
-        list[2].y = (area->height + area->y) - -1.0f;
-        list[1].x = (area->x + area->width) - -1.0f;
-        list[1].y = list[0].y;
-        list[2].x = list[1].x;
-        list[3].x = list[0].x;
-        list[3].y = list[2].y;
-        list[4].x = list[0].x;
-        list[4].y = list[0].y;
+        list[0].x = list[3].x = list[4].x = area->x - 1.0f;
+        list[0].y = list[1].y = list[4].y = area->y - 1.0f;
+        list[2].y = list[3].y = (area->height + area->y) - -1.0f;
+        list[1].x = list[2].x = (area->x + area->width) - -1.0f;
         surface_draw_polyline(list, list + 1, 4, 0.0f, 1.0f, 0.0f, 0);
 
-        list[0].x = area->x - 2.0f;
-        list[0].y = area->y - 2.0f;
-        list[1].x = (area->x + area->width) - -2.0f;
-        list[2].y = (area->height + area->y) - -2.0f;
-        list[1].y = list[0].y;
-        list[2].x = list[1].x;
-        list[3].x = list[0].x;
-        list[3].y = list[2].y;
-        list[4].x = list[0].x;
-        list[4].y = list[0].y;
+        list[0].x = list[3].x = list[4].x = area->x - 2.0f;
+        list[0].y = list[1].y = list[4].y = area->y - 2.0f;
+        list[2].y = list[3].y = (area->height + area->y) - -2.0f;
+        list[1].x = list[2].x = (area->x + area->width) - -2.0f;
         surface_draw_polyline(list, list + 1, 4, 0.0f, 1.0f, 0.0f, 0);
     }
 }
@@ -2561,55 +2555,55 @@ int interface_do_action(int type)
         mask = 0x10;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 21:
         mask = 0x8;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 28:
         mask = 0x4;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 27:
         mask = 0x2;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 30:
         mask = 0x20;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 29:
         mask = 0x40;
         if ((unsigned char)s_global_low_word_c & (unsigned char)mask) {
             global_state_low_byte_clear_and_refresh();
-            return 1;
+        } else {
+            global_state_low_byte_clear_and_refresh();
+            s_global_low_word_c |= mask;
         }
-        global_state_low_byte_clear_and_refresh();
-        s_global_low_word_c |= mask;
         return 1;
     case 66:
         command_context_post_to_hud(18, NULL);
@@ -2869,12 +2863,14 @@ void interface_update_slide(float elapsed)
                 interfaceGlobs.flags &= ~INTERFACE_FLAG_OUT;
                 sound_alias_play(21, 0);
                 if (interfaceGlobs.nextMenuType == 22) {
-                    interfaceGlobs.flags = (interfaceGlobs.flags & ~INTERFACE_FLAG_OPEN) | INTERFACE_FLAG_IN;
+                    interfaceGlobs.flags &= ~INTERFACE_FLAG_OPEN;
+                    interfaceGlobs.flags |= INTERFACE_FLAG_IN;
                     panel_state_flags_toggle(8);
                     simtick_global_ui_flags_clear_bits12();
                     panelGlobs.flags |= 2;
                 } else if (interfaceGlobs.nextMenuType == 23) {
-                    interfaceGlobs.flags = (interfaceGlobs.flags & ~INTERFACE_FLAG_OPEN) | INTERFACE_FLAG_IN;
+                    interfaceGlobs.flags &= ~INTERFACE_FLAG_OPEN;
+                    interfaceGlobs.flags |= INTERFACE_FLAG_IN;
                     panel_state_flags_toggle(11);
                     s_global_low_word_c |= 1;
                     global_flag_bit0_clear();
@@ -2936,23 +2932,30 @@ void interface_draw_dependencies(float x, float y)
 
     if (interfaceGlobs.flags & INTERFACE_FLAG_DEPENDENCIES) {
         dependencies_get_requirements(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex, 0, &list, &count);
-        if (count != 0) {
+        if (count > 0) {
             pos.x = x - 15.0f;
             pos.y = y;
             for (i = 0; i < count; i++) {
                 if (i == 0) {
-                    image = interfaceGlobs.dependencyEqualsImage;
+                    if (interfaceGlobs.dependencyEqualsImage != NULL) {
+                        pos.x -= (float)(int)interfaceGlobs.dependencyEqualsImage->width;
+                        image_display_scaled(interfaceGlobs.dependencyEqualsImage, NULL, &pos, NULL);
+                    } else {
+                        pos.x -= 20.0f;
+                    }
                 } else {
-                    image = interfaceGlobs.dependencyPlusImage;
-                }
-                if (image != NULL) {
-                    pos.x -= (float)(int)image->width;
-                    image_display_scaled(image, NULL, &pos, NULL);
-                } else {
-                    pos.x -= 20.0f;
+                    if (interfaceGlobs.dependencyPlusImage != NULL) {
+                        pos.x -= (float)(int)interfaceGlobs.dependencyPlusImage->width;
+                        image_display_scaled(interfaceGlobs.dependencyPlusImage, NULL, &pos, NULL);
+                    } else {
+                        pos.x -= 20.0f;
+                    }
                 }
 
-                image = (Image*)input_binding_default_value_get(list[i].objType, list[i].objIndex, entity_pool_find_by_callback_filtered_current(INTERFACE_OBJECT_CALLBACK(terrain_cell_resource_entry_matches), &list[i]) != 0);
+                if (entity_pool_find_by_callback_filtered_current(INTERFACE_OBJECT_CALLBACK(terrain_cell_resource_entry_matches), &list[i]))
+                    image = (Image*)input_binding_default_value_get(list[i].objType, list[i].objIndex, 1);
+                else
+                    image = (Image*)input_binding_default_value_get(list[i].objType, list[i].objIndex, 0);
                 if (image != NULL) {
                     pos.x -= (float)(int)image->width;
                     image_display_scaled(image, NULL, &pos, NULL);
@@ -2991,8 +2994,8 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
         (dependencies_get_requirements(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex, 0, &list, &count), count != 0)) {
         areaX -= 15.0f;
         fx = (float)(unsigned int)x;
-        if (areaX <= fx && fx <= areaX - -15.0f &&
-            areaY <= (float)(unsigned int)y &&
+        if (fx >= areaX && fx <= areaX - -15.0f &&
+            (float)(unsigned int)y >= areaY &&
             (float)(unsigned int)y <= areaY - -40.0f) {
             *type = 20;
             return 1;
@@ -3012,8 +3015,8 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
                 height = 40;
             }
             left = areaX - (float)width;
-            if (left <= fx && fx <= left + (float)width &&
-                areaY <= (float)(unsigned int)y &&
+            if (fx >= left && fx <= left + (float)width &&
+                (float)(unsigned int)y >= areaY &&
                 (float)(unsigned int)y <= (float)height + areaY) {
                 *type = 20;
                 return 1;
@@ -3028,7 +3031,7 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
                 height = 40;
             }
             areaX = left - (float)width;
-            if (areaX <= fx && fx <= areaX + (float)width &&
+            if (fx >= areaX && fx <= areaX + (float)width &&
                 areaY <= (float)(unsigned int)y &&
                 (float)(unsigned int)y <= (float)height + areaY) {
                 *type = list[i].objType;
@@ -3212,17 +3215,16 @@ int interface_callback_damaged(struct LegoObject* obj, void* data)
 int interface_callback_can_pick_up(struct LegoObject* obj, void* data)
 {
     void* container;
-    Point2F wPos;
-    int bx;
-    int by;
+    Point2I blockPos;
+    float wPos[3];
     unsigned int capacity;
 
     if (entity_capability_flags_get(LEGOOBJ(obj)) & 1) {
         if (!(obj->flags1 & 0x400) && !(obj->flags4 & 0x10000) &&
             (container = lego_object_get_container(obj)) != NULL) {
-            container_get_position(container, NULL, &wPos);
-            if (terrain_map_world_to_block(lego_get_map(), wPos.x, wPos.y, &bx, &by) &&
-                lego_terrain_cell_route_and_occupancy_check(NULL, bx, by, bx, by, 1)) {
+            container_get_position(container, NULL, (Point2F*)wPos);
+            if (terrain_map_world_to_block(lego_get_map(), wPos[0], wPos[1], &blockPos.x, &blockPos.y) &&
+                lego_terrain_cell_route_and_occupancy_check(NULL, blockPos.x, blockPos.y, blockPos.x, blockPos.y, 1)) {
                 return 1;
             }
         }

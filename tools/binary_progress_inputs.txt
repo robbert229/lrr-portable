@@ -259,6 +259,7 @@ src/game/info_unit.c
 src/game/info_unit.h
 src/game/interface.h
 src/game/interface_callees.h
+src/game/interface_mem.h
 src/game/interface_port.cpp
 src/game/interface_unit.c
 src/game/interface_unit.h
@@ -608,7 +609,7 @@ src/gods98/engine_shared.hpp
 src/gods98/entity.cpp
 src/gods98/entity.h
 src/gods98/entity.hpp
-src/gods98/file_list_streams.cpp
+src/gods98/file_list_streams.c
 src/gods98/files.c
 src/gods98/files.h
 src/gods98/files_native.h
@@ -668,6 +669,8 @@ src/gods98/input.hpp
 src/gods98/input_for_interface.hpp
 src/gods98/input_for_terrain_map.hpp
 src/gods98/input_from_interface.hpp
+src/gods98/input_globs.h
+src/gods98/input_key_names.h
 src/gods98/input_keys.h
 src/gods98/input_shared.hpp
 src/gods98/input_unit.c
@@ -700,6 +703,8 @@ src/gods98/media.hpp
 src/gods98/media_for_lego.hpp
 src/gods98/media_for_pointer.hpp
 src/gods98/media_shared.hpp
+src/gods98/mem_alloc.h
+src/gods98/mem_free.h
 src/gods98/mesh.h
 src/gods98/mesh_api.h
 src/gods98/mesh_imports.h

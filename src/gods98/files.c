@@ -70,7 +70,7 @@ static File_Globs fileGlobs;
 // GLOBAL: LEGORR 0x005769e0
 char fileRedundantList[2000][1024];
 // GLOBAL: LEGORR 0x0076a9e0
-unsigned int fileRedundantCount;
+unsigned int fileRedundantListCount;
 
 // FUNCTION: LEGORR 0x0047f130
 void file_initialise(const char* programName, int insistOnCD,
@@ -797,10 +797,10 @@ void file_check_redundant_files(const char* logName)
     char line[1024];
 
     if ((f = file_open(logName, "r")) != NULL) {
-        fileRedundantCount = 0;
+        fileRedundantListCount = 0;
         /* The original reads the File record as a C library stream. */
         while (fscanf((FILE*)f, "%s", line) != EOF) {
-            strcpy(fileRedundantList[fileRedundantCount++], line);
+            strcpy(fileRedundantList[fileRedundantListCount++], line);
         }
         file_check_directory(fileGlobs.dataDir);
         fclose((FILE*)f);
@@ -839,7 +839,7 @@ void file_check_file(const char* fName)
 {
     unsigned int i;
 
-    for (i = 0; i < fileRedundantCount; i++) {
+    for (i = 0; i < fileRedundantListCount; i++) {
         if (_strcmpi(fName, fileRedundantList[i]) == 0) return;
     }
 }

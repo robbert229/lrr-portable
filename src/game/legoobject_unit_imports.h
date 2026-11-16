@@ -259,7 +259,11 @@ extern int legoGlobs_BuildingUpgradeCostOre;        /* 00556f98 */
 extern int legoGlobs_BuildingUpgradeCostStuds;      /* 00556f9c */
 /* Lego.c (lego_unit.c). 0041f8e0 is an empty function in this build; the
  * original's caller compares its (undefined) return value. */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+int noop_callback(int);   /* 0041f8e0 Lego_GetCrystalCount */
+#else
 void noop_callback(void);                           /* 0041f8e0 */
+#endif
 void global_object_field98_add(int amount);         /* 0041f8a0 */
 int lego_upgrade_resource_check(int ore);           /* 0041f900 */
 void lego_upgrade_resource_debit(int ore, int amount); /* 0041f9e0 */
@@ -453,7 +457,11 @@ void* legoobject_type_component_get(Lego_Object* obj);                 /* 0044a2
 /* GAME-021 Lego.c (lego_unit.c). 0041f8e0 is Lego_GetCrystalCount(flag) in
  * the original; lego_unit.c defines it as noop_callback(void), so the unit
  * calls it with the original's argument and result through a cast. */
+#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
+int noop_callback(int);   /* 0041f8e0 Lego_GetCrystalCount */
+#else
 void noop_callback(void);                                                    /* 0041f8e0 */
+#endif
 #define Lego_GetCrystalCount(onlyUsable) (((int (*)(int))noop_callback)(onlyUsable))
 int lego_upgrade_resource_check(int ore);                                   /* 0041f900 */
 void global_object_field8c_increment(void);                                 /* 0041f870 */
