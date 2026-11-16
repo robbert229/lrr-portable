@@ -952,8 +952,8 @@ Container* Container_Load(Container* parent, const char* filename,
 
                     if (*actname == '!') {
                         if (s_engine_feature_word & 0x00400000) goto next;
-                        actname++;
                     }
+                    if (*actname == '!') actname++;
 
                     sprintf(tempString,
                             // STRING: LEGORR 0x004aab04
