@@ -82,13 +82,10 @@ float polyline_segment_lengths_total(BezierCurve* curve)
 {
     unsigned int i;
     float total = 0.0f;
-    float dist;
 
     curve->distances[0] = 0.0f;
     for (i = 1; i < curve->count; i++) {
-        dist = vec2_dist_alt(&curve->points[i - 1], &curve->points[i]);
-        curve->distances[i] = dist;
-        total += dist;
+        total += (curve->distances[i] = vec2_dist_alt(&curve->points[i - 1], &curve->points[i]));
     }
     return total;
 }
