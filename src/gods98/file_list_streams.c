@@ -142,3 +142,5 @@ void startup_config_stream_load(void)
 #ifdef __cplusplus
 }
 #endif
+
+#include "gods98/d3drmdef_consts.h"
