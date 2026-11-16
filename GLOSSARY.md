@@ -79,7 +79,7 @@ which carries the patches still in upstream review (ADR 0007).
 _Avoid_: "the SDL layer", "the shim" when context needs the product name
 
 **library substitution**:
-A Windows-only API call outside *miniwin*'s scope (DirectSound, winmm, AVIFile, the registry, files) replaced in place in a unit by a portable library, and marked `// [library:<subsystem>]` as in isle-portable (ADR 0007).
+A Windows-only API call outside *miniwin*'s scope (DirectSound, winmm, AVIFile, the registry, files, the DirectInput keyboard) replaced in place in a unit by a portable library, and marked `// [library:<subsystem>]` as in isle-portable (ADR 0007).
 _Avoid_: "shim", "port hack"
 
 **reference build**:
