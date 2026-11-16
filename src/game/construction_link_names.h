@@ -20,7 +20,6 @@
 #ifndef LEGORRR_GAME_CONSTRUCTION_LINK_NAMES_H
 #define LEGORRR_GAME_CONSTRUCTION_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define construction_get_building_base string_table_index_lookup /* 00408c80 */
 #define construction_zone_place_resource cmd_operation_group_append_object /* 00408ce0 */
 #define construction_zone_needs_more_of_resource terrain_descriptor_coordinate_count_limit_check /* 00408d70 */
@@ -33,6 +32,5 @@
 #define construction_zone_cancel_building lego_path_remove /* 00409600 */
 #define construction_update_surrounding_blocks terrain_cell_refresh_eight_neighbors_current /* 00409940 */
 #define construction_remove_all path_record_release_all /* 004099d0 */
-#endif
 
 #endif /* LEGORRR_GAME_CONSTRUCTION_LINK_NAMES_H */

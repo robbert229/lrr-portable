@@ -24,8 +24,8 @@
 extern "C" {
 #endif
 
-struct Image_SurfaceIface;
-struct Image_SurfaceDesc;
+struct IDirectDrawSurface4;
+struct DDSURFACEDESC2;
 struct IndexedBitmapPaletteData;
 
 #define IMAGE_MAXLISTS 32
@@ -36,14 +36,14 @@ struct IndexedBitmapPaletteData;
 void Image_Initialise(void);                                     /* 0047d410 */
 void Image_Shutdown(void);                                       /* 0047d430 */
 void Image_Remove(Image* dead);                                  /* 0047d470 */
-int Image_CopyToDataToSurface(struct Image_SurfaceIface* surface,
+int Image_CopyToDataToSurface(struct IDirectDrawSurface4* surface,
                               struct IndexedBitmapPaletteData* image); /* 0047d490 */
-int Image_8BitSourceCopy(struct Image_SurfaceDesc* desc,
+int Image_8BitSourceCopy(struct DDSURFACEDESC2* desc,
                          struct IndexedBitmapPaletteData* image); /* 0047d520 */
 int Image_CountMaskBits(unsigned int mask);                      /* 0047d700 */
 int Image_CountMaskBitShift(unsigned int mask);                  /* 0047d720 */
-void Image_FlipSurface(struct Image_SurfaceDesc* desc);          /* 0047d740 */
-int Image_24BitSourceCopy(struct Image_SurfaceDesc* desc,
+void Image_FlipSurface(struct DDSURFACEDESC2* desc);          /* 0047d740 */
+int Image_24BitSourceCopy(struct DDSURFACEDESC2* desc,
                           struct IndexedBitmapPaletteData* image); /* 0047d800 */
 Image* Image_LoadBMPScaled(const char* fileName, unsigned int width,
                            unsigned int height);                /* 0047d9d0 */
@@ -62,18 +62,18 @@ unsigned int Image_GetPen255(Image* image);                      /* 0047def0 */
 unsigned int Image_GetPixelMask(Image* image);                   /* 0047df50 */
 int Image_GetPixel(Image* image, unsigned int x, unsigned int y,
                    unsigned int* colour);                       /* 0047dfa0 */
-Image* Image_Create(struct Image_SurfaceIface* surface, unsigned int width,
+Image* Image_Create(struct IDirectDrawSurface4* surface, unsigned int width,
                     unsigned int height, unsigned int penZero,
                     unsigned int pen255);                        /* 0047e050 */
 void Image_AddList(void);                                        /* 0047e0c0 */
 void Image_RemoveAll(void);                                      /* 0047e130 */
-unsigned int Image_DDColorMatch(struct Image_SurfaceIface* surface,
+unsigned int Image_DDColorMatch(struct IDirectDrawSurface4* surface,
                                 unsigned int rgb);              /* 0047e190 */
 void Image_CR2RGB(unsigned int rgb, unsigned char* r, unsigned char* g,
                   unsigned char* b);                            /* 0047e2d0 */
 void Image_GetScreenshot(Image* image, unsigned int xsize,
                          unsigned int ysize);                   /* 0047e300 */
-void Image_InitFromSurface(Image* image, struct Image_SurfaceIface* surface,
+void Image_InitFromSurface(Image* image, struct IDirectDrawSurface4* surface,
                            unsigned int width, unsigned int height,
                            unsigned int penZero,
                            unsigned int pen255);                /* 0047e3e0 */

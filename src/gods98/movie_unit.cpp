@@ -13,79 +13,65 @@
  * The binary attests none of the names (it has no RTTI). The class is named
  * after gods98's own movie class; the methods use descriptive names.
  *
- * Windows only. The Windows builds (the matching build and the MinGW
- * reference build) compile the original's code, which calls DirectShow and
- * DirectDraw through their COM method tables and imports CoInitialize and
- * CoCreateInstance from ole32, as the original does. The native port has no
- * DirectShow: there the file is empty, and video_graph_port.cpp defines the
- * entry points. */
+ * DirectShow is outside miniwin's scope: until the video substitution of
+ * ADR 0007 ([library:video], FFmpeg) replaces it, CoInitialize and
+ * CoCreateInstance are seam stubs (platform/native/seam_stubs.cpp), so no
+ * movie opens. */
 #include "movie_unit.h"
 
-#if !defined(LEGORRR_BACKEND_MINIWIN)
 
 #include <stdio.h>
 #include <string.h>
-#include <windows.h>
+#include <miniwin/windows.h>
 
 #include "files.h"
 #include "../game/aitask.h"
-#include "heap.hpp"
 #include "../crt/vc5names.h"
 
-/* The GUIDs: the matching build links the first five from amstrmid.lib and
- * the last two from dxguid.lib, as the original does (finding 688). The
- * portable builds keep the unit's own copies. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
-extern "C" {
+/* The GUIDs, which the original links from amstrmid.lib (the first five)
+ * and dxguid.lib (the last two). */
 // GLOBAL: LEGORR 0x0049f168
-extern const GUID IID_IAMMultiMediaStream;
+static const GUID IID_IAMMultiMediaStream =
+    {0xbebe595c, 0x9a6f, 0x11d0, {0x8f, 0xde, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d}};
 // GLOBAL: LEGORR 0x0049f1e8
-extern const GUID CLSID_AMMultiMediaStream;
+static const GUID CLSID_AMMultiMediaStream =
+    {0x49c47ce5, 0x9ba4, 0x11d0, {0x82, 0x12, 0x00, 0xc0, 0x4f, 0xc3, 0x2c, 0x45}};
 // GLOBAL: LEGORR 0x0049f228
-extern const GUID IID_IDirectDrawMediaStream;
+static const GUID IID_IDirectDrawMediaStream =
+    {0xf4104fce, 0x9a70, 0x11d0, {0x8f, 0xde, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d}};
 // GLOBAL: LEGORR 0x0049f288
-extern const GUID MSPID_PrimaryVideo;
+static const GUID MSPID_PrimaryVideo =
+    {0xa35ff56a, 0x9fda, 0x11d0, {0x8f, 0xdf, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d}};
 // GLOBAL: LEGORR 0x0049f298
-extern const GUID MSPID_PrimaryAudio;
+static const GUID MSPID_PrimaryAudio =
+    {0xa35ff56b, 0x9fda, 0x11d0, {0x8f, 0xdf, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d}};
 // GLOBAL: LEGORR 0x0049f318
-extern const GUID IID_IDirectDraw2;
+static const GUID IID_IDirectDraw2 =
+    {0xb3a6f3e0, 0x2b43, 0x11cf, {0xa2, 0xde, 0x00, 0xaa, 0x00, 0xb9, 0x33, 0x56}};
 // GLOBAL: LEGORR 0x0049f358
-extern const GUID IID_IDirectDrawSurface3;
+static const GUID IID_IDirectDrawSurface3 =
+    {0xda044e00, 0x69b2, 0x11d0, {0xa1, 0xd5, 0x00, 0xaa, 0x00, 0xb8, 0xdf, 0xbb}};
+
+/* OLE32 and KERNEL32, outside miniwin's scope. platform/native/
+ * seam_stubs.cpp stubs them until the video substitution of ADR 0007
+ * replaces DirectShow in this unit. */
+typedef int64_t LONGLONG;
+typedef uint16_t WCHAR;
+typedef const WCHAR* LPCWSTR;
+#define MAX_PATH 260
+#define CP_ACP 0
+#define CLSCTX_INPROC_SERVER 0x1
+extern "C" {
+HRESULT CoInitialize(void* reserved);
+HRESULT CoCreateInstance(const GUID& clsid, void* outer, DWORD context,
+                         const GUID& iid, void** object);
+int MultiByteToWideChar(UINT codePage, DWORD flags, const char* text,
+                        int textLength, WCHAR* wide, int wideLength);
 }
-#else
-static const GUID IID_IAMMultiMediaStream = {
-    0xbebe595c, 0x9a6f, 0x11d0,
-    { 0x8f, 0xde, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d }
-};
-static const GUID CLSID_AMMultiMediaStream = {
-    0x49c47ce5, 0x9ba4, 0x11d0,
-    { 0x82, 0x12, 0x00, 0xc0, 0x4f, 0xc3, 0x2c, 0x45 }
-};
-static const GUID IID_IDirectDrawMediaStream = {
-    0xf4104fce, 0x9a70, 0x11d0,
-    { 0x8f, 0xde, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d }
-};
-static const GUID MSPID_PrimaryVideo = {
-    0xa35ff56a, 0x9fda, 0x11d0,
-    { 0x8f, 0xdf, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d }
-};
-static const GUID MSPID_PrimaryAudio = {
-    0xa35ff56b, 0x9fda, 0x11d0,
-    { 0x8f, 0xdf, 0x00, 0xc0, 0x4f, 0xd9, 0x18, 0x9d }
-};
-static const GUID IID_IDirectDraw2 = {
-    0xb3a6f3e0, 0x2b43, 0x11cf,
-    { 0xa2, 0xde, 0x00, 0xaa, 0x00, 0xb9, 0x33, 0x56 }
-};
-static const GUID IID_IDirectDrawSurface3 = {
-    0xda044e00, 0x69b2, 0x11d0,
-    { 0xa1, 0xd5, 0x00, 0xaa, 0x00, 0xb8, 0xdf, 0xbb }
-};
-#endif
 
 /* MSVC 5.0 has no amstream.h, and its ddraw.h is DirectX 3's. The unit
  * declares the interfaces it calls, each up to the last slot it uses, as
- * C++ abstract structs with __stdcall virtuals, so the calls compile to the
+ * C++ abstract structs with virtuals, so the calls compile to the
  * original's `mov ecx, [eax]` ... `call [ecx+slot]` shape. */
 
 /* DDSURFACEDESC (0x6c bytes). */
@@ -100,95 +86,95 @@ struct MovieSurfaceDesc {
 /* IUnknown: IMediaStream, IDirectDrawSurface and IDirectDraw2, which the
  * unit only queries and releases. */
 struct MovieUnknown {
-    virtual HRESULT __stdcall QueryInterface(const GUID&, void**) = 0;
-    virtual ULONG __stdcall AddRef() = 0;
-    virtual ULONG __stdcall Release() = 0;
+    virtual HRESULT QueryInterface(const GUID&, void**) = 0;
+    virtual ULONG AddRef() = 0;
+    virtual ULONG Release() = 0;
 };
 
 /* IDirectDrawSurface3, up to GetSurfaceDesc (slot 22). */
 struct MovieSurface3 {
-    virtual HRESULT __stdcall QueryInterface(const GUID&, void**) = 0;
-    virtual ULONG __stdcall AddRef() = 0;
-    virtual ULONG __stdcall Release() = 0;
-    virtual HRESULT __stdcall AddAttachedSurface(void*) = 0;
-    virtual HRESULT __stdcall AddOverlayDirtyRect(LPRECT) = 0;
-    virtual HRESULT __stdcall Blt(LPRECT, MovieSurface3*, LPRECT, DWORD,
+    virtual HRESULT QueryInterface(const GUID&, void**) = 0;
+    virtual ULONG AddRef() = 0;
+    virtual ULONG Release() = 0;
+    virtual HRESULT AddAttachedSurface(void*) = 0;
+    virtual HRESULT AddOverlayDirtyRect(LPRECT) = 0;
+    virtual HRESULT Blt(LPRECT, MovieSurface3*, LPRECT, DWORD,
                                   void*) = 0;
-    virtual HRESULT __stdcall BltBatch(void*, DWORD, DWORD) = 0;
-    virtual HRESULT __stdcall BltFast(DWORD, DWORD, MovieSurface3*, LPRECT,
+    virtual HRESULT BltBatch(void*, DWORD, DWORD) = 0;
+    virtual HRESULT BltFast(DWORD, DWORD, MovieSurface3*, LPRECT,
                                       DWORD) = 0;
-    virtual HRESULT __stdcall DeleteAttachedSurface(DWORD, void*) = 0;
-    virtual HRESULT __stdcall EnumAttachedSurfaces(void*, void*) = 0;
-    virtual HRESULT __stdcall EnumOverlayZOrders(DWORD, void*, void*) = 0;
-    virtual HRESULT __stdcall Flip(void*, DWORD) = 0;
-    virtual HRESULT __stdcall GetAttachedSurface(void*, void**) = 0;
-    virtual HRESULT __stdcall GetBltStatus(DWORD) = 0;
-    virtual HRESULT __stdcall GetCaps(void*) = 0;
-    virtual HRESULT __stdcall GetClipper(void**) = 0;
-    virtual HRESULT __stdcall GetColorKey(DWORD, void*) = 0;
-    virtual HRESULT __stdcall GetDC(HDC*) = 0;
-    virtual HRESULT __stdcall GetFlipStatus(DWORD) = 0;
-    virtual HRESULT __stdcall GetOverlayPosition(LPLONG, LPLONG) = 0;
-    virtual HRESULT __stdcall GetPalette(void**) = 0;
-    virtual HRESULT __stdcall GetPixelFormat(void*) = 0;
-    virtual HRESULT __stdcall GetSurfaceDesc(MovieSurfaceDesc*) = 0;
+    virtual HRESULT DeleteAttachedSurface(DWORD, void*) = 0;
+    virtual HRESULT EnumAttachedSurfaces(void*, void*) = 0;
+    virtual HRESULT EnumOverlayZOrders(DWORD, void*, void*) = 0;
+    virtual HRESULT Flip(void*, DWORD) = 0;
+    virtual HRESULT GetAttachedSurface(void*, void**) = 0;
+    virtual HRESULT GetBltStatus(DWORD) = 0;
+    virtual HRESULT GetCaps(void*) = 0;
+    virtual HRESULT GetClipper(void**) = 0;
+    virtual HRESULT GetColorKey(DWORD, void*) = 0;
+    virtual HRESULT GetDC(HDC*) = 0;
+    virtual HRESULT GetFlipStatus(DWORD) = 0;
+    virtual HRESULT GetOverlayPosition(LPLONG, LPLONG) = 0;
+    virtual HRESULT GetPalette(void**) = 0;
+    virtual HRESULT GetPixelFormat(void*) = 0;
+    virtual HRESULT GetSurfaceDesc(MovieSurfaceDesc*) = 0;
 };
 
 /* IDirectDrawStreamSample, up to GetSurface (slot 8). */
 struct MovieStreamSample {
-    virtual HRESULT __stdcall QueryInterface(const GUID&, void**) = 0;
-    virtual ULONG __stdcall AddRef() = 0;
-    virtual ULONG __stdcall Release() = 0;
-    virtual HRESULT __stdcall GetMediaStream(void**) = 0;
-    virtual HRESULT __stdcall GetSampleTimes(LONGLONG*, LONGLONG*,
+    virtual HRESULT QueryInterface(const GUID&, void**) = 0;
+    virtual ULONG AddRef() = 0;
+    virtual ULONG Release() = 0;
+    virtual HRESULT GetMediaStream(void**) = 0;
+    virtual HRESULT GetSampleTimes(LONGLONG*, LONGLONG*,
                                              LONGLONG*) = 0;
-    virtual HRESULT __stdcall SetSampleTimes(const LONGLONG*,
+    virtual HRESULT SetSampleTimes(const LONGLONG*,
                                              const LONGLONG*) = 0;
-    virtual HRESULT __stdcall Update(DWORD, HANDLE, void*, DWORD) = 0;
-    virtual HRESULT __stdcall CompletionStatus(DWORD, DWORD) = 0;
-    virtual HRESULT __stdcall GetSurface(MovieUnknown**, RECT*) = 0;
+    virtual HRESULT Update(DWORD, HANDLE, void*, DWORD) = 0;
+    virtual HRESULT CompletionStatus(DWORD, DWORD) = 0;
+    virtual HRESULT GetSurface(MovieUnknown**, RECT*) = 0;
 };
 
 /* IDirectDrawMediaStream, up to CreateSample (slot 13). */
 struct MovieDDStream {
-    virtual HRESULT __stdcall QueryInterface(const GUID&, void**) = 0;
-    virtual ULONG __stdcall AddRef() = 0;
-    virtual ULONG __stdcall Release() = 0;
-    virtual HRESULT __stdcall GetMultiMediaStream(void**) = 0;
-    virtual HRESULT __stdcall GetInformation(void*, void*) = 0;
-    virtual HRESULT __stdcall SetSameFormat(void*, DWORD) = 0;
-    virtual HRESULT __stdcall AllocateSample(DWORD, void**) = 0;
-    virtual HRESULT __stdcall CreateSharedSample(void*, DWORD, void**) = 0;
-    virtual HRESULT __stdcall SendEndOfStream(DWORD) = 0;
-    virtual HRESULT __stdcall GetFormat(void*, void**, void*, DWORD*) = 0;
-    virtual HRESULT __stdcall SetFormat(const void*, void*) = 0;
-    virtual HRESULT __stdcall GetDirectDraw(void**) = 0;
-    virtual HRESULT __stdcall SetDirectDraw(void*) = 0;
-    virtual HRESULT __stdcall CreateSample(void*, const RECT*, DWORD,
+    virtual HRESULT QueryInterface(const GUID&, void**) = 0;
+    virtual ULONG AddRef() = 0;
+    virtual ULONG Release() = 0;
+    virtual HRESULT GetMultiMediaStream(void**) = 0;
+    virtual HRESULT GetInformation(void*, void*) = 0;
+    virtual HRESULT SetSameFormat(void*, DWORD) = 0;
+    virtual HRESULT AllocateSample(DWORD, void**) = 0;
+    virtual HRESULT CreateSharedSample(void*, DWORD, void**) = 0;
+    virtual HRESULT SendEndOfStream(DWORD) = 0;
+    virtual HRESULT GetFormat(void*, void**, void*, DWORD*) = 0;
+    virtual HRESULT SetFormat(const void*, void*) = 0;
+    virtual HRESULT GetDirectDraw(void**) = 0;
+    virtual HRESULT SetDirectDraw(void*) = 0;
+    virtual HRESULT CreateSample(void*, const RECT*, DWORD,
                                            MovieStreamSample**) = 0;
 };
 
 /* IAMMultiMediaStream, up to OpenFile (slot 16). */
 struct MovieAMStream {
-    virtual HRESULT __stdcall QueryInterface(const GUID&, void**) = 0;
-    virtual ULONG __stdcall AddRef() = 0;
-    virtual ULONG __stdcall Release() = 0;
-    virtual HRESULT __stdcall GetInformation(DWORD*, DWORD*) = 0;
-    virtual HRESULT __stdcall GetMediaStream(const GUID&,
+    virtual HRESULT QueryInterface(const GUID&, void**) = 0;
+    virtual ULONG AddRef() = 0;
+    virtual ULONG Release() = 0;
+    virtual HRESULT GetInformation(DWORD*, DWORD*) = 0;
+    virtual HRESULT GetMediaStream(const GUID&,
                                              MovieUnknown**) = 0;
-    virtual HRESULT __stdcall EnumMediaStreams(long, void**) = 0;
-    virtual HRESULT __stdcall GetState(DWORD*) = 0;
-    virtual HRESULT __stdcall SetState(DWORD) = 0;
-    virtual HRESULT __stdcall GetTime(LONGLONG*) = 0;
-    virtual HRESULT __stdcall GetDuration(LONGLONG*) = 0;
-    virtual HRESULT __stdcall Seek(LONGLONG) = 0;
-    virtual HRESULT __stdcall GetEndOfStreamEventHandle(HANDLE*) = 0;
-    virtual HRESULT __stdcall Initialize(DWORD, DWORD, void*) = 0;
-    virtual HRESULT __stdcall GetFilterGraph(void**) = 0;
-    virtual HRESULT __stdcall GetFilter(void**) = 0;
-    virtual HRESULT __stdcall AddMediaStream(void*, const GUID*, DWORD,
+    virtual HRESULT EnumMediaStreams(long, void**) = 0;
+    virtual HRESULT GetState(DWORD*) = 0;
+    virtual HRESULT SetState(DWORD) = 0;
+    virtual HRESULT GetTime(LONGLONG*) = 0;
+    virtual HRESULT GetDuration(LONGLONG*) = 0;
+    virtual HRESULT Seek(LONGLONG) = 0;
+    virtual HRESULT GetEndOfStreamEventHandle(HANDLE*) = 0;
+    virtual HRESULT Initialize(DWORD, DWORD, void*) = 0;
+    virtual HRESULT GetFilterGraph(void**) = 0;
+    virtual HRESULT GetFilter(void**) = 0;
+    virtual HRESULT AddMediaStream(void*, const GUID*, DWORD,
                                              void**) = 0;
-    virtual HRESULT __stdcall OpenFile(LPCWSTR, DWORD) = 0;
+    virtual HRESULT OpenFile(LPCWSTR, DWORD) = 0;
 };
 
 /* The methods' `cond ? true : false` returns, and InitSample's goto chain,
@@ -210,11 +196,7 @@ struct MovieAMStream {
  * LIBC's, 0x0048ead0) and operator delete (ui_render_record_free,
  * 0x0045daf0); files.h gives File_VerifyFilename and File_GetCDFilePath. */
 
-#if defined(_MSC_VER)
 #define MOVIE_OPERATOR_NEW(size) ::operator new(size)
-#else
-#define MOVIE_OPERATOR_NEW(size) engine_calloc((long)(size))
-#endif
 
 struct G98CMovie {
     G98CMovie(const char* fName, MovieSurface3* destSurf,
@@ -233,7 +215,7 @@ struct G98CMovie {
     // PORT-ONLY: routes new to the original's operator new (0x0048ead0)
     static void* operator new(size_t size) { return MOVIE_OPERATOR_NEW(size); }
     // PORT-ONLY: routes delete to the original's operator delete (0x0045daf0)
-    static void operator delete(void* p) { ui_render_record_free(p); }
+    static void operator delete(void* p) { ::operator delete(p); }
 
     MovieAMStream* m_amStream;          /* +0x00 */
     HRESULT m_err;                      /* +0x04 */
@@ -252,19 +234,19 @@ struct G98CMovie {
 bool G98CMovie::InitSample(MovieAMStream* stream)
 {
     m_err = stream->GetMediaStream(MSPID_PrimaryVideo, &m_primaryVidStream);
-    if (FAILED(m_err)) goto fail;
+    if ((m_err) != S_OK) goto fail;
     m_err = m_primaryVidStream->QueryInterface(IID_IDirectDrawMediaStream,
                                                (void**)&m_ddStream);
-    if (FAILED(m_err)) goto fail;
+    if ((m_err) != S_OK) goto fail;
     m_err = m_ddStream->CreateSample(NULL, NULL, 0, &m_sample);
-    if (FAILED(m_err)) goto fail;
+    if ((m_err) != S_OK) goto fail;
     m_err = m_sample->GetSurface(&m_surface, &m_rect);
-    if (FAILED(m_err)) goto fail;
+    if ((m_err) != S_OK) goto fail;
     m_err = m_surface->QueryInterface(IID_IDirectDrawSurface3,
                                       (void**)&m_baseSurf);
-    if (FAILED(m_err)) goto fail;
+    if ((m_err) != S_OK) goto fail;
     m_err = stream->SetState(MOVIE_STREAMSTATE_RUN);
-    if (FAILED(m_err)) goto fail;
+    if ((m_err) != S_OK) goto fail;
 
     return true;
 
@@ -274,30 +256,30 @@ fail:
     m_sample->Release();
     m_surface->Release();
 
-    return SUCCEEDED(m_err) ? true : false;
+    return (m_err) == S_OK ? true : false;
 }
 
 // FUNCTION: LEGORR 0x004722b0
 bool G98CMovie::OpenStream(const char* fName, MovieAMStream** streamOut,
                            MovieUnknown* ddraw)
 {
-    MovieAMStream* stream;
+    MovieAMStream* stream = NULL;
     WCHAR wPath[MAX_PATH];
     HRESULT hr;
 
     hr = CoCreateInstance(CLSID_AMMultiMediaStream, NULL,
                           CLSCTX_INPROC_SERVER, IID_IAMMultiMediaStream,
                           (void**)&stream);
-    if (SUCCEEDED(hr)) {
+    if ((hr) == S_OK) {
         hr = stream->Initialize(MOVIE_STREAMTYPE_READ, 0, NULL);
-        if (SUCCEEDED(hr)) {
+        if ((hr) == S_OK) {
             hr = stream->AddMediaStream(ddraw, &MSPID_PrimaryVideo, 0,
                                         NULL);
-            if (SUCCEEDED(hr)) {
+            if ((hr) == S_OK) {
                 hr = stream->AddMediaStream(NULL, &MSPID_PrimaryAudio,
                                             MOVIE_AMMSF_ADDDEFAULTRENDERER,
                                             NULL);
-                if (FAILED(hr)) hr = S_OK;
+                if ((hr) != S_OK) hr = S_OK;
                 MultiByteToWideChar(CP_ACP, 0, fName, -1, wPath, MAX_PATH);
                 stream->OpenFile(wPath, 0);
                 *streamOut = stream;
@@ -306,9 +288,9 @@ bool G98CMovie::OpenStream(const char* fName, MovieAMStream** streamOut,
         }
     }
 
-    stream->Release();
+    if (stream) stream->Release();
 
-    return SUCCEEDED(hr) ? true : false;
+    return (hr) == S_OK ? true : false;
 }
 
 // FUNCTION: LEGORR 0x00472390
@@ -451,4 +433,3 @@ void movie_free(G98CMovie* mov)
 
 } /* extern "C" */
 
-#endif /* !LEGORRR_BACKEND_MINIWIN */

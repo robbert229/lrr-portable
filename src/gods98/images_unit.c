@@ -11,13 +11,9 @@
  * bitmap (BMP.c) into a system-memory surface, converting 8-bit and 24-bit
  * pixels to the display's 16-bit format and flipping the rows.
  *
- * The native port has no DirectDraw: the unit compiles to nothing there,
- * and the port's software surfaces and adapters serve the callers. In the
- * matching build images_link_names.h gives two functions the port's names,
- * and the C units' headers point their other calls at the unit. */
+ * The unit draws through miniwin's DirectDraw (ADR 0007). */
 #include "images_link_names.h"
 
-#if !defined(LEGORRR_BACKEND_MINIWIN)
 
 #include <math.h>
 #include <stdio.h>
@@ -26,18 +22,11 @@
 
 #include "crt/vc5names.h"
 
-#if defined(_MSC_VER) && _MSC_VER == 1100
-#include <windows.h>
-#endif
+#include <miniwin/windows.h>
 
 #include "images_unit.h"
 #include "images_imports.h"
 
-#if defined(_WIN32)
-#define IMAGE_STDCALL __stdcall
-#else
-#define IMAGE_STDCALL
-#endif
 
 #define IMAGE_GLOB_FLAG_INITIALISED 0x00000001
 
@@ -68,133 +57,11 @@ struct IndexedBitmapPaletteData {
 };
 typedef struct IndexedBitmapPaletteData BMP_Image;
 
-/* DirectDraw's RECT, DDCOLORKEY, DDPIXELFORMAT and DDSURFACEDESC2. */
-typedef struct Image_Rect {
-    int left;
-    int top;
-    int right;
-    int bottom;
-} Image_Rect;
+#include <miniwin/ddraw.h>
 
-typedef struct Image_ColourKey {
-    unsigned int dwColorSpaceLowValue;
-    unsigned int dwColorSpaceHighValue;
-} Image_ColourKey;
-
-typedef struct Image_PixelFormat {
-    unsigned int dwSize;            /* +0x00 */
-    unsigned int dwFlags;           /* +0x04 */
-    unsigned int dwFourCC;          /* +0x08 */
-    unsigned int dwRGBBitCount;     /* +0x0c */
-    unsigned int dwRBitMask;        /* +0x10 */
-    unsigned int dwGBitMask;        /* +0x14 */
-    unsigned int dwBBitMask;        /* +0x18 */
-    unsigned int dwRGBAlphaBitMask; /* +0x1c */
-} Image_PixelFormat;
-
-struct Image_SurfaceDesc {
-    unsigned int dwSize;            /* +0x00 */
-    unsigned int dwFlags;           /* +0x04 */
-    unsigned int dwHeight;          /* +0x08 */
-    unsigned int dwWidth;           /* +0x0c */
-    int lPitch;                     /* +0x10 */
-    unsigned int dwBackBufferCount; /* +0x14 */
-    unsigned int dwRefreshRate;     /* +0x18 */
-    unsigned int dwAlphaBitDepth;   /* +0x1c */
-    unsigned int dwReserved;        /* +0x20 */
-    void* lpSurface;                /* +0x24 */
-    Image_ColourKey ddckCKDestOverlay; /* +0x28 */
-    Image_ColourKey ddckCKDestBlt;  /* +0x30 */
-    Image_ColourKey ddckCKSrcOverlay; /* +0x38 */
-    Image_ColourKey ddckCKSrcBlt;   /* +0x40 */
-    Image_PixelFormat ddpfPixelFormat; /* +0x48 */
-    unsigned int dwCaps;            /* +0x68 ddsCaps */
-    unsigned int dwCaps2;           /* +0x6c */
-    unsigned int dwCaps3;           /* +0x70 */
-    unsigned int dwCaps4;           /* +0x74 */
-    unsigned int dwTextureStage;    /* +0x78 */
-};
-typedef struct Image_SurfaceDesc Image_SurfaceDesc;
-
-#define DDSD_CAPS 0x00000001
-#define DDSD_HEIGHT 0x00000002
-#define DDSD_WIDTH 0x00000004
-#define DDSCAPS_OFFSCREENPLAIN 0x00000040
-#define DDSCAPS_SYSTEMMEMORY 0x00000800
-#define DDCKEY_SRCBLT 0x00000008
-#define DDLOCK_WAIT 0x00000001
-#define DDLOCK_READONLY 0x00000010
-#define DDLOCK_WRITEONLY 0x00000020
-#define DDBLT_KEYSRC 0x00008000
-#define DDBLT_WAIT 0x01000000
-
-/* IDirectDraw4 and IDirectDrawSurface4, the methods the unit calls. */
-typedef struct Image_DDrawIface Image_DDrawIface;
-typedef struct Image_SurfaceIface Image_SurfaceIface;
-
-typedef struct Image_DDrawVtbl {
-    void* QueryInterface;
-    void* AddRef;
-    void* Release;
-    void* Compact;
-    void* CreateClipper;
-    void* CreatePalette;
-    long (IMAGE_STDCALL* CreateSurface)(Image_DDrawIface*, Image_SurfaceDesc*,
-                                        Image_SurfaceIface**, void*);
-} Image_DDrawVtbl;
-
-struct Image_DDrawIface {
-    const Image_DDrawVtbl* lpVtbl;
-};
-
-typedef struct Image_SurfaceVtbl {
-    void* QueryInterface;
-    void* AddRef;
-    unsigned long (IMAGE_STDCALL* Release)(Image_SurfaceIface*);
-    void* AddAttachedSurface;
-    void* AddOverlayDirtyRect;
-    long (IMAGE_STDCALL* Blt)(Image_SurfaceIface*, Image_Rect*,
-                              Image_SurfaceIface*, Image_Rect*, unsigned int,
-                              void*);
-    void* BltBatch;
-    void* BltFast;
-    void* DeleteAttachedSurface;
-    void* EnumAttachedSurfaces;
-    void* EnumOverlayZOrders;
-    void* Flip;
-    void* GetAttachedSurface;
-    void* GetBltStatus;
-    void* GetCaps;
-    void* GetClipper;
-    void* GetColorKey;
-    void* GetDC;
-    void* GetFlipStatus;
-    void* GetOverlayPosition;
-    void* GetPalette;
-    long (IMAGE_STDCALL* GetPixelFormat)(Image_SurfaceIface*,
-                                         Image_PixelFormat*);
-    void* GetSurfaceDesc;
-    void* Initialize;
-    void* IsLost;
-    long (IMAGE_STDCALL* Lock)(Image_SurfaceIface*, Image_Rect*,
-                               Image_SurfaceDesc*, unsigned int, void*);
-    void* ReleaseDC;
-    void* Restore;
-    void* SetClipper;
-    long (IMAGE_STDCALL* SetColorKey)(Image_SurfaceIface*, unsigned int,
-                                      Image_ColourKey*);
-    void* SetOverlayPosition;
-    void* SetPalette;
-    long (IMAGE_STDCALL* Unlock)(Image_SurfaceIface*, Image_Rect*);
-} Image_SurfaceVtbl;
-
-struct Image_SurfaceIface {
-    const Image_SurfaceVtbl* lpVtbl;
-};
-
-#define lpDD() ((Image_DDrawIface*)directDrawGlobs.lpDirectDraw)
-#define DirectDraw_bSurf() ((Image_SurfaceIface*)directDrawGlobs.bSurf)
-#define Image_Surface(image) ((Image_SurfaceIface*)(image)->surface)
+#define lpDD() ((IDirectDraw4*)directDrawGlobs.lpDirectDraw)
+#define DirectDraw_bSurf() ((IDirectDrawSurface4*)directDrawGlobs.bSurf)
+#define Image_Surface(image) ((IDirectDrawSurface4*)(image)->surface)
 
 /* The unit's state (0x90 bytes). */
 typedef struct Image_Globs {
@@ -244,19 +111,19 @@ void Image_Shutdown(void)
 // FUNCTION: LEGORR 0x0047d470
 void Image_Remove(Image* dead)
 {
-    Image_Surface(dead)->lpVtbl->Release(Image_Surface(dead));
+    Image_Surface(dead)->Release();
 
     dead->nextFree = imageGlobs.freeList;
     imageGlobs.freeList = dead;
 }
 
 // FUNCTION: LEGORR 0x0047d490
-int Image_CopyToDataToSurface(Image_SurfaceIface* surface, BMP_Image* image)
+int Image_CopyToDataToSurface(IDirectDrawSurface4* surface, BMP_Image* image)
 {
-    Image_SurfaceDesc desc = { sizeof(Image_SurfaceDesc) };
+    DDSURFACEDESC2 desc = { sizeof(DDSURFACEDESC2) };
 
-    if (surface->lpVtbl->Lock(surface, NULL, &desc,
-                              DDLOCK_WAIT | DDLOCK_WRITEONLY, NULL) == 0) {
+    if (surface->Lock(NULL, &desc,
+                              DDLOCK_WAIT | DDLOCK_WRITEONLY, NULL) == DD_OK) {
         switch (image->bpp) {
         case 8:
             Image_8BitSourceCopy(&desc, image);
@@ -267,7 +134,7 @@ int Image_CopyToDataToSurface(Image_SurfaceIface* surface, BMP_Image* image)
             Image_24BitSourceCopy(&desc, image);
             break;
         }
-        surface->lpVtbl->Unlock(surface, NULL);
+        surface->Unlock(NULL);
         return 1;
     }
 
@@ -275,7 +142,7 @@ int Image_CopyToDataToSurface(Image_SurfaceIface* surface, BMP_Image* image)
 }
 
 // FUNCTION: LEGORR 0x0047d520
-int Image_8BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
+int Image_8BitSourceCopy(DDSURFACEDESC2* desc, BMP_Image* image)
 {
     unsigned int bpp = desc->ddpfPixelFormat.dwRGBBitCount;
 
@@ -348,7 +215,7 @@ int Image_CountMaskBitShift(unsigned int mask)
 }
 
 // FUNCTION: LEGORR 0x0047d740
-void Image_FlipSurface(Image_SurfaceDesc* desc)
+void Image_FlipSurface(DDSURFACEDESC2* desc)
 {
     unsigned int pitch = desc->lPitch / 2;
     unsigned short* fromLine = (unsigned short*)desc->lpSurface;
@@ -368,7 +235,7 @@ void Image_FlipSurface(Image_SurfaceDesc* desc)
 }
 
 // FUNCTION: LEGORR 0x0047d800
-int Image_24BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
+int Image_24BitSourceCopy(DDSURFACEDESC2* desc, BMP_Image* image)
 {
     unsigned int bpp = desc->ddpfPixelFormat.dwRGBBitCount;
 
@@ -420,8 +287,8 @@ Image* Image_LoadBMPScaled(const char* fileName, unsigned int width,
                            unsigned int height)
 {
     BMP_Image image = { 0 };
-    Image_SurfaceDesc ddsd = { 0 };
-    Image_SurfaceIface* surface = NULL;
+    DDSURFACEDESC2 ddsd = { 0 };
+    IDirectDrawSurface4* surface = NULL;
     Image* newImage;
     void* buffer;
     unsigned int size = 0;
@@ -450,11 +317,11 @@ Image* Image_LoadBMPScaled(const char* fileName, unsigned int width,
         memset(&ddsd, 0, sizeof(ddsd));
         ddsd.dwSize = sizeof(ddsd);
         ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
-        ddsd.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
+        ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
         ddsd.dwWidth = image.width;
         ddsd.dwHeight = image.height;
 
-        if (lpDD()->lpVtbl->CreateSurface(lpDD(), &ddsd, &surface, NULL) == 0) {
+        if (lpDD()->CreateSurface(&ddsd, &surface, NULL) == DD_OK) {
             if (Image_CopyToDataToSurface(surface, &image)) {
                 if ((newImage = Image_Create(surface, image.width, image.height,
                                              penZero, pen255)) != NULL) {
@@ -465,7 +332,7 @@ Image* Image_LoadBMPScaled(const char* fileName, unsigned int width,
             }
         }
 
-        if (surface) surface->lpVtbl->Release(surface);
+        if (surface) surface->Release();
         BMP_Cleanup(&image);
         free(buffer);
     }
@@ -492,12 +359,11 @@ unsigned int Image_RGB2CR(unsigned char r, unsigned char g, unsigned char b)
 // FUNCTION: LEGORR 0x0047dbc0
 void Image_SetPenZeroTrans(Image* image)
 {
-    Image_ColourKey colourKey;
+    DDCOLORKEY colourKey;
 
     colourKey.dwColorSpaceLowValue = image->penZero;
     colourKey.dwColorSpaceHighValue = image->penZero;
-    Image_Surface(image)->lpVtbl->SetColorKey(Image_Surface(image),
-                                              DDCKEY_SRCBLT, &colourKey);
+    Image_Surface(image)->SetColorKey(DDCKEY_SRCBLT, &colourKey);
     image->flags |= IMAGE_FLAG_TRANS;
 }
 
@@ -505,7 +371,7 @@ void Image_SetPenZeroTrans(Image* image)
 void Image_SetupTrans(Image* image, float lowr, float lowg, float lowb,
                       float highr, float highg, float highb)
 {
-    Image_ColourKey colourKey;
+    DDCOLORKEY colourKey;
     unsigned int low;
     unsigned int high;
 
@@ -517,8 +383,7 @@ void Image_SetupTrans(Image* image, float lowr, float lowg, float lowb,
                         (unsigned char)(highb * 255.0f));
     colourKey.dwColorSpaceLowValue = Image_DDColorMatch(Image_Surface(image), low);
     colourKey.dwColorSpaceHighValue = Image_DDColorMatch(Image_Surface(image), high);
-    Image_Surface(image)->lpVtbl->SetColorKey(Image_Surface(image),
-                                              DDCKEY_SRCBLT, &colourKey);
+    Image_Surface(image)->SetColorKey(DDCKEY_SRCBLT, &colourKey);
     image->flags |= IMAGE_FLAG_TRANS;
 }
 
@@ -526,8 +391,8 @@ void Image_SetupTrans(Image* image, float lowr, float lowg, float lowb,
 void Image_DisplayScaled(Image* image, const Area2F* src,
                          const Point2F* destPos, const Point2F* destSize)
 {
-    Image_Rect r_src;
-    Image_Rect r_dst;
+    RECT r_src;
+    RECT r_dst;
 
     if (src) {
         r_src.left = (int)floor(src->x);
@@ -552,23 +417,23 @@ void Image_DisplayScaled(Image* image, const Area2F* src,
     }
 
     if (image->flags & IMAGE_FLAG_TRANS)
-        DirectDraw_bSurf()->lpVtbl->Blt(DirectDraw_bSurf(), destPos ? &r_dst : NULL, Image_Surface(image),
+        DirectDraw_bSurf()->Blt(destPos ? &r_dst : NULL, Image_Surface(image),
                                         src ? &r_src : NULL, DDBLT_KEYSRC | DDBLT_WAIT, NULL);
     else
-        DirectDraw_bSurf()->lpVtbl->Blt(DirectDraw_bSurf(), destPos ? &r_dst : NULL, Image_Surface(image),
+        DirectDraw_bSurf()->Blt(destPos ? &r_dst : NULL, Image_Surface(image),
                                         src ? &r_src : NULL, DDBLT_WAIT, NULL);
 }
 
 // FUNCTION: LEGORR 0x0047de60
 void* Image_LockSurface(Image* image, unsigned int* pitch, unsigned int* bpp)
 {
-    Image_SurfaceDesc desc;
+    DDSURFACEDESC2 desc;
 
     memset(&desc, 0, sizeof(desc));
     desc.dwSize = sizeof(desc);
 
-    if (Image_Surface(image)->lpVtbl->Lock(Image_Surface(image), NULL, &desc,
-                                           DDLOCK_WAIT, NULL) == 0) {
+    if (Image_Surface(image)->Lock(NULL, &desc,
+                                           DDLOCK_WAIT, NULL) == DD_OK) {
         *pitch = desc.lPitch;
         *bpp = desc.ddpfPixelFormat.dwRGBBitCount;
         return desc.lpSurface;
@@ -580,19 +445,19 @@ void* Image_LockSurface(Image* image, unsigned int* pitch, unsigned int* bpp)
 // FUNCTION: LEGORR 0x0047ded0
 void Image_UnlockSurface(Image* image)
 {
-    Image_Surface(image)->lpVtbl->Unlock(Image_Surface(image), NULL);
+    Image_Surface(image)->Unlock(NULL);
 }
 
 // FUNCTION: LEGORR 0x0047def0
 unsigned int Image_GetPen255(Image* image)
 {
-    Image_PixelFormat pf;
+    DDPIXELFORMAT pf;
     unsigned int pen = 0;
 
     memset(&pf, 0, sizeof(pf));
     pf.dwSize = sizeof(pf);
 
-    if (Image_Surface(image)->lpVtbl->GetPixelFormat(Image_Surface(image), &pf) == 0) {
+    if (Image_Surface(image)->GetPixelFormat(&pf) == DD_OK) {
         ((unsigned char*)&pen)[0] = ((unsigned char*)&image->pen255)[3];
         ((unsigned char*)&pen)[1] = ((unsigned char*)&image->pen255)[2];
         ((unsigned char*)&pen)[2] = ((unsigned char*)&image->pen255)[1];
@@ -602,17 +467,19 @@ unsigned int Image_GetPen255(Image* image)
 
     /* The original falls off the end here: eax holds GetPixelFormat's
      * error code. */
+    /* GetPixelFormat failed: the original returns its error code. */
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x0047df50
 unsigned int Image_GetPixelMask(Image* image)
 {
-    Image_PixelFormat pf;
+    DDPIXELFORMAT pf;
 
     memset(&pf, 0, sizeof(pf));
     pf.dwSize = sizeof(pf);
 
-    if (Image_Surface(image)->lpVtbl->GetPixelFormat(Image_Surface(image), &pf) == 0) {
+    if (Image_Surface(image)->GetPixelFormat(&pf) == DD_OK) {
         return 0xffffffff << (32 - pf.dwRGBBitCount);
     }
 
@@ -623,20 +490,20 @@ unsigned int Image_GetPixelMask(Image* image)
 int Image_GetPixel(Image* image, unsigned int x, unsigned int y,
                    unsigned int* colour)
 {
-    Image_SurfaceDesc desc;
+    DDSURFACEDESC2 desc;
 
     memset(&desc, 0, sizeof(desc));
     desc.dwSize = sizeof(desc);
 
     if (x < image->width && y < image->height) {
-        if (Image_Surface(image)->lpVtbl->Lock(Image_Surface(image), NULL, &desc,
+        if (Image_Surface(image)->Lock(NULL, &desc,
                                                DDLOCK_WAIT | DDLOCK_READONLY,
-                                               NULL) == 0) {
+                                               NULL) == DD_OK) {
             *colour = *(unsigned int*)((unsigned char*)desc.lpSurface +
                                        (y * desc.lPitch) +
                                        (x * (desc.ddpfPixelFormat.dwRGBBitCount >> 3))) >>
                       (32 - desc.ddpfPixelFormat.dwRGBBitCount);
-            Image_Surface(image)->lpVtbl->Unlock(Image_Surface(image), NULL);
+            Image_Surface(image)->Unlock(NULL);
             return 1;
         }
     }
@@ -645,7 +512,7 @@ int Image_GetPixel(Image* image, unsigned int x, unsigned int y,
 }
 
 // FUNCTION: LEGORR 0x0047e050
-Image* Image_Create(Image_SurfaceIface* surface, unsigned int width,
+Image* Image_Create(IDirectDrawSurface4* surface, unsigned int width,
                     unsigned int height, unsigned int penZero,
                     unsigned int pen255)
 {
@@ -714,12 +581,12 @@ void Image_RemoveAll(void)
 }
 
 // FUNCTION: LEGORR 0x0047e190
-unsigned int Image_DDColorMatch(Image_SurfaceIface* pdds, unsigned int rgb)
+unsigned int Image_DDColorMatch(IDirectDrawSurface4* pdds, unsigned int rgb)
 {
     unsigned char b;
     unsigned char r;
     unsigned int rm;
-    Image_SurfaceDesc ddsd = { sizeof(Image_SurfaceDesc) };
+    DDSURFACEDESC2 ddsd = { sizeof(DDSURFACEDESC2) };
     int gshift;
     int rbits;
     int bbits;
@@ -733,7 +600,7 @@ unsigned int Image_DDColorMatch(Image_SurfaceIface* pdds, unsigned int rgb)
 
     Image_CR2RGB(rgb, &r, &g, &b);
 
-    if (pdds->lpVtbl->Lock(pdds, NULL, &ddsd, DDLOCK_WAIT, NULL) == 0) {
+    if (pdds->Lock(NULL, &ddsd, DDLOCK_WAIT, NULL) == DD_OK) {
         rm = ddsd.ddpfPixelFormat.dwRBitMask;
         gm = ddsd.ddpfPixelFormat.dwGBitMask;
         bm = ddsd.ddpfPixelFormat.dwBBitMask;
@@ -752,7 +619,7 @@ unsigned int Image_DDColorMatch(Image_SurfaceIface* pdds, unsigned int rgb)
             dw &= (1 << ddsd.ddpfPixelFormat.dwRGBBitCount) - 1;
         }
 
-        pdds->lpVtbl->Unlock(pdds, NULL);
+        pdds->Unlock(NULL);
     }
 
     return dw;
@@ -770,19 +637,19 @@ void Image_CR2RGB(unsigned int rgb, unsigned char* r, unsigned char* g,
 // FUNCTION: LEGORR 0x0047e300
 void Image_GetScreenshot(Image* image, unsigned int xsize, unsigned int ysize)
 {
-    Image_SurfaceDesc desc;
-    Image_SurfaceIface* surf;
-    Image_Rect rect;
+    DDSURFACEDESC2 desc;
+    IDirectDrawSurface4* surf;
+    RECT rect;
     long r;
 
     memset(&desc, 0, sizeof(desc));
     desc.dwSize = sizeof(desc);
     desc.dwWidth = xsize;
     desc.dwHeight = ysize;
-    desc.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
+    desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
     desc.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
 
-    if ((r = lpDD()->lpVtbl->CreateSurface(lpDD(), &desc, &surf, NULL)) != 0) {
+    if ((r = lpDD()->CreateSurface(&desc, &surf, NULL)) != DD_OK) {
         directx_result_diagnostic_dispatch(r, 3,
             // STRING: LEGORR 0x004aae84
             "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Images.c", 1140);
@@ -793,13 +660,13 @@ void Image_GetScreenshot(Image* image, unsigned int xsize, unsigned int ysize)
     rect.top = 0;
     rect.right = xsize;
     rect.bottom = ysize;
-    surf->lpVtbl->Blt(surf, &rect, DirectDraw_bSurf(), NULL, 0, NULL);
+    surf->Blt(&rect, DirectDraw_bSurf(), NULL, (DDBltFlags)0, NULL);
 
     Image_InitFromSurface(image, surf, xsize, ysize, 0, 0);
 }
 
 // FUNCTION: LEGORR 0x0047e3e0
-void Image_InitFromSurface(Image* newImage, Image_SurfaceIface* surface,
+void Image_InitFromSurface(Image* newImage, IDirectDrawSurface4* surface,
                            unsigned int width, unsigned int height,
                            unsigned int penZero, unsigned int pen255)
 {
@@ -818,11 +685,10 @@ void Image_InitFromSurface(Image* newImage, Image_SurfaceIface* surface,
 // FUNCTION: LEGORR 0x0047e440
 int Image_SaveBMP(Image* image, const char* fname)
 {
-    return directdraw_save_bmp((struct DirectDrawSurfaceIface*)image->surface, fname);
+    return directdraw_save_bmp((struct IDirectDrawSurface4*)image->surface, fname);
 }
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* !LEGORRR_BACKEND_MINIWIN */

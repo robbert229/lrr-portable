@@ -74,11 +74,15 @@ jobs:
         # Fetches only 3rdparty/isle-portable/miniwin/, never the full submodule.
         run: tools/setup-miniwin.sh
 
-      - name: Create test scratch directory
-        # The render, frontend, and options tests hardcode /tmp/opencode as
-        # their scratch base and do not create it (sound and movie tests use the
-        # same path). The developer environment has it; the runner does not.
-        run: mkdir -p /tmp/opencode
+      - name: Lint the units
+        # ADR 0007: the units take one branch (no backend or compiler guards)
+        # and call DirectX through miniwin's C++ interfaces (no lpVtbl).
+        run: |
+          if grep -rnE '^\s*#\s*(if|elif|ifdef|ifndef).*(LEGORRR_BACKEND_|MINIWIN|_MSC_VER|_M_IX86|_WIN32)' src ||
+             grep -rn 'lpVtbl' src; then
+            echo "A unit has a backend or compiler guard, or an lpVtbl call" >&2
+            exit 1
+          fi
 
       - name: Configure, build, and test
         env:

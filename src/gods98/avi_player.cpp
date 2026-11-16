@@ -16,22 +16,17 @@
  * The binary attests none of the names (it has no RTTI); the classes and
  * functions use descriptive names.
  *
- * Windows only. The Windows builds (the matching build and the MinGW
- * reference build) compile the original's code, which calls DirectDraw
- * through its COM method tables and imports AVIFIL32 directly, as the
- * original does (finding 574). The native port has no DirectDraw or
- * AVIFIL32: there the file is empty, and the port's movie module
- * (movie.cpp, avi_player_port.cpp) plays movies through FFmpeg. */
+ * AVIFile is outside miniwin's scope: until the video substitution of
+ * ADR 0007 ([library:video], FFmpeg) replaces it, the AVIFIL32 calls are
+ * seam stubs (platform/native/seam_stubs.cpp), so no AVI opens. */
 #include "avi_player.h"
 
-#if !defined(LEGORRR_BACKEND_MINIWIN)
 
 #include <string.h>
-#include <windows.h>
+#include <miniwin/windows.h>
 
 #include "files.h"
 #include "../game/aitask.h"
-#include "heap.hpp"
 
 /* AVIFIL32, called through the import thunks (finding 574; crt.cpp pairs
  * the original's six thunks with VFW32.LIB's). The unit declares the part
@@ -64,156 +59,26 @@ struct AviStreamInfoA {
 };
 
 extern "C" {
-void __stdcall AVIFileInit(void);
-HRESULT __stdcall AVIStreamOpenFromFileA(AviStreamIface** ppavi,
+void AVIFileInit(void);
+HRESULT AVIStreamOpenFromFileA(AviStreamIface** ppavi,
                                          LPCSTR szFile, DWORD fccType,
                                          LONG lParam, UINT mode,
                                          void* pclsidHandler);
-HRESULT __stdcall AVIStreamInfoA(AviStreamIface* pavi, AviStreamInfoA* psi,
+HRESULT AVIStreamInfoA(AviStreamIface* pavi, AviStreamInfoA* psi,
                                  LONG lSize);
-ULONG __stdcall AVIStreamRelease(AviStreamIface* pavi);
-AviGetFrameIface* __stdcall AVIStreamGetFrameOpen(AviStreamIface* pavi,
+ULONG AVIStreamRelease(AviStreamIface* pavi);
+AviGetFrameIface* AVIStreamGetFrameOpen(AviStreamIface* pavi,
                                                   LPBITMAPINFOHEADER lpbiWanted);
-LPVOID __stdcall AVIStreamGetFrame(AviGetFrameIface* pg, LONG lPos);
+LPVOID AVIStreamGetFrame(AviGetFrameIface* pg, LONG lPos);
 }
 
+#define OF_READ 0x00000000
 #define AVI_STREAMTYPE_VIDEO            0x73646976  /* mmioFOURCC('v','i','d','s') */
 #define AVI_GETFRAMEF_BESTDISPLAYFMT    1
 
-/* The DirectX 6 interfaces the unit calls, with their method tables at the
- * DirectX 6 slots. MSVC 5.0's ddraw.h is DirectX 3's and has neither
- * IDirectDraw4 nor DDSURFACEDESC2, so the unit declares the layouts it
- * uses (as directdraw.c does). Unused slots are placeholders. */
+#include <miniwin/ddraw.h>
+#include <SDL3/SDL_timer.h>
 
-/* DDPIXELFORMAT (0x20 bytes). */
-struct AviPixelFormat {
-    DWORD dwSize;
-    DWORD dwFlags;
-    DWORD dwFourCC;
-    DWORD dwRGBBitCount;
-    DWORD dwRBitMask;
-    DWORD dwGBitMask;
-    DWORD dwBBitMask;
-    DWORD dwRGBAlphaBitMask;
-};
-
-/* DDSURFACEDESC2 (0x7c bytes). */
-struct AviSurfaceDesc2 {
-    DWORD dwSize;                       /* +0x00 */
-    DWORD dwFlags;                      /* +0x04 */
-    DWORD dwHeight;                     /* +0x08 */
-    DWORD dwWidth;                      /* +0x0c */
-    LONG lPitch;                        /* +0x10 */
-    DWORD dwBackBufferCount;            /* +0x14 */
-    DWORD dwMipMapCount;                /* +0x18 */
-    DWORD dwAlphaBitDepth;              /* +0x1c */
-    DWORD dwReserved;                   /* +0x20 */
-    LPVOID lpSurface;                   /* +0x24 */
-    DWORD ddckCKDestOverlay[2];         /* +0x28 */
-    DWORD ddckCKDestBlt[2];             /* +0x30 */
-    DWORD ddckCKSrcOverlay[2];          /* +0x38 */
-    DWORD ddckCKSrcBlt[2];              /* +0x40 */
-    AviPixelFormat ddpfPixelFormat;     /* +0x48 */
-    DWORD ddsCaps[4];                   /* +0x68 DDSCAPS2 */
-    DWORD dwTextureStage;               /* +0x78 */
-};
-
-struct AviDirectDrawPalette;
-
-/* IDirectDrawSurface4, all 45 slots. Deviation (scoring only): the unit
- * calls nothing after Unlock (slot 32), and the other interfaces stop at
- * the last slot they call. The surface's full table is declared because
- * those 12 declarations put AviSurface::Init (0x0047e510) in the phase of
- * MSVC 5.0's symbol counter that the original's (finding 538 rule B):
- * 98.76% without them, 100% with them. It changes no storage. */
-struct AviDirectDrawSurface4 {
-    virtual HRESULT __stdcall QueryInterface(void*, void**) = 0;
-    virtual ULONG __stdcall AddRef() = 0;
-    virtual ULONG __stdcall Release() = 0;
-    virtual HRESULT __stdcall AddAttachedSurface(void*) = 0;
-    virtual HRESULT __stdcall AddOverlayDirtyRect(LPRECT) = 0;
-    virtual HRESULT __stdcall Blt(LPRECT, AviDirectDrawSurface4*, LPRECT,
-                                  DWORD, void*) = 0;
-    virtual HRESULT __stdcall BltBatch(void*, DWORD, DWORD) = 0;
-    virtual HRESULT __stdcall BltFast(DWORD, DWORD, void*, LPRECT,
-                                      DWORD) = 0;
-    virtual HRESULT __stdcall DeleteAttachedSurface(DWORD, void*) = 0;
-    virtual HRESULT __stdcall EnumAttachedSurfaces(void*, void*) = 0;
-    virtual HRESULT __stdcall EnumOverlayZOrders(DWORD, void*, void*) = 0;
-    virtual HRESULT __stdcall Flip(void*, DWORD) = 0;
-    virtual HRESULT __stdcall GetAttachedSurface(void*, void**) = 0;
-    virtual HRESULT __stdcall GetBltStatus(DWORD) = 0;
-    virtual HRESULT __stdcall GetCaps(void*) = 0;
-    virtual HRESULT __stdcall GetClipper(void**) = 0;
-    virtual HRESULT __stdcall GetColorKey(DWORD, void*) = 0;
-    virtual HRESULT __stdcall GetDC(HDC*) = 0;
-    virtual HRESULT __stdcall GetFlipStatus(DWORD) = 0;
-    virtual HRESULT __stdcall GetOverlayPosition(LPLONG, LPLONG) = 0;
-    virtual HRESULT __stdcall GetPalette(AviDirectDrawPalette**) = 0;
-    virtual HRESULT __stdcall GetPixelFormat(AviPixelFormat*) = 0;
-    virtual HRESULT __stdcall GetSurfaceDesc(AviSurfaceDesc2*) = 0;
-    virtual HRESULT __stdcall Initialize(void*, AviSurfaceDesc2*) = 0;
-    virtual HRESULT __stdcall IsLost() = 0;
-    virtual HRESULT __stdcall Lock(LPRECT, AviSurfaceDesc2*, DWORD,
-                                   HANDLE) = 0;
-    virtual HRESULT __stdcall ReleaseDC(HDC) = 0;
-    virtual HRESULT __stdcall Restore() = 0;
-    virtual HRESULT __stdcall SetClipper(void*) = 0;
-    virtual HRESULT __stdcall SetColorKey(DWORD, void*) = 0;
-    virtual HRESULT __stdcall SetOverlayPosition(LONG, LONG) = 0;
-    virtual HRESULT __stdcall SetPalette(AviDirectDrawPalette*) = 0;
-    virtual HRESULT __stdcall Unlock(LPRECT) = 0;
-    virtual HRESULT __stdcall UpdateOverlay(LPRECT, AviDirectDrawSurface4*, LPRECT, DWORD, void*) = 0;
-    virtual HRESULT __stdcall UpdateOverlayDisplay(DWORD) = 0;
-    virtual HRESULT __stdcall UpdateOverlayZOrder(DWORD, AviDirectDrawSurface4*) = 0;
-    virtual HRESULT __stdcall GetDDInterface(void**) = 0;
-    virtual HRESULT __stdcall PageLock(DWORD) = 0;
-    virtual HRESULT __stdcall PageUnlock(DWORD) = 0;
-    virtual HRESULT __stdcall SetSurfaceDesc(AviSurfaceDesc2*, DWORD) = 0;
-    virtual HRESULT __stdcall SetPrivateData(const GUID&, void*, DWORD, DWORD) = 0;
-    virtual HRESULT __stdcall GetPrivateData(const GUID&, void*, LPDWORD) = 0;
-    virtual HRESULT __stdcall FreePrivateData(const GUID&) = 0;
-    virtual HRESULT __stdcall GetUniquenessValue(LPDWORD) = 0;
-    virtual HRESULT __stdcall ChangeUniquenessValue() = 0;
-};
-
-/* IDirectDrawPalette, up to Release (slot 2). */
-struct AviDirectDrawPalette {
-    virtual HRESULT __stdcall QueryInterface(void*, void**) = 0;
-    virtual ULONG __stdcall AddRef() = 0;
-    virtual ULONG __stdcall Release() = 0;
-};
-
-/* IDirectDraw4, up to CreateSurface (slot 6). */
-struct AviDirectDraw4 {
-    virtual HRESULT __stdcall QueryInterface(void*, void**) = 0;
-    virtual ULONG __stdcall AddRef() = 0;
-    virtual ULONG __stdcall Release() = 0;
-    virtual HRESULT __stdcall Compact() = 0;
-    virtual HRESULT __stdcall CreateClipper(DWORD, void**, void*) = 0;
-    virtual HRESULT __stdcall CreatePalette(DWORD, LPPALETTEENTRY,
-                                            AviDirectDrawPalette**,
-                                            void*) = 0;
-    virtual HRESULT __stdcall CreateSurface(AviSurfaceDesc2*,
-                                            AviDirectDrawSurface4**,
-                                            void*) = 0;
-};
-
-#define AVI_DDSD_CAPS               0x00000001
-#define AVI_DDSD_HEIGHT             0x00000002
-#define AVI_DDSD_WIDTH              0x00000004
-#define AVI_DDSD_PIXELFORMAT        0x00001000
-#define AVI_DDSCAPS_OFFSCREENPLAIN  0x00000040
-#define AVI_DDSCAPS_PRIMARYSURFACE  0x00000200
-#define AVI_DDSCAPS_SYSTEMMEMORY    0x00000800
-#define AVI_DDSCAPS_VIDEOMEMORY     0x00004000
-#define AVI_DDPF_PALETTEINDEXED8    0x00000020
-#define AVI_DDPF_RGB                0x00000040
-#define AVI_DDPCAPS_8BIT            0x00000004
-#define AVI_DDLOCK_WAIT             0x00000001
-#define AVI_DDLOCK_NOSYSLOCK        0x00000800
-#define AVI_DDBLT_WAIT              0x01000000
-#define AVI_DD_OK                   0
 
 /* Callees declared by their own headers: aitask.h gives the back buffer
  * (render_surface_secondary_get, 0x004065e0, AITask.c's out-of-line copy of
@@ -222,11 +87,7 @@ struct AviDirectDraw4 {
  * operator delete (ui_render_record_free, 0x0045daf0); files.h gives
  * File_VerifyFilename. */
 
-#if defined(_MSC_VER)
 #define AVI_OPERATOR_NEW(size) ::operator new(size)
-#else
-#define AVI_OPERATOR_NEW(size) engine_calloc((long)(size))
-#endif
 
 /* Read by every AviMovie method; nothing in the image writes it. */
 /* Eight RGB byte triples (black, white, red, green, blue, yellow, magenta,
@@ -243,7 +104,7 @@ static unsigned char s_aviColours[8][3] = {
 static bool s_aviDisabled;
 
 // GLOBAL: LEGORR 0x0053399c
-static AviDirectDraw4* s_aviDirectDraw;
+static IDirectDraw4* s_aviDirectDraw;
 
 // VTABLE: LEGORR 0x0049e9a0
 class AviSurface {
@@ -265,7 +126,7 @@ public:
     // PORT-ONLY: routes new to the original's operator new (0x0048ead0)
     static void* operator new(size_t size) { return AVI_OPERATOR_NEW(size); }
     // PORT-ONLY: routes delete to the original's operator delete (0x0045daf0)
-    static void operator delete(void* p) { ui_render_record_free(p); }
+    static void operator delete(void* p) { ::operator delete(p); }
 
 private:
     bool Init(long width, long height, long bpp, bool vram);
@@ -276,13 +137,13 @@ public:
     unsigned long m_unused04;           /* +0x04 */
     bool m_locked;                      /* +0x08 */
     long m_bpp;                         /* +0x0c */
-    AviDirectDrawPalette* m_palette;    /* +0x10 */
+    IDirectDrawPalette* m_palette;    /* +0x10 */
     bool m_unused14;                    /* +0x14 */
     bool m_unused15;                    /* +0x15 */
     bool m_is555;                       /* +0x16 */
     bool m_ok;                          /* +0x17 */
-    AviDirectDrawSurface4* m_surf;      /* +0x18 */
-    AviSurfaceDesc2 m_desc;             /* +0x1c */
+    IDirectDrawSurface4* m_surf;      /* +0x18 */
+    DDSURFACEDESC2 m_desc;             /* +0x1c */
 };
 
 // VTABLE: LEGORR 0x0049e9b0
@@ -300,7 +161,7 @@ public:
     // PORT-ONLY: routes new to the original's operator new (0x0048ead0)
     static void* operator new(size_t size) { return AVI_OPERATOR_NEW(size); }
     // PORT-ONLY: routes delete to the original's operator delete (0x0045daf0)
-    static void operator delete(void* p) { ui_render_record_free(p); }
+    static void operator delete(void* p) { ::operator delete(p); }
 
     AviStreamIface* m_aviStream;        /* +0x04 */
     AviGetFrameIface* m_getFrame;       /* +0x08 */
@@ -350,46 +211,46 @@ bool AviSurface::Init(long width, long height, long bpp, bool vram)
     PALETTEENTRY pal[256];
     long i;
 
-    m_desc.dwFlags |= (width ? AVI_DDSD_WIDTH : 0) | (height ? AVI_DDSD_HEIGHT : 0) | AVI_DDSD_CAPS;
+    m_desc.dwFlags |= (width ? DDSD_WIDTH : (DDSurfaceDescFlags)0) | (height ? DDSD_HEIGHT : (DDSurfaceDescFlags)0) | DDSD_CAPS;
     m_bpp = bpp;
     if (width) m_desc.dwWidth = width;
     if (height) m_desc.dwHeight = height;
 
     if (!width && !height) {
-        m_desc.ddsCaps[0] = AVI_DDSCAPS_PRIMARYSURFACE;
+        m_desc.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
     } else {
-        m_desc.ddsCaps[0] = AVI_DDSCAPS_OFFSCREENPLAIN;
-        if (vram) m_desc.ddsCaps[0] |= AVI_DDSCAPS_VIDEOMEMORY; else m_desc.ddsCaps[0] |= AVI_DDSCAPS_SYSTEMMEMORY;
+        m_desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
+        if (vram) m_desc.ddsCaps.dwCaps |= DDSCAPS_VIDEOMEMORY; else m_desc.ddsCaps.dwCaps |= DDSCAPS_SYSTEMMEMORY;
     }
 
     if (bpp) {
-        m_desc.dwFlags |= AVI_DDSD_PIXELFORMAT;
-        m_desc.ddpfPixelFormat.dwSize = sizeof(AviPixelFormat);
+        m_desc.dwFlags |= DDSD_PIXELFORMAT;
+        m_desc.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
         m_desc.ddpfPixelFormat.dwRGBBitCount = (bpp == 15) ? 16 : bpp;
         if (bpp == 24) {
             m_desc.ddpfPixelFormat.dwRBitMask = 0xff0000;
             m_desc.ddpfPixelFormat.dwGBitMask = 0xff00;
             m_desc.ddpfPixelFormat.dwBBitMask = 0xff;
-            m_desc.ddpfPixelFormat.dwFlags = AVI_DDPF_RGB;
+            m_desc.ddpfPixelFormat.dwFlags = DDPF_RGB;
         } else if (bpp == 16) {
             m_desc.ddpfPixelFormat.dwRBitMask = 0xf800;
             m_desc.ddpfPixelFormat.dwGBitMask = 0x7e0;
             m_desc.ddpfPixelFormat.dwBBitMask = 0x1f;
-            m_desc.ddpfPixelFormat.dwFlags = AVI_DDPF_RGB;
+            m_desc.ddpfPixelFormat.dwFlags = DDPF_RGB;
         } else if (bpp == 15) {
             m_desc.ddpfPixelFormat.dwRBitMask = 0x7c00;
             m_desc.ddpfPixelFormat.dwGBitMask = 0x3e0;
             m_desc.ddpfPixelFormat.dwBBitMask = 0x1f;
-            m_desc.ddpfPixelFormat.dwFlags = AVI_DDPF_RGB;
+            m_desc.ddpfPixelFormat.dwFlags = DDPF_RGB;
         } else if (bpp == 8) {
             m_desc.ddpfPixelFormat.dwRBitMask = 0xff0000;
             m_desc.ddpfPixelFormat.dwGBitMask = 0xff00;
             m_desc.ddpfPixelFormat.dwBBitMask = 0xff;
-            m_desc.ddpfPixelFormat.dwFlags = AVI_DDPF_RGB | AVI_DDPF_PALETTEINDEXED8;
+            m_desc.ddpfPixelFormat.dwFlags = DDPF_RGB | DDPF_PALETTEINDEXED8;
         }
     }
 
-    if (s_aviDirectDraw->CreateSurface(&m_desc, &m_surf, NULL) == AVI_DD_OK) {
+    if (s_aviDirectDraw->CreateSurface(&m_desc, &m_surf, NULL) == DD_OK) {
         Lock();
         Unlock();
         if (m_desc.ddpfPixelFormat.dwRGBBitCount == 8) {
@@ -397,10 +258,10 @@ bool AviSurface::Init(long width, long height, long bpp, bool vram)
                 pal[i].peRed = 0;
                 pal[i].peGreen = 0;
                 pal[i].peBlue = 0;
-                pal[i].peFlags = 0;
+                pal[i].peFlags = (PCFlags)0;
             }
-            if (s_aviDirectDraw->CreatePalette(AVI_DDPCAPS_8BIT, pal, &m_palette, NULL) != AVI_DD_OK) return false;
-            if (m_surf->SetPalette(m_palette) != AVI_DD_OK) return false;
+            if (s_aviDirectDraw->CreatePalette(DDPCAPS_8BIT, pal, &m_palette, NULL) != DD_OK) return false;
+            if (m_surf->SetPalette(m_palette) != DD_OK) return false;
         }
         if (m_desc.ddpfPixelFormat.dwRGBBitCount == 16) {
             if (CountMaskBits(m_desc.ddpfPixelFormat.dwGBitMask) +
@@ -441,7 +302,7 @@ bool AviSurface::Lock()
     if (!m_locked) {
         memset(&m_desc, 0, sizeof(m_desc));
         m_desc.dwSize = sizeof(m_desc);
-        if (m_surf->Lock(NULL, &m_desc, AVI_DDLOCK_WAIT | AVI_DDLOCK_NOSYSLOCK, NULL) == AVI_DD_OK) {
+        if (m_surf->Lock(NULL, &m_desc, DDLOCK_WAIT | DDLOCK_NOSYSLOCK, NULL) == DD_OK) {
             m_locked = true;
             return true;
         }
@@ -453,7 +314,7 @@ bool AviSurface::Lock()
 bool AviSurface::Unlock()
 {
     if (m_locked) {
-        if (m_surf->Unlock(NULL) == AVI_DD_OK) {
+        if (m_surf->Unlock(NULL) == DD_OK) {
             m_locked = false;
             return true;
         }
@@ -489,7 +350,7 @@ AviMovie::AviMovie(char* fName) : m_init(false), m_ok(false), m_surf(NULL)
         if (AVIStreamOpenFromFileA(&m_aviStream, fName, AVI_STREAMTYPE_VIDEO, 0, OF_READ, NULL) == 0) {
             if ((m_getFrame = AVIStreamGetFrameOpen(m_aviStream, (LPBITMAPINFOHEADER)AVI_GETFRAMEF_BESTDISPLAYFMT)) != NULL) {
                 if (AVIStreamInfoA(m_aviStream, &m_info, sizeof(m_info)) == 0) {
-                    m_startTime = timeGetTime() * 0.001f;
+                    m_startTime = (DWORD)SDL_GetTicks() * 0.001f; // [library:time]
                     m_ok = true;
                     m_currFrame = 0;
                     m_rect.top = m_info.rcFrame.top;
@@ -566,7 +427,7 @@ bool AviMovie::Update()
 
     if ((lpbi = (LPBITMAPINFOHEADER)AVIStreamGetFrame(m_getFrame, m_currFrame)) != NULL) {
         FrameToSurface(lpbi);
-        DWORD time = timeGetTime();
+        DWORD time = (DWORD)SDL_GetTicks(); // [library:time]
         float rate = (float)m_info.dwRate, scale = (float)m_info.dwScale;
         m_frameRate = rate / scale;
         m_currTime = time * 0.001f;
@@ -587,7 +448,7 @@ void AviMovie::SetTime(unsigned long time)
 {
     if (!s_aviDisabled) {
         m_currFrame = time;
-        m_currTime = timeGetTime() * 0.001f;
+        m_currTime = (DWORD)SDL_GetTicks() * 0.001f; // [library:time]
         m_startTime = m_currTime - (float)m_currFrame / m_frameRate;
     }
 }
@@ -606,7 +467,7 @@ extern "C" {
 // FUNCTION: LEGORR 0x0047ec80
 void avi_initialise(void* directDraw)
 {
-    s_aviDirectDraw = (AviDirectDraw4*)directDraw;
+    s_aviDirectDraw = (IDirectDraw4*)directDraw;
     AVIFileInit();
 }
 
@@ -623,11 +484,11 @@ int avi_update(AviMovie* anim)
 }
 
 // FUNCTION: LEGORR 0x0047ed00
-void avi_blit_to_back_buffer(AviMovie* anim, struct tagRECT* destRect)
+void avi_blit_to_back_buffer(AviMovie* anim, struct RECT* destRect)
 {
     if (anim->m_ok) {
-        AviDirectDrawSurface4* surf = anim->m_surf->m_surf;
-        ((AviDirectDrawSurface4*)render_surface_secondary_get())->Blt(destRect, surf, NULL, AVI_DDBLT_WAIT, NULL);
+        IDirectDrawSurface4* surf = anim->m_surf->m_surf;
+        ((IDirectDrawSurface4*)render_surface_secondary_get())->Blt(destRect, surf, NULL, DDBLT_WAIT, NULL);
     }
 }
 
@@ -663,4 +524,3 @@ int avi_is_ok(AviMovie* anim)
 
 } /* extern "C" */
 
-#endif /* !LEGORRR_BACKEND_MINIWIN */

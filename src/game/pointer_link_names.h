@@ -18,7 +18,6 @@
 #ifndef LEGORRR_GAME_POINTER_LINK_NAMES_H
 #define LEGORRR_GAME_POINTER_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define pointer_initialise ui_pointer_cursor_name_registry_init          /* 0045c830 */
 #define pointer_load_pointers pointer_cursor_config_load_target          /* 0045ca70 */
 #define pointer_get_type pointer_cursor_config_parse_target              /* 0045cbd0 */
@@ -28,6 +27,5 @@
 #define pointer_get_current_type global_cursor_word_get                  /* 0045cc60 */
 #define pointer_draw_pointer pointer_cursor_draw_target                  /* 0045cc70 */
 #define pointer_update media_pointer_cursor_override_tick                /* 0045cd90 */
-#endif
 
 #endif /* LEGORRR_GAME_POINTER_LINK_NAMES_H */

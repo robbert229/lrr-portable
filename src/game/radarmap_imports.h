@@ -54,14 +54,8 @@ int terrain_cell_type_get_at_current(uint32_t cx, uint32_t cy,
  * through an unprototyped function type, which pushes none, as the original
  * does; the native C++ compile goes through lego_port.cpp's adapter (as
  * fallin_imports.h). */
-void* level_current_terrain_get_original(void);
-#ifdef __cplusplus
 #define RADARMAP_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get_original())
-#else
-#define RADARMAP_LEGO_GET_MAP() \
-    ((struct TerrainMap*)((void* (*)())level_current_terrain_get)())
-#endif
+    ((struct TerrainMap*)level_current_terrain_get(0, 0))
 
 /* Stats.c (entity_stats.c), by its link name: StatsObject_GetStatsFlags2. */
 uint32_t entity_state_flags_get(const struct EntitySlot* e);     /* 00469e80 */

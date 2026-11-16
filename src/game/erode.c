@@ -63,8 +63,8 @@ typedef struct Erode_Globs {
 static Erode_Globs erodeGlobs;
 
 #define EROSION_BLOCK(level, bx, by) \
-    (LEGO_LEVEL_PTR(Lego_Block, (level)->blocks)[(level)->width * (by) + (bx)])
-#define EROSION_MAP(level) LEGO_LEVEL_PTR(struct TerrainMap, (level)->map)
+    (((level)->blocks)[(level)->width * (by) + (bx)])
+#define EROSION_MAP(level) ((level)->map)
 
 // FUNCTION: LEGORR 0x0040e930
 void erode_initialise(float triggerTime, float erodeTime, float lockTime)
@@ -95,7 +95,7 @@ int erode_get_free_activity(unsigned int* index)
 float erode_get_block_erode_rate(ErodePoint2I* blockPos)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return (6 - LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos->y + blockPos->x].f_06) *
+    return (6 - level->blocks[level->width * blockPos->y + blockPos->x].f_06) *
            erodeGlobs.erodeTime * 25.0f;
 }
 // FUNCTION: LEGORR 0x0040ea10

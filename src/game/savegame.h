@@ -13,7 +13,7 @@
  * the callers take the unit's names (frontend_unit.c's own declarations
  * keep theirs). A macro renames a declaration one for one, so MSVC's
  * symbol numbering does not change. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(LEGORRR_FRONTEND_UNIT_C)
+#if !defined(LEGORRR_FRONTEND_UNIT_C)
 /* Front_Levels_UpdateAvailable takes five arguments; the macro drops the
  * port's trailing engine context. */
 #define sav_tree_load(node, base, blocks, window, flag, eng) \
@@ -45,8 +45,7 @@ void save_slot_set_target(int slot);                        /* 00417ea0 */
  * matching build the C callers pass the original's argument to
  * frontend_unit.c's definition (finding 628). The macro also rewrites
  * this declaration, one for one. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus) && \
-    !defined(LEGORRR_FRONTEND_UNIT_C)
+#if !defined(LEGORRR_FRONTEND_UNIT_C)
 #define save_mark_record(ctx, index) front_save_set_level_completed(index)
 #endif
 void save_mark_record(struct GameContext* ctx, int index);  /* 00417eb0 */

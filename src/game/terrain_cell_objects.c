@@ -6,7 +6,6 @@
  * the model. */
 /* Matching build: LegoObject.c callers call legoobject_unit.c (#575). */
 #include "legoobject_port_aliases.h"
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: LegoObject_GetBlockPos and Level_BlockUpdateSurface
  * themselves, in legoobject_unit.c and lego_unit.c, instead of the port
  * tail's adapters (terrain_cell_objects_port.cpp; #805, finding 674). Each
@@ -14,7 +13,6 @@
  * new names are not otherwise declared here (finding 538). */
 #define legoobject_block_position_get legoobject_position_to_terrain_cell /* 004424f0 */
 #define level_block_surface_update lego_cell_init_pass                     /* 0042f6f0 */
-#endif
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>

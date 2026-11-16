@@ -13,7 +13,6 @@
 extern "C" {
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: both words are objectGlobs fields (004de790,
  * legoobject_globs.h, finding 662): flags (+0x684) and the count of the
  * buildings among the visited units (+0xc438). objectGlobs is declared
@@ -24,23 +23,11 @@ extern "C" {
 extern struct LegoObject_Globs objectGlobs;
 #define s_entity_state_flags (*(unsigned int*)((char*)&objectGlobs + 0x684))
 #define s_lego_object_tool_tip_gate (*(int*)((char*)&objectGlobs + 0xc438))
-#else
-/* DAT_004dee14: the object manager's state word. Not declared again where
- * legoobject_globs.h has made the name a field (matching build). */
-#ifndef s_entity_state_flags
-extern uint32_t s_entity_state_flags;
-#endif
-/* DAT_004eabc8: LegoObject.c's tool-tip gate. The port has no owner; this
- * port global stands in for it. */
-extern int s_lego_object_tool_tip_gate;
-#endif
 
 /* FUN_0044c550 (GAME-023). */
 /* In the matching build 0044c550 is legoobject_unit.c's (GAME-023 part 3,
  * issue #615); one declaration either way. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define global_scatter_spawn_enable_and_drain legoobject_scatter_spawn_enable_and_drain
-#endif
 void global_scatter_spawn_enable_and_drain(void);
 
 #ifdef __cplusplus

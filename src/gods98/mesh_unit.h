@@ -23,7 +23,6 @@
 
 #include <stdint.h>
 
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 #define lwo_model_entry_load mesh_load /* 004809e0 */
 #define mesh_texture_time_set mesh_set_texture_time2 /* 00482040 */
 #define pointer_value_get mesh_get_group_count /* 00482210 */
@@ -36,7 +35,6 @@
 #define record_flag2c_bit0_set mesh_hide /* 004827d0 */
 #define sfx_mesh_load_texture_adapter mesh_load_texture /* 00482e70 */
 #define sfx_mesh_set_group_texture_adapter animated_texture_frame_surface_set /* 004830c0 */
-#endif
 
 #ifdef __cplusplus
 extern "C" {

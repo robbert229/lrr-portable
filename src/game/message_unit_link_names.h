@@ -20,7 +20,6 @@
 #include "game/sfx_link_names.h"
 #include "gods98/container_link_names.h"
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define message_initialise message_string_table_initialize          /* 00451cd0 */
 #define message_remove_events_with_object cmd_queue_cancel_match     /* 00451f60 */
 #define message_add_message_action lego_key_callback_set_adapter     /* 00452010 */
@@ -46,6 +45,5 @@
 #define message_deselect_object selection_entity_remove_active       /* 00452c50 */
 #define message_kill_all_selected_units selected_entity_state_monitor /* 00452cc0 */
 #define message_enter_first_person_view selection_command_dispatch   /* 00452d60 */
-#endif
 
 #endif /* LEGORRR_GAME_MESSAGE_UNIT_LINK_NAMES_H */

@@ -22,7 +22,6 @@
 #ifndef LEGORRR_GAME_HELPWINDOW_LINK_NAMES_H
 #define LEGORRR_GAME_HELPWINDOW_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define help_window_set_font selection_mode_state_set /* 00418190 */
 #define help_window_hide selection_state_flag_clear_bit0 /* 004181a0 */
 #define help_window_initialise help_window_initialise_adapter /* 004181b0 */
@@ -30,6 +29,5 @@
 #define help_window_recall_dependencies building_upgrade_state_changed_dispatch /* 00418830 */
 #define help_window_check_buttons help_window_button_hit_test /* 00418da0 */
 #define help_window_is_showing main_sim_state_admission_predicate /* 004191a0 */
-#endif
 
 #endif /* LEGORRR_GAME_HELPWINDOW_LINK_NAMES_H */

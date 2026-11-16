@@ -3,15 +3,17 @@
  * window, the surface lock and colour packer, the pixel writers for each
  * depth and effect, clipped lines, rectangle fills and dotted circles.
  *
- * The native port has no DirectDraw back buffer, so the test installs a
- * fake surface as draw_port_back_surface. */
+ * draw.c draws on DirectDraw.c's back buffer (directDrawGlobs.bSurf); the
+ * test installs a surface whose methods fail, then a fake one. */
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
+#include <miniwin/ddraw.h>
+
+#include "gods98/directdraw.h"
 #include "gods98/draw.h"
-#include "gods98/draw_port.hpp"
 
 static int s_failures = 0;
 
@@ -23,10 +25,49 @@ static void CHECK(int cond, const char* what)
     }
 }
 
+/* A DirectDraw surface whose every method fails with DDERR_SURFACELOST. */
+struct LostSurface : public IDirectDrawSurface4 {
+    // IDirectDrawSurface
+    HRESULT AddAttachedSurface(LPDIRECTDRAWSURFACE) override { return DDERR_SURFACELOST; }
+    HRESULT Blt(LPRECT, LPDIRECTDRAWSURFACE, LPRECT, DDBltFlags, LPDDBLTFX) override
+    {
+        return DDERR_SURFACELOST;
+    }
+    HRESULT BltFast(DWORD, DWORD, LPDIRECTDRAWSURFACE, LPRECT, DDBltFastFlags) override
+    {
+        return DDERR_SURFACELOST;
+    }
+    HRESULT Flip(LPDIRECTDRAWSURFACE, DDFlipFlags) override { return DDERR_SURFACELOST; }
+    HRESULT GetAttachedSurface(LPDDSCAPS, LPDIRECTDRAWSURFACE*) override { return DDERR_SURFACELOST; }
+    HRESULT GetDC(HDC*) override { return DDERR_SURFACELOST; }
+    HRESULT GetPalette(LPDIRECTDRAWPALETTE*) override { return DDERR_SURFACELOST; }
+    HRESULT GetPixelFormat(LPDDPIXELFORMAT) override { return DDERR_SURFACELOST; }
+    HRESULT GetSurfaceDesc(LPDDSURFACEDESC) override { return DDERR_SURFACELOST; }
+    HRESULT IsLost() override { return DDERR_SURFACELOST; }
+    HRESULT Lock(LPRECT, LPDDSURFACEDESC, DDLockFlags, HANDLE) override { return DDERR_SURFACELOST; }
+    HRESULT ReleaseDC(HDC) override { return DDERR_SURFACELOST; }
+    HRESULT Restore() override { return DDERR_SURFACELOST; }
+    HRESULT SetClipper(LPDIRECTDRAWCLIPPER) override { return DDERR_SURFACELOST; }
+    HRESULT SetColorKey(DDColorKeyFlags, LPDDCOLORKEY) override { return DDERR_SURFACELOST; }
+    HRESULT SetPalette(LPDIRECTDRAWPALETTE) override { return DDERR_SURFACELOST; }
+    HRESULT Unlock(LPVOID) override { return DDERR_SURFACELOST; }
+    // IDirectDrawSurface4
+    HRESULT Blt(LPRECT, LPDIRECTDRAWSURFACE4, LPRECT, DDBltFlags, LPDDBLTFX) override
+    {
+        return DDERR_SURFACELOST;
+    }
+    HRESULT Flip(LPDIRECTDRAWSURFACE4, DDFlipFlags) override { return DDERR_SURFACELOST; }
+    HRESULT GetAttachedSurface(LPDDSCAPS2, LPDIRECTDRAWSURFACE4*) override { return DDERR_SURFACELOST; }
+    HRESULT GetSurfaceDesc(LPDDSURFACEDESC2) override { return DDERR_SURFACELOST; }
+    HRESULT Lock(LPRECT, LPDDSURFACEDESC2, DDLockFlags, HANDLE) override { return DDERR_SURFACELOST; }
+    HRESULT Unlock(LPRECT) override { return DDERR_SURFACELOST; }
+};
+
+
 enum { FAKE_WIDTH = 10, FAKE_HEIGHT = 8, FAKE_PITCH = 48 };
 
 /* An IDirectDrawSurface4 with the three methods draw.c calls. */
-struct FakeSurface : public DrawPortLostSurface {
+struct FakeSurface : public LostSurface {
     uint32_t bpp;
     uint32_t masks[3];
     int locks;
@@ -106,14 +147,16 @@ static void set_area(Area2F* area, float x, float y, float w, float h)
 
 int main(void)
 {
-    LPDIRECTDRAWSURFACE4 const native_surface = draw_port_back_surface;
+    LostSurface lost;
+    LPDIRECTDRAWSURFACE4 const native_surface = &lost;
     FakeSurface fake;
     Area2F area;
     Area2F clip;
 
     CHECK(sizeof(DrawRect) == 0x1c, "a coloured rectangle is 0x1c bytes");
 
-    /* The native default surface fails, so nothing is locked or drawn. */
+    /* A lost back buffer fails, so nothing is locked or drawn. */
+    directDrawGlobs.bSurf = native_surface;
     surface_render_setup(NULL);
     viewport_rectangle_get(&clip);
     CHECK(clip.x == 0.0f && clip.y == 0.0f, "no surface: clip starts at 0");
@@ -122,7 +165,7 @@ int main(void)
           "no surface: the lock fails");
 
     fake_init(&fake, 16, 0xf800, 0x07e0, 0x001f);
-    draw_port_back_surface = &fake;
+    directDrawGlobs.bSurf = &fake;
 
     /* Draw_SetClipWindow / Draw_GetClipWindow. */
     viewport_subrectangle_set(NULL);
@@ -280,7 +323,7 @@ int main(void)
               "and unlocks the surface");
     }
 
-    draw_port_back_surface = native_surface;
+    directDrawGlobs.bSurf = NULL;
     if (s_failures != 0) {
         printf("%d failure(s)\n", s_failures);
         return 1;

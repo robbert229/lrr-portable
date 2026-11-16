@@ -7,6 +7,8 @@
 #ifndef LEGORRR_GAME_AITASK_IMPORTS_H
 #define LEGORRR_GAME_AITASK_IMPORTS_H
 
+#include "gods98/directdraw.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,7 +19,6 @@ struct EntitySlot;
  * now annotates under other names, and that legoobject_port_aliases.h does
  * not alias (their port entries are namespaced ledger stubs). Each macro
  * renames one declaration and its calls one for one (finding 538). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define ledger_stub_00438a60_SpatialObjectQueryCenterMask01 legoobject_query_center_mask01
 #define ledger_stub_00438ae0_SpatialObjectQueryCenterMask02 legoobject_query_center_mask02
 #define ledger_stub_00438bf0_SpatialObjectQueryCenterMask80 legoobject_query_center_mask80
@@ -29,7 +30,6 @@ struct EntitySlot;
 #define aitask_route_setup_adapter legoobject_route_setup_and_marker_associate /* 00441700 */
 #define aitask_object_find_trainer_adapter legoobject_query_center_mask100 /* 00438e50 */
 #define aitask_place_command_cell_accept_adapter always_accept_place_command_cell /* 00432550 */
-#endif
 
 /* --- group A (00401cb0-00402d30) --- */
 
@@ -44,14 +44,8 @@ struct LevelState* level_current_owner_get(void);           /* 00431560 */
  * matching build calls it through an unprototyped function type, which
  * pushes none, as the original does; the native C++ compile goes through
  * lego.cpp's adapter. lego_unit.h declares level_current_terrain_get. */
-void* level_current_terrain_get_original(void);
-#ifdef __cplusplus
 #define AITASK_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get_original())
-#else
-#define AITASK_LEGO_GET_MAP() \
-    ((struct TerrainMap*)((void* (*)())level_current_terrain_get)())
-#endif
+    ((struct TerrainMap*)level_current_terrain_get(0, 0))
 int terrain_cell_walkable_flag_current(unsigned int cx,
                                        unsigned int cy);     /* 00432bd0 */
 int terrain_cell_speed_class_current(const int cell_xy[2]);  /* 00432c50 */
@@ -133,11 +127,9 @@ void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
     unsigned int filter_a, unsigned int filter_b);                   /* 00438ae0 */
 struct EntitySlot* entity_action_kind_entity_create_and_command_issue(
     struct EntitySlot* source, int kind, int selector, int argument); /* 0043a650 */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: the original itself, in LegoObject.c (legoobject_unit.c),
  * as lego_unit_imports.h has it (#805, finding 674). */
 #define entity_linked_activity_event_dispatch legoobject_linked_activity_event_dispatch
-#endif
 void entity_linked_activity_event_dispatch(struct EntitySlot* entity,
                                            unsigned int events);     /* 0043f5b0 */
 /* Stats.c (entity.hpp). */
@@ -265,7 +257,7 @@ int entity_capacity_or_state_predicate(const struct EntitySlot* entity); /* 0043
 int ai_activity_scan(const struct EntitySlot* e, int activity);      /* 0044b480 */
 /* LegoObject_GetBlockPos (004424f0): the port's entry takes the level as
  * well; adapter at the end of lego.cpp. */
-void entity_position_to_terrain_cell_adapter(const struct EntitySlot* entity,
+int entity_position_to_terrain_cell_adapter(const struct EntitySlot* entity,
                                              int* cell_x, int* cell_y);
 /* 0043a5f0 (LegoObject_GetActivityContainer-style) and 0044b4c0: the port's
  * entries have other contracts or no C declaration; adapters at the end of
@@ -314,24 +306,10 @@ void* scene_object_secondary_handle_get_or_create(void* record);     /* 004087e0
 unsigned long main_time_get(void);                                   /* 00478000 */
 /* Bubbles.c (cmd_shared.hpp; bubbles.cpp). */
 void idle_register(struct EntitySlot* object);                       /* 00407450 */
-/* DirectDraw.c's DirectDraw object and back buffer. Windows builds read
- * directDrawGlobs (0076ac80, gods98/directdraw.h), declared here as a view
- * of its first words with the symbol count of the two port words it
- * replaces (Deviation (scoring only): a declaration-only view; finding
- * 596). The native port keeps the port's words (crt.hpp; crt.cpp). */
-#if defined(LEGORRR_BACKEND_MINIWIN)
-extern unsigned int s_renderer_global_dword;                         /* 0076ac84 */
-extern unsigned int s_render_surface_secondary;                      /* 0076ac8c */
-#else
-extern struct AiTaskDirectDrawView {
-    unsigned int hWnd;
-    unsigned int lpDirectDraw;
-    unsigned int fSurf;
-    unsigned int bSurf;
-} directDrawGlobs;                                                   /* 0076ac80 */
+/* DirectDraw.c's DirectDraw object and back buffer (directDrawGlobs,
+ * 0076ac80, gods98/directdraw.h). */
 #define s_renderer_global_dword (directDrawGlobs.lpDirectDraw)       /* 0076ac84 */
 #define s_render_surface_secondary (directDrawGlobs.bSurf)           /* 0076ac8c */
-#endif
 /* Message.c (select.hpp, cmd.hpp, message.h). */
 unsigned int selection_contains_entity_active_target(struct EntitySlot* entity,
                                                      unsigned int* index_out); /* 00452610 */

@@ -25,13 +25,11 @@
 #ifndef LEGORRR_GODS98_MESH_LINK_NAMES_H
 #define LEGORRR_GODS98_MESH_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define mesh_get_group indexed_record_entry_read /* 004821a0 */
 #define mesh_add_group mesh_record_allocate_and_fill /* 00482220 */
 #define mesh_get_vertices indexed_geometry_data_copy_to_output /* 00482470 */
 #define mesh_is_group_hidden indexed_record_flag6c_bit0_get /* 00482780 */
 #define mesh_set_group_texture animated_texture_frame_surface_set /* 004830c0 */
 #define mesh_set_group_colour render_object_color_vector_set /* 00483270 */
-#endif
 
 #endif /* LEGORRR_GODS98_MESH_LINK_NAMES_H */

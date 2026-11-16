@@ -22,7 +22,6 @@
 #ifndef LEGORRR_GAME_SFX_LINK_NAMES_H
 #define LEGORRR_GAME_SFX_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define sfx_initialise sound_alias_registry_init /* 00464740 */
 #define sfx_set_sample_populate_mode sound_alias_registration_set /* 00464c50 */
 #define sfx_get_type sound_alias_lookup /* 00464c70 */
@@ -57,6 +56,5 @@
 #define smoke_group_show transient_effect_particle_slot_initialize /* 00465c50 */
 #define smoke_group_update transient_effect_segment_advance /* 00465e00 */
 #define smoke_group_set_vertices transient_effect_instance_quad_vertices_build /* 00465f40 */
-#endif
 
 #endif /* LEGORRR_GAME_SFX_LINK_NAMES_H */

@@ -9,12 +9,9 @@
  * (Flic_Memory or Flic_Load, then Flic_FindChunk, Flic_FrameChunk and
  * Flic_DoChunk's decoders) and blits it to the back buffer.
  *
- * The native port has no DirectDraw: the unit compiles to nothing there,
- * and the port's player (flic.hpp) serves the callers. In the matching
- * build flic_link_names.h gives seven functions the port's names. */
+ * The unit draws through miniwin's DirectDraw (ADR 0007). */
 #include "flic_link_names.h"
 
-#if !defined(LEGORRR_BACKEND_MINIWIN)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,9 +19,7 @@
 
 #include "crt/vc5names.h"
 
-#if defined(_MSC_VER) && _MSC_VER == 1100
-#include <windows.h>
-#endif
+#include <miniwin/windows.h>
 
 #include "images.h"
 #include "flic_unit.h"
@@ -38,11 +33,6 @@
 #endif
 #include "flic_imports.h"
 
-#if defined(_WIN32)
-#define FLIC_STDCALL __stdcall
-#else
-#define FLIC_STDCALL
-#endif
 
 /* Chunk types. */
 #define FLI_CHUNK_COLOUR256 4
@@ -80,132 +70,10 @@ typedef struct Flic_SubChunk {
     short type;                     /* +0x04 */
 } Flic_SubChunk;
 
-/* DirectDraw's RECT, DDCOLORKEY, DDSURFACEDESC2 and DDBLTFX. */
-typedef struct Flic_Rect {
-    int left;
-    int top;
-    int right;
-    int bottom;
-} Flic_Rect;
+#include <miniwin/ddraw.h>
 
-typedef struct Flic_ColourKey {
-    unsigned int low;
-    unsigned int high;
-} Flic_ColourKey;
-
-typedef struct Flic_SurfaceDesc {
-    unsigned int dwSize;            /* +0x00 */
-    unsigned int dwFlags;           /* +0x04 */
-    unsigned int dwHeight;          /* +0x08 */
-    unsigned int dwWidth;           /* +0x0c */
-    unsigned int lPitch;            /* +0x10 */
-    unsigned int dwBackBufferCount; /* +0x14 */
-    unsigned int dwRefreshRate;     /* +0x18 */
-    unsigned int dwAlphaBitDepth;   /* +0x1c */
-    unsigned int dwReserved;        /* +0x20 */
-    void* lpSurface;                /* +0x24 */
-    Flic_ColourKey ddckCKDestOverlay; /* +0x28 */
-    Flic_ColourKey ddckCKDestBlt;   /* +0x30 */
-    Flic_ColourKey ddckCKSrcOverlay; /* +0x38 */
-    Flic_ColourKey ddckCKSrcBlt;    /* +0x40 */
-    unsigned int pfSize;            /* +0x48 ddpfPixelFormat */
-    unsigned int pfFlags;           /* +0x4c */
-    unsigned int pfFourCC;          /* +0x50 */
-    unsigned int pfRGBBitCount;     /* +0x54 */
-    unsigned int pfRBitMask;        /* +0x58 */
-    unsigned int pfGBitMask;        /* +0x5c */
-    unsigned int pfBBitMask;        /* +0x60 */
-    unsigned int pfRGBAlphaBitMask; /* +0x64 */
-    unsigned int dwCaps;            /* +0x68 ddsCaps */
-    unsigned int dwCaps2;           /* +0x6c */
-    unsigned int dwCaps3;           /* +0x70 */
-    unsigned int dwCaps4;           /* +0x74 */
-    unsigned int dwTextureStage;    /* +0x78 */
-} Flic_SurfaceDesc;
-
-typedef struct Flic_BltFx {
-    unsigned int dwSize;            /* +0x00 */
-    unsigned int reserved[19];      /* +0x04 */
-    unsigned int dwFillColor;       /* +0x50 */
-    Flic_ColourKey ddckDestColorkey; /* +0x54 */
-    Flic_ColourKey ddckSrcColorkey; /* +0x5c */
-} Flic_BltFx;
-
-#define DDSD_CAPS 0x00000001
-#define DDSD_HEIGHT 0x00000002
-#define DDSD_WIDTH 0x00000004
-#define DDSCAPS_OFFSCREENPLAIN 0x00000040
-#define DDSCAPS_SYSTEMMEMORY 0x00000800
-#define DDCKEY_SRCBLT 0x00000008
-#define DDLOCK_WAIT 0x00000001
-#define DDBLT_KEYSRC 0x00008000
-#define DDBLT_WAIT 0x01000000
-
-/* IDirectDraw4 and IDirectDrawSurface4, the methods the unit calls. */
-typedef struct Flic_DDrawIface Flic_DDrawIface;
-typedef struct Flic_SurfaceIface Flic_SurfaceIface;
-
-typedef struct Flic_DDrawVtbl {
-    void* QueryInterface;
-    void* AddRef;
-    void* Release;
-    void* Compact;
-    void* CreateClipper;
-    void* CreatePalette;
-    long (FLIC_STDCALL* CreateSurface)(Flic_DDrawIface*, Flic_SurfaceDesc*,
-                                       Flic_SurfaceIface**, void*);
-} Flic_DDrawVtbl;
-
-struct Flic_DDrawIface {
-    const Flic_DDrawVtbl* lpVtbl;
-};
-
-typedef struct Flic_SurfaceVtbl {
-    void* QueryInterface;
-    void* AddRef;
-    void* Release;
-    void* AddAttachedSurface;
-    void* AddOverlayDirtyRect;
-    long (FLIC_STDCALL* Blt)(Flic_SurfaceIface*, Flic_Rect*,
-                             Flic_SurfaceIface*, Flic_Rect*, unsigned int,
-                             Flic_BltFx*);
-    void* BltBatch;
-    void* BltFast;
-    void* DeleteAttachedSurface;
-    void* EnumAttachedSurfaces;
-    void* EnumOverlayZOrders;
-    void* Flip;
-    void* GetAttachedSurface;
-    void* GetBltStatus;
-    void* GetCaps;
-    void* GetClipper;
-    void* GetColorKey;
-    void* GetDC;
-    void* GetFlipStatus;
-    void* GetOverlayPosition;
-    void* GetPalette;
-    void* GetPixelFormat;
-    void* GetSurfaceDesc;
-    void* Initialize;
-    void* IsLost;
-    long (FLIC_STDCALL* Lock)(Flic_SurfaceIface*, Flic_Rect*,
-                              Flic_SurfaceDesc*, unsigned int, void*);
-    void* ReleaseDC;
-    void* Restore;
-    void* SetClipper;
-    long (FLIC_STDCALL* SetColorKey)(Flic_SurfaceIface*, unsigned int,
-                                     Flic_ColourKey*);
-    void* SetOverlayPosition;
-    void* SetPalette;
-    long (FLIC_STDCALL* Unlock)(Flic_SurfaceIface*, Flic_Rect*);
-} Flic_SurfaceVtbl;
-
-struct Flic_SurfaceIface {
-    const Flic_SurfaceVtbl* lpVtbl;
-};
-
-#define lpDD() ((Flic_DDrawIface*)directDrawGlobs.lpDirectDraw)
-#define DirectDraw_bSurf() ((Flic_SurfaceIface*)directDrawGlobs.bSurf)
+#define lpDD() ((IDirectDraw4*)directDrawGlobs.lpDirectDraw)
+#define DirectDraw_bSurf() ((IDirectDrawSurface4*)directDrawGlobs.bSurf)
 
 /* The unit's functions have C linkage in the reference build's C++ compile
  * too. */
@@ -216,9 +84,9 @@ extern "C" {
 // FUNCTION: LEGORR 0x00483c80
 int Flic_Setup(const char* filename, LPFLICSTRUCT* fsp, unsigned int flags)
 {
-    Flic_DDrawIface* dd = lpDD();
-    Flic_ColourKey colourKey;
-    Flic_SurfaceDesc ddsd;
+    IDirectDraw4* dd = lpDD();
+    DDCOLORKEY colourKey;
+    DDSURFACEDESC2 ddsd;
     char buff[128];
     char drive[_MAX_DRIVE];
     char dir[_MAX_DIR];
@@ -237,18 +105,18 @@ int Flic_Setup(const char* filename, LPFLICSTRUCT* fsp, unsigned int flags)
     memset(&ddsd, 0, sizeof(ddsd));
     ddsd.dwSize = sizeof(ddsd);
     ddsd.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
-    ddsd.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
+    ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
     width = (*fsp)->fsHeader.width;
     height = (*fsp)->fsHeader.height;
     ddsd.dwWidth = width;
     ddsd.dwHeight = height;
     (*fsp)->fsXsize = width;
     (*fsp)->fsYsize = height;
-    dd->lpVtbl->CreateSurface(dd, &ddsd, &(*fsp)->fsSurface, NULL);
+    dd->CreateSurface(&ddsd, &(*fsp)->fsSurface, NULL);
 
-    colourKey.low = 0;
-    colourKey.high = 0;
-    (*fsp)->fsSurface->lpVtbl->SetColorKey((*fsp)->fsSurface, DDCKEY_SRCBLT,
+    colourKey.dwColorSpaceLowValue = 0;
+    colourKey.dwColorSpaceHighValue = 0;
+    (*fsp)->fsSurface->SetColorKey(DDCKEY_SRCBLT,
                                            &colourKey);
 
     (*fsp)->userflags = flags;
@@ -352,10 +220,10 @@ int Flic_LoadHeader(const char* filename, LPFLICSTRUCT* fsp)
 int Flic_Animate(LPFLICSTRUCT fsp, const struct Area2F* destArea, int advance,
                  int trans)
 {
-    Flic_SurfaceIface* bSurf = DirectDraw_bSurf();
-    Flic_Rect dest;
-    Flic_SurfaceDesc ddsd;
-    Flic_BltFx bltFX;
+    IDirectDrawSurface4* bSurf = DirectDraw_bSurf();
+    RECT dest;
+    DDSURFACEDESC2 ddsd;
+    DDBLTFX bltFX;
     int ok;
 
     dest.left = (int)destArea->x;
@@ -366,11 +234,11 @@ int Flic_Animate(LPFLICSTRUCT fsp, const struct Area2F* destArea, int advance,
     ok = 0;
     memset(&ddsd, 0, sizeof(ddsd));
     ddsd.dwSize = sizeof(ddsd);
-    fsp->fsSurface->lpVtbl->Lock(fsp->fsSurface, NULL, &ddsd, DDLOCK_WAIT,
+    fsp->fsSurface->Lock(NULL, &ddsd, DDLOCK_WAIT,
                                  NULL);
     fsp->fsSPtr = ddsd.lpSurface;
     fsp->fsPitch = ddsd.lPitch;
-    fsp->is15bit = (ddsd.pfGBitMask == 0x3e0);
+    fsp->is15bit = (ddsd.ddpfPixelFormat.dwGBitMask == 0x3e0);
 
     if (fsp->currentframe == 0) advance = 1;
     if (advance) {
@@ -378,13 +246,13 @@ int Flic_Animate(LPFLICSTRUCT fsp, const struct Area2F* destArea, int advance,
         else ok = Flic_Load(fsp);
     }
 
-    fsp->fsSurface->lpVtbl->Unlock(fsp->fsSurface, NULL);
+    fsp->fsSurface->Unlock(NULL);
 
     memset(&bltFX, 0, sizeof(bltFX));
     bltFX.dwSize = sizeof(bltFX);
     bltFX.dwFillColor = 0xff00;
-    bSurf->lpVtbl->Blt(bSurf, &dest, fsp->fsSurface, NULL,
-                       (trans ? DDBLT_KEYSRC : 0) | DDBLT_WAIT, &bltFX);
+    bSurf->Blt(&dest, fsp->fsSurface, NULL,
+                       (trans ? DDBLT_KEYSRC : (DDBltFlags)0) | DDBLT_WAIT, &bltFX);
 
     return !ok;
 }
@@ -1020,4 +888,3 @@ int Flic_GetHeight(LPFLICSTRUCT fsp)
 }
 #endif
 
-#endif /* !LEGORRR_BACKEND_MINIWIN */

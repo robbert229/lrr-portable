@@ -1460,7 +1460,7 @@ int weapons_object_update_weapons(Weapons_Object* obj, float elapsed)
  * passes, which Ghidra merged into the preceding function. It clears an
  * object's laser hit reference to the object being removed. */
 // FUNCTION: LEGORR 0x00472060
-int weapons_callback_remove_lazer_hit_reference(Weapons_Object* obj, Weapons_Object* removed)
+extern "C" int weapons_callback_remove_lazer_hit_reference(Weapons_Object* obj, Weapons_Object* removed)
 {
     if (obj->lazerHitObject == removed) obj->lazerHitObject = NULL;
     return 0;

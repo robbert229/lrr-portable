@@ -17,13 +17,13 @@ extern "C" {
 typedef struct AviMovie AviMovie;
 #endif
 
-struct tagRECT;
+struct RECT;
 
 void avi_initialise(void* directDraw);                         /* 0047ec80 */
 AviMovie* avi_load(char* fName);                               /* 0047ec90 */
 int avi_update(AviMovie* anim);                                /* 0047ecf0 */
 void avi_blit_to_back_buffer(AviMovie* anim,
-                             struct tagRECT* destRect);         /* 0047ed00 */
+                             struct RECT* destRect);         /* 0047ed00 */
 void avi_set_time(AviMovie* anim, unsigned long time);         /* 0047ed40 */
 unsigned long avi_get_time(AviMovie* anim);                    /* 0047ed50 */
 unsigned long avi_get_length(AviMovie* anim);                  /* 0047ed60 */

@@ -177,7 +177,6 @@ int vehicle_set_activity(VehicleModel* vehicle, const char* activityName,
     return result;
 }
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: activityName is an objectGlobs field (004de790 +0x534,
  * legoobject_globs.h, finding 662). objectGlobs is declared here, without
  * its struct, just before the one function that reads it, so the symbol
@@ -186,7 +185,6 @@ int vehicle_set_activity(VehicleModel* vehicle, const char* activityName,
 extern struct LegoObject_Globs objectGlobs;
 #undef s_activity
 #define s_activity ((const char**)((char*)&objectGlobs + 0x534))
-#endif
 /* Hang each shown upgrade part on its null and set its activity, and record
  * the weapon parts' fire and pivot nulls. Building.c's
  * Building_SetUpgradeActivity (004083a0) is the same code. */
@@ -606,24 +604,10 @@ void vehicle_hide(VehicleModel* vehicle, int hide)
  * (finding 590). Container.c's 00473ba0 (`>> 3`) has the same shape and is
  * naked asm too. */
 // FUNCTION: LEGORR 0x0046d330
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) unsigned int vehicle_is_hidden(VehicleModel* vehicle)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 1e8h]
-        and eax, 0ffh
-        shr eax, 1
-        and eax, 1
-        ret
-    }
-}
-#else
 unsigned int vehicle_is_hidden(VehicleModel* vehicle)
 {
     return (vehicle->flags & 0xff) >> 1 & 1;
 }
-#endif
 
 // FUNCTION: LEGORR 0x0046d350
 void vehicle_set_orientation(VehicleModel* vehicle, float xDir, float yDir,

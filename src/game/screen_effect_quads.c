@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <SDL3/SDL_timer.h>
 
 #include "crt/vc5names.h"
 #include "gods98/winmm.h"
@@ -99,7 +100,7 @@ void credits_play(const char* textFile, struct TextureSurface* font,
     lineCount = 0;
     scroll = 0;
     quit = FALSE;
-    lastTime = timeGetTime();
+    lastTime = (DWORD)SDL_GetTicks(); // [library:time]
     destRect.left = 0;
     destRect.top = 0;
     destRect.right = s_display_w;
@@ -133,15 +134,15 @@ void credits_play(const char* textFile, struct TextureSurface* font,
 
             avi_update(avi);
             if (avi_get_time(avi) >= avi_get_length(avi)) avi_set_time(avi, 0);
-            avi_blit_to_back_buffer(avi, (struct tagRECT*)&destRect);
+            avi_blit_to_back_buffer(avi, (struct RECT*)&destRect);
 
-            if (timeGetTime() - lastTime > 33) {
+            if ((DWORD)SDL_GetTicks() - lastTime > 33) { // [library:time]
                 if (++scroll == fontHeight) {
                     scroll = 0;
                     if (currLine++ == lineCount) currLine = -linesOnScreen;
                 }
                 lastTime += 33;
-                if (lastTime < timeGetTime()) lastTime = timeGetTime();
+                if (lastTime < (DWORD)SDL_GetTicks()) lastTime = (DWORD)SDL_GetTicks(); // [library:time]
             }
 
             for (line = currLine; line < lineCount; line++) {

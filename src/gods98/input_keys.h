@@ -12,9 +12,7 @@
 extern "C" {
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #include "gods98/input_key_names.h"
-#endif
 extern uint8_t s_global_current_keys[256];  /* DAT_0076ab80 */
 extern uint8_t s_global_previous_keys[256]; /* DAT_0076aa00 */
 

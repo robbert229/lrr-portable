@@ -35,7 +35,7 @@ SpiderWeb_Globs spiderWebGlobs;
 #define SPIDERWEB_BLOCK(bx, by) \
     spiderWebGlobs.webBlocks[spiderWebGlobs.level->width * (by) + (bx)]
 #define SPIDERWEB_LEVEL_BLOCK(bx, by)                                  \
-    LEGO_LEVEL_PTR(Lego_Block, spiderWebGlobs.level->blocks)            \
+    spiderWebGlobs.level->blocks            \
         [spiderWebGlobs.level->width * (by) + (bx)]
 
 // FUNCTION: LEGORR 0x004661c0
@@ -75,7 +75,7 @@ int spiderweb_spawn_at(int bx, int by)
     if (!(SPIDERWEB_BLOCK(bx, by).flags & SPIDERWEB_FLAG_WEB)) {
         if (spiderweb_get_angle(bx, by, &theta)) {
             terrain_map_block_to_world(
-                LEGO_LEVEL_PTR(TerrainMap, spiderWebGlobs.level->map), bx, by,
+                spiderWebGlobs.level->map, bx, by,
                 &wPos.x, &wPos.y);
             webObj = legoobject_create_in_world(legoGlobs_contSpiderWeb, 0xc,
                                                 0, 0, wPos.x, wPos.y, theta);
@@ -133,7 +133,7 @@ int spiderweb_check_collision(Lego_Object* liveObj)
     if (legoobject_position_to_terrain_cell(liveObj, &bx, &by)) {
         if (SPIDERWEB_BLOCK(bx, by).flags & SPIDERWEB_FLAG_WEB) {
             terrain_map_block_to_world(
-                LEGO_LEVEL_PTR(TerrainMap, spiderWebGlobs.level->map), bx, by,
+                spiderWebGlobs.level->map, bx, by,
                 &wPos[0], &wPos[1]);
             legoobject_surface_vector_normalize(SPIDERWEB_BLOCK(bx, by).webObj,
                                                 faceDir);

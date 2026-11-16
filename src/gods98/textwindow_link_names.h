@@ -22,7 +22,6 @@
 #ifndef LEGORRR_GODS98_TEXTWINDOW_LINK_NAMES_H
 #define LEGORRR_GODS98_TEXTWINDOW_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define text_window_create text_buffer_create /* 004850f0 */
 #define text_window_enable_centering text_output_field82c_bit2_set_clear /* 00485160 */
 #define text_window_remove text_buffer_destroy_target /* 00485190 */
@@ -36,6 +35,5 @@
 #define text_window_update_overlay text_wrap_measure_and_draw_lines /* 00485710 */
 #define text_window_clear text_buffer_reset_target /* 004859b0 */
 #define text_window_get_info object_state_pair_get_target /* 00485a00 */
-#endif
 
 #endif /* LEGORRR_GODS98_TEXTWINDOW_LINK_NAMES_H */

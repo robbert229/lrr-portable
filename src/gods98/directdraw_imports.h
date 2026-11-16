@@ -24,8 +24,9 @@ void renderer_window_mode_apply(int fullscreen, int x, int y,
  * screen flag. The declaration keeps the native model's parameter types
  * (surface.hpp), which the C boundary test checks; directdraw_setup passes
  * the original's arguments in those slots. */
-int direct3drm_device_initialize(void* adapter, unsigned int adapter_flags,
-                                 void* surface, int force_single_mode); /* 004781d0 */
+int direct3drm_device_initialize(struct DirectDraw_Device* dev, void* ddraw1,
+                                 struct IDirectDrawSurface4* backSurf,
+                                 int doubleBuffered);                 /* 004781d0 */
 
 /* DAT_00505918: Main.c's IDirect3DRMDevice3 (lpDevice()). The stand-in that
  * Viewports.c also reads (viewports_imports.h); viewports_port.cpp defines

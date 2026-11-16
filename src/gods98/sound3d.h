@@ -50,7 +50,7 @@ void simtick_sound_keepalive(struct EngineContext* c);
 /* Sound3D_Play2 (FUN_0047ad70): play a sample attached to a frame (mode
  * 0), at a world position (mode 1) or without 3D (mode 2); returns the
  * sound handle (slot * 3 + buffer) or -1. */
-int s_play_seam(int mode, int position, int slot, int loop,
+int s_play_seam(int mode, intptr_t position, int slot, int loop,
                 const float* xyz);
 
 /* Sound3D_SetVolume / Sound3D_GetVolume (FUN_0047b050, FUN_0047b0d0). */

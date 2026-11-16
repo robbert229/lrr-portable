@@ -7,12 +7,12 @@
 #ifndef LEGORRR_GAME_PANEL_MATHS_H
 #define LEGORRR_GAME_PANEL_MATHS_H
 
-static __inline float panel_vector2d_modulus(const Point2F* v)
+static inline float panel_vector2d_modulus(const Point2F* v)
 {
     return (float)sqrt(v->x * v->x + v->y * v->y);
 }
 
-static __inline Point2F* panel_vector2d_scale(Point2F* r, const Point2F* a,
+static inline Point2F* panel_vector2d_scale(Point2F* r, const Point2F* a,
                                               float f)
 {
     r->x = a->x * f;
@@ -20,12 +20,12 @@ static __inline Point2F* panel_vector2d_scale(Point2F* r, const Point2F* a,
     return r;
 }
 
-static __inline Point2F* panel_vector2d_normalise(Point2F* v)
+static inline Point2F* panel_vector2d_normalise(Point2F* v)
 {
     return panel_vector2d_scale(v, v, 1.0f / panel_vector2d_modulus(v));
 }
 
-static __inline Point2F* panel_vector2d_set_length(Point2F* v, float length)
+static inline Point2F* panel_vector2d_set_length(Point2F* v, float length)
 {
     return panel_vector2d_scale(v, panel_vector2d_normalise(v), length);
 }

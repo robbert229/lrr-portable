@@ -17,9 +17,7 @@ extern "C" {
  * adapter: it loads nothing and returns NULL (finding 549). In the matching
  * build the callers call legoobject_unit.c's original, whose contract this
  * is (issue #730, finding 638). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define mesh_lod_load legoobject_poly_variant_section_model_build /* 0044a7d0 */
-#endif
 ModelEntryRecord* mesh_lod_load(BlockFile* config, const char* gameName,
                                 const char* filename, int lod,
                                 unsigned int count);

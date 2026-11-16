@@ -10,7 +10,7 @@
 #define LEGORRR_GAME_REWARD_MATHS_H
 
 /* An item's percentage of its total, at most 100. */
-static __inline void reward_item_percent(RewardLevelItem* item)
+static inline void reward_item_percent(RewardLevelItem* item)
 {
     item->percent = (item->total != 0.0f) ? (100.0f / item->total) * item->actual : 100.0f;
     item->percent = (item->percent > 100.0f) ? 100.0f : item->percent;

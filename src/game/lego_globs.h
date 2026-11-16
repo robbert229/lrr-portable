@@ -143,8 +143,8 @@ struct Lego_Globs {
     int field_380;                           /* +0x380 00556440 legoGlobs_f_556440 */
     int field_384;                           /* +0x384 00556444 legoGlobs_f_556444 */
     int field_388;                           /* +0x388 00556448 legoGlobs_f_556448 */
-    uint32_t field_38c;                      /* +0x38c 0055644c legoGlobs_f_55644c */
-    uint32_t field_390;                      /* +0x390 00556450 legoGlobs_f_556450 */
+    void* field_38c;                         /* +0x38c 0055644c legoGlobs_f_55644c */
+    void* field_390;                         /* +0x390 00556450 legoGlobs_f_556450 */
     void* field_394;                         /* +0x394 00556454 legoGlobs_f_556454 (Lego_Object*) */
     float MinEnergyForEat;                   /* +0x398 00556458 legoGlobs_MinEnergyForEat */
     void* TutorialIcon;                      /* +0x39c 0055645c legoGlobs_TutorialIcon (Image*) */
@@ -360,7 +360,6 @@ extern struct Lego_Globs legoGlobs;
  * currLevel is void* to the C units (no struct tag to declare) and the
  * port's struct LevelState* to the C++ port files; the field stays a plain
  * member access, as the units' and the port's inline asm need. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define LEGO_GLOBS_CURRLEVEL legoGlobs.currLevel
 #define s_engine_config_root legoGlobs.gameName
 #define g_active_level_retail LEGO_GLOBS_CURRLEVEL
@@ -409,7 +408,6 @@ extern struct Lego_Globs legoGlobs;
 #define s_position_handle legoGlobs.field_e7c
 #define DAT_00556f50 legoGlobs.CreditsTextFile
 #define DAT_00556f54 legoGlobs.CreditsBackAVI
-#endif
 
 #ifdef __cplusplus
 }

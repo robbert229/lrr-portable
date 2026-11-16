@@ -21,7 +21,7 @@ extern "C" {
 #endif
 
 struct Area2F;
-struct Flic_SurfaceIface;
+struct IDirectDrawSurface4;
 struct File;
 
 /* FLICSTRUCT userflags (+0x000). */
@@ -65,7 +65,7 @@ typedef struct FLICSTRUCT {
     int ringframe;                  /* +0x630 the loop position */
     int pointerposition;            /* +0x634 the file position */
     unsigned int fsPitch;           /* +0x638 */
-    struct Flic_SurfaceIface* fsSurface; /* +0x63c */
+    struct IDirectDrawSurface4* fsSurface; /* +0x63c */
     Flic_Header fsHeader;           /* +0x640 */
     struct File* filehandle;        /* +0x6c8 Files.c's File */
     void* fsSPtr;                   /* +0x6cc the locked surface's pixels */

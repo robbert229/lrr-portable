@@ -32,14 +32,8 @@ struct LevelState* level_current_owner_get(void); /* 00431560 Lego_GetLevel */
  * does; the native C++ compile goes through lego_port.cpp's adapter (as
  * weapons_imports.h). */
 void* level_current_terrain_get(int cell_x, int cell_y);          /* 00431570 */
-void* level_current_terrain_get_original(void);
-#ifdef __cplusplus
 #define EFFECT_LEGO_GET_MAP() \
-    ((TerrainMap*)level_current_terrain_get_original())
-#else
-#define EFFECT_LEGO_GET_MAP() \
-    ((TerrainMap*)((void* (*)())level_current_terrain_get)())
-#endif
+    ((TerrainMap*)level_current_terrain_get(0, 0))
 
 /* GAME-023 LegoObject.c (legoobject_unit.h, entity.hpp). */
 void legoobject_spatial_callback_query_at_optional_coordinate(
@@ -48,9 +42,7 @@ void legoobject_transform_position_get(struct Lego_Object* obj, float* outX,
                                        float* outY);             /* 00442260 */
 /* In the matching build 0044a200 is legoobject_unit.c's (GAME-023 part 3,
  * issue #615); one declaration either way. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define entity_type_component_get legoobject_type_component_get
-#endif
 void* entity_type_component_get(const void* entity_record);      /* 0044a200 */
 
 /* gods98 Container.c (view.hpp). */

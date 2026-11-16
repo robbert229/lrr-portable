@@ -24,7 +24,6 @@
 #ifndef LEGORRR_GODS98_CONTAINER_LINK_NAMES_H
 #define LEGORRR_GODS98_CONTAINER_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* AnimClone.c's functions, by their matching-build names
  * (animclone_link_names.h). */
 #define anim_clone_remove scene_object_owner_link_release /* 00489750 */
@@ -100,6 +99,5 @@
 #define Container_SetParent ddiscene_scene_object_attach_or_unlink /* 00475710 */
 #define Container_GetTransCoef typed_child_resource_scalar_get /* 004757f0 */
 #define Container_Frame_SetAppData ddiscene_animation_hook_create /* 00475f70 */
-#endif
 
 #endif /* LEGORRR_GODS98_CONTAINER_LINK_NAMES_H */

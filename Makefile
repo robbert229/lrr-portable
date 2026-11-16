@@ -5,8 +5,9 @@ SHELL := /bin/bash
 BUILD_DIR ?= build
 WAD_DIR ?= $(CURDIR)/reference
 CMAKE_TOOLCHAIN_FILE ?=
-TEST_WADS_DIR ?=
-MOVIES ?= auto
+# The shipped exe's flags: -best picks a display mode without the
+# mode-selection dialog, which miniwin cannot show.
+RUN_ARGS ?= -best -window
 # The shipped game, run under the A.2 harness (tools/compat/README.md).
 REFERENCE_DIR ?= $(CURDIR)/reference
 PROTON_BIN ?= $(RR_A2_PROTON)
@@ -20,7 +21,7 @@ all: build
 # CMake. An existing build directory is reconfigured in place.
 setup:
 	tools/setup-miniwin.sh
-	cmake -S . -B "$(BUILD_DIR)" -DMOVIES="$(MOVIES)" -DTEST_WADS_DIR="$(TEST_WADS_DIR)" $(if $(CMAKE_TOOLCHAIN_FILE),-DCMAKE_TOOLCHAIN_FILE="$(CMAKE_TOOLCHAIN_FILE)",)
+	cmake -S . -B "$(BUILD_DIR)" $(if $(CMAKE_TOOLCHAIN_FILE),-DCMAKE_TOOLCHAIN_FILE="$(CMAKE_TOOLCHAIN_FILE)",)
 
 build: setup
 	cmake --build "$(BUILD_DIR)" --target program
@@ -30,7 +31,7 @@ test: setup
 	ctest --test-dir "$(BUILD_DIR)" --output-on-failure
 
 run: build
-	LEGORRR_WAD_DIR="$(WAD_DIR)" "$(BUILD_DIR)/LegoRR"
+	cd "$(WAD_DIR)" && "$(abspath $(BUILD_DIR))/LegoRR" $(RUN_ARGS)
 
 clean:
 	cmake --build "$(BUILD_DIR)" --target clean

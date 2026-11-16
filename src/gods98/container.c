@@ -976,24 +976,10 @@ void Container_Hide(Container* cont, int hide)
  * the flags or of the shifted flags, a byte local and `!= 0` forms all
  * compile without it (25% or 50%). The port's naked body (100%) stays. */
 // FUNCTION: LEGORR 0x00473ba0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int Container_IsHidden(Container* cont)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 14h]
-        and eax, 0ffh
-        shr eax, 3
-        and eax, 1
-        ret
-    }
-}
-#else
 int Container_IsHidden(Container* cont)
 {
     return (cont->flags & CONTAINER_FLAG_HIDDEN) ? 1 : 0;
 }
-#endif
 
 // FUNCTION: LEGORR 0x00473bc0
 Container* Container_SearchTree(Container* root, const char* name, int mode,
@@ -1254,8 +1240,8 @@ LPDIRECTDRAWSURFACE4 Container_LoadTextureSurface(const char* fname,
                                             NULL) == DD_OK) {
                                         if (origDesc.ddpfPixelFormat.dwRGBBitCount == 16) {
                                             directdraw_blt_8_to_16(
-                                                (struct DirectDrawSurfaceIface*)surface,
-                                                (struct DirectDrawSurfaceIface*)tempSurface,
+                                                (struct IDirectDrawSurface4*)surface,
+                                                (struct IDirectDrawSurface4*)tempSurface,
                                                 image.palette);
                                         }
                                         tempSurface->Release();
@@ -1270,7 +1256,7 @@ LPDIRECTDRAWSURFACE4 Container_LoadTextureSurface(const char* fname,
                                         LPPALETTEENTRY pal =
                                             (LPPALETTEENTRY)image.palette;
                                         decalColour = directdraw_get_colour(
-                                            (struct DirectDrawSurfaceIface*)surface,
+                                            (struct IDirectDrawSurface4*)surface,
                                             (pal[decalColour].peRed << 16) |
                                                 (pal[decalColour].peGreen << 8) |
                                                 pal[decalColour].peBlue);

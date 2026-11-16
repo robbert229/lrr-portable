@@ -26,7 +26,6 @@
 #ifndef LEGORRR_GAME_VEHICLE_MODEL_LINK_NAMES_H
 #define LEGORRR_GAME_VEHICLE_MODEL_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define vehicle_set_upgrade_activity scene_channel_slots_rebuild /* 0046c510 */
 #define vehicle_load lego_vehicle_load_adapter /* 0046c6f0 */
 #define vehicle_remove entity_payload_type1_release /* 0046ce10 */
@@ -49,6 +48,5 @@
 #define vehicle_get_driver_null scene_resource_cached_slot_c0_get /* 0046daf0 */
 #define vehicle_get_carry_null attached_entity_slot_object_get /* 0046db20 */
 #define vehicle_get_carry_null_frames object_record_field11c_get /* 0046db60 */
-#endif
 
 #endif /* LEGORRR_GAME_VEHICLE_MODEL_LINK_NAMES_H */

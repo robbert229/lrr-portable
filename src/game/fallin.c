@@ -49,8 +49,8 @@ static unsigned int fallinCaveInLimit = 4;
 static float fallinTimer;
 
 #define FALLIN_BLOCK(level, bx, by) \
-    (LEGO_LEVEL_PTR(Lego_Block, (level)->blocks)[(by) * (level)->width + (bx)])
-#define FALLIN_MAP(level) LEGO_LEVEL_PTR(struct TerrainMap, (level)->map)
+    (((level)->blocks)[(by) * (level)->width + (bx)])
+#define FALLIN_MAP(level) ((level)->map)
 
 // FUNCTION: LEGORR 0x0040f0e0
 void fallin_update(float elapsedGame)

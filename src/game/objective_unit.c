@@ -54,12 +54,8 @@ typedef struct Objective_Globs {
 /* Defined at the end of the file, after the storage before it. */
 extern Objective_Globs objectiveGlobs;
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Input.c's INPUT.lClicked (0076ab48): a field of inputGlobs. */
 #include "gods98/input_globs.h"
-#else
-uint32_t s_window_mouse_word_48;
-#endif
 
 // FUNCTION: LEGORR 0x004574e0
 void objective_load_objective_text(struct BlockRec* config,
@@ -604,7 +600,7 @@ status_read:
                 "Stream_Objective%s%s%s", statusName,
                 // STRING: LEGORR 0x004a8268
                 useLevelName ? "_" : "",
-                useLevelName ? LEGO_LEVEL_PTR(char, level->name) : "");
+                useLevelName ? level->name : "");
         if (objectiveGlobs.soundName) free(objectiveGlobs.soundName);
         objectiveGlobs.soundName = string_duplicate(buff);
         objectiveGlobs.soundHandle = -1;

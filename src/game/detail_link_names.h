@@ -30,7 +30,6 @@
 #ifndef LEGORRR_GAME_DETAIL_LINK_NAMES_H
 #define LEGORRR_GAME_DETAIL_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define detail_load_texture_set terrain_cell_resource_grid_load            /* 0040b310 */
 #define detail_free_texture_set terrain_cell_resource_grid_dispose         /* 0040b410 */
 #define detail_get_block_screen_area lego_projected_quad_area_adapter      /* 0040b470 */
@@ -39,6 +38,5 @@
 #define detail_reset_all lego_detail_mesh_resources_clear_adapter          /* 0040b810 */
 #define detail_get_texture packed_grid_cell_value_get                      /* 0040b850 */
 #define detail_add_block scene_cell_visual_channels_apply                  /* 0040b880 */
-#endif
 
 #endif /* LEGORRR_GAME_DETAIL_LINK_NAMES_H */

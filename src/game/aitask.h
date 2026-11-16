@@ -361,10 +361,10 @@ int aitask_entity_pool_callback_search(int (*callback)(AITask* task, void* data)
                                        void* data);
 
 /* FUN_004065d0 (renderer_global_dword_get). */
-unsigned int renderer_global_dword_get(void);
+struct IDirectDraw4* renderer_global_dword_get(void);
 
 /* FUN_004065e0 (render_surface_secondary_get). */
-unsigned int render_surface_secondary_get(void);
+struct IDirectDrawSurface4* render_surface_secondary_get(void);
 
 /* FUN_004021f0 (callback or merged entry). */
 int aitask_callback_004021f0(AITask* task, void* data);

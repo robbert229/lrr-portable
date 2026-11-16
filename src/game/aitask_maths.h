@@ -6,13 +6,13 @@
  * stack slot, as the out-of-line copy at 0x00401240 does (finding 675).
  * Only aitask.c includes this file, after AITaskPoint2F.
  *
- * It is a static __inline function, not a macro: as a macro the expansion
+ * It is a static inline function, not a macro: as a macro the expansion
  * compiles differently (finding 544). In a header it adds no Reccmp lint
  * debt. */
 #ifndef LEGORRR_GAME_AITASK_MATHS_H
 #define LEGORRR_GAME_AITASK_MATHS_H
 
-static __inline float aitask_vector2d_distance(const AITaskPoint2F* a,
+static inline float aitask_vector2d_distance(const AITaskPoint2F* a,
                                                const AITaskPoint2F* b)
 {
     return (float)sqrt((a->x - b->x) * (a->x - b->x) + (a->y - b->y) * (a->y - b->y));

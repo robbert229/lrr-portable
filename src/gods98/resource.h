@@ -17,9 +17,7 @@
  * instead, whose contract theirs is (finding 583). A macro renames the
  * declaration and the calls one for one: the symbol numbering does not
  * change. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define read_whole_file file_load_binary
-#endif
 
 #ifdef __cplusplus
 extern "C" {

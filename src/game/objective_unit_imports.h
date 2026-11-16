@@ -29,15 +29,7 @@ struct LevelState;
 extern int s_display_w;                     /* 00505924 appWidth */
 extern int s_display_h;                     /* 00505928 appHeight */
 extern int32_t s_application_mode;          /* 00505f88 programmerLevel */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #include "gods98/input_globs.h"
-#else
-extern uint32_t s_renderer_word_a;          /* 0076ab24 msx */
-extern uint32_t s_renderer_word_b;          /* 0076ab28 msy */
-extern uint32_t g_renderer_word_c;          /* 0076ab3c mslb */
-extern uint32_t s_window_mouse_word_40;     /* 0076ab40 msrb */
-extern uint32_t s_window_mouse_word_4c;     /* 0076ab4c */
-#endif
 
 /* GAME-021 Lego.c's legoGlobs fields (the port's globals; lego_unit.h has
  * the unit's stand-ins). */
@@ -79,10 +71,8 @@ int nerpfunc_set_objective_switch(unsigned int* stack);           /* 004567c0 */
  * objectrecall.c's functions (#749, finding 648):
  * object-like aliases before each name's only declaration, so the symbol
  * counter does not move. 00459360 returns an int that this unit ignores. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 #define objective_osf_store_adapter object_recall_snapshot
 #define objective_osf_restore_adapter object_recall_restore
-#endif
 void objective_osf_store_adapter(void);                           /* 004592e0 */
 void objective_osf_restore_adapter(void);                         /* 00459360 */
 /* GAME-037 Reward.c (reward.c). */
@@ -109,14 +99,12 @@ void tooltip_activate(int toolTipType);                           /* 0046b770 */
 void main_loop_frame_pump(int force);                             /* 00477f30 */
 /* gods98 Sound3D.c (sound3d.c). */
 int sound_stream_stop_and_release(int stream_index);              /* 0047ba20 */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Images.c is images_unit.c in the matching build (finding 632): the
  * C callers' calls go to the unit (images_link_names.h). */
 #define image_surface_release Image_Remove /* 0047d470 */
 #define resource_record_add_ref Image_SetPenZeroTrans /* 0047dbc0 */
 #define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
 #define objective_image_get_screenshot_adapter Image_GetScreenshot /* 0047e300 */
-#endif
 /* gods98 Images.c (images_unit.cpp, images.h). */
 void image_surface_release(void* record);                         /* 0047d470 */
 void resource_record_add_ref(void* record);                       /* 0047dbc0 */

@@ -15,14 +15,14 @@ extern "C" {
 #endif
 
 struct G98CMovie;
-struct tagRECT;
+struct RECT;
 
 struct G98CMovie* movie_load(const char* fName);              /* 00472560 */
 void movie_get_size(struct G98CMovie* mov, unsigned int* width,
                     unsigned int* height);                     /* 00472670 */
 unsigned int movie_get_duration(struct G98CMovie* mov);        /* 004726c0 */
 int movie_update(struct G98CMovie* mov, float speed,
-                 struct tagRECT* destRect);                    /* 004726d0 */
+                 struct RECT* destRect);                    /* 004726d0 */
 void movie_free(struct G98CMovie* mov);                        /* 004726f0 */
 
 #ifdef __cplusplus

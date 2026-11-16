@@ -56,7 +56,7 @@ void water_initialise(void* contRoot, Lego_Level* level)
     for (by = 0; by < level->height; by++) {
         bxStart = bxEnd = 0;
         for (bx = 0; bx < level->width; bx++) {
-            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by * level->width) + bx].f_02 == 7) {
+            if (level->blocks[(by * level->width) + bx].f_02 == 7) {
                 if (bxStart == bxEnd) bxStart = bx;
                 bxEnd = bx + 1;
             } else {
@@ -114,7 +114,7 @@ void water_init_entries(void* contRoot, Lego_Level* level)
                 x = (int)(offsets[d].x + pool->points[j].x);
                 y = (int)(pool->points[j].y + offsets[d].y);
                 if (x >= 0 && x < (int)level->width && y >= 0 && y < (int)level->height) {
-                    terrain = LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(y * (int)level->width) + x].f_02;
+                    terrain = level->blocks[(y * (int)level->width) + x].f_02;
                     if (terrain != 7 && terrain != 1) {
                         pool->entries[pool->entryCount].pointIndex = j;
                         pool->entries[pool->entryCount].direction = d;
@@ -147,13 +147,13 @@ void water_init_vertices(void* contRoot, Lego_Level* level)
         pool->startLevel = -10000.0f;
         for (j = 0; j < pool->pointCount; j++) {
             terrain_map_block_vertices_get(
-                (TerrainMap*)LEGO_LEVEL_PTR(void, level->map),
+                (TerrainMap*)level->map,
                 (int)pool->points[j].x, (int)pool->points[j].y, vertPos);
             /* The four blocks around the vertex: predug (f_00) 0 is a wall. */
             for (k = 0; k < 4; k++) {
                 int bx = (int)(pool->points[j].x + offsets[k].x);
                 int by = (int)(pool->points[j].y + offsets[k].y);
-                if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by * level->width) + bx].f_00 == 0) {
+                if (level->blocks[(by * level->width) + bx].f_00 == 0) {
                     if (vertPos[k].z > pool->startLevel) pool->startLevel = vertPos[k].z;
                 } else {
                     pool->flags |= WATER_FLAG_VISIBLE;
@@ -169,7 +169,7 @@ void water_init_vertices(void* contRoot, Lego_Level* level)
                                                    (const unsigned short*)faceData);
             scene_mesh_color_and_alpha_set(pool->mesh, group, 0.0f, 0.3f, 0.8f, 0.6f);
             terrain_map_block_vertices_get(
-                (TerrainMap*)LEGO_LEVEL_PTR(void, level->map),
+                (TerrainMap*)level->map,
                 (int)pool->points[j].x, (int)pool->points[j].y, vertPos);
             for (k = 0; k < 4; k++) {
                 vertices[k].position.x = vertPos[k].x;
@@ -216,7 +216,7 @@ void water_destroy_wall_complete(Lego_Level* level, int bx, int by)
         entry->spread = 0.0f;
         entry->recede = 0.0f;
         terrain_map_block_vertices_get(
-            (TerrainMap*)LEGO_LEVEL_PTR(void, level->map),
+            (TerrainMap*)level->map,
             (int)point->x, (int)point->y, vertPos);
         a = -vertPos[pairs[entry->direction][0]].z;
         b = -vertPos[pairs[entry->direction][1]].z;
@@ -320,23 +320,23 @@ void water_update_flow_blocks(Lego_Level* level, float elapsedGame)
         for (j = 0; j < pool->entryCount; j++) {
             WaterEntry* entry = &pool->entries[j];
             terrain_map_block_vertices_get(
-                (TerrainMap*)LEGO_LEVEL_PTR(void, level->map),
+                (TerrainMap*)level->map,
                 (int)pool->points[entry->pointIndex].x,
                 (int)pool->points[entry->pointIndex].y, vertPos);
             p = water_flow_point(&pos, &vertPos[pairs[entry->direction][0]],
                              &vertPos[pairs[entry->direction][1]],
                              &dirs[entry->direction], entry->spread);
-            terrain_map_world_to_block((TerrainMap*)LEGO_LEVEL_PTR(void, level->map), p->x, p->y, &bx, &by);
+            terrain_map_world_to_block((TerrainMap*)level->map, p->x, p->y, &bx, &by);
             lego_terrain_cell_edge_flag_set_and_update(level, bx, by, 1);
 
             terrain_map_block_vertices_get(
-                (TerrainMap*)LEGO_LEVEL_PTR(void, level->map),
+                (TerrainMap*)level->map,
                 (int)pool->points[entry->pointIndex].x,
                 (int)pool->points[entry->pointIndex].y, vertPos);
             p = water_flow_point(&pos, &vertPos[pairs[entry->direction][0]],
                              &vertPos[pairs[entry->direction][1]],
                              &dirs[entry->direction], entry->recede);
-            terrain_map_world_to_block((TerrainMap*)LEGO_LEVEL_PTR(void, level->map), p->x, p->y, &bx, &by);
+            terrain_map_world_to_block((TerrainMap*)level->map, p->x, p->y, &bx, &by);
             lego_terrain_cell_edge_flag_set_and_update(level, bx, by, 0);
         }
     }

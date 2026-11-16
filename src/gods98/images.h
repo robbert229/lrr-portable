@@ -39,12 +39,10 @@ typedef struct Image {
     struct Image* nextFree; /* +0x1c the free list; itself when in use */
 } Image;
 
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Images.c is images_unit.c in the matching build (finding 632): the
  * C callers' calls go to the unit (images_link_names.h). */
 #define image_load_bmp_scaled Image_LoadBMPScaled /* 0047d9d0 */
 #define image_display_scaled Image_DisplayScaled /* 0047dcb0 */
-#endif
 /* Image_LoadBMPScaled (FUN_0047d9d0): load a bitmap resource. Port adapter:
  * a non-zero width or height asks the original to scale; the port ignores
  * it (every converted caller passes 0, 0). NULL when the load fails. */

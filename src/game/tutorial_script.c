@@ -3686,12 +3686,10 @@ int nerpfunc_get_crystals_currently_stored(unsigned int* stack)
  * its own definition, so the gods98 tests that call it do not pull this
  * unit (and its gods98 callees) in after the last gods98 pass of the link. */
 // FUNCTION: LEGORR 0x00456210
-#if defined(_MSC_VER) && defined(_M_IX86)
 uint32_t flh_magic_uu_noop(void)
 {
     return 0;
 }
-#endif
 
 // FUNCTION: LEGORR 0x00456220
 int nerpfunc_get_ore_picked_up(unsigned int* stack)
@@ -4030,9 +4028,7 @@ int nerpfunc_set_message(unsigned int* stack)
     if (nerpfunc_get_message_wait(NULL)) {
         /* The native port has no DirectDraw.c (finding 596); its frame
          * loop presents the frame. */
-#if !defined(LEGORRR_BACKEND_MINIWIN)
         directdraw_flip();
-#endif
         while (!NERPS_KEY_PRESSED(0x1c)) input_state_poll_retail();
     }
     return stack[0];

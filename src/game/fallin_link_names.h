@@ -18,13 +18,11 @@
 #ifndef LEGORRR_GAME_FALLIN_LINK_NAMES_H
 #define LEGORRR_GAME_FALLIN_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define fallin_update kind_six_random_sweep_dispatch /* 0040f0e0 */
 #define fallin_try_generate_land_slide lava_erosion_cell_eligible_and_mutate /* 0040f190 */
 #define fallin_can_land_slide_at_block lava_erosion_neighbor_eligible_current /* 0040f2b0 */
 #define fallin_generate_land_slide lava_erosion_neighbor_mutate /* 0040f330 */
 #define fallin_initialise global_config_value_set /* 0040f5e0 */
 #define fallin_generate_cave_in lava_erosion_eight_neighbor_propagate /* 0040f5f0 */
-#endif
 
 #endif /* LEGORRR_GAME_FALLIN_LINK_NAMES_H */

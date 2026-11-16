@@ -172,7 +172,7 @@ SelectPlace_Point2I* selectplace_check_and_update(SelectPlace* selectPlace,
     vertexIndices[16] = 3; vertexIndices[17] = 7; vertexIndices[18] = 4; vertexIndices[19] = 0;
 
     shape = selectplace_transform_shape(blockPos, shapePoints, shapeCount, rotation);
-    validTolerance = terrain_map_shape_tolerance_check(LEGO_LEVEL_PTR(TerrainMap, legoGlobs_currLevel->map), (TerrainMapPoint2I*)shape, shapeCount,
+    validTolerance = terrain_map_shape_tolerance_check(legoGlobs_currLevel->map, (TerrainMapPoint2I*)shape, shapeCount,
                                                        legoGlobs_currLevel->buildingTolerance,
                                                        legoGlobs_currLevel->buildingMaxVariation);
 

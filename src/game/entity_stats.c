@@ -36,7 +36,6 @@ unsigned int lego_stats_level_record_count_for_stat_type(int objType); /* 0042ef
 unsigned int string_table_index_lookup(const char* value);  /* 00408c80 */
 /* LegoObject.c (GAME-023) */
 void entity_kind_four_post_create_resolve(StatsObject* obj); /* 0043c570 */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: the two level-count tables are objectGlobs fields
  * (004de790, legoobject_globs.h, finding 662), at +0x6b4 and +0x51b4.
  * objectGlobs is declared here without its struct: the declaration and
@@ -46,10 +45,6 @@ void entity_kind_four_post_create_resolve(StatsObject* obj); /* 0043c570 */
 extern struct LegoObject_Globs objectGlobs;
 #define s_grid_count_second ((unsigned int*)((char*)&objectGlobs + 0x6b4))
 #define s_grid_count_first ((unsigned int*)((char*)&objectGlobs + 0x51b4))
-#else
-extern unsigned int s_grid_count_second[0x12c0];            /* 004dee44 */
-extern unsigned int s_grid_count_first[0x12c0];             /* 004e3944 */
-#endif
 #ifdef __cplusplus
 }
 #endif

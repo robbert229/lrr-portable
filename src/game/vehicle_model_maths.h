@@ -6,24 +6,24 @@
  * 00401720, vec_scale). Only vehicle_model.c includes this file, after
  * Vehicle_Vector3F.
  *
- * They are static __inline functions, not macros: as macros the expansions
+ * They are static inline functions, not macros: as macros the expansions
  * compile differently (finding 544). In a header they add no Reccmp lint
  * debt. */
 #ifndef LEGORRR_GAME_VEHICLE_MODEL_MATHS_H
 #define LEGORRR_GAME_VEHICLE_MODEL_MATHS_H
 
-static __inline float vehicle_vector3d_dot(const Vehicle_Vector3F* a,
+static inline float vehicle_vector3d_dot(const Vehicle_Vector3F* a,
                                            const Vehicle_Vector3F* b)
 {
     return a->x * b->x + a->y * b->y + a->z * b->z;
 }
 
-static __inline float vehicle_vector3d_modulus(const Vehicle_Vector3F* v)
+static inline float vehicle_vector3d_modulus(const Vehicle_Vector3F* v)
 {
     return (float)sqrt(vehicle_vector3d_dot(v, v));
 }
 
-static __inline Vehicle_Vector3F* vehicle_vector3d_add(
+static inline Vehicle_Vector3F* vehicle_vector3d_add(
     Vehicle_Vector3F* r, const Vehicle_Vector3F* a, const Vehicle_Vector3F* b)
 {
     r->x = a->x + b->x;
@@ -32,7 +32,7 @@ static __inline Vehicle_Vector3F* vehicle_vector3d_add(
     return r;
 }
 
-static __inline Vehicle_Vector3F* vehicle_vector3d_subtract(
+static inline Vehicle_Vector3F* vehicle_vector3d_subtract(
     Vehicle_Vector3F* r, const Vehicle_Vector3F* a, const Vehicle_Vector3F* b)
 {
     r->x = a->x - b->x;
@@ -41,14 +41,14 @@ static __inline Vehicle_Vector3F* vehicle_vector3d_subtract(
     return r;
 }
 
-static __inline Vehicle_Vector3F* vehicle_vector3d_normalise(
+static inline Vehicle_Vector3F* vehicle_vector3d_normalise(
     Vehicle_Vector3F* r)
 {
     return (Vehicle_Vector3F*)vec_scale((float*)r, (const float*)r,
                                         1.0f / vehicle_vector3d_modulus(r));
 }
 
-static __inline Vehicle_Vector3F* vehicle_vector3d_scale(
+static inline Vehicle_Vector3F* vehicle_vector3d_scale(
     Vehicle_Vector3F* r, const Vehicle_Vector3F* a, float f)
 {
     r->x = a->x * f;
@@ -58,7 +58,7 @@ static __inline Vehicle_Vector3F* vehicle_vector3d_scale(
 }
 
 /* Maths_RayEndPoint: p + t * v. */
-static __inline Vehicle_Vector3F* vehicle_ray_end_point(
+static inline Vehicle_Vector3F* vehicle_ray_end_point(
     Vehicle_Vector3F* r, const Vehicle_Vector3F* p, const Vehicle_Vector3F* v,
     float t)
 {
@@ -69,7 +69,7 @@ static __inline Vehicle_Vector3F* vehicle_ray_end_point(
 }
 
 /* gods98's left-handed form, (a.z * b.y - a.y * b.z, ...). */
-static __inline Vehicle_Vector3F* vehicle_vector3d_cross_product(
+static inline Vehicle_Vector3F* vehicle_vector3d_cross_product(
     Vehicle_Vector3F* r, const Vehicle_Vector3F* a, const Vehicle_Vector3F* b)
 {
     r->x = a->z * b->y - a->y * b->z;

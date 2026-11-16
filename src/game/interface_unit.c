@@ -23,7 +23,6 @@
  * names is otherwise declared in this unit, so the symbol counter does not
  * change (finding 538). Natively, and in interface_port.cpp, the adapters
  * and stand-ins stay. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define lego_camera_fp legoGlobs_cameraFP                       /* 005560ec */
 #define lego_object_fp legoGlobs_selectedObject                 /* 00556160 */
 #define lego_vehicle_names legoGlobs_vehicleName                /* 005561e8 */
@@ -62,7 +61,6 @@
 #define lego_object_get_block legoobject_position_to_terrain_cell /* 004424f0 */
 #define entity_kind6_tick_down_marker_spawn_obj legoobject_kind6_tick_down_marker_spawn /* 004489a0 */
 #define container_get_position ddiscene_object_position_get     /* 004754c0 */
-#endif
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,7 +89,6 @@
 #include "gods98/sound.h"
 #include "gods98/utils.h"
 #include "lego_globs.h"
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: legoGlobs is one struct (lego_globs.h, finding 653). The
  * names above now reach its fields, with the types interface_callees.h
  * gives them (its declarations of the old names are not referenced). */
@@ -111,14 +108,10 @@
 #define lego_upgrade_cost_ore (*(unsigned int*)&legoGlobs.BuildingUpgradeCostOre)
 #undef lego_upgrade_cost_studs
 #define lego_upgrade_cost_studs (*(unsigned int*)&legoGlobs.BuildingUpgradeCostStuds)
-#endif
 
 /* Port-only code: the entries that keep the port's names delegate to the
  * port's model in the native build (finding 564). The matching build
  * compiles the original bodies only (ADR 0006). */
-#if !(defined(_MSC_VER) && _MSC_VER == 1100)
-#define INTERFACE_PORT 1
-#endif
 
 /* Lego.c and Info.c read the menu state and the font directly, so the struct
  * is external. The zero initialiser keeps it in this object's .bss rather
@@ -637,10 +630,6 @@ void interface_load_dependency_images(const char* plusName,
 // FUNCTION: LEGORR 0x0041b2d0
 void command_context_post_to_hud(int menu, const uint32_t blockPos[2])
 {
-#ifdef INTERFACE_PORT
-    command_context_post_to_hud_port(menu, blockPos);
-    return;
-#endif
     global_state_low_byte_clear_and_refresh();
     interface_set_block_highlight(menu, (const Point2I*)blockPos);
     interface_set_menu(menu, (const Point2I*)blockPos);
@@ -865,13 +854,6 @@ int interface_callback_draw_item(int type, int objType, int objIndex,
             flash = interfaceGlobs.buildingItemFlags[objIndex] &
                     INTERFACE_ITEM_FLASH;
         }
-#if !(defined(_MSC_VER) && _MSC_VER < 1200)
-        /* The original leaves `flash` unset for other object types; its
-         * register then still holds objType, which the port keeps. */
-        else {
-            flash = objType;
-        }
-#endif
         interface_set_object_item_pressed(objType, objIndex, 0);
     } else {
         interface_update_item_enabled(type);
@@ -922,9 +904,6 @@ void interface_update(float elapsed)
 // FUNCTION: LEGORR 0x0041b9b0
 uint32_t sim_status_banner_word_get(void)
 {
-#ifdef INTERFACE_PORT
-    return sim_status_banner_word_get_port();
-#endif
     return interfaceGlobs.flashingState;
 }
 
@@ -972,10 +951,6 @@ void interface_update_hover_sfx(float elapsed)
 // FUNCTION: LEGORR 0x0041ba90
 void simulation_global_word_set(uint32_t sfx)
 {
-#ifdef INTERFACE_PORT
-    simulation_global_word_set_port(sfx);
-    return;
-#endif
     interfaceGlobs.hoverSFX = sfx;
 }
 
@@ -1258,10 +1233,6 @@ int interface_callback_hit_item(int type, int objType, int objIndex,
 // FUNCTION: LEGORR 0x0041c440
 void advisor_callback_schedule_gate(void)
 {
-#ifdef INTERFACE_PORT
-    advisor_callback_schedule_gate_port();
-    return;
-#endif
     if ((interfaceGlobs.flags & INTERFACE_FLAG_OPEN) &&
         (interfaceGlobs.flags & INTERFACE_FLAG_IN) &&
         input_key_map[0x3c]) {
@@ -1593,9 +1564,6 @@ Image* interface_get_object_item_image(int objType, int objIndex)
 // FUNCTION: LEGORR 0x0041cb90
 void* input_binding_default_value_get(int objType, int objIndex, int available)
 {
-#ifdef INTERFACE_PORT
-    return input_binding_default_value_get_port(objType, objIndex, available);
-#endif
     if (available) {
         switch (objType) {
         case 2:
@@ -1657,10 +1625,6 @@ void position_tracker_box_draw(const float bounds[4])
     const Area2F* area = (const Area2F*)bounds;
     Point2F list[5];
 
-#ifdef INTERFACE_PORT
-    position_tracker_box_draw_port(bounds);
-    return;
-#endif
     if (!(lego_flags1 & 0x100000)) {
         list[0].x = list[3].x = list[4].x = area->x - 1.0f;
         list[0].y = list[1].y = list[4].y = area->y - 1.0f;
@@ -1731,10 +1695,6 @@ void selection_mode7_cancel_at_point(const uint32_t coordinate[2])
 {
     const Point2I* blockPos = (const Point2I*)coordinate;
 
-#ifdef INTERFACE_PORT
-    selection_mode7_cancel_at_point_port(coordinate);
-    return;
-#endif
     if (interfaceGlobs.currMenuType == 7 &&
         interfaceGlobs.selBlockPos.x == blockPos->x &&
         interfaceGlobs.selBlockPos.y == blockPos->y) {
@@ -1747,10 +1707,6 @@ void cancel_action_for_matching_coordinates(const uint32_t coordinate[2])
 {
     const Point2I* blockPos = (const Point2I*)coordinate;
 
-#ifdef INTERFACE_PORT
-    cancel_action_for_matching_coordinates_port(coordinate);
-    return;
-#endif
     if ((interfaceGlobs.currMenuType == 1 || interfaceGlobs.currMenuType == 4) &&
         interfaceGlobs.selBlockPos.x == blockPos->x &&
         interfaceGlobs.selBlockPos.y == blockPos->y) {
@@ -1763,10 +1719,6 @@ void selection_mode5_cancel_at_point(const uint32_t coordinate[2])
 {
     const Point2I* blockPos = (const Point2I*)coordinate;
 
-#ifdef INTERFACE_PORT
-    selection_mode5_cancel_at_point_port(coordinate);
-    return;
-#endif
     if (interfaceGlobs.currMenuType == 5 &&
         interfaceGlobs.selBlockPos.x == blockPos->x &&
         interfaceGlobs.selBlockPos.y == blockPos->y) {
@@ -2649,10 +2601,6 @@ fail:
 // FUNCTION: LEGORR 0x0041e750
 void selection_clear_request_and_hud_reset(void)
 {
-#ifdef INTERFACE_PORT
-    selection_clear_request_and_hud_reset_port();
-    return;
-#endif
     cmd_produce(3, NULL, 0, NULL);
     command_context_post_to_hud(0, NULL);
 }
@@ -2804,9 +2752,6 @@ int interface_get_advisor_type(int type)
 // FUNCTION: LEGORR 0x0041e990
 int cell_action_permission_get(int x, int y)
 {
-#ifdef INTERFACE_PORT
-    return cell_action_permission_get_port(x, y);
-#endif
     if (system_state_flags_get() & 4) {
         return interfaceGlobs.blockPermissions[x][y];
     }

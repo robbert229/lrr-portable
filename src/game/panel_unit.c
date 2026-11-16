@@ -13,13 +13,11 @@
  * native HUD, and the few guards the native port needs because it reaches
  * these functions before the original's state exists) is compiled out of
  * the matching build (ADR 0006). */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: Lego.c's TransitionControl (lego_unit.c) itself, instead
  * of lego_port.cpp's model (#805, finding 674). It renames lego.h's
  * declaration and its use; the new name is not otherwise declared here
  * (finding 538). */
 #define ledger_stub_00425c30_TransitionControl lego_transition_control /* 00425c30 */
-#endif
 #include <math.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -40,7 +38,6 @@
 #include "gods98/input.h"
 #include "gods98/utils.h"
 #include "gods98/textwindow.h"
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: the flic's width and height through the original's
  * getters (#805, finding 674): 004850e0 is Flic_GetHeight under its link
  * name (flic_link_names.h); Flic_GetWidth was folded into 004897d0, which
@@ -50,24 +47,18 @@
  * here (finding 538). */
 #define flic_width anim_clone_is_lws   /* 004897d0 */
 #define flic_height object_field10_get /* 004850e0 */
-#endif
 #include "gods98/flic.h"
 #include "gods98/engine.h"
 #include "camera_control.h"
 #include "info.h"
 #include "ai.h"
 #include "lego_globs.h"
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: Lego.c's legoGlobs.flags1 (00556ecc) itself, as the
  * original reads it, instead of engine.cpp's EngineContext word (#827,
  * finding 684). lego.h's declaration stays, so no counter moves
  * (finding 538). */
 #define engine_shared_state_word() (&legoGlobs_flags1)
-#endif
 
-#if !(defined(_MSC_VER) && _MSC_VER == 1100)
-#define PANEL_PORT 1
-#endif
 
 /* Other units read these fields directly (Lego.c, Interface.c, Info.c,
  * Priorities.c), so the struct is external. The zero initialiser keeps it
@@ -333,9 +324,6 @@ void ui_text_output_position_and_draw(void* window, unsigned int posFromEnd,
 {
     PanelTextWindow* textWindow = (PanelTextWindow*)window;
 
-#ifdef PANEL_PORT
-    if (textWindow == NULL) return; /* port: the native HUD may have no window */
-#endif
     float_pair_at_offset4_set_from_ints(textWindow->textWindow,
         (int)floor(textWindow->x + textWindow->panel->currPos.x),
         (int)floor(textWindow->y + textWindow->panel->currPos.y));
@@ -352,9 +340,6 @@ void ui_text_output_object_release_target(void* const* window)
 void ui_record_callback_forward(const void* const* window, uint32_t* outA,
                                 uint32_t* outB)
 {
-#ifdef PANEL_PORT
-    if (window == NULL) { *outA = 0; *outB = 0; return; } /* port */
-#endif
     object_state_pair_get_target(*window, outA, outB);
 }
 
@@ -961,48 +946,6 @@ void ui_overlay_create_configured_element(void)
  * matching build keeps the original instructions (as advisor.c's vec_cross
  * does, finding 550). */
 // FUNCTION: LEGORR 0x0045b8a0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int point_distance_within_radius(int x1, int y1, int x2,
-                                                   int y2, int radius)
-{
-    __asm {
-        sub esp, 8
-        mov eax, dword ptr [esp + 0x14]
-        mov edx, dword ptr [esp + 0x0c]
-        mov ecx, dword ptr [esp + 0x18]
-        sub eax, edx
-        mov edx, dword ptr [esp + 0x10]
-        mov dword ptr [esp + 0x14], eax
-        fild dword ptr [esp + 0x14]
-        fild dword ptr [esp + 0x1c]
-        sub ecx, edx
-        mov dword ptr [esp + 0x18], ecx
-        fild dword ptr [esp + 0x18]
-        fld st(2)
-        fmul st, st(3)
-        fxch st(1)
-        fst dword ptr [esp + 4]
-        fmul dword ptr [esp + 4]
-        faddp st(1), st
-        fsqrt
-        fst dword ptr [esp + 0x14]
-        fxch st(1)
-        fcompp
-        fnstsw ax
-        test ah, 0x41
-        fstp st(0)
-        jne point_distance_outside_radius
-        mov eax, 1
-        add esp, 8
-        ret
-
-    point_distance_outside_radius:
-        xor eax, eax
-        add esp, 8
-        ret
-    }
-}
-#else
 int point_distance_within_radius(int x1, int y1, int x2, int y2, int radius)
 {
     Point2F d;
@@ -1014,7 +957,6 @@ int point_distance_within_radius(int x1, int y1, int x2, int y2, int radius)
     if ((float)radius > distance) return 1;
     return 0;
 }
-#endif
 
 // FUNCTION: LEGORR 0x0045b900
 void integer_pair_divide_to_float_pair(int x, int y, int divisor,

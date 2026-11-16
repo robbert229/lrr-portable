@@ -427,6 +427,8 @@ int sfx_random_play_sound_normal(int sfxID, int loop)
         int handle = sfx_random_get_sound3d_handle(sfxID);
         if (handle != 0) return s_play_seam(2, 0, handle, loop, NULL);
     }
+    /* The original returns an undefined value here. */
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x00465010
@@ -470,7 +472,7 @@ int sfx_random_play_sound3d_on_frame_internal(void* frame, int sfxID, int loop,
     else if (sfxID != 0 && (sfxGlobs.flags & SFX_GLOB_FLAG_SOUNDON)) {
         int handle = sfx_random_get_sound3d_handle(sfxID);
         if (handle != 0) {
-            if (onCont) return s_play_seam(0, (int)(uintptr_t)frame, handle, loop, NULL);
+            if (onCont) return s_play_seam(0, (intptr_t)frame, handle, loop, NULL);
             return s_play_seam(1, 0, handle, loop, wPos);
         }
     }

@@ -29,12 +29,10 @@
 #ifndef LEGORRR_GODS98_FLIC_LINK_NAMES_H
 #define LEGORRR_GODS98_FLIC_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define Flic_Setup flic_setup /* 00483c80 */
 #define Flic_Animate flic_animate /* 00484070 */
 #define Flic_Unsupported flic_opcode25_success_stub /* 00484b90 */
 #define Flic_Nothing flic_opcode27_fallback_noop /* 00484c90 */
 #define Flic_GetHeight object_field10_get /* 004850e0 */
-#endif
 
 #endif /* LEGORRR_GODS98_FLIC_LINK_NAMES_H */

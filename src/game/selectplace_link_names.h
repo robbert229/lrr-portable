@@ -16,11 +16,9 @@
 /* The callees' own link names. */
 #include "gods98/container_link_names.h"
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define selectplace_create select_place_create_adapter                  /* 00463f00 */
 #define selectplace_transform_shape rotated_pairs_scratch_fill          /* 00464110 */
 #define selectplace_check_and_update legoobject_gs_placement_footprint_check_adapter /* 004641c0 */
 #define selectplace_hide surface_visibility_set                         /* 00464720 */
-#endif
 
 #endif /* LEGORRR_GAME_SELECTPLACE_LINK_NAMES_H */

@@ -17,7 +17,6 @@
 #ifndef LEGORRR_GAME_LEGOOBJECT_PORT_ALIASES_H
 #define LEGORRR_GAME_LEGOOBJECT_PORT_ALIASES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define ai_activity_name_table_initialize legoobject_initialise /* 00436c20 */
 #define pooled_record_pool_resources_release legoobject_shutdown /* 00437050 */
 #define render_config_six_field_copy_out legoobject_render_config_copy_out /* 004370b0 */
@@ -242,7 +241,6 @@
  * and the unit's function does not read. */
 #define aitask_adjacent_position_find_adapter legoobject_adjacent_position_candidate_find /* 00443710 */
 #define aitask_object_command_gate_adapter legoobject_type_two_target_resolve_and_apply /* 0044b4c0 */
-#endif
 #endif
 
 #endif /* LEGORRR_GAME_LEGOOBJECT_PORT_ALIASES_H */

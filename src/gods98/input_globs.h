@@ -15,8 +15,8 @@
 #define LEGORRR_GODS98_INPUT_GLOBS_H
 
 struct Input_Globs {
-    struct DirectInputIface* lpdi;               /* +0x00 */
-    struct DirectInputDeviceIface* lpdiKeyboard; /* +0x04 */
+    struct IDirectInputA* lpdi;                  /* +0x00 */
+    struct IDirectInputDeviceA* lpdiKeyboard;    /* +0x04 */
     unsigned int unknown_08;                     /* +0x08 never read */
     int keyboardAcquired;                        /* +0x0c */
     unsigned int unknown_10[5];                  /* +0x10 never read */

@@ -63,14 +63,8 @@ int always_accept_place_command_cell();
  * through an unprototyped function type, which pushes none, as the original
  * does; the native C++ compile goes through lego_port.cpp's adapter (as
  * fallin_imports.h). */
-void* level_current_terrain_get_original(void);
-#ifdef __cplusplus
 #define CONSTRUCTION_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get_original())
-#else
-#define CONSTRUCTION_LEGO_GET_MAP() \
-    ((struct TerrainMap*)((void* (*)())level_current_terrain_get)())
-#endif
+    ((struct TerrainMap*)level_current_terrain_get(0, 0))
 /* GAME-023 LegoObject.c (legoobject_unit.c; the rest in legoobject_unit.h). */
 void legoobject_dispatch_event5_and_set_flag(Lego_Object* obj);       /* 00447b00 */
 /* GAME-027 Message.c (message.h). */

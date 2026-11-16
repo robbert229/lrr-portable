@@ -22,7 +22,6 @@
 #ifndef LEGORRR_GAME_BUILDING_MODEL_LINK_NAMES_H
 #define LEGORRR_GAME_BUILDING_MODEL_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define building_load entity_building_type_config_record_parse /* 00407d60 */
 #define building_change_power_level scene_object_scalar_adjust_by_direction /* 004082e0 */
 #define building_get_shape_points task_field84_get_and_field88_out /* 00408360 */
@@ -43,6 +42,5 @@
 #define building_remove entity_payload_teardown /* 00408940 */
 #define building_can_upgrade_type task_flag_bit_query /* 00408970 */
 #define building_set_upgrade_level entity_payload_state_set /* 004089a0 */
-#endif
 
 #endif /* LEGORRR_GAME_BUILDING_MODEL_LINK_NAMES_H */

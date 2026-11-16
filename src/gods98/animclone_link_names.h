@@ -21,10 +21,8 @@
 #ifndef LEGORRR_GODS98_ANIMCLONE_LINK_NAMES_H
 #define LEGORRR_GODS98_ANIMCLONE_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define material_create scene_material_create                   /* 004894c0 */
 #define anim_clone_remove scene_object_owner_link_release       /* 00489750 */
 #define anim_clone_set_time ddiscene_timed_hook_dispatch        /* 004897e0 */
-#endif
 
 #endif /* LEGORRR_GODS98_ANIMCLONE_LINK_NAMES_H */

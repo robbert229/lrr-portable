@@ -34,9 +34,7 @@ void scroll_rect_resource_record_create(int view, int mode,
                                         int tex_b);             /* 00463770 */
 /* FUN_00463810: the port's name is gods98/resource.cpp's model, so in the
  * matching build Panel.c calls the unit's own name. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define scroll_rect_payload_record_create scroll_info_add_create_structure
-#endif
 void scroll_rect_payload_record_create(int slot, const float rect[4],
                                        int count, uint32_t value,
                                        const char* resource_name); /* 00463810 */

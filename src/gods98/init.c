@@ -11,22 +11,17 @@
  * names in snake case.
  *
  * The original links this object after the import libraries, like
- * LATE-001 (finding 608). The code is Windows only: the native port has no
- * DirectDraw, so the file defines only initGlobs there (init_port.cpp keeps
- * the port's valid-mode filters in it).
- *
- * C-compatible (ADR 0005): C in the matching build, C++ in the MinGW
- * reference build. */
+ * LATE-001 (finding 608). miniwin has no dialog resources, so the
+ * mode-selection dialog fails; -best selects a mode without it. */
 #include "init.h"
 
 // GLOBAL: LEGORR 0x005580a0
 Init_Globs initGlobs;
 
-#if !defined(LEGORRR_BACKEND_MINIWIN)
 
 #include <stdio.h>
 #include <string.h>
-#include <windows.h>
+#include <miniwin/windows.h>
 
 #include "crt/vc5names.h"
 #include "init_imports.h"
@@ -39,7 +34,7 @@ Init_Globs initGlobs;
 #define INIT_IDC_WINDOW             1005
 #define INIT_IDC_MODELISTTEXT       1006
 
-static BOOL CALLBACK init_dialog_handler(HWND hWndDlg, UINT message,
+static INT_PTR CALLBACK init_dialog_handler(HWND hWndDlg, UINT message,
                                          WPARAM wParam, LPARAM lParam);
 void init_set_full_screen(HWND hWndDlg, BOOL on);
 void init_set_mode_list(HWND hWndDlg);
@@ -128,7 +123,7 @@ int init_initialise(int setup, int debug, int best, int window,
 }
 
 // FUNCTION: LEGORR 0x0049d2f0
-static BOOL CALLBACK init_dialog_handler(HWND hWndDlg, UINT message,
+static INT_PTR CALLBACK init_dialog_handler(HWND hWndDlg, UINT message,
                                          WPARAM wParam, LPARAM lParam)
 {
     unsigned int mode;
@@ -350,4 +345,3 @@ void init_handle_window_button(HWND hWndDlg)
     }
 }
 
-#endif /* !LEGORRR_BACKEND_MINIWIN */

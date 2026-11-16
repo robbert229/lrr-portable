@@ -20,10 +20,8 @@
 #include "utils.h"
 #include "crt/vc5names.h"
 
-#if defined(_MSC_VER) && _MSC_VER == 1100
-#include <windows.h>
-#include <d3drm.h>
-#endif
+#include <miniwin/windows.h>
+#include <miniwin/d3drm.h>
 
 #define CONFIG_MAXLISTS 32
 #define CONFIG_MAXTOKENS 100

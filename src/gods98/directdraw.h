@@ -13,24 +13,20 @@
 #ifndef LEGORRR_GODS98_DIRECTDRAW_H
 #define LEGORRR_GODS98_DIRECTDRAW_H
 
+#include <miniwin/windows.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* The COM interfaces the unit calls (directdraw.c lays out their method
- * tables). */
-struct DirectDrawIface;
-struct DirectDrawSurfaceIface;
-struct DirectDrawClipperIface;
+/* miniwin's DirectDraw interfaces (miniwin/ddraw.h). */
+struct IDirectDraw4;
+struct IDirectDrawSurface4;
+struct IDirectDrawClipper;
 struct Area2F;
 
-/* GUID, laid out as the SDK's. */
-typedef struct DirectDraw_Guid {
-    unsigned int data1;
-    unsigned short data2;
-    unsigned short data3;
-    unsigned char data4[8];
-} DirectDraw_Guid;
+/* GUID (miniwin/windows.h). */
+typedef GUID DirectDraw_Guid;
 
 /* A DirectDraw driver, a Direct3D device and a display mode, as the
  * enumeration callbacks fill them (0x114, 0x114 and 0x110 bytes). */
@@ -70,12 +66,12 @@ typedef struct DirectDraw_Mode {
  * read the DirectDraw object (+0x04) and the back buffer (+0x0c). */
 typedef struct DirectDraw_Globs {
     void* hWnd;                                     /* +0x00 0076ac80 */
-    struct DirectDrawIface* lpDirectDraw;           /* +0x04 0076ac84 */
-    struct DirectDrawSurfaceIface* fSurf;           /* +0x08 0076ac88 */
-    struct DirectDrawSurfaceIface* bSurf;           /* +0x0c 0076ac8c */
-    struct DirectDrawSurfaceIface* zSurf;           /* +0x10 0076ac90 */
-    struct DirectDrawClipperIface* lpFrontClipper;  /* +0x14 0076ac94 */
-    struct DirectDrawClipperIface* lpBackClipper;   /* +0x18 0076ac98 */
+    struct IDirectDraw4* lpDirectDraw;              /* +0x04 0076ac84 */
+    struct IDirectDrawSurface4* fSurf;              /* +0x08 0076ac88 */
+    struct IDirectDrawSurface4* bSurf;              /* +0x0c 0076ac8c */
+    struct IDirectDrawSurface4* zSurf;              /* +0x10 0076ac90 */
+    struct IDirectDrawClipper* lpFrontClipper;      /* +0x14 0076ac94 */
+    struct IDirectDrawClipper* lpBackClipper;       /* +0x18 0076ac98 */
     DirectDraw_Driver* driverList;                  /* +0x1c 0076ac9c */
     unsigned int reserved_20;                      /* +0x20 never referenced */
     DirectDraw_Device* deviceList;                  /* +0x24 0076aca4 */
@@ -89,9 +85,7 @@ typedef struct DirectDraw_Globs {
     unsigned int height;                           /* +0x44 0076acc4 */
 } DirectDraw_Globs;
 
-#if !defined(LEGORRR_BACKEND_MINIWIN)
 extern DirectDraw_Globs directDrawGlobs;
-#endif
 
 void directdraw_initialise(void* hWnd);                                 /* 0047c170 */
 int directdraw_enum_drivers(DirectDraw_Driver* list,
@@ -108,7 +102,7 @@ int directdraw_setup(int fullScreen, const DirectDraw_Driver* driver,
                      unsigned int yPos, unsigned int width,
                      unsigned int height);                             /* 0047c610 */
 void directdraw_flip(void);                                             /* 0047c8d0 */
-int directdraw_save_bmp(struct DirectDrawSurfaceIface* surface,
+int directdraw_save_bmp(struct IDirectDrawSurface4* surface,
                         const char* fname);                             /* 0047c8f0 */
 void directdraw_return_front_buffer(void);                              /* 0047cc20 */
 void directdraw_blit_buffers(void);                                     /* 0047cc50 */
@@ -119,10 +113,10 @@ int directdraw_get_avail_texture_mem(unsigned int* total,
 void directdraw_clear(struct Area2F* window, unsigned int colour);     /* 0047ce20 */
 int directdraw_create_clipper(int fullScreen, unsigned int width,
                               unsigned int height);                    /* 0047cee0 */
-void directdraw_blt_8_to_16(struct DirectDrawSurfaceIface* target,
-                            struct DirectDrawSurfaceIface* source,
+void directdraw_blt_8_to_16(struct IDirectDrawSurface4* target,
+                            struct IDirectDrawSurface4* source,
                             void* palette);                             /* 0047d000 */
-unsigned int directdraw_get_colour(struct DirectDrawSurfaceIface* surf,
+unsigned int directdraw_get_colour(struct IDirectDrawSurface4* surf,
                                     unsigned int colour);              /* 0047d2d0 */
 unsigned int directdraw_count_mask_bits(unsigned int mask);           /* 0047d3f0 */
 

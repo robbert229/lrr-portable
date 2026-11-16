@@ -24,22 +24,8 @@ typedef struct Vector3F {
     float x, y, z;
 } Vector3F;
 
-/* D3DRM.DLL's vector helpers (d3drmdef.h). The Windows builds import them;
- * the native port emulates them in view.cpp. */
-#if defined(_WIN32)
-#define MATHS_D3DRMAPI __stdcall
-#else
-#define MATHS_D3DRMAPI
-#endif
-#ifdef __cplusplus
-extern "C" {
-#endif
-float* MATHS_D3DRMAPI D3DRMVectorRandom(float* d);
-float* MATHS_D3DRMAPI D3DRMVectorRotate(float* r, float* v, float* axis,
-                                        float theta);
-#ifdef __cplusplus
-}
-#endif
+/* D3DRM.DLL's vector helpers (d3drmdef.h), from miniwin. */
+#include <miniwin/d3drm.h>
 
 /* The unit's .rdata, in original order. It opens with the 16-byte
  * {1, 2, 4, -1} table at 0049e910 that 19 gods98 objects share (finding
@@ -67,12 +53,12 @@ static const float s_maths_four = 4.0f;
 
 /* Maths.h's inline vector helpers (Maths_Vector3DModulus, _Scale and
  * _Normalise). Like the original's, they are always inlined. */
-static __inline float maths_vector3d_modulus(const Vector3F* v)
+static inline float maths_vector3d_modulus(const Vector3F* v)
 {
     return (float)sqrt(v->x * v->x + v->y * v->y + v->z * v->z);
 }
 
-static __inline Vector3F* maths_vector3d_scale(Vector3F* r, const Vector3F* a, float f)
+static inline Vector3F* maths_vector3d_scale(Vector3F* r, const Vector3F* a, float f)
 {
     r->x = a->x * f;
     r->y = a->y * f;
@@ -80,7 +66,7 @@ static __inline Vector3F* maths_vector3d_scale(Vector3F* r, const Vector3F* a, f
     return r;
 }
 
-static __inline Vector3F* maths_vector3d_normalise(Vector3F* r)
+static inline Vector3F* maths_vector3d_normalise(Vector3F* r)
 {
     return maths_vector3d_scale(r, r, s_maths_one / maths_vector3d_modulus(r));
 }
@@ -88,13 +74,13 @@ static __inline Vector3F* maths_vector3d_normalise(Vector3F* r)
 // FUNCTION: LEGORR 0x00479500
 float* d3drm_vector_random(float* r)
 {
-    return D3DRMVectorRandom(r);
+    return (float*)D3DRMVectorRandom((D3DVECTOR*)r);
 }
 
 // FUNCTION: LEGORR 0x00479510
 float* d3drm_vector_rotate(float* r, float* v, float* axis, float theta)
 {
-    return D3DRMVectorRotate(r, v, axis, theta);
+    return (float*)D3DRMVectorRotate((D3DVECTOR*)r, (D3DVECTOR*)v, (D3DVECTOR*)axis, theta);
 }
 
 // FUNCTION: LEGORR 0x00479530

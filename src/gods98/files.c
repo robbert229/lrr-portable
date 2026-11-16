@@ -19,13 +19,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(_WIN32)
-#include <windows.h>
-#include <direct.h>
-#include <io.h>
-#else
+#include <miniwin/windows.h>
+
 #include "files_native.h"
-#endif
 
 #include "crt/vc5names.h"
 
@@ -35,15 +31,13 @@
 #include "g98_024.h"
 #include "g98_029.h"
 
-#ifdef __cplusplus
-/* PORT-ONLY: the original calls an empty variadic function, folded into
- * 00484c90, with its debug messages. C++ cannot call the unprototyped
- * declaration below with arguments. */
-extern "C" void files_debug_noop(const char* msg, ...);
-#define flic_opcode27_fallback_noop files_debug_noop
-#else
-void flic_opcode27_fallback_noop();
-#endif
+/* The original calls an empty variadic function, folded into 00484c90
+ * (Flic_Nothing), with its debug messages. C++ cannot call 00484c90's
+ * prototype with arguments, so the unit keeps an empty variadic one. */
+static void files_nothing(const char* msg, ...)
+{
+}
+#define flic_opcode27_fallback_noop files_nothing
 
 #define FILE_MAXPATH 260
 #define FILE_MAXWADS 10
@@ -797,13 +791,17 @@ void file_check_redundant_files(const char* logName)
     char line[1024];
 
     if ((f = file_open(logName, "r")) != NULL) {
+        /* The original hands the File record itself to fscanf and fclose
+         * as a C library stream; read the record's own stream instead (a
+         * WAD stream has none) and close the record. */
+        FILE* stream = (f->type == FileSystem_Std) ? f->stream.std : NULL;
         fileRedundantListCount = 0;
-        /* The original reads the File record as a C library stream. */
-        while (fscanf((FILE*)f, "%s", line) != EOF) {
+        while (stream && fileRedundantListCount < 2000 &&
+               fscanf(stream, "%1023s", line) != EOF) {
             strcpy(fileRedundantList[fileRedundantListCount++], line);
         }
         file_check_directory(fileGlobs.dataDir);
-        fclose((FILE*)f);
+        file_close(f);
     }
 }
 

@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <SDL3/SDL_timer.h>
 
 /* savegame.h: this unit defines its part-2 names (finding 628). */
 #define LEGORRR_FRONTEND_UNIT_C 1
@@ -201,6 +202,59 @@ typedef struct Front_SaveData {
     unsigned char field_38[0x80];   /* +0x38 */
 } Front_SaveData;
 
+/* The save file's image of a Front_SaveData: the Win32 layout, 0xb8 bytes,
+ * of which the file holds the first 0xb0 (read) or 0xb4 (written). The
+ * missionsTable pointer's slot (+0x34) holds no data on disk. */
+#define FRONT_SAVEDATA_FILE_SIZE 0xb8
+
+static uint32_t front_save_data_word(const unsigned char* bytes, int offset)
+{
+    return (uint32_t)bytes[offset] | ((uint32_t)bytes[offset + 1] << 8) |
+           ((uint32_t)bytes[offset + 2] << 16) | ((uint32_t)bytes[offset + 3] << 24);
+}
+
+static void front_save_data_put_word(unsigned char* bytes, int offset, uint32_t value)
+{
+    bytes[offset] = (unsigned char)value;
+    bytes[offset + 1] = (unsigned char)(value >> 8);
+    bytes[offset + 2] = (unsigned char)(value >> 16);
+    bytes[offset + 3] = (unsigned char)(value >> 24);
+}
+
+/* Parses a save file's image into a Front_SaveData; missionsTable is NULL. */
+static void front_save_data_parse(const unsigned char* bytes, Front_SaveData* out)
+{
+    int i;
+    out->field_0 = (int)front_save_data_word(bytes, 0x00);
+    out->musicVolume = (int)front_save_data_word(bytes, 0x04);
+    out->sfxVolume = (int)front_save_data_word(bytes, 0x08);
+    out->gameSpeed = (int)front_save_data_word(bytes, 0x0c);
+    out->brightness = (int)front_save_data_word(bytes, 0x10);
+    out->field_14 = (int)front_save_data_word(bytes, 0x14);
+    out->missionsCount = front_save_data_word(bytes, 0x18);
+    for (i = 0; i < 6; i++)
+        out->saveStruct18.values[i] = (int)front_save_data_word(bytes, 0x1c + i * 4);
+    out->missionsTable = NULL;
+    memcpy(out->field_38, bytes + 0x38, sizeof(out->field_38));
+}
+
+/* Writes a Front_SaveData's save file image. */
+static void front_save_data_serialize(const Front_SaveData* data, unsigned char* bytes)
+{
+    int i;
+    front_save_data_put_word(bytes, 0x00, (uint32_t)data->field_0);
+    front_save_data_put_word(bytes, 0x04, (uint32_t)data->musicVolume);
+    front_save_data_put_word(bytes, 0x08, (uint32_t)data->sfxVolume);
+    front_save_data_put_word(bytes, 0x0c, (uint32_t)data->gameSpeed);
+    front_save_data_put_word(bytes, 0x10, (uint32_t)data->brightness);
+    front_save_data_put_word(bytes, 0x14, (uint32_t)data->field_14);
+    front_save_data_put_word(bytes, 0x18, data->missionsCount);
+    for (i = 0; i < 6; i++)
+        front_save_data_put_word(bytes, 0x1c + i * 4, (uint32_t)data->saveStruct18.values[i]);
+    front_save_data_put_word(bytes, 0x34, 0);
+    memcpy(bytes + 0x38, data->field_38, sizeof(data->field_38));
+}
+
 /* frontGlobs (00556fc0, 0x890 bytes), as the original's one struct: a
  * store into one field then orders the stores around it as the original
  * does (finding 635). Fields the port does not model keep their offsets
@@ -323,11 +377,7 @@ Front_Globs frontGlobs;
 #define frontGlobs_optionsMenuSet frontGlobs.optionsMenuSet
 #define frontGlobs_tutorialLevels frontGlobs.tutorialLevels
 #define frontGlobs_missionLevels frontGlobs.missionLevels
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define g_front_save_tree frontGlobs.startMissionLink
-#else
-#define frontGlobs_startMissionLink frontGlobs.startMissionLink
-#endif
 #define frontGlobs_startTutorialLink frontGlobs.startTutorialLink
 #define frontGlobs_mainMenuValues frontGlobs.mainMenuValues
 #define frontGlobs_triggerContinueMission frontGlobs.triggerContinueMission
@@ -367,29 +417,12 @@ Front_Globs frontGlobs;
 #ifdef __cplusplus
 extern "C" {
 #endif
-#if defined(_MSC_VER) && _MSC_VER < 1200
 int light_interface_call_slot_40(void* record, float value);      /* 00473460 */
 int light_interface_call_slot_3c(void* record, float value);      /* 00473480 */
 void save_menu_refresh_target(float elapsed, int slot);           /* 004150b0 */
 #define FRONT_FLOAT_ARG(f) (f)
-#else
-int light_interface_call_slot_40(void* record, uint32_t value);
-int light_interface_call_slot_3c(void* record, uint32_t value);
-void save_menu_refresh_target(uint32_t unused, int slot);
-#endif
 #ifdef __cplusplus
 }
-#endif
-#if !(defined(_MSC_VER) && _MSC_VER < 1200)
-// PORT-ONLY: native build only; passes a float as the port's uint32_t bits
-static uint32_t front_float_bits(float f)
-{
-    uint32_t bits;
-
-    memcpy(&bits, &f, sizeof(bits));
-    return bits;
-}
-#define FRONT_FLOAT_ARG(f) front_float_bits(f)
 #endif
 
 // FUNCTION: LEGORR 0x004102b0
@@ -444,13 +477,8 @@ void front_util_print_f(Front_Font* font, int x, int y, const char* msg, ...)
 // FUNCTION: LEGORR 0x004103d0
 void front_callback_trigger_play_credits(void)
 {
-#if defined(_MSC_VER) && _MSC_VER < 1200
     credits_play((const char*)DAT_00556f50, (struct TextureSurface*)DAT_0055613c,
                  (const char*)DAT_00556f54);
-#else
-    /* Natively the port's entry plays the credits (frontend_port.cpp). */
-    main_menu_text_item();
-#endif
 }
 
 // FUNCTION: LEGORR 0x004103f0
@@ -2359,17 +2387,17 @@ void front_menu_load_slot_images(void)
     }
     i = 0;
     for (completion = s_saveSlotCompletion; completion < s_saveSlotCompletion + 5; completion++) {
-        /* A Front_SaveData (0xb8 bytes, defined with part 2): [6] is
-         * missionsCount, [13] missionsTable. Each mission record is 0x3190
-         * bytes, its reward score at +0x2fb8. */
-        int saveData[0xb8 / 4] = { 0 };
+        /* Each mission record is 0x3190 bytes, its reward score at
+         * +0x2fb8. */
+        Front_SaveData saveData;
 
-        save_read_slot_target(i, saveData, 1);
+        memset(&saveData, 0, sizeof(saveData));
+        save_read_slot_target(i, &saveData, 1);
         *completion = 0;
-        for (k = 8; k < (unsigned int)saveData[6]; k++) {
-            *completion += (*(float*)((char*)saveData[13] + k * 0x3190 + 0x2fb8) != 0.0f) ? 4 : 0;
+        for (k = 8; k < saveData.missionsCount; k++) {
+            *completion += (*(float*)((char*)saveData.missionsTable + k * 0x3190 + 0x2fb8) != 0.0f) ? 4 : 0;
         }
-        free((void*)saveData[13]);
+        free(saveData.missionsTable);
         i++;
     }
 }
@@ -2414,7 +2442,7 @@ void front_run_screen_menu(Front_Menu* menu)
     g_front_save_menu_result = 1;
     g_front_save_menu_open = 1;
     frontGlobs_overlayImage = NULL;
-    lastTime = timeGetTime();
+    lastTime = (DWORD)SDL_GetTicks(); // [library:time]
     while (!menu->closed) {
         if (!transition) {
             nextMenu = front_menu_update(elapsed, menu, NULL);
@@ -2429,7 +2457,7 @@ void front_run_screen_menu(Front_Menu* menu)
         tooltip_update(s_renderer_word_a, s_renderer_word_b, elapsed);
         sfx_update(elapsed);
         main_loop_frame_pump(0);
-        currTime = timeGetTime();
+        currTime = (DWORD)SDL_GetTicks(); // [library:time]
         elapsed = (float)(currTime - lastTime) * 0.025f;
         lastTime = currTime;
         if (!transition && nextMenu != menu) {
@@ -2976,10 +3004,6 @@ typedef struct Front_LevelMenuBuild {
 extern "C" {
 #endif
 /* Part 2's callees (finding 628). */
-#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: lego_globs.h */
-extern float s_scroll_scale;                /* 0055615c legoGlobs.gameSpeed */
-extern struct LevelState* g_active_level_retail; /* 005560d4 currLevel */
-#endif
 /* GAME-018 HelpWindow.c (helpwindow.c), GAME-019 Info.c (info_unit.c). */
 void help_window_toggle(int toggle, int disable);                 /* 00419200 */
 void info_set_auto_game_speed(int on);                            /* 00419450 */
@@ -3003,20 +3027,11 @@ int ledger_stub_004789a0_MusicMixerVolumeGet(float* music,
                                              float* sfx);         /* 004789a0 */
 /* gods98 Utils.c (utils.c). */
 char* string_duplicate(const char* text);                         /* 00477550 */
-#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: frontend_unit_imports.h */
-/* gods98 Input.c (input_unit.cpp): Input_AnyKeyPressed. */
-int input_keyboard_down_key_count(void);                          /* 0047efb0 */
-#endif
 /* Container_MakeLight (004734f0): view.h types the colours as their
  * bits; the matching build passes the floats. Image_SaveBMP-style
  * adapters for ObjectRecall.c's save (004593e0), whose port entry takes
  * the game context: an unannotated adapter in frontend_port.cpp. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 void* ddiscene_light_create(void* parent, unsigned int type, float r, float g, float b); /* 004734f0 */
-#else
-void* ddiscene_light_create(void* owner, uint32_t value_a, uint32_t value_b,
-                            uint32_t value_c, uint32_t value_d);
-#endif
 void* container_load(void* parent, const char* filename, const char* typeString,
                      int looseLoad);                                  /* 00472cd0 */
 int sfx_random_set_and_play_global_sample(int sfxID, int* handle);   /* 00464ef0 */
@@ -3032,7 +3047,8 @@ Front_Menu* s_optionsMenu = 0;
 // GLOBAL: LEGORR 0x004db8e4
 Front_MenuSet* s_optionsMenuSet = 0;
 
-/* Part 2's functions. */
+/* Part 2's functions, with C linkage: other units call them (ADR 0005). */
+extern "C" {
 void front_callback_slider_music_volume(int volume); /* 00414df0 */
 int front_get_music_volume_slider(void); /* 00414e10 */
 void front_callback_cycle_wall_detail(int cycle); /* 00414e50 */
@@ -3112,6 +3128,7 @@ void front_save_copy_save_data(Front_SaveData* outData); /* 00418040 */
 void front_save_restore_save_data(Front_SaveData* data); /* 004180c0 */
 void front_levels_set_update(uint32_t update); /* 00418110 */
 int front_save_is_game_100_percented(void); /* 00418120 */
+}
 
 // FUNCTION: LEGORR 0x00414df0
 void front_callback_slider_music_volume(int volume)
@@ -3492,7 +3509,7 @@ void front_play_movie(struct G98CMovie* movie, int skippable)
     rect.right = 640;
     rect.bottom = 480;
     timer = 0.0f;
-    if (movie_update(movie, 1.0f, (struct tagRECT*)&rect)) {
+    if (movie_update(movie, 1.0f, (struct RECT*)&rect)) {
         while (1) {
             main_loop_frame_pump(0);
             timer = timer - -1.0f;
@@ -3510,7 +3527,7 @@ void front_play_movie(struct G98CMovie* movie, int skippable)
                     return;
                 }
             }
-            if (!movie_update(movie, 1.0f, (struct tagRECT*)&rect)) {
+            if (!movie_update(movie, 1.0f, (struct RECT*)&rect)) {
                 return;
             }
         }
@@ -3533,7 +3550,7 @@ void front_play_intro_splash(const char* imageKey, int skippable, const char* ti
     if (0.0f == seconds) {
         seconds = 3.0f;
     }
-    endTime = timeGetTime() - (int)(seconds * -1000.0f);
+    endTime = (DWORD)SDL_GetTicks() - (int)(seconds * -1000.0f); // [library:time]
     if (imageKey != NULL) {
         imageName = block_get_str_copy(legoGlobs_config,
                                        string_path_join(s_engine_config_root, "Main", imageKey, NULL));
@@ -3543,7 +3560,7 @@ void front_play_intro_splash(const char* imageKey, int skippable, const char* ti
                     image_display_scaled((Image*)image, NULL, NULL, NULL);
                     main_loop_frame_pump(0);
                     Sleep(100);
-                    if (timeGetTime() >= endTime) {
+                    if ((DWORD)SDL_GetTicks() >= endTime) { // [library:time]
                         break;
                     }
                     if (skippable && (input_keyboard_down_key_count() || s_window_mouse_word_40 ||
@@ -4573,7 +4590,11 @@ int front_save_read_save_file(uint32_t saveIndex, void* outData, int readOnly)
         if (file != NULL) {
             missionsCount = 0;
             tutorialsCount = 0;
-            file_read(outData, 0xb0, 1, file);
+            {
+                unsigned char image[FRONT_SAVEDATA_FILE_SIZE] = { 0 };
+                file_read(image, 0xb0, 1, file);
+                front_save_data_parse(image, (Front_SaveData*)outData);
+            }
             front_level_link_run_through_links(g_front_save_tree,
                                                front_level_link_callback_inc_count, &missionsCount);
             front_levels_reset_visited();
@@ -4619,7 +4640,9 @@ int front_save_write_save_file(unsigned int saveIndex, Front_SaveData* saveData)
             // STRING: LEGORR 0x004a2794
             file = file_open(buffer, "wb");
             if (file != NULL) {
-                file_write(saveData, 0xb0, 1, file);
+                unsigned char image[FRONT_SAVEDATA_FILE_SIZE];
+                front_save_data_serialize(saveData, image);
+                file_write(image, 0xb0, 1, file);
                 if (saveData->missionsCount != 0) {
                     file_write(saveData->missionsTable, sizeof(Front_SaveReward), saveData->missionsCount, file);
                 }
@@ -4644,7 +4667,9 @@ int front_save_write_save_file(unsigned int saveIndex, Front_SaveData* saveData)
                 front_level_link_run_through_links(g_front_save_tree,
                                                    front_level_link_callback_inc_count, &newData.missionsCount);
                 front_levels_reset_visited();
-                file_write(&newData, 0xb4, 1, file);
+                unsigned char image[FRONT_SAVEDATA_FILE_SIZE];
+                front_save_data_serialize(&newData, image);
+                file_write(image, 0xb4, 1, file);
                 for (i = 0; i < newData.missionsCount; i++) {
                     file_write(&newReward, sizeof(Front_SaveReward), 1, file);
                 }

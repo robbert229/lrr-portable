@@ -24,7 +24,6 @@
 #ifndef LEGORRR_GAME_DEPENDENCIES_LINK_NAMES_H
 #define LEGORRR_GAME_DEPENDENCIES_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define dependencies_set_enabled global_mode_zero_input_set                       /* 0040ab10 */
 #define dependencies_reset_clear_all_level_flags_10c grid_record_flag_mask_clear  /* 0040ab30 */
 #define dependencies_initialise dependencies_initialise_adapter                   /* 0040ab70 */
@@ -36,6 +35,5 @@
 #define dependencies_object_is_unlocked help_window_dependencies_flag4_adapter    /* 0040b250 */
 #define dependencies_object_add_level_flag_100 help_window_dependencies_flag100_set_adapter /* 0040b2a0 */
 #define dependencies_object_get_level_flag_100 help_window_dependencies_flag100_adapter /* 0040b2e0 */
-#endif
 
 #endif /* LEGORRR_GAME_DEPENDENCIES_LINK_NAMES_H */

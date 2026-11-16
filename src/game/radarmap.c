@@ -630,7 +630,7 @@ int radarmap_get_block_colour(DrawRect* drawRect, int bx, int by)
         }
     } else if (terrain_cell_mask18_clear_current(bx, by) &&
                level_cell_flag_4_current(bx, by)) {
-        block = &LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+        block = &legoGlobs_currLevel->blocks
                     [legoGlobs_currLevel->width * by + bx];
         if (block->flags1 & 0x20000) {
             RadarMap_SetColour(drawRect, RADARMAP_COLOUR_FLAG20000);
@@ -655,7 +655,7 @@ int radarmap_get_block_colour(DrawRect* drawRect, int bx, int by)
         case 7: RadarMap_SetColour(drawRect, RADARMAP_COLOUR_WATER); return 1;
         case 9: RadarMap_SetColour(drawRect, RADARMAP_COLOUR_LAKE); return 1;
         default:
-            block = &LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+            block = &legoGlobs_currLevel->blocks
                         [legoGlobs_currLevel->width * by + bx];
             if (block->flags1 & 0x100000) {
                 RadarMap_SetColour(drawRect, RADARMAP_COLOUR_FLAG100000);

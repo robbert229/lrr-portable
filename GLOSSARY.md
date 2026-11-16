@@ -62,7 +62,7 @@ The tag marking `main` once the *matching build* is byte-identical to the shippe
 _Avoid_: "the 100% branch", "release"
 
 **port shell**:
-The port-only rewrite of the game (`LegorrrRun`, the `*_port.cpp` files and their hook tables) that the native build ran instead of the units; ADR 0007 deletes it.
+The port-only rewrite of the game (`LegorrrRun`, the `*_port.cpp` files and their hook tables) that the native build ran instead of the units, until ADR 0007 deleted it.
 _Avoid_: "the port" (that is the product), "port tail" (the link-order term)
 
 **scenario**:
