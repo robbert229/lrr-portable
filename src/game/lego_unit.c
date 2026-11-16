@@ -5752,7 +5752,7 @@ void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* 
                                          int smooth)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    int pos[2];
+    LegoPoint2I2A pos;
     int x, y;
 
     legoGlobs_f_556158 = smooth;
@@ -5761,7 +5761,7 @@ void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* 
             entity_transform_position_get_outputs(liveObj, &legoGlobs_f_556150, &legoGlobs_f_556154);
         else
             entity_transform_position_get_outputs(liveObj, &legoGlobs_f_556148, &legoGlobs_f_55614c);
-        entity_position_to_terrain_cell_adapter(liveObj, &pos[0], &pos[1]);
+        entity_position_to_terrain_cell_adapter(liveObj, &pos.x, &pos.y);
     } else {
         if (smooth)
             terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
@@ -5769,20 +5769,19 @@ void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* 
         else
             terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
                                        blockPos[0], blockPos[1], &legoGlobs_f_556148, &legoGlobs_f_55614c);
-        pos[0] = blockPos[0];
-        pos[1] = blockPos[1];
+        pos = *(const LegoPoint2I2A*)blockPos;
     }
 
-    x = pos[0];
-    y = pos[1];
-    if (pos[0] < view_grid_edge_get()) x = view_grid_edge_get();
-    if (pos[0] >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x0) - view_grid_edge_get())
+    x = pos.x;
+    y = pos.y;
+    if (pos.x < view_grid_edge_get()) x = view_grid_edge_get();
+    if (pos.x >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x0) - view_grid_edge_get())
         x = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x0) - view_grid_edge_get() - 1;
-    if (pos[1] < view_grid_edge_get()) y = view_grid_edge_get();
-    if (pos[1] >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x4) - view_grid_edge_get())
+    if (pos.y < view_grid_edge_get()) y = view_grid_edge_get();
+    if (pos.y >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x4) - view_grid_edge_get())
         y = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x4) - view_grid_edge_get() - 1;
 
-    if (pos[0] != x || pos[1] != y) {
+    if (pos.x != x || pos.y != y) {
         if (smooth)
             terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
                                        x, y, &legoGlobs_f_556150, &legoGlobs_f_556154);
