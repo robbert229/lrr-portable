@@ -16,10 +16,14 @@ RECCMP_BASELINE ?= docs/coverage/match-baseline.txt
 RECCMP_WINE_BIN ?=
 RECCMP_PROTON_BIN ?= $(RR_A2_PROTON)
 RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-raider-a2)/compatdata
+# Fallback source for the native D3DRM.DLL that reccmp-run places beside the
+# rebuilt executable when the reference directory has none.
+RECCMP_D3DRM_URL ?= https://legoisland.org/download/d3drm.zip
+RECCMP_D3DRM_SHA256 ?= 6f046d7041c3257e9c1f870ab03123ee7e46b2a081791c687a798969185a0957
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: opt-ref-link opt-ref opt-ref-callers unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-search phase-probe match-function-parity convert-unit relocate-unit tools-test
+.PHONY: opt-ref-link opt-ref opt-ref-callers unit-data-offsets pe-audit winapi-link-check match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reccmp-run-d3drm reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-search phase-probe match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -220,6 +224,45 @@ reference-run: _RUN_MISSING_HINT :=
 reccmp-run: _RUN_EXE := $(abspath $(RECCMP_BUILD_DIR)/LegoRR.exe)
 reccmp-run: _RUN_ARGUMENT := $(abspath $(RECCMP_BUILD_DIR)/LegoRR.exe)
 reccmp-run: _RUN_MISSING_HINT :=; build it with make reccmp-report
+reccmp-run: reccmp-run-d3drm
+
+# The game needs the native D3DRM.DLL: Wine's builtin d3drm stubs
+# CreateUserVisual, so the first mesh dereferences a null visual. Windows
+# searches the executable's directory before system32 and the working
+# directory last, so the DLL in the reference directory is not found for the
+# rebuilt executable. Put a copy beside it: from the reference directory, or
+# else from $(RECCMP_D3DRM_URL), checked against $(RECCMP_D3DRM_SHA256).
+reccmp-run-d3drm:
+	@exe_dir="$(abspath $(RECCMP_BUILD_DIR))"; \
+	test -s "$$exe_dir/LegoRR.exe" || exit 0; \
+	if [ -n "$$(find "$$exe_dir" -maxdepth 1 -iname d3drm.dll -size +0 -print -quit)" ]; then \
+	  exit 0; \
+	fi; \
+	ref_dll="$$(find "$(RECCMP_REFERENCE_DIR)" -maxdepth 1 -iname d3drm.dll -size +0 -print -quit 2>/dev/null)"; \
+	if [ -n "$$ref_dll" ]; then \
+	  echo "Copying $$ref_dll to $$exe_dir/D3DRM.DLL"; \
+	  cp "$$ref_dll" "$$exe_dir/D3DRM.DLL"; \
+	  exit; \
+	fi; \
+	tmp="$$(mktemp -d)" || exit 1; \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	echo "Downloading D3DRM.DLL from $(RECCMP_D3DRM_URL)"; \
+	curl -fsSL -o "$$tmp/d3drm.zip" "$(RECCMP_D3DRM_URL)" || { \
+	  echo "Download failed; place D3DRM.DLL in $(RECCMP_REFERENCE_DIR) or $$exe_dir" >&2; \
+	  exit 2; \
+	}; \
+	echo "$(RECCMP_D3DRM_SHA256)  $$tmp/d3drm.zip" | sha256sum -c --quiet - || { \
+	  echo "$(RECCMP_D3DRM_URL) does not match RECCMP_D3DRM_SHA256" >&2; \
+	  exit 2; \
+	}; \
+	python3 -m zipfile -e "$$tmp/d3drm.zip" "$$tmp/x" || exit 2; \
+	dll="$$(find "$$tmp/x" -iname d3drm.dll -size +0 -print -quit)"; \
+	if [ -z "$$dll" ]; then \
+	  echo "$(RECCMP_D3DRM_URL) has no d3drm.dll" >&2; \
+	  exit 2; \
+	fi; \
+	cp "$$dll" "$$exe_dir/D3DRM.DLL.tmp" && mv "$$exe_dir/D3DRM.DLL.tmp" "$$exe_dir/D3DRM.DLL" && \
+	  echo "Installed $$exe_dir/D3DRM.DLL"
 
 reference-run reccmp-run:
 	@test -s "$(_RUN_EXE)" || { \
