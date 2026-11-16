@@ -259,7 +259,7 @@ float* line_intersection_2d_compute(float* r, const float* p1,
                                     const float* d1, const float* p2,
                                     const float* d2)
 {
-    float ax, ay, bx, by, det, t;
+    float ax, ay, bx, by, det, i0, i1, t;
 
     bx = d2[0];
     by = d2[1];
@@ -267,7 +267,11 @@ float* line_intersection_2d_compute(float* r, const float* p1,
     ay = -d1[1];
     det = ay * bx - ax * by;
     if (s_maths_zero != det) {
-        t = -(by / det) * (p1[0] - p2[0]) + (bx / det) * (p1[1] - p2[1]);
+        /* The inverse's first row: the negation is applied late (fchs after
+         * the loads) and the second product parenthesised, as the original. */
+        i0 = -by / det;
+        i1 = bx / det;
+        t = i0 * (p1[0] - p2[0]) + (i1 * (p1[1] - p2[1]));
         r[0] = t * d1[0];
         r[1] = t * d1[1];
         r[0] = p1[0] + r[0];
