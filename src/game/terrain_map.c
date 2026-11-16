@@ -278,6 +278,16 @@ void terrain_map_vertex_normals_update_all(TerrainMap* map)
     }
 }
 
+/* The shape walks' test for a repeated point, an inline helper: the
+ * original reads the second point through its own address ([ecx + 4] for
+ * its y). Defined here, before its first caller, as a header include at
+ * this point moves the unit's symbol phase (finding 538). */
+static __inline int terrain_map_point2i_differs(const TerrainMapPoint2I* a,
+                                                const TerrainMapPoint2I* b)
+{
+    return a->x != b->x || a->y != b->y;
+}
+
 // FUNCTION: LEGORR 0x0044e8c0
 int terrain_map_shape_tolerance_check(TerrainMap* map,
                                       const TerrainMapPoint2I* shape,
@@ -296,8 +306,7 @@ int terrain_map_shape_tolerance_check(TerrainMap* map,
     lowest = 10000.0f;
     highest = -10000.0f;
     for (i = 0; i < count; i++) {
-        if (i == count - 1 || shape[i].x != shape[i + 1].x ||
-            shape[i].y != shape[i + 1].y) {
+        if (i == count - 1 || terrain_map_point2i_differs(&shape[i], &shape[i + 1])) {
             terrain_map_block_vertices_get(map, shape[i].x, shape[i].y,
                                            vertices);
             for (j = 0; j < 6; j++) {
@@ -354,8 +363,7 @@ void terrain_map_shape_flatten(TerrainMap* map,
     highest = -10000.0f;
     blockCount = 0;
     for (i = 0; i < count; i++) {
-        if (i == count - 1 || shape[i].x != shape[i + 1].x ||
-            shape[i].y != shape[i + 1].y) {
+        if (i == count - 1 || terrain_map_point2i_differs(&shape[i], &shape[i + 1])) {
             point = &s_terrain_map_flatten_blocks[blockCount];
             *point = shape[i];
             terrain_map_block_vertices_get(map, point->x, point->y,
