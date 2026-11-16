@@ -6831,13 +6831,14 @@ int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                 terrain_map_vertex_move(map, bx + 1, by, level->digDepth);
                 LEGO_2F_BLOCK(level, bx + 1, by).f_00 = 1;
             }
-            if (LEGO_2F_BLOCK(level, bx + 1, by + 1).f_00 == 0) {
-                terrain_map_vertex_move(map, bx + 1, by + 1, level->digDepth);
-                LEGO_2F_BLOCK(level, bx + 1, by + 1).f_00 = 1;
+            y = by + 1;
+            if (LEGO_2F_BLOCK(level, bx + 1, y).f_00 == 0) {
+                terrain_map_vertex_move(map, bx + 1, y, level->digDepth);
+                LEGO_2F_BLOCK(level, bx + 1, y).f_00 = 1;
             }
-            if (LEGO_2F_BLOCK(level, bx, by + 1).f_00 == 0) {
-                terrain_map_vertex_move(map, bx, by + 1, level->digDepth);
-                LEGO_2F_BLOCK(level, bx, by + 1).f_00 = 1;
+            if (LEGO_2F_BLOCK(level, bx, y).f_00 == 0) {
+                terrain_map_vertex_move(map, bx, y, level->digDepth);
+                LEGO_2F_BLOCK(level, bx, y).f_00 = 1;
             }
 
             {
