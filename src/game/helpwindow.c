@@ -103,7 +103,7 @@ typedef struct HelpWindow_Globs {
 } HelpWindow_Globs;                             /* 0xd6c */
 
 // GLOBAL: LEGORR 0x004db8e8
-static HelpWindow_Globs helpwindowGlobs;
+HelpWindow_Globs helpwindowGlobs = { 0 };
 
 // FUNCTION: LEGORR 0x00418190
 void help_window_set_font(struct Font* font)
