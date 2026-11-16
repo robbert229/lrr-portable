@@ -306,7 +306,7 @@ def write_outputs(source: Path, found: list[Found], objects: dict[int, bytes], *
         obj.write_bytes(objects[item.address])
         reference = obj.relative_to(ROOT).as_posix()
         plan.write_bytes(grind_plan(unit=unit, symbol=item.symbol, reference=reference,
-                                    counts=counts or ((1, 4) if item.synthetic else count_window(item.pads)),
+                                    counts=counts or ((1, 32) if item.synthetic else count_window(item.pads)),
                                     placement=item.placement))
         item.object_path = reference
         item.plan_path = plan.relative_to(ROOT).as_posix()

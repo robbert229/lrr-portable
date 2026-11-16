@@ -1282,7 +1282,8 @@ A function no pad count reproduces gets no files: its remaining difference
 is not a phase. With `--synthetic`, such a function whose compiled body has
 the original's length gets a *synthetic* reference instead: the unpadded
 compile with that body replaced by the original's bytes, outside relocated
-fields, and a plan over runs of 1–4 declarations. Grind can then author a
+fields, and a plan over runs of 1–32 declarations (a phase-sensitive unit
+may need a longer run before its donor compiles like the seed). Grind can then author a
 `retail_exact_donor_rewriting` record when the donor holds the original's
 instructions in another order (robbert229/reprobit#19). Neither does one whose unpadded unit already gives the
 original's body, since its difference lies elsewhere and grind would find
