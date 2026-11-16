@@ -1,4 +1,4 @@
-# input_sha256: f2b41e1d5046274f5226e580bc69643be3af008d32237746511d3876222a8489
+# input_sha256: 6bedeeef4a8ec88a6791bd93165d97072ab39e5db54d8cba9e6b14c691fd11f7
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -620,7 +620,7 @@
 0x0041c310 100.00 interface_callback_hit_item
 0x0041c440 100.00 advisor_callback_schedule_gate
 0x0041c470 100.00 interface_callback_hotkey
-0x0041c4f0 98.58 interface_update_advisor
+0x0041c4f0 100.00 interface_update_advisor
 0x0041c6e0 100.00 interface_handle_item_press
 0x0041c7b0 100.00 interface_update_item_enabled
 0x0041c800 100.00 interface_update_object_item_enabled
@@ -3345,7 +3345,7 @@
 0x0041c310 100.00 interface_callback_hit_item
 0x0041c440 100.00 advisor_callback_schedule_gate
 0x0041c470 100.00 interface_callback_hotkey
-0x0041c4f0 98.58 interface_update_advisor
+0x0041c4f0 100.00 interface_update_advisor
 0x0041c6e0 100.00 interface_handle_item_press
 0x0041c7b0 100.00 interface_update_item_enabled
 0x0041c800 100.00 interface_update_object_item_enabled
