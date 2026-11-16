@@ -2544,21 +2544,21 @@ Lego_Object* legoobject_predug_spawn_coordinate_select_and_create(Lego_Object* o
 Lego_Object* legoobject_emergence_random_spawn_attempt(void)
 {
     int id;
-    int width;
+    LegoObjF_Point2I size;
     unsigned int i;
-    int height;
     int by;
     int bx;
     Lego_Object* obj;
+    LegoObjH_CreatureModel* model;
 
     id = active_engine_field_b0_get_current();
-    width = ((LegoObjH_Map*)Lego_GetMap())->blockWidth;
-    height = ((LegoObjH_Map*)Lego_GetMap())->blockHeight;
+    size.x = ((LegoObjH_Map*)Lego_GetMap())->blockWidth;
+    size.y = ((LegoObjH_Map*)Lego_GetMap())->blockHeight;
     for (i = 0; i < 1000; i++) {
-        bx = rng_thunk_draw15() % width;
-        by = rng_thunk_draw15() % height;
-        obj = legoobject_creature_spawn_from_emergence(
-            (LegoObjH_CreatureModel*)legoGlobs_rockMonsterData + id, 3, id, bx, by);
+        bx = rng_thunk_draw15() % size.x;
+        by = rng_thunk_draw15() % size.y;
+        model = (LegoObjH_CreatureModel*)legoGlobs_rockMonsterData + id;
+        obj = legoobject_creature_spawn_from_emergence(model, 3, id, bx, by);
         if (obj != NULL)
             return obj;
     }
