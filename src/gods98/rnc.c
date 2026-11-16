@@ -12,6 +12,7 @@
  * The packed stream: "RNC", a method byte, the unpacked length (big-endian)
  * at +4, and the packed data from +0x12. Method 0 is stored, method 1 is
  * Huffman-coded and read LSB-first, method 2 is read MSB-first. */
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -53,10 +54,10 @@ unsigned int rnc_bitCache;
 // GLOBAL: LEGORR 0x00558090
 unsigned char* rnc_outputEnd;
 
-/* The unpacked length: the big-endian dword at +4. Init and the dispatch
- * read it as a signed 32-bit word (MSVC 5.0's long); the native port reads
- * it unsigned, so that the shifts wrap there without overflow. */
-#define RNC_LONG long
+/* The unpacked length: the big-endian dword at +4. The original reads it
+ * as a signed 32-bit word (MSVC 5.0's long); it is read unsigned, so that
+ * the shifts wrap without overflow, and 32 bits wide on every target. */
+#define RNC_LONG uint32_t
 #define RNC_LENGTH(l) (((((l) * 256 + (((l) >> 8) & 0xff)) * 256) + (((l) >> 16) & 0xff)) * 256 \
                        + ((unsigned int)(l) >> 24))
 
