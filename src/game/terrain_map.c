@@ -1565,8 +1565,7 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
 {
     TerrainMapVector3 v[4];
     TerrainMapVector3 normal;
-    TerrainMapVector3 hitA;
-    TerrainMapVector3 hitB;
+    TerrainMapVector3 hit[2];
     TerrainMapPoint2 point;
     TerrainMapPoint2 list[4];
     int rotated;
@@ -1576,7 +1575,7 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
     hitAFound = 0;
     hitBFound = 0;
     normal = map->blocks[by * map->blockWidth + bx].normalA;
-    if (view_ray_intersection_test(&hitA.x, &origin->x, &direction->x,
+    if (view_ray_intersection_test(&hit[0].x, &origin->x, &direction->x,
                                    &v[0].x, &normal.x)) {
         if (!rotated) {
             list[0].x = v[0].x;
@@ -1598,13 +1597,13 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
             list[3].x = v[0].x;
             list[3].y = v[0].y;
         }
-        point = *(TerrainMapPoint2*)&hitA;
+        point = *(TerrainMapPoint2*)&hit[0];
         if (point_in_polygon_2d(&point.x, &list[0].x, &list[1].x, 3)) {
             hitAFound = 1;
         }
     }
     normal = map->blocks[by * map->blockWidth + bx].normalB;
-    if (view_ray_intersection_test(&hitB.x, &origin->x, &direction->x,
+    if (view_ray_intersection_test(&hit[1].x, &origin->x, &direction->x,
                                    &v[2].x, &normal.x)) {
         if (!rotated) {
             list[0].x = v[1].x;
@@ -1626,24 +1625,24 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
             list[3].x = v[0].x;
             list[3].y = v[0].y;
         }
-        point = *(TerrainMapPoint2*)&hitB;
+        point = *(TerrainMapPoint2*)&hit[1];
         if (point_in_polygon_2d(&point.x, &list[0].x, &list[1].x, 3)) {
             hitBFound = 1;
         }
     }
     if (!hitAFound && !hitBFound) return 0;
     if (hitAFound && hitBFound) {
-        if (terrain_map_vector3d_distance(&hitA, origin) <
-            terrain_map_vector3d_distance(&hitB, origin)) {
-            *intersection = hitA;
+        if (terrain_map_vector3d_distance(&hit[0], origin) <
+            terrain_map_vector3d_distance(&hit[1], origin)) {
+            *intersection = hit[0];
             return 1;
         }
     }
     else if (hitAFound) {
-        *intersection = hitA;
+        *intersection = hit[0];
         return 1;
     }
-    *intersection = hitB;
+    *intersection = hit[1];
     return 1;
 }
 
