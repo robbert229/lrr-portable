@@ -1,4 +1,4 @@
-# input_sha256: d445d56929885c61f10a9375b95090e55e6499b46728f1d918565e8af11add41
+# input_sha256: ff7f5864cc3e523e393bdcc04027280a4da4d116bbe4cb3122dba9b93c80bb1b
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1077,7 +1077,7 @@
 0x0043fb40 100.00 legoobject_damage_hurt_sound_submit
 0x0043fc20 100.00 legoobject_record_pair_pose_copy_and_activity_raise
 0x0043fdc0 100.00 legoobject_action_target_cell_is_valid
-0x0043fe70 82.39 legoobject_route_to_explicit_target
+0x0043fe70 87.32 legoobject_route_to_explicit_target
 0x0043fff0 100.00 legoobject_route_marker_setup
 0x00440130 100.00 legoobject_update_and_unregister_at_tile
 0x004401b0 98.06 legoobject_terrain_cell_to_world_position
@@ -1164,7 +1164,7 @@
 0x00449010 100.00 legoobject_kind6_record_approach_route_issue
 0x004490a0 100.00 legoobject_proximity_step_command_issue_with_link
 0x00449240 100.00 legoobject_walkable_target_cell_route_issue
-0x004492b0 84.62 legoobject_cell_step_command_issue_with_target_mark
+0x004492b0 100.00 legoobject_cell_step_command_issue_with_target_mark
 0x004493e0 100.00 legoobject_has_task_type_4_5_7
 0x00449430 100.00 legoobject_target_cell_route_and_associate
 0x00449520 100.00 legoobject_target_cell_route_marker14
@@ -1205,7 +1205,7 @@
 0x0044b370 100.00 legoobject_activity_grant
 0x0044b480 100.00 legoobject_activity_scan
 0x0044b4c0 100.00 legoobject_type_two_target_resolve_and_apply
-0x0044b500 42.29 legoobject_position_step_command_issue_and_link
+0x0044b500 52.33 legoobject_position_step_command_issue_and_link
 0x0044b680 100.00 legoobject_scene_object_tree_attach
 0x0044b7a0 100.00 legoobject_matrix_rotate_z_with_offset
 0x0044b850 100.00 legoobject_scene_node_sync_callback
@@ -3802,7 +3802,7 @@
 0x0043fb40 100.00 legoobject_damage_hurt_sound_submit
 0x0043fc20 100.00 legoobject_record_pair_pose_copy_and_activity_raise
 0x0043fdc0 100.00 legoobject_action_target_cell_is_valid
-0x0043fe70 82.39 legoobject_route_to_explicit_target
+0x0043fe70 87.32 legoobject_route_to_explicit_target
 0x0043fff0 100.00 legoobject_route_marker_setup
 0x00440130 100.00 legoobject_update_and_unregister_at_tile
 0x004401b0 98.06 legoobject_terrain_cell_to_world_position
@@ -3889,7 +3889,7 @@
 0x00449010 100.00 legoobject_kind6_record_approach_route_issue
 0x004490a0 100.00 legoobject_proximity_step_command_issue_with_link
 0x00449240 100.00 legoobject_walkable_target_cell_route_issue
-0x004492b0 84.62 legoobject_cell_step_command_issue_with_target_mark
+0x004492b0 100.00 legoobject_cell_step_command_issue_with_target_mark
 0x004493e0 100.00 legoobject_has_task_type_4_5_7
 0x00449430 100.00 legoobject_target_cell_route_and_associate
 0x00449520 100.00 legoobject_target_cell_route_marker14
@@ -3930,7 +3930,7 @@
 0x0044b370 100.00 legoobject_activity_grant
 0x0044b480 100.00 legoobject_activity_scan
 0x0044b4c0 100.00 legoobject_type_two_target_resolve_and_apply
-0x0044b500 42.29 legoobject_position_step_command_issue_and_link
+0x0044b500 52.33 legoobject_position_step_command_issue_and_link
 0x0044b680 100.00 legoobject_scene_object_tree_attach
 0x0044b7a0 100.00 legoobject_matrix_rotate_z_with_offset
 0x0044b850 100.00 legoobject_scene_node_sync_callback

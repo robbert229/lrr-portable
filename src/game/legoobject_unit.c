@@ -4669,9 +4669,6 @@ int legoobject_route_to_explicit_target(Lego_Object* obj, Lego_Object* target)
 {
     int result;
     void* cont;
-    unsigned int* xs;
-    unsigned int* ys;
-    unsigned int count;
     int bx;
     int by;
     int objX;
@@ -4689,12 +4686,18 @@ int legoobject_route_to_explicit_target(Lego_Object* obj, Lego_Object* target)
             if (terrain_map_world_to_block(Lego_GetMap(), pos[0], pos[1], &bx, &by)) {
                 if (bx == objX && by == objY) {
                     result = legoobject_route_setup_and_marker_associate(obj, 1, (unsigned int*)&bx, (unsigned int*)&by, pos);
-                } else if (legoobject_terrain_neighbor_path_check(obj, objX, objY, bx, by, &xs, &ys, &count, NULL, NULL)) {
-                    result = legoobject_route_setup_and_marker_associate(obj, count, xs, ys, pos);
-                    free(xs);
-                    free(ys);
                 } else {
-                    return 0;
+                    unsigned int* xs;
+                    unsigned int* ys;
+                    unsigned int count;
+
+                    if (legoobject_terrain_neighbor_path_check(obj, objX, objY, bx, by, &xs, &ys, &count, NULL, NULL)) {
+                        result = legoobject_route_setup_and_marker_associate(obj, count, xs, ys, pos);
+                        free(xs);
+                        free(ys);
+                    } else {
+                        return 0;
+                    }
                 }
                 if (result) {
                     obj->routeToObject = target;
@@ -8862,9 +8865,6 @@ int legoobject_walkable_target_cell_route_issue(Lego_Object* obj, int* blockPos)
 int legoobject_cell_step_command_issue_with_target_mark(Lego_Object* obj, int* blockPos)
 {
     int result;
-    unsigned int* routeX;
-    unsigned int* routeY;
-    unsigned int count;
     LegoObjF_Point2I ownPos;
 
     if (terrain_cell_speed_class_current(blockPos)) {
@@ -8875,6 +8875,10 @@ int legoobject_cell_step_command_issue_with_target_mark(Lego_Object* obj, int* b
             result = legoobject_route_setup_and_marker_associate(obj, 1,
                 (unsigned int*)&blockPos[0], (unsigned int*)&blockPos[1], NULL);
         } else {
+            unsigned int* routeX;
+            unsigned int* routeY;
+            unsigned int count;
+
             if (legoobject_terrain_neighbor_path_check(obj, ownPos.x, ownPos.y, blockPos[0], blockPos[1],
                     &routeX, &routeY, &count, NULL, NULL)) {
                 result = legoobject_route_setup_and_marker_associate(obj, count, routeX, routeY, NULL);
@@ -10206,9 +10210,6 @@ int legoobject_position_step_command_issue_and_link(Lego_Object* obj, int select
     float target[2];
     LegoObjF_Point2I toBlock;
     LegoObjF_Point2I fromBlock;
-    unsigned int* xs;
-    unsigned int* ys;
-    unsigned int count;
 
     if (obj->type == 2) {
         legoobject_transform_position_get(obj, &pos[0], &pos[1]);
@@ -10225,6 +10226,10 @@ int legoobject_position_step_command_issue_and_link(Lego_Object* obj, int select
                 result = legoobject_route_setup_and_marker_associate(obj, 1, (unsigned int*)&toBlock.x,
                                                                      (unsigned int*)&toBlock.y, target);
             } else {
+                unsigned int* xs;
+                unsigned int* ys;
+                unsigned int count;
+
                 if (legoobject_terrain_neighbor_path_check(obj, fromBlock.x, fromBlock.y, toBlock.x, toBlock.y,
                                                            &xs, &ys, &count, NULL, NULL))
                 {
