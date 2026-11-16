@@ -3761,8 +3761,10 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
 
     if (show) {
         tooltip_set_content(6, "%s", text);
-        if (!playSound) sfx = 0;
-        timed_effect_cue_request_set_corpus(6, sfx);
+        if (playSound)
+            timed_effect_cue_request_set_corpus(6, sfx);
+        else
+            timed_effect_cue_request_set_corpus(6, 0);
         timed_effect_update_request_set_corpus(6);
     }
 }
@@ -7080,7 +7082,8 @@ void lego_terrain_cell_queued_work_transition(unsigned int bx, unsigned int by)
 // FUNCTION: LEGORR 0x004311d0
 void lego_block_activity_create(Lego_Level* level, const int* blockPos, int build)
 {
-    float wx, wy, wz;
+    LegoPoint2F2G wxwy;
+    float wz;
     LegoVector3FC dirs[4] = {
         { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f },
         { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }
@@ -7111,9 +7114,9 @@ void lego_block_activity_create(Lego_Level* level, const int* blockPos, int buil
             LEGO_2F_PTR_SET(LEGO_2F_BLOCK(level, blockPos[0], blockPos[1]).f_10[2], activity);
         }
         terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
-                                   blockPos[0], blockPos[1], &wx, &wy);
-        wz = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wx, wy);
-        ddiscene_object_position_set(activity->cont, NULL, wx, wy, wz);
+                                   blockPos[0], blockPos[1], &wxwy.x, &wxwy.y);
+        wz = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wxwy.x, wxwy.y);
+        ddiscene_object_position_set(activity->cont, NULL, wxwy.x, wxwy.y, wz);
         ddiscene_object_pose_method_dispatch(activity->cont, NULL, (float)dirs[direction].x,
                                              (float)dirs[direction].y, (float)dirs[direction].z,
                                              0.0f, 0.0f, -1.0f);

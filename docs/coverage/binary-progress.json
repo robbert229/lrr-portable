@@ -3,7 +3,7 @@
     "full": 98.2,
     "game_only": 98.01
   },
-  "baseline_sha256": "3e32664e4fa7a4773b056673867570298c0f2c9b6b60ca1cf2da963b7d81e8e2",
+  "baseline_sha256": "a2d4dcfb3616be91b3d92eedb0fe42ab9f0fecf7d98e67265d12f655fa7d86f7",
   "correct_size_functions": {
     "full": {
       "bytes": 493596,
@@ -304,7 +304,7 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "6fc4bd8327199c5917dc57b04b6c9b9754a43712ab57e521615de3695fbc773e",
+  "input_sha256": "82f4efd524ee29a334f9522970fdcc0b3ef62eaaedf5bf0effb236c022ef0969",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 54,
@@ -4014,7 +4014,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 11
   },
-  "listing_digests_sha256": "f3edaf535190907169fe02a08dc925c7ae4b3b2fcb2197e4947174aa0ef2c607",
+  "listing_digests_sha256": "76e0faf5493bb550fa343b3e93dc3cf2892e0e47f51981c316db441dee2b6ebf",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4117,8 +4117,8 @@
           "rebuilt": 10744
         },
         ".text": {
-          "differing": 582032,
-          "equal": 60517,
+          "differing": 582029,
+          "equal": 60520,
           "original": 642549,
           "rebuilt": 641845
         }
@@ -4204,7 +4204,7 @@
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 6.59,
-      "identical_bytes": 60499,
+      "identical_bytes": 60502,
       "identical_percent": 9.42,
       "original_bytes": 642549,
       "rebuilt_bytes": 641845,
@@ -4241,7 +4241,7 @@
   "text_at_original_addresses": {
     "chance_percent": 2.83,
     "excess_percent_points": 6.59,
-    "identical_bytes": 60542,
+    "identical_bytes": 60545,
     "identical_percent": 9.42,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
