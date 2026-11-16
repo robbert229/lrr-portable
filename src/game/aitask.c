@@ -22,6 +22,7 @@
 
 #include "crt/vc5names.h"
 #include "lego_unit.h"
+#include "legoobject_record.h"
 #include "aitask.h"
 #include "aitask_imports.h"
 /* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
@@ -435,7 +436,7 @@ void aitask_cmd_registry_init_target(void)
  * }
  */
 // FUNCTION: LEGORR 0x00402000
-void aitask_cmd_mark_matching(int type, struct EntitySlot* object,
+void aitask_cmd_mark_matching(int type, struct Lego_Object* object,
                               const int* blockPos)
 {
     AITask* task;
@@ -759,8 +760,8 @@ void aitask_cmd_tick_global_delta(float elapsed)
 
         for (task = aiTaskGlobs.globalHead; task != NULL; task = task->next) {
             if (task->type == 10 && !(task->flags & 0x200000)) {
-                if (LEGO_FIELD(task->object, float, 0x340) <= s_rdata_0049e014 ||
-                    LEGO_FIELD(task->object, float, 0x340) >= s_rdata_0049e018)
+                if (task->object->health <= s_rdata_0049e014 ||
+                    task->object->health >= s_rdata_0049e018)
                     task->flags |= 0x20;
             }
         }
@@ -1104,10 +1105,10 @@ void aitask_entity_record_array_apply_zero_state(AITask* task, int detach)
         selection_snapshot_create(&task->buffer, &task->count);
         for (i = 0; i < task->count; i++) {
             entity_action_sequence_reset(
-                ((struct EntitySlot**)task->buffer)[i], 0);
+                ((struct Lego_Object**)task->buffer)[i], 0);
             if (detach)
                 entity_attached_object_list_detach(
-                    ((struct EntitySlot**)task->buffer)[i], 0);
+                    ((struct Lego_Object**)task->buffer)[i], 0);
         }
     }
 }
@@ -1135,7 +1136,7 @@ void aitask_entity_record_array_apply_zero_state(AITask* task, int detach)
  * }
  */
 // FUNCTION: LEGORR 0x00402670
-void aitask_entity_command15_validated_record_queue(struct EntitySlot* object)
+void aitask_entity_command15_validated_record_queue(struct Lego_Object* object)
 {
     AITask* task;
 
@@ -1168,10 +1169,10 @@ void aitask_entity_command15_validated_record_queue(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x004026c0
-void aitask_entity_deferred_work_schedule(struct EntitySlot* object)
+void aitask_entity_deferred_work_schedule(struct Lego_Object* object)
 {
-    if (LEGO_FIELD(object, void*, 0x304) == NULL &&
-        !(LEGO_FIELD(object, unsigned int, 0x3ec) & 0x100)) {
+    if (object->carryingThisObject == NULL &&
+        !(object->flags4 & 0x100)) {
         if (!aitask_entity_pool_callback_search(aitask_callback_00402700, object))
             aitask_cmd_create_task(object, 0.0f);
     }
@@ -1183,7 +1184,7 @@ void aitask_entity_deferred_work_schedule(struct EntitySlot* object)
 // FUNCTION: LEGORR 0x00402700
 int aitask_callback_00402700(AITask* task, void* data)
 {
-    if (task->type == 3 && task->object == (struct EntitySlot*)data)
+    if (task->type == 3 && task->object == (struct Lego_Object*)data)
         return 1;
     return 0;
 }
@@ -1248,7 +1249,7 @@ int aitask_callback_00402700(AITask* task, void* data)
  * }
  */
 // FUNCTION: LEGORR 0x00402720
-void aitask_cmd_create_task(struct EntitySlot* object, float timeIn)
+void aitask_cmd_create_task(struct Lego_Object* object, float timeIn)
 {
     AITask* task;
     int priority;
@@ -1257,13 +1258,13 @@ void aitask_cmd_create_task(struct EntitySlot* object, float timeIn)
     task = aitask_cmd_alloc(3);
     task->object = object;
     task->timeIn = timeIn;
-    if (LEGO_FIELD(object, int, 0) == 6) {
-        priority = (LEGO_FIELD(object, unsigned int, 0x3e8) & 0x80000000) ? 0x12 : 0;
-    } else if (LEGO_FIELD(object, int, 0) == 7) {
+    if (object->type == 6) {
+        priority = (object->flags3 & 0x80000000) ? 0x12 : 0;
+    } else if (object->type == 7) {
         priority = 1;
-    } else if (LEGO_FIELD(object, int, 0) == 9) {
+    } else if (object->type == 9) {
         priority = 0x10;
-    } else if (LEGO_FIELD(object, int, 0) == 8) {
+    } else if (object->type == 8) {
         task->field_3c = 8;
         priority = 3;
     }
@@ -1359,11 +1360,11 @@ void aitask_entity_command14_batch_issue(unsigned int count)
  * }
  */
 // FUNCTION: LEGORR 0x00402850
-void aitask_cmd_minion_companion(struct EntitySlot* object)
+void aitask_cmd_minion_companion(struct Lego_Object* object)
 {
     AITask* task;
 
-    if (LEGO_FIELD(object, int, 0) == 6) {
+    if (object->type == 6) {
         task = aitask_cmd_alloc(3);
         task->object = object;
         aitask_cmd_set_kind(task, 0x15);
@@ -1415,7 +1416,7 @@ void aitask_cmd_minion_companion(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x00402890
-void aitask_task_type23_create_for_category_mask(struct EntitySlot* object,
+void aitask_task_type23_create_for_category_mask(struct Lego_Object* object,
                                                  int mask, int detach)
 {
     AITask* task;
@@ -1503,14 +1504,14 @@ void aitask_task_type23_create_for_category_mask(struct EntitySlot* object,
  * }
  */
 // FUNCTION: LEGORR 0x00402960
-void aitask_entity_kind_command_issue(struct EntitySlot* object)
+void aitask_entity_kind_command_issue(struct Lego_Object* object)
 {
     AITask* task;
 
-    if (!(LEGO_FIELD(object, unsigned int, 0x3e4) & 0x10)) {
+    if (!(object->flags2 & 0x10)) {
         task = aitask_cmd_alloc(0x12);
         task->object = object;
-        LEGO_FIELD(object, unsigned int, 0x3e4) |= 0x10;
+        object->flags2 |= 0x10;
         if (entity_capability_flags_get(object) & 0x100) {
             task->field_3c = 1;
         } else if (entity_stats_word_get(object) & 0x2000000) {
@@ -1522,7 +1523,7 @@ void aitask_entity_kind_command_issue(struct EntitySlot* object)
             task->field_3c = 2;
         }
         if ((entity_capability_flags_get(object) & 0x40) &&
-            !(LEGO_FIELD(object, unsigned int, 0x3e0) & 0x400))
+            !(object->flags1 & 0x400))
             task->flags |= 0x100000;
         aitask_entity_record_array_apply_zero_state(task, !(task->flags & 0x100000));
         task->flags &= ~0x40;
@@ -1589,7 +1590,7 @@ int aitask_callback_00402a70(AITask* task, void* data)
  * }
  */
 // FUNCTION: LEGORR 0x00402aa0
-void aitask_argument_callback_dispatch(struct EntitySlot* object)
+void aitask_argument_callback_dispatch(struct Lego_Object* object)
 {
     aitask_entity_pool_callback_search(aitask_callback_00402ac0, object);
 }
@@ -1600,7 +1601,7 @@ void aitask_argument_callback_dispatch(struct EntitySlot* object)
 // FUNCTION: LEGORR 0x00402ac0
 int aitask_callback_00402ac0(AITask* task, void* data)
 {
-    if (task->type == 0x1a && task->object == (struct EntitySlot*)data)
+    if (task->type == 0x1a && task->object == (struct Lego_Object*)data)
         task->flags |= 0x20;
     return 0;
 }
@@ -1961,16 +1962,16 @@ void aitask_cell_command_type13_issue(const int* blockPos)
  * }
  */
 // FUNCTION: LEGORR 0x00402ec0
-void aitask_entity_conditional_task_schedule(struct EntitySlot* object)
+void aitask_entity_conditional_task_schedule(struct Lego_Object* object)
 {
     AITask* task;
 
     if ((entity_capability_flags_get(object) & 1) &&
-        !(LEGO_FIELD(object, unsigned int, 0x3e0) & 0x400) &&
-        !(LEGO_FIELD(object, unsigned int, 0x3ec) & 0x10000)) {
+        !(object->flags1 & 0x400) &&
+        !(object->flags4 & 0x10000)) {
         task = aitask_cmd_alloc(0x1e);
         task->object = object;
-        LEGO_FIELD(object, unsigned int, 0x3ec) |= 0x10000;
+        object->flags4 |= 0x10000;
         aitask_cmd_link_head(task, 0x11);
         task->flags &= ~0x40;
         task->flags |= 0x100010;
@@ -1997,7 +1998,7 @@ void aitask_entity_conditional_task_schedule(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x00402f30
-void aitask_entity_threshold_progress_event_queue(struct EntitySlot* object,
+void aitask_entity_threshold_progress_event_queue(struct Lego_Object* object,
                                                   int urgent)
 {
     AITask* task;
@@ -2032,8 +2033,8 @@ void aitask_entity_threshold_progress_event_queue(struct EntitySlot* object,
  * }
  */
 // FUNCTION: LEGORR 0x00402f70
-void aitask_entity_target_command_queue(struct EntitySlot* object,
-                                        struct EntitySlot* target)
+void aitask_entity_target_command_queue(struct Lego_Object* object,
+                                        struct Lego_Object* target)
 {
     AITask* task;
     AITask* tail;
@@ -2043,7 +2044,7 @@ void aitask_entity_target_command_queue(struct EntitySlot* object,
     if ((tail = aitask_cmd_chain_walk(object)) != NULL)
         tail->next = task;
     else
-        LEGO_FIELD(object, AITask*, 0x2f0) = task;
+        object->aiTask = task;
 }
 
 /* 0x00402fb0 cell_command_type11_issue (corpus name CellCommandType11Issue), 128 bytes.
@@ -2318,7 +2319,7 @@ int aitask_object_event_type2_queue(void* payload)
 int aitask_active_entity_list_contains_code(int code)
 {
     unsigned int count;
-    struct EntitySlot* const* list;
+    struct Lego_Object* const* list;
     unsigned int i;
 
     if (selection_active_has_any_get()) {
@@ -2376,14 +2377,14 @@ int aitask_active_entity_list_contains_code(int code)
  * }
  */
 // FUNCTION: LEGORR 0x00403270
-void aitask_selection_drag_area_command_create(struct EntitySlot** objects,
+void aitask_selection_drag_area_command_create(struct Lego_Object** objects,
                                                unsigned int count,
                                                const int* blockPos,
                                                int replace)
 {
     AITask* task;
     AITask* tail;
-    struct EntitySlot* object;
+    struct Lego_Object* object;
     unsigned int i;
 
     if (count) {
@@ -2394,15 +2395,15 @@ void aitask_selection_drag_area_command_create(struct EntitySlot** objects,
             task->flags = 4;
             object = objects[i];
             if ((!(entity_stats_word_get(object) & 0x20000) ||
-                 LEGO_FIELD(object, void*, 0x36c) != NULL) &&
-                LEGO_FIELD(object, void*, 0x304) == NULL &&
-                (LEGO_FIELD(object, unsigned int, 0x3e8) & 0x80)) {
+                 object->driveObject != NULL) &&
+                object->carryingThisObject == NULL &&
+                (object->flags3 & 0x80)) {
                 if (replace)
                     aitask_command_queue_sweep_relink(object);
                 if ((tail = aitask_cmd_chain_walk(object)) != NULL)
                     tail->next = task;
                 else
-                    LEGO_FIELD(object, AITask*, 0x2f0) = task;
+                    object->aiTask = task;
             }
         }
     }
@@ -2444,20 +2445,20 @@ void aitask_selection_drag_area_command_create(struct EntitySlot** objects,
  * }
  */
 // FUNCTION: LEGORR 0x00403320
-void aitask_object_command_task_create(struct EntitySlot* object, int param)
+void aitask_object_command_task_create(struct Lego_Object* object, int param)
 {
     AITask* task;
     AITask* tail;
-    struct EntitySlot* target;
+    struct Lego_Object* target;
     float pos[2];
 
     target = NULL;
-    if (LEGO_FIELD(object, int, 0) == 2 &&
-        !(LEGO_FIELD(object, unsigned int, 0x3e0) & 0x400)) {
+    if (object->type == 2 &&
+        !(object->flags1 & 0x400)) {
         entity_transform_position_get_outputs(object, &pos[0], &pos[1]);
         target = entity_lookup_at_world_position(pos);
-    } else if (LEGO_FIELD(object, int, 0) == 1) {
-        target = (struct EntitySlot*)
+    } else if (object->type == 1) {
+        target = (struct Lego_Object*)
             ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(object);
     }
     if (target != NULL) {
@@ -2468,7 +2469,7 @@ void aitask_object_command_task_create(struct EntitySlot* object, int param)
         if ((tail = aitask_cmd_chain_walk(object)) != NULL)
             tail->next = task;
         else
-            LEGO_FIELD(object, AITask*, 0x2f0) = task;
+            object->aiTask = task;
     }
 }
 
@@ -2493,7 +2494,7 @@ void aitask_object_command_task_create(struct EntitySlot* object, int param)
  * }
  */
 // FUNCTION: LEGORR 0x004033c0
-void aitask_object_attached_record_allocate(struct EntitySlot* object)
+void aitask_object_attached_record_allocate(struct Lego_Object* object)
 {
     AITask* task;
     AITask* tail;
@@ -2502,7 +2503,7 @@ void aitask_object_attached_record_allocate(struct EntitySlot* object)
     if ((tail = aitask_cmd_chain_walk(object)) != NULL)
         tail->next = task;
     else
-        LEGO_FIELD(object, AITask*, 0x2f0) = task;
+        object->aiTask = task;
 }
 
 /* 0x004033f0 coordinate_pair_task_record_queue (corpus name CoordinatePairTaskRecordQueue), 64 bytes.
@@ -2613,7 +2614,7 @@ void aitask_task_registry_remove_type0_entry_by_pair(const int* blockPos)
  * }
  */
 // FUNCTION: LEGORR 0x004034a0
-void aitask_scalar_task_record_queue(struct EntitySlot* object)
+void aitask_scalar_task_record_queue(struct Lego_Object* object)
 {
     AITask* task;
 
@@ -2671,7 +2672,7 @@ void aitask_task_pair_record_enqueue(const int* blockPos)
  * }
  */
 // FUNCTION: LEGORR 0x00403520
-void aitask_task_record_kind10_queue(struct EntitySlot* object)
+void aitask_task_record_kind10_queue(struct Lego_Object* object)
 {
     AITask* task;
 
@@ -2716,7 +2717,7 @@ void aitask_task_record_kind10_queue(struct EntitySlot* object)
  */
 // FUNCTION: LEGORR 0x00403560
 void aitask_task_registry_remove_type10_entries_for_entity(
-    struct EntitySlot* object)
+    struct Lego_Object* object)
 {
     AITask* task;
     AITask* next;
@@ -2762,7 +2763,7 @@ void aitask_task_registry_remove_type10_entries_for_entity(
  * }
  */
 // FUNCTION: LEGORR 0x004035c0
-void aitask_cmd_create_move(struct EntitySlot* object, const int* blockPos,
+void aitask_cmd_create_move(struct Lego_Object* object, const int* blockPos,
                             int param)
 {
     AITask* task;
@@ -2775,7 +2776,7 @@ void aitask_cmd_create_move(struct EntitySlot* object, const int* blockPos,
     if ((tail = aitask_cmd_chain_walk(object)) != NULL) {
         tail->next = task;
     } else {
-        LEGO_FIELD(object, AITask*, 0x2f0) = task;
+        object->aiTask = task;
         idle_register(object);
     }
 }
@@ -2804,19 +2805,19 @@ void aitask_cmd_create_move(struct EntitySlot* object, const int* blockPos,
  * }
  */
 // FUNCTION: LEGORR 0x00403610
-void aitask_cmd_create_gated(struct EntitySlot* object,
-                             struct EntitySlot* target)
+void aitask_cmd_create_gated(struct Lego_Object* object,
+                             struct Lego_Object* target)
 {
     AITask* task;
     AITask* tail;
 
-    if (LEGO_FIELD(object, unsigned int, 0x3e0) & 0x400) {
+    if (object->flags1 & 0x400) {
         task = aitask_cmd_alloc(5);
         task->object = target;
         if ((tail = aitask_cmd_chain_walk(object)) != NULL)
             tail->next = task;
         else
-            LEGO_FIELD(object, AITask*, 0x2f0) = task;
+            object->aiTask = task;
     }
 }
 
@@ -2850,13 +2851,13 @@ void aitask_cmd_create_gated(struct EntitySlot* object,
  * }
  */
 // FUNCTION: LEGORR 0x00403650
-void aitask_entity_task_batch_append(struct EntitySlot** objects,
+void aitask_entity_task_batch_append(struct Lego_Object** objects,
                                      unsigned int count,
-                                     struct EntitySlot* target)
+                                     struct Lego_Object* target)
 {
     AITask* task;
     AITask* tail;
-    struct EntitySlot* object;
+    struct Lego_Object* object;
     unsigned int i;
 
     if (count) {
@@ -2869,7 +2870,7 @@ void aitask_entity_task_batch_append(struct EntitySlot** objects,
             if ((tail = aitask_cmd_chain_walk(object)) != NULL)
                 tail->next = task;
             else
-                LEGO_FIELD(object, AITask*, 0x2f0) = task;
+                object->aiTask = task;
         }
     }
 }
@@ -2897,8 +2898,8 @@ void aitask_entity_task_batch_append(struct EntitySlot** objects,
  * }
  */
 // FUNCTION: LEGORR 0x004036c0
-void aitask_cmd_create_target(struct EntitySlot* object,
-                              struct EntitySlot* target)
+void aitask_cmd_create_target(struct Lego_Object* object,
+                              struct Lego_Object* target)
 {
     AITask* task;
     AITask* tail;
@@ -2909,7 +2910,7 @@ void aitask_cmd_create_target(struct EntitySlot* object,
     if ((tail = aitask_cmd_chain_walk(object)) != NULL)
         tail->next = task;
     else
-        LEGO_FIELD(object, AITask*, 0x2f0) = task;
+        object->aiTask = task;
 }
 
 /* 0x00403700 cmd_cancel_by_coords (corpus name CmdCancelByCoords), 80 bytes.
@@ -3056,11 +3057,11 @@ void aitask_cmd_command_kind_record_issue(int field20, int field24, int field28,
 void aitask_terrain_cell_record_count_update(const int* blockPos, int a, int b,
                                              int c)
 {
-    struct EntitySlot* object;
+    struct Lego_Object* object;
     unsigned int count;
     unsigned int i;
 
-    if ((object = (struct EntitySlot*)ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
+    if ((object = (struct Lego_Object*)ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
              blockPos, a, b, c)) != NULL) {
         /* The goto keeps more of the original's block order (76.83% against
          * 62.34% for a plain else-if fall-through). */
@@ -3068,7 +3069,7 @@ void aitask_terrain_cell_record_count_update(const int* blockPos, int a, int b,
             goto count_it;
         return;
     } else if (b != 0 && a == 7 &&
-               (object = (struct EntitySlot*)ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
+               (object = (struct Lego_Object*)ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
                     blockPos, 7, 0, c)) != NULL) {
         count = stats_instance_word_at_ec(
             ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(NULL, blockPos, 7, 0));
@@ -3101,7 +3102,7 @@ count_it:
  * }
  */
 // FUNCTION: LEGORR 0x004038c0
-AITask* aitask_timed_task_record_initialize_and_link(struct EntitySlot* object,
+AITask* aitask_timed_task_record_initialize_and_link(struct Lego_Object* object,
                                                      int field20, int field24,
                                                      int field28)
 {
@@ -3163,7 +3164,7 @@ AITask* aitask_timed_task_record_initialize_and_link(struct EntitySlot* object,
  * }
  */
 // FUNCTION: LEGORR 0x00403910
-void aitask_terrain_cell_record_counts_prune(struct EntitySlot* object)
+void aitask_terrain_cell_record_counts_prune(struct Lego_Object* object)
 {
     unsigned int* count;
     int a;
@@ -3206,7 +3207,7 @@ void aitask_terrain_cell_record_counts_prune(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x004039a0
-void aitask_task_record_create_and_scan_grid(struct EntitySlot* object)
+void aitask_task_record_create_and_scan_grid(struct Lego_Object* object)
 {
     AITask* task;
 
@@ -3233,7 +3234,7 @@ void aitask_task_record_create_and_scan_grid(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x004039d0
-void aitask_task_record_kind11_timed_queue(struct EntitySlot* object)
+void aitask_task_record_kind11_timed_queue(struct Lego_Object* object)
 {
     AITask* task;
 
@@ -3256,7 +3257,7 @@ void aitask_task_record_kind11_timed_queue(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x00403a10
-void aitask_task_callback_dispatch(struct EntitySlot* object)
+void aitask_task_callback_dispatch(struct Lego_Object* object)
 {
     aitask_entity_pool_callback_search(aitask_callback_00403a30, object);
 }
@@ -3267,7 +3268,7 @@ void aitask_task_callback_dispatch(struct EntitySlot* object)
 // FUNCTION: LEGORR 0x00403a30
 int aitask_callback_00403a30(AITask* task, void* data)
 {
-    if (task->type == 5 && (struct EntitySlot*)data == task->object)
+    if (task->type == 5 && (struct Lego_Object*)data == task->object)
         task->flags |= 0x20;
     return 0;
 }
@@ -3310,13 +3311,13 @@ int aitask_callback_00403a30(AITask* task, void* data)
  * }
  */
 // FUNCTION: LEGORR 0x00403a50
-void aitask_entity_drain_command_chain(struct EntitySlot* object)
+void aitask_entity_drain_command_chain(struct Lego_Object* object)
 {
     AITask* task;
     AITask* next;
 
     if (!(aiTaskGlobs.flags & 2)) {
-        task = LEGO_FIELD(object, AITask*, 0x2f0);
+        task = object->aiTask;
         while (task != NULL) {
             next = task->next;
             if ((task->flags & 0x10) && !(task->flags & 0x20))
@@ -3327,7 +3328,7 @@ void aitask_entity_drain_command_chain(struct EntitySlot* object)
                 aitask_cmd_free(task, 0);
             task = next;
         }
-        LEGO_FIELD(object, AITask*, 0x2f0) = NULL;
+        object->aiTask = NULL;
         aitask_entity_pool_callback_search(aitask_callback_00403ad0, object);
     }
 }
@@ -3338,7 +3339,7 @@ void aitask_entity_drain_command_chain(struct EntitySlot* object)
 // FUNCTION: LEGORR 0x00403ad0
 int aitask_callback_00403ad0(AITask* task, void* data)
 {
-    if ((struct EntitySlot*)data == task->object)
+    if ((struct Lego_Object*)data == task->object)
         task->flags |= 0x20;
     return 0;
 }
@@ -3369,16 +3370,16 @@ int aitask_callback_00403ad0(AITask* task, void* data)
  * }
  */
 // FUNCTION: LEGORR 0x00403af0
-void aitask_entity_task_state_update_after_cleanup(struct EntitySlot* object,
+void aitask_entity_task_state_update_after_cleanup(struct Lego_Object* object,
                                                    int remove)
 {
     AITask* task;
 
-    if ((task = LEGO_FIELD(object, AITask*, 0x2f0)) != NULL) {
+    if ((task = object->aiTask) != NULL) {
         if (remove) {
             if (task->type == 0) {
                 aitask_entity_command_chain_head_remove(object);
-                if (LEGO_FIELD(object, int, 0x0) == 3)
+                if (object->type == 3)
                     cmd_produce(7, object, 0, NULL);
             }
         } else {
@@ -3404,11 +3405,11 @@ void aitask_entity_task_state_update_after_cleanup(struct EntitySlot* object,
  * }
  */
 // FUNCTION: LEGORR 0x00403b40
-void aitask_entity_pending_task_flag_clear(struct EntitySlot* object)
+void aitask_entity_pending_task_flag_clear(struct Lego_Object* object)
 {
     AITask* task;
 
-    if ((task = LEGO_FIELD(object, AITask*, 0x2f0)) != NULL)
+    if ((task = object->aiTask) != NULL)
         task->flags &= ~1;
 }
 
@@ -3443,15 +3444,15 @@ void aitask_entity_pending_task_flag_clear(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x00403b60
-void aitask_entity_activity_records_refresh(struct EntitySlot* object)
+void aitask_entity_activity_records_refresh(struct Lego_Object* object)
 {
     unsigned int i;
-    struct EntitySlot* other;
+    struct Lego_Object* other;
 
-    if ((LEGO_FIELD(object, unsigned int, 0x3e0) & 0x400) &&
-        !(LEGO_FIELD(object, unsigned int, 0x3e0) & 0x2000)) {
-        for (i = 0; i < LEGO_FIELD(object, unsigned int, 0x324); i++) {
-            other = (&LEGO_FIELD(object, struct EntitySlot*, 0x308))[i];
+    if ((object->flags1 & 0x400) &&
+        !(object->flags1 & 0x2000)) {
+        for (i = 0; i < object->numCarriedObjects; i++) {
+            other = (&object->carriedObjects[0])[i];
             aitask_entity_activity_record_remove_by_type(object, 5, other);
             aitask_entity_activity_record_remove_by_type(object, 6, other);
             aitask_entity_activity_record_remove_by_type(object, 9, other);
@@ -3526,9 +3527,9 @@ void aitask_entity_activity_records_refresh(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x00403c00
-void aitask_entity_activity_record_remove_by_type(struct EntitySlot* object,
+void aitask_entity_activity_record_remove_by_type(struct Lego_Object* object,
                                                   int type,
-                                                  struct EntitySlot* target)
+                                                  struct Lego_Object* target)
 {
     AITask* task;
     AITask* prev;
@@ -3536,7 +3537,7 @@ void aitask_entity_activity_record_remove_by_type(struct EntitySlot* object,
     if (aiTaskGlobs.flags & 2)
         return;
     prev = NULL;
-    for (task = LEGO_FIELD(object, AITask*, 0x2f0); task != NULL; task = task->next) {
+    for (task = object->aiTask; task != NULL; task = task->next) {
         if (type == task->type) {
             if (task->type == 5 || task->type == 7 || task->type == 6 ||
                 task->type == 3 || task->type == 9 || task->type == 0xf ||
@@ -3557,7 +3558,7 @@ void aitask_entity_activity_record_remove_by_type(struct EntitySlot* object,
             if (prev != NULL)
                 prev->next = task->next;
             else
-                LEGO_FIELD(object, AITask*, 0x2f0) = task->next;
+                object->aiTask = task->next;
             aitask_cmd_free(task, 0);
             return;
         }
@@ -3655,13 +3656,13 @@ void aitask_entity_activity_record_remove_by_type(struct EntitySlot* object,
  * }
  */
 // FUNCTION: LEGORR 0x00403d10
-void aitask_entity_command_unlink_by_kind(struct EntitySlot* object, int type,
-                                          struct EntitySlot* target, int unlink)
+void aitask_entity_command_unlink_by_kind(struct Lego_Object* object, int type,
+                                          struct Lego_Object* target, int unlink)
 {
     AITask* task;
     AITask* prev;
-    struct EntitySlot* found;
-    struct EntitySlot* appendObject;
+    struct Lego_Object* found;
+    struct Lego_Object* appendObject;
     int append;
     int zone;
     unsigned int count;
@@ -3671,11 +3672,11 @@ void aitask_entity_command_unlink_by_kind(struct EntitySlot* object, int type,
         return;
     prev = NULL;
     if (type == 3 &&
-        (found = (struct EntitySlot*)ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
-             object, NULL, LEGO_FIELD(target, int, 0x0),
-             LEGO_FIELD(target, int, 0x330))) != NULL)
+        (found = (struct Lego_Object*)ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
+             object, NULL, target->type,
+             target->objLevel)) != NULL)
         cmd_produce(0x18, object, (int)(size_t)found, NULL);
-    for (task = LEGO_FIELD(object, AITask*, 0x2f0); task != NULL; task = task->next) {
+    for (task = object->aiTask; task != NULL; task = task->next) {
         if (type == task->type) {
             appendObject = NULL;
             append = 0;
@@ -3683,20 +3684,20 @@ void aitask_entity_command_unlink_by_kind(struct EntitySlot* object, int type,
                 if (prev != NULL)
                     prev->next = task->next;
                 else
-                    LEGO_FIELD(object, AITask*, 0x2f0) = task->next;
+                    object->aiTask = task->next;
             }
             if (task->type == 7) {
                 zone = task->zone;
                 append = 1;
                 appendObject = target;
                 if (!terrain_descriptor_coordinate_count_limit_check(
-                        zone, LEGO_FIELD(target, int, 0x0), LEGO_FIELD(target, int, 0x4))) {
-                    aitask_cmd_cancel_by_coords(zone, 1, LEGO_FIELD(target, int, 0x0),
-                                                LEGO_FIELD(target, int, 0x4));
+                        zone, target->type, target->id)) {
+                    aitask_cmd_cancel_by_coords(zone, 1, target->type,
+                                                target->id);
                     append = 0;
                 }
             } else if (task->type == 0xc) {
-                if (LEGO_FIELD(object, int, 0x0) == 1) {
+                if (object->type == 1) {
                     count = legoGlobs_currLevel->blocks
                                 [task->blockY * legoGlobs_currLevel->width + task->blockX]
                                     .flags1 & 3;
@@ -3737,7 +3738,7 @@ void aitask_entity_command_unlink_by_kind(struct EntitySlot* object, int type,
  * }
  */
 // FUNCTION: LEGORR 0x00403ef0
-void aitask_pending_record_callback_dispatch(struct EntitySlot* object)
+void aitask_pending_record_callback_dispatch(struct Lego_Object* object)
 {
     aitask_entity_pool_callback_search(aitask_callback_00403f10, object);
 }
@@ -3748,7 +3749,7 @@ void aitask_pending_record_callback_dispatch(struct EntitySlot* object)
 // FUNCTION: LEGORR 0x00403f10
 int aitask_callback_00403f10(AITask* task, void* data)
 {
-    if (task->type == 3 && task->object == (struct EntitySlot*)data)
+    if (task->type == 3 && task->object == (struct Lego_Object*)data)
         task->flags |= 0x20;
     return 0;
 }
@@ -3771,15 +3772,15 @@ int aitask_callback_00403f10(AITask* task, void* data)
  * }
  */
 // FUNCTION: LEGORR 0x00403f30
-void aitask_ai_idle_chain_record_attach(struct EntitySlot* object)
+void aitask_ai_idle_chain_record_attach(struct Lego_Object* object)
 {
     AITask* task;
 
-    if (LEGO_FIELD(object, AITask*, 0x2f0) == NULL ||
-        LEGO_FIELD(object, AITask*, 0x2f0)->type != 0xe) {
+    if (object->aiTask == NULL ||
+        object->aiTask->type != 0xe) {
         task = aitask_cmd_alloc(0xe);
-        task->next = LEGO_FIELD(object, AITask*, 0x2f0);
-        LEGO_FIELD(object, AITask*, 0x2f0) = task;
+        task->next = object->aiTask;
+        object->aiTask = task;
     }
 }
 
@@ -3797,10 +3798,10 @@ void aitask_ai_idle_chain_record_attach(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x00403f60
-void aitask_task_record_kind14_remove_if_head(struct EntitySlot* object)
+void aitask_task_record_kind14_remove_if_head(struct Lego_Object* object)
 {
-    if (LEGO_FIELD(object, AITask*, 0x2f0) != NULL &&
-        LEGO_FIELD(object, AITask*, 0x2f0)->type == 0xe)
+    if (object->aiTask != NULL &&
+        object->aiTask->type == 0xe)
         aitask_entity_command_chain_head_remove(object);
 }
 
@@ -3971,14 +3972,14 @@ struct TerrainMapVector3 {
  * }
  */
 // FUNCTION: LEGORR 0x004040a0
-void aitask_entity_task_queue_flush(struct EntitySlot* object)
+void aitask_entity_task_queue_flush(struct Lego_Object* object)
 {
     if (!(aiTaskGlobs.flags & 6)) {
         aitask_entity_activity_record_remove_by_type(object, 0, NULL);
         if ((AITASK_OBJ(object)->flags1 & 0x400) &&
             AITASK_OBJ(object)->interactObject->type == 8) {
             aitask_entity_activity_record_remove_by_type(
-                object, 9, (struct EntitySlot*)AITASK_OBJ(object)->interactObject);
+                object, 9, (struct Lego_Object*)AITASK_OBJ(object)->interactObject);
         }
         aitask_command_queue_sweep_relink(object);
         aitask_pending_record_entity_reference_clear(object);
@@ -4033,7 +4034,7 @@ void aitask_entity_task_queue_flush(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x00404100
-void aitask_command_queue_sweep_relink(struct EntitySlot* object)
+void aitask_command_queue_sweep_relink(struct Lego_Object* object)
 {
     AITask* task;
     AITask* next;
@@ -4084,7 +4085,7 @@ void aitask_command_queue_sweep_relink(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x00404190
-AITask* aitask_cmd_chain_walk(struct EntitySlot* object)
+AITask* aitask_cmd_chain_walk(struct Lego_Object* object)
 {
     AITask* task;
 
@@ -4148,7 +4149,7 @@ AITask* aitask_cmd_chain_walk(struct EntitySlot* object)
  * }
  */
 // FUNCTION: LEGORR 0x004041b0
-int aitask_entity_task_chain_contains_kind(struct EntitySlot* object, int type)
+int aitask_entity_task_chain_contains_kind(struct Lego_Object* object, int type)
 {
     AITask* task;
 
@@ -4166,7 +4167,7 @@ int aitask_entity_task_chain_contains_kind(struct EntitySlot* object, int type)
  * (not in the corpus)
  */
 // FUNCTION: LEGORR 0x004041e0
-AITask* aitask_entity_command_chain_head_remove(struct EntitySlot* object)
+AITask* aitask_entity_command_chain_head_remove(struct Lego_Object* object)
 {
     AITask* task;
     unsigned int flags;
@@ -4208,7 +4209,7 @@ int aitask_cmd_pool_timer_delta_apply(AITask* task, void* data)
  * preceding function; the unit pushes or calls its address. Read it from
  * the disassembly of reference/LegoRR.exe. */
 // FUNCTION: LEGORR 0x00404280
-int aitask_cmd_entity_command_chain_tick(struct EntitySlot* object, void* data)
+int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
 {
     AITask* task;
     AITask* prev;
@@ -4596,7 +4597,7 @@ int aitask_cmd_entity_command_chain_tick(struct EntitySlot* object, void* data)
  * }
  */
 // FUNCTION: LEGORR 0x00404e00
-int aitask_object_path_submit_to_grid_target(struct EntitySlot* object, int* blockPos,
+int aitask_object_path_submit_to_grid_target(struct Lego_Object* object, int* blockPos,
                                              float* wPos)
 {
     AITaskPoint2I pos;
@@ -4637,7 +4638,7 @@ int aitask_object_path_submit_to_grid_target(struct EntitySlot* object, int* blo
  * }
  */
 // FUNCTION: LEGORR 0x00404ed0
-int aitask_check_object_candidate(struct EntitySlot* object)
+int aitask_check_object_candidate(struct Lego_Object* object)
 {
     if (AITASK_OBJ(object)->type == 6 && (AITASK_OBJ(object)->flags3 & 0x80000000))
         return aitask_type11_nearest_resolve_adapter(object, NULL);
@@ -5072,7 +5073,7 @@ int aitask_object_filter_matches_action_target(AITask* task, void* data)
  * }
  */
 // FUNCTION: LEGORR 0x00404fc0
-int aitask_place_command_eligibility_check(AITask* task, struct EntitySlot* object,
+int aitask_place_command_eligibility_check(AITask* task, struct Lego_Object* object,
                                            float* outWPos, int* outBPos, int* outFlag,
                                            int checkCommand, int checkAbility)
 {
@@ -5123,7 +5124,7 @@ int aitask_place_command_eligibility_check(AITask* task, struct EntitySlot* obje
         if ((AITASK_OBJ(object)->flags3 & 0x40) &&
             entity_accepts_target_for_task_check(object, task->object, 1) &&
             (AITASK_OBJ(object)->type != 1 || stats_instance_word_at_ec(object))) {
-            struct EntitySlot* target = task->object;
+            struct Lego_Object* target = task->object;
             int targetType = AITASK_OBJ(target)->type;
             if (targetType == 8 && !(AITASK_OBJ(object)->abilityFlags & 8) && checkAbility)
                 result = 0;
@@ -5288,7 +5289,7 @@ int aitask_place_command_eligibility_check(AITask* task, struct EntitySlot* obje
             }
         }
     } else if (task->type == 0x13) {
-        struct EntitySlot* found;
+        struct Lego_Object* found;
         float wPos[2];
         if (AITASK_OBJ(object)->type == 2 && (unsigned int)ai_activity_cap(object) > 0 &&
             !ai_activity_scan(object, (int)(size_t)task->field_38)) {
@@ -5447,7 +5448,7 @@ void aitask_pending_command_timer_fire_scan(void)
             int fire = 0;
             unsigned int i;
             for (i = 0; i < aiTaskGlobs.timerCandidateCount; i++) {
-                struct EntitySlot* object = aiTaskGlobs.timerCandidates[i];
+                struct Lego_Object* object = aiTaskGlobs.timerCandidates[i];
                 float wPos[2];
                 int bPos[2];
                 entity_transform_position_get_outputs(object, &wPos[0], &wPos[1]);
@@ -5827,8 +5828,8 @@ void aitask_pending_command_entity_assignment_tick(void)
 
     for (task = aiTaskGlobs.globalHead; task != NULL; task = task->next) {
         if (task->timeIn <= s_rdata_0049e014 && !(task->flags & 0x80400)) {
-            struct EntitySlot* best = NULL;
-            struct EntitySlot* object;
+            struct Lego_Object* best = NULL;
+            struct Lego_Object* object;
             unsigned int bestIndex;
             unsigned int i;
             float bestWPos[2];
@@ -5993,7 +5994,7 @@ void aitask_pending_command_entity_assignment_tick(void)
                     }
                 }
                 if (task->type != 0x17 && task->field_3c != 0 && !(task->flags & 0x8000)) {
-                    struct EntitySlot* found = NULL;
+                    struct Lego_Object* found = NULL;
                     int done = 0;
                     float wPos[2];
                     for (i = 0; i < aiTaskGlobs.assignCandidateCount; i++) {
@@ -6013,7 +6014,7 @@ void aitask_pending_command_entity_assignment_tick(void)
                         }
                     }
                     if (found != NULL && !done) {
-                        struct EntitySlot* trainer = aitask_object_find_trainer_adapter(NULL, wPos, task->field_3c);
+                        struct Lego_Object* trainer = aitask_object_find_trainer_adapter(NULL, wPos, task->field_3c);
                         if (trainer != NULL) {
                             aitask_task_type23_create_for_category_mask(trainer, task->field_3c,
                                                                         task->field_3c != 0x10);
@@ -6059,7 +6060,7 @@ void aitask_pending_command_entity_assignment_tick(void)
  * }
  */
 // FUNCTION: LEGORR 0x00406360
-void aitask_entity_record_attach_and_relink(AITask* task, AITask* prev, struct EntitySlot* object)
+void aitask_entity_record_attach_and_relink(AITask* task, AITask* prev, struct Lego_Object* object)
 {
     if (task->flags & 0x40) {
         AITASK_OBJ(object)->aiTask = aitask_cmd_pending_record_copy(task);
@@ -6095,7 +6096,7 @@ void aitask_entity_record_attach_and_relink(AITask* task, AITask* prev, struct E
  * }
  */
 // FUNCTION: LEGORR 0x004063e0
-void aitask_pending_record_entity_reference_clear(struct EntitySlot* object)
+void aitask_pending_record_entity_reference_clear(struct Lego_Object* object)
 {
     AITask* task;
     for (task = aiTaskGlobs.globalHead; task != NULL; task = task->next) {

@@ -17,12 +17,12 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 struct InfoPoint2I;
-struct LevelState;
+struct Lego_Level;
 
 /* GAME-002 AITask.c (aitask.h). */
-void aitask_cmd_create_task(struct EntitySlot* object, float timeIn); /* 00402720 */
+void aitask_cmd_create_task(struct Lego_Object* object, float timeIn); /* 00402720 */
 void aitask_bobbin_clear_delay(const int* blockPos);                  /* 004027a0 */
 void aitask_terrain_cell_refresh_dispatch_current(const int* blockPos,
                                                   int mode);          /* 00402ae0 */
@@ -45,7 +45,7 @@ uint32_t level_cell_occupied_at_current(const int cell_xy[2]);        /* 0043309
 void terrain_cell_secondary_bit0_set_current(const int cell_xy[2]);   /* 004325d0 */
 void terrain_cell_flag40000000_clear_or_set_current(const int cell_xy[2],
                                                     int set);         /* 00432560 */
-void terrain_cell_mutation_progress(struct LevelState* level, uint32_t x,
+void terrain_cell_mutation_progress(struct Lego_Level* level, uint32_t x,
                                     uint32_t y);                      /* 00433380 */
 /* 00432550 Lego.c's block-is-path test takes the block and answers TRUE;
  * lego_unit.c defines it without parameters. The C matching build calls it
@@ -76,8 +76,8 @@ uint32_t entity_indexed_record_word_at_b0_get(int group, int index,
 uint32_t entity_indexed_record_word_at_b4_get(int group, int index,
                                               int slot);              /* 00469af0 */
 uint32_t stats_table_word_at_b8(int type, int row, int stride_index);  /* 00469b20 */
-unsigned int entity_stats_word_get(const struct EntitySlot* e);       /* 00469e60 */
-unsigned int entity_state_flags_get(const struct EntitySlot* e);      /* 00469e80 */
+unsigned int entity_stats_word_get(const struct Lego_Object* e);       /* 00469e60 */
+unsigned int entity_state_flags_get(const struct Lego_Object* e);      /* 00469e80 */
 
 #ifdef __cplusplus
 }

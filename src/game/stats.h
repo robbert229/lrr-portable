@@ -12,10 +12,10 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 
-float entity_stats_float_at74(const struct EntitySlot* e);   /* 00469d50 */
-uint32_t entity_state_flags_get(const struct EntitySlot* e); /* 00469e80 */
+float entity_stats_float_at74(const struct Lego_Object* e);   /* 00469d50 */
+uint32_t entity_state_flags_get(const struct Lego_Object* e); /* 00469e80 */
 
 #ifdef __cplusplus
 }

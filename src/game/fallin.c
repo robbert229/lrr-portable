@@ -205,9 +205,9 @@ void fallin_generate_land_slide(FallinPoint2I* blockPos,
     }
 
     if (allowCaveIn) {
-        FALLIN_BLOCK(legoGlobs_currLevel, blockPos->x, blockPos->y).f_10[5]++;
+        FALLIN_BLOCK(legoGlobs_currLevel, blockPos->x, blockPos->y).f_24++;
         if (FALLIN_BLOCK(legoGlobs_currLevel, blockPos->x,
-                         blockPos->y).f_10[5] >= fallinCaveInLimit) {
+                         blockPos->y).f_24 >= fallinCaveInLimit) {
             fallin_generate_cave_in(blockPos, fallinDirection);
             info_send(6, NULL, NULL, (struct InfoPoint2I*)blockPos);
         }

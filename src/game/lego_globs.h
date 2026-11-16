@@ -29,23 +29,23 @@
 extern "C" {
 #endif
 
+struct LegoCamera;
+struct TextWindow;
+struct Lego_Object;
+
 struct Lego_Globs {
     void* config;                            /* +0x000 005560c0 legoGlobs_config (BlockRec*); Lego.cfg's block root */
     const char* gameName;                    /* +0x004 005560c4 s_engine_config_root; engine.cpp */
     uint32_t field_8;                        /* +0x008 005560c8 */
     uint32_t field_c;                        /* +0x00c 005560cc */
     int quality;                             /* +0x010 005560d0 legoGlobs_quality; render quality */
-#ifdef __cplusplus
-    struct LevelState* currLevel;            /* +0x014 005560d4 g_active_level_retail (LevelState*); terrain_grid.cpp */
-#else
-    void* currLevel;                         /* +0x014 005560d4 g_active_level_retail (LevelState*); terrain_grid.cpp */
-#endif
+    struct Lego_Level* currLevel;            /* +0x014 005560d4 g_active_level_retail; terrain_grid.cpp */
     void* rootCont;                          /* +0x018 005560d8 legoGlobs_rootCont */
     void* viewMain;                          /* +0x01c 005560dc legoGlobs_viewMain */
     void* viewTrack;                         /* +0x020 005560e0 legoGlobs_viewTrack */
-    void* cameraMain;                        /* +0x024 005560e4 s_zoom_step_context; view.cpp */
-    void* cameraTrack;                       /* +0x028 005560e8 legoGlobs_cameraTrack */
-    void* cameraFP;                          /* +0x02c 005560ec legoGlobs_cameraFP */
+    struct LegoCamera* cameraMain;                     /* +0x024 005560e4 s_zoom_step_context; view.cpp */
+    struct LegoCamera* cameraTrack;                     /* +0x028 005560e8 legoGlobs_cameraTrack */
+    struct LegoCamera* cameraFP;                     /* +0x02c 005560ec legoGlobs_cameraFP */
     void* spotlightTop;                      /* +0x030 005560f0 legoGlobs_spotlightTop */
     void* spotlightTrack;                    /* +0x034 005560f4 legoGlobs_spotlightTrack */
     uint32_t field_38;                       /* +0x038 005560f8 legoGlobs_f_5560f8; pointLightFP */
@@ -72,7 +72,7 @@ struct Lego_Globs {
     float field_94;                          /* +0x094 00556154 legoGlobs_f_556154 */
     int field_98;                            /* +0x098 00556158 legoGlobs_f_556158 */
     float gameSpeed;                         /* +0x09c 0055615c s_scroll_scale; engine.cpp */
-    void* objectFP;                          /* +0x0a0 00556160 legoGlobs_selectedObject */
+    struct Lego_Object* objectFP;                     /* +0x0a0 00556160 legoGlobs_selectedObject */
     float field_a4[3];                       /* +0x0a4 00556164 legoGlobs_f_556164 */
     float field_b0[2];                       /* +0x0b0 00556170 legoGlobs_f_556170 */
     float field_b8[2];                       /* +0x0b8 00556178 legoGlobs_f_556178 */
@@ -204,10 +204,10 @@ struct Lego_Globs {
     float DragBoxRGB[3];                     /* +0xe6c 00556f2c legoGlobs_dragBoxRGB */
     void* DialogImage;                       /* +0xe78 00556f38 legoGlobs_DialogImage (Image*) */
     void* field_e7c;                         /* +0xe7c 00556f3c s_position_handle; engine.cpp */
-    void* DialogTextWndTitle;                /* +0xe80 00556f40 legoGlobs_DialogTextWndTitle */
-    void* DialogTextWndMessage;              /* +0xe84 00556f44 legoGlobs_DialogTextWndMessage */
-    void* DialogTextWndOK;                   /* +0xe88 00556f48 legoGlobs_DialogTextWndOK */
-    void* DialogTextWndCancel;               /* +0xe8c 00556f4c legoGlobs_DialogTextWndCancel */
+    struct TextWindow* DialogTextWndTitle;                /* +0xe80 00556f40 legoGlobs_DialogTextWndTitle */
+    struct TextWindow* DialogTextWndMessage;              /* +0xe84 00556f44 legoGlobs_DialogTextWndMessage */
+    struct TextWindow* DialogTextWndOK;                   /* +0xe88 00556f48 legoGlobs_DialogTextWndOK */
+    struct TextWindow* DialogTextWndCancel;               /* +0xe8c 00556f4c legoGlobs_DialogTextWndCancel */
     void* CreditsTextFile;                   /* +0xe90 00556f50 DAT_00556f50; frontend.cpp */
     void* CreditsBackAVI;                    /* +0xe94 00556f54 DAT_00556f54; frontend.cpp */
     char* UpgradeNames[16];                  /* +0xe98 00556f58 legoGlobs_upgradeNames */
@@ -358,7 +358,7 @@ extern struct Lego_Globs legoGlobs;
 
 /* The port-owned fields, under the port's names (matching build only).
  * currLevel is void* to the C units (no struct tag to declare) and the
- * port's struct LevelState* to the C++ port files; the field stays a plain
+ * port's struct Lego_Level* to the C++ port files; the field stays a plain
  * member access, as the units' and the port's inline asm need. */
 #define LEGO_GLOBS_CURRLEVEL legoGlobs.currLevel
 #define s_engine_config_root legoGlobs.gameName

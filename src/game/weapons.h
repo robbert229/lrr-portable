@@ -28,12 +28,12 @@ extern "C" {
 #define ledger_stub_0046f270_TypeMotionScaleApplyDispatch weapons_generic_damage_object
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 
 uint32_t object_type_name_index_find(const char* name);       /* 0046f0d0 */
 float weapon_type_recharge_time_get_target(int type);         /* 0046f110 */
 void ledger_stub_0046f270_TypeMotionScaleApplyDispatch(
-    struct EntitySlot* entity, int weapon_type, int apply_index, float scale,
+    struct Lego_Object* entity, int weapon_type, int apply_index, float scale,
     void* finish_argument);                                   /* 0046f270 */
 
 #ifdef __cplusplus

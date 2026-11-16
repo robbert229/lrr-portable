@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 struct TerrainMap;
 
 /* GAME-001 Advisor.c: the out-of-line copies of Maths.h's inline vector
@@ -49,7 +49,7 @@ void* level_current_terrain_get(int cell_x, int cell_y);          /* 00431570 */
  * same addresses (GAME-023 part 3, issue #615); one declaration each. */
 #define entity_follow_target_pose_get legoobject_follow_target_pose_get
 #define entity_type_component_get legoobject_type_component_get
-void entity_follow_target_pose_get(struct EntitySlot* entity, int index,
+void entity_follow_target_pose_get(struct Lego_Object* entity, int index,
                                    float position[3],
                                    float facing[3]);              /* 0044a070 */
 void* entity_type_component_get(const void* entity_record);       /* 0044a200 */

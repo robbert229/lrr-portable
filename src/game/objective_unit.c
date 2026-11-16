@@ -17,13 +17,14 @@
 
 #include "objective_unit_link_names.h"
 #include "objective_unit.h"
+#include "legoobject_record.h"
 #include "objective_unit_imports.h"
 #include "crt/vc5names.h"
 /* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
  * above, pays for its symbols (finding 538). */
 #include "lego_globs.h"
 
-#define OBJECTIVE_DATA(level) ((Objective_Data*)(level)->f_0bc)
+#define OBJECTIVE_DATA(level) (&(level)->objective)
 
 /* Objective.c's .bss (004ffbc0-004ffe4c), 0x28c bytes. */
 typedef struct Objective_Globs {
@@ -917,8 +918,8 @@ int objective_callback_check_completed_object(struct Lego_Object* liveObj,
     int blockPos[2];
 
     if (objectiveGlobs.flags & OBJECTIVE_FLAG_BLOCK) {
-        if (LEGO_FIELD(liveObj, int, 0x00) == 2 ||
-            LEGO_FIELD(liveObj, int, 0x00) == 1) {
+        if (liveObj->type == 2 ||
+            liveObj->type == 1) {
             legoobject_position_to_terrain_cell(liveObj, &blockPos[0],
                                                 &blockPos[1]);
             if (blockPos[0] == objective->block[0] &&
@@ -927,8 +928,8 @@ int objective_callback_check_completed_object(struct Lego_Object* liveObj,
     }
 
     if (objectiveGlobs.flags & OBJECTIVE_FLAG_CONSTRUCTION) {
-        if (objective->constructionType == LEGO_FIELD(liveObj, int, 0x00) &&
-            objective->constructionID == LEGO_FIELD(liveObj, int, 0x04)) return 1;
+        if (objective->constructionType == liveObj->type &&
+            objective->constructionID == liveObj->id) return 1;
     }
 
     return 0;

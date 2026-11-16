@@ -24,6 +24,8 @@
 #include "crt/vc5names.h"
 #include "text.h"
 #include "text_imports.h"
+#include "gods98/textwindow_record.h"
+#include "lego_level_record.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -71,23 +73,8 @@ typedef enum Text_Type {
 /* Panel.c's message panel. */
 #define PANEL_MESSAGES 3
 
-/* Font.c's record, as far as the unit reads it: Font_GetHeight is an
- * inline read of +0xbe4. */
-typedef struct Font {
-    unsigned char reserved[0xbe4];
-    unsigned int height; /* +0xbe4 */
-} Font;
-
-/* TextWindow.c's record, as far as the unit reads it. */
-typedef struct TextWindow {
-    Font* font; /* +0x000 */
-} TextWindow;
-
-/* Lego.c's level record, as far as the unit reads it. */
-typedef struct Lego_Level {
-    unsigned char reserved[0x1fc];
-    float oxygenLevel; /* +0x1fc */
-} Lego_Level;
+/* Font.c's and TextWindow.c's records (gods98/textwindow_record.h) and
+ * Lego.c's level record (lego_level_record.h). */
 
 typedef struct Text_Globs {
     const char* typeName[Text_Type_Count];      /* +0x000 00503190 */
@@ -197,7 +184,7 @@ void text_initialise(const char* panelImageFile, unsigned int panelX,
     textGlobs.panelY = panelY;
     textGlobs.messageArea = *messageArea;
     textGlobs.messageBottom = textGlobs.messageArea.y + textGlobs.messageArea.height -
-        (float)textGlobs.textOnlyWindow->font->height;
+        (float)textGlobs.textOnlyWindow->font->fontHeight;
     textGlobs.panelTimer = panelTimer;
     textGlobs.panelX = (float)panelX;
 
@@ -372,7 +359,7 @@ void text_update(float elapsed)
         panel_resource_position_update(PANEL_MESSAGES);
 
         if (text_buffer_draw_wrapped(textGlobs.textOnlyWindow, 0, elapsed, &lowestPoint)) {
-            height = (float)textGlobs.textOnlyWindow->font->height;
+            height = (float)textGlobs.textOnlyWindow->font->fontHeight;
             textGlobs.currPanelY -= height;
             textGlobs.currArea.y -= height;
             textGlobs.currArea.height += height;
@@ -384,7 +371,7 @@ void text_update(float elapsed)
             textGlobs.flags &= ~TEXT_FLAG_NERPSMESSAGE;
         } else if (textGlobs.flags & TEXT_FLAG_NERPSMESSAGE) {
             if ((float)lowestPoint < textGlobs.messageBottom) {
-                height = (float)textGlobs.textOnlyWindow->font->height;
+                height = (float)textGlobs.textOnlyWindow->font->fontHeight;
                 textGlobs.currPanelY += height;
                 textGlobs.currArea.y += height;
                 textGlobs.currArea.height -= height;

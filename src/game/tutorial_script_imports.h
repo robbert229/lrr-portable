@@ -28,8 +28,8 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
-struct LevelState;
+struct Lego_Object;
+struct Lego_Level;
 struct ViewProjectionAdapter;
 
 /* GAME-002 AITask.c (aitask.c): the tutorial congregation's records. */
@@ -52,7 +52,7 @@ unsigned int interface_get_object_item_clicks(int objType,
                                               int objIndex); /* 0041e860 */
 int interface_set_advisor_item(int type, int loop);          /* 0041e890 */
 
-struct LevelState* level_current_owner_get(void);  /* 00431560 Lego_GetLevel */
+struct Lego_Level* level_current_owner_get(void);  /* 00431560 Lego_GetLevel */
 float global_float_field_00556f00_get(void);       /* 004230b0 Lego_GetGameSpeed */
 void global_scroll_guard_set(int value);           /* 00425cd0 */
 void lego_game_speed_set(float speed);             /* 00425ce0 Lego_SetGameSpeed */
@@ -60,7 +60,7 @@ void engine_global_state_flags_bits6_and_9_set_target(int value,
                                                       int set_bit9); /* 00426360 */
 void engine_global_state_flags_bit7_set_target(int value);           /* 004263a0 */
 void media_action_feedback_sound_dispatch(int event);                /* 00428800 */
-void lego_viewport_target_position_clamp(struct EntitySlot* liveObj,
+void lego_viewport_target_position_clamp(struct Lego_Object* liveObj,
                                          const int* blockPos,
                                          int smooth);       /* 0042de40 */
 int lego_object_pointer_registry_get_slot(unsigned int index,
@@ -101,10 +101,10 @@ struct Lego_Object* legoobject_creature_spawn_from_emergence(
     void* model, int type, int id, int bx, int by);         /* 0043af30 */
 unsigned int legoobject_grid_record_count_get(int row, int column,
                                               int slot);    /* 004374a0 */
-void entity_transform_position_get_outputs(const struct EntitySlot* entity,
+void entity_transform_position_get_outputs(const struct Lego_Object* entity,
                                            float* out_x,
                                            float* out_y);   /* 00442260 */
-int entity_position_to_terrain_cell_adapter(const struct EntitySlot* entity,
+int entity_position_to_terrain_cell_adapter(const struct Lego_Object* entity,
                                              int* cell_x, int* cell_y);
 
 /* GAME-029 Objective.c (objective_unit.cpp, objective.hpp). */
@@ -165,10 +165,10 @@ uint32_t flic_opcode25_success_stub(void);                  /* 00484b90 */
 void priority_entry_state_set(int kind, int value);         /* 004020a0 */
 void task_record_kind10_queue(void* payload);               /* 00403520 */
 void aitask_task_registry_remove_type10_entries_for_entity(
-    struct EntitySlot* object);                             /* 00403560 */
+    struct Lego_Object* object);                             /* 00403560 */
 
 /* GAME-021 Lego.c (lego_unit.c; legoGlobs' port-owned fields). */
-extern struct LevelState* g_active_level_retail;            /* 005560d4 currLevel */
+extern struct Lego_Level* g_active_level_retail;            /* 005560d4 currLevel */
 extern uint32_t s_panel_highlight_flags;                    /* 00556ed0 flags2 */
 void global_object_field8c_increment(void);                 /* 0041f870 */
 int noop_callback(int);   /* 0041f8e0 Lego_GetCrystalCount */
@@ -187,14 +187,14 @@ void legoobject_global_animation_state_set(unsigned int state); /* 004383a0 */
 void entity_activity_scene_state_update_retail(void);       /* 00439990 */
 void* predug_spawn_coordinate_select_and_create(int source_object,
                                                 int type);  /* 0043ad50 */
-void entity_action_sequence_reset(struct EntitySlot* entity,
+void entity_action_sequence_reset(struct Lego_Object* entity,
                                   int preserve_mode);       /* 00441940 */
-int entity_type3_flag04000000_test(const struct EntitySlot* e); /* 004436f0 */
+int entity_type3_flag04000000_test(const struct Lego_Object* e); /* 004436f0 */
 
 /* GAME-027 Message.c (message_unit.c under its link names). */
-struct EntitySlot* const* selection_active_records_get(void); /* 004525e0 */
+struct Lego_Object* const* selection_active_records_get(void); /* 004525e0 */
 unsigned int selection_active_count_get(void);              /* 004525f0 */
-unsigned int selection_contains_entity_active_target(struct EntitySlot* entity,
+unsigned int selection_contains_entity_active_target(struct Lego_Object* entity,
                                                      unsigned int* index_out); /* 00452610 */
 
 /* GAME-029 Objective.c (objective_unit.c). */
@@ -204,9 +204,9 @@ int objective_is_ended_original(void);                      /* 004589a0 */
 int panel_advisor_animation_play(int panel, int button, int force); /* 0045c670 */
 
 /* GAME-043 Stats.c (entity_stats.c under its link names). */
-int legoobject_gd_building_index_set_adapter(struct EntitySlot* entity,
+int legoobject_gd_building_index_set_adapter(struct Lego_Object* entity,
                                              uint32_t state); /* 00469c10 */
-uint32_t entity_state_flags_get(const struct EntitySlot* e); /* 00469e80 */
+uint32_t entity_state_flags_get(const struct Lego_Object* e); /* 00469e80 */
 uint32_t building_upgrade_admission_check(int type, int row); /* 00469f40 */
 
 /* GAME-044 Teleporter.c (teleporter.c, under its link name). */

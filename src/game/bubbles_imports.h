@@ -19,7 +19,7 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 struct TextureSurface;
 
 /* Lego.c (lego_unit.c). legoGlobs.gameName (005560c4) and
@@ -39,8 +39,8 @@ int ddiscene_object_position_get(void* object, void* alternate_frame,
 
 /* Stats.c (entity_stats.c), by its link names:
  * StatsObject_GetCollHeight and StatsObject_GetStatsFlags3. */
-float entity_stats_float_at74(const struct EntitySlot* e);      /* 00469d50 */
-uint32_t entity_capability_flags_get(const struct EntitySlot* e); /* 00469ea0 */
+float entity_stats_float_at74(const struct Lego_Object* e);      /* 00469d50 */
+uint32_t entity_capability_flags_get(const struct Lego_Object* e); /* 00469ea0 */
 
 /* Images.c is images_unit.c in the matching build (finding 632): the
  * C callers' calls go to the unit (images_link_names.h). */

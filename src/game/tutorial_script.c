@@ -238,7 +238,7 @@ typedef struct NERPs_Globs {
     unsigned int cameraTrackIndex;    /* +0x04 */
     float cameraX;                    /* +0x08 */
     float cameraY;                    /* +0x0c */
-    struct EntitySlot* cameraTrackObject; /* +0x10 */
+    struct Lego_Object* cameraTrackObject; /* +0x10 */
     int cameraZoom;                   /* +0x14 */
     float cameraZoomAmount;           /* +0x18 */
     float cameraZoomCurrent;          /* +0x1c */
@@ -1812,9 +1812,9 @@ void nerps_runtime_update_camera(float elapsed)
             if (!lego_object_pointer_registry_get_slot(nerpsGlobs.cameraTrackIndex, &object)) {
                 nerpsGlobs.cameraTrack = 0;
             } else {
-                entity_position_to_terrain_cell_adapter((struct EntitySlot*)object, &blockPos.x, &blockPos.y);
-                entity_transform_position_get_outputs((struct EntitySlot*)object, &nerpsGlobs.cameraX, &nerpsGlobs.cameraY);
-                lego_viewport_target_position_clamp((struct EntitySlot*)object, NULL, 1);
+                entity_position_to_terrain_cell_adapter((struct Lego_Object*)object, &blockPos.x, &blockPos.y);
+                entity_transform_position_get_outputs((struct Lego_Object*)object, &nerpsGlobs.cameraX, &nerpsGlobs.cameraY);
+                lego_viewport_target_position_clamp((struct Lego_Object*)object, NULL, 1);
             }
         }
     }
@@ -1870,7 +1870,7 @@ int nerpfunc_camera_lock_on_monster(unsigned int* stack)
 // FUNCTION: LEGORR 0x00454020
 int nerps_camera_lock_on_monster_callback(NERPs_Object* obj, void* data)
 {
-    if (obj != NULL && entity_type3_flag04000000_test((struct EntitySlot*)obj)) {
+    if (obj != NULL && entity_type3_flag04000000_test((struct Lego_Object*)obj)) {
         *(NERPs_Object**)data = obj;
         return 1;
     }
@@ -1941,7 +1941,7 @@ int nerpfunc_get_selected_record_object(unsigned int* stack)
     for (i = 0; i < 10; i++) {
         object = NULL;
         if (lego_object_pointer_registry_get_slot(i, &object) &&
-            selection_contains_entity_active_target((struct EntitySlot*)object, NULL))
+            selection_contains_entity_active_target((struct Lego_Object*)object, NULL))
             return i + 1;
     }
     return 0;
@@ -1982,18 +1982,18 @@ int nerps_set_monster_attack_callback(NERPs_Object* obj, void* data)
     NERPs_Point2I blockPos;
 
     if (obj != NULL) {
-        entity_position_to_terrain_cell_adapter((struct EntitySlot*)obj, &blockPos.x, &blockPos.y);
+        entity_position_to_terrain_cell_adapter((struct Lego_Object*)obj, &blockPos.x, &blockPos.y);
         if (terrain_cell_occupied_or_flag_current(blockPos.x, blockPos.y, 1)) {
-            if ((!(entity_state_flags_get((struct EntitySlot*)obj) & search->flags) &&
+            if ((!(entity_state_flags_get((struct Lego_Object*)obj) & search->flags) &&
                  search->flagsNot == (unsigned int)-1) ||
-                ((entity_state_flags_get((struct EntitySlot*)obj) & search->flagsNot) &&
+                ((entity_state_flags_get((struct Lego_Object*)obj) & search->flagsNot) &&
                  search->flags == (unsigned int)-1)) {
                 switch (search->attack) {
                 case 0:
                     task_record_kind10_queue(obj);
                     break;
                 case 1:
-                    aitask_task_registry_remove_type10_entries_for_entity((struct EntitySlot*)obj);
+                    aitask_task_registry_remove_type10_entries_for_entity((struct Lego_Object*)obj);
                     return 0;
                 }
             }
@@ -2041,7 +2041,7 @@ int nerps_set_objects_level_callback(NERPs_Object* obj, void* data)
     NERPs_ObjectLevelSearch* search = (NERPs_ObjectLevelSearch*)data;
 
     if (obj != NULL && obj->type == search->type && obj->id == search->id)
-        legoobject_gd_building_index_set_adapter((struct EntitySlot*)obj, search->level);
+        legoobject_gd_building_index_set_adapter((struct Lego_Object*)obj, search->level);
     return 0;
 }
 
@@ -2055,7 +2055,7 @@ int nerps_record_object_at_tutorial_callback(NERPs_BlockPointer* blockPointer,
     NERPs_Point2I blockPos;
     NERPs_Vector3F wPos;
 
-    entity_transform_position_get_outputs((struct EntitySlot*)search->object, &wPos.x, &wPos.y);
+    entity_transform_position_get_outputs((struct Lego_Object*)search->object, &wPos.x, &wPos.y);
     terrain_map_world_to_block(level->map, wPos.x, wPos.y, &blockPos.x, &blockPos.y);
     if (x == (unsigned int)blockPos.x && y == (unsigned int)blockPos.y) search->count++;
     return 1;
@@ -2111,7 +2111,7 @@ void nerps_draw_tutorial_icon(NERPs_Level* level, void* viewport, int unused, fl
     if (nerpsGlobs.tutorialIconObject) {
         if (lego_object_pointer_registry_get_slot(nerpsGlobs.tutorialIconObject - 1, (void**)&object)) {
             object->tutorialIcon = 1;
-            entity_transform_position_get_outputs((struct EntitySlot*)object, &world.x, &world.y);
+            entity_transform_position_get_outputs((struct Lego_Object*)object, &world.x, &world.y);
             world.z = terrain_map_world_z_get(level->map, world.x, world.y);
             camera_project_point_to_screen((struct ViewProjectionAdapter*)viewport, screen, &world.x);
             screen[0] -= (float)((int)legoGlobs_TutorialIcon->width / 2);
@@ -2283,7 +2283,7 @@ int nerps_rock_monster_callback(NERPs_Object* obj, void* data)
             if (obj->health > 0.0f &&
                 obj->health < *(float*)(obj->stats + 0xe8) -
                               20.0f * (*(float*)(obj->stats + 0xe8) * 0.01f)) {
-                entity_action_sequence_reset((struct EntitySlot*)obj, 0);
+                entity_action_sequence_reset((struct Lego_Object*)obj, 0);
                 search->count++;
             }
             break;
@@ -2474,7 +2474,7 @@ int nerps_get_selected_count(const char* name)
 {
     int type;
     unsigned int id;
-    struct EntitySlot* const* units;
+    struct Lego_Object* const* units;
     unsigned int i;
     int count = 0;
 
@@ -4352,7 +4352,7 @@ int nerps_object_at_tutorial_block_callback(NERPs_Object* obj, void* data)
     NERPs_Point2I blockPos;
 
     if (obj != NULL) {
-        entity_position_to_terrain_cell_adapter((struct EntitySlot*)obj, &blockPos.x, &blockPos.y);
+        entity_position_to_terrain_cell_adapter((struct Lego_Object*)obj, &blockPos.x, &blockPos.y);
         if (blockPos.x == ((NERPs_TutorialSearch*)data)->x && blockPos.y == ((NERPs_TutorialSearch*)data)->y) {
             if (((NERPs_TutorialSearch*)data)->checkType && obj->type == ((NERPs_TutorialSearch*)data)->objType) {
                 ((NERPs_TutorialSearch*)data)->found = obj;
@@ -4373,7 +4373,7 @@ int nerps_tutorial_icon_object_callback(NERPs_Object* obj, void* data)
     NERPs_Point2I blockPos;
 
     if (obj != NULL) {
-        entity_position_to_terrain_cell_adapter((struct EntitySlot*)obj, &blockPos.x, &blockPos.y);
+        entity_position_to_terrain_cell_adapter((struct Lego_Object*)obj, &blockPos.x, &blockPos.y);
         if (blockPos.x == ((NERPs_TutorialSearch*)data)->x && blockPos.y == ((NERPs_TutorialSearch*)data)->y) {
             obj->tutorialIcon = 1;
             return 0;
@@ -4425,7 +4425,7 @@ void nerps_set_tutorial_pointer(unsigned int index, int on)
 
         if (lego_object_pointer_registry_get_slot(nerpsGlobs.tutorialIconObject - 1,
                                                   &object)) {
-            entity_position_to_terrain_cell_adapter((struct EntitySlot*)object,
+            entity_position_to_terrain_cell_adapter((struct Lego_Object*)object,
                                                     &blockPos.x, &blockPos.y);
             search.x = blockPos.x;
             search.y = blockPos.y;

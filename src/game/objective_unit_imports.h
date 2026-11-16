@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 struct TextureSurface;
-struct LevelState;
+struct Lego_Level;
 
 /* gods98 Main.c and Input.c state (crt.cpp, engine.cpp). */
 extern int s_display_w;                     /* 00505924 appWidth */
@@ -54,7 +54,7 @@ int bubble_get_object_uis_always_visible(void);                   /* 00407360 */
 /* GAME-008 (entity_cell_effects.c). */
 void level_state_stored_value_set(uint32_t v);                    /* 00409d40 */
 /* GAME-021 Lego.c (lego_unit.c). */
-struct LevelState* level_current_owner_get(void);                 /* 00431560 */
+struct Lego_Level* level_current_owner_get(void);                 /* 00431560 */
 int lego_keep_running(void);                                      /* 00435940 */
 /* GAME-023 LegoObject.c (legoobject_unit.c). */
 int legoobject_run_through_lists_skip_upgrade_parts(

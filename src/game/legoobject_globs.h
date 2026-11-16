@@ -61,7 +61,7 @@ struct LegoObject_Globs {
     int field_c434;                          /* +0xc434 004eabc4 s_object_f_4eabc4; their count */
     int field_c438;                          /* +0xc438 004eabc8 s_object_f_4eabc8; the buildings among them */
 #ifdef __cplusplus
-    struct EntitySlot* liveObjs[100];        /* +0xc43c 004eabcc s_idle100 */
+    struct Lego_Object* liveObjs[100];        /* +0xc43c 004eabcc s_idle100 */
 #else
     void* liveObjs[100];                     /* +0xc43c 004eabcc s_idle100 */
 #endif

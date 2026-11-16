@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 struct Lego_Object;
 struct EngineTaskCallbackRecord;
 struct MeshRecordPool;
@@ -67,8 +67,8 @@ void* legoobject_type_component_get(struct Lego_Object* obj);      /* 0044a200 *
 /* GAME-043 Stats.c (entity_stats.c), by the names its definitions take in
  * the matching build (entity_stats_link_names.h): StatsObject_GetCollHeight
  * and StatsObject_GetStatsFlags2. */
-float entity_stats_float_at74(const struct EntitySlot* e);       /* 00469d50 */
-uint32_t entity_state_flags_get(const struct EntitySlot* e);     /* 00469e80 */
+float entity_stats_float_at74(const struct Lego_Object* e);       /* 00469d50 */
+uint32_t entity_state_flags_get(const struct Lego_Object* e);     /* 00469e80 */
 
 /* gods98 Container.c (scene_pool.hpp, view.hpp, record.h, view.h). The
  * container's master frame is at +0x04. */

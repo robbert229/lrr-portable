@@ -178,7 +178,7 @@ void encyclopedia_draw_select_box(struct ViewProjectionAdapter* view)
     if ((encyclopediaGlobs.flags & ENCYCLOPEDIA_GLOB_FLAG_ACTIVE) &&
         (panelGlobs.panelTable[PANEL_ENCYCLOPEDIA].flags & PANEL_FLAG_OUT) &&
         encyclopediaGlobs.currObject) {
-        lego_selected_entity_ground_marker_render((struct EntitySlot*)encyclopediaGlobs.currObject,
+        lego_selected_entity_ground_marker_render((struct Lego_Object*)encyclopediaGlobs.currObject,
                                                   view, 0.0f, 1.0f, 0.0f);
     }
 }

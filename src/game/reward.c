@@ -561,7 +561,7 @@ RewardBuildingCounts* reward_building_counts_get(RewardBuildingCounts* out)
 
     counts.count = 0;
     entity_pool_find_by_callback_filtered_current(
-        (int (*)(struct EntitySlot*, void*))reward_building_counts_callback, &counts);
+        (int (*)(struct Lego_Object*, void*))reward_building_counts_callback, &counts);
     counts.gridCount = 0;
     for (y = 0; y < 15; y++) {
         for (x = 0; x < 16; x++)
@@ -1237,7 +1237,7 @@ void reward_save_menu(void)
         save = sav_build_ctx_target();
         front_campaign_snapshot_create(snapshot);
         current = reward_current_level_get();
-        if (!inGame && level_objective_result_get((const struct LevelState*)level)) {
+        if (!inGame && level_objective_result_get((const struct Lego_Level*)level)) {
             do {
                 menu_enter(NULL, 4);
             } while (g_front_save_menu_open);

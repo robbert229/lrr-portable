@@ -417,7 +417,7 @@ void bubble_show_health_bar(Lego_Object* liveObj)
     unsigned int i;
     BubbleTimer* bubbleTimer;
 
-    if (entity_capability_flags_get((struct EntitySlot*)liveObj) & STATS3_SHOWHEALTHBAR) {
+    if (entity_capability_flags_get((struct Lego_Object*)liveObj) & STATS3_SHOWHEALTHBAR) {
         for (i = 0; i < BUBBLE_MAXHEALTHBARS; i++) {
             bubbleTimer = &bubbleGlobs.healthBarTable[i];
             if (liveObj == bubbleTimer->object) break;
@@ -455,7 +455,7 @@ void bubble_draw_all_obj_infos(float elapsedGame)
                 Point2F screenPt;
                 Bubble_Vector3F wPos;
                 ddiscene_object_position_get(legoobject_type_component_get(liveObj), NULL, (float*)&wPos);
-                wPos.z -= entity_stats_float_at74((struct EntitySlot*)liveObj);
+                wPos.z -= entity_stats_float_at74((struct Lego_Object*)liveObj);
                 viewport_world_to_screen((struct Viewport*)legoGlobs_viewMain, &screenPt, (struct Vector3F*)&wPos);
                 legacy_entity_screen_ring_render(liveObj, (int)screenPt.x, (int)screenPt.y);
             }
@@ -477,7 +477,7 @@ void bubble_draw_all_obj_infos(float elapsedGame)
                         Point2F screenPt;
                         Bubble_Vector3F wPos;
                         ddiscene_object_position_get(legoobject_type_component_get(liveObj), NULL, (float*)&wPos);
-                        wPos.z -= entity_stats_float_at74((struct EntitySlot*)liveObj);
+                        wPos.z -= entity_stats_float_at74((struct Lego_Object*)liveObj);
                         viewport_world_to_screen((struct Viewport*)legoGlobs_viewMain, &screenPt, (struct Vector3F*)&wPos);
                         screenPt.y -= (float)(int)image->height;
                         screenPt.x -= (float)(int)image->width * 0.5f;
@@ -534,7 +534,7 @@ void bubble_live_object_update_bubble_image(Lego_Object* liveObj, float elapsedG
     Bubble_Vector3F wPos;
 
     ddiscene_object_position_get(legoobject_type_component_get(liveObj), NULL, (float*)&wPos);
-    wPos.z -= entity_stats_float_at74((struct EntitySlot*)liveObj);
+    wPos.z -= entity_stats_float_at74((struct Lego_Object*)liveObj);
     viewport_world_to_screen((struct Viewport*)legoGlobs_viewMain, screenPt, (struct Vector3F*)&wPos);
 
     liveObj->bubbleTimer -= elapsedGame;

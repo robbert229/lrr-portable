@@ -210,7 +210,7 @@ void damage_font_load_frames(const char* dirName, const char* fileName)
 }
 
 // FUNCTION: LEGORR 0x0040a4b0
-void damage_font_display_damage_over_live_object(struct EntitySlot* liveObj,
+void damage_font_display_damage_over_live_object(struct Lego_Object* liveObj,
                                                  unsigned int damage)
 {
     unsigned int indices[6] = { 0, 2, 1, 0, 3, 2 };
@@ -371,7 +371,7 @@ void damage_font_update(DamageFont_Data* data, float elapsed)
 }
 
 // FUNCTION: LEGORR 0x0040aae0
-int damage_font_live_object_check_can_show_damage(struct EntitySlot* liveObj)
+int damage_font_live_object_check_can_show_damage(struct Lego_Object* liveObj)
 {
     if (!(entity_state_flags_get(liveObj) & 0x8000000) &&
         ((DamageFont_LiveObject*)liveObj)->type != 8 &&

@@ -64,7 +64,7 @@ static Construction_Globs constructionGlobs;
 #define CONSTRUCTION_BLOCK(level, bx, by) \
     (((level)->blocks)[(by) * (level)->width + (bx)])
 #define CONSTRUCTION_BLOCK_ZONE(level, bx, by) \
-    (*(Lego_ConstructionZone**)&CONSTRUCTION_BLOCK(level, bx, by).f_10[0])
+    (CONSTRUCTION_BLOCK(level, bx, by).construct)
 
 // FUNCTION: LEGORR 0x00408c80
 unsigned int construction_get_building_base(const char* name)
@@ -269,7 +269,7 @@ void construction_zone_cancel_path(int* blockPos)
     for (i = 0; i < zone->placedObjectCount; i++) {
         obj = zone->placedObjects[i];
         obj->flags4 &= ~CONSTRUCTION_OBJECT4_PLACED;
-        aitask_cmd_create_task((struct EntitySlot*)obj, 0);
+        aitask_cmd_create_task((struct Lego_Object*)obj, 0);
     }
     cancel_action_for_matching_coordinates((const uint32_t*)blockPos);
     aitask_cmd_cancel_by_coords(zone->handle, 0, 0, 0);
@@ -480,7 +480,7 @@ void construction_zone_cancel_building(int* blockPos)
                 zone->placedObjects[i]->health = -1.0f;
             } else {
                 zone->placedObjects[i]->flags4 &= ~CONSTRUCTION_OBJECT4_PLACED;
-                aitask_cmd_create_task((struct EntitySlot*)zone->placedObjects[i], 0);
+                aitask_cmd_create_task((struct Lego_Object*)zone->placedObjects[i], 0);
             }
         }
         aitask_cmd_cancel_by_coords(zone->handle, 0, 0, 0);
@@ -646,14 +646,14 @@ struct Lego_Object* construction_zone_complete_building(
             legoobject_update_and_unregister_at_tile(obj, &zone->shapePoints[i].x);
             i++;
         } else {
-            if (entity_stats_word_get((struct EntitySlot*)obj) & 0x100000) {
+            if (entity_stats_word_get((struct Lego_Object*)obj) & 0x100000) {
                 lego_terrain_cell_flags_set_and_refresh(&zone->shapePoints[i].x);
             } else {
                 cancel_action_for_matching_coordinates(
                     (const uint32_t*)&zone->shapePoints[i]);
                 lego_terrain_cell_flags_set_mask100400(zone->shapePoints[i].x,
                                                        zone->shapePoints[i].y);
-                if (entity_state_flags_get((struct EntitySlot*)obj) & 0x200)
+                if (entity_state_flags_get((struct Lego_Object*)obj) & 0x200)
                     terrain_cell_secondary_bit0_set_current(&zone->shapePoints[i].x);
                 construction_update_cardinal_blocks(&zone->shapePoints[i].x);
             }

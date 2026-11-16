@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 /* The matching build calls Lego.c's original-shape entry in lego_unit.c
  * (GAME-021 part 2, finding 571); the port model in lego.cpp is
  * unannotated. One declaration either way, so the callers' declaration
@@ -24,7 +24,7 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
     lego_entity_type_pair_lookup((name), (type_out), \
                                  (unsigned int*)(row_out), (void**)(zero_out))
 int entity_pool_find_by_callback_filtered_current(
-    int (*callback)(struct EntitySlot*, void*), void* payload); /* 004377b0 */
+    int (*callback)(struct Lego_Object*, void*), void* payload); /* 004377b0 */
 const char* item_name_by_kind_lookup(uint32_t kind, int index); /* 004396c0 */
 
 #ifdef __cplusplus

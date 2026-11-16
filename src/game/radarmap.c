@@ -441,7 +441,7 @@ int radarmap_can_show_object(struct Lego_Object* liveObj)
     if (type != 14 && type != 5 && type != 8 && type != 13 && type != 16 &&
         type != 17 && type != 19 && type != 9 && type != 18 && type != 4 &&
         type != 12) {
-        return (~entity_state_flags_get((const struct EntitySlot*)liveObj) >> 29) & 1;
+        return (~entity_state_flags_get((const struct Lego_Object*)liveObj) >> 29) & 1;
     }
     return 0;
 }

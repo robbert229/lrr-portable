@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-struct EntitySlot;
+struct Lego_Object;
 struct GameContext;
 
 /* Lego_Level fields the unit reads (Lego.c, 0x284 bytes; the port's

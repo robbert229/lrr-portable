@@ -239,7 +239,7 @@ void objinfo_draw_health_bar(struct Lego_Object* liveObj, int screenX, int scree
     float* colour;
 
     if ((objInfoGlobs.flags & OBJINFO_GLOB_FLAG_HEALTHBAR) &&
-        damage_font_live_object_check_can_show_damage((struct EntitySlot*)liveObj)) {
+        damage_font_live_object_check_can_show_damage((struct Lego_Object*)liveObj)) {
         border = (float)(objInfoGlobs.HealthBarBorderSize * 2);
         width = objInfoGlobs.HealthBarWidthHeight.x + border;
         height = objInfoGlobs.HealthBarWidthHeight.y + border;

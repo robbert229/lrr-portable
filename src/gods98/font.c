@@ -24,28 +24,16 @@
 
 #include "crt/vc5names.h"
 #include "font_imports.h"
+#include "gods98/font_record.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define FONT_GRIDWIDTH 10
-#define FONT_GRIDHEIGHT 19
 #define FONT_TABWIDTH 8
 #define FONT_MAXSTRINGLEN 1024
 #define FONT_MAXLISTS 32
-
-/* One font (0xbf4 bytes). posSet[x][y] is the source rectangle of glyph
- * 32 + y * 10 + x; its width is trimmed to the glyph's ink. */
-typedef struct Font {
-    Image* image;                                 /* +0x000 */
-    Area2F posSet[FONT_GRIDWIDTH][FONT_GRIDHEIGHT]; /* +0x004 */
-    unsigned int fontHeight;                      /* +0xbe4 */
-    unsigned int tabWidth;                        /* +0xbe8 */
-    unsigned int reserved;                        /* +0xbec: not read in the binary */
-    struct Font* nextFree;                        /* +0xbf0 */
-} Font;
 
 Font* font_load(const char* fname);
 void font_v_get_string_info(Font* font, unsigned int* width,
