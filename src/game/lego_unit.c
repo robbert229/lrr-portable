@@ -7432,15 +7432,11 @@ int lego_first_free_neighbor_cell_pick(struct EntitySlot* liveObj,
     s_neighbor_pick_rotation++;
     for (i = 0; i < 4; i++) {
         dir = (s_neighbor_pick_rotation + i) & 3;
-        /* The original inlines a helper here: is the neighbour inside the
-         * map's border, with flags1 0x10 set and 8 clear, as a 0/1 value. */
+        /* Lego.h's inline wall test (lego_maths.h), its 0/1 result kept in
+         * eax as the original does. */
         if (!skipWalls ||
-            (bx = DIRECTIONS[dir][0] + blockPos[0], by = DIRECTIONS[dir][1] + blockPos[1],
-             wall = 0,
-             (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1 &&
-              (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[by * legoGlobs_currLevel->width + bx].flags1 & 0x10) &&
-              !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[by * legoGlobs_currLevel->width + bx].flags1 & 8))
-                 ? (wall = 1) : 0,
+            (wall = lego_C_block_is_wall(bx = DIRECTIONS[dir][0] + blockPos[0],
+                                         by = DIRECTIONS[dir][1] + blockPos[1]),
              !wall)) {
             if (lego_terrain_cell_route_and_occupancy_check(liveObj,
                     DIRECTIONS[dir][0] + blockPos[0], DIRECTIONS[dir][1] + blockPos[1],
