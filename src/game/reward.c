@@ -1668,7 +1668,7 @@ int reward_scroll_update(RewardScroll* scroll)
             if (label->flags & 2)
                 y = (int)label->y;
             if ((label->flags & 2) ||
-                ((float)y < scroll->area.height + scroll->top && (float)y > scroll->top))
+                ((float)y < (scroll->area.height + scroll->top) && (float)y > scroll->top))
                 font_print_f(label->font, x, y, label->text);
             break;
         }
