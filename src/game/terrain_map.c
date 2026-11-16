@@ -1424,17 +1424,17 @@ int terrain_map_block_pair_fades(TerrainMap* map, unsigned int bx1,
                                  unsigned int by2)
 {
     unsigned char texA;
-    char texB;
+    unsigned char texB;
     unsigned int i;
 
     if (by1 != by2 || bx1 != bx2) {
         if (bx1 < map->gridWidth && by1 < map->gridHeight &&
             bx2 < map->gridWidth && by2 < map->gridHeight) {
             texA = map->blocks[by1 * map->blockWidth + bx1].texture;
-            texB = (char)map->blocks[by2 * map->blockWidth + bx2].texture;
-            if (texA != 0xff && texB != -1) {
+            texB = map->blocks[by2 * map->blockWidth + bx2].texture;
+            if (texA != 0xff && texB != 0xff) {
                 for (i = 0; i < map->fadePairCount[texA]; i++) {
-                    if ((char)map->fadePairs[texA][i] == texB) return 1;
+                    if (map->fadePairs[texA][i] == texB) return 1;
                 }
                 return 0;
             }
