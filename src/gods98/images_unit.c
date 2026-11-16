@@ -429,7 +429,7 @@ Image* Image_LoadBMPScaled(const char* fileName, unsigned int width,
     unsigned int pen255;
     char name[1024];
 
-    penZero = pen255 = Image_RGB2CR(0, 0, 0);
+    pen255 = penZero = Image_RGB2CR(0, 0, 0);
 
     if ((buffer = file_load_binary(fileName, &size)) != NULL) {
         BMP_Parse(buffer, size, &image);
