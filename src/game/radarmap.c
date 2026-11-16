@@ -499,20 +499,7 @@ int radarmap_inside_radar(RadarMap* radarMap, uint32_t screenX, uint32_t screenY
     return 0;
 }
 
-/* Maths.h's inline Vector2DScale and Vector2DAdd. */
-static __inline Point2F* radarmap_vector2d_scale(Point2F* r, Point2F* a, float f)
-{
-    r->x = f * a->x;
-    r->y = f * a->y;
-    return r;
-}
-
-static __inline Point2F* radarmap_vector2d_add(Point2F* r, Point2F* a, Point2F* b)
-{
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    return r;
-}
+#include "radarmap_maths.h" /* here, where the original's inline helpers sit */
 
 // FUNCTION: LEGORR 0x0045e6d0
 int radarmap_screen_to_block_pos(RadarMap* radarMap, uint32_t screenX,
