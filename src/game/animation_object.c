@@ -353,3 +353,6 @@ float animation_object_value_get(AnimationObject* object)
 {
     return typed_child_resource_scalar_get(object->container);
 }
+
+/* A header inline copy's 1.0 closes the unit's .rdata (0049e05c). */
+#include "reciprocal_inline.h"

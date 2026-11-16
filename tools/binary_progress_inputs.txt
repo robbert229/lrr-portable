@@ -383,6 +383,7 @@ src/game/radarmap.h
 src/game/radarmap_imports.h
 src/game/radarmap_link_names.h
 src/game/radarmap_maths.h
+src/game/reciprocal_inline.h
 src/game/record_chains_port.cpp
 src/game/render.cpp
 src/game/render.hpp
