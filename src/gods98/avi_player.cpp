@@ -664,3 +664,5 @@ int avi_is_ok(AviMovie* anim)
 } /* extern "C" */
 
 #endif /* !LEGORRR_BACKEND_MINIWIN */
+
+#include "avi_player_tail.h"
