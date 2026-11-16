@@ -3539,11 +3539,13 @@ void front_play_intro_splash(const char* imageKey, int skippable, const char* ti
     char* imageName;
     struct Image* image;
 
-    seconds = (float)atof(block_get_strptr(legoGlobs_config,
-                                           string_path_join(s_engine_config_root, "Main", timeKey, NULL))
-                              ? block_get_strptr(legoGlobs_config,
-                                                 string_path_join(s_engine_config_root, "Main", timeKey, NULL))
-                              : "");
+    /* The + 0.0 keeps the result on the x87 stack until 0.0f is loaded for
+     * the test, as the original stores it after that load. */
+    seconds = (float)(atof(block_get_strptr(legoGlobs_config,
+                                            string_path_join(s_engine_config_root, "Main", timeKey, NULL))
+                               ? block_get_strptr(legoGlobs_config,
+                                                  string_path_join(s_engine_config_root, "Main", timeKey, NULL))
+                               : "") + 0.0);
     if (0.0f == seconds) {
         seconds = 3.0f;
     }
