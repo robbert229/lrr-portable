@@ -7080,8 +7080,7 @@ void lego_terrain_cell_queued_work_transition(unsigned int bx, unsigned int by)
 // FUNCTION: LEGORR 0x004311d0
 void lego_block_activity_create(Lego_Level* level, const int* blockPos, int build)
 {
-    LegoPoint2F2G wxwy;
-    float wz;
+    LegoVector3FC wpos;
     LegoVector3FC dirs[4] = {
         { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f },
         { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }
@@ -7112,9 +7111,9 @@ void lego_block_activity_create(Lego_Level* level, const int* blockPos, int buil
             LEGO_2F_PTR_SET(LEGO_2F_BLOCK(level, blockPos[0], blockPos[1]).f_10[2], activity);
         }
         terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
-                                   blockPos[0], blockPos[1], &wxwy.x, &wxwy.y);
-        wz = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wxwy.x, wxwy.y);
-        ddiscene_object_position_set(activity->cont, NULL, wxwy.x, wxwy.y, wz);
+                                   blockPos[0], blockPos[1], &wpos.x, &wpos.y);
+        wpos.z = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wpos.x, wpos.y);
+        ddiscene_object_position_set(activity->cont, NULL, wpos.x, wpos.y, wpos.z);
         ddiscene_object_pose_method_dispatch(activity->cont, NULL, (float)dirs[direction].x,
                                              (float)dirs[direction].y, (float)dirs[direction].z,
                                              0.0f, 0.0f, -1.0f);
