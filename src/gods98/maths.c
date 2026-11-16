@@ -42,28 +42,32 @@ float* MATHS_D3DRMAPI D3DRMVectorRotate(float* r, float* v, float* axis,
 #endif
 
 /* The unit's .rdata, in original order. It opens with the 16-byte
- * {1, 2, 4, -1} table at 0049e910 that 19 gods98 objects share (finding
- * 505). The table is d3drmdef.h's (finding 524), but the unit does not
- * include the toolchain's DirectX 3 d3drm.h: it moves the symbol counter so
- * that two exact functions fall (finding 646). Zero and -1.0 stores are immediates in the
- * original, so they use literals. */
-// GLOBAL: LEGORR 0x0049e920
+ * {1, 2, 4, -1} table at 0049e910 that 20 objects share: d3drmdef.h's
+ * four consts (finding 524). The unit does not include the toolchain's
+ * DirectX 3 d3drm.h (finding 646), and defining the consts here moves the
+ * symbol counter so that two functions fall. In C the constants are only
+ * declared here (tentative definitions) and defined at the end of the
+ * file, behind d3drmdef_consts.h: MSVC 5.0 numbers a static at its first
+ * declaration, so no function's counter moves, and emits .rdata in
+ * definition order, so the table opens the block. Zero and -1.0 stores
+ * are immediates in the original, so they use literals. */
+#ifdef __cplusplus
 static const float s_maths_one = 1.0f;
-// GLOBAL: LEGORR 0x0049e924
 static const float s_maths_zero = 0.0f;
-// GLOBAL: LEGORR 0x0049e928
 static const float s_maths_minus_one = -1.0f;
-// GLOBAL: LEGORR 0x0049e92c
 static const float s_maths_half = 0.5f;
-// GLOBAL: LEGORR 0x0049e930
 static const float s_maths_rand_scale = 1.0f / 32767.0f;
-/* Maths_RaySphereIntersection's 2.0f. MSVC folds each 2.0f * x into
- * fadd st, st, so no instruction reads it; the literal is in that function
- * and this copy keeps the table's layout. */
-// GLOBAL: LEGORR 0x0049e934
 static const float s_maths_two = 2.0f;
-// GLOBAL: LEGORR 0x0049e938
 static const float s_maths_four = 4.0f;
+#else
+static const float s_maths_one;
+static const float s_maths_zero;
+static const float s_maths_minus_one;
+static const float s_maths_half;
+static const float s_maths_rand_scale;
+static const float s_maths_two;
+static const float s_maths_four;
+#endif
 
 /* Maths.h's inline vector helpers (Maths_Vector3DModulus, _Scale and
  * _Normalise). Like the original's, they are always inlined. */
@@ -411,3 +415,25 @@ void matrix4_copy(float* r, const float* m)
         }
     }
 }
+
+/* The unit's .rdata, in original order (see s_maths_one above). */
+#include "gods98/d3drmdef_consts.h"
+#ifndef __cplusplus
+// GLOBAL: LEGORR 0x0049e920
+static const float s_maths_one = 1.0f;
+// GLOBAL: LEGORR 0x0049e924
+static const float s_maths_zero = 0.0f;
+// GLOBAL: LEGORR 0x0049e928
+static const float s_maths_minus_one = -1.0f;
+// GLOBAL: LEGORR 0x0049e92c
+static const float s_maths_half = 0.5f;
+// GLOBAL: LEGORR 0x0049e930
+static const float s_maths_rand_scale = 1.0f / 32767.0f;
+/* Maths_RaySphereIntersection's 2.0f. MSVC folds each 2.0f * x into
+ * fadd st, st, so no instruction reads it; the literal is in that function
+ * and this copy keeps the table's layout. */
+// GLOBAL: LEGORR 0x0049e934
+static const float s_maths_two = 2.0f;
+// GLOBAL: LEGORR 0x0049e938
+static const float s_maths_four = 4.0f;
+#endif
