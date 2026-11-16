@@ -375,13 +375,13 @@ int Image_24BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
     if (bpp == 8) {
         return 0;
     } else if (bpp == 16) {
-        unsigned int rm = desc->ddpfPixelFormat.dwRBitMask;
         unsigned int gm = desc->ddpfPixelFormat.dwGBitMask;
         unsigned int bm = desc->ddpfPixelFormat.dwBBitMask;
         unsigned short* to = (unsigned short*)desc->lpSurface;
         int lineLen = image->bytes_per_line;
         unsigned char* from = image->buffer1;
-        unsigned int pitch = desc->lPitch;
+        unsigned int pitch = (unsigned int)desc->lPitch / 2;
+        unsigned int rm = desc->ddpfPixelFormat.dwRBitMask;
         int rbits = Image_CountMaskBits(rm);
         int gbits = Image_CountMaskBits(gm);
         int bbits = Image_CountMaskBits(bm);
@@ -401,7 +401,7 @@ int Image_24BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
                                          ((r >> (8 - rbits)) << rshift));
             }
             from += lineLen - (image->width * 3);
-            to += (pitch / 2) - image->width;
+            to += pitch - image->width;
         }
 
         Image_FlipSurface(desc);
