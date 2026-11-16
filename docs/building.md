@@ -17,43 +17,48 @@ make build
 make run WAD_DIR=/path/to/game
 ```
 
-miniwin supplies the Windows-compatible interfaces over SDL3 on every host,
-Windows included (ADR 0007); the build does not require Wine. `BUILD_DIR` selects
-another build directory. `MOVIES=auto|enabled|disabled` controls detection of
-FFmpeg runtime libraries; the default is `auto`. Movie playback requires the
-runtime libraries, rather than FFmpeg headers at build time.
+`LegoRR` is the units' `WinMain` (ADR 0007): it runs in the game directory,
+opens `LegoRR0.wad` and `LegoRR1.wad` there, and takes the shipped exe's flags
+(`-best`, `-window`, `-nosound`, `-debug`, ...). `make run` passes `RUN_ARGS`,
+`-best -window` by default; `-best` picks a display mode without the
+mode-selection dialog, which miniwin cannot show. miniwin supplies the
+Windows-compatible interfaces over SDL3 on every host, Windows included; the
+build does not require Wine. The imports outside miniwin's scope (sound, CD
+audio, movies, the registry and directory listings) are logging stubs in
+`src/platform/native/seam_stubs.cpp` until their library substitutions land.
+`BUILD_DIR` selects another build directory.
 
 For direct CMake use, initialize miniwin first:
 
 ```sh
 tools/setup-miniwin.sh
-cmake -S . -B build -DMOVIES=auto
+cmake -S . -B build
 cmake --build build
-LEGORRR_WAD_DIR=/path/to/game ./build/LegoRR
+cd /path/to/game && /path/to/build/LegoRR -best -window
 ```
 
 ## Tests
 
 ```sh
-cmake -S . -B build -DTEST_WADS_DIR=/path/to/game
+cmake -S . -B build
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-`make test` runs the same build and ctest in `BUILD_DIR`. Omit
-`TEST_WADS_DIR` for synthetic-fixture tests only. Real-data probes need
-original game files and are skipped when those files are not configured.
-Passing tests establishes the behavior covered by those tests; gameplay
-comparison against the original is a separate check.
+`make test` runs the same build and ctest in `BUILD_DIR`. The tests call
+units directly (bezier, steering, animation_object, draw, registry) or
+miniwin (miniwin_dx6), on synthetic data only. Passing tests establishes the
+behavior covered by those tests; gameplay comparison against the original is
+a separate check.
 
 ## Continuous integration
 
 The `native-build` workflow (`.github/workflows/native-build.yml`) runs on pull
 requests and pushes to `main` and `develop`. Its check is required for merging. It checks out
 the repository without submodules, runs `tools/setup-miniwin.sh` to fetch only
-`miniwin/`, and then runs the native commands from [Tests](#tests) with
-`TEST_WADS_DIR` unset, so only the synthetic-fixture tests run. It also runs
-the Python tool tests in `tools/tests`.
+`miniwin/`, and then runs the native commands from [Tests](#tests). It also
+lints the units (no `LEGORRR_BACKEND_*`, `MINIWIN`, `_MSC_VER`, `_M_IX86` or
+`_WIN32` guards and no `lpVtbl` in `src/`) and runs the Python tool tests in `tools/tests`.
 
 SDL3 comes from a pinned source build of release-3.4.18 (commit `829a65d7`),
 configured headless with `SDL_UNIX_CONSOLE_BUILD` and without X11 or Wayland.
@@ -62,17 +67,15 @@ version. `ubuntu-24.04` has no SDL3 development package, so a distro package is
 not used. When you change the SDL version or its build recipe, update
 `SDL_VERSION`, `SDL_COMMIT`, or `SDL_CACHE_VERSION` in the workflow.
 
-Real-data tests need licensed game files, so they stay local and are not run
-in CI.
 
 ## Sources
 
 `src/link_order.cmake` is the source list: one
 `lrr_link(<kind> <key> <library> <source>)` line per source, with the library
-(`game`, `gods98`, `platform_glue` or `program`) it is built into. Its header
-explains the fields. It is the only place that adds a game, gods98, platform
-or program source to the build. The units rebuilt in original shape are its
-`.c` files and its `.cpp` entries of kind `unit`; they compile as C++17.
+(`game`, `gods98` or `platform`) it belongs to. Its header explains the
+fields. Its entries of kind `unit` are the 83 original-shape units, which
+compile as C++17 into one library; kind `platform` is the process entry and
+the seam stubs.
 
 ## Running the original
 

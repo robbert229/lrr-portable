@@ -40,12 +40,11 @@ Open PRs for this work against `develop`.
   decisions are in `docs/findings/` and `docs/adr/`; tooling is in `tools/`.
 - CMake is the build. It needs SDL3 and the sparse
   `3rdparty/isle-portable` miniwin submodule. `make setup`, `make build`, and
-  `make run` configure, build, and launch; `WAD_DIR` selects the game data
-  directory. For tests, run `cmake -S . -B build`, then
+  `make run` configure, build, and launch; `make run` starts `LegoRR` in
+  `WAD_DIR` (the game data directory) with `RUN_ARGS` (default
+  `-best -window`). For tests, run `cmake -S . -B build`, then
   `cmake --build build` and `ctest --test-dir build --output-on-failure`
-  (`make test` does the same). Set `TEST_WADS_DIR` at configure time to enable
-  real-data tests when the shipped WADs are available.
-  `MOVIES=auto|enabled|disabled` controls native FFmpeg runtime detection.
+  (`make test` does the same).
 - CI runs one required check, `native-build`
   (`.github/workflows/native-build.yml`), on pull requests and on pushes to
   `main` and `develop`. It builds the native port, runs ctest with synthetic

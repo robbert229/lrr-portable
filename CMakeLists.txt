@@ -8,7 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(SRC_ROOT "src" CACHE PATH "Directory containing the reconstruction source tree")
-set(TEST_WADS_DIR "" CACHE PATH "Directory containing shipped wads for real-data tests")
 
 set(ENGINE_DIR "${SRC_ROOT}/gods98")
 set(GAME_DIR "${SRC_ROOT}/game")
@@ -65,12 +64,15 @@ target_link_libraries(units PUBLIC miniwin SDL3::SDL3)
 
 # The seam's remaining stubs (ADR 0007): the imports neither miniwin nor a
 # library substitution provides yet.
-add_library(seam_stubs STATIC ${PLATFORM_DIR}/native/seam_stubs.cpp)
+set(LRR_ENTRY_SOURCE "${PLATFORM_DIR}/native/entry.cpp")
+set(LRR_SEAM_SOURCES ${LRR_LINK_SOURCES_platform})
+list(REMOVE_ITEM LRR_SEAM_SOURCES "${LRR_ENTRY_SOURCE}")
+add_library(seam_stubs STATIC ${LRR_SEAM_SOURCES})
 target_include_directories(seam_stubs PUBLIC ${SRC_ROOT})
 target_link_libraries(seam_stubs PUBLIC miniwin)
 target_link_libraries(units PUBLIC seam_stubs)
 
-add_executable(program ${PLATFORM_DIR}/native/entry.cpp)
+add_executable(program ${LRR_ENTRY_SOURCE})
 set_target_properties(program PROPERTIES OUTPUT_NAME "LegoRR")
 target_link_libraries(program PRIVATE units)
 if(WIN32)
