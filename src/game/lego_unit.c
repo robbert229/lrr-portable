@@ -7768,7 +7768,7 @@ int terrain_cell_walkability_query_current(const struct Lego_Object* liveObj,
         if (digging && !(entity_stats_word_get(liveObj) & 1))
             return 0;
         if ((!ignoreFlag400 || !(liveObj->flags1 & 0x400)) &&
-            ((*(unsigned char*)&liveObj->flags3) & 2) &&
+            (liveObj->flags3 & 2) &&
             entity_stats_float_at24_indexed(liveObj, block->f_02) != 0.0f &&
             bx < level->width - 2 && by < level->height - 2) {
             if (digging) {
@@ -7852,7 +7852,7 @@ int level_cell_flag8_check_target(const void* unused, int bx, int by)
 int lego_terrain_cell_allows_placement(struct Lego_Object* liveObj, unsigned int bx, unsigned int by)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    if ((liveObj == NULL || ((*(unsigned char*)&liveObj->flags3) & 4)) && bx > 0 && by > 0 &&
+    if ((liveObj == NULL || (liveObj->flags3 & 4)) && bx > 0 && by > 0 &&
         bx < level->width - 2 && by < level->height - 2) {
         Lego_Block* block = &level->blocks[by * level->width + bx];
         uint32_t flags = block->flags1;

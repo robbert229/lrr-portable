@@ -3067,7 +3067,7 @@ void legoobject_objective_sidecar_append_gate(Lego_Object* obj)
     }
 
     if (obj->type == 2 || obj->type == 1 || obj->type == 11 ||
-        (obj->type == 4 && (((*(unsigned char*)&obj->teleporterMode) & 4) || (obj->flags4 & 0x8))))
+        (obj->type == 4 && ((obj->teleporterMode & 4) || (obj->flags4 & 0x8))))
     {
         if (!(obj->flags3 & 0x40000))
             return;
