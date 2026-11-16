@@ -7310,10 +7310,11 @@ void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
     {
         LegoPoint2F2G dirs[4] = { { 0.0f, 1.0f }, { 1.0f, 0.0f },
                                   { 0.0f, -1.0f }, { -1.0f, 0.0f } };
+        LegoPoint2F2G* dir = &dirs[direction];
         if (scene_slot_pose_scale_register((unsigned short)big, bx, by, x, y,
                 terrain_map_world_z_get((struct TerrainMap*)LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
                                         x, y),
-                dirs[direction].x, dirs[direction].y)) {
+                dir->x, dir->y)) {
             LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
                 [legoGlobs_currLevel->width * by + bx].flags1 |= 0x800;
         }
