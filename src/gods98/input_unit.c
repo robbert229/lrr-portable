@@ -7,33 +7,37 @@
  * The binary attests none of the names; the functions keep the names the
  * port gave them.
  *
- * The unit calls miniwin's DirectInput (ADR 0007).
+ * The keyboard is a library substitution (ADR 0007, `// [library:input]`),
+ * as in isle-portable's input manager: SDL3's keyboard state fills the
+ * DirectInput key map through an SDL scancode to DIK_* table
+ * (input_sdl_keys.h). The mouse still comes from miniwin's window messages
+ * and cursor calls.
  *
  * The state is the original's, in the commons: the previous and current
  * key maps, the DirectInput object, the keyboard device, its acquired flag,
- * and the cursor position and movement. The other units read the key maps
- * and the mouse words by their port names, so the state is a set of
- * separate commons rather than the original's one Input_Globs (finding 683,
- * section 2). */
+ * and the cursor position and movement. The DirectInput object and the
+ * keyboard device stay null under the substitution. The other units read
+ * the key maps and the mouse words by their port names, so the state is a
+ * set of separate commons rather than the original's one Input_Globs
+ * (finding 683, section 2). */
 #include "input_unit.h"
 
 
 #include <string.h>
 #include <miniwin/windows.h>
-#include <miniwin/dinput.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_init.h>
+#include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_log.h>
 
-#include "dxerror.h"
+#include "input_sdl_keys.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define INPUT_DIRECTINPUT_VERSION 0x0500
-#define INPUT_DISCL_NONEXCLUSIVE_FOREGROUND (DISCL_NONEXCLUSIVE | DISCL_FOREGROUND)
-#define INPUT_DIERR_INPUTLOST ((HRESULT)0x8007001EL)
-
-/* c_dfDIKeyboard (dinput.lib, 0049c790) and GUID_SysKeyboard (dxguid.lib,
- * 004a0148) come from miniwin/dinput.h. */
+/* DirectInput's value for a key held down in the key map. */
+#define INPUT_KEY_DOWN 0x80
 
 /* Main.c's state: mainGlobs' hWnd, hInst, active, appWidth, appHeight and
  * flags. In the matching build the port names are its fields
@@ -56,46 +60,17 @@ unsigned char inputKeyMap[256];
 // FUNCTION: LEGORR 0x0047ed90
 int input_direct_initialize(void)
 {
-    GUID guid = GUID_SysKeyboard;
-    HRESULT r;
-
-    if (DirectInputCreateA((HINSTANCE)g_main_instance_handle,
-                           INPUT_DIRECTINPUT_VERSION, &s_input_lpdi, NULL) != DI_OK) {
-        directx_result_diagnostic_dispatch(
-            DirectInputCreateA((HINSTANCE)g_main_instance_handle,
-                               INPUT_DIRECTINPUT_VERSION, &s_input_lpdi, NULL),
-            DXERROR_MODULE_DINPUT,
-            // STRING: LEGORR 0x004aaed0
-            "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Input.c", 118);
+    /* DirectInputCreateA, CreateDevice(GUID_SysKeyboard), SetDataFormat
+     * and SetCooperativeLevel: SDL's keyboard needs only its events
+     * subsystem, and there is no device object. */
+    s_input_lpdi = NULL;
+    s_input_lpdi_keyboard = NULL;
+    if (!SDL_InitSubSystem(SDL_INIT_EVENTS)) { // [library:input]
+        SDL_Log("Input.c: SDL_InitSubSystem: %s", SDL_GetError());
         return 0;
     }
-    if (s_input_lpdi->CreateDevice(guid,
-                                           &s_input_lpdi_keyboard, NULL) != DI_OK) {
-        directx_result_diagnostic_dispatch(
-            s_input_lpdi->CreateDevice(guid,
-                                               &s_input_lpdi_keyboard, NULL),
-            DXERROR_MODULE_DINPUT,
-            "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Input.c", 121);
-        return 0;
-    }
-    if (s_input_lpdi_keyboard->SetDataFormat(&c_dfDIKeyboard) != DI_OK) {
-        directx_result_diagnostic_dispatch(
-            s_input_lpdi_keyboard->SetDataFormat(&c_dfDIKeyboard),
-            DXERROR_MODULE_DINPUT,
-            "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Input.c", 124);
-        return 0;
-    }
-    if (s_input_lpdi_keyboard->SetCooperativeLevel((HWND)g_platform_cursor_window_handle,
-            INPUT_DISCL_NONEXCLUSIVE_FOREGROUND) != DI_OK) {
-        directx_result_diagnostic_dispatch(
-            s_input_lpdi_keyboard->SetCooperativeLevel((HWND)g_platform_cursor_window_handle,
-                INPUT_DISCL_NONEXCLUSIVE_FOREGROUND),
-            DXERROR_MODULE_DINPUT,
-            "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Input.c", 127);
-        return 0;
-    }
-    r = s_input_lpdi_keyboard->Acquire();
-    s_input_keyboard_acquired = r == DI_OK;
+    /* Acquire: SDL's keyboard state is always readable. */
+    s_input_keyboard_acquired = 1; // [library:input]
     return 1;
 }
 
@@ -103,7 +78,10 @@ int input_direct_initialize(void)
 void input_state_poll_retail(void)
 {
     int active;
-    HRESULT r;
+    const bool* state;
+    int count;
+    int i;
+    unsigned char dik;
 
     if (s_engine_feature_word & 2) active = 1;
     else active = s_window_application_active;
@@ -111,25 +89,22 @@ void input_state_poll_retail(void)
     if (!active) {
         memset(s_global_current_keys, 0, sizeof(s_global_current_keys));
         memset(s_global_previous_keys, 0, sizeof(s_global_previous_keys));
-        s_input_lpdi_keyboard->Unacquire();
+        s_input_keyboard_acquired = 0; // [library:input] Unacquire
         return;
     }
 
-    if (s_input_lpdi_keyboard) {
-        if (s_input_keyboard_acquired) {
-            memcpy(s_global_previous_keys, s_global_current_keys,
-                   sizeof(s_global_previous_keys));
-            memset(s_global_current_keys, 0, sizeof(s_global_current_keys));
-            r = s_input_lpdi_keyboard->GetDeviceState(sizeof(s_global_current_keys),
-                s_global_current_keys);
-        } else {
-            r = INPUT_DIERR_INPUTLOST;
-        }
-        if (r != DI_OK) {
-            s_input_keyboard_acquired = 0;
-            if (s_input_lpdi_keyboard->Acquire() == DI_OK)
-                s_input_keyboard_acquired = 1;
-        }
+    /* Acquire, then GetDeviceState: the key map from SDL's keyboard state.
+     * SDL_PumpEvents keeps the state current for loops that poll the
+     * keyboard without pumping window messages. */
+    s_input_keyboard_acquired = 1; // [library:input] Acquire
+    memcpy(s_global_previous_keys, s_global_current_keys,
+           sizeof(s_global_previous_keys));
+    memset(s_global_current_keys, 0, sizeof(s_global_current_keys));
+    SDL_PumpEvents(); // [library:input]
+    state = SDL_GetKeyboardState(&count); // [library:input]
+    for (i = 0; i < count; i++) {
+        if (state[i] && (dik = input_sdl_scancode_dik((SDL_Scancode)i)) != 0)
+            s_global_current_keys[dik] = INPUT_KEY_DOWN;
     }
 }
 
@@ -150,13 +125,9 @@ int input_keyboard_down_key_count(void)
 // FUNCTION: LEGORR 0x0047efd0
 void input_direct_shutdown(void)
 {
-    if (s_input_keyboard_acquired) {
-        s_input_lpdi_keyboard->Unacquire();
-        s_input_keyboard_acquired = 0;
-    }
-    if (s_input_lpdi_keyboard)
-        s_input_lpdi_keyboard->Release();
-    if (s_input_lpdi) s_input_lpdi->Release();
+    /* Unacquire and Release the keyboard and DirectInput. */
+    s_input_keyboard_acquired = 0;
+    SDL_QuitSubSystem(SDL_INIT_EVENTS); // [library:input]
 }
 
 // FUNCTION: LEGORR 0x0047f010
