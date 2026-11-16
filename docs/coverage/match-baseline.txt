@@ -1,4 +1,4 @@
-# input_sha256: d98bf64335b8cc5998e0a3caf3696b67681cba7b6e89db888247813a6a631d1d
+# input_sha256: b3fe2cf07a07c90e0924b5426cf099093972162606392a7793b0d9df63540e7e
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1251,7 +1251,7 @@
 0x0044dde0 100.00 loader_display_loading_bar
 0x0044dec0 100.00 loader_file_load_callback
 0x0044e0a0 100.00 loader_display_shutdown
-0x0044e0c0 93.43 terrain_map_create
+0x0044e0c0 98.00 terrain_map_create
 0x0044e4d0 100.00 terrain_map_vertices_build
 0x0044e670 100.00 terrain_map_remove
 0x0044e6b0 100.00 terrain_map_texture_no_fade_set
@@ -1286,7 +1286,7 @@
 0x004500d0 100.00 terrain_map_block_vertices_get
 0x00450220 100.00 terrain_map_block_vertices_raw_get
 0x004502c0 100.00 level_coord_pair_within_bounds_target
-0x004502e0 85.50 terrain_map_screen_pick
+0x004502e0 87.50 terrain_map_screen_pick
 0x00450560 100.00 terrain_map_ray_intersection
 0x00450600 100.00 terrain_map_visible_radius_add
 0x00450700 100.00 terrain_map_block_hide
@@ -1306,7 +1306,7 @@
 0x004514f0 100.00 terrain_map_block_face_normals_update
 0x004515a0 100.00 terrain_map_file_specs_get
 0x004515c0 100.00 terrain_map_file_block_value
-0x004515e0 88.54 terrain_map_block_ray_intersection
+0x004515e0 92.36 terrain_map_block_ray_intersection
 0x004519b0 100.00 model_entry_record_load
 0x00451ab0 100.00 model_primitive_record_create
 0x00451b30 100.00 model_entry_list_flatten
@@ -2133,7 +2133,7 @@
 0x00472a50 100.00 Container_Remove2
 0x00472cd0 88.85 container_load
 0x00473340 100.00 ledger_stub_00473340_SceneActionNamePresent
-0x00473370 80.39 scene_action_name_set
+0x00473370 97.98 scene_action_name_set
 0x00473460 100.00 light_interface_call_slot_40
 0x00473480 100.00 light_interface_call_slot_3c
 0x004734a0 100.00 light_interface_call_slot_38
@@ -2398,12 +2398,12 @@
 0x0047d430 100.00 scene_object_registry_teardown
 0x0047d470 100.00 Image_Remove
 0x0047d490 74.23 Image_CopyToDataToSurface
-0x0047d520 48.43 Image_8BitSourceCopy
+0x0047d520 52.20 Image_8BitSourceCopy
 0x0047d700 100.00 Image_CountMaskBits
 0x0047d720 100.00 Image_CountMaskBitShift
 0x0047d740 100.00 Image_FlipSurface
-0x0047d800 82.91 Image_24BitSourceCopy
-0x0047d9d0 78.55 Image_LoadBMPScaled
+0x0047d800 85.44 Image_24BitSourceCopy
+0x0047d9d0 84.67 Image_LoadBMPScaled
 0x0047db90 100.00 Image_RGB2CR
 0x0047dbc0 100.00 Image_SetPenZeroTrans
 0x0047dbf0 100.00 Image_SetupTrans
@@ -2503,7 +2503,7 @@
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
-0x00481c50 86.97 mesh_uview_mesh
+0x00481c50 95.33 mesh_uview_mesh
 0x00481fa0 100.00 mesh_get_texture_uvs_wrap
 0x00482040 100.00 mesh_set_texture_time2
 0x004820d0 100.00 mesh_remove
@@ -3976,7 +3976,7 @@
 0x0044dde0 100.00 loader_display_loading_bar
 0x0044dec0 100.00 loader_file_load_callback
 0x0044e0a0 100.00 loader_display_shutdown
-0x0044e0c0 93.43 terrain_map_create
+0x0044e0c0 98.00 terrain_map_create
 0x0044e4d0 100.00 terrain_map_vertices_build
 0x0044e670 100.00 terrain_map_remove
 0x0044e6b0 100.00 terrain_map_texture_no_fade_set
@@ -4011,7 +4011,7 @@
 0x004500d0 100.00 terrain_map_block_vertices_get
 0x00450220 100.00 terrain_map_block_vertices_raw_get
 0x004502c0 100.00 level_coord_pair_within_bounds_target
-0x004502e0 85.50 terrain_map_screen_pick
+0x004502e0 87.50 terrain_map_screen_pick
 0x00450560 100.00 terrain_map_ray_intersection
 0x00450600 100.00 terrain_map_visible_radius_add
 0x00450700 100.00 terrain_map_block_hide
@@ -4031,7 +4031,7 @@
 0x004514f0 100.00 terrain_map_block_face_normals_update
 0x004515a0 100.00 terrain_map_file_specs_get
 0x004515c0 100.00 terrain_map_file_block_value
-0x004515e0 88.54 terrain_map_block_ray_intersection
+0x004515e0 92.36 terrain_map_block_ray_intersection
 0x004519b0 100.00 model_entry_record_load
 0x00451ab0 100.00 model_primitive_record_create
 0x00451b30 100.00 model_entry_list_flatten
@@ -4858,7 +4858,7 @@
 0x00472a50 100.00 Container_Remove2
 0x00472cd0 88.85 container_load
 0x00473340 100.00 ledger_stub_00473340_SceneActionNamePresent
-0x00473370 80.39 scene_action_name_set
+0x00473370 97.98 scene_action_name_set
 0x00473460 100.00 light_interface_call_slot_40
 0x00473480 100.00 light_interface_call_slot_3c
 0x004734a0 100.00 light_interface_call_slot_38
@@ -5123,12 +5123,12 @@
 0x0047d430 100.00 scene_object_registry_teardown
 0x0047d470 100.00 Image_Remove
 0x0047d490 74.23 Image_CopyToDataToSurface
-0x0047d520 48.43 Image_8BitSourceCopy
+0x0047d520 52.20 Image_8BitSourceCopy
 0x0047d700 100.00 Image_CountMaskBits
 0x0047d720 100.00 Image_CountMaskBitShift
 0x0047d740 100.00 Image_FlipSurface
-0x0047d800 82.91 Image_24BitSourceCopy
-0x0047d9d0 78.55 Image_LoadBMPScaled
+0x0047d800 85.44 Image_24BitSourceCopy
+0x0047d9d0 84.67 Image_LoadBMPScaled
 0x0047db90 100.00 Image_RGB2CR
 0x0047dbc0 100.00 Image_SetPenZeroTrans
 0x0047dbf0 100.00 Image_SetupTrans
@@ -5228,7 +5228,7 @@
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
-0x00481c50 86.97 mesh_uview_mesh
+0x00481c50 95.33 mesh_uview_mesh
 0x00481fa0 100.00 mesh_get_texture_uvs_wrap
 0x00482040 100.00 mesh_set_texture_time2
 0x004820d0 100.00 mesh_remove
