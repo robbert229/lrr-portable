@@ -1096,3 +1096,5 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
 }
 
 #endif /* !LEGORRR_BACKEND_MINIWIN */
+
+#include "main_tail.h"

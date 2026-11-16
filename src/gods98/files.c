@@ -847,3 +847,5 @@ void file_check_file(const char* fName)
         if (_strcmpi(fName, fileRedundantList[i]) == 0) return;
     }
 }
+
+#include "files_tail.h"

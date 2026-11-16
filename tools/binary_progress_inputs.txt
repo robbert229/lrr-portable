@@ -629,6 +629,7 @@ src/gods98/files_native.h
 src/gods98/files_open.h
 src/gods98/files_paths.h
 src/gods98/files_port.cpp
+src/gods98/files_tail.h
 src/gods98/flic.cpp
 src/gods98/flic.h
 src/gods98/flic.hpp
@@ -708,6 +709,7 @@ src/gods98/main.c
 src/gods98/main.h
 src/gods98/main_globs.h
 src/gods98/main_imports.h
+src/gods98/main_tail.h
 src/gods98/mainsim.cpp
 src/gods98/mainsim.hpp
 src/gods98/maths.c
