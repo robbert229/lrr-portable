@@ -63,3 +63,5 @@ int registry_path_create_keys(HKEY root, const char* path, const char* name,
     RegCloseKey(child);
     return result;
 }
+
+#include "g98_029_tail.h"

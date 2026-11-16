@@ -658,6 +658,7 @@ src/gods98/g98_026.c
 src/gods98/g98_026.h
 src/gods98/g98_029.c
 src/gods98/g98_029.h
+src/gods98/g98_029_tail.h
 src/gods98/gods98.cpp
 src/gods98/gods98.hpp
 src/gods98/heap.cpp
