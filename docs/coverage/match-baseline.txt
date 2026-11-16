@@ -1,4 +1,4 @@
-# input_sha256: fb8653e9e85205b63269b89284cb2f856a682a66e66e029c81c25ac023a4319a
+# input_sha256: 412aa2bd88bf37d62e5497bad6fc3c9fc906ac896c829d2876fb176cb2f9844e
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2114,7 +2114,7 @@
 0x004722b0 100.00 G98CMovie::OpenStream
 0x00472390 100.00 G98CMovie::G98CMovie
 0x00472430 100.00 G98CMovie::~G98CMovie
-0x004724a0 97.01 G98CMovie::Update
+0x004724a0 100.00 G98CMovie::Update
 0x00472530 100.00 G98CMovie::GetDuration
 0x00472560 100.00 movie_load
 0x00472670 100.00 movie_get_size
@@ -2265,13 +2265,13 @@
 0x00477bf0 100.00 winmain_parse_options
 0x00477f30 100.00 main_loop_frame_pump
 0x00477f70 100.00 render_feature_flags_get
-0x00477f80 85.71 window_runtime_display_caps_query
+0x00477f80 100.00 window_runtime_display_caps_query
 0x00477fa0 100.00 renderer_begin_frame_once_retail
 0x00477fd0 100.00 window_runtime_callback_triplet_set
 0x00478000 100.00 main_time_get
 0x00478010 100.00 window_runtime_message_dispatch_filter
 0x00478040 100.00 window_message_dispatch_pump
-0x004780b0 98.89 renderer_window_mode_apply
+0x004780b0 100.00 renderer_window_mode_apply
 0x004781d0 99.00 direct3drm_device_initialize
 0x00478310 100.00 window_runtime_adjust_rect
 0x00478330 100.00 direct3d_render_preferences_apply
@@ -2463,7 +2463,7 @@
 0x0047f6a0 100.00 file_make_dir
 0x0047f6e0 100.00 game_file_open_dispatch
 0x0047f850 100.00 wad_file_seek
-0x0047f980 98.80 wad_file_read
+0x0047f980 100.00 wad_file_read
 0x0047fa50 100.00 game_file_write
 0x0047fac0 100.00 game_file_close
 0x0047fb10 100.00 wad_file_cursor_get
@@ -4839,7 +4839,7 @@
 0x004722b0 100.00 G98CMovie::OpenStream
 0x00472390 100.00 G98CMovie::G98CMovie
 0x00472430 100.00 G98CMovie::~G98CMovie
-0x004724a0 97.01 G98CMovie::Update
+0x004724a0 100.00 G98CMovie::Update
 0x00472530 100.00 G98CMovie::GetDuration
 0x00472560 100.00 movie_load
 0x00472670 100.00 movie_get_size
@@ -4990,13 +4990,13 @@
 0x00477bf0 100.00 winmain_parse_options
 0x00477f30 100.00 main_loop_frame_pump
 0x00477f70 100.00 render_feature_flags_get
-0x00477f80 85.71 window_runtime_display_caps_query
+0x00477f80 100.00 window_runtime_display_caps_query
 0x00477fa0 100.00 renderer_begin_frame_once_retail
 0x00477fd0 100.00 window_runtime_callback_triplet_set
 0x00478000 100.00 main_time_get
 0x00478010 100.00 window_runtime_message_dispatch_filter
 0x00478040 100.00 window_message_dispatch_pump
-0x004780b0 98.89 renderer_window_mode_apply
+0x004780b0 100.00 renderer_window_mode_apply
 0x004781d0 99.00 direct3drm_device_initialize
 0x00478310 100.00 window_runtime_adjust_rect
 0x00478330 100.00 direct3d_render_preferences_apply
@@ -5188,7 +5188,7 @@
 0x0047f6a0 100.00 file_make_dir
 0x0047f6e0 100.00 game_file_open_dispatch
 0x0047f850 100.00 wad_file_seek
-0x0047f980 98.80 wad_file_read
+0x0047f980 100.00 wad_file_read
 0x0047fa50 100.00 game_file_write
 0x0047fac0 100.00 game_file_close
 0x0047fb10 100.00 wad_file_cursor_get
