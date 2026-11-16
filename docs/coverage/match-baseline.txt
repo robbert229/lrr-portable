@@ -1,4 +1,4 @@
-# input_sha256: 268c2f3e0bdb81257f6fdcfe05cf61bd4d881c6a40934217c4b468f9778034ec
+# input_sha256: 97ac849d5887f935c4211b1fbccda2f14b9d523ddb0943eace361688934e82cb
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -328,7 +328,7 @@
 0x0040d5e0 100.00 electric_fence_building_spark_callback
 0x0040d720 100.00 electric_fence_building_clear_callback
 0x0040d770 100.00 electric_fence_node_update_callback
-0x0040d850 60.31 electric_fence_spark
+0x0040d850 99.67 electric_fence_spark
 0x0040dc20 100.00 electric_fence_beam_create
 0x0040dd90 100.00 electric_fence_block_vector_get
 0x0040de40 100.00 electric_fence_object_strike
@@ -1046,7 +1046,7 @@
 0x0043b770 100.00 legoobject_select_in_screen_rect_callback
 0x0043b820 100.00 legoobject_first_person_meshes_swap
 0x0043b850 100.00 legoobject_lod_meshes_update
-0x0043b8d0 96.55 legoobject_lod_meshes_update_callback
+0x0043b8d0 99.47 legoobject_lod_meshes_update_callback
 0x0043baf0 100.00 legoobject_flags_mask107c33de_or_1c00203_any_test
 0x0043bb20 100.00 legoobject_building_deposit_state_monitor
 0x0043bbc0 100.00 legoobject_detach_carried_object_and_reset_state
@@ -1128,7 +1128,7 @@
 0x00445340 78.57 legoobject_path_step_vector_callback
 0x004455a0 100.00 legoobject_move_vector_surface_probe
 0x004456e0 100.00 legoobject_behavior_callback_tick
-0x00445770 92.68 legoobject_behavior_callback_a
+0x00445770 95.24 legoobject_behavior_callback_a
 0x00445830 88.42 legoobject_behavior_callback_b
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
 0x00445df0 99.55 legoobject_flag_gated_callback_b
@@ -2304,7 +2304,7 @@
 0x00479500 100.00 d3drm_vector_random
 0x00479510 100.00 d3drm_vector_rotate
 0x00479530 100.00 surface_triangle_normal_calculate
-0x00479630 60.37 surface_triangle_area_calculate
+0x00479630 63.47 surface_triangle_area_calculate
 0x004798a0 100.00 rng_thunk_draw15
 0x004798b0 100.00 random_float_range
 0x004798e0 100.00 view_ray_intersection_test
@@ -3053,7 +3053,7 @@
 0x0040d5e0 100.00 electric_fence_building_spark_callback
 0x0040d720 100.00 electric_fence_building_clear_callback
 0x0040d770 100.00 electric_fence_node_update_callback
-0x0040d850 60.31 electric_fence_spark
+0x0040d850 99.67 electric_fence_spark
 0x0040dc20 100.00 electric_fence_beam_create
 0x0040dd90 100.00 electric_fence_block_vector_get
 0x0040de40 100.00 electric_fence_object_strike
@@ -3771,7 +3771,7 @@
 0x0043b770 100.00 legoobject_select_in_screen_rect_callback
 0x0043b820 100.00 legoobject_first_person_meshes_swap
 0x0043b850 100.00 legoobject_lod_meshes_update
-0x0043b8d0 96.55 legoobject_lod_meshes_update_callback
+0x0043b8d0 99.47 legoobject_lod_meshes_update_callback
 0x0043baf0 100.00 legoobject_flags_mask107c33de_or_1c00203_any_test
 0x0043bb20 100.00 legoobject_building_deposit_state_monitor
 0x0043bbc0 100.00 legoobject_detach_carried_object_and_reset_state
@@ -3853,7 +3853,7 @@
 0x00445340 78.57 legoobject_path_step_vector_callback
 0x004455a0 100.00 legoobject_move_vector_surface_probe
 0x004456e0 100.00 legoobject_behavior_callback_tick
-0x00445770 92.68 legoobject_behavior_callback_a
+0x00445770 95.24 legoobject_behavior_callback_a
 0x00445830 88.42 legoobject_behavior_callback_b
 0x00445d70 100.00 legoobject_flag_gated_callback_dispatch
 0x00445df0 99.55 legoobject_flag_gated_callback_b
@@ -5029,7 +5029,7 @@
 0x00479500 100.00 d3drm_vector_random
 0x00479510 100.00 d3drm_vector_rotate
 0x00479530 100.00 surface_triangle_normal_calculate
-0x00479630 60.37 surface_triangle_area_calculate
+0x00479630 63.47 surface_triangle_area_calculate
 0x004798a0 100.00 rng_thunk_draw15
 0x004798b0 100.00 random_float_range
 0x004798e0 100.00 view_ray_intersection_test
