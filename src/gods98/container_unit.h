@@ -7,8 +7,9 @@
  * LightWave mesh. The unit also loads textures (Container_LoadTexture2)
  * and keeps the scene's fog.
  *
- * C-compatible header (ADR 0005). container.c is compiled as C in the
- * matching build and as C++ in the native port. Shared C++ headers do not
+ * The frame, mesh, texture and surface types are miniwin's DirectX 6
+ * interfaces (ADR 0007 decision 3), so this header is C++. Shared C++
+ * headers do not
  * include this file: every include and declaration a header adds shifts
  * MSVC's symbol numbering (finding 506). src/game/test_c_boundaries.cpp
  * includes it.
@@ -24,24 +25,22 @@
 #ifndef LEGORRR_GODS98_CONTAINER_UNIT_H
 #define LEGORRR_GODS98_CONTAINER_UNIT_H
 
+#include <miniwin/d3drm.h>
+#include <miniwin/ddraw.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct Container Container;
 typedef struct Container_Texture Container_Texture;
-struct CntFrame;        /* IDirect3DRMFrame3 */
-struct CntMesh;         /* IDirect3DRMMesh */
-struct CntTexture;      /* IDirect3DRMTexture3 */
-struct CntSurface;      /* IDirectDrawSurface4 */
-struct CntObject;       /* IDirect3DRMObject */
 struct AnimClone;
 
 typedef void (*ContainerTriggerFrameCallback)(Container* cont, void* data);
 typedef void (*ContainerSoundTriggerCallback)(const char* sample,
                                               Container* cont, void* data);
 typedef void (*ContainerActivityCallback)(Container* cont, void* data);
-typedef int (*ContainerWalkTreeCallback)(struct CntFrame* frame, void* data);
+typedef int (*ContainerWalkTreeCallback)(LPDIRECT3DRMFRAME3 frame, void* data);
 
 Container* Container_Initialise(const char* gameName);               /* 00472710 */
 void Container_Shutdown(void);                                       /* 00472800 */
@@ -71,7 +70,7 @@ void Container_Light_SetEnableContainer(Container* light,
 Container* Container_MakeLight(Container* parent, unsigned long type,
                                 float r, float g, float b);          /* 004734f0 */
 Container* Container_MakeMesh2(Container* parent, int type);        /* 00473560 */
-struct CntFrame* Container_GetMasterFrame(Container* cont);        /* 00473680 */
+LPDIRECT3DRMFRAME3 Container_GetMasterFrame(Container* cont);        /* 00473680 */
 Container* Container_Clone(Container* orig);                         /* 00473690 */
 void Container_Hide2(Container* cont, int hide);                     /* 00473b20 */
 void Container_Hide(Container* cont, int hide);                      /* 00473b40 */
@@ -88,7 +87,7 @@ void Container_SetFogMode(unsigned long mode);                     /* 00473e70 *
 void Container_SetFogParams(float start, float end,
                               float density);                        /* 00473ea0 */
 void Container_SetPerspectiveCorrection(Container* cont, int on);  /* 00473ec0 */
-struct CntSurface* Container_LoadTextureSurface(
+LPDIRECTDRAWSURFACE4 Container_LoadTextureSurface(
     const char* fname, int managed, unsigned long* width,
     unsigned long* height, int* trans);                              /* 00474050 */
 int Container_GetDecalColour(const char* fname,
@@ -112,8 +111,8 @@ int Container_Mesh_IsGroupHidden(Container* cont,
                                    unsigned long group);             /* 00474ae0 */
 void Container_Mesh_HideGroup(Container* cont, unsigned long group,
                                int hide);                            /* 00474b30 */
-int Container_Mesh_HandleSeparateMeshGroups(struct CntMesh** mesh,
-                                               unsigned long* group); /* 00474c00 */
+int Container_Mesh_HandleSeparateMeshGroups(LPDIRECT3DRMMESH* mesh,
+                                            unsigned long* group); /* 00474c00 */
 int Container_Mesh_GetGroup(Container* cont, unsigned long groupID,
                              unsigned long* vertexCount,
                              unsigned long* faceCount,
@@ -175,19 +174,19 @@ float Container_GetZXRatio(Container* cont);                       /* 004756d0 *
 void Container_SetParent(Container* child, Container* parent);      /* 00475710 */
 Container* Container_GetParent(Container* child);                   /* 004757a0 */
 float Container_GetTransCoef(Container* cont);                     /* 004757f0 */
-Container* Container_SearchOwner(struct CntFrame* frame);           /* 00475830 */
-Container* Container_Frame_GetContainer(struct CntFrame* frame);    /* 00475880 */
+Container* Container_SearchOwner(LPDIRECT3DRMFRAME3 frame);           /* 00475830 */
+Container* Container_Frame_GetContainer(LPDIRECT3DRMFRAME3 frame);    /* 00475880 */
 void Container_GetFrames(Container* cont, Container* ref,
-                          struct CntFrame** contFrame,
-                          struct CntFrame** refFrame);               /* 00475900 */
+                          LPDIRECT3DRMFRAME3* contFrame,
+                          LPDIRECT3DRMFRAME3* refFrame);               /* 00475900 */
 int Container_ParseTypeString(const char* str, int* noTexture);    /* 00475930 */
 void Container_AddList(void);                                       /* 004759f0 */
 unsigned long Container_GetActivities(Container* cont,
-                                       struct CntFrame** frameList,
+                                       LPDIRECT3DRMFRAME3* frameList,
                                        struct AnimClone** acList,
                                        char** nameList);             /* 00475a70 */
 void Container_SetTypeData(Container* cont, char* name,
-                             void* light, struct CntMesh* mesh,
+                             void* light, LPDIRECT3DRMMESH mesh,
                              void* transMesh);                       /* 00475c00 */
 void Container_FreeTypeData(Container* cont);                      /* 00475c80 */
 int Container_AddActivity2(Container* cont, const char* filename,
@@ -195,10 +194,10 @@ int Container_AddActivity2(Container* cont, const char* filename,
                             unsigned long trigger, const char* sample,
                             struct AnimClone* origClone, int lws,
                             int looping);                            /* 00475d10 */
-struct CntFrame* Container_Frame_Find(Container* cont,
+LPDIRECT3DRMFRAME3 Container_Frame_Find(Container* cont,
                                       const char* findName,
                                       int hidden);                   /* 00475e40 */
-void Container_Frame_SetAppData(struct CntFrame* frame,
+void Container_Frame_SetAppData(LPDIRECT3DRMFRAME3 frame,
                                   Container* owner,
                                   struct AnimClone* animClone,
                                   const char* asfname,
@@ -208,39 +207,39 @@ void Container_Frame_SetAppData(struct CntFrame* frame,
                                   const char* actSample,
                                   void* soundRecord,
                                   unsigned long* trigger);           /* 00475f70 */
-void Container_Frame_RemoveAppData(struct CntFrame* frame);        /* 004760e0 */
-Container* Container_Frame_GetOwner(struct CntFrame* frame);        /* 00476120 */
-char* Container_Frame_GetAnimSetFileName(struct CntFrame* frame); /* 00476140 */
-struct AnimClone* Container_Frame_GetAnimClone(struct CntFrame* frame); /* 00476160 */
-unsigned long Container_Frame_GetFrameCount(struct CntFrame* frame); /* 00476180 */
-float Container_Frame_GetCurrTime(struct CntFrame* frame);         /* 004761a0 */
-float Container_Frame_GetTransCo(struct CntFrame* frame);          /* 004761c0 */
-char* Container_Frame_GetSample(struct CntFrame* frame);            /* 004761e0 */
-unsigned long Container_Frame_GetTrigger(struct CntFrame* frame);   /* 00476200 */
-void Container_Frame_SafeAddChild(struct CntFrame* parent,
-                                    struct CntFrame* child);         /* 00476220 */
-void Container_Frame_FormatName(struct CntFrame* frame,
+void Container_Frame_RemoveAppData(LPDIRECT3DRMFRAME3 frame);        /* 004760e0 */
+Container* Container_Frame_GetOwner(LPDIRECT3DRMFRAME3 frame);        /* 00476120 */
+char* Container_Frame_GetAnimSetFileName(LPDIRECT3DRMFRAME3 frame); /* 00476140 */
+struct AnimClone* Container_Frame_GetAnimClone(LPDIRECT3DRMFRAME3 frame); /* 00476160 */
+unsigned long Container_Frame_GetFrameCount(LPDIRECT3DRMFRAME3 frame); /* 00476180 */
+float Container_Frame_GetCurrTime(LPDIRECT3DRMFRAME3 frame);         /* 004761a0 */
+float Container_Frame_GetTransCo(LPDIRECT3DRMFRAME3 frame);          /* 004761c0 */
+char* Container_Frame_GetSample(LPDIRECT3DRMFRAME3 frame);            /* 004761e0 */
+unsigned long Container_Frame_GetTrigger(LPDIRECT3DRMFRAME3 frame);   /* 00476200 */
+void Container_Frame_SafeAddChild(LPDIRECT3DRMFRAME3 parent,
+                                    LPDIRECT3DRMFRAME3 child);         /* 00476220 */
+void Container_Frame_FormatName(LPDIRECT3DRMFRAME3 frame,
                                  const char* msg, ...);              /* 00476270 */
-void Container_Frame_FreeName(struct CntFrame* frame);              /* 004762f0 */
-char* Container_Frame_GetName(struct CntFrame* frame);              /* 00476310 */
-int Container_Frame_WalkTree(struct CntFrame* frame,
+void Container_Frame_FreeName(LPDIRECT3DRMFRAME3 frame);              /* 004762f0 */
+char* Container_Frame_GetName(LPDIRECT3DRMFRAME3 frame);              /* 00476310 */
+int Container_Frame_WalkTree(LPDIRECT3DRMFRAME3 frame,
                               unsigned long level,
                               ContainerWalkTreeCallback callback,
                               void* data);                           /* 00476330 */
-int Container_Frame_SearchCallback(struct CntFrame* frame,
+int Container_Frame_SearchCallback(LPDIRECT3DRMFRAME3 frame,
                                     void* data);                     /* 00476410 */
 struct AnimClone* Container_LoadAnimSet(const char* fname,
-                                          struct CntFrame* frame,
+                                          LPDIRECT3DRMFRAME3 frame,
                                           unsigned long* frameCount,
                                           int lws, int looping);     /* 004765c0 */
 unsigned long Container_GetAnimFileFrameCount(const char* fileData); /* 00476770 */
-int Container_FrameLoad(const char* fname, struct CntFrame* frame); /* 004767e0 */
-struct CntMesh* Container_MeshLoad(void* fileData,
+int Container_FrameLoad(const char* fname, LPDIRECT3DRMFRAME3 frame); /* 004767e0 */
+LPDIRECT3DRMMESH Container_MeshLoad(void* fileData,
                                     unsigned long fileSize,
                                     const char* fname,
-                                    struct CntFrame* frame,
+                                    LPDIRECT3DRMFRAME3 frame,
                                     int noTextures);                 /* 00476850 */
-void Container_YFlipTexture(struct CntTexture* texture);           /* 00476bf0 */
+void Container_YFlipTexture(LPDIRECT3DRMTEXTURE3 texture);           /* 00476bf0 */
 
 #ifdef __cplusplus
 }

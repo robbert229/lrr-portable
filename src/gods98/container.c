@@ -25,9 +25,8 @@
  * where their callers pass the original's arguments, so those callers reach
  * them; natively the port tail serves those names.
  *
- * C-compatible (ADR 0005): C in the matching build, C++ elsewhere. The
- * Direct3DRM and DirectDraw interfaces are called through their COM method
- * tables, declared here with the slots the unit uses. */
+ * The Direct3DRM and DirectDraw interfaces are miniwin's DirectX 6
+ * interfaces, called with C++ syntax (ADR 0007 decision 3). */
 #include "container_link_names.h"
 
 #include <ctype.h>
@@ -50,13 +49,8 @@
 #include "directdraw.h"
 #include "container_imports.h"
 
-#if defined(_WIN32)
-#define CNT_STDCALL __stdcall
-#define CNT_CDECL __cdecl
-#else
-#define CNT_STDCALL
-#define CNT_CDECL
-#endif
+#include <miniwin/d3drm.h>
+#include <miniwin/ddraw.h>
 
 #define CONTAINER_MAXLISTS 20
 #define CONTAINER_MAXTEXTURES 1000
@@ -96,33 +90,9 @@ typedef enum Container_SearchMode {
 #define CONTAINER_FLAG_ANIMATIONUPDATE 0x00000020
 #define CONTAINER_FLAG_HIDDEN2 0x00000080
 
-/* D3DRMCOMBINE_REPLACE, D3DRMLOAD_FROMFILE, D3DRMLOAD_FROMMEMORY,
- * D3DRMLOAD_FIRST and D3DRMSORT_FRONTTOBACK. */
-#define CNT_COMBINE_REPLACE 0
-#define CNT_LOAD_FROMFILE 0x00
-#define CNT_LOAD_FROMMEMORY 0x02
-#define CNT_LOAD_FIRST 0x00
-#define CNT_SORT_FRONTTOBACK 1
-
-typedef struct CntIID {
-    unsigned long data1;
-    unsigned short data2;
-    unsigned short data3;
-    unsigned char data4[8];
-} CntIID;
-
-typedef struct CntVector3 {
-    float x;
-    float y;
-    float z;
-} CntVector3;
-
-typedef struct CntBox {
-    CntVector3 min;
-    CntVector3 max;
-} CntBox;
-
-/* D3DRMIMAGE. */
+/* Images.c's BMP_Image (IndexedBitmapPaletteData), which
+ * Container_LoadTextureSurface has the bitmap parsed into: the original
+ * SDK's D3DRMIMAGE layout, which miniwin's D3DRMIMAGE does not keep. */
 typedef struct CntImage {
     int width;
     int height;
@@ -133,360 +103,25 @@ typedef struct CntImage {
     int bytes_per_line;
     void* buffer1;
     void* buffer2;
-    unsigned long red_mask;
-    unsigned long green_mask;
-    unsigned long blue_mask;
-    unsigned long alpha_mask;
+    unsigned int red_mask;
+    unsigned int green_mask;
+    unsigned int blue_mask;
+    unsigned int alpha_mask;
     int palette_size;
     void* palette;
 } CntImage;
 
-typedef struct CntFrame CntFrame;            /* IDirect3DRMFrame3 */
-typedef struct CntFrame1 CntFrame1;          /* IDirect3DRMFrame */
-typedef struct CntFrameArray CntFrameArray;  /* IDirect3DRMFrameArray */
-typedef struct CntMesh CntMesh;              /* IDirect3DRMMesh */
-typedef struct CntMeshBuilder CntMeshBuilder; /* IDirect3DRMMeshBuilder3 */
-typedef struct CntLight CntLight;            /* IDirect3DRMLight */
-typedef struct CntTexture CntTexture;        /* IDirect3DRMTexture3 */
-typedef struct CntAnimSet CntAnimSet;        /* IDirect3DRMAnimationSet2 */
-typedef struct CntObject CntObject;          /* IDirect3DRMObject, IUnknown */
-typedef struct CntD3DRM CntD3DRM;            /* IDirect3DRM3 */
-typedef struct CntDevice CntDevice;          /* IDirect3DRMDevice3 */
-typedef struct CntDDraw CntDDraw;            /* IDirectDraw4 */
-typedef struct CntSurface CntSurface;        /* IDirectDrawSurface4 */
-typedef struct CntPalette CntPalette;        /* IDirectDrawPalette */
-
-typedef void (CNT_CDECL* CntObjectCallback)(CntObject* obj, void* arg);
-typedef long (CNT_CDECL* CntLoadTextureCallback)(char* name, void* arg,
-                                                 CntTexture** texture);
-
-typedef struct CntFrameVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntFrame*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntFrame*);                    /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntFrame*);                   /* +0x08 */
-    void* Clone;                                                       /* +0x0c */
-    long (CNT_STDCALL* AddDestroyCallback)(CntFrame*, CntObjectCallback,
-                                           void*);                     /* +0x10 */
-    void* DeleteDestroyCallback;                                       /* +0x14 */
-    long (CNT_STDCALL* SetAppData)(CntFrame*, void*);                  /* +0x18 */
-    void* (CNT_STDCALL* GetAppData)(CntFrame*);                        /* +0x1c */
-    long (CNT_STDCALL* SetName)(CntFrame*, const char*);               /* +0x20 */
-    long (CNT_STDCALL* GetName)(CntFrame*, unsigned long*, char*);     /* +0x24 */
-    void* GetClassName;                                                /* +0x28 */
-    long (CNT_STDCALL* AddChild)(CntFrame*, CntFrame*);                /* +0x2c */
-    long (CNT_STDCALL* AddLight)(CntFrame*, CntLight*);                /* +0x30 */
-    void* AddMoveCallback;                                             /* +0x34 */
-    long (CNT_STDCALL* AddTransform)(CntFrame*, int, float (*)[4]);    /* +0x38 */
-    long (CNT_STDCALL* AddTranslation)(CntFrame*, int, float, float,
-                                       float);                         /* +0x3c */
-    long (CNT_STDCALL* AddScale)(CntFrame*, int, float, float, float); /* +0x40 */
-    long (CNT_STDCALL* AddRotation)(CntFrame*, int, float, float, float,
-                                    float);                            /* +0x44 */
-    long (CNT_STDCALL* AddVisual)(CntFrame*, CntObject*);              /* +0x48 */
-    long (CNT_STDCALL* GetChildren)(CntFrame*, CntFrameArray**);       /* +0x4c */
-    void* GetColor;                                                    /* +0x50 */
-    void* GetLights;                                                   /* +0x54 */
-    void* GetMaterialMode;                                             /* +0x58 */
-    long (CNT_STDCALL* GetParent)(CntFrame*, CntFrame**);              /* +0x5c */
-    long (CNT_STDCALL* GetPosition)(CntFrame*, CntFrame*, CntVector3*); /* +0x60 */
-    void* GetRotation;                                                 /* +0x64 */
-    void* GetScene;                                                    /* +0x68 */
-    void* GetSortMode;                                                 /* +0x6c */
-    void* GetTexture;                                                  /* +0x70 */
-    long (CNT_STDCALL* GetTransform)(CntFrame*, CntFrame*,
-                                     float (*)[4]);                    /* +0x74 */
-    void* GetVelocity;                                                 /* +0x78 */
-    long (CNT_STDCALL* GetOrientation)(CntFrame*, CntFrame*, CntVector3*,
-                                       CntVector3*);                   /* +0x7c */
-    long (CNT_STDCALL* GetVisuals)(CntFrame*, unsigned long*,
-                                   CntObject**);                       /* +0x80 */
-    long (CNT_STDCALL* InverseTransform)(CntFrame*, CntVector3*,
-                                         CntVector3*);                 /* +0x84 */
-    long (CNT_STDCALL* Load)(CntFrame*, void*, void*, unsigned long,
-                             CntLoadTextureCallback, void*);           /* +0x88 */
-    void* LookAt;                                                      /* +0x8c */
-    void* Move;                                                        /* +0x90 */
-    long (CNT_STDCALL* DeleteChild)(CntFrame*, CntFrame*);             /* +0x94 */
-    void* DeleteLight;                                                 /* +0x98 */
-    void* DeleteMoveCallback;                                          /* +0x9c */
-    long (CNT_STDCALL* DeleteVisual)(CntFrame*, CntObject*);           /* +0xa0 */
-    void* GetSceneBackground;                                          /* +0xa4 */
-    void* GetSceneBackgroundDepth;                                     /* +0xa8 */
-    void* GetSceneFogColor;                                            /* +0xac */
-    void* GetSceneFogEnable;                                           /* +0xb0 */
-    void* GetSceneFogMode;                                             /* +0xb4 */
-    void* GetSceneFogParams;                                           /* +0xb8 */
-    long (CNT_STDCALL* SetSceneBackground)(CntFrame*, unsigned long);  /* +0xbc */
-    void* SetSceneBackgroundRGB;                                       /* +0xc0 */
-    void* SetSceneBackgroundDepth;                                     /* +0xc4 */
-    void* SetSceneBackgroundImage;                                     /* +0xc8 */
-    long (CNT_STDCALL* SetSceneFogEnable)(CntFrame*, int);             /* +0xcc */
-    long (CNT_STDCALL* SetSceneFogColor)(CntFrame*, unsigned long);    /* +0xd0 */
-    long (CNT_STDCALL* SetSceneFogMode)(CntFrame*, unsigned long);     /* +0xd4 */
-    long (CNT_STDCALL* SetSceneFogParams)(CntFrame*, float, float,
-                                          float);                      /* +0xd8 */
-    void* SetColor;                                                    /* +0xdc */
-    void* SetColorRGB;                                                 /* +0xe0 */
-    void* GetZbufferMode;                                              /* +0xe4 */
-    void* SetMaterialMode;                                             /* +0xe8 */
-    long (CNT_STDCALL* SetOrientation)(CntFrame*, CntFrame*, float, float,
-                                       float, float, float, float);    /* +0xec */
-    long (CNT_STDCALL* SetPosition)(CntFrame*, CntFrame*, float, float,
-                                    float);                            /* +0xf0 */
-    void* SetRotation;                                                 /* +0xf4 */
-    long (CNT_STDCALL* SetSortMode)(CntFrame*, int);                   /* +0xf8 */
-    void* SetTexture;                                                  /* +0xfc */
-    void* SetVelocity;                                                 /* +0x100 */
-    void* SetZbufferMode;                                              /* +0x104 */
-    long (CNT_STDCALL* Transform)(CntFrame*, CntVector3*, CntVector3*); /* +0x108 */
-    void* slots_10c[18];
-    long (CNT_STDCALL* SetSceneFogMethod)(CntFrame*, unsigned long);   /* +0x154 */
-} CntFrameVtbl;
-struct CntFrame {
-    const CntFrameVtbl* lpVtbl;
-};
-
-typedef struct CntFrame1Vtbl {
-    long (CNT_STDCALL* QueryInterface)(CntFrame1*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntFrame1*);                   /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntFrame1*);                  /* +0x08 */
-} CntFrame1Vtbl;
-struct CntFrame1 {
-    const CntFrame1Vtbl* lpVtbl;
-};
-
-typedef struct CntFrameArrayVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntFrameArray*, const CntIID*,
-                                       void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntFrameArray*);               /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntFrameArray*);              /* +0x08 */
-    unsigned long (CNT_STDCALL* GetSize)(CntFrameArray*);              /* +0x0c */
-    long (CNT_STDCALL* GetElement)(CntFrameArray*, unsigned long,
-                                   CntFrame1**);                       /* +0x10 */
-} CntFrameArrayVtbl;
-struct CntFrameArray {
-    const CntFrameArrayVtbl* lpVtbl;
-};
-
-typedef struct CntMeshVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntMesh*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntMesh*);                     /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntMesh*);                    /* +0x08 */
-    void* Clone;                                                       /* +0x0c */
-    void* AddDestroyCallback;                                          /* +0x10 */
-    void* DeleteDestroyCallback;                                       /* +0x14 */
-    long (CNT_STDCALL* SetAppData)(CntMesh*, unsigned long);           /* +0x18 */
-    void* (CNT_STDCALL* GetAppData)(CntMesh*);                         /* +0x1c */
-    void* SetName;                                                     /* +0x20 */
-    void* GetName;                                                     /* +0x24 */
-    void* GetClassName;                                                /* +0x28 */
-    long (CNT_STDCALL* Scale)(CntMesh*, float, float, float);          /* +0x2c */
-    void* Translate;                                                   /* +0x30 */
-    long (CNT_STDCALL* GetBox)(CntMesh*, CntBox*);                     /* +0x34 */
-    long (CNT_STDCALL* AddGroup)(CntMesh*, unsigned long, unsigned long,
-                                 unsigned long, unsigned long*,
-                                 unsigned long*);                      /* +0x38 */
-    long (CNT_STDCALL* SetVertices)(CntMesh*, unsigned long, unsigned long,
-                                    unsigned long, void*);             /* +0x3c */
-    void* SetGroupColor;                                               /* +0x40 */
-    void* SetGroupColorRGB;                                            /* +0x44 */
-    long (CNT_STDCALL* SetGroupMapping)(CntMesh*, unsigned long,
-                                        unsigned long);                /* +0x48 */
-    long (CNT_STDCALL* SetGroupQuality)(CntMesh*, unsigned long,
-                                        unsigned long);                /* +0x4c */
-    void* SetGroupMaterial;                                            /* +0x50 */
-    long (CNT_STDCALL* SetGroupTexture)(CntMesh*, unsigned long,
-                                        CntTexture*);                  /* +0x54 */
-    unsigned long (CNT_STDCALL* GetGroupCount)(CntMesh*);              /* +0x58 */
-    long (CNT_STDCALL* GetGroup)(CntMesh*, unsigned long, unsigned long*,
-                                 unsigned long*, unsigned long*,
-                                 unsigned long*, unsigned long*);      /* +0x5c */
-    long (CNT_STDCALL* GetVertices)(CntMesh*, unsigned long, unsigned long,
-                                    unsigned long, void*);             /* +0x60 */
-} CntMeshVtbl;
-struct CntMesh {
-    const CntMeshVtbl* lpVtbl;
-};
-
-typedef struct CntMeshBuilderVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntMeshBuilder*, const CntIID*,
-                                       void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntMeshBuilder*);              /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntMeshBuilder*);             /* +0x08 */
-    void* slots_0c[8];
-    long (CNT_STDCALL* Load)(CntMeshBuilder*, void*, void*, unsigned long,
-                             CntLoadTextureCallback, void*);           /* +0x2c */
-    void* slots_30[19];
-    long (CNT_STDCALL* SetPerspective)(CntMeshBuilder*, int);          /* +0x7c */
-    void* slots_80[16];
-    long (CNT_STDCALL* CreateMesh)(CntMeshBuilder*, CntMesh**);        /* +0xc0 */
-} CntMeshBuilderVtbl;
-struct CntMeshBuilder {
-    const CntMeshBuilderVtbl* lpVtbl;
-};
-
-typedef struct CntLightVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntLight*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntLight*);                    /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntLight*);                   /* +0x08 */
-    void* slots_0c[9];
-    long (CNT_STDCALL* SetColor)(CntLight*, unsigned long);            /* +0x30 */
-    void* SetColorRGB;                                                 /* +0x34 */
-    long (CNT_STDCALL* SetRange)(CntLight*, float);                    /* +0x38 */
-    long (CNT_STDCALL* SetUmbra)(CntLight*, float);                    /* +0x3c */
-    long (CNT_STDCALL* SetPenumbra)(CntLight*, float);                 /* +0x40 */
-    void* slots_44[11];
-    long (CNT_STDCALL* SetEnableFrame)(CntLight*, CntFrame1*);         /* +0x70 */
-} CntLightVtbl;
-struct CntLight {
-    const CntLightVtbl* lpVtbl;
-};
-
-typedef struct CntTextureVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntTexture*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntTexture*);                  /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntTexture*);                 /* +0x08 */
-    void* Clone;                                                       /* +0x0c */
-    long (CNT_STDCALL* AddDestroyCallback)(CntTexture*, CntObjectCallback,
-                                           void*);                     /* +0x10 */
-    void* DeleteDestroyCallback;                                       /* +0x14 */
-    long (CNT_STDCALL* SetAppData)(CntTexture*, void*);                /* +0x18 */
-    void* (CNT_STDCALL* GetAppData)(CntTexture*);                      /* +0x1c */
-    void* slots_20[12];
-    long (CNT_STDCALL* SetDecalTransparency)(CntTexture*, int);        /* +0x50 */
-    long (CNT_STDCALL* SetDecalTransparentColor)(CntTexture*,
-                                                 unsigned long);       /* +0x54 */
-    void* slots_58[2];
-    CntImage* (CNT_STDCALL* GetImage)(CntTexture*);                    /* +0x60 */
-    void* slots_64[7];
-    long (CNT_STDCALL* GenerateMIPMap)(CntTexture*, unsigned long);    /* +0x80 */
-} CntTextureVtbl;
-struct CntTexture {
-    const CntTextureVtbl* lpVtbl;
-};
-
-typedef struct CntAnimSetVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntAnimSet*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntAnimSet*);                  /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntAnimSet*);                 /* +0x08 */
-    void* slots_0c[9];
-    long (CNT_STDCALL* Load)(CntAnimSet*, void*, void*, unsigned long,
-                             CntLoadTextureCallback, void*, CntFrame*); /* +0x30 */
-    void* DeleteAnimation;                                             /* +0x34 */
-    long (CNT_STDCALL* SetTime)(CntAnimSet*, float);                   /* +0x38 */
-} CntAnimSetVtbl;
-struct CntAnimSet {
-    const CntAnimSetVtbl* lpVtbl;
-};
-
-typedef struct CntObjectVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntObject*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntObject*);                   /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntObject*);                  /* +0x08 */
-    void* Clone;                                                       /* +0x0c */
-    void* AddDestroyCallback;                                          /* +0x10 */
-    void* DeleteDestroyCallback;                                       /* +0x14 */
-    long (CNT_STDCALL* SetAppData)(CntObject*, void*);                 /* +0x18 */
-    void* (CNT_STDCALL* GetAppData)(CntObject*);                       /* +0x1c */
-} CntObjectVtbl;
-struct CntObject {
-    const CntObjectVtbl* lpVtbl;
-};
-
-typedef struct CntD3DRMVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntD3DRM*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntD3DRM*);                    /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntD3DRM*);                   /* +0x08 */
-    void* CreateObject;                                                /* +0x0c */
-    long (CNT_STDCALL* CreateFrame)(CntD3DRM*, CntFrame*, CntFrame**); /* +0x10 */
-    long (CNT_STDCALL* CreateMesh)(CntD3DRM*, CntMesh**);              /* +0x14 */
-    long (CNT_STDCALL* CreateMeshBuilder)(CntD3DRM*, CntMeshBuilder**); /* +0x18 */
-    void* CreateFace;                                                  /* +0x1c */
-    void* CreateAnimation;                                             /* +0x20 */
-    long (CNT_STDCALL* CreateAnimationSet)(CntD3DRM*, CntAnimSet**);   /* +0x24 */
-    void* CreateTexture;                                               /* +0x28 */
-    void* CreateLight;                                                 /* +0x2c */
-    long (CNT_STDCALL* CreateLightRGB)(CntD3DRM*, unsigned long, float,
-                                       float, float, CntLight**);      /* +0x30 */
-    void* slots_34[5];
-    long (CNT_STDCALL* CreateTextureFromSurface)(CntD3DRM*, CntSurface*,
-                                                 CntTexture**);        /* +0x48 */
-    void* slots_4c[4];
-    long (CNT_STDCALL* LoadTexture)(CntD3DRM*, const char*,
-                                    CntTexture**);                     /* +0x5c */
-} CntD3DRMVtbl;
-struct CntD3DRM {
-    const CntD3DRMVtbl* lpVtbl;
-};
-
-typedef struct CntDeviceVtbl {
-    void* slots_00[39];
-    long (CNT_STDCALL* FindPreferredTextureFormat)(CntDevice*,
-                                                   unsigned long,
-                                                   unsigned long,
-                                                   void*);             /* +0x9c */
-} CntDeviceVtbl;
-struct CntDevice {
-    const CntDeviceVtbl* lpVtbl;
-};
-
-typedef struct CntDDrawVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntDDraw*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntDDraw*);                    /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntDDraw*);                   /* +0x08 */
-    void* slots_0c[2];
-    long (CNT_STDCALL* CreatePalette)(CntDDraw*, unsigned long, void*,
-                                      CntPalette**, void*);            /* +0x14 */
-    long (CNT_STDCALL* CreateSurface)(CntDDraw*, void*, CntSurface**,
-                                      void*);                          /* +0x18 */
-} CntDDrawVtbl;
-struct CntDDraw {
-    const CntDDrawVtbl* lpVtbl;
-};
-
-typedef struct CntSurfaceVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntSurface*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntSurface*);                  /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntSurface*);                 /* +0x08 */
-    void* slots_0c[17];
-    long (CNT_STDCALL* GetPalette)(CntSurface*, CntPalette**);         /* +0x50 */
-    void* slots_54[4];
-    long (CNT_STDCALL* Lock)(CntSurface*, void*, void*, unsigned long,
-                             void*);                                   /* +0x64 */
-    void* slots_68[3];
-    long (CNT_STDCALL* SetColorKey)(CntSurface*, unsigned long, void*); /* +0x74 */
-    void* SetOverlayPosition;                                          /* +0x78 */
-    long (CNT_STDCALL* SetPalette)(CntSurface*, CntPalette*);          /* +0x7c */
-    long (CNT_STDCALL* Unlock)(CntSurface*, void*);                    /* +0x80 */
-} CntSurfaceVtbl;
-struct CntSurface {
-    const CntSurfaceVtbl* lpVtbl;
-};
-
-typedef struct CntPaletteVtbl {
-    long (CNT_STDCALL* QueryInterface)(CntPalette*, const CntIID*, void**);
-    unsigned long (CNT_STDCALL* AddRef)(CntPalette*);                  /* +0x04 */
-    unsigned long (CNT_STDCALL* Release)(CntPalette*);                 /* +0x08 */
-    void* GetCaps;                                                     /* +0x0c */
-    long (CNT_STDCALL* GetEntries)(CntPalette*, unsigned long,
-                                   unsigned long, unsigned long,
-                                   void*);                             /* +0x10 */
-} CntPaletteVtbl;
-struct CntPalette {
-    const CntPaletteVtbl* lpVtbl;
-};
-
 /* Main.c's lpD3DRM() (00505914) and lpDevice() (00505918). */
-#define lpD3DRM() ((CntD3DRM*)s_main_d3drm)
-#define lpDevice() ((CntDevice*)s_main_device)
+#define lpD3DRM() ((LPDIRECT3DRM3)s_main_d3drm)
+#define lpDevice() ((LPDIRECT3DRMDEVICE3)s_main_device)
 /* DirectDraw.c's lpDD() (0076ac84). */
-#define lpDD() ((CntDDraw*)CONTAINER_LPDD())
+#define lpDD() ((LPDIRECTDRAW4)CONTAINER_LPDD())
 
 /* A container's type data (Container_SetTypeData). */
 typedef struct Container_TypeData {
     char* name;                 /* +0x00 the current activity */
-    CntLight* light;            /* +0x04 */
-    CntMesh* mesh;              /* +0x08 */
+    LPDIRECT3DRMLIGHT light;            /* +0x04 */
+    LPDIRECT3DRMMESH mesh;              /* +0x08 */
     void* transMesh;            /* +0x0c Mesh.c's mesh */
 } Container_TypeData;
 
@@ -500,9 +135,9 @@ typedef struct Container_CloneData {
 } Container_CloneData;
 
 struct Container {
-    CntFrame* masterFrame;                       /* +0x00 */
-    CntFrame* activityFrame;                     /* +0x04 */
-    CntFrame* hiddenFrame;                       /* +0x08 */
+    LPDIRECT3DRMFRAME3 masterFrame;                       /* +0x00 */
+    LPDIRECT3DRMFRAME3 activityFrame;                     /* +0x04 */
+    LPDIRECT3DRMFRAME3 hiddenFrame;                       /* +0x08 */
     Container_TypeData* typeData;                /* +0x0c */
     Container_Type type;                         /* +0x10 */
     unsigned long flags;                         /* +0x14 */
@@ -515,15 +150,15 @@ struct Container {
 
 /* A Container_LoadTexture2 texture. */
 struct Container_Texture {
-    CntSurface* surface;        /* +0x00 */
-    CntTexture* texture;        /* +0x04 */
+    LPDIRECTDRAWSURFACE4 surface;        /* +0x00 */
+    LPDIRECT3DRMTEXTURE3 texture;        /* +0x04 */
     int colourKey;              /* +0x08 */
 };
 
 /* A mesh container's group records (Container_MakeMesh2). Group 0 is the
  * mesh itself; group n is listSet[n - 1], a separate mesh. */
 typedef struct Container_MeshAppData {
-    CntMesh** listSet;          /* +0x00 */
+    LPDIRECT3DRMMESH* listSet;          /* +0x00 */
     unsigned long usedCount;    /* +0x04 */
     unsigned long listSize;     /* +0x08 */
     int groupZeroHidden;        /* +0x0c */
@@ -549,7 +184,7 @@ typedef struct Container_SearchData {
     const char* string;         /* +0x00 */
     unsigned long stringLen;    /* +0x04 */
     int caseSensitive;          /* +0x08 */
-    CntFrame* resultFrame;      /* +0x0c */
+    LPDIRECT3DRMFRAME3 resultFrame;      /* +0x0c */
     unsigned long count;        /* +0x10 */
     Container_SearchMode mode;  /* +0x14 */
     unsigned long matchNumber;  /* +0x18 */
@@ -558,7 +193,7 @@ typedef struct Container_SearchData {
 /* A texture the mesh loader cached (Container_TextureLoadCallback). */
 typedef struct Container_TextureRef {
     char* fileName;             /* +0x00 */
-    CntTexture* texture;        /* +0x04 */
+    LPDIRECT3DRMTEXTURE3 texture;        /* +0x04 */
 } Container_TextureRef;
 
 /* The unit's state: a common symbol at 0076ad80 (0x2018 bytes). */
@@ -569,7 +204,7 @@ typedef struct Container_Globs {
     const char* typeName[Container_TypeCount];         /* +0x0058 0076add8 */
     const char* extensionName[Container_TypeCount];    /* +0x007c 0076adfc */
     const char* gameName;                              /* +0x00a0 0076ae20 */
-    CntObject* visualArray[CONTAINER_MAXVISUALS];      /* +0x00a4 0076ae24 */
+    IUnknown* visualArray[CONTAINER_MAXVISUALS];      /* +0x00a4 0076ae24 */
     Container_TextureRef textureSet[CONTAINER_MAXTEXTURES]; /* +0x00b4 0076ae34 */
     unsigned long textureCount;                        /* +0x1ff4 0076cd74 */
     ContainerSoundTriggerCallback soundTriggerCallback; /* +0x1ff8 0076cd78 */
@@ -584,7 +219,9 @@ typedef struct Container_Globs {
 
 /* d3drmdef.h's mapping flags and D3DRMGROUP_ALLGROUPS: static consts, so
  * every object that includes the header has a copy (Viewports.c's are at
- * 0049e89c). The unit reads D3DRMMAP_PERSPCORRECT from memory. */
+ * 0049e89c). The original reads D3DRMMAP_PERSPCORRECT from memory; the
+ * unit now passes miniwin's D3DRMMAP_PERSPCORRECT, and these copies stay
+ * as a record of the original's .rdata. */
 // GLOBAL: LEGORR 0x0049e87c
 static const unsigned long cntMapWrapU = 1;
 // GLOBAL: LEGORR 0x0049e880
@@ -594,57 +231,19 @@ static const unsigned long cntMapPerspCorrect = 4;
 // GLOBAL: LEGORR 0x0049e888
 static const long cntGroupAllGroups = -1;
 
-/* The interface IDs the unit asks for: library data in the GUID block.
- * The matching build links them from dxguid.lib, as the original does
- * (finding 688); animclone.c reads IID_IDirect3DRMFrame3 too. The portable
- * builds keep the unit's own copies, and take IID_IDirect3DRMFrame3 from
- * resource.cpp's s_resource_tree_child_iid (#805, finding 674). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
-// GLOBAL: LEGORR 0x0049f338
-extern const CntIID IID_IDirectDrawSurface;
-// GLOBAL: LEGORR 0x0049f968
-extern const CntIID IID_IDirect3DRMFrame;
-// GLOBAL: LEGORR 0x0049f988
-extern const CntIID IID_IDirect3DRMFrame3;
-// GLOBAL: LEGORR 0x0049f9a8
-extern const CntIID IID_IDirect3DRMMesh;
-// GLOBAL: LEGORR 0x0049f9c8
-extern const CntIID IID_IDirect3DRMMeshBuilder2;
-// GLOBAL: LEGORR 0x0049fa18
-extern const CntIID IID_IDirect3DRMTexture;
-#else
-static const CntIID IID_IDirectDrawSurface = {
-    0x6c14db81, 0xa733, 0x11ce,
-    {0xa5, 0x21, 0x00, 0x20, 0xaf, 0x0b, 0xe5, 0x60}};
-static const CntIID IID_IDirect3DRMFrame = {
-    0xeb16cb03, 0xd271, 0x11ce,
-    {0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1}};
-static const CntIID IID_IDirect3DRMMesh = {
-    0xa3a80d01, 0x6e12, 0x11cf,
-    {0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1}};
-static const CntIID IID_IDirect3DRMMeshBuilder2 = {
-    0x4516ec77, 0x8f20, 0x11d0,
-    {0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3}};
-static const CntIID IID_IDirect3DRMTexture = {
-    0xeb16cb09, 0xd271, 0x11ce,
-    {0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1}};
-extern const unsigned char s_resource_tree_child_iid[16];          /* 0049f988 */
-#define IID_IDirect3DRMFrame3 (*(const CntIID*)s_resource_tree_child_iid)
-#endif
-
 // GLOBAL: LEGORR 0x0076ad80
 Container_Globs containerGlobs;
 
 /* The unit's static callbacks, passed by address before their definitions. */
-static int Container_SetPerspectiveCorrectionCallback(CntFrame* frame,
+static int Container_SetPerspectiveCorrectionCallback(LPDIRECT3DRMFRAME3 frame,
                                                       void* data);
-static void CNT_CDECL Container_Frame_ReferenceDestroyCallback(
-    CntObject* obj, void* arg);
-static long CNT_CDECL Container_TextureLoadCallback(char* name, void* data,
-                                                    CntTexture** texture);
+static void Container_Frame_ReferenceDestroyCallback(
+                                                     LPDIRECT3DRMOBJECT obj, void* arg);
+static HRESULT Container_TextureLoadCallback(char* name, void* data,
+                                             LPDIRECT3DRMTEXTURE3* texture);
 static int Container_TextureSetSort(const void* a, const void* b);
-static void CNT_CDECL Container_TextureDestroyCallback(CntObject* obj,
-                                                       void* arg);
+static void Container_TextureDestroyCallback(LPDIRECT3DRMOBJECT obj,
+                                             void* arg);
 
 // FUNCTION: LEGORR 0x00472710
 Container* Container_Initialise(const char* gameName)
@@ -684,8 +283,7 @@ Container* Container_Initialise(const char* gameName)
 
     root = Container_Create(NULL);
     containerGlobs.rootContainer = root;
-    root->masterFrame->lpVtbl->SetSortMode(root->masterFrame,
-                                           CNT_SORT_FRONTTOBACK);
+    root->masterFrame->SetSortMode(D3DRMSORT_NONE);
 
     return root;
 }
@@ -769,8 +367,8 @@ Container* Container_GetRoot(void)
 Container* Container_Create(Container* parent)
 {
     Container* newCont;
-    CntFrame* parentFrame = NULL;
-    CntFrame* hiddenParentFrame = NULL;
+    LPDIRECT3DRMFRAME3 parentFrame = NULL;
+    LPDIRECT3DRMFRAME3 hiddenParentFrame = NULL;
 
     if (parent) {
         parentFrame = parent->masterFrame;
@@ -784,12 +382,12 @@ Container* Container_Create(Container* parent)
     memset(newCont, 0, sizeof(Container));
     newCont->nextFree = newCont;
 
-    if (lpD3DRM()->lpVtbl->CreateFrame(lpD3DRM(), parentFrame,
-                                       &newCont->masterFrame) == 0) {
-        if (lpD3DRM()->lpVtbl->CreateFrame(lpD3DRM(), newCont->masterFrame,
-                                           &newCont->activityFrame) == 0) {
-            if (lpD3DRM()->lpVtbl->CreateFrame(lpD3DRM(), hiddenParentFrame,
-                                               &newCont->hiddenFrame) == 0) {
+    if (lpD3DRM()->CreateFrame(parentFrame,
+                               &newCont->masterFrame) == D3DRM_OK) {
+        if (lpD3DRM()->CreateFrame(newCont->masterFrame,
+                                   &newCont->activityFrame) == D3DRM_OK) {
+            if (lpD3DRM()->CreateFrame(hiddenParentFrame,
+                                       &newCont->hiddenFrame) == D3DRM_OK) {
                 Container_Frame_SetAppData(newCont->masterFrame, newCont, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
                                            NULL, NULL);
@@ -818,12 +416,12 @@ void Container_Remove(Container* dead)
 void Container_Remove2(Container* dead, int kill)
 {
     unsigned long count, loop;
-    CntFrame** frameList;
+    LPDIRECT3DRMFRAME3* frameList;
     struct AnimClone** cloneList;
     struct AnimClone* animClone;
     Container_MeshAppData* appData;
-    CntMesh* mesh;
-    CntFrame* parent;
+    LPDIRECT3DRMMESH mesh;
+    LPDIRECT3DRMFRAME3 parent;
 
     if (dead->type != Container_Reference) Container_SetParent(dead, NULL);
 
@@ -841,13 +439,13 @@ void Container_Remove2(Container* dead, int kill)
     if (dead->type == Container_FromActivity) {
         count = Container_GetActivities(dead, NULL, NULL, NULL);
         cloneList = (struct AnimClone**)malloc(sizeof(struct AnimClone*) * count);
-        frameList = (CntFrame**)malloc(sizeof(CntFrame*) * count);
+        frameList = (LPDIRECT3DRMFRAME3*)malloc(sizeof(LPDIRECT3DRMFRAME3) * count);
         Container_GetActivities(dead, frameList, cloneList, NULL);
         for (loop = 0; loop < count; loop++) {
             anim_clone_remove(cloneList[loop]);
             Container_Frame_FreeName(frameList[loop]);
             Container_Frame_RemoveAppData(frameList[loop]);
-            frameList[loop]->lpVtbl->Release(frameList[loop]);
+            frameList[loop]->Release();
         }
         free(cloneList);
         free(frameList);
@@ -856,12 +454,12 @@ void Container_Remove2(Container* dead, int kill)
             if (dead->typeData->transMesh) {
                 mesh_remove(dead->typeData->transMesh, dead->activityFrame);
             } else {
-                appData = (Container_MeshAppData*)dead->typeData->mesh->lpVtbl->GetAppData(dead->typeData->mesh);
+                appData = (Container_MeshAppData*)dead->typeData->mesh->GetAppData();
                 if (appData) {
                     for (loop = 0; loop < appData->usedCount; loop++) {
                         mesh = appData->listSet[loop];
-                        dead->activityFrame->lpVtbl->DeleteVisual(dead->activityFrame, (CntObject*)mesh);
-                        mesh->lpVtbl->Release(mesh);
+                        dead->activityFrame->DeleteVisual(mesh);
+                        mesh->Release();
                     }
                     free(appData->listSet);
                     free(appData);
@@ -886,22 +484,22 @@ void Container_Remove2(Container* dead, int kill)
     Container_Frame_RemoveAppData(dead->hiddenFrame);
 
     if (dead->type != Container_Reference) {
-        dead->masterFrame->lpVtbl->GetParent(dead->masterFrame, &parent);
+        dead->masterFrame->GetParent(&parent);
         if (parent) {
-            parent->lpVtbl->DeleteChild(parent, dead->masterFrame);
-            parent->lpVtbl->Release(parent);
+            parent->DeleteChild(dead->masterFrame);
+            parent->Release();
         }
-        dead->masterFrame->lpVtbl->Release(dead->masterFrame);
-        dead->activityFrame->lpVtbl->Release(dead->activityFrame);
+        dead->masterFrame->Release();
+        dead->activityFrame->Release();
 
-        dead->hiddenFrame->lpVtbl->GetParent(dead->hiddenFrame, &parent);
+        dead->hiddenFrame->GetParent(&parent);
         if (parent) {
-            parent->lpVtbl->DeleteChild(parent, dead->hiddenFrame);
-            parent->lpVtbl->Release(parent);
+            parent->DeleteChild(dead->hiddenFrame);
+            parent->Release();
         }
-        dead->hiddenFrame->lpVtbl->Release(dead->hiddenFrame);
+        dead->hiddenFrame->Release();
     } else {
-        dead->hiddenFrame->lpVtbl->Release(dead->hiddenFrame);
+        dead->hiddenFrame->Release();
     }
 
     dead->nextFree = containerGlobs.freeList;
@@ -1021,8 +619,8 @@ Container* Container_Load(Container* parent, const char* filename,
                                     ? block_get_strptr(config, path)
                                     : "");
             if (0.0f != scale) {
-                cont->activityFrame->lpVtbl->AddScale(cont->activityFrame, CNT_COMBINE_REPLACE,
-                                                      scale, scale, scale);
+                cont->activityFrame->AddScale(D3DRMCOMBINE_REPLACE,
+                                              scale, scale, scale);
             }
 
             block_close(config);
@@ -1041,7 +639,7 @@ Container* Container_Load(Container* parent, const char* filename,
 
         sprintf(path, "%s.%s", name, containerGlobs.extensionName[Container_Mesh]);
         if (fileData = file_load_binary(path, (unsigned int*)&fileSize)) {
-            CntMesh* mesh;
+            LPDIRECT3DRMMESH mesh;
 
             cont = Container_Create(parent);
             cont->type = type;
@@ -1096,8 +694,8 @@ int Container_SetActivity(Container* cont, const char* actname)
 {
     char* freeName = NULL;
     char* currAnimName;
-    CntFrame* newFrame;
-    CntFrame* oldFrame;
+    LPDIRECT3DRMFRAME3 newFrame;
+    LPDIRECT3DRMFRAME3 oldFrame;
     char* newName;
     int result = 0;
 
@@ -1131,29 +729,29 @@ int Container_SetActivity(Container* cont, const char* actname)
 // FUNCTION: LEGORR 0x00473460
 int Container_Light_SetSpotPenumbra(Container* spotlight, float angle)
 {
-    return spotlight->typeData->light->lpVtbl->SetPenumbra(spotlight->typeData->light, angle) == 0;
+    return spotlight->typeData->light->SetPenumbra(angle) == D3DRM_OK;
 }
 
 // FUNCTION: LEGORR 0x00473480
 int Container_Light_SetSpotUmbra(Container* spotlight, float angle)
 {
-    return spotlight->typeData->light->lpVtbl->SetUmbra(spotlight->typeData->light, angle) == 0;
+    return spotlight->typeData->light->SetUmbra(angle) == D3DRM_OK;
 }
 
 // FUNCTION: LEGORR 0x004734a0
 int Container_Light_SetSpotRange(Container* spotlight, float dist)
 {
-    return spotlight->typeData->light->lpVtbl->SetRange(spotlight->typeData->light, dist) == 0;
+    return spotlight->typeData->light->SetRange(dist) == D3DRM_OK;
 }
 
 // FUNCTION: LEGORR 0x004734c0
 void Container_Light_SetEnableContainer(Container* light, Container* enable)
 {
-    CntFrame1* frame1;
+    LPDIRECT3DRMFRAME frame1;
 
-    enable->masterFrame->lpVtbl->QueryInterface(enable->masterFrame, &IID_IDirect3DRMFrame,
-                                                (void**)&frame1);
-    light->typeData->light->lpVtbl->SetEnableFrame(light->typeData->light, frame1);
+    enable->masterFrame->QueryInterface(IID_IDirect3DRMFrame,
+                                        (void**)&frame1);
+    light->typeData->light->SetEnableFrame(frame1);
 }
 
 // FUNCTION: LEGORR 0x004734f0
@@ -1161,12 +759,12 @@ Container* Container_MakeLight(Container* parent, unsigned long type, float r,
                                float g, float b)
 {
     Container* cont = Container_Create(parent);
-    CntLight* light;
+    LPDIRECT3DRMLIGHT light;
 
     if (cont) {
         cont->type = Container_Light;
-        if (lpD3DRM()->lpVtbl->CreateLightRGB(lpD3DRM(), type, r, g, b, &light) == 0) {
-            cont->activityFrame->lpVtbl->AddLight(cont->activityFrame, light);
+        if (lpD3DRM()->CreateLightRGB((D3DRMLIGHTTYPE)type, r, g, b, &light) == D3DRM_OK) {
+            cont->activityFrame->AddLight(light);
             Container_SetTypeData(cont, NULL, light, NULL, NULL);
         }
     }
@@ -1178,7 +776,7 @@ Container* Container_MakeLight(Container* parent, unsigned long type, float r,
 Container* Container_MakeMesh2(Container* parent, int type)
 {
     Container* cont = Container_Create(parent);
-    CntMesh* mesh;
+    LPDIRECT3DRMMESH mesh;
     Container_MeshAppData* appData;
     unsigned long flags;
 
@@ -1191,19 +789,20 @@ Container* Container_MakeMesh2(Container* parent, int type)
             Container_SetTypeData(cont, NULL, NULL, NULL,
                                   engine_task_callback_record_allocate_and_initialize(
                                       cont->activityFrame, NULL, flags, NULL, 0));
-        } else if (lpD3DRM()->lpVtbl->CreateMesh(lpD3DRM(), &mesh) == 0) {
-            cont->activityFrame->lpVtbl->AddVisual(cont->activityFrame, (CntObject*)mesh);
+        } else if (lpD3DRM()->CreateMesh(&mesh) == D3DRM_OK) {
+            cont->activityFrame->AddVisual(mesh);
             Container_SetTypeData(cont, NULL, NULL, mesh, NULL);
             if (type == 1) {
                 appData = (Container_MeshAppData*)malloc(sizeof(Container_MeshAppData));
                 appData->listSize = 20;
                 appData->usedCount = 0;
-                appData->listSet = (CntMesh**)malloc(sizeof(CntMesh*) * appData->listSize);
+                appData->listSet = (LPDIRECT3DRMMESH*)malloc(
+                    sizeof(LPDIRECT3DRMMESH) * appData->listSize);
                 appData->groupZeroHidden = 0;
                 appData->firstAddGroup = 1;
-                mesh->lpVtbl->SetAppData(mesh, (unsigned long)appData);
+                mesh->SetAppData(appData);
             } else {
-                mesh->lpVtbl->SetAppData(mesh, 0);
+                mesh->SetAppData(NULL);
             }
         }
     }
@@ -1212,7 +811,7 @@ Container* Container_MakeMesh2(Container* parent, int type)
 }
 
 // FUNCTION: LEGORR 0x00473680
-CntFrame* Container_GetMasterFrame(Container* cont)
+LPDIRECT3DRMFRAME3 Container_GetMasterFrame(Container* cont)
 {
     return cont->masterFrame;
 }
@@ -1224,11 +823,11 @@ Container* Container_Clone(Container* orig)
     Container* unusedCont = NULL;
     unsigned long count = 0;
     unsigned long loop;
-    CntFrame* parent;
+    LPDIRECT3DRMFRAME3 parent;
     float mat[4][4];
 
     if (orig->type == Container_Mesh) {
-        orig->typeData->mesh->lpVtbl->GetAppData(orig->typeData->mesh);
+        orig->typeData->mesh->GetAppData();
     }
 
     if (orig->type == Container_FromActivity || orig->type == Container_Anim) {
@@ -1275,10 +874,10 @@ Container* Container_Clone(Container* orig)
         cont = Container_Create(Container_GetParent(orig));
     }
 
-    orig->activityFrame->lpVtbl->GetParent(orig->activityFrame, &parent);
-    orig->activityFrame->lpVtbl->GetTransform(orig->activityFrame, parent, mat);
-    cont->activityFrame->lpVtbl->AddTransform(cont->activityFrame, CNT_COMBINE_REPLACE, mat);
-    parent->lpVtbl->Release(parent);
+    orig->activityFrame->GetParent(&parent);
+    orig->activityFrame->GetTransform(parent, mat);
+    cont->activityFrame->AddTransform(D3DRMCOMBINE_REPLACE, mat);
+    parent->Release();
 
     if (unusedCont == NULL) {
         cont->type = orig->type;
@@ -1303,16 +902,16 @@ Container* Container_Clone(Container* orig)
         }
 
         if (cont->type == Container_Mesh) {
-            CntMesh* mesh = cont->typeData->mesh;
-            cont->activityFrame->lpVtbl->AddVisual(cont->activityFrame, (CntObject*)mesh);
-            mesh->lpVtbl->AddRef(mesh);
+            LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
+            cont->activityFrame->AddVisual(mesh);
+            mesh->AddRef();
         } else if (cont->type == Container_FromActivity) {
-            CntFrame** frameList;
+            LPDIRECT3DRMFRAME3* frameList;
             char** nameList;
             unsigned long loop;
 
             count = Container_GetActivities(orig, NULL, NULL, NULL);
-            frameList = (CntFrame**)malloc(sizeof(CntFrame*) * count);
+            frameList = (LPDIRECT3DRMFRAME3*)malloc(sizeof(LPDIRECT3DRMFRAME3) * count);
             nameList = (char**)malloc(sizeof(char*) * count);
             Container_GetActivities(orig, frameList, NULL, nameList);
             for (loop = 0; loop < count; loop++) {
@@ -1339,7 +938,7 @@ Container* Container_Clone(Container* orig)
             char* fname = Container_Frame_GetAnimSetFileName(orig->activityFrame);
             struct AnimClone* animClone = anim_clone_make(
                 Container_Frame_GetAnimClone(orig->activityFrame),
-                (struct AnimCloneFrame*)cont->activityFrame, &frameCount);
+                cont->activityFrame, &frameCount);
             Container_Frame_SetAppData(cont->activityFrame, cont, animClone, fname,
                                        &frameCount, NULL, NULL, NULL, NULL, NULL, NULL);
         } else if (cont->type == Container_LWO) {
@@ -1431,7 +1030,7 @@ static char containerPartName[1024];
 char* Container_FormatPartName(Container* cont, const char* partname,
                                unsigned long* instance)
 {
-    CntFrame* frame;
+    LPDIRECT3DRMFRAME3 frame;
     char name[1024];
     char* s;
     char* t;
@@ -1482,14 +1081,11 @@ void* Container_GetUserData(Container* cont)
 // FUNCTION: LEGORR 0x00473dc0
 void Container_EnableFog(int on)
 {
-    containerGlobs.rootContainer->masterFrame->lpVtbl->SetSceneFogEnable(
-        containerGlobs.rootContainer->masterFrame, on);
+    containerGlobs.rootContainer->masterFrame->SetSceneFogEnable(on);
     if (on) {
-        containerGlobs.rootContainer->masterFrame->lpVtbl->SetSceneBackground(
-            containerGlobs.rootContainer->masterFrame, containerGlobs.fogColour);
+        containerGlobs.rootContainer->masterFrame->SetSceneBackground(containerGlobs.fogColour);
     } else {
-        containerGlobs.rootContainer->masterFrame->lpVtbl->SetSceneBackground(
-            containerGlobs.rootContainer->masterFrame, 0);
+        containerGlobs.rootContainer->masterFrame->SetSceneBackground(0);
     }
 }
 
@@ -1500,91 +1096,22 @@ void Container_SetFogColour(float r, float g, float b)
                                ((unsigned long)(r * 255.0f) << 16) |
                                ((unsigned long)(g * 255.0f) << 8) |
                                (unsigned long)(b * 255.0f);
-    containerGlobs.rootContainer->masterFrame->lpVtbl->SetSceneFogColor(
-        containerGlobs.rootContainer->masterFrame, containerGlobs.fogColour);
+    containerGlobs.rootContainer->masterFrame->SetSceneFogColor(containerGlobs.fogColour);
 }
 
 // FUNCTION: LEGORR 0x00473e70
 void Container_SetFogMode(unsigned long mode)
 {
-    containerGlobs.rootContainer->masterFrame->lpVtbl->SetSceneFogMode(
-        containerGlobs.rootContainer->masterFrame, mode);
-    containerGlobs.rootContainer->masterFrame->lpVtbl->SetSceneFogMethod(
-        containerGlobs.rootContainer->masterFrame, s_scene_fog_mode);
+    containerGlobs.rootContainer->masterFrame->SetSceneFogMode((D3DRMFOGMODE)mode);
+    containerGlobs.rootContainer->masterFrame->SetSceneFogMethod(s_scene_fog_mode);
 }
 
 // FUNCTION: LEGORR 0x00473ea0
 void Container_SetFogParams(float start, float end, float density)
 {
-    containerGlobs.rootContainer->masterFrame->lpVtbl->SetSceneFogParams(
-        containerGlobs.rootContainer->masterFrame, start, end, density);
+    containerGlobs.rootContainer->masterFrame->SetSceneFogParams(start, end, density);
 }
 
-/* DDPIXELFORMAT, DDSURFACEDESC2, DDCOLORKEY and PALETTEENTRY. */
-typedef struct CntPixelFormat {
-    unsigned long dwSize;          /* +0x00 */
-    unsigned long dwFlags;         /* +0x04 */
-    unsigned long dwFourCC;        /* +0x08 */
-    unsigned long dwRGBBitCount;   /* +0x0c */
-    unsigned long dwRBitMask;      /* +0x10 */
-    unsigned long dwGBitMask;      /* +0x14 */
-    unsigned long dwBBitMask;      /* +0x18 */
-    unsigned long dwAlphaBitMask;  /* +0x1c */
-} CntPixelFormat;
-
-typedef struct CntColourKey {
-    unsigned long low;   /* +0x00 */
-    unsigned long high;  /* +0x04 */
-} CntColourKey;
-
-typedef struct CntSurfaceDesc {
-    unsigned long dwSize;              /* +0x00 */
-    unsigned long dwFlags;             /* +0x04 */
-    unsigned long dwHeight;            /* +0x08 */
-    unsigned long dwWidth;             /* +0x0c */
-    long lPitch;                       /* +0x10 */
-    unsigned long dwBackBufferCount;   /* +0x14 */
-    unsigned long dwMipMapCount;       /* +0x18 */
-    unsigned long dwAlphaBitDepth;     /* +0x1c */
-    unsigned long dwReserved;          /* +0x20 */
-    void* lpSurface;                   /* +0x24 */
-    CntColourKey ddckCKDestOverlay;    /* +0x28 */
-    CntColourKey ddckCKDestBlt;        /* +0x30 */
-    CntColourKey ddckCKSrcOverlay;     /* +0x38 */
-    CntColourKey ddckCKSrcBlt;         /* +0x40 */
-    CntPixelFormat ddpfPixelFormat;    /* +0x48 */
-    unsigned long dwCaps;              /* +0x68 */
-    unsigned long dwCaps2;             /* +0x6c */
-    unsigned long dwCaps3;             /* +0x70 */
-    unsigned long dwCaps4;             /* +0x74 */
-    unsigned long dwTextureStage;      /* +0x78 */
-} CntSurfaceDesc;
-
-typedef struct CntPaletteEntry {
-    unsigned char red;    /* +0x00 */
-    unsigned char green;  /* +0x01 */
-    unsigned char blue;   /* +0x02 */
-    unsigned char flags;  /* +0x03 */
-} CntPaletteEntry;
-
-/* DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT, the DDSCAPS
- * and DDPF bits, DDBD_8 and DDBD_16, D3DRMFPTF_PALETTIZED, DDLOCK_WAIT,
- * DDPCAPS_8BIT | DDPCAPS_INITIALIZE | DDPCAPS_ALLOW256 and
- * DDCKEY_SRCBLT. */
-#define CNT_DDSD_TEXTUREFLAGS 0x00001007
-#define CNT_DDSCAPS_OFFSCREENPLAIN 0x00000040
-#define CNT_DDSCAPS_SYSTEMMEMORY 0x00000800
-#define CNT_DDSCAPS_TEXTURE 0x00001000
-#define CNT_DDSCAPS_VIDEOMEMORY 0x00004000
-#define CNT_DDSCAPS2_TEXTUREMANAGE 0x00000010
-#define CNT_DDPF_PALETTEINDEXED8 0x00000020
-#define CNT_DDPF_RGB 0x00000040
-#define CNT_DDBD_8 0x00000800
-#define CNT_DDBD_16 0x00000400
-#define CNT_FPTF_PALETTIZED 0x00000004
-#define CNT_DDLOCK_WAIT 0x00000001
-#define CNT_DDPCAPS_8BIT256 0x0000004c
-#define CNT_DDCKEY_SRCBLT 0x00000008
 /* Main.c's MAIN_FLAG_VIDEOTEXTURE (0x20) in mainGlobs.flags. */
 #define CNT_MAIN_FLAG_VIDEOTEXTURE 0x00000020
 
@@ -1593,7 +1120,8 @@ void Container_SetPerspectiveCorrection(Container* cont, int on)
 {
     if (cont->type == Container_FromActivity) {
         unsigned long count = Container_GetActivities(cont, NULL, NULL, NULL);
-        CntFrame** frameList = (CntFrame**)malloc(sizeof(CntFrame*) * count);
+        LPDIRECT3DRMFRAME3* frameList = (LPDIRECT3DRMFRAME3*)malloc(
+            sizeof(LPDIRECT3DRMFRAME3) * count);
         unsigned long loop;
         Container_GetActivities(cont, frameList, NULL, NULL);
         for (loop = 0; loop < count; loop++) {
@@ -1612,33 +1140,32 @@ void Container_SetPerspectiveCorrection(Container* cont, int on)
 }
 
 // FUNCTION: LEGORR 0x00473f70
-static int Container_SetPerspectiveCorrectionCallback(CntFrame* frame,
+static int Container_SetPerspectiveCorrectionCallback(LPDIRECT3DRMFRAME3 frame,
                                                       void* data)
 {
     int on = *(int*)data;
-    unsigned long count;
+    DWORD count;
     unsigned long loop;
 
-    frame->lpVtbl->GetVisuals(frame, &count, NULL);
+    frame->GetVisuals(&count, NULL);
     if (count) {
-        frame->lpVtbl->GetVisuals(frame, &count, containerGlobs.visualArray);
+        frame->GetVisuals(&count, containerGlobs.visualArray);
         for (loop = 0; loop < count; loop++) {
-            CntObject* visual = containerGlobs.visualArray[loop];
-            CntMeshBuilder* mb;
-            CntMesh* mesh;
-            if (visual->lpVtbl->QueryInterface(visual, &IID_IDirect3DRMMeshBuilder2,
-                                               (void**)&mb) == 0) {
-                mb->lpVtbl->SetPerspective(mb, on);
-            } else if (visual->lpVtbl->QueryInterface(visual, &IID_IDirect3DRMMesh,
-                                                      (void**)&mesh) == 0) {
-                unsigned long groupCount = mesh->lpVtbl->GetGroupCount(mesh);
+            IUnknown* visual = containerGlobs.visualArray[loop];
+            LPDIRECT3DRMMESHBUILDER2 mb;
+            LPDIRECT3DRMMESH mesh;
+            if (visual->QueryInterface(IID_IDirect3DRMMeshBuilder2,
+                                       (void**)&mb) == D3DRM_OK) {
+                mb->SetPerspective(on);
+            } else if (visual->QueryInterface(IID_IDirect3DRMMesh,
+                                              (void**)&mesh) == D3DRM_OK) {
+                unsigned long groupCount = mesh->GetGroupCount();
                 unsigned long group;
                 for (group = 0; group < groupCount; group++) {
                     if (on) {
-                        mesh->lpVtbl->SetGroupMapping(mesh, group,
-                                                      cntMapPerspCorrect);
+                        mesh->SetGroupMapping(group, D3DRMMAP_PERSPCORRECT);
                     } else {
-                        mesh->lpVtbl->SetGroupMapping(mesh, group, 0);
+                        mesh->SetGroupMapping(group, D3DRMMAP_NONE);
                     }
                 }
             }
@@ -1648,61 +1175,58 @@ static int Container_SetPerspectiveCorrectionCallback(CntFrame* frame,
 }
 
 // FUNCTION: LEGORR 0x00474050
-struct CntSurface* Container_LoadTextureSurface(const char* fname,
-                                                int managed,
-                                                unsigned long* width,
-                                                unsigned long* height,
-                                                int* trans)
+LPDIRECTDRAWSURFACE4 Container_LoadTextureSurface(const char* fname,
+                                                  int managed,
+                                                  unsigned long* width,
+                                                  unsigned long* height,
+                                                  int* trans)
 {
-    CntSurface* surface = NULL;
+    LPDIRECTDRAWSURFACE4 surface = NULL;
     int convert = 0;
     void* buffer;
     unsigned int size;
     unsigned long decalColour;
-    CntPalette* palette;
+    LPDIRECTDRAWPALETTE palette;
     CntImage image;
-    CntSurfaceDesc desc;
-    CntSurfaceDesc origDesc;
+    DDSURFACEDESC2 desc;
+    DDSURFACEDESC2 origDesc;
 
     if ((buffer = file_load_binary(fname, &size)) != NULL) {
         indexed_bitmap_palette_data_prepare((const uint8_t*)buffer, size,
                                             (struct IndexedBitmapPaletteData*)&image);
         if (!image.rgb && image.depth == 8) {
-            memset(&desc, 0, sizeof(CntSurfaceDesc));
-            desc.dwSize = sizeof(CntSurfaceDesc);
-            desc.dwFlags = CNT_DDSD_TEXTUREFLAGS;
+            memset(&desc, 0, sizeof(DDSURFACEDESC2));
+            desc.dwSize = sizeof(DDSURFACEDESC2);
+            desc.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
             desc.dwWidth = image.width;
             desc.dwHeight = image.height;
-            desc.dwCaps = CNT_DDSCAPS_TEXTURE;
+            desc.ddsCaps.dwCaps = DDSCAPS_TEXTURE;
             if (!(s_engine_feature_word & CNT_MAIN_FLAG_VIDEOTEXTURE) && managed) {
-                desc.dwCaps2 = CNT_DDSCAPS2_TEXTUREMANAGE;
+                desc.ddsCaps.dwCaps2 = DDSCAPS2_TEXTUREMANAGE;
             } else {
-                desc.dwCaps = CNT_DDSCAPS_TEXTURE | CNT_DDSCAPS_VIDEOMEMORY;
+                desc.ddsCaps.dwCaps = DDSCAPS_TEXTURE | DDSCAPS_VIDEOMEMORY;
             }
-            desc.ddpfPixelFormat.dwSize = sizeof(CntPixelFormat);
+            desc.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
 
-            if (lpDevice()->lpVtbl->FindPreferredTextureFormat(
-                    lpDevice(), CNT_DDBD_8, CNT_FPTF_PALETTIZED,
-                    &desc.ddpfPixelFormat) != 0) {
+            if (lpDevice()->FindPreferredTextureFormat(DDBD_8, D3DRMFPTF_PALETTIZED,
+                    &desc.ddpfPixelFormat) != D3DRM_OK) {
                 origDesc = desc;
-                memset(&desc.ddpfPixelFormat, 0, sizeof(CntPixelFormat));
-                desc.ddpfPixelFormat.dwSize = sizeof(CntPixelFormat);
+                memset(&desc.ddpfPixelFormat, 0, sizeof(DDPIXELFORMAT));
+                desc.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
                 desc.ddpfPixelFormat.dwFlags =
-                    CNT_DDPF_RGB | CNT_DDPF_PALETTEINDEXED8;
+                    DDPF_RGB | DDPF_PALETTEINDEXED8;
                 desc.ddpfPixelFormat.dwRGBBitCount = 8;
-                desc.dwCaps &= ~(CNT_DDSCAPS_TEXTURE | CNT_DDSCAPS_VIDEOMEMORY);
-                desc.dwCaps2 &= ~CNT_DDSCAPS2_TEXTUREMANAGE;
-                desc.dwCaps |= CNT_DDSCAPS_SYSTEMMEMORY |
-                               CNT_DDSCAPS_OFFSCREENPLAIN;
+                desc.ddsCaps.dwCaps &= ~(DDSCAPS_TEXTURE | DDSCAPS_VIDEOMEMORY);
+                desc.ddsCaps.dwCaps2 &= ~DDSCAPS2_TEXTUREMANAGE;
+                desc.ddsCaps.dwCaps |= DDSCAPS_SYSTEMMEMORY |
+                                       DDSCAPS_OFFSCREENPLAIN;
                 convert = 1;
             }
 
-            if (lpDD()->lpVtbl->CreateSurface(lpDD(), &desc, &surface,
-                                              NULL) == 0) {
-                memset(&desc, 0, sizeof(CntSurfaceDesc));
-                desc.dwSize = sizeof(CntSurfaceDesc);
-                if (surface->lpVtbl->Lock(surface, NULL, &desc,
-                                          CNT_DDLOCK_WAIT, NULL) == 0) {
+            if (lpDD()->CreateSurface(&desc, &surface, NULL) == DD_OK) {
+                memset(&desc, 0, sizeof(DDSURFACEDESC2));
+                desc.dwSize = sizeof(DDSURFACEDESC2);
+                if (surface->Lock(NULL, &desc, DDLOCK_WAIT, NULL) == DD_OK) {
                     unsigned char* dst = (unsigned char*)desc.lpSurface;
                     unsigned char* src = (unsigned char*)image.buffer1;
                     int y;
@@ -1711,50 +1235,49 @@ struct CntSurface* Container_LoadTextureSurface(const char* fname,
                         dst += desc.lPitch;
                         src += image.bytes_per_line;
                     }
-                    surface->lpVtbl->Unlock(surface, NULL);
+                    surface->Unlock(NULL);
 
-                    if (lpDD()->lpVtbl->CreatePalette(lpDD(), CNT_DDPCAPS_8BIT256,
-                                                      image.palette, &palette,
-                                                      NULL) == 0) {
-                        if (surface->lpVtbl->SetPalette(surface, palette) == 0) {
+                    if (lpDD()->CreatePalette(
+                            DDPCAPS_8BIT | DDPCAPS_INITIALIZE | DDPCAPS_ALLOW256,
+                            (LPPALETTEENTRY)image.palette, &palette,
+                            NULL) == DD_OK) {
+                        if (surface->SetPalette(palette) == DD_OK) {
                             if (convert) {
                                 memset(&origDesc.ddpfPixelFormat, 0,
-                                       sizeof(CntPixelFormat));
+                                       sizeof(DDPIXELFORMAT));
                                 origDesc.ddpfPixelFormat.dwSize =
-                                    sizeof(CntPixelFormat);
-                                if (lpDevice()->lpVtbl->FindPreferredTextureFormat(
-                                        lpDevice(), CNT_DDBD_16, 0,
-                                        &origDesc.ddpfPixelFormat) == 0) {
-                                    CntSurface* tempSurface = surface;
-                                    if (lpDD()->lpVtbl->CreateSurface(
-                                            lpDD(), &origDesc, &surface,
-                                            NULL) == 0) {
+                                    sizeof(DDPIXELFORMAT);
+                                if (lpDevice()->FindPreferredTextureFormat(DDBD_16, 0,
+                                        &origDesc.ddpfPixelFormat) == D3DRM_OK) {
+                                    LPDIRECTDRAWSURFACE4 tempSurface = surface;
+                                    if (lpDD()->CreateSurface(&origDesc, &surface,
+                                            NULL) == DD_OK) {
                                         if (origDesc.ddpfPixelFormat.dwRGBBitCount == 16) {
                                             directdraw_blt_8_to_16(
                                                 (struct DirectDrawSurfaceIface*)surface,
                                                 (struct DirectDrawSurfaceIface*)tempSurface,
                                                 image.palette);
                                         }
-                                        tempSurface->lpVtbl->Release(tempSurface);
+                                        tempSurface->Release();
                                     }
                                 }
                             }
 
                             if (trans) {
                                 if (Container_GetDecalColour(fname, &decalColour)) {
-                                    CntColourKey colourKey;
+                                    DDCOLORKEY colourKey;
                                     if (convert) {
-                                        CntPaletteEntry* pal =
-                                            (CntPaletteEntry*)image.palette;
+                                        LPPALETTEENTRY pal =
+                                            (LPPALETTEENTRY)image.palette;
                                         decalColour = directdraw_get_colour(
                                             (struct DirectDrawSurfaceIface*)surface,
-                                            (pal[decalColour].red << 16) |
-                                                (pal[decalColour].green << 8) |
-                                                pal[decalColour].blue);
+                                            (pal[decalColour].peRed << 16) |
+                                                (pal[decalColour].peGreen << 8) |
+                                                pal[decalColour].peBlue);
                                     }
-                                    colourKey.low = colourKey.high = decalColour;
-                                    surface->lpVtbl->SetColorKey(
-                                        surface, CNT_DDCKEY_SRCBLT, &colourKey);
+                                    colourKey.dwColorSpaceLowValue =
+                                        colourKey.dwColorSpaceHighValue = decalColour;
+                                    surface->SetColorKey(DDCKEY_SRCBLT, &colourKey);
                                     *trans = 1;
                                 } else {
                                     *trans = 0;
@@ -1763,12 +1286,12 @@ struct CntSurface* Container_LoadTextureSurface(const char* fname,
 
                             if (width) *width = image.width;
                             if (height) *height = image.height;
-                            surface->lpVtbl->AddRef(surface);
+                            surface->AddRef();
                         }
-                        palette->lpVtbl->Release(palette);
+                        palette->Release();
                     }
                 }
-                if (surface->lpVtbl->Release(surface) == 0) surface = NULL;
+                if (surface->Release() == 0) surface = NULL;
             }
         }
         object_field_38_release_target(&image);
@@ -1802,7 +1325,7 @@ Container_Texture* Container_LoadTexture2(const char* fname, int immediate,
                                           unsigned long* width,
                                           unsigned long* height)
 {
-    CntTexture* texture = NULL;
+    LPDIRECT3DRMTEXTURE3 texture = NULL;
     const char* path;
     Container_Texture* text;
     unsigned long decalColour;
@@ -1810,59 +1333,54 @@ Container_Texture* Container_LoadTexture2(const char* fname, int immediate,
     path = file_verify_filename(fname);
     if ((text = (Container_Texture*)malloc(sizeof(Container_Texture))) != NULL) {
         if (immediate) {
-            CntSurface* surface = Container_LoadTextureSurface(
+            LPDIRECTDRAWSURFACE4 surface = Container_LoadTextureSurface(
                 fname, immediate, width, height, NULL);
             if (surface) {
-                CntSurface* surf1;
-                if (surface->lpVtbl->QueryInterface(
-                        surface, &IID_IDirectDrawSurface,
-                        (void**)&surf1) == 0) {
-                    if (lpD3DRM()->lpVtbl->CreateTextureFromSurface(
-                            lpD3DRM(), surf1, &texture) == 0) {
-                        surf1->lpVtbl->Release(surf1);
+                LPDIRECTDRAWSURFACE surf1;
+                if (surface->QueryInterface(IID_IDirectDrawSurface,
+                        (void**)&surf1) == DD_OK) {
+                    if (lpD3DRM()->CreateTextureFromSurface(surf1, &texture) == D3DRM_OK) {
+                        surf1->Release();
                         if (Container_GetDecalColour(fname, &decalColour)) {
-                            CntPalette* palette;
-                            CntPaletteEntry entry;
-                            surface->lpVtbl->GetPalette(surface, &palette);
-                            palette->lpVtbl->GetEntries(palette, 0, decalColour,
-                                                        1, &entry);
-                            palette->lpVtbl->Release(palette);
-                            texture->lpVtbl->SetDecalTransparency(texture, 1);
-                            texture->lpVtbl->SetDecalTransparentColor(
-                                texture, (entry.red << 16) | (entry.green << 8) |
-                                             entry.blue);
+                            LPDIRECTDRAWPALETTE palette;
+                            PALETTEENTRY entry;
+                            surface->GetPalette(&palette);
+                            palette->GetEntries(0, decalColour, 1, &entry);
+                            palette->Release();
+                            texture->SetDecalTransparency(1);
+                            texture->SetDecalTransparentColor(
+                                (entry.peRed << 16) | (entry.peGreen << 8) |
+                                entry.peBlue);
                         }
                         text->texture = texture;
                         text->surface = surface;
-                        texture->lpVtbl->SetAppData(texture, text);
+                        texture->SetAppData(text);
                         return text;
                     }
-                    surf1->lpVtbl->Release(surf1);
+                    surf1->Release();
                 }
-                surface->lpVtbl->Release(surface);
+                surface->Release();
                 free(text);
                 return NULL;
             }
         } else {
-            if (lpD3DRM()->lpVtbl->LoadTexture(lpD3DRM(), path, &texture) == 0) {
-                CntImage* image = texture->lpVtbl->GetImage(texture);
+            if (lpD3DRM()->LoadTexture(path, &texture) == D3DRM_OK) {
+                D3DRMIMAGE* image = texture->GetImage();
                 if (image) {
                     if (Container_GetDecalColour(fname, &decalColour)) {
-                        CntPaletteEntry* entry =
-                            &((CntPaletteEntry*)image->palette)[decalColour];
+                        D3DRMPALETTEENTRY* entry = &image->palette[decalColour];
                         unsigned long red = entry->red;
                         unsigned long green = entry->green;
                         unsigned long blue = entry->blue;
-                        texture->lpVtbl->SetDecalTransparency(texture, 1);
-                        texture->lpVtbl->SetDecalTransparentColor(
-                            texture, (red << 16) | (green << 8) | blue);
+                        texture->SetDecalTransparency(1);
+                        texture->SetDecalTransparentColor((red << 16) | (green << 8) | blue);
                     }
                     if (width) *width = image->width;
                     if (height) *height = image->height;
                 }
                 text->texture = texture;
                 text->surface = NULL;
-                texture->lpVtbl->SetAppData(texture, text);
+                texture->SetAppData(text);
                 return text;
             }
         }
@@ -1876,10 +1394,10 @@ void Container_FreeTexture(Container_Texture* text)
 {
     if (text) {
         if (text->surface) {
-            while (text->surface->lpVtbl->Release(text->surface));
+            while (text->surface->Release());
         }
         if (text->texture) {
-            while (text->texture->lpVtbl->Release(text->texture));
+            while (text->texture->Release());
         }
     }
 }
@@ -1888,53 +1406,51 @@ void Container_FreeTexture(Container_Texture* text)
  * (+0x0c). */
 typedef struct Container_MeshView {
     void* reserved[3];
-    CntObject* uv;              /* +0x0c */
+    LPDIRECT3DRMUSERVISUAL uv;  /* +0x0c */
 } Container_MeshView;
 
 // FUNCTION: LEGORR 0x00474760
 void Container_Mesh_Swap(Container* target, Container* origin, int restore)
 {
-    CntFrame* frame;
-    unsigned long count, loop;
+    LPDIRECT3DRMFRAME3 frame;
+    DWORD count, loop;
 
     if (target->type == Container_Reference) frame = target->masterFrame;
     else frame = target->activityFrame;
 
     if (!restore) {
-        frame->lpVtbl->GetVisuals(frame, &count, NULL);
+        frame->GetVisuals(&count, NULL);
         if (count) {
-            frame->lpVtbl->GetVisuals(frame, &count, containerGlobs.visualArray);
+            frame->GetVisuals(&count, containerGlobs.visualArray);
             for (loop = 0; loop < count; loop++) {
-                CntObject* visual = containerGlobs.visualArray[loop];
-                target->hiddenFrame->lpVtbl->AddVisual(target->hiddenFrame, visual);
-                frame->lpVtbl->DeleteVisual(frame, visual);
+                IUnknown* visual = containerGlobs.visualArray[loop];
+                target->hiddenFrame->AddVisual(visual);
+                frame->DeleteVisual(visual);
             }
         }
         if (origin) {
             if (origin->typeData->mesh == NULL) {
-                frame->lpVtbl->AddVisual(
-                    frame, ((Container_MeshView*)origin->typeData->transMesh)->uv);
+                frame->AddVisual(((Container_MeshView*)origin->typeData->transMesh)->uv);
             } else {
-                frame->lpVtbl->AddVisual(frame, (CntObject*)origin->typeData->mesh);
+                frame->AddVisual(origin->typeData->mesh);
             }
         }
         target->flags |= CONTAINER_FLAG_MESHSWAPPED;
     } else {
-        frame->lpVtbl->GetVisuals(frame, &count, NULL);
+        frame->GetVisuals(&count, NULL);
         if (count) {
-            frame->lpVtbl->GetVisuals(frame, &count, containerGlobs.visualArray);
+            frame->GetVisuals(&count, containerGlobs.visualArray);
             for (loop = 0; loop < count; loop++) {
-                frame->lpVtbl->DeleteVisual(frame, containerGlobs.visualArray[loop]);
+                frame->DeleteVisual(containerGlobs.visualArray[loop]);
             }
         }
-        target->hiddenFrame->lpVtbl->GetVisuals(target->hiddenFrame, &count, NULL);
+        target->hiddenFrame->GetVisuals(&count, NULL);
         if (count) {
-            target->hiddenFrame->lpVtbl->GetVisuals(target->hiddenFrame, &count,
-                                                    containerGlobs.visualArray);
+            target->hiddenFrame->GetVisuals(&count, containerGlobs.visualArray);
             for (loop = 0; loop < count; loop++) {
-                CntObject* visual = containerGlobs.visualArray[loop];
-                frame->lpVtbl->AddVisual(frame, visual);
-                target->hiddenFrame->lpVtbl->DeleteVisual(target->hiddenFrame, visual);
+                IUnknown* visual = containerGlobs.visualArray[loop];
+                frame->AddVisual(visual);
+                target->hiddenFrame->DeleteVisual(visual);
             }
         }
         target->flags &= ~CONTAINER_FLAG_MESHSWAPPED;
@@ -1951,21 +1467,25 @@ unsigned long Container_Mesh_AddGroup(Container* cont, unsigned long vertexCount
                                              vertexCount, faceCount, vPerFace,
                                              (const uint16_t*)faceData);
     } else {
-        CntMesh* mesh = cont->typeData->mesh;
-        unsigned long groupID;
-        Container_MeshAppData* appData = (Container_MeshAppData*)mesh->lpVtbl->GetAppData(mesh);
+        LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
+        D3DRMGROUPINDEX groupID;
+        Container_MeshAppData* appData = (Container_MeshAppData*)mesh->GetAppData();
 
         if (appData) {
             if (appData->firstAddGroup == 0) {
-                CntMesh** newList;
+                LPDIRECT3DRMMESH* newList;
                 if (appData->usedCount == appData->listSize) return CONTAINER_ULONG_MAX;
-                if (lpD3DRM()->lpVtbl->CreateMesh(lpD3DRM(), &mesh) != 0) return CONTAINER_ULONG_MAX;
+                if (lpD3DRM()->CreateMesh(&mesh) != D3DRM_OK) return CONTAINER_ULONG_MAX;
                 appData->listSet[appData->usedCount++] = mesh;
-                cont->activityFrame->lpVtbl->AddVisual(cont->activityFrame, (CntObject*)mesh);
-                mesh->lpVtbl->SetAppData(mesh, appData->usedCount | 0x80000000);
+                cont->activityFrame->AddVisual(mesh);
+                /* A group mesh's app data is its group number and a visible
+                 * bit, not a pointer. */
+                mesh->SetAppData(
+                    (LPD3DRM_APPDATA)(uintptr_t)(appData->usedCount | 0x80000000));
                 if (appData->usedCount == appData->listSize) {
-                    if (newList = (CntMesh**)realloc(appData->listSet,
-                                                     sizeof(CntMesh*) * (appData->listSize + 20))) {
+                    if (newList = (LPDIRECT3DRMMESH*)realloc(
+                            appData->listSet,
+                            sizeof(LPDIRECT3DRMMESH) * (appData->listSize + 20))) {
                         appData->listSize += 20;
                         appData->listSet = newList;
                     }
@@ -1975,8 +1495,9 @@ unsigned long Container_Mesh_AddGroup(Container* cont, unsigned long vertexCount
             }
         }
 
-        if (mesh->lpVtbl->AddGroup(mesh, vertexCount, faceCount, vPerFace, faceData,
-                                   &groupID) == 0) {
+        /* faceData holds the original's 32-bit indices (selectplace.c). */
+        if (mesh->AddGroup(vertexCount, faceCount, vPerFace,
+                           (unsigned int*)faceData, &groupID) == D3DRM_OK) {
             if (appData) return appData->usedCount;
             return groupID;
         }
@@ -1991,9 +1512,9 @@ unsigned long Container_Mesh_GetGroupCount(Container* cont)
         return pointer_value_get(cont->typeData->transMesh);
     } else {
         Container_MeshAppData* appData = (Container_MeshAppData*)
-            cont->typeData->mesh->lpVtbl->GetAppData(cont->typeData->mesh);
+            cont->typeData->mesh->GetAppData();
         if (appData) return appData->usedCount + 1;
-        return cont->typeData->mesh->lpVtbl->GetGroupCount(cont->typeData->mesh);
+        return cont->typeData->mesh->GetGroupCount();
     }
 }
 
@@ -2002,7 +1523,7 @@ void Container_Mesh_SetQuality(Container* cont, unsigned long groupID,
                                unsigned long quality)
 {
     unsigned long renderQuality;
-    CntMesh* mesh;
+    LPDIRECT3DRMMESH mesh;
 
     if (cont->typeData->transMesh == NULL) {
         if (quality == 0) renderQuality = 0x40;
@@ -2011,7 +1532,7 @@ void Container_Mesh_SetQuality(Container* cont, unsigned long groupID,
         if (quality == 3) renderQuality = 0x89;
         mesh = cont->typeData->mesh;
         Container_Mesh_HandleSeparateMeshGroups(&mesh, &groupID);
-        cont->typeData->mesh->lpVtbl->SetGroupQuality(mesh, groupID, renderQuality);
+        mesh->SetGroupQuality(groupID, (D3DRMRENDERQUALITY)renderQuality);
     }
 }
 
@@ -2021,12 +1542,12 @@ int Container_Mesh_IsGroupHidden(Container* cont, unsigned long group)
     if (cont->typeData->transMesh) {
         return container_mesh_is_group_hidden_adapter(cont->typeData->transMesh, group);
     } else {
-        CntMesh* mesh = cont->typeData->mesh;
-        Container_MeshAppData* appData = (Container_MeshAppData*)mesh->lpVtbl->GetAppData(mesh);
+        LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
+        Container_MeshAppData* appData = (Container_MeshAppData*)mesh->GetAppData();
         if (appData) {
             if (group) {
                 mesh = appData->listSet[group - 1];
-                return !((unsigned long)mesh->lpVtbl->GetAppData(mesh) & 0x80000000);
+                return !((uintptr_t)mesh->GetAppData() & 0x80000000);
             }
             return appData->groupZeroHidden;
         }
@@ -2040,14 +1561,14 @@ void Container_Mesh_HideGroup(Container* cont, unsigned long group, int hide)
     if (cont->typeData->transMesh) {
         indexed_record_flag6c_bit0_set(cont->typeData->transMesh, (int)group, hide);
     } else {
-        CntMesh* mesh = cont->typeData->mesh;
-        Container_MeshAppData* appData = (Container_MeshAppData*)mesh->lpVtbl->GetAppData(mesh);
+        LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
+        Container_MeshAppData* appData = (Container_MeshAppData*)mesh->GetAppData();
         if (appData) {
-            CntMesh* groupMesh;
+            LPDIRECT3DRMMESH groupMesh;
             int hidden;
             if (group) {
                 groupMesh = appData->listSet[group - 1];
-                hidden = !((unsigned long)groupMesh->lpVtbl->GetAppData(groupMesh) & 0x80000000);
+                hidden = !((uintptr_t)groupMesh->GetAppData() & 0x80000000);
                 mesh = groupMesh;
             } else {
                 hidden = appData->groupZeroHidden;
@@ -2055,15 +1576,15 @@ void Container_Mesh_HideGroup(Container* cont, unsigned long group, int hide)
             }
 
             if (hide && !hidden) {
-                cont->activityFrame->lpVtbl->DeleteVisual(cont->activityFrame, (CntObject*)mesh);
+                cont->activityFrame->DeleteVisual(mesh);
             } else if (!hide && hidden) {
-                cont->activityFrame->lpVtbl->AddVisual(cont->activityFrame, (CntObject*)mesh);
+                cont->activityFrame->AddVisual(mesh);
             }
 
             if (groupMesh) {
-                unsigned long data = (unsigned long)groupMesh->lpVtbl->GetAppData(groupMesh) & 0x7fffffff;
-                if (hide) groupMesh->lpVtbl->SetAppData(groupMesh, data);
-                else groupMesh->lpVtbl->SetAppData(groupMesh, data | 0x80000000);
+                uintptr_t data = (uintptr_t)groupMesh->GetAppData() & 0x7fffffff;
+                if (hide) groupMesh->SetAppData((LPD3DRM_APPDATA)data);
+                else groupMesh->SetAppData((LPD3DRM_APPDATA)(data | 0x80000000));
             } else {
                 appData->groupZeroHidden = hide;
             }
@@ -2072,9 +1593,9 @@ void Container_Mesh_HideGroup(Container* cont, unsigned long group, int hide)
 }
 
 // FUNCTION: LEGORR 0x00474c00
-int Container_Mesh_HandleSeparateMeshGroups(CntMesh** mesh, unsigned long* group)
+int Container_Mesh_HandleSeparateMeshGroups(LPDIRECT3DRMMESH* mesh, unsigned long* group)
 {
-    Container_MeshAppData* appData = (Container_MeshAppData*)(*mesh)->lpVtbl->GetAppData(*mesh);
+    Container_MeshAppData* appData = (Container_MeshAppData*)(*mesh)->GetAppData();
     if (appData) {
         if (*group) *mesh = appData->listSet[*group - 1];
         *group = 0;
@@ -2094,10 +1615,13 @@ int Container_Mesh_GetGroup(Container* cont, unsigned long groupID,
                                                 vertexCount, faceCount, vPerFace,
                                                 faceDataSize, faceData);
     } else {
-        CntMesh* mesh = cont->typeData->mesh;
+        LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
         Container_Mesh_HandleSeparateMeshGroups(&mesh, &groupID);
-        return mesh->lpVtbl->GetGroup(mesh, groupID, vertexCount, faceCount, vPerFace,
-                                      faceDataSize, faceData) == 0;
+        /* The outputs are the original's 32-bit counts and indices. */
+        return mesh->GetGroup(groupID, (unsigned int*)vertexCount,
+                              (unsigned int*)faceCount, (unsigned int*)vPerFace,
+                              (DWORD*)faceDataSize,
+                              (unsigned int*)faceData) == D3DRM_OK;
     }
 }
 
@@ -2110,11 +1634,13 @@ unsigned long Container_Mesh_GetVertices(Container* cont, unsigned long groupID,
         return container_mesh_get_vertices_adapter(cont->typeData->transMesh, groupID, index,
                                                    count, retArray);
     } else {
-        CntMesh* mesh = cont->typeData->mesh;
-        unsigned long result;
+        LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
+        unsigned long result = 0;
         Container_Mesh_HandleSeparateMeshGroups(&mesh, &groupID);
-        result = mesh->lpVtbl->GetVertices(mesh, groupID, index, count, retArray);
-        if (result) result = CONTAINER_ULONG_MAX;
+        if (mesh->GetVertices(groupID, index, count,
+                              (D3DRMVERTEX*)retArray) != D3DRM_OK) {
+            result = CONTAINER_ULONG_MAX;
+        }
         return result;
     }
 }
@@ -2128,11 +1654,13 @@ unsigned long Container_Mesh_SetVertices(Container* cont, unsigned long groupID,
         return container_mesh_set_vertices_adapter(cont->typeData->transMesh, groupID, index,
                                                    count, values);
     } else {
-        CntMesh* mesh = cont->typeData->mesh;
-        unsigned long result;
+        LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
+        unsigned long result = 0;
         Container_Mesh_HandleSeparateMeshGroups(&mesh, &groupID);
-        result = mesh->lpVtbl->SetVertices(mesh, groupID, index, count, values);
-        if (result) result = CONTAINER_ULONG_MAX;
+        if (mesh->SetVertices(groupID, index, count,
+                              (D3DRMVERTEX*)values) != D3DRM_OK) {
+            result = CONTAINER_ULONG_MAX;
+        }
         return result;
     }
 }
@@ -2141,8 +1669,8 @@ unsigned long Container_Mesh_SetVertices(Container* cont, unsigned long groupID,
 void Container_Mesh_SetTexture(Container* cont, unsigned long groupID,
                                Container_Texture* itext)
 {
-    CntTexture* texture;
-    CntTexture* texture1;
+    LPDIRECT3DRMTEXTURE3 texture;
+    LPDIRECT3DRMTEXTURE texture1;
 
     if (itext) texture = itext->texture;
     else texture = NULL;
@@ -2150,15 +1678,15 @@ void Container_Mesh_SetTexture(Container* cont, unsigned long groupID,
     if (cont->typeData->transMesh) {
         animated_texture_frame_surface_set(cont->typeData->transMesh, (int)groupID, itext);
     } else {
-        CntMesh* mesh = cont->typeData->mesh;
+        LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
         Container_Mesh_HandleSeparateMeshGroups(&mesh, &groupID);
         if (texture) {
-            texture->lpVtbl->QueryInterface(texture, &IID_IDirect3DRMTexture, (void**)&texture1);
+            texture->QueryInterface(IID_IDirect3DRMTexture, (void**)&texture1);
         } else {
             texture1 = NULL;
         }
-        mesh->lpVtbl->SetGroupTexture(mesh, groupID, texture1);
-        if (texture1) texture1->lpVtbl->Release(texture1);
+        mesh->SetGroupTexture(groupID, texture1);
+        if (texture1) texture1->Release();
     }
 }
 
@@ -2166,10 +1694,10 @@ void Container_Mesh_SetTexture(Container* cont, unsigned long groupID,
 void Container_Mesh_SetPerspectiveCorrection(Container* cont, unsigned long groupID, int on)
 {
     if (cont->typeData->transMesh == NULL) {
-        CntMesh* mesh = cont->typeData->mesh;
+        LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
         Container_Mesh_HandleSeparateMeshGroups(&mesh, &groupID);
-        if (on) mesh->lpVtbl->SetGroupMapping(mesh, groupID, cntMapPerspCorrect);
-        else mesh->lpVtbl->SetGroupMapping(mesh, groupID, 0);
+        if (on) mesh->SetGroupMapping(groupID, D3DRMMAP_PERSPCORRECT);
+        else mesh->SetGroupMapping(groupID, D3DRMMAP_NONE);
     }
 }
 
@@ -2179,14 +1707,14 @@ int Container_Mesh_Scale(Container* cont, float x, float y, float z)
     if (cont->typeData->transMesh) {
         container_mesh_scale_adapter(cont->typeData->transMesh, x, y, z);
     } else {
-        CntMesh* mesh = cont->typeData->mesh;
+        LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
         Container_MeshAppData* appData;
         unsigned long loop;
 
-        mesh->lpVtbl->Scale(mesh, x, y, z);
-        if (appData = (Container_MeshAppData*)mesh->lpVtbl->GetAppData(mesh)) {
+        mesh->Scale(x, y, z);
+        if (appData = (Container_MeshAppData*)mesh->GetAppData()) {
             for (loop = 0; loop < appData->usedCount; loop++) {
-                appData->listSet[loop]->lpVtbl->Scale(appData->listSet[loop], x, y, z);
+                appData->listSet[loop]->Scale(x, y, z);
             }
         }
     }
@@ -2196,16 +1724,16 @@ int Container_Mesh_Scale(Container* cont, float x, float y, float z)
 // FUNCTION: LEGORR 0x00474f10
 int Container_Mesh_GetBox(Container* cont, float* box)
 {
-    CntMesh* mesh = cont->typeData->mesh;
-    CntBox* result = (CntBox*)box;
+    LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
+    D3DRMBOX* result = (D3DRMBOX*)box;
     Container_MeshAppData* appData;
     unsigned long loop;
 
-    mesh->lpVtbl->GetBox(mesh, result);
-    if (appData = (Container_MeshAppData*)mesh->lpVtbl->GetAppData(mesh)) {
+    mesh->GetBox(result);
+    if (appData = (Container_MeshAppData*)mesh->GetAppData()) {
         for (loop = 0; loop < appData->usedCount; loop++) {
-            CntBox tempBox;
-            appData->listSet[loop]->lpVtbl->GetBox(appData->listSet[loop], &tempBox);
+            D3DRMBOX tempBox;
+            appData->listSet[loop]->GetBox(&tempBox);
             if (tempBox.min.x < result->min.x) result->min.x = tempBox.min.x;
             if (tempBox.min.y < result->min.y) result->min.y = tempBox.min.y;
             if (tempBox.min.z < result->min.z) result->min.z = tempBox.min.z;
@@ -2241,15 +1769,15 @@ void Container_Mesh_SetColourAlpha(Container* cont, unsigned long groupID, float
 // FUNCTION: LEGORR 0x00475070
 void Container_Transform(Container* cont, float* destVector, float* srcVector)
 {
-    cont->masterFrame->lpVtbl->Transform(cont->masterFrame, (CntVector3*)destVector,
-                                         (CntVector3*)srcVector);
+    cont->masterFrame->Transform((D3DVECTOR*)destVector,
+                                 (D3DVECTOR*)srcVector);
 }
 
 // FUNCTION: LEGORR 0x00475090
 void Container_InverseTransform(Container* cont, float* destVector, float* srcVector)
 {
-    cont->masterFrame->lpVtbl->InverseTransform(cont->masterFrame, (CntVector3*)destVector,
-                                                (CntVector3*)srcVector);
+    cont->masterFrame->InverseTransform((D3DVECTOR*)destVector,
+                                        (D3DVECTOR*)srcVector);
 }
 
 // FUNCTION: LEGORR 0x004750b0
@@ -2261,7 +1789,7 @@ void Container_SetColourAlpha(Container* cont, float r, float g, float b, float 
                            (unsigned long)(b * 255.0f);
 
     if (cont->type == Container_Light) {
-        cont->typeData->light->lpVtbl->SetColor(cont->typeData->light, colour);
+        cont->typeData->light->SetColor(colour);
     }
 }
 
@@ -2278,7 +1806,7 @@ float Container_SetAnimationTime(Container* cont, float time)
 {
     struct AnimClone* animClone = NULL;
     float overrun = 0.0f;
-    CntFrame* frame;
+    LPDIRECT3DRMFRAME3 frame;
 
     if (cont->type == Container_FromActivity) {
         if (frame = Container_Frame_Find(cont, cont->typeData->name, 0)) {
@@ -2341,7 +1869,7 @@ void Container_ForceAnimationUpdate(Container* cont)
 
     if (cont->flags & CONTAINER_FLAG_ANIMATIONUPDATE) {
         if (cont->type == Container_FromActivity) {
-            CntFrame* frame;
+            LPDIRECT3DRMFRAME3 frame;
             if (frame = Container_Frame_Find(cont, cont->typeData->name, 0)) {
                 animClone = Container_Frame_GetAnimClone(frame);
                 time = Container_Frame_GetCurrTime(frame);
@@ -2360,7 +1888,7 @@ float Container_GetAnimationTime(Container* cont)
     float time = 0.0f;
 
     if (cont->type == Container_FromActivity) {
-        CntFrame* frame;
+        LPDIRECT3DRMFRAME3 frame;
         if (frame = Container_Frame_Find(cont, cont->typeData->name, 0)) {
             time = Container_Frame_GetCurrTime(frame);
         }
@@ -2374,7 +1902,7 @@ float Container_GetAnimationTime(Container* cont)
 // FUNCTION: LEGORR 0x004753f0
 unsigned long Container_GetAnimationFrames(Container* cont)
 {
-    CntFrame* frame = NULL;
+    LPDIRECT3DRMFRAME3 frame = NULL;
 
     if (cont->type == Container_FromActivity) {
         frame = Container_Frame_Find(cont, cont->typeData->name, 0);
@@ -2388,43 +1916,43 @@ unsigned long Container_GetAnimationFrames(Container* cont)
 // FUNCTION: LEGORR 0x00475430
 void Container_SetPosition(Container* cont, Container* ref, float x, float y, float z)
 {
-    CntFrame* contFrame;
-    CntFrame* refFrame;
+    LPDIRECT3DRMFRAME3 contFrame;
+    LPDIRECT3DRMFRAME3 refFrame;
 
     Container_GetFrames(cont, ref, &contFrame, &refFrame);
-    contFrame->lpVtbl->SetPosition(contFrame, refFrame, x, y, z);
+    contFrame->SetPosition(refFrame, x, y, z);
 }
 
 // FUNCTION: LEGORR 0x00475470
 void Container_SetOrientation(Container* cont, Container* ref, float dirx, float diry,
                               float dirz, float upx, float upy, float upz)
 {
-    CntFrame* contFrame;
-    CntFrame* refFrame;
+    LPDIRECT3DRMFRAME3 contFrame;
+    LPDIRECT3DRMFRAME3 refFrame;
 
     Container_GetFrames(cont, ref, &contFrame, &refFrame);
-    contFrame->lpVtbl->SetOrientation(contFrame, refFrame, dirx, diry, dirz, upx, upy, upz);
+    contFrame->SetOrientation(refFrame, dirx, diry, dirz, upx, upy, upz);
 }
 
 // FUNCTION: LEGORR 0x004754c0
 void Container_GetPosition(Container* cont, Container* ref, float* pos)
 {
-    CntFrame* contFrame;
-    CntFrame* refFrame;
+    LPDIRECT3DRMFRAME3 contFrame;
+    LPDIRECT3DRMFRAME3 refFrame;
 
     Container_GetFrames(cont, ref, &contFrame, &refFrame);
-    contFrame->lpVtbl->GetPosition(contFrame, refFrame, (CntVector3*)pos);
+    contFrame->GetPosition(refFrame, (D3DVECTOR*)pos);
 }
 
 // FUNCTION: LEGORR 0x00475500
 void Container_GetOrientation(Container* cont, Container* ref, float* dir, float* up)
 {
-    CntFrame* contFrame;
-    CntFrame* refFrame;
-    CntVector3 tempDir, tempUp;
+    LPDIRECT3DRMFRAME3 contFrame;
+    LPDIRECT3DRMFRAME3 refFrame;
+    D3DVECTOR tempDir, tempUp;
 
     Container_GetFrames(cont, ref, &contFrame, &refFrame);
-    contFrame->lpVtbl->GetOrientation(contFrame, refFrame, &tempDir, &tempUp);
+    contFrame->GetOrientation(refFrame, &tempDir, &tempUp);
     if (dir) {
         dir[0] = tempDir.x;
         dir[1] = tempDir.y;
@@ -2441,19 +1969,19 @@ void Container_GetOrientation(Container* cont, Container* ref, float* dir, float
 void Container_AddRotation(Container* cont, int combine, float x, float y, float z,
                            float angle)
 {
-    cont->masterFrame->lpVtbl->AddRotation(cont->masterFrame, combine, x, y, z, angle);
+    cont->masterFrame->AddRotation((D3DRMCOMBINETYPE)combine, x, y, z, angle);
 }
 
 // FUNCTION: LEGORR 0x004755b0
 void Container_AddScale(Container* cont, int combine, float x, float y, float z)
 {
-    cont->masterFrame->lpVtbl->AddScale(cont->masterFrame, combine, x, y, z);
+    cont->masterFrame->AddScale((D3DRMCOMBINETYPE)combine, x, y, z);
 }
 
 // FUNCTION: LEGORR 0x004755e0
 void Container_AddTranslation(Container* cont, int combine, float x, float y, float z)
 {
-    cont->masterFrame->lpVtbl->AddTranslation(cont->masterFrame, combine, x, y, z);
+    cont->masterFrame->AddTranslation((D3DRMCOMBINETYPE)combine, x, y, z);
 }
 
 // FUNCTION: LEGORR 0x00475610
@@ -2466,25 +1994,25 @@ void Container_ClearTransform(Container* cont)
     mat[0][2] = 0.0f; mat[1][2] = 0.0f; mat[2][2] = 1.0f; mat[3][2] = 0.0f;
     mat[0][3] = 0.0f; mat[1][3] = 0.0f; mat[2][3] = 0.0f; mat[3][3] = 1.0f;
 
-    Container_AddTransform(cont, CNT_COMBINE_REPLACE, mat);
+    Container_AddTransform(cont, (int)D3DRMCOMBINE_REPLACE, mat);
 }
 
 // FUNCTION: LEGORR 0x004756b0
 void Container_AddTransform(Container* cont, int combine, float (*matrix)[4])
 {
-    cont->masterFrame->lpVtbl->AddTransform(cont->masterFrame, combine, matrix);
+    cont->masterFrame->AddTransform((D3DRMCOMBINETYPE)combine, matrix);
 }
 
 // FUNCTION: LEGORR 0x004756d0
 float Container_GetZXRatio(Container* cont)
 {
-    CntFrame* frame = cont->masterFrame;
-    CntFrame* parent;
+    LPDIRECT3DRMFRAME3 frame = cont->masterFrame;
+    LPDIRECT3DRMFRAME3 parent;
     float mat[4][4];
 
-    frame->lpVtbl->GetParent(frame, &parent);
-    frame->lpVtbl->GetTransform(frame, parent, mat);
-    parent->lpVtbl->Release(parent);
+    frame->GetParent(&parent);
+    frame->GetTransform(parent, mat);
+    parent->Release();
 
     return mat[2][2] / mat[0][0];
 }
@@ -2492,20 +2020,20 @@ float Container_GetZXRatio(Container* cont)
 // FUNCTION: LEGORR 0x00475710
 void Container_SetParent(Container* child, Container* parent)
 {
-    CntFrame* frame = child->masterFrame;
-    CntFrame* hiddenFrame = child->hiddenFrame;
-    CntFrame* parentFrame;
+    LPDIRECT3DRMFRAME3 frame = child->masterFrame;
+    LPDIRECT3DRMFRAME3 hiddenFrame = child->hiddenFrame;
+    LPDIRECT3DRMFRAME3 parentFrame;
 
     if (parent == NULL) {
-        frame->lpVtbl->GetParent(frame, &parentFrame);
+        frame->GetParent(&parentFrame);
         if (parentFrame) {
-            parentFrame->lpVtbl->DeleteChild(parentFrame, frame);
-            parentFrame->lpVtbl->Release(parentFrame);
+            parentFrame->DeleteChild(frame);
+            parentFrame->Release();
         }
-        frame->lpVtbl->GetParent(hiddenFrame, &parentFrame);
+        hiddenFrame->GetParent(&parentFrame);
         if (parentFrame) {
-            parentFrame->lpVtbl->DeleteChild(parentFrame, hiddenFrame);
-            parentFrame->lpVtbl->Release(parentFrame);
+            parentFrame->DeleteChild(hiddenFrame);
+            parentFrame->Release();
         }
     } else {
         Container_Frame_SafeAddChild(parentFrame = parent->masterFrame, frame);
@@ -2516,15 +2044,15 @@ void Container_SetParent(Container* child, Container* parent)
 // FUNCTION: LEGORR 0x004757a0
 Container* Container_GetParent(Container* child)
 {
-    CntFrame* parentFrame;
+    LPDIRECT3DRMFRAME3 parentFrame;
     Container* parent;
 
     if (child == containerGlobs.rootContainer) return NULL;
 
-    child->masterFrame->lpVtbl->GetParent(child->masterFrame, &parentFrame);
+    child->masterFrame->GetParent(&parentFrame);
     if (parentFrame) {
         parent = Container_Frame_GetContainer(parentFrame);
-        parentFrame->lpVtbl->Release(parentFrame);
+        parentFrame->Release();
     } else {
         parent = NULL;
     }
@@ -2536,7 +2064,7 @@ Container* Container_GetParent(Container* child)
 float Container_GetTransCoef(Container* cont)
 {
     if (cont->type == Container_FromActivity && cont->typeData && cont->typeData->name) {
-        CntFrame* frame;
+        LPDIRECT3DRMFRAME3 frame;
         if (frame = Container_Frame_Find(cont, cont->typeData->name, 0)) {
             return Container_Frame_GetTransCo(frame);
         }
@@ -2545,18 +2073,18 @@ float Container_GetTransCoef(Container* cont)
 }
 
 // FUNCTION: LEGORR 0x00475830
-Container* Container_SearchOwner(CntFrame* frame)
+Container* Container_SearchOwner(LPDIRECT3DRMFRAME3 frame)
 {
     Container* owner = NULL;
     Container* cont;
-    CntFrame* parent;
+    LPDIRECT3DRMFRAME3 parent;
 
     while (owner == NULL && frame != NULL) {
         if ((cont = Container_Frame_GetOwner(frame)) && cont->type != Container_Reference) {
             owner = cont;
         }
-        frame->lpVtbl->GetParent(frame, &parent);
-        if (frame = parent) frame->lpVtbl->Release(frame);
+        frame->GetParent(&parent);
+        if (frame = parent) frame->Release();
         else frame = NULL;
     }
 
@@ -2564,19 +2092,19 @@ Container* Container_SearchOwner(CntFrame* frame)
 }
 
 // FUNCTION: LEGORR 0x00475880
-Container* Container_Frame_GetContainer(CntFrame* frame)
+Container* Container_Frame_GetContainer(LPDIRECT3DRMFRAME3 frame)
 {
     Container* cont = Container_Frame_GetOwner(frame);
 
     if (cont == NULL) {
         if (cont = Container_Create(NULL)) {
-            cont->masterFrame->lpVtbl->Release(cont->masterFrame);
-            cont->activityFrame->lpVtbl->Release(cont->activityFrame);
+            cont->masterFrame->Release();
+            cont->activityFrame->Release();
             cont->masterFrame = frame;
             cont->activityFrame = NULL;
             cont->type = Container_Reference;
-            frame->lpVtbl->AddDestroyCallback(frame, Container_Frame_ReferenceDestroyCallback,
-                                              NULL);
+            frame->AddDestroyCallback(Container_Frame_ReferenceDestroyCallback,
+                                      NULL);
             Container_Frame_SetAppData(frame, cont, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL);
         }
@@ -2586,8 +2114,8 @@ Container* Container_Frame_GetContainer(CntFrame* frame)
 }
 
 // FUNCTION: LEGORR 0x00475900
-void Container_GetFrames(Container* cont, Container* ref, CntFrame** contFrame,
-                         CntFrame** refFrame)
+void Container_GetFrames(Container* cont, Container* ref, LPDIRECT3DRMFRAME3* contFrame,
+                         LPDIRECT3DRMFRAME3* refFrame)
 {
     *contFrame = cont->masterFrame;
     if (ref == NULL) *refFrame = containerGlobs.rootContainer->masterFrame;
@@ -2648,47 +2176,39 @@ typedef struct Container_TextureData {
 
 #define CONTAINER_TEXTURE_NOLOAD 0x00000001
 
-/* D3DRMLOADMEMORY. */
-typedef struct CntLoadMemory {
-    void* lpMemory;             /* +0x00 */
-    unsigned int dSize;         /* +0x04 */
-} CntLoadMemory;
-
-/* D3DRMERR_FILENOTFOUND. */
-#define CNT_D3DRMERR_FILENOTFOUND ((long)0x88760311)
 /* Main.c's MAIN_FLAG_MIPMAPENABLED (0x08) in mainGlobs.flags. */
 #define CNT_MAIN_FLAG_MIPMAPENABLED 0x00000008
 
 // FUNCTION: LEGORR 0x00475a70
 unsigned long Container_GetActivities(Container* cont,
-                                      struct CntFrame** frameList,
+                                      LPDIRECT3DRMFRAME3* frameList,
                                       struct AnimClone** acList,
                                       char** nameList)
 {
-    CntFrame* frame;
-    unsigned long len = 0;
+    LPDIRECT3DRMFRAME3 frame;
+    DWORD len = 0;
     unsigned long count = 0;
     unsigned long loop;
 
     if (cont->type == Container_FromActivity) {
         for (loop = 0; loop < 2; loop++) {
-            CntFrame* root;
-            CntFrameArray* children;
+            LPDIRECT3DRMFRAME3 root;
+            LPDIRECT3DRMFRAMEARRAY children;
             if (loop == 0) root = cont->activityFrame;
             if (loop == 1) root = cont->hiddenFrame;
-            if (root->lpVtbl->GetChildren(root, &children) == 0) {
-                unsigned long childCount = children->lpVtbl->GetSize(children);
+            if (root->GetChildren(&children) == D3DRM_OK) {
+                unsigned long childCount = children->GetSize();
                 unsigned long sub;
                 for (sub = 0; sub < childCount; sub++) {
-                    CntFrame1* frame1;
-                    children->lpVtbl->GetElement(children, sub, &frame1);
-                    frame1->lpVtbl->QueryInterface(frame1, &IID_IDirect3DRMFrame3,
-                                                   (void**)&frame);
-                    frame1->lpVtbl->Release(frame1);
-                    frame->lpVtbl->GetName(frame, &len, NULL);
+                    LPDIRECT3DRMFRAME frame1;
+                    children->GetElement(sub, &frame1);
+                    frame1->QueryInterface(IID_IDirect3DRMFrame3,
+                                           (void**)&frame);
+                    frame1->Release();
+                    frame->GetName(&len, NULL);
                     if (len) {
                         char* name = (char*)malloc(len);
-                        frame->lpVtbl->GetName(frame, &len, name);
+                        frame->GetName(&len, name);
                         if (strnicmp(name, CONTAINER_ACTIVITYFRAMEPREFIX,
                                       strlen(CONTAINER_ACTIVITYFRAMEPREFIX)) == 0) {
                             if (frameList) frameList[count] = frame;
@@ -2700,9 +2220,9 @@ unsigned long Container_GetActivities(Container* cont,
                             free(name);
                         }
                     }
-                    frame->lpVtbl->Release(frame);
+                    frame->Release();
                 }
-                children->lpVtbl->Release(children);
+                children->Release();
             }
         }
     }
@@ -2711,17 +2231,17 @@ unsigned long Container_GetActivities(Container* cont,
 
 // FUNCTION: LEGORR 0x00475c00
 void Container_SetTypeData(Container* cont, char* name, void* light,
-                           struct CntMesh* mesh, void* transMesh)
+                           LPDIRECT3DRMMESH mesh, void* transMesh)
 {
     if (cont->typeData) {
         if (name) cont->typeData->name = name;
-        if (light) cont->typeData->light = (CntLight*)light;
+        if (light) cont->typeData->light = (LPDIRECT3DRMLIGHT)light;
         if (mesh) cont->typeData->mesh = mesh;
         if (transMesh) cont->typeData->transMesh = transMesh;
     } else {
         cont->typeData = (Container_TypeData*)malloc(sizeof(Container_TypeData));
         cont->typeData->name = name;
-        cont->typeData->light = (CntLight*)light;
+        cont->typeData->light = (LPDIRECT3DRMLIGHT)light;
         cont->typeData->mesh = mesh;
         cont->typeData->transMesh = transMesh;
     }
@@ -2734,12 +2254,11 @@ void Container_FreeTypeData(Container* cont)
         if (cont->type == Container_FromActivity) {
             free(cont->typeData->name);
         } else if (cont->type == Container_Light) {
-            cont->typeData->light->lpVtbl->Release(cont->typeData->light);
+            cont->typeData->light->Release();
         } else if (cont->type == Container_Mesh) {
             if (cont->typeData->mesh) {
-                cont->activityFrame->lpVtbl->DeleteVisual(
-                    cont->activityFrame, (CntObject*)cont->typeData->mesh);
-                cont->typeData->mesh->lpVtbl->Release(cont->typeData->mesh);
+                cont->activityFrame->DeleteVisual(cont->typeData->mesh);
+                cont->typeData->mesh->Release();
             }
         } else if (cont->type == Container_LWO) {
             if (cont->typeData->transMesh) {
@@ -2758,15 +2277,15 @@ int Container_AddActivity2(Container* cont, const char* filename,
                            struct AnimClone* origClone, int lws,
                            int looping)
 {
-    CntFrame* frame;
+    LPDIRECT3DRMFRAME3 frame;
     unsigned long frameCount;
     char xFile[512];
     struct AnimClone* animClone;
 
     sprintf(xFile, "%s.%s", filename,
             containerGlobs.extensionName[Container_Anim]);
-    if (lpD3DRM()->lpVtbl->CreateFrame(lpD3DRM(), cont->hiddenFrame,
-                                       &frame) == 0) {
+    if (lpD3DRM()->CreateFrame(cont->hiddenFrame,
+                               &frame) == D3DRM_OK) {
         Container_Frame_FormatName(frame,
                                    // STRING: LEGORR 0x004aab90
                                    "%s_%s",
@@ -2775,7 +2294,7 @@ int Container_AddActivity2(Container* cont, const char* filename,
             animClone = Container_LoadAnimSet(xFile, frame, &frameCount, lws,
                                               looping);
         } else {
-            animClone = anim_clone_make(origClone, (struct AnimCloneFrame*)frame,
+            animClone = anim_clone_make(origClone, frame,
                                         &frameCount);
         }
         Container_Frame_SetAppData(frame, cont, animClone, filename,
@@ -2787,10 +2306,10 @@ int Container_AddActivity2(Container* cont, const char* filename,
 }
 
 // FUNCTION: LEGORR 0x00475e10
-static void CNT_CDECL Container_Frame_ReferenceDestroyCallback(
-    CntObject* obj, void* arg)
+static void Container_Frame_ReferenceDestroyCallback(
+                                                     LPDIRECT3DRMOBJECT obj, void* arg)
 {
-    CntFrame* frame = (CntFrame*)obj;
+    LPDIRECT3DRMFRAME3 frame = (LPDIRECT3DRMFRAME3)obj;
     Container* cont = Container_Frame_GetOwner(frame);
     (void)arg;
     if (cont) {
@@ -2800,48 +2319,48 @@ static void CNT_CDECL Container_Frame_ReferenceDestroyCallback(
 }
 
 // FUNCTION: LEGORR 0x00475e40
-struct CntFrame* Container_Frame_Find(Container* cont, const char* findName,
-                                      int hidden)
+LPDIRECT3DRMFRAME3 Container_Frame_Find(Container* cont, const char* findName,
+                                        int hidden)
 {
-    CntFrame* parent;
-    CntFrame* frame;
-    CntFrame* foundFrame = NULL;
-    CntFrameArray* children;
-    CntFrame1* frame1;
+    LPDIRECT3DRMFRAME3 parent;
+    LPDIRECT3DRMFRAME3 frame;
+    LPDIRECT3DRMFRAME3 foundFrame = NULL;
+    LPDIRECT3DRMFRAMEARRAY children;
+    LPDIRECT3DRMFRAME frame1;
     unsigned long count;
     unsigned long loop;
-    unsigned long len;
+    DWORD len;
     char* name;
     char buffer[512];
 
     if (hidden) parent = cont->hiddenFrame;
     else parent = cont->activityFrame;
-    if (parent->lpVtbl->GetChildren(parent, &children) == 0) {
-        count = children->lpVtbl->GetSize(children);
+    if (parent->GetChildren(&children) == D3DRM_OK) {
+        count = children->GetSize();
         for (loop = 0; loop < count; loop++) {
-            children->lpVtbl->GetElement(children, loop, &frame1);
-            frame1->lpVtbl->QueryInterface(frame1, &IID_IDirect3DRMFrame3,
-                                           (void**)&frame);
-            frame1->lpVtbl->Release(frame1);
-            frame->lpVtbl->GetName(frame, &len, NULL);
+            children->GetElement(loop, &frame1);
+            frame1->QueryInterface(IID_IDirect3DRMFrame3,
+                                   (void**)&frame);
+            frame1->Release();
+            frame->GetName(&len, NULL);
             if (len) {
                 name = (char*)malloc(len + 1);
-                frame->lpVtbl->GetName(frame, &len, name);
+                frame->GetName(&len, name);
                 sprintf(buffer, "%s_%s", CONTAINER_ACTIVITYFRAMEPREFIX,
                         findName);
                 if (stricmp(name, buffer) == 0) foundFrame = frame;
                 free(name);
             }
-            frame->lpVtbl->Release(frame);
+            frame->Release();
             if (foundFrame) break;
         }
-        children->lpVtbl->Release(children);
+        children->Release();
     }
     return foundFrame;
 }
 
 // FUNCTION: LEGORR 0x00475f70
-void Container_Frame_SetAppData(struct CntFrame* frame, Container* owner,
+void Container_Frame_SetAppData(LPDIRECT3DRMFRAME3 frame, Container* owner,
                                 struct AnimClone* animClone,
                                 const char* asfname,
                                 unsigned long* frameCount,
@@ -2850,7 +2369,7 @@ void Container_Frame_SetAppData(struct CntFrame* frame, Container* owner,
                                 void* soundRecord, unsigned long* trigger)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
 
     if (appData) {
         if (owner) appData->ownerContainer = owner;
@@ -2881,7 +2400,7 @@ void Container_Frame_SetAppData(struct CntFrame* frame, Container* owner,
         else appData->trigger = 0;
         appData->activitySample = (char*)actSample;
         appData->soundList = soundRecord;
-        frame->lpVtbl->SetAppData(frame, appData);
+        frame->SetAppData(appData);
     }
     if (asfname) {
         appData->animSetFileName = (char*)malloc(strlen(asfname) + 1);
@@ -2890,105 +2409,105 @@ void Container_Frame_SetAppData(struct CntFrame* frame, Container* owner,
 }
 
 // FUNCTION: LEGORR 0x004760e0
-void Container_Frame_RemoveAppData(struct CntFrame* frame)
+void Container_Frame_RemoveAppData(LPDIRECT3DRMFRAME3 frame)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
     if (appData) {
         if (appData->animSetFileName) free(appData->animSetFileName);
         free(appData);
     }
-    frame->lpVtbl->SetAppData(frame, NULL);
+    frame->SetAppData(NULL);
 }
 
 // FUNCTION: LEGORR 0x00476120
-Container* Container_Frame_GetOwner(struct CntFrame* frame)
+Container* Container_Frame_GetOwner(LPDIRECT3DRMFRAME3 frame)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
     if (appData) return appData->ownerContainer;
     return NULL;
 }
 
 // FUNCTION: LEGORR 0x00476140
-char* Container_Frame_GetAnimSetFileName(struct CntFrame* frame)
+char* Container_Frame_GetAnimSetFileName(LPDIRECT3DRMFRAME3 frame)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
     if (appData) return appData->animSetFileName;
     return NULL;
 }
 
 // FUNCTION: LEGORR 0x00476160
-struct AnimClone* Container_Frame_GetAnimClone(struct CntFrame* frame)
+struct AnimClone* Container_Frame_GetAnimClone(LPDIRECT3DRMFRAME3 frame)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
     if (appData) return appData->animClone;
     return NULL;
 }
 
 // FUNCTION: LEGORR 0x00476180
-unsigned long Container_Frame_GetFrameCount(struct CntFrame* frame)
+unsigned long Container_Frame_GetFrameCount(LPDIRECT3DRMFRAME3 frame)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
     if (appData) return appData->frameCount;
     return 0;
 }
 
 // FUNCTION: LEGORR 0x004761a0
-float Container_Frame_GetCurrTime(struct CntFrame* frame)
+float Container_Frame_GetCurrTime(LPDIRECT3DRMFRAME3 frame)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
     if (appData) return appData->currTime;
     return 0.0f;
 }
 
 // FUNCTION: LEGORR 0x004761c0
-float Container_Frame_GetTransCo(struct CntFrame* frame)
+float Container_Frame_GetTransCo(LPDIRECT3DRMFRAME3 frame)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
     if (appData) return appData->transCo;
     return 0.0f;
 }
 
 // FUNCTION: LEGORR 0x004761e0
-char* Container_Frame_GetSample(struct CntFrame* frame)
+char* Container_Frame_GetSample(LPDIRECT3DRMFRAME3 frame)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
     if (appData) return appData->activitySample;
     return NULL;
 }
 
 // FUNCTION: LEGORR 0x00476200
-unsigned long Container_Frame_GetTrigger(struct CntFrame* frame)
+unsigned long Container_Frame_GetTrigger(LPDIRECT3DRMFRAME3 frame)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
     if (appData) return appData->trigger;
     return 0;
 }
 
 // FUNCTION: LEGORR 0x00476220
-void Container_Frame_SafeAddChild(struct CntFrame* parent,
-                                  struct CntFrame* child)
+void Container_Frame_SafeAddChild(LPDIRECT3DRMFRAME3 parent,
+                                  LPDIRECT3DRMFRAME3 child)
 {
-    CntFrame* oldParent;
+    LPDIRECT3DRMFRAME3 oldParent;
     float matrix[4][4];
 
-    child->lpVtbl->GetParent(child, &oldParent);
-    child->lpVtbl->GetTransform(child, oldParent, matrix);
-    if (oldParent) oldParent->lpVtbl->Release(oldParent);
-    parent->lpVtbl->AddChild(parent, child);
-    child->lpVtbl->AddTransform(child, CNT_COMBINE_REPLACE, matrix);
+    child->GetParent(&oldParent);
+    child->GetTransform(oldParent, matrix);
+    if (oldParent) oldParent->Release();
+    parent->AddChild(child);
+    child->AddTransform(D3DRMCOMBINE_REPLACE, matrix);
 }
 
 // FUNCTION: LEGORR 0x00476270
-void Container_Frame_FormatName(struct CntFrame* frame, const char* msg, ...)
+void Container_Frame_FormatName(LPDIRECT3DRMFRAME3 frame, const char* msg, ...)
 {
     char buffer[1024];
     char* name;
@@ -3001,70 +2520,70 @@ void Container_Frame_FormatName(struct CntFrame* frame, const char* msg, ...)
     vsprintf(name, msg, args);
     va_end(args);
 
-    frame->lpVtbl->SetName(frame, name);
+    frame->SetName(name);
     Container_Frame_SetAppData(frame, NULL, NULL, NULL, NULL, name, NULL,
                                NULL, NULL, NULL, NULL);
 }
 
 // FUNCTION: LEGORR 0x004762f0
-void Container_Frame_FreeName(struct CntFrame* frame)
+void Container_Frame_FreeName(LPDIRECT3DRMFRAME3 frame)
 {
     char* name = Container_Frame_GetName(frame);
     if (name) free(name);
 }
 
 // FUNCTION: LEGORR 0x00476310
-char* Container_Frame_GetName(struct CntFrame* frame)
+char* Container_Frame_GetName(LPDIRECT3DRMFRAME3 frame)
 {
     Container_AppData* appData =
-        (Container_AppData*)frame->lpVtbl->GetAppData(frame);
+        (Container_AppData*)frame->GetAppData();
     if (appData) return appData->frameName;
     return NULL;
 }
 
 // FUNCTION: LEGORR 0x00476330
-int Container_Frame_WalkTree(struct CntFrame* frame, unsigned long level,
+int Container_Frame_WalkTree(LPDIRECT3DRMFRAME3 frame, unsigned long level,
                              ContainerWalkTreeCallback callback, void* data)
 {
-    CntFrameArray* children;
-    CntFrame1* frame1;
-    CntFrame* child;
+    LPDIRECT3DRMFRAMEARRAY children;
+    LPDIRECT3DRMFRAME frame1;
+    LPDIRECT3DRMFRAME3 child;
     unsigned long count;
     unsigned long loop;
     int finished = 0;
 
     if (callback(frame, data)) return 1;
 
-    frame->lpVtbl->GetChildren(frame, &children);
-    count = children->lpVtbl->GetSize(children);
+    frame->GetChildren(&children);
+    count = children->GetSize();
     for (loop = 0; loop < count; loop++) {
-        children->lpVtbl->GetElement(children, loop, &frame1);
-        frame1->lpVtbl->QueryInterface(frame1, &IID_IDirect3DRMFrame3, (void**)&child);
-        frame1->lpVtbl->Release(frame1);
+        children->GetElement(loop, &frame1);
+        frame1->QueryInterface(IID_IDirect3DRMFrame3, (void**)&child);
+        frame1->Release();
         if (Container_Frame_WalkTree(child, level + 1, callback, data)) {
             finished = 1;
-            child->lpVtbl->Release(child);
+            child->Release();
             break;
         }
-        child->lpVtbl->Release(child);
+        child->Release();
     }
-    children->lpVtbl->Release(children);
+    children->Release();
     return finished;
 }
 
 // FUNCTION: LEGORR 0x00476410
-int Container_Frame_SearchCallback(struct CntFrame* frame, void* data)
+int Container_Frame_SearchCallback(LPDIRECT3DRMFRAME3 frame, void* data)
 {
     Container_SearchData* search = (Container_SearchData*)data;
     char* name;
-    unsigned long len;
+    DWORD len;
     unsigned long loop;
 
-    frame->lpVtbl->GetName(frame, &len, NULL);
+    frame->GetName(&len, NULL);
     if (len - 1 == search->stringLen) {
         name = (char*)malloc(len);
         name[0] = '\0';
-        frame->lpVtbl->GetName(frame, &len, name);
+        frame->GetName(&len, name);
         for (loop = 0; loop < len; loop++) {
             if (search->string[loop] == '?') name[loop] = '?';
         }
@@ -3102,14 +2621,14 @@ int Container_Frame_SearchCallback(struct CntFrame* frame, void* data)
 
 // FUNCTION: LEGORR 0x004765c0
 struct AnimClone* Container_LoadAnimSet(const char* fname,
-                                        struct CntFrame* frame,
+                                        LPDIRECT3DRMFRAME3 frame,
                                         unsigned long* frameCount, int lws,
                                         int looping)
 {
-    CntAnimSet* animSet = NULL;
-    CntFrame* animFrame;
+    LPDIRECT3DRMANIMATIONSET2 animSet = NULL;
+    LPDIRECT3DRMFRAME3 animFrame;
     struct AnimClone* animClone = NULL;
-    CntLoadMemory buffer;
+    D3DRMLOADMEMORY buffer;
     Container_TextureData textureData;
 
     if (lws) {
@@ -3122,32 +2641,31 @@ struct AnimClone* Container_LoadAnimSet(const char* fname,
             lws_time_set(scene, 0.0f);
             if (frameCount) *frameCount = resource_entry_id_get(scene);
             animClone = anim_clone_register_lws(
-                scene, (struct AnimCloneFrame*)frame, *frameCount);
+                scene, frame, *frameCount);
         }
     } else {
         if ((buffer.lpMemory = file_load_binary(fname, &buffer.dSize)) != NULL) {
-            if (lpD3DRM()->lpVtbl->CreateFrame(lpD3DRM(), frame,
-                                               &animFrame) == 0) {
-                if (lpD3DRM()->lpVtbl->CreateAnimationSet(lpD3DRM(),
-                                                          &animSet) == 0) {
+            if (lpD3DRM()->CreateFrame(frame,
+                                       &animFrame) == D3DRM_OK) {
+                if (lpD3DRM()->CreateAnimationSet(&animSet) == D3DRM_OK) {
                     textureData.xFileName = fname;
                     textureData.flags = 0;
-                    if (animSet->lpVtbl->Load(animSet, &buffer, NULL,
-                                              CNT_LOAD_FROMMEMORY,
-                                              Container_TextureLoadCallback,
-                                              &textureData, animFrame) == 0) {
+                    if (animSet->Load(&buffer, NULL,
+                                      D3DRMLOAD_FROMMEMORY,
+                                      Container_TextureLoadCallback,
+                                      &textureData, animFrame) == D3DRM_OK) {
                         unsigned long count;
-                        animSet->lpVtbl->SetTime(animSet, 0.0f);
+                        animSet->SetTime(0.0f);
                         count = Container_GetAnimFileFrameCount(
                             (const char*)buffer.lpMemory);
                         if (frameCount) *frameCount = count;
                         animClone = anim_clone_register(
-                            (struct AnimCloneAnimSet*)animSet,
-                            (struct AnimCloneFrame*)animFrame, count);
+                            animSet,
+                            animFrame, count);
                     }
                     free(buffer.lpMemory);
                 }
-                animFrame->lpVtbl->Release(animFrame);
+                animFrame->Release();
             }
         }
     }
@@ -3171,18 +2689,18 @@ unsigned long Container_GetAnimFileFrameCount(const char* fileData)
 }
 
 // FUNCTION: LEGORR 0x004767e0
-int Container_FrameLoad(const char* fname, struct CntFrame* frame)
+int Container_FrameLoad(const char* fname, LPDIRECT3DRMFRAME3 frame)
 {
-    CntLoadMemory buffer;
+    D3DRMLOADMEMORY buffer;
     Container_TextureData textureData;
     int result = 0;
 
     if ((buffer.lpMemory = file_load_binary(fname, &buffer.dSize)) != NULL) {
         textureData.xFileName = fname;
         textureData.flags = 0;
-        if (frame->lpVtbl->Load(frame, &buffer, NULL, CNT_LOAD_FROMMEMORY,
-                                Container_TextureLoadCallback,
-                                &textureData) == 0) {
+        if (frame->Load(&buffer, NULL, D3DRMLOAD_FROMMEMORY,
+                        Container_TextureLoadCallback,
+                        &textureData) == D3DRM_OK) {
             result = 1;
         }
         free(buffer.lpMemory);
@@ -3191,38 +2709,38 @@ int Container_FrameLoad(const char* fname, struct CntFrame* frame)
 }
 
 // FUNCTION: LEGORR 0x00476850
-struct CntMesh* Container_MeshLoad(void* fileData, unsigned long fileSize,
-                                   const char* fname, struct CntFrame* frame,
-                                   int noTextures)
+LPDIRECT3DRMMESH Container_MeshLoad(void* fileData, unsigned long fileSize,
+                                    const char* fname, LPDIRECT3DRMFRAME3 frame,
+                                    int noTextures)
 {
-    CntLoadMemory buffer;
+    D3DRMLOADMEMORY buffer;
     Container_TextureData textureData;
-    CntMeshBuilder* mb;
-    CntMesh* mesh;
+    LPDIRECT3DRMMESHBUILDER3 mb;
+    LPDIRECT3DRMMESH mesh;
 
     buffer.lpMemory = fileData;
     buffer.dSize = fileSize;
-    if (lpD3DRM()->lpVtbl->CreateMeshBuilder(lpD3DRM(), &mb) == 0) {
+    if (lpD3DRM()->CreateMeshBuilder(&mb) == D3DRM_OK) {
         textureData.xFileName = fname;
         textureData.flags = 0;
         if (noTextures) textureData.flags = CONTAINER_TEXTURE_NOLOAD;
-        if (mb->lpVtbl->Load(mb, &buffer, NULL, CNT_LOAD_FROMMEMORY,
-                             Container_TextureLoadCallback,
-                             &textureData) == 0) {
-            mb->lpVtbl->CreateMesh(mb, &mesh);
-            mb->lpVtbl->Release(mb);
-            if (frame->lpVtbl->AddVisual(frame, (CntObject*)mesh) == 0) {
+        if (mb->Load(&buffer, NULL, D3DRMLOAD_FROMMEMORY,
+                     Container_TextureLoadCallback,
+                     &textureData) == D3DRM_OK) {
+            mb->CreateMesh(&mesh);
+            mb->Release();
+            if (frame->AddVisual(mesh) == D3DRM_OK) {
                 return mesh;
             }
         }
-        mb->lpVtbl->Release(mb);
+        mb->Release();
     }
     return NULL;
 }
 
 // FUNCTION: LEGORR 0x00476900
-static long CNT_CDECL Container_TextureLoadCallback(char* name, void* data,
-                                                    CntTexture** texture)
+static HRESULT Container_TextureLoadCallback(char* name, void* data,
+                                             LPDIRECT3DRMTEXTURE3* texture)
 {
     Container_TextureData* textureData = (Container_TextureData*)data;
     const char* s;
@@ -3264,8 +2782,8 @@ static long CNT_CDECL Container_TextureLoadCallback(char* name, void* data,
                     if (strcmp(containerGlobs.textureSet[loop].fileName,
                                path) == 0) {
                         *texture = containerGlobs.textureSet[loop].texture;
-                        (*texture)->lpVtbl->AddRef(*texture);
-                        return 0;
+                        (*texture)->AddRef();
+                        return D3DRM_OK;
                     }
                 }
             }
@@ -3274,7 +2792,7 @@ static long CNT_CDECL Container_TextureLoadCallback(char* name, void* data,
                 *texture = text->texture;
                 Container_YFlipTexture(*texture);
                 if (s_engine_feature_word & CNT_MAIN_FLAG_MIPMAPENABLED) {
-                    (*texture)->lpVtbl->GenerateMIPMap(*texture, 0);
+                    (*texture)->GenerateMIPMap(0);
                 }
                 if (containerGlobs.textureCount == CONTAINER_MAXTEXTURES) {
                     qsort(containerGlobs.textureSet, containerGlobs.textureCount,
@@ -3288,24 +2806,23 @@ static long CNT_CDECL Container_TextureLoadCallback(char* name, void* data,
                 if (containerGlobs.textureCount < CONTAINER_MAXTEXTURES) {
                     Container_TextureRef* ref =
                         &containerGlobs.textureSet[containerGlobs.textureCount];
-                    (*texture)->lpVtbl->AddDestroyCallback(
-                        *texture, Container_TextureDestroyCallback, ref);
+                    (*texture)->AddDestroyCallback(Container_TextureDestroyCallback, ref);
                     ref->fileName = (char*)malloc(strlen(path) + 1);
                     strcpy(ref->fileName, path);
                     ref->texture = *texture;
                     containerGlobs.textureCount++;
                 }
-                return 0;
+                return D3DRM_OK;
             }
         }
     }
-    return CNT_D3DRMERR_FILENOTFOUND;
+    return D3DRMERR_NOTFOUND;
 }
 
 // FUNCTION: LEGORR 0x00476bf0
-void Container_YFlipTexture(struct CntTexture* texture)
+void Container_YFlipTexture(LPDIRECT3DRMTEXTURE3 texture)
 {
-    CntImage* image = texture->lpVtbl->GetImage(texture);
+    D3DRMIMAGE* image = texture->GetImage();
     unsigned long width;
     unsigned char* buffer;
     unsigned char* top;
@@ -3342,12 +2859,12 @@ static int Container_TextureSetSort(const void* a, const void* b)
 }
 
 // FUNCTION: LEGORR 0x00476d10
-static void CNT_CDECL Container_TextureDestroyCallback(CntObject* obj,
-                                                       void* arg)
+static void Container_TextureDestroyCallback(LPDIRECT3DRMOBJECT obj,
+                                             void* arg)
 {
     Container_TextureRef* ref = (Container_TextureRef*)arg;
     (void)obj;
-    free(ref->texture->lpVtbl->GetAppData(ref->texture));
+    free(ref->texture->GetAppData());
     free(ref->fileName);
     ref->fileName = NULL;
     ref->texture = NULL;
