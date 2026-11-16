@@ -349,7 +349,8 @@ G98CMovie::~G98CMovie()
 bool G98CMovie::Update(float speed, LPRECT destRect)
 {
     if (m_sample) {
-        if (m_sample->Update(0, NULL, NULL, 0) != S_OK) {
+        HRESULT r = m_sample->Update(0, NULL, NULL, 0);
+        if (r != S_OK) {
             m_primaryVidStream->Release();
             m_primaryVidStream = NULL;
             m_ddStream->Release();
@@ -364,8 +365,8 @@ bool G98CMovie::Update(float speed, LPRECT destRect)
             }
             return false;
         }
-        return (m_destSurf->Blt(destRect, m_baseSurf, NULL, MOVIE_DDBLT_WAIT,
-                                NULL) == MOVIE_DD_OK) ? true : false;
+        r = m_destSurf->Blt(destRect, m_baseSurf, NULL, MOVIE_DDBLT_WAIT, NULL);
+        return (r == MOVIE_DD_OK) ? true : false;
     }
 
     return false;
