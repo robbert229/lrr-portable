@@ -10047,12 +10047,15 @@ void legoobject_tiny_monster_spawn_and_teardown(Lego_Object* obj)
     unsigned int count;
     Lego_Object* tiny;
 
+#if !(defined(_MSC_VER) && _MSC_VER < 1200)
+    /* The original leaves name unset when no monster matches (the matching
+     * build then reads obj's argument slot); the port gives it that value. */
+    name = (const char*)obj;
+#endif
     if (entity_type_pair_lookup("RockMonster", &type, &id, NULL) && type == obj->type && id == obj->id) {
-        found = 1;
         // STRING: LEGORR 0x004a5168
         name = "TinyRM";
-    } else {
-        name = (const char*)obj; /* the original's value when no monster matches */
+        found = 1;
     }
     if (!found) {
         found = 0;
@@ -10070,7 +10073,9 @@ void legoobject_tiny_monster_spawn_and_teardown(Lego_Object* obj)
     if (entity_type_pair_lookup(name, &type, &id, (int*)&model)) {
         legoobject_transform_position_get(obj, &xy.x, &xy.y);
         for (count = 0; count < 3; count++) {
-            tiny = legoobject_create_in_world(model, type, id, 0, xy.x, xy.y, (float)(rng_thunk_draw15() % 7));
+            float heading;
+            heading = (float)(rng_thunk_draw15() % 7);
+            tiny = legoobject_create_in_world(model, type, id, 0, xy.x, xy.y, heading);
             tiny->health = -1.0f;
             if (!legoobject_route_step_command_issue(tiny)) {
                 legoobject_remove(tiny);
