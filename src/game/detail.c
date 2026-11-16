@@ -335,6 +335,8 @@ void detail_matrix_setup(float* m, float sx, float sy, float y, float x2,
     m[1] = (y2 / x2) * (x2 / sx);
 }
 
+#include "detail_tail.h"
+
 #ifdef __cplusplus
 }
 #endif

@@ -145,6 +145,7 @@ src/game/detail.h
 src/game/detail_imports.h
 src/game/detail_link_names.h
 src/game/detail_maths.h
+src/game/detail_tail.h
 src/game/effects.cpp
 src/game/effects.h
 src/game/effects.hpp
