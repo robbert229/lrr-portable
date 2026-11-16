@@ -437,3 +437,5 @@ static const float s_maths_two = 2.0f;
 // GLOBAL: LEGORR 0x0049e938
 static const float s_maths_four = 4.0f;
 #endif
+
+#include "maths_tail.h"
