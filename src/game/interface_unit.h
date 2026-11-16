@@ -45,7 +45,7 @@ typedef struct InterfaceItemSearch {
 
 typedef int (*InterfaceMenuItemCallback)(int type, int objType, int objIndex,
                                          void* data);
-typedef int (*InterfaceObjectCallback)(struct LegoObject* obj, void* data);
+typedef int (*InterfaceObjectCallback)(struct Lego_Object* obj, void* data);
 
 /* 0041a300 Interface_Initialise */
 void interface_initialise(unsigned int x, unsigned int y,
@@ -147,16 +147,16 @@ void interface_set_dependency_area(const Point2F* position,
 /* 0041cd30: the box around the item under the cursor (an Area2F). */
 void position_tracker_box_draw(const float bounds[4]);
 /* 0041cea0 */
-void interface_object_menu_check(struct LegoObject* obj);
+void interface_object_menu_check(struct Lego_Object* obj);
 /* 0041cf20 */
-void interface_driven_object_menu_check(struct LegoObject* obj);
+void interface_driven_object_menu_check(struct Lego_Object* obj);
 /* 0041cf80, 0041cfb0, 0041cfe0: back to the main menu when the menu of
  * the given block (a Point2I) is open. */
 void selection_mode7_cancel_at_point(const uint32_t coordinate[2]);
 void cancel_action_for_matching_coordinates(const uint32_t coordinate[2]);
 void selection_mode5_cancel_at_point(const uint32_t coordinate[2]);
 /* 0041d010 */
-void interface_back_to_main_if_selected(struct LegoObject* obj);
+void interface_back_to_main_if_selected(struct Lego_Object* obj);
 /* 0041d040 */
 int interface_is_item_available(int type);
 /* 0041dca0 Interface_DoAction */
@@ -168,7 +168,7 @@ void interface_set_item_flash(int type, int on);
 /* 0041e7a0 */
 void interface_set_object_item_flash(int objType, int objIndex, int on);
 /* 0041e7e0 */
-struct LegoObject* interface_get_primary_selected(void);
+struct Lego_Object* interface_get_primary_selected(void);
 /* 0041e7f0 */
 unsigned int interface_set_item_clicks(int type, unsigned int clicks);
 /* 0041e810 */
@@ -228,26 +228,26 @@ int interface_callback_hit_item(int type, int objType, int objIndex,
                                 void* data);
 int interface_callback_hotkey(int type, int objType, int objIndex,
                               void* data);
-int interface_callback_object_search(struct LegoObject* obj, void* data);
-int interface_callback_can_reach(struct LegoObject* obj, void* data);
-int interface_callback_can_enter(struct LegoObject* obj, void* data);
-int interface_callback_can_unload(struct LegoObject* obj, void* data);
-int interface_callback_hungry(struct LegoObject* obj, void* data);
-int interface_callback_damaged(struct LegoObject* obj, void* data);
-int interface_callback_can_pick_up(struct LegoObject* obj, void* data);
-int interface_callback_delete(struct LegoObject* obj, void* data);
-int interface_callback_go_feed(struct LegoObject* obj, void* data);
-int interface_callback_repair(struct LegoObject* obj, void* data);
-int interface_callback_lacks_tool(struct LegoObject* obj, void* data);
-int interface_callback_get_tool(struct LegoObject* obj, void* data);
-int interface_callback_detach(struct LegoObject* obj, void* data);
-int interface_callback_has_tool(struct LegoObject* obj, void* data);
+int interface_callback_object_search(struct Lego_Object* obj, void* data);
+int interface_callback_can_reach(struct Lego_Object* obj, void* data);
+int interface_callback_can_enter(struct Lego_Object* obj, void* data);
+int interface_callback_can_unload(struct Lego_Object* obj, void* data);
+int interface_callback_hungry(struct Lego_Object* obj, void* data);
+int interface_callback_damaged(struct Lego_Object* obj, void* data);
+int interface_callback_can_pick_up(struct Lego_Object* obj, void* data);
+int interface_callback_delete(struct Lego_Object* obj, void* data);
+int interface_callback_go_feed(struct Lego_Object* obj, void* data);
+int interface_callback_repair(struct Lego_Object* obj, void* data);
+int interface_callback_lacks_tool(struct Lego_Object* obj, void* data);
+int interface_callback_get_tool(struct Lego_Object* obj, void* data);
+int interface_callback_detach(struct Lego_Object* obj, void* data);
+int interface_callback_has_tool(struct Lego_Object* obj, void* data);
 /* 0041f720 */
 int interface_primary_has_ability(unsigned int mask);
 /* 0041f740 */
 int interface_can_lay_path(const Point2I* blockPos);
 /* 0041f840 */
-int interface_callback_remove_spider(struct LegoObject* obj, void* data);
+int interface_callback_remove_spider(struct Lego_Object* obj, void* data);
 
 #ifdef __cplusplus
 }

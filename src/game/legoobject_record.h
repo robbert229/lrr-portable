@@ -117,7 +117,7 @@ typedef struct Lego_Object {
     unsigned int flags4;              /* +0x3ec */
     unsigned int abilityFlags;        /* +0x3f0 */
     int field_3f4;                    /* +0x3f4 */
-    int field_3f8;                    /* +0x3f8 */
+    int field_3f8;                    /* +0x3f8 NERPs' tutorial icon */
     float field_3fc;                  /* +0x3fc */
     float field_400;                  /* +0x400 */
     int field_404;                    /* +0x404 */

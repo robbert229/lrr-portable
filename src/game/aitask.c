@@ -23,6 +23,7 @@
 #include "crt/vc5names.h"
 #include "lego_unit.h"
 #include "legoobject_record.h"
+#include "entity_stats.h"
 #include "aitask.h"
 #include "aitask_imports.h"
 /* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
@@ -3893,50 +3894,10 @@ void aitask_cmd_link_tail(AITask* task)
     task->flags &= ~0x11;
 }
 
-/* The LegoObject fields (LegoObject.c, GAME-023) that groups C and D read,
- * at their Win32 offsets. The port's EntitySlot has another layout; the unit
- * receives and passes these records as EntitySlot pointers and views them
- * through AITASK_OBJ. Only the matching and Win32 reference builds run this
- * code. A struct member, not an offset cast, is what lets MSVC 5.0 use the
- * field as an x87 memory operand as the original does. */
-typedef struct AITaskObjectStats AITaskObjectStats;
-struct AITaskObjectStats {
-    unsigned char pad_000[0xe8];
-    float field_e8;                     /* +0x0e8 health threshold */
-};
-typedef struct AITaskObject AITaskObject;
-struct AITaskObject {
-    int type;                           /* +0x000 */
-    int field_4;                        /* +0x004 object id within the type */
-    unsigned char pad_008[0x018 - 0x008];
-    void* field_18;                     /* +0x018 */
-    unsigned char pad_01c[0x2f0 - 0x01c];
-    AITask* aiTask;                     /* +0x2f0 the entity's task chain */
-    unsigned char pad_2f4[0x2fc - 0x2f4];
-    AITaskObject* field_2fc;            /* +0x2fc */
-    unsigned char pad_300[0x304 - 0x300];
-    void* field_304;                    /* +0x304 */
-    AITaskObject* interactObject;       /* +0x308 */
-    unsigned char pad_30c[0x330 - 0x30c];
-    int field_330;                      /* +0x330 object level */
-    AITaskObjectStats* stats;           /* +0x334 */
-    float field_338;                    /* +0x338 idle time */
-    unsigned char pad_33c[0x340 - 0x33c];
-    float health;                       /* +0x340 */
-    float energy;                       /* +0x344 */
-    unsigned char pad_348[0x364 - 0x348];
-    void* field_364;                    /* +0x364 */
-    unsigned char pad_368[0x36c - 0x368];
-    AITaskObject* driveObject;          /* +0x36c */
-    unsigned char pad_370[0x3d4 - 0x370];
-    float field_3d4;                    /* +0x3d4 */
-    unsigned char pad_3d8[0x3e0 - 0x3d8];
-    unsigned int flags1;                /* +0x3e0 */
-    unsigned int flags2;                /* +0x3e4 */
-    unsigned int flags3;                /* +0x3e8 */
-    unsigned int flags4;                /* +0x3ec */
-    unsigned int abilityFlags;          /* +0x3f0 */
-};
+/* The LegoObject (legoobject_record.h) and its stats record (StatsData,
+ * entity_stats.h), which groups C and D read. */
+typedef struct StatsData AITaskObjectStats;
+typedef struct Lego_Object AITaskObject;
 #define AITASK_OBJ(ptr) ((AITaskObject*)(ptr))
 
 /* Maths.h's Point2I and Point2F: block and world positions. */
@@ -3977,9 +3938,9 @@ void aitask_entity_task_queue_flush(struct Lego_Object* object)
     if (!(aiTaskGlobs.flags & 6)) {
         aitask_entity_activity_record_remove_by_type(object, 0, NULL);
         if ((AITASK_OBJ(object)->flags1 & 0x400) &&
-            AITASK_OBJ(object)->interactObject->type == 8) {
+            AITASK_OBJ(object)->carriedObjects[0]->type == 8) {
             aitask_entity_activity_record_remove_by_type(
-                object, 9, (struct Lego_Object*)AITASK_OBJ(object)->interactObject);
+                object, 9, (struct Lego_Object*)AITASK_OBJ(object)->carriedObjects[0]);
         }
         aitask_command_queue_sweep_relink(object);
         aitask_pending_record_entity_reference_clear(object);
@@ -4221,13 +4182,13 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
         AITASK_OBJ(object)->health > s_rdata_0049e014 &&
         !lego_entity_matches_current_selection_or_owner(object) &&
         !(AITASK_OBJ(object)->driveObject != NULL && AITASK_OBJ(object)->type == 2) &&
-        AITASK_OBJ(object)->field_304 == NULL &&
+        AITASK_OBJ(object)->carryingThisObject == NULL &&
         !(AITASK_OBJ(object)->flags2 & 0x8004000) &&
         !(AITASK_OBJ(object)->flags1 & 0x800000)) {
         remove = 0;
         task = AITASK_OBJ(object)->aiTask;
         if (task != NULL) {
-            AITASK_OBJ(object)->field_338 = 0.0f;
+            AITASK_OBJ(object)->aiTimer = 0.0f;
             if (task->flags & 0x20) {
                 aitask_entity_command_chain_head_remove(object);
                 entity_action_sequence_reset(object, 0);
@@ -4248,7 +4209,7 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
                 } else if (task->type == 2) {
                     if (task->time <= s_rdata_0049e014) {
                         if (AITASK_OBJ(task->object)->health >
-                            AITASK_OBJ(task->object)->stats->field_e8) {
+                            AITASK_OBJ(task->object)->stats->PainThreshold) {
                             AITaskPoint2F wPos;
                             AITaskPoint2F targetWPos;
                             entity_transform_position_get_outputs(object, &wPos.x, &wPos.y);
@@ -4359,7 +4320,7 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
                             }
                             if (system_state_flags_get_original(NULL) &&
                                 AITASK_OBJ(task->object)->health <
-                                    AITASK_OBJ(task->object)->stats->field_e8) {
+                                    AITASK_OBJ(task->object)->stats->PainThreshold) {
                                 result = 0;
                                 break;
                             }
@@ -4430,9 +4391,9 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
 
             candidate.x = 0;
             candidate.y = 0;
-            AITASK_OBJ(object)->field_338 += *elapsed;
+            AITASK_OBJ(object)->aiTimer += *elapsed;
             entity_position_to_terrain_cell_adapter(object, &blockPos.x, &blockPos.y);
-            if (AITASK_OBJ(object)->field_338 != *elapsed &&
+            if (AITASK_OBJ(object)->aiTimer != *elapsed &&
                 !(AITASK_OBJ(object)->flags4 & 0xc0) &&
                 aitask_adjacent_position_find_adapter(object, &blockPos.x, &candidate.x, 0)) {
                 if (candidate.x != 0 && candidate.y != 0) {
@@ -4441,11 +4402,11 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
                     task->blockX = candidate.x;
                     task->blockY = candidate.y;
                 }
-            } else if (AITASK_OBJ(object)->field_338 > s_rdata_0049e028) {
+            } else if (AITASK_OBJ(object)->aiTimer > s_rdata_0049e028) {
                 if (AITASK_OBJ(object)->type == 2 &&
                     !lego_entity_matches_current_selection_or_owner(object))
                     entity_random_activity_attempt(object);
-                AITASK_OBJ(object)->field_338 = 0.0f;
+                AITASK_OBJ(object)->aiTimer = 0.0f;
             } else {
                 prev = NULL;
                 for (task = aiTaskGlobs.globalHead; task != NULL;
@@ -4485,13 +4446,13 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
                     if ((task->flags & 0x400) && entity_flag400_and_health_threshold_check(object) &&
                         !(AITASK_OBJ(object)->flags3 & 0x200000) &&
                         AITASK_OBJ(object)->type != 3) {
-                        AITaskObject* driver = AITASK_OBJ(object)->interactObject;
+                        AITaskObject* driver = AITASK_OBJ(object)->carriedObjects[0];
                         if (driver->flags3 & 0x80000000) {
                             if (task->type == 0x1b)
                                 break;
                         } else if (task->field_20 == 0 ||
-                                   (driver->field_330 == task->field_28 &&
-                                    (task->field_24 == -1 || driver->field_4 == task->field_24) &&
+                                   (driver->objLevel == task->field_28 &&
+                                    (task->field_24 == -1 || driver->id == task->field_24) &&
                                     driver->type == task->field_20)) {
                             int route = 0;
                             int failed = 0;
@@ -4643,8 +4604,8 @@ int aitask_check_object_candidate(struct Lego_Object* object)
     if (AITASK_OBJ(object)->type == 6 && (AITASK_OBJ(object)->flags3 & 0x80000000))
         return aitask_type11_nearest_resolve_adapter(object, NULL);
     return aitask_object_task_target_filter_find(AITASK_OBJ(object)->type,
-                                                 AITASK_OBJ(object)->field_4,
-                                                 AITASK_OBJ(object)->field_330);
+                                                 AITASK_OBJ(object)->id,
+                                                 AITASK_OBJ(object)->objLevel);
 }
 
 /* 0x00404f10 object_task_target_filter_find (corpus name FindMatchingObjectRecord), 64 bytes.
@@ -5137,7 +5098,7 @@ int aitask_place_command_eligibility_check(AITask* task, struct Lego_Object* obj
                 result = 0;
             else if (AITASK_OBJ(object)->type == 1 &&
                      (AITASK_OBJ(object)->flags1 & 0x400) &&
-                     AITASK_OBJ(object)->interactObject->type == 0xb)
+                     AITASK_OBJ(object)->carriedObjects[0]->type == 0xb)
                 return 0;
             else if (!aitask_check_object_candidate(target))
                 result = 0;
@@ -5210,9 +5171,9 @@ int aitask_place_command_eligibility_check(AITask* task, struct Lego_Object* obj
                 AITaskObject* carried;
                 void* cont;
                 if ((AITASK_OBJ(task->object)->flags4 & 0x40) &&
-                    (carried = AITASK_OBJ(task->object)->field_2fc) != NULL &&
+                    (carried = AITASK_OBJ(task->object)->routeToObject) != NULL &&
                     carried->type == 4 &&
-                    (cont = scene_object_secondary_handle_get_or_create(carried->field_18)) != NULL) {
+                    (cont = scene_object_secondary_handle_get_or_create(carried->building)) != NULL) {
                     ddiscene_object_position_get(cont, NULL, pos);
                     if (outWPos != NULL) {
                         outWPos[0] = pos[0];

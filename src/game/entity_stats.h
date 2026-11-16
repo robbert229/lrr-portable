@@ -16,6 +16,8 @@
 #ifndef LEGORRR_GAME_ENTITY_STATS_H
 #define LEGORRR_GAME_ENTITY_STATS_H
 
+#include "legoobject_record.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -110,16 +112,9 @@ typedef struct Stats_Globs {
     Stats_ToolTaskTypes toolTaskTypes[STATS_TOOL_TYPES];           /* 005030d8 */
 } Stats_Globs;
 
-/* The original object (LegoObject) as far as Stats.c reads it, at its Win32
- * offsets. In the matching build the port's EntitySlot has these fields at
- * the same offsets (asserted in entity.hpp). */
-typedef struct StatsObject {
-    int type;                   /* +0x000 */
-    int id;                     /* +0x004 */
-    unsigned char f_008[0x328];
-    unsigned int objLevel;      /* +0x330 */
-    StatsData* stats;           /* +0x334 */
-} StatsObject;
+/* LegoObject.c's object record (legoobject_record.h): Stats.c reads its
+ * type, ID, level and current stats record. */
+typedef struct Lego_Object StatsObject;
 
 /* PORT-ONLY: the port tail's view of statsGlobs (finding 581). */
 Stats_Globs* entity_stats_port_globs(void);

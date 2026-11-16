@@ -48,12 +48,12 @@ typedef struct Lego_Level {
     struct LegoBlockActivity2F* f_088; /* +0x088 the block activities */
     int f_08c;                      /* +0x08c */
     uint32_t f_090;                 /* +0x090 */
-    int f_094;                      /* +0x094 */
+    int f_094;                      /* +0x094 NERPs: crystals picked up */
     int f_098;                      /* +0x098 */
     int f_09c;                      /* +0x09c */
-    int crystals;                   /* +0x0a0 */
+    int crystals;                   /* +0x0a0 NERPs reads it as the ore stored */
     uint32_t f_0a4;                 /* +0x0a4 */
-    int f_0a8;                      /* +0x0a8 */
+    int f_0a8;                      /* +0x0a8 NERPs: ore picked up */
     int ore;                        /* +0x0ac */
     uint32_t f_0b0;                 /* +0x0b0 */
     char* nextLevel;                /* +0x0b4 */
@@ -102,8 +102,8 @@ struct Lego_Block {
     short f_22;                     /* +0x22 */
     uint32_t f_24;                  /* +0x24 cave-in count */
     uint32_t f_28;                  /* +0x28 click count */
-    int f_2c;                       /* +0x2c */
-    int f_30;                       /* +0x30 */
+    int f_2c;                       /* +0x2c NERPs: tutorial crystals */
+    int f_30;                       /* +0x30 NERPs: tutorial ore */
     unsigned char f_34;             /* +0x34 */
     unsigned char f_35[3];          /* +0x35 */
     int f_38;                       /* +0x38 */

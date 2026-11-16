@@ -34,6 +34,9 @@
 
 #include "crt/vc5names.h"
 #include "tutorial_script_imports.h"
+#include "lego_level_record.h"
+#include "legoobject_record.h"
+#include "entity_stats.h"
 
 /* The unit's functions have C linkage in the native C++ compile too: the
  * port tail's adapters and the shared entry expect it. */
@@ -76,57 +79,11 @@ typedef int (*NERPsBlockPointerCallback)(NERPs_BlockPointer* blockPointer,
                                          unsigned int x, unsigned int y,
                                          void* data);
 
-/* Lego_Block (0x48 bytes), the field this unit reads. */
-typedef struct NERPs_Block {
-    unsigned char pad_00[0x04];
-    unsigned char blockPointer;       /* +0x04 */
-    unsigned char pad_05[0x08 - 0x05];
-    unsigned int flags1;              /* +0x08 */
-    unsigned char pad_0c[0x28 - 0x0c];
-    int tutorialBlockClicks;          /* +0x28 */
-    int tutorialCrystals;             /* +0x2c */
-    int tutorialOre;                  /* +0x30 */
-    unsigned char pad_34[0x48 - 0x34];
-} NERPs_Block;
-
-/* Lego_Level (0x284 bytes), the fields this unit reads. */
-typedef struct NERPs_Level {
-    unsigned char pad_000[0x004];
-    struct TerrainMap* map;           /* +0x004 */
-    unsigned char pad_008[0x014 - 0x008];
-    unsigned int width;               /* +0x014 */
-    unsigned int height;              /* +0x018 */
-    unsigned char pad_01c[0x094 - 0x01c];
-    int crystals;                     /* +0x094 */
-    unsigned char pad_098[0x0a0 - 0x098];
-    int ore;                          /* +0x0a0 */
-    unsigned char pad_0a4[0x0a8 - 0x0a4];
-    int orePickedUp;                  /* +0x0a8 */
-    unsigned char pad_0ac[0x0b8 - 0x0ac];
-    NERPs_Block* blocks;              /* +0x0b8 */
-    unsigned char pad_0bc[0x114 - 0x0bc];
-    NERPs_BlockPointer* blockPointers[0x37]; /* +0x114 */
-    unsigned char pad_1f0[0x1fc - 0x1f0];
-    float oxygenLevel;                /* +0x1fc */
-    unsigned char pad_200[0x27c - 0x200];
-    int status;                       /* +0x27c */
-} NERPs_Level;
-
-/* LegoObject (0x40c bytes), the fields this unit reads and writes. */
-typedef struct NERPs_Object {
-    int type;                         /* +0x000 */
-    int id;                           /* +0x004 */
-    unsigned char pad_008[0x334 - 0x008];
-    unsigned char* stats;             /* +0x334 ObjectStats */
-    unsigned char pad_338[0x340 - 0x338];
-    float health;                     /* +0x340 */
-    unsigned char pad_344[0x36c - 0x344];
-    struct NERPs_Object* driver;      /* +0x36c */
-    unsigned char pad_370[0x3e8 - 0x370];
-    unsigned int flags3;              /* +0x3e8 */
-    unsigned char pad_3ec[0x3f8 - 0x3ec];
-    int tutorialIcon;                 /* +0x3f8 */
-} NERPs_Object;
+/* Lego.c's block and level records (lego_level_record.h) and LegoObject.c's
+ * object record (legoobject_record.h), by the names the unit uses. */
+typedef struct Lego_Block NERPs_Block;
+typedef struct Lego_Level NERPs_Level;
+typedef struct Lego_Object NERPs_Object;
 
 typedef struct NERPs_Vector3F {
     float x, y, z;
@@ -173,7 +130,7 @@ typedef struct NERPs_RockMonsterSearch {
 /* GetRecordObjectAtTutorial's block-pointer search (8 bytes). */
 typedef struct NERPs_RecordObjectSearch {
     int count;                        /* +0x0 */
-    struct NERPs_Object* object;      /* +0x4 */
+    struct Lego_Object* object;      /* +0x4 */
 } NERPs_RecordObjectSearch;
 
 /* The tutorial-block search (0x2c bytes): the tutorial rows pass one to the
@@ -189,7 +146,7 @@ typedef struct NERPs_TutorialSearch {
     int y;                            /* +0x18 */
     int f_1c;                         /* +0x1c */
     int checkType;                    /* +0x20 */
-    struct NERPs_Object* found;       /* +0x24 */
+    struct Lego_Object* found;       /* +0x24 */
     int objType;                      /* +0x28 */
 } NERPs_TutorialSearch;
 
@@ -2110,7 +2067,7 @@ void nerps_draw_tutorial_icon(NERPs_Level* level, void* viewport, int unused, fl
     nerpsruntimeGlobs.iconBounce -= (elapsed * 25.0f) * -0.013333334f;
     if (nerpsGlobs.tutorialIconObject) {
         if (lego_object_pointer_registry_get_slot(nerpsGlobs.tutorialIconObject - 1, (void**)&object)) {
-            object->tutorialIcon = 1;
+            object->field_3f8 = 1;
             entity_transform_position_get_outputs((struct Lego_Object*)object, &world.x, &world.y);
             world.z = terrain_map_world_z_get(level->map, world.x, world.y);
             camera_project_point_to_screen((struct ViewProjectionAdapter*)viewport, screen, &world.x);
@@ -2281,14 +2238,14 @@ int nerps_rock_monster_callback(NERPs_Object* obj, void* data)
         switch (search->mode) {
         case 0:
             if (obj->health > 0.0f &&
-                obj->health < *(float*)(obj->stats + 0xe8) -
-                              20.0f * (*(float*)(obj->stats + 0xe8) * 0.01f)) {
+                obj->health < obj->stats->PainThreshold -
+                              20.0f * (obj->stats->PainThreshold * 0.01f)) {
                 entity_action_sequence_reset((struct Lego_Object*)obj, 0);
                 search->count++;
             }
             break;
         case 1:
-            *(float*)(obj->stats + 0xe8) = search->value;
+            obj->stats->PainThreshold = search->value;
             break;
         case 2:
             obj->health = search->value;
@@ -2412,7 +2369,7 @@ int nerps_set_tutorial_block_clicks_callback(NERPs_BlockPointer* blockPointer,
                                              void* data)
 {
     NERPs_Level* level = NERPS_LEVEL();
-    level->blocks[y * level->width + x].tutorialBlockClicks = *(int*)data;
+    level->blocks[y * level->width + x].f_28 = *(int*)data;
     return 1;
 }
 
@@ -2434,7 +2391,7 @@ int nerps_set_tutorial_crystals_callback(NERPs_BlockPointer* blockPointer,
 
     blockPos.x = x;
     blockPos.y = y;
-    level->blocks[y * level->width + x].tutorialCrystals = *(int*)data;
+    level->blocks[y * level->width + x].f_2c = *(int*)data;
     for (i = 0; i < *(int*)data; i++)
         legoobject_build_placement_command_setup(&blockPos.x, 0, NULL, 1);
     return 1;
@@ -2457,7 +2414,7 @@ int nerps_set_ore_at_icon_positions_callback(NERPs_BlockPointer* blockPointer,
 
     blockPos.x = x;
     blockPos.y = y;
-    level->blocks[y * level->width + x].tutorialOre = *(int*)data;
+    level->blocks[y * level->width + x].f_30 = *(int*)data;
     legoobject_build_placement_alternate_command_setup(&blockPos.x, 0, NULL, 0);
     return 1;
 }
@@ -2600,7 +2557,7 @@ int nerps_driven_count_callback(NERPs_Object* obj, void* data)
 {
     NERPs_ObjectSearch* search = (NERPs_ObjectSearch*)data;
 
-    if (obj->type == search->type && obj->id == (int)search->id && obj->driver != NULL)
+    if (obj->type == search->type && obj->id == (int)search->id && obj->driveObject != NULL)
         search->count++;
     return 0;
 }
@@ -2630,7 +2587,7 @@ int nerps_add_tutorial_crystals_callback(NERPs_BlockPointer* blockPointer,
                                          void* data)
 {
     NERPs_Level* level = NERPS_LEVEL();
-    *(int*)data += level->blocks[y * level->width + x].tutorialCrystals;
+    *(int*)data += level->blocks[y * level->width + x].f_2c;
     return 1;
 }
 
@@ -2648,7 +2605,7 @@ int nerps_add_tutorial_block_clicks_callback(NERPs_BlockPointer* blockPointer,
                                              void* data)
 {
     NERPs_Level* level = NERPS_LEVEL();
-    *(int*)data += level->blocks[y * level->width + x].tutorialBlockClicks;
+    *(int*)data += level->blocks[y * level->width + x].f_28;
     return 1;
 }
 
@@ -3670,7 +3627,7 @@ int nerpfunc_get_random100(unsigned int* stack)
 // FUNCTION: LEGORR 0x004561f0
 int nerpfunc_get_crystals_picked_up(unsigned int* stack)
 {
-    return ((NERPs_Level*)g_active_level_retail)->crystals;
+    return ((NERPs_Level*)g_active_level_retail)->f_094;
 }
 
 // FUNCTION: LEGORR 0x00456200
@@ -3694,13 +3651,13 @@ uint32_t flh_magic_uu_noop(void)
 // FUNCTION: LEGORR 0x00456220
 int nerpfunc_get_ore_picked_up(unsigned int* stack)
 {
-    return ((NERPs_Level*)g_active_level_retail)->orePickedUp;
+    return ((NERPs_Level*)g_active_level_retail)->f_0a8;
 }
 
 // FUNCTION: LEGORR 0x00456230
 int nerpfunc_get_ore_currently_stored(unsigned int* stack)
 {
-    return ((NERPs_Level*)g_active_level_retail)->ore;
+    return ((NERPs_Level*)g_active_level_retail)->crystals;
 }
 
 // FUNCTION: LEGORR 0x00456240
@@ -4164,14 +4121,14 @@ void nerps_init_block_pointers_table(NERPs_Level* level)
     memset(level->blockPointers, 0, sizeof(level->blockPointers));
     for (x = 0; x < level->width; x++) {
         for (y = 0; y < level->height; y++) {
-            if (level->blocks[y * level->width + x].blockPointer) {
+            if (level->blocks[y * level->width + x].f_04) {
                 NERPs_BlockPointer* blockPointer = (NERPs_BlockPointer*)malloc(sizeof(NERPs_BlockPointer));
-                unsigned int index = level->blocks[y * level->width + x].blockPointer;
+                unsigned int index = level->blocks[y * level->width + x].f_04;
                 blockPointer->x = x;
                 blockPointer->y = y;
                 blockPointer->next = level->blockPointers[index];
                 level->blockPointers[index] = blockPointer;
-                level->blocks[y * level->width + x].blockPointer = 0;
+                level->blocks[y * level->width + x].f_04 = 0;
             }
         }
     }
@@ -4264,7 +4221,7 @@ int nerps_tutorial_action_callback(NERPs_BlockPointer* blockPointer,
             (char*)legoGlobs_rockMonsterData + type * 0x74, 3, type,
             blockPos.x, blockPos.y);
         if (object != NULL) {
-            *(float*)(object->stats + 0xe8) = 60.0f;
+            object->stats->PainThreshold = 60.0f;
             return 1;
         }
         break;
@@ -4375,10 +4332,10 @@ int nerps_tutorial_icon_object_callback(NERPs_Object* obj, void* data)
     if (obj != NULL) {
         entity_position_to_terrain_cell_adapter((struct Lego_Object*)obj, &blockPos.x, &blockPos.y);
         if (blockPos.x == ((NERPs_TutorialSearch*)data)->x && blockPos.y == ((NERPs_TutorialSearch*)data)->y) {
-            obj->tutorialIcon = 1;
+            obj->field_3f8 = 1;
             return 0;
         }
-        obj->tutorialIcon = 0;
+        obj->field_3f8 = 0;
     }
     return 0;
 }
@@ -4408,7 +4365,7 @@ void nerps_set_tutorial_pointer(unsigned int index, int on)
 
     while (blockPointer != NULL) {
         if (on == 1) {
-            level->blocks[level->width * blockPointer->y + blockPointer->x].blockPointer =
+            level->blocks[level->width * blockPointer->y + blockPointer->x].f_04 =
                 (unsigned char)index;
             search.index = index;
             search.count = 0;
@@ -4416,7 +4373,7 @@ void nerps_set_tutorial_pointer(unsigned int index, int on)
             nerps_block_pointer_enumerate(index, nerpsTutorialActionCallback, &search);
         }
         if (on == 0)
-            level->blocks[level->width * blockPointer->y + blockPointer->x].blockPointer = 0;
+            level->blocks[level->width * blockPointer->y + blockPointer->x].f_04 = 0;
         blockPointer = blockPointer->next;
     }
 

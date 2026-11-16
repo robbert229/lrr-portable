@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-struct LegoObject;
+struct Lego_Object;
 
 #define INTERFACE_MENUITEM_COUNT 74   /* 0x4a */
 #define INTERFACE_MENU_COUNT 24       /* 0x18 */

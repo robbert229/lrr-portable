@@ -910,7 +910,7 @@ uint32_t sim_status_banner_word_get(void)
 // FUNCTION: LEGORR 0x0041b9c0
 int interface_resolve_teleporter_item(int* type)
 {
-    struct LegoObject* obj = selection_active_entity_get_obj();
+    struct Lego_Object* obj = selection_active_entity_get_obj();
 
     if (!(interfaceGlobs.flags & INTERFACE_FLAG_IN) &&
         (interfaceGlobs.flags & INTERFACE_FLAG_OUT)) {
@@ -973,7 +973,7 @@ int interface_do_mouse(int x, int y, int leftButton, int leftButtonLast,
     char* text;
     unsigned int count;
     Image* image;
-    struct LegoObject* obj;
+    struct Lego_Object* obj;
     unsigned int last;
     unsigned int i;
     char* p;
@@ -1641,10 +1641,10 @@ void position_tracker_box_draw(const float bounds[4])
 }
 
 // FUNCTION: LEGORR 0x0041cea0
-void interface_object_menu_check(struct LegoObject* obj)
+void interface_object_menu_check(struct Lego_Object* obj)
 {
     unsigned int count;
-    struct LegoObject** list;
+    struct Lego_Object** list;
     unsigned int i;
 
     if (interfaceGlobs.currMenuType == 12) {
@@ -1668,10 +1668,10 @@ void interface_object_menu_check(struct LegoObject* obj)
 }
 
 // FUNCTION: LEGORR 0x0041cf20
-void interface_driven_object_menu_check(struct LegoObject* obj)
+void interface_driven_object_menu_check(struct Lego_Object* obj)
 {
     unsigned int count;
-    struct LegoObject** list;
+    struct Lego_Object** list;
     unsigned int i;
 
     if (interfaceGlobs.currMenuType == 10 || interfaceGlobs.currMenuType == 18 ||
@@ -1727,7 +1727,7 @@ void selection_mode5_cancel_at_point(const uint32_t coordinate[2])
 }
 
 // FUNCTION: LEGORR 0x0041d010
-void interface_back_to_main_if_selected(struct LegoObject* obj)
+void interface_back_to_main_if_selected(struct Lego_Object* obj)
 {
     if (s_context_mode != 0 &&
         selection_contains_entity_active_target(LEGOOBJ(obj), NULL)) {
@@ -1738,7 +1738,7 @@ void interface_back_to_main_if_selected(struct LegoObject* obj)
 // FUNCTION: LEGORR 0x0041d040
 int interface_is_item_available(int type)
 {
-    struct LegoObject* obj;
+    struct Lego_Object* obj;
     int objType;
     int mask;
     unsigned int abilities;
@@ -1783,8 +1783,8 @@ int interface_is_item_available(int type)
             return 0;
         }
         if ((entity_capability_flags_get(LEGOOBJ(obj)) & 1) &&
-            (obj->flags1 & 0x400) && obj->interactObject != NULL &&
-            !lego_terrain_cell_route_and_occupancy_check(LEGOOBJ(obj->interactObject), blockPos.x, blockPos.y, blockPos.x, blockPos.y, 1)) {
+            (obj->flags1 & 0x400) && obj->carriedObjects[0] != NULL &&
+            !lego_terrain_cell_route_and_occupancy_check(LEGOOBJ(obj->carriedObjects[0]), blockPos.x, blockPos.y, blockPos.x, blockPos.y, 1)) {
             return 0;
         }
         if (!(entity_stats_word_get(LEGOOBJ(obj)) & 0x2000000) &&
@@ -1885,7 +1885,7 @@ int interface_is_item_available(int type)
         if (!interface_can_lay_path(&interfaceGlobs.selBlockPos)) {
             return 0;
         }
-        terrain = LEGO_BLOCK(interfaceGlobs.selBlockPos.x, interfaceGlobs.selBlockPos.y)->terrain;
+        terrain = LEGO_BLOCK(interfaceGlobs.selBlockPos.x, interfaceGlobs.selBlockPos.y)->f_02;
         if (terrain == 1 || terrain == 11 ||
             !terrain_cell_walkable_flag_current(interfaceGlobs.selBlockPos.x, interfaceGlobs.selBlockPos.y) ||
             terrain_cell_flag_reserved_current(&interfaceGlobs.selBlockPos.x) ||
@@ -1899,12 +1899,12 @@ int interface_is_item_available(int type)
         }
         break;
     case 45:
-        if (obj == lego_object_fp && lego_camera_fp->mode == 0) {
+        if (obj == lego_object_fp && lego_camera_fp->trackFPCameraFrame == 0) {
             return 0;
         }
         break;
     case 46:
-        if (obj == lego_object_fp && lego_camera_fp->mode == 1) {
+        if (obj == lego_object_fp && lego_camera_fp->trackFPCameraFrame == 1) {
             return 0;
         }
         break;
@@ -1915,7 +1915,7 @@ int interface_is_item_available(int type)
         break;
     case 22:
     case 23:
-        if ((obj->flags1 & 0x400) && obj->interactObject->type == 9) {
+        if ((obj->flags1 & 0x400) && obj->carriedObjects[0]->type == 9) {
             return 0;
         }
         if ((entity_capability_flags_get(LEGOOBJ(obj)) & 1) &&
@@ -1943,7 +1943,7 @@ int interface_is_item_available(int type)
         break;
     case 7:
         if (terrain_cell_predicate_check_current((const uint32_t*)&interfaceGlobs.selBlockPos) ||
-            LEGO_BLOCK(interfaceGlobs.selBlockPos.x, interfaceGlobs.selBlockPos.y)->terrain == 6) {
+            LEGO_BLOCK(interfaceGlobs.selBlockPos.x, interfaceGlobs.selBlockPos.y)->f_02 == 6) {
             return 0;
         }
         break;
@@ -2193,8 +2193,8 @@ int interface_is_item_available(int type)
 // FUNCTION: LEGORR 0x0041dca0
 int interface_do_action(int type)
 {
-    struct LegoObject* obj;
-    struct LegoObject* found;
+    struct Lego_Object* obj;
+    struct Lego_Object* found;
     unsigned int mask;
 
     obj = selection_active_entity_get_obj();
@@ -2634,7 +2634,7 @@ void interface_set_object_item_flash(int objType, int objIndex, int on)
 }
 
 // FUNCTION: LEGORR 0x0041e7e0
-struct LegoObject* interface_get_primary_selected(void)
+struct Lego_Object* interface_get_primary_selected(void)
 {
     return selection_active_entity_get_obj();
 }
@@ -3011,7 +3011,7 @@ int interface_object_type_present(int objType, int objIndex)
 }
 
 // FUNCTION: LEGORR 0x0041f190
-int interface_callback_object_search(struct LegoObject* obj, void* data)
+int interface_callback_object_search(struct Lego_Object* obj, void* data)
 {
     InterfaceObjectSearch* search = (InterfaceObjectSearch*)data;
 
@@ -3085,7 +3085,7 @@ int interface_any_object_with_ability(unsigned int mask)
 }
 
 // FUNCTION: LEGORR 0x0041f390
-int interface_callback_can_reach(struct LegoObject* obj, void* data)
+int interface_callback_can_reach(struct Lego_Object* obj, void* data)
 {
     Point2I* blockPos = (Point2I*)data;
 
@@ -3099,7 +3099,7 @@ int interface_any_object_can_reach(const Point2I* blockPos)
 }
 
 // FUNCTION: LEGORR 0x0041f3e0
-int interface_callback_can_enter(struct LegoObject* obj, void* data)
+int interface_callback_can_enter(struct Lego_Object* obj, void* data)
 {
     Point2I* blockPos = (Point2I*)data;
 
@@ -3116,7 +3116,7 @@ int interface_any_object_can_reach_alt(const Point2I* blockPos)
 int interface_enumerate_selected(InterfaceObjectCallback callback, void* data)
 {
     unsigned int count;
-    struct LegoObject** list;
+    struct Lego_Object** list;
     unsigned int i;
 
     count = selection_active_count_get();
@@ -3130,7 +3130,7 @@ int interface_enumerate_selected(InterfaceObjectCallback callback, void* data)
 }
 
 // FUNCTION: LEGORR 0x0041f470
-int interface_callback_can_unload(struct LegoObject* obj, void* data)
+int interface_callback_can_unload(struct Lego_Object* obj, void* data)
 {
     if ((obj->flags1 & 0x400) && !(obj->flags1 & 0x2000)) {
         return 1;
@@ -3139,7 +3139,7 @@ int interface_callback_can_unload(struct LegoObject* obj, void* data)
 }
 
 // FUNCTION: LEGORR 0x0041f490
-int interface_callback_hungry(struct LegoObject* obj, void* data)
+int interface_callback_hungry(struct Lego_Object* obj, void* data)
 {
     if (obj->energy < 100.0f) {
         return 1;
@@ -3148,7 +3148,7 @@ int interface_callback_hungry(struct LegoObject* obj, void* data)
 }
 
 // FUNCTION: LEGORR 0x0041f4b0
-int interface_callback_damaged(struct LegoObject* obj, void* data)
+int interface_callback_damaged(struct Lego_Object* obj, void* data)
 {
     if (obj->health < 100.0f) {
         return 1;
@@ -3157,7 +3157,7 @@ int interface_callback_damaged(struct LegoObject* obj, void* data)
 }
 
 // FUNCTION: LEGORR 0x0041f4d0
-int interface_callback_can_pick_up(struct LegoObject* obj, void* data)
+int interface_callback_can_pick_up(struct Lego_Object* obj, void* data)
 {
     void* container;
     Point2I blockPos;
@@ -3179,8 +3179,8 @@ int interface_callback_can_pick_up(struct LegoObject* obj, void* data)
             return 1;
         }
     } else if ((obj->flags3 & 0x20) && (obj->flags3 & 0x40)) {
-        capacity = (obj->carryCount < stats_instance_word_at_ec(obj)) ? obj->carryCount : stats_instance_word_at_ec(obj);
-        if (obj->carriedCount < capacity) {
+        capacity = (obj->carryNullFrames < stats_instance_word_at_ec(obj)) ? obj->carryNullFrames : stats_instance_word_at_ec(obj);
+        if (obj->numCarriedObjects < capacity) {
             return 1;
         }
     }
@@ -3188,7 +3188,7 @@ int interface_callback_can_pick_up(struct LegoObject* obj, void* data)
 }
 
 // FUNCTION: LEGORR 0x0041f5f0
-int interface_callback_delete(struct LegoObject* obj, void* data)
+int interface_callback_delete(struct Lego_Object* obj, void* data)
 {
     obj->health = -1.0f;
     obj->flags4 |= 0x8;
@@ -3196,7 +3196,7 @@ int interface_callback_delete(struct LegoObject* obj, void* data)
 }
 
 // FUNCTION: LEGORR 0x0041f610
-int interface_callback_go_feed(struct LegoObject* obj, void* data)
+int interface_callback_go_feed(struct Lego_Object* obj, void* data)
 {
     if (obj->energy < 100.0f) {
         entity_activity23_state_transition(LEGOOBJ(obj));
@@ -3205,7 +3205,7 @@ int interface_callback_go_feed(struct LegoObject* obj, void* data)
 }
 
 // FUNCTION: LEGORR 0x0041f640
-int interface_callback_repair(struct LegoObject* obj, void* data)
+int interface_callback_repair(struct Lego_Object* obj, void* data)
 {
     if (obj->health < 100.0f) {
         aitask_entity_threshold_progress_event_queue(LEGOOBJ(obj), 0);
@@ -3214,13 +3214,13 @@ int interface_callback_repair(struct LegoObject* obj, void* data)
 }
 
 // FUNCTION: LEGORR 0x0041f670
-int interface_callback_lacks_tool(struct LegoObject* obj, void* data)
+int interface_callback_lacks_tool(struct Lego_Object* obj, void* data)
 {
     return !ai_activity_scan(LEGOOBJ(obj), (int)(size_t)data);
 }
 
 // FUNCTION: LEGORR 0x0041f690
-int interface_callback_get_tool(struct LegoObject* obj, void* data)
+int interface_callback_get_tool(struct Lego_Object* obj, void* data)
 {
     if (!ai_activity_scan(LEGOOBJ(obj), (int)(size_t)data)) {
         aitask_object_event_type2_queue((void*)data);
@@ -3229,14 +3229,14 @@ int interface_callback_get_tool(struct LegoObject* obj, void* data)
 }
 
 // FUNCTION: LEGORR 0x0041f6c0
-int interface_callback_detach(struct LegoObject* obj, void* data)
+int interface_callback_detach(struct Lego_Object* obj, void* data)
 {
     if (entity_capability_flags_get(LEGOOBJ(obj)) & 1) {
-        if ((obj->flags1 & 0x400) && obj->interactObject != NULL) {
-            lego_object_drop_carried(obj->interactObject);
+        if ((obj->flags1 & 0x400) && obj->carriedObjects[0] != NULL) {
+            lego_object_drop_carried(obj->carriedObjects[0]);
             return 0;
         }
-    } else if (!(obj->flags1 & 0x400) || obj->interactObject->type != 9) {
+    } else if (!(obj->flags1 & 0x400) || obj->carriedObjects[0]->type != 9) {
         lego_object_detach_all(obj, 0);
     }
     return 0;
@@ -3276,13 +3276,13 @@ int interface_can_lay_path(const Point2I* blockPos)
 }
 
 // FUNCTION: LEGORR 0x0041f820
-int interface_callback_has_tool(struct LegoObject* obj, void* data)
+int interface_callback_has_tool(struct Lego_Object* obj, void* data)
 {
     return ai_activity_scan(LEGOOBJ(obj), (int)(size_t)data) != 0;
 }
 
 // FUNCTION: LEGORR 0x0041f840
-int interface_callback_remove_spider(struct LegoObject* obj, void* data)
+int interface_callback_remove_spider(struct Lego_Object* obj, void* data)
 {
     if (ai_activity_scan(LEGOOBJ(obj), 6)) {
         entity_kind6_tick_down_marker_spawn_obj(obj);

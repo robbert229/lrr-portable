@@ -24,6 +24,9 @@
 #include <stdint.h>
 
 #include "gods98/images.h"
+#include "legoobject_record.h"
+#include "lego_level_record.h"
+#include "camera_control.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,57 +38,12 @@ struct Point2I;
 struct TerrainMap;
 struct TextureSurface;
 
-/* The fields of LegoObject (LegoObject.c, GAME-023) that the unit reads, at
- * their Win32 offsets. The port's EntitySlot has another layout; the unit
- * passes these records to port entries as EntitySlot pointers. */
-typedef struct LegoObject {
-    int type;                               /* +0x000 */
-    int id;                                 /* +0x004 */
-    char* customName;                       /* +0x008 */
-    unsigned char pad_00c[0x308 - 0x00c];
-    struct LegoObject* interactObject;      /* +0x308 */
-    unsigned char pad_30c[0x324 - 0x30c];
-    unsigned int carriedCount;              /* +0x324 */
-    unsigned int carryCount;                /* +0x328 */
-    unsigned char pad_32c[0x330 - 0x32c];
-    unsigned int objLevel;                  /* +0x330 */
-    unsigned char pad_334[0x340 - 0x334];
-    float health;                           /* +0x340 */
-    float energy;                           /* +0x344 */
-    unsigned char pad_348[0x36c - 0x348];
-    struct LegoObject* driveObject;         /* +0x36c */
-    unsigned char pad_370[0x3d4 - 0x370];
-    float field_3d4;                        /* +0x3d4 */
-    int field_3d8;                          /* +0x3d8 */
-    unsigned char pad_3dc[0x3e0 - 0x3dc];
-    unsigned int flags1;                    /* +0x3e0 */
-    unsigned int flags2;                    /* +0x3e4 */
-    unsigned int flags3;                    /* +0x3e8 */
-    unsigned int flags4;                    /* +0x3ec */
-    unsigned int abilityFlags;              /* +0x3f0 */
-} LegoObject;
-
-
-/* Lego_Block (0x48 bytes) and the Lego_Level fields the unit reads. */
-typedef struct LegoBlock {
-    unsigned char pad_00[2];
-    unsigned char terrain;                  /* +0x02 */
-    unsigned char pad_03[5];
-    unsigned int flags1;                    /* +0x08 */
-    unsigned char pad_0c[0x48 - 0x0c];
-} LegoBlock;
-
-typedef struct LegoLevel {
-    unsigned char pad_00[0x14];
-    unsigned int width;                     /* +0x14 */
-    unsigned char pad_18[0xb8 - 0x18];
-    LegoBlock* blocks;                      /* +0xb8 */
-} LegoLevel;
-
-typedef struct LegoCamera {
-    unsigned char pad_00[0x14];
-    int mode;                               /* +0x14 */
-} LegoCamera;
+/* LegoObject.c's object record (legoobject_record.h), Lego.c's block and
+ * level records (lego_level_record.h) and the camera (camera_control.h), by
+ * the names the unit uses. */
+typedef struct Lego_Object LegoObject;
+typedef struct Lego_Block LegoBlock;
+typedef struct Lego_Level LegoLevel;
 
 /* One entry of a Dependencies.c requirement list (0x10 bytes). */
 typedef struct InterfaceDependency {

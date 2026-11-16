@@ -268,12 +268,14 @@ void lego_sound_minimum_distance_update_mode(int mode, void* object, int cameraF
 
 /* ---- group E ---- */
 
-/* The per-type model records legoGlobs keeps arrays of, by size only (the
- * shutdown passes their addresses to their owners' release functions). */
-typedef struct LegoVehicleModelE { unsigned char bytes[0x1ec]; } LegoVehicleModelE;
-typedef struct LegoCreatureModelE { unsigned char bytes[0x74]; } LegoCreatureModelE;
-typedef struct LegoBuildingModelE { unsigned char bytes[0x14c]; } LegoBuildingModelE;
-typedef struct LegoUpgradeModelE { unsigned char bytes[0x10]; } LegoUpgradeModelE;
+/* The per-type model records legoGlobs keeps arrays of (the shutdown
+ * passes their addresses to their owners' release functions): Vehicle.c's,
+ * Creature.c's (animation_object_record.h), Building.c's and Upgrade.c's
+ * models. */
+typedef struct VehicleModel LegoVehicleModelE;
+typedef struct AnimationObject LegoCreatureModelE;
+typedef struct BuildingModel LegoBuildingModelE;
+typedef struct Upgrade_PartModel LegoUpgradeModelE;
 /* Maths.h Point2F / Vector3F / Vector4F. */
 typedef struct LegoPoint2FE { float x, y; } LegoPoint2FE;
 typedef struct LegoVector3FE { float x, y, z; } LegoVector3FE;
@@ -323,11 +325,9 @@ void lego_audio_playback_toggle(int on);
 
 /* ---- group F ---- */
 
-/* Lego_RockMonsterData? (0x74 bytes): one creature type's data, read by
- * address only. */
-typedef struct LegoCreatureDataF {
-    unsigned char f_00[0x74];
-} LegoCreatureDataF;
+/* Lego_RockMonsterData? (0x74 bytes on Win32): one creature type's data, read
+ * by address only. */
+typedef struct AnimationObject LegoCreatureDataF;
 
 /* gods98 Input's key maps (stand-ins in lego_unit.c), and Input.h's
  * Input_IsKeyPressed. */

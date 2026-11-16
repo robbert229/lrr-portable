@@ -24,6 +24,7 @@
 #include "crt/vc5names.h"
 #include "construction.h"
 #include "construction_imports.h"
+#include "building_model_record.h"
 /* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
  * above, pays for its symbols (finding 538). */
 #include "lego_globs.h"

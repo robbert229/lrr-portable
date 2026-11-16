@@ -40,6 +40,7 @@
 #include "upgrade_record.h"
 #include "vehicle_model_record.h"
 #include "building_model_record.h"
+#include "animation_object_record.h"
 #include "entity_stats.h"
 #include "construction_record.h"
 #include "terrain_map.h"
@@ -5384,7 +5385,7 @@ void* lego_upgrade_name_entry_find(const char* name)
 
     for (loop = 0; loop < legoGlobs_catalogCounts[4]; loop++) {
         if (stricmp(name, legoGlobs_upgradeName[loop]) == 0) {
-            return (char*)s_upgrade_records + loop * 16;
+            return &((LegoUpgradeModelE*)s_upgrade_records)[loop];
         }
     }
     return NULL;
@@ -5556,13 +5557,13 @@ int lego_upgrade_types_load(void)
         legoGlobs_catalogCounts[4]++;
     }
     if (legoGlobs_catalogCounts[4] != 0) {
-        if ((s_upgrade_records = malloc(16 * legoGlobs_catalogCounts[4])) != NULL) {
+        if ((s_upgrade_records = malloc(sizeof(LegoUpgradeModelE) * legoGlobs_catalogCounts[4])) != NULL) {
             if ((legoGlobs_upgradeName = (char**)malloc(sizeof(char*) * legoGlobs_catalogCounts[4])) != NULL) {
                 arrayItem = block_subgroup(legoGlobs_config, string_path_join(s_engine_config_root, "UpgradeTypes", NULL));
                 while (arrayItem != NULL) {
-                    render_resource_binding_initialize((struct RenderResourceBinding*)((char*)s_upgrade_records + loop * 16),
+                    render_resource_binding_initialize((struct RenderResourceBinding*)&((LegoUpgradeModelE*)s_upgrade_records)[loop],
                                                        (void*)(size_t)loop, legoGlobs_rootCont, arrayItem->value);
-                    animation_object_visibility_set((char*)s_upgrade_records + loop * 16, 1);
+                    animation_object_visibility_set(&((LegoUpgradeModelE*)s_upgrade_records)[loop], 1);
                     legoGlobs_upgradeName[loop] = (char*)malloc(strlen(arrayItem->key) + 1);
                     memcpy(legoGlobs_upgradeName[loop], arrayItem->key, strlen(arrayItem->key) + 1);
                     loop++;

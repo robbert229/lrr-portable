@@ -17,6 +17,7 @@
 #include <stdint.h>
 
 #include "legoobject_record.h"
+#include "lego_level_record.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -141,12 +142,7 @@ typedef struct LegoObjGE_RouteMarkerSearch {
     int selector;            /* +0x20 legoobject_flags_contain_requested_single_bit */
 } LegoObjGE_RouteMarkerSearch;
 /* Lego_Level and Lego_Block (0x48), the fields group E reads. */
-typedef struct LegoObjGE_Block {
-    unsigned char pad_00[0x2c];
-    int field_2c;            /* +0x2c build-placement counter */
-    int field_30;            /* +0x30 alternate build-placement counter */
-    unsigned char pad_34[0x48 - 0x34];
-} LegoObjGE_Block;
+typedef struct Lego_Block LegoObjGE_Block;
 /* Point2F. */
 typedef struct LegoObjGE_Point2F {
     float x;
@@ -185,11 +181,7 @@ int legoobject_record_flag20_query(Lego_Object* obj, int* outCell); /* 00439e40 
 
 /* ---- group G: 00439e70-0043a960 ---- */
 /* Lego_Block (0x48) and the Lego_Level fields group G reads. */
-typedef struct LegoObjG_Block {
-    unsigned char pad_00[2];
-    unsigned char terrain;            /* +0x02 */
-    unsigned char pad_03[0x48 - 0x03];
-} LegoObjG_Block;
+typedef struct Lego_Block LegoObjG_Block;
 /* RoutingBlock (0x14 bytes): one entry of Lego_Object.routeBlocks. */
 typedef struct LegoObjG_RouteBlock {
     int blockPos[2];                  /* +0x00 */
@@ -198,12 +190,7 @@ typedef struct LegoObjG_RouteBlock {
     unsigned char actionFlags;        /* +0x11 */
     unsigned char pad_12[0x14 - 0x12];
 } LegoObjG_RouteBlock;
-typedef struct LegoObjG_Level {
-    unsigned char pad_00[0x14];
-    unsigned int width;               /* +0x14 */
-    unsigned char pad_18[0xb8 - 0x18];
-    LegoObjG_Block* blocks;           /* +0xb8 */
-} LegoObjG_Level;
+typedef struct Lego_Level LegoObjG_Level;
 void legoobject_attached_object_list_detach(Lego_Object* obj, int resetMode); /* 00439e70 */
 int legoobject_cell_step_command_issue_with_jitter(Lego_Object* obj, int* target, float* input, int mode, int markPending); /* 0043a120 */
 int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target); /* 0043a300 */
@@ -247,13 +234,9 @@ typedef struct LegoObjH_Map {
     int blockHeight;                  /* +0x04 */
 } LegoObjH_Map;
 /* legoGlobs.rockMonsterData: the creature models (0x74 bytes each). */
-typedef struct LegoObjH_CreatureModel {
-    unsigned char bytes[0x74];
-} LegoObjH_CreatureModel;
+typedef struct AnimationObject LegoObjH_CreatureModel;
 /* legoGlobs.buildingData: the building models (0x14c bytes each). */
-typedef struct LegoObjH_BuildingModel {
-    unsigned char bytes[0x14c];
-} LegoObjH_BuildingModel;
+typedef struct BuildingModel LegoObjH_BuildingModel;
 void legoobject_queue_for_rockfall_processing_if_eligible(Lego_Object* obj); /* 0043a9e0 */
 void legoobject_pair_interaction_gate(Lego_Object* obj, Lego_Object* other); /* 0043a9f0 */
 void legoobject_proximity_activity_raise(Lego_Object* obj); /* 0043aab0 */
@@ -295,19 +278,8 @@ void legoobject_activity_counters_advance(Lego_Object* obj, float elapsed); /* 0
 
 /* ---- group J: 0043c810-0043c810 (part 2, issue #588) ---- */
 /* Lego_Block (0x48) and the Lego_Level fields group J reads. */
-typedef struct LegoObjJ_Block {
-    unsigned char pad_00[2];
-    unsigned char terrain;            /* +0x02 */
-    unsigned char pad_03[0x0c - 0x03];
-    unsigned int flags1;              /* +0x0c */
-    unsigned char pad_10[0x48 - 0x10];
-} LegoObjJ_Block;
-typedef struct LegoObjJ_Level {
-    unsigned char pad_00[0x14];
-    unsigned int width;               /* +0x14 */
-    unsigned char pad_18[0xb8 - 0x18];
-    LegoObjJ_Block* blocks;           /* +0xb8 */
-} LegoObjJ_Level;
+typedef struct Lego_Block LegoObjJ_Block;
+typedef struct Lego_Level LegoObjJ_Level;
 /* Vector3F. */
 typedef struct LegoObjJ_Vector3F {
     float x;

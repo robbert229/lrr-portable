@@ -123,7 +123,7 @@ ElectricFenceNode* electric_fence_create(ElectricFenceObject* object, int bx,
     node->blockY = by;
     electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].flags = 0;
     electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence = node;
-    object->flags3 |= 0x2000000;
+    object->flags2 |= 0x2000000;
     electric_fence_block_surfaces_update(bx, by);
     return node;
 }
@@ -152,7 +152,7 @@ void electric_fence_remove(ElectricFenceObject* object)
     int bx, by;
     ElectricFenceNode* node;
 
-    if (object->flags3 & 0x2000000) {
+    if (object->flags2 & 0x2000000) {
         legoobject_block_position_get((struct Lego_Object*)object, &bx, &by);
         node = electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence;
         if (node != NULL)
@@ -218,7 +218,7 @@ int electric_fence_can_place_at_block(int bx, int by)
 
     idx = electricFenceGlobs.level->width * by + bx;
     block = &electricFenceGlobs.level->blocks[idx];
-    if (!(block->flags1 & 0x8) || block->predug == 6 || block->predug == 7 ||
+    if (!(block->flags1 & 0x8) || block->f_02 == 6 || block->f_02 == 7 ||
         electricFenceGlobs.fenceGrid[idx].fence != NULL ||
         electric_fence_block_is_building(electricFenceGlobs.level, bx, by, 0))
         return 0;
@@ -309,7 +309,7 @@ int electric_fence_spark_from(ElectricFenceObject* object, int bx, int by)
         entity_transform_position_get_outputs((struct Lego_Object*)object, &wPos.x, &wPos.y);
         terrain_map_world_to_block(electricFenceGlobs.level->map, wPos.x, wPos.y, &bx, &by);
         if (!(entity_state_flags_get((struct Lego_Object*)object) & 0x400) &&
-            !(object->flags4 & 0x20000000))
+            !(object->flags3 & 0x20000000))
             return 0;
     } else {
         if (electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].fence == NULL &&
@@ -347,7 +347,7 @@ int electric_fence_building_spark_callback(ElectricFenceObject* object,
                     direction = 2;
             }
             shape = (TerrainMapPoint2I*)(uintptr_t)task_field84_get_and_field88_out(
-                object->stats, &count);
+                object->building, &count);
             shape = (TerrainMapPoint2I*)rotated_pairs_scratch_fill(
                 &blockPos.x, (const int*)shape, count, direction);
             for (i = 0; i < count; i++) {

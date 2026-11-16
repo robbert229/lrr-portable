@@ -38,11 +38,11 @@ void aitask_task_registry_remove_type0_entry_by_pair(const int* blockPos); /* 00
 
 /* GAME-020 Interface.c (interface_unit.c): the menu icons' click counts,
  * flashing and the advisor. */
-struct LegoObject;
+struct Lego_Object;
 void interface_set_item_flash(int type, int on);             /* 0041e770 */
 void interface_set_object_item_flash(int objType, int objIndex,
                                      int on);                /* 0041e7a0 */
-struct LegoObject* interface_get_primary_selected(void);     /* 0041e7e0 */
+struct Lego_Object* interface_get_primary_selected(void);     /* 0041e7e0 */
 unsigned int interface_set_item_clicks(int type,
                                        unsigned int clicks); /* 0041e7f0 */
 unsigned int interface_get_item_clicks(int type);            /* 0041e810 */

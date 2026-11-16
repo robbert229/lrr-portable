@@ -260,10 +260,10 @@ extern struct Lego_Globs legoGlobs;
 #define legoGlobs_f_556180 legoGlobs.field_c0
 #define legoGlobs_f_556184 legoGlobs.field_c4
 #define legoGlobs_f_556188 legoGlobs.field_c8
-#define legoGlobs_vehicleData (*(struct LegoVehicleModelE**)&legoGlobs.vehicleData)
-#define legoGlobs_miniFigureData (*(struct LegoCreatureModelE**)&legoGlobs.miniFigureData)
-#define legoGlobs_rockMonsterData (*(struct LegoCreatureModelE**)&legoGlobs.rockMonsterData)
-#define legoGlobs_buildingData (*(struct LegoBuildingModelE**)&legoGlobs.buildingData)
+#define legoGlobs_vehicleData (*(struct VehicleModel**)&legoGlobs.vehicleData)
+#define legoGlobs_miniFigureData (*(struct AnimationObject**)&legoGlobs.miniFigureData)
+#define legoGlobs_rockMonsterData (*(struct AnimationObject**)&legoGlobs.rockMonsterData)
+#define legoGlobs_buildingData (*(struct BuildingModel**)&legoGlobs.buildingData)
 #define legoGlobs_vehicleName legoGlobs.vehicleName
 #define legoGlobs_miniFigureName legoGlobs.miniFigureName
 #define legoGlobs_rockMonsterName legoGlobs.rockMonsterName
