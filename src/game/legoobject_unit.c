@@ -5077,10 +5077,16 @@ void legoobject_attached_direction_vector_update(Lego_Object* obj)
                 ddiscene_object_position_set(cont, null, 0.0f, 0.0f, 0.0f);
                 ddiscene_object_pose_method_dispatch(cont, null, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f);
                 ddiscene_object_position_get(cont, NULL, &pos.x);
-                legoobject_vector3d_subtract(&pos.x, &pos.x, &carried->field_2a0);
-                len = legoobject_vector3d_modulus(&pos.x);
+                {
+                    float* b = &carried->field_2a0;
+                    LegoObjL_Vector3F d;
+                    d.x = pos.x - b[0]; d.y = pos.y - b[1]; d.z = pos.z - b[2];
+                    pos.x = d.x; pos.y = d.y; pos.z = d.z;
+                }
+                len = sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
                 carried->faceDirectionLength = len;
-                legoobject_vector3d_scale((LegoObjL_Vector3F*)carried->faceDirection, &pos, 1.0f / len);
+                len = 1.0f / len;
+                legoobject_vector3d_scale((LegoObjL_Vector3F*)carried->faceDirection, &pos, len);
             }
         }
     }
