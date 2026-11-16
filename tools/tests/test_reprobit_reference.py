@@ -102,3 +102,18 @@ class OriginalBytesTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CountWindowTest(unittest.TestCase):
+    def test_small_pad_counts_start_at_one(self):
+        self.assertEqual(rr.count_window(3), (1, 64))
+        self.assertEqual(rr.count_window(31), (1, 64))
+
+    def test_large_pad_counts_are_centred(self):
+        self.assertEqual(rr.count_window(162), (131, 194))
+        self.assertEqual(rr.count_window(187), (156, 219))
+
+    def test_window_holds_at_most_64_lengths(self):
+        start, stop = rr.count_window(121)
+        self.assertEqual(stop - start + 1, 64)
+        self.assertTrue(start <= 121 <= stop)

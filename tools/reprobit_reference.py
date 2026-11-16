@@ -8,14 +8,15 @@ a COFF compile of the unit: the original only exists as LegoRR.exe, and
 relocated fields cannot be qualified from bare bytes. This tool finds one.
 
     python3 tools/reprobit_reference.py ADDR [ADDR ...] [--pads 0 128]
-        [--counts 1 64] [--jobs 8] [--out reference/grind] [--json]
+        [--counts FIRST LAST] [--jobs 8] [--out reference/grind] [--json]
 
 For each N in --pads it compiles the unit from a scratch copy with N inert
 `extern int` pads after its first #include (phase_probe.py's pads, finding
 664), with the matching build's flags. The first compile whose function body
 equals the original's bytes, outside relocated fields, is written unchanged
 to OUT/<addr>.obj. Next to it, OUT/<addr>.json is a grind plan for that
-function: an `extern_runs` search over --counts declarations after the
+function: an `extern_runs` search over --counts declarations (default: 64
+lengths centred on the pad count) after the
 unit's final include, or at its start when an include follows the function
 (a different seat from the pads, so the counts differ).
 Run it with
@@ -112,6 +113,17 @@ def run_placement(source_text: str, function_line: int) -> str:
     includes = [number for number, line in enumerate(source_text.splitlines(), start=1)
                 if line.startswith("#include")]
     return "prefix" if includes and includes[-1] > function_line else "after_includes"
+
+
+def count_window(pads: int, width: int = 64) -> tuple[int, int]:
+    """The extern-run lengths a grind plan searches for a reference found at `pads`.
+
+    The run sits at a different seat from the pads, so its length differs a
+    little; a window of `width` lengths (grind's limit) centred on the pad
+    count, starting at 1 at the least.
+    """
+    start = max(1, pads - (width // 2 - 1))
+    return start, start + width - 1
 
 
 def grind_plan(*, unit: dict, symbol: str, reference: str, counts: tuple[int, int],
@@ -236,7 +248,8 @@ def find_references(addresses: list[int], *, pads: tuple[int, int], jobs: int) -
         unit.close()
 
 
-def write_outputs(source: Path, found: list[Found], objects: dict[int, bytes], *, out: Path, counts: tuple[int, int]) -> None:
+def write_outputs(source: Path, found: list[Found], objects: dict[int, bytes], *, out: Path,
+                  counts: tuple[int, int] | None) -> None:
     build_plan = json.loads((ROOT / BUILD_PLAN).read_text(encoding="utf-8"))
     unit = translation_unit(build_plan, source.relative_to(ROOT).as_posix())
     out.mkdir(parents=True, exist_ok=True)
@@ -248,7 +261,8 @@ def write_outputs(source: Path, found: list[Found], objects: dict[int, bytes], *
         obj.write_bytes(objects[item.address])
         reference = obj.relative_to(ROOT).as_posix()
         plan.write_bytes(grind_plan(unit=unit, symbol=item.symbol, reference=reference,
-                                    counts=counts, placement=item.placement))
+                                    counts=counts or count_window(item.pads),
+                                    placement=item.placement))
         item.object_path = reference
         item.plan_path = plan.relative_to(ROOT).as_posix()
 
@@ -258,8 +272,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("addresses", nargs="+", type=lambda s: int(s, 16), metavar="ADDR")
     parser.add_argument("--pads", nargs=2, type=int, default=(0, 128), metavar=("FIRST", "LAST"),
                         help="pad counts to compile (default 0 128)")
-    parser.add_argument("--counts", nargs=2, type=int, default=(1, 64), metavar=("FIRST", "LAST"),
-                        help="extern-run lengths the grind plan searches (default 1 64; at most 64)")
+    parser.add_argument("--counts", nargs=2, type=int, default=None, metavar=("FIRST", "LAST"),
+                        help="extern-run lengths the grind plan searches (default: 64 lengths "
+                             "centred on the pad count found; at most 64)")
     parser.add_argument("--jobs", type=int, default=min(8, os.cpu_count() or 1))
     parser.add_argument("--out", type=Path, default=ROOT / "reference" / "grind")
     parser.add_argument("--json", action="store_true")
@@ -269,13 +284,15 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        if not 1 <= args.counts[0] <= args.counts[1] or args.counts[1] - args.counts[0] >= 64:
+        if args.counts is not None and (
+                not 1 <= args.counts[0] <= args.counts[1] or args.counts[1] - args.counts[0] >= 64):
             raise ReferenceError("--counts must name 1 to 64 lengths from 1")
         if args.pads[0] < 0 or args.pads[1] < args.pads[0]:
             raise ReferenceError("--pads must be an increasing range from 0")
         out = output_dir(args.out)
         source, found, objects = find_references(args.addresses, pads=tuple(args.pads), jobs=args.jobs)
-        write_outputs(source, found, objects, out=out, counts=tuple(args.counts))
+        write_outputs(source, found, objects, out=out,
+                      counts=tuple(args.counts) if args.counts is not None else None)
     except Exception as exc:  # pylint: disable=broad-except
         if type(exc).__name__ not in ("ReferenceError", "ProbeError", "MatchError"):
             raise

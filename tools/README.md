@@ -1270,7 +1270,9 @@ outside relocated fields, unchanged, as `reference/grind/<addr>.obj`.
 
 Beside it, `<addr>.json` is the grind plan for that function: its
 translation unit from `reprobit/build-plan.json`, its decorated symbol, and
-an `extern_runs` search over `--counts` (default 1–64) declarations. Grind
+an `extern_runs` search over `--counts` declarations; the default is the 64
+lengths (grind's limit) centred on the pad count found, from 1 at least, so
+a 162-pad reference searches runs of 131–194. Grind
 seats those after the unit's final `#include`, or at the unit's start
 (`placement: prefix`) when an `#include` follows the function, as in
 `terrain_map.c` and `frontend_unit.c`. That is not where the pads go, so the
