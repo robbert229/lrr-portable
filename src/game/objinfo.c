@@ -232,40 +232,43 @@ void objinfo_draw_health_bar(struct Lego_Object* liveObj, int screenX, int scree
     Point2F hiFrom[OBJINFO_MAXBORDERLINES];
     Point2F loFrom[OBJINFO_MAXBORDERLINES];
     unsigned int lineCount = 0;
-    float width, height;
-    Area2F rect;
+    float size;
     unsigned int loop;
     float border;
     float* colour;
 
     if ((objInfoGlobs.flags & OBJINFO_GLOB_FLAG_HEALTHBAR) &&
         damage_font_live_object_check_can_show_damage((struct EntitySlot*)liveObj)) {
+        Area2F rect;
+        *(Point2F*)&rect.x = objInfoGlobs.HealthBarPosition;
+        *(Point2F*)&rect.width = objInfoGlobs.HealthBarWidthHeight;
         border = (float)(objInfoGlobs.HealthBarBorderSize * 2);
-        width = objInfoGlobs.HealthBarWidthHeight.x + border;
-        height = objInfoGlobs.HealthBarWidthHeight.y + border;
-        rect.x = (float)screenX + objInfoGlobs.HealthBarPosition.x;
-        rect.y = (float)screenY + objInfoGlobs.HealthBarPosition.y;
+        rect.width = objInfoGlobs.HealthBarWidthHeight.x + border;
+        rect.height = objInfoGlobs.HealthBarWidthHeight.y + border;
+        rect.x += (float)screenX;
+        rect.y += (float)screenY;
 
+        /* Each border row adds two light lines (left, top) and two dark
+         * lines (bottom, right); lineCount steps once per pair. */
         for (loop = 0; loop < objInfoGlobs.HealthBarBorderSize; loop++) {
-            /* Left and top in the light shade. */
             hiFrom[lineCount].x = rect.x + loop;
             hiFrom[lineCount].y = rect.y + loop;
-            hiTo[lineCount].x = hiFrom[lineCount].x;
-            hiTo[lineCount].y = (rect.y + height - 2.0f) - loop;
-            hiFrom[lineCount + 1].x = (rect.x + width - 1.0f) - loop;
-            hiFrom[lineCount + 1].y = rect.y + loop;
-            hiTo[lineCount + 1].x = (rect.x + loop) - -1.0f;
-            hiTo[lineCount + 1].y = rect.y + loop;
-            /* Bottom and right in the dark shade. */
             loFrom[lineCount].x = rect.x + loop;
-            loFrom[lineCount].y = (rect.y + height - 1.0f) - loop;
-            loTo[lineCount].x = (rect.x + width - 2.0f) - loop;
+            loFrom[lineCount].y = (rect.y + rect.height - 1.0f) - loop;
+            hiTo[lineCount].x = hiFrom[lineCount].x;
+            hiTo[lineCount].y = (rect.y + rect.height - 2.0f) - loop;
+            loTo[lineCount].x = (rect.x + rect.width - 2.0f) - loop;
             loTo[lineCount].y = loFrom[lineCount].y;
-            loFrom[lineCount + 1].x = (rect.x + width - 1.0f) - loop;
-            loFrom[lineCount + 1].y = (rect.y + height - 1.0f) - loop;
-            loTo[lineCount + 1].x = loFrom[lineCount + 1].x;
-            loTo[lineCount + 1].y = (rect.y + loop) - -1.0f;
-            lineCount += 2;
+            lineCount++;
+            hiFrom[lineCount].x = (rect.x + rect.width - 1.0f) - loop;
+            hiFrom[lineCount].y = rect.y + loop;
+            loFrom[lineCount].x = (rect.x + rect.width - 1.0f) - loop;
+            loFrom[lineCount].y = (rect.y + rect.height - 1.0f) - loop;
+            hiTo[lineCount].x = (rect.x + loop) - -1.0f;
+            hiTo[lineCount].y = rect.y + loop;
+            loTo[lineCount].x = loFrom[lineCount].x;
+            loTo[lineCount].y = (rect.y + loop) - -1.0f;
+            lineCount++;
         }
 
         health = liveObj->health;
@@ -273,22 +276,22 @@ void objinfo_draw_health_bar(struct Lego_Object* liveObj, int screenX, int scree
         else if (health > 100.0f) health = 100.0f;
 
         if (objInfoGlobs.flags & OBJINFO_GLOB_FLAG_HEALTHBAR_VERTICAL) {
-            rect.height = (1.0f - health * 0.01f) * height;
-            rect.width = width;
+            size = rect.height;
+            rect.height = (1.0f - health * 0.01f) * rect.height;
             surface_fill_pixel_spans(&rect, 1, objInfoGlobs.HealthBarBackgroundRGB.red,
                                      objInfoGlobs.HealthBarBackgroundRGB.green,
                                      objInfoGlobs.HealthBarBackgroundRGB.blue, 0);
             rect.y += rect.height;
-            rect.height = height - rect.height;
+            rect.height = size - rect.height;
             colour = &objInfoGlobs.HealthBarRGB.red;
         } else {
-            rect.width = health * width * 0.01f;
-            rect.height = height;
+            size = rect.width;
+            rect.width = health * rect.width * 0.01f;
             surface_fill_pixel_spans(&rect, 1, objInfoGlobs.HealthBarRGB.red,
                                      objInfoGlobs.HealthBarRGB.green,
                                      objInfoGlobs.HealthBarRGB.blue, 0);
             rect.x += rect.width;
-            rect.width = width - rect.width;
+            rect.width = size - rect.width;
             colour = &objInfoGlobs.HealthBarBackgroundRGB.red;
         }
         surface_fill_pixel_spans(&rect, 1, colour[0], colour[1], colour[2], 0);
