@@ -1,4 +1,4 @@
-# input_sha256: 412aa2bd88bf37d62e5497bad6fc3c9fc906ac896c829d2876fb176cb2f9844e
+# input_sha256: 682a5e578da73642a0a4083d67e1047cca563f037a9867f58d00ef7e8ed2bb39
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -959,7 +959,7 @@
 0x004377d0 100.00 legoobject_run_through_lists
 0x00437880 100.00 legoobject_rename
 0x004378e0 100.00 legoobject_grid_object_records_release
-0x00437940 91.36 legoobject_deferred_olist_create_and_link
+0x00437940 100.00 legoobject_deferred_olist_create_and_link
 0x00437c20 100.00 legoobject_deferred_olist_queue_add
 0x00437cc0 100.00 legoobject_flag40000_threshold_compare
 0x00437d00 100.00 legoobject_create
@@ -1063,7 +1063,7 @@
 0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
-0x0043c810 89.73 legoobject_update_callback
+0x0043c810 89.82 legoobject_update_callback
 0x0043eea0 90.96 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
@@ -1080,7 +1080,7 @@
 0x0043fe70 87.32 legoobject_route_to_explicit_target
 0x0043fff0 100.00 legoobject_route_marker_setup
 0x00440130 100.00 legoobject_update_and_unregister_at_tile
-0x004401b0 98.06 legoobject_terrain_cell_to_world_position
+0x004401b0 100.00 legoobject_terrain_cell_to_world_position
 0x004403d0 86.12 legoobject_level_debug_cell_retarget_dispatch
 0x004407b0 100.00 legoobject_spatial_callback_query
 0x00440800 98.41 legoobject_spatial_callback_query_visit
@@ -1359,7 +1359,7 @@
 0x00453b20 100.00 nerpfunc_click_only_calltoarms
 0x00453b50 100.00 nerpfunc_disallow_all
 0x00453b80 100.00 nerpfunc_flash_call_to_arms_icon
-0x00453bb0 96.97 nerps_runtime_update_timers
+0x00453bb0 100.00 nerps_runtime_update_timers
 0x00453ca0 100.00 nerpfunc_get_timer0
 0x00453cb0 100.00 nerpfunc_get_timer1
 0x00453cc0 100.00 nerpfunc_get_timer2
@@ -1386,7 +1386,7 @@
 0x004544c0 100.00 nerps_record_object_at_tutorial_callback
 0x00454530 100.00 nerpfunc_get_record_object_at_tutorial
 0x004545a0 100.00 nerpfunc_get_record_object_amount_at_tutorial
-0x00454600 97.37 nerps_draw_tutorial_icon
+0x00454600 98.68 nerps_draw_tutorial_icon
 0x00454700 100.00 nerpfunc_set_record_object_pointer
 0x00454710 100.00 nerps_get_icon_clicks
 0x00454720 100.00 nerpfunc_get_oxygen_level
@@ -1764,10 +1764,10 @@
 0x0045cc60 100.00 global_cursor_word_get
 0x0045cc70 100.00 pointer_cursor_draw_target
 0x0045cd90 100.00 media_pointer_cursor_override_tick
-0x0045cdc0 98.98 priorities_load_images
+0x0045cdc0 100.00 priorities_load_images
 0x0045cf00 51.61 priorities_reset
 0x0045cf50 57.69 priorities_load
-0x0045d060 98.28 priorities_load_positions
+0x0045d060 100.00 priorities_load_positions
 0x0045d110 59.81 priorities_handle_cursor
 0x0045d300 100.00 priorities_select
 0x0045d370 100.00 priorities_set_hover_area
@@ -1775,7 +1775,7 @@
 0x0045d3f0 53.01 priorities_move_to_top
 0x0045d470 75.00 priorities_move_up
 0x0045d4f0 100.00 priorities_toggle
-0x0045d550 97.06 priorities_move_cursor_to_up_button
+0x0045d550 100.00 priorities_move_cursor_to_up_button
 0x0045d640 100.00 priorities_move_cursor_to_image
 0x0045d6d0 63.23 priorities_draw
 0x0045d7e0 100.00 ptl_initialise
@@ -2093,7 +2093,7 @@
 0x00471310 100.00 weapons_model_timer_set
 0x00471330 100.00 weapons_z_within_bounds
 0x00471370 99.55 weapons_callback_ray_candidate
-0x00471630 97.93 weapons_ray_block_sweep
+0x00471630 100.00 weapons_ray_block_sweep
 0x00471860 100.00 weapons_ray_trace_nearest
 0x004718d0 88.00 weapons_object_pair_ray_hit
 0x00471960 94.74 weapons_see_through_walls_check
@@ -3684,7 +3684,7 @@
 0x004377d0 100.00 legoobject_run_through_lists
 0x00437880 100.00 legoobject_rename
 0x004378e0 100.00 legoobject_grid_object_records_release
-0x00437940 91.36 legoobject_deferred_olist_create_and_link
+0x00437940 100.00 legoobject_deferred_olist_create_and_link
 0x00437c20 100.00 legoobject_deferred_olist_queue_add
 0x00437cc0 100.00 legoobject_flag40000_threshold_compare
 0x00437d00 100.00 legoobject_create
@@ -3788,7 +3788,7 @@
 0x0043c570 100.00 legoobject_kind_four_post_create_resolve
 0x0043c650 100.00 legoobject_capacity_or_state_predicate
 0x0043c6b0 100.00 legoobject_activity_counters_advance
-0x0043c810 89.73 legoobject_update_callback
+0x0043c810 89.82 legoobject_update_callback
 0x0043eea0 90.96 legoobject_simulation_queue_flush
 0x0043f100 100.00 legoobject_linked_route_flag_clear
 0x0043f130 100.00 legoobject_trigger_frame_callback
@@ -3805,7 +3805,7 @@
 0x0043fe70 87.32 legoobject_route_to_explicit_target
 0x0043fff0 100.00 legoobject_route_marker_setup
 0x00440130 100.00 legoobject_update_and_unregister_at_tile
-0x004401b0 98.06 legoobject_terrain_cell_to_world_position
+0x004401b0 100.00 legoobject_terrain_cell_to_world_position
 0x004403d0 86.12 legoobject_level_debug_cell_retarget_dispatch
 0x004407b0 100.00 legoobject_spatial_callback_query
 0x00440800 98.41 legoobject_spatial_callback_query_visit
@@ -4084,7 +4084,7 @@
 0x00453b20 100.00 nerpfunc_click_only_calltoarms
 0x00453b50 100.00 nerpfunc_disallow_all
 0x00453b80 100.00 nerpfunc_flash_call_to_arms_icon
-0x00453bb0 96.97 nerps_runtime_update_timers
+0x00453bb0 100.00 nerps_runtime_update_timers
 0x00453ca0 100.00 nerpfunc_get_timer0
 0x00453cb0 100.00 nerpfunc_get_timer1
 0x00453cc0 100.00 nerpfunc_get_timer2
@@ -4111,7 +4111,7 @@
 0x004544c0 100.00 nerps_record_object_at_tutorial_callback
 0x00454530 100.00 nerpfunc_get_record_object_at_tutorial
 0x004545a0 100.00 nerpfunc_get_record_object_amount_at_tutorial
-0x00454600 97.37 nerps_draw_tutorial_icon
+0x00454600 98.68 nerps_draw_tutorial_icon
 0x00454700 100.00 nerpfunc_set_record_object_pointer
 0x00454710 100.00 nerps_get_icon_clicks
 0x00454720 100.00 nerpfunc_get_oxygen_level
@@ -4489,10 +4489,10 @@
 0x0045cc60 100.00 global_cursor_word_get
 0x0045cc70 100.00 pointer_cursor_draw_target
 0x0045cd90 100.00 media_pointer_cursor_override_tick
-0x0045cdc0 98.98 priorities_load_images
+0x0045cdc0 100.00 priorities_load_images
 0x0045cf00 51.61 priorities_reset
 0x0045cf50 57.69 priorities_load
-0x0045d060 98.28 priorities_load_positions
+0x0045d060 100.00 priorities_load_positions
 0x0045d110 59.81 priorities_handle_cursor
 0x0045d300 100.00 priorities_select
 0x0045d370 100.00 priorities_set_hover_area
@@ -4500,7 +4500,7 @@
 0x0045d3f0 53.01 priorities_move_to_top
 0x0045d470 75.00 priorities_move_up
 0x0045d4f0 100.00 priorities_toggle
-0x0045d550 97.06 priorities_move_cursor_to_up_button
+0x0045d550 100.00 priorities_move_cursor_to_up_button
 0x0045d640 100.00 priorities_move_cursor_to_image
 0x0045d6d0 63.23 priorities_draw
 0x0045d7e0 100.00 ptl_initialise
@@ -4818,7 +4818,7 @@
 0x00471310 100.00 weapons_model_timer_set
 0x00471330 100.00 weapons_z_within_bounds
 0x00471370 99.55 weapons_callback_ray_candidate
-0x00471630 97.93 weapons_ray_block_sweep
+0x00471630 100.00 weapons_ray_block_sweep
 0x00471860 100.00 weapons_ray_trace_nearest
 0x004718d0 88.00 weapons_object_pair_ray_hit
 0x00471960 94.74 weapons_see_through_walls_check
