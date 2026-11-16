@@ -9038,7 +9038,7 @@ void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
         y = (int)visible[i].y;
         if (highCount < maxCount && visible[i].dist < maxDist) {
             float scale = 1.0f - visible[i].dist / maxDist;
-            float uniform = scale * 0.7f + 0.3f;
+            float uniform = (scale * 0.7f) + 0.3f;
             if ((legoGlobs_flags1 & 0x20) &&
                 lego_terrain_cell_surface_update_dispatch_level(level, x, y, scale, uniform)) {
                 LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 |= 0x100;
