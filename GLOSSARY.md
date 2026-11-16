@@ -60,12 +60,32 @@ The end-goal product: the reconstruction running natively on a modern host
 (miniwin) at the *seam*. Not to be confused with _port run_.
 _Avoid_: "the Wine build", "native Linux build" when you mean the product
 
+**develop branch**:
+The long-lived `develop` branch, the main development branch, on which the _port_ is built from the *original shape* units, free of byte-matching rules; it becomes `main` at the *decomp tag* (ADR 0007).
+_Avoid_: "port branch", "the native branch"
+
+**decomp tag**:
+The tag marking `main` once the *matching build* is byte-identical to the shipped `LegoRR.exe`; the last state of the decompilation before the *develop branch* takes over `main`.
+_Avoid_: "the 100% branch", "release"
+
+**port shell**:
+The port-only rewrite of the game (`LegorrrRun`, the `*_port.cpp` files and their hook tables) that the native build ran instead of the units; ADR 0007 deletes it.
+_Avoid_: "the port" (that is the product), "port tail" (the link-order term)
+
+**scenario**:
+A recorded run of the game, as its input and timer readings, that `make port-check` replays to compare builds across the *seam*.
+_Avoid_: "demo", "recording" when you mean the replayable unit
+
 **miniwin**:
 The LGPL-3.0 source-compatible *platform* adapter from the
 isledecomp/isle-portable project that reimplements the DX6-era WinAPI surface
 (DirectDraw, D3DRM skeleton, etc.) over SDL3. Brought in as a sparse submodule
 limited to `miniwin/` and extended by upstream contributions, not forks.
 _Avoid_: "the SDL layer", "the shim" when context needs the product name
+
+**library substitution**:
+A Windows-only API call outside *miniwin*'s scope (DirectSound, winmm, AVIFile, the registry, files) replaced in place in a unit by a portable library, and marked `// [library:<subsystem>]` as in isle-portable (ADR 0007).
+_Avoid_: "shim", "port hack"
 
 **reference build**:
 The `winapi` platform adapter (Win32/MinGW cross build) that compiles the same

@@ -3,6 +3,15 @@
 - Keep all C/C++ source compatible with Microsoft Visual C++ 5.0 (MSVC 5.0).
   Avoid language and CRT features it does not support; validate source changes
   with `make reccmp-report` when the configured toolchain is available.
+- Write every commit message and PR title in
+  [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
+  form: `type(scope): summary`, for example
+  `fix(sound3d): stop looping samples on level exit`. Use the types `feat`,
+  `fix`, `docs`, `refactor`, `perf`, `test`, `build`, `ci` and `chore`. The
+  scope is optional and names the unit, subsystem or tool. Mark a breaking
+  change with `!` after the type or scope, or with a `BREAKING CHANGE:`
+  footer. A squash merge uses the PR title as the commit subject, so the PR
+  title must follow the form too.
 - Never merge, squash-merge, or auto-merge a PR — open the PR, report the link,
   and leave merging to the human. This applies to every branch and every repo
   state, including after all checks are green.
