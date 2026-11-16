@@ -1228,15 +1228,10 @@ Lego_Object* legoobject_unknown_00438960(Lego_Object* obj, int alt)
 {
     LegoObjGD_SearchData search;
 
-    search.x = 0.0f;
-    search.result = NULL;
-    search.y = 0.0f;
+    memset(&search, 0, offsetof(LegoObjGD_SearchData, bestDistance));
     search.bestDistance = 10000.0f;
     search.mask = 0x2000;
-    search.arg14 = 0;
-    search.arg18 = 0;
-    search.arg1c = 0;
-    search.arg20 = 0;
+    memset(&search.arg14, 0, 4 * sizeof(int));
     if (alt) search.mask |= 0x4000;
     if (obj) legoobject_transform_position_get(obj, &search.x, &search.y);
     legoobject_run_through_lists_skip_upgrade_parts(legoobject_route_marker_candidate_visit, &search);
