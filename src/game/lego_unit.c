@@ -9788,7 +9788,7 @@ void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
                                                           wPos[0], wPos[1]);
                         camera_project_point_to_screen((const struct ViewProjectionAdapter*)view, sPos, wPos);
                         sPos[0] -= (float)((int)legoGlobs_TutorialIcon->width / 2);
-                        sPos[1] -= bob * 20.0f + (int)legoGlobs_TutorialIcon->height * 2;
+                        sPos[1] -= (bob * 20.0f) + (int)legoGlobs_TutorialIcon->height * 2;
                         image_display_scaled(legoGlobs_TutorialIcon, NULL, (const struct Point2F*)sPos, NULL);
                         if (LEGO_FIELD(&interfaceGlobs, int, 0xfc4)) {
                             terrain_map_block_highlight_set(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by, 5);
