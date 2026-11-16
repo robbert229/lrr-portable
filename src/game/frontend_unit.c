@@ -4249,7 +4249,6 @@ Front_LevelLink* front_level_set_load_level_links(Front_LevelSet* levelSet, cons
                                                                       // STRING: LEGORR 0x004a26e8
                                                                       "LevelLinks", NULL));
                     link->setIndex = index;
-                    i = 0;
                     if (linksString != NULL) {
                         count = sound_variant_split(linksString, stringParts, ",");
                         if (count == 0) {
@@ -4259,11 +4258,13 @@ Front_LevelLink* front_level_set_load_level_links(Front_LevelSet* levelSet, cons
                         for (i = 0; i < count; i++) {
                             link->linkLevels[i] = front_level_set_load_level_links(levelSet, stringParts[i]);
                         }
+                        link->linkCount = i;
+                        return link;
                     } else {
                         link->linkLevels = NULL;
+                        link->linkCount = 0;
+                        return link;
                     }
-                    link->linkCount = i;
-                    return link;
                 }
             failed:
                 free(link);
