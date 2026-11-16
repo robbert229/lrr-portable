@@ -28,7 +28,8 @@
   `docs/coverage/binary-progress.json`. Both commands read the one
   non-incremental matching build in `build-reccmp/`, so the second only reruns
   Reccmp. Review drops under ADR 0005 before accepting a new baseline. CI
-  checks freshness. On a generated-file conflict, take either side and
+  checks freshness on `main` only; `develop` drops the matching build (ADR
+  0007). On a generated-file conflict, take either side and
   regenerate all three with
   `make match-progress`; never hand-merge them.
 - To convert an original translation unit (ADR 0005), start with step 0: run
@@ -61,8 +62,8 @@
   `cross/i686.ini` and the build documentation before attempting a cross-build.
   `MOVIES=auto|enabled|disabled` controls native FFmpeg runtime detection.
 - CI runs one required check, `native-build` (`.github/workflows/native-build.yml`),
-  on pull requests and pushes to `main`. It builds the native port and runs the
-  CMake and ctest commands above with synthetic fixtures only. It does not run
+  on pull requests and on pushes to `main` and `develop`. It builds the native
+  port and runs the CMake and ctest commands above with synthetic fixtures only. It does not run
   the matching build, `make reccmp-check`, or real-data tests. Those need
   licensed inputs and the MSVC 5.0 toolchain, so run them locally.
 - No separate repository-wide formatter, linter, or pre-commit configuration is
