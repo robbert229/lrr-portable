@@ -615,7 +615,8 @@ void renderer_window_mode_apply(int fullScreen, int xPos, int yPos,
                      rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER);
         ShowCursor(FALSE);
     } else {
-        GetWindowRect(GetDesktopWindow(), &rect);
+        HWND desktop = GetDesktopWindow();
+        GetWindowRect(desktop, &rect);
         SetWindowPos((HWND)g_platform_cursor_window_handle, NULL, rect.left, rect.top,
                      rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER);
         SetCursor(NULL);
