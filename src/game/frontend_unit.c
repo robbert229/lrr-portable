@@ -2831,7 +2831,7 @@ Front_MenuSet* front_load_menu_set(struct BlockRec* config, const char* menuName
                                              front_menu_item_create_image_item(
                                                  "", loFont, hiFont, stringParts[3],
                                                  stringParts[4], atoi(stringParts[1]), atoi(stringParts[2]),
-                                                 Front_MenuItem_Next, autoCenter, stringParts[5],
+                                                 Front_MenuItem_Next, autoCenter, stringParts[6],
                                                  menuSet->menus[k]));
                 } else if (numParts == 6) {
                     k = atoi(stringParts[4] + 4) - 1;
