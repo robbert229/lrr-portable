@@ -2499,11 +2499,16 @@ void Container_Frame_FormatName(LPDIRECT3DRMFRAME3 frame, const char* msg, ...)
     char* name;
     unsigned long len;
     va_list args;
+    va_list again;
 
     va_start(args, msg);
+    /* The original walks the same va_list twice, which Win32's pointer
+     * va_list allows; x86-64 needs a copy. */
+    va_copy(again, args);
     len = vsprintf(buffer, msg, args);
     name = (char*)malloc(len + 1);
-    vsprintf(name, msg, args);
+    vsprintf(name, msg, again);
+    va_end(again);
     va_end(args);
 
     frame->SetName(name);
