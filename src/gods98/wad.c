@@ -381,3 +381,5 @@ void* wad_file_data(int handle)
 {
     return wad_file_get_pointer(handle);
 }
+
+#include "gods98/d3drmdef_consts.h"
