@@ -18,6 +18,10 @@ project(lrr-portable VERSION 0.1.0 LANGUAGES CXX)
 # original was (ADR 0005). Other builds compile those sources as C++.
 if(LRR_CLASSIC_MSVC5)
   enable_language(C)
+  # The toolchain file's LINK.EXE on the toolchain's own runtime (finding 694).
+  if(LRR_MSVC5_LINK)
+    set(CMAKE_LINKER "${LRR_MSVC5_LINK}")
+  endif()
 endif()
 
 set(CMAKE_CXX_STANDARD 17)

@@ -9,7 +9,9 @@ cross/msvc5-importlibs/dsound.def
 cross/msvc5-importlibs/dxguid.c
 cross/msvc5-importlibs/sdk_exports.c
 cross/msvc5-importlibs/sdk_guid.h
+cross/msvc5-native-crt-link.sh
 cross/msvc5-toolchain.cmake
+cross/msvc5_native_crt.py
 docs/coverage/function-areas.csv
 docs/coverage/ledger.csv
 docs/coverage/translation-unit-ranges.csv
