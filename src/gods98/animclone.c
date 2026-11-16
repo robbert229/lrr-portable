@@ -533,3 +533,5 @@ void anim_clone_reference_visuals(AnimCloneFrame* orig, AnimCloneFrame* clone)
         }
     }
 }
+
+#include "gods98/d3drmdef_consts.h"
