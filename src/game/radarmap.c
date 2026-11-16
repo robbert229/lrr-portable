@@ -539,10 +539,8 @@ int radarmap_try_select_object(RadarMap* radarMap, uint32_t screenX,
     RadarMap_SearchObject search;
     RadarMap_Point2I blockPos;
 
-    search.wPos.x = 0.0f;
-    search.wPos.y = 0.0f;
-    search.radius = 0.0f;
     search.result = NULL;
+    memset(&search.wPos, 0, sizeof(search.wPos) + sizeof(search.radius));
     if (radarmap_screen_to_block_pos(radarMap, screenX, screenY, &search.wPos,
                                      &blockPos.x, &blockPos.y)) {
         if (terrain_cell_occupied_or_flag_current(blockPos.x, blockPos.y, 1)) {
