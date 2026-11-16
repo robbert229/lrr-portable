@@ -5973,10 +5973,13 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                     if ((target = objList[j]) != NULL) {
                         LEGO_FIELD(obj, struct EntitySlot*, 0x2fc) = target;
                         LEGO_FIELD(obj, uint32_t, 0x3e4) |= 4;
-                        entity_linked_activity_event_dispatch(obj,
-                            (entity_capability_flags_get(target) & 0x100) ? 1 :
-                            (entity_stats_word_get(target) & 0x1000000) ?
-                                ((entity_stats_word_get(target) & 0x2000000) ? 1 : 2) : 4);
+                        (entity_capability_flags_get(target) & 0x100) ?
+                            entity_linked_activity_event_dispatch(obj, 1) :
+                        (entity_stats_word_get(target) & 0x1000000) ?
+                            ((entity_stats_word_get(target) & 0x2000000) ?
+                                entity_linked_activity_event_dispatch(obj, 1) :
+                                entity_linked_activity_event_dispatch(obj, 2)) :
+                            entity_linked_activity_event_dispatch(obj, 4);
                         entity_linked_route_flag_clear_original(obj, target);
                     }
                     break;
