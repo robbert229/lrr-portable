@@ -1,0 +1,112 @@
+# Flat (non-COM) seam functions LegoRR.exe imports (finding 15 §1; `python3
+# tools/seamrec/pe.py imports reference/LegoRR.exe`), signatures as in the
+# mingw-w64 headers. gen.py checks each one against the header prototype.
+#
+#   proxy <dll>   functions exported by the proxy <dll>.dll beside the exe;
+#                 every other export of the real DLL is passed through.
+#   iat <DLL>     functions patched in LegoRR.exe's own import table.
+#   ... hook      the wrapper calls SRH_<name> (hooks.c) instead of the real
+#                 function: time, input and message injection.
+#
+# Not wrapped: USER32 wsprintfA (varargs, pure formatting), and KERNEL32
+# apart from Sleep and ExitProcess (file I/O, heap, CRT startup).
+
+proxy ddraw
+  HRESULT DirectDrawCreate(GUID * lpGUID, LPDIRECTDRAW * lplpDD, IUnknown * pUnkOuter)
+  HRESULT DirectDrawEnumerateA(LPDDENUMCALLBACKA lpCallback, LPVOID lpContext)
+
+proxy d3drm
+  HRESULT Direct3DRMCreate(struct IDirect3DRM ** d3drm)
+  D3DVECTOR * D3DRMVectorRotate(D3DVECTOR * ret, D3DVECTOR * x, D3DVECTOR * axis, D3DVALUE theta)
+  D3DVECTOR * D3DRMVectorRandom(D3DVECTOR * ret)
+
+proxy dinput
+  HRESULT DirectInputCreateA(HINSTANCE hinst, DWORD version, LPDIRECTINPUTA * out, LPUNKNOWN outer)
+
+proxy dsound
+  HRESULT DirectSoundCreate(LPCGUID lpGUID, LPDIRECTSOUND * ppDS, LPUNKNOWN pUnkOuter)
+
+proxy winmm
+  MMRESULT mmioGetInfo(HMMIO hmmio, LPMMIOINFO pmmioinfo, UINT fuInfo)
+  MCIERROR mciSendStringA(LPCSTR lpstrCommand, LPSTR lpstrReturnString, UINT uReturnLength, HWND hwndCallback)
+  WINBOOL mciGetErrorStringA(MCIERROR mcierr, LPSTR pszText, UINT cchText)
+  MMRESULT mmioDescend(HMMIO hmmio, LPMMCKINFO pmmcki, const MMCKINFO * pmmckiParent, UINT fuDescend)
+  LONG mmioRead(HMMIO hmmio, HPSTR pch, LONG cch)
+  MMRESULT mmioAscend(HMMIO hmmio, LPMMCKINFO pmmcki, UINT fuAscend)
+  MMRESULT mmioClose(HMMIO hmmio, UINT fuClose)
+  UINT mixerGetNumDevs()
+  MMRESULT mixerOpen(LPHMIXER phmx, UINT uMxId, DWORD_PTR dwCallback, DWORD_PTR dwInstance, DWORD fdwOpen)
+  MMRESULT mixerGetDevCapsA(UINT_PTR uMxId, LPMIXERCAPSA pmxcaps, UINT cbmxcaps)
+  MMRESULT mixerGetLineInfoA(HMIXEROBJ hmxobj, LPMIXERLINEA pmxl, DWORD fdwInfo)
+  MMRESULT mixerGetLineControlsA(HMIXEROBJ hmxobj, LPMIXERLINECONTROLSA pmxlc, DWORD fdwControls)
+  MMRESULT mixerGetControlDetailsA(HMIXEROBJ hmxobj, LPMIXERCONTROLDETAILS pmxcd, DWORD fdwDetails)
+  DWORD timeGetTime() hook
+  MMRESULT mixerSetControlDetails(HMIXEROBJ hmxobj, LPMIXERCONTROLDETAILS pmxcd, DWORD fdwDetails)
+  MMRESULT mixerClose(HMIXER hmx)
+  MMRESULT mmioSetInfo(HMMIO hmmio, LPCMMIOINFO pmmioinfo, UINT fuInfo)
+  MMRESULT mmioAdvance(HMMIO hmmio, LPMMIOINFO pmmioinfo, UINT fuAdvance)
+  HMMIO mmioOpenA(LPSTR pszFileName, LPMMIOINFO pmmioinfo, DWORD fdwOpen)
+  LONG mmioSeek(HMMIO hmmio, LONG lOffset, int iOrigin)
+
+proxy avifil32
+  HRESULT AVIStreamOpenFromFileA(PAVISTREAM * ppavi, LPCSTR szFile, DWORD fccType, LONG lParam, UINT mode, CLSID * pclsidHandler)
+  PGETFRAME AVIStreamGetFrameOpen(PAVISTREAM pavi, LPBITMAPINFOHEADER lpbiWanted)
+  ULONG AVIStreamRelease(PAVISTREAM pavi)
+  LPVOID AVIStreamGetFrame(PGETFRAME pg, LONG lPos)
+  void AVIFileInit()
+  HRESULT AVIStreamInfoA(PAVISTREAM pavi, LPAVISTREAMINFOA psi, LONG lSize)
+
+iat USER32.dll
+  INT_PTR DialogBoxParamA(HINSTANCE hInstance, LPCSTR lpTemplateName, HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam)
+  WINBOOL GetWindowRect(HWND hWnd, LPRECT lpRect)
+  HWND GetDesktopWindow()
+  LRESULT SendMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+  HWND GetDlgItem(HWND hDlg, int nIDDlgItem)
+  WINBOOL EndDialog(HWND hDlg, INT_PTR nResult)
+  HCURSOR SetCursor(HCURSOR hCursor)
+  WINBOOL EnableWindow(HWND hWnd, WINBOOL bEnable)
+  WINBOOL SetCursorPos(int X, int Y) hook
+  WINBOOL GetClientRect(HWND hWnd, LPRECT lpRect)
+  WINBOOL GetCursorPos(LPPOINT lpPoint) hook
+  WINBOOL ClientToScreen(HWND hWnd, LPPOINT lpPoint)
+  WINBOOL OffsetRect(LPRECT lprc, int dx, int dy)
+  HWND SetCapture(HWND hWnd)
+  WINBOOL ReleaseCapture()
+  LRESULT DefWindowProcA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+  ATOM RegisterClassA(const WNDCLASSA * lpWndClass) hook
+  WINBOOL DestroyWindow(HWND hWnd)
+  HDC GetDC(HWND hWnd)
+  LRESULT DispatchMessageA(const MSG * lpMsg)
+  WINBOOL TranslateMessage(const MSG * lpMsg)
+  WINBOOL PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg) hook
+  HWND SetActiveWindow(HWND hWnd)
+  WINBOOL ShowWindow(HWND hWnd, int nCmdShow)
+  HWND CreateWindowExA(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+  LONG SetWindowLongA(HWND hWnd, int nIndex, LONG dwNewLong)
+  WINBOOL MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, WINBOOL bRepaint)
+  int ShowCursor(WINBOOL bShow)
+  WINBOOL SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags)
+  WINBOOL AdjustWindowRect(LPRECT lpRect, DWORD dwStyle, WINBOOL bMenu)
+  WINBOOL SetWindowTextA(HWND hWnd, LPCSTR lpString)
+  int MessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
+  HWND SetFocus(HWND hWnd)
+
+iat GDI32.dll
+  int GetDeviceCaps(HDC hdc, int index)
+  DWORD GetRegionData(HRGN hrgn, DWORD nCount, LPRGNDATA lpRgnData)
+  HRGN CreateRectRgn(int x1, int y1, int x2, int y2)
+
+iat ADVAPI32.dll
+  LONG RegCreateKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
+  LONG RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+  LONG RegCloseKey(HKEY hKey)
+
+iat ole32.dll
+  HRESULT CoInitialize(LPVOID pvReserved)
+  HRESULT CoCreateInstance(const IID *const rclsid, LPUNKNOWN pUnkOuter, DWORD dwClsContext, const IID *const riid, LPVOID * ppv)
+
+iat KERNEL32.dll
+  void Sleep(DWORD dwMilliseconds) hook
+  void ExitProcess(UINT uExitCode) hook
+
+callback LPDDENUMCALLBACKA stdcall WINBOOL(GUID * guid, LPSTR description, LPSTR name, LPVOID ctx)

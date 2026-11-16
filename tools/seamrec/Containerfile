@@ -1,0 +1,10 @@
+# Seam recorder tool image (tools/seamrec/README.md):
+#  - mingw-w64 i686, which builds the proxy DLLs;
+#  - Xvfb and PulseAudio, the per-run sandbox recordings run against
+#    (software rendering, a single null audio sink: no host GPU, desktop or
+#    audio devices involved).
+# Pinned base digest; packages from Debian 13 (trixie) stable.
+FROM docker.io/library/debian:13@sha256:e2914ec98e08b24b4cee3cefcb9f90dfb5519f8d215a2ccf0c9a49b10b6e43de
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends gcc-mingw-w64-i686 binutils-mingw-w64-i686 make python3 xvfb pulseaudio \
+ && rm -rf /var/lib/apt/lists/*
