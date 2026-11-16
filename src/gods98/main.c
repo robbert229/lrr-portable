@@ -840,7 +840,9 @@ LRESULT window_game_window_procedure_retail(HWND hWnd, UINT message,
     case WM_KEYUP:
     case WM_SYSKEYDOWN:
     case WM_MOUSEMOVE:
+        return 0;
     case WM_ENTERMENULOOP:
+        return 0;
     case WM_EXITMENULOOP:
         return 0;
 
