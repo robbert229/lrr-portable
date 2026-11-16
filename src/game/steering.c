@@ -428,10 +428,10 @@ void steering_item_follow_target(SteeringGroup* group, SteeringItem* item,
         steering_vector3d_scale(&dir, &dir, step);
         steering_vector3d_add(&item->position, &position, &dir);
     }
-    item->target = target;
     item->transform[12] = item->position.x;
     item->transform[13] = item->position.y;
     item->transform[14] = item->position.z;
+    item->target = target;
 }
 
 /* Clears *data unless the item is at its target; hides an arrived item. */
