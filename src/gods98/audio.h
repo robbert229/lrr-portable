@@ -10,6 +10,11 @@
 #ifndef LEGORRR_GODS98_AUDIO_H
 #define LEGORRR_GODS98_AUDIO_H
 
+#include <miniwin/d3d.h>
+#include <miniwin/windows.h>
+
+struct IDirect3DRMFrame3;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,13 +22,27 @@ extern "C" {
 /* Sound3D_Initialise (FUN_0047a640): start DirectSound on window. */
 int audio_system_init(void* window);
 
-/* DAT_00533878: set while 3D sound is running. In the matching build it is
- * the first word of Sound3D.c's state after s_sound3d, followed by the
- * frame state (0x88 bytes, typed in sound3d.c): one struct, which is how
- * the original's frame state sits 4-aligned at 0053387c. */
+#define SOUND3D_MAXUPDATEFRAMES 20
+
+/* The frame state after the initialised flag (0053387c, 0x88 bytes on
+ * Win32). */
+typedef struct Sound3DFrameGlobs {
+    LONG windowsVolume;                          /* +0x00 */
+    unsigned long reserved_04;
+    struct IDirect3DRMFrame3* updateFrameList[SOUND3D_MAXUPDATEFRAMES]; /* +0x08 */
+    unsigned long reserved_58;
+    D3DVECTOR oldPos;                        /* +0x5c */
+    unsigned long reserved_68;
+    D3DVECTOR oldOrientFront;                /* +0x6c */
+    unsigned long reserved_78;
+    D3DVECTOR oldOrientUp;                   /* +0x7c */
+} Sound3DFrameGlobs;
+
+/* DAT_00533878: set while 3D sound is running. It is the first word of
+ * Sound3D.c's state after s_sound3d, followed by the frame state. */
 typedef struct Sound3D_State {
     int initialised;                 /* 00533878 */
-    unsigned char frames[0x88];      /* 0053387c */
+    Sound3DFrameGlobs frames;        /* 0053387c */
 } Sound3D_State;
 extern Sound3D_State sound3dState;
 #define s_bank_sound_on (sound3dState.initialised)

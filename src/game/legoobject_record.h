@@ -124,6 +124,20 @@ typedef struct Lego_Object {
     struct Lego_Object* nextFree;     /* +0x408 */
 } Lego_Object;
 
+/* objectGlobs.recordObjs (004e8544): one deferred object of the level's
+ * object list, 0x2c bytes on Win32, created when its block is uncovered. */
+typedef struct LegoObjGB_DeferredRecord {
+    int blockPos[2];                  /* +0x00 */
+    float worldPos[2];                /* +0x08 */
+    float heading;                    /* +0x10 */
+    void* model;                      /* +0x14 */
+    int type;                         /* +0x18 */
+    int id;                           /* +0x1c */
+    float health;                     /* +0x20 */
+    char* name;                       /* +0x24 */
+    char* linkName;                   /* +0x28 driving/route target's name */
+} LegoObjGB_DeferredRecord;
+
 #ifdef __cplusplus
 }
 #endif

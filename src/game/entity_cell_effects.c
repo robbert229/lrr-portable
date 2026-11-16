@@ -23,6 +23,7 @@
 
 #include "entity_cell_effects.h"
 #include "legoobject_unit.h"
+#include "building_model_record.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,9 +95,8 @@ void building_set_cost_drop_disabled(int disabled)
  * (finding 538). */
 #include "lego_globs.h"
 /* legoGlobs is one struct (lego_globs.h, finding 653); this unit reads the
- * building data as bytes and the three tracked objects as objects. */
-#undef legoGlobs_buildingData
-#define legoGlobs_buildingData (*(char**)&legoGlobs.buildingData)       /* 005561e0 */
+ * building models (building_model_record.h) and the three tracked objects
+ * as objects. */
 #undef legoGlobs_f_55644c
 #define legoGlobs_f_55644c (*(Lego_Object**)&legoGlobs.field_38c)       /* 0055644c */
 #undef legoGlobs_f_556450
@@ -135,7 +135,7 @@ void building_remove_from_terrain(Lego_Object* buildingObj)
     }
 
     shapePoints = building_get_shape_points(
-        legoGlobs_buildingData + buildingObj->id * 0x14c, &count);
+        &legoGlobs_buildingData[buildingObj->id], &count);
     shape = selectplace_transform_shape(&blockPos, shapePoints, count, direction);
     for (i = 0; i < count; i++) {
         next = &shape[i + 1];

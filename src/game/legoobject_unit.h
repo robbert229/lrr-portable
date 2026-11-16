@@ -50,19 +50,6 @@ void legoobject_callback_dispatch_unless_type_five(Lego_Object* obj); /* 004374f
 int legoobject_linked_route_clear_callback(Lego_Object* obj, void* data); /* 00437510 */
 
 /* ---- group B: 00437540-00437cc0 ---- */
-/* objectGlobs.recordObjs (004e8544): one deferred object of the level's
- * object list, 0x2c bytes, created when its block is uncovered. */
-typedef struct LegoObjGB_DeferredRecord {
-    int blockPos[2];                  /* +0x00 */
-    float worldPos[2];                /* +0x08 */
-    float heading;                    /* +0x10 */
-    void* model;                      /* +0x14 */
-    int type;                         /* +0x18 */
-    int id;                           /* +0x1c */
-    float health;                     /* +0x20 */
-    char* name;                       /* +0x24 */
-    char* linkName;                   /* +0x28 driving/route target's name */
-} LegoObjGB_DeferredRecord;
 int legoobject_remove(Lego_Object* obj);                        /* 00437540 */
 int legoobject_run_through_lists_skip_upgrade_parts(Lego_ObjectCallback callback, void* data); /* 004377b0 */
 int legoobject_run_through_lists(Lego_ObjectCallback callback, void* data, int skipUpgradeParts); /* 004377d0 */

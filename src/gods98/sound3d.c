@@ -159,7 +159,6 @@ extern "C" long WINAPI DirectSoundCreate(Sound3DIID* guid, Sound3DDevice** devic
 #define SOUND3D_STREAM_CAPS 0x100e0
 
 #define SOUND3D_MAXSAMPLES 600
-#define SOUND3D_MAXUPDATEFRAMES 20
 
 /* Sample flags. */
 #define SOUND3D_FLAG_USED 0x1
@@ -238,19 +237,6 @@ typedef struct Sound3DGlobs {
     Sound3DSoundData soundTable[SOUND3D_MAXSAMPLES]; /* +0xe0 */
 } Sound3DGlobs;
 
-/* The globals after the initialised flag (00533878). */
-typedef struct Sound3DFrameGlobs {
-    LONG windowsVolume;                          /* +0x00 */
-    unsigned long reserved_04;
-    Sound3DFrame* updateFrameList[SOUND3D_MAXUPDATEFRAMES]; /* +0x08 */
-    unsigned long reserved_58;
-    Sound3DVector oldPos;                        /* +0x5c */
-    unsigned long reserved_68;
-    Sound3DVector oldOrientFront;                /* +0x6c */
-    unsigned long reserved_78;
-    Sound3DVector oldOrientUp;                   /* +0x7c */
-} Sound3DFrameGlobs;
-
 #define SOUND3D_STREAM_BUFFER(loop) \
     ((loop) ? s_sound3d.lpDSLoopStreamBuff : s_sound3d.lpDSStreamBuff)
 
@@ -265,7 +251,7 @@ static const Sound3DIID IID_IDirectSound3DBuffer =
 
 extern Sound3DGlobs s_sound3d; /* defined at the end of the file */
 
-#define s_sound3d_frames (*(Sound3DFrameGlobs*)sound3dState.frames)
+#define s_sound3d_frames (sound3dState.frames)
 
 /* With C linkage: other units call them (ADR 0005). */
 extern "C" {
