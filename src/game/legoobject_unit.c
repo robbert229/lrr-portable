@@ -10213,10 +10213,10 @@ int legoobject_type_two_target_resolve_and_apply(Lego_Object* obj, int code)
 // FUNCTION: LEGORR 0x0044b500
 int legoobject_position_step_command_issue_and_link(Lego_Object* obj, int selector)
 {
-    int ok = 0;
     int result = 0;
     float pos[2];
     Lego_Object* building;
+    void* cont;
     float nullPos[3];
     float target[2];
     LegoObjF_Point2I toBlock;
@@ -10226,9 +10226,8 @@ int legoobject_position_step_command_issue_and_link(Lego_Object* obj, int select
         legoobject_transform_position_get(obj, &pos[0], &pos[1]);
         building = legoobject_lookup_at_world_position(pos);
         if (building) {
-            ddiscene_object_position_get(
-                scene_object_indexed_secondary_handle_get_or_create(building->building, s_activity_resource_slots[selector]),
-                NULL, nullPos);
+            cont = scene_object_indexed_secondary_handle_get_or_create(building->building, s_activity_resource_slots[selector]);
+            ddiscene_object_position_get(cont, NULL, nullPos);
             target[0] = nullPos[0];
             target[1] = nullPos[1];
             terrain_map_world_to_block(Lego_GetMap(), nullPos[0], nullPos[1], &toBlock.x, &toBlock.y);
@@ -10244,20 +10243,18 @@ int legoobject_position_step_command_issue_and_link(Lego_Object* obj, int select
                 if (legoobject_terrain_neighbor_path_check(obj, fromBlock.x, fromBlock.y, toBlock.x, toBlock.y,
                                                            &xs, &ys, &count, NULL, NULL))
                 {
-                    ok = legoobject_route_setup_and_marker_associate(obj, count, xs, ys, target);
+                    result = legoobject_route_setup_and_marker_associate(obj, count, xs, ys, target);
                     free(xs);
                     free(ys);
-                    result = ok;
                 }
             }
-            ok = result;
             if (result) {
                 obj->routeToObject = building;
                 ((LegoObjG_RouteBlock*)obj->routeBlocks)[obj->routeBlocksTotal - 1].actionFlags = 0xd;
             }
         }
     }
-    return ok;
+    return result;
 }
 
 /* LegoObject_Flocks_Initialise: a flock of FlocksSize clones of the
