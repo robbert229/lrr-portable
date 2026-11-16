@@ -1,4 +1,4 @@
-# input_sha256: 6bedeeef4a8ec88a6791bd93165d97072ab39e5db54d8cba9e6b14c691fd11f7
+# input_sha256: 86dab41f2cae19897f03c1349b3eeb396f7875548e93bfab5ee06ce2ebdde67b
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -136,7 +136,7 @@
 0x00404ed0 100.00 aitask_check_object_candidate
 0x00404f10 100.00 aitask_object_task_target_filter_find
 0x00404f50 100.00 aitask_object_filter_matches_action_target
-0x00404fc0 99.66 aitask_place_command_eligibility_check
+0x00404fc0 99.77 aitask_place_command_eligibility_check
 0x00405950 99.08 aitask_pending_command_timer_fire_scan
 0x00405c10 62.61 aitask_pending_command_entity_assignment_tick
 0x00406360 100.00 aitask_entity_record_attach_and_relink
@@ -1765,10 +1765,10 @@
 0x0045cc70 100.00 pointer_cursor_draw_target
 0x0045cd90 100.00 media_pointer_cursor_override_tick
 0x0045cdc0 100.00 priorities_load_images
-0x0045cf00 51.61 priorities_reset
+0x0045cf00 100.00 priorities_reset
 0x0045cf50 57.69 priorities_load
 0x0045d060 100.00 priorities_load_positions
-0x0045d110 59.81 priorities_handle_cursor
+0x0045d110 100.00 priorities_handle_cursor
 0x0045d300 100.00 priorities_select
 0x0045d370 100.00 priorities_set_hover_area
 0x0045d3c0 100.00 priorities_change_priority
@@ -1777,7 +1777,7 @@
 0x0045d4f0 100.00 priorities_toggle
 0x0045d550 100.00 priorities_move_cursor_to_up_button
 0x0045d640 100.00 priorities_move_cursor_to_image
-0x0045d6d0 63.23 priorities_draw
+0x0045d6d0 100.00 priorities_draw
 0x0045d7e0 100.00 ptl_initialise
 0x0045d870 100.00 ptl_translate_event
 0x0045d8a0 100.00 radarmap_set_zoom
@@ -1789,8 +1789,8 @@
 0x0045e400 100.00 radarmap_can_show_object
 0x0045e460 98.20 radarmap_callback_draw_object
 0x0045e660 100.00 rect_contains_point_half_open
-0x0045e6d0 46.49 terrain_point_pick_resolve_original
-0x0045e820 67.65 viewport_point_callback_dispatch
+0x0045e6d0 82.52 terrain_point_pick_resolve_original
+0x0045e820 100.00 viewport_point_callback_dispatch
 0x0045e8e0 100.00 radarmap_callback_try_select_object
 0x0045e940 84.11 radarmap_transform_rect
 0x0045e9e0 95.46 radarmap_get_block_colour
@@ -2242,7 +2242,7 @@
 0x00476fd0 100.00 resource_interface_call_slot8c
 0x00476ff0 100.00 resource_interface_call_slot90
 0x00477010 96.30 ledger_stub_00477010_DDiSceneDrawBegin
-0x00477150 93.65 ddiscene_draw_end
+0x00477150 100.00 ddiscene_draw_end
 0x00477220 100.00 render_resource_track_and_retain
 0x00477240 100.00 scene_current_object_set_original
 0x00477250 100.00 resource_interface_call_slot40_and_clear_field14
@@ -2297,7 +2297,7 @@
 0x00479110 100.00 config_angle_radians_get
 0x00479170 100.00 config_rgb_vector_read
 0x00479240 100.00 block_close
-0x00479270 70.18 block_record_create
+0x00479270 100.00 block_record_create
 0x004792c0 100.00 block_record_remove
 0x004792e0 100.00 block_find
 0x00479490 100.00 block_text_token_pool_grow
@@ -2330,7 +2330,7 @@
 0x0047a520 100.00 bitmap_font_glyph_measure_width
 0x0047a540 100.00 object_field_be4_dword_get
 0x0047a550 100.00 font_atlas_record_release
-0x0047a580 61.11 font_create
+0x0047a580 100.00 font_create
 0x0047a5c0 100.00 font_add_list
 0x0047a640 100.00 audio_system_init
 0x0047a800 100.00 audio_active_shutdown
@@ -2664,7 +2664,7 @@
 0x004899f0 100.00 anim_clone_create_copy
 0x00489b30 100.00 anim_clone_clone_lwo_meshes
 0x00489bc0 100.00 anim_clone_reference_visuals
-0x00489c30 70.54 indexed_bitmap_palette_data_prepare
+0x00489c30 100.00 indexed_bitmap_palette_data_prepare
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
@@ -2674,7 +2674,7 @@
 0x0048b2f0 100.00 startup_config_stream_load
 0x0048b330 100.00 registry_path_split
 0x0048b360 100.00 registry_path_accessor
-0x0048b390 65.56 registry_path_create_keys
+0x0048b390 100.00 registry_path_create_keys
 0x0048b4a0 100.00 wad_get_file_name
 0x0048b4e0 100.00 wad_load
 0x0048bce0 100.00 wad_get
@@ -2861,7 +2861,7 @@
 0x00404ed0 100.00 aitask_check_object_candidate
 0x00404f10 100.00 aitask_object_task_target_filter_find
 0x00404f50 100.00 aitask_object_filter_matches_action_target
-0x00404fc0 99.66 aitask_place_command_eligibility_check
+0x00404fc0 99.77 aitask_place_command_eligibility_check
 0x00405950 99.08 aitask_pending_command_timer_fire_scan
 0x00405c10 62.61 aitask_pending_command_entity_assignment_tick
 0x00406360 100.00 aitask_entity_record_attach_and_relink
@@ -4490,10 +4490,10 @@
 0x0045cc70 100.00 pointer_cursor_draw_target
 0x0045cd90 100.00 media_pointer_cursor_override_tick
 0x0045cdc0 100.00 priorities_load_images
-0x0045cf00 51.61 priorities_reset
+0x0045cf00 100.00 priorities_reset
 0x0045cf50 57.69 priorities_load
 0x0045d060 100.00 priorities_load_positions
-0x0045d110 59.81 priorities_handle_cursor
+0x0045d110 100.00 priorities_handle_cursor
 0x0045d300 100.00 priorities_select
 0x0045d370 100.00 priorities_set_hover_area
 0x0045d3c0 100.00 priorities_change_priority
@@ -4502,7 +4502,7 @@
 0x0045d4f0 100.00 priorities_toggle
 0x0045d550 100.00 priorities_move_cursor_to_up_button
 0x0045d640 100.00 priorities_move_cursor_to_image
-0x0045d6d0 63.23 priorities_draw
+0x0045d6d0 100.00 priorities_draw
 0x0045d7e0 100.00 ptl_initialise
 0x0045d870 100.00 ptl_translate_event
 0x0045d8a0 100.00 radarmap_set_zoom
@@ -4514,8 +4514,8 @@
 0x0045e400 100.00 radarmap_can_show_object
 0x0045e460 98.20 radarmap_callback_draw_object
 0x0045e660 100.00 rect_contains_point_half_open
-0x0045e6d0 46.49 terrain_point_pick_resolve_original
-0x0045e820 67.65 viewport_point_callback_dispatch
+0x0045e6d0 82.52 terrain_point_pick_resolve_original
+0x0045e820 100.00 viewport_point_callback_dispatch
 0x0045e8e0 100.00 radarmap_callback_try_select_object
 0x0045e940 84.11 radarmap_transform_rect
 0x0045e9e0 95.46 radarmap_get_block_colour
@@ -4967,7 +4967,7 @@
 0x00476fd0 100.00 resource_interface_call_slot8c
 0x00476ff0 100.00 resource_interface_call_slot90
 0x00477010 96.30 ledger_stub_00477010_DDiSceneDrawBegin
-0x00477150 93.65 ddiscene_draw_end
+0x00477150 100.00 ddiscene_draw_end
 0x00477220 100.00 render_resource_track_and_retain
 0x00477240 100.00 scene_current_object_set_original
 0x00477250 100.00 resource_interface_call_slot40_and_clear_field14
@@ -5022,7 +5022,7 @@
 0x00479110 100.00 config_angle_radians_get
 0x00479170 100.00 config_rgb_vector_read
 0x00479240 100.00 block_close
-0x00479270 70.18 block_record_create
+0x00479270 100.00 block_record_create
 0x004792c0 100.00 block_record_remove
 0x004792e0 100.00 block_find
 0x00479490 100.00 block_text_token_pool_grow
@@ -5055,7 +5055,7 @@
 0x0047a520 100.00 bitmap_font_glyph_measure_width
 0x0047a540 100.00 object_field_be4_dword_get
 0x0047a550 100.00 font_atlas_record_release
-0x0047a580 61.11 font_create
+0x0047a580 100.00 font_create
 0x0047a5c0 100.00 font_add_list
 0x0047a640 100.00 audio_system_init
 0x0047a800 100.00 audio_active_shutdown
@@ -5389,7 +5389,7 @@
 0x004899f0 100.00 anim_clone_create_copy
 0x00489b30 100.00 anim_clone_clone_lwo_meshes
 0x00489bc0 100.00 anim_clone_reference_visuals
-0x00489c30 70.54 indexed_bitmap_palette_data_prepare
+0x00489c30 100.00 indexed_bitmap_palette_data_prepare
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
@@ -5399,7 +5399,7 @@
 0x0048b2f0 100.00 startup_config_stream_load
 0x0048b330 100.00 registry_path_split
 0x0048b360 100.00 registry_path_accessor
-0x0048b390 65.56 registry_path_create_keys
+0x0048b390 100.00 registry_path_create_keys
 0x0048b4a0 100.00 wad_get_file_name
 0x0048b4e0 100.00 wad_load
 0x0048bce0 100.00 wad_get
