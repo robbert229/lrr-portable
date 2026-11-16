@@ -3,7 +3,7 @@
     "full": 98.63,
     "game_only": 98.48
   },
-  "baseline_sha256": "654ea5b0562d461a7268bf3dc169880529237ef981e6f26a92f0ca8bff5eb9f7",
+  "baseline_sha256": "4ba2d6f757a3ec1c13eedb0af184377473bfb7dbabe06cf12f7ea558fd68c266",
   "correct_size_functions": {
     "full": {
       "bytes": 509537,
@@ -253,7 +253,7 @@
         },
         "original_bytes": 11232,
         "original_start": "0x49e000",
-        "rebuilt_bytes": 10744,
+        "rebuilt_bytes": 10840,
         "rebuilt_start": "0x49e000",
         "start_delta": 0
       },
@@ -332,7 +332,7 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "0ad83684120c05a398f05cf487ce0f20531060ee403fff7805a426d3fd3bc328",
+  "input_sha256": "375f7921053e86457a78048acaaea5433095755f4c1f8130771b5a7ed286fb9a",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 54,
@@ -4042,7 +4042,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 8
   },
-  "listing_digests_sha256": "a744031b575b3b72b9b32ea6a202ee4e7ee06e54127b501cf795d5114cf34350",
+  "listing_digests_sha256": "2fc23ca62c89a8c9723382a87e74df1e7a89d9b3ee99247d9884f013d381bc88",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4139,14 +4139,14 @@
           "rebuilt": 4112
         },
         ".rdata": {
-          "differing": 8797,
-          "equal": 2435,
+          "differing": 8600,
+          "equal": 2632,
           "original": 11232,
-          "rebuilt": 10744
+          "rebuilt": 10840
         },
         ".text": {
-          "differing": 581554,
-          "equal": 60995,
+          "differing": 581549,
+          "equal": 61000,
           "original": 642549,
           "rebuilt": 642101
         }
@@ -4161,8 +4161,8 @@
           "virtual_size": 4112
         },
         ".rdata": {
-          "raw_size": 10752,
-          "virtual_size": 10744
+          "raw_size": 11264,
+          "virtual_size": 10840
         },
         ".rsrc": {
           "raw_size": 3072,
@@ -4219,11 +4219,11 @@
     },
     ".rdata": {
       "chance_percent": 4.12,
-      "excess_percent_points": 19.8,
-      "identical_bytes": 2687,
-      "identical_percent": 23.92,
+      "excess_percent_points": 21.6,
+      "identical_bytes": 2889,
+      "identical_percent": 25.72,
       "original_bytes": 11232,
-      "rebuilt_bytes": 10840,
+      "rebuilt_bytes": 10936,
       "run_chance_percent": 0.0,
       "run_excess_percent_points": 0.93,
       "run_identical_bytes": 104,
