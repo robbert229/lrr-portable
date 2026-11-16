@@ -1251,6 +1251,39 @@ checkout` the file). Never run a probe while a build compiles the same tree.
 committing them or any filler declaration; fix the original's real
 declarations instead.
 
+## `reprobit_reference.py` — reference objects for ReproBit's grind
+
+```sh
+make reprobit-reference ADDR=0x00479a30
+make reprobit-reference ADDR="0x00473e10 0x004750b0" REFERENCE_ARGS="--pads 0 255"
+rbit discover grind . --expert-plan reference/grind/00479a30.json --accept-progress
+```
+
+`rbit discover grind` (ReproBit build, `docs/building.md`) keeps a donor
+compile only if its function body equals a reference object's. A reference
+object is a COFF compile of the unit, because relocated fields cannot be
+qualified from the original's bare bytes. For each address (all in one
+unit), this tool compiles the unit from a scratch copy with N of
+`phase_probe.py`'s pads, for N in `--pads` (default 0–128, `--jobs` at a
+time). It keeps the first compile whose body equals the original's bytes
+outside relocated fields, unchanged, as `reference/grind/<addr>.obj`.
+
+Beside it, `<addr>.json` is the grind plan for that function: its
+translation unit from `reprobit/build-plan.json`, its decorated symbol, and
+an `extern_runs` search over `--counts` (default 1–64) declarations. Grind
+seats those after the unit's final `#include`, or at the unit's start
+(`placement: prefix`) when an `#include` follows the function, as in
+`terrain_map.c` and `frontend_unit.c`. That is not where the pads go, so the
+two counts differ (0x479a30: 3 pads, a run of 19).
+
+A function no pad count reproduces gets no files: its remaining difference
+is not a phase. Neither does one whose unpadded unit already gives the
+original's body, since its difference lies elsewhere and grind would find
+the donor identical to the seed. Output goes under `reference/` only, which
+is never committed. Exit status: 0 when every address has a reference or
+needs none, 1 when one has no pad count, 2 on errors. Never run it while a
+build compiles the tree.
+
 ## `port_tail_inventory.py` — the port tail in the matching link (finding 668)
 
 `python3 tools/port_tail_inventory.py [--build build-reccmp] [--json OUT]`
