@@ -401,6 +401,7 @@ src/game/roof.c
 src/game/roof.h
 src/game/roof_imports.h
 src/game/roof_maths.h
+src/game/saturate_inline.h
 src/game/savegame.cpp
 src/game/savegame.h
 src/game/savegame.hpp
