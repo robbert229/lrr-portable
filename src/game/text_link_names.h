@@ -23,7 +23,6 @@
 #ifndef LEGORRR_GAME_TEXT_LINK_NAMES_H
 #define LEGORRR_GAME_TEXT_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define text_load ui_message_strings_initialize                          /* 0046a7f0 */
 #define text_initialise text_message_panel_initialise_adapter            /* 0046a950 */
 #define text_restart ui_message_overlay_state_initialize                 /* 0046aa90 */
@@ -33,6 +32,5 @@
 #define text_set_nerps_message advisor_text_request_setup                /* 0046ac20 */
 #define text_display_message advisor_text_animation_update               /* 0046ac60 */
 #define text_update advisor_text_display_worker                          /* 0046ad00 */
-#endif
 
 #endif /* LEGORRR_GAME_TEXT_LINK_NAMES_H */

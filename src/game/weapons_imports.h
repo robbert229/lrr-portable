@@ -40,19 +40,13 @@ struct LevelState* level_current_owner_get(void);   /* 00431560 Lego_GetLevel */
  * through an unprototyped function type, which pushes none, as the original
  * does; the native C++ compile goes through lego.cpp's adapter (as
  * aitask_imports.h). */
-void* level_current_terrain_get_original(void);
-#ifdef __cplusplus
 #define WEAPONS_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get_original())
-#else
-#define WEAPONS_LEGO_GET_MAP() \
-    ((struct TerrainMap*)((void* (*)())level_current_terrain_get)())
-#endif
+    ((struct TerrainMap*)level_current_terrain_get(0, 0))
 #define WEAPONS_LEGO_GET_LEVEL() ((Lego_Level*)level_current_owner_get())
 #define WEAPONS_MAP_WIDTH() (WEAPONS_LEGO_GET_MAP()->gridWidth)
 #define WEAPONS_MAP_HEIGHT() (WEAPONS_LEGO_GET_MAP()->gridHeight)
 #define legoGlobs_currLevel_blocks \
-    LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+    legoGlobs_currLevel->blocks
 /* 0041f8e0 is Lego_GetCrystalCount(flag) in the original; lego_unit.c
  * defines it as noop_callback(void), so the unit calls it with the
  * original's argument and result through a cast (as legoobject_unit.c). */
@@ -67,12 +61,10 @@ int terrain_cell_drill_work_add_current(int x, int y, float divisor,
  * original-ABI adapters). */
 /* In the matching build these name legoobject_unit.c's functions at the
  * same addresses (GAME-023 part 3, issue #615); one declaration each. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define entity_type_component_get legoobject_type_component_get
 #define entity_directional_activity_start legoobject_directional_activity_start
 #define entity_one_shot_attached_effect_start legoobject_one_shot_attached_effect_start
 #define entity_pair_scalar_fields_set legoobject_pair_scalar_fields_set
-#endif
 void* entity_type_component_get(const void* entity_record);       /* 0044a200 */
 void entity_transform_position_get_outputs(const struct EntitySlot* entity,
                                            float* out_x,
@@ -90,10 +82,8 @@ int entity_task_at_grid_coordinate_find(uint32_t x, uint32_t y,
  * lego.cpp's adapters natively: the port's entries take three arguments,
  * and an integer pair. The matching build calls the annotated functions
  * with the original's arguments; the extra one is ignored (cdecl). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define entity_damage_apply_original entity_damage_apply
 #define entity_pair_scalar_fields_set_original entity_pair_scalar_fields_set
-#endif
 void entity_damage_apply_original(struct EntitySlot* entity, float damage,
                                   int emitEffects, float elapsed); /* 0043f6a0 */
 int entity_pair_scalar_fields_set_original(struct EntitySlot* entity,
@@ -132,11 +122,7 @@ int sound_submission_route_wrapper(const void* wrapped_position, int alias,
                                    const float* xyz);             /* 00465050 */
 /* 00465160 returns on the x87 stack either way; the original declares it
  * float, the port double (sound.hpp). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 float sound_object_duration_get(int alias);                       /* 00465160 */
-#else
-double sound_object_duration_get(int alias);                      /* 00465160 */
-#endif
 
 /* gods98 Container.c and Mesh.c (view.hpp, surface.hpp, record.hpp). The
  * container's master frame is at +0x04. */

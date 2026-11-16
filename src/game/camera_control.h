@@ -16,8 +16,7 @@
 #ifndef LEGORRR_GAME_CAMERA_CONTROL_H
 #define LEGORRR_GAME_CAMERA_CONTROL_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200 && \
-    !defined(LEGORRR_GAME_CAMERA_CONTROL_UNIT)
+#if !defined(LEGORRR_GAME_CAMERA_CONTROL_UNIT)
 #define camera_pan_axis_update camera_add_tilt
 #define camera_tilt_axis_update camera_add_rotation
 #define camera_zoom_update camera_add_zoom

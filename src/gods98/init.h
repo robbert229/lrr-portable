@@ -49,7 +49,6 @@ typedef struct Init_Globs {
  * in it too (init_port.cpp). */
 extern Init_Globs initGlobs;
 
-#if !defined(LEGORRR_BACKEND_MINIWIN)
 /* 0049d030: set up the display. setup runs the dialog, debug also accepts
  * 800x600 and 1024x768, best picks the last driver with a hardware device
  * and a valid mode without asking, window selects a window in that case.
@@ -63,7 +62,6 @@ void init_add_valid_mode(unsigned int width, unsigned int height,
                          unsigned int depth);                         /* 0049d870 */
 int init_is_valid_mode(unsigned int mode);                            /* 0049d8d0 */
 int init_get_mode(const char* name, unsigned int* mode);              /* 0049d950 */
-#endif
 
 #ifdef __cplusplus
 }

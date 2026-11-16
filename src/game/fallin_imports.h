@@ -43,14 +43,8 @@ int terrain_cell_state_equals_one_current(const int cell_xy[2]);   /* 00432ec0 *
  * through an unprototyped function type, which pushes none, as the original
  * does; the native C++ compile goes through lego_port.cpp's adapter (as
  * rock_fall_styles_imports.h). */
-void* level_current_terrain_get_original(void);
-#ifdef __cplusplus
 #define FALLIN_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get_original())
-#else
-#define FALLIN_LEGO_GET_MAP() \
-    ((struct TerrainMap*)((void* (*)())level_current_terrain_get)())
-#endif
+    ((struct TerrainMap*)level_current_terrain_get(0, 0))
 /* GAME-040 SFX.c: SFX_Random_PlaySound3DOnContainer (00465050), by the
  * port's name, which sfx.c's definition takes in the matching build. */
 int sound_submission_route_wrapper(const void* wrapped_position, int alias,

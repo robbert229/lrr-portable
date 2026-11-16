@@ -5,23 +5,23 @@
  * reproduces the same shapes for G98-007. Only steering.c includes this file,
  * after its .rdata: normalise reads the unit's 1.0 (0049e14c).
  *
- * They are static __inline functions, not macros: as macros the expansions
+ * They are static inline functions, not macros: as macros the expansions
  * compile differently (finding 544). */
 #ifndef LEGORRR_GAME_STEERING_MATHS_H
 #define LEGORRR_GAME_STEERING_MATHS_H
 
-static __inline float steering_vector3d_dot(const SteeringVector3* a,
+static inline float steering_vector3d_dot(const SteeringVector3* a,
                                             const SteeringVector3* b)
 {
     return a->x * b->x + a->y * b->y + a->z * b->z;
 }
 
-static __inline float steering_vector3d_modulus(const SteeringVector3* v)
+static inline float steering_vector3d_modulus(const SteeringVector3* v)
 {
     return (float)sqrt(steering_vector3d_dot(v, v));
 }
 
-static __inline SteeringVector3* steering_vector3d_add(SteeringVector3* r,
+static inline SteeringVector3* steering_vector3d_add(SteeringVector3* r,
                                                        const SteeringVector3* a,
                                                        const SteeringVector3* b)
 {
@@ -31,7 +31,7 @@ static __inline SteeringVector3* steering_vector3d_add(SteeringVector3* r,
     return r;
 }
 
-static __inline SteeringVector3* steering_vector3d_subtract(SteeringVector3* r,
+static inline SteeringVector3* steering_vector3d_subtract(SteeringVector3* r,
                                                             const SteeringVector3* a,
                                                             const SteeringVector3* b)
 {
@@ -41,7 +41,7 @@ static __inline SteeringVector3* steering_vector3d_subtract(SteeringVector3* r,
     return r;
 }
 
-static __inline SteeringVector3* steering_vector3d_scale(SteeringVector3* r,
+static inline SteeringVector3* steering_vector3d_scale(SteeringVector3* r,
                                                          const SteeringVector3* a,
                                                          float f)
 {
@@ -51,12 +51,12 @@ static __inline SteeringVector3* steering_vector3d_scale(SteeringVector3* r,
     return r;
 }
 
-static __inline SteeringVector3* steering_vector3d_normalise(SteeringVector3* r)
+static inline SteeringVector3* steering_vector3d_normalise(SteeringVector3* r)
 {
     return steering_vector3d_scale(r, r, s_steering_one / steering_vector3d_modulus(r));
 }
 
-static __inline SteeringVector3* steering_vector3d_cross(SteeringVector3* r,
+static inline SteeringVector3* steering_vector3d_cross(SteeringVector3* r,
                                                          const SteeringVector3* a,
                                                          const SteeringVector3* b)
 {

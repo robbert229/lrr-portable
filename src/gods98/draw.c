@@ -25,11 +25,7 @@
 #include "draw.h"
 #include "crt/crt.h"
 
-#if defined(LEGORRR_BACKEND_MINIWIN)
-#define DRAW_BACK_SURFACE() (draw_port_back_surface)
-#else
-#define DRAW_BACK_SURFACE() ((LPDIRECTDRAWSURFACE4)(uintptr_t)s_render_surface_secondary)
-#endif
+#define DRAW_BACK_SURFACE() (s_render_surface_secondary)
 
 #define DRAW_FLAG_INITIALISED 0x1
 

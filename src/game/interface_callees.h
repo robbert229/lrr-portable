@@ -125,18 +125,11 @@ extern LegoObject* lego_object_fp;
  * DAT_0055627c/DAT_00556288 their counts. */
 extern char** lego_vehicle_names;
 extern char** lego_building_names;
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: the counts are legoGlobs' words, which entity.cpp keeps
  * as s_catalog_counts (C linkage since #740), [0] and [3]. */
 extern unsigned int s_catalog_counts[5];
 #define LEGO_VEHICLE_TYPE_COUNT s_catalog_counts[0]
 #define LEGO_BUILDING_TYPE_COUNT s_catalog_counts[3]
-#else
-extern unsigned int lego_vehicle_type_count;
-extern unsigned int lego_building_type_count;
-#define LEGO_VEHICLE_TYPE_COUNT lego_vehicle_type_count
-#define LEGO_BUILDING_TYPE_COUNT lego_building_type_count
-#endif
 #define LEGO_VEHICLE_NAME(i) (lego_vehicle_names[i])
 #define LEGO_BUILDING_NAME(i) (lego_building_names[i])
 /* DAT_0055644c..DAT_00556454 the primary teleporters. */
@@ -162,7 +155,6 @@ extern unsigned int lego_flags1;
 extern unsigned int s_global_low_word_c;
 /* DAT_00556f58: the upgrade level names. */
 extern char* lego_upgrade_level_names[16];
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: LegoObject.c's tool-tip sounds (004de814) and the ore
  * icon of the cost tool tip (004eadc0) are objectGlobs fields (004de790,
  * legoobject_globs.h, finding 662), at +0x84 and +0xc630. objectGlobs is
@@ -173,16 +165,8 @@ extern char* lego_upgrade_level_names[16];
 extern struct LegoObject_Globs objectGlobs;
 #define object_tooltip_sfx ((int*)((char*)&objectGlobs + 0x84))
 #define lego_tooltip_ore_icon (*(void**)((char*)&objectGlobs + 0xc630))
-#else
-/* DAT_004de814: LegoObject.c's tool-tip sounds, [type * 15 + index]. */
-extern int object_tooltip_sfx[];
-/* DAT_004eadc0: the ore icon of the cost tool tip. */
-extern void* lego_tooltip_ore_icon;
-#endif
 /* DAT_0076ab80/DAT_0076aa00: Input.c's key map and the previous frame's. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #include "gods98/input_key_names.h"
-#endif
 extern unsigned char input_key_map[256];
 extern unsigned char input_prev_key_map[256];
 
@@ -355,19 +339,6 @@ void tooltip_reset_timer(int index);
  * Native builds only: the unit's functions that keep the port's names
  * delegate to these (finding 564). The matching build compiles the original
  * bodies. */
-#if !(defined(_MSC_VER) && _MSC_VER == 1100)
-void command_context_post_to_hud_port(int kind, const uint32_t coord[2]);
-uint32_t sim_status_banner_word_get_port(void);
-void simulation_global_word_set_port(uint32_t value);
-void advisor_callback_schedule_gate_port(void);
-void* input_binding_default_value_get_port(int kind, int index, int mode);
-void position_tracker_box_draw_port(const float bounds[4]);
-void selection_mode7_cancel_at_point_port(const uint32_t coordinate[2]);
-void cancel_action_for_matching_coordinates_port(const uint32_t coordinate[2]);
-void selection_mode5_cancel_at_point_port(const uint32_t coordinate[2]);
-void selection_clear_request_and_hud_reset_port(void);
-int cell_action_permission_get_port(int column, int row);
-#endif
 
 #ifdef __cplusplus
 }

@@ -22,26 +22,16 @@ extern "C" {
 
 /* ---- group M ---- */
 
-/* Lego_Level (0x284 bytes): the current level, legoGlobs.currLevel
- * (005560d4). The port's LevelState begins with a 32-bit word image of the
- * same layout on every target (level.hpp), so the shared accessors below
- * read the port's live level natively too. Its pointer fields are pointers
- * only in the Win32 builds; elsewhere they are image words, and
- * LEGO_LEVEL_PTR reads one as a pointer (unit-only code, which the native
- * port compiles but never calls). Unnamed fields are named by offset. */
-#if defined(_WIN32) && !defined(_WIN64)
-#define LEGO_LEVEL_PTR_FIELD(T) T*
-#define LEGO_LEVEL_PTR(T, field) (field)
-#else
-#define LEGO_LEVEL_PTR_FIELD(T) uint32_t
-#define LEGO_LEVEL_PTR(T, field) ((T*)(uintptr_t)(field))
-#endif
+/* Lego_Level (0x284 bytes on Win32): the current level,
+ * legoGlobs.currLevel (005560d4). The offsets are the original's; the
+ * pointer fields hold real pointers (ADR 0007 decision 4). Unnamed fields
+ * are named by offset. */
 
 typedef struct Lego_Block Lego_Block;
 typedef struct Lego_Level {
-    LEGO_LEVEL_PTR_FIELD(char) name;            /* +0x000 */
-    LEGO_LEVEL_PTR_FIELD(void) map;             /* +0x004 Map3D */
-    LEGO_LEVEL_PTR_FIELD(void) emergeMap;       /* +0x008 */
+    char* name;            /* +0x000 */
+    struct TerrainMap* map; /* +0x004 Map3D */
+    void* emergeMap;       /* +0x008 */
     uint32_t f_00c;
     uint32_t f_010;
     uint32_t width;                 /* +0x014 */
@@ -56,8 +46,8 @@ typedef struct Lego_Level {
     uint32_t f_038[15];             /* +0x038 */
     uint32_t f_074;                 /* +0x074 tile mesh grid width */
     uint32_t f_078;                 /* +0x078 tile mesh grid height */
-    LEGO_LEVEL_PTR_FIELD(void) textureSet;      /* +0x07c Detail_TextureSet */
-    LEGO_LEVEL_PTR_FIELD(void*) f_080;          /* +0x080 tile meshes, f_074 * f_078 */
+    void* textureSet;      /* +0x07c Detail_TextureSet */
+    void** f_080;          /* +0x080 tile meshes, f_074 * f_078 */
     uint32_t f_084;                 /* +0x084 */
     uint32_t f_088;
     int f_08c;                      /* +0x08c */
@@ -70,8 +60,8 @@ typedef struct Lego_Level {
     int f_0a8;                      /* +0x0a8 */
     int ore;                        /* +0x0ac */
     uint32_t f_0b0;                 /* +0x0b0 */
-    LEGO_LEVEL_PTR_FIELD(char) nextLevel;       /* +0x0b4 */
-    LEGO_LEVEL_PTR_FIELD(Lego_Block) blocks;     /* +0x0b8 width * height */
+    char* nextLevel;       /* +0x0b4 */
+    Lego_Block* blocks;     /* +0x0b8 width * height */
     uint32_t f_0bc[78];             /* +0x0bc objective data */
     int startFP;                    /* +0x1f4 */
     int noDrain;                    /* +0x1f8 */
@@ -85,7 +75,7 @@ typedef struct Lego_Level {
     float emergeTimeOut;            /* +0x264 */
     float f_268;                    /* +0x268 */
     uint32_t f_26c;                 /* +0x26c */
-    LEGO_LEVEL_PTR_FIELD(char) fullName;        /* +0x270 */
+    char* fullName;        /* +0x270 */
     uint32_t f_274;                 /* +0x274 BoulderAnimation */
     uint32_t f_278;
     int status;                     /* +0x27c */
@@ -132,11 +122,7 @@ void global_object_field8c_increment(void);
 void global_object_field8c_subtract(int amount);
 void global_object_field98_add(int amount);
 void global_object_field98_clear_current(void);
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 int noop_callback(int);   /* 0041f8e0 Lego_GetCrystalCount */
-#else
-void noop_callback(void);
-#endif
 void level_state_field9c_add(int amount);
 void global_object_field94_increment(void);
 void global_object_fielda8_increment(void);
@@ -328,12 +314,6 @@ int lego_terrain_cell_command_predicate(const int* blockPos); /* F 00428780 */
 
 /* ---- group D ---- */
 
-/* Writes a Lego_Level pointer field (see LEGO_LEVEL_PTR). */
-#if defined(_WIN32) && !defined(_WIN64)
-#define LEGO_LEVEL_PTR_SET(field, value) ((field) = (value))
-#else
-#define LEGO_LEVEL_PTR_SET(field, value) ((field) = (uint32_t)(uintptr_t)(value))
-#endif
 
 /* The record LevelLoad passes to EntityEffectCountersApplyFromRecord for
  * each object: the level's InitialCrystals and InitialOre. */

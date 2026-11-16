@@ -73,8 +73,7 @@ extern struct Main_Globs {
  * LEGORRR_MAIN_GLOBS_NO_NAMES. crt/crt.h includes this file that way in
  * place of its own declarations, so the unit's later include, which costs
  * no symbol, defines the names after the unit's last declaration of them. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && \
-    !defined(LEGORRR_MAIN_GLOBS_NO_NAMES) && !defined(LEGORRR_MAIN_GLOBS_NAMES)
+#if !defined(LEGORRR_MAIN_GLOBS_NO_NAMES) && !defined(LEGORRR_MAIN_GLOBS_NAMES)
 #define LEGORRR_MAIN_GLOBS_NAMES
 #define g_platform_cursor_window_handle (mainGlobs.hWnd)
 #define g_main_instance_handle          (mainGlobs.hInst)

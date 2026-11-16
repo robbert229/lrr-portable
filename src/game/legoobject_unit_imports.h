@@ -65,9 +65,6 @@ extern const char* s_engine_config_root;  /* engine.cpp, 005560c4 gameName */
  * declared there, which pays for one of lego_globs.h's symbols (finding
  * 538); the unit's other declarations of legoGlobs fields' old names stay,
  * unreferenced. Deviation (scoring only). */
-#if !(defined(_MSC_VER) && _MSC_VER < 1200)
-extern const char* s_tool_type_names[];   /* ai.cpp, 005561fc toolName[11] */
-#endif
 /* More objectGlobs fields' old names (legoobject_globs.h; not referenced
  * where the header makes them fields). */
 extern float* s_terrain_neighbor_path_cost;      /* 004dee00 */
@@ -80,11 +77,9 @@ int legoobject_activity_register_bookkeeping(Lego_Object* obj); /* 00447c40 */
 /* Stats.c (entity.hpp) and Weapons.c (weapons.cpp). */
 uint32_t stats_table_word_at_144(int type, int row);     /* 00469ec0 */
 float weapon_type_discharge_rate_get_target(int type);   /* 0046f140 */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Images.c is images_unit.c in the matching build (finding 632): the
  * C callers' calls go to the unit (images_link_names.h). */
 #define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
-#endif
 /* Images.c: Image_SetupTrans (surface.hpp; the port takes the surface). */
 void image_surface_blit_transformed(struct TextureSurface* surface,
                                     float low_red, float low_green,
@@ -128,7 +123,7 @@ void info_send(int type, char* text, void* object,
 /* Lego.c: 0042dfc0 is lego_unit.c's (lego_unit.h, C linkage); 00431570 is
  * an adapter at the end of lego.cpp. */
 void lego_object_pointer_registry_clear_match(void* object);    /* 0042dfc0 */
-void* level_current_terrain_get_original(void);                 /* 00431570 */
+void* level_current_terrain_get(int cell_x, int cell_y); /* 00431570 */
 /* LegoObject.c part 3 (entity.hpp, legoobject_port.cpp). */
 void legoobject_type_four_callback_dispatch(Lego_Object* obj); /* 00447900 */
 /* Map3D.c (terrain_map.h). */
@@ -154,21 +149,17 @@ void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object); /* 00472a40
 char* string_duplicate(const char* text);                       /* 00477550 */
 /* Original-ABI adapters at the end of legoobject_port.cpp (group B): the port
  * entries take a GameContext or hook table, or there is none. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Weapons.c's original callback is weapons.c's (finding 645). */
 #define legoobject_gb_weapon_target_clear_callback weapons_callback_remove_lazer_hit_reference /* 00472060 */
-#endif
 int legoobject_gb_weapon_target_clear_callback(void* obj, void* data); /* 00472060 */
 void legoobject_auxiliary_payload_release(Lego_Object* obj);       /* 0044be30 */
 void* construction_place_building(int objID, int* blockPos,
                                   unsigned int direction, int* shapePoints,
                                   unsigned int shapeCount,
                                   int teleportDown);              /* 00409a90 construction.c */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: NERPs.c's 00454880 itself (tutorial_script.c), which the
  * original calls with the object's type it does not read (issue #730). */
 #define legoobject_gb_tutorial_counter_increment_adapter nerps_monster_destroyed
-#endif
 void legoobject_gb_tutorial_counter_increment_adapter(int type);   /* 00454880 */
 
 /* ---- group C ---- */
@@ -259,23 +250,13 @@ extern int legoGlobs_BuildingUpgradeCostOre;        /* 00556f98 */
 extern int legoGlobs_BuildingUpgradeCostStuds;      /* 00556f9c */
 /* Lego.c (lego_unit.c). 0041f8e0 is an empty function in this build; the
  * original's caller compares its (undefined) return value. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 int noop_callback(int);   /* 0041f8e0 Lego_GetCrystalCount */
-#else
-void noop_callback(void);                           /* 0041f8e0 */
-#endif
 void global_object_field98_add(int amount);         /* 0041f8a0 */
 int lego_upgrade_resource_check(int ore);           /* 0041f900 */
 void lego_upgrade_resource_debit(int ore, int amount); /* 0041f9e0 */
 /* 00431570 takes no argument; the port's entry takes two ignored cells
  * (adapter at the end of lego.cpp). */
-void* level_current_terrain_get_original(void);     /* 00431570 */
-#if defined(_MSC_VER) && _MSC_VER < 1200
-/* Matching build: Lego_GetMap itself (lego_unit.c), called without the
- * port's two ignored cells, as Lego_GetMap() below. Finding 626. */
-#define level_current_terrain_get_original() \
-    (((void* (*)())level_current_terrain_get)())
-#endif
+void* level_current_terrain_get(int cell_x, int cell_y); /* 00431570 */
 /* Info.c (info_unit.c). */
 void info_send(int type, char* text, void* object,
                struct InfoPoint2I* blockPos);       /* 00419b80 */
@@ -292,11 +273,9 @@ uint32_t entity_state_flags_get(const struct EntitySlot* e); /* 00469e80 */
  * linkage; C entry at the end of entity_stats.cpp. */
 int legoobject_gd_building_index_set_adapter(struct EntitySlot* entity,
                                              uint32_t state); /* 00469c10 */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: entity_stats.c's 00469c10 (declared above), whose
  * contract is the original's (entity_stats_link_names.h). Finding 626. */
 #define legoobject_gd_building_index_set_adapter entity_building_index_set
-#endif
 uint32_t building_upgrade_admission_check(int type, int row); /* 00469f40 */
 uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
                                                      int slot); /* 0046a0c0 */
@@ -342,7 +321,6 @@ extern const char** s_object_the_name_kind3;        /* 00556270 */
 extern const char** s_object_the_name_kind4;        /* 00556274 */
 extern const char** s_object_the_name_kind10;       /* 00556278 */
 /* GAME-021 Lego.c (lego.cpp, level.hpp, entity_api.h). */
-#if defined(_MSC_VER) && defined(_M_IX86)
 /* The matching build calls Lego.c's original-shape entries in lego_unit.c
  * (GAME-021 part 2, finding 571); their port models are unannotated. One
  * declaration either way (finding 538, rule B). */
@@ -358,13 +336,6 @@ int lego_terrain_cell_byte_state_classify_current(const int* blockPos,
 #define terrain_cell_byte_state_classify_current(xy, a, b, c, d) \
     lego_terrain_cell_byte_state_classify_current((xy), (unsigned int*)(a), \
         (unsigned int*)(b), (unsigned int*)(c), (unsigned int*)(d))
-#else
-int entity_type_pair_lookup(const char* name, int* type_out, int* row_out,
-                            int* zero_out);                     /* 0042e8b0 */
-int terrain_cell_byte_state_classify_current(const int xy[2],
-    uint32_t* out_a, uint32_t* out_b, uint32_t* out_c,
-    uint32_t* out_d);                                           /* 0042c5b0 */
-#endif
 struct LevelState* level_current_owner_get(void);               /* 00431560 */
 /* GAME-019 Info.c (info_unit.h). */
 void info_send(int type, char* text, void* object,
@@ -408,18 +379,12 @@ void global_object_field98_clear_current(void);                              /* 
 void* level_current_terrain_get(int cell_x, int cell_y);                     /* 00431570 */
 #define Lego_GetMap() ((struct TerrainMap*)((void* (*)(void))level_current_terrain_get)())
 uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);      /* 00432b50 */
-#if defined(_MSC_VER) && defined(_M_IX86)
 /* Matching build: lego_unit.c's original-shape entry (finding 571). */
 int lego_terrain_cell_route_and_occupancy_check(struct EntitySlot* liveObj,
     int bx, int by, int toX, int toY, int ignoreOwnBlock);                   /* 00431da0 */
 #define terrain_cell_route_and_occupancy_check_current(e, fx, fy, tx, ty, s) \
     lego_terrain_cell_route_and_occupancy_check((struct EntitySlot*)(e), \
         (fx), (fy), (tx), (ty), (s))
-#else
-int terrain_cell_route_and_occupancy_check_current(
-    const struct EntitySlot* entity, int from_x, int from_y,
-    int to_x, int to_y, int strict);                                         /* 00431da0 */
-#endif
 /* GAME-026 Map3D (terrain_map.h). */
 int terrain_map_world_to_block(struct TerrainMap* map, float x, float y,
                                int* bx, int* by);                            /* 0044f6d0 */
@@ -457,11 +422,7 @@ void* legoobject_type_component_get(Lego_Object* obj);                 /* 0044a2
 /* GAME-021 Lego.c (lego_unit.c). 0041f8e0 is Lego_GetCrystalCount(flag) in
  * the original; lego_unit.c defines it as noop_callback(void), so the unit
  * calls it with the original's argument and result through a cast. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 int noop_callback(int);   /* 0041f8e0 Lego_GetCrystalCount */
-#else
-void noop_callback(void);                                                    /* 0041f8e0 */
-#endif
 #define Lego_GetCrystalCount(onlyUsable) (((int (*)(int))noop_callback)(onlyUsable))
 int lego_upgrade_resource_check(int ore);                                   /* 0041f900 */
 void global_object_field8c_increment(void);                                 /* 0041f870 */
@@ -550,10 +511,8 @@ int terrain_cell_mask_180000_current(const int cell_xy[2]);                /* 00
 /* Original-ABI adapter at the end of legoobject_port.cpp (group H): the
  * port's 00435230 takes the cell as two ints. 0044a4f0 and 0044bf00 are
  * part 3's own functions (issue #615). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: lego_unit.c's 00435230 itself (finding 626). */
 #define legoobject_gh_random_variant_cell_scatter_adapter lego_random_variant_cell_scatter
-#endif
 void legoobject_gh_random_variant_cell_scatter_adapter(const int* blockPos,
                                                        int radius,
                                                        int mode);           /* 00435230 */
@@ -600,11 +559,7 @@ void aitask_entity_deferred_work_schedule(struct EntitySlot* object);      /* 00
 /* In the matching build part 1's entity_command_unlink_by_kind (above)
  * names this function (aitask_port_aliases.h) with a const void* target;
  * aitask.h declares a struct EntitySlot*. Each build sees one type. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define LEGOOBJ_I_UNLINK_TARGET const void*
-#else
-#define LEGOOBJ_I_UNLINK_TARGET struct EntitySlot*
-#endif
 void aitask_entity_command_unlink_by_kind(struct EntitySlot* object, int type,
                                           LEGOOBJ_I_UNLINK_TARGET target,
                                           int unlink);                      /* 00403d10 */
@@ -690,10 +645,8 @@ void aitask_entity_threshold_progress_event_queue(struct EntitySlot* object,
 void flagged_object_timer_registry_insert(struct EntitySlot* record);      /* 00407540 */
 /* 00435aa0 (Lego.c part 3): the port's entry also takes the engine
  * context; GAME-021's adapter at the end of lego.cpp. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: lego_unit.c's 00435aa0 itself (finding 626). */
 #define lego_panel_selection_highlight_toggle_adapter lego_panel_selection_highlight_toggle
-#endif
 void lego_panel_selection_highlight_toggle_adapter(int on);                /* 00435aa0 */
 void global_float_accumulator_00555330_add(float value);                   /* 004628a0 */
 void global_float_accumulate_00555120(float value);                        /* 004628c0 */
@@ -708,12 +661,10 @@ int terrain_map_world_to_block(struct TerrainMap* map, float x, float y,
 int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,
                                unsigned int by, float* xOut,
                                float* yOut);                                /* 0044f640 */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: objectrecall.c's
  * ObjectRecall_RecallMiniFigure (#749, finding 648). An object-like alias
  * before the name's only declaration, so the symbol counter does not move. */
 #define entity_state_override_pop object_recall_recall_minifigure
-#endif
 int entity_state_override_pop(struct EntitySlot* entity);                  /* 00459240 */
 uint32_t entity_indexed_record_word_at_b4_get(int group, int index,
                                               int slot);                    /* 00469af0 */
@@ -742,14 +693,11 @@ float entity_energy_decay_rate_get(const struct EntitySlot* e);            /* 00
  * ObjectRecall_StoreMiniFigure, and entity_cell_effects.c's
  * 00409d50, which has C linkage there. Object-like aliases before each
  * name's only declaration, so the symbol counter does not move. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define legoobject_gi_osf_add_adapter object_recall_store_minifigure
 #define legoobject_gi_cell_path_effects_apply_adapter entity_cell_path_effects_apply_current
-#endif
 void legoobject_gi_osf_add_adapter(void* obj);                             /* 00459190 */
 void legoobject_gi_cell_path_effects_apply_adapter(void* obj);             /* 00409d50 */
 /* Weapons.c (entity.hpp, weapons.cpp). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: weapons.c's originals themselves (issue #730, finding
  * 638). Each port model has the original's contract; natively the unit
  * keeps the port's names. Object-like aliases, before the first
@@ -758,7 +706,6 @@ void legoobject_gi_cell_path_effects_apply_adapter(void* obj);             /* 00
 #define entity_flag100_and_shared_eligibility_check weapons_object_can_be_hit /* 00471ce0 */
 #define entity_velocity_slot_dispatch weapons_object_update_weapons /* 00471fc0 */
 #define entity_centers_within_configured_radius weapons_object_in_range /* 00472080 */
-#endif
 int object_pair_ray_hit_check(void* first, void* second);                  /* 004718d0 */
 int entity_centers_within_configured_radius(const struct EntitySlot* first,
                                             const struct EntitySlot* second); /* 00472080 */
@@ -812,13 +759,11 @@ int terrain_cell_walkable_flag_current(uint32_t cx, uint32_t cy);     /* 00432bd
 int terrain_cell_speed_class_current(const int cell_xy[2]);           /* 00432c50 */
 uint32_t terrain_cell_flag_20_bounded_current(uint32_t cx, uint32_t cy); /* 00432d90 */
 void level_tile_mark_current_target(const int cell_xy[2], int set);   /* 00432e00 */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: lego_unit.c's 00433be0 and 00433c10 themselves; the one
  * caller of 00433be0 already casts away the port's context argument
  * (finding 626). */
 #define current_level_terrain_grid_pick lego_current_level_terrain_grid_pick
 #define entity_neighbor_blocked_cell_step_probe lego_entity_neighbor_blocked_cell_step_probe
-#endif
 void current_level_terrain_grid_pick(struct EngineContext* ctx, float x, float y,
                                      int* gx, int* gy);               /* 00433be0 */
 int entity_neighbor_blocked_cell_step_probe(struct EntitySlot* entity,
@@ -826,13 +771,11 @@ int entity_neighbor_blocked_cell_step_probe(struct EntitySlot* entity,
 int terrain_cell_drill_work_add_current(int x, int y, float divisor,
                                         float elapsed);               /* 00434570 */
 void panel_selection_highlight_toggle(struct EngineContext* ctx, int on);             /* 00435aa0 */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: lego_unit.c's 00435aa0 itself, already declared above
  * (lego_panel_selection_highlight_toggle_adapter). After the declaration,
  * so only the use changes and the symbol counter does not move (#805,
  * finding 674). */
 #define panel_selection_highlight_toggle lego_panel_selection_highlight_toggle
-#endif
 int legoobject_progress_advance_by_25(Lego_Object* obj);              /* 00447730 */
 void legoobject_clear_linked_object_state(Lego_Object* obj);          /* 00447780 */
 int legoobject_activity_terrain_eligibility_transition(Lego_Object* obj, float elapsed,
@@ -974,12 +917,10 @@ void scene_resource_draw_at_origin(struct SceneResourceAnimationRecord* record,
 /* Weapons.c (weapon.hpp, weapons.cpp, effects.hpp). */
 uint32_t object_type_name_index_find(const char* name);             /* 0046f0d0 */
 float weapon_type_recharge_time_get_target(int type);                /* 0046f110 */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: weapons.c's 0046faf0 and 0046fc70 themselves, whose
  * contract is the original's (finding 626). */
 #define entity_spawn_record_slot_init weapons_projectile_create
 #define object_flight_curve_record_init weapons_projectile_create_curved
-#endif
 int entity_spawn_record_slot_init(void* owner, const float position[3],
                                   const float direction[3],
                                   uint32_t auxiliary, uint32_t mode); /* 0046faf0 */
@@ -1113,25 +1054,23 @@ float entity_indexed_float_lookup_with_minus_one_fallback(
  * Container_GetAnimationFrames. */
 float ddiscene_object_length_get(void* scene_object);              /* 00475390 */
 uint32_t ddiscene_object_frame_position_get(void* scene_object);   /* 004753f0 */
-/* LIBC __finite (0048e870; vc5names.h maps it for other compilers). */
-int _finite(double x);
 /* LegoObject.c part 3 (issue #615): the unit's own function. */
 void legoobject_pairing_activity_raise_and_mutual_link(Lego_Object* first,
                                                        Lego_Object* second); /* 0044b250 */
 
 /* Maths.h's inline Vector3D and Vector2D helpers, as group O's functions
- * expand them (static __inline; /Ob1 expands them in place). */
-static __inline float legoobject_o_vector3_dot(LegoObjJ_Vector3F* a, LegoObjJ_Vector3F* b)
+ * expand them (static inline; /Ob1 expands them in place). */
+static inline float legoobject_o_vector3_dot(LegoObjJ_Vector3F* a, LegoObjJ_Vector3F* b)
 {
     return a->x * b->x + a->y * b->y + a->z * b->z;
 }
 
-static __inline float legoobject_o_vector3_modulus(LegoObjJ_Vector3F* v)
+static inline float legoobject_o_vector3_modulus(LegoObjJ_Vector3F* v)
 {
     return (float)sqrt(legoobject_o_vector3_dot(v, v));
 }
 
-static __inline LegoObjJ_Vector3F* legoobject_o_vector3_scale(LegoObjJ_Vector3F* r,
+static inline LegoObjJ_Vector3F* legoobject_o_vector3_scale(LegoObjJ_Vector3F* r,
                                                              LegoObjJ_Vector3F* a, float f)
 {
     r->x = a->x * f;
@@ -1140,12 +1079,12 @@ static __inline LegoObjJ_Vector3F* legoobject_o_vector3_scale(LegoObjJ_Vector3F*
     return r;
 }
 
-static __inline LegoObjJ_Vector3F* legoobject_o_vector3_normalise(LegoObjJ_Vector3F* r)
+static inline LegoObjJ_Vector3F* legoobject_o_vector3_normalise(LegoObjJ_Vector3F* r)
 {
     return legoobject_o_vector3_scale(r, r, 1.0f / legoobject_o_vector3_modulus(r));
 }
 
-static __inline LegoObjJ_Vector3F* legoobject_o_vector3_cross(LegoObjJ_Vector3F* r,
+static inline LegoObjJ_Vector3F* legoobject_o_vector3_cross(LegoObjJ_Vector3F* r,
                                                              LegoObjJ_Vector3F* a,
                                                              LegoObjJ_Vector3F* b)
 {
@@ -1162,40 +1101,40 @@ static __inline LegoObjJ_Vector3F* legoobject_o_vector3_cross(LegoObjJ_Vector3F*
     return r;
 }
 
-static __inline float legoobject_o_vector2_modulus(Point2F* v)
+static inline float legoobject_o_vector2_modulus(Point2F* v)
 {
     return (float)sqrt(v->x * v->x + v->y * v->y);
 }
 
-static __inline Point2F* legoobject_o_vector2_scale(Point2F* r, Point2F* a, float f)
+static inline Point2F* legoobject_o_vector2_scale(Point2F* r, Point2F* a, float f)
 {
     r->x = a->x * f;
     r->y = a->y * f;
     return r;
 }
 
-static __inline Point2F* legoobject_o_vector2_add(Point2F* r, Point2F* a, Point2F* b)
+static inline Point2F* legoobject_o_vector2_add(Point2F* r, Point2F* a, Point2F* b)
 {
     r->x = a->x + b->x;
     r->y = a->y + b->y;
     return r;
 }
 
-static __inline Point2F* legoobject_o_vector2_subtract(Point2F* r, Point2F* a, Point2F* b)
+static inline Point2F* legoobject_o_vector2_subtract(Point2F* r, Point2F* a, Point2F* b)
 {
     r->x = a->x - b->x;
     r->y = a->y - b->y;
     return r;
 }
 
-static __inline Point2F* legoobject_o_vector2_copy(Point2F* r, Point2F* a)
+static inline Point2F* legoobject_o_vector2_copy(Point2F* r, Point2F* a)
 {
     r->x = a->x;
     r->y = a->y;
     return r;
 }
 
-static __inline Point2F* legoobject_o_vector2_normalise(Point2F* r)
+static inline Point2F* legoobject_o_vector2_normalise(Point2F* r)
 {
     return legoobject_o_vector2_scale(r, r, 1.0f / legoobject_o_vector2_modulus(r));
 }

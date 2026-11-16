@@ -19,16 +19,12 @@ void main_menu_text_item(void);                             /* 004103d0 */
  * matching build the C callers pass the original's argument to
  * frontend_unit.c's definition (finding 628). The macro also rewrites
  * this declaration, one for one. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 #define menu_enter(fe, mode) front_run_screen_menu_type(mode)
-#endif
 int menu_enter(struct FrontEnd* fe, int mode);              /* 00416c80 */
 /* Front_IsFrontEndEnabled (00416d00) takes no argument; the macro drops
  * the port's in the matching build's C callers, and rewrites this
  * declaration into an old-style one. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 #define frontend_enabled(cfg) frontend_enabled()
-#endif
 int frontend_enabled(BlockFile* cfg);                       /* 00416d00 */
 int save_slot_open(void);                                   /* 00416d50 */
 int is_in_game(void);                                       /* 00416d60 */
@@ -54,25 +50,13 @@ extern char* g_front_end_avi2;            /* DAT_00556fb4 */
 extern struct Front_Globs frontGlobs;
 #define FRONT_GLOBS_FIELD(type, offset) (*(type*)((char*)&frontGlobs + (offset)))
 #define g_front_main_menu_set FRONT_GLOBS_FIELD(void*, 0x004)  /* 00556fc4 */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define g_front_save_tree FRONT_GLOBS_FIELD(void*, 0x038)      /* 00556ff8 */
-#else
-/* Natively the port keeps its own (frontend_port.cpp). */
-extern void* g_front_save_tree;           /* DAT_00556ff8 */
-#endif
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* frontGlobs.missionLevels (00556fe4), the mission level set, which
  * Reward.c passes Front_Levels_UpdateAvailable by address. */
 #define g_front_mission_levels (&FRONT_GLOBS_FIELD(uint8_t, 0x024))
-#endif
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* frontGlobs.saveData[5] (00557418), the current game's save slot, which
  * Reward.c reads the save file into (finding 680). */
 #define g_front_save_slot_buffer (&FRONT_GLOBS_FIELD(uint8_t, 0x458))
-#else
-/* Natively the port keeps its own (frontend_port.cpp). */
-extern uint8_t g_front_save_slot_buffer[0xec]; /* DAT_00557418 */
-#endif
 #define g_front_save_menu_result FRONT_GLOBS_FIELD(int, 0x544) /* 00557504 */
 #define g_front_save_menu_open FRONT_GLOBS_FIELD(int, 0x548)   /* 00557508 */
 

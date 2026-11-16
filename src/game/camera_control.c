@@ -24,11 +24,9 @@
 extern "C" {
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Maths.h's inline copies; their `_sqrt` reference places LIBC's sqrt.obj
  * (finding 692). The other compilers use camera_control_imports.h alone. */
 #include "camera_maths.h"
-#endif
 
 typedef struct Camera_Vector3F {
     float x;

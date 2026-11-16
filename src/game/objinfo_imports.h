@@ -29,10 +29,8 @@ int damage_font_live_object_check_can_show_damage(struct EntitySlot* liveObj); /
 /* gods98 Utils.c (utils.c): Util_Tokenise. */
 int sound_variant_split(char* text, char** out, const char* separators); /* 00477440 */
 
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Images.c is images_unit.c in the matching build (finding 632). */
 #define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
-#endif
 /* Images.c (images_unit.c): Image_SetupTrans. */
 void image_surface_blit_transformed(struct TextureSurface* surface,
                                     float low_red, float low_green,

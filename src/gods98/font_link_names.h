@@ -20,16 +20,9 @@
 #ifndef LEGORRR_GODS98_FONT_LINK_NAMES_H
 #define LEGORRR_GODS98_FONT_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define font_load font_atlas_record_create /* 00479ee0 */
 #define font_get_char_width bitmap_font_glyph_measure_width /* 0047a520 */
 #define font_get_height object_field_be4_dword_get /* 0047a540 */
 #define font_remove font_atlas_record_release /* 0047a550 */
-#else
-#define font_v_get_string_info font_unit_v_get_string_info /* 0047a150 */
-#define font_print_f font_unit_print_f /* 0047a180 */
-#define font_v_print_f font_unit_v_print_f /* 0047a1b0 */
-#define font_output_char font_unit_output_char /* 0047a470 */
-#endif
 
 #endif /* LEGORRR_GODS98_FONT_LINK_NAMES_H */

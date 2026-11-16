@@ -5,12 +5,12 @@
  * own. Only screen_effect_quads.c includes this file, after
  * DamageFont_Vector3F.
  *
- * They are static __inline functions, not macros: as macros the expansions
+ * They are static inline functions, not macros: as macros the expansions
  * compile differently (finding 544). */
 #ifndef LEGORRR_GAME_SCREEN_EFFECT_QUADS_MATHS_H
 #define LEGORRR_GAME_SCREEN_EFFECT_QUADS_MATHS_H
 
-static __inline DamageFont_Vector3F* damage_font_vector3d_add(
+static inline DamageFont_Vector3F* damage_font_vector3d_add(
     DamageFont_Vector3F* r, const DamageFont_Vector3F* a,
     const DamageFont_Vector3F* b)
 {
@@ -20,7 +20,7 @@ static __inline DamageFont_Vector3F* damage_font_vector3d_add(
     return r;
 }
 
-static __inline DamageFont_Vector3F* damage_font_vector3d_scale(
+static inline DamageFont_Vector3F* damage_font_vector3d_scale(
     DamageFont_Vector3F* r, const DamageFont_Vector3F* a, float f)
 {
     r->x = a->x * f;
@@ -29,7 +29,7 @@ static __inline DamageFont_Vector3F* damage_font_vector3d_scale(
     return r;
 }
 
-static __inline DamageFont_Vector3F* damage_font_vector3d_cross_product(
+static inline DamageFont_Vector3F* damage_font_vector3d_cross_product(
     DamageFont_Vector3F* r, const DamageFont_Vector3F* a,
     const DamageFont_Vector3F* b)
 {
@@ -39,7 +39,7 @@ static __inline DamageFont_Vector3F* damage_font_vector3d_cross_product(
     return r;
 }
 
-static __inline DamageFont_Vector3F* damage_font_ray_end_point(
+static inline DamageFont_Vector3F* damage_font_ray_end_point(
     DamageFont_Vector3F* r, const DamageFont_Vector3F* p,
     const DamageFont_Vector3F* v, float t)
 {

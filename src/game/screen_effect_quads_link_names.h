@@ -27,13 +27,11 @@
 #ifndef LEGORRR_GAME_SCREEN_EFFECT_QUADS_LINK_NAMES_H
 #define LEGORRR_GAME_SCREEN_EFFECT_QUADS_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define credits_play scrolling_text_display                                   /* 0040a0c0 */
 #define damage_font_cleanup screen_effect_flags_clear_and_release             /* 0040a3d0 */
 #define damage_font_load_frames preload_numbered_bitmaps                      /* 0040a400 */
 #define damage_font_display_damage_over_live_object quad_mesh_render_record_create /* 0040a4b0 */
 #define damage_font_update_all simtick_table_dispatch_original                /* 0040aa10 */
 #define damage_font_live_object_check_can_show_damage entity_quad_mesh_render_record_allowed /* 0040aae0 */
-#endif
 
 #endif /* LEGORRR_GAME_SCREEN_EFFECT_QUADS_LINK_NAMES_H */

@@ -6,7 +6,7 @@
 #ifndef LEGORRR_GODS98_MEM_FREE_H
 #define LEGORRR_GODS98_MEM_FREE_H
 
-static __inline void Mem_Free(void* addr)
+static inline void Mem_Free(void* addr)
 {
     free(addr);
 }

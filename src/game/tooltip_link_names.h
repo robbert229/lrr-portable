@@ -33,16 +33,11 @@
 #ifndef LEGORRR_GAME_TOOLTIP_LINK_NAMES_H
 #define LEGORRR_GAME_TOOLTIP_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define tooltip_initialise tooltip_overlay_state_initialize /* 0046b1d0 */
 #define tooltip_get_type case_insensitive_name_table_lookup /* 0046b4d0 */
 #define tooltip_add_icon command_sample_stats_accumulate /* 0046b660 */
 #define tooltip_set_sfx timed_effect_cue_request_set_corpus /* 0046b700 */
 #define tooltip_activate timed_effect_update_request_set_corpus /* 0046b770 */
 #define tooltip_update timed_effect_runtime_update /* 0046b7c0 */
-#else
-#define tooltip_set_content tooltip_unit_set_content /* 0046b520 */
-#define tooltip_draw_box tooltip_unit_draw_box /* 0046b8b0 */
-#endif
 
 #endif /* LEGORRR_GAME_TOOLTIP_LINK_NAMES_H */

@@ -61,15 +61,11 @@
 
 /* Maths.h's inline vector functions (vec_len to vec_normalize). The original
  * emits them in every object that includes Maths.h as pick-any COMDATs, and
- * LINK keeps the first, this unit's. MSVC 5.0's `extern __inline` gives that
+ * LINK keeps the first, this unit's. MSVC 5.0's `inline` gives that
  * COMDAT, with the same code as a plain definition, so the unoptimised
  * camera unit's copies (camera_maths.h) are discarded rather than
  * multiply defined (finding 692). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
-#define MATHS_INLINE extern __inline
-#else
-#define MATHS_INLINE
-#endif
+#define MATHS_INLINE inline
 
 /* The prefix of the game camera (LegoCamera) that Advisor_Initialise
  * reads: its camera container is the word at +0x24. */
@@ -306,42 +302,6 @@ MATHS_INLINE float vec_dist(const float* a, const float* b)
 }
 
 // FUNCTION: LEGORR 0x00401470
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* The C body below compiles to the same operations with the operands of the
- * last two products loaded the other way round (68%), in every source form
- * and counter phase tried (finding 550); the matching build keeps the
- * port's instruction-for-instruction body. */
-__declspec(naked) float* vec_cross(float* dst, const float* b, const float* c)
-{
-    __asm {
-        mov edx, dword ptr [esp + 8]
-        mov ecx, dword ptr [esp + 0x0c]
-        mov eax, dword ptr [esp + 4]
-        fld dword ptr [edx + 8]
-        fld dword ptr [ecx + 8]
-        fmul dword ptr [edx + 4]
-        fxch st(1)
-        fmul dword ptr [ecx + 4]
-        fsubp st(1), st
-        fstp dword ptr [eax]
-        fld dword ptr [ecx + 8]
-        fld dword ptr [edx + 8]
-        fmul dword ptr [ecx]
-        fxch st(1)
-        fmul dword ptr [edx]
-        fsubp st(1), st
-        fstp dword ptr [eax + 4]
-        fld dword ptr [edx + 4]
-        fld dword ptr [ecx + 4]
-        fmul dword ptr [edx]
-        fxch st(1)
-        fmul dword ptr [ecx]
-        fsubp st(1), st
-        fstp dword ptr [eax + 8]
-        ret
-    }
-}
-#else
 float* vec_cross(float* dst, const float* b, const float* c)
 {
     dst[0] = b[1] * c[2] - b[2] * c[1];
@@ -349,7 +309,6 @@ float* vec_cross(float* dst, const float* b, const float* c)
     dst[2] = b[0] * c[1] - b[1] * c[0];
     return dst;
 }
-#endif
 
 
 // FUNCTION: LEGORR 0x004014c0
@@ -608,13 +567,9 @@ int engine_app_mode_get(void)
  * native port has no such buffer and no start level (finding 633). */
 
 // FUNCTION: LEGORR 0x00401c00
-const char* main_get_start_level(void)
+extern "C" const char* main_get_start_level(void)
 {
-#if !defined(LEGORRR_BACKEND_MINIWIN)
     return (s_engine_feature_word & ADVISOR_MAIN_FLAG_STARTLEVEL) ? mainGlobs.startLevel : NULL;
-#else
-    return NULL;
-#endif
 }
 
 // FUNCTION: LEGORR 0x00401c20
@@ -664,20 +619,3 @@ void formatted_text_printf(const struct TextureSurface* font,
     va_end(args);
 }
 
-#if !(defined(_MSC_VER) && _MSC_VER == 1100)
-/* Port-only test accessors, compiled out of the matching build (ADR 0006). */
-uint32_t advisor_state_word_peek(void)
-{
-    return advisorGlobs.flags;
-}
-
-void advisor_state_word_set(uint32_t v)
-{
-    advisorGlobs.flags = v;
-}
-
-uint32_t advisor_action_flags_peek(int row)
-{
-    return advisorGlobs.positions[row].flags;
-}
-#endif

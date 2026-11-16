@@ -17,13 +17,11 @@ extern "C" {
 
 float EngineTimeScale(void);                                    /* 0041fb40 */
 void lego_game_speed_set(float speed);                          /* 00425ce0 lego_unit.c */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: Lego.c's Lego_GotoInfo itself (lego_unit.c), instead of
  * engine.cpp's adapter (#827, finding 684). It renames the declaration
  * below and its use; the new name is not otherwise declared here
  * (finding 538). */
 #define lego_goto_info lego_viewport_target_position_clamp /* 0042de40 */
-#endif
 /* Lego_GotoInfo (0042de40) in the original ABI; natively an unannotated
  * adapter (engine.cpp). */
 void lego_goto_info(void* object, const int* blockPos, int force);
@@ -34,11 +32,9 @@ void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
                                    uint32_t* out_y);            /* 00463ea0 */
 void indexed_text_metrics_pair_set(int index, uint32_t x,
                                    uint32_t y);                 /* 00463ed0 */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Images.c is images_unit.c in the matching build (finding 632): the
  * C callers' calls go to the unit (images_link_names.h). */
 #define resource_record_add_ref Image_SetPenZeroTrans /* 0047dbc0 */
-#endif
 /* Image_SetPenZeroTrans (0047dbc0). The port's entry takes its
  * TextureSurface; info_unit.c passes the Image, as the original does. The
  * unit's image setters have no native caller (finding 567). */

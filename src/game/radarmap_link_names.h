@@ -28,7 +28,6 @@
 #ifndef LEGORRR_GAME_RADARMAP_LINK_NAMES_H
 #define LEGORRR_GAME_RADARMAP_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define radarmap_initialise screen_coord_normalize_init                 /* 0045d8b0 */
 #define radarmap_create ui_render_record_create                         /* 0045da90 */
 #define radarmap_free ui_render_record_free                             /* 0045daf0 */
@@ -37,6 +36,5 @@
 #define radarmap_inside_radar rect_contains_point_half_open             /* 0045e660 */
 #define radarmap_screen_to_block_pos terrain_point_pick_resolve_original /* 0045e6d0 */
 #define radarmap_try_select_object viewport_point_callback_dispatch     /* 0045e820 */
-#endif
 
 #endif /* LEGORRR_GAME_RADARMAP_LINK_NAMES_H */

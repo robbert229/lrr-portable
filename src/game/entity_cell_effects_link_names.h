@@ -19,10 +19,8 @@
 #include "game/rock_fall_styles_link_names.h"
 #include "game/selectplace_link_names.h"
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define building_set_cost_drop_disabled level_state_stored_value_set          /* 00409d40 */
 #define building_remove_from_terrain entity_cell_path_effects_apply_current   /* 00409d50 */
 #define object_tracked_replace_and_remove entity_destroy_tracked_pointer_cleanup /* 00409ff0 */
-#endif
 
 #endif /* LEGORRR_GAME_ENTITY_CELL_EFFECTS_LINK_NAMES_H */

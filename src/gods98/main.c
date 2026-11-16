@@ -10,28 +10,23 @@
  * CD-audio mixer volume. The binary attests none of the names; the
  * functions keep the names the port gave them.
  *
- * The code is Windows only. The native port has its own start-up
- * (platform/native/entry.cpp): the file compiles to nothing there, and the
- * port's native bodies of the functions other modules call stay in
- * frameloop.cpp, surface.cpp, audio.cpp and crt.cpp (PORT-ONLY).
+ * The process entry (platform/native/entry.cpp) calls WinMain with the
+ * command line; miniwin provides the window, the message queue, DirectDraw
+ * and Direct3DRM (ADR 0007). WINMM's time comes from SDL3
+ * ([library:time]); the CD-audio mixer and KERNEL32's single-instance mutex
+ * are seam stubs (platform/native/seam_stubs.cpp).
  *
  * The unit's .bss is the original's mainGlobs, one external struct
- * (finding 679). Thirteen of its fields are shared with the port, which
- * defines them under its own names in other files (main_imports.h lists
- * them); in the matching build those names are mainGlobs fields
- * (main_globs.h), here and in every unit that reads them.
- *
- * C-compatible (ADR 0005): C in the matching build, C++ in the MinGW
- * reference build. */
+ * (finding 679); other units read thirteen of its fields by the port's
+ * names, which main_globs.h makes the fields. */
 #include "main.h"
 
-#if !defined(LEGORRR_BACKEND_MINIWIN)
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <windows.h>
-#include <mmsystem.h>
+#include <miniwin/windows.h>
+#include "winmm.h"
 
 #include "crt/vc5names.h"
 #include "avi_player.h"
@@ -76,80 +71,18 @@
 #define MAIN_FLAG_REDUCEFLICS       0x01000000
 #define MAIN_FLAG_REDUCEIMAGES      0x02000000
 
-/* The COM interfaces the unit calls, with only the methods it uses. */
-typedef struct Main_Guid {
-    unsigned int data1;
-    unsigned short data2;
-    unsigned short data3;
-    unsigned char data4[8];
-} Main_Guid;
-
-typedef struct Main_RMIface1 Main_RMIface1;         /* IDirect3DRM */
-typedef struct Main_RMIface Main_RMIface;           /* IDirect3DRM3 */
-typedef struct Main_RMDevice Main_RMDevice;         /* IDirect3DRMDevice3 */
-typedef struct Main_IMDevice2 Main_IMDevice2;       /* IDirect3DDevice2 */
-typedef struct Main_IMDevice Main_IMDevice;         /* IDirect3DDevice3 */
-typedef struct Main_Surface Main_Surface;           /* IDirectDrawSurface4 */
-
-typedef struct Main_RMIface1Vtbl {
-    HRESULT (WINAPI* QueryInterface)(Main_RMIface1*, const Main_Guid*, void**);
-} Main_RMIface1Vtbl;
-struct Main_RMIface1 { const Main_RMIface1Vtbl* lpVtbl; };
-
-typedef struct Main_RMIfaceVtbl {
-    void* reserved_00[15];
-    HRESULT (WINAPI* CreateDeviceFromSurface)(Main_RMIface*, void* guid,
-                                              void* ddraw, void* backSurf,
-                                              DWORD flags,
-                                              Main_RMDevice** device); /* +0x3c */
-} Main_RMIfaceVtbl;
-struct Main_RMIface { const Main_RMIfaceVtbl* lpVtbl; };
-
-typedef struct Main_RMDeviceVtbl {
-    void* reserved_00[14];
-    HRESULT (WINAPI* Update)(Main_RMDevice*);                        /* +0x38 */
-    void* reserved_3c[2];
-    HRESULT (WINAPI* SetBufferCount)(Main_RMDevice*, DWORD);         /* +0x44 */
-    void* reserved_48;
-    HRESULT (WINAPI* SetDither)(Main_RMDevice*, BOOL);               /* +0x4c */
-    void* reserved_50;
-    HRESULT (WINAPI* SetQuality)(Main_RMDevice*, DWORD);             /* +0x54 */
-    HRESULT (WINAPI* SetTextureQuality)(Main_RMDevice*, DWORD);      /* +0x58 */
-    void* reserved_5c[15];
-    HRESULT (WINAPI* GetDirect3DDevice2)(Main_RMDevice*, Main_IMDevice2**); /* +0x98 */
-} Main_RMDeviceVtbl;
-struct Main_RMDevice { const Main_RMDeviceVtbl* lpVtbl; };
-
-typedef struct Main_IMDevice2Vtbl {
-    HRESULT (WINAPI* QueryInterface)(Main_IMDevice2*, const Main_Guid*, void**);
-    ULONG (WINAPI* AddRef)(Main_IMDevice2*);
-    ULONG (WINAPI* Release)(Main_IMDevice2*);
-} Main_IMDevice2Vtbl;
-struct Main_IMDevice2 { const Main_IMDevice2Vtbl* lpVtbl; };
-
-typedef struct Main_IMDeviceVtbl {
-    void* reserved_00[21];
-    HRESULT (WINAPI* GetRenderState)(Main_IMDevice*, DWORD, DWORD*); /* +0x54 */
-    HRESULT (WINAPI* SetRenderState)(Main_IMDevice*, DWORD, DWORD);  /* +0x58 */
-} Main_IMDeviceVtbl;
-struct Main_IMDevice { const Main_IMDeviceVtbl* lpVtbl; };
-
-typedef struct Main_SurfaceVtbl {
-    HRESULT (WINAPI* QueryInterface)(Main_Surface*, const Main_Guid*, void**);
-} Main_SurfaceVtbl;
-struct Main_Surface { const Main_SurfaceVtbl* lpVtbl; };
+#include <miniwin/d3d.h>
+#include <miniwin/d3drm.h>
+#include <miniwin/ddraw.h>
+#include <SDL3/SDL_timer.h>
 
 /* WinMain's shutdown passes FALSE to the shared empty function at
  * 00484c90; the port's own definition takes no arguments. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
-#define main_shutdown_nothing() (((void (*)())flic_opcode27_fallback_noop)(FALSE))
-#else
-#define main_shutdown_nothing() flic_opcode27_fallback_noop()
-#endif
+#define main_shutdown_nothing() (flic_opcode27_fallback_noop())
 
-#define lpD3DRM()   ((Main_RMIface*)s_main_d3drm)
-#define lpDevice()  ((Main_RMDevice*)s_main_device)
-#define lpIMDevice() ((Main_IMDevice*)s_main_im_device)
+#define lpD3DRM()   ((LPDIRECT3DRM3)s_main_d3drm)
+#define lpDevice()  ((LPDIRECT3DRMDEVICE3)s_main_device)
+#define lpIMDevice() ((LPDIRECT3DDEVICE3)s_main_im_device)
 
 /* The game's three callbacks (Main_State). */
 typedef struct Main_State {
@@ -164,30 +97,9 @@ typedef struct Main_StateChangeData {
     int changed;
 } Main_StateChangeData;
 
-/* IID_IDirectDrawSurface, IID_IDirect3DDevice3 and IID_IDirect3DRM3. The
- * matching build links them from dxguid.lib, as the original does (finding
- * 688); container.c annotates the first. The portable builds keep the
- * unit's own copies. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
-extern const Main_Guid IID_IDirectDrawSurface;
-// GLOBAL: LEGORR 0x0049f6d8
-extern const Main_Guid IID_IDirect3DDevice3;
-// GLOBAL: LEGORR 0x0049fbd8
-extern const Main_Guid IID_IDirect3DRM3;
-#else
-static const Main_Guid IID_IDirectDrawSurface = {
-    0x6c14db81, 0xa733, 0x11ce,
-    { 0xa5, 0x21, 0x00, 0x20, 0xaf, 0x0b, 0xe5, 0x60 }
-};
-static const Main_Guid IID_IDirect3DDevice3 = {
-    0xb0ab3b60, 0x33d7, 0x11d1,
-    { 0xa9, 0x81, 0x00, 0xc0, 0x4f, 0xd7, 0xb1, 0x74 }
-};
-static const Main_Guid IID_IDirect3DRM3 = {
-    0x4516ec83, 0x8f20, 0x11d0,
-    { 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3 }
-};
-#endif
+/* IID_IDirectDrawSurface, IID_IDirect3DDevice3 and IID_IDirect3DRM3 come
+ * from miniwin's headers (the original links them from dxguid.lib, at
+ * 0049f6d8 and 0049fbd8 for the last two). */
 
 /* The unit's .bss, mainGlobs (main_globs.h): one external definition with
  * `= { 0 }`, so it stays in the object's .bss (finding 669). Reward.c and
@@ -235,7 +147,6 @@ Main_Globs mainGlobs = { 0 };
 #ifdef __cplusplus
 extern "C" {
 #endif
-HRESULT WINAPI Direct3DRMCreate(Main_RMIface1** lplpDirect3DRM);    /* d3drm.dll */
 void low_texture_flag_set(void);
 void winmain_parse_options(const char* lpCmdLine, int* nosound,
                            int* insistOnCD);
@@ -250,7 +161,7 @@ void window_message_dispatch_pump(void);
 void renderer_window_mode_apply(int fullScreen, int xPos, int yPos,
                                 int width, int height);
 int direct3drm_device_initialize(DirectDraw_Device* dev, void* ddraw1,
-                                 Main_Surface* backSurf, int doubleBuffered);
+                                 LPDIRECTDRAWSURFACE4 backSurf, int doubleBuffered);
 void window_runtime_adjust_rect(LPRECT rect);
 void direct3d_render_preferences_apply(int quality, int dither,
                                        int filter, int mipmap,
@@ -371,7 +282,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                     float time = 1.0f;
                     unsigned long lastTime, currTime;
 
-                    lastTime = timeGetTime();
+                    lastTime = (DWORD)SDL_GetTicks(); // [library:time]
                     while (!s_window_close_requested) {
                         s_window_mouse_word_4c = 0;
                         s_window_mouse_word_50 = 0;
@@ -398,15 +309,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                             time = 25.0f / 30.0f;
                         } else if (s_engine_feature_word & MAIN_FLAG_PAUSED) {
                             time = 0.0f;
-                            lastTime = timeGetTime();
+                            lastTime = (DWORD)SDL_GetTicks(); // [library:time]
                         } else if (0.0f == mainGlobs.fixedFrameTiming) {
-                            currTime = timeGetTime();
+                            currTime = (DWORD)SDL_GetTicks(); // [library:time]
                             time = (float)(currTime - lastTime) * 0.025f;
                             lastTime = currTime;
                             if (time > 3.0f) time = 3.0f;
                         } else {
                             time = mainGlobs.fixedFrameTiming;
-                            lastTime = timeGetTime();
+                            lastTime = (DWORD)SDL_GetTicks(); // [library:time]
                         }
                     }
                 }
@@ -544,7 +455,7 @@ int window_runtime_display_caps_query(void)
 void renderer_begin_frame_once_retail(void)
 {
     if (!(s_engine_feature_word & MAIN_FLAG_UPDATED)) {
-        lpDevice()->lpVtbl->Update(lpDevice());
+        lpDevice()->Update();
         s_engine_feature_word |= MAIN_FLAG_UPDATED;
     }
 }
@@ -565,7 +476,7 @@ int window_runtime_callback_triplet_set(const Main_State* state)
 // FUNCTION: LEGORR 0x00478000
 unsigned long main_time_get(void)
 {
-    return timeGetTime();
+    return (DWORD)SDL_GetTicks(); // [library:time]
 }
 
 // FUNCTION: LEGORR 0x00478010
@@ -627,16 +538,16 @@ void renderer_window_mode_apply(int fullScreen, int xPos, int yPos,
 
 // FUNCTION: LEGORR 0x004781d0
 int direct3drm_device_initialize(DirectDraw_Device* dev, void* ddraw1,
-                                 Main_Surface* backSurf, int doubleBuffered)
+                                 LPDIRECTDRAWSURFACE4 backSurf, int doubleBuffered)
 {
-    Main_RMIface1* lpD3DRM1;
-    Main_Surface* surf1;
-    Main_IMDevice2* imdev2;
-    HRESULT r;
-    DirectDraw_Guid* guid = NULL;
+    LPDIRECT3DRM lpD3DRM1;
+    LPDIRECTDRAWSURFACE surf1;
+    LPDIRECT3DDEVICE2 imdev2;
+    HRESULT r = D3DRM_OK;
+    GUID* guid = NULL;
 
     if (dev) {
-        guid = &dev->guid;
+        guid = (GUID*)&dev->guid;
         if (dev->flags & DIRECTDRAW_FLAG_DEVICE_VIDEOTEXTURE)
             s_engine_feature_word |= MAIN_FLAG_VIDEOTEXTURE;
     }
@@ -648,20 +559,17 @@ int direct3drm_device_initialize(DirectDraw_Device* dev, void* ddraw1,
         s_scene_fog_mode = 2;
     }
 
-    if (Direct3DRMCreate((void*)&lpD3DRM1) == 0) {
-        if (lpD3DRM1->lpVtbl->QueryInterface(lpD3DRM1, &IID_IDirect3DRM3,
-                                             &s_main_d3drm) == 0) {
-            backSurf->lpVtbl->QueryInterface(backSurf, &IID_IDirectDrawSurface,
-                                             (void**)&surf1);
-            if ((r = lpD3DRM()->lpVtbl->CreateDeviceFromSurface(
-                     lpD3DRM(), guid, ddraw1, surf1, 0,
-                     (Main_RMDevice**)&s_main_device)) == 0) {
-                lpDevice()->lpVtbl->GetDirect3DDevice2(lpDevice(), &imdev2);
-                imdev2->lpVtbl->QueryInterface(imdev2, &IID_IDirect3DDevice3,
-                                               &s_main_im_device);
-                imdev2->lpVtbl->Release(imdev2);
+    if (Direct3DRMCreate(&lpD3DRM1) == D3DRM_OK) {
+        if (lpD3DRM1->QueryInterface(IID_IDirect3DRM3, &s_main_d3drm) == D3DRM_OK) {
+            backSurf->QueryInterface(IID_IDirectDrawSurface, (void**)&surf1);
+            if ((r = lpD3DRM()->CreateDeviceFromSurface(
+                     guid, (LPDIRECTDRAW)ddraw1, surf1, 0,
+                     (LPDIRECT3DRMDEVICE3*)&s_main_device)) == D3DRM_OK) {
+                lpDevice()->GetDirect3DDevice2(&imdev2);
+                imdev2->QueryInterface(IID_IDirect3DDevice3, &s_main_im_device);
+                imdev2->Release();
                 if (doubleBuffered)
-                    lpDevice()->lpVtbl->SetBufferCount(lpDevice(), 2);
+                    lpDevice()->SetBufferCount(2);
                 return TRUE;
             } else {
                 directx_result_diagnostic_dispatch(
@@ -671,7 +579,7 @@ int direct3drm_device_initialize(DirectDraw_Device* dev, void* ddraw1,
         }
     }
 
-    if (r != 0) {
+    if (r != D3DRM_OK) {
         directx_result_diagnostic_dispatch(
             r, 1, "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Main.c", 576);
     }
@@ -711,9 +619,9 @@ void direct3d_render_preferences_apply(int quality, int dither,
     }
 
     if (lpDevice()) {
-        lpDevice()->lpVtbl->SetDither(lpDevice(), dither);
-        lpDevice()->lpVtbl->SetQuality(lpDevice(), renderQuality);
-        lpDevice()->lpVtbl->SetTextureQuality(lpDevice(), textureQuality);
+        lpDevice()->SetDither(dither);
+        lpDevice()->SetQuality((D3DRMRENDERQUALITY)renderQuality);
+        lpDevice()->SetTextureQuality((D3DRMTEXTUREQUALITY)textureQuality);
     }
 }
 
@@ -941,9 +849,9 @@ void direct3d_render_state_set_cached(DWORD dwRenderStateType,
     Main_StateChangeData* data;
     DWORD currValue;
 
-    lpIMDevice()->lpVtbl->GetRenderState(lpIMDevice(), dwRenderStateType, &currValue);
+    lpIMDevice()->GetRenderState((D3DRENDERSTATETYPE)dwRenderStateType, &currValue);
     if (currValue != dwRenderState) {
-        lpIMDevice()->lpVtbl->SetRenderState(lpIMDevice(), dwRenderStateType, dwRenderState);
+        lpIMDevice()->SetRenderState((D3DRENDERSTATETYPE)dwRenderStateType, dwRenderState);
         data = &mainGlobs.renderStates[dwRenderStateType];
         if (data->changed) {
             if (data->origValue == currValue) data->changed = FALSE;
@@ -961,8 +869,8 @@ void d3d_material_state_flush(void)
 
     for (loop = 0; loop < MAIN_MAXRENDERSTATES; loop++) {
         if (mainGlobs.renderStates[loop].changed) {
-            lpIMDevice()->lpVtbl->SetRenderState(lpIMDevice(), loop,
-                                                 mainGlobs.renderStates[loop].origValue);
+            lpIMDevice()->SetRenderState((D3DRENDERSTATETYPE)loop,
+                                         mainGlobs.renderStates[loop].origValue);
             mainGlobs.renderStates[loop].changed = FALSE;
         }
     }
@@ -1092,4 +1000,3 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
     return result;
 }
 
-#endif /* !LEGORRR_BACKEND_MINIWIN */

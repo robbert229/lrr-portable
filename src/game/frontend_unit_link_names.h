@@ -17,7 +17,6 @@
 #include "game/tooltip_link_names.h"
 #include "gods98/viewports_link_names.h"
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define front_callback_trigger_play_credits main_menu_text_item /* 004103d0 */
 
 /* Part 2 (finding 628): the unit's functions whose port names have C
@@ -78,11 +77,5 @@
  * (00417fc0) keep the unit's names: savegame.h's prototypes of the port's
  * names take another argument list, so savegame.h renames its callers
  * instead (outside this unit). */
-#else
-/* frontGlobs.startMissionLink (00556ff8) is Reward.c's g_front_save_tree
- * in the matching build, where frontend_port.cpp compiles its own
- * definition out; natively the port keeps that name. */
-#define g_front_save_tree frontGlobs_startMissionLink
-#endif
 
 #endif /* LEGORRR_GAME_FRONTEND_UNIT_LINK_NAMES_H */

@@ -43,14 +43,6 @@ typedef struct DrawRect {
 struct IDirectDrawSurface4;
 typedef struct IDirectDrawSurface4* LPDIRECTDRAWSURFACE4;
 
-#if defined(LEGORRR_BACKEND_MINIWIN)
-/* Native port only (draw_port.cpp). The original draws on the back buffer
- * in the common word at 0076ac8c. The port keeps that word as a uint32_t
- * (crt.hpp), which cannot hold a 64-bit pointer, and the native port has
- * no DirectDraw back buffer, so draw.c reads this one instead. By default
- * it is a surface whose methods fail, so nothing is drawn. */
-extern LPDIRECTDRAWSURFACE4 draw_port_back_surface;
-#endif
 
 /* Draw_Initialise (FUN_00485e80): set the initialised flag and the clip
  * window (NULL: the whole back buffer). */

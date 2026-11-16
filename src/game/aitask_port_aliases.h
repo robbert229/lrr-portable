@@ -18,7 +18,6 @@
 #ifndef LEGORRR_GAME_AITASK_PORT_ALIASES_H
 #define LEGORRR_GAME_AITASK_PORT_ALIASES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define cmd_kind_by_name aitask_cmd_kind_by_name /* 00401cb0 */
 #define cmd_registry_init_target aitask_cmd_registry_init_target /* 00401cf0 */
 #define cmd_mark_matching_adapter aitask_cmd_mark_matching /* 00402000 */
@@ -104,6 +103,5 @@
 #define simtick_scene_position_reset_and_effect_motion_cancel light_effects_invalidate_position /* 0044cf70 */
 #define motion_gameplay_tick light_effects_update /* 0044cfa0 */
 #define simtick_route_position_blocked_state_set light_effects_set_dimmer_mode /* 0044da20 */
-#endif
 
 #endif /* LEGORRR_GAME_AITASK_PORT_ALIASES_H */

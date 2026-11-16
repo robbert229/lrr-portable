@@ -1054,9 +1054,9 @@ void aitask_terrain_cell_command_create(const int* blockPos, int noHighlight,
             task->flags |= 0x20000;
         if (!noHighlight) {
             terrain_map_block_highlight_set(
-                (struct TerrainMap*)LEGO_LEVEL_PTR(void, level->map),
+                (struct TerrainMap*)level->map,
                 blockPos[0], blockPos[1], 1);
-            LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+            level->blocks
                 [level->width * blockPos[1] + blockPos[0]].flags1 |= 0x800000;
         }
     }
@@ -1635,7 +1635,7 @@ void aitask_terrain_cell_refresh_dispatch_current(const int* blockPos, int mode)
     search.mode = mode;
     aitask_entity_pool_callback_search(aitask_callback_00402bb0, &search);
     terrain_map_block_highlight_clear(
-        (struct TerrainMap*)LEGO_LEVEL_PTR(void, level->map),
+        (struct TerrainMap*)level->map,
         blockPos[0], blockPos[1]);
 }
 
@@ -1870,7 +1870,7 @@ int aitask_kind_nine_cell_command_issue(const int* blockPos, int noDetach)
 {
     AITask* task;
 
-    if (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+    if (legoGlobs_currLevel->blocks
             [legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].f_02 != 1 &&
         terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&
         !terrain_cell_flag_reserved_current(blockPos)) {
@@ -3697,7 +3697,7 @@ void aitask_entity_command_unlink_by_kind(struct EntitySlot* object, int type,
                 }
             } else if (task->type == 0xc) {
                 if (LEGO_FIELD(object, int, 0x0) == 1) {
-                    count = LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+                    count = legoGlobs_currLevel->blocks
                                 [task->blockY * legoGlobs_currLevel->width + task->blockX]
                                     .flags1 & 3;
                     for (i = 0; i < count; i++) {
@@ -6341,7 +6341,7 @@ int aitask_entity_pool_callback_search(int (*callback)(AITask* task, void* data)
  * }
  */
 // FUNCTION: LEGORR 0x004065d0
-unsigned int renderer_global_dword_get(void)
+struct IDirectDraw4* renderer_global_dword_get(void)
 {
     return s_renderer_global_dword;
 }
@@ -6357,7 +6357,7 @@ unsigned int renderer_global_dword_get(void)
  * }
  */
 // FUNCTION: LEGORR 0x004065e0
-unsigned int render_surface_secondary_get(void)
+struct IDirectDrawSurface4* render_surface_secondary_get(void)
 {
     return s_render_surface_secondary;
 }

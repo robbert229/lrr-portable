@@ -6,12 +6,12 @@
 #ifndef LEGORRR_GODS98_MEM_ALLOC_H
 #define LEGORRR_GODS98_MEM_ALLOC_H
 
-static __inline void* Mem_Alloc(unsigned int size)
+static inline void* Mem_Alloc(unsigned int size)
 {
     return malloc(size);
 }
 
-static __inline void* Mem_ReAlloc(void* addr, unsigned int size)
+static inline void* Mem_ReAlloc(void* addr, unsigned int size)
 {
     return realloc(addr, size);
 }

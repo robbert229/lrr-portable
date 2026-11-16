@@ -6,7 +6,7 @@
  *
  * The unit is compiled without optimisation (/Od, which implies /Ob0), so
  * MSVC 5.0 expands none of them: the camera's code calls each one, and the
- * object carries its own copy as a pick-any COMDAT (`extern __inline`). LINK
+ * object carries its own copy as a pick-any COMDAT (`inline`). LINK
  * keeps the first copy it meets, Advisor.c's (004013a0-00401750, defined
  * there the same way), and discards these. The copies call `sqrt` out of
  * line, so the object references `_sqrt` ahead of camera_update's `_fabs`.
@@ -16,17 +16,17 @@
 #ifndef LEGORRR_GAME_CAMERA_MATHS_H
 #define LEGORRR_GAME_CAMERA_MATHS_H
 
-extern __inline float vec_len(const float* a)
+inline float vec_len(const float* a)
 {
     return (float)sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
 }
 
-extern __inline float vec_dist(const float* a, const float* b)
+inline float vec_dist(const float* a, const float* b)
 {
     return (float)sqrt((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]));
 }
 
-extern __inline float* vec_add(float* dst, const float* a, const float* b)
+inline float* vec_add(float* dst, const float* a, const float* b)
 {
     dst[0] = a[0] + b[0];
     dst[1] = a[1] + b[1];
@@ -34,7 +34,7 @@ extern __inline float* vec_add(float* dst, const float* a, const float* b)
     return dst;
 }
 
-extern __inline float* vec_sub(float* dst, const float* a, const float* b)
+inline float* vec_sub(float* dst, const float* a, const float* b)
 {
     dst[0] = a[0] - b[0];
     dst[1] = a[1] - b[1];
@@ -42,12 +42,12 @@ extern __inline float* vec_sub(float* dst, const float* a, const float* b)
     return dst;
 }
 
-extern __inline float vec_dot(const float* a, const float* b)
+inline float vec_dot(const float* a, const float* b)
 {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
-extern __inline float* vec_scale(float* dst, const float* src, float s)
+inline float* vec_scale(float* dst, const float* src, float s)
 {
     dst[0] = src[0] * s;
     dst[1] = src[1] * s;
@@ -55,7 +55,7 @@ extern __inline float* vec_scale(float* dst, const float* src, float s)
     return dst;
 }
 
-extern __inline void vec_normalize(float* v)
+inline void vec_normalize(float* v)
 {
     vec_scale(v, v, 1.0f / vec_len(v));
 }

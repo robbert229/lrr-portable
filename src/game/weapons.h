@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(LEGORRR_GAME_WEAPONS_UNIT)
+#if !defined(LEGORRR_GAME_WEAPONS_UNIT)
 #define ledger_stub_0046f270_TypeMotionScaleApplyDispatch weapons_generic_damage_object
 #endif
 

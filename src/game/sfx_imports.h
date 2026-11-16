@@ -31,12 +31,11 @@ struct MeshRecordPool;
  * as the original does; the native C++ compile goes through lego_port.cpp's
  * adapter (as weapons_imports.h). */
 void* level_current_terrain_get(int cell_x, int cell_y);           /* 00431570 */
-void* level_current_terrain_get_original(void);
 #ifdef __cplusplus
-#define SFX_LEGO_GET_MAP() ((TerrainMap*)level_current_terrain_get_original())
+#define SFX_LEGO_GET_MAP() ((TerrainMap*)level_current_terrain_get(0, 0))
 #else
 #define SFX_LEGO_GET_MAP() \
-    ((TerrainMap*)((void* (*)())level_current_terrain_get)())
+    ((TerrainMap*)level_current_terrain_get(0, 0))
 #endif
 /* 004295a0: the current camera's container (Lego.c). */
 uint32_t lego_context_selected_global_pointer_get(void);           /* 004295a0 */
@@ -48,11 +47,9 @@ void scene_sample_hook_register(void* hook, void* value);          /* 00472920 *
 void* scene_root_object_get(void);                                 /* 00472940 */
 /* 00472950 Container_Create: the port's entry has C++ linkage in namespace
  * lego, so natively the unit calls lego_port.cpp's existing adapter. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: Container.c's own, under its link name
  * (container_link_names.h; #805, finding 674). */
 #define lego_container_create_adapter ddiscene_object_allocate
-#endif
 void* lego_container_create_adapter(void* parent);                 /* 00472950 */
 uint32_t scene_object_wrapped_pointer_get(const void* wrapped);    /* 00473680 */
 int ddiscene_object_position_get(void* object, void* alternate_frame,

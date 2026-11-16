@@ -19,12 +19,8 @@ extern "C" {
  * the matching build (MSVC 5.0) the C callers call tutorial_script.c's
  * NERPFunc__GetTutorialFlags with the original's argument instead; the
  * declaration replaces the port's one for one (finding 586). */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 int nerpfunc_get_tutorial_flags(unsigned int*);
 #define system_state_flags_get() nerpfunc_get_tutorial_flags(0)
-#else
-uint32_t system_state_flags_get(void);
-#endif
 
 #ifdef __cplusplus
 }

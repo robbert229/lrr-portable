@@ -20,7 +20,6 @@
 #ifndef LEGORRR_GAME_ENTITY_STATS_LINK_NAMES_H
 #define LEGORRR_GAME_ENTITY_STATS_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define stats_add_tool_task_type entity_indexed_value_append /* 00469a90 */
 #define stats_get_cost_ore entity_indexed_record_word_at_b0_get /* 00469ac0 */
 #define stats_get_cost_crystal entity_indexed_record_word_at_b4_get /* 00469af0 */
@@ -83,6 +82,5 @@
 #define stats_object_get_freezer_damage entity_stats_float_at110 /* 0046a2f0 */
 #define stats_object_get_freezer_time entity_stats_float_at10c /* 0046a310 */
 #define stats_object_debug_toggle_self_powered entity_record_flag400_toggle_and_refresh /* 0046a330 */
-#endif
 
 #endif /* LEGORRR_GAME_ENTITY_STATS_LINK_NAMES_H */

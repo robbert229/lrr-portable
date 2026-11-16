@@ -19,7 +19,6 @@
 extern "C" {
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* The matching build: container.c's Container_Frame_SetAppData serves this
  * name (container_link_names.h, finding 624), with the original's eleven
  * arguments; the macro passes the last one, 0, as the original does. A
@@ -35,15 +34,6 @@ void ddiscene_animation_hook_create(void* scene_object, int callback,
                                     const uint32_t*);
 #define ddiscene_animation_hook_create(a, b, c, d, e, f, g, h, i, j) \
     ddiscene_animation_hook_create(a, b, c, d, e, f, g, h, i, j, 0)
-#else
-void ddiscene_animation_hook_create(void* scene_object, int callback,
-                                    const char* name,
-                                    const uint32_t* value_0c, int value_08,
-                                    const uint32_t* value_10,
-                                    const uint32_t* value_14,
-                                    int value_18, int value_24,
-                                    const uint32_t* value_20);
-#endif
 
 #ifdef __cplusplus
 }

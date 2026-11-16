@@ -20,10 +20,8 @@
 #ifndef LEGORRR_GAME_COLLISION_LINK_NAMES_H
 #define LEGORRR_GAME_COLLISION_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define collision_polyline_point_distance point_to_polyline_minimum_segment_distance /* 00408b00 */
 #define collision_project_onto_line point_project_onto_line2d /* 00408b60 */
 #define collision_project_onto_direction point2d_project_onto_direction /* 00408bf0 */
-#endif
 
 #endif /* LEGORRR_GAME_COLLISION_LINK_NAMES_H */

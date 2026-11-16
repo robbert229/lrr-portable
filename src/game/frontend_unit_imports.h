@@ -30,12 +30,6 @@ struct TextureSurface;
 struct Flic;
 
 /* gods98 Main.c and Input.c state (crt.cpp, input). */
-#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: mainGlobs, main_globs.h */
-extern int s_display_w;                     /* 00505924 appWidth */
-extern uint32_t s_engine_feature_word;      /* 00505f84 mainGlobs.flags */
-extern int32_t s_application_mode;          /* 00505f88 programmerLevel */
-#endif
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #include "gods98/input_globs.h"
 #include "gods98/input_key_names.h"
 /* Input.h's entry points beside its state, as the original unit saw
@@ -43,12 +37,6 @@ extern int32_t s_application_mode;          /* 00505f88 programmerLevel */
 int input_direct_initialize(void);
 void input_state_poll_retail(void);
 int input_keyboard_down_key_count(void);   /* 0047efb0 Input_AnyKeyPressed */
-#else
-extern uint32_t s_renderer_word_a;          /* 0076ab24 msx */
-extern uint32_t s_renderer_word_b;          /* 0076ab28 msy */
-extern uint32_t g_renderer_word_c;          /* 0076ab3c mslb */
-extern uint32_t s_window_mouse_word_40;     /* 0076ab40 msrb */
-#endif
 extern uint8_t s_global_current_keys[256];  /* 0076ab80 Input_KeyMap */
 extern uint8_t s_global_previous_keys[256]; /* 0076aa00 Input_PrevKeyMap */
 
@@ -125,14 +113,12 @@ uint32_t object_field_be4_dword_get(const void* record);          /* 0047a540 */
 /* gods98 Sound3D.c (sound3d.c). */
 void audio_sound_volume_index_set(int index);                     /* 0047b530 */
 int sound_stream_stop_and_release(int stream_index);              /* 0047ba20 */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Images.c is images_unit.c in the matching build (finding 632): the
  * C callers' calls go to the unit (images_link_names.h). */
 #define image_surface_release Image_Remove /* 0047d470 */
 #define resource_record_add_ref Image_SetPenZeroTrans /* 0047dbc0 */
 #define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
 #define front_image_save_bmp_adapter Image_SaveBMP /* 0047e440 */
-#endif
 /* gods98 Images.c (images_unit.cpp, images.h). */
 void image_surface_release(void* record);                         /* 0047d470 */
 void resource_record_add_ref(void* record);                       /* 0047dbc0 */

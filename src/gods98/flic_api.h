@@ -13,9 +13,7 @@
 #ifndef LEGORRR_GODS98_FLIC_API_H
 #define LEGORRR_GODS98_FLIC_API_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 #define flic_close Flic_Close /* 00483f00 */
-#endif
 
 #ifdef __cplusplus
 extern "C" {

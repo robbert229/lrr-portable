@@ -22,12 +22,8 @@
 #include <stdint.h>
 #include <cstddef>
 
-#if defined(LEGORRR_BACKEND_MINIWIN)
 #  include <miniwin/windows.h>
 #  include <miniwin/ddraw.h>
-#else
-#  error "LEGORRR_BACKEND_MINIWIN is not defined; build with CMake"
-#endif
 
 /* --- Platform window + presentation (backend-specific glue) --------------- */
 /* miniwin exposes DDraw surfaces as framebuffers but never creates the

@@ -22,9 +22,7 @@
  * unit's name in the matching build, because C++ port code calls the port's
  * name with the port's projection adapter (viewports_link_names.h). A
  * #define adds no declaration, so the symbol numbering does not move. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define camera_project_point_to_screen viewport_world_to_screen
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,10 +82,8 @@ int lego_entity_type_pair_lookup(const char* objName, int* outType,
  * well, so natively the unit calls lego.cpp's original-ABI adapter. In the
  * C matching build both entries are legoobject_unit.c's (#610, as
  * legoobject_port_aliases.h maps them). */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 #define entity_transform_position_get_outputs legoobject_transform_position_get /* 00442260 */
 #define entity_position_to_terrain_cell_adapter legoobject_position_to_terrain_cell /* 004424f0 */
-#endif
 struct LegoObjGE_Point2F;
 void legoobject_build_placement_command_setup(int* cell, int id,
                                               struct LegoObjGE_Point2F* world,
@@ -108,7 +104,7 @@ unsigned int legoobject_grid_record_count_get(int row, int column,
 void entity_transform_position_get_outputs(const struct EntitySlot* entity,
                                            float* out_x,
                                            float* out_y);   /* 00442260 */
-void entity_position_to_terrain_cell_adapter(const struct EntitySlot* entity,
+int entity_position_to_terrain_cell_adapter(const struct EntitySlot* entity,
                                              int* cell_x, int* cell_y);
 
 /* GAME-029 Objective.c (objective_unit.cpp, objective.hpp). */
@@ -122,7 +118,6 @@ int sound_deferred_timer_set_if_idle(float seconds);        /* 00464ec0 */
 /* GAME-045 Text.c (text.c; text_port.cpp, message.hpp, frontend.hpp
  * natively). The original's Text_SetNERPsMessage (0046ac20) takes the
  * message line; the port's request word is that pointer on Win32. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Text.c's textGlobs (text.c, 00503190; finding 607), as far as NERPs
  * writes it: the message counter (00503610) and the message line
  * (00503614). One struct and one extern replace the two word declarations
@@ -136,10 +131,6 @@ struct Text_Globs {
 extern struct Text_Globs textGlobs;
 #define s_overlay_word_03610 textGlobs.counter
 #define s_overlay_word_03614 textGlobs.currText
-#else
-extern uint32_t s_overlay_word_03610;                       /* 00503610 */
-extern uint32_t s_overlay_word_03614;                       /* 00503614 */
-#endif
 void ui_message_overlay_state_initialize(void);             /* 0046aa90 */
 void advisor_text_request_setup(uint32_t request, uint32_t flags); /* 0046ac20 */
 
@@ -161,7 +152,6 @@ uint32_t flic_opcode25_success_stub(void);                  /* 00484b90 */
  * below give the original-shape units' names (as legoobject_port_aliases.h,
  * aitask_port_aliases.h and lego_unit_imports.h map them). A #define adds no
  * declaration, so the symbol numbering does not move. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 #define entity_type3_flag04000000_test legoobject_type3_flag04000000_test /* 004436f0 */
 #define task_record_kind10_queue aitask_task_record_kind10_queue /* 00403520 */
 #define legoobject_gd_building_index_set_adapter entity_building_index_set /* 00469c10 */
@@ -170,7 +160,6 @@ uint32_t flic_opcode25_success_stub(void);                  /* 00484b90 */
 #define entity_action_sequence_reset legoobject_action_sequence_reset /* 00441940 */
 #define entity_activity_scene_state_update_retail legoobject_activity_scene_state_update /* 00439990 */
 #define grid_record_count_difference_get legoobject_grid_record_count_difference_get /* 00437460 */
-#endif
 
 /* GAME-002 AITask.c (aitask.c). */
 void priority_entry_state_set(int kind, int value);         /* 004020a0 */
@@ -182,11 +171,7 @@ void aitask_task_registry_remove_type10_entries_for_entity(
 extern struct LevelState* g_active_level_retail;            /* 005560d4 currLevel */
 extern uint32_t s_panel_highlight_flags;                    /* 00556ed0 flags2 */
 void global_object_field8c_increment(void);                 /* 0041f870 */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 int noop_callback(int);   /* 0041f8e0 Lego_GetCrystalCount */
-#else
-void noop_callback(void);                                   /* 0041f8e0 */
-#endif
 void lego_level_resource_balance_add_and_sound(int ore);    /* 0041f9a0 */
 void lego_transition_control(int on, unsigned int flags);   /* 00425c30 */
 uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy,
@@ -232,11 +217,9 @@ void directdraw_flip(void);                                 /* 0047c8d0 */
 void input_state_poll_retail(void);                         /* 0047eef0 */
 int input_keyboard_down_key_count(void);                    /* 0047efb0 */
 short rng_thunk_draw15(void);                               /* 004798a0 */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* The key maps' matching-build names (input_key_names.h). */
 #define s_global_current_keys inputKeyMap
 #define s_global_previous_keys inputPrevKeyMap
-#endif
 extern uint8_t s_global_current_keys[256];                  /* 0076ab80 Input_KeyMap */
 extern uint8_t s_global_previous_keys[256];                 /* 0076aa00 Input_PrevKeyMap */
 

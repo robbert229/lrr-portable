@@ -22,7 +22,6 @@
 #include "game/text_link_names.h"
 #include "game/tooltip_link_names.h"
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define objective_load_level objective_load_original                /* 00457d40 */
 #define objective_has_achieved level_objective_result_get           /* 00458650 */
 #define objective_set_end_teleport_enabled global_value_004ffe48_set /* 00458660 */
@@ -30,6 +29,5 @@
 #define objective_is_ended objective_is_ended_original              /* 004589a0 */
 #define objective_handle_keys lego_quit_poll_adapter                /* 004589c0 */
 #define objective_update objective_tick_target                      /* 00458be0 */
-#endif
 
 #endif /* LEGORRR_GAME_OBJECTIVE_UNIT_LINK_NAMES_H */

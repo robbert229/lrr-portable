@@ -439,7 +439,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data); /* 0043c810 */
 
 /* Maths_Vector3DScale and Maths_Vector3DAdd, the inline helpers of
  * Gods98's Maths.h: inlined, they leave no code of their own. */
-static __inline LegoObjJ_Vector3F* legoobject_vector3_scale(LegoObjJ_Vector3F* r,
+static inline LegoObjJ_Vector3F* legoobject_vector3_scale(LegoObjJ_Vector3F* r,
                                                            LegoObjJ_Vector3F* a, float f)
 {
     r->x = a->x * f;
@@ -448,7 +448,7 @@ static __inline LegoObjJ_Vector3F* legoobject_vector3_scale(LegoObjJ_Vector3F* r
     return r;
 }
 
-static __inline LegoObjJ_Vector3F* legoobject_vector3_add(LegoObjJ_Vector3F* r,
+static inline LegoObjJ_Vector3F* legoobject_vector3_add(LegoObjJ_Vector3F* r,
                                                          LegoObjJ_Vector3F* a,
                                                          LegoObjJ_Vector3F* b)
 {
@@ -490,7 +490,7 @@ typedef struct LegoObjK_SearchData {
  * z); the matching build compiles with /Ob1, so it is expanded in place, as
  * the original's was. Maths_Vector3DModulus is legoobject_unit_imports.h's
  * legoobject_vector3d_modulus (it needs <math.h>). */
-static __inline float* legoobject_vector3d_subtract(float* r, float* a, float* b)
+static inline float* legoobject_vector3d_subtract(float* r, float* a, float* b)
 {
     r[0] = a[0] - b[0];
     r[1] = a[1] - b[1];
@@ -527,7 +527,7 @@ typedef struct LegoObjL_Vector3F {
 /* Maths_Vector3DScale, one of Maths.h's inline functions (the matching
  * build compiles with /Ob1, so it is expanded in place, as the original's
  * was). */
-static __inline LegoObjL_Vector3F* legoobject_vector3d_scale(LegoObjL_Vector3F* r,
+static inline LegoObjL_Vector3F* legoobject_vector3d_scale(LegoObjL_Vector3F* r,
     LegoObjL_Vector3F* a, float f)
 {
     r->x = a->x * f;
@@ -561,7 +561,7 @@ float legoobject_world_z_callback_lake(float x, float y, struct TerrainMap* map)
  * to the unit. */
 #include <math.h>
 /* Maths_Vector3DAdd. */
-static __inline LegoObjL_Vector3F* legoobject_vector3d_add(LegoObjL_Vector3F* r,
+static inline LegoObjL_Vector3F* legoobject_vector3d_add(LegoObjL_Vector3F* r,
     LegoObjL_Vector3F* a, LegoObjL_Vector3F* b)
 {
     r->x = a->x + b->x;
@@ -575,36 +575,36 @@ typedef struct LegoObjM_Point2F {
     float x;
     float y;
 } LegoObjM_Point2F;
-static __inline LegoObjM_Point2F* legoobject_vector2d_subtract(LegoObjM_Point2F* r,
+static inline LegoObjM_Point2F* legoobject_vector2d_subtract(LegoObjM_Point2F* r,
     LegoObjM_Point2F* a, LegoObjM_Point2F* b)
 {
     r->x = a->x - b->x;
     r->y = a->y - b->y;
     return r;
 }
-static __inline float legoobject_vector2d_modulus(LegoObjM_Point2F* v)
+static inline float legoobject_vector2d_modulus(LegoObjM_Point2F* v)
 {
     return (float)sqrt(v->x * v->x + v->y * v->y);
 }
-static __inline LegoObjM_Point2F* legoobject_vector2d_scale(LegoObjM_Point2F* r,
+static inline LegoObjM_Point2F* legoobject_vector2d_scale(LegoObjM_Point2F* r,
     LegoObjM_Point2F* a, float f)
 {
     r->x = a->x * f;
     r->y = a->y * f;
     return r;
 }
-static __inline LegoObjM_Point2F* legoobject_vector2d_normalise(LegoObjM_Point2F* r, LegoObjM_Point2F* a)
+static inline LegoObjM_Point2F* legoobject_vector2d_normalise(LegoObjM_Point2F* r, LegoObjM_Point2F* a)
 {
     float inv;
     inv = 1.0f / legoobject_vector2d_modulus(a);
     return legoobject_vector2d_scale(r, a, inv);
 }
-static __inline float legoobject_vector2d_dot(LegoObjM_Point2F* a, LegoObjM_Point2F* b)
+static inline float legoobject_vector2d_dot(LegoObjM_Point2F* a, LegoObjM_Point2F* b)
 {
     return a->x * b->x + a->y * b->y;
 }
 /* Maths_Vector3DSubtract and Maths_Vector3DModulus (Maths.h inlines). */
-static __inline LegoObjL_Vector3F* legoobject_m_vector3d_subtract(LegoObjL_Vector3F* r,
+static inline LegoObjL_Vector3F* legoobject_m_vector3d_subtract(LegoObjL_Vector3F* r,
     LegoObjL_Vector3F* a, LegoObjL_Vector3F* b)
 {
     r->x = a->x - b->x;
@@ -612,7 +612,7 @@ static __inline LegoObjL_Vector3F* legoobject_m_vector3d_subtract(LegoObjL_Vecto
     r->z = a->z - b->z;
     return r;
 }
-static __inline float legoobject_m_vector3d_modulus(LegoObjL_Vector3F* v)
+static inline float legoobject_m_vector3d_modulus(LegoObjL_Vector3F* v)
 {
     float m;
     m = (float)sqrt(v->x * v->x + v->y * v->y + v->z * v->z);
@@ -634,7 +634,7 @@ int legoobject_route_cell_candidate_accept(Lego_Object* obj, int* blockPos, void
  * functions on Point2F (x, y); the matching build compiles with /Ob1, so
  * they are expanded in place, as the original's were. The modulus needs
  * <math.h>, which the unit includes. */
-static __inline float* legoobject_n_vector2d_subtract(float* r, float* a, float* b)
+static inline float* legoobject_n_vector2d_subtract(float* r, float* a, float* b)
 {
     r[0] = a[0] - b[0];
     r[1] = a[1] - b[1];
@@ -644,7 +644,7 @@ static __inline float* legoobject_n_vector2d_subtract(float* r, float* a, float*
     ((float)sqrt((v)[0] * (v)[0] + (v)[1] * (v)[1]))
 /* r = origin + ray * dist on Point2F, an inline vector function of the
  * same kind (00444460 expands it in place). */
-static __inline float* legoobject_vector2d_ray_end_point(float* r, float* origin,
+static inline float* legoobject_vector2d_ray_end_point(float* r, float* origin,
                                                          float* ray, float dist)
 {
     r[0] = origin[0] + ray[0] * dist;

@@ -20,9 +20,7 @@
 #ifndef LEGORRR_GAME_WATER_LINK_NAMES_H
 #define LEGORRR_GAME_WATER_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define water_initialise terrain_cell_quad_run_stage_level               /* 0046db90 */
 #define water_destroy_wall_complete terrain_cell_surface_quad_height_fill_current /* 0046e220 */
-#endif
 
 #endif /* LEGORRR_GAME_WATER_LINK_NAMES_H */

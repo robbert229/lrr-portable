@@ -30,12 +30,7 @@ extern uint32_t s_engine_feature_word;
 /* DirectDraw.c (G98-010): lpDD() (directDrawGlobs.lpDirectDraw,
  * 0076ac84). Windows builds read the unit's common (directdraw.h); the
  * native port keeps the port's word (crt.hpp), as aitask_imports.h does. */
-#if defined(LEGORRR_BACKEND_MINIWIN)
-extern unsigned int s_renderer_global_dword;                       /* 0076ac84 */
-#define CONTAINER_LPDD() ((void*)s_renderer_global_dword)
-#else
 #define CONTAINER_LPDD() ((void*)directDrawGlobs.lpDirectDraw)
-#endif
 
 /* Mesh.c (G98-015, mesh_unit.cpp), by the port's names where they have
  * C linkage (mesh_unit.h has five more). */
@@ -56,17 +51,12 @@ uint32_t render_object_color_vector_set(void* record, int block, float red,
 
 /* Five more Mesh.c entries. The matching build (C) calls mesh_unit.c by
  * its names there (mesh_link_names.h for three of them, finding 625),
- * declared with the original's results; other builds compile the
- * unit as C++ beside record.hpp, so they call PORT-ONLY adapters with the
- * same signatures at the end of container_port.cpp instead (the unit is
- * not linked natively). */
-#if !defined(__cplusplus)
+ * declared with the original's results. */
 #define container_mesh_get_group_adapter indexed_record_entry_read
 #define container_mesh_scale_adapter mesh_scale
 #define container_mesh_set_vertices_adapter mesh_set_vertices
 #define container_mesh_get_vertices_adapter indexed_geometry_data_copy_to_output
 #define container_mesh_is_group_hidden_adapter indexed_record_flag6c_bit0_get
-#endif
 int container_mesh_get_group_adapter(void* mesh, unsigned long groupID,
                                      unsigned long* vertexCount,
                                      unsigned long* faceCount,

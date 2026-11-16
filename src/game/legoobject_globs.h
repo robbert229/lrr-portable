@@ -95,7 +95,6 @@ extern struct LegoObject_Globs objectGlobs;
 
 /* The fields a C++ port file reads too, under the port's names (matching
  * build only). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define s_pool_chunks objectGlobs.listSet
 #define s_pool_record_head objectGlobs.freeList
 #define s_terrain_sfx_grid objectGlobs.field_84
@@ -119,7 +118,6 @@ extern struct LegoObject_Globs objectGlobs;
 #define s_idle100_n objectGlobs.liveCount
 #define s_ability_type_names objectGlobs.abilityName
 #define s_global_animation_state objectGlobs.field_c634
-#endif
 
 #ifdef __cplusplus
 }

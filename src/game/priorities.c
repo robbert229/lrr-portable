@@ -21,13 +21,12 @@
 #include "frontend.h"
 #include "panel_unit.h"
 #include "crt/vc5names.h"
+#include "lego.h"
 #include "gods98/config.h"
 #include "gods98/images.h"
 #include "gods98/input.h"
-#include "gods98/media.hpp"
 #include "gods98/simtick.h"
 #include "gods98/sound.h"
-#include "gods98/string.hpp"
 #include "gods98/utils.h"
 
 /* Tool-tip slot and message used by the panel. */

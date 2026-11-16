@@ -12,10 +12,7 @@
  * bar when the section's share has grown. Loader_Shutdown writes the sizes
  * just measured back to the profile.
  *
- * The native port has no DirectDraw back buffer: the unit compiles to
- * nothing there, and lego_unit.c calls the port's entries
- * (lego_unit_imports.h). */
-#if !defined(LEGORRR_BACKEND_MINIWIN)
+ * It draws through DirectDraw.c's back buffer (miniwin, ADR 0007). */
 
 #include <stdlib.h>
 #include <string.h>
@@ -249,4 +246,3 @@ void loader_display_shutdown(void)
     }
 }
 
-#endif /* !LEGORRR_BACKEND_MINIWIN */

@@ -22,7 +22,6 @@
 #ifndef LEGORRR_GAME_LEGO_PORT_ALIASES_H
 #define LEGORRR_GAME_LEGO_PORT_ALIASES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define engine_game_config_callback_registry_init lego_game_config_callback_registry_init /* 0041fa20 */
 #define ledger_stub_004263c0_GlobalSubsystemStateReset lego_global_subsystem_state_reset /* 004263c0 */
 #define level_upgrade_name_strings_load lego_level_upgrade_name_strings_load /* 00427f80 */
@@ -45,6 +44,5 @@
 #define terrain_cell_material_get_current lego_terrain_cell_material_get /* 004319b0 */
 #define terrain_placement_blocked_adjacent_cell_scan lego_terrain_placement_blocked_adjacent_cell_scan /* 00431b20 */
 #define terrain_cell_route_and_occupancy_check_current lego_terrain_cell_route_and_occupancy_check /* 00431da0 */
-#endif
 
 #endif /* LEGORRR_GAME_LEGO_PORT_ALIASES_H */

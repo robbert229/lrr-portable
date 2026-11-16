@@ -8,12 +8,10 @@
  * names (lego_unit.c, finding 630). Each macro renames a declaration one for
  * one, so the symbol counter does not change (finding 538). Natively the
  * port's frontend globals and engine.cpp's adapter stay. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define g_front_end_avi1 legoGlobs_endGameAVI1 /* 00556fb0 */
 #define g_front_end_avi2 legoGlobs_endGameAVI2 /* 00556fb4 */
 #define lego_reset_level_and_exit lego_exit /* 004250a0 */
 #define movie_play_wait front_play_movie /* 00415700 Front_PlayMovie (#805) */
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -22,9 +20,6 @@
 #include "crt/crt.h"
 #include "crt/crt_mouse.h"
 #include "crt/vc5names.h"
-#if !defined(_MSC_VER)
-#include "gods98/winmm.h"
-#endif
 #include "gods98/utils.h"
 #include "gods98/sound.h"
 #include "gods98/sound_api.h"
@@ -68,11 +63,7 @@
 
 /* FrontEnd.c's mission level set: the original passes its address
  * (00556fe4); the port asks Front_GetCurrentLevelSet. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define REWARD_MISSION_LEVELS g_front_mission_levels
-#else
-#define REWARD_MISSION_LEVELS active_object_list_word()
-#endif
 
 /* The state, in the common region. */
 // GLOBAL: LEGORR 0x00552980
@@ -559,9 +550,7 @@ int reward_level_start(void)
     rewardGlobs.level.buildingCounts = *reward_building_counts_get(&counts);
     rewardGlobs.level.itemsArray[REWARD_ITEM_FIGURES].startCount =
         entity_type_grid_record_count_get("Pilot", 0);
-#if !defined(_MSC_VER)
     return 1;
-#endif
 }
 
 // FUNCTION: LEGORR 0x00460290
@@ -1167,9 +1156,7 @@ int reward_draw_score(unsigned int count, float time)
                          (formatted_text_printf_width(rewardGlobs.backFont, name) >> 1),
                      current->items[REWARD_ITEM_SCORE].textY - 40, name);
     }
-#if !defined(_MSC_VER)
     return 1;
-#endif
 }
 
 // FUNCTION: LEGORR 0x00461dd0
@@ -1227,9 +1214,7 @@ int reward_do_buttons(int* state, int* saved)
 
     if (!clicked && ledger_stub_00435550_GlobalStateZeroTransitionDetect())
         sound_alias_play(0x14, 0);
-#if !defined(_MSC_VER)
     return 1;
-#endif
 }
 
 // FUNCTION: LEGORR 0x00462030
@@ -1364,9 +1349,7 @@ int reward_debug_keys(int* count, int* state, int* drawn, float* time)
                 reward_restart_flic(&current->items[i]);
         }
     }
-#if !defined(_MSC_VER)
     return 1;
-#endif
 }
 
 // FUNCTION: LEGORR 0x00462460
@@ -1419,9 +1402,7 @@ int reward_update_state(int* count, int* state, float* time)
             }
         }
     }
-#if !defined(_MSC_VER)
     return 1;
-#endif
 }
 
 // FUNCTION: LEGORR 0x00462600
@@ -1442,9 +1423,7 @@ int reward_draw_values(int* count, int* drawn, float time)
         reward_draw_item(&current->items[i], REWARD_ITEM_FLAG_TEXT, *count, time);
     formatted_text_printf_width(rewardGlobs.titleFont, level->fullName);
     formatted_text_printf_width(rewardGlobs.titleFont, rewardGlobs.statusText);
-#if !defined(_MSC_VER)
     return 1;
-#endif
 }
 
 // FUNCTION: LEGORR 0x00462700
@@ -1610,11 +1589,7 @@ void reward_scroll_flags_set(RewardScroll* scroll, unsigned int flags)
 /* Main.c's fixed frame interval (mainGlobs.fixedFrameTiming, 0050593c),
  * which the original passes to TextWindow_Update. Natively the port's 1.0f
  * stays. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define REWARD_TEXT_WINDOW_TIME mainGlobs.fixedFrameTiming
-#else
-#define REWARD_TEXT_WINDOW_TIME 1.0f
-#endif
 
 // FUNCTION: LEGORR 0x00462ad0
 int reward_scroll_update(RewardScroll* scroll)

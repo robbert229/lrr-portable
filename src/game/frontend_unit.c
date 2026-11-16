@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <SDL3/SDL_timer.h>
 
 /* savegame.h: this unit defines its part-2 names (finding 628). */
 #define LEGORRR_FRONTEND_UNIT_C 1
@@ -323,11 +324,7 @@ Front_Globs frontGlobs;
 #define frontGlobs_optionsMenuSet frontGlobs.optionsMenuSet
 #define frontGlobs_tutorialLevels frontGlobs.tutorialLevels
 #define frontGlobs_missionLevels frontGlobs.missionLevels
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define g_front_save_tree frontGlobs.startMissionLink
-#else
-#define frontGlobs_startMissionLink frontGlobs.startMissionLink
-#endif
 #define frontGlobs_startTutorialLink frontGlobs.startTutorialLink
 #define frontGlobs_mainMenuValues frontGlobs.mainMenuValues
 #define frontGlobs_triggerContinueMission frontGlobs.triggerContinueMission
@@ -367,29 +364,12 @@ Front_Globs frontGlobs;
 #ifdef __cplusplus
 extern "C" {
 #endif
-#if defined(_MSC_VER) && _MSC_VER < 1200
 int light_interface_call_slot_40(void* record, float value);      /* 00473460 */
 int light_interface_call_slot_3c(void* record, float value);      /* 00473480 */
 void save_menu_refresh_target(float elapsed, int slot);           /* 004150b0 */
 #define FRONT_FLOAT_ARG(f) (f)
-#else
-int light_interface_call_slot_40(void* record, uint32_t value);
-int light_interface_call_slot_3c(void* record, uint32_t value);
-void save_menu_refresh_target(uint32_t unused, int slot);
-#endif
 #ifdef __cplusplus
 }
-#endif
-#if !(defined(_MSC_VER) && _MSC_VER < 1200)
-// PORT-ONLY: native build only; passes a float as the port's uint32_t bits
-static uint32_t front_float_bits(float f)
-{
-    uint32_t bits;
-
-    memcpy(&bits, &f, sizeof(bits));
-    return bits;
-}
-#define FRONT_FLOAT_ARG(f) front_float_bits(f)
 #endif
 
 // FUNCTION: LEGORR 0x004102b0
@@ -444,13 +424,8 @@ void front_util_print_f(Front_Font* font, int x, int y, const char* msg, ...)
 // FUNCTION: LEGORR 0x004103d0
 void front_callback_trigger_play_credits(void)
 {
-#if defined(_MSC_VER) && _MSC_VER < 1200
     credits_play((const char*)DAT_00556f50, (struct TextureSurface*)DAT_0055613c,
                  (const char*)DAT_00556f54);
-#else
-    /* Natively the port's entry plays the credits (frontend_port.cpp). */
-    main_menu_text_item();
-#endif
 }
 
 // FUNCTION: LEGORR 0x004103f0
@@ -2414,7 +2389,7 @@ void front_run_screen_menu(Front_Menu* menu)
     g_front_save_menu_result = 1;
     g_front_save_menu_open = 1;
     frontGlobs_overlayImage = NULL;
-    lastTime = timeGetTime();
+    lastTime = (DWORD)SDL_GetTicks(); // [library:time]
     while (!menu->closed) {
         if (!transition) {
             nextMenu = front_menu_update(elapsed, menu, NULL);
@@ -2429,7 +2404,7 @@ void front_run_screen_menu(Front_Menu* menu)
         tooltip_update(s_renderer_word_a, s_renderer_word_b, elapsed);
         sfx_update(elapsed);
         main_loop_frame_pump(0);
-        currTime = timeGetTime();
+        currTime = (DWORD)SDL_GetTicks(); // [library:time]
         elapsed = (float)(currTime - lastTime) * 0.025f;
         lastTime = currTime;
         if (!transition && nextMenu != menu) {
@@ -2976,10 +2951,6 @@ typedef struct Front_LevelMenuBuild {
 extern "C" {
 #endif
 /* Part 2's callees (finding 628). */
-#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: lego_globs.h */
-extern float s_scroll_scale;                /* 0055615c legoGlobs.gameSpeed */
-extern struct LevelState* g_active_level_retail; /* 005560d4 currLevel */
-#endif
 /* GAME-018 HelpWindow.c (helpwindow.c), GAME-019 Info.c (info_unit.c). */
 void help_window_toggle(int toggle, int disable);                 /* 00419200 */
 void info_set_auto_game_speed(int on);                            /* 00419450 */
@@ -3003,20 +2974,11 @@ int ledger_stub_004789a0_MusicMixerVolumeGet(float* music,
                                              float* sfx);         /* 004789a0 */
 /* gods98 Utils.c (utils.c). */
 char* string_duplicate(const char* text);                         /* 00477550 */
-#if !(defined(_MSC_VER) && _MSC_VER < 1200) /* matching build: frontend_unit_imports.h */
-/* gods98 Input.c (input_unit.cpp): Input_AnyKeyPressed. */
-int input_keyboard_down_key_count(void);                          /* 0047efb0 */
-#endif
 /* Container_MakeLight (004734f0): view.h types the colours as their
  * bits; the matching build passes the floats. Image_SaveBMP-style
  * adapters for ObjectRecall.c's save (004593e0), whose port entry takes
  * the game context: an unannotated adapter in frontend_port.cpp. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 void* ddiscene_light_create(void* parent, unsigned int type, float r, float g, float b); /* 004734f0 */
-#else
-void* ddiscene_light_create(void* owner, uint32_t value_a, uint32_t value_b,
-                            uint32_t value_c, uint32_t value_d);
-#endif
 void* container_load(void* parent, const char* filename, const char* typeString,
                      int looseLoad);                                  /* 00472cd0 */
 int sfx_random_set_and_play_global_sample(int sfxID, int* handle);   /* 00464ef0 */
@@ -3032,7 +2994,8 @@ Front_Menu* s_optionsMenu = 0;
 // GLOBAL: LEGORR 0x004db8e4
 Front_MenuSet* s_optionsMenuSet = 0;
 
-/* Part 2's functions. */
+/* Part 2's functions, with C linkage: other units call them (ADR 0005). */
+extern "C" {
 void front_callback_slider_music_volume(int volume); /* 00414df0 */
 int front_get_music_volume_slider(void); /* 00414e10 */
 void front_callback_cycle_wall_detail(int cycle); /* 00414e50 */
@@ -3112,6 +3075,7 @@ void front_save_copy_save_data(Front_SaveData* outData); /* 00418040 */
 void front_save_restore_save_data(Front_SaveData* data); /* 004180c0 */
 void front_levels_set_update(uint32_t update); /* 00418110 */
 int front_save_is_game_100_percented(void); /* 00418120 */
+}
 
 // FUNCTION: LEGORR 0x00414df0
 void front_callback_slider_music_volume(int volume)
@@ -3492,7 +3456,7 @@ void front_play_movie(struct G98CMovie* movie, int skippable)
     rect.right = 640;
     rect.bottom = 480;
     timer = 0.0f;
-    if (movie_update(movie, 1.0f, (struct tagRECT*)&rect)) {
+    if (movie_update(movie, 1.0f, (struct RECT*)&rect)) {
         while (1) {
             main_loop_frame_pump(0);
             timer = timer - -1.0f;
@@ -3510,7 +3474,7 @@ void front_play_movie(struct G98CMovie* movie, int skippable)
                     return;
                 }
             }
-            if (!movie_update(movie, 1.0f, (struct tagRECT*)&rect)) {
+            if (!movie_update(movie, 1.0f, (struct RECT*)&rect)) {
                 return;
             }
         }
@@ -3533,7 +3497,7 @@ void front_play_intro_splash(const char* imageKey, int skippable, const char* ti
     if (0.0f == seconds) {
         seconds = 3.0f;
     }
-    endTime = timeGetTime() - (int)(seconds * -1000.0f);
+    endTime = (DWORD)SDL_GetTicks() - (int)(seconds * -1000.0f); // [library:time]
     if (imageKey != NULL) {
         imageName = block_get_str_copy(legoGlobs_config,
                                        string_path_join(s_engine_config_root, "Main", imageKey, NULL));
@@ -3543,7 +3507,7 @@ void front_play_intro_splash(const char* imageKey, int skippable, const char* ti
                     image_display_scaled((Image*)image, NULL, NULL, NULL);
                     main_loop_frame_pump(0);
                     Sleep(100);
-                    if (timeGetTime() >= endTime) {
+                    if ((DWORD)SDL_GetTicks() >= endTime) { // [library:time]
                         break;
                     }
                     if (skippable && (input_keyboard_down_key_count() || s_window_mouse_word_40 ||

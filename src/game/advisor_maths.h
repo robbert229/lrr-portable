@@ -8,12 +8,12 @@
 #ifndef LEGORRR_GAME_ADVISOR_MATHS_H
 #define LEGORRR_GAME_ADVISOR_MATHS_H
 
-static __inline float advisor_vector3d_modulus(const float* v)
+static inline float advisor_vector3d_modulus(const float* v)
 {
     return (float)sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 }
 
-static __inline float* advisor_vector3d_scale(float* r, const float* a, float f)
+static inline float* advisor_vector3d_scale(float* r, const float* a, float f)
 {
     r[0] = a[0] * f;
     r[1] = a[1] * f;

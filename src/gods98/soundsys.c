@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <SDL3/SDL_timer.h>
 
 #include "winmm.h"
 #include "soundsys.h"
@@ -119,7 +120,7 @@ void media_cd_audio_watchdog_tick(int cdtrack)
     DWORD currTime;
 
     if (soundGlobs.useSound) {
-        currTime = timeGetTime();
+        currTime = (DWORD)SDL_GetTicks(); // [library:time]
         if (currTime > soundGlobs.lastUpdate + 4000) {
             if (cdtrack) {
                 if (!media_cd_audio_track_completion_poll(soundGlobs.currTrack)) {

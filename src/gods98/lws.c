@@ -677,7 +677,7 @@ float keyframe_time_segment_fraction(LwsNode* node, float time,
 
 /* Gods98's Maths_Interpolate, an inline helper: the original loads the
  * first key once and reuses it from the x87 stack (finding 650). */
-static __inline float lws_maths_interpolate(float a, float b, float t)
+static inline float lws_maths_interpolate(float a, float b, float t)
 {
     return a + ((b - a) * t);
 }

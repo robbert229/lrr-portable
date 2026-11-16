@@ -836,7 +836,7 @@ void legoobject_deferred_olist_queue_add(void* model, int type, int id, float* w
     if (linkName != NULL) {
         rec->linkName = string_duplicate(linkName);
     }
-    terrain_map_world_to_block((struct TerrainMap*)level_current_terrain_get_original(),
+    terrain_map_world_to_block((struct TerrainMap*)level_current_terrain_get(0, 0),
                                worldPos[0], worldPos[1],
                                &rec->blockPos[0], &rec->blockPos[1]);
 }
@@ -1275,7 +1275,7 @@ Lego_Object* legoobject_query_center_mask01(int* cell, int a, int b, int c)
     search.arg18 = b;
     search.arg1c = c;
     search.arg20 = 0;
-    terrain_map_block_to_world((struct TerrainMap*)level_current_terrain_get_original(), cell[0], cell[1], &search.x, &search.y);
+    terrain_map_block_to_world((struct TerrainMap*)level_current_terrain_get(0, 0), cell[0], cell[1], &search.x, &search.y);
     legoobject_run_through_lists_skip_upgrade_parts(legoobject_route_marker_candidate_visit, &search);
     return search.result;
 }
@@ -1295,7 +1295,7 @@ Lego_Object* legoobject_query_center_mask02(Lego_Object* obj, int* cell, int a, 
     search.arg1c = b;
     search.arg20 = 0;
     if (obj) legoobject_transform_position_get(obj, &search.x, &search.y);
-    else terrain_map_block_to_world((struct TerrainMap*)level_current_terrain_get_original(), cell[0], cell[1], &search.x, &search.y);
+    else terrain_map_block_to_world((struct TerrainMap*)level_current_terrain_get(0, 0), cell[0], cell[1], &search.x, &search.y);
     legoobject_run_through_lists_skip_upgrade_parts(legoobject_route_marker_candidate_visit, &search);
     return search.result;
 }
@@ -2619,16 +2619,7 @@ Lego_Object* legoobject_creature_spawn_from_emergence(void* model, int type, int
             legoobject_set_activity(obj, 0xc, 0);
             legoobject_activity_register_bookkeeping(obj);
             aitask_ai_idle_chain_record_attach(LEGOOBJ_SLOT(obj));
-#if defined(_MSC_VER) && _MSC_VER < 1200
-            /* The original takes the container before pushing the other
-             * arguments, as from a temporary. `found` (dead here) holds it
-             * in the 32-bit matching build: a new local costs a symbol
-             * (rule B, finding 645). */
-            found = (int)legoobject_type_component_get(obj);
-            sound_submission_route_wrapper((void*)found, 10, 0, 1, NULL);
-#else
             sound_submission_route_wrapper(legoobject_type_component_get(obj), 10, 0, 1, NULL);
-#endif
             level_tile_mark_current_target(blockPos, 1);
             obj->targetBlockPos[0] = (float)blockPos[0];
             obj->targetBlockPos[1] = (float)blockPos[1];
@@ -8013,13 +8004,9 @@ void camera_shake(void* cam, float intensity, float duration);             /* 00
 /* Kept, unreferenced: the old names of legoGlobs fields (lego_globs.h,
  * finding 653), so that the symbol counter below does not move.
  * Deviation (scoring only). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #undef s_zoom_step_context
-#endif
 extern void* s_zoom_step_context;                                          /* 005560e4 */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define s_zoom_step_context legoGlobs.cameraMain
-#endif
 #undef legoGlobs_DynamiteMaxDamage
 extern float legoGlobs_DynamiteMaxDamage;                                  /* 00556468 */
 #define legoGlobs_DynamiteMaxDamage legoGlobs.DynamiteMaxDamage
@@ -9174,22 +9161,16 @@ void scene_resource_visibility_set(void* record, uint32_t flag);       /* 0046d2
 void legoobject_gs_container_hidden_set_adapter(void* cont, int hide);  /* 00473b20 */
 /* container_link_names.h's matching-build link name of Container_IsHidden
  * (00473ba0, container.c since #697). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define legoobject_gs_container_is_hidden_adapter scene_object_flag_bit3_get_target
-#endif
 int legoobject_gs_container_is_hidden_adapter(void* cont);              /* 00473ba0 */
 /* vehicle_model_link_names.h's matching-build link names of 0046d330 and
  * 0046da90. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define vehicle_is_hidden entity_type_flag_bit1_get_target
 #define vehicle_get_drill_null scene_resource_cached_slot_b4_get
-#endif
 unsigned int vehicle_is_hidden(struct VehicleModel* vehicle);             /* 0046d330 */
 /* building_model_link_names.h's matching-build link name of 004086a0
  * (building_model.c). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define legoobject_gs_object_is_hidden_adapter animation_object_visibility_get
-#endif
 int legoobject_gs_object_is_hidden_adapter(void* model);                /* 004086a0 */
 int vehicle_is_camera_flip_dir(struct VehicleModel* vehicle);           /* 0046c3d0 */
 void* vehicle_get_drill_null(struct VehicleModel* vehicle);          /* 0046da90 */
@@ -9545,27 +9526,6 @@ int legoobject_type11_cell_coordinate_nearest_resolve(Lego_Object* obj, int* out
 
 /* Deviation: naked asm, as 0044a390 (the count reloads after each store). */
 // FUNCTION: LEGORR 0x0044a4b0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void legoobject_predug_coordinate_pool_append(int* blockPos)
-{
-    __asm {
-        mov ecx, dword ptr [s_predug_coordinate_count]
-        cmp ecx, 14h
-        jae predug_append_return
-        mov eax, dword ptr [esp + 4]
-        mov edx, dword ptr [eax]
-        mov dword ptr [ecx*8 + s_predug_coordinates], edx
-        mov ecx, dword ptr [s_predug_coordinate_count]
-        mov eax, dword ptr [eax + 4]
-        mov dword ptr [ecx*8 + s_predug_coordinates + 4], eax
-        mov eax, dword ptr [s_predug_coordinate_count]
-        inc eax
-        mov dword ptr [s_predug_coordinate_count], eax
-    predug_append_return:
-        ret
-    }
-}
-#else
 void legoobject_predug_coordinate_pool_append(int* blockPos)
 {
     if (s_predug_coordinate_count < 20) {
@@ -9574,7 +9534,6 @@ void legoobject_predug_coordinate_pool_append(int* blockPos)
         s_predug_coordinate_count++;
     }
 }
-#endif
 
 // FUNCTION: LEGORR 0x0044a4f0
 int legoobject_nearest_cell_coordinate_world_resolve(Lego_Object* obj, int* outBlockPos)
@@ -9993,12 +9952,7 @@ extern int s_object_f_4eabc4;                     /* 004eabc4 objectGlobs list c
 extern int s_object_f_4eabc8;                     /* 004eabc8 its buildings */
 #define s_object_f_4eabc8 objectGlobs.field_c438
 /* Mouse position (crt_mouse.h, crt.cpp). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #include "gods98/input_globs.h"
-#else
-extern uint32_t s_renderer_word_a;                /* 0076ab24 mouse x */
-extern uint32_t s_renderer_word_b;                /* 0076ab28 mouse y */
-#endif
 /* Reward.c (reward.h, reward.c). */
 void global_counter_at_00555328_increment(void);                        /* 00462880 */
 /* objectGlobs' list of the objects 0044c5f0 has visited (004ea7c4); its
@@ -10012,13 +9966,11 @@ extern Lego_Object* objectGlobs_f_4ea7c4[256];   /* 004ea7c4 */
  * one-line getter (return ((int*)p)[3]) the linker folded with
  * Flic_GetWidth; 0044bc30 calls it on the flock (SteeringGroup.hasPosition).
  * 004756b0 (Container_SetMatrix) has C++ linkage in the port. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Deviation (scoring only): the linker folded the original's flock getter
  * into 004897d0, which this tree annotates as animclone.c's
  * anim_clone_is_lws (the same one-line getter). The matching build calls
  * that name, so the operand names the folded address (finding 626). */
 #define legoobject_gt_flock_has_position_adapter anim_clone_is_lws
-#endif
 int legoobject_gt_flock_has_position_adapter(void* flock);              /* 004897d0 */
 void legoobject_gt_container_matrix_set_adapter(void* cont, uint32_t mode,
                                                 const float* matrix);   /* 004756b0 */
@@ -10754,42 +10706,6 @@ struct LegoObject_Globs objectGlobs = { 0 };
 // GLOBAL: LEGORR 0x004eadcc
 unsigned int objectGlobs_f_eadcc = 0;
 
-#if !(defined(_MSC_VER) && _MSC_VER < 1200)
-/* Native build: the fields a C++ port file reads stay separate globals,
- * as before (legoobject_globs.h); the struct's copies of them are unused.
- * activityName and abilityName (004decc4, 004ead60) are
- * legoobject_port.cpp's. */
-void* s_pool_chunks[32];
-void* s_pool_record_head;
-int s_terrain_sfx_grid[300];
-float* s_terrain_neighbor_path_cost;
-/* The retail path-search functions share and reuse one zeroed dword per
- * map cell. */
-uint32_t* s_terrain_path_depth;
-uint32_t s_terrain_path_depth_count;
-uint32_t s_pool_chunk_count;
-/* The entity activity scene-state leaf (see ai.hpp): this shared word owns
- * the ported DAT_004dee14 bits. */
-uint32_t s_entity_state_flags;
-uint32_t s_activity_resource_slots[11] = {
-    0, 0, 1, 1, 4, 4, 4, 4, 3, 2, 4
-};
-uint32_t s_grid_count_second[0x12c0];
-uint32_t s_task_counter_nonzero;
-uint32_t s_grid_count_first[0x12c0];
-uint32_t s_task_counter_zero;
-/* A bounded twenty-entry pool of the predug coordinates encountered while
- * loading the layer. */
-int s_predug_coordinates[20][2];
-int s_type11_cell_coordinates[10][2];
-unsigned int s_predug_coordinate_count;
-unsigned int s_type11_cell_coordinate_count;
-/* The six-dword render snapshot; its individual values are unresolved. */
-uint32_t s_render_config_snapshot[6];
-struct EntitySlot* s_idle100[100];
-int s_idle100_n;
-uint32_t s_global_animation_state;
-#endif
 
 /* The released-flock list (004eadd0), after objectGlobs. */
 // GLOBAL: LEGORR 0x004eadd0

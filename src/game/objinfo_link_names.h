@@ -16,11 +16,9 @@
 /* The callees' own link names. */
 #include "game/screen_effect_quads_link_names.h"
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define objinfo_initialise frontend_render_three_pass_update        /* 00459530 */
 #define objinfo_draw_health_bar legacy_entity_screen_ring_render    /* 00459b00 */
 #define objinfo_draw_hunger objinfo_draw_hunger_image_adapter        /* 00459f50 */
 #define objinfo_draw_bubble panel_resource_position_apply_if_enabled /* 00459fd0 */
-#endif
 
 #endif /* LEGORRR_GAME_OBJINFO_LINK_NAMES_H */

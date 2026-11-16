@@ -41,22 +41,14 @@ void lego_flags1_bit17_set(int on);                               /* 0041f940 */
  * does; the native C++ compile goes through lego.cpp's adapter (as
  * weapons_imports.h). */
 void* level_current_terrain_get(int cell_x, int cell_y);          /* 00431570 */
-void* level_current_terrain_get_original(void);
-#ifdef __cplusplus
 #define CAMERA_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get_original())
-#else
-#define CAMERA_LEGO_GET_MAP() \
-    ((struct TerrainMap*)((void* (*)())level_current_terrain_get)())
-#endif
+    ((struct TerrainMap*)level_current_terrain_get(0, 0))
 
 /* GAME-023 LegoObject.c (entity.hpp). */
 /* In the matching build these name legoobject_unit.c's functions at the
  * same addresses (GAME-023 part 3, issue #615); one declaration each. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define entity_follow_target_pose_get legoobject_follow_target_pose_get
 #define entity_type_component_get legoobject_type_component_get
-#endif
 void entity_follow_target_pose_get(struct EntitySlot* entity, int index,
                                    float position[3],
                                    float facing[3]);              /* 0044a070 */

@@ -20,9 +20,7 @@
 #ifndef LEGORRR_GODS98_IMAGES_LINK_NAMES_H
 #define LEGORRR_GODS98_IMAGES_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define Image_Initialise renderer_record_table_initialize /* 0047d410 */
 #define Image_Shutdown scene_object_registry_teardown /* 0047d430 */
-#endif
 
 #endif /* LEGORRR_GODS98_IMAGES_LINK_NAMES_H */

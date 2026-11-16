@@ -21,7 +21,6 @@
 
 #include <stdio.h>
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* The matching build: the unit owns these port names (finding 583). */
 #define LEGORRR_FILES_UNIT_OWNS_PORT_NAMES 1
 #define file_initialise resource_mount_startup_target
@@ -50,7 +49,6 @@
 #define file_set_load_callback loader_progress_callback_set
 #define file_check_redundant_files resource_file_token_list_load_and_tree_scan_target
 #define file_check_directory resource_directory_tree_scan_target
-#endif
 
 #ifdef __cplusplus
 extern "C" {

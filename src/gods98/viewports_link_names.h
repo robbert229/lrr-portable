@@ -32,7 +32,6 @@
 #ifndef LEGORRR_GODS98_VIEWPORTS_LINK_NAMES_H
 #define LEGORRR_GODS98_VIEWPORTS_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define viewport_initialise scene_resource_slots_initialize /* 00476d50 */
 #define viewport_create render_target_viewport_scale_set /* 00476dc0 */
 #define viewport_create_pixel render_target_viewport_create_original /* 00476e50 */
@@ -48,6 +47,5 @@
 #define viewport_set_field resource_interface_call_slot40_and_clear_field14 /* 00477250 */
 #define viewport_inverse_transform camera_screen_coordinate_project /* 00477290 */
 #define viewport_transform render_interface_transform_point /* 004772b0 */
-#endif
 
 #endif /* LEGORRR_GODS98_VIEWPORTS_LINK_NAMES_H */

@@ -21,7 +21,6 @@
 #ifndef LEGORRR_GAME_SCROLLINFO_LINK_NAMES_H
 #define LEGORRR_GAME_SCROLLINFO_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define scroll_info_initialise info_panel_initialise             /* 004636b0 */
 #define scroll_info_set_xy_offset indexed_float_pair_set         /* 00463730 */
 #define scroll_info_add_structure scroll_rect_resource_record_create /* 00463770 */
@@ -30,6 +29,5 @@
 #define scroll_info_round float_round_to_nearest_int             /* 00463e40 */
 #define scroll_info_get_range indexed_text_metrics_pair_get      /* 00463ea0 */
 #define scroll_info_set_range indexed_text_metrics_pair_set      /* 00463ed0 */
-#endif
 
 #endif /* LEGORRR_GAME_SCROLLINFO_LINK_NAMES_H */

@@ -7,7 +7,7 @@
 #ifndef LEGORRR_GAME_INTERFACE_MEM_H
 #define LEGORRR_GAME_INTERFACE_MEM_H
 
-static __inline void interface_mem_free(void* addr)
+static inline void interface_mem_free(void* addr)
 {
     free(addr);
 }

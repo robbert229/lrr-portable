@@ -19,13 +19,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(_WIN32)
-#include <windows.h>
-#include <direct.h>
-#include <io.h>
-#else
+#include <miniwin/windows.h>
+
 #include "files_native.h"
-#endif
 
 #include "crt/vc5names.h"
 
@@ -35,15 +31,13 @@
 #include "g98_024.h"
 #include "g98_029.h"
 
-#ifdef __cplusplus
-/* PORT-ONLY: the original calls an empty variadic function, folded into
- * 00484c90, with its debug messages. C++ cannot call the unprototyped
- * declaration below with arguments. */
-extern "C" void files_debug_noop(const char* msg, ...);
-#define flic_opcode27_fallback_noop files_debug_noop
-#else
-void flic_opcode27_fallback_noop();
-#endif
+/* The original calls an empty variadic function, folded into 00484c90
+ * (Flic_Nothing), with its debug messages. C++ cannot call 00484c90's
+ * prototype with arguments, so the unit keeps an empty variadic one. */
+static void files_nothing(const char* msg, ...)
+{
+}
+#define flic_opcode27_fallback_noop files_nothing
 
 #define FILE_MAXPATH 260
 #define FILE_MAXWADS 10

@@ -20,10 +20,8 @@
 #ifndef LEGORRR_GAME_TELEPORTER_LINK_NAMES_H
 #define LEGORRR_GAME_TELEPORTER_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define teleporter_restart global_linked_record_chain_clear           /* 0046a390 */
 #define teleporter_service_all entity_flag_mask_callbacks_all_pass    /* 0046a4c0 */
 #define teleporter_start scene_object_state_dispatch_original         /* 0046a510 */
-#endif
 
 #endif /* LEGORRR_GAME_TELEPORTER_LINK_NAMES_H */

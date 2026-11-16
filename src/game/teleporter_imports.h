@@ -29,9 +29,7 @@ extern int32_t s_context_mode;                /* 00556ec8 */
  * the engine context instead of the map; its adapter is at the end of
  * camera_control_port.cpp. In the matching build the name is
  * camera_control.c's definition (as lego_unit_imports.h). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define camera_topdown_position_get_adapter camera_get_topdown_world_pos
-#endif
 int camera_topdown_position_get_adapter(void* camera, void* map,
                                         float out[3]);        /* 00436b33 */
 
@@ -41,12 +39,7 @@ int camera_topdown_position_get_adapter(void* camera, void* map,
  * does; the native C++ compile goes through lego.cpp's adapter (as
  * camera_control_imports.h). */
 void* level_current_terrain_get(int cell_x, int cell_y);      /* 00431570 */
-void* level_current_terrain_get_original(void);
-#ifdef __cplusplus
-#define TELEPORTER_LEGO_GET_MAP() level_current_terrain_get_original()
-#else
-#define TELEPORTER_LEGO_GET_MAP() ((void* (*)())level_current_terrain_get)()
-#endif
+#define TELEPORTER_LEGO_GET_MAP() level_current_terrain_get(0, 0)
 
 #ifdef __cplusplus
 }

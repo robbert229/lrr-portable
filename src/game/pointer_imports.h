@@ -11,7 +11,6 @@
 #include <stdint.h>
 
 #include "gods98/config.h"
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Matching build: the flic's width and height through the original's
  * getters (#805, finding 674): 004850e0 is Flic_GetHeight under its link
  * name (flic_link_names.h); Flic_GetWidth was folded into 004897d0, which
@@ -21,7 +20,6 @@
  * here (finding 538). */
 #define flic_width anim_clone_is_lws   /* 004897d0 */
 #define flic_height object_field10_get /* 004850e0 */
-#endif
 #include "gods98/flic.h"
 #include "gods98/images.h"
 
@@ -37,11 +35,9 @@ extern uint32_t s_engine_feature_word;
 /* Utils.c (utils.c): Util_Tokenise. */
 int sound_variant_split(char* text, char** out, const char* separators); /* 00477440 */
 
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 /* Images.c is images_unit.c in the matching build (finding 632): the
  * C callers' calls go to the unit (images_link_names.h). */
 #define image_surface_blit_transformed Image_SetupTrans /* 0047dbf0 */
-#endif
 /* Images.c (images_unit.cpp): Image_SetupTrans. Image_LoadBMPScaled
  * (0047d9d0) and Image_DisplayScaled (0047dcb0) are images.h's adapters;
  * Flic_Setup (00483c80), Flic_Animate (00484070) and the flic's width and

@@ -1,72 +1,145 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* VC5 LIBC spellings for converted C units (ADR 0005). Converted units call
- * the routines by their LIBC names, as the original did. MSVC builds link
- * LIBC.LIB; other builds map the names onto the port's CRT layer (crt.hpp,
- * crt_heap.cpp) here, so the units themselves need no compiler conditionals.
+/* The MSVC 5.0 LIBC names the units call (ADR 0005), on the host's C
+ * library. The original linked LIBC.LIB statically; its old names (itoa,
+ * stricmp, strnicmp, strupr, strlwr, through oldnames.lib) and the
+ * underscore routines (_splitpath, _finite, _strcmpi) have no portable
+ * equivalent, so this header supplies them. rand and srand keep the VC5
+ * linear congruential generator, so the game's random sequences match the
+ * original's for a given seed.
  *
- * The native port compiles converted units as C++, so the port routines
- * keep the linkage their own headers give them. Include this header after
- * the C library headers: it redefines malloc and free. */
+ * Include this header after the C library headers: it redefines rand and
+ * srand. */
 #ifndef LEGORRR_CRT_VC5NAMES_H
 #define LEGORRR_CRT_VC5NAMES_H
 
+#include <ctype.h>
+#include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
-#if !defined(_MSC_VER)
-char* crt_signed_to_string(int value, char* out, int radix);
-#define _itoa crt_signed_to_string
-/* The original's callers use the old names of the late LIBC members
- * (strnicmp, itoa, strlwr, strupr), which oldnames.lib resolves; that is why
- * those members follow the import thunks (issue #447, finding 643). */
-#define itoa crt_signed_to_string
-/* _rand (FUN_0048e170): the port's VC5 LCG. */
-int level_random_draw15(void);
-#define rand level_random_draw15
+#include <cmath>
+#include <cstdlib>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-/* The engine heap (FUN_0048dbd0 _malloc, FUN_0048db80 _free). */
-void* engine_heap_alloc(long size);
-void engine_heap_free(void* ptr);
-/* __strcmpi (FUN_0048ff10) and __strnicmp (FUN_0049dab0). */
-int strcasecmp_lite(const char* a, const char* b);
-int strnicmp_lite(const char* a, const char* b, int count);
-/* __finite (FUN_0048e870). */
-int double_is_finite(double value);
-/* __splitpath (FUN_00490090): the port's model, in gods98/lwo_port.cpp. */
-void crt_path_split(const char* path, char* drive, char* dir, char* fname,
-                    char* ext);
-#ifdef __cplusplus
+/* _rand and _srand: the VC5 LIBC generator (holdrand * 214013 + 2531011,
+ * bits 16-30). */
+inline uint32_t& crt_rand_state()
+{
+    static uint32_t holdrand = 1;
+    return holdrand;
 }
-#endif
-
-#define malloc(size) engine_heap_alloc((long)(size))
-#define free(ptr) engine_heap_free(ptr)
-#ifdef __cplusplus
-/* _realloc (FUN_0048dc80): the port's model in crt.cpp, over the same heap
- * as engine_heap_alloc. Other compilers build the units as C++. */
-namespace unported_ledger_stubs {
-void* ledger_stub_0048dc80_GrowHeapArray(void* allocation,
-                                         unsigned int requested_size);
+inline int crt_rand()
+{
+    uint32_t& s = crt_rand_state();
+    s = s * 214013u + 2531011u;
+    return (int)((s >> 16) & 0x7fff);
 }
-#define realloc(ptr, size) \
-    unported_ledger_stubs::ledger_stub_0048dc80_GrowHeapArray( \
-        (ptr), (unsigned int)(size))
-/* __strlwr (FUN_0049dc10): the port's model in crt.cpp (crt.hpp). */
-char* crt_string_to_lower(char* text);
-#define _strlwr crt_string_to_lower
-#define strlwr crt_string_to_lower
-#endif
-#define _strcmpi strcasecmp_lite
-/* The original's callers spell __strcmpi by its old name too, except
- * Files.c's direct calls, so LIBC pulls stricmp.obj among Files.c's
- * references (finding 667). */
-#define stricmp strcasecmp_lite
-#define _strnicmp(a, b, count) strnicmp_lite((a), (b), (int)(count))
-#define strnicmp(a, b, count) strnicmp_lite((a), (b), (int)(count))
-#define _finite double_is_finite
-#define _splitpath crt_path_split
-#endif
+inline void crt_srand(unsigned int seed)
+{
+    crt_rand_state() = seed;
+}
+#define rand crt_rand
+#define srand crt_srand
+
+/* _itoa. */
+inline char* crt_itoa(int value, char* out, int radix)
+{
+    char tmp[34];
+    char* p = tmp;
+    unsigned int v;
+    char* o = out;
+    if (radix == 10 && value < 0) {
+        *o++ = '-';
+        v = (unsigned int)(-(int64_t)value);
+    } else {
+        v = (unsigned int)value;
+    }
+    do {
+        unsigned int d = v % (unsigned int)radix;
+        *p++ = (char)(d < 10 ? '0' + d : 'a' + d - 10);
+        v /= (unsigned int)radix;
+    } while (v != 0);
+    while (p != tmp) *o++ = *--p;
+    *o = '\0';
+    return out;
+}
+#define itoa crt_itoa
+#define _itoa crt_itoa
+
+/* _strupr and _strlwr. */
+inline char* crt_strupr(char* s)
+{
+    for (char* p = s; *p; p++) *p = (char)toupper((unsigned char)*p);
+    return s;
+}
+inline char* crt_strlwr(char* s)
+{
+    for (char* p = s; *p; p++) *p = (char)tolower((unsigned char)*p);
+    return s;
+}
+#define strupr crt_strupr
+#define _strupr crt_strupr
+#define strlwr crt_strlwr
+#define _strlwr crt_strlwr
+
+/* _strcmpi, _stricmp and _strnicmp. */
+#define stricmp strcasecmp
+#define _stricmp strcasecmp
+#define _strcmpi strcasecmp
+#define strnicmp(a, b, count) strncasecmp((a), (b), (size_t)(count))
+#define _strnicmp(a, b, count) strncasecmp((a), (b), (size_t)(count))
+
+/* _finite. */
+inline int crt_finite(double value)
+{
+    return std::isfinite(value) ? 1 : 0;
+}
+#define _finite crt_finite
+
+/* _splitpath: drive, directory, file name and extension of a DOS path;
+ * any output may be NULL. */
+inline void crt_splitpath(const char* path, char* drive, char* dir,
+                          char* fname, char* ext)
+{
+    const char* p = path;
+    const char* lastSlash = NULL;
+    const char* lastDot = NULL;
+    const char* q;
+    if (p[0] != '\0' && p[1] == ':') {
+        if (drive) {
+            drive[0] = p[0];
+            drive[1] = ':';
+            drive[2] = '\0';
+        }
+        p += 2;
+    } else if (drive) {
+        drive[0] = '\0';
+    }
+    for (q = p; *q; q++) {
+        if (*q == '\\' || *q == '/') lastSlash = q + 1;
+        else if (*q == '.') lastDot = q;
+    }
+    if (lastSlash) {
+        if (dir) {
+            memcpy(dir, p, (size_t)(lastSlash - p));
+            dir[lastSlash - p] = '\0';
+        }
+        p = lastSlash;
+    } else if (dir) {
+        dir[0] = '\0';
+    }
+    if (lastDot && lastDot >= p) {
+        if (fname) {
+            memcpy(fname, p, (size_t)(lastDot - p));
+            fname[lastDot - p] = '\0';
+        }
+        if (ext) strcpy(ext, lastDot);
+    } else {
+        if (fname) strcpy(fname, p);
+        if (ext) ext[0] = '\0';
+    }
+}
+#define _splitpath crt_splitpath
 
 #endif /* LEGORRR_CRT_VC5NAMES_H */

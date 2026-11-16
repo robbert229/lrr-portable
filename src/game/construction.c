@@ -62,7 +62,7 @@ typedef struct Construction_Globs {
 static Construction_Globs constructionGlobs;
 
 #define CONSTRUCTION_BLOCK(level, bx, by) \
-    (LEGO_LEVEL_PTR(Lego_Block, (level)->blocks)[(by) * (level)->width + (bx)])
+    (((level)->blocks)[(by) * (level)->width + (bx)])
 #define CONSTRUCTION_BLOCK_ZONE(level, bx, by) \
     (*(Lego_ConstructionZone**)&CONSTRUCTION_BLOCK(level, bx, by).f_10[0])
 

@@ -13,11 +13,9 @@
 #ifndef LEGORRR_GAME_ENCYCLOPEDIA_LINK_NAMES_H
 #define LEGORRR_GAME_ENCYCLOPEDIA_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define encyclopedia_initialise encyclopedia_config_files_open          /* 0040e490 */
 #define encyclopedia_select_object terrain_choice_resource_select       /* 0040e700 */
 #define encyclopedia_disable_update global_flag_bit0_clear              /* 0040e7e0 */
 #define encyclopedia_remove_current_reference global_value_clear_if_equal /* 0040e910 */
-#endif
 
 #endif /* LEGORRR_GAME_ENCYCLOPEDIA_LINK_NAMES_H */

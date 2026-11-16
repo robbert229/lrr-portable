@@ -31,11 +31,7 @@ struct TextureSurface;
  * Main_LoopUpdate. */
 extern int s_display_w;
 extern int s_display_h;
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #include "gods98/input_globs.h"
-#else
-extern uint32_t g_renderer_word_c;
-#endif
 void main_loop_frame_pump(int draw_projection_overlay);           /* 00477f30 */
 
 /* gods98 Utils.c (utils.c): Util_Tokenise. */
@@ -93,13 +89,11 @@ uint32_t scene_object_query_value_if_ready(void* object);         /* 00476f70 */
  * gods98/mesh_unit.c (finding 625). Every call passes the original's
  * arguments. A macro renames a declaration one for one, so MSVC's symbol
  * numbering (finding 538) does not change. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 #define engine_task_callback_record_allocate_and_initialize mesh_create_on_frame /* 00480870 */
 #define instance_quad_vertex_data_fill mesh_set_vertices_point_normal_at /* 00482500 */
 #define indexed_record_flag6c_bit0_set mesh_hide_group /* 004827a0 */
 #define sfx_mesh_load_texture_adapter mesh_load_texture /* 00482e70 */
 #define mesh_group_material_values_set mesh_set_group_material_values /* 00483420 */
-#endif
 struct EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
     void* owner, void* callback, uint32_t mode, void* context,
     uint32_t flag_value);                                         /* 00480870 */

@@ -56,11 +56,7 @@ unsigned char* rnc_outputEnd;
 /* The unpacked length: the big-endian dword at +4. Init and the dispatch
  * read it as a signed 32-bit word (MSVC 5.0's long); the native port reads
  * it unsigned, so that the shifts wrap there without overflow. */
-#if defined(_MSC_VER) && defined(_M_IX86)
 #define RNC_LONG long
-#else
-#define RNC_LONG unsigned int
-#endif
 #define RNC_LENGTH(l) (((((l) * 256 + (((l) >> 8) & 0xff)) * 256) + (((l) >> 16) & 0xff)) * 256 \
                        + ((unsigned int)(l) >> 24))
 

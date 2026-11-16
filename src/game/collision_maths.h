@@ -4,24 +4,24 @@
  * unit expands them in place, so they have no address of their own. Only
  * collision.c includes this file, after CollisionPoint2F.
  *
- * They are static __inline functions, not macros: as macros the expansions
+ * They are static inline functions, not macros: as macros the expansions
  * compile differently (finding 544). In a header they add no Reccmp lint
  * debt. */
 #ifndef LEGORRR_GAME_COLLISION_MATHS_H
 #define LEGORRR_GAME_COLLISION_MATHS_H
 
-static __inline float collision_vector2d_dot(const CollisionPoint2F* a,
+static inline float collision_vector2d_dot(const CollisionPoint2F* a,
                                              const CollisionPoint2F* b)
 {
     return a->x * b->x + a->y * b->y;
 }
 
-static __inline float collision_vector2d_modulus(const CollisionPoint2F* v)
+static inline float collision_vector2d_modulus(const CollisionPoint2F* v)
 {
     return (float)sqrt(collision_vector2d_dot(v, v));
 }
 
-static __inline CollisionPoint2F* collision_vector2d_subtract(
+static inline CollisionPoint2F* collision_vector2d_subtract(
     CollisionPoint2F* r, const CollisionPoint2F* a, const CollisionPoint2F* b)
 {
     r->x = a->x - b->x;
@@ -29,7 +29,7 @@ static __inline CollisionPoint2F* collision_vector2d_subtract(
     return r;
 }
 
-static __inline CollisionPoint2F* collision_vector2d_scale(
+static inline CollisionPoint2F* collision_vector2d_scale(
     CollisionPoint2F* r, const CollisionPoint2F* a, float f)
 {
     r->x = a->x * f;
@@ -37,14 +37,14 @@ static __inline CollisionPoint2F* collision_vector2d_scale(
     return r;
 }
 
-static __inline CollisionPoint2F* collision_vector2d_normalise(
+static inline CollisionPoint2F* collision_vector2d_normalise(
     CollisionPoint2F* r)
 {
     return collision_vector2d_scale(r, r,
                                     1.0f / collision_vector2d_modulus(r));
 }
 
-static __inline CollisionPoint2F* collision_ray_end_point(
+static inline CollisionPoint2F* collision_ray_end_point(
     CollisionPoint2F* r, const CollisionPoint2F* p, const CollisionPoint2F* v,
     float t)
 {

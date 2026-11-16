@@ -34,7 +34,6 @@
 #ifndef LEGORRR_GAME_ROCK_FALL_STYLES_LINK_NAMES_H
 #define LEGORRR_GAME_ROCK_FALL_STYLES_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define effect_remove_all ledger_stub_0040bdc0_SetTimeoutTo10000 /* 0040bdc0 */
 #define effect_spawn_boulder_explode_at scene_light_create_at_position /* 0040be10 */
 #define effect_get_rock_fall_style rock_fall_style_name_lookup /* 0040bf70 */
@@ -50,6 +49,5 @@
 #define effect_load_explosion global_resource_handle_load_and_enable_original /* 0040c720 */
 #define effect_load_misc_objects misc_objects_effect_slots_bind_original /* 0040c990 */
 #define effect_spawn_particle lava_effect_select_and_place /* 0040cce0 */
-#endif
 
 #endif /* LEGORRR_GAME_ROCK_FALL_STYLES_LINK_NAMES_H */

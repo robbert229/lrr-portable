@@ -13,7 +13,6 @@ extern "C" {
 #endif
 
 struct LevelState;
-#if defined(_MSC_VER) && defined(_M_IX86)
 /* The matching build calls Lego.c's original-shape entry in lego_unit.c
  * (GAME-021 part 2, finding 571); the port model is unannotated. One
  * declaration either way (finding 538, rule B). */
@@ -23,26 +22,18 @@ int lego_terrain_cell_byte_state_classify_current(const int* blockPos,
 #define terrain_cell_byte_state_classify_current(xy, a, b, c, d) \
     lego_terrain_cell_byte_state_classify_current((xy), (unsigned int*)(a), \
         (unsigned int*)(b), (unsigned int*)(c), (unsigned int*)(d))
-#else
-int terrain_cell_byte_state_classify_current(const int xy[2],
-    uint32_t* out_a, uint32_t* out_b, uint32_t* out_c, uint32_t* out_d); /* 0042c5b0 */
-#endif
 int grid_record_count_difference_get(int row, int column, int slot,
                                      int subtract_first_table); /* 00437460 */
 void render_config_six_field_copy_out(uint32_t out[6]);    /* 004370b0 */
 uint32_t grid_record_count_get(int row, int column, int slot); /* 004374a0 */
 /* NERPs.c's 00455300 (tutorial_script.c, finding 586): the C matching
  * build's callers (reward.c) call the unit's; natively the port's level.cpp. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 #define entity_type_grid_record_count_get nerps_object_count
-#endif
 uint32_t entity_type_grid_record_count_get(const char* type_name, int slot); /* 00455300 */
 /* Objective_HasAchieved (00458650) takes no argument; the macro drops
  * the port's in the matching build's C callers, and rewrites this
  * declaration into an old-style one. */
-#if defined(_MSC_VER) && _MSC_VER < 1200 && !defined(__cplusplus)
 #define level_objective_result_get(s) level_objective_result_get()
-#endif
 int level_objective_result_get(const struct LevelState* s); /* 00458650 */
 
 #ifdef __cplusplus

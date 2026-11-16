@@ -25,7 +25,6 @@
 #ifndef LEGORRR_GAME_BUBBLES_LINK_NAMES_H
 #define LEGORRR_GAME_BUBBLES_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define bubble_initialise bubble_action_strings_initialize          /* 004070b0 */
 #define bubble_load_bubbles bubble_config_texture_load              /* 00407240 */
 #define bubble_toggle_object_uis_always_visible state_flag_toggle_when_zero /* 00407340 */
@@ -38,6 +37,5 @@
 #define bubble_set_call_to_arms_timer set_type2_object_record_value /* 00407510 */
 #define bubble_show_health_bar flagged_object_timer_registry_insert /* 00407540 */
 #define bubble_draw_all_obj_infos screen_effects_tick               /* 004075a0 */
-#endif
 
 #endif /* LEGORRR_GAME_BUBBLES_LINK_NAMES_H */

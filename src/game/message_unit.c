@@ -22,7 +22,7 @@
 
 /* Lego_GetMap (00431570) takes no argument; the port's entry under that
  * address, level_current_terrain_get, takes a cell (lego_unit.h). */
-#define MESSAGE_LEGO_GET_MAP() (((void* (*)())level_current_terrain_get)())
+#define MESSAGE_LEGO_GET_MAP() (level_current_terrain_get(0, 0))
 
 /* StatsFlags1: the object can be driven. */
 #define MESSAGE_STATS1_CANBEDRIVEN 0x20000
@@ -203,11 +203,6 @@ int message_lookup_physical_name(const char* name)
     for (i = 0; i < MESSAGE_TYPE_COUNT; i++) {
         if (!stricmp(messageGlobs.messageName[i] + 8, name)) return i;
     }
-#if !(defined(_MSC_VER) && _MSC_VER < 1200)
-    /* The original falls off the end and returns the last comparison's
-     * result; C++ needs a return. */
-    return MESSAGE_TYPE_COUNT;
-#endif
 }
 
 // FUNCTION: LEGORR 0x00452010

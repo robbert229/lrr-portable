@@ -20,12 +20,10 @@
 #ifndef LEGORRR_GAME_UPGRADE_LINK_NAMES_H
 #define LEGORRR_GAME_UPGRADE_LINK_NAMES_H
 
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define upgrade_part_load render_resource_binding_initialize /* 0046c030 */
 #define upgrade_part_clone render_resource_binding_copy_and_convert /* 0046c0b0 */
 #define upgrade_part_remove render_resource_binding_release /* 0046c0f0 */
 #define upgrade_part_set_activity scene_object_set_animation_with_fallback /* 0046c130 */
 #define upgrade_set_upgrade_level scene_indexed_record_list_rebuild_for_value /* 0046c340 */
-#endif
 
 #endif /* LEGORRR_GAME_UPGRADE_LINK_NAMES_H */

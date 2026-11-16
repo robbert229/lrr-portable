@@ -1,29 +1,25 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 #
-# The source list: every game, gods98, platform and program source of the
-# native build, with the library it belongs to. On develop it is only a
-# source list; the order of entries no longer matters to the build. It keeps
-# the original's unit order (ADR 0006 on main) so the units can be read in
-# the order the original linked them.
+# The source list: every source of the native build (ADR 0007). The order
+# of entries does not matter to the build; it keeps the original's unit
+# order (ADR 0006 on main) so the units can be read in the order the
+# original linked them.
 #
 # One entry per source:
 #
 #   lrr_link(<kind> <key> <library> <source>)
 #
-#   kind      unit    the file holds exactly one original unit (ADR 0005;
-#                     ADR 0007 decision 1); key is its unit id in
-#                     docs/coverage/translation-unit-ranges.csv
-#             legacy  a mixed file that still holds original functions; key
-#                     is an original address that places it among the units
-#             tail    port-only code: the port shell (ADR 0007 decision 2
-#                     deletes it); key is "-"
-#   library   game, gods98, platform_glue or program (the executable's own
-#             sources)
+#   kind      unit      the file holds exactly one original unit (ADR 0005;
+#                       ADR 0007 decision 1); key is its unit id in
+#                       docs/coverage/translation-unit-ranges.csv
+#             platform  port-only code below the seam: the process entry
+#                       and the seam's stubs; key is "-"
+#   library   game, gods98 or platform
 #   source    path under SRC_ROOT
 #
 # Fields are separated by blanks, one entry per line.
 
-# The game units, then the gods98 units, the port tail and the legacy files.
+# The game units, then the gods98 units.
 lrr_link(unit   GAME-001 game          game/advisor.c)
 lrr_link(unit   GAME-002 game          game/aitask.c)
 lrr_link(unit   GAME-003 game          game/bezier.c)
@@ -107,140 +103,10 @@ lrr_link(unit   G98-028  gods98        gods98/file_list_streams.c)
 lrr_link(unit   G98-029  gods98        gods98/g98_029.c)
 lrr_link(unit   G98-030  gods98        gods98/wad.c)
 lrr_link(unit   G98-031  gods98        gods98/lwo.c)
-
-# Port tail
-lrr_link(tail   -        game          game/creature_scene.cpp)
-lrr_link(tail   -        game          game/entity_motion_owner.cpp)
-lrr_link(tail   -        game          game/game.cpp)
-lrr_link(tail   -        game          game/opgroup.cpp)
-lrr_link(tail   -        game          game/render.cpp)
-lrr_link(tail   -        game          game/tutorial_world_arrows.cpp)
-lrr_link(tail   -        game          game/frontend_port.cpp)
-lrr_link(tail   -        gods98        gods98/avi_player_port.cpp)
-lrr_link(tail   -        gods98        gods98/block.cpp)
-lrr_link(tail   -        gods98        gods98/container_port.cpp)
-lrr_link(tail   -        gods98        gods98/container_native.cpp)
-lrr_link(tail   -        gods98        gods98/container_route.cpp)
-lrr_link(tail   -        gods98        gods98/draw_port.cpp)
-lrr_link(tail   -        gods98        gods98/files_port.cpp)
-lrr_link(tail   -        gods98        gods98/flic_port.cpp)
-lrr_link(tail   -        gods98        gods98/gods98.cpp)
-lrr_link(tail   -        gods98        gods98/images_port.cpp)
-lrr_link(tail   -        gods98        gods98/lwo_port.cpp)
-lrr_link(tail   -        gods98        gods98/lws_port.cpp)
-lrr_link(tail   -        gods98        gods98/mesh_port.cpp)
-lrr_link(tail   -        gods98        gods98/com_object_tree_port.cpp)
-lrr_link(tail   -        gods98        gods98/lwsc_scene.cpp)
-lrr_link(tail   -        gods98        gods98/lwsc_miniwin.cpp)
-lrr_link(tail   -        gods98        gods98/registry_port.cpp)
-lrr_link(tail   -        gods98        gods98/sound_wave.cpp)
-lrr_link(tail   -        gods98        gods98/bitmap_font_port.cpp)
-lrr_link(tail   -        gods98        gods98/text_window_port.cpp)
-lrr_link(tail   -        gods98        gods98/tickers.cpp)
-lrr_link(tail   -        gods98        gods98/video_graph_port.cpp)
-lrr_link(tail   -        gods98        gods98/viewports_port.cpp)
-lrr_link(tail   -        gods98        gods98/winmm_port.cpp)
-lrr_link(tail   -        gods98        gods98/frameloop.cpp)
-lrr_link(tail   -        gods98        gods98/surface.cpp)
-lrr_link(tail   -        gods98        gods98/audio.cpp)
-lrr_link(tail   -        program       main.cpp)
-lrr_link(tail   -        program       platform/native/entry.cpp)
-lrr_link(tail   -        platform_glue platform/native/frameloop.cpp)
-lrr_link(tail   -        gods98        gods98/flic.cpp)
-lrr_link(tail   -        game          game/screen_pick.cpp)
-lrr_link(tail   -        game          game/dependency_grid.cpp)
-lrr_link(tail   -        gods98        gods98/ptrstack.cpp)
-lrr_link(tail   -        game          game/startup_config.cpp)
-lrr_link(tail   -        game          game/tutorial_hud.cpp)
-lrr_link(tail   -        game          game/ui_list.cpp)
-lrr_link(tail   -        game          game/helpwindow_port.cpp)
-lrr_link(tail   -        game          game/entity_config.cpp)
-lrr_link(tail   -        game          game/scene_render.cpp)
-lrr_link(tail   -        gods98        gods98/engine.cpp)
-lrr_link(tail   -        gods98        gods98/mainsim.cpp)
-lrr_link(tail   -        game          game/weapon.cpp)
-lrr_link(tail   -        gods98        gods98/media.cpp)
-lrr_link(tail   -        game          game/mission.cpp)
-lrr_link(tail   -        game          game/options.cpp)
-lrr_link(tail   -        game          game/upgrades.cpp)
-lrr_link(tail   -        game          game/util.cpp)
-lrr_link(tail   -        gods98        gods98/heap.cpp)
-lrr_link(tail   -        game          game/terrain_map_port.cpp)
-lrr_link(tail   -        game          game/reward_port.cpp)
-lrr_link(tail   -        game          game/interface_port.cpp)
-lrr_link(tail   -        game          game/info_port.cpp)
-lrr_link(tail   -        game          game/aitask_port.cpp)
-lrr_link(tail   -        game          game/weapons_port.cpp)
-lrr_link(tail   -        gods98        gods98/wad_port.cpp)
-lrr_link(tail   -        gods98        gods98/directdraw_port.cpp)
-lrr_link(tail   -        game          game/tutorial_script_port.cpp)
-lrr_link(tail   -        game          game/terrain_cell_objects_port.cpp)
-lrr_link(tail   -        game          game/entity_stats_port.cpp)
-lrr_link(tail   -        game          game/camera_control_port.cpp)
-lrr_link(tail   -        game          game/sfx_port.cpp)
-lrr_link(tail   -        game          game/rock_fall_styles_port.cpp)
-lrr_link(tail   -        game          game/vehicle_model_port.cpp)
-lrr_link(tail   -        game          game/building_model_port.cpp)
-lrr_link(tail   -        game          game/lighteffects_port.cpp)
-lrr_link(tail   -        game          game/tooltip_port.cpp)
-lrr_link(tail   -        game          game/bubbles_port.cpp)
-lrr_link(tail   -        game          game/lava_erosion_port.cpp)
-lrr_link(tail   -        game          game/text_port.cpp)
-lrr_link(tail   -        game          game/dependencies_port.cpp)
-lrr_link(tail   -        game          game/pointer_port.cpp)
-lrr_link(tail   -        game          game/map_view_port.cpp)
-lrr_link(tail   -        game          game/scrollinfo_port.cpp)
-lrr_link(tail   -        game          game/placement_port.cpp)
-lrr_link(tail   -        game          game/screen_effect_quads_port.cpp)
-lrr_link(tail   -        game          game/upgrade_levels_port.cpp)
-lrr_link(tail   -        game          game/tile_variants_port.cpp)
-lrr_link(tail   -        game          game/cell_flood_passes_port.cpp)
-lrr_link(tail   -        game          game/record_chains_port.cpp)
-lrr_link(tail   -        game          game/spiderweb_port.cpp)
-lrr_link(tail   -        game          game/terrain_overlay_quads_port.cpp)
-lrr_link(tail   -        game          game/message_port.cpp)
-lrr_link(tail   -        game          game/objective_port.cpp)
-lrr_link(tail   -        game          game/loader_port.cpp)
-lrr_link(tail   -        game          game/encyclopedia_port.cpp)
-lrr_link(tail   -        game          game/objinfo_port.cpp)
-lrr_link(tail   -        game          game/selectplace_port.cpp)
-lrr_link(tail   -        game          game/entity_cell_effects_port.cpp)
-lrr_link(tail   -        game          game/object_state_file_port.cpp)
-lrr_link(tail   -        game          game/level_id_remap_port.cpp)
-lrr_link(tail   -        gods98        gods98/message.cpp)
-lrr_link(tail   -        gods98        gods98/sound.cpp)
-lrr_link(tail   -        game          game/effects.cpp)
-lrr_link(tail   -        game          game/frontend.cpp)
-lrr_link(tail   -        game          game/objective.cpp)
-lrr_link(tail   -        game          game/terrain_grid.cpp)
-lrr_link(tail   -        gods98        gods98/camera.cpp)
-lrr_link(tail   -        game          game/select.cpp)
-lrr_link(tail   -        game          game/ai.cpp)
-lrr_link(tail   -        game          game/cmd.cpp)
-lrr_link(tail   -        game          game/entity.cpp)
-lrr_link(tail   -        gods98        gods98/simtick.cpp)
-lrr_link(tail   -        gods98        gods98/movie.cpp)
-lrr_link(tail   -        game          game/savegame.cpp)
-lrr_link(tail   -        gods98        gods98/entity.cpp)
-lrr_link(tail   -        gods98        gods98/scene_pool.cpp)
-lrr_link(tail   -        game          game/spawn.cpp)
-lrr_link(tail   -        gods98        gods98/input.cpp)
-lrr_link(tail   -        gods98        gods98/model.cpp)
-lrr_link(tail   -        gods98        gods98/record.cpp)
-lrr_link(tail   -        gods98        gods98/scene_resources.cpp)
-lrr_link(tail   -        gods98        gods98/texture.cpp)
-lrr_link(tail   -        gods98        gods98/view.cpp)
-lrr_link(tail   -        game          game/lego_port.cpp)
-lrr_link(tail   -        game          game/legoobject_port.cpp)
-lrr_link(tail   -        gods98        gods98/resource.cpp)
-lrr_link(tail   -        gods98        gods98/init_port.cpp)
-lrr_link(tail   -        gods98        gods98/port_state.cpp)
-lrr_link(legacy 0048e160 game          game/level.cpp)
-lrr_link(legacy 0048e1e0 gods98        gods98/string.cpp)
-
-# The runtime stand-ins for the original's statically linked C runtime
-# (issue #447, finding 643).
-lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp)
-lrr_link(legacy 00493ef0 gods98        crt/crt.cpp)
 lrr_link(unit   LATE-001 gods98        gods98/rnc.c)
 lrr_link(unit   LATE-002 gods98        gods98/init.c)
+
+# The native platform: the process entry, which calls the units' WinMain,
+# and the seam's remaining stubs (ADR 0007).
+lrr_link(platform -     platform      platform/native/entry.cpp)
+lrr_link(platform -     platform      platform/native/seam_stubs.cpp)

@@ -31,11 +31,9 @@
 #include <string.h>
 
 #include "crt/vc5names.h"
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Input.c's key maps under their matching-build names (lego_unit.h
  * declares them). */
 #include "gods98/input_key_names.h"
-#endif
 #include "lego_unit.h"
 #include "lego_unit_imports.h"
 #include "lego_globs.h"
@@ -286,9 +284,6 @@ extern struct EntitySlot* s_lego_debugRetargetObject;
 /* Text.c's message timer (00503618). In the matching build it is text.c's
  * textGlobs.timer (lego_unit_imports.h, finding 607); natively the port has
  * no owner for it. */
-#if !(defined(_MSC_VER) && _MSC_VER < 1200)
-uint32_t textGlobs_f_503618;
-#endif
 
 
 /* ---- GAME-021 part 2 (issue #574) state ---- */
@@ -321,7 +316,7 @@ uint32_t textGlobs_f_503618;
 
 /* Lego.c's blockValue(level, bx, by): one block of a level's map. */
 #define LEGO_2F_BLOCK(level, bx, by) \
-    (LEGO_LEVEL_PTR(Lego_Block, (level)->blocks)[(level)->width * (by) + (bx)])
+    (((level)->blocks)[(level)->width * (by) + (bx)])
 /* A 32-bit pointer word of an original record (Lego_Level +0x88, Lego_Block
  * +0x18) read or written as a pointer. Only the Win32 builds run the code
  * that uses it (see LEGO_LEVEL_PTR). */
@@ -386,7 +381,6 @@ void global_object_field98_clear_current(void)
  * onlyUsable is set. Like the original, no value without a level. Natively
  * the port keeps an empty callback under this name. */
 // FUNCTION: LEGORR 0x0041f8e0
-#if defined(_MSC_VER) && _MSC_VER < 1200
 int noop_callback(int onlyUsable)
 {
     if (legoGlobs_currLevel != NULL) {
@@ -394,11 +388,6 @@ int noop_callback(int onlyUsable)
         return legoGlobs_currLevel->f_08c - legoGlobs_currLevel->f_098;
     }
 }
-#else
-void noop_callback(void)
-{
-}
-#endif
 
 /* UpgradeResourceCheck [group M] */
 // FUNCTION: LEGORR 0x0041f900
@@ -529,9 +518,6 @@ float EngineTimeScale(void)
  *
  * The original compiled this function (and Lego_LoadMiscObjects after it)
  * without optimisation: every local lives in its stack slot. */
-#if defined(_MSC_VER)
-#pragma optimize("", off)
-#endif
 // FUNCTION: LEGORR 0x0041fb50
 int lego_game_config_init(void)
 {
@@ -1229,16 +1215,10 @@ int lego_game_config_init(void)
     }
     return 0;
 }
-#if defined(_MSC_VER)
-#pragma optimize("", on)
-#endif
 
 /* MiscObjectResourcesLoad [group F] */
 /* The original compiled Lego_LoadMiscObjects without optimisation (frame
  * pointer, every value through its stack slot). */
-#ifdef _MSC_VER
-#pragma optimize("", off)
-#endif
 // FUNCTION: LEGORR 0x00422850
 void lego_misc_object_resources_load(struct BlockRec* config)
 {
@@ -1366,9 +1346,6 @@ void lego_misc_object_resources_load(struct BlockRec* config)
 
     misc_objects_effect_slots_bind_original(config, s_engine_config_root, legoGlobs_rootCont);
 }
-#ifdef _MSC_VER
-#pragma optimize("", on)
-#endif
 
 /* ModeDependentField24Get [group M] */
 /* Lego_GetCurrentCamera_Container: the camera container of the current
@@ -1557,7 +1534,7 @@ int lego_engine_tick(float elapsed)
     simtick_render_step_original();
     simtick_post_cluster_original(elapsedWorld);
     lego_main_sim_interaction_and_cell_update(elapsedAbs, elapsed, keyDownT, keyDownR, keyDownShift);
-    terrain_map_update(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), elapsedWorld);
+    terrain_map_update(legoGlobs_currLevel->map, elapsedWorld);
     simtick_fx_bank_tick_original(legoGlobs_currLevel, elapsedWorld);
     simtick_sound_keepalive_original();
     transient_effect_instances_tick(elapsedWorld);
@@ -1645,7 +1622,7 @@ int lego_engine_tick(float elapsed)
                 scene_render_lock_toggle(legoGlobs_dirLightCallToArms, 1);
             ddiscene_draw_end(legoGlobs_viewTrack, legoGlobs_rootCont, elapsed);
             scene_render_lock_toggle(legoGlobs_spotlightTrack, 1);
-            terrain_map_visible_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map));
+            terrain_map_visible_clear(legoGlobs_currLevel->map);
         }
     }
 
@@ -1658,7 +1635,7 @@ int lego_engine_tick(float elapsed)
         world_render_pass_b_original(legoGlobs_currLevel, legoGlobs_viewMain, elapsedWorld, elapsed);
     }
 
-    terrain_map_visible_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map));
+    terrain_map_visible_clear(legoGlobs_currLevel->map);
 
     renderTrack = ((legoGlobs_flags1 & 0x2) && (legoGlobs_flags1 & 0x1000)) ? 1 : 0;
     if (renderTrack) lego_update_render_viewport_state();
@@ -1771,7 +1748,7 @@ int lego_engine_tick(float elapsed)
 
     if ((legoGlobs_flags1 & 0x40000) && legoGlobs_f_556188) {
         float screen[4];
-        terrain_map_block_first_vertex_get(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+        terrain_map_block_first_vertex_get(legoGlobs_currLevel->map,
                                            legoGlobs_f_556180, legoGlobs_f_556184,
                                            (struct TerrainMapVector3*)pos);
         render_interface_transform_point(legoGlobs_viewMain, screen, pos);
@@ -1949,15 +1926,15 @@ void lego_terrain_cell_flag_cleanup(Lego_Level* level, float elapsed)
         scene_cell_table_pair_read(groups[i], slots[i], &x, &y);
         pos[0] = x;
         pos[1] = y;
-        LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+        legoGlobs_currLevel->blocks
             [y * legoGlobs_currLevel->width + x].flags1 &= ~0x800;
-        if (!(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+        if (!(legoGlobs_currLevel->blocks
                   [y * legoGlobs_currLevel->width + x].flags1 & 0x1000)) {
             cmd_produce(0x14, 0, 0, pos);
         }
-        LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+        legoGlobs_currLevel->blocks
             [y * legoGlobs_currLevel->width + x].flags1 &= ~0x1000;
-        LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+        legoGlobs_currLevel->blocks
             [pos[1] * legoGlobs_currLevel->width + pos[0]].flags1 &= ~0x8000000;
     }
 }
@@ -1986,9 +1963,6 @@ void lego_sine_phase_midpoint_blend_dispatch(int on, float elapsed)
 }
 
 /* The original compiles the next four functions without optimisation. */
-#ifdef _MSC_VER
-#pragma optimize("", off)
-#endif
 
 /* ApplyDefaultTransformToFlaggedRenderObject [group E]: a LegoObject
  * run-all callback; draws the selection box of each flagged object. */
@@ -2055,7 +2029,7 @@ void lego_selected_entity_ground_marker_render(
             b *= 0.3f;
         }
         entity_transform_position_get_outputs(liveObj, &worldPos.x, &worldPos.y);
-        worldPos.z = terrain_map_world_z_get((struct TerrainMap*)level_current_terrain_get_original(), worldPos.x, worldPos.y);
+        worldPos.z = terrain_map_world_z_get((struct TerrainMap*)level_current_terrain_get(0, 0), worldPos.x, worldPos.y);
         worldPos.z -= entity_stats_float_at74(liveObj) / 2.0f;
         camera_project_point_to_screen(view, &sPos.x, &worldPos.x);
 
@@ -2122,9 +2096,6 @@ void lego_selected_entity_ground_marker_render(
     }
 }
 
-#ifdef _MSC_VER
-#pragma optimize("", on)
-#endif
 
 /* EngineShutdownAlt [group E]: the shutdown callback the configuration
  * installs when the game skips its normal shutdown. */
@@ -2620,14 +2591,14 @@ void lego_terrain_pointer_command_update(void)
 
             if (s_lego_radarDragging && g_renderer_word_c && s_lego_radarDragDistance >= 4.0f &&
                 terrain_point_pick_resolve_original(
-                    (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
+                    (const struct TerrainPointPickRegion*)level->f_084,
                     s_renderer_word_a, s_renderer_word_b, scroll, &bx, &by)) {
                 selection_record_point_get((struct ViewContext*)s_zoom_step_context, diff);
                 if (bx < (unsigned int)view_grid_edge_get() ||
-                    bx >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), unsigned int, 0x0) - view_grid_edge_get())
+                    bx >= LEGO_FIELD(level->map, unsigned int, 0x0) - view_grid_edge_get())
                     scroll[0] = diff[0];
                 if (by < (unsigned int)view_grid_edge_get() ||
-                    by >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), unsigned int, 0x4) - view_grid_edge_get())
+                    by >= LEGO_FIELD(level->map, unsigned int, 0x4) - view_grid_edge_get())
                     scroll[1] = diff[1];
                 if (s_context_mode == 1)
                     selection_record_point_set((struct ViewContext*)s_zoom_step_context, scroll[0], scroll[1]);
@@ -2636,14 +2607,14 @@ void lego_terrain_pointer_command_update(void)
             }
         }
 
-        if (rect_contains_point_half_open((const float*)LEGO_LEVEL_PTR(void, level->f_084),
+        if (rect_contains_point_half_open((const float*)level->f_084,
                                           s_renderer_word_a, s_renderer_word_b) &&
             g_renderer_word_c && !s_lego_radarPrevButton)
             s_lego_radarDragging = 1;
 
         if (s_lego_radarDragDistance < 4.0f) {
             if (viewport_point_callback_dispatch(
-                    (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
+                    (const struct TerrainPointPickRegion*)level->f_084,
                     s_renderer_word_a, s_renderer_word_b, (uint32_t*)&liveObj, objPos)) {
                 if (!g_renderer_word_c) {
                     if (s_lego_radarPrevButton) {
@@ -2662,15 +2633,15 @@ void lego_terrain_pointer_command_update(void)
             } else if (!g_renderer_word_c) {
                 if (s_lego_radarPrevButton) {
                     if (terrain_point_pick_resolve_original(
-                            (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
+                            (const struct TerrainPointPickRegion*)level->f_084,
                             s_renderer_word_a, s_renderer_word_b, &legoGlobs_f_5563f8.x, &clickX, &clickY))
                         legoGlobs_flags1 |= 0x4000;
                 } else if (terrain_point_pick_resolve_original(
-                               (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
+                               (const struct TerrainPointPickRegion*)level->f_084,
                                s_renderer_word_a, s_renderer_word_b, NULL, &bx, &by)) {
                     if (s_lego_radarBlockX == bx && s_lego_radarBlockY == by) {
                         if ((bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
-                                ? LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+                                ? legoGlobs_currLevel->blocks
                                       [by * legoGlobs_currLevel->width + bx].flags1 & 4
                                 : 0) {
                             int pos[2];
@@ -2818,7 +2789,7 @@ void lego_cursor_ray_to_camera_route(float elapsed)
             return;
         }
         camera_topdown_position_get_adapter(
-            s_zoom_step_context, LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
+            s_zoom_step_context, legoGlobs_currLevel->map,
             &centre.x);
         lego_camera_pointer_ray_route(legoInput_mouseX, legoInput_mouseY,
                                       &wPos.x, &wPos.y);
@@ -2903,11 +2874,11 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
     }
 
     if (terrain_map_screen_pick(
-            LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+            legoGlobs_currLevel->map,
             legoGlobs_viewMain, legoInput_mouseX, legoInput_mouseY, &bx, &by,
             (struct TerrainMapVector3*)&wPos)) {
         picked = 1;
-        block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx];
+        block = &level->blocks[level->width * by + bx];
         ddiscene_object_position_set(legoGlobs_f_556108, NULL, wPos.x, wPos.y,
                                      wPos.z - 250.0f);
         simtick_route_position_blocked_state_set(0);
@@ -3649,7 +3620,7 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
     level = legoGlobs_currLevel;
     by = blockPos[1];
     bx = blockPos[0];
-    block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx];
+    block = &level->blocks[level->width * by + bx];
     if (s_lego_toolTipBlockX != bx || s_lego_toolTipBlockY != by) {
         s_lego_toolTipBlockX = blockPos[0];
         s_lego_toolTipBlockY = blockPos[1];
@@ -3658,8 +3629,8 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
 
     flags = block->flags1;
     if ((flags & 0x100000) &&
-        !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 0x400) &&
-        !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags2 & 4) &&
+        !(legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * by + bx].flags1 & 0x400) &&
+        !(legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * by + bx].flags2 & 4) &&
         !(flags & 0x8000)) {
         site = LEGO_FIELD(block, struct EntitySlot*, 0x10);
         usesStuds = LEGO_FIELD(site, unsigned int, 0xd0) & 8;
@@ -3714,15 +3685,15 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
             show = 1;
         } else {
             if (bx >= 0 && by >= 0 && bx < (int)legoGlobs_currLevel->width && by < (int)legoGlobs_currLevel->height)
-                valid = LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 0x20000000;
+                valid = legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * by + bx].flags1 & 0x20000000;
             else
                 valid = 0;
             if (valid || (flags & 0x8000)) {
                 text = lego_terrain_surface_type_name_get(0xe);
                 sfx = lego_surface_type_configured_value_at_index(0xe);
                 show = 1;
-            } else if (!(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 0x400) &&
-                       !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags2 & 4) &&
+            } else if (!(legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * by + bx].flags1 & 0x400) &&
+                       !(legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * by + bx].flags2 & 4) &&
                        !(flags & 0x100000)) {
                 if (showCavern) {
                     text = lego_terrain_surface_type_name_get(0x11);
@@ -3777,7 +3748,7 @@ int lego_terrain_cell_command_predicate(const int* blockPos)
         !(system_state_flags_get_original(0) & 4))
         return 1;
     if (system_state_flags_get_original(0) & 2) {
-        if (LEGO_LEVEL_PTR(Lego_Block, ((Lego_Level*)level_current_owner_get())->blocks)
+        if ((((Lego_Level*)level_current_owner_get())->blocks)
                 [((Lego_Level*)level_current_owner_get())->width * blockPos[1] + blockPos[0]].f_04 == 0)
             return 1;
     }
@@ -3939,8 +3910,8 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct EntityS
             entity_type_operation_dispatch_adapter(boulder, 1);
             entity_try_create_linked_at_position_original(unit, x, y, boulder);
             object_list_field_assign_all(boulder,
-                (void*)(uintptr_t)packed_grid_cell_value_get(LEGO_LEVEL_PTR(void, level->textureSet),
-                    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * y + x].texture));
+                (void*)(uintptr_t)packed_grid_cell_value_get(level->textureSet,
+                    level->blocks[level->width * y + x].texture));
         }
     }
     if (LEGO_KEY_PRESSED(0x31) && selection_active_has_any_get())
@@ -4002,61 +3973,25 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct EntityS
 void lego_block_visible_callback(int bx, int by)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    uint32_t flags1 = LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+    uint32_t flags1 = level->blocks
         [by * level->width + bx].flags1;
 
     if (flags1 & 0x4000) {
         transient_effect_enable_set((void*)(uintptr_t)
-            LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+            level->blocks
                 [by * legoGlobs_currLevel->width + bx].f_10[3], 0);
     }
 }
 
 /* TerrainCellPaletteResourceAtGridPosition [group M] */
 // FUNCTION: LEGORR 0x00429160
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* The C body below compiles to the same operations except one: the index
- * multiply loads xy[1] into eax and multiplies by the level's width, where
- * the original loads the width and multiplies by xy[1], with the global and
- * parameter loads scheduled the other way round (82.35%). No source form
- * moved it: every operand order of width * y + x, signedness casts, a local
- * level pointer, a Point2I parameter declared before and after Lego_Level,
- * the permuter (no candidates) and a counter sweep over a full 512 period
- * (one code at every N, so not rule B; finding 538). As for vec_cross
- * (finding 550), the matching build keeps the port's instruction-for-
- * instruction body. */
-__declspec(naked) void* lego_terrain_cell_palette_resource_at_grid_position(
-    const int* xy)
-{
-    __asm {
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esp + 4]
-        push esi
-        mov eax, dword ptr [ecx + 14h]
-        mov esi, dword ptr [edx]
-        imul eax, dword ptr [edx + 4]
-        mov edx, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [ecx + 7ch]
-        add eax, esi
-        lea eax, dword ptr [eax + eax*8]
-        mov al, byte ptr [edx + eax*8 + 1]
-        push eax
-        push ecx
-        call packed_grid_cell_value_get
-        add esp, 8
-        pop esi
-        ret
-    }
-}
-#else
 void* lego_terrain_cell_palette_resource_at_grid_position(const int* xy)
 {
     int idx = xy[0] + xy[1] * legoGlobs_currLevel->width;
     return (void*)(uintptr_t)packed_grid_cell_value_get(
-        LEGO_LEVEL_PTR(void, legoGlobs_currLevel->textureSet),
-        LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[idx].texture);
+        legoGlobs_currLevel->textureSet,
+        legoGlobs_currLevel->blocks[idx].texture);
 }
-#endif
 
 
 /* SceneMarkerUpdateAndDraw [group G] */
@@ -4073,22 +4008,22 @@ void lego_scene_marker_update_and_draw(float elapsed, int track)
             ddiscene_object_position_get(
                 LEGO_FIELD(s_zoom_step_context, void*, 0x28), NULL, &pos.x);
             terrain_map_world_to_block(
-                LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+                legoGlobs_currLevel->map,
                 pos.x, pos.y, &bx, &by);
             ddiscene_object_facing_pair_get(
                 LEGO_FIELD(s_zoom_step_context, void*, 0x24), NULL, &dir.x,
                 NULL);
             lego_G_vector3d_scale(&dir, &dir, terrain_context_scale_get(
-                level_current_terrain_get_original()) * 3.0f);
+                level_current_terrain_get(0, 0)) * 3.0f);
             lego_G_vector3d_add(&pos, &dir, &pos);
             terrain_map_world_to_block(
-                LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+                legoGlobs_currLevel->map,
                 pos.x, pos.y, &bx, &by);
             terrain_map_visible_radius_add(
-                LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+                legoGlobs_currLevel->map,
                 bx, by, 8, lego_block_visible_callback);
         } else if (s_context_mode == 0) {
-            dist = LEGO_FIELD(LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
+            dist = LEGO_FIELD(legoGlobs_currLevel->map,
                               float, 0x10) * legoGlobs_FPClipBlocks;
             count = legoGlobs_HPBlocks;
             if ((legoGlobs_flags1 & 0x80000) && elapsed != 0.0f) {
@@ -4102,10 +4037,10 @@ void lego_scene_marker_update_and_draw(float elapsed, int track)
         ddiscene_object_position_get(
             LEGO_FIELD(legoGlobs_cameraTrack, void*, 0x28), NULL, &pos.x);
         terrain_map_world_to_block(
-            LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+            legoGlobs_currLevel->map,
             pos.x, pos.y, &bx, &by);
         terrain_map_visible_radius_add(
-            LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+            legoGlobs_currLevel->map,
             bx, by, 2, NULL);
     }
 }
@@ -4216,7 +4151,7 @@ void lego_sound_minimum_distance_update_mode(int viewMode, void* liveObj,
                                    cameraFrame);
         global_entity_render_parameter_mode_set(1);
         terrain_map_wobble_emissive_set(
-            LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), 1);
+            legoGlobs_currLevel->map, 1);
         legoGlobs_selectedObject = liveObj;
         if (LEGO_FIELD(liveObj, int, 0x00) == 2) {
             entity_attached_object_list_detach((struct EntitySlot*)liveObj,
@@ -4239,7 +4174,7 @@ void lego_sound_minimum_distance_update_mode(int viewMode, void* liveObj,
         legoGlobs_selectedObject = NULL;
         global_entity_render_parameter_mode_set(0);
         terrain_map_wobble_emissive_set(
-            LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), 0);
+            legoGlobs_currLevel->map, 0);
         resource_interface_call_slot48(legoGlobs_viewMain,
             LEGO_FIELD(s_zoom_step_context, void*, 0x24));
         simtick_directsound_listener_view_set(
@@ -4590,15 +4525,15 @@ int lego_level_load(const char* levelName)
         } else legoGlobs_flags1 &= ~0x8000;
 
         // STRING: LEGORR 0x004a4288
-        LEGO_LEVEL_PTR_SET(level->nextLevel, LEGO_D_COPY("nextlevel"));
+        ((level->nextLevel) = (LEGO_D_COPY("nextlevel")));
         fullName = LEGO_D_COPY("FullName");
-        LEGO_LEVEL_PTR_SET(level->fullName, fullName);
+        ((level->fullName) = (fullName));
         if (fullName) {
-            for (i = 0; i < strlen(LEGO_LEVEL_PTR(char, level->fullName)); i++) {
-                LEGO_LEVEL_PTR(char, level->fullName)[i] =
-                    (LEGO_LEVEL_PTR(char, level->fullName)[i] == '_') ? ' ' : (unsigned char)LEGO_LEVEL_PTR(char, level->fullName)[i];
+            for (i = 0; i < strlen(level->fullName); i++) {
+                level->fullName[i] =
+                    (level->fullName[i] == '_') ? ' ' : (unsigned char)level->fullName[i];
             }
-        } else LEGO_LEVEL_PTR_SET(level->fullName, NULL);
+        } else ((level->fullName) = (NULL));
 
         objective_load_original(config, s_engine_config_root, levelName, level, s_display_w, s_display_h);
 
@@ -4616,7 +4551,7 @@ int lego_level_load(const char* levelName)
 
         // STRING: LEGORR 0x004a421c
         level->disableStartTeleport = (LEGO_D_BOOL("DisableStartTeleport") != 1);
-        LEGO_LEVEL_PTR_SET(level->name, (char*)levelName);
+        ((level->name) = ((char*)levelName));
         level->oxygenLevel = level->f_204 = 100.0f;
         level->f_08c = 0;
         level->crystals = 0;
@@ -4744,7 +4679,7 @@ int lego_load_tile_meshes(Lego_Level* level, const char* baseName)
     unsigned int height = level->f_078;
     unsigned int x, y;
 
-    if (LEGO_LEVEL_PTR_SET(level->f_080, (void**)malloc(sizeof(void*) * width * height))) {
+    if (((level->f_080) = ((void**)malloc(sizeof(void*) * width * height)))) {
         if (!(s_engine_feature_word & 0x800000)) {
             for (y = 0; y < height; y++) {
                 for (x = 0; x < width; x++) {
@@ -4752,13 +4687,13 @@ int lego_load_tile_meshes(Lego_Level* level, const char* baseName)
                     sprintf(names[0], "%s%0.1x%0.1xa", baseName, x, y);
                     // STRING: LEGORR 0x004a45c4
                     sprintf(names[1], "%s%0.1x%0.1xb", baseName, x, y);
-                    LEGO_LEVEL_PTR(void*, level->f_080)[(y * width) + x] =
+                    level->f_080[(y * width) + x] =
                         tile_model_entity_register_original(legoGlobs_rootCont, names[0], names[1], level->blockSize,
-                                                            LEGO_LEVEL_PTR(void, level->textureSet));
+                                                            level->textureSet);
                 }
             }
         } else {
-            memset(LEGO_LEVEL_PTR(void*, level->f_080), 0, sizeof(void*) * width * height);
+            memset(level->f_080, 0, sizeof(void*) * width * height);
         }
         return 1;
     }
@@ -4775,11 +4710,11 @@ void lego_rectangular_resource_table_destroy(Lego_Level* level)
 
     for (y = 0; y < height; y++) {
         for (x = 0; x < width; x++) {
-            cell_visual_channel_table_dispose_original(LEGO_LEVEL_PTR(void*, level->f_080)[(y * width) + x]);
+            cell_visual_channel_table_dispose_original(level->f_080[(y * width) + x]);
         }
     }
-    free(LEGO_LEVEL_PTR(void, level->f_080));
-    LEGO_LEVEL_PTR_SET(level->f_080, NULL);
+    free(level->f_080);
+    ((level->f_080) = (NULL));
 }
 
 /* GlobalStateField84Get [group M] */
@@ -4797,10 +4732,10 @@ uint32_t global_state_field84_get_current_target(void)
 
 /* Lego_Level.blocks[y * width + x]. */
 #define LEGO_2A_BLOCK(level, x, y) \
-    (LEGO_LEVEL_PTR(Lego_Block, (level)->blocks)[((y) * (level)->width) + (x)])
+    (((level)->blocks)[((y) * (level)->width) + (x)])
 /* Lego_Level.emergeMap (+0x08) as its records. */
 #define LEGO_2A_TRIGGERS(level) \
-    ((LegoEmergeTrigger2A*)LEGO_LEVEL_PTR(void, (level)->emergeMap))
+    ((LegoEmergeTrigger2A*)((level)->emergeMap))
 
 /* MapLoadPipeline [group 2A]: Lego_LoadMapSet. Builds the level's map and
  * blocks from the level's map files, in the order the original reads them.
@@ -4820,22 +4755,22 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
 {
     unsigned int x, y;
 
-    LEGO_LEVEL_PTR_SET(level->map, terrain_map_create(legoGlobs_rootCont, surfaceMap, level->blockSize,
-                                                      level->roughLevel));
-    if (LEGO_LEVEL_PTR(void, level->map)) {
+    ((level->map) = (terrain_map_create(legoGlobs_rootCont, surfaceMap, level->blockSize,
+                                                      level->roughLevel)));
+    if (level->map) {
         level->f_084 = (uint32_t)(uintptr_t)ui_render_record_create(
-            LEGO_LEVEL_PTR(void, level->map), (const uint32_t*)legoGlobs_f_5563e4,
+            level->map, (const uint32_t*)legoGlobs_f_5563e4,
             LEGO_FIELD(&s_lego_radar_zoom, uint32_t, 0));
-        terrain_map_perspective_correction_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 1);
-        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
-        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
-        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
-        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
-        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
-        terrain_map_texture_no_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), 0x70);
+        terrain_map_perspective_correction_set(level->map, 1);
+        terrain_map_texture_no_fade_set(level->map, 0x70);
+        terrain_map_texture_no_fade_set(level->map, 0x70);
+        terrain_map_texture_no_fade_set(level->map, 0x70);
+        terrain_map_texture_no_fade_set(level->map, 0x70);
+        terrain_map_texture_no_fade_set(level->map, 0x70);
+        terrain_map_texture_no_fade_set(level->map, 0x70);
 
-        level->width = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), uint32_t, 0x8);
-        level->height = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), uint32_t, 0xc);
+        level->width = LEGO_FIELD(level->map, uint32_t, 0x8);
+        level->height = LEGO_FIELD(level->map, uint32_t, 0xc);
 
         electric_fence_restart((struct ElectricFenceLevel*)level);
         spiderweb_restart(level);
@@ -4846,9 +4781,9 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
         }
 
         if (lego_texture_set_config_load(level, textureSet)) {
-            LEGO_LEVEL_PTR_SET(level->blocks, (Lego_Block*)malloc(sizeof(Lego_Block) * level->width * level->height));
-            if (LEGO_LEVEL_PTR(void, level->blocks)) {
-                memset(LEGO_LEVEL_PTR(Lego_Block, level->blocks), 0, sizeof(Lego_Block) * level->width * level->height);
+            ((level->blocks) = ((Lego_Block*)malloc(sizeof(Lego_Block) * level->width * level->height)));
+            if (level->blocks) {
+                memset(level->blocks, 0, sizeof(Lego_Block) * level->width * level->height);
                 for (y = 0; y < level->height; y++) {
                     for (x = 0; x < level->width; x++) {
                         LEGO_2A_BLOCK(level, x, y).f_00 = 0;
@@ -4880,7 +4815,7 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
                             }
                         }
 
-                        terrain_map_vertex_normals_update_all(LEGO_LEVEL_PTR(struct TerrainMap, level->map));
+                        terrain_map_vertex_normals_update_all(level->map);
                         terrain_cell_quad_run_stage_level(legoGlobs_rootCont, (struct LevelState*)level);
                         return 1;
                     }
@@ -4888,11 +4823,6 @@ int lego_map_load_pipeline(Lego_Level* level, const char* surfaceMap,
             }
         }
     }
-#if !(defined(_MSC_VER) && _MSC_VER < 1200)
-    /* The original falls off the end on failure, with the failed test's
-     * zero in eax; the port needs a return. */
-    return 0;
-#endif
 }
 
 /* SurfaceTextCharacterMapInitialize [group 2A]: Lego_InitTextureMappings.
@@ -4954,16 +4884,16 @@ int lego_texture_set_config_load(Lego_Level* level, const char* textureSet)
         if ((height = LEGO_A_CFG_INT(config, string_path_join(s_engine_config_root, textureSet, "surftextheight", 0)))) {
             level->f_074 = width;
             level->f_078 = height;
-            lego_surface_text_character_map_initialize(LEGO_LEVEL_PTR(struct TerrainMap, level->map));
-            terrain_map_vertex_normals_update_all(LEGO_LEVEL_PTR(struct TerrainMap, level->map));
+            lego_surface_text_character_map_initialize(level->map);
+            terrain_map_vertex_normals_update_all(level->map);
 
             // STRING: LEGORR 0x004a4600
             if ((meshBaseName = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "meshbasename", 0)))) {
                 // STRING: LEGORR 0x004a45f0
                 if ((textureBaseName = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "texturebasename", 0)))) {
-                    if (LEGO_LEVEL_PTR_SET(level->textureSet, (void*)terrain_cell_resource_grid_load(textureBaseName, level->f_074, level->f_078))) {
-                        terrain_map_texture_set_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
-                                                    LEGO_LEVEL_PTR(void, level->textureSet));
+                    if (((level->textureSet) = ((void*)terrain_cell_resource_grid_load(textureBaseName, level->f_074, level->f_078)))) {
+                        terrain_map_texture_set_set(level->map,
+                                                    level->textureSet);
                         if (lego_load_tile_meshes(level, meshBaseName)) {
                             // STRING: LEGORR 0x004a45e4
                             if ((roofTexture = block_get_strptr(config, string_path_join(s_engine_config_root, textureSet, "rooftexture", 0)))) {
@@ -5111,12 +5041,10 @@ int lego_load_layer_l(Lego_Level* level, const char* filename)
                         index = value / 6;
                         if (index + 1 > level->f_00c) {
                             if (!level->emergeMap) {
-                                LEGO_LEVEL_PTR_SET(level->emergeMap,
-                                                   malloc(sizeof(LegoEmergeTrigger2A) * (index + 1)));
+                                ((level->emergeMap) = (malloc(sizeof(LegoEmergeTrigger2A) * (index + 1))));
                             } else {
-                                LEGO_LEVEL_PTR_SET(level->emergeMap,
-                                                   realloc(LEGO_LEVEL_PTR(void, level->emergeMap),
-                                                           sizeof(LegoEmergeTrigger2A) * (index + 1)));
+                                ((level->emergeMap) = (realloc(level->emergeMap,
+                                                           sizeof(LegoEmergeTrigger2A) * (index + 1))));
                             }
                             memset(&LEGO_2A_TRIGGERS(level)[level->f_00c], 0,
                                    sizeof(LegoEmergeTrigger2A) * ((index + 1) - level->f_00c));
@@ -5211,8 +5139,8 @@ int lego_load_erode_cryore(Lego_Level* level, const char* filename, int modifier
                 for (x = 0; x < width; x++) {
                     value = level_map_cell_get(handle, x, y) - modifier;
                     if (value == 5) value = 4;
-                    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_02 = (unsigned char)value;
-                    block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x];
+                    level->blocks[y * level->width + x].f_02 = (unsigned char)value;
+                    block = &level->blocks[y * level->width + x];
                     if (block->f_02 == 6) {
                         block->f_07 = 4;
                     } else if (block->f_02 == 11) {
@@ -5239,7 +5167,7 @@ int lego_terrain_cell_byte_state_classify_current(const int* blockPos,
     unsigned int* crystalsLv0, unsigned int* crystalsLv1,
     unsigned int* oreLv0, unsigned int* oreLv1)
 {
-    unsigned int cryOre = LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+    unsigned int cryOre = legoGlobs_currLevel->blocks
         [blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].f_05;
     unsigned int counts[5];
     unsigned int count;
@@ -5273,7 +5201,7 @@ int lego_load_path_ai(Lego_Level* level, const char* filename, char modifier)
         if (width == level->width && height == level->height) {
             for (y = 0; y < height; y++) {
                 for (x = 0; x < width; x++) {
-                    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_05 =
+                    level->blocks[y * level->width + x].f_05 =
                         (unsigned char)((char)level_map_cell_get(handle, x, y) - modifier);
                 }
             }
@@ -5303,7 +5231,7 @@ int lego_load_fallin(Lego_Level* level, const char* filename, int modifier)
                     blockPos[0] = x;
                     blockPos[1] = y;
                     value = level_map_cell_get(handle, x, y) - modifier;
-                    flags1 = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1;
+                    flags1 = &level->blocks[y * level->width + x].flags1;
                     if (*flags1 & 0x8) {
                         if (value == 2) {
                             *flags1 |= 0x20000000;
@@ -5312,21 +5240,21 @@ int lego_load_fallin(Lego_Level* level, const char* filename, int modifier)
                              * level copy keeps the third test from reusing
                              * the block address, as in the original. */
                             Lego_Level* currLevel = legoGlobs_currLevel;
-                            Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, currLevel->blocks)[blockPos[1] * currLevel->width + blockPos[0]];
+                            Lego_Block* block = &currLevel->blocks[blockPos[1] * currLevel->width + blockPos[0]];
                             int i;
 
                             if (!(block->flags1 & 0x400) &&
                                 !(block->flags2 & 0x4) &&
-                                !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 & 0x8000) &&
+                                !(legoGlobs_currLevel->blocks[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 & 0x8000) &&
                                 !terrain_cell_predicate_check_current((const uint32_t*)blockPos)) {
-                                LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 &= ~0x200000;
-                                LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 &= ~0x20000000;
-                                LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 &= ~0x40000000;
+                                legoGlobs_currLevel->blocks[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 &= ~0x200000;
+                                legoGlobs_currLevel->blocks[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 &= ~0x20000000;
+                                legoGlobs_currLevel->blocks[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 &= ~0x40000000;
                                 entity_activity_scene_state_update_retail();
                                 coordinate_pair_callback_dispatch(blockPos);
                                 lego_noop_block_adapter(blockPos);
                                 for (i = 0; i < 4; i++) coordinate_pair_event_queue(blockPos, (void*)0x3d);
-                                LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 |= 0x3;
+                                legoGlobs_currLevel->blocks[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 |= 0x3;
                             }
                         }
                     }
@@ -5356,16 +5284,16 @@ int lego_load_block_pointers(Lego_Level* level, const char* filename)
             for (y = 0; y < height; y++) {
                 for (x = 0; x < width; x++) {
                     value = level_map_cell_get(handle, x, y);
-                    LEGO_FIELD(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x], unsigned int, 0x3c) = 0;
+                    LEGO_FIELD(&level->blocks[y * level->width + x], unsigned int, 0x3c) = 0;
                     if (value != 0) {
-                        LEGO_FIELD(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x], unsigned int, 0x3c) = value;
-                        LEGO_FIELD(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x], float, 0x40) =
-                            (float)((unsigned int)LEGO_FIELD(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x], short, 0x20) %
+                        LEGO_FIELD(&level->blocks[y * level->width + x], unsigned int, 0x3c) = value;
+                        LEGO_FIELD(&level->blocks[y * level->width + x], float, 0x40) =
+                            (float)((unsigned int)LEGO_FIELD(&level->blocks[y * level->width + x], short, 0x20) %
                                     (value * legoGlobs_f_556f14 * 25));
-                        LEGO_FIELD(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x], int, 0x38) = 0;
+                        LEGO_FIELD(&level->blocks[y * level->width + x], int, 0x38) = 0;
                         if (value > 4) {
-                            LEGO_FIELD(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x], unsigned int, 0x3c) = value - 4;
-                            LEGO_FIELD(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x], int, 0x38) = 1;
+                            LEGO_FIELD(&level->blocks[y * level->width + x], unsigned int, 0x3c) = value - 4;
+                            LEGO_FIELD(&level->blocks[y * level->width + x], int, 0x38) = 1;
                         }
                     }
                 }
@@ -5394,13 +5322,13 @@ void lego_camera_grid_expiry(float elapsed)
             for (x = 0; x < width; x++) {
                 blockPos[0] = x;
                 blockPos[1] = y;
-                block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x];
+                block = &level->blocks[y * level->width + x];
                 if (block->f_10[11] != 0) {
-                    ((float*)LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10)[12] += elapsed;
-                    if ((float)(LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10[11] * legoGlobs_f_556f14 * 25) < ((float*)LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10)[12]) {
-                        ((float*)LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10)[12] = 0.0f;
+                    ((float*)level->blocks[y * level->width + x].f_10)[12] += elapsed;
+                    if ((float)(level->blocks[y * level->width + x].f_10[11] * legoGlobs_f_556f14 * 25) < ((float*)level->blocks[y * level->width + x].f_10)[12]) {
+                        ((float*)level->blocks[y * level->width + x].f_10)[12] = 0.0f;
                         if (lava_erosion_cell_eligible_and_mutate(blockPos,
-                                LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10[10])) {
+                                level->blocks[y * level->width + x].f_10[10])) {
                             info_send(6, NULL, NULL, (struct InfoPoint2I*)blockPos);
                         }
                     }
@@ -5424,7 +5352,7 @@ int lego_load_terrain_map(Lego_Level* level, const char* filename, int modifier)
             for (y = 0; y < height; y++) {
                 for (x = 0; x < width; x++) {
                     value = level_map_cell_get(handle, x, y) - modifier;
-                    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_04 = (unsigned char)value;
+                    level->blocks[y * level->width + x].f_04 = (unsigned char)value;
                 }
             }
             level_map_slot_release(handle);
@@ -5764,10 +5692,10 @@ void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* 
         entity_position_to_terrain_cell_adapter(liveObj, &pos[0], &pos[1]);
     } else {
         if (smooth)
-            terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+            terrain_map_block_to_world(legoGlobs_currLevel->map,
                                        blockPos[0], blockPos[1], &legoGlobs_f_556150, &legoGlobs_f_556154);
         else
-            terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+            terrain_map_block_to_world(legoGlobs_currLevel->map,
                                        blockPos[0], blockPos[1], &legoGlobs_f_556148, &legoGlobs_f_55614c);
         pos[0] = blockPos[0];
         pos[1] = blockPos[1];
@@ -5776,18 +5704,18 @@ void lego_viewport_target_position_clamp(struct EntitySlot* liveObj, const int* 
     x = pos[0];
     y = pos[1];
     if (pos[0] < view_grid_edge_get()) x = view_grid_edge_get();
-    if (pos[0] >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x0) - view_grid_edge_get())
-        x = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x0) - view_grid_edge_get() - 1;
+    if (pos[0] >= LEGO_FIELD(level->map, int, 0x0) - view_grid_edge_get())
+        x = LEGO_FIELD(level->map, int, 0x0) - view_grid_edge_get() - 1;
     if (pos[1] < view_grid_edge_get()) y = view_grid_edge_get();
-    if (pos[1] >= LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x4) - view_grid_edge_get())
-        y = LEGO_FIELD(LEGO_LEVEL_PTR(void, level->map), int, 0x4) - view_grid_edge_get() - 1;
+    if (pos[1] >= LEGO_FIELD(level->map, int, 0x4) - view_grid_edge_get())
+        y = LEGO_FIELD(level->map, int, 0x4) - view_grid_edge_get() - 1;
 
     if (pos[0] != x || pos[1] != y) {
         if (smooth)
-            terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+            terrain_map_block_to_world(legoGlobs_currLevel->map,
                                        x, y, &legoGlobs_f_556150, &legoGlobs_f_556154);
         else
-            terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+            terrain_map_block_to_world(legoGlobs_currLevel->map,
                                        x, y, &legoGlobs_f_556148, &legoGlobs_f_55614c);
     }
     legoGlobs_flags1 |= 0x200000;
@@ -5891,7 +5819,7 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                 xPos -= 1.0f;
                 by = (unsigned int)yPos;
                 bx = (unsigned int)xPos;
-                terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by, &wPos.x, &wPos.y);
+                terrain_map_block_to_world(level->map, bx, by, &wPos.x, &wPos.y);
                 wPos.x += (xPos - (bx + 0.5f)) * level->blockSize;
                 yPos = (yPos - (by + 0.5f)) * level->blockSize;
                 wPos.y -= yPos;
@@ -5907,7 +5835,7 @@ int lego_object_list_load_file(Lego_Level* level, const char* fileName)
                     legoGlobs_f_5563f8 = wPos;
                     s_lego_radar_zoom = 15.0f;
                 } else if (!((bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1)
-                                 ? (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+                                 ? (legoGlobs_currLevel->blocks
                                         [legoGlobs_currLevel->width * by + bx].flags1 & 8)
                                  : 0)) {
                     hiddenPos = wPos;
@@ -6259,7 +6187,7 @@ void lego_play_movie(const char* fName, const float* screenPt)
             } else noScreenPt = 1;
             if (!noScreenPt) directdraw_return_front_buffer();
             while (movie_update(mov, 1.0f,
-                                noScreenPt ? NULL : (struct tagRECT*)&rect)) {
+                                noScreenPt ? NULL : (struct RECT*)&rect)) {
                 main_loop_frame_pump(noScreenPt);
             }
             movie_free(mov);
@@ -6276,10 +6204,10 @@ const char* lego_level_free(void)
     const char* nextLevel = NULL;
 
     if (level) {
-        free(LEGO_LEVEL_PTR(void, level->emergeMap));
+        free(level->emergeMap);
         if (legoGlobs_endGameAVI1) free(legoGlobs_endGameAVI1);
         if (legoGlobs_endGameAVI2) free(legoGlobs_endGameAVI2);
-        free(LEGO_LEVEL_PTR(char, level->fullName));
+        free(level->fullName);
 
         legoGlobs_flags1 &= ~0x00200000;
         s_entity_state_flags &= ~0x40;
@@ -6304,7 +6232,7 @@ const char* lego_level_free(void)
         transient_effect_registry_release_all();
         global_state_low_byte_clear_and_refresh();
 
-        nextLevel = LEGO_LEVEL_PTR(char, level->nextLevel);
+        nextLevel = level->nextLevel;
 
         ui_message_overlay_state_initialize();
         selection_state_flag_clear_bit0();
@@ -6322,12 +6250,12 @@ const char* lego_level_free(void)
         selection_active_count_reset();
         tutorial_display_resources_release();
         ui_render_record_free((void*)(uintptr_t)level->f_084);
-        terrain_map_remove(LEGO_LEVEL_PTR(struct TerrainMap, level->map));
+        terrain_map_remove(level->map);
         lego_rectangular_resource_table_destroy(level);
-        terrain_cell_resource_grid_dispose(LEGO_LEVEL_PTR(struct TerrainCellResourceGrid, level->textureSet));
+        terrain_cell_resource_grid_dispose((TerrainCellResourceGrid*)level->textureSet);
         lego_block_activity_remove_all(level);
         scene_resource_singleton_pool_release();
-        free(LEGO_LEVEL_PTR(Lego_Block, level->blocks));
+        free(level->blocks);
         free(level);
         pending_record_release_all();
         interface_reset();
@@ -6347,10 +6275,10 @@ const char* lego_level_free(void)
 void lego_terrain_cell_edge_flag_set_and_update(Lego_Level* level, int bx, int by, int on)
 {
     if (on) {
-        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 |= 0x200;
+        level->blocks[level->width * by + bx].flags1 |= 0x200;
         lego_cell_init_pass(level, bx, by, 0);
     } else {
-        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 &= ~0x200;
+        level->blocks[level->width * by + bx].flags1 &= ~0x200;
         lego_cell_init_pass(level, bx, by, 0);
     }
 }
@@ -6372,10 +6300,10 @@ unsigned char lego_terrain_neighbor_coordinate_check(int bx, int by, unsigned ch
         x = bx + dirs[i][0];
         y = by + dirs[i][1];
         if (x >= 0 && y >= 0 && x < (int)legoGlobs_currLevel->width && y < (int)legoGlobs_currLevel->height)
-            solid = LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[y * legoGlobs_currLevel->width + x].flags1 & 0x20000000;
+            solid = legoGlobs_currLevel->blocks[y * legoGlobs_currLevel->width + x].flags1 & 0x20000000;
         else
             solid = 0;
-        if (solid || (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * y + x].flags1 & 0x400))
+        if (solid || (legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * y + x].flags1 & 0x400))
             mask |= 1 << i;
     }
 
@@ -6423,7 +6351,7 @@ unsigned char lego_terrain_neighbor_coordinate_check(int bx, int by, unsigned ch
 
 /* The current level's block at (x, y). */
 #define LEGO_2E_CURR_BLOCK(x, y) \
-    (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * (y) + (x)])
+    (legoGlobs_currLevel->blocks[legoGlobs_currLevel->width * (y) + (x)])
 
 /* CellInitPass (Level_BlockUpdateSurface): choose a block's surface
  * texture and direction from its walls and flags, and update the map. */
@@ -6449,9 +6377,9 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
     {
     int dirs[4][2];
 
-    map = LEGO_LEVEL_PTR(struct TerrainMap, level->map);
+    map = level->map;
     wallCount = 0;
-    block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+    block = &level->blocks[by * level->width + bx];
     /* Assigned after the block lookup, as the original schedules them. */
     dirs[0][0] = 0; dirs[0][1] = 0; dirs[1][0] = 1; dirs[1][1] = 0;
     dirs[2][0] = 1; dirs[2][1] = 1; dirs[3][0] = 0; dirs[3][1] = 1;
@@ -6467,7 +6395,7 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
 
     notWallPtr = notWall;
     for (i = 0; i < 4; i++) {
-        if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by + dirs[i][1]) * level->width + bx + dirs[i][0]].f_00 == 1) {
+        if (level->blocks[(by + dirs[i][1]) * level->width + bx + dirs[i][0]].f_00 == 1) {
             wallDir = (unsigned char)i;
             wallCount++;
         } else {
@@ -6529,12 +6457,12 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
         if (block->f_02 == 6 || (block->flags1 & 0x80000000)) {
             lava_erosion_pending_cell_add(blockPos, 1);
             if (block->flags1 & 0x200) {
-                terrain_map_block_uv_wobble_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by, 0);
+                terrain_map_block_uv_wobble_set(level->map, bx, by, 0);
                 block->texture = 0x47;
                 if (block->flags1 & 0x4000) transient_effect_enable_set(LEGO_FIELD(block, void*, 0x1c), 1);
             } else if (block->f_07 == 4) {
                 block->texture = 0x46;
-                terrain_map_block_uv_wobble_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by, 1);
+                terrain_map_block_uv_wobble_set(level->map, bx, by, 1);
                 if (block->flags1 & 0x4000) {
                     transient_effect_enable_set(LEGO_FIELD(block, void*, 0x1c), 0);
                 } else if (LEGO_FIELD(block, short, 0x20) % 3 == 0) {
@@ -6550,7 +6478,7 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
                     block->flags1 |= 0x4000;
                 }
             } else {
-                terrain_map_block_uv_wobble_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by, 0);
+                terrain_map_block_uv_wobble_set(level->map, bx, by, 0);
                 switch (block->f_07) {
                 case 0: block->texture = 0x06; break;
                 case 1: block->texture = 0x16; break;
@@ -6560,7 +6488,7 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
             }
         } else if (block->f_02 == 9) {
             block->texture = 0x45;
-            terrain_map_block_uv_wobble_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by, 1);
+            terrain_map_block_uv_wobble_set(level->map, bx, by, 1);
         } else if (block->flags1 & 0x100000) {
             if (block->flags2 & 0x100) block->texture = 0x66;
             else block->texture = 0x76;
@@ -6731,15 +6659,15 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
     if ((block->flags1 & 0x4) && (block->flags1 & 0x800000) &&
         (block->f_02 == 1 || block->f_02 == 7 || (block->flags1 & 0x8))) {
         block->flags1 &= ~0x800000;
-        terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by);
+        terrain_map_block_highlight_clear(level->map, bx, by);
     }
 
     if (!(render_feature_flags_get() & 0x8000)) fade = 0;
     if (fade)
-        terrain_map_block_texture_fade_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by,
+        terrain_map_block_texture_fade_set(level->map, bx, by,
                                            block->texture, block->f_03);
     else
-        terrain_map_block_texture_set(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by,
+        terrain_map_block_texture_set(level->map, bx, by,
                                       block->texture, block->f_03);
 
     if (level->useRoof) terrain_cell_mutation_progress((struct LevelState*)level, bx, by);
@@ -6754,13 +6682,12 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
  * not live pointers (LEGO_LEVEL_PTR) and the port prefers its GameContext's
  * level, so lego.cpp keeps their port models for the other targets. Their
  * callers already use these entries' contracts. */
-#if defined(_MSC_VER) && defined(_M_IX86)
 
 /* Clears the block's two tracking flags and refreshes the objects and
  * routes around it. Inline in the original as well: 00430320 and 00430530
  * repeat its body. */
 // FUNCTION: LEGORR 0x004302b0
-extern __inline void map_cell_tracking_flags_clear_and_refresh_current(const int cell_xy[2])
+inline void map_cell_tracking_flags_clear_and_refresh_current(const int cell_xy[2])
 {
     LEGO_2F_BLOCK(legoGlobs_currLevel, cell_xy[0], cell_xy[1]).flags1 &= ~0x20000000;
     LEGO_2F_BLOCK(legoGlobs_currLevel, cell_xy[0], cell_xy[1]).flags1 &= ~0x40000000;
@@ -6777,7 +6704,7 @@ extern __inline void map_cell_tracking_flags_clear_and_refresh_current(const int
  * level through a local copy, the third through the global, so MSVC 5.0
  * cannot merge the three tests (as 0042c760's expansion does). */
 // FUNCTION: LEGORR 0x00430320
-extern __inline void terrain_cell_work_flag_clear_current(const int coord[2], uint32_t selector)
+inline void terrain_cell_work_flag_clear_current(const int coord[2], uint32_t selector)
 {
     Lego_Level* currLevel = legoGlobs_currLevel;
     int i;
@@ -6794,7 +6721,6 @@ extern __inline void terrain_cell_work_flag_clear_current(const int coord[2], ui
     }
 }
 
-#endif /* _MSC_VER && _M_IX86 */
 
 // FUNCTION: LEGORR 0x00430470
 void lego_terrain_neighbor_flag_set(Lego_Level* level, int unused,
@@ -6818,7 +6744,7 @@ void lego_terrain_neighbor_flag_set(Lego_Level* level, int unused,
 int lego_terrain_cell_mutate(Lego_Level* level, unsigned int bx,
                              unsigned int by, int isHiddenCavern)
 {
-    struct TerrainMap* map = LEGO_LEVEL_PTR(struct TerrainMap, level->map);
+    struct TerrainMap* map = level->map;
     int quad[4][2] = { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } };
     int pos[2];
     int pos2[2];
@@ -6999,7 +6925,7 @@ void lego_terrain_neighbor_refresh(const int* blockPos)
 // FUNCTION: LEGORR 0x00430ee0
 int lego_terrain_cell_initialize(Lego_Level* level, unsigned int bx, unsigned int by)
 {
-    struct TerrainMap* map = LEGO_LEVEL_PTR(struct TerrainMap, level->map);
+    struct TerrainMap* map = level->map;
     LegoPoint2I2F dirs[4] = { { -1, -1 }, { 0, -1 }, { 0, 0 }, { -1, 0 } };
     unsigned int x, y;
     unsigned int i;
@@ -7113,9 +7039,9 @@ void lego_block_activity_create(Lego_Level* level, const int* blockPos, int buil
             LEGO_2F_PTR_SET(level->f_088, activity);
             LEGO_2F_PTR_SET(LEGO_2F_BLOCK(level, blockPos[0], blockPos[1]).f_10[2], activity);
         }
-        terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
+        terrain_map_block_to_world(level->map,
                                    blockPos[0], blockPos[1], &wxwy.x, &wxwy.y);
-        wz = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wxwy.x, wxwy.y);
+        wz = terrain_map_world_z_get(level->map, wxwy.x, wxwy.y);
         ddiscene_object_position_set(activity->cont, NULL, wxwy.x, wxwy.y, wz);
         ddiscene_object_pose_method_dispatch(activity->cont, NULL, (float)dirs[direction].x,
                                              (float)dirs[direction].y, (float)dirs[direction].z,
@@ -7194,7 +7120,6 @@ void lego_block_activity_remove_all(Lego_Level* level)
     }
 }
 
-#if defined(_MSC_VER) && defined(_M_IX86)
 
 // FUNCTION: LEGORR 0x00431560
 struct LevelState* level_current_owner_get(void)
@@ -7207,10 +7132,9 @@ struct LevelState* level_current_owner_get(void)
 // FUNCTION: LEGORR 0x00431570
 void* level_current_terrain_get(int cell_x, int cell_y)
 {
-    return LEGO_LEVEL_PTR(void, ((Lego_Level*)level_current_owner_get())->map);
+    return (((Lego_Level*)level_current_owner_get())->map);
 }
 
-#endif /* _MSC_VER && _M_IX86 */
 
 /* ---- part 2 functions, group 2F: end ---- */
 
@@ -7249,9 +7173,9 @@ void lego_terrain_neighbor_work_flag_scan(unsigned int bx, unsigned int by)
                 pos = lists[curr][i];
                 for (y = (int)pos.y - 1; y <= (int)pos.y + 1; y++) {
                     for (x = (int)pos.x - 1; x <= (int)pos.x + 1; x++) {
-                        if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x20000) {
+                        if (level->blocks[y * level->width + x].flags1 & 0x20000) {
                             lego_terrain_cell_mutate(level, x, y, 1);
-                            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 &= ~0x20000;
+                            level->blocks[y * level->width + x].flags1 &= ~0x20000;
                             if (pos.x != (float)x || pos.y != (float)y) {
                                 lists[!curr][counts[!curr]].x = (float)x;
                                 lists[!curr][counts[!curr]].y = (float)y;
@@ -7290,21 +7214,21 @@ void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
         for (i = 0; i < 4; i++) {
             offsets[i].x += (float)bx;
             offsets[i].y += (float)by;
-            if (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+            if (legoGlobs_currLevel->blocks
                     [legoGlobs_currLevel->width * (int)offsets[i].y + (int)offsets[i].x].flags1 & 8)
                 count++;
         }
     }
     if (vertexMode) {
-        terrain_map_vertex_position_get((struct TerrainMap*)LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
+        terrain_map_vertex_position_get((struct TerrainMap*)legoGlobs_currLevel->map,
                                         bx, by, &x, &y, &z);
     } else {
-        terrain_map_block_to_world((struct TerrainMap*)LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
+        terrain_map_block_to_world((struct TerrainMap*)legoGlobs_currLevel->map,
                                    bx, by, &x, &y);
     }
     sPos.y = y;
     sPos.x = x;
-    sPos.z = terrain_map_world_z_get((struct TerrainMap*)LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
+    sPos.z = terrain_map_world_z_get((struct TerrainMap*)legoGlobs_currLevel->map,
                                      x, y);
     sound_submission_route_wrapper(NULL, 4, 0, 0, &sPos.x);
     big = (count > 1);
@@ -7312,10 +7236,10 @@ void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
         LegoPoint2F2G dirs[4] = { { 0.0f, 1.0f }, { 1.0f, 0.0f },
                                   { 0.0f, -1.0f }, { -1.0f, 0.0f } };
         if (scene_slot_pose_scale_register((unsigned short)big, bx, by, x, y,
-                terrain_map_world_z_get((struct TerrainMap*)LEGO_LEVEL_PTR(void, legoGlobs_currLevel->map),
+                terrain_map_world_z_get((struct TerrainMap*)legoGlobs_currLevel->map,
                                         x, y),
                 dirs[direction].x, dirs[direction].y)) {
-            LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+            legoGlobs_currLevel->blocks
                 [legoGlobs_currLevel->width * by + bx].flags1 |= 0x800;
         }
     }
@@ -7325,7 +7249,7 @@ void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
 // FUNCTION: LEGORR 0x004319b0
 int lego_terrain_cell_material_get(int bx, int by)
 {
-    return LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+    return legoGlobs_currLevel->blocks
         [legoGlobs_currLevel->width * by + bx].f_02;
 }
 
@@ -7392,9 +7316,9 @@ int lego_terrain_placement_blocked_adjacent_cell_scan(int bx, int by,
 
     blockPos[1] = by;
     blockPos[0] = bx;
-    block = &LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+    block = &legoGlobs_currLevel->blocks
         [legoGlobs_currLevel->width * by + bx];
-    if (!(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+    if (!(legoGlobs_currLevel->blocks
               [legoGlobs_currLevel->width * by + bx].flags2 & 0x20) &&
         !terrain_cell_predicate_check_current((const uint32_t*)blockPos) &&
         !(block->flags1 & 0x20000000)) {
@@ -7406,7 +7330,7 @@ int lego_terrain_placement_blocked_adjacent_cell_scan(int bx, int by,
             if (!electric_fence_block_is_fence(bx, by)) {
                 int DIRECTIONS[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
                 for (i = 0; i < 4; i++) {
-                    if (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+                    if (legoGlobs_currLevel->blocks
                             [(DIRECTIONS[i][1] + by) * legoGlobs_currLevel->width + bx + DIRECTIONS[i][0]].f_02 == 11)
                         return 0;
                 }
@@ -7439,8 +7363,8 @@ int lego_first_free_neighbor_cell_pick(struct EntitySlot* liveObj,
             (bx = DIRECTIONS[dir][0] + blockPos[0], by = DIRECTIONS[dir][1] + blockPos[1],
              wall = 0,
              (bx < legoGlobs_currLevel->width - 1 && by < legoGlobs_currLevel->height - 1 &&
-              (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[by * legoGlobs_currLevel->width + bx].flags1 & 0x10) &&
-              !(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[by * legoGlobs_currLevel->width + bx].flags1 & 8))
+              (legoGlobs_currLevel->blocks[by * legoGlobs_currLevel->width + bx].flags1 & 0x10) &&
+              !(legoGlobs_currLevel->blocks[by * legoGlobs_currLevel->width + bx].flags1 & 8))
                  ? (wall = 1) : 0,
              !wall)) {
             if (lego_terrain_cell_route_and_occupancy_check(liveObj,
@@ -7468,8 +7392,8 @@ int lego_terrain_cell_route_and_occupancy_check(struct EntitySlot* liveObj,
     uint32_t crossOther = 1;
     uint32_t enterLava = 0;
     uint32_t crossRubble = 0;
-    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
-    Lego_Block* toBlock = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[toY * level->width + toX];
+    Lego_Block* block = &level->blocks[by * level->width + bx];
+    Lego_Block* toBlock = &level->blocks[toY * level->width + toX];
     int result = 1;
     int DIRECTIONS[4][2] = { { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } };
     unsigned int dir;
@@ -7519,13 +7443,13 @@ int lego_terrain_cell_route_and_occupancy_check(struct EntitySlot* liveObj,
             result = 3;
         if (block->f_00 == 0)
             return 0;
-        if ((LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].flags1 & 0x10) &&
-            (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx - 1].f_02 == 6 ||
-             LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by - 1) * level->width + bx].f_02 == 6))
+        if ((level->blocks[by * level->width + bx].flags1 & 0x10) &&
+            (level->blocks[by * level->width + bx - 1].f_02 == 6 ||
+             level->blocks[(by - 1) * level->width + bx].f_02 == 6))
             return 0;
-        if ((LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].flags1 & 0x10) &&
-            (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx - 1].f_02 == 7 ||
-             LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by - 1) * level->width + bx].f_02 == 7))
+        if ((level->blocks[by * level->width + bx].flags1 & 0x10) &&
+            (level->blocks[by * level->width + bx - 1].f_02 == 7 ||
+             level->blocks[(by - 1) * level->width + bx].f_02 == 7))
             return 0;
         if (dir == 0) {
             if (flags & 0x2000)
@@ -7537,8 +7461,8 @@ int lego_terrain_cell_route_and_occupancy_check(struct EntitySlot* liveObj,
         return 0;
     }
     if (toX != bx && toY != by) {
-        if ((LEGO_LEVEL_PTR(Lego_Block, level->blocks)[toY * level->width + bx].flags1 & 8) &&
-            (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + toX].flags1 & 8))
+        if ((level->blocks[toY * level->width + bx].flags1 & 8) &&
+            (level->blocks[by * level->width + toX].flags1 & 8))
             return 2;
     }
     return result;
@@ -7552,7 +7476,7 @@ void lego_terrain_cell_flag100_set_and_track(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
     int32_t (*list)[2] = s_cell_refresh_track;
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags2 |= 0x100;
+    level->blocks[level->width * blockPos[1] + blockPos[0]].flags2 |= 0x100;
     list[s_cell_refresh_track_count][0] = blockPos[0];
     list[s_cell_refresh_track_count][1] = blockPos[1];
     s_cell_refresh_track_count++;
@@ -7563,7 +7487,7 @@ void lego_terrain_cell_flag100_set_and_track(const int blockPos[2])
 uint32_t lego_terrain_cell_secondary_flag_100(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+    return level->blocks
         [blockPos[1] * level->width + blockPos[0]].flags2 & 0x100;
 }
 
@@ -7574,7 +7498,7 @@ void lego_terrain_cell_update_queue_flush(void)
     unsigned int i;
 
     for (i = 0; i < (unsigned int)s_cell_previous_track_count; i++) {
-        if (!(LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+        if (!(level->blocks
                   [level->width * s_cell_previous_track[i][1] + s_cell_previous_track[i][0]].flags2 & 0x100))
             lego_cell_init_pass(level, s_cell_previous_track[i][0], s_cell_previous_track[i][1], 0);
     }
@@ -7589,47 +7513,6 @@ void lego_terrain_cell_update_queue_flush(void)
  * scored 23.88%. So the matching build keeps the original's code, its
  * operands now legoGlobs' fields; the C form is for other compilers. */
 // FUNCTION: LEGORR 0x00432200
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void lego_terrain_cell_previous_state_track(void)
-{
-    __asm {
-        mov eax, dword ptr [s_cell_refresh_track_count]
-        xor edx, edx
-        push esi
-        mov esi, dword ptr [g_active_level_retail]
-        test eax, eax
-        jbe lego_previous_state_track_done
-        push edi
-        mov ecx, offset legoGlobs + 78ch
-    lego_previous_state_track_loop:
-        mov eax, dword ptr [ecx]
-        mov dword ptr [ecx + 320h], eax
-        mov eax, dword ptr [ecx + 4]
-        mov dword ptr [ecx + 324h], eax
-        mov eax, dword ptr [ecx + 4]
-        imul eax, dword ptr [esi + 14h]
-        mov edi, dword ptr [ecx]
-        add ecx, 8
-        add eax, edi
-        mov edi, dword ptr [esi + 0b8h]
-        lea eax, dword ptr [eax + eax*8]
-        lea eax, dword ptr [edi + eax*8 + 0ch]
-        mov edi, dword ptr [eax]
-        and edi, 0fffffeffh
-        inc edx
-        mov dword ptr [eax], edi
-        mov eax, dword ptr [s_cell_refresh_track_count]
-        cmp edx, eax
-        jb lego_previous_state_track_loop
-        pop edi
-    lego_previous_state_track_done:
-        mov dword ptr [s_cell_previous_track_count], eax
-        mov dword ptr [s_cell_refresh_track_count], 0
-        pop esi
-        ret
-    }
-}
-#else
 void lego_terrain_cell_previous_state_track(void)
 {
     Lego_Level* level = legoGlobs_currLevel;
@@ -7638,19 +7521,18 @@ void lego_terrain_cell_previous_state_track(void)
     for (i = 0; i < (unsigned int)s_cell_refresh_track_count; i++) {
         s_cell_previous_track[i][0] = s_cell_refresh_track[i][0];
         s_cell_previous_track[i][1] = s_cell_refresh_track[i][1];
-        LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+        level->blocks
             [s_cell_refresh_track[i][1] * level->width + s_cell_refresh_track[i][0]].flags2 &= ~0x100;
     }
     s_cell_previous_track_count = s_cell_refresh_track_count;
     s_cell_refresh_track_count = 0;
 }
-#endif
 
 // FUNCTION: LEGORR 0x00432270
 void lego_terrain_cell_visited_flag_set_and_track(const int blockPos[2])
 {
     int32_t (*list)[2] = s_cell_visited_track;
-    LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+    legoGlobs_currLevel->blocks
         [legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].flags2 |= 2;
     list[s_cell_visited_track_count][0] = blockPos[0];
     list[s_cell_visited_track_count][1] = blockPos[1];
@@ -7661,14 +7543,13 @@ void lego_terrain_cell_visited_flag_set_and_track(const int blockPos[2])
 uint32_t lego_terrain_cell_visited_flag(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+    return level->blocks
         [blockPos[1] * level->width + blockPos[0]].flags2 & 2;
 }
 
 /* Shared under MSVC x86 with the port's name: same contract, same globals.
  * Other targets keep the port model in lego.cpp (the level's pointer words
  * are not pointers on 64-bit). */
-#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x00432300
 void terrain_cell_visited_flags_clear_all_current(void)
 {
@@ -7676,19 +7557,18 @@ void terrain_cell_visited_flags_clear_all_current(void)
     unsigned int i;
 
     for (i = 0; i < (unsigned int)s_cell_visited_track_count; i++) {
-        LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+        level->blocks
             [s_cell_visited_track[i][1] * level->width + s_cell_visited_track[i][0]].flags2 &= ~2;
     }
     s_cell_visited_track_count = 0;
 }
-#endif
 
 // FUNCTION: LEGORR 0x00432360
 void lego_terrain_cell_primary_flags_mask_clear_and_refresh(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 &= 0xdfef7bff;
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags2 &= ~4;
+    level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 &= 0xdfef7bff;
+    level->blocks[level->width * blockPos[1] + blockPos[0]].flags2 &= ~4;
     lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
 }
 
@@ -7696,7 +7576,7 @@ void lego_terrain_cell_primary_flags_mask_clear_and_refresh(const int blockPos[2
 void lego_terrain_cell_secondary_bit0_clear(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+    level->blocks
         [blockPos[1] * level->width + blockPos[0]].flags2 &= ~1;
 }
 
@@ -7704,8 +7584,8 @@ void lego_terrain_cell_secondary_bit0_clear(const int blockPos[2])
 void lego_terrain_cell_flags_set_and_refresh(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x108000;
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags2 |= 4;
+    level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x108000;
+    level->blocks[level->width * blockPos[1] + blockPos[0]].flags2 |= 4;
     lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
 }
 
@@ -7713,7 +7593,7 @@ void lego_terrain_cell_flags_set_and_refresh(const int blockPos[2])
 void lego_terrain_cell_flags_set_mask100400(int bx, int by)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 |= 0x100400;
+    level->blocks[level->width * by + bx].flags1 |= 0x100400;
     lego_cell_init_pass(level, bx, by, 0);
 }
 
@@ -7721,7 +7601,7 @@ void lego_terrain_cell_flags_set_mask100400(int bx, int by)
 void lego_terrain_cell_flags_set_mask20108000(int bx, int by)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 |= 0x20108000;
+    level->blocks[level->width * by + bx].flags1 |= 0x20108000;
     lego_cell_init_pass(level, bx, by, 0);
 }
 
@@ -7763,19 +7643,18 @@ float entity_indexed_float_lookup_with_minus_one_fallback(int weapon_type,
  * 00433180 take a LegoObject; the port's callers pass its EntitySlot (0x674
  * bytes, not the original's 0x40c), which only the matching build reads at
  * the original's offsets, as the port's own MSVC bodies already did. */
-#define LEGO_3A_BLOCKS (LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks))
+#define LEGO_3A_BLOCKS (legoGlobs_currLevel->blocks)
 
-#if defined(_MSC_VER) && defined(_M_IX86)
 
 // FUNCTION: LEGORR 0x004324d0
 void terrain_cell_secondary_flag_8_set_current(int bx, int by, int on)
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (on) {
-        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags2 |= 8;
+        level->blocks[level->width * by + bx].flags2 |= 8;
         return;
     }
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags2 &= ~8;
+    level->blocks[level->width * by + bx].flags2 &= ~8;
 }
 
 // FUNCTION: LEGORR 0x00432520
@@ -7795,9 +7674,9 @@ void terrain_cell_flag40000000_clear_or_set_current(const int blockPos[2], int o
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (on)
-        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x40000000;
+        level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x40000000;
     else
-        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x40000000;
+        level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x40000000;
     lego_cell_init_pass(level, blockPos[0], blockPos[1], 0);
 }
 
@@ -7811,31 +7690,16 @@ void terrain_cell_flag40000000_clear_or_set_current(const int blockPos[2], int o
  *   }
  */
 // FUNCTION: LEGORR 0x004325d0
-__declspec(naked) void terrain_cell_secondary_bit0_set_current(
-    const int cell_xy[2])
+void terrain_cell_secondary_bit0_set_current(const int blockPos[2])
 {
-    __asm {
-        mov edx, dword ptr [esp + 4]
-        mov ecx, dword ptr [g_active_level_retail]
-        push esi
-        mov eax, dword ptr [edx + 4]
-        mov esi, dword ptr [edx]
-        imul eax, dword ptr [ecx + 14h]
-        mov ecx, dword ptr [ecx + 0b8h]
-        add eax, esi
-        pop esi
-        lea eax, dword ptr [eax + eax*8]
-        lea eax, dword ptr [ecx + eax*8 + 0ch]
-        or dword ptr [eax], 1
-        ret
-    }
+    LEGO_3A_BLOCKS[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags2 |= 1;
 }
 
 // FUNCTION: LEGORR 0x00432600
 int terrain_cell_variant_flag_propagate_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]];
+    Lego_Block* block = &level->blocks[level->width * blockPos[1] + blockPos[0]];
     uint32_t flags = block->flags1;
 
     if ((flags & 0x200000) && block->f_02 != 6) {
@@ -7854,11 +7718,11 @@ int terrain_cell_variant_flag_propagate_current(const int blockPos[2])
         offsets[4][1] = 0;
         if (flags & 0x80000000) {
             lava_erosion_pending_cell_add(blockPos, 0);
-            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].f_07 = 0;
+            level->blocks[level->width * blockPos[1] + blockPos[0]].f_07 = 0;
         } else {
             block->flags1 = flags | 0x20000000;
         }
-        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x40000000;
+        level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x40000000;
         for (i = 0; i < 5; i++)
             lego_cell_init_pass(level, blockPos[0] + offsets[i][0], offsets[i][1] + blockPos[1], 0);
         entity_activity_scene_state_update_retail();
@@ -7872,10 +7736,10 @@ void terrain_cell_flag_80000_clear_or_set_current(const int blockPos[2], int on)
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (on) {
-        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x80000;
+        level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x80000;
         return;
     }
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x80000;
+    level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x80000;
 }
 
 /* Shared in the matching build only: the port's callers in ai.cpp and
@@ -7887,7 +7751,7 @@ int terrain_cell_walkability_query_current(const struct EntitySlot* liveObj,
                                            int digging, int ignoreFlag400)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+    Lego_Block* block = &level->blocks[by * level->width + bx];
 
     if (!(entity_stats_word_get(liveObj) & 0x20000) || LEGO_FIELD(liveObj, void*, 0x36c) != NULL) {
         if (digging && !(entity_stats_word_get(liveObj) & 1))
@@ -7918,13 +7782,13 @@ int terrain_cell_walkability_query_current(const struct EntitySlot* liveObj,
                     offsets[3][0] = -1;
                     offsets[3][1] = 0;
                     for (i = 0; i < 4; i++) {
-                        if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+                        if (level->blocks
                                 [(offsets[i][1] + by) * level->width + bx + offsets[i][0]].f_00 != 0)
                             break;
                     }
                     if (i < 4) {
                         for (i = 0; i < 4; i++) {
-                            unsigned char type = LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+                            unsigned char type = level->blocks
                                 [(offsets[i + 4][1] + by) * level->width + bx + offsets[i + 4][0]].f_02;
                             if (type != 1 && type != 7)
                                 break;
@@ -7943,7 +7807,6 @@ int terrain_cell_walkability_query_current(const struct EntitySlot* liveObj,
     return 0;
 }
 
-#endif /* _MSC_VER && _M_IX86 */
 
 /* The port's functions take the level as well (and an EntitySlot); its
  * callers keep them. */
@@ -7953,7 +7816,7 @@ int lego_entity_move_destination_cell_usable(struct EntitySlot* liveObj, unsigne
     Lego_Level* level = legoGlobs_currLevel;
     if ((LEGO_FIELD(liveObj, uint32_t, 0x3e8) & 0x8000) && bx > 0 && by > 0 &&
         bx < level->width - 2 && by < level->height - 2) {
-        Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+        Lego_Block* block = &level->blocks[by * level->width + bx];
         uint32_t flags = block->flags1;
         unsigned char type;
         if ((flags & 0x10) && !(flags & 0x40) && (type = block->f_02) != 1 && type != 11 && type != 7)
@@ -7962,19 +7825,17 @@ int lego_entity_move_destination_cell_usable(struct EntitySlot* liveObj, unsigne
     return 0;
 }
 
-#if defined(_MSC_VER) && defined(_M_IX86)
 
 // FUNCTION: LEGORR 0x004329d0
 int level_cell_flag8_check_target(const void* unused, int bx, int by)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    if (level_coord_pair_within_bounds_target(LEGO_LEVEL_PTR(const unsigned int, level->map), bx, by) &&
-        (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 & 8))
+    if (level_coord_pair_within_bounds_target((const unsigned int*)level->map, bx, by) &&
+        (level->blocks[level->width * by + bx].flags1 & 8))
         return 1;
     return 0;
 }
 
-#endif /* _MSC_VER && _M_IX86 */
 
 // FUNCTION: LEGORR 0x00432a20
 int lego_terrain_cell_allows_placement(struct EntitySlot* liveObj, unsigned int bx, unsigned int by)
@@ -7982,7 +7843,7 @@ int lego_terrain_cell_allows_placement(struct EntitySlot* liveObj, unsigned int 
     Lego_Level* level = legoGlobs_currLevel;
     if ((liveObj == NULL || (LEGO_FIELD(liveObj, unsigned char, 0x3e8) & 4)) && bx > 0 && by > 0 &&
         bx < level->width - 2 && by < level->height - 2) {
-        Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+        Lego_Block* block = &level->blocks[by * level->width + bx];
         uint32_t flags = block->flags1;
         unsigned char type;
         if ((flags & 0x10) && !(flags & 0x20) && (type = block->f_02) != 11 && type != 8 && type != 10)
@@ -7991,19 +7852,18 @@ int lego_terrain_cell_allows_placement(struct EntitySlot* liveObj, unsigned int 
     return 0;
 }
 
-#if defined(_MSC_VER) && defined(_M_IX86)
 
 // FUNCTION: LEGORR 0x00432aa0
 uint32_t terrain_cell_occupied_or_flag_current(int bx, int by, int checkFlags2)
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (checkFlags2) {
-        Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx];
+        Lego_Block* block = &level->blocks[level->width * by + bx];
         if (!(block->flags1 & 0x400) && !(block->flags2 & 4))
             return 0;
         return 1;
     }
-    return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 & 0x400;
+    return level->blocks[level->width * by + bx].flags1 & 0x400;
 }
 
 // FUNCTION: LEGORR 0x00432b00
@@ -8052,7 +7912,7 @@ uint32_t terrain_cell_flag_wave_current(int bx, int by)
 int terrain_cell_speed_class_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    uint32_t flags = LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1;
+    uint32_t flags = level->blocks[level->width * blockPos[1] + blockPos[0]].flags1;
     if (flags & 0x200000)
         return 0;
     return (flags & 3) + 1;
@@ -8063,7 +7923,7 @@ int terrain_cell_state_update_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
     int result = 1;
-    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]];
+    Lego_Block* block = &level->blocks[level->width * blockPos[1] + blockPos[0]];
     uint32_t flags = block->flags1;
     uint32_t stage = flags & 3;
 
@@ -8075,9 +7935,9 @@ int terrain_cell_state_update_current(const int blockPos[2])
             info_remove_block_references((struct InfoPoint2I*)blockPos);
             selection_mode5_cancel_at_point((const uint32_t*)blockPos);
             aitask_coordinate_callback_dispatch_by_mode(blockPos, 0);
-            terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
+            terrain_map_block_to_world(level->map,
                                        blockPos[0], blockPos[1], &wPos[0], &wPos[1]);
-            wPos[2] = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wPos[0], wPos[1]);
+            wPos[2] = terrain_map_world_z_get(level->map, wPos[0], wPos[1]);
             d3drm_vector_random(dir);
             dir[2] = 0.0f;
             lava_effect_select_and_place(3, wPos, dir);
@@ -8111,24 +7971,9 @@ uint32_t terrain_cell_flag_20_bounded_current(uint32_t bx, uint32_t by)
  *   }
  */
 // FUNCTION: LEGORR 0x00432dd0
-__declspec(naked) uint32_t terrain_cell_flag_reserved_current(
-    const int cell_xy[2])
+uint32_t terrain_cell_flag_reserved_current(const int blockPos[2])
 {
-    __asm {
-        mov edx, dword ptr [esp + 4]
-        mov ecx, dword ptr [g_active_level_retail]
-        push esi
-        mov eax, dword ptr [edx + 4]
-        mov esi, dword ptr [edx]
-        imul eax, dword ptr [ecx + 14h]
-        mov ecx, dword ptr [ecx + 0b8h]
-        add eax, esi
-        pop esi
-        lea eax, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + eax*8 + 8]
-        and eax, 8000000h
-        ret
-    }
+    return LEGO_3A_BLOCKS[blockPos[1] * legoGlobs_currLevel->width + blockPos[0]].flags1 & 0x8000000;
 }
 
 // FUNCTION: LEGORR 0x00432e00
@@ -8136,10 +7981,10 @@ void level_tile_mark_current_target(const int blockPos[2], int on)
 {
     Lego_Level* level = legoGlobs_currLevel;
     if (on) {
-        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x8000000;
+        level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 |= 0x8000000;
         return;
     }
-    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x8000000;
+    level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 &= ~0x8000000;
 }
 
 // FUNCTION: LEGORR 0x00432e60
@@ -8159,28 +8004,14 @@ uint32_t terrain_cell_mask_c0_current(int bx, int by)
  *   uint32_t terrain_cell_edge_wall_current(const int blockPos[2])
  *   {
  *       Lego_Level* level = legoGlobs_currLevel;
- *       return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 & 0x4000000;
+ *       return level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 & 0x4000000;
  *   }
  */
 // FUNCTION: LEGORR 0x00432e90
-__declspec(naked) uint32_t terrain_cell_edge_wall_current(
-    const int cell_xy[2])
+uint32_t terrain_cell_edge_wall_current(const int blockPos[2])
 {
-    __asm {
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esp + 4]
-        push esi
-        mov eax, dword ptr [ecx + 14h]
-        mov esi, dword ptr [edx]
-        imul eax, dword ptr [edx + 4]
-        mov ecx, dword ptr [ecx + 0b8h]
-        add eax, esi
-        pop esi
-        lea eax, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + eax*8 + 8]
-        and eax, 4000000h
-        ret
-    }
+    Lego_Level* level = legoGlobs_currLevel;
+    return level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 & 0x4000000;
 }
 
 /* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
@@ -8192,40 +8023,21 @@ __declspec(naked) uint32_t terrain_cell_edge_wall_current(
  *   int terrain_cell_state_equals_one_current(const int blockPos[2])
  *   {
  *       Lego_Level* level = legoGlobs_currLevel;
- *       return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].f_02 == 1;
+ *       return level->blocks[level->width * blockPos[1] + blockPos[0]].f_02 == 1;
  *   }
  */
 // FUNCTION: LEGORR 0x00432ec0
-__declspec(naked) int terrain_cell_state_equals_one_current(
-    const int cell_xy[2])
+int terrain_cell_state_equals_one_current(const int blockPos[2])
 {
-    __asm {
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esp + 4]
-        push ebx
-        push esi
-        mov eax, dword ptr [ecx + 14h]
-        mov esi, dword ptr [edx]
-        imul eax, dword ptr [edx + 4]
-        mov ecx, dword ptr [ecx + 0b8h]
-        add eax, esi
-        xor edx, edx
-        pop esi
-        lea eax, dword ptr [eax + eax*8]
-        mov bl, byte ptr [ecx + eax*8 + 2]
-        cmp bl, 1
-        pop ebx
-        sete dl
-        mov eax, edx
-        ret
-    }
+    Lego_Level* level = legoGlobs_currLevel;
+    return level->blocks[level->width * blockPos[1] + blockPos[0]].f_02 == 1;
 }
 
 // FUNCTION: LEGORR 0x00432f00
 int terrain_cell_state_equals_six_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[blockPos[1] * level->width + blockPos[0]].f_02 == 6;
+    return level->blocks[blockPos[1] * level->width + blockPos[0]].f_02 == 6;
 }
 
 // FUNCTION: LEGORR 0x00432f40
@@ -8260,7 +8072,7 @@ uint32_t terrain_cell_flag_80_current(int bx, int by)
 uint32_t terrain_cell_flag_8000_current(const int blockPos[2])
 {
     Lego_Level* level = legoGlobs_currLevel;
-    return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags1 & 0x8000;
+    return level->blocks[level->width * blockPos[1] + blockPos[0]].flags1 & 0x8000;
 }
 
 /* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
@@ -8272,28 +8084,14 @@ uint32_t terrain_cell_flag_8000_current(const int blockPos[2])
  *   uint32_t terrain_cell_secondary_bit0_current(const int blockPos[2])
  *   {
  *       Lego_Level* level = legoGlobs_currLevel;
- *       return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * blockPos[1] + blockPos[0]].flags2 & 1;
+ *       return level->blocks[level->width * blockPos[1] + blockPos[0]].flags2 & 1;
  *   }
  */
 // FUNCTION: LEGORR 0x00433060
-__declspec(naked) uint32_t terrain_cell_secondary_bit0_current(
-    const int cell_xy[2])
+uint32_t terrain_cell_secondary_bit0_current(const int blockPos[2])
 {
-    __asm {
-        mov ecx, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esp + 4]
-        push esi
-        mov eax, dword ptr [ecx + 14h]
-        mov esi, dword ptr [edx]
-        imul eax, dword ptr [edx + 4]
-        mov ecx, dword ptr [ecx + 0b8h]
-        add eax, esi
-        pop esi
-        lea eax, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + eax*8 + 0ch]
-        and eax, 1
-        ret
-    }
+    Lego_Level* level = legoGlobs_currLevel;
+    return level->blocks[level->width * blockPos[1] + blockPos[0]].flags2 & 1;
 }
 
 /* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
@@ -8309,42 +8107,20 @@ __declspec(naked) uint32_t terrain_cell_secondary_bit0_current(
  *       int by;
  *       if (bx >= 0 && (by = blockPos[1]) >= 0 &&
  *           bx < (int)level->width && by < (int)level->height)
- *           return LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx].flags1 & 0x20000000;
+ *           return level->blocks[level->width * by + bx].flags1 & 0x20000000;
  *       return 0;
  *   }
  */
 // FUNCTION: LEGORR 0x00433090
-__declspec(naked) uint32_t level_cell_occupied_at_current(
-    const int cell_xy[2])
+uint32_t level_cell_occupied_at_current(const int blockPos[2])
 {
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov edx, dword ptr [g_active_level_retail]
-        push esi
-        mov ecx, dword ptr [eax]
-        test ecx, ecx
-        jl level_cell_occupied_at_failed
-        mov esi, dword ptr [eax + 4]
-        test esi, esi
-        jl level_cell_occupied_at_failed
-        mov eax, dword ptr [edx + 14h]
-        cmp ecx, eax
-        jge level_cell_occupied_at_failed
-        cmp esi, dword ptr [edx + 18h]
-        jge level_cell_occupied_at_failed
-        imul eax, esi
-        add eax, ecx
-        mov ecx, dword ptr [edx + 0b8h]
-        lea eax, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + eax*8 + 8]
-        and eax, 20000000h
-        pop esi
-        ret
-    level_cell_occupied_at_failed:
-        xor eax, eax
-        pop esi
-        ret
-    }
+    Lego_Level* level = legoGlobs_currLevel;
+    int bx = blockPos[0];
+    int by;
+    if (bx >= 0 && (by = blockPos[1]) >= 0 &&
+        bx < (int)level->width && by < (int)level->height)
+        return level->blocks[level->width * by + bx].flags1 & 0x20000000;
+    return 0;
 }
 
 /* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
@@ -8356,35 +8132,18 @@ __declspec(naked) uint32_t level_cell_occupied_at_current(
  *   int terrain_cell_mask_180000_current(const int blockPos[2])
  *   {
  *       Lego_Level* level = legoGlobs_currLevel;
- *       if (!(LEGO_LEVEL_PTR(Lego_Block, level->blocks)[blockPos[1] * level->width + blockPos[0]].flags1 & 0x180000))
+ *       if (!(level->blocks[blockPos[1] * level->width + blockPos[0]].flags1 & 0x180000))
  *           return 0;
  *       (no value when set, as in the original)
  *   }
  */
 // FUNCTION: LEGORR 0x004330e0
-__declspec(naked) int terrain_cell_mask_180000_current(
-    const int cell_xy[2])
+int terrain_cell_mask_180000_current(const int blockPos[2])
 {
-    __asm {
-        mov edx, dword ptr [esp + 4]
-        mov ecx, dword ptr [g_active_level_retail]
-        push esi
-        mov eax, dword ptr [edx + 4]
-        mov esi, dword ptr [edx]
-        imul eax, dword ptr [ecx + 14h]
-        mov ecx, dword ptr [ecx + 0b8h]
-        add eax, esi
-        lea eax, dword ptr [eax + eax*8]
-        test dword ptr [ecx + eax*8 + 8], 180000h
-        jne terrain_cell_mask_180000_true
-        xor eax, eax
-        pop esi
-        ret
-    terrain_cell_mask_180000_true:
-        mov eax, 1
-        pop esi
-        ret
-    }
+    Lego_Level* level = legoGlobs_currLevel;
+    if (!(level->blocks[blockPos[1] * level->width + blockPos[0]].flags1 & 0x180000))
+        return 0;
+    return 1;
 }
 
 /* MSVC 5 swaps the two base registers (ecx/edx) of this accessor in every
@@ -8397,50 +8156,21 @@ __declspec(naked) int terrain_cell_mask_180000_current(
  *   {
  *       Lego_Level* level = legoGlobs_currLevel;
  *       if (on) {
- *           LEGO_LEVEL_PTR(Lego_Block, level->blocks)[blockPos[1] * level->width + blockPos[0]].flags1 |= 0x10000000;
+ *           level->blocks[blockPos[1] * level->width + blockPos[0]].flags1 |= 0x10000000;
  *           return;
  *       }
- *       LEGO_LEVEL_PTR(Lego_Block, level->blocks)[blockPos[1] * level->width + blockPos[0]].flags1 &= ~0x10000000;
+ *       level->blocks[blockPos[1] * level->width + blockPos[0]].flags1 &= ~0x10000000;
  *   }
  */
 // FUNCTION: LEGORR 0x00433120
-__declspec(naked) void terrain_cell_flag_10000000_set_current(
-    const int cell_xy[2], int set)
+void terrain_cell_flag_10000000_set_current(const int blockPos[2], int on)
 {
-    __asm {
-        mov eax, dword ptr [esp + 8]
-        mov edx, dword ptr [esp + 4]
-        mov ecx, dword ptr [g_active_level_retail]
-        push esi
-        test eax, eax
-        mov eax, dword ptr [edx + 4]
-        je terrain_cell_flag_10000000_clear
-        imul eax, dword ptr [ecx + 14h]
-        mov esi, dword ptr [edx]
-        mov ecx, dword ptr [ecx + 0b8h]
-        add eax, esi
-        lea eax, dword ptr [eax + eax*8]
-        lea eax, dword ptr [ecx + eax*8 + 8]
-        or dword ptr [eax], 10000000h
-        pop esi
-        ret
-    terrain_cell_flag_10000000_clear:
-        imul eax, dword ptr [ecx + 14h]
-        mov esi, dword ptr [edx]
-        add eax, esi
-        pop esi
-        lea edx, dword ptr [eax + eax*8]
-        mov eax, dword ptr [ecx + 0b8h]
-        mov ecx, dword ptr [eax + edx*8 + 8]
-        lea eax, dword ptr [eax + edx*8 + 8]
-        and ecx, 0efffffffh
-        mov dword ptr [eax], ecx
-        ret
-        nop
-        nop
-        nop
-        nop
+    Lego_Level* level = legoGlobs_currLevel;
+    if (on) {
+        level->blocks[blockPos[1] * level->width + blockPos[0]].flags1 |= 0x10000000;
+        return;
     }
+    level->blocks[blockPos[1] * level->width + blockPos[0]].flags1 &= ~0x10000000;
 }
 
 /* Shared in the matching build only, as 00432770. */
@@ -8456,13 +8186,13 @@ int entity_cell_type_speed_multiplier_resolve_current(const struct EntitySlot* l
         Lego_Block* block;
         if (LEGO_FIELD(liveObj, void*, 0x36c) != NULL && !(entity_stats_word_get(liveObj) & 0x20000))
             return 0;
-        block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+        block = &level->blocks[by * level->width + bx];
         if (block->f_02 == 6 && !(block->flags1 & 0x200) && !(entity_state_flags_get(liveObj) & 0x200000)) {
             if (outSpeed != NULL)
                 *outSpeed = speed;
             return 1;
         }
-        if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].flags1 & 0x1000) {
+        if (level->blocks[by * level->width + bx].flags1 & 0x1000) {
             if (outSpeed != NULL)
                 *outSpeed = entity_indexed_float_lookup_with_minus_one_fallback(
                                 (int)object_type_name_index_find(
@@ -8498,7 +8228,6 @@ int terrain_cell_type_get_at_current(uint32_t bx, uint32_t by, uint32_t* outType
     return 0;
 }
 
-#endif /* _MSC_VER && _M_IX86 */
 
 
 /* ---- part 3 functions, group 3A: end ---- */
@@ -8595,11 +8324,7 @@ void indexed_surface_entry_hide_and_record(int x, int y);         /* 004634f0 */
  * build the callee is detail.c's Detail_AddBlock, whose texture and
  * direction are bytes (the caller pushes them unextended); the port's
  * view.cpp entry takes words. */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define LEGO_DETAIL_BYTE unsigned char
-#else
-#define LEGO_DETAIL_BYTE uint32_t
-#endif
 void scene_cell_visual_channels_apply(struct SceneCellVisualRelayRecord* record,
                                       const float corner_points[12],
                                       LEGO_DETAIL_BYTE lookup_selector,
@@ -8612,20 +8337,16 @@ void lego_roof_block_vertices_set_adapter(unsigned int bx, unsigned int by,
                                           struct TerrainMapVector3* v1,
                                           struct TerrainMapVector3* v2,
                                           struct TerrainMapVector3* v3); /* 00462f20 */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: Main.c's Main_Setup3D itself (gods98/main.c since #738,
  * which reads the first five of the seven arguments). A rename of the
  * declaration below, one for one. */
 #define lego_main_setup3d_adapter direct3d_render_preferences_apply
-#endif
 void lego_main_setup3d_adapter(int quality, int dither, int filter,
                                int mipmap, int linearMipMap, int blend,
                                int sort);                         /* 00478330 */
 /* container_link_names.h's matching-build link name of Container_Create
  * (container.c since #697). */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 #define lego_container_create_adapter ddiscene_object_allocate
-#endif
 void* lego_container_create_adapter(void* parent);                /* 00472950 */
 float lego_viewport_field_get_adapter(void* view);                /* 00477270 */
 void lego_viewport_size_get_adapter(void* view, unsigned int* width,
@@ -8634,16 +8355,13 @@ float lego_projected_quad_area_adapter(struct TerrainMapVector3* vertices,
                                        void* view,
                                        const float screen[2],
                                        int noClip);               /* 0040b470 */
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: the original itself, in LegoObject.c (legoobject_unit.c) (finding 634). */
 #define lego_entity_random_cell_step_route_adapter legoobject_random_cell_step_route_issue
-#endif
 int lego_entity_random_cell_step_route_adapter(struct EntitySlot* object); /* 00444260 */
 /* 0040b810's port entry takes the ledger namespace's channel table. */
 void lego_detail_mesh_resources_clear_adapter(void* mesh);        /* 0040b810 */
 
 
-#if defined(_MSC_VER) && defined(_M_IX86)
 
 /* Lego_UpdateBlockRoof [group 3B]: lowers the roof quad over a wall block
  * (all four corners), or over a reinforced/pre-dug edge block (the corners
@@ -8655,14 +8373,14 @@ void terrain_cell_mutation_progress(struct LevelState* levelState,
                                     uint32_t bx, uint32_t by)
 {
     Lego_Level* level = (Lego_Level*)levelState;
-    struct TerrainMap* map = LEGO_LEVEL_PTR(struct TerrainMap, level->map);
+    struct TerrainMap* map = level->map;
     LegoVector3FC vertPos[4];
 
     if (bx < level->width - 1 && by < level->height - 1) {
         Lego_Block* block;
 
         terrain_map_block_vertices_get(map, bx, by, (struct TerrainMapVector3*)vertPos);
-        block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+        block = &level->blocks[by * level->width + bx];
         if (block->flags1 & 0x8) {
             float drop = level->digDepth + level->roofHeight;
             vertPos[0].z -= drop;
@@ -8672,11 +8390,11 @@ void terrain_cell_mutation_progress(struct LevelState* levelState,
         } else if (block->flags1 & 0x10) {
             if (block->f_00 == 1)
                 vertPos[0].z -= level->digDepth + level->roofHeight;
-            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx + 1].f_00 == 1)
+            if (level->blocks[by * level->width + bx + 1].f_00 == 1)
                 vertPos[1].z -= level->digDepth + level->roofHeight;
-            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by + 1) * level->width + bx + 1].f_00 == 1)
+            if (level->blocks[(by + 1) * level->width + bx + 1].f_00 == 1)
                 vertPos[2].z -= level->digDepth + level->roofHeight;
-            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[(by + 1) * level->width + bx].f_00 == 1)
+            if (level->blocks[(by + 1) * level->width + bx].f_00 == 1)
                 vertPos[3].z -= level->digDepth + level->roofHeight;
         } else {
             return;
@@ -8689,7 +8407,6 @@ void terrain_cell_mutation_progress(struct LevelState* levelState,
     }
 }
 
-#endif /* _MSC_VER && _M_IX86 */
 
 /* Lego_GetMapFileDimensions [group 3B]: the map file's header dimensions.
  * Shared: the port's definition in lego.cpp is gone. */
@@ -8862,7 +8579,7 @@ int lego_scene_lights_build_from_config(void)
 // FUNCTION: LEGORR 0x00433be0
 void lego_current_level_terrain_grid_pick(float x, float y, int* bx, int* by)
 {
-    terrain_map_world_to_block(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map),
+    terrain_map_world_to_block(legoGlobs_currLevel->map,
                                x, y, bx, by);
 }
 
@@ -8928,9 +8645,9 @@ int lego_entity_neighbor_blocked_cell_step_probe(struct EntitySlot* object,
 // FUNCTION: LEGORR 0x00433e30
 int lego_grid_cell_entity_eligibility_check(int bx, int by)
 {
-    if (!(LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
+    if (!(legoGlobs_currLevel->blocks
               [legoGlobs_currLevel->width * by + bx].flags1 & 0x100) &&
-        terrain_map_block_hidden_get((struct TerrainMap*)level_current_terrain_get_original(),
+        terrain_map_block_hidden_get((struct TerrainMap*)level_current_terrain_get(0, 0),
                                      bx, by)) {
         return 1;
     }
@@ -8948,7 +8665,7 @@ void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
                                                unsigned int maxCount)
 {
     Lego_Level* level = legoGlobs_currLevel;
-    struct TerrainMap* map = LEGO_LEVEL_PTR(struct TerrainMap, level->map);
+    struct TerrainMap* map = level->map;
     unsigned int visibleCount = 0;
     float blockSize = terrain_context_scale_get(map);
     int radius = (int)(maxDist / blockSize);
@@ -8990,7 +8707,7 @@ void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
 
     for (y = startY; y < (unsigned int)endY; y++) {
         for (x = startX; x < (unsigned int)endX; x++) {
-            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x18) {
+            if (level->blocks[y * level->width + x].flags1 & 0x18) {
                 terrain_map_block_to_world(map, x, y, &wPos.x, &wPos.y);
                 wPos.z = terrain_map_world_z_get(map, wPos.x, wPos.y);
                 diff.x = wPos.x - camPos.x;
@@ -9042,25 +8759,25 @@ void lego_terrain_projected_cell_state_refresh(void* cont, void* view,
             float uniform = scale * 0.7f + 0.3f;
             if ((legoGlobs_flags1 & 0x20) &&
                 lego_terrain_cell_surface_update_dispatch_level(level, x, y, scale, uniform)) {
-                LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 |= 0x100;
+                level->blocks[y * level->width + x].flags1 |= 0x100;
                 indexed_surface_entry_hide_and_record(x, y);
                 highCount++;
             } else {
                 terrain_map_visible_add(map, x, y);
                 indexed_surface_entry_hide_and_record(x, y);
-                if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x4000) {
+                if (level->blocks[y * level->width + x].flags1 & 0x4000) {
                     transient_effect_enable_set((void*)(uintptr_t)
-                        LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10[3], 0);
+                        level->blocks[y * level->width + x].f_10[3], 0);
                 }
-                LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 &= ~0x100;
+                level->blocks[y * level->width + x].flags1 &= ~0x100;
             }
         } else {
-            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 &= ~0x100;
+            level->blocks[y * level->width + x].flags1 &= ~0x100;
             terrain_map_visible_add(map, x, y);
             indexed_surface_entry_hide_and_record(x, y);
-            if (LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].flags1 & 0x4000) {
+            if (level->blocks[y * level->width + x].flags1 & 0x4000) {
                 transient_effect_enable_set((void*)(uintptr_t)
-                    LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x].f_10[3], 0);
+                    level->blocks[y * level->width + x].f_10[3], 0);
             }
         }
     }
@@ -9087,26 +8804,25 @@ int lego_terrain_cell_surface_update_dispatch_level(Lego_Level* level,
                                                     float scale,
                                                     float uniformScale)
 {
-    Lego_Block* block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+    Lego_Block* block = &level->blocks[by * level->width + bx];
     void* mesh;
     LegoVector3FC vertPos[4];
 
     if ((block->flags1 & 0x18) &&
-        (mesh = LEGO_LEVEL_PTR(void*, level->f_080)[level->f_074 * (block->texture & 0xf) +
+        (mesh = level->f_080[level->f_074 * (block->texture & 0xf) +
                                                     (block->texture >> 4)]) != NULL) {
-        terrain_map_block_vertices_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
+        terrain_map_block_vertices_get(level->map,
                                        bx, by, (struct TerrainMapVector3*)vertPos);
         scene_cell_visual_channels_apply((struct SceneCellVisualRelayRecord*)mesh,
             &vertPos[0].x,
-            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].texture,
-            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_03,
+            level->blocks[by * level->width + bx].texture,
+            level->blocks[by * level->width + bx].f_03,
             scale, uniformScale);
         return 1;
     }
     return 0;
 }
 
-#if defined(_MSC_VER) && defined(_M_IX86)
 
 /* [group 3B] Releases the resources of every tile mesh of the current
  * level. Shared under MSVC x86: the port's model in lego.cpp keeps the
@@ -9118,13 +8834,12 @@ void terrain_grid_entry_resources_release_all_current(void)
     unsigned int i;
 
     for (i = 0; i < level->f_078 * level->f_074; i++) {
-        if (LEGO_LEVEL_PTR(void*, level->f_080)[i] != NULL) {
-            lego_detail_mesh_resources_clear_adapter(LEGO_LEVEL_PTR(void*, level->f_080)[i]);
+        if (level->f_080[i] != NULL) {
+            lego_detail_mesh_resources_clear_adapter(level->f_080[i]);
         }
     }
 }
 
-#endif /* _MSC_VER && _M_IX86 */
 
 /* ---- part 3 functions, group 3B: end ---- */
 
@@ -9230,20 +8945,14 @@ int entity_spawn_request_queue_add(struct GameContext* ctx, int type,
 /* lego.cpp (level.hpp): 004332f0, 00433e30. */
 void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy);
 int grid_cell_entity_eligibility_check(int x, int y);
-#if defined(_MSC_VER) && _MSC_VER < 1200
 /* Matching build: the original itself, 00433e30 above. A function-like
  * macro keeps this declaration, so the symbol counter does not move
  * (finding 634). */
 #define grid_cell_entity_eligibility_check(x, y) \
     lego_grid_cell_entity_eligibility_check(x, y)
-#endif
 /* level.cpp (level_for_lego.hpp): legoGlobs.langSurface_desc (005562d8)
  * and langSurface_sound (00556320). In the matching build they are
  * legoGlobs' fields (lego_globs.h). */
-#if !(defined(_MSC_VER) && _MSC_VER < 1200)
-extern const char* s_surface_type_names[18];
-extern uint32_t s_surface_type_values[18];
-#endif
 /* GAME-026 Map3D.c (terrain_map.h): 0044f4e0, 0044f540. */
 int terrain_map_block_highlight_set(struct TerrainMap* map, int bx, int by,
                                     int highlight);
@@ -9268,7 +8977,6 @@ int entity_flag_mask_callbacks_all_pass(uint32_t mask);
 /* TerrainCellProgressUpdate [group 3C]: Level_Block_Damage. Adds
  * elapsed / destroyTime to the block's damage and reports whether it is
  * past 1. Shared under MSVC x86 (the level's pointer words). */
-#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x00434570
 int terrain_cell_drill_work_add_current(int bx, int by, float destroyTime,
                                         float elapsed)
@@ -9276,12 +8984,11 @@ int terrain_cell_drill_work_add_current(int bx, int by, float destroyTime,
     Lego_Level* level = legoGlobs_currLevel;
 
     if (0.0f != destroyTime) {
-        LEGO_BLOCK_DAMAGE(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx]) += elapsed / destroyTime;
-        if (LEGO_BLOCK_DAMAGE(&LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx]) > 1.0f) return 1;
+        LEGO_BLOCK_DAMAGE(&level->blocks[by * level->width + bx]) += elapsed / destroyTime;
+        if (LEGO_BLOCK_DAMAGE(&level->blocks[by * level->width + bx]) > 1.0f) return 1;
     }
     return 0;
 }
-#endif
 
 /* PanelsConfigEntryApply [group 3C]: Lego_LoadPanels. */
 // FUNCTION: LEGORR 0x004345f0
@@ -9539,7 +9246,6 @@ int lego_interface_spawn_request_enqueue(int objType, int objIndex)
 /* TerrainCellWorkFlagCircleSet [group 3C]: Level_Block_SetBusyArea?
  * Raises the work flag on the blocks within the radius. Shared under
  * MSVC x86 (the level's pointer words). */
-#if defined(_MSC_VER) && defined(_M_IX86)
 /* The original keeps the level in a stack slot across the call and reloads
  * the radius after it; MSVC 5 keeps the level in a register in both C
  * forms tried (the bounds tests inline: 46.73%; with radius * radius and
@@ -9568,85 +9274,26 @@ int lego_interface_spawn_request_enqueue(int objType, int objIndex)
  *   }
  */
 // FUNCTION: LEGORR 0x00435010
-__declspec(naked) void terrain_cell_work_flag_circle_set_current(
-    const int center_xy[2], int radius)
+void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
+                                               int radius)
 {
-    __asm {
-        sub esp, 0ch
-        mov eax, dword ptr [g_active_level_retail]
-        mov edx, dword ptr [esp + 14h]
-        /* mov dword ptr [esp + 0], eax, in the original's encoding (a zero
-         * 8-bit displacement); the inline assembler emits the short form,
-         * which left the function a byte short of the original. */
-        _emit 0x89
-        _emit 0x44
-        _emit 0x24
-        _emit 0x00
-        mov eax, edx
-        imul eax, edx
-        push esi
-        mov esi, edx
-        neg esi
-        push edi
-        mov edi, esi
-        cmp edi, edx
-        mov dword ptr [esp + 0ch], eax
-        mov dword ptr [esp + 10h], esi
-        jg terrain_cell_work_flag_circle_set_early_done
-        push ebp
-        mov ebp, dword ptr [esp + 1ch]
-        push ebx
-    terrain_cell_work_flag_circle_set_outer_loop:
-        mov ebx, edi
-        imul ebx, edi
-        cmp esi, edx
-        jg terrain_cell_work_flag_circle_set_outer_next
-    terrain_cell_work_flag_circle_set_inner_loop:
-        mov ecx, esi
-        mov eax, dword ptr [esp + 14h]
-        imul ecx, esi
-        add ecx, ebx
-        cmp ecx, eax
-        jg terrain_cell_work_flag_circle_set_next_column
-        mov eax, dword ptr [ebp]
-        lea ecx, dword ptr [esi + eax]
-        test ecx, ecx
-        jl terrain_cell_work_flag_circle_set_next_column
-        mov eax, dword ptr [esp + 10h]
-        cmp ecx, dword ptr [eax + 14h]
-        jge terrain_cell_work_flag_circle_set_next_column
-        mov eax, dword ptr [ebp + 4]
-        add eax, edi
-        test eax, eax
-        jl terrain_cell_work_flag_circle_set_next_column
-        mov edx, dword ptr [esp + 10h]
-        cmp eax, dword ptr [edx + 18h]
-        jge terrain_cell_work_flag_circle_set_after_mark
-        push eax
-        push ecx
-        call terrain_cell_work_flag_set_current
-        add esp, 8
-    terrain_cell_work_flag_circle_set_after_mark:
-        mov edx, dword ptr [esp + 24h]
-    terrain_cell_work_flag_circle_set_next_column:
-        inc esi
-        cmp esi, edx
-        jle terrain_cell_work_flag_circle_set_inner_loop
-        mov esi, dword ptr [esp + 18h]
-    terrain_cell_work_flag_circle_set_outer_next:
-        inc edi
-        cmp edi, edx
-        jle terrain_cell_work_flag_circle_set_outer_loop
-        pop ebx
-        pop ebp
-    terrain_cell_work_flag_circle_set_early_done:
-        pop edi
-        pop esi
-        add esp, 0ch
-        ret
+    Lego_Level* level = legoGlobs_currLevel;
+    int radiusSq = radius * radius;
+    int x, y;
+
+    for (y = -radius; y <= radius; y++) {
+        for (x = -radius; x <= radius; x++) {
+            if (x * x + y * y <= radiusSq) {
+                int bx = center_xy[0] + x;
+                if (bx >= 0 && bx < (int)level->width) {
+                    int by = center_xy[1] + y;
+                    if (by >= 0 && by < (int)level->height)
+                        terrain_cell_work_flag_set_current(bx, by);
+                }
+            }
+        }
     }
 }
-#endif
 
 /* legoGlobs.langSurface_name, langSurface_desc and langSurface_sound: three
  * adjacent arrays (00556290, 005562d8, 00556320). */
@@ -9778,38 +9425,38 @@ void lego_tutorial_block_icons_update(Lego_Level* level, void* view,
 
     s_lego_tutorialIconPhase -= -0.013333334f * (elapsed * 25.0f);
     if (system_state_flags_get_original(NULL)) {
-        for (by = 0; by < ((unsigned int*)LEGO_LEVEL_PTR(void, level->map))[1]; by++) {
-            for (bx = 0; bx < ((unsigned int*)LEGO_LEVEL_PTR(void, level->map))[0]; bx++) {
+        for (by = 0; by < ((unsigned int*)level->map)[1]; by++) {
+            for (bx = 0; bx < ((unsigned int*)level->map)[0]; bx++) {
                 if (!grid_cell_entity_eligibility_check(bx, by)) {
-                    block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx];
+                    block = &level->blocks[by * level->width + bx];
                     if (block->f_04) {
-                        terrain_map_block_to_world(LEGO_LEVEL_PTR(struct TerrainMap, level->map), bx, by,
+                        terrain_map_block_to_world(level->map, bx, by,
                                                    &wPos[0], &wPos[1]);
-                        wPos[2] = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map),
+                        wPos[2] = terrain_map_world_z_get(level->map,
                                                           wPos[0], wPos[1]);
                         camera_project_point_to_screen((const struct ViewProjectionAdapter*)view, sPos, wPos);
                         sPos[0] -= (float)((int)legoGlobs_TutorialIcon->width / 2);
                         sPos[1] -= bob * 20.0f + (int)legoGlobs_TutorialIcon->height * 2;
                         image_display_scaled(legoGlobs_TutorialIcon, NULL, (const struct Point2F*)sPos, NULL);
                         if (LEGO_FIELD(&interfaceGlobs, int, 0xfc4)) {
-                            terrain_map_block_highlight_set(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by, 5);
-                            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_10[13] = 1;
+                            terrain_map_block_highlight_set(legoGlobs_currLevel->map, bx, by, 5);
+                            level->blocks[by * level->width + bx].f_10[13] = 1;
                         } else {
-                            terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by);
-                            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_10[13] = 1;
+                            terrain_map_block_highlight_clear(legoGlobs_currLevel->map, bx, by);
+                            level->blocks[by * level->width + bx].f_10[13] = 1;
                         }
                     } else if (block->f_10[13] == 1) {
                         block->f_10[13] = 0;
                         if (!(system_state_flags_get_original(NULL) & 2) &&
-                            LEGO_LEVEL_PTR(Lego_Block, level->blocks)[by * level->width + bx].f_10[6] &&
+                            level->blocks[by * level->width + bx].f_10[6] &&
                             !LEGO_FIELD(&interfaceGlobs, int, 0xf74)) {
-                            terrain_map_block_highlight_set(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by, 4);
+                            terrain_map_block_highlight_set(legoGlobs_currLevel->map, bx, by, 4);
                         } else {
-                            terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by);
+                            terrain_map_block_highlight_clear(legoGlobs_currLevel->map, bx, by);
                         }
                     } else if (block->f_10[13] == 0 &&
-                               terrain_map_block_highlight_get(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by) == 5) {
-                        terrain_map_block_highlight_clear(LEGO_LEVEL_PTR(struct TerrainMap, legoGlobs_currLevel->map), bx, by);
+                               terrain_map_block_highlight_get(legoGlobs_currLevel->map, bx, by) == 5) {
+                        terrain_map_block_highlight_clear(legoGlobs_currLevel->map, bx, by);
                     }
                 }
             }

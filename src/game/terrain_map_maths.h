@@ -5,24 +5,24 @@
  * unit expands them in place, so they have no address of their own. Only
  * terrain_map.c includes this file.
  *
- * They are static __inline functions, not macros: as macros the expansions
+ * They are static inline functions, not macros: as macros the expansions
  * compile differently (finding 544). In a header they add no Reccmp lint
  * debt. */
 #ifndef LEGORRR_GAME_TERRAIN_MAP_MATHS_H
 #define LEGORRR_GAME_TERRAIN_MAP_MATHS_H
 
-static __inline float terrain_map_vector3d_dot(const TerrainMapVector3* a,
+static inline float terrain_map_vector3d_dot(const TerrainMapVector3* a,
                                                const TerrainMapVector3* b)
 {
     return a->x * b->x + a->y * b->y + a->z * b->z;
 }
 
-static __inline float terrain_map_vector3d_modulus(const TerrainMapVector3* v)
+static inline float terrain_map_vector3d_modulus(const TerrainMapVector3* v)
 {
     return (float)sqrt(terrain_map_vector3d_dot(v, v));
 }
 
-static __inline TerrainMapVector3* terrain_map_vector3d_add(
+static inline TerrainMapVector3* terrain_map_vector3d_add(
     TerrainMapVector3* r, const TerrainMapVector3* a,
     const TerrainMapVector3* b)
 {
@@ -32,7 +32,7 @@ static __inline TerrainMapVector3* terrain_map_vector3d_add(
     return r;
 }
 
-static __inline TerrainMapVector3* terrain_map_vector3d_subtract(
+static inline TerrainMapVector3* terrain_map_vector3d_subtract(
     TerrainMapVector3* r, const TerrainMapVector3* a,
     const TerrainMapVector3* b)
 {
@@ -42,7 +42,7 @@ static __inline TerrainMapVector3* terrain_map_vector3d_subtract(
     return r;
 }
 
-static __inline TerrainMapVector3* terrain_map_vector3d_scale(
+static inline TerrainMapVector3* terrain_map_vector3d_scale(
     TerrainMapVector3* r, const TerrainMapVector3* a, float f)
 {
     r->x = a->x * f;
@@ -51,14 +51,14 @@ static __inline TerrainMapVector3* terrain_map_vector3d_scale(
     return r;
 }
 
-static __inline TerrainMapVector3* terrain_map_vector3d_normalise(
+static inline TerrainMapVector3* terrain_map_vector3d_normalise(
     TerrainMapVector3* r)
 {
     return terrain_map_vector3d_scale(r, r,
                                       1.0f / terrain_map_vector3d_modulus(r));
 }
 
-static __inline float terrain_map_vector3d_distance(const TerrainMapVector3* a,
+static inline float terrain_map_vector3d_distance(const TerrainMapVector3* a,
                                                     const TerrainMapVector3* b)
 {
     TerrainMapVector3 d;
@@ -67,12 +67,12 @@ static __inline float terrain_map_vector3d_distance(const TerrainMapVector3* a,
     return terrain_map_vector3d_modulus(&d);
 }
 
-static __inline float terrain_map_vector2d_modulus(const TerrainMapPoint2* v)
+static inline float terrain_map_vector2d_modulus(const TerrainMapPoint2* v)
 {
     return (float)sqrt(v->x * v->x + v->y * v->y);
 }
 
-static __inline TerrainMapPoint2* terrain_map_vector2d_normalise(
+static inline TerrainMapPoint2* terrain_map_vector2d_normalise(
     TerrainMapPoint2* r)
 {
     float f = 1.0f / terrain_map_vector2d_modulus(r);
@@ -82,7 +82,7 @@ static __inline TerrainMapPoint2* terrain_map_vector2d_normalise(
     return r;
 }
 
-static __inline float terrain_map_vector2d_distance(const TerrainMapPoint2* a,
+static inline float terrain_map_vector2d_distance(const TerrainMapPoint2* a,
                                                     const TerrainMapPoint2* b)
 {
     TerrainMapPoint2 c;
