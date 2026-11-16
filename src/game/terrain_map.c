@@ -960,12 +960,15 @@ void terrain_map_block_first_vertex_get(TerrainMap* map, int bx, int by,
                                         TerrainMapVector3* position)
 {
     TerrainMapVertex vertex;
+    unsigned int flags;
+    unsigned int group;
 
-    lwo_layer_polygon_vertex_data_read(
-        map->mesh, by * map->gridWidth + bx,
-        map->blocks[map->blockWidth * by + bx].flags &
-            TERRAIN_MAP_BLOCK_ROTATED,
-        1, &vertex);
+    group = by * map->gridWidth + bx;
+    flags = map->blocks[map->blockWidth * by + bx].flags;
+    if (flags & TERRAIN_MAP_BLOCK_ROTATED) flags = 1;
+    else flags = 0;
+    lwo_layer_polygon_vertex_data_read(map->mesh, group,
+                                       flags, 1, &vertex);
     *position = vertex.position;
 }
 
