@@ -1,4 +1,4 @@
-# input_sha256: efb99132fbaa582d0c19160948e9e9ec5208e2a0449ef35911446711f2604cd4
+# input_sha256: f2b41e1d5046274f5226e580bc69643be3af008d32237746511d3876222a8489
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1298,7 +1298,7 @@
 0x00450960 100.00 terrain_map_block_uv_wobble_set
 0x00450a80 100.00 terrain_map_wobble_emissive_set
 0x00450b60 45.08 terrain_map_uv_wobble_update
-0x00450f30 98.86 terrain_map_block_vertex_normals_update
+0x00450f30 100.00 terrain_map_block_vertex_normals_update
 0x00451180 67.61 terrain_map_block_pair_fades
 0x00451230 100.00 terrain_map_block_vertex_normal_set
 0x004512d0 91.37 terrain_map_block_vertex_normal_get
@@ -4023,7 +4023,7 @@
 0x00450960 100.00 terrain_map_block_uv_wobble_set
 0x00450a80 100.00 terrain_map_wobble_emissive_set
 0x00450b60 45.08 terrain_map_uv_wobble_update
-0x00450f30 98.86 terrain_map_block_vertex_normals_update
+0x00450f30 100.00 terrain_map_block_vertex_normals_update
 0x00451180 67.61 terrain_map_block_pair_fades
 0x00451230 100.00 terrain_map_block_vertex_normal_set
 0x004512d0 91.37 terrain_map_block_vertex_normal_get
