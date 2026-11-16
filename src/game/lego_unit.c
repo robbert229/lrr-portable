@@ -4002,7 +4002,7 @@ void lego_block_visible_callback(int bx, int by)
 
     if (flags1 & 0x4000) {
         transient_effect_enable_set((void*)(uintptr_t)
-            LEGO_LEVEL_PTR(Lego_Block, level->blocks)
+            LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)
                 [by * legoGlobs_currLevel->width + bx].f_10[3], 0);
     }
 }
