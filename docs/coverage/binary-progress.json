@@ -3,7 +3,7 @@
     "full": 98.68,
     "game_only": 98.54
   },
-  "baseline_sha256": "95ec5d2bcc8e4c313a2f41130456519d42755461b51ce396d3841dcbc7a9d9a9",
+  "baseline_sha256": "8b5961ddaa65abc29e24ef4ddc5e801f01514bcea0b9bc69f4558d29b2ee33c6",
   "correct_size_functions": {
     "full": {
       "bytes": 511680,
@@ -41,9 +41,9 @@
         "start_delta": 0
       },
       ".rdata": {
-        "at_original_address": 0,
-        "at_original_offset": 0,
-        "at_original_offset_bytes": 0,
+        "at_original_address": 2,
+        "at_original_offset": 2,
+        "at_original_offset_bytes": 16,
         "identical_prefix_bytes": 0,
         "rebuilt_start": "0x49e000",
         "start_delta": 0
@@ -227,22 +227,22 @@
         "first_difference": {
           "object": null,
           "offset_delta": 4,
-          "original": "0x49e054",
-          "rebuilt": "0x49e058",
+          "original": "0x49e100",
+          "rebuilt": "0x49e104",
           "rebuilt_region": ".rdata"
         },
         "identical_prefix": {
-          "bytes": 90,
-          "first_difference": "0x49e05a",
+          "bytes": 367,
+          "first_difference": "0x49e16f",
           "rebuilt_object": null
         },
         "items": {
-          "at_original_address": 12,
-          "at_original_address_bytes": 48,
-          "at_original_offset": 12,
-          "at_original_offset_bytes": 48,
-          "paired": 97,
-          "paired_bytes": 1032
+          "at_original_address": 19,
+          "at_original_address_bytes": 80,
+          "at_original_offset": 19,
+          "at_original_offset_bytes": 80,
+          "paired": 96,
+          "paired_bytes": 1028
         },
         "objects": {
           "agreeing": [],
@@ -251,7 +251,7 @@
         },
         "original_bytes": 11232,
         "original_start": "0x49e000",
-        "rebuilt_bytes": 11048,
+        "rebuilt_bytes": 11080,
         "rebuilt_start": "0x49e000",
         "start_delta": 0
       },
@@ -330,13 +330,13 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "79a65c6797274801f76eee619876870b11e0c969e231cb5a56e9d6d7ea1cfbae",
+  "input_sha256": "cb8e2dffed684273227445bf7539c0005063fbfed2f9ffbedbf7603dafec2eb3",
   "layout": {
     "data_offset_agreement": {
-      "agreeing_units": 57,
-      "eligible_units": 57,
+      "agreeing_units": 56,
+      "eligible_units": 56,
       "method": "anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted",
-      "unattributed_or_unmapped_annotations": 125
+      "unattributed_or_unmapped_annotations": 126
     },
     "link_order_list": {
       "adjacent": 0,
@@ -1338,8 +1338,8 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": true,
-        "data_offset_comparisons": 2,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
         "functions": 7,
         "identical_function_bytes": 380,
         "identity_percent": 42.7,
@@ -4040,7 +4040,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 8
   },
-  "listing_digests_sha256": "70c135b6b34d6beaae876a015e674253b1f5f27a71fd9a581d298df9bbe2a072",
+  "listing_digests_sha256": "6717cd63fa9f81f527aa351e5d015b5f4d62e0a035f068f8093c8814d4bf40bd",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4059,8 +4059,8 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 580032,
-        "functions": 2719,
+        "bytes": 580000,
+        "functions": 2718,
         "removed_bytes": 0,
         "removed_functions": 0
       }
@@ -4079,8 +4079,8 @@
         "removed_functions": 78
       },
       "original_annotated": {
-        "bytes": 580032,
-        "functions": 2719,
+        "bytes": 580000,
+        "functions": 2718,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4091,13 +4091,13 @@
         "removed_functions": 0
       },
       "port_unit": {
-        "bytes": 416,
-        "functions": 18,
-        "removed_bytes": 368,
-        "removed_functions": 15
+        "bytes": 624,
+        "functions": 24,
+        "removed_bytes": 544,
+        "removed_functions": 20
       }
     },
-    "gate_text_symbols": 3304,
+    "gate_text_symbols": 3309,
     "image": {
       "bss_bytes": 2863396,
       "characteristics": 271,
@@ -4125,8 +4125,8 @@
       "imported_names": 145,
       "section_bytes": {
         ".data": {
-          "differing": 856,
-          "equal": 72360,
+          "differing": 850,
+          "equal": 72366,
           "original": 73216,
           "rebuilt": 73216
         },
@@ -4137,14 +4137,14 @@
           "rebuilt": 4112
         },
         ".rdata": {
-          "differing": 8020,
-          "equal": 3212,
+          "differing": 7721,
+          "equal": 3511,
           "original": 11232,
-          "rebuilt": 11048
+          "rebuilt": 11080
         },
         ".text": {
-          "differing": 550097,
-          "equal": 92452,
+          "differing": 550084,
+          "equal": 92465,
           "original": 642549,
           "rebuilt": 642117
         }
@@ -4160,7 +4160,7 @@
         },
         ".rdata": {
           "raw_size": 11264,
-          "virtual_size": 11048
+          "virtual_size": 11080
         },
         ".rsrc": {
           "raw_size": 3072,
@@ -4191,8 +4191,8 @@
       ]
     },
     "reference": "gate against its /DEBUG /OPT:NOREF relink",
-    "removed_bytes": 9447,
-    "removed_functions": 225,
+    "removed_bytes": 9623,
+    "removed_functions": 230,
     "unmapped_annotations": []
   },
   "pe_header_differences": {
@@ -4206,7 +4206,7 @@
     ".data": {
       "chance_percent": 10.47,
       "excess_percent_points": 88.38,
-      "identical_bytes": 72374,
+      "identical_bytes": 72376,
       "identical_percent": 98.85,
       "original_bytes": 73216,
       "rebuilt_bytes": 73216,
@@ -4217,26 +4217,26 @@
     },
     ".rdata": {
       "chance_percent": 4.12,
-      "excess_percent_points": 27.71,
-      "identical_bytes": 3575,
-      "identical_percent": 31.83,
+      "excess_percent_points": 32.29,
+      "identical_bytes": 4090,
+      "identical_percent": 36.41,
       "original_bytes": 11232,
-      "rebuilt_bytes": 11128,
+      "rebuilt_bytes": 11176,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 1.18,
-      "run_identical_bytes": 132,
-      "run_identical_percent": 1.18
+      "run_excess_percent_points": 0.32,
+      "run_identical_bytes": 36,
+      "run_identical_percent": 0.32
     },
     ".text": {
       "chance_percent": 2.83,
       "excess_percent_points": 11.55,
-      "identical_bytes": 92398,
+      "identical_bytes": 92383,
       "identical_percent": 14.38,
       "original_bytes": 642549,
       "rebuilt_bytes": 642117,
       "run_chance_percent": 0.0,
       "run_excess_percent_points": 9.73,
-      "run_identical_bytes": 62541,
+      "run_identical_bytes": 62523,
       "run_identical_percent": 9.73
     },
     "imports": {
@@ -4266,14 +4266,14 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 11.56,
-    "identical_bytes": 92428,
+    "excess_percent_points": 11.55,
+    "identical_bytes": 92413,
     "identical_percent": 14.38,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
     "run_excess_percent_points": 9.73,
-    "run_identical_bytes": 62541,
+    "run_identical_bytes": 62523,
     "run_identical_percent": 9.73
   },
   "unit_size_agreement": {
