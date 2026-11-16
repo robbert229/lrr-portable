@@ -321,9 +321,11 @@ void steering_item_spread_tuning(SteeringGroup* group,
     float factor = (2.0f * r) - s_steering_one;
     float scale = s_steering_one / spread;
 
-    item->turnStep = scale * factor * item->baseTurnStep + item->baseTurnStep;
-    item->wanderRadius = scale * factor * item->baseWanderRadius + item->baseWanderRadius;
-    item->wanderPeriod = scale * factor * item->baseWanderPeriod + item->baseWanderPeriod;
+    /* The (float) casts keep MSVC from folding k * x + x into
+     * (k - -1) * x: the original multiplies, then adds the base. */
+    item->turnStep = (float)(scale * factor * item->baseTurnStep) + item->baseTurnStep;
+    item->wanderRadius = (float)(scale * factor * item->baseWanderRadius) + item->baseWanderRadius;
+    item->wanderPeriod = (float)(scale * factor * item->baseWanderPeriod) + item->baseWanderPeriod;
 }
 
 // FUNCTION: LEGORR 0x0040ff50
