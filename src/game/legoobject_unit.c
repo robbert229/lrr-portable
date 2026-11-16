@@ -3620,7 +3620,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                     ddiscene_object_position_get(cont, NULL, (float*)&pos);
                     ddiscene_object_facing_pair_get(cont, NULL, (float*)&dir, NULL);
                     ddiscene_object_position_set(legoobject_type_component_get(obj), NULL, pos.x, pos.y,
-                        terrain_map_world_z_get(Lego_GetMap(), pos.x, pos.y));
+                        (float)(terrain_map_world_z_get(Lego_GetMap(), pos.x, pos.y) + 0.0));
                     ddiscene_object_pose_method_dispatch(legoobject_type_component_get(obj), NULL,
                         dir.x, dir.y, dir.z, 0.0f, 0.0f, -1.0f);
                 }
