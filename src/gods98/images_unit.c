@@ -123,7 +123,7 @@ int Image_CopyToDataToSurface(IDirectDrawSurface4* surface, BMP_Image* image)
     DDSURFACEDESC2 desc = { sizeof(DDSURFACEDESC2) };
 
     if (surface->Lock(NULL, &desc,
-                              DDLOCK_WAIT | DDLOCK_WRITEONLY, NULL) == 0) {
+                              DDLOCK_WAIT | DDLOCK_WRITEONLY, NULL) == DD_OK) {
         switch (image->bpp) {
         case 8:
             Image_8BitSourceCopy(&desc, image);
@@ -321,7 +321,7 @@ Image* Image_LoadBMPScaled(const char* fileName, unsigned int width,
         ddsd.dwWidth = image.width;
         ddsd.dwHeight = image.height;
 
-        if (lpDD()->CreateSurface(&ddsd, &surface, NULL) == 0) {
+        if (lpDD()->CreateSurface(&ddsd, &surface, NULL) == DD_OK) {
             if (Image_CopyToDataToSurface(surface, &image)) {
                 if ((newImage = Image_Create(surface, image.width, image.height,
                                              penZero, pen255)) != NULL) {
@@ -433,7 +433,7 @@ void* Image_LockSurface(Image* image, unsigned int* pitch, unsigned int* bpp)
     desc.dwSize = sizeof(desc);
 
     if (Image_Surface(image)->Lock(NULL, &desc,
-                                           DDLOCK_WAIT, NULL) == 0) {
+                                           DDLOCK_WAIT, NULL) == DD_OK) {
         *pitch = desc.lPitch;
         *bpp = desc.ddpfPixelFormat.dwRGBBitCount;
         return desc.lpSurface;
@@ -457,7 +457,7 @@ unsigned int Image_GetPen255(Image* image)
     memset(&pf, 0, sizeof(pf));
     pf.dwSize = sizeof(pf);
 
-    if (Image_Surface(image)->GetPixelFormat(&pf) == 0) {
+    if (Image_Surface(image)->GetPixelFormat(&pf) == DD_OK) {
         ((unsigned char*)&pen)[0] = ((unsigned char*)&image->pen255)[3];
         ((unsigned char*)&pen)[1] = ((unsigned char*)&image->pen255)[2];
         ((unsigned char*)&pen)[2] = ((unsigned char*)&image->pen255)[1];
@@ -479,7 +479,7 @@ unsigned int Image_GetPixelMask(Image* image)
     memset(&pf, 0, sizeof(pf));
     pf.dwSize = sizeof(pf);
 
-    if (Image_Surface(image)->GetPixelFormat(&pf) == 0) {
+    if (Image_Surface(image)->GetPixelFormat(&pf) == DD_OK) {
         return 0xffffffff << (32 - pf.dwRGBBitCount);
     }
 
@@ -498,7 +498,7 @@ int Image_GetPixel(Image* image, unsigned int x, unsigned int y,
     if (x < image->width && y < image->height) {
         if (Image_Surface(image)->Lock(NULL, &desc,
                                                DDLOCK_WAIT | DDLOCK_READONLY,
-                                               NULL) == 0) {
+                                               NULL) == DD_OK) {
             *colour = *(unsigned int*)((unsigned char*)desc.lpSurface +
                                        (y * desc.lPitch) +
                                        (x * (desc.ddpfPixelFormat.dwRGBBitCount >> 3))) >>
@@ -600,7 +600,7 @@ unsigned int Image_DDColorMatch(IDirectDrawSurface4* pdds, unsigned int rgb)
 
     Image_CR2RGB(rgb, &r, &g, &b);
 
-    if (pdds->Lock(NULL, &ddsd, DDLOCK_WAIT, NULL) == 0) {
+    if (pdds->Lock(NULL, &ddsd, DDLOCK_WAIT, NULL) == DD_OK) {
         rm = ddsd.ddpfPixelFormat.dwRBitMask;
         gm = ddsd.ddpfPixelFormat.dwGBitMask;
         bm = ddsd.ddpfPixelFormat.dwBBitMask;
@@ -649,7 +649,7 @@ void Image_GetScreenshot(Image* image, unsigned int xsize, unsigned int ysize)
     desc.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
     desc.dwFlags = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH;
 
-    if ((r = lpDD()->CreateSurface(&desc, &surf, NULL)) != 0) {
+    if ((r = lpDD()->CreateSurface(&desc, &surf, NULL)) != DD_OK) {
         directx_result_diagnostic_dispatch(r, 3,
             // STRING: LEGORR 0x004aae84
             "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Images.c", 1140);

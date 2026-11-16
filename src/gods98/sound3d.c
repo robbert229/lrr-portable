@@ -1117,7 +1117,7 @@ int sound_streamed_wave_buffer_setup(const char* fName, int loop, int volume)
     int nError;
 
     if (sound_wave_file_open_read_chunks(fName, &stream->hmmio, &stream->pwf,
-                                         &stream->mmckinfoParent) != 0) {
+                                         &stream->mmckinfoParent) != MMSYSERR_NOERROR) {
         return 0;
     }
 
@@ -1127,7 +1127,7 @@ int sound_streamed_wave_buffer_setup(const char* fName, int loop, int volume)
     }
 
     if ((nError = sound_wave_data_chunk_open(&stream->hmmio, &stream->mmckinfoData,
-                                             &stream->mmckinfoParent)) != 0) {
+                                             &stream->mmckinfoParent)) != MMSYSERR_NOERROR) {
         sound_wave_handle_and_buffer_release(&stream->hmmio, &stream->pwf);
         return 0;
     }

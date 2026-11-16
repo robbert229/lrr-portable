@@ -60,7 +60,7 @@ int input_direct_initialize(void)
     HRESULT r;
 
     if (DirectInputCreateA((HINSTANCE)g_main_instance_handle,
-                           INPUT_DIRECTINPUT_VERSION, &s_input_lpdi, NULL) != 0) {
+                           INPUT_DIRECTINPUT_VERSION, &s_input_lpdi, NULL) != DI_OK) {
         directx_result_diagnostic_dispatch(
             DirectInputCreateA((HINSTANCE)g_main_instance_handle,
                                INPUT_DIRECTINPUT_VERSION, &s_input_lpdi, NULL),
@@ -70,7 +70,7 @@ int input_direct_initialize(void)
         return 0;
     }
     if (s_input_lpdi->CreateDevice(guid,
-                                           &s_input_lpdi_keyboard, NULL) != 0) {
+                                           &s_input_lpdi_keyboard, NULL) != DI_OK) {
         directx_result_diagnostic_dispatch(
             s_input_lpdi->CreateDevice(guid,
                                                &s_input_lpdi_keyboard, NULL),
@@ -78,7 +78,7 @@ int input_direct_initialize(void)
             "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Input.c", 121);
         return 0;
     }
-    if (s_input_lpdi_keyboard->SetDataFormat(&c_dfDIKeyboard) != 0) {
+    if (s_input_lpdi_keyboard->SetDataFormat(&c_dfDIKeyboard) != DI_OK) {
         directx_result_diagnostic_dispatch(
             s_input_lpdi_keyboard->SetDataFormat(&c_dfDIKeyboard),
             DXERROR_MODULE_DINPUT,
@@ -86,7 +86,7 @@ int input_direct_initialize(void)
         return 0;
     }
     if (s_input_lpdi_keyboard->SetCooperativeLevel((HWND)g_platform_cursor_window_handle,
-            INPUT_DISCL_NONEXCLUSIVE_FOREGROUND) != 0) {
+            INPUT_DISCL_NONEXCLUSIVE_FOREGROUND) != DI_OK) {
         directx_result_diagnostic_dispatch(
             s_input_lpdi_keyboard->SetCooperativeLevel((HWND)g_platform_cursor_window_handle,
                 INPUT_DISCL_NONEXCLUSIVE_FOREGROUND),
@@ -95,7 +95,7 @@ int input_direct_initialize(void)
         return 0;
     }
     r = s_input_lpdi_keyboard->Acquire();
-    s_input_keyboard_acquired = r == 0;
+    s_input_keyboard_acquired = r == DI_OK;
     return 1;
 }
 
@@ -125,9 +125,9 @@ void input_state_poll_retail(void)
         } else {
             r = INPUT_DIERR_INPUTLOST;
         }
-        if (r != 0) {
+        if (r != DI_OK) {
             s_input_keyboard_acquired = 0;
-            if (s_input_lpdi_keyboard->Acquire() == 0)
+            if (s_input_lpdi_keyboard->Acquire() == DI_OK)
                 s_input_keyboard_acquired = 1;
         }
     }
