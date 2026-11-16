@@ -39,8 +39,11 @@ typedef struct ElectricFenceGlobs {
     unsigned int listCount;             /* 004c7e84 */
 } ElectricFenceGlobs;                   /* 0x90 bytes */
 
+/* An external, as in the original: as a static, MSVC 5.0 reuses the free
+ * list's first load across electric_fence_add_list's call. Zero-initialised,
+ * so it stays in the object's .bss rather than becoming a common. */
 // GLOBAL: LEGORR 0x004c7df8
-static ElectricFenceGlobs electricFenceGlobs;
+ElectricFenceGlobs electricFenceGlobs = { 0 };
 
 // FUNCTION: LEGORR 0x0040cdc0
 void electric_fence_initialise(ElectricFenceLevel* level)
