@@ -9845,7 +9845,7 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
                                           const char* ok, const char* cancel)
 {
     float pos[2];
-    float wndRect[4];
+    Area2F wndRect;
     float textX;
     unsigned int textWidth;
     unsigned int textHeight;
@@ -9861,17 +9861,17 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
         text_buffer_reset_target(legoGlobs_DialogTextWndOK);
         text_buffer_reset_target(legoGlobs_DialogTextWndCancel);
         if (ok) {
-            wndRect[0] = 0.0f;
-            wndRect[1] = 0.0f;
-            wndRect[2] = 0.0f;
+            wndRect.y = 0.0f;
+            wndRect.width = 0.0f;
+            wndRect.height = 0.0f;
             textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
             textWidth = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingHi, ok);
             textX = ((float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 4) -
                      (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 12) * -0.5f) - (float)(textWidth >> 1);
-            wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 8);
-            wndRect[2] = (float)textHeight;
+            wndRect.y = (float)LEGO_FIELD(legoGlobs_DialogTextWndOK, int, 8);
+            wndRect.height = (float)textHeight;
             if (textX > legoInput_mouseX || legoInput_mouseX >= textX + textWidth ||
-                wndRect[0] > legoInput_mouseY || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
+                wndRect.y > legoInput_mouseY || legoInput_mouseY >= wndRect.y + wndRect.height) {
                 LEGO_FIELD(legoGlobs_DialogTextWndOK, void*, 0) = legoGlobs_fontBriefingHi;
                 text_buffer_append_format(legoGlobs_DialogTextWndOK, ok);
             } else {
@@ -9881,17 +9881,17 @@ int lego_menu_option_panel_texture_update(const char* title, const char* msg,
             }
         }
         if (cancel) {
-            wndRect[0] = 0.0f;
-            wndRect[1] = 0.0f;
-            wndRect[2] = 0.0f;
+            wndRect.y = 0.0f;
+            wndRect.width = 0.0f;
+            wndRect.height = 0.0f;
             textWidth = formatted_text_printf_width((const struct TextureSurface*)legoGlobs_fontBriefingHi, cancel);
             textHeight = object_field_be4_dword_get(legoGlobs_fontBriefingHi);
             textX = ((float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 4) -
                      (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 12) * -0.5f) - (float)(textWidth >> 1);
-            wndRect[0] = (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 8);
-            wndRect[2] = (float)textHeight;
+            wndRect.y = (float)LEGO_FIELD(legoGlobs_DialogTextWndCancel, int, 8);
+            wndRect.height = (float)textHeight;
             if (textX > legoInput_mouseX || legoInput_mouseX >= textX + textWidth ||
-                wndRect[0] > legoInput_mouseY || legoInput_mouseY >= wndRect[0] + wndRect[2]) {
+                wndRect.y > legoInput_mouseY || legoInput_mouseY >= wndRect.y + wndRect.height) {
                 LEGO_FIELD(legoGlobs_DialogTextWndCancel, void*, 0) = legoGlobs_fontBriefingHi;
                 text_buffer_append_format(legoGlobs_DialogTextWndCancel, cancel);
             } else {
