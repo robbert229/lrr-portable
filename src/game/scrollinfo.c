@@ -286,8 +286,8 @@ void scroll_info_draw(unsigned int index)
     unsigned int i;
 
     panel = &panelGlobs.panelTable[scrollInfo->panel];
-    origin.x = panel->currPos.x + scrollInfo->xOffset;
-    origin.y = panel->currPos.y + scrollInfo->yOffset;
+    origin.x = (scrollInfo->xOffset) + panel->currPos.x;
+    origin.y = (scrollInfo->yOffset) + panel->currPos.y;
     image_display_scaled(scrollInfo->image, NULL, &origin, NULL);
 
     for (i = 0; i < 2; i++) {
@@ -308,7 +308,7 @@ void scroll_info_draw(unsigned int index)
 
     slider = scrollInfo->slider;
     pos.x = slider->x1 + (slider->xOffset + origin.x);
-    pos.y = slider->y1 + slider->yOffset + origin.y;
+    pos.y = (slider->y1) + slider->yOffset + origin.y;
     image_display_scaled(slider->image, NULL, &pos, NULL);
 }
 
