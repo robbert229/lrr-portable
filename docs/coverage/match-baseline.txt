@@ -1,4 +1,4 @@
-# input_sha256: d44af9fbeda25f7a2853efe0f76949423d655ed9d199c4bfeca30b27ebc04d31
+# input_sha256: 91aeb0f090760c577d958e01732f9ea5fb1ae34a1ac5e8bde541b59bdcf5afea
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2301,8 +2301,8 @@
 0x004792c0 100.00 block_record_remove
 0x004792e0 100.00 block_find
 0x00479490 100.00 block_text_token_pool_grow
-0x00479500 75.00 d3drm_vector_random
-0x00479510 90.00 d3drm_vector_rotate
+0x00479500 100.00 d3drm_vector_random
+0x00479510 100.00 d3drm_vector_rotate
 0x00479530 100.00 surface_triangle_normal_calculate
 0x00479630 60.37 surface_triangle_area_calculate
 0x004798a0 100.00 rng_thunk_draw15
@@ -2731,7 +2731,7 @@
 0x0049e9a0 100.00 AviSurface::`vftable'
 0x0049e9b0 100.00 AviMovie::`vftable'
 
-[full] 3020 mapped functions
+[full] 3022 mapped functions
 0x00401000 100.00 advisor_scene_controller_initialize
 0x004011c0 100.00 advisor_animation_end_cleanup
 0x00401210 100.00 advisor_scene_visual_state_initialize
@@ -5026,8 +5026,8 @@
 0x004792c0 100.00 block_record_remove
 0x004792e0 100.00 block_find
 0x00479490 100.00 block_text_token_pool_grow
-0x00479500 75.00 d3drm_vector_random
-0x00479510 90.00 d3drm_vector_rotate
+0x00479500 100.00 d3drm_vector_random
+0x00479510 100.00 d3drm_vector_rotate
 0x00479530 100.00 surface_triangle_normal_calculate
 0x00479630 60.37 surface_triangle_area_calculate
 0x004798a0 100.00 rng_thunk_draw15
@@ -5711,6 +5711,8 @@
 0x0049b5b0 100.00 __mbschr
 0x0049b660 100.00 __strdup
 0x0049b6b0 100.00 _Direct3DRMCreate@4
+0x0049b6b6 100.00 _D3DRMVectorRandom@4
+0x0049b6bc 100.00 _D3DRMVectorRotate@16
 0x0049b6c2 100.00 _DirectDrawEnumerateA@8
 0x0049b6c8 100.00 _DirectDrawCreate@12
 0x0049b6ce 100.00 _AVIStreamInfoA@12
