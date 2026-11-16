@@ -1,0 +1,28 @@
+; SPDX-License-Identifier: LGPL-3.0-or-later
+;
+; DDRAW.DLL import library of the matching build. An import's hint is its
+; index in the DLL's sorted export table as the import library records it.
+; The original's DirectDrawCreate and DirectDrawEnumerateA carry hints 7 and
+; 9, those of DirectX 5's ddraw.dll, whose exports these are; the
+; toolchain's older ddraw.lib gives 6 and 8. LIB numbers the exports in this
+; order, so the list must stay complete and sorted.
+LIBRARY DDRAW.dll
+EXPORTS
+    AcquireDDThreadLock
+    CompleteCreateSysmemSurface
+    D3DParseUnknownCommand
+    DDGetAttachedSurfaceLcl
+    DDInternalLock
+    DDInternalUnlock
+    DSoundHelp
+    DirectDrawCreate
+    DirectDrawCreateClipper
+    DirectDrawEnumerateA
+    DirectDrawEnumerateW
+    DllCanUnloadNow PRIVATE
+    DllGetClassObject PRIVATE
+    GetDDSurfaceLocal
+    GetOLEThunkData
+    GetSurfaceFromDC
+    RegisterSpecialCase
+    ReleaseDDThreadLock

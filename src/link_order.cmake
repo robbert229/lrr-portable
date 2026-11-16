@@ -291,8 +291,8 @@ set(LRR_LINK_TAIL_LIBRARY lrr_tail)
 # Libraries of the matching build, after the objects, in the order of the
 # original's import directory, with LIBC placed so that its code precedes the
 # import thunks and RtlUnwind's thunk comes last (finding 574; ADR 0006
-# decision 1 as amended). dinput.lib, dsound.lib, amstrmid.lib and dxguid.lib
-# are rebuilt from cross/msvc5-importlibs; vfw32.lib holds the avifil32
+# decision 1 as amended). ddraw.lib, dinput.lib, dsound.lib, amstrmid.lib and
+# dxguid.lib are rebuilt from cross/msvc5-importlibs; vfw32.lib holds the avifil32
 # imports. amstrmid.lib's member precedes dxguid.lib's in the original's GUID
 # block (finding 688).
 #

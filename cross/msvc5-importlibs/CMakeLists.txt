@@ -9,6 +9,8 @@
 #               lives in .text
 #   dsound.lib  DSOUND.dll's DirectSoundCreate, imported by ordinal 1
 #               (the toolchain's dsound.lib imports it by name)
+#   ddraw.lib   DDRAW.dll's imports with DirectX 5's hints (the toolchain's
+#               older ddraw.lib numbers them one lower)
 #   amstrmid.lib  the DirectShow multimedia-stream GUIDs, one member
 #   dxguid.lib  every DirectX 6.1 GUID, one member, so that the data
 #               members' references pull the whole block (finding 688)
@@ -48,6 +50,11 @@ lrr_importlib(lrr_il_dsound dsound sdk_exports.c)
 set_target_properties(lrr_il_dsound PROPERTIES STATIC_LIBRARY_OPTIONS
   "/machine:i386;/def:${CMAKE_CURRENT_SOURCE_DIR}/dsound.def")
 
+# ddraw.lib from DirectX 5's export list, for the original's import hints.
+lrr_importlib(lrr_il_ddraw ddraw ddraw_exports.c)
+set_target_properties(lrr_il_ddraw PROPERTIES STATIC_LIBRARY_OPTIONS
+  "/machine:i386;/def:${CMAKE_CURRENT_SOURCE_DIR}/ddraw.def")
+
 # The SDK's dinput.lib also held the two data members. A librarian step
 # cannot take another library as input, so they are their own library,
 # dinput_data.lib, which the link reads just before dinput.lib: the image is
@@ -60,6 +67,7 @@ lrr_importlib(lrr_il_dxguid dxguid dxguid.c)
 set(LRR_IMPORTLIB_TARGETS
   dinput.lib lrr_il_dinput_data+lrr_il_dinput
   dsound.lib lrr_il_dsound
+  ddraw.lib lrr_il_ddraw
   amstrmid.lib lrr_il_amstrmid
   dxguid.lib lrr_il_dxguid
   PARENT_SCOPE)
