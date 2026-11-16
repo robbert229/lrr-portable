@@ -7531,8 +7531,6 @@ int legoobject_flag_gated_callback_a(Lego_Object* liveObj, void* data)
     void* liveCont;
     void* objCont;
     float dist;
-    float dx;
-    float dy;
     int i;
     int j;
 
@@ -7549,9 +7547,8 @@ int legoobject_flag_gated_callback_a(Lego_Object* liveObj, void* data)
         liveCont = legoobject_type_component_get(liveObj);
         objCont = legoobject_type_component_get(obj);
         if (entity_stats_word_get(LEGOOBJ_SLOT(liveObj)) & 0x80) {
-            dx = livePos.x - search->pos[0];
-            dy = livePos.y - search->pos[1];
-            dist = (float)sqrt(dx * dx + dy * dy);
+            dist = (float)sqrt((livePos.y - search->pos[1]) * (livePos.y - search->pos[1]) +
+                               (livePos.x - search->pos[0]) * (livePos.x - search->pos[0]));
             if (dist < entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) + entity_stats_float_at6c(LEGOOBJ_SLOT(liveObj))) {
                 LegoObjP_Vector3F box[4];
                 LegoObjP_Point2F poly[5];
@@ -7579,9 +7576,8 @@ int legoobject_flag_gated_callback_a(Lego_Object* liveObj, void* data)
                 }
             }
         } else if (entity_stats_word_get(LEGOOBJ_SLOT(liveObj)) & 0x100) {
-            dx = livePos.x - search->pos[0];
-            dy = livePos.y - search->pos[1];
-            dist = (float)sqrt(dx * dx + dy * dy);
+            dist = (float)sqrt((livePos.y - search->pos[1]) * (livePos.y - search->pos[1]) +
+                               (livePos.x - search->pos[0]) * (livePos.x - search->pos[0]));
             if (dist < entity_stats_float_at6c(LEGOOBJ_SLOT(obj)) + entity_stats_float_at6c(LEGOOBJ_SLOT(liveObj))) {
                 Lego_Object* objs[2];
                 LegoObjP_Vector3F boxes[2][4];
