@@ -1347,7 +1347,7 @@ void interface_update_advisor(int type, int objType, int objIndex,
                 if (!(interfaceGlobs.flags & INTERFACE_FLAG_IN)) {
                     pos.x = interfaceGlobs.slideInPosition.x;
                 }
-                pos.y = (float)height * 0.5f + pos.y;
+                pos.y = ((float)height * 0.5f) + pos.y;
             }
 
             advisor_action_position_get(interfaceGlobs.advisorType,
