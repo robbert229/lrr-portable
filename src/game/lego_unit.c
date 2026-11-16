@@ -2604,11 +2604,11 @@ void lego_terrain_pointer_command_update(void)
     float scroll[2];
     unsigned int bx, by;
     struct EntitySlot* liveObj;
-    float objPos[2];
+    float objPos[3];
     unsigned int clickX, clickY;
 
-    level = legoGlobs_currLevel;
     if ((legoGlobs_flags1 & 2) && (legoGlobs_flags1 & 0x1000) && !(legoGlobs_flags1 & 0x100)) {
+        level = legoGlobs_currLevel;
         {
             float diff[2];
 
@@ -2659,13 +2659,13 @@ void lego_terrain_pointer_command_update(void)
                         timed_effect_update_request_set_corpus(2);
                     }
                 }
+            } else if (!g_renderer_word_c && s_lego_radarPrevButton) {
+                if (terrain_point_pick_resolve_original(
+                        (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
+                        s_renderer_word_a, s_renderer_word_b, &legoGlobs_f_5563f8.x, &clickX, &clickY))
+                    legoGlobs_flags1 |= 0x4000;
             } else if (!g_renderer_word_c) {
-                if (s_lego_radarPrevButton) {
-                    if (terrain_point_pick_resolve_original(
-                            (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
-                            s_renderer_word_a, s_renderer_word_b, &legoGlobs_f_5563f8.x, &clickX, &clickY))
-                        legoGlobs_flags1 |= 0x4000;
-                } else if (terrain_point_pick_resolve_original(
+                if (terrain_point_pick_resolve_original(
                                (const struct TerrainPointPickRegion*)LEGO_LEVEL_PTR(void, level->f_084),
                                s_renderer_word_a, s_renderer_word_b, NULL, &bx, &by)) {
                     if (s_lego_radarBlockX == bx && s_lego_radarBlockY == by) {
