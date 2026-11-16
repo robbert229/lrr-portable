@@ -28,6 +28,7 @@
 #define LEGORRR_LWO_UNIT 1
 #include "lwo.h"
 #include "files.h"
+#include "gods98/d3drmdef_consts.h"
 
 /* Big-endian to host. The original spells the 16-bit swap two ways; each
  * use takes the one whose code matches (see finding 601). */

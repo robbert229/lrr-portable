@@ -38,6 +38,7 @@
 #include "resource.h"
 #include "files_paths.h"
 #include "container_frame.h"
+#include "gods98/d3drmdef_consts.h"
 
 /* The COM interfaces the unit calls, with the method-table slots at their
  * Win32 offsets. MSVC 5.0's dsound.h is DirectX 3's and has no 3D

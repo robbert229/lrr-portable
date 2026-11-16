@@ -30,6 +30,7 @@
 #include "files.h"
 #include "images.h"
 #include "directdraw_imports.h"
+#include "gods98/d3drmdef_consts.h"
 
 /* The COM interfaces the unit calls, with their method tables at the
  * DirectX 6 slots. MSVC 5.0's ddraw.h is DirectX 3's and has neither

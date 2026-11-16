@@ -48,6 +48,7 @@
 #include "main_imports.h"
 #define LEGORRR_MAIN_GLOBS_OWNER
 #include "gods98/main_globs.h"
+#include "gods98/d3drmdef_consts.h"
 
 #define MAIN_MAXRENDERSTATES        200
 

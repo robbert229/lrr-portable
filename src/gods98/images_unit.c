@@ -826,3 +826,5 @@ int Image_SaveBMP(Image* image, const char* fname)
 #endif
 
 #endif /* !LEGORRR_BACKEND_MINIWIN */
+
+#include "gods98/d3drmdef_consts.h"

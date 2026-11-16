@@ -20,6 +20,7 @@
 #include "viewports.h"
 #include "viewports_imports.h"
 #include "dxerror.h"
+#include "gods98/d3drmdef_consts.h"
 
 #if defined(_WIN32)
 #define VP_STDCALL __stdcall
