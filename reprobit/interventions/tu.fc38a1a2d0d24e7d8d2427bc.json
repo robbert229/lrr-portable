@@ -1,0 +1,1 @@
+{"build_target":"lrr_il_dxguid","interventions":[],"schema_version":3,"source":"cross/msvc5-importlibs/dxguid.c","source_digest":{"algorithm":"sha256","value":"62db04328bf52733b683d498fa0e32ffbb733b78d3c7611d91847877246f5fa0"},"target_id":"program","translation_unit_id":"tu.fc38a1a2d0d24e7d8d2427bc"}

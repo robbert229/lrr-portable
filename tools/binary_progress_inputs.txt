@@ -1,4 +1,5 @@
 CMakeLists.txt
+cross/msvc5-importlibs/CMakeLists.txt
 cross/msvc5-importlibs/amstrmid.c
 cross/msvc5-importlibs/dilib1.c
 cross/msvc5-importlibs/dilib2.c
@@ -6,7 +7,6 @@ cross/msvc5-importlibs/dinput.def
 cross/msvc5-importlibs/dinput_formats.h
 cross/msvc5-importlibs/dsound.def
 cross/msvc5-importlibs/dxguid.c
-cross/msvc5-importlibs/importlibs.cmake
 cross/msvc5-importlibs/sdk_exports.c
 cross/msvc5-importlibs/sdk_guid.h
 cross/msvc5-toolchain.cmake
@@ -17,6 +17,7 @@ docs/coverage/translation-units.csv
 docs/coverage/translation-units.spec.csv
 docs/decompiles/full/manifest.csv
 reccmp-project.yml
+src/LegoRR.ico
 src/compat/msvc5/cstdint
 src/compat/msvc5/stdint.h
 src/crt/crt.cpp
