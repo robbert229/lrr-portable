@@ -1143,16 +1143,17 @@ int front_menu_item_select_test_string_collision(Front_Menu* menu,
         return -3;
     }
     for (i = 0; i < select->visibleCount; i++) {
-        index = select->scrollStart + i;
-        if (index >= select->selItemCount) {
+        if (select->scrollStart + i >= select->selItemCount) {
             break;
         }
+        index = select->scrollStart + i;
         selItem = &select->selItemList[index];
         if (selItem->flags & 4) {
             if (front_maths_is_point_inside_rect_centered(
                     FRONT_MSX, FRONT_MSY,
-                    item->x1 + select->x1 + selItem->xPos + frontGlobs_scrollOffsetX + menu->xPos,
-                    select->yStep * i + item->y1 + select->y1 + selItem->yPos +
+                    item->x1 + select->x1 + select->selItemList[index].xPos +
+                        frontGlobs_scrollOffsetX + menu->xPos,
+                    select->yStep * i + item->y1 + select->y1 + select->selItemList[index].yPos +
                         frontGlobs_scrollOffsetY + menu->yPos,
                     select->widths[0][index], select->heights[0][index],
                     menu->autoCenter)) {
