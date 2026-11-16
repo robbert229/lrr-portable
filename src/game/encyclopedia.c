@@ -21,6 +21,8 @@
 #include "crt/vc5names.h"
 #include "encyclopedia.h"
 #include "encyclopedia_imports.h"
+/* The unit's .rdata is this header inline copy's 1.0 (0049e120). */
+#include "reciprocal_inline.h"
 
 /* LegoObject_Type. */
 #define LEGOOBJECT_VEHICLE 1
