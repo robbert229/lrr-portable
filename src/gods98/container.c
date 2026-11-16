@@ -983,7 +983,7 @@ int Container_IsHidden(Container* cont)
 
 // FUNCTION: LEGORR 0x00473bc0
 Container* Container_SearchTree(Container* root, const char* name, int mode,
-                                unsigned long* count)
+                                unsigned int* count)
 {
     Container_SearchData search;
 

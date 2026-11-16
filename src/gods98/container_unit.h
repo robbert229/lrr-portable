@@ -76,7 +76,7 @@ void Container_Hide2(Container* cont, int hide);                     /* 00473b20
 void Container_Hide(Container* cont, int hide);                      /* 00473b40 */
 int Container_IsHidden(Container* cont);                            /* 00473ba0 */
 Container* Container_SearchTree(Container* root, const char* name,
-                                 int mode, unsigned long* count);    /* 00473bc0 */
+                                 int mode, unsigned int* count);     /* 00473bc0 */
 char* Container_FormatPartName(Container* cont, const char* partname,
                                  unsigned long* instance);           /* 00473c60 */
 void Container_SetUserData(Container* cont, void* data);           /* 00473da0 */
