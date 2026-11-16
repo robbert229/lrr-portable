@@ -1721,7 +1721,9 @@ void nerps_runtime_update_timers(float elapsed)
     unsigned int i;
 
     elapsed = (elapsed * 1000.0f) * 0.04f;
-    for (i = 0; i < 4; i++) nerpsruntimeGlobs.timers[i] += elapsed;
+    /* The parentheses keep the timer as the first operand (fld timer;
+     * fadd elapsed), as in the original. */
+    for (i = 0; i < 4; i++) nerpsruntimeGlobs.timers[i] = (nerpsruntimeGlobs.timers[i]) + elapsed;
     if (nerpsruntimeGlobs.messageTimer == 0.0f) return;
     if (nerpsruntimeGlobs.messageTimer < 0.0f) {
         nerpsruntimeGlobs.messageTimer = 0.0f;
