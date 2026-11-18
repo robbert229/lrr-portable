@@ -644,7 +644,12 @@ Smoke* smoke_create_smoke_area(void* cont, int bx, int by, SFX_Vector3F* dir,
     smoke->dir.x = dir->x;
     smoke->dir.y = dir->y;
     smoke->dir.z = dir->z;
-    sfx_vector3d_normalise(&smoke->dir);
+    {
+        float inv = 1.0f / sfx_vector3d_modulus(&smoke->dir);
+        smoke->dir.x *= inv;
+        smoke->dir.y *= inv;
+        smoke->dir.z *= inv;
+    }
     smoke->r = r;
     smoke->g = g;
     smoke->b = b;
