@@ -14,7 +14,10 @@
 #                       docs/coverage/translation-unit-ranges.csv
 #             platform  port-only code below the seam: the process entry
 #                       and the seam's stubs; key is "-"
-#   library   game, gods98 or platform
+#             library   port-only library code that a unit's library
+#                       substitution calls (ADR 0007 decision 3), such as
+#                       the FFmpeg video library; key is "-"
+#   library   game, gods98, platform or library
 #   source    path under SRC_ROOT
 #
 # Fields are separated by blanks, one entry per line.
@@ -110,3 +113,6 @@ lrr_link(unit   LATE-002 gods98        gods98/init.c)
 # and the seam's remaining stubs (ADR 0007).
 lrr_link(platform -     platform      platform/native/entry.cpp)
 lrr_link(platform -     platform      platform/native/seam_stubs.cpp)
+
+# The libraries the units' substitutions call (ADR 0007).
+lrr_link(library  -     library       library/video_ffmpeg.cpp)
