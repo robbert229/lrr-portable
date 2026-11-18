@@ -2141,15 +2141,18 @@ int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
 {
 
     if (obj->flags1 & 0x400) {
-        if ((entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x4) ||
-            (entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x2))
-        {
+        /* The goto gives the original's layout: the first test jumps
+         * into the block, which follows the second test inline. */
+        if (entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x4) goto deposit;
+        if (entity_stats_word_get(LEGOOBJ_SLOT(obj)) & 0x2) {
+        deposit:
             obj->flags1 |= 0x2000;
             legoobject_set_activity(obj, 0x1d, 1);
             legoobject_activity_register_bookkeeping(obj);
             legoobject_activity_tick(obj, 1.0f);
             return 1;
-        } else if (legoobject_accepts_target_for_task_check(target, obj->carriedObjects[0], 0) ||
+        }
+        if (legoobject_accepts_target_for_task_check(target, obj->carriedObjects[0], 0) ||
             (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x8))
         {
             int fromY;
