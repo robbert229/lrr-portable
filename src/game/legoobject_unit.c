@@ -5365,7 +5365,7 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
                             stepCost = 0.5f;
                         if (terrain_cell_route_and_occupancy_check_current(LEGOOBJ_SLOT(obj), x, y, tx, ty, 0)) {
                             float* score = &s_terrain_neighbor_path_cost[width * y + x];
-                            if (*score == legoobject_zero || *score > stepCost + cost) {
+                            if (*score == legoobject_zero || *score > (float)(stepCost + cost)) {
                                 unsigned int other = (current == 0);
                                 *score = stepCost + cost;
                                 lists[other][counts[other]].blockPos[0] = x;
