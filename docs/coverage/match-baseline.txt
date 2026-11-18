@@ -1,4 +1,4 @@
-# input_sha256: 6df13d03ae70f72cdd5687255100f43d7dca81740abdacfef76f60365e8b595a
+# input_sha256: 1629ccde717f44b16339c8e1211ecccb3e4db5058cf308db463130a90fb827c2
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1087,7 +1087,7 @@
 0x004408c0 100.00 legoobject_spatial_callback_query_at_optional_coordinate
 0x00440920 100.00 legoobject_spatial_callback_query_at_optional_coordinate_visit
 0x004409e0 100.00 legoobject_set_activity
-0x00440a10 61.95 legoobject_attached_direction_vector_update
+0x00440a10 75.84 legoobject_attached_direction_vector_update
 0x00440bf0 100.00 legoobject_object_list_field_assign_all
 0x00440c30 100.00 legoobject_grid_route_search_adapter
 0x00440c70 51.91 legoobject_terrain_grid_path_search
@@ -3812,7 +3812,7 @@
 0x004408c0 100.00 legoobject_spatial_callback_query_at_optional_coordinate
 0x00440920 100.00 legoobject_spatial_callback_query_at_optional_coordinate_visit
 0x004409e0 100.00 legoobject_set_activity
-0x00440a10 61.95 legoobject_attached_direction_vector_update
+0x00440a10 75.84 legoobject_attached_direction_vector_update
 0x00440bf0 100.00 legoobject_object_list_field_assign_all
 0x00440c30 100.00 legoobject_grid_route_search_adapter
 0x00440c70 51.91 legoobject_terrain_grid_path_search
