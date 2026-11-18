@@ -1,4 +1,4 @@
-# input_sha256: 1629ccde717f44b16339c8e1211ecccb3e4db5058cf308db463130a90fb827c2
+# input_sha256: 544368d9b3728d05af4b75b15f308e23dd5012fb1a3baf9c6d756bf48179833c
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2131,7 +2131,7 @@
 0x00472950 100.00 ddiscene_object_allocate
 0x00472a40 100.00 ledger_stub_00472a40_DDiSceneObjectDestroy
 0x00472a50 100.00 Container_Remove2
-0x00472cd0 91.10 container_load
+0x00472cd0 100.00 container_load
 0x00473340 100.00 ledger_stub_00473340_SceneActionNamePresent
 0x00473370 97.98 scene_action_name_set
 0x00473460 100.00 light_interface_call_slot_40
@@ -2499,7 +2499,7 @@
 0x00480870 100.00 mesh_create_on_frame
 0x00480900 100.00 mesh_clone
 0x004809e0 100.00 mesh_load
-0x00480ac0 79.08 mesh_parse_lwo
+0x00480ac0 79.98 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
@@ -4856,7 +4856,7 @@
 0x00472950 100.00 ddiscene_object_allocate
 0x00472a40 100.00 ledger_stub_00472a40_DDiSceneObjectDestroy
 0x00472a50 100.00 Container_Remove2
-0x00472cd0 91.10 container_load
+0x00472cd0 100.00 container_load
 0x00473340 100.00 ledger_stub_00473340_SceneActionNamePresent
 0x00473370 97.98 scene_action_name_set
 0x00473460 100.00 light_interface_call_slot_40
@@ -5224,7 +5224,7 @@
 0x00480870 100.00 mesh_create_on_frame
 0x00480900 100.00 mesh_clone
 0x004809e0 100.00 mesh_load
-0x00480ac0 79.08 mesh_parse_lwo
+0x00480ac0 79.98 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
