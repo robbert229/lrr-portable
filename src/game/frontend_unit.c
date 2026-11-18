@@ -2279,7 +2279,10 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
         ddiscene_scene_object_attach_or_unlink(frontGlobs_rockWipeAnim, NULL);
         timer = (float)ddiscene_object_frame_position_get(frontGlobs_rockWipeAnim);
         currTime = (float)main_time_get();
-        elapsedTime = (currTime - frontGlobs_rockWipeLastUpdateTime) * 0.001f * 25.0f;
+        /* Seconds times 25 frames: written left to right, MSVC folds
+         * 0.001f * 25.0f into one 0.025 literal; the original multiplies
+         * by 0.001 and then by 25 (two .rdata literals). */
+        elapsedTime = 25.0f * ((currTime - frontGlobs_rockWipeLastUpdateTime) * 0.001f);
         elapsedTime = elapsedTime + elapsedTime;
         if (elapsedTime > 3.0f) {
             elapsedTime = 3.0f;
