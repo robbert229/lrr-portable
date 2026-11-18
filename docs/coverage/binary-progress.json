@@ -3,20 +3,20 @@
     "full": 98.8,
     "game_only": 98.67
   },
-  "baseline_sha256": "9f5b9bff094e8dc5d33e16eeb14956bb50affe0f2c0158bace843e50ec12549d",
+  "baseline_sha256": "230244606f050e7591a0c0e11d67abfc558c209b01f22b2288a818f7f5988f74",
   "correct_size_functions": {
     "full": {
-      "bytes": 515295,
+      "bytes": 516639,
       "compared": 3020,
-      "count": 2906,
+      "count": 2907,
       "exact_functions": 2797,
       "mapped": 3022,
       "uncompared": 2
     },
     "game_only": {
-      "bytes": 464444,
+      "bytes": 465788,
       "compared": 2721,
-      "count": 2611,
+      "count": 2612,
       "exact_functions": 2504,
       "mapped": 2723,
       "uncompared": 2
@@ -286,8 +286,8 @@
     "percent": 62.04
   },
   "fully_identical_functions_at_original_address": {
-    "bytes": 8061,
-    "count": 113
+    "bytes": 8008,
+    "count": 112
   },
   "function_order_inversions": {
     "full": {
@@ -330,7 +330,7 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "544368d9b3728d05af4b75b15f308e23dd5012fb1a3baf9c6d756bf48179833c",
+  "input_sha256": "aae27af1fa525fe35a906948e0e987730f654118ccf2132c42e62395c6179c82",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 56,
@@ -424,99 +424,99 @@
           "object": "frontend_unit.c.obj"
         },
         {
-          "first_public_address": "0x4181d0",
+          "first_public_address": "0x4181e0",
           "object": "helpwindow.c.obj"
         },
         {
-          "first_public_address": "0x419270",
+          "first_public_address": "0x419280",
           "object": "info_unit.c.obj"
         },
         {
-          "first_public_address": "0x41a340",
+          "first_public_address": "0x41a350",
           "object": "interface_unit.c.obj"
         },
         {
-          "first_public_address": "0x41f850",
+          "first_public_address": "0x41f860",
           "object": "lego_unit.c.obj"
         },
         {
-          "first_public_address": "0x435a90",
+          "first_public_address": "0x435aa0",
           "object": "camera_control.c.obj"
         },
         {
-          "first_public_address": "0x436b90",
+          "first_public_address": "0x436ba0",
           "object": "legoobject_unit.c.obj"
         },
         {
-          "first_public_address": "0x44c630",
+          "first_public_address": "0x44c640",
           "object": "lighteffects.c.obj"
         },
         {
-          "first_public_address": "0x44da80",
+          "first_public_address": "0x44da90",
           "object": "loader.c.obj"
         },
         {
-          "first_public_address": "0x44dff0",
+          "first_public_address": "0x44e000",
           "object": "terrain_map.c.obj"
         },
         {
-          "first_public_address": "0x451ba0",
+          "first_public_address": "0x451bb0",
           "object": "message_unit.c.obj"
         },
         {
-          "first_public_address": "0x452cd0",
+          "first_public_address": "0x452ce0",
           "object": "tutorial_script.c.obj"
         },
         {
-          "first_public_address": "0x4573c0",
+          "first_public_address": "0x4573d0",
           "object": "objective_unit.c.obj"
         },
         {
-          "first_public_address": "0x459070",
+          "first_public_address": "0x459080",
           "object": "objectrecall.c.obj"
         },
         {
-          "first_public_address": "0x459410",
+          "first_public_address": "0x459420",
           "object": "objinfo.c.obj"
         },
         {
-          "first_public_address": "0x459f00",
+          "first_public_address": "0x459f10",
           "object": "panel_unit.c.obj"
         },
         {
-          "first_public_address": "0x45c710",
+          "first_public_address": "0x45c720",
           "object": "pointer.c.obj"
         },
         {
-          "first_public_address": "0x45cca0",
+          "first_public_address": "0x45ccb0",
           "object": "priorities.c.obj"
         },
         {
-          "first_public_address": "0x45d6c0",
+          "first_public_address": "0x45d6d0",
           "object": "ptl.c.obj"
         },
         {
-          "first_public_address": "0x45d790",
+          "first_public_address": "0x45d7a0",
           "object": "radarmap.c.obj"
         },
         {
-          "first_public_address": "0x45ef10",
+          "first_public_address": "0x45ef20",
           "object": "reward.c.obj"
         },
         {
-          "first_public_address": "0x462c80",
+          "first_public_address": "0x462c90",
           "object": "roof.c.obj"
         },
         {
-          "first_public_address": "0x4635a0",
+          "first_public_address": "0x4635b0",
           "object": "scrollinfo.c.obj"
         },
         {
-          "first_public_address": "0x463df0",
+          "first_public_address": "0x463e00",
           "object": "selectplace.c.obj"
         },
         {
-          "first_public_address": "0x464630",
+          "first_public_address": "0x464640",
           "object": "sfx.c.obj"
         },
         {
@@ -4040,7 +4040,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 8
   },
-  "listing_digests_sha256": "c2cb54771ac1fa482de010ea1fff1948fbf026fa5c896815d9d69c4b3e7ef455",
+  "listing_digests_sha256": "ae3736f2a91ff56acbf565f628afe11a582c21af2ba59bed674fb21e2e472690",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4137,14 +4137,14 @@
           "rebuilt": 4112
         },
         ".rdata": {
-          "differing": 7723,
-          "equal": 3509,
+          "differing": 7702,
+          "equal": 3530,
           "original": 11232,
           "rebuilt": 11080
         },
         ".text": {
-          "differing": 576683,
-          "equal": 65866,
+          "differing": 580210,
+          "equal": 62339,
           "original": 642549,
           "rebuilt": 642341
         }
@@ -4217,9 +4217,9 @@
     },
     ".rdata": {
       "chance_percent": 4.12,
-      "excess_percent_points": 32.28,
-      "identical_bytes": 4089,
-      "identical_percent": 36.4,
+      "excess_percent_points": 32.24,
+      "identical_bytes": 4084,
+      "identical_percent": 36.36,
       "original_bytes": 11232,
       "rebuilt_bytes": 11176,
       "run_chance_percent": 0.0,
@@ -4229,15 +4229,15 @@
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 7.41,
-      "identical_bytes": 65813,
-      "identical_percent": 10.24,
+      "excess_percent_points": 6.86,
+      "identical_bytes": 62277,
+      "identical_percent": 9.69,
       "original_bytes": 642549,
       "rebuilt_bytes": 642341,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 5.8,
-      "run_identical_bytes": 37256,
-      "run_identical_percent": 5.8
+      "run_excess_percent_points": 5.2,
+      "run_identical_bytes": 33433,
+      "run_identical_percent": 5.2
     },
     "imports": {
       "chance_percent": 34.58,
@@ -4266,15 +4266,15 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 7.42,
-    "identical_bytes": 65821,
-    "identical_percent": 10.24,
+    "excess_percent_points": 6.87,
+    "identical_bytes": 62285,
+    "identical_percent": 9.69,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
-    "run_excess_percent_points": 5.8,
-    "run_identical_bytes": 37256,
-    "run_identical_percent": 5.8
+    "run_excess_percent_points": 5.2,
+    "run_identical_bytes": 33433,
+    "run_identical_percent": 5.2
   },
   "unit_size_agreement": {
     "agreeing_unit_ids": [

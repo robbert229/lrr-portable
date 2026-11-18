@@ -1,4 +1,4 @@
-# input_sha256: 544368d9b3728d05af4b75b15f308e23dd5012fb1a3baf9c6d756bf48179833c
+# input_sha256: aae27af1fa525fe35a906948e0e987730f654118ccf2132c42e62395c6179c82
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -436,7 +436,7 @@
 0x00412750 90.39 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
 0x00412af0 100.00 front_menu_draw_menu_image
-0x00412c00 59.95 front_menu_update
+0x00412c00 59.98 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
@@ -1897,7 +1897,7 @@
 0x00465370 100.00 sound_subsystem_enabled
 0x00465380 100.00 scene_effect_registry_reset
 0x004653a0 100.00 transient_effect_textures_preload
-0x00465430 96.49 transient_effect_emitter_create
+0x00465430 96.61 transient_effect_emitter_create
 0x00465970 100.00 transient_effect_registry_release_all
 0x004659b0 100.00 transient_effect_instance_release
 0x00465a90 100.00 transient_effect_registry_enable_set
@@ -3161,7 +3161,7 @@
 0x00412750 90.39 front_menu_item_draw_select_text_window
 0x004129d0 78.92 front_menu_draw_load_save_text
 0x00412af0 100.00 front_menu_draw_menu_image
-0x00412c00 59.95 front_menu_update
+0x00412c00 59.98 front_menu_update
 0x00413970 100.00 front_menu_update_mouse_position
 0x00413a60 100.00 front_menu_load_slot_images
 0x00413b50 100.00 front_menu_free_slot_images
@@ -4622,7 +4622,7 @@
 0x00465370 100.00 sound_subsystem_enabled
 0x00465380 100.00 scene_effect_registry_reset
 0x004653a0 100.00 transient_effect_textures_preload
-0x00465430 96.49 transient_effect_emitter_create
+0x00465430 96.61 transient_effect_emitter_create
 0x00465970 100.00 transient_effect_registry_release_all
 0x004659b0 100.00 transient_effect_instance_release
 0x00465a90 100.00 transient_effect_registry_enable_set
