@@ -5,8 +5,7 @@
  * thiscall class, finding 505 rule 8), and so is movie_unit.cpp. Shared C++
  * headers do not include this file (ADR 0005 entropy policy).
  *
- * The binary attests none of the names. The native port has no DirectShow:
- * there the entry points are video_graph_port.cpp's (no movie loads). */
+ * The binary attests none of the names. */
 #ifndef LEGORRR_GODS98_MOVIE_UNIT_H
 #define LEGORRR_GODS98_MOVIE_UNIT_H
 

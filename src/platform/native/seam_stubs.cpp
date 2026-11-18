@@ -6,13 +6,12 @@
  * The library substitutions of ADR 0007 replace these calls in the units:
  *
  *   DSOUND, WINMM mmio/MCI/mixer  -> [library:audio]
- *   AVIFIL32, OLE32 (DirectShow)  -> [library:video]
  *   ADVAPI32 registry             -> [library:config]
  *   LIBC directory routines,
  *   KERNEL32 GetDriveTypeA        -> [library:filesystem]
  *
  * A few calls are small enough to work here already (GlobalAlloc,
- * GlobalFree, wsprintfA, GetLastError, MultiByteToWideChar, the working
+ * GlobalFree, wsprintfA, GetLastError, the working
  * directory routines, OutputDebugStringA and GetCommandLineA, whose string
  * the process entry builds); they are marked as working. */
 #include <SDL3/SDL.h>
@@ -97,17 +96,6 @@ int wsprintfA(LPSTR output, LPCSTR format, ...)
     int written = vsnprintf(output, 1025, format, args);
     va_end(args);
     return written;
-}
-
-/* Working: the units only pass ASCII paths. */
-int MultiByteToWideChar(UINT codePage, DWORD flags, const char* text,
-                        int textLength, uint16_t* wide, int wideLength)
-{
-    int length = textLength < 0 ? (int)strlen(text) + 1 : textLength;
-    if (!wide || wideLength == 0) return length;
-    if (length > wideLength) length = wideLength;
-    for (int i = 0; i < length; i++) wide[i] = (unsigned char)text[i];
-    return length;
 }
 
 /* --- WINMM: mmio ([library:audio]) ------------------------------------- */
@@ -276,64 +264,6 @@ LONG RegQueryValueExA(HKEY key, const char* name, DWORD* reserved,
     return 2; /* ERROR_FILE_NOT_FOUND */
 }
 
-/* --- AVIFIL32 ([library:video]) ---------------------------------------- */
-
-/* Stub: no AVI opens. avi_player.cpp declares the parameters with its own
- * types. */
-void AVIFileInit(void)
-{
-    SEAM_STUB();
-}
-
-HRESULT AVIStreamOpenFromFileA(void** ppavi, LPCSTR file, DWORD type,
-                               LONG param, UINT mode, void* handler)
-{
-    SEAM_STUB();
-    if (ppavi) *ppavi = NULL;
-    return (HRESULT)0x80044067; /* AVIERR_FILEOPEN */
-}
-
-HRESULT AVIStreamInfoA(void* pavi, void* info, LONG size)
-{
-    SEAM_STUB();
-    return (HRESULT)0x80044067;
-}
-
-ULONG AVIStreamRelease(void* pavi)
-{
-    SEAM_STUB();
-    return 0;
-}
-
-void* AVIStreamGetFrameOpen(void* pavi, LPBITMAPINFOHEADER wanted)
-{
-    SEAM_STUB();
-    return NULL;
-}
-
-LPVOID AVIStreamGetFrame(void* frame, LONG position)
-{
-    SEAM_STUB();
-    return NULL;
-}
-
-/* --- OLE32: DirectShow's multimedia streams ([library:video]) ----------- */
-
-/* Stub: COM starts, but no class is registered. */
-HRESULT CoInitialize(void* reserved)
-{
-    SEAM_STUB();
-    return S_OK;
-}
-
-HRESULT CoCreateInstance(const GUID& clsid, void* outer, DWORD context,
-                         const GUID& iid, void** object)
-{
-    SEAM_STUB();
-    if (object) *object = NULL;
-    return (HRESULT)0x80040154; /* REGDB_E_CLASSNOTREG */
-}
-
 /* --- LIBC directory routines and KERNEL32 ([library:filesystem]) ------- */
 
 /* Stub: no directory listing. */
@@ -449,6 +379,15 @@ std::string HostPath(const char* path)
 FILE* files_native_fopen(const char* path, const char* mode)
 {
     return fopen(HostPath(path).c_str(), mode);
+}
+
+char* files_native_host_path(char* hostPath, const char* path,
+                             unsigned int maxLength)
+{
+    std::string host = HostPath(path);
+    if (host.size() + 1 > maxLength) return NULL;
+    memcpy(hostPath, host.c_str(), host.size() + 1);
+    return hostPath;
 }
 
 /* Working: a relative path is taken from the working directory. */

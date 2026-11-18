@@ -16,9 +16,8 @@
  * The binary attests none of the names (it has no RTTI); the classes and
  * functions use descriptive names.
  *
- * AVIFile is outside miniwin's scope: until the video substitution of
- * ADR 0007 ([library:video], FFmpeg) replaces it, the AVIFIL32 calls are
- * seam stubs (platform/native/seam_stubs.cpp), so no AVI opens. */
+ * AVIFile is outside miniwin's scope: ADR 0007's video substitution
+ * ([library:video], FFmpeg) replaces its calls. */
 #include "avi_player.h"
 
 
@@ -26,15 +25,18 @@
 #include <miniwin/windows.h>
 
 #include "files.h"
+#include "files_native.h"
+#include "library/video_ffmpeg.h"
 #include "../game/aitask.h"
 
-/* AVIFIL32, called through the import thunks (finding 574; crt.cpp pairs
- * the original's six thunks with VFW32.LIB's). The unit declares the part
- * of the AVIFile API it uses rather than including MSVC 5.0's vfw.h: that
- * header defines `static DWORD dwICValue;`, which would add a word to the
- * unit's .bss that the original's (00533998-005339a0) does not have. */
-struct AviStreamIface;                  /* IAVIStream */
-struct AviGetFrameIface;                /* IGetFrame */
+/* AVIFIL32 is outside miniwin's scope. ADR 0007's video substitution
+ * replaces it with FFmpeg (library/video_ffmpeg.h), call by call, at the
+ * sites marked `// [library:video]`: the AVI stream and its frame getter
+ * are both a VideoFile, AVIStreamInfoA's fields come from the video, and
+ * AVIStreamGetFrame's DIB is the decoded frame in the surface's format.
+ * Without FFmpeg no stream opens and the movie is not ok. */
+typedef VideoFile AviStreamIface;       /* IAVIStream */
+typedef VideoFile AviGetFrameIface;     /* IGetFrame */
 
 /* AVISTREAMINFOA (0x8c bytes). */
 struct AviStreamInfoA {
@@ -58,23 +60,8 @@ struct AviStreamInfoA {
     char szName[64];                    /* +0x4c */
 };
 
-extern "C" {
-void AVIFileInit(void);
-HRESULT AVIStreamOpenFromFileA(AviStreamIface** ppavi,
-                                         LPCSTR szFile, DWORD fccType,
-                                         LONG lParam, UINT mode,
-                                         void* pclsidHandler);
-HRESULT AVIStreamInfoA(AviStreamIface* pavi, AviStreamInfoA* psi,
-                                 LONG lSize);
-ULONG AVIStreamRelease(AviStreamIface* pavi);
-AviGetFrameIface* AVIStreamGetFrameOpen(AviStreamIface* pavi,
-                                                  LPBITMAPINFOHEADER lpbiWanted);
-LPVOID AVIStreamGetFrame(AviGetFrameIface* pg, LONG lPos);
-}
+#define AVI_MAX_PATH 1024
 
-#define OF_READ 0x00000000
-#define AVI_STREAMTYPE_VIDEO            0x73646976  /* mmioFOURCC('v','i','d','s') */
-#define AVI_GETFRAMEF_BESTDISPLAYFMT    1
 
 #include <miniwin/ddraw.h>
 #include <SDL3/SDL_timer.h>
@@ -347,9 +334,21 @@ AviMovie::AviMovie(char* fName) : m_init(false), m_ok(false), m_surf(NULL)
     m_rect.right = 0;
 
     if (!s_aviDisabled) {
-        if (AVIStreamOpenFromFileA(&m_aviStream, fName, AVI_STREAMTYPE_VIDEO, 0, OF_READ, NULL) == 0) {
-            if ((m_getFrame = AVIStreamGetFrameOpen(m_aviStream, (LPBITMAPINFOHEADER)AVI_GETFRAMEF_BESTDISPLAYFMT)) != NULL) {
-                if (AVIStreamInfoA(m_aviStream, &m_info, sizeof(m_info)) == 0) {
+        char hostPath[AVI_MAX_PATH];
+        unsigned int rate, scale, width, height;
+
+        if (files_native_host_path(hostPath, fName, sizeof(hostPath)) && // [library:filesystem]
+            (m_aviStream = video_open(hostPath, FALSE)) != NULL) { // [library:video]
+            if ((m_getFrame = m_aviStream) != NULL) { // [library:video]
+                /* AVIStreamInfoA: the fields the unit reads. */
+                video_get_rate(m_aviStream, &rate, &scale); // [library:video]
+                video_get_size(m_aviStream, &width, &height);
+                m_info.dwRate = rate;
+                m_info.dwScale = scale;
+                m_info.dwLength = video_get_frame_count(m_aviStream);
+                m_info.rcFrame.right = (LONG)width;
+                m_info.rcFrame.bottom = (LONG)height;
+                {
                     m_startTime = (DWORD)SDL_GetTicks() * 0.001f; // [library:time]
                     m_ok = true;
                     m_currFrame = 0;
@@ -371,7 +370,7 @@ AviMovie::AviMovie(char* fName) : m_init(false), m_ok(false), m_surf(NULL)
 AviMovie::~AviMovie()
 {
     if (!s_aviDisabled) {
-        if (m_aviStream) AVIStreamRelease(m_aviStream);
+        if (m_aviStream) video_close(m_aviStream); // [library:video]
         delete m_surf;
     }
 }
@@ -425,7 +424,13 @@ bool AviMovie::Update()
     if (!m_ok) return false;
     if (s_aviDisabled) return false;
 
-    if ((lpbi = (LPBITMAPINFOHEADER)AVIStreamGetFrame(m_getFrame, m_currFrame)) != NULL) {
+    /* AVIGETFRAMEF_BESTDISPLAYFMT: the DIB is in the surface's format. */
+    DDPIXELFORMAT* format = &m_surf->m_desc.ddpfPixelFormat; // [library:video]
+    if ((lpbi = (LPBITMAPINFOHEADER)video_get_frame_dib(m_getFrame, m_currFrame, // [library:video]
+                                                        format->dwRGBBitCount,
+                                                        format->dwRBitMask,
+                                                        format->dwGBitMask,
+                                                        format->dwBBitMask)) != NULL) {
         FrameToSurface(lpbi);
         DWORD time = (DWORD)SDL_GetTicks(); // [library:time]
         float rate = (float)m_info.dwRate, scale = (float)m_info.dwScale;
@@ -468,7 +473,7 @@ extern "C" {
 void avi_initialise(void* directDraw)
 {
     s_aviDirectDraw = (IDirectDraw4*)directDraw;
-    AVIFileInit();
+    video_available(); // [library:video]
 }
 
 // FUNCTION: LEGORR 0x0047ec90

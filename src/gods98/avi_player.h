@@ -5,8 +5,7 @@
  * frames, finding 505 rule 8), and so is avi_player.cpp. Shared C++ headers
  * do not include this file (ADR 0005 entropy policy).
  *
- * The binary attests none of the names. The port's own movie module keeps
- * its names (movie.hpp) and runs on its own code (avi_player_port.cpp). */
+ * The binary attests none of the names. */
 #ifndef LEGORRR_GODS98_AVI_PLAYER_H
 #define LEGORRR_GODS98_AVI_PLAYER_H
 
