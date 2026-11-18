@@ -6696,7 +6696,7 @@ void lego_cell_init_pass(Lego_Level* level, unsigned int bx, unsigned int by, in
  * routes around it. Inline in the original as well: 00430320 and 00430530
  * repeat its body. */
 // FUNCTION: LEGORR 0x004302b0
-inline void map_cell_tracking_flags_clear_and_refresh_current(const int cell_xy[2])
+void map_cell_tracking_flags_clear_and_refresh_current(const int cell_xy[2])
 {
     LEGO_2F_BLOCK(legoGlobs_currLevel, cell_xy[0], cell_xy[1]).flags1 &= ~0x20000000;
     LEGO_2F_BLOCK(legoGlobs_currLevel, cell_xy[0], cell_xy[1]).flags1 &= ~0x40000000;
@@ -6713,7 +6713,7 @@ inline void map_cell_tracking_flags_clear_and_refresh_current(const int cell_xy[
  * level through a local copy, the third through the global, so MSVC 5.0
  * cannot merge the three tests (as 0042c760's expansion does). */
 // FUNCTION: LEGORR 0x00430320
-inline void terrain_cell_work_flag_clear_current(const int coord[2], uint32_t selector)
+void terrain_cell_work_flag_clear_current(const int coord[2], uint32_t selector)
 {
     Lego_Level* currLevel = legoGlobs_currLevel;
     int i;
