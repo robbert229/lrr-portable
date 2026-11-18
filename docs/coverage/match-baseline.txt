@@ -1,4 +1,4 @@
-# input_sha256: aae27af1fa525fe35a906948e0e987730f654118ccf2132c42e62395c6179c82
+# input_sha256: 6a06257b307c3a76e58a820318d2a0f6128eee7cde032184ab0b38089b1ff649
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1020,7 +1020,7 @@
 0x00439e40 100.00 legoobject_record_flag20_query
 0x00439e70 100.00 legoobject_attached_object_list_detach
 0x0043a120 100.00 legoobject_cell_step_command_issue_with_jitter
-0x0043a300 88.27 legoobject_deposit_activity_gate
+0x0043a300 100.00 legoobject_deposit_activity_gate
 0x0043a5f0 100.00 legoobject_visual_resource_get_or_create
 0x0043a650 100.00 legoobject_action_kind_create_and_command_issue
 0x0043a7c0 100.00 legoobject_action_kind_supported
@@ -1091,7 +1091,7 @@
 0x00440bf0 100.00 legoobject_object_list_field_assign_all
 0x00440c30 100.00 legoobject_grid_route_search_adapter
 0x00440c70 51.91 legoobject_terrain_grid_path_search
-0x004410f0 71.13 legoobject_terrain_neighbor_path_check
+0x004410f0 73.60 legoobject_terrain_neighbor_path_check
 0x00441700 100.00 legoobject_route_setup_and_marker_associate
 0x00441940 100.00 legoobject_action_sequence_reset
 0x00441b30 100.00 legoobject_state_reset
@@ -3745,7 +3745,7 @@
 0x00439e40 100.00 legoobject_record_flag20_query
 0x00439e70 100.00 legoobject_attached_object_list_detach
 0x0043a120 100.00 legoobject_cell_step_command_issue_with_jitter
-0x0043a300 88.27 legoobject_deposit_activity_gate
+0x0043a300 100.00 legoobject_deposit_activity_gate
 0x0043a5f0 100.00 legoobject_visual_resource_get_or_create
 0x0043a650 100.00 legoobject_action_kind_create_and_command_issue
 0x0043a7c0 100.00 legoobject_action_kind_supported
@@ -3816,7 +3816,7 @@
 0x00440bf0 100.00 legoobject_object_list_field_assign_all
 0x00440c30 100.00 legoobject_grid_route_search_adapter
 0x00440c70 51.91 legoobject_terrain_grid_path_search
-0x004410f0 71.13 legoobject_terrain_neighbor_path_check
+0x004410f0 73.60 legoobject_terrain_neighbor_path_check
 0x00441700 100.00 legoobject_route_setup_and_marker_associate
 0x00441940 100.00 legoobject_action_sequence_reset
 0x00441b30 100.00 legoobject_state_reset
