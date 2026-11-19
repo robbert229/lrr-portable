@@ -382,7 +382,6 @@ unsigned int effect_update_all(float elapsed, unsigned int** completeTypes,
     unsigned int count = 0;
     unsigned int i, j;
     Effect_RockFall* rockFall;
-    Effect_FenceBeam* beam;
 
     effect_update_explosions(elapsed);
     effect_update_boulder_explode(elapsed);
@@ -409,12 +408,15 @@ unsigned int effect_update_all(float elapsed, unsigned int** completeTypes,
     *completeTypes = effectGlobs.rockFallCompletedTypes;
     *completeIndexes = effectGlobs.rockFallCompletedIndexes;
 
-    for (beam = effectGlobs.fenceBeams; beam < &effectGlobs.fenceBeams[EFFECT_FENCEBEAM_NUMTYPES]; beam++) {
+    /* Indexed, not a walking pointer: the original's outer loop rebases
+     * onto &fenceBeams[i].finished (`mov esi, edi`), which only the
+     * index form gives. */
+    for (i = 0; i < EFFECT_FENCEBEAM_NUMTYPES; i++) {
         for (j = 0; j < EFFECT_FENCEBEAM_MAXINSTANCES; j++) {
-            if (!beam->finished[j]) {
-                if (ddiscene_advance_by_time_target(beam->conts[j], elapsed) > 0.0f) {
-                    scene_render_lock_toggle(beam->conts[j], 1);
-                    beam->finished[j] = 1;
+            if (!effectGlobs.fenceBeams[i].finished[j]) {
+                if (ddiscene_advance_by_time_target(effectGlobs.fenceBeams[i].conts[j], elapsed) > 0.0f) {
+                    scene_render_lock_toggle(effectGlobs.fenceBeams[i].conts[j], 1);
+                    effectGlobs.fenceBeams[i].finished[j] = 1;
                 }
             }
         }
