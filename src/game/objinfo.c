@@ -314,7 +314,7 @@ void objinfo_draw_hunger(struct Lego_Object* liveObj, int screenX, int screenY)
     Point2F pos;
 
     if (objInfoGlobs.flags & OBJINFO_GLOB_FLAG_HUNGERIMAGES) {
-        level = (unsigned int)((liveObj->energy / 100.0f) * OBJINFO_HUNGERIMAGES);
+        level = (unsigned int)((liveObj->energy * 0.01f) * OBJINFO_HUNGERIMAGES);
         if (level > 4) level = 4;
         if (objInfoGlobs.HungerImages[level]) {
             pos = objInfoGlobs.HungerImagesPosition;
