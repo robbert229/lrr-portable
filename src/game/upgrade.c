@@ -121,6 +121,10 @@ extern struct LegoObject_Globs objectGlobs;
 #undef s_activity
 #define s_activity ((const char**)((char*)&objectGlobs + 0x534))
 #endif
+/* Maths.h's inline normalise. Its 1.0f (0049e7e0) follows the 0.0f the
+ * function above returns, so the copy is compiled here. */
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0046c130
 void upgrade_part_set_activity(Upgrade_PartModel* upgradeModel,
                                const char* activityName)
