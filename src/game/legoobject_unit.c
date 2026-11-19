@@ -7170,6 +7170,7 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
     Point2F d;
     Point2F pos;
     Point2F mpos;
+    Point2F ahead;
     int blockPos[2];
     float dir[3];
     float x;
@@ -7199,17 +7200,15 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
             float len;
             ddiscene_object_facing_pair_get(cont, NULL, dir, NULL);
             len = 1.0f / (float)sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
-            x = dir[0] * len * 15.0f;
-            y = dir[1] * len * 15.0f;
-            x += mpos.x;
-            y += mpos.y;
-            terrain_map_world_to_block(Lego_GetMap(), x, y, &blockPos[0], &blockPos[1]);
+            ahead.x = dir[0] * len * 15.0f;
+            ahead.y = dir[1] * len * 15.0f;
+            legoobject_o_vector2_add(&ahead, &ahead, &mpos);
+            terrain_map_world_to_block(Lego_GetMap(), ahead.x, ahead.y, &blockPos[0], &blockPos[1]);
             if (!terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&
                 !terrain_cell_occupied_or_flag_current(blockPos[0], blockPos[1], 1))
             {
-                y = pos.y - y;
-                x = pos.x - x;
-                if ((float)sqrt(x * x + y * y) < entity_stats_float_at6c(LEGOOBJ_SLOT(obj))) {
+                legoobject_o_vector2_subtract(&ahead, &pos, &ahead);
+                if (legoobject_o_vector2_modulus(&ahead) < entity_stats_float_at6c(LEGOOBJ_SLOT(obj))) {
                     legoobject_pairing_activity_raise_and_mutual_link(monster, obj);
                     return 0;
                 }
