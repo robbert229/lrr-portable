@@ -368,24 +368,31 @@ void tooltip_draw_box(Area2F box, ColourRGBF rgbNormal,
     unsigned int lineCount = 0;
     unsigned int i;
 
+    /* Each point is stored from its computed value, as in the original:
+     * box.x + i, box.y + i and the four far-edge terms are evaluated once
+     * (CSE) and stored from the x87 stack. Only toHi's first x and toLo's
+     * second x are copies of an element just stored (integer moves).
+     * toHi's second x still reads fromHi[lineCount - 1].x back from the
+     * array; the original adds 1 to the computed box.x + i, but written
+     * that way the function scores lower (31.91% against 46.56%). */
     for (i = 0; i < toolTipGlobs.borderSize; i++) {
         fromHi[lineCount].x = box.x + i;
         fromHi[lineCount].y = box.y + i;
         toHi[lineCount].x = fromHi[lineCount].x;
         toHi[lineCount].y = (box.y + box.height) - 2.0f - i;
-        fromLo[lineCount].x = fromHi[lineCount].x;
+        fromLo[lineCount].x = box.x + i;
         fromLo[lineCount].y = (box.y + box.height) - 1.0f - i;
         toLo[lineCount].x = (box.x + box.width) - 2.0f - i;
-        toLo[lineCount].y = fromLo[lineCount].y;
+        toLo[lineCount].y = (box.y + box.height) - 1.0f - i;
         lineCount++;
         fromHi[lineCount].x = (box.x + box.width) - 1.0f - i;
-        fromHi[lineCount].y = fromHi[lineCount - 1].y;
+        fromHi[lineCount].y = box.y + i;
         toHi[lineCount].x = fromHi[lineCount - 1].x - -1.0f;
-        toHi[lineCount].y = fromHi[lineCount].y;
-        fromLo[lineCount].x = fromHi[lineCount].x;
-        fromLo[lineCount].y = fromLo[lineCount - 1].y;
+        toHi[lineCount].y = box.y + i;
+        fromLo[lineCount].x = (box.x + box.width) - 1.0f - i;
+        fromLo[lineCount].y = (box.y + box.height) - 1.0f - i;
         toLo[lineCount].x = fromLo[lineCount].x;
-        toLo[lineCount].y = fromHi[lineCount].y - -1.0f;
+        toLo[lineCount].y = (box.y + i) - -1.0f;
         lineCount++;
     }
 
