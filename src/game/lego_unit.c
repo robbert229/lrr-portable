@@ -3846,12 +3846,14 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct EntityS
                                       legoGlobs_currLevel->f_0b0, bx, by);
     if (s_global_current_keys[0x11])
         lego_terrain_neighbor_flag_set(legoGlobs_currLevel, 0, bx, by);
-    if (s_global_current_keys[0x2e]) {
-        if (LEGO_KEY_PRESSED(0x2e) && selection_active_has_any_get())
+    /* Two tests of the key with no enclosing key test, as in the original.
+     * The second's nested if keeps the unit's label count, which the code of
+     * later functions follows. */
+    if (LEGO_KEY_PRESSED(0x2e) && selection_active_has_any_get())
+        entity_clear_nested_state_8_fields(selection_active_entity_get());
+    if (LEGO_KEY_PRESSED(0x2e))
+        if (selection_active_has_any_get())
             entity_clear_nested_state_8_fields(selection_active_entity_get());
-        if (LEGO_KEY_PRESSED(0x2e) && selection_active_has_any_get())
-            entity_clear_nested_state_8_fields(selection_active_entity_get());
-    }
     if (LEGO_KEY_PRESSED(0x58)) {
         if (legoGlobs_flags1 & 0x1000000) {
             legoGlobs_flags1 &= ~0x1000000;
