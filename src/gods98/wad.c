@@ -383,3 +383,8 @@ void* wad_file_data(int handle)
 }
 
 #include "gods98/d3drmdef_consts.h"
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049ead4, after the unit's
+ * named constants. The unread 100.0f after it (0049ead8) is
+ * not reproduced: no code of the unit creates it. */
+#include "maths_normalise_head.h"

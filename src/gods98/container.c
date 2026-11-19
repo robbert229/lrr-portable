@@ -646,6 +646,10 @@ static int Container_TextureSetSort(const void* a, const void* b);
 static void CNT_CDECL Container_TextureDestroyCallback(CntObject* obj,
                                                        void* arg);
 
+/* Maths.h's inline normalise. Its unread 1.0f (0049e88c) opens the
+ * unit's literal pool, before the 0.0f and 255.0f its code reads. */
+#include "maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x00472710
 Container* Container_Initialise(const char* gameName)
 {

@@ -849,3 +849,8 @@ void file_check_file(const char* fName)
 }
 
 #include "files_tail.h"
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049e9c8, the first word
+ * of the unit's .rdata. Its 0.0f partner at 0049e9cc, also unread,
+ * is not reproduced: no code of the unit creates it. */
+#include "maths_normalise_head.h"

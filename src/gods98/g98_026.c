@@ -81,3 +81,8 @@ void object_field_38_release_target(void* record)
 }
 
 #include "gods98/d3drmdef_consts.h"
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049ea98, the last word of
+ * the unit's .rdata. No code of the unit creates a literal, so the copy
+ * is compiled at the end, after every function. */
+#include "maths_normalise_head.h"

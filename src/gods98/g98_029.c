@@ -65,3 +65,8 @@ int registry_path_create_keys(HKEY root, const char* path, const char* name,
 }
 
 #include "g98_029_tail.h"
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049eac0, the last word of
+ * the unit's .rdata. No code of the unit creates a literal, so the copy
+ * is compiled at the end, after every function. */
+#include "maths_normalise_head.h"

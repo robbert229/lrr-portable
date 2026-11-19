@@ -421,3 +421,8 @@ int block_text_token_pool_watermark_peek(void)
 unsigned int config_unknown_506090[2] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x00506098
 ConfigGlobs configGlobs = { 0 };
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049e908, after the unit's
+ * named constants. Its 0.0f partner at 0049e90c, also unread,
+ * is not reproduced: no code of the unit creates it. */
+#include "maths_normalise_head.h"
