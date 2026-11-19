@@ -1,11 +1,16 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Write an i386 COFF object that holds only weak externals.
 
-usage: coff_weak_external.py OUT WEAK=DEFAULT [WEAK=DEFAULT ...]
+usage: coff_weak_external.py [--search=nolibrary|library|alias] OUT WEAK=DEFAULT [WEAK=DEFAULT ...]
 
 Each WEAK symbol becomes a weak external (storage class 105) whose default
-is DEFAULT, with IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY: LINK resolves a
-reference to WEAK to DEFAULT and does not search the libraries for WEAK.
+is DEFAULT, with the given search characteristic (default nolibrary,
+IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY). With nolibrary, LINK 5.0 resolves a
+reference to WEAK to DEFAULT when DEFAULT comes from a command-line object
+and the reference from a library member, as in the matching build; a
+reference from a plain object can still make it search the libraries.
+ReproBit's CMake import parses this command line (it never runs the script)
+and writes the same bytes itself, so the build passes --search explicitly.
 The object has no sections, so it adds nothing to the image.
 
 The matching build links one to give the original's one function two names.
@@ -24,9 +29,10 @@ IMAGE_FILE_MACHINE_I386 = 0x014C
 IMAGE_SYM_CLASS_EXTERNAL = 2
 IMAGE_SYM_CLASS_WEAK_EXTERNAL = 105
 IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY = 1
+SEARCH = {"nolibrary": 1, "library": 2, "alias": 3}
 
 
-def build(aliases: list[tuple[str, str]]) -> bytes:
+def build(aliases: list[tuple[str, str]], search: int = IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY) -> bytes:
     strtab = bytearray()
 
     def name(text: str) -> bytes:
@@ -49,8 +55,7 @@ def build(aliases: list[tuple[str, str]]) -> bytes:
     for weak, default in aliases:
         symbols += name(weak) + struct.pack(
             "<IhHBB", 0, 0, 0, IMAGE_SYM_CLASS_WEAK_EXTERNAL, 1)
-        symbols += struct.pack("<II", defaults[default],
-                               IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY) + bytes(10)
+        symbols += struct.pack("<II", defaults[default], search) + bytes(10)
         count += 2
     header = struct.pack("<HHIIIHH", IMAGE_FILE_MACHINE_I386, 0, 0, 20,
                          count, 0, 0)
@@ -58,11 +63,19 @@ def build(aliases: list[tuple[str, str]]) -> bytes:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) < 3 or any("=" not in arg for arg in argv[2:]):
+    args = argv[1:]
+    search = IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY
+    if args and args[0].startswith("--search="):
+        value = args.pop(0).split("=", 1)[1]
+        if value not in SEARCH:
+            print(__doc__.strip().splitlines()[2], file=sys.stderr)
+            return 2
+        search = SEARCH[value]
+    if len(args) < 2 or any("=" not in arg for arg in args[1:]):
         print(__doc__.strip().splitlines()[2], file=sys.stderr)
         return 2
-    aliases = [tuple(arg.split("=", 1)) for arg in argv[2:]]
-    Path(argv[1]).write_bytes(build(aliases))  # type: ignore[arg-type]
+    aliases = [tuple(arg.split("=", 1)) for arg in args[1:]]
+    Path(args[0]).write_bytes(build(aliases, search))  # type: ignore[arg-type]
     return 0
 
 

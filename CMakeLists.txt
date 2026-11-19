@@ -379,7 +379,7 @@ if(LRR_CLASSIC_MSVC5)
   set(_lrr_weak_delete "${CMAKE_BINARY_DIR}/weak_operator_delete.obj")
   add_custom_command(OUTPUT "${_lrr_weak_delete}"
     COMMAND "${Python3_EXECUTABLE}"
-      "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py" --search=nolibrary
       "${_lrr_weak_delete}" "??3@YAXPAX@Z=_ui_render_record_free"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py"
     VERBATIM)
