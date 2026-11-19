@@ -650,6 +650,11 @@ void weapons_projectile_update(Weapons_Projectile* projectile, float elapsed)
     }
 }
 
+/* A removed helper's -0.5f and 0.5f (0049e83c-0049e840), which the
+ * original creates here, before weapons_projectile_create_curved's
+ * literals. */
+#include "weapons_extent_head.h"
+
 // FUNCTION: LEGORR 0x0046faf0
 int weapons_projectile_create(Weapons_Object* owner, Weapons_Vector3F* pos,
                               Weapons_Vector3F* dir, int weaponType,
@@ -1360,6 +1365,11 @@ void weapons_model_aim(Weapons_Model* model, Weapons_Vector3F* target,
                                              0.0f, 0.0f, -1.0f);
     }
 }
+
+/* A removed helper's unread 100.0f and 150.0f (0049e870-0049e874),
+ * after weapons_model_aim's 5.0f and before weapons_model_aim_update's
+ * 10000.0f. */
+#include "weapons_range_head.h"
 
 // FUNCTION: LEGORR 0x00471c70
 void weapons_model_fire_dir_get(Weapons_Model* model, Weapons_Vector3F* dir,
