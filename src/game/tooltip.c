@@ -444,9 +444,9 @@ void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
         else box.x = (float)mouseX;
     }
     box.y = (float)(toolTipGlobs.offsetY + mouseY);
-    box.height = (float)height;
-    if (box.y + box.height > (float)toolTipGlobs.appHeight) box.y = (float)(mouseY - height) - 1.0f;
+    if (box.y + (float)height > (float)toolTipGlobs.appHeight) box.y = (float)(mouseY - height) - 1.0f;
     box.width = (float)width;
+    box.height = (float)height;
 
     tooltip_draw_box(box, rgbNormal, rgbHighlight, rgbShadow, 0);
 
@@ -465,8 +465,10 @@ void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
                      "%s", toolTip->textBuffer);
         for (i = 0; i < toolTip->iconCount; i++) {
             if (toolTip->iconList[i]) {
-                pos.x = x + (box.x + toolTipGlobs.borderSize + toolTipGlobs.offset);
-                pos.y = mouseX + (box.y + toolTipGlobs.borderSize + toolTipGlobs.offset);
+                pos.x = box.x + toolTipGlobs.borderSize + toolTipGlobs.offset;
+                pos.y = box.y + toolTipGlobs.borderSize + toolTipGlobs.offset;
+                pos.x += x;
+                pos.y += mouseX;
                 image_display_scaled(toolTip->iconList[i], NULL, &pos, NULL);
                 if ((int)toolTip->iconList[i]->height > (int)rowHeight) rowHeight = toolTip->iconList[i]->height;
                 x += toolTip->iconList[i]->width;
