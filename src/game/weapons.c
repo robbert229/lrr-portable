@@ -878,7 +878,7 @@ int weapons_object_quad_intersect(Weapons_Object* obj, float* fromPos,
     float edge[2];
     float hit[2];
     unsigned int i;
-    float* pt;
+    unsigned int j;
 
     cont = entity_type_component_get(obj);
     from[0] = fromPos[0];
@@ -905,16 +905,16 @@ int weapons_object_quad_intersect(Weapons_Object* obj, float* fromPos,
     }
     points[4][0] = points[0][0];
     points[4][1] = points[0][1];
-    for (i = 0, pt = points[0]; i < 4; i++, pt += 2) {
-        edge[0] = pt[0] - pt[2];
-        edge[1] = pt[1] - pt[3];
-        if (line_intersection_2d_compute(hit, from, to, pt, edge)) {
-            if ((float)fabs(pt[0] - pt[2]) <= (float)fabs(pt[1] - pt[3])) {
-                if ((hit[1] > pt[1] && hit[1] < pt[3]) ||
-                    (pt[1] > hit[1] && pt[3] < hit[1])) goto found;
+    for (j = 0; j < 4; j++) {
+        edge[0] = points[j][0] - points[j + 1][0];
+        edge[1] = points[j][1] - points[j + 1][1];
+        if (line_intersection_2d_compute(hit, from, to, points[j], edge)) {
+            if (fabs(points[j][0] - points[j + 1][0]) > fabs(points[j][1] - points[j + 1][1])) {
+                if ((hit[0] > points[j][0] && hit[0] < points[j + 1][0]) ||
+                    (hit[0] < points[j][0] && hit[0] > points[j + 1][0])) goto found;
             }
-            else if ((hit[0] > pt[0] && hit[0] < pt[2]) ||
-                     (hit[0] < pt[0] && hit[0] > pt[2])) {
+            else if ((hit[1] > points[j][1] && hit[1] < points[j + 1][1]) ||
+                     (hit[1] < points[j][1] && hit[1] > points[j + 1][1])) {
 found:
                 if (intersection != NULL) {
                     intersection[0] = hit[0];
