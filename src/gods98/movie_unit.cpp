@@ -227,13 +227,24 @@ struct G98CMovie {
     unsigned int GetDuration();
     void SetPosition(unsigned int ms);
 
-    /* Deviation (scoring only): the original's new-expression and
-     * destructor call the global operator new (LIBC's, 0x0048ead0) and
-     * delete (0x0045daf0), as in avi_player.cpp. */
+    /* Deviation (scoring only): the original's new-expressions call the
+     * global operator new (LIBC's, 0x0048ead0); movie_free and the
+     * new-expressions' EH funclets call the global operator delete
+     * (0x0045daf0), as in avi_player.cpp. A class-scope operator new
+     * forwards to the function that carries the annotation.
+     *
+     * The matching build uses the global operator delete, which the build
+     * aliases to ui_render_record_free (0x0045daf0) with a weak external
+     * (finding 696). A class-scope one would cost an out-of-line COMDAT, as
+     * MSVC 5.0 does not inline it into movie_load's funclets. The port has
+     * no global operator delete under that name, so it keeps a class-scope
+     * one. */
     // PORT-ONLY: routes new to the original's operator new (0x0048ead0)
     static void* operator new(size_t size) { return MOVIE_OPERATOR_NEW(size); }
+#if !defined(_MSC_VER)
     // PORT-ONLY: routes delete to the original's operator delete (0x0045daf0)
     static void operator delete(void* p) { ui_render_record_free(p); }
+#endif
 
     MovieAMStream* m_amStream;          /* +0x00 */
     HRESULT m_err;                      /* +0x04 */

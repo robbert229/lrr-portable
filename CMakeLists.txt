@@ -374,12 +374,15 @@ if(LRR_CLASSIC_MSVC5)
   # The original's operator delete is 0045daf0, which C code also calls as a
   # plain function (ui_render_record_free). LINK 5.0 has no /ALTERNATENAME,
   # so a section-less object gives that function the C++ name too, as a weak
-  # external (finding 696). It adds nothing to the image.
+  # external (finding 696). It adds nothing to the image. The alias
+  # characteristic resolves references from command-line objects such as
+  # movie_unit.cpp's to the default too; with nolibrary, LINK would search
+  # the libraries for them and take LIBC's delete.obj.
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   set(_lrr_weak_delete "${CMAKE_BINARY_DIR}/weak_operator_delete.obj")
   add_custom_command(OUTPUT "${_lrr_weak_delete}"
     COMMAND "${Python3_EXECUTABLE}"
-      "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py" --search=nolibrary
+      "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py" --search=alias
       "${_lrr_weak_delete}" "??3@YAXPAX@Z=_ui_render_record_free"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py"
     VERBATIM)

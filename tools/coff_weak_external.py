@@ -7,9 +7,11 @@ Each WEAK symbol becomes a weak external (storage class 105) whose default
 is DEFAULT, with the given search characteristic (default nolibrary,
 IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY). With nolibrary, LINK 5.0 resolves a
 reference to WEAK to DEFAULT when DEFAULT comes from a command-line object
-and the reference from a library member, as in the matching build; a
-reference from a plain object can still make it search the libraries.
-ReproBit's CMake import parses this command line (it never runs the script)
+and the reference from a library member; a reference from a plain object
+can still make it search the libraries. With alias, it resolves both kinds
+of reference to DEFAULT. The matching build passes alias, because
+movie_unit.cpp's object, which refers to the global operator delete, is on
+the command line (finding 696). ReproBit's CMake import parses this command line (it never runs the script)
 and writes the same bytes itself, so the build passes --search explicitly.
 The object has no sections, so it adds nothing to the image.
 

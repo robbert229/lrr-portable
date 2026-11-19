@@ -88,8 +88,10 @@ LINK 5.0 has no `/ALTERNATENAME` (finding 560), but it resolves COFF weak
 externals: its error text includes "cannot find resolution for weak
 extern". `tools/coff_weak_external.py` writes a section-less object whose
 only weak external, `??3@YAXPAX@Z`, defaults to `_ui_render_record_free`.
-It uses `IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY`, so LINK never pulls LIBC's
-`delete.obj`. The matching build links it as `weak_operator_delete.obj`. It
+It first used `IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY`, which kept LINK from
+pulling LIBC's `delete.obj` while every reference came from a library member
+(see *movie_unit.cpp* below for why the build now uses
+`IMAGE_WEAK_EXTERN_SEARCH_ALIAS`). The matching build links it as `weak_operator_delete.obj`. It
 has no sections and adds no bytes. avi_player.cpp drops the class-scope
 `operator delete` under `_MSC_VER`. The funclets and the scalar deleting
 destructors then call the global one, and LINK resolves it to
@@ -151,9 +153,51 @@ after); `~AviSurface` stays at 94.74%, `FrameToSurface` at 66.36% and
 `Update` at 96.49%. The scalar deleting destructors and both funclets now
 call `ui_render_record_free` directly.
 
-## Not done here
+## movie_unit.cpp
 
-`movie_unit.cpp`'s `G98CMovie` has the same class-scope `operator delete`,
-and its `??3G98CMovie@@SAXPAX@Z` (0x10, at `00472640` in the rebuild) is
-extra in the same way. The same `#if !defined(_MSC_VER)` would remove it,
-but its symbol-counter effects have not been checked.
+`movie_unit.cpp`'s `G98CMovie` had the same class-scope `operator delete`.
+`movie_load`'s two new-expressions have EH funclets, and they called an
+out-of-line `??3G98CMovie@@SAXPAX@Z` (0x10), extra between `movie_load` and
+`movie_get_size`. `movie_free`'s `delete` already inlined it and called
+`0045daf0` directly. The matching build now drops it under `_MSC_VER`, as
+avi_player.cpp does, and the funclets and `movie_free` call the global
+`operator delete`. Two of the original's four funclets that call
+`0045daf0`, at `0049dd90` and `0049dd9e`, are movie_load's: they free the
+pointer at `[ebp-0x210]`, and the rebuilt ones are the same instructions.
+
+With `--search=nolibrary`, that broke the alias. `movie_unit.cpp.obj` is a
+command-line object, not a member of `unit_gods98.lib`, and LINK 5.0
+searches the libraries for a plain object's reference to a nolibrary weak
+external. It pulled LIBC's `delete.obj` (`0048ea50`), and `movie_free` and
+both scalar deleting destructors fell from 100% to 90.91%. Listing the weak
+object first on the command line made no difference. A scratch relink with
+`IMAGE_WEAK_EXTERN_SEARCH_LIBRARY` also pulled `delete.obj`. With
+`IMAGE_WEAK_EXTERN_SEARCH_ALIAS`, LINK resolves both kinds of reference to
+`_ui_render_record_free`, and `delete.obj` stays out. ReproBit's LINK 5.0
+probe (`tests/test_coff_weak_alias.py` in the fork) records the same
+behaviour. The matching build now passes `--search=alias`.
+
+The symbol counter: the removed inline operator was a declaration before
+every function in the unit. The unit's compiler-generated labels are now
+numbered 4 lower (`$L30258` becomes `$L30254`), but no function changed
+bytes (relocations masked), and no score changed (3,022 functions, before
+against after). The call targets alone differ: the funclets and
+`movie_free` now name `??3@YAXPAX@Z`, which LINK resolves to
+`ui_render_record_free`. The rebuilt `.text` is 16 bytes shorter (642,517
+against 642,533). Every function is at the original's size and offset in the
+unit, which starts at `004721b0` in the rebuild (the units before it are
+0x30 short):
+
+| Original | Function | Size | Offset in unit |
+| --- | --- | ---: | ---: |
+| `004721e0` | `G98CMovie::InitSample` | 0xd0 | 0x000 |
+| `004722b0` | `G98CMovie::OpenStream` | 0xe0 | 0x0d0 |
+| `00472390` | `G98CMovie::G98CMovie` | 0xa0 | 0x1b0 |
+| `00472430` | `G98CMovie::~G98CMovie` | 0x70 | 0x250 |
+| `004724a0` | `G98CMovie::Update` | 0x90 | 0x2c0 |
+| `00472530` | `G98CMovie::GetDuration` | 0x30 | 0x350 |
+| `00472560` | `movie_load` | 0x110 | 0x380 |
+| `00472670` | `movie_get_size` | 0x50 | 0x490 |
+| `004726c0` | `movie_get_duration` | 0x10 | 0x4e0 |
+| `004726d0` | `movie_update` | 0x20 | 0x4f0 |
+| `004726f0` | `movie_free` | 0x20 | 0x510 |
