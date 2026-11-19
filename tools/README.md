@@ -1299,7 +1299,37 @@ may need a longer run before its donor compiles like the seed). Grind can then a
 `retail_exact_donor_rewriting` record when the donor holds the original's
 instructions in another order (robbert229/reprobit#19). Neither does one whose unpadded unit already gives the
 original's body, since its difference lies elsewhere and grind would find
-the donor identical to the seed. Output goes under `reference/` only, which
+the donor identical to the seed.
+
+The synthetic body's relocations sit at the original's own address fields,
+not the compile's, so a function whose instruction layout differs from the
+compile's still gets a faithful reference (`explain_synthetic_reference`):
+
+- `ia32_fields.py` decodes both bodies with ReproBit's opcode tables (its
+  tests check the lengths against the fork's `ia32_decode.py`). The
+  original's address fields are its ModRM `disp32`, `moffs32` and `imm32`
+  operands whose value lies in the original image, its `rel32` branches out
+  of the function (and calls to itself), and its jump-table entries, which
+  follow its code end as the compile's follow the compile's.
+- The instruction shapes (opcode, addressing form, field kinds; no registers,
+  displacements or immediates) are aligned by longest common subsequence. A
+  field's candidates are the compile's relocations at the same operand of
+  the instructions it pairs with in some longest alignment, else at an
+  operand of the same kind between its aligned neighbours, else at that
+  operand of any instruction of its shape.
+- Candidates are narrowed until each field has one: a symbol resolves to
+  one address (address minus addend), an address to one symbol plus addend,
+  and a function Reccmp pairs (`build-reccmp`'s report and map,
+  `known_addresses`) to its original address. The compile's relocations
+  and the original's fields must then correspond one to one.
+- An external target keeps the compile's addend; an internal one (a jump
+  table, a case label) takes the original's offset in the function.
+
+It refuses, and prints why, when a field has no candidate or several, the
+checks contradict each other, one side has a field the other lacks, or the
+original's body runs past the compile's length. When the layouts agree, the
+object is the compile with the original's bytes outside its relocated
+fields, as before. Output goes under `reference/` only, which
 is never committed. Exit status: 0 when every address has a reference or
 needs none, 1 when one has no pad count, 2 on errors. Never run it while a
 build compiles the tree.

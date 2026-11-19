@@ -133,22 +133,170 @@ class CountWindowTest(unittest.TestCase):
         self.assertTrue(start <= 121 <= stop)
 
 
-class SyntheticReferenceTest(unittest.TestCase):
-    def _object(self, body: bytes) -> bytes:
-        return _coff_with_function(body)
+ADDRESS = 0x401000  # the original function's address in these tests
+RANGES = [(0x401000, 0x402000), (0x410000, 0x411000)]
+D, G, H = 0x410100, 0x401800, 0x401900  # the original's _d, _g and _h
+DIR32, REL32 = 0x06, 0x14
 
+
+def _object(body: bytes, relocations: list[tuple[int, int, int]], names=("_d", "_g", "_h")) -> bytes:
+    """An i386 COFF: ``_f`` (symbol 0) holding ``body``, then undefined ``names``."""
+    raw = 20 + 40
+    rel = raw + len(body)
+    sym = rel + 10 * len(relocations)
+    header = struct.pack("<HHIIIHH", 0x14C, 1, 0, sym, 1 + len(names), 0, 0)
+    section = b".text\0\0\0" + struct.pack("<IIIIIIHHI", 0, 0, len(body), raw, rel, 0,
+                                              len(relocations), 0, msvc_coff.IMAGE_SCN_CNT_CODE)
+    table = b"".join(struct.pack("<IIH", *r) for r in relocations)
+    symbols = b"_f\0\0\0\0\0\0" + struct.pack("<IhHBB", 0, 1, FUNCTION, 2, 0)
+    for name in names:
+        symbols += name.encode().ljust(8, b"\0") + struct.pack("<IhHBB", 0, 0, FUNCTION, 2, 0)
+    return header + section + body + table + symbols + struct.pack("<I", 4)
+
+
+def rel32(target: int, field: int) -> bytes:
+    """The original's rel32 at body offset ``field`` that branches to ``target``."""
+    return struct.pack("<I", (target - (ADDRESS + field + 4)) & 0xFFFFFFFF)
+
+
+def u32(value: int) -> bytes:
+    return struct.pack("<I", value)
+
+
+def relocations(data: bytes) -> list[tuple[int, str, int, int]]:
+    """(offset, symbol, type, addend) of ``_f``'s relocations."""
+    coff = msvc_coff.parse_coff(data)
+    body = coff.section(1).data
+    return [(r.offset, coff.symbols[r.symbol].name, r.type, struct.unpack_from("<I", body, r.offset)[0])
+            for r in coff.section(1).relocations]
+
+
+def explain(data: bytes, original: bytes, **kwargs):
+    return rr.explain_synthetic_reference(data, "_f", original, address=ADDRESS, ranges=RANGES, **kwargs)
+
+
+class SyntheticReferenceTest(unittest.TestCase):
     def test_the_original_body_replaces_the_compile_outside_relocations(self):
         compiled = bytes.fromhex("8d4c24088d542408e800000000c3")
         original = bytes.fromhex("8d5424088d4c2408e8aabbccddc3")
-        data = rr.synthetic_reference(self._object(compiled), "_f", original)
+        data = rr.synthetic_reference(_coff_with_function(compiled), "_f", original,
+                                      address=ADDRESS, ranges=RANGES)
         body, spans = rr.function_body(msvc_coff.parse_coff(data), "_f")
         self.assertEqual(spans, [(9, 13)])
         self.assertEqual(body, bytes.fromhex("8d5424088d4c2408e800000000c3"))
 
     def test_no_reference_when_lengths_differ_or_bodies_agree(self):
         compiled = bytes.fromhex("8d4c24088d542408e800000000c3")
-        self.assertIsNone(rr.synthetic_reference(self._object(compiled), "_f", compiled[:-1]))
-        self.assertIsNone(rr.synthetic_reference(self._object(compiled), "_f", compiled))
+        obj = _coff_with_function(compiled)
+        self.assertIsNone(rr.synthetic_reference(obj, "_f", compiled[:-1], address=ADDRESS, ranges=RANGES))
+        self.assertIsNone(rr.synthetic_reference(obj, "_f", compiled, address=ADDRESS, ranges=RANGES))
+        linked = compiled[:9] + rel32(G, 9) + compiled[13:]
+        self.assertIsNone(rr.synthetic_reference(obj, "_f", linked, address=ADDRESS, ranges=RANGES))
+
+    def test_same_layout_is_the_seed_with_the_original_outside_its_relocations(self):
+        # mov ecx, [_d+4]; push ecx; call _g; add esp, 4; ret -- the original uses eax.
+        seed = bytes.fromhex("8b0d04000000" "51" "e800000000" "83c404" "c3")
+        original = bytes.fromhex("8b05") + u32(D + 4) + bytes.fromhex("50" "e8") + rel32(G, 8) \
+            + bytes.fromhex("83c404" "c3")
+        data = _object(seed, [(2, 1, DIR32), (8, 2, REL32)])
+        got, reason = explain(data, original)
+        self.assertEqual(reason, "written")
+        # What the reference was before fields were placed by alignment: the
+        # seed's relocated fields copied over the original's bytes.
+        expected = bytearray(data)
+        legacy = bytearray(original)
+        legacy[2:6], legacy[8:12] = seed[2:6], seed[8:12]
+        expected[60:60 + len(seed)] = legacy
+        self.assertEqual(got, bytes(expected))
+
+    def test_shifted_fields_take_their_aligned_targets(self):
+        # sub esp, 8; mov ecx, [_d+4]; push ecx; call _g; mov eax, [_d+8]; add esp, 0xc; ret
+        seed = bytes.fromhex("83ec08" "8b0d04000000" "51" "e800000000" "a108000000" "83c40c" "c3")
+        # sub esp, 0x10; push esi; mov eax, [d+8]; mov ecx, [d+4]; push ecx; call g; pop esi; ret; nop
+        original = bytes.fromhex("83ec10" "56" "a1") + u32(D + 8) + bytes.fromhex("8b0d") + u32(D + 4) \
+            + bytes.fromhex("51" "e8") + rel32(G, 17) + bytes.fromhex("5e" "c3" "90")
+        self.assertEqual(len(seed), len(original))
+        data = _object(seed, [(5, 1, DIR32), (11, 2, REL32), (16, 1, DIR32)])
+        got, reason = explain(data, original)
+        self.assertEqual(reason, "written")
+        self.assertEqual(relocations(got), [(5, "_d", DIR32, 8), (11, "_d", DIR32, 4), (17, "_g", REL32, 0)])
+        body = rr.function_body(msvc_coff.parse_coff(got), "_f")[0]
+        self.assertEqual(body, original[:5] + u32(8) + original[9:11] + u32(4) + original[15:17] + u32(0)
+                         + original[21:])
+
+    def test_jump_tables_follow_the_original_code_end(self):
+        # mov eax, [esp+4]; jmp [eax*4 + table]; case 0: mov eax, 1; ret; case 1: mov eax, 2; ret;
+        # fill; table
+        seed = bytes.fromhex("8b442404" "ff2485" "18000000" "b801000000" "c3" "b802000000" "c3" "90"
+                             "0b000000" "11000000")
+        # The original's first case is two bytes shorter, so its table starts at 22 and fill ends it.
+        original = bytes.fromhex("8b442404" "ff2485") + u32(ADDRESS + 22) + bytes.fromhex(
+            "6a01" "58" "c3" "b802000000" "c3" "90") + u32(ADDRESS + 11) + u32(ADDRESS + 15) + b"\x90\x90"
+        self.assertEqual(len(seed), len(original))
+        data = _object(seed, [(7, 0, DIR32), (24, 0, DIR32), (28, 0, DIR32)])
+        got, reason = explain(data, original)
+        self.assertEqual(reason, "written")
+        self.assertEqual(relocations(got), [(7, "_f", DIR32, 22), (22, "_f", DIR32, 11), (26, "_f", DIR32, 15)])
+
+    def test_refuses_an_address_field_the_seed_lacks(self):
+        seed = bytes.fromhex("b878563412" "c3")  # mov eax, 0x12345678 (no relocation)
+        original = bytes.fromhex("b8") + u32(D) + bytes.fromhex("c3")  # mov eax, offset d
+        got, reason = explain(_object(seed, []), original)
+        self.assertIsNone(got)
+        self.assertIn("no aligned seed relocation", reason)
+
+    def test_refuses_a_relocation_the_original_lacks(self):
+        seed = bytes.fromhex("a100000000" "8bc1" "c3")  # mov eax, [_d]; mov eax, ecx
+        original = bytes.fromhex("a110000000" "8bc2" "c3")  # [0x10] is no image address
+        got, reason = explain(_object(seed, [(1, 1, DIR32)]), original)
+        self.assertIsNone(got)
+        self.assertIn("the original has 0 fields for _d and the seed 1 relocations", reason)
+
+    def test_refuses_a_symbol_at_two_addresses(self):
+        seed = bytes.fromhex("8b0500000000" "8b0d04000000" "c3")  # [_d]; [_d+4]
+        original = bytes.fromhex("8b15") + u32(D) + bytes.fromhex("8b0d") + u32(D + 0x100) + b"\xc3"
+        got, reason = explain(_object(seed, [(2, 1, DIR32), (8, 1, DIR32)]), original)
+        self.assertIsNone(got)
+        self.assertIn("give _d two addresses", reason)
+
+    def test_refuses_an_ambiguous_alignment(self):
+        seed = bytes.fromhex("e800000000" "e800000000" "c3")  # call _g; call _h
+        original = bytes.fromhex("e8") + rel32(H, 1) + bytes.fromhex("9090909090" "c3")
+        got, reason = explain(_object(seed, [(1, 2, REL32), (6, 3, REL32)]), original)
+        self.assertIsNone(got)
+        self.assertIn("aligns with seed relocations to different targets", reason)
+
+    def test_known_addresses_pin_swapped_calls(self):
+        seed = bytes.fromhex("e800000000" "e800000000" "8bc1" "c3")  # call _g; call _h
+        original = bytes.fromhex("e8") + rel32(H, 1) + bytes.fromhex("e8") + rel32(G, 6) \
+            + bytes.fromhex("8bc2" "c3")
+        data = _object(seed, [(1, 2, REL32), (6, 3, REL32)])
+        got, reason = explain(data, original, known={"_g": G, "_h": H})
+        self.assertEqual(reason, "written")
+        self.assertEqual(relocations(got), [(1, "_h", REL32, 0), (6, "_g", REL32, 0)])
+
+    def test_known_addresses_rule_out_a_wrong_alignment(self):
+        seed = bytes.fromhex("e800000000" "e800000000" "8bc1" "c3")  # call _g; call _h
+        other = 0x401A00  # the original calls a function the seed does not
+        original = bytes.fromhex("e8") + rel32(other, 1) + bytes.fromhex("e8") + rel32(H, 6) \
+            + bytes.fromhex("8bc2" "c3")
+        data = _object(seed, [(1, 2, REL32), (6, 3, REL32)])
+        self.assertEqual(explain(data, original)[1], "written")  # alignment alone pairs _g with it
+        got, reason = explain(data, original, known={"_g": G, "_h": H})
+        self.assertIsNone(got)
+        self.assertIn("the original's field at 1 has no aligned seed relocation", reason)
+
+    def test_known_addresses_from_the_report_and_map(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            build = Path(tmp)
+            (build / "reccmp-report").mkdir()
+            (build / "reccmp-report" / "results.json").write_text(json.dumps({"data": [
+                {"address": "0x401800", "recomp": "0x401810"}, {"address": "0x402000"}]}))
+            (build / "LegoRR.map").write_text(
+                " 0001:00000810       _g 00401810 f a.obj\n 0001:00000900       _h 00401900 f a.obj\n")
+            self.assertEqual(rr.known_addresses(build), {"_g": 0x401800})
+            self.assertEqual(rr.known_addresses(build / "missing"), {})
 
 
 class StaticSymbolTest(unittest.TestCase):
