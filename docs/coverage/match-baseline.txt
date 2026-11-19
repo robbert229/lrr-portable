@@ -1,4 +1,4 @@
-# input_sha256: 55fdea9cd4b203ec9c4d39ac651996547d18340927651ab909ecad6737e78b40
+# input_sha256: 4b983744ee29884cb979b1d6a0637023e2cb00140deabaceddb552c4b02ec366
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -661,7 +661,7 @@
 0x0041ec30 89.19 interface_draw_object_count
 0x0041eca0 100.00 interface_draw_dependencies
 0x0041ee60 100.00 interface_reset_dependency_timer
-0x0041ee80 72.39 interface_get_dependency_at_point
+0x0041ee80 77.88 interface_get_dependency_at_point
 0x0041f100 100.00 interface_object_type_present
 0x0041f190 97.14 interface_callback_object_search
 0x0041f230 100.00 interface_any_object_of_type2
@@ -3386,7 +3386,7 @@
 0x0041ec30 89.19 interface_draw_object_count
 0x0041eca0 100.00 interface_draw_dependencies
 0x0041ee60 100.00 interface_reset_dependency_timer
-0x0041ee80 72.39 interface_get_dependency_at_point
+0x0041ee80 77.88 interface_get_dependency_at_point
 0x0041f100 100.00 interface_object_type_present
 0x0041f190 97.14 interface_callback_object_search
 0x0041f230 100.00 interface_any_object_of_type2
