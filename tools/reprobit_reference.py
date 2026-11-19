@@ -112,11 +112,13 @@ def image_ranges(exe: bytes) -> list[tuple[int, int]]:
 
 
 def known_addresses(build: Path) -> dict[str, int]:
-    """Original addresses of the matching build's functions Reccmp pairs, by COFF name.
+    """Original addresses of the matching build's functions Reccmp pairs, and of
+    its .data and .bss symbols, by COFF name.
 
     Read from ``build``'s Reccmp report and link map; empty when either is
-    missing. They pin a synthetic reference's calls where alignment alone
-    cannot tell two calls apart.
+    missing. They pin a synthetic reference's calls and global references
+    where alignment alone cannot tell two apart, such as two fields of one
+    global struct.
     """
     import re
 
@@ -128,9 +130,18 @@ def known_addresses(build: Path) -> dict[str, int]:
              for e in json.loads(results.read_text())["data"] if e.get("recomp")}
     known: dict[str, int] = {}
     for line in link_map.read_text(errors="replace").splitlines():
-        match = re.match(r"\s*[0-9a-f]{4}:[0-9a-f]{8}\s+(\S+)\s+([0-9a-f]{8})\b", line)
-        if match and int(match.group(2), 16) in pairs:
-            known.setdefault(match.group(1), pairs[int(match.group(2), 16)])
+        match = re.match(r"\s*([0-9a-f]{4}):[0-9a-f]{8}\s+(\S+)\s+([0-9a-f]{8})\b", line)
+        if not match:
+            continue
+        place = int(match.group(3), 16)
+        if place in pairs:
+            known.setdefault(match.group(2), pairs[place])
+        elif match.group(1) == "0003":
+            # .data and .bss sit at the original's addresses (make
+            # unit-data-offsets checks it), so a data symbol's address in the
+            # matching build is its original address. .rdata is not pinned:
+            # its literal pools may still differ in length.
+            known.setdefault(match.group(2), place)
     return known
 
 

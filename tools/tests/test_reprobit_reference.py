@@ -318,8 +318,12 @@ class SyntheticReferenceTest(unittest.TestCase):
             (build / "reccmp-report" / "results.json").write_text(json.dumps({"data": [
                 {"address": "0x401800", "recomp": "0x401810"}, {"address": "0x402000"}]}))
             (build / "LegoRR.map").write_text(
-                " 0001:00000810       _g 00401810 f a.obj\n 0001:00000900       _h 00401900 f a.obj\n")
-            self.assertEqual(rr.known_addresses(build), {"_g": 0x401800})
+                " 0001:00000810       _g 00401810 f a.obj\n 0001:00000900       _h 00401900 f a.obj\n"
+                " 0002:00000010       _lit 0049e010   a.obj\n"
+                " 0003:000b50c0       _globs 005560c0   <common>\n")
+            # Paired functions take their original address; .data and .bss
+            # symbols keep theirs (the layouts match); .rdata is not pinned.
+            self.assertEqual(rr.known_addresses(build), {"_g": 0x401800, "_globs": 0x5560c0})
             self.assertEqual(rr.known_addresses(build / "missing"), {})
 
 
