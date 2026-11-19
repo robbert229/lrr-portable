@@ -4369,13 +4369,21 @@ int lego_level_load(const char* levelName)
     char* fullName;
     char buff[260];
     char* parts[10];
-    /* The original reuses its locals (finding 659): the three floats also
-     * hold the erosion times, `number` also holds the seed, and the
-     * address-taken lookups and copies live in inner blocks. That gives
-     * the original's stack slots. */
+    /* The locals give the original's stack slots (finding 659).
+     * MSVC 5.0 packs non-overlapping floats into three slots by itself, but
+     * which C variables exist decides the order of the tied map pointers:
+     * the three upgrade times need their own variables. `upgradeTime` also
+     * holds the erode time, `slugTime` the initial slug time, `number` the
+     * seed and `copy` the drag-box string; the address-taken lookups live
+     * in inner blocks. */
     float upgradeTime;
-    float value;
-    float slugValue;
+    float minifigureUpgradeTime;
+    float vehicleUpgradeTime;
+    float buildingUpgradeTime;
+    float slugTime;
+    float fogRate;
+    float triggerTime;
+    float lockTime;
     int number;
     unsigned int i;
     unsigned int rockFallStyle;
@@ -4405,11 +4413,11 @@ int lego_level_load(const char* levelName)
         if ((number = LEGO_D_INT("Seed")) != 0) srand(number);
 
         // STRING: LEGORR 0x004a45a8
-        if ((str = LEGO_D_TEMP("BoulderAnimation")) != NULL) {
+        if ((str = LEGO_D_TEMP("BoulderAnimation")) != NULL &&
             // STRING: LEGORR 0x004a45a0
-            if (!stricmp(str, "Rock")) level->f_274 = 0;
+            stricmp(str, "Rock")) {
             // STRING: LEGORR 0x004a4598
-            else if (!stricmp(str, "Lava")) level->f_274 = 1;
+            if (!stricmp(str, "Lava")) level->f_274 = 1;
             // STRING: LEGORR 0x004a4594
             else if (!stricmp(str, "Ice")) level->f_274 = 2;
             else level->f_274 = 0;
@@ -4483,20 +4491,20 @@ int lego_level_load(const char* levelName)
         upgradeTime = LEGO_D_FLOAT("UpgradeTime") * 25.0f;
         for (i = 0; i < 20; i++) level->upgradeTimes[i] = upgradeTime;
         // STRING: LEGORR 0x004a4400
-        value = LEGO_D_FLOAT("MinifigureUpgradeTime");
-        level->upgradeTimes[2] = value;
-        if (0.0f == value) level->upgradeTimes[2] = upgradeTime;
-        else level->upgradeTimes[2] = value * 25.0f;
+        minifigureUpgradeTime = LEGO_D_FLOAT("MinifigureUpgradeTime");
+        level->upgradeTimes[2] = minifigureUpgradeTime;
+        if (0.0f == minifigureUpgradeTime) level->upgradeTimes[2] = upgradeTime;
+        else level->upgradeTimes[2] = minifigureUpgradeTime * 25.0f;
         // STRING: LEGORR 0x004a43ec
-        value = LEGO_D_FLOAT("VehicleUpgradeTime");
-        level->upgradeTimes[1] = value;
-        if (0.0f == value) level->upgradeTimes[1] = upgradeTime;
-        else level->upgradeTimes[1] = value * 25.0f;
+        vehicleUpgradeTime = LEGO_D_FLOAT("VehicleUpgradeTime");
+        level->upgradeTimes[1] = vehicleUpgradeTime;
+        if (0.0f == vehicleUpgradeTime) level->upgradeTimes[1] = upgradeTime;
+        else level->upgradeTimes[1] = vehicleUpgradeTime * 25.0f;
         // STRING: LEGORR 0x004a43d8
-        value = LEGO_D_FLOAT("BuildingUpgradeTime");
-        level->upgradeTimes[4] = value;
-        if (0.0f == value) level->upgradeTimes[4] = upgradeTime;
-        else level->upgradeTimes[4] = value * 25.0f;
+        buildingUpgradeTime = LEGO_D_FLOAT("BuildingUpgradeTime");
+        level->upgradeTimes[4] = buildingUpgradeTime;
+        if (0.0f == buildingUpgradeTime) level->upgradeTimes[4] = upgradeTime;
+        else level->upgradeTimes[4] = buildingUpgradeTime * 25.0f;
         // STRING: LEGORR 0x004a43cc
         level->trainTime = LEGO_D_FLOAT("TrainTime") * 25.0f;
 
@@ -4530,16 +4538,15 @@ int lego_level_load(const char* levelName)
         else global_value_004ffe48_set(1);
 
         {
-            char* dragCopy;
             char* argv[10];
             // STRING: LEGORR 0x004a4338
-            if ((dragCopy = LEGO_D_COPY("DragBoxRGB")) != NULL) {
-                if (sound_variant_split(dragCopy, argv, ":") == 3) {
+            if ((copy = LEGO_D_COPY("DragBoxRGB")) != NULL) {
+                if (sound_variant_split(copy, argv, ":") == 3) {
                     for (i = 0; i < 3; i++) {
                         legoGlobs_dragBoxRGB[i] = (float)atoi(argv[i]) * (1.0f / 255.0f);
                     }
                 }
-                free(dragCopy);
+                free(copy);
             }
         }
 
@@ -4558,14 +4565,14 @@ int lego_level_load(const char* levelName)
             int slugType;
             if (lego_entity_type_pair_lookup(str, &slugType, &level->f_26c, NULL)) {
                 // STRING: LEGORR 0x004a42ec
-                slugValue = LEGO_D_FLOAT("SlugTime");
-                level->f_268 = slugValue;
-                if (0.0f == slugValue) level->f_268 = 60.0f;
+                slugTime = LEGO_D_FLOAT("SlugTime");
+                level->f_268 = slugTime;
+                if (0.0f == slugTime) level->f_268 = 60.0f;
                 level->f_268 *= 25.0f;
                 // STRING: LEGORR 0x004a42dc
-                slugValue = LEGO_D_FLOAT("InitialSlugTime");
-                if (0.0f == slugValue) slugValue = 60.0f;
-                g_camera_countdown = slugValue * 25.0f;
+                slugTime = LEGO_D_FLOAT("InitialSlugTime");
+                if (0.0f == slugTime) slugTime = 60.0f;
+                g_camera_countdown = slugTime * 25.0f;
             }
         } else level->f_26c = 20;
 
@@ -4595,8 +4602,8 @@ int lego_level_load(const char* levelName)
                 legoGlobs_flags1 |= 0x10000;
                 legoGlobs_f_556424 = 1.0f;
                 // STRING: LEGORR 0x004a4294
-                if (0.0f == (slugValue = LEGO_D_FLOAT("FogRate"))) slugValue = 60.0f;
-                legoGlobs_f_556ef8 = slugValue * 25.0f;
+                if (0.0f == (fogRate = LEGO_D_FLOAT("FogRate"))) fogRate = 60.0f;
+                legoGlobs_f_556ef8 = fogRate * 25.0f;
             } else legoGlobs_flags1 &= ~0x10000;
             renderer_fog_color_set_original(legoGlobs_fogColourRGB[0], legoGlobs_fogColourRGB[1],
                                             legoGlobs_fogColourRGB[2]);
@@ -4620,12 +4627,12 @@ int lego_level_load(const char* levelName)
         objective_load_original(config, s_engine_config_root, levelName, level, s_display_w, s_display_h);
 
         // STRING: LEGORR 0x004a4274
-        if (0.0f == (upgradeTime = LEGO_D_FLOAT("ErodeTriggerTime"))) upgradeTime = 10.0f;
+        if (0.0f == (triggerTime = LEGO_D_FLOAT("ErodeTriggerTime"))) triggerTime = 10.0f;
         // STRING: LEGORR 0x004a4264
-        if (0.0f == (slugValue = LEGO_D_FLOAT("ErodeErodeTime"))) slugValue = 5.0f;
+        if (0.0f == (upgradeTime = LEGO_D_FLOAT("ErodeErodeTime"))) upgradeTime = 5.0f;
         // STRING: LEGORR 0x004a4254
-        if (0.0f == (value = LEGO_D_FLOAT("ErodeLockTime"))) value = 60.0f;
-        erosion_timing_state_init(upgradeTime, slugValue, value);
+        if (0.0f == (lockTime = LEGO_D_FLOAT("ErodeLockTime"))) lockTime = 60.0f;
+        erosion_timing_state_init(triggerTime, upgradeTime, lockTime);
         // STRING: LEGORR 0x004a4234
         number = LEGO_D_INT("NumberOfLandSlidesTillCaveIn");
         if (number == 0) global_config_value_set(3);
@@ -4649,16 +4656,16 @@ int lego_level_load(const char* levelName)
         objective_advisor_token_file_load(nerpMessageFile);
 
         if (level_identifier_remap_table_load_original(ptlName, s_engine_config_root)) {
-            int surfaceParam, pathParam = 0, blockPointersParam = 0, cryOreParam = 0, terrainParam = 0, predugParam = 0, fallinParam;
+            int pathParam = 0, cryOreParam = 0, blockPointersParam = 0, terrainParam = 0, predugParam = 0;
 
-            if (surfaceMap && sound_variant_split(surfaceMap, parts, ":") == 2) surfaceParam = atoi(parts[1]);
+            if (surfaceMap && sound_variant_split(surfaceMap, parts, ":") == 2) atoi(parts[1]);
             if (predugMap && sound_variant_split(predugMap, parts, ":") == 2) predugParam = atoi(parts[1]);
             if (terrainMap && sound_variant_split(terrainMap, parts, ":") == 2) terrainParam = atoi(parts[1]);
             if (blockPointersMap && sound_variant_split(blockPointersMap, parts, ":") == 2)
                 blockPointersParam = atoi(parts[1]);
             if (cryOreMap && sound_variant_split(cryOreMap, parts, ":") == 2) cryOreParam = atoi(parts[1]);
             if (pathMap && sound_variant_split(pathMap, parts, ":") == 2) pathParam = atoi(parts[1]);
-            if (fallinMap && sound_variant_split(fallinMap, parts, ":") == 2) fallinParam = atoi(parts[1]);
+            if (fallinMap && sound_variant_split(fallinMap, parts, ":") == 2) atoi(parts[1]);
             if (emergeMap && sound_variant_split(emergeMap, parts, ":") == 2) pathParam = atoi(parts[1]);
 
             if (lego_map_load_pipeline(level, surfaceMap, predugMap, predugParam, terrainMap, terrainParam,
