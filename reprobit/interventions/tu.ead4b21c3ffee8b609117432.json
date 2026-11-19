@@ -1,0 +1,1 @@
+{"build_target":"lrr_il_ddraw","interventions":[],"schema_version":3,"source":"cross/msvc5-importlibs/ddraw_exports.c","source_digest":{"algorithm":"sha256","value":"3b431bcc8b68a5cc92a08db82720cd5fd9bf8edf90dcaa84edefbaf3e5614a27"},"target_id":"program","translation_unit_id":"tu.ead4b21c3ffee8b609117432"}
