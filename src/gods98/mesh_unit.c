@@ -935,13 +935,17 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
         mesh_set_group_colour(mesh, groupID, mesh->lightWaveSurf[loop].colour.r * mesh->lightWaveSurf[loop].emissive,
                               mesh->lightWaveSurf[loop].colour.g * mesh->lightWaveSurf[loop].emissive,
                               mesh->lightWaveSurf[loop].colour.b * mesh->lightWaveSurf[loop].emissive, Mesh_Colour_Emissive);
+        /* Each specular argument in parentheses: MSVC 5.0 then evaluates
+         * them on the x87 stack, as the original does (three products, then
+         * the pushes; three `fld specular` rather than one integer copy), and
+         * the two calls share their last push (finding 661's parentheses). */
         if (mesh->lightWaveSurf[loop].flags & MESH_SFLAG_COLOURHIGHLIGHT) {
-            mesh_set_group_colour(mesh, groupID, mesh->lightWaveSurf[loop].colour.r * mesh->lightWaveSurf[loop].specular,
-                                  mesh->lightWaveSurf[loop].colour.g * mesh->lightWaveSurf[loop].specular,
-                                  mesh->lightWaveSurf[loop].colour.b * mesh->lightWaveSurf[loop].specular, Mesh_Colour_Specular);
+            mesh_set_group_colour(mesh, groupID, (mesh->lightWaveSurf[loop].colour.r * mesh->lightWaveSurf[loop].specular),
+                                  (mesh->lightWaveSurf[loop].colour.g * mesh->lightWaveSurf[loop].specular),
+                                  (mesh->lightWaveSurf[loop].colour.b * mesh->lightWaveSurf[loop].specular), Mesh_Colour_Specular);
         } else {
-            mesh_set_group_colour(mesh, groupID, mesh->lightWaveSurf[loop].specular, mesh->lightWaveSurf[loop].specular,
-                                  mesh->lightWaveSurf[loop].specular, Mesh_Colour_Specular);
+            mesh_set_group_colour(mesh, groupID, (mesh->lightWaveSurf[loop].specular), (mesh->lightWaveSurf[loop].specular),
+                                  (mesh->lightWaveSurf[loop].specular), Mesh_Colour_Specular);
         }
         mesh_set_group_material_values(mesh, groupID, mesh->lightWaveSurf[loop].power * 10.0f, Mesh_Colour_Power);
         mesh_set_group_material_values(mesh, groupID, 1.0f - mesh->lightWaveSurf[loop].transparency, Mesh_Colour_Alpha);
