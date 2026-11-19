@@ -3221,7 +3221,16 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                              * `handled` (a command was found, kept in memory)
                              * and a per-test flag in a register, for which the
                              * dead `picked` is reused. In the last tests
-                             * `handled` is also the "no command" sound's flag. */
+                             * `handled` is also the "no command" sound's flag.
+                             * Neither flag is reset again inside the tests
+                             * below that run only while `picked` is 0 (every
+                             * `handled = 1` comes with `picked = 1`): the
+                             * original keeps each in one register or slot
+                             * throughout, which a reset would split, and the
+                             * second route check is nested as its own
+                             * `if (!picked)`. The reinforced tests are written
+                             * `? 0 : 1`, which keeps the original's 0/1
+                             * result (finding 671). */
                             picked = 0;
                             handled = 0;
                             if (!(block->flags1 & 8))
@@ -3268,9 +3277,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                     }
                                 }
                                 if (!picked && (block->flags1 & 8)) {
-                                    if (!lego_C_block_is_reinforced(bx, by) &&
+                                    if ((lego_C_block_is_reinforced(bx, by) ? 0 : 1) &&
                                         !(block->flags2 & 0x20)) {
-                                        picked = 0;
                                         if (!(block->flags1 & 0x200000) &&
                                             (entity_stats_word_get(selection_active_entity_get()) & 0x10000) &&
                                             lego_terrain_cell_route_and_occupancy_check(
@@ -3287,32 +3295,30 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 selection_clear_request_and_hud_reset();
                                             }
                                         }
-                                        if (picked) goto tracking;
-                                        picked = 0;
-                                        if (lego_terrain_cell_route_and_occupancy_check(
-                                                selection_active_entity_get(), bx, by, bx, by, 0)) {
-                                            picked = 1;
-                                            handled = 1;
-                                            if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x27);
-                                            else media_pointer_cursor_select(0x28);
-                                            advisor_text_animation_update(0, 0, 0);
-                                            if (leftReleased &&
-                                                !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
-                                                cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
-                                                media_action_feedback_sound_dispatch(0);
-                                                selection_clear_request_and_hud_reset();
+                                        if (!picked) {
+                                            if (lego_terrain_cell_route_and_occupancy_check(
+                                                    selection_active_entity_get(), bx, by, bx, by, 0)) {
+                                                picked = 1;
+                                                handled = 1;
+                                                if (LEGO_FIELD(selection_active_entity_get(), int, 0) == 2) media_pointer_cursor_select(0x27);
+                                                else media_pointer_cursor_select(0x28);
+                                                advisor_text_animation_update(0, 0, 0);
+                                                if (leftReleased &&
+                                                    !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                                    cmd_produce(8, NULL, 0, legoGlobs_mouseBlockPos);
+                                                    media_action_feedback_sound_dispatch(0);
+                                                    selection_clear_request_and_hud_reset();
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                             if (!picked) {
-                                handled = 0;
-                                if (!lego_C_block_is_reinforced(bx, by) &&
+                                if ((lego_C_block_is_reinforced(bx, by) ? 0 : 1) &&
                                     block->f_02 != 6 && block->f_02 != 9 &&
                                     !(block->flags2 & 0x20)) {
                                     if (block->flags1 & 8) {
-                                        picked = 0;
                                         if (lego_C_block_at(legoGlobs_mouseBlockPos[0], legoGlobs_mouseBlockPos[1])->flags1 & 0x80000000) {
                                             picked = 1;
                                             handled = 1;
@@ -3362,22 +3368,26 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                     command_context_post_to_hud(1, (const uint32_t*)legoGlobs_mouseBlockPos);
                                                 }
                                             }
-                                            if (!picked) {
-                                                handled = 0;
-                                                if (!(block->flags1 & 0x200000)) {
-                                                    handled = 1;
-                                                    if (leftReleased &&
-                                                        !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
-                                                        cmd_produce(3, NULL, 0, NULL);
-                                                        media_action_feedback_sound_dispatch(5);
-                                                        command_context_post_to_hud(5, (const uint32_t*)legoGlobs_mouseBlockPos);
-                                                    }
+                                            if (picked) goto tracking;
+                                            /* No sound test of its own: this
+                                             * test falls through to the shared
+                                             * "no command" sound below, as the
+                                             * original's cross-jumped
+                                             * command_context_post_to_hud call
+                                             * shows. */
+                                            handled = 0;
+                                            if (!(block->flags1 & 0x200000)) {
+                                                handled = 1;
+                                                if (leftReleased &&
+                                                    !lego_terrain_cell_command_predicate(legoGlobs_mouseBlockPos)) {
+                                                    cmd_produce(3, NULL, 0, NULL);
+                                                    media_action_feedback_sound_dispatch(5);
+                                                    command_context_post_to_hud(5, (const uint32_t*)legoGlobs_mouseBlockPos);
                                                 }
-                                                if (!handled && leftReleased)
-                                                    media_action_feedback_sound_dispatch(1);
                                             }
+                                        } else {
+                                            goto tracking;
                                         }
-                                        goto tracking;
                                     } else if (block->f_02 != 1 && !(block->flags1 & 0x40)) {
                                         handled = 1;
                                         if (leftReleased &&
