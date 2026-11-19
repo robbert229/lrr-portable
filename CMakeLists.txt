@@ -384,6 +384,20 @@ if(LRR_CLASSIC_MSVC5)
     COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py" --search=alias
       "${_lrr_weak_delete}" "??3@YAXPAX@Z=_ui_render_record_free"
+      # Flic.c's do-nothing functions, which the original's linker folded
+      # into one body each (flic_unit.h).
+      "_Flic_Palette64=_flic_opcode25_success_stub"
+      "_Flic_DeltaByte=_flic_opcode25_success_stub"
+      "_Flic_Black=_flic_opcode25_success_stub"
+      "_FlicBRunDepackBytePerPixel=_flic_opcode25_success_stub"
+      "_FlicBRunDepackHiColorFlic=_flic_opcode25_success_stub"
+      "_FlicCopyHiColorFlic=_flic_opcode27_fallback_noop"
+      "_FlicCopyBytePerPixel=_flic_opcode27_fallback_noop"
+      "_FlicCopyHiColor=_flic_opcode27_fallback_noop"
+      "_FlicDeltaWordBytePerPixel=_flic_opcode27_fallback_noop"
+      "_FlicDeltaWordHiColorDZ=_flic_opcode27_fallback_noop"
+      "_FlicDeltaWordHiColorFlic=_flic_opcode27_fallback_noop"
+      "_Flic_Unpack=_flh_magic_uu_noop"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py"
     VERBATIM)
   set_source_files_properties("${_lrr_weak_delete}" PROPERTIES

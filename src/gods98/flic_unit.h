@@ -105,6 +105,39 @@ unsigned short Flic_GetPaletteColour(unsigned char index,
                                      LPFLICSTRUCT fsp);         /* 004850c0 */
 int Flic_GetHeight(LPFLICSTRUCT fsp);                           /* 004850e0 */
 
+/* The original's do-nothing functions, by OpenLRR's names. Its linker
+ * folded each into the identical body named in the comment, but its
+ * compiler saw distinct callees and kept their callers' tails apart. In the
+ * matching build each is declared and defined nowhere: a weak external
+ * (tools/coff_weak_external.py, linked by CMakeLists.txt) resolves it to
+ * that body. Elsewhere each name is that body. */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+int Flic_Palette64(LPFLICSTRUCT fsp);                           /* 00484b90 */
+int Flic_DeltaByte(LPFLICSTRUCT fsp);                           /* 00484b90 */
+int Flic_Black(LPFLICSTRUCT fsp);                               /* 00484b90 */
+int FlicBRunDepackBytePerPixel(LPFLICSTRUCT fsp);               /* 00484b90 */
+int FlicBRunDepackHiColorFlic(LPFLICSTRUCT fsp);                /* 00484b90 */
+void FlicCopyHiColorFlic(LPFLICSTRUCT fsp);                     /* 00484c90 */
+void FlicCopyBytePerPixel(LPFLICSTRUCT fsp);                    /* 00484c90 */
+void FlicCopyHiColor(LPFLICSTRUCT fsp);                         /* 00484c90 */
+void FlicDeltaWordBytePerPixel(LPFLICSTRUCT fsp);               /* 00484c90 */
+void FlicDeltaWordHiColorDZ(LPFLICSTRUCT fsp);                  /* 00484c90 */
+void FlicDeltaWordHiColorFlic(LPFLICSTRUCT fsp);                /* 00484c90 */
+int Flic_Unpack(LPFLICSTRUCT fsp);          /* 00456210, NERPs.c's body */
+#else
+#define Flic_Palette64 Flic_Unsupported
+#define Flic_DeltaByte Flic_Unsupported
+#define Flic_Black Flic_Unsupported
+#define FlicBRunDepackBytePerPixel Flic_Unsupported
+#define FlicBRunDepackHiColorFlic Flic_Unsupported
+#define FlicCopyHiColorFlic Flic_Nothing
+#define FlicCopyBytePerPixel Flic_Nothing
+#define FlicCopyHiColor Flic_Nothing
+#define FlicDeltaWordBytePerPixel Flic_Nothing
+#define FlicDeltaWordHiColorDZ Flic_Nothing
+#define FlicDeltaWordHiColorFlic Flic_Nothing
+#endif
+
 #ifdef __cplusplus
 }
 #endif
