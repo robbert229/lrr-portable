@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* GAME-026's copy of gods98 Maths.h's inline vector helpers (dot, modulus,
- * add, subtract, scale, normalise, distance, and the 2D modulus, normalise
- * and distance), over TerrainMapVector3 and TerrainMapPoint2. The original
- * unit expands them in place, so they have no address of their own. Only
- * terrain_map.c includes this file.
+ * add, subtract, scale, normalise, distance, and the 2D add, scale, modulus,
+ * normalise and distance), over TerrainMapVector3 and TerrainMapPoint2. The
+ * original unit expands them in place, so they have no address of their own.
+ * Only terrain_map.c includes this file.
  *
  * They are static __inline functions, not macros: as macros the expansions
  * compile differently (finding 544). In a header they add no Reccmp lint
@@ -79,6 +79,22 @@ static __inline TerrainMapPoint2* terrain_map_vector2d_normalise(
 
     r->x = r->x * f;
     r->y = r->y * f;
+    return r;
+}
+
+static __inline TerrainMapPoint2* terrain_map_vector2d_add(
+    TerrainMapPoint2* r, const TerrainMapPoint2* a, const TerrainMapPoint2* b)
+{
+    r->x = a->x + b->x;
+    r->y = a->y + b->y;
+    return r;
+}
+
+static __inline TerrainMapPoint2* terrain_map_vector2d_scale(
+    TerrainMapPoint2* r, const TerrainMapPoint2* a, float f)
+{
+    r->x = a->x * f;
+    r->y = a->y * f;
     return r;
 }
 
