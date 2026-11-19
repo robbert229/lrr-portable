@@ -461,10 +461,14 @@ int Flic_FindChunk(LPFLICSTRUCT fsp)
             case FLI_PREFIX_TYPE:
                 Flic_LoadPalette64(fsp);
                 fsp->pointerposition += header->size;
+                header = (Flic_ChunkHeader*)((char*)header + header->size);
+                size += header->size;
                 break;
             case FLI_POINTERS_TYPE:
                 Flic_LoadPointers(fsp);
                 fsp->pointerposition += header->size;
+                header = (Flic_ChunkHeader*)((char*)header + header->size);
+                size += header->size;
                 break;
             case FLI_FRAME_TYPE:
                 Flic_FrameChunk(fsp);
@@ -472,10 +476,10 @@ int Flic_FindChunk(LPFLICSTRUCT fsp)
                 break;
             default:
                 fsp->pointerposition += header->size;
+                header = (Flic_ChunkHeader*)((char*)header + header->size);
+                size += header->size;
                 break;
             }
-            header = (Flic_ChunkHeader*)((char*)header + header->size);
-            size += header->size;
             if (found) {
                 fsp->pointerposition = start + size;
                 return 0;
