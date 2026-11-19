@@ -1,4 +1,4 @@
-# input_sha256: e55aa1abea96a86b53f4a41c39f4b84c2f62fcea8f1cd632d3d0a6d1ac8a5166
+# input_sha256: 6d3dd0e227a441229914dcff75a8108cc5b1f9de7f2a5aa9ea22a4e658828453
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -153,7 +153,7 @@
 0x00406760 100.00 vector2_set_length
 0x004067b0 100.00 polyline_segment_lengths_total
 0x00406820 100.00 bezier_curve_samples_build
-0x004068c0 75.76 path_arc_length_interpolate
+0x004068c0 77.04 path_arc_length_interpolate
 0x00406980 100.00 scene_object_mode_is_one
 0x00406990 100.00 entity_type_config_resource_row_load
 0x00406c00 100.00 renderer_object_update_from_record_field64
@@ -746,7 +746,7 @@
 0x00428330 87.65 lego_terrain_command_feedback_dispatch
 0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
-0x004288e0 98.41 lego_level_debug_input_cell_mutator_dispatch
+0x004288e0 100.00 lego_level_debug_input_cell_mutator_dispatch
 0x00429110 100.00 lego_block_visible_callback
 0x00429160 100.00 lego_terrain_cell_palette_resource_at_grid_position
 0x004291a0 98.10 lego_scene_marker_update_and_draw
@@ -1081,7 +1081,7 @@
 0x0043fff0 100.00 legoobject_route_marker_setup
 0x00440130 100.00 legoobject_update_and_unregister_at_tile
 0x004401b0 100.00 legoobject_terrain_cell_to_world_position
-0x004403d0 86.12 legoobject_level_debug_cell_retarget_dispatch
+0x004403d0 86.44 legoobject_level_debug_cell_retarget_dispatch
 0x004407b0 100.00 legoobject_spatial_callback_query
 0x00440800 98.41 legoobject_spatial_callback_query_visit
 0x004408c0 100.00 legoobject_spatial_callback_query_at_optional_coordinate
@@ -2878,7 +2878,7 @@
 0x00406760 100.00 vector2_set_length
 0x004067b0 100.00 polyline_segment_lengths_total
 0x00406820 100.00 bezier_curve_samples_build
-0x004068c0 75.76 path_arc_length_interpolate
+0x004068c0 77.04 path_arc_length_interpolate
 0x00406980 100.00 scene_object_mode_is_one
 0x00406990 100.00 entity_type_config_resource_row_load
 0x00406c00 100.00 renderer_object_update_from_record_field64
@@ -3471,7 +3471,7 @@
 0x00428330 87.65 lego_terrain_command_feedback_dispatch
 0x00428780 100.00 lego_terrain_cell_command_predicate
 0x00428800 100.00 media_action_feedback_sound_dispatch
-0x004288e0 98.41 lego_level_debug_input_cell_mutator_dispatch
+0x004288e0 100.00 lego_level_debug_input_cell_mutator_dispatch
 0x00429110 100.00 lego_block_visible_callback
 0x00429160 100.00 lego_terrain_cell_palette_resource_at_grid_position
 0x004291a0 98.10 lego_scene_marker_update_and_draw
@@ -3806,7 +3806,7 @@
 0x0043fff0 100.00 legoobject_route_marker_setup
 0x00440130 100.00 legoobject_update_and_unregister_at_tile
 0x004401b0 100.00 legoobject_terrain_cell_to_world_position
-0x004403d0 86.12 legoobject_level_debug_cell_retarget_dispatch
+0x004403d0 86.44 legoobject_level_debug_cell_retarget_dispatch
 0x004407b0 100.00 legoobject_spatial_callback_query
 0x00440800 98.41 legoobject_spatial_callback_query_visit
 0x004408c0 100.00 legoobject_spatial_callback_query_at_optional_coordinate
