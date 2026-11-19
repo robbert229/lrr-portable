@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """tools/reprobit_reference.py: body extraction, masking, plans and PE reads."""
 import json
+import os
 import struct
 import sys
 import unittest
@@ -314,3 +315,317 @@ class StaticSymbolTest(unittest.TestCase):
             self.assertEqual(rr.static_symbol(0x471370, root), "_weapons_callback_ray_candidate")
             self.assertIsNone(rr.static_symbol(0x401000, root))
             self.assertIsNone(rr.static_symbol(0x123456, root))
+
+
+# ---------------------------------------------------------------------------
+# Synthetic references whose procedure size differs from the seed's.
+
+COMDAT = msvc_coff.IMAGE_SCN_LNK_COMDAT
+TEXT_FLAGS = msvc_coff.IMAGE_SCN_CNT_CODE | COMDAT
+DEBUG_FLAGS = msvc_coff.IMAGE_SCN_CNT_INITIALIZED_DATA | COMDAT
+DATA_FLAGS = msvc_coff.IMAGE_SCN_CNT_INITIALIZED_DATA
+STATIC, LABEL, FUNCTION_CLASS = 3, 6, 101
+SECREL, SECTION_REL, DIR32NB = 0x0B, 0x0A, 0x07
+TRAILER = b"DATA" * 3  # a .data section after the function's records
+
+
+def _msvc_object(body: bytes, proc: int, relocations: list[tuple[int, str, int]], *,
+                 labels: dict[str, int] = None, lines: list[tuple[int, int]] = (),
+                 debug_range: tuple[int, int] = (0, None), records: bool = True,
+                 extra_function: bool = False) -> bytes:
+    """An MSVC 5.0-shaped object: ``_f`` alone in a COMDAT .text holding
+    ``body`` (procedure ``proc``), with its section symbol, TotalSize, .bf,
+    .lf and .ef, ``labels``, line rows, an associated .debug$S procedure
+    record and .debug$F FPO record, then a .data section; ``relocations``
+    name their targets: _f, the labels, or the undefined _d, _g and _h."""
+    labels = labels or {}
+    names = ["_d", "_g", "_h"]
+    symbols, index = [], {}
+
+    def add(name, value, section, type_, sclass, aux=()):
+        index[name] = sum(1 + len(a) for _n, *_r, a in symbols)
+        symbols.append((name, value, section, type_, sclass, list(aux)))
+
+    text_size = len(body)
+    line_rows = [(0, 0)] + list(lines)  # the sentinel's symbol index is patched below
+    add(".text", 0, 1, 0, STATIC, [struct.pack("<IHHIHBxxx", text_size, len(relocations),
+                                               len(line_rows), 0, 0, 2)])
+    add("_f", 0, 1, FUNCTION, 2, [struct.pack("<IIIIxx", 0, proc if records else 0, 0, 0)]
+        if records else [])
+    if extra_function:
+        add("_f2", 8, 1, FUNCTION, 2)
+    if records:
+        add(".bf", 0, 1, 0, FUNCTION_CLASS, [bytes(18)])
+        add(".lf", len(lines), 1, 0, FUNCTION_CLASS)
+        add(".ef", proc, 1, 0, FUNCTION_CLASS, [bytes(18)])
+    for name, value in labels.items():
+        add(name, value, 1, 0, LABEL)
+    if records:
+        add(".debug$S", 0, 2, 0, STATIC, [struct.pack("<IHHIHBxxx", 0, 2, 0, 0, 1, 5)])
+        add(".debug$F", 0, 3, 0, STATIC, [struct.pack("<IHHIHBxxx", 16, 1, 0, 0, 1, 5)])
+    add(".data", 0, 4 if records else 2, 0, STATIC, [struct.pack("<IHHIHBxxx", len(TRAILER), 0, 0, 0, 0, 0)])
+    for name in names:
+        add(name, 0, 0, FUNCTION, 2)
+    line_rows[0] = (index["_f"], 0)
+
+    start, end = debug_range
+    proc_record = struct.pack("<HHIIIIIIIIHB", 39, 0x100B, 0, 0, 0, proc, start,
+                              proc if end is None else end, 0x1019, 0, 0, 0) + b"\x01f"
+    cv = proc_record + struct.pack("<HH", 2, 6)
+    fpo = struct.pack("<IIIHBB", 0, proc, 0, 1, 3, 0)
+    sections = [(".text", TEXT_FLAGS, body,
+                 [(o, index[n], t) for o, n, t in relocations], line_rows)]
+    if records:
+        sections += [(".debug$S", DEBUG_FLAGS, cv, [(32, index["_f"], SECREL), (36, index["_f"], SECTION_REL)], []),
+                     (".debug$F", DEBUG_FLAGS, fpo, [(0, index["_f"], DIR32NB)], [])]
+    sections.append((".data", DATA_FLAGS, TRAILER, [], []))
+
+    cursor = 20 + 40 * len(sections)
+    headers, payload = b"", b""
+    for name, flags, raw, relocs, rows in sections:
+        rawptr = cursor
+        relptr = rawptr + len(raw) if relocs else 0
+        lnptr = rawptr + len(raw) + 10 * len(relocs) if rows else 0
+        headers += name.encode().ljust(8, b"\0") + struct.pack(
+            "<IIIIIIHHI", 0, 0, len(raw), rawptr, relptr, lnptr, len(relocs), len(rows), flags)
+        payload += raw + b"".join(struct.pack("<IIH", *r) for r in relocs) \
+            + b"".join(struct.pack("<IH", *r) for r in rows)
+        cursor += len(raw) + 10 * len(relocs) + 6 * len(rows)
+    table = b""
+    for name, value, section, type_, sclass, aux in symbols:
+        table += name.encode().ljust(8, b"\0") + struct.pack("<IhHBB", value, section, type_, sclass, len(aux))
+        table += b"".join(aux)
+    count = sum(1 + len(s[5]) for s in symbols)
+    header = struct.pack("<HHIIIHH", 0x14C, len(sections), 0, cursor, count, 0, 0)
+    out = bytearray(header + headers + payload + table + struct.pack("<I", 4))
+    if records:  # TotalSize's PointerToLinenumber: the .text line table
+        lnptr = struct.unpack_from("<I", out, 20 + 28)[0]
+        struct.pack_into("<I", out, cursor + (index["_f"] + 1) * 18 + 8, lnptr)
+    return bytes(out)
+
+
+def _records(data: bytes, symbol: str = "_f") -> dict:
+    """Everything a resize must keep consistent, read back from ``data``."""
+    coff = msvc_coff.parse_coff(data)
+    sym = next(s for s in coff.symbols.values() if s.name == symbol and s.section > 0)
+    text = coff.section(sym.section)
+    by_name = {s.name: s for s in coff.symbols.values()}
+    out = {
+        "body": text.data,
+        "size": text.size,
+        "section_length": struct.unpack_from("<I", by_name[".text"].aux[0], 0)[0],
+        "relocations": [(r.offset, coff.symbols[r.symbol].name, r.type,
+                         struct.unpack_from("<I", text.data, r.offset)[0]) for r in text.relocations],
+        "lines": text.linenumbers[1:],
+        "labels": {s.name: s.value for s in coff.symbols.values() if s.storage_class == LABEL},
+        "trailer": next(s for s in coff.sections if s.name == ".data").data,
+    }
+    if sym.aux:
+        total, lnptr = struct.unpack_from("<II", sym.aux[0], 4)
+        lines = struct.unpack_from("<I", data, 20 + 28)[0]
+        out.update(total=total, line_pointer_ok=lnptr == lines, ef=by_name[".ef"].value)
+        debug = next(s for s in coff.sections if s.name == ".debug$S")
+        out["codeview"] = struct.unpack_from("<III", debug.data, 16)
+        out["codeview_relocations"] = [(r.offset, coff.symbols[r.symbol].name) for r in debug.relocations]
+        fpo = next(s for s in coff.sections if s.name == ".debug$F")
+        out["fpo"] = struct.unpack_from("<I", fpo.data, 4)[0]
+    return out
+
+
+def _pad(code: bytes) -> bytes:
+    return code + b"\x90" * (-len(code) % 16)
+
+
+# mov ecx, [_d+4]; push ecx; call _g; add esp, 4; ret -- 16 bytes, its own slot.
+SEED = bytes.fromhex("8b0d04000000" "51" "e800000000" "83c404" "c3")
+SEED_RELOCS = [(2, "_d", DIR32), (8, "_g", REL32)]
+
+
+# The original saves esi around it and returns 0: 20 bytes, a 32-byte slot.
+LONGER = bytes.fromhex("56" "8b0d") + u32(D + 4) + bytes.fromhex("51" "e8") + rel32(G, 9) \
+    + bytes.fromhex("83c404" "33c0" "5e" "c3")
+
+
+class SyntheticResizeTest(unittest.TestCase):
+    def explain(self, data, original, **kwargs):
+        return rr.explain_synthetic_reference(data, "_f", original, address=ADDRESS, ranges=RANGES,
+                                              **kwargs)
+
+    def seed(self, **kwargs):
+        return _msvc_object(_pad(SEED), len(SEED), SEED_RELOCS,
+                            lines=[(0, 10), (7, 11), (15, 12)], debug_range=(0, 15), **kwargs)
+
+    def test_equal_sizes_keep_the_seed_records(self):
+        # The original uses eax: the same lengths, so only the body changes.
+        original = _pad(bytes.fromhex("8b05") + u32(D + 4) + bytes.fromhex("50" "e8") + rel32(G, 8)
+                        + bytes.fromhex("83c404" "c3"))
+        data = self.seed()
+        got, reason = self.explain(data, original)
+        self.assertEqual(reason, "written")
+        expected = bytearray(data)
+        raw = struct.unpack_from("<I", data, 20 + 20)[0]
+        legacy = bytearray(original)
+        legacy[2:6], legacy[8:12] = _pad(SEED)[2:6], _pad(SEED)[8:12]
+        expected[raw:raw + 16] = legacy
+        self.assertEqual(got, bytes(expected))
+
+    def test_same_slot_with_a_shorter_procedure(self):
+        # The original pops the argument: 14 bytes and two NOPs in the same 16-byte slot.
+        original = _pad(bytes.fromhex("8b0d") + u32(D + 4) + bytes.fromhex("51" "e8") + rel32(G, 8)
+                        + bytes.fromhex("59" "c3"))
+        self.assertEqual(len(original), 16)
+        got, reason = self.explain(self.seed(), original)
+        self.assertEqual(reason, "written")
+        records = _records(got)
+        self.assertEqual(records["body"][:14], original[:2] + u32(4) + original[6:8] + u32(0) + original[12:14])
+        self.assertEqual((records["size"], records["section_length"]), (16, 16))
+        self.assertEqual((records["total"], records["ef"], records["fpo"]), (14, 14, 14))
+        self.assertEqual(records["codeview"], (14, 0, 13))  # the ret pairs with the ret
+        self.assertEqual(records["lines"], [(0, 10), (7, 11), (13, 12)])
+        self.assertEqual(records["relocations"], [(2, "_d", DIR32, 4), (8, "_g", REL32, 0)])
+        self.assertEqual(records["trailer"], TRAILER)
+
+    def test_a_larger_padded_slot_resizes_the_section(self):
+        # push esi; ... pop esi -- 20 bytes, so the original's slot is 32.
+        code = LONGER
+        self.assertEqual(len(code), 20)
+        original = _pad(code)
+        data = self.seed()
+        got, reason = self.explain(data, original)
+        self.assertEqual(reason, "written")
+        records = _records(got)
+        self.assertEqual(records["body"], original[:3] + u32(4) + original[7:9] + u32(0) + original[13:])
+        self.assertEqual((records["size"], records["section_length"]), (32, 32))
+        self.assertEqual((records["total"], records["ef"], records["fpo"]), (20, 20, 20))
+        self.assertEqual(records["codeview"], (20, 0, 19))
+        self.assertEqual(records["lines"], [(0, 10), (8, 11), (19, 12)])  # the entry stays
+        self.assertEqual(records["relocations"], [(3, "_d", DIR32, 4), (9, "_g", REL32, 0)])
+        self.assertTrue(records["line_pointer_ok"])
+        self.assertEqual(records["trailer"], TRAILER)
+        self.assertEqual(records["codeview_relocations"], [(32, "_f"), (36, "_f")])
+        self.assertEqual(len(got), len(data) + 16)
+
+    def test_a_smaller_padded_slot_shrinks_the_section(self):
+        # The seed saves esi around the call (20 bytes, slot 32); the original's 16 fill 16.
+        seed = bytes.fromhex("56" "8b0d04000000" "51" "e800000000" "83c404" "5e" "33c0" "c3")
+        self.assertEqual(len(seed), 20)
+        data = _msvc_object(_pad(seed), len(seed), [(3, "_d", DIR32), (9, "_g", REL32)],
+                            lines=[(0, 10), (8, 11), (17, 12)], debug_range=(0, 19))
+        original = bytes.fromhex("8b0d") + u32(D + 4) + bytes.fromhex("51" "e8") + rel32(G, 8) \
+            + bytes.fromhex("83c404" "c3")
+        got, reason = self.explain(data, original)
+        self.assertEqual(reason, "written")
+        records = _records(got)
+        self.assertEqual((records["size"], records["section_length"]), (16, 16))
+        self.assertEqual((records["total"], records["ef"], records["fpo"]), (16, 16, 16))
+        self.assertEqual(records["codeview"], (16, 0, 15))
+        # push esi and xor eax, eax have no instruction of their own: their
+        # lines go to their gap's first original instruction (the mov, the ret).
+        self.assertEqual(records["lines"], [(0, 10), (7, 11), (15, 12)])
+        self.assertEqual(records["relocations"], [(2, "_d", DIR32, 4), (8, "_g", REL32, 0)])
+        self.assertEqual(records["trailer"], TRAILER)
+        self.assertEqual(len(got), len(data) - 16)
+
+    def test_a_switch_table_keeps_its_place_after_the_code(self):
+        # mov eax, [esp+4]; jmp [eax*4 + $L3]; $L1: mov eax, 1; ret; $L2: mov eax, 2; ret;
+        # nop; $L3: dd $L1, $L2 -- procedure 32, so no fill.
+        seed = bytes.fromhex("8b442404" "ff2485" "00000000" "b801000000" "c3" "b802000000" "c3" "90"
+                             "00000000" "00000000")
+        labels = {"$L1": 11, "$L2": 17, "$L3": 24}
+        data = _msvc_object(seed, 32, [(7, "$L3", DIR32), (24, "$L1", DIR32), (28, "$L2", DIR32)],
+                            labels=labels, lines=[(0, 5), (11, 6), (17, 7)], debug_range=(0, 32))
+        # The original tests the argument first: its code is 8 bytes longer.
+        code = bytes.fromhex("8b442404" "85c0" "7c07" "ff2485") + u32(ADDRESS + 32) + bytes.fromhex(
+            "33c0" "c3" "b801000000" "c3" "b802000000" "c3" "8bff")
+        self.assertEqual(len(code), 32)
+        original = _pad(code + u32(ADDRESS + 18) + u32(ADDRESS + 24))
+        got, reason = self.explain(data, original)
+        self.assertEqual(reason, "written")
+        records = _records(got)
+        self.assertEqual((records["size"], records["total"], records["fpo"]), (48, 40, 40))
+        self.assertEqual(records["labels"], {"$L1": 18, "$L2": 24, "$L3": 32})
+        self.assertEqual(records["relocations"],
+                         [(11, "$L3", DIR32, 0), (32, "$L1", DIR32, 0), (36, "$L2", DIR32, 0)])
+        self.assertEqual(records["lines"], [(0, 5), (18, 6), (24, 7)])
+        self.assertEqual(records["codeview"], (40, 0, 40))
+
+    def test_an_unpadded_seed_drops_the_linkers_int3_fill(self):
+        seed = bytes.fromhex("8b0d04000000" "51" "e800000000" "59" "c3")  # 14 bytes, no fill
+        data = _msvc_object(seed, len(seed), SEED_RELOCS, lines=[(0, 10)], debug_range=(0, 13))
+        code = bytes.fromhex("8b0d") + u32(D + 4) + bytes.fromhex("51" "e8") + rel32(G, 8) \
+            + bytes.fromhex("83c404" "33c0" "c3")
+        got, reason = self.explain(data, code + b"\xcc" * 14)
+        self.assertEqual(reason, "written")
+        records = _records(got)
+        self.assertEqual((records["size"], records["total"], records["section_length"]), (18, 18, 18))
+        self.assertEqual(records["codeview"], (18, 0, 17))
+        self.assertEqual(records["body"], code[:2] + u32(4) + code[6:8] + u32(0) + code[12:])
+
+    def test_refuses_several_functions_in_one_section(self):
+        data = _msvc_object(_pad(SEED), len(SEED), SEED_RELOCS, extra_function=True)
+        got, reason = self.explain(data, _pad(LONGER))
+        self.assertIsNone(got)
+        self.assertIn("several functions share the seed's section", reason)
+
+    def test_refuses_records_that_disagree(self):
+        data = bytearray(self.seed())
+        coff = msvc_coff.parse_coff(bytes(data))
+        fpo = next(s for s in coff.sections if s.name == ".debug$F")
+        struct.pack_into("<I", data, struct.unpack_from("<I", data, 20 + 2 * 40 + 20)[0] + 4, 14)
+        self.assertEqual(fpo.index, 3)
+        got, reason = self.explain(bytes(data), _pad(LONGER))
+        self.assertIsNone(got)
+        self.assertIn("different procedure sizes", reason)
+
+    def test_refuses_a_slot_holding_another_function(self):
+        # The original's slot runs on past a ret and fill into a second function.
+        original = bytes.fromhex("8b0d") + u32(D + 4) + bytes.fromhex("51" "e8") + rel32(G, 8) \
+            + bytes.fromhex("59" "c3" "9090") + bytes.fromhex("33c0" "c3") + b"\x90" * 13
+        got, reason = self.explain(self.seed(), original)
+        self.assertIsNone(got)
+        self.assertIn("where another function may start", reason)
+
+    def test_refuses_a_slot_of_fill_or_one_cut_short(self):
+        got, reason = self.explain(self.seed(), _pad(SEED) + b"\x90" * 16)
+        self.assertIsNone(got)
+        self.assertIn("bytes of fill", reason)
+        cut = bytes.fromhex("8b0d") + u32(D + 4) + bytes.fromhex("51" "e8") + rel32(G, 8) \
+            + bytes.fromhex("83c404" "33c0" "33c9" "33d2")
+        got, reason = self.explain(self.seed(), _pad(cut))
+        self.assertIsNone(got)
+        self.assertIn("does not end in a ret or jump", reason)
+
+    def test_refuses_switch_tables_of_another_length(self):
+        seed = bytes.fromhex("8b442404" "ff2485" "00000000" "b801000000" "c3" "b802000000" "c3" "90"
+                             "00000000" "00000000")
+        data = _msvc_object(seed, 32, [(7, "$L3", DIR32), (24, "$L1", DIR32), (28, "$L2", DIR32)],
+                            labels={"$L1": 11, "$L2": 17, "$L3": 24})
+        code = bytes.fromhex("8b442404" "ff2485") + u32(ADDRESS + 24) + bytes.fromhex(
+            "b801000000" "c3" "b802000000" "c3" "90")
+        original = _pad(code + u32(ADDRESS + 11) + u32(ADDRESS + 17) + u32(ADDRESS + 17))
+        got, reason = self.explain(data, original)
+        self.assertIsNone(got)
+        self.assertIn("switch tables (12 bytes) differ in length from the seed's (8)", reason)
+
+
+class SyntheticResizeForkTest(unittest.TestCase):
+    """ReproBit's own reading of a resized reference, when the fork is importable."""
+
+    def test_the_fork_reads_the_original_procedure(self):
+        sys.path.insert(0, str(Path(os.environ.get("REPROBIT_SRC", Path.home() / "source" / "reprobit" / "src"))))
+        try:
+            from reprobit.coff_format import CoffObject, coff_body, detailed_relocations
+            from reprobit.discovery_region_resize import _instruction_keys, _procedure
+        except ImportError:
+            self.skipTest("ReproBit is not importable")
+        finally:
+            sys.path.pop(0)
+        test = SyntheticResizeTest()
+        got, reason = test.explain(test.seed(), _pad(LONGER))
+        self.assertEqual(reason, "written")
+        coff = CoffObject(got)
+        section = coff.function_section("_f")
+        proc, code_end, fill = _procedure(coff, section, "reference")
+        self.assertEqual((proc, code_end, fill), (20, 20, 16))
+        _instruction_keys(bytes(coff_body(coff, section)), detailed_relocations(coff, section), code_end,
+                          "reference")

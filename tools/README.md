@@ -1291,13 +1291,15 @@ seats those after the unit's final `#include`, or at the unit's start
 two counts differ (0x479a30: 3 pads, a run of 19).
 
 A function no pad count reproduces gets no files: its remaining difference
-is not a phase. With `--synthetic`, such a function whose compiled body has
-the original's length gets a *synthetic* reference instead: the unpadded
-compile with that body replaced by the original's bytes, outside relocated
-fields, and a plan over runs of 1–32 declarations (a phase-sensitive unit
+is not a phase. With `--synthetic`, such a function gets a *synthetic*
+reference instead: the unpadded compile with that body replaced by the
+original's bytes, outside relocated fields, at the original's length when
+it differs (below), and a plan over runs of 1–32 declarations (a phase-sensitive unit
 may need a longer run before its donor compiles like the seed). Grind can then author a
 `retail_exact_donor_rewriting` record when the donor holds the original's
-instructions in another order (robbert229/reprobit#19). Neither does one whose unpadded unit already gives the
+instructions in another order (robbert229/reprobit#19), or a
+`retail_exact_region_resize_rewriting` record when proved regions of
+another length reach it (robbert229/reprobit#24). Neither does one whose unpadded unit already gives the
 original's body, since its difference lies elsewhere and grind would find
 the donor identical to the seed.
 
@@ -1325,11 +1327,39 @@ compile's still gets a faithful reference (`explain_synthetic_reference`):
 - An external target keeps the compile's addend; an internal one (a jump
   table, a case label) takes the original's offset in the function.
 
+The original's bytes are its whole slot: from its address to the next
+function the Reccmp report lists (`function_starts`, `original_slot`).
+Its procedure ends before the slot's fill: MSVC 5.0's NOPs when the
+compile's COMDAT is padded to 16, else the linker's int3 (a compile whose
+procedure is itself a multiple of 16 takes the slot's own fill). When that
+procedure size, or its padded length, differs from the compile's, the
+reference carries the original's everywhere the object states it:
+
+- the FPO record's `cbProcSize`, the CodeView procedure's `cbProc`, the
+  function's aux TotalSize and the `.ef` value hold the original's
+  procedure size;
+- a different padded length resizes the section: its header and its
+  section symbol's Length, with every file pointer past its raw data (the
+  other sections, relocation and line tables, the symbol table, each
+  function's line pointer) moved by the difference;
+- offsets inside the function follow the alignment: the entry stays at 0,
+  each line row and the CodeView debug range go to the original instruction
+  their compiled one pairs with (one in an unpaired run goes to the run's
+  first original instruction), switch tables keep their place after the
+  code, and each `$L` label moves to where the original's own fields put it
+  (an unreferenced label follows the alignment), so internal relocations
+  keep their zero addends.
+
 It refuses, and prints why, when a field has no candidate or several, the
-checks contradict each other, one side has a field the other lacks, or the
-original's body runs past the compile's length. When the layouts agree, the
-object is the compile with the original's bytes outside its relocated
-fields, as before. Output goes under `reference/` only, which
+checks contradict each other, or one side has a field the other lacks; and,
+for a length change, when the function shares its section, the compile's
+records disagree on its size or state a code offset of their own, the slot
+ends in 16 or more bytes of fill or is not padded to 16, the original's
+code does not end in a `ret` or jump (up to 3 bytes before its tables), fill
+after a `ret` or jump reaches a 16-byte boundary inside the slot (another
+function would start there), or the switch tables differ in length. When the
+sizes agree, the object is the compile with the original's bytes outside
+its relocated fields, as before, byte for byte. Output goes under `reference/` only, which
 is never committed. Exit status: 0 when every address has a reference or
 needs none, 1 when one has no pad count, 2 on errors. Never run it while a
 build compiles the tree.
