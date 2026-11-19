@@ -841,17 +841,19 @@ void front_menu_item_free_menu_item(Front_MenuItem* item)
         case Front_MenuItem_Cycle:
             front_menu_item_free_cycle((Front_CycleData*)item->itemData);
             break;
-        case Front_MenuItem_Trigger:
-            optional_resource_destroy(item->itemData);
-            break;
+        /* The original lays TextInput's case out before Trigger's (its jump
+         * table's second entry points past its third). */
         case Front_MenuItem_TextInput:
-            optional_resource_destroy(item->itemData);
+            front_menu_item_free_text_input(item->itemData);
+            break;
+        case Front_MenuItem_Trigger:
+            front_menu_item_free_trigger(item->itemData);
             break;
         case Front_MenuItem_Slider:
-            optional_resource_destroy(item->itemData);
+            front_menu_item_free_slider(item->itemData);
             break;
         case Front_MenuItem_RealSlider:
-            optional_resource_destroy(item->itemData);
+            front_menu_item_free_real_slider(item->itemData);
             break;
         case Front_MenuItem_Select:
             front_menu_item_free_select((Front_SelectData*)item->itemData);

@@ -398,6 +398,12 @@ if(LRR_CLASSIC_MSVC5)
       "_FlicDeltaWordHiColorDZ=_flic_opcode27_fallback_noop"
       "_FlicDeltaWordHiColorFlic=_flic_opcode27_fallback_noop"
       "_Flic_Unpack=_flh_magic_uu_noop"
+      # FrontEnd.c's four data frees, folded into steering.c's
+      # optional_resource_destroy (frontend_unit_imports.h).
+      "_front_menu_item_free_trigger=_optional_resource_destroy"
+      "_front_menu_item_free_text_input=_optional_resource_destroy"
+      "_front_menu_item_free_slider=_optional_resource_destroy"
+      "_front_menu_item_free_real_slider=_optional_resource_destroy"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/coff_weak_external.py"
     VERBATIM)
   set_source_files_properties("${_lrr_weak_delete}" PROPERTIES
