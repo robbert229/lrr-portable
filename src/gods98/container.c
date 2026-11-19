@@ -3356,3 +3356,7 @@ static void CNT_CDECL Container_TextureDestroyCallback(CntObject* obj,
     ref->fileName = NULL;
     ref->texture = NULL;
 }
+
+/* A removed colour helper's unread 1/255 (0049e898), the last word of the
+ * unit's .rdata, after the 255.0f its colour setters read. */
+#include "container_colour_tail.h"

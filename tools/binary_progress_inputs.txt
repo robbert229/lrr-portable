@@ -594,6 +594,7 @@ src/gods98/config.c
 src/gods98/config.h
 src/gods98/container.c
 src/gods98/container.h
+src/gods98/container_colour_tail.h
 src/gods98/container_frame.h
 src/gods98/container_imports.h
 src/gods98/container_link_names.h
