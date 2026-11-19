@@ -24,6 +24,7 @@
 #include "crt/vc5names.h"
 #include "helpwindow.h"
 #include "helpwindow_imports.h"
+#include "gods98/maths_normalise_head.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus

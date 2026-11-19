@@ -15,6 +15,7 @@
 #include "panel_unit.h"
 #include "interface_unit.h"
 #include "tutorial_script.h"
+#include "gods98/maths_normalise_head.h"
 
 /* Panel.c's information panel. */
 #define INFO_PANEL 7

@@ -81,6 +81,7 @@
 #include "tutorial_script.h"
 #include "crt/crt.h"
 #include "crt/vc5names.h"
+#include "gods98/maths_normalise_head.h"
 #include "gods98/config.h"
 #include "gods98/draw.h"
 #include "gods98/font_api.h"

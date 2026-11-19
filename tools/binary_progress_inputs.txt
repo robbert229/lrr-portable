@@ -717,6 +717,7 @@ src/gods98/mainsim.hpp
 src/gods98/maths.c
 src/gods98/maths.h
 src/gods98/maths_maths.h
+src/gods98/maths_normalise_head.h
 src/gods98/maths_tail.h
 src/gods98/media.cpp
 src/gods98/media.h
