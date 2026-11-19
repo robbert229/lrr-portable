@@ -7124,8 +7124,10 @@ void lego_block_activity_create(Lego_Level* level, const int* blockPos, int buil
                                    blockPos[0], blockPos[1], &wpos.x, &wpos.y);
         wpos.z = terrain_map_world_z_get(LEGO_LEVEL_PTR(struct TerrainMap, level->map), wpos.x, wpos.y);
         ddiscene_object_position_set(activity->cont, NULL, wpos.x, wpos.y, wpos.z);
-        ddiscene_object_pose_method_dispatch(activity->cont, NULL, (float)dirs[direction].x,
-                                             (float)dirs[direction].y, (float)dirs[direction].z,
+        /* Parenthesised, each component goes through the x87 stack to its
+         * argument slot (fld; push ecx; fstp [esp]), as in the original. */
+        ddiscene_object_pose_method_dispatch(activity->cont, NULL, (dirs[direction].x),
+                                             (dirs[direction].y), (dirs[direction].z),
                                              0.0f, 0.0f, -1.0f);
     }
 }
