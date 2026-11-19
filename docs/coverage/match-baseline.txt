@@ -1,4 +1,4 @@
-# input_sha256: 255f2c7bfdc636919fbad0a8f8b9e145b1d08c3688d5e8681c138d7c79d901fd
+# input_sha256: 1ae71ffc06ea5e24036775829809593943a5dab3c2ea0b587c4e9ada969d41c9
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -661,7 +661,7 @@
 0x0041ec30 89.19 interface_draw_object_count
 0x0041eca0 100.00 interface_draw_dependencies
 0x0041ee60 100.00 interface_reset_dependency_timer
-0x0041ee80 77.88 interface_get_dependency_at_point
+0x0041ee80 100.00 interface_get_dependency_at_point
 0x0041f100 100.00 interface_object_type_present
 0x0041f190 97.14 interface_callback_object_search
 0x0041f230 100.00 interface_any_object_of_type2
@@ -2083,7 +2083,7 @@
 0x0046ff90 100.00 weapons_lazer_find_free
 0x0046ffb0 100.00 weapons_fire_lazer
 0x00470260 100.00 weapons_object_collision_check
-0x004702b0 61.25 weapons_object_quad_intersect
+0x004702b0 98.58 weapons_object_quad_intersect
 0x00470540 100.00 weapons_object_center_proximity_check
 0x00470630 100.00 weapons_object_line_side_check
 0x00470690 100.00 weapons_lazer_create
@@ -3386,7 +3386,7 @@
 0x0041ec30 89.19 interface_draw_object_count
 0x0041eca0 100.00 interface_draw_dependencies
 0x0041ee60 100.00 interface_reset_dependency_timer
-0x0041ee80 77.88 interface_get_dependency_at_point
+0x0041ee80 100.00 interface_get_dependency_at_point
 0x0041f100 100.00 interface_object_type_present
 0x0041f190 97.14 interface_callback_object_search
 0x0041f230 100.00 interface_any_object_of_type2
@@ -4808,7 +4808,7 @@
 0x0046ff90 100.00 weapons_lazer_find_free
 0x0046ffb0 100.00 weapons_fire_lazer
 0x00470260 100.00 weapons_object_collision_check
-0x004702b0 61.25 weapons_object_quad_intersect
+0x004702b0 98.58 weapons_object_quad_intersect
 0x00470540 100.00 weapons_object_center_proximity_check
 0x00470630 100.00 weapons_object_line_side_check
 0x00470690 100.00 weapons_lazer_create
