@@ -913,6 +913,7 @@ src/gods98/viewports_port.cpp
 src/gods98/wad.c
 src/gods98/wad.h
 src/gods98/wad_payload.h
+src/gods98/wad_percent_tail.h
 src/gods98/wad_port.cpp
 src/gods98/winmm.h
 src/gods98/winmm_port.cpp
