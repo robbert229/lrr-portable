@@ -896,6 +896,17 @@ With `--json FILE` it writes the table and the per-function report, which
 names each function's root functions. Tests:
 `tools/tests/test_opt_ref_link.py`, in `make tools-test`.
 
+## Weak externals (`coff_weak_external.py`)
+
+`python3 tools/coff_weak_external.py OUT WEAK=DEFAULT ...` writes an i386
+COFF object with no sections, only weak externals: LINK resolves a reference
+to `WEAK` to `DEFAULT` and does not search the libraries for `WEAK`. LINK 5.0
+has no `/ALTERNATENAME`, so this is how the matching build gives one function
+two names. `CMakeLists.txt` builds `weak_operator_delete.obj` with it, which
+aliases the global `operator delete` (`??3@YAXPAX@Z`) to
+`_ui_render_record_free` (`0045daf0`, finding 696). Tests:
+`tools/tests/test_coff_weak_external.py`.
+
 ## Native code in winapi links (`winapi_link_audit.py`)
 
 The matching build and the MinGW reference build must link no native-backend
