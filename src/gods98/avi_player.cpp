@@ -248,6 +248,7 @@ static AviDirectDraw4* s_aviDirectDraw;
 // VTABLE: LEGORR 0x0049e9a0
 class AviSurface {
 public:
+    AviSurface();
     AviSurface(long width, long height, long bpp, bool vram, bool unused);
     virtual ~AviSurface();
     virtual long Width();
@@ -255,17 +256,25 @@ public:
     bool Lock();
     bool Unlock();
 
-    /* Deviation (scoring only): the original's new-expressions and
-     * destructors call the global operator new (LIBC's, 0x0048ead0) and
-     * delete (0x0045daf0). The port defines no global operator delete under
-     * that name, so class-scope operators forward to the functions that
-     * carry the annotations; the matching build takes operator new from
-     * LIBC, the native port from engine_calloc. Inline, they compile to the
-     * original's direct calls. */
+    /* Deviation (scoring only): the original's new-expressions call the
+     * global operator new (LIBC's, 0x0048ead0); its scalar deleting
+     * destructors and new-expression EH funclets call the global operator
+     * delete (0x0045daf0). A class-scope operator new forwards to the
+     * function that carries the annotation: the matching build takes LIBC's,
+     * the native port engine_calloc. Inline, it compiles to the original's
+     * direct call.
+     *
+     * The matching build uses the global operator delete, which the build
+     * aliases to ui_render_record_free (0x0045daf0) with a weak external
+     * (finding 696). A class-scope one would cost an out-of-line COMDAT, as
+     * MSVC 5.0 does not inline it into the funclets. The port has no global
+     * operator delete under that name, so it keeps a class-scope one. */
     // PORT-ONLY: routes new to the original's operator new (0x0048ead0)
     static void* operator new(size_t size) { return AVI_OPERATOR_NEW(size); }
+#if !defined(_MSC_VER)
     // PORT-ONLY: routes delete to the original's operator delete (0x0045daf0)
     static void operator delete(void* p) { ui_render_record_free(p); }
+#endif
 
 private:
     bool Init(long width, long height, long bpp, bool vram);
@@ -299,8 +308,10 @@ public:
     /* Deviation (scoring only): see AviSurface. */
     // PORT-ONLY: routes new to the original's operator new (0x0048ead0)
     static void* operator new(size_t size) { return AVI_OPERATOR_NEW(size); }
+#if !defined(_MSC_VER)
     // PORT-ONLY: routes delete to the original's operator delete (0x0045daf0)
     static void operator delete(void* p) { ui_render_record_free(p); }
+#endif
 
     AviStreamIface* m_aviStream;        /* +0x04 */
     AviGetFrameIface* m_getFrame;       /* +0x08 */
@@ -315,6 +326,19 @@ public:
     unsigned long m_unusedBc;           /* +0xbc */
     AviSurface* m_surf;                 /* +0xc0 */
 };
+
+/* Nothing calls this constructor, so /OPT:REF removes it. MSVC 5.0 emits a
+ * class's vtable, and with it the scalar deleting destructor, after the
+ * first function that stores the vtable pointer. This one is that function,
+ * so the scalar deleting destructor comes before ~AviSurface, as in the
+ * original (finding 696). Without it, ~AviSurface stores the pointer first
+ * and the destructor follows it. The constructor also keeps
+ * AviSurface::Init in the original's phase of the symbol counter (finding
+ * 538 rule B), where the class-scope operator deletes held it before. */
+// PORT-ONLY: an unreferenced constructor that /OPT:REF removes; it places the scalar deleting destructor first (finding 696)
+AviSurface::AviSurface()
+{
+}
 
 // FUNCTION: LEGORR 0x0047e460
 // AviSurface::`scalar deleting destructor'
