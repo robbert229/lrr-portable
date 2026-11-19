@@ -865,10 +865,9 @@ void lws_absolute_key_set(LwsInfo* scene, LwsNode* node, LwsVector3* pos,
 {
     LwsFrame* frame = scene->frameList[node->frameIndex];
     float mat[4][4];
+    LwsFrame* parent;
 
     if (node->flags & LWSNODE_FLAG_FACECAMERA) {
-        LwsFrame* parent;
-
         frame->lpVtbl->GetParent(frame, &parent);
         frame->lpVtbl->GetTransform(frame, parent, mat);
         parent->lpVtbl->Release(parent);
@@ -881,35 +880,37 @@ void lws_absolute_key_set(LwsInfo* scene, LwsNode* node, LwsVector3* pos,
         mat[3][1] = pos->y;
         mat[3][2] = pos->z;
     } else {
-        float sinB = (float)sin(hpb->z);
-        float sinP = (float)sin(hpb->y);
-        float cosB = (float)cos(hpb->z);
-        float sinH = (float)sin(hpb->x);
-        float px = node->pivotVector.x;
-        float cosH = (float)cos(hpb->x);
-        float cosP = (float)cos(hpb->y);
-        float py = node->pivotVector.y;
-        float pz = node->pivotVector.z;
-        float e, a, c, b, d, f, g;
+        float a, b, c, d, e, f, g;
+        float px, py, pz;
+        float sinH, cosH, sinP, cosP, sinB, cosB;
 
+        sinB = (float)sin(hpb->z);
+        sinP = (float)sin(hpb->y);
+        cosB = (float)cos(hpb->z);
+        sinH = (float)sin(hpb->x);
+        px = node->pivotVector.x;
+        cosH = (float)cos(hpb->x);
+        cosP = (float)cos(hpb->y);
+        py = node->pivotVector.y;
+        pz = node->pivotVector.z;
         a = scale->x * sinB;
         b = scale->x * cosB;
-        d = scale->y * cosB;
         c = sinP * a;
-        mat[0][1] = cosP * a;
-        e = sinP * d;
-        f = -scale->y * sinB;
         mat[0][0] = cosH * b + sinH * c;
+        mat[0][1] = cosP * a;
         mat[0][2] = -sinH * b + cosH * c;
-        g = scale->z * cosP;
-        mat[2][1] = -scale->z * sinP;
-        mat[2][0] = sinH * g;
-        mat[2][2] = cosH * g;
-        mat[1][1] = cosP * d;
-        mat[1][0] = cosH * f + sinH * e;
-        mat[1][2] = cosH * e + -sinH * f;
         mat[0][3] = 0.0f;
+        d = scale->y * cosB;
+        f = -scale->y * sinB;
+        e = sinP * d;
+        mat[1][0] = cosH * f + sinH * e;
+        mat[1][1] = cosP * d;
+        mat[1][2] = cosH * e + -sinH * f;
         mat[1][3] = 0.0f;
+        g = scale->z * cosP;
+        mat[2][0] = sinH * g;
+        mat[2][1] = -scale->z * sinP;
+        mat[2][2] = cosH * g;
         mat[2][3] = 0.0f;
         mat[3][0] = pz * mat[2][0] + (px * mat[0][0] + py * mat[1][0]) + pos->x;
         mat[3][1] = px * mat[0][1] + py * mat[1][1] + pz * mat[2][1] + pos->y;
