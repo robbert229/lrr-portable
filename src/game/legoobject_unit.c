@@ -8355,6 +8355,7 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
     float wx;
     float wy;
     float angle;
+    float height;
 
     if (obj->type == 5) {
         if (obj->flags3 & 0x2000) {
@@ -8384,8 +8385,10 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
             pos2D.x = target.x;
             pos2D.y = target.y;
             terrain_map_world_to_block(Lego_GetMap(), target.x, target.y, &blockPos[0], &blockPos[1]);
-            hit = legoobject_flag_gated_callback_dispatch(
-                obj, &pos2D.x, terrain_map_world_z_get(Lego_GetMap(), target.x, target.y) - target.z, 1);
+            /* The original stores the boulder's height over the ground in a
+             * local before it passes it. */
+            height = terrain_map_world_z_get(Lego_GetMap(), target.x, target.y) - target.z;
+            hit = legoobject_flag_gated_callback_dispatch(obj, &pos2D.x, height, 1);
             if (hit) {
                 obj->carryingThisObject = NULL;
                 obj->flags3 &= ~0x2000;
