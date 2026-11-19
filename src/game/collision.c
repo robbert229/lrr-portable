@@ -72,10 +72,10 @@ float collision_polyline_point_distance(const CollisionPoint2F* point,
 }
 
 // FUNCTION: LEGORR 0x00408b60
-void collision_project_onto_line(const CollisionPoint2F* start,
-                                 const CollisionPoint2F* end,
-                                 const CollisionPoint2F* point,
-                                 CollisionPoint2F* out)
+CollisionPoint2F* collision_project_onto_line(const CollisionPoint2F* start,
+                                              const CollisionPoint2F* end,
+                                              const CollisionPoint2F* point,
+                                              CollisionPoint2F* out)
 {
     CollisionPoint2F dir;
     CollisionPoint2F rel;
@@ -85,7 +85,7 @@ void collision_project_onto_line(const CollisionPoint2F* start,
     collision_vector2d_normalise(&dir);
     collision_vector2d_subtract(&rel, point, start);
     t = collision_vector2d_dot(&rel, &dir);
-    collision_ray_end_point(out, start, &dir, t);
+    return collision_ray_end_point(out, start, &dir, t);
 }
 
 // FUNCTION: LEGORR 0x00408bf0

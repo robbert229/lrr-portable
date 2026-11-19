@@ -116,8 +116,8 @@ float entity_stats_float_at110(const struct EntitySlot* e);       /* 0046a2f0 */
 float entity_stats_float_at10c(const struct EntitySlot* e);       /* 0046a310 */
 
 /* Other game units. */
-void point_project_onto_line2d(const float* line_start, const float* line_end,
-                               const float* point, float* out);   /* 00408b60 */
+float* point_project_onto_line2d(const float* line_start, const float* line_end,
+                                 const float* point, float* out); /* 00408b60 */
 void point2d_project_onto_direction(const float* origin, const float* direction,
                                     const float* point, float* out); /* 00408bf0 */
 void scene_light_create_at_position(const float position[3]);     /* 0040be10 */
