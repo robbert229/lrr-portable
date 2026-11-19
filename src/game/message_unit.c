@@ -749,20 +749,22 @@ unsigned int message_kill_all_selected_units(void)
     return messageGlobs.selectedUnitCount;
 }
 
+#include "message_first_person.h"
+
 // FUNCTION: LEGORR 0x00452d60
 int message_enter_first_person_view(unsigned int cameraFrame)
 {
     Lego_Object* obj = (Lego_Object*)legoGlobs_selectedObject;
     unsigned int loop;
 
-    if (obj && (obj->flags3 & 0x10) && (obj->type == 2 || obj->driveObject)) {
+    if (obj && message_object_can_first_person(obj)) {
         lego_sound_minimum_distance_update_mode(0, obj, cameraFrame);
         return 1;
     }
     for (loop = 0; loop < messageGlobs.selectedUnitCount; loop++) {
         obj = messageGlobs.selectedUnitList[loop];
         if (obj->type == 2 && obj->driveObject) obj = obj->driveObject;
-        if ((obj->flags3 & 0x10) && (obj->type == 2 || obj->driveObject)) {
+        if (message_object_can_first_person(obj)) {
             lego_sound_minimum_distance_update_mode(0, obj, cameraFrame);
             return 1;
         }
