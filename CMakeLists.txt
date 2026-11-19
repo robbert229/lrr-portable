@@ -371,16 +371,6 @@ if(LRR_RECCMP)
   target_link_options(program PRIVATE "/MAP:${CMAKE_BINARY_DIR}/LegoRR.map")
 endif()
 if(LRR_CLASSIC_MSVC5)
-  # The original's operator delete is 0045daf0, which C code also calls as a
-  # plain function (ui_render_record_free). LINK 5.0 has no /ALTERNATENAME,
-  # so a section-less object gives that function the C++ name too, as a weak
-  # external (finding 696). It adds nothing to the image.
-  # Committed, not generated at build time, so that ReproBit's CMake import
-  # sees a source input rather than a producer it does not model;
-  # tools/tests/test_coff_weak_external.py checks it is exactly
-  # tools/coff_weak_external.py's output.
-  target_sources(program PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/cross/msvc5-importlibs/weak_operator_delete.obj")
   # The DirectX libraries the toolchain lacks, rebuilt from source (finding
   # 574). Each target's full path takes the place the link order gives the
   # library's name, so LINK reads them in the same order and never searches

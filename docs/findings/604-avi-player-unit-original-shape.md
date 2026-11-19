@@ -226,11 +226,6 @@ direct calls and are marked `Deviation (scoring only)` and `PORT-ONLY` (the
 lint exemption). `heap.hpp` declares both functions, and `aitask.h` declares
 the back-buffer getter `render_surface_secondary_get` (`004065e0`).
 
-Finding 696 later removes the class-scope `operator delete` from the
-matching build. Its EH funclets called out-of-line `??3` copies, so the
-build now aliases the global `operator delete` to `0045daf0` with a weak
-external.
-
 ### Callers and the port tail
 
 The original's callers are the credits loop (`0040a0c0`, in
