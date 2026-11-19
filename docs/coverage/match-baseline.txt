@@ -1,4 +1,4 @@
-# input_sha256: 133e775ce130dba9cf9139089fbb5deec6f3aafcd5b44eecc43f163e3572aba1
+# input_sha256: 30e712614d193b0dd7a5389847236419ed1d5c2b21c8c40b07bb060096c603ac
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -739,7 +739,7 @@
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 100.00 lego_global_subsystem_state_reset
 0x00426420 95.77 lego_cursor_ray_to_camera_route
-0x00426520 74.07 lego_main_sim_interaction_and_cell_update
+0x00426520 76.19 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 100.00 lego_level_upgrade_name_strings_load
 0x00428020 99.26 lego_entity_command_status_feedback_dispatch
@@ -3464,7 +3464,7 @@
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 100.00 lego_global_subsystem_state_reset
 0x00426420 95.77 lego_cursor_ray_to_camera_route
-0x00426520 74.07 lego_main_sim_interaction_and_cell_update
+0x00426520 76.19 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 100.00 lego_level_upgrade_name_strings_load
 0x00428020 99.26 lego_entity_command_status_feedback_dispatch
