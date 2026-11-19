@@ -784,6 +784,7 @@ int panel_button_collision_check(int* outPanel, int* outButton, int mouseX,
     int found = 0;
     unsigned int panelType;
     unsigned int i;
+    PanelData* panel;
     PanelButton* button;
     int inside;
 
@@ -798,13 +799,18 @@ int panel_button_collision_check(int* outPanel, int* outButton, int mouseX,
     }
 
     for (panelType = 0; panelType < PANEL_TYPE_COUNT; panelType++) {
-        if (panelGlobs.panelTable[panelType].flags & PANEL_FLAG_OPEN) {
+        /* The original takes the panel's address once per panel (`ebx`)
+         * for its flags, button count and button list.
+         * panel_button_point_inside's argument stays spelled out below and
+         * shares that address; written as `panel` it scores lower. */
+        panel = &panelGlobs.panelTable[panelType];
+        if (panel->flags & PANEL_FLAG_OPEN) {
             if (overPanel != NULL && panelType != 1 && panelType != 2 &&
                 !legacy_panel_slot_coordinate_hit_test(panelType, mouseX, mouseY)) {
                 *overPanel = 1;
             }
-            for (i = 0; i < panelGlobs.panelTable[panelType].buttonCount; i++) {
-                button = &panelGlobs.panelTable[panelType].buttonList[i];
+            for (i = 0; i < panel->buttonCount; i++) {
+                button = &panel->buttonList[i];
                 inside = 0;
                 if (!found) {
                     if (panelType == PANEL_CAMERA_CONTROL && i == 3) {
@@ -820,9 +826,9 @@ int panel_button_collision_check(int* outPanel, int* outButton, int mouseX,
                     if (leftButton) {
                         if (panelGlobs.selectedButton == PANEL_MAX_BUTTONS) {
                             if (!leftButtonLast) {
+                                panelGlobs.selectedPanel = panelType;
                                 panelGlobs.selectedButton = i;
                                 found = 1;
-                                panelGlobs.selectedPanel = panelType;
                                 *outButton = i;
                                 button->flags = (button->flags & ~PANEL_BUTTON_FLAG_HIGHLIGHT) | PANEL_BUTTON_FLAG_PRESSED;
                             } else {
