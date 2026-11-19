@@ -1,4 +1,4 @@
-# input_sha256: 3950c95a9b54bef74a30450c7529d0c780f2f85bfae95fc42b2a5850012031ab
+# input_sha256: de3017b04ea4da18bf75d86f59645cb77751246b34ec9c940402b88e7cb804eb
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -216,8 +216,8 @@
 0x004089a0 100.00 entity_payload_state_set
 0x004089d0 100.00 collision_segment_point_distance
 0x00408b00 100.00 point_to_polyline_minimum_segment_distance
-0x00408b60 64.15 point_project_onto_line2d
-0x00408bf0 79.25 point2d_project_onto_direction
+0x00408b60 81.13 point_project_onto_line2d
+0x00408bf0 92.45 point2d_project_onto_direction
 0x00408c80 100.00 string_table_index_lookup
 0x00408ce0 100.00 cmd_operation_group_append_object
 0x00408d70 100.00 terrain_descriptor_coordinate_count_limit_check
@@ -810,7 +810,7 @@
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
 0x00431140 100.00 lego_terrain_cell_queued_work_transition
-0x004311d0 81.02 lego_block_activity_create
+0x004311d0 91.55 lego_block_activity_create
 0x004313b0 100.00 lego_block_activity_update_all
 0x00431450 100.00 lego_terrain_neighbor_flag_refresh
 0x004314c0 100.00 lego_block_activity_remove
@@ -2941,8 +2941,8 @@
 0x004089a0 100.00 entity_payload_state_set
 0x004089d0 100.00 collision_segment_point_distance
 0x00408b00 100.00 point_to_polyline_minimum_segment_distance
-0x00408b60 64.15 point_project_onto_line2d
-0x00408bf0 79.25 point2d_project_onto_direction
+0x00408b60 81.13 point_project_onto_line2d
+0x00408bf0 92.45 point2d_project_onto_direction
 0x00408c80 100.00 string_table_index_lookup
 0x00408ce0 100.00 cmd_operation_group_append_object
 0x00408d70 100.00 terrain_descriptor_coordinate_count_limit_check
@@ -3535,7 +3535,7 @@
 0x00430ee0 52.37 lego_terrain_cell_initialize
 0x004310f0 100.00 lego_terrain_cell_flag20_clear_and_refresh
 0x00431140 100.00 lego_terrain_cell_queued_work_transition
-0x004311d0 81.02 lego_block_activity_create
+0x004311d0 91.55 lego_block_activity_create
 0x004313b0 100.00 lego_block_activity_update_all
 0x00431450 100.00 lego_terrain_neighbor_flag_refresh
 0x004314c0 100.00 lego_block_activity_remove
