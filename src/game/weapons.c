@@ -248,6 +248,10 @@ static int weapons_callback_update_object(Weapons_Object* obj, float* elapsed);
 static int weapons_callback_ray_candidate(Weapons_Object* obj,
                                           Weapons_RaySearch* search);
 
+/* Maths.h's inline normalise. Its 1.0f (0049e820) opens the unit's
+ * literal pool, before weapons_initialise's -1.0f. */
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0046eb80
 int weapons_initialise(struct BlockRec* config, const char* gameName)
 {
