@@ -846,16 +846,19 @@ int panel_button_collision_check(int* outPanel, int* outButton, int mouseX,
                             found = 1;
                             *outButton = i;
                             button->flags = (button->flags & ~PANEL_BUTTON_FLAG_PRESSED) | PANEL_BUTTON_FLAG_HIGHLIGHT;
-                        } else if (panelType == panelGlobs.selectedPanel && i == panelGlobs.selectedButton) {
-                            *outButton = i;
-                            if (button->flags & PANEL_BUTTON_FLAG_TOGGLE) {
-                                if (button->flags & PANEL_BUTTON_FLAG_TOGGLED) button->flags &= ~PANEL_BUTTON_FLAG_TOGGLED;
-                                else button->flags |= PANEL_BUTTON_FLAG_TOGGLED;
-                            }
-                            if (outClicked != NULL) *outClicked = 1;
-                            button->flags = (button->flags & ~PANEL_BUTTON_FLAG_PRESSED) | PANEL_BUTTON_FLAG_HIGHLIGHT;
-                            found = 1;
                         } else {
+                            /* The original's released-click branch falls
+                             * through into the found = 1 it shares with the
+                             * other buttons. */
+                            if (panelType == panelGlobs.selectedPanel && i == panelGlobs.selectedButton) {
+                                *outButton = i;
+                                if (button->flags & PANEL_BUTTON_FLAG_TOGGLE) {
+                                    if (button->flags & PANEL_BUTTON_FLAG_TOGGLED) button->flags &= ~PANEL_BUTTON_FLAG_TOGGLED;
+                                    else button->flags |= PANEL_BUTTON_FLAG_TOGGLED;
+                                }
+                                if (outClicked != NULL) *outClicked = 1;
+                                button->flags = (button->flags & ~PANEL_BUTTON_FLAG_PRESSED) | PANEL_BUTTON_FLAG_HIGHLIGHT;
+                            }
                             found = 1;
                         }
                     }
