@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* GAME-026 — original translation unit (text 0044e0c0-00451cd0; finding
- * 505): the 3D terrain map (the original's Map3D.c) and the level-of-detail
- * mesh lists (MeshLOD) at the end of the object.
+/* GAME-026 — original translation unit (text 0044e0c0-004519b0; finding
+ * 505): the 3D terrain map (the original's Map3D.c). The level-of-detail
+ * mesh lists after it are their own object (GAME-053, meshlod.c).
  *
  * Rebuilt in the original's shape (issue #522, ADR 0005): one file for the
- * unit, its 62 functions in original order and the C-compatible subset, so
+ * unit, its 56 functions in original order and the C-compatible subset, so
  * the matching build compiles it as C. The native port compiles it as C++.
  *
  * The port's terrain model is a different contract, so the port's
@@ -1660,139 +1660,4 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
     }
     *intersection = hit[1];
     return 1;
-}
-
-// FUNCTION: LEGORR 0x004519b0
-ModelEntryRecord* model_entry_record_load(ModelEntryRecord* previous,
-                                          const char* partName,
-                                          const char* dir,
-                                          const char* meshName, int setID)
-{
-    char path[256];
-    void* container;
-    ModelEntryRecord* record;
-
-    sprintf(path, "%s\\%s", dir, meshName);
-    if ((container = container_load(NULL, path, "LWO", 1)) == NULL) {
-        container = container_load(NULL, path, "MESH", 1);
-    }
-    if (container) {
-        record = (ModelEntryRecord*)malloc(sizeof(ModelEntryRecord));
-        record->flags = 2;
-        if (previous) previous->next = record;
-        record->object = container;
-        record->next = NULL;
-        record->kind = setID;
-        record->name = (char*)malloc(strlen(partName) + 1);
-        strcpy(record->name, partName);
-        record->instance = NULL;
-        return record;
-    }
-    return NULL;
-}
-
-// FUNCTION: LEGORR 0x00451ab0
-ModelEntryRecord* model_primitive_record_create(ModelEntryRecord* previous,
-                                                const char* name, int kind)
-{
-    ModelEntryRecord* record;
-
-    record = (ModelEntryRecord*)malloc(sizeof(ModelEntryRecord));
-    record->flags = 2;
-    if (previous) previous->next = record;
-    record->kind = kind;
-    record->next = NULL;
-    record->object = NULL;
-    record->name = (char*)malloc(strlen(name) + 1);
-    strcpy(record->name, name);
-    record->instance = NULL;
-    return record;
-}
-
-// FUNCTION: LEGORR 0x00451b30
-ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head)
-{
-    const ModelEntryRecord* node;
-    ModelEntryRecord* clone;
-    unsigned int count = 0;
-    unsigned int i;
-
-    for (node = head; node; node = node->next) count++;
-    if (count) {
-        clone = (ModelEntryRecord*)malloc(count * sizeof(ModelEntryRecord));
-        i = 0;
-        for (node = head; node; node = node->next) {
-            clone[i] = *node;
-            clone[i].instance = NULL;
-            clone[i].flags = (clone[i].flags & ~2) | 1;
-            clone[i].next = &clone[i + 1];
-            i++;
-        }
-        clone[0].flags |= 2;
-        clone[i - 1].next = NULL;
-        return clone;
-    }
-    return NULL;
-}
-
-// FUNCTION: LEGORR 0x00451bc0
-void resource_list_update_matching_key(void* list, void* library,
-                                       void* update_value,
-                                       unsigned int key)
-{
-    ModelEntryRecord* record;
-
-    for (record = (ModelEntryRecord*)list; record; record = record->next) {
-        if (key == (unsigned int)record->kind) {
-            if (!record->instance) {
-                const char* name = xf_texture_name_format(library, record->name, NULL);
-                record->instance = resource_name_register_or_query_target(
-                    (void**)library, name, 0, NULL);
-            }
-            if (record->instance) {
-                interface_array_forward_sync(record->instance, record->object,
-                                             update_value);
-            }
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x00451c30
-void linked_record_field4_clear(void* record)
-{
-    ModelEntryRecord* node;
-
-    for (node = (ModelEntryRecord*)record; node; node = node->next) {
-        node->instance = NULL;
-    }
-}
-
-// FUNCTION: LEGORR 0x00451c50
-void owned_object_reference_chain_release(void* head)
-{
-    ModelEntryRecord* node;
-    ModelEntryRecord* next;
-    ModelEntryRecord* last = NULL;
-    ModelEntryRecord* root = (ModelEntryRecord*)head;
-
-    for (node = root; node; node = node->next) {
-        if (!(node->flags & 1)) {
-            if (node->name) free(node->name);
-            if (node->object) {
-                ledger_stub_00472a40_DDiSceneObjectDestroy(node->object);
-            }
-        }
-        if (node->flags & 2) {
-            last = node;
-        }
-        else if (last) {
-            last->next = node->next;
-        }
-    }
-    if (last) {
-        for (node = root; node; node = next) {
-            next = node->next;
-            free(node);
-        }
-    }
 }

@@ -4577,11 +4577,9 @@ int nerpfunc_get_monster_at_tutorial(unsigned int* stack)
 }
 
 /* nerpsruntimeGlobs, defined after every function so that no function's symbol
- * counter moves (finding 538), and after the .bss the original has before
- * it: 1,720 bytes at 004ff2a0, after Message.c's .bss, which nothing in the image reads. Both are zero-initialised
- * externals, which MSVC 5.0 emits in definition order (finding 686). */
-// GLOBAL: LEGORR 0x004ff2a0
-unsigned int tutorial_script_unknown_4ff2a0[430] = { 0 }; /* never read */
+ * counter moves (finding 538). It is a zero-initialised external, which
+ * MSVC 5.0 emits in .bss (finding 686). The 1,720 bytes before it
+ * (004ff2a0) are the code-less object's before it (message_data.c). */
 // GLOBAL: LEGORR 0x004ff958
 NERPs_RuntimeGlobs nerpsruntimeGlobs = { 0 };
 

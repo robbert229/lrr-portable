@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* GAME-026 (original translation unit GAME-026, finding 505): the 3D
- * terrain map (the original's Map3D.c) and, at the end of the object, the
- * level-of-detail mesh lists (MeshLOD).
+ * terrain map (the original's Map3D.c).
  *
  * The terrain map is a grid of blocks, one per map-file cell. Each block
  * holds the two face normals of its quad, its surface texture, flags, the
@@ -141,7 +140,7 @@ typedef struct TerrainMapFile {
 
 /* A level-of-detail mesh list entry (MeshLOD, 0x18 bytes); the C view of
  * gods98/model.hpp's ModelEntryRecord, which defines it when included
- * first (test_c_boundaries.cpp). */
+ * first (test_c_boundaries.cpp). meshlod.h has the same record. */
 #ifndef LRR_MODEL_ENTRY_RECORD_DEFINED
 #define LRR_MODEL_ENTRY_RECORD_DEFINED 1
 struct ModelEntryRecord {
@@ -341,7 +340,13 @@ int terrain_map_block_ray_intersection(TerrainMap* map, int bx, int by,
                                        const TerrainMapVector3* direction,
                                        TerrainMapVector3* intersection);
 
-/* MeshLOD (shared: the port's names and contracts). */
+/* MeshLOD (shared: the port's names and contracts). The level-of-detail
+ * mesh lists are their own object, GAME-053, and meshlod.h is their header.
+ * The record above and these declarations stay here as well: the C units
+ * that include this file count them, and an included header that adds
+ * declarations costs MSVC's symbol counter one more (finding 538), which
+ * moves 0044fb90 and 0044fe70. test_c_boundaries.cpp checks both headers
+ * against each other. */
 /* FUN_004519b0 MeshLOD_Create. */
 ModelEntryRecord* model_entry_record_load(ModelEntryRecord* previous,
                                           const char* partName,

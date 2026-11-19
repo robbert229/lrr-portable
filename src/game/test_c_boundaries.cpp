@@ -94,6 +94,7 @@
 #include "gods98/mesh.h"
 #include "game/tile_variants.h"
 #include "game/terrain_map.h"
+#include "game/meshlod.h"
 #include "game/mission.hpp"
 #include "game/savegame.hpp"
 #include "gods98/frameloop.hpp"
