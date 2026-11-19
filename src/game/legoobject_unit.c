@@ -6765,7 +6765,6 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
     float dot2;
     float len;
     unsigned char flags;
-    Point2F* offset;
     float jx;
     float jy;
     Point2F move;
@@ -6775,11 +6774,10 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
     Point2F unused;
     LegoObjJ_Vector3F toward;
     LegoObjJ_Vector3F facing;
-    Point2F offsets[4];
     LegoObjG_RouteBlock* route;
 
-    diag = 0;
     adjusted = 0;
+    diag = 0;
     result = 1;
     route = (LegoObjG_RouteBlock*)obj->routeBlocks;
     sx = route[obj->routeBlocksCurrent].blockPos[0];
@@ -6812,17 +6810,9 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
             !terrain_cell_type_is_8_or_10_or_11_current(cbx, cby))
         {
             if (terrain_cell_flag_80_current(cbx, cby)) {
-                if (fabs(to.x - move.x) <= fabs(to.y - move.y)) {
-                    offsets[0].x = 0.1f;
-                    offsets[0].y = 0.0f;
-                    offsets[1].x = -0.1f;
-                    offsets[1].y = 0.0f;
-                    offsets[2].x = -0.1f;
-                    offsets[2].y = 0.0f;
-                    offsets[3].x = 0.1f;
-                    offsets[3].y = 0.0f;
-                    offset = &offsets[legoobject_o_block_byte3(cbx, cby)];
-                } else {
+                if (fabs(to.x - move.x) > fabs(to.y - move.y)) {
+                    Point2F offsets[4];
+
                     offsets[0].x = 0.0f;
                     offsets[0].y = -0.1f;
                     offsets[1].x = 0.0f;
@@ -6831,9 +6821,20 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
                     offsets[2].y = 0.1f;
                     offsets[3].x = 0.0f;
                     offsets[3].y = 0.1f;
-                    offset = &offsets[legoobject_o_block_byte3(cbx, cby)];
+                    legoobject_o_vector2_add(&to, &offsets[terrain_cell_record_byte3_current(cbx, cby)], &to);
+                } else {
+                    Point2F offsets[4];
+
+                    offsets[0].x = 0.1f;
+                    offsets[0].y = 0.0f;
+                    offsets[1].x = -0.1f;
+                    offsets[1].y = 0.0f;
+                    offsets[2].x = -0.1f;
+                    offsets[2].y = 0.0f;
+                    offsets[3].x = 0.1f;
+                    offsets[3].y = 0.0f;
+                    legoobject_o_vector2_add(&to, &offsets[terrain_cell_record_byte3_current(cbx, cby)], &to);
                 }
-                legoobject_o_vector2_add(&to, offset, &to);
             }
             terrain_map_world_edge_point_get(Lego_GetMap(), to.x, to.y,
                 terrain_cell_flag_2000_current(cbx, cby), 0.05f, &to.x, &to.y);
@@ -6881,8 +6882,8 @@ int legoobject_step_movement_vector_resolve(Lego_Object* obj, int nextBlock, int
     } else {
         legoobject_o_vector2_subtract(&move, &to, &move);
         if (adjusted && !diag) {
-            if (fabs(move.x) <= fabs(move.y)) move.x = 0.0f;
-            else move.y = 0.0f;
+            if (fabs(move.x) > fabs(move.y)) move.y = 0.0f;
+            else move.x = 0.0f;
         } else if (0.0f == move.x && 0.0f == move.y) {
             legoobject_o_vector2_subtract(&move, &to, &pos);
         }

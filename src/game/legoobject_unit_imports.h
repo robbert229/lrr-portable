@@ -1093,12 +1093,9 @@ void aitask_entity_task_batch_append(struct EntitySlot** objects,
 uint32_t terrain_cell_flag_2000_current(int cx, int cy);           /* 00432fd0 */
 int terrain_cell_type_is_8_or_10_or_11_current(int cx, int cy);    /* 00432b90 */
 uint32_t terrain_cell_flag_80_current(int cx, int cy);             /* 00433000 */
-/* 004332c0 returns the block's byte 3; the port declares a uint32_t
- * (level.hpp). The unit reads the byte through a cast, as the original
- * uses only al. */
+/* 004332c0 returns the block's byte 3 as a uint32_t (level.hpp); its
+ * caller 00444680 indexes with the whole of eax, no `and eax, 0xff`. */
 uint32_t terrain_cell_record_byte3_current(int x, int y);          /* 004332c0 */
-#define legoobject_o_block_byte3(x, y) \
-    (((uint8_t (*)(int, int))terrain_cell_record_byte3_current)(x, y))
 /* Map3D.c (terrain_map.h). */
 int terrain_map_world_edge_point_get(struct TerrainMap* map, float x, float y,
                                      int diagonal, float distance,
