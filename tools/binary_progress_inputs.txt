@@ -592,6 +592,7 @@ src/gods98/camera_shared.hpp
 src/gods98/com_object_tree_port.cpp
 src/gods98/config.c
 src/gods98/config.h
+src/gods98/config_zero_tail.h
 src/gods98/container.c
 src/gods98/container.h
 src/gods98/container_colour_tail.h

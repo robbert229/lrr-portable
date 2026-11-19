@@ -423,6 +423,9 @@ unsigned int config_unknown_506090[2] = { 0 }; /* never read */
 ConfigGlobs configGlobs = { 0 };
 
 /* Maths.h's inline normalise: the unread 1.0f at 0049e908, after the unit's
- * named constants. Its 0.0f partner at 0049e90c, also unread,
- * is not reproduced: no code of the unit creates it. */
+ * named constants. */
 #include "maths_normalise_head.h"
+
+/* A removed Config.h helper's unread 0.0f (0049e90c), the last word of the
+ * unit's .rdata. */
+#include "config_zero_tail.h"
