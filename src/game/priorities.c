@@ -70,6 +70,8 @@ static int s_tool_tip_type = PRIORITY_TYPE_COUNT;
 // GLOBAL: LEGORR 0x00500f00
 static PrioritiesGlobs priorities;
 
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0045cdc0
 void priorities_load_images(BlockFile* config, const char* game_name)
 {

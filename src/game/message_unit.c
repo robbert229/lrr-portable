@@ -19,6 +19,7 @@
 /* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
  * above, pays for its symbols (finding 538). */
 #include "lego_globs.h"
+#include "gods98/maths_normalise_head.h"
 
 /* Lego_GetMap (00431570) takes no argument; the port's entry under that
  * address, level_current_terrain_get, takes a cell (lego_unit.h). */

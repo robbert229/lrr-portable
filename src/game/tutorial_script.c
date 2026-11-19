@@ -1272,6 +1272,8 @@ extern NERPs_RuntimeGlobs nerpsruntimeGlobs;
 // GLOBAL: LEGORR 0x00555d40
 NERPs_Globs nerpsGlobs;
 
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x00452df0
 int nerps_file_load_script_file(const char* filename)
 {
