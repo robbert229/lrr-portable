@@ -2,7 +2,7 @@
 /* Images.c, original translation unit G98-011 (finding 632), rebuilt in
  * original shape (ADR 0005): gods98's 2D images, text 0047d410-0047e460,
  * .rdata 0049e980-0049e99c (d3drmdef.h's table, an unread 1.0f, an unread
- * 1/255 the rebuild lacks, 255.0f), strings 004aae7c-004aaeb4, .bss
+ * 1/255, 255.0f), strings 004aae7c-004aaeb4, .bss
  * 00533908-00533994.
  *
  * An Image is a DirectDraw surface with its size, its pens and a colour-key
@@ -418,6 +418,10 @@ int Image_24BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
  * Image_SetupTrans's 255.0f; compiled here, after the source copies, it
  * leaves their x87 operand order as it was. */
 #include "maths_normalise_head.h"
+
+/* A removed Images.h colour helper's unread 1/255 (0049e994), between
+ * Maths.h's 1.0f and Image_SetupTrans's 255.0f. */
+#include "images_colour_head.h"
 
 // FUNCTION: LEGORR 0x0047d9d0
 Image* Image_LoadBMPScaled(const char* fileName, unsigned int width,
