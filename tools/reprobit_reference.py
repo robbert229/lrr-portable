@@ -1038,7 +1038,9 @@ def output_dir(path: Path) -> Path:
     reference = (ROOT / "reference").resolve()
     if resolved != reference and reference not in resolved.parents:
         raise ReferenceError(f"--out must lie under reference/ (never committed): {path}")
-    return resolved
+    # Under the checkout's own reference/, even when that is a symlink (a
+    # helper worktree's), so the plans' paths stay project-relative.
+    return ROOT / "reference" / resolved.relative_to(reference)
 
 
 # ---------------------------------------------------------------------------

@@ -94,7 +94,7 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(plan["extern_runs"]["placement"], "prefix")
 
     def test_output_must_lie_under_reference(self):
-        self.assertEqual(rr.output_dir(rr.ROOT / "reference" / "grind"), (rr.ROOT / "reference" / "grind").resolve())
+        self.assertEqual(rr.output_dir(rr.ROOT / "reference" / "grind"), rr.ROOT / "reference" / "grind")
         with self.assertRaises(rr.ReferenceError):
             rr.output_dir(rr.ROOT / "docs")
 
