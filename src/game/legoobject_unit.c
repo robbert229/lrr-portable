@@ -5124,6 +5124,7 @@ int legoobject_grid_route_search_adapter(Lego_Object* obj, unsigned int startX, 
 int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount, int (*callback)(Lego_Object* obj, int* blockPos, void* data), void* data)
 {
     unsigned int* countPtr;
+    unsigned int count;
     int found;
     unsigned int current;
     unsigned int step;
@@ -5143,7 +5144,6 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
     unsigned int other;
     unsigned int* xs;
     unsigned int* ys;
-    unsigned int k;
     int n;
     int dir;
     unsigned int cx;
@@ -5231,17 +5231,18 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
         if (found == -1)
             return 0;
 
+        count = step;
         xs = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int));
         if (xs != NULL && (ys = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int))) != NULL) {
-            k = step - 1;
+            step--;
             cx = endX;
             cy = endY;
-            xs[k] = cx;
-            ys[k] = cy;
+            xs[step] = cx;
+            ys[step] = cy;
             xs[0] = startX;
             ys[0] = startY;
             dir = 0;
-            for (; k != 1; k--) {
+            for (; step != 1; step--) {
                 for (n = 0; n < 4; n++) {
                     x = cx;
                     y = cy;
@@ -5249,9 +5250,9 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
                     else if (dir == 1) x = cx + 1;
                     else if (dir == 2) y = cy + 1;
                     else if (dir == 3) x = cx - 1;
-                    if (x < width && y < height && s_terrain_path_depth[y * width + x] == k) {
-                        xs[k - 1] = x;
-                        ys[k - 1] = y;
+                    if (x < width && y < height && s_terrain_path_depth[y * width + x] == step) {
+                        xs[step - 1] = x;
+                        ys[step - 1] = y;
                         cx = x;
                         cy = y;
                         break;
@@ -5262,7 +5263,7 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
             }
             *outXs = xs;
             *outYs = ys;
-            *outCount = step;
+            *outCount = count;
         }
     }
     return 1;
