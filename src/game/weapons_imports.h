@@ -118,8 +118,8 @@ float entity_stats_float_at10c(const struct EntitySlot* e);       /* 0046a310 */
 /* Other game units. */
 float* point_project_onto_line2d(const float* line_start, const float* line_end,
                                  const float* point, float* out); /* 00408b60 */
-void point2d_project_onto_direction(const float* origin, const float* direction,
-                                    const float* point, float* out); /* 00408bf0 */
+float* point2d_project_onto_direction(const float* origin, const float* direction,
+                                      const float* point, float* out); /* 00408bf0 */
 void scene_light_create_at_position(const float position[3]);     /* 0040be10 */
 int lava_effect_select_and_place(int slot, const float* position,
                                  const float* rotation);          /* 0040cce0 */

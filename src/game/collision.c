@@ -89,10 +89,10 @@ CollisionPoint2F* collision_project_onto_line(const CollisionPoint2F* start,
 }
 
 // FUNCTION: LEGORR 0x00408bf0
-void collision_project_onto_direction(const CollisionPoint2F* origin,
-                                      const CollisionPoint2F* direction,
-                                      const CollisionPoint2F* point,
-                                      CollisionPoint2F* out)
+CollisionPoint2F* collision_project_onto_direction(const CollisionPoint2F* origin,
+                                                   const CollisionPoint2F* direction,
+                                                   const CollisionPoint2F* point,
+                                                   CollisionPoint2F* out)
 {
     CollisionPoint2F dir = *direction;
     CollisionPoint2F rel;
@@ -103,6 +103,7 @@ void collision_project_onto_direction(const CollisionPoint2F* origin,
     t = collision_vector2d_dot(&rel, &dir);
     out->x = dir.x * t + origin->x;
     out->y = dir.y * t + origin->y;
+    return out;
 }
 
 #include "collision_tail.h"
