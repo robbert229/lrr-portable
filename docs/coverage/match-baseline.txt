@@ -1,4 +1,4 @@
-# input_sha256: 447bb4efb04baf7355ddb9b216940cef5042a144bbc267fa164770b5b1d4002f
+# input_sha256: 133e775ce130dba9cf9139089fbb5deec6f3aafcd5b44eecc43f163e3572aba1
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2557,10 +2557,10 @@
 0x00484260 100.00 Flic_Load
 0x00484320 75.59 Flic_FindChunk
 0x004844b0 100.00 Flic_FrameChunk
-0x00484610 46.15 Flic_DoChunk
+0x00484610 100.00 Flic_DoChunk
 0x00484720 100.00 Flic_LoadPointers
 0x004847d0 100.00 Flic_LoadPalette64
-0x00484880 61.11 Flic_Copy
+0x00484880 100.00 Flic_Copy
 0x004848d0 100.00 Flic_BrunDepack
 0x004849d0 100.00 Flic_BrunDepack16
 0x00484b20 100.00 Flic_Brun
@@ -5282,10 +5282,10 @@
 0x00484260 100.00 Flic_Load
 0x00484320 75.59 Flic_FindChunk
 0x004844b0 100.00 Flic_FrameChunk
-0x00484610 46.15 Flic_DoChunk
+0x00484610 100.00 Flic_DoChunk
 0x00484720 100.00 Flic_LoadPointers
 0x004847d0 100.00 Flic_LoadPalette64
-0x00484880 61.11 Flic_Copy
+0x00484880 100.00 Flic_Copy
 0x004848d0 100.00 Flic_BrunDepack
 0x004849d0 100.00 Flic_BrunDepack16
 0x00484b20 100.00 Flic_Brun
