@@ -5336,12 +5336,12 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
         memset(s_terrain_neighbor_path_cost, 0, width * height * sizeof(float));
 
         counts[0] = 1;
+        current = 0;
         s_terrain_neighbor_path_cost[width * startY + startX] = 1.0f;
         step = 1;
         lists[0][0].blockPos[0] = startX;
         lists[0][0].blockPos[1] = startY;
         counts[1] = 0;
-        current = 0;
         countPtr = &counts[0];
         do {
             step++;
