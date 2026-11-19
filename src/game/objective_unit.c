@@ -93,13 +93,13 @@ void objective_load_objective_text(struct BlockRec* config,
     textArea.x = left;
     beginArea.y = OBJECTIVE_DATA(level)->imagePos[1] - -220.0f;
     textArea.y = OBJECTIVE_DATA(level)->imagePos[1] - -60.0f;
-    msgArea.x = OBJECTIVE_DATA(level)->imagePos[0] - -40.0f;
-    msgArea.y = OBJECTIVE_DATA(level)->imagePos[1] - -34.0f;
     beginArea.width = 320.0f;
     beginArea.height = 20.0f;
     textArea.width = 390.0f;
-    inLevelSection = 0;
     textArea.height = 180.0f;
+    msgArea.x = OBJECTIVE_DATA(level)->imagePos[0] - -40.0f;
+    msgArea.y = OBJECTIVE_DATA(level)->imagePos[1] - -34.0f;
+    inLevelSection = 0;
     msgArea.width = 422.0f;
     msgArea.height = 21.0f;
     beginNext = 0;
@@ -296,6 +296,11 @@ void objective_load_objective_text(struct BlockRec* config,
         }
     }
 }
+
+/* Maths.h's inline normalise. Its 1.0f (0049e598, unread) follows
+ * objective_load_objective_text's 0.5f in the original's pool and comes
+ * before this function's 25.0f, so the copy is compiled here. */
+#include "gods98/maths_normalise_head.h"
 
 // FUNCTION: LEGORR 0x00457d40
 void objective_load_level(struct BlockRec* config, const char* gameName,
