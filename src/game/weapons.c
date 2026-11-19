@@ -727,7 +727,12 @@ int weapons_projectile_create_curved(Weapons_Object* owner, Weapons_Vector3F* po
             weapons_vector3d_normalise(&projectile->direction);
             projectile->speed = 4.0f;
             p2.y = target->z - pos->z;
-            p2.x = dist = weapons_vector3d_distance(pos, target);
+            /* The distance written out, not weapons_vector3d_distance: the
+             * original keeps no vector local for it (its frame is 0x2c) and
+             * squares each difference from a reused argument slot. */
+            p2.x = dist = (float)sqrt(((pos->x - target->x) * (pos->x - target->x)) +
+                                      ((pos->y - target->y) * (pos->y - target->y)) +
+                                      ((pos->z - target->z) * (pos->z - target->z)));
             vector2_set_length(&p1, dist * 0.2f);
             vector2_set_length(&p3, dist * 0.33333334f);
             bezier_curve_samples_build(&projectile->curve, &p0, &p1, &p2, &p3, 50);
