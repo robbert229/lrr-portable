@@ -4874,7 +4874,9 @@ int legoobject_level_debug_cell_retarget_dispatch(Lego_Object* obj, Lego_Object*
     if ((task == NULL || (task->taskType == 0x12 && LEGOOBJ_FIELD(task, int, 0x60) == 0)) &&
         obj->driveObject == NULL && target->driveObject == NULL && obj->type == 2)
     {
-        if ((obj->abilityFlags & 5) && (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x2000000) &&
+        /* Two tests: the original loads the whole word for them. */
+        if (((obj->abilityFlags & 1) || (obj->abilityFlags & 4)) &&
+            (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x2000000) &&
             (entity_stats_word_get(LEGOOBJ_SLOT(target)) & 0x20000) && !(target->flags4 & 0x40))
         {
             cont = legoobject_type_component_get(target);
