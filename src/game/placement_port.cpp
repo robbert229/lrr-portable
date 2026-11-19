@@ -201,8 +201,8 @@ float point_to_polyline_minimum_segment_distance(const float* point,
 }
 
 /* Port model of 0x00408b60 */
-void point_project_onto_line2d(const float* line_start, const float* line_end,
-                               const float* point, float* out)
+float* point_project_onto_line2d(const float* line_start, const float* line_end,
+                                 const float* point, float* out)
 {
     float dx = line_end[0] - line_start[0];
     float dy = line_end[1] - line_start[1];
@@ -213,11 +213,12 @@ void point_project_onto_line2d(const float* line_start, const float* line_end,
                        (point[0] - line_start[0]) * unit_x;
     out[0] = projection * unit_x + line_start[0];
     out[1] = projection * unit_y + line_start[1];
+    return out;
 }
 
 /* Port model of 0x00408bf0 */
-void point2d_project_onto_direction(const float* origin, const float* direction,
-                                    const float* point, float* out)
+float* point2d_project_onto_direction(const float* origin, const float* direction,
+                                      const float* point, float* out)
 {
     float direction_x = direction[0];
     float direction_y = direction[1];
@@ -229,6 +230,7 @@ void point2d_project_onto_direction(const float* origin, const float* direction,
                        (point[0] - origin[0]) * unit_x;
     out[0] = projection * unit_x + origin[0];
     out[1] = projection * unit_y + origin[1];
+    return out;
 }
 
 #endif

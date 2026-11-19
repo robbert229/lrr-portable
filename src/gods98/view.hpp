@@ -677,13 +677,13 @@ float projected_quad_screen_area_calculate(
 #ifdef __cplusplus
 extern "C"
 #endif
-void point_project_onto_line2d(const float* line_start, const float* line_end,
-                               const float* point, float* out);
+float* point_project_onto_line2d(const float* line_start, const float* line_end,
+                                 const float* point, float* out);
 #ifdef __cplusplus
 extern "C"
 #endif
-void point2d_project_onto_direction(const float* origin, const float* direction,
-                                    const float* point, float* out);
+float* point2d_project_onto_direction(const float* origin, const float* direction,
+                                      const float* point, float* out);
 
 /* --- geometry helpers (corpus FUN_0045b8a0 / FUN_0045e660 / FUN_00479a30 /
  * FUN_00479af0 / FUN_00479c10; findings 363/323) --------------------------- */
