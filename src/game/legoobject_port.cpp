@@ -201,8 +201,8 @@ typedef struct TerrainVariantVisitContext {
 
 /* The corpus's eligibility gate compares the +0x340 bound against this
  * .rdata zero dword (objdump-verified fcomp operand of
- * EntitySharedEligibilityCheck). Its annotation moved to legoobject_unit.c
- * (legoobject_zero, GAME-023). */
+ * EntitySharedEligibilityCheck). In legoobject_unit.c (GAME-023) it is the
+ * unit's pooled 0.0f literal, unannotated. */
 static const float s_eligibility_floor = 0.0f;   /* DAT_0049e3a4, verified */
 
 const char s_tool_name_birdscarer[] = "LegoObject_ToolType_BirdScarer";
