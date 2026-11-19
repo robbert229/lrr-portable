@@ -5406,8 +5406,6 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
             unsigned int* xs;
             unsigned int* ys;
             unsigned int count;
-            unsigned int last;
-            unsigned int k;
             unsigned int cx;
             unsigned int cy;
             float best;
@@ -5419,12 +5417,12 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
             if (xs != NULL && (ys = (unsigned int*)Mem_Alloc(step * sizeof(unsigned int))) != NULL) {
                 cy = endY;
                 cx = endX;
-                last = step - 1;
-                xs[last] = endX;
-                ys[last] = endY;
+                step--;
+                xs[step] = endX;
+                ys[step] = endY;
                 xs[0] = startX;
                 ys[0] = startY;
-                for (k = last; k != 1; k--) {
+                while (step != 1) {
                     best = 10000.0f;
                     for (i = 0; i < 4; i++) {
                         x = cx;
@@ -5445,8 +5443,9 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
                             }
                         }
                     }
-                    xs[k - 1] = bestPos[0];
-                    ys[k - 1] = bestPos[1];
+                    step--;
+                    xs[step] = bestPos[0];
+                    ys[step] = bestPos[1];
                     cx = bestPos[0];
                     cy = bestPos[1];
                 }
