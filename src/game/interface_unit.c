@@ -3006,16 +3006,18 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
     unsigned int i;
     Image* image;
     float fx;
+    Point2F pos;
     unsigned int width;
     unsigned int height;
 
     if ((interfaceGlobs.flags & INTERFACE_FLAG_DEPENDENCIES) &&
         (dependencies_get_requirements(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex, 0, &list, &count), count > 0)) {
-        areaX -= 15.0f;
+        pos.x = areaX - 15.0f;
+        pos.y = areaY;
         fx = (float)(unsigned int)x;
-        if (fx >= areaX && fx <= (areaX - -15.0f) &&
-            (float)(unsigned int)y >= areaY &&
-            (float)(unsigned int)y <= areaY - -40.0f) {
+        if (fx >= pos.x && fx <= (pos.x - -15.0f) &&
+            (float)(unsigned int)y >= pos.y &&
+            (float)(unsigned int)y <= pos.y - -40.0f) {
             *type = 20;
             return 1;
         }
@@ -3033,10 +3035,10 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
                 width = 20;
                 height = 40;
             }
-            areaX -= (float)width;
-            if (fx >= areaX && fx <= (areaX + (float)width) &&
-                (float)(unsigned int)y >= areaY &&
-                (float)(unsigned int)y <= (float)height + areaY) {
+            pos.x -= (float)width;
+            if (fx >= pos.x && fx <= (pos.x + (float)width) &&
+                (float)(unsigned int)y >= pos.y &&
+                (float)(unsigned int)y <= (float)height + pos.y) {
                 *type = 20;
                 return 1;
             }
@@ -3049,10 +3051,10 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
                 width = 40;
                 height = 40;
             }
-            areaX -= (float)width;
-            if (fx >= areaX && fx <= (areaX + (float)width) &&
-                (float)(unsigned int)y >= areaY &&
-                (float)(unsigned int)y <= (float)height + areaY) {
+            pos.x -= (float)width;
+            if (fx >= pos.x && fx <= (pos.x + (float)width) &&
+                (float)(unsigned int)y >= pos.y &&
+                (float)(unsigned int)y <= (float)height + pos.y) {
                 *type = list[i].objType;
                 *objType = list[i].objIndex;
                 *objIndex = list[i].level;
