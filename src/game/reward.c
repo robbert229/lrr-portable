@@ -78,6 +78,8 @@
 // GLOBAL: LEGORR 0x00552980
 RewardGlobs rewardGlobs;
 
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0045f030
 int reward_initialise(void)
 {
@@ -1394,7 +1396,10 @@ int reward_update_state(int* count, int* state, float* time)
 
     if (*time >= rewardGlobs.timer && *state == 0)
         next = 1;
-    if (*state != 0 && rewardGlobs.timer * 2.0 <= *time &&
+    /* A float product, folded to fadd st, st: it creates the unread 2.0f
+     * of the original's pool (0049e6e4), where 2.0 pooled a double. The
+     * compare stays the original's fld [time]; fcompp. */
+    if (*state != 0 && (double)(rewardGlobs.timer * 2.0f) <= *time &&
         ((RewardLegoLevel*)level_current_owner_get())->status == 1 && *count < 10)
         next = 1;
 
