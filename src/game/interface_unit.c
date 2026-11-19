@@ -3006,15 +3006,14 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
     unsigned int i;
     Image* image;
     float fx;
-    float left;
     unsigned int width;
     unsigned int height;
 
     if ((interfaceGlobs.flags & INTERFACE_FLAG_DEPENDENCIES) &&
-        (dependencies_get_requirements(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex, 0, &list, &count), count != 0)) {
+        (dependencies_get_requirements(interfaceGlobs.dependencyObjType, interfaceGlobs.dependencyObjIndex, 0, &list, &count), count > 0)) {
         areaX -= 15.0f;
         fx = (float)(unsigned int)x;
-        if (fx >= areaX && fx <= areaX - -15.0f &&
+        if (fx >= areaX && fx <= (areaX - -15.0f) &&
             (float)(unsigned int)y >= areaY &&
             (float)(unsigned int)y <= areaY - -40.0f) {
             *type = 20;
@@ -3034,8 +3033,8 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
                 width = 20;
                 height = 40;
             }
-            left = areaX - (float)width;
-            if (fx >= left && fx <= left + (float)width &&
+            areaX -= (float)width;
+            if (fx >= areaX && fx <= (areaX + (float)width) &&
                 (float)(unsigned int)y >= areaY &&
                 (float)(unsigned int)y <= (float)height + areaY) {
                 *type = 20;
@@ -3050,9 +3049,9 @@ int interface_get_dependency_at_point(int x, int y, float areaX, float areaY,
                 width = 40;
                 height = 40;
             }
-            areaX = left - (float)width;
-            if (fx >= areaX && fx <= areaX + (float)width &&
-                areaY <= (float)(unsigned int)y &&
+            areaX -= (float)width;
+            if (fx >= areaX && fx <= (areaX + (float)width) &&
+                (float)(unsigned int)y >= areaY &&
                 (float)(unsigned int)y <= (float)height + areaY) {
                 *type = list[i].objType;
                 *objType = list[i].objIndex;
