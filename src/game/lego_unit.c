@@ -174,11 +174,13 @@ int legoGlobs_mouseBlockPos[2];
 
 /* Gates the AllowRename key. */
 
-/* The first mini-figure the object list loads (OListEntityRecordParse sets
- * it); the StartFP view follows it. It is objectGlobs +0x9cb8
- * (legoobject_globs.h, finding 662). Kept, unreferenced, so the symbol
- * counter does not move. Deviation (scoring only). */
-extern void* s_lego_f_4e8448;
+/* Maths.h's inline normalise, whose 1.0f opens the unit's .rdata
+ * (0049e2b0) before 0041fb50's 25.0f. The include costs three symbols of
+ * MSVC's counter (finding 538): the unreferenced declaration of
+ * s_lego_f_4e8448 (objectGlobs +0x9cb8, legoobject_globs.h) that was here
+ * and the two parameter names lego_unit_imports.h no longer gives
+ * ui_overlay_animation_advance. Deviation (scoring only). */
+#include "gods98/maths_normalise_head.h"
 /* ---- state, group E ---- */
 
 /* legoGlobs.config (005560c0): the game's Lego.cfg block root. */
@@ -3424,8 +3426,8 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                 if (s_lego_dragging && !(s_panel_highlight_flags & 0x2000) &&
                     !(legoGlobs_flags1 & 0x200)) {
                     if (!(legoGlobs_flags1 & 0x100) &&
-                        sqrt(s_lego_drag_x * s_lego_drag_x +
-                             s_lego_drag_y * s_lego_drag_y) > 10.0f)
+                        (float)sqrt(s_lego_drag_x * s_lego_drag_x +
+                                    s_lego_drag_y * s_lego_drag_y) > 10.0f)
                         legoGlobs_flags1 |= 0x100;
                     legoGlobs_f_556178[0] = (float)bx;
                     legoGlobs_f_556178[1] = (float)by;
