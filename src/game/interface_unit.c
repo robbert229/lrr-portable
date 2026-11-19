@@ -1668,20 +1668,30 @@ void position_tracker_box_draw(const float bounds[4])
         top = area->y - 1.0f;
         bottom = (area->height + area->y) - -1.0f;
         right = (area->x + area->width) - -1.0f;
-        list[0].x = list[3].x = list[4].x = left;
-        list[0].y = list[1].y = list[4].y = top;
-        list[2].y = list[3].y = bottom;
-        list[1].x = list[2].x = right;
+        list[2].x = right;
+        list[2].y = bottom;
+        list[1].x = right;
+        list[1].y = top;
+        list[3].x = left;
+        list[3].y = bottom;
+        list[4].x = left;
+        list[4].y = top;
+        list[0] = list[4];
         surface_draw_polyline(list, list + 1, 4, 0.0f, 1.0f, 0.0f, 0);
 
         left = area->x - 2.0f;
         top = area->y - 2.0f;
         bottom = (area->height + area->y) - -2.0f;
         right = (area->x + area->width) - -2.0f;
-        list[0].x = list[3].x = list[4].x = left;
-        list[0].y = list[1].y = list[4].y = top;
-        list[2].y = list[3].y = bottom;
-        list[1].x = list[2].x = right;
+        list[2].x = right;
+        list[2].y = bottom;
+        list[1].x = right;
+        list[1].y = top;
+        list[3].x = left;
+        list[3].y = bottom;
+        list[4].x = left;
+        list[4].y = top;
+        list[0] = list[4];
         surface_draw_polyline(list, list + 1, 4, 0.0f, 1.0f, 0.0f, 0);
     }
 }
