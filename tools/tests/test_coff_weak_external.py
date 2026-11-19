@@ -30,6 +30,14 @@ class WeakExternalObjectTest(unittest.TestCase):
         names = [symbols[i].name for i in sorted(symbols)]
         self.assertEqual(names, ["_c", "_a", "_b"])
 
+    def test_committed_object_is_the_tools_output(self):
+        # CMakeLists.txt links this committed copy (ReproBit imports it as a
+        # source input); it must stay exactly what the tool writes.
+        committed = Path(__file__).resolve().parents[2] / "cross" / "msvc5-importlibs" / \
+            "weak_operator_delete.obj"
+        self.assertEqual(committed.read_bytes(), coff_weak_external.build(
+            [("??3@YAXPAX@Z", "_ui_render_record_free")]))
+
 
 if __name__ == "__main__":
     unittest.main()
