@@ -117,29 +117,33 @@ SelectPlace_Point2I* selectplace_transform_shape(const SelectPlace_Point2I* bloc
 {
     unsigned int loop;
     int temp;
+    /* The buffer through a local pointer: with it MSVC addresses the
+     * source points relative to the buffer as the original does
+     * (sub esi, offset+4 and [esi+ecx+4]). */
+    SelectPlace_Point2I* shape = selectPlaceShape;
 
     for (loop = 0; loop < shapeCount; loop++) {
-        selectPlaceShape[loop] = shapePoints[loop];
+        shape[loop] = shapePoints[loop];
         switch ((rotation + 0x8000) % 4) {
         case 0:
             break;
         case 1:
-            temp = selectPlaceShape[loop].x;
-            selectPlaceShape[loop].x = -selectPlaceShape[loop].y;
-            selectPlaceShape[loop].y = temp;
+            temp = shape[loop].x;
+            shape[loop].x = -shape[loop].y;
+            shape[loop].y = temp;
             break;
         case 2:
-            selectPlaceShape[loop].x = -selectPlaceShape[loop].x;
-            selectPlaceShape[loop].y = -selectPlaceShape[loop].y;
+            shape[loop].x = -shape[loop].x;
+            shape[loop].y = -shape[loop].y;
             break;
         case 3:
-            temp = selectPlaceShape[loop].x;
-            selectPlaceShape[loop].x = selectPlaceShape[loop].y;
-            selectPlaceShape[loop].y = -temp;
+            temp = shape[loop].x;
+            shape[loop].x = shape[loop].y;
+            shape[loop].y = -temp;
             break;
         }
-        selectPlaceShape[loop].x += blockPos->x;
-        selectPlaceShape[loop].y += blockPos->y;
+        shape[loop].x += blockPos->x;
+        shape[loop].y += blockPos->y;
     }
     return selectPlaceShape;
 }
