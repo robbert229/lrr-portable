@@ -1,4 +1,4 @@
-# input_sha256: 4b5cff972ac30a1691c2f88d53cf8fbe0827d460787146e5a11ed27b2bf667dd
+# input_sha256: 8fc24ed11338e09e5b26df5ced4d657272b72c9a0c76f086f40a7224358ab623
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -635,7 +635,7 @@
 0x0041cb90 100.00 input_binding_default_value_get
 0x0041cc80 100.00 interface_set_dependency_item
 0x0041cce0 100.00 interface_set_dependency_area
-0x0041cd30 35.11 position_tracker_box_draw
+0x0041cd30 42.86 position_tracker_box_draw
 0x0041cea0 100.00 interface_object_menu_check
 0x0041cf20 100.00 interface_driven_object_menu_check
 0x0041cf80 100.00 selection_mode7_cancel_at_point
@@ -3360,7 +3360,7 @@
 0x0041cb90 100.00 input_binding_default_value_get
 0x0041cc80 100.00 interface_set_dependency_item
 0x0041cce0 100.00 interface_set_dependency_area
-0x0041cd30 35.11 position_tracker_box_draw
+0x0041cd30 42.86 position_tracker_box_draw
 0x0041cea0 100.00 interface_object_menu_check
 0x0041cf20 100.00 interface_driven_object_menu_check
 0x0041cf80 100.00 selection_mode7_cancel_at_point
