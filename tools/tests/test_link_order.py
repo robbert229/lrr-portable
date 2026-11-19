@@ -204,6 +204,19 @@ class CheckTest(unittest.TestCase):
         self.assertEqual(self.errors(self.lines + [late]), "")
         self.assertIn("wrong segment", self.errors([self.lines[0], self.lines[1], late, self.lines[2]]))
 
+    def test_data_entry_precedes_its_unit_and_has_no_code(self):
+        # A code-less original object (message_data.c): placed by the unit
+        # it precedes, whose entry must follow it, and without functions.
+        (self.root / "src/game/data.c").write_text("unsigned int unread[4] = { 0 };\n")
+        data = "lrr_link(data GAME-001 game game/data.c)"
+        self.assertEqual(self.errors([data, *self.lines]), "")
+        entries = lo.parse(data + "\n")
+        self.assertEqual(lo.entry_address(entries[0], {"GAME-001": 0x401000}), 0x401000)
+        self.assertIn("immediately before unit GAME-001", self.errors([self.lines[0], data, *self.lines[1:]]))
+        self.assertIn("not a game or gods98 unit", self.errors([data.replace("GAME-001", "BAD"), *self.lines]))
+        (self.root / "src/game/data.c").write_text("// FUNCTION: LEGORR 0x00401010\n")
+        self.assertIn("code-less object has no functions", self.errors([data, *self.lines]))
+
     def test_stale_median_order_and_segments(self):
         self.assertIn("set it to 00402010", self.errors([self.lines[0], self.lines[1].replace("00402010", "00402011"), self.lines[2]]))
         self.assertIn("wrong segment", self.errors([self.lines[1], self.lines[0], self.lines[2]]))

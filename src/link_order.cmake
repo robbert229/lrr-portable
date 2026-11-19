@@ -16,6 +16,10 @@
 #                     the lower median original address of its FUNCTION and LIBRARY
 #                     markers (for an even count, use the lower middle), which
 #                     places it among the units
+#             data    an original object whose code the link removed
+#                     (/OPT:REF), leaving only its literals and data; it has
+#                     no unit range, and key is the unit it precedes, whose
+#                     entry must follow it
 #             tail    port-only code: the port tail (ADR 0006 decision 4);
 #                     key is "-"
 #   key       see kind; units and legacy files are in ascending key order

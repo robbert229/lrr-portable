@@ -27,7 +27,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 LIST = "src/link_order.cmake"
 RANGES = "docs/coverage/translation-unit-ranges.csv"
-KINDS = ("unit", "legacy", "tail")
+KINDS = ("unit", "legacy", "data", "tail")
 LIBRARIES = ("game", "gods98", "platform_glue", "program")
 PLATFORMS = ("native", "winapi")
 # Every build but the MSVC 5.0 matching build (src/crt/'s stand-ins, #447).
@@ -56,7 +56,7 @@ _TAIL_LIBRARY = re.compile(r"^\s*set\(LRR_LINK_TAIL_LIBRARY\b([^)]*)\)", re.M)
 @dataclass(frozen=True)
 class Entry:
     kind: str
-    key: str            # unit id, median address (hex) or "-"
+    key: str            # unit id, median address (hex), next unit's id or "-"
     library: str
     source: str         # relative to src/
     platform: str | None
@@ -204,8 +204,10 @@ def unit_starts(root: Path = ROOT) -> dict[str, int]:
 
 
 def entry_address(entry: Entry, starts: dict[str, int]) -> int | None:
-    """The original address that places an entry: its unit start or median."""
-    if entry.kind == "unit":
+    """The original address that places an entry: its unit start or median.
+
+    A data entry is placed by the start of the unit it precedes."""
+    if entry.kind in ("unit", "data"):
         return starts.get(entry.key)
     if entry.kind == "legacy":
         return int(entry.key, 16)
@@ -320,6 +322,19 @@ def check(root: Path = ROOT) -> list[str]:
                     errors.append(f"{where}: invalid median {e.key!r}; set it to {median:08x}")
                 if address is not None and address != median:
                     errors.append(f"{where}: stale median {e.key}; set it to {median:08x} and move the entry into order")
+        elif e.kind == "data":
+            # An original object whose code the link removed (/OPT:REF): it
+            # keeps only data, so it has no unit range of its own and sits
+            # immediately before the unit its key names.
+            if e.key not in spec or spec[e.key]["kind"] not in ("game", "gods98") or e.key not in ranges:
+                errors.append(f"{where}: {e.key} is not a game or gods98 unit in the spec and ranges")
+            else:
+                address = ranges[e.key][0]
+                following = next((n for n in entries if n.line > e.line and n.kind != "data"), None)
+                if following is None or following.kind != "unit" or following.key != e.key:
+                    errors.append(f"{where}: a data entry must come immediately before unit {e.key}'s entry")
+            for a in addresses:
+                errors.append(f"{where}: marker 0x{a:08x} in a data entry; a code-less object has no functions")
         elif e.key != "-":
             errors.append(f"{where}: tail key must be -")
         part = 2 if e.kind == "tail" else (3 if address is not None and address >= crt else 1 if address is not None and address >= g98 else 0)
