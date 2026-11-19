@@ -873,12 +873,74 @@ def explain_synthetic_reference(data: bytes, symbol: str, original: bytes, *, ad
     return bytes(out), "written"
 
 
+def legacy_synthetic_reference(data: bytes, symbol: str, original: bytes) -> bytes | None:
+    """The seed with ``symbol``'s body replaced by the original's, at the
+    seed's own relocation offsets (the tool's behaviour before field
+    placement).
+
+    The seed's relocated field bytes are kept where the seed has them, so it
+    is right only when both bodies put their address fields at the same
+    offsets: equal lengths, the instructions merely reordered or renamed
+    around them. ``explain_synthetic_reference`` falls back to it when its
+    alignment refuses such a body (a reordered x87 window can pair no field
+    across it); grind then proves whatever record it authors against the
+    donor, so a wrong guess here can only lead to a refusal. None when the
+    bodies differ in length or already agree.
+    """
+    coff = msvc_coff.parse_coff(data, "synthetic reference")
+    result = function_body(coff, symbol)
+    if result is None:
+        return None
+    body, spans = result
+    if len(original) < len(body):
+        return None
+    target = bytearray(original[:len(body)])
+    for start, end in spans:
+        target[start:end] = body[start:end]
+    if bytes(target) == body:
+        return None
+    sym = next(s for s in coff.symbols.values()
+               if s.name == symbol and s.section > 0 and s.is_function)
+    optional_size = struct.unpack_from("<H", data, 16)[0]
+    header = 20 + optional_size + (sym.section - 1) * 40
+    raw = struct.unpack_from("<I", data, header + 20)[0] + sym.value
+    out = bytearray(data)
+    out[raw:raw + len(body)] = target
+    return bytes(out)
+
+
+def explain_reference_with_fallback(data: bytes, symbol: str, original: bytes, *, address: int,
+                                    ranges: list[tuple[int, int]],
+                                    known: dict[str, int] | None = None
+                                    ) -> tuple[bytes | None, str]:
+    """``explain_synthetic_reference``, falling back to
+    ``legacy_synthetic_reference`` when field placement refuses a body
+    whose padded slot is the seed's own length (the procedures agree in
+    size, so the seed's field offsets may still be the original's)."""
+    placed, reason = explain_synthetic_reference(data, symbol, original, address=address,
+                                                 ranges=ranges, known=known)
+    if placed is not None:
+        return placed, reason
+    coff = msvc_coff.parse_coff(data, "synthetic reference")
+    result = function_body(coff, symbol)
+    if result is None:
+        return None, reason
+    body = result[0]
+    padded = (len(body) + 15) // 16 * 16
+    if len(original) != padded:
+        return None, reason
+    legacy = legacy_synthetic_reference(data, symbol, original)
+    if legacy is None:
+        return None, reason
+    return legacy, f"{reason}; used the seed's field offsets (same-length body)"
+
+
 def synthetic_reference(data: bytes, symbol: str, original: bytes, *, address: int,
                         ranges: list[tuple[int, int]],
                         known: dict[str, int] | None = None) -> bytes | None:
-    """``explain_synthetic_reference`` without the reason."""
-    return explain_synthetic_reference(data, symbol, original, address=address, ranges=ranges,
-                                       known=known)[0]
+    """``explain_reference_with_fallback`` without the reason."""
+    return explain_reference_with_fallback(data, symbol, original, address=address,
+                                           ranges=ranges, known=known)[0]
 
 
 def translation_unit(build_plan: dict, source: str) -> dict:
@@ -1072,7 +1134,7 @@ def find_references(addresses: list[int], *, pads: tuple[int, int], jobs: int,
                         continue
                     # The original's whole slot: its procedure may differ in length.
                     slot = original_slot(exe, address, starts) or len(result[0])
-                    data, item.refusal = explain_synthetic_reference(
+                    data, item.refusal = explain_reference_with_fallback(
                         base, item.symbol, original_bytes(exe, address, slot),
                         address=address, ranges=image_ranges(exe),
                         known=known_addresses(ROOT / "build-reccmp"))

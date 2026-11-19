@@ -186,6 +186,29 @@ class SyntheticReferenceTest(unittest.TestCase):
         self.assertEqual(spans, [(9, 13)])
         self.assertEqual(body, bytes.fromhex("8d5424088d4c2408e800000000c3"))
 
+    def test_falls_back_to_seed_offsets_for_a_same_length_body(self):
+        # A placement refusal (here forced) on a body of the seed's padded
+        # length gives the seed-offset reference, with the reason noted.
+        compiled = bytes.fromhex("8d4c24088d542408e800000000c3")
+        original = bytes.fromhex("8d5424088d4c2408e8aabbccddc3") + b"\x90\x90"
+        obj = _coff_with_function(compiled)
+        saved = rr.explain_synthetic_reference
+        rr.explain_synthetic_reference = lambda *a, **k: (None, "forced refusal")
+        try:
+            data, reason = rr.explain_reference_with_fallback(obj, "_f", original,
+                                                              address=ADDRESS, ranges=RANGES)
+            shorter, _ = rr.explain_reference_with_fallback(obj, "_f", original[:-2],
+                                                            address=ADDRESS, ranges=RANGES)
+        finally:
+            rr.explain_synthetic_reference = saved
+        self.assertIn("forced refusal", reason)
+        self.assertIn("seed's field offsets", reason)
+        body, _spans = rr.function_body(msvc_coff.parse_coff(data), "_f")
+        self.assertEqual(body, bytes.fromhex("8d5424088d4c2408e800000000c3"))
+        self.assertEqual(data, rr.legacy_synthetic_reference(obj, "_f", original))
+        # a slot of another length is not the seed's layout: still refused
+        self.assertIsNone(shorter)
+
     def test_no_reference_when_lengths_differ_or_bodies_agree(self):
         compiled = bytes.fromhex("8d4c24088d542408e800000000c3")
         obj = _coff_with_function(compiled)
