@@ -1,4 +1,4 @@
-# input_sha256: 7547a66e61292507e6a18908f6a2be40f8452dfd82819f199110008e20a4d540
+# input_sha256: 3950c95a9b54bef74a30450c7529d0c780f2f85bfae95fc42b2a5850012031ab
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1338,7 +1338,7 @@
 0x00452be0 100.00 selection_clear_active
 0x00452c50 100.00 selection_entity_remove_active
 0x00452cc0 100.00 selected_entity_state_monitor
-0x00452d60 86.44 selection_command_dispatch
+0x00452d60 100.00 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
 0x00452e70 100.00 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
@@ -2499,7 +2499,7 @@
 0x00480870 100.00 mesh_create_on_frame
 0x00480900 100.00 mesh_clone
 0x004809e0 100.00 mesh_load
-0x00480ac0 79.98 mesh_parse_lwo
+0x00480ac0 80.90 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
@@ -2555,7 +2555,7 @@
 0x00484070 100.00 flic_animate
 0x004841d0 100.00 Flic_Memory
 0x00484260 100.00 Flic_Load
-0x00484320 67.74 Flic_FindChunk
+0x00484320 75.59 Flic_FindChunk
 0x004844b0 100.00 Flic_FrameChunk
 0x00484610 46.15 Flic_DoChunk
 0x00484720 100.00 Flic_LoadPointers
@@ -2622,7 +2622,7 @@
 0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
 0x00488170 62.45 lws_interpolate
-0x004882e0 30.28 lws_absolute_key_set
+0x004882e0 32.02 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
 0x00488790 100.00 pair_table_append
@@ -4063,7 +4063,7 @@
 0x00452be0 100.00 selection_clear_active
 0x00452c50 100.00 selection_entity_remove_active
 0x00452cc0 100.00 selected_entity_state_monitor
-0x00452d60 86.44 selection_command_dispatch
+0x00452d60 100.00 selection_command_dispatch
 0x00452df0 100.00 nerps_file_load_script_file
 0x00452e70 100.00 nerps_file_load_message_file
 0x00453200 100.00 nerps_file_get_message_line
@@ -5224,7 +5224,7 @@
 0x00480870 100.00 mesh_create_on_frame
 0x00480900 100.00 mesh_clone
 0x004809e0 100.00 mesh_load
-0x00480ac0 79.98 mesh_parse_lwo
+0x00480ac0 80.90 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
@@ -5280,7 +5280,7 @@
 0x00484070 100.00 flic_animate
 0x004841d0 100.00 Flic_Memory
 0x00484260 100.00 Flic_Load
-0x00484320 67.74 Flic_FindChunk
+0x00484320 75.59 Flic_FindChunk
 0x004844b0 100.00 Flic_FrameChunk
 0x00484610 46.15 Flic_DoChunk
 0x00484720 100.00 Flic_LoadPointers
@@ -5347,7 +5347,7 @@
 0x00488070 100.00 lws_dissolve_interpolate
 0x004880d0 100.00 lws_dissolve_level_set
 0x00488170 62.45 lws_interpolate
-0x004882e0 30.28 lws_absolute_key_set
+0x004882e0 32.02 lws_absolute_key_set
 0x004885c0 100.00 lws_mesh_load
 0x00488730 100.00 pair_table_find
 0x00488790 100.00 pair_table_append

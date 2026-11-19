@@ -326,6 +326,7 @@ src/game/meshlod.c
 src/game/meshlod.h
 src/game/message.h
 src/game/message_data.c
+src/game/message_first_person.h
 src/game/message_port.cpp
 src/game/message_unit.c
 src/game/message_unit.h
