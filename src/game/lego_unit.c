@@ -3641,13 +3641,18 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
     int show;
     const char* text;
     unsigned int sfx;
-    unsigned int valid;
 
     level = legoGlobs_currLevel;
     by = blockPos[1];
     bx = blockPos[0];
     block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[level->width * by + bx];
-    if (s_lego_toolTipBlockX != bx || s_lego_toolTipBlockY != by) {
+    /* The original lays the reset inline between the two tests, which
+     * MSVC 5 only does for a goto into the second test's block; an
+     * `a || b` block goes after the epilogue. */
+    if (s_lego_toolTipBlockX != bx)
+        goto reset_tooltip;
+    if (s_lego_toolTipBlockY != by) {
+    reset_tooltip:
         s_lego_toolTipBlockX = blockPos[0];
         s_lego_toolTipBlockY = blockPos[1];
         return;
@@ -3711,10 +3716,13 @@ void lego_terrain_command_feedback_dispatch(const int* blockPos, int showConstru
             show = 1;
         } else {
             if (bx >= 0 && by >= 0 && bx < (int)legoGlobs_currLevel->width && by < (int)legoGlobs_currLevel->height)
-                valid = LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 0x20000000;
+                usesStuds = LEGO_LEVEL_PTR(Lego_Block, legoGlobs_currLevel->blocks)[legoGlobs_currLevel->width * by + bx].flags1 & 0x20000000;
             else
-                valid = 0;
-            if (valid || (flags & 0x8000)) {
+                usesStuds = 0;
+            /* `usesStuds` is dead on this path and holds the solid test, so
+             * the goto's label leaves Lego.c's symbol counter where it was
+             * (finding 671). */
+            if (usesStuds || (flags & 0x8000)) {
                 text = lego_terrain_surface_type_name_get(0xe);
                 sfx = lego_surface_type_configured_value_at_index(0xe);
                 show = 1;
