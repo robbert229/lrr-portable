@@ -117,7 +117,6 @@ unsigned int path_arc_length_interpolate(const BezierCurve* curve,
 {
     unsigned int i;
     float dist = 0.0f;
-    float frac;
     Point2F delta;
 
     for (i = 1; i < curve->count; i++) {
@@ -127,12 +126,14 @@ unsigned int path_arc_length_interpolate(const BezierCurve* curve,
 
     if (i < curve->count) {
         *r = curve->points[i - 1];
-        frac = (distance - (dist - curve->distances[i])) /
-               curve->distances[i];
+        /* The fraction overwrites distance: the original stores it in the
+         * parameter's slot and multiplies from there. */
+        distance -= dist - curve->distances[i];
+        distance /= curve->distances[i];
         delta.x = curve->points[i].x - curve->points[i - 1].x;
         delta.y = curve->points[i].y - curve->points[i - 1].y;
-        delta.x *= frac;
-        delta.y *= frac;
+        delta.x *= distance;
+        delta.y *= distance;
         r->x = delta.x + curve->points[i - 1].x;
         r->y = delta.y + curve->points[i - 1].y;
         return i;
