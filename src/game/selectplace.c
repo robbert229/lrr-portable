@@ -219,17 +219,15 @@ SelectPlace_Point2I* selectplace_check_and_update(SelectPlace* selectPlace,
             !pathFound || lego_terrain_cell_command_predicate(&blockPos->x)) {
             valid = 0;
             red = 0.6f; green = 0.0f; blue = 0.0f;
-        } else if (!isWater) {
-            if (isDouble) {
-                red = 0.7f; green = 0.7f; blue = 0.0f;
-            } else if (!validTolerance) {
-                valid = 0;
-                red = 0.7f; green = 0.0f; blue = 0.7f;
-            } else {
-                red = 0.0f; green = 0.7f; blue = 0.1f;
-            }
-        } else {
+        } else if (isWater) {
             red = 0.0f; green = 0.7f; blue = 0.9f;
+        } else if (isDouble) {
+            red = 0.7f; green = 0.7f; blue = 0.0f;
+        } else if (!validTolerance) {
+            valid = 0;
+            red = 0.7f; green = 0.0f; blue = 0.7f;
+        } else {
+            red = 0.0f; green = 0.7f; blue = 0.1f;
         }
 
         Container_Mesh_SetColourAlpha(selectPlace->contMesh, group, red, green, blue, 0.2f);

@@ -43,6 +43,8 @@ static int scrollInfoOverSlider;
 // GLOBAL: LEGORR 0x00552140
 ScrollInfo_Globs scrollInfoGlobs;
 
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x004636b0
 void scroll_info_initialise(const char* imageName, unsigned int index,
                             int horizontal, int panel, ...)
