@@ -83,3 +83,25 @@ The scripts are in the coordinator's scratchpad
    a path that starts with `/` as an option.
 4. Compare the map's multi-name addresses and the per-function padded sizes
    with the original's.
+
+## Addendum: the service-pack LIBCs are ruled out
+
+The conclusion's guess, a service pack's `LIBC.LIB`, does not hold. The
+RTM, SP1 and SP3 libraries (SP2's is byte-identical to SP1's) were
+provisioned with `rbit toolchain provision`, each authenticated against
+the fork's reviewed digests. Each library's exported function COMDATs
+were compared, relocations masked, with the original's bytes for the 294
+LIBC functions the matching build links at known original addresses:
+
+| `libc.lib` | equal | differ |
+|---|---|---|
+| RTM (`4ae22c6f…`) | 240 | 1 (`__amsg_exit`) |
+| SP1/SP2 (`f81440dd…`) | 229 | 12 |
+| SP3 (`3b5f43e9…`) | 226 | 15 |
+
+The other 53 are not exported under the same names by any of the three
+(static helpers such as `_shortsort` and `_write_char`, and members whose
+public name differs). The RTM library is the original's. All three still
+keep `_CallMemberFunction0`/`1`/`2`, `_matherr` and `__fpclear` as
+separate COMDATs, so no service pack explains the folded copies either.
+The 48 bytes stay open.
