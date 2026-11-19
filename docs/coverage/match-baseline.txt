@@ -1,4 +1,4 @@
-# input_sha256: 30e712614d193b0dd7a5389847236419ed1d5c2b21c8c40b07bb060096c603ac
+# input_sha256: 255f2c7bfdc636919fbad0a8f8b9e145b1d08c3688d5e8681c138d7c79d901fd
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -409,7 +409,7 @@
 0x00410b60 100.00 front_menu_item_create_trigger
 0x00410b90 100.00 front_menu_item_create_real_slider
 0x00410bf0 100.00 front_menu_item_create_slider
-0x00410c70 82.61 front_menu_item_free_menu_item
+0x00410c70 100.00 front_menu_item_free_menu_item
 0x00410d50 100.00 front_menu_item_create_banner_item
 0x00410e20 100.00 front_menu_item_create_image_item
 0x00410f30 100.00 front_menu_free_menu
@@ -1730,7 +1730,7 @@
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
 0x0045adb0 99.37 panel_cursor_interaction_update
-0x0045b310 59.81 panel_button_collision_check
+0x0045b310 65.85 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
 0x0045b620 100.00 ui_list_priority_button_action_dispatch
@@ -3134,7 +3134,7 @@
 0x00410b60 100.00 front_menu_item_create_trigger
 0x00410b90 100.00 front_menu_item_create_real_slider
 0x00410bf0 100.00 front_menu_item_create_slider
-0x00410c70 82.61 front_menu_item_free_menu_item
+0x00410c70 100.00 front_menu_item_free_menu_item
 0x00410d50 100.00 front_menu_item_create_banner_item
 0x00410e20 100.00 front_menu_item_create_image_item
 0x00410f30 100.00 front_menu_free_menu
@@ -4455,7 +4455,7 @@
 0x0045abf0 100.00 panel_item_flag8_set_if_enabled
 0x0045ac30 100.00 panel_texture_slots_allocate
 0x0045adb0 99.37 panel_cursor_interaction_update
-0x0045b310 59.81 panel_button_collision_check
+0x0045b310 65.85 panel_button_collision_check
 0x0045b590 100.00 panel_button_point_inside
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
 0x0045b620 100.00 ui_list_priority_button_action_dispatch
