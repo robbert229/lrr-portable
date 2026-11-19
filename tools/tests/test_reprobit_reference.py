@@ -209,6 +209,24 @@ class SyntheticReferenceTest(unittest.TestCase):
         # a slot of another length is not the seed's layout: still refused
         self.assertIsNone(shorter)
 
+    def test_fallback_refuses_seed_offsets_inside_the_originals_instructions(self):
+        # The seed's call field is at 9; the original's (two nops earlier, one
+        # push later) is at 10, so the seed's offset is inside the original's
+        # call instruction: the fallback has no reference to give.
+        compiled = bytes.fromhex("8d4c24088d542408" "e800000000" "c3")
+        original = bytes.fromhex("8d5424088d4c2408" "90" "e8aabbccdd" "c3") + b"\x90"
+        obj = _coff_with_function(compiled)
+        saved = rr.explain_synthetic_reference
+        rr.explain_synthetic_reference = lambda *a, **k: (None, "forced refusal")
+        try:
+            data, reason = rr.explain_reference_with_fallback(obj, "_f", original,
+                                                              address=ADDRESS, ranges=RANGES)
+        finally:
+            rr.explain_synthetic_reference = saved
+        self.assertIsNone(data)
+        self.assertEqual(reason, "forced refusal")
+        self.assertIsNone(rr.legacy_synthetic_reference(obj, "_f", original))
+
     def test_no_reference_when_lengths_differ_or_bodies_agree(self):
         compiled = bytes.fromhex("8d4c24088d542408e800000000c3")
         obj = _coff_with_function(compiled)

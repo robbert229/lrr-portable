@@ -905,6 +905,22 @@ def legacy_synthetic_reference(data: bytes, symbol: str, original: bytes) -> byt
     body, spans = result
     if len(original) < len(body):
         return None
+    # Each kept relocation must start a 32-bit address field of the
+    # original's own instructions (decoded linearly; a field past the last
+    # decodable instruction is the data tail's): otherwise the original
+    # does not put its fields where the seed does, and the reference would
+    # relocate the middle of an instruction.
+    fields: set[int] = set()
+    decoded = 0
+    try:
+        while decoded < len(body):
+            instruction = ia32_fields.decode(original[:len(body)], decoded)
+            fields.update(field.offset for field in instruction.fields)
+            decoded = instruction.end
+    except ia32_fields.DecodeError:
+        pass
+    if any(start < decoded and start not in fields for start, _ in spans):
+        return None
     target = bytearray(original[:len(body)])
     for start, end in spans:
         target[start:end] = body[start:end]
