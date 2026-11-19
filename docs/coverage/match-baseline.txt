@@ -1,4 +1,4 @@
-# input_sha256: de3017b04ea4da18bf75d86f59645cb77751246b34ec9c940402b88e7cb804eb
+# input_sha256: e55aa1abea96a86b53f4a41c39f4b84c2f62fcea8f1cd632d3d0a6d1ac8a5166
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1090,8 +1090,8 @@
 0x00440a10 75.84 legoobject_attached_direction_vector_update
 0x00440bf0 100.00 legoobject_object_list_field_assign_all
 0x00440c30 100.00 legoobject_grid_route_search_adapter
-0x00440c70 67.16 legoobject_terrain_grid_path_search
-0x004410f0 86.34 legoobject_terrain_neighbor_path_check
+0x00440c70 80.65 legoobject_terrain_grid_path_search
+0x004410f0 86.56 legoobject_terrain_neighbor_path_check
 0x00441700 100.00 legoobject_route_setup_and_marker_associate
 0x00441940 100.00 legoobject_action_sequence_reset
 0x00441b30 100.00 legoobject_state_reset
@@ -2077,7 +2077,7 @@
 0x0046f770 100.00 weapons_projectile_hit_object
 0x0046f920 89.63 weapons_projectile_update
 0x0046faf0 84.50 weapons_projectile_create
-0x0046fc70 60.87 weapons_projectile_create_curved
+0x0046fc70 76.02 weapons_projectile_create_curved
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
 0x0046ff70 100.00 weapons_projectile_find_free
 0x0046ff90 100.00 weapons_lazer_find_free
@@ -3815,8 +3815,8 @@
 0x00440a10 75.84 legoobject_attached_direction_vector_update
 0x00440bf0 100.00 legoobject_object_list_field_assign_all
 0x00440c30 100.00 legoobject_grid_route_search_adapter
-0x00440c70 67.16 legoobject_terrain_grid_path_search
-0x004410f0 86.34 legoobject_terrain_neighbor_path_check
+0x00440c70 80.65 legoobject_terrain_grid_path_search
+0x004410f0 86.56 legoobject_terrain_neighbor_path_check
 0x00441700 100.00 legoobject_route_setup_and_marker_associate
 0x00441940 100.00 legoobject_action_sequence_reset
 0x00441b30 100.00 legoobject_state_reset
@@ -4802,7 +4802,7 @@
 0x0046f770 100.00 weapons_projectile_hit_object
 0x0046f920 89.63 weapons_projectile_update
 0x0046faf0 84.50 weapons_projectile_create
-0x0046fc70 60.87 weapons_projectile_create_curved
+0x0046fc70 76.02 weapons_projectile_create_curved
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
 0x0046ff70 100.00 weapons_projectile_find_free
 0x0046ff90 100.00 weapons_lazer_find_free
