@@ -398,6 +398,11 @@ void indexed_pair_get(int panelType, float* x, float* y)
     *y = panel->currPos.y;
 }
 
+/* Maths.h's inline normalise. Its 1.0f (0049e5dc) follows the 0.0f that
+ * 0045a270 stores and comes before the double 1.0 below, so the copy is
+ * compiled here. */
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0045a730
 void simtick_manager_tick(int panelType, float elapsed)
 {

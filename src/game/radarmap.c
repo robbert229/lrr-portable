@@ -182,6 +182,11 @@ void radarmap_initialise(void)
     radarmapGlobs.highlightX = -1;
 }
 
+/* Maths.h's inline normalise. Its 1.0f (0049e688) follows
+ * radar_map_initialise's constants in the original's pool, so the copy is
+ * compiled here. */
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0045da90
 RadarMap* radarmap_create(struct TerrainMap* map, const Area2F* screenRect,
                           float zoom)
