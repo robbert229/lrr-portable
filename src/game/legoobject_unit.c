@@ -5132,7 +5132,6 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
     unsigned int width;
     unsigned int height;
     unsigned int counts[2];
-    int blockPos[2];
     int DIRECTIONS[4][2];
     LegoObjG_RouteBlock lists[2][100];
     unsigned int* map;
@@ -5178,13 +5177,13 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
         memset(s_terrain_path_depth, 0, width * height * sizeof(unsigned int));
 
         current = 0;
+        step = 1;
         s_terrain_path_depth[width * startY + startX] = 1;
         lists[0][0].blockPos[0] = startX;
         lists[0][0].blockPos[1] = startY;
         counts[0] = 1;
         counts[1] = 0;
         countPtr = &counts[0];
-        step = 1;
         do {
             step++;
             for (j = 0; j < *countPtr; j++) {
@@ -5207,6 +5206,8 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
                             counts[other]++;
                             *cell = step;
                             if (callback != NULL) {
+                                int blockPos[2];
+
                                 blockPos[0] = x;
                                 blockPos[1] = y;
                                 if (callback(obj, blockPos, data)) {
