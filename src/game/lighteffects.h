@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+struct LightEffects_Vector3F;
+
 void light_effects_initialise(void* contSpotlight, void* contRoot,
                               float initialRed, float initialGreen,
                               float initialBlue);              /* 0044c710 */
@@ -51,7 +53,7 @@ void light_effects_flip_sign(float* value);                   /* 0044d250 */
 void light_effects_update_fade(float elapsedGame);            /* 0044d280 */
 void light_effects_set_fade_speed(void);                      /* 0044d710 */
 void light_effects_update_move(float elapsedGame);            /* 0044d760 */
-int light_effects_check_move_limit(const float* position);    /* 0044d9a0 */
+int light_effects_check_move_limit(const struct LightEffects_Vector3F* position); /* 0044d9a0 */
 void light_effects_set_dimmer_mode(int on);                   /* 0044da20 */
 void light_effects_update_dimmer(float elapsedGame);          /* 0044da50 */
 

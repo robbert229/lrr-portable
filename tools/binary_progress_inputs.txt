@@ -316,6 +316,7 @@ src/game/level_shared.hpp
 src/game/lighteffects.c
 src/game/lighteffects.h
 src/game/lighteffects_imports.h
+src/game/lighteffects_maths.h
 src/game/lighteffects_port.cpp
 src/game/loader.c
 src/game/loader.h

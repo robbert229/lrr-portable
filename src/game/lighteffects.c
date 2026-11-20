@@ -532,13 +532,13 @@ void light_effects_update_move(float elapsedGame)
             newPos.x = pos.x + lightEffectsGlobs.moveVector.x;
             newPos.y = pos.y + lightEffectsGlobs.moveVector.y;
             newPos.z = pos.z + lightEffectsGlobs.moveVector.z;
-            if (light_effects_check_move_limit(&newPos.x)) {
+            if (light_effects_check_move_limit(&newPos)) {
                 ok = 1;
             } else {
                 newPos.x = pos.x - lightEffectsGlobs.moveVector.x;
                 newPos.y = pos.y - lightEffectsGlobs.moveVector.y;
                 newPos.z = pos.z - lightEffectsGlobs.moveVector.z;
-                if (light_effects_check_move_limit(&newPos.x)) ok = 1;
+                if (light_effects_check_move_limit(&newPos)) ok = 1;
             }
             if (ok) {
                 ddiscene_object_position_set(lightEffectsGlobs.contSpotlight,
@@ -577,18 +577,16 @@ void light_effects_update_move(float elapsedGame)
     }
 }
 
+#include "lighteffects_maths.h"
+
 // FUNCTION: LEGORR 0x0044d9a0
-int light_effects_check_move_limit(const float* position)
+int light_effects_check_move_limit(const LightEffects_Vector3F* position)
 {
     LightEffects_Vector3F diff;
 
-    diff.x = position[0] - lightEffectsGlobs.moveStartPos.x;
-    diff.y = position[1] - lightEffectsGlobs.moveStartPos.y;
-    diff.z = position[2] - lightEffectsGlobs.moveStartPos.z;
-    diff.x = (float)fabs(diff.x);
-    diff.y = (float)fabs(diff.y);
-    if (diff.x > lightEffectsGlobs.moveLimit.x) return 0;
-    if (diff.y > lightEffectsGlobs.moveLimit.y) return 0;
+    light_effects_vector3d_subtract(&diff, position, &lightEffectsGlobs.moveStartPos);
+    if ((float)fabs(diff.x) > lightEffectsGlobs.moveLimit.x) return 0;
+    if ((float)fabs(diff.y) > lightEffectsGlobs.moveLimit.y) return 0;
     if ((float)fabs(diff.z) > lightEffectsGlobs.moveLimit.z) return 0;
     return 1;
 }
