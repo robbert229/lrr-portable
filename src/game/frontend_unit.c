@@ -1568,7 +1568,7 @@ void front_menu_update_overlays(Front_Menu* menu)
     Area2F area;
 
     if (frontGlobs_overlayImage != NULL) {
-        width = anim_clone_is_lws((AnimClone*)frontGlobs_overlayImage);
+        width = Flic_GetWidth(frontGlobs_overlayImage);
         height = object_field10_get(frontGlobs_overlayImage);
         area.x = (float)frontGlobs_overlayX;
         area.y = (float)frontGlobs_overlayY;

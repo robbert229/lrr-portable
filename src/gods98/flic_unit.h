@@ -48,6 +48,7 @@ void Flic_DeltaWord16(LPFLICSTRUCT fsp);                        /* 00484e50 */
 int Flic_Delta(LPFLICSTRUCT fsp);                               /* 00485030 */
 unsigned short Flic_GetPaletteColour(unsigned char index,
                                      LPFLICSTRUCT fsp);         /* 004850c0 */
+int Flic_GetWidth(LPFLICSTRUCT fsp);    /* folded into 004897d0 */
 int Flic_GetHeight(LPFLICSTRUCT fsp);                           /* 004850e0 */
 
 #ifdef __cplusplus

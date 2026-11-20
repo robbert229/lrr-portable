@@ -130,9 +130,12 @@ void image_surface_blit_transformed(struct TextureSurface* surface,
  * frontend_port.cpp. */
 int front_image_save_bmp_adapter(void* image, const char* fname); /* 0047e440 */
 /* gods98 Flic.c: flic.h's adapters (Flic_Setup, Flic_Animate) and
- * flic_api.h's Flic_Close. The original reads the flic's width through
- * 004897d0 (animclone.h's anim_clone_is_lws) and its height through
- * 004850e0. */
+ * flic_api.h's Flic_Close. The original reads the flic's height through
+ * 004850e0, and its width through 004897d0, where the linker folded
+ * Flic_GetWidth into animclone.h's anim_clone_is_lws; the port reads the
+ * width through Flic.c's Flic_GetWidth, since an AnimClone's field is
+ * not at the flic's width on 64-bit. */
+int Flic_GetWidth(const void* object);           /* folded into 004897d0 */
 uint32_t object_field10_get(const void* object);                  /* 004850e0 */
 /* gods98 TextWindow.c (textwindow.c), by the names its definitions take. */
 void text_buffer_append_format(void* record, const char* format, ...); /* 00485230 */
