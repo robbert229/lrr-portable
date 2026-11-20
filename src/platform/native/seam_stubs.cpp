@@ -5,7 +5,6 @@
  * failure its API documents, which the units already handle; none aborts.
  * The library substitutions of ADR 0007 replace these calls in the units:
  *
- *   WINMM mixer                   -> [library:audio]
  *   ADVAPI32 registry             -> [library:config]
  *   LIBC directory routines,
  *   KERNEL32 GetDriveTypeA        -> [library:filesystem]
@@ -96,62 +95,6 @@ int wsprintfA(LPSTR output, LPCSTR format, ...)
     int written = vsnprintf(output, 1025, format, args);
     va_end(args);
     return written;
-}
-
-/* --- WINMM: the mixer ([library:audio]) --------------------------------- */
-
-/* Stub: no mixer devices. */
-UINT mixerGetNumDevs(void)
-{
-    SEAM_STUB();
-    return 0;
-}
-
-MMRESULT mixerOpen(HMIXER* mixer, UINT device, DWORD_PTR callback,
-                   DWORD_PTR instance, DWORD flags)
-{
-    SEAM_STUB();
-    if (mixer) *mixer = NULL;
-    return MMSYSERR_INVALHANDLE;
-}
-
-MMRESULT mixerClose(HMIXER mixer)
-{
-    SEAM_STUB();
-    return MMSYSERR_INVALHANDLE;
-}
-
-MMRESULT mixerGetDevCapsA(UINT_PTR device, MIXERCAPSA* caps, UINT size)
-{
-    SEAM_STUB();
-    return MMSYSERR_INVALHANDLE;
-}
-
-MMRESULT mixerGetLineInfoA(HMIXEROBJ mixer, MIXERLINEA* line, DWORD flags)
-{
-    SEAM_STUB();
-    return MMSYSERR_INVALHANDLE;
-}
-
-MMRESULT mixerGetLineControlsA(HMIXEROBJ mixer, MIXERLINECONTROLSA* controls,
-                               DWORD flags)
-{
-    SEAM_STUB();
-    return MMSYSERR_INVALHANDLE;
-}
-
-MMRESULT mixerGetControlDetailsA(HMIXEROBJ mixer,
-                                 MIXERCONTROLDETAILS* details, DWORD flags)
-{
-    SEAM_STUB();
-    return MMSYSERR_INVALHANDLE;
-}
-
-MMRESULT mixerSetControlDetails(HMIXEROBJ mixer,
-                                MIXERCONTROLDETAILS* details, DWORD flags)
-{
-    SEAM_STUB();
-    return MMSYSERR_INVALHANDLE;
 }
 
 /* --- ADVAPI32 ([library:config]) --------------------------------------- */

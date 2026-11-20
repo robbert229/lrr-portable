@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* The audio library of ADR 0007's substitution table: SDL3 audio in place
- * of DirectSound (sound3d.c, G98-009), and audio files decoded by miniaudio
- * in place of WinMM's mmio and MCI "cdaudio" device (soundsys.c, G98-021).
+ * of DirectSound (sound3d.c, G98-009), audio files decoded by miniaudio in
+ * place of WinMM's mmio and MCI "cdaudio" device (soundsys.c, G98-021), and
+ * a mixer of one CD-audio line in place of WinMM's mixer (main.c, G98-005).
  * The units call it at their `// [library:audio]` call sites; it holds no
  * game logic. Each function stands for the one Win32 call named beside it,
  * with that call's arguments and results, so a call site changes only the
@@ -13,7 +14,16 @@
  * device's and mixes the streams bound to the device, so the library needs
  * no mixer of its own. The primary buffer's volume is the device's gain.
  * A 3D buffer is attenuated by its distance from the listener, as
- * DirectSound's default rolloff does; it is not panned.
+ * DirectSound's default rolloff does, and panned by the sine of its
+ * azimuth about the listener's orientation, with DirectSound's pan law:
+ * the far channel is attenuated and the near one keeps its level, so a
+ * centred source sounds as a 2D one does. The far channel's gain is
+ * 1 - |sin azimuth|, hard over at 90 degrees. Microsoft documents no
+ * curve for its software 3D pan; this one approximates it. There is no
+ * Doppler shift: it follows the buffers' and listener's velocities, which
+ * the units never set, so the original never shifts either. Feeding a
+ * stream converts the buffer's 8- or 16-bit mono or stereo PCM to float
+ * stereo with the channels' gains, ramped across each feed.
  *
  * mmio reads a whole file (or the caller's memory) and walks its RIFF
  * chunks in place.
@@ -22,7 +32,13 @@
  * `Music/TrackNN` (two digits) with the extension .ogg, .flac, .mp3 or
  * .wav, in the working directory, matched without case. With no such
  * files there is no disc: "open cdaudio" fails, as the original's does
- * without a CD, and the game plays no music. */
+ * without a CD, and the game plays no music.
+ *
+ * The mixer has one device, whose speakers destination has one source:
+ * the CD-audio line, two channels with one volume fader from 0 to 65535.
+ * The fader scales the cdaudio device's tracks by value / 65535 per
+ * channel; it starts at its maximum. The DirectSound primary buffer's
+ * volume does not reach it, as on Windows. */
 #ifndef LEGORRR_LIBRARY_AUDIO_SDL_H
 #define LEGORRR_LIBRARY_AUDIO_SDL_H
 
@@ -51,7 +67,9 @@ typedef struct AudioListener AudioListener; /* IDirectSound3DListener */
 #define AUDIO_PLAY_LOOPING 0x1
 #define AUDIO_STATUS_PLAYING 0x1
 #define AUDIO_STATUS_LOOPING 0x4
-/* DS3DMODE_DISABLE: a 3D buffer that plays without attenuation. */
+/* DS3DMODE_HEADRELATIVE: positions are relative to the listener.
+ * DS3DMODE_DISABLE: a 3D buffer that plays without attenuation or pan. */
+#define AUDIO_3D_MODE_HEADRELATIVE 1
 #define AUDIO_3D_MODE_DISABLE 2
 
 /* DirectSoundCreate: opens the default playback device. */
@@ -144,8 +162,46 @@ MCIERROR audio_mci_send_string(LPCSTR command, LPSTR result, UINT capacity,
 /* mciGetErrorStringA. */
 BOOL audio_mci_get_error_string(MCIERROR error, LPSTR text, UINT capacity);
 
+/* --- mixer ------------------------------------------------------------------ */
+
+/* mixerGetNumDevs, mixerOpen, mixerClose, mixerGetDevCapsA,
+ * mixerGetLineInfoA, mixerGetLineControlsA, mixerGetControlDetailsA and
+ * mixerSetControlDetails, on the one device described above. */
+UINT audio_mixer_get_num_devs(void);
+MMRESULT audio_mixer_open(HMIXER* mixer, UINT device, DWORD_PTR callback,
+                          DWORD_PTR instance, DWORD flags);
+MMRESULT audio_mixer_close(HMIXER mixer);
+MMRESULT audio_mixer_get_dev_caps(UINT_PTR device, MIXERCAPSA* caps, UINT size);
+MMRESULT audio_mixer_get_line_info(HMIXEROBJ mixer, MIXERLINEA* line,
+                                   DWORD flags);
+MMRESULT audio_mixer_get_line_controls(HMIXEROBJ mixer,
+                                       MIXERLINECONTROLSA* controls,
+                                       DWORD flags);
+MMRESULT audio_mixer_get_control_details(HMIXEROBJ mixer,
+                                         MIXERCONTROLDETAILS* details,
+                                         DWORD flags);
+MMRESULT audio_mixer_set_control_details(HMIXEROBJ mixer,
+                                         MIXERCONTROLDETAILS* details,
+                                         DWORD flags);
+
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+/* The library's arithmetic, for its tests. */
+namespace audio_sdl_detail {
+/* DirectSound's volume, in hundredths of a decibel, as a linear gain. */
+float GainOfVolume(LONG volume);
+/* The 3D gains of a source at offset (from the listener, in world
+ * coordinates) for a listener facing front with top up: distance
+ * attenuation times the pan, per channel. */
+void GainsOf3D(const float offset[3], const float front[3], const float top[3],
+               float minDistance, float maxDistance, float rolloff,
+               float* left, float* right);
+/* A mixer fader value, 0 to 65535, as a linear gain. */
+float GainOfFader(DWORD value);
+} // namespace audio_sdl_detail
 #endif
 
 #endif /* LEGORRR_LIBRARY_AUDIO_SDL_H */

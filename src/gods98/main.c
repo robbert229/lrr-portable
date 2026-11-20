@@ -13,8 +13,9 @@
  * The process entry (platform/native/entry.cpp) calls WinMain with the
  * command line; miniwin provides the window, the message queue, DirectDraw
  * and Direct3DRM (ADR 0007). WINMM's time comes from SDL3
- * ([library:time]); the CD-audio mixer and KERNEL32's single-instance mutex
- * are seam stubs (platform/native/seam_stubs.cpp).
+ * ([library:time]); the CD-audio mixer is the audio library's
+ * ([library:audio]), and KERNEL32's single-instance mutex is a seam stub
+ * (platform/native/seam_stubs.cpp).
  *
  * The unit's .bss is the original's mainGlobs, one external struct
  * (finding 679); other units read thirteen of its fields by the port's
@@ -27,6 +28,7 @@
 #include <string.h>
 #include <miniwin/windows.h>
 #include "winmm.h"
+#include "library/audio_sdl.h"
 
 #include "crt/vc5names.h"
 #include "avi_player.h"
@@ -905,7 +907,7 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
     DWORD* values;
     DWORD left, right, min, range;
 
-    numDevs = mixerGetNumDevs();
+    numDevs = audio_mixer_get_num_devs(); // [library:audio]
     result = FALSE;
 
     if (set) {
@@ -916,21 +918,21 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
     }
 
     for (device = 0; device < numDevs; device++) {
-        if (mixerOpen(&hMixer, device, 0, 0, 0) == MMSYSERR_NOERROR) {
+        if (audio_mixer_open(&hMixer, device, 0, 0, 0) == MMSYSERR_NOERROR) { // [library:audio]
             memset(&caps, 0, sizeof(caps));
-            mixerGetDevCapsA(device, &caps, sizeof(caps));
+            audio_mixer_get_dev_caps(device, &caps, sizeof(caps)); // [library:audio]
             for (dest = 0; dest < caps.cDestinations; dest++) {
                 memset(&line, 0, sizeof(line));
                 line.cbStruct = sizeof(line);
                 line.dwDestination = dest;
-                if (mixerGetLineInfoA((HMIXEROBJ)hMixer, &line,
+                if (audio_mixer_get_line_info((HMIXEROBJ)hMixer, &line, // [library:audio]
                                       MIXER_GETLINEINFOF_DESTINATION) == MMSYSERR_NOERROR) {
                     connections = line.cConnections;
                     for (src = 0; src < connections; src++) {
                         line.cbStruct = sizeof(line);
                         line.dwDestination = dest;
                         line.dwSource = src;
-                        if (mixerGetLineInfoA((HMIXEROBJ)hMixer, &line,
+                        if (audio_mixer_get_line_info((HMIXEROBJ)hMixer, &line, // [library:audio]
                                               MIXER_GETLINEINFOF_SOURCE) == MMSYSERR_NOERROR &&
                             line.dwComponentType == MIXERLINE_COMPONENTTYPE_SRC_COMPACTDISC) {
                             memset(&lineControls, 0, sizeof(lineControls));
@@ -940,7 +942,7 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
                             lineControls.cbmxctrl = sizeof(MIXERCONTROLA);
                             controls = (MIXERCONTROLA*)malloc(sizeof(MIXERCONTROLA) * line.cControls);
                             lineControls.pamxctrl = controls;
-                            if (mixerGetLineControlsA((HMIXEROBJ)hMixer, &lineControls,
+                            if (audio_mixer_get_line_controls((HMIXEROBJ)hMixer, &lineControls, // [library:audio]
                                                       MIXER_GETLINECONTROLSF_ALL) == MMSYSERR_NOERROR) {
                                 for (control = 0; control < line.cControls; control++) {
                                     if ((controls[control].dwControlType & MIXERCONTROL_CT_CLASS_FADER) &&
@@ -966,12 +968,12 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
                                                     values[channel] = (left + right) / 2;
                                                 }
                                             }
-                                            if (mixerSetControlDetails((HMIXEROBJ)hMixer, &details,
+                                            if (audio_mixer_set_control_details((HMIXEROBJ)hMixer, &details, // [library:audio]
                                                                        MIXER_SETCONTROLDETAILSF_VALUE) == MMSYSERR_NOERROR) {
                                                 result = TRUE;
                                             }
                                         } else {
-                                            if (mixerGetControlDetailsA((HMIXEROBJ)hMixer, &details,
+                                            if (audio_mixer_get_control_details((HMIXEROBJ)hMixer, &details, // [library:audio]
                                                                         MIXER_GETCONTROLDETAILSF_VALUE) == MMSYSERR_NOERROR) {
                                                 *leftVolume = (float)(values[0] - controls[control].Bounds.dwMinimum) /
                                                     (float)(controls[control].Bounds.dwMaximum - controls[control].Bounds.dwMinimum);
@@ -993,7 +995,7 @@ int audio_mixer_control_init(float* leftVolume, float* rightVolume, int set)
                     }
                 }
             }
-            mixerClose(hMixer);
+            audio_mixer_close(hMixer); // [library:audio]
         }
     }
 
