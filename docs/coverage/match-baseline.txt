@@ -1,4 +1,4 @@
-# input_sha256: c71d38e6cdc0e7b2e49dfb3181694047016294ef81ffb7f65c50f52c046c1bc9
+# input_sha256: 3b8d7442ec694a2eb787b5596e7c0a48f05da6f99ea7088a4f0fcf01dca883a1
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -780,7 +780,7 @@
 0x0042c6a0 100.00 lego_load_path_ai
 0x0042c760 100.00 lego_load_fallin
 0x0042c9d0 100.00 lego_load_block_pointers
-0x0042cb70 96.67 lego_camera_grid_expiry
+0x0042cb70 100.00 lego_camera_grid_expiry
 0x0042cc90 100.00 lego_load_terrain_map
 0x0042cd50 100.00 lego_upgrade_name_entry_find
 0x0042cda0 100.00 lego_entity_vehicle_type_table_load
@@ -3505,7 +3505,7 @@
 0x0042c6a0 100.00 lego_load_path_ai
 0x0042c760 100.00 lego_load_fallin
 0x0042c9d0 100.00 lego_load_block_pointers
-0x0042cb70 96.67 lego_camera_grid_expiry
+0x0042cb70 100.00 lego_camera_grid_expiry
 0x0042cc90 100.00 lego_load_terrain_map
 0x0042cd50 100.00 lego_upgrade_name_entry_find
 0x0042cda0 100.00 lego_entity_vehicle_type_table_load
