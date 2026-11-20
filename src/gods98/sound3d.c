@@ -2043,11 +2043,14 @@ int sound_stream_stop_and_release(int stream_index)
 #if defined(SOUND3D_DIRECTSOUND)
 int sound_streamed_wave_buffer_setup(const char* fName, int loop, int volume)
 {
-    Sound3DStreamData* stream = loop ? &s_sound3d.loopStreamData : &s_sound3d.streamData;
+    Sound3DStreamData* stream;
     Sound3DBufferDesc dsbd;
     Sound3DBuffer* soundBuff;
     unsigned long remainder;
     int nError;
+
+    if (loop) stream = &s_sound3d.loopStreamData;
+    else stream = &s_sound3d.streamData;
 
     if (sound_wave_file_open_read_chunks(fName, &stream->hmmio, &stream->pwf,
                                          &stream->mmckinfoParent) != 0) {
