@@ -3029,6 +3029,11 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                             }
                         }
                     } else if (!(s_global_low_word & 0x20) && !(s_global_low_word & 0x40)) {
+                        /* One `type` for both object tests, and one `unit`
+                         * for both route checks below: lego_maths.h's two
+                         * `level` locals take their place in Lego.c's symbol
+                         * count (finding 538), and the code is unchanged. */
+                        int type;
                         if (!(s_global_low_word & 8) && !(s_global_low_word & 0x10)) {
                             if ((s_global_low_word & 2) || (s_global_low_word & 4)) {
                                 if (s_global_low_word & 2) media_pointer_cursor_select(0x25);
@@ -3043,6 +3048,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                 }
                             } else if (entity_shared_eligibility_check(liveObj, 1)) {
                                 int objPos[2];
+                                struct EntitySlot* unit;
                                 media_pointer_cursor_select(2);
                                 if (!s_lego_dragging)
                                     lego_entity_command_status_feedback_dispatch(liveObj);
@@ -3059,7 +3065,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 !(LEGO_FIELD(liveObj, uint32_t, 0x3e0) & 0x40000)) &&
                                                (!(legoGlobs_flags1 & 0x10000000) ||
                                                 (LEGO_FIELD(liveObj, uint32_t, 0x3ec) & 1))) {
-                                        int type = LEGO_FIELD(liveObj, int, 0);
+                                        type = LEGO_FIELD(liveObj, int, 0);
                                         if (type == 1 || type == 4 || type == 2 ||
                                             (type == 0xb &&
                                              (LEGO_FIELD(liveObj, uint32_t, 0x3e4) & 0x2000000))) {
@@ -3072,7 +3078,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                                 cmd_produce(0x2d, NULL, 0, NULL);
                                             }
                                         } else if (type == 6 || type == 7) {
-                                            struct EntitySlot* unit = selection_active_entity_get();
+                                            unit = selection_active_entity_get();
                                             if (unit != NULL) {
                                                 entity_position_to_terrain_cell_adapter(
                                                     liveObj, &objPos[0], &objPos[1]);
@@ -3091,7 +3097,7 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                         }
                                     }
                                 } else {
-                                    struct EntitySlot* unit = selection_active_entity_get();
+                                    unit = selection_active_entity_get();
                                     if (unit != NULL &&
                                         (LEGO_FIELD(liveObj, int, 0) == 6 ||
                                          LEGO_FIELD(liveObj, int, 0) == 7)) {
@@ -3111,7 +3117,6 @@ void lego_main_sim_interaction_and_cell_update(float elapsedGame,
                                 }
                             }
                         } else {
-                            int type;
                             if (s_global_low_word & 8) media_pointer_cursor_select(0x21);
                             else media_pointer_cursor_select(0x22);
                             type = LEGO_FIELD(liveObj, int, 0);
