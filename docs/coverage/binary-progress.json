@@ -1,22 +1,22 @@
 {
   "accuracy_percent": {
-    "full": 98.95,
-    "game_only": 98.84
+    "full": 98.96,
+    "game_only": 98.85
   },
-  "baseline_sha256": "aa80d61e6c41c2adeb425a8666ac03744aad9ff63c4dfac7b9d2dc0ac1da6fa5",
+  "baseline_sha256": "f8a413894d4a1f4d892131d2295da95b61e6b0ddc2acda609f1f8d7683f4027d",
   "correct_size_functions": {
     "full": {
-      "bytes": 526712,
+      "bytes": 526916,
       "compared": 3020,
-      "count": 2922,
+      "count": 2923,
       "exact_functions": 2813,
       "mapped": 3022,
       "uncompared": 2
     },
     "game_only": {
-      "bytes": 475861,
+      "bytes": 476065,
       "compared": 2721,
-      "count": 2627,
+      "count": 2628,
       "exact_functions": 2519,
       "mapped": 2723,
       "uncompared": 2
@@ -342,7 +342,7 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "697781861c03858933143812c1047adec67332d6c4dffe66e8b3115ce357e615",
+  "input_sha256": "a83e34981f481b7edcc8d2834c816fd1526c461716e6db2520e770fe4d45a492",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 55,
@@ -460,143 +460,143 @@
           "object": "legoobject_unit.c.obj"
         },
         {
-          "first_public_address": "0x44c6a0",
+          "first_public_address": "0x44c6b0",
           "object": "lighteffects.c.obj"
         },
         {
-          "first_public_address": "0x44daf0",
+          "first_public_address": "0x44db00",
           "object": "loader.c.obj"
         },
         {
-          "first_public_address": "0x44e060",
+          "first_public_address": "0x44e070",
           "object": "terrain_map.c.obj"
         },
         {
-          "first_public_address": "0x451940",
+          "first_public_address": "0x451950",
           "object": "meshlod.c.obj"
         },
         {
-          "first_public_address": "0x451c60",
+          "first_public_address": "0x451c70",
           "object": "message_unit.c.obj"
         },
         {
-          "first_public_address": "0x452d80",
+          "first_public_address": "0x452d90",
           "object": "tutorial_script.c.obj"
         },
         {
-          "first_public_address": "0x457470",
+          "first_public_address": "0x457480",
           "object": "objective_unit.c.obj"
         },
         {
-          "first_public_address": "0x459120",
+          "first_public_address": "0x459130",
           "object": "objectrecall.c.obj"
         },
         {
-          "first_public_address": "0x4594c0",
+          "first_public_address": "0x4594d0",
           "object": "objinfo.c.obj"
         },
         {
-          "first_public_address": "0x459fb0",
+          "first_public_address": "0x459fc0",
           "object": "panel_unit.c.obj"
         },
         {
-          "first_public_address": "0x45c7b0",
+          "first_public_address": "0x45c7c0",
           "object": "pointer.c.obj"
         },
         {
-          "first_public_address": "0x45cd40",
+          "first_public_address": "0x45cd50",
           "object": "priorities.c.obj"
         },
         {
-          "first_public_address": "0x45d760",
+          "first_public_address": "0x45d770",
           "object": "ptl.c.obj"
         },
         {
-          "first_public_address": "0x45d830",
+          "first_public_address": "0x45d840",
           "object": "radarmap.c.obj"
         },
         {
-          "first_public_address": "0x45efb0",
+          "first_public_address": "0x45efc0",
           "object": "reward.c.obj"
         },
         {
-          "first_public_address": "0x462d20",
+          "first_public_address": "0x462d30",
           "object": "roof.c.obj"
         },
         {
-          "first_public_address": "0x463640",
+          "first_public_address": "0x463650",
           "object": "scrollinfo.c.obj"
         },
         {
-          "first_public_address": "0x463e90",
+          "first_public_address": "0x463ea0",
           "object": "selectplace.c.obj"
         },
         {
-          "first_public_address": "0x4646e0",
+          "first_public_address": "0x4646f0",
           "object": "sfx.c.obj"
         },
         {
-          "first_public_address": "0x466160",
+          "first_public_address": "0x466170",
           "object": "spiderweb.c.obj"
         },
         {
-          "first_public_address": "0x466780",
+          "first_public_address": "0x466790",
           "object": "entity_stats.c.obj"
         },
         {
-          "first_public_address": "0x46a310",
+          "first_public_address": "0x46a320",
           "object": "teleporter.c.obj"
         },
         {
-          "first_public_address": "0x46a790",
+          "first_public_address": "0x46a7a0",
           "object": "text.c.obj"
         },
         {
-          "first_public_address": "0x46b170",
+          "first_public_address": "0x46b180",
           "object": "tooltip.c.obj"
         },
         {
-          "first_public_address": "0x46bfc0",
+          "first_public_address": "0x46bfd0",
           "object": "upgrade.c.obj"
         },
         {
-          "first_public_address": "0x46c360",
+          "first_public_address": "0x46c370",
           "object": "vehicle_model.c.obj"
         },
         {
-          "first_public_address": "0x46db20",
+          "first_public_address": "0x46db30",
           "object": "water.c.obj"
         },
         {
-          "first_public_address": "0x46eb10",
+          "first_public_address": "0x46eb20",
           "object": "weapons.c.obj"
         },
         {
-          "first_public_address": "0x4721b0",
+          "first_public_address": "0x4721c0",
           "object": "movie_unit.cpp.obj"
         },
         {
-          "first_public_address": "0x4726e0",
+          "first_public_address": "0x4726f0",
           "object": "unit_gods98:container.c.obj"
         },
         {
-          "first_public_address": "0x476d20",
+          "first_public_address": "0x476d30",
           "object": "unit_gods98:viewports.c.obj"
         },
         {
-          "first_public_address": "0x477410",
+          "first_public_address": "0x477420",
           "object": "unit_gods98:utils.c.obj"
         },
         {
-          "first_public_address": "0x477770",
+          "first_public_address": "0x477780",
           "object": "unit_gods98:main.c.obj"
         },
         {
-          "first_public_address": "0x478dc0",
+          "first_public_address": "0x478dd0",
           "object": "unit_gods98:config.c.obj"
         },
         {
-          "first_public_address": "0x4794d0",
+          "first_public_address": "0x4794e0",
           "object": "unit_gods98:maths.c.obj"
         },
         {
@@ -4068,7 +4068,7 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 8
   },
-  "listing_digests_sha256": "7074df28c710d4a1230518dfbcb8ef28785d2e3f8670258a2e48dc4ccbd1658c",
+  "listing_digests_sha256": "580a3268035a520be2f9290bbd2aa13ed55df86f8f878123dfce57ee350b7ae8",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
@@ -4153,8 +4153,8 @@
       "imported_names": 145,
       "section_bytes": {
         ".data": {
-          "differing": 432,
-          "equal": 72784,
+          "differing": 417,
+          "equal": 72799,
           "original": 73216,
           "rebuilt": 73216
         },
@@ -4165,14 +4165,14 @@
           "rebuilt": 4112
         },
         ".rdata": {
-          "differing": 1202,
-          "equal": 10030,
+          "differing": 1146,
+          "equal": 10086,
           "original": 11232,
           "rebuilt": 11224
         },
         ".text": {
-          "differing": 536349,
-          "equal": 106264,
+          "differing": 533816,
+          "equal": 108797,
           "original": 642549,
           "rebuilt": 642613
         }
@@ -4228,9 +4228,9 @@
   "sections": {
     ".data": {
       "chance_percent": 10.47,
-      "excess_percent_points": 88.85,
-      "identical_bytes": 72718,
-      "identical_percent": 99.32,
+      "excess_percent_points": 88.87,
+      "identical_bytes": 72733,
+      "identical_percent": 99.34,
       "original_bytes": 73216,
       "rebuilt_bytes": 73216,
       "run_chance_percent": 1.76,
@@ -4240,9 +4240,9 @@
     },
     ".rdata": {
       "chance_percent": 4.12,
-      "excess_percent_points": 29.3,
-      "identical_bytes": 3754,
-      "identical_percent": 33.42,
+      "excess_percent_points": 29.34,
+      "identical_bytes": 3758,
+      "identical_percent": 33.46,
       "original_bytes": 11232,
       "rebuilt_bytes": 11304,
       "run_chance_percent": 0.0,
@@ -4252,15 +4252,15 @@
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 13.65,
-      "identical_bytes": 105905,
-      "identical_percent": 16.48,
+      "excess_percent_points": 14.05,
+      "identical_bytes": 108430,
+      "identical_percent": 16.87,
       "original_bytes": 642549,
       "rebuilt_bytes": 642613,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 11.84,
-      "run_identical_bytes": 76077,
-      "run_identical_percent": 11.84
+      "run_excess_percent_points": 12.17,
+      "run_identical_bytes": 78198,
+      "run_identical_percent": 12.17
     },
     "imports": {
       "chance_percent": 34.58,
@@ -4289,15 +4289,15 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 13.65,
-    "identical_bytes": 105905,
-    "identical_percent": 16.48,
+    "excess_percent_points": 14.05,
+    "identical_bytes": 108430,
+    "identical_percent": 16.87,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
-    "run_excess_percent_points": 11.84,
-    "run_identical_bytes": 76077,
-    "run_identical_percent": 11.84
+    "run_excess_percent_points": 12.17,
+    "run_identical_bytes": 78198,
+    "run_identical_percent": 12.17
   },
   "unit_size_agreement": {
     "agreeing_unit_ids": [
