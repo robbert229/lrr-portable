@@ -307,23 +307,25 @@ int point_in_polygon_2d(const float* point, const float* fromList,
     return crossings & 1;
 }
 
+/* Maths.h's inline dot product (maths_sphere.h), included before its only
+ * user so that the functions above keep their symbol counter. */
+#include "maths_sphere.h"
+
 // FUNCTION: LEGORR 0x00479c10
 int sphere_ray_intersection_discriminant_positive(const float* center,
                                                   float radius,
                                                   const float* camera,
                                                   const float* line)
 {
-    float lx, ly, lz, b, c;
-    Vector3F d;
+    Vector3F csVec, ray = *(const Vector3F*)line;
+    float t;
 
-    d = *(const Vector3F*)line;
-    lx = camera[0] - center[0];
-    ly = camera[1] - center[1];
-    lz = camera[2] - center[2];
-    b = 2.0f * d.x * lx + ly * (2.0f * d.y) + 2.0f * d.z * lz;
-    c = (lz * lz + (lx * lx + ly * ly)) * s_maths_four - radius * radius;
-    if (b * b - c > s_maths_zero) return 1;
-    return 0;
+    maths_vector3d_scale(&ray, &ray, 2.0f);
+    maths_vector3d_subtract(&csVec, (const Vector3F*)camera, (const Vector3F*)center);
+    t = maths_vector3d_dot_product(&ray, &csVec);
+    t *= t;
+    t -= (s_maths_four * maths_vector3d_dot_product(&csVec, &csVec) - (radius * radius));
+    return (t > s_maths_zero);
 }
 
 // FUNCTION: LEGORR 0x00479ce0
