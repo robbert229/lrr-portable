@@ -5,6 +5,8 @@
 // Viewport::Clear(flags) rectangles and colours, that nothing a viewport
 // draws leaves its rectangle, that its projection is centred on it, and
 // that once the game clears the z-buffer itself, Render no longer does.
+// Transform and InverseTransform use D3DRM's homogeneous screen vectors in
+// device coordinates, as the game's terrain picking reads them.
 // Synthetic only: a dummy-driver SDL window, no game data.
 #include <miniwin/d3d.h>
 #include <miniwin/d3drm.h>
@@ -14,6 +16,7 @@
 #include <SDL3/SDL.h>
 
 #include <functional>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -235,6 +238,56 @@ static IDirect3DRMViewport2* MakeViewport(DWORD x, DWORD y, DWORD w, DWORD h)
     return viewport;
 }
 
+static bool Close(float a, float b, float tolerance = 1e-3f)
+{
+    return fabsf(a - b) <= tolerance * (1.0f + fabsf(b));
+}
+
+// D3DRM screen vectors: x / w and y / w are device pixels, z / w the depth
+// from 0 at the front plane to 1 at the back one. Both viewports see from a
+// camera at the origin looking down +z with front 1, back 100 and field 0.5,
+// so a point at depth 10 is a fifth of the half-view off centre per unit.
+static void CheckTransforms(IDirect3DRMViewport2* level, IDirect3DRMViewport2* radar)
+{
+    // The view matrix is the one the last Render used.
+    CHECK(level->Render(g_root) == DD_OK);
+    CHECK(radar->Render(g_root) == DD_OK);
+
+    D3DVECTOR centre = {0, 0, 10};
+    D3DRMVECTOR4D s = {};
+    CHECK(level->Transform(&s, &centre) == DD_OK);
+    CHECK(Close(s.w, 10) && Close(s.x / s.w, 32) && Close(s.y / s.w, 32));
+    CHECK(Close(s.z / s.w, 100.0f / 99.0f * (1.0f - 1.0f / 10.0f)));
+
+    // In the radar the same offsets land around its own centre, (48, 16).
+    D3DVECTOR corner = {1.25f, 1.25f, 10};
+    CHECK(radar->Transform(&s, &corner) == DD_OK);
+    CHECK(Close(s.x / s.w, 52) && Close(s.y / s.w, 12));
+
+    D3DVECTOR front = {0, 0, 1}, back = {0, 0, 100};
+    CHECK(level->Transform(&s, &front) == DD_OK && Close(s.z / s.w, 0));
+    CHECK(level->Transform(&s, &back) == DD_OK && Close(s.z / s.w, 1));
+
+    // InverseTransform undoes Transform, whatever the w.
+    for (IDirect3DRMViewport2* viewport : {level, radar}) {
+        D3DVECTOR p = {-3, 2, 25}, q = {};
+        CHECK(viewport->Transform(&s, &p) == DD_OK);
+        CHECK(viewport->InverseTransform(&q, &s) == DD_OK);
+        CHECK(Close(q.x, p.x) && Close(q.y, p.y) && Close(q.z, p.z));
+        D3DRMVECTOR4D unit = {s.x / s.w, s.y / s.w, s.z / s.w, 1};
+        CHECK(viewport->InverseTransform(&q, &unit) == DD_OK);
+        CHECK(Close(q.x, p.x) && Close(q.y, p.y) && Close(q.z, p.z));
+    }
+
+    // terrain_map_screen_pick's ray: the mouse at depth 0 and at depth 1.
+    D3DRMVECTOR4D nearScreen = {52, 12, 0, 1}, farScreen = {52, 12, 1, 1};
+    D3DVECTOR nearPoint = {}, farPoint = {};
+    CHECK(radar->InverseTransform(&nearPoint, &nearScreen) == DD_OK);
+    CHECK(radar->InverseTransform(&farPoint, &farScreen) == DD_OK);
+    CHECK(Close(nearPoint.x, 0.125f) && Close(nearPoint.y, 0.125f) && Close(nearPoint.z, 1));
+    CHECK(Close(farPoint.x, 12.5f) && Close(farPoint.y, 12.5f) && Close(farPoint.z, 100));
+}
+
 int main()
 {
     SDL_SetLogPriority(SDL_LOG_CATEGORY_CUSTOM, SDL_LOG_PRIORITY_CRITICAL);
@@ -318,6 +371,7 @@ int main()
     CHECK(Is(Pixel(32, 32), 255, 0, 0));
 
     g_draw = nullptr;
+    CheckTransforms(level, radar);
     for (IDirect3DMaterial3* material : keep) {
         if (material) {
             material->Release();
