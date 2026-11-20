@@ -1,4 +1,4 @@
-# input_sha256: e91c475e6c24332b4837488ebd9a1684b8351442e80fc2273cbaf1606525432c
+# input_sha256: 6824db3127e9c3e31db77b1fbc14cb924b9f79bd08dbaa9351cbef6223cd5537
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1673,7 +1673,7 @@
 0x00457460 100.00 nerpfunc_get_unit_at_block
 0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
 0x004574e0 99.69 objective_load_objective_text
-0x00457d40 78.21 objective_load_original
+0x00457d40 100.00 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
 0x004585c0 100.00 objective_set_block_objective
 0x004585f0 100.00 objective_set_timer_objective
@@ -1700,7 +1700,7 @@
 0x00459900 100.00 objinfo_load_hunger
 0x004599c0 100.00 objinfo_load_hunger_images
 0x00459a50 100.00 objinfo_load_bubble
-0x00459b00 38.40 legacy_entity_screen_ring_render
+0x00459b00 53.80 legacy_entity_screen_ring_render
 0x00459f50 88.57 objinfo_draw_hunger_image_adapter
 0x00459fd0 88.00 panel_resource_position_apply_if_enabled
 0x0045a030 100.00 ui_panel_name_tables_init
@@ -4398,7 +4398,7 @@
 0x00457460 100.00 nerpfunc_get_unit_at_block
 0x004574a0 100.00 nerpfunc_get_monster_at_tutorial
 0x004574e0 99.69 objective_load_objective_text
-0x00457d40 78.21 objective_load_original
+0x00457d40 100.00 objective_load_original
 0x00458580 100.00 objective_set_cry_ore_objectives
 0x004585c0 100.00 objective_set_block_objective
 0x004585f0 100.00 objective_set_timer_objective
@@ -4425,7 +4425,7 @@
 0x00459900 100.00 objinfo_load_hunger
 0x004599c0 100.00 objinfo_load_hunger_images
 0x00459a50 100.00 objinfo_load_bubble
-0x00459b00 38.40 legacy_entity_screen_ring_render
+0x00459b00 53.80 legacy_entity_screen_ring_render
 0x00459f50 88.57 objinfo_draw_hunger_image_adapter
 0x00459fd0 88.00 panel_resource_position_apply_if_enabled
 0x0045a030 100.00 ui_panel_name_tables_init
