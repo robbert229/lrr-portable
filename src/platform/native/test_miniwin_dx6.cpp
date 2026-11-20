@@ -169,19 +169,35 @@ static void CheckDevice(IDirect3DRMDevice3* device)
     if (d3d) {
         d3d->Release();
     }
-    CHECK(imDevice->SetCurrentViewport(nullptr) == DDERR_UNSUPPORTED);
-    CHECK(imDevice->GetRenderState(D3DRENDERSTATE_ZENABLE, &value) == DDERR_UNSUPPORTED);
-    CHECK(imDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, 1) == DDERR_UNSUPPORTED);
-    CHECK(imDevice->GetLightState(D3DLIGHTSTATE_AMBIENT, &value) == DDERR_UNSUPPORTED);
-    CHECK(imDevice->SetLightState(D3DLIGHTSTATE_AMBIENT, 0) == DDERR_UNSUPPORTED);
-    CHECK(imDevice->SetTransform(D3DTRANSFORMSTATE_WORLD, &matrix) == DDERR_UNSUPPORTED);
-    CHECK(imDevice->GetTransform(D3DTRANSFORMSTATE_WORLD, &matrix) == DDERR_UNSUPPORTED);
+    // The device keeps its immediate-mode state (test_miniwin_immediate
+    // draws with it).
+    CHECK(imDevice->SetCurrentViewport(nullptr) == DD_OK);
+    CHECK(imDevice->GetRenderState(D3DRENDERSTATE_ZENABLE, &value) == DD_OK && value == TRUE);
+    CHECK(imDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, 0) == DD_OK);
+    CHECK(imDevice->GetRenderState(D3DRENDERSTATE_ZENABLE, &value) == DD_OK && value == 0);
+    CHECK(imDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, 1) == DD_OK);
+    CHECK(imDevice->SetLightState(D3DLIGHTSTATE_AMBIENT, 0x00404040) == DD_OK);
+    CHECK(imDevice->GetLightState(D3DLIGHTSTATE_AMBIENT, &value) == DD_OK && value == 0x00404040);
+    matrix._11 = matrix._22 = matrix._33 = matrix._44 = 2.0f;
+    CHECK(imDevice->SetTransform(D3DTRANSFORMSTATE_WORLD, &matrix) == DD_OK);
+    D3DMATRIX got = {};
+    CHECK(imDevice->GetTransform(D3DTRANSFORMSTATE_WORLD, &got) == DD_OK && got._11 == 2.0f && got._12 == 0.0f);
+    // Only D3DFVF_VERTEX triangle lists are drawn.
     CHECK(imDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, vertices, 3, indices, 3, 0) ==
           DDERR_UNSUPPORTED);
-    CHECK(imDevice->GetTexture(0, &texture) == DDERR_UNSUPPORTED);
-    CHECK(imDevice->SetTexture(0, nullptr) == DDERR_UNSUPPORTED);
-    CHECK(imDevice->GetTextureStageState(0, D3DTSS_COLOROP, &value) == DDERR_UNSUPPORTED);
-    CHECK(imDevice->SetTextureStageState(0, D3DTSS_COLOROP, 0) == DDERR_UNSUPPORTED);
+    CHECK(imDevice->DrawIndexedPrimitive(D3DPT_TRIANGLESTRIP, D3DFVF_VERTEX, vertices, 3, indices, 3, 0) ==
+          DDERR_UNSUPPORTED);
+    WORD outOfRange[3] = {0, 1, 3};
+    CHECK(imDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, D3DFVF_VERTEX, vertices, 3, outOfRange, 3, 0) ==
+          DDERR_INVALIDPARAMS);
+    CHECK(imDevice->GetTexture(0, &texture) == DD_OK && texture == nullptr);
+    CHECK(imDevice->SetTexture(0, nullptr) == DD_OK);
+    CHECK(imDevice->GetTextureStageState(0, D3DTSS_COLOROP, &value) == DD_OK && value == 4);
+    CHECK(imDevice->SetTextureStageState(0, D3DTSS_COLOROP, 2) == DD_OK);
+    CHECK(imDevice->GetTextureStageState(0, D3DTSS_COLOROP, &value) == DD_OK && value == 2);
+    CHECK(imDevice->SetTextureStageState(0, D3DTSS_COLOROP, 4) == DD_OK);
+    matrix._11 = matrix._22 = matrix._33 = matrix._44 = 1.0f;
+    CHECK(imDevice->SetTransform(D3DTRANSFORMSTATE_WORLD, &matrix) == DD_OK);
     imDevice->Release();
 }
 
