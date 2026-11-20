@@ -1,4 +1,4 @@
-# input_sha256: 6824db3127e9c3e31db77b1fbc14cb924b9f79bd08dbaa9351cbef6223cd5537
+# input_sha256: 91cfc3d7d425c1c247d5d36ed4b0ee209efd4a54a233da0df37cad2dbdfc0ee2
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1850,7 +1850,7 @@
 0x00462e60 100.00 roof_set_texture
 0x00462ed0 100.00 roof_shutdown
 0x00462f20 100.00 roof_set_block_roof_vertices
-0x00463230 72.97 roof_update
+0x00463230 100.00 roof_update
 0x004634b0 100.00 roof_hide
 0x004634f0 100.00 roof_hide_block
 0x00463540 100.00 roof_show_hidden_blocks
@@ -2499,7 +2499,7 @@
 0x00480870 100.00 mesh_create_on_frame
 0x00480900 100.00 mesh_clone
 0x004809e0 100.00 mesh_load
-0x00480ac0 80.99 mesh_parse_lwo
+0x00480ac0 83.23 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence
@@ -4575,7 +4575,7 @@
 0x00462e60 100.00 roof_set_texture
 0x00462ed0 100.00 roof_shutdown
 0x00462f20 100.00 roof_set_block_roof_vertices
-0x00463230 72.97 roof_update
+0x00463230 100.00 roof_update
 0x004634b0 100.00 roof_hide
 0x004634f0 100.00 roof_hide_block
 0x00463540 100.00 roof_show_hidden_blocks
@@ -5224,7 +5224,7 @@
 0x00480870 100.00 mesh_create_on_frame
 0x00480900 100.00 mesh_clone
 0x004809e0 100.00 mesh_load
-0x00480ac0 80.99 mesh_parse_lwo
+0x00480ac0 83.23 mesh_parse_lwo
 0x00481820 97.98 mesh_get_surf_info
 0x00481ac0 100.00 mesh_get_texture_seq_info
 0x00481b80 100.00 mesh_get_next_in_sequence

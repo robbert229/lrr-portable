@@ -1,23 +1,23 @@
 {
   "accuracy_percent": {
-    "full": 99.08,
-    "game_only": 98.98
+    "full": 99.09,
+    "game_only": 98.99
   },
-  "baseline_sha256": "bfa77ae3bf66aef3bc73efe11bf33c2cf36601079bbe32c0a0f20434a1197c08",
+  "baseline_sha256": "e131c33c27b6460841c8c7a4df0c14b16a8f57f9b8d3a57324cb12037d09559f",
   "correct_size_functions": {
     "full": {
-      "bytes": 537296,
+      "bytes": 537931,
       "compared": 3020,
-      "count": 2933,
-      "exact_functions": 2832,
+      "count": 2934,
+      "exact_functions": 2833,
       "mapped": 3022,
       "uncompared": 2
     },
     "game_only": {
-      "bytes": 486445,
+      "bytes": 487080,
       "compared": 2721,
-      "count": 2638,
-      "exact_functions": 2538,
+      "count": 2639,
+      "exact_functions": 2539,
       "mapped": 2723,
       "uncompared": 2
     },
@@ -293,9 +293,9 @@
     }
   },
   "exact_function_code_bytes": {
-    "bytes": 421475,
+    "bytes": 422110,
     "original_text_bytes": 642549,
-    "percent": 65.59
+    "percent": 65.69
   },
   "fully_identical_functions_at_original_address": {
     "bytes": 25624,
@@ -342,7 +342,7 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "6824db3127e9c3e31db77b1fbc14cb924b9f79bd08dbaa9351cbef6223cd5537",
+  "input_sha256": "91cfc3d7d425c1c247d5d36ed4b0ee209efd4a54a233da0df37cad2dbdfc0ee2",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 55,
@@ -524,111 +524,111 @@
           "object": "roof.c.obj"
         },
         {
-          "first_public_address": "0x4636a0",
+          "first_public_address": "0x463690",
           "object": "scrollinfo.c.obj"
         },
         {
-          "first_public_address": "0x463ef0",
+          "first_public_address": "0x463ee0",
           "object": "selectplace.c.obj"
         },
         {
-          "first_public_address": "0x464730",
+          "first_public_address": "0x464720",
           "object": "sfx.c.obj"
         },
         {
-          "first_public_address": "0x4661b0",
+          "first_public_address": "0x4661a0",
           "object": "spiderweb.c.obj"
         },
         {
-          "first_public_address": "0x4667d0",
+          "first_public_address": "0x4667c0",
           "object": "entity_stats.c.obj"
         },
         {
-          "first_public_address": "0x46a360",
+          "first_public_address": "0x46a350",
           "object": "teleporter.c.obj"
         },
         {
-          "first_public_address": "0x46a7e0",
+          "first_public_address": "0x46a7d0",
           "object": "text.c.obj"
         },
         {
-          "first_public_address": "0x46b1c0",
+          "first_public_address": "0x46b1b0",
           "object": "tooltip.c.obj"
         },
         {
-          "first_public_address": "0x46c010",
+          "first_public_address": "0x46c000",
           "object": "upgrade.c.obj"
         },
         {
-          "first_public_address": "0x46c3b0",
+          "first_public_address": "0x46c3a0",
           "object": "vehicle_model.c.obj"
         },
         {
-          "first_public_address": "0x46db70",
+          "first_public_address": "0x46db60",
           "object": "water.c.obj"
         },
         {
-          "first_public_address": "0x46eb60",
+          "first_public_address": "0x46eb50",
           "object": "weapons.c.obj"
         },
         {
-          "first_public_address": "0x4721d0",
+          "first_public_address": "0x4721c0",
           "object": "movie_unit.cpp.obj"
         },
         {
-          "first_public_address": "0x472700",
+          "first_public_address": "0x4726f0",
           "object": "unit_gods98:container.c.obj"
         },
         {
-          "first_public_address": "0x476d40",
+          "first_public_address": "0x476d30",
           "object": "unit_gods98:viewports.c.obj"
         },
         {
-          "first_public_address": "0x477430",
+          "first_public_address": "0x477420",
           "object": "unit_gods98:utils.c.obj"
         },
         {
-          "first_public_address": "0x477790",
+          "first_public_address": "0x477780",
           "object": "unit_gods98:main.c.obj"
         },
         {
-          "first_public_address": "0x478de0",
+          "first_public_address": "0x478dd0",
           "object": "unit_gods98:config.c.obj"
         },
         {
-          "first_public_address": "0x4794f0",
+          "first_public_address": "0x4794e0",
           "object": "unit_gods98:maths.c.obj"
         },
         {
-          "first_public_address": "0x479ed0",
+          "first_public_address": "0x479ec0",
           "object": "unit_gods98:font.c.obj"
         },
         {
-          "first_public_address": "0x47a630",
+          "first_public_address": "0x47a620",
           "object": "unit_gods98:sound3d.c.obj"
         },
         {
-          "first_public_address": "0x47c160",
+          "first_public_address": "0x47c150",
           "object": "unit_gods98:directdraw.c.obj"
         },
         {
-          "first_public_address": "0x47d400",
+          "first_public_address": "0x47d3f0",
           "object": "unit_gods98:images_unit.c.obj"
         },
         {
-          "first_public_address": "0x47e450",
+          "first_public_address": "0x47e440",
           "object": "unit_gods98:avi_player.cpp.obj"
         },
         {
-          "first_public_address": "0x47ed80",
+          "first_public_address": "0x47ed70",
           "object": "unit_gods98:input_unit.c.obj"
         },
         {
-          "first_public_address": "0x47f120",
+          "first_public_address": "0x47f110",
           "object": "unit_gods98:files.c.obj"
         },
         {
-          "first_public_address": "0x4805a0",
+          "first_public_address": "0x480590",
           "object": "unit_gods98:mesh_unit.c.obj"
         },
         {
@@ -1304,7 +1304,7 @@
     "size_exact_prefix": {
       "bytes": 3248,
       "method": "all original functions mapped with equal code sizes; bytes use original unit spans",
-      "size_exact_units": 62,
+      "size_exact_units": 63,
       "units": 1
     },
     "unattributed_mapped_functions": 2,
@@ -1322,10 +1322,10 @@
       "units": 228
     },
     "unit_relative_identity": {
-      "identical_bytes": 346568,
+      "identical_bytes": 347203,
       "method": "whole function byte identity; image-address operands and external relative branches masked; missing functions count against original bytes",
       "original_bytes": 553892,
-      "percent": 62.57
+      "percent": 62.68
     },
     "units": [
       {
@@ -1813,11 +1813,11 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 9,
-        "identical_function_bytes": 1341,
-        "identity_percent": 59.55,
+        "identical_function_bytes": 1976,
+        "identity_percent": 87.74,
         "mapped": 9,
         "original_function_bytes": 2252,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "GAME-038"
       },
       {
@@ -4068,18 +4068,18 @@
     "unlisted_mapped_functions": 466,
     "unmapped_original_functions": 8
   },
-  "listing_digests_sha256": "0d47931b9506283d197e462568ec820f4d00e0df2b32aca087b7a3b093fb39a3",
+  "listing_digests_sha256": "a6d184b0282e4cdbd7602c7a384fdee855bfbb878e59d3e3410c8d1d376723fd",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 2832,
+        "exact": 2833,
         "mapped": 3022,
         "removed": 0,
         "removed_exact": null
       },
       "game_only": {
-        "exact": 2538,
+        "exact": 2539,
         "mapped": 2723,
         "removed": 0,
         "removed_exact": null
@@ -4171,8 +4171,8 @@
           "rebuilt": 11224
         },
         ".text": {
-          "differing": 532665,
-          "equal": 109948,
+          "differing": 530887,
+          "equal": 111726,
           "original": 642549,
           "rebuilt": 642613
         }
@@ -4252,15 +4252,15 @@
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 14.22,
-      "identical_bytes": 109570,
-      "identical_percent": 17.05,
+      "excess_percent_points": 14.5,
+      "identical_bytes": 111359,
+      "identical_percent": 17.33,
       "original_bytes": 642549,
       "rebuilt_bytes": 642613,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 11.98,
-      "run_identical_bytes": 76977,
-      "run_identical_percent": 11.98
+      "run_excess_percent_points": 12.23,
+      "run_identical_bytes": 78571,
+      "run_identical_percent": 12.23
     },
     "imports": {
       "chance_percent": 34.58,
@@ -4289,15 +4289,15 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 14.22,
-    "identical_bytes": 109570,
-    "identical_percent": 17.05,
+    "excess_percent_points": 14.5,
+    "identical_bytes": 111359,
+    "identical_percent": 17.33,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
-    "run_excess_percent_points": 11.98,
-    "run_identical_bytes": 76977,
-    "run_identical_percent": 11.98
+    "run_excess_percent_points": 12.23,
+    "run_identical_bytes": 78571,
+    "run_identical_percent": 12.23
   },
   "unit_size_agreement": {
     "agreeing_unit_ids": [
@@ -4381,7 +4381,7 @@
       "CRT-107",
       "CRT-108"
     ],
-    "correct_size_units": 186,
+    "correct_size_units": 187,
     "eligible_units": 228,
     "end_agreeing_units": 85,
     "method": "listed original functions in each unit range: all mapped with correct size, first function at its original address, last function code ending at its original end; trailing padding not compared",
@@ -4708,7 +4708,7 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 9,
         "start_agrees": false,
