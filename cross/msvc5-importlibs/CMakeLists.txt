@@ -23,7 +23,9 @@
 # The members are compiled without optimisation or configuration defines;
 # /Zl keeps default-library names out of them. /Zi, which ReproBit's compile
 # model requires, adds only debug sections, which no link here keeps. These
-# settings are this directory's own.
+# settings are this directory's own: the parent's directory-level compile
+# options (LRR_ORIGINAL_UNIT_FLAGS adds /Zi /O2 there, finding 697) are cleared.
+set_property(DIRECTORY PROPERTY COMPILE_OPTIONS "")
 set(CMAKE_C_FLAGS "/W3 /Zl /Zi")
 foreach(_config IN ITEMS DEBUG MINSIZEREL RELEASE RELWITHDEBINFO)
   set(CMAKE_C_FLAGS_${_config} "")
