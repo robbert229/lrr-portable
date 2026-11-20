@@ -30,7 +30,6 @@ GIT_CEILING_DIRECTORIES="${project_root}/.reprobit-state/runs" \
   --configuration RelWithDebInfo \
   --cmake-define PLATFORM=winapi \
   --cmake-define LRR_CLASSIC_MSVC5=ON \
-  --cmake-define LRR_ORIGINAL_UNIT_FLAGS=ON \
   --cmake-define BUILD_TESTING=OFF \
   --directive-input program=libcp.lib
 
