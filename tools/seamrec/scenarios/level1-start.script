@@ -1,0 +1,38 @@
+# Boot the shipped game into the first level and play about 30 s of it with
+# no input: the oracle for level rendering (ADR 0008 step 0).
+# Frame numbers count the game's message pumps (one per rendered frame).
+args -best              # skip the driver/mode dialog (init.c): HAL device, 640x480x16
+frame_ms 40             # virtual clock: 25 frames per second of game time
+stop_after 2000         # the level is up from frame ~1210; ~30 s of it
+cursor 320 240
+
+# skip the intro movies: any key skips front_play_movie
+at 100 key 0x39 down    # DIK_SPACE
+at 102 key 0x39 up
+at 200 key 0x39 down
+at 202 key 0x39 up
+at 300 key 0x39 down
+at 302 key 0x39 up
+
+# main menu (up by frame ~775): "Start Game"
+at 850 cursor 320 218
+at 860 lbutton down
+at 863 lbutton up
+
+# level select: the one open cavern, top left (the first training mission)
+at 890 cursor 155 165
+at 900 lbutton down
+at 903 lbutton up
+
+# the level loads and opens on the mission brief (by frame ~1000);
+# Space pages through it and closes it
+at 1100 key 0x39 down
+at 1102 key 0x39 up
+at 1150 key 0x39 down
+at 1152 key 0x39 up
+at 1200 key 0x39 down
+at 1202 key 0x39 up
+at 1250 key 0x39 down
+at 1252 key 0x39 up
+at 1300 key 0x39 down
+at 1302 key 0x39 up

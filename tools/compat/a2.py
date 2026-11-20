@@ -194,6 +194,8 @@ def ensure_gst_libav_deps(runner):
             link = d / soname
             if link.exists():
                 continue
+            if link.is_symlink():  # dangling: the host library was upgraded
+                link.unlink()
             cands = sorted(set(glob.glob(f"/lib*/{globpat}") + glob.glob(f"/usr/lib*/{globpat}")))
             host = next((c for c in reversed(cands) if _elf_class(c) == want), None)
             if host:

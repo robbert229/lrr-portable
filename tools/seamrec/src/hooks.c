@@ -7,14 +7,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 unsigned sr_frame;
 
 /* ------------------------------------------------------------------------- */
 /* scenario file                                                             */
 
-#define SR_NCHAN 6
-static const char* const sr_chan_names[SR_NCHAN] = { "time", "cursor", "di", "ds", "msg", "av" };
+#define SR_NCHAN 7
+static const char* const sr_chan_names[SR_NCHAN] = { "time", "cursor", "di", "ds", "msg", "av", "rnd" };
 
 typedef struct SRChan { char** lines; int n, cap, pos; } SRChan;
 static SRChan g_chan[SR_NCHAN];
@@ -163,6 +164,11 @@ void sr_scn_init(void)
         for (char* line = strtok(text, "\r\n"); line; line = strtok(NULL, "\r\n")) {
             char chan[16];
             if (line[0] == '#' || sscanf(line, "%15s", chan) != 1) continue;
+            /* the script's stop frame, unless SEAMREC_MAXFRAMES overrides it */
+            if (!strcmp(chan, "stop_after")) {
+                if (!g_stop_after) g_stop_after = atoi(line + strlen(chan));
+                continue;
+            }
             int ci = sr_chan_index(chan);
             if (ci < 0) continue; /* header, end marker */
             SRChan* c = &g_chan[ci];
@@ -190,6 +196,7 @@ void sr_scn_init(void)
                 ExitProcess(98);
             }
             sr_script_load(text);
+            if (g_stop_after) sr_putf(&g_scn_buf, "stop_after %u\n", g_stop_after);
             sr_put(&g_scn_buf, "# scripted\n");
         }
     }
@@ -397,6 +404,57 @@ DWORD WINAPI SRH_timeGetTime(void)
         return v;
     default:
         return sr_real_timeGetTime();
+    }
+}
+
+/* Microsoft's D3DRM seeds its own generator for D3DRMVectorRandom, so its
+ * vectors differ from run to run. Script mode synthesizes them from a fixed
+ * seed. Readings hold each component's float32 bits, so a replay returns
+ * exactly the recorded vector. */
+static void sr_rnd_write(const D3DVECTOR* v)
+{
+    uint32_t b[3];
+    memcpy(&b[0], &v->x, 4);
+    memcpy(&b[1], &v->y, 4);
+    memcpy(&b[2], &v->z, 4);
+    sr_scn_write("rnd", "v", "%08x %08x %08x", (unsigned)b[0], (unsigned)b[1], (unsigned)b[2]);
+}
+
+D3DVECTOR* WINAPI SRH_D3DRMVectorRandom(D3DVECTOR* ret)
+{
+    static uint32_t g_rnd_state = 12345u;
+    char buf[128];
+    unsigned b[3];
+    switch (sr_mode) {
+    case SR_REPLAY:
+        sr_scn_next("rnd", "v", buf, sizeof buf);
+        if (sscanf(buf, "%x %x %x", &b[0], &b[1], &b[2]) != 3) sr_divergence("malformed rnd reading");
+        memcpy(&ret->x, &b[0], 4);
+        memcpy(&ret->y, &b[1], 4);
+        memcpy(&ret->z, &b[2], 4);
+        return ret;
+    case SR_SCRIPT: {
+        float c[3], l2;
+        do {
+            for (int i = 0; i < 3; i++) {
+                g_rnd_state = g_rnd_state * 1103515245u + 12345u;
+                c[i] = (float)((g_rnd_state >> 8) & 0xffff) / 32768.0f - 1.0f;
+            }
+            l2 = c[0] * c[0] + c[1] * c[1] + c[2] * c[2];
+        } while (l2 < 1e-4f || l2 > 1.0f);
+        float inv = 1.0f / sqrtf(l2);
+        ret->x = c[0] * inv;
+        ret->y = c[1] * inv;
+        ret->z = c[2] * inv;
+        sr_rnd_write(ret);
+        return ret;
+    }
+    case SR_RECORD:
+        sr_real_D3DRMVectorRandom(ret);
+        sr_rnd_write(ret);
+        return ret;
+    default:
+        return sr_real_D3DRMVectorRandom(ret);
     }
 }
 

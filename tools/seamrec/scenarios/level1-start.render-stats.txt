@@ -1,0 +1,36 @@
+render stats for replay1/seam.log
+
+viewport #82: 1058 Render calls, 1058 with RENDER callbacks
+  CANSEE callbacks per Render: n=1058 min=32 median=32 max=54
+  RENDER callbacks per Render: n=1058 min=32 median=32 max=54
+  DrawIndexedPrimitive inside Render: n=1058 min=44 median=304 max=349
+DrawIndexedPrimitive after Render (post-render list): n=20 min=30 median=30 max=30
+
+DrawIndexedPrimitive arguments:
+     329632  type=4 fvf=274 flags=0
+Clear2(count, rect, flags, colour, z, stencil):
+       1058  1, <000000000000000080020000e0010000>, 3, 4278190080, 1, 0
+SetRenderState(state: value x count):
+    1: 0 x69888, 41 x24912, 33 x8304, 35 x7266, 34 x2076, 37 x2076, 30 x1056, 36 x1038
+   14: 0 x20, 1 x20
+   17: 1 x34228, 2 x34228
+   18: 4 x38190, 6 x38190, 1 x34228
+   20: 2 x200, 6 x200
+   22: 1 x1256, 3 x1256
+   27: 1 x20, 0 x20
+   41: 0 x26496, 1 x26232
+SetLightState(state x count): 1 x76380
+Light, fog, viewport and texture calls:
+        180  IDirect3DDevice3::SetTransform
+          2  IDirect3DRM3::CreateViewport
+          1  IDirect3DRMFrame3::SetSceneFogColor
+          1  IDirect3DRMFrame3::SetSceneFogMethod
+          1  IDirect3DRMFrame3::SetSceneFogMode
+          1  IDirect3DRMFrame3::SetSceneFogParams
+       1039  IDirect3DRMLight::SetColor
+        264  IDirect3DRMLight::SetEnableFrame
+          2  IDirect3DRMLight::SetPenumbra
+          3  IDirect3DRMLight::SetRange
+          2  IDirect3DRMLight::SetUmbra
+          3  IDirect3DRMViewport2::SetBack
+          1  IDirect3DRMViewport2::SetField

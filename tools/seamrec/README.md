@@ -161,6 +161,7 @@ A scenario is the sequence of *readings* a run consumed, one channel each:
 | `ds` | `IDirectSoundBuffer::GetCurrentPosition` / `GetStatus` | HRESULT, values |
 | `av` | AMStream `IDirectDrawStreamSample::Update` (movie frames arrive on their own clock) | HRESULT |
 | `msg` | state-changing window messages | the call they arrived during, message, wParam, lParam |
+| `rnd` | `D3DRMVectorRandom` (Microsoft's D3DRM seeds its own generator) | the vector's float32 bits |
 
 Keys include the object id, so a replay that drifts stops at once with
 `!! SCENARIO DIVERGENCE` and exit code 3, instead of silently consuming the
@@ -196,11 +197,34 @@ Game*, then *Yes*, and the game exits through `ExitProcess(0)` at frame 914.
 The `.scn` (68 KB of readings) and the seam log's digest are committed. The
 log itself (485,360 lines, 32 MB) is not; `check` regenerates it.
 
+`scenarios/level1-start.*` is the oracle for level rendering
+([ADR 0008](../../docs/adr/0008-level-rendering-on-miniwin-renderer.md),
+step 0). It skips the intro, clicks *Start Game*, picks the first training
+mission in the level select, pages through the mission brief with Space,
+and then leaves the level running without input. The level is drawing from
+about frame 1210; the run stops at frame 2000 (`stop_after`, which the
+`.scn` carries, so a replay stops there too). Its log is 7.6M lines
+(about 600 MB). `stats` summarizes a log's level-rendering calls: the
+user-visual callbacks and `DrawIndexedPrimitive` calls per viewport
+`Render`, the post-render draws, `Clear2` arguments, render states, and
+light and fog calls. `scenarios/level1-start.render-stats.txt` is its output
+for this scenario:
+
+```sh
+python3 tools/seamrec/seamrec.py check level1-start
+python3 tools/seamrec/seamrec.py stats ~/.local/share/rock-raider-a2/seamrec/runs/check-level1-start/replay1/seam.log
+```
+
 ## Determinism
 
 The script run of boot-menu-quit and two replays of its scenario give
 byte-identical logs, and the digest is in `scenarios/boot-menu-quit.seam.sha256`.
-A live `record` run of 400 frames, replayed, also matched byte for byte. The
+A live `record` run of 400 frames, replayed, also matched byte for byte.
+For level1-start the two replays are byte-identical, but the script run's
+log differs from them in `@N` pointer ids: the game's heap is laid out
+differently in script mode, so a freed address is reused (and keeps its
+id) in one mode and not the other. `check` accepts a script log that
+differs from the replays only in pointer ids. The
 digest also depends on the environment that recorded it: the Proton runner
 that `a2.py find_runner()` picks, Mesa (llvmpipe), and the tool image. A
 replay on another setup that is self-consistent but misses the digest
