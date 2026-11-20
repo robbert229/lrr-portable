@@ -288,18 +288,16 @@ void detail_set_mesh_frame(void* cont, float blockSize, Detail_Vector3F* a,
                            Detail_Vector3F* b, Detail_Vector3F* c)
 {
     float mat[4][4];
-    float dirScale, upScale;
     Detail_Vector3F dir, up, tb, tc;
 
     detail_vector3d_subtract(&dir, b, a);
     detail_vector3d_subtract(&up, c, b);
     detail_vector3d_cross_product(&up, &up, &dir);
-    dirScale = 1.0f / detail_vector3d_modulus(&dir);
-    upScale = 1.0f / detail_vector3d_modulus(&up);
+    detail_vector3d_normalise(&dir);
+    detail_vector3d_normalise(&up);
 
-    ddiscene_object_pose_method_dispatch(cont, NULL, -(up.x * upScale), -(up.y * upScale),
-                                         -(up.z * upScale), dir.x * dirScale,
-                                         dir.y * dirScale, dir.z * dirScale);
+    ddiscene_object_pose_method_dispatch(cont, NULL, -up.x, -up.y, -up.z, dir.x,
+                                         dir.y, dir.z);
     {
         /* y and z as float locals of the block: the original copies them
          * through the x87 stack and only x through a register. */
