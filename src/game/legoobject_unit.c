@@ -6221,8 +6221,7 @@ void legoobject_pose_orientation_dispatch(Lego_Object* obj, float elapsed)
             dx = edge.x - newPos.x;
             dy = edge.y - newPos.y;
             half = elapsed * 0.5f;
-            len = (float)sqrt(dx * dx + dy * dy);
-            if (len > half) {
+            if ((len = (float)sqrt(dx * dx + dy * dy)) > half) {
                 half = half / len;
                 newPos.x = half * dx + newPos.x;
                 newPos.y = half * dy + newPos.y;
