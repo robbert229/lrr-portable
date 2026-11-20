@@ -278,6 +278,13 @@ if(BUILD_TESTING)
   add_test(NAME miniwin_textures COMMAND miniwin_textures_test)
   set_tests_properties(miniwin_textures PROPERTIES LABELS miniwin)
 
+  # Lights (ADR 0008, step 4): spot cones, range, attenuation, light colour,
+  # enable frames, and the material's emissive, ambient and specular terms.
+  add_executable(miniwin_lights_test ${PLATFORM_DIR}/native/test_miniwin_lights.cpp)
+  target_link_libraries(miniwin_lights_test PRIVATE miniwin)
+  add_test(NAME miniwin_lights COMMAND miniwin_lights_test)
+  set_tests_properties(miniwin_lights PROPERTIES LABELS miniwin)
+
   # Main.c's window procedure under miniwin: SDL mouse events as client
   # coordinate messages, and SDL's quit event as WM_CLOSE.
   add_executable(miniwin_messages_test ${PLATFORM_DIR}/native/test_miniwin_messages.cpp)

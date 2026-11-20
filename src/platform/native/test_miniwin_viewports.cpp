@@ -124,6 +124,7 @@ static D3DMATERIALHANDLE Material(float r, float g, float b, IDirect3DMaterial3*
         D3DMATERIAL data = {};
         data.dwSize = sizeof(data);
         data.diffuse = {r, g, b, 1};
+        data.ambient = {r, g, b, 1};
         (*keep)->SetMaterial(&data);
         (*keep)->GetHandle(g_im, &handle);
     }
