@@ -5283,18 +5283,18 @@ int legoobject_terrain_grid_path_search(Lego_Object* obj, unsigned int startX, u
 // FUNCTION: LEGORR 0x004410f0
 int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX, unsigned int startY, unsigned int endX, unsigned int endY, unsigned int** outXs, unsigned int** outYs, unsigned int* outCount, LegoObjL_RouteCallback callback, void* data)
 {
-    unsigned int y;
     int i;
     unsigned int* countPtr;
     unsigned int width;
+    unsigned int y;
     unsigned int current;
     unsigned int step;
-    float stepCost;
+    float cost;
     unsigned int height;
     int found;
     int result;
     unsigned int j;
-    float cost;
+    float stepCost;
     unsigned int counts[2];
     unsigned int foundStep;
     int blockPos[2];
@@ -5333,15 +5333,15 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
         if (s_terrain_neighbor_path_cost != NULL)
             free(s_terrain_neighbor_path_cost);
         s_terrain_path_depth_count = width * height;
-        s_terrain_neighbor_path_cost = (float*)Mem_Alloc(s_terrain_path_depth_count * sizeof(float));
+        s_terrain_neighbor_path_cost = (float*)Mem_Alloc(width * height * sizeof(float));
     }
     if (s_terrain_neighbor_path_cost != NULL) {
         memset(s_terrain_neighbor_path_cost, 0, width * height * sizeof(float));
 
-        counts[0] = 1;
         current = 0;
-        s_terrain_neighbor_path_cost[width * startY + startX] = 1.0f;
         step = 1;
+        s_terrain_neighbor_path_cost[width * startY + startX] = 1.0f;
+        counts[0] = 1;
         lists[0][0].blockPos[0] = startX;
         lists[0][0].blockPos[1] = startY;
         counts[1] = 0;
@@ -5370,10 +5370,10 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
                             float* score = &s_terrain_neighbor_path_cost[width * y + x];
                             if (*score == 0.0f || *score > (float)(stepCost + cost)) {
                                 unsigned int other = (current == 0);
-                                *score = stepCost + cost;
                                 lists[other][counts[other]].blockPos[0] = x;
                                 lists[other][counts[other]].blockPos[1] = y;
                                 counts[other]++;
+                                *score = stepCost + cost;
                                 if (callback != NULL) {
                                     blockPos[0] = x;
                                     blockPos[1] = y;
@@ -5437,7 +5437,8 @@ int legoobject_terrain_neighbor_path_check(Lego_Object* obj, unsigned int startX
                         blockPos[0] = x;
                         blockPos[1] = y;
                         if (x < width && y < height) {
-                            diff = s_terrain_neighbor_path_cost[width * cy + cx] - s_terrain_neighbor_path_cost[width * y + x];
+                            diff = s_terrain_neighbor_path_cost[width * cy + cx];
+                            diff -= s_terrain_neighbor_path_cost[width * y + x];
                             if ((diff > 0.0f && diff < best) ||
                                 (diff == best && level_cell_occupied_at_current(blockPos))) {
                                 best = diff;
