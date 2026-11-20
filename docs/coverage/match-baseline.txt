@@ -1,4 +1,4 @@
-# input_sha256: 72c720a76f65b5e6d2c7ffdaf1003d3c320499d91d03de11e41166bb4f651313
+# input_sha256: 5d5334ea99ad80cca92d039d25903f07854283a9b0899f72d81d5e89f6acf0b9
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1152,7 +1152,7 @@
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 100.00 legoobject_activity_tick
 0x00447c40 100.00 legoobject_activity_register_bookkeeping
-0x00447ea0 75.62 legoobject_type_behavior_update
+0x00447ea0 89.51 legoobject_type_behavior_update
 0x004487c0 100.00 legoobject_clear_nested_state_8_fields
 0x00448800 100.00 legoobject_move_to_cell_coordinates
 0x00448880 100.00 legoobject_record_gated_step_command_issue
@@ -2321,7 +2321,7 @@
 0x00479e70 100.00 matrix4_set_identity
 0x00479ea0 100.00 matrix4_set_zero
 0x00479eb0 100.00 matrix4_copy
-0x00479ee0 78.35 font_atlas_record_create
+0x00479ee0 100.00 font_atlas_record_create
 0x0047a150 100.00 font_v_get_string_info
 0x0047a180 100.00 font_print_f
 0x0047a1b0 100.00 font_v_print_f
@@ -3877,7 +3877,7 @@
 0x00447b00 100.00 legoobject_dispatch_event5_and_set_flag
 0x00447b30 100.00 legoobject_activity_tick
 0x00447c40 100.00 legoobject_activity_register_bookkeeping
-0x00447ea0 75.62 legoobject_type_behavior_update
+0x00447ea0 89.51 legoobject_type_behavior_update
 0x004487c0 100.00 legoobject_clear_nested_state_8_fields
 0x00448800 100.00 legoobject_move_to_cell_coordinates
 0x00448880 100.00 legoobject_record_gated_step_command_issue
@@ -5046,7 +5046,7 @@
 0x00479e70 100.00 matrix4_set_identity
 0x00479ea0 100.00 matrix4_set_zero
 0x00479eb0 100.00 matrix4_copy
-0x00479ee0 78.35 font_atlas_record_create
+0x00479ee0 100.00 font_atlas_record_create
 0x0047a150 100.00 font_v_get_string_info
 0x0047a180 100.00 font_print_f
 0x0047a1b0 100.00 font_v_print_f
