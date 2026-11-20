@@ -1302,8 +1302,7 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
     TerrainMapPoint2I blockOffsets[4];
     TerrainMapVertex vertices[4];
     TerrainMapPoint2 wobble;
-    TerrainMapPoint2 cur;
-    TerrainMapPoint2 target;
+    TerrainMapPoint2 uv[2]; /* the vertex's UV, then its wobble target */
     float speed, scale, dist;
     unsigned int i, j, k, x, y, group;
     int rotated;
@@ -1340,12 +1339,12 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
                 k = j;
                 if (rotated) k = (j + 1) & 3;
                 wobble = map->blocks[(y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x].uvWobble;
-                terrain_map_vector2d_add(&target, &wobble, &uvOffsets[j]);
-                cur.x = vertices[k].tu;
-                cur.y = vertices[k].tv;
-                dist = terrain_map_vector2d_distance(&cur, &target);
+                terrain_map_vector2d_add(&uv[1], &wobble, &uvOffsets[j]);
+                uv[0].x = vertices[k].tu;
+                uv[0].y = vertices[k].tv;
+                dist = terrain_map_vector2d_distance(&uv[0], &uv[1]);
                 if (dist > 0.36f) {
-                    cur = target;
+                    uv[0] = uv[1];
                 }
                 else if (dist < 0.05f) {
                     wobble.x = random_float_range(0.0f, 1.0f);
@@ -1354,14 +1353,14 @@ void terrain_map_uv_wobble_update(TerrainMap* map, float elapsed)
                     uvw = &map->blocks[(y + blockOffsets[j].y) * map->blockWidth + x + blockOffsets[j].x].uvWobble;
                     terrain_map_vector2d_add(&wobble, uvw, &wobble);
                     terrain_map_vector2d_scale(&wobble, &wobble, 0.3f);
-                    terrain_map_vector2d_add(&target, &wobble, &uvOffsets[j]);
+                    terrain_map_vector2d_add(&uv[1], &wobble, &uvOffsets[j]);
                     *uvw = wobble;
                 }
-                terrain_map_vector2d_scale(&cur, &cur, speed);
-                terrain_map_vector2d_add(&cur, &cur, &target);
-                terrain_map_vector2d_scale(&cur, &cur, scale);
-                vertices[k].tu = cur.x;
-                vertices[k].tv = cur.y;
+                terrain_map_vector2d_scale(&uv[0], &uv[0], speed);
+                terrain_map_vector2d_add(&uv[0], &uv[0], &uv[1]);
+                terrain_map_vector2d_scale(&uv[0], &uv[0], scale);
+                vertices[k].tu = uv[0].x;
+                vertices[k].tv = uv[0].y;
             }
             container_mesh_set_vertices(map->mesh, group, 0, 4, vertices);
         }
