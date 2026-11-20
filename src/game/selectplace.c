@@ -156,7 +156,7 @@ SelectPlace_Point2I* selectplace_check_and_update(SelectPlace* selectPlace,
                                                   void* map, unsigned int waterEntrances)
 {
     SelectPlace_Vertex vertices[5 * 4];
-    TerrainMapVector3 wallList[8];
+    SelectPlace_Vector3F wallList[8];
     unsigned int vertexIndices[5 * 4];
     SelectPlace_Point2I* shape;
     int validTolerance;
@@ -180,7 +180,9 @@ SelectPlace_Point2I* selectplace_check_and_update(SelectPlace* selectPlace,
                                                        legoGlobs_currLevel->buildingTolerance,
                                                        legoGlobs_currLevel->buildingMaxVariation);
 
-    if (shapeCount) {
+    /* No shapeCount guard: the original hoists the offsets into the
+     * loop's own entry test. */
+    {
         SelectPlace_Point2I offsets[4];
         SelectPlace_Point2I pos;
         int pathHere;
@@ -213,7 +215,8 @@ SelectPlace_Point2I* selectplace_check_and_update(SelectPlace* selectPlace,
     for (loop = 0; loop < shapeCount; loop++) {
         if (loop < shapeCount - 1 && shape[loop].x == shape[loop + 1].x && shape[loop].y == shape[loop + 1].y) {
             isDouble = 1;
-            isWater = (group < waterEntrances + 1);
+            isWater = 1;
+            if (group >= waterEntrances + 1) isWater = 0;
         } else {
             isDouble = 0;
             isWater = 0;
@@ -238,7 +241,7 @@ SelectPlace_Point2I* selectplace_check_and_update(SelectPlace* selectPlace,
         Container_Mesh_SetEmissive(selectPlace->contMesh, group, red * 0.5f, green * 0.5f, blue * 0.5f);
 
         if (level_coord_pair_within_bounds_target((const unsigned int*)map, shape[loop].x, shape[loop].y)) {
-            terrain_map_block_vertices_raw_get((TerrainMap*)map, shape[loop].x, shape[loop].y, wallList);
+            terrain_map_block_vertices_raw_get((TerrainMap*)map, shape[loop].x, shape[loop].y, (TerrainMapVector3*)wallList);
             for (sub = 0; sub < 4; sub++) {
                 wallList[sub + 4] = wallList[sub];
                 wallList[sub].z -= selectPlace->tileDepth;
@@ -246,9 +249,7 @@ SelectPlace_Point2I* selectplace_check_and_update(SelectPlace* selectPlace,
             Container_Mesh_GetVertices(selectPlace->contMesh, group, 0, 5 * 4, vertices);
             for (face = 0; face < 5; face++) {
                 for (sub = 0; sub < 4; sub++) {
-                    vertices[face * 4 + sub].position.x = wallList[vertexIndices[face * 4 + sub]].x;
-                    vertices[face * 4 + sub].position.y = wallList[vertexIndices[face * 4 + sub]].y;
-                    vertices[face * 4 + sub].position.z = wallList[vertexIndices[face * 4 + sub]].z;
+                    vertices[face * 4 + sub].position = wallList[vertexIndices[face * 4 + sub]];
                 }
             }
             Container_Mesh_SetVertices(selectPlace->contMesh, group, 0, 5 * 4, vertices);
