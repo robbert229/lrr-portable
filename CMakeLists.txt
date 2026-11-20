@@ -270,6 +270,14 @@ if(BUILD_TESTING)
   add_test(NAME miniwin_viewports COMMAND miniwin_viewports_test)
   set_tests_properties(miniwin_viewports PROPERTIES LABELS miniwin)
 
+  # Textures (ADR 0008, step 3): 8-bit colour-keyed texture surfaces drawn
+  # through SetTexture and TEXTUREHANDLE, stage 0 ops, linear filtering, and
+  # D3DRM decal transparency.
+  add_executable(miniwin_textures_test ${PLATFORM_DIR}/native/test_miniwin_textures.cpp)
+  target_link_libraries(miniwin_textures_test PRIVATE miniwin)
+  add_test(NAME miniwin_textures COMMAND miniwin_textures_test)
+  set_tests_properties(miniwin_textures PROPERTIES LABELS miniwin)
+
   # Main.c's window procedure under miniwin: SDL mouse events as client
   # coordinate messages, and SDL's quit event as WM_CLOSE.
   add_executable(miniwin_messages_test ${PLATFORM_DIR}/native/test_miniwin_messages.cpp)
