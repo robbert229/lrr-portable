@@ -29,9 +29,9 @@ static __inline LegoVector3FC* lego_C_vector3_subtract(LegoVector3FC* r,
                                                       const LegoVector3FC* a,
                                                       const LegoVector3FC* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 
@@ -111,9 +111,9 @@ static __inline LegoVector3FG* lego_G_vector3d_add(LegoVector3FG* r,
                                                    const LegoVector3FG* a,
                                                    const LegoVector3FG* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 
@@ -121,9 +121,9 @@ static __inline LegoVector3FG* lego_G_vector3d_add(LegoVector3FG* r,
 static __inline LegoVector3FG* lego_G_vector3d_subtract(
     LegoVector3FG* r, const LegoVector3FG* a, const LegoVector3FG* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 
