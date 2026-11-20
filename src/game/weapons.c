@@ -1071,9 +1071,13 @@ void weapons_mesh_build_segment(void* mesh, float radius,
         normals[i].x = vertices[i].x;
         normals[i].y = vertices[i].y;
         normals[i].z = vertices[i].z;
-        weapons_vector3d_add(&vertices[i + 8], toPos, &vertices[i]);
+        vertices[i + 8].x = toPos->x + vertices[i].x;
+        vertices[i + 8].y = toPos->y + vertices[i].y;
+        vertices[i + 8].z = toPos->z + vertices[i].z;
         weapons_vector3d_normalise(&normals[i]);
-        weapons_vector3d_add(&vertices[i], fromPos, &vertices[i]);
+        vertices[i].x = fromPos->x + vertices[i].x;
+        vertices[i].y = fromPos->y + vertices[i].y;
+        vertices[i].z = fromPos->z + vertices[i].z;
     }
     group = mesh_record_allocate_and_fill((struct MeshRecordPool*)mesh, 16, 16, 3,
                                            (const uint16_t*)faceData);
@@ -1338,15 +1342,8 @@ void weapons_model_aim(Weapons_Model* model, Weapons_Vector3F* target,
         weapons_vector3d_subtract(&dir, &model->targets[slot], &pos);
         len = 1.0f / weapons_vector3d_modulus(&dir);
         weapons_vector3d_scale(&model->fireDirs[slot], &model->fireDirs[slot], elapsed);
-        /* The sum goes through a pointer to the fire direction (target is
-         * dead here, and a new local would shift weapons_ray_block_sweep's
-         * symbol phase): the original addresses its y from the same base
-         * as x and z instead of keeping the address of
-         * model->fireDirs[slot].y in a register. */
-        target = &model->fireDirs[slot];
-        target->x = len * dir.x + target->x;
-        target->y = len * dir.y + target->y;
-        target->z = len * dir.z + target->z;
+        weapons_vector3d_scale(&dir, &dir, len);
+        weapons_vector3d_add(&model->fireDirs[slot], &dir, &model->fireDirs[slot]);
         weapons_vector3d_normalise(&model->fireDirs[slot]);
         if (model->fireDirs[slot].z > model->pitchRange) {
             model->fireDirs[slot].z = model->pitchRange;

@@ -35,18 +35,18 @@ static __inline float weapons_vector2d_modulus(const float* v)
 static __inline Weapons_Vector3F* weapons_vector3d_subtract(
     Weapons_Vector3F* r, const Weapons_Vector3F* a, const Weapons_Vector3F* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 
 static __inline Weapons_Vector3F* weapons_vector3d_add(
     Weapons_Vector3F* r, const Weapons_Vector3F* a, const Weapons_Vector3F* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 
