@@ -5410,12 +5410,15 @@ void lego_camera_grid_expiry(float elapsed)
 {
     Lego_Level* level = (Lego_Level*)level_current_owner_get();
     unsigned int width, height, x, y;
-    int blockPos[2];
     Lego_Block* block;
 
     if (legoGlobs_f_556f18 && (width = level->width) != 0 && (height = level->height) != 0) {
         for (y = 0; y < height; y++) {
             for (x = 0; x < width; x++) {
+                /* The inner loop's own local, as in the original: its
+                 * stores follow the block address. */
+                int blockPos[2];
+
                 blockPos[0] = x;
                 blockPos[1] = y;
                 block = &LEGO_LEVEL_PTR(Lego_Block, level->blocks)[y * level->width + x];
