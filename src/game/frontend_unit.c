@@ -1772,8 +1772,11 @@ void front_menu_item_draw_save_image(Front_Menu* menu, int selIndex,
                                      Front_SelectData* select, int bigSize)
 {
     struct Image* image;
-    char* stringParts[2];
-    char buff[20];
+    /* The original's frame: five split parts (only two are read) and a key
+     * buffer for "pos1".."pos5" whose size is not a multiple of four, which
+     * puts it below the points (5 to 7 bytes give the same frame). */
+    char* stringParts[5];
+    char buff[5];
     char* str;
     Point2F dest;
     Point2F size;
