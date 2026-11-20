@@ -874,7 +874,16 @@ int mesh_parse_lwo(const char* basePath, Mesh* mesh,
                     mesh_vector3d_add(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]],
                                       &vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]],
                                       &faceNorm[loop]);
-                    mesh_vector3d_normalise(&vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]]);
+                    /* Normalised by hand through a pointer and a reciprocal
+                     * local: the original keeps the modulus, then the
+                     * reciprocal, in a stack temporary here and drops its
+                     * first x with fstp st(0), which the inline normalise
+                     * of the other three branches does not do. */
+                    {
+                        Mesh_Vector3F* v = &vertexNorm[lightWaveObject->aoPoly[loop].plyData[faceDataQuad[vertex]]];
+                        float m = 1.0f / mesh_vector3d_modulus(v);
+                        mesh_vector3d_scale(v, v, m);
+                    }
 
                     /* GET VERTEX REFERENCE AND COPY TO FACE DATA */
                     surfFaceData[surfFDArraySize + surfFaceDataCount[lightWaveObject->aoPoly[loop].srfIndex]++] =
