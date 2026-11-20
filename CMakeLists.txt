@@ -256,6 +256,13 @@ if(BUILD_TESTING)
   add_test(NAME miniwin_ddraw4 COMMAND miniwin_ddraw4_test)
   set_tests_properties(miniwin_ddraw4 PROPERTIES LABELS miniwin)
 
+  # Immediate-mode drawing through a user visual on the software renderer
+  # (ADR 0008, step 1): coverage, z, blending and culling read back by Lock.
+  add_executable(miniwin_immediate_test ${PLATFORM_DIR}/native/test_miniwin_immediate.cpp)
+  target_link_libraries(miniwin_immediate_test PRIVATE miniwin)
+  add_test(NAME miniwin_immediate COMMAND miniwin_immediate_test)
+  set_tests_properties(miniwin_immediate PROPERTIES LABELS miniwin)
+
   # Main.c's window procedure under miniwin: SDL mouse events as client
   # coordinate messages, and SDL's quit event as WM_CLOSE.
   add_executable(miniwin_messages_test ${PLATFORM_DIR}/native/test_miniwin_messages.cpp)
