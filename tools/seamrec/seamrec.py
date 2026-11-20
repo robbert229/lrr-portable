@@ -17,6 +17,7 @@ import datetime
 import filecmp
 import os
 import pathlib
+import re
 import shutil
 import signal
 import subprocess
@@ -243,6 +244,18 @@ def digest(path):
     return f"{a2.hashlib.sha256(data).hexdigest()}  {lines} lines"
 
 
+_PTR_ID = re.compile(rb"@\d+")
+
+
+def same_but_pointer_ids(a, b):
+    """True when two seam logs differ only in their `@N` pointer ids."""
+    with open(a, "rb") as fa, open(b, "rb") as fb:
+        for la, lb in zip(fa, fb):
+            if la != lb and _PTR_ID.sub(b"@", la) != _PTR_ID.sub(b"@", lb):
+                return False
+        return fa.read(1) == fb.read(1) == b""
+
+
 def cmd_check(args):
     """The determinism gate for one scenario: replay scenarios/NAME.scn twice;
     both seam logs must be byte-identical. --rescript first regenerates the
@@ -265,7 +278,13 @@ def cmd_check(args):
     ok = True
     for a, b in zip(logs, logs[1:]):
         same = a.exists() and b.exists() and filecmp.cmp(a, b, shallow=False)
-        print(f"{'identical' if same else 'DIFFERENT'}: {a.relative_to(RUNS)} vs {b.relative_to(RUNS)}")
+        verdict = "identical" if same else "DIFFERENT"
+        if not same and "script" in b.parts and a.exists() and b.exists() and same_but_pointer_ids(a, b):
+            # The script run can lay the game's heap out differently from
+            # the replays, so a freed address may be reused (and its @N id
+            # with it) in one and not the other. The calls are the same.
+            same, verdict = True, "same calls, @N pointer ids differ"
+        print(f"{verdict}: {a.relative_to(RUNS)} vs {b.relative_to(RUNS)}")
         ok &= same
     got = digest(logs[0]) if logs[0].exists() else "missing"
     print(f"seam log: {got}")
@@ -277,6 +296,95 @@ def cmd_check(args):
         print("matches the committed digest" if want == got else
               f"differs from the committed digest ({want}): environment drift, or a recorder change")
     raise SystemExit(0 if ok else 1)
+
+
+_RENDER = re.compile(r"^IDirect3DRMViewport2::Render\((#\d+),")
+_UVCB = re.compile(r"^<- D3DRMUSERVISUALCALLBACK\([^,]+, #\d+, [^,]+, (\d+),")
+_CALL = re.compile(r"^([A-Za-z0-9_]+(?:::[A-Za-z0-9_]+)?)\((.*)\) = (.*)$")
+
+
+def render_stats(log):
+    """Summarize the level-rendering calls of a seam log: per viewport Render,
+    the user-visual callbacks and the DrawIndexedPrimitive calls inside it;
+    the draws after it (the post-render list); Clear2 arguments; render
+    states set; light and fog parameters."""
+    from collections import Counter, defaultdict
+    renders = defaultdict(list)          # viewport -> [(cansee, render, dips)]
+    post = []                            # DIPs at top level after each Render
+    dip_args, clear2, rstates, lstates = Counter(), Counter(), defaultdict(Counter), Counter()
+    other = Counter()
+    watch = ("IDirect3DRMLight::", "IDirect3DRMFrame3::SetSceneFog", "IDirect3DRMFrame3::SetSceneBackground",
+             "IDirect3DDevice3::SetTextureStageState", "IDirect3DDevice3::SetTexture",
+             "IDirect3DRMViewport2::SetFront", "IDirect3DRMViewport2::SetBack", "IDirect3DRMViewport2::SetField",
+             "IDirect3DRM3::CreateViewport", "IDirect3DRMViewport2::Clear", "IDirect3DDevice3::SetTransform")
+    cur = None
+    with open(log, encoding="utf-8", errors="replace") as f:
+        for raw in f:
+            depth = (len(raw) - len(raw.lstrip(" "))) // 2
+            line = raw.strip()
+            m = _RENDER.match(line) if depth == 0 else None
+            if m:
+                cur = [0, 0, 0]
+                renders[m.group(1)].append(cur)
+                post.append(0)
+                continue
+            m = _UVCB.match(line)
+            if m and cur is not None and depth == 1:
+                cur[0 if m.group(1) == "0" else 1] += 1
+                continue
+            m = _CALL.match(line)
+            if not m:
+                continue
+            name, args = m.group(1), m.group(2)
+            if name == "IDirect3DDevice3::DrawIndexedPrimitive":
+                a = [x.strip() for x in args.split(",")]
+                dip_args[f"type={a[1]} fvf={a[2]} flags={a[-1]}"] += 1
+                if depth == 0:
+                    if post:
+                        post[-1] += 1
+                elif cur is not None:
+                    cur[2] += 1
+            elif name == "IDirect3DViewport3::Clear2":
+                clear2[", ".join(args.split(", ")[1:])] += 1
+            elif name == "IDirect3DDevice3::SetRenderState":
+                _, st, val = [x.strip() for x in args.split(",")]
+                rstates[int(st)][val] += 1
+            elif name == "IDirect3DDevice3::SetLightState":
+                lstates[args.split(", ")[1]] += 1
+            elif name.startswith(watch):
+                other[name] += 1
+
+    def dist(xs):
+        xs = sorted(xs)
+        if not xs:
+            return "n=0"
+        return f"n={len(xs)} min={xs[0]} median={xs[len(xs) // 2]} max={xs[-1]}"
+
+    out = [f"render stats for {pathlib.Path(log).parent.name}/{pathlib.Path(log).name}", ""]
+    for vp, rs in renders.items():
+        level = [r for r in rs if r[1]]
+        out.append(f"viewport {vp}: {len(rs)} Render calls, {len(level)} with RENDER callbacks")
+        out.append(f"  CANSEE callbacks per Render: {dist([r[0] for r in level])}")
+        out.append(f"  RENDER callbacks per Render: {dist([r[1] for r in level])}")
+        out.append(f"  DrawIndexedPrimitive inside Render: {dist([r[2] for r in level])}")
+    out.append(f"DrawIndexedPrimitive after Render (post-render list): {dist([p for p in post if p])}")
+    out.append("")
+    out.append("DrawIndexedPrimitive arguments:")
+    out += [f"  {n:9d}  {k}" for k, n in dip_args.most_common()]
+    out.append("Clear2(count, rect, flags, colour, z, stencil):")
+    out += [f"  {n:9d}  {k}" for k, n in clear2.most_common(12)]
+    out.append("SetRenderState(state: value x count):")
+    for st in sorted(rstates):
+        vals = ", ".join(f"{v} x{n}" for v, n in rstates[st].most_common(8))
+        out.append(f"  {st:3d}: {vals}")
+    out.append("SetLightState(state x count): " + ", ".join(f"{k} x{n}" for k, n in sorted(lstates.items())))
+    out.append("Light, fog, viewport and texture calls:")
+    out += [f"  {n:9d}  {k}" for k, n in sorted(other.items())]
+    return "\n".join(out) + "\n"
+
+
+def cmd_stats(args):
+    print(render_stats(args.log), end="")
 
 
 def main(argv=None):
@@ -308,6 +416,9 @@ def main(argv=None):
     p.add_argument("--rescript", action="store_true", help="regenerate scenarios/NAME.scn from NAME.script")
     p.add_argument("--timeout", type=int, default=600)
     p.set_defaults(fn=cmd_check)
+    p = sub.add_parser("stats", help="summarize a seam log's level-rendering calls")
+    p.add_argument("log", type=pathlib.Path)
+    p.set_defaults(fn=cmd_stats)
     args = ap.parse_args(argv)
     if args.cmd == "run" and args.mode == "script" and not args.script:
         ap.error("--mode script needs --script")

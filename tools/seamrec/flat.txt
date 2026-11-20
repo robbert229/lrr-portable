@@ -6,7 +6,7 @@
 #                 every other export of the real DLL is passed through.
 #   iat <DLL>     functions patched in LegoRR.exe's own import table.
 #   ... hook      the wrapper calls SRH_<name> (hooks.c) instead of the real
-#                 function: time, input and message injection.
+#                 function: time, input, message and random-vector injection.
 #
 # Not wrapped: USER32 wsprintfA (varargs, pure formatting), and KERNEL32
 # apart from Sleep and ExitProcess (file I/O, heap, CRT startup).
@@ -18,7 +18,7 @@ proxy ddraw
 proxy d3drm
   HRESULT Direct3DRMCreate(struct IDirect3DRM ** d3drm)
   D3DVECTOR * D3DRMVectorRotate(D3DVECTOR * ret, D3DVECTOR * x, D3DVECTOR * axis, D3DVALUE theta)
-  D3DVECTOR * D3DRMVectorRandom(D3DVECTOR * ret)
+  D3DVECTOR * D3DRMVectorRandom(D3DVECTOR * ret) hook
 
 proxy dinput
   HRESULT DirectInputCreateA(HINSTANCE hinst, DWORD version, LPDIRECTINPUTA * out, LPUNKNOWN outer)
