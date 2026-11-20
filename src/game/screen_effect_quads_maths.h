@@ -14,9 +14,9 @@ static __inline DamageFont_Vector3F* damage_font_vector3d_add(
     DamageFont_Vector3F* r, const DamageFont_Vector3F* a,
     const DamageFont_Vector3F* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 
@@ -33,9 +33,9 @@ static __inline DamageFont_Vector3F* damage_font_vector3d_cross_product(
     DamageFont_Vector3F* r, const DamageFont_Vector3F* a,
     const DamageFont_Vector3F* b)
 {
-    r->x = a->y * b->z - a->z * b->y;
-    r->y = a->z * b->x - a->x * b->z;
-    r->z = a->x * b->y - a->y * b->x;
+    r->x = (a->y * b->z) - (a->z * b->y);
+    r->y = (a->z * b->x) - (a->x * b->z);
+    r->z = (a->x * b->y) - (a->y * b->x);
     return r;
 }
 
