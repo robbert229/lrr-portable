@@ -65,6 +65,10 @@ _Avoid_: "the 100% branch", "release"
 The port-only rewrite of the game (`LegorrrRun`, the `*_port.cpp` files and their hook tables) that the native build ran instead of the units, until ADR 0007 deleted it.
 _Avoid_: "the port" (that is the product), "port tail" (the link-order term)
 
+**immediate-mode mesh**:
+A gods98 `Mesh` (`Mesh.c`): a Direct3DRM user visual on a frame whose callback draws the mesh's groups itself on the Direct3D device. The terrain and every LightWave model are immediate-mode meshes; a *retained-mode mesh* is an `IDirect3DRMMesh` that D3DRM draws (ADR 0008).
+_Avoid_: "user mesh", "IM mesh"
+
 **scenario**:
 A recorded run of the game, as its input and timer readings, that `make port-check` replays to compare builds across the *seam*.
 _Avoid_: "demo", "recording" when you mean the replayable unit
