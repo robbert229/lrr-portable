@@ -36,8 +36,7 @@ static const float s_animation_object_one = 1.0f;
 int entity_type_config_resource_row_load(void* destination,
                                          unsigned int objectId, void* root,
                                          const char* filename,
-                                         void* configName,
-                                         unsigned int rowKind)
+                                         void* configName)
 {
     AnimationObject* object = (AnimationObject*)destination;
     const char* gameName = (const char*)configName;
@@ -135,7 +134,7 @@ void renderer_object_update_from_record_field64(AnimationObject* object,
                                                 int swap)
 {
     resource_list_update_matching_key(object->polyMedium, object->container,
-                                      (void*)(size_t)(swap == 0), 0);
+                                      (swap == 0), 0);
 }
 
 // FUNCTION: LEGORR 0x00406c30
@@ -143,7 +142,7 @@ void renderer_object_update_from_record_field68(AnimationObject* object,
                                                 int swap)
 {
     resource_list_update_matching_key(object->polyHigh, object->container,
-                                      (void*)(size_t)(swap == 0), 0);
+                                      (swap == 0), 0);
 }
 
 // FUNCTION: LEGORR 0x00406c60
@@ -152,7 +151,7 @@ void renderer_object_update_from_record_field6c(AnimationObject* object,
                                                 unsigned int camera)
 {
     resource_list_update_matching_key(object->polyFP, object->container,
-                                      (void*)(size_t)(swap == 0), camera);
+                                      (swap == 0), camera);
 }
 
 // FUNCTION: LEGORR 0x00406c90

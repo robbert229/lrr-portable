@@ -1013,7 +1013,7 @@ void weapons_mesh_build_segment(void* mesh, float radius,
         weapons_vector3d_add(&vertices[i], fromPos, &vertices[i]);
     }
     group = mesh_record_allocate_and_fill((struct MeshRecordPool*)mesh, 16, 16, 3,
-                                           (const uint16_t*)faceData);
+                                           faceData);
     render_object_color_vector_set(mesh, group, r, g, b, 3);
     mesh_group_material_values_set(mesh, group, a, 4);
     mesh_segment_vertex_fill(mesh, group, 0, 16, (const float*)vertices,

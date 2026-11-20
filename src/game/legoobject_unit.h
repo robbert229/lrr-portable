@@ -181,7 +181,7 @@ typedef struct Lego_Level LegoObjG_Level;
 void legoobject_attached_object_list_detach(Lego_Object* obj, int resetMode); /* 00439e70 */
 int legoobject_cell_step_command_issue_with_jitter(Lego_Object* obj, int* target, float* input, int mode, int markPending); /* 0043a120 */
 int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target); /* 0043a300 */
-void legoobject_visual_resource_get_or_create(Lego_Object* obj); /* 0043a5f0 */
+void* legoobject_visual_resource_get_or_create(Lego_Object* obj); /* 0043a5f0 */
 Lego_Object* legoobject_action_kind_create_and_command_issue(Lego_Object* source, int kind, int argument, int last); /* 0043a650 */
 int legoobject_action_kind_supported(Lego_Object* obj, int kind, int argument, int last); /* 0043a7c0 */
 void legoobject_action_record_consume_and_cleanup(Lego_Object* obj, Lego_Object* record); /* 0043a850 */

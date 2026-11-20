@@ -18,8 +18,8 @@ struct GameContext;
 
 int entity_teardown(struct Lego_Object* entity);             /* 00437540 */
 struct Lego_Object* entity_create_with_position(struct GameContext* context,
-                                               int type, const char* name,
-                                               int value, float x, float y,
+                                               int type, int id,
+                                               int last, float x, float y,
                                                float heading); /* 00438610 */
 void entity_action_route_state_initialize(struct Lego_Object* entity); /* 00442210 */
 void entity_transform_position_get_outputs(const struct Lego_Object* entity,
@@ -28,7 +28,7 @@ void entity_transform_position_get_outputs(const struct Lego_Object* entity,
 void entity_surface_vector_normalize(void* surface, float out_xy[2]); /* 004422a0 */
 /* 004424f0 LegoObject_GetBlockPos. The port entry also takes the level;
  * this adapter, in the GAME-013 port tail, passes the current one. */
-void legoobject_block_position_get(struct Lego_Object* entity, int* bx,
+int legoobject_block_position_get(struct Lego_Object* entity, int* bx,
                                    int* by);
 
 #ifdef __cplusplus

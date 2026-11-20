@@ -2,31 +2,27 @@
 /* G98-026: BMP palette and pixel-data preparation (ADR 0005). */
 #include <string.h>
 #include "g98_026.h"
+#include "g98_026_record.h"
 #include "crt/vc5names.h"
 
-/* The BMP header's 32-bit fields sit at unaligned offsets; read them
+/* The BMP header's fields are little-endian and sit at offsets the buffer
+ * need not align (a file inside a WAD can start anywhere): read them
  * bytewise. */
-static inline int32_t bmp_read_i32(const uint8_t* at)
+static inline uint16_t bmp_read_u16(const uint8_t* at)
 {
-    int32_t value;
-    memcpy(&value, at, sizeof(value));
-    return value;
+    return (uint16_t)(at[0] | (at[1] << 8));
 }
 
-typedef struct IndexedBitmapPaletteData {
-    int32_t width;             /* +0x00 */
-    int32_t height;            /* +0x04 */
-    uint32_t flag_08;           /* +0x08 = 1 */
-    uint32_t flag_0c;           /* +0x0c = 1 */
-    uint32_t bits_per_pixel;    /* +0x10 */
-    uint32_t indexed_flag;      /* +0x14: 0 for 8-bit, 1 otherwise */
-    uint32_t scanline_stride;   /* +0x18 */
-    const uint8_t* pixels;      /* +0x1c */
-    void* reserved_20;          /* +0x20 = 0 (CntImage.buffer2) */
-    uint32_t channel_fields[4]; /* +0x24..+0x30; 8-bit = 0xfc each */
-    uint32_t palette_count;     /* +0x34 */
-    uint32_t* palette;          /* +0x38 */
-} IndexedBitmapPaletteData;
+static inline uint32_t bmp_read_u32(const uint8_t* at)
+{
+    return (uint32_t)at[0] | ((uint32_t)at[1] << 8) |
+           ((uint32_t)at[2] << 16) | ((uint32_t)at[3] << 24);
+}
+
+static inline int32_t bmp_read_i32(const uint8_t* at)
+{
+    return (int32_t)bmp_read_u32(at);
+}
 
 // FUNCTION: LEGORR 0x00489c30
 void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap, uint32_t size,
@@ -40,7 +36,7 @@ void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap, uint32_t size,
     uint8_t* entry;
     uint8_t red;
     (void)size;
-    if (*(const uint16_t*)(bitmap + 0x1c) == 8) {
+    if (bmp_read_u16(bitmap + 0x1c) == 8) {
         count = bmp_read_i32(bitmap + 0x2e);
         if (count == 0) count = 256;
         palette = (uint32_t*)malloc(0x400);
@@ -66,7 +62,7 @@ void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap, uint32_t size,
     }
     output->width = bmp_read_i32(bitmap + 0x12);
     output->height = bmp_read_i32(bitmap + 0x16);
-    bpp = *(const uint16_t*)(bitmap + 0x1c);
+    bpp = bmp_read_u16(bitmap + 0x1c);
     output->bits_per_pixel = bpp;
     switch (bpp) {
     case 8: bytes_per_pixel = 1; break;
@@ -78,7 +74,7 @@ void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap, uint32_t size,
     output->scanline_stride = (bytes_per_pixel * output->width + 3) & ~3u;
     output->flag_0c = 1;
     output->flag_08 = 1;
-    output->pixels = bitmap + *(const uint32_t*)(bitmap + 10);
+    output->pixels = bitmap + bmp_read_u32(bitmap + 10);
     output->reserved_20 = NULL;
 }
 

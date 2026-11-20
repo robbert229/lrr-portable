@@ -33,13 +33,9 @@ extern int32_t s_context_mode;                /* 00556ec8 */
 int camera_topdown_position_get_adapter(void* camera, void* map,
                                         float out[3]);        /* 00436b33 */
 
-/* 00431570 Lego_GetMap takes no arguments. lego_unit.c defines it with the
- * port's two ignored cell arguments, so the C matching build calls it
- * through an unprototyped function type, which pushes none, as the original
- * does; the native C++ compile goes through lego.cpp's adapter (as
- * camera_control_imports.h). */
-void* level_current_terrain_get(int cell_x, int cell_y);      /* 00431570 */
-#define TELEPORTER_LEGO_GET_MAP() level_current_terrain_get(0, 0)
+/* 00431570 Lego_GetMap takes no arguments. */
+void* level_current_terrain_get(void);      /* 00431570 */
+#define TELEPORTER_LEGO_GET_MAP() level_current_terrain_get()
 
 #ifdef __cplusplus
 }

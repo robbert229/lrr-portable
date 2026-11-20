@@ -92,7 +92,7 @@ static void test_load_missing(void)
     memset(&object, 0, sizeof(object));
     CHECK(entity_type_config_resource_row_load(&object, 7, NULL,
                                                "NoSuchDir\\NoSuchObject",
-                                               (void*)"Game", 0) == 0,
+                                               (void*)"Game") == 0,
           "a missing .ae file fails the load");
     CHECK(object.container == NULL && object.flags == 0,
           "a failed load leaves the record alone");

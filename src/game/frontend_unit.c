@@ -2894,7 +2894,7 @@ void objective_announce_current(int who);                         /* 00458670 */
 int objective_is_ended_original(void);                            /* 004589a0 */
 /* GAME-030 ObjectRecall.c: 00459360 has no port entry (natively an
  * adapter in frontend_port.cpp). */
-void front_object_recall_restore_adapter(void);                   /* 00459360 */
+int front_object_recall_restore_adapter(void);                   /* 00459360 */
 /* gods98 Main.c (audio.cpp): Main_SetCDVolume, Main_GetCDVolume. */
 void music_mixer_volume_set(float music, float sfx);              /* 00478980 */
 int ledger_stub_004789a0_MusicMixerVolumeGet(float* music,
@@ -2905,12 +2905,12 @@ char* string_duplicate(const char* text);                         /* 00477550 */
  * bits; the matching build passes the floats. Image_SaveBMP-style
  * adapters for ObjectRecall.c's save (004593e0), whose port entry takes
  * the game context: an unannotated adapter in frontend_port.cpp. */
-void* ddiscene_light_create(void* parent, unsigned int type, float r, float g, float b); /* 004734f0 */
+void* ddiscene_light_create(void* parent, unsigned long type, float r, float g, float b); /* 004734f0 */
 void* container_load(void* parent, const char* filename, const char* typeString,
                      int looseLoad);                                  /* 00472cd0 */
 int sfx_random_set_and_play_global_sample(int sfxID, int* handle);   /* 00464ef0 */
 void* text_buffer_create(void* font, float* area, unsigned int bufferSize); /* 004850f0 */
-void front_object_recall_save_adapter(const char* fname);           /* 004593e0 */
+int front_object_recall_save_adapter(const char* fname);           /* 004593e0 */
 #ifdef __cplusplus
 }
 #endif

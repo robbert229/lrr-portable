@@ -1247,7 +1247,7 @@ void reward_save_menu(void)
             if (g_front_save_menu_result == 1) {
                 if (current_selection_context_get()) {
                     show_level_overlay_target();
-                    current_selection_context_set(NULL);
+                    current_selection_context_set(0);
                 }
                 if (sav_build_ctx_target()) {
                     if (sav_build_ctx_target() != save && save) {

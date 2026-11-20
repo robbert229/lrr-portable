@@ -27,17 +27,13 @@ extern "C" {
 struct EngineTaskCallbackRecord;
 struct MeshRecordPool;
 
-/* GAME-021 Lego.c. 00431570 Lego_GetMap takes no arguments; lego_unit.c
- * defines it with the port's two ignored cell arguments, so the C matching
- * build calls it through an unprototyped function type, which pushes none,
- * as the original does; the native C++ compile goes through lego_port.cpp's
- * adapter (as weapons_imports.h). */
-void* level_current_terrain_get(int cell_x, int cell_y);           /* 00431570 */
+/* GAME-021 Lego.c. 00431570 Lego_GetMap takes no arguments. */
+void* level_current_terrain_get(void);           /* 00431570 */
 #ifdef __cplusplus
-#define SFX_LEGO_GET_MAP() ((TerrainMap*)level_current_terrain_get(0, 0))
+#define SFX_LEGO_GET_MAP() ((TerrainMap*)level_current_terrain_get())
 #else
 #define SFX_LEGO_GET_MAP() \
-    ((TerrainMap*)level_current_terrain_get(0, 0))
+    ((TerrainMap*)level_current_terrain_get())
 #endif
 /* 004295a0: the current camera's container (Lego.c). */
 void* lego_context_selected_global_pointer_get(void);           /* 004295a0 */
@@ -55,38 +51,38 @@ void* scene_root_object_get(void);                                 /* 00472940 *
 #define lego_container_create_adapter ddiscene_object_allocate
 void* lego_container_create_adapter(void* parent);                 /* 00472950 */
 void* scene_object_wrapped_pointer_get(const void* wrapped);       /* 00473680 */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);               /* 004754c0 */
-int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+void ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3]); /* 00475500 */
 void* scene_object_query_value_if_ready(void* object);             /* 00476f70 */
 
 /* gods98 Mesh.c (view.hpp, surface.hpp, record.hpp, mesh_unit.h). */
 struct EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
-    void* owner, void* callback, uint32_t mode, void* context,
-    uint32_t flag_value);                                          /* 00480870 */
-int mesh_record_allocate_and_fill(struct MeshRecordPool* pool,
-                                  uint32_t vertex_count,
-                                  uint32_t index_rows,
-                                  uint32_t index_columns,
-                                  const uint16_t* source_indices); /* 00482220 */
-void instance_quad_vertex_data_fill(void* record, int block,
-                                    int first_vertex, int count,
+    void* owner, void* callback, unsigned long mode, void* context,
+    unsigned long flag_value);                                          /* 00480870 */
+long mesh_record_allocate_and_fill(struct MeshRecordPool* pool,
+                                  unsigned long vertex_count,
+                                  unsigned long index_rows,
+                                  unsigned long index_columns,
+                                  const unsigned int* source_indices); /* 00482220 */
+void instance_quad_vertex_data_fill(void* record, unsigned long block,
+                                    unsigned long first_vertex, unsigned long count,
                                     const float* positions,
                                     const float triple[3],
                                     const uint32_t* pairs);        /* 00482500 */
-void indexed_record_flag6c_bit0_set(void* record, int index, int set); /* 004827a0 */
+void indexed_record_flag6c_bit0_set(void* record, unsigned long index, int set); /* 004827a0 */
 void record_flag2c_bit0_set(void* record, int set);                /* 004827d0 */
-uint32_t render_object_color_vector_set(void* record, int block, float red,
+uint32_t render_object_color_vector_set(void* record, unsigned long block, float red,
                                         float green, float blue,
-                                        int slot);                 /* 00483270 */
+                                        unsigned long slot);                 /* 00483270 */
 /* 00482e70 Mesh_LoadTexture and 004830c0 Mesh_SetGroupTexture have no
  * port entry with the original's contract and C linkage, so thin
  * unannotated adapters in sfx_port.cpp stand in. */
 void* sfx_mesh_load_texture_adapter(const char* basePath, const char* name,
                                     unsigned int* width,
                                     unsigned int* height);         /* 00482e70 */
-void sfx_mesh_set_group_texture_adapter(void* mesh, int group,
+void sfx_mesh_set_group_texture_adapter(void* mesh, unsigned long group,
                                         void* texture);            /* 004830c0 */
 
 #ifdef __cplusplus

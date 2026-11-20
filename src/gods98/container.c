@@ -626,7 +626,7 @@ Container* Container_Load(Container* parent, const char* filename,
         cont = Container_Create(parent);
         cont->type = type;
         if (transMesh = lwo_model_entry_load(name, cont->activityFrame,
-                                             (void*)(long)noTexture)) {
+                                             noTexture)) {
             Container_SetTypeData(cont, NULL, NULL, NULL, transMesh);
             return cont;
         }
@@ -1404,7 +1404,7 @@ unsigned long Container_Mesh_AddGroup(Container* cont, unsigned long vertexCount
     if (cont->typeData->transMesh) {
         return mesh_record_allocate_and_fill((struct MeshRecordPool*)cont->typeData->transMesh,
                                              vertexCount, faceCount, vPerFace,
-                                             (const uint16_t*)faceData);
+                                             faceData);
     } else {
         LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
         D3DRMGROUPINDEX groupID;
@@ -1550,17 +1550,28 @@ int Container_Mesh_GetGroup(Container* cont, unsigned long groupID,
                             unsigned long* faceData)
 {
     if (cont->typeData->transMesh) {
-        return container_mesh_get_group_adapter(cont->typeData->transMesh, groupID,
-                                                vertexCount, faceCount, vPerFace,
-                                                faceDataSize, faceData);
+        /* Mesh_GetGroup returns nothing; the original passed on whatever
+         * was in eax. */
+        container_mesh_get_group_adapter(cont->typeData->transMesh, groupID,
+                                         vertexCount, faceCount, vPerFace,
+                                         faceDataSize, faceData);
+        return 1;
     } else {
         LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
+        unsigned int vc = 0, fc = 0, vpf = 0;
+        DWORD fds = 0;
+        int ok;
         Container_Mesh_HandleSeparateMeshGroups(&mesh, &groupID);
-        /* The outputs are the original's 32-bit counts and indices. */
-        return mesh->GetGroup(groupID, (unsigned int*)vertexCount,
-                              (unsigned int*)faceCount, (unsigned int*)vPerFace,
-                              (DWORD*)faceDataSize,
-                              (unsigned int*)faceData) == D3DRM_OK;
+        /* D3DRM writes 32-bit counts: read them into 32-bit locals rather
+         * than through the unsigned long outputs. faceData stays an array
+         * of the original's 32-bit indices. */
+        ok = mesh->GetGroup(groupID, &vc, &fc, &vpf, &fds,
+                            (unsigned int*)faceData) == D3DRM_OK;
+        if (vertexCount) *vertexCount = vc;
+        if (faceCount) *faceCount = fc;
+        if (vPerFace) *vPerFace = vpf;
+        if (faceDataSize) *faceDataSize = fds;
+        return ok;
     }
 }
 
@@ -1570,8 +1581,11 @@ unsigned long Container_Mesh_GetVertices(Container* cont, unsigned long groupID,
                                          void* retArray)
 {
     if (cont->typeData->transMesh) {
-        return container_mesh_get_vertices_adapter(cont->typeData->transMesh, groupID, index,
-                                                   count, retArray);
+        /* Mesh_GetVertices returns nothing; the original passed on
+         * whatever was in eax. */
+        container_mesh_get_vertices_adapter(cont->typeData->transMesh, groupID, index,
+                                            count, retArray);
+        return 0;
     } else {
         LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
         unsigned long result = 0;
@@ -1590,8 +1604,11 @@ unsigned long Container_Mesh_SetVertices(Container* cont, unsigned long groupID,
                                          void* values)
 {
     if (cont->typeData->transMesh) {
-        return container_mesh_set_vertices_adapter(cont->typeData->transMesh, groupID, index,
-                                                   count, values);
+        /* Mesh_SetVertices returns nothing; the original passed on
+         * whatever was in eax. */
+        container_mesh_set_vertices_adapter(cont->typeData->transMesh, groupID, index,
+                                            count, values);
+        return 0;
     } else {
         LPDIRECT3DRMMESH mesh = cont->typeData->mesh;
         unsigned long result = 0;

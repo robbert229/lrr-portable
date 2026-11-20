@@ -487,7 +487,7 @@ extern "C" void simtick_directsound_listener_view_set(Sound3DFrame* frame)
 }
 
 // FUNCTION: LEGORR 0x0047aba0
-void simtick_sound_keepalive(struct EngineContext* c)
+void simtick_sound_keepalive(void)
 {
     if (s_bank_sound_on && s_sound3d.listenerFrame) {
         sound_listener_frame_update(s_sound3d.listenerFrame, NULL, 0.0f);
@@ -728,8 +728,8 @@ void sound_instance_track_register(Sound3DFrame* frame,
     record->pos.x = 0.0f;
     record->pos.y = 0.0f;
     record->pos.z = 0.0f;
-    ddiscene_animation_hook_create(frame, 0, NULL, NULL, 0, NULL, NULL, 0, 0,
-                                   (const uint32_t*)record);
+    ddiscene_animation_hook_create(frame, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, record);
 
     for (i = 0; i < SOUND3D_MAXUPDATEFRAMES; i++) {
         if (s_sound3d_frames.updateFrameList[i] == NULL) {

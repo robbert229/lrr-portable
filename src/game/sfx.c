@@ -670,7 +670,7 @@ Smoke* smoke_create_smoke_area(void* cont, int bx, int by, SFX_Vector3F* dir,
     for (; i < smoke->groupCount; i++) {
         int groupID = mesh_record_allocate_and_fill(
             (struct MeshRecordPool*)smoke->mesh, 4, 2, 3,
-            (const uint16_t*)faceData);
+            faceData);
         Smoke_Group* group = &smoke->groups[groupID];
 
         sfx_mesh_set_group_texture_adapter(smoke->mesh, groupID,

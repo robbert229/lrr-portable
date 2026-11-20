@@ -21,7 +21,7 @@ extern "C" {
 void render_object_set_packed_rgba_from_float_channels(
     void* scene_object, float red, float green, float blue,
     float alpha);                                                 /* 004750b0 */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);              /* 004754c0 */
 
 #ifdef __cplusplus

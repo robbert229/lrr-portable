@@ -65,8 +65,10 @@
  * LINK keeps the first, this unit's. MSVC 5.0's `inline` gives that
  * COMDAT, with the same code as a plain definition, so the unoptimised
  * camera unit's copies (camera_maths.h) are discarded rather than
- * multiply defined (finding 692). */
-#define MATHS_INLINE inline
+ * multiply defined (finding 692). Other units call them out of line, so
+ * the port marks them used: an optimising C++ compile would otherwise
+ * inline every use here and emit no copy for the others to link. */
+#define MATHS_INLINE inline __attribute__((used))
 
 /* The game camera (camera_control.h's LegoCamera): Advisor_Initialise
  * reads its camera container. */

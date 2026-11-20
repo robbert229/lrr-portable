@@ -53,8 +53,7 @@ void electric_fence_block_surfaces_update(int bx, int by);          /* 0040cea0 
 /* GAME-021 Lego.c. */
 void terrain_cell_work_flag_clear_current(EntityCell_Point2I* blockPos,
                                           unsigned int flags);       /* 00430320 */
-/* Lego_GetCurrentMapTerrain takes no argument; lego_unit.c defines it
- * with two. */
+/* Lego_GetMap takes no argument. */
 void* level_current_terrain_get(void);                              /* 00431570 */
 void lego_terrain_cell_primary_flags_mask_clear_and_refresh(EntityCell_Point2I* blockPos); /* 00432360 */
 void lego_terrain_cell_secondary_bit0_clear(EntityCell_Point2I* blockPos); /* 004323c0 */

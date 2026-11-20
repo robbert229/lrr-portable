@@ -49,13 +49,9 @@ unsigned int level_cell_flag_4_current(unsigned int cx,
 uint32_t level_cell_occupied_at_current(const int cell_xy[2]);   /* 00433090 */
 int terrain_cell_type_get_at_current(uint32_t cx, uint32_t cy,
                                      uint32_t* out_type);        /* 00433330 */
-/* 00431570 Lego_GetMap takes no arguments. lego_unit.c defines it with the
- * port's two ignored cell arguments, so the C matching build calls it
- * through an unprototyped function type, which pushes none, as the original
- * does; the native C++ compile goes through lego_port.cpp's adapter (as
- * fallin_imports.h). */
+/* 00431570 Lego_GetMap takes no arguments. */
 #define RADARMAP_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get(0, 0))
+    ((struct TerrainMap*)level_current_terrain_get())
 
 /* Stats.c (entity_stats.c), by its link name: StatsObject_GetStatsFlags2. */
 uint32_t entity_state_flags_get(const struct Lego_Object* e);     /* 00469e80 */

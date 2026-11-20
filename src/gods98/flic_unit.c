@@ -70,6 +70,29 @@ typedef struct Flic_SubChunk {
     short type;                     /* +0x04 */
 } Flic_SubChunk;
 
+/* The stream's chunks start wherever the previous one ended, so their
+ * fields and the pixel words inside them need not be aligned: read them
+ * with memcpy (the stream is little-endian, like every host the port
+ * builds for). */
+static inline unsigned short flic_read_u16(const void* at)
+{
+    unsigned short value;
+    memcpy(&value, at, sizeof(value));
+    return value;
+}
+
+static inline int flic_read_i32(const void* at)
+{
+    int value;
+    memcpy(&value, at, sizeof(value));
+    return value;
+}
+
+/* A chunk header's size (+0x00), type (+0x04) and subchunk count (+0x06). */
+#define FLIC_CHUNK_SIZE(chunk) flic_read_i32(chunk)
+#define FLIC_CHUNK_TYPE(chunk) flic_read_u16((const char*)(chunk) + 4)
+#define FLIC_CHUNK_COUNT(chunk) (((const char*)(chunk))[6])
+
 #include <miniwin/ddraw.h>
 
 #define lpDD() ((IDirectDraw4*)directDrawGlobs.lpDirectDraw)
@@ -320,67 +343,67 @@ int Flic_FindChunk(LPFLICSTRUCT fsp)
     start = fsp->pointerposition;
 
     if ((fsp->userflags & FLICMEMORY) == FLICMEMORY) {
-        size = *(int*)((char*)header + start);
+        size = flic_read_i32((char*)header + start);
         header = (Flic_ChunkHeader*)((char*)header + start);
         found = 0;
         while (!found) {
             if (fsp->pointerposition >= fsp->fsHeader.size) break;
-            switch (header->type) {
+            switch (FLIC_CHUNK_TYPE(header)) {
             case FLI_PREFIX_TYPE:
                 Flic_LoadPalette64(fsp);
-                fsp->pointerposition += header->size;
+                fsp->pointerposition += FLIC_CHUNK_SIZE(header);
                 break;
             case FLI_POINTERS_TYPE:
                 Flic_LoadPointers(fsp);
-                fsp->pointerposition += header->size;
+                fsp->pointerposition += FLIC_CHUNK_SIZE(header);
                 break;
             case FLI_FRAME_TYPE:
                 Flic_FrameChunk(fsp);
                 found = 1;
                 break;
             default:
-                fsp->pointerposition += header->size;
+                fsp->pointerposition += FLIC_CHUNK_SIZE(header);
                 break;
             }
-            header = (Flic_ChunkHeader*)((char*)header + header->size);
-            size += header->size;
+            header = (Flic_ChunkHeader*)((char*)header + FLIC_CHUNK_SIZE(header));
+            size += FLIC_CHUNK_SIZE(header);
             if (found) {
                 fsp->pointerposition = start + size;
                 return 0;
             }
         }
     } else {
-        size = header->size;
+        size = FLIC_CHUNK_SIZE(header);
         found = 0;
         while (!found) {
             if (fsp->pointerposition >= fsp->fsHeader.size) break;
-            switch (header->type) {
+            switch (FLIC_CHUNK_TYPE(header)) {
             case FLI_PREFIX_TYPE:
                 Flic_LoadPalette64(fsp);
-                fsp->pointerposition += header->size;
+                fsp->pointerposition += FLIC_CHUNK_SIZE(header);
                 file_seek(fsp->filehandle, fsp->pointerposition, SEEK_SET);
                 header = (Flic_ChunkHeader*)fsp->fsLoadBuffer;
                 file_read(header, 16, 1, fsp->filehandle);
-                size += header->size;
+                size += FLIC_CHUNK_SIZE(header);
                 break;
             case FLI_POINTERS_TYPE:
                 Flic_LoadPointers(fsp);
-                fsp->pointerposition += header->size;
+                fsp->pointerposition += FLIC_CHUNK_SIZE(header);
                 file_seek(fsp->filehandle, fsp->pointerposition, SEEK_SET);
                 header = (Flic_ChunkHeader*)fsp->fsLoadBuffer;
                 file_read(header, 16, 1, fsp->filehandle);
-                size += header->size;
+                size += FLIC_CHUNK_SIZE(header);
                 break;
             case FLI_FRAME_TYPE:
                 Flic_FrameChunk(fsp);
                 found = 1;
                 break;
             default:
-                fsp->pointerposition += header->size;
+                fsp->pointerposition += FLIC_CHUNK_SIZE(header);
                 file_seek(fsp->filehandle, fsp->pointerposition, SEEK_SET);
                 header = (Flic_ChunkHeader*)fsp->fsLoadBuffer;
                 file_read(header, 16, 1, fsp->filehandle);
-                size += header->size;
+                size += FLIC_CHUNK_SIZE(header);
                 break;
             }
         }
@@ -401,20 +424,20 @@ int Flic_FrameChunk(LPFLICSTRUCT fsp)
 
     if ((fsp->userflags & FLICMEMORY) == FLICMEMORY) {
         header = (Flic_ChunkHeader*)(fsp->rambufferhandle + fsp->pointerposition);
-        subchunks = header->chunks;
+        subchunks = FLIC_CHUNK_COUNT(header);
         chunk = (int*)((char*)header + 16);
         fsp->pointerposition += 16;
         while (subchunks > 0 && fsp->pointerposition < fsp->fsHeader.size) {
             fsp->fsSource = chunk;
             Flic_DoChunk(fsp);
-            fsp->pointerposition += *chunk;
-            chunk = (int*)((char*)chunk + *chunk);
+            fsp->pointerposition += FLIC_CHUNK_SIZE(chunk);
+            chunk = (int*)((char*)chunk + FLIC_CHUNK_SIZE(chunk));
             subchunks--;
         }
     } else {
         chunk = (int*)fsp->fsLoadBuffer;
-        subchunks = ((Flic_ChunkHeader*)chunk)->chunks;
-        size = *chunk - 16;
+        subchunks = FLIC_CHUNK_COUNT(chunk);
+        size = FLIC_CHUNK_SIZE(chunk) - 16;
         if (size > fsp->fsLoadBufferSize) {
             if (chunk) free(chunk);
             fsp->fsLoadBufferSize = size;
@@ -431,8 +454,8 @@ int Flic_FrameChunk(LPFLICSTRUCT fsp)
         while (subchunks > 0 && fsp->pointerposition < fsp->fsHeader.size) {
             fsp->fsSource = chunk;
             Flic_DoChunk(fsp);
-            fsp->pointerposition += *chunk;
-            chunk = (int*)((char*)chunk + *chunk);
+            fsp->pointerposition += FLIC_CHUNK_SIZE(chunk);
+            chunk = (int*)((char*)chunk + FLIC_CHUNK_SIZE(chunk));
             subchunks--;
         }
     }
@@ -445,7 +468,7 @@ int Flic_DoChunk(LPFLICSTRUCT fsp)
 {
     int retval = 0;
 
-    switch (((Flic_SubChunk*)fsp->fsSource)->type) {
+    switch ((short)FLIC_CHUNK_TYPE(fsp->fsSource)) {
     case FLI_CHUNK_COLOUR256:
         Flic_Colour256(fsp);
         retval = 1;
@@ -497,7 +520,7 @@ int Flic_LoadPointers(LPFLICSTRUCT fsp)
 
     if ((fsp->userflags & FLICMEMORY) != FLICMEMORY) {
         chunk = (int*)fsp->fsLoadBuffer;
-        size = *chunk;
+        size = FLIC_CHUNK_SIZE(chunk);
         if (size > fsp->fsLoadBufferSize) {
             if (chunk) free(chunk);
             fsp->fsLoadBufferSize = size;
@@ -524,7 +547,7 @@ int Flic_LoadPalette64(LPFLICSTRUCT fsp)
 
     if ((fsp->userflags & FLICMEMORY) != FLICMEMORY) {
         chunk = (int*)fsp->fsLoadBuffer;
-        size = *chunk;
+        size = FLIC_CHUNK_SIZE(chunk);
         if (size > fsp->fsLoadBufferSize) {
             if (chunk) free(chunk);
             fsp->fsLoadBufferSize = size;
@@ -611,7 +634,7 @@ int Flic_BrunDepack16(LPFLICSTRUCT fsp)
             count = *src++;
             if (count < 0x80) {
                 width -= count;
-                colour = *(unsigned short*)src;
+                colour = flic_read_u16(src);
                 src += 2;
                 colour = ((colour & 0xffe0) << 1) | (colour & 0x1f);
                 while (count) {
@@ -622,7 +645,7 @@ int Flic_BrunDepack16(LPFLICSTRUCT fsp)
                 count = 0x100 - count;
                 width -= count;
                 while (count) {
-                    colour = *(unsigned short*)src;
+                    colour = flic_read_u16(src);
                     src += 2;
                     colour = ((colour & 0xffe0) << 1) | (colour & 0x1f);
                     *dst++ = fsp->is15bit ? ((colour >> 1) & 0x7ff0) | (colour & 0x1f) : colour;
@@ -687,7 +710,7 @@ int Flic_Colour256(LPFLICSTRUCT fsp)
     unsigned short count;
     unsigned char colour;
 
-    packets = *(unsigned short*)src;
+    packets = flic_read_u16(src);
     src += 2;
     while (packets) {
         skip = *src++;
@@ -734,11 +757,11 @@ void Flic_DeltaWord(LPFLICSTRUCT fsp)
     unsigned char last;
     unsigned short writeLast;
 
-    lines = *(unsigned short*)src;
+    lines = flic_read_u16(src);
     src += 2;
     while (lines) {
         dst = (unsigned short*)((unsigned char*)fsp->fsSPtr + line * fsp->fsPitch);
-        word = *(unsigned short*)src;
+        word = flic_read_u16(src);
         type = (word & 0xc000) >> 12;
         if (type == 0xc) {
             src += 2;
@@ -752,7 +775,7 @@ void Flic_DeltaWord(LPFLICSTRUCT fsp)
             src += 2;
             writeLast = 1;
         }
-        packets = *(unsigned short*)src;
+        packets = flic_read_u16(src);
         src += 2;
         while (packets) {
             skip = *src++;
@@ -799,11 +822,11 @@ void Flic_DeltaWord16(LPFLICSTRUCT fsp)
     unsigned short last;
     unsigned short writeLast;
 
-    lines = *(unsigned short*)src;
+    lines = flic_read_u16(src);
     src += 2;
     while (lines) {
         dst = (unsigned short*)((unsigned char*)fsp->fsSPtr + line * fsp->fsPitch);
-        word = *(unsigned short*)src;
+        word = flic_read_u16(src);
         type = (word & 0xc000) >> 12;
         if (type == 0xc) {
             src += 2;
@@ -817,13 +840,13 @@ void Flic_DeltaWord16(LPFLICSTRUCT fsp)
             src += 2;
             writeLast = 1;
         }
-        packets = *(unsigned short*)src;
+        packets = flic_read_u16(src);
         src += 2;
         while (packets) {
             dst += *src++;
             count = *src++;
             if (count & 0x80) {
-                colour = *(unsigned short*)src;
+                colour = flic_read_u16(src);
                 src += 2;
                 colour = ((colour & 0xffe0) << 1) | (colour & 0x1f);
                 count = 0x100 - count;
@@ -833,7 +856,7 @@ void Flic_DeltaWord16(LPFLICSTRUCT fsp)
                 }
             } else {
                 while (count) {
-                    colour = *(unsigned short*)src;
+                    colour = flic_read_u16(src);
                     src += 2;
                     colour = ((colour & 0xffe0) << 1) | (colour & 0x1f);
                     *dst++ = fsp->is15bit ? ((colour >> 1) & 0x7ff0) | (colour & 0x1f) : colour;

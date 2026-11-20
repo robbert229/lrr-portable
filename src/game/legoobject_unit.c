@@ -767,11 +767,11 @@ void legoobject_deferred_olist_create_and_link(int* blockPos)
                                               rec->worldPos[1], rec->heading, 1);
                 }
                 if (rec->type == 6 || rec->type == 7 || rec->type == 8 || rec->type == 9) {
-                    cmd_create_task((struct Lego_Object*)obj, 0);
+                    cmd_create_task((struct Lego_Object*)obj, 0.0f);
                 }
                 obj->health = rec->health;
                 if (obj->type == 2) {
-                    legoobject_gb_tutorial_counter_increment_adapter(obj->type);
+                    legoobject_gb_tutorial_counter_increment_adapter();
                     info_send(0x21, NULL, obj, NULL);
                 }
                 obj->flags4 |= 0x200;
@@ -845,7 +845,7 @@ void legoobject_deferred_olist_queue_add(void* model, int type, int id, float* w
     if (linkName != NULL) {
         rec->linkName = string_duplicate(linkName);
     }
-    terrain_map_world_to_block((struct TerrainMap*)level_current_terrain_get(0, 0),
+    terrain_map_world_to_block((struct TerrainMap*)level_current_terrain_get(),
                                worldPos[0], worldPos[1],
                                &rec->blockPos[0], &rec->blockPos[1]);
 }
@@ -1284,7 +1284,7 @@ Lego_Object* legoobject_query_center_mask01(int* cell, int a, int b, int c)
     search.arg18 = b;
     search.arg1c = c;
     search.arg20 = 0;
-    terrain_map_block_to_world((struct TerrainMap*)level_current_terrain_get(0, 0), cell[0], cell[1], &search.x, &search.y);
+    terrain_map_block_to_world((struct TerrainMap*)level_current_terrain_get(), cell[0], cell[1], &search.x, &search.y);
     legoobject_run_through_lists_skip_upgrade_parts(legoobject_route_marker_candidate_visit, &search);
     return search.result;
 }
@@ -1304,7 +1304,7 @@ Lego_Object* legoobject_query_center_mask02(Lego_Object* obj, int* cell, int a, 
     search.arg1c = b;
     search.arg20 = 0;
     if (obj) legoobject_transform_position_get(obj, &search.x, &search.y);
-    else terrain_map_block_to_world((struct TerrainMap*)level_current_terrain_get(0, 0), cell[0], cell[1], &search.x, &search.y);
+    else terrain_map_block_to_world((struct TerrainMap*)level_current_terrain_get(), cell[0], cell[1], &search.x, &search.y);
     legoobject_run_through_lists_skip_upgrade_parts(legoobject_route_marker_candidate_visit, &search);
     return search.result;
 }
@@ -2233,8 +2233,11 @@ int legoobject_deposit_activity_gate(Lego_Object* obj, Lego_Object* target)
     return 0;
 }
 
+/* The original is declared void, but its callers read the result: the
+ * handle, or failing that the activity container, which the last call
+ * leaves in eax. The port returns it. */
 // FUNCTION: LEGORR 0x0043a5f0
-void legoobject_visual_resource_get_or_create(Lego_Object* obj)
+void* legoobject_visual_resource_get_or_create(Lego_Object* obj)
 {
     void* handle;
 
@@ -2248,7 +2251,8 @@ void legoobject_visual_resource_get_or_create(Lego_Object* obj)
     else if (obj->type == 1)
         handle = scene_resource_cached_slot_b8_get((struct SceneResourceAnimationRecord*)obj->vehicle);
     if (handle == NULL)
-        legoobject_type_component_get(obj);
+        handle = legoobject_type_component_get(obj);
+    return handle;
 }
 
 // FUNCTION: LEGORR 0x0043a650
@@ -3407,7 +3411,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
         type2_timed_registry_insert((struct Lego_Object*)obj);
         obj->flags4 |= 0x20;
     } else {
-        set_type2_object_record_value((struct Lego_Object*)obj, 0);
+        set_type2_object_record_value((struct Lego_Object*)obj, 0.0f);
         obj->flags4 &= ~0x20;
     }
     if (obj->type == 1 && (obj->flags4 & 0x40) && obj->routeToObject == NULL &&
@@ -3427,7 +3431,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
     if (obj->type == 2 && (obj->flags2 & 8) && obj->driveObject != NULL &&
         obj->driveObject->type == 1) {
         animation_object_time_update((struct AnimationObject*)obj->miniFigure,
-            ((float (*)(void*))scene_object_attached_resource_release)(obj->driveObject->vehicle));
+            scene_object_attached_resource_release(obj->driveObject->vehicle));
     } else {
         tickResult = legoobject_activity_tick(obj, elapsed);
     }
@@ -3524,7 +3528,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                         obj->flags3 &= ~0x4000;
                     }
                 }
-            } else if (((int (*)(float, float, int*, int*))current_level_terrain_grid_pick)(wx, wy, &pick.x, &pick.y) &&
+            } else if (current_level_terrain_grid_pick(wx, wy, &pick.x, &pick.y) &&
                        pick.x == bx && pick.y == by) {
                 obj->flags3 |= 0x4000;
             }
@@ -3615,7 +3619,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             if (obj->routeToObject != NULL) {
                 LegoObjJ_Vector3F pos;
                 LegoObjJ_Vector3F dir;
-                cont = ((void* (*)(Lego_Object*))legoobject_visual_resource_get_or_create)(obj->routeToObject);
+                cont = legoobject_visual_resource_get_or_create(obj->routeToObject);
                 if (cont != NULL) {
                     ddiscene_object_position_get(cont, NULL, (float*)&pos);
                     ddiscene_object_facing_pair_get(cont, NULL, (float*)&dir, NULL);
@@ -3726,7 +3730,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
             obj->routeToObject != NULL && !(obj->routeToObject->flags4 & 0x10)) {
             if (legoobject_shared_eligibility_check(obj->routeToObject, 0)) {
                 info_send(0xf, NULL, obj->routeToObject, NULL);
-                ((void (*)(int))panel_selection_highlight_toggle)(1);
+                panel_selection_highlight_toggle(1);
             }
             obj->routeToObject->flags4 |= 0x10;
             legoobject_activity_scene_state_update();
@@ -4077,7 +4081,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
                 legoobject_vector_direction_angle_radians_get(obj), 1);
         }
         if (obj->animTime > legoobject_zero) {
-            cont = ((void* (*)(Lego_Object*))legoobject_visual_resource_get_or_create)(obj);
+            cont = legoobject_visual_resource_get_or_create(obj);
             ddiscene_object_position_get(cont, NULL, (float*)&pos);
             legoobject_world_position_set(obj, pos.x, pos.y, 0, 0);
             obj->flags2 &= ~1;
@@ -4178,7 +4182,7 @@ int legoobject_update_callback(Lego_Object* obj, void* data)
     if (obj->flags1 & 0x400)
         legoobject_attached_direction_vector_update(obj);
     if (entity_flag100_and_shared_eligibility_check((struct Lego_Object*)obj))
-        ((int (*)(void*, float))entity_velocity_slot_dispatch)(obj, elapsed);
+        entity_velocity_slot_dispatch(obj, elapsed);
     ((void (*)(Lego_Object*, float))legoobject_behavior_callback_tick)(obj, elapsed);
     legoobject_motion_to_scene_node_sync(obj, *(float*)data);
     legoobject_energy_low_target_route_command_tick(obj, elapsed);
@@ -6225,7 +6229,7 @@ void legoobject_pose_orientation_dispatch(Lego_Object* obj, float elapsed)
         float up[3];
         legoobject_position_to_terrain_cell(obj, (int*)&bx, (int*)&by);
         if (obj->type != 9 && terrain_cell_flag_800_bounded_current(bx, by) && obj->field_2dc == NULL) {
-            obj->field_2dc = ((void* (*)(unsigned int, unsigned int))scene_resource_slot_register_name)(bx, by);
+            obj->field_2dc = scene_resource_slot_register_name(bx, by);
             obj->targetBlockPos[0] = (float)bx;
             obj->targetBlockPos[1] = (float)by;
             obj->flags3 &= ~0x100000;
@@ -6473,7 +6477,7 @@ void legoobject_path_step_advance_and_arrival_check(Lego_Object* obj, float elap
             if (!(obj->flags1 & 0x8) &&
                 routeBlocks[obj->routeBlocksCurrent].actionFlags == 1 &&
                 legoobject_work_object_position_get(obj, &workX, &workY) &&
-                ((int (*)(float, float, int*, int*))current_level_terrain_grid_pick)(workX, workY, &bx, &by) &&
+                current_level_terrain_grid_pick(workX, workY, &bx, &by) &&
                 terrain_cell_walkable_flag_current(bx, by) &&
                 bx == routeBlocks[obj->routeBlocksCurrent].blockPos[0] &&
                 by == routeBlocks[obj->routeBlocksCurrent].blockPos[1]) {
@@ -7415,9 +7419,8 @@ struct VehicleModel;
 float vehicle_get_trans_coef(struct VehicleModel* vehicle);                /* 0046db70 */
 /* Creature.c: Creature_GetTransCoef (animation_object.c). */
 float animation_object_value_get(void* object);                            /* 00407090 */
-/* Building.c: Building_GetTransCoef returns 0.0 (building_model.cpp's
- * constant_zero_float_get, which takes no argument in the port). */
-double constant_zero_float_get(void* building);                            /* 00408930 */
+/* Building.c: Building_GetTransCoef (building_model.c). */
+float constant_zero_float_get(void* building);                             /* 00408930 */
 /* Stats.c (entity.hpp, entity_stats.c). */
 float entity_stats_float_at20(const struct Lego_Object* e);                 /* 00469cb0 */
 float entity_stats_float_atd4(const struct Lego_Object* e);                 /* 00469ce0 */
@@ -9844,7 +9847,7 @@ void legoobject_random_kind_six_scatter_spawn(Lego_Object* obj, unsigned int cou
             pos.y = offset.y + pos.y;
         }
         crystal = legoobject_create_in_world(legoGlobs_contCrystal, 6, 0, 0, pos.x, pos.y, 0.0f);
-        cmd_create_task(LEGOOBJ_SLOT(crystal), 0);
+        cmd_create_task(LEGOOBJ_SLOT(crystal), 0.0f);
     }
 }
 
@@ -9910,7 +9913,7 @@ void* scene_root_object_get(void);                                      /* 00472
 void* ddiscene_object_allocate(const void* cont);                       /* 00472950 */
 float ddiscene_advance_by_time_target(void* scene_object, float delta); /* 00475120 */
 float ddiscene_object_length_get(void* scene_object);                   /* 00475390 */
-int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+void ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3]);   /* 00475500 */
 void ddiscene_scene_object_attach_or_unlink(void* pair_record, void* source_pair_record); /* 00475710 */
 /* G98 Maths.c (maths.h, C). */

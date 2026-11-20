@@ -26,12 +26,14 @@ void screen_right_edge_cache_refresh(void);
  * matching build scrollinfo.c's definitions take these names
  * (scrollinfo_link_names.h); natively the port tail scrollinfo_port.cpp
  * serves them (FUN_004636b0 and FUN_004638a0 as no-op adapters). */
-void info_panel_initialise(const char* name, int a, int b, int panel,
-                           int c);                              /* 004636b0 */
+void info_panel_initialise(const char* name, unsigned int index,
+                           int horizontal, int panel, ...);     /* 004636b0 */
 void indexed_float_pair_set(int index, uint32_t x, uint32_t y); /* 00463730 */
-void scroll_rect_resource_record_create(int view, int mode,
-                                        const float* quad, int tex_a,
-                                        int tex_b);             /* 00463770 */
+void scroll_rect_resource_record_create(unsigned int index,
+                                        unsigned int type,
+                                        const float* rect,
+                                        const char* highlightName,
+                                        const char* pressedName); /* 00463770 */
 /* FUN_00463810: the port's name is gods98/resource.cpp's model, so in the
  * matching build Panel.c calls the unit's own name. */
 #define scroll_rect_payload_record_create scroll_info_add_create_structure

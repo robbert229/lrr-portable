@@ -56,7 +56,7 @@ void command_context_post_to_hud(int menu, const uint32_t blockPos[2]); /* 0041b
 void lego_render_record_set_from_input(struct Lego_Object* object); /* 00425d50 */
 void lego_sound_minimum_distance_update_mode(int viewMode, void* liveObj,
                                              int cameraFrame);    /* 004295f0 */
-void* level_current_terrain_get(int cell_x, int cell_y);          /* 00431570 */
+void* level_current_terrain_get(void);          /* 00431570 */
 void lego_terrain_stamp_impact_handle(unsigned int bx, unsigned int by,
                                       int direction, int vertexMode); /* 00431780 */
 uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy); /* 00432b50 */

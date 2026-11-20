@@ -41,13 +41,10 @@ struct TerrainMap;
 
 /* GAME-021 Lego.c (level.hpp; lego.cpp). */
 struct Lego_Level* level_current_owner_get(void);           /* 00431560 */
-/* 00431570 Lego_GetMap takes no arguments. Its definition (lego_unit.c,
- * GAME-021 part 2) keeps the port's two ignored cell arguments, so the C
- * matching build calls it through an unprototyped function type, which
- * pushes none, as the original does; the native C++ compile goes through
- * lego.cpp's adapter. lego_unit.h declares level_current_terrain_get. */
+/* 00431570 Lego_GetMap takes no arguments (lego_unit.h declares
+ * level_current_terrain_get). */
 #define AITASK_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get(0, 0))
+    ((struct TerrainMap*)level_current_terrain_get())
 int terrain_cell_walkable_flag_current(unsigned int cx,
                                        unsigned int cy);     /* 00432bd0 */
 int terrain_cell_speed_class_current(const int cell_xy[2]);  /* 00432c50 */
@@ -194,8 +191,8 @@ int aitask_cell_step_command_issue_adapter(struct Lego_Object* object,
 int aitask_route_setup_adapter(struct Lego_Object* object, unsigned int count,
                                int* routeX, int* routeY, float* wPos); /* 00441700 */
 int aitask_adjacent_position_find_adapter(struct Lego_Object* object,
-                                          int* blockPos, int* outPos,
-                                          int mode);                 /* 00443710 */
+                                          int* blockPos,
+                                          int* outPos);              /* 00443710 */
 int aitask_nearest_cell_route_commit_adapter(struct Lego_Object* object,
                                              unsigned int x, unsigned int y,
                                              int mode);              /* 00446e40 */
@@ -231,7 +228,7 @@ int aitask_proximity_step_clearing_adapter(struct Lego_Object* object,
 int aitask_type11_nearest_resolve_adapter(struct Lego_Object* object,
                                           int* outPos);              /* 0044a3d0 */
 int aitask_position_step_link_adapter(struct Lego_Object* object,
-                                      void* selector);               /* 0044b500 */
+                                      int selector);                 /* 0044b500 */
 /* --- end group C --- */
 
 /* --- group D (00404fc0-00405950) --- */
@@ -266,10 +263,9 @@ int entity_position_to_terrain_cell_adapter(const struct Lego_Object* entity,
  * aitask_port.cpp. */
 void* aitask_object_container_get_adapter(struct Lego_Object* object);
 int aitask_object_command_gate_adapter(struct Lego_Object* object, int type);
-/* 00432550 (Lego.c) takes the block position; the port's entry
- * (always_accept_place_command_cell) takes no argument. Adapter at the end
- * of aitask_port.cpp. */
-int aitask_place_command_cell_accept_adapter(int* blockPos);
+/* 00432550 (Lego.c) takes no argument; the original's caller pushes the
+ * block position. */
+int aitask_place_command_cell_accept_adapter(void);
 /* Stats.c (entity.hpp, ai.hpp). */
 unsigned int entity_stats_word_get(const struct Lego_Object* e);      /* 00469e60 */
 unsigned int entity_state_flags_get(const struct Lego_Object* e);     /* 00469e80 */
@@ -296,7 +292,7 @@ int terrain_map_block_to_world(struct TerrainMap* map, unsigned int bx,
 int terrain_map_world_to_block(struct TerrainMap* map, float x, float y,
                                int* bx, int* by);                    /* 0044f6d0 */
 /* Container.c (view.hpp) and the building model (view.hpp). */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);                 /* 004754c0 */
 void* scene_object_secondary_handle_get_or_create(void* record);     /* 004087e0 */
 

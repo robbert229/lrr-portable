@@ -2110,7 +2110,7 @@ int nerpfunc_generate_slug(unsigned int* stack)
     void* model;
 
     lego_entity_type_pair_lookup("Slug", &type, &id, &model);
-    predug_spawn_coordinate_select_and_create(0, id);
+    predug_spawn_coordinate_select_and_create(NULL, id);
     return 0;
 }
 

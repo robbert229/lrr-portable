@@ -22,7 +22,7 @@ ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head);
 void linked_record_field4_clear(void* record);
 /* MeshLOD_SwapTarget (FUN_00451bc0, GAME-026). */
 void resource_list_update_matching_key(void* list, void* library,
-                                       void* update_value,
+                                       int restore,
                                        unsigned int key);
 /* MeshLOD_Free (FUN_00451c50, GAME-026). */
 void owned_object_reference_chain_release(void* head);

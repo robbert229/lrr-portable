@@ -34,7 +34,7 @@ extern uint32_t s_engine_feature_word;
 void* legoobject_type_component_get(Lego_Object* obj);          /* 0044a200 */
 
 /* Container.c (container_unit.cpp): Container_GetPosition. */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);            /* 004754c0 */
 
 /* Stats.c (entity_stats.c), by its link names:

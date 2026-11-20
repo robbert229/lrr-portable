@@ -21,9 +21,8 @@
  * above, pays for its symbols (finding 538). */
 #include "lego_globs.h"
 
-/* Lego_GetMap (00431570) takes no argument; the port's entry under that
- * address, level_current_terrain_get, takes a cell (lego_unit.h). */
-#define MESSAGE_LEGO_GET_MAP() (level_current_terrain_get(0, 0))
+/* Lego_GetMap (00431570) takes no argument. */
+#define MESSAGE_LEGO_GET_MAP() (level_current_terrain_get())
 
 /* StatsFlags1: the object can be driven. */
 #define MESSAGE_STATS1_CANBEDRIVEN 0x20000

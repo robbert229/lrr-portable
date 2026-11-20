@@ -910,12 +910,12 @@ void ui_scroll_info_panel_initialize(void)
     rect.y = 0.0f;
     rect.width = 18.0f;
     rect.height = 11.0f;
-    scroll_rect_resource_record_create(0, 1, &rect.x, 0, 0);
+    scroll_rect_resource_record_create(0, 1, &rect.x, NULL, NULL);
     rect.x = 0.0f;
     rect.y = 11.0f;
     rect.width = 18.0f;
     rect.height = 11.0f;
-    scroll_rect_resource_record_create(0, 0, &rect.x, 0, 0);
+    scroll_rect_resource_record_create(0, 0, &rect.x, NULL, NULL);
     rect.x = 0.0f;
     rect.y = 0.0f;
     rect.width = 0.0f;

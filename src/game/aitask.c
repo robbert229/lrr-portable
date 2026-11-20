@@ -4328,7 +4328,7 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
                         result = aitask_target_cell_route_associate_adapter(object, task->object);
                         break;
                     case 19:
-                        result = aitask_position_step_link_adapter(object, task->field_38);
+                        result = aitask_position_step_link_adapter(object, (int)(intptr_t)task->field_38);
                         entity_reset_auxiliary_state(object);
                         break;
                     case 8:
@@ -4395,7 +4395,7 @@ int aitask_cmd_entity_command_chain_tick(struct Lego_Object* object, void* data)
             entity_position_to_terrain_cell_adapter(object, &blockPos.x, &blockPos.y);
             if (AITASK_OBJ(object)->aiTimer != *elapsed &&
                 !(AITASK_OBJ(object)->flags4 & 0xc0) &&
-                aitask_adjacent_position_find_adapter(object, &blockPos.x, &candidate.x, 0)) {
+                aitask_adjacent_position_find_adapter(object, &blockPos.x, &candidate.x)) {
                 if (candidate.x != 0 && candidate.y != 0) {
                     task = aitask_cmd_alloc(0);
                     AITASK_OBJ(object)->aiTask = task;
@@ -5238,7 +5238,7 @@ int aitask_place_command_eligibility_check(AITask* task, struct Lego_Object* obj
     } else if (task->type == 0x16) {
         if (AITASK_OBJ(object)->type != 2)
             result = 0;
-        else if (!aitask_place_command_cell_accept_adapter(&task->blockX))
+        else if (!aitask_place_command_cell_accept_adapter())
             result = 0;
         else {
             if (outWPos != NULL)

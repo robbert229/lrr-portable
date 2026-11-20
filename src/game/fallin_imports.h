@@ -38,13 +38,9 @@ void level_tile_mark_current_target(const int cell_xy[2], int set); /* 00432e00 
 uint32_t terrain_cell_mask_c0_current(int cx, int cy);             /* 00432e60 */
 uint32_t terrain_cell_edge_wall_current(const int cell_xy[2]);     /* 00432e90 */
 int terrain_cell_state_equals_one_current(const int cell_xy[2]);   /* 00432ec0 */
-/* 00431570 Lego_GetMap takes no arguments. lego_unit.c defines it with the
- * port's two ignored cell arguments, so the C matching build calls it
- * through an unprototyped function type, which pushes none, as the original
- * does; the native C++ compile goes through lego_port.cpp's adapter (as
- * rock_fall_styles_imports.h). */
+/* 00431570 Lego_GetMap takes no arguments. */
 #define FALLIN_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get(0, 0))
+    ((struct TerrainMap*)level_current_terrain_get())
 /* GAME-040 SFX.c: SFX_Random_PlaySound3DOnContainer (00465050), by the
  * port's name, which sfx.c's definition takes in the matching build. */
 int sound_submission_route_wrapper(const void* wrapped_position, int alias,

@@ -19,7 +19,7 @@ extern "C" {
 typedef struct ViewProjectionAdapter ViewProjectionAdapter;
 
 /* Container_MakeLight (FUN_004734f0). */
-void* ddiscene_light_create(void* owner, unsigned int type, float r,
+void* ddiscene_light_create(void* owner, unsigned long type, float r,
                             float g, float b);
 /* FUN_004734c0: the second argument is the container. */
 void advisor_companion_transform_apply(void* unused, void** object_reference);
@@ -30,10 +30,10 @@ float ddiscene_frame_update_and_callbacks(void* scene_object, float time);
 /* Container_GetAnimationTime (FUN_00475390). */
 float ddiscene_object_length_get(void* scene_object);
 /* Container_SetPosition (FUN_00475430). */
-int ddiscene_object_position_set(void* object, void* alternate_frame,
+void ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z);
 /* Container_SetOrientation (FUN_00475470). */
-int ddiscene_object_pose_method_dispatch(void* object,
+void ddiscene_object_pose_method_dispatch(void* object,
                                          void* alternate_frame,
                                          float parameter_3,
                                          float parameter_4,

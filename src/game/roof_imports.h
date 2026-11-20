@@ -24,7 +24,7 @@ extern "C" {
  * units already call. */
 void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object); /* 00472a40 */
 void scene_render_lock_toggle(void* scene_object, int enabled);     /* 00473b40 */
-int animated_texture_frame_count(const void* texture);              /* 00474a20 */
+unsigned long animated_texture_frame_count(const void* texture);              /* 00474a20 */
 
 /* Container functions whose port entries have C++ linkage: Detail.c's
  * PORT-ONLY adapters with the original signature, at the end of

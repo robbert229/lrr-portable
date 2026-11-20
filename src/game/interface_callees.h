@@ -169,7 +169,7 @@ int ensure_cell_entries_loaded(uint32_t kind, int row, int slot);
  * the matching build, finding 603); FUN_0040af40, the object-pool
  * callback that tests one dependency (the port spells its arguments as two
  * records). */
-void* tutorial_path_descriptor_create(const uint32_t* coord_pair);
+int tutorial_path_descriptor_create(const uint32_t* coord_pair);
 int terrain_cell_resource_entry_matches(const uint32_t* cell_record,
                                         const uint32_t* resource_entry);
 /* Encyclopedia (GAME-014): crt/crt.hpp */
@@ -228,7 +228,7 @@ int sound_submit_with_global_cooldown(int alias, int* out_handle);
 /* AITask_DoDig-style block tasks (FUN_00402510, FUN_00402d50, FUN_00403030,
  * FUN_00402fb0): the port's entries take x and y. */
 void lego_ai_create_dig(const struct Point2I* blockPos, int arg2, int arg3);
-void lego_ai_create_dynamite(const struct Point2I* blockPos, int arg2);
+int lego_ai_create_dynamite(const struct Point2I* blockPos, int arg2);
 void lego_ai_create_reinforce(const struct Point2I* blockPos);
 void lego_ai_create_dam(const struct Point2I* blockPos);
 /* FUN_004031e0: the port's entry takes a GameContext. */
@@ -256,7 +256,7 @@ int lego_object_type_for_name(const char* name, int* objType, int* objIndex,
                               int* level);
 /* FUN_0042f6f0: the port's entry has another parameter list. */
 void lego_level_block_update(LegoLevel* level, int x, int y, int arg);
-/* FUN_00431570 Lego_GetMap: the port's entry takes a block position. */
+/* FUN_00431570 Lego_GetMap. */
 struct TerrainMap* lego_get_map(void);
 /* FUN_00432a20: the port's entry takes the level too. */
 int lego_object_can_enter_block(LegoObject* obj, int x, int y);
@@ -271,14 +271,14 @@ int lego_object_pair_requirement_met(int objType, int objIndex,
  * LegoObject.c entries the port has with other contracts, or in a
  * namespace. */
 void* lego_object_get_container(LegoObject* obj);
-void lego_object_drop_carried(LegoObject* obj);
-void lego_object_go_to_block(LegoObject* obj, int dig);
-void lego_object_get_block(LegoObject* obj, int* x, int* y);
+int lego_object_drop_carried(LegoObject* obj);
+int lego_object_go_to_block(LegoObject* obj, int dig);
+int lego_object_get_block(LegoObject* obj, int* x, int* y);
 /* FUN_00438e50 and FUN_00439e70: ledger stubs in a namespace. */
 LegoObject* lego_object_find_trainer(LegoObject* obj, const Point2F* center,
                                      unsigned int mask);
 void lego_object_detach_all(LegoObject* obj, int resetMode);
-void entity_kind6_tick_down_marker_spawn_obj(LegoObject* obj);
+int entity_kind6_tick_down_marker_spawn_obj(LegoObject* obj);
 /* FUN_004754c0 Container_GetPosition: the port's entry is in view.cpp's
  * backend region. */
 void container_get_position(void* container, void* reference,

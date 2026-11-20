@@ -24,7 +24,7 @@ void* resource_name_register_or_query_target(
 /* Container_Clone (FUN_00473690). */
 void* entity_visual_resource_load(void* scene_object);
 /* FUN_004753f0: the activity's frame count. */
-unsigned int ddiscene_object_frame_position_get(void* scene_object);
+unsigned long ddiscene_object_frame_position_get(void* scene_object);
 /* FUN_004757f0: the activity's transition time from the `.ae` data. */
 float typed_child_resource_scalar_get(void* scene_object);
 

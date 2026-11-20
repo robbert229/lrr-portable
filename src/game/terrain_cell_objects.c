@@ -184,7 +184,7 @@ int electric_fence_debug_place(int bx, int by)
     if (electric_fence_can_place_at_block(bx, by)) {
         terrain_map_block_to_world(electricFenceGlobs.level->map, bx, by, &wPos.x, &wPos.y);
         object = (ElectricFenceObject*)entity_create_with_position(
-            (struct GameContext*)legoGlobs_contElectricFence, 0xb, NULL, 0, wPos.x, wPos.y, 0.0f);
+            (struct GameContext*)legoGlobs_contElectricFence, 0xb, 0, 0, wPos.x, wPos.y, 0.0f);
         electric_fence_create(object, bx, by);
         return 1;
     }
@@ -639,7 +639,7 @@ void electric_fence_stud_set(ElectricFenceLevel* level, int bx, int by,
                 terrain_map_block_to_world(level->map, bx, by, &wPos.x, &wPos.y);
                 electricFenceGlobs.fenceGrid[electricFenceGlobs.level->width * by + bx].stud =
                     (ElectricFenceObject*)entity_create_with_position(
-                        (struct GameContext*)legoGlobs_contElectricFenceStud, 0xe, NULL, 0, wPos.x,
+                        (struct GameContext*)legoGlobs_contElectricFenceStud, 0xe, 0, 0, wPos.x,
                         wPos.y, 0.0f);
                 return;
             }

@@ -47,7 +47,7 @@ typedef int (*LwsSoundEnabledFunc)(void);
 #if !defined(LEGORRR_LWS_UNIT)
 
 /* Lws_GetFrameCount (FUN_004877d0): the scene's last frame. */
-uint32_t resource_entry_id_get(const void* entry);
+unsigned long resource_entry_id_get(const void* entry);
 
 /* Lws_FindPrevKey (FUN_00487cb0): the key before `time` and the fraction
  * of the way to the next. */
@@ -56,14 +56,14 @@ float animation_track_find_keyframe_and_fraction(const void* track,
                                                  uint16_t* keyframe_out);
 
 /* Lws_KeyPassed (FUN_00487ed0): 1 when the last time step passed `time`. */
-int shared_object_sample_time_matches(const void* record, uint32_t time);
+int shared_object_sample_time_matches(const void* record, unsigned long time);
 
 /* Lws_FindPrevDissolve (FUN_00487fc0). */
 float keyframe_time_segment_fraction(const void* track, float time,
                                      uint16_t* segment_out);
 
 /* Lws_SearchMeshPathList (FUN_00488730). */
-void* pair_table_find(const void* table, uint32_t count, const char* key);
+void* pair_table_find(const void* table, unsigned long count, const char* key);
 
 /* Lws_AddMeshPathEntry (FUN_00488790). */
 void pair_table_append(void* table, int* count, const char* key,

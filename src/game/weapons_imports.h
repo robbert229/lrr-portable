@@ -37,13 +37,9 @@ extern const char* s_engine_config_root;            /* 005560c4 gameName */
 extern float s_scroll_scale;                        /* 0055615c gameSpeed */
 extern uint32_t s_panel_highlight_flags;            /* 00556ed0 flags2 */
 struct Lego_Level* level_current_owner_get(void);   /* 00431560 Lego_GetLevel */
-/* 00431570 Lego_GetMap takes no arguments. lego_unit.c defines it with the
- * port's two ignored cell arguments, so the C matching build calls it
- * through an unprototyped function type, which pushes none, as the original
- * does; the native C++ compile goes through lego.cpp's adapter (as
- * aitask_imports.h). */
+/* 00431570 Lego_GetMap takes no arguments. */
 #define WEAPONS_LEGO_GET_MAP() \
-    ((struct TerrainMap*)level_current_terrain_get(0, 0))
+    ((struct TerrainMap*)level_current_terrain_get())
 #define WEAPONS_LEGO_GET_LEVEL() ((Lego_Level*)level_current_owner_get())
 #define WEAPONS_MAP_WIDTH() (WEAPONS_LEGO_GET_MAP()->gridWidth)
 #define WEAPONS_MAP_HEIGHT() (WEAPONS_LEGO_GET_MAP()->gridHeight)
@@ -130,28 +126,28 @@ float sound_object_duration_get(int alias);                       /* 00465160 */
  * these units hang meshes on is the container's activity frame (+0x04,
  * gods98/container_record.h). */
 #define WEAPONS_CONTAINER_FRAME(cont) ((void*)((struct Container*)(cont))->activityFrame)
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);              /* 004754c0 */
-int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+void ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3]); /* 00475500 */
 void scene_object_coordinate_transform_in_place(void* object,
                                                 void* coordinates,
                                                 void* transform); /* 00475070 */
 struct EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
-    void* owner, void* callback, uint32_t mode, void* context,
-    uint32_t flag_value);                                         /* 00480870 */
-int mesh_record_allocate_and_fill(struct MeshRecordPool* pool,
-                                  uint32_t vertex_count,
-                                  uint32_t index_rows,
-                                  uint32_t index_columns,
-                                  const uint16_t* source_indices); /* 00482220 */
-void mesh_segment_vertex_fill(void* record, int block, int first_vertex,
-                              int count, const float* positions,
+    void* owner, void* callback, unsigned long mode, void* context,
+    unsigned long flag_value);                                         /* 00480870 */
+long mesh_record_allocate_and_fill(struct MeshRecordPool* pool,
+                                  unsigned long vertex_count,
+                                  unsigned long index_rows,
+                                  unsigned long index_columns,
+                                  const unsigned int* source_indices); /* 00482220 */
+void mesh_segment_vertex_fill(void* record, unsigned long block, unsigned long first_vertex,
+                              unsigned long count, const float* positions,
                               const uint32_t triple[3],
                               const uint32_t* pairs);             /* 00482620 */
-uint32_t render_object_color_vector_set(void* record, int block, float red,
+uint32_t render_object_color_vector_set(void* record, unsigned long block, float red,
                                         float green, float blue,
-                                        int slot);                /* 00483270 */
+                                        unsigned long slot);                /* 00483270 */
 
 #ifdef __cplusplus
 }

@@ -39,14 +39,12 @@ typedef float (*AnimationObjectHeightFn)(float x, float y, void* data);
 
 /* FUN_00406990: load the object (`destination`) with its container and
  * the `.ae` settings for the game name `configName` from `filename` (a path
- * without extension) under `root`. The port's contract (type_config_ports.hpp)
- * types the object and the name as `void*` and adds `rowKind`, which the
- * original does not have and the unit ignores. */
+ * without extension) under `root`. The object and the name are typed
+ * `void*`. */
 int entity_type_config_resource_row_load(void* destination,
                                          unsigned int objectId, void* root,
                                          const char* filename,
-                                         void* configName,
-                                         unsigned int rowKind);
+                                         void* configName);
 /* FUN_00406c00, FUN_00406c30, FUN_00406c60: swap the medium, high and
  * first-person meshes onto the container (or back when `swap` is 0). */
 void renderer_object_update_from_record_field64(AnimationObject* object,

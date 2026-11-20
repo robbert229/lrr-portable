@@ -96,6 +96,13 @@ if(BUILD_TESTING)
   target_link_libraries(draw_test PRIVATE units)
   add_test(NAME draw COMMAND draw_test)
   set_tests_properties(draw PROPERTIES LABELS draw)
+  # The BMP and FLIC readers on synthetic data at odd addresses.
+  add_executable(unaligned_readers_test ${ENGINE_DIR}/test_unaligned_readers.cpp)
+  target_link_libraries(unaligned_readers_test PRIVATE units)
+  add_test(NAME unaligned_readers COMMAND unaligned_readers_test)
+  # Under -fsanitize=undefined, a misaligned load fails the test.
+  set_tests_properties(unaligned_readers PROPERTIES LABELS unaligned_readers
+    ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
   # G98-029's registry walk over the test's own registry: the unit alone,
   # without the seam's stubs.
   add_executable(registry_test ${ENGINE_DIR}/test_registry.cpp ${ENGINE_DIR}/g98_029.c)

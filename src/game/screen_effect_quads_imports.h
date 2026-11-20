@@ -73,9 +73,9 @@ uint32_t entity_state_flags_get(const struct Lego_Object* e);     /* 00469e80 */
 /* gods98 Container.c (scene_pool.hpp, view.hpp, record.h, view.h). The
  * container's master frame is at +0x04. */
 void* ddiscene_object_allocate(const void* parent);              /* 00472950 */
-int ddiscene_object_position_get(void* object, void* alternate_frame,
+void ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);              /* 004754c0 */
-int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+void ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
                                     float first[3], float second[3]); /* 00475500 */
 void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* parent);        /* 00475710 */
@@ -95,24 +95,24 @@ void* scene_object_query_value_if_ready(void* object);            /* 00476f70 */
 #define sfx_mesh_load_texture_adapter mesh_load_texture /* 00482e70 */
 #define mesh_group_material_values_set mesh_set_group_material_values /* 00483420 */
 struct EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
-    void* owner, void* callback, uint32_t mode, void* context,
-    uint32_t flag_value);                                         /* 00480870 */
-int mesh_record_allocate_and_fill(struct MeshRecordPool* pool,
-                                  uint32_t vertex_count,
-                                  uint32_t index_rows,
-                                  uint32_t index_columns,
-                                  const uint16_t* source_indices); /* 00482220 */
-void instance_quad_vertex_data_fill(void* record, int block,
-                                    int first_vertex, int count,
+    void* owner, void* callback, unsigned long mode, void* context,
+    unsigned long flag_value);                                         /* 00480870 */
+long mesh_record_allocate_and_fill(struct MeshRecordPool* pool,
+                                  unsigned long vertex_count,
+                                  unsigned long index_rows,
+                                  unsigned long index_columns,
+                                  const unsigned int* source_indices); /* 00482220 */
+void instance_quad_vertex_data_fill(void* record, unsigned long block,
+                                    unsigned long first_vertex, unsigned long count,
                                     const float* positions,
                                     const float triple[3],
                                     const uint32_t* pairs);       /* 00482500 */
-void indexed_record_flag6c_bit0_set(void* record, int index, int set); /* 004827a0 */
-void animated_texture_frame_surface_set(void* texture, int frame_index,
+void indexed_record_flag6c_bit0_set(void* record, unsigned long index, int set); /* 004827a0 */
+void animated_texture_frame_surface_set(void* texture, unsigned long frame_index,
                                         const void* frame_state); /* 004830c0 */
-uint32_t render_object_color_vector_set(void* record, int block, float red,
+uint32_t render_object_color_vector_set(void* record, unsigned long block, float red,
                                         float green, float blue,
-                                        int slot);                /* 00483270 */
+                                        unsigned long slot);                /* 00483270 */
 /* 00482e70 Mesh_LoadTexture has no port entry, and 00483420
  * Mesh_SetGroupMaterialValues has C++ linkage only (the frozen
  * record_from_mesh_unit.hpp), so natively the existing unannotated
@@ -120,8 +120,8 @@ uint32_t render_object_color_vector_set(void* record, int block, float red,
 void* sfx_mesh_load_texture_adapter(const char* basePath, const char* name,
                                     unsigned int* width,
                                     unsigned int* height);        /* 00482e70 */
-uint32_t mesh_group_material_values_set(void* mesh, int group, float value,
-                                        int type);                /* 00483420 */
+uint32_t mesh_group_material_values_set(void* mesh, unsigned long group, float value,
+                                        unsigned long type);                /* 00483420 */
 
 #ifdef __cplusplus
 }

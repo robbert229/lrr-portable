@@ -166,7 +166,7 @@ void water_init_vertices(void* contRoot, Lego_Level* level)
 
         for (j = 0; j < pool->pointCount; j++) {
             group = mesh_record_allocate_or_append(pool->mesh, 4, 2, 3,
-                                                   (const unsigned short*)faceData);
+                                                   faceData);
             scene_mesh_color_and_alpha_set(pool->mesh, group, 0.0f, 0.3f, 0.8f, 0.6f);
             terrain_map_block_vertices_get(
                 (TerrainMap*)level->map,
