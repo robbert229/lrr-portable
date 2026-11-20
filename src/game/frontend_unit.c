@@ -2023,9 +2023,6 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
     if (s_overlayIndex >= 0) {
         nextMenu = origMenu;
     }
-    x = menu->xPos;
-    y = menu->yPos;
-
     if (frontGlobs_rockWipeAnim != NULL && (frontGlobs_rockWipeFlags & FRONT_ROCKWIPE_ANIMATING)) {
         viewport_clear((struct Viewport*)view, 1);
         ddiscene_scene_object_attach_or_unlink(frontGlobs_rockWipeAnim, legoGlobs_rootCont);
@@ -2042,6 +2039,9 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
         front_menu_update_overlays(menu);
     }
     front_menu_item_draw_select_text_window(&menu, &nextMenu, &origMenu);
+
+    x = menu->xPos;
+    y = menu->yPos;
 
     if (menu->displayTitle) {
         width = formatted_text_printf_width(menu->menuFont, front_util_replace_text_spaces(menu->fullName));
