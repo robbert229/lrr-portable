@@ -6113,13 +6113,16 @@ int legoobject_movement_accumulator_apply(Lego_Object* obj, float elapsed, float
     }
 
     if (obj->field_2bc != 0 || obj->field_2c0 != 0) {
-        float trans[3];
-        trans[1] = 0.0f;
-        inv = 1.0f / (float)sqrt((float)obj->field_2bc * (float)obj->field_2bc +
-                                 (float)obj->field_2c0 * (float)obj->field_2c0);
-        trans[2] = moveSpeed * (inv * (float)obj->field_2c0);
-        trans[0] = inv * (float)obj->field_2bc * moveSpeed;
-        scene_object_camera_teleport_or_offset(cont, 1, trans[0], trans[1], trans[2]);
+        /* A vector with y = 0: the original keeps it at one frame slot
+         * and stores y before scaling x and z by 1 / |(x, z)|. */
+        LegoObjL_Vector3F trans;
+        trans.x = (float)obj->field_2bc;
+        trans.y = 0.0f;
+        trans.z = (float)obj->field_2c0;
+        inv = 1.0f / (float)sqrt((trans.x * trans.x) + (trans.z * trans.z));
+        trans.x = (trans.x * inv) * moveSpeed;
+        trans.z = (trans.z * inv) * moveSpeed;
+        scene_object_camera_teleport_or_offset(cont, 1, trans.x, trans.y, trans.z);
         result = 1;
     }
 
@@ -7149,7 +7152,10 @@ int legoobject_behavior_callback_a(Lego_Object* obj, void* data)
         legoobject_transform_position_get(obj, &pos.x, &pos.y);
         legoobject_transform_position_get((Lego_Object*)data, &opos.x, &opos.y);
         legoobject_o_vector2_subtract(&d, &pos, &opos);
-        if ((dist = legoobject_o_vector2_modulus(&d)) < legoGlobs_DynamiteDamageRadius) {
+        /* Assigned before the test: the original compares with fcom, keeping
+         * the modulus for the scale. */
+        dist = legoobject_o_vector2_modulus(&d);
+        if (dist < legoGlobs_DynamiteDamageRadius) {
             legoobject_o_vector2_scale(&dir, &d, 1.0f / dist);
             legoobject_flagged_vector_step_command_issue(obj, &dir.x);
             return 0;
@@ -7200,8 +7206,11 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
         if (entity_stats_word_get(LEGOOBJ_SLOT(monster)) & 0x8000) {
             void* cont = legoobject_type_component_get(monster);
             ddiscene_object_facing_pair_get(cont, NULL, dir, NULL);
-            legoobject_o_vector2_normalise((Point2F*)dir);
-            legoobject_o_vector2_scale(&ahead, (Point2F*)dir, 15.0f);
+            /* Scaled into ahead, not normalised in place: the original never
+             * writes the unit direction back to dir. */
+            legoobject_o_vector2_scale(&ahead, (Point2F*)dir,
+                                       1.0f / legoobject_o_vector2_modulus((Point2F*)dir));
+            legoobject_o_vector2_scale(&ahead, &ahead, 15.0f);
             legoobject_o_vector2_add(&ahead, &ahead, &mpos);
             terrain_map_world_to_block(Lego_GetMap(), ahead.x, ahead.y, &blockPos[0], &blockPos[1]);
             if (!terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&

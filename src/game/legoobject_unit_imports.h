@@ -1139,7 +1139,8 @@ static __inline LegoObjJ_Vector3F* legoobject_o_vector3_scale(LegoObjJ_Vector3F*
 
 static __inline LegoObjJ_Vector3F* legoobject_o_vector3_normalise(LegoObjJ_Vector3F* r)
 {
-    return legoobject_o_vector3_scale(r, r, 1.0f / legoobject_o_vector3_modulus(r));
+    legoobject_o_vector3_scale(r, r, 1.0f / legoobject_o_vector3_modulus(r));
+    return r;
 }
 
 static __inline LegoObjJ_Vector3F* legoobject_o_vector3_cross(LegoObjJ_Vector3F* r,
@@ -1161,7 +1162,7 @@ static __inline LegoObjJ_Vector3F* legoobject_o_vector3_cross(LegoObjJ_Vector3F*
 
 static __inline float legoobject_o_vector2_modulus(Point2F* v)
 {
-    return (float)sqrt(v->x * v->x + v->y * v->y);
+    return (float)sqrt((v->x * v->x) + (v->y * v->y));
 }
 
 static __inline Point2F* legoobject_o_vector2_scale(Point2F* r, Point2F* a, float f)
@@ -1194,7 +1195,8 @@ static __inline Point2F* legoobject_o_vector2_copy(Point2F* r, Point2F* a)
 
 static __inline Point2F* legoobject_o_vector2_normalise(Point2F* r)
 {
-    return legoobject_o_vector2_scale(r, r, 1.0f / legoobject_o_vector2_modulus(r));
+    legoobject_o_vector2_scale(r, r, 1.0f / legoobject_o_vector2_modulus(r));
+    return r;
 }
 
 #ifdef __cplusplus
