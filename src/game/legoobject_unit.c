@@ -7199,11 +7199,9 @@ int legoobject_behavior_callback_b(Lego_Object* obj, void* data)
     if (obj->type == 2) {
         if (entity_stats_word_get(LEGOOBJ_SLOT(monster)) & 0x8000) {
             void* cont = legoobject_type_component_get(monster);
-            float len;
             ddiscene_object_facing_pair_get(cont, NULL, dir, NULL);
-            len = 1.0f / (float)sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
-            ahead.x = dir[0] * len * 15.0f;
-            ahead.y = dir[1] * len * 15.0f;
+            legoobject_o_vector2_normalise((Point2F*)dir);
+            legoobject_o_vector2_scale(&ahead, (Point2F*)dir, 15.0f);
             legoobject_o_vector2_add(&ahead, &ahead, &mpos);
             terrain_map_world_to_block(Lego_GetMap(), ahead.x, ahead.y, &blockPos[0], &blockPos[1]);
             if (!terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&
