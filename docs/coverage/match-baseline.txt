@@ -1,4 +1,4 @@
-# input_sha256: 1ae71ffc06ea5e24036775829809593943a5dab3c2ea0b587c4e9ada969d41c9
+# input_sha256: c71d38e6cdc0e7b2e49dfb3181694047016294ef81ffb7f65c50f52c046c1bc9
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -761,7 +761,7 @@
 0x00429850 100.00 active_engine_field_b0_get_current
 0x00429860 100.00 engine_float_field210_get_by_index_current
 0x00429880 100.00 engine_float_field260_get_current_target
-0x00429890 95.46 lego_level_load
+0x00429890 100.00 lego_level_load
 0x0042b2f0 100.00 lego_entity_effect_counters_apply_from_record
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
@@ -3486,7 +3486,7 @@
 0x00429850 100.00 active_engine_field_b0_get_current
 0x00429860 100.00 engine_float_field210_get_by_index_current
 0x00429880 100.00 engine_float_field260_get_current_target
-0x00429890 95.46 lego_level_load
+0x00429890 100.00 lego_level_load
 0x0042b2f0 100.00 lego_entity_effect_counters_apply_from_record
 0x0042b330 100.00 lego_load_tile_meshes
 0x0042b480 100.00 lego_rectangular_resource_table_destroy
