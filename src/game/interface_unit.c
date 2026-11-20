@@ -2276,17 +2276,19 @@ int interface_do_action(int type)
         case 16:
         case 17:
             command_context_post_to_hud(9, NULL);
-            return 1;
+            break;
         case 18:
             if (!(entity_stats_word_get(LEGOOBJ(obj)) & 0x2000000) &&
                 !(obj->flags4 & 0x40)) {
                 command_context_post_to_hud(11, NULL);
-                return 1;
+            } else {
+                command_context_post_to_hud(10, NULL);
             }
-            command_context_post_to_hud(10, NULL);
-            return 1;
+            break;
+        default:
+            goto done;
         }
-        break;
+        return 1;
     case 1:
         interface_spawn_request_enqueue(2, 0);
         selection_clear_request_and_hud_reset();
@@ -2656,6 +2658,7 @@ int interface_do_action(int type)
         break;
     }
 
+done:
     selection_clear_request_and_hud_reset();
     return 1;
     /* The original sends its three failure returns to one shared
