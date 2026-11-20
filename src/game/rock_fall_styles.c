@@ -97,8 +97,6 @@ typedef struct Effect_Misc {
 } Effect_Misc;
 
 typedef struct Effect_Globs {
-    unsigned int rockFallCompletedTypes[12];        /* 004c7180 */
-    unsigned int rockFallCompletedIndexes[12];      /* 004c71b0 */
     Effect_RockFall rockFallEffects[EFFECT_ROCKFALL_MAXSTYLES][EFFECT_ROCKFALL_NUMTYPES]; /* 004c71e0 */
     char* rockFallStyleNames[EFFECT_ROCKFALL_MAXSTYLES]; /* 004c7990 */
     unsigned int rockFallStyleCount;                /* 004c79a0 */
@@ -112,7 +110,7 @@ typedef struct Effect_Globs {
     int explosionCount;                             /* 004c7df4 */
 } Effect_Globs;
 
-// GLOBAL: LEGORR 0x004c7180
+// GLOBAL: LEGORR 0x004c71e0
 static Effect_Globs effectGlobs;
 
 void effect_remove_all(void);
@@ -379,6 +377,15 @@ int effect_spawn_electric_fence_beam(unsigned int type, float xPos, float yPos,
 unsigned int effect_update_all(float elapsed, unsigned int** completeTypes,
                                unsigned int** completeIndexes)
 {
+    /* The completed lists are the function's own statics, not effectGlobs
+     * fields: with both arrays in one struct MSVC walks them with a single
+     * pointer (and spills count), where the original indexes each array by
+     * count in ebx. Their names give the original .bss order (types, then
+     * indexes, then effectGlobs). */
+    // GLOBAL: LEGORR 0x004c7180
+    static unsigned int types[12];
+    // GLOBAL: LEGORR 0x004c71b0
+    static unsigned int indexes[12];
     unsigned int count = 0;
     unsigned int i, j;
     Effect_RockFall* rockFall;
@@ -389,24 +396,24 @@ unsigned int effect_update_all(float elapsed, unsigned int** completeTypes,
     effect_update_misc_effects_all(elapsed);
 
     for (i = 0; i < EFFECT_ROCKFALL_NUMTYPES; i++) {
-        if (effectGlobs.rockFallEffects[effectGlobs.rockFallStyleIndex][i].cont != NULL) {
-            rockFall = &effectGlobs.rockFallEffects[effectGlobs.rockFallStyleIndex][i];
+        rockFall = &effectGlobs.rockFallEffects[effectGlobs.rockFallStyleIndex][i];
+        if (rockFall->cont != NULL) {
             for (j = 0; j < EFFECT_ROCKFALL_MAXINSTANCES; j++) {
                 if (!rockFall->finished[j]) {
                     if (ddiscene_advance_by_time_target(rockFall->conts[j], elapsed) > 0.0f) {
                         scene_render_lock_toggle(rockFall->conts[j], 1);
                         rockFall->finished[j] = 1;
                         rockFall->partsUsed[j] = 0;
-                        effectGlobs.rockFallCompletedTypes[count] = i;
-                        effectGlobs.rockFallCompletedIndexes[count] = j;
+                        types[count] = i;
+                        indexes[count] = j;
                         count++;
                     }
                 }
             }
         }
     }
-    *completeTypes = effectGlobs.rockFallCompletedTypes;
-    *completeIndexes = effectGlobs.rockFallCompletedIndexes;
+    *completeTypes = types;
+    *completeIndexes = indexes;
 
     /* Indexed, not a walking pointer: the original's outer loop rebases
      * onto &fenceBeams[i].finished (`mov esi, edi`), which only the
