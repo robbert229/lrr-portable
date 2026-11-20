@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 cmake_minimum_required(VERSION 3.20)
 
-project(lrr-portable VERSION 0.1.0 LANGUAGES CXX)
+project(lrr-portable VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -81,13 +81,40 @@ else()
   set(LRR_VIDEO_LIBAVUTIL "libavutil.so.61,libavutil.so.60,libavutil.so.59,libavutil.so")
   set(LRR_VIDEO_LIBSWSCALE "libswscale.so.10,libswscale.so.9,libswscale.so.8,libswscale.so")
 endif()
+# The audio library decodes the CD tracks' files with miniaudio: the copy
+# isle-portable vendors when its submodules are checked out, else the same
+# release fetched at configure time.
+set(LRR_MINIAUDIO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/isle-portable/3rdparty/miniaudio"
+  CACHE PATH "miniaudio source tree (miniaudio.h and extras/stb_vorbis.c)")
+if(NOT EXISTS "${LRR_MINIAUDIO_DIR}/miniaudio.h")
+  include(FetchContent)
+  if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+  endif()
+  FetchContent_Declare(miniaudio
+    URL https://github.com/mackron/miniaudio/archive/refs/tags/0.11.25.tar.gz
+    URL_HASH MD5=6fae6da8f30afb3ddcba26fcaa64f540
+    SOURCE_SUBDIR lrr-no-cmake)
+  FetchContent_MakeAvailable(miniaudio)
+  set(LRR_MINIAUDIO_DIR "${miniaudio_SOURCE_DIR}")
+endif()
 add_library(library STATIC ${LRR_LINK_SOURCES_library})
 target_include_directories(library PUBLIC ${SRC_ROOT})
+target_include_directories(library PRIVATE "${LRR_MINIAUDIO_DIR}")
+# Only the decoders: SDL3 does the playback.
+target_compile_definitions(library PRIVATE MA_NO_DEVICE_IO MA_NO_ENCODING
+  MA_NO_GENERATION MA_NO_RESOURCE_MANAGER MA_NO_NODE_GRAPH MA_NO_ENGINE
+  MA_NO_THREADING)
+set_source_files_properties("${SRC_ROOT}/library/miniaudio_impl.c" PROPERTIES
+  COMPILE_OPTIONS "$<IF:$<C_COMPILER_ID:MSVC>,/w,-w>")
 foreach(_name IN ITEMS LIBAVFORMAT LIBAVCODEC LIBAVUTIL LIBSWSCALE)
   target_compile_definitions(library PRIVATE
     "LRR_VIDEO_${_name}=\"${LRR_VIDEO_${_name}}\"")
 endforeach()
-target_link_libraries(library PUBLIC SDL3::SDL3 ${CMAKE_DL_LIBS})
+target_link_libraries(library PUBLIC miniwin SDL3::SDL3 ${CMAKE_DL_LIBS})
+if(UNIX)
+  target_link_libraries(library PUBLIC m)
+endif()
 target_link_libraries(units PUBLIC library)
 
 # The seam's remaining stubs (ADR 0007): the imports neither miniwin nor a
@@ -173,7 +200,7 @@ if(BUILD_TESTING)
   set_tests_properties(video PROPERTIES LABELS video SKIP_RETURN_CODE 77
     ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
   add_executable(video_missing_test ${SRC_ROOT}/library/test_video_ffmpeg.cpp
-    ${LRR_LINK_SOURCES_library})
+    ${SRC_ROOT}/library/video_ffmpeg.cpp)
   target_include_directories(video_missing_test PRIVATE ${SRC_ROOT})
   target_compile_definitions(video_missing_test PRIVATE LRR_VIDEO_TEST_MISSING
     "LRR_VIDEO_TEST_CLIP=\"${LRR_VIDEO_TEST_CLIP}\""
@@ -184,6 +211,17 @@ if(BUILD_TESTING)
   target_link_libraries(video_missing_test PRIVATE SDL3::SDL3 ${CMAKE_DL_LIBS})
   add_test(NAME video_missing COMMAND video_missing_test)
   set_tests_properties(video_missing PROPERTIES LABELS video)
+
+  # The audio library and the units' audio substitution on synthetic
+  # waves: buffers, wave readers and the CD device on SDL's dummy driver,
+  # and the mix of a streamed wave and a CD track on its disk driver.
+  add_executable(audio_test ${SRC_ROOT}/library/test_audio_sdl.cpp)
+  target_link_libraries(audio_test PRIVATE units)
+  add_test(NAME audio COMMAND audio_test dummy)
+  set_tests_properties(audio PROPERTIES LABELS audio SKIP_RETURN_CODE 77
+    ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
+  add_test(NAME audio_mix COMMAND audio_test disk)
+  set_tests_properties(audio_mix PROPERTIES LABELS audio SKIP_RETURN_CODE 77)
 
   # The DirectX 6 interface versions the units use, declared in miniwin
   # (ADR 0007, decision 3): reachable, and failing rather than crashing

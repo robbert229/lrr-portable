@@ -16,14 +16,18 @@
  *    variant and an average-byte-rate probe. Only 3DSound.c calls them;
  *  - the MCI "cdaudio" commands that the CD track player uses.
  *
- * Win32 calls go through gods98/winmm.h: the Windows builds call the
- * imports, and the native port uses winmm_port.cpp's emulation. */
+ * The WinMM calls (mmio and MCI) are ADR 0007's audio substitution: each
+ * calls the audio library (library/audio_sdl.h) instead, marked
+ * `// [library:audio]`. The MCI "cdaudio" device plays the disc's tracks
+ * from audio files, and fails to open without them, as with no CD. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <SDL3/SDL_timer.h>
 
 #include "winmm.h"
+#include "files_native.h"
+#include "library/audio_sdl.h"
 #include "soundsys.h"
 #include "audio.h"
 #include "platform/window.h"
@@ -159,11 +163,11 @@ int sound_wave_memory_format_read(void* fileData, LONG fileSize,
     mmioInfo.pchBuffer = (HPSTR)fileData;
     mmioInfo.cchBuffer = fileSize;
 
-    if ((hmmioIn = mmioOpenA(NULL, &mmioInfo, MMIO_ALLOCBUF | MMIO_READ)) == NULL) {
+    if ((hmmioIn = audio_mmio_open(NULL, &mmioInfo, MMIO_ALLOCBUF | MMIO_READ)) == NULL) { // [library:audio]
         nError = WAVE_ER_CANNOTOPEN;
         goto ERROR_READING_WAVE;
     }
-    if ((nError = (int)mmioDescend(hmmioIn, pckInRIFF, NULL, 0)) != 0)
+    if ((nError = (int)audio_mmio_descend(hmmioIn, pckInRIFF, NULL, 0)) != 0) // [library:audio]
         goto ERROR_READING_WAVE;
     if (pckInRIFF->ckid != FOURCC_RIFF ||
         pckInRIFF->fccType != mmioFOURCC('W', 'A', 'V', 'E')) {
@@ -171,20 +175,20 @@ int sound_wave_memory_format_read(void* fileData, LONG fileSize,
         goto ERROR_READING_WAVE;
     }
     ckIn.ckid = mmioFOURCC('f', 'm', 't', ' ');
-    if ((nError = (int)mmioDescend(hmmioIn, &ckIn, pckInRIFF, MMIO_FINDCHUNK)) != 0)
+    if ((nError = (int)audio_mmio_descend(hmmioIn, &ckIn, pckInRIFF, MMIO_FINDCHUNK)) != 0) // [library:audio]
         goto ERROR_READING_WAVE;
     if (ckIn.cksize < (long)sizeof(PCMWAVEFORMAT)) {
         nError = WAVE_ER_NOTWAVEFILE;
         goto ERROR_READING_WAVE;
     }
-    if (mmioRead(hmmioIn, (HPSTR)&pcmWaveFormat, (long)sizeof(pcmWaveFormat)) != (long)sizeof(pcmWaveFormat)) {
+    if (audio_mmio_read(hmmioIn, (HPSTR)&pcmWaveFormat, (long)sizeof(pcmWaveFormat)) != (long)sizeof(pcmWaveFormat)) { // [library:audio]
         nError = WAVE_ER_CANNOTREAD;
         goto ERROR_READING_WAVE;
     }
     if (pcmWaveFormat.wf.wFormatTag == WAVE_FORMAT_PCM)
         cbExtraAlloc = 0;
     else {
-        if (mmioRead(hmmioIn, (HPSTR)&cbExtraAlloc, (long)sizeof(cbExtraAlloc)) != (long)sizeof(cbExtraAlloc)) {
+        if (audio_mmio_read(hmmioIn, (HPSTR)&cbExtraAlloc, (long)sizeof(cbExtraAlloc)) != (long)sizeof(cbExtraAlloc)) { // [library:audio]
             nError = WAVE_ER_CANNOTREAD;
             goto ERROR_READING_WAVE;
         }
@@ -196,12 +200,12 @@ int sound_wave_memory_format_read(void* fileData, LONG fileSize,
     memcpy(*ppwfxInfo, &pcmWaveFormat, sizeof(pcmWaveFormat));
     (*ppwfxInfo)->cbSize = cbExtraAlloc;
     if (cbExtraAlloc != 0) {
-        if (mmioRead(hmmioIn, (HPSTR)(((BYTE*)&((*ppwfxInfo)->cbSize)) + sizeof(cbExtraAlloc)), (long)cbExtraAlloc) != (long)cbExtraAlloc) {
+        if (audio_mmio_read(hmmioIn, (HPSTR)(((BYTE*)&((*ppwfxInfo)->cbSize)) + sizeof(cbExtraAlloc)), (long)cbExtraAlloc) != (long)cbExtraAlloc) { // [library:audio]
             nError = WAVE_ER_NOTWAVEFILE;
             goto ERROR_READING_WAVE;
         }
     }
-    if ((nError = mmioAscend(hmmioIn, &ckIn, 0)) != 0)
+    if ((nError = audio_mmio_ascend(hmmioIn, &ckIn, 0)) != 0) // [library:audio]
         goto ERROR_READING_WAVE;
     goto TEMPCLEANUP;
 
@@ -211,7 +215,7 @@ ERROR_READING_WAVE:
         *ppwfxInfo = NULL;
     }
     if (hmmioIn != NULL) {
-        mmioClose(hmmioIn, 0);
+        audio_mmio_close(hmmioIn, 0); // [library:audio]
         hmmioIn = NULL;
     }
 
@@ -229,21 +233,23 @@ DWORD sound_wave_file_average_bytes_per_second_read(const char* pszFileName)
     MMCKINFO ckIn;
     PCMWAVEFORMAT pcmWaveFormat;
     DWORD avgBytesPerSec;
+    char hostName[260]; // [library:filesystem]
 
     avgBytesPerSec = 0;
-    if ((hmmioIn = mmioOpenA((LPSTR)pszFileName, NULL, MMIO_READ)) != NULL) {
-        if (mmioDescend(hmmioIn, &ckInRiff, NULL, 0) == 0 &&
+    if ((hmmioIn = audio_mmio_open(files_native_host_path(hostName, pszFileName, sizeof(hostName)), // [library:audio] [library:filesystem]
+                                   NULL, MMIO_READ)) != NULL) {
+        if (audio_mmio_descend(hmmioIn, &ckInRiff, NULL, 0) == 0 && // [library:audio]
             ckInRiff.ckid == FOURCC_RIFF &&
             ckInRiff.fccType == mmioFOURCC('W', 'A', 'V', 'E')) {
             ckIn.ckid = mmioFOURCC('f', 'm', 't', ' ');
-            if (mmioDescend(hmmioIn, &ckIn, &ckInRiff, MMIO_FINDCHUNK) == 0 &&
+            if (audio_mmio_descend(hmmioIn, &ckIn, &ckInRiff, MMIO_FINDCHUNK) == 0 && // [library:audio]
                 ckIn.cksize >= (long)sizeof(PCMWAVEFORMAT)) {
-                if (mmioRead(hmmioIn, (HPSTR)&pcmWaveFormat, (long)sizeof(pcmWaveFormat)) == (long)sizeof(pcmWaveFormat))
+                if (audio_mmio_read(hmmioIn, (HPSTR)&pcmWaveFormat, (long)sizeof(pcmWaveFormat)) == (long)sizeof(pcmWaveFormat)) // [library:audio]
                     avgBytesPerSec = pcmWaveFormat.wf.nAvgBytesPerSec;
             }
         }
     }
-    if (hmmioIn != NULL) mmioClose(hmmioIn, 0);
+    if (hmmioIn != NULL) audio_mmio_close(hmmioIn, 0); // [library:audio]
     return avgBytesPerSec;
 }
 
@@ -259,16 +265,18 @@ int sound_wave_file_open_read_chunks(const char* pszFileName,
     PCMWAVEFORMAT pcmWaveFormat;
     WORD cbExtraAlloc;
     int nError;
+    char hostName[260]; // [library:filesystem]
 
     *ppwfxInfo = NULL;
     nError = 0;
     hmmioIn = NULL;
 
-    if ((hmmioIn = mmioOpenA((LPSTR)pszFileName, NULL, MMIO_ALLOCBUF | MMIO_READ)) == NULL) {
+    if ((hmmioIn = audio_mmio_open(files_native_host_path(hostName, pszFileName, sizeof(hostName)), // [library:audio] [library:filesystem]
+                                   NULL, MMIO_ALLOCBUF | MMIO_READ)) == NULL) {
         nError = WAVE_ER_CANNOTOPEN;
         goto ERROR_READING_WAVE;
     }
-    if ((nError = (int)mmioDescend(hmmioIn, pckInRIFF, NULL, 0)) != 0)
+    if ((nError = (int)audio_mmio_descend(hmmioIn, pckInRIFF, NULL, 0)) != 0) // [library:audio]
         goto ERROR_READING_WAVE;
     if (pckInRIFF->ckid != FOURCC_RIFF ||
         pckInRIFF->fccType != mmioFOURCC('W', 'A', 'V', 'E')) {
@@ -276,20 +284,20 @@ int sound_wave_file_open_read_chunks(const char* pszFileName,
         goto ERROR_READING_WAVE;
     }
     ckIn.ckid = mmioFOURCC('f', 'm', 't', ' ');
-    if ((nError = (int)mmioDescend(hmmioIn, &ckIn, pckInRIFF, MMIO_FINDCHUNK)) != 0)
+    if ((nError = (int)audio_mmio_descend(hmmioIn, &ckIn, pckInRIFF, MMIO_FINDCHUNK)) != 0) // [library:audio]
         goto ERROR_READING_WAVE;
     if (ckIn.cksize < (long)sizeof(PCMWAVEFORMAT)) {
         nError = WAVE_ER_NOTWAVEFILE;
         goto ERROR_READING_WAVE;
     }
-    if (mmioRead(hmmioIn, (HPSTR)&pcmWaveFormat, (long)sizeof(pcmWaveFormat)) != (long)sizeof(pcmWaveFormat)) {
+    if (audio_mmio_read(hmmioIn, (HPSTR)&pcmWaveFormat, (long)sizeof(pcmWaveFormat)) != (long)sizeof(pcmWaveFormat)) { // [library:audio]
         nError = WAVE_ER_CANNOTREAD;
         goto ERROR_READING_WAVE;
     }
     if (pcmWaveFormat.wf.wFormatTag == WAVE_FORMAT_PCM)
         cbExtraAlloc = 0;
     else {
-        if (mmioRead(hmmioIn, (HPSTR)&cbExtraAlloc, (long)sizeof(cbExtraAlloc)) != (long)sizeof(cbExtraAlloc)) {
+        if (audio_mmio_read(hmmioIn, (HPSTR)&cbExtraAlloc, (long)sizeof(cbExtraAlloc)) != (long)sizeof(cbExtraAlloc)) { // [library:audio]
             nError = WAVE_ER_CANNOTREAD;
             goto ERROR_READING_WAVE;
         }
@@ -301,12 +309,12 @@ int sound_wave_file_open_read_chunks(const char* pszFileName,
     memcpy(*ppwfxInfo, &pcmWaveFormat, sizeof(pcmWaveFormat));
     (*ppwfxInfo)->cbSize = cbExtraAlloc;
     if (cbExtraAlloc != 0) {
-        if (mmioRead(hmmioIn, (HPSTR)(((BYTE*)&((*ppwfxInfo)->cbSize)) + sizeof(cbExtraAlloc)), (long)cbExtraAlloc) != (long)cbExtraAlloc) {
+        if (audio_mmio_read(hmmioIn, (HPSTR)(((BYTE*)&((*ppwfxInfo)->cbSize)) + sizeof(cbExtraAlloc)), (long)cbExtraAlloc) != (long)cbExtraAlloc) { // [library:audio]
             nError = WAVE_ER_NOTWAVEFILE;
             goto ERROR_READING_WAVE;
         }
     }
-    if ((nError = mmioAscend(hmmioIn, &ckIn, 0)) != 0)
+    if ((nError = audio_mmio_ascend(hmmioIn, &ckIn, 0)) != 0) // [library:audio]
         goto ERROR_READING_WAVE;
     goto TEMPCLEANUP;
 
@@ -316,7 +324,7 @@ ERROR_READING_WAVE:
         *ppwfxInfo = NULL;
     }
     if (hmmioIn != NULL) {
-        mmioClose(hmmioIn, 0);
+        audio_mmio_close(hmmioIn, 0); // [library:audio]
         hmmioIn = NULL;
     }
 
@@ -331,9 +339,9 @@ TEMPCLEANUP:
 int sound_wave_data_chunk_open(HMMIO* phmmioIn, MMCKINFO* pckIn,
                                MMCKINFO* pckInRIFF)
 {
-    mmioSeek(*phmmioIn, pckInRIFF->dwDataOffset + sizeof(FOURCC), SEEK_SET);
+    audio_mmio_seek(*phmmioIn, pckInRIFF->dwDataOffset + sizeof(FOURCC), SEEK_SET); // [library:audio]
     pckIn->ckid = mmioFOURCC('d', 'a', 't', 'a');
-    return mmioDescend(*phmmioIn, pckIn, pckInRIFF, MMIO_FINDCHUNK);
+    return audio_mmio_descend(*phmmioIn, pckIn, pckInRIFF, MMIO_FINDCHUNK); // [library:audio]
 }
 
 /* WaveReadFile: copy up to cbRead bytes of the data chunk through mmio's
@@ -347,7 +355,7 @@ int sound_wave_data_read(HMMIO hmmioIn, UINT cbRead, BYTE* pbDest,
     int nError;
     UINT cT, cbDataIn;
 
-    if ((nError = mmioGetInfo(hmmioIn, &mmioinfoIn, 0) != 0) != 0)
+    if ((nError = audio_mmio_get_info(hmmioIn, &mmioinfoIn, 0) != 0) != 0) // [library:audio]
         goto ERROR_CANNOT_READ;
     cbDataIn = cbRead;
     if (cbDataIn > pckIn->cksize)
@@ -355,7 +363,7 @@ int sound_wave_data_read(HMMIO hmmioIn, UINT cbRead, BYTE* pbDest,
     pckIn->cksize -= cbDataIn;
     for (cT = 0; cT < cbDataIn; cT++) {
         if (mmioinfoIn.pchNext == mmioinfoIn.pchEndRead) {
-            if ((nError = mmioAdvance(hmmioIn, &mmioinfoIn, MMIO_READ)) != 0)
+            if ((nError = audio_mmio_advance(hmmioIn, &mmioinfoIn, MMIO_READ)) != 0) // [library:audio]
                 goto ERROR_CANNOT_READ;
             if (mmioinfoIn.pchNext == mmioinfoIn.pchEndRead) {
                 nError = WAVE_ER_CORRUPTWAVEFILE;
@@ -364,7 +372,7 @@ int sound_wave_data_read(HMMIO hmmioIn, UINT cbRead, BYTE* pbDest,
         }
         *((BYTE*)pbDest + cT) = (BYTE)*mmioinfoIn.pchNext++;
     }
-    if ((nError = mmioSetInfo(hmmioIn, &mmioinfoIn, 0)) != 0)
+    if ((nError = audio_mmio_set_info(hmmioIn, &mmioinfoIn, 0)) != 0) // [library:audio]
         goto ERROR_CANNOT_READ;
     *cbActualRead = cbDataIn;
     goto FINISHED_READING;
@@ -386,7 +394,7 @@ int sound_wave_handle_and_buffer_release(HMMIO* phmmio,
         *ppwfxSrc = NULL;
     }
     if (*phmmio != NULL) {
-        mmioClose(*phmmio, 0);
+        audio_mmio_close(*phmmio, 0); // [library:audio]
         *phmmio = NULL;
     }
     return 0;
@@ -401,7 +409,7 @@ int media_cd_audio_track_play_from(int track)
 
     // STRING: LEGORR 0x004ab6e0
     wsprintfA(chText, "play cdaudio from %i", track + 1);
-    if ((soundGlobs.mciErr = mciSendStringA(chText, sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL)) != 0) {
+    if ((soundGlobs.mciErr = audio_mci_send_string(chText, sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL)) != 0) { // [library:audio]
         media_cd_audio_error_text_get();
         return 0;
     }
@@ -412,7 +420,7 @@ int media_cd_audio_track_play_from(int track)
 // FUNCTION: LEGORR 0x00489260
 void media_cd_audio_error_text_get(void)
 {
-    mciGetErrorStringA(soundGlobs.mciErr, sound_mci_return, SOUND_MCI_RETURN_SIZE);
+    audio_mci_get_error_string(soundGlobs.mciErr, sound_mci_return, SOUND_MCI_RETURN_SIZE); // [library:audio]
 }
 
 /* Status_CDTrack: whether the disc is still playing track or an earlier
@@ -426,12 +434,12 @@ int media_cd_audio_track_completion_poll(int track)
     track++;
     // STRING: LEGORR 0x004ab720
     sprintf(chText, "status cdaudio mode");
-    soundGlobs.mciErr = mciSendStringA(chText, sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL);
+    soundGlobs.mciErr = audio_mci_send_string(chText, sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL); // [library:audio]
     // STRING: LEGORR 0x004ab718
     if (_strcmpi(sound_mci_return, "stopped") == 0) goto not_playing;
     // STRING: LEGORR 0x004ab6f8
     sprintf(chText, "status cdaudio current track");
-    soundGlobs.mciErr = mciSendStringA(chText, sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL);
+    soundGlobs.mciErr = audio_mci_send_string(chText, sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL); // [library:audio]
     if (atoi(sound_mci_return) > track) {
 not_playing:
         media_cd_audio_error_text_get();
@@ -447,9 +455,9 @@ not_playing:
 int media_cd_audio_device_open(int track)
 {
     // STRING: LEGORR 0x004ab754
-    if ((soundGlobs.mciErr = mciSendStringA("open cdaudio", sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL)) == 0) {
+    if ((soundGlobs.mciErr = audio_mci_send_string("open cdaudio", sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL)) == 0) { // [library:audio]
         // STRING: LEGORR 0x004ab734
-        if ((soundGlobs.mciErr = mciSendStringA("set cdaudio time format tmsf", sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL)) == 0)
+        if ((soundGlobs.mciErr = audio_mci_send_string("set cdaudio time format tmsf", sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL)) == 0) // [library:audio]
             media_cd_audio_track_play_from(track);
     }
     if (soundGlobs.mciErr != 0) {
@@ -465,9 +473,9 @@ int media_cd_audio_device_open(int track)
 int media_cd_audio_stop_and_close(void)
 {
     // STRING: LEGORR 0x004ab774
-    if ((soundGlobs.mciErr = mciSendStringA("stop cdaudio", sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL)) == 0)
+    if ((soundGlobs.mciErr = audio_mci_send_string("stop cdaudio", sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL)) == 0) // [library:audio]
         // STRING: LEGORR 0x004ab764
-        soundGlobs.mciErr = mciSendStringA("close cdaudio", sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL);
+        soundGlobs.mciErr = audio_mci_send_string("close cdaudio", sound_mci_return, SOUND_MCI_RETURN_SIZE, NULL); // [library:audio]
     if (soundGlobs.mciErr != 0) {
         media_cd_audio_error_text_get();
         return 0;

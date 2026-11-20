@@ -116,3 +116,5 @@ lrr_link(platform -     platform      platform/native/seam_stubs.cpp)
 
 # The libraries the units' substitutions call (ADR 0007).
 lrr_link(library  -     library       library/video_ffmpeg.cpp)
+lrr_link(library  -     library       library/audio_sdl.cpp)
+lrr_link(library  -     library       library/miniaudio_impl.c)
