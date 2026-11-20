@@ -2104,13 +2104,16 @@ int sound_streamed_wave_buffer_setup(const char* fName, int loop, int volume)
 #if defined(SOUND3D_DIRECTSOUND)
 int sound_stream_drain_check(int loop)
 {
-    Sound3DStreamData* stream = loop ? &s_sound3d.loopStreamData : &s_sound3d.streamData;
+    Sound3DStreamData* stream;
     void* lpvAudio1;
     DWORD dwBytes1;
     void* lpvAudio2;
     DWORD dwBytes2;
     UINT cbActualRead;
     UINT pos;
+
+    if (loop) stream = &s_sound3d.loopStreamData;
+    else stream = &s_sound3d.streamData;
 
     if (SOUND3D_STREAM_BUFFER(loop)->lpVtbl->Lock(SOUND3D_STREAM_BUFFER(loop), 0,
             stream->bufferSize, &lpvAudio1, &dwBytes1, &lpvAudio2, &dwBytes2, 0) != SOUND3D_DS_OK) {
