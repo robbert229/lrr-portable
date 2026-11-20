@@ -6199,7 +6199,10 @@ void lego_play_movie(const char* fName, const float* screenPt)
                 noScreenPt = 0;
             } else noScreenPt = 1;
             if (!noScreenPt) directdraw_return_front_buffer();
-            while (movie_update(mov, 1.0f,
+            /* PORT-ONLY: a close request ends the movie, as in
+             * front_play_movie. */
+            while (!s_window_close_requested &&
+                   movie_update(mov, 1.0f,
                                 noScreenPt ? NULL : (struct RECT*)&rect)) {
                 main_loop_frame_pump(noScreenPt);
             }
