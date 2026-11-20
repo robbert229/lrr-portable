@@ -8,6 +8,7 @@
 #include "miniaudio.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -22,6 +23,8 @@
 struct AudioListener {
     AudioDevice* device;
     float pos[3];
+    float front[3];
+    float top[3];
     float rolloff;
 };
 
@@ -39,13 +42,15 @@ struct AudioBuffer {
     std::shared_ptr<std::vector<Uint8>> data;
     DWORD size;
     DWORD blockAlign;
-    SDL_AudioSpec spec;
-    SDL_AudioStream* stream;
+    SDL_AudioSpec spec;     /* the buffer's own format */
+    SDL_AudioStream* stream; /* fed float stereo at the buffer's rate */
     bool bound;
     /* Under the stream's lock: the mix reads them. */
     DWORD cursor;   /* the next byte the stream is fed */
     bool playing;
     bool looping;
+    float pan[2];   /* the channels' gains, which the feed ramps to */
+    float fed[2];   /* the channels' gains at the end of the last feed */
     LONG volume;
     /* IDirectSound3DBuffer. */
     bool is3D;
@@ -55,9 +60,8 @@ struct AudioBuffer {
     float maxDistance;
 };
 
-namespace {
+namespace audio_sdl_detail {
 
-/* DirectSound's attenuation, in hundredths of a decibel, as a gain. */
 float GainOfVolume(LONG volume)
 {
     if (volume <= -10000) return 0.0f;
@@ -67,31 +71,106 @@ float GainOfVolume(LONG volume)
 
 /* DirectSound's default rolloff: full gain inside the minimum distance,
  * minimum / distance (to the rolloff factor's power) beyond it, and silence
- * at the maximum distance (DSBCAPS_MUTE3DATMAXDISTANCE). */
-float GainOf3D(const AudioBuffer* buffer)
+ * at the maximum distance (DSBCAPS_MUTE3DATMAXDISTANCE). The pan: the far
+ * channel's gain is 1 - |sin azimuth|, where sin azimuth is the offset's
+ * component along the listener's right (top x front, DirectSound's
+ * coordinates being left-handed) over its length. */
+void GainsOf3D(const float offset[3], const float front[3], const float top[3],
+               float minDistance, float maxDistance, float rolloff,
+               float* left, float* right)
 {
-    if (!buffer->is3D || buffer->mode3D == AUDIO_3D_MODE_DISABLE) return 1.0f;
-    const AudioListener& listener = buffer->device->listener;
-    float dx = buffer->pos[0] - listener.pos[0];
-    float dy = buffer->pos[1] - listener.pos[1];
-    float dz = buffer->pos[2] - listener.pos[2];
-    float distance = sqrtf(dx * dx + dy * dy + dz * dz);
-    if (distance >= buffer->maxDistance) return 0.0f;
-    if (distance <= buffer->minDistance || buffer->minDistance <= 0.0f) return 1.0f;
-    return powf(buffer->minDistance / distance, listener.rolloff);
+    *left = *right = 1.0f;
+    float distance = sqrtf(offset[0] * offset[0] + offset[1] * offset[1] +
+                           offset[2] * offset[2]);
+    float gain = 1.0f;
+    if (distance >= maxDistance) gain = 0.0f;
+    else if (distance > minDistance && minDistance > 0.0f) {
+        gain = powf(minDistance / distance, rolloff);
+    }
+    float side[3] = {
+        top[1] * front[2] - top[2] * front[1],
+        top[2] * front[0] - top[0] * front[2],
+        top[0] * front[1] - top[1] * front[0],
+    };
+    float sideLength = sqrtf(side[0] * side[0] + side[1] * side[1] + side[2] * side[2]);
+    float pan = 0.0f;
+    if (distance > 1.0e-6f && sideLength > 1.0e-6f) {
+        pan = (offset[0] * side[0] + offset[1] * side[1] + offset[2] * side[2]) /
+              (distance * sideLength);
+        pan = std::max(-1.0f, std::min(1.0f, pan));
+    }
+    *left = gain * (pan > 0.0f ? 1.0f - pan : 1.0f);
+    *right = gain * (pan < 0.0f ? 1.0f + pan : 1.0f);
 }
 
+float GainOfFader(DWORD value)
+{
+    return (float)std::min<DWORD>(value, 0xffff) / 65535.0f;
+}
+
+} // namespace audio_sdl_detail
+
+namespace {
+
+using audio_sdl_detail::GainOfVolume;
+
+/* The 3D gains of a buffer, per channel; 1 for a 2D buffer. */
+void GainsOf3D(const AudioBuffer* buffer, float* left, float* right)
+{
+    *left = *right = 1.0f;
+    if (!buffer->is3D || buffer->mode3D == AUDIO_3D_MODE_DISABLE) return;
+    const AudioListener& listener = buffer->device->listener;
+    if (buffer->mode3D == AUDIO_3D_MODE_HEADRELATIVE) {
+        static const float kFront[3] = { 0.0f, 0.0f, 1.0f };
+        static const float kTop[3] = { 0.0f, 1.0f, 0.0f };
+        audio_sdl_detail::GainsOf3D(buffer->pos, kFront, kTop, buffer->minDistance,
+                                    buffer->maxDistance, listener.rolloff, left, right);
+        return;
+    }
+    float offset[3] = {
+        buffer->pos[0] - listener.pos[0],
+        buffer->pos[1] - listener.pos[1],
+        buffer->pos[2] - listener.pos[2],
+    };
+    audio_sdl_detail::GainsOf3D(offset, listener.front, listener.top, buffer->minDistance,
+                                buffer->maxDistance, listener.rolloff, left, right);
+}
+
+/* The buffer's volume is the stream's gain; the 3D gains are the feed's. */
 void ApplyGain(AudioBuffer* buffer)
 {
-    if (buffer->stream) {
-        SDL_SetAudioStreamGain(buffer->stream,
-                               GainOfVolume(buffer->volume) * GainOf3D(buffer));
+    if (!buffer->stream) return;
+    float left, right;
+    GainsOf3D(buffer, &left, &right);
+    SDL_SetAudioStreamGain(buffer->stream, GainOfVolume(buffer->volume));
+    SDL_LockAudioStream(buffer->stream);
+    buffer->pan[0] = left;
+    buffer->pan[1] = right;
+    if (!buffer->playing) {
+        /* Nothing is playing to ramp from. */
+        buffer->fed[0] = left;
+        buffer->fed[1] = right;
     }
+    SDL_UnlockAudioStream(buffer->stream);
+}
+
+/* The stream's input: float stereo at the buffer's rate. */
+const int kFedFrameBytes = (int)sizeof(float) * 2;
+
+/* One of the buffer's samples at frame, channel, as a float. */
+float SampleAt(const AudioBuffer* buffer, const Uint8* frame, int channel)
+{
+    if (buffer->spec.format == SDL_AUDIO_U8) {
+        return ((float)frame[channel] - 128.0f) / 128.0f;
+    }
+    const Uint8* bytes = frame + 2 * channel;
+    return (float)(Sint16)(bytes[0] | (bytes[1] << 8)) / 32768.0f;
 }
 
 /* The stream's get callback, on the audio thread with the stream locked:
  * feed it from the cursor, wrapping a looping buffer and stopping at the
- * end of a one-shot. */
+ * end of a one-shot, as float stereo with the channels' gains ramped from
+ * the last feed's to the current ones. */
 void SDLCALL FeedBuffer(void* userdata, SDL_AudioStream* stream,
                         int additional, int total)
 {
@@ -101,8 +180,16 @@ void SDLCALL FeedBuffer(void* userdata, SDL_AudioStream* stream,
         buffer->playing = false;
         return;
     }
-    while (additional > 0 && buffer->playing) {
-        DWORD left = buffer->size - buffer->cursor;
+    const int channels = buffer->spec.channels;
+    const DWORD blockAlign = buffer->blockAlign;
+    int frames = (additional + kFedFrameBytes - 1) / kFedFrameBytes;
+    const float step[2] = {
+        frames > 0 ? (buffer->pan[0] - buffer->fed[0]) / (float)frames : 0.0f,
+        frames > 0 ? (buffer->pan[1] - buffer->fed[1]) / (float)frames : 0.0f,
+    };
+    float out[512 * 2];
+    while (frames > 0 && buffer->playing) {
+        DWORD left = (buffer->size - buffer->cursor) / blockAlign;
         if (left == 0) {
             if (buffer->looping) {
                 buffer->cursor = 0;
@@ -114,20 +201,29 @@ void SDLCALL FeedBuffer(void* userdata, SDL_AudioStream* stream,
             SDL_FlushAudioStream(stream);
             break;
         }
-        DWORD bytes = std::min(left, (DWORD)additional);
-        /* Whole frames only; the buffer's size is a whole number of them. */
-        bytes = ((bytes + buffer->blockAlign - 1) / buffer->blockAlign) * buffer->blockAlign;
-        if (bytes > left) bytes = left;
-        SDL_PutAudioStreamData(stream, buffer->data->data() + buffer->cursor, (int)bytes);
-        buffer->cursor += bytes;
-        additional -= (int)bytes;
+        int count = (int)std::min<DWORD>(left, (DWORD)std::min(frames, 512));
+        const Uint8* in = buffer->data->data() + buffer->cursor;
+        for (int i = 0; i < count; i++, in += blockAlign) {
+            buffer->fed[0] += step[0];
+            buffer->fed[1] += step[1];
+            float l = SampleAt(buffer, in, 0);
+            float r = channels > 1 ? SampleAt(buffer, in, 1) : l;
+            out[2 * i] = l * buffer->fed[0];
+            out[2 * i + 1] = r * buffer->fed[1];
+        }
+        SDL_PutAudioStreamData(stream, out, count * kFedFrameBytes);
+        buffer->cursor += (DWORD)count * blockAlign;
+        frames -= count;
     }
+    buffer->fed[0] = buffer->pan[0];
+    buffer->fed[1] = buffer->pan[1];
 }
 
 bool SpecOfFormat(const WAVEFORMATEX* format, SDL_AudioSpec* spec)
 {
     if (!format || format->wFormatTag != WAVE_FORMAT_PCM) return false;
-    if (format->nChannels < 1 || format->nChannels > 8) return false;
+    /* DirectSound 6's PCM: mono or stereo, 8 or 16 bits. */
+    if (format->nChannels < 1 || format->nChannels > 2) return false;
     if (format->nSamplesPerSec == 0) return false;
     if (format->wBitsPerSample == 8) spec->format = SDL_AUDIO_U8;
     else if (format->wBitsPerSample == 16) spec->format = SDL_AUDIO_S16LE;
@@ -145,12 +241,15 @@ AudioBuffer* NewBuffer(AudioDevice* device)
     buffer->blockAlign = 1;
     buffer->minDistance = 1.0f;     /* DS3D_DEFAULTMINDISTANCE */
     buffer->maxDistance = 1.0e9f;   /* DS3D_DEFAULTMAXDISTANCE */
+    buffer->pan[0] = buffer->pan[1] = 1.0f;
+    buffer->fed[0] = buffer->fed[1] = 1.0f;
     return buffer;
 }
 
 bool OpenStream(AudioBuffer* buffer)
 {
-    buffer->stream = SDL_CreateAudioStream(&buffer->spec, &buffer->spec);
+    SDL_AudioSpec fed = { SDL_AUDIO_F32, 2, buffer->spec.freq };
+    buffer->stream = SDL_CreateAudioStream(&fed, &fed);
     if (!buffer->stream) return false;
     SDL_SetAudioStreamGetCallback(buffer->stream, FeedBuffer, buffer);
     ApplyGain(buffer);
@@ -177,6 +276,8 @@ long audio_create(AudioDevice** device)
     created->id = id;
     created->volume = 0;
     created->listener.device = created;
+    created->listener.front[2] = 1.0f;  /* DS3D's default orientation */
+    created->listener.top[1] = 1.0f;
     created->listener.rolloff = 1.0f;
     *device = created;
     return AUDIO_OK;
@@ -295,6 +396,10 @@ long audio_buffer_play(AudioBuffer* buffer, DWORD reserved1, DWORD priority,
     if (!buffer) return AUDIO_ERR_INVALIDPARAM;
     if (buffer->primary) return AUDIO_OK;
     SDL_LockAudioStream(buffer->stream);
+    if (!buffer->playing) {
+        buffer->fed[0] = buffer->pan[0];
+        buffer->fed[1] = buffer->pan[1];
+    }
     buffer->playing = true;
     buffer->looping = (flags & AUDIO_PLAY_LOOPING) != 0;
     SDL_UnlockAudioStream(buffer->stream);
@@ -335,11 +440,13 @@ long audio_buffer_get_current_position(AudioBuffer* buffer, DWORD* play,
     if (!buffer || buffer->primary || buffer->size == 0) return AUDIO_ERR_INVALIDPARAM;
     SDL_LockAudioStream(buffer->stream);
     /* The play cursor trails the fed cursor by what the stream still
-     * holds, in the buffer's own format. */
+     * holds, which it holds as float stereo frames. */
     int queued = SDL_GetAudioStreamQueued(buffer->stream);
     DWORD cursor = buffer->cursor;
     SDL_UnlockAudioStream(buffer->stream);
-    DWORD behind = queued > 0 ? (DWORD)queued % buffer->size : 0;
+    DWORD behind = queued > 0
+        ? (DWORD)(((unsigned long long)queued / kFedFrameBytes * buffer->blockAlign) % buffer->size)
+        : 0;
     DWORD position = (cursor + buffer->size - behind) % buffer->size;
     if (play) *play = position;
     if (write) *write = cursor % buffer->size;
@@ -487,15 +594,21 @@ long audio_listener_set_orientation(AudioListener* listener, float frontX,
                                     float frontY, float frontZ, float topX,
                                     float topY, float topZ, DWORD apply)
 {
-    /* Orientation only pans, which the library does not do. */
-    (void)frontX; (void)frontY; (void)frontZ;
-    (void)topX; (void)topY; (void)topZ; (void)apply;
-    return listener ? AUDIO_OK : AUDIO_ERR_INVALIDPARAM;
+    (void)apply;
+    if (!listener) return AUDIO_ERR_INVALIDPARAM;
+    listener->front[0] = frontX;
+    listener->front[1] = frontY;
+    listener->front[2] = frontZ;
+    listener->top[0] = topX;
+    listener->top[1] = topY;
+    listener->top[2] = topZ;
+    return AUDIO_OK;
 }
 
 long audio_listener_set_doppler_factor(AudioListener* listener, float factor,
                                        DWORD apply)
 {
+    /* Doppler follows velocities, which the units never set: no shift. */
     (void)factor;
     (void)apply;
     return listener ? AUDIO_OK : AUDIO_ERR_INVALIDPARAM;
@@ -722,6 +835,9 @@ struct CdAudio {
 
 CdAudio s_cd;
 
+/* The mixer's CD-audio fader, per channel: 0 to 65535. */
+std::atomic<DWORD> s_cdFader[kCdChannels] = { { 0xffff }, { 0xffff } };
+
 struct FindEntry {
     const char* want;
     std::string found;
@@ -809,6 +925,16 @@ void SDLCALL FeedCd(void* userdata, SDL_AudioStream* stream, int additional,
         ma_uint64 got = 0;
         ma_result result = ma_decoder_read_pcm_frames(&s_cd.decoder, frames, want, &got);
         if (got > 0) {
+            /* The mixer's fader, as the CD drive's analogue line was. */
+            for (int c = 0; c < kCdChannels; c++) {
+                DWORD fader = s_cdFader[c].load(std::memory_order_relaxed);
+                if (fader >= 0xffff) continue;
+                float gain = audio_sdl_detail::GainOfFader(fader);
+                for (ma_uint64 i = 0; i < got; i++) {
+                    Sint16& sample = frames[i * kCdChannels + c];
+                    sample = (Sint16)lrintf((float)sample * gain);
+                }
+            }
             SDL_PutAudioStreamData(stream, frames, (int)got * frameBytes);
             additional -= (int)got * frameBytes;
         }
@@ -938,6 +1064,179 @@ BOOL audio_mci_get_error_string(MCIERROR error, LPSTR text, UINT capacity)
     }
     SDL_strlcpy(text, message, capacity);
     return TRUE;
+}
+
+} /* extern "C" */
+
+/* --- mixer ------------------------------------------------------------------ */
+
+struct HMIXER__ {
+    int unused;
+};
+
+namespace {
+
+/* mmsystem.h's codes and the lines' types. */
+const MMRESULT kMmsyserrBadDeviceId = 2;
+const MMRESULT kMmsyserrInvalFlag = 10;
+const MMRESULT kMmsyserrInvalParam = 11;
+const MMRESULT kMixerrInvalLine = 1024;
+const MMRESULT kMixerrInvalControl = 1025;
+const DWORD kComponentDstSpeakers = 4;
+const DWORD kLineActive = 1;
+const DWORD kLineSource = 0x80000000;
+
+/* The line and control IDs. */
+const DWORD kSpeakersLineId = 0xffff0000;
+const DWORD kCdLineId = 0;
+const DWORD kCdVolumeControlId = 1;
+
+HMIXER__ s_mixer;
+
+bool IsMixer(HMIXEROBJ mixer)
+{
+    return reinterpret_cast<void*>(mixer) == static_cast<void*>(&s_mixer);
+}
+
+} // namespace
+
+extern "C" {
+
+UINT audio_mixer_get_num_devs(void)
+{
+    return 1;
+}
+
+MMRESULT audio_mixer_open(HMIXER* mixer, UINT device, DWORD_PTR callback,
+                          DWORD_PTR instance, DWORD flags)
+{
+    (void)callback;
+    (void)instance;
+    if (!mixer) return kMmsyserrInvalParam;
+    *mixer = NULL;
+    if (device != 0) return kMmsyserrBadDeviceId;
+    if (flags != 0) return kMmsyserrInvalFlag; /* no callbacks */
+    *mixer = &s_mixer;
+    return MMSYSERR_NOERROR;
+}
+
+MMRESULT audio_mixer_close(HMIXER mixer)
+{
+    return mixer == &s_mixer ? MMSYSERR_NOERROR : MMSYSERR_INVALHANDLE;
+}
+
+MMRESULT audio_mixer_get_dev_caps(UINT_PTR device, MIXERCAPSA* caps, UINT size)
+{
+    if (device != 0) return kMmsyserrBadDeviceId;
+    if (!caps || size < sizeof(MIXERCAPSA)) return kMmsyserrInvalParam;
+    memset(caps, 0, sizeof(*caps));
+    SDL_strlcpy(caps->szPname, "SDL audio", sizeof(caps->szPname));
+    caps->cDestinations = 1;
+    return MMSYSERR_NOERROR;
+}
+
+MMRESULT audio_mixer_get_line_info(HMIXEROBJ mixer, MIXERLINEA* line, DWORD flags)
+{
+    if (!IsMixer(mixer)) return MMSYSERR_INVALHANDLE;
+    if (!line || line->cbStruct < sizeof(MIXERLINEA)) return kMmsyserrInvalParam;
+    if (line->dwDestination != 0) return kMixerrInvalLine;
+    DWORD destination = line->dwDestination;
+    DWORD source = line->dwSource;
+    if (flags == MIXER_GETLINEINFOF_DESTINATION) {
+        memset(line, 0, sizeof(*line));
+        line->cbStruct = sizeof(*line);
+        line->dwDestination = destination;
+        line->dwLineID = kSpeakersLineId;
+        line->fdwLine = kLineActive;
+        line->dwComponentType = kComponentDstSpeakers;
+        line->cChannels = kCdChannels;
+        line->cConnections = 1;
+        line->cControls = 0;
+        SDL_strlcpy(line->szShortName, "Speakers", sizeof(line->szShortName));
+        SDL_strlcpy(line->szName, "Speakers", sizeof(line->szName));
+        return MMSYSERR_NOERROR;
+    }
+    if (flags == MIXER_GETLINEINFOF_SOURCE) {
+        if (source != 0) return kMixerrInvalLine;
+        memset(line, 0, sizeof(*line));
+        line->cbStruct = sizeof(*line);
+        line->dwDestination = destination;
+        line->dwSource = source;
+        line->dwLineID = kCdLineId;
+        line->fdwLine = kLineActive | kLineSource;
+        line->dwComponentType = MIXERLINE_COMPONENTTYPE_SRC_COMPACTDISC;
+        line->cChannels = kCdChannels;
+        line->cConnections = 0;
+        line->cControls = 1;
+        SDL_strlcpy(line->szShortName, "CD Audio", sizeof(line->szShortName));
+        SDL_strlcpy(line->szName, "CD Audio", sizeof(line->szName));
+        return MMSYSERR_NOERROR;
+    }
+    return kMmsyserrInvalFlag;
+}
+
+MMRESULT audio_mixer_get_line_controls(HMIXEROBJ mixer, MIXERLINECONTROLSA* controls,
+                                       DWORD flags)
+{
+    if (!IsMixer(mixer)) return MMSYSERR_INVALHANDLE;
+    if (flags != MIXER_GETLINECONTROLSF_ALL) return kMmsyserrInvalFlag;
+    if (!controls || controls->cbStruct < sizeof(MIXERLINECONTROLSA)) return kMmsyserrInvalParam;
+    if (controls->dwLineID != kCdLineId) return kMixerrInvalLine;
+    if (controls->cControls != 1 || controls->cbmxctrl < sizeof(MIXERCONTROLA) ||
+        !controls->pamxctrl) {
+        return kMmsyserrInvalParam;
+    }
+    MIXERCONTROLA* control = controls->pamxctrl;
+    memset(control, 0, sizeof(*control));
+    control->cbStruct = sizeof(*control);
+    control->dwControlID = kCdVolumeControlId;
+    control->dwControlType = MIXERCONTROL_CONTROLTYPE_VOLUME;
+    SDL_strlcpy(control->szShortName, "Volume", sizeof(control->szShortName));
+    SDL_strlcpy(control->szName, "CD Audio Volume", sizeof(control->szName));
+    control->Bounds.dwMinimum = 0;
+    control->Bounds.dwMaximum = 0xffff;
+    control->Metrics[0] = 0xffff; /* cSteps */
+    return MMSYSERR_NOERROR;
+}
+
+MMRESULT audio_mixer_get_control_details(HMIXEROBJ mixer, MIXERCONTROLDETAILS* details,
+                                         DWORD flags)
+{
+    if (!IsMixer(mixer)) return MMSYSERR_INVALHANDLE;
+    if (flags != MIXER_GETCONTROLDETAILSF_VALUE) return kMmsyserrInvalFlag;
+    if (!details || details->cbStruct < sizeof(MIXERCONTROLDETAILS)) return kMmsyserrInvalParam;
+    if (details->dwControlID != kCdVolumeControlId) return kMixerrInvalControl;
+    if (details->cbDetails != sizeof(DWORD) || !details->paDetails ||
+        details->cChannels < 1 || details->cChannels > kCdChannels || details->cMultipleItems != 0) {
+        return kMmsyserrInvalParam;
+    }
+    DWORD* values = static_cast<DWORD*>(details->paDetails);
+    if (details->cChannels == 1) {
+        /* The uniform value: the louder channel's. */
+        values[0] = std::max(s_cdFader[0].load(), s_cdFader[1].load());
+    } else {
+        for (int c = 0; c < kCdChannels; c++) values[c] = s_cdFader[c].load();
+    }
+    return MMSYSERR_NOERROR;
+}
+
+MMRESULT audio_mixer_set_control_details(HMIXEROBJ mixer, MIXERCONTROLDETAILS* details,
+                                         DWORD flags)
+{
+    if (!IsMixer(mixer)) return MMSYSERR_INVALHANDLE;
+    if (flags != MIXER_SETCONTROLDETAILSF_VALUE) return kMmsyserrInvalFlag;
+    if (!details || details->cbStruct < sizeof(MIXERCONTROLDETAILS)) return kMmsyserrInvalParam;
+    if (details->dwControlID != kCdVolumeControlId) return kMixerrInvalControl;
+    if (details->cbDetails != sizeof(DWORD) || !details->paDetails ||
+        details->cChannels < 1 || details->cChannels > kCdChannels || details->cMultipleItems != 0) {
+        return kMmsyserrInvalParam;
+    }
+    const DWORD* values = static_cast<const DWORD*>(details->paDetails);
+    for (int c = 0; c < kCdChannels; c++) {
+        DWORD value = values[details->cChannels == 1 ? 0 : c];
+        s_cdFader[c].store(std::min<DWORD>(value, 0xffff));
+    }
+    return MMSYSERR_NOERROR;
 }
 
 } /* extern "C" */

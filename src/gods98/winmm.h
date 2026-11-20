@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* The Win32 subset outside miniwin's scope that the units use: WinMM's
- * mmio, MCI and mixer types, the mixer calls, KERNEL32's
- * GlobalAlloc/GlobalFree and USER32's wsprintfA, with the layouts the units
- * read. The develop branch has no WinMM. The audio library
- * (library/audio_sdl.h) replaces the mmio and MCI calls at the units'
- * `// [library:audio]` call sites; until a substitution replaces the
- * mixer's, platform/native/seam_stubs.cpp defines them as logging stubs. */
+ * mmio, MCI and mixer types, KERNEL32's GlobalAlloc/GlobalFree and
+ * USER32's wsprintfA, with the layouts the units read. The develop branch
+ * has no WinMM. The audio library (library/audio_sdl.h) replaces the mmio,
+ * MCI and mixer calls at the units' `// [library:audio]` call sites. */
 #ifndef LEGORRR_GODS98_WINMM_H
 #define LEGORRR_GODS98_WINMM_H
 
@@ -195,20 +193,6 @@ LPSTR GetCommandLineA(void);
 HGLOBAL GlobalAlloc(UINT flags, size_t bytes);
 HGLOBAL GlobalFree(HGLOBAL memory);
 int wsprintfA(LPSTR output, LPCSTR format, ...);
-
-UINT mixerGetNumDevs(void);
-MMRESULT mixerOpen(HMIXER* mixer, UINT device, DWORD_PTR callback,
-                   DWORD_PTR instance, DWORD flags);
-MMRESULT mixerClose(HMIXER mixer);
-MMRESULT mixerGetDevCapsA(UINT_PTR device, MIXERCAPSA* caps, UINT size);
-MMRESULT mixerGetLineInfoA(HMIXEROBJ mixer, MIXERLINEA* line, DWORD flags);
-MMRESULT mixerGetLineControlsA(HMIXEROBJ mixer, MIXERLINECONTROLSA* controls,
-                               DWORD flags);
-MMRESULT mixerGetControlDetailsA(HMIXEROBJ mixer,
-                                 MIXERCONTROLDETAILS* details, DWORD flags);
-MMRESULT mixerSetControlDetails(HMIXEROBJ mixer,
-                                MIXERCONTROLDETAILS* details, DWORD flags);
-
 
 #ifdef __cplusplus
 }

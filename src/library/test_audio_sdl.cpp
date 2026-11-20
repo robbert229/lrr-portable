@@ -1,15 +1,21 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* The audio substitution ([library:audio], ADR 0007) on synthetic waves.
  *
- *   audio_test dummy   SDL's dummy driver: soundsys.c's wave readers
- *                      through the mmio substitution, DirectSound buffers
- *                      (play, loop, stop, duplicate, volume, formats) and
- *                      the MCI cdaudio device with and without track files.
+ *   audio_test dummy   SDL's dummy driver: the library's arithmetic (dB to
+ *                      gain, the 3D pan and rolloff, the mixer's fader),
+ *                      soundsys.c's wave readers through the mmio
+ *                      substitution, DirectSound buffers (play, loop, stop,
+ *                      duplicate, volume, formats), the mixer through
+ *                      main.c's CD volume, and the MCI cdaudio device with
+ *                      and without track files.
  *   audio_test disk    SDL's disk driver, whose output file is the mix:
  *                      a streamed 8-bit wave played by sound3d.c's stream
- *                      path (the menu overlays' path), then a CD track
- *                      through soundsys.c. The mix must hold both, at the
- *                      levels their formats imply.
+ *                      path (the menu overlays' path), a CD track through
+ *                      soundsys.c at full and half music volume, a short
+ *                      stream at SFX slider 5, then a mono 3D buffer
+ *                      panned right, left, by a turned listener and at 45
+ *                      degrees. The mix must hold each, at the levels and
+ *                      on the channels their formats and settings imply.
  *
  * Each run works in a fresh temporary directory. Exit 77 skips. */
 #include <SDL3/SDL.h>
@@ -19,6 +25,7 @@
 #include "gods98/soundsys.h"
 #include "library/audio_sdl.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -28,7 +35,12 @@
 
 #include <unistd.h>
 
-extern "C" int sound_streamed_wave_play(const char* fName, int loop, int volume);
+extern "C" {
+int sound_streamed_wave_play(const char* fName, int loop, int volume);
+/* main.c (G98-005): Main_SetCDVolume and Main_GetCDVolume. */
+void music_mixer_volume_set(float leftVolume, float rightVolume);
+int ledger_stub_004789a0_MusicMixerVolumeGet(float* leftVolume, float* rightVolume);
+}
 
 namespace {
 
@@ -101,16 +113,21 @@ std::vector<char> SquareU8(unsigned rate, double seconds)
     return samples;
 }
 
-/* 16-bit stereo: a sine of amplitude 0.5 at 440 Hz. */
-std::vector<char> SineS16(unsigned rate, double seconds)
+/* 16-bit, mono or stereo: a sine of amplitude 0.5 at 440 Hz. */
+std::vector<char> SineS16(unsigned rate, double seconds, int channels = 2)
 {
     std::vector<char> samples;
     size_t frames = (size_t)(rate * seconds);
     for (size_t i = 0; i < frames; i++) {
         int value = (int)lround(0.5 * 32767.0 * sin(2.0 * M_PI * 440.0 * i / rate));
-        for (int c = 0; c < 2; c++) PutLe16(samples, (unsigned)(value & 0xffff));
+        for (int c = 0; c < channels; c++) PutLe16(samples, (unsigned)(value & 0xffff));
     }
     return samples;
+}
+
+bool Near(float value, float want, float tolerance = 1.0e-4f)
+{
+    return fabsf(value - want) <= tolerance;
 }
 
 bool WriteFile(const std::string& path, const std::vector<char>& bytes)
@@ -141,6 +158,110 @@ bool WaitFor(F done, int timeoutMs)
 }
 
 /* --- dummy: the readers, the buffers and the CD device ------------------- */
+
+void TestArithmetic()
+{
+    using namespace audio_sdl_detail;
+    /* DirectSound's volume: hundredths of a decibel. */
+    CHECK(GainOfVolume(0) == 1.0f);
+    CHECK(GainOfVolume(-10000) == 0.0f);
+    CHECK(GainOfVolume(-20000) == 0.0f);
+    CHECK(Near(GainOfVolume(-600), 0.501187f));
+    CHECK(Near(GainOfVolume(-2000), 0.1f));
+    CHECK(Near(GainOfVolume(-300), 0.707946f));
+
+    /* The mixer's fader. */
+    CHECK(GainOfFader(0) == 0.0f);
+    CHECK(GainOfFader(0xffff) == 1.0f);
+    CHECK(GainOfFader(0x10000) == 1.0f);
+    CHECK(Near(GainOfFader(0x8000), 0.500008f));
+
+    /* The pan, for DirectSound's default listener: +x is right. */
+    const float front[3] = { 0.0f, 0.0f, 1.0f };
+    const float top[3] = { 0.0f, 1.0f, 0.0f };
+    float left, right;
+    const float ahead[3] = { 0.0f, 0.0f, 5.0f };
+    GainsOf3D(ahead, front, top, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(left == 1.0f && right == 1.0f);
+    const float behind[3] = { 0.0f, 0.0f, -5.0f };
+    GainsOf3D(behind, front, top, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(Near(left, 1.0f) && Near(right, 1.0f));
+    const float above[3] = { 0.0f, 5.0f, 0.0f };
+    GainsOf3D(above, front, top, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(Near(left, 1.0f) && Near(right, 1.0f));
+    const float onRight[3] = { 5.0f, 0.0f, 0.0f };
+    GainsOf3D(onRight, front, top, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(Near(left, 0.0f) && right == 1.0f);
+    const float onLeft[3] = { -5.0f, 0.0f, 0.0f };
+    GainsOf3D(onLeft, front, top, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(left == 1.0f && Near(right, 0.0f));
+    const float rightAhead[3] = { 3.0f, 0.0f, 3.0f };
+    GainsOf3D(rightAhead, front, top, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(Near(left, 1.0f - sqrtf(0.5f)) && right == 1.0f);
+    /* At the listener: no direction, no pan. */
+    const float here[3] = { 0.0f, 0.0f, 0.0f };
+    GainsOf3D(here, front, top, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(left == 1.0f && right == 1.0f);
+
+    /* A turned listener: facing +x, its right is -z. */
+    const float east[3] = { 1.0f, 0.0f, 0.0f };
+    const float north[3] = { 0.0f, 0.0f, 5.0f };
+    GainsOf3D(north, east, top, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(left == 1.0f && Near(right, 0.0f));
+    /* Looking down, as the game's camera does, with +z up the screen:
+     * its right is still +x, and height does not pan. */
+    const float down[3] = { 0.0f, -1.0f, 0.0f };
+    const float screenUp[3] = { 0.0f, 0.0f, 1.0f };
+    GainsOf3D(onRight, down, screenUp, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(Near(left, 0.0f) && right == 1.0f);
+    const float below[3] = { 0.0f, -8.0f, 0.0f };
+    GainsOf3D(below, down, screenUp, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(Near(left, 1.0f) && Near(right, 1.0f));
+
+    /* The rolloff: min / distance to the factor's power, silent at max. */
+    const float far[3] = { 0.0f, 0.0f, 40.0f };
+    GainsOf3D(far, front, top, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(Near(left, 0.25f) && Near(right, 0.25f));
+    GainsOf3D(far, front, top, 10.0f, 100.0f, 2.0f, &left, &right);
+    CHECK(Near(left, 0.0625f) && Near(right, 0.0625f));
+    GainsOf3D(far, front, top, 10.0f, 40.0f, 1.0f, &left, &right);
+    CHECK(left == 0.0f && right == 0.0f);
+    const float farRight[3] = { 40.0f, 0.0f, 0.0f };
+    GainsOf3D(farRight, front, top, 10.0f, 100.0f, 1.0f, &left, &right);
+    CHECK(Near(left, 0.0f) && Near(right, 0.25f));
+}
+
+/* The mixer: its one CD-audio line, through main.c's mixer walk. */
+void TestMixer()
+{
+    HMIXER mixer = NULL;
+    CHECK(audio_mixer_get_num_devs() == 1);
+    CHECK(audio_mixer_open(&mixer, 1, 0, 0, 0) != MMSYSERR_NOERROR && mixer == NULL);
+    CHECK(audio_mixer_open(&mixer, 0, 0, 0, 0) == MMSYSERR_NOERROR && mixer != NULL);
+    MIXERLINEA line;
+    memset(&line, 0, sizeof(line));
+    line.cbStruct = sizeof(line);
+    line.dwSource = 1;
+    CHECK(audio_mixer_get_line_info((HMIXEROBJ)mixer, &line, MIXER_GETLINEINFOF_SOURCE) != MMSYSERR_NOERROR);
+    CHECK(audio_mixer_get_line_info((HMIXEROBJ)NULL, &line, MIXER_GETLINEINFOF_DESTINATION) ==
+          MMSYSERR_INVALHANDLE);
+    CHECK(audio_mixer_close(mixer) == MMSYSERR_NOERROR);
+
+    /* Full volume at start, then what the slider sets. */
+    float left = -1.0f, right = -1.0f;
+    CHECK(ledger_stub_004789a0_MusicMixerVolumeGet(&left, &right) == 1);
+    CHECK(left == 1.0f && right == 1.0f);
+    music_mixer_volume_set(5.0f / 9.0f, 5.0f / 9.0f);
+    CHECK(ledger_stub_004789a0_MusicMixerVolumeGet(&left, &right) == 1);
+    CHECK(Near(left, 5.0f / 9.0f, 1.0e-4f) && Near(right, 5.0f / 9.0f, 1.0e-4f));
+    music_mixer_volume_set(0.25f, 0.75f);
+    CHECK(ledger_stub_004789a0_MusicMixerVolumeGet(&left, &right) == 1);
+    CHECK(Near(left, 0.25f, 1.0e-4f) && Near(right, 0.75f, 1.0e-4f));
+    music_mixer_volume_set(2.0f, -1.0f); /* clamped by the unit */
+    CHECK(ledger_stub_004789a0_MusicMixerVolumeGet(&left, &right) == 1);
+    CHECK(left == 1.0f && right == 0.0f);
+    music_mixer_volume_set(1.0f, 1.0f);
+}
 
 void TestWaveReaders(const std::string& dir)
 {
@@ -362,6 +483,8 @@ int RunDummy()
         fprintf(stderr, "skip: %s\n", SDL_GetError());
         return 77;
     }
+    TestArithmetic();
+    TestMixer();
     TestWaveReaders(dir);
     TestBuffers();
     /* Sound_Initialise starts 3D sound on the library's device. */
@@ -376,14 +499,18 @@ int RunDummy()
 
 /* --- disk: the mix -------------------------------------------------------- */
 
+/* A run of sound: the left channel's peak, mean and RMS, and the right
+ * channel's RMS. */
 struct Segment {
     size_t start, end; /* frames */
     float peak;
     double mean;
     double rms;
+    double rmsRight;
 };
 
-/* The runs of sound in a stereo float mix, split at 50 ms of silence. */
+/* The runs of sound on either channel of a stereo float mix, split at
+ * 50 ms of silence. */
 std::vector<Segment> FindSegments(const std::vector<float>& mix, int rate)
 {
     std::vector<Segment> segments;
@@ -391,9 +518,9 @@ std::vector<Segment> FindSegments(const std::vector<float>& mix, int rate)
     size_t gap = (size_t)rate / 20;
     size_t quiet = gap;
     for (size_t i = 0; i < frames; i++) {
-        float value = mix[2 * i];
-        if (fabsf(value) > 0.01f) {
-            if (quiet >= gap) segments.push_back({ i, i, 0.0f, 0.0, 0.0 });
+        float value = std::max(fabsf(mix[2 * i]), fabsf(mix[2 * i + 1]));
+        if (value > 0.01f) {
+            if (quiet >= gap) segments.push_back({ i, i, 0.0f, 0.0, 0.0, 0.0 });
             Segment& segment = segments.back();
             segment.end = i;
             quiet = 0;
@@ -402,15 +529,17 @@ std::vector<Segment> FindSegments(const std::vector<float>& mix, int rate)
         }
     }
     for (Segment& segment : segments) {
-        double sum = 0.0, squares = 0.0;
+        double sum = 0.0, squares = 0.0, squaresRight = 0.0;
         for (size_t i = segment.start; i <= segment.end; i++) {
             segment.peak = std::max(segment.peak, fabsf(mix[2 * i]));
             sum += mix[2 * i];
             squares += (double)mix[2 * i] * mix[2 * i];
+            squaresRight += (double)mix[2 * i + 1] * mix[2 * i + 1];
         }
         double count = (double)(segment.end - segment.start + 1);
         segment.mean = sum / count;
         segment.rms = sqrt(squares / count);
+        segment.rmsRight = sqrt(squaresRight / count);
     }
     return segments;
 }
@@ -449,12 +578,80 @@ int RunDisk()
     }
     sound_stream_stop_and_release(0);
 
-    /* Then the disc's track 2 through soundsys.c. */
+    /* Then the disc's track 2 through soundsys.c, at full music volume and
+     * at half. */
     CHECK(SDL_CreateDirectory((dir + "/Music").c_str()));
     CHECK(WriteFile(dir + "/Music/Track02.wav", MakeWave(2, 22050, 16, SineS16(22050, 0.5))));
     CHECK(media_cd_audio_device_open(1) == 1);
     SDL_Delay(900);
     CHECK(media_cd_audio_stop_and_close() == 1);
+    music_mixer_volume_set(0.5f, 0.5f);
+    CHECK(media_cd_audio_device_open(1) == 1);
+    SDL_Delay(900);
+    CHECK(media_cd_audio_stop_and_close() == 1);
+    music_mixer_volume_set(1.0f, 1.0f);
+
+    /* A short streamed wave at the SFX slider's sixth step (-10 dB). */
+    audio_sound_volume_index_set(5);
+    const double shortSeconds = 0.4;
+    CHECK(WriteFile(dir + "/Short.wav", MakeWave(1, 11025, 8, SquareU8(11025, shortSeconds))));
+    std::string shortStream = dir + "/Short.wav";
+    CHECK(sound_streamed_wave_play(shortStream.c_str(), 0, 0) == 1);
+    until = SDL_GetTicks() + (Uint64)(shortSeconds * 1000) + 600;
+    while (SDL_GetTicks() < until) {
+        sound_source_spatial_refresh_all();
+        SDL_Delay(15);
+    }
+    sound_stream_stop_and_release(0);
+    audio_sound_volume_set(0);
+
+    /* A mono 3D buffer on a device of the test's own, inside its minimum
+     * distance unless a case says otherwise. */
+    AudioDevice* device = NULL;
+    AudioBuffer* primary = NULL;
+    AudioListener* listener = NULL;
+    AudioBuffer* buffer = NULL;
+    AudioBuffer* view = NULL;
+    std::vector<char> sine = SineS16(22050, 0.3, 1);
+    WAVEFORMATEX mono = { WAVE_FORMAT_PCM, 1, 22050, 44100, 2, 16, 0 };
+    CHECK(audio_create(&device) == AUDIO_OK);
+    CHECK(audio_create_buffer(device, AUDIO_BUFFER_PRIMARY, 0, NULL, &primary) == AUDIO_OK);
+    CHECK(audio_buffer_query_listener(primary, &listener) == AUDIO_OK);
+    CHECK(audio_create_buffer(device, 0, (DWORD)sine.size(), &mono, &buffer) == AUDIO_OK);
+    if (buffer) {
+        void* audio1;
+        DWORD bytes1;
+        CHECK(audio_buffer_lock(buffer, 0, (DWORD)sine.size(), &audio1, &bytes1, NULL, NULL, 0) == AUDIO_OK);
+        memcpy(audio1, sine.data(), bytes1);
+        audio_buffer_unlock(buffer, audio1, bytes1, NULL, 0);
+        CHECK(audio_buffer_query_3d(buffer, &view) == AUDIO_OK);
+        audio_buffer_set_min_distance(view, 20.0f, 0);
+        audio_buffer_set_max_distance(view, 800.0f, 0);
+        auto play = [&](float x, float y, float z) {
+            DWORD status = 0;
+            audio_buffer_set_3d_position(view, x, y, z, 0);
+            audio_listener_commit_deferred_settings(listener);
+            audio_buffer_set_current_position(buffer, 0);
+            audio_buffer_play(buffer, 0, 0, 0);
+            CHECK(WaitFor([&] {
+                audio_buffer_get_status(buffer, &status);
+                return status == 0;
+            }, 3000));
+            SDL_Delay(150);
+        };
+        play(10.0f, 0.0f, 0.0f);   /* right */
+        play(-10.0f, 0.0f, 0.0f);  /* left */
+        /* Facing +x, the listener's right is -z: +z is on its left, and
+         * at 40 its gain is 20 / 40. */
+        audio_listener_set_orientation(listener, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0);
+        play(0.0f, 0.0f, 40.0f);
+        audio_listener_set_orientation(listener, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0);
+        play(10.0f, 0.0f, 10.0f);  /* 45 degrees right */
+        audio_buffer_release(view);
+        audio_buffer_release(buffer);
+    }
+    audio_buffer_release(primary);
+    audio_release(device);
     /* The disk device's format, which the hints ask for but need not
      * get. */
     SDL_AudioSpec spec;
@@ -487,8 +684,8 @@ int RunDisk()
         printf("sound %.3f-%.3f s, peak %.3f, rms %.3f, mean %.4f\n", (double)segment.start / rate,
                (double)segment.end / rate, segment.peak, segment.rms, segment.mean);
     }
-    CHECK(segments.size() == 2);
-    if (segments.size() == 2) {
+    CHECK(segments.size() == 8);
+    if (segments.size() == 8) {
         /* The unsigned 8-bit square at +-0.75 (RMS 0.75; read as signed
          * it would be +-0.25), unbroken across the ring's refills and
          * centred on zero. */
@@ -501,6 +698,23 @@ int RunDisk()
         CHECK(fabs(seconds - 0.5) < 0.1);
         CHECK(segments[1].peak > 0.4f && segments[1].peak < 0.6f);
         CHECK(segments[1].rms > 0.3 && segments[1].rms < 0.4);
+        CHECK(fabs(segments[1].rmsRight - segments[1].rms) < 0.01);
+        /* At half music volume (RMS 0.177). */
+        seconds = (double)(segments[2].end - segments[2].start) / rate;
+        CHECK(fabs(seconds - 0.5) < 0.1);
+        CHECK(segments[2].peak > 0.2f && segments[2].peak < 0.3f);
+        CHECK(segments[2].rms > 0.15 && segments[2].rms < 0.2);
+        /* The square at -10 dB (RMS 0.237). */
+        seconds = (double)(segments[3].end - segments[3].start) / rate;
+        CHECK(fabs(seconds - shortSeconds) < 0.1);
+        CHECK(segments[3].rms > 0.2 && segments[3].rms < 0.27);
+        /* The mono sine at 0.5 (RMS 0.354): hard right, hard left, left
+         * at half, and right with the left at 1 - sin 45 (RMS 0.104). */
+        CHECK(segments[4].rms < 0.01 && segments[4].rmsRight > 0.3 && segments[4].rmsRight < 0.4);
+        CHECK(segments[5].rmsRight < 0.01 && segments[5].rms > 0.3 && segments[5].rms < 0.4);
+        CHECK(segments[6].rmsRight < 0.01 && segments[6].rms > 0.15 && segments[6].rms < 0.2);
+        CHECK(segments[7].rmsRight > 0.3 && segments[7].rmsRight < 0.4);
+        CHECK(segments[7].rms > 0.08 && segments[7].rms < 0.13);
     }
     return s_failures ? 1 : 0;
 }
