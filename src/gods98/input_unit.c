@@ -301,3 +301,12 @@ void input_cursor_client_position_set(int x, int y)
 #endif
 
 #endif /* !LEGORRR_BACKEND_MINIWIN */
+
+#include "gods98/d3drmdef_consts.h"
+
+#include "input_tail.h"
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049e9c4, the last word of
+ * the unit's .rdata. No code of the unit creates a literal, so the copy
+ * is compiled at the end, after every function. */
+#include "maths_normalise_head.h"

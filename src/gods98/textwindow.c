@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* TextWindow.c, original translation unit G98-017 (finding 505), rebuilt in
  * original shape (ADR 0005; finding 600): text 004850f0-00485a20 and the
- * .rdata floats 0049ea04 (0.5f) and 0049ea0c (0.0f). The unit has no .data
- * or .bss of its own.
+ * .rdata floats 0049ea04-0049ea0c (0.5f, an unread 1.0f, 0.0f). The unit
+ * has no .data or .bss of its own.
  *
  * A text window is a 0x830-byte record: a font, a screen area, a ring buffer
  * of printed text with the start of each wrapped line, and an overlay string
@@ -313,6 +313,10 @@ int text_window_update(TextWindow* window, unsigned int posFromEnd,
 /* The overlay string, wrapped like the ring buffer. As in TextWindow_Update,
  * the pen's x reuses a dead variable (lineWidth). `c = buf[sub++]` keeps c in
  * memory in the draw loop, as the original does. */
+/* Maths.h's inline normalise. Its unread 1.0f (0049ea08) follows the 0.5f
+ * of the function above and comes before the 0.0f of the one below. */
+#include "maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x00485710
 int text_window_update_overlay(TextWindow* window, float time,
                                int* lpLinesUsed)

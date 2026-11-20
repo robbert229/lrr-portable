@@ -111,6 +111,8 @@ typedef struct Pointer_Globs {
 /* Defined at the end of the file, after the storage before it. */
 extern Pointer_Globs pointerGlobs;
 
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0045c830
 void pointer_initialise(void)
 {

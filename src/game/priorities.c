@@ -70,6 +70,8 @@ static int s_tool_tip_type = PRIORITY_TYPE_COUNT;
 // GLOBAL: LEGORR 0x00500f00
 static PrioritiesGlobs priorities;
 
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0045cdc0
 void priorities_load_images(BlockFile* config, const char* game_name)
 {
@@ -80,6 +82,7 @@ void priorities_load_images(BlockFile* config, const char* game_name)
     char line[512];
 
     for (item = block_subgroup(config,
+             // STRING: LEGORR 0x004a8ef0
              string_path_join(game_name, "PriorityImages", NULL));
          item != NULL; item = block_next_equal_key(item)) {
         if (cmd_kind_by_name(item->key, &type)) {
@@ -103,7 +106,7 @@ void priorities_reset(void)
 
     for (i = 0; i < priorities.count; i++) {
         priorities.list[i] = priorities.initial_list[i];
-        priority_entry_order_value_set(priorities.initial_list[i],
+        priority_entry_order_value_set(priorities.list[i],
                                        priorities.initial_values[i]);
         priority_entry_state_set(priorities.list[i],
                                  priorities.initial_states[i]);
@@ -153,6 +156,7 @@ void priorities_load_positions(BlockFile* config, const char* game_name)
     for (i = 0; i < PRIORITY_TYPE_COUNT; i++) {
         itoa(i + 1, number, 10);
         value = block_get_strptr(config, string_path_join(game_name,
+            // STRING: LEGORR 0x004a8f0c
             "PrioritiesImagePositions", number, NULL));
         if (value != NULL) {
             /* The original tokenises the config's own value in place. */
@@ -178,15 +182,16 @@ int priorities_handle_cursor(unsigned int x, unsigned int y, int pressed,
             int type = priorities.list[i];
             Image* image = priorities.images[type];
             if (image != NULL) {
+                unsigned int height = image->height;
+                unsigned int width = image->width;
                 position.x = priorities.offsets[i].x + panel.x;
                 position.y = priorities.offsets[i].y + panel.y;
                 if ((float)x >= position.x &&
-                    (float)x <= position.x + (float)image->width &&
-                    position.y <= (float)y &&
-                    (float)y <= position.y + (float)image->height) {
+                    (float)x <= position.x + (float)width &&
+                    (float)y >= position.y &&
+                    (float)y <= position.y + (float)height) {
                     priorities.flags |= PRIORITIES_FLAG_HOVER;
-                    priorities_set_hover_area(&position, image->width - 1,
-                                              image->height - 1);
+                    priorities_set_hover_area(&position, width - 1, height - 1);
                     if (!pressed) {
                         if (s_tool_tip_index == i && s_tool_tip_type == type) {
                             tooltip_set_content(PRIORITIES_TOOLTIP,
@@ -257,10 +262,11 @@ void priorities_move_to_top(unsigned int index)
     if (index != 0 && index < priorities.count) {
         int type = priorities.list[index];
         unsigned int i;
-        for (i = 0; i < index; i++) {
+        for (i = 0; index - i > 0; i++) {
+            unsigned int offset = index * PRIORITIES_VALUE_STEP;
             priorities.list[index - i] = priorities.list[index - i - 1];
             priority_entry_order_value_set(priorities.list[index - i],
-                PRIORITIES_TOP_VALUE - (index - i) * PRIORITIES_VALUE_STEP);
+                PRIORITIES_TOP_VALUE + i * PRIORITIES_VALUE_STEP - offset);
         }
         priorities.list[0] = type;
         priority_entry_order_value_set(type, PRIORITIES_TOP_VALUE);
@@ -273,12 +279,13 @@ void priorities_move_up(unsigned int index)
 {
     if (index != 0 && index < priorities.count) {
         int type = priorities.list[index];
+        unsigned int offset = index * PRIORITIES_VALUE_STEP;
         priorities.list[index] = priorities.list[index - 1];
         priorities.list[index - 1] = type;
         priority_entry_order_value_set(priorities.list[index],
-            PRIORITIES_TOP_VALUE - index * PRIORITIES_VALUE_STEP);
+            PRIORITIES_TOP_VALUE - offset);
         priority_entry_order_value_set(priorities.list[index - 1],
-            PRIORITIES_TOP_VALUE - (index - 1) * PRIORITIES_VALUE_STEP);
+            PRIORITIES_TOP_VALUE + PRIORITIES_VALUE_STEP - offset);
         priorities_move_cursor_to_up_button(index - 1);
     }
     media_action_feedback_sound_dispatch(0);
@@ -320,8 +327,8 @@ void priorities_move_cursor_to_up_button(unsigned int index)
     indexed_pair_get(PRIORITIES_PANEL, &panel.x, &panel.y);
     ui_entry_bounds_get(PRIORITIES_PANEL, button, &area.x);
     input_cursor_client_position_set(
-        (int)(area.x + area.width * 0.5f + panel.x),
-        (int)(area.y + area.height * 0.5f + panel.y));
+        (int)(area.x + (area.width * 0.5f) + panel.x),
+        (int)(area.y + (area.height * 0.5f) + panel.y));
 }
 
 // FUNCTION: LEGORR 0x0045d640
@@ -345,25 +352,29 @@ void priorities_move_cursor_to_image(unsigned int index)
 // FUNCTION: LEGORR 0x0045d6d0
 void priorities_draw(void)
 {
-    Point2F panel;
-    unsigned int i;
     Point2F position;
+    unsigned int i;
+    Point2F panel;
 
     if (!request_record_ready_flag4_target(PRIORITIES_PANEL)) {
         indexed_pair_get(PRIORITIES_PANEL, &panel.x, &panel.y);
         for (i = 0; i < priorities.count; i++) {
             int type;
             Image* image;
+            type = priorities.list[i];
             position.x = priorities.offsets[i].x + panel.x;
             position.y = priorities.offsets[i].y + panel.y;
-            type = priorities.list[i];
-            if (priority_entry_state_get(type)) image = priorities.off_images[type];
-            else if ((priorities.flags & PRIORITIES_FLAG_PRESSED) &&
-                     priorities.selected == i) {
+            if (priority_entry_state_get(type)) {
+                image = priorities.off_images[type];
+                if (image != NULL) image_display_scaled(image, NULL, &position, NULL);
+            } else if ((priorities.flags & PRIORITIES_FLAG_PRESSED) &&
+                       priorities.selected == i) {
                 image = priorities.pressed_images[type];
+                if (image != NULL) image_display_scaled(image, NULL, &position, NULL);
+            } else {
+                image = priorities.images[type];
+                if (image != NULL) image_display_scaled(image, NULL, &position, NULL);
             }
-            else image = priorities.images[type];
-            if (image != NULL) image_display_scaled(image, NULL, &position, NULL);
         }
         if (priorities.flags & PRIORITIES_FLAG_HOVER) {
             position_tracker_box_draw(&priorities.hover_area.x);

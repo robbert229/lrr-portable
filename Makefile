@@ -202,6 +202,7 @@ tools-test: reccmp-lint
 	python3 -m unittest discover -s tools/tests -p 'test_msvc_permuter.py'
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_search.py'
 	python3 -m unittest discover -s tools/tests -p 'test_phase_probe.py'
+	python3 -m unittest discover -s tools/tests -p 'test_ia32_fields.py'
 	python3 -m unittest discover -s tools/tests -p 'test_reprobit_reference.py'
 	python3 -m unittest discover -s tools/tests -p 'test_match_function_flags.py'
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_cohort.py'

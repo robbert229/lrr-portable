@@ -736,6 +736,7 @@ int ledger_stub_00462ad0_RewardScrollTickerAdvanceAndDraw(
 
 /* Reward.c's crystal task name. The relocated Panel.c held it (finding 546,
  * fix-up 2); the converted unit uses the pooled literal, so the named object
- * stays with its other user, as before #516 (finding 554). */
-// GLOBAL: LEGORR 0x004a8a08
+ * stays with its other user, as before #516 (finding 554). The original's
+ * "Crystals" (004a8a08) is Panel.c's pooled literal, which panel_unit.c
+ * marks; this port copy has no original address. */
 const char s_task_name_crystals[] = "Crystals";

@@ -532,3 +532,5 @@ void building_set_upgrade_level(BuildingModel* building, unsigned int objLevel)
 #ifdef __cplusplus
 }
 #endif
+
+#include "building_model_tail.h"

@@ -43,6 +43,8 @@ static int scrollInfoOverSlider;
 // GLOBAL: LEGORR 0x00552140
 ScrollInfo_Globs scrollInfoGlobs;
 
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x004636b0
 void scroll_info_initialise(const char* imageName, unsigned int index,
                             int horizontal, int panel, ...)
@@ -199,10 +201,7 @@ int scroll_info_update(unsigned int* index, unsigned int mouseX,
                             position = scroll_info_round(offset / step);
                         }
                         scrollInfo->slider->position = position;
-                        handled = 1;
                         scrollInfo->slider->dirty = 1;
-                        *index = i;
-                        goto layout;
                     }
                 } else {
                     if (scrollInfoGlobs.selection == SCROLLINFO_SELECT_NONE) {
@@ -216,7 +215,6 @@ int scroll_info_update(unsigned int* index, unsigned int mouseX,
                 scrollInfoOverSlider = 0;
             }
 
-        layout:
             slider = scrollInfo->slider;
             if (slider->dirty) {
                 if (scrollInfo->flags & SCROLLINFO_FLAG_VERTICAL) {
@@ -246,8 +244,9 @@ int scroll_info_mouse_over_structure(ScrollInfo_Struct* scrollInfo,
                                      ScrollInfo_Button* button, int mouseX,
                                      int mouseY)
 {
-    float x = panelGlobs.panelTable[scrollInfo->panel].currPos.x + scrollInfo->xOffset;
-    float y = panelGlobs.panelTable[scrollInfo->panel].currPos.y + scrollInfo->yOffset;
+    PanelData* panel = &panelGlobs.panelTable[scrollInfo->panel];
+    float x = (panel->currPos.x) + scrollInfo->xOffset;
+    float y = (panel->currPos.y) + scrollInfo->yOffset;
 
     mouseX -= (int)x;
     mouseY -= (int)y;
@@ -285,8 +284,8 @@ void scroll_info_draw(unsigned int index)
     unsigned int i;
 
     panel = &panelGlobs.panelTable[scrollInfo->panel];
-    origin.x = panel->currPos.x + scrollInfo->xOffset;
-    origin.y = panel->currPos.y + scrollInfo->yOffset;
+    origin.x = (scrollInfo->xOffset) + panel->currPos.x;
+    origin.y = (scrollInfo->yOffset) + panel->currPos.y;
     image_display_scaled(scrollInfo->image, NULL, &origin, NULL);
 
     for (i = 0; i < 2; i++) {
@@ -307,7 +306,7 @@ void scroll_info_draw(unsigned int index)
 
     slider = scrollInfo->slider;
     pos.x = slider->x1 + (slider->xOffset + origin.x);
-    pos.y = slider->y1 + slider->yOffset + origin.y;
+    pos.y = (slider->y1) + slider->yOffset + origin.y;
     image_display_scaled(slider->image, NULL, &pos, NULL);
 }
 

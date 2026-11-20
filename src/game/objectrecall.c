@@ -22,6 +22,7 @@
 #include "objectrecall.h"
 #include "legoobject_unit.h"
 #include "entity_stats.h"
+#include "gods98/maths_normalise_head.h"
 
 /* ObjectRecall_Globs' entry: one minifigure, 0x14 bytes. */
 typedef struct ObjectRecall {

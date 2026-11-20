@@ -248,6 +248,10 @@ static int weapons_callback_update_object(Weapons_Object* obj, float* elapsed);
 static int weapons_callback_ray_candidate(Weapons_Object* obj,
                                           Weapons_RaySearch* search);
 
+/* Maths.h's inline normalise. Its 1.0f (0049e820) opens the unit's
+ * literal pool, before weapons_initialise's -1.0f. */
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0046eb80
 int weapons_initialise(struct BlockRec* config, const char* gameName)
 {
@@ -601,38 +605,55 @@ void weapons_projectile_update(Weapons_Projectile* projectile, float elapsed)
 {
     void* cont;
     Point2F curvePos;
-    float dist;
+    Weapons_Vector3F vec;
 
     cont = entity_type_component_get(projectile->object);
     ddiscene_object_position_get(cont, NULL, (float*)&projectile->lastPosition);
-    dist = projectile->speed * elapsed;
+    /* The step is kept in elapsed's slot, both branches build the move in
+     * one vector local through the maths helpers, and the positions and
+     * directions go to the scene as float locals of a block: the original
+     * copies them through the x87 stack. */
+    elapsed = projectile->speed * elapsed;
     if (!projectile->curved) {
-        projectile->position.x += projectile->direction.x * dist;
-        projectile->position.z += projectile->direction.z * dist;
-        projectile->position.y += projectile->direction.y * dist;
-        ddiscene_object_position_set(cont, NULL, projectile->position.x,
-                                     projectile->position.y, projectile->position.z);
-        ddiscene_object_pose_method_dispatch(cont, NULL, projectile->direction.x,
-                                             projectile->direction.y,
-                                             projectile->direction.z,
-                                             0.0f, 0.0f, -1.0f);
+        weapons_vector3d_scale(&vec, &projectile->direction, elapsed);
+        weapons_vector3d_add(&projectile->position, &projectile->position, &vec);
+        {
+            float x = projectile->position.x;
+            float y = projectile->position.y;
+            float z = projectile->position.z;
+            ddiscene_object_position_set(cont, NULL, x, y, z);
+        }
+        {
+            float x = projectile->direction.x;
+            float y = projectile->direction.y;
+            float z = projectile->direction.z;
+            ddiscene_object_pose_method_dispatch(cont, NULL, x, y, z, 0.0f, 0.0f, -1.0f);
+        }
     }
     else {
-        dist += projectile->curveDistance;
-        projectile->curveDistance = dist;
-        path_arc_length_interpolate(&projectile->curve, dist, &curvePos);
-        projectile->position.x = projectile->direction.x * curvePos.x + projectile->startPos.x;
-        projectile->position.y = projectile->startPos.y + projectile->direction.y * curvePos.x;
-        projectile->position.z = projectile->startPos.z + curvePos.y;
-        ddiscene_object_position_set(cont, NULL, projectile->position.x,
-                                     projectile->position.y, projectile->position.z);
-        ddiscene_object_pose_method_dispatch(
-            cont, NULL, projectile->position.x - projectile->lastPosition.x,
-            projectile->position.y - projectile->lastPosition.y,
-            (projectile->position.z - projectile->lastPosition.z) * 0.25f,
-            0.0f, 0.0f, -1.0f);
+        elapsed += projectile->curveDistance;
+        projectile->curveDistance = elapsed;
+        path_arc_length_interpolate(&projectile->curve, elapsed, &curvePos);
+        vec.x = projectile->direction.x * curvePos.x;
+        vec.y = projectile->direction.y * curvePos.x;
+        vec.z = curvePos.y;
+        weapons_vector3d_add(&projectile->position, &projectile->startPos, &vec);
+        {
+            float x = projectile->position.x;
+            float y = projectile->position.y;
+            float z = projectile->position.z;
+            ddiscene_object_position_set(cont, NULL, x, y, z);
+        }
+        weapons_vector3d_subtract(&vec, &projectile->position, &projectile->lastPosition);
+        ddiscene_object_pose_method_dispatch(cont, NULL, vec.x, vec.y, vec.z * 0.25f,
+                                             0.0f, 0.0f, -1.0f);
     }
 }
+
+/* A removed helper's -0.5f and 0.5f (0049e83c-0049e840), which the
+ * original creates here, before weapons_projectile_create_curved's
+ * literals. */
+#include "weapons_extent_head.h"
 
 // FUNCTION: LEGORR 0x0046faf0
 int weapons_projectile_create(Weapons_Object* owner, Weapons_Vector3F* pos,
@@ -706,7 +727,12 @@ int weapons_projectile_create_curved(Weapons_Object* owner, Weapons_Vector3F* po
             weapons_vector3d_normalise(&projectile->direction);
             projectile->speed = 4.0f;
             p2.y = target->z - pos->z;
-            p2.x = dist = weapons_vector3d_distance(pos, target);
+            /* The distance written out, not weapons_vector3d_distance: the
+             * original keeps no vector local for it (its frame is 0x2c) and
+             * squares each difference from a reused argument slot. */
+            p2.x = dist = (float)sqrt(((pos->x - target->x) * (pos->x - target->x)) +
+                                      ((pos->y - target->y) * (pos->y - target->y)) +
+                                      ((pos->z - target->z) * (pos->z - target->z)));
             vector2_set_length(&p1, dist * 0.2f);
             vector2_set_length(&p3, dist * 0.33333334f);
             bezier_curve_samples_build(&projectile->curve, &p0, &p1, &p2, &p3, 50);
@@ -780,7 +806,7 @@ Weapons_Object* weapons_fire_lazer(Weapons_Vector3F* fromPos, Weapons_Vector3F* 
     dist = 1.0f;
     hitObject = NULL;
     sound_submission_route_wrapper(NULL, 0x1b, 0, 0, (const float*)fromPos);
-    weapons_vector3d_scale(&rayDir, dir, coef);
+    weapons_vector3d_scale_cast(&rayDir, dir, coef);
     weapons_ray_trace_nearest(fromPos, &rayDir, &hitObject, &dist, liveObj);
     weapons_vector3d_scale(&rayDir, &rayDir, dist);
     weapons_vector3d_add(&endPos, &rayDir, fromPos);
@@ -795,8 +821,8 @@ Weapons_Object* weapons_fire_lazer(Weapons_Vector3F* fromPos, Weapons_Vector3F* 
                                    &blockPos[0], &blockPos[1]);
         if (terrain_cell_walkable_flag_current(blockPos[0], blockPos[1]) &&
             !terrain_cell_state_equals_one_current(blockPos)) {
-            surface = legoGlobs_currLevel_blocks[legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].f_02;
-            if (surface != 0xb) {
+            if (legoGlobs_currLevel_blocks[legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].f_02 != 0xb) {
+                surface = legoGlobs_currLevel_blocks[legoGlobs_currLevel->width * blockPos[1] + blockPos[0]].f_02;
                 coef = weapon_type_wall_destroy_time_get_target(weaponType, surface);
                 if (terrain_cell_drill_work_add_current(blockPos[0], blockPos[1], coef, elapsed)) {
                     lego_terrain_cell_mutate(WEAPONS_LEGO_GET_LEVEL(), blockPos[0], blockPos[1], 0);
@@ -847,12 +873,12 @@ int weapons_object_quad_intersect(Weapons_Object* obj, float* fromPos,
     void* cont;
     float from[2];
     float to[2];
-    float corners[4][3];
-    float points[5][2];
+    Weapons_Vector3F corners[4];
+    Point2F points[5];
     float edge[2];
     float hit[2];
     unsigned int i;
-    float* pt;
+    unsigned int j;
 
     cont = entity_type_component_get(obj);
     from[0] = fromPos[0];
@@ -860,35 +886,33 @@ int weapons_object_quad_intersect(Weapons_Object* obj, float* fromPos,
     to[0] = toPos[0];
     to[1] = toPos[1];
     if (checkSide && weapons_object_line_side_check(obj, from, to)) return 0;
-    corners[0][0] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * -0.5f;
-    corners[0][2] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * 0.5f;
-    corners[1][0] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * 0.5f;
-    corners[1][2] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * 0.5f;
-    corners[2][0] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * 0.5f;
-    corners[2][2] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * -0.5f;
-    corners[3][0] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * -0.5f;
-    corners[3][2] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * -0.5f;
-    corners[3][1] = 0.0f;
-    corners[2][1] = 0.0f;
-    corners[1][1] = 0.0f;
-    corners[0][1] = 0.0f;
+    corners[0].x = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * -0.5f;
+    corners[0].z = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * 0.5f;
+    corners[1].x = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * 0.5f;
+    corners[1].z = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * 0.5f;
+    corners[2].x = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * 0.5f;
+    corners[2].z = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * -0.5f;
+    corners[3].x = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * -0.5f;
+    corners[3].z = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * -0.5f;
+    corners[3].y = 0.0f;
+    corners[2].y = 0.0f;
+    corners[1].y = 0.0f;
+    corners[0].y = 0.0f;
     for (i = 0; i < 4; i++) {
-        scene_object_coordinate_transform_in_place(cont, corners[i], corners[i]);
-        points[i][0] = corners[i][0];
-        points[i][1] = corners[i][1];
+        scene_object_coordinate_transform_in_place(cont, (float*)&corners[i], (float*)&corners[i]);
+        points[i] = *(Point2F*)&corners[i];
     }
-    points[4][0] = points[0][0];
-    points[4][1] = points[0][1];
-    for (i = 0, pt = points[0]; i < 4; i++, pt += 2) {
-        edge[0] = pt[0] - pt[2];
-        edge[1] = pt[1] - pt[3];
-        if (line_intersection_2d_compute(hit, from, to, pt, edge)) {
-            if ((float)fabs(pt[0] - pt[2]) <= (float)fabs(pt[1] - pt[3])) {
-                if ((hit[1] > pt[1] && hit[1] < pt[3]) ||
-                    (pt[1] > hit[1] && pt[3] < hit[1])) goto found;
+    points[4] = points[0];
+    for (j = 0; j < 4; j++) {
+        edge[0] = points[j].x - points[j + 1].x;
+        edge[1] = points[j].y - points[j + 1].y;
+        if (line_intersection_2d_compute(hit, from, to, (float*)&points[j], edge)) {
+            if (fabs(points[j].x - points[j + 1].x) > fabs(points[j].y - points[j + 1].y)) {
+                if ((hit[0] > points[j].x && hit[0] < points[j + 1].x) ||
+                    (hit[0] < points[j].x && hit[0] > points[j + 1].x)) goto found;
             }
-            else if ((hit[0] > pt[0] && hit[0] < pt[2]) ||
-                     (hit[0] < pt[0] && hit[0] > pt[2])) {
+            else if ((hit[1] > points[j].y && hit[1] < points[j + 1].y) ||
+                     (hit[1] < points[j].y && hit[1] > points[j + 1].y)) {
 found:
                 if (intersection != NULL) {
                     intersection[0] = hit[0];
@@ -1047,9 +1071,13 @@ void weapons_mesh_build_segment(void* mesh, float radius,
         normals[i].x = vertices[i].x;
         normals[i].y = vertices[i].y;
         normals[i].z = vertices[i].z;
-        weapons_vector3d_add(&vertices[i + 8], toPos, &vertices[i]);
+        vertices[i + 8].x = toPos->x + vertices[i].x;
+        vertices[i + 8].y = toPos->y + vertices[i].y;
+        vertices[i + 8].z = toPos->z + vertices[i].z;
         weapons_vector3d_normalise(&normals[i]);
-        weapons_vector3d_add(&vertices[i], fromPos, &vertices[i]);
+        vertices[i].x = fromPos->x + vertices[i].x;
+        vertices[i].y = fromPos->y + vertices[i].y;
+        vertices[i].z = fromPos->z + vertices[i].z;
     }
     group = mesh_record_allocate_and_fill((struct MeshRecordPool*)mesh, 16, 16, 3,
                                            (const uint16_t*)faceData);
@@ -1173,9 +1201,7 @@ void weapons_ray_block_sweep(Weapons_RaySearch* search)
 
     WEAPONS_LEGO_GET_MAP();
     WEAPONS_LEGO_GET_MAP();
-    end.x = search->direction->x + search->origin->x;
-    end.y = search->origin->y + search->direction->y;
-    end.z = search->origin->z + search->direction->z;
+    weapons_vector3d_add(&end, search->origin, search->direction);
     if (!terrain_map_world_to_block(WEAPONS_LEGO_GET_MAP(), search->origin->x,
                                     search->origin->y, (int*)&startX, (int*)&startY)) {
         if (startX >= WEAPONS_MAP_WIDTH()) startX = WEAPONS_MAP_WIDTH() - 1;
@@ -1316,25 +1342,34 @@ void weapons_model_aim(Weapons_Model* model, Weapons_Vector3F* target,
         weapons_vector3d_subtract(&dir, &model->targets[slot], &pos);
         len = 1.0f / weapons_vector3d_modulus(&dir);
         weapons_vector3d_scale(&model->fireDirs[slot], &model->fireDirs[slot], elapsed);
-        model->fireDirs[slot].x = len * dir.x + model->fireDirs[slot].x;
-        model->fireDirs[slot].y = len * dir.y + model->fireDirs[slot].y;
-        model->fireDirs[slot].z = len * dir.z + model->fireDirs[slot].z;
+        weapons_vector3d_scale(&dir, &dir, len);
+        weapons_vector3d_add(&model->fireDirs[slot], &dir, &model->fireDirs[slot]);
         weapons_vector3d_normalise(&model->fireDirs[slot]);
         if (model->fireDirs[slot].z > model->pitchRange) {
             model->fireDirs[slot].z = model->pitchRange;
         }
         yPivot = weapons_model_y_pivot_get(model, slot);
         if (yPivot != NULL) {
-            ddiscene_object_pose_method_dispatch(yPivot, NULL, model->fireDirs[slot].x,
-                                                 model->fireDirs[slot].y, 0.0f,
+            /* The fire direction goes through a double in both calls: the
+             * original copies it through the x87 stack. (Block float locals
+             * do the same but shift weapons_ray_block_sweep's symbol phase.) */
+            ddiscene_object_pose_method_dispatch(yPivot, NULL,
+                                                 (float)(model->fireDirs[slot].x + 0.0),
+                                                 (float)(model->fireDirs[slot].y + 0.0), 0.0f,
                                                  0.0f, 0.0f, -1.0f);
         }
-        ddiscene_object_pose_method_dispatch(xPivot, NULL, model->fireDirs[slot].x,
-                                             model->fireDirs[slot].y,
-                                             model->fireDirs[slot].z,
+        ddiscene_object_pose_method_dispatch(xPivot, NULL,
+                                             (float)(model->fireDirs[slot].x + 0.0),
+                                             (float)(model->fireDirs[slot].y + 0.0),
+                                             (float)(model->fireDirs[slot].z + 0.0),
                                              0.0f, 0.0f, -1.0f);
     }
 }
+
+/* A removed helper's unread 100.0f and 150.0f (0049e870-0049e874),
+ * after weapons_model_aim's 5.0f and before weapons_model_aim_update's
+ * 10000.0f. */
+#include "weapons_range_head.h"
 
 // FUNCTION: LEGORR 0x00471c70
 void weapons_model_fire_dir_get(Weapons_Model* model, Weapons_Vector3F* dir,
@@ -1393,8 +1428,8 @@ int weapons_model_fire_update(Weapons_Object* obj, float elapsed, unsigned int s
                 weaponType = object_type_name_index_find(
                     weapons_get_weapons_model(obj)->weaponNames[slot]->name);
                 range = weapon_type_range_get_target(weaponType);
-                discharge = entity_speed_component_get(WEAPONS_ENT(obj));
-                if (discharge == 0.0f) discharge = 1.0f;
+                if ((discharge = entity_speed_component_get(WEAPONS_ENT(obj))) == 0.0f)
+                    discharge = 1.0f;
                 if (i == 0) {
                     weapons_model_timer_set(obj, weapon_type_recharge_time_get_target(weaponType), slot);
                     weapons_model_fire_dir_get(weapons_get_weapons_model(obj), &dir, slot);

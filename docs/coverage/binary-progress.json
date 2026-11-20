@@ -1,23 +1,23 @@
 {
   "accuracy_percent": {
-    "full": 98.23,
-    "game_only": 98.04
+    "full": 99.09,
+    "game_only": 98.99
   },
-  "baseline_sha256": "aa60914b787beff4db9fc078ef523bcb9044f4f801652002fa68ed9416eb21d0",
+  "baseline_sha256": "e131c33c27b6460841c8c7a4df0c14b16a8f57f9b8d3a57324cb12037d09559f",
   "correct_size_functions": {
     "full": {
-      "bytes": 493596,
-      "compared": 3017,
-      "count": 2851,
-      "exact_functions": 2707,
-      "mapped": 3019,
+      "bytes": 537931,
+      "compared": 3020,
+      "count": 2934,
+      "exact_functions": 2833,
+      "mapped": 3022,
       "uncompared": 2
     },
     "game_only": {
-      "bytes": 442763,
+      "bytes": 487080,
       "compared": 2721,
-      "count": 2559,
-      "exact_functions": 2418,
+      "count": 2639,
+      "exact_functions": 2539,
       "mapped": 2723,
       "uncompared": 2
     },
@@ -26,17 +26,17 @@
   "data_identity": {
     "gate": {
       ".bss": {
-        "at_original_address": 118,
-        "at_original_offset": 118,
-        "at_original_offset_bytes": 615078,
+        "at_original_address": 168,
+        "at_original_offset": 168,
+        "at_original_offset_bytes": 616030,
         "rebuilt_start": "0x4b2db0",
         "start_delta": 0
       },
       ".data": {
-        "at_original_address": 2401,
-        "at_original_offset": 2401,
-        "at_original_offset_bytes": 57219,
-        "identical_prefix_bytes": 12,
+        "at_original_address": 2461,
+        "at_original_offset": 2461,
+        "at_original_offset_bytes": 68812,
+        "identical_prefix_bytes": 16,
         "rebuilt_start": "0x4a1000",
         "start_delta": 0
       },
@@ -60,30 +60,27 @@
     "method": "regions measured from their own starts; items are Reccmp-paired data entities, objects the rebuilt definers of those items (link map); measured on the original-mode link (no /DEBUG), Reccmp's gate addresses moved to it by the nearest map symbol both links define",
     "regions": {
       ".bss": {
-        "first_difference": {
-          "object": "libc:fpinit.obj",
-          "offset_delta": -8,
-          "original": "0x5490c8",
-          "rebuilt": "0x5490c0",
-          "rebuilt_region": ".bss"
-        },
+        "first_difference": null,
         "items": {
-          "at_original_address": 118,
-          "at_original_address_bytes": 615078,
-          "at_original_offset": 118,
-          "at_original_offset_bytes": 615078,
-          "paired": 164,
-          "paired_bytes": 616026
+          "at_original_address": 168,
+          "at_original_address_bytes": 616030,
+          "at_original_offset": 168,
+          "at_original_offset_bytes": 616030,
+          "paired": 168,
+          "paired_bytes": 616030
         },
         "objects": {
           "agreeing": [
             "advisor.c.obj",
             "aitask.c.obj",
             "animation_object.c.obj",
+            "terrain_cell_objects.c.obj",
             "frontend_unit.c.obj",
+            "helpwindow.c.obj",
             "interface_unit.c.obj",
             "lego_unit.c.obj",
             "legoobject_unit.c.obj",
+            "message_data.c.obj",
             "tutorial_script.c.obj",
             "objective_unit.c.obj",
             "objectrecall.c.obj",
@@ -95,12 +92,28 @@
             "unit_gods98:config.c.obj",
             "unit_gods98:font.c.obj",
             "unit_gods98:sound3d.c.obj",
+            "unit_gods98:files.c.obj",
             "unit_gods98:mesh_unit.c.obj",
             "unit_gods98:draw.c.obj",
-            "unit_gods98:dxerror.c.obj"
+            "unit_gods98:dxerror.c.obj",
+            "libc:fpinit.obj",
+            "libc:crt0dat.obj",
+            "libc:wincrt0.obj",
+            "libc:_newmode.obj",
+            "libc:handler.obj",
+            "libc:nlsdata2.obj",
+            "libc:frame.obj",
+            "libc:hooks.obj",
+            "libc:winxfltr.obj",
+            "libc:mbctype.obj",
+            "libc:crt0msg.obj",
+            "libc:_file.obj",
+            "libc:_sftbuf.obj",
+            "libc:ncommode.obj",
+            "libc:txtmode.obj"
           ],
-          "at_original_offset": 21,
-          "with_paired_items": 36
+          "at_original_offset": 40,
+          "with_paired_items": 40
         },
         "original_bytes": 616304,
         "original_start": "0x4b2db0",
@@ -109,25 +122,19 @@
         "start_delta": 0
       },
       ".data": {
-        "first_difference": {
-          "object": "rock_fall_styles.c.obj",
-          "offset_delta": 132,
-          "original": "0x4a1d5c",
-          "rebuilt": "0x4a1de0",
-          "rebuilt_region": ".data"
-        },
+        "first_difference": null,
         "identical_prefix": {
-          "bytes": 12,
-          "first_difference": "0x4a100c",
+          "bytes": 16,
+          "first_difference": "0x4a1010",
           "rebuilt_object": "libc:crt0init.obj"
         },
         "items": {
-          "at_original_address": 2401,
-          "at_original_address_bytes": 57219,
-          "at_original_offset": 2401,
-          "at_original_offset_bytes": 57219,
-          "paired": 2458,
-          "paired_bytes": 68743
+          "at_original_address": 2461,
+          "at_original_address_bytes": 68812,
+          "at_original_offset": 2461,
+          "at_original_offset_bytes": 68812,
+          "paired": 2461,
+          "paired_bytes": 68812
         },
         "objects": {
           "agreeing": [
@@ -137,6 +144,10 @@
             "animation_object.c.obj",
             "bubbles.c.obj",
             "building_model.c.obj",
+            "screen_effect_quads.c.obj",
+            "dependencies.c.obj",
+            "detail.c.obj",
+            "rock_fall_styles.c.obj",
             "terrain_cell_objects.c.obj",
             "encyclopedia.c.obj",
             "frontend_unit.c.obj",
@@ -153,6 +164,7 @@
             "objinfo.c.obj",
             "panel_unit.c.obj",
             "pointer.c.obj",
+            "priorities.c.obj",
             "radarmap.c.obj",
             "reward.c.obj",
             "sfx.c.obj",
@@ -181,15 +193,29 @@
             "unit_gods98:wad.c.obj",
             "unit_gods98:lwo.c.obj",
             "libc:fpinit.obj",
+            "libc:87fmod.obj",
             "libc:exsup.obj",
             "libc:wincrt0.obj",
             "libc:ctype.obj",
             "libc:nlsdata1.obj",
             "libc:cmiscdat.obj",
-            "libc:output.obj"
+            "libc:output.obj",
+            "libc:sbheap.obj",
+            "libc:87disp.obj",
+            "libc:util.obj",
+            "libc:hooks.obj",
+            "libc:winxfltr.obj",
+            "libc:ioinit.obj",
+            "libc:_file.obj",
+            "libc:matherr.obj",
+            "libc:timeset.obj",
+            "libc:days.obj",
+            "libc:constpow.obj",
+            "late_rnc:rnc.c.obj",
+            "late_init:init.c.obj"
           ],
-          "at_original_offset": 56,
-          "with_paired_items": 74
+          "at_original_offset": 75,
+          "with_paired_items": 75
         },
         "original_bytes": 73136,
         "original_start": "0x4a1000",
@@ -200,32 +226,44 @@
       ".rdata": {
         "first_difference": {
           "object": null,
-          "offset_delta": -20,
-          "original": "0x49e048",
-          "rebuilt": "0x49e034",
+          "offset_delta": 4,
+          "original": "0x49e100",
+          "rebuilt": "0x49e104",
           "rebuilt_region": ".rdata"
         },
         "identical_prefix": {
-          "bytes": 52,
-          "first_difference": "0x49e034",
+          "bytes": 367,
+          "first_difference": "0x49e16f",
           "rebuilt_object": null
         },
         "items": {
-          "at_original_address": 8,
-          "at_original_address_bytes": 32,
-          "at_original_offset": 8,
-          "at_original_offset_bytes": 32,
-          "paired": 96,
-          "paired_bytes": 1028
+          "at_original_address": 90,
+          "at_original_address_bytes": 1000,
+          "at_original_offset": 90,
+          "at_original_offset_bytes": 1000,
+          "paired": 91,
+          "paired_bytes": 1004
         },
         "objects": {
-          "agreeing": [],
-          "at_original_offset": 0,
+          "agreeing": [
+            "unit_gods98:avi_player.cpp.obj",
+            "libc:testfdiv.obj",
+            "libc:cvt.obj",
+            "libc:output.obj",
+            "libc:aw_map.obj",
+            "libc:crt0msg.obj",
+            "libc:crtmbox.obj",
+            "libc:tzset.obj",
+            "libc:x10fout.obj",
+            "amstrmid:amstrmid.c.obj",
+            "dxguid:dxguid.c.obj"
+          ],
+          "at_original_offset": 11,
           "with_paired_items": 12
         },
         "original_bytes": 11232,
         "original_start": "0x49e000",
-        "rebuilt_bytes": 10744,
+        "rebuilt_bytes": 11224,
         "rebuilt_start": "0x49e000",
         "start_delta": 0
       },
@@ -255,22 +293,22 @@
     }
   },
   "exact_function_code_bytes": {
-    "bytes": 365396,
+    "bytes": 422110,
     "original_text_bytes": 642549,
-    "percent": 56.87
+    "percent": 65.69
   },
   "fully_identical_functions_at_original_address": {
-    "bytes": 8094,
-    "count": 114
+    "bytes": 25624,
+    "count": 247
   },
   "function_order_inversions": {
     "full": {
-      "adjacent": 10,
-      "pairs": 222
+      "adjacent": 0,
+      "pairs": 0
     },
     "game_only": {
-      "adjacent": 1,
-      "pairs": 1
+      "adjacent": 0,
+      "pairs": 0
     }
   },
   "identical_prefix": {
@@ -304,17 +342,17 @@
     "original_text_bytes": 642549,
     "percent": 0.06
   },
-  "input_sha256": "fb8653e9e85205b63269b89284cb2f856a682a66e66e029c81c25ac023a4319a",
+  "input_sha256": "91cfc3d7d425c1c247d5d36ed4b0ee209efd4a54a233da0df37cad2dbdfc0ee2",
   "layout": {
     "data_offset_agreement": {
-      "agreeing_units": 54,
-      "eligible_units": 57,
+      "agreeing_units": 55,
+      "eligible_units": 55,
       "method": "anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted",
-      "unattributed_or_unmapped_annotations": 126
+      "unattributed_or_unmapped_annotations": 132
     },
     "link_order_list": {
       "adjacent": 0,
-      "entries": 85,
+      "entries": 87,
       "method": "list order versus original unit starts and legacy median-address keys; tail omitted",
       "pairs": 0
     },
@@ -354,907 +392,911 @@
           "object": "construction.c.obj"
         },
         {
-          "first_public_address": "0x409d30",
+          "first_public_address": "0x409d40",
           "object": "entity_cell_effects.c.obj"
         },
         {
-          "first_public_address": "0x40a0b0",
+          "first_public_address": "0x40a0c0",
           "object": "screen_effect_quads.c.obj"
         },
         {
-          "first_public_address": "0x40aae0",
+          "first_public_address": "0x40aaf0",
           "object": "dependencies.c.obj"
         },
         {
-          "first_public_address": "0x40b2e0",
+          "first_public_address": "0x40b2f0",
           "object": "detail.c.obj"
         },
         {
-          "first_public_address": "0x40bdc0",
+          "first_public_address": "0x40bda0",
           "object": "rock_fall_styles.c.obj"
         },
         {
-          "first_public_address": "0x40cdc0",
+          "first_public_address": "0x40cda0",
           "object": "terrain_cell_objects.c.obj"
         },
         {
-          "first_public_address": "0x40e460",
+          "first_public_address": "0x40e470",
           "object": "encyclopedia.c.obj"
         },
         {
-          "first_public_address": "0x40e900",
+          "first_public_address": "0x40e910",
           "object": "erode.c.obj"
         },
         {
-          "first_public_address": "0x40f0b0",
+          "first_public_address": "0x40f0c0",
           "object": "fallin.c.obj"
         },
         {
-          "first_public_address": "0x40f690",
+          "first_public_address": "0x40f6a0",
           "object": "steering.c.obj"
         },
         {
-          "first_public_address": "0x410280",
+          "first_public_address": "0x410290",
           "object": "frontend_unit.c.obj"
         },
         {
-          "first_public_address": "0x418140",
+          "first_public_address": "0x4181b0",
           "object": "helpwindow.c.obj"
         },
         {
-          "first_public_address": "0x4191e0",
+          "first_public_address": "0x419250",
           "object": "info_unit.c.obj"
         },
         {
-          "first_public_address": "0x41a2b0",
+          "first_public_address": "0x41a320",
           "object": "interface_unit.c.obj"
         },
         {
-          "first_public_address": "0x41f7c0",
+          "first_public_address": "0x41f860",
           "object": "lego_unit.c.obj"
         },
         {
-          "first_public_address": "0x4359f0",
+          "first_public_address": "0x435b00",
           "object": "camera_control.c.obj"
         },
         {
-          "first_public_address": "0x436af0",
+          "first_public_address": "0x436c00",
           "object": "legoobject_unit.c.obj"
         },
         {
-          "first_public_address": "0x44c550",
+          "first_public_address": "0x44c6f0",
           "object": "lighteffects.c.obj"
         },
         {
-          "first_public_address": "0x44d9a0",
+          "first_public_address": "0x44db30",
           "object": "loader.c.obj"
         },
         {
-          "first_public_address": "0x44df10",
+          "first_public_address": "0x44e0a0",
           "object": "terrain_map.c.obj"
         },
         {
-          "first_public_address": "0x451ab0",
+          "first_public_address": "0x451990",
+          "object": "meshlod.c.obj"
+        },
+        {
+          "first_public_address": "0x451cb0",
           "object": "message_unit.c.obj"
         },
         {
-          "first_public_address": "0x452be0",
+          "first_public_address": "0x452dd0",
           "object": "tutorial_script.c.obj"
         },
         {
-          "first_public_address": "0x4572c0",
+          "first_public_address": "0x4574c0",
           "object": "objective_unit.c.obj"
         },
         {
-          "first_public_address": "0x458f70",
+          "first_public_address": "0x459170",
           "object": "objectrecall.c.obj"
         },
         {
-          "first_public_address": "0x459310",
+          "first_public_address": "0x459510",
           "object": "objinfo.c.obj"
         },
         {
-          "first_public_address": "0x459d70",
+          "first_public_address": "0x45a010",
           "object": "panel_unit.c.obj"
         },
         {
-          "first_public_address": "0x45c580",
+          "first_public_address": "0x45c810",
           "object": "pointer.c.obj"
         },
         {
-          "first_public_address": "0x45cb10",
+          "first_public_address": "0x45cda0",
           "object": "priorities.c.obj"
         },
         {
-          "first_public_address": "0x45d510",
+          "first_public_address": "0x45d7c0",
           "object": "ptl.c.obj"
         },
         {
-          "first_public_address": "0x45d5e0",
+          "first_public_address": "0x45d890",
           "object": "radarmap.c.obj"
         },
         {
-          "first_public_address": "0x45ed50",
+          "first_public_address": "0x45f010",
           "object": "reward.c.obj"
         },
         {
-          "first_public_address": "0x462ac0",
+          "first_public_address": "0x462d80",
           "object": "roof.c.obj"
         },
         {
-          "first_public_address": "0x4633e0",
+          "first_public_address": "0x463690",
           "object": "scrollinfo.c.obj"
         },
         {
-          "first_public_address": "0x463c20",
+          "first_public_address": "0x463ee0",
           "object": "selectplace.c.obj"
         },
         {
-          "first_public_address": "0x464460",
+          "first_public_address": "0x464720",
           "object": "sfx.c.obj"
         },
         {
-          "first_public_address": "0x465ef0",
+          "first_public_address": "0x4661a0",
           "object": "spiderweb.c.obj"
         },
         {
-          "first_public_address": "0x466510",
+          "first_public_address": "0x4667c0",
           "object": "entity_stats.c.obj"
         },
         {
-          "first_public_address": "0x46a0a0",
+          "first_public_address": "0x46a350",
           "object": "teleporter.c.obj"
         },
         {
-          "first_public_address": "0x46a520",
+          "first_public_address": "0x46a7d0",
           "object": "text.c.obj"
         },
         {
-          "first_public_address": "0x46af00",
+          "first_public_address": "0x46b1b0",
           "object": "tooltip.c.obj"
         },
         {
-          "first_public_address": "0x46bd30",
+          "first_public_address": "0x46c000",
           "object": "upgrade.c.obj"
         },
         {
-          "first_public_address": "0x46c0d0",
+          "first_public_address": "0x46c3a0",
           "object": "vehicle_model.c.obj"
         },
         {
-          "first_public_address": "0x46d890",
+          "first_public_address": "0x46db60",
           "object": "water.c.obj"
         },
         {
-          "first_public_address": "0x46e880",
+          "first_public_address": "0x46eb50",
           "object": "weapons.c.obj"
         },
         {
-          "first_public_address": "0x471f00",
+          "first_public_address": "0x4721c0",
           "object": "movie_unit.cpp.obj"
         },
         {
-          "first_public_address": "0x472440",
+          "first_public_address": "0x4726f0",
           "object": "unit_gods98:container.c.obj"
         },
         {
-          "first_public_address": "0x476a80",
+          "first_public_address": "0x476d30",
           "object": "unit_gods98:viewports.c.obj"
         },
         {
-          "first_public_address": "0x477170",
+          "first_public_address": "0x477420",
           "object": "unit_gods98:utils.c.obj"
         },
         {
-          "first_public_address": "0x4774d0",
+          "first_public_address": "0x477780",
           "object": "unit_gods98:main.c.obj"
         },
         {
-          "first_public_address": "0x478b10",
+          "first_public_address": "0x478dd0",
           "object": "unit_gods98:config.c.obj"
         },
         {
-          "first_public_address": "0x479220",
+          "first_public_address": "0x4794e0",
           "object": "unit_gods98:maths.c.obj"
         },
         {
-          "first_public_address": "0x479c40",
+          "first_public_address": "0x479ec0",
           "object": "unit_gods98:font.c.obj"
         },
         {
-          "first_public_address": "0x47a3b0",
+          "first_public_address": "0x47a620",
           "object": "unit_gods98:sound3d.c.obj"
         },
         {
-          "first_public_address": "0x47bec0",
+          "first_public_address": "0x47c150",
           "object": "unit_gods98:directdraw.c.obj"
         },
         {
-          "first_public_address": "0x47d170",
+          "first_public_address": "0x47d3f0",
           "object": "unit_gods98:images_unit.c.obj"
         },
         {
-          "first_public_address": "0x47e1a0",
+          "first_public_address": "0x47e440",
           "object": "unit_gods98:avi_player.cpp.obj"
         },
         {
-          "first_public_address": "0x47eaf0",
+          "first_public_address": "0x47ed70",
           "object": "unit_gods98:input_unit.c.obj"
         },
         {
-          "first_public_address": "0x47ee90",
+          "first_public_address": "0x47f110",
           "object": "unit_gods98:files.c.obj"
         },
         {
-          "first_public_address": "0x480310",
+          "first_public_address": "0x480590",
           "object": "unit_gods98:mesh_unit.c.obj"
         },
         {
-          "first_public_address": "0x4839b0",
+          "first_public_address": "0x483c50",
           "object": "unit_gods98:flic_unit.c.obj"
         },
         {
-          "first_public_address": "0x484dd0",
+          "first_public_address": "0x4850c0",
           "object": "unit_gods98:textwindow.c.obj"
         },
         {
-          "first_public_address": "0x485700",
+          "first_public_address": "0x4859f0",
           "object": "unit_gods98:keys.c.obj"
         },
         {
-          "first_public_address": "0x485b60",
+          "first_public_address": "0x485e50",
           "object": "unit_gods98:draw.c.obj"
         },
         {
-          "first_public_address": "0x4866c0",
+          "first_public_address": "0x4869c0",
           "object": "unit_gods98:lws.c.obj"
         },
         {
-          "first_public_address": "0x488810",
+          "first_public_address": "0x488b20",
           "object": "unit_gods98:soundsys.c.obj"
         },
         {
-          "first_public_address": "0x4890b0",
+          "first_public_address": "0x4893c0",
           "object": "unit_gods98:g98_024.c.obj"
         },
         {
-          "first_public_address": "0x489180",
+          "first_public_address": "0x489490",
           "object": "unit_gods98:animclone.c.obj"
         },
         {
-          "first_public_address": "0x4898f0",
+          "first_public_address": "0x489c00",
           "object": "unit_gods98:g98_026.c.obj"
         },
         {
-          "first_public_address": "0x489a50",
+          "first_public_address": "0x489d60",
           "object": "unit_gods98:dxerror.c.obj"
         },
         {
-          "first_public_address": "0x48af20",
+          "first_public_address": "0x48b230",
           "object": "unit_gods98:file_list_streams.c.obj"
         },
         {
-          "first_public_address": "0x48aff0",
+          "first_public_address": "0x48b300",
           "object": "unit_gods98:g98_029.c.obj"
         },
         {
-          "first_public_address": "0x48b160",
+          "first_public_address": "0x48b470",
           "object": "unit_gods98:wad.c.obj"
         },
         {
-          "first_public_address": "0x48bd00",
+          "first_public_address": "0x48c010",
           "object": "unit_gods98:lwo.c.obj"
         },
         {
-          "first_public_address": "0x48d5e0",
+          "first_public_address": "0x48d8f0",
           "object": "libc:fpinit.obj"
         },
         {
-          "first_public_address": "0x48d650",
+          "first_public_address": "0x48d960",
           "object": "libc:atof.obj"
         },
         {
-          "first_public_address": "0x48d6b0",
+          "first_public_address": "0x48d9c0",
           "object": "libc:sprintf.obj"
         },
         {
-          "first_public_address": "0x48d720",
-          "object": "libc:free.obj"
-        },
-        {
-          "first_public_address": "0x48d770",
-          "object": "libc:malloc.obj"
-        },
-        {
-          "first_public_address": "0x48d820",
-          "object": "libc:qsort.obj"
-        },
-        {
-          "first_public_address": "0x48da60",
-          "object": "libc:atox.obj"
-        },
-        {
-          "first_public_address": "0x48db10",
-          "object": "libc:ftol.obj"
-        },
-        {
-          "first_public_address": "0x48db40",
+          "first_public_address": "0x48da30",
           "object": "libc:strstr.obj"
         },
         {
-          "first_public_address": "0x48dbc0",
-          "object": "libc:acos.obj"
+          "first_public_address": "0x48dab0",
+          "object": "libc:atox.obj"
         },
         {
-          "first_public_address": "0x48dc90",
+          "first_public_address": "0x48db60",
+          "object": "libc:free.obj"
+        },
+        {
+          "first_public_address": "0x48dbb0",
+          "object": "libc:malloc.obj"
+        },
+        {
+          "first_public_address": "0x48dc60",
           "object": "libc:realloc.obj"
         },
         {
-          "first_public_address": "0x48de30",
-          "object": "libc:vsprintf.obj"
+          "first_public_address": "0x48de00",
+          "object": "libc:qsort.obj"
         },
         {
-          "first_public_address": "0x48dea0",
+          "first_public_address": "0x48e040",
+          "object": "libc:ftol.obj"
+        },
+        {
+          "first_public_address": "0x48e070",
+          "object": "libc:acos.obj"
+        },
+        {
+          "first_public_address": "0x48e140",
           "object": "libc:rand.obj"
         },
         {
-          "first_public_address": "0x48df10",
-          "object": "libc:floor.obj"
-        },
-        {
-          "first_public_address": "0x48e010",
-          "object": "libc:toupper.obj"
-        },
-        {
-          "first_public_address": "0x48e110",
-          "object": "libc:crt0dat.obj"
-        },
-        {
-          "first_public_address": "0x48e250",
-          "object": "libc:sqrt.obj"
-        },
-        {
-          "first_public_address": "0x48e310",
-          "object": "libc:fabs.obj"
-        },
-        {
-          "first_public_address": "0x48e400",
-          "object": "libc:strncpy.obj"
-        },
-        {
-          "first_public_address": "0x48e500",
-          "object": "libc:ieeemisc.obj"
-        },
-        {
-          "first_public_address": "0x48e520",
+          "first_public_address": "0x48e180",
           "object": "libc:87fmod.obj"
         },
         {
-          "first_public_address": "0x48e560",
+          "first_public_address": "0x48e1c0",
+          "object": "libc:vsprintf.obj"
+        },
+        {
+          "first_public_address": "0x48e260",
+          "object": "libc:floor.obj"
+        },
+        {
+          "first_public_address": "0x48e360",
+          "object": "libc:toupper.obj"
+        },
+        {
+          "first_public_address": "0x48e460",
+          "object": "libc:crt0dat.obj"
+        },
+        {
+          "first_public_address": "0x48e5a0",
+          "object": "libc:sqrt.obj"
+        },
+        {
+          "first_public_address": "0x48e660",
+          "object": "libc:fabs.obj"
+        },
+        {
+          "first_public_address": "0x48e750",
+          "object": "libc:strncpy.obj"
+        },
+        {
+          "first_public_address": "0x48e850",
+          "object": "libc:ieeemisc.obj"
+        },
+        {
+          "first_public_address": "0x48e870",
           "object": "libc:sscanf.obj"
         },
         {
-          "first_public_address": "0x48e5b0",
+          "first_public_address": "0x48e8c0",
           "object": "libc:ceil.obj"
         },
         {
-          "first_public_address": "0x48e6b0",
+          "first_public_address": "0x48e9c0",
           "object": "libc:lldiv.obj"
         },
         {
-          "first_public_address": "0x48e760",
+          "first_public_address": "0x48ea70",
           "object": "libc:llmul.obj"
         },
         {
-          "first_public_address": "0x48e7a0",
+          "first_public_address": "0x48eab0",
           "object": "libc:new.obj"
         },
         {
-          "first_public_address": "0x48e7b0",
+          "first_public_address": "0x48eac0",
           "object": "libc:fclose.obj"
         },
         {
-          "first_public_address": "0x48e830",
+          "first_public_address": "0x48eb40",
           "object": "libc:fopen.obj"
         },
         {
-          "first_public_address": "0x48e880",
+          "first_public_address": "0x48eb90",
           "object": "libc:trnsctrl.obj"
         },
         {
-          "first_public_address": "0x48ec00",
+          "first_public_address": "0x48ef10",
           "object": "libc:exsup.obj"
         },
         {
-          "first_public_address": "0x48ecf0",
+          "first_public_address": "0x48f000",
           "object": "libc:wincrt0.obj"
         },
         {
-          "first_public_address": "0x48eec0",
+          "first_public_address": "0x48f1d0",
           "object": "libc:isctype.obj"
         },
         {
-          "first_public_address": "0x48ef60",
+          "first_public_address": "0x48f270",
           "object": "libc:strncmp.obj"
         },
         {
-          "first_public_address": "0x48efa0",
+          "first_public_address": "0x48f2b0",
           "object": "libc:ftell.obj"
         },
         {
-          "first_public_address": "0x48f150",
+          "first_public_address": "0x48f460",
           "object": "libc:fseek.obj"
         },
         {
-          "first_public_address": "0x48f1f0",
-          "object": "libc:unlink.obj"
-        },
-        {
-          "first_public_address": "0x48f220",
-          "object": "libc:chmod.obj"
-        },
-        {
-          "first_public_address": "0x48f270",
-          "object": "libc:mkdir.obj"
-        },
-        {
-          "first_public_address": "0x48f2a0",
-          "object": "libc:findfile.obj"
-        },
-        {
-          "first_public_address": "0x48f5a0",
-          "object": "libc:getcwd.obj"
-        },
-        {
-          "first_public_address": "0x48f730",
-          "object": "libc:fread.obj"
-        },
-        {
-          "first_public_address": "0x48f870",
+          "first_public_address": "0x48f500",
           "object": "libc:fwrite.obj"
         },
         {
-          "first_public_address": "0x48f9c0",
+          "first_public_address": "0x48f650",
+          "object": "libc:unlink.obj"
+        },
+        {
+          "first_public_address": "0x48f680",
+          "object": "libc:chmod.obj"
+        },
+        {
+          "first_public_address": "0x48f6d0",
+          "object": "libc:mkdir.obj"
+        },
+        {
+          "first_public_address": "0x48f700",
+          "object": "libc:findfile.obj"
+        },
+        {
+          "first_public_address": "0x48fa00",
+          "object": "libc:getcwd.obj"
+        },
+        {
+          "first_public_address": "0x48fb90",
+          "object": "libc:fread.obj"
+        },
+        {
+          "first_public_address": "0x48fcd0",
           "object": "libc:fflush.obj"
         },
         {
-          "first_public_address": "0x48fb10",
+          "first_public_address": "0x48fe20",
           "object": "libc:fgetc.obj"
         },
         {
-          "first_public_address": "0x48fb40",
+          "first_public_address": "0x48fe50",
           "object": "libc:fgets.obj"
         },
         {
-          "first_public_address": "0x48fbc0",
+          "first_public_address": "0x48fed0",
           "object": "libc:vfprintf.obj"
         },
         {
-          "first_public_address": "0x48fc00",
+          "first_public_address": "0x48ff10",
           "object": "libc:stricmp.obj"
         },
         {
-          "first_public_address": "0x48fc90",
+          "first_public_address": "0x48ffa0",
           "object": "libc:fullpath.obj"
         },
         {
-          "first_public_address": "0x48fd60",
+          "first_public_address": "0x490070",
           "object": "libc:fscanf.obj"
         },
         {
-          "first_public_address": "0x48fd80",
+          "first_public_address": "0x490090",
           "object": "libc:splitpat.obj"
         },
         {
-          "first_public_address": "0x48ff00",
+          "first_public_address": "0x490210",
           "object": "libc:fp8.obj"
         },
         {
-          "first_public_address": "0x48ff20",
+          "first_public_address": "0x490230",
           "object": "libc:testfdiv.obj"
         },
         {
-          "first_public_address": "0x48ffa0",
+          "first_public_address": "0x4902b0",
           "object": "libc:cvt.obj"
         },
         {
-          "first_public_address": "0x4904e0",
+          "first_public_address": "0x4907f0",
           "object": "libc:cfin.obj"
         },
         {
-          "first_public_address": "0x490590",
+          "first_public_address": "0x4908a0",
           "object": "libc:_flsbuf.obj"
         },
         {
-          "first_public_address": "0x4906c0",
+          "first_public_address": "0x4909d0",
           "object": "libc:output.obj"
         },
         {
-          "first_public_address": "0x491180",
-          "object": "libc:heapinit.obj"
-        },
-        {
-          "first_public_address": "0x4911c0",
-          "object": "libc:sbheap.obj"
-        },
-        {
-          "first_public_address": "0x4919b0",
-          "object": "libc:handler.obj"
-        },
-        {
-          "first_public_address": "0x4919e0",
+          "first_public_address": "0x4914a0",
           "object": "libc:strchr.obj"
         },
         {
-          "first_public_address": "0x491aa0",
+          "first_public_address": "0x491560",
+          "object": "libc:heapinit.obj"
+        },
+        {
+          "first_public_address": "0x4915a0",
+          "object": "libc:sbheap.obj"
+        },
+        {
+          "first_public_address": "0x491d90",
+          "object": "libc:handler.obj"
+        },
+        {
+          "first_public_address": "0x491db0",
           "object": "libc:87disp.obj"
         },
         {
-          "first_public_address": "0x491c70",
+          "first_public_address": "0x491f80",
           "object": "libc:genexcep.obj"
         },
         {
-          "first_public_address": "0x491cd0",
+          "first_public_address": "0x491fe0",
           "object": "libc:common.obj"
         },
         {
-          "first_public_address": "0x491e60",
-          "object": "libc:frnd.obj"
-        },
-        {
-          "first_public_address": "0x491e80",
-          "object": "libc:fpexcept.obj"
-        },
-        {
-          "first_public_address": "0x492750",
-          "object": "libc:util.obj"
-        },
-        {
-          "first_public_address": "0x4928f0",
-          "object": "libc:fpctrl.obj"
-        },
-        {
-          "first_public_address": "0x4929b0",
-          "object": "libc:aw_map.obj"
-        },
-        {
-          "first_public_address": "0x492c00",
+          "first_public_address": "0x492170",
           "object": "libc:87cdisp.obj"
         },
         {
-          "first_public_address": "0x492e50",
+          "first_public_address": "0x4923c0",
           "object": "libc:adj_fdiv.obj"
         },
         {
+          "first_public_address": "0x493150",
+          "object": "libc:frnd.obj"
+        },
+        {
+          "first_public_address": "0x493170",
+          "object": "libc:fpexcept.obj"
+        },
+        {
+          "first_public_address": "0x493a40",
+          "object": "libc:util.obj"
+        },
+        {
           "first_public_address": "0x493be0",
+          "object": "libc:fpctrl.obj"
+        },
+        {
+          "first_public_address": "0x493ca0",
+          "object": "libc:aw_map.obj"
+        },
+        {
+          "first_public_address": "0x493ef0",
           "object": "libc:input.obj"
         },
         {
-          "first_public_address": "0x494a00",
+          "first_public_address": "0x494d10",
           "object": "libc:close.obj"
         },
         {
-          "first_public_address": "0x494ae0",
+          "first_public_address": "0x494df0",
           "object": "libc:_freebuf.obj"
         },
         {
-          "first_public_address": "0x494b20",
+          "first_public_address": "0x494e30",
           "object": "libc:_open.obj"
         },
         {
-          "first_public_address": "0x494cf0",
+          "first_public_address": "0x495000",
           "object": "libc:stream.obj"
         },
         {
-          "first_public_address": "0x494d80",
+          "first_public_address": "0x495090",
           "object": "libc:frame.obj"
         },
         {
-          "first_public_address": "0x495780",
+          "first_public_address": "0x495a90",
           "object": "libc:lowhelpr.obj"
         },
         {
-          "first_public_address": "0x4957d0",
+          "first_public_address": "0x495ae0",
           "object": "libc:hooks.obj"
         },
         {
-          "first_public_address": "0x4958f0",
+          "first_public_address": "0x495c00",
           "object": "libc:winxfltr.obj"
         },
         {
-          "first_public_address": "0x495a80",
+          "first_public_address": "0x495d90",
           "object": "libc:ismbbyte.obj"
         },
         {
-          "first_public_address": "0x495ae0",
+          "first_public_address": "0x495df0",
           "object": "libc:stdenvp.obj"
         },
         {
-          "first_public_address": "0x495bd0",
+          "first_public_address": "0x495ee0",
           "object": "libc:stdargv.obj"
         },
         {
-          "first_public_address": "0x495e80",
+          "first_public_address": "0x496190",
           "object": "libc:aw_env.obj"
         },
         {
-          "first_public_address": "0x495fe0",
+          "first_public_address": "0x4962f0",
           "object": "libc:mbctype.obj"
         },
         {
-          "first_public_address": "0x4962c0",
+          "first_public_address": "0x4965d0",
           "object": "libc:ioinit.obj"
         },
         {
-          "first_public_address": "0x4964c8",
+          "first_public_address": "0x4967d8",
           "object": "libc:exsup3.obj"
         },
         {
-          "first_public_address": "0x4965a0",
+          "first_public_address": "0x4968b0",
           "object": "libc:crt0msg.obj"
         },
         {
-          "first_public_address": "0x4967c0",
+          "first_public_address": "0x496ad0",
           "object": "libc:aw_str.obj"
         },
         {
-          "first_public_address": "0x4968f0",
+          "first_public_address": "0x496c00",
           "object": "libc:lseek.obj"
         },
         {
-          "first_public_address": "0x4969b0",
-          "object": "libc:dosmap.obj"
-        },
-        {
-          "first_public_address": "0x496a20",
-          "object": "libc:dtoxtime.obj"
-        },
-        {
-          "first_public_address": "0x496b10",
-          "object": "libc:_filbuf.obj"
-        },
-        {
-          "first_public_address": "0x496c00",
-          "object": "libc:read.obj"
-        },
-        {
-          "first_public_address": "0x496e60",
+          "first_public_address": "0x496cc0",
           "object": "libc:write.obj"
         },
         {
-          "first_public_address": "0x497080",
+          "first_public_address": "0x496ee0",
+          "object": "libc:dosmap.obj"
+        },
+        {
+          "first_public_address": "0x496f50",
+          "object": "libc:dtoxtime.obj"
+        },
+        {
+          "first_public_address": "0x497040",
+          "object": "libc:_filbuf.obj"
+        },
+        {
+          "first_public_address": "0x497130",
+          "object": "libc:read.obj"
+        },
+        {
+          "first_public_address": "0x497390",
           "object": "libc:commit.obj"
         },
         {
-          "first_public_address": "0x4970e0",
+          "first_public_address": "0x4973f0",
           "object": "libc:_file.obj"
         },
         {
-          "first_public_address": "0x4971c0",
+          "first_public_address": "0x4974d0",
           "object": "libc:_sftbuf.obj"
         },
         {
-          "first_public_address": "0x4972c0",
+          "first_public_address": "0x4975d0",
           "object": "libc:tolower.obj"
         },
         {
-          "first_public_address": "0x4973c0",
+          "first_public_address": "0x4976d0",
           "object": "libc:mbsnbcpy.obj"
         },
         {
-          "first_public_address": "0x497460",
+          "first_public_address": "0x497770",
           "object": "libc:ieee87.obj"
         },
         {
-          "first_public_address": "0x4975f0",
+          "first_public_address": "0x497900",
           "object": "libc:intrncvt.obj"
         },
         {
-          "first_public_address": "0x497b10",
+          "first_public_address": "0x497e20",
           "object": "libc:_fptostr.obj"
         },
         {
-          "first_public_address": "0x497bb0",
+          "first_public_address": "0x497ec0",
           "object": "libc:cfout.obj"
         },
         {
-          "first_public_address": "0x497cf0",
+          "first_public_address": "0x498000",
           "object": "libc:memmove.obj"
         },
         {
-          "first_public_address": "0x498030",
+          "first_public_address": "0x498340",
           "object": "libc:crt0fp.obj"
         },
         {
-          "first_public_address": "0x498040",
+          "first_public_address": "0x498350",
           "object": "libc:strgtold.obj"
         },
         {
-          "first_public_address": "0x4987d0",
+          "first_public_address": "0x498ae0",
           "object": "libc:_getbuf.obj"
         },
         {
-          "first_public_address": "0x498830",
+          "first_public_address": "0x498b40",
           "object": "libc:isatty.obj"
         },
         {
-          "first_public_address": "0x498860",
+          "first_public_address": "0x498b70",
           "object": "libc:wctomb.obj"
         },
         {
-          "first_public_address": "0x4988e0",
+          "first_public_address": "0x498bf0",
           "object": "libc:ulldiv.obj"
         },
         {
-          "first_public_address": "0x498950",
+          "first_public_address": "0x498c60",
           "object": "libc:ullrem.obj"
         },
         {
-          "first_public_address": "0x4989d0",
+          "first_public_address": "0x498ce0",
           "object": "libc:87except.obj"
         },
         {
-          "first_public_address": "0x498af0",
+          "first_public_address": "0x498e00",
           "object": "libc:matherr.obj"
         },
         {
-          "first_public_address": "0x498b00",
+          "first_public_address": "0x498e10",
           "object": "libc:mbtowc.obj"
         },
         {
-          "first_public_address": "0x498c00",
+          "first_public_address": "0x498f10",
           "object": "libc:_ctype.obj"
         },
         {
-          "first_public_address": "0x498c30",
+          "first_public_address": "0x498f40",
           "object": "libc:llshl.obj"
         },
         {
-          "first_public_address": "0x498c50",
+          "first_public_address": "0x498f60",
           "object": "libc:ungetc.obj"
         },
         {
-          "first_public_address": "0x498ce0",
+          "first_public_address": "0x498ff0",
           "object": "libc:osfinfo.obj"
         },
         {
-          "first_public_address": "0x498f40",
+          "first_public_address": "0x499250",
           "object": "libc:open.obj"
         },
         {
-          "first_public_address": "0x499300",
+          "first_public_address": "0x499610",
           "object": "libc:unhandld.obj"
         },
         {
-          "first_public_address": "0x499390",
+          "first_public_address": "0x4996a0",
           "object": "libc:validate.obj"
         },
         {
-          "first_public_address": "0x4993f0",
+          "first_public_address": "0x499700",
           "object": "libc:abort.obj"
         },
         {
-          "first_public_address": "0x499410",
+          "first_public_address": "0x499720",
           "object": "libc:wcslen.obj"
         },
         {
-          "first_public_address": "0x499430",
+          "first_public_address": "0x499740",
           "object": "libc:crtmbox.obj"
         },
         {
-          "first_public_address": "0x4994c0",
+          "first_public_address": "0x4997d0",
           "object": "libc:calloc.obj"
         },
         {
-          "first_public_address": "0x499560",
+          "first_public_address": "0x499870",
           "object": "libc:tzset.obj"
         },
         {
-          "first_public_address": "0x499c40",
+          "first_public_address": "0x499f50",
           "object": "libc:closeall.obj"
         },
         {
-          "first_public_address": "0x499cb0",
+          "first_public_address": "0x499fc0",
           "object": "libc:mantold.obj"
         },
         {
-          "first_public_address": "0x499eb0",
+          "first_public_address": "0x49a1c0",
           "object": "libc:x10fout.obj"
         },
         {
-          "first_public_address": "0x49a240",
+          "first_public_address": "0x49a550",
           "object": "libc:tenpow.obj"
         },
         {
-          "first_public_address": "0x49a590",
+          "first_public_address": "0x49a8a0",
           "object": "libc:chsize.obj"
         },
         {
-          "first_public_address": "0x49a710",
+          "first_public_address": "0x49aa20",
           "object": "libc:winsig.obj"
         },
         {
-          "first_public_address": "0x49a8e0",
+          "first_public_address": "0x49abf0",
           "object": "libc:wcstombs.obj"
         },
         {
-          "first_public_address": "0x49ab10",
+          "first_public_address": "0x49ae20",
           "object": "libc:getenv.obj"
         },
         {
-          "first_public_address": "0x49aba0",
+          "first_public_address": "0x49aeb0",
           "object": "libc:setmode.obj"
         },
         {
-          "first_public_address": "0x49ac20",
+          "first_public_address": "0x49af30",
           "object": "libc:mbsnbico.obj"
         },
         {
-          "first_public_address": "0x49ac60",
+          "first_public_address": "0x49af70",
           "object": "libc:wtombenv.obj"
         },
         {
-          "first_public_address": "0x49ace0",
+          "first_public_address": "0x49aff0",
           "object": "libc:aw_cmp.obj"
         },
         {
-          "first_public_address": "0x49afe0",
+          "first_public_address": "0x49b2f0",
           "object": "libc:setenv.obj"
         },
         {
-          "first_public_address": "0x49b2e0",
+          "first_public_address": "0x49b5f0",
           "object": "libc:mbschr.obj"
         },
         {
-          "first_public_address": "0x49b390",
+          "first_public_address": "0x49b6a0",
           "object": "libc:strdup.obj"
         },
         {
-          "first_public_address": "0x49b3e0",
+          "first_public_address": "0x49b6f0",
           "object": "d3drm:d3drm.dll"
         },
         {
-          "first_public_address": "0x49b3f2",
+          "first_public_address": "0x49b702",
           "object": "ddraw:DDRAW.dll"
         },
         {
-          "first_public_address": "0x49b3fe",
+          "first_public_address": "0x49b70e",
           "object": "vfw32:AVIFIL32.dll"
         },
         {
-          "first_public_address": "0x49c4d8",
+          "first_public_address": "0x49c7e8",
           "object": "dinput:DINPUT.dll"
         },
         {
-          "first_public_address": "0x49c4de",
+          "first_public_address": "0x49c7ee",
           "object": "dsound:DSOUND.dll"
         },
         {
-          "first_public_address": "0x49c4f0",
-          "object": "late_rnc:rnc.c.obj"
-        },
-        {
-          "first_public_address": "0x49cd60",
-          "object": "late_init:init.c.obj"
-        },
-        {
-          "first_public_address": "0x49d7e0",
+          "first_public_address": "0x49c7f4",
           "object": "kernel32:KERNEL32.dll"
         },
         {
-          "first_public_address": "0x49d7f0",
+          "first_public_address": "0x49c800",
+          "object": "late_rnc:rnc.c.obj"
+        },
+        {
+          "first_public_address": "0x49d070",
+          "object": "late_init:init.c.obj"
+        },
+        {
+          "first_public_address": "0x49daf0",
           "object": "libc:strnicmp.obj"
         },
         {
-          "first_public_address": "0x49d8a0",
+          "first_public_address": "0x49dba0",
           "object": "libc:xtoa.obj"
         },
         {
-          "first_public_address": "0x49d950",
+          "first_public_address": "0x49dc50",
           "object": "libc:strlwr.obj"
         },
         {
-          "first_public_address": "0x49da10",
+          "first_public_address": "0x49dd10",
           "object": "libc:strupr.obj"
         }
       ]
@@ -1262,28 +1304,28 @@
     "size_exact_prefix": {
       "bytes": 3248,
       "method": "all original functions mapped with equal code sizes; bytes use original unit spans",
-      "size_exact_units": 53,
+      "size_exact_units": 63,
       "units": 1
     },
     "unattributed_mapped_functions": 2,
     "unattributed_original_functions": 0,
     "unit_contiguity": {
-      "eligible_units": 226,
+      "eligible_units": 228,
       "method": "one run of mapped functions in original function order; unmapped functions omitted; mapped annotations inside a unit range that start no listed function count with that unit",
-      "percent": 99.12,
-      "units": 224
+      "percent": 100.0,
+      "units": 228
     },
     "unit_order_inversions": {
-      "adjacent": 9,
+      "adjacent": 0,
       "method": "median mapped function address per unit; ties are not inversions",
-      "pairs": 45,
-      "units": 226
+      "pairs": 0,
+      "units": 228
     },
     "unit_relative_identity": {
-      "identical_bytes": 296737,
+      "identical_bytes": 347203,
       "method": "whole function byte identity; image-address operands and external relative branches masked; missing functions count against original bytes",
       "original_bytes": 553892,
-      "percent": 53.57
+      "percent": 62.68
     },
     "units": [
       {
@@ -1301,7 +1343,7 @@
       {
         "contiguous": true,
         "data_offset_agreement": true,
-        "data_offset_comparisons": 65,
+        "data_offset_comparisons": 64,
         "functions": 94,
         "identical_function_bytes": 8870,
         "identity_percent": 62.91,
@@ -1312,11 +1354,11 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": true,
-        "data_offset_comparisons": 2,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
         "functions": 7,
-        "identical_function_bytes": 282,
-        "identity_percent": 31.69,
+        "identical_function_bytes": 380,
+        "identity_percent": 42.7,
         "mapped": 7,
         "original_function_bytes": 890,
         "size_exact": false,
@@ -1363,11 +1405,11 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 4,
-        "identical_function_bytes": 96,
-        "identity_percent": 14.01,
+        "identical_function_bytes": 400,
+        "identity_percent": 58.39,
         "mapped": 4,
         "original_function_bytes": 685,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "GAME-007"
       },
       {
@@ -1375,8 +1417,8 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 27,
-        "identical_function_bytes": 3172,
-        "identity_percent": 80.04,
+        "identical_function_bytes": 3573,
+        "identity_percent": 90.16,
         "mapped": 27,
         "original_function_bytes": 3963,
         "size_exact": false,
@@ -1396,11 +1438,11 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 7,
         "functions": 9,
-        "identical_function_bytes": 1543,
-        "identity_percent": 81.86,
+        "identical_function_bytes": 1885,
+        "identity_percent": 100.0,
         "mapped": 9,
         "original_function_bytes": 1885,
         "size_exact": true,
@@ -1423,20 +1465,20 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 1,
         "functions": 11,
-        "identical_function_bytes": 1732,
-        "identity_percent": 65.09,
+        "identical_function_bytes": 2661,
+        "identity_percent": 100.0,
         "mapped": 11,
         "original_function_bytes": 2661,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "GAME-011"
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
-        "data_offset_comparisons": 13,
+        "data_offset_agreement": true,
+        "data_offset_comparisons": 15,
         "functions": 27,
-        "identical_function_bytes": 3113,
-        "identity_percent": 80.59,
+        "identical_function_bytes": 3784,
+        "identity_percent": 97.95,
         "mapped": 27,
         "original_function_bytes": 3863,
         "size_exact": false,
@@ -1447,11 +1489,11 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 1,
         "functions": 24,
-        "identical_function_bytes": 3884,
-        "identity_percent": 77.59,
+        "identical_function_bytes": 4045,
+        "identity_percent": 80.8,
         "mapped": 24,
         "original_function_bytes": 5006,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "GAME-013"
       },
       {
@@ -1495,11 +1537,11 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 8,
         "functions": 23,
-        "identical_function_bytes": 1256,
-        "identity_percent": 62.49,
+        "identical_function_bytes": 1545,
+        "identity_percent": 76.87,
         "mapped": 23,
         "original_function_bytes": 2010,
-        "size_exact": true,
+        "size_exact": false,
         "unit_id": "GAME-016"
       },
       {
@@ -1507,8 +1549,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 126,
         "functions": 132,
-        "identical_function_bytes": 14796,
-        "identity_percent": 50.26,
+        "identical_function_bytes": 18162,
+        "identity_percent": 61.7,
         "mapped": 132,
         "original_function_bytes": 29437,
         "size_exact": false,
@@ -1519,8 +1561,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 9,
         "functions": 19,
-        "identical_function_bytes": 2297,
-        "identity_percent": 56.16,
+        "identical_function_bytes": 3870,
+        "identity_percent": 94.62,
         "mapped": 19,
         "original_function_bytes": 4090,
         "size_exact": false,
@@ -1543,8 +1585,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 84,
         "functions": 73,
-        "identical_function_bytes": 9293,
-        "identity_percent": 50.38,
+        "identical_function_bytes": 10417,
+        "identity_percent": 56.47,
         "mapped": 73,
         "original_function_bytes": 18446,
         "size_exact": false,
@@ -1555,8 +1597,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 348,
         "functions": 216,
-        "identical_function_bytes": 34517,
-        "identity_percent": 41.77,
+        "identical_function_bytes": 46183,
+        "identity_percent": 55.89,
         "mapped": 216,
         "original_function_bytes": 82635,
         "size_exact": false,
@@ -1579,8 +1621,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 123,
         "functions": 258,
-        "identical_function_bytes": 38046,
-        "identity_percent": 56.84,
+        "identical_function_bytes": 43994,
+        "identity_percent": 65.73,
         "mapped": 257,
         "original_function_bytes": 66934,
         "size_exact": false,
@@ -1591,8 +1633,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 13,
         "functions": 20,
-        "identical_function_bytes": 3030,
-        "identity_percent": 60.38,
+        "identical_function_bytes": 4323,
+        "identity_percent": 86.15,
         "mapped": 20,
         "original_function_bytes": 5018,
         "size_exact": false,
@@ -1614,21 +1656,33 @@
         "contiguous": true,
         "data_offset_agreement": true,
         "data_offset_comparisons": 1,
-        "functions": 62,
-        "identical_function_bytes": 7110,
-        "identity_percent": 47.92,
-        "mapped": 62,
-        "original_function_bytes": 14838,
+        "functions": 56,
+        "identical_function_bytes": 8572,
+        "identity_percent": 60.8,
+        "mapped": 56,
+        "original_function_bytes": 14099,
         "size_exact": false,
         "unit_id": "GAME-026"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 6,
+        "identical_function_bytes": 739,
+        "identity_percent": 100.0,
+        "mapped": 6,
+        "original_function_bytes": 739,
+        "size_exact": true,
+        "unit_id": "GAME-053"
       },
       {
         "contiguous": true,
         "data_offset_agreement": true,
         "data_offset_comparisons": 65,
         "functions": 26,
-        "identical_function_bytes": 2696,
-        "identity_percent": 67.16,
+        "identical_function_bytes": 3325,
+        "identity_percent": 82.84,
         "mapped": 26,
         "original_function_bytes": 4014,
         "size_exact": false,
@@ -1637,10 +1691,10 @@
       {
         "contiguous": true,
         "data_offset_agreement": true,
-        "data_offset_comparisons": 313,
+        "data_offset_comparisons": 312,
         "functions": 30,
-        "identical_function_bytes": 1884,
-        "identity_percent": 34.09,
+        "identical_function_bytes": 3033,
+        "identity_percent": 54.88,
         "mapped": 30,
         "original_function_bytes": 5527,
         "size_exact": false,
@@ -1651,8 +1705,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 28,
         "functions": 14,
-        "identical_function_bytes": 1203,
-        "identity_percent": 16.94,
+        "identical_function_bytes": 4437,
+        "identity_percent": 62.49,
         "mapped": 14,
         "original_function_bytes": 7100,
         "size_exact": false,
@@ -1685,7 +1739,7 @@
       {
         "contiguous": true,
         "data_offset_agreement": true,
-        "data_offset_comparisons": 62,
+        "data_offset_comparisons": 63,
         "functions": 52,
         "identical_function_bytes": 7179,
         "identity_percent": 74.24,
@@ -1709,10 +1763,10 @@
       {
         "contiguous": true,
         "data_offset_agreement": true,
-        "data_offset_comparisons": 2,
+        "data_offset_comparisons": 4,
         "functions": 14,
-        "identical_function_bytes": 944,
-        "identity_percent": 38.06,
+        "identical_function_bytes": 2020,
+        "identity_percent": 81.45,
         "mapped": 14,
         "original_function_bytes": 2480,
         "size_exact": false,
@@ -1735,8 +1789,8 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 11,
-        "identical_function_bytes": 937,
-        "identity_percent": 17.96,
+        "identical_function_bytes": 1122,
+        "identity_percent": 21.51,
         "mapped": 11,
         "original_function_bytes": 5217,
         "size_exact": false,
@@ -1747,8 +1801,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 43,
         "functions": 52,
-        "identical_function_bytes": 10442,
-        "identity_percent": 68.12,
+        "identical_function_bytes": 11156,
+        "identity_percent": 72.78,
         "mapped": 52,
         "original_function_bytes": 15329,
         "size_exact": false,
@@ -1759,11 +1813,11 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 9,
-        "identical_function_bytes": 1341,
-        "identity_percent": 59.55,
+        "identical_function_bytes": 1976,
+        "identity_percent": 87.74,
         "mapped": 9,
         "original_function_bytes": 2252,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "GAME-038"
       },
       {
@@ -1771,11 +1825,11 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 11,
-        "identical_function_bytes": 785,
-        "identity_percent": 38.37,
+        "identical_function_bytes": 1772,
+        "identity_percent": 86.61,
         "mapped": 11,
         "original_function_bytes": 2046,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "GAME-039"
       },
       {
@@ -1817,7 +1871,7 @@
       {
         "contiguous": true,
         "data_offset_agreement": true,
-        "data_offset_comparisons": 134,
+        "data_offset_comparisons": 130,
         "functions": 63,
         "identical_function_bytes": 14604,
         "identity_percent": 100.0,
@@ -1891,8 +1945,8 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 12,
-        "identical_function_bytes": 2646,
-        "identity_percent": 67.55,
+        "identical_function_bytes": 3273,
+        "identity_percent": 83.56,
         "mapped": 12,
         "original_function_bytes": 3917,
         "size_exact": true,
@@ -1903,8 +1957,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 10,
         "functions": 45,
-        "identical_function_bytes": 2705,
-        "identity_percent": 21.65,
+        "identical_function_bytes": 5723,
+        "identity_percent": 45.79,
         "mapped": 45,
         "original_function_bytes": 12497,
         "size_exact": false,
@@ -1915,8 +1969,8 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 11,
-        "identical_function_bytes": 1131,
-        "identity_percent": 89.13,
+        "identical_function_bytes": 1269,
+        "identity_percent": 100.0,
         "mapped": 11,
         "original_function_bytes": 1269,
         "size_exact": true,
@@ -1927,8 +1981,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 21,
         "functions": 107,
-        "identical_function_bytes": 11927,
-        "identity_percent": 74.02,
+        "identical_function_bytes": 13564,
+        "identity_percent": 84.18,
         "mapped": 107,
         "original_function_bytes": 16114,
         "size_exact": false,
@@ -1939,11 +1993,11 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 22,
-        "identical_function_bytes": 1054,
-        "identity_percent": 66.75,
+        "identical_function_bytes": 1579,
+        "identity_percent": 100.0,
         "mapped": 22,
         "original_function_bytes": 1579,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "G98-003"
       },
       {
@@ -1961,10 +2015,10 @@
       {
         "contiguous": true,
         "data_offset_agreement": true,
-        "data_offset_comparisons": 34,
+        "data_offset_comparisons": 35,
         "functions": 24,
-        "identical_function_bytes": 3102,
-        "identity_percent": 59.06,
+        "identical_function_bytes": 3405,
+        "identity_percent": 64.83,
         "mapped": 24,
         "original_function_bytes": 5252,
         "size_exact": false,
@@ -1975,11 +2029,11 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 3,
         "functions": 16,
-        "identical_function_bytes": 1386,
-        "identity_percent": 81.91,
+        "identical_function_bytes": 1461,
+        "identity_percent": 86.35,
         "mapped": 16,
         "original_function_bytes": 1692,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "G98-006"
       },
       {
@@ -1987,8 +2041,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 6,
         "functions": 20,
-        "identical_function_bytes": 732,
-        "identity_percent": 30.86,
+        "identical_function_bytes": 1439,
+        "identity_percent": 60.67,
         "mapped": 20,
         "original_function_bytes": 2372,
         "size_exact": false,
@@ -1999,8 +2053,8 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 11,
-        "identical_function_bytes": 478,
-        "identity_percent": 26.57,
+        "identical_function_bytes": 1153,
+        "identity_percent": 64.09,
         "mapped": 11,
         "original_function_bytes": 1799,
         "size_exact": false,
@@ -2011,11 +2065,11 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 3,
         "functions": 42,
-        "identical_function_bytes": 4404,
-        "identity_percent": 66.32,
+        "identical_function_bytes": 5571,
+        "identity_percent": 83.89,
         "mapped": 42,
         "original_function_bytes": 6641,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "G98-009"
       },
       {
@@ -2023,8 +2077,8 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 17,
-        "identical_function_bytes": 2387,
-        "identity_percent": 61.17,
+        "identical_function_bytes": 3099,
+        "identity_percent": 79.42,
         "mapped": 17,
         "original_function_bytes": 3902,
         "size_exact": false,
@@ -2035,15 +2089,15 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 2,
         "functions": 27,
-        "identical_function_bytes": 1637,
-        "identity_percent": 41.24,
+        "identical_function_bytes": 2059,
+        "identity_percent": 51.88,
         "mapped": 27,
         "original_function_bytes": 3969,
         "size_exact": false,
         "unit_id": "G98-011"
       },
       {
-        "contiguous": false,
+        "contiguous": true,
         "data_offset_agreement": true,
         "data_offset_comparisons": 1,
         "functions": 25,
@@ -2069,10 +2123,10 @@
       {
         "contiguous": true,
         "data_offset_agreement": true,
-        "data_offset_comparisons": 34,
+        "data_offset_comparisons": 35,
         "functions": 36,
-        "identical_function_bytes": 4669,
-        "identity_percent": 93.94,
+        "identical_function_bytes": 4970,
+        "identity_percent": 100.0,
         "mapped": 36,
         "original_function_bytes": 4970,
         "size_exact": true,
@@ -2095,8 +2149,8 @@
         "data_offset_agreement": true,
         "data_offset_comparisons": 4,
         "functions": 24,
-        "identical_function_bytes": 4299,
-        "identity_percent": 86.34,
+        "identical_function_bytes": 4373,
+        "identity_percent": 87.83,
         "mapped": 24,
         "original_function_bytes": 4979,
         "size_exact": false,
@@ -2128,8 +2182,8 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": true,
-        "data_offset_comparisons": 3,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
         "functions": 12,
         "identical_function_bytes": 2517,
         "identity_percent": 100.0,
@@ -2140,7 +2194,7 @@
       },
       {
         "contiguous": true,
-        "data_offset_agreement": false,
+        "data_offset_agreement": true,
         "data_offset_comparisons": 20,
         "functions": 25,
         "identical_function_bytes": 3826,
@@ -2227,11 +2281,11 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 3,
-        "identical_function_bytes": 81,
-        "identity_percent": 23.01,
+        "identical_function_bytes": 352,
+        "identity_percent": 100.0,
         "mapped": 3,
         "original_function_bytes": 352,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "G98-029"
       },
       {
@@ -3351,7 +3405,7 @@
         "unit_id": "CRT-091"
       },
       {
-        "contiguous": false,
+        "contiguous": true,
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 1,
@@ -3451,8 +3505,8 @@
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 1,
-        "identical_function_bytes": 0,
-        "identity_percent": 0.0,
+        "identical_function_bytes": 821,
+        "identity_percent": 100.0,
         "mapped": 1,
         "original_function_bytes": 821,
         "size_exact": true,
@@ -3867,15 +3921,15 @@
         "unit_id": "CRT-134"
       },
       {
-        "contiguous": null,
+        "contiguous": true,
         "data_offset_agreement": null,
         "data_offset_comparisons": 0,
         "functions": 3,
-        "identical_function_bytes": 0,
-        "identity_percent": 0.0,
-        "mapped": 0,
+        "identical_function_bytes": 18,
+        "identity_percent": 100.0,
+        "mapped": 3,
         "original_function_bytes": 18,
-        "size_exact": false,
+        "size_exact": true,
         "unit_id": "IMP-001"
       },
       {
@@ -4012,20 +4066,20 @@
       }
     ],
     "unlisted_mapped_functions": 466,
-    "unmapped_original_functions": 11
+    "unmapped_original_functions": 8
   },
-  "listing_digests_sha256": "918f51a2d58efb75ad02c64f9a2a55e6c5ce678f0d9d1821a87193b9bda0ff25",
+  "listing_digests_sha256": "a6d184b0282e4cdbd7602c7a384fdee855bfbb878e59d3e3410c8d1d376723fd",
   "minimum_identical_run_bytes": 16,
   "opt_ref": {
     "annotated": {
       "full": {
-        "exact": 2707,
-        "mapped": 3019,
+        "exact": 2833,
+        "mapped": 3022,
         "removed": 0,
         "removed_exact": null
       },
       "game_only": {
-        "exact": 2418,
+        "exact": 2539,
         "mapped": 2723,
         "removed": 0,
         "removed_exact": null
@@ -4033,28 +4087,28 @@
     },
     "annotated_by_kind": {
       "unit": {
-        "bytes": 579744,
-        "functions": 2719,
+        "bytes": 580464,
+        "functions": 2714,
         "removed_bytes": 0,
         "removed_functions": 0
       }
     },
     "by_category": {
       "import_thunks": {
-        "bytes": 1133,
-        "functions": 146,
-        "removed_bytes": 927,
-        "removed_functions": 132
+        "bytes": 1197,
+        "functions": 160,
+        "removed_bytes": 1113,
+        "removed_functions": 146
       },
       "libc": {
-        "bytes": 65728,
-        "functions": 419,
-        "removed_bytes": 8168,
-        "removed_functions": 78
+        "bytes": 65840,
+        "functions": 421,
+        "removed_bytes": 8280,
+        "removed_functions": 80
       },
       "original_annotated": {
-        "bytes": 579744,
-        "functions": 2719,
+        "bytes": 580464,
+        "functions": 2714,
         "removed_bytes": 0,
         "removed_functions": 0
       },
@@ -4065,13 +4119,13 @@
         "removed_functions": 0
       },
       "port_unit": {
-        "bytes": 224,
-        "functions": 9,
-        "removed_bytes": 176,
-        "removed_functions": 6
+        "bytes": 1232,
+        "functions": 50,
+        "removed_bytes": 1120,
+        "removed_functions": 45
       }
     },
-    "gate_text_symbols": 3295,
+    "gate_text_symbols": 3347,
     "image": {
       "bss_bytes": 2863396,
       "characteristics": 271,
@@ -4081,7 +4135,7 @@
         0,
         0
       ],
-      "entry_point_rva": 584944,
+      "entry_point_rva": 585728,
       "import_dlls": [
         "kernel32.dll",
         "ole32.dll",
@@ -4099,28 +4153,28 @@
       "imported_names": 145,
       "section_bytes": {
         ".data": {
-          "differing": 2825,
-          "equal": 70391,
+          "differing": 351,
+          "equal": 72865,
           "original": 73216,
           "rebuilt": 73216
         },
         ".idata": {
-          "differing": 2887,
-          "equal": 1225,
+          "differing": 0,
+          "equal": 4112,
           "original": 4112,
           "rebuilt": 4112
         },
         ".rdata": {
-          "differing": 8790,
-          "equal": 2442,
+          "differing": 1146,
+          "equal": 10086,
           "original": 11232,
-          "rebuilt": 10744
+          "rebuilt": 11224
         },
         ".text": {
-          "differing": 582033,
-          "equal": 60516,
+          "differing": 530887,
+          "equal": 111726,
           "original": 642549,
-          "rebuilt": 641845
+          "rebuilt": 642613
         }
       },
       "sections": {
@@ -4133,16 +4187,16 @@
           "virtual_size": 4112
         },
         ".rdata": {
-          "raw_size": 10752,
-          "virtual_size": 10744
+          "raw_size": 11264,
+          "virtual_size": 11224
         },
         ".rsrc": {
           "raw_size": 3072,
           "virtual_size": 2936
         },
         ".text": {
-          "raw_size": 642048,
-          "virtual_size": 641845
+          "raw_size": 643072,
+          "virtual_size": 642613
         }
       },
       "thunk_order": [
@@ -4165,65 +4219,60 @@
       ]
     },
     "reference": "gate against its /DEBUG /OPT:NOREF relink",
-    "removed_bytes": 9271,
-    "removed_functions": 216,
+    "removed_bytes": 10513,
+    "removed_functions": 271,
     "unmapped_annotations": []
   },
-  "pe_header_differences": {
-    "entry_point_rva": {
-      "original": 585728,
-      "rebuilt": 584944
-    }
-  },
+  "pe_header_differences": {},
   "schema_version": 6,
   "sections": {
     ".data": {
       "chance_percent": 10.47,
-      "excess_percent_points": 85.67,
-      "identical_bytes": 70390,
-      "identical_percent": 96.14,
+      "excess_percent_points": 88.96,
+      "identical_bytes": 72799,
+      "identical_percent": 99.43,
       "original_bytes": 73216,
       "rebuilt_bytes": 73216,
       "run_chance_percent": 1.76,
-      "run_excess_percent_points": 88.94,
-      "run_identical_bytes": 66408,
-      "run_identical_percent": 90.7
+      "run_excess_percent_points": 92.93,
+      "run_identical_bytes": 69328,
+      "run_identical_percent": 94.69
     },
     ".rdata": {
       "chance_percent": 4.12,
-      "excess_percent_points": 18.95,
-      "identical_bytes": 2591,
-      "identical_percent": 23.07,
+      "excess_percent_points": 29.34,
+      "identical_bytes": 3758,
+      "identical_percent": 33.46,
       "original_bytes": 11232,
-      "rebuilt_bytes": 10824,
+      "rebuilt_bytes": 11304,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 0.32,
-      "run_identical_bytes": 36,
-      "run_identical_percent": 0.32
+      "run_excess_percent_points": 0.22,
+      "run_identical_bytes": 25,
+      "run_identical_percent": 0.22
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 6.59,
-      "identical_bytes": 60498,
-      "identical_percent": 9.42,
+      "excess_percent_points": 14.5,
+      "identical_bytes": 111359,
+      "identical_percent": 17.33,
       "original_bytes": 642549,
-      "rebuilt_bytes": 641845,
+      "rebuilt_bytes": 642613,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 5.27,
-      "run_identical_bytes": 33893,
-      "run_identical_percent": 5.27
+      "run_excess_percent_points": 12.23,
+      "run_identical_bytes": 78571,
+      "run_identical_percent": 12.23
     },
     "imports": {
       "chance_percent": 34.58,
-      "excess_percent_points": 57.5,
-      "identical_bytes": 221,
-      "identical_percent": 92.08,
+      "excess_percent_points": 65.42,
+      "identical_bytes": 240,
+      "identical_percent": 100.0,
       "original_bytes": 240,
       "rebuilt_bytes": 240,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 87.08,
-      "run_identical_bytes": 209,
-      "run_identical_percent": 87.08
+      "run_excess_percent_points": 100.0,
+      "run_identical_bytes": 240,
+      "run_identical_percent": 100.0
     },
     "resources": {
       "chance_percent": 16.31,
@@ -4240,26 +4289,101 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 6.59,
-    "identical_bytes": 60541,
-    "identical_percent": 9.42,
+    "excess_percent_points": 14.5,
+    "identical_bytes": 111359,
+    "identical_percent": 17.33,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
-    "run_excess_percent_points": 5.27,
-    "run_identical_bytes": 33893,
-    "run_identical_percent": 5.27
+    "run_excess_percent_points": 12.23,
+    "run_identical_bytes": 78571,
+    "run_identical_percent": 12.23
   },
   "unit_size_agreement": {
     "agreeing_unit_ids": [
       "GAME-001",
       "GAME-004",
       "GAME-005",
-      "GAME-006"
+      "GAME-006",
+      "GAME-007",
+      "GAME-008",
+      "CRT-031",
+      "CRT-032",
+      "CRT-033",
+      "CRT-034",
+      "CRT-035",
+      "CRT-036",
+      "CRT-037",
+      "CRT-038",
+      "CRT-039",
+      "CRT-040",
+      "CRT-041",
+      "CRT-042",
+      "CRT-043",
+      "CRT-044",
+      "CRT-045",
+      "CRT-046",
+      "CRT-047",
+      "CRT-048",
+      "CRT-049",
+      "CRT-050",
+      "CRT-051",
+      "CRT-052",
+      "CRT-053",
+      "CRT-054",
+      "CRT-055",
+      "CRT-056",
+      "CRT-057",
+      "CRT-058",
+      "CRT-059",
+      "CRT-060",
+      "CRT-061",
+      "CRT-062",
+      "CRT-064",
+      "CRT-065",
+      "CRT-066",
+      "CRT-067",
+      "CRT-068",
+      "CRT-070",
+      "CRT-071",
+      "CRT-072",
+      "CRT-073",
+      "CRT-074",
+      "CRT-078",
+      "CRT-079",
+      "CRT-080",
+      "CRT-081",
+      "CRT-082",
+      "CRT-083",
+      "CRT-084",
+      "CRT-085",
+      "CRT-086",
+      "CRT-087",
+      "CRT-088",
+      "CRT-089",
+      "CRT-090",
+      "CRT-091",
+      "CRT-092",
+      "CRT-093",
+      "CRT-094",
+      "CRT-095",
+      "CRT-096",
+      "CRT-097",
+      "CRT-098",
+      "CRT-099",
+      "CRT-100",
+      "CRT-101",
+      "CRT-102",
+      "CRT-103",
+      "CRT-104",
+      "CRT-105",
+      "CRT-106",
+      "CRT-107",
+      "CRT-108"
     ],
-    "correct_size_units": 173,
-    "eligible_units": 227,
-    "end_agreeing_units": 7,
+    "correct_size_units": 187,
+    "eligible_units": 228,
+    "end_agreeing_units": 85,
     "method": "listed original functions in each unit range: all mapped with correct size, first function at its original address, last function code ending at its original end; trailing padding not compared",
     "per_unit": [
       {
@@ -4311,9 +4435,9 @@
         "unit_id": "GAME-006"
       },
       {
-        "agrees": false,
-        "correct_size": false,
-        "end_agrees": false,
+        "agrees": true,
+        "correct_size": true,
+        "end_agrees": true,
         "functions": 4,
         "start_agrees": true,
         "unit_id": "GAME-007"
@@ -4321,17 +4445,17 @@
       {
         "agrees": false,
         "correct_size": false,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 27,
         "start_agrees": true,
         "unit_id": "GAME-052"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 4,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "GAME-008"
       },
       {
@@ -4339,7 +4463,7 @@
         "correct_size": true,
         "end_agrees": false,
         "functions": 9,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "GAME-009"
       },
       {
@@ -4352,26 +4476,26 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
-        "end_agrees": true,
+        "correct_size": true,
+        "end_agrees": false,
         "functions": 11,
         "start_agrees": false,
         "unit_id": "GAME-011"
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 27,
-        "start_agrees": true,
+        "start_agrees": false,
         "unit_id": "GAME-012"
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 24,
-        "start_agrees": true,
+        "start_agrees": false,
         "unit_id": "GAME-013"
       },
       {
@@ -4400,7 +4524,7 @@
       },
       {
         "agrees": false,
-        "correct_size": true,
+        "correct_size": false,
         "end_agrees": false,
         "functions": 23,
         "start_agrees": false,
@@ -4416,7 +4540,7 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 19,
         "start_agrees": false,
@@ -4482,13 +4606,21 @@
         "agrees": false,
         "correct_size": false,
         "end_agrees": false,
-        "functions": 62,
+        "functions": 56,
         "start_agrees": false,
         "unit_id": "GAME-026"
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
+        "end_agrees": false,
+        "functions": 6,
+        "start_agrees": false,
+        "unit_id": "GAME-053"
+      },
+      {
+        "agrees": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 26,
         "start_agrees": false,
@@ -4576,7 +4708,7 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 9,
         "start_agrees": false,
@@ -4584,7 +4716,7 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 11,
         "start_agrees": false,
@@ -4696,7 +4828,7 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 22,
         "start_agrees": false,
@@ -4720,7 +4852,7 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 16,
         "start_agrees": false,
@@ -4744,7 +4876,7 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 42,
         "start_agrees": false,
@@ -4864,7 +4996,7 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 2,
         "start_agrees": false,
@@ -4888,7 +5020,7 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 3,
         "start_agrees": false,
@@ -5137,7 +5269,7 @@
       {
         "agrees": false,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 9,
         "start_agrees": false,
         "unit_id": "CRT-029"
@@ -5147,311 +5279,311 @@
         "correct_size": false,
         "end_agrees": false,
         "functions": 5,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-030"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 2,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-031"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-032"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-033"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-034"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-035"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-036"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-037"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-038"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-039"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 4,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-040"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 3,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-041"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-042"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-043"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-044"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-045"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-046"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-047"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-048"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-049"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-050"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-051"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 2,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-052"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 7,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-053"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-054"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-055"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 7,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-056"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-057"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-058"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 8,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-059"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-060"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 2,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-061"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 6,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-062"
       },
       {
         "agrees": false,
         "correct_size": false,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 7,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-063"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 2,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-064"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-065"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 8,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-066"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 3,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-067"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 4,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-068"
       },
       {
@@ -5459,55 +5591,55 @@
         "correct_size": false,
         "end_agrees": false,
         "functions": 2,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-069"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 5,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-070"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-071"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-072"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-073"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-074"
       },
       {
         "agrees": false,
         "correct_size": false,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 10,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-075"
       },
       {
@@ -5515,7 +5647,7 @@
         "correct_size": false,
         "end_agrees": false,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-076"
       },
       {
@@ -5523,255 +5655,255 @@
         "correct_size": false,
         "end_agrees": false,
         "functions": 4,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-077"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 2,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-078"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-079"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 2,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-080"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-081"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 5,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-082"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-083"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-084"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 2,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-085"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-086"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-087"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-088"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-089"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-090"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-091"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-092"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 2,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-093"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-094"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-095"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 4,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-096"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 12,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-097"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-098"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 2,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-099"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-100"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-101"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-102"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-103"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-104"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-105"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-106"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-107"
       },
       {
-        "agrees": false,
+        "agrees": true,
         "correct_size": true,
-        "end_agrees": false,
+        "end_agrees": true,
         "functions": 1,
-        "start_agrees": false,
+        "start_agrees": true,
         "unit_id": "CRT-108"
       },
       {
@@ -5984,7 +6116,7 @@
       },
       {
         "agrees": false,
-        "correct_size": false,
+        "correct_size": true,
         "end_agrees": false,
         "functions": 3,
         "start_agrees": false,
@@ -6079,7 +6211,7 @@
         "unit_id": "LATE-006"
       }
     ],
-    "start_agreeing_units": 10,
-    "units": 4
+    "start_agreeing_units": 89,
+    "units": 79
   }
 }

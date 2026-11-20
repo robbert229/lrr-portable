@@ -24,18 +24,18 @@ static __inline float sfx_vector3d_modulus(const SFX_Vector3F* v)
 static __inline SFX_Vector3F* sfx_vector3d_add(
     SFX_Vector3F* r, const SFX_Vector3F* a, const SFX_Vector3F* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 
 static __inline SFX_Vector3F* sfx_vector3d_subtract(
     SFX_Vector3F* r, const SFX_Vector3F* a, const SFX_Vector3F* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 
@@ -50,15 +50,16 @@ static __inline SFX_Vector3F* sfx_vector3d_scale(
 
 static __inline SFX_Vector3F* sfx_vector3d_normalise(SFX_Vector3F* r)
 {
-    return sfx_vector3d_scale(r, r, 1.0f / sfx_vector3d_modulus(r));
+    sfx_vector3d_scale(r, r, 1.0f / sfx_vector3d_modulus(r));
+    return r;
 }
 
 static __inline SFX_Vector3F* sfx_vector3d_cross_product(
     SFX_Vector3F* r, const SFX_Vector3F* a, const SFX_Vector3F* b)
 {
-    r->x = a->y * b->z - a->z * b->y;
-    r->y = a->z * b->x - a->x * b->z;
-    r->z = a->x * b->y - a->y * b->x;
+    r->x = (a->y * b->z) - (a->z * b->y);
+    r->y = (a->z * b->x) - (a->x * b->z);
+    r->z = (a->x * b->y) - (a->y * b->x);
     return r;
 }
 

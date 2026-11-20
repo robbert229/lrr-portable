@@ -225,6 +225,14 @@ of its listing; only label names differ), and its score is unchanged in
 the full report (73.90). Finding 538's rule A still orders
 `s_lego_hold_time += elapsedGame` as before.
 
+**Update (lrr-portable#861).** The file-scope redeclaration is gone. The
+`lego_terrain_pointer_command_update` (`00425d90`) fix gives that function
+a block-scope `Vector3F` for the camera position, one symbol more before
+`lego_main_sim_interaction_and_cell_update`. That symbol keeps every later
+function at `main`'s counter, as the redeclaration did, so the
+redeclaration was removed in the same change; every other function body
+in the unit compiles unchanged.
+
 Every function body in `lego_unit.c` was compared between the two
 listings, ignoring label numbers: none changed.
 
@@ -269,7 +277,7 @@ and `004355c0` (−32). None closed.
 - The native build compiles, its 39 ctest tests pass with the real WADs,
   and `LegoRR` runs with the offscreen video driver until the timeout.
 - No `#pragma`, no pad, no filler. One `Deviation (scoring only)`
-  declaration. Only `src/game/lego_unit.c` and the generated files change.
+  declaration (removed since; see the update above). Only `src/game/lego_unit.c` and the generated files change.
 
 ## Reproduce
 

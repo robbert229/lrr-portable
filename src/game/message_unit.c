@@ -19,6 +19,7 @@
 /* legoGlobs' fields (lego_globs.h, finding 653). lego_unit.h, included
  * above, pays for its symbols (finding 538). */
 #include "lego_globs.h"
+#include "gods98/maths_normalise_head.h"
 
 /* Lego_GetMap (00431570) takes no argument; the port's entry under that
  * address, level_current_terrain_get, takes a cell (lego_unit.h). */
@@ -186,7 +187,8 @@ void message_remove_events_with_object(Lego_Object* obj)
     unsigned int count = messageGlobs.eventCount[messageGlobs.eventAB];
 
     for (loop = 0; loop < count; loop++) {
-        if (messageGlobs.eventList[messageGlobs.eventAB][loop].argument1 == obj) {
+        Message_Event* event = &messageGlobs.eventList[messageGlobs.eventAB][loop];
+        if (obj == event->argument1) {
             count--;
             messageGlobs.eventList[messageGlobs.eventAB][loop] =
                 messageGlobs.eventList[messageGlobs.eventAB][count];
@@ -510,6 +512,7 @@ int message_select_object2(Lego_Object* obj, int noDoubleSelect,
 {
     float faceDir[2];
     float dir[3];
+    void* cont;
 
     if (obj->carryingThisObject) obj = obj->carryingThisObject;
 
@@ -541,8 +544,8 @@ int message_select_object2(Lego_Object* obj, int noDoubleSelect,
             if (obj->flags3 & 0x80) {
                 if (!(stats_object_get_stats_flags1((struct StatsObject*)obj) &
                       MESSAGE_STATS1_CANBEDRIVEN) || obj->driveObject) {
-                    sfx_random_play_sound3d_on_container(
-                        legoobject_type_component_get(obj), 0x11, 0, 1, NULL);
+                    cont = legoobject_type_component_get(obj);
+                    sfx_random_play_sound3d_on_container(cont, 0x11, 0, 1, NULL);
                     return 1;
                 }
             }
@@ -746,20 +749,22 @@ unsigned int message_kill_all_selected_units(void)
     return messageGlobs.selectedUnitCount;
 }
 
+#include "message_first_person.h"
+
 // FUNCTION: LEGORR 0x00452d60
 int message_enter_first_person_view(unsigned int cameraFrame)
 {
     Lego_Object* obj = (Lego_Object*)legoGlobs_selectedObject;
     unsigned int loop;
 
-    if (obj && (obj->flags3 & 0x10) && (obj->type == 2 || obj->driveObject)) {
+    if (obj && message_object_can_first_person(obj)) {
         lego_sound_minimum_distance_update_mode(0, obj, cameraFrame);
         return 1;
     }
     for (loop = 0; loop < messageGlobs.selectedUnitCount; loop++) {
         obj = messageGlobs.selectedUnitList[loop];
         if (obj->type == 2 && obj->driveObject) obj = obj->driveObject;
-        if ((obj->flags3 & 0x10) && (obj->type == 2 || obj->driveObject)) {
+        if (message_object_can_first_person(obj)) {
             lego_sound_minimum_distance_update_mode(0, obj, cameraFrame);
             return 1;
         }

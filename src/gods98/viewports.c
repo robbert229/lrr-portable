@@ -20,6 +20,7 @@
 #include "viewports.h"
 #include "viewports_imports.h"
 #include "dxerror.h"
+#include "gods98/d3drmdef_consts.h"
 
 #if defined(_WIN32)
 #define VP_STDCALL __stdcall
@@ -350,9 +351,6 @@ void viewport_clear(Viewport* vp, int full)
         VpFrame* scene;
         unsigned long colour;
         VpArea2F area; /* a struct, so its floats stay in the frame */
-        VpIMViewport* imViewport1;
-        VpIMViewport* imViewport;
-
         scene = viewport_get_scene(vp);
         colour = 0;
         area.x = (float)vp->lpVP->lpVtbl->GetX(vp->lpVP);
@@ -362,8 +360,12 @@ void viewport_clear(Viewport* vp, int full)
         if (scene) colour = scene->lpVtbl->GetSceneBackground(scene);
 
         {
-            /* In its own block, so it shares the width's conversion slot. */
+            /* In its own block, so it shares the width's conversion slot;
+             * the two viewports in it too, so the first takes the dead vp
+             * slot that the x and y conversions share. */
             VpRect rect;
+            VpIMViewport* imViewport1;
+            VpIMViewport* imViewport;
 
             rect.x1 = (long)area.x;
             rect.y1 = (long)area.y;
@@ -392,12 +394,14 @@ void viewport_render(Viewport* vp, Container* root, float delta)
     vp->rendering = 1;
 
     if (0.0f != vp->smoothFOV) {
-        float smooth, sum, fov; /* smooth first: rule A (finding 538) */
+        float smooth, fov; /* smooth first: rule A (finding 538) */
 
         fov = vp->lpVP->lpVtbl->GetField(vp->lpVP);
         smooth = (1.0f / delta) * 4.0f;
-        sum = (smooth * fov) + vp->smoothFOV;
-        fov = (1.0f / (smooth - -1.0f)) * sum;
+        /* Compound assignments: the last one keeps fov in memory. */
+        fov *= smooth;
+        fov += vp->smoothFOV;
+        fov *= (1.0f / (smooth - -1.0f));
         vp->lpVP->lpVtbl->SetField(vp->lpVP, fov);
         if (fov == vp->smoothFOV) vp->smoothFOV = 0.0f;
     }

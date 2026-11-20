@@ -7,8 +7,10 @@
  * - Files.c (files.c, files.h) and DirectDraw.c (directdraw.c,
  *   directdraw.h) are converted units: the unit reads the DirectDraw object
  *   (0076ac84) and the back buffer (0076ac8c) from directDrawGlobs.
- * - 00456210, the chunk type 'UU' handler, is one of the original's shared
- *   do-nothing functions; tutorial_script.c defines it as
+ * - 00456210, the chunk type 'UU' handler Flic_Unpack, is one of the
+ *   original's shared do-nothing functions; tutorial_script.c defines it as
+ *   flh_magic_uu_noop. The matching build declares Flic_Unpack itself
+ *   (flic_unit.h) and aliases it to that body; elsewhere it is a call of
  *   flh_magic_uu_noop. */
 #ifndef LEGORRR_GODS98_FLIC_IMPORTS_H
 #define LEGORRR_GODS98_FLIC_IMPORTS_H
@@ -20,8 +22,10 @@
 extern "C" {
 #endif
 
+#if !defined(_MSC_VER) || _MSC_VER >= 1200
 unsigned int flh_magic_uu_noop(void);                          /* 00456210 */
-#define Flic_Sound(fsp) (((unsigned int (*)(LPFLICSTRUCT))flh_magic_uu_noop)(fsp))
+#define Flic_Unpack(fsp) (((unsigned int (*)(LPFLICSTRUCT))flh_magic_uu_noop)(fsp))
+#endif
 
 #ifdef __cplusplus
 }

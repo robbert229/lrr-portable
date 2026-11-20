@@ -19,6 +19,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "crt/vc5names.h"
 
@@ -180,6 +181,11 @@ void radarmap_initialise(void)
     radarmapGlobs.highlightY = -1;
     radarmapGlobs.highlightX = -1;
 }
+
+/* Maths.h's inline normalise. Its 1.0f (0049e688) follows
+ * radar_map_initialise's constants in the original's pool, so the copy is
+ * compiled here. */
+#include "gods98/maths_normalise_head.h"
 
 // FUNCTION: LEGORR 0x0045da90
 RadarMap* radarmap_create(struct TerrainMap* map, const Area2F* screenRect,
@@ -473,9 +479,9 @@ static int radarmap_callback_draw_object(struct Lego_Object* liveObj, void* data
             size = 1.0f / 3.0f;
         }
         radarMap->drawRectList[radarMap->drawRectCount].rect.x =
-            wPos.x - (size * 0.5f) * radarMap->blockSize;
+            wPos.x - ((size * 0.5f) * radarMap->blockSize);
         radarMap->drawRectList[radarMap->drawRectCount].rect.y =
-            wPos.y + (size * 0.5f) * radarMap->blockSize;
+            wPos.y + ((size * 0.5f) * radarMap->blockSize);
         radarMap->drawRectList[radarMap->drawRectCount].rect.width =
             size * radarMap->blockSize;
         radarMap->drawRectList[radarMap->drawRectCount].rect.height =
@@ -499,6 +505,8 @@ int radarmap_inside_radar(RadarMap* radarMap, uint32_t screenX, uint32_t screenY
     return 0;
 }
 
+#include "radarmap_maths.h" /* here, where the original's inline helpers sit */
+
 // FUNCTION: LEGORR 0x0045e6d0
 int radarmap_screen_to_block_pos(RadarMap* radarMap, uint32_t screenX,
                                  uint32_t screenY, Point2F* outWorldPos,
@@ -515,13 +523,11 @@ int radarmap_screen_to_block_pos(RadarMap* radarMap, uint32_t screenX,
         if (y >= radarMap->screenRect.y &&
             y < radarMap->screenRect.y + radarMap->screenRect.height) {
             scale = 1.0f / radarMap->zoom;
-            wPos.y = radarMap->blockSize *
-                     ((radarMap->screenRect.y + radarMap->screenRect.width * 0.5f) - y) *
-                     scale + radarMap->centrePos.y;
-            wPos.x = radarMap->centrePos.x -
-                     radarMap->blockSize *
-                     ((radarMap->screenRect.x + radarMap->screenRect.width * 0.5f) - x) *
-                     scale;
+            wPos.x = ((radarMap->screenRect.x + (radarMap->screenRect.width * 0.5f)) - x) * scale;
+            wPos.y = ((radarMap->screenRect.y + (radarMap->screenRect.width * 0.5f)) - y) * scale;
+            wPos.x = -wPos.x;
+            radarmap_vector2d_scale(&wPos, &wPos, radarMap->blockSize);
+            radarmap_vector2d_add(&wPos, &radarMap->centrePos, &wPos);
             if (terrain_map_world_to_block(radarMap->map, wPos.x, wPos.y, outBx, outBy)) {
                 if (outWorldPos) *outWorldPos = wPos;
                 return 1;
@@ -539,10 +545,8 @@ int radarmap_try_select_object(RadarMap* radarMap, uint32_t screenX,
     RadarMap_SearchObject search;
     RadarMap_Point2I blockPos;
 
-    search.wPos.x = 0.0f;
-    search.wPos.y = 0.0f;
-    search.radius = 0.0f;
     search.result = NULL;
+    memset(&search.wPos, 0, sizeof(search.wPos) + sizeof(search.radius));
     if (radarmap_screen_to_block_pos(radarMap, screenX, screenY, &search.wPos,
                                      &blockPos.x, &blockPos.y)) {
         if (terrain_cell_occupied_or_flag_current(blockPos.x, blockPos.y, 1)) {

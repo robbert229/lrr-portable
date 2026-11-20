@@ -321,9 +321,11 @@ void steering_item_spread_tuning(SteeringGroup* group,
     float factor = (2.0f * r) - s_steering_one;
     float scale = s_steering_one / spread;
 
-    item->turnStep = scale * factor * item->baseTurnStep + item->baseTurnStep;
-    item->wanderRadius = scale * factor * item->baseWanderRadius + item->baseWanderRadius;
-    item->wanderPeriod = scale * factor * item->baseWanderPeriod + item->baseWanderPeriod;
+    /* The (float) casts keep MSVC from folding k * x + x into
+     * (k - -1) * x: the original multiplies, then adds the base. */
+    item->turnStep = (float)(scale * factor * item->baseTurnStep) + item->baseTurnStep;
+    item->wanderRadius = (float)(scale * factor * item->baseWanderRadius) + item->baseWanderRadius;
+    item->wanderPeriod = (float)(scale * factor * item->baseWanderPeriod) + item->baseWanderPeriod;
 }
 
 // FUNCTION: LEGORR 0x0040ff50
@@ -406,26 +408,28 @@ void scene_object_list_apply_second_position_callback(
     ptrstack_for_each(group, steering_item_set_target, (void*)target);
 }
 
+/* No step local: item->speed * elapsed is written in the test and in the
+ * scale, and MSVC loads the common value once in the else branch. dir is
+ * declared after position, which gives the original's x87 scheduling. */
 // FUNCTION: LEGORR 0x004100d0
 void steering_item_follow_target(SteeringGroup* group, SteeringItem* item,
                                  void* data)
 {
-    SteeringVector3 dir, position, target;
+    SteeringVector3 position, target, dir;
     float elapsed = *(float*)data;
-    float len, step;
+    float len;
 
-    target = item->target;
     position = item->position;
+    target = item->target;
     steering_physics_step(group, item, data);
 
     steering_vector3d_subtract(&dir, &target, &position);
-    step = item->speed * elapsed;
     len = steering_vector3d_modulus(&dir);
-    if (len < step) {
+    if (len < item->speed * elapsed) {
         item->position = item->target;
     } else {
         steering_vector3d_scale(&dir, &dir, s_steering_one / len);
-        steering_vector3d_scale(&dir, &dir, step);
+        steering_vector3d_scale(&dir, &dir, item->speed * elapsed);
         steering_vector3d_add(&item->position, &position, &dir);
     }
     item->target = target;

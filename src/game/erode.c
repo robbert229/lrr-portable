@@ -312,6 +312,9 @@ int erode_find_adjacent_block(ErodePoint2I* blockPos, ErodePoint2I* adjPos)
     return 0;
 }
 
+/* A header inline copy's 1.0 closes the unit's .rdata (0049e134). */
+#include "reciprocal_inline.h"
+
 #ifdef __cplusplus
 }
 #endif

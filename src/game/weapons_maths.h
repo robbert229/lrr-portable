@@ -11,10 +11,12 @@
 #ifndef LEGORRR_GAME_WEAPONS_MATHS_H
 #define LEGORRR_GAME_WEAPONS_MATHS_H
 
+/* The products in parentheses, as mesh_maths.h's: MSVC 5.0 keeps a
+ * parenthesised float subexpression as written (finding 661). */
 static __inline float weapons_vector3d_dot(const Weapons_Vector3F* a,
                                            const Weapons_Vector3F* b)
 {
-    return a->x * b->x + a->y * b->y + a->z * b->z;
+    return (a->x * b->x) + (a->y * b->y) + (a->z * b->z);
 }
 
 static __inline float weapons_vector3d_modulus(const Weapons_Vector3F* v)
@@ -33,18 +35,18 @@ static __inline float weapons_vector2d_modulus(const float* v)
 static __inline Weapons_Vector3F* weapons_vector3d_subtract(
     Weapons_Vector3F* r, const Weapons_Vector3F* a, const Weapons_Vector3F* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 
 static __inline Weapons_Vector3F* weapons_vector3d_add(
     Weapons_Vector3F* r, const Weapons_Vector3F* a, const Weapons_Vector3F* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 
@@ -52,6 +54,21 @@ static __inline Weapons_Vector3F* weapons_vector3d_scale(
     Weapons_Vector3F* r, const Weapons_Vector3F* a, float f)
 {
     r->x = a->x * f;
+    r->y = a->y * f;
+    r->z = a->z * f;
+    return r;
+}
+
+/* weapons_fire_lazer's ray: a scale whose x product is cast to float. The
+ * cast changes nothing in value; it makes MSVC 5.0 load the factor twice and
+ * all three components before the first store, the original's x87 order
+ * (plain stores give a load-multiply-store per component). It stands for an
+ * original helper or macro whose exact form is unknown, and has the plain
+ * scale's three parameters so the unit's symbol count is unchanged. */
+static __inline Weapons_Vector3F* weapons_vector3d_scale_cast(
+    Weapons_Vector3F* r, const Weapons_Vector3F* a, float f)
+{
+    r->x = (float)(a->x * f);
     r->y = a->y * f;
     r->z = a->z * f;
     return r;

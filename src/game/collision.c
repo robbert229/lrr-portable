@@ -39,8 +39,8 @@ float collision_segment_point_distance(const CollisionPoint2F* point,
     collision_vector2d_subtract(&dir, end, start);
     collision_vector2d_subtract(&toEnd, point, end);
     dist = collision_vector2d_modulus(&toEnd);
-    collision_vector2d_normalise(&dir);
     collision_vector2d_scale(&toEnd, &toEnd, 1.0f / dist);
+    collision_vector2d_normalise(&dir);
     if (collision_vector2d_dot(&toEnd, &dir) < 0.0f) {
         collision_vector2d_subtract(&toStart, point, start);
         dist = collision_vector2d_modulus(&toStart);
@@ -72,10 +72,10 @@ float collision_polyline_point_distance(const CollisionPoint2F* point,
 }
 
 // FUNCTION: LEGORR 0x00408b60
-void collision_project_onto_line(const CollisionPoint2F* start,
-                                 const CollisionPoint2F* end,
-                                 const CollisionPoint2F* point,
-                                 CollisionPoint2F* out)
+CollisionPoint2F* collision_project_onto_line(const CollisionPoint2F* start,
+                                              const CollisionPoint2F* end,
+                                              const CollisionPoint2F* point,
+                                              CollisionPoint2F* out)
 {
     CollisionPoint2F dir;
     CollisionPoint2F rel;
@@ -85,14 +85,14 @@ void collision_project_onto_line(const CollisionPoint2F* start,
     collision_vector2d_normalise(&dir);
     collision_vector2d_subtract(&rel, point, start);
     t = collision_vector2d_dot(&rel, &dir);
-    collision_ray_end_point(out, start, &dir, t);
+    return collision_ray_end_point(out, start, &dir, t);
 }
 
 // FUNCTION: LEGORR 0x00408bf0
-void collision_project_onto_direction(const CollisionPoint2F* origin,
-                                      const CollisionPoint2F* direction,
-                                      const CollisionPoint2F* point,
-                                      CollisionPoint2F* out)
+CollisionPoint2F* collision_project_onto_direction(const CollisionPoint2F* origin,
+                                                   const CollisionPoint2F* direction,
+                                                   const CollisionPoint2F* point,
+                                                   CollisionPoint2F* out)
 {
     CollisionPoint2F dir = *direction;
     CollisionPoint2F rel;
@@ -103,7 +103,10 @@ void collision_project_onto_direction(const CollisionPoint2F* origin,
     t = collision_vector2d_dot(&rel, &dir);
     out->x = dir.x * t + origin->x;
     out->y = dir.y * t + origin->y;
+    return out;
 }
+
+#include "collision_tail.h"
 
 #ifdef __cplusplus
 }

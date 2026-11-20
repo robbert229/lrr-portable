@@ -153,3 +153,8 @@ int block_get_bool(const char* value)
     if (stricmp(value, "OFF") == 0) return 0;
     return 2;
 }
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049e8bc, the last word of
+ * the unit's .rdata. No code of the unit creates a literal, so the copy
+ * is compiled at the end, after every function. */
+#include "maths_normalise_head.h"

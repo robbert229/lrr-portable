@@ -381,3 +381,13 @@ void* wad_file_data(int handle)
 {
     return wad_file_get_pointer(handle);
 }
+
+#include "gods98/d3drmdef_consts.h"
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049ead4, after the unit's
+ * named constants. */
+#include "maths_normalise_head.h"
+
+/* A removed Wad.h helper's unread 100.0f (0049ead8), the last word of the
+ * unit's .rdata. */
+#include "wad_percent_tail.h"

@@ -66,13 +66,39 @@ void main_menu_text_item(void);
 void credits_play(const char* textFile, struct TextureSurface* font,
                   const char* backAvi);                           /* 0040a0c0 */
 /* GAME-016 (steering.c): Mem_Free of an item's data. */
-void optional_resource_destroy(void* item);                       /* 0040f7b0 */
+void optional_resource_destroy(void*);                            /* 0040f7b0 */
+/* FrontEnd.c's own frees of a Trigger's, TextInput's, Slider's and
+ * RealSlider's data, by OpenLRR's names (Front_MenuItem_FreeTrigger and so
+ * on). Each is `if (data) Mem_Free(data);`, and the original's linker folded
+ * all four into steering.c's identical 0040f7b0 ("merged with freeNonNull"
+ * in OpenLRR). Its compiler still saw four callees, so
+ * front_menu_item_free_menu_item keeps four separate call sites. In the
+ * matching build each is declared and defined nowhere: a weak external
+ * (tools/coff_weak_external.py, linked by CMakeLists.txt) resolves it to
+ * that body. Elsewhere each name is that body.
+ *
+ * MSVC's symbol counter numbers each prototype's parameter names too. The
+ * four are unnamed, and so are optional_resource_destroy's,
+ * nerpfunc_get_tutorial_flags', sfx_update's and tooltip_activate's: that
+ * pays for the four new names, so every function in the unit keeps the
+ * counter it was matched with (finding 538, rule B). */
+#if defined(_MSC_VER) && _MSC_VER < 1200
+void front_menu_item_free_trigger(void*);                    /* 0040f7b0 */
+void front_menu_item_free_text_input(void*);                 /* 0040f7b0 */
+void front_menu_item_free_slider(void*);                     /* 0040f7b0 */
+void front_menu_item_free_real_slider(void*);                /* 0040f7b0 */
+#else
+#define front_menu_item_free_trigger optional_resource_destroy
+#define front_menu_item_free_text_input optional_resource_destroy
+#define front_menu_item_free_slider optional_resource_destroy
+#define front_menu_item_free_real_slider optional_resource_destroy
+#endif
 /* GAME-021 Lego.c (lego_unit.c): the overwrite question. */
 int lego_menu_option_panel_texture_update(const char* title, const char* msg,
                                           const char* ok,
                                           const char* cancel);    /* 004355c0 */
 /* GAME-028 NERPs (tutorial_script.c): NERPFunc__GetTutorialFlags. */
-int nerpfunc_get_tutorial_flags(unsigned int* stack);             /* 00456240 */
+int nerpfunc_get_tutorial_flags(unsigned int*);                   /* 00456240 */
 /* GAME-033 Pointer.c (pointer.c). */
 void pointer_set_current_if_timer_finished(int pointerType);      /* 0045cc20 */
 int pointer_get_current_type(void);                               /* 0045cc60 */
@@ -82,10 +108,10 @@ void pointer_draw_pointer(unsigned int mouseX, unsigned int mouseY); /* 0045cc70
 int sfx_get_type(const char* sfxName, int* sfxID);                /* 00464c70 */
 void sfx_add_to_queue(int sfxID, int mode);                       /* 00464f60 */
 int sfx_random_play_sound_normal(int sfxID, int loop);            /* 00464fa0 */
-void sfx_update(float elapsed);                                   /* 004651a0 */
+void sfx_update(float);                                           /* 004651a0 */
 /* GAME-046 ToolTip.c (tooltip.c). */
 int tooltip_get_type(const char* toolTipName, int* toolTipType);  /* 0046b4d0 */
-void tooltip_activate(int toolTipType);                           /* 0046b770 */
+void tooltip_activate(int);                                       /* 0046b770 */
 void tooltip_update(unsigned int mouseX, unsigned int mouseY,
                     float elapsed);                               /* 0046b7c0 */
 

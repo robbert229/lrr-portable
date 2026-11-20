@@ -42,34 +42,41 @@ float* MATHS_D3DRMAPI D3DRMVectorRotate(float* r, float* v, float* axis,
 #endif
 
 /* The unit's .rdata, in original order. It opens with the 16-byte
- * {1, 2, 4, -1} table at 0049e910 that 19 gods98 objects share (finding
- * 505). The table is d3drmdef.h's (finding 524), but the unit does not
- * include the toolchain's DirectX 3 d3drm.h: it moves the symbol counter so
- * that two exact functions fall (finding 646). Zero and -1.0 stores are immediates in the
- * original, so they use literals. */
-// GLOBAL: LEGORR 0x0049e920
+ * {1, 2, 4, -1} table at 0049e910 that 20 objects share: d3drmdef.h's
+ * four consts (finding 524). The unit does not include the toolchain's
+ * DirectX 3 d3drm.h (finding 646), and defining the consts here moves the
+ * symbol counter so that two functions fall. In C the constants are only
+ * declared here (tentative definitions) and defined at the end of the
+ * file, behind d3drmdef_consts.h: MSVC 5.0 numbers a static at its first
+ * declaration, so no function's counter moves, and emits .rdata in
+ * definition order, so the table opens the block. Zero and -1.0 stores
+ * are immediates in the original, so they use literals. */
+#ifdef __cplusplus
 static const float s_maths_one = 1.0f;
-// GLOBAL: LEGORR 0x0049e924
 static const float s_maths_zero = 0.0f;
-// GLOBAL: LEGORR 0x0049e928
 static const float s_maths_minus_one = -1.0f;
-// GLOBAL: LEGORR 0x0049e92c
 static const float s_maths_half = 0.5f;
-// GLOBAL: LEGORR 0x0049e930
 static const float s_maths_rand_scale = 1.0f / 32767.0f;
-/* Maths_RaySphereIntersection's 2.0f. MSVC folds each 2.0f * x into
- * fadd st, st, so no instruction reads it; the literal is in that function
- * and this copy keeps the table's layout. */
-// GLOBAL: LEGORR 0x0049e934
 static const float s_maths_two = 2.0f;
-// GLOBAL: LEGORR 0x0049e938
 static const float s_maths_four = 4.0f;
+#else
+static const float s_maths_one;
+static const float s_maths_zero;
+static const float s_maths_minus_one;
+static const float s_maths_half;
+static const float s_maths_rand_scale;
+static const float s_maths_two;
+static const float s_maths_four;
+#endif
 
 /* Maths.h's inline vector helpers (Maths_Vector3DModulus, _Scale and
  * _Normalise). Like the original's, they are always inlined. */
+/* The products in parentheses: MSVC 5.0 keeps a parenthesised float
+ * subexpression as written (finding 661), which gives the original's x87
+ * order where two moduli interleave. */
 static __inline float maths_vector3d_modulus(const Vector3F* v)
 {
-    return (float)sqrt(v->x * v->x + v->y * v->y + v->z * v->z);
+    return (float)sqrt((v->x * v->x) + (v->y * v->y) + (v->z * v->z));
 }
 
 static __inline Vector3F* maths_vector3d_scale(Vector3F* r, const Vector3F* a, float f)
@@ -97,6 +104,10 @@ float* d3drm_vector_rotate(float* r, float* v, float* axis, float theta)
     return D3DRMVectorRotate(r, v, axis, theta);
 }
 
+/* The helper header is a first-time #include, one symbol for the counter:
+ * with the helper it keeps the later functions' phase (phase_probe). */
+#include "maths_maths.h"
+
 // FUNCTION: LEGORR 0x00479530
 float* surface_triangle_normal_calculate(float* n, const float* p1,
                                          const float* p2, const float* p3)
@@ -104,18 +115,14 @@ float* surface_triangle_normal_calculate(float* n, const float* p1,
     Vector3F v1, v2;
     float x, y, z, len;
 
-    v1.x = p2[0] - p1[0];
-    v1.y = p2[1] - p1[1];
-    v1.z = p2[2] - p1[2];
-    v2.x = p3[0] - p2[0];
-    v2.y = p3[1] - p2[1];
-    v2.z = p3[2] - p2[2];
+    maths_vector3d_subtract(&v1, (const Vector3F*)p2, (const Vector3F*)p1);
+    maths_vector3d_subtract(&v2, (const Vector3F*)p3, (const Vector3F*)p2);
 
-    x = v1.y * v2.z - v1.z * v2.y;
-    y = v1.z * v2.x - v1.x * v2.z;
-    z = v1.x * v2.y - v1.y * v2.x;
+    x = (v1.y * v2.z) - (v1.z * v2.y);
+    y = (v1.z * v2.x) - (v1.x * v2.z);
+    z = (v1.x * v2.y) - (v1.y * v2.x);
 
-    len = s_maths_one / (float)sqrt(y * y + x * x + z * z);
+    len = s_maths_one / (float)sqrt(y * y + z * z + x * x);
     n[0] = len * x;
     n[1] = len * y;
     n[2] = len * z;
@@ -259,7 +266,7 @@ float* line_intersection_2d_compute(float* r, const float* p1,
                                     const float* d1, const float* p2,
                                     const float* d2)
 {
-    float ax, ay, bx, by, det, t;
+    float ax, ay, bx, by, det, i0, i1, t;
 
     bx = d2[0];
     by = d2[1];
@@ -267,7 +274,11 @@ float* line_intersection_2d_compute(float* r, const float* p1,
     ay = -d1[1];
     det = ay * bx - ax * by;
     if (s_maths_zero != det) {
-        t = -(by / det) * (p1[0] - p2[0]) + (bx / det) * (p1[1] - p2[1]);
+        /* The inverse's first row: the negation is applied late (fchs after
+         * the loads) and the second product parenthesised, as the original. */
+        i0 = -by / det;
+        i1 = bx / det;
+        t = i0 * (p1[0] - p2[0]) + (i1 * (p1[1] - p2[1]));
         r[0] = t * d1[0];
         r[1] = t * d1[1];
         r[0] = p1[0] + r[0];
@@ -296,23 +307,25 @@ int point_in_polygon_2d(const float* point, const float* fromList,
     return crossings & 1;
 }
 
+/* Maths.h's inline dot product (maths_sphere.h), included before its only
+ * user so that the functions above keep their symbol counter. */
+#include "maths_sphere.h"
+
 // FUNCTION: LEGORR 0x00479c10
 int sphere_ray_intersection_discriminant_positive(const float* center,
                                                   float radius,
                                                   const float* camera,
                                                   const float* line)
 {
-    float lx, ly, lz, b, c;
-    Vector3F d;
+    Vector3F csVec, ray = *(const Vector3F*)line;
+    float t;
 
-    d = *(const Vector3F*)line;
-    lx = camera[0] - center[0];
-    ly = camera[1] - center[1];
-    lz = camera[2] - center[2];
-    b = 2.0f * d.x * lx + ly * (2.0f * d.y) + 2.0f * d.z * lz;
-    c = (lz * lz + (lx * lx + ly * ly)) * s_maths_four - radius * radius;
-    if (b * b - c > s_maths_zero) return 1;
-    return 0;
+    maths_vector3d_scale(&ray, &ray, 2.0f);
+    maths_vector3d_subtract(&csVec, (const Vector3F*)camera, (const Vector3F*)center);
+    t = maths_vector3d_dot_product(&ray, &csVec);
+    t *= t;
+    t -= (s_maths_four * maths_vector3d_dot_product(&csVec, &csVec) - (radius * radius));
+    return (t > s_maths_zero);
 }
 
 // FUNCTION: LEGORR 0x00479ce0
@@ -404,3 +417,27 @@ void matrix4_copy(float* r, const float* m)
         }
     }
 }
+
+/* The unit's .rdata, in original order (see s_maths_one above). */
+#include "gods98/d3drmdef_consts.h"
+#ifndef __cplusplus
+// GLOBAL: LEGORR 0x0049e920
+static const float s_maths_one = 1.0f;
+// GLOBAL: LEGORR 0x0049e924
+static const float s_maths_zero = 0.0f;
+// GLOBAL: LEGORR 0x0049e928
+static const float s_maths_minus_one = -1.0f;
+// GLOBAL: LEGORR 0x0049e92c
+static const float s_maths_half = 0.5f;
+// GLOBAL: LEGORR 0x0049e930
+static const float s_maths_rand_scale = 1.0f / 32767.0f;
+/* Maths_RaySphereIntersection's 2.0f. MSVC folds each 2.0f * x into
+ * fadd st, st, so no instruction reads it; the literal is in that function
+ * and this copy keeps the table's layout. */
+// GLOBAL: LEGORR 0x0049e934
+static const float s_maths_two = 2.0f;
+// GLOBAL: LEGORR 0x0049e938
+static const float s_maths_four = 4.0f;
+#endif
+
+#include "maths_tail.h"

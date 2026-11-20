@@ -58,6 +58,8 @@ Teleporter_Globs teleporterGlobs = { 0, 40, NULL, 3.0f };
 // GLOBAL: LEGORR 0x00503188
 static int s_teleporter_none_teleporting;
 
+#include "gods98/maths_normalise_head.h"
+
 // FUNCTION: LEGORR 0x0046a370
 void teleporter_remove_all(Teleporter_Service* service)
 {

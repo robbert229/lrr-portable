@@ -44,10 +44,10 @@ void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap, uint32_t size,
         output->channel_fields[3] = 0xfc;
         output->palette_count = count;
         entry = (uint8_t*)palette;
-        for (i = 0; i < count; i++, entry += 4) {
-            red = entry[0];
-            entry[0] = entry[2];
-            entry[2] = red;
+        for (i = 0; i < count; i++) {
+            red = entry[i * 4];
+            entry[i * 4] = entry[i * 4 + 2];
+            entry[i * 4 + 2] = red;
         }
         output->palette = palette;
     } else {
@@ -67,9 +67,9 @@ void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap, uint32_t size,
     default: bytes_per_pixel = 0; break;
     }
     output->scanline_stride = (bytes_per_pixel * output->width + 3) & ~3u;
+    output->pixels = bitmap + *(const uint32_t*)(bitmap + 10);
     output->flag_0c = 1;
     output->flag_08 = 1;
-    output->pixels = bitmap + *(const uint32_t*)(bitmap + 10);
     output->reserved_20 = 0;
 }
 
@@ -79,3 +79,10 @@ void object_field_38_release_target(void* record)
     void* field = *(void**)((char*)record + 0x38);
     if (field != NULL) free(field);
 }
+
+#include "gods98/d3drmdef_consts.h"
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049ea98, the last word of
+ * the unit's .rdata. No code of the unit creates a literal, so the copy
+ * is compiled at the end, after every function. */
+#include "maths_normalise_head.h"

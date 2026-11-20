@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* GAME-003 — original translation unit (text 004065f0-00406990, .rdata
- * 0049e048-0049e050; finding 505). Cubic Bezier sampling and arc-length
+ * 0049e034-0049e050; finding 505). Cubic Bezier sampling and arc-length
  * helpers.
  *
  * Rebuilt in the original's shape (issue #417, ADR 0005): one file for the
@@ -11,22 +11,23 @@
 #include <math.h>
 
 #include "bezier.h"
+#include "gods98/d3drmdef_consts.h"
 
-/* The unit's .rdata, in original order. Like Maths.c, the unit does not
- * reproduce the 16-byte {1, 2, 4, -1} table at 0049e034 that opens its block
- * (finding 505), nor the unreferenced 1.0 after it at 0049e044. The table
- * is d3drmdef.h's (finding 524), but the toolchain's DirectX 3 d3drm.h
- * shifts the symbol counter so that cubic_bezier_point_evaluate falls
- * (finding 646). */
+/* The unit's .rdata, in original order. It opens with d3drmdef.h's four
+ * consts at 0049e034 (finding 524), then an unreferenced 1.0 at 0049e044:
+ * a named constant, since a literal 1.0 would be pooled with the one at
+ * 0049e050 (finding 646). Its original name is not known. The 3.0 is named:
+ * as a literal, MSVC folds the subtractions into a -3.0 of its own. The 0.0
+ * (0049e04c) and the 1.0 (0049e050) are literals, which MSVC emits after the
+ * named constants in first-use order: polyline_segment_lengths_total's 0.0
+ * (two immediate stores, but the literal is still pooled), then
+ * bezier_curve_samples_build's 1.0. path_arc_length_interpolate's 0.0 reads
+ * the pooled literal. Named, the 0.0 and 1.0 left polyline's literal 0.0 as
+ * a fifth word nothing reads. */
+// GLOBAL: LEGORR 0x0049e044
+static const float s_bezier_unref_one = 1.0f;
 // GLOBAL: LEGORR 0x0049e048
 static const float s_bezier_three = 3.0f;
-// GLOBAL: LEGORR 0x0049e04c
-static const float s_bezier_zero = 0.0f;
-/* BezierCurveSamplesBuild's 1.0. The function uses the literal: MSVC hoists
- * 1.0f / (count - 1) out of the loop only for a constant, as the original
- * does, and not for a const variable. This copy keeps the table's layout. */
-// GLOBAL: LEGORR 0x0049e050
-static const float s_bezier_one = 1.0f;
 
 /* The control points c1 = p0 + 3 * p1 and c2 = p2 - 3 * p3 are computed
  * before r->x is written: the original reloads only p0 and p2 after that
@@ -82,13 +83,10 @@ float polyline_segment_lengths_total(BezierCurve* curve)
 {
     unsigned int i;
     float total = 0.0f;
-    float dist;
 
     curve->distances[0] = 0.0f;
     for (i = 1; i < curve->count; i++) {
-        dist = vec2_dist_alt(&curve->points[i - 1], &curve->points[i]);
-        curve->distances[i] = dist;
-        total += dist;
+        total += (curve->distances[i] = vec2_dist_alt(&curve->points[i - 1], &curve->points[i]));
     }
     return total;
 }
@@ -103,9 +101,13 @@ void bezier_curve_samples_build(BezierCurve* curve, const Point2F* p0,
     if (count >= BEZIER_MAXPOINTS) count = BEZIER_MAXPOINTS;
     curve->count = count;
     curve->points[0] = *p0;
-    for (i = 1; i < count; i++) {
-        cubic_bezier_point_evaluate(&curve->points[i], p0, p1, p2, p3,
-                                    (float)i * (1.0f / (float)(count - 1)));
+    i = 1;
+    if (i < count) {
+        float step = 1.0f / (float)(count - 1);
+        do {
+            cubic_bezier_point_evaluate(&curve->points[i], p0, p1, p2, p3,
+                                        (float)i * step);
+        } while (++i < count);
     }
 }
 
@@ -114,8 +116,7 @@ unsigned int path_arc_length_interpolate(const BezierCurve* curve,
                                          float distance, Point2F* r)
 {
     unsigned int i;
-    float dist = s_bezier_zero;
-    float frac;
+    float dist = 0.0f;
     Point2F delta;
 
     for (i = 1; i < curve->count; i++) {
@@ -125,12 +126,14 @@ unsigned int path_arc_length_interpolate(const BezierCurve* curve,
 
     if (i < curve->count) {
         *r = curve->points[i - 1];
-        frac = (distance - (dist - curve->distances[i])) /
-               curve->distances[i];
+        /* The fraction overwrites distance: the original stores it in the
+         * parameter's slot and multiplies from there. */
+        distance -= dist - curve->distances[i];
+        distance /= curve->distances[i];
         delta.x = curve->points[i].x - curve->points[i - 1].x;
         delta.y = curve->points[i].y - curve->points[i - 1].y;
-        delta.x *= frac;
-        delta.y *= frac;
+        delta.x *= distance;
+        delta.y *= distance;
         r->x = delta.x + curve->points[i - 1].x;
         r->y = delta.y + curve->points[i - 1].y;
         return i;

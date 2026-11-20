@@ -23,6 +23,9 @@
 
 #include "crt/vc5names.h"
 #include "rock_fall_styles_imports.h"
+/* A header inline copy whose 1.0 and 0.0 the unit's code then reads
+ * (0049e104, 0049e108): see saturate_inline.h and the end of the file. */
+#include "saturate_inline.h"
 
 /* The unit's functions have C linkage in the native C++ compile too. */
 #ifdef __cplusplus
@@ -94,8 +97,6 @@ typedef struct Effect_Misc {
 } Effect_Misc;
 
 typedef struct Effect_Globs {
-    unsigned int rockFallCompletedTypes[12];        /* 004c7180 */
-    unsigned int rockFallCompletedIndexes[12];      /* 004c71b0 */
     Effect_RockFall rockFallEffects[EFFECT_ROCKFALL_MAXSTYLES][EFFECT_ROCKFALL_NUMTYPES]; /* 004c71e0 */
     char* rockFallStyleNames[EFFECT_ROCKFALL_MAXSTYLES]; /* 004c7990 */
     unsigned int rockFallStyleCount;                /* 004c79a0 */
@@ -109,7 +110,7 @@ typedef struct Effect_Globs {
     int explosionCount;                             /* 004c7df4 */
 } Effect_Globs;
 
-// GLOBAL: LEGORR 0x004c7180
+// GLOBAL: LEGORR 0x004c71e0
 static Effect_Globs effectGlobs;
 
 void effect_remove_all(void);
@@ -179,16 +180,23 @@ void effect_spawn_boulder_explode(Effect_Object* obj)
 void effect_spawn_boulder_explode_at(Effect_Vector3F* wPos)
 {
     unsigned int i;
+    void* cont;
 
     for (i = 0; i < 4; i++) {
         if (effectGlobs.boulderExplodeConts[i] == NULL) {
             if (((Effect_Level*)level_current_owner_get())->boulderAnimation == 2)
-                effectGlobs.boulderExplodeConts[i] = entity_visual_resource_load(legoGlobs_contBoulderExplodeIce);
+                cont = entity_visual_resource_load(legoGlobs_contBoulderExplodeIce);
             else
-                effectGlobs.boulderExplodeConts[i] = entity_visual_resource_load(legoGlobs_contBoulderExplode);
-            ddiscene_frame_update_and_callbacks(effectGlobs.boulderExplodeConts[i], 0.0f);
-            ddiscene_object_position_set(effectGlobs.boulderExplodeConts[i], NULL,
-                                         wPos->x, wPos->y, wPos->z);
+                cont = entity_visual_resource_load(legoGlobs_contBoulderExplode);
+            ddiscene_frame_update_and_callbacks(effectGlobs.boulderExplodeConts[i] = cont, 0.0f);
+            {
+                /* y and z as float locals of the block: the original copies
+                 * them through the x87 stack and only x through a register. */
+                float y = wPos->y;
+                float z = wPos->z;
+                ddiscene_object_position_set(effectGlobs.boulderExplodeConts[i], NULL,
+                                             wPos->x, y, z);
+            }
             ddiscene_object_pose_method_dispatch(effectGlobs.boulderExplodeConts[i], NULL,
                                                  0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f);
             return;
@@ -369,10 +377,18 @@ int effect_spawn_electric_fence_beam(unsigned int type, float xPos, float yPos,
 unsigned int effect_update_all(float elapsed, unsigned int** completeTypes,
                                unsigned int** completeIndexes)
 {
+    /* The completed lists are the function's own statics, not effectGlobs
+     * fields: with both arrays in one struct MSVC walks them with a single
+     * pointer (and spills count), where the original indexes each array by
+     * count in ebx. Their names give the original .bss order (types, then
+     * indexes, then effectGlobs). */
+    // GLOBAL: LEGORR 0x004c7180
+    static unsigned int types[12];
+    // GLOBAL: LEGORR 0x004c71b0
+    static unsigned int indexes[12];
     unsigned int count = 0;
     unsigned int i, j;
     Effect_RockFall* rockFall;
-    Effect_FenceBeam* beam;
 
     effect_update_explosions(elapsed);
     effect_update_boulder_explode(elapsed);
@@ -380,31 +396,34 @@ unsigned int effect_update_all(float elapsed, unsigned int** completeTypes,
     effect_update_misc_effects_all(elapsed);
 
     for (i = 0; i < EFFECT_ROCKFALL_NUMTYPES; i++) {
-        if (effectGlobs.rockFallEffects[effectGlobs.rockFallStyleIndex][i].cont != NULL) {
-            rockFall = &effectGlobs.rockFallEffects[effectGlobs.rockFallStyleIndex][i];
+        rockFall = &effectGlobs.rockFallEffects[effectGlobs.rockFallStyleIndex][i];
+        if (rockFall->cont != NULL) {
             for (j = 0; j < EFFECT_ROCKFALL_MAXINSTANCES; j++) {
                 if (!rockFall->finished[j]) {
                     if (ddiscene_advance_by_time_target(rockFall->conts[j], elapsed) > 0.0f) {
                         scene_render_lock_toggle(rockFall->conts[j], 1);
                         rockFall->finished[j] = 1;
                         rockFall->partsUsed[j] = 0;
-                        effectGlobs.rockFallCompletedTypes[count] = i;
-                        effectGlobs.rockFallCompletedIndexes[count] = j;
+                        types[count] = i;
+                        indexes[count] = j;
                         count++;
                     }
                 }
             }
         }
     }
-    *completeTypes = effectGlobs.rockFallCompletedTypes;
-    *completeIndexes = effectGlobs.rockFallCompletedIndexes;
+    *completeTypes = types;
+    *completeIndexes = indexes;
 
-    for (beam = effectGlobs.fenceBeams; beam < &effectGlobs.fenceBeams[EFFECT_FENCEBEAM_NUMTYPES]; beam++) {
+    /* Indexed, not a walking pointer: the original's outer loop rebases
+     * onto &fenceBeams[i].finished (`mov esi, edi`), which only the
+     * index form gives. */
+    for (i = 0; i < EFFECT_FENCEBEAM_NUMTYPES; i++) {
         for (j = 0; j < EFFECT_FENCEBEAM_MAXINSTANCES; j++) {
-            if (!beam->finished[j]) {
-                if (ddiscene_advance_by_time_target(beam->conts[j], elapsed) > 0.0f) {
-                    scene_render_lock_toggle(beam->conts[j], 1);
-                    beam->finished[j] = 1;
+            if (!effectGlobs.fenceBeams[i].finished[j]) {
+                if (ddiscene_advance_by_time_target(effectGlobs.fenceBeams[i].conts[j], elapsed) > 0.0f) {
+                    scene_render_lock_toggle(effectGlobs.fenceBeams[i].conts[j], 1);
+                    effectGlobs.fenceBeams[i].finished[j] = 1;
                 }
             }
         }
@@ -694,11 +713,20 @@ int effect_spawn_particle(unsigned int type, Effect_Vector3F* wPos,
         misc->timer = 0.0f;
         misc->conts[misc->count] = entity_visual_resource_load(misc->cont);
         ddiscene_frame_update_and_callbacks(misc->conts[misc->count], 0.0f);
-        ddiscene_object_position_set(misc->conts[misc->count], NULL, wPos->x, wPos->y, wPos->z);
-        if (dir != NULL)
+        {
+            /* y and z of each vector as float locals of a block, as in
+             * effect_spawn_boulder_explode_at: the original copies them
+             * through the x87 stack. */
+            float y = wPos->y;
+            float z = wPos->z;
+            ddiscene_object_position_set(misc->conts[misc->count], NULL, wPos->x, y, z);
+        }
+        if (dir != NULL) {
+            float y = dir->y;
+            float z = dir->z;
             ddiscene_object_pose_method_dispatch(misc->conts[misc->count], NULL,
-                                                 dir->x, dir->y, dir->z, 0.0f, 0.0f, -1.0f);
-        else
+                                                 dir->x, y, z, 0.0f, 0.0f, -1.0f);
+        } else
             ddiscene_object_pose_method_dispatch(misc->conts[misc->count], NULL,
                                                  0.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f);
         misc->count++;
@@ -706,6 +734,17 @@ int effect_spawn_particle(unsigned int type, Effect_Vector3F* wPos,
     }
     return 0;
 }
+
+/* The unit's .rdata in the original (0049e100-0049e110): a 1.0 that
+ * nothing reads, then the literals 1.0, 0.0 and 12.5. MSVC 5.0 emits named
+ * constants before literals and pools a literal once per object, so the
+ * first 1.0 is a named constant (as AITask.c's at 0049e010; finding 689),
+ * and the literals' 1.0-before-0.0 order is saturate_inline.h's. The 1.0
+ * cannot close Detail.c's block: Detail.c's literal 1.0 is pooled at
+ * 0049e0d4. Defined here, after the functions, it keeps their symbol
+ * counter and is still emitted first. Its original name is not known. */
+// GLOBAL: LEGORR 0x0049e100
+static const float s_rdata_0049e100 = 1.0f;
 
 #ifdef __cplusplus
 }

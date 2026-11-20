@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* Original translation unit G98-020, Lws.c (text 004869f0-00488b50; .rdata
- * 0049ea48-0049ea58; literals 004ab5f8-004ab6c8; .bss 00540838-00544864;
+ * 0049ea38-0049ea58; literals 004ab5f8-004ab6c8; .bss 00540838-00544864;
  * finding 505): the LightWave scene loader.
  *
  * Lws_Parse reads an "LWSC" version 1 .lws file into a node list: each
@@ -251,11 +251,20 @@ const LwsIID IID_IDirect3DRMUserVisual = {
 #endif
 
 /* The degree-to-radian factors. Lws_Parse multiplies by each in turn; as
- * literals MSVC folds them into one constant. */
-// GLOBAL: LEGORR 0x0049ea4c
+ * literals MSVC folds them into one constant. In C they are only declared
+ * here (tentative definitions) and defined at the end of the file, after
+ * d3drmdef.h's four consts (finding 524): MSVC 5.0 numbers a static at
+ * its first declaration, so no function's symbol counter moves, and emits
+ * .rdata in definition order, so the consts open the unit's block as at
+ * 0049ea38. Defining the consts here instead moves the counter, and
+ * lws_interpolate and lws_absolute_key_set fall. */
+#ifdef __cplusplus
 static const float s_lws_pi = 3.14159265358979323846f;
-// GLOBAL: LEGORR 0x0049ea48
 static const float s_lws_one_over_180 = 1.0f / 180.0f;
+#else
+static const float s_lws_pi;
+static const float s_lws_one_over_180;
+#endif
 
 // GLOBAL: LEGORR 0x00540838
 static LwsGlobs lwsGlobs;
@@ -856,10 +865,9 @@ void lws_absolute_key_set(LwsInfo* scene, LwsNode* node, LwsVector3* pos,
 {
     LwsFrame* frame = scene->frameList[node->frameIndex];
     float mat[4][4];
+    LwsFrame* parent;
 
     if (node->flags & LWSNODE_FLAG_FACECAMERA) {
-        LwsFrame* parent;
-
         frame->lpVtbl->GetParent(frame, &parent);
         frame->lpVtbl->GetTransform(frame, parent, mat);
         parent->lpVtbl->Release(parent);
@@ -872,35 +880,37 @@ void lws_absolute_key_set(LwsInfo* scene, LwsNode* node, LwsVector3* pos,
         mat[3][1] = pos->y;
         mat[3][2] = pos->z;
     } else {
-        float sinB = (float)sin(hpb->z);
-        float sinP = (float)sin(hpb->y);
-        float cosB = (float)cos(hpb->z);
-        float sinH = (float)sin(hpb->x);
-        float px = node->pivotVector.x;
-        float cosH = (float)cos(hpb->x);
-        float cosP = (float)cos(hpb->y);
-        float py = node->pivotVector.y;
-        float pz = node->pivotVector.z;
-        float e, a, c, b, d, f, g;
+        float a, b, c, d, e, f, g;
+        float px, py, pz;
+        float sinH, cosH, sinP, cosP, sinB, cosB;
 
+        sinB = (float)sin(hpb->z);
+        sinP = (float)sin(hpb->y);
+        cosB = (float)cos(hpb->z);
+        sinH = (float)sin(hpb->x);
+        px = node->pivotVector.x;
+        cosH = (float)cos(hpb->x);
+        cosP = (float)cos(hpb->y);
+        py = node->pivotVector.y;
+        pz = node->pivotVector.z;
         a = scale->x * sinB;
         b = scale->x * cosB;
-        d = scale->y * cosB;
         c = sinP * a;
-        mat[0][1] = cosP * a;
-        e = sinP * d;
-        f = -scale->y * sinB;
         mat[0][0] = cosH * b + sinH * c;
+        mat[0][1] = cosP * a;
         mat[0][2] = -sinH * b + cosH * c;
-        g = scale->z * cosP;
-        mat[2][1] = -scale->z * sinP;
-        mat[2][0] = sinH * g;
-        mat[2][2] = cosH * g;
-        mat[1][1] = cosP * d;
-        mat[1][0] = cosH * f + sinH * e;
-        mat[1][2] = cosH * e + -sinH * f;
         mat[0][3] = 0.0f;
+        d = scale->y * cosB;
+        f = -scale->y * sinB;
+        e = sinP * d;
+        mat[1][0] = cosH * f + sinH * e;
+        mat[1][1] = cosP * d;
+        mat[1][2] = cosH * e + -sinH * f;
         mat[1][3] = 0.0f;
+        g = scale->z * cosP;
+        mat[2][0] = sinH * g;
+        mat[2][1] = -scale->z * sinP;
+        mat[2][2] = cosH * g;
         mat[2][3] = 0.0f;
         mat[3][0] = pz * mat[2][0] + (px * mat[0][0] + py * mat[1][0]) + pos->x;
         mat[3][1] = px * mat[0][1] + py * mat[1][1] + pz * mat[2][1] + pos->y;
@@ -1090,3 +1100,12 @@ void lws_node_free(LwsInfo* scene, LwsNode* node)
         }
     }
 }
+
+/* The unit's .rdata, in original order (see s_lws_pi above). */
+#include "gods98/d3drmdef_consts.h"
+#ifndef __cplusplus
+// GLOBAL: LEGORR 0x0049ea48
+static const float s_lws_one_over_180 = 1.0f / 180.0f;
+// GLOBAL: LEGORR 0x0049ea4c
+static const float s_lws_pi = 3.14159265358979323846f;
+#endif

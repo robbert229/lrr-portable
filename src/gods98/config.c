@@ -251,7 +251,7 @@ BlockRec* block_record_create(BlockRec* prev)
     if (configGlobs.free_list == NULL) block_text_token_pool_grow();
 
     conf = configGlobs.free_list;
-    configGlobs.free_list = configGlobs.free_list->next_free;
+    configGlobs.free_list = conf->next_free;
     conf->next_free = conf;
 
     conf->key = NULL;
@@ -261,8 +261,8 @@ BlockRec* block_record_create(BlockRec* prev)
     if (prev) {
         prev->next = conf;
         conf->prev = prev;
-        conf->file_text = NULL;
         conf->depth = prev->depth;
+        conf->file_text = NULL;
     }
     else {
         conf->depth = 0;
@@ -421,3 +421,11 @@ int block_text_token_pool_watermark_peek(void)
 unsigned int config_unknown_506090[2] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x00506098
 ConfigGlobs configGlobs = { 0 };
+
+/* Maths.h's inline normalise: the unread 1.0f at 0049e908, after the unit's
+ * named constants. */
+#include "maths_normalise_head.h"
+
+/* A removed Config.h helper's unread 0.0f (0049e90c), the last word of the
+ * unit's .rdata. */
+#include "config_zero_tail.h"

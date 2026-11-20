@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* Images.c, original translation unit G98-011 (finding 632), rebuilt in
  * original shape (ADR 0005): gods98's 2D images, text 0047d410-0047e460,
- * .rdata 0049e998 (255.0f), strings 004aae7c-004aaeb4, .bss
+ * .rdata 0049e980-0049e99c (d3drmdef.h's table, an unread 1.0f, an unread
+ * 1/255, 255.0f), strings 004aae7c-004aaeb4, .bss
  * 00533908-00533994.
  *
  * An Image is a DirectDraw surface with its size, its pens and a colour-key
@@ -287,7 +288,7 @@ int Image_8BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
         unsigned int gm = desc->ddpfPixelFormat.dwGBitMask;
         Image_PaletteEntry* pal = image->palette;
         int x;
-        unsigned int pitch = desc->lPitch;
+        unsigned int pitch = (unsigned int)desc->lPitch / 2;
         unsigned char* from = image->buffer1;
         unsigned int bm = desc->ddpfPixelFormat.dwBBitMask;
         unsigned int rm = desc->ddpfPixelFormat.dwRBitMask;
@@ -307,11 +308,10 @@ int Image_8BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
                                          ((pal[index].green >> (8 - gbits)) << gshift));
             }
             from += lineLen - image->width;
-            to += (pitch / 2) - image->width;
+            to += pitch - image->width;
         }
 
         Image_FlipSurface(desc);
-        return 1;
     } else if (bpp == 24) {
         return 0;
     } else if (bpp == 32) {
@@ -375,13 +375,13 @@ int Image_24BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
     if (bpp == 8) {
         return 0;
     } else if (bpp == 16) {
-        unsigned int rm = desc->ddpfPixelFormat.dwRBitMask;
         unsigned int gm = desc->ddpfPixelFormat.dwGBitMask;
         unsigned int bm = desc->ddpfPixelFormat.dwBBitMask;
         unsigned short* to = (unsigned short*)desc->lpSurface;
         int lineLen = image->bytes_per_line;
         unsigned char* from = image->buffer1;
-        unsigned int pitch = desc->lPitch;
+        unsigned int pitch = (unsigned int)desc->lPitch / 2;
+        unsigned int rm = desc->ddpfPixelFormat.dwRBitMask;
         int rbits = Image_CountMaskBits(rm);
         int gbits = Image_CountMaskBits(gm);
         int bbits = Image_CountMaskBits(bm);
@@ -401,11 +401,10 @@ int Image_24BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
                                          ((r >> (8 - rbits)) << rshift));
             }
             from += lineLen - (image->width * 3);
-            to += (pitch / 2) - image->width;
+            to += pitch - image->width;
         }
 
         Image_FlipSurface(desc);
-        return 1;
     } else if (bpp == 24) {
         return 0;
     } else if (bpp == 32) {
@@ -414,6 +413,15 @@ int Image_24BitSourceCopy(Image_SurfaceDesc* desc, BMP_Image* image)
 
     return 1;
 }
+
+/* Maths.h's inline normalise. Its unread 1.0f (0049e990) comes before
+ * Image_SetupTrans's 255.0f; compiled here, after the source copies, it
+ * leaves their x87 operand order as it was. */
+#include "maths_normalise_head.h"
+
+/* A removed Images.h colour helper's unread 1/255 (0049e994), between
+ * Maths.h's 1.0f and Image_SetupTrans's 255.0f. */
+#include "images_colour_head.h"
 
 // FUNCTION: LEGORR 0x0047d9d0
 Image* Image_LoadBMPScaled(const char* fileName, unsigned int width,
@@ -429,7 +437,7 @@ Image* Image_LoadBMPScaled(const char* fileName, unsigned int width,
     unsigned int pen255;
     char name[1024];
 
-    penZero = pen255 = Image_RGB2CR(0, 0, 0);
+    pen255 = penZero = Image_RGB2CR(0, 0, 0);
 
     if ((buffer = file_load_binary(fileName, &size)) != NULL) {
         BMP_Parse(buffer, size, &image);
@@ -826,3 +834,5 @@ int Image_SaveBMP(Image* image, const char* fname)
 #endif
 
 #endif /* !LEGORRR_BACKEND_MINIWIN */
+
+#include "gods98/d3drmdef_consts.h"

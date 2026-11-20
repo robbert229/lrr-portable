@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* DirectX error decoder — original translation unit G98-027 (text
- * 00489d90-0048b260, .data 004ab788-004af9e1, .bss 005488a8-005490c0;
+ * 00489d90-0048b260, .data 004ab788-004af9e1, .bss 005488a0-005490c8;
  * findings 505 and 511). The original file name is not evidenced in the
  * binary, so the stem is descriptive.
  *
@@ -1114,11 +1114,19 @@ int directx_result_diagnostic_dispatch(int err, int module, const char* file,
 }
 
 /* dxerrorGlobs, defined after every function so that no function's symbol
- * counter moves (finding 538), after the 8 bytes of .bss the original has
- * before it (005488a0, after G98-024's handle table), which nothing in the
+ * counter moves (finding 538), between the 8 bytes of .bss the original has
+ * before it (005488a0, after G98-024's handle table) and the 8 it has after
+ * it (005490c0, before LIBC fpinit.obj's 005490c8), which nothing in the
  * image reads. Zero-initialised externals, emitted in definition order
- * (finding 686). */
+ * (finding 686). The trailing pair may belong to a later gods98 object
+ * (G98-028 to G98-031 have no .bss of their own); only its size and place
+ * are evidenced. Without it LIBC's .bss starts 8 bytes early, up to
+ * 87cdisp.obj's 16-byte alignment. */
 // GLOBAL: LEGORR 0x005488a0
 unsigned int dxerror_unknown_5488a0[2] = { 0 }; /* never read */
 // GLOBAL: LEGORR 0x005488a8
 DxerrorGlobs dxerrorGlobs = { 0 };
+// GLOBAL: LEGORR 0x005490c0
+unsigned int dxerror_unknown_5490c0[2] = { 0 }; /* never read */
+
+#include "gods98/d3drmdef_consts.h"

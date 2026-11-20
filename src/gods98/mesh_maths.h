@@ -14,9 +14,9 @@ static __inline Mesh_Vector3F* mesh_vector3d_add(Mesh_Vector3F* r,
                                                  Mesh_Vector3F* a,
                                                  Mesh_Vector3F* b)
 {
-    r->x = a->x + b->x;
-    r->y = a->y + b->y;
-    r->z = a->z + b->z;
+    r->x = (a->x + b->x);
+    r->y = (a->y + b->y);
+    r->z = (a->z + b->z);
     return r;
 }
 
@@ -24,9 +24,9 @@ static __inline Mesh_Vector3F* mesh_vector3d_subtract(Mesh_Vector3F* r,
                                                       Mesh_Vector3F* a,
                                                       Mesh_Vector3F* b)
 {
-    r->x = a->x - b->x;
-    r->y = a->y - b->y;
-    r->z = a->z - b->z;
+    r->x = (a->x - b->x);
+    r->y = (a->y - b->y);
+    r->z = (a->z - b->z);
     return r;
 }
 
@@ -40,7 +40,7 @@ static __inline float mesh_vector3d_dot(Mesh_Vector3F* a, Mesh_Vector3F* b)
 
 static __inline float mesh_vector3d_modulus(Mesh_Vector3F* v)
 {
-    return (float)sqrt(mesh_vector3d_dot(v, v));
+    return (float)sqrt((v->x * v->x) + (v->y * v->y) + (v->z * v->z));
 }
 
 static __inline Mesh_Vector3F* mesh_vector3d_scale(Mesh_Vector3F* r,
@@ -55,7 +55,8 @@ static __inline Mesh_Vector3F* mesh_vector3d_scale(Mesh_Vector3F* r,
 
 static __inline Mesh_Vector3F* mesh_vector3d_normalise(Mesh_Vector3F* r)
 {
-    return mesh_vector3d_scale(r, r, 1.0f / mesh_vector3d_modulus(r));
+    mesh_vector3d_scale(r, r, 1.0f / mesh_vector3d_modulus(r));
+    return r;
 }
 
 #endif /* LEGORRR_GODS98_MESH_MATHS_H */

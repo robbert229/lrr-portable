@@ -38,6 +38,7 @@
 #include "resource.h"
 #include "files_paths.h"
 #include "container_frame.h"
+#include "gods98/d3drmdef_consts.h"
 
 /* The COM interfaces the unit calls, with the method-table slots at their
  * Win32 offsets. MSVC 5.0's dsound.h is DirectX 3's and has no 3D
@@ -2042,11 +2043,14 @@ int sound_stream_stop_and_release(int stream_index)
 #if defined(SOUND3D_DIRECTSOUND)
 int sound_streamed_wave_buffer_setup(const char* fName, int loop, int volume)
 {
-    Sound3DStreamData* stream = loop ? &s_sound3d.loopStreamData : &s_sound3d.streamData;
+    Sound3DStreamData* stream;
     Sound3DBufferDesc dsbd;
     Sound3DBuffer* soundBuff;
     unsigned long remainder;
     int nError;
+
+    if (loop) stream = &s_sound3d.loopStreamData;
+    else stream = &s_sound3d.streamData;
 
     if (sound_wave_file_open_read_chunks(fName, &stream->hmmio, &stream->pwf,
                                          &stream->mmckinfoParent) != 0) {
@@ -2100,13 +2104,16 @@ int sound_streamed_wave_buffer_setup(const char* fName, int loop, int volume)
 #if defined(SOUND3D_DIRECTSOUND)
 int sound_stream_drain_check(int loop)
 {
-    Sound3DStreamData* stream = loop ? &s_sound3d.loopStreamData : &s_sound3d.streamData;
+    Sound3DStreamData* stream;
     void* lpvAudio1;
     DWORD dwBytes1;
     void* lpvAudio2;
     DWORD dwBytes2;
     UINT cbActualRead;
     UINT pos;
+
+    if (loop) stream = &s_sound3d.loopStreamData;
+    else stream = &s_sound3d.streamData;
 
     if (SOUND3D_STREAM_BUFFER(loop)->lpVtbl->Lock(SOUND3D_STREAM_BUFFER(loop), 0,
             stream->bufferSize, &lpvAudio1, &dwBytes1, &lpvAudio2, &dwBytes2, 0) != SOUND3D_DS_OK) {
@@ -2183,20 +2190,26 @@ int sound_stream_drain_check(int stream_index)
 #if defined(SOUND3D_DIRECTSOUND)
 void sound_stream_ring_buffer_tick(int loop)
 {
-    Sound3DStreamData* stream = loop ? &s_sound3d.loopStreamData : &s_sound3d.streamData;
+    Sound3DStreamData* stream;
     DWORD playPos;
     DWORD writePos;
+    DWORD played;
     void* lpvAudio1;
     DWORD dwBytes1;
     UINT cbActualRead;
     UINT pos;
     int first;
 
+    if (loop) stream = &s_sound3d.loopStreamData;
+    else stream = &s_sound3d.streamData;
+
     if (stream->playing && stream->fileOpen) {
         SOUND3D_STREAM_BUFFER(loop)->lpVtbl->GetCurrentPosition(SOUND3D_STREAM_BUFFER(loop),
                                                                 &playPos, &writePos);
-        stream->playProgress += ((playPos < stream->lastPos) ? stream->bufferSize + playPos : playPos) -
-                                stream->lastPos;
+        if (playPos < stream->lastPos) played = stream->bufferSize - stream->lastPos + playPos;
+        else played = playPos - stream->lastPos;
+
+        stream->playProgress += played;
         stream->lastPos = playPos;
 
         first = 0;
@@ -2236,11 +2249,9 @@ void sound_stream_ring_buffer_tick(int loop)
                 }
                 SOUND3D_STREAM_BUFFER(loop)->lpVtbl->Unlock(SOUND3D_STREAM_BUFFER(loop),
                                                             lpvAudio1, dwBytes1, NULL, 0);
-                stream->writeProgress += dwBytes1;
                 stream->writeOffset += dwBytes1;
-                if (stream->bufferSize <= stream->writeOffset) {
-                    stream->writeOffset -= stream->bufferSize;
-                }
+                stream->writeProgress += dwBytes1;
+                if (stream->writeOffset >= stream->bufferSize) stream->writeOffset -= stream->bufferSize;
             } else {
                 SOUND3D_STREAM_BUFFER(loop)->lpVtbl->Lock(SOUND3D_STREAM_BUFFER(loop),
                     stream->writeOffset, stream->notifySize, &lpvAudio1, &dwBytes1,
@@ -2458,3 +2469,5 @@ int s_bank_sound_on = 0;
 Sound3DFrameGlobs s_sound3d_frames = { 0 };
 #endif
 #endif
+
+#include "sound3d_tail.h"
