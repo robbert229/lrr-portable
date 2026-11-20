@@ -114,7 +114,7 @@ static void CheckDirectDraw(IDirectDraw* dd, IDirectDrawSurface** outSurface)
     CHECK(surface->QueryInterface(IID_IDirect3DTexture2, (void**) &texture2) == DD_OK && texture2);
     if (texture2) {
         D3DTEXTUREHANDLE handle = 0;
-        CHECK(texture2->GetHandle(nullptr, &handle) == DDERR_UNSUPPORTED);
+        CHECK(texture2->GetHandle(nullptr, &handle) == DD_OK && handle != 0);
         texture2->Release();
     }
 }
@@ -146,7 +146,7 @@ static void CheckDevice(IDirect3DRMDevice3* device)
     CHECK(Answers(device, IID_IDirect3DRMDevice2));
     CHECK(Answers(device, IID_IDirect3DRMDevice3));
     DDPIXELFORMAT format = {};
-    CHECK(device->FindPreferredTextureFormat(DDBD_16, 0, &format) == E_NOTIMPL);
+    CHECK(device->FindPreferredTextureFormat(DDBD_16, 0, &format) == DD_OK && format.dwRGBBitCount == 16);
 
     IDirect3DDevice2* imDevice2 = nullptr;
     CHECK(device->GetDirect3DDevice2(&imDevice2) == DD_OK && imDevice2);
@@ -383,8 +383,8 @@ static void CheckRetainedMode(IDirectDraw* dd, IDirectDrawSurface* surface)
         CHECK(Answers(texture, IID_IDirect3DRMTexture2));
         CHECK(Answers(texture, IID_IDirect3DRMTexture3));
         CHECK(texture->GetImage() == nullptr);
-        CHECK(texture->SetDecalTransparency(TRUE) == E_NOTIMPL);
-        CHECK(texture->SetDecalTransparentColor(0) == E_NOTIMPL);
+        CHECK(texture->SetDecalTransparency(TRUE) == DD_OK);
+        CHECK(texture->SetDecalTransparentColor(0) == DD_OK);
         CHECK(texture->GenerateMIPMap(0) == E_NOTIMPL);
         texture->Release();
     }
