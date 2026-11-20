@@ -285,6 +285,14 @@ if(BUILD_TESTING)
   add_test(NAME miniwin_lights COMMAND miniwin_lights_test)
   set_tests_properties(miniwin_lights PROPERTIES LABELS miniwin)
 
+  # Fog (ADR 0008, step 5): the scene's fog reaching the device's fog
+  # states, linear, exponential and exponential-squared, per vertex and per
+  # pixel, and Mesh.c's FOGENABLE off for its alpha-blended groups.
+  add_executable(miniwin_fog_test ${PLATFORM_DIR}/native/test_miniwin_fog.cpp)
+  target_link_libraries(miniwin_fog_test PRIVATE miniwin)
+  add_test(NAME miniwin_fog COMMAND miniwin_fog_test)
+  set_tests_properties(miniwin_fog PROPERTIES LABELS miniwin)
+
   # Main.c's window procedure under miniwin: SDL mouse events as client
   # coordinate messages, and SDL's quit event as WM_CLOSE.
   add_executable(miniwin_messages_test ${PLATFORM_DIR}/native/test_miniwin_messages.cpp)

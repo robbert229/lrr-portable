@@ -1329,7 +1329,7 @@ void mesh_set_render_desc(unsigned long flags, Mesh_Matrix* matWorld,
     Mesh_Matrix mat;
 
     if ((flags & MESH_RENDERFLAGS_ALPHAMASK) && alphaBlend) {
-        main_change_render_state(28, 0); /* D3DRENDERSTATE_ZWRITEENABLE */
+        main_change_render_state(28, 0); /* D3DRENDERSTATE_FOGENABLE */
     }
 
     if ((flags & MESH_RENDERFLAGS_ALPHAMASK) && !alphaBlend) {
