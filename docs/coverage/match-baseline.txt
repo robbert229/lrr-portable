@@ -1,4 +1,4 @@
-# input_sha256: 6037408664b20ae5e0cbc92c4af8f7f0be53cb0f7f5bfa5569f8d2d40967b960
+# input_sha256: 3fade8b4b5956c2d1ecc723467d3c7d1ef629853fd82fc1a0add2628c2633101
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -384,7 +384,7 @@
 0x00410070 100.00 scene_object_list_apply_position_callback
 0x00410090 100.00 steering_item_set_target
 0x004100b0 100.00 scene_object_list_apply_second_position_callback
-0x004100d0 55.73 steering_item_follow_target
+0x004100d0 70.23 steering_item_follow_target
 0x00410230 100.00 steering_item_arrived
 0x00410280 100.00 callback_operation_run_and_return_status
 0x004102b0 100.00 front_util_replace_text_spaces
@@ -3109,7 +3109,7 @@
 0x00410070 100.00 scene_object_list_apply_position_callback
 0x00410090 100.00 steering_item_set_target
 0x004100b0 100.00 scene_object_list_apply_second_position_callback
-0x004100d0 55.73 steering_item_follow_target
+0x004100d0 70.23 steering_item_follow_target
 0x00410230 100.00 steering_item_arrived
 0x00410280 100.00 callback_operation_run_and_return_status
 0x004102b0 100.00 front_util_replace_text_spaces
