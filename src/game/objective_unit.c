@@ -309,13 +309,13 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
 {
     int objType;
     unsigned int objID;
+    int blockPos[2];
     char* argv[60];
     char buff[1024];
     int hitTimeFail = 0;
     const char* str;
     char* s;
     int argc;
-    unsigned int r, g, b;
     unsigned int crystals;
     float timer;
 
@@ -349,13 +349,13 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
         OBJECTIVE_DATA(level)->imagePos[0] = (float)atoi(argv[1]);
         OBJECTIVE_DATA(level)->imagePos[1] = (float)atoi(argv[2]);
         if (argc == 6 && OBJECTIVE_DATA(level)->image) {
-            r = atoi(argv[3]);
-            g = atoi(argv[4]);
-            b = atoi(argv[5]);
+            float r, g, b;
+
+            r = (float)((unsigned int)atoi(argv[3]) / 255);
+            g = (float)((unsigned int)atoi(argv[4]) / 255);
+            b = (float)((unsigned int)atoi(argv[5]) / 255);
             image_surface_blit_transformed((struct TextureSurface*)OBJECTIVE_DATA(level)->image,
-                                           (float)(r / 255), (float)(g / 255),
-                                           (float)(b / 255), (float)(r / 255),
-                                           (float)(g / 255), (float)(b / 255));
+                                           r, g, b, r, g, b);
         }
         free(s);
     }
@@ -373,32 +373,31 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
         OBJECTIVE_DATA(level)->achievedImagePos[0] = (float)atoi(argv[1]);
         OBJECTIVE_DATA(level)->achievedImagePos[1] = (float)atoi(argv[2]);
         if (argc == 6 && OBJECTIVE_DATA(level)->achievedImage) {
-            r = atoi(argv[3]);
-            g = atoi(argv[4]);
-            b = atoi(argv[5]);
+            float r, g, b;
+
+            r = (float)((unsigned int)atoi(argv[3]) / 255);
+            g = (float)((unsigned int)atoi(argv[4]) / 255);
+            b = (float)((unsigned int)atoi(argv[5]) / 255);
             /* The original sets the briefing image's transparency here. */
             image_surface_blit_transformed((struct TextureSurface*)OBJECTIVE_DATA(level)->image,
-                                           (float)(r / 255), (float)(g / 255),
-                                           (float)(b / 255), (float)(r / 255),
-                                           (float)(g / 255), (float)(b / 255));
+                                           r, g, b, r, g, b);
         }
         free(s);
     }
 
-    if ((s = block_get_str_copy(config, string_path_join(gameName, levelName,
-                                                         // STRING: LEGORR 0x004a81ac
-                                                         "ObjectiveAcheivedAVI",
-                                                         NULL)))) {
-        argc = sound_variant_split(s, argv, ",");
+    if ((str = block_get_str_copy(config, string_path_join(gameName, levelName,
+                                                           // STRING: LEGORR 0x004a81ac
+                                                           "ObjectiveAcheivedAVI",
+                                                           NULL)))) {
+        argc = sound_variant_split((char*)str, argv, ",");
         OBJECTIVE_DATA(level)->achievedVideoName = string_duplicate(argv[0]);
         if (argc == 3) {
             OBJECTIVE_DATA(level)->achievedVideoPos[0] = (float)atoi(argv[1]);
             OBJECTIVE_DATA(level)->achievedVideoPos[1] = (float)atoi(argv[2]);
-            free(s);
         } else {
             OBJECTIVE_DATA(level)->noAchievedVideoPos = 1;
-            free(s);
         }
+        free((void*)str);
     }
 
     sprintf(buff,
@@ -457,7 +456,6 @@ void objective_load_level(struct BlockRec* config, const char* gameName,
                                                          // STRING: LEGORR 0x004a811c
                                                          "BlockObjective",
                                                          NULL)))) {
-        int blockPos[2];
         s = string_duplicate(str);
         sound_variant_split(s, argv, ",");
         blockPos[0] = atoi(argv[0]);
