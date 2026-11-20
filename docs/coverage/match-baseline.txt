@@ -1,4 +1,4 @@
-# input_sha256: 3b8d7442ec694a2eb787b5596e7c0a48f05da6f99ea7088a4f0fcf01dca883a1
+# input_sha256: 350d5a375f43058891cb66f74cff550151c1076580f1ef251327a77b2abb315b
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1109,7 +1109,7 @@
 0x004425f0 100.00 legoobject_subobject_pose_delta_normalize_and_dispatch
 0x004428a0 98.94 legoobject_world_position_set
 0x00442b10 92.35 legoobject_movement_accumulator_apply
-0x00442f80 98.13 legoobject_pose_orientation_dispatch
+0x00442f80 98.45 legoobject_pose_orientation_dispatch
 0x00443510 100.00 legoobject_scene_object_pose_position_sync
 0x00443670 100.00 legoobject_random_activity_attempt
 0x004436f0 100.00 legoobject_type3_flag04000000_test
@@ -2083,7 +2083,7 @@
 0x0046ff90 100.00 weapons_lazer_find_free
 0x0046ffb0 100.00 weapons_fire_lazer
 0x00470260 100.00 weapons_object_collision_check
-0x004702b0 98.58 weapons_object_quad_intersect
+0x004702b0 100.00 weapons_object_quad_intersect
 0x00470540 100.00 weapons_object_center_proximity_check
 0x00470630 100.00 weapons_object_line_side_check
 0x00470690 100.00 weapons_lazer_create
@@ -3834,7 +3834,7 @@
 0x004425f0 100.00 legoobject_subobject_pose_delta_normalize_and_dispatch
 0x004428a0 98.94 legoobject_world_position_set
 0x00442b10 92.35 legoobject_movement_accumulator_apply
-0x00442f80 98.13 legoobject_pose_orientation_dispatch
+0x00442f80 98.45 legoobject_pose_orientation_dispatch
 0x00443510 100.00 legoobject_scene_object_pose_position_sync
 0x00443670 100.00 legoobject_random_activity_attempt
 0x004436f0 100.00 legoobject_type3_flag04000000_test
@@ -4808,7 +4808,7 @@
 0x0046ff90 100.00 weapons_lazer_find_free
 0x0046ffb0 100.00 weapons_fire_lazer
 0x00470260 100.00 weapons_object_collision_check
-0x004702b0 98.58 weapons_object_quad_intersect
+0x004702b0 100.00 weapons_object_quad_intersect
 0x00470540 100.00 weapons_object_center_proximity_check
 0x00470630 100.00 weapons_object_line_side_check
 0x00470690 100.00 weapons_lazer_create
