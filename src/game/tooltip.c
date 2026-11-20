@@ -408,6 +408,10 @@ void tooltip_draw_box(Area2F box, ColourRGBF rgbNormal,
     }
 }
 
+/* Images.h's inline size getters (tooltip_images.h), included before their
+ * only user so that the functions above keep their symbol counter. */
+#include "tooltip_images.h"
+
 // FUNCTION: LEGORR 0x0046bc30
 void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
 {
@@ -434,8 +438,8 @@ void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
 
     height = width = (toolTipGlobs.borderSize + toolTipGlobs.offset) * 2;
     if (toolTip->flags & TOOLTIP_FLAG_IMAGE) {
-        width += toolTip->image->width;
-        height += toolTip->image->height;
+        width += tooltip_image_get_width(toolTip->image);
+        height += tooltip_image_get_height(toolTip->image);
     }
     else {
         width += (toolTip->textWidth > (unsigned int)toolTip->iconsWidth) ? toolTip->textWidth : toolTip->iconsWidth;
@@ -467,7 +471,7 @@ void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
         x = 0;
         rowHeight = 0;
         font_print_f(toolTipGlobs.font,
-                     (int)(toolTipGlobs.offset + (box.x + toolTipGlobs.borderSize)),
+                     (int)(toolTipGlobs.borderSize + (box.x + toolTipGlobs.offset)),
                      (int)(box.y + toolTipGlobs.borderSize + toolTipGlobs.offset),
                      "%s", toolTip->textBuffer);
         for (i = 0; i < toolTip->iconCount; i++) {
@@ -477,8 +481,9 @@ void tooltip_draw(ToolTip* toolTip, unsigned int mouseX, unsigned int mouseY)
                 pos.x += x;
                 pos.y += mouseX;
                 image_display_scaled(toolTip->iconList[i], NULL, &pos, NULL);
-                if ((int)toolTip->iconList[i]->height > (int)rowHeight) rowHeight = toolTip->iconList[i]->height;
-                x += toolTip->iconList[i]->width;
+                if (tooltip_image_get_height(toolTip->iconList[i]) > (int)rowHeight)
+                    rowHeight = tooltip_image_get_height(toolTip->iconList[i]);
+                x += tooltip_image_get_width(toolTip->iconList[i]);
             }
             else {
                 mouseX += rowHeight;

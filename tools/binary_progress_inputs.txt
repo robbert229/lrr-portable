@@ -502,6 +502,7 @@ src/game/tile_variants.h
 src/game/tile_variants_port.cpp
 src/game/tooltip.c
 src/game/tooltip.h
+src/game/tooltip_images.h
 src/game/tooltip_imports.h
 src/game/tooltip_link_names.h
 src/game/tooltip_port.cpp
