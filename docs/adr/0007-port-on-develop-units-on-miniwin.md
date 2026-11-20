@@ -37,7 +37,9 @@ shape.
 3. **Follow isle-portable: miniwin for its scope, library substitutions for
    the rest.** miniwin is the only adapter on every host, Windows included.
    The `winapi` platform and its MinGW/DirectX build are dropped.
-   - **miniwin** covers windows, DirectDraw, Direct3D, D3DRM and DirectInput.
+   - **miniwin** covers windows, DirectDraw, Direct3D and D3DRM. The mouse
+     reaches the units as window messages and cursor calls, so it stays in
+     miniwin with the windows.
      The units call it through C++ interface syntax (`obj->Method(...)`), not
      C `lpVtbl->` calls. miniwin grows the interface versions the game uses
      that it lacks:
@@ -45,7 +47,6 @@ shape.
      - D3DRM3: Frame3, Device3, MeshBuilder2/3, AnimationSet2, UserVisual,
        Viewport2, Texture3, Material2, and fog.
      - D3DIM: Device3, Viewport3, Texture2.
-     - DirectInput device 2.
 
      These changes go upstream to isle-portable first. Patches still
      awaiting review are carried on a fork that the submodule points at, and
@@ -62,6 +63,7 @@ shape.
      | AVIFile movies | FFmpeg | `// [library:video]` |
      | Registry | ini file (libiniparser) | `// [library:config]` |
      | Files | SDL3 | `// [library:filesystem]` |
+     | DirectInput keyboard | SDL3 | `// [library:input]` |
 
      Each replaced call site carries its marker, so a search for one marker
      finds every place a subsystem was substituted. A substitution changes
@@ -193,11 +195,12 @@ unit that reads them some other way is fixed so that it goes through the seam.
 4. Fill the seam in boot-path order:
    - window, message pump and time;
    - registry and files;
-   - DirectInput (SDL scancode → DIK table);
-   - DirectDraw4, which brings up the front end and menus.
+   - DirectDraw4, which brings up the front end and menus;
+   - the keyboard substitution (SDL scancode → DIK table) and the mouse
+     messages, which make the menus respond.
 5. Add D3DRM3 and D3DIM, the largest piece. This brings up the level view.
 6. Substitute audio and video: DirectSound and 3D sound, MCI CD from audio
-   files, and AVI through FFmpeg. The time, config and filesystem
+   files, and AVI through FFmpeg. The time, config, filesystem and input
    substitutions are already needed in step 4.
 7. Add `make port-check` once the first scenario reaches gameplay, and
    ratchet it from there.

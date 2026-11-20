@@ -2314,7 +2314,10 @@ void front_run_screen_menu(Front_Menu* menu)
     g_front_save_menu_open = 1;
     frontGlobs_overlayImage = NULL;
     lastTime = (DWORD)SDL_GetTicks(); // [library:time]
-    while (!menu->closed) {
+    nextMenu = menu;
+    /* The original never leaves a menu when the window is closed. The port
+     * leaves it as if Quit Game were chosen (front_is_quit_selected). */
+    while (!menu->closed && !s_window_close_requested) {
         if (!transition) {
             nextMenu = front_menu_update(elapsed, menu, NULL);
         } else {
@@ -4009,7 +4012,8 @@ const char* front_get_selected_level(void)
 // FUNCTION: LEGORR 0x00416dd0
 int front_is_quit_selected(void)
 {
-    return frontGlobs_mainMenuValues[3];
+    /* A closed window quits as Quit Game does (front_run_screen_menu). */
+    return frontGlobs_mainMenuValues[3] || s_window_close_requested;
 }
 
 // FUNCTION: LEGORR 0x00416de0

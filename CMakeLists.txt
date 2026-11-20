@@ -40,7 +40,7 @@ endif()
 find_package(SDL3 CONFIG REQUIRED)
 set(MINIWIN_SOURCES
   windows/windows.cpp windows/windowmessages.cpp ddraw/ddpalette.cpp ddraw/ddraw.cpp ddraw/ddsurface.cpp
-  ddraw/framebuffer.cpp dinput/dinput.cpp d3d/d3dmaterial.cpp
+  ddraw/framebuffer.cpp d3d/d3dmaterial.cpp
   d3d/d3dviewport.cpp d3drm/d3drm.cpp d3drm/d3drmanimationset.cpp
   d3drm/d3drmdevice.cpp d3drm/d3drmframe.cpp d3drm/d3drmlight.cpp
   d3drm/d3drmmesh.cpp d3drm/d3drmmeshbuilder.cpp d3drm/d3drmtexture.cpp
@@ -105,6 +105,12 @@ if(BUILD_TESTING)
   target_link_libraries(registry_test PRIVATE miniwin)
   add_test(NAME registry COMMAND registry_test)
   set_tests_properties(registry PROPERTIES LABELS registry)
+  # Input.c's keyboard substitution: the SDL scancode to DIK_* table.
+  add_executable(input_keys_test ${ENGINE_DIR}/test_input_keys.cpp)
+  target_include_directories(input_keys_test PRIVATE ${ENGINE_DIR})
+  target_link_libraries(input_keys_test PRIVATE SDL3::SDL3)
+  add_test(NAME input_keys COMMAND input_keys_test)
+  set_tests_properties(input_keys PROPERTIES LABELS input)
 
   # The DirectX 6 interface versions the units use, declared in miniwin
   # (ADR 0007, decision 3): reachable, and failing rather than crashing
@@ -121,4 +127,11 @@ if(BUILD_TESTING)
   target_link_libraries(miniwin_ddraw4_test PRIVATE miniwin)
   add_test(NAME miniwin_ddraw4 COMMAND miniwin_ddraw4_test)
   set_tests_properties(miniwin_ddraw4 PROPERTIES LABELS miniwin)
+
+  # Main.c's window procedure under miniwin: SDL mouse events as client
+  # coordinate messages, and SDL's quit event as WM_CLOSE.
+  add_executable(miniwin_messages_test ${PLATFORM_DIR}/native/test_miniwin_messages.cpp)
+  target_link_libraries(miniwin_messages_test PRIVATE miniwin)
+  add_test(NAME miniwin_messages COMMAND miniwin_messages_test)
+  set_tests_properties(miniwin_messages PROPERTIES LABELS miniwin)
 endif()

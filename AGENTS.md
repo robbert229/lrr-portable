@@ -9,7 +9,8 @@ Open PRs for this work against `develop`.
   (`src/link_order.cmake`, kind `unit`). Port-only code lives in exactly two
   places: in miniwin, below the seam, and in library substitutions inside a
   unit, each call site marked `// [library:audio]`, `// [library:time]`,
-  `// [library:video]`, `// [library:config]` or `// [library:filesystem]`.
+  `// [library:video]`, `// [library:config]`, `// [library:filesystem]` or
+  `// [library:input]`.
   A substitution replaces only the call it marks.
 - **Units keep the original's shape:** their files, function order, names,
   signatures and globals. Within that shape, change code freely for

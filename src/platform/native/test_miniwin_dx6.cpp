@@ -8,7 +8,6 @@
 // Synthetic only: an offscreen SDL window, no game data.
 #include <miniwin/d3drm.h>
 #include <miniwin/ddraw.h>
-#include <miniwin/dinput.h>
 
 #include <SDL3/SDL.h>
 
@@ -398,37 +397,6 @@ static void CheckRetainedMode(IDirectDraw* dd, IDirectDrawSurface* surface)
     d3drm->Release();
 }
 
-static void CheckDirectInput()
-{
-    IDirectInputA* input = nullptr;
-    CHECK(DirectInputCreateA(nullptr, 0x0500, &input, nullptr) == DI_OK && input);
-    if (!input) {
-        return;
-    }
-    CHECK(Answers(input, IID_IDirectInputA));
-    IDirectInputDeviceA* other = nullptr;
-    CHECK(input->CreateDevice(IID_IDirectInputA, &other, nullptr) == DIERR_DEVICENOTREG);
-    IDirectInputDeviceA* keyboard = nullptr;
-    CHECK(input->CreateDevice(GUID_SysKeyboard, &keyboard, nullptr) == DI_OK && keyboard);
-    if (keyboard) {
-        CHECK(Answers(keyboard, IID_IDirectInputDeviceA));
-        IDirectInputDevice2A* keyboard2 = nullptr;
-        CHECK(keyboard->QueryInterface(IID_IDirectInputDevice2A, (void**) &keyboard2) == DI_OK && keyboard2);
-        unsigned char state[256];
-        CHECK(keyboard->SetDataFormat(&c_dfDIKeyboard) == DIERR_UNSUPPORTED);
-        CHECK(keyboard->SetCooperativeLevel(nullptr, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND) == DIERR_UNSUPPORTED);
-        CHECK(keyboard->Acquire() == DIERR_UNSUPPORTED);
-        CHECK(keyboard->GetDeviceState(sizeof(state), state) == DIERR_UNSUPPORTED);
-        CHECK(keyboard->Unacquire() == DIERR_UNSUPPORTED);
-        if (keyboard2) {
-            CHECK(keyboard2->Poll() == DIERR_UNSUPPORTED);
-            keyboard2->Release();
-        }
-        keyboard->Release();
-    }
-    input->Release();
-}
-
 int main()
 {
     // The stubs log once each; keep the test output to its own checks.
@@ -457,7 +425,6 @@ int main()
             surface->Release();
         }
     }
-    CheckDirectInput();
 
     SDL_DestroyWindow(window);
     SDL_Quit();
