@@ -262,4 +262,11 @@ if(BUILD_TESTING)
   target_link_libraries(miniwin_messages_test PRIVATE miniwin)
   add_test(NAME miniwin_messages COMMAND miniwin_messages_test)
   set_tests_properties(miniwin_messages PROPERTIES LABELS miniwin)
+
+  # miniwin's key messages: Windows virtual-key codes and lParam flags from
+  # SDL key events, WM_SYSKEY* for Alt and F10, and Alt+F4 as WM_CLOSE.
+  add_executable(miniwin_keys_test ${PLATFORM_DIR}/native/test_miniwin_keys.cpp)
+  target_link_libraries(miniwin_keys_test PRIVATE miniwin)
+  add_test(NAME miniwin_keys COMMAND miniwin_keys_test)
+  set_tests_properties(miniwin_keys PROPERTIES LABELS miniwin)
 endif()

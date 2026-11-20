@@ -3484,6 +3484,12 @@ void front_play_movie(struct G98CMovie* movie, int skippable)
             if ((float)movie_get_duration(movie) < timer) {
                 return;
             }
+            /* PORT-ONLY: a close request (the window's close button, or
+             * SIGTERM/SIGINT through SDL's quit event) ends the movie, so
+             * the game exits instead of playing the intro to its end. */
+            if (s_window_close_requested) {
+                return;
+            }
             if (skippable) {
                 if (input_keyboard_down_key_count()) {
                     return;
@@ -3529,6 +3535,11 @@ void front_play_intro_splash(const char* imageKey, int skippable, const char* ti
                     main_loop_frame_pump(0);
                     Sleep(100);
                     if ((DWORD)SDL_GetTicks() >= endTime) { // [library:time]
+                        break;
+                    }
+                    /* PORT-ONLY: a close request ends the splash, as it
+                     * ends a movie (front_play_movie). */
+                    if (s_window_close_requested) {
                         break;
                     }
                     if (skippable && (input_keyboard_down_key_count() || s_window_mouse_word_40 ||
