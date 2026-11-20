@@ -737,20 +737,23 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
     int setQueueMode;
     int type;
     int completed;
-    int playMusic = 0;
-    int showTextWindows = 0;
-    int showing = 0;
+    int playMusic;
+    int showTextWindows;
+    int showing;
 
     setQueueMode = 0;
+    showTextWindows = 0;
+    showing = 0;
+    playMusic = 0;
 
     if ((unsigned int)s_application_mode > 3)
         objective_stop_showing_objective();
 
     if (objectiveGlobs.flags & OBJECTIVE_FLAG_BRIEFING) {
-        showing = 1;
         lego_transition_control(0, 1);
         type = 0;
         showTextWindows = 1;
+        showing = 1;
         if (objectiveGlobs.flags & OBJECTIVE_FLAG_STATUSREAD) {
             if (objectiveGlobs.flags & OBJECTIVE_FLAG_SHOWBRIEFINGADVISOR)
                 advisor_request_admit(0, 1);
@@ -760,7 +763,6 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
         text_display_message(0x16, 0, 0);
     } else if (objectiveGlobs.flags & OBJECTIVE_FLAG_COMPLETED) {
         if (teleporter_service_all(0x40b)) {
-            playMusic = 1;
             lego_transition_control(0, 1);
             objective_osf_store_adapter();
             if (!OBJECTIVE_DATA(level)->achievedVideoPlayed) {
@@ -779,6 +781,7 @@ void objective_update(void* textWnd, Lego_Level* level, float elapsedGame,
                 objectiveGlobs.flags &= ~OBJECTIVE_FLAG_STATUSREAD;
             }
             showing = 1;
+            playMusic = 1;
         }
     } else if (objectiveGlobs.flags & OBJECTIVE_FLAG_FAILED) {
         if (teleporter_service_all(0x40b)) {
