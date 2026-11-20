@@ -873,8 +873,8 @@ int weapons_object_quad_intersect(Weapons_Object* obj, float* fromPos,
     void* cont;
     float from[2];
     float to[2];
-    float corners[4][3];
-    float points[5][2];
+    Weapons_Vector3F corners[4];
+    Point2F points[5];
     float edge[2];
     float hit[2];
     unsigned int i;
@@ -886,35 +886,33 @@ int weapons_object_quad_intersect(Weapons_Object* obj, float* fromPos,
     to[0] = toPos[0];
     to[1] = toPos[1];
     if (checkSide && weapons_object_line_side_check(obj, from, to)) return 0;
-    corners[0][0] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * -0.5f;
-    corners[0][2] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * 0.5f;
-    corners[1][0] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * 0.5f;
-    corners[1][2] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * 0.5f;
-    corners[2][0] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * 0.5f;
-    corners[2][2] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * -0.5f;
-    corners[3][0] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * -0.5f;
-    corners[3][2] = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * -0.5f;
-    corners[3][1] = 0.0f;
-    corners[2][1] = 0.0f;
-    corners[1][1] = 0.0f;
-    corners[0][1] = 0.0f;
+    corners[0].x = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * -0.5f;
+    corners[0].z = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * 0.5f;
+    corners[1].x = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * 0.5f;
+    corners[1].z = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * 0.5f;
+    corners[2].x = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * 0.5f;
+    corners[2].z = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * -0.5f;
+    corners[3].x = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[0] * -0.5f;
+    corners[3].z = ((float*)entity_stats_field_at_a0_corpus(WEAPONS_ENT(obj)))[1] * -0.5f;
+    corners[3].y = 0.0f;
+    corners[2].y = 0.0f;
+    corners[1].y = 0.0f;
+    corners[0].y = 0.0f;
     for (i = 0; i < 4; i++) {
-        scene_object_coordinate_transform_in_place(cont, corners[i], corners[i]);
-        points[i][0] = corners[i][0];
-        points[i][1] = corners[i][1];
+        scene_object_coordinate_transform_in_place(cont, (float*)&corners[i], (float*)&corners[i]);
+        points[i] = *(Point2F*)&corners[i];
     }
-    points[4][0] = points[0][0];
-    points[4][1] = points[0][1];
+    points[4] = points[0];
     for (j = 0; j < 4; j++) {
-        edge[0] = points[j][0] - points[j + 1][0];
-        edge[1] = points[j][1] - points[j + 1][1];
-        if (line_intersection_2d_compute(hit, from, to, points[j], edge)) {
-            if (fabs(points[j][0] - points[j + 1][0]) > fabs(points[j][1] - points[j + 1][1])) {
-                if ((hit[0] > points[j][0] && hit[0] < points[j + 1][0]) ||
-                    (hit[0] < points[j][0] && hit[0] > points[j + 1][0])) goto found;
+        edge[0] = points[j].x - points[j + 1].x;
+        edge[1] = points[j].y - points[j + 1].y;
+        if (line_intersection_2d_compute(hit, from, to, (float*)&points[j], edge)) {
+            if (fabs(points[j].x - points[j + 1].x) > fabs(points[j].y - points[j + 1].y)) {
+                if ((hit[0] > points[j].x && hit[0] < points[j + 1].x) ||
+                    (hit[0] < points[j].x && hit[0] > points[j + 1].x)) goto found;
             }
-            else if ((hit[1] > points[j][1] && hit[1] < points[j + 1][1]) ||
-                     (hit[1] < points[j][1] && hit[1] > points[j + 1][1])) {
+            else if ((hit[1] > points[j].y && hit[1] < points[j + 1].y) ||
+                     (hit[1] < points[j].y && hit[1] > points[j + 1].y)) {
 found:
                 if (intersection != NULL) {
                     intersection[0] = hit[0];
