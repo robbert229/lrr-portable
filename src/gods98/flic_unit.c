@@ -901,6 +901,17 @@ unsigned short Flic_GetPaletteColour(unsigned char index, LPFLICSTRUCT fsp)
     return fsp->fsPalette64k[index];
 }
 
+/* The original's Flic_GetWidth has no address of its own: the linker folded
+ * it with AnimClone_IsLws (004897d0, animclone.c's anim_clone_is_lws), which
+ * also returns the 32-bit field at +0x0c, and the callers called that. On a
+ * 64-bit build the two records no longer share that offset (an AnimClone's
+ * lws sits after three pointers), so the callers read the flic's width here,
+ * not through the folded getter. */
+int Flic_GetWidth(LPFLICSTRUCT fsp)
+{
+    return fsp->fsXsize;
+}
+
 // FUNCTION: LEGORR 0x004850e0
 int Flic_GetHeight(LPFLICSTRUCT fsp)
 {

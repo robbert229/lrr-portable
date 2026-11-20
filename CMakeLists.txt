@@ -127,6 +127,11 @@ if(BUILD_TESTING)
   # Under -fsanitize=undefined, a misaligned load fails the test.
   set_tests_properties(unaligned_readers PROPERTIES LABELS unaligned_readers
     ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
+  # G98-016's frame-size getters, which the menu overlays, pointers and
+  # panels size their blits from.
+  add_executable(flic_size_test ${ENGINE_DIR}/test_flic_size.cpp)
+  target_link_libraries(flic_size_test PRIVATE units)
+  add_test(NAME flic_size COMMAND flic_size_test)
   # G98-029's registry walk over the test's own registry: the unit alone,
   # without the seam's stubs.
   add_executable(registry_test ${ENGINE_DIR}/test_registry.cpp ${ENGINE_DIR}/g98_029.c)
