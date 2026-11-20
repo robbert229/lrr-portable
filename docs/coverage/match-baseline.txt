@@ -1,4 +1,4 @@
-# input_sha256: 08ce7ad7664ba8dd03502e2d0d10ebc54b3d21a4033a599f62bf44c7ff426ad9
+# input_sha256: 697781861c03858933143812c1047adec67332d6c4dffe66e8b3115ce357e615
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2012,7 +2012,7 @@
 0x0046b7a0 100.00 tooltip_reset_timer
 0x0046b7c0 57.14 timed_effect_runtime_update
 0x0046b8b0 46.56 tooltip_draw_box
-0x0046bc30 91.38 tooltip_draw
+0x0046bc30 93.79 tooltip_draw
 0x0046c030 100.00 render_resource_binding_initialize
 0x0046c0b0 100.00 render_resource_binding_copy_and_convert
 0x0046c0f0 100.00 render_resource_binding_release
@@ -4737,7 +4737,7 @@
 0x0046b7a0 100.00 tooltip_reset_timer
 0x0046b7c0 57.14 timed_effect_runtime_update
 0x0046b8b0 46.56 tooltip_draw_box
-0x0046bc30 91.38 tooltip_draw
+0x0046bc30 93.79 tooltip_draw
 0x0046c030 100.00 render_resource_binding_initialize
 0x0046c0b0 100.00 render_resource_binding_copy_and_convert
 0x0046c0f0 100.00 render_resource_binding_release
