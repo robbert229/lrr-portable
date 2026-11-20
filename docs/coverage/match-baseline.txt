@@ -1,4 +1,4 @@
-# input_sha256: 1b98d4075cab34cdfecde69fa01f9c937e88d8fec82c1e27428c4cb90977eec2
+# input_sha256: 62a5de6bd53c482e0a85825bedea62daf3320a8c7182f8bb83bda72606ab0fa9
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -280,7 +280,7 @@
 0x0040b850 100.00 packed_grid_cell_value_get
 0x0040b880 100.00 scene_cell_visual_channels_apply
 0x0040ba00 100.00 detail_place_mesh
-0x0040bb90 60.00 detail_set_mesh_frame
+0x0040bb90 100.00 detail_set_mesh_frame
 0x0040bd60 100.00 detail_matrix_setup
 0x0040bdc0 100.00 ledger_stub_0040bdc0_SetTimeoutTo10000
 0x0040bde0 100.00 effect_spawn_boulder_explode
@@ -739,7 +739,7 @@
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 100.00 lego_global_subsystem_state_reset
 0x00426420 100.00 lego_cursor_ray_to_camera_route
-0x00426520 76.19 lego_main_sim_interaction_and_cell_update
+0x00426520 84.35 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 100.00 lego_level_upgrade_name_strings_load
 0x00428020 99.26 lego_entity_command_status_feedback_dispatch
@@ -1868,7 +1868,7 @@
 0x00463ed0 100.00 indexed_text_metrics_pair_set
 0x00463f00 100.00 select_place_create_adapter
 0x00464110 100.00 rotated_pairs_scratch_fill
-0x004641c0 51.90 legoobject_gs_placement_footprint_check_adapter
+0x004641c0 53.86 legoobject_gs_placement_footprint_check_adapter
 0x00464720 100.00 surface_visibility_set
 0x00464740 100.00 sound_alias_registry_init
 0x00464c20 100.00 sfx_container_sound_trigger_callback
@@ -2071,13 +2071,13 @@
 0x0046f1d0 100.00 weapons_get_damage_for_object
 0x0046f270 100.00 weapons_generic_damage_object
 0x0046f380 100.00 weapons_gun_hit_object
-0x0046f3b0 88.98 weapons_projectile_hit_check
+0x0046f3b0 92.91 weapons_projectile_hit_check
 0x0046f550 100.00 weapons_update
 0x0046f610 100.00 weapons_callback_update_object
 0x0046f770 100.00 weapons_projectile_hit_object
-0x0046f920 89.63 weapons_projectile_update
+0x0046f920 91.18 weapons_projectile_update
 0x0046faf0 84.50 weapons_projectile_create
-0x0046fc70 76.02 weapons_projectile_create_curved
+0x0046fc70 78.79 weapons_projectile_create_curved
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
 0x0046ff70 100.00 weapons_projectile_find_free
 0x0046ff90 100.00 weapons_lazer_find_free
@@ -2087,7 +2087,7 @@
 0x00470540 100.00 weapons_object_center_proximity_check
 0x00470630 100.00 weapons_object_line_side_check
 0x00470690 100.00 weapons_lazer_create
-0x00470760 56.93 weapons_mesh_build_segment
+0x00470760 61.65 weapons_mesh_build_segment
 0x004712c0 100.00 weapons_get_weapons_model
 0x004712f0 100.00 weapons_model_timer_get
 0x00471310 100.00 weapons_model_timer_set
@@ -2095,12 +2095,12 @@
 0x00471370 99.55 weapons_callback_ray_candidate
 0x00471630 100.00 weapons_ray_block_sweep
 0x00471860 100.00 weapons_ray_trace_nearest
-0x004718d0 88.00 weapons_object_pair_ray_hit
-0x00471960 94.74 weapons_see_through_walls_check
+0x004718d0 100.00 weapons_object_pair_ray_hit
+0x00471960 100.00 weapons_see_through_walls_check
 0x00471a20 100.00 weapons_model_fire_null_get
 0x00471a40 100.00 weapons_model_x_pivot_get
 0x00471a50 100.00 weapons_model_y_pivot_get
-0x00471a60 85.41 weapons_model_aim
+0x00471a60 88.17 weapons_model_aim
 0x00471c70 100.00 weapons_model_fire_dir_get
 0x00471ca0 100.00 weapons_object_center_get
 0x00471ce0 100.00 weapons_object_can_be_hit
@@ -2108,8 +2108,8 @@
 0x00471f00 100.00 weapons_model_aim_update
 0x00471fc0 100.00 weapons_object_update_weapons
 0x00472060 100.00 weapons_callback_remove_lazer_hit_reference
-0x00472080 90.16 weapons_object_in_range
-0x00472130 90.16 weapons_object_in_touch_range
+0x00472080 100.00 weapons_object_in_range
+0x00472130 100.00 weapons_object_in_touch_range
 0x004721e0 100.00 G98CMovie::InitSample
 0x004722b0 100.00 G98CMovie::OpenStream
 0x00472390 100.00 G98CMovie::G98CMovie
@@ -3005,7 +3005,7 @@
 0x0040b850 100.00 packed_grid_cell_value_get
 0x0040b880 100.00 scene_cell_visual_channels_apply
 0x0040ba00 100.00 detail_place_mesh
-0x0040bb90 60.00 detail_set_mesh_frame
+0x0040bb90 100.00 detail_set_mesh_frame
 0x0040bd60 100.00 detail_matrix_setup
 0x0040bdc0 100.00 ledger_stub_0040bdc0_SetTimeoutTo10000
 0x0040bde0 100.00 effect_spawn_boulder_explode
@@ -3464,7 +3464,7 @@
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 100.00 lego_global_subsystem_state_reset
 0x00426420 100.00 lego_cursor_ray_to_camera_route
-0x00426520 76.19 lego_main_sim_interaction_and_cell_update
+0x00426520 84.35 lego_main_sim_interaction_and_cell_update
 0x00427e00 100.00 lego_tooltip_info_strings_load
 0x00427f80 100.00 lego_level_upgrade_name_strings_load
 0x00428020 99.26 lego_entity_command_status_feedback_dispatch
@@ -4593,7 +4593,7 @@
 0x00463ed0 100.00 indexed_text_metrics_pair_set
 0x00463f00 100.00 select_place_create_adapter
 0x00464110 100.00 rotated_pairs_scratch_fill
-0x004641c0 51.90 legoobject_gs_placement_footprint_check_adapter
+0x004641c0 53.86 legoobject_gs_placement_footprint_check_adapter
 0x00464720 100.00 surface_visibility_set
 0x00464740 100.00 sound_alias_registry_init
 0x00464c20 100.00 sfx_container_sound_trigger_callback
@@ -4796,13 +4796,13 @@
 0x0046f1d0 100.00 weapons_get_damage_for_object
 0x0046f270 100.00 weapons_generic_damage_object
 0x0046f380 100.00 weapons_gun_hit_object
-0x0046f3b0 88.98 weapons_projectile_hit_check
+0x0046f3b0 92.91 weapons_projectile_hit_check
 0x0046f550 100.00 weapons_update
 0x0046f610 100.00 weapons_callback_update_object
 0x0046f770 100.00 weapons_projectile_hit_object
-0x0046f920 89.63 weapons_projectile_update
+0x0046f920 91.18 weapons_projectile_update
 0x0046faf0 84.50 weapons_projectile_create
-0x0046fc70 76.02 weapons_projectile_create_curved
+0x0046fc70 78.79 weapons_projectile_create_curved
 0x0046fef0 100.00 weapons_get_known_weapon_object_type
 0x0046ff70 100.00 weapons_projectile_find_free
 0x0046ff90 100.00 weapons_lazer_find_free
@@ -4812,7 +4812,7 @@
 0x00470540 100.00 weapons_object_center_proximity_check
 0x00470630 100.00 weapons_object_line_side_check
 0x00470690 100.00 weapons_lazer_create
-0x00470760 56.93 weapons_mesh_build_segment
+0x00470760 61.65 weapons_mesh_build_segment
 0x004712c0 100.00 weapons_get_weapons_model
 0x004712f0 100.00 weapons_model_timer_get
 0x00471310 100.00 weapons_model_timer_set
@@ -4820,12 +4820,12 @@
 0x00471370 99.55 weapons_callback_ray_candidate
 0x00471630 100.00 weapons_ray_block_sweep
 0x00471860 100.00 weapons_ray_trace_nearest
-0x004718d0 88.00 weapons_object_pair_ray_hit
-0x00471960 94.74 weapons_see_through_walls_check
+0x004718d0 100.00 weapons_object_pair_ray_hit
+0x00471960 100.00 weapons_see_through_walls_check
 0x00471a20 100.00 weapons_model_fire_null_get
 0x00471a40 100.00 weapons_model_x_pivot_get
 0x00471a50 100.00 weapons_model_y_pivot_get
-0x00471a60 85.41 weapons_model_aim
+0x00471a60 88.17 weapons_model_aim
 0x00471c70 100.00 weapons_model_fire_dir_get
 0x00471ca0 100.00 weapons_object_center_get
 0x00471ce0 100.00 weapons_object_can_be_hit
@@ -4833,8 +4833,8 @@
 0x00471f00 100.00 weapons_model_aim_update
 0x00471fc0 100.00 weapons_object_update_weapons
 0x00472060 100.00 weapons_callback_remove_lazer_hit_reference
-0x00472080 90.16 weapons_object_in_range
-0x00472130 90.16 weapons_object_in_touch_range
+0x00472080 100.00 weapons_object_in_range
+0x00472130 100.00 weapons_object_in_touch_range
 0x004721e0 100.00 G98CMovie::InitSample
 0x004722b0 100.00 G98CMovie::OpenStream
 0x00472390 100.00 G98CMovie::G98CMovie
