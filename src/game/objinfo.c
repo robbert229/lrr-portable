@@ -234,17 +234,13 @@ void objinfo_draw_health_bar(struct Lego_Object* liveObj, int screenX, int scree
     unsigned int lineCount = 0;
     float size;
     unsigned int loop;
-    float border;
-    float* colour;
 
     if ((objInfoGlobs.flags & OBJINFO_GLOB_FLAG_HEALTHBAR) &&
         damage_font_live_object_check_can_show_damage((struct EntitySlot*)liveObj)) {
         Area2F rect;
-        *(Point2F*)&rect.x = objInfoGlobs.HealthBarPosition;
-        *(Point2F*)&rect.width = objInfoGlobs.HealthBarWidthHeight;
-        border = (float)(objInfoGlobs.HealthBarBorderSize * 2);
-        rect.width = objInfoGlobs.HealthBarWidthHeight.x + border;
-        rect.height = objInfoGlobs.HealthBarWidthHeight.y + border;
+        rect = *(Area2F*)&objInfoGlobs.HealthBarPosition;
+        rect.width = objInfoGlobs.HealthBarWidthHeight.x + (float)(objInfoGlobs.HealthBarBorderSize * 2);
+        rect.height = objInfoGlobs.HealthBarWidthHeight.y + (float)(objInfoGlobs.HealthBarBorderSize * 2);
         rect.x += (float)screenX;
         rect.y += (float)screenY;
 
@@ -254,20 +250,20 @@ void objinfo_draw_health_bar(struct Lego_Object* liveObj, int screenX, int scree
             hiFrom[lineCount].x = rect.x + loop;
             hiFrom[lineCount].y = rect.y + loop;
             loFrom[lineCount].x = rect.x + loop;
-            loFrom[lineCount].y = (rect.y + rect.height - 1.0f) - loop;
             hiTo[lineCount].x = hiFrom[lineCount].x;
             hiTo[lineCount].y = (rect.y + rect.height - 2.0f) - loop;
+            loTo[lineCount].y = (rect.y + rect.height - 1.0f) - loop;
             loTo[lineCount].x = (rect.x + rect.width - 2.0f) - loop;
-            loTo[lineCount].y = loFrom[lineCount].y;
+            loFrom[lineCount].y = (rect.y + rect.height - 1.0f) - loop;
             lineCount++;
             hiFrom[lineCount].x = (rect.x + rect.width - 1.0f) - loop;
-            hiFrom[lineCount].y = rect.y + loop;
             loFrom[lineCount].x = (rect.x + rect.width - 1.0f) - loop;
-            loFrom[lineCount].y = (rect.y + rect.height - 1.0f) - loop;
-            hiTo[lineCount].x = (rect.x + loop) - -1.0f;
             hiTo[lineCount].y = rect.y + loop;
-            loTo[lineCount].x = loFrom[lineCount].x;
             loTo[lineCount].y = (rect.y + loop) - -1.0f;
+            loTo[lineCount].x = loFrom[lineCount].x;
+            hiTo[lineCount].x = (rect.x + loop) - -1.0f;
+            hiFrom[lineCount].y = rect.y + loop;
+            loFrom[lineCount].y = (rect.y + rect.height - 1.0f) - loop;
             lineCount++;
         }
 
@@ -283,7 +279,9 @@ void objinfo_draw_health_bar(struct Lego_Object* liveObj, int screenX, int scree
                                      objInfoGlobs.HealthBarBackgroundRGB.blue, 0);
             rect.y += rect.height;
             rect.height = size - rect.height;
-            colour = &objInfoGlobs.HealthBarRGB.red;
+            surface_fill_pixel_spans(&rect, 1, objInfoGlobs.HealthBarRGB.red,
+                                     objInfoGlobs.HealthBarRGB.green,
+                                     objInfoGlobs.HealthBarRGB.blue, 0);
         } else {
             size = rect.width;
             rect.width = health * rect.width * 0.01f;
@@ -292,9 +290,10 @@ void objinfo_draw_health_bar(struct Lego_Object* liveObj, int screenX, int scree
                                      objInfoGlobs.HealthBarRGB.blue, 0);
             rect.x += rect.width;
             rect.width = size - rect.width;
-            colour = &objInfoGlobs.HealthBarBackgroundRGB.red;
+            surface_fill_pixel_spans(&rect, 1, objInfoGlobs.HealthBarBackgroundRGB.red,
+                                     objInfoGlobs.HealthBarBackgroundRGB.green,
+                                     objInfoGlobs.HealthBarBackgroundRGB.blue, 0);
         }
-        surface_fill_pixel_spans(&rect, 1, colour[0], colour[1], colour[2], 0);
 
         surface_draw_polyline(hiFrom, hiTo, lineCount,
                               objInfoGlobs.HealthBarBorderRGB[0][OBJINFO_SHADE_LIGHT],
