@@ -20,7 +20,7 @@ get_filename_component(LRR_SRC_ROOT_ABS "${SRC_ROOT}" ABSOLUTE
 set(LRR_LINK_ORDER_FILE "${LRR_SRC_ROOT_ABS}/link_order.cmake")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   "${LRR_LINK_ORDER_FILE}")
-foreach(_lib IN ITEMS game gods98 platform)
+foreach(_lib IN ITEMS game gods98 platform library)
   set(LRR_LINK_SOURCES_${_lib} "")
 endforeach()
 macro(lrr_link kind key library source)
@@ -65,6 +65,30 @@ add_library(units STATIC ${LRR_UNIT_SOURCES})
 target_include_directories(units PUBLIC ${SRC_ROOT} ${ENGINE_DIR} ${GAME_DIR})
 target_compile_definitions(units PUBLIC MINIWIN)
 target_link_libraries(units PUBLIC miniwin SDL3::SDL3)
+
+# The libraries the units' substitutions call (ADR 0007, decision 3).
+# The video library loads FFmpeg at run time, trying each library's
+# comma-separated sonames in order, so the build needs no FFmpeg package;
+# without the libraries at run time the units skip their movies.
+if(APPLE)
+  set(LRR_VIDEO_LIBAVFORMAT "libavformat.63.dylib,libavformat.62.dylib,libavformat.61.dylib,libavformat.dylib")
+  set(LRR_VIDEO_LIBAVCODEC "libavcodec.63.dylib,libavcodec.62.dylib,libavcodec.61.dylib,libavcodec.dylib")
+  set(LRR_VIDEO_LIBAVUTIL "libavutil.61.dylib,libavutil.60.dylib,libavutil.59.dylib,libavutil.dylib")
+  set(LRR_VIDEO_LIBSWSCALE "libswscale.10.dylib,libswscale.9.dylib,libswscale.8.dylib,libswscale.dylib")
+else()
+  set(LRR_VIDEO_LIBAVFORMAT "libavformat.so.63,libavformat.so.62,libavformat.so.61,libavformat.so")
+  set(LRR_VIDEO_LIBAVCODEC "libavcodec.so.63,libavcodec.so.62,libavcodec.so.61,libavcodec.so")
+  set(LRR_VIDEO_LIBAVUTIL "libavutil.so.61,libavutil.so.60,libavutil.so.59,libavutil.so")
+  set(LRR_VIDEO_LIBSWSCALE "libswscale.so.10,libswscale.so.9,libswscale.so.8,libswscale.so")
+endif()
+add_library(library STATIC ${LRR_LINK_SOURCES_library})
+target_include_directories(library PUBLIC ${SRC_ROOT})
+foreach(_name IN ITEMS LIBAVFORMAT LIBAVCODEC LIBAVUTIL LIBSWSCALE)
+  target_compile_definitions(library PRIVATE
+    "LRR_VIDEO_${_name}=\"${LRR_VIDEO_${_name}}\"")
+endforeach()
+target_link_libraries(library PUBLIC SDL3::SDL3 ${CMAKE_DL_LIBS})
+target_link_libraries(units PUBLIC library)
 
 # The seam's remaining stubs (ADR 0007): the imports neither miniwin nor a
 # library substitution provides yet.
@@ -118,6 +142,28 @@ if(BUILD_TESTING)
   target_link_libraries(input_keys_test PRIVATE SDL3::SDL3)
   add_test(NAME input_keys COMMAND input_keys_test)
   set_tests_properties(input_keys PROPERTIES LABELS input)
+
+  # The video library on a synthetic clip: against the host's FFmpeg
+  # (skipped without it), and built with sonames that never load.
+  set(LRR_VIDEO_TEST_CLIP "${LRR_SRC_ROOT_ABS}/library/testdata/synthetic.avi")
+  add_executable(video_test ${SRC_ROOT}/library/test_video_ffmpeg.cpp)
+  target_compile_definitions(video_test PRIVATE "LRR_VIDEO_TEST_CLIP=\"${LRR_VIDEO_TEST_CLIP}\"")
+  target_link_libraries(video_test PRIVATE library)
+  add_test(NAME video COMMAND video_test)
+  set_tests_properties(video PROPERTIES LABELS video SKIP_RETURN_CODE 77
+    ENVIRONMENT "SDL_AUDIO_DRIVER=dummy")
+  add_executable(video_missing_test ${SRC_ROOT}/library/test_video_ffmpeg.cpp
+    ${LRR_LINK_SOURCES_library})
+  target_include_directories(video_missing_test PRIVATE ${SRC_ROOT})
+  target_compile_definitions(video_missing_test PRIVATE LRR_VIDEO_TEST_MISSING
+    "LRR_VIDEO_TEST_CLIP=\"${LRR_VIDEO_TEST_CLIP}\""
+    "LRR_VIDEO_LIBAVFORMAT=\"liblrr-missing-avformat.so\""
+    "LRR_VIDEO_LIBAVCODEC=\"liblrr-missing-avcodec.so\""
+    "LRR_VIDEO_LIBAVUTIL=\"liblrr-missing-avutil.so\""
+    "LRR_VIDEO_LIBSWSCALE=\"liblrr-missing-swscale.so\"")
+  target_link_libraries(video_missing_test PRIVATE SDL3::SDL3 ${CMAKE_DL_LIBS})
+  add_test(NAME video_missing COMMAND video_missing_test)
+  set_tests_properties(video_missing PROPERTIES LABELS video)
 
   # The DirectX 6 interface versions the units use, declared in miniwin
   # (ADR 0007, decision 3): reachable, and failing rather than crashing
