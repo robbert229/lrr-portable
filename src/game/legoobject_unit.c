@@ -9957,16 +9957,14 @@ void global_counter_at_00555328_increment(void);                        /* 00462
 #undef objectGlobs_f_4ea7c4
 extern Lego_Object* objectGlobs_f_4ea7c4[256];   /* 004ea7c4 */
 #define objectGlobs_f_4ea7c4 ((Lego_Object**)objectGlobs.field_c034)
-/* PORT-ONLY adapters, original ABI (legoobject_port.cpp). 004897d0 is a
- * one-line getter (return ((int*)p)[3]) the linker folded with
- * Flic_GetWidth; 0044bc30 calls it on the flock (SteeringGroup.hasPosition).
- * 004756b0 (Container_SetMatrix) has C++ linkage in the port. */
-/* Deviation (scoring only): the linker folded the original's flock getter
- * into 004897d0, which this tree annotates as animclone.c's
- * anim_clone_is_lws (the same one-line getter). The matching build calls
- * that name, so the operand names the folded address (finding 626). */
-#define legoobject_gt_flock_has_position_adapter anim_clone_is_lws
-int legoobject_gt_flock_has_position_adapter(void* flock);              /* 004897d0 */
+/* PORT-ONLY adapters, original ABI (legoobject_port.cpp). 004756b0
+ * (Container_SetMatrix) has C++ linkage in the port.
+ * The original's flock getter (return group->hasPosition, the int at +0x0c)
+ * has no address of its own: the linker folded it into 004897d0, animclone.c's
+ * anim_clone_is_lws (the same one-line getter), and 0044bc30 called that on
+ * the flock (finding 626). On a 64-bit build the two records no longer share
+ * that offset (an AnimClone's lws sits after three pointers, where a
+ * SteeringGroup keeps hasTarget), so 0044bc30 reads hasPosition itself. */
 void legoobject_gt_container_matrix_set_adapter(void* cont, uint32_t mode,
                                                 const float* matrix);   /* 004756b0 */
 
@@ -10380,7 +10378,8 @@ void legoobject_motion_to_scene_node_sync(Lego_Object* obj, float elapsed)
         target[0] = pos[0];
         target[1] = -pos[2];
         target[2] = pos[1];
-        if (!legoobject_gt_flock_has_position_adapter((void*)(uintptr_t)obj->field_32c)) {
+        /* The original called 004897d0, the folded getter (see above). */
+        if (!((LegoObjT_Flock*)(uintptr_t)obj->field_32c)->hasPosition) {
             scene_node_position_set((void*)(uintptr_t)obj->field_32c, target);
             scene_object_list_apply_position_callback((void*)(uintptr_t)obj->field_32c, target);
             scene_object_list_apply_second_position_callback((void*)(uintptr_t)obj->field_32c, target);

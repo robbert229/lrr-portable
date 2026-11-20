@@ -157,6 +157,23 @@ if(BUILD_TESTING)
     target_link_options(menu_frame_rate_test PRIVATE "LINKER:--wrap=main_time_get")
     add_test(NAME menu_frame_rate COMMAND menu_frame_rate_test)
     set_tests_properties(menu_frame_rate PROPERTIES LABELS frontend)
+    # LegoObject.c's flock update reads the flock's own hasPosition, not
+    # the getter the linker folded it into: the unit's calls to the Stats.c
+    # and Container.c getters reach the test's __wrap_ stubs.
+    add_executable(flock_position_test ${GAME_DIR}/test_flock_position.cpp)
+    target_link_libraries(flock_position_test PRIVATE units)
+    target_link_options(flock_position_test PRIVATE
+      "LINKER:--wrap=entity_stats_word_get"
+      "LINKER:--wrap=entity_stats_float_at120"
+      "LINKER:--wrap=entity_stats_float_at124"
+      "LINKER:--wrap=entity_stats_float_at128"
+      "LINKER:--wrap=entity_stats_float_at12c"
+      "LINKER:--wrap=entity_stats_float_at130"
+      "LINKER:--wrap=entity_stats_float_at134"
+      "LINKER:--wrap=entity_stats_float_at138"
+      "LINKER:--wrap=ddiscene_object_position_get")
+    add_test(NAME flock_position COMMAND flock_position_test)
+    set_tests_properties(flock_position PROPERTIES LABELS legoobject)
   endif()
   add_executable(draw_test ${ENGINE_DIR}/test_draw.cpp)
   target_link_libraries(draw_test PRIVATE units)
