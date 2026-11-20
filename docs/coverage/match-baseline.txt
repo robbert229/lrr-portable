@@ -1,4 +1,4 @@
-# input_sha256: e9d29f3e5cbbccaab1e24f92ded3d4d392eabaca133db34e737867bb00ca80ca
+# input_sha256: 1d128a49ba7d6dfa015f5412159d8d56a515100ad8f0acf7140253546e4fe5e6
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2368,9 +2368,9 @@
 0x0047b8e0 100.00 sound_streamed_wave_buffer_step_rate
 0x0047b970 100.00 sound_streamed_wave_play
 0x0047ba20 100.00 sound_stream_stop_and_release
-0x0047baa0 82.51 sound_streamed_wave_buffer_setup
-0x0047bc30 84.77 sound_stream_drain_check
-0x0047bdb0 82.69 sound_stream_ring_buffer_tick
+0x0047baa0 100.00 sound_streamed_wave_buffer_setup
+0x0047bc30 88.24 sound_stream_drain_check
+0x0047bdb0 100.00 sound_stream_ring_buffer_tick
 0x0047c0c0 100.00 vec_exact_equal
 0x0047c100 100.00 ledger_stub_0047c100_DirectSoundListenerRolloffSet
 0x0047c160 100.00 constant_negative_10000_get
@@ -5093,9 +5093,9 @@
 0x0047b8e0 100.00 sound_streamed_wave_buffer_step_rate
 0x0047b970 100.00 sound_streamed_wave_play
 0x0047ba20 100.00 sound_stream_stop_and_release
-0x0047baa0 82.51 sound_streamed_wave_buffer_setup
-0x0047bc30 84.77 sound_stream_drain_check
-0x0047bdb0 82.69 sound_stream_ring_buffer_tick
+0x0047baa0 100.00 sound_streamed_wave_buffer_setup
+0x0047bc30 88.24 sound_stream_drain_check
+0x0047bdb0 100.00 sound_stream_ring_buffer_tick
 0x0047c0c0 100.00 vec_exact_equal
 0x0047c100 100.00 ledger_stub_0047c100_DirectSoundListenerRolloffSet
 0x0047c160 100.00 constant_negative_10000_get
@@ -5570,7 +5570,7 @@
 0x00493150 100.00 __frnd
 0x00493170 100.00 __handle_qnan1
 0x004931c0 100.00 __except1
-0x00493280 98.98 __raise_exc
+0x00493280 100.00 __raise_exc
 0x004935c0 100.00 __handle_exc
 0x004938f0 98.21 __umatherr
 0x004939a0 100.00 __set_errno
