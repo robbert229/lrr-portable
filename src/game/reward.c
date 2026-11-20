@@ -1590,6 +1590,10 @@ void reward_scroll_flags_set(RewardScroll* scroll, unsigned int flags)
  * stays. */
 #define REWARD_TEXT_WINDOW_TIME mainGlobs.fixedFrameTiming
 
+/* PORT-ONLY: when reward_scroll_update last ran, in main_time_get
+ * milliseconds. The original steps once per frame and needs no clock. */
+static unsigned long s_rewardScrollTime = 0;
+
 // FUNCTION: LEGORR 0x00462ad0
 int reward_scroll_update(RewardScroll* scroll)
 {
@@ -1600,6 +1604,9 @@ int reward_scroll_update(RewardScroll* scroll)
     int n;
     int k;
     float bottom;
+    unsigned long now;
+    unsigned long stepMs;
+    float frames;
 
     for (i = 0; i < scroll->labelCount; i++) {
         label = scroll->labels[i];
@@ -1648,12 +1655,23 @@ int reward_scroll_update(RewardScroll* scroll)
         }
     }
 
-    scroll->area.y = scroll->area.y - scroll->speed;
+    /* Departs from the original, which moves the text speed pixels per call
+     * and, with the debug keys held, changes speed by 0.01 per call: at its
+     * vblank-bound 60 Hz, 60 times a second. The uncapped port would scroll
+     * many times faster, so both are scaled by the 60 Hz frames since the
+     * previous call on main_time_get. A step over 100 ms (the screen's first
+     * call, a hitch) counts as one frame, as the original's next frame after
+     * a pause. */
+    now = main_time_get(); // [library:time]
+    stepMs = (unsigned long)(now - s_rewardScrollTime) & 0xffffffffUL;
+    s_rewardScrollTime = now;
+    frames = (stepMs > 100UL) ? 1.0f : (float)stepMs * (60.0f / 1000.0f);
+    scroll->area.y = scroll->area.y - scroll->speed * frames;
     if (s_panel_highlight_flags & 0x10) {
         if (s_global_current_keys[0x1f]) scroll->speed = 0.0f;
         if (s_global_current_keys[0x13]) scroll->area.y = scroll->top;
-        if (s_global_current_keys[0x0d]) scroll->speed = scroll->speed - -0.01f;
-        if (s_global_current_keys[0x0c]) scroll->speed = scroll->speed - 0.01f;
+        if (s_global_current_keys[0x0d]) scroll->speed = scroll->speed - -0.01f * frames;
+        if (s_global_current_keys[0x0c]) scroll->speed = scroll->speed - 0.01f * frames;
         for (k = 0; k < 10; k++) {
             if (s_global_current_keys[0x02 + k])
                 scroll->speed = ((scroll->speed < 0.0f) ? (float)-k : (float)k) * 0.1f;

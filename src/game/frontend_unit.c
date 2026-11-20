@@ -141,6 +141,14 @@ static int s_saveSlotToWrite = -1;
  * main_time_get milliseconds. The original rolls once per frame and needs no
  * clock (see that function). */
 static unsigned long s_overlayRollTime = 0;
+/* PORT-ONLY: the text cursor blink's clock (front_menu_update): when it last
+ * advanced, in main_time_get milliseconds, and the part of a 60 Hz frame
+ * left over, in 1/1000ths of a frame. */
+static unsigned long s_textInputBlinkTime = 0;
+static unsigned long s_textInputBlinkCarry = 0;
+/* PORT-ONLY: the menu edge scroll's leftover fraction of a pixel
+ * (front_menu_update_mouse_position). */
+static float s_menuScrollCarry = 0.0f;
 /* Input_GetKeyCharacter's table: each DirectInput key's character. Not
  * const: the original has it in .data, after the -1 words. */
 // GLOBAL: LEGORR 0x004a1f60
@@ -2020,7 +2028,21 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
             case Front_MenuItem_TextInput:
                 input = (Front_TextInputData*)menu->items[menu->itemFocus]->itemData;
                 savedChar = input->text[input->caretPos];
-                s_textInputBlink++;
+                /* Departs from the original, which adds one per update, so
+                 * the cursor shows for 2 updates and hides for 2: at its
+                 * vblank-bound 60 Hz, a toggle every 33 ms. The uncapped
+                 * port would blink too fast to see, so the counter advances
+                 * once per 60 Hz frame of main_time_get instead. A step over
+                 * 100 ms (the field just focused, a hitch) counts as one
+                 * frame, as the original's next update after a pause. */
+                {
+                    unsigned long now = main_time_get(); // [library:time]
+                    unsigned long stepMs = (unsigned long)(now - s_textInputBlinkTime) & 0xffffffffUL;
+                    s_textInputBlinkTime = now;
+                    s_textInputBlinkCarry += (stepMs > 100UL) ? 1000UL : stepMs * 60UL;
+                    s_textInputBlink += (int)(s_textInputBlinkCarry / 1000UL);
+                    s_textInputBlinkCarry %= 1000UL;
+                }
                 if (s_textInputBlink != 0 && (s_textInputBlink / 2) % 2) {
                     input->text[input->caretPos] = '_';
                 }
@@ -2264,7 +2286,26 @@ void front_menu_update_mouse_position(Front_Menu* menu, float elapsed)
                 if (msy < 240.0f) {
                     speed = -speed;
                 }
-                frontGlobs_scrollOffsetY += (int)(speed * -0.25f);
+                /* Departs from the original, which moves a whole
+                 * (int)(speed * -0.25f) pixels per update and ignores
+                 * elapsed: at its vblank-bound 60 Hz, 60 such steps a
+                 * second. The uncapped port would scroll many times faster,
+                 * so the same per-frame step is scaled by the update's 60 Hz
+                 * frames: elapsed is in 25ths of a second, so a frame is
+                 * 25 / 60 of it. The fraction of a pixel carries to the next
+                 * update. A step over 100 ms (elapsed > 2.5: the menu's first
+                 * update, a hitch) counts as one frame, as the original's
+                 * next update after a pause. */
+                {
+                    float frames = (elapsed > 2.5f) ? 1.0f : elapsed * (60.0f / 25.0f);
+                    int step;
+                    s_menuScrollCarry += (float)(int)(speed * -0.25f) * frames;
+                    step = (int)s_menuScrollCarry;
+                    s_menuScrollCarry -= (float)step;
+                    frontGlobs_scrollOffsetY += step;
+                }
+            } else {
+                s_menuScrollCarry = 0.0f;
             }
             if (frontGlobs_scrollOffsetY > 0) {
                 frontGlobs_scrollOffsetY = 0;
@@ -2272,10 +2313,13 @@ void front_menu_update_mouse_position(Front_Menu* menu, float elapsed)
             if (frontGlobs_scrollOffsetY - 480 < -height) {
                 frontGlobs_scrollOffsetY = 480 - height;
             }
+        } else {
+            s_menuScrollCarry = 0.0f;
         }
     } else {
         frontGlobs_scrollOffsetX = 0;
         frontGlobs_scrollOffsetY = 0;
+        s_menuScrollCarry = 0.0f;
     }
 }
 
