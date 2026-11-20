@@ -215,7 +215,7 @@ static void CheckViewport(IDirect3DRM3* d3drm, IDirect3DRMDevice3* device, IDire
     if (got) {
         got->Release();
     }
-    CHECK(viewport->Clear(D3DRMCLEAR_ALL) == E_NOTIMPL);
+    CHECK(viewport->Clear(D3DRMCLEAR_ALL) == DD_OK);
     CHECK(viewport->GetX() == 0);
     CHECK(viewport->GetY() == 0);
 
@@ -226,7 +226,7 @@ static void CheckViewport(IDirect3DRM3* d3drm, IDirect3DRMDevice3* device, IDire
         CHECK(imViewport1->QueryInterface(IID_IDirect3DViewport3, (void**) &imViewport) == DD_OK && imViewport);
         if (imViewport) {
             D3DRECT rect = {0, 0, 64, 64};
-            CHECK(imViewport->Clear2(1, &rect, 0, 0, 1.0f, 0) == DDERR_UNSUPPORTED);
+            CHECK(imViewport->Clear2(1, &rect, 0, 0, 1.0f, 0) == DD_OK);
             imViewport->Release();
         }
         imViewport1->Release();
