@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <math.h>
 #include <SDL3/SDL_timer.h>
 
 /* savegame.h: this unit defines its part-2 names (finding 628). */
@@ -136,6 +137,10 @@ static int s_overlayShownIndex = -1;
 static int s_overwriteAnswer = -1;
 // GLOBAL: LEGORR 0x004a1f5c
 static int s_saveSlotToWrite = -1;
+/* PORT-ONLY: when front_menu_should_random_play last rolled, in
+ * main_time_get milliseconds. The original rolls once per frame and needs no
+ * clock (see that function). */
+static unsigned long s_overlayRollTime = 0;
 /* Input_GetKeyCharacter's table: each DirectInput key's character. Not
  * const: the original has it in .data, after the -1 words. */
 // GLOBAL: LEGORR 0x004a1f60
@@ -1545,13 +1550,55 @@ int front_menu_get_overlay_count(Front_Menu* menu)
     return count;
 }
 
+/* The roll's 60 Hz reference rate, and the longest step it counts. */
+#define FRONT_OVERLAY_ROLL_HZ 60.0
+#define FRONT_OVERLAY_ROLL_MAX_STEP_MS 100UL
+
+/* Departs from the original, which returns rand() % 400 == 0 once per menu
+ * update. Its fullscreen flip waited for vblank, so that was about 60 rolls a
+ * second, and an overlay started on average 400 / 60 = 6.7 s after the last
+ * one ended. The port runs uncapped (hundreds of updates a second), so a
+ * per-update roll starts overlays almost back to back.
+ *
+ * This roll keeps the 60 Hz rate at any frame rate: over dt seconds since the
+ * previous roll it starts an overlay with probability
+ * 1 - (399/400)^(dt * 60), the chance that at least one of the dt * 60
+ * original frames would have rolled a zero. The clock is integer
+ * milliseconds; a call within the same millisecond has dt = 0 and never
+ * starts one, and the milliseconds still count toward the next call.
+ *
+ * Gaps: the caller rolls only while a random-play menu shows and no overlay
+ * plays. The first roll, the first after an overlay ends, after another menu
+ * or screen, or after a hitch, all see a step longer than 100 ms. Such a step
+ * counts as one 60 Hz frame, exactly as the original's next frame after any
+ * pause rolled once at 1/400. Counting the whole gap would make an overlay
+ * start the moment the previous one ends or the menu reappears. Below 10
+ * updates a second every step is such a gap, and the roll behaves as the
+ * original's per-frame roll at that frame rate.
+ *
+ * rand() is still called exactly once per call, so the game's VC5 sequence
+ * advances as in the original. Its 15-bit value is compared against the
+ * probability, rounded to whole steps of 1/32768: at 60 Hz that is the same
+ * 82 values in 32768 that rand() % 400 == 0 accepts, and at a 1 ms step
+ * (above 1000 updates a second) it overshoots by under 2%. */
 // FUNCTION: LEGORR 0x00412190
 int front_menu_should_random_play(void)
 {
     int r;
+    unsigned long now;
+    unsigned long stepMs;
+    double p;
 
-    r = rand() % 400;
-    return r == 0;
+    r = rand(); /* once per call, as the original's rand() % 400 */
+    now = main_time_get(); // [library:time]
+    stepMs = (unsigned long)(now - s_overlayRollTime) & 0xffffffffUL;
+    s_overlayRollTime = now;
+    if (stepMs > FRONT_OVERLAY_ROLL_MAX_STEP_MS) {
+        p = 1.0 / 400.0; /* one 60 Hz frame */
+    } else {
+        p = 1.0 - pow(399.0 / 400.0, (double)stepMs * (FRONT_OVERLAY_ROLL_HZ / 1000.0));
+    }
+    return (double)r + 0.5 < p * 32768.0; /* VC5 rand() is 0..0x7fff */
 }
 
 // FUNCTION: LEGORR 0x004121b0
