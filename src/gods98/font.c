@@ -95,16 +95,17 @@ Font* font_load(const char* fname)
             if (buffer = (unsigned char*)image_lock_surface(image, &pitch, &bpp)) {
                 for (y = 0; y < FONT_GRIDHEIGHT; y++) {
                     for (x = 0; x < FONT_GRIDWIDTH; x++) {
-                        font->posSet[x][y].x = (float)(x * width);
-                        font->posSet[x][y].y = (float)(y * height);
-                        font->posSet[x][y].width = (float)width;
-                        font->posSet[x][y].height = (float)height;
+                        Area2F* pos = &font->posSet[x][y];
+                        pos->x = (float)(x * width);
+                        pos->y = (float)(y * height);
+                        pos->width = (float)width;
+                        pos->height = (float)height;
                         for (xPos = width - 1; xPos; xPos--) {
-                            offset = (unsigned int)((float)(x * width) + xPos) * (bpp / 8) +
-                                     (unsigned int)(float)(y * height) * pitch;
+                            offset = (unsigned int)(pos->x + xPos) * (bpp / 8) +
+                                     (unsigned int)pos->y * pitch;
                             if ((((((((buffer[offset] << 8) | buffer[offset + 1]) << 8) |
                                     buffer[offset + 2]) << 8) | buffer[offset + 3]) & mask) == pen255)
-                                font->posSet[x][y].width--;
+                                pos->width--;
                             else
                                 break;
                         }
