@@ -5,7 +5,7 @@
  * failure its API documents, which the units already handle; none aborts.
  * The library substitutions of ADR 0007 replace these calls in the units:
  *
- *   DSOUND, WINMM mmio/MCI/mixer  -> [library:audio]
+ *   WINMM mixer                   -> [library:audio]
  *   ADVAPI32 registry             -> [library:config]
  *   LIBC directory routines,
  *   KERNEL32 GetDriveTypeA        -> [library:filesystem]
@@ -98,83 +98,7 @@ int wsprintfA(LPSTR output, LPCSTR format, ...)
     return written;
 }
 
-/* --- WINMM: mmio ([library:audio]) ------------------------------------- */
-
-/* Stub: no file opens, so no sample loads. */
-HMMIO mmioOpenA(LPSTR name, LPMMIOINFO info, DWORD flags)
-{
-    SEAM_STUB();
-    if (info) info->wErrorRet = MMIOERR_CANNOTOPEN;
-    return NULL;
-}
-
-MMRESULT mmioClose(HMMIO hmmio, UINT flags)
-{
-    SEAM_STUB();
-    return MMSYSERR_INVALHANDLE;
-}
-
-LONG mmioRead(HMMIO hmmio, HPSTR buffer, LONG bytes)
-{
-    SEAM_STUB();
-    return -1;
-}
-
-LONG mmioSeek(HMMIO hmmio, LONG offset, int origin)
-{
-    SEAM_STUB();
-    return -1;
-}
-
-MMRESULT mmioGetInfo(HMMIO hmmio, LPMMIOINFO info, UINT flags)
-{
-    SEAM_STUB();
-    return MMSYSERR_INVALHANDLE;
-}
-
-MMRESULT mmioSetInfo(HMMIO hmmio, const MMIOINFO* info, UINT flags)
-{
-    SEAM_STUB();
-    return MMSYSERR_INVALHANDLE;
-}
-
-MMRESULT mmioAdvance(HMMIO hmmio, LPMMIOINFO info, UINT flags)
-{
-    SEAM_STUB();
-    return MMIOERR_CANNOTREAD;
-}
-
-MMRESULT mmioDescend(HMMIO hmmio, LPMMCKINFO chunk, const MMCKINFO* parent,
-                     UINT flags)
-{
-    SEAM_STUB();
-    return MMIOERR_CHUNKNOTFOUND;
-}
-
-MMRESULT mmioAscend(HMMIO hmmio, LPMMCKINFO chunk, UINT flags)
-{
-    SEAM_STUB();
-    return MMIOERR_CANNOTSEEK;
-}
-
-/* --- WINMM: MCI and the mixer ([library:audio]) ------------------------ */
-
-/* Stub: there is no "cdaudio" device. */
-MCIERROR mciSendStringA(LPCSTR command, LPSTR result, UINT capacity,
-                        HWND callback)
-{
-    SEAM_STUB();
-    if (result && capacity) result[0] = '\0';
-    return MCIERR_INVALID_DEVICE_NAME;
-}
-
-BOOL mciGetErrorStringA(MCIERROR error, LPSTR text, UINT capacity)
-{
-    SEAM_STUB();
-    if (!text || !capacity) return FALSE;
-    snprintf(text, capacity, "MCI error %u", (unsigned)error);
-    return TRUE;
-}
+/* --- WINMM: the mixer ([library:audio]) --------------------------------- */
 
 /* Stub: no mixer devices. */
 UINT mixerGetNumDevs(void)
@@ -228,17 +152,6 @@ MMRESULT mixerSetControlDetails(HMIXEROBJ mixer,
 {
     SEAM_STUB();
     return MMSYSERR_INVALHANDLE;
-}
-
-/* --- DSOUND ([library:audio]) ------------------------------------------ */
-
-/* Stub: no DirectSound device, so Sound3D_Initialise runs without sound.
- * sound3d.c declares the parameters with its own interface types. */
-long DirectSoundCreate(void* guid, void** device, void* outer)
-{
-    SEAM_STUB();
-    if (device) *device = NULL;
-    return (long)0x88780078; /* DSERR_NODRIVER */
 }
 
 /* --- ADVAPI32 ([library:config]) --------------------------------------- */

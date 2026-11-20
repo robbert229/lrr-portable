@@ -7,11 +7,10 @@
  * port's names; the comments give descriptive Sound3D_* names, which the
  * binary does not attest.
  *
- * DirectSound is outside miniwin's scope: until the audio substitution of
- * ADR 0007 ([library:audio], SDL3 audio and miniaudio) replaces it,
- * DirectSoundCreate is a seam stub (platform/native/seam_stubs.cpp) that
- * finds no device, so the game runs without sound. The unit declares the
- * DirectSound interfaces it calls; frames are miniwin's IDirect3DRMFrame3. */
+ * DirectSound is outside miniwin's scope. ADR 0007's audio substitution
+ * replaces each DirectSound call with the audio library's SDL3 version
+ * (library/audio_sdl.h), marked `// [library:audio]`; frames are miniwin's
+ * IDirect3DRMFrame3. */
 #include "sound3d.h"
 #include "audio.h"
 
@@ -27,12 +26,14 @@
 #include "resource.h"
 #include "files_paths.h"
 #include "container_frame.h"
+#include "files_native.h"
+#include "library/audio_sdl.h"
 
 #include <miniwin/d3drm.h>
 
-/* The COM interfaces the unit calls, with the method-table slots at their
- * Win32 offsets. MSVC 5.0's dsound.h is DirectX 3's and has no 3D
- * interfaces, so the unit declares the DirectX 5 layouts it uses. */
+/* The DirectSound types the unit fills in. MSVC 5.0's dsound.h is DirectX
+ * 3's and has no 3D interfaces, so the unit declares the DirectX 5 layouts
+ * it uses. */
 typedef struct Sound3DIID {
     uint32_t data1;
     unsigned short data2;
@@ -51,94 +52,15 @@ typedef struct Sound3DBufferDesc {
     WAVEFORMATEX* lpwfxFormat;
 } Sound3DBufferDesc;
 
-typedef struct Sound3DDevice Sound3DDevice;          /* IDirectSound */
-typedef struct Sound3DBuffer Sound3DBuffer;          /* IDirectSoundBuffer */
-typedef struct Sound3DListener Sound3DListener;      /* IDirectSound3DListener */
-typedef struct Sound3DBuffer3D Sound3DBuffer3D;      /* IDirectSound3DBuffer */
+/* [library:audio] DirectSound's objects are the audio library's
+ * (library/audio_sdl.h, SDL3 audio): each call the unit made through their
+ * method tables is a call into the library, marked where it is made. The
+ * 3D buffer is the buffer itself. */
+typedef AudioDevice Sound3DDevice;                   /* IDirectSound */
+typedef AudioBuffer Sound3DBuffer;                   /* IDirectSoundBuffer */
+typedef AudioListener Sound3DListener;               /* IDirectSound3DListener */
+typedef AudioBuffer Sound3DBuffer3D;                 /* IDirectSound3DBuffer */
 typedef IDirect3DRMFrame3 Sound3DFrame;              /* miniwin */
-
-struct Sound3DDevice {
-    virtual long QueryInterface(const Sound3DIID*, void**) = 0;
-    virtual unsigned long AddRef() = 0;
-    virtual unsigned long Release() = 0;
-    virtual long CreateSoundBuffer(Sound3DBufferDesc*, Sound3DBuffer**, void*) = 0;
-    virtual long GetCaps(void*) = 0;
-    virtual long DuplicateSoundBuffer(Sound3DBuffer*, Sound3DBuffer**) = 0;
-    virtual long SetCooperativeLevel(void*, DWORD) = 0;
-};
-
-struct Sound3DBuffer {
-    virtual long QueryInterface(const Sound3DIID*, void**) = 0;
-    virtual unsigned long AddRef() = 0;
-    virtual unsigned long Release() = 0;
-    virtual long GetCaps(void*) = 0;
-    virtual long GetCurrentPosition(DWORD*, DWORD*) = 0;
-    virtual long GetFormat(WAVEFORMATEX*, DWORD, DWORD*) = 0;
-    virtual long GetVolume(LONG*) = 0;
-    virtual long GetPan(LONG*) = 0;
-    virtual long GetFrequency(DWORD*) = 0;
-    virtual long GetStatus(DWORD*) = 0;
-    virtual long Initialize(Sound3DDevice*, Sound3DBufferDesc*) = 0;
-    virtual long Lock(DWORD, DWORD, void**, DWORD*, void**, DWORD*, DWORD) = 0;
-    virtual long Play(DWORD, DWORD, DWORD) = 0;
-    virtual long SetCurrentPosition(DWORD) = 0;
-    virtual long SetFormat(WAVEFORMATEX*) = 0;
-    virtual long SetVolume(LONG) = 0;
-    virtual long SetPan(LONG) = 0;
-    virtual long SetFrequency(DWORD) = 0;
-    virtual long Stop() = 0;
-    virtual long Unlock(void*, DWORD, void*, DWORD) = 0;
-    virtual long Restore() = 0;
-};
-
-struct Sound3DListener {
-    virtual long QueryInterface(const Sound3DIID*, void**) = 0;
-    virtual unsigned long AddRef() = 0;
-    virtual unsigned long Release() = 0;
-    virtual long GetAllParameters(void*) = 0;
-    virtual long GetDistanceFactor(float*) = 0;
-    virtual long GetDopplerFactor(float*) = 0;
-    virtual long GetOrientation(Sound3DVector*, Sound3DVector*) = 0;
-    virtual long GetPosition(Sound3DVector*) = 0;
-    virtual long GetRolloffFactor(float*) = 0;
-    virtual long GetVelocity(Sound3DVector*) = 0;
-    virtual long SetAllParameters(void*, DWORD) = 0;
-    virtual long SetDistanceFactor(float, DWORD) = 0;
-    virtual long SetDopplerFactor(float, DWORD) = 0;
-    virtual long SetOrientation(float, float, float, float, float, float, DWORD) = 0;
-    virtual long SetPosition(float, float, float, DWORD) = 0;
-    virtual long SetRolloffFactor(float, DWORD) = 0;
-    virtual long SetVelocity(float, float, float, DWORD) = 0;
-    virtual long CommitDeferredSettings() = 0;
-};
-
-struct Sound3DBuffer3D {
-    virtual long QueryInterface(const Sound3DIID*, void**) = 0;
-    virtual unsigned long AddRef() = 0;
-    virtual unsigned long Release() = 0;
-    virtual long GetAllParameters(void*) = 0;
-    virtual long GetConeAngles(DWORD*, DWORD*) = 0;
-    virtual long GetConeOrientation(Sound3DVector*) = 0;
-    virtual long GetConeOutsideVolume(LONG*) = 0;
-    virtual long GetMaxDistance(float*) = 0;
-    virtual long GetMinDistance(float*) = 0;
-    virtual long GetMode(DWORD*) = 0;
-    virtual long GetPosition(Sound3DVector*) = 0;
-    virtual long GetVelocity(Sound3DVector*) = 0;
-    virtual long SetAllParameters(void*, DWORD) = 0;
-    virtual long SetConeAngles(DWORD, DWORD, DWORD) = 0;
-    virtual long SetConeOrientation(float, float, float, DWORD) = 0;
-    virtual long SetConeOutsideVolume(LONG, DWORD) = 0;
-    virtual long SetMaxDistance(float, DWORD) = 0;
-    virtual long SetMinDistance(float, DWORD) = 0;
-    virtual long SetMode(DWORD, DWORD) = 0;
-    virtual long SetPosition(float, float, float, DWORD) = 0;
-    virtual long SetVelocity(float, float, float, DWORD) = 0;
-};
-
-/* DirectSoundCreate (DSOUND ordinal 1), called through its import thunk. */
-extern "C" long WINAPI DirectSoundCreate(Sound3DIID* guid, Sound3DDevice** device,
-                              void* outer);
 
 #define SOUND3D_DS_OK 0
 #define SOUND3D_DSERR_BUFFERLOST ((long)0x88780096)
@@ -314,12 +236,12 @@ int audio_system_init(void* window)
     s_sound3d.listenerFrame = NULL;
 
     do {
-        if (DirectSoundCreate(NULL, &s_sound3d.lpDSnd, NULL) == SOUND3D_DS_OK) {
-            if (s_sound3d.lpDSnd->SetCooperativeLevel(window, SOUND3D_DSSCL_PRIORITY) == SOUND3D_DS_OK) {
+        if (audio_create(&s_sound3d.lpDSnd) == SOUND3D_DS_OK) { // [library:audio]
+            if (audio_set_cooperative_level(s_sound3d.lpDSnd, window, SOUND3D_DSSCL_PRIORITY) == SOUND3D_DS_OK) { // [library:audio]
                 memset(&dsbd, 0, sizeof(dsbd));
                 dsbd.dwSize = sizeof(dsbd);
                 dsbd.dwFlags = SOUND3D_PRIMARY_CAPS;
-                if (s_sound3d.lpDSnd->CreateSoundBuffer(&dsbd, &s_sound3d.lpDSBuff, NULL) == SOUND3D_DS_OK) {
+                if (audio_create_buffer(s_sound3d.lpDSnd, dsbd.dwFlags, dsbd.dwBufferBytes, dsbd.lpwfxFormat, &s_sound3d.lpDSBuff) == SOUND3D_DS_OK) { // [library:audio]
                     wfx.wFormatTag = 1;
                     wfx.nChannels = 2;
                     wfx.wBitsPerSample = 16;
@@ -327,21 +249,22 @@ int audio_system_init(void* window)
                     wfx.nBlockAlign = wfx.nChannels * wfx.wBitsPerSample / 8;
                     wfx.nAvgBytesPerSec = wfx.nSamplesPerSec * wfx.nBlockAlign;
                     wfx.cbSize = 0;
-                    s_sound3d.lpDSBuff->SetFormat(&wfx);
-                    if (s_sound3d.lpDSBuff->QueryInterface(&IID_IDirectSound3DListener,
-                            (void**)&s_sound3d.lp3DListenerInfo) == SOUND3D_DS_OK) {
-                        s_sound3d.lp3DListenerInfo->SetDopplerFactor(100.0f, SOUND3D_DS3D_IMMEDIATE);
+                    audio_buffer_set_format(s_sound3d.lpDSBuff, &wfx); // [library:audio]
+                    /* QueryInterface(IID_IDirectSound3DListener). */
+                    if (audio_buffer_query_listener(s_sound3d.lpDSBuff, // [library:audio]
+                            &s_sound3d.lp3DListenerInfo) == SOUND3D_DS_OK) {
+                        audio_listener_set_doppler_factor(s_sound3d.lp3DListenerInfo, 100.0f, SOUND3D_DS3D_IMMEDIATE); // [library:audio]
                     } else {
-                        s_sound3d.lpDSBuff->Release();
-                        s_sound3d.lpDSnd->Release();
+                        audio_buffer_release(s_sound3d.lpDSBuff); // [library:audio]
+                        audio_release(s_sound3d.lpDSnd); // [library:audio]
                         s_sound3d.lpDSnd = NULL;
                     }
                 } else {
-                    s_sound3d.lpDSnd->Release();
+                    audio_release(s_sound3d.lpDSnd); // [library:audio]
                     s_sound3d.lpDSnd = NULL;
                 }
             } else {
-                s_sound3d.lpDSnd->Release();
+                audio_release(s_sound3d.lpDSnd); // [library:audio]
                 s_sound3d.lpDSnd = NULL;
             }
         }
@@ -355,13 +278,13 @@ int audio_system_init(void* window)
     } while (r == 4);
 
     if (s_bank_sound_on) {
-        s_sound3d.lpDSBuff->Play(0, 0, SOUND3D_DSBPLAY_LOOPING);
-        s_sound3d.lp3DListenerInfo->SetRolloffFactor(1.0f, SOUND3D_DS3D_DEFERRED);
-        s_sound3d.lp3DListenerInfo->SetDopplerFactor(0.0f, SOUND3D_DS3D_DEFERRED);
-        s_sound3d.lp3DListenerInfo->CommitDeferredSettings();
+        audio_buffer_play(s_sound3d.lpDSBuff, 0, 0, SOUND3D_DSBPLAY_LOOPING); // [library:audio]
+        audio_listener_set_rolloff_factor(s_sound3d.lp3DListenerInfo, 1.0f, SOUND3D_DS3D_DEFERRED); // [library:audio]
+        audio_listener_set_doppler_factor(s_sound3d.lp3DListenerInfo, 0.0f, SOUND3D_DS3D_DEFERRED); // [library:audio]
+        audio_listener_commit_deferred_settings(s_sound3d.lp3DListenerInfo); // [library:audio]
         s_sound3d.minDistanceForAttenuation = 1.0f;
         s_sound3d.maxDistance = 800.0f;
-        s_sound3d.lpDSBuff->GetVolume(&s_sound3d_frames.windowsVolume);
+        audio_buffer_get_volume(s_sound3d.lpDSBuff, &s_sound3d_frames.windowsVolume); // [library:audio]
         audio_sound_volume_minus_300();
     }
 
@@ -373,9 +296,9 @@ void audio_active_shutdown(void)
 {
     if (s_bank_sound_on) {
         audio_sound_volume_set(s_sound3d_frames.windowsVolume);
-        s_sound3d.lpDSBuff->Stop();
-        s_sound3d.lpDSBuff->Release();
-        s_sound3d.lpDSnd->Release();
+        audio_buffer_stop(s_sound3d.lpDSBuff); // [library:audio]
+        audio_buffer_release(s_sound3d.lpDSBuff); // [library:audio]
+        audio_release(s_sound3d.lpDSnd); // [library:audio]
         s_sound3d.lpDSnd = NULL;
         s_bank_sound_on = 0;
     }
@@ -407,13 +330,13 @@ int sound_bank_entry_load(const char* name, int streamed, int looping,
             const char* fullName = resource_path_resolve_against_base(fileName);
             const char* useName = NULL;
             FILE* mfp;
-            if ((mfp = fopen(fullName, "r")) != NULL) {
+            if ((mfp = files_native_fopen(fullName, "r")) != NULL) { // [library:filesystem]
                 useName = fullName;
                 fclose(mfp);
             } else if (resource_cd_file_path_get(cdFileName, fileName)) {
                 useName = cdFileName;
             }
-            if (useName != NULL && (mfp = fopen(useName, "r")) != NULL) {
+            if (useName != NULL && (mfp = files_native_fopen(useName, "r")) != NULL) { // [library:filesystem]
                 fseek(mfp, 0, SEEK_END);
                 s_sound3d.soundTable[handle].size = ftell(mfp);
                 s_sound3d.soundTable[handle].avgBytesPerSec =
@@ -470,7 +393,7 @@ int sound_bank_entry_release(int slot)
         }
         for (i = 0; i < 3; i++) {
             if (sound->lpDsb3D[i] != NULL) {
-                sound->lpDsb3D[i]->Release();
+                audio_buffer_release(sound->lpDsb3D[i]); // [library:audio]
                 sound->lpDsb3D[i] = NULL;
             }
         }
@@ -505,7 +428,7 @@ void sound_listener_frame_update(Sound3DFrame* frame, void* arg, float delta)
     frame->GetScene(&scene);
     frame->GetPosition(scene, &vec);
     if (!vec_exact_equal(&vec.x, &s_sound3d_frames.oldPos.x)) {
-        s_sound3d.lp3DListenerInfo->SetPosition(vec.x, vec.y, vec.z, SOUND3D_DS3D_DEFERRED);
+        audio_listener_set_position(s_sound3d.lp3DListenerInfo, vec.x, vec.y, vec.z, SOUND3D_DS3D_DEFERRED); // [library:audio]
         s_sound3d_frames.oldPos = vec;
         changed = 1;
     }
@@ -513,7 +436,7 @@ void sound_listener_frame_update(Sound3DFrame* frame, void* arg, float delta)
     frame->GetOrientation(scene, &vec, &up);
     if (!vec_exact_equal(&vec.x, &s_sound3d_frames.oldOrientFront.x) ||
         !vec_exact_equal(&up.x, &s_sound3d_frames.oldOrientUp.x)) {
-        s_sound3d.lp3DListenerInfo->SetOrientation(vec.x, vec.y, vec.z, up.x, up.y, up.z,
+        audio_listener_set_orientation(s_sound3d.lp3DListenerInfo, vec.x, vec.y, vec.z, up.x, up.y, up.z, // [library:audio]
             SOUND3D_DS3D_DEFERRED);
         s_sound3d_frames.oldOrientFront = vec;
         s_sound3d_frames.oldOrientUp = up;
@@ -521,7 +444,7 @@ void sound_listener_frame_update(Sound3DFrame* frame, void* arg, float delta)
     }
 
     if (changed) {
-        s_sound3d.lp3DListenerInfo->CommitDeferredSettings();
+        audio_listener_commit_deferred_settings(s_sound3d.lp3DListenerInfo); // [library:audio]
     }
 
     scene->Release();
@@ -532,8 +455,8 @@ void sound_position_set_from_vector(Sound3DBuffer3D* sound3DBuff,
                                     const Sound3DVector* wPos,
                                     const Sound3DVector* vel)
 {
-    sound3DBuff->SetPosition(wPos->x, wPos->y, wPos->z,
-                                     SOUND3D_DS3D_IMMEDIATE);
+    audio_buffer_set_3d_position(sound3DBuff, wPos->x, wPos->y, wPos->z, // [library:audio]
+                                 SOUND3D_DS3D_IMMEDIATE);
 }
 
 // FUNCTION: LEGORR 0x0047ad30
@@ -576,7 +499,7 @@ int s_play_seam(int mode, intptr_t position, int slot, int loop,
                 const char* fullName = resource_path_resolve_against_base(sound->fName);
                 const char* useName = NULL;
                 FILE* mfp;
-                if ((mfp = fopen(fullName, "r")) != NULL) {
+                if ((mfp = files_native_fopen(fullName, "r")) != NULL) { // [library:filesystem]
                     useName = fullName;
                     fclose(mfp);
                 } else if (resource_cd_file_path_get(cdFileName, sound->fName)) {
@@ -594,45 +517,45 @@ int s_play_seam(int mode, intptr_t position, int slot, int loop,
                     soundBuff = sound->lpDsb3D[0];
                 }
 
-                soundBuff->QueryInterface(&IID_IDirectSound3DBuffer,
-                                                  (void**)&sound3DBuff);
+                /* QueryInterface(IID_IDirectSound3DBuffer). */
+                audio_buffer_query_3d(soundBuff, &sound3DBuff); // [library:audio]
 
                 volume = sound->volume;
                 if (mode == 2) volume -= 800;
-                soundBuff->SetVolume(volume);
+                audio_buffer_set_volume(soundBuff, volume); // [library:audio]
 
-                sound3DBuff->SetMinDistance(s_sound3d.minDistanceForAttenuation, SOUND3D_DS3D_DEFERRED);
-                sound3DBuff->SetMaxDistance(s_sound3d.maxDistance, SOUND3D_DS3D_DEFERRED);
+                audio_buffer_set_min_distance(sound3DBuff, s_sound3d.minDistanceForAttenuation, SOUND3D_DS3D_DEFERRED); // [library:audio]
+                audio_buffer_set_max_distance(sound3DBuff, s_sound3d.maxDistance, SOUND3D_DS3D_DEFERRED); // [library:audio]
 
                 if (mode == 0) {
-                    sound3DBuff->SetMode(SOUND3D_DS3DMODE_NORMAL,
-                                                 SOUND3D_DS3D_DEFERRED);
+                    audio_buffer_set_3d_mode(sound3DBuff, SOUND3D_DS3DMODE_NORMAL, // [library:audio]
+                                             SOUND3D_DS3D_DEFERRED);
                     frame->GetScene(&scene);
                     sound_attached_stop_by_entity(frame, sound3DBuff);
                     sound_instance_track_register(frame, sound3DBuff);
                     sound_buffer_association_add(frame, soundBuff, sound3DBuff);
                     frame->GetPosition(scene, &pos);
-                    sound3DBuff->SetPosition(pos.x, pos.y, pos.z,
-                                                     SOUND3D_DS3D_DEFERRED);
+                    audio_buffer_set_3d_position(sound3DBuff, pos.x, pos.y, pos.z, // [library:audio]
+                                                 SOUND3D_DS3D_DEFERRED);
                     scene->Release();
                 } else if (mode == 1) {
-                    sound3DBuff->SetMode(SOUND3D_DS3DMODE_NORMAL,
-                                                 SOUND3D_DS3D_DEFERRED);
+                    audio_buffer_set_3d_mode(sound3DBuff, SOUND3D_DS3DMODE_NORMAL, // [library:audio]
+                                             SOUND3D_DS3D_DEFERRED);
                     sound_position_set_from_vector(sound3DBuff, (const Sound3DVector*)xyz,
                                                    NULL);
                     sound_attached_stop_by_entity(NULL, sound3DBuff);
                     sound_buffer_association_add(NULL, soundBuff, sound3DBuff);
                 } else if (mode == 2) {
-                    sound3DBuff->SetMode(SOUND3D_DS3DMODE_DISABLE,
-                                                 SOUND3D_DS3D_DEFERRED);
+                    audio_buffer_set_3d_mode(sound3DBuff, SOUND3D_DS3DMODE_DISABLE, // [library:audio]
+                                             SOUND3D_DS3D_DEFERRED);
                     sound_attached_stop_by_entity(NULL, sound3DBuff);
                     sound_buffer_association_add(NULL, soundBuff, sound3DBuff);
                 }
 
-                s_sound3d.lp3DListenerInfo->CommitDeferredSettings();
-                soundBuff->SetCurrentPosition(0);
-                if (loop) soundBuff->Play(0, 0, SOUND3D_DSBPLAY_LOOPING);
-                else soundBuff->Play(0, 0, 0);
+                audio_listener_commit_deferred_settings(s_sound3d.lp3DListenerInfo); // [library:audio]
+                audio_buffer_set_current_position(soundBuff, 0); // [library:audio]
+                if (loop) audio_buffer_play(soundBuff, 0, 0, SOUND3D_DSBPLAY_LOOPING); // [library:audio]
+                else audio_buffer_play(soundBuff, 0, 0, 0); // [library:audio]
 
                 return (slot * 3) + sound->voice;
             }
@@ -667,11 +590,11 @@ void sound_bank_entry_volume_set(int slot, int millibels)
     if (sound->flags & SOUND3D_FLAG_MULTI) {
         for (i = 0; i < 3; i++) {
             if (sound->lpDsb3D[i] != NULL) {
-                sound->lpDsb3D[i]->SetVolume(sound->volume);
+                audio_buffer_set_volume(sound->lpDsb3D[i], sound->volume); // [library:audio]
             }
         }
     } else if (sound->lpDsb3D[0] != NULL) {
-        sound->lpDsb3D[0]->SetVolume(sound->volume);
+        audio_buffer_set_volume(sound->lpDsb3D[0], sound->volume); // [library:audio]
     }
 }
 
@@ -697,7 +620,7 @@ void sound_buffer_stop_handle(int buffer_handle)
     Sound3DBuffer* soundBuff = sound_handle_buffer_get(buffer_handle);
 
     if (s_bank_sound_on && buffer_handle != -1 && soundBuff != NULL) {
-        soundBuff->Stop();
+        audio_buffer_stop(soundBuff); // [library:audio]
     }
 }
 
@@ -707,7 +630,7 @@ void sound_subsystem_stop_all(void)
     Sound3DSoundFrameRecord* item;
 
     for (item = s_sound3d.soundFrameRecord; item != NULL; item = item->next) {
-        item->soundBuff->Stop();
+        audio_buffer_stop(item->soundBuff); // [library:audio]
     }
     sound_stream_stop_and_release(0);
     sound_stream_stop_and_release(1);
@@ -747,7 +670,7 @@ void sound_instance_track_stop_and_remove(Sound3DFrame* frame,
     Sound3DSoundRecord* temp;
     unsigned int i;
 
-    sound3DBuff->Release();
+    audio_buffer_release(sound3DBuff); // [library:audio]
 
     if (frame == NULL) {
         keyed_resource_entry_remove(frame, sound3DBuff);
@@ -842,7 +765,7 @@ void sound_source_spatial_refresh_all(void)
 
     while (item != NULL) {
         next = item->next;
-        item->soundBuff->GetStatus(&status);
+        audio_buffer_get_status(item->soundBuff, &status); // [library:audio]
         if (!(status & SOUND3D_DSBSTATUS_PLAYING)) {
             sound_instance_track_stop_and_remove(item->frame, item->sound3DBuff);
         }
@@ -865,8 +788,8 @@ void sound_source_spatial_refresh(Sound3DFrame* frame, void* arg, float delta)
     while (item != NULL) {
         frame->GetPosition(scene, &pos);
         if (!vec_exact_equal(&pos.x, &item->pos.x)) {
-            item->sound3DBuff->SetPosition(pos.x, pos.y, pos.z,
-                                                   SOUND3D_DS3D_IMMEDIATE);
+            audio_buffer_set_3d_position(item->sound3DBuff, pos.x, pos.y, pos.z, // [library:audio]
+                                         SOUND3D_DS3D_IMMEDIATE);
             item->pos = pos;
         }
         item = item->next;
@@ -881,8 +804,8 @@ void sound_tracked_buffers_set_min_distance(float dist)
 
     s_sound3d.minDistanceForAttenuation = dist;
     for (item = s_sound3d.soundFrameRecord; item != NULL; item = item->next) {
-        item->sound3DBuff->SetMinDistance(dist,
-                                                  SOUND3D_DS3D_IMMEDIATE);
+        audio_buffer_set_min_distance(item->sound3DBuff, dist, // [library:audio]
+                                      SOUND3D_DS3D_IMMEDIATE);
     }
 }
 
@@ -893,8 +816,8 @@ void sound_tracked_buffers_set_max_distance(float dist)
 
     s_sound3d.maxDistance = dist;
     for (item = s_sound3d.soundFrameRecord; item != NULL; item = item->next) {
-        item->sound3DBuff->SetMaxDistance(dist,
-                                                  SOUND3D_DS3D_IMMEDIATE);
+        audio_buffer_set_max_distance(item->sound3DBuff, dist, // [library:audio]
+                                      SOUND3D_DS3D_IMMEDIATE);
     }
 }
 
@@ -907,7 +830,7 @@ void audio_sound_volume_set(int millibels)
     if (s_bank_sound_on) {
         if (sound_volume_value_valid(millibels)) {
             s_sound3d.volume = millibels;
-            s_sound3d.lpDSBuff->SetVolume(millibels);
+            audio_buffer_set_volume(s_sound3d.lpDSBuff, millibels); // [library:audio]
         }
     }
 }
@@ -927,7 +850,7 @@ void audio_sound_volume_minus_300(void)
 {
     if (s_bank_sound_on) {
         s_sound3d.volume = -300;
-        s_sound3d.lpDSBuff->SetVolume(-300);
+        audio_buffer_set_volume(s_sound3d.lpDSBuff, -300); // [library:audio]
     }
 }
 
@@ -956,7 +879,7 @@ int sound_wave_sample_load(Sound3DSoundData* sound, const char* fName,
                                            &mmckinfoSubchunk, &cbActualRead)) != 0) goto ERROR_LOADING;
         sound->size = cbActualRead;
         if (hmmio != NULL) {
-            mmioClose(hmmio, 0);
+            audio_mmio_close(hmmio, 0); // [library:audio]
             hmmio = NULL;
         }
         if (sound_record_create_buffers(sound, simultaneous)) {
@@ -991,15 +914,15 @@ int sound_record_create_buffers(Sound3DSoundData* sound, int simultaneous)
     dsbd.dwBufferBytes = sound->size;
     dsbd.lpwfxFormat = sound->pwf;
 
-    if (s_sound3d.lpDSnd->CreateSoundBuffer(&dsbd,
-                                                    &sound->lpDsb3D[0], NULL) != SOUND3D_DS_OK) {
+    if (audio_create_buffer(s_sound3d.lpDSnd, dsbd.dwFlags, dsbd.dwBufferBytes, dsbd.lpwfxFormat, // [library:audio]
+                            &sound->lpDsb3D[0]) != SOUND3D_DS_OK) {
         return 0;
     }
 
     sound->voice = 0;
     if (simultaneous) {
         for (i = 1; i < 3; i++) {
-            if (s_sound3d.lpDSnd->DuplicateSoundBuffer(sound->lpDsb3D[0], &sound->lpDsb3D[i]) != SOUND3D_DS_OK) {
+            if (audio_duplicate_buffer(s_sound3d.lpDSnd, sound->lpDsb3D[0], &sound->lpDsb3D[i]) != SOUND3D_DS_OK) { // [library:audio]
                 return 0;
             }
         }
@@ -1017,12 +940,12 @@ int sound_wave_sample_duplicate_buffer_create(Sound3DSoundData* sound)
     DWORD dwBytes2 = 0;
     long hr;
 
-    hr = sound->lpDsb3D[0]->Lock(sound->offset, sound->size,
-                                         &lpvAudio1, &dwBytes1, &lpvAudio2, &dwBytes2, 0);
+    hr = audio_buffer_lock(sound->lpDsb3D[0], sound->offset, sound->size, // [library:audio]
+                           &lpvAudio1, &dwBytes1, &lpvAudio2, &dwBytes2, 0);
     if (hr == SOUND3D_DSERR_BUFFERLOST) {
-        sound->lpDsb3D[0]->Restore();
-        sound->lpDsb3D[0]->Lock(sound->offset, sound->size,
-                                        &lpvAudio1, &dwBytes1, &lpvAudio2, &dwBytes2, 0);
+        audio_buffer_restore(sound->lpDsb3D[0]); // [library:audio]
+        audio_buffer_lock(sound->lpDsb3D[0], sound->offset, sound->size, // [library:audio]
+                          &lpvAudio1, &dwBytes1, &lpvAudio2, &dwBytes2, 0);
     } else if (hr != SOUND3D_DS_OK) {
         return 0;
     }
@@ -1032,14 +955,14 @@ int sound_wave_sample_duplicate_buffer_create(Sound3DSoundData* sound)
         memcpy(lpvAudio2, sound->pbData + dwBytes1, dwBytes2);
     }
 
-    if (sound->lpDsb3D[0]->Unlock(lpvAudio1, dwBytes1,
-                                          lpvAudio2, dwBytes2) != SOUND3D_DS_OK) {
+    if (audio_buffer_unlock(sound->lpDsb3D[0], lpvAudio1, dwBytes1, // [library:audio]
+                            lpvAudio2, dwBytes2) != SOUND3D_DS_OK) {
         return 0;
     }
-    if (sound->lpDsb3D[0]->GetFrequency(&sound->freq) != SOUND3D_DS_OK) {
+    if (audio_buffer_get_frequency(sound->lpDsb3D[0], &sound->freq) != SOUND3D_DS_OK) { // [library:audio]
         return 0;
     }
-    return sound->lpDsb3D[0]->GetVolume(&sound->volume) == SOUND3D_DS_OK;
+    return audio_buffer_get_volume(sound->lpDsb3D[0], &sound->volume) == SOUND3D_DS_OK; // [library:audio]
 }
 
 // FUNCTION: LEGORR 0x0047b8e0
@@ -1066,9 +989,9 @@ int sound_streamed_wave_play(const char* fName, int loop, int volume)
     }
 
     if (sound_streamed_wave_buffer_setup(fName, loop, volume)) {
-        SOUND3D_STREAM_BUFFER(loop)->SetCurrentPosition(0);
-        SOUND3D_STREAM_BUFFER(loop)->Play(0, 0,
-                                                  SOUND3D_DSBPLAY_LOOPING);
+        audio_buffer_set_current_position(SOUND3D_STREAM_BUFFER(loop), 0); // [library:audio]
+        audio_buffer_play(SOUND3D_STREAM_BUFFER(loop), 0, 0, // [library:audio]
+                          SOUND3D_DSBPLAY_LOOPING);
         stream->playing = 1;
         return 1;
     }
@@ -1085,9 +1008,9 @@ int sound_stream_stop_and_release(int stream_index)
 
     stream->playing = 0;
     if (stream->fileOpen) {
-        SOUND3D_STREAM_BUFFER(stream_index)->Stop();
+        audio_buffer_stop(SOUND3D_STREAM_BUFFER(stream_index)); // [library:audio]
         sound_wave_handle_and_buffer_release(&stream->hmmio, &stream->pwf);
-        SOUND3D_STREAM_BUFFER(stream_index)->Release();
+        audio_buffer_release(SOUND3D_STREAM_BUFFER(stream_index)); // [library:audio]
         stream->fileOpen = 0;
     }
     return 1;
@@ -1128,15 +1051,15 @@ int sound_streamed_wave_buffer_setup(const char* fName, int loop, int volume)
     dsbd.dwBufferBytes = stream->bufferSize = stream->notifySize * 4;
     dsbd.lpwfxFormat = stream->pwf;
 
-    if (s_sound3d.lpDSnd->CreateSoundBuffer(&dsbd, &soundBuff,
-                                                    NULL) != SOUND3D_DS_OK) {
+    if (audio_create_buffer(s_sound3d.lpDSnd, dsbd.dwFlags, dsbd.dwBufferBytes, dsbd.lpwfxFormat, // [library:audio]
+                            &soundBuff) != SOUND3D_DS_OK) {
         return 0;
     }
 
     if (loop) s_sound3d.lpDSLoopStreamBuff = soundBuff;
     else s_sound3d.lpDSStreamBuff = soundBuff;
 
-    SOUND3D_STREAM_BUFFER(loop)->SetVolume(volume);
+    audio_buffer_set_volume(SOUND3D_STREAM_BUFFER(loop), volume); // [library:audio]
 
     stream->fileEnd = 0;
     stream->writeOffset = 0;
@@ -1160,7 +1083,7 @@ int sound_stream_drain_check(int loop)
     UINT cbActualRead;
     UINT pos;
 
-    if (SOUND3D_STREAM_BUFFER(loop)->Lock(0,
+    if (audio_buffer_lock(SOUND3D_STREAM_BUFFER(loop), 0, // [library:audio]
             stream->bufferSize, &lpvAudio1, &dwBytes1, &lpvAudio2, &dwBytes2, 0) != SOUND3D_DS_OK) {
         return 0;
     }
@@ -1185,8 +1108,8 @@ int sound_stream_drain_check(int loop)
         }
     }
 
-    SOUND3D_STREAM_BUFFER(loop)->Unlock(lpvAudio1,
-                                                dwBytes1, NULL, 0);
+    audio_buffer_unlock(SOUND3D_STREAM_BUFFER(loop), lpvAudio1, // [library:audio]
+                        dwBytes1, NULL, 0);
 
     stream->writeOffset += dwBytes1;
     if (stream->writeOffset >= stream->bufferSize) stream->writeOffset -= stream->bufferSize;
@@ -1208,7 +1131,7 @@ void sound_stream_ring_buffer_tick(int loop)
     int first;
 
     if (stream->playing && stream->fileOpen) {
-        SOUND3D_STREAM_BUFFER(loop)->GetCurrentPosition(&playPos, &writePos);
+        audio_buffer_get_current_position(SOUND3D_STREAM_BUFFER(loop), &playPos, &writePos); // [library:audio]
         stream->playProgress += ((playPos < stream->lastPos) ? stream->bufferSize + playPos : playPos) -
                                 stream->lastPos;
         stream->lastPos = playPos;
@@ -1223,7 +1146,7 @@ void sound_stream_ring_buffer_tick(int loop)
             first = 1;
 
             if (!stream->fileEnd) {
-                if (SOUND3D_STREAM_BUFFER(loop)->Lock(stream->writeOffset, stream->notifySize, &lpvAudio1, &dwBytes1,
+                if (audio_buffer_lock(SOUND3D_STREAM_BUFFER(loop), stream->writeOffset, stream->notifySize, &lpvAudio1, &dwBytes1, // [library:audio]
                         NULL, NULL, 0) != SOUND3D_DS_OK) {
                     return;
                 }
@@ -1247,17 +1170,17 @@ void sound_stream_ring_buffer_tick(int loop)
                         } while (pos < dwBytes1);
                     }
                 }
-                SOUND3D_STREAM_BUFFER(loop)->Unlock(lpvAudio1, dwBytes1, NULL, 0);
+                audio_buffer_unlock(SOUND3D_STREAM_BUFFER(loop), lpvAudio1, dwBytes1, NULL, 0); // [library:audio]
                 stream->writeProgress += dwBytes1;
                 stream->writeOffset += dwBytes1;
                 if (stream->bufferSize <= stream->writeOffset) {
                     stream->writeOffset -= stream->bufferSize;
                 }
             } else {
-                SOUND3D_STREAM_BUFFER(loop)->Lock(stream->writeOffset, stream->notifySize, &lpvAudio1, &dwBytes1,
+                audio_buffer_lock(SOUND3D_STREAM_BUFFER(loop), stream->writeOffset, stream->notifySize, &lpvAudio1, &dwBytes1, // [library:audio]
                     NULL, NULL, 0);
                 memset(lpvAudio1, (BYTE)((stream->pwf->wBitsPerSample == 8) ? 128 : 0), dwBytes1);
-                SOUND3D_STREAM_BUFFER(loop)->Unlock(lpvAudio1, dwBytes1, NULL, 0);
+                audio_buffer_unlock(SOUND3D_STREAM_BUFFER(loop), lpvAudio1, dwBytes1, NULL, 0); // [library:audio]
                 if ((stream->mmckinfoParent.cksize > stream->notifySize &&
                      stream->playProgress >= stream->mmckinfoParent.cksize - stream->notifySize) ||
                     stream->playProgress >= stream->mmckinfoParent.cksize) {
@@ -1281,7 +1204,7 @@ float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff)
     if (s_bank_sound_on) {
         if (rolloff < 0.0f) rolloff = 0.0f;
         if (rolloff > 10.0f) rolloff = 10.0f;
-        s_sound3d.lp3DListenerInfo->SetRolloffFactor(rolloff, SOUND3D_DS3D_IMMEDIATE);
+        audio_listener_set_rolloff_factor(s_sound3d.lp3DListenerInfo, rolloff, SOUND3D_DS3D_IMMEDIATE); // [library:audio]
     }
     return rolloff;
 }

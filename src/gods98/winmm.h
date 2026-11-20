@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* The Win32 subset outside miniwin's scope that the units call: WinMM's
- * mmio, MCI, timeGetTime and the mixer, KERNEL32's GlobalAlloc/GlobalFree
- * and USER32's wsprintfA, with the layouts the units read. The develop
- * branch has no WinMM: until the library substitutions of ADR 0007 replace
- * these calls in the units, platform/native/seam_stubs.cpp defines them as
- * logging stubs. */
+/* The Win32 subset outside miniwin's scope that the units use: WinMM's
+ * mmio, MCI and mixer types, the mixer calls, KERNEL32's
+ * GlobalAlloc/GlobalFree and USER32's wsprintfA, with the layouts the units
+ * read. The develop branch has no WinMM. The audio library
+ * (library/audio_sdl.h) replaces the mmio and MCI calls at the units'
+ * `// [library:audio]` call sites; until a substitution replaces the
+ * mixer's, platform/native/seam_stubs.cpp defines them as logging stubs. */
 #ifndef LEGORRR_GODS98_WINMM_H
 #define LEGORRR_GODS98_WINMM_H
 
@@ -194,21 +195,6 @@ LPSTR GetCommandLineA(void);
 HGLOBAL GlobalAlloc(UINT flags, size_t bytes);
 HGLOBAL GlobalFree(HGLOBAL memory);
 int wsprintfA(LPSTR output, LPCSTR format, ...);
-
-HMMIO mmioOpenA(LPSTR name, LPMMIOINFO info, DWORD flags);
-MMRESULT mmioClose(HMMIO hmmio, UINT flags);
-LONG mmioRead(HMMIO hmmio, HPSTR buffer, LONG bytes);
-LONG mmioSeek(HMMIO hmmio, LONG offset, int origin);
-MMRESULT mmioGetInfo(HMMIO hmmio, LPMMIOINFO info, UINT flags);
-MMRESULT mmioSetInfo(HMMIO hmmio, const MMIOINFO* info, UINT flags);
-MMRESULT mmioAdvance(HMMIO hmmio, LPMMIOINFO info, UINT flags);
-MMRESULT mmioDescend(HMMIO hmmio, LPMMCKINFO chunk,
-                     const MMCKINFO* parent, UINT flags);
-MMRESULT mmioAscend(HMMIO hmmio, LPMMCKINFO chunk, UINT flags);
-
-MCIERROR mciSendStringA(LPCSTR command, LPSTR result, UINT capacity,
-                        HWND callback);
-BOOL mciGetErrorStringA(MCIERROR error, LPSTR text, UINT capacity);
 
 UINT mixerGetNumDevs(void);
 MMRESULT mixerOpen(HMIXER* mixer, UINT device, DWORD_PTR callback,
