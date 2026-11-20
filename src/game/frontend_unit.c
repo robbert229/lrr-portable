@@ -1980,7 +1980,6 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
     int selIndex;
     int imageIndex;
     int pointerType;
-    int width;
     float timer;
     float elapsedTime;
     float currTime;
@@ -1988,7 +1987,6 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
     float camPos[3];
     float camDir[3];
     float camUp[3];
-    Point2F dest;
     char buff[128];
     Front_CycleData* cycle;
     Front_SelectItem* selItem;
@@ -2044,10 +2042,11 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
     y = menu->yPos;
 
     if (menu->displayTitle) {
-        width = formatted_text_printf_width(menu->menuFont, front_util_replace_text_spaces(menu->fullName));
         /* The original computes both positions before the second
-         * ReplaceTextSpaces call, so they are statements (finding 672). */
-        itemX = s_display_w / 2 - ((unsigned int)width >> 1);
+         * ReplaceTextSpaces call, so they are statements (finding 672);
+         * the width call sits inside the X expression, with no local. */
+        itemX = s_display_w / 2 -
+                (formatted_text_printf_width(menu->menuFont, front_util_replace_text_spaces(menu->fullName)) / 2);
         itemY = menu->anchoredY + y;
         font_print_f(menu->menuFont, itemX, itemY, front_util_replace_text_spaces(menu->fullName));
     }
@@ -2233,6 +2232,7 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
                 itemX = item->x1 + menu->xPos;
                 itemY = item->y1 + menu->yPos;
                 if ((image = item->imageHi) != NULL) {
+                    Point2F dest;
                     dest.x = (float)itemX;
                     dest.y = (float)itemY;
                     image_display_scaled(image, NULL, &dest, NULL);
@@ -2242,6 +2242,7 @@ Front_Menu* front_menu_update(float elapsed, Front_Menu* menu, int* menuTransiti
                 itemX = item->x1 + menu->xPos;
                 itemY = item->y1 + menu->yPos;
                 if ((image = item->imageLo) != NULL) {
+                    Point2F dest;
                     dest.x = (float)itemX;
                     dest.y = (float)itemY;
                     image_display_scaled(image, NULL, &dest, NULL);
