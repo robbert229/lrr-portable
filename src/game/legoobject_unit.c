@@ -8356,10 +8356,8 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
     LegoObjP_Vector3F dir;
     LegoObjP_Point2F pos2D;
     LegoObjP_Point2F dir2D;
-    int blockPos[2];
-    int blockPos2[2];
+    LegoObjF_Point2I blockPos; /* a Point2I: its fields fix the dynamite's registers */
     float len;
-    float speed;
     float inv;
     Lego_Object* hit;
     float wx;
@@ -8379,13 +8377,12 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
             dir.y = target.y - pos.y;
             dir.z = target.z - pos.z;
             len = legoobject_o_vector3_modulus((LegoObjJ_Vector3F*)&dir);
-            speed = elapsed * 3.5f;
             legoobject_o_vector3_scale((LegoObjJ_Vector3F*)&dir, (LegoObjJ_Vector3F*)&dir, 1.0f / len);
-            legoobject_o_vector3_scale((LegoObjJ_Vector3F*)&dir, (LegoObjJ_Vector3F*)&dir, speed);
+            legoobject_o_vector3_scale((LegoObjJ_Vector3F*)&dir, (LegoObjJ_Vector3F*)&dir, elapsed * 3.5f);
             pos.x = dir.x + pos.x;
             pos.y = dir.y + pos.y;
             pos.z = dir.z + pos.z;
-            if (len < speed) {
+            if (len < elapsed * 3.5f) {
                 obj->carryingThisObject = NULL;
                 obj->health = -1.0f;
                 obj->flags3 = (obj->flags3 & ~0x2000) | 0x800000;
@@ -8394,7 +8391,7 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
             }
             pos2D.x = target.x;
             pos2D.y = target.y;
-            terrain_map_world_to_block(Lego_GetMap(), target.x, target.y, &blockPos[0], &blockPos[1]);
+            terrain_map_world_to_block(Lego_GetMap(), target.x, target.y, &blockPos.x, &blockPos.y);
             /* The original stores the boulder's height over the ground in a
              * local before it passes it. */
             height = terrain_map_world_z_get(Lego_GetMap(), target.x, target.y) - target.z;
@@ -8419,19 +8416,21 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
         if (obj->flags3 & 0x10000) {
             if (obj->health <= 0.0f || ddiscene_advance_by_time_target(obj->other, elapsed) != 0.0f) {
 
-                blockPos[0] = (int)obj->targetBlockPos[0];
-                blockPos[1] = (int)obj->targetBlockPos[1];
-                if (blockPos[0] && blockPos[1])
-                    lego_terrain_cell_mutate((struct Lego_Level*)level_current_owner_get(), blockPos[0], blockPos[1], 0);
+                blockPos.x = (int)obj->targetBlockPos[0];
+                blockPos.y = (int)obj->targetBlockPos[1];
+                if (blockPos.x && blockPos.y)
+                    lego_terrain_cell_mutate((struct Lego_Level*)level_current_owner_get(), blockPos.x, blockPos.y, 0);
                 if (obj->type == 8) {
-                    legoobject_position_to_terrain_cell(obj, &blockPos[0], &blockPos[1]);
-                    terrain_cell_flag_80000_clear_or_set_current(blockPos, 0);
+                    legoobject_position_to_terrain_cell(obj, &blockPos.x, &blockPos.y);
+                    terrain_cell_flag_80000_clear_or_set_current(&blockPos.x, 0);
                     legoobject_spatial_callback_query(obj, legoGlobs_DynamiteDamageRadius, legoGlobs_DynamiteMaxDamage,
                                                       legoGlobs_DynamiteWakeRadius);
                     sound_alias_play(0x2b, 0);
                     effect_spawn_explosion(obj, NULL);
                     camera_shake(s_zoom_step_context, 5.0f, 50.0f);
                 } else if (obj->type == 13) {
+                    int blockPos2[2];
+
                     legoobject_transform_position_get(obj, &pos.x, &pos.y);
                     legoobject_position_to_terrain_cell(obj, &blockPos2[0], &blockPos2[1]);
                     pos.z = terrain_map_world_z_get(Lego_GetMap(), pos.x, pos.y);
@@ -8443,6 +8442,7 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
                 obj->flags3 |= 0x800000;
             }
         } else if (obj->flags1 & 0x80000) {
+            int blockPos2[2];
 
             obj->flags1 &= ~0x80000;
             obj->flags3 |= 0x10000;
@@ -8457,14 +8457,17 @@ void legoobject_type_behavior_update(Lego_Object* obj, float elapsed)
         }
     } else if (obj->type == 11) {
         if (obj->flags1 & 0x80000) {
+            /* The fence's block is two scalars: the original keeps one in
+             * the dead obj parameter slot. */
+            int bx, by;
 
             obj->flags1 &= ~0x80000;
             electric_fence_add((struct ElectricFenceObject*)obj);
-            legoobject_position_to_terrain_cell(obj, &blockPos2[0], &blockPos2[1]);
-            terrain_map_block_to_world(Lego_GetMap(), blockPos2[0], blockPos2[1], &wx, &wy);
+            legoobject_position_to_terrain_cell(obj, &bx, &by);
+            terrain_map_block_to_world(Lego_GetMap(), bx, by, &wx, &wy);
             angle = legoobject_vector_direction_angle_radians_get(obj) + 0.78539819f;
             legoobject_world_position_set(obj, wx, wy, angle - (float)fmod(angle, 1.5707964f), 1);
-            terrain_cell_secondary_flag_8_set_current(blockPos2[0], blockPos2[1], 0);
+            terrain_cell_secondary_flag_8_set_current(bx, by, 0);
         }
     } else if (obj->type == 9) {
         if (ddiscene_advance_by_time_target(obj->other, elapsed) != 0.0f) {
