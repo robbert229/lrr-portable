@@ -321,8 +321,12 @@ static void CheckRetainedMode(IDirectDraw* dd, IDirectDrawSurface* surface)
         CHECK(Answers(material, IID_IDirect3DRMMaterial));
         CHECK(Answers(material, IID_IDirect3DRMMaterial2));
         CHECK(material->GetPower() == 10.0f);
-        CHECK(material->SetSpecular(1, 1, 1) == E_NOTIMPL);
-        CHECK(material->SetEmissive(0, 0, 0) == E_NOTIMPL);
+        D3DVALUE r = 0, g = 0, b = 0;
+        CHECK(material->GetSpecular(&r, &g, &b) == DD_OK && r == 1 && g == 1 && b == 1);
+        CHECK(material->SetSpecular(0.25f, 0.5f, 0.75f) == DD_OK);
+        CHECK(material->GetSpecular(&r, &g, &b) == DD_OK && r == 0.25f && g == 0.5f && b == 0.75f);
+        CHECK(material->SetEmissive(0.5f, 0, 1) == DD_OK);
+        CHECK(material->GetEmissive(&r, &g, &b) == DD_OK && r == 0.5f && g == 0 && b == 1);
         material->Release();
     }
 
@@ -368,11 +372,22 @@ static void CheckRetainedMode(IDirectDraw* dd, IDirectDrawSurface* surface)
     IDirect3DRMLight* light = nullptr;
     CHECK(d3drm->CreateLightRGB(D3DRMLIGHT_SPOT, 1, 1, 1, &light) == DD_OK && light);
     if (light) {
-        CHECK(light->SetColor(0xffffffff) == E_NOTIMPL);
-        CHECK(light->SetRange(10) == E_NOTIMPL);
-        CHECK(light->SetUmbra(0.5f) == E_NOTIMPL);
-        CHECK(light->SetPenumbra(0.6f) == E_NOTIMPL);
-        CHECK(light->SetEnableFrame(camera) == E_NOTIMPL);
+        // D3DRM's defaults, then the set values.
+        CHECK(light->GetRange() == 256.0f && light->GetUmbra() == 0.4f && light->GetPenumbra() == 0.5f);
+        CHECK(light->GetConstantAttenuation() == 1 && light->GetLinearAttenuation() == 0);
+        CHECK(light->GetQuadraticAttenuation() == 0);
+        CHECK(light->SetColor(0x80ff4000) == DD_OK && light->GetColor() == 0xffff4000);
+        CHECK(light->SetRange(10) == DD_OK && light->GetRange() == 10);
+        CHECK(light->SetUmbra(0.5f) == DD_OK && light->GetUmbra() == 0.5f);
+        CHECK(light->SetPenumbra(0.6f) == DD_OK && light->GetPenumbra() == 0.6f);
+        IDirect3DRMFrame* enable = nullptr;
+        CHECK(light->GetEnableFrame(&enable) == DD_OK && enable == nullptr);
+        CHECK(light->SetEnableFrame(camera) == DD_OK);
+        CHECK(light->GetEnableFrame(&enable) == DD_OK && enable == camera);
+        if (enable) {
+            enable->Release();
+        }
+        CHECK(light->SetEnableFrame(nullptr) == DD_OK);
         light->Release();
     }
 
