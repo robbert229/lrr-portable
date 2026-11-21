@@ -7870,6 +7870,9 @@ int lego_terrain_cell_allows_placement(struct Lego_Object* liveObj, unsigned int
 uint32_t terrain_cell_occupied_or_flag_current(int bx, int by, int checkFlags2)
 {
     Lego_Level* level = legoGlobs_currLevel;
+    /* PORT-ONLY: a NaN position converts to INT_MIN block coordinates; the
+     * original's 32-bit index arithmetic wraps those to block 0. */
+    if ((uint32_t)bx >= level->width || (uint32_t)by >= level->height) bx = by = 0;
     if (checkFlags2) {
         Lego_Block* block = &level->blocks[level->width * by + bx];
         if (!(block->flags1 & 0x400) && !(block->flags2 & 4))
@@ -9612,7 +9615,10 @@ int lego_keep_running(void)
     options_load_or_default_target(1, 0);
     if (levelName == NULL) return 0;
     if (!lego_level_load(levelName)) return 0;
-    free((void*)levelName);
+    /* PORT-ONLY: the original frees levelName here (0048db80), but the new
+     * level keeps it as level->name, and on the menu path it is the front
+     * end's own idNames entry. Win32's heap left the freed text readable;
+     * glibc's does not, so Restart Mission then loaded a garbage name. */
     return 1;
 }
 
