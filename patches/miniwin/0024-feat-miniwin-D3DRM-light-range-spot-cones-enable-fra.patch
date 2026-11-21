@@ -1,0 +1,880 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 13:04:47 -0800
+Subject: [PATCH] feat(miniwin): D3DRM light range, spot cones, enable frames
+ and material terms
+
+IDirect3DRMLight keeps its colour, range, umbra, penumbra, attenuation and
+enable frame, with D3DRM's defaults (range 256, umbra 0.4, penumbra 0.5,
+attenuation 1, 0, 0), and gains the matching getters. SetColor reads the
+colour as 0xAARRGGBB; the viewport used to read the packed colour with red
+and blue swapped.
+
+SceneLight carries the range, attenuation and cone after its first 48
+bytes, which stay the layout the GPU backends upload; the SDL3 GPU backend
+copies that prefix into its own shader struct, and the DirectX 9 and
+OpenGL 1 bridges mirror the new fields.
+
+The viewport scopes a light with an enable frame to that frame's
+hierarchy: it walks the scene with a mask of the lights that reach each
+frame and pushes the renderer the matching set before each draw.
+
+The software backend applies range, attenuation and Direct3D's linear spot
+falloff to positional lights. D3DRM's umbra and penumbra are angles from
+the spot's axis, half of Direct3D's theta and phi: LEGO Rock Raiders'
+first level matches the shipped game's frame that way, and is far too dark
+with full cone angles. Immediate-mode draws are lit with Direct3D's
+material formula: emissive, plus ambient light times the material's
+ambient colour, plus each light's diffuse, and specular added after the
+texture stage when SPECULARENABLE is set. IDirect3DRMMaterial2 keeps its
+emissive and specular colours.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/d3drm.h b/miniwin/include/miniwin/d3drm.h
+index e729e49..c3bd02e 100644
+--- a/miniwin/include/miniwin/d3drm.h
++++ b/miniwin/include/miniwin/d3drm.h
+@@ -277,6 +277,8 @@ typedef IDirect3DRMMaterial *LPDIRECT3DRMMATERIAL, **LPLPDIRECT3DRMMATERIAL;
+ struct IDirect3DRMMaterial2 : public IDirect3DRMMaterial {
+ 	virtual HRESULT SetSpecular(D3DVALUE r, D3DVALUE g, D3DVALUE b) = 0;
+ 	virtual HRESULT SetEmissive(D3DVALUE r, D3DVALUE g, D3DVALUE b) = 0;
++	virtual HRESULT GetSpecular(D3DVALUE* r, D3DVALUE* g, D3DVALUE* b) = 0;
++	virtual HRESULT GetEmissive(D3DVALUE* r, D3DVALUE* g, D3DVALUE* b) = 0;
+ };
+ typedef IDirect3DRMMaterial2* LPDIRECT3DRMMATERIAL2;
+ 
+@@ -346,6 +348,16 @@ struct IDirect3DRMLight : public IDirect3DRMObject {
+ 	virtual HRESULT SetEnableFrame(IDirect3DRMFrame* frame) = 0;
+ 	virtual D3DRMLIGHTTYPE GetType() = 0;
+ 	virtual D3DCOLOR GetColor() = 0;
++	virtual HRESULT SetConstantAttenuation(D3DVALUE attenuation) = 0;
++	virtual HRESULT SetLinearAttenuation(D3DVALUE attenuation) = 0;
++	virtual HRESULT SetQuadraticAttenuation(D3DVALUE attenuation) = 0;
++	virtual D3DVALUE GetRange() = 0;
++	virtual D3DVALUE GetUmbra() = 0;
++	virtual D3DVALUE GetPenumbra() = 0;
++	virtual D3DVALUE GetConstantAttenuation() = 0;
++	virtual D3DVALUE GetLinearAttenuation() = 0;
++	virtual D3DVALUE GetQuadraticAttenuation() = 0;
++	virtual HRESULT GetEnableFrame(IDirect3DRMFrame** frame) = 0;
+ };
+ typedef IDirect3DRMLight* LPDIRECT3DRMLIGHT;
+ 
+diff --git a/miniwin/src/d3drm/backends/directx9/actual.h b/miniwin/src/d3drm/backends/directx9/actual.h
+index bf09cb0..d730fcc 100644
+--- a/miniwin/src/d3drm/backends/directx9/actual.h
++++ b/miniwin/src/d3drm/backends/directx9/actual.h
+@@ -18,6 +18,10 @@ struct BridgeSceneLight {
+ 	float positional;
+ 	BridgeVector direction;
+ 	float directional;
++	float range;
++	float attenuation[3];
++	float umbra;
++	float penumbra;
+ };
+ 
+ struct BridgeSceneVertex {
+diff --git a/miniwin/src/d3drm/backends/opengl1/actual.h b/miniwin/src/d3drm/backends/opengl1/actual.h
+index 232fc88..bdc8c99 100644
+--- a/miniwin/src/d3drm/backends/opengl1/actual.h
++++ b/miniwin/src/d3drm/backends/opengl1/actual.h
+@@ -27,6 +27,10 @@ struct GL11_BridgeSceneLight {
+ 	float positional;
+ 	GL11_BridgeVector direction;
+ 	float directional;
++	float range;
++	float attenuation[3];
++	float umbra;
++	float penumbra;
+ };
+ 
+ struct GL11_BridgeSceneVertex {
+diff --git a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
+index 13643cf..28639df 100644
+--- a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
++++ b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
+@@ -385,7 +385,10 @@ void Direct3DRMSDL3GPURenderer::PushLights(const SceneLight* lights, size_t coun
+ 		count = 3;
+ 	}
+ 	int lightCount = std::min(static_cast<int>(count), 3);
+-	memcpy(&m_fragmentShadingData.lights, lights, sizeof(SceneLight) * lightCount);
++	for (int i = 0; i < lightCount; ++i) {
++		const SceneLight& l = lights[i];
++		m_fragmentShadingData.lights[i] = {l.color, l.position, l.positional, l.direction, l.directional};
++	}
+ 	m_fragmentShadingData.lightCount = lightCount;
+ }
+ 
+@@ -921,8 +924,8 @@ void Direct3DRMSDL3GPURenderer::Draw2DImage(
+ 
+ 	CreateOrthographicProjection((float) m_width, (float) m_height, m_uniforms.projection);
+ 
+-	SceneLight fullBright = {{1, 1, 1, 1}, {0, 0, 0}, 0, {0, 0, 0}, 0};
+-	memcpy(&m_fragmentShadingData.lights, &fullBright, sizeof(SceneLight));
++	ShaderLight fullBright = {{1, 1, 1, 1}, {0, 0, 0}, 0, {0, 0, 0}, 0};
++	memcpy(&m_fragmentShadingData.lights, &fullBright, sizeof(ShaderLight));
+ 	m_fragmentShadingData.lightCount = 1;
+ 	m_fragmentShadingData.color.r = static_cast<Uint8>(color.r * 255);
+ 	m_fragmentShadingData.color.g = static_cast<Uint8>(color.g * 255);
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index ea36ae3..305093b 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -103,7 +103,18 @@ void Direct3DRMSoftwareRenderer::PushLights(const SceneLight* lights, size_t cou
+ 
+ 		PreparedLight prepared;
+ 		prepared.color = light.color;
++		prepared.spot = light.positional == 1.0f && light.directional == 1.0f;
++		prepared.range = light.range;
++		for (int a = 0; a < 3; ++a) {
++			prepared.attenuation[a] = light.attenuation[a];
++		}
++		float penumbra = std::max(light.penumbra, light.umbra);
++		prepared.cosUmbra = std::cos(light.umbra);
++		prepared.cosPenumbra = std::cos(penumbra);
+ 		if (light.directional == 1.0f) {
++			prepared.spotDirection = Normalize(light.direction);
++		}
++		if (light.directional == 1.0f && !prepared.spot) {
+ 			prepared.positional = false;
+ 			prepared.vec = Normalize({-light.direction.x, -light.direction.y, -light.direction.z});
+ 		}
+@@ -276,6 +287,33 @@ inline static void BlendRGBA(Uint8* p, int r, int g, int b, int a)
+ 	p[3] = static_cast<Uint8>(outA > 255 ? 255 : outA);
+ }
+ 
++float Direct3DRMSoftwareRenderer::LightReach(
++	const PreparedLight& light,
++	const D3DVECTOR& worldPos,
++	D3DVECTOR& toLight
++) const
++{
++	D3DVECTOR d = {light.vec.x - worldPos.x, light.vec.y - worldPos.y, light.vec.z - worldPos.z};
++	float distance = std::sqrt(DotProduct(d, d));
++	if (distance > light.range) {
++		return 0.0f;
++	}
++	toLight = distance > 0.0f ? D3DVECTOR{d.x / distance, d.y / distance, d.z / distance} : D3DVECTOR{0, 0, 0};
++	float denominator =
++		light.attenuation[0] + light.attenuation[1] * distance + light.attenuation[2] * distance * distance;
++	float reach = denominator > 0.0f ? 1.0f / denominator : 1.0f;
++	if (light.spot) {
++		float rho = -DotProduct(toLight, light.spotDirection);
++		if (rho <= light.cosPenumbra) {
++			return 0.0f;
++		}
++		if (rho < light.cosUmbra) {
++			reach *= (rho - light.cosPenumbra) / (light.cosUmbra - light.cosPenumbra);
++		}
++	}
++	return reach;
++}
++
+ void Direct3DRMSoftwareRenderer::ApplyLighting(
+ 	const D3DVECTOR& position,
+ 	const D3DVECTOR& oNormal,
+@@ -296,18 +334,22 @@ void Direct3DRMSoftwareRenderer::ApplyLighting(
+ 		const PreparedLight& light = m_preparedLights[i];
+ 
+ 		D3DVECTOR lightVec;
++		float reach = 1.0f;
+ 		if (light.positional) {
+ 			if (!haveWorldPos) {
+ 				worldPos = TransformPoint(position, m_worldMatrix);
+ 				haveWorldPos = true;
+ 			}
+-			lightVec = Normalize({light.vec.x - worldPos.x, light.vec.y - worldPos.y, light.vec.z - worldPos.z});
++			reach = LightReach(light, worldPos, lightVec);
++			if (reach <= 0.0f) {
++				continue;
++			}
+ 		}
+ 		else {
+ 			lightVec = light.vec;
+ 		}
+ 
+-		float dotNL = DotProduct(normal, lightVec);
++		float dotNL = DotProduct(normal, lightVec) * reach;
+ 		if (dotNL > 0.0f) {
+ 			diffuse.r += dotNL * light.color.r;
+ 			diffuse.g += dotNL * light.color.g;
+@@ -1458,6 +1500,15 @@ void Direct3DRMSoftwareRenderer::DrawImmediateTriangle(
+ 				b = stage(state.colorOp, state.colorArg1, state.colorArg2, b, t.b);
+ 				srcAlpha = stage(state.alphaOp, state.alphaArg1, state.alphaArg2, diffuseAlpha, t.a);
+ 			}
++			if (state.specular) {
++				auto spec = [&](Uint8 SDL_Color::*c) {
++					return (w[0] * (lit[0]->specular.*c) + w[1] * (lit[1]->specular.*c) + w[2] * (lit[2]->specular.*c)) /
++						   255.0f;
++				};
++				r = std::min(1.0f, r + spec(&SDL_Color::r));
++				g = std::min(1.0f, g + spec(&SDL_Color::g));
++				b = std::min(1.0f, b + spec(&SDL_Color::b));
++			}
+ 
+ 			// The render target stands for the display surface, which has no
+ 			// alpha channel: destination alpha reads as one and stays opaque.
+@@ -1488,9 +1539,62 @@ void Direct3DRMSoftwareRenderer::DrawImmediateTriangle(
+ 	}
+ }
+ 
+-// Each vertex is lit with the scene's lights and the current material's
+-// diffuse colour and alpha; texture stage 0 then combines that with the
+-// texture.
++void Direct3DRMSoftwareRenderer::LightImmediateVertex(
++	const D3DVECTOR& position,
++	const D3DVECTOR& oNormal,
++	const D3DMATERIAL& material,
++	const D3DVECTOR& eye,
++	bool specular,
++	SDL_Color& color,
++	SDL_Color& specularColor
++)
++{
++	D3DVECTOR normal = Normalize(TransformNormal(oNormal, m_normalMatrix));
++	D3DVECTOR worldPos = TransformPoint(position, m_worldMatrix);
++	D3DVECTOR toEye = Normalize(Subtract(eye, worldPos));
++
++	FColor diffuse = {
++		material.emissive.r + m_ambientR * material.ambient.r,
++		material.emissive.g + m_ambientG * material.ambient.g,
++		material.emissive.b + m_ambientB * material.ambient.b,
++		0
++	};
++	FColor spec = {0, 0, 0, 0};
++	for (const PreparedLight& light : m_preparedLights) {
++		D3DVECTOR lightVec = light.vec;
++		float reach = 1.0f;
++		if (light.positional) {
++			reach = LightReach(light, worldPos, lightVec);
++			if (reach <= 0.0f) {
++				continue;
++			}
++		}
++		float dotNL = DotProduct(normal, lightVec);
++		if (dotNL <= 0.0f) {
++			continue;
++		}
++		diffuse.r += reach * dotNL * light.color.r * material.diffuse.r;
++		diffuse.g += reach * dotNL * light.color.g * material.diffuse.g;
++		diffuse.b += reach * dotNL * light.color.b * material.diffuse.b;
++		if (specular && material.power > 0.0f) {
++			D3DVECTOR halfway = Normalize({lightVec.x + toEye.x, lightVec.y + toEye.y, lightVec.z + toEye.z});
++			float dotNH = DotProduct(normal, halfway);
++			if (dotNH > 0.0f) {
++				float power = reach * std::pow(dotNH, material.power);
++				spec.r += power * light.color.r * material.specular.r;
++				spec.g += power * light.color.g * material.specular.g;
++				spec.b += power * light.color.b * material.specular.b;
++			}
++		}
++	}
++
++	auto toByte = [](float c) { return static_cast<Uint8>(std::min(255.0f, std::max(0.0f, c * 255.0f + 0.5f))); };
++	color = {toByte(diffuse.r), toByte(diffuse.g), toByte(diffuse.b), toByte(material.diffuse.a)};
++	specularColor = {toByte(spec.r), toByte(spec.g), toByte(spec.b), 0};
++}
++
++// Each vertex is lit as Direct3D lights it, from the scene's lights and the
++// current material; texture stage 0 then combines that with the texture.
+ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ {
+ 	if (!m_renderedImage || !m_renderedImage->pixels) {
+@@ -1545,8 +1649,21 @@ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ 	pixelState.alphaOp = tss[static_cast<DWORD>(D3DTSS_ALPHAOP)];
+ 	pixelState.alphaArg1 = tss[static_cast<DWORD>(D3DTSS_ALPHAARG1)];
+ 	pixelState.alphaArg2 = tss[static_cast<DWORD>(D3DTSS_ALPHAARG2)];
++	pixelState.specular = st.Render(D3DRENDERSTATE_SPECULARENABLE) != 0;
+ 	const DWORD cull = st.Render(D3DRENDERSTATE_CULLMODE);
+ 
++	// The eye in world space, for the specular half vector (LOCALVIEWER).
++	D3DVECTOR eye = {0, 0, 0};
++	{
++		const D3DRMMATRIX4D& v = draw.view;
++		D3DVECTOR t = {v[3][0], v[3][1], v[3][2]};
++		eye = {
++			-(t.x * v[0][0] + t.y * v[0][1] + t.z * v[0][2]),
++			-(t.x * v[1][0] + t.y * v[1][1] + t.z * v[1][2]),
++			-(t.x * v[2][0] + t.y * v[2][1] + t.z * v[2][2])
++		};
++	}
++
+ 	const DWORD vertexCount = draw.vertexCount;
+ 	m_transformedPositions.resize(vertexCount);
+ 	for (DWORD i = 0; i < vertexCount; ++i) {
+@@ -1561,7 +1678,15 @@ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ 		if (!m_vertexLit[i]) {
+ 			m_vertexLit[i] = 1;
+ 			const D3DVERTEX& v = draw.vertices[i];
+-			ApplyLighting({v.x, v.y, v.z}, {v.nx, v.ny, v.nz}, appearance, m_vertexColors[i], m_vertexSpeculars[i]);
++			LightImmediateVertex(
++				{v.x, v.y, v.z},
++				{v.nx, v.ny, v.nz},
++				draw.material,
++				eye,
++				pixelState.specular,
++				m_vertexColors[i],
++				m_vertexSpeculars[i]
++			);
+ 		}
+ 	};
+ 
+@@ -1592,11 +1717,18 @@ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ 			c1 = m_vertexColors[i1];
+ 			c2 = m_vertexColors[i2];
+ 		}
+-		const SDL_Color none = {0, 0, 0, 0};
++		SDL_Color s0 = m_vertexSpeculars[i0], s1, s2;
++		if (appearance.flat) {
++			s1 = s2 = s0;
++		}
++		else {
++			s1 = m_vertexSpeculars[i1];
++			s2 = m_vertexSpeculars[i2];
++		}
+ 		SWLitVertex tri[3] = {
+-			{p0, {draw.vertices[i0].tu, draw.vertices[i0].tv}, c0, none},
+-			{p1, {draw.vertices[i1].tu, draw.vertices[i1].tv}, c1, none},
+-			{p2, {draw.vertices[i2].tu, draw.vertices[i2].tv}, c2, none},
++			{p0, {draw.vertices[i0].tu, draw.vertices[i0].tv}, c0, s0},
++			{p1, {draw.vertices[i1].tu, draw.vertices[i1].tv}, c1, s1},
++			{p2, {draw.vertices[i2].tu, draw.vertices[i2].tv}, c2, s2},
+ 		};
+ 		DrawImmediateClipped(tri, pixelState);
+ 	}
+diff --git a/miniwin/src/d3drm/d3drm.cpp b/miniwin/src/d3drm/d3drm.cpp
+index 146d3e1..677f299 100644
+--- a/miniwin/src/d3drm/d3drm.cpp
++++ b/miniwin/src/d3drm/d3drm.cpp
+@@ -112,17 +112,36 @@ struct Direct3DRMMaterialImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMMater
+ 	D3DVALUE GetPower() override { return m_power; }
+ 	HRESULT SetSpecular(D3DVALUE r, D3DVALUE g, D3DVALUE b) override
+ 	{
+-		MINIWIN_NOT_IMPLEMENTED();
+-		return E_NOTIMPL;
++		m_specular[0] = r;
++		m_specular[1] = g;
++		m_specular[2] = b;
++		return DD_OK;
+ 	}
+ 	HRESULT SetEmissive(D3DVALUE r, D3DVALUE g, D3DVALUE b) override
+ 	{
+-		MINIWIN_NOT_IMPLEMENTED();
+-		return E_NOTIMPL;
++		m_emissive[0] = r;
++		m_emissive[1] = g;
++		m_emissive[2] = b;
++		return DD_OK;
+ 	}
++	HRESULT GetSpecular(D3DVALUE* r, D3DVALUE* g, D3DVALUE* b) override { return Get(m_specular, r, g, b); }
++	HRESULT GetEmissive(D3DVALUE* r, D3DVALUE* g, D3DVALUE* b) override { return Get(m_emissive, r, g, b); }
+ 
+ private:
++	static HRESULT Get(const D3DVALUE (&value)[3], D3DVALUE* r, D3DVALUE* g, D3DVALUE* b)
++	{
++		if (!r || !g || !b) {
++			return DDERR_INVALIDPARAMS;
++		}
++		*r = value[0];
++		*g = value[1];
++		*b = value[2];
++		return DD_OK;
++	}
+ 	D3DVALUE m_power;
++	// D3DRM's defaults: white specular, no emission.
++	D3DVALUE m_specular[3] = {1.f, 1.f, 1.f};
++	D3DVALUE m_emissive[3] = {0.f, 0.f, 0.f};
+ };
+ 
+ HRESULT Direct3DRMImpl::QueryInterface(const GUID& riid, void** ppvObject)
+diff --git a/miniwin/src/d3drm/d3drmlight.cpp b/miniwin/src/d3drm/d3drmlight.cpp
+index 228d3a8..04b390a 100644
+--- a/miniwin/src/d3drm/d3drmlight.cpp
++++ b/miniwin/src/d3drm/d3drmlight.cpp
+@@ -1,15 +1,23 @@
+ #include "d3drmlight_impl.h"
+ #include "miniwin.h"
+ 
++#include <algorithm>
++
+ Direct3DRMLightImpl::Direct3DRMLightImpl(D3DRMLIGHTTYPE type, float r, float g, float b) : m_type(type)
+ {
+ 	SetColorRGB(r, g, b);
+ }
+ 
++Direct3DRMLightImpl::~Direct3DRMLightImpl()
++{
++	if (m_enableFrame) {
++		m_enableFrame->Release();
++	}
++}
++
+ HRESULT Direct3DRMLightImpl::SetColorRGB(float r, float g, float b)
+ {
+-	m_color = (0xFF << 24) | (static_cast<BYTE>(r * 255.0f) << 16) | (static_cast<BYTE>(g * 255.0f) << 8) |
+-			  (static_cast<BYTE>(b * 255.0f));
++	m_color = {r, g, b, 1.f};
+ 	return DD_OK;
+ }
+ 
+@@ -20,35 +28,75 @@ D3DRMLIGHTTYPE Direct3DRMLightImpl::GetType()
+ 
+ D3DCOLOR Direct3DRMLightImpl::GetColor()
+ {
+-	return m_color;
++	auto toByte = [](float c) { return static_cast<DWORD>(std::min(1.f, std::max(0.f, c)) * 255.f); };
++	return (0xFFu << 24) | (toByte(m_color.r) << 16) | (toByte(m_color.g) << 8) | toByte(m_color.b);
+ }
+ 
++// The alpha byte is ignored, as D3DRM ignores it.
+ HRESULT Direct3DRMLightImpl::SetColor(D3DCOLOR color)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOTIMPL;
++	m_color = {((color >> 16) & 0xFF) / 255.f, ((color >> 8) & 0xFF) / 255.f, (color & 0xFF) / 255.f, 1.f};
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMLightImpl::SetRange(D3DVALUE range)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOTIMPL;
++	m_range = range;
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMLightImpl::SetUmbra(D3DVALUE angle)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOTIMPL;
++	m_umbra = angle;
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMLightImpl::SetPenumbra(D3DVALUE angle)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOTIMPL;
++	m_penumbra = angle;
++	return DD_OK;
++}
++
++HRESULT Direct3DRMLightImpl::SetConstantAttenuation(D3DVALUE attenuation)
++{
++	m_attenuation[0] = attenuation;
++	return DD_OK;
+ }
+ 
++HRESULT Direct3DRMLightImpl::SetLinearAttenuation(D3DVALUE attenuation)
++{
++	m_attenuation[1] = attenuation;
++	return DD_OK;
++}
++
++HRESULT Direct3DRMLightImpl::SetQuadraticAttenuation(D3DVALUE attenuation)
++{
++	m_attenuation[2] = attenuation;
++	return DD_OK;
++}
++
++// The light lights only the visuals of this frame and its descendants;
++// nullptr lights every frame again.
+ HRESULT Direct3DRMLightImpl::SetEnableFrame(IDirect3DRMFrame* frame)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOTIMPL;
++	if (frame) {
++		frame->AddRef();
++	}
++	if (m_enableFrame) {
++		m_enableFrame->Release();
++	}
++	m_enableFrame = frame;
++	return DD_OK;
++}
++
++HRESULT Direct3DRMLightImpl::GetEnableFrame(IDirect3DRMFrame** frame)
++{
++	if (!frame) {
++		return DDERR_INVALIDPARAMS;
++	}
++	*frame = m_enableFrame;
++	if (m_enableFrame) {
++		m_enableFrame->AddRef();
++	}
++	return DD_OK;
+ }
+diff --git a/miniwin/src/d3drm/d3drmviewport.cpp b/miniwin/src/d3drm/d3drmviewport.cpp
+index fcdb0e8..ee945c6 100644
+--- a/miniwin/src/d3drm/d3drmviewport.cpp
++++ b/miniwin/src/d3drm/d3drmviewport.cpp
+@@ -1,5 +1,6 @@
+ #include "d3drm_impl.h"
+ #include "d3drmframe_impl.h"
++#include "d3drmlight_impl.h"
+ #include "d3drmmesh_impl.h"
+ #include "d3drmrenderer.h"
+ #include "d3drmuservisual_impl.h"
+@@ -110,11 +111,7 @@ static void ComputeFrameWorldMatrix(IDirect3DRMFrame* frame, D3DRMMATRIX4D out)
+ 	memcpy(out, acc, sizeof(acc));
+ }
+ 
+-void Direct3DRMViewportImpl::CollectLightsFromFrame(
+-	IDirect3DRMFrame* frame,
+-	D3DRMMATRIX4D parentToWorld,
+-	std::vector<SceneLight>& lights
+-)
++void Direct3DRMViewportImpl::CollectLightsFromFrame(IDirect3DRMFrame* frame, D3DRMMATRIX4D parentToWorld)
+ {
+ 	auto* frameImpl = static_cast<Direct3DRMFrameImpl*>(frame);
+ 	// Row vectors, as D3DRM: a point goes through the frame's own transform
+@@ -128,14 +125,15 @@ void Direct3DRMViewportImpl::CollectLightsFromFrame(
+ 	for (DWORD li = 0; li < lightCount; ++li) {
+ 		IDirect3DRMLight* light = nullptr;
+ 		lightArray->GetElement(li, &light);
+-		D3DCOLOR color = light->GetColor();
++		auto* lightImpl = static_cast<Direct3DRMLightImpl*>(light);
+ 		SceneLight extracted;
+-		extracted.color = {
+-			((color >> 0) & 0xFF) / 255.0f,
+-			((color >> 8) & 0xFF) / 255.0f,
+-			((color >> 16) & 0xFF) / 255.0f,
+-			((color >> 24) & 0xFF) / 255.0f
+-		};
++		extracted.color = lightImpl->GetColorValue();
++		extracted.range = light->GetRange();
++		extracted.attenuation[0] = light->GetConstantAttenuation();
++		extracted.attenuation[1] = light->GetLinearAttenuation();
++		extracted.attenuation[2] = light->GetQuadraticAttenuation();
++		extracted.umbra = light->GetUmbra();
++		extracted.penumbra = light->GetPenumbra();
+ 
+ 		D3DRMLIGHTTYPE type = light->GetType();
+ 		if (type == D3DRMLIGHT_POINT || type == D3DRMLIGHT_SPOT || type == D3DRMLIGHT_PARALLELPOINT) {
+@@ -147,7 +145,8 @@ void Direct3DRMViewportImpl::CollectLightsFromFrame(
+ 			extracted.directional = 1.f;
+ 		}
+ 
+-		lights.push_back(extracted);
++		m_lights.push_back(extracted);
++		m_lightEnableFrames.push_back(lightImpl->PeekEnableFrame());
+ 		light->Release();
+ 	}
+ 	lightArray->Release();
+@@ -158,7 +157,7 @@ void Direct3DRMViewportImpl::CollectLightsFromFrame(
+ 	for (DWORD i = 0; i < n; ++i) {
+ 		IDirect3DRMFrame* childFrame = nullptr;
+ 		children->GetElement(i, &childFrame);
+-		CollectLightsFromFrame(childFrame, worldMatrix, lights);
++		CollectLightsFromFrame(childFrame, worldMatrix);
+ 		childFrame->Release();
+ 	}
+ 	children->Release();
+@@ -236,9 +235,34 @@ float CalculateDepth(const D3DRMMATRIX4D& viewProj, const D3DRMMATRIX4D& worldMa
+ 	return (clipPos.z / clipPos.w + 1.0f) * 0.5f;
+ }
+ 
+-void Direct3DRMViewportImpl::CollectMeshesFromFrame(IDirect3DRMFrame* frame, D3DRMMATRIX4D parentMatrix)
++void Direct3DRMViewportImpl::UseLights(uint64_t mask)
++{
++	if (mask == m_pushedLightMask) {
++		return;
++	}
++	m_activeLights.clear();
++	for (size_t i = 0; i < m_lights.size(); ++i) {
++		if (i >= 64 || (mask >> i) & 1) {
++			m_activeLights.push_back(m_lights[i]);
++		}
++	}
++	m_renderer->PushLights(m_activeLights.data(), m_activeLights.size());
++	m_pushedLightMask = mask;
++}
++
++void Direct3DRMViewportImpl::CollectMeshesFromFrame(
++	IDirect3DRMFrame* frame,
++	D3DRMMATRIX4D parentMatrix,
++	uint64_t lightMask
++)
+ {
+ 	Direct3DRMFrameImpl* frameImpl = static_cast<Direct3DRMFrameImpl*>(frame);
++	// A light with an enable frame lights that frame's hierarchy only.
++	for (size_t i = 0; i < m_lightEnableFrames.size() && i < 64; ++i) {
++		if (m_lightEnableFrames[i] && static_cast<Direct3DRMFrameImpl*>(m_lightEnableFrames[i]) == frameImpl) {
++			lightMask |= uint64_t(1) << i;
++		}
++	}
+ 	D3DRMMATRIX4D localMatrix;
+ 	memcpy(localMatrix, frameImpl->m_transform, sizeof(D3DRMMATRIX4D));
+ 
+@@ -258,7 +282,7 @@ void Direct3DRMViewportImpl::CollectMeshesFromFrame(IDirect3DRMFrame* frame, D3D
+ 		IDirect3DRMFrame* childFrame = nullptr;
+ 		visual->QueryInterface(IID_IDirect3DRMFrame, (void**) &childFrame);
+ 		if (childFrame) {
+-			CollectMeshesFromFrame(childFrame, worldMatrix);
++			CollectMeshesFromFrame(childFrame, worldMatrix, lightMask);
+ 			childFrame->Release();
+ 			visual->Release();
+ 			continue;
+@@ -288,13 +312,15 @@ void Direct3DRMViewportImpl::CollectMeshesFromFrame(IDirect3DRMFrame* frame, D3D
+ 							 {},
+ 							 {},
+ 							 appearance,
+-							 CalculateDepth(m_viewProjectionwMatrix, worldMatrix)}
++							 CalculateDepth(m_viewProjectionwMatrix, worldMatrix),
++							 lightMask}
+ 						);
+ 						memcpy(m_deferredDraws.back().modelViewMatrix, modelViewMatrix, sizeof(D3DRMMATRIX4D));
+ 						memcpy(m_deferredDraws.back().worldMatrix, worldMatrix, sizeof(D3DRMMATRIX4D));
+ 						memcpy(m_deferredDraws.back().normalMatrix, worldMatrixInvert, sizeof(Matrix3x3));
+ 					}
+ 					else {
++						UseLights(lightMask);
+ 						m_renderer->SubmitDraw(
+ 							m_renderer->GetMeshId(mesh, &meshGroup),
+ 							modelViewMatrix,
+@@ -314,6 +340,7 @@ void Direct3DRMViewportImpl::CollectMeshesFromFrame(IDirect3DRMFrame* frame, D3D
+ 		IDirect3DRMUserVisual* userVisual = nullptr;
+ 		visual->QueryInterface(IID_IDirect3DRMUserVisual, (void**) &userVisual);
+ 		if (userVisual) {
++			UseLights(lightMask);
+ 			RenderUserVisual(static_cast<Direct3DRMUserVisualImpl*>(userVisual), worldMatrix);
+ 			userVisual->Release();
+ 		}
+@@ -329,7 +356,7 @@ void Direct3DRMViewportImpl::CollectMeshesFromFrame(IDirect3DRMFrame* frame, D3D
+ 	for (DWORD i = 0; i < childCount; ++i) {
+ 		IDirect3DRMFrame* childFrame = nullptr;
+ 		children->GetElement(i, &childFrame);
+-		CollectMeshesFromFrame(childFrame, worldMatrix);
++		CollectMeshesFromFrame(childFrame, worldMatrix, lightMask);
+ 		childFrame->Release();
+ 	}
+ 	children->Release();
+@@ -376,15 +403,23 @@ HRESULT Direct3DRMViewportImpl::RenderScene()
+ 
+ 	ApplyToRenderer();
+ 
+-	std::vector<SceneLight> lights;
+-	CollectLightsFromFrame(m_rootFrame, identity, lights);
+-	m_renderer->PushLights(lights.data(), lights.size());
++	m_lights.clear();
++	m_lightEnableFrames.clear();
++	CollectLightsFromFrame(m_rootFrame, identity);
++	uint64_t sceneMask = 0;
++	for (size_t i = 0; i < m_lightEnableFrames.size() && i < 64; ++i) {
++		if (!m_lightEnableFrames[i]) {
++			sceneMask |= uint64_t(1) << i;
++		}
++	}
++	m_pushedLightMask = ~sceneMask; // force the first push
++	UseLights(sceneMask);
+ 	HRESULT status = m_renderer->BeginFrame();
+ 	if (status != DD_OK) {
+ 		return status;
+ 	}
+ 
+-	CollectMeshesFromFrame(m_rootFrame, identity);
++	CollectMeshesFromFrame(m_rootFrame, identity, sceneMask);
+ 
+ 	std::sort(
+ 		m_deferredDraws.begin(),
+@@ -393,6 +428,7 @@ HRESULT Direct3DRMViewportImpl::RenderScene()
+ 	);
+ 	m_renderer->EnableTransparency();
+ 	for (const DeferredDrawCommand& cmd : m_deferredDraws) {
++		UseLights(cmd.lightMask);
+ 		m_renderer->SubmitDraw(
+ 			cmd.meshId,
+ 			cmd.modelViewMatrix,
+diff --git a/miniwin/src/internal/d3drmlight_impl.h b/miniwin/src/internal/d3drmlight_impl.h
+index 09c6b64..5c20164 100644
+--- a/miniwin/src/internal/d3drmlight_impl.h
++++ b/miniwin/src/internal/d3drmlight_impl.h
+@@ -3,9 +3,11 @@
+ #include "d3drm_impl.h"
+ #include "d3drmobject_impl.h"
+ #include "miniwin.h"
++#include "structs.h"
+ 
+ struct Direct3DRMLightImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMLight> {
+ 	Direct3DRMLightImpl(D3DRMLIGHTTYPE type, float r, float g, float b);
++	~Direct3DRMLightImpl() override;
+ 	HRESULT SetColor(D3DCOLOR color) override;
+ 	HRESULT SetColorRGB(float r, float g, float b) override;
+ 	HRESULT SetRange(D3DVALUE range) override;
+@@ -14,10 +16,32 @@ struct Direct3DRMLightImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMLight> {
+ 	HRESULT SetEnableFrame(IDirect3DRMFrame* frame) override;
+ 	D3DRMLIGHTTYPE GetType() override;
+ 	D3DCOLOR GetColor() override;
++	HRESULT SetConstantAttenuation(D3DVALUE attenuation) override;
++	HRESULT SetLinearAttenuation(D3DVALUE attenuation) override;
++	HRESULT SetQuadraticAttenuation(D3DVALUE attenuation) override;
++	D3DVALUE GetRange() override { return m_range; }
++	D3DVALUE GetUmbra() override { return m_umbra; }
++	D3DVALUE GetPenumbra() override { return m_penumbra; }
++	D3DVALUE GetConstantAttenuation() override { return m_attenuation[0]; }
++	D3DVALUE GetLinearAttenuation() override { return m_attenuation[1]; }
++	D3DVALUE GetQuadraticAttenuation() override { return m_attenuation[2]; }
++	HRESULT GetEnableFrame(IDirect3DRMFrame** frame) override;
++
++	// The colour as D3DRM keeps it: floats, which may exceed 1.
++	const FColor& GetColorValue() const { return m_color; }
++	// The enable frame without a reference, or nullptr when the light
++	// lights every frame.
++	IDirect3DRMFrame* PeekEnableFrame() const { return m_enableFrame; }
+ 
+ private:
+ 	D3DRMLIGHTTYPE m_type;
+-	D3DCOLOR m_color = 0xFFFFFFFF;
++	FColor m_color = {1.f, 1.f, 1.f, 1.f};
++	// D3DRM's defaults.
++	D3DVALUE m_range = 256.f;
++	D3DVALUE m_umbra = 0.4f;
++	D3DVALUE m_penumbra = 0.5f;
++	D3DVALUE m_attenuation[3] = {1.f, 0.f, 0.f};
++	IDirect3DRMFrame* m_enableFrame = nullptr;
+ };
+ 
+ struct Direct3DRMLightArrayImpl
+diff --git a/miniwin/src/internal/d3drmrenderer.h b/miniwin/src/internal/d3drmrenderer.h
+index 557dba0..225e34c 100644
+--- a/miniwin/src/internal/d3drmrenderer.h
++++ b/miniwin/src/internal/d3drmrenderer.h
+@@ -14,14 +14,23 @@
+ 
+ static_assert(sizeof(D3DRMVERTEX) == 32);
+ 
++// A light in world space. A spot light is both positional and directional.
++// The first 48 bytes are the shading layout the GPU backends upload; the
++// rest are D3DRM's range, attenuation and spot cone, with D3DRM's defaults.
+ struct SceneLight {
+ 	FColor color;
+ 	D3DVECTOR position;
+ 	float positional = 0.f; // position is valid if 1.f
+ 	D3DVECTOR direction;
+ 	float directional = 0.f; // direction is valid if 1.f
++	float range = 256.f;     // positional lights light nothing beyond it
++	float attenuation[3] = {1.f, 0.f, 0.f}; // 1 / (a0 + a1 d + a2 d^2)
++	// The spot's cones, as angles in radians from its axis: full strength
++	// inside the umbra, falling off to nothing at the penumbra.
++	float umbra = 0.4f;
++	float penumbra = 0.5f;
+ };
+-static_assert(sizeof(SceneLight) == 48);
++static_assert(sizeof(SceneLight) == 72);
+ 
+ struct Plane {
+ 	D3DVECTOR normal;
+diff --git a/miniwin/src/internal/d3drmrenderer_sdl3gpu.h b/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
+index 46a5113..9802874 100644
+--- a/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
++++ b/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
+@@ -18,8 +18,18 @@ typedef struct {
+ static_assert(sizeof(ViewportUniforms) % 16 == 0);
+ static_assert(sizeof(ViewportUniforms) == 192);
+ 
++// The shader's light: SceneLight's first 48 bytes.
++struct ShaderLight {
++	FColor color;
++	D3DVECTOR position;
++	float positional;
++	D3DVECTOR direction;
++	float directional;
++};
++static_assert(sizeof(ShaderLight) == 48);
++
+ struct FragmentShadingData {
+-	SceneLight lights[3];
++	ShaderLight lights[3];
+ 	int lightCount;
+ 	float shininess;
+ 	SDL_Color color;
+diff --git a/miniwin/src/internal/d3drmrenderer_software.h b/miniwin/src/internal/d3drmrenderer_software.h
+index dde1616..b45ad47 100644
+--- a/miniwin/src/internal/d3drmrenderer_software.h
++++ b/miniwin/src/internal/d3drmrenderer_software.h
+@@ -88,6 +88,7 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 		int texWidth, texHeight, texPitch;
+ 		bool keyed, colorKeyEnable, linear;
+ 		DWORD colorOp, colorArg1, colorArg2, alphaOp, alphaArg1, alphaArg2;
++		bool specular; // SPECULARENABLE: add the vertex specular after stage 0
+ 	};
+ 	void DrawImmediateClipped(const SWLitVertex (&v)[3], const ImmediatePixelState& state);
+ 	void DrawImmediateTriangle(
+@@ -104,6 +105,18 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 		SDL_Color& color,
+ 		SDL_Color& specular
+ 	);
++	// Direct3D's lighting of a D3DFVF_VERTEX with a D3DMATERIAL: emissive,
++	// plus ambient light times the material's ambient, plus each light's
++	// diffuse and (when wanted) specular.
++	void LightImmediateVertex(
++		const D3DVECTOR& position,
++		const D3DVECTOR& normal,
++		const D3DMATERIAL& material,
++		const D3DVECTOR& eye,
++		bool specular,
++		SDL_Color& color,
++		SDL_Color& specularColor
++	);
+ 	void AddTextureDestroyCallback(Uint32 id, IDirect3DRMTexture* texture);
+ 	SDL_Surface* ConvertTexture(Direct3DRMTextureImpl* texture, bool& keyed) const;
+ 	void AddMeshDestroyCallback(Uint32 id, IDirect3DRMMesh* mesh);
+@@ -112,9 +125,18 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 	// lighting loop does no normalization.
+ 	struct PreparedLight {
+ 		D3DVECTOR vec; // normalized direction to light (directional) or position (positional)
++		D3DVECTOR spotDirection; // unit direction the spot shines in
+ 		FColor color;
+ 		bool positional;
++		bool spot;
++		float range;
++		float attenuation[3];
++		float cosUmbra;    // inside it the spot is at full strength
++		float cosPenumbra; // outside it the spot lights nothing
+ 	};
++	// How much of a positional light reaches worldPos (range, attenuation
++	// and spot cone), and the unit vector from worldPos toward the light.
++	float LightReach(const PreparedLight& light, const D3DVECTOR& worldPos, D3DVECTOR& toLight) const;
+ 
+ 	D3DLightingModel m_lightingModel;
+ 
+diff --git a/miniwin/src/internal/d3drmviewport_impl.h b/miniwin/src/internal/d3drmviewport_impl.h
+index 26b7fe8..9ff0ee6 100644
+--- a/miniwin/src/internal/d3drmviewport_impl.h
++++ b/miniwin/src/internal/d3drmviewport_impl.h
+@@ -14,6 +14,7 @@ struct DeferredDrawCommand {
+ 	Matrix3x3 normalMatrix;
+ 	Appearance appearance;
+ 	float depth;
++	uint64_t lightMask;
+ };
+ 
+ class Direct3DRMDeviceImpl;
+@@ -69,13 +70,23 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 
+ private:
+ 	HRESULT RenderScene();
+-	void CollectLightsFromFrame(IDirect3DRMFrame* frame, D3DRMMATRIX4D parentMatrix, std::vector<SceneLight>& lights);
+-	void CollectMeshesFromFrame(IDirect3DRMFrame* frame, D3DRMMATRIX4D parentMatrix);
++	void CollectLightsFromFrame(IDirect3DRMFrame* frame, D3DRMMATRIX4D parentMatrix);
++	// lightMask has a bit for each of m_lights that lights the frame's
++	// parent; the frame adds the lights whose enable frame it is.
++	void CollectMeshesFromFrame(IDirect3DRMFrame* frame, D3DRMMATRIX4D parentMatrix, uint64_t lightMask);
++	// Push the lights in mask to the renderer, unless they are pushed already.
++	void UseLights(uint64_t mask);
+ 	void BuildViewFrustumPlanes();
+ 	void RenderUserVisual(struct Direct3DRMUserVisualImpl* visual, const D3DRMMATRIX4D worldMatrix);
+ 	Direct3DRMRenderer* m_renderer;
+ 	IDirect3DRMDevice* m_device; // the device the viewport was created on; not owned
+ 	std::vector<DeferredDrawCommand> m_deferredDraws;
++	// The scene's lights, and for each its enable frame (nullptr when it
++	// lights every frame). Lights past the mask's 64 bits light every frame.
++	std::vector<SceneLight> m_lights;
++	std::vector<IDirect3DRMFrame*> m_lightEnableFrames;
++	std::vector<SceneLight> m_activeLights;
++	uint64_t m_pushedLightMask = 0;
+ 	D3DCOLOR m_backgroundColor = 0xFF000000;
+ 	LONG m_x;
+ 	LONG m_y;

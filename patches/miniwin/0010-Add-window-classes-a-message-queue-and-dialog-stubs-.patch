@@ -1,0 +1,927 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 21:54:06 -0800
+Subject: [PATCH] Add window classes, a message queue and dialog stubs to
+ miniwin
+
+miniwin gains the USER32 subset a Win32 game's WinMain needs to run over
+SDL3: RegisterClassA, CreateWindowExA, DestroyWindow, DefWindowProcA,
+PeekMessageA, TranslateMessage, DispatchMessageA, PostQuitMessage,
+SendMessageA, ShowWindow, UpdateWindow, SetActiveWindow, SetFocus,
+SetCapture, ReleaseCapture, SetWindowTextA, GetWindowRect, GetClientRect,
+GetDesktopWindow, AdjustWindowRect, SetWindowLongA, MoveWindow,
+ShowCursor, SetCursor, GetCursorPos, SetCursorPos, ScreenToClient and
+MessageBoxA. SDL events become WM_* messages for the window's procedure.
+Dialog boxes need resource templates, so DialogBoxParamA, EndDialog,
+GetDlgItem and EnableWindow are declared and fail.
+
+Also: POINT, MSG, WNDCLASSA, WINDOWPOS, the message and control
+constants, one-rectangle regions (CreateRectRgn, GetRegionData,
+OffsetRect), D3DRMVectorRandom and D3DRMVectorRotate, D3DDEVICEDESC's
+dwDevCaps and D3DDD_* flags, DDLOCK_NOSYSLOCK and DirectDrawEnumerateA.
+
+diff --git a/miniwin/CMakeLists.txt b/miniwin/CMakeLists.txt
+index eb3e318..b45ca69 100644
+--- a/miniwin/CMakeLists.txt
++++ b/miniwin/CMakeLists.txt
+@@ -4,6 +4,7 @@ target_include_directories(miniwin-headers INTERFACE $<BUILD_INTERFACE:${CMAKE_C
+ add_library(miniwin STATIC EXCLUDE_FROM_ALL
+   # Core
+   src/windows/windows.cpp
++  src/windows/windowmessages.cpp
+ 
+   # DDraw
+   src/ddraw/ddpalette.cpp
+diff --git a/miniwin/include/miniwin/d3d.h b/miniwin/include/miniwin/d3d.h
+index 9d2cba5..e0a3d18 100644
+--- a/miniwin/include/miniwin/d3d.h
++++ b/miniwin/include/miniwin/d3d.h
+@@ -32,10 +32,19 @@ enum class DDBitDepths : uint32_t {
+ };
+ ENABLE_BITMASK_OPERATORS(DDBitDepths)
+ 
++#define D3DDD_COLORMODEL D3DDeviceDescFlags::COLORMODEL
++#define D3DDD_DEVCAPS D3DDeviceDescFlags::DEVCAPS
++#define D3DDD_DEVICERENDERBITDEPTH D3DDeviceDescFlags::DEVICERENDERBITDEPTH
+ #define D3DDD_DEVICEZBUFFERBITDEPTH D3DDeviceDescFlags::DEVICEZBUFFERBITDEPTH
+ enum class D3DDeviceDescFlags : uint32_t {
++	COLORMODEL = 1 << 0,
++	DEVCAPS = 1 << 1,
++	DEVICERENDERBITDEPTH = 1 << 7,
+ 	DEVICEZBUFFERBITDEPTH = 1 << 8,
+ };
++
++#define D3DDEVCAPS_TEXTURESYSTEMMEMORY 0x00000100
++#define D3DDEVCAPS_TEXTUREVIDEOMEMORY 0x00000200
+ ENABLE_BITMASK_OPERATORS(D3DDeviceDescFlags)
+ 
+ #define D3DPSHADECAPS_ALPHAFLATBLEND D3DPShadeCaps::ALPHAFLATBLEND
+@@ -181,6 +190,7 @@ typedef D3DMATERIAL* LPD3DMATERIAL;
+ 
+ struct D3DDEVICEDESC {
+ 	D3DDeviceDescFlags dwFlags;
++	DWORD dwDevCaps;
+ 	DDBitDepths dwDeviceZBufferBitDepth;
+ 	D3DCOLORMODEL dcmColorModel; // D3DCOLOR_* Bit flag, but Isle think it's an enum
+ 	DDBitDepths dwDeviceRenderBitDepth;
+diff --git a/miniwin/include/miniwin/d3drm.h b/miniwin/include/miniwin/d3drm.h
+index 6163e46..e729e49 100644
+--- a/miniwin/include/miniwin/d3drm.h
++++ b/miniwin/include/miniwin/d3drm.h
+@@ -626,3 +626,9 @@ typedef IDirect3DRM3* LPDIRECT3DRM3;
+ HRESULT WINAPI Direct3DRMCreate(IDirect3DRM** direct3DRM);
+ 
+ D3DCOLOR D3DRMCreateColorRGBA(D3DVALUE red, D3DVALUE green, D3DVALUE blue, D3DVALUE alpha);
++
++// A random unit vector.
++D3DVECTOR* D3DRMVectorRandom(D3DVECTOR* d);
++
++// v rotated by theta radians about axis, in r.
++D3DVECTOR* D3DRMVectorRotate(D3DVECTOR* r, D3DVECTOR* v, D3DVECTOR* axis, D3DVALUE theta);
+diff --git a/miniwin/include/miniwin/ddraw.h b/miniwin/include/miniwin/ddraw.h
+index a678081..09c9561 100644
+--- a/miniwin/include/miniwin/ddraw.h
++++ b/miniwin/include/miniwin/ddraw.h
+@@ -169,12 +169,14 @@ ENABLE_BITMASK_OPERATORS(DDBltFastFlags)
+ #define DDLOCK_SURFACEMEMORYPTR DDLockFlags::SURFACEMEMORYPTR
+ #define DDLOCK_WAIT DDLockFlags::WAIT
+ #define DDLOCK_WRITEONLY DDLockFlags::WRITEONLY
++#define DDLOCK_NOSYSLOCK DDLockFlags::NOSYSLOCK
+ #define DDLOCK_READONLY DDLockFlags::READONLY
+ enum class DDLockFlags : uint32_t {
+ 	SURFACEMEMORYPTR = 0,
+ 	WAIT = 1 << 0,
+ 	READONLY = 1 << 4,
+ 	WRITEONLY = 1 << 5,
++	NOSYSLOCK = 1 << 11,
+ };
+ ENABLE_BITMASK_OPERATORS(DDLockFlags)
+ 
+@@ -472,6 +474,7 @@ HRESULT DirectDrawCreate(LPGUID lpGuid, LPDIRECTDRAW* lplpDD, IUnknown* pUnkOute
+ 
+ typedef BOOL (*LPDDENUMCALLBACKA)(GUID*, LPSTR, LPSTR, LPVOID);
+ HRESULT DirectDrawEnumerate(LPDDENUMCALLBACKA cb, void* context);
++#define DirectDrawEnumerateA DirectDrawEnumerate
+ 
+ UINT WINAPI GetSystemPaletteEntries(HDC hdc, UINT iStart, UINT cEntries, LPPALETTEENTRY pPalEntries);
+ 
+diff --git a/miniwin/include/miniwin/windows.h b/miniwin/include/miniwin/windows.h
+index c42be8f..78e46f4 100644
+--- a/miniwin/include/miniwin/windows.h
++++ b/miniwin/include/miniwin/windows.h
+@@ -30,14 +30,82 @@
+ #define SWP_NOSIZE 0x0004
+ #define SWP_NOZORDER 0x0001
+ 
++#define WM_CREATE 0x0001
++#define WM_DESTROY 0x0002
++#define WM_MOVE 0x0003
++#define WM_SIZE 0x0005
++#define WM_ACTIVATE 0x0006
+ #define WM_CLOSE 0x0010
+ #define WM_QUIT 0x0012
++#define WM_ACTIVATEAPP 0x001C
++#define WM_WINDOWPOSCHANGING 0x0046
++#define WM_NCACTIVATE 0x0086
++#define WM_KEYDOWN 0x0100
++#define WM_KEYUP 0x0101
++#define WM_CHAR 0x0102
++#define WM_SYSKEYDOWN 0x0104
++#define WM_SYSKEYUP 0x0105
+ #define WM_TIMER 0x0113
++#define WM_ENTERMENULOOP 0x0211
++#define WM_EXITMENULOOP 0x0212
++#define WM_MOUSEMOVE 0x0200
++#define WM_LBUTTONDOWN 0x0201
++#define WM_LBUTTONUP 0x0202
++#define WM_LBUTTONDBLCLK 0x0203
++#define WM_RBUTTONDOWN 0x0204
++#define WM_RBUTTONUP 0x0205
++#define WM_RBUTTONDBLCLK 0x0206
++
++#define WM_SETTEXT 0x000C
++#define WM_INITDIALOG 0x0110
++#define WM_COMMAND 0x0111
++
++#define BM_SETCHECK 0x00F1
++#define BN_CLICKED 0
++#define LB_ADDSTRING 0x0180
++#define LB_DELETESTRING 0x0182
++#define LB_SETCURSEL 0x0186
++#define LB_GETCURSEL 0x0188
++#define LB_GETTEXT 0x0189
++#define LB_ERR (-1)
++#define LBN_SELCHANGE 1
++
++#define MAKEINTRESOURCEA(i) ((LPSTR) ((uintptr_t) ((WORD) (i))))
++#define MAKEINTRESOURCE MAKEINTRESOURCEA
++
++#define PM_NOREMOVE 0x0000
++#define PM_REMOVE 0x0001
++
++#define CS_DBLCLKS 0x0008
++
++#define SW_HIDE 0
++#define SW_SHOWNORMAL 1
++#define SW_SHOW 5
++
++#define SWP_NOOWNERZORDER 0x0200
++
++#define MB_OK 0x00000000L
++#define MB_OKCANCEL 0x00000001L
++#define MB_ICONERROR 0x00000010L
++
++#define IDOK 1
++#define IDCANCEL 2
++
++#define BITSPIXEL 12
++
++#define ERROR_SUCCESS 0L
++#define ERROR_ALREADY_EXISTS 183L
++
++#define MAKELPARAM(l, h) ((LPARAM) (DWORD) (((WORD) (l)) | (((DWORD) (WORD) (h)) << 16)))
++#define LOWORD(l) ((WORD) (((uintptr_t) (l)) & 0xffff))
++#define HIWORD(l) ((WORD) ((((uintptr_t) (l)) >> 16) & 0xffff))
+ 
+ #define WS_CAPTION 0x00C00000L
+ #define WS_OVERLAPPED 0x00000000L
+ #define WS_POPUP 0x80000000L
++#define WS_SYSMENU 0x00080000L
+ #define WS_THICKFRAME 0x00040000L
++#define WS_EX_APPWINDOW 0x00040000L
+ 
+ #define GWL_STYLE (-16)
+ #define GWL_EXSTYLE -20
+@@ -82,13 +150,21 @@ typedef struct HPALETTE__* HPALETTE;
+ typedef HICON HCURSOR;
+ typedef HANDLE HFILE;
+ typedef int LSTATUS, HKEY, REGSAM;
++typedef struct HBRUSH__* HBRUSH;
++typedef struct HRGN__* HRGN;
++typedef uintptr_t WPARAM;
++typedef intptr_t LPARAM, LRESULT;
++typedef WORD ATOM;
++typedef LRESULT (*WNDPROC)(HWND, UINT, WPARAM, LPARAM);
++typedef intptr_t INT_PTR;
++typedef INT_PTR (*DLGPROC)(HWND, UINT, WPARAM, LPARAM);
+ 
+ // --- Structs ---
+ struct tagPOINT {
+ 	LONG x;
+ 	LONG y;
+ };
+-typedef tagPOINT* LPPOINT;
++typedef tagPOINT POINT, *LPPOINT;
+ 
+ struct SIZE {
+ 	LONG cx;
+@@ -103,6 +179,39 @@ struct RECT {
+ };
+ typedef RECT* LPRECT;
+ 
++struct WNDCLASSA {
++	UINT style;
++	WNDPROC lpfnWndProc;
++	int cbClsExtra;
++	int cbWndExtra;
++	HINSTANCE hInstance;
++	HICON hIcon;
++	HCURSOR hCursor;
++	HBRUSH hbrBackground;
++	LPCSTR lpszMenuName;
++	LPCSTR lpszClassName;
++};
++
++struct MSG {
++	HWND hwnd;
++	UINT message;
++	WPARAM wParam;
++	LPARAM lParam;
++	DWORD time;
++	tagPOINT pt;
++};
++typedef MSG* LPMSG;
++
++struct WINDOWPOS {
++	HWND hwnd;
++	HWND hwndInsertAfter;
++	int x;
++	int y;
++	int cx;
++	int cy;
++	UINT flags;
++};
++
+ struct RGNDATAHEADER {
+ 	DWORD dwSize;
+ 	DWORD iType;
+@@ -217,3 +326,93 @@ int SetRect(RECT* rc, int left, int top, int right, int bottom);
+ VOID WINAPI Sleep(DWORD dwMilliseconds);
+ 
+ BOOL ClientToScreen(HWND hWnd, LPPOINT lpPoint);
++
++BOOL OffsetRect(LPRECT lprc, int dx, int dy);
++
++// A region is one rectangle.
++HRGN CreateRectRgn(int x1, int y1, int x2, int y2);
++
++DWORD GetRegionData(HRGN hrgn, DWORD nCount, LPRGNDATA lpRgnData);
++
++// --- Window classes, windows and the message queue (over SDL3) ---
++// A window is an SDL_Window; its HWND is the SDL_Window pointer, as for
++// SetWindowPos and DirectDraw's SetCooperativeLevel.
++
++ATOM RegisterClassA(const WNDCLASSA* lpWndClass);
++
++HWND CreateWindowExA(
++	DWORD dwExStyle,
++	LPCSTR lpClassName,
++	LPCSTR lpWindowName,
++	DWORD dwStyle,
++	int X,
++	int Y,
++	int nWidth,
++	int nHeight,
++	HWND hWndParent,
++	HMENU hMenu,
++	HINSTANCE hInstance,
++	LPVOID lpParam
++);
++
++BOOL DestroyWindow(HWND hWnd);
++
++LRESULT DefWindowProcA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
++
++BOOL PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg);
++
++BOOL TranslateMessage(const MSG* lpMsg);
++
++LRESULT DispatchMessageA(const MSG* lpMsg);
++
++void PostQuitMessage(int nExitCode);
++
++BOOL ShowWindow(HWND hWnd, int nCmdShow);
++
++BOOL UpdateWindow(HWND hWnd);
++
++HWND SetActiveWindow(HWND hWnd);
++
++HWND SetFocus(HWND hWnd);
++
++HWND SetCapture(HWND hWnd);
++
++BOOL ReleaseCapture();
++
++BOOL SetWindowTextA(HWND hWnd, LPCSTR lpString);
++
++BOOL GetWindowRect(HWND hWnd, LPRECT lpRect);
++
++BOOL GetClientRect(HWND hWnd, LPRECT lpRect);
++
++HWND GetDesktopWindow();
++
++BOOL AdjustWindowRect(LPRECT lpRect, DWORD dwStyle, BOOL bMenu);
++
++LONG SetWindowLongA(HWND hWnd, int nIndex, LONG dwNewLong);
++
++int ShowCursor(BOOL bShow);
++
++HCURSOR SetCursor(HCURSOR hCursor);
++
++BOOL GetCursorPos(LPPOINT lpPoint);
++
++BOOL SetCursorPos(int X, int Y);
++
++BOOL ScreenToClient(HWND hWnd, LPPOINT lpPoint);
++
++int MessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType);
++
++LRESULT SendMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
++
++BOOL MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, BOOL bRepaint);
++
++BOOL EnableWindow(HWND hWnd, BOOL bEnable);
++
++// Dialog boxes need resource templates, which miniwin has none of: these fail.
++INT_PTR DialogBoxParamA(HINSTANCE hInstance, LPCSTR lpTemplateName, HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam);
++
++BOOL EndDialog(HWND hDlg, INT_PTR nResult);
++
++HWND GetDlgItem(HWND hDlg, int nIDDlgItem);
++
+diff --git a/miniwin/src/d3drm/d3drm.cpp b/miniwin/src/d3drm/d3drm.cpp
+index d1b4821..96d9e13 100644
+--- a/miniwin/src/d3drm/d3drm.cpp
++++ b/miniwin/src/d3drm/d3drm.cpp
+@@ -360,3 +360,41 @@ D3DCOLOR D3DRMCreateColorRGBA(D3DVALUE red, D3DVALUE green, D3DVALUE blue, D3DVA
+ 
+ 	return (a << 24) | (r << 16) | (g << 8) | b;
+ }
++
++D3DVECTOR* D3DRMVectorRandom(D3DVECTOR* d)
++{
++	float length;
++	do {
++		d->x = SDL_randf() * 2.0f - 1.0f;
++		d->y = SDL_randf() * 2.0f - 1.0f;
++		d->z = SDL_randf() * 2.0f - 1.0f;
++		length = d->x * d->x + d->y * d->y + d->z * d->z;
++	} while (length > 1.0f || length < 1e-6f);
++	length = SDL_sqrtf(length);
++	d->x /= length;
++	d->y /= length;
++	d->z /= length;
++	return d;
++}
++
++D3DVECTOR* D3DRMVectorRotate(D3DVECTOR* r, D3DVECTOR* v, D3DVECTOR* axis, D3DVALUE theta)
++{
++	// Rodrigues' rotation about the normalised axis.
++	float length = SDL_sqrtf(axis->x * axis->x + axis->y * axis->y + axis->z * axis->z);
++	if (length < 1e-6f) {
++		*r = *v;
++		return r;
++	}
++	const float kx = axis->x / length;
++	const float ky = axis->y / length;
++	const float kz = axis->z / length;
++	const float c = SDL_cosf(theta);
++	const float s = SDL_sinf(theta);
++	const float dot = kx * v->x + ky * v->y + kz * v->z;
++	const D3DVECTOR in = *v;
++	r->x = in.x * c + (ky * in.z - kz * in.y) * s + kx * dot * (1.0f - c);
++	r->y = in.y * c + (kz * in.x - kx * in.z) * s + ky * dot * (1.0f - c);
++	r->z = in.z * c + (kx * in.y - ky * in.x) * s + kz * dot * (1.0f - c);
++	return r;
++}
++
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+new file mode 100644
+index 0000000..b651cf0
+--- /dev/null
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -0,0 +1,449 @@
++#include "miniwin.h"
++#include "miniwin/windows.h"
++
++#include <SDL3/SDL.h>
++#include <deque>
++#include <string>
++#include <unordered_map>
++
++// Window classes, windows and the message queue over SDL3. A window is an
++// SDL_Window, and its HWND is the SDL_Window pointer. SDL events become the
++// matching window messages, which DispatchMessageA hands to the window
++// procedure of the window's class.
++
++namespace {
++
++std::unordered_map<std::string, WNDCLASSA>& WindowClasses()
++{
++	static std::unordered_map<std::string, WNDCLASSA> classes;
++	return classes;
++}
++
++std::unordered_map<SDL_Window*, WNDPROC>& WindowProcedures()
++{
++	static std::unordered_map<SDL_Window*, WNDPROC> procedures;
++	return procedures;
++}
++
++std::deque<MSG>& PostedMessages()
++{
++	static std::deque<MSG> messages;
++	return messages;
++}
++
++int g_cursorCount = 0;
++
++SDL_Window* WindowOf(SDL_WindowID id)
++{
++	return SDL_GetWindowFromID(id);
++}
++
++void Post(SDL_Window* window, UINT message, WPARAM wParam, LPARAM lParam)
++{
++	MSG msg = {};
++	msg.hwnd = reinterpret_cast<HWND>(window);
++	msg.message = message;
++	msg.wParam = wParam;
++	msg.lParam = lParam;
++	msg.time = (DWORD) SDL_GetTicks();
++	float x = 0.0f;
++	float y = 0.0f;
++	SDL_GetGlobalMouseState(&x, &y);
++	msg.pt.x = (LONG) x;
++	msg.pt.y = (LONG) y;
++	PostedMessages().push_back(msg);
++}
++
++LPARAM MousePosition(float x, float y)
++{
++	return MAKELPARAM((int) x, (int) y);
++}
++
++// Turns one SDL event into window messages on the queue.
++void Translate(const SDL_Event& event)
++{
++	switch (event.type) {
++	case SDL_EVENT_QUIT:
++		for (auto& entry : WindowProcedures()) {
++			Post(entry.first, WM_CLOSE, 0, 0);
++		}
++		break;
++	case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
++		Post(WindowOf(event.window.windowID), WM_CLOSE, 0, 0);
++		break;
++	case SDL_EVENT_WINDOW_FOCUS_GAINED:
++		Post(WindowOf(event.window.windowID), WM_ACTIVATEAPP, TRUE, 0);
++		break;
++	case SDL_EVENT_WINDOW_FOCUS_LOST:
++		Post(WindowOf(event.window.windowID), WM_ACTIVATEAPP, FALSE, 0);
++		break;
++	case SDL_EVENT_WINDOW_MOVED:
++		Post(WindowOf(event.window.windowID), WM_MOVE, 0, MAKELPARAM(event.window.data1, event.window.data2));
++		break;
++	case SDL_EVENT_WINDOW_RESIZED:
++		Post(WindowOf(event.window.windowID), WM_SIZE, 0, MAKELPARAM(event.window.data1, event.window.data2));
++		break;
++	case SDL_EVENT_MOUSE_MOTION:
++		Post(WindowOf(event.motion.windowID), WM_MOUSEMOVE, 0, MousePosition(event.motion.x, event.motion.y));
++		break;
++	case SDL_EVENT_MOUSE_BUTTON_DOWN:
++	case SDL_EVENT_MOUSE_BUTTON_UP: {
++		bool down = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
++		bool doubleClick = down && event.button.clicks == 2;
++		UINT message;
++		if (event.button.button == SDL_BUTTON_LEFT) {
++			message = doubleClick ? WM_LBUTTONDBLCLK : (down ? WM_LBUTTONDOWN : WM_LBUTTONUP);
++		}
++		else if (event.button.button == SDL_BUTTON_RIGHT) {
++			message = doubleClick ? WM_RBUTTONDBLCLK : (down ? WM_RBUTTONDOWN : WM_RBUTTONUP);
++		}
++		else {
++			break;
++		}
++		Post(WindowOf(event.button.windowID), message, 0, MousePosition(event.button.x, event.button.y));
++		break;
++	}
++	case SDL_EVENT_KEY_DOWN:
++	case SDL_EVENT_KEY_UP:
++		Post(
++			WindowOf(event.key.windowID),
++			event.type == SDL_EVENT_KEY_DOWN ? WM_KEYDOWN : WM_KEYUP,
++			(WPARAM) event.key.key,
++			0
++		);
++		break;
++	default:
++		break;
++	}
++}
++
++} // namespace
++
++ATOM RegisterClassA(const WNDCLASSA* lpWndClass)
++{
++	if (!lpWndClass || !lpWndClass->lpszClassName || !lpWndClass->lpfnWndProc) {
++		return 0;
++	}
++	WindowClasses()[lpWndClass->lpszClassName] = *lpWndClass;
++	return (ATOM) WindowClasses().size();
++}
++
++HWND CreateWindowExA(
++	DWORD dwExStyle,
++	LPCSTR lpClassName,
++	LPCSTR lpWindowName,
++	DWORD dwStyle,
++	int X,
++	int Y,
++	int nWidth,
++	int nHeight,
++	HWND hWndParent,
++	HMENU hMenu,
++	HINSTANCE hInstance,
++	LPVOID lpParam
++)
++{
++	auto found = WindowClasses().find(lpClassName ? lpClassName : "");
++	if (found == WindowClasses().end()) {
++		return NULL;
++	}
++	if (!SDL_WasInit(SDL_INIT_VIDEO) && !SDL_InitSubSystem(SDL_INIT_VIDEO)) {
++		SDL_LogError(LOG_CATEGORY_MINIWIN, "SDL_InitSubSystem: %s", SDL_GetError());
++		return NULL;
++	}
++	SDL_WindowFlags flags = SDL_WINDOW_HIDDEN;
++	if (!(dwStyle & WS_CAPTION)) {
++		flags |= SDL_WINDOW_BORDERLESS;
++	}
++	if (dwStyle & WS_THICKFRAME) {
++		flags |= SDL_WINDOW_RESIZABLE;
++	}
++	SDL_Window* window = SDL_CreateWindow(lpWindowName ? lpWindowName : "", nWidth, nHeight, flags);
++	if (!window) {
++		SDL_LogError(LOG_CATEGORY_MINIWIN, "SDL_CreateWindow: %s", SDL_GetError());
++		return NULL;
++	}
++	SDL_SetWindowPosition(window, X, Y);
++	WindowProcedures()[window] = found->second.lpfnWndProc;
++	HWND hWnd = reinterpret_cast<HWND>(window);
++	found->second.lpfnWndProc(hWnd, WM_CREATE, 0, 0);
++	return hWnd;
++}
++
++BOOL DestroyWindow(HWND hWnd)
++{
++	SDL_Window* window = reinterpret_cast<SDL_Window*>(hWnd);
++	auto found = WindowProcedures().find(window);
++	if (found == WindowProcedures().end()) {
++		return FALSE;
++	}
++	found->second(hWnd, WM_DESTROY, 0, 0);
++	WindowProcedures().erase(found);
++	auto& queue = PostedMessages();
++	for (auto it = queue.begin(); it != queue.end();) {
++		it = it->hwnd == hWnd ? queue.erase(it) : it + 1;
++	}
++	SDL_DestroyWindow(window);
++	return TRUE;
++}
++
++LRESULT DefWindowProcA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
++{
++	if (Msg == WM_CLOSE) {
++		DestroyWindow(hWnd);
++	}
++	return 0;
++}
++
++BOOL PeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax, UINT wRemoveMsg)
++{
++	SDL_Event event;
++	while (SDL_PollEvent(&event)) {
++		Translate(event);
++	}
++	auto& queue = PostedMessages();
++	for (auto it = queue.begin(); it != queue.end(); ++it) {
++		if (hWnd && it->hwnd != hWnd) {
++			continue;
++		}
++		if ((wMsgFilterMin || wMsgFilterMax) && (it->message < wMsgFilterMin || it->message > wMsgFilterMax)) {
++			continue;
++		}
++		*lpMsg = *it;
++		if (wRemoveMsg & PM_REMOVE) {
++			queue.erase(it);
++		}
++		return TRUE;
++	}
++	return FALSE;
++}
++
++BOOL TranslateMessage(const MSG* lpMsg)
++{
++	return FALSE;
++}
++
++LRESULT DispatchMessageA(const MSG* lpMsg)
++{
++	auto found = WindowProcedures().find(reinterpret_cast<SDL_Window*>(lpMsg->hwnd));
++	if (found == WindowProcedures().end()) {
++		return 0;
++	}
++	return found->second(lpMsg->hwnd, lpMsg->message, lpMsg->wParam, lpMsg->lParam);
++}
++
++void PostQuitMessage(int nExitCode)
++{
++	MSG msg = {};
++	msg.message = WM_QUIT;
++	msg.wParam = (WPARAM) nExitCode;
++	PostedMessages().push_back(msg);
++}
++
++BOOL ShowWindow(HWND hWnd, int nCmdShow)
++{
++	SDL_Window* window = reinterpret_cast<SDL_Window*>(hWnd);
++	if (!window) {
++		return FALSE;
++	}
++	bool wasVisible = !(SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN);
++	if (nCmdShow == SW_HIDE) {
++		SDL_HideWindow(window);
++	}
++	else {
++		SDL_ShowWindow(window);
++	}
++	return wasVisible;
++}
++
++BOOL UpdateWindow(HWND hWnd)
++{
++	return hWnd != NULL;
++}
++
++HWND SetActiveWindow(HWND hWnd)
++{
++	if (hWnd) {
++		SDL_RaiseWindow(reinterpret_cast<SDL_Window*>(hWnd));
++	}
++	return NULL;
++}
++
++HWND SetFocus(HWND hWnd)
++{
++	if (hWnd) {
++		SDL_RaiseWindow(reinterpret_cast<SDL_Window*>(hWnd));
++	}
++	return NULL;
++}
++
++HWND SetCapture(HWND hWnd)
++{
++	SDL_CaptureMouse(true);
++	return NULL;
++}
++
++BOOL ReleaseCapture()
++{
++	return SDL_CaptureMouse(false);
++}
++
++BOOL SetWindowTextA(HWND hWnd, LPCSTR lpString)
++{
++	return SDL_SetWindowTitle(reinterpret_cast<SDL_Window*>(hWnd), lpString ? lpString : "");
++}
++
++BOOL GetWindowRect(HWND hWnd, LPRECT lpRect)
++{
++	int x = 0;
++	int y = 0;
++	int w = 0;
++	int h = 0;
++	if (hWnd == GetDesktopWindow()) {
++		const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
++		if (!mode) {
++			return FALSE;
++		}
++		w = mode->w;
++		h = mode->h;
++	}
++	else {
++		SDL_Window* window = reinterpret_cast<SDL_Window*>(hWnd);
++		if (!SDL_GetWindowPosition(window, &x, &y) || !SDL_GetWindowSize(window, &w, &h)) {
++			return FALSE;
++		}
++	}
++	SetRect(lpRect, x, y, x + w, y + h);
++	return TRUE;
++}
++
++BOOL GetClientRect(HWND hWnd, LPRECT lpRect)
++{
++	int w = 0;
++	int h = 0;
++	if (!SDL_GetWindowSize(reinterpret_cast<SDL_Window*>(hWnd), &w, &h)) {
++		return FALSE;
++	}
++	SetRect(lpRect, 0, 0, w, h);
++	return TRUE;
++}
++
++HWND GetDesktopWindow()
++{
++	// Never an SDL_Window pointer: GetWindowRect reads the desktop's mode.
++	return reinterpret_cast<HWND>(static_cast<uintptr_t>(1));
++}
++
++BOOL AdjustWindowRect(LPRECT lpRect, DWORD dwStyle, BOOL bMenu)
++{
++	return AdjustWindowRectEx(lpRect, dwStyle, bMenu, 0);
++}
++
++LONG SetWindowLongA(HWND hWnd, int nIndex, LONG dwNewLong)
++{
++	return SetWindowLong(hWnd, nIndex, dwNewLong);
++}
++
++int ShowCursor(BOOL bShow)
++{
++	g_cursorCount += bShow ? 1 : -1;
++	if (g_cursorCount >= 0) {
++		SDL_ShowCursor();
++	}
++	else {
++		SDL_HideCursor();
++	}
++	return g_cursorCount;
++}
++
++HCURSOR SetCursor(HCURSOR hCursor)
++{
++	if (!hCursor) {
++		SDL_HideCursor();
++	}
++	return NULL;
++}
++
++BOOL GetCursorPos(LPPOINT lpPoint)
++{
++	float x = 0.0f;
++	float y = 0.0f;
++	SDL_GetGlobalMouseState(&x, &y);
++	lpPoint->x = (LONG) x;
++	lpPoint->y = (LONG) y;
++	return TRUE;
++}
++
++BOOL SetCursorPos(int X, int Y)
++{
++	return SDL_WarpMouseGlobal((float) X, (float) Y);
++}
++
++BOOL ScreenToClient(HWND hWnd, LPPOINT lpPoint)
++{
++	int x = 0;
++	int y = 0;
++	if (!SDL_GetWindowPosition(reinterpret_cast<SDL_Window*>(hWnd), &x, &y)) {
++		return FALSE;
++	}
++	lpPoint->x -= x;
++	lpPoint->y -= y;
++	return TRUE;
++}
++
++int MessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
++{
++	SDL_LogError(LOG_CATEGORY_MINIWIN, "%s: %s", lpCaption ? lpCaption : "", lpText ? lpText : "");
++	SDL_ShowSimpleMessageBox(
++		SDL_MESSAGEBOX_ERROR,
++		lpCaption ? lpCaption : "",
++		lpText ? lpText : "",
++		reinterpret_cast<SDL_Window*>(hWnd)
++	);
++	return 1;
++}
++
++LRESULT SendMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
++{
++	auto found = WindowProcedures().find(reinterpret_cast<SDL_Window*>(hWnd));
++	if (found == WindowProcedures().end()) {
++		MINIWIN_NOT_IMPLEMENTED();
++		return 0;
++	}
++	return found->second(hWnd, Msg, wParam, lParam);
++}
++
++BOOL MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, BOOL bRepaint)
++{
++	return SetWindowPos(hWnd, NULL, X, Y, nWidth, nHeight, SWP_NOZORDER | SWP_NOACTIVATE);
++}
++
++BOOL EnableWindow(HWND hWnd, BOOL bEnable)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return FALSE;
++}
++
++INT_PTR DialogBoxParamA(
++	HINSTANCE hInstance,
++	LPCSTR lpTemplateName,
++	HWND hWndParent,
++	DLGPROC lpDialogFunc,
++	LPARAM dwInitParam
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return -1;
++}
++
++BOOL EndDialog(HWND hDlg, INT_PTR nResult)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return FALSE;
++}
++
++HWND GetDlgItem(HWND hDlg, int nIDDlgItem)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return NULL;
++}
+diff --git a/miniwin/src/windows/windows.cpp b/miniwin/src/windows/windows.cpp
+index b7f15e8..41ae97f 100644
+--- a/miniwin/src/windows/windows.cpp
++++ b/miniwin/src/windows/windows.cpp
+@@ -160,12 +160,69 @@ LONG SetWindowLong(HWND hWnd, int nIndex, LONG dwNewLong)
+ 	return 0;
+ }
+ 
+-int DeleteObject(void*)
++namespace {
++std::vector<RECT*>& Regions()
+ {
++	static std::vector<RECT*> regions;
++	return regions;
++}
++} // namespace
++
++int DeleteObject(void* object)
++{
++	auto& regions = Regions();
++	for (auto it = regions.begin(); it != regions.end(); ++it) {
++		if (*it == object) {
++			delete *it;
++			regions.erase(it);
++			return 1;
++		}
++	}
+ 	MINIWIN_NOT_IMPLEMENTED();
+ 	return 1;
+ }
+ 
++BOOL OffsetRect(LPRECT lprc, int dx, int dy)
++{
++	if (!lprc) {
++		return FALSE;
++	}
++	lprc->left += dx;
++	lprc->right += dx;
++	lprc->top += dy;
++	lprc->bottom += dy;
++	return TRUE;
++}
++
++HRGN CreateRectRgn(int x1, int y1, int x2, int y2)
++{
++	RECT* rect = new RECT{x1, y1, x2, y2};
++	Regions().push_back(rect);
++	return reinterpret_cast<HRGN>(rect);
++}
++
++DWORD GetRegionData(HRGN hrgn, DWORD nCount, LPRGNDATA lpRgnData)
++{
++	const DWORD size = sizeof(RGNDATAHEADER) + sizeof(RECT);
++	if (!hrgn) {
++		return 0;
++	}
++	if (!lpRgnData) {
++		return size;
++	}
++	if (nCount < size) {
++		return 0;
++	}
++	const RECT* rect = reinterpret_cast<const RECT*>(hrgn);
++	lpRgnData->rdh.dwSize = sizeof(RGNDATAHEADER);
++	lpRgnData->rdh.iType = 1; // RDH_RECTANGLES
++	lpRgnData->rdh.nCount = 1;
++	lpRgnData->rdh.nRgnSize = sizeof(RECT);
++	lpRgnData->rdh.rcBound = *rect;
++	memcpy(lpRgnData->Buffer, rect, sizeof(RECT));
++	return size;
++}
++
+ BOOL AdjustWindowRectEx(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle)
+ {
+ 	return TRUE;

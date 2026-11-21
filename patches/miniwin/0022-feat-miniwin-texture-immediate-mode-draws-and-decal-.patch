@@ -1,0 +1,595 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 10:30:28 -0800
+Subject: [PATCH] feat(miniwin): texture immediate-mode draws and
+ decal-transparent meshes
+
+A DirectDraw surface's IDirect3DTexture2 now has a handle, and
+DrawIndexedPrimitive draws with stage 0's texture: the one SetTexture
+set, or else the surface the TEXTUREHANDLE render state names. The draw
+record carries it as an IDirect3DRMTexture, so a backend maps it with
+GetTextureId as it does for retained-mode meshes.
+
+The D3DRM device's FindPreferredTextureFormat answers 8-bit palettized
+when asked for it, and RGB 565 otherwise. Texture::SetDecalTransparency
+and SetDecalTransparentColor take effect.
+
+The software backend's texture cache turns a surface colour key and a
+decal colour into alpha-0 texels and remembers that they are a key. The
+immediate rasterizer samples stage 0 perspective-correct, nearest or
+bilinear by TEXTUREMAG, and applies stage 0's colour and alpha ops
+(DISABLE, SELECTARG1/2, MODULATE, MODULATE2X/4X, ADD) to the texture and
+the lit diffuse colour. With COLORKEYENABLE, key texels are not drawn and
+do not bleed into filtered neighbours; without it they draw as their
+colour.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/d3d.h b/miniwin/include/miniwin/d3d.h
+index 8e9fa03..43123b1 100644
+--- a/miniwin/include/miniwin/d3d.h
++++ b/miniwin/include/miniwin/d3d.h
+@@ -243,6 +243,48 @@ enum class D3DTEXTURESTAGESTATETYPE : uint32_t {
+ 	ALPHAARG2 = 6,
+ };
+ 
++#define D3DTOP_DISABLE D3DTEXTUREOP::DISABLE
++#define D3DTOP_SELECTARG1 D3DTEXTUREOP::SELECTARG1
++#define D3DTOP_SELECTARG2 D3DTEXTUREOP::SELECTARG2
++#define D3DTOP_MODULATE D3DTEXTUREOP::MODULATE
++#define D3DTOP_MODULATE2X D3DTEXTUREOP::MODULATE2X
++#define D3DTOP_MODULATE4X D3DTEXTUREOP::MODULATE4X
++#define D3DTOP_ADD D3DTEXTUREOP::ADD
++enum class D3DTEXTUREOP : uint32_t {
++	DISABLE = 1,
++	SELECTARG1 = 2,
++	SELECTARG2 = 3,
++	MODULATE = 4,
++	MODULATE2X = 5,
++	MODULATE4X = 6,
++	ADD = 7,
++};
++
++// Texture stage arguments: a source, optionally complemented.
++#define D3DTA_SELECTMASK 0x0000000f
++#define D3DTA_DIFFUSE 0x00000000
++#define D3DTA_CURRENT 0x00000001
++#define D3DTA_TEXTURE 0x00000002
++#define D3DTA_TFACTOR 0x00000003
++#define D3DTA_SPECULAR 0x00000004
++#define D3DTA_COMPLEMENT 0x00000010
++#define D3DTA_ALPHAREPLICATE 0x00000020
++
++#define D3DFILTER_NEAREST D3DTEXTUREFILTER::NEAREST
++#define D3DFILTER_LINEAR D3DTEXTUREFILTER::LINEAR
++#define D3DFILTER_MIPNEAREST D3DTEXTUREFILTER::MIPNEAREST
++#define D3DFILTER_MIPLINEAR D3DTEXTUREFILTER::MIPLINEAR
++#define D3DFILTER_LINEARMIPNEAREST D3DTEXTUREFILTER::LINEARMIPNEAREST
++#define D3DFILTER_LINEARMIPLINEAR D3DTEXTUREFILTER::LINEARMIPLINEAR
++enum class D3DTEXTUREFILTER : uint32_t {
++	NEAREST = 1,
++	LINEAR = 2,
++	MIPNEAREST = 3,
++	MIPLINEAR = 4,
++	LINEARMIPNEAREST = 5,
++	LINEARMIPLINEAR = 6,
++};
++
+ // --- Structs ---
+ struct D3DVECTOR {
+ 	float x, y, z;
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index cb3fd10..ea36ae3 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -773,10 +773,39 @@ void Direct3DRMSoftwareRenderer::AddTextureDestroyCallback(Uint32 id, IDirect3DR
+ 	});
+ }
+ 
++// The texture in the render format. A colour key on the surface becomes
++// alpha 0 (SDL does this when converting), and so does decal transparency's
++// colour.
++SDL_Surface* Direct3DRMSoftwareRenderer::ConvertTexture(Direct3DRMTextureImpl* texture, bool& keyed) const
++{
++	auto surface = static_cast<DirectDrawSurfaceImpl*>(texture->m_surface);
++	SDL_Surface* converted = SDL_ConvertSurface(surface->m_surface, m_renderedImage->format);
++	if (!converted) {
++		keyed = false;
++		return nullptr;
++	}
++	keyed = SDL_SurfaceHasColorKey(surface->m_surface);
++	if (texture->m_decalTransparency) {
++		keyed = true;
++		const Uint8 r = (texture->m_decalTransparentColor >> 16) & 0xff;
++		const Uint8 g = (texture->m_decalTransparentColor >> 8) & 0xff;
++		const Uint8 b = texture->m_decalTransparentColor & 0xff;
++		for (int y = 0; y < converted->h; ++y) {
++			Uint8* px = static_cast<Uint8*>(converted->pixels) + y * converted->pitch;
++			for (int x = 0; x < converted->w; ++x, px += 4) {
++				if (px[0] == r && px[1] == g && px[2] == b) {
++					px[3] = 0;
++				}
++			}
++		}
++	}
++	SDL_LockSurface(converted);
++	return converted;
++}
++
+ Uint32 Direct3DRMSoftwareRenderer::GetTextureId(IDirect3DRMTexture* iTexture, bool isUI, float scaleX, float scaleY)
+ {
+ 	auto texture = static_cast<Direct3DRMTextureImpl*>(iTexture);
+-	auto surface = static_cast<DirectDrawSurfaceImpl*>(texture->m_surface);
+ 
+ 	// Check if already mapped
+ 	for (Uint32 i = 0; i < m_textures.size(); ++i) {
+@@ -785,29 +814,28 @@ Uint32 Direct3DRMSoftwareRenderer::GetTextureId(IDirect3DRMTexture* iTexture, bo
+ 			if (texRef.version != texture->m_version) {
+ 				// Update animated textures
+ 				SDL_DestroySurface(texRef.cached);
+-				texRef.cached = SDL_ConvertSurface(surface->m_surface, m_renderedImage->format);
+-				SDL_LockSurface(texRef.cached);
++				texRef.cached = ConvertTexture(texture, texRef.keyed);
+ 				texRef.version = texture->m_version;
+ 			}
+ 			return i;
+ 		}
+ 	}
+ 
+-	SDL_Surface* convertedRender = SDL_ConvertSurface(surface->m_surface, m_renderedImage->format);
+-	SDL_LockSurface(convertedRender);
++	bool keyed = false;
++	SDL_Surface* convertedRender = ConvertTexture(texture, keyed);
+ 
+ 	// Reuse freed slot
+ 	for (Uint32 i = 0; i < m_textures.size(); ++i) {
+ 		auto& texRef = m_textures[i];
+ 		if (!texRef.texture) {
+-			texRef = {texture, texture->m_version, convertedRender};
++			texRef = {texture, texture->m_version, convertedRender, keyed};
+ 			AddTextureDestroyCallback(i, texture);
+ 			return i;
+ 		}
+ 	}
+ 
+ 	// Append new
+-	m_textures.push_back({texture, texture->m_version, convertedRender});
++	m_textures.push_back({texture, texture->m_version, convertedRender, keyed});
+ 	AddTextureDestroyCallback(static_cast<Uint32>(m_textures.size() - 1), texture);
+ 	return static_cast<Uint32>(m_textures.size() - 1);
+ }
+@@ -1209,6 +1237,120 @@ static float ImmediateBlendFactor(DWORD factor, float src, float srcAlpha, float
+ 	}
+ }
+ 
++struct ImmediateTexel {
++	float r, g, b, a;
++	bool discard;
++};
++
++// Stage 0's texel at (u, v), wrapped. A keyed texture's alpha-0 texels are
++// the colour key: with COLORKEYENABLE they are not drawn (and do not bleed
++// into a filtered neighbour), and the texels that are drawn are opaque.
++template <typename State>
++static ImmediateTexel SampleImmediateTexture(const State& state, float u, float v)
++{
++	auto texel = [&](int x, int y) {
++		x %= state.texWidth;
++		y %= state.texHeight;
++		x += x < 0 ? state.texWidth : 0;
++		y += y < 0 ? state.texHeight : 0;
++		return state.texels + y * state.texPitch + x * 4;
++	};
++	float fx = u * state.texWidth;
++	float fy = v * state.texHeight;
++	ImmediateTexel out = {};
++	if (!state.linear) {
++		const Uint8* t = texel(static_cast<int>(std::floor(fx)), static_cast<int>(std::floor(fy)));
++		out = {t[0] / 255.0f, t[1] / 255.0f, t[2] / 255.0f, t[3] / 255.0f, false};
++		if (state.keyed) {
++			out.discard = state.colorKeyEnable && t[3] == 0;
++			out.a = 1.0f;
++		}
++		return out;
++	}
++
++	fx -= 0.5f;
++	fy -= 0.5f;
++	const float x0 = std::floor(fx), y0 = std::floor(fy);
++	const float ax = fx - x0, ay = fy - y0;
++	const int ix = static_cast<int>(x0), iy = static_cast<int>(y0);
++	const Uint8* t[4] = {texel(ix, iy), texel(ix + 1, iy), texel(ix, iy + 1), texel(ix + 1, iy + 1)};
++	const float w[4] = {(1 - ax) * (1 - ay), ax * (1 - ay), (1 - ax) * ay, ax * ay};
++	const bool keyOut = state.keyed && state.colorKeyEnable;
++	float coverage = 0.0f;
++	for (int i = 0; i < 4; ++i) {
++		float wi = w[i];
++		if (keyOut) {
++			wi *= t[i][3] / 255.0f;
++		}
++		out.r += wi * t[i][0];
++		out.g += wi * t[i][1];
++		out.b += wi * t[i][2];
++		out.a += w[i] * t[i][3];
++		coverage += wi;
++	}
++	if (keyOut) {
++		if (coverage < 0.5f) {
++			out.discard = true;
++			return out;
++		}
++		const float scale = 1.0f / (coverage * 255.0f);
++		out.r *= scale;
++		out.g *= scale;
++		out.b *= scale;
++		out.a = 1.0f;
++		return out;
++	}
++	out.r /= 255.0f;
++	out.g /= 255.0f;
++	out.b /= 255.0f;
++	out.a = state.keyed ? 1.0f : out.a / 255.0f;
++	return out;
++}
++
++// A texture stage argument. Stage 0's CURRENT is the diffuse colour.
++static float ImmediateStageArg(DWORD arg, float diffuse, float texture, float diffuseAlpha, float textureAlpha)
++{
++	float value;
++	const bool alpha = (arg & D3DTA_ALPHAREPLICATE) != 0;
++	switch (arg & D3DTA_SELECTMASK) {
++	case D3DTA_TEXTURE:
++		value = alpha ? textureAlpha : texture;
++		break;
++	case D3DTA_TFACTOR:
++		value = 1.0f;
++		break;
++	case D3DTA_SPECULAR:
++		value = 0.0f;
++		break;
++	default: // DIFFUSE, CURRENT
++		value = alpha ? diffuseAlpha : diffuse;
++		break;
++	}
++	return (arg & D3DTA_COMPLEMENT) ? 1.0f - value : value;
++}
++
++static float ImmediateStageOp(DWORD op, float arg1, float arg2, float current)
++{
++	switch (static_cast<D3DTEXTUREOP>(op)) {
++	case D3DTOP_DISABLE:
++		return current;
++	case D3DTOP_SELECTARG1:
++		return arg1;
++	case D3DTOP_SELECTARG2:
++		return arg2;
++	case D3DTOP_MODULATE:
++		return arg1 * arg2;
++	case D3DTOP_MODULATE2X:
++		return std::min(1.0f, 2.0f * arg1 * arg2);
++	case D3DTOP_MODULATE4X:
++		return std::min(1.0f, 4.0f * arg1 * arg2);
++	case D3DTOP_ADD:
++		return std::min(1.0f, arg1 + arg2);
++	default:
++		return arg1 * arg2;
++	}
++}
++
+ // Edge-function rasterizer: samples at integer pixel coordinates, as the
+ // retained-mode rasterizer does, with a top-left rule so that pixels on an
+ // edge shared by two triangles are drawn once (which matters when blending
+@@ -1259,7 +1401,13 @@ void Direct3DRMSoftwareRenderer::DrawImmediateTriangle(
+ 	}
+ 
+ 	float invArea = 1.0f / area;
+-	float srcAlpha = lit[0]->color.a / 255.0f;
++	const float diffuseAlpha = lit[0]->color.a / 255.0f;
++	float oneOverW[3], uOverW[3], vOverW[3];
++	for (int k = 0; k < 3; ++k) {
++		oneOverW[k] = 1.0f / p[k].w;
++		uOverW[k] = lit[k]->texCoord.u * oneOverW[k];
++		vOverW[k] = lit[k]->texCoord.v * oneOverW[k];
++	}
+ 	Uint8* pixels = static_cast<Uint8*>(m_renderedImage->pixels);
+ 	int pitch = m_renderedImage->pitch;
+ 
+@@ -1286,6 +1434,30 @@ void Direct3DRMSoftwareRenderer::DrawImmediateTriangle(
+ 			float r = (w[0] * lit[0]->color.r + w[1] * lit[1]->color.r + w[2] * lit[2]->color.r) / 255.0f;
+ 			float g = (w[0] * lit[0]->color.g + w[1] * lit[1]->color.g + w[2] * lit[2]->color.g) / 255.0f;
+ 			float b = (w[0] * lit[0]->color.b + w[1] * lit[1]->color.b + w[2] * lit[2]->color.b) / 255.0f;
++			float srcAlpha = diffuseAlpha;
++
++			if (state.texels) {
++				// Perspective-correct texture coordinates.
++				float oow = w[0] * oneOverW[0] + w[1] * oneOverW[1] + w[2] * oneOverW[2];
++				float u = (w[0] * uOverW[0] + w[1] * uOverW[1] + w[2] * uOverW[2]) / oow;
++				float v = (w[0] * vOverW[0] + w[1] * vOverW[1] + w[2] * vOverW[2]) / oow;
++				ImmediateTexel t = SampleImmediateTexture(state, u, v);
++				if (t.discard) {
++					continue;
++				}
++				auto stage = [&](DWORD op, DWORD arg1, DWORD arg2, float diffuse, float texture) {
++					return ImmediateStageOp(
++						op,
++						ImmediateStageArg(arg1, diffuse, texture, diffuseAlpha, t.a),
++						ImmediateStageArg(arg2, diffuse, texture, diffuseAlpha, t.a),
++						diffuse
++					);
++				};
++				r = stage(state.colorOp, state.colorArg1, state.colorArg2, r, t.r);
++				g = stage(state.colorOp, state.colorArg1, state.colorArg2, g, t.g);
++				b = stage(state.colorOp, state.colorArg1, state.colorArg2, b, t.b);
++				srcAlpha = stage(state.alphaOp, state.alphaArg1, state.alphaArg2, diffuseAlpha, t.a);
++			}
+ 
+ 			// The render target stands for the display surface, which has no
+ 			// alpha channel: destination alpha reads as one and stays opaque.
+@@ -1316,8 +1488,9 @@ void Direct3DRMSoftwareRenderer::DrawImmediateTriangle(
+ 	}
+ }
+ 
+-// Untextured for now: each vertex is lit with the scene's lights and the
+-// current material's diffuse colour and alpha.
++// Each vertex is lit with the scene's lights and the current material's
++// diffuse colour and alpha; texture stage 0 then combines that with the
++// texture.
+ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ {
+ 	if (!m_renderedImage || !m_renderedImage->pixels) {
+@@ -1350,6 +1523,28 @@ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ 	pixelState.blend = st.Render(D3DRENDERSTATE_ALPHABLENDENABLE) != 0;
+ 	pixelState.srcBlend = st.Render(D3DRENDERSTATE_SRCBLEND);
+ 	pixelState.destBlend = st.Render(D3DRENDERSTATE_DESTBLEND);
++	pixelState.texels = nullptr;
++	if (draw.texture) {
++		Uint32 textureId = GetTextureId(draw.texture, false, 1.0f, 1.0f);
++		const TextureCache& cache = m_textures[textureId];
++		if (cache.cached && st.textureStageState[0][static_cast<DWORD>(D3DTSS_COLOROP)] !=
++								static_cast<DWORD>(D3DTOP_DISABLE)) {
++			pixelState.texels = static_cast<const Uint8*>(cache.cached->pixels);
++			pixelState.texWidth = cache.cached->w;
++			pixelState.texHeight = cache.cached->h;
++			pixelState.texPitch = cache.cached->pitch;
++			pixelState.keyed = cache.keyed;
++		}
++	}
++	pixelState.colorKeyEnable = st.Render(D3DRENDERSTATE_COLORKEYENABLE) != 0;
++	pixelState.linear = st.Render(D3DRENDERSTATE_TEXTUREMAG) != static_cast<DWORD>(D3DFILTER_NEAREST);
++	const DWORD* tss = st.textureStageState[0];
++	pixelState.colorOp = tss[static_cast<DWORD>(D3DTSS_COLOROP)];
++	pixelState.colorArg1 = tss[static_cast<DWORD>(D3DTSS_COLORARG1)];
++	pixelState.colorArg2 = tss[static_cast<DWORD>(D3DTSS_COLORARG2)];
++	pixelState.alphaOp = tss[static_cast<DWORD>(D3DTSS_ALPHAOP)];
++	pixelState.alphaArg1 = tss[static_cast<DWORD>(D3DTSS_ALPHAARG1)];
++	pixelState.alphaArg2 = tss[static_cast<DWORD>(D3DTSS_ALPHAARG2)];
+ 	const DWORD cull = st.Render(D3DRENDERSTATE_CULLMODE);
+ 
+ 	const DWORD vertexCount = draw.vertexCount;
+diff --git a/miniwin/src/d3drm/d3drmdevice.cpp b/miniwin/src/d3drm/d3drmdevice.cpp
+index 124ac90..2552e47 100644
+--- a/miniwin/src/d3drm/d3drmdevice.cpp
++++ b/miniwin/src/d3drm/d3drmdevice.cpp
+@@ -248,6 +248,27 @@ HRESULT Direct3DRMDevice2Impl::FindPreferredTextureFormat(
+ 	LPDDPIXELFORMAT pixelFormat
+ )
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOTIMPL;
++	if (!pixelFormat) {
++		return DDERR_INVALIDPARAMS;
++	}
++	// 8-bit palettized textures when the caller asks for them, which keeps
++	// a colour key a palette index; otherwise RGB 565.
++	DDPIXELFORMAT format = {};
++	format.dwSize = sizeof(format);
++	if ((bitDepths & DDBD_8) == DDBD_8 && (flags & D3DRMFPTF_PALETTIZED)) {
++		format.dwFlags = DDPF_RGB | DDPF_PALETTEINDEXED8;
++		format.dwRGBBitCount = 8;
++	}
++	else if ((bitDepths & DDBD_16) == DDBD_16) {
++		format.dwFlags = DDPF_RGB;
++		format.dwRGBBitCount = 16;
++		format.dwRBitMask = 0xf800;
++		format.dwGBitMask = 0x07e0;
++		format.dwBBitMask = 0x001f;
++	}
++	else {
++		return DDERR_INVALIDPIXELFORMAT;
++	}
++	*pixelFormat = format;
++	return DD_OK;
+ }
+diff --git a/miniwin/src/d3drm/d3drmrenderer.cpp b/miniwin/src/d3drm/d3drmrenderer.cpp
+index c38e4ab..401b3ae 100644
+--- a/miniwin/src/d3drm/d3drmrenderer.cpp
++++ b/miniwin/src/d3drm/d3drmrenderer.cpp
+@@ -3,6 +3,7 @@
+ #include "d3drm_impl.h"
+ #include "d3drmviewport_impl.h"
+ #include "d3dviewport_impl.h"
++#include "ddsurface_impl.h"
+ #include "miniwin.h"
+ #ifdef USE_OPENGL1
+ #include "d3drmrenderer_opengl1.h"
+@@ -274,6 +275,11 @@ HRESULT Direct3DRMRenderer::DrawIndexedPrimitive(
+ 	if (const D3DMATERIAL* material = Direct3DMaterial_FromHandle(materialHandle)) {
+ 		draw.material = *material;
+ 	}
++	DirectDrawSurfaceImpl* surface = static_cast<DirectDrawSurfaceImpl*>(m_textures[0]);
++	if (!surface) {
++		surface = DirectDrawSurfaceImpl::FromTextureHandle(m_immediateState.Render(D3DRENDERSTATE_TEXTUREHANDLE));
++	}
++	draw.texture = surface ? surface->ToTexture() : nullptr;
+ 	return SubmitImmediate(draw);
+ }
+ 
+diff --git a/miniwin/src/d3drm/d3drmtexture.cpp b/miniwin/src/d3drm/d3drmtexture.cpp
+index 2cd4685..e833968 100644
+--- a/miniwin/src/d3drm/d3drmtexture.cpp
++++ b/miniwin/src/d3drm/d3drmtexture.cpp
+@@ -100,14 +100,21 @@ D3DRMIMAGE* Direct3DRMTextureImpl::GetImage()
+ 
+ HRESULT Direct3DRMTextureImpl::SetDecalTransparency(BOOL transparency)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOTIMPL;
++	if (m_decalTransparency != (transparency != FALSE)) {
++		m_decalTransparency = transparency != FALSE;
++		m_version++;
++	}
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMTextureImpl::SetDecalTransparentColor(D3DCOLOR color)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOTIMPL;
++	color &= 0x00ffffff;
++	if (m_decalTransparentColor != color) {
++		m_decalTransparentColor = color;
++		m_version++;
++	}
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMTextureImpl::GenerateMIPMap(DWORD flags)
+diff --git a/miniwin/src/ddraw/ddsurface.cpp b/miniwin/src/ddraw/ddsurface.cpp
+index 7cf44fa..f415aee 100644
+--- a/miniwin/src/ddraw/ddsurface.cpp
++++ b/miniwin/src/ddraw/ddsurface.cpp
+@@ -6,6 +6,13 @@
+ #include "miniwin.h"
+ 
+ #include <assert.h>
++#include <unordered_map>
++
++static std::unordered_map<D3DTEXTUREHANDLE, DirectDrawSurfaceImpl*>& TextureHandles()
++{
++	static std::unordered_map<D3DTEXTUREHANDLE, DirectDrawSurfaceImpl*> handles;
++	return handles;
++}
+ 
+ DirectDrawSurfaceImpl::DirectDrawSurfaceImpl(int width, int height, SDL_PixelFormat format)
+ {
+@@ -17,6 +24,9 @@ DirectDrawSurfaceImpl::DirectDrawSurfaceImpl(int width, int height, SDL_PixelFor
+ 
+ DirectDrawSurfaceImpl::~DirectDrawSurfaceImpl()
+ {
++	if (m_handle) {
++		TextureHandles().erase(m_handle);
++	}
+ 	SDL_DestroySurface(m_surface);
+ 	if (m_palette) {
+ 		m_palette->Release();
+@@ -372,10 +382,28 @@ HRESULT DirectDrawSurfaceImpl::Unlock(LPRECT lpRect)
+ }
+ 
+ // IDirect3DTexture2 interface
++// The handle is the same for every device: there is only one renderer.
+ HRESULT DirectDrawSurfaceImpl::GetHandle(IDirect3DDevice2* device, LPD3DTEXTUREHANDLE handle)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (!handle) {
++		return DDERR_INVALIDPARAMS;
++	}
++	if (!m_handle) {
++		static D3DTEXTUREHANDLE next = 0;
++		do {
++			++next;
++		} while (next == 0 || TextureHandles().count(next));
++		m_handle = next;
++		TextureHandles()[m_handle] = this;
++	}
++	*handle = m_handle;
++	return DD_OK;
++}
++
++DirectDrawSurfaceImpl* DirectDrawSurfaceImpl::FromTextureHandle(D3DTEXTUREHANDLE handle)
++{
++	auto it = TextureHandles().find(handle);
++	return it == TextureHandles().end() ? nullptr : it->second;
+ }
+ 
+ IDirect3DRMTexture2* DirectDrawSurfaceImpl::ToTexture()
+diff --git a/miniwin/src/internal/d3drmrenderer.h b/miniwin/src/internal/d3drmrenderer.h
+index 2433fe5..557dba0 100644
+--- a/miniwin/src/internal/d3drmrenderer.h
++++ b/miniwin/src/internal/d3drmrenderer.h
+@@ -58,6 +58,9 @@ struct ImmediateDraw {
+ 	D3DRMMATRIX4D projection;
+ 	const ImmediateState* state;
+ 	D3DMATERIAL material; // all zero when no material is selected
++	// Stage 0's texture, from SetTexture or else the TEXTUREHANDLE render
++	// state, or nullptr. A backend maps it with GetTextureId.
++	IDirect3DRMTexture* texture;
+ };
+ 
+ class Direct3DRMRenderer : public IDirect3DDevice3 {
+diff --git a/miniwin/src/internal/d3drmrenderer_software.h b/miniwin/src/internal/d3drmrenderer_software.h
+index e82df3b..dde1616 100644
+--- a/miniwin/src/internal/d3drmrenderer_software.h
++++ b/miniwin/src/internal/d3drmrenderer_software.h
+@@ -14,6 +14,9 @@ struct TextureCache {
+ 	Direct3DRMTextureImpl* texture;
+ 	Uint8 version;
+ 	SDL_Surface* cached;
++	// Alpha-0 texels stand for a colour key or decal colour rather than
++	// for real alpha.
++	bool keyed;
+ };
+ 
+ struct MeshCache {
+@@ -79,6 +82,12 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 	struct ImmediatePixelState {
+ 		bool zEnable, zWrite, blend;
+ 		DWORD zFunc, srcBlend, destBlend;
++		// Stage 0. texels is nullptr when untextured, and the stage then
++		// passes the diffuse colour through.
++		const Uint8* texels;
++		int texWidth, texHeight, texPitch;
++		bool keyed, colorKeyEnable, linear;
++		DWORD colorOp, colorArg1, colorArg2, alphaOp, alphaArg1, alphaArg2;
+ 	};
+ 	void DrawImmediateClipped(const SWLitVertex (&v)[3], const ImmediatePixelState& state);
+ 	void DrawImmediateTriangle(
+@@ -96,6 +105,7 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 		SDL_Color& specular
+ 	);
+ 	void AddTextureDestroyCallback(Uint32 id, IDirect3DRMTexture* texture);
++	SDL_Surface* ConvertTexture(Direct3DRMTextureImpl* texture, bool& keyed) const;
+ 	void AddMeshDestroyCallback(Uint32 id, IDirect3DRMMesh* mesh);
+ 
+ 	// Per-frame light data prepared once in PushLights so the per-vertex
+diff --git a/miniwin/src/internal/d3drmtexture_impl.h b/miniwin/src/internal/d3drmtexture_impl.h
+index 4f2b284..8f556fa 100644
+--- a/miniwin/src/internal/d3drmtexture_impl.h
++++ b/miniwin/src/internal/d3drmtexture_impl.h
+@@ -17,4 +17,7 @@ struct Direct3DRMTextureImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMTextur
+ 	IDirectDrawSurface* m_surface = nullptr;
+ 	Uint8 m_version = 0;
+ 	bool m_holdsRef;
++	// Decal transparency: texels of this RGB colour are not drawn.
++	bool m_decalTransparency = false;
++	D3DCOLOR m_decalTransparentColor = 0;
+ };
+diff --git a/miniwin/src/internal/ddsurface_impl.h b/miniwin/src/internal/ddsurface_impl.h
+index 8bca5ee..02693a8 100644
+--- a/miniwin/src/internal/ddsurface_impl.h
++++ b/miniwin/src/internal/ddsurface_impl.h
+@@ -52,10 +52,14 @@ struct DirectDrawSurfaceImpl : public IDirectDrawSurface4, public IDirect3DTextu
+ 	HRESULT GetHandle(IDirect3DDevice2* device, LPD3DTEXTUREHANDLE handle) override;
+ 
+ 	IDirect3DRMTexture2* ToTexture();
++	// The surface a texture handle names, or nullptr. Handles are small
++	// integers rather than pointers, since a D3DTEXTUREHANDLE is 32-bit.
++	static DirectDrawSurfaceImpl* FromTextureHandle(D3DTEXTUREHANDLE handle);
+ 
+ 	SDL_Surface* m_surface = nullptr;
+ 
+ private:
++	D3DTEXTUREHANDLE m_handle = 0;
+ 	IDirect3DRMTexture2* m_texture = nullptr;
+ 	IDirectDrawPalette* m_palette = nullptr;
+ };

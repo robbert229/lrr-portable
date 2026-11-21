@@ -37,6 +37,21 @@ set(MINIWIN "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/isle-portable/miniwin")
 if(NOT EXISTS "${MINIWIN}/include/miniwin/windows.h")
   message(FATAL_ERROR "miniwin is not bootstrapped; run tools/setup-miniwin.sh")
 endif()
+# miniwin is upstream isle-portable plus patches/miniwin (ADR 0009). Every
+# build checks that the series is applied, so a changed patch or a
+# `git submodule update` cannot build unpatched sources.
+find_program(LRR_BASH bash)
+if(LRR_BASH)
+  execute_process(COMMAND "${LRR_BASH}" tools/miniwin-patches.sh check
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" RESULT_VARIABLE LRR_MINIWIN_PATCHED)
+  if(NOT LRR_MINIWIN_PATCHED EQUAL 0)
+    message(FATAL_ERROR "miniwin's patches are not applied; run tools/setup-miniwin.sh")
+  endif()
+  add_custom_target(miniwin_patches_check
+    COMMAND "${LRR_BASH}" tools/miniwin-patches.sh check
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    COMMENT "Checking patches/miniwin is applied")
+endif()
 find_package(SDL3 CONFIG REQUIRED)
 set(MINIWIN_SOURCES
   windows/windows.cpp windows/windowmessages.cpp ddraw/ddpalette.cpp ddraw/ddraw.cpp ddraw/ddsurface.cpp
@@ -58,6 +73,9 @@ target_include_directories(miniwin PUBLIC "${MINIWIN}/include"
 target_compile_definitions(miniwin PRIVATE MINIWIN USE_SOFTWARE_RENDER USE_PALETTE_SW_RENDER
   MINIWIN_PIXELFORMAT=SDL_PIXELFORMAT_RGB565 MINIWIN_SOFTWARE_HAL)
 target_link_libraries(miniwin PUBLIC SDL3::SDL3)
+if(TARGET miniwin_patches_check)
+  add_dependencies(miniwin miniwin_patches_check)
+endif()
 
 # The units, in one library (ADR 0003's game/gods98 split is a source
 # grouping only: the units call each other both ways).

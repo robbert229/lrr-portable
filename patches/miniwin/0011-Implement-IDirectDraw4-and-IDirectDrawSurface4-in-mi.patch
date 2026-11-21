@@ -1,0 +1,773 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 22:29:49 -0800
+Subject: [PATCH] Implement IDirectDraw4 and IDirectDrawSurface4 in miniwin
+
+EnumDisplayModes lists the classic resolutions and the display's own in
+the display format (MINIWIN_PIXELFORMAT, else the desktop's), honouring
+DDENUMRET_CANCEL and a filter description. CreateSurface, Lock,
+GetSurfaceDesc, Blt, Flip and GetAttachedSurface take DDSURFACEDESC2 and
+DDSCAPS2 and share the version-1 code. SetDisplayMode and
+GetAvailableVidMem are implemented.
+
+Blits follow DirectDraw more closely: a 16-bit fill colour is a pixel in
+the surface's format, the source colour key applies only with
+DDBLT_KEYSRC/DDBLTFAST_SRCCOLORKEY, Lock honours its rectangle,
+GetSurfaceDesc reports the pitch, SetColorKey no longer fails on SDL3's
+boolean success, and a surface can read back the framebuffer.
+
+With MINIWIN_PIXELFORMAT the framebuffer's transfer buffer uses the
+display format. GetDeviceCaps reports BITSPIXEL and PLANES, and
+IDirectDrawClipper::SetClipList succeeds. MINIWIN_DUMP_FRAME=<file>
+writes each presented frame to a file for headless runs.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/ddraw.h b/miniwin/include/miniwin/ddraw.h
+index 09c9561..af25787 100644
+--- a/miniwin/include/miniwin/ddraw.h
++++ b/miniwin/include/miniwin/ddraw.h
+@@ -4,6 +4,7 @@
+ #include "miniwin/windows.h"
+ 
+ #define DDENUMRET_OK TRUE
++#define DDENUMRET_CANCEL FALSE
+ 
+ #define MAKE_DDHRESULT(code) MAKE_HRESULT(1, 0x876, code)
+ 
+diff --git a/miniwin/include/miniwin/windows.h b/miniwin/include/miniwin/windows.h
+index 78e46f4..9297af2 100644
+--- a/miniwin/include/miniwin/windows.h
++++ b/miniwin/include/miniwin/windows.h
+@@ -92,6 +92,7 @@
+ #define IDCANCEL 2
+ 
+ #define BITSPIXEL 12
++#define PLANES 14
+ 
+ #define ERROR_SUCCESS 0L
+ #define ERROR_ALREADY_EXISTS 183L
+diff --git a/miniwin/src/ddraw/ddraw.cpp b/miniwin/src/ddraw/ddraw.cpp
+index ae24ac6..4e0b622 100644
+--- a/miniwin/src/ddraw/ddraw.cpp
++++ b/miniwin/src/ddraw/ddraw.cpp
+@@ -9,11 +9,14 @@
+ #include "miniwin/d3d.h"
+ 
+ #include <SDL3/SDL.h>
++#include <algorithm>
+ #include <assert.h>
+ #include <cinttypes>
+ #include <cstdint>
+ #include <cstdlib>
+ #include <cstring>
++#include <iterator>
++#include <vector>
+ 
+ SDL_Window* DDWindow;
+ Direct3DRMRenderer* DDRenderer;
+@@ -82,6 +85,16 @@ HRESULT DirectDrawImpl::CreateSurface(
+ 	LPDIRECTDRAWSURFACE* lplpDDSurface,
+ 	IUnknown* pUnkOuter
+ )
++{
++	IDirectDrawSurface4* surface = nullptr;
++	HRESULT result = CreateSurface4(lpDDSurfaceDesc, &surface);
++	if (result == DD_OK) {
++		*lplpDDSurface = surface;
++	}
++	return result;
++}
++
++HRESULT DirectDrawImpl::CreateSurface4(LPDDSURFACEDESC lpDDSurfaceDesc, LPDIRECTDRAWSURFACE4* lplpDDSurface)
+ {
+ 	if ((lpDDSurfaceDesc->dwFlags & DDSD_CAPS) == DDSD_CAPS) {
+ 		if ((lpDDSurfaceDesc->ddsCaps.dwCaps & DDSCAPS_ZBUFFER) == DDSCAPS_ZBUFFER) {
+@@ -89,17 +102,17 @@ HRESULT DirectDrawImpl::CreateSurface(
+ 				return DDERR_INVALIDPARAMS;
+ 			}
+ 			SDL_Log("Todo: Set %" PRIu32 "bit Z-Buffer", lpDDSurfaceDesc->dwZBufferBitDepth);
+-			*lplpDDSurface = static_cast<IDirectDrawSurface*>(new DummySurfaceImpl);
++			*lplpDDSurface = new DummySurfaceImpl;
+ 			return DD_OK;
+ 		}
+ 		if ((lpDDSurfaceDesc->ddsCaps.dwCaps & DDSCAPS_PRIMARYSURFACE) == DDSCAPS_PRIMARYSURFACE) {
+ 			m_frameBuffer = new FrameBufferImpl(m_virtualWidth, m_virtualHeight);
+-			*lplpDDSurface = static_cast<IDirectDrawSurface*>(m_frameBuffer);
++			*lplpDDSurface = m_frameBuffer;
+ 			return DD_OK;
+ 		}
+ 		if ((lpDDSurfaceDesc->ddsCaps.dwCaps & DDSCAPS_3DDEVICE) == DDSCAPS_3DDEVICE) {
+ 			m_frameBuffer->AddRef();
+-			*lplpDDSurface = static_cast<IDirectDrawSurface*>(m_frameBuffer);
++			*lplpDDSurface = m_frameBuffer;
+ 			return DD_OK;
+ 		}
+ 		if ((lpDDSurfaceDesc->ddsCaps.dwCaps & DDSCAPS_TEXTURE) == DDSCAPS_TEXTURE) {
+@@ -139,7 +152,7 @@ HRESULT DirectDrawImpl::CreateSurface(
+ 	if (width == 0 || height == 0) {
+ 		return DDERR_INVALIDPARAMS;
+ 	}
+-	*lplpDDSurface = static_cast<IDirectDrawSurface*>(new DirectDrawSurfaceImpl(width, height, format));
++	*lplpDDSurface = new DirectDrawSurfaceImpl(width, height, format);
+ 	return DD_OK;
+ }
+ 
+@@ -340,8 +353,25 @@ HRESULT DirectDrawImpl::CreateSurface(
+ 	IUnknown* pUnkOuter
+ )
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (!lpDDSurfaceDesc || !lplpDDSurface) {
++		return DDERR_INVALIDPARAMS;
++	}
++	DDSURFACEDESC desc;
++	ToSurfaceDesc(*lpDDSurfaceDesc, desc);
++	return CreateSurface4(&desc, lplpDDSurface);
++}
++
++// The display format: what a surface without DDSD_PIXELFORMAT gets, and what
++// GetDisplayMode and GetDeviceCaps(BITSPIXEL) report.
++SDL_PixelFormat MiniwinDisplayPixelFormat()
++{
++#ifdef MINIWIN_PIXELFORMAT
++	return MINIWIN_PIXELFORMAT;
++#else
++	SDL_DisplayID displayID = SDL_GetPrimaryDisplay();
++	const SDL_DisplayMode* mode = displayID ? SDL_GetCurrentDisplayMode(displayID) : nullptr;
++	return mode ? mode->format : SDL_PIXELFORMAT_XRGB8888;
++#endif
+ }
+ 
+ HRESULT DirectDrawImpl::EnumDisplayModes(
+@@ -351,20 +381,117 @@ HRESULT DirectDrawImpl::EnumDisplayModes(
+ 	LPDDENUMMODESCALLBACK2 lpEnumModesCallback
+ )
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (!lpEnumModesCallback) {
++		return DDERR_INVALIDPARAMS;
++	}
++
++	// SetDisplayMode only sets the virtual resolution, which the renderer
++	// scales into the window, so every classic mode can be set. The display's
++	// own modes are listed too.
++	struct Size {
++		int w, h;
++	};
++	static const Size classicModes[] = {
++		{320, 200},
++		{320, 240},
++		{512, 384},
++		{640, 400},
++		{640, 480},
++		{800, 600},
++		{1024, 768},
++		{1152, 864},
++		{1280, 960},
++		{1280, 1024},
++		{1600, 1200},
++	};
++	std::vector<Size> sizes(std::begin(classicModes), std::end(classicModes));
++
++	SDL_DisplayID displayID = SDL_GetPrimaryDisplay();
++	if (displayID) {
++		int count = 0;
++		SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(displayID, &count);
++		for (int i = 0; modes && i < count; i++) {
++			sizes.push_back({modes[i]->w, modes[i]->h});
++		}
++		SDL_free(modes);
++		if (const SDL_DisplayMode* desktop = SDL_GetDesktopDisplayMode(displayID)) {
++			sizes.push_back({desktop->w, desktop->h});
++		}
++	}
++	std::sort(sizes.begin(), sizes.end(), [](const Size& a, const Size& b) {
++		return a.w != b.w ? a.w < b.w : a.h < b.h;
++	});
++	sizes.erase(
++		std::unique(
++			sizes.begin(),
++			sizes.end(),
++			[](const Size& a, const Size& b) { return a.w == b.w && a.h == b.h; }
++		),
++		sizes.end()
++	);
++
++	const SDL_PixelFormatDetails* details = SDL_GetPixelFormatDetails(MiniwinDisplayPixelFormat());
++	if (!details) {
++		return DDERR_GENERIC;
++	}
++
++	for (const Size& size : sizes) {
++		DDSURFACEDESC2 ddsd = {};
++		ddsd.dwSize = sizeof(DDSURFACEDESC2);
++		ddsd.dwFlags = DDSD_WIDTH | DDSD_HEIGHT | DDSD_PIXELFORMAT;
++		ddsd.dwWidth = size.w;
++		ddsd.dwHeight = size.h;
++		ddsd.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
++		ddsd.ddpfPixelFormat.dwFlags = DDPF_RGB;
++		if (details->Amask) {
++			ddsd.ddpfPixelFormat.dwFlags |= DDPF_ALPHAPIXELS;
++		}
++		if (details->bits_per_pixel == 8) {
++			ddsd.ddpfPixelFormat.dwFlags |= DDPF_PALETTEINDEXED8;
++		}
++		ddsd.ddpfPixelFormat.dwRGBBitCount = details->bits_per_pixel;
++		ddsd.ddpfPixelFormat.dwRBitMask = details->Rmask;
++		ddsd.ddpfPixelFormat.dwGBitMask = details->Gmask;
++		ddsd.ddpfPixelFormat.dwBBitMask = details->Bmask;
++		ddsd.ddpfPixelFormat.dwRGBAlphaBitMask = details->Amask;
++
++		if (lpDDSurfaceDesc) {
++			if ((lpDDSurfaceDesc->dwFlags & DDSD_WIDTH) == DDSD_WIDTH && lpDDSurfaceDesc->dwWidth != ddsd.dwWidth) {
++				continue;
++			}
++			if ((lpDDSurfaceDesc->dwFlags & DDSD_HEIGHT) == DDSD_HEIGHT && lpDDSurfaceDesc->dwHeight != ddsd.dwHeight) {
++				continue;
++			}
++			if ((lpDDSurfaceDesc->dwFlags & DDSD_PIXELFORMAT) == DDSD_PIXELFORMAT &&
++				lpDDSurfaceDesc->ddpfPixelFormat.dwRGBBitCount != ddsd.ddpfPixelFormat.dwRGBBitCount) {
++				continue;
++			}
++		}
++
++		if (lpEnumModesCallback(&ddsd, lpContext) == DDENUMRET_CANCEL) {
++			break;
++		}
++	}
++
++	return DD_OK;
+ }
+ 
+ HRESULT DirectDrawImpl::SetDisplayMode(DWORD dwWidth, DWORD dwHeight, DWORD dwBPP, DWORD dwRefreshRate, DWORD dwFlags)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	return SetDisplayMode(dwWidth, dwHeight, dwBPP);
+ }
+ 
+ HRESULT DirectDrawImpl::GetAvailableVidMem(LPDDSCAPS2 lpDDSCaps, LPDWORD lpdwTotal, LPDWORD lpdwFree)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	// Surfaces live in system memory; report a generous fixed budget.
++	const DWORD budget = 256u * 1024u * 1024u;
++	if (lpdwTotal) {
++		*lpdwTotal = budget;
++	}
++	if (lpdwFree) {
++		*lpdwFree = budget;
++	}
++	return DD_OK;
+ }
+ 
+ // IDirect3D2 interface
+@@ -383,6 +510,7 @@ HRESULT DirectDrawImpl::CreateDevice(
+ 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create a renderer for the selected device GUID");
+ 		return E_NOINTERFACE;
+ 	}
++	DDRenderer->SetDirect3D(this);
+ 	*ppDirect3DDevice = static_cast<IDirect3DDevice2*>(DDRenderer);
+ 	return DD_OK;
+ }
+diff --git a/miniwin/src/ddraw/ddsurface.cpp b/miniwin/src/ddraw/ddsurface.cpp
+index b46fb33..7cf44fa 100644
+--- a/miniwin/src/ddraw/ddsurface.cpp
++++ b/miniwin/src/ddraw/ddsurface.cpp
+@@ -2,6 +2,7 @@
+ #include "ddpalette_impl.h"
+ #include "ddraw_impl.h"
+ #include "ddsurface_impl.h"
++#include "framebuffer_impl.h"
+ #include "miniwin.h"
+ 
+ #include <assert.h>
+@@ -68,20 +69,8 @@ HRESULT DirectDrawSurfaceImpl::Blt(
+ )
+ {
+ 	if ((dwFlags & DDBLT_COLORFILL) == DDBLT_COLORFILL) {
+-		Uint32 color;
+-		if (m_surface->format == SDL_PIXELFORMAT_INDEX8) {
+-			// For INDEX8 surfaces the fill color is a palette index, not RGBA.
+-			color = lpDDBltFx->dwFillColor & 0xFF;
+-		}
+-		else {
+-			Uint8 a = (lpDDBltFx->dwFillColor >> 24) & 0xFF;
+-			Uint8 r = (lpDDBltFx->dwFillColor >> 16) & 0xFF;
+-			Uint8 g = (lpDDBltFx->dwFillColor >> 8) & 0xFF;
+-			Uint8 b = lpDDBltFx->dwFillColor & 0xFF;
+-
+-			const SDL_PixelFormatDetails* details = SDL_GetPixelFormatDetails(m_surface->format);
+-			color = SDL_MapRGBA(details, nullptr, r, g, b, a);
+-		}
++		SDL_Palette* palette = m_palette ? static_cast<DirectDrawPaletteImpl*>(m_palette)->m_palette : nullptr;
++		Uint32 color = FillColorToPixel(m_surface->format, palette, lpDDBltFx->dwFillColor);
+ 		if (lpDestRect) {
+ 			SDL_Rect dstRect = ConvertRect(lpDestRect);
+ 			SDL_FillSurfaceRect(m_surface, &dstRect, color);
+@@ -89,9 +78,23 @@ HRESULT DirectDrawSurfaceImpl::Blt(
+ 		else {
+ 			SDL_FillSurfaceRect(m_surface, nullptr, color);
+ 		}
++		if (m_texture) {
++			m_texture->Changed(TRUE, FALSE);
++		}
+ 		return DD_OK;
+ 	}
+ 
++	if (!lpDDSrcSurface) {
++		return DDERR_INVALIDPARAMS;
++	}
++	if (auto frameBuffer = dynamic_cast<FrameBufferImpl*>(lpDDSrcSurface)) {
++		// Reading the screen back: copy from what the renderer has drawn.
++		lpDDSrcSurface = frameBuffer->DownloadTransferBuffer();
++		if (!lpDDSrcSurface) {
++			return DDERR_GENERIC;
++		}
++	}
++
+ 	auto other = static_cast<DirectDrawSurfaceImpl*>(lpDDSrcSurface);
+ 
+ 	SDL_Rect srcRect = lpSrcRect ? ConvertRect(lpSrcRect) : SDL_Rect{0, 0, other->m_surface->w, other->m_surface->h};
+@@ -106,13 +109,26 @@ HRESULT DirectDrawSurfaceImpl::Blt(
+ 		}
+ 	}
+ 
+-	if (!SDL_BlitSurfaceScaled(blitSource, &srcRect, m_surface, &dstRect, SDL_SCALEMODE_NEAREST)) {
+-		return DDERR_GENERIC;
++	// DirectDraw applies the source colour key only when asked to.
++	bool keyed = SDL_SurfaceHasColorKey(blitSource);
++	Uint32 key = 0;
++	bool useKey = (dwFlags & DDBLT_KEYSRC) == DDBLT_KEYSRC;
++	if (keyed && !useKey) {
++		SDL_GetSurfaceColorKey(blitSource, &key);
++		SDL_SetSurfaceColorKey(blitSource, false, 0);
+ 	}
+ 
++	bool blitted = SDL_BlitSurfaceScaled(blitSource, &srcRect, m_surface, &dstRect, SDL_SCALEMODE_NEAREST);
++
++	if (keyed && !useKey) {
++		SDL_SetSurfaceColorKey(blitSource, true, key);
++	}
+ 	if (blitSource != other->m_surface) {
+ 		SDL_DestroySurface(blitSource);
+ 	}
++	if (!blitted) {
++		return DDERR_GENERIC;
++	}
+ 	if (m_texture) {
+ 		m_texture->Changed(TRUE, FALSE);
+ 	}
+@@ -127,13 +143,27 @@ HRESULT DirectDrawSurfaceImpl::BltFast(
+ 	DDBltFastFlags dwTrans
+ )
+ {
+-	RECT destRect = {
+-		(int) dwX,
+-		(int) dwY,
+-		(int) (lpSrcRect->right - lpSrcRect->left + dwX),
+-		(int) (lpSrcRect->bottom - lpSrcRect->top + dwY)
+-	};
+-	return Blt(&destRect, lpDDSrcSurface, lpSrcRect, DDBLT_NONE, nullptr);
++	if (!lpDDSrcSurface) {
++		return DDERR_INVALIDPARAMS;
++	}
++	int width, height;
++	if (lpSrcRect) {
++		width = lpSrcRect->right - lpSrcRect->left;
++		height = lpSrcRect->bottom - lpSrcRect->top;
++	}
++	else {
++		DDSURFACEDESC desc = {};
++		desc.dwSize = sizeof(desc);
++		lpDDSrcSurface->GetSurfaceDesc(&desc);
++		width = desc.dwWidth;
++		height = desc.dwHeight;
++	}
++	RECT destRect = {(int) dwX, (int) dwY, (int) dwX + width, (int) dwY + height};
++	DDBltFlags flags = DDBLT_NONE;
++	if ((dwTrans & DDBLTFAST_SRCCOLORKEY) == DDBLTFAST_SRCCOLORKEY) {
++		flags = flags | DDBLT_KEYSRC;
++	}
++	return Blt(&destRect, lpDDSrcSurface, lpSrcRect, flags, nullptr);
+ }
+ 
+ HRESULT DirectDrawSurfaceImpl::Flip(LPDIRECTDRAWSURFACE lpDDSurfaceTargetOverride, DDFlipFlags dwFlags)
+@@ -187,6 +217,7 @@ HRESULT DirectDrawSurfaceImpl::GetSurfaceDesc(LPDDSURFACEDESC lpDDSurfaceDesc)
+ 	lpDDSurfaceDesc->dwFlags |= DDSD_WIDTH | DDSD_HEIGHT;
+ 	lpDDSurfaceDesc->dwWidth = m_surface->w;
+ 	lpDDSurfaceDesc->dwHeight = m_surface->h;
++	lpDDSurfaceDesc->lPitch = m_surface->pitch;
+ 	return DD_OK;
+ }
+ 
+@@ -207,7 +238,11 @@ HRESULT DirectDrawSurfaceImpl::Lock(
+ 	}
+ 
+ 	GetSurfaceDesc(lpDDSurfaceDesc);
+-	lpDDSurfaceDesc->lpSurface = m_surface->pixels;
++	Uint8* pixels = static_cast<Uint8*>(m_surface->pixels);
++	if (lpDestRect) {
++		pixels += lpDestRect->top * m_surface->pitch + lpDestRect->left * SDL_BYTESPERPIXEL(m_surface->format);
++	}
++	lpDDSurfaceDesc->lpSurface = pixels;
+ 	lpDDSurfaceDesc->lPitch = m_surface->pitch;
+ 
+ 	return DD_OK;
+@@ -233,12 +268,20 @@ HRESULT DirectDrawSurfaceImpl::SetClipper(LPDIRECTDRAWCLIPPER lpDDClipper)
+ 
+ HRESULT DirectDrawSurfaceImpl::SetColorKey(DDColorKeyFlags dwFlags, LPDDCOLORKEY lpDDColorKey)
+ {
+-	if (lpDDColorKey->dwColorSpaceLowValue != lpDDColorKey->dwColorSpaceHighValue) {
+-		MINIWIN_NOT_IMPLEMENTED();
++	if (!lpDDColorKey) {
++		SDL_SetSurfaceColorKey(m_surface, false, 0);
+ 	}
+-
+-	if (SDL_SetSurfaceColorKey(m_surface, true, lpDDColorKey->dwColorSpaceLowValue) != 0) {
+-		return DDERR_GENERIC;
++	else {
++		if (lpDDColorKey->dwColorSpaceLowValue != lpDDColorKey->dwColorSpaceHighValue) {
++			// SDL keys a single value; the low end of the range is used.
++			MINIWIN_NOT_IMPLEMENTED();
++		}
++		if (!SDL_SetSurfaceColorKey(m_surface, true, lpDDColorKey->dwColorSpaceLowValue)) {
++			return DDERR_GENERIC;
++		}
++	}
++	if (m_texture) {
++		m_texture->Changed(TRUE, FALSE);
+ 	}
+ 
+ 	return DD_OK;
+@@ -283,26 +326,28 @@ HRESULT DirectDrawSurfaceImpl::Blt(
+ 	LPDDBLTFX lpDDBltFx
+ )
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	return Blt(lpDestRect, static_cast<LPDIRECTDRAWSURFACE>(lpDDSrcSurface), lpSrcRect, dwFlags, lpDDBltFx);
+ }
+ 
+ HRESULT DirectDrawSurfaceImpl::Flip(LPDIRECTDRAWSURFACE4 lpDDSurfaceTargetOverride, DDFlipFlags dwFlags)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	return DDERR_NOTFLIPPABLE;
+ }
+ 
+ HRESULT DirectDrawSurfaceImpl::GetAttachedSurface(LPDDSCAPS2 lpDDSCaps, LPDIRECTDRAWSURFACE4* lplpDDAttachedSurface)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	return DDERR_NOTFOUND;
+ }
+ 
+ HRESULT DirectDrawSurfaceImpl::GetSurfaceDesc(LPDDSURFACEDESC2 lpDDSurfaceDesc)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DDSURFACEDESC desc = {};
++	desc.dwSize = sizeof(desc);
++	HRESULT result = GetSurfaceDesc(&desc);
++	if (result == DD_OK) {
++		FromSurfaceDesc(desc, *lpDDSurfaceDesc);
++	}
++	return result;
+ }
+ 
+ HRESULT DirectDrawSurfaceImpl::Lock(
+@@ -312,14 +357,18 @@ HRESULT DirectDrawSurfaceImpl::Lock(
+ 	HANDLE hEvent
+ )
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DDSURFACEDESC desc = {};
++	desc.dwSize = sizeof(desc);
++	HRESULT result = Lock(lpDestRect, &desc, dwFlags, hEvent);
++	if (result == DD_OK) {
++		FromSurfaceDesc(desc, *lpDDSurfaceDesc);
++	}
++	return result;
+ }
+ 
+ HRESULT DirectDrawSurfaceImpl::Unlock(LPRECT lpRect)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	return Unlock(static_cast<LPVOID>(nullptr));
+ }
+ 
+ // IDirect3DTexture2 interface
+diff --git a/miniwin/src/ddraw/framebuffer.cpp b/miniwin/src/ddraw/framebuffer.cpp
+index 8ebda96..8725df8 100644
+--- a/miniwin/src/ddraw/framebuffer.cpp
++++ b/miniwin/src/ddraw/framebuffer.cpp
+@@ -11,6 +11,8 @@ FrameBufferImpl::FrameBufferImpl(DWORD virtualWidth, DWORD virtualHeight)
+ {
+ #ifdef __DJGPP__
+ 	m_transferBuffer = new DirectDrawSurfaceImpl(m_virtualWidth, m_virtualHeight, SDL_PIXELFORMAT_INDEX8);
++#elif defined(MINIWIN_PIXELFORMAT)
++	m_transferBuffer = new DirectDrawSurfaceImpl(m_virtualWidth, m_virtualHeight, MINIWIN_PIXELFORMAT);
+ #else
+ 	m_transferBuffer = new DirectDrawSurfaceImpl(m_virtualWidth, m_virtualHeight, SDL_PIXELFORMAT_RGBA32);
+ #endif
+@@ -77,6 +79,13 @@ HRESULT FrameBufferImpl::Blt(
+ 		Uint8 r = (lpDDBltFx->dwFillColor >> 16) & 0xFF;
+ 		Uint8 g = (lpDDBltFx->dwFillColor >> 8) & 0xFF;
+ 		Uint8 b = lpDDBltFx->dwFillColor & 0xFF;
++		SDL_PixelFormat format = m_transferBuffer->m_surface->format;
++		if (format != SDL_PIXELFORMAT_INDEX8 && SDL_BITSPERPIXEL(format) <= 16) {
++			// A pixel in the framebuffer's own format.
++			Uint32 pixel = FillColorToPixel(format, nullptr, lpDDBltFx->dwFillColor);
++			SDL_GetRGB(pixel, SDL_GetPixelFormatDetails(format), nullptr, &r, &g, &b);
++			a = 0xFF;
++		}
+ 
+ 		float fa = a / 255.0f;
+ 		float fr = r / 255.0f;
+@@ -134,10 +143,48 @@ HRESULT FrameBufferImpl::Flip(LPDIRECTDRAWSURFACE lpDDSurfaceTargetOverride, DDF
+ 	if (!DDRenderer) {
+ 		return DDERR_GENERIC;
+ 	}
++	DumpFrame();
+ 	DDRenderer->Flip();
+ 	return DD_OK;
+ }
+ 
++// MINIWIN_DUMP_FRAME=<file>: write each presented frame to <file> (PNG when
++// SDL can, else BMP), replacing the previous one, for headless runs.
++void FrameBufferImpl::DumpFrame()
++{
++	static const char* path = SDL_getenv("MINIWIN_DUMP_FRAME");
++	if (!path || !*path) {
++		return;
++	}
++	SDL_Surface* frame = SDL_CreateSurface(m_virtualWidth, m_virtualHeight, SDL_PIXELFORMAT_RGB24);
++	if (!frame) {
++		return;
++	}
++	DDRenderer->Download(frame);
++	char* temp = nullptr;
++	SDL_asprintf(&temp, "%s.tmp", path);
++	bool saved;
++#if SDL_VERSION_ATLEAST(3, 4, 0)
++	saved = SDL_SavePNG(frame, temp);
++#else
++	saved = SDL_SaveBMP(frame, temp);
++#endif
++	if (saved) {
++		SDL_RenamePath(temp, path);
++	}
++	SDL_free(temp);
++	SDL_DestroySurface(frame);
++}
++
++DirectDrawSurfaceImpl* FrameBufferImpl::DownloadTransferBuffer()
++{
++	if (!DDRenderer) {
++		return nullptr;
++	}
++	DDRenderer->Download(m_transferBuffer->m_surface);
++	return m_transferBuffer;
++}
++
+ HRESULT FrameBufferImpl::GetAttachedSurface(LPDDSCAPS lpDDSCaps, LPDIRECTDRAWSURFACE* lplpDDAttachedSurface)
+ {
+ 	if ((lpDDSCaps->dwCaps & DDSCAPS_BACKBUFFER) != DDSCAPS_BACKBUFFER) {
+@@ -277,36 +324,47 @@ HRESULT FrameBufferImpl::Blt(
+ 	LPDDBLTFX lpDDBltFx
+ )
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	return Blt(lpDestRect, static_cast<LPDIRECTDRAWSURFACE>(lpDDSrcSurface), lpSrcRect, dwFlags, lpDDBltFx);
+ }
+ 
+ HRESULT FrameBufferImpl::Flip(LPDIRECTDRAWSURFACE4 lpDDSurfaceTargetOverride, DDFlipFlags dwFlags)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	return Flip(static_cast<LPDIRECTDRAWSURFACE>(lpDDSurfaceTargetOverride), dwFlags);
+ }
+ 
+ HRESULT FrameBufferImpl::GetAttachedSurface(LPDDSCAPS2 lpDDSCaps, LPDIRECTDRAWSURFACE4* lplpDDAttachedSurface)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if ((lpDDSCaps->dwCaps & DDSCAPS_BACKBUFFER) != DDSCAPS_BACKBUFFER) {
++		return DDERR_INVALIDPARAMS;
++	}
++	AddRef();
++	*lplpDDAttachedSurface = this;
++	return DD_OK;
+ }
+ 
+ HRESULT FrameBufferImpl::GetSurfaceDesc(LPDDSURFACEDESC2 lpDDSurfaceDesc)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DDSURFACEDESC desc = {};
++	desc.dwSize = sizeof(desc);
++	HRESULT result = GetSurfaceDesc(&desc);
++	if (result == DD_OK) {
++		FromSurfaceDesc(desc, *lpDDSurfaceDesc);
++	}
++	return result;
+ }
+ 
+ HRESULT FrameBufferImpl::Lock(LPRECT lpDestRect, LPDDSURFACEDESC2 lpDDSurfaceDesc, DDLockFlags dwFlags, HANDLE hEvent)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DDSURFACEDESC desc = {};
++	desc.dwSize = sizeof(desc);
++	HRESULT result = Lock(lpDestRect, &desc, dwFlags, hEvent);
++	if (result == DD_OK) {
++		FromSurfaceDesc(desc, *lpDDSurfaceDesc);
++	}
++	return result;
+ }
+ 
+ HRESULT FrameBufferImpl::Unlock(LPRECT lpRect)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	return Unlock(static_cast<LPVOID>(nullptr));
+ }
+diff --git a/miniwin/src/internal/ddraw_impl.h b/miniwin/src/internal/ddraw_impl.h
+index 330d72a..669b67a 100644
+--- a/miniwin/src/internal/ddraw_impl.h
++++ b/miniwin/src/internal/ddraw_impl.h
+@@ -16,6 +16,57 @@ inline static SDL_Rect ConvertRect(const RECT* r)
+ 	return {r->left, r->top, r->right - r->left, r->bottom - r->top};
+ }
+ 
++// DDSURFACEDESC2 <-> DDSURFACEDESC for the fields miniwin uses, so the
++// IDirectDraw4/IDirectDrawSurface4 entry points share the version-1 code.
++inline static void ToSurfaceDesc(const DDSURFACEDESC2& in, DDSURFACEDESC& out)
++{
++	out = {};
++	out.dwSize = sizeof(DDSURFACEDESC);
++	out.dwFlags = in.dwFlags;
++	out.dwHeight = in.dwHeight;
++	out.dwWidth = in.dwWidth;
++	out.lPitch = in.lPitch;
++	out.dwBackBufferCount = in.dwBackBufferCount;
++	out.lpSurface = in.lpSurface;
++	out.ddpfPixelFormat = in.ddpfPixelFormat;
++	out.ddsCaps.dwCaps = in.ddsCaps.dwCaps;
++	if ((in.ddsCaps.dwCaps & DDSCAPS_ZBUFFER) == DDSCAPS_ZBUFFER) {
++		// DDSURFACEDESC2 carries the z-buffer depth in the pixel format.
++		out.dwFlags = out.dwFlags | DDSD_ZBUFFERBITDEPTH;
++		out.dwZBufferBitDepth = in.ddpfPixelFormat.dwRGBBitCount ? in.ddpfPixelFormat.dwRGBBitCount : 16;
++	}
++}
++
++inline static void FromSurfaceDesc(const DDSURFACEDESC& in, DDSURFACEDESC2& out)
++{
++	out = {};
++	out.dwSize = sizeof(DDSURFACEDESC2);
++	out.dwFlags = in.dwFlags;
++	out.dwHeight = in.dwHeight;
++	out.dwWidth = in.dwWidth;
++	out.lPitch = in.lPitch;
++	out.dwBackBufferCount = in.dwBackBufferCount;
++	out.lpSurface = in.lpSurface;
++	out.ddpfPixelFormat = in.ddpfPixelFormat;
++	out.ddpfPixelFormat.dwSize = sizeof(DDPIXELFORMAT);
++	out.ddsCaps.dwCaps = in.ddsCaps.dwCaps;
++}
++
++// A DDBLTFX fill colour as an SDL pixel of `format`. DirectDraw passes a
++// pixel in the surface's own format; miniwin has always read 32-bit fills as
++// A8R8G8B8, which is the same thing on a 32-bit display, and keeps that.
++inline static Uint32 FillColorToPixel(SDL_PixelFormat format, SDL_Palette* palette, DWORD fill)
++{
++	if (format == SDL_PIXELFORMAT_INDEX8) {
++		return fill & 0xFF;
++	}
++	const SDL_PixelFormatDetails* details = SDL_GetPixelFormatDetails(format);
++	if (details->bits_per_pixel <= 16) {
++		return fill & ((1u << details->bits_per_pixel) - 1);
++	}
++	return SDL_MapRGBA(details, palette, (fill >> 16) & 0xFF, (fill >> 8) & 0xFF, fill & 0xFF, (fill >> 24) & 0xFF);
++}
++
+ struct DirectDrawImpl : public IDirectDraw4, public IDirect3D3, public IDirect3DMiniwin {
+ 	// IUnknown interface
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+@@ -86,6 +137,8 @@ struct DirectDrawImpl : public IDirectDraw4, public IDirect3D3, public IDirect3D
+ 	D3DRenderStyle GetRenderStyle() const override { return m_renderStyle; }
+ 
+ private:
++	HRESULT CreateSurface4(LPDDSURFACEDESC lpDDSurfaceDesc, LPDIRECTDRAWSURFACE4* lplpDDSurface);
++
+ 	FrameBufferImpl* m_frameBuffer = nullptr;
+ 	int m_virtualWidth = 0;
+ 	int m_virtualHeight = 0;
+@@ -98,6 +151,8 @@ struct DirectDrawImpl : public IDirectDraw4, public IDirect3D3, public IDirect3D
+ 
+ HRESULT DirectDrawEnumerate(LPDDENUMCALLBACKA cb, void* context);
+ 
++SDL_PixelFormat MiniwinDisplayPixelFormat();
++
+ HRESULT DirectDrawCreate(LPGUID lpGuid, LPDIRECTDRAW* lplpDD, IUnknown* pUnkOuter);
+ 
+ void EnumDevice(
+diff --git a/miniwin/src/internal/framebuffer_impl.h b/miniwin/src/internal/framebuffer_impl.h
+index 4e955e5..08031a5 100644
+--- a/miniwin/src/internal/framebuffer_impl.h
++++ b/miniwin/src/internal/framebuffer_impl.h
+@@ -50,8 +50,12 @@ struct FrameBufferImpl : public IDirectDrawSurface4 {
+ 	HRESULT Unlock(LPRECT lpRect) override;
+ 
+ 	bool IsIndex8() const { return m_transferBuffer->m_surface->format == SDL_PIXELFORMAT_INDEX8; }
++	// The renderer's current image, read back into the transfer buffer.
++	DirectDrawSurfaceImpl* DownloadTransferBuffer();
+ 
+ private:
++	void DumpFrame();
++
+ 	uint32_t m_virtualWidth;
+ 	uint32_t m_virtualHeight;
+ 	bool m_readOnlyLock;
+diff --git a/miniwin/src/windows/windows.cpp b/miniwin/src/windows/windows.cpp
+index 41ae97f..dfe6e70 100644
+--- a/miniwin/src/windows/windows.cpp
++++ b/miniwin/src/windows/windows.cpp
+@@ -1,3 +1,4 @@
++#include "ddraw_impl.h"
+ #include "miniwin.h"
+ #include "miniwin/ddraw.h"
+ 
+@@ -31,8 +32,9 @@ HRESULT IUnknown::QueryInterface(const GUID& riid, void** ppvObject)
+ 
+ HRESULT IDirectDrawClipper::SetClipList(LPRGNDATA lpClipList, DWORD dwFlags)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	// Blits are clipped to the destination surface; a clip list that covers
++	// the surface, the common case, needs nothing more.
++	return DD_OK;
+ }
+ 
+ HRESULT IDirectDrawClipper::SetHWnd(DWORD unnamedParam1, HWND hWnd)
+@@ -83,6 +85,13 @@ int WINAPI GetDeviceCaps(HDC hdc, int index)
+ 	if (index == SIZEPALETTE) {
+ 		return 256;
+ 	}
++	if (index == BITSPIXEL) {
++		const SDL_PixelFormatDetails* details = SDL_GetPixelFormatDetails(MiniwinDisplayPixelFormat());
++		return details ? details->bits_per_pixel : 0;
++	}
++	if (index == PLANES) {
++		return 1;
++	}
+ 	return 0;
+ }
+ 

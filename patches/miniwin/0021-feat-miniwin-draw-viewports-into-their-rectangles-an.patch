@@ -1,0 +1,575 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 01:48:58 -0800
+Subject: [PATCH] feat(miniwin): draw viewports into their rectangles and clear
+ on request
+
+CreateViewport's x and y now place the viewport: GetX and GetY return
+them, and the renderer gets a viewport rectangle (SetViewportRect,
+default ignored) that the viewport's projection is centred on and that
+its drawing is clipped to. A viewport re-applies its rectangle,
+projection and frustum on every Render and when it becomes the device's
+current viewport, so two viewports on one device no longer share the
+last one's projection. The frustum planes are derived from the
+projection, so they hold for any front plane.
+
+IDirect3DViewport3::Clear2 and Viewport::Clear(flags) clear rectangles,
+clipped to the viewport, of the target (to a colour, or to the scene's
+background) and the z-buffer, through a new renderer entry point,
+ClearRect. Its default clears only the whole target. Viewport::Clear()
+clears both, as D3DRM does.
+
+The software backend implements both. Once the client clears the
+z-buffer itself, BeginFrame stops clearing it, so drawing can continue
+across Render calls until the next clear; LEGO Island, which never
+clears z, keeps the per-frame clear.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/d3d.h b/miniwin/include/miniwin/d3d.h
+index 10a18d5..8e9fa03 100644
+--- a/miniwin/include/miniwin/d3d.h
++++ b/miniwin/include/miniwin/d3d.h
+@@ -210,6 +210,10 @@ enum class D3DBLEND : uint32_t {
+ 	SRCALPHASAT = 11,
+ };
+ 
++#define D3DCLEAR_TARGET 0x1
++#define D3DCLEAR_ZBUFFER 0x2
++#define D3DCLEAR_STENCIL 0x4
++
+ // The one vertex type the immediate-mode draw path takes: position, normal
+ // and one texture coordinate, transformed and lit by the device. It is DX5's
+ // D3DVT_VERTEX and DX6's D3DFVF_VERTEX.
+diff --git a/miniwin/src/d3d/d3dviewport.cpp b/miniwin/src/d3d/d3dviewport.cpp
+index 24eb24a..fd2109a 100644
+--- a/miniwin/src/d3d/d3dviewport.cpp
++++ b/miniwin/src/d3d/d3dviewport.cpp
+@@ -1,3 +1,5 @@
++#include "d3drm_impl.h"
++#include "d3drmviewport_impl.h"
+ #include "d3dviewport_impl.h"
+ #include "miniwin.h"
+ 
+@@ -17,8 +19,22 @@ HRESULT Direct3DViewportImpl::QueryInterface(const GUID& riid, void** ppvObject)
+ 	return E_NOINTERFACE;
+ }
+ 
++// Clear rectangles of the target and z-buffer. Rectangles are in device
++// coordinates and clipped to the viewport; there is no stencil buffer.
+ HRESULT Direct3DViewportImpl::Clear2(DWORD count, LPD3DRECT rects, DWORD flags, DWORD color, float z, DWORD stencil)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (!m_owner) {
++		return DDERR_GENERIC;
++	}
++	if (count && !rects) {
++		return DDERR_INVALIDPARAMS;
++	}
++	flags &= D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER;
++	for (DWORD i = 0; i < count; ++i) {
++		HRESULT result = m_owner->ClearRect(&rects[i], flags, color, z);
++		if (result != DD_OK) {
++			return result;
++		}
++	}
++	return DD_OK;
+ }
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index 278f387..cb3fd10 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -152,9 +152,9 @@ void Direct3DRMSoftwareRenderer::ProjectVertex(const D3DVECTOR& v, D3DRMVECTOR4D
+ 		pz *= invW;
+ 	}
+ 
+-	// Map from NDC [-1,1] to screen coordinates
+-	p.x = (px * 0.5f + 0.5f) * m_width;
+-	p.y = (1.0f - (py * 0.5f + 0.5f)) * m_height;
++	// Map from NDC [-1,1] to the viewport's pixels
++	p.x = m_viewportX + (px * 0.5f + 0.5f) * m_viewportW;
++	p.y = m_viewportY + (1.0f - (py * 0.5f + 0.5f)) * m_viewportH;
+ 	p.z = pz;
+ }
+ 
+@@ -519,8 +519,8 @@ void Direct3DRMSoftwareRenderer::DrawTriangleProjected(
+ 		std::swap(verts[0], verts[1]);
+ 	}
+ 
+-	int minY = std::max(0, (int) std::ceil(verts[0].y));
+-	int maxY = std::min((int) m_height - 1, (int) std::floor(verts[2].y));
++	int minY = std::max(m_clipMinY, (int) std::ceil(verts[0].y));
++	int maxY = std::min(m_clipMaxY, (int) std::floor(verts[2].y));
+ 	if (minY > maxY) {
+ 		return;
+ 	}
+@@ -553,8 +553,8 @@ void Direct3DRMSoftwareRenderer::DrawTriangleProjected(
+ 		const SWEdge& left = (shortEdge.x <= longEdge.x) ? shortEdge : longEdge;
+ 		const SWEdge& right = (shortEdge.x <= longEdge.x) ? longEdge : shortEdge;
+ 
+-		int startX = std::max(0, (int) std::ceil(left.x));
+-		int endX = std::min((int) m_width - 1, (int) std::floor(right.x));
++		int startX = std::max(m_clipMinX, (int) std::ceil(left.x));
++		int endX = std::min(m_clipMaxX, (int) std::floor(right.x));
+ 
+ 		float span = right.x - left.x;
+ 		if (span <= 0.0f || startX > endX) {
+@@ -882,7 +882,9 @@ HRESULT Direct3DRMSoftwareRenderer::BeginFrame()
+ 	if (!m_renderedImage || !SDL_LockSurface(m_renderedImage)) {
+ 		return DDERR_GENERIC;
+ 	}
+-	ClearZBuffer();
++	if (!m_clientClearsZ) {
++		ClearZBuffer();
++	}
+ 
+ 	m_format = SDL_GetPixelFormatDetails(m_renderedImage->format);
+ 	m_palette = SDL_GetSurfacePalette(m_renderedImage);
+@@ -1055,6 +1057,7 @@ void Direct3DRMSoftwareRenderer::Resize(int width, int height, const ViewportTra
+ 		SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, m_width, m_height);
+ 
+ 	m_zBuffer.resize(m_width * m_height);
++	SetViewportRect(nullptr);
+ }
+ 
+ void Direct3DRMSoftwareRenderer::Clear(float r, float g, float b)
+@@ -1233,10 +1236,10 @@ void Direct3DRMSoftwareRenderer::DrawImmediateTriangle(
+ 		area = -area;
+ 	}
+ 
+-	int minX = std::max(0, static_cast<int>(std::ceil(std::min({p[0].x, p[1].x, p[2].x}))));
+-	int maxX = std::min(m_width - 1, static_cast<int>(std::floor(std::max({p[0].x, p[1].x, p[2].x}))));
+-	int minY = std::max(0, static_cast<int>(std::ceil(std::min({p[0].y, p[1].y, p[2].y}))));
+-	int maxY = std::min(m_height - 1, static_cast<int>(std::floor(std::max({p[0].y, p[1].y, p[2].y}))));
++	int minX = std::max(m_clipMinX, static_cast<int>(std::ceil(std::min({p[0].x, p[1].x, p[2].x}))));
++	int maxX = std::min(m_clipMaxX, static_cast<int>(std::floor(std::max({p[0].x, p[1].x, p[2].x}))));
++	int minY = std::max(m_clipMinY, static_cast<int>(std::ceil(std::min({p[0].y, p[1].y, p[2].y}))));
++	int maxY = std::min(m_clipMaxY, static_cast<int>(std::floor(std::max({p[0].y, p[1].y, p[2].y}))));
+ 	if (minX > maxX || minY > maxY) {
+ 		return;
+ 	}
+@@ -1404,3 +1407,66 @@ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ 	}
+ 	return DD_OK;
+ }
++
++// ---- viewports and clears ---------------------------------------------------
++
++// A rectangle in the game's coordinates as render pixels, scaled and
++// offset as the 2D image is, and clipped to the target.
++SDL_Rect Direct3DRMSoftwareRenderer::ToRenderPixels(const D3DRECT& rect) const
++{
++	float scale = m_viewportTransform.scale;
++	int x1 = static_cast<int>(std::lround(rect.x1 * scale + m_viewportTransform.offsetX));
++	int y1 = static_cast<int>(std::lround(rect.y1 * scale + m_viewportTransform.offsetY));
++	int x2 = static_cast<int>(std::lround(rect.x2 * scale + m_viewportTransform.offsetX));
++	int y2 = static_cast<int>(std::lround(rect.y2 * scale + m_viewportTransform.offsetY));
++	x1 = std::max(0, std::min(x1, m_width));
++	y1 = std::max(0, std::min(y1, m_height));
++	x2 = std::max(x1, std::min(x2, m_width));
++	y2 = std::max(y1, std::min(y2, m_height));
++	return {x1, y1, x2 - x1, y2 - y1};
++}
++
++void Direct3DRMSoftwareRenderer::SetViewportRect(const D3DRECT* rect)
++{
++	// The whole-device viewport keeps the whole target (its projection
++	// already accounts for the window's aspect).
++	SDL_Rect pixels = rect ? ToRenderPixels(*rect) : SDL_Rect{0, 0, m_width, m_height};
++	m_viewportX = static_cast<float>(pixels.x);
++	m_viewportY = static_cast<float>(pixels.y);
++	m_viewportW = static_cast<float>(pixels.w);
++	m_viewportH = static_cast<float>(pixels.h);
++	m_clipMinX = pixels.x;
++	m_clipMinY = pixels.y;
++	m_clipMaxX = pixels.x + pixels.w - 1;
++	m_clipMaxY = pixels.y + pixels.h - 1;
++}
++
++HRESULT Direct3DRMSoftwareRenderer::ClearRect(const D3DRECT& rect, DWORD flags, D3DCOLOR color, float z)
++{
++	if (!m_renderedImage) {
++		return DDERR_GENERIC;
++	}
++	SDL_Rect pixels = ToRenderPixels(rect);
++	if (pixels.w <= 0 || pixels.h <= 0) {
++		return DD_OK;
++	}
++	if (flags & D3DCLEAR_TARGET) {
++		const SDL_PixelFormatDetails* details = SDL_GetPixelFormatDetails(m_renderedImage->format);
++		Uint32 fill = SDL_MapRGBA(
++			details,
++			SDL_GetSurfacePalette(m_renderedImage),
++			(color >> 16) & 0xff,
++			(color >> 8) & 0xff,
++			color & 0xff,
++			0xff
++		);
++		SDL_FillSurfaceRect(m_renderedImage, &pixels, fill);
++	}
++	if (flags & D3DCLEAR_ZBUFFER) {
++		m_clientClearsZ = true;
++		for (int y = pixels.y; y < pixels.y + pixels.h; ++y) {
++			std::fill_n(&m_zBuffer[y * m_width + pixels.x], pixels.w, z);
++		}
++	}
++	return DD_OK;
++}
+diff --git a/miniwin/src/d3drm/d3drm.cpp b/miniwin/src/d3drm/d3drm.cpp
+index b695553..146d3e1 100644
+--- a/miniwin/src/d3drm/d3drm.cpp
++++ b/miniwin/src/d3drm/d3drm.cpp
+@@ -238,7 +238,7 @@ HRESULT Direct3DRMImpl::CreateViewport(
+ {
+ 	auto device = static_cast<Direct3DRMDevice2Impl*>(iDevice);
+ 	auto* viewport =
+-		new Direct3DRMViewportImpl(width, height, device->m_renderer, static_cast<IDirect3DRMDevice*>(device));
++		new Direct3DRMViewportImpl(width, height, device->m_renderer, static_cast<IDirect3DRMDevice*>(device), x, y);
+ 	if (camera) {
+ 		viewport->SetCamera(camera);
+ 	}
+diff --git a/miniwin/src/d3drm/d3drmrenderer.cpp b/miniwin/src/d3drm/d3drmrenderer.cpp
+index 5a12a39..c38e4ab 100644
+--- a/miniwin/src/d3drm/d3drmrenderer.cpp
++++ b/miniwin/src/d3drm/d3drmrenderer.cpp
+@@ -1,5 +1,8 @@
+ #include "d3dmaterial_impl.h"
+ #include "d3drmrenderer.h"
++#include "d3drm_impl.h"
++#include "d3drmviewport_impl.h"
++#include "d3dviewport_impl.h"
+ #include "miniwin.h"
+ #ifdef USE_OPENGL1
+ #include "d3drmrenderer_opengl1.h"
+@@ -150,6 +153,25 @@ HRESULT Direct3DRMRenderer::SetCurrentViewport(IDirect3DViewport3* viewport)
+ 		m_currentViewport->Release();
+ 	}
+ 	m_currentViewport = viewport;
++	// Draws now project into and clip to that viewport's rectangle.
++	if (auto* impl = dynamic_cast<Direct3DViewportImpl*>(viewport)) {
++		if (impl->m_owner && impl->m_owner->GetRenderer() == this) {
++			impl->m_owner->ApplyToRenderer();
++		}
++	}
++	return DD_OK;
++}
++
++HRESULT Direct3DRMRenderer::ClearRect(const D3DRECT& rect, DWORD flags, D3DCOLOR color, float z)
++{
++	if (!(flags & D3DCLEAR_TARGET)) {
++		return DD_OK; // this backend clears its z-buffer in every BeginFrame
++	}
++	if (rect.x1 > 0 || rect.y1 > 0 || rect.x2 < m_virtualWidth || rect.y2 < m_virtualHeight) {
++		MINIWIN_NOT_IMPLEMENTED();
++		return DDERR_UNSUPPORTED;
++	}
++	Clear(((color >> 16) & 0xff) / 255.0f, ((color >> 8) & 0xff) / 255.0f, (color & 0xff) / 255.0f);
+ 	return DD_OK;
+ }
+ 
+diff --git a/miniwin/src/d3drm/d3drmviewport.cpp b/miniwin/src/d3drm/d3drmviewport.cpp
+index dadccb3..82c5f20 100644
+--- a/miniwin/src/d3drm/d3drmviewport.cpp
++++ b/miniwin/src/d3drm/d3drmviewport.cpp
+@@ -11,6 +11,7 @@
+ 
+ #include <SDL3/SDL.h>
+ #include <SDL3/SDL_stdinc.h>
++#include <algorithm>
+ #include <cassert>
+ #include <float.h>
+ #include <functional>
+@@ -20,10 +21,15 @@ Direct3DRMViewportImpl::Direct3DRMViewportImpl(
+ 	DWORD width,
+ 	DWORD height,
+ 	Direct3DRMRenderer* renderer,
+-	IDirect3DRMDevice* device
++	IDirect3DRMDevice* device,
++	LONG x,
++	LONG y
+ )
+-	: m_virtualWidth(width), m_virtualHeight(height), m_renderer(renderer), m_device(device)
++	: m_virtualWidth(width), m_virtualHeight(height), m_renderer(renderer), m_device(device), m_x(x), m_y(y)
+ {
++	if (m_renderer) {
++		UpdateProjectionMatrix();
++	}
+ }
+ 
+ Direct3DRMViewportImpl::~Direct3DRMViewportImpl()
+@@ -33,6 +39,7 @@ Direct3DRMViewportImpl::~Direct3DRMViewportImpl()
+ 		m_camera = nullptr;
+ 	}
+ 	if (m_d3dViewport) {
++		m_d3dViewport->m_owner = nullptr;
+ 		m_d3dViewport->Release();
+ 		m_d3dViewport = nullptr;
+ 	}
+@@ -160,9 +167,9 @@ void Direct3DRMViewportImpl::CollectLightsFromFrame(
+ void Direct3DRMViewportImpl::BuildViewFrustumPlanes()
+ {
+ 
+-	float aspect = (float) m_renderer->GetWidth() / (float) m_renderer->GetHeight();
+-	float tanFovX = m_field;
+-	float tanFovY = m_field / aspect;
++	// The half-extents of the view at z = 1, as the projection maps them.
++	float tanFovX = 1.0f / m_projectionMatrix[0][0];
++	float tanFovY = 1.0f / m_projectionMatrix[1][1];
+ 
+ 	// View-space frustum planes
+ 	m_frustumPlanes[0] = {Normalize({tanFovX, 0.0f, 1.0f}), 0.0f};  // Left
+@@ -367,6 +374,8 @@ HRESULT Direct3DRMViewportImpl::RenderScene()
+ 
+ 	D3DRMMATRIX4D identity = {{1.f, 0.f, 0.f, 0.f}, {0.f, 1.f, 0.f, 0.f}, {0.f, 0.f, 1.f, 0.f}, {0.f, 0.f, 0.f, 1.f}};
+ 
++	ApplyToRenderer();
++
+ 	std::vector<SceneLight> lights;
+ 	CollectLightsFromFrame(m_rootFrame, identity, lights);
+ 	m_renderer->PushLights(lights.data(), lights.size());
+@@ -375,9 +384,6 @@ HRESULT Direct3DRMViewportImpl::RenderScene()
+ 		return status;
+ 	}
+ 
+-	BuildViewFrustumPlanes();
+-	m_renderer->SetFrustumPlanes(m_frustumPlanes);
+-
+ 	CollectMeshesFromFrame(m_rootFrame, identity);
+ 
+ 	std::sort(
+@@ -417,17 +423,40 @@ HRESULT Direct3DRMViewportImpl::ForceUpdate(int x, int y, int w, int h)
+ }
+ 
+ HRESULT Direct3DRMViewportImpl::Clear()
++{
++	return Clear(D3DRMCLEAR_ALL);
++}
++
++void Direct3DRMViewportImpl::ApplyToRenderer()
+ {
+ 	if (!m_renderer) {
+-		return DDERR_GENERIC;
++		return;
+ 	}
++	bool whole = m_x == 0 && m_y == 0 && (int) m_virtualWidth == m_renderer->GetVirtualWidth() &&
++				 (int) m_virtualHeight == m_renderer->GetVirtualHeight();
++	D3DRECT rect = {m_x, m_y, m_x + (LONG) m_virtualWidth, m_y + (LONG) m_virtualHeight};
++	m_renderer->SetViewportRect(whole ? nullptr : &rect);
++	m_renderer->SetProjection(m_projectionMatrix, m_front, m_back);
++	BuildViewFrustumPlanes();
++	m_renderer->SetFrustumPlanes(m_frustumPlanes);
++}
+ 
+-	uint8_t r = (m_backgroundColor >> 16) & 0xFF;
+-	uint8_t g = (m_backgroundColor >> 8) & 0xFF;
+-	uint8_t b = m_backgroundColor & 0xFF;
+-	m_renderer->Clear(r / 255.0f, g / 255.0f, b / 255.0f);
+-
+-	return DD_OK;
++HRESULT Direct3DRMViewportImpl::ClearRect(const D3DRECT* rect, DWORD flags, D3DCOLOR color, float z)
++{
++	if (!m_renderer) {
++		return DDERR_GENERIC;
++	}
++	D3DRECT area = {m_x, m_y, m_x + (LONG) m_virtualWidth, m_y + (LONG) m_virtualHeight};
++	if (rect) {
++		area.x1 = std::max(area.x1, rect->x1);
++		area.y1 = std::max(area.y1, rect->y1);
++		area.x2 = std::min(area.x2, rect->x2);
++		area.y2 = std::min(area.y2, rect->y2);
++	}
++	if (area.x1 >= area.x2 || area.y1 >= area.y2) {
++		return DD_OK;
++	}
++	return m_renderer->ClearRect(area, flags, color, z);
+ }
+ 
+ HRESULT Direct3DRMViewportImpl::SetCamera(IDirect3DRMFrame* camera)
+@@ -496,6 +525,13 @@ void Direct3DRMViewportImpl::UpdateProjectionMatrix()
+ {
+ 	float virtualAspect = (float) m_virtualWidth / (float) m_virtualHeight;
+ 	float windowAspect = (float) m_renderer->GetWidth() / (float) m_renderer->GetHeight();
++	// A viewport smaller than the device is drawn into its own rectangle,
++	// scaled with the 2D image, so it keeps its own aspect.
++	bool whole = m_x == 0 && m_y == 0 && (int) m_virtualWidth == m_renderer->GetVirtualWidth() &&
++				 (int) m_virtualHeight == m_renderer->GetVirtualHeight();
++	if (!whole) {
++		windowAspect = virtualAspect;
++	}
+ 
+ 	float base_f = m_front / m_field;
+ 	float f_v = base_f * virtualAspect;
+@@ -905,10 +941,28 @@ void Direct3DRMViewportImpl::CloseDevice()
+ }
+ 
+ // IDirect3DRMViewport2 interface
++// Clear the viewport's rectangle: the target to the scene's background
++// colour, the z-buffer to the far plane.
+ HRESULT Direct3DRMViewportImpl::Clear(DWORD flags)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOTIMPL;
++	if (!m_renderer) {
++		return DDERR_GENERIC;
++	}
++	if (m_camera) {
++		auto* scene = static_cast<Direct3DRMFrameImpl*>(m_camera);
++		while (scene->m_parent && scene->m_parent != scene) {
++			scene = scene->m_parent;
++		}
++		m_backgroundColor = scene->m_backgroundColor;
++	}
++	DWORD d3dFlags = 0;
++	if (flags & D3DRMCLEAR_TARGET) {
++		d3dFlags |= D3DCLEAR_TARGET;
++	}
++	if (flags & D3DRMCLEAR_ZBUFFER) {
++		d3dFlags |= D3DCLEAR_ZBUFFER;
++	}
++	return ClearRect(nullptr, d3dFlags, m_backgroundColor | 0xff000000, 1.0f);
+ }
+ 
+ HRESULT Direct3DRMViewportImpl::Render(IDirect3DRMFrame3* frame)
+@@ -931,14 +985,12 @@ HRESULT Direct3DRMViewportImpl::GetCamera(IDirect3DRMFrame3** camera)
+ 
+ LONG Direct3DRMViewportImpl::GetX()
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return 0;
++	return m_x;
+ }
+ 
+ LONG Direct3DRMViewportImpl::GetY()
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return 0;
++	return m_y;
+ }
+ 
+ HRESULT Direct3DRMViewportImpl::GetDirect3DViewport(IDirect3DViewport** viewport)
+@@ -947,9 +999,9 @@ HRESULT Direct3DRMViewportImpl::GetDirect3DViewport(IDirect3DViewport** viewport
+ 		return DDERR_INVALIDPARAMS;
+ 	}
+ 	if (!m_d3dViewport) {
+-		m_d3dViewport = static_cast<IDirect3DViewport*>(new Direct3DViewportImpl);
++		m_d3dViewport = new Direct3DViewportImpl(this);
+ 	}
+ 	m_d3dViewport->AddRef();
+-	*viewport = m_d3dViewport;
++	*viewport = static_cast<IDirect3DViewport*>(m_d3dViewport);
+ 	return DD_OK;
+ }
+diff --git a/miniwin/src/internal/d3drmrenderer.h b/miniwin/src/internal/d3drmrenderer.h
+index ff7fee0..2433fe5 100644
+--- a/miniwin/src/internal/d3drmrenderer.h
++++ b/miniwin/src/internal/d3drmrenderer.h
+@@ -120,6 +120,14 @@ class Direct3DRMRenderer : public IDirect3DDevice3 {
+ 	// Backends that do not implement it leave DrawIndexedPrimitive
+ 	// unsupported.
+ 	virtual HRESULT SubmitImmediate(const ImmediateDraw& draw) { return DDERR_UNSUPPORTED; }
++	// The rectangle 3D drawing is projected into and clipped to, in the
++	// game's (virtual) coordinates; nullptr is the whole target. Backends
++	// that ignore it draw every viewport over the whole target.
++	virtual void SetViewportRect(const D3DRECT* rect) {}
++	// Clear a rectangle, in virtual coordinates, of the target (D3DCLEAR_TARGET,
++	// to an ARGB colour) and of the z-buffer (D3DCLEAR_ZBUFFER, to z). The
++	// default clears only the whole target, through Clear.
++	virtual HRESULT ClearRect(const D3DRECT& rect, DWORD flags, D3DCOLOR color, float z);
+ 	virtual void SetPalette(SDL_Palette* palette) {}
+ 	virtual bool UsesPalettedSurfaces() const { return false; }
+ 	// The IDirect3D3 (the DirectDraw object) the device was created from.
+diff --git a/miniwin/src/internal/d3drmrenderer_software.h b/miniwin/src/internal/d3drmrenderer_software.h
+index b7d501c..e82df3b 100644
+--- a/miniwin/src/internal/d3drmrenderer_software.h
++++ b/miniwin/src/internal/d3drmrenderer_software.h
+@@ -63,6 +63,8 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 	void SetDither(bool dither) override;
+ 	void SetPalette(SDL_Palette* palette) override;
+ 	HRESULT SubmitImmediate(const ImmediateDraw& draw) override;
++	void SetViewportRect(const D3DRECT* rect) override;
++	HRESULT ClearRect(const D3DRECT& rect, DWORD flags, D3DCOLOR color, float z) override;
+ 
+ private:
+ 	void ClearZBuffer();
+@@ -130,6 +132,14 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 	std::vector<SDL_Color> m_vertexSpeculars;
+ 	std::vector<Uint8> m_vertexLit;
+ 	Plane m_frustumPlanes[6];
++	// The current viewport in render pixels: projection maps NDC onto
++	// m_viewport*, and triangles are clipped to the m_clip* pixel range.
++	float m_viewportX = 0.0f, m_viewportY = 0.0f, m_viewportW = 0.0f, m_viewportH = 0.0f;
++	int m_clipMinX = 0, m_clipMinY = 0, m_clipMaxX = -1, m_clipMaxY = -1;
++	// Set once the client clears the z-buffer itself (D3DCLEAR_ZBUFFER);
++	// until then BeginFrame clears it, as LEGO Island expects.
++	bool m_clientClearsZ = false;
++	SDL_Rect ToRenderPixels(const D3DRECT& rect) const;
+ };
+ 
+ inline static void Direct3DRMSoftware_EnumDevice(LPD3DENUMDEVICESCALLBACK cb, void* ctx)
+diff --git a/miniwin/src/internal/d3drmviewport_impl.h b/miniwin/src/internal/d3drmviewport_impl.h
+index 824e3c9..2db5858 100644
+--- a/miniwin/src/internal/d3drmviewport_impl.h
++++ b/miniwin/src/internal/d3drmviewport_impl.h
+@@ -24,7 +24,9 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 		DWORD width,
+ 		DWORD height,
+ 		Direct3DRMRenderer* renderer,
+-		IDirect3DRMDevice* device = nullptr
++		IDirect3DRMDevice* device = nullptr,
++		LONG x = 0,
++		LONG y = 0
+ 	);
+ 	~Direct3DRMViewportImpl() override;
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+@@ -59,6 +61,11 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 	LONG GetY() override;
+ 	void CloseDevice();
+ 	void UpdateProjectionMatrix();
++	// Make this the viewport the renderer projects into and clips to.
++	void ApplyToRenderer();
++	// Clear the viewport's rectangle, or the part of rect inside it.
++	HRESULT ClearRect(const D3DRECT* rect, DWORD flags, D3DCOLOR color, float z);
++	Direct3DRMRenderer* GetRenderer() const { return m_renderer; }
+ 
+ private:
+ 	HRESULT RenderScene();
+@@ -70,6 +77,8 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 	IDirect3DRMDevice* m_device; // the device the viewport was created on; not owned
+ 	std::vector<DeferredDrawCommand> m_deferredDraws;
+ 	D3DCOLOR m_backgroundColor = 0xFF000000;
++	LONG m_x;
++	LONG m_y;
+ 	DWORD m_virtualWidth;
+ 	DWORD m_virtualHeight;
+ 	D3DRMMATRIX4D m_viewProjectionwMatrix;
+@@ -78,7 +87,7 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 	D3DRMMATRIX4D m_inverseProjectionMatrix;
+ 	IDirect3DRMFrame* m_rootFrame = nullptr;
+ 	IDirect3DRMFrame* m_camera = nullptr;
+-	IDirect3DViewport* m_d3dViewport = nullptr;
++	struct Direct3DViewportImpl* m_d3dViewport = nullptr;
+ 	D3DVALUE m_front = 1.f;
+ 	D3DVALUE m_back = 10.f;
+ 	D3DVALUE m_field = 0.5f;
+diff --git a/miniwin/src/internal/d3dviewport_impl.h b/miniwin/src/internal/d3dviewport_impl.h
+index e4fa05f..7e7e5b1 100644
+--- a/miniwin/src/internal/d3dviewport_impl.h
++++ b/miniwin/src/internal/d3dviewport_impl.h
+@@ -2,9 +2,16 @@
+ 
+ #include "miniwin/d3d.h"
+ 
++struct Direct3DRMViewportImpl;
++
++// The Direct3D viewport of a Direct3DRM viewport (GetDirect3DViewport).
+ struct Direct3DViewportImpl : public IDirect3DViewport3 {
++	explicit Direct3DViewportImpl(Direct3DRMViewportImpl* owner) : m_owner(owner) {}
+ 	// IUnknown interface
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+ 	// IDirect3DViewport3 interface
+ 	HRESULT Clear2(DWORD count, LPD3DRECT rects, DWORD flags, DWORD color, float z, DWORD stencil) override;
++
++	// The Direct3DRM viewport this one belongs to; null once it is gone.
++	Direct3DRMViewportImpl* m_owner;
+ };

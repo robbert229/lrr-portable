@@ -1,0 +1,382 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 18:09:30 -0800
+Subject: [PATCH] Add Direct3DRM mesh builder, animation set and user visual
+ stubs to miniwin
+
+Declare IDirect3DRMMeshBuilder, IDirect3DRMMeshBuilder2,
+IDirect3DRMMeshBuilder3, IDirect3DRMAnimationSet2 and
+IDirect3DRMUserVisual with their IIDs, the user-visual callback and
+reason types, and IDirect3DRM3's CreateMeshBuilder, CreateAnimationSet
+and CreateUserVisual.
+
+miniwin has no object for these yet, so each gets a new stub class:
+Direct3DRMMeshBuilderImpl answers all three mesh builder IIDs,
+Direct3DRMAnimationSetImpl answers IID_IDirect3DRMAnimationSet2, and
+Direct3DRMUserVisualImpl answers IID_IDirect3DRMUserVisual and keeps
+its callback and argument. The IDirect3DRM3 Create methods return these
+objects, and their methods log once and return E_NOTIMPL.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/CMakeLists.txt b/miniwin/CMakeLists.txt
+index 1621035..272c651 100644
+--- a/miniwin/CMakeLists.txt
++++ b/miniwin/CMakeLists.txt
+@@ -17,11 +17,14 @@ add_library(miniwin STATIC EXCLUDE_FROM_ALL
+ 
+   # D3DRM
+   src/d3drm/d3drm.cpp
++  src/d3drm/d3drmanimationset.cpp
+   src/d3drm/d3drmdevice.cpp
+   src/d3drm/d3drmframe.cpp
+   src/d3drm/d3drmlight.cpp
+   src/d3drm/d3drmmesh.cpp
++  src/d3drm/d3drmmeshbuilder.cpp
+   src/d3drm/d3drmtexture.cpp
++  src/d3drm/d3drmuservisual.cpp
+   src/d3drm/d3drmviewport.cpp
+   src/d3drm/d3drmrenderer.cpp
+   src/internal/meshutils.cpp
+diff --git a/miniwin/include/miniwin/d3drm.h b/miniwin/include/miniwin/d3drm.h
+index e1ef0ec..e0d5173 100644
+--- a/miniwin/include/miniwin/d3drm.h
++++ b/miniwin/include/miniwin/d3drm.h
+@@ -142,6 +142,13 @@ typedef DWORD D3DRMLOADOPTIONS;
+ #define D3DRMLOAD_INSTANCEBYREFERENCE 0x100
+ #define D3DRMLOAD_INSTANCEBYCOPYING 0x200
+ 
++#define D3DRMUSERVISUAL_CANSEE D3DRMUSERVISUALREASON::CANSEE
++#define D3DRMUSERVISUAL_RENDER D3DRMUSERVISUALREASON::RENDER
++enum class D3DRMUSERVISUALREASON {
++	CANSEE,
++	RENDER
++};
++
+ #define D3DRMFOGMETHOD_VERTEX 0x1
+ #define D3DRMFOGMETHOD_TABLE 0x2
+ #define D3DRMFOGMETHOD_ANY 0x4
+@@ -166,6 +173,10 @@ DEFINE_GUID(IID_IDirect3DRMViewport, 0xeb16cb02, 0xd271, 0x11ce, 0xac, 0x48, 0x0
+ DEFINE_GUID(IID_IDirect3DRMViewport2, 0x4a1b1be6, 0xbfed, 0x11d1, 0x8e, 0xd8, 0x00, 0xa0, 0xc9, 0x67, 0xa4, 0x82);
+ DEFINE_GUID(IID_IDirect3DRMMesh, 0xa3a80d01, 0x6e12, 0x11cf, 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
+ DEFINE_GUID(IID_IDirect3DRMMeshBuilder, 0xa3a80d02, 0x6e12, 0x11cf, 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
++DEFINE_GUID(IID_IDirect3DRMMeshBuilder2, 0x4516ec77, 0x8f20, 0x11d0, 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3);
++DEFINE_GUID(IID_IDirect3DRMMeshBuilder3, 0x4516ec82, 0x8f20, 0x11d0, 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3);
++DEFINE_GUID(IID_IDirect3DRMAnimationSet2, 0xff6b7f79, 0xa40e, 0x11d1, 0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66);
++DEFINE_GUID(IID_IDirect3DRMUserVisual, 0x59163de0, 0x6d43, 0x11cf, 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
+ DEFINE_GUID(IID_IDirect3DRMTexture, 0xeb16cb09, 0xd271, 0x11ce, 0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
+ DEFINE_GUID(IID_IDirect3DRMTexture2, 0x120f30c0, 0x1629, 0x11d0, 0x94, 0x1c, 0x00, 0x80, 0xc8, 0x0c, 0xfa, 0x7b);
+ DEFINE_GUID(IID_IDirect3DRMTexture3, 0xff6b7f73, 0xa40e, 0x11d1, 0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66);
+@@ -300,6 +311,26 @@ struct IDirect3DRMMesh : public IDirect3DRMVisual {
+ };
+ 
+ struct IDirect3DRMFrame;
++struct IDirect3DRMMeshBuilder : public IDirect3DRMVisual {
++	virtual HRESULT SetPerspective(BOOL perspective) = 0;
++	virtual HRESULT CreateMesh(IDirect3DRMMesh** mesh) = 0;
++};
++typedef IDirect3DRMMeshBuilder* LPDIRECT3DRMMESHBUILDER;
++
++struct IDirect3DRMMeshBuilder2 : public IDirect3DRMMeshBuilder {};
++typedef IDirect3DRMMeshBuilder2* LPDIRECT3DRMMESHBUILDER2;
++
++struct IDirect3DRMMeshBuilder3 : public IDirect3DRMMeshBuilder2 {
++	virtual HRESULT Load(
++		void* filename,
++		void* name,
++		D3DRMLOADOPTIONS flags,
++		D3DRMLOADTEXTURE3CALLBACK callback,
++		void* arg
++	) = 0;
++};
++typedef IDirect3DRMMeshBuilder3* LPDIRECT3DRMMESHBUILDER3;
++
+ struct IDirect3DRMLight : public IDirect3DRMObject {
+ 	virtual HRESULT SetColor(D3DCOLOR color) = 0;
+ 	virtual HRESULT SetColorRGB(float r, float g, float b) = 0;
+@@ -442,6 +473,19 @@ struct IDirect3DRMViewport : public IDirect3DRMObject {
+ 	virtual HRESULT Pick(float x, float y, LPDIRECT3DRMPICKEDARRAY* pickedArray) = 0;
+ };
+ 
++struct IDirect3DRMAnimationSet2 : public IDirect3DRMObject {
++	virtual HRESULT Load(
++		void* filename,
++		void* name,
++		D3DRMLOADOPTIONS flags,
++		D3DRMLOADTEXTURE3CALLBACK callback,
++		void* arg,
++		IDirect3DRMFrame3* parent
++	) = 0;
++	virtual HRESULT SetTime(D3DVALUE time) = 0;
++};
++typedef IDirect3DRMAnimationSet2* LPDIRECT3DRMANIMATIONSET2;
++
+ struct IDirect3DRMViewport2 : public IDirect3DRMViewport {
+ 	virtual HRESULT Clear(DWORD flags) = 0;
+ 	virtual HRESULT Render(IDirect3DRMFrame3* frame) = 0;
+@@ -494,6 +538,17 @@ struct IDirect3DRMDevice3 : public IDirect3DRMDevice2 {
+ };
+ typedef IDirect3DRMDevice3* LPDIRECT3DRMDEVICE3;
+ 
++struct IDirect3DRMUserVisual;
++typedef int (*D3DRMUSERVISUALCALLBACK)(
++	IDirect3DRMUserVisual* visual,
++	void* arg,
++	D3DRMUSERVISUALREASON reason,
++	IDirect3DRMDevice* device,
++	IDirect3DRMViewport* viewport
++);
++struct IDirect3DRMUserVisual : public IDirect3DRMVisual {};
++typedef IDirect3DRMUserVisual* LPDIRECT3DRMUSERVISUAL;
++
+ struct IDirect3DRM : virtual public IUnknown {
+ 	virtual HRESULT CreateDeviceFromD3D(
+ 		const IDirect3D2* d3d,
+@@ -549,6 +604,13 @@ struct IDirect3DRM3 : public IDirect3DRM2 {
+ 		IDirect3DRMViewport2** outViewport
+ 	) = 0;
+ 	virtual HRESULT LoadTexture(const char* filename, IDirect3DRMTexture3** outTexture) = 0;
++	virtual HRESULT CreateMeshBuilder(IDirect3DRMMeshBuilder3** outMeshBuilder) = 0;
++	virtual HRESULT CreateAnimationSet(IDirect3DRMAnimationSet2** outAnimationSet) = 0;
++	virtual HRESULT CreateUserVisual(
++		D3DRMUSERVISUALCALLBACK callback,
++		void* arg,
++		IDirect3DRMUserVisual** outUserVisual
++	) = 0;
+ };
+ typedef IDirect3DRM3* LPDIRECT3DRM3;
+ 
+diff --git a/miniwin/src/d3drm/d3drm.cpp b/miniwin/src/d3drm/d3drm.cpp
+index db42643..d1b4821 100644
+--- a/miniwin/src/d3drm/d3drm.cpp
++++ b/miniwin/src/d3drm/d3drm.cpp
+@@ -1,13 +1,16 @@
+ #include "miniwin/d3drm.h"
+ 
+ #include "d3drm_impl.h"
++#include "d3drmanimationset_impl.h"
+ #include "d3drmdevice_impl.h"
+ #include "d3drmframe_impl.h"
+ #include "d3drmlight_impl.h"
+ #include "d3drmmesh_impl.h"
++#include "d3drmmeshbuilder_impl.h"
+ #include "d3drmobject_impl.h"
+ #include "d3drmrenderer.h"
+ #include "d3drmtexture_impl.h"
++#include "d3drmuservisual_impl.h"
+ #include "d3drmviewport_impl.h"
+ #include "ddraw_impl.h"
+ #include "ddsurface_impl.h"
+@@ -320,6 +323,28 @@ HRESULT Direct3DRMImpl::LoadTexture(const char* filename, IDirect3DRMTexture3**
+ 	return E_NOTIMPL;
+ }
+ 
++HRESULT Direct3DRMImpl::CreateMeshBuilder(IDirect3DRMMeshBuilder3** outMeshBuilder)
++{
++	*outMeshBuilder = static_cast<IDirect3DRMMeshBuilder3*>(new Direct3DRMMeshBuilderImpl);
++	return DD_OK;
++}
++
++HRESULT Direct3DRMImpl::CreateAnimationSet(IDirect3DRMAnimationSet2** outAnimationSet)
++{
++	*outAnimationSet = static_cast<IDirect3DRMAnimationSet2*>(new Direct3DRMAnimationSetImpl);
++	return DD_OK;
++}
++
++HRESULT Direct3DRMImpl::CreateUserVisual(
++	D3DRMUSERVISUALCALLBACK callback,
++	void* arg,
++	IDirect3DRMUserVisual** outUserVisual
++)
++{
++	*outUserVisual = static_cast<IDirect3DRMUserVisual*>(new Direct3DRMUserVisualImpl(callback, arg));
++	return DD_OK;
++}
++
+ HRESULT WINAPI Direct3DRMCreate(IDirect3DRM** direct3DRM)
+ {
+ 	*direct3DRM = new Direct3DRMImpl;
+diff --git a/miniwin/src/d3drm/d3drmanimationset.cpp b/miniwin/src/d3drm/d3drmanimationset.cpp
+new file mode 100644
+index 0000000..748d8ad
+--- /dev/null
++++ b/miniwin/src/d3drm/d3drmanimationset.cpp
+@@ -0,0 +1,32 @@
++#include "d3drmanimationset_impl.h"
++#include "miniwin.h"
++
++HRESULT Direct3DRMAnimationSetImpl::QueryInterface(const GUID& riid, void** ppvObject)
++{
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMAnimationSet2, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMAnimationSet2*>(this);
++		return DD_OK;
++	}
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOINTERFACE;
++}
++
++HRESULT Direct3DRMAnimationSetImpl::Load(
++	void* filename,
++	void* name,
++	D3DRMLOADOPTIONS flags,
++	D3DRMLOADTEXTURE3CALLBACK callback,
++	void* arg,
++	IDirect3DRMFrame3* parent
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMAnimationSetImpl::SetTime(D3DVALUE time)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
+diff --git a/miniwin/src/d3drm/d3drmmeshbuilder.cpp b/miniwin/src/d3drm/d3drmmeshbuilder.cpp
+new file mode 100644
+index 0000000..4ee15dd
+--- /dev/null
++++ b/miniwin/src/d3drm/d3drmmeshbuilder.cpp
+@@ -0,0 +1,47 @@
++#include "d3drmmeshbuilder_impl.h"
++#include "miniwin.h"
++
++HRESULT Direct3DRMMeshBuilderImpl::QueryInterface(const GUID& riid, void** ppvObject)
++{
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMMeshBuilder, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMMeshBuilder*>(this);
++		return DD_OK;
++	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMMeshBuilder2, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMMeshBuilder2*>(this);
++		return DD_OK;
++	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMMeshBuilder3, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMMeshBuilder3*>(this);
++		return DD_OK;
++	}
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOINTERFACE;
++}
++
++HRESULT Direct3DRMMeshBuilderImpl::SetPerspective(BOOL perspective)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMMeshBuilderImpl::CreateMesh(IDirect3DRMMesh** mesh)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMMeshBuilderImpl::Load(
++	void* filename,
++	void* name,
++	D3DRMLOADOPTIONS flags,
++	D3DRMLOADTEXTURE3CALLBACK callback,
++	void* arg
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
+diff --git a/miniwin/src/d3drm/d3drmuservisual.cpp b/miniwin/src/d3drm/d3drmuservisual.cpp
+new file mode 100644
+index 0000000..2b4f63c
+--- /dev/null
++++ b/miniwin/src/d3drm/d3drmuservisual.cpp
+@@ -0,0 +1,13 @@
++#include "d3drmuservisual_impl.h"
++#include "miniwin.h"
++
++HRESULT Direct3DRMUserVisualImpl::QueryInterface(const GUID& riid, void** ppvObject)
++{
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMUserVisual, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMUserVisual*>(this);
++		return DD_OK;
++	}
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOINTERFACE;
++}
+diff --git a/miniwin/src/internal/d3drm_impl.h b/miniwin/src/internal/d3drm_impl.h
+index 5c82685..0e3d60b 100644
+--- a/miniwin/src/internal/d3drm_impl.h
++++ b/miniwin/src/internal/d3drm_impl.h
+@@ -61,6 +61,10 @@ struct Direct3DRMImpl : virtual public IDirect3DRM3 {
+ 		IDirect3DRMViewport2** outViewport
+ 	) override;
+ 	HRESULT LoadTexture(const char* filename, IDirect3DRMTexture3** outTexture) override;
++	HRESULT CreateMeshBuilder(IDirect3DRMMeshBuilder3** outMeshBuilder) override;
++	HRESULT CreateAnimationSet(IDirect3DRMAnimationSet2** outAnimationSet) override;
++	HRESULT CreateUserVisual(D3DRMUSERVISUALCALLBACK callback, void* arg, IDirect3DRMUserVisual** outUserVisual)
++		override;
+ };
+ 
+ template <typename InterfaceType, typename ActualType, typename ArrayInterface>
+diff --git a/miniwin/src/internal/d3drmanimationset_impl.h b/miniwin/src/internal/d3drmanimationset_impl.h
+new file mode 100644
+index 0000000..c8f61ef
+--- /dev/null
++++ b/miniwin/src/internal/d3drmanimationset_impl.h
+@@ -0,0 +1,16 @@
++#pragma once
++
++#include "d3drmobject_impl.h"
++
++struct Direct3DRMAnimationSetImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMAnimationSet2> {
++	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
++	HRESULT Load(
++		void* filename,
++		void* name,
++		D3DRMLOADOPTIONS flags,
++		D3DRMLOADTEXTURE3CALLBACK callback,
++		void* arg,
++		IDirect3DRMFrame3* parent
++	) override;
++	HRESULT SetTime(D3DVALUE time) override;
++};
+diff --git a/miniwin/src/internal/d3drmmeshbuilder_impl.h b/miniwin/src/internal/d3drmmeshbuilder_impl.h
+new file mode 100644
+index 0000000..3b38bb1
+--- /dev/null
++++ b/miniwin/src/internal/d3drmmeshbuilder_impl.h
+@@ -0,0 +1,13 @@
++#pragma once
++
++#include "d3drmobject_impl.h"
++
++struct Direct3DRMMeshBuilderImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMMeshBuilder3> {
++	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
++	// IDirect3DRMMeshBuilder interface
++	HRESULT SetPerspective(BOOL perspective) override;
++	HRESULT CreateMesh(IDirect3DRMMesh** mesh) override;
++	// IDirect3DRMMeshBuilder3 interface
++	HRESULT Load(void* filename, void* name, D3DRMLOADOPTIONS flags, D3DRMLOADTEXTURE3CALLBACK callback, void* arg)
++		override;
++};
+diff --git a/miniwin/src/internal/d3drmuservisual_impl.h b/miniwin/src/internal/d3drmuservisual_impl.h
+new file mode 100644
+index 0000000..4997756
+--- /dev/null
++++ b/miniwin/src/internal/d3drmuservisual_impl.h
+@@ -0,0 +1,12 @@
++#pragma once
++
++#include "d3drmobject_impl.h"
++
++struct Direct3DRMUserVisualImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMUserVisual> {
++	Direct3DRMUserVisualImpl(D3DRMUSERVISUALCALLBACK callback, void* arg) : m_callback(callback), m_arg(arg) {}
++	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
++
++private:
++	D3DRMUSERVISUALCALLBACK m_callback;
++	void* m_arg;
++};

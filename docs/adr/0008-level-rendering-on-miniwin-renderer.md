@@ -199,9 +199,10 @@ Our fork is that commit plus 14 DX6 commits.
 
 ## Order of work
 
-Each step is one PR in this repo, bumping the submodule. Each miniwin commit
-goes on `lrr/dx6-interfaces` and, at the same time, into an upstream PR to
-isle-portable.
+Each step is one PR in this repo. Each miniwin change is a patch in
+`patches/miniwin` ([ADR 0009](0009-miniwin-patches-in-this-repository.md);
+steps 0 to 5 went on the old fork's `lrr/dx6-interfaces`) and, at the same
+time, an upstream PR to isle-portable.
 
 Verification uses four tools:
 

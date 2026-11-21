@@ -4,6 +4,8 @@
 on how the native port is structured and where it lives. **Amends**
 [ADR 0005](0005-original-shape-c-units.md) and [ADR 0006](0006-original-link-order.md)
 on the *develop branch* only; both still govern `main` until the *decomp tag*.
+**Amended by** [ADR 0009](0009-miniwin-patches-in-this-repository.md) on where
+miniwin patches awaiting upstream review are carried.
 
 ## Context
 
@@ -49,8 +51,10 @@ shape.
      - D3DIM: Device3, Viewport3, Texture2.
 
      These changes go upstream to isle-portable first. Patches still
-     awaiting review are carried on a fork that the submodule points at, and
-     dropped as upstream accepts them.
+     awaiting review are carried as patch files in this repository
+     ([ADR 0009](0009-miniwin-patches-in-this-repository.md); until
+     2026-11-20, on a fork that the submodule pointed at), and dropped as
+     upstream accepts them.
    - **Library substitutions** replace the Windows-only APIs outside
      miniwin's scope, directly in the units that call them, in the same way
      as isle-portable's library-substitution table:

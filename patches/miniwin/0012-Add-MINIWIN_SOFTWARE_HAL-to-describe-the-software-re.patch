@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 22:29:49 -0800
+Subject: [PATCH] Add MINIWIN_SOFTWARE_HAL to describe the software renderer as
+ HAL
+
+Some DirectX 6 games accept only a hardware device and otherwise report
+that no 3D accelerator was found. With this compile-time option the
+software renderer, which stands in for the display driver, fills its HAL
+description too, including 16-, 24- and 32-bit render depths.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/internal/d3drmrenderer_software.h b/miniwin/src/internal/d3drmrenderer_software.h
+index f3f3266..ea9d8c5 100644
+--- a/miniwin/src/internal/d3drmrenderer_software.h
++++ b/miniwin/src/internal/d3drmrenderer_software.h
+@@ -132,5 +132,14 @@ inline static void Direct3DRMSoftware_EnumDevice(LPD3DENUMDEVICESCALLBACK cb, vo
+ 	helDesc.dpcTriCaps.dwShadeCaps = D3DPSHADECAPS_ALPHAFLATBLEND;
+ 	helDesc.dpcTriCaps.dwTextureFilterCaps = D3DPTFILTERCAPS_LINEAR;
+ 
++#ifdef MINIWIN_SOFTWARE_HAL
++	// Some games accept only a hardware (HAL) device and report "no 3D
++	// accelerator" otherwise. With this option the software renderer stands in
++	// for the display driver's rasterizer and describes itself as HAL.
++	halDesc = helDesc;
++	halDesc.dwFlags = halDesc.dwFlags | D3DDD_COLORMODEL | D3DDD_DEVICERENDERBITDEPTH;
++	halDesc.dwDeviceRenderBitDepth = DDBD_16 | DDBD_24 | DDBD_32;
++#endif
++
+ 	EnumDevice(cb, ctx, "Miniwin Emulation", &halDesc, &helDesc, SOFTWARE_GUID);
+ }

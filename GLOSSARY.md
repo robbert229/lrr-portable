@@ -77,9 +77,9 @@ _Avoid_: "demo", "recording" when you mean the replayable unit
 The LGPL-3.0 source-compatible *platform* adapter from the
 isledecomp/isle-portable project that reimplements the DX6-era WinAPI surface
 (DirectDraw, D3DRM skeleton, etc.) over SDL3. Brought in as a sparse submodule
-limited to `miniwin/`. Extended upstream first; the submodule points at the
-project's fork (`robbert229/isle-portable`, branch `lrr/dx6-interfaces`),
-which carries the patches still in upstream review (ADR 0007).
+limited to `miniwin/`, pinned to an upstream commit. Extended upstream first;
+the patches still in upstream review are `patches/miniwin/*.patch`, applied
+on top by `tools/setup-miniwin.sh` (ADR 0007, ADR 0009).
 _Avoid_: "the SDL layer", "the shim" when context needs the product name
 
 **library substitution**:

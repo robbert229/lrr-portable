@@ -29,6 +29,7 @@ src/                Reconstruction source tree: game/ and gods98/ (original
                     from relocation), platform/ (native entry points), crt/
                     (stand-ins for the original's static C runtime), main.cpp
 3rdparty/           Dependency submodules (isle-portable, sparse → miniwin/)
+patches/miniwin/    Our miniwin changes, applied on top of the submodule (ADR 0009)
 ```
 
 Everything under `reference/` is the original game as shipped. It is **not** committed to git

@@ -1,0 +1,342 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 00:54:24 -0800
+Subject: [PATCH] fix(miniwin): send Windows virtual-key codes in key messages
+
+WM_KEYDOWN and WM_KEYUP carried the SDL keycode in wParam (SDLK_UP is
+0x40000052), not the virtual-key code Windows sends. Translate SDL key
+events as Windows does: wParam is the VK code (letters and digits by the
+layout's character, other keys by keycode, unmapped keys by position),
+lParam has a repeat count of 1 and the extended, Alt-held, previous-state
+and transition flags, and Alt combinations and F10 arrive as
+WM_SYSKEYDOWN/WM_SYSKEYUP. DefWindowProcA turns Alt+F4 into WM_CLOSE.
+Add the VK_* and KF_* constants to windows.h.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/windows.h b/miniwin/include/miniwin/windows.h
+index 9297af2..1c29d26 100644
+--- a/miniwin/include/miniwin/windows.h
++++ b/miniwin/include/miniwin/windows.h
+@@ -56,6 +56,83 @@
+ #define WM_RBUTTONUP 0x0205
+ #define WM_RBUTTONDBLCLK 0x0206
+ 
++// Virtual-key codes: WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN and WM_SYSKEYUP
++// carry these in wParam, as on Windows.
++#define VK_BACK 0x08
++#define VK_TAB 0x09
++#define VK_CLEAR 0x0C
++#define VK_RETURN 0x0D
++#define VK_SHIFT 0x10
++#define VK_CONTROL 0x11
++#define VK_MENU 0x12
++#define VK_PAUSE 0x13
++#define VK_CAPITAL 0x14
++#define VK_ESCAPE 0x1B
++#define VK_SPACE 0x20
++#define VK_PRIOR 0x21
++#define VK_NEXT 0x22
++#define VK_END 0x23
++#define VK_HOME 0x24
++#define VK_LEFT 0x25
++#define VK_UP 0x26
++#define VK_RIGHT 0x27
++#define VK_DOWN 0x28
++#define VK_SNAPSHOT 0x2C
++#define VK_INSERT 0x2D
++#define VK_DELETE 0x2E
++#define VK_LWIN 0x5B
++#define VK_RWIN 0x5C
++#define VK_APPS 0x5D
++#define VK_NUMPAD0 0x60
++#define VK_NUMPAD1 0x61
++#define VK_NUMPAD2 0x62
++#define VK_NUMPAD3 0x63
++#define VK_NUMPAD4 0x64
++#define VK_NUMPAD5 0x65
++#define VK_NUMPAD6 0x66
++#define VK_NUMPAD7 0x67
++#define VK_NUMPAD8 0x68
++#define VK_NUMPAD9 0x69
++#define VK_MULTIPLY 0x6A
++#define VK_ADD 0x6B
++#define VK_SEPARATOR 0x6C
++#define VK_SUBTRACT 0x6D
++#define VK_DECIMAL 0x6E
++#define VK_DIVIDE 0x6F
++#define VK_F1 0x70
++#define VK_F2 0x71
++#define VK_F3 0x72
++#define VK_F4 0x73
++#define VK_F5 0x74
++#define VK_F6 0x75
++#define VK_F7 0x76
++#define VK_F8 0x77
++#define VK_F9 0x78
++#define VK_F10 0x79
++#define VK_F11 0x7A
++#define VK_F12 0x7B
++#define VK_NUMLOCK 0x90
++#define VK_SCROLL 0x91
++#define VK_OEM_1 0xBA
++#define VK_OEM_PLUS 0xBB
++#define VK_OEM_COMMA 0xBC
++#define VK_OEM_MINUS 0xBD
++#define VK_OEM_PERIOD 0xBE
++#define VK_OEM_2 0xBF
++#define VK_OEM_3 0xC0
++#define VK_OEM_4 0xDB
++#define VK_OEM_5 0xDC
++#define VK_OEM_6 0xDD
++#define VK_OEM_7 0xDE
++#define VK_OEM_102 0xE2
++
++// Key message lParam flags (the high word): extended key, Alt held,
++// previous key state and transition state.
++#define KF_EXTENDED 0x0100
++#define KF_ALTDOWN 0x2000
++#define KF_REPEAT 0x4000
++#define KF_UP 0x8000
++
+ #define WM_SETTEXT 0x000C
+ #define WM_INITDIALOG 0x0110
+ #define WM_COMMAND 0x0111
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+index c2ea0a2..a03c088 100644
+--- a/miniwin/src/windows/windowmessages.cpp
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -80,6 +80,207 @@ LPARAM MousePosition(float x, float y)
+ 	return MAKELPARAM((int) x, (int) y);
+ }
+ 
++// The virtual-key code Windows reports for a key: a letter or digit by the
++// character the layout gives it (as Windows' VK_A..VK_Z follow the layout),
++// any other key by its SDL keycode, and a key the layout gives no Latin
++// character by its physical position.
++WPARAM VirtualKey(SDL_Keycode key, SDL_Scancode scancode)
++{
++	if (key >= SDLK_A && key <= SDLK_Z) {
++		return 'A' + (key - SDLK_A);
++	}
++	if (key >= SDLK_0 && key <= SDLK_9) {
++		return '0' + (key - SDLK_0);
++	}
++	if (key >= SDLK_F1 && key <= SDLK_F12) {
++		return VK_F1 + (key - SDLK_F1);
++	}
++	switch (key) {
++	case SDLK_BACKSPACE:
++		return VK_BACK;
++	case SDLK_TAB:
++		return VK_TAB;
++	case SDLK_CLEAR:
++		return VK_CLEAR;
++	case SDLK_RETURN:
++	case SDLK_KP_ENTER:
++		return VK_RETURN;
++	case SDLK_LSHIFT:
++	case SDLK_RSHIFT:
++		return VK_SHIFT;
++	case SDLK_LCTRL:
++	case SDLK_RCTRL:
++		return VK_CONTROL;
++	case SDLK_LALT:
++	case SDLK_RALT:
++		return VK_MENU;
++	case SDLK_PAUSE:
++		return VK_PAUSE;
++	case SDLK_CAPSLOCK:
++		return VK_CAPITAL;
++	case SDLK_ESCAPE:
++		return VK_ESCAPE;
++	case SDLK_SPACE:
++		return VK_SPACE;
++	case SDLK_PAGEUP:
++		return VK_PRIOR;
++	case SDLK_PAGEDOWN:
++		return VK_NEXT;
++	case SDLK_END:
++		return VK_END;
++	case SDLK_HOME:
++		return VK_HOME;
++	case SDLK_LEFT:
++		return VK_LEFT;
++	case SDLK_UP:
++		return VK_UP;
++	case SDLK_RIGHT:
++		return VK_RIGHT;
++	case SDLK_DOWN:
++		return VK_DOWN;
++	case SDLK_PRINTSCREEN:
++		return VK_SNAPSHOT;
++	case SDLK_INSERT:
++		return VK_INSERT;
++	case SDLK_DELETE:
++		return VK_DELETE;
++	case SDLK_LGUI:
++		return VK_LWIN;
++	case SDLK_RGUI:
++		return VK_RWIN;
++	case SDLK_APPLICATION:
++		return VK_APPS;
++	case SDLK_KP_0:
++		return VK_NUMPAD0;
++	case SDLK_KP_1:
++		return VK_NUMPAD1;
++	case SDLK_KP_2:
++		return VK_NUMPAD2;
++	case SDLK_KP_3:
++		return VK_NUMPAD3;
++	case SDLK_KP_4:
++		return VK_NUMPAD4;
++	case SDLK_KP_5:
++		return VK_NUMPAD5;
++	case SDLK_KP_6:
++		return VK_NUMPAD6;
++	case SDLK_KP_7:
++		return VK_NUMPAD7;
++	case SDLK_KP_8:
++		return VK_NUMPAD8;
++	case SDLK_KP_9:
++		return VK_NUMPAD9;
++	case SDLK_KP_MULTIPLY:
++		return VK_MULTIPLY;
++	case SDLK_KP_PLUS:
++		return VK_ADD;
++	case SDLK_KP_MINUS:
++		return VK_SUBTRACT;
++	case SDLK_KP_PERIOD:
++		return VK_DECIMAL;
++	case SDLK_KP_DIVIDE:
++		return VK_DIVIDE;
++	case SDLK_NUMLOCKCLEAR:
++		return VK_NUMLOCK;
++	case SDLK_SCROLLLOCK:
++		return VK_SCROLL;
++	case SDLK_SEMICOLON:
++		return VK_OEM_1;
++	case SDLK_EQUALS:
++		return VK_OEM_PLUS;
++	case SDLK_COMMA:
++		return VK_OEM_COMMA;
++	case SDLK_MINUS:
++		return VK_OEM_MINUS;
++	case SDLK_PERIOD:
++		return VK_OEM_PERIOD;
++	case SDLK_SLASH:
++		return VK_OEM_2;
++	case SDLK_GRAVE:
++		return VK_OEM_3;
++	case SDLK_LEFTBRACKET:
++		return VK_OEM_4;
++	case SDLK_BACKSLASH:
++		return VK_OEM_5;
++	case SDLK_RIGHTBRACKET:
++		return VK_OEM_6;
++	case SDLK_APOSTROPHE:
++		return VK_OEM_7;
++	default:
++		break;
++	}
++	if (scancode >= SDL_SCANCODE_A && scancode <= SDL_SCANCODE_Z) {
++		return 'A' + (scancode - SDL_SCANCODE_A);
++	}
++	if (scancode >= SDL_SCANCODE_1 && scancode <= SDL_SCANCODE_9) {
++		return '1' + (scancode - SDL_SCANCODE_1);
++	}
++	if (scancode == SDL_SCANCODE_0) {
++		return '0';
++	}
++	if (scancode == SDL_SCANCODE_NONUSBACKSLASH) {
++		return VK_OEM_102;
++	}
++	return 0;
++}
++
++// Windows' extended-key flag: the right-hand Ctrl and Alt, the navigation
++// keys outside the numeric keypad, and the keypad's Enter and divide.
++bool ExtendedKey(SDL_Scancode scancode)
++{
++	switch (scancode) {
++	case SDL_SCANCODE_RCTRL:
++	case SDL_SCANCODE_RALT:
++	case SDL_SCANCODE_INSERT:
++	case SDL_SCANCODE_DELETE:
++	case SDL_SCANCODE_HOME:
++	case SDL_SCANCODE_END:
++	case SDL_SCANCODE_PAGEUP:
++	case SDL_SCANCODE_PAGEDOWN:
++	case SDL_SCANCODE_LEFT:
++	case SDL_SCANCODE_RIGHT:
++	case SDL_SCANCODE_UP:
++	case SDL_SCANCODE_DOWN:
++	case SDL_SCANCODE_KP_ENTER:
++	case SDL_SCANCODE_KP_DIVIDE:
++	case SDL_SCANCODE_NUMLOCKCLEAR:
++	case SDL_SCANCODE_PRINTSCREEN:
++	case SDL_SCANCODE_LGUI:
++	case SDL_SCANCODE_RGUI:
++	case SDL_SCANCODE_APPLICATION:
++		return true;
++	default:
++		return false;
++	}
++}
++
++// A key event as Windows sends it: WM_SYSKEYDOWN/WM_SYSKEYUP for F10 and
++// for keys pressed with Alt but not Ctrl (Alt itself included), otherwise
++// WM_KEYDOWN/WM_KEYUP. wParam is the virtual-key code; lParam has a repeat
++// count of 1, the extended-key, Alt-held, previous-state and transition
++// flags in its high word, and no OEM scan code.
++void TranslateKey(const SDL_KeyboardEvent& key)
++{
++	WPARAM vk = VirtualKey(key.key, key.scancode);
++	bool alt = (key.mod & SDL_KMOD_ALT) || key.key == SDLK_LALT || key.key == SDLK_RALT;
++	bool sys = (alt && !(key.mod & SDL_KMOD_CTRL)) || key.key == SDLK_F10;
++	UINT message = key.down ? (sys ? WM_SYSKEYDOWN : WM_KEYDOWN) : (sys ? WM_SYSKEYUP : WM_KEYUP);
++	WORD flags = 0;
++	if (ExtendedKey(key.scancode)) {
++		flags |= KF_EXTENDED;
++	}
++	if (alt && sys) {
++		flags |= KF_ALTDOWN;
++	}
++	if (!key.down || key.repeat) {
++		flags |= KF_REPEAT;
++	}
++	if (!key.down) {
++		flags |= KF_UP;
++	}
++	Post(WindowOf(key.windowID), message, vk, MAKELPARAM(1, flags));
++}
++
+ // Turns one SDL event into window messages on the queue.
+ void Translate(const SDL_Event& event)
+ {
+@@ -126,12 +327,7 @@ void Translate(const SDL_Event& event)
+ 	}
+ 	case SDL_EVENT_KEY_DOWN:
+ 	case SDL_EVENT_KEY_UP:
+-		Post(
+-			WindowOf(event.key.windowID),
+-			event.type == SDL_EVENT_KEY_DOWN ? WM_KEYDOWN : WM_KEYUP,
+-			(WPARAM) event.key.key,
+-			0
+-		);
++		TranslateKey(event.key);
+ 		break;
+ 	default:
+ 		break;
+@@ -213,6 +409,11 @@ LRESULT DefWindowProcA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+ 	if (Msg == WM_CLOSE) {
+ 		DestroyWindow(hWnd);
+ 	}
++	// Alt+F4 closes the window: Windows' default handling turns it into
++	// SC_CLOSE, which sends WM_CLOSE.
++	else if (Msg == WM_SYSKEYDOWN && wParam == VK_F4 && (HIWORD(lParam) & KF_ALTDOWN)) {
++		SendMessageA(hWnd, WM_CLOSE, 0, 0);
++	}
+ 	return 0;
+ }
+ 

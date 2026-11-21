@@ -9,8 +9,9 @@ containing `LegoRR0.wad`, `LegoRR1.wad`, and the loose `Data/` files. The
 ## Native Linux build
 
 Install CMake 3.20 or later, a C++17 compiler, SDL3 development headers, and Git.
-`make setup` bootstraps the sparse `3rdparty/isle-portable` miniwin submodule
-and configures CMake; `make build` also runs setup.
+`make setup` bootstraps the sparse `3rdparty/isle-portable` miniwin submodule,
+applies the project's patches from `patches/miniwin` to it, and configures
+CMake; `make build` also runs setup.
 
 ```sh
 make build
@@ -28,7 +29,9 @@ audio, movies, the registry and directory listings) are logging stubs in
 `src/platform/native/seam_stubs.cpp` until their library substitutions land.
 `BUILD_DIR` selects another build directory.
 
-For direct CMake use, initialize miniwin first:
+For direct CMake use, initialize miniwin first. Rerun `tools/setup-miniwin.sh`
+whenever `patches/miniwin` or the submodule pin changes; the build stops with
+that advice when the applied patches are out of date.
 
 ```sh
 tools/setup-miniwin.sh
@@ -72,7 +75,7 @@ a separate check.
 The `native-build` workflow (`.github/workflows/native-build.yml`) runs on pull
 requests and pushes to `main` and `develop`. Its check is required for merging. It checks out
 the repository without submodules, runs `tools/setup-miniwin.sh` to fetch only
-`miniwin/`, and then runs the native commands from [Tests](#tests). It also
+`miniwin/` and apply `patches/miniwin`, and then runs the native commands from [Tests](#tests). It also
 lints the units (no `LEGORRR_BACKEND_*`, `MINIWIN`, `_MSC_VER`, `_M_IX86` or
 `_WIN32` guards and no `lpVtbl` in `src/`) and runs the Python tool tests in `tools/tests`.
 

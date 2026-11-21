@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 21:08:15 -0800
+Subject: [PATCH] Declare LPDIRECT3DRMMESH, LPDIRECT3DRMLIGHT and
+ texture-format flags in miniwin
+
+Add the SDK's LPDIRECT3DRMMESH and LPDIRECT3DRMLIGHT pointer typedefs,
+the D3DRMFPTF_* flags that IDirect3DRMDevice3::FindPreferredTextureFormat
+takes, and DDSCAPS2_TEXTUREMANAGE for DDSCAPS2::dwCaps2, with the
+DirectX 6 SDK's values.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/d3drm.h b/miniwin/include/miniwin/d3drm.h
+index e0d5173..5494970 100644
+--- a/miniwin/include/miniwin/d3drm.h
++++ b/miniwin/include/miniwin/d3drm.h
+@@ -153,6 +153,11 @@ enum class D3DRMUSERVISUALREASON {
+ #define D3DRMFOGMETHOD_TABLE 0x2
+ #define D3DRMFOGMETHOD_ANY 0x4
+ 
++#define D3DRMFPTF_ALPHA 0x1
++#define D3DRMFPTF_NOALPHA 0x2
++#define D3DRMFPTF_PALETTIZED 0x4
++#define D3DRMFPTF_ANYDEPTH 0x8
++
+ #define D3DRMCLEAR_TARGET 0x1
+ #define D3DRMCLEAR_ZBUFFER 0x2
+ #define D3DRMCLEAR_DIRTYRECTS 0x4
+@@ -309,6 +314,7 @@ struct IDirect3DRMMesh : public IDirect3DRMVisual {
+ 	virtual D3DCOLOR GetGroupColor(D3DRMGROUPINDEX index) = 0;
+ 	virtual HRESULT GetVertices(D3DRMGROUPINDEX groupIndex, int startIndex, int count, D3DRMVERTEX* vertices) = 0;
+ };
++typedef IDirect3DRMMesh* LPDIRECT3DRMMESH;
+ 
+ struct IDirect3DRMFrame;
+ struct IDirect3DRMMeshBuilder : public IDirect3DRMVisual {
+@@ -341,6 +347,7 @@ struct IDirect3DRMLight : public IDirect3DRMObject {
+ 	virtual D3DRMLIGHTTYPE GetType() = 0;
+ 	virtual D3DCOLOR GetColor() = 0;
+ };
++typedef IDirect3DRMLight* LPDIRECT3DRMLIGHT;
+ 
+ struct IDirect3DRMArray : public IUnknown {
+ 	virtual DWORD GetSize() = 0;
+diff --git a/miniwin/include/miniwin/ddraw.h b/miniwin/include/miniwin/ddraw.h
+index e01262c..a678081 100644
+--- a/miniwin/include/miniwin/ddraw.h
++++ b/miniwin/include/miniwin/ddraw.h
+@@ -255,6 +255,7 @@ struct DDSCAPS {
+ };
+ typedef struct DDSCAPS* LPDDSCAPS;
+ 
++#define DDSCAPS2_TEXTUREMANAGE 0x00000010
+ struct DDSCAPS2 {
+ 	DDSCapsFlags dwCaps;
+ 	DWORD dwCaps2;

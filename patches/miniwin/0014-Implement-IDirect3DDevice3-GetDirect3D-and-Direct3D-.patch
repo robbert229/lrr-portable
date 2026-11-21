@@ -1,0 +1,137 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 22:29:49 -0800
+Subject: [PATCH] Implement IDirect3DDevice3::GetDirect3D and Direct3D material
+ handles
+
+The renderer keeps the IDirect3D3 it was created from.
+IDirect3DMaterial3 stores its material and hands out a unique handle.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/d3d/d3dmaterial.cpp b/miniwin/src/d3d/d3dmaterial.cpp
+index 78aceda..9c1fea3 100644
+--- a/miniwin/src/d3d/d3dmaterial.cpp
++++ b/miniwin/src/d3d/d3dmaterial.cpp
+@@ -14,12 +14,23 @@ HRESULT Direct3DMaterialImpl::QueryInterface(const GUID& riid, void** ppvObject)
+ 
+ HRESULT Direct3DMaterialImpl::SetMaterial(LPD3DMATERIAL data)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (!data) {
++		return DDERR_INVALIDPARAMS;
++	}
++	m_material = *data;
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DMaterialImpl::GetHandle(IDirect3DDevice3* device, LPD3DMATERIALHANDLE handle)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (!handle) {
++		return DDERR_INVALIDPARAMS;
++	}
++	// A non-zero handle, unique per material; no renderer reads it yet.
++	static D3DMATERIALHANDLE nextHandle = 1;
++	if (!m_handle) {
++		m_handle = nextHandle++;
++	}
++	*handle = m_handle;
++	return DD_OK;
+ }
+diff --git a/miniwin/src/d3drm/d3drm.cpp b/miniwin/src/d3drm/d3drm.cpp
+index 96d9e13..ce1f60b 100644
+--- a/miniwin/src/d3drm/d3drm.cpp
++++ b/miniwin/src/d3drm/d3drm.cpp
+@@ -179,6 +179,11 @@ HRESULT Direct3DRMImpl::CreateDeviceFromSurface(
+ 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create a renderer for the selected device GUID");
+ 		return E_NOINTERFACE;
+ 	}
++	IDirect3D3* d3d = nullptr;
++	if (dd->QueryInterface(IID_IDirect3D3, (void**) &d3d) == DD_OK) {
++		DDRenderer->SetDirect3D(d3d);
++		d3d->Release();
++	}
+ 	*outDevice =
+ 		static_cast<IDirect3DRMDevice2*>(new Direct3DRMDevice2Impl(DDSDesc.dwWidth, DDSDesc.dwHeight, DDRenderer));
+ 	return DD_OK;
+diff --git a/miniwin/src/d3drm/d3drmrenderer.cpp b/miniwin/src/d3drm/d3drmrenderer.cpp
+index aa38c9c..bd07385 100644
+--- a/miniwin/src/d3drm/d3drmrenderer.cpp
++++ b/miniwin/src/d3drm/d3drmrenderer.cpp
+@@ -37,6 +37,20 @@ Direct3DRMRenderer::~Direct3DRMRenderer()
+ 		ctx->object->DeleteDestroyCallback(OnObjectDestroyed, ctx);
+ 		delete ctx;
+ 	}
++	if (m_direct3d) {
++		m_direct3d->Release();
++	}
++}
++
++void Direct3DRMRenderer::SetDirect3D(IDirect3D3* d3d)
++{
++	if (d3d) {
++		d3d->AddRef();
++	}
++	if (m_direct3d) {
++		m_direct3d->Release();
++	}
++	m_direct3d = d3d;
+ }
+ 
+ HRESULT Direct3DRMRenderer::QueryInterface(const GUID& riid, void** ppvObject)
+@@ -57,8 +71,15 @@ HRESULT Direct3DRMRenderer::QueryInterface(const GUID& riid, void** ppvObject)
+ 
+ HRESULT Direct3DRMRenderer::GetDirect3D(IDirect3D3** d3d)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (!d3d) {
++		return DDERR_INVALIDPARAMS;
++	}
++	*d3d = m_direct3d;
++	if (!m_direct3d) {
++		return DDERR_GENERIC;
++	}
++	m_direct3d->AddRef();
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::SetCurrentViewport(IDirect3DViewport3* viewport)
+diff --git a/miniwin/src/internal/d3dmaterial_impl.h b/miniwin/src/internal/d3dmaterial_impl.h
+index 9cec1b9..5a58db0 100644
+--- a/miniwin/src/internal/d3dmaterial_impl.h
++++ b/miniwin/src/internal/d3dmaterial_impl.h
+@@ -8,4 +8,9 @@ struct Direct3DMaterialImpl : public IDirect3DMaterial3 {
+ 	// IDirect3DMaterial3 interface
+ 	HRESULT SetMaterial(LPD3DMATERIAL data) override;
+ 	HRESULT GetHandle(IDirect3DDevice3* device, LPD3DMATERIALHANDLE handle) override;
++
++	D3DMATERIAL m_material{};
++
++private:
++	D3DMATERIALHANDLE m_handle = 0;
+ };
+diff --git a/miniwin/src/internal/d3drmrenderer.h b/miniwin/src/internal/d3drmrenderer.h
+index 8cfcc02..e34fa5c 100644
+--- a/miniwin/src/internal/d3drmrenderer.h
++++ b/miniwin/src/internal/d3drmrenderer.h
+@@ -85,6 +85,8 @@ class Direct3DRMRenderer : public IDirect3DDevice3 {
+ 	virtual void SetDither(bool dither) = 0;
+ 	virtual void SetPalette(SDL_Palette* palette) {}
+ 	virtual bool UsesPalettedSurfaces() const { return false; }
++	// The IDirect3D3 (the DirectDraw object) the device was created from.
++	void SetDirect3D(IDirect3D3* d3d);
+ 
+ protected:
+ 	using DestroyCallback = void (*)(Direct3DRMRenderer* renderer, Uint32 id);
+@@ -104,6 +106,7 @@ class Direct3DRMRenderer : public IDirect3DDevice3 {
+ 	static void OnObjectDestroyed(IDirect3DRMObject* object, void* arg);
+ 
+ 	std::unordered_set<DestroyCallbackContext*> m_destroyCallbacks;
++	IDirect3D3* m_direct3d = nullptr;
+ };
+ 
+ Direct3DRMRenderer* CreateDirect3DRMRenderer(

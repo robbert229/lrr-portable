@@ -40,7 +40,10 @@ Open PRs for this work against `develop`.
   `src/platform/native/`. Reverse-engineering findings and architecture
   decisions are in `docs/findings/` and `docs/adr/`; tooling is in `tools/`.
 - CMake is the build. It needs SDL3 and the sparse
-  `3rdparty/isle-portable` miniwin submodule. `make setup`, `make build`, and
+  `3rdparty/isle-portable` miniwin submodule, which is upstream isle-portable
+  with `patches/miniwin` applied by `tools/setup-miniwin.sh`. To change
+  miniwin, commit in the submodule and run `tools/miniwin-patches.sh export`
+  ([ADR 0009](docs/adr/0009-miniwin-patches-in-this-repository.md)). `make setup`, `make build`, and
   `make run` configure, build, and launch; `make run` starts `LegoRR` in
   `WAD_DIR` (the game data directory) with `RUN_ARGS` (default
   `-best -window`). For tests, run `cmake -S . -B build`, then

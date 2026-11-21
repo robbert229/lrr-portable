@@ -1,0 +1,1191 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 01:25:14 -0800
+Subject: [PATCH] feat(miniwin): draw user visuals and immediate-mode triangle
+ lists
+
+Viewport::Render now runs the callbacks of IDirect3DRMUserVisual visuals,
+in frame-walk order, as D3DRM does: it sets the device's world, view and
+projection transforms and its current viewport, asks CANSEE, and then
+RENDER. The walk also descends into child frames (AddChild, or
+CreateFrame with a parent), not only into frames used as visuals.
+
+The renderer, which is the IDirect3DDevice3, keeps the immediate-mode
+state: render, light and texture stage states with Direct3D's defaults,
+the three transforms, the bound textures and the current viewport. A
+material handle from IDirect3DMaterial3::GetHandle selects the material
+through SetLightState(MATERIAL).
+
+DrawIndexedPrimitive with a D3DFVF_VERTEX (D3DVT_VERTEX) triangle list
+goes to a new renderer entry point, SubmitImmediate. It takes the
+transient vertices and indices, the transforms, the state and the
+material, and caches nothing. Its default reports DDERR_UNSUPPORTED, so
+backends that do not implement it build unchanged.
+
+The software backend implements it: vertices lit by the scene's lights
+and the material's diffuse colour (untextured for now), near-plane
+clipping shared with the retained-mode path, cull mode, z enable, z
+write and z function, and the blend factors, with a top-left fill rule
+so additive triangles sharing an edge blend it once. Drawing after
+Render returns, before Flip, still lands in the frame.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/d3d.h b/miniwin/include/miniwin/d3d.h
+index e0a3d18..10a18d5 100644
+--- a/miniwin/include/miniwin/d3d.h
++++ b/miniwin/include/miniwin/d3d.h
+@@ -125,15 +125,103 @@ enum class D3DLIGHTSTATETYPE : uint32_t {
+ #define D3DRENDERSTATE_DITHERENABLE D3DRENDERSTATETYPE::DITHERENABLE
+ #define D3DRENDERSTATE_ALPHABLENDENABLE D3DRENDERSTATETYPE::ALPHABLENDENABLE
+ #define D3DRENDERSTATE_SPECULARENABLE D3DRENDERSTATETYPE::SPECULARENABLE
++#define D3DRENDERSTATE_TEXTUREMAG D3DRENDERSTATETYPE::TEXTUREMAG
++#define D3DRENDERSTATE_TEXTUREMIN D3DRENDERSTATETYPE::TEXTUREMIN
++#define D3DRENDERSTATE_SRCBLEND D3DRENDERSTATETYPE::SRCBLEND
++#define D3DRENDERSTATE_DESTBLEND D3DRENDERSTATETYPE::DESTBLEND
++#define D3DRENDERSTATE_ZFUNC D3DRENDERSTATETYPE::ZFUNC
++#define D3DRENDERSTATE_COLORKEYENABLE D3DRENDERSTATETYPE::COLORKEYENABLE
+ enum class D3DRENDERSTATETYPE : uint32_t {
+ 	TEXTUREHANDLE = 1,
+ 	ZENABLE = 7,
+ 	SHADEMODE = 9,
+ 	ZWRITEENABLE = 14,
++	TEXTUREMAG = 17,
++	TEXTUREMIN = 18,
++	SRCBLEND = 19,
++	DESTBLEND = 20,
+ 	CULLMODE = 22,
++	ZFUNC = 23,
+ 	DITHERENABLE = 26,
+ 	ALPHABLENDENABLE = 27,
+ 	SPECULARENABLE = 29,
++	COLORKEYENABLE = 41,
++};
++
++#define D3DSHADE_FLAT D3DSHADEMODE::FLAT
++#define D3DSHADE_GOURAUD D3DSHADEMODE::GOURAUD
++#define D3DSHADE_PHONG D3DSHADEMODE::PHONG
++enum class D3DSHADEMODE : uint32_t {
++	FLAT = 1,
++	GOURAUD = 2,
++	PHONG = 3,
++};
++
++#define D3DCULL_NONE D3DCULL::NONE
++#define D3DCULL_CW D3DCULL::CW
++#define D3DCULL_CCW D3DCULL::CCW
++enum class D3DCULL : uint32_t {
++	NONE = 1,
++	CW = 2,
++	CCW = 3,
++};
++
++#define D3DCMP_NEVER D3DCMPFUNC::NEVER
++#define D3DCMP_LESS D3DCMPFUNC::LESS
++#define D3DCMP_EQUAL D3DCMPFUNC::EQUAL
++#define D3DCMP_LESSEQUAL D3DCMPFUNC::LESSEQUAL
++#define D3DCMP_GREATER D3DCMPFUNC::GREATER
++#define D3DCMP_NOTEQUAL D3DCMPFUNC::NOTEQUAL
++#define D3DCMP_GREATEREQUAL D3DCMPFUNC::GREATEREQUAL
++#define D3DCMP_ALWAYS D3DCMPFUNC::ALWAYS
++enum class D3DCMPFUNC : uint32_t {
++	NEVER = 1,
++	LESS = 2,
++	EQUAL = 3,
++	LESSEQUAL = 4,
++	GREATER = 5,
++	NOTEQUAL = 6,
++	GREATEREQUAL = 7,
++	ALWAYS = 8,
++};
++
++#define D3DBLEND_ZERO D3DBLEND::ZERO
++#define D3DBLEND_ONE D3DBLEND::ONE
++#define D3DBLEND_SRCCOLOR D3DBLEND::SRCCOLOR
++#define D3DBLEND_INVSRCCOLOR D3DBLEND::INVSRCCOLOR
++#define D3DBLEND_SRCALPHA D3DBLEND::SRCALPHA
++#define D3DBLEND_INVSRCALPHA D3DBLEND::INVSRCALPHA
++#define D3DBLEND_DESTALPHA D3DBLEND::DESTALPHA
++#define D3DBLEND_INVDESTALPHA D3DBLEND::INVDESTALPHA
++#define D3DBLEND_DESTCOLOR D3DBLEND::DESTCOLOR
++#define D3DBLEND_INVDESTCOLOR D3DBLEND::INVDESTCOLOR
++#define D3DBLEND_SRCALPHASAT D3DBLEND::SRCALPHASAT
++enum class D3DBLEND : uint32_t {
++	ZERO = 1,
++	ONE = 2,
++	SRCCOLOR = 3,
++	INVSRCCOLOR = 4,
++	SRCALPHA = 5,
++	INVSRCALPHA = 6,
++	DESTALPHA = 7,
++	INVDESTALPHA = 8,
++	DESTCOLOR = 9,
++	INVDESTCOLOR = 10,
++	SRCALPHASAT = 11,
++};
++
++// The one vertex type the immediate-mode draw path takes: position, normal
++// and one texture coordinate, transformed and lit by the device. It is DX5's
++// D3DVT_VERTEX and DX6's D3DFVF_VERTEX.
++#define D3DFVF_XYZ 0x002
++#define D3DFVF_NORMAL 0x010
++#define D3DFVF_TEX1 0x100
++#define D3DFVF_VERTEX (D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_TEX1)
++#define D3DVT_VERTEX D3DVERTEXTYPE::VERTEX
++enum class D3DVERTEXTYPE : uint32_t {
++	VERTEX = 1,
++	LVERTEX = 2,
++	TLVERTEX = 3,
+ };
+ 
+ #define D3DTSS_COLOROP D3DTEXTURESTAGESTATETYPE::COLOROP
+@@ -168,6 +256,14 @@ struct D3DMATRIX {
+ };
+ typedef D3DMATRIX* LPD3DMATRIX;
+ 
++struct D3DVERTEX {
++	float x, y, z;
++	float nx, ny, nz;
++	float tu, tv;
++};
++static_assert(sizeof(D3DVERTEX) == 32, "D3DVERTEX is 32 bytes");
++typedef D3DVERTEX* LPD3DVERTEX;
++
+ struct D3DRECT {
+ 	LONG x1;
+ 	LONG y1;
+diff --git a/miniwin/src/d3d/d3dmaterial.cpp b/miniwin/src/d3d/d3dmaterial.cpp
+index 9c1fea3..02289fb 100644
+--- a/miniwin/src/d3d/d3dmaterial.cpp
++++ b/miniwin/src/d3d/d3dmaterial.cpp
+@@ -1,6 +1,27 @@
+ #include "d3dmaterial_impl.h"
+ #include "miniwin.h"
+ 
++#include <unordered_map>
++
++static std::unordered_map<D3DMATERIALHANDLE, Direct3DMaterialImpl*>& MaterialHandles()
++{
++	static std::unordered_map<D3DMATERIALHANDLE, Direct3DMaterialImpl*> handles;
++	return handles;
++}
++
++const D3DMATERIAL* Direct3DMaterial_FromHandle(D3DMATERIALHANDLE handle)
++{
++	auto it = MaterialHandles().find(handle);
++	return it == MaterialHandles().end() ? nullptr : &it->second->m_material;
++}
++
++Direct3DMaterialImpl::~Direct3DMaterialImpl()
++{
++	if (m_handle) {
++		MaterialHandles().erase(m_handle);
++	}
++}
++
+ HRESULT Direct3DMaterialImpl::QueryInterface(const GUID& riid, void** ppvObject)
+ {
+ 	if (SDL_memcmp(&riid, &IID_IDirect3DMaterial3, sizeof(GUID)) == 0) {
+@@ -26,10 +47,12 @@ HRESULT Direct3DMaterialImpl::GetHandle(IDirect3DDevice3* device, LPD3DMATERIALH
+ 	if (!handle) {
+ 		return DDERR_INVALIDPARAMS;
+ 	}
+-	// A non-zero handle, unique per material; no renderer reads it yet.
++	// A non-zero handle, unique per material; SetLightState(MATERIAL)
++	// selects the material by it.
+ 	static D3DMATERIALHANDLE nextHandle = 1;
+ 	if (!m_handle) {
+ 		m_handle = nextHandle++;
++		MaterialHandles()[m_handle] = this;
+ 	}
+ 	*handle = m_handle;
+ 	return DD_OK;
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index eb08c66..278f387 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -201,53 +201,68 @@ static bool IsTriangleOutsideViewCone(
+ 	return false;
+ }
+ 
+-void Direct3DRMSoftwareRenderer::DrawTriangleClipped(const SWLitVertex (&v)[3], const Appearance& appearance)
++// Clip a view-space triangle against the near plane z = front and pass the
++// zero, one or two triangles that remain to draw(a, b, c).
++template <typename Draw>
++static void ClipNear(const SWLitVertex (&v)[3], float front, Draw&& draw)
+ {
+-	bool in0 = v[0].position.z >= m_front;
+-	bool in1 = v[1].position.z >= m_front;
+-	bool in2 = v[2].position.z >= m_front;
++	bool in0 = v[0].position.z >= front;
++	bool in1 = v[1].position.z >= front;
++	bool in2 = v[2].position.z >= front;
+ 
+ 	int insideCount = in0 + in1 + in2;
+-
+-	if (insideCount == 0 || v[0].position.z > m_back && v[1].position.z > m_back && v[2].position.z > m_back) {
+-		return; // Outside clipping
+-	}
+-	if (IsTriangleOutsideViewCone(v[0].position, v[1].position, v[2].position, m_frustumPlanes)) {
+-		return;
+-	}
+-
+ 	if (insideCount == 3) {
+-		DrawTriangleProjected(v[0], v[1], v[2], appearance);
++		draw(v[0], v[1], v[2]);
+ 	}
+ 	else if (insideCount == 2) {
+ 		SWLitVertex split;
+ 		if (!in0) {
+-			split = SplitEdge(v[2], v[0], m_front);
+-			DrawTriangleProjected(v[1], v[2], split, appearance);
+-			DrawTriangleProjected(v[1], split, SplitEdge(v[1], v[0], m_front), appearance);
++			split = SplitEdge(v[2], v[0], front);
++			draw(v[1], v[2], split);
++			draw(v[1], split, SplitEdge(v[1], v[0], front));
+ 		}
+ 		else if (!in1) {
+-			split = SplitEdge(v[0], v[1], m_front);
+-			DrawTriangleProjected(v[2], v[0], split, appearance);
+-			DrawTriangleProjected(v[2], split, SplitEdge(v[2], v[1], m_front), appearance);
++			split = SplitEdge(v[0], v[1], front);
++			draw(v[2], v[0], split);
++			draw(v[2], split, SplitEdge(v[2], v[1], front));
+ 		}
+ 		else {
+-			split = SplitEdge(v[1], v[2], m_front);
+-			DrawTriangleProjected(v[0], v[1], split, appearance);
+-			DrawTriangleProjected(v[0], split, SplitEdge(v[0], v[2], m_front), appearance);
++			split = SplitEdge(v[1], v[2], front);
++			draw(v[0], v[1], split);
++			draw(v[0], split, SplitEdge(v[0], v[2], front));
+ 		}
+ 	}
+ 	else if (in0) {
+-		DrawTriangleProjected(v[0], SplitEdge(v[0], v[1], m_front), SplitEdge(v[0], v[2], m_front), appearance);
++		draw(v[0], SplitEdge(v[0], v[1], front), SplitEdge(v[0], v[2], front));
+ 	}
+ 	else if (in1) {
+-		DrawTriangleProjected(SplitEdge(v[1], v[0], m_front), v[1], SplitEdge(v[1], v[2], m_front), appearance);
++		draw(SplitEdge(v[1], v[0], front), v[1], SplitEdge(v[1], v[2], front));
+ 	}
+-	else {
+-		DrawTriangleProjected(SplitEdge(v[2], v[0], m_front), SplitEdge(v[2], v[1], m_front), v[2], appearance);
++	else if (in2) {
++		draw(SplitEdge(v[2], v[0], front), SplitEdge(v[2], v[1], front), v[2]);
+ 	}
+ }
+ 
++void Direct3DRMSoftwareRenderer::DrawTriangleClipped(const SWLitVertex (&v)[3], const Appearance& appearance)
++{
++	bool in0 = v[0].position.z >= m_front;
++	bool in1 = v[1].position.z >= m_front;
++	bool in2 = v[2].position.z >= m_front;
++
++	int insideCount = in0 + in1 + in2;
++
++	if (insideCount == 0 || v[0].position.z > m_back && v[1].position.z > m_back && v[2].position.z > m_back) {
++		return; // Outside clipping
++	}
++	if (IsTriangleOutsideViewCone(v[0].position, v[1].position, v[2].position, m_frustumPlanes)) {
++		return;
++	}
++
++	ClipNear(v, m_front, [&](const SWLitVertex& a, const SWLitVertex& b, const SWLitVertex& c) {
++		DrawTriangleProjected(a, b, c, appearance);
++	});
++}
++
+ // The render surface and all cached textures are SDL_PIXELFORMAT_RGBA32
+ // (bytes R,G,B,A in memory regardless of endianness), so pixels are accessed
+ // directly instead of through SDL_GetRGBA/SDL_MapRGBA calls per pixel.
+@@ -1119,3 +1134,273 @@ void Direct3DRMSoftwareRenderer::Download(SDL_Surface* target)
+ 
+ 	SDL_BlitSurfaceScaled(m_renderedImage, &srcRect, target, nullptr, SDL_SCALEMODE_LINEAR);
+ }
++
++// ---- immediate mode ---------------------------------------------------------
++
++void Direct3DRMSoftwareRenderer::DrawImmediateClipped(const SWLitVertex (&v)[3], const ImmediatePixelState& state)
++{
++	if (v[0].position.z < m_front && v[1].position.z < m_front && v[2].position.z < m_front) {
++		return;
++	}
++	if (v[0].position.z > m_back && v[1].position.z > m_back && v[2].position.z > m_back) {
++		return;
++	}
++	if (IsTriangleOutsideViewCone(v[0].position, v[1].position, v[2].position, m_frustumPlanes)) {
++		return;
++	}
++	ClipNear(v, m_front, [&](const SWLitVertex& a, const SWLitVertex& b, const SWLitVertex& c) {
++		DrawImmediateTriangle(a, b, c, state);
++	});
++}
++
++static bool ImmediateDepthTest(DWORD func, float z, float stored)
++{
++	switch (static_cast<D3DCMPFUNC>(func)) {
++	case D3DCMP_NEVER:
++		return false;
++	case D3DCMP_LESS:
++		return z < stored;
++	case D3DCMP_EQUAL:
++		return z == stored;
++	case D3DCMP_LESSEQUAL:
++		return z <= stored;
++	case D3DCMP_GREATER:
++		return z > stored;
++	case D3DCMP_NOTEQUAL:
++		return z != stored;
++	case D3DCMP_GREATEREQUAL:
++		return z >= stored;
++	default:
++		return true;
++	}
++}
++
++// One channel's blend factor, in [0, 1].
++static float ImmediateBlendFactor(DWORD factor, float src, float srcAlpha, float dst, float dstAlpha)
++{
++	switch (static_cast<D3DBLEND>(factor)) {
++	case D3DBLEND_ZERO:
++		return 0.0f;
++	case D3DBLEND_ONE:
++		return 1.0f;
++	case D3DBLEND_SRCCOLOR:
++		return src;
++	case D3DBLEND_INVSRCCOLOR:
++		return 1.0f - src;
++	case D3DBLEND_SRCALPHA:
++		return srcAlpha;
++	case D3DBLEND_INVSRCALPHA:
++		return 1.0f - srcAlpha;
++	case D3DBLEND_DESTALPHA:
++		return dstAlpha;
++	case D3DBLEND_INVDESTALPHA:
++		return 1.0f - dstAlpha;
++	case D3DBLEND_DESTCOLOR:
++		return dst;
++	case D3DBLEND_INVDESTCOLOR:
++		return 1.0f - dst;
++	case D3DBLEND_SRCALPHASAT:
++		return std::min(srcAlpha, 1.0f - dstAlpha);
++	default:
++		return 1.0f;
++	}
++}
++
++// Edge-function rasterizer: samples at integer pixel coordinates, as the
++// retained-mode rasterizer does, with a top-left rule so that pixels on an
++// edge shared by two triangles are drawn once (which matters when blending
++// is additive).
++void Direct3DRMSoftwareRenderer::DrawImmediateTriangle(
++	const SWLitVertex& v0,
++	const SWLitVertex& v1,
++	const SWLitVertex& v2,
++	const ImmediatePixelState& state
++)
++{
++	D3DRMVECTOR4D p[3];
++	ProjectVertex(v0.position, p[0]);
++	ProjectVertex(v1.position, p[1]);
++	ProjectVertex(v2.position, p[2]);
++	const SWLitVertex* lit[3] = {&v0, &v1, &v2};
++
++	float area = (p[1].x - p[0].x) * (p[2].y - p[0].y) - (p[2].x - p[0].x) * (p[1].y - p[0].y);
++	if (area == 0.0f || !std::isfinite(area)) {
++		return;
++	}
++	if (area < 0.0f) {
++		std::swap(p[1], p[2]);
++		std::swap(lit[1], lit[2]);
++		area = -area;
++	}
++
++	int minX = std::max(0, static_cast<int>(std::ceil(std::min({p[0].x, p[1].x, p[2].x}))));
++	int maxX = std::min(m_width - 1, static_cast<int>(std::floor(std::max({p[0].x, p[1].x, p[2].x}))));
++	int minY = std::max(0, static_cast<int>(std::ceil(std::min({p[0].y, p[1].y, p[2].y}))));
++	int maxY = std::min(m_height - 1, static_cast<int>(std::floor(std::max({p[0].y, p[1].y, p[2].y}))));
++	if (minX > maxX || minY > maxY) {
++		return;
++	}
++
++	// Edge k runs from vertex k+1 to k+2 and weighs vertex k.
++	struct Edge {
++		float ax, ay, dx, dy;
++		bool topLeft;
++		float At(float x, float y) const { return dx * (y - ay) - dy * (x - ax); }
++	};
++	Edge edges[3];
++	for (int k = 0; k < 3; ++k) {
++		const D3DRMVECTOR4D& a = p[(k + 1) % 3];
++		const D3DRMVECTOR4D& b = p[(k + 2) % 3];
++		edges[k] = {a.x, a.y, b.x - a.x, b.y - a.y, false};
++		edges[k].topLeft = edges[k].dy < 0.0f || (edges[k].dy == 0.0f && edges[k].dx > 0.0f);
++	}
++
++	float invArea = 1.0f / area;
++	float srcAlpha = lit[0]->color.a / 255.0f;
++	Uint8* pixels = static_cast<Uint8*>(m_renderedImage->pixels);
++	int pitch = m_renderedImage->pitch;
++
++	for (int y = minY; y <= maxY; ++y) {
++		Uint8* row = pixels + y * pitch;
++		float* zRow = &m_zBuffer[y * m_width];
++		for (int x = minX; x <= maxX; ++x) {
++			float w[3];
++			bool inside = true;
++			for (int k = 0; k < 3 && inside; ++k) {
++				float e = edges[k].At(static_cast<float>(x), static_cast<float>(y));
++				inside = e > 0.0f || (e == 0.0f && edges[k].topLeft);
++				w[k] = e * invArea;
++			}
++			if (!inside) {
++				continue;
++			}
++
++			float z = w[0] * p[0].z + w[1] * p[1].z + w[2] * p[2].z;
++			if (state.zEnable && !ImmediateDepthTest(state.zFunc, z, zRow[x])) {
++				continue;
++			}
++
++			float r = (w[0] * lit[0]->color.r + w[1] * lit[1]->color.r + w[2] * lit[2]->color.r) / 255.0f;
++			float g = (w[0] * lit[0]->color.g + w[1] * lit[1]->color.g + w[2] * lit[2]->color.g) / 255.0f;
++			float b = (w[0] * lit[0]->color.b + w[1] * lit[1]->color.b + w[2] * lit[2]->color.b) / 255.0f;
++
++			// The render target stands for the display surface, which has no
++			// alpha channel: destination alpha reads as one and stays opaque.
++			Uint8* px = row + x * 4;
++			if (state.blend) {
++				float dr = px[0] / 255.0f, dg = px[1] / 255.0f, db = px[2] / 255.0f, da = 1.0f;
++				float outR = r * ImmediateBlendFactor(state.srcBlend, r, srcAlpha, dr, da) +
++							 dr * ImmediateBlendFactor(state.destBlend, r, srcAlpha, dr, da);
++				float outG = g * ImmediateBlendFactor(state.srcBlend, g, srcAlpha, dg, da) +
++							 dg * ImmediateBlendFactor(state.destBlend, g, srcAlpha, dg, da);
++				float outB = b * ImmediateBlendFactor(state.srcBlend, b, srcAlpha, db, da) +
++							 db * ImmediateBlendFactor(state.destBlend, b, srcAlpha, db, da);
++				px[0] = static_cast<Uint8>(SWClampChannel(outR * 255.0f + 0.5f));
++				px[1] = static_cast<Uint8>(SWClampChannel(outG * 255.0f + 0.5f));
++				px[2] = static_cast<Uint8>(SWClampChannel(outB * 255.0f + 0.5f));
++				px[3] = 255;
++			}
++			else {
++				px[0] = static_cast<Uint8>(SWClampChannel(r * 255.0f + 0.5f));
++				px[1] = static_cast<Uint8>(SWClampChannel(g * 255.0f + 0.5f));
++				px[2] = static_cast<Uint8>(SWClampChannel(b * 255.0f + 0.5f));
++				px[3] = 255;
++			}
++			if (state.zEnable && state.zWrite) {
++				zRow[x] = z;
++			}
++		}
++	}
++}
++
++// Untextured for now: each vertex is lit with the scene's lights and the
++// current material's diffuse colour and alpha.
++HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
++{
++	if (!m_renderedImage || !m_renderedImage->pixels) {
++		return DDERR_GENERIC;
++	}
++	const ImmediateState& st = *draw.state;
++
++	D3DRMMATRIX4D modelView;
++	MultiplyMatrix(modelView, draw.world, draw.view);
++	memcpy(m_worldMatrix, draw.world, sizeof(D3DRMMATRIX4D));
++	NormalMatrix(m_normalMatrix, draw.world);
++	m_specular = false;
++
++	auto toByte = [](float c) { return static_cast<Uint8>(std::min(255.0f, std::max(0.0f, c * 255.0f + 0.5f))); };
++	Appearance appearance = {};
++	appearance.color = {
++		toByte(draw.material.diffuse.r),
++		toByte(draw.material.diffuse.g),
++		toByte(draw.material.diffuse.b),
++		toByte(draw.material.diffuse.a)
++	};
++	appearance.shininess = draw.material.power;
++	appearance.textureId = NO_TEXTURE_ID;
++	appearance.flat = st.Render(D3DRENDERSTATE_SHADEMODE) == static_cast<DWORD>(D3DSHADE_FLAT);
++
++	ImmediatePixelState pixelState;
++	pixelState.zEnable = st.Render(D3DRENDERSTATE_ZENABLE) != 0;
++	pixelState.zWrite = st.Render(D3DRENDERSTATE_ZWRITEENABLE) != 0;
++	pixelState.zFunc = st.Render(D3DRENDERSTATE_ZFUNC);
++	pixelState.blend = st.Render(D3DRENDERSTATE_ALPHABLENDENABLE) != 0;
++	pixelState.srcBlend = st.Render(D3DRENDERSTATE_SRCBLEND);
++	pixelState.destBlend = st.Render(D3DRENDERSTATE_DESTBLEND);
++	const DWORD cull = st.Render(D3DRENDERSTATE_CULLMODE);
++
++	const DWORD vertexCount = draw.vertexCount;
++	m_transformedPositions.resize(vertexCount);
++	for (DWORD i = 0; i < vertexCount; ++i) {
++		const D3DVERTEX& v = draw.vertices[i];
++		m_transformedPositions[i] = TransformPoint({v.x, v.y, v.z}, modelView);
++	}
++	m_vertexColors.resize(vertexCount);
++	m_vertexSpeculars.resize(vertexCount);
++	m_vertexLit.assign(vertexCount, 0);
++
++	auto lightVertex = [&](WORD i) {
++		if (!m_vertexLit[i]) {
++			m_vertexLit[i] = 1;
++			const D3DVERTEX& v = draw.vertices[i];
++			ApplyLighting({v.x, v.y, v.z}, {v.nx, v.ny, v.nz}, appearance, m_vertexColors[i], m_vertexSpeculars[i]);
++		}
++	};
++
++	for (DWORD t = 0; t + 2 < draw.indexCount; t += 3) {
++		const WORD i0 = draw.indices[t];
++		const WORD i1 = draw.indices[t + 1];
++		const WORD i2 = draw.indices[t + 2];
++		const D3DVECTOR& p0 = m_transformedPositions[i0];
++		const D3DVECTOR& p1 = m_transformedPositions[i1];
++		const D3DVECTOR& p2 = m_transformedPositions[i2];
++
++		// Counter-clockwise on screen is IsBackface's test (D3DCULL_CCW).
++		if (cull == static_cast<DWORD>(D3DCULL_CCW) && IsBackface(p0, p1, p2)) {
++			continue;
++		}
++		if (cull == static_cast<DWORD>(D3DCULL_CW) && IsBackface(p0, p2, p1)) {
++			continue;
++		}
++
++		lightVertex(i0);
++		SDL_Color c0 = m_vertexColors[i0], c1, c2;
++		if (appearance.flat) {
++			c1 = c2 = c0; // flat shading takes the first vertex's colour
++		}
++		else {
++			lightVertex(i1);
++			lightVertex(i2);
++			c1 = m_vertexColors[i1];
++			c2 = m_vertexColors[i2];
++		}
++		const SDL_Color none = {0, 0, 0, 0};
++		SWLitVertex tri[3] = {
++			{p0, {draw.vertices[i0].tu, draw.vertices[i0].tv}, c0, none},
++			{p1, {draw.vertices[i1].tu, draw.vertices[i1].tv}, c1, none},
++			{p2, {draw.vertices[i2].tu, draw.vertices[i2].tv}, c2, none},
++		};
++		DrawImmediateClipped(tri, pixelState);
++	}
++	return DD_OK;
++}
+diff --git a/miniwin/src/d3drm/d3drm.cpp b/miniwin/src/d3drm/d3drm.cpp
+index ce1f60b..b695553 100644
+--- a/miniwin/src/d3drm/d3drm.cpp
++++ b/miniwin/src/d3drm/d3drm.cpp
+@@ -237,7 +237,8 @@ HRESULT Direct3DRMImpl::CreateViewport(
+ )
+ {
+ 	auto device = static_cast<Direct3DRMDevice2Impl*>(iDevice);
+-	auto* viewport = new Direct3DRMViewportImpl(width, height, device->m_renderer);
++	auto* viewport =
++		new Direct3DRMViewportImpl(width, height, device->m_renderer, static_cast<IDirect3DRMDevice*>(device));
+ 	if (camera) {
+ 		viewport->SetCamera(camera);
+ 	}
+diff --git a/miniwin/src/d3drm/d3drmrenderer.cpp b/miniwin/src/d3drm/d3drmrenderer.cpp
+index bd07385..5a12a39 100644
+--- a/miniwin/src/d3drm/d3drmrenderer.cpp
++++ b/miniwin/src/d3drm/d3drmrenderer.cpp
+@@ -1,3 +1,4 @@
++#include "d3dmaterial_impl.h"
+ #include "d3drmrenderer.h"
+ #include "miniwin.h"
+ #ifdef USE_OPENGL1
+@@ -31,8 +32,66 @@
+ #include "d3drmrenderer_glide.h"
+ #endif
+ 
++ImmediateState::ImmediateState()
++{
++	SDL_memset(renderState, 0, sizeof(renderState));
++	SDL_memset(lightState, 0, sizeof(lightState));
++	SDL_memset(textureStageState, 0, sizeof(textureStageState));
++
++	// Direct3D's defaults, as a device with a z-buffer reports them.
++	renderState[4] = TRUE;  // TEXTUREPERSPECTIVE
++	renderState[7] = TRUE;  // ZENABLE
++	renderState[8] = 3;     // FILLMODE: SOLID
++	renderState[9] = static_cast<DWORD>(D3DSHADE_GOURAUD);
++	renderState[10] = 0xffff; // LINEPATTERN
++	renderState[14] = TRUE;   // ZWRITEENABLE
++	renderState[16] = TRUE;   // LASTPIXEL
++	renderState[17] = 1;      // TEXTUREMAG: NEAREST
++	renderState[18] = 1;      // TEXTUREMIN: NEAREST
++	renderState[19] = static_cast<DWORD>(D3DBLEND_ONE);
++	renderState[20] = static_cast<DWORD>(D3DBLEND_ZERO);
++	renderState[21] = 4; // TEXTUREMAPBLEND: MODULATE
++	renderState[22] = static_cast<DWORD>(D3DCULL_CCW);
++	renderState[23] = static_cast<DWORD>(D3DCMP_LESSEQUAL);
++	renderState[25] = static_cast<DWORD>(D3DCMP_ALWAYS); // ALPHAFUNC
++	renderState[26] = FALSE;                             // DITHERENABLE
++	renderState[37] = 1;                                 // FOGTABLEDENSITY
++
++	for (DWORD stage = 0; stage < TextureStageCount; ++stage) {
++		DWORD* tss = textureStageState[stage];
++		tss[1] = stage == 0 ? 4 : 1; // COLOROP: MODULATE, or DISABLE
++		tss[2] = 2;                  // COLORARG1: TEXTURE
++		tss[3] = 1;                  // COLORARG2: CURRENT
++		tss[4] = stage == 0 ? 2 : 1; // ALPHAOP: SELECTARG1, or DISABLE
++		tss[5] = 2;                  // ALPHAARG1: TEXTURE
++		tss[6] = 1;                  // ALPHAARG2: CURRENT
++		tss[11] = stage;             // TEXCOORDINDEX
++		tss[12] = 1;                 // ADDRESS: WRAP
++		tss[16] = 1;                 // MAGFILTER: POINT
++		tss[17] = 1;                 // MINFILTER: POINT
++		tss[18] = 1;                 // MIPFILTER: NONE
++	}
++}
++
++Direct3DRMRenderer::Direct3DRMRenderer()
++{
++	for (D3DRMMATRIX4D& m : m_transforms) {
++		IdentityMatrix(m);
++	}
++}
++
+ Direct3DRMRenderer::~Direct3DRMRenderer()
+ {
++	for (IDirect3DTexture2*& texture : m_textures) {
++		if (texture) {
++			texture->Release();
++			texture = nullptr;
++		}
++	}
++	if (m_currentViewport) {
++		m_currentViewport->Release();
++		m_currentViewport = nullptr;
++	}
+ 	for (DestroyCallbackContext* ctx : m_destroyCallbacks) {
+ 		ctx->object->DeleteDestroyCallback(OnObjectDestroyed, ctx);
+ 		delete ctx;
+@@ -84,44 +143,74 @@ HRESULT Direct3DRMRenderer::GetDirect3D(IDirect3D3** d3d)
+ 
+ HRESULT Direct3DRMRenderer::SetCurrentViewport(IDirect3DViewport3* viewport)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (viewport) {
++		viewport->AddRef();
++	}
++	if (m_currentViewport) {
++		m_currentViewport->Release();
++	}
++	m_currentViewport = viewport;
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::GetRenderState(D3DRENDERSTATETYPE state, LPDWORD value)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DWORD index = static_cast<DWORD>(state);
++	if (!value || index >= ImmediateState::RenderStateCount) {
++		return DDERR_INVALIDPARAMS;
++	}
++	*value = m_immediateState.renderState[index];
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::SetRenderState(D3DRENDERSTATETYPE state, DWORD value)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DWORD index = static_cast<DWORD>(state);
++	if (index >= ImmediateState::RenderStateCount) {
++		return DDERR_INVALIDPARAMS;
++	}
++	m_immediateState.renderState[index] = value;
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::GetLightState(D3DLIGHTSTATETYPE state, LPDWORD value)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DWORD index = static_cast<DWORD>(state);
++	if (!value || index >= ImmediateState::LightStateCount) {
++		return DDERR_INVALIDPARAMS;
++	}
++	*value = m_immediateState.lightState[index];
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::SetLightState(D3DLIGHTSTATETYPE state, DWORD value)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DWORD index = static_cast<DWORD>(state);
++	if (index >= ImmediateState::LightStateCount) {
++		return DDERR_INVALIDPARAMS;
++	}
++	m_immediateState.lightState[index] = value;
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::SetTransform(D3DTRANSFORMSTATETYPE state, LPD3DMATRIX matrix)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DWORD index = static_cast<DWORD>(state);
++	if (!matrix || index < 1 || index > 3) {
++		return DDERR_INVALIDPARAMS;
++	}
++	SDL_memcpy(m_transforms[index - 1], matrix, sizeof(D3DRMMATRIX4D));
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::GetTransform(D3DTRANSFORMSTATETYPE state, LPD3DMATRIX matrix)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DWORD index = static_cast<DWORD>(state);
++	if (!matrix || index < 1 || index > 3) {
++		return DDERR_INVALIDPARAMS;
++	}
++	SDL_memcpy(matrix, m_transforms[index - 1], sizeof(D3DRMMATRIX4D));
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::DrawIndexedPrimitive(
+@@ -134,32 +223,83 @@ HRESULT Direct3DRMRenderer::DrawIndexedPrimitive(
+ 	DWORD flags
+ )
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (primitiveType != D3DPT_TRIANGLELIST || vertexType != D3DFVF_VERTEX) {
++		MINIWIN_NOT_IMPLEMENTED();
++		return DDERR_UNSUPPORTED;
++	}
++	if (!vertices || !indices || indexCount % 3 != 0) {
++		return DDERR_INVALIDPARAMS;
++	}
++	for (DWORD i = 0; i < indexCount; ++i) {
++		if (indices[i] >= vertexCount) {
++			return DDERR_INVALIDPARAMS;
++		}
++	}
++	if (indexCount == 0) {
++		return DD_OK;
++	}
++
++	ImmediateDraw draw = {};
++	draw.vertices = static_cast<const D3DVERTEX*>(vertices);
++	draw.vertexCount = vertexCount;
++	draw.indices = indices;
++	draw.indexCount = indexCount;
++	SDL_memcpy(draw.world, m_transforms[0], sizeof(D3DRMMATRIX4D));
++	SDL_memcpy(draw.view, m_transforms[1], sizeof(D3DRMMATRIX4D));
++	SDL_memcpy(draw.projection, m_transforms[2], sizeof(D3DRMMATRIX4D));
++	draw.state = &m_immediateState;
++	DWORD materialHandle = m_immediateState.lightState[static_cast<DWORD>(D3DLIGHTSTATE_MATERIAL)];
++	if (const D3DMATERIAL* material = Direct3DMaterial_FromHandle(materialHandle)) {
++		draw.material = *material;
++	}
++	return SubmitImmediate(draw);
+ }
+ 
+ HRESULT Direct3DRMRenderer::GetTexture(DWORD stage, IDirect3DTexture2** texture)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (!texture || stage >= ImmediateState::TextureStageCount) {
++		return DDERR_INVALIDPARAMS;
++	}
++	*texture = m_textures[stage];
++	if (*texture) {
++		(*texture)->AddRef();
++	}
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::SetTexture(DWORD stage, IDirect3DTexture2* texture)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	if (stage >= ImmediateState::TextureStageCount) {
++		return DDERR_INVALIDPARAMS;
++	}
++	if (texture) {
++		texture->AddRef();
++	}
++	if (m_textures[stage]) {
++		m_textures[stage]->Release();
++	}
++	m_textures[stage] = texture;
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::GetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE state, LPDWORD value)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DWORD index = static_cast<DWORD>(state);
++	if (!value || stage >= ImmediateState::TextureStageCount || index >= ImmediateState::TextureStageStateCount) {
++		return DDERR_INVALIDPARAMS;
++	}
++	*value = m_immediateState.textureStageState[stage][index];
++	return DD_OK;
+ }
+ 
+ HRESULT Direct3DRMRenderer::SetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE state, DWORD value)
+ {
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DDERR_UNSUPPORTED;
++	DWORD index = static_cast<DWORD>(state);
++	if (stage >= ImmediateState::TextureStageCount || index >= ImmediateState::TextureStageStateCount) {
++		return DDERR_INVALIDPARAMS;
++	}
++	m_immediateState.textureStageState[stage][index] = value;
++	return DD_OK;
+ }
+ 
+ void Direct3DRMRenderer::RegisterDestroyCallback(IDirect3DRMObject* object, Uint32 id, DestroyCallback callback)
+diff --git a/miniwin/src/d3drm/d3drmviewport.cpp b/miniwin/src/d3drm/d3drmviewport.cpp
+index 8a44c38..dadccb3 100644
+--- a/miniwin/src/d3drm/d3drmviewport.cpp
++++ b/miniwin/src/d3drm/d3drmviewport.cpp
+@@ -2,6 +2,7 @@
+ #include "d3drmframe_impl.h"
+ #include "d3drmmesh_impl.h"
+ #include "d3drmrenderer.h"
++#include "d3drmuservisual_impl.h"
+ #include "d3drmviewport_impl.h"
+ #include "d3dviewport_impl.h"
+ #include "ddraw_impl.h"
+@@ -15,8 +16,13 @@
+ #include <functional>
+ #include <math.h>
+ 
+-Direct3DRMViewportImpl::Direct3DRMViewportImpl(DWORD width, DWORD height, Direct3DRMRenderer* renderer)
+-	: m_virtualWidth(width), m_virtualHeight(height), m_renderer(renderer)
++Direct3DRMViewportImpl::Direct3DRMViewportImpl(
++	DWORD width,
++	DWORD height,
++	Direct3DRMRenderer* renderer,
++	IDirect3DRMDevice* device
++)
++	: m_virtualWidth(width), m_virtualHeight(height), m_renderer(renderer), m_device(device)
+ {
+ }
+ 
+@@ -60,34 +66,6 @@ static void D3DRMMatrixMultiply(D3DRMMATRIX4D out, const D3DRMMATRIX4D a, const
+ 	}
+ }
+ 
+-static void D3DRMMatrixInvertForNormal(Matrix3x3 out, const D3DRMMATRIX4D m)
+-{
+-	float a = m[0][0], b = m[0][1], c = m[0][2];
+-	float d = m[1][0], e = m[1][1], f = m[1][2];
+-	float g = m[2][0], h = m[2][1], i = m[2][2];
+-
+-	float det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+-
+-	if (fabs(det) < 1e-6f) {
+-		memset(out, 0, sizeof(Matrix3x3));
+-		return;
+-	}
+-
+-	float invDet = 1.0f / det;
+-
+-	out[0][0] = (e * i - f * h) * invDet;
+-	out[1][0] = (c * h - b * i) * invDet;
+-	out[2][0] = (b * f - c * e) * invDet;
+-
+-	out[0][1] = (f * g - d * i) * invDet;
+-	out[1][1] = (a * i - c * g) * invDet;
+-	out[2][1] = (c * d - a * f) * invDet;
+-
+-	out[0][2] = (d * h - e * g) * invDet;
+-	out[1][2] = (b * g - a * h) * invDet;
+-	out[2][2] = (a * e - b * d) * invDet;
+-}
+-
+ static void D3DRMMatrixInvertOrthogonal(D3DRMMATRIX4D out, const D3DRMMATRIX4D m)
+ {
+ 	for (int i = 0; i < 3; ++i) {
+@@ -261,7 +239,7 @@ void Direct3DRMViewportImpl::CollectMeshesFromFrame(IDirect3DRMFrame* frame, D3D
+ 	D3DRMMatrixMultiply(worldMatrix, localMatrix, parentMatrix);
+ 
+ 	Matrix3x3 worldMatrixInvert;
+-	D3DRMMatrixInvertForNormal(worldMatrixInvert, worldMatrix);
++	NormalMatrix(worldMatrixInvert, worldMatrix);
+ 
+ 	IDirect3DRMVisualArray* visuals = nullptr;
+ 	frame->GetVisuals(&visuals);
+@@ -322,10 +300,59 @@ void Direct3DRMViewportImpl::CollectMeshesFromFrame(IDirect3DRMFrame* frame, D3D
+ 				}
+ 			}
+ 			mesh->Release();
++			visual->Release();
++			continue;
++		}
++
++		IDirect3DRMUserVisual* userVisual = nullptr;
++		visual->QueryInterface(IID_IDirect3DRMUserVisual, (void**) &userVisual);
++		if (userVisual) {
++			RenderUserVisual(static_cast<Direct3DRMUserVisualImpl*>(userVisual), worldMatrix);
++			userVisual->Release();
+ 		}
+ 		visual->Release();
+ 	}
+ 	visuals->Release();
++
++	// Child frames (AddChild, or CreateFrame with a parent) render with the
++	// frame, as D3DRM does; a frame used as a visual was walked above.
++	IDirect3DRMFrameArray* children = nullptr;
++	frame->GetChildren(&children);
++	DWORD childCount = children->GetSize();
++	for (DWORD i = 0; i < childCount; ++i) {
++		IDirect3DRMFrame* childFrame = nullptr;
++		children->GetElement(i, &childFrame);
++		CollectMeshesFromFrame(childFrame, worldMatrix);
++		childFrame->Release();
++	}
++	children->Release();
++}
++
++// A user visual draws itself on the immediate-mode device. As D3DRM does,
++// the device's world, view and projection transforms and its current
++// viewport are set before the callback is asked whether the visual can be
++// seen (CANSEE) and then to draw it (RENDER).
++void Direct3DRMViewportImpl::RenderUserVisual(Direct3DRMUserVisualImpl* visual, const D3DRMMATRIX4D worldMatrix)
++{
++	m_renderer->SetTransform(D3DTRANSFORMSTATE_WORLD, (LPD3DMATRIX) worldMatrix);
++	m_renderer->SetTransform(D3DTRANSFORMSTATE_VIEW, (LPD3DMATRIX) m_viewMatrix);
++	m_renderer->SetTransform(D3DTRANSFORMSTATE_PROJECTION, (LPD3DMATRIX) m_projectionMatrix);
++
++	IDirect3DViewport* d3dViewport = nullptr;
++	IDirect3DViewport3* d3dViewport3 = nullptr;
++	if (GetDirect3DViewport(&d3dViewport) == DD_OK) {
++		d3dViewport->QueryInterface(IID_IDirect3DViewport3, (void**) &d3dViewport3);
++		d3dViewport->Release();
++	}
++	m_renderer->SetCurrentViewport(d3dViewport3);
++	if (d3dViewport3) {
++		d3dViewport3->Release();
++	}
++
++	IDirect3DRMViewport* self = static_cast<IDirect3DRMViewport*>(this);
++	if (visual->Invoke(D3DRMUSERVISUAL_CANSEE, m_device, self)) {
++		visual->Invoke(D3DRMUSERVISUAL_RENDER, m_device, self);
++	}
+ }
+ 
+ HRESULT Direct3DRMViewportImpl::RenderScene()
+diff --git a/miniwin/src/internal/d3dmaterial_impl.h b/miniwin/src/internal/d3dmaterial_impl.h
+index 5a58db0..f130e42 100644
+--- a/miniwin/src/internal/d3dmaterial_impl.h
++++ b/miniwin/src/internal/d3dmaterial_impl.h
+@@ -3,6 +3,7 @@
+ #include "miniwin/d3d.h"
+ 
+ struct Direct3DMaterialImpl : public IDirect3DMaterial3 {
++	~Direct3DMaterialImpl() override;
+ 	// IUnknown interface
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+ 	// IDirect3DMaterial3 interface
+@@ -14,3 +15,7 @@ struct Direct3DMaterialImpl : public IDirect3DMaterial3 {
+ private:
+ 	D3DMATERIALHANDLE m_handle = 0;
+ };
++
++// The material a handle from GetHandle names, or nullptr: what
++// SetLightState(D3DLIGHTSTATE_MATERIAL, handle) selects for drawing.
++const D3DMATERIAL* Direct3DMaterial_FromHandle(D3DMATERIALHANDLE handle);
+diff --git a/miniwin/src/internal/d3drmrenderer.h b/miniwin/src/internal/d3drmrenderer.h
+index e34fa5c..ff7fee0 100644
+--- a/miniwin/src/internal/d3drmrenderer.h
++++ b/miniwin/src/internal/d3drmrenderer.h
+@@ -28,8 +28,41 @@ struct Plane {
+ 	float d;
+ };
+ 
++// The immediate-mode state of the device (IDirect3DDevice2/3): render
++// states, light states and texture stage states, indexed by their Direct3D
++// values. Untouched states hold Direct3D's defaults.
++struct ImmediateState {
++	static constexpr DWORD RenderStateCount = 256;
++	static constexpr DWORD LightStateCount = 16;
++	static constexpr DWORD TextureStageCount = 8;
++	static constexpr DWORD TextureStageStateCount = 32;
++
++	ImmediateState();
++	DWORD Render(D3DRENDERSTATETYPE state) const { return renderState[static_cast<DWORD>(state)]; }
++
++	DWORD renderState[RenderStateCount];
++	DWORD lightState[LightStateCount];
++	DWORD textureStageState[TextureStageCount][TextureStageStateCount];
++};
++
++// One DrawIndexedPrimitive call: a D3DFVF_VERTEX triangle list with the
++// device's transforms, state and current material. The vertices and indices
++// belong to the caller and are only valid during SubmitImmediate.
++struct ImmediateDraw {
++	const D3DVERTEX* vertices;
++	DWORD vertexCount;
++	const WORD* indices;
++	DWORD indexCount;
++	D3DRMMATRIX4D world;
++	D3DRMMATRIX4D view;
++	D3DRMMATRIX4D projection;
++	const ImmediateState* state;
++	D3DMATERIAL material; // all zero when no material is selected
++};
++
+ class Direct3DRMRenderer : public IDirect3DDevice3 {
+ public:
++	Direct3DRMRenderer();
+ 	~Direct3DRMRenderer() override;
+ 	// IUnknown interface
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+@@ -83,6 +116,10 @@ class Direct3DRMRenderer : public IDirect3DDevice3 {
+ 	virtual void Draw2DImage(Uint32 textureId, const SDL_Rect& srcRect, const SDL_Rect& dstRect, FColor color) = 0;
+ 	virtual void Download(SDL_Surface* target) = 0;
+ 	virtual void SetDither(bool dither) = 0;
++	// Immediate mode: draw one triangle list now, with the device's state.
++	// Backends that do not implement it leave DrawIndexedPrimitive
++	// unsupported.
++	virtual HRESULT SubmitImmediate(const ImmediateDraw& draw) { return DDERR_UNSUPPORTED; }
+ 	virtual void SetPalette(SDL_Palette* palette) {}
+ 	virtual bool UsesPalettedSurfaces() const { return false; }
+ 	// The IDirect3D3 (the DirectDraw object) the device was created from.
+@@ -96,6 +133,11 @@ class Direct3DRMRenderer : public IDirect3DDevice3 {
+ 	int m_virtualWidth, m_virtualHeight;
+ 	ViewportTransform m_viewportTransform;
+ 
++	ImmediateState m_immediateState;
++	D3DRMMATRIX4D m_transforms[3]; // world, view, projection
++	IDirect3DViewport3* m_currentViewport = nullptr;
++	IDirect3DTexture2* m_textures[ImmediateState::TextureStageCount] = {};
++
+ private:
+ 	struct DestroyCallbackContext {
+ 		Direct3DRMRenderer* renderer;
+diff --git a/miniwin/src/internal/d3drmrenderer_software.h b/miniwin/src/internal/d3drmrenderer_software.h
+index ea9d8c5..b7d501c 100644
+--- a/miniwin/src/internal/d3drmrenderer_software.h
++++ b/miniwin/src/internal/d3drmrenderer_software.h
+@@ -62,6 +62,7 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 	void Download(SDL_Surface* target) override;
+ 	void SetDither(bool dither) override;
+ 	void SetPalette(SDL_Palette* palette) override;
++	HRESULT SubmitImmediate(const ImmediateDraw& draw) override;
+ 
+ private:
+ 	void ClearZBuffer();
+@@ -72,6 +73,18 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 		const Appearance& appearance
+ 	);
+ 	void DrawTriangleClipped(const SWLitVertex (&v)[3], const Appearance& appearance);
++	// Immediate mode: the device's z, blend and cull states per pixel.
++	struct ImmediatePixelState {
++		bool zEnable, zWrite, blend;
++		DWORD zFunc, srcBlend, destBlend;
++	};
++	void DrawImmediateClipped(const SWLitVertex (&v)[3], const ImmediatePixelState& state);
++	void DrawImmediateTriangle(
++		const SWLitVertex& v0,
++		const SWLitVertex& v1,
++		const SWLitVertex& v2,
++		const ImmediatePixelState& state
++	);
+ 	void ProjectVertex(const D3DVECTOR& v, D3DRMVECTOR4D& p) const;
+ 	void ApplyLighting(
+ 		const D3DVECTOR& position,
+diff --git a/miniwin/src/internal/d3drmuservisual_impl.h b/miniwin/src/internal/d3drmuservisual_impl.h
+index 4997756..25ffbcc 100644
+--- a/miniwin/src/internal/d3drmuservisual_impl.h
++++ b/miniwin/src/internal/d3drmuservisual_impl.h
+@@ -5,6 +5,12 @@
+ struct Direct3DRMUserVisualImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMUserVisual> {
+ 	Direct3DRMUserVisualImpl(D3DRMUSERVISUALCALLBACK callback, void* arg) : m_callback(callback), m_arg(arg) {}
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
++	// Run the callback, as Viewport::Render does: CANSEE asks whether the
++	// visual can be seen, RENDER draws it on the device.
++	int Invoke(D3DRMUSERVISUALREASON reason, IDirect3DRMDevice* device, IDirect3DRMViewport* viewport)
++	{
++		return m_callback ? m_callback(this, m_arg, reason, device, viewport) : 0;
++	}
+ 
+ private:
+ 	D3DRMUSERVISUALCALLBACK m_callback;
+diff --git a/miniwin/src/internal/d3drmviewport_impl.h b/miniwin/src/internal/d3drmviewport_impl.h
+index ae3104a..824e3c9 100644
+--- a/miniwin/src/internal/d3drmviewport_impl.h
++++ b/miniwin/src/internal/d3drmviewport_impl.h
+@@ -20,7 +20,12 @@ class Direct3DRMDeviceImpl;
+ class Direct3DRMFrameImpl;
+ 
+ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewport2> {
+-	Direct3DRMViewportImpl(DWORD width, DWORD height, Direct3DRMRenderer* renderer);
++	Direct3DRMViewportImpl(
++		DWORD width,
++		DWORD height,
++		Direct3DRMRenderer* renderer,
++		IDirect3DRMDevice* device = nullptr
++	);
+ 	~Direct3DRMViewportImpl() override;
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+ 	HRESULT Render(IDirect3DRMFrame* group) override;
+@@ -60,7 +65,9 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 	void CollectLightsFromFrame(IDirect3DRMFrame* frame, D3DRMMATRIX4D parentMatrix, std::vector<SceneLight>& lights);
+ 	void CollectMeshesFromFrame(IDirect3DRMFrame* frame, D3DRMMATRIX4D parentMatrix);
+ 	void BuildViewFrustumPlanes();
++	void RenderUserVisual(struct Direct3DRMUserVisualImpl* visual, const D3DRMMATRIX4D worldMatrix);
+ 	Direct3DRMRenderer* m_renderer;
++	IDirect3DRMDevice* m_device; // the device the viewport was created on; not owned
+ 	std::vector<DeferredDrawCommand> m_deferredDraws;
+ 	D3DCOLOR m_backgroundColor = 0xFF000000;
+ 	DWORD m_virtualWidth;
+diff --git a/miniwin/src/internal/mathutils.h b/miniwin/src/internal/mathutils.h
+index dfb84fb..326713a 100644
+--- a/miniwin/src/internal/mathutils.h
++++ b/miniwin/src/internal/mathutils.h
+@@ -3,6 +3,7 @@
+ #include "miniwin/d3drm.h"
+ 
+ #include <math.h>
++#include <string.h>
+ 
+ typedef D3DVALUE Matrix3x3[3][3];
+ 
+@@ -103,3 +104,33 @@ inline D3DVECTOR TransformDirection(const D3DVECTOR& v, const D3DRMMATRIX4D m)
+ 		v.x * m[0][2] + v.y * m[1][2] + v.z * m[2][2]
+ 	};
+ }
++
++// The matrix that takes a model-space normal to world space for the world
++// matrix m: the inverse of its upper 3x3, applied by TransformNormal.
++inline void NormalMatrix(Matrix3x3 out, const D3DRMMATRIX4D m)
++{
++	float a = m[0][0], b = m[0][1], c = m[0][2];
++	float d = m[1][0], e = m[1][1], f = m[1][2];
++	float g = m[2][0], h = m[2][1], i = m[2][2];
++
++	float det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
++
++	if (fabs(det) < 1e-6f) {
++		memset(out, 0, sizeof(Matrix3x3));
++		return;
++	}
++
++	float invDet = 1.0f / det;
++
++	out[0][0] = (e * i - f * h) * invDet;
++	out[1][0] = (c * h - b * i) * invDet;
++	out[2][0] = (b * f - c * e) * invDet;
++
++	out[0][1] = (f * g - d * i) * invDet;
++	out[1][1] = (a * i - c * g) * invDet;
++	out[2][1] = (c * d - a * f) * invDet;
++
++	out[0][2] = (d * h - e * g) * invDet;
++	out[1][2] = (b * g - a * h) * invDet;
++	out[2][2] = (a * e - b * d) * invDet;
++}

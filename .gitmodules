@@ -1,5 +1,6 @@
 [submodule "3rdparty/isle-portable"]
 	path = 3rdparty/isle-portable
-	url = https://github.com/robbert229/isle-portable.git
+	url = https://github.com/isledecomp/isle-portable.git
 	shallow = true
-	branch = lrr/dx6-interfaces
+	branch = master
+	ignore = all

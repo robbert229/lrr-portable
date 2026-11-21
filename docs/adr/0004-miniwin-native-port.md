@@ -1,7 +1,9 @@
 # Native Linux (miniwin) is the primary target; Win32/MinGW is the reference build
 
 **Status:** superseded on how the port is structured and where it lives by
-[ADR 0007](0007-port-on-develop-units-on-miniwin.md).
+[ADR 0007](0007-port-on-develop-units-on-miniwin.md). The submodule points at
+upstream isle-portable, with our patches applied on top, per
+[ADR 0009](0009-miniwin-patches-in-this-repository.md).
 
 The end goal is a **native Linux port running `lrr-portable` with no Wine
 layer**. The sequencing answer to "Windows-first or port-first" was: *flip to

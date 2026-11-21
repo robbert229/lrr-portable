@@ -71,7 +71,8 @@ jobs:
         run: echo "CMAKE_PREFIX_PATH=$RUNNER_TEMP/sdl3-prefix" >> "$GITHUB_ENV"
 
       - name: Bootstrap sparse miniwin
-        # Fetches only 3rdparty/isle-portable/miniwin/, never the full submodule.
+        # Fetches only 3rdparty/isle-portable/miniwin/, never the full submodule,
+        # and applies patches/miniwin on top (ADR 0009).
         run: tools/setup-miniwin.sh
 
       - name: Lint the units
