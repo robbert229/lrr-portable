@@ -1567,9 +1567,12 @@ extern const char** s_object_the_name_kind10;
 #define legoGlobs_objectTheNamesKind10 s_object_the_name_kind10
 /* legoGlobs.recordObjects (005563b8, 10 entries) and recordObjectCount
  * (005563e0): entity.cpp's s_object_pointer_registry_words/_count, with
- * C linkage (the pre-declarations before entity_for_lego.hpp). */
-extern uint32_t s_object_pointer_registry_words[10];
-#define legoGlobs_recordObjects ((void**)s_object_pointer_registry_words)
+ * C linkage (the pre-declarations before entity_for_lego.hpp). The
+ * entries are object pointers, so they are pointer-wide: as 32-bit words
+ * read through a void** cast, the sixth object written overran the array
+ * into recordObjectCount on 64-bit. */
+extern void* s_object_pointer_registry_words[10];
+#define legoGlobs_recordObjects s_object_pointer_registry_words
 extern uint32_t s_object_pointer_registry_count;
 #define legoGlobs_recordObjectCount s_object_pointer_registry_count
 

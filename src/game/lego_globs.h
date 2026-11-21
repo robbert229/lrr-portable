@@ -127,7 +127,7 @@ struct Lego_Globs {
     void* contSmashPath;                     /* +0x2ec 005563ac legoGlobs_contSmashPath */
     void* contLaserShot;                     /* +0x2f0 005563b0 legoGlobs_contLaserShot */
     void* field_2f4;                         /* +0x2f4 005563b4 s_refresh_record; engine.cpp */
-    uint32_t recordObjects[10];              /* +0x2f8 005563b8 s_object_pointer_registry_words; entity.cpp */
+    void* recordObjects[10];                 /* +0x2f8 005563b8 s_object_pointer_registry_words; entity.cpp */
     uint32_t recordObjectCount;              /* +0x320 005563e0 s_object_pointer_registry_count; entity.cpp */
     float field_324[4];                      /* +0x324 005563e4 legoGlobs_f_5563e4; the radar view's area */
     float radarZoom;                         /* +0x334 005563f4 s_lego_radar_zoom */
