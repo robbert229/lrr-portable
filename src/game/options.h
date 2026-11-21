@@ -14,7 +14,9 @@ extern "C" {
 
 void options_write_to_slot_target(void);                    /* 00416910 */
 void options_context_six_field_set_target(const uint32_t* src); /* 00417f20 */
-void options_context_copy_and_replace_resource_target(const uint32_t* source); /* 004180c0 */
+/* Front_Save_RestoreSaveData: source is a Front_SaveData, which holds a
+ * pointer, so it is larger than its 0xb8-byte Win32 image on 64-bit. */
+void options_context_copy_and_replace_resource_target(void* source); /* 004180c0 */
 
 #ifdef __cplusplus
 }

@@ -1229,7 +1229,9 @@ void reward_save_menu(void)
     void* save;
     RewardLevel* current;
     uint32_t render[6];
-    uint32_t snapshot[46];
+    /* The current save slot's copy: a whole Front_SaveData (0xb8 bytes on
+     * Win32, 0xc0 on 64-bit, where it holds an 8-byte pointer). */
+    Front_SaveData snapshot;
 
     save_slot_open();
     inGame = is_in_game();
@@ -1238,7 +1240,7 @@ void reward_save_menu(void)
         sav_record_ptr_target(REWARD_LEVEL_INDEX(level->name));
         slot = save_slot_get_target();
         save = sav_build_ctx_target();
-        front_campaign_snapshot_create(snapshot);
+        front_campaign_snapshot_create(&snapshot);
         current = reward_current_level_get();
         if (!inGame && level_objective_result_get((const struct Lego_Level*)level)) {
             do {
@@ -1251,7 +1253,7 @@ void reward_save_menu(void)
                 }
                 if (sav_build_ctx_target()) {
                     if (sav_build_ctx_target() != save && save) {
-                        options_context_copy_and_replace_resource_target(snapshot);
+                        options_context_copy_and_replace_resource_target(&snapshot);
                         save_mark_record(NULL, REWARD_LEVEL_INDEX(
                             ((RewardLegoLevel*)level_current_owner_get())->name));
                         save_write_record_target(REWARD_LEVEL_INDEX(level->name),
