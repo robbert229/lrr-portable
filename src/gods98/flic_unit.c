@@ -343,11 +343,23 @@ int Flic_FindChunk(LPFLICSTRUCT fsp)
     start = fsp->pointerposition;
 
     if ((fsp->userflags & FLICMEMORY) == FLICMEMORY) {
+        /* Flic_Setup reads the file from past its 128-byte header, so the
+         * buffer holds fsHeader.size - 128 bytes. Stop at any chunk whose
+         * header or body would run past them rather than read the heap
+         * beyond: a non-looping flic that is animated after its last frame
+         * starts its walk there. */
+        int loaded = fsp->fsHeader.size - 128;
+        if (start < 0 || start > loaded - 8) return 0;
         size = flic_read_i32((char*)header + start);
         header = (Flic_ChunkHeader*)((char*)header + start);
         found = 0;
         while (!found) {
             if (fsp->pointerposition >= fsp->fsHeader.size) break;
+            if (fsp->pointerposition > loaded - 8 ||
+                FLIC_CHUNK_SIZE(header) < 8 ||
+                FLIC_CHUNK_SIZE(header) > loaded - fsp->pointerposition) {
+                break;
+            }
             switch (FLIC_CHUNK_TYPE(header)) {
             case FLI_PREFIX_TYPE:
                 Flic_LoadPalette64(fsp);
@@ -365,12 +377,14 @@ int Flic_FindChunk(LPFLICSTRUCT fsp)
                 fsp->pointerposition += FLIC_CHUNK_SIZE(header);
                 break;
             }
+            /* The original leaves the walk as soon as it has drawn a frame,
+             * so the frame ends it at start + size. Stepping on and adding
+             * the next chunk's size as well skipped every other frame and
+             * walked past the end of the buffer before the loop reset. */
+            if (found) break;
             header = (Flic_ChunkHeader*)((char*)header + FLIC_CHUNK_SIZE(header));
+            if (fsp->pointerposition > loaded - 8) break;
             size += FLIC_CHUNK_SIZE(header);
-            if (found) {
-                fsp->pointerposition = start + size;
-                return 0;
-            }
         }
     } else {
         size = FLIC_CHUNK_SIZE(header);
