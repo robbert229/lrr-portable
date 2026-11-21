@@ -747,8 +747,12 @@ int lego_game_config_init(void)
             }
 
             if (frontend_enabled_original() && movie_avis_enabled_original()) {
+                /* PORT-ONLY: the original lets a key or click skip the LEGO
+                 * logo movie only in programmer mode (engine_app_mode_get()
+                 * != 0); the port makes it skippable always, like DDIAvi and
+                 * RRAvi. */
                 // STRING: LEGORR 0x004a3b5c
-                front_play_intro_movie_adapter("LegoAvi", engine_app_mode_get() != 0);
+                front_play_intro_movie_adapter("LegoAvi", 1);
                 front_play_intro_splash_adapter(
                     // STRING: LEGORR 0x004a3b48
                     "DDILogo", 1,
