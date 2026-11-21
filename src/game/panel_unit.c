@@ -280,7 +280,11 @@ void panel_print_f(int panelType, const struct TextureSurface* font, int x,
 
     va_start(args, msg);
     if (center) {
-        font_v_get_string_info(font, &width, NULL, msg, args);
+        /* Measuring consumes a va_list on x86-64, so measure a copy. */
+        va_list measure;
+        va_copy(measure, args);
+        font_v_get_string_info(font, &width, NULL, msg, measure);
+        va_end(measure);
         x -= width >> 1;
     }
     font_v_print_f(font, (int)floor(x + panel->currPos.x),
