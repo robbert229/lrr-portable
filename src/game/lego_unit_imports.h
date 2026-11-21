@@ -1354,14 +1354,15 @@ struct ViewProjectionAdapter;
 extern struct Text_Globs textGlobs;
 #define s_overlay_word_03610 textGlobs.counter
 #define textGlobs_f_503618 textGlobs.timer
-/* Reward.c's rewardGlobs (reward.c, 00552980): the level-start pilot count
+/* Reward.c's rewardGlobs (reward.h, 00552980): the level-start pilot count
  * Lego.c stores is rewardGlobs.level.itemsArray[5].startCount (00555118).
  * Natively spawn.cpp's word stands in for it. One extern replaces the
- * other (finding 626). Deviation (scoring only): the extern views the
- * struct as words, because naming its tag would add one to the unit's
- * symbol numbering (finding 538). */
-extern uint32_t rewardGlobs[];
-#define s_start_level_pilot_grid_count (rewardGlobs[0x2798 / 4])
+ * other (finding 626). The field is named, not reached as the Win32 word
+ * at +0x2798: RewardLevelItem holds pointers, so the byte offset lands in
+ * itemsArray[4] on 64-bit. */
+#include "reward.h"
+#define s_start_level_pilot_grid_count \
+    (rewardGlobs.level.itemsArray[REWARD_ITEM_FIGURES].startCount)
 /* GAME-032 Panel.c (panel_unit.h), 005000e0; panelTable[0].flags is at
  * +0x5c. */
 
