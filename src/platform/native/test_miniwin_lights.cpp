@@ -6,11 +6,12 @@
 // facing the camera at the centre of a 64x64 target and compares the centre
 // pixel with Direct3D's lighting formulas: emissive + ambient light times
 // material ambient + per light, attenuation * spot factor * N.L * light
-// colour * material diffuse, with the spot factor
-// (cos a - cos penumbra) / (cos umbra - cos penumbra) between the cones,
-// and nothing beyond the range. D3DRM's umbra and penumbra are angles from
-// the spot's axis (the shipped game's level frame matches only that way;
-// Direct3D's own theta and phi are twice them).
+// colour * material diffuse, and nothing beyond the range. D3DRM hands a
+// spot to Direct3D as theta = umbra, phi = penumbra and falloff 0 (read
+// back from Microsoft's D3DRM.DLL under Wine). Direct3D's theta and phi are
+// full apex angles, and falloff 0 makes the spot factor 1 anywhere inside
+// phi, so a D3DRM spot lights fully out to half its penumbra from the axis
+// and not at all beyond, whatever its umbra.
 // Synthetic only: a dummy-driver SDL window, no game data.
 #include <miniwin/d3d.h>
 #include <miniwin/d3drm.h>
@@ -156,44 +157,26 @@ static void AimSpot(float z, float a)
     g_scene.lightFrame->SetOrientation(g_scene.root, sinf(a), 0, cosf(a), 0, 1, 0);
 }
 
-// Direct3D's spot factor for an angle a off the spot's axis.
-static float SpotFactor(float a, float umbra, float penumbra)
-{
-    float rho = cosf(a), inner = cosf(umbra), outer = cosf(penumbra);
-    if (rho <= outer) {
-        return 0.0f;
-    }
-    if (rho >= inner) {
-        return 1.0f;
-    }
-    return (rho - outer) / (inner - outer);
-}
-
 // ---- the cases ----------------------------------------------------------
 
-// Inside the umbra the spot is at full strength, in the penumbra it falls
-// off linearly in the cosine, and outside the penumbra it lights nothing.
+// The spot is at full strength out to half its penumbra angle and lights
+// nothing beyond, and its umbra changes nothing.
 static void CheckSpotCone(D3DMATERIALHANDLE white)
 {
-    const float umbra = 0.2f, penumbra = 0.4f;
-    CHECK(g_scene.spot->SetUmbra(umbra) == DD_OK);
-    CHECK(g_scene.spot->SetPenumbra(penumbra) == DD_OK);
     CHECK(g_scene.spot->SetRange(100.0f) == DD_OK);
-
-    AimSpot(2.0f, 0.0f);
-    CHECK(Near(Lit(white), 1, 1, 1));
-    AimSpot(2.0f, 0.15f);
-    CHECK(Near(Lit(white), 1, 1, 1));
-
-    for (float a : {0.25f, 0.3f, 0.35f}) {
-        float f = SpotFactor(a, umbra, penumbra);
-        CHECK(f > 0.1f && f < 0.9f);
-        AimSpot(2.0f, a);
-        CHECK(Near(Lit(white), f, f, f));
+    for (float umbra : {0.0f, 0.2f, 0.4f}) {
+        CHECK(g_scene.spot->SetUmbra(umbra) == DD_OK);
+        CHECK(g_scene.spot->SetPenumbra(0.4f) == DD_OK);
+        for (float a : {0.0f, 0.1f, 0.18f}) {
+            AimSpot(2.0f, a);
+            CHECK(Near(Lit(white), 1, 1, 1));
+        }
+        for (float a : {0.22f, 0.3f, 0.5f}) {
+            AimSpot(2.0f, a);
+            CHECK(Near(Lit(white), 0, 0, 0));
+        }
     }
-
-    AimSpot(2.0f, 0.5f);
-    CHECK(Near(Lit(white), 0, 0, 0));
+    CHECK(g_scene.spot->SetUmbra(0.2f) == DD_OK);
 }
 
 // The light colour, the range and the attenuation.
