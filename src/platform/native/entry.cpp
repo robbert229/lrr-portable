@@ -9,7 +9,8 @@
  * name after the last backslash and opens <name>0.wad, <name>1.wad, ... in
  * the working directory. The rest goes to WinMain as lpCmdLine, so the
  * shipped exe's flags (-best, -window, -nosound, -debug, ...) work
- * unchanged. */
+ * unchanged. Without -best, WinMain opens the "Mode Selection" dialog,
+ * whose template resources.cpp registers first. */
 #include <SDL3/SDL.h>
 
 #include <miniwin/windows.h>
@@ -18,6 +19,9 @@
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int cmdShow);
+
+/* The program's dialog templates (resources.cpp). */
+void RegisterResources();
 
 /* GetCommandLineA's string (seam_stubs.cpp). */
 extern "C" char* seam_command_line;
@@ -57,6 +61,7 @@ int main(int argc, char** argv)
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL_Init: %s", SDL_GetError());
         return 1;
     }
+    RegisterResources();
     int result = WinMain(NULL, NULL, const_cast<LPSTR>(arguments.c_str()), SW_SHOWNORMAL);
     SDL_Quit();
     return result;

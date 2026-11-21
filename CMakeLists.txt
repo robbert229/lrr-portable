@@ -54,7 +54,7 @@ if(LRR_BASH)
 endif()
 find_package(SDL3 CONFIG REQUIRED)
 set(MINIWIN_SOURCES
-  windows/windows.cpp windows/windowmessages.cpp ddraw/ddpalette.cpp ddraw/ddraw.cpp ddraw/ddsurface.cpp
+  windows/windows.cpp windows/windowmessages.cpp windows/dialog.cpp ddraw/ddpalette.cpp ddraw/ddraw.cpp ddraw/ddsurface.cpp
   ddraw/framebuffer.cpp d3d/d3dmaterial.cpp
   d3d/d3dviewport.cpp d3drm/d3drm.cpp d3drm/d3drmanimationset.cpp
   d3drm/d3drmdevice.cpp d3drm/d3drmframe.cpp d3drm/d3drmlight.cpp
@@ -317,6 +317,14 @@ if(BUILD_TESTING)
   target_link_libraries(miniwin_messages_test PRIVATE miniwin)
   add_test(NAME miniwin_messages COMMAND miniwin_messages_test)
   set_tests_properties(miniwin_messages PROPERTIES LABELS miniwin)
+
+  # miniwin's modal dialogs, as Init.c's mode selection runs them: a
+  # registered template, list boxes and radio buttons filled through
+  # SendMessageA, and mouse and key input as WM_COMMAND notifications.
+  add_executable(miniwin_dialog_test ${PLATFORM_DIR}/native/test_miniwin_dialog.cpp)
+  target_link_libraries(miniwin_dialog_test PRIVATE miniwin)
+  add_test(NAME miniwin_dialog COMMAND miniwin_dialog_test)
+  set_tests_properties(miniwin_dialog PROPERTIES LABELS miniwin TIMEOUT 30)
 
   # miniwin's key messages: Windows virtual-key codes and lParam flags from
   # SDL key events, WM_SYSKEY* for Alt and F10, and Alt+F4 as WM_CLOSE.

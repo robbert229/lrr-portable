@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 19:04:29 -0800
+Subject: [PATCH] fix(miniwin): name the primary DirectDraw driver "display"
+
+DirectDrawEnumerate passed a null driver name, which a program that
+prints the description and name together shows as "(null)". Windows
+names the primary display driver "display".
+
+diff --git a/miniwin/src/ddraw/ddraw.cpp b/miniwin/src/ddraw/ddraw.cpp
+index 4e0b622..dbefeab 100644
+--- a/miniwin/src/ddraw/ddraw.cpp
++++ b/miniwin/src/ddraw/ddraw.cpp
+@@ -528,7 +528,10 @@ HRESULT DirectDrawEnumerate(LPDDENUMCALLBACKA cb, void* context)
+ {
+ 	const char* driverName = SDL_GetCurrentVideoDriver();
+ 	char* driverNameDup = SDL_strdup(driverName);
+-	BOOL callback_result = cb(NULL, driverNameDup, NULL, context);
++	// The primary driver's name is "display", as on Windows: programs print
++	// the description and the name together.
++	char displayName[] = "display";
++	BOOL callback_result = cb(NULL, driverNameDup, displayName, context);
+ 	SDL_free(driverNameDup);
+ 	if (!callback_result) {
+ 		return DDERR_GENERIC;
