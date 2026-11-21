@@ -11,6 +11,7 @@
 #include <math.h>
 
 #include "bezier.h"
+#include "animation_object_record.h"
 
 /* The unit's .rdata, in original order. Like Maths.c, the unit does not
  * reproduce the 16-byte {1, 2, 4, -1} table at 0049e034 that opens its block
@@ -145,5 +146,6 @@ unsigned int path_arc_length_interpolate(const BezierCurve* curve,
 // FUNCTION: LEGORR 0x00406980
 int scene_object_mode_is_one(const void* scene_object)
 {
-    return *(const int*)((const char*)scene_object + 0x28) == 1;
+    /* AnimationObject.cameraFlipDir, +0x28 on Win32 (+0x34 on 64-bit). */
+    return ((const AnimationObject*)scene_object)->cameraFlipDir == 1;
 }
