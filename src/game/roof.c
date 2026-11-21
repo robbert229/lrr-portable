@@ -93,6 +93,9 @@ void roof_shutdown(void)
     if (roofGlobs.contMesh) ledger_stub_00472a40_DDiSceneObjectDestroy(roofGlobs.contMesh);
     roofGlobs.contMesh = NULL;
     detail_container_free_texture_adapter(roofGlobs.texture);
+    /* Roof_SetTexture frees a texture it finds here, and a level without a
+     * roof skips Roof_Initialise, which would clear it. */
+    roofGlobs.texture = NULL;
 }
 
 // FUNCTION: LEGORR 0x00462f20
