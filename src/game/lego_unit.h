@@ -529,9 +529,10 @@ unsigned int lego_stats_level_record_count_for_stat_type(int objType); /* 0042ef
 
 /* ---- part 2 declarations, group 2E (0042efc0-0042f6f0): begin ---- */
 
-/* Win32 RECT, as Lego_PlayMovie's destination area. */
+/* Win32 RECT, as Lego_PlayMovie's destination area. RECT's LONG fields
+ * are 32-bit; long is 64-bit on LP64 targets. */
 typedef struct LegoRect2E {
-    long left, top, right, bottom;
+    int32_t left, top, right, bottom;
 } LegoRect2E;
 
 /* Stand-ins (lego_unit.c). */
