@@ -11,8 +11,8 @@
  * names in snake case.
  *
  * The original links this object after the import libraries, like
- * LATE-001 (finding 608). miniwin has no dialog resources, so the
- * mode-selection dialog fails; -best selects a mode without it. */
+ * LATE-001 (finding 608). On the port, miniwin runs the dialog from the
+ * template that platform/native/resources.cpp registers. */
 #include "init.h"
 
 // GLOBAL: LEGORR 0x005580a0

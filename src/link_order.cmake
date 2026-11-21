@@ -12,8 +12,9 @@
 #   kind      unit      the file holds exactly one original unit (ADR 0005;
 #                       ADR 0007 decision 1); key is its unit id in
 #                       docs/coverage/translation-unit-ranges.csv
-#             platform  port-only code below the seam: the process entry
-#                       and the seam's stubs; key is "-"
+#             platform  port-only code below the seam: the process entry,
+#                       the seam's stubs and the program's resources;
+#                       key is "-"
 #             library   port-only library code that a unit's library
 #                       substitution calls (ADR 0007 decision 3), such as
 #                       the FFmpeg video library; key is "-"
@@ -113,6 +114,7 @@ lrr_link(unit   LATE-002 gods98        gods98/init.c)
 # and the seam's remaining stubs (ADR 0007).
 lrr_link(platform -     platform      platform/native/entry.cpp)
 lrr_link(platform -     platform      platform/native/seam_stubs.cpp)
+lrr_link(platform -     platform      platform/native/resources.cpp)
 
 # The libraries the units' substitutions call (ADR 0007).
 lrr_link(library  -     library       library/video_ffmpeg.cpp)

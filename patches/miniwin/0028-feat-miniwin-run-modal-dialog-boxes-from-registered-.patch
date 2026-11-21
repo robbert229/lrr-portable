@@ -1,0 +1,1248 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 19:03:10 -0800
+Subject: [PATCH] feat(miniwin): run modal dialog boxes from registered
+ templates
+
+DialogBoxParamA now runs a real modal dialog over SDL3 instead of failing.
+miniwin has no resource sections, so a program registers its dialog
+templates (a DIALOG resource's parsed form, in dialog units) with
+MiniwinRegisterDialogTemplate. The dialog is its own SDL_Window and
+SDL_Renderer, so GetWindowRect and MoveWindow work on it; its push
+buttons, auto radio buttons, static text and list boxes are drawn in the
+classic Windows look with SDL's 8x8 debug font, scaled by the display's
+content scale.
+
+Controls take the messages a dialog procedure sends (WM_SETTEXT,
+WM_GETTEXT, BM_SETCHECK, BM_GETCHECK and the LB_* list messages) and
+notify the procedure with WM_COMMAND: BN_CLICKED, LBN_SELCHANGE and
+LBN_DBLCLK. The mouse, the wheel, Tab, Space, the arrow keys, Enter
+(the default button) and Escape (IDCANCEL) work, and closing the window
+sends IDCANCEL. EndDialog, GetDlgItem, SetFocus and EnableWindow work on
+controls.
+
+diff --git a/miniwin/CMakeLists.txt b/miniwin/CMakeLists.txt
+index 4c05a0e..741b461 100644
+--- a/miniwin/CMakeLists.txt
++++ b/miniwin/CMakeLists.txt
+@@ -5,6 +5,7 @@ add_library(miniwin STATIC EXCLUDE_FROM_ALL
+   # Core
+   src/windows/windows.cpp
+   src/windows/windowmessages.cpp
++  src/windows/dialog.cpp
+ 
+   # DDraw
+   src/ddraw/ddpalette.cpp
+diff --git a/miniwin/include/miniwin/windows.h b/miniwin/include/miniwin/windows.h
+index 1c29d26..e60a461 100644
+--- a/miniwin/include/miniwin/windows.h
++++ b/miniwin/include/miniwin/windows.h
+@@ -146,6 +146,32 @@
+ #define LB_GETTEXT 0x0189
+ #define LB_ERR (-1)
+ #define LBN_SELCHANGE 1
++#define WM_GETTEXT 0x000D
++#define WM_GETTEXTLENGTH 0x000E
++#define BM_GETCHECK 0x00F0
++#define BST_UNCHECKED 0
++#define BST_CHECKED 1
++#define LB_RESETCONTENT 0x0184
++#define LB_GETCOUNT 0x018B
++#define LB_GETTEXTLEN 0x018A
++#define LBN_DBLCLK 2
++
++// Window and control styles a dialog template uses.
++#define WS_GROUP 0x00020000L
++#define WS_TABSTOP 0x00010000L
++#define WS_DISABLED 0x08000000L
++#define BS_PUSHBUTTON 0x00000000L
++#define BS_DEFPUSHBUTTON 0x00000001L
++#define BS_AUTORADIOBUTTON 0x00000009L
++#define BS_TYPEMASK 0x0000000FL
++#define SS_LEFT 0x00000000L
++#define SS_CENTER 0x00000001L
++#define SS_RIGHT 0x00000002L
++#define LBS_NOTIFY 0x0001L
++#define LBS_SORT 0x0002L
++
++#define MAKEWPARAM(l, h) ((WPARAM) (DWORD) (((WORD) (l)) | (((DWORD) (WORD) (h)) << 16)))
++#define IS_INTRESOURCE(r) ((((uintptr_t) (r)) >> 16) == 0)
+ 
+ #define MAKEINTRESOURCEA(i) ((LPSTR) ((uintptr_t) ((WORD) (i))))
+ #define MAKEINTRESOURCE MAKEINTRESOURCEA
+@@ -487,7 +513,36 @@ BOOL MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, BOOL bRepaint)
+ 
+ BOOL EnableWindow(HWND hWnd, BOOL bEnable);
+ 
+-// Dialog boxes need resource templates, which miniwin has none of: these fail.
++// miniwin has no resource sections: a program registers its dialog templates
++// (the parsed form of a DIALOG resource, in dialog units) before it opens
++// them. The item classes are the predefined class atoms of a DLGITEMTEMPLATE.
++#define MINIWIN_DLGCLASS_BUTTON 0x0080
++#define MINIWIN_DLGCLASS_STATIC 0x0082
++#define MINIWIN_DLGCLASS_LISTBOX 0x0083
++
++struct MINIWIN_DLGITEM {
++	WORD classAtom;
++	DWORD style;
++	short x, y, cx, cy;
++	WORD id;
++	const char* text;
++};
++
++struct MINIWIN_DLGTEMPLATE {
++	DWORD style;
++	short cx, cy;
++	const char* title;
++	const MINIWIN_DLGITEM* items;
++	int itemCount;
++};
++
++// lpTemplateName is a name or MAKEINTRESOURCE(id), as DialogBoxParamA takes
++// it. The template must outlive the program's dialogs.
++BOOL MiniwinRegisterDialogTemplate(LPCSTR lpTemplateName, const MINIWIN_DLGTEMPLATE* lpTemplate);
++
++// A modal dialog in its own window, with button, radio button, static text
++// and list box controls drawn over SDL3. It fails with -1 when the template
++// is not registered.
+ INT_PTR DialogBoxParamA(HINSTANCE hInstance, LPCSTR lpTemplateName, HWND hWndParent, DLGPROC lpDialogFunc, LPARAM dwInitParam);
+ 
+ BOOL EndDialog(HWND hDlg, INT_PTR nResult);
+diff --git a/miniwin/src/internal/dialog_impl.h b/miniwin/src/internal/dialog_impl.h
+new file mode 100644
+index 0000000..8c3b949
+--- /dev/null
++++ b/miniwin/src/internal/dialog_impl.h
+@@ -0,0 +1,19 @@
++#pragma once
++
++#include "miniwin/windows.h"
++
++// The dialog controls' side of the USER32 calls that windowmessages.cpp
++// implements: a control's HWND is not an SDL_Window, so those calls hand
++// controls and dialog windows to dialog.cpp first.
++
++// True when hWnd is a control or a dialog window, and the message was handled.
++bool MiniwinDialogSendMessage(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam, LRESULT* result);
++
++// True when hWnd is a control: it takes the focus in its dialog.
++bool MiniwinDialogSetFocus(HWND hWnd);
++
++// True when hWnd is a control: it is enabled or disabled.
++bool MiniwinDialogEnableWindow(HWND hWnd, BOOL bEnable, BOOL* wasDisabled);
++
++// True when hWnd is a control: lpRect is its rectangle in screen coordinates.
++bool MiniwinDialogGetWindowRect(HWND hWnd, LPRECT lpRect);
+diff --git a/miniwin/src/windows/dialog.cpp b/miniwin/src/windows/dialog.cpp
+new file mode 100644
+index 0000000..4c739cf
+--- /dev/null
++++ b/miniwin/src/windows/dialog.cpp
+@@ -0,0 +1,1032 @@
++#include "dialog_impl.h"
++#include "miniwin.h"
++
++#include <SDL3/SDL.h>
++#include <algorithm>
++#include <cmath>
++#include <cstring>
++#include <memory>
++#include <string>
++#include <unordered_map>
++#include <vector>
++
++// Modal dialog boxes over SDL3. A dialog is its own SDL_Window with an
++// SDL_Renderer, and its HWND is that window's pointer, so GetWindowRect and
++// MoveWindow work on it as on any window. Its controls are drawn in the
++// classic Windows look with SDL's built-in 8x8 font; a control's HWND is
++// a pointer to its Control record. DialogBoxParamA runs the dialog's
++// message loop until the dialog procedure calls EndDialog.
++//
++// The templates come from MiniwinRegisterDialogTemplate. Their coordinates
++// are dialog units; one horizontal unit is kDluX dialog pixels and one
++// vertical unit kDluY, which sizes the 8x8 font like an 8-point font of the
++// era. The renderer's logical size is the dialog in dialog pixels, and the
++// window is that size times the display's content scale.
++
++namespace {
++
++constexpr float kCharSize = SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE;
++constexpr float kDluX = 2.0f;
++constexpr float kDluY = 2.0f;
++constexpr float kRowHeight = kCharSize + 3.0f;
++constexpr float kScrollWidth = 12.0f;
++constexpr float kRadioSize = 12.0f;
++
++struct Color {
++	Uint8 r, g, b;
++};
++
++constexpr Color kFace = {192, 192, 192};
++constexpr Color kHighlight = {255, 255, 255};
++constexpr Color kLight = {223, 223, 223};
++constexpr Color kShadow = {128, 128, 128};
++constexpr Color kDarkShadow = {0, 0, 0};
++constexpr Color kWindow = {255, 255, 255};
++constexpr Color kText = {0, 0, 0};
++constexpr Color kSelection = {0, 0, 128};
++constexpr Color kSelectionText = {255, 255, 255};
++
++struct Dialog;
++
++struct Control {
++	Dialog* dialog;
++	WORD classAtom;
++	DWORD style;
++	WORD id;
++	SDL_FRect rect;
++	std::string text;
++	bool enabled;
++	bool checked = false;
++	std::vector<std::string> items;
++	int selection = -1;
++	int top = 0;
++};
++
++struct Dialog {
++	SDL_Window* window = nullptr;
++	SDL_Renderer* renderer = nullptr;
++	DLGPROC proc = nullptr;
++	float width = 0.0f;
++	float height = 0.0f;
++	std::vector<std::unique_ptr<Control>> controls;
++	Control* focus = nullptr;
++	Control* pressed = nullptr;
++	bool pressedInside = false;
++	bool ended = false;
++	INT_PTR result = 0;
++};
++
++std::unordered_map<std::string, const MINIWIN_DLGTEMPLATE*>& Templates()
++{
++	static std::unordered_map<std::string, const MINIWIN_DLGTEMPLATE*> templates;
++	return templates;
++}
++
++std::unordered_map<HWND, Control*>& Controls()
++{
++	static std::unordered_map<HWND, Control*> controls;
++	return controls;
++}
++
++std::unordered_map<SDL_Window*, Dialog*>& Dialogs()
++{
++	static std::unordered_map<SDL_Window*, Dialog*> dialogs;
++	return dialogs;
++}
++
++std::string TemplateKey(LPCSTR name)
++{
++	if (IS_INTRESOURCE(name)) {
++		return "#" + std::to_string(LOWORD(name));
++	}
++	return name;
++}
++
++HWND HandleOf(Control* control)
++{
++	return reinterpret_cast<HWND>(control);
++}
++
++HWND HandleOf(Dialog* dialog)
++{
++	return reinterpret_cast<HWND>(dialog->window);
++}
++
++Control* ControlOf(HWND hWnd)
++{
++	auto found = Controls().find(hWnd);
++	return found == Controls().end() ? nullptr : found->second;
++}
++
++Dialog* DialogOf(HWND hWnd)
++{
++	auto found = Dialogs().find(reinterpret_cast<SDL_Window*>(hWnd));
++	return found == Dialogs().end() ? nullptr : found->second;
++}
++
++// --- Control kinds and geometry -------------------------------------------
++
++bool IsButton(const Control* c)
++{
++	return c->classAtom == MINIWIN_DLGCLASS_BUTTON;
++}
++
++bool IsRadio(const Control* c)
++{
++	return IsButton(c) && (c->style & BS_TYPEMASK) == BS_AUTORADIOBUTTON;
++}
++
++bool IsPushButton(const Control* c)
++{
++	DWORD type = c->style & BS_TYPEMASK;
++	return IsButton(c) && (type == BS_PUSHBUTTON || type == BS_DEFPUSHBUTTON);
++}
++
++bool IsListBox(const Control* c)
++{
++	return c->classAtom == MINIWIN_DLGCLASS_LISTBOX;
++}
++
++bool IsStatic(const Control* c)
++{
++	return c->classAtom == MINIWIN_DLGCLASS_STATIC;
++}
++
++bool Contains(const SDL_FRect& r, float x, float y)
++{
++	return x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h;
++}
++
++// The list box's client area, inside its sunken border.
++SDL_FRect ListInner(const Control* c)
++{
++	return SDL_FRect{c->rect.x + 2, c->rect.y + 2, c->rect.w - 4, c->rect.h - 4};
++}
++
++int VisibleRows(const Control* c)
++{
++	return std::max(1, (int) (ListInner(c).h / kRowHeight));
++}
++
++bool HasScrollBar(const Control* c)
++{
++	return (int) c->items.size() > VisibleRows(c);
++}
++
++SDL_FRect ScrollBar(const Control* c)
++{
++	SDL_FRect inner = ListInner(c);
++	return SDL_FRect{inner.x + inner.w - kScrollWidth, inner.y, kScrollWidth, inner.h};
++}
++
++void ClampTop(Control* c)
++{
++	int maxTop = std::max(0, (int) c->items.size() - VisibleRows(c));
++	c->top = std::clamp(c->top, 0, maxTop);
++}
++
++void EnsureVisible(Control* c)
++{
++	if (c->selection >= 0) {
++		if (c->selection < c->top) {
++			c->top = c->selection;
++		}
++		else if (c->selection >= c->top + VisibleRows(c)) {
++			c->top = c->selection - VisibleRows(c) + 1;
++		}
++	}
++	ClampTop(c);
++}
++
++// --- Notifications ----------------------------------------------------------
++
++void Notify(Control* c, WORD code)
++{
++	Dialog* d = c->dialog;
++	d->proc(HandleOf(d), WM_COMMAND, MAKEWPARAM(c->id, code), (LPARAM) HandleOf(c));
++}
++
++Control* FindControl(Dialog* d, int id)
++{
++	for (auto& c : d->controls) {
++		if (c->id == (WORD) id) {
++			return c.get();
++		}
++	}
++	return nullptr;
++}
++
++// IDOK or IDCANCEL from the keyboard or the window's close box: Windows sends
++// the command whether or not the dialog has the button.
++void Command(Dialog* d, int id)
++{
++	Control* button = FindControl(d, id);
++	if (button && !button->enabled) {
++		return;
++	}
++	d->proc(HandleOf(d), WM_COMMAND, MAKEWPARAM(id, BN_CLICKED), (LPARAM) (button ? HandleOf(button) : NULL));
++}
++
++void CheckRadio(Control* c)
++{
++	auto& controls = c->dialog->controls;
++	size_t index = 0;
++	while (controls[index].get() != c) {
++		index++;
++	}
++	// The group runs from the last control with WS_GROUP up to the next one.
++	size_t first = index;
++	while (first > 0 && !(controls[first]->style & WS_GROUP)) {
++		first--;
++	}
++	size_t last = index + 1;
++	while (last < controls.size() && !(controls[last]->style & WS_GROUP)) {
++		last++;
++	}
++	for (size_t i = first; i < last; i++) {
++		if (IsRadio(controls[i].get())) {
++			controls[i]->checked = controls[i].get() == c;
++		}
++	}
++}
++
++void Click(Control* c)
++{
++	if (IsRadio(c)) {
++		CheckRadio(c);
++	}
++	Notify(c, BN_CLICKED);
++}
++
++void SelectRow(Control* c, int row)
++{
++	if (c->items.empty()) {
++		return;
++	}
++	row = std::clamp(row, 0, (int) c->items.size() - 1);
++	bool changed = row != c->selection;
++	c->selection = row;
++	EnsureVisible(c);
++	if (changed && (c->style & LBS_NOTIFY)) {
++		Notify(c, LBN_SELCHANGE);
++	}
++}
++
++// --- Control messages -------------------------------------------------------
++
++LRESULT ControlMessage(Control* c, UINT msg, WPARAM wParam, LPARAM lParam)
++{
++	int index = (int) (INT_PTR) wParam;
++	int count = (int) c->items.size();
++	switch (msg) {
++	case WM_SETTEXT:
++		c->text = lParam ? reinterpret_cast<const char*>(lParam) : "";
++		return TRUE;
++	case WM_GETTEXT: {
++		if (wParam == 0 || !lParam) {
++			return 0;
++		}
++		size_t n = std::min(c->text.size(), (size_t) wParam - 1);
++		memcpy(reinterpret_cast<char*>(lParam), c->text.data(), n);
++		reinterpret_cast<char*>(lParam)[n] = '\0';
++		return (LRESULT) n;
++	}
++	case WM_GETTEXTLENGTH:
++		return (LRESULT) c->text.size();
++	case BM_SETCHECK:
++		c->checked = wParam == BST_CHECKED;
++		return 0;
++	case BM_GETCHECK:
++		return c->checked ? BST_CHECKED : BST_UNCHECKED;
++	case LB_ADDSTRING: {
++		std::string item = lParam ? reinterpret_cast<const char*>(lParam) : "";
++		int at = count;
++		if (c->style & LBS_SORT) {
++			auto pos = std::upper_bound(
++				c->items.begin(),
++				c->items.end(),
++				item,
++				[](const std::string& a, const std::string& b) { return SDL_strcasecmp(a.c_str(), b.c_str()) < 0; }
++			);
++			at = (int) (pos - c->items.begin());
++		}
++		c->items.insert(c->items.begin() + at, item);
++		if (c->selection >= at) {
++			c->selection++;
++		}
++		return at;
++	}
++	case LB_DELETESTRING:
++		if (index < 0 || index >= count) {
++			return LB_ERR;
++		}
++		c->items.erase(c->items.begin() + index);
++		if (c->selection == index) {
++			c->selection = -1;
++		}
++		else if (c->selection > index) {
++			c->selection--;
++		}
++		ClampTop(c);
++		return count - 1;
++	case LB_RESETCONTENT:
++		c->items.clear();
++		c->selection = -1;
++		c->top = 0;
++		return 0;
++	case LB_SETCURSEL:
++		if (index < 0 || index >= count) {
++			c->selection = -1;
++			return LB_ERR;
++		}
++		c->selection = index;
++		EnsureVisible(c);
++		return index;
++	case LB_GETCURSEL:
++		return c->selection >= 0 ? c->selection : LB_ERR;
++	case LB_GETTEXT:
++		if (index < 0 || index >= count || !lParam) {
++			return LB_ERR;
++		}
++		strcpy(reinterpret_cast<char*>(lParam), c->items[index].c_str());
++		return (LRESULT) c->items[index].size();
++	case LB_GETTEXTLEN:
++		if (index < 0 || index >= count) {
++			return LB_ERR;
++		}
++		return (LRESULT) c->items[index].size();
++	case LB_GETCOUNT:
++		return count;
++	default:
++		return 0;
++	}
++}
++
++// --- Drawing ----------------------------------------------------------------
++
++void SetColor(SDL_Renderer* r, Color c)
++{
++	SDL_SetRenderDrawColor(r, c.r, c.g, c.b, SDL_ALPHA_OPAQUE);
++}
++
++void Fill(SDL_Renderer* r, const SDL_FRect& rect, Color c)
++{
++	SetColor(r, c);
++	SDL_RenderFillRect(r, &rect);
++}
++
++void Pixel(SDL_Renderer* r, float x, float y, Color c)
++{
++	SDL_FRect rect = {x, y, 1, 1};
++	Fill(r, rect, c);
++}
++
++// One 1-pixel edge pair: topLeft along the top and left, bottomRight along
++// the bottom and right.
++void Edge(SDL_Renderer* r, const SDL_FRect& rect, Color topLeft, Color bottomRight)
++{
++	Fill(r, SDL_FRect{rect.x, rect.y, rect.w - 1, 1}, topLeft);
++	Fill(r, SDL_FRect{rect.x, rect.y, 1, rect.h - 1}, topLeft);
++	Fill(r, SDL_FRect{rect.x, rect.y + rect.h - 1, rect.w, 1}, bottomRight);
++	Fill(r, SDL_FRect{rect.x + rect.w - 1, rect.y, 1, rect.h}, bottomRight);
++}
++
++SDL_FRect Inset(const SDL_FRect& rect, float by)
++{
++	return SDL_FRect{rect.x + by, rect.y + by, rect.w - 2 * by, rect.h - 2 * by};
++}
++
++void Raised(SDL_Renderer* r, const SDL_FRect& rect)
++{
++	Edge(r, rect, kHighlight, kDarkShadow);
++	Edge(r, Inset(rect, 1), kLight, kShadow);
++}
++
++void Sunken(SDL_Renderer* r, const SDL_FRect& rect)
++{
++	Edge(r, rect, kShadow, kHighlight);
++	Edge(r, Inset(rect, 1), kDarkShadow, kLight);
++}
++
++void DottedRect(SDL_Renderer* r, const SDL_FRect& rect)
++{
++	for (float x = rect.x; x < rect.x + rect.w; x += 2) {
++		Pixel(r, x, rect.y, kText);
++		Pixel(r, x, rect.y + rect.h - 1, kText);
++	}
++	for (float y = rect.y; y < rect.y + rect.h; y += 2) {
++		Pixel(r, rect.x, y, kText);
++		Pixel(r, rect.x + rect.w - 1, y, kText);
++	}
++}
++
++float TextWidth(const std::string& text)
++{
++	return kCharSize * (float) text.size();
++}
++
++void Text(SDL_Renderer* r, float x, float y, const std::string& text, Color c, bool enabled = true)
++{
++	x = std::floor(x);
++	y = std::floor(y);
++	if (!enabled) {
++		SetColor(r, kHighlight);
++		SDL_RenderDebugText(r, x + 1, y + 1, text.c_str());
++		c = kShadow;
++	}
++	SetColor(r, c);
++	SDL_RenderDebugText(r, x, y, text.c_str());
++}
++
++void Clip(SDL_Renderer* r, const SDL_FRect& rect)
++{
++	SDL_Rect clip = {(int) rect.x, (int) rect.y, (int) rect.w, (int) rect.h};
++	SDL_SetRenderClipRect(r, &clip);
++}
++
++void Unclip(SDL_Renderer* r)
++{
++	SDL_SetRenderClipRect(r, nullptr);
++}
++
++void DrawStatic(SDL_Renderer* r, const Control* c)
++{
++	float x = c->rect.x;
++	DWORD align = c->style & 3;
++	if (align == SS_RIGHT) {
++		x = c->rect.x + c->rect.w - TextWidth(c->text);
++	}
++	else if (align == SS_CENTER) {
++		x = c->rect.x + (c->rect.w - TextWidth(c->text)) / 2;
++	}
++	Clip(r, c->rect);
++	Text(r, x, c->rect.y, c->text, kText, c->enabled);
++	Unclip(r);
++}
++
++void DrawPushButton(SDL_Renderer* r, const Dialog* d, const Control* c)
++{
++	SDL_FRect rect = c->rect;
++	bool down = d->pressed == c && d->pressedInside;
++	bool focused = d->focus == c;
++	// The default button, or a focused push button, gets a black frame.
++	bool isDefault = (c->style & BS_TYPEMASK) == BS_DEFPUSHBUTTON;
++	bool framed = c->enabled && (focused || (isDefault && !(d->focus && IsPushButton(d->focus))));
++	Fill(r, rect, kFace);
++	if (framed) {
++		Edge(r, rect, kDarkShadow, kDarkShadow);
++		rect = Inset(rect, 1);
++	}
++	if (down) {
++		Edge(r, rect, kShadow, kShadow);
++	}
++	else {
++		Raised(r, rect);
++	}
++	float offset = down ? 1.0f : 0.0f;
++	float tx = rect.x + (rect.w - TextWidth(c->text)) / 2 + offset;
++	float ty = rect.y + (rect.h - kCharSize) / 2 + offset;
++	Text(r, tx, ty, c->text, kText, c->enabled);
++	if (focused) {
++		DottedRect(r, Inset(rect, 3));
++	}
++}
++
++void DrawRadio(SDL_Renderer* r, const Dialog* d, const Control* c)
++{
++	float x0 = c->rect.x;
++	float y0 = c->rect.y + std::floor((c->rect.h - kRadioSize) / 2);
++	float radius = kRadioSize / 2;
++	bool down = d->pressed == c && d->pressedInside;
++	Color well = (c->enabled && !down) ? kWindow : kFace;
++	for (int py = 0; py < (int) kRadioSize; py++) {
++		for (int px = 0; px < (int) kRadioSize; px++) {
++			float dx = px + 0.5f - radius;
++			float dy = py + 0.5f - radius;
++			float dist = std::sqrt(dx * dx + dy * dy);
++			bool upperLeft = dx + dy < 0;
++			if (dist > radius) {
++				continue;
++			}
++			Color color;
++			if (dist > radius - 1) {
++				color = upperLeft ? kShadow : kHighlight;
++			}
++			else if (dist > radius - 2) {
++				color = upperLeft ? kDarkShadow : kLight;
++			}
++			else if (c->checked && dist <= 2.0f) {
++				color = c->enabled ? kText : kShadow;
++			}
++			else {
++				color = well;
++			}
++			Pixel(r, x0 + px, y0 + py, color);
++		}
++	}
++	float tx = x0 + kRadioSize + 4;
++	float ty = c->rect.y + (c->rect.h - kCharSize) / 2;
++	Clip(r, c->rect);
++	Text(r, tx, ty, c->text, kText, c->enabled);
++	Unclip(r);
++	if (d->focus == c) {
++		DottedRect(r, SDL_FRect{tx - 2, ty - 2, TextWidth(c->text) + 4, kCharSize + 4});
++	}
++}
++
++void DrawArrow(SDL_Renderer* r, const SDL_FRect& box, bool up, bool enabled)
++{
++	float cx = std::floor(box.x + box.w / 2);
++	float cy = std::floor(box.y + box.h / 2);
++	for (int row = 0; row < 3; row++) {
++		float y = up ? cy - 1 + row : cy + 1 - row;
++		Fill(r, SDL_FRect{cx - row, y, 2.0f * row + 1, 1}, enabled ? kText : kShadow);
++	}
++}
++
++void DrawListBox(SDL_Renderer* r, const Dialog* d, const Control* c)
++{
++	Sunken(r, c->rect);
++	SDL_FRect inner = ListInner(c);
++	Fill(r, inner, c->enabled ? kWindow : kFace);
++	bool scroll = HasScrollBar(c);
++	SDL_FRect area = inner;
++	if (scroll) {
++		area.w -= kScrollWidth;
++	}
++	Clip(r, area);
++	int rows = VisibleRows(c);
++	for (int i = 0; i < rows && c->top + i < (int) c->items.size(); i++) {
++		int item = c->top + i;
++		SDL_FRect row = {area.x, area.y + i * kRowHeight, area.w, kRowHeight};
++		bool selected = item == c->selection;
++		if (selected) {
++			Fill(r, row, kSelection);
++		}
++		Text(r, row.x + 2, row.y + 2, c->items[item], selected ? kSelectionText : kText, c->enabled);
++		if (selected && d->focus == c) {
++			DottedRect(r, row);
++		}
++	}
++	Unclip(r);
++	if (scroll) {
++		SDL_FRect bar = ScrollBar(c);
++		Fill(r, bar, kLight);
++		SDL_FRect upBox = {bar.x, bar.y, kScrollWidth, kScrollWidth};
++		SDL_FRect downBox = {bar.x, bar.y + bar.h - kScrollWidth, kScrollWidth, kScrollWidth};
++		int maxTop = (int) c->items.size() - rows;
++		float track = bar.h - 2 * kScrollWidth;
++		float thumbH = std::max(6.0f, track * rows / (float) c->items.size());
++		float thumbY = bar.y + kScrollWidth + (track - thumbH) * c->top / (float) std::max(1, maxTop);
++		SDL_FRect thumb = {bar.x, thumbY, kScrollWidth, thumbH};
++		for (const SDL_FRect& box : {upBox, downBox, thumb}) {
++			Fill(r, box, kFace);
++			Raised(r, box);
++		}
++		DrawArrow(r, upBox, true, c->top > 0);
++		DrawArrow(r, downBox, false, c->top < maxTop);
++	}
++}
++
++void Render(Dialog* d)
++{
++	SDL_Renderer* r = d->renderer;
++	SetColor(r, kFace);
++	SDL_RenderClear(r);
++	for (auto& c : d->controls) {
++		if (IsStatic(c.get())) {
++			DrawStatic(r, c.get());
++		}
++		else if (IsListBox(c.get())) {
++			DrawListBox(r, d, c.get());
++		}
++		else if (IsRadio(c.get())) {
++			DrawRadio(r, d, c.get());
++		}
++		else if (IsButton(c.get())) {
++			DrawPushButton(r, d, c.get());
++		}
++	}
++	SDL_RenderPresent(r);
++}
++
++// --- Input ------------------------------------------------------------------
++
++Control* HitTest(Dialog* d, float x, float y)
++{
++	for (auto& c : d->controls) {
++		if (!IsStatic(c.get()) && c->enabled && Contains(c->rect, x, y)) {
++			return c.get();
++		}
++	}
++	return nullptr;
++}
++
++void MoveFocus(Dialog* d, bool backwards)
++{
++	std::vector<Control*> stops;
++	for (auto& c : d->controls) {
++		if ((c->style & WS_TABSTOP) && c->enabled && !IsStatic(c.get())) {
++			stops.push_back(c.get());
++		}
++	}
++	if (stops.empty()) {
++		return;
++	}
++	auto at = std::find(stops.begin(), stops.end(), d->focus);
++	int index = at == stops.end() ? -1 : (int) (at - stops.begin());
++	int n = (int) stops.size();
++	index = backwards ? (index <= 0 ? n - 1 : index - 1) : (index + 1) % n;
++	d->focus = stops[index];
++}
++
++void ListBoxMouseDown(Control* c, float x, float y, bool doubleClick)
++{
++	if (HasScrollBar(c) && Contains(ScrollBar(c), x, y)) {
++		SDL_FRect bar = ScrollBar(c);
++		int rows = VisibleRows(c);
++		if (y < bar.y + kScrollWidth) {
++			c->top--;
++		}
++		else if (y >= bar.y + bar.h - kScrollWidth) {
++			c->top++;
++		}
++		else {
++			int maxTop = (int) c->items.size() - rows;
++			float track = bar.h - 2 * kScrollWidth;
++			float thumbH = std::max(6.0f, track * rows / (float) c->items.size());
++			float thumbY = bar.y + kScrollWidth + (track - thumbH) * c->top / (float) std::max(1, maxTop);
++			c->top += y < thumbY ? -rows : (y >= thumbY + thumbH ? rows : 0);
++		}
++		ClampTop(c);
++		return;
++	}
++	int row = c->top + (int) ((y - ListInner(c).y) / kRowHeight);
++	if (row >= 0 && row < (int) c->items.size()) {
++		SelectRow(c, row);
++		if (doubleClick && (c->style & LBS_NOTIFY)) {
++			Notify(c, LBN_DBLCLK);
++		}
++	}
++}
++
++void KeyDown(Dialog* d, const SDL_KeyboardEvent& key)
++{
++	Control* focus = d->focus && d->focus->enabled ? d->focus : nullptr;
++	switch (key.key) {
++	case SDLK_ESCAPE:
++		Command(d, IDCANCEL);
++		return;
++	case SDLK_RETURN:
++	case SDLK_KP_ENTER: {
++		Control* button = focus && IsPushButton(focus) ? focus : nullptr;
++		if (!button) {
++			for (auto& c : d->controls) {
++				if (IsButton(c.get()) && (c->style & BS_TYPEMASK) == BS_DEFPUSHBUTTON) {
++					button = c.get();
++					break;
++				}
++			}
++		}
++		if (button) {
++			if (button->enabled) {
++				Click(button);
++			}
++		}
++		else {
++			Command(d, IDOK);
++		}
++		return;
++	}
++	case SDLK_TAB:
++		MoveFocus(d, key.mod & SDL_KMOD_SHIFT);
++		return;
++	case SDLK_SPACE:
++		if (focus && IsButton(focus)) {
++			Click(focus);
++		}
++		return;
++	default:
++		break;
++	}
++	if (focus && IsListBox(focus) && !focus->items.empty()) {
++		int rows = VisibleRows(focus);
++		int row = focus->selection;
++		switch (key.key) {
++		case SDLK_UP:
++			row = row < 0 ? 0 : row - 1;
++			break;
++		case SDLK_DOWN:
++			row = row + 1;
++			break;
++		case SDLK_PAGEUP:
++			row -= rows - 1;
++			break;
++		case SDLK_PAGEDOWN:
++			row += rows - 1;
++			break;
++		case SDLK_HOME:
++			row = 0;
++			break;
++		case SDLK_END:
++			row = (int) focus->items.size() - 1;
++			break;
++		default:
++			return;
++		}
++		SelectRow(focus, row);
++	}
++}
++
++void HandleEvent(Dialog* d, SDL_Event& event)
++{
++	if (event.type == SDL_EVENT_QUIT) {
++		Command(d, IDCANCEL);
++		return;
++	}
++	SDL_Window* window = SDL_GetWindowFromEvent(&event);
++	if (window != d->window) {
++		// The modal loop owns input: other windows' events are dropped, as
++		// Windows disables a modal dialog's owner.
++		return;
++	}
++	SDL_ConvertEventToRenderCoordinates(d->renderer, &event);
++	switch (event.type) {
++	case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
++		Command(d, IDCANCEL);
++		break;
++	case SDL_EVENT_MOUSE_BUTTON_DOWN: {
++		if (event.button.button != SDL_BUTTON_LEFT) {
++			break;
++		}
++		Control* c = HitTest(d, event.button.x, event.button.y);
++		if (!c) {
++			break;
++		}
++		d->focus = c;
++		d->pressed = c;
++		d->pressedInside = true;
++		if (IsListBox(c)) {
++			ListBoxMouseDown(c, event.button.x, event.button.y, event.button.clicks == 2);
++		}
++		break;
++	}
++	case SDL_EVENT_MOUSE_MOTION:
++		if (d->pressed) {
++			d->pressedInside = Contains(d->pressed->rect, event.motion.x, event.motion.y);
++			Control* c = d->pressed;
++			if (IsListBox(c) && !(HasScrollBar(c) && Contains(ScrollBar(c), event.motion.x, event.motion.y))) {
++				// Dragging selects the row under the mouse, scrolling past the ends.
++				SDL_FRect inner = ListInner(c);
++				int row = c->top + (int) std::floor((event.motion.y - inner.y) / kRowHeight);
++				if (d->pressedInside || event.motion.y < inner.y || event.motion.y >= inner.y + inner.h) {
++					SelectRow(c, row);
++				}
++			}
++		}
++		break;
++	case SDL_EVENT_MOUSE_BUTTON_UP:
++		if (event.button.button == SDL_BUTTON_LEFT && d->pressed) {
++			Control* c = d->pressed;
++			bool inside = Contains(c->rect, event.button.x, event.button.y);
++			d->pressed = nullptr;
++			if (inside && IsButton(c) && c->enabled) {
++				Click(c);
++			}
++		}
++		break;
++	case SDL_EVENT_MOUSE_WHEEL: {
++		Control* c = HitTest(d, event.wheel.mouse_x, event.wheel.mouse_y);
++		if (c && IsListBox(c)) {
++			c->top -= (int) std::round(event.wheel.y * 3);
++			ClampTop(c);
++		}
++		break;
++	}
++	case SDL_EVENT_KEY_DOWN:
++		KeyDown(d, event.key);
++		break;
++	default:
++		break;
++	}
++}
++
++float UiScale()
++{
++	SDL_DisplayID display = SDL_GetPrimaryDisplay();
++	float scale = display ? SDL_GetDisplayContentScale(display) : 1.0f;
++	return scale >= 1.0f ? scale : 1.0f;
++}
++
++void DestroyDialog(Dialog* d)
++{
++	for (auto& c : d->controls) {
++		Controls().erase(HandleOf(c.get()));
++	}
++	Dialogs().erase(d->window);
++	if (d->renderer) {
++		SDL_DestroyRenderer(d->renderer);
++	}
++	if (d->window) {
++		SDL_DestroyWindow(d->window);
++	}
++}
++
++} // namespace
++
++BOOL MiniwinRegisterDialogTemplate(LPCSTR lpTemplateName, const MINIWIN_DLGTEMPLATE* lpTemplate)
++{
++	if (!lpTemplateName || !lpTemplate) {
++		return FALSE;
++	}
++	Templates()[TemplateKey(lpTemplateName)] = lpTemplate;
++	return TRUE;
++}
++
++INT_PTR DialogBoxParamA(
++	HINSTANCE hInstance,
++	LPCSTR lpTemplateName,
++	HWND hWndParent,
++	DLGPROC lpDialogFunc,
++	LPARAM dwInitParam
++)
++{
++	if (!lpTemplateName || !lpDialogFunc) {
++		return -1;
++	}
++	auto found = Templates().find(TemplateKey(lpTemplateName));
++	if (found == Templates().end()) {
++		SDL_LogError(LOG_CATEGORY_MINIWIN, "DialogBoxParamA: no dialog template %s", TemplateKey(lpTemplateName).c_str());
++		return -1;
++	}
++	const MINIWIN_DLGTEMPLATE* tmpl = found->second;
++	if (!SDL_WasInit(SDL_INIT_VIDEO) && !SDL_InitSubSystem(SDL_INIT_VIDEO)) {
++		SDL_LogError(LOG_CATEGORY_MINIWIN, "SDL_InitSubSystem: %s", SDL_GetError());
++		return -1;
++	}
++
++	Dialog dialog;
++	Dialog* d = &dialog;
++	d->proc = lpDialogFunc;
++	d->width = tmpl->cx * kDluX;
++	d->height = tmpl->cy * kDluY;
++	float scale = UiScale();
++	d->window = SDL_CreateWindow(
++		tmpl->title ? tmpl->title : "",
++		(int) std::ceil(d->width * scale),
++		(int) std::ceil(d->height * scale),
++		SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY
++	);
++	if (!d->window) {
++		SDL_LogError(LOG_CATEGORY_MINIWIN, "SDL_CreateWindow: %s", SDL_GetError());
++		return -1;
++	}
++	d->renderer = SDL_CreateRenderer(d->window, nullptr);
++	if (!d->renderer) {
++		SDL_LogError(LOG_CATEGORY_MINIWIN, "SDL_CreateRenderer: %s", SDL_GetError());
++		DestroyDialog(d);
++		return -1;
++	}
++	SDL_SetDefaultTextureScaleMode(d->renderer, SDL_SCALEMODE_NEAREST);
++	SDL_SetRenderLogicalPresentation(
++		d->renderer,
++		(int) d->width,
++		(int) d->height,
++		SDL_LOGICAL_PRESENTATION_STRETCH
++	);
++	SDL_SetWindowPosition(d->window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
++	Dialogs()[d->window] = d;
++
++	for (int i = 0; i < tmpl->itemCount; i++) {
++		const MINIWIN_DLGITEM& item = tmpl->items[i];
++		auto c = std::make_unique<Control>();
++		c->dialog = d;
++		c->classAtom = item.classAtom;
++		c->style = item.style;
++		c->id = item.id;
++		c->rect = SDL_FRect{item.x * kDluX, item.y * kDluY, item.cx * kDluX, item.cy * kDluY};
++		c->text = item.text ? item.text : "";
++		c->enabled = !(item.style & WS_DISABLED);
++		Controls()[HandleOf(c.get())] = c.get();
++		d->controls.push_back(std::move(c));
++	}
++
++	// Windows disables the owner while its modal dialog runs; SDL keeps a
++	// modal window above its parent.
++	SDL_Window* parent = reinterpret_cast<SDL_Window*>(hWndParent);
++	if (parent && hWndParent != GetDesktopWindow() && SDL_GetWindowID(parent) &&
++		!(SDL_GetWindowFlags(parent) & SDL_WINDOW_HIDDEN)) {
++		SDL_SetWindowParent(d->window, parent);
++		SDL_SetWindowModal(d->window, true);
++	}
++
++	if (d->proc(HandleOf(d), WM_INITDIALOG, 0, dwInitParam) && !d->focus) {
++		MoveFocus(d, false);
++	}
++	if (!d->ended) {
++		SDL_ShowWindow(d->window);
++		SDL_RaiseWindow(d->window);
++	}
++
++	while (!d->ended) {
++		Render(d);
++		SDL_Event event;
++		if (SDL_WaitEventTimeout(&event, 100)) {
++			do {
++				HandleEvent(d, event);
++			} while (!d->ended && SDL_PollEvent(&event));
++		}
++	}
++
++	INT_PTR result = d->result;
++	DestroyDialog(d);
++	return result;
++}
++
++BOOL EndDialog(HWND hDlg, INT_PTR nResult)
++{
++	Dialog* d = DialogOf(hDlg);
++	if (!d) {
++		return FALSE;
++	}
++	d->ended = true;
++	d->result = nResult;
++	return TRUE;
++}
++
++HWND GetDlgItem(HWND hDlg, int nIDDlgItem)
++{
++	Dialog* d = DialogOf(hDlg);
++	if (!d) {
++		return NULL;
++	}
++	Control* c = FindControl(d, nIDDlgItem);
++	return c ? HandleOf(c) : NULL;
++}
++
++bool MiniwinDialogSendMessage(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam, LRESULT* result)
++{
++	if (Control* c = ControlOf(hWnd)) {
++		*result = ControlMessage(c, Msg, wParam, lParam);
++		return true;
++	}
++	if (Dialog* d = DialogOf(hWnd)) {
++		if (Msg == WM_SETTEXT) {
++			*result = SDL_SetWindowTitle(d->window, lParam ? reinterpret_cast<const char*>(lParam) : "");
++		}
++		else {
++			*result = (LRESULT) d->proc(hWnd, Msg, wParam, lParam);
++		}
++		return true;
++	}
++	return false;
++}
++
++bool MiniwinDialogSetFocus(HWND hWnd)
++{
++	Control* c = ControlOf(hWnd);
++	if (!c) {
++		return false;
++	}
++	c->dialog->focus = c;
++	return true;
++}
++
++bool MiniwinDialogEnableWindow(HWND hWnd, BOOL bEnable, BOOL* wasDisabled)
++{
++	Control* c = ControlOf(hWnd);
++	if (!c) {
++		return false;
++	}
++	*wasDisabled = !c->enabled;
++	c->enabled = bEnable != FALSE;
++	if (!c->enabled && c->dialog->pressed == c) {
++		c->dialog->pressed = nullptr;
++	}
++	return true;
++}
++
++bool MiniwinDialogGetWindowRect(HWND hWnd, LPRECT lpRect)
++{
++	Control* c = ControlOf(hWnd);
++	if (!c) {
++		return false;
++	}
++	Dialog* d = c->dialog;
++	int x = 0;
++	int y = 0;
++	int w = 0;
++	int h = 0;
++	SDL_GetWindowPosition(d->window, &x, &y);
++	SDL_GetWindowSize(d->window, &w, &h);
++	float sx = d->width > 0 ? w / d->width : 1.0f;
++	float sy = d->height > 0 ? h / d->height : 1.0f;
++	SetRect(
++		lpRect,
++		x + (int) (c->rect.x * sx),
++		y + (int) (c->rect.y * sy),
++		x + (int) ((c->rect.x + c->rect.w) * sx),
++		y + (int) ((c->rect.y + c->rect.h) * sy)
++	);
++	return true;
++}
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+index a03c088..41e59b5 100644
+--- a/miniwin/src/windows/windowmessages.cpp
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -1,3 +1,4 @@
++#include "dialog_impl.h"
+ #include "miniwin.h"
+ #include "miniwin/windows.h"
+ 
+@@ -493,6 +494,9 @@ HWND SetActiveWindow(HWND hWnd)
+ 
+ HWND SetFocus(HWND hWnd)
+ {
++	if (MiniwinDialogSetFocus(hWnd)) {
++		return NULL;
++	}
+ 	if (hWnd) {
+ 		SDL_RaiseWindow(reinterpret_cast<SDL_Window*>(hWnd));
+ 	}
+@@ -521,6 +525,9 @@ BOOL GetWindowRect(HWND hWnd, LPRECT lpRect)
+ 	int y = 0;
+ 	int w = 0;
+ 	int h = 0;
++	if (MiniwinDialogGetWindowRect(hWnd, lpRect)) {
++		return TRUE;
++	}
+ 	if (hWnd == GetDesktopWindow()) {
+ 		const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
+ 		if (!mode) {
+@@ -622,6 +629,10 @@ int MessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
+ 
+ LRESULT SendMessageA(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+ {
++	LRESULT result = 0;
++	if (MiniwinDialogSendMessage(hWnd, Msg, wParam, lParam, &result)) {
++		return result;
++	}
+ 	auto found = WindowProcedures().find(reinterpret_cast<SDL_Window*>(hWnd));
+ 	if (found == WindowProcedures().end()) {
+ 		MINIWIN_NOT_IMPLEMENTED();
+@@ -637,30 +648,10 @@ BOOL MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, BOOL bRepaint)
+ 
+ BOOL EnableWindow(HWND hWnd, BOOL bEnable)
+ {
++	BOOL wasDisabled = FALSE;
++	if (MiniwinDialogEnableWindow(hWnd, bEnable, &wasDisabled)) {
++		return wasDisabled;
++	}
+ 	MINIWIN_NOT_IMPLEMENTED();
+ 	return FALSE;
+ }
+-
+-INT_PTR DialogBoxParamA(
+-	HINSTANCE hInstance,
+-	LPCSTR lpTemplateName,
+-	HWND hWndParent,
+-	DLGPROC lpDialogFunc,
+-	LPARAM dwInitParam
+-)
+-{
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return -1;
+-}
+-
+-BOOL EndDialog(HWND hDlg, INT_PTR nResult)
+-{
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return FALSE;
+-}
+-
+-HWND GetDlgItem(HWND hDlg, int nIDDlgItem)
+-{
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return NULL;
+-}
