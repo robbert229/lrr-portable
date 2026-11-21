@@ -45,7 +45,12 @@
  * +0x5d4) and the level select's (+0x5d8), two views of one layout. */
 typedef struct Front_SaveTextWindow {
     void* textWindow;               /* +0x000 */
-    int field_4[9];                 /* +0x004 */
+    /* Front_LevelTextWindow's head, so the text lands at the same offset
+     * on 64-bit, where panelImage is 8 bytes. */
+    struct Image* panelImage;       /* +0x004 */
+    float window[4];                /* +0x008 */
+    float panelPos[2];              /* +0x018 */
+    float panelSize[2];             /* +0x020 */
     char loadText[256];             /* +0x028 "Load" */
     char saveText[256];             /* +0x128 "Save" */
     char slotText[256];             /* +0x228 "Slot" */
@@ -66,6 +71,12 @@ typedef struct Front_LevelTextWindow {
     char levelText[256];            /* +0x528 "Level" */
     char tutorialText[256];         /* +0x628 "Tutorial" */
 } Front_LevelTextWindow;
+
+static_assert(offsetof(Front_SaveTextWindow, loadText) ==
+                  offsetof(Front_LevelTextWindow, loadText) &&
+              offsetof(Front_SaveTextWindow, slotNumberText) ==
+                  offsetof(Front_LevelTextWindow, loadSelText),
+              "the two menu text window views share one layout");
 
 /* The original's FrontEnd.c .bss (004d78c8-004db8e8), in the original's
  * order. Zero-initialised externals, as MSVC 5.0 emits those in definition
