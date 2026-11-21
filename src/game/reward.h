@@ -116,7 +116,7 @@ typedef struct RewardBuildingCounts {
 typedef struct RewardLevel {
     int enabled;                /* +0x0000 Enable */
     int saveHasCapture;         /* +0x0004 */
-    unsigned int saveCapture[8]; /* +0x0008 */
+    Image saveCapture;          /* +0x0008 the level-end screenshot (0x20 bytes on Win32) */
     RewardBuildingCounts buildingCounts; /* +0x0028 */
     unsigned int modifier;      /* +0x01c0 Modifier */
     unsigned int unk_1c4;

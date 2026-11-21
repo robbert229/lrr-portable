@@ -2451,12 +2451,15 @@ void front_run_screen_menu(Front_Menu* menu)
     front_menu_free_slot_images();
     if (nextMenu == frontGlobs_saveMenuSet->menus[0] && s_saveSlotToWrite >= 0) {
         if (reward_current_level_get() != NULL &&
-            *(void**)((char*)(level = reward_current_level_get()) + 4) != NULL) {
+            /* RewardLevel.saveHasCapture (+0x04), an int: as a void* read
+             * it took in the first half of saveCapture on 64-bit. */
+            *(int*)((char*)(level = reward_current_level_get()) + 4) != 0) {
             sprintf(buff, "%s\\%d.dat",
                     block_get_str_copy(legoGlobs_config,
                                        string_path_join(s_engine_config_root, s_menuSaveImage,
                                                         "Path", NULL)),
                     s_saveSlotToWrite);
+            /* RewardLevel.saveCapture (+0x08), an Image. */
             front_image_save_bmp_adapter((char*)level + 8, buff);
         }
     }

@@ -107,7 +107,14 @@ int main(void)
     memset(&level, 0, sizeof(level));
     level.enabled = 1;
     level.saveHasCapture = 1;
-    for (i = 0; i < 8; i++) level.saveCapture[i] = 0x100 + i;
+    level.saveCapture.surface = &address;
+    level.saveCapture.width = 0x10c;
+    level.saveCapture.height = 0x110;
+    level.saveCapture.penZero = 0x114;
+    level.saveCapture.pen255 = 0x118;
+    level.saveCapture.penZeroRGB = 0x11c;
+    level.saveCapture.flags = 0x120;
+    level.saveCapture.nextFree = &level.saveCapture;
     for (i = 0; i < 100; i++) level.buildingCounts.names[i] = &address;
     level.buildingCounts.count = 7;
     level.buildingCounts.gridCount = 9;
@@ -128,7 +135,8 @@ int main(void)
 
     /* The Win32 offsets. */
     CHECK(image_word(image, 0x0000) == 1, "enabled at +0x0000");
-    CHECK(image_word(image, 0x0008 + 7 * 4) == 0x107, "saveCapture[7] at +0x0024");
+    CHECK(image_word(image, 0x000c) == 0x10c, "saveCapture.width at +0x000c");
+    CHECK(image_word(image, 0x0020) == 0x120, "saveCapture.flags at +0x0020");
     CHECK(image_word(image, 0x01b8) == 7, "buildingCounts.count at +0x01b8");
     CHECK(image_word(image, 0x01c0) == 0x1c0, "modifier at +0x01c0");
     CHECK(image_word(image, 0x01d0) == 0x1d0, "buildingGridCount at +0x01d0");
@@ -145,6 +153,8 @@ int main(void)
           "the save table's score is itemsArray[9].percent");
 
     /* The pointer slots hold no data. */
+    CHECK(image_word(image, 0x0008) == 0, "saveCapture.surface is 0");
+    CHECK(image_word(image, 0x0024) == 0, "saveCapture.nextFree is 0");
     for (i = 0; i < 100; i++)
         CHECK(image_word(image, 0x0028 + i * 4) == 0, "buildingCounts.names[] is 0");
     CHECK(image_word(image, 0x1ce8) == 0, "items is 0");
@@ -159,8 +169,12 @@ int main(void)
     memset(&parsed, 0xab, sizeof(parsed));
     reward_level_parse(image, &parsed);
     CHECK(parsed.enabled == 1 && parsed.saveHasCapture == 1, "the flags round-trip");
-    for (i = 0; i < 8; i++)
-        CHECK(parsed.saveCapture[i] == level.saveCapture[i], "saveCapture round-trips");
+    CHECK(parsed.saveCapture.width == 0x10c && parsed.saveCapture.height == 0x110 &&
+              parsed.saveCapture.penZero == 0x114 && parsed.saveCapture.pen255 == 0x118 &&
+              parsed.saveCapture.penZeroRGB == 0x11c && parsed.saveCapture.flags == 0x120,
+          "saveCapture's words round-trip");
+    CHECK(parsed.saveCapture.surface == NULL && parsed.saveCapture.nextFree == NULL,
+          "saveCapture's pointers read back NULL");
     CHECK(parsed.buildingCounts.count == 7 && parsed.buildingCounts.gridCount == 9,
           "the building counts round-trip");
     CHECK(parsed.buildingCounts.names[0] == NULL, "the building names read back NULL");
