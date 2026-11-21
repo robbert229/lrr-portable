@@ -69,10 +69,10 @@ typedef struct LwsVector3 {
 } LwsVector3;
 
 typedef struct LwsSoundTrigger {
-    unsigned long sfxID;                                 /* +0x00 */
+    int sfxID;                                           /* +0x00 */
     unsigned short frameStartList[LWS_MAXTRIGKEYS];      /* +0x04 */
     unsigned short frameEndList[LWS_MAXTRIGKEYS];        /* +0x36 */
-    unsigned long loopUID[LWS_MAXTRIGKEYS];              /* +0x68 */
+    int loopUID[LWS_MAXTRIGKEYS];                        /* +0x68 */
     unsigned short count;                                /* +0xcc */
 } LwsSoundTrigger;
 
@@ -627,7 +627,7 @@ void lws_trigger_handle(LwsInfo* scene, LwsNode* node)
                 trigger->loopUID[loop] = lwsGlobs.PlaySample3DFunc(frame, trigger->sfxID, loopSound, 1, NULL);
             }
             if (loopSound && shared_object_sample_time_matches(scene, trigger->frameEndList[loop])) {
-                sound_buffer_stop_handle((int)trigger->loopUID[loop]);
+                sound_buffer_stop_handle(trigger->loopUID[loop]);
             }
         }
     }
