@@ -371,6 +371,27 @@ int main()
     CHECK(level->Render(g_root) == DD_OK);
     CHECK(Is(Pixel(32, 32), 255, 0, 0));
 
+    // The view cone matches the projection for any front plane. With front
+    // 0.1 and field 0.5 the view shows x / z up to 5, so a quad at x / z 2
+    // to 3 is on screen, at pixels 45 to 51.
+    level->SetFront(0.1f);
+    Clear2(level, {0, 0, kSize, kSize}, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, 0xff000000);
+    g_draw = [&](IDirect3DDevice3* im) {
+        D3DVERTEX v[4] = {
+            {20, 10, 10, 0, 0, -1, 0, 0},
+            {30, 10, 10, 0, 0, -1, 1, 0},
+            {20, -10, 10, 0, 0, -1, 0, 1},
+            {30, -10, 10, 0, 0, -1, 1, 1},
+        };
+        WORD indices[6] = {0, 1, 2, 2, 1, 3};
+        im->SetLightState(D3DLIGHTSTATE_MATERIAL, green);
+        CHECK(im->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, D3DFVF_VERTEX, v, 4, indices, 6, 0) == DD_OK);
+    };
+    CHECK(level->Render(g_root) == DD_OK);
+    CHECK(AllAre(46, 28, 50, 36, 0, 255, 0));
+    CHECK(Is(Pixel(32, 32), 0, 0, 0));
+    level->SetFront(1.0f);
+
     g_draw = nullptr;
     CheckTransforms(level, radar);
     for (IDirect3DMaterial3* material : keep) {

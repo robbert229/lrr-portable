@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 16:29:08 -0800
+Subject: [PATCH] fix(miniwin): scale retained-mode specular by the light's
+ reach
+
+ApplyLighting scaled a positional light's diffuse term by its reach
+(range, attenuation and spot cone) but added its specular highlight at
+full strength, so an attenuated or half-coned light still left a
+full-bright highlight on shiny retained-mode meshes. The immediate-mode
+path already scaled both.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index 729c1cb..5b54900 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -359,7 +359,7 @@ void Direct3DRMSoftwareRenderer::ApplyLighting(
+ 			if (m_specular) {
+ 				float dotNH = DotProduct(normal, m_halfway[i]);
+ 				if (dotNH > 0.0f) {
+-					float power = std::pow(dotNH, appearance.shininess);
++					float power = reach * std::pow(dotNH, appearance.shininess);
+ 					spec.r += power * light.color.r;
+ 					spec.g += power * light.color.g;
+ 					spec.b += power * light.color.b;

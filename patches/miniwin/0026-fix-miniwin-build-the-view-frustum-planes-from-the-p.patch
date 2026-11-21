@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 16:27:14 -0800
+Subject: [PATCH] fix(miniwin): build the view frustum planes from the
+ projection's scales
+
+BuildViewFrustumPlanes fed the projection's half-extents (1 / scale) to
+plane normals that want the scale itself, so the cone was wrong whenever
+the projection's scale was not 1. With a front plane of 0.1 and a field
+of 0.5 the planes kept only x / z within 0.2 of a view that shows up to
+5, and IsMeshInFrustum and the software renderer's view-cone test threw
+away meshes and triangles that were on screen. With LEGO Rock Raiders'
+front plane of 1 the cone was too wide instead, which costs only culling.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/d3drm/d3drmviewport.cpp b/miniwin/src/d3drm/d3drmviewport.cpp
+index e8cf020..3469fff 100644
+--- a/miniwin/src/d3drm/d3drmviewport.cpp
++++ b/miniwin/src/d3drm/d3drmviewport.cpp
+@@ -204,15 +204,16 @@ void Direct3DRMViewportImpl::ApplySceneFog()
+ void Direct3DRMViewportImpl::BuildViewFrustumPlanes()
+ {
+ 
+-	// The half-extents of the view at z = 1, as the projection maps them.
+-	float tanFovX = 1.0f / m_projectionMatrix[0][0];
+-	float tanFovY = 1.0f / m_projectionMatrix[1][1];
++	// The projection's scales: a view-space point is inside the left plane
++	// when scaleX * x / z >= -1, that is when scaleX * x + z >= 0.
++	float scaleX = m_projectionMatrix[0][0];
++	float scaleY = m_projectionMatrix[1][1];
+ 
+ 	// View-space frustum planes
+-	m_frustumPlanes[0] = {Normalize({tanFovX, 0.0f, 1.0f}), 0.0f};  // Left
+-	m_frustumPlanes[1] = {Normalize({-tanFovX, 0.0f, 1.0f}), 0.0f}; // Right
+-	m_frustumPlanes[2] = {Normalize({0.0f, -tanFovY, 1.0f}), 0.0f}; // Top
+-	m_frustumPlanes[3] = {Normalize({0.0f, tanFovY, 1.0f}), 0.0f};  // Bottom
++	m_frustumPlanes[0] = {Normalize({scaleX, 0.0f, 1.0f}), 0.0f};  // Left
++	m_frustumPlanes[1] = {Normalize({-scaleX, 0.0f, 1.0f}), 0.0f}; // Right
++	m_frustumPlanes[2] = {Normalize({0.0f, -scaleY, 1.0f}), 0.0f}; // Top
++	m_frustumPlanes[3] = {Normalize({0.0f, scaleY, 1.0f}), 0.0f};  // Bottom
+ 
+ 	// Near and far planes
+ 	m_frustumPlanes[4] = {{0.0f, 0.0f, 1.0f}, -m_front}; // Near (Z >= m_front)

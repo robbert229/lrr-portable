@@ -307,6 +307,62 @@ static void CheckEnableFrame(D3DMATERIALHANDLE white)
 
 // ---- set-up ---------------------------------------------------------------
 
+// Retained mode: a positional light's attenuation, range and cone scale its
+// specular highlight as they scale its diffuse light. A black mesh with a
+// shiny material shows only the highlight, at full strength from the spot
+// straight ahead, and at half with a constant attenuation of 2.
+static void CheckRetainedSpecular()
+{
+    Scene& s = g_scene;
+    AimSpot(2.0f, 0.0f);
+    g_draw = nullptr;
+    IDirect3DRMFrame3* frame = nullptr;
+    IDirect3DRMMesh* mesh = nullptr;
+    IDirect3DRMMaterial2* material = nullptr;
+    CHECK(s.d3drm->CreateFrame(s.root, &frame) == DD_OK && frame);
+    CHECK(s.d3drm->CreateMesh(&mesh) == DD_OK && mesh);
+    CHECK(s.d3drm->CreateMaterial(10.0f, &material) == DD_OK && material);
+    if (!frame || !mesh || !material) {
+        return;
+    }
+    unsigned int faces[6] = {0, 1, 2, 2, 1, 3};
+    D3DRMGROUPINDEX group = 0;
+    CHECK(mesh->AddGroup(4, 2, 3, faces, &group) == DD_OK);
+    D3DRMVERTEX v[4] = {};
+    const float pos[4][2] = {{-0.5f, 0.5f}, {0.5f, 0.5f}, {-0.5f, -0.5f}, {0.5f, -0.5f}};
+    for (int i = 0; i < 4; ++i) {
+        v[i].position = {pos[i][0], pos[i][1], 0};
+        v[i].normal = {0, 0, -1};
+    }
+    CHECK(mesh->SetVertices(group, 0, 4, v) == DD_OK);
+    // The highlight's half vector is taken at the frame's origin.
+    frame->SetPosition(s.root, 0, 0, kDepth);
+    mesh->SetGroupColorRGB(group, 0, 0, 0);
+    IDirect3DRMMaterial* material1 = nullptr;
+    material->QueryInterface(IID_IDirect3DRMMaterial, (void**) &material1);
+    CHECK(material1 && mesh->SetGroupMaterial(group, material1) == DD_OK);
+    frame->AddVisual(mesh);
+
+    auto centre = [&]() {
+        static_cast<IDirect3DRMViewport*>(s.viewport)->Clear();
+        CHECK(s.viewport->Render(s.root) == DD_OK);
+        return Pixel(kSize / 2, kSize / 2);
+    };
+    CHECK(Near(centre(), 1, 1, 1));
+    CHECK(s.spot->SetConstantAttenuation(2.0f) == DD_OK);
+    CHECK(Near(centre(), 0.5f, 0.5f, 0.5f));
+    CHECK(s.spot->SetConstantAttenuation(1.0f) == DD_OK);
+
+    frame->DeleteVisual(mesh);
+    s.root->DeleteChild(frame);
+    IUnknown* objects[] = {material1, material, mesh, frame};
+    for (IUnknown* object : objects) {
+        if (object) {
+            object->Release();
+        }
+    }
+}
+
 static HRESULT FindSoftwareDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDESC, LPD3DDEVICEDESC, LPVOID ctx)
 {
     if (SDL_strcmp(name, "Miniwin Emulation") == 0) {
@@ -455,6 +511,7 @@ int main()
     CheckColourRangeAttenuation(white, orange);
     CheckMaterialTerms();
     CheckEnableFrame(white);
+    CheckRetainedSpecular();
 
     g_draw = nullptr;
     for (IDirect3DMaterial3* material : materials) {
