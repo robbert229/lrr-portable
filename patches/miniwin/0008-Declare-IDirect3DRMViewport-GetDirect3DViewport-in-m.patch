@@ -1,0 +1,55 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 21:09:38 -0800
+Subject: [PATCH] Declare IDirect3DRMViewport::GetDirect3DViewport in miniwin
+
+DirectX declares GetDirect3DViewport on IDirect3DRMViewport, not only on
+IDirect3DRMViewport2, so a user visual callback, which receives an
+IDirect3DRMViewport, can reach the immediate-mode viewport. Move the
+declaration to the base interface; Direct3DRMViewportImpl still
+overrides it. Also add the LPDIRECT3DRMVIEWPORT typedef.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/d3drm.h b/miniwin/include/miniwin/d3drm.h
+index 5494970..6163e46 100644
+--- a/miniwin/include/miniwin/d3drm.h
++++ b/miniwin/include/miniwin/d3drm.h
+@@ -478,7 +478,9 @@ struct IDirect3DRMViewport : public IDirect3DRMObject {
+ 	virtual HRESULT Transform(D3DRMVECTOR4D* screen, D3DVECTOR* world) = 0;
+ 	virtual HRESULT InverseTransform(D3DVECTOR* world, D3DRMVECTOR4D* screen) = 0;
+ 	virtual HRESULT Pick(float x, float y, LPDIRECT3DRMPICKEDARRAY* pickedArray) = 0;
++	virtual HRESULT GetDirect3DViewport(IDirect3DViewport** viewport) = 0;
+ };
++typedef IDirect3DRMViewport* LPDIRECT3DRMVIEWPORT;
+ 
+ struct IDirect3DRMAnimationSet2 : public IDirect3DRMObject {
+ 	virtual HRESULT Load(
+@@ -500,7 +502,6 @@ struct IDirect3DRMViewport2 : public IDirect3DRMViewport {
+ 	virtual HRESULT GetCamera(IDirect3DRMFrame3** camera) = 0;
+ 	virtual LONG GetX() = 0;
+ 	virtual LONG GetY() = 0;
+-	virtual HRESULT GetDirect3DViewport(IDirect3DViewport** viewport) = 0;
+ };
+ typedef IDirect3DRMViewport2* LPDIRECT3DRMVIEWPORT2;
+ 
+diff --git a/miniwin/src/internal/d3drmviewport_impl.h b/miniwin/src/internal/d3drmviewport_impl.h
+index 95d33f6..ae3104a 100644
+--- a/miniwin/src/internal/d3drmviewport_impl.h
++++ b/miniwin/src/internal/d3drmviewport_impl.h
+@@ -44,6 +44,7 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 	HRESULT Transform(D3DRMVECTOR4D* screen, D3DVECTOR* world) override;
+ 	HRESULT InverseTransform(D3DVECTOR* world, D3DRMVECTOR4D* screen) override;
+ 	HRESULT Pick(float x, float y, LPDIRECT3DRMPICKEDARRAY* pickedArray) override;
++	HRESULT GetDirect3DViewport(IDirect3DViewport** viewport) override;
+ 	// IDirect3DRMViewport2 interface
+ 	HRESULT Clear(DWORD flags) override;
+ 	HRESULT Render(IDirect3DRMFrame3* frame) override;
+@@ -51,7 +52,6 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 	HRESULT GetCamera(IDirect3DRMFrame3** camera) override;
+ 	LONG GetX() override;
+ 	LONG GetY() override;
+-	HRESULT GetDirect3DViewport(IDirect3DViewport** viewport) override;
+ 	void CloseDevice();
+ 	void UpdateProjectionMatrix();
+ 

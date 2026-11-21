@@ -1,0 +1,289 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 13:55:36 -0800
+Subject: [PATCH] feat(miniwin): scene fog on immediate-mode draws, per vertex
+ and per pixel
+
+Viewport::Render loads the root frame's scene fog into the device's fog
+states, as D3DRM does before it renders: FOGENABLE and FOGCOLOR, then the
+table states (FOGTABLEMODE, START, END, DENSITY) for table fog or the
+light states (FOGMODE, FOGSTART, FOGEND, FOGDENSITY) for vertex fog.
+D3DRMFOG_LINEAR, EXPONENTIAL and EXPONENTIALSQUARED become D3DFOG_LINEAR,
+EXP and EXP2.
+
+The software backend fogs immediate-mode draws from those states, after
+texture stage 0 and specular and before blending: per vertex, with the
+factor carried in the specular alpha as Direct3D carries it, or per pixel
+from the perspective-correct view depth. A draw made with FOGENABLE off,
+as LEGO Rock Raiders makes its alpha-blended groups, stays unfogged.
+Retained-mode meshes are not fogged yet.
+
+The fog render states join D3DRENDERSTATETYPE, with D3DFOGMODE. The
+device's default render state 37 was set to the integer 1 as
+FOGTABLEDENSITY; 37 is FOGTABLEEND, and the fog states hold floats, so
+FOGTABLEEND, FOGTABLEDENSITY, FOGEND and FOGDENSITY now default to 1.0f.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/d3d.h b/miniwin/include/miniwin/d3d.h
+index 43123b1..d7966fb 100644
+--- a/miniwin/include/miniwin/d3d.h
++++ b/miniwin/include/miniwin/d3d.h
+@@ -131,6 +131,12 @@ enum class D3DLIGHTSTATETYPE : uint32_t {
+ #define D3DRENDERSTATE_DESTBLEND D3DRENDERSTATETYPE::DESTBLEND
+ #define D3DRENDERSTATE_ZFUNC D3DRENDERSTATETYPE::ZFUNC
+ #define D3DRENDERSTATE_COLORKEYENABLE D3DRENDERSTATETYPE::COLORKEYENABLE
++#define D3DRENDERSTATE_FOGENABLE D3DRENDERSTATETYPE::FOGENABLE
++#define D3DRENDERSTATE_FOGCOLOR D3DRENDERSTATETYPE::FOGCOLOR
++#define D3DRENDERSTATE_FOGTABLEMODE D3DRENDERSTATETYPE::FOGTABLEMODE
++#define D3DRENDERSTATE_FOGTABLESTART D3DRENDERSTATETYPE::FOGTABLESTART
++#define D3DRENDERSTATE_FOGTABLEEND D3DRENDERSTATETYPE::FOGTABLEEND
++#define D3DRENDERSTATE_FOGTABLEDENSITY D3DRENDERSTATETYPE::FOGTABLEDENSITY
+ enum class D3DRENDERSTATETYPE : uint32_t {
+ 	TEXTUREHANDLE = 1,
+ 	ZENABLE = 7,
+@@ -144,10 +150,27 @@ enum class D3DRENDERSTATETYPE : uint32_t {
+ 	ZFUNC = 23,
+ 	DITHERENABLE = 26,
+ 	ALPHABLENDENABLE = 27,
++	FOGENABLE = 28,
+ 	SPECULARENABLE = 29,
++	FOGCOLOR = 34,
++	FOGTABLEMODE = 35,
++	FOGTABLESTART = 36, // the fog states hold floats as their bits
++	FOGTABLEEND = 37,
++	FOGTABLEDENSITY = 38,
+ 	COLORKEYENABLE = 41,
+ };
+ 
++#define D3DFOG_NONE D3DFOGMODE::NONE
++#define D3DFOG_EXP D3DFOGMODE::EXP
++#define D3DFOG_EXP2 D3DFOGMODE::EXP2
++#define D3DFOG_LINEAR D3DFOGMODE::LINEAR
++enum class D3DFOGMODE : uint32_t {
++	NONE = 0,
++	EXP = 1,
++	EXP2 = 2,
++	LINEAR = 3,
++};
++
+ #define D3DSHADE_FLAT D3DSHADEMODE::FLAT
+ #define D3DSHADE_GOURAUD D3DSHADEMODE::GOURAUD
+ #define D3DSHADE_PHONG D3DSHADEMODE::PHONG
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index 305093b..729c1cb 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -187,6 +187,7 @@ static SWLitVertex SplitEdge(SWLitVertex a, const SWLitVertex& b, float plane)
+ 	a.specular.r = static_cast<Uint8>(a.specular.r + t * (b.specular.r - a.specular.r));
+ 	a.specular.g = static_cast<Uint8>(a.specular.g + t * (b.specular.g - a.specular.g));
+ 	a.specular.b = static_cast<Uint8>(a.specular.b + t * (b.specular.b - a.specular.b));
++	a.specular.a = static_cast<Uint8>(a.specular.a + t * (b.specular.a - a.specular.a));
+ 
+ 	return a;
+ }
+@@ -1226,6 +1227,33 @@ void Direct3DRMSoftwareRenderer::DrawImmediateClipped(const SWLitVertex (&v)[3],
+ 	});
+ }
+ 
++// Direct3D's fog factor at view depth z: 1 leaves the colour, 0 is all fog.
++static float FogFactor(DWORD mode, float start, float end, float density, float z)
++{
++	float f = 1.0f;
++	switch (static_cast<D3DFOGMODE>(mode)) {
++	case D3DFOG_LINEAR:
++		f = end != start ? (end - z) / (end - start) : (z < start ? 1.0f : 0.0f);
++		break;
++	case D3DFOG_EXP:
++		f = std::exp(-density * z);
++		break;
++	case D3DFOG_EXP2:
++		f = std::exp(-(density * z) * (density * z));
++		break;
++	default:
++		break;
++	}
++	return std::min(1.0f, std::max(0.0f, f));
++}
++
++static float FloatState(DWORD bits)
++{
++	float value;
++	SDL_memcpy(&value, &bits, sizeof(value));
++	return value;
++}
++
+ static bool ImmediateDepthTest(DWORD func, float z, float stored)
+ {
+ 	switch (static_cast<D3DCMPFUNC>(func)) {
+@@ -1509,6 +1537,19 @@ void Direct3DRMSoftwareRenderer::DrawImmediateTriangle(
+ 				g = std::min(1.0f, g + spec(&SDL_Color::g));
+ 				b = std::min(1.0f, b + spec(&SDL_Color::b));
+ 			}
++			if (state.fog != ImmediatePixelState::Fog::None) {
++				float f;
++				if (state.fog == ImmediatePixelState::Fog::Vertex) {
++					f = (w[0] * lit[0]->specular.a + w[1] * lit[1]->specular.a + w[2] * lit[2]->specular.a) / 255.0f;
++				}
++				else {
++					float oow = w[0] * oneOverW[0] + w[1] * oneOverW[1] + w[2] * oneOverW[2];
++					f = FogFactor(state.fogMode, state.fogStart, state.fogEnd, state.fogDensity, 1.0f / oow);
++				}
++				r = f * r + (1.0f - f) * state.fogR;
++				g = f * g + (1.0f - f) * state.fogG;
++				b = f * b + (1.0f - f) * state.fogB;
++			}
+ 
+ 			// The render target stands for the display surface, which has no
+ 			// alpha channel: destination alpha reads as one and stays opaque.
+@@ -1650,6 +1691,27 @@ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ 	pixelState.alphaArg1 = tss[static_cast<DWORD>(D3DTSS_ALPHAARG1)];
+ 	pixelState.alphaArg2 = tss[static_cast<DWORD>(D3DTSS_ALPHAARG2)];
+ 	pixelState.specular = st.Render(D3DRENDERSTATE_SPECULARENABLE) != 0;
++	pixelState.fog = ImmediatePixelState::Fog::None;
++	DWORD vertexFogMode = st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGMODE)];
++	float vertexFogStart = FloatState(st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGSTART)]);
++	float vertexFogEnd = FloatState(st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGEND)]);
++	float vertexFogDensity = FloatState(st.lightState[static_cast<DWORD>(D3DLIGHTSTATE_FOGDENSITY)]);
++	if (st.Render(D3DRENDERSTATE_FOGENABLE)) {
++		D3DCOLOR fogColor = st.Render(D3DRENDERSTATE_FOGCOLOR);
++		pixelState.fogR = ((fogColor >> 16) & 0xff) / 255.0f;
++		pixelState.fogG = ((fogColor >> 8) & 0xff) / 255.0f;
++		pixelState.fogB = (fogColor & 0xff) / 255.0f;
++		pixelState.fogMode = st.Render(D3DRENDERSTATE_FOGTABLEMODE);
++		if (pixelState.fogMode != static_cast<DWORD>(D3DFOG_NONE)) {
++			pixelState.fog = ImmediatePixelState::Fog::Table;
++			pixelState.fogStart = FloatState(st.Render(D3DRENDERSTATE_FOGTABLESTART));
++			pixelState.fogEnd = FloatState(st.Render(D3DRENDERSTATE_FOGTABLEEND));
++			pixelState.fogDensity = FloatState(st.Render(D3DRENDERSTATE_FOGTABLEDENSITY));
++		}
++		else if (vertexFogMode != static_cast<DWORD>(D3DFOG_NONE)) {
++			pixelState.fog = ImmediatePixelState::Fog::Vertex;
++		}
++	}
+ 	const DWORD cull = st.Render(D3DRENDERSTATE_CULLMODE);
+ 
+ 	// The eye in world space, for the specular half vector (LOCALVIEWER).
+@@ -1687,6 +1749,16 @@ HRESULT Direct3DRMSoftwareRenderer::SubmitImmediate(const ImmediateDraw& draw)
+ 				m_vertexColors[i],
+ 				m_vertexSpeculars[i]
+ 			);
++			if (pixelState.fog == ImmediatePixelState::Fog::Vertex) {
++				float f = FogFactor(
++					vertexFogMode,
++					vertexFogStart,
++					vertexFogEnd,
++					vertexFogDensity,
++					m_transformedPositions[i].z
++				);
++				m_vertexSpeculars[i].a = static_cast<Uint8>(f * 255.0f + 0.5f);
++			}
+ 		}
+ 	};
+ 
+diff --git a/miniwin/src/d3drm/d3drmrenderer.cpp b/miniwin/src/d3drm/d3drmrenderer.cpp
+index 401b3ae..62024e4 100644
+--- a/miniwin/src/d3drm/d3drmrenderer.cpp
++++ b/miniwin/src/d3drm/d3drmrenderer.cpp
+@@ -59,7 +59,11 @@ ImmediateState::ImmediateState()
+ 	renderState[23] = static_cast<DWORD>(D3DCMP_LESSEQUAL);
+ 	renderState[25] = static_cast<DWORD>(D3DCMP_ALWAYS); // ALPHAFUNC
+ 	renderState[26] = FALSE;                             // DITHERENABLE
+-	renderState[37] = 1;                                 // FOGTABLEDENSITY
++	const float one = 1.0f;
++	SDL_memcpy(&renderState[37], &one, sizeof(DWORD)); // FOGTABLEEND
++	SDL_memcpy(&renderState[38], &one, sizeof(DWORD)); // FOGTABLEDENSITY
++	SDL_memcpy(&lightState[6], &one, sizeof(DWORD));   // FOGEND
++	SDL_memcpy(&lightState[7], &one, sizeof(DWORD));   // FOGDENSITY
+ 
+ 	for (DWORD stage = 0; stage < TextureStageCount; ++stage) {
+ 		DWORD* tss = textureStageState[stage];
+diff --git a/miniwin/src/d3drm/d3drmviewport.cpp b/miniwin/src/d3drm/d3drmviewport.cpp
+index ee945c6..e8cf020 100644
+--- a/miniwin/src/d3drm/d3drmviewport.cpp
++++ b/miniwin/src/d3drm/d3drmviewport.cpp
+@@ -163,6 +163,44 @@ void Direct3DRMViewportImpl::CollectLightsFromFrame(IDirect3DRMFrame* frame, D3D
+ 	children->Release();
+ }
+ 
++static DWORD FloatBits(float value)
++{
++	DWORD bits;
++	memcpy(&bits, &value, sizeof(bits));
++	return bits;
++}
++
++void Direct3DRMViewportImpl::ApplySceneFog()
++{
++	auto* root = static_cast<Direct3DRMFrameImpl*>(m_rootFrame);
++	m_renderer->SetRenderState(D3DRENDERSTATE_FOGENABLE, root->m_fogEnable ? TRUE : FALSE);
++	if (!root->m_fogEnable) {
++		return;
++	}
++	D3DFOGMODE mode = D3DFOG_LINEAR;
++	if (root->m_fogMode == D3DRMFOG_EXPONENTIAL) {
++		mode = D3DFOG_EXP;
++	}
++	else if (root->m_fogMode == D3DRMFOG_EXPONENTIALSQUARED) {
++		mode = D3DFOG_EXP2;
++	}
++	bool vertex = (root->m_fogMethod & (D3DRMFOGMETHOD_TABLE | D3DRMFOGMETHOD_ANY)) == 0 &&
++				  (root->m_fogMethod & D3DRMFOGMETHOD_VERTEX) == D3DRMFOGMETHOD_VERTEX;
++	m_renderer->SetRenderState(D3DRENDERSTATE_FOGCOLOR, root->m_fogColor);
++	m_renderer->SetRenderState(D3DRENDERSTATE_FOGTABLEMODE, static_cast<DWORD>(vertex ? D3DFOG_NONE : mode));
++	m_renderer->SetLightState(D3DLIGHTSTATE_FOGMODE, static_cast<DWORD>(vertex ? mode : D3DFOG_NONE));
++	if (vertex) {
++		m_renderer->SetLightState(D3DLIGHTSTATE_FOGSTART, FloatBits(root->m_fogStart));
++		m_renderer->SetLightState(D3DLIGHTSTATE_FOGEND, FloatBits(root->m_fogEnd));
++		m_renderer->SetLightState(D3DLIGHTSTATE_FOGDENSITY, FloatBits(root->m_fogDensity));
++	}
++	else {
++		m_renderer->SetRenderState(D3DRENDERSTATE_FOGTABLESTART, FloatBits(root->m_fogStart));
++		m_renderer->SetRenderState(D3DRENDERSTATE_FOGTABLEEND, FloatBits(root->m_fogEnd));
++		m_renderer->SetRenderState(D3DRENDERSTATE_FOGTABLEDENSITY, FloatBits(root->m_fogDensity));
++	}
++}
++
+ void Direct3DRMViewportImpl::BuildViewFrustumPlanes()
+ {
+ 
+@@ -418,6 +456,7 @@ HRESULT Direct3DRMViewportImpl::RenderScene()
+ 	if (status != DD_OK) {
+ 		return status;
+ 	}
++	ApplySceneFog();
+ 
+ 	CollectMeshesFromFrame(m_rootFrame, identity, sceneMask);
+ 
+diff --git a/miniwin/src/internal/d3drmrenderer_software.h b/miniwin/src/internal/d3drmrenderer_software.h
+index b45ad47..da33247 100644
+--- a/miniwin/src/internal/d3drmrenderer_software.h
++++ b/miniwin/src/internal/d3drmrenderer_software.h
+@@ -89,6 +89,12 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 		bool keyed, colorKeyEnable, linear;
+ 		DWORD colorOp, colorArg1, colorArg2, alphaOp, alphaArg1, alphaArg2;
+ 		bool specular; // SPECULARENABLE: add the vertex specular after stage 0
++		// Fog, blended in last: per vertex (the factor rides in the
++		// specular alpha, as in Direct3D) or per pixel from the view depth.
++		enum class Fog { None, Vertex, Table } fog;
++		DWORD fogMode; // D3DFOGMODE, for table fog
++		float fogStart, fogEnd, fogDensity;
++		float fogR, fogG, fogB;
+ 	};
+ 	void DrawImmediateClipped(const SWLitVertex (&v)[3], const ImmediatePixelState& state);
+ 	void DrawImmediateTriangle(
+diff --git a/miniwin/src/internal/d3drmviewport_impl.h b/miniwin/src/internal/d3drmviewport_impl.h
+index 9ff0ee6..96eefc2 100644
+--- a/miniwin/src/internal/d3drmviewport_impl.h
++++ b/miniwin/src/internal/d3drmviewport_impl.h
+@@ -77,6 +77,10 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 	// Push the lights in mask to the renderer, unless they are pushed already.
+ 	void UseLights(uint64_t mask);
+ 	void BuildViewFrustumPlanes();
++	// Load the scene's fog into the device's fog states, as D3DRM does
++	// before it renders: table fog in the render states, vertex fog in
++	// the light states.
++	void ApplySceneFog();
+ 	void RenderUserVisual(struct Direct3DRMUserVisualImpl* visual, const D3DRMMATRIX4D worldMatrix);
+ 	Direct3DRMRenderer* m_renderer;
+ 	IDirect3DRMDevice* m_device; // the device the viewport was created on; not owned

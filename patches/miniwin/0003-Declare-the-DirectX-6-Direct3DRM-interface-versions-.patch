@@ -1,0 +1,1131 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 18:08:11 -0800
+Subject: [PATCH] Declare the DirectX 6 Direct3DRM interface versions on
+ miniwin's objects
+
+Add IDirect3DRM3, IDirect3DRMFrame3, IDirect3DRMDevice3,
+IDirect3DRMViewport2, IDirect3DRMTexture3 and IDirect3DRMMaterial2,
+with their IIDs and the fog, sort, constraint, load and clear
+declarations their methods take. Each extends the previous version in
+miniwin's chain and is answered by the existing object:
+
+- Direct3DRMImpl answers IID_IDirect3DRM, IID_IDirect3DRM2 and
+  IID_IDirect3DRM3.
+- Direct3DRMFrameImpl answers IID_IDirect3DRMFrame, 2 and 3.
+- Direct3DRMDevice2Impl answers IID_IDirect3DRMDevice, 2 and 3.
+- Direct3DRMViewportImpl answers IID_IDirect3DRMViewport and 2.
+- Direct3DRMTextureImpl answers IID_IDirect3DRMTexture, 2 and 3.
+- The material answers IID_IDirect3DRMMaterial and 2.
+
+Also declare IDirect3DRMLight's SetColor, SetRange, SetUmbra,
+SetPenumbra and SetEnableFrame, and IDirect3DRMMesh::Scale, plus
+E_NOTIMPL.
+
+Where a version-3 method differs from an implemented one only by its
+pointer types (Frame3 AddChild, DeleteChild and GetPosition; Viewport2
+Render, SetCamera and GetCamera; the IDirect3DRM3 Create methods), it
+forwards to the existing implementation.
+IDirect3DRMDevice3::GetDirect3DDevice2 returns the renderer and
+IDirect3DRMViewport2::GetDirect3DViewport returns an IDirect3DViewport
+that the viewport owns. Every other new method logs once and returns
+E_NOTIMPL, or 0 or nullptr where it returns a value.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/d3drm.h b/miniwin/include/miniwin/d3drm.h
+index dea6e0f..e1ef0ec 100644
+--- a/miniwin/include/miniwin/d3drm.h
++++ b/miniwin/include/miniwin/d3drm.h
+@@ -22,8 +22,12 @@ typedef void (*D3DRMOBJECTCALLBACK)(LPDIRECT3DRMOBJECT obj, LPVOID arg);
+ 
+ // --- Enums ---
+ #define D3DRMCOMBINE_REPLACE D3DRMCOMBINETYPE::REPLACE
++#define D3DRMCOMBINE_BEFORE D3DRMCOMBINETYPE::BEFORE
++#define D3DRMCOMBINE_AFTER D3DRMCOMBINETYPE::AFTER
+ enum class D3DRMCOMBINETYPE {
+-	REPLACE
++	REPLACE,
++	BEFORE,
++	AFTER
+ };
+ typedef D3DRMCOMBINETYPE* LPD3DRMCOMBINETYPE;
+ 
+@@ -98,14 +102,75 @@ enum class D3DRMPROJECTIONTYPE {
+ };
+ typedef D3DRMPROJECTIONTYPE* LPD3DRMPROJECTIONTYPE;
+ 
++#define D3DRMFOG_LINEAR D3DRMFOGMODE::LINEAR
++#define D3DRMFOG_EXPONENTIAL D3DRMFOGMODE::EXPONENTIAL
++#define D3DRMFOG_EXPONENTIALSQUARED D3DRMFOGMODE::EXPONENTIALSQUARED
++enum class D3DRMFOGMODE {
++	LINEAR,
++	EXPONENTIAL,
++	EXPONENTIALSQUARED
++};
++
++#define D3DRMSORT_FROMPARENT D3DRMSORTMODE::FROMPARENT
++#define D3DRMSORT_NONE D3DRMSORTMODE::NONE
++#define D3DRMSORT_FRONTTOBACK D3DRMSORTMODE::FRONTTOBACK
++#define D3DRMSORT_BACKTOFRONT D3DRMSORTMODE::BACKTOFRONT
++enum class D3DRMSORTMODE {
++	FROMPARENT,
++	NONE,
++	FRONTTOBACK,
++	BACKTOFRONT
++};
++
++#define D3DRMCONSTRAIN_Z D3DRMFRAMECONSTRAINT::Z
++#define D3DRMCONSTRAIN_Y D3DRMFRAMECONSTRAINT::Y
++#define D3DRMCONSTRAIN_X D3DRMFRAMECONSTRAINT::X
++enum class D3DRMFRAMECONSTRAINT {
++	Z,
++	Y,
++	X
++};
++
++typedef DWORD D3DRMLOADOPTIONS;
++#define D3DRMLOAD_FROMFILE 0x000
++#define D3DRMLOAD_FROMRESOURCE 0x001
++#define D3DRMLOAD_FROMMEMORY 0x002
++#define D3DRMLOAD_BYNAME 0x010
++#define D3DRMLOAD_BYPOSITION 0x020
++#define D3DRMLOAD_BYGUID 0x040
++#define D3DRMLOAD_FIRST 0x080
++#define D3DRMLOAD_INSTANCEBYREFERENCE 0x100
++#define D3DRMLOAD_INSTANCEBYCOPYING 0x200
++
++#define D3DRMFOGMETHOD_VERTEX 0x1
++#define D3DRMFOGMETHOD_TABLE 0x2
++#define D3DRMFOGMETHOD_ANY 0x4
++
++#define D3DRMCLEAR_TARGET 0x1
++#define D3DRMCLEAR_ZBUFFER 0x2
++#define D3DRMCLEAR_DIRTYRECTS 0x4
++#define D3DRMCLEAR_ALL (D3DRMCLEAR_TARGET | D3DRMCLEAR_ZBUFFER | D3DRMCLEAR_DIRTYRECTS)
++
+ // --- GUIDs ---
++DEFINE_GUID(IID_IDirect3DRM, 0x2bc49361, 0x8327, 0x11cf, 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
+ DEFINE_GUID(IID_IDirect3DRM2, 0x4516ecc8, 0x8f20, 0x11d0, 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3);
++DEFINE_GUID(IID_IDirect3DRM3, 0x4516ec83, 0x8f20, 0x11d0, 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3);
++DEFINE_GUID(IID_IDirect3DRMDevice, 0xe9e19280, 0x6e05, 0x11cf, 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
+ DEFINE_GUID(IID_IDirect3DRMDevice2, 0x4516ec78, 0x8f20, 0x11d0, 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3);
++DEFINE_GUID(IID_IDirect3DRMDevice3, 0x549f498b, 0xbfeb, 0x11d1, 0x8e, 0xd8, 0x00, 0xa0, 0xc9, 0x67, 0xa4, 0x82);
+ DEFINE_GUID(IID_IDirect3DRMWinDevice, 0xc5016cc0, 0xd273, 0x11ce, 0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
+ DEFINE_GUID(IID_IDirect3DRMFrame, 0xeb16cb03, 0xd271, 0x11ce, 0xac, 0x48, 0x0, 0x0, 0xc0, 0x38, 0x25, 0xa1);
++DEFINE_GUID(IID_IDirect3DRMFrame2, 0xc3dfbd60, 0x3988, 0x11d0, 0x9e, 0xc2, 0x00, 0x00, 0xc0, 0x29, 0x1a, 0xc3);
++DEFINE_GUID(IID_IDirect3DRMFrame3, 0xff6b7f70, 0xa40e, 0x11d1, 0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66);
++DEFINE_GUID(IID_IDirect3DRMViewport, 0xeb16cb02, 0xd271, 0x11ce, 0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
++DEFINE_GUID(IID_IDirect3DRMViewport2, 0x4a1b1be6, 0xbfed, 0x11d1, 0x8e, 0xd8, 0x00, 0xa0, 0xc9, 0x67, 0xa4, 0x82);
+ DEFINE_GUID(IID_IDirect3DRMMesh, 0xa3a80d01, 0x6e12, 0x11cf, 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
+ DEFINE_GUID(IID_IDirect3DRMMeshBuilder, 0xa3a80d02, 0x6e12, 0x11cf, 0xac, 0x4a, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
++DEFINE_GUID(IID_IDirect3DRMTexture, 0xeb16cb09, 0xd271, 0x11ce, 0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
+ DEFINE_GUID(IID_IDirect3DRMTexture2, 0x120f30c0, 0x1629, 0x11d0, 0x94, 0x1c, 0x00, 0x80, 0xc8, 0x0c, 0xfa, 0x7b);
++DEFINE_GUID(IID_IDirect3DRMTexture3, 0xff6b7f73, 0xa40e, 0x11d1, 0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66);
++DEFINE_GUID(IID_IDirect3DRMMaterial, 0xeb16cb0b, 0xd271, 0x11ce, 0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1);
++DEFINE_GUID(IID_IDirect3DRMMaterial2, 0xff6b7f75, 0xa40e, 0x11d1, 0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66);
+ 
+ // --- Structs ---
+ typedef struct D3DRMVECTOR4D {
+@@ -132,6 +197,12 @@ typedef struct D3DRMIMAGE {
+ 
+ typedef D3DVALUE D3DRMMATRIX4D[4][4];
+ 
++struct D3DRMLOADMEMORY {
++	LPVOID lpMemory;
++	DWORD dSize;
++};
++typedef D3DRMLOADMEMORY* LPD3DRMLOADMEMORY;
++
+ struct D3DRMBOX {
+ 	D3DVECTOR min;
+ 	D3DVECTOR max;
+@@ -172,13 +243,30 @@ typedef IDirect3DRMTexture* LPDIRECT3DRMTEXTURE;
+ struct IDirect3DRMTexture2 : public IDirect3DRMTexture {};
+ typedef IDirect3DRMTexture2* LPDIRECT3DRMTEXTURE2;
+ 
++struct IDirect3DRMTexture3 : public IDirect3DRMTexture2 {
++	virtual D3DRMIMAGE* GetImage() = 0;
++	virtual HRESULT SetDecalTransparency(BOOL transparency) = 0;
++	virtual HRESULT SetDecalTransparentColor(D3DCOLOR color) = 0;
++	virtual HRESULT GenerateMIPMap(DWORD flags) = 0;
++};
++typedef IDirect3DRMTexture3* LPDIRECT3DRMTEXTURE3;
++
++typedef HRESULT (*D3DRMLOADTEXTURE3CALLBACK)(char* name, void* arg, IDirect3DRMTexture3** texture);
++
+ struct IDirect3DRMMaterial : public IDirect3DRMObject {
+ 	virtual D3DVALUE GetPower() = 0;
+ };
+ typedef IDirect3DRMMaterial *LPDIRECT3DRMMATERIAL, **LPLPDIRECT3DRMMATERIAL;
+ 
++struct IDirect3DRMMaterial2 : public IDirect3DRMMaterial {
++	virtual HRESULT SetSpecular(D3DVALUE r, D3DVALUE g, D3DVALUE b) = 0;
++	virtual HRESULT SetEmissive(D3DVALUE r, D3DVALUE g, D3DVALUE b) = 0;
++};
++typedef IDirect3DRMMaterial2* LPDIRECT3DRMMATERIAL2;
++
+ struct IDirect3DRMMesh : public IDirect3DRMVisual {
+ 	virtual HRESULT Clone(int flags, GUID iid, void** object) = 0;
++	virtual HRESULT Scale(D3DVALUE sx, D3DVALUE sy, D3DVALUE sz) = 0;
+ 	virtual HRESULT GetBox(D3DRMBOX* box) = 0;
+ 	virtual HRESULT AddGroup(
+ 		unsigned int vertexCount,
+@@ -211,8 +299,14 @@ struct IDirect3DRMMesh : public IDirect3DRMVisual {
+ 	virtual HRESULT GetVertices(D3DRMGROUPINDEX groupIndex, int startIndex, int count, D3DRMVERTEX* vertices) = 0;
+ };
+ 
++struct IDirect3DRMFrame;
+ struct IDirect3DRMLight : public IDirect3DRMObject {
++	virtual HRESULT SetColor(D3DCOLOR color) = 0;
+ 	virtual HRESULT SetColorRGB(float r, float g, float b) = 0;
++	virtual HRESULT SetRange(D3DVALUE range) = 0;
++	virtual HRESULT SetUmbra(D3DVALUE angle) = 0;
++	virtual HRESULT SetPenumbra(D3DVALUE angle) = 0;
++	virtual HRESULT SetEnableFrame(IDirect3DRMFrame* frame) = 0;
+ 	virtual D3DRMLIGHTTYPE GetType() = 0;
+ 	virtual D3DCOLOR GetColor() = 0;
+ };
+@@ -264,6 +358,55 @@ struct IDirect3DRMFrameArray : public IDirect3DRMArray {
+ struct IDirect3DRMFrame2 : public IDirect3DRMFrame {};
+ typedef IDirect3DRMFrame2* LPDIRECT3DRMFRAME2;
+ 
++typedef struct IDirect3DRMFrame3* LPDIRECT3DRMFRAME3;
++struct IDirect3DRMFrame3 : public IDirect3DRMFrame2 {
++	virtual HRESULT AddChild(IDirect3DRMFrame3* child) = 0;
++	virtual HRESULT AddTranslation(D3DRMCOMBINETYPE combine, D3DVALUE x, D3DVALUE y, D3DVALUE z) = 0;
++	virtual HRESULT AddScale(D3DRMCOMBINETYPE combine, D3DVALUE sx, D3DVALUE sy, D3DVALUE sz) = 0;
++	virtual HRESULT AddRotation(D3DRMCOMBINETYPE combine, D3DVALUE x, D3DVALUE y, D3DVALUE z, D3DVALUE theta) = 0;
++	virtual HRESULT AddVisual(IUnknown* visual) = 0;
++	virtual HRESULT GetParent(IDirect3DRMFrame3** parent) = 0;
++	virtual HRESULT GetPosition(IDirect3DRMFrame3* reference, D3DVECTOR* position) = 0;
++	virtual HRESULT GetScene(IDirect3DRMFrame3** scene) = 0;
++	virtual HRESULT GetTransform(IDirect3DRMFrame3* reference, D3DRMMATRIX4D matrix) = 0;
++	virtual HRESULT GetOrientation(IDirect3DRMFrame3* reference, D3DVECTOR* dir, D3DVECTOR* up) = 0;
++	virtual HRESULT GetVisuals(DWORD* count, IUnknown** visuals) = 0;
++	virtual HRESULT InverseTransform(D3DVECTOR* d, D3DVECTOR* s) = 0;
++	virtual HRESULT Load(
++		void* filename,
++		void* name,
++		D3DRMLOADOPTIONS flags,
++		D3DRMLOADTEXTURE3CALLBACK callback,
++		void* arg
++	) = 0;
++	virtual HRESULT LookAt(
++		IDirect3DRMFrame3* target,
++		IDirect3DRMFrame3* reference,
++		D3DRMFRAMECONSTRAINT constraint
++	) = 0;
++	virtual HRESULT DeleteChild(IDirect3DRMFrame3* child) = 0;
++	virtual HRESULT DeleteVisual(IUnknown* visual) = 0;
++	virtual D3DCOLOR GetSceneBackground() = 0;
++	virtual HRESULT SetSceneBackground(D3DCOLOR color) = 0;
++	virtual HRESULT SetSceneFogEnable(BOOL enable) = 0;
++	virtual HRESULT SetSceneFogColor(D3DCOLOR color) = 0;
++	virtual HRESULT SetSceneFogMode(D3DRMFOGMODE mode) = 0;
++	virtual HRESULT SetSceneFogParams(D3DVALUE start, D3DVALUE end, D3DVALUE density) = 0;
++	virtual HRESULT SetOrientation(
++		IDirect3DRMFrame3* reference,
++		D3DVALUE dx,
++		D3DVALUE dy,
++		D3DVALUE dz,
++		D3DVALUE ux,
++		D3DVALUE uy,
++		D3DVALUE uz
++	) = 0;
++	virtual HRESULT SetPosition(IDirect3DRMFrame3* reference, D3DVALUE x, D3DVALUE y, D3DVALUE z) = 0;
++	virtual HRESULT SetSortMode(D3DRMSORTMODE mode) = 0;
++	virtual HRESULT Transform(D3DVECTOR* d, D3DVECTOR* s) = 0;
++	virtual HRESULT SetSceneFogMethod(DWORD flags) = 0;
++};
++
+ struct D3DRMPICKDESC {
+ 	float dist;
+ };
+@@ -299,6 +442,17 @@ struct IDirect3DRMViewport : public IDirect3DRMObject {
+ 	virtual HRESULT Pick(float x, float y, LPDIRECT3DRMPICKEDARRAY* pickedArray) = 0;
+ };
+ 
++struct IDirect3DRMViewport2 : public IDirect3DRMViewport {
++	virtual HRESULT Clear(DWORD flags) = 0;
++	virtual HRESULT Render(IDirect3DRMFrame3* frame) = 0;
++	virtual HRESULT SetCamera(IDirect3DRMFrame3* camera) = 0;
++	virtual HRESULT GetCamera(IDirect3DRMFrame3** camera) = 0;
++	virtual LONG GetX() = 0;
++	virtual LONG GetY() = 0;
++	virtual HRESULT GetDirect3DViewport(IDirect3DViewport** viewport) = 0;
++};
++typedef IDirect3DRMViewport2* LPDIRECT3DRMVIEWPORT2;
++
+ struct IDirect3DRMViewportArray : public IDirect3DRMArray {
+ 	virtual HRESULT GetElement(DWORD index, IDirect3DRMViewport** out) = 0;
+ 	virtual HRESULT AddElement(IDirect3DRMViewport* in) = 0;
+@@ -334,6 +488,12 @@ struct IDirect3DRMDevice : virtual public IDirect3DRMObject {
+ 
+ struct IDirect3DRMDevice2 : virtual public IDirect3DRMDevice {};
+ 
++struct IDirect3DRMDevice3 : public IDirect3DRMDevice2 {
++	virtual HRESULT GetDirect3DDevice2(IDirect3DDevice2** d3dDevice) = 0;
++	virtual HRESULT FindPreferredTextureFormat(DDBitDepths bitDepths, DWORD flags, LPDDPIXELFORMAT pixelFormat) = 0;
++};
++typedef IDirect3DRMDevice3* LPDIRECT3DRMDEVICE3;
++
+ struct IDirect3DRM : virtual public IUnknown {
+ 	virtual HRESULT CreateDeviceFromD3D(
+ 		const IDirect3D2* d3d,
+@@ -368,6 +528,30 @@ typedef IDirect3DRM *LPDIRECT3DRM, **LPLPDIRECT3DRM;
+ 
+ struct IDirect3DRM2 : public IDirect3DRM {};
+ 
++struct IDirect3DRM3 : public IDirect3DRM2 {
++	virtual HRESULT CreateFrame(IDirect3DRMFrame3* parent, IDirect3DRMFrame3** outFrame) = 0;
++	virtual HRESULT CreateMaterial(D3DVALUE power, IDirect3DRMMaterial2** outMaterial) = 0;
++	virtual HRESULT CreateDeviceFromSurface(
++		GUID* guid,
++		IDirectDraw* dd,
++		IDirectDrawSurface* surface,
++		DWORD flags,
++		IDirect3DRMDevice3** outDevice
++	) = 0;
++	virtual HRESULT CreateTextureFromSurface(LPDIRECTDRAWSURFACE surface, IDirect3DRMTexture3** outTexture) = 0;
++	virtual HRESULT CreateViewport(
++		IDirect3DRMDevice3* device,
++		IDirect3DRMFrame3* camera,
++		DWORD x,
++		DWORD y,
++		DWORD width,
++		DWORD height,
++		IDirect3DRMViewport2** outViewport
++	) = 0;
++	virtual HRESULT LoadTexture(const char* filename, IDirect3DRMTexture3** outTexture) = 0;
++};
++typedef IDirect3DRM3* LPDIRECT3DRM3;
++
+ // Functions
+ HRESULT WINAPI Direct3DRMCreate(IDirect3DRM** direct3DRM);
+ 
+diff --git a/miniwin/include/miniwin/windows.h b/miniwin/include/miniwin/windows.h
+index 46bfd43..3085e9b 100644
+--- a/miniwin/include/miniwin/windows.h
++++ b/miniwin/include/miniwin/windows.h
+@@ -19,6 +19,7 @@
+ #define HWND_NOTOPMOST ((HWND) (-2))
+ #define RGB(r, g, b) (((BYTE) (r) | ((BYTE) (g) << 8) | ((BYTE) (b) << 16)))
+ #define S_OK ((HRESULT) 0)
++#define E_NOTIMPL ((HRESULT) 0x80004001)
+ #define E_NOINTERFACE (0x80004002)
+ #define VOID void
+ #define TRUE 1
+diff --git a/miniwin/src/d3drm/d3drm.cpp b/miniwin/src/d3drm/d3drm.cpp
+index 58bedd2..db42643 100644
+--- a/miniwin/src/d3drm/d3drm.cpp
++++ b/miniwin/src/d3drm/d3drm.cpp
+@@ -89,9 +89,34 @@ struct Direct3DRMWinDeviceImpl : public IDirect3DRMWinDevice {
+ 	void HandlePaint(void* p_dc) override { MINIWIN_NOT_IMPLEMENTED(); }
+ };
+ 
+-struct Direct3DRMMaterialImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMMaterial> {
++struct Direct3DRMMaterialImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMMaterial2> {
+ 	Direct3DRMMaterialImpl(D3DVALUE power) : m_power(power) {}
++	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override
++	{
++		if (SDL_memcmp(&riid, &IID_IDirect3DRMMaterial, sizeof(GUID)) == 0) {
++			this->IUnknown::AddRef();
++			*ppvObject = static_cast<IDirect3DRMMaterial*>(this);
++			return DD_OK;
++		}
++		if (SDL_memcmp(&riid, &IID_IDirect3DRMMaterial2, sizeof(GUID)) == 0) {
++			this->IUnknown::AddRef();
++			*ppvObject = static_cast<IDirect3DRMMaterial2*>(this);
++			return DD_OK;
++		}
++		MINIWIN_NOT_IMPLEMENTED();
++		return E_NOINTERFACE;
++	}
+ 	D3DVALUE GetPower() override { return m_power; }
++	HRESULT SetSpecular(D3DVALUE r, D3DVALUE g, D3DVALUE b) override
++	{
++		MINIWIN_NOT_IMPLEMENTED();
++		return E_NOTIMPL;
++	}
++	HRESULT SetEmissive(D3DVALUE r, D3DVALUE g, D3DVALUE b) override
++	{
++		MINIWIN_NOT_IMPLEMENTED();
++		return E_NOTIMPL;
++	}
+ 
+ private:
+ 	D3DVALUE m_power;
+@@ -99,11 +124,21 @@ struct Direct3DRMMaterialImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMMater
+ 
+ HRESULT Direct3DRMImpl::QueryInterface(const GUID& riid, void** ppvObject)
+ {
++	if (SDL_memcmp(&riid, &IID_IDirect3DRM, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRM*>(this);
++		return DD_OK;
++	}
+ 	if (SDL_memcmp(&riid, &IID_IDirect3DRM2, sizeof(GUID)) == 0) {
+ 		this->IUnknown::AddRef();
+ 		*ppvObject = static_cast<IDirect3DRM2*>(this);
+ 		return DD_OK;
+ 	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DRM3, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRM3*>(this);
++		return DD_OK;
++	}
+ 	SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Direct3DRMImpl does not implement guid");
+ 	return E_NOINTERFACE;
+ }
+@@ -213,6 +248,78 @@ HRESULT Direct3DRMImpl::SetDefaultTextureColors(DWORD count)
+ 	return DD_OK;
+ }
+ 
++// IDirect3DRM3 interface
++HRESULT Direct3DRMImpl::CreateFrame(IDirect3DRMFrame3* parent, IDirect3DRMFrame3** outFrame)
++{
++	auto parentImpl = static_cast<Direct3DRMFrameImpl*>(parent);
++	*outFrame = static_cast<IDirect3DRMFrame3*>(new Direct3DRMFrameImpl{parentImpl});
++	return DD_OK;
++}
++
++HRESULT Direct3DRMImpl::CreateMaterial(D3DVALUE power, IDirect3DRMMaterial2** outMaterial)
++{
++	*outMaterial = static_cast<IDirect3DRMMaterial2*>(new Direct3DRMMaterialImpl(power));
++	return DD_OK;
++}
++
++HRESULT Direct3DRMImpl::CreateDeviceFromSurface(
++	GUID* guid,
++	IDirectDraw* dd,
++	IDirectDrawSurface* surface,
++	DWORD flags,
++	IDirect3DRMDevice3** outDevice
++)
++{
++	if (flags) {
++		MINIWIN_NOT_IMPLEMENTED();
++		return E_NOTIMPL;
++	}
++	IDirect3DRMDevice2* device;
++	HRESULT result = CreateDeviceFromSurface(static_cast<const GUID*>(guid), dd, surface, &device);
++	if (result == DD_OK) {
++		*outDevice = static_cast<Direct3DRMDevice2Impl*>(device);
++	}
++	return result;
++}
++
++HRESULT Direct3DRMImpl::CreateTextureFromSurface(LPDIRECTDRAWSURFACE surface, IDirect3DRMTexture3** outTexture)
++{
++	*outTexture = static_cast<IDirect3DRMTexture3*>(new Direct3DRMTextureImpl(surface, true));
++	return DD_OK;
++}
++
++HRESULT Direct3DRMImpl::CreateViewport(
++	IDirect3DRMDevice3* device,
++	IDirect3DRMFrame3* camera,
++	DWORD x,
++	DWORD y,
++	DWORD width,
++	DWORD height,
++	IDirect3DRMViewport2** outViewport
++)
++{
++	IDirect3DRMViewport* viewport;
++	HRESULT result = CreateViewport(
++		static_cast<IDirect3DRMDevice2*>(device),
++		static_cast<IDirect3DRMFrame*>(camera),
++		x,
++		y,
++		width,
++		height,
++		&viewport
++	);
++	if (result == DD_OK) {
++		*outViewport = static_cast<Direct3DRMViewportImpl*>(viewport);
++	}
++	return result;
++}
++
++HRESULT Direct3DRMImpl::LoadTexture(const char* filename, IDirect3DRMTexture3** outTexture)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
+ HRESULT WINAPI Direct3DRMCreate(IDirect3DRM** direct3DRM)
+ {
+ 	*direct3DRM = new Direct3DRMImpl;
+diff --git a/miniwin/src/d3drm/d3drmdevice.cpp b/miniwin/src/d3drm/d3drmdevice.cpp
+index ce11787..124ac90 100644
+--- a/miniwin/src/d3drm/d3drmdevice.cpp
++++ b/miniwin/src/d3drm/d3drmdevice.cpp
+@@ -32,11 +32,21 @@ Direct3DRMDevice2Impl::~Direct3DRMDevice2Impl()
+ 
+ HRESULT Direct3DRMDevice2Impl::QueryInterface(const GUID& riid, void** ppvObject)
+ {
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMDevice, sizeof(riid)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMDevice*>(this);
++		return DD_OK;
++	}
+ 	if (SDL_memcmp(&riid, &IID_IDirect3DRMDevice2, sizeof(riid)) == 0) {
+ 		this->IUnknown::AddRef();
+ 		*ppvObject = static_cast<IDirect3DRMDevice2*>(this);
+ 		return DD_OK;
+ 	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMDevice3, sizeof(riid)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMDevice3*>(this);
++		return DD_OK;
++	}
+ 	else if (SDL_memcmp(&riid, &IID_IDirect3DRMMiniwinDevice, sizeof(riid)) == 0) {
+ 		this->IUnknown::AddRef();
+ 		*ppvObject = static_cast<IDirect3DRMMiniwinDevice*>(this);
+@@ -220,3 +230,24 @@ bool Direct3DRMDevice2Impl::ConvertRenderToWindowCoordinates(Sint32 inX, Sint32
+ 
+ 	return true;
+ }
++
++// IDirect3DRMDevice3 interface
++HRESULT Direct3DRMDevice2Impl::GetDirect3DDevice2(IDirect3DDevice2** d3dDevice)
++{
++	if (!d3dDevice) {
++		return DDERR_INVALIDPARAMS;
++	}
++	m_renderer->AddRef();
++	*d3dDevice = static_cast<IDirect3DDevice2*>(m_renderer);
++	return DD_OK;
++}
++
++HRESULT Direct3DRMDevice2Impl::FindPreferredTextureFormat(
++	DDBitDepths bitDepths,
++	DWORD flags,
++	LPDDPIXELFORMAT pixelFormat
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
+diff --git a/miniwin/src/d3drm/d3drmframe.cpp b/miniwin/src/d3drm/d3drmframe.cpp
+index a5a7f78..fb4747c 100644
+--- a/miniwin/src/d3drm/d3drmframe.cpp
++++ b/miniwin/src/d3drm/d3drmframe.cpp
+@@ -34,6 +34,16 @@ HRESULT Direct3DRMFrameImpl::QueryInterface(const GUID& riid, void** ppvObject)
+ 		*ppvObject = static_cast<IDirect3DRMFrame*>(this);
+ 		return S_OK;
+ 	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMFrame2, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMFrame2*>(this);
++		return S_OK;
++	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMFrame3, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMFrame3*>(this);
++		return S_OK;
++	}
+ 	if (SDL_memcmp(&riid, &IID_IDirect3DRMMesh, sizeof(GUID)) == 0) {
+ 		return E_NOINTERFACE;
+ 	}
+@@ -180,3 +190,181 @@ HRESULT Direct3DRMFrameImpl::GetChildren(IDirect3DRMFrameArray** children)
+ 	m_children->AddRef();
+ 	return DD_OK;
+ }
++
++// IDirect3DRMFrame3 interface
++HRESULT Direct3DRMFrameImpl::AddChild(IDirect3DRMFrame3* child)
++{
++	return AddChild(static_cast<IDirect3DRMFrame*>(child));
++}
++
++HRESULT Direct3DRMFrameImpl::DeleteChild(IDirect3DRMFrame3* child)
++{
++	return DeleteChild(static_cast<IDirect3DRMFrame*>(child));
++}
++
++HRESULT Direct3DRMFrameImpl::GetPosition(IDirect3DRMFrame3* reference, D3DVECTOR* position)
++{
++	return GetPosition(static_cast<IDirect3DRMFrame*>(reference), position);
++}
++
++HRESULT Direct3DRMFrameImpl::AddTranslation(D3DRMCOMBINETYPE combine, D3DVALUE x, D3DVALUE y, D3DVALUE z)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::AddScale(D3DRMCOMBINETYPE combine, D3DVALUE sx, D3DVALUE sy, D3DVALUE sz)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::AddRotation(D3DRMCOMBINETYPE combine, D3DVALUE x, D3DVALUE y, D3DVALUE z, D3DVALUE theta)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::AddVisual(IUnknown* visual)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::GetParent(IDirect3DRMFrame3** parent)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::GetScene(IDirect3DRMFrame3** scene)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::GetTransform(IDirect3DRMFrame3* reference, D3DRMMATRIX4D matrix)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::GetOrientation(IDirect3DRMFrame3* reference, D3DVECTOR* dir, D3DVECTOR* up)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::GetVisuals(DWORD* count, IUnknown** visuals)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::InverseTransform(D3DVECTOR* d, D3DVECTOR* s)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::Load(
++	void* filename,
++	void* name,
++	D3DRMLOADOPTIONS flags,
++	D3DRMLOADTEXTURE3CALLBACK callback,
++	void* arg
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::LookAt(
++	IDirect3DRMFrame3* target,
++	IDirect3DRMFrame3* reference,
++	D3DRMFRAMECONSTRAINT constraint
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::DeleteVisual(IUnknown* visual)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++D3DCOLOR Direct3DRMFrameImpl::GetSceneBackground()
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return 0;
++}
++
++HRESULT Direct3DRMFrameImpl::SetSceneBackground(D3DCOLOR color)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::SetSceneFogEnable(BOOL enable)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::SetSceneFogColor(D3DCOLOR color)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::SetSceneFogMode(D3DRMFOGMODE mode)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::SetSceneFogParams(D3DVALUE start, D3DVALUE end, D3DVALUE density)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::SetOrientation(
++	IDirect3DRMFrame3* reference,
++	D3DVALUE dx,
++	D3DVALUE dy,
++	D3DVALUE dz,
++	D3DVALUE ux,
++	D3DVALUE uy,
++	D3DVALUE uz
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::SetPosition(IDirect3DRMFrame3* reference, D3DVALUE x, D3DVALUE y, D3DVALUE z)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::SetSortMode(D3DRMSORTMODE mode)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::Transform(D3DVECTOR* d, D3DVECTOR* s)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMFrameImpl::SetSceneFogMethod(DWORD flags)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
+diff --git a/miniwin/src/d3drm/d3drmlight.cpp b/miniwin/src/d3drm/d3drmlight.cpp
+index 351221a..228d3a8 100644
+--- a/miniwin/src/d3drm/d3drmlight.cpp
++++ b/miniwin/src/d3drm/d3drmlight.cpp
+@@ -1,4 +1,5 @@
+ #include "d3drmlight_impl.h"
++#include "miniwin.h"
+ 
+ Direct3DRMLightImpl::Direct3DRMLightImpl(D3DRMLIGHTTYPE type, float r, float g, float b) : m_type(type)
+ {
+@@ -21,3 +22,33 @@ D3DCOLOR Direct3DRMLightImpl::GetColor()
+ {
+ 	return m_color;
+ }
++
++HRESULT Direct3DRMLightImpl::SetColor(D3DCOLOR color)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMLightImpl::SetRange(D3DVALUE range)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMLightImpl::SetUmbra(D3DVALUE angle)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMLightImpl::SetPenumbra(D3DVALUE angle)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMLightImpl::SetEnableFrame(IDirect3DRMFrame* frame)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
+diff --git a/miniwin/src/d3drm/d3drmmesh.cpp b/miniwin/src/d3drm/d3drmmesh.cpp
+index d3b48a7..fcc6820 100644
+--- a/miniwin/src/d3drm/d3drmmesh.cpp
++++ b/miniwin/src/d3drm/d3drmmesh.cpp
+@@ -306,3 +306,9 @@ HRESULT Direct3DRMMeshImpl::GetBox(D3DRMBOX* box)
+ 
+ 	return DD_OK;
+ }
++
++HRESULT Direct3DRMMeshImpl::Scale(D3DVALUE sx, D3DVALUE sy, D3DVALUE sz)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
+diff --git a/miniwin/src/d3drm/d3drmtexture.cpp b/miniwin/src/d3drm/d3drmtexture.cpp
+index cc4dbe2..2cd4685 100644
+--- a/miniwin/src/d3drm/d3drmtexture.cpp
++++ b/miniwin/src/d3drm/d3drmtexture.cpp
+@@ -63,11 +63,21 @@ Direct3DRMTextureImpl::~Direct3DRMTextureImpl()
+ 
+ HRESULT Direct3DRMTextureImpl::QueryInterface(const GUID& riid, void** ppvObject)
+ {
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMTexture, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMTexture*>(this);
++		return DD_OK;
++	}
+ 	if (SDL_memcmp(&riid, &IID_IDirect3DRMTexture2, sizeof(GUID)) == 0) {
+ 		this->IUnknown::AddRef();
+ 		*ppvObject = static_cast<IDirect3DRMTexture2*>(this);
+ 		return DD_OK;
+ 	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMTexture3, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMTexture3*>(this);
++		return DD_OK;
++	}
+ 	MINIWIN_NOT_IMPLEMENTED();
+ 	return E_NOINTERFACE;
+ }
+@@ -80,3 +90,28 @@ HRESULT Direct3DRMTextureImpl::Changed(BOOL pixels, BOOL palette)
+ 	m_version++;
+ 	return DD_OK;
+ }
++
++// IDirect3DRMTexture3 interface
++D3DRMIMAGE* Direct3DRMTextureImpl::GetImage()
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return nullptr;
++}
++
++HRESULT Direct3DRMTextureImpl::SetDecalTransparency(BOOL transparency)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMTextureImpl::SetDecalTransparentColor(D3DCOLOR color)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMTextureImpl::GenerateMIPMap(DWORD flags)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
+diff --git a/miniwin/src/d3drm/d3drmviewport.cpp b/miniwin/src/d3drm/d3drmviewport.cpp
+index 93b2317..8572035 100644
+--- a/miniwin/src/d3drm/d3drmviewport.cpp
++++ b/miniwin/src/d3drm/d3drmviewport.cpp
+@@ -3,6 +3,7 @@
+ #include "d3drmmesh_impl.h"
+ #include "d3drmrenderer.h"
+ #include "d3drmviewport_impl.h"
++#include "d3dviewport_impl.h"
+ #include "ddraw_impl.h"
+ #include "mathutils.h"
+ #include "miniwin.h"
+@@ -25,6 +26,26 @@ Direct3DRMViewportImpl::~Direct3DRMViewportImpl()
+ 		m_camera->Release();
+ 		m_camera = nullptr;
+ 	}
++	if (m_d3dViewport) {
++		m_d3dViewport->Release();
++		m_d3dViewport = nullptr;
++	}
++}
++
++HRESULT Direct3DRMViewportImpl::QueryInterface(const GUID& riid, void** ppvObject)
++{
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMViewport, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMViewport*>(this);
++		return DD_OK;
++	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DRMViewport2, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DRMViewport2*>(this);
++		return DD_OK;
++	}
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOINTERFACE;
+ }
+ 
+ static void D3DRMMatrixMultiply(D3DRMMATRIX4D out, const D3DRMMATRIX4D a, const D3DRMMATRIX4D b)
+@@ -853,3 +874,53 @@ void Direct3DRMViewportImpl::CloseDevice()
+ {
+ 	m_renderer = nullptr;
+ }
++
++// IDirect3DRMViewport2 interface
++HRESULT Direct3DRMViewportImpl::Clear(DWORD flags)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOTIMPL;
++}
++
++HRESULT Direct3DRMViewportImpl::Render(IDirect3DRMFrame3* frame)
++{
++	return Render(static_cast<IDirect3DRMFrame*>(frame));
++}
++
++HRESULT Direct3DRMViewportImpl::SetCamera(IDirect3DRMFrame3* camera)
++{
++	return SetCamera(static_cast<IDirect3DRMFrame*>(camera));
++}
++
++HRESULT Direct3DRMViewportImpl::GetCamera(IDirect3DRMFrame3** camera)
++{
++	IDirect3DRMFrame* frame;
++	HRESULT result = GetCamera(&frame);
++	*camera = frame ? static_cast<Direct3DRMFrameImpl*>(frame) : nullptr;
++	return result;
++}
++
++LONG Direct3DRMViewportImpl::GetX()
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return 0;
++}
++
++LONG Direct3DRMViewportImpl::GetY()
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return 0;
++}
++
++HRESULT Direct3DRMViewportImpl::GetDirect3DViewport(IDirect3DViewport** viewport)
++{
++	if (!viewport) {
++		return DDERR_INVALIDPARAMS;
++	}
++	if (!m_d3dViewport) {
++		m_d3dViewport = static_cast<IDirect3DViewport*>(new Direct3DViewportImpl);
++	}
++	m_d3dViewport->AddRef();
++	*viewport = m_d3dViewport;
++	return DD_OK;
++}
+diff --git a/miniwin/src/internal/d3drm_impl.h b/miniwin/src/internal/d3drm_impl.h
+index c4426f1..5c82685 100644
+--- a/miniwin/src/internal/d3drm_impl.h
++++ b/miniwin/src/internal/d3drm_impl.h
+@@ -11,7 +11,7 @@ struct PickRecord {
+ 	D3DRMPICKDESC desc;
+ };
+ 
+-struct Direct3DRMImpl : virtual public IDirect3DRM2 {
++struct Direct3DRMImpl : virtual public IDirect3DRM3 {
+ 	// IUnknown interface
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+ 	// IDirect3DRM interface
+@@ -40,6 +40,27 @@ struct Direct3DRMImpl : virtual public IDirect3DRM2 {
+ 	) override;
+ 	HRESULT SetDefaultTextureShades(DWORD count) override;
+ 	HRESULT SetDefaultTextureColors(DWORD count) override;
++	// IDirect3DRM3 interface
++	HRESULT CreateFrame(IDirect3DRMFrame3* parent, IDirect3DRMFrame3** outFrame) override;
++	HRESULT CreateMaterial(D3DVALUE power, IDirect3DRMMaterial2** outMaterial) override;
++	HRESULT CreateDeviceFromSurface(
++		GUID* guid,
++		IDirectDraw* dd,
++		IDirectDrawSurface* surface,
++		DWORD flags,
++		IDirect3DRMDevice3** outDevice
++	) override;
++	HRESULT CreateTextureFromSurface(LPDIRECTDRAWSURFACE surface, IDirect3DRMTexture3** outTexture) override;
++	HRESULT CreateViewport(
++		IDirect3DRMDevice3* device,
++		IDirect3DRMFrame3* camera,
++		DWORD x,
++		DWORD y,
++		DWORD width,
++		DWORD height,
++		IDirect3DRMViewport2** outViewport
++	) override;
++	HRESULT LoadTexture(const char* filename, IDirect3DRMTexture3** outTexture) override;
+ };
+ 
+ template <typename InterfaceType, typename ActualType, typename ArrayInterface>
+diff --git a/miniwin/src/internal/d3drmdevice_impl.h b/miniwin/src/internal/d3drmdevice_impl.h
+index 46dc5ed..8859517 100644
+--- a/miniwin/src/internal/d3drmdevice_impl.h
++++ b/miniwin/src/internal/d3drmdevice_impl.h
+@@ -7,7 +7,7 @@
+ 
+ #include <SDL3/SDL.h>
+ 
+-struct Direct3DRMDevice2Impl : public Direct3DRMObjectBaseImpl<IDirect3DRMDevice2>, public IDirect3DRMMiniwinDevice {
++struct Direct3DRMDevice2Impl : public Direct3DRMObjectBaseImpl<IDirect3DRMDevice3>, public IDirect3DRMMiniwinDevice {
+ 	Direct3DRMDevice2Impl(DWORD width, DWORD height, Direct3DRMRenderer* renderer);
+ 	~Direct3DRMDevice2Impl() override;
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+@@ -31,6 +31,9 @@ struct Direct3DRMDevice2Impl : public Direct3DRMObjectBaseImpl<IDirect3DRMDevice
+ 	HRESULT Update() override;
+ 	HRESULT AddViewport(IDirect3DRMViewport* viewport) override;
+ 	HRESULT GetViewports(IDirect3DRMViewportArray** ppViewportArray) override;
++	// IDirect3DRMDevice3 interface
++	HRESULT GetDirect3DDevice2(IDirect3DDevice2** d3dDevice) override;
++	HRESULT FindPreferredTextureFormat(DDBitDepths bitDepths, DWORD flags, LPDDPIXELFORMAT pixelFormat) override;
+ 
+ 	// IDirect3DRMMiniwinDevice interface
+ 	bool ConvertEventToRenderCoordinates(SDL_Event* event) override;
+diff --git a/miniwin/src/internal/d3drmframe_impl.h b/miniwin/src/internal/d3drmframe_impl.h
+index 697b931..36fc463 100644
+--- a/miniwin/src/internal/d3drmframe_impl.h
++++ b/miniwin/src/internal/d3drmframe_impl.h
+@@ -7,7 +7,7 @@ class Direct3DRMLightArrayImpl;
+ class Direct3DRMVisualArrayImpl;
+ class Direct3DRMFrameArrayImpl;
+ 
+-struct Direct3DRMFrameImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMFrame2> {
++struct Direct3DRMFrameImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMFrame3> {
+ 	Direct3DRMFrameImpl(Direct3DRMFrameImpl* parent = nullptr);
+ 	~Direct3DRMFrameImpl() override;
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+@@ -28,6 +28,43 @@ struct Direct3DRMFrameImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMFrame2>
+ 	HRESULT SetColorRGB(float r, float g, float b) override;
+ 	HRESULT SetMaterialMode(D3DRMMATERIALMODE mode) override;
+ 	HRESULT GetChildren(IDirect3DRMFrameArray** children) override;
++	// IDirect3DRMFrame3 interface
++	HRESULT AddChild(IDirect3DRMFrame3* child) override;
++	HRESULT DeleteChild(IDirect3DRMFrame3* child) override;
++	HRESULT GetPosition(IDirect3DRMFrame3* reference, D3DVECTOR* position) override;
++	HRESULT AddTranslation(D3DRMCOMBINETYPE combine, D3DVALUE x, D3DVALUE y, D3DVALUE z) override;
++	HRESULT AddScale(D3DRMCOMBINETYPE combine, D3DVALUE sx, D3DVALUE sy, D3DVALUE sz) override;
++	HRESULT AddRotation(D3DRMCOMBINETYPE combine, D3DVALUE x, D3DVALUE y, D3DVALUE z, D3DVALUE theta) override;
++	HRESULT AddVisual(IUnknown* visual) override;
++	HRESULT GetParent(IDirect3DRMFrame3** parent) override;
++	HRESULT GetScene(IDirect3DRMFrame3** scene) override;
++	HRESULT GetTransform(IDirect3DRMFrame3* reference, D3DRMMATRIX4D matrix) override;
++	HRESULT GetOrientation(IDirect3DRMFrame3* reference, D3DVECTOR* dir, D3DVECTOR* up) override;
++	HRESULT GetVisuals(DWORD* count, IUnknown** visuals) override;
++	HRESULT InverseTransform(D3DVECTOR* d, D3DVECTOR* s) override;
++	HRESULT Load(void* filename, void* name, D3DRMLOADOPTIONS flags, D3DRMLOADTEXTURE3CALLBACK callback, void* arg)
++		override;
++	HRESULT LookAt(IDirect3DRMFrame3* target, IDirect3DRMFrame3* reference, D3DRMFRAMECONSTRAINT constraint) override;
++	HRESULT DeleteVisual(IUnknown* visual) override;
++	D3DCOLOR GetSceneBackground() override;
++	HRESULT SetSceneBackground(D3DCOLOR color) override;
++	HRESULT SetSceneFogEnable(BOOL enable) override;
++	HRESULT SetSceneFogColor(D3DCOLOR color) override;
++	HRESULT SetSceneFogMode(D3DRMFOGMODE mode) override;
++	HRESULT SetSceneFogParams(D3DVALUE start, D3DVALUE end, D3DVALUE density) override;
++	HRESULT SetOrientation(
++		IDirect3DRMFrame3* reference,
++		D3DVALUE dx,
++		D3DVALUE dy,
++		D3DVALUE dz,
++		D3DVALUE ux,
++		D3DVALUE uy,
++		D3DVALUE uz
++	) override;
++	HRESULT SetPosition(IDirect3DRMFrame3* reference, D3DVALUE x, D3DVALUE y, D3DVALUE z) override;
++	HRESULT SetSortMode(D3DRMSORTMODE mode) override;
++	HRESULT Transform(D3DVECTOR* d, D3DVECTOR* s) override;
++	HRESULT SetSceneFogMethod(DWORD flags) override;
+ 
+ 	Direct3DRMFrameImpl* m_parent{};
+ 	D3DRMMATRIX4D m_transform =
+diff --git a/miniwin/src/internal/d3drmlight_impl.h b/miniwin/src/internal/d3drmlight_impl.h
+index 7c75c1c..09c6b64 100644
+--- a/miniwin/src/internal/d3drmlight_impl.h
++++ b/miniwin/src/internal/d3drmlight_impl.h
+@@ -6,7 +6,12 @@
+ 
+ struct Direct3DRMLightImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMLight> {
+ 	Direct3DRMLightImpl(D3DRMLIGHTTYPE type, float r, float g, float b);
++	HRESULT SetColor(D3DCOLOR color) override;
+ 	HRESULT SetColorRGB(float r, float g, float b) override;
++	HRESULT SetRange(D3DVALUE range) override;
++	HRESULT SetUmbra(D3DVALUE angle) override;
++	HRESULT SetPenumbra(D3DVALUE angle) override;
++	HRESULT SetEnableFrame(IDirect3DRMFrame* frame) override;
+ 	D3DRMLIGHTTYPE GetType() override;
+ 	D3DCOLOR GetColor() override;
+ 
+diff --git a/miniwin/src/internal/d3drmmesh_impl.h b/miniwin/src/internal/d3drmmesh_impl.h
+index 34d307b..ec1fe90 100644
+--- a/miniwin/src/internal/d3drmmesh_impl.h
++++ b/miniwin/src/internal/d3drmmesh_impl.h
+@@ -67,6 +67,7 @@ struct MeshGroup {
+ struct Direct3DRMMeshImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMMesh> {
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+ 	HRESULT Clone(int flags, GUID iid, void** object) override;
++	HRESULT Scale(D3DVALUE sx, D3DVALUE sy, D3DVALUE sz) override;
+ 	HRESULT AddGroup(
+ 		unsigned int vertexCount,
+ 		unsigned int faceCount,
+diff --git a/miniwin/src/internal/d3drmtexture_impl.h b/miniwin/src/internal/d3drmtexture_impl.h
+index 35ef777..4f2b284 100644
+--- a/miniwin/src/internal/d3drmtexture_impl.h
++++ b/miniwin/src/internal/d3drmtexture_impl.h
+@@ -2,12 +2,17 @@
+ 
+ #include "d3drmobject_impl.h"
+ 
+-struct Direct3DRMTextureImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMTexture2> {
++struct Direct3DRMTextureImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMTexture3> {
+ 	Direct3DRMTextureImpl(D3DRMIMAGE* image);
+ 	Direct3DRMTextureImpl(IDirectDrawSurface* surface, bool holdsRef);
+ 	~Direct3DRMTextureImpl() override;
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+ 	HRESULT Changed(BOOL pixels, BOOL palette) override;
++	// IDirect3DRMTexture3 interface
++	D3DRMIMAGE* GetImage() override;
++	HRESULT SetDecalTransparency(BOOL transparency) override;
++	HRESULT SetDecalTransparentColor(D3DCOLOR color) override;
++	HRESULT GenerateMIPMap(DWORD flags) override;
+ 
+ 	IDirectDrawSurface* m_surface = nullptr;
+ 	Uint8 m_version = 0;
+diff --git a/miniwin/src/internal/d3drmviewport_impl.h b/miniwin/src/internal/d3drmviewport_impl.h
+index 98d6664..95d33f6 100644
+--- a/miniwin/src/internal/d3drmviewport_impl.h
++++ b/miniwin/src/internal/d3drmviewport_impl.h
+@@ -19,9 +19,10 @@ struct DeferredDrawCommand {
+ class Direct3DRMDeviceImpl;
+ class Direct3DRMFrameImpl;
+ 
+-struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewport> {
++struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewport2> {
+ 	Direct3DRMViewportImpl(DWORD width, DWORD height, Direct3DRMRenderer* renderer);
+ 	~Direct3DRMViewportImpl() override;
++	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+ 	HRESULT Render(IDirect3DRMFrame* group) override;
+ 	/**
+ 	 * @brief Blit the render back to our backbuffer
+@@ -43,6 +44,14 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 	HRESULT Transform(D3DRMVECTOR4D* screen, D3DVECTOR* world) override;
+ 	HRESULT InverseTransform(D3DVECTOR* world, D3DRMVECTOR4D* screen) override;
+ 	HRESULT Pick(float x, float y, LPDIRECT3DRMPICKEDARRAY* pickedArray) override;
++	// IDirect3DRMViewport2 interface
++	HRESULT Clear(DWORD flags) override;
++	HRESULT Render(IDirect3DRMFrame3* frame) override;
++	HRESULT SetCamera(IDirect3DRMFrame3* camera) override;
++	HRESULT GetCamera(IDirect3DRMFrame3** camera) override;
++	LONG GetX() override;
++	LONG GetY() override;
++	HRESULT GetDirect3DViewport(IDirect3DViewport** viewport) override;
+ 	void CloseDevice();
+ 	void UpdateProjectionMatrix();
+ 
+@@ -62,6 +71,7 @@ struct Direct3DRMViewportImpl : public Direct3DRMObjectBaseImpl<IDirect3DRMViewp
+ 	D3DRMMATRIX4D m_inverseProjectionMatrix;
+ 	IDirect3DRMFrame* m_rootFrame = nullptr;
+ 	IDirect3DRMFrame* m_camera = nullptr;
++	IDirect3DViewport* m_d3dViewport = nullptr;
+ 	D3DVALUE m_front = 1.f;
+ 	D3DVALUE m_back = 10.f;
+ 	D3DVALUE m_field = 0.5f;

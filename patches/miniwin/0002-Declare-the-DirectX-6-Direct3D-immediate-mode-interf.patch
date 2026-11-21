@@ -1,0 +1,615 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 18:02:10 -0800
+Subject: [PATCH] Declare the DirectX 6 Direct3D immediate-mode interfaces in
+ miniwin
+
+Add IDirect3D3, IDirect3DDevice3, IDirect3DViewport3 (over a new
+IDirect3DViewport), IDirect3DTexture2 and IDirect3DMaterial3, with
+their IIDs and the D3DMATRIX, D3DRECT, D3DMATERIAL and state-type
+declarations their methods take.
+
+The interfaces are answered by existing objects where the DirectX
+object model allows it:
+- DirectDrawImpl implements IDirect3D3 (QueryInterface IID_IDirect3D3).
+- Direct3DRMRenderer, the object miniwin hands out as IDirect3DDevice2,
+  implements IDirect3DDevice3 and answers IID_IDirect3DDevice2 and
+  IID_IDirect3DDevice3.
+- DirectDrawSurfaceImpl implements IDirect3DTexture2, as a DirectDraw
+  surface does.
+
+IDirect3DMaterial3 and IDirect3DViewport3 get new stub classes;
+IDirect3D3::CreateMaterial creates the material. Every new method
+logs once and returns DDERR_UNSUPPORTED.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/CMakeLists.txt b/miniwin/CMakeLists.txt
+index 925a6ec..1621035 100644
+--- a/miniwin/CMakeLists.txt
++++ b/miniwin/CMakeLists.txt
+@@ -11,6 +11,10 @@ add_library(miniwin STATIC EXCLUDE_FROM_ALL
+   src/ddraw/ddsurface.cpp
+   src/ddraw/framebuffer.cpp
+ 
++  # D3D
++  src/d3d/d3dmaterial.cpp
++  src/d3d/d3dviewport.cpp
++
+   # D3DRM
+   src/d3drm/d3drm.cpp
+   src/d3drm/d3drmdevice.cpp
+diff --git a/miniwin/include/miniwin/d3d.h b/miniwin/include/miniwin/d3d.h
+index 10313c4..3183b07 100644
+--- a/miniwin/include/miniwin/d3d.h
++++ b/miniwin/include/miniwin/d3d.h
+@@ -4,6 +4,17 @@
+ 
+ // --- GUIDs ---
+ DEFINE_GUID(IID_IDirect3D2, 0x6aae1ec1, 0x662a, 0x11d0, 0x88, 0x9d, 0x00, 0xaa, 0x00, 0xbb, 0xb7, 0x6a);
++DEFINE_GUID(IID_IDirect3D3, 0xbb223240, 0xe72b, 0x11d0, 0xa9, 0xb4, 0x00, 0xaa, 0x00, 0xc0, 0x99, 0x3e);
++DEFINE_GUID(IID_IDirect3DDevice2, 0x93281501, 0x8cf8, 0x11d0, 0x89, 0xab, 0x00, 0xa0, 0xc9, 0x05, 0x41, 0x29);
++DEFINE_GUID(IID_IDirect3DDevice3, 0xb0ab3b60, 0x33d7, 0x11d1, 0xa9, 0x81, 0x00, 0xc0, 0x4f, 0xd7, 0xb1, 0x74);
++DEFINE_GUID(IID_IDirect3DTexture2, 0x93281502, 0x8cf8, 0x11d0, 0x89, 0xab, 0x00, 0xa0, 0xc9, 0x05, 0x41, 0x29);
++DEFINE_GUID(IID_IDirect3DMaterial3, 0xca9c46f4, 0xd3c5, 0x11d1, 0xb7, 0x5a, 0x00, 0x60, 0x08, 0x52, 0xb3, 0x12);
++DEFINE_GUID(IID_IDirect3DViewport, 0x4417c146, 0x33ad, 0x11cf, 0x81, 0x6f, 0x00, 0x00, 0xc0, 0x20, 0x15, 0x6e);
++DEFINE_GUID(IID_IDirect3DViewport3, 0xb0ab3b61, 0x33d7, 0x11d1, 0xa9, 0x81, 0x00, 0xc0, 0x4f, 0xd7, 0xb1, 0x74);
++
++// --- Typedefs ---
++typedef DWORD D3DTEXTUREHANDLE, *LPD3DTEXTUREHANDLE;
++typedef DWORD D3DMATERIALHANDLE, *LPD3DMATERIALHANDLE;
+ 
+ // --- Enums ---
+ #define DDBD_8 DDBitDepths::BPP_8
+@@ -51,11 +62,118 @@ enum class D3DCOLORMODEL {
+ 	MONO,
+ };
+ 
++#define D3DPT_POINTLIST D3DPRIMITIVETYPE::POINTLIST
++#define D3DPT_LINELIST D3DPRIMITIVETYPE::LINELIST
++#define D3DPT_LINESTRIP D3DPRIMITIVETYPE::LINESTRIP
++#define D3DPT_TRIANGLELIST D3DPRIMITIVETYPE::TRIANGLELIST
++#define D3DPT_TRIANGLESTRIP D3DPRIMITIVETYPE::TRIANGLESTRIP
++#define D3DPT_TRIANGLEFAN D3DPRIMITIVETYPE::TRIANGLEFAN
++enum class D3DPRIMITIVETYPE : uint32_t {
++	POINTLIST = 1,
++	LINELIST = 2,
++	LINESTRIP = 3,
++	TRIANGLELIST = 4,
++	TRIANGLESTRIP = 5,
++	TRIANGLEFAN = 6,
++};
++
++#define D3DTRANSFORMSTATE_WORLD D3DTRANSFORMSTATETYPE::WORLD
++#define D3DTRANSFORMSTATE_VIEW D3DTRANSFORMSTATETYPE::VIEW
++#define D3DTRANSFORMSTATE_PROJECTION D3DTRANSFORMSTATETYPE::PROJECTION
++enum class D3DTRANSFORMSTATETYPE : uint32_t {
++	WORLD = 1,
++	VIEW = 2,
++	PROJECTION = 3,
++};
++
++#define D3DLIGHTSTATE_MATERIAL D3DLIGHTSTATETYPE::MATERIAL
++#define D3DLIGHTSTATE_AMBIENT D3DLIGHTSTATETYPE::AMBIENT
++#define D3DLIGHTSTATE_COLORMODEL D3DLIGHTSTATETYPE::COLORMODEL
++#define D3DLIGHTSTATE_FOGMODE D3DLIGHTSTATETYPE::FOGMODE
++#define D3DLIGHTSTATE_FOGSTART D3DLIGHTSTATETYPE::FOGSTART
++#define D3DLIGHTSTATE_FOGEND D3DLIGHTSTATETYPE::FOGEND
++#define D3DLIGHTSTATE_FOGDENSITY D3DLIGHTSTATETYPE::FOGDENSITY
++#define D3DLIGHTSTATE_COLORVERTEX D3DLIGHTSTATETYPE::COLORVERTEX
++enum class D3DLIGHTSTATETYPE : uint32_t {
++	MATERIAL = 1,
++	AMBIENT = 2,
++	COLORMODEL = 3,
++	FOGMODE = 4,
++	FOGSTART = 5,
++	FOGEND = 6,
++	FOGDENSITY = 7,
++	COLORVERTEX = 8,
++};
++
++#define D3DRENDERSTATE_ZENABLE D3DRENDERSTATETYPE::ZENABLE
++#define D3DRENDERSTATE_SHADEMODE D3DRENDERSTATETYPE::SHADEMODE
++#define D3DRENDERSTATE_ZWRITEENABLE D3DRENDERSTATETYPE::ZWRITEENABLE
++#define D3DRENDERSTATE_CULLMODE D3DRENDERSTATETYPE::CULLMODE
++#define D3DRENDERSTATE_DITHERENABLE D3DRENDERSTATETYPE::DITHERENABLE
++#define D3DRENDERSTATE_ALPHABLENDENABLE D3DRENDERSTATETYPE::ALPHABLENDENABLE
++#define D3DRENDERSTATE_SPECULARENABLE D3DRENDERSTATETYPE::SPECULARENABLE
++enum class D3DRENDERSTATETYPE : uint32_t {
++	ZENABLE = 7,
++	SHADEMODE = 9,
++	ZWRITEENABLE = 14,
++	CULLMODE = 22,
++	DITHERENABLE = 26,
++	ALPHABLENDENABLE = 27,
++	SPECULARENABLE = 29,
++};
++
++#define D3DTSS_COLOROP D3DTEXTURESTAGESTATETYPE::COLOROP
++#define D3DTSS_COLORARG1 D3DTEXTURESTAGESTATETYPE::COLORARG1
++#define D3DTSS_COLORARG2 D3DTEXTURESTAGESTATETYPE::COLORARG2
++#define D3DTSS_ALPHAOP D3DTEXTURESTAGESTATETYPE::ALPHAOP
++#define D3DTSS_ALPHAARG1 D3DTEXTURESTAGESTATETYPE::ALPHAARG1
++#define D3DTSS_ALPHAARG2 D3DTEXTURESTAGESTATETYPE::ALPHAARG2
++enum class D3DTEXTURESTAGESTATETYPE : uint32_t {
++	COLOROP = 1,
++	COLORARG1 = 2,
++	COLORARG2 = 3,
++	ALPHAOP = 4,
++	ALPHAARG1 = 5,
++	ALPHAARG2 = 6,
++};
++
+ // --- Structs ---
+ struct D3DVECTOR {
+ 	float x, y, z;
+ };
+ 
++struct D3DCOLORVALUE {
++	float r, g, b, a;
++};
++
++struct D3DMATRIX {
++	float _11, _12, _13, _14;
++	float _21, _22, _23, _24;
++	float _31, _32, _33, _34;
++	float _41, _42, _43, _44;
++};
++typedef D3DMATRIX* LPD3DMATRIX;
++
++struct D3DRECT {
++	LONG x1;
++	LONG y1;
++	LONG x2;
++	LONG y2;
++};
++typedef D3DRECT* LPD3DRECT;
++
++struct D3DMATERIAL {
++	DWORD dwSize;
++	D3DCOLORVALUE diffuse;
++	D3DCOLORVALUE ambient;
++	D3DCOLORVALUE specular;
++	D3DCOLORVALUE emissive;
++	float power;
++	D3DTEXTUREHANDLE hTexture;
++	DWORD dwRampSize;
++};
++typedef D3DMATERIAL* LPD3DMATERIAL;
++
+ struct D3DDEVICEDESC {
+ 	D3DDeviceDescFlags dwFlags;
+ 	DDBitDepths dwDeviceZBufferBitDepth;
+@@ -70,6 +188,52 @@ struct D3DDEVICEDESC {
+ typedef D3DDEVICEDESC* LPD3DDEVICEDESC;
+ 
+ struct IDirect3DDevice2 : virtual public IUnknown {};
++typedef IDirect3DDevice2* LPDIRECT3DDEVICE2;
++
++struct IDirect3DTexture2 : virtual public IUnknown {
++	virtual HRESULT GetHandle(IDirect3DDevice2* device, LPD3DTEXTUREHANDLE handle) = 0;
++};
++typedef IDirect3DTexture2* LPDIRECT3DTEXTURE2;
++
++struct IDirect3DViewport : virtual public IUnknown {};
++typedef IDirect3DViewport* LPDIRECT3DVIEWPORT;
++
++struct IDirect3DViewport3 : public IDirect3DViewport {
++	virtual HRESULT Clear2(DWORD count, LPD3DRECT rects, DWORD flags, DWORD color, float z, DWORD stencil) = 0;
++};
++typedef IDirect3DViewport3* LPDIRECT3DVIEWPORT3;
++
++struct IDirect3D3;
++struct IDirect3DDevice3 : public IDirect3DDevice2 {
++	virtual HRESULT GetDirect3D(IDirect3D3** d3d) = 0;
++	virtual HRESULT SetCurrentViewport(IDirect3DViewport3* viewport) = 0;
++	virtual HRESULT GetRenderState(D3DRENDERSTATETYPE state, LPDWORD value) = 0;
++	virtual HRESULT SetRenderState(D3DRENDERSTATETYPE state, DWORD value) = 0;
++	virtual HRESULT GetLightState(D3DLIGHTSTATETYPE state, LPDWORD value) = 0;
++	virtual HRESULT SetLightState(D3DLIGHTSTATETYPE state, DWORD value) = 0;
++	virtual HRESULT SetTransform(D3DTRANSFORMSTATETYPE state, LPD3DMATRIX matrix) = 0;
++	virtual HRESULT GetTransform(D3DTRANSFORMSTATETYPE state, LPD3DMATRIX matrix) = 0;
++	virtual HRESULT DrawIndexedPrimitive(
++		D3DPRIMITIVETYPE primitiveType,
++		DWORD vertexType,
++		LPVOID vertices,
++		DWORD vertexCount,
++		WORD* indices,
++		DWORD indexCount,
++		DWORD flags
++	) = 0;
++	virtual HRESULT GetTexture(DWORD stage, IDirect3DTexture2** texture) = 0;
++	virtual HRESULT SetTexture(DWORD stage, IDirect3DTexture2* texture) = 0;
++	virtual HRESULT GetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE state, LPDWORD value) = 0;
++	virtual HRESULT SetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE state, DWORD value) = 0;
++};
++typedef IDirect3DDevice3* LPDIRECT3DDEVICE3;
++
++struct IDirect3DMaterial3 : virtual public IUnknown {
++	virtual HRESULT SetMaterial(LPD3DMATERIAL data) = 0;
++	virtual HRESULT GetHandle(IDirect3DDevice3* device, LPD3DMATERIALHANDLE handle) = 0;
++};
++typedef IDirect3DMaterial3* LPDIRECT3DMATERIAL3;
+ 
+ typedef HRESULT (*LPD3DENUMDEVICESCALLBACK)(LPGUID, LPSTR, LPSTR, LPD3DDEVICEDESC, LPD3DDEVICEDESC, LPVOID);
+ struct IDirect3D2 : virtual public IUnknown {
+@@ -81,3 +245,8 @@ struct IDirect3D2 : virtual public IUnknown {
+ 	virtual HRESULT EnumDevices(LPD3DENUMDEVICESCALLBACK cb, void* ctx) = 0;
+ };
+ typedef IDirect3D2* LPDIRECT3D2;
++
++struct IDirect3D3 : public IDirect3D2 {
++	virtual HRESULT CreateMaterial(IDirect3DMaterial3** material, IUnknown* outer) = 0;
++};
++typedef IDirect3D3* LPDIRECT3D3;
+diff --git a/miniwin/src/d3d/d3dmaterial.cpp b/miniwin/src/d3d/d3dmaterial.cpp
+new file mode 100644
+index 0000000..78aceda
+--- /dev/null
++++ b/miniwin/src/d3d/d3dmaterial.cpp
+@@ -0,0 +1,25 @@
++#include "d3dmaterial_impl.h"
++#include "miniwin.h"
++
++HRESULT Direct3DMaterialImpl::QueryInterface(const GUID& riid, void** ppvObject)
++{
++	if (SDL_memcmp(&riid, &IID_IDirect3DMaterial3, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DMaterial3*>(this);
++		return DD_OK;
++	}
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOINTERFACE;
++}
++
++HRESULT Direct3DMaterialImpl::SetMaterial(LPD3DMATERIAL data)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DMaterialImpl::GetHandle(IDirect3DDevice3* device, LPD3DMATERIALHANDLE handle)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
+diff --git a/miniwin/src/d3d/d3dviewport.cpp b/miniwin/src/d3d/d3dviewport.cpp
+new file mode 100644
+index 0000000..24eb24a
+--- /dev/null
++++ b/miniwin/src/d3d/d3dviewport.cpp
+@@ -0,0 +1,24 @@
++#include "d3dviewport_impl.h"
++#include "miniwin.h"
++
++HRESULT Direct3DViewportImpl::QueryInterface(const GUID& riid, void** ppvObject)
++{
++	if (SDL_memcmp(&riid, &IID_IDirect3DViewport, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DViewport*>(this);
++		return DD_OK;
++	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DViewport3, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DViewport3*>(this);
++		return DD_OK;
++	}
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOINTERFACE;
++}
++
++HRESULT Direct3DViewportImpl::Clear2(DWORD count, LPD3DRECT rects, DWORD flags, DWORD color, float z, DWORD stencil)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
+diff --git a/miniwin/src/d3drm/d3drmrenderer.cpp b/miniwin/src/d3drm/d3drmrenderer.cpp
+index 03c5506..aa38c9c 100644
+--- a/miniwin/src/d3drm/d3drmrenderer.cpp
++++ b/miniwin/src/d3drm/d3drmrenderer.cpp
+@@ -1,4 +1,5 @@
+ #include "d3drmrenderer.h"
++#include "miniwin.h"
+ #ifdef USE_OPENGL1
+ #include "d3drmrenderer_opengl1.h"
+ #endif
+@@ -38,6 +39,108 @@ Direct3DRMRenderer::~Direct3DRMRenderer()
+ 	}
+ }
+ 
++HRESULT Direct3DRMRenderer::QueryInterface(const GUID& riid, void** ppvObject)
++{
++	if (SDL_memcmp(&riid, &IID_IDirect3DDevice2, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DDevice2*>(this);
++		return DD_OK;
++	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DDevice3, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DDevice3*>(this);
++		return DD_OK;
++	}
++	MINIWIN_NOT_IMPLEMENTED();
++	return E_NOINTERFACE;
++}
++
++HRESULT Direct3DRMRenderer::GetDirect3D(IDirect3D3** d3d)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::SetCurrentViewport(IDirect3DViewport3* viewport)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::GetRenderState(D3DRENDERSTATETYPE state, LPDWORD value)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::SetRenderState(D3DRENDERSTATETYPE state, DWORD value)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::GetLightState(D3DLIGHTSTATETYPE state, LPDWORD value)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::SetLightState(D3DLIGHTSTATETYPE state, DWORD value)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::SetTransform(D3DTRANSFORMSTATETYPE state, LPD3DMATRIX matrix)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::GetTransform(D3DTRANSFORMSTATETYPE state, LPD3DMATRIX matrix)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::DrawIndexedPrimitive(
++	D3DPRIMITIVETYPE primitiveType,
++	DWORD vertexType,
++	LPVOID vertices,
++	DWORD vertexCount,
++	WORD* indices,
++	DWORD indexCount,
++	DWORD flags
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::GetTexture(DWORD stage, IDirect3DTexture2** texture)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::SetTexture(DWORD stage, IDirect3DTexture2* texture)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::GetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE state, LPDWORD value)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT Direct3DRMRenderer::SetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE state, DWORD value)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
+ void Direct3DRMRenderer::RegisterDestroyCallback(IDirect3DRMObject* object, Uint32 id, DestroyCallback callback)
+ {
+ 	auto* ctx = new DestroyCallbackContext{this, object, id, callback};
+diff --git a/miniwin/src/ddraw/ddraw.cpp b/miniwin/src/ddraw/ddraw.cpp
+index 15e1461..ae24ac6 100644
+--- a/miniwin/src/ddraw/ddraw.cpp
++++ b/miniwin/src/ddraw/ddraw.cpp
+@@ -1,6 +1,7 @@
+ 
+ #include "d3drmrenderer.h"
+ #include "ddpalette_impl.h"
++#include "d3dmaterial_impl.h"
+ #include "ddraw_impl.h"
+ #include "ddsurface_impl.h"
+ #include "dummysurface_impl.h"
+@@ -39,6 +40,11 @@ HRESULT DirectDrawImpl::QueryInterface(const GUID& riid, void** ppvObject)
+ 		*ppvObject = static_cast<IDirect3D2*>(this);
+ 		return S_OK;
+ 	}
++	if (SDL_memcmp(&riid, &IID_IDirect3D3, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3D3*>(this);
++		return S_OK;
++	}
+ 	if (SDL_memcmp(&riid, &IID_IDirect3DMiniwin, sizeof(GUID)) == 0) {
+ 		this->IUnknown::AddRef();
+ 		*ppvObject = static_cast<IDirect3DMiniwin*>(this);
+@@ -381,6 +387,15 @@ HRESULT DirectDrawImpl::CreateDevice(
+ 	return DD_OK;
+ }
+ 
++HRESULT DirectDrawImpl::CreateMaterial(IDirect3DMaterial3** material, IUnknown* outer)
++{
++	if (!material) {
++		return DDERR_INVALIDPARAMS;
++	}
++	*material = static_cast<IDirect3DMaterial3*>(new Direct3DMaterialImpl);
++	return DD_OK;
++}
++
+ HRESULT DirectDrawEnumerate(LPDDENUMCALLBACKA cb, void* context)
+ {
+ 	const char* driverName = SDL_GetCurrentVideoDriver();
+diff --git a/miniwin/src/ddraw/ddsurface.cpp b/miniwin/src/ddraw/ddsurface.cpp
+index 8a26f81..b46fb33 100644
+--- a/miniwin/src/ddraw/ddsurface.cpp
++++ b/miniwin/src/ddraw/ddsurface.cpp
+@@ -43,6 +43,11 @@ HRESULT DirectDrawSurfaceImpl::QueryInterface(const GUID& riid, void** ppvObject
+ 		*ppvObject = static_cast<IDirectDrawSurface4*>(this);
+ 		return S_OK;
+ 	}
++	if (SDL_memcmp(&riid, &IID_IDirect3DTexture2, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirect3DTexture2*>(this);
++		return S_OK;
++	}
+ 	SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "DirectDrawSurfaceImpl does not implement guid");
+ 	return E_NOINTERFACE;
+ }
+@@ -317,6 +322,13 @@ HRESULT DirectDrawSurfaceImpl::Unlock(LPRECT lpRect)
+ 	return DDERR_UNSUPPORTED;
+ }
+ 
++// IDirect3DTexture2 interface
++HRESULT DirectDrawSurfaceImpl::GetHandle(IDirect3DDevice2* device, LPD3DTEXTUREHANDLE handle)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
+ IDirect3DRMTexture2* DirectDrawSurfaceImpl::ToTexture()
+ {
+ 	if (!m_texture) {
+diff --git a/miniwin/src/internal/d3dmaterial_impl.h b/miniwin/src/internal/d3dmaterial_impl.h
+new file mode 100644
+index 0000000..9cec1b9
+--- /dev/null
++++ b/miniwin/src/internal/d3dmaterial_impl.h
+@@ -0,0 +1,11 @@
++#pragma once
++
++#include "miniwin/d3d.h"
++
++struct Direct3DMaterialImpl : public IDirect3DMaterial3 {
++	// IUnknown interface
++	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
++	// IDirect3DMaterial3 interface
++	HRESULT SetMaterial(LPD3DMATERIAL data) override;
++	HRESULT GetHandle(IDirect3DDevice3* device, LPD3DMATERIALHANDLE handle) override;
++};
+diff --git a/miniwin/src/internal/d3drmrenderer.h b/miniwin/src/internal/d3drmrenderer.h
+index 884030f..8cfcc02 100644
+--- a/miniwin/src/internal/d3drmrenderer.h
++++ b/miniwin/src/internal/d3drmrenderer.h
+@@ -28,9 +28,35 @@ struct Plane {
+ 	float d;
+ };
+ 
+-class Direct3DRMRenderer : public IDirect3DDevice2 {
++class Direct3DRMRenderer : public IDirect3DDevice3 {
+ public:
+ 	~Direct3DRMRenderer() override;
++	// IUnknown interface
++	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
++	// IDirect3DDevice3 interface
++	HRESULT GetDirect3D(IDirect3D3** d3d) override;
++	HRESULT SetCurrentViewport(IDirect3DViewport3* viewport) override;
++	HRESULT GetRenderState(D3DRENDERSTATETYPE state, LPDWORD value) override;
++	HRESULT SetRenderState(D3DRENDERSTATETYPE state, DWORD value) override;
++	HRESULT GetLightState(D3DLIGHTSTATETYPE state, LPDWORD value) override;
++	HRESULT SetLightState(D3DLIGHTSTATETYPE state, DWORD value) override;
++	HRESULT SetTransform(D3DTRANSFORMSTATETYPE state, LPD3DMATRIX matrix) override;
++	HRESULT GetTransform(D3DTRANSFORMSTATETYPE state, LPD3DMATRIX matrix) override;
++	HRESULT DrawIndexedPrimitive(
++		D3DPRIMITIVETYPE primitiveType,
++		DWORD vertexType,
++		LPVOID vertices,
++		DWORD vertexCount,
++		WORD* indices,
++		DWORD indexCount,
++		DWORD flags
++	) override;
++	HRESULT GetTexture(DWORD stage, IDirect3DTexture2** texture) override;
++	HRESULT SetTexture(DWORD stage, IDirect3DTexture2* texture) override;
++	HRESULT GetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE state, LPDWORD value) override;
++	HRESULT SetTextureStageState(DWORD stage, D3DTEXTURESTAGESTATETYPE state, DWORD value) override;
++
++	// Direct3DRMRenderer interface
+ 	virtual void PushLights(const SceneLight* vertices, size_t count) = 0;
+ 	virtual void SetProjection(const D3DRMMATRIX4D& projection, D3DVALUE front, D3DVALUE back) = 0;
+ 	virtual void SetFrustumPlanes(const Plane* frustumPlanes) = 0;
+diff --git a/miniwin/src/internal/d3dviewport_impl.h b/miniwin/src/internal/d3dviewport_impl.h
+new file mode 100644
+index 0000000..e4fa05f
+--- /dev/null
++++ b/miniwin/src/internal/d3dviewport_impl.h
+@@ -0,0 +1,10 @@
++#pragma once
++
++#include "miniwin/d3d.h"
++
++struct Direct3DViewportImpl : public IDirect3DViewport3 {
++	// IUnknown interface
++	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
++	// IDirect3DViewport3 interface
++	HRESULT Clear2(DWORD count, LPD3DRECT rects, DWORD flags, DWORD color, float z, DWORD stencil) override;
++};
+diff --git a/miniwin/src/internal/ddraw_impl.h b/miniwin/src/internal/ddraw_impl.h
+index 7176ea0..330d72a 100644
+--- a/miniwin/src/internal/ddraw_impl.h
++++ b/miniwin/src/internal/ddraw_impl.h
+@@ -16,7 +16,7 @@ inline static SDL_Rect ConvertRect(const RECT* r)
+ 	return {r->left, r->top, r->right - r->left, r->bottom - r->top};
+ }
+ 
+-struct DirectDrawImpl : public IDirectDraw4, public IDirect3D2, public IDirect3DMiniwin {
++struct DirectDrawImpl : public IDirectDraw4, public IDirect3D3, public IDirect3DMiniwin {
+ 	// IUnknown interface
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+ 	// IDirectDraw interface
+@@ -57,6 +57,8 @@ struct DirectDrawImpl : public IDirectDraw4, public IDirect3D2, public IDirect3D
+ 	HRESULT CreateDevice(const GUID& guid, IDirectDrawSurface* pBackBuffer, IDirect3DDevice2** ppDirect3DDevice)
+ 		override;
+ 	HRESULT EnumDevices(LPD3DENUMDEVICESCALLBACK cb, void* ctx) override;
++	// IDirect3D3 interface
++	HRESULT CreateMaterial(IDirect3DMaterial3** material, IUnknown* outer) override;
+ 	// IDirect3DMiniwin interface
+ 	HRESULT RequestMSAA(DWORD msaaSamples) override
+ 	{
+diff --git a/miniwin/src/internal/ddsurface_impl.h b/miniwin/src/internal/ddsurface_impl.h
+index 5a629ce..8bca5ee 100644
+--- a/miniwin/src/internal/ddsurface_impl.h
++++ b/miniwin/src/internal/ddsurface_impl.h
+@@ -1,9 +1,10 @@
+ #pragma once
+ 
+ #include <SDL3/SDL.h>
++#include <miniwin/d3d.h>
+ #include <miniwin/ddraw.h>
+ 
+-struct DirectDrawSurfaceImpl : public IDirectDrawSurface4 {
++struct DirectDrawSurfaceImpl : public IDirectDrawSurface4, public IDirect3DTexture2 {
+ 	DirectDrawSurfaceImpl(int width, int height, SDL_PixelFormat format);
+ 	~DirectDrawSurfaceImpl() override;
+ 
+@@ -47,6 +48,8 @@ struct DirectDrawSurfaceImpl : public IDirectDrawSurface4 {
+ 	HRESULT GetSurfaceDesc(LPDDSURFACEDESC2 lpDDSurfaceDesc) override;
+ 	HRESULT Lock(LPRECT lpDestRect, LPDDSURFACEDESC2 lpDDSurfaceDesc, DDLockFlags dwFlags, HANDLE hEvent) override;
+ 	HRESULT Unlock(LPRECT lpRect) override;
++	// IDirect3DTexture2 interface
++	HRESULT GetHandle(IDirect3DDevice2* device, LPD3DTEXTUREHANDLE handle) override;
+ 
+ 	IDirect3DRMTexture2* ToTexture();
+ 

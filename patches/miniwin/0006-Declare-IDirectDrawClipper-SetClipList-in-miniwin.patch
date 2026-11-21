@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 18:11:44 -0800
+Subject: [PATCH] Declare IDirectDrawClipper::SetClipList in miniwin
+
+Add the RGNDATA and RGNDATAHEADER structs and IDirectDrawClipper's
+SetClipList. Like SetHWnd, it is defined on the interface itself
+because CreateClipper returns a plain IDirectDrawClipper. It logs once
+and returns DDERR_UNSUPPORTED.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/ddraw.h b/miniwin/include/miniwin/ddraw.h
+index d7385f9..e01262c 100644
+--- a/miniwin/include/miniwin/ddraw.h
++++ b/miniwin/include/miniwin/ddraw.h
+@@ -359,6 +359,7 @@ struct IDirectDrawPalette : virtual public IUnknown {
+ typedef struct IDirectDrawPalette* LPDIRECTDRAWPALETTE;
+ 
+ struct IDirectDrawClipper : virtual public IUnknown {
++	virtual HRESULT SetClipList(LPRGNDATA lpClipList, DWORD dwFlags);
+ 	virtual HRESULT SetHWnd(DWORD unnamedParam1, HWND hWnd);
+ };
+ typedef IDirectDrawClipper* LPDIRECTDRAWCLIPPER;
+diff --git a/miniwin/include/miniwin/windows.h b/miniwin/include/miniwin/windows.h
+index 3085e9b..c42be8f 100644
+--- a/miniwin/include/miniwin/windows.h
++++ b/miniwin/include/miniwin/windows.h
+@@ -103,6 +103,20 @@ struct RECT {
+ };
+ typedef RECT* LPRECT;
+ 
++struct RGNDATAHEADER {
++	DWORD dwSize;
++	DWORD iType;
++	DWORD nCount;
++	DWORD nRgnSize;
++	RECT rcBound;
++};
++
++struct RGNDATA {
++	RGNDATAHEADER rdh;
++	char Buffer[1];
++};
++typedef RGNDATA* LPRGNDATA;
++
+ struct BITMAPINFOHEADER {
+ 	DWORD biSize;
+ 	LONG biWidth;
+diff --git a/miniwin/src/windows/windows.cpp b/miniwin/src/windows/windows.cpp
+index ad6dbc5..b7f15e8 100644
+--- a/miniwin/src/windows/windows.cpp
++++ b/miniwin/src/windows/windows.cpp
+@@ -29,6 +29,12 @@ HRESULT IUnknown::QueryInterface(const GUID& riid, void** ppvObject)
+ 	return E_NOINTERFACE;
+ }
+ 
++HRESULT IDirectDrawClipper::SetClipList(LPRGNDATA lpClipList, DWORD dwFlags)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
+ HRESULT IDirectDrawClipper::SetHWnd(DWORD unnamedParam1, HWND hWnd)
+ {
+ 	return DD_OK;

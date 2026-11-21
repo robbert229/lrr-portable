@@ -1,0 +1,518 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sun, 15 Nov 2026 17:59:58 -0800
+Subject: [PATCH] Declare IDirectDraw4 and IDirectDrawSurface4 in miniwin
+
+Add the DirectX 6 DirectDraw interfaces with their DDSURFACEDESC2 and
+DDSCAPS2 structs and IIDs. IDirectDraw4 extends IDirectDraw2 and
+IDirectDrawSurface4 extends IDirectDrawSurface3, redeclaring the methods
+whose DirectX 6 signatures take the version-4 types, so callers holding
+an IDirectDraw4 or IDirectDrawSurface4 see the DirectX 6 signatures.
+
+DirectDrawImpl now answers QueryInterface for IID_IDirectDraw and
+IID_IDirectDraw4, and the surface classes for IID_IDirectDrawSurface,
+IID_IDirectDrawSurface3 and IID_IDirectDrawSurface4. The new methods are
+stubs that log once and return DDERR_UNSUPPORTED.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/include/miniwin/ddraw.h b/miniwin/include/miniwin/ddraw.h
+index 912a1b9..d7385f9 100644
+--- a/miniwin/include/miniwin/ddraw.h
++++ b/miniwin/include/miniwin/ddraw.h
+@@ -100,8 +100,12 @@
+ #define DDERR_NOTPALETTIZED MAKE_DDHRESULT(589)
+ 
+ // --- GUIDs ---
++DEFINE_GUID(IID_IDirectDraw, 0x6C14DB80, 0xA733, 0x11CE, 0xA5, 0x21, 0x00, 0x20, 0xAF, 0x0B, 0xE5, 0x60);
+ DEFINE_GUID(IID_IDirectDraw2, 0xB3A6F3E0, 0x2B43, 0x11CF, 0xA2, 0xDE, 0x00, 0xAA, 0x00, 0xB9, 0x33, 0x56);
++DEFINE_GUID(IID_IDirectDraw4, 0x9C59509A, 0x39BD, 0x11D1, 0x8C, 0x4A, 0x00, 0xC0, 0x4F, 0xD9, 0x30, 0xC5);
++DEFINE_GUID(IID_IDirectDrawSurface, 0x6C14DB81, 0xA733, 0x11CE, 0xA5, 0x21, 0x00, 0x20, 0xAF, 0x0B, 0xE5, 0x60);
+ DEFINE_GUID(IID_IDirectDrawSurface3, 0xDA044E00, 0x69B2, 0x11D0, 0xA1, 0xD5, 0x00, 0xAA, 0x00, 0xB8, 0xDF, 0xBB);
++DEFINE_GUID(IID_IDirectDrawSurface4, 0x0B2B8630, 0xAD35, 0x11D0, 0x8E, 0xA6, 0x00, 0x60, 0x97, 0x97, 0xEA, 0x5B);
+ 
+ // --- Enums ---
+ #define DDCKEY_SRCBLT DDColorKeyFlags::SRCBLT
+@@ -251,6 +255,14 @@ struct DDSCAPS {
+ };
+ typedef struct DDSCAPS* LPDDSCAPS;
+ 
++struct DDSCAPS2 {
++	DDSCapsFlags dwCaps;
++	DWORD dwCaps2;
++	DWORD dwCaps3;
++	DWORD dwCaps4;
++};
++typedef struct DDSCAPS2* LPDDSCAPS2;
++
+ #define DDBLTFX_NOTEARING DDBLTFXFlags::NOTEARING
+ enum class DDBLTFXFlags : uint8_t {
+ 	NOTEARING = 1 << 3,
+@@ -294,6 +306,36 @@ struct DDSURFACEDESC {
+ };
+ typedef struct DDSURFACEDESC* LPDDSURFACEDESC;
+ 
++struct DDSURFACEDESC2 {
++	DWORD dwSize;
++	DDSurfaceDescFlags dwFlags;
++	DWORD dwHeight;
++	DWORD dwWidth;
++	union {
++		LONG lPitch;
++		DWORD dwLinearSize;
++	};
++	union {
++		DWORD dwBackBufferCount;
++		DWORD dwDepth;
++	};
++	union {
++		DWORD dwMipMapCount;
++		DWORD dwRefreshRate;
++	};
++	DWORD dwAlphaBitDepth;
++	DWORD dwReserved;
++	LPVOID lpSurface;
++	DDCOLORKEY ddckCKDestOverlay;
++	DDCOLORKEY ddckCKDestBlt;
++	DDCOLORKEY ddckCKSrcOverlay;
++	DDCOLORKEY ddckCKSrcBlt;
++	DDPIXELFORMAT ddpfPixelFormat;
++	DDSCAPS2 ddsCaps;
++	DWORD dwTextureStage;
++};
++typedef struct DDSURFACEDESC2* LPDDSURFACEDESC2;
++
+ struct PALETTEENTRY {
+ 	BYTE peRed;
+ 	BYTE peGreen;
+@@ -357,6 +399,22 @@ struct IDirectDrawSurface : virtual public IUnknown {
+ struct IDirectDrawSurface3 : public IDirectDrawSurface {};
+ typedef IDirectDrawSurface3* LPDIRECTDRAWSURFACE3;
+ 
++typedef struct IDirectDrawSurface4* LPDIRECTDRAWSURFACE4;
++struct IDirectDrawSurface4 : public IDirectDrawSurface3 {
++	virtual HRESULT Blt(
++		LPRECT lpDestRect,
++		LPDIRECTDRAWSURFACE4 lpDDSrcSurface,
++		LPRECT lpSrcRect,
++		DDBltFlags dwFlags,
++		LPDDBLTFX lpDDBltFx
++	) = 0;
++	virtual HRESULT Flip(LPDIRECTDRAWSURFACE4 lpDDSurfaceTargetOverride, DDFlipFlags dwFlags) = 0;
++	virtual HRESULT GetAttachedSurface(LPDDSCAPS2 lpDDSCaps, LPDIRECTDRAWSURFACE4* lplpDDAttachedSurface) = 0;
++	virtual HRESULT GetSurfaceDesc(LPDDSURFACEDESC2 lpDDSurfaceDesc) = 0;
++	virtual HRESULT Lock(LPRECT lpDestRect, LPDDSURFACEDESC2 lpDDSurfaceDesc, DDLockFlags dwFlags, HANDLE hEvent) = 0;
++	virtual HRESULT Unlock(LPRECT lpRect) = 0;
++};
++
+ typedef HRESULT (*LPDDENUMMODESCALLBACK)(LPDDSURFACEDESC, LPVOID);
+ struct IDirectDraw : virtual public IUnknown {
+ 	virtual HRESULT CreateClipper(DWORD dwFlags, LPDIRECTDRAWCLIPPER* lplpDDClipper, IUnknown* pUnkOuter) = 0;
+@@ -388,6 +446,24 @@ struct IDirectDraw : virtual public IUnknown {
+ struct IDirectDraw2 : public IDirectDraw {};
+ typedef IDirectDraw2* LPDIRECTDRAW2;
+ 
++typedef HRESULT (*LPDDENUMMODESCALLBACK2)(LPDDSURFACEDESC2, LPVOID);
++struct IDirectDraw4 : public IDirectDraw2 {
++	virtual HRESULT CreateSurface(
++		LPDDSURFACEDESC2 lpDDSurfaceDesc,
++		LPDIRECTDRAWSURFACE4* lplpDDSurface,
++		IUnknown* pUnkOuter
++	) = 0;
++	virtual HRESULT EnumDisplayModes(
++		DWORD dwFlags,
++		LPDDSURFACEDESC2 lpDDSurfaceDesc,
++		LPVOID lpContext,
++		LPDDENUMMODESCALLBACK2 lpEnumModesCallback
++	) = 0;
++	virtual HRESULT SetDisplayMode(DWORD dwWidth, DWORD dwHeight, DWORD dwBPP, DWORD dwRefreshRate, DWORD dwFlags) = 0;
++	virtual HRESULT GetAvailableVidMem(LPDDSCAPS2 lpDDSCaps, LPDWORD lpdwTotal, LPDWORD lpdwFree) = 0;
++};
++typedef IDirectDraw4* LPDIRECTDRAW4;
++
+ // --- Functions ---
+ 
+ HRESULT DirectDrawCreate(LPGUID lpGuid, LPDIRECTDRAW* lplpDD, IUnknown* pUnkOuter);
+diff --git a/miniwin/src/ddraw/ddraw.cpp b/miniwin/src/ddraw/ddraw.cpp
+index cec4f80..15e1461 100644
+--- a/miniwin/src/ddraw/ddraw.cpp
++++ b/miniwin/src/ddraw/ddraw.cpp
+@@ -19,11 +19,21 @@ Direct3DRMRenderer* DDRenderer;
+ 
+ HRESULT DirectDrawImpl::QueryInterface(const GUID& riid, void** ppvObject)
+ {
++	if (SDL_memcmp(&riid, &IID_IDirectDraw, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirectDraw*>(this);
++		return S_OK;
++	}
+ 	if (SDL_memcmp(&riid, &IID_IDirectDraw2, sizeof(GUID)) == 0) {
+ 		this->IUnknown::AddRef();
+ 		*ppvObject = static_cast<IDirectDraw2*>(this);
+ 		return S_OK;
+ 	}
++	if (SDL_memcmp(&riid, &IID_IDirectDraw4, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirectDraw4*>(this);
++		return S_OK;
++	}
+ 	if (SDL_memcmp(&riid, &IID_IDirect3D2, sizeof(GUID)) == 0) {
+ 		this->IUnknown::AddRef();
+ 		*ppvObject = static_cast<IDirect3D2*>(this);
+@@ -317,6 +327,40 @@ HRESULT DirectDrawImpl::SetDisplayMode(DWORD dwWidth, DWORD dwHeight, DWORD dwBP
+ 	return DD_OK;
+ }
+ 
++// IDirectDraw4 interface
++HRESULT DirectDrawImpl::CreateSurface(
++	LPDDSURFACEDESC2 lpDDSurfaceDesc,
++	LPDIRECTDRAWSURFACE4* lplpDDSurface,
++	IUnknown* pUnkOuter
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT DirectDrawImpl::EnumDisplayModes(
++	DWORD dwFlags,
++	LPDDSURFACEDESC2 lpDDSurfaceDesc,
++	LPVOID lpContext,
++	LPDDENUMMODESCALLBACK2 lpEnumModesCallback
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT DirectDrawImpl::SetDisplayMode(DWORD dwWidth, DWORD dwHeight, DWORD dwBPP, DWORD dwRefreshRate, DWORD dwFlags)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT DirectDrawImpl::GetAvailableVidMem(LPDDSCAPS2 lpDDSCaps, LPDWORD lpdwTotal, LPDWORD lpdwFree)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
+ // IDirect3D2 interface
+ HRESULT DirectDrawImpl::CreateDevice(
+ 	const GUID& guid,
+diff --git a/miniwin/src/ddraw/ddsurface.cpp b/miniwin/src/ddraw/ddsurface.cpp
+index 04235a2..8a26f81 100644
+--- a/miniwin/src/ddraw/ddsurface.cpp
++++ b/miniwin/src/ddraw/ddsurface.cpp
+@@ -28,11 +28,21 @@ DirectDrawSurfaceImpl::~DirectDrawSurfaceImpl()
+ // IUnknown interface
+ HRESULT DirectDrawSurfaceImpl::QueryInterface(const GUID& riid, void** ppvObject)
+ {
++	if (SDL_memcmp(&riid, &IID_IDirectDrawSurface, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirectDrawSurface*>(this);
++		return S_OK;
++	}
+ 	if (SDL_memcmp(&riid, &IID_IDirectDrawSurface3, sizeof(GUID)) == 0) {
+ 		this->IUnknown::AddRef();
+ 		*ppvObject = static_cast<IDirectDrawSurface3*>(this);
+ 		return S_OK;
+ 	}
++	if (SDL_memcmp(&riid, &IID_IDirectDrawSurface4, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirectDrawSurface4*>(this);
++		return S_OK;
++	}
+ 	SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "DirectDrawSurfaceImpl does not implement guid");
+ 	return E_NOINTERFACE;
+ }
+@@ -259,6 +269,54 @@ HRESULT DirectDrawSurfaceImpl::Unlock(LPVOID lpSurfaceData)
+ 	return DD_OK;
+ }
+ 
++// IDirectDrawSurface4 interface
++HRESULT DirectDrawSurfaceImpl::Blt(
++	LPRECT lpDestRect,
++	LPDIRECTDRAWSURFACE4 lpDDSrcSurface,
++	LPRECT lpSrcRect,
++	DDBltFlags dwFlags,
++	LPDDBLTFX lpDDBltFx
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT DirectDrawSurfaceImpl::Flip(LPDIRECTDRAWSURFACE4 lpDDSurfaceTargetOverride, DDFlipFlags dwFlags)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT DirectDrawSurfaceImpl::GetAttachedSurface(LPDDSCAPS2 lpDDSCaps, LPDIRECTDRAWSURFACE4* lplpDDAttachedSurface)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT DirectDrawSurfaceImpl::GetSurfaceDesc(LPDDSURFACEDESC2 lpDDSurfaceDesc)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT DirectDrawSurfaceImpl::Lock(
++	LPRECT lpDestRect,
++	LPDDSURFACEDESC2 lpDDSurfaceDesc,
++	DDLockFlags dwFlags,
++	HANDLE hEvent
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT DirectDrawSurfaceImpl::Unlock(LPRECT lpRect)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
+ IDirect3DRMTexture2* DirectDrawSurfaceImpl::ToTexture()
+ {
+ 	if (!m_texture) {
+diff --git a/miniwin/src/ddraw/framebuffer.cpp b/miniwin/src/ddraw/framebuffer.cpp
+index a913a39..8ebda96 100644
+--- a/miniwin/src/ddraw/framebuffer.cpp
++++ b/miniwin/src/ddraw/framebuffer.cpp
+@@ -27,6 +27,21 @@ FrameBufferImpl::~FrameBufferImpl()
+ // IUnknown interface
+ HRESULT FrameBufferImpl::QueryInterface(const GUID& riid, void** ppvObject)
+ {
++	if (SDL_memcmp(&riid, &IID_IDirectDrawSurface, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirectDrawSurface*>(this);
++		return S_OK;
++	}
++	if (SDL_memcmp(&riid, &IID_IDirectDrawSurface3, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirectDrawSurface3*>(this);
++		return S_OK;
++	}
++	if (SDL_memcmp(&riid, &IID_IDirectDrawSurface4, sizeof(GUID)) == 0) {
++		this->IUnknown::AddRef();
++		*ppvObject = static_cast<IDirectDrawSurface4*>(this);
++		return S_OK;
++	}
+ 	MINIWIN_NOT_IMPLEMENTED();
+ 	return E_NOINTERFACE;
+ }
+@@ -54,7 +69,7 @@ HRESULT FrameBufferImpl::Blt(
+ 	}
+ 
+ 	if (dynamic_cast<FrameBufferImpl*>(lpDDSrcSurface)) {
+-		return Flip(nullptr, DDFLIP_WAIT);
++		return Flip(static_cast<LPDIRECTDRAWSURFACE>(nullptr), DDFLIP_WAIT);
+ 	}
+ 
+ 	if ((dwFlags & DDBLT_COLORFILL) == DDBLT_COLORFILL) {
+@@ -252,3 +267,46 @@ HRESULT FrameBufferImpl::Unlock(LPVOID lpSurfaceData)
+ 
+ 	return DD_OK;
+ }
++
++// IDirectDrawSurface4 interface
++HRESULT FrameBufferImpl::Blt(
++	LPRECT lpDestRect,
++	LPDIRECTDRAWSURFACE4 lpDDSrcSurface,
++	LPRECT lpSrcRect,
++	DDBltFlags dwFlags,
++	LPDDBLTFX lpDDBltFx
++)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT FrameBufferImpl::Flip(LPDIRECTDRAWSURFACE4 lpDDSurfaceTargetOverride, DDFlipFlags dwFlags)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT FrameBufferImpl::GetAttachedSurface(LPDDSCAPS2 lpDDSCaps, LPDIRECTDRAWSURFACE4* lplpDDAttachedSurface)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT FrameBufferImpl::GetSurfaceDesc(LPDDSURFACEDESC2 lpDDSurfaceDesc)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT FrameBufferImpl::Lock(LPRECT lpDestRect, LPDDSURFACEDESC2 lpDDSurfaceDesc, DDLockFlags dwFlags, HANDLE hEvent)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
++
++HRESULT FrameBufferImpl::Unlock(LPRECT lpRect)
++{
++	MINIWIN_NOT_IMPLEMENTED();
++	return DDERR_UNSUPPORTED;
++}
+diff --git a/miniwin/src/internal/ddraw_impl.h b/miniwin/src/internal/ddraw_impl.h
+index b7e3078..7176ea0 100644
+--- a/miniwin/src/internal/ddraw_impl.h
++++ b/miniwin/src/internal/ddraw_impl.h
+@@ -16,7 +16,7 @@ inline static SDL_Rect ConvertRect(const RECT* r)
+ 	return {r->left, r->top, r->right - r->left, r->bottom - r->top};
+ }
+ 
+-struct DirectDrawImpl : public IDirectDraw2, public IDirect3D2, public IDirect3DMiniwin {
++struct DirectDrawImpl : public IDirectDraw4, public IDirect3D2, public IDirect3DMiniwin {
+ 	// IUnknown interface
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+ 	// IDirectDraw interface
+@@ -42,6 +42,17 @@ struct DirectDrawImpl : public IDirectDraw2, public IDirect3D2, public IDirect3D
+ 	HRESULT RestoreDisplayMode() override;
+ 	HRESULT SetCooperativeLevel(HWND hWnd, DDSCLFlags dwFlags) override;
+ 	HRESULT SetDisplayMode(DWORD dwWidth, DWORD dwHeight, DWORD dwBPP) override;
++	// IDirectDraw4 interface
++	HRESULT CreateSurface(LPDDSURFACEDESC2 lpDDSurfaceDesc, LPDIRECTDRAWSURFACE4* lplpDDSurface, IUnknown* pUnkOuter)
++		override;
++	HRESULT EnumDisplayModes(
++		DWORD dwFlags,
++		LPDDSURFACEDESC2 lpDDSurfaceDesc,
++		LPVOID lpContext,
++		LPDDENUMMODESCALLBACK2 lpEnumModesCallback
++	) override;
++	HRESULT SetDisplayMode(DWORD dwWidth, DWORD dwHeight, DWORD dwBPP, DWORD dwRefreshRate, DWORD dwFlags) override;
++	HRESULT GetAvailableVidMem(LPDDSCAPS2 lpDDSCaps, LPDWORD lpdwTotal, LPDWORD lpdwFree) override;
+ 	// IDirect3D2 interface
+ 	HRESULT CreateDevice(const GUID& guid, IDirectDrawSurface* pBackBuffer, IDirect3DDevice2** ppDirect3DDevice)
+ 		override;
+diff --git a/miniwin/src/internal/ddsurface_impl.h b/miniwin/src/internal/ddsurface_impl.h
+index 62fab18..5a629ce 100644
+--- a/miniwin/src/internal/ddsurface_impl.h
++++ b/miniwin/src/internal/ddsurface_impl.h
+@@ -3,7 +3,7 @@
+ #include <SDL3/SDL.h>
+ #include <miniwin/ddraw.h>
+ 
+-struct DirectDrawSurfaceImpl : public IDirectDrawSurface3 {
++struct DirectDrawSurfaceImpl : public IDirectDrawSurface4 {
+ 	DirectDrawSurfaceImpl(int width, int height, SDL_PixelFormat format);
+ 	~DirectDrawSurfaceImpl() override;
+ 
+@@ -34,6 +34,19 @@ struct DirectDrawSurfaceImpl : public IDirectDrawSurface3 {
+ 	HRESULT SetColorKey(DDColorKeyFlags dwFlags, LPDDCOLORKEY lpDDColorKey) override;
+ 	HRESULT SetPalette(LPDIRECTDRAWPALETTE lpDDPalette) override;
+ 	HRESULT Unlock(LPVOID lpSurfaceData) override;
++	// IDirectDrawSurface4 interface
++	HRESULT Blt(
++		LPRECT lpDestRect,
++		LPDIRECTDRAWSURFACE4 lpDDSrcSurface,
++		LPRECT lpSrcRect,
++		DDBltFlags dwFlags,
++		LPDDBLTFX lpDDBltFx
++	) override;
++	HRESULT Flip(LPDIRECTDRAWSURFACE4 lpDDSurfaceTargetOverride, DDFlipFlags dwFlags) override;
++	HRESULT GetAttachedSurface(LPDDSCAPS2 lpDDSCaps, LPDIRECTDRAWSURFACE4* lplpDDAttachedSurface) override;
++	HRESULT GetSurfaceDesc(LPDDSURFACEDESC2 lpDDSurfaceDesc) override;
++	HRESULT Lock(LPRECT lpDestRect, LPDDSURFACEDESC2 lpDDSurfaceDesc, DDLockFlags dwFlags, HANDLE hEvent) override;
++	HRESULT Unlock(LPRECT lpRect) override;
+ 
+ 	IDirect3DRMTexture2* ToTexture();
+ 
+diff --git a/miniwin/src/internal/dummysurface_impl.h b/miniwin/src/internal/dummysurface_impl.h
+index 9502adc..c4c1fa6 100644
+--- a/miniwin/src/internal/dummysurface_impl.h
++++ b/miniwin/src/internal/dummysurface_impl.h
+@@ -3,7 +3,7 @@
+ #include <miniwin.h>
+ #include <miniwin/ddraw.h>
+ 
+-struct DummySurfaceImpl : public IDirectDrawSurface3 {
++struct DummySurfaceImpl : public IDirectDrawSurface4 {
+ 	// IUnknown interface
+ 	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override
+ 	{
+@@ -100,4 +100,42 @@ struct DummySurfaceImpl : public IDirectDrawSurface3 {
+ 		MINIWIN_NOT_IMPLEMENTED();
+ 		return DDERR_GENERIC;
+ 	}
++
++	// IDirectDrawSurface4 interface
++	HRESULT Blt(
++		LPRECT lpDestRect,
++		LPDIRECTDRAWSURFACE4 lpDDSrcSurface,
++		LPRECT lpSrcRect,
++		DDBltFlags dwFlags,
++		LPDDBLTFX lpDDBltFx
++	) override
++	{
++		MINIWIN_NOT_IMPLEMENTED();
++		return DDERR_UNSUPPORTED;
++	}
++	HRESULT Flip(LPDIRECTDRAWSURFACE4 lpDDSurfaceTargetOverride, DDFlipFlags dwFlags) override
++	{
++		MINIWIN_NOT_IMPLEMENTED();
++		return DDERR_UNSUPPORTED;
++	}
++	HRESULT GetAttachedSurface(LPDDSCAPS2 lpDDSCaps, LPDIRECTDRAWSURFACE4* lplpDDAttachedSurface) override
++	{
++		MINIWIN_NOT_IMPLEMENTED();
++		return DDERR_UNSUPPORTED;
++	}
++	HRESULT GetSurfaceDesc(LPDDSURFACEDESC2 lpDDSurfaceDesc) override
++	{
++		MINIWIN_NOT_IMPLEMENTED();
++		return DDERR_UNSUPPORTED;
++	}
++	HRESULT Lock(LPRECT lpDestRect, LPDDSURFACEDESC2 lpDDSurfaceDesc, DDLockFlags dwFlags, HANDLE hEvent) override
++	{
++		MINIWIN_NOT_IMPLEMENTED();
++		return DDERR_UNSUPPORTED;
++	}
++	HRESULT Unlock(LPRECT lpRect) override
++	{
++		MINIWIN_NOT_IMPLEMENTED();
++		return DDERR_UNSUPPORTED;
++	}
+ };
+diff --git a/miniwin/src/internal/framebuffer_impl.h b/miniwin/src/internal/framebuffer_impl.h
+index 76693f9..4e955e5 100644
+--- a/miniwin/src/internal/framebuffer_impl.h
++++ b/miniwin/src/internal/framebuffer_impl.h
+@@ -4,7 +4,7 @@
+ #include <ddsurface_impl.h>
+ #include <miniwin/ddraw.h>
+ 
+-struct FrameBufferImpl : public IDirectDrawSurface3 {
++struct FrameBufferImpl : public IDirectDrawSurface4 {
+ 	FrameBufferImpl(DWORD virtualWidth, DWORD virtualHeight);
+ 	~FrameBufferImpl() override;
+ 
+@@ -35,6 +35,19 @@ struct FrameBufferImpl : public IDirectDrawSurface3 {
+ 	HRESULT SetColorKey(DDColorKeyFlags dwFlags, LPDDCOLORKEY lpDDColorKey) override;
+ 	HRESULT SetPalette(LPDIRECTDRAWPALETTE lpDDPalette) override;
+ 	HRESULT Unlock(LPVOID lpSurfaceData) override;
++	// IDirectDrawSurface4 interface
++	HRESULT Blt(
++		LPRECT lpDestRect,
++		LPDIRECTDRAWSURFACE4 lpDDSrcSurface,
++		LPRECT lpSrcRect,
++		DDBltFlags dwFlags,
++		LPDDBLTFX lpDDBltFx
++	) override;
++	HRESULT Flip(LPDIRECTDRAWSURFACE4 lpDDSurfaceTargetOverride, DDFlipFlags dwFlags) override;
++	HRESULT GetAttachedSurface(LPDDSCAPS2 lpDDSCaps, LPDIRECTDRAWSURFACE4* lplpDDAttachedSurface) override;
++	HRESULT GetSurfaceDesc(LPDDSURFACEDESC2 lpDDSurfaceDesc) override;
++	HRESULT Lock(LPRECT lpDestRect, LPDDSURFACEDESC2 lpDDSurfaceDesc, DDLockFlags dwFlags, HANDLE hEvent) override;
++	HRESULT Unlock(LPRECT lpRect) override;
+ 
+ 	bool IsIndex8() const { return m_transferBuffer->m_surface->format == SDL_PIXELFORMAT_INDEX8; }
+ 

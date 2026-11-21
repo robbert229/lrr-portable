@@ -1,0 +1,243 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Mon, 16 Nov 2026 11:34:39 -0800
+Subject: [PATCH] fix(miniwin): read and set the cursor in client coordinates
+
+ClientToScreen leaves a point unchanged, because the primary surface is
+the window's client area. GetCursorPos, SetCursorPos and each message's pt
+used the desktop's coordinates, so a game that subtracts the client
+origin from GetCursorPos saw the window's position added to every cursor
+reading in a window that is not at the desktop's origin.
+
+Screen coordinates are now the client coordinates of the window under the
+mouse: GetCursorPos and a message's pt read SDL_GetMouseState,
+SetCursorPos warps within the window, and ScreenToClient, the inverse of
+ClientToScreen, leaves the point unchanged too.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/dinput/dinput.cpp b/miniwin/src/dinput/dinput.cpp
+deleted file mode 100644
+index e3c26cb..0000000
+--- a/miniwin/src/dinput/dinput.cpp
++++ /dev/null
+@@ -1,95 +0,0 @@
+-#include "dinput_impl.h"
+-#include "miniwin.h"
+-
+-// The keyboard data format's header. Its per-key object table is not provided until
+-// IDirectInputDeviceA::SetDataFormat is implemented.
+-const DIDATAFORMAT c_dfDIKeyboard = {sizeof(DIDATAFORMAT), sizeof(DIOBJECTDATAFORMAT), DIDF_RELAXIS, 256, 0, nullptr};
+-
+-HRESULT DirectInputDeviceImpl::QueryInterface(const GUID& riid, void** ppvObject)
+-{
+-	if (SDL_memcmp(&riid, &IID_IDirectInputDeviceA, sizeof(GUID)) == 0) {
+-		this->IUnknown::AddRef();
+-		*ppvObject = static_cast<IDirectInputDeviceA*>(this);
+-		return DI_OK;
+-	}
+-	if (SDL_memcmp(&riid, &IID_IDirectInputDevice2A, sizeof(GUID)) == 0) {
+-		this->IUnknown::AddRef();
+-		*ppvObject = static_cast<IDirectInputDevice2A*>(this);
+-		return DI_OK;
+-	}
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOINTERFACE;
+-}
+-
+-HRESULT DirectInputDeviceImpl::Acquire()
+-{
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DIERR_UNSUPPORTED;
+-}
+-
+-HRESULT DirectInputDeviceImpl::Unacquire()
+-{
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DIERR_UNSUPPORTED;
+-}
+-
+-HRESULT DirectInputDeviceImpl::GetDeviceState(DWORD cbData, LPVOID lpvData)
+-{
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DIERR_UNSUPPORTED;
+-}
+-
+-HRESULT DirectInputDeviceImpl::SetDataFormat(LPCDIDATAFORMAT lpdf)
+-{
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DIERR_UNSUPPORTED;
+-}
+-
+-HRESULT DirectInputDeviceImpl::SetCooperativeLevel(HWND hwnd, DWORD dwFlags)
+-{
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DIERR_UNSUPPORTED;
+-}
+-
+-HRESULT DirectInputDeviceImpl::Poll()
+-{
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return DIERR_UNSUPPORTED;
+-}
+-
+-HRESULT DirectInputImpl::QueryInterface(const GUID& riid, void** ppvObject)
+-{
+-	if (SDL_memcmp(&riid, &IID_IDirectInputA, sizeof(GUID)) == 0) {
+-		this->IUnknown::AddRef();
+-		*ppvObject = static_cast<IDirectInputA*>(this);
+-		return DI_OK;
+-	}
+-	MINIWIN_NOT_IMPLEMENTED();
+-	return E_NOINTERFACE;
+-}
+-
+-HRESULT DirectInputImpl::CreateDevice(
+-	const GUID& rguid,
+-	LPDIRECTINPUTDEVICEA* lplpDirectInputDevice,
+-	IUnknown* pUnkOuter
+-)
+-{
+-	if (!lplpDirectInputDevice) {
+-		return DIERR_INVALIDPARAM;
+-	}
+-	if (SDL_memcmp(&rguid, &GUID_SysKeyboard, sizeof(GUID)) != 0 &&
+-		SDL_memcmp(&rguid, &GUID_SysMouse, sizeof(GUID)) != 0) {
+-		return DIERR_DEVICENOTREG;
+-	}
+-	*lplpDirectInputDevice = static_cast<IDirectInputDeviceA*>(new DirectInputDeviceImpl);
+-	return DI_OK;
+-}
+-
+-HRESULT DirectInputCreateA(HINSTANCE hinst, DWORD dwVersion, LPDIRECTINPUTA* lplpDirectInput, IUnknown* punkOuter)
+-{
+-	if (!lplpDirectInput) {
+-		return DIERR_INVALIDPARAM;
+-	}
+-	*lplpDirectInput = new DirectInputImpl;
+-	return DI_OK;
+-}
+diff --git a/miniwin/src/internal/dinput_impl.h b/miniwin/src/internal/dinput_impl.h
+deleted file mode 100644
+index 58934a8..0000000
+--- a/miniwin/src/internal/dinput_impl.h
++++ /dev/null
+@@ -1,23 +0,0 @@
+-#pragma once
+-
+-#include "miniwin/dinput.h"
+-
+-struct DirectInputDeviceImpl : public IDirectInputDevice2A {
+-	// IUnknown interface
+-	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+-	// IDirectInputDeviceA interface
+-	HRESULT Acquire() override;
+-	HRESULT Unacquire() override;
+-	HRESULT GetDeviceState(DWORD cbData, LPVOID lpvData) override;
+-	HRESULT SetDataFormat(LPCDIDATAFORMAT lpdf) override;
+-	HRESULT SetCooperativeLevel(HWND hwnd, DWORD dwFlags) override;
+-	// IDirectInputDevice2A interface
+-	HRESULT Poll() override;
+-};
+-
+-struct DirectInputImpl : public IDirectInputA {
+-	// IUnknown interface
+-	HRESULT QueryInterface(const GUID& riid, void** ppvObject) override;
+-	// IDirectInputA interface
+-	HRESULT CreateDevice(const GUID& rguid, LPDIRECTINPUTDEVICEA* lplpDirectInputDevice, IUnknown* pUnkOuter) override;
+-};
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+index b651cf0..c2ea0a2 100644
+--- a/miniwin/src/windows/windowmessages.cpp
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -10,6 +10,11 @@
+ // SDL_Window, and its HWND is the SDL_Window pointer. SDL events become the
+ // matching window messages, which DispatchMessageA hands to the window
+ // procedure of the window's class.
++//
++// Screen coordinates are the client coordinates of the window under the
++// mouse (or of the first window): miniwin's primary surface is the window's
++// client area, so ClientToScreen leaves a point unchanged, and the cursor
++// calls and a message's pt follow it.
+ 
+ namespace {
+ 
+@@ -38,6 +43,26 @@ SDL_Window* WindowOf(SDL_WindowID id)
+ 	return SDL_GetWindowFromID(id);
+ }
+ 
++// The window whose client area the screen coordinates are.
++SDL_Window* CursorWindow()
++{
++	if (SDL_Window* window = SDL_GetMouseFocus()) {
++		return window;
++	}
++	if (SDL_Window* window = SDL_GetKeyboardFocus()) {
++		return window;
++	}
++	return WindowProcedures().empty() ? nullptr : WindowProcedures().begin()->first;
++}
++
++POINT CursorPosition()
++{
++	float x = 0.0f;
++	float y = 0.0f;
++	SDL_GetMouseState(&x, &y);
++	return POINT{(LONG) x, (LONG) y};
++}
++
+ void Post(SDL_Window* window, UINT message, WPARAM wParam, LPARAM lParam)
+ {
+ 	MSG msg = {};
+@@ -46,11 +71,7 @@ void Post(SDL_Window* window, UINT message, WPARAM wParam, LPARAM lParam)
+ 	msg.wParam = wParam;
+ 	msg.lParam = lParam;
+ 	msg.time = (DWORD) SDL_GetTicks();
+-	float x = 0.0f;
+-	float y = 0.0f;
+-	SDL_GetGlobalMouseState(&x, &y);
+-	msg.pt.x = (LONG) x;
+-	msg.pt.y = (LONG) y;
++	msg.pt = CursorPosition();
+ 	PostedMessages().push_back(msg);
+ }
+ 
+@@ -366,29 +387,24 @@ HCURSOR SetCursor(HCURSOR hCursor)
+ 
+ BOOL GetCursorPos(LPPOINT lpPoint)
+ {
+-	float x = 0.0f;
+-	float y = 0.0f;
+-	SDL_GetGlobalMouseState(&x, &y);
+-	lpPoint->x = (LONG) x;
+-	lpPoint->y = (LONG) y;
++	*lpPoint = CursorPosition();
+ 	return TRUE;
+ }
+ 
+ BOOL SetCursorPos(int X, int Y)
+ {
+-	return SDL_WarpMouseGlobal((float) X, (float) Y);
++	SDL_Window* window = CursorWindow();
++	if (!window) {
++		return FALSE;
++	}
++	SDL_WarpMouseInWindow(window, (float) X, (float) Y);
++	return TRUE;
+ }
+ 
+ BOOL ScreenToClient(HWND hWnd, LPPOINT lpPoint)
+ {
+-	int x = 0;
+-	int y = 0;
+-	if (!SDL_GetWindowPosition(reinterpret_cast<SDL_Window*>(hWnd), &x, &y)) {
+-		return FALSE;
+-	}
+-	lpPoint->x -= x;
+-	lpPoint->y -= y;
+-	return TRUE;
++	// The inverse of ClientToScreen: screen coordinates are client coordinates.
++	return hWnd != NULL;
+ }
+ 
+ int MessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)

@@ -6,7 +6,8 @@ unit conversion and the search tools) remains on `main` (ADR 0007).
 
 | Tool | Purpose |
 | --- | --- |
-| `setup-miniwin.sh` | Fetches only `miniwin/` of the `3rdparty/isle-portable` submodule; `make setup` runs it |
+| `setup-miniwin.sh` | Fetches only `miniwin/` of the `3rdparty/isle-portable` submodule and applies `patches/miniwin`; `make setup` runs it |
+| `miniwin-patches.sh` | Applies, checks, exports and rebases the miniwin patch series in `patches/miniwin` (ADR 0009) |
 | `rrwad.py` | Unpacks, packs and verifies `.wad` archives (below) |
 | `unwad.py` | The earlier extract-only `.wad` script |
 | `rrlwo.py` | Converts `.lwo` models to glTF 2.0 (below) |
