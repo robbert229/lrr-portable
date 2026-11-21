@@ -1335,12 +1335,18 @@ Container_Texture* Container_LoadTexture2(const char* fname, int immediate,
 void Container_FreeTexture(Container_Texture* text)
 {
     if (text) {
-        if (text->surface) {
-            while (text->surface->Release());
-        }
+        /* The original releases the surface first. A texture made from the
+         * surface (Container_LoadTexture2's immediate path) holds a reference
+         * to it, so emptying the surface first leaves the texture pointing at
+         * a freed surface, and the texture's last Release touches it. Release
+         * the texture first; it gives back its surface reference as it goes. */
         if (text->texture) {
             while (text->texture->Release());
         }
+        if (text->surface) {
+            while (text->surface->Release());
+        }
+        free(text);
     }
 }
 
