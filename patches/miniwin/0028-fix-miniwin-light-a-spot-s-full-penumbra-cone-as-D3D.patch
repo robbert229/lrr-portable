@@ -1,0 +1,75 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Fri, 20 Nov 2026 19:12:41 -0800
+Subject: [PATCH] fix(miniwin): light a spot's full penumbra cone, as D3DRM
+ sets it up
+
+D3DRM gives Direct3D a spot light with theta = umbra, phi = penumbra and
+falloff 0. Direct3D's theta and phi are full apex angles, and with falloff 0
+the spot factor is 1 anywhere inside phi. So a D3DRM spot lights at full
+strength out to half its penumbra angle from the axis and not at all
+beyond, whatever the umbra.
+
+The software renderer took the angles as half angles and faded between
+umbra and penumbra, which lit a cone about twice as wide.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index 5b54900..1cb72f0 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -108,9 +108,10 @@ void Direct3DRMSoftwareRenderer::PushLights(const SceneLight* lights, size_t cou
+ 		for (int a = 0; a < 3; ++a) {
+ 			prepared.attenuation[a] = light.attenuation[a];
+ 		}
+-		float penumbra = std::max(light.penumbra, light.umbra);
+-		prepared.cosUmbra = std::cos(light.umbra);
+-		prepared.cosPenumbra = std::cos(penumbra);
++		// D3DRM hands its spot to Direct3D as theta = umbra, phi = penumbra
++		// and falloff 0. Direct3D's theta and phi are full cone angles, and
++		// with falloff 0 the spot is at full strength anywhere inside phi.
++		prepared.cosPenumbra = std::cos(light.penumbra * 0.5f);
+ 		if (light.directional == 1.0f) {
+ 			prepared.spotDirection = Normalize(light.direction);
+ 		}
+@@ -308,9 +309,6 @@ float Direct3DRMSoftwareRenderer::LightReach(
+ 		if (rho <= light.cosPenumbra) {
+ 			return 0.0f;
+ 		}
+-		if (rho < light.cosUmbra) {
+-			reach *= (rho - light.cosPenumbra) / (light.cosUmbra - light.cosPenumbra);
+-		}
+ 	}
+ 	return reach;
+ }
+diff --git a/miniwin/src/internal/d3drmrenderer.h b/miniwin/src/internal/d3drmrenderer.h
+index 225e34c..3621d76 100644
+--- a/miniwin/src/internal/d3drmrenderer.h
++++ b/miniwin/src/internal/d3drmrenderer.h
+@@ -25,8 +25,9 @@ struct SceneLight {
+ 	float directional = 0.f; // direction is valid if 1.f
+ 	float range = 256.f;     // positional lights light nothing beyond it
+ 	float attenuation[3] = {1.f, 0.f, 0.f}; // 1 / (a0 + a1 d + a2 d^2)
+-	// The spot's cones, as angles in radians from its axis: full strength
+-	// inside the umbra, falling off to nothing at the penumbra.
++	// The spot's cones, D3DRM's umbra and penumbra: full apex angles in
++	// radians, as Direct3D's theta and phi. D3DRM sets falloff 0, so the spot
++	// is at full strength inside the penumbra and the umbra has no effect.
+ 	float umbra = 0.4f;
+ 	float penumbra = 0.5f;
+ };
+diff --git a/miniwin/src/internal/d3drmrenderer_software.h b/miniwin/src/internal/d3drmrenderer_software.h
+index da33247..ed4819a 100644
+--- a/miniwin/src/internal/d3drmrenderer_software.h
++++ b/miniwin/src/internal/d3drmrenderer_software.h
+@@ -137,8 +137,7 @@ class Direct3DRMSoftwareRenderer : public Direct3DRMRenderer {
+ 		bool spot;
+ 		float range;
+ 		float attenuation[3];
+-		float cosUmbra;    // inside it the spot is at full strength
+-		float cosPenumbra; // outside it the spot lights nothing
++		float cosPenumbra; // the spot lights at full strength inside it, nothing outside
+ 	};
+ 	// How much of a positional light reaches worldPos (range, attenuation
+ 	// and spot cone), and the unit vector from worldPos toward the light.
