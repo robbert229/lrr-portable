@@ -53,8 +53,8 @@ void scene_object_camera_teleport_or_offset(void* object,
  * tile_variants_port.cpp. */
 void* detail_container_load_texture2_adapter(const char* fname,
                                              int immediate,
-                                             unsigned int* width,
-                                             unsigned int* height); /* 004744f0 */
+                                             unsigned long* width,
+                                             unsigned long* height); /* 004744f0 */
 void detail_container_free_texture_adapter(void* texture);          /* 00474710 */
 int detail_container_mesh_get_group_adapter(void* cont, unsigned long group,
                                             unsigned long* vertexCount,
