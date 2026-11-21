@@ -227,8 +227,10 @@ void damage_font_display_damage_over_live_object(struct Lego_Object* liveObj,
         if (data->cont == NULL) {
             data->cont = ddiscene_object_allocate(
                 legoobject_type_component_get((struct Lego_Object*)liveObj));
+            /* The container's activity frame (+0x04 on Win32): read by name,
+             * as the byte offset lands inside masterFrame on 64-bit. */
             data->mesh = engine_task_callback_record_allocate_and_initialize(
-                *(void**)((char*)data->cont + 4),
+                (void*)((struct Container*)data->cont)->activityFrame,
                 (void*)damage_font_mesh_render_callback, 0x3000, data, 0);
             for (i = 0; i < 4; i++) {
                 mesh_record_allocate_and_fill((struct MeshRecordPool*)data->mesh,

@@ -13,6 +13,7 @@
 
 #include "gods98/avi_player.h"
 #include "gods98/container.h"
+#include "gods98/container_record.h"
 #include "gods98/record.h"
 #include "gods98/view.h"
 
