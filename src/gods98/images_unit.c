@@ -499,6 +499,13 @@ int Image_GetPixel(Image* image, unsigned int x, unsigned int y,
         if (Image_Surface(image)->Lock(NULL, &desc,
                                                DDLOCK_WAIT | DDLOCK_READONLY,
                                                NULL) == DD_OK) {
+            /* The row offsets below are y * pitch with an unsigned y: a negative
+             * (bottom-up) pitch wrapped to the right row on Win32 but lands ~4 GB
+             * away on 64-bit. miniwin's pitch is always positive; stop if not. */
+            if (desc.lPitch < 0) {
+                fprintf(stderr, "Image_GetPixel: negative surface pitch %d\n", (int)desc.lPitch);
+                abort();
+            }
             *colour = *(unsigned int*)((unsigned char*)desc.lpSurface +
                                        (y * desc.lPitch) +
                                        (x * (desc.ddpfPixelFormat.dwRGBBitCount >> 3))) >>

@@ -17,6 +17,7 @@
  * word at 0076ac8c (crt.h); the native port reads draw_port_back_surface
  * instead (draw.h). */
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -273,6 +274,13 @@ int surface_active_pixel_writer_configure(LPDIRECTDRAWSURFACE4 surf, int effect)
     memset(&desc, 0, sizeof(desc));
     desc.dwSize = sizeof(desc);
     if (surf->Lock(NULL, &desc, DDLOCK_WAIT, NULL) == DD_OK) {
+        /* The Draw_Pixel* row offsets are y * pitch with an unsigned y: a negative
+         * (bottom-up) pitch wrapped to the right row on Win32 but lands ~4 GB
+         * away on 64-bit. miniwin's pitch is always positive; stop if not. */
+        if (desc.lPitch < 0) {
+            fprintf(stderr, "Draw_LockSurface: negative surface pitch %d\n", (int)desc.lPitch);
+            abort();
+        }
         drawGlobs.buffer = desc.lpSurface;
         drawGlobs.pitch = desc.lPitch;
         drawGlobs.redMask = desc.ddpfPixelFormat.dwRBitMask;
