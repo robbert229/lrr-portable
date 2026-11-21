@@ -110,9 +110,20 @@ typedef struct Sound3DSoundRecord {
     struct Sound3DSoundRecord* next;
 } Sound3DSoundRecord;
 
-/* The frame app data (Container.c); the unit reads only its sound list. */
+/* The frame app data (Container.c's Container_AppData); the unit reads only
+ * its sound list. The fields mirror Container_AppData's types so the sound
+ * list lands on the same offset on every ABI: on a 64-bit build it is +0x40,
+ * not the original's +0x24. */
 typedef struct Sound3DFrameData {
-    void* reserved[9];
+    void* ownerContainer;            /* +0x00 */
+    char* animSetFileName;           /* +0x04 */
+    char* frameName;                 /* +0x08 */
+    unsigned long frameCount;        /* +0x0c */
+    float currTime;                  /* +0x10 */
+    float transCo;                   /* +0x14 */
+    char* activitySample;            /* +0x18 */
+    void* animClone;                 /* +0x1c */
+    unsigned long trigger;           /* +0x20 */
     Sound3DSoundRecord* soundRecord; /* +0x24 */
 } Sound3DFrameData;
 

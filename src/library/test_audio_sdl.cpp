@@ -24,6 +24,7 @@
 #include "gods98/sound3d.h"
 #include "gods98/soundsys.h"
 #include "library/audio_sdl.h"
+#include <miniwin/d3drm.h>
 
 #include <algorithm>
 #include <cmath>
@@ -37,6 +38,8 @@
 
 extern "C" {
 int sound_streamed_wave_play(const char* fName, int loop, int volume);
+void resource_mount_startup_target(const char*, int, const char*);
+void Container_Frame_RemoveAppData(IDirect3DRMFrame3*);
 /* main.c (G98-005): Main_SetCDVolume and Main_GetCDVolume. */
 void music_mixer_volume_set(float leftVolume, float rightVolume);
 int ledger_stub_004789a0_MusicMixerVolumeGet(float* leftVolume, float* rightVolume);
@@ -475,6 +478,45 @@ void TestCdAudio(const std::string& dir)
     CHECK(media_cd_audio_stop_and_close() == 1);
 }
 
+void TestSamplePlayback(const std::string& dir)
+{
+    char cwd[4096];
+    CHECK(getcwd(cwd, sizeof(cwd)) != NULL);
+    CHECK(SDL_CreateDirectory((dir + "/Data").c_str()));
+    CHECK(WriteFile(dir + "/Data/sample.wav", MakeWave(1, 11025, 8, SquareU8(11025, 0.1))));
+    CHECK(chdir(dir.c_str()) == 0);
+    /* An empty WAD: the mount needs one, as the test cannot list a Data
+     * directory. */
+    CHECK(WriteFile("AudioTest0.wad", { 'W', 'W', 'A', 'D', 0, 0, 0, 0 }));
+    resource_mount_startup_target("AudioTest", 0, "");
+    int slot = sound_bank_entry_load("sample", 0, 0, 0);
+    CHECK(slot >= 0);
+    IDirect3DRM* rm = NULL;
+    IDirect3DRM3* rm3 = NULL;
+    IDirect3DRMFrame3* scene = NULL;
+    IDirect3DRMFrame3* frame = NULL;
+    CHECK(Direct3DRMCreate(&rm) == 0);
+    CHECK(rm->QueryInterface(IID_IDirect3DRM3, (void**)&rm3) == 0);
+    CHECK(rm3->CreateFrame(NULL, &scene) == 0);
+    CHECK(rm3->CreateFrame(scene, &frame) == 0);
+    if (slot >= 0) {
+        for (int i = 0; i < 10; i++) {
+            int handle = s_play_seam(0, (intptr_t)frame, slot, 0, NULL);
+            CHECK(handle == slot * 3);
+            sound_source_spatial_refresh_all();
+            sound_buffer_stop_handle(handle);
+            sound_source_spatial_refresh_all();
+        }
+        CHECK(sound_bank_entry_release(slot) == 1);
+    }
+    Container_Frame_RemoveAppData(frame);
+    frame->Release();
+    scene->Release();
+    rm3->Release();
+    rm->Release();
+    CHECK(chdir(cwd) == 0);
+}
+
 int RunDummy()
 {
     std::string dir = MakeTempDir();
@@ -490,6 +532,7 @@ int RunDummy()
     /* Sound_Initialise starts 3D sound on the library's device. */
     CHECK(media_cd_audio_device_state_update(0) == 1);
     CHECK(media_cd_audio_playback_available() == 1);
+    TestSamplePlayback(dir);
     TestCdAudio(dir);
     audio_active_shutdown();
     CHECK(media_cd_audio_playback_available() == 0);
