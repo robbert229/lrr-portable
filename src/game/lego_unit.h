@@ -381,9 +381,10 @@ void lego_level_debug_input_cell_mutator_dispatch(int bx, int by, struct Lego_Ob
 struct BlockRec;
 
 /* legoGlobs.config (005560c0): the first field, so &legoGlobs_config is
- * the address of legoGlobs itself, and Lego_Gods_Go zeroes the original's
- * 0xef8 bytes from it: sizeof(struct Lego_Globs) (lego_globs.h). */
-#define LEGO_GLOBS_SIZE 0xef8
+ * the address of legoGlobs itself, and Lego_Gods_Go zeroes
+ * sizeof(struct Lego_Globs) bytes from it (lego_globs.h): 0xef8 on Win32,
+ * more on 64-bit, where the struct's pointers are 8 bytes. */
+#define LEGO_GLOBS_SIZE sizeof(struct Lego_Globs)
 extern char* legoGlobs_healthText;              /* 00556e9c ToolTipInfo */
 extern char* legoGlobs_toolsText;               /* 00556eb0 */
 extern char* legoGlobs_carryObjectText;         /* 00556eb4 */
