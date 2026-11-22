@@ -11,10 +11,9 @@
 #include "platform/native/emscripten/events.h"
 #include "platform/native/emscripten/manifest.h"
 
-#include <SDL3/SDL_error.h>
 #include <SDL3/SDL_filesystem.h>
-#include <SDL3/SDL_log.h>
 #include <SDL3/SDL_iostream.h>
+#include <SDL3/SDL_log.h>
 #include <SDL3/SDL_stdinc.h>
 #include <emscripten.h>
 #include <emscripten/wasmfs.h>
@@ -26,6 +25,31 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+/* The build settings CMake defines for this file (CMakeLists.txt), with the
+ * defaults for a build that gives none. */
+/* The host the game data is streamed from: the LRR_EMSCRIPTEN_HOST build
+ * setting, as isle-portable's ISLE_EMSCRIPTEN_HOST. The data directory is
+ * at <host>/LegoRR, which holds the WADs, Data and the manifest
+ * (manifest.h). Empty is the page's own origin. */
+#ifndef LRR_EMSCRIPTEN_HOST
+#define LRR_EMSCRIPTEN_HOST ""
+#endif
+static const char* Emscripten_streamHost = LRR_EMSCRIPTEN_HOST;
+
+/* Whether the WADs are fetched in full at start-up, with progress events
+ * for the page (the LRR_EMSCRIPTEN_PRELOAD_WADS build setting). */
+#ifndef LRR_EMSCRIPTEN_PRELOAD_WADS
+#define LRR_EMSCRIPTEN_PRELOAD_WADS 1
+#endif
+
+/* The fetch backend's chunk size, the LRR_EMSCRIPTEN_CHUNK_SIZE build
+ * setting. A file of at most twice this, or from a host that sends no
+ * "Accept-Ranges: bytes", is fetched whole on first use; a larger one is
+ * fetched in chunks of this size with range requests, as the WADs are. */
+#ifndef LRR_EMSCRIPTEN_CHUNK_SIZE
+#define LRR_EMSCRIPTEN_CHUNK_SIZE (512 * 1024)
+#endif
 
 static backend_t opfs = nullptr;
 static backend_t fetchfs = nullptr;
@@ -108,7 +132,7 @@ static void Emscripten_PreloadDataFile(const std::string& p_name)
     }
 
     /* A few chunks at a time, which one range request fetches. */
-    const size_t slice = SDL_min(8 * (size_t) LRR_EMSCRIPTEN_CHUNK_SIZE, (size_t) 4 * 1024 * 1024);
+    const size_t slice = (size_t) SDL_min(8 * (Uint64) LRR_EMSCRIPTEN_CHUNK_SIZE, (Uint64) 4 * 1024 * 1024);
     std::vector<char> buffer(slice);
     off_t size = info.st_size;
     off_t done = 0;
@@ -142,10 +166,16 @@ static void Emscripten_SetupDataFilesystem()
      * one of its own directories. */
     if (SDL_GetPathInfo(Emscripten_dataPath, NULL)) {
         SDL_Log("%s is bundled and won't be streamed", Emscripten_dataPath);
+        Emscripten_SendDataReady();
         return;
     }
 
-    std::string baseUrl = std::string(Emscripten_streamHost) + Emscripten_dataPath;
+    /* A host given with a trailing slash would double it. */
+    std::string host = Emscripten_streamHost;
+    while (!host.empty() && host.back() == '/') {
+        host.pop_back();
+    }
+    std::string baseUrl = host + Emscripten_dataPath;
     fetchfs = wasmfs_create_fetch_backend(baseUrl.c_str(), LRR_EMSCRIPTEN_CHUNK_SIZE);
     std::set<std::string> directories;
 
@@ -155,6 +185,7 @@ static void Emscripten_SetupDataFilesystem()
     /* The manifest is the first file, which tells which others there are. */
     std::string manifestPath = root + "/" LRR_DATA_MANIFEST_NAME;
     if (!Emscripten_RegisterDataFile(LRR_DATA_MANIFEST_NAME, directories)) {
+        Emscripten_SendDataError("Cannot register the game data manifest");
         return;
     }
 
@@ -172,7 +203,8 @@ static void Emscripten_SetupDataFilesystem()
     std::vector<std::string> files;
     size_t dropped = DataManifest_Parse(static_cast<const char*>(data), length, files);
     SDL_free(data);
-    SDL_RemovePath(manifestPath.c_str());
+    /* Only to keep it out of the data directory's listings. */
+    (void) SDL_RemovePath(manifestPath.c_str());
 
     if (dropped > 0) {
         SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "The game data manifest has %zu unsafe paths; ignored", dropped);

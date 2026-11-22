@@ -193,7 +193,7 @@ fetches every file whole.
 The page listens for events the game dispatches on the canvas: `dataProgress`
 (`detail.name`, `detail.progress` in percent) while a WAD is read through,
 `dataReady` once the data is set up, and `dataError` (`detail.message`) when
-it cannot be (no manifest on the host). `shell.html` shows them in its status
+it cannot be (no manifest on the host, or one that lists no files). `shell.html` shows them in its status
 line.
 
 The host must serve `LegoRR/` with:
@@ -222,6 +222,19 @@ Add `--port 8001 --cors-origin http://127.0.0.1:8000` to serve the data from
 another origin than the page, with `-DLRR_EMSCRIPTEN_HOST=http://127.0.0.1:8001`
 in the build. The licensed data stays on that machine; keep it out of any
 repository and any CI run, which use synthetic data only.
+
+To deploy, build with `LRR_EMSCRIPTEN_HOST` set (or empty, for one origin),
+then publish three things: `LegoRR.html`, `LegoRR.js` and `LegoRR.wasm` from
+the build directory (the page's origin, served with
+`Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp`, as `tools/serve_web.py` does,
+because the game's threads need `SharedArrayBuffer`); the game directory's
+`LegoRR*.wad` and `Data` (minus what the manifest leaves out) at
+`<host>/LegoRR/`; and the manifest `tools/web_manifest.py` wrote at
+`<host>/LegoRR/LegoRR.manifest`. The page and the data may share an origin or
+not. Regenerate the manifest whenever the data changes, and give the data a
+cache lifetime that suits it, since the backend never revalidates a file it
+has fetched during a visit.
 
 A page that bundles the data itself still works: when `/LegoRR` already
 exists in the page's filesystem, the game streams nothing (a fetch backend

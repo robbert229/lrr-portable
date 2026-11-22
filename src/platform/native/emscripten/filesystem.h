@@ -12,28 +12,9 @@ inline static const char* Emscripten_savePath = "/save";
  * WADs) is mounted, as isle-portable's "/LEGO". */
 inline static const char* Emscripten_dataPath = "/LegoRR";
 
-/* The host the game data is streamed from: the LRR_EMSCRIPTEN_HOST build
- * setting, as isle-portable's ISLE_EMSCRIPTEN_HOST. The data directory is
- * at <host>/LegoRR, which holds the WADs, Data and the manifest
- * (manifest.h). Empty is the page's own origin. */
-#ifndef LRR_EMSCRIPTEN_HOST
-#define LRR_EMSCRIPTEN_HOST ""
-#endif
-inline static const char* Emscripten_streamHost = LRR_EMSCRIPTEN_HOST;
-
-/* Whether the WADs are fetched in full at start-up, with progress events
- * for the page (the LRR_EMSCRIPTEN_PRELOAD_WADS build setting). */
-#ifndef LRR_EMSCRIPTEN_PRELOAD_WADS
-#define LRR_EMSCRIPTEN_PRELOAD_WADS 1
-#endif
-
-/* The fetch backend's chunk size, the LRR_EMSCRIPTEN_CHUNK_SIZE build
- * setting. A file of at most twice this, or from a host that sends no
- * "Accept-Ranges: bytes", is fetched whole on first use; a larger one is
- * fetched in chunks of this size with range requests, as the WADs are. */
-#ifndef LRR_EMSCRIPTEN_CHUNK_SIZE
-#define LRR_EMSCRIPTEN_CHUNK_SIZE (512 * 1024)
-#endif
+/* The game data is streamed from <LRR_EMSCRIPTEN_HOST>/LegoRR, a build
+ * setting (filesystem.cpp); the data directory holds the WADs, Data and the
+ * manifest (manifest.h). */
 
 bool Emscripten_OPFSDisabled();
 /* Makes the OPFS directories that hold an explicit configuration file. */

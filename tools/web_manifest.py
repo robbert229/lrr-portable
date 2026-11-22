@@ -33,6 +33,12 @@ DEFAULT_EXCLUDES = ["Data/Saves/*"]
 MOVIE_EXCLUDES = ["*.avi"]
 
 
+def excludes(include_movies=False, extra=()):
+    """The patterns the manifest leaves out: the defaults, the movies unless
+    `include_movies`, and `extra`."""
+    return DEFAULT_EXCLUDES + ([] if include_movies else MOVIE_EXCLUDES) + list(extra)
+
+
 def is_excluded(path, patterns):
     name = path.rsplit("/", 1)[-1]
     return any(
@@ -74,14 +80,13 @@ def main(argv=None):
 
     if not os.path.isdir(args.game_dir):
         parser.error(f"{args.game_dir} is not a directory")
-    excludes = DEFAULT_EXCLUDES + ([] if args.include_movies else MOVIE_EXCLUDES) + args.exclude
-    text = manifest_text(args.game_dir, excludes)
+    text = manifest_text(args.game_dir, excludes(args.include_movies, args.exclude))
     if not any(line.lower().endswith(".wad") for line in text.splitlines()):
         parser.error(f"{args.game_dir} holds no WAD archives")
 
     if args.output:
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-        with open(args.output, "w", newline="\n") as out:
+        with open(args.output, "w", encoding="utf-8", newline="\n") as out:
             out.write(text)
         print(f"{len(text.splitlines()) - 1} files listed in {args.output}", file=sys.stderr)
     else:

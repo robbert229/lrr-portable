@@ -38,6 +38,15 @@ MANIFEST_PATH = DATA_PREFIX + "LegoRR.manifest"
 RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
 
 
+def normalize(path):
+    """A request path without its query or fragment, with its escapes decoded
+    and a doubled slash merged: a fetch backend joins the file's directories
+    to the base URL with an extra slash ("/LegoRR//Data/x"), which a CDN
+    merges."""
+    url_path = urllib.parse.unquote(path.split("?", 1)[0].split("#", 1)[0])
+    return re.sub(r"/{2,}", "/", url_path)
+
+
 def parse_range(header, size):
     """The (start, end) bytes of a single `Range` header, end inclusive, or
     None when there is none or it is not a single satisfiable range."""
@@ -80,10 +89,7 @@ class IsolatedHandler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
 
     def translate_path(self, path):
-        url_path = urllib.parse.unquote(path.split("?", 1)[0].split("#", 1)[0])
-        # A fetch backend joins the file's directories with the base URL
-        # with an extra slash ("/LegoRR//Data/x"); a CDN merges it.
-        url_path = re.sub(r"/{2,}", "/", url_path)
+        url_path = normalize(path)
         if self.data_dir and url_path.startswith(DATA_PREFIX):
             relative = url_path[len(DATA_PREFIX):]
             local = os.path.realpath(os.path.join(self.data_dir, *[p for p in relative.split("/") if p]))
@@ -98,8 +104,7 @@ class IsolatedHandler(http.server.SimpleHTTPRequestHandler):
         return text.encode("utf-8")
 
     def send_head(self):
-        url_path = re.sub(r"/{2,}", "/", self.path.split("?", 1)[0])
-        if self.data_dir and url_path == MANIFEST_PATH:
+        if self.data_dir and normalize(self.path) == MANIFEST_PATH:
             body = self.manifest_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
@@ -161,7 +166,7 @@ def main():
     parser.add_argument("--include-movies", action="store_true",
                         help="list the movies (*.avi) in the manifest")
     args = parser.parse_args()
-    excludes = web_manifest.DEFAULT_EXCLUDES + ([] if args.include_movies else web_manifest.MOVIE_EXCLUDES)
+    excludes = web_manifest.excludes(args.include_movies)
     handler = type("Handler", (IsolatedHandler,), {
         "data_dir": args.data, "cors_origin": args.cors_origin, "manifest_excludes": excludes})
     handler = functools.partial(handler, directory=args.directory)

@@ -33,8 +33,16 @@ static std::string Emscripten_JsonEscape(const char* p_text)
     for (const char* c = p_text; *c; c++) {
         if (*c == '"' || *c == '\\') {
             text += '\\';
+            text += *c;
         }
-        text += *c;
+        else if ((unsigned char) *c < 0x20) {
+            char escape[8];
+            SDL_snprintf(escape, sizeof(escape), "\\u%04x", (unsigned) (unsigned char) *c);
+            text += escape;
+        }
+        else {
+            text += *c;
+        }
     }
     return text;
 }

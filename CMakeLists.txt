@@ -43,12 +43,18 @@ endif()
 # number) is fetched in chunks of that size by range requests, a smaller one
 # whole on first use. LRR_EMSCRIPTEN_PRELOAD_WADS fetches the WADs at start,
 # a few chunks per request, sending the page "dataProgress" events.
-set(LRR_EMSCRIPTEN_HOST "" CACHE STRING
-  "Host URL the web build streams the game data from, e.g. https://example.com")
-set(LRR_EMSCRIPTEN_CHUNK_SIZE 524288 CACHE STRING
-  "Bytes per range request when the web build streams a large game file (the WADs)")
-option(LRR_EMSCRIPTEN_PRELOAD_WADS
-  "The web build fetches the WADs at start, with progress events for the page" ON)
+if(EMSCRIPTEN)
+  set(LRR_EMSCRIPTEN_HOST "" CACHE STRING
+    "Host URL the web build streams the game data from, e.g. https://example.com")
+  set(LRR_EMSCRIPTEN_CHUNK_SIZE 524288 CACHE STRING
+    "Bytes per range request when the web build streams a large game file (the WADs)")
+  if(LRR_EMSCRIPTEN_CHUNK_SIZE LESS 1 OR LRR_EMSCRIPTEN_CHUNK_SIZE GREATER 2147483647)
+    message(FATAL_ERROR
+      "LRR_EMSCRIPTEN_CHUNK_SIZE must be from 1 to 2147483647, not ${LRR_EMSCRIPTEN_CHUNK_SIZE}")
+  endif()
+  option(LRR_EMSCRIPTEN_PRELOAD_WADS
+    "The web build fetches the WADs at start, with progress events for the page" ON)
+endif()
 if(EMSCRIPTEN)
   add_compile_options(-pthread)
   add_link_options(-pthread -sPROXY_TO_PTHREAD=1 -sPTHREAD_POOL_SIZE_STRICT=0
@@ -341,7 +347,7 @@ target_link_libraries(seam_stubs PUBLIC miniwin lrr_iniparser)
 if(EMSCRIPTEN)
   # The OPFS and fetch backends are WasmFS ones (emscripten/filesystem.cpp).
   target_link_options(seam_stubs PUBLIC "-sWASMFS=1" "-sFORCE_FILESYSTEM=1")
-  # Only filesystem.cpp reads the two settings, so changing one rebuilds
+  # Only filesystem.cpp reads the three settings, so changing one rebuilds
   # that file and not the units.
   set_source_files_properties("${PLATFORM_DIR}/native/emscripten/filesystem.cpp"
     PROPERTIES COMPILE_DEFINITIONS
