@@ -157,7 +157,7 @@ int object_recall_save(const char* fname)
 
     if ((file = file_open(fname, "wb")) != NULL) {
         unsigned char headerImage[8];
-        unsigned char* image = NULL;
+        unsigned char image[OBJECT_RECALL_IMAGE_SIZE];
         unsigned int i;
 
         header[0] = 0x534f5252; /* 'RRSO' */
@@ -165,18 +165,9 @@ int object_recall_save(const char* fname)
         object_recall_image_put_word(headerImage, 0, header[0]);
         object_recall_image_put_word(headerImage, 4, header[1]);
         file_write(headerImage, 4, 2, file);
-        if (objectRecallGlobs.objRecallCount)
-            image = (unsigned char*)malloc(objectRecallGlobs.objRecallCount *
-                                           OBJECT_RECALL_IMAGE_SIZE);
-        /* Out of memory, the file keeps the count but no entries, and its
-         * length check makes a later load read nothing from it. */
-        if (image != NULL) {
-            for (i = 0; i < objectRecallGlobs.objRecallCount; i++)
-                object_recall_serialize(&objectRecallGlobs.objRecall[i],
-                                        image + i * OBJECT_RECALL_IMAGE_SIZE);
-            file_write(image, OBJECT_RECALL_IMAGE_SIZE,
-                       objectRecallGlobs.objRecallCount, file);
-            free(image);
+        for (i = 0; i < objectRecallGlobs.objRecallCount; i++) {
+            object_recall_serialize(&objectRecallGlobs.objRecall[i], image);
+            file_write(image, OBJECT_RECALL_IMAGE_SIZE, 1, file);
         }
         file_close(file);
         object_recall_snapshot();
@@ -211,19 +202,23 @@ int object_recall_load_rrosfile(const char* fname)
          * a debug build stops at a sidecar from another program; a release
          * build falls through to the original's check, which loads nothing. */
         assert(header[0] == 0x534f5252);
-        if (header[0] == 0x534f5252 &&
-            length == (int)(header[1] * OBJECT_RECALL_IMAGE_SIZE)) {
+        /* The length check is made in 64 bits: the original's 32-bit
+         * product wraps, so a huge count could pass it. */
+        if (header[0] == 0x534f5252 && length >= 0 &&
+            (uint64_t)length == (uint64_t)header[1] * OBJECT_RECALL_IMAGE_SIZE) {
             objectRecallGlobs.objRecallCount = header[1];
             objectRecallGlobs.objRecallSize = header[1];
             objectRecallGlobs.objRecall = (ObjectRecall*)malloc(
                 header[1] * sizeof(ObjectRecall));
             image = (unsigned char*)malloc(header[1] * OBJECT_RECALL_IMAGE_SIZE);
-            if (header[1] && (objectRecallGlobs.objRecall == NULL || image == NULL)) {
-                /* Out of memory: load nothing, as from a mismatched file. */
+            if (header[1] &&
+                (objectRecallGlobs.objRecall == NULL || image == NULL ||
+                 file_read(image, OBJECT_RECALL_IMAGE_SIZE, (int)header[1], file) !=
+                     (int)header[1])) {
+                /* Out of memory or a short read: load nothing, as from a
+                 * mismatched file. */
                 object_recall_reset();
             } else {
-                file_read(image, OBJECT_RECALL_IMAGE_SIZE,
-                          objectRecallGlobs.objRecallCount, file);
                 for (i = 0; i < objectRecallGlobs.objRecallCount; i++)
                     object_recall_parse(image + i * OBJECT_RECALL_IMAGE_SIZE,
                                         &objectRecallGlobs.objRecall[i]);
@@ -238,6 +233,11 @@ int object_recall_load_rrosfile(const char* fname)
     return result;
 }
 
+/* ---- The .osf file's image of an ObjectRecall (objectrecall.h) -------- */
+
+static_assert(sizeof(((ObjectRecall*)0)->abilityFlags) == 4 &&
+                  sizeof(((ObjectRecall*)0)->level) == 4,
+              "the ObjectRecall image's words are 32-bit");
 static_assert(0x08 + sizeof(((ObjectRecall*)0)->customName) == OBJECT_RECALL_IMAGE_SIZE,
               "the ObjectRecall image ends with the custom name");
 
