@@ -69,3 +69,6 @@ lrr_unit_test(encyclopedia SOURCES ${GAME_DIR}/test_encyclopedia.cpp
 
 # Erosion neighbor filtering and lock expiry on a synthetic level.
 lrr_unit_test(erode SOURCES ${GAME_DIR}/test_erode.cpp LABELS erode)
+
+# Landslide eligibility, including reserved cells and safe-cavern edges.
+lrr_unit_test(fallin SOURCES ${GAME_DIR}/test_fallin.cpp LABELS fallin)
