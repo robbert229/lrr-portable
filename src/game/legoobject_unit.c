@@ -5079,7 +5079,14 @@ void legoobject_attached_direction_vector_update(Lego_Object* obj)
                 legoobject_vector3d_subtract(&pos.x, &pos.x, &carried->field_2a0);
                 len = legoobject_vector3d_modulus(&pos.x);
                 carried->faceDirectionLength = len;
-                legoobject_vector3d_scale((LegoObjL_Vector3F*)carried->faceDirection, &pos, 1.0f / len);
+                /* PORT-ONLY: a carrier standing still leaves the carried
+                 * object where it was, so the original's 0/0 gave a NaN
+                 * facing, and a unit routing with a NaN facing skips its
+                 * turn on the spot (a vehicle carried by a LargeCat would).
+                 * Keep the previous facing instead; any real move is far
+                 * longer than 1e-6. */
+                if (len > 1e-6f)
+                    legoobject_vector3d_scale((LegoObjL_Vector3F*)carried->faceDirection, &pos, 1.0f / len);
             }
         }
     }

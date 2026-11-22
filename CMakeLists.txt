@@ -32,7 +32,29 @@ endif()
 # WebGL (#925 brings WebGL 2 back). SDL's DOM event handlers run on the main
 # browser thread and queue the events for the worker. Every object compiles
 # with -pthread, since the threads share one wasm memory. WASMFS and
-# FORCE_FILESYSTEM back the OPFS saves (emscripten/filesystem.cpp).
+# FORCE_FILESYSTEM back the OPFS saves and the streamed game data
+# (emscripten/filesystem.cpp).
+#
+# The game data is streamed over a WasmFS fetch backend from
+# <LRR_EMSCRIPTEN_HOST>/LegoRR (issue #908), as isle-portable streams from
+# ISLE_EMSCRIPTEN_HOST/LEGO: a URL prefix such as https://example.com, empty
+# for the page's own origin. A file over twice LRR_EMSCRIPTEN_CHUNK_SIZE
+# (bytes, at most 2147483647: the backend reads it as a signed 32-bit
+# number) is fetched in chunks of that size by range requests, a smaller one
+# whole on first use. LRR_EMSCRIPTEN_PRELOAD_WADS fetches the WADs at start,
+# a few chunks per request, sending the page "dataProgress" events.
+if(EMSCRIPTEN)
+  set(LRR_EMSCRIPTEN_HOST "" CACHE STRING
+    "Host URL the web build streams the game data from, e.g. https://example.com")
+  set(LRR_EMSCRIPTEN_CHUNK_SIZE 524288 CACHE STRING
+    "Bytes per range request when the web build streams a large game file (the WADs)")
+  if(LRR_EMSCRIPTEN_CHUNK_SIZE LESS 1 OR LRR_EMSCRIPTEN_CHUNK_SIZE GREATER 2147483647)
+    message(FATAL_ERROR
+      "LRR_EMSCRIPTEN_CHUNK_SIZE must be from 1 to 2147483647, not ${LRR_EMSCRIPTEN_CHUNK_SIZE}")
+  endif()
+  option(LRR_EMSCRIPTEN_PRELOAD_WADS
+    "The web build fetches the WADs at start, with progress events for the page" ON)
+endif()
 if(EMSCRIPTEN)
   add_compile_options(-pthread)
   add_link_options(-pthread -sPROXY_TO_PTHREAD=1 -sPTHREAD_POOL_SIZE_STRICT=0
@@ -324,14 +346,20 @@ if(EMSCRIPTEN)
   list(APPEND LRR_SEAM_SOURCES
     "${PLATFORM_DIR}/native/emscripten/config.cpp"
     "${PLATFORM_DIR}/native/emscripten/events.cpp"
-    "${PLATFORM_DIR}/native/emscripten/filesystem.cpp")
+    "${PLATFORM_DIR}/native/emscripten/filesystem.cpp"
+    "${PLATFORM_DIR}/native/emscripten/manifest.cpp")
 endif()
 add_library(seam_stubs STATIC ${LRR_SEAM_SOURCES})
 target_include_directories(seam_stubs PUBLIC ${SRC_ROOT})
 target_link_libraries(seam_stubs PUBLIC miniwin lrr_iniparser)
 if(EMSCRIPTEN)
-  # The OPFS backend is a WasmFS one (emscripten/filesystem.cpp).
+  # The OPFS and fetch backends are WasmFS ones (emscripten/filesystem.cpp).
   target_link_options(seam_stubs PUBLIC "-sWASMFS=1" "-sFORCE_FILESYSTEM=1")
+  # Only filesystem.cpp reads the three settings, so changing one rebuilds
+  # that file and not the units.
+  set_source_files_properties("${PLATFORM_DIR}/native/emscripten/filesystem.cpp"
+    PROPERTIES COMPILE_DEFINITIONS
+    "LRR_EMSCRIPTEN_HOST=\"${LRR_EMSCRIPTEN_HOST}\";LRR_EMSCRIPTEN_CHUNK_SIZE=${LRR_EMSCRIPTEN_CHUNK_SIZE};LRR_EMSCRIPTEN_PRELOAD_WADS=$<BOOL:${LRR_EMSCRIPTEN_PRELOAD_WADS}>")
 endif()
 target_link_libraries(units PUBLIC seam_stubs)
 
@@ -542,7 +570,27 @@ if(BUILD_TESTING)
       "LINKER:--wrap=game_file_close")
     add_test(NAME lws COMMAND lws_test)
     set_tests_properties(lws PROPERTIES LABELS lws)
+    # LegoObject.c keeps a carried object's facing when its carrier stands
+    # still, instead of the original's 0/0 NaN. The carry null and the
+    # carried object's container are stand-ins.
+    add_executable(carried_facing_test ${GAME_DIR}/test_carried_facing.cpp)
+    target_link_libraries(carried_facing_test PRIVATE units)
+    target_link_options(carried_facing_test PRIVATE
+      "LINKER:--wrap=renderer_cached_handle_48_get_or_create"
+      "LINKER:--wrap=ddiscene_object_position_get"
+      "LINKER:--wrap=ddiscene_object_position_set"
+      "LINKER:--wrap=ddiscene_object_pose_method_dispatch")
+    add_test(NAME carried_facing COMMAND carried_facing_test)
+    set_tests_properties(carried_facing PROPERTIES LABELS carried_facing)
   endif()
+  # The web build's manifest of game files (emscripten/manifest.cpp, plain
+  # C++): which lines the parser keeps.
+  add_executable(web_manifest_test
+    ${PLATFORM_DIR}/native/emscripten/test_manifest.cpp
+    ${PLATFORM_DIR}/native/emscripten/manifest.cpp)
+  target_include_directories(web_manifest_test PRIVATE ${SRC_ROOT})
+  add_test(NAME web_manifest COMMAND web_manifest_test)
+  set_tests_properties(web_manifest PROPERTIES LABELS config)
   add_executable(config_test ${PLATFORM_DIR}/native/test_config.cpp)
   target_link_libraries(config_test PRIVATE units)
   add_test(NAME config COMMAND config_test)
