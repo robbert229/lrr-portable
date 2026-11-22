@@ -53,3 +53,7 @@ lrr_unit_test(mesh_unit SOURCES ${ENGINE_DIR}/test_mesh_unit.cpp LABELS mesh_uni
 
 # Decode disjoint palette packets and verify the RGB565 lookup entries.
 lrr_unit_test(flic_unit SOURCES ${ENGINE_DIR}/test_flic_unit.cpp LABELS flic_unit)
+
+# Exercise the text ring and timed overlay with a glyph sink in memory.
+lrr_unit_test(textwindow SOURCES ${ENGINE_DIR}/test_textwindow.cpp
+  WRAP font_output_char LABELS textwindow)
