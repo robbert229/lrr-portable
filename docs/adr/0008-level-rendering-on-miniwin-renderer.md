@@ -188,6 +188,8 @@ Our fork is that commit plus 14 DX6 commits.
 - **If upstream declines immediate mode or user visuals in principle**, this
   ADR is reopened before the SDL3 GPU work starts. The fork would then be
   carrying a patch with no upstream future, which ADR 0007 does not allow.
+  [Review before step 6](#review-before-step-6-2026-11-21) records the check
+  made when that work started.
 - Retained-mode features that the first level does not reach are deferred
   until a scenario reaches them:
   - vertex colour in `D3DRMVERTEX`, for `container.c`'s 36-byte vertices;
@@ -275,3 +277,36 @@ Step 0 can start at once. Steps 4 and 5 can run in parallel after step 1.
 7. **The retained-mode remainder**, as scenarios reach it: `D3DRMVERTEX`
    colour, `MeshBuilder3::Load`, `AnimationSet2`. Then the frame-walk and
    2D-blit performance work.
+
+## Review before step 6 (2026-11-21)
+
+*Consequences* asks for this ADR to be reopened before the SDL3 GPU work
+starts if the patch series has lost its upstream future. The check, made for
+#924, found no reason to reopen it:
+
+- **No drift.** `patches/miniwin` (0001–0028) applies to the pinned upstream
+  `8ce9570`. Upstream `master` is one commit ahead, at `3e060ee`, and that
+  commit changes only `.github/workflows/ci.yml`. The series therefore applies
+  unchanged to current upstream.
+- **Nothing declined.** None of the ADR 0008 patches had been offered upstream
+  yet, so upstream has not declined immediate mode or user visuals.
+
+The decision stands. Step 6 follows it with one refinement:
+
+- **Transform and lighting stay on the CPU.** The SDL3 GPU backend runs the
+  same per-vertex code as the software backend: transforms, back-face culling,
+  Direct3D lighting and vertex fog, shared in one module. The GPU then
+  rasterizes the lit triangles, and its own immediate-mode shaders apply
+  texture stage 0, specular, fog and the blend states. A DirectX 6 HAL device
+  without hardware T&L worked this way, and it keeps lighting results equal
+  between the two backends. LEGO Island's retained-mode shaders are left as
+  they are.
+- **Retained mode stays as upstream draws it on SDL3 GPU.** The
+  retained-mode additions of steps 3 and 4 (decal transparency, and
+  specular scaled by a light's reach) are on the software backend only,
+  until a scenario needs them there (step 7). The level does not use
+  retained-mode meshes.
+- **Verification.** CI has no GPU, so it builds the backend and skips its
+  tests. The `_sdlgpu` ctest runs and `miniwin_backends`, which compares
+  the two backends with a stated tolerance, run where an SDL GPU device can
+  draw offscreen (Mesa's lavapipe without a GPU).

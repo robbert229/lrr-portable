@@ -15,6 +15,8 @@
 
 #include <SDL3/SDL.h>
 
+#include "test_miniwin_device.h"
+
 #include <functional>
 #include <math.h>
 #include <stdio.h>
@@ -147,7 +149,7 @@ static void Quad(IDirect3DDevice3* im, D3DMATERIALHANDLE material, float s, floa
 
 static HRESULT FindSoftwareDevice(LPGUID guid, LPSTR name, LPSTR, LPD3DDEVICEDESC, LPD3DDEVICEDESC, LPVOID ctx)
 {
-    if (SDL_strcmp(name, "Miniwin Emulation") == 0) {
+    if (SDL_strcmp(name, MiniwinTestDevice()) == 0) {
         *static_cast<GUID*>(ctx) = *guid;
     }
     return DDENUMRET_OK;
@@ -187,6 +189,9 @@ static bool SetUp(SDL_Window* window)
     }
     d3d2->EnumDevices(FindSoftwareDevice, &software);
     d3d2->Release();
+    if (MiniwinTestDeviceMissing(software)) {
+        return false;
+    }
     IDirect3DRM* d3drm1 = nullptr;
     if (Direct3DRMCreate(&d3drm1) != DD_OK) {
         return false;
@@ -292,7 +297,7 @@ static void CheckTransforms(IDirect3DRMViewport2* level, IDirect3DRMViewport2* r
 int main()
 {
     SDL_SetLogPriority(SDL_LOG_CATEGORY_CUSTOM, SDL_LOG_PRIORITY_CRITICAL);
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
+    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, MiniwinTestVideoDriver());
     SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
@@ -300,6 +305,9 @@ int main()
     }
     SDL_Window* window = SDL_CreateWindow("miniwin_viewports", kSize, kSize, 0);
     if (!window || !SetUp(window)) {
+        if (g_miniwinTestDeviceMissing) {
+            return kMiniwinTestSkip;
+        }
         fprintf(stderr, "set-up failed\n");
         return 1;
     }

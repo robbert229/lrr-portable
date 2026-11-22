@@ -93,9 +93,10 @@ isle-portable does for Lego Island's `CONFIG.EXE`:
   800x600 and 1024x768 work with `-debug`; any other size falls back to
   640x480.
 - `3d device`: a device as the original's dialog listed it, such as
-  `Miniwin driver (Miniwin Emulation)` or
+  `Miniwin driver (Miniwin Emulation)` (the software renderer),
+  `Miniwin driver (SDL3 GPU HAL)` (the GPU, through SDL GPU) or
   `Miniwin driver (Miniwin Paletted Software)`. Empty picks the default
-  device.
+  device, the software renderer.
 
 The `[tweaks]` section switches the port's deliberate changes to the
 original game:

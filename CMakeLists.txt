@@ -158,11 +158,12 @@ endif()
 # Windows, Citro3D on 3DS, GXM on Vita and Glide on DOS
 # (ISLE_RENDERER_SOFTWARE and ISLE_RENDERER_SDLGPU switch the software and SDL
 # GPU backends). On the desktop the software backend is the last hardware
-# device miniwin enumerates, so it stays the device the game picks; the
-# patches implement immediate-mode drawing on it alone so far.
+# device miniwin enumerates, so it stays the device the game picks. The
+# patches implement immediate-mode drawing on it and on SDL GPU, which
+# LegoRR.ini's "3d device" selects.
 add_subdirectory("${MINIWIN}" "${CMAKE_CURRENT_BINARY_DIR}/miniwin")
 if(NOT ISLE_RENDERER_SOFTWARE)
-  message(WARNING "ISLE_RENDERER_SOFTWARE is OFF: the game will pick a backend that does not draw the level yet")
+  message(WARNING "ISLE_RENDERER_SOFTWARE is OFF: the game will pick another backend, and of the others only SDL GPU draws the level")
 endif()
 # The machine miniwin emulates for the game: a 16-bit RGB565 display (the
 # units convert images to 16-bit only), and the software renderer described as
@@ -512,6 +513,22 @@ if(BUILD_TESTING)
   target_link_libraries(miniwin_fog_test PRIVATE miniwin)
   add_test(NAME miniwin_fog COMMAND miniwin_fog_test)
   set_tests_properties(miniwin_fog PROPERTIES LABELS miniwin)
+
+  # The rendering checks above again on the SDL GPU backend (ADR 0008,
+  # step 6), and the same scene on both backends compared pixel by pixel.
+  # They need an SDL GPU device that can draw on SDL's offscreen video
+  # driver, such as Mesa's lavapipe; without one, as on CI, they are skipped.
+  # Retained-mode checks run on the software backend only.
+  foreach(name immediate viewports textures lights fog)
+    add_test(NAME miniwin_${name}_sdlgpu COMMAND miniwin_${name}_test)
+    set_tests_properties(miniwin_${name}_sdlgpu PROPERTIES LABELS "miniwin;sdlgpu"
+      SKIP_RETURN_CODE 77
+      ENVIRONMENT "MINIWIN_TEST_DEVICE=SDL3 GPU HAL;MINIWIN_TEST_VIDEO_DRIVER=offscreen")
+  endforeach()
+  add_executable(miniwin_backends_test ${PLATFORM_DIR}/native/test_miniwin_backends.cpp)
+  target_link_libraries(miniwin_backends_test PRIVATE miniwin)
+  add_test(NAME miniwin_backends COMMAND miniwin_backends_test)
+  set_tests_properties(miniwin_backends PROPERTIES LABELS "miniwin;sdlgpu" SKIP_RETURN_CODE 77)
 
   # Main.c's window procedure under miniwin: SDL mouse events as client
   # coordinate messages, and SDL's quit event as WM_CLOSE.
