@@ -277,7 +277,12 @@ jobs:
           chmod a+x /opt/devkitpro/tools/bin/bannertool /opt/devkitpro/tools/bin/makerom
 
       - name: Bootstrap sparse miniwin
-        run: tools/setup-miniwin.sh
+        # The container runs as root over a workspace the runner owns, which
+        # git refuses as dubious ownership, here and in the configure step's
+        # patch check.
+        run: |
+          git config --global --add safe.directory '*'
+          tools/setup-miniwin.sh
 
       - name: Configure and build
         env:
