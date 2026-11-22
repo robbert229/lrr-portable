@@ -20,3 +20,6 @@ lrr_unit_test(animation_object_activity SOURCES ${GAME_DIR}/test_animation_objec
 lrr_unit_test(bubbles SOURCES ${GAME_DIR}/test_bubbles.cpp
   WRAP block_subgroup Image_LoadBMPScaled Image_SetupTrans
   LABELS bubbles)
+
+# Building power smoothing, footprint access and cached attachment points.
+lrr_unit_test(building_model SOURCES ${GAME_DIR}/test_building_model.cpp LABELS building_model)
