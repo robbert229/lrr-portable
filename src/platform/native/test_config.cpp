@@ -194,19 +194,19 @@ int main(void)
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetTrainingSave() == LRR_TRAINING_SAVE_PROMPT,
           "training save: the key is read from [tweaks], not [legorr]");
 
-    /* tweaks:Display: "original" keeps the original; anything else fits. */
-    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nDisplay = original\n");
+    /* tweaks:display: "original" keeps the original; anything else fits. */
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ndisplay = original\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_ORIGINAL,
           "display: original");
-    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nDisplay = Original\n");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ndisplay = Original\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_ORIGINAL,
           "display: original in any case");
-    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nDisplay = fit\n");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ndisplay = fit\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_FIT, "display: fit");
-    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\nDisplay = bogus\n");
+    write_text(custom, "[" LRR_CONFIG_TWEAKS_SECTION "]\ndisplay = bogus\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_FIT,
           "display: an unknown value fits");
-    write_text(custom, "[" LRR_CONFIG_SECTION "]\nDisplay = original\n");
+    write_text(custom, "[" LRR_CONFIG_SECTION "]\ndisplay = original\n");
     CHECK(LRR_LoadConfig(custom.c_str()) && LRR_GetDisplayScaling() == LRR_DISPLAY_FIT,
           "display: the key is read from [tweaks], not [legorr]");
 

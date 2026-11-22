@@ -18,10 +18,10 @@
  * uncalled.
  *
  * A divergence ([divergence:display-fit]) sizes the window. With
- * tweaks:Display = fit (the default), the game keeps the dialog's default
+ * tweaks:display = fit (the default), the game keeps the dialog's default
  * mode, 640x480, which miniwin fits into a resizable window that opens at
  * the file's resolution, any size, and draws the 3D view at the window's
- * resolution (miniwin/miniwinpresentation.h). With tweaks:Display =
+ * resolution (miniwin/miniwinpresentation.h). With tweaks:display =
  * original, the file's resolution chooses the mode, as the dialog did. */
 #include "init.h"
 
@@ -69,7 +69,7 @@ int init_initialise(int setup, int debug, int best, int window,
     int chosen;                                       // [library:config]
     int fitWindow = LRR_GetDisplayScaling() == LRR_DISPLAY_FIT; // [divergence:display-fit]
 
-    /* [divergence:display-fit] tweaks:Display = fit draws the 3D view at the
+    /* [divergence:display-fit] tweaks:display = fit draws the 3D view at the
      * window's resolution; = original at the mode's. Either way the 3D view
      * keeps the mode's 4:3 frame (docs/divergences.md). */
     Miniwin_SetRenderResolution(fitWindow ? MiniwinRenderResolution::Window
@@ -183,7 +183,7 @@ int init_initialise(int setup, int debug, int best, int window,
                 res = directdraw_setup(TRUE, initGlobs.selDriver, initGlobs.selDevice, initGlobs.selMode, 0, 0, 320, 200);
             } else if (initGlobs.selMode) {
                 res = directdraw_setup(FALSE, NULL, initGlobs.selDevice, NULL, 100, 100, initGlobs.selMode->width, initGlobs.selMode->height);
-                /* [divergence:display-fit] tweaks:Display = fit: the
+                /* [divergence:display-fit] tweaks:display = fit: the
                  * display is set up at the mode's size, which fixes the size
                  * the game draws at, and the window then takes the file's
                  * resolution, centred on the desktop. */

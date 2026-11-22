@@ -106,7 +106,7 @@ reference.
 - **Why:** a 640x480 window is small on today's displays, and a full screen
   of stretched 640x480 pixels is blurry. This follows isle-portable, which
   renders Lego Island's 3D at the window's resolution in the same way.
-- **Configurable:** `[tweaks]` `Display = fit` (the default) or
+- **Configurable:** `[tweaks]` `display = fit` (the default) or
   `original`, which keeps a fixed window of the mode's size and draws the
   whole picture at the mode's resolution. Full screen still fills the
   desktop, with the picture scaled to fit, since the port does not change
@@ -124,7 +124,7 @@ reference.
 - **Why:** a movie in one corner of the screen looks broken. At 640x480,
   the only mode outside `-debug`, nothing changes.
 - **Configurable:** no; the larger modes are debug modes, reachable only
-  with `-debug` and `[tweaks]` `Display = original`.
+  with `-debug` and `[tweaks]` `display = original`.
 - **Where:** `front_play_movie` in `src/game/frontend_unit.c`
   (`[divergence:movie-fill]`).
 

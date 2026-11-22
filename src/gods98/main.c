@@ -520,7 +520,7 @@ void renderer_window_mode_apply(int fullScreen, int xPos, int yPos,
     if (!fullScreen) {
         rect.left = xPos;
         mainGlobs.style = WS_POPUP | WS_SYSMENU | WS_CAPTION;
-        /* [divergence:display-fit] With tweaks:Display = fit, the
+        /* [divergence:display-fit] With tweaks:display = fit, the
          * window can be resized: miniwin fits the game's picture into it
          * (docs/divergences.md). */
         if (LRR_GetDisplayScaling() == LRR_DISPLAY_FIT) mainGlobs.style |= WS_THICKFRAME;
