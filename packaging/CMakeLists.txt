@@ -23,8 +23,9 @@ set(LRR_APP_URL "https://github.com/robbert229/lrr-portable")
 
 # The AppStream release date. SOURCE_DATE_EPOCH keeps it reproducible.
 string(TIMESTAMP LRR_BUILD_DATE "%Y-%m-%d" UTC)
-# CI numbers its packages by run, as isle-portable does, so that two runs of
-# one version sort apart.
+# CI numbers the version recorded in the package metadata and the AppStream
+# release by run, as isle-portable does, so that two runs of one version sort
+# apart. File names carry the plain version.
 if("$ENV{GITHUB_ACTIONS}" STREQUAL "true" AND NOT "$ENV{GITHUB_RUN_NUMBER}" STREQUAL "")
   set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}~build$ENV{GITHUB_RUN_NUMBER}")
 else()

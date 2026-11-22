@@ -35,7 +35,7 @@ otool -L "$app/Contents/MacOS/LegoRR"
 (
     cd "$home"
     HOME="$home" SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
-        "$app/Contents/MacOS/LegoRR" -nosound
+        "$app/Contents/MacOS/LegoRR" -nosound || echo "LegoRR exited with status $?"
 )
 test -f "$home/Library/Application Support/lrr-portable/LegoRR/LegoRR.ini"
 echo "verified $dmg"

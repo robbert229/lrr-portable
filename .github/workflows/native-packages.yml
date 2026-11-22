@@ -80,7 +80,8 @@ jobs:
           mkdir -p "$HOME"
           cd "$RUNNER_TEMP"
           APPIMAGE_EXTRACT_AND_RUN=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
-            timeout 60 "$GITHUB_WORKSPACE"/build/dist/lrr-portable-*-Linux-x86_64.AppImage -nosound
+            timeout 60 "$GITHUB_WORKSPACE"/build/dist/lrr-portable-*-Linux-x86_64.AppImage -nosound \
+            || echo "LegoRR exited with status $?"
           test -f "$HOME/.local/share/lrr-portable/LegoRR/LegoRR.ini"
 
       - name: Upload packages

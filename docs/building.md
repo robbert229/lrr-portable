@@ -160,7 +160,8 @@ same events and builds the port on macOS arm64 (`macos-latest`), macOS Intel
 (`macos-15-intel`), both with `CMAKE_OSX_DEPLOYMENT_TARGET=12.0`, FreeBSD
 15.1 in a VM, and Windows: MSVC x86 and x64 (`windows-2025`, x86 running
 under WOW64), MSVC arm64 (`windows-11-arm`), and msys2 MinGW64. Its jobs are
-not required checks. The macOS and Windows jobs also build the CPack package and upload it. Each runs `tools/setup-miniwin.sh`, then the commands
+not required checks. The macOS and Windows jobs also build the CPack package
+and upload it. Each runs `tools/setup-miniwin.sh`, then the commands
 from [Tests](#tests) with Ninja and a Release build; SDL3 is the static build
 configure fetches at `LRR_SDL3_GIT_TAG`, with SDL's default drivers, except on
 MinGW64, which uses msys2's `mingw-w64-x86_64-sdl3` package. The `--wrap`
