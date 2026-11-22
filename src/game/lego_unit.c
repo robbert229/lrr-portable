@@ -2602,10 +2602,10 @@ void lego_terrain_pointer_command_update(void)
 {
     Lego_Level* level;
     float scroll[2];
-    unsigned int bx, by;
+    uint32_t bx, by;
     struct Lego_Object* liveObj;
     float objPos[2];
-    unsigned int clickX, clickY;
+    uint32_t clickX, clickY;
 
     level = legoGlobs_currLevel;
     if ((legoGlobs_flags1 & 2) && (legoGlobs_flags1 & 0x1000) && !(legoGlobs_flags1 & 0x100)) {
@@ -4323,7 +4323,7 @@ int lego_level_load(const char* levelName)
     float slugValue;
     int number;
     unsigned int i;
-    unsigned int rockFallStyle;
+    uint32_t rockFallStyle;
 
     movie_play_level_video_adapter(levelName, 1);
     global_linked_record_chain_clear();
@@ -5156,7 +5156,7 @@ void lego_level_record_timer_countdown(Lego_Level* level, float elapsed)
 int lego_load_erode_cryore(Lego_Level* level, const char* filename, int modifier)
 {
     int handle;
-    unsigned int width, height, x, y;
+    uint32_t width, height, x, y;
     int value;
     Lego_Block* block;
     int blockPos[2];
@@ -5223,7 +5223,7 @@ int lego_terrain_cell_byte_state_classify_current(const int* blockPos,
 int lego_load_path_ai(Lego_Level* level, const char* filename, char modifier)
 {
     int handle;
-    unsigned int width, height, x, y;
+    uint32_t width, height, x, y;
 
     if ((handle = map_open2(filename, NULL)) != -1) {
         level_map_dimensions_get(handle, &width, &height);
@@ -5247,9 +5247,9 @@ int lego_load_path_ai(Lego_Level* level, const char* filename, char modifier)
 int lego_load_fallin(Lego_Level* level, const char* filename, int modifier)
 {
     int handle;
-    unsigned int width, height, x, y;
+    uint32_t width, height, x, y;
     int value;
-    unsigned int* flags1;
+    uint32_t* flags1;
     int blockPos[2];
 
     if (filename != NULL && (handle = map_open2(filename, NULL)) != -1) {
@@ -5303,7 +5303,7 @@ int lego_load_fallin(Lego_Level* level, const char* filename, int modifier)
 int lego_load_block_pointers(Lego_Level* level, const char* filename)
 {
     int handle;
-    unsigned int width, height, x, y;
+    uint32_t width, height, x, y;
     unsigned int value;
 
     legoGlobs_f_556f18 = 0;
@@ -5372,7 +5372,7 @@ void lego_camera_grid_expiry(float elapsed)
 int lego_load_terrain_map(Lego_Level* level, const char* filename, int modifier)
 {
     int handle;
-    unsigned int width, height, x, y;
+    uint32_t width, height, x, y;
     int value;
 
     if (filename != NULL && (handle = map_open2(filename, NULL)) != -1) {

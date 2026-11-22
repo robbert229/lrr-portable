@@ -579,8 +579,8 @@ RewardBuildingCounts* reward_building_counts_get(RewardBuildingCounts* out)
 // FUNCTION: LEGORR 0x00460310
 int reward_building_counts_callback(void* object, RewardBuildingCounts* counts)
 {
-    unsigned int type;
-    unsigned int index;
+    uint32_t type;
+    uint32_t index;
 
     copy_two_dword_pair_to_outputs(object, &type, &index);
     if (type == 4) {

@@ -2734,7 +2734,7 @@ int legoobject_pick_at_screen_position(unsigned int x, unsigned int y, Lego_Obje
 int legoobject_pick_at_screen_position_callback(Lego_Object* obj, void* data)
 {
     unsigned int count;
-    unsigned int shapeCount;
+    uint32_t shapeCount;
     unsigned int i;
     void* view;
     float screen[4];
@@ -9287,7 +9287,7 @@ int legoobject_hide_check_callback(Lego_Object* obj, void* data)
 {
     int hide;
     LegoObjF_Point2I* shape;
-    unsigned int count;
+    uint32_t count;
     unsigned int i;
     int skip;
     unsigned int dir;
@@ -9683,7 +9683,7 @@ int legoobject_building_placement_preview_update(int objType, int objID, int cli
 {
     int* shape;
     int* placed;
-    unsigned int count;
+    uint32_t count;
     int waterEntrances;
     unsigned int i;
     uint32_t group;

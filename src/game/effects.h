@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-void timed_effect_runtime_update(uint32_t render_x, uint32_t render_y,
+void timed_effect_runtime_update(unsigned int render_x, unsigned int render_y,
                                  float delta);              /* 0046b7c0 */
 #include "gods98/images.h"
 
