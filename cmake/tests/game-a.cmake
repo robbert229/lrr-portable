@@ -76,3 +76,6 @@ lrr_unit_test(fallin SOURCES ${GAME_DIR}/test_fallin.cpp LABELS fallin)
 # Steering group arrival hides only followers that have reached their targets.
 lrr_unit_test(steering_arrival SOURCES ${GAME_DIR}/test_steering_arrival.cpp
   WRAP scene_render_lock_toggle LABELS steering)
+
+# Frontend rectangle bounds, menu item types and dynamic menu growth.
+lrr_unit_test(frontend_unit SOURCES ${GAME_DIR}/test_frontend_unit.cpp LABELS frontend_unit)
