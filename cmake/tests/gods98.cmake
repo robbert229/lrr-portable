@@ -72,3 +72,6 @@ lrr_unit_test(animclone SOURCES ${ENGINE_DIR}/test_animclone.cpp LABELS animclon
 
 # Check packed BMP scanline strides and the default 256-entry palette.
 lrr_unit_test(g98_026 SOURCES ${ENGINE_DIR}/test_g98_026.cpp LABELS g98_026)
+
+# Verify DirectX result decoding, report metadata and bounded formatting.
+lrr_unit_test(dxerror SOURCES ${ENGINE_DIR}/test_dxerror.cpp LABELS dxerror)
