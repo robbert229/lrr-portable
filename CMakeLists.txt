@@ -304,6 +304,11 @@ if(BUILD_TESTING)
     add_test(NAME ${name} COMMAND ${name}_test)
     set_tests_properties(${name} PROPERTIES LABELS ${name})
   endforeach()
+  # The units' vsprintf prints "%b" as VC5 LIBC does, on every host.
+  add_executable(vc5_vsprintf_test src/crt/test_vc5_vsprintf.cpp)
+  target_include_directories(vc5_vsprintf_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  add_test(NAME vc5_vsprintf COMMAND vc5_vsprintf_test)
+  set_tests_properties(vc5_vsprintf PROPERTIES LABELS crt)
   # FrontEnd.c's random menu overlay roll on a simulated clock: the unit's
   # calls to main_time_get reach the test's __wrap_main_time_get.
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT APPLE AND NOT WIN32)
@@ -368,6 +373,23 @@ if(BUILD_TESTING)
       "LINKER:--wrap=sound_submit_with_global_cooldown")
     add_test(NAME info_image_token COMMAND info_image_token_test)
     set_tests_properties(info_image_token PROPERTIES LABELS info)
+    # The info panel prints a token's "%b" as the original's VC5 LIBC does,
+    # through the real panel print, TextWindow and the units' vsprintf.
+    add_executable(info_panel_percent_b_test ${GAME_DIR}/test_info_panel_percent_b.cpp)
+    target_link_libraries(info_panel_percent_b_test PRIVATE units)
+    target_link_options(info_panel_percent_b_test PRIVATE
+      "LINKER:--wrap=Image_LoadBMPScaled"
+      "LINKER:--wrap=Image_SetPenZeroTrans"
+      "LINKER:--wrap=Image_DisplayScaled"
+      "LINKER:--wrap=panel_state_flags_toggle"
+      "LINKER:--wrap=ui_text_output_object_release_target"
+      "LINKER:--wrap=ui_text_output_position_and_draw"
+      "LINKER:--wrap=ui_record_callback_forward"
+      "LINKER:--wrap=indexed_text_metrics_pair_set"
+      "LINKER:--wrap=indexed_text_metrics_pair_get"
+      "LINKER:--wrap=sound_submit_with_global_cooldown")
+    add_test(NAME info_panel_percent_b COMMAND info_panel_percent_b_test)
+    set_tests_properties(info_panel_percent_b PROPERTIES LABELS info)
   endif()
   # Files.c's SDL3 streams and path mapping, and the configuration file
   # ([library:filesystem], [library:config]).

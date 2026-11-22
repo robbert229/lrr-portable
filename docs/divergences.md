@@ -191,6 +191,7 @@ Each one is marked `// [library:<area>]` at its call site (ADR 0007).
 | Filesystem | Windows paths | host paths, case-insensitive, `SDL_IOStream`, `SDL_GlobDirectory` |
 | Config | registry, Mode Selection dialog | iniparser (`LegoRR.ini`) |
 | Display | DirectDraw, Direct3DRM, USER32 | miniwin over SDL3 (ADR 0004, 0008, 0009) |
+| C library | VC5 LIBC, linked statically | the host's C library, with the VC5 names and behaviours in `crt/vc5names.h` |
 
 Known small differences in substitutions meant to behave the same:
 
@@ -200,3 +201,11 @@ Known small differences in substitutions meant to behave the same:
 - `entry.cpp` builds the Windows command line from `argv`, so the original's
   flags (`-best`, `-window`, `-nosound`, `-debug`, ...) work unchanged.
 - `crt/vc5names.h` keeps the VC5 `rand`/`srand`, so random sequences match.
+- `crt/vc5names.h`'s `vsprintf` prints a `%b` as `b` and takes no argument,
+  as VC5 does, and drops a `%` left unfinished at the end of the format.
+  Info messages with `$name$` image tokens reach the info panel's
+  TextWindow with a `%b` for each token, so the panel shows a `b` where
+  the token was, as in the original, on every host (#951). glibc would
+  print the image pointer in binary and the UCRT would abort. The image is
+  not drawn; the original never drew it there either. One edge differs: a
+  `*` width before the `b` takes an `int` argument in VC5 and none here.

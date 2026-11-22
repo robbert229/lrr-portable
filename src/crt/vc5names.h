@@ -7,20 +7,24 @@
  * linear congruential generator, so the game's random sequences match the
  * original's for a given seed.
  *
- * Include this header after the C library headers: it redefines rand and
- * srand. */
+ * Include this header after the C library headers: it redefines rand,
+ * srand and vsprintf. */
 #ifndef LEGORRR_CRT_VC5NAMES_H
 #define LEGORRR_CRT_VC5NAMES_H
 
 #include <ctype.h>
 #include <math.h>
+#include <stdarg.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
+#include <string>
 
 /* _rand and _srand: the VC5 LIBC generator (holdrand * 214013 + 2531011,
  * bits 16-30). */
@@ -141,5 +145,54 @@ inline void crt_splitpath(const char* path, char* drive, char* dir,
     }
 }
 #define _splitpath crt_splitpath
+
+/* _vsprintf: the host's vsprintf with VC5 LIBC's handling of two formats
+ * where hosts differ; other conversions VC5 lacks still reach the host. VC5 has no "b" conversion: it drops the "%"
+ * and any flags, width, precision and size before the "b", prints the "b"
+ * as text and takes no argument. glibc prints the argument in binary and
+ * the UCRT aborts. A "%" whose specification runs into the end of the
+ * format prints nothing in VC5; glibc fails the whole call. Info text
+ * reaches TextWindow's vsprintf with a "%b" for each image token (#951).
+ * A "*" width before a "b" takes an int in VC5 but nothing here. */
+inline int crt_vsprintf(char* buffer, const char* format, va_list args)
+{
+    std::string fixed;
+    const char* copied = format;
+    const char* p = format;
+    const char* q;
+    bool changed = false;
+
+    while (*p != '\0') {
+        if (*p != '%') {
+            p++;
+            continue;
+        }
+        q = p + 1;
+        while (*q == '-' || *q == '+' || *q == ' ' || *q == '#' || *q == '0') q++;
+        while (*q == '*' || isdigit((unsigned char)*q)) q++;
+        if (*q == '.') {
+            q++;
+            while (*q == '*' || isdigit((unsigned char)*q)) q++;
+        }
+        if (q[0] == 'I' && q[1] == '6' && q[2] == '4') q += 3;
+        else while (*q == 'h' || *q == 'l' || *q == 'L') q++;
+        if (*q == 'b' || *q == '\0') {
+            fixed.append(copied, p);
+            if (*q == 'b') {
+                fixed += 'b';
+                q++;
+            }
+            copied = q;
+            changed = true;
+            p = q;
+        } else {
+            p = q + 1;
+        }
+    }
+    if (!changed) return vsprintf(buffer, format, args);
+    fixed.append(copied);
+    return vsprintf(buffer, fixed.c_str(), args);
+}
+#define vsprintf crt_vsprintf
 
 #endif /* LEGORRR_CRT_VC5NAMES_H */
