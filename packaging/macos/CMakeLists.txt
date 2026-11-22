@@ -45,5 +45,4 @@ install(CODE "
   execute_process(COMMAND /usr/bin/codesign --force --deep --sign -
     \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/LegoRR.app\"
     COMMAND_ERROR_IS_FATAL ANY)
-  "
-  COMPONENT Runtime)
+  ")

@@ -32,16 +32,20 @@ else()
   set(LRR_SEMANTIC_VERSION "${PROJECT_VERSION}")
 endif()
 
-# Windows puts LegoRR.exe at the root of its ZIP; elsewhere bin/.
+# Windows puts LegoRR.exe and the licence at the root of its ZIP; elsewhere
+# they go under bin/ and share/doc. These are plain variables, not the cache
+# ones of GNUInstallDirs, which another directory may already have set.
 if(WIN32)
-  set(CMAKE_INSTALL_BINDIR "." CACHE PATH "Binary install directory")
-  set(CMAKE_INSTALL_DOCDIR "." CACHE PATH "Documentation install directory")
+  set(LRR_INSTALL_BINDIR ".")
+  set(LRR_INSTALL_DOCDIR ".")
 else()
   include(GNUInstallDirs)
+  set(LRR_INSTALL_BINDIR "${CMAKE_INSTALL_BINDIR}")
+  set(LRR_INSTALL_DOCDIR "${CMAKE_INSTALL_DOCDIR}")
 endif()
 
 install(TARGETS program
-  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  RUNTIME DESTINATION "${LRR_INSTALL_BINDIR}"
   BUNDLE DESTINATION ".")
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -53,10 +57,10 @@ endif()
 if(WIN32)
   # A shared SDL3 (an installed package; the fetched one is static) travels
   # with the exe, as the post-build step copies it beside the build's.
-  install(FILES $<TARGET_RUNTIME_DLLS:program> DESTINATION "${CMAKE_INSTALL_BINDIR}")
+  install(FILES $<TARGET_RUNTIME_DLLS:program> DESTINATION "${LRR_INSTALL_BINDIR}")
 endif()
 if(NOT APPLE)
-  install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "${CMAKE_INSTALL_DOCDIR}")
+  install(FILES "${PROJECT_SOURCE_DIR}/LICENSE" DESTINATION "${LRR_INSTALL_DOCDIR}")
 endif()
 
 # The package name: lrr-portable-0.1.0-Linux-x86_64, -Darwin-arm64,

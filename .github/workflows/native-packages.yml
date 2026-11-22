@@ -133,6 +133,8 @@ jobs:
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-24.08
       options: --privileged
+      volumes:
+        - /var/lib/flatpak
     steps:
       - name: Check out
         uses: actions/checkout@v4
