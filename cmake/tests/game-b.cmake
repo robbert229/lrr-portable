@@ -60,3 +60,8 @@ lrr_unit_test(selectplace SOURCES ${GAME_DIR}/test_selectplace.cpp LABELS select
 # Sound name registration, sample markers, deferred playback and cooldown.
 lrr_unit_test(sfx SOURCES ${GAME_DIR}/test_sfx.cpp
   WRAP sound_bank_entry_load s_play_seam sound_source_spatial_refresh_all LABELS sfx)
+
+# Spiderweb damage, teardown and restart, beyond the existing grid tests.
+lrr_unit_test(spiderweb SOURCES ${GAME_DIR}/test_spiderweb.cpp
+  WRAP legoobject_position_to_terrain_cell object_type_name_index_find weapons_get_damage_for_object
+  LABELS spiderweb)
