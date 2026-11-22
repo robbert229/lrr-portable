@@ -57,3 +57,6 @@ lrr_unit_test(flic_unit SOURCES ${ENGINE_DIR}/test_flic_unit.cpp LABELS flic_uni
 # Exercise the text ring and timed overlay with a glyph sink in memory.
 lrr_unit_test(textwindow SOURCES ${ENGINE_DIR}/test_textwindow.cpp
   WRAP font_output_char LABELS textwindow)
+
+# Resolve the original key-name table back to DirectInput codes.
+lrr_unit_test(keys SOURCES ${ENGINE_DIR}/test_keys.cpp LABELS keys)
