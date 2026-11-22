@@ -1,0 +1,776 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 23:09:33 -0800
+Subject: [PATCH] feat(miniwin): fit the virtual display in a resizable window
+
+The virtual display (the display mode, or the window's size when the
+primary surface is made) is now fitted into the window whatever its size:
+the largest rectangle of its aspect, centred, with black bars at the sides
+or above and below. A resized window, or one made full screen at the
+desktop's size, takes effect at the next Flip, between frames; a minimized
+window keeps its target until it returns.
+
+miniwin/miniwinpresentation.h states the fit (Miniwin_FitTransform, the
+transform Direct3DRMDevice2Impl already computed) and its rules:
+- The 3D device renders at the window's pixels by default, or at most at
+  the virtual display's (Miniwin_SetRenderResolution), and the target is
+  scaled to the swapchain when presented.
+- A viewport covering the whole display widens into the bars, as before,
+  unless Miniwin_SetViewportsFillWindow(false) keeps it to the display's
+  aspect and fit; then Transform and InverseTransform agree with the
+  picture at any window size.
+- 2D images and viewport rectangles are clipped to the fit, so nothing is
+  drawn into the bars.
+- MINIWIN_DUMP_FRAME writes the picture at the resolution it was drawn at.
+
+The SDL GPU backend also releases its download buffer when it resizes.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/CMakeLists.txt b/miniwin/CMakeLists.txt
+index d3b0f2d..73c4dfe 100644
+--- a/miniwin/CMakeLists.txt
++++ b/miniwin/CMakeLists.txt
+@@ -11,6 +11,7 @@ add_library(miniwin STATIC EXCLUDE_FROM_ALL
+   src/ddraw/ddraw.cpp
+   src/ddraw/ddsurface.cpp
+   src/ddraw/framebuffer.cpp
++  src/ddraw/presentation.cpp
+ 
+   # D3D
+   src/d3d/d3dmaterial.cpp
+diff --git a/miniwin/include/miniwin/miniwinpresentation.h b/miniwin/include/miniwin/miniwinpresentation.h
+new file mode 100644
+index 0000000..02d55c8
+--- /dev/null
++++ b/miniwin/include/miniwin/miniwinpresentation.h
+@@ -0,0 +1,79 @@
++#pragma once
++
++struct SDL_Window;
++
++// How miniwin shows its virtual display in the window.
++//
++// The virtual display is the size the client draws in: the DirectDraw
++// display mode, or, in a window, the window's size when the primary surface
++// was made. The window may later be resized, or made full screen at the
++// desktop's size. miniwin then fits the virtual display into the window:
++// the largest rectangle of the virtual display's aspect, centred, with bars
++// at the sides (pillarboxing) or above and below (letterboxing).
++//
++// - The 3D device renders at the window's pixel size, unless
++//   Miniwin_SetRenderResolution asks for the virtual display's size.
++// - The mouse messages, GetCursorPos and SetCursorPos use virtual display
++//   coordinates. A point over a bar lies outside the virtual display: its
++//   coordinates are negative, or past the display's width or height.
++
++// The fit of a virtual display in a window: a point (x, y) of the virtual
++// display is at (x * scale + offsetX, y * scale + offsetY) in the window's
++// pixels.
++struct ViewportTransform {
++	float scale;
++	float offsetX;
++	float offsetY;
++};
++
++// The largest rectangle of virtualW:virtualH that fits in windowW x windowH,
++// centred.
++ViewportTransform Miniwin_FitTransform(int virtualW, int virtualH, int windowW, int windowH);
++
++// Where the 3D device renders.
++enum class MiniwinRenderResolution {
++	// The window's pixels: the 3D view at the window's resolution (or the
++	// largest area of the virtual display's aspect in it). The default.
++	Window,
++	// The virtual display's pixels, at most: the whole picture is drawn at
++	// the virtual display's resolution and scaled to fit when presented.
++	Virtual,
++};
++
++// Applies to 3D devices made, or windows resized, after the call.
++void Miniwin_SetRenderResolution(MiniwinRenderResolution resolution);
++MiniwinRenderResolution Miniwin_GetRenderResolution();
++
++// Whether a D3DRM viewport that covers the whole virtual display widens
++// into the bars: its projection takes the window's aspect, so a wider window
++// shows more of the scene at the sides (true, the default). False keeps it
++// to the virtual display's aspect and its fit in the window, so the 3D view
++// is framed exactly as the virtual display frames it, and D3DRM's Transform
++// and InverseTransform agree with the picture at any window size. Applies
++// to viewports whose projection is set after the call.
++void Miniwin_SetViewportsFillWindow(bool fill);
++bool Miniwin_GetViewportsFillWindow();
++
++// The size, in pixels, of a render target for a window of windowW x windowH
++// pixels showing a virtualW x virtualH display at `resolution`: the window's
++// size for Window; for Virtual, the window's aspect with the virtual display
++// at a scale of at most one.
++void Miniwin_RenderSize(
++	MiniwinRenderResolution resolution,
++	int virtualW,
++	int virtualH,
++	int windowW,
++	int windowH,
++	int* renderW,
++	int* renderH
++);
++
++// A point in the window, in SDL's window coordinates (points, as mouse
++// events report them), as a point of the virtual display, by the fit of the
++// virtual display in `window` (Miniwin_FitTransform, at the window's pixel
++// density). Unchanged for a window that shows no virtual display.
++void Miniwin_WindowToVirtual(SDL_Window* window, float x, float y, float* virtualX, float* virtualY);
++
++// The inverse: the window point, in SDL's window coordinates, at the centre
++// of the virtual display's pixel (x, y).
++void Miniwin_VirtualToWindow(SDL_Window* window, int x, int y, float* windowX, float* windowY);
+diff --git a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
+index 17bdbaf..d2ca55c 100644
+--- a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
++++ b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
+@@ -313,6 +313,7 @@ Direct3DRMSDL3GPURenderer::Direct3DRMSDL3GPURenderer(
+ 	m_height = height;
+ 	m_virtualWidth = width;
+ 	m_virtualHeight = height;
++
+ 	SDL_Surface* dummySurface = SDL_CreateSurface(1, 1, SDL_PIXELFORMAT_RGBA32);
+ 	if (!dummySurface) {
+ 		SDL_LogError(LOG_CATEGORY_MINIWIN, "Failed to create surface: %s", SDL_GetError());
+@@ -896,6 +897,10 @@ void Direct3DRMSDL3GPURenderer::Resize(int width, int height, const ViewportTran
+ 	}
+ 
+ 	// Setup texture GPU-to-CPU transfer
++	if (m_downloadBuffer) {
++		SDL_ReleaseGPUTransferBuffer(m_device, m_downloadBuffer);
++		m_downloadBuffer = nullptr;
++	}
+ 	SDL_GPUTransferBufferCreateInfo downloadBufferInfo = {};
+ 	downloadBufferInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD;
+ 	downloadBufferInfo.size =
+@@ -924,22 +929,34 @@ void Direct3DRMSDL3GPURenderer::Flip()
+ 	}
+ 
+ 	SDL_GPUTexture* swapchainTexture;
+-	if (!SDL_WaitAndAcquireGPUSwapchainTexture(m_cmdbuf, DDWindow, &swapchainTexture, nullptr, nullptr) ||
++	Uint32 swapchainWidth = 0;
++	Uint32 swapchainHeight = 0;
++	if (!SDL_WaitAndAcquireGPUSwapchainTexture(
++			m_cmdbuf,
++			DDWindow,
++			&swapchainTexture,
++			&swapchainWidth,
++			&swapchainHeight
++		) ||
+ 		!swapchainTexture) {
+ 		SDL_Log("SDL_WaitAndAcquireGPUSwapchainTexture: %s", SDL_GetError());
+ 		return;
+ 	}
+ 
++	// The render target fills the window: it has the window's size, or its
++	// aspect at a lower resolution (Miniwin_RenderSize), and the window may
++	// have been resized since the target was.
+ 	SDL_GPUBlitInfo blit = {};
+ 	blit.source.texture = m_transferTexture;
+ 	blit.source.w = m_width;
+ 	blit.source.h = m_height;
+ 	blit.destination.texture = swapchainTexture;
+-	blit.destination.w = m_width;
+-	blit.destination.h = m_height;
++	blit.destination.w = swapchainWidth ? swapchainWidth : m_width;
++	blit.destination.h = swapchainHeight ? swapchainHeight : m_height;
+ 	blit.load_op = SDL_GPU_LOADOP_DONT_CARE;
+ 	blit.flip_mode = SDL_FLIP_NONE;
+-	blit.filter = SDL_GPU_FILTER_NEAREST;
++	bool sameSize = blit.destination.w == (Uint32) m_width && blit.destination.h == (Uint32) m_height;
++	blit.filter = sameSize ? SDL_GPU_FILTER_NEAREST : SDL_GPU_FILTER_LINEAR;
+ 	blit.cycle = false;
+ 	SDL_BlitGPUTexture(m_cmdbuf, &blit);
+ 	SDL_SubmitGPUCommandBuffer(m_cmdbuf);
+@@ -961,6 +978,12 @@ void Direct3DRMSDL3GPURenderer::Draw2DImage(
+ 	SDL_GPUViewport fullTarget = {0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height), 0.0f, 1.0f};
+ 	SDL_SetGPUViewport(m_renderPass, &fullTarget);
+ 
++	// The image's rectangle in the render target, which the scissor clips to.
++	int x1 = static_cast<int>(std::round(dstRect.x * m_viewportTransform.scale + m_viewportTransform.offsetX));
++	int y1 = static_cast<int>(std::round(dstRect.y * m_viewportTransform.scale + m_viewportTransform.offsetY));
++	int x2 = x1 + static_cast<int>(std::round(dstRect.w * m_viewportTransform.scale));
++	int y2 = y1 + static_cast<int>(std::round(dstRect.h * m_viewportTransform.scale));
++
+ 	SDL_GPUTexture* tex;
+ 	SDL_Rect expandedDstRect;
+ 	if (textureId == NO_TEXTURE_ID) {
+@@ -1010,17 +1033,15 @@ void Direct3DRMSDL3GPURenderer::Draw2DImage(
+ 	SDL_GPUBufferBinding indexBufferBinding = {m_uiMeshCache.indexBuffer};
+ 	SDL_BindGPUIndexBuffer(m_renderPass, &indexBufferBinding, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+ 
+-	// Clamp the scissor to the render target: Metal and Vulkan reject a
+-	// scissor with a negative origin, so an image partly above or left of
+-	// the screen would otherwise not draw at all.
+-	int x1 = static_cast<int>(std::round(dstRect.x * m_viewportTransform.scale + m_viewportTransform.offsetX));
+-	int y1 = static_cast<int>(std::round(dstRect.y * m_viewportTransform.scale + m_viewportTransform.offsetY));
+-	int x2 = x1 + static_cast<int>(std::round(dstRect.w * m_viewportTransform.scale));
+-	int y2 = y1 + static_cast<int>(std::round(dstRect.h * m_viewportTransform.scale));
+-	x1 = std::max(0, std::min(x1, m_width));
+-	y1 = std::max(0, std::min(y1, m_height));
+-	x2 = std::max(x1, std::min(x2, m_width));
+-	y2 = std::max(y1, std::min(y2, m_height));
++	// Clamp the scissor to the virtual display's pixels in the render target:
++	// Metal and Vulkan reject a scissor with a negative origin, so an image
++	// partly above or left of the screen would otherwise not draw at all,
++	// and an image past the display's edge would draw into the bars.
++	SDL_Rect fit = GetFitRect();
++	x1 = std::max(fit.x, std::min(x1, fit.x + fit.w));
++	y1 = std::max(fit.y, std::min(y1, fit.y + fit.h));
++	x2 = std::max(x1, std::min(x2, fit.x + fit.w));
++	y2 = std::max(y1, std::min(y2, fit.y + fit.h));
+ 	if (x2 == x1 || y2 == y1) {
+ 		return;
+ 	}
+@@ -1338,10 +1359,11 @@ SDL_Rect Direct3DRMSDL3GPURenderer::ToRenderPixels(const D3DRECT& rect) const
+ 	int y1 = static_cast<int>(std::lround(rect.y1 * scale + m_viewportTransform.offsetY));
+ 	int x2 = static_cast<int>(std::lround(rect.x2 * scale + m_viewportTransform.offsetX));
+ 	int y2 = static_cast<int>(std::lround(rect.y2 * scale + m_viewportTransform.offsetY));
+-	x1 = std::max(0, std::min(x1, m_width));
+-	y1 = std::max(0, std::min(y1, m_height));
+-	x2 = std::max(x1, std::min(x2, m_width));
+-	y2 = std::max(y1, std::min(y2, m_height));
++	SDL_Rect fit = GetFitRect();
++	x1 = std::max(fit.x, std::min(x1, fit.x + fit.w));
++	y1 = std::max(fit.y, std::min(y1, fit.y + fit.h));
++	x2 = std::max(x1, std::min(x2, fit.x + fit.w));
++	y2 = std::max(y1, std::min(y2, fit.y + fit.h));
+ 	return {x1, y1, x2 - x1, y2 - y1};
+ }
+ 
+diff --git a/miniwin/src/d3drm/backends/software/renderer.cpp b/miniwin/src/d3drm/backends/software/renderer.cpp
+index 54320e3..764d93b 100644
+--- a/miniwin/src/d3drm/backends/software/renderer.cpp
++++ b/miniwin/src/d3drm/backends/software/renderer.cpp
+@@ -1033,6 +1033,11 @@ void Direct3DRMSoftwareRenderer::Resize(int width, int height, const ViewportTra
+ 		SDL_DestroySurface(m_renderedImage);
+ 	}
+ 	m_renderedImage = SDL_CreateSurface(m_width, m_height, SDL_PIXELFORMAT_RGBA32);
++	SDL_FillSurfaceRect(m_renderedImage, nullptr, SDL_MapSurfaceRGBA(m_renderedImage, 0, 0, 0, 0xFF));
++	// 2D images and clears stay in the virtual display's pixels, so the
++	// bars stay black.
++	SDL_Rect fit = GetFitRect();
++	SDL_SetSurfaceClipRect(m_renderedImage, &fit);
+ 
+ 	if (m_uploadBuffer) {
+ 		SDL_DestroyTexture(m_uploadBuffer);
+@@ -1507,10 +1512,11 @@ SDL_Rect Direct3DRMSoftwareRenderer::ToRenderPixels(const D3DRECT& rect) const
+ 	int y1 = static_cast<int>(std::lround(rect.y1 * scale + m_viewportTransform.offsetY));
+ 	int x2 = static_cast<int>(std::lround(rect.x2 * scale + m_viewportTransform.offsetX));
+ 	int y2 = static_cast<int>(std::lround(rect.y2 * scale + m_viewportTransform.offsetY));
+-	x1 = std::max(0, std::min(x1, m_width));
+-	y1 = std::max(0, std::min(y1, m_height));
+-	x2 = std::max(x1, std::min(x2, m_width));
+-	y2 = std::max(y1, std::min(y2, m_height));
++	SDL_Rect fit = GetFitRect();
++	x1 = std::max(fit.x, std::min(x1, fit.x + fit.w));
++	y1 = std::max(fit.y, std::min(y1, fit.y + fit.h));
++	x2 = std::max(x1, std::min(x2, fit.x + fit.w));
++	y2 = std::max(y1, std::min(y2, fit.y + fit.h));
+ 	return {x1, y1, x2 - x1, y2 - y1};
+ }
+ 
+diff --git a/miniwin/src/d3drm/d3drmdevice.cpp b/miniwin/src/d3drm/d3drmdevice.cpp
+index 2552e47..5d6ccbc 100644
+--- a/miniwin/src/d3drm/d3drmdevice.cpp
++++ b/miniwin/src/d3drm/d3drmdevice.cpp
+@@ -7,19 +7,44 @@
+ #include "miniwin.h"
+ #include "miniwin/d3drm.h"
+ #include "miniwin/miniwindevice.h"
++#include "presentation_impl.h"
+ 
+ #include <SDL3/SDL.h>
++#include <algorithm>
+ #include <cassert>
++#include <vector>
++
++namespace {
++
++// The live devices, which Miniwin_ResizeDevicesToWindow resizes when their
++// window changes size.
++std::vector<Direct3DRMDevice2Impl*>& Devices()
++{
++	static std::vector<Direct3DRMDevice2Impl*> devices;
++	return devices;
++}
++
++} // namespace
++
++void Miniwin_ResizeDevicesToWindow()
++{
++	for (Direct3DRMDevice2Impl* device : Devices()) {
++		device->ResizeIfWindowChanged();
++	}
++}
+ 
+ Direct3DRMDevice2Impl::Direct3DRMDevice2Impl(DWORD width, DWORD height, Direct3DRMRenderer* renderer)
+ 	: m_virtualWidth(width), m_virtualHeight(height), m_renderer(renderer), m_viewports(new Direct3DRMViewportArrayImpl)
+ {
+ 	m_renderer->AddRef();
++	Devices().push_back(this);
+ 	Resize();
+ }
+ 
+ Direct3DRMDevice2Impl::~Direct3DRMDevice2Impl()
+ {
++	auto& devices = Devices();
++	devices.erase(std::remove(devices.begin(), devices.end(), this), devices.end());
+ 	for (int i = 0; i < m_viewports->GetSize(); i++) {
+ 		IDirect3DRMViewport* viewport;
+ 		m_viewports->GetElement(i, &viewport);
+@@ -145,31 +170,30 @@ HRESULT Direct3DRMDevice2Impl::GetViewports(IDirect3DRMViewportArray** ppViewpor
+ 	return DD_OK;
+ }
+ 
+-ViewportTransform CalculateViewportTransform(int virtualW, int virtualH, int windowW, int windowH)
+-{
+-	float scaleX = (float) windowW / virtualW;
+-	float scaleY = (float) windowH / virtualH;
+-	float scale = (scaleX < scaleY) ? scaleX : scaleY;
+-
+-	float viewportW = virtualW * scale;
+-	float viewportH = virtualH * scale;
+-
+-	float offsetX = (windowW - viewportW) * 0.5f;
+-	float offsetY = (windowH - viewportH) * 0.5f;
+-
+-	return {scale, offsetX, offsetY};
+-}
+-
++// The render target: the window's pixels, or the virtual display's
++// (Miniwin_SetRenderResolution), with the virtual display fitted in it. The
++// window's own fit (m_windowTransform) maps events, whatever the target.
+ void Direct3DRMDevice2Impl::Resize()
+ {
+-	SDL_GetWindowSizeInPixels(DDWindow, &m_windowWidth, &m_windowHeight);
++	Miniwin_WindowPixelSize(DDWindow, &m_windowWidth, &m_windowHeight);
+ #ifdef __3DS__
+ 	m_windowWidth = 320; // We are on the lower screen
+ 	m_windowHeight = 240;
+ #endif
+-	SDL_Log("Render resolution: %dx%d", m_windowWidth, m_windowHeight);
+-	m_viewportTransform = CalculateViewportTransform(m_virtualWidth, m_virtualHeight, m_windowWidth, m_windowHeight);
+-	m_renderer->Resize(m_windowWidth, m_windowHeight, m_viewportTransform);
++	int renderWidth, renderHeight;
++	Miniwin_RenderSize(
++		Miniwin_GetRenderResolution(),
++		m_virtualWidth,
++		m_virtualHeight,
++		m_windowWidth,
++		m_windowHeight,
++		&renderWidth,
++		&renderHeight
++	);
++	SDL_Log("Render resolution: %dx%d", renderWidth, renderHeight);
++	m_windowTransform = Miniwin_FitTransform(m_virtualWidth, m_virtualHeight, m_windowWidth, m_windowHeight);
++	m_viewportTransform = Miniwin_FitTransform(m_virtualWidth, m_virtualHeight, renderWidth, renderHeight);
++	m_renderer->Resize(renderWidth, renderHeight, m_viewportTransform);
+ 	m_renderer->Clear(0, 0, 0);
+ 	for (int i = 0; i < m_viewports->GetSize(); i++) {
+ 		IDirect3DRMViewport* viewport;
+@@ -180,6 +204,18 @@ void Direct3DRMDevice2Impl::Resize()
+ 	}
+ }
+ 
++void Direct3DRMDevice2Impl::ResizeIfWindowChanged()
++{
++#ifndef __3DS__
++	// A minimized window reports no size: keep the target until it returns.
++	int width, height;
++	if (Miniwin_WindowPixelSize(DDWindow, &width, &height) &&
++		(width != m_windowWidth || height != m_windowHeight)) {
++		Resize();
++	}
++#endif
++}
++
+ bool Direct3DRMDevice2Impl::ConvertEventToRenderCoordinates(SDL_Event* event)
+ {
+ 	float density = SDL_GetWindowPixelDensity(DDWindow);
+@@ -193,22 +229,22 @@ bool Direct3DRMDevice2Impl::ConvertEventToRenderCoordinates(SDL_Event* event)
+ 		break;
+ 	}
+ 	case SDL_EVENT_MOUSE_MOTION: {
+-		event->motion.x = (event->motion.x * density - m_viewportTransform.offsetX) / m_viewportTransform.scale;
+-		event->motion.y = (event->motion.y * density - m_viewportTransform.offsetY) / m_viewportTransform.scale;
++		event->motion.x = (event->motion.x * density - m_windowTransform.offsetX) / m_windowTransform.scale;
++		event->motion.y = (event->motion.y * density - m_windowTransform.offsetY) / m_windowTransform.scale;
+ 		break;
+ 	}
+ 	case SDL_EVENT_MOUSE_BUTTON_DOWN:
+ 	case SDL_EVENT_MOUSE_BUTTON_UP: {
+-		event->button.x = (event->button.x * density - m_viewportTransform.offsetX) / m_viewportTransform.scale;
+-		event->button.y = (event->button.y * density - m_viewportTransform.offsetY) / m_viewportTransform.scale;
++		event->button.x = (event->button.x * density - m_windowTransform.offsetX) / m_windowTransform.scale;
++		event->button.y = (event->button.y * density - m_windowTransform.offsetY) / m_windowTransform.scale;
+ 		break;
+ 	}
+ 	case SDL_EVENT_FINGER_MOTION:
+ 	case SDL_EVENT_FINGER_DOWN:
+ 	case SDL_EVENT_FINGER_UP:
+ 	case SDL_EVENT_FINGER_CANCELED: {
+-		float x = (event->tfinger.x * m_windowWidth - m_viewportTransform.offsetX) / m_viewportTransform.scale;
+-		float y = (event->tfinger.y * m_windowHeight - m_viewportTransform.offsetY) / m_viewportTransform.scale;
++		float x = (event->tfinger.x * m_windowWidth - m_windowTransform.offsetX) / m_windowTransform.scale;
++		float y = (event->tfinger.y * m_windowHeight - m_windowTransform.offsetY) / m_windowTransform.scale;
+ 		event->tfinger.x = x / m_virtualWidth;
+ 		event->tfinger.y = y / m_virtualHeight;
+ 		break;
+@@ -225,8 +261,8 @@ bool Direct3DRMDevice2Impl::ConvertRenderToWindowCoordinates(Sint32 inX, Sint32
+ 		density = 1.0f;
+ 	}
+ 
+-	outX = static_cast<Sint32>((inX * m_viewportTransform.scale + m_viewportTransform.offsetX) / density);
+-	outY = static_cast<Sint32>((inY * m_viewportTransform.scale + m_viewportTransform.offsetY) / density);
++	outX = static_cast<Sint32>((inX * m_windowTransform.scale + m_windowTransform.offsetX) / density);
++	outY = static_cast<Sint32>((inY * m_windowTransform.scale + m_windowTransform.offsetY) / density);
+ 
+ 	return true;
+ }
+diff --git a/miniwin/src/d3drm/d3drmviewport.cpp b/miniwin/src/d3drm/d3drmviewport.cpp
+index 3469fff..c4a6fae 100644
+--- a/miniwin/src/d3drm/d3drmviewport.cpp
++++ b/miniwin/src/d3drm/d3drmviewport.cpp
+@@ -508,7 +508,8 @@ void Direct3DRMViewportImpl::ApplyToRenderer()
+ 	if (!m_renderer) {
+ 		return;
+ 	}
+-	bool whole = m_x == 0 && m_y == 0 && (int) m_virtualWidth == m_renderer->GetVirtualWidth() &&
++	bool whole = Miniwin_GetViewportsFillWindow() && m_x == 0 && m_y == 0 &&
++				 (int) m_virtualWidth == m_renderer->GetVirtualWidth() &&
+ 				 (int) m_virtualHeight == m_renderer->GetVirtualHeight();
+ 	D3DRECT rect = {m_x, m_y, m_x + (LONG) m_virtualWidth, m_y + (LONG) m_virtualHeight};
+ 	m_renderer->SetViewportRect(whole ? nullptr : &rect);
+@@ -602,8 +603,11 @@ void Direct3DRMViewportImpl::UpdateProjectionMatrix()
+ 	float virtualAspect = (float) m_virtualWidth / (float) m_virtualHeight;
+ 	float windowAspect = (float) m_renderer->GetWidth() / (float) m_renderer->GetHeight();
+ 	// A viewport smaller than the device is drawn into its own rectangle,
+-	// scaled with the 2D image, so it keeps its own aspect.
+-	bool whole = m_x == 0 && m_y == 0 && (int) m_virtualWidth == m_renderer->GetVirtualWidth() &&
++	// scaled with the 2D image, so it keeps its own aspect; so does one that
++	// covers the device unless it may fill the window's bars
++	// (Miniwin_SetViewportsFillWindow).
++	bool whole = Miniwin_GetViewportsFillWindow() && m_x == 0 && m_y == 0 &&
++				 (int) m_virtualWidth == m_renderer->GetVirtualWidth() &&
+ 				 (int) m_virtualHeight == m_renderer->GetVirtualHeight();
+ 	if (!whole) {
+ 		windowAspect = virtualAspect;
+diff --git a/miniwin/src/ddraw/framebuffer.cpp b/miniwin/src/ddraw/framebuffer.cpp
+index 8725df8..5fd6d07 100644
+--- a/miniwin/src/ddraw/framebuffer.cpp
++++ b/miniwin/src/ddraw/framebuffer.cpp
+@@ -3,6 +3,7 @@
+ #include "dummysurface_impl.h"
+ #include "framebuffer_impl.h"
+ #include "miniwin.h"
++#include "presentation_impl.h"
+ 
+ #include <assert.h>
+ 
+@@ -16,10 +17,12 @@ FrameBufferImpl::FrameBufferImpl(DWORD virtualWidth, DWORD virtualHeight)
+ #else
+ 	m_transferBuffer = new DirectDrawSurfaceImpl(m_virtualWidth, m_virtualHeight, SDL_PIXELFORMAT_RGBA32);
+ #endif
++	Miniwin_SetVirtualDisplay(DDWindow, (int) m_virtualWidth, (int) m_virtualHeight);
+ }
+ 
+ FrameBufferImpl::~FrameBufferImpl()
+ {
++	Miniwin_ClearVirtualDisplay(DDWindow);
+ 	m_transferBuffer->Release();
+ 	if (m_palette) {
+ 		m_palette->Release();
+@@ -145,6 +148,9 @@ HRESULT FrameBufferImpl::Flip(LPDIRECTDRAWSURFACE lpDDSurfaceTargetOverride, DDF
+ 	}
+ 	DumpFrame();
+ 	DDRenderer->Flip();
++	// Between frames: a resized window, or one made full screen, takes
++	// effect now, so a frame is never drawn into two sizes of target.
++	Miniwin_ResizeDevicesToWindow();
+ 	return DD_OK;
+ }
+ 
+@@ -156,7 +162,12 @@ void FrameBufferImpl::DumpFrame()
+ 	if (!path || !*path) {
+ 		return;
+ 	}
+-	SDL_Surface* frame = SDL_CreateSurface(m_virtualWidth, m_virtualHeight, SDL_PIXELFORMAT_RGB24);
++	// The picture as the renderer drew it: the virtual display at the render
++	// target's scale, never smaller than the virtual display.
++	ViewportTransform fit = DDRenderer->GetViewportTransform();
++	float scale = fit.scale > 1.0f ? fit.scale : 1.0f;
++	SDL_Surface* frame =
++		SDL_CreateSurface((int) (m_virtualWidth * scale), (int) (m_virtualHeight * scale), SDL_PIXELFORMAT_RGB24);
+ 	if (!frame) {
+ 		return;
+ 	}
+diff --git a/miniwin/src/ddraw/presentation.cpp b/miniwin/src/ddraw/presentation.cpp
+new file mode 100644
+index 0000000..f018653
+--- /dev/null
++++ b/miniwin/src/ddraw/presentation.cpp
+@@ -0,0 +1,162 @@
++#include "presentation_impl.h"
++
++#include <SDL3/SDL.h>
++#include <cmath>
++
++namespace {
++
++MiniwinRenderResolution g_renderResolution = MiniwinRenderResolution::Window;
++bool g_viewportsFillWindow = true;
++
++struct VirtualDisplay {
++	SDL_Window* window;
++	int width;
++	int height;
++};
++
++VirtualDisplay g_virtualDisplay = {nullptr, 0, 0};
++
++float PixelDensity(SDL_Window* window)
++{
++	float density = SDL_GetWindowPixelDensity(window);
++	return density > 0.0f ? density : 1.0f;
++}
++
++} // namespace
++
++ViewportTransform Miniwin_FitTransform(int virtualW, int virtualH, int windowW, int windowH)
++{
++	if (virtualW <= 0 || virtualH <= 0 || windowW <= 0 || windowH <= 0) {
++		return {1.0f, 0.0f, 0.0f};
++	}
++	float scaleX = (float) windowW / virtualW;
++	float scaleY = (float) windowH / virtualH;
++	float scale = (scaleX < scaleY) ? scaleX : scaleY;
++
++	float viewportW = virtualW * scale;
++	float viewportH = virtualH * scale;
++
++	float offsetX = (windowW - viewportW) * 0.5f;
++	float offsetY = (windowH - viewportH) * 0.5f;
++
++	return {scale, offsetX, offsetY};
++}
++
++void Miniwin_SetRenderResolution(MiniwinRenderResolution resolution)
++{
++	g_renderResolution = resolution;
++}
++
++MiniwinRenderResolution Miniwin_GetRenderResolution()
++{
++	return g_renderResolution;
++}
++
++void Miniwin_SetViewportsFillWindow(bool fill)
++{
++	g_viewportsFillWindow = fill;
++}
++
++bool Miniwin_GetViewportsFillWindow()
++{
++	return g_viewportsFillWindow;
++}
++
++void Miniwin_RenderSize(
++	MiniwinRenderResolution resolution,
++	int virtualW,
++	int virtualH,
++	int windowW,
++	int windowH,
++	int* renderW,
++	int* renderH
++)
++{
++	*renderW = windowW;
++	*renderH = windowH;
++	if (resolution != MiniwinRenderResolution::Virtual || virtualW <= 0 || virtualH <= 0 || windowW <= 0 ||
++		windowH <= 0) {
++		return;
++	}
++	// The window's aspect, with the virtual display at a scale of at most
++	// one: as wide as the virtual display when the window is narrower than
++	// it, else as tall.
++	float aspect = (float) windowW / windowH;
++	float virtualAspect = (float) virtualW / virtualH;
++	if (aspect > virtualAspect) {
++		*renderH = SDL_min(windowH, virtualH);
++		*renderW = SDL_max(1, (int) std::lround(*renderH * aspect));
++	}
++	else {
++		*renderW = SDL_min(windowW, virtualW);
++		*renderH = SDL_max(1, (int) std::lround(*renderW / aspect));
++	}
++}
++
++void Miniwin_SetVirtualDisplay(SDL_Window* window, int width, int height)
++{
++	g_virtualDisplay = {window, width, height};
++}
++
++void Miniwin_ClearVirtualDisplay(SDL_Window* window)
++{
++	if (g_virtualDisplay.window == window) {
++		g_virtualDisplay = {nullptr, 0, 0};
++	}
++}
++
++bool Miniwin_GetVirtualDisplay(SDL_Window* window, int* width, int* height)
++{
++	if (!window || g_virtualDisplay.window != window || g_virtualDisplay.width <= 0 ||
++		g_virtualDisplay.height <= 0) {
++		return false;
++	}
++	*width = g_virtualDisplay.width;
++	*height = g_virtualDisplay.height;
++	return true;
++}
++
++bool Miniwin_WindowPixelSize(SDL_Window* window, int* width, int* height)
++{
++	*width = 0;
++	*height = 0;
++	if (window) {
++		SDL_GetWindowSizeInPixels(window, width, height);
++	}
++	bool sized = *width > 0 && *height > 0;
++	*width = SDL_max(*width, 1);
++	*height = SDL_max(*height, 1);
++	return sized;
++}
++
++void Miniwin_WindowToVirtual(SDL_Window* window, float x, float y, float* virtualX, float* virtualY)
++{
++	*virtualX = x;
++	*virtualY = y;
++	int virtualW, virtualH;
++	if (!Miniwin_GetVirtualDisplay(window, &virtualW, &virtualH)) {
++		return;
++	}
++	int windowW, windowH;
++	Miniwin_WindowPixelSize(window, &windowW, &windowH);
++	ViewportTransform fit = Miniwin_FitTransform(virtualW, virtualH, windowW, windowH);
++	float density = PixelDensity(window);
++	*virtualX = (x * density - fit.offsetX) / fit.scale;
++	*virtualY = (y * density - fit.offsetY) / fit.scale;
++}
++
++void Miniwin_VirtualToWindow(SDL_Window* window, int x, int y, float* windowX, float* windowY)
++{
++	*windowX = (float) x;
++	*windowY = (float) y;
++	int virtualW, virtualH;
++	if (!Miniwin_GetVirtualDisplay(window, &virtualW, &virtualH)) {
++		return;
++	}
++	int windowW, windowH;
++	Miniwin_WindowPixelSize(window, &windowW, &windowH);
++	ViewportTransform fit = Miniwin_FitTransform(virtualW, virtualH, windowW, windowH);
++	float density = PixelDensity(window);
++	*windowX = ((x + 0.5f) * fit.scale + fit.offsetX) / density;
++	*windowY = ((y + 0.5f) * fit.scale + fit.offsetY) / density;
++}
+diff --git a/miniwin/src/internal/d3drmdevice_impl.h b/miniwin/src/internal/d3drmdevice_impl.h
+index 8859517..81563c2 100644
+--- a/miniwin/src/internal/d3drmdevice_impl.h
++++ b/miniwin/src/internal/d3drmdevice_impl.h
+@@ -41,6 +41,9 @@ struct Direct3DRMDevice2Impl : public Direct3DRMObjectBaseImpl<IDirect3DRMDevice
+ 
+ 	Direct3DRMRenderer* m_renderer;
+ 
++	// Resizes the render target when the window's pixel size has changed.
++	void ResizeIfWindowChanged();
++
+ private:
+ 	void Resize();
+ 
+@@ -48,6 +51,8 @@ struct Direct3DRMDevice2Impl : public Direct3DRMObjectBaseImpl<IDirect3DRMDevice
+ 	int m_windowHeight;
+ 	uint32_t m_virtualWidth;
+ 	uint32_t m_virtualHeight;
++	// The virtual display's fit in the render target, and in the window.
+ 	ViewportTransform m_viewportTransform;
++	ViewportTransform m_windowTransform;
+ 	IDirect3DRMViewportArray* m_viewports;
+ };
+diff --git a/miniwin/src/internal/d3drmrenderer.h b/miniwin/src/internal/d3drmrenderer.h
+index fc12e3a..a843b37 100644
+--- a/miniwin/src/internal/d3drmrenderer.h
++++ b/miniwin/src/internal/d3drmrenderer.h
+@@ -109,6 +109,21 @@ class Direct3DRMRenderer : public IDirect3DDevice3 {
+ 	virtual Uint32 GetTextureId(IDirect3DRMTexture* texture, bool isUI = false, float scaleX = 0, float scaleY = 0) = 0;
+ 	virtual Uint32 GetMeshId(IDirect3DRMMesh* mesh, const MeshGroup* meshGroup) = 0;
+ 	int GetWidth() { return m_width; }
++	// The virtual display's fit in the render target, and the pixels it
++	// covers there. Nothing is drawn outside them, so the bars stay black.
++	ViewportTransform GetViewportTransform() const { return m_viewportTransform; }
++	SDL_Rect GetFitRect() const
++	{
++		int x1 = (int) SDL_lroundf(m_viewportTransform.offsetX);
++		int y1 = (int) SDL_lroundf(m_viewportTransform.offsetY);
++		int x2 = (int) SDL_lroundf(m_viewportTransform.offsetX + m_virtualWidth * m_viewportTransform.scale);
++		int y2 = (int) SDL_lroundf(m_viewportTransform.offsetY + m_virtualHeight * m_viewportTransform.scale);
++		x1 = SDL_clamp(x1, 0, m_width);
++		y1 = SDL_clamp(y1, 0, m_height);
++		x2 = SDL_clamp(x2, x1, m_width);
++		y2 = SDL_clamp(y2, y1, m_height);
++		return {x1, y1, x2 - x1, y2 - y1};
++	}
+ 	int GetHeight() { return m_height; }
+ 	int GetVirtualWidth() { return m_virtualWidth; }
+ 	int GetVirtualHeight() { return m_virtualHeight; }
+diff --git a/miniwin/src/internal/presentation_impl.h b/miniwin/src/internal/presentation_impl.h
+new file mode 100644
+index 0000000..6b40d1d
+--- /dev/null
++++ b/miniwin/src/internal/presentation_impl.h
+@@ -0,0 +1,20 @@
++#pragma once
++
++#include "miniwin/miniwinpresentation.h"
++
++#include <SDL3/SDL.h>
++
++// The virtual display a window shows: set when the primary surface is made
++// (FrameBufferImpl), cleared when it is released.
++void Miniwin_SetVirtualDisplay(SDL_Window* window, int width, int height);
++void Miniwin_ClearVirtualDisplay(SDL_Window* window);
++// False when `window` shows no virtual display.
++bool Miniwin_GetVirtualDisplay(SDL_Window* window, int* width, int* height);
++
++// The window's size in pixels, never zero. False when the window reports
++// none, as a minimized one can: the sizes are then 1x1.
++bool Miniwin_WindowPixelSize(SDL_Window* window, int* width, int* height);
++
++// Resizes every 3D device whose window changed pixel size since it last
++// sized its render target (Direct3DRMDevice2Impl), at a frame boundary.
++void Miniwin_ResizeDevicesToWindow();
+diff --git a/miniwin/src/internal/structs.h b/miniwin/src/internal/structs.h
+index 43bda0e..fa80bfc 100644
+--- a/miniwin/src/internal/structs.h
++++ b/miniwin/src/internal/structs.h
+@@ -1,5 +1,7 @@
+ #pragma once
+ 
++#include "miniwin/miniwinpresentation.h" // ViewportTransform
++
+ #include <SDL3/SDL.h>
+ #include <stdint.h>
+ 
+@@ -15,9 +17,3 @@ struct Appearance {
+ 	uint32_t textureId;
+ 	uint32_t flat;
+ };
+-
+-struct ViewportTransform {
+-	float scale;
+-	float offsetX;
+-	float offsetY;
+-};

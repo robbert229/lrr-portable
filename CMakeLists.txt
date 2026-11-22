@@ -478,6 +478,19 @@ if(BUILD_TESTING)
       "LINKER:--wrap=sound_submit_with_global_cooldown")
     add_test(NAME info_panel_percent_b COMMAND info_panel_percent_b_test)
     set_tests_properties(info_panel_percent_b PROPERTIES LABELS info)
+    # Lego.cfg lays the interface out only for 640x480: another mode reads
+    # that layout ([divergence:layout-fallback]). The units' Panel.c calls
+    # and the file read reach the test's __wrap_ stubs.
+    add_executable(layout_fallback_test ${GAME_DIR}/test_layout_fallback.cpp)
+    target_link_libraries(layout_fallback_test PRIVATE units)
+    target_link_options(layout_fallback_test PRIVATE
+      "LINKER:--wrap=file_load_binary"
+      "LINKER:--wrap=legacy_overlay_image_record_load"
+      "LINKER:--wrap=panel_category_bounds_set"
+      "LINKER:--wrap=panel_texture_slots_allocate"
+      "LINKER:--wrap=case_insensitive_name_table_lookup")
+    add_test(NAME layout_fallback COMMAND layout_fallback_test)
+    set_tests_properties(layout_fallback PROPERTIES LABELS display)
   endif()
   # Files.c's SDL3 streams and path mapping, and the configuration file
   # ([library:filesystem], [library:config]).
@@ -694,6 +707,15 @@ if(BUILD_TESTING)
   target_link_libraries(miniwin_messages_test PRIVATE miniwin)
   add_test(NAME miniwin_messages COMMAND miniwin_messages_test)
   set_tests_properties(miniwin_messages PROPERTIES LABELS miniwin)
+
+  # The virtual display fitted into a window of another size: the fit, the
+  # render size and filtering rule, the mouse through the fit, and a frame
+  # buffer lock that draws only the pixels it changed
+  # (miniwin/miniwinpresentation.h).
+  add_executable(miniwin_presentation_test ${PLATFORM_DIR}/native/test_miniwin_presentation.cpp)
+  target_link_libraries(miniwin_presentation_test PRIVATE miniwin)
+  add_test(NAME miniwin_presentation COMMAND miniwin_presentation_test)
+  set_tests_properties(miniwin_presentation PROPERTIES LABELS miniwin SKIP_RETURN_CODE 77)
 
   # miniwin's key messages: Windows virtual-key codes and lParam flags from
   # SDL key events, WM_SYSKEY* for Alt and F10, and Alt+F4 as WM_CLOSE.

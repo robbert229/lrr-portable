@@ -1,0 +1,113 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 23:09:33 -0800
+Subject: [PATCH] feat(miniwin): map the mouse through the virtual display's
+ fit
+
+In a window that shows the virtual display, client coordinates are the
+virtual display's: the mouse messages, a message's pt, GetCursorPos and
+SetCursorPos go through its fit in the window (Miniwin_WindowToVirtual,
+Miniwin_VirtualToWindow), at the window's pixel density. A point over a bar
+lies outside the display, for the client to clamp, as a captured mouse
+outside a Windows client area does. A window without a virtual display
+keeps its own coordinates.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/windows/windowmessages.cpp b/miniwin/src/windows/windowmessages.cpp
+index 9747c84..e67db46 100644
+--- a/miniwin/src/windows/windowmessages.cpp
++++ b/miniwin/src/windows/windowmessages.cpp
+@@ -1,5 +1,6 @@
+ #include "miniwin.h"
+ #include "miniwin/windows.h"
++#include "presentation_impl.h"
+ 
+ #include <SDL3/SDL.h>
+ #ifdef __EMSCRIPTEN__
+@@ -17,7 +18,10 @@
+ // Screen coordinates are the client coordinates of the window under the
+ // mouse (or of the first window): miniwin's primary surface is the window's
+ // client area, so ClientToScreen leaves a point unchanged, and the cursor
+-// calls and a message's pt follow it.
++// calls and a message's pt follow it. In a window that shows the virtual
++// display, the client coordinates are the virtual display's, through its
++// fit in the window (miniwin/miniwinpresentation.h): the window can be any
++// size while the client keeps drawing at the display mode's.
+ 
+ namespace {
+ 
+@@ -58,12 +62,20 @@ SDL_Window* CursorWindow()
+ 	return WindowProcedures().empty() ? nullptr : WindowProcedures().begin()->first;
+ }
+ 
++// A point in `window`, in SDL's window coordinates, in client coordinates.
++POINT ClientPoint(SDL_Window* window, float x, float y)
++{
++	float clientX, clientY;
++	Miniwin_WindowToVirtual(window, x, y, &clientX, &clientY);
++	return POINT{(LONG) SDL_floorf(clientX), (LONG) SDL_floorf(clientY)};
++}
++
+ POINT CursorPosition()
+ {
+ 	float x = 0.0f;
+ 	float y = 0.0f;
+ 	SDL_GetMouseState(&x, &y);
+-	return POINT{(LONG) x, (LONG) y};
++	return ClientPoint(CursorWindow(), x, y);
+ }
+ 
+ void Post(SDL_Window* window, UINT message, WPARAM wParam, LPARAM lParam)
+@@ -78,9 +90,10 @@ void Post(SDL_Window* window, UINT message, WPARAM wParam, LPARAM lParam)
+ 	PostedMessages().push_back(msg);
+ }
+ 
+-LPARAM MousePosition(float x, float y)
++LPARAM MousePosition(SDL_Window* window, float x, float y)
+ {
+-	return MAKELPARAM((int) x, (int) y);
++	POINT point = ClientPoint(window, x, y);
++	return MAKELPARAM(point.x, point.y);
+ }
+ 
+ // The virtual-key code Windows reports for a key: a letter or digit by the
+@@ -309,7 +322,12 @@ void Translate(const SDL_Event& event)
+ 		Post(WindowOf(event.window.windowID), WM_SIZE, 0, MAKELPARAM(event.window.data1, event.window.data2));
+ 		break;
+ 	case SDL_EVENT_MOUSE_MOTION:
+-		Post(WindowOf(event.motion.windowID), WM_MOUSEMOVE, 0, MousePosition(event.motion.x, event.motion.y));
++		Post(
++			WindowOf(event.motion.windowID),
++			WM_MOUSEMOVE,
++			0,
++			MousePosition(WindowOf(event.motion.windowID), event.motion.x, event.motion.y)
++		);
+ 		break;
+ 	case SDL_EVENT_MOUSE_BUTTON_DOWN:
+ 	case SDL_EVENT_MOUSE_BUTTON_UP: {
+@@ -325,7 +343,12 @@ void Translate(const SDL_Event& event)
+ 		else {
+ 			break;
+ 		}
+-		Post(WindowOf(event.button.windowID), message, 0, MousePosition(event.button.x, event.button.y));
++		Post(
++			WindowOf(event.button.windowID),
++			message,
++			0,
++			MousePosition(WindowOf(event.button.windowID), event.button.x, event.button.y)
++		);
+ 		break;
+ 	}
+ 	case SDL_EVENT_KEY_DOWN:
+@@ -611,7 +634,9 @@ BOOL SetCursorPos(int X, int Y)
+ 	if (!window) {
+ 		return FALSE;
+ 	}
+-	SDL_WarpMouseInWindow(window, (float) X, (float) Y);
++	float x, y;
++	Miniwin_VirtualToWindow(window, X, Y, &x, &y);
++	SDL_WarpMouseInWindow(window, x, y);
+ 	return TRUE;
+ }
+ 

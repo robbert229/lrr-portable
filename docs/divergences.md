@@ -81,6 +81,53 @@ reference.
   `Vertical Resolution` and `3D Device`. `-best` and `-window` still work.
 - **Where:** 7590243a (#913); `src/gods98/init.c` (`[library:config]`).
 
+### A resizable window, and the 3D view at the window's resolution
+
+- **Original:** draws a 640x480 picture. In a window, the window is 640x480
+  and cannot be resized. Full screen switches the display to 640x480.
+- **Port:**
+  - The window can be resized to any size, and opens at `LegoRR.ini`'s
+    resolution. Full screen fills the desktop at the desktop's resolution;
+    the display mode is never changed.
+  - The game keeps its 640x480 layout. miniwin fits it into the window: the
+    largest 4:3 area, centred, with black bars at the sides or above and
+    below when the window is not 4:3.
+  - The 3D view is drawn at the window's resolution, inside that 4:3 area,
+    so it is sharper; it shows the same part of the scene as at 640x480.
+  - The interface is the 640x480 art scaled up: nearest-neighbour when the
+    scale is a whole number (1280x960, 1920x1440), so every pixel stays
+    square and sharp, and bilinear at other scales, where nearest-neighbour
+    would draw pixels of uneven widths. There is no setting for it.
+  - The mouse, its clicks and edge scrolling follow the fit. A pointer over
+    a bar counts as at the picture's nearest edge, which scrolls the view.
+  - The software renderer, which the port uses only where SDL GPU is not
+    available, still draws at 640x480 and scales the whole picture to fit:
+    at 1600x1200 it ran at about 9 frames a second instead of 41.
+- **Why:** a 640x480 window is small on today's displays, and a full screen
+  of stretched 640x480 pixels is blurry. This follows isle-portable, which
+  renders Lego Island's 3D at the window's resolution in the same way.
+- **Configurable:** `[tweaks]` `display = fit` (the default) or
+  `original`, which keeps a fixed window of the mode's size and draws the
+  whole picture at the mode's resolution. Full screen still fills the
+  desktop, with the picture scaled to fit, since the port does not change
+  the display mode.
+- **Where:** `src/gods98/init.c` and `src/gods98/main.c`
+  (`[divergence:display-fit]`); `patches/miniwin` 0037 to 0040 (the fit,
+  the filtering, the mouse and frame-buffer locks,
+  `miniwin/miniwinpresentation.h`).
+
+### Movies fill a larger screen mode
+
+- **Original:** the front end plays its movies at 640x480. In a larger
+  mode, 800x600 or 1024x768 with `-debug`, they play in its top-left corner.
+- **Port:** they fill the mode.
+- **Why:** a movie in one corner of the screen looks broken. At 640x480,
+  the only mode outside `-debug`, nothing changes.
+- **Configurable:** no; the larger modes are debug modes, reachable only
+  with `-debug` and `[tweaks]` `display = original`.
+- **Where:** `front_play_movie` in `src/game/frontend_unit.c`
+  (`[divergence:movie-fill]`).
+
 ### LegoRR.ini and `--ini`
 
 - **Original:** has neither.
@@ -190,6 +237,7 @@ These change the original's code where it misbehaves. Each one is marked
 | RNC unpacked length | read as a signed long | read as unsigned | `rnc.c` |
 | Info text image tokens | `info_compile_text` writes an uninitialised byte for a `$name$` token that names no image, overruns its image slots past the eighth token and its name buffer past 31 characters, and reads past the text for an unclosed token; Font draws any `@[0x` + 8 characters + `]` as an image | writes nothing for an imageless token, keeps five images and drops the rest, truncates the name, stops at the text's end; Font draws only a full hex address (#904) | `info_unit.c`, `font.c` |
 | Scene animation last key | `Lws_FindPrevKey` and `Lws_Interpolate` blend a node's last key with the slot after it. `Lws_Parse` leaves that slot unwritten when the last key is on the scene's last frame, and allocates no room after it when it fills the slot itself. In Tutorial01 the slot held NaN bytes, so a raider's nodes went NaN at the end of an animation, and a power crystal on its carry null took a NaN position | holds the last key, as `Lws_FindPrevDissolve` does. That is the original's result whenever the slot held finite values on another frame. No `[tweaks]` key: the original read memory it never wrote (#943) | `lws.c` |
+| Interface layout in other modes | `Lego.cfg` has the interface layout (`Panels`, `Buttons`, `AdvisorPositions`, `ObjectiveImage`, `NextButton`, `BackButton`, ... with a `640x480` suffix) only for 640x480. In another mode, 800x600 or 1024x768 with `-debug`, the lookups find nothing; the port crashed at start-up in `panel_item_flag32_set` (#915). | reads the 640x480 keys when the mode has none of its own. The interface stays at the 640x480 positions, as in the original's debug modes; the port's own scaling is the `display` tweak above. No `[tweaks]` key: without it the mode does not start | `lego_unit.c`, `advisor.c`, `objective_unit.c` (`[divergence:layout-fallback]`) |
 | `Data\Saves` directory | (n/a: only POSIX paths are affected) | makes `Data/Saves`, not a directory named with a backslash | b4af5d1f |
 
 Many 64-bit and ABI fixes are not listed here. These include reused

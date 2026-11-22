@@ -1,0 +1,306 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: John Rowley <johnrowleyster@gmail.com>
+Date: Sat, 21 Nov 2026 23:09:33 -0800
+Subject: [PATCH] perf(miniwin): draw only the pixels a frame buffer lock
+ changed
+
+A read-write Lock of the frame buffer reads the renderer's picture back at
+the virtual display's size, and Unlock drew all of it back. With a render
+target larger than the virtual display, that replaced the picture with its
+low-resolution copy whenever a client drew a line or a pixel. Lock now keeps
+the copy it read, and Unlock draws only the bounding box of the pixels that
+differ, with the unchanged pixels in it transparent; they keep their
+colours, so a filtered edge blends towards the picture under it.
+
+The SDL GPU backend's Download scales the virtual display's pixels to the
+target's size on the GPU before reading them back, so a lock reads the
+virtual display's pixels rather than the whole render target.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
+index 1ebe128..b38d416 100644
+--- a/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
++++ b/miniwin/src/d3drm/backends/sdl3gpu/renderer.cpp
+@@ -369,6 +369,9 @@ Direct3DRMSDL3GPURenderer::~Direct3DRMSDL3GPURenderer()
+ 	if (m_downloadBuffer) {
+ 		SDL_ReleaseGPUTransferBuffer(m_device, m_downloadBuffer);
+ 	}
++	if (m_downloadTexture) {
++		SDL_ReleaseGPUTexture(m_device, m_downloadTexture);
++	}
+ 	if (m_uploadBuffer) {
+ 		SDL_ReleaseGPUTransferBuffer(m_device, m_uploadBuffer);
+ 	}
+@@ -911,24 +914,6 @@ void Direct3DRMSDL3GPURenderer::Resize(int width, int height, const ViewportTran
+ 		return;
+ 	}
+ 
+-	// Setup texture GPU-to-CPU transfer
+-	if (m_downloadBuffer) {
+-		SDL_ReleaseGPUTransferBuffer(m_device, m_downloadBuffer);
+-		m_downloadBuffer = nullptr;
+-	}
+-	SDL_GPUTransferBufferCreateInfo downloadBufferInfo = {};
+-	downloadBufferInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD;
+-	downloadBufferInfo.size =
+-		((m_width - (m_viewportTransform.offsetX * 2)) * (m_height - (m_viewportTransform.offsetY * 2))) * 4;
+-	m_downloadBuffer = SDL_CreateGPUTransferBuffer(m_device, &downloadBufferInfo);
+-	if (!m_downloadBuffer) {
+-		SDL_LogError(
+-			LOG_CATEGORY_MINIWIN,
+-			"SDL_CreateGPUTransferBuffer filed for download buffer (%s)",
+-			SDL_GetError()
+-		);
+-		return;
+-	}
+ 	m_viewportRect = {0, 0, m_width, m_height};
+ }
+ 
+@@ -1126,15 +1111,57 @@ void Direct3DRMSDL3GPURenderer::Download(SDL_Surface* target)
+ 		m_renderPass = nullptr;
+ 	}
+ 
+-	const int offsetX = static_cast<int>(m_viewportTransform.offsetX);
+-	const int offsetY = static_cast<int>(m_viewportTransform.offsetY);
+-	const int width = m_width - offsetX * 2;
+-	const int height = m_height - offsetY * 2;
++	// The virtual display's pixels in the render target, scaled on the GPU to
++	// the target's size, then read back.
++	const int width = target->w;
++	const int height = target->h;
++	if (!m_downloadTexture || m_downloadWidth != width || m_downloadHeight != height) {
++		if (m_downloadTexture) {
++			SDL_ReleaseGPUTexture(m_device, m_downloadTexture);
++			m_downloadTexture = nullptr;
++		}
++		if (m_downloadBuffer) {
++			SDL_ReleaseGPUTransferBuffer(m_device, m_downloadBuffer);
++			m_downloadBuffer = nullptr;
++		}
++		SDL_GPUTextureCreateInfo textureInfo = {};
++		textureInfo.type = SDL_GPU_TEXTURETYPE_2D;
++		textureInfo.format = SDL_GetGPUSwapchainTextureFormat(m_device, DDWindow);
++		textureInfo.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
++		textureInfo.width = width;
++		textureInfo.height = height;
++		textureInfo.layer_count_or_depth = 1;
++		textureInfo.num_levels = 1;
++		textureInfo.sample_count = SDL_GPU_SAMPLECOUNT_1;
++		m_downloadTexture = SDL_CreateGPUTexture(m_device, &textureInfo);
++		SDL_GPUTransferBufferCreateInfo downloadBufferInfo = {};
++		downloadBufferInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_DOWNLOAD;
++		downloadBufferInfo.size = width * height * 4;
++		m_downloadBuffer = SDL_CreateGPUTransferBuffer(m_device, &downloadBufferInfo);
++		if (!m_downloadTexture || !m_downloadBuffer) {
++			SDL_LogError(LOG_CATEGORY_MINIWIN, "Download texture or buffer failed (%s)", SDL_GetError());
++			return;
++		}
++		m_downloadWidth = width;
++		m_downloadHeight = height;
++	}
++
++	SDL_Rect fit = GetFitRect();
++	SDL_GPUBlitInfo blit = {};
++	blit.source.texture = m_transferTexture;
++	blit.source.x = fit.x;
++	blit.source.y = fit.y;
++	blit.source.w = fit.w;
++	blit.source.h = fit.h;
++	blit.destination.texture = m_downloadTexture;
++	blit.destination.w = width;
++	blit.destination.h = height;
++	blit.load_op = SDL_GPU_LOADOP_DONT_CARE;
++	blit.filter = fit.w == width && fit.h == height ? SDL_GPU_FILTER_NEAREST : SDL_GPU_FILTER_LINEAR;
++	SDL_BlitGPUTexture(m_cmdbuf, &blit);
+ 
+ 	SDL_GPUTextureRegion region = {};
+-	region.texture = m_transferTexture;
+-	region.x = offsetX;
+-	region.y = offsetY;
++	region.texture = m_downloadTexture;
+ 	region.w = width;
+ 	region.h = height;
+ 	region.d = 1;
+@@ -1165,7 +1192,7 @@ void Direct3DRMSDL3GPURenderer::Download(SDL_Surface* target)
+ 	SDL_Surface* renderedImage =
+ 		SDL_CreateSurfaceFrom(width, height, SDL_PIXELFORMAT_XRGB8888, downloadedData, width * 4);
+ 
+-	SDL_BlitSurfaceScaled(renderedImage, nullptr, target, nullptr, SDL_SCALEMODE_NEAREST);
++	SDL_BlitSurface(renderedImage, nullptr, target, nullptr);
+ 	SDL_DestroySurface(renderedImage);
+ 	SDL_UnmapGPUTransferBuffer(m_device, m_downloadBuffer);
+ }
+diff --git a/miniwin/src/ddraw/framebuffer.cpp b/miniwin/src/ddraw/framebuffer.cpp
+index 5fd6d07..ef2bac7 100644
+--- a/miniwin/src/ddraw/framebuffer.cpp
++++ b/miniwin/src/ddraw/framebuffer.cpp
+@@ -23,6 +23,9 @@ FrameBufferImpl::FrameBufferImpl(DWORD virtualWidth, DWORD virtualHeight)
+ FrameBufferImpl::~FrameBufferImpl()
+ {
+ 	Miniwin_ClearVirtualDisplay(DDWindow);
++	if (m_lockChanges) {
++		m_lockChanges->Release();
++	}
+ 	m_transferBuffer->Release();
+ 	if (m_palette) {
+ 		m_palette->Release();
+@@ -266,6 +269,18 @@ HRESULT FrameBufferImpl::Lock(LPRECT lpDestRect, DDSURFACEDESC* lpDDSurfaceDesc,
+ 		DDRenderer->Download(m_transferBuffer->m_surface);
+ 	}
+ 
++	// A read-write lock keeps what it read, so Unlock draws only the pixels
++	// the client changes. Drawing the whole read-back frame would replace a
++	// picture rendered at more than the virtual display's resolution with
++	// the virtual display's copy of it.
++	SDL_Surface* frame = m_transferBuffer->m_surface;
++	m_lockSnapshotValid = !m_readOnlyLock && (dwFlags & DDLOCK_WRITEONLY) != DDLOCK_WRITEONLY &&
++						  frame->format != SDL_PIXELFORMAT_INDEX8;
++	if (m_lockSnapshotValid) {
++		const Uint8* pixels = static_cast<const Uint8*>(frame->pixels);
++		m_lockSnapshot.assign(pixels, pixels + (size_t) frame->pitch * frame->h);
++	}
++
+ 	m_transferBuffer->Lock(lpDestRect, lpDDSurfaceDesc, dwFlags, hEvent);
+ 
+ 	return DD_OK;
+@@ -319,13 +334,91 @@ HRESULT FrameBufferImpl::SetPalette(LPDIRECTDRAWPALETTE lpDDPalette)
+ HRESULT FrameBufferImpl::Unlock(LPVOID lpSurfaceData)
+ {
+ 	m_transferBuffer->Unlock(lpSurfaceData);
+-	if (!m_readOnlyLock) {
++	if (m_lockSnapshotValid) {
++		m_lockSnapshotValid = false;
++		DrawLockChanges();
++	}
++	else if (!m_readOnlyLock) {
+ 		BltFast(0, 0, m_transferBuffer, nullptr, DDBLTFAST_WAIT);
+ 	}
+ 
+ 	return DD_OK;
+ }
+ 
++// Draws the pixels of the transfer buffer that differ from the lock's copy:
++// the bounding box of the changes, with the unchanged pixels in it
++// transparent. They keep their own colours, so a scaled, filtered edge
++// blends towards the picture under it rather than towards black.
++void FrameBufferImpl::DrawLockChanges()
++{
++	SDL_Surface* frame = m_transferBuffer->m_surface;
++	const int bytesPerPixel = SDL_BYTESPERPIXEL(frame->format);
++	const Uint8* now = static_cast<const Uint8*>(frame->pixels);
++	const Uint8* before = m_lockSnapshot.data();
++	const size_t rowBytes = (size_t) frame->w * bytesPerPixel;
++
++	int minX = frame->w, minY = frame->h, maxX = -1, maxY = -1;
++	for (int y = 0; y < frame->h; y++) {
++		const Uint8* rowNow = now + (size_t) y * frame->pitch;
++		const Uint8* rowBefore = before + (size_t) y * frame->pitch;
++		if (SDL_memcmp(rowNow, rowBefore, rowBytes) == 0) {
++			continue;
++		}
++		int first = 0;
++		while (SDL_memcmp(rowNow + first * bytesPerPixel, rowBefore + first * bytesPerPixel, bytesPerPixel) == 0) {
++			first++;
++		}
++		int last = frame->w - 1;
++		while (SDL_memcmp(rowNow + last * bytesPerPixel, rowBefore + last * bytesPerPixel, bytesPerPixel) == 0) {
++			last--;
++		}
++		minX = SDL_min(minX, first);
++		maxX = SDL_max(maxX, last);
++		minY = SDL_min(minY, y);
++		maxY = y;
++	}
++	if (maxY < 0) {
++		return;
++	}
++
++	if (!m_lockChanges) {
++		m_lockChanges = new DirectDrawSurfaceImpl(frame->w, frame->h, SDL_PIXELFORMAT_RGBA32);
++	}
++	SDL_Surface* changes = m_lockChanges->m_surface;
++	SDL_Rect box = {minX, minY, maxX - minX + 1, maxY - minY + 1};
++
++	DDSURFACEDESC desc = {};
++	desc.dwSize = sizeof(desc);
++	if (m_lockChanges->Lock(nullptr, &desc, DDLOCK_WAIT, nullptr) != DD_OK) {
++		return;
++	}
++	Uint8* out = static_cast<Uint8*>(changes->pixels);
++	SDL_ConvertPixels(
++		box.w,
++		box.h,
++		frame->format,
++		now + (size_t) box.y * frame->pitch + (size_t) box.x * bytesPerPixel,
++		frame->pitch,
++		SDL_PIXELFORMAT_RGBA32,
++		out + (size_t) box.y * changes->pitch + (size_t) box.x * 4,
++		changes->pitch
++	);
++	for (int y = box.y; y < box.y + box.h; y++) {
++		const Uint8* rowNow = now + (size_t) y * frame->pitch;
++		const Uint8* rowBefore = before + (size_t) y * frame->pitch;
++		Uint8* rowOut = out + (size_t) y * changes->pitch;
++		for (int x = box.x; x < box.x + box.w; x++) {
++			bool same =
++				SDL_memcmp(rowNow + x * bytesPerPixel, rowBefore + x * bytesPerPixel, bytesPerPixel) == 0;
++			rowOut[x * 4 + 3] = same ? 0 : 0xFF; // RGBA32: alpha is the fourth byte
++		}
++	}
++	m_lockChanges->Unlock(static_cast<LPVOID>(nullptr));
++
++	RECT rect = {box.x, box.y, box.x + box.w, box.y + box.h};
++	Blt(&rect, m_lockChanges, &rect, DDBLT_NONE, nullptr);
++}
++
+ // IDirectDrawSurface4 interface
+ HRESULT FrameBufferImpl::Blt(
+ 	LPRECT lpDestRect,
+diff --git a/miniwin/src/internal/d3drmrenderer_sdl3gpu.h b/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
+index 90c3936..ac8a830 100644
+--- a/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
++++ b/miniwin/src/internal/d3drmrenderer_sdl3gpu.h
+@@ -196,6 +196,12 @@ class Direct3DRMSDL3GPURenderer : public Direct3DRMRenderer {
+ 	int m_uploadBufferSize;
+ 	SDL_GPUTransferBuffer* m_uploadBuffer;
+ 	SDL_GPUTransferBuffer* m_downloadBuffer = nullptr;
++	// Download's copy of the picture at the size it is read back at, so a
++	// render target larger than the virtual display is scaled on the GPU
++	// and only the small copy crosses to the CPU.
++	SDL_GPUTexture* m_downloadTexture = nullptr;
++	int m_downloadWidth = 0;
++	int m_downloadHeight = 0;
+ 	SDL_GPUBuffer* m_vertexBuffer = nullptr;
+ 	SDL_GPUSampler* m_sampler;
+ 	SDL_GPUSampler* m_uiSampler;
+diff --git a/miniwin/src/internal/framebuffer_impl.h b/miniwin/src/internal/framebuffer_impl.h
+index 08031a5..7af1c9c 100644
+--- a/miniwin/src/internal/framebuffer_impl.h
++++ b/miniwin/src/internal/framebuffer_impl.h
+@@ -3,6 +3,7 @@
+ #include <SDL3/SDL.h>
+ #include <ddsurface_impl.h>
+ #include <miniwin/ddraw.h>
++#include <vector>
+ 
+ struct FrameBufferImpl : public IDirectDrawSurface4 {
+ 	FrameBufferImpl(DWORD virtualWidth, DWORD virtualHeight);
+@@ -55,10 +56,17 @@ struct FrameBufferImpl : public IDirectDrawSurface4 {
+ 
+ private:
+ 	void DumpFrame();
++	void DrawLockChanges();
+ 
+ 	uint32_t m_virtualWidth;
+ 	uint32_t m_virtualHeight;
+ 	bool m_readOnlyLock;
+ 	DirectDrawSurfaceImpl* m_transferBuffer;
++	// A read-write Lock's copy of the frame it read back, which Unlock
++	// compares with the transfer buffer to draw only the pixels the client
++	// changed (DrawLockChanges), in m_lockChanges.
++	std::vector<Uint8> m_lockSnapshot;
++	bool m_lockSnapshotValid = false;
++	DirectDrawSurfaceImpl* m_lockChanges = nullptr;
+ 	IDirectDrawPalette* m_palette = nullptr;
+ };
