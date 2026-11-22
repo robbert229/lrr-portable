@@ -65,3 +65,6 @@ lrr_unit_test(sfx SOURCES ${GAME_DIR}/test_sfx.cpp
 lrr_unit_test(spiderweb SOURCES ${GAME_DIR}/test_spiderweb.cpp
   WRAP legoobject_position_to_terrain_cell object_type_name_index_find weapons_get_damage_for_object
   LABELS spiderweb)
+
+# Stats level changes, counters and tool lookup.
+lrr_unit_test(entity_stats SOURCES ${GAME_DIR}/test_entity_stats.cpp LABELS entity_stats)
