@@ -51,7 +51,14 @@ These paths take literal formats only, so the change does not cover them:
 
 Format text still chooses which arguments are read. A `%s` or `%d` that
 the caller supplies no argument for reads the next argument slot, as it
-did in the original. `font_v_print_f2` copies its format into a
-1024-byte stack buffer without a bound, as the original did. Each `%b`
-grows to an image token there, so long menu or tooltip text can overrun
-the buffer.
+did in the original.
+
+`font_v_print_f2` copies its format into a 1024-byte stack buffer, and each
+`%b` grows to an image token there. The original did not bound the copy
+(issue #967); the port does. It stops at 1023 characters and never starts a
+`%b` that does not fit whole. A conversion the cut leaves unfinished takes no
+argument (the safe formatter above, not the host's C library, reads it), so a
+cut format reads only arguments the whole format would.
+`src/gods98/test_font_format_bound.cpp` measures long formats and many `%b`.
+The longest line in the shipped `Lego.cfg` is 334 characters, so no shipped
+text is cut.

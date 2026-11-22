@@ -167,22 +167,31 @@ unsigned int font_v_print_f2(Font* font, int x, int y, int render,
     char line[FONT_MAXSTRINGLEN];
     char msgCopy[FONT_MAXSTRINGLEN];
     char* s;
+    char* copyEnd;
 
     lineHeight = font->fontHeight;
     lines = 1;
     lineWidth = 0;
     maxWidth = 0;
     s = msgCopy;
+    copyEnd = msgCopy + sizeof(msgCopy) - 1;
+    /* The copy holds sizeof(msgCopy) - 1 characters at most: a format that
+     * comes from data can be longer, and each "%b" grows. The rest is cut
+     * off. A "%b" that does not fit whole is not started, and a conversion
+     * the cut leaves unfinished takes no argument, so the cut format reads
+     * only the arguments the whole format would. */
     while (*msg != '\0') {
         if (*msg == '%' && msg[1] == 'b') {
             /* PORT-ONLY: the original writes "@[0x%0.8x]", whose eight digits
              * do not hold a 64-bit Image pointer. The port writes one hex
              * digit per pointer nibble; the caller passes the Image* as a
              * uintptr_t. */
+            if (strlen(FONT_IMAGEFORMAT) > (size_t)(copyEnd - s)) break;
             strcpy(s, FONT_IMAGEFORMAT);
             s += strlen(FONT_IMAGEFORMAT) - 1;
             msg++;
         } else {
+            if (s >= copyEnd) break;
             *s = *msg;
         }
         msg++;

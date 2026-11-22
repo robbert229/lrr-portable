@@ -513,6 +513,12 @@ if(BUILD_TESTING)
   target_link_libraries(device_choice_test PRIVATE units)
   add_test(NAME device_choice COMMAND device_choice_test)
   set_tests_properties(device_choice PROPERTIES LABELS config)
+  # Font.c's format copy stops at its buffer: long formats and many "%b".
+  add_executable(font_format_bound_test ${ENGINE_DIR}/test_font_format_bound.cpp)
+  target_link_libraries(font_format_bound_test PRIVATE units)
+  add_test(NAME font_format_bound COMMAND font_format_bound_test)
+  set_tests_properties(font_format_bound PROPERTIES LABELS font
+    ENVIRONMENT "UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1")
   add_executable(draw_test ${ENGINE_DIR}/test_draw.cpp)
   target_link_libraries(draw_test PRIVATE units)
   add_test(NAME draw COMMAND draw_test)
