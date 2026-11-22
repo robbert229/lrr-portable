@@ -33,10 +33,19 @@ pin() {
     git ls-files -s -- "$SUB" | awk '{print $2}'
 }
 
+# SHA-256 of stdin: sha256sum where there is one, else macOS's shasum.
+sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum
+    else
+        shasum -a 256
+    fi
+}
+
 # A fingerprint of the pin and the patch files, recorded in the submodule's
 # git directory after an apply or export.
 fingerprint() {
-    { pin; cat "$PATCHES"/*.patch 2>/dev/null; } | sha256sum | awk '{print $1}'
+    { pin; cat "$PATCHES"/*.patch 2>/dev/null; } | sha256 | awk '{print $1}'
 }
 
 stamp_file() {

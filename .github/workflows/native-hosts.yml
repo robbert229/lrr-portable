@@ -1,0 +1,80 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# The native port on macOS (arm64 and Intel) and FreeBSD. These jobs are not
+# required checks: native-build is the only one. Each configures, builds and
+# runs ctest as native-build does, with SDL3 fetched by CMake at the pinned
+# commit (CMakeLists.txt, LRR_SDL3_GIT_TAG). The Python tool tests and the
+# unit lint run in native-build only.
+name: native-hosts
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-hosts-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  macos:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: 'macos-arm64', os: 'macos-latest' }
+          - { name: 'macos-intel', os: 'macos-15-intel' }
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Install build tools
+        run: brew install ninja
+
+      - name: Bootstrap sparse miniwin
+        run: tools/setup-miniwin.sh
+
+      - name: Configure, build, and test
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "4"
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+
+  freebsd:
+    name: freebsd
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Configure, build, and test in a FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "15.1"
+          usesh: true
+          prepare: |
+            pkg install -y bash cmake ninja git pkgconf xorg alsa-lib
+          run: |
+            set -e
+            git config --global --add safe.directory '*'
+            tools/setup-miniwin.sh
+            cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+            cmake --build build
+            ctest --test-dir build --output-on-failure

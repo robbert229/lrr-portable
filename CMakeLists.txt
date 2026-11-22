@@ -7,6 +7,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# No fused multiply-add: the original's x87 code rounds every product, and
+# miniwin's rasterizer needs a shared edge to evaluate to exactly opposite
+# values from its two triangles. Clang contracts a * b + c by default where
+# the target has FMA (arm64), and GCC can too.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  add_compile_options(-ffp-contract=off)
+endif()
+
 set(SRC_ROOT "src" CACHE PATH "Directory containing the reconstruction source tree")
 
 set(ENGINE_DIR "${SRC_ROOT}/gods98")
@@ -356,19 +364,24 @@ if(BUILD_TESTING)
   set_tests_properties(diskpath PROPERTIES LABELS files)
   # The block grids' index (game/block_grid.h): a NaN position's INT_MIN
   # coordinates resolve to block 0, as the original's 32-bit arithmetic.
-  add_executable(block_grid_test ${GAME_DIR}/test_block_grid.cpp)
-  target_link_libraries(block_grid_test PRIVATE units)
-  target_link_options(block_grid_test PRIVATE
-    "LINKER:--wrap=ddiscene_object_position_get"
-    "LINKER:--wrap=entity_state_flags_get"
-    "LINKER:--wrap=container_mesh_hide_group"
-    "LINKER:--wrap=scene_mesh_color_and_alpha_set")
-  add_test(NAME block_grid COMMAND block_grid_test)
-  set_tests_properties(block_grid PROPERTIES LABELS block_grid)
+  # GNU ld's --wrap, as the frontend tests above.
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND NOT APPLE AND NOT WIN32)
+    add_executable(block_grid_test ${GAME_DIR}/test_block_grid.cpp)
+    target_link_libraries(block_grid_test PRIVATE units)
+    target_link_options(block_grid_test PRIVATE
+      "LINKER:--wrap=ddiscene_object_position_get"
+      "LINKER:--wrap=entity_state_flags_get"
+      "LINKER:--wrap=container_mesh_hide_group"
+      "LINKER:--wrap=scene_mesh_color_and_alpha_set")
+    add_test(NAME block_grid COMMAND block_grid_test)
+    set_tests_properties(block_grid PROPERTIES LABELS block_grid)
+  endif()
   add_executable(config_test ${PLATFORM_DIR}/native/test_config.cpp)
   target_link_libraries(config_test PRIVATE units)
   add_test(NAME config COMMAND config_test)
-  set_tests_properties(config PROPERTIES LABELS config)
+  # Skipped (77) where the preference directory cannot be moved into the
+  # fixture.
+  set_tests_properties(config PROPERTIES LABELS config SKIP_RETURN_CODE 77)
   add_executable(draw_test ${ENGINE_DIR}/test_draw.cpp)
   target_link_libraries(draw_test PRIVATE units)
   add_test(NAME draw COMMAND draw_test)
