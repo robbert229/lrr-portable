@@ -52,7 +52,62 @@ if(LRR_BASH)
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     COMMENT "Checking patches/miniwin is applied")
 endif()
-find_package(SDL3 CONFIG REQUIRED)
+# SDL3: an installed package when there is one, otherwise the same pinned
+# release CI builds (3.4.18, commit 829a65d7), fetched as iniparser and
+# miniaudio are below. The console hosts take isle-portable's per-platform
+# forks; on Android, Gradle builds SDL as an AAR and CMake only reads its
+# package.
+find_package(SDL3 CONFIG QUIET)
+if(NOT TARGET SDL3::SDL3)
+  include(FetchContent)
+  if(ANDROID)
+    # Built by Gradle.
+    find_package(SDL3 CONFIG REQUIRED COMPONENTS Shared)
+  else()
+    if(WINDOWS_STORE)
+      FetchContent_Declare(
+        SDL3
+        GIT_REPOSITORY "https://github.com/Helloyunho/SDL3-uwp.git"
+        GIT_TAG "main"
+        EXCLUDE_FROM_ALL
+      )
+    elseif(NINTENDO_SWITCH)
+      FetchContent_Declare(
+        SDL3
+        GIT_REPOSITORY "https://github.com/SnepOMatic/SDL3-Switch.git"
+        GIT_TAG "switch-sdl-3.2.14"
+        EXCLUDE_FROM_ALL
+      )
+      set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON CACHE BOOL "Disable PCH globally" FORCE)
+    else()
+      # Keep the commit in step with SDL_COMMIT in native-build.yml.
+      set(LRR_SDL3_GIT_REPO "https://github.com/libsdl-org/SDL.git" CACHE STRING "The SDL3 git repo")
+      set(LRR_SDL3_GIT_TAG "829a65d769d935c4852f8159e964312c0957260a" CACHE STRING "The SDL3 git tag or commit")
+      FetchContent_Declare(
+        SDL3
+        GIT_REPOSITORY "${LRR_SDL3_GIT_REPO}"
+        GIT_TAG "${LRR_SDL3_GIT_TAG}"
+        UPDATE_DISCONNECTED TRUE
+        EXCLUDE_FROM_ALL
+      )
+    endif()
+    # SDL keeps its own defaults otherwise, so a desktop build gets its
+    # video drivers; a host without X11 or Wayland development libraries
+    # configures with -DSDL_X11=OFF -DSDL_WAYLAND=OFF
+    # -DSDL_UNIX_CONSOLE_BUILD=ON, as CI does. A static SDL leaves no
+    # SDL3.dll to place beside each executable. The function scope keeps
+    # these settings to SDL's own build.
+    function(lrr_fetch_sdl3)
+      set(BUILD_TESTING OFF)
+      set(SDL_TESTS OFF)
+      set(SDL_EXAMPLES OFF)
+      set(SDL_SHARED OFF)
+      set(SDL_STATIC ON)
+      FetchContent_MakeAvailable(SDL3)
+    endfunction()
+    lrr_fetch_sdl3()
+  endif()
+endif()
 
 if(IOS)
   add_compile_definitions(IOS)
