@@ -80,3 +80,6 @@ lrr_unit_test(dxerror SOURCES ${ENGINE_DIR}/test_dxerror.cpp LABELS dxerror)
 lrr_unit_test(file_list_streams SOURCES ${ENGINE_DIR}/test_file_list_streams.cpp
   WRAP game_file_open_dispatch game_file_close resource_file_token_list_load_and_tree_scan_target
   LABELS file_list_streams)
+
+# Mount synthetic WWAD archives and check precedence, packed entries and handles.
+lrr_unit_test(wad SOURCES ${ENGINE_DIR}/test_wad.cpp LABELS wad)
