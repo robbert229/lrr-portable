@@ -5,6 +5,13 @@ SHELL := /bin/bash
 BUILD_DIR ?= build
 WAD_DIR ?= $(CURDIR)/reference
 CMAKE_TOOLCHAIN_FILE ?=
+# Empty leaves the build directory's cached build type alone.
+CMAKE_BUILD_TYPE ?=
+# The debug build: symbols and frame pointers, so a crash's core dump
+# (coredumpctl info LegoRR) or a gdb session gives a readable stack.
+DEBUG_BUILD_DIR ?= build-dbg
+DEBUG_BUILD_TYPE ?= RelWithDebInfo
+DEBUG_FLAGS ?= -fno-omit-frame-pointer
 # The shipped exe's flags: -best picks a display mode without the
 # mode-selection dialog, which miniwin cannot show.
 RUN_ARGS ?= -best -window
@@ -13,7 +20,7 @@ REFERENCE_DIR ?= $(CURDIR)/reference
 PROTON_BIN ?= $(RR_A2_PROTON)
 COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-raider-a2)/compatdata
 
-.PHONY: all setup build run test clean reference-run
+.PHONY: all setup build run test clean reference-run debug-setup debug-build debug-run
 
 all: build
 
@@ -21,7 +28,9 @@ all: build
 # CMake. An existing build directory is reconfigured in place.
 setup:
 	tools/setup-miniwin.sh
-	cmake -S . -B "$(BUILD_DIR)" $(if $(CMAKE_TOOLCHAIN_FILE),-DCMAKE_TOOLCHAIN_FILE="$(CMAKE_TOOLCHAIN_FILE)",)
+	cmake -S . -B "$(BUILD_DIR)" $(if $(CMAKE_TOOLCHAIN_FILE),-DCMAKE_TOOLCHAIN_FILE="$(CMAKE_TOOLCHAIN_FILE)",) \
+	  $(if $(CMAKE_BUILD_TYPE),-DCMAKE_BUILD_TYPE="$(CMAKE_BUILD_TYPE)",) \
+	  $(CMAKE_ARGS)
 
 build: setup
 	cmake --build "$(BUILD_DIR)" --target program
@@ -32,6 +41,20 @@ test: setup
 
 run: build
 	cd "$(WAD_DIR)" && "$(abspath $(BUILD_DIR))/LegoRR" $(RUN_ARGS)
+
+# The same targets on $(DEBUG_BUILD_DIR), configured for debugging.
+DEBUG_MAKE = $(MAKE) BUILD_DIR="$(DEBUG_BUILD_DIR)" \
+  CMAKE_BUILD_TYPE="$(DEBUG_BUILD_TYPE)" \
+  CMAKE_ARGS='-DCMAKE_C_FLAGS="$(DEBUG_FLAGS)" -DCMAKE_CXX_FLAGS="$(DEBUG_FLAGS)"'
+
+debug-setup:
+	$(DEBUG_MAKE) setup
+
+debug-build:
+	$(DEBUG_MAKE) build
+
+debug-run:
+	$(DEBUG_MAKE) run
 
 clean:
 	cmake --build "$(BUILD_DIR)" --target clean
