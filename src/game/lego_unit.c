@@ -4004,7 +4004,7 @@ void lego_block_visible_callback(int bx, int by)
 // FUNCTION: LEGORR 0x00429160
 void* lego_terrain_cell_palette_resource_at_grid_position(const int* xy)
 {
-    int idx = xy[0] + xy[1] * legoGlobs_currLevel->width;
+    uint32_t idx = (uint32_t)xy[0] + (uint32_t)xy[1] * legoGlobs_currLevel->width;
     return packed_grid_cell_value_get(
         legoGlobs_currLevel->textureSet,
         legoGlobs_currLevel->blocks[lrr_block_index(idx, legoGlobs_currLevel->width,

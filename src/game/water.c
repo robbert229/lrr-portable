@@ -115,7 +115,7 @@ void water_init_entries(void* contRoot, Lego_Level* level)
                 x = (int)(offsets[d].x + pool->points[j].x);
                 y = (int)(pool->points[j].y + offsets[d].y);
                 if (x >= 0 && x < (int)level->width && y >= 0 && y < (int)level->height) {
-                    terrain = level->blocks[lrr_block_index((y * (int)level->width) + x, level->width, level->height)].f_02;
+                    terrain = level->blocks[lrr_block_index((uint32_t)y * level->width + (uint32_t)x, level->width, level->height)].f_02;
                     if (terrain != 7 && terrain != 1) {
                         pool->entries[pool->entryCount].pointIndex = j;
                         pool->entries[pool->entryCount].direction = d;
